@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { accessTokenCookie, isAuthorizedProfile, refreshTokenCookie, sessionRoleCookie, type Profile } from "@/lib/auth-config";
+import { accessTokenCookie, customerAccessTokenCookie, customerRefreshTokenCookie, customerSessionRoleCookie, isAuthorizedProfile, refreshTokenCookie, sessionRoleCookie, type Profile } from "@/lib/auth-config";
 import { internalLaunchHome, isIntermediaryLaunchPath, isIntermediaryOnlyLaunch } from "@/lib/launch-scope";
 import { isAccountsRolePortalPath, isProtectedPortalPath, safePortalReturnPath } from "@/lib/portal-routes";
 import { hasCapability } from "@/lib/roles";
@@ -136,28 +136,36 @@ async function refreshSession(refreshToken: string): Promise<RefreshedSession | 
   };
 }
 
-function applySessionCookies(response: NextResponse, session: RefreshedSession, role?: string | null) {
-  response.cookies.set(accessTokenCookie, session.access_token, { ...cookieOptions, maxAge: session.expires_in });
-  response.cookies.set(refreshTokenCookie, session.refresh_token, { ...cookieOptions, maxAge: 60 * 60 * 24 * 30 });
-  if (role) response.cookies.set(sessionRoleCookie, role, { ...cookieOptions, maxAge: session.expires_in });
+type SessionScope = "customer" | "team";
+const cookieNames = (scope: SessionScope) => scope === "customer"
+  ? { access: customerAccessTokenCookie, refresh: customerRefreshTokenCookie, role: customerSessionRoleCookie }
+  : { access: accessTokenCookie, refresh: refreshTokenCookie, role: sessionRoleCookie };
+
+function applySessionCookies(response: NextResponse, session: RefreshedSession, role: string | null | undefined, scope: SessionScope) {
+  const names = cookieNames(scope);
+  response.cookies.set(names.access, session.access_token, { ...cookieOptions, maxAge: session.expires_in });
+  response.cookies.set(names.refresh, session.refresh_token, { ...cookieOptions, maxAge: 60 * 60 * 24 * 30 });
+  if (role) response.cookies.set(names.role, role, { ...cookieOptions, maxAge: session.expires_in });
   return response;
 }
 
-function clearSessionCookies(response: NextResponse) {
-  response.cookies.set(accessTokenCookie, "", { ...cookieOptions, maxAge: 0 });
-  response.cookies.set(refreshTokenCookie, "", { ...cookieOptions, maxAge: 0 });
-  response.cookies.set(sessionRoleCookie, "", { ...cookieOptions, maxAge: 0 });
+function clearSessionCookies(response: NextResponse, scope: SessionScope) {
+  const names = cookieNames(scope);
+  response.cookies.set(names.access, "", { ...cookieOptions, maxAge: 0 });
+  response.cookies.set(names.refresh, "", { ...cookieOptions, maxAge: 0 });
+  response.cookies.set(names.role, "", { ...cookieOptions, maxAge: 0 });
   return response;
 }
 
-function setRoleCookie(response: NextResponse, role?: string | null) {
-  if (role) response.cookies.set(sessionRoleCookie, role, { ...cookieOptions, maxAge: 60 * 60 });
+function setRoleCookie(response: NextResponse, role: string | null | undefined, scope: SessionScope) {
+  if (role) response.cookies.set(cookieNames(scope).role, role, { ...cookieOptions, maxAge: 60 * 60 });
   return response;
 }
 
 function redirect(request: NextRequest, pathname: string, session?: RefreshedSession | null, role?: string | null) {
   const response = NextResponse.redirect(new URL(pathname, request.url));
-  return session ? applySessionCookies(response, session, role) : setRoleCookie(response, role);
+  const scope = isCustomerPortalPath(request.nextUrl.pathname) ? "customer" : "team";
+  return session ? applySessionCookies(response, session, role, scope) : setRoleCookie(response, role, scope);
 }
 
 function denialPath(reason: "profile_missing" | "account_inactive" | "role_not_enabled" | "customer_workspace" | "staff_workspace" | "module_permission") {
@@ -165,13 +173,15 @@ function denialPath(reason: "profile_missing" | "account_inactive" | "role_not_e
 }
 
 function continueRequest(request: NextRequest, session?: RefreshedSession | null, role?: string | null) {
-  if (!session) return setRoleCookie(NextResponse.next(), role);
-  request.cookies.set(accessTokenCookie, session.access_token);
-  request.cookies.set(refreshTokenCookie, session.refresh_token);
-  if (role) request.cookies.set(sessionRoleCookie, role);
+  const scope = isCustomerPortalPath(request.nextUrl.pathname) ? "customer" : "team";
+  if (!session) return setRoleCookie(NextResponse.next(), role, scope);
+  const names = cookieNames(scope);
+  request.cookies.set(names.access, session.access_token);
+  request.cookies.set(names.refresh, session.refresh_token);
+  if (role) request.cookies.set(names.role, role);
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("cookie", request.cookies.toString());
-  return applySessionCookies(NextResponse.next({ request: { headers: requestHeaders } }), session, role);
+  return applySessionCookies(NextResponse.next({ request: { headers: requestHeaders } }), session, role, scope);
 }
 
 export async function middleware(request: NextRequest) {
@@ -189,8 +199,12 @@ export async function middleware(request: NextRequest) {
   }
 
   const isRenewalVoiceLab = pathname === "/partner/renewals/voice-lab";
-  let accessToken = request.cookies.get(accessTokenCookie)?.value;
-  const refreshToken = request.cookies.get(refreshTokenCookie)?.value;
+  // Select the appropriate independently authenticated session based on the
+  // requested workspace, never by the cached role cookie or another workspace.
+  const scope: SessionScope = isCustomerPortalPath(pathname) ? "customer" : "team";
+  const names = cookieNames(scope);
+  let accessToken = request.cookies.get(names.access)?.value;
+  const refreshToken = request.cookies.get(names.refresh)?.value;
   let refreshedSession: RefreshedSession | null = null;
 
   // Never authorize or route from the cached role cookie alone. The role cookie is
@@ -228,7 +242,7 @@ export async function middleware(request: NextRequest) {
       return redirect(request, check.role === "intermediary" ? "/partner" : internalLaunchHome, refreshedSession, check.role);
     }
     if (check.status === "forbidden") return redirect(request, denialPath(check.denialReason ?? "role_not_enabled"), refreshedSession, check.role);
-    return clearSessionCookies(continueRequest(request));
+    return clearSessionCookies(continueRequest(request), scope);
   }
 
   // Signup is a public Customer authentication-entry page, not a protected Customer workspace.
@@ -236,14 +250,14 @@ export async function middleware(request: NextRequest) {
   if (pathname === "/customer/login" || pathname === "/customer/signup") {
     if (check.status === "customer") return redirect(request, "/customer/home", refreshedSession, check.role);
     if (check.status === "authorized" || check.status === "forbidden") {
-      return redirect(request, denialPath(check.status === "forbidden" ? (check.denialReason ?? "role_not_enabled") : "customer_workspace"), refreshedSession, check.role);
+      return redirect(request, denialPath(check.status === "forbidden" ? (check.denialReason ?? "role_not_enabled") : "staff_workspace"), refreshedSession, check.role);
     }
-    return clearSessionCookies(continueRequest(request));
+    return clearSessionCookies(continueRequest(request), scope);
   }
 
   if (isCustomerPortalPath(pathname)) {
     if (check.status === "invalid") {
-      return clearSessionCookies(redirect(request, "/customer/login"));
+      return clearSessionCookies(redirect(request, "/customer/login"), scope);
     }
     if (check.status !== "customer") {
       return redirect(request, denialPath(check.status === "forbidden" ? (check.denialReason ?? "role_not_enabled") : "staff_workspace"), refreshedSession, check.role);
@@ -256,7 +270,7 @@ export async function middleware(request: NextRequest) {
     if (check.status === "invalid") {
       const loginUrl = new URL("/login", request.url);
       loginUrl.searchParams.set("next", safePortalReturnPath(`${pathname}${request.nextUrl.search}`));
-      return clearSessionCookies(NextResponse.redirect(loginUrl));
+      return clearSessionCookies(NextResponse.redirect(loginUrl), scope);
     }
     if (check.status === "forbidden") return redirect(request, denialPath(check.denialReason ?? "role_not_enabled"), refreshedSession, check.role);
     if (check.role === "accounts" && !isAccountsRolePortalPath(pathname)) {

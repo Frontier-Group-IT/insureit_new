@@ -1,7 +1,7 @@
 import { cache } from "react";
 import { notFound } from "next/navigation";
 import { projectInternalClaim } from "@insureit/claim-journey";
-import { createServerSupabaseClient } from "@/lib/auth-server";
+import { createCustomerServerSupabaseClient } from "@/lib/auth-server";
 import {
   customerDisplayVehicleNo,
   formatCustomerDate,
@@ -176,7 +176,7 @@ const externalMilestones = [
 ] as const;
 
 export const loadCustomerClaims = cache(async (customerId: string) => {
-  const supabase = await createServerSupabaseClient();
+  const supabase = await createCustomerServerSupabaseClient();
   const [claimResult, vehicleResult, internalPolicyResult, externalPolicyResult, insurerResult] = await Promise.all([
     supabase.from("claims").select("*").eq("customer_id", customerId).order("created_at", { ascending: false }),
     supabase.from("vehicles").select("id,vehicle_no,make,model").eq("customer_id", customerId),
@@ -211,7 +211,7 @@ export async function loadCustomerClaimListContext(customerId: string) {
   const claims = await loadCustomerClaims(customerId);
   if (!claims.length) return { claims, milestones_by_claim: new Map<string, CustomerClaimMilestone[]>() };
 
-  const supabase = await createServerSupabaseClient();
+  const supabase = await createCustomerServerSupabaseClient();
   const { data, error } = await supabase
     .from("claim_milestones")
     .select("id,claim_id,milestone_key,milestone_status,details,completed_at,updated_at")
@@ -231,7 +231,7 @@ export async function loadCustomerClaimDetail(customerId: string, claimId: strin
   const claim = claims.find((item) => item.id === claimId);
   if (!claim) notFound();
 
-  const supabase = await createServerSupabaseClient();
+  const supabase = await createCustomerServerSupabaseClient();
   const [milestoneResult, documentResult, taskResult] = await Promise.all([
     supabase.from("claim_milestones").select("id,claim_id,milestone_key,milestone_status,details,completed_at,updated_at").eq("claim_id", claimId),
     supabase.from("claim_documents").select("id,claim_id,document_type,verification_status,created_at,file_name").eq("claim_id", claimId).order("created_at", { ascending: false }),

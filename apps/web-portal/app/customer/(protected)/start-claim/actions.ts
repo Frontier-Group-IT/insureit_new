@@ -1,6 +1,6 @@
 "use server";
 
-import { createServerSupabaseClient } from "@/lib/auth-server";
+import { createCustomerServerSupabaseClient } from "@/lib/auth-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { getCustomerWebSession } from "@/lib/customer-web";
 import { loadCustomerWebPolicies, loadCustomerWebVehicles, resolveCustomerWebScope } from "@/lib/customer-web-data";
@@ -22,7 +22,7 @@ export async function prepareCustomerClaim(_previous: PrepareCustomerClaimState,
   if (policyId && !policy) return { error: "This policy is not linked to the selected vehicle." };
   const active = claims.find(c => (policy ? (policy.source === "external" ? c.external_policy_id === policy.id : c.policy_id === policy.id) : c.vehicle_id === vehicleId && !c.policy_id && !c.external_policy_id) && !["Settled","Closed","Claim Complete","Rejected"].includes(c.current_status));
   if (active) return await existingClaimResult(active.id, active.current_status, account.id);
-  const supabase = await createServerSupabaseClient();
+  const supabase = await createCustomerServerSupabaseClient();
   if (policy?.source === "external") {
     const { data, error } = await supabase.rpc("ensure_self_managed_external_claim_draft", {
       p_customer_id: account.id, p_vehicle_id: vehicleId, p_external_policy_id: policy.id,

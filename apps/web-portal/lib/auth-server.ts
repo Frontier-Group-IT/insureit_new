@@ -1,6 +1,6 @@
 import { cache } from "react";
 import { cookies } from "next/headers";
-import { accessTokenCookie } from "./auth-config";
+import { accessTokenCookie, customerAccessTokenCookie } from "./auth-config";
 import { createSupabaseWithAccessToken, getAuthenticatedProfile as getAuthenticatedProfileUncached, isAuthorizedProfile } from "./auth";
 import { getAuthenticatedProfileViaUser } from "./auth-cloudflare";
 
@@ -9,8 +9,17 @@ export const getServerAccessToken = cache(async () => {
   return cookieStore.get(accessTokenCookie)?.value;
 });
 
+export const getCustomerServerAccessToken = cache(async () => {
+  const cookieStore = await cookies();
+  return cookieStore.get(customerAccessTokenCookie)?.value;
+});
+
 export async function createServerSupabaseClient() {
   return createSupabaseWithAccessToken(await getServerAccessToken());
+}
+
+export async function createCustomerServerSupabaseClient() {
+  return createSupabaseWithAccessToken(await getCustomerServerAccessToken());
 }
 
 export const getAuthenticatedProfile = cache(async (accessToken?: string) => {

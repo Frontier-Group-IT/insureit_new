@@ -1,7 +1,7 @@
 import { cache } from "react";
 import { redirect } from "next/navigation";
 import { createSupabaseWithAccessToken } from "@/lib/auth";
-import { getServerAccessToken } from "@/lib/auth-server";
+import { getCustomerServerAccessToken } from "@/lib/auth-server";
 import type { Profile } from "@/lib/auth-config";
 
 export type CustomerWebAccount = {
@@ -18,7 +18,7 @@ export type CustomerWebSession = {
 };
 
 export const getCustomerWebSession = cache(async (): Promise<CustomerWebSession> => {
-  const accessToken = await getServerAccessToken();
+  const accessToken = await getCustomerServerAccessToken();
   if (!accessToken) redirect("/customer/login");
 
   // Customer Web uses Supabase Auth's server verification endpoint directly.

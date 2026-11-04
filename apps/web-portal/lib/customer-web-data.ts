@@ -1,6 +1,6 @@
 import { cache } from "react";
 import { notFound } from "next/navigation";
-import { createServerSupabaseClient } from "@/lib/auth-server";
+import { createCustomerServerSupabaseClient } from "@/lib/auth-server";
 import { getCustomerWebSession, type CustomerWebAccount } from "@/lib/customer-web";
 
 export type CustomerVehicleRow = {
@@ -79,7 +79,7 @@ export async function resolveCustomerWebScope(accountId?: string | null): Promis
 }
 
 export const loadCustomerWebVehicles = cache(async (customerId: string): Promise<CustomerVehicleRow[]> => {
-  const supabase = await createServerSupabaseClient();
+  const supabase = await createCustomerServerSupabaseClient();
   const { data, error } = await supabase
     .from("vehicles")
     .select("id,customer_id,vehicle_no,vehicle_type,make,model,year,chassis_no,engine_no,registration_status,registration_date,fitness_expiry_date,puc_expiry_date,road_tax_expiry_date,national_permit_expiry_date,local_permit_expiry_date")
@@ -91,7 +91,7 @@ export const loadCustomerWebVehicles = cache(async (customerId: string): Promise
 });
 
 export const loadCustomerWebPolicies = cache(async (customerId: string): Promise<CustomerPolicyRow[]> => {
-  const supabase = await createServerSupabaseClient();
+  const supabase = await createCustomerServerSupabaseClient();
   const [internalResult, externalResult, vehicleResult, companyResult] = await Promise.all([
     supabase
       .from("policies")

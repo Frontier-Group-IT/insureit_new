@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import {
-  accessTokenCookie,
-  refreshTokenCookie,
-  sessionRoleCookie,
+  customerAccessTokenCookie,
+  customerRefreshTokenCookie,
+  customerSessionRoleCookie,
 } from "@/lib/auth-config";
 import { createSupabaseWithAccessToken } from "@/lib/auth";
 
@@ -99,16 +99,16 @@ export async function POST(request: Request) {
     : 60 * 60;
 
   const response = NextResponse.json({ ok: true });
-  response.cookies.set(accessTokenCookie, body.access_token, { ...cookieOptions, maxAge: expiresIn });
-  response.cookies.set(refreshTokenCookie, body.refresh_token, { ...cookieOptions, maxAge: 60 * 60 * 24 * 30 });
-  response.cookies.set(sessionRoleCookie, "customer", { ...cookieOptions, maxAge: expiresIn });
+  response.cookies.set(customerAccessTokenCookie, body.access_token, { ...cookieOptions, maxAge: expiresIn });
+  response.cookies.set(customerRefreshTokenCookie, body.refresh_token, { ...cookieOptions, maxAge: 60 * 60 * 24 * 30 });
+  response.cookies.set(customerSessionRoleCookie, "customer", { ...cookieOptions, maxAge: expiresIn });
   return response;
 }
 
 export async function DELETE() {
   const response = NextResponse.json({ ok: true });
-  response.cookies.set(accessTokenCookie, "", { ...cookieOptions, maxAge: 0 });
-  response.cookies.set(refreshTokenCookie, "", { ...cookieOptions, maxAge: 0 });
-  response.cookies.set(sessionRoleCookie, "", { ...cookieOptions, maxAge: 0 });
+  response.cookies.set(customerAccessTokenCookie, "", { ...cookieOptions, maxAge: 0 });
+  response.cookies.set(customerRefreshTokenCookie, "", { ...cookieOptions, maxAge: 0 });
+  response.cookies.set(customerSessionRoleCookie, "", { ...cookieOptions, maxAge: 0 });
   return response;
 }

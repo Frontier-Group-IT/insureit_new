@@ -72,7 +72,7 @@ assert(!guard.includes("supabase-admin"), "Customer Web must not use service-rol
 
 const sessionRoute = read("app/api/customer/auth/session/route.ts");
 assert(sessionRoute.includes('profile.role !== "customer"'), "Customer Web session endpoint must reject non-customer roles");
-assert(sessionRoute.includes('sessionRoleCookie, "customer"'), "Customer Web session must record only the customer role");
+assert(sessionRoute.includes('customerSessionRoleCookie, "customer"'), "Customer Web session must record only the customer role");
 assert(sessionRoute.includes("supabase.auth.getUser(accessToken)"), "Customer Web session must verify the access token server-side through Supabase Auth");
 assert(sessionRoute.includes('from("profiles")'), "Customer Web session must verify the authenticated customer profile server-side");
 assert(!sessionRoute.includes("getAuthenticatedProfile"), "Customer Web Cloudflare session path must not depend on the shared getClaims-based auth helper");

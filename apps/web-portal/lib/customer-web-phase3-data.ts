@@ -1,6 +1,6 @@
 import { cache } from "react";
 import { notFound } from "next/navigation";
-import { createServerSupabaseClient } from "@/lib/auth-server";
+import { createCustomerServerSupabaseClient } from "@/lib/auth-server";
 
 export type CustomerExchangeFeedRow = {
   listing_id: string;
@@ -139,7 +139,7 @@ type ServiceActivityTable = {
 async function signedUrl(bucket: string | null, storagePath: string | null) {
   if (!bucket || !storagePath) return null;
   try {
-    const supabase = await createServerSupabaseClient();
+    const supabase = await createCustomerServerSupabaseClient();
     const { data, error } = await supabase.storage.from(bucket).createSignedUrl(storagePath, 3600);
     return error ? null : data.signedUrl;
   } catch {
@@ -149,7 +149,7 @@ async function signedUrl(bucket: string | null, storagePath: string | null) {
 }
 
 export const loadCustomerExchangeFeed = cache(async (input?: { category?: string | null; query?: string | null }) => {
-  const supabase = await createServerSupabaseClient();
+  const supabase = await createCustomerServerSupabaseClient();
   const exchangeClient = supabase as unknown as { rpc: UntypedRpc };
   const { data, error } = await exchangeClient.rpc("exchange_marketplace_feed", {
     p_category: input?.category && input.category !== "All" ? input.category : null,
@@ -166,7 +166,7 @@ export const loadCustomerExchangeFeed = cache(async (input?: { category?: string
 });
 
 export const loadCustomerExchangeSellableVehicles = cache(async (customerId: string): Promise<CustomerExchangeSellableVehicle[]> => {
-  const supabase = await createServerSupabaseClient();
+  const supabase = await createCustomerServerSupabaseClient();
   const exchangeClient = supabase as unknown as { rpc: UntypedRpc };
   const { data, error } = await exchangeClient.rpc("exchange_my_sellable_vehicles", { p_customer_id: customerId });
   if (error) throw new Error("Exchange selling workspace is temporarily unavailable.");
@@ -174,7 +174,7 @@ export const loadCustomerExchangeSellableVehicles = cache(async (customerId: str
 });
 
 export const loadCustomerExchangeActivity = cache(async (customerId: string): Promise<CustomerExchangeActivity> => {
-  const supabase = await createServerSupabaseClient();
+  const supabase = await createCustomerServerSupabaseClient();
   const exchangeClient = supabase as unknown as { rpc: UntypedRpc };
   const { data, error } = await exchangeClient.rpc("exchange_my_activity", { p_customer_id: customerId });
   if (error) throw new Error("Exchange activity is temporarily unavailable.");
@@ -193,7 +193,7 @@ export async function loadCustomerExchangeListing(listingId: string) {
   const listing = feed.find((item) => item.listing_id === listingId);
   if (!listing) notFound();
 
-  const supabase = await createServerSupabaseClient();
+  const supabase = await createCustomerServerSupabaseClient();
   const exchangeClient = supabase as unknown as { rpc: UntypedRpc };
   const { data, error } = await exchangeClient.rpc("exchange_listing_detail", { p_listing_id: listingId });
   const detail = error || !data || typeof data !== "object" ? null : data as CustomerExchangeListingDetail;
@@ -207,7 +207,7 @@ export async function loadCustomerExchangeListing(listingId: string) {
 }
 
 export const loadCustomerServiceActivity = cache(async (customerId: string): Promise<CustomerServiceActivity[]> => {
-  const supabase = await createServerSupabaseClient();
+  const supabase = await createCustomerServerSupabaseClient();
   const serviceEnquiries = (supabase.from as unknown as (table: string) => ServiceActivityTable)("service_enquiries");
   const { data, error } = await serviceEnquiries
     .select("id,enquiry_no,service_type,subject,description,status,vehicle_no,category,priority,claim_id,created_at,updated_at")
@@ -226,7 +226,7 @@ export async function loadCustomerServiceActivityDetail(customerId: string, enqu
 }
 
 export const loadCustomerSupportClaims = cache(async (customerId: string) => {
-  const supabase = await createServerSupabaseClient();
+  const supabase = await createCustomerServerSupabaseClient();
   const { data, error } = await supabase
     .from("claims")
     .select("id,claim_no,current_status")

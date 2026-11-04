@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { CalendarDays, CarFront, FileText, ShieldCheck, UploadCloud, Wallet } from "lucide-react";
-import { createServerSupabaseClient } from "@/lib/auth-server";
+import { createCustomerServerSupabaseClient } from "@/lib/auth-server";
 import { getCustomerWebSession } from "@/lib/customer-web";
 import { resolveCustomerWebScope, loadCustomerWebVehicles, loadCustomerWebPolicies } from "@/lib/customer-web-data";
 import { CustomerAccountTabs } from "@/components/customer-portal/customer-phase1";
@@ -14,7 +14,7 @@ export default async function AddCustomerPolicy({ searchParams }: { searchParams
   const q = searchParams ? await searchParams : {};
   const { account, accounts } = await resolveCustomerWebScope(q.account);
   const [vehicles, policies] = await Promise.all([loadCustomerWebVehicles(account.id), loadCustomerWebPolicies(account.id)]);
-  const supabase = await createServerSupabaseClient();
+  const supabase = await createCustomerServerSupabaseClient();
   const companies = await supabase.from("insurance_companies").select("id,name").order("name");
 
   async function save(_state: PolicySaveState, form: FormData): Promise<PolicySaveState> {
@@ -37,7 +37,7 @@ export default async function AddCustomerPolicy({ searchParams }: { searchParams
     if (!no || !insurerId || !kind) return { error: "Complete all mandatory policy fields.", policyCreated: false };
     const allowed = selectedVehicle.vehicle_type === "PCP" || selectedVehicle.vehicle_type === "TWP" ? ["Package","Third Party","SAOD","Bundled","Long Term Package","Long Term Third Party"] : ["Package","Third Party","SAOD"];
     if (!allowed.includes(kind)) return { error: "This policy product is not valid for this vehicle.", policyCreated: false };
-    const db = await createServerSupabaseClient();
+    const db = await createCustomerServerSupabaseClient();
     const insurerCheck = await db.from("insurance_companies").select("id").eq("id", insurerId).maybeSingle();
     if (!insurerCheck.data) return { error: "Select a valid insurance company.", policyCreated: false };
     const premium = String(form.get("premium") || "");

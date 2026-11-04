@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createServerSupabaseClient } from "@/lib/auth-server";
+import { createCustomerServerSupabaseClient } from "@/lib/auth-server";
 import { getCustomerWebSession } from "@/lib/customer-web";
 
 const PAN = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
@@ -43,7 +43,7 @@ export async function POST(request: Request) {
   if (!FLEET.has(fleetSizeBand)) return NextResponse.json({ error: "Select your fleet size." }, { status: 400 });
   if (isGstRegistered && (!legalTradeName || !GST.test(gstNumber))) return NextResponse.json({ error: "Enter valid GST registration details." }, { status: 400 });
 
-  const supabase = await createServerSupabaseClient();
+  const supabase = await createCustomerServerSupabaseClient();
   const application = await supabase
     .from("customer_onboarding_applications")
     .select("id,status,partner_type")
