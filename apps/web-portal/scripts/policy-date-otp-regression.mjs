@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import { policyDateDecision, needsPolicyDateApproval, POLICY_DATE_APPROVERS } from "../lib/policy-date-rule.ts";
+import { policyDateDecision, needsPolicyDateApproval, policyDateApprovalReason, POLICY_DATE_APPROVERS } from "../lib/policy-date-rule.ts";
 
 assert.equal(policyDateDecision("2026-11-01","2026-11-30"),"allowed");
 assert.equal(policyDateDecision("2026-10-31","2026-11-15"),"allowed");
@@ -13,6 +13,12 @@ assert.equal(policyDateDecision("2026-02-30","2026-03-15"),"invalid");
 assert.equal(needsPolicyDateApproval("2026-09-01","2026-09-01","2026-11-16"),false);
 assert.equal(needsPolicyDateApproval("2026-09-01","2026-10-01","2026-11-16"),true);
 assert.deepEqual(POLICY_DATE_APPROVERS.map(x=>x.key),["jatin","vishal","varun","gagan"]);
+assert.equal(policyDateApprovalReason("2026-10-01", "2026-11-16"), "Previous-month issuance after the 15th-day approval cutoff");
+assert.equal(policyDateApprovalReason("2026-09-30", "2026-11-04"), "Older-month policy issuance outside the permitted direct-submission window");
+assert.equal(policyDateApprovalReason("2026-10-01", "2026-11-15"), null);
+assert.equal(policyDateApprovalReason("2026-11-01", "2026-11-16"), null);
+assert.equal(policyDateApprovalReason("2025-12-20", "2026-01-16"), "Previous-month issuance after the 15th-day approval cutoff");
+
 
 const read = name=>fs.readFileSync(new URL(name,import.meta.url),"utf8");
 const motor = read("../app/policies/policy-onboarding-actions.ts");
@@ -50,4 +56,21 @@ assert.match(approvalDialog,/policyNumber=\{props\.policyNumber\}/,"OTP remains 
 assert.match(approvalDialog,/disabled=\{!props\.verifiedApprovalId \|\| props\.submitting\}/,"Saving requires verified approval");
 assert.match(unified,/motorSectionProgress\.findIndex/,"Motor policy completeness must be checked before approval");
 assert.match(nonmotorUi,/dateApprovalRequired\) \{ if \(!approvalConfirmed\)/,"Non Motor validates before opening approval");
+const widget = read("../components/policy-date-approval-widget.tsx");
+const contextMigration = read("../../../supabase/migrations/20261104113000_policy_date_approval_request_context.sql");
+assert.match(otp, /const requesterName = profile\.full_name\?\.trim\(\)/, "Requester name must be authenticated, not user-submitted");
+assert.match(otp, /policyDateApprovalReason\(input\.issuanceDate\)/, "Approval reason must be derived server-side");
+assert.match(otp, /justification\.length < 12 \|\| justification\.length > 500/, "Justification length must be validated on the server");
+assert.match(otp, /requester_name: requesterName, approval_reason: ruleReason, requester_justification: justification/, "Audit details must be stored with OTP approval");
+assert.match(otp, /\["Requested by", requesterName\]/, "Email must show real requester");
+assert.match(otp, /\["System approval reason", ruleReason\]/, "Email must state actual cutoff rule");
+assert.match(otp, /\["Employee justification", justification\]/, "Email must include employee explanation");
+assert.match(otp, /\["Previous issuance date", formatPolicyDate\(originalDate\)\]/, "Edit approval email must include existing date");
+assert.match(otp, /text: emailText, html: emailHtml/, "Email must provide both readable text and structured HTML");
+assert.match(otp, /escapeHtml\(value\)/, "User-supplied text must be HTML escaped");
+assert.match(widget, /Reason for backdated issuance/, "Approval popup must collect an explanation");
+assert.match(widget, /disabled=\{busy \|\| Boolean\(requestId\) \|\| Boolean\(props\.verifiedApprovalId\)\}/, "Explanation must freeze once OTP is issued");
+assert.match(widget, /requestPolicyDateApproval\(\{ \.\.\.input, approverKey: approver, justification \}\)/, "Justification must travel with OTP request");
+assert.match(contextMigration, /add column if not exists requester_justification text/, "Justification storage migration required");
+assert.doesNotMatch(contextMigration, /grant (?:select|insert|update|delete) .* authenticated/i, "No client data access to approval records");
 console.log("Policy issuance date OTP regression passed.");
