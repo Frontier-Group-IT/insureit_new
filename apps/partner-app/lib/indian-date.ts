@@ -32,3 +32,13 @@ export function formatAppDateTime(value?: string | Date | null, empty = '-'): st
   const suffix = date.getHours() >= 12 ? 'PM' : 'AM';
   return `${formattedDate}, ${pad(hours)}:${pad(date.getMinutes())} ${suffix}`;
 }
+
+/** Convert a manually entered DD/MM/YYYY value into the API's YYYY-MM-DD format. */
+export function parseAppDate(value: string): string | null {
+  const match = value.trim().match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (!match) return null;
+  const day = Number(match[1]), month = Number(match[2]), year = Number(match[3]);
+  const valid = new Date(Date.UTC(year, month - 1, day));
+  if (valid.getUTCDate() !== day || valid.getUTCMonth() !== month - 1 || valid.getUTCFullYear() !== year) return null;
+  return `${match[3]}-${match[2]}-${match[1]}`;
+}
