@@ -4,7 +4,7 @@ import { saveCustomerInternalSpotCorrection } from "@/app/customer/(protected)/c
 import { isExternalCustomerClaim } from "@/lib/customer-web-phase2-data";
 import { resolveCustomerWebScope } from "@/lib/customer-web-data";
 import { loadCustomerClaimDetail } from "@/lib/customer-web-phase2-data";
-import { createServerSupabaseClient } from "@/lib/auth-server";
+import { createCustomerServerSupabaseClient } from "@/lib/auth-server";
 import { CustomerClaimStageStrip } from "@/components/customer-portal/customer-claim-stage-strip";
 import { CustomerClaimEvidenceWorkspace } from "@/components/customer-portal/customer-claim-evidence-workspace";
 import { CustomerClaimVoiceRecorder } from "@/components/customer-portal/customer-claim-voice-recorder";
@@ -80,8 +80,8 @@ export default async function CustomerSpotIntimation({searchParams}:{searchParam
     const phone=String(form.get("phone")||"").trim();
     const location=String(form.get("location")||"").trim().slice(0,500);
     if(phone && !/^\+?[0-9 ]{10,15}$/.test(phone)) return {error:"Enter a valid driver phone number."};
-    let db: Awaited<ReturnType<typeof createServerSupabaseClient>>;
-    try { db=await createServerSupabaseClient(); }
+    let db: Awaited<ReturnType<typeof createCustomerServerSupabaseClient>>;
+    try { db=await createCustomerServerSupabaseClient(); }
     catch (error) { console.error("Customer Spot Intimation database connection failed",error); return {error:"Unable to connect to claim service. Please try again."}; }
     try {
     if(owned.external_policy_id) {
