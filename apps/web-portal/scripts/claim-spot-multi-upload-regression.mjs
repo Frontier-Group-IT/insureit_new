@@ -21,8 +21,8 @@ const sharedClaimJourney = await readFile(new URL("../../../packages/claim-journ
 for (const removed of ["Claim Status", "Spot Intimation Date & Time", "Insurer", "Make & Model"]) {
   assert.doesNotMatch(workspace, new RegExp('<Info label="' + removed + '"'), removed + " must not reappear in navy summary");
 }
-assert.match(workspace, /<Info label="Vehicle No\\." title=\\{vehicleNumber\\}/, "Vehicle number must have a separate field");
-assert.match(workspace, /<Info label="Model" title=\\{model\\} logo=\\{<ManufacturerLogo name=\\{make\\} \\/>\\}/, "Model must have its own field with manufacturer logo");
+assert.ok(workspace.includes('<Info label="Vehicle No." title={vehicleNumber}'), "Vehicle number must have a separate field");
+assert.ok(workspace.includes('<Info label="Model" title={model} logo={<ManufacturerLogo name={make} />} />'), "Model must have its own field with manufacturer logo");
 assert.match(workspace, /const vehicleNumberAndModel = \[vehicleNumber, model\]/, "Combined header field must include both values");
 assert.match(workspace, /lg:grid-cols-6/, "Display six remaining summary fields on one row at desktop width");
 assert.equal((workspace.match(/<Info label=/g) ?? []).length, 6, "Navy summary must render precisely six information fields");
