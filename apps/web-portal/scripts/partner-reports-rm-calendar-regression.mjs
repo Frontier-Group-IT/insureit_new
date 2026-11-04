@@ -19,6 +19,11 @@ assert.match(filters, /import \{ ReportDateRangePicker \} from "@\/components\/r
 assert.match(filters, /onRangeComplete=\{\(nextFrom, nextTo\) => \{/);
 assert.match(filters, /navigate\(\{ period: "custom", from: nextFrom, to: nextTo \}\)/);
 assert.match(filters, /onOpenChange=\{onCalendarOpenChange\}/);
+assert.match(filters, /rangeCommittedRef\.current = true/, "Completing the range must be distinguished from cancellation.");
+assert.match(filters, /if \(!rangeCommittedRef\.current\) setDraftPeriod\(period\)/, "Only incomplete selection may restore previous period.");
+assert.match(filters, /useEffect\(\(\) => \{ setDraftPeriod\(period\); \}, \[period, from, to\]\)/, "Applied period synchronization must not depend on closing the calendar.");
+assert.doesNotMatch(filters, /\[period, calendarOpen\]/, "Calendar visibility must not reset the selected Custom period.");
+assert.doesNotMatch(filters, /onRangeComplete=\{\(nextFrom, nextTo\) => \{\s*setCalendarOpen\(false\)/, "Let the shared RM picker close after range completion.");
 assert.match(filters, /onChange=\{\(event\) => changePeriod\(event.target.value\)\}/);
 assert.match(filters, /navigate\(\{ period: value, from: null, to: null \}\)/);
 assert.match(filters, /navigate\(\{ business: event.target.value \}\)/);
