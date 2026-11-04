@@ -18,7 +18,7 @@ type PartnerDatePickerProps = {
 export function PartnerDatePicker({ label, value, onChange, minimumDate, maximumDate, disabled = false }: PartnerDatePickerProps) {
   const [open, setOpen] = useState(false);
   const displayValue = useMemo(() => value
-    ? new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }).format(value)
+    ? `${String(value.getDate()).padStart(2, '0')}/${String(value.getMonth() + 1).padStart(2, '0')}/${value.getFullYear()}`
     : 'Select date', [value]);
 
   const openPicker = () => {
