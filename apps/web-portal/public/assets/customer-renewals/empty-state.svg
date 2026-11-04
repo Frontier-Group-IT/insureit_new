@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 340 245" role="img" aria-labelledby="title">
+<title id="title">Renewals complete — calendar, checked policy list and shield</title>
+<defs>
+  <linearGradient id="back" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#E6F5FF"/><stop offset="1" stop-color="#F3FCF9"/></linearGradient>
+  <linearGradient id="board" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#2F86EF"/><stop offset="1" stop-color="#1050B5"/></linearGradient>
+  <linearGradient id="shield" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#50DBAA"/><stop offset="1" stop-color="#0A996E"/></linearGradient>
+  <linearGradient id="paper" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#FFFFFF"/><stop offset="1" stop-color="#E5F2FF"/></linearGradient>
+  <filter id="shadow" x="-25%" y="-25%" width="150%" height="160%"><feDropShadow dx="0" dy="8" stdDeviation="9" flood-color="#1E569A" flood-opacity=".18"/></filter>
+</defs>
+<ellipse cx="170" cy="215" rx="120" ry="16" fill="#DCEAF7" opacity=".6"/>
+<path d="M59 90C58 42 110 18 167 40c43-41 121-3 119 51 33 40-1 105-51 105H97C44 196 25 135 59 90Z" fill="url(#back)"/>
+<g fill="#98D8C2" opacity=".75"><path d="M65 165C28 137 40 104 50 100c35 9 38 36 15 65Z"/><path d="M68 178c-27-1-43-25-43-44 31-3 51 22 43 44Z"/><path d="M275 165c32-29 30-58 18-67-35 15-43 47-18 67Z"/><path d="M268 187c25 0 48-22 51-46-37-5-53 22-51 46Z"/></g>
+<g filter="url(#shadow)">
+<rect x="99" y="33" width="151" height="181" rx="20" fill="url(#board)"/>
+<rect x="110" y="46" width="129" height="156" rx="12" fill="url(#paper)"/>
+<rect x="146" y="24" width="58" height="24" rx="9" fill="#85B0EB" stroke="#3C78D8" stroke-width="2"/>
+<circle cx="175" cy="29" r="4" fill="#D6E8FF"/>
+</g>
+<g fill="none" stroke="#2777D2" stroke-width="5" stroke-linecap="round"><path d="M164 73a18 18 0 0 1 27-1l5 5"/><path d="m196 66 0 12-12 0"/><path d="M189 92a18 18 0 0 1-27 1l-5-5"/><path d="m157 100 0-12 12 0"/></g>
+<g fill="#D4E5FB"><rect x="155" y="112" width="61" height="6" rx="3"/><rect x="155" y="140" width="61" height="6" rx="3"/><rect x="155" y="168" width="47" height="6" rx="3"/></g>
+<g fill="#F9FEFC" stroke="#C2E9D9" stroke-width="1.5"><rect x="126" y="104" width="21" height="20" rx="5"/><rect x="126" y="132" width="21" height="20" rx="5"/><rect x="126" y="160" width="21" height="20" rx="5"/></g>
+<g fill="none" stroke="#20B97E" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="m132 114 5 5 8-10"/><path d="m132 142 5 5 8-10"/><path d="m132 170 5 5 8-10"/></g>
+<g filter="url(#shadow)">
+<rect x="39" y="140" width="90" height="73" rx="13" fill="#F7FBFF" stroke="#83AEE8" stroke-width="3"/>
+<rect x="39" y="140" width="90" height="17" rx="9" fill="#3786EA"/>
+<path d="M61 135v13M105 135v13" stroke="#EAF5FF" stroke-width="6" stroke-linecap="round"/>
+<g fill="#BCD6F6"><rect x="54" y="166" width="14" height="10" rx="2"/><rect x="75" y="166" width="14" height="10" rx="2"/><rect x="96" y="166" width="14" height="10" rx="2"/><rect x="54" y="182" width="14" height="10" rx="2"/><rect x="75" y="182" width="14" height="10" rx="2"/><rect x="96" y="182" width="14" height="10" rx="2"/></g>
+<path d="M245 136c15 11 27 12 42 16v27c0 24-17 42-42 54-24-11-42-30-42-54v-27c15-4 27-5 42-16Z" fill="url(#shield)" stroke="#078A64" stroke-width="3"/>
+<path d="m226 181 13 13 27-29" fill="none" stroke="#FFF" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</svg>
