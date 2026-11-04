@@ -63,6 +63,11 @@ export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails, al
   const [verificationLoadError, setVerificationLoadError] = useState("");
   const dirtyDetailFieldsRef = useRef<Set<keyof ClaimIntimationDetails>>(new Set());
   const draftKey = `insureit:operations:final-documents:stage-details:${claimId}`;
+  const [autoSaveStatus, setAutoSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [autoSaveError, setAutoSaveError] = useState("");
+  const lastSavedSignatureRef = useRef("");
+  const latestDetailsRef = useRef<ClaimIntimationDetails | null>(null);
+  const autoSaveQueueRef = useRef<Promise<void>>(Promise.resolve());
   const [details, setDetails] = useState<ClaimIntimationDetails>({
     claim_intimation_date: "",
     dealership_name: dealershipDetails?.dealership_name ?? "",
@@ -148,9 +153,12 @@ export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails, al
   }, [successNotice]);
 
   function updateStageDetail<K extends keyof ClaimIntimationDetails>(key: K, value: ClaimIntimationDetails[K]) {
+    setAutoSaveStatus("idle");
+    setAutoSaveError("");
     dirtyDetailFieldsRef.current.add(key);
     setDetails((current) => {
       const next = { ...current, [key]: value };
+      latestDetailsRef.current = next;
       try { window.sessionStorage.setItem(draftKey, JSON.stringify({ at: Date.now(), fields: next })); } catch {}
       return next;
     });
@@ -162,13 +170,13 @@ export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails, al
     return formData;
   }
 
-  function stageDetailsForm() {
+  function stageDetailsForm(snapshot: ClaimIntimationDetails = details) {
     const formData = baseForm();
-    formData.set("claim_intimation_date", details.claim_intimation_date);
-    formData.set("dealership_name", details.dealership_name);
-    formData.set("dealership_location", details.dealership_location);
-    formData.set("gate_in_date", details.gate_in_date);
-    formData.set("estimate_amount", details.estimate_amount);
+    formData.set("claim_intimation_date", snapshot.claim_intimation_date);
+    formData.set("dealership_name", snapshot.dealership_name);
+    formData.set("dealership_location", snapshot.dealership_location);
+    formData.set("gate_in_date", snapshot.gate_in_date);
+    formData.set("estimate_amount", snapshot.estimate_amount);
     return formData;
   }
 
@@ -214,16 +222,43 @@ export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails, al
     });
   }
 
-  function saveStageDetails() {
-    run("stage-details", () => saveFinalDealershipDetails(stageDetailsForm()), () => {
-      try { window.sessionStorage.removeItem(draftKey); } catch {}
-      if (showClaimNumberPrompt) {
-        setClaimNumberError("");
-        setClaimNumberPromptOpen(true);
-      }
-    });
-  }
+  // Write complete Stage 3 details automatically; incomplete edits remain in the
+  // existing claim-specific session draft until they can pass server validation.
+  // Serialize writes so an older request cannot finish after a newer edit.
+  useEffect(() => {
+    if (!dirtyDetailFieldsRef.current.size) return;
+    const snapshot = { ...details };
+    latestDetailsRef.current = snapshot;
+    const complete = Object.values(snapshot).every((value) => value.trim().length > 0);
+    const validDates = /^\d{4}-\d{2}-\d{2}$/.test(snapshot.claim_intimation_date)
+      && /^\d{4}-\d{2}-\d{2}$/.test(snapshot.gate_in_date);
+    const amount = Number(snapshot.estimate_amount);
+    if (!complete || !validDates || !Number.isFinite(amount) || amount < 0) return;
+    const signature = JSON.stringify(snapshot);
+    if (signature === lastSavedSignatureRef.current) return;
 
+    const timer = window.setTimeout(() => {
+      autoSaveQueueRef.current = autoSaveQueueRef.current.then(async () => {
+        if (signature === lastSavedSignatureRef.current) return;
+        setAutoSaveStatus("saving");
+        try {
+          const response = await saveFinalDealershipDetails(stageDetailsForm(snapshot));
+          if (!response.ok) throw new Error(response.message || "Unable to save stage details.");
+          lastSavedSignatureRef.current = signature;
+          // Only clear the draft that actually reached the server.
+          if (JSON.stringify(latestDetailsRef.current) === signature) {
+            try { window.sessionStorage.removeItem(draftKey); } catch {}
+            setAutoSaveStatus("saved");
+            setAutoSaveError("");
+          }
+        } catch (error) {
+          setAutoSaveStatus("error");
+          setAutoSaveError(error instanceof Error ? error.message : "Automatic save failed. Your draft is kept in this browser tab.");
+        }
+      });
+    }, 650);
+    return () => window.clearTimeout(timer);
+  }, [claimId, details, draftKey]);
 
   function closeClaimNumberPrompt() {
     setClaimNumberPromptOpen(false);
@@ -346,8 +381,9 @@ export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails, al
             <h2 className="text-[15px] font-semibold text-[#071D49]">Stage Details</h2>
             <p className="mt-1 text-[12px] text-[#68758A]">Record claim intimation, workshop and estimate details.</p>
           </div>
-          <button type="button" disabled={isPending && pendingAction === "stage-details"} onClick={saveStageDetails} className="rounded-lg border border-[#BFD3F7] bg-[#F7FAFF] px-4 py-2 text-[12px] font-semibold text-[#174EA6] disabled:opacity-60">{isPending && pendingAction === "stage-details" ? "Saving..." : "Save Details"}</button>
+          <span role="status" aria-live="polite" className="text-[11px] font-medium text-[#60758F]">{autoSaveStatus === "saving" ? "Saving automatically…" : autoSaveStatus === "saved" ? "Saved" : autoSaveStatus === "error" ? "Save failed — draft retained" : "Changes save automatically"}</span>
         </div>
+        {autoSaveStatus === "error" ? <p role="alert" className="mt-2 text-[11px] text-red-700">{autoSaveError}</p> : null}
         <div className="mt-3 grid gap-3 md:grid-cols-5">
           <DateField label="Claim Intimation Date" value={details.claim_intimation_date} onChange={(value) => updateStageDetail("claim_intimation_date", value)} />
           <Field label="Dealership Name" value={details.dealership_name} onChange={(value) => updateStageDetail("dealership_name", value)} />
