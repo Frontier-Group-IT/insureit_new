@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { ArrowRight, Info, AlertCircle, Clock3, Download } from "lucide-react";
+import { ArrowRight, Info, AlertCircle, Clock3 } from "lucide-react";
 import { BusinessTrendCard } from "@/components/reports/business-trend-card";
 import { PartnerReportsShell } from "@/components/partner-portal/partner-reports-shell";
+import { PartnerReportsFilters } from "@/components/partner-portal/partner-reports-filters";
 import { requirePartnerReportScope } from "@/lib/reports/partner-report-scope";
 import { getPartnerWebBusinessPerformance, getPartnerWebPolicySummary, getPartnerWebClaimSummary, getPartnerWebRenewalSummary, listPartnerWebPolicies, type PartnerPolicyRow } from "@/lib/partner-web";
 import { getInsurerLogo } from "@/lib/insurer-logo";
@@ -71,15 +72,10 @@ export default async function PartnerReportsPage({searchParams}:{searchParams:Pr
  const maxMix=Math.max(1,...mixRows.map(row=>row.premium));
  const filterQuery=new URLSearchParams({period,business,...(period==="custom"?{from:bounds.from,to:bounds.to}:{})});
  return <PartnerReportsShell active="Overview" scope={reportScope} toolbar={
-   <form method="get" className="flex flex-wrap items-center justify-end gap-1.5" aria-label="Overview filters">
-     <label className="flex items-center text-[0px]">Period<select name="period" defaultValue={period} className="block h-9 min-w-[125px] rounded-lg border border-[#dae2ec] bg-white px-2 text-[11px]"><option value="mtd">MTD</option><option value="last-month">Last Month</option><option value="last-6-months">Last 6 Months</option><option value="custom">Custom</option></select></label>
-     <label className="flex items-center text-[0px]">Business<select name="business" defaultValue={business} className="block h-9 min-w-[145px] rounded-lg border border-[#dae2ec] bg-white px-2 text-[11px]"><option value="all">All Business</option><option value="motor">Motor</option><option value="non motor">Non Motor</option><option value="life">Life</option><option value="health">Health</option></select></label>
-     <label className="flex items-center text-[0px]">From<input type="date" name="from" defaultValue={bounds.from} className="block h-9 w-[130px] rounded-lg border border-[#dae2ec] px-1 text-[11px]"/></label>
-     <label className="flex items-center text-[0px]">To<input type="date" name="to" defaultValue={bounds.to} className="block h-9 w-[130px] rounded-lg border border-[#dae2ec] px-1 text-[11px]"/></label>
-     <button type="submit" className="h-9 rounded-lg bg-[#205a97] px-4 text-[11px] font-bold text-white">Apply</button>
-     <Link href="/partner/reports" className="flex h-9 items-center rounded-lg border border-[#dae2ec] px-3 text-[11px] font-semibold text-[#305070]">Reset</Link>
-     <Link href={`/partner/business/export?${filterQuery.toString()}`} className="flex h-9 items-center gap-1 rounded-lg border border-[#205a97] px-3 text-[11px] font-semibold text-[#205a97]"><Download className="h-3.5 w-3.5"/>Export</Link>
-   </form>
+   <PartnerReportsFilters
+     period={period} business={business} from={bounds.from} to={bounds.to}
+     exportHref={`/partner/business/export?${filterQuery.toString()}`}
+   />
  }>
   <div className="reports-v2-page reports-overview-reference">
 
