@@ -9,12 +9,12 @@ const customerSpot=source("../app/customer/(protected)/spot-intimation/page.tsx"
 const customerControl=source("../components/customer-portal/customer-date-input.tsx");
 const report=source("../components/reports/report-date-range-picker.tsx");
 const webDate=source("../lib/indian-date.ts");
-const mobile=source("../../../mobile-app/lib/indian-date.ts");
-const partner=source("../../../partner-app/lib/indian-date.ts");
-const partnerPicker=source("../../../partner-app/components/ui/partner-date-picker.tsx");
-const customerClaims=source("../../../mobile-app/app/customer/claims.tsx");
-const customerRenewals=source("../../../mobile-app/app/customer/renewals.tsx");
-const partnerPolicies=source("../../../partner-app/app/(tabs)/policies.tsx");
+const mobile=source("../../mobile-app/lib/indian-date.ts");
+const partner=source("../../partner-app/lib/indian-date.ts");
+const partnerPicker=source("../../partner-app/components/ui/partner-date-picker.tsx");
+const customerClaims=source("../../mobile-app/app/customer/claims.tsx");
+const customerRenewals=source("../../mobile-app/app/customer/renewals.tsx");
+const partnerPolicies=source("../../partner-app/app/(tabs)/policies.tsx");
 
 assert.match(ops,/const useAppDatePicker = field\.type === "date"/,"All nine Operations stage form dates must use consistent picker");
 assert.match(ops,/\$\{match\[3\]\}\/\$\{match\[2\]\}\/\$\{match\[1\]\}/,"Operations picker must show DD/MM/YYYY");
