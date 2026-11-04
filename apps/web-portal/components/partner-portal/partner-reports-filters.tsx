@@ -48,10 +48,15 @@ export function PartnerReportsFilters({
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const advancedRef = useRef<HTMLDivElement>(null);
+  // The RM picker reports range completion before its close callback. Do not treat
+  // that close as cancellation while the report URL is still updating.
+  const rangeCommittedRef = useRef(false);
   const queryString = searchParams.toString();
   const existingParams = useMemo(() => new URLSearchParams(queryString), [queryString]);
 
-  useEffect(() => { if (!calendarOpen) setDraftPeriod(period); }, [period, calendarOpen]);
+  // Synchronize from the applied server range, not from calendar visibility:
+  // closing a picker must never overwrite a just-completed Custom selection.
+  useEffect(() => { setDraftPeriod(period); }, [period, from, to]);
 
   useEffect(() => {
     if (!filtersOpen) return;
@@ -81,6 +86,7 @@ export function PartnerReportsFilters({
 
   function changePeriod(value: string) {
     if (value === "custom") {
+      rangeCommittedRef.current = false;
       setDraftPeriod("custom");
       setCalendarOpen(true);
       setFiltersOpen(false);
@@ -93,7 +99,12 @@ export function PartnerReportsFilters({
 
   function onCalendarOpenChange(open: boolean) {
     setCalendarOpen(open);
-    if (!open) setDraftPeriod(period);
+    if (!open) {
+      // Outside click / Escape cancels an unfinished selection; the picker also
+      // closes after onRangeComplete, which must keep Custom selected.
+      if (!rangeCommittedRef.current) setDraftPeriod(period);
+      rangeCommittedRef.current = false;
+    }
   }
 
   function changeAdvanced(field: "insurer" | "rm" | "intermediary", value: string) {
@@ -124,9 +135,10 @@ export function PartnerReportsFilters({
             from={from} to={to} hideTrigger align="left"
             open={calendarOpen} onOpenChange={onCalendarOpenChange}
             onRangeComplete={(nextFrom, nextTo) => {
-              setCalendarOpen(false);
+              rangeCommittedRef.current = true;
               setDraftPeriod("custom");
               navigate({ period: "custom", from: nextFrom, to: nextTo });
+              // ReportDateRangePicker closes itself after invoking this callback.
             }}
           />
         ) : null}
@@ -140,7 +152,7 @@ export function PartnerReportsFilters({
       {showAdvanced ? (
         <div className="relative shrink-0" ref={advancedRef}>
           <button type="button" aria-expanded={filtersOpen} aria-controls="partner-reports-advanced-filters"
-            onClick={() => { setFiltersOpen((open) => !open); setCalendarOpen(false); }}
+            onClick={() => { setFiltersOpen((open) => !open); if (calendarOpen) onCalendarOpenChange(false); }}
             className={controlClass + " inline-flex items-center gap-2"}>
             <SlidersHorizontal size={14} /> Filters
           </button>
