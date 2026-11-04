@@ -222,7 +222,7 @@ export default async function IntermediaryAccountReviewPage({ params, searchPara
         {query.error ? <Notice tone="error" text={reviewErrorMessage(query.error)} /> : null}
         {query.success && !modalSuccessEvents.has(query.success) ? <WorkflowSuccessToast message={successMessage(query.success)} durationMs={4000} /> : null}
 
-        <section className="overflow-hidden rounded-2xl border border-[#173E7B] bg-gradient-to-br from-[#071D49] via-[#0A2B65] to-[#0C4A9A] text-white shadow-[0_18px_45px_rgba(7,29,73,.18)]">
+        <section className={`overflow-hidden border border-[#173E7B] bg-gradient-to-br from-[#071D49] via-[#0A2B65] to-[#0C4A9A] text-white shadow-[0_18px_45px_rgba(7,29,73,.18)] ${isPartner ? "rounded-t-2xl rounded-b-none" : "rounded-2xl"}`}>
           <div className="flex flex-col gap-5 px-5 py-5 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex min-w-0 items-center gap-3">
               <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-white text-[#315FEA] shadow-md"><Icon name="user" className="h-6 w-6" /></span>
@@ -257,9 +257,9 @@ export default async function IntermediaryAccountReviewPage({ params, searchPara
           <div className="grid border-t border-white/15 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">{stats.map((stat) => <HeaderStat key={stat.label} {...stat} />)}</div>
         </section>
 
-        {isPartner ? <nav aria-label="Partner review sections" className="flex items-center gap-1 rounded-xl border border-[#dce5f1] bg-white p-1.5 shadow-sm">
-          <Link href={returnPath} aria-current={query.tab !== "business" ? "page" : undefined} className={`rounded-lg px-4 py-2 text-[12px] font-bold transition ${query.tab !== "business" ? "bg-[#0c2b63] text-white" : "text-[#52647b] hover:bg-slate-100"}`}>Profile</Link>
-          <Link href={`${returnPath}?tab=business`} aria-current={query.tab === "business" ? "page" : undefined} className={`rounded-lg px-4 py-2 text-[12px] font-bold transition ${query.tab === "business" ? "bg-[#0c2b63] text-white" : "text-[#52647b] hover:bg-slate-100"}`}>Business Report</Link>
+        {isPartner ? <nav aria-label="Partner review sections" className="-mt-4 grid grid-cols-2 overflow-hidden rounded-b-2xl border border-t-0 border-[#dce5f1] bg-white p-1.5 shadow-sm">
+          <Link href={returnPath} aria-current={query.tab !== "business" ? "page" : undefined} className={`flex min-h-10 w-full items-center justify-center rounded-lg px-3 py-2 text-center text-[12px] font-bold transition-[background-color,color,box-shadow,transform] duration-200 ease-out focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#3978DB] ${query.tab !== "business" ? "bg-[#0c2b63] text-white shadow-sm" : "text-[#52647b] hover:bg-[#eef4ff] hover:text-[#0c2b63] active:scale-[0.99]"}`}>Profile</Link>
+          <Link href={`${returnPath}?tab=business`} aria-current={query.tab === "business" ? "page" : undefined} className={`flex min-h-10 w-full items-center justify-center rounded-lg px-3 py-2 text-center text-[12px] font-bold transition-[background-color,color,box-shadow,transform] duration-200 ease-out focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#3978DB] ${query.tab === "business" ? "bg-[#0c2b63] text-white shadow-sm" : "text-[#52647b] hover:bg-[#eef4ff] hover:text-[#0c2b63] active:scale-[0.99]"}`}>Business Report</Link>
         </nav> : null}
         {isPartner && query.tab === "business" ? (
           <PartnerBusinessReport applicationId={id} intermediaryCode={partnerId ?? ""} viewer={{ id: reviewer.id, role: reviewer.role }} query={{ period: query.period, from: query.from, to: query.to, mix: query.mix }} />
