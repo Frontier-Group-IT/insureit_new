@@ -76,3 +76,15 @@ assert.match(workspace, /window\.sessionStorage\.getItem\(POLICY_REGISTER_PERIOD
 assert.match(workspace, /setFromDate\(" *"\)/, "Changing period must clear incompatible custom date filters");
 assert.match(workspace, /setView\("all"\)/, "Changing period must reset the active status tab");
 assert.match(workspace, /setPage\(1\)/, "Changing period must reset pagination");
+
+
+const periodComponent = workspace.slice(workspace.indexOf("function PolicyPeriodFilter("), workspace.indexOf("export function PolicyWorkspace("));
+assert.ok(periodComponent, "Policy period selector must exist");
+assert.match(periodComponent, /role="group" aria-label="Policy period"/, "MTD and All must be directly accessible");
+assert.match(periodComponent, /aria-pressed=\{value === option\.value\}/, "Each period must expose its selection state");
+assert.match(periodComponent, /onClick=\{\(\) => onChange\(option\.value\)\}/, "Clicking MTD or All must update period directly");
+assert.match(periodComponent, /\{ value: "mtd", label: "MTD", count: mtdCount \}/, "MTD must display current month count");
+assert.match(periodComponent, /\{ value: "all", label: "All", count: allCount \}/, "All must display authorized total");
+assert.doesNotMatch(periodComponent, /createPortal|onPointerDown|onScroll|setMenuPosition|openMenu|addEventListener/, "Period selection must not rely on popup or scroll dismissal");
+assert.match(workspace, /setTimeScope\(next\)/, "Period switching must update the table scope state");
+assert.match(workspace, /setFromDate\(""\)/, "Selecting a period must clear conflicting custom date filters");
