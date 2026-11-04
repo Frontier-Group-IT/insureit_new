@@ -43,6 +43,8 @@ jobs:
         run: node scripts/operations-claim-stage-one-media-parity-regression.mjs
       - name: Customer document re-upload dialog layering regression
         run: node scripts/customer-document-reupload-dialog-regression.mjs
+      - name: Claim document re-upload Stage 1/3 Internal External parity regression
+        run: node scripts/claim-document-reupload-all-stages-regression.mjs
       - name: External self-managed Claim Journey layout and read-only regression
         run: node scripts/external-self-managed-claim-layout-parity-regression.mjs
       - name: Operations claim Customer motion parity regression
