@@ -18,6 +18,10 @@ export async function createServerSupabaseClient() {
   return createSupabaseWithAccessToken(await getServerAccessToken());
 }
 
+export async function createCustomerServerSupabaseClient() {
+  return createSupabaseWithAccessToken(await getCustomerServerAccessToken());
+}
+
 export const getAuthenticatedProfile = cache(async (accessToken?: string) => {
   const result = await getAuthenticatedProfileUncached(accessToken);
   if (result.user && result.profile) return result;
