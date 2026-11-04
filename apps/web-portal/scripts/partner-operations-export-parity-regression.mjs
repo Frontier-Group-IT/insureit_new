@@ -33,7 +33,7 @@ assert.match(parityMigration,/scoped_policy\.rm_employee_id=any\(v_employee_ids\
 assert.match(parityMigration,/scoped_policy\.intermediary_group_id=any\(v_group_ids\)/,"Group policy authorization must be preserved");
 assert.match(parityMigration,/when v_scope_mode='none' then false/,"Unknown scope must fail closed");
 assert.match(parityMigration,/cardinality\(p_policy_ids\) > 100/,"Maximum batch size must remain 100");
-assert.match(parityMigration,/where scoped_policy\.id is null or not/,"Missing or unauthorized policy IDs must fail closed");
+assert.match(parityMigration,/where scoped_policy\.id is null or not coalesce\(\(/,"Missing or nullable scope decisions must fail closed");
 assert.match(parityMigration,/grant execute on function public\.partner_app_export_policy_details\(uuid\[\]\) to authenticated/,"Only authenticated users may invoke export");
 assert.doesNotMatch(parityMigration,/policy_payin_details|policy_intermediary_payouts|insurer_scheme_amount|retention_amount|tds_amount/,"Commercial columns must never enter partner export");
 assert.match(partner,/console\.error\("Partner Business MIS scoped enrichment failed"/,"RPC error diagnostics must remain server-side");
