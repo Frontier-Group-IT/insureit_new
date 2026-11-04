@@ -17,15 +17,15 @@ const claimWorkflow = await readFile(new URL("../lib/claim-workflow.ts", import.
 const customerClaimDetail = await readFile(new URL("../../mobile-app/app/customer/claim-detail.tsx", import.meta.url), "utf8");
 const sharedClaimJourney = await readFile(new URL("../../../packages/claim-journey/src/index.ts", import.meta.url), "utf8");
 
-// Header display has six fields in a single desktop row. Removed data still belongs to the claim record.
+// Header displays seven separate fields in a single desktop row. Removed data still belongs to the claim record.
 for (const removed of ["Claim Status", "Spot Intimation Date & Time", "Insurer", "Make & Model"]) {
   assert.doesNotMatch(workspace, new RegExp('<Info label="' + removed + '"'), removed + " must not reappear in navy summary");
 }
 assert.ok(workspace.includes('<Info label="Vehicle No." title={vehicleNumber}'), "Vehicle number must have a separate field");
 assert.ok(workspace.includes('<Info label="Model" title={model} logo={<ManufacturerLogo name={make} />} />'), "Model must have its own field with manufacturer logo");
-assert.match(workspace, /const vehicleNumberAndModel = \[vehicleNumber, model\]/, "Combined header field must include both values");
-assert.match(workspace, /lg:grid-cols-6/, "Display six remaining summary fields on one row at desktop width");
-assert.equal((workspace.match(/<Info label=/g) ?? []).length, 6, "Navy summary must render precisely six information fields");
+assert.doesNotMatch(workspace, /vehicleNumberAndModel/, "Combined vehicle number/model display must be removed");
+assert.match(workspace, /lg:grid-cols-7/, "Display seven separate summary fields on one row at desktop width");
+assert.equal((workspace.match(/<Info label=/g) ?? []).length, 7, "Navy summary must render precisely seven information fields");
 assert.match(workspace, /BulkDocumentVerificationGroup/, "Spot document categories must render through grouped verification.");
 assert.match(workspace, /item\.documents\.length > 0 && item\.documents\.every/, "A category is verified only when every current file is verified.");
 assert.doesNotMatch(bulkVerificationGroup, /type="checkbox"/, "Stage 1 pending files must use the document icon rather than checkbox selection.");
