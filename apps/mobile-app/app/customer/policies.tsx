@@ -1,3 +1,4 @@
+import { formatAppDate } from '@/lib/indian-date';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
@@ -624,7 +625,7 @@ function countForFilter(filter: PolicyFilter, policies: PolicyRow[]) {
 
 function formatDate(value?: string | null) {
   if (!value) return '-';
-  return new Date(value).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  return formatAppDate(value);
 }
 
 function daysUntil(value: string) {
