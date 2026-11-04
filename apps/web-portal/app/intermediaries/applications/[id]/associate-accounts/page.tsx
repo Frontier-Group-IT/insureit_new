@@ -221,7 +221,7 @@ export default async function PartnerAssociateAccountsPage({
             <h2 className="text-[13px] font-semibold text-[#17203A]">Associate Accounts Register</h2>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[1390px] text-left text-[10.5px]">
+            <table className="w-full min-w-[1390px] text-center text-[10.5px]">
               <thead className="border-b border-[#E7ECF3] bg-[#F8FAFC] text-[8.5px] font-bold uppercase tracking-[.06em] text-[#64748B]">
                 <tr>
                   <th className="px-5 py-3">Name</th>
@@ -230,8 +230,8 @@ export default async function PartnerAssociateAccountsPage({
                   <th className="px-3 py-3">Designation</th>
                   <th className="px-3 py-3">Address</th>
                   <th className="px-3 py-3">Role</th>
-                  <th className="px-3 py-3 text-right">Customer Count</th>
-                  <th className="px-3 py-3 text-right">Net Premium</th>
+                  <th className="px-3 py-3 text-center">Customer Count</th>
+                  <th className="px-3 py-3 text-center">Net Premium</th>
                   <th className="px-3 py-3">Status</th>
                   <th className="px-3 py-3 text-center">Action</th>
                 </tr>
@@ -245,8 +245,8 @@ export default async function PartnerAssociateAccountsPage({
                     <td className="px-3 py-3 text-[#475569]">{associate.designation}</td>
                     <td className="max-w-[260px] px-3 py-3 text-[#475569]">{associateAddress(associate)}</td>
                     <td className="px-3 py-3"><RolePill value={associate.role} /></td>
-                    <td className="px-3 py-3 text-right font-semibold tabular-nums">{associateMetrics.get(associate.id)?.customerCount == null ? "—" : associateMetrics.get(associate.id)!.customerCount!.toLocaleString("en-IN")}</td>
-                    <td className="px-3 py-3 text-right font-semibold tabular-nums">{associateMetrics.get(associate.id)?.netPremium == null ? "—" : associateMetrics.get(associate.id)!.netPremium!.toLocaleString("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 })}</td>
+                    <td className="px-3 py-3 text-center font-semibold tabular-nums">{associateMetrics.get(associate.id)?.customerCount == null ? "—" : associateMetrics.get(associate.id)!.customerCount!.toLocaleString("en-IN")}</td>
+                    <td className="px-3 py-3 text-center font-semibold tabular-nums">{associateMetrics.get(associate.id)?.netPremium == null ? "—" : associateMetrics.get(associate.id)!.netPremium!.toLocaleString("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 })}</td>
                     <td className="px-3 py-3"><StatusPill value={associate.status} /></td>
                     <td className="px-3 py-3 text-center">
                       {canManageAssociates ? (
