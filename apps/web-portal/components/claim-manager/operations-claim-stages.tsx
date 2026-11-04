@@ -311,14 +311,14 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
                 className={`operations-claim-motion-step-button flex min-h-[42px] w-full min-w-0 items-center justify-center rounded-md border-b px-1 py-1 text-center transition focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#174EA6] ${showSelectedMarker ? "border-b-[#071D49]" : "border-b-transparent"} ${isCurrent ? "bg-[#F7FAFF]" : available ? "bg-white hover:bg-[#FAFCFF]" : "cursor-not-allowed bg-white"}`}
               >
                 <span className="flex min-w-0 items-center justify-center gap-1">
-                  <span className={`operations-claim-motion-indicator grid h-5 w-5 shrink-0 place-items-center rounded-full ${isCompleted ? "bg-[#E8F8F0] text-[#0A9B72]" : isCurrent ? "bg-[#155EEF] text-white shadow-[0_2px_6px_rgba(21,94,239,0.18)]" : "bg-[#EEF2F7] text-[#58708F]"}`}>
+                  <span className={`operations-claim-motion-indicator grid h-5 w-5 shrink-0 place-items-center rounded-full ${isCompleted ? "bg-[#16A34A] text-white shadow-[0_2px_5px_rgba(22,163,74,0.22)]" : isCurrent ? "bg-[#155EEF] text-white shadow-[0_2px_6px_rgba(21,94,239,0.18)]" : "bg-[#EEF2F7] text-[#58708F]"}`}>
                     {isCompleted ? (
                       <svg viewBox="0 0 24 24" aria-hidden="true" className="operations-claim-motion-check h-3.5 w-3.5 fill-none stroke-current stroke-[2.4]"><path d="m6 12 4 4 8-9" /></svg>
                     ) : isCurrent || unrestrictedStageEditing ? <span className="text-[9px] font-semibold">{index + 1}</span> : (
                       <svg viewBox="0 0 24 24" aria-hidden="true" className="h-3 w-3 fill-none stroke-current stroke-[2]"><rect x="6.5" y="10.5" width="11" height="8" rx="1.5" /><path d="M9 10.5V8a3 3 0 0 1 6 0v2.5" /></svg>
                     )}
                   </span>
-                  <span className={`block whitespace-nowrap text-[clamp(7px,0.62vw,10px)] font-bold leading-none ${isCurrent ? "text-[#155EEF]" : isCompleted ? "text-[#3E536F]" : "text-[#667A96]"}`}>{stage.label}</span>
+                  <span className={`block whitespace-nowrap text-[clamp(7px,0.62vw,10px)] font-bold leading-none ${isCurrent ? "text-[#155EEF]" : isCompleted ? "text-[#166534]" : "text-[#667A96]"}`}>{stage.label}</span>
                 </span>
               </button>
             </li>
