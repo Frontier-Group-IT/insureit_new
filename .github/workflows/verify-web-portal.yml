@@ -115,6 +115,8 @@ jobs:
         run: node --experimental-strip-types scripts/policy-date-otp-regression.mjs
       - name: Policy intake workflow regression
         run: npm run policy-intake:workflow-regression
+      - name: Life Health issued edit parity regression
+        run: node scripts/life-health-issued-edit-parity-regression.mjs
       - name: Life Health payment mode validation regression
         run: node scripts/life-health-payment-mode-validation-regression.mjs
       - name: Life Health native onboarding architecture regression
