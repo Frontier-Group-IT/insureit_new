@@ -8,6 +8,7 @@ import { useEffect, useMemo, useState, type MouseEvent } from "react";
 import { ClaimDocumentCollapsedStatus } from "@/components/claim-manager/claim-document-collapsed-status";
 import { DocumentVerificationDetailsButton } from "@/components/spot-survey/document-verification-details-button";
 import { ReplaceDocumentButton } from "@/components/spot-survey/replace-document-button";
+import { RequestCustomerDocumentReuploadButton } from "@/components/spot-survey/request-customer-document-reupload-button";
 import { deleteVerifiedSpotSurveyDocument } from "@/app/claims/[id]/spot-survey-actions";
 import { useRouter } from "next/navigation";
 import { VerificationActionButton } from "@/components/spot-survey/verification-action-button";
@@ -194,7 +195,8 @@ function DocumentFileRow({ item, claim, document, verification, verified, reject
           <button type="button" disabled={deletePending} aria-label="Delete document" title="Delete document" className="grid h-8 w-8 shrink-0 place-items-center rounded-md text-red-600 transition hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/30 disabled:opacity-50" onClick={() => setDeleteOpen(true)}>
             <Trash2 aria-hidden="true" size={16} strokeWidth={2} />
           </button>
-          <VerificationActionButton claimId={claim.id} documentId={document.id} itemKey={item.verificationKey} incidentDate={claim.accident_at} policyStartDate={claim.policies?.start_date} policyEndDate={claim.policies?.end_date} prefillDetails={verification?.details ?? null} variant="icon" />
+          <RequestCustomerDocumentReuploadButton claimId={claim.id} documentId={document.id} fileName={document.file_name} />
+          {!rejected ? <VerificationActionButton claimId={claim.id} documentId={document.id} itemKey={item.verificationKey} incidentDate={claim.accident_at} policyStartDate={claim.policies?.start_date} policyEndDate={claim.policies?.end_date} prefillDetails={verification?.details ?? null} variant="icon" /> : null}
           <ReplaceDocumentButton claimId={claim.id} customerId={claim.customer_id} documentId={document.id} documentType={item.documentType} label={item.title} actionLabel="Replace" iconOnly />
           {verified && showVerifiedDetails ? <DocumentVerificationDetailsButton document={document} verification={verification ?? fallbackVerification(claim, item, document)} title={item.title} triggerVariant="verified" /> : null}
         </div>
@@ -252,7 +254,7 @@ function latestVerificationForDocument(document: FinalVerificationDocument, veri
 
 function isDocumentVerified(document: FinalVerificationDocument, verifications: FinalVerificationRow[]) {
   const verification = latestVerificationForDocument(document, verifications);
-  return document.verification_status === "verified" || Boolean(verification?.is_valid);
+  return document.verification_status !== "rejected" && (document.verification_status === "verified" || Boolean(verification?.is_valid));
 }
 
 function fallbackVerification(claim: ClaimContext, item: Stage3DocumentVerificationItem, document: FinalVerificationDocument): FinalVerificationRow {
