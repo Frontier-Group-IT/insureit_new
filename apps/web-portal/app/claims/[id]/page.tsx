@@ -339,7 +339,7 @@ function mergeCustomerSpotDraft(
   const timestamp = (dateKey: string, timeKey: string) => {
     const date = get(dateKey);
     const time = get(timeKey);
-    if (!date || !time || !/^\\d{4}-\\d{2}-\\d{2}$/.test(date) || !/^\\d{2}:\\d{2}$/.test(time)) return null;
+    if (!date || !time || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{2}:\d{2}$/.test(time)) return null;
     const parsed = new Date(`${date}T${time}:00+05:30`);
     return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
   };
