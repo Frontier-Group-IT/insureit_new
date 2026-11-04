@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { matchesClaimIntimationDocument } from "@insureit/claim-journey";
 import { completeClaimJourneyStage } from "@/app/claims/stage-actions";
 import { ClaimStageSuccessPopup } from "@/components/claim-manager/claim-stage-success-popup";
+import { ClaimStageErrorDialog } from "@/components/claim-manager/claim-stage-error-dialog";
 import { finalDocumentDefinitions, finalDocumentTabs } from "./final-document-groups";
 import { loadFinalClaimIntimationDetails, saveFinalDealershipDetails, saveOperationsInsurerClaimNumber, submitFinalDocumentsDraft } from "./final-documents-actions";
 import { loadFinalDocumentVerificationData, type FinalVerificationData, type FinalVerificationDocument } from "./final-document-verification-data-actions";
@@ -286,7 +287,7 @@ export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails, al
             <label className="block text-[11px] font-semibold text-[#174EA6]">Insurance Claim Number
               <input autoFocus type="text" value={claimNumberInput} maxLength={120} onChange={(event) => { setClaimNumberInput(event.target.value); setClaimNumberError(""); }} placeholder="Enter claim number" className="mt-1.5 h-10 w-full rounded-lg border border-[#D9E3F0] bg-white px-3 text-[12px] font-medium text-[#071D49] outline-none focus:border-[#174EA6]" />
             </label>
-            {claimNumberError ? <p role="alert" className="mt-2 text-[11px] font-medium text-red-700">{claimNumberError}</p> : null}
+            
             <div className="mt-5 grid grid-cols-2 gap-3">
               <button type="button" disabled={isPending} onClick={closeClaimNumberPrompt} className="h-10 rounded-lg border border-[#CFD9E8] bg-white text-[12px] font-semibold text-[#071D49] disabled:opacity-50">Not Now</button>
               <button type="button" disabled={isPending} onClick={addClaimNumber} className="h-10 rounded-lg bg-[#071D49] text-[12px] font-semibold text-white disabled:opacity-50">{pendingAction === "claim-number" ? "Saving..." : "Add"}</button>
@@ -363,12 +364,20 @@ export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails, al
             })}
           </div>
         ) : (
-          <div className="mt-3 rounded-xl border border-[#E2EAF4] bg-[#FBFCFE] px-4 py-5 text-center text-[11px] font-semibold text-[#68758A]">{verificationLoadError || "Loading documents..."}</div>
+          <div className="mt-3 rounded-xl border border-[#E2EAF4] bg-[#FBFCFE] px-4 py-5 text-center text-[11px] font-semibold text-[#68758A]">{verificationLoadError ? "Unable to load documents. Please retry or refresh the claim." : "Loading documents..."}</div>
         )}
-        {result && !result.ok ? <p role="alert" className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[12px] font-semibold text-red-700">{result.message}</p> : null}
+        
         <div className="mt-4 flex justify-end"><div className="flex items-center gap-3"><button type="button" disabled={isPending} onClick={() => run("draft", () => submitFinalDocumentsDraft(baseForm()))} className="rounded-lg border border-[#D9E3F0] bg-white px-5 py-2 text-[12px] font-semibold text-[#071D49] transition disabled:cursor-not-allowed disabled:bg-[#F1F4F8] disabled:text-[#8A97A8] disabled:opacity-70">{isPending && pendingAction === "draft" ? "Saving..." : "Save as Draft"}</button><button type="button" disabled={isPending} onClick={saveAndContinue} className="rounded-lg bg-[#071D49] px-5 py-2 text-[12px] font-semibold text-white disabled:bg-[#A9B4C5]">{isPending && pendingAction === "save-continue" ? "Saving..." : "Save Details"}</button></div></div>
       </section>
 
+      <ClaimStageErrorDialog
+        message={claimNumberError || (!result?.ok ? result?.message : null) || verificationLoadError}
+        onClose={() => {
+          if (claimNumberError) setClaimNumberError("");
+          else if (result && !result.ok) setResult(null);
+          else setVerificationLoadError("");
+        }}
+      />
       {successNotice ? <ClaimStageSuccessPopup message={successNotice} /> : null}
     </div>
   );
