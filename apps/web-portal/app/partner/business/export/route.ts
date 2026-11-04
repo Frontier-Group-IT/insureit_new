@@ -98,7 +98,16 @@ async function loadAuthorizedPolicyDetails(rows: PartnerPolicyRow[]) {
     const { data, error } = await supabase.rpc("partner_app_export_policy_details",{
       p_policy_ids: batch,
     });
-    if(error) throw new Error("Authorized Partner export details unavailable.");
+    if (error) {
+      // Server logs retain a bounded diagnostic; never include policy IDs,
+      // report data or Supabase internals in the browser-facing error.
+      console.error("Partner Business MIS scoped enrichment failed", {
+        code: error.code ?? "unknown",
+        message: error.message,
+        batchCount: batch.length,
+      });
+      throw new Error("Authorized Partner export details unavailable.");
+    }
     const scopedRows = (data ?? []) as unknown as Array<{ policy_id: string; detail: Omit<DetailRow,"id"> }>;
     for(const row of scopedRows) if(batch.includes(row.policy_id))details.set(row.policy_id,{ id:row.policy_id, ...row.detail });
   }
