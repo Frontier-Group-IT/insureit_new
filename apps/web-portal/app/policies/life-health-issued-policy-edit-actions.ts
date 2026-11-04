@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { isPensionLifePolicy } from "@/lib/life-health-pension-maturity";
+import { validScheduleDate, canonicalPaymentFrequency } from "@/lib/life-health-issued-schedule";
 import { requirePolicyEditor } from "@/lib/policy-access-server";
 import { canAccessPolicyCommercials } from "@/lib/policy-commercial-access";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
@@ -127,6 +128,10 @@ export async function updateIssuedLifeHealthPolicy(formData: FormData): Promise<
   const caseId = clean(formData.get("caseId"));
   const businessLine = clean(formData.get("businessLine"));
   const sourcingDate = clean(formData.get("sourcingDate"));
+  const proposalDate = clean(formData.get("proposalDate"));
+  const requestedPolicyNumber = clean(formData.get("policyNumber")).toUpperCase();
+  const normalizedPolicyNumber = requestedPolicyNumber.replace(/\s+/g, "");
+  const policyNumberConfirmed = clean(formData.get("confirmPolicyNumberChange")) === "true";
   const sourceId = clean(formData.get("sourceId"));
   const insurerId = clean(formData.get("insurerId"));
   const productName = clean(formData.get("productName"));
@@ -139,6 +144,8 @@ export async function updateIssuedLifeHealthPolicy(formData: FormData): Promise<
   const premiumAmount = amount(formData.get("premiumAmount"));
   const startDate = clean(formData.get("startDate"));
   const endDate = clean(formData.get("endDate"));
+  const pptEndDate = clean(formData.get("pptEndDate"));
+  const nextInstallmentDate = clean(formData.get("nextInstallmentDate"));
   const finalPremium = amount(formData.get("finalPremium"));
   const sumInsuredRaw = clean(formData.get("sumInsured"));
   const sumInsured = sumInsuredRaw ? amount(sumInsuredRaw) : null;
@@ -158,9 +165,14 @@ export async function updateIssuedLifeHealthPolicy(formData: FormData): Promise<
 
   if (!policyId || !caseId) return { ok: false, error: "Policy edit reference is missing." };
   if (businessLine !== "Life" && businessLine !== "Health") return { ok: false, error: "Only Life and Health policies can use this editor." };
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(sourcingDate)) return { ok: false, error: "Enter a valid policy issuance date." };
+  if (!validScheduleDate(sourcingDate)) return { ok: false, error: "Enter a valid policy issuance date." };
+  if (!validScheduleDate(proposalDate)) return { ok: false, error: "Enter a valid proposal date." };
+  if (!requestedPolicyNumber || !normalizedPolicyNumber || requestedPolicyNumber.length > 120) return { ok: false, error: "Enter a valid policy number." };
+  if ((pptEndDate && !validScheduleDate(pptEndDate)) || (nextInstallmentDate && !validScheduleDate(nextInstallmentDate))) return { ok: false, error: "Enter valid PPT End and Next Installment dates." };
   if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate) || (!pensionPlan && !endDate) || (endDate && !/^\d{4}-\d{2}-\d{2}$/.test(endDate))) return { ok: false, error: "Enter valid policy start and end dates." };
   if (endDate && endDate < startDate) return { ok: false, error: "Policy end date cannot be before the start date." };
+  if (pptEndDate && pptEndDate < startDate) return { ok: false, error: "PPT End Date cannot be before the policy start date." };
+  if (nextInstallmentDate && nextInstallmentDate < startDate) return { ok: false, error: "Next Installment Date cannot be before the policy start date." };
   if (!sourceId || !insurerId || !productName || !proposalNumber || !paymentFrequency || !paymentMode || premiumAmount === null || finalPremium === null) return { ok: false, error: "Complete all required policy onboarding fields." };
   if (sumInsuredRaw && sumInsured === null) return { ok: false, error: "Enter a valid sum assured / insured amount." };
   if (commercialAccess) {
@@ -174,6 +186,15 @@ export async function updateIssuedLifeHealthPolicy(formData: FormData): Promise<
     admin.from("intermediaries").select("id,intermediary_type,intermediary_code,display_name,mobile,associate_employee_id").eq("id", sourceId).eq("account_status", "active").maybeSingle<{ id: string; intermediary_type: string; intermediary_code: string | null; display_name: string; mobile: string | null; associate_employee_id: string | null }>(),
   ]);
   if (!policy || !caseRow || !source) return { ok: false, error: "The linked policy, Life/Health case or lead source is no longer available." };
+  const changingPolicyNumber = requestedPolicyNumber !== clean(policy.policy_no).toUpperCase();
+  if (changingPolicyNumber) {
+    if (!policyNumberConfirmed) return { ok: false, error: "Confirm the issued policy number change before saving." };
+    if (sourcingDate !== policy.issuance_date) return { ok: false, error: "Save the policy-number change separately from an issuance-date change requiring OTP." };
+    const { data: duplicate, error: duplicateError } = await admin.from("policies").select("id")
+      .eq("policy_no_normalized",normalizedPolicyNumber).neq("id",policyId).limit(1).maybeSingle<{id:string}>();
+    if (duplicateError) return { ok: false, error: "Could not verify policy number uniqueness. Try again." };
+    if (duplicate) return { ok: false, error: "This policy number is already used by another policy." };
+  }
 
   const intermediaryType = source.intermediary_type === "posp" ? "POSP" : source.intermediary_type === "misp" ? "MISP" : "SIBL / Partner";
   const intermediaryCode = clean(source.intermediary_code);
@@ -195,7 +216,7 @@ export async function updateIssuedLifeHealthPolicy(formData: FormData): Promise<
   if(!dateGuard.ok)return{ok:false,error:dateGuard.error};
   const { error: caseError } = await admin.from("life_health_cases").update({
     business_line: businessLine,
-    sourcing_date: sourcingDate,
+    sourcing_date: proposalDate,
     insurance_company_id: insurerId,
     product_name: productName,
     proposal_number: proposalNumber,
@@ -223,6 +244,7 @@ export async function updateIssuedLifeHealthPolicy(formData: FormData): Promise<
     policy_product: productName,
     business_line: businessLine,
     issuance_date: sourcingDate,
+    ...(changingPolicyNumber ? { policy_no: requestedPolicyNumber, policy_no_normalized: normalizedPolicyNumber } : {}),
     start_date: startDate,
     end_date: endDate || null,
     policy_term: pd || null,
@@ -245,7 +267,7 @@ export async function updateIssuedLifeHealthPolicy(formData: FormData): Promise<
   const savedSchedule = savedAdditional.issued_schedule && typeof savedAdditional.issued_schedule === "object" && !Array.isArray(savedAdditional.issued_schedule)
     ? savedAdditional.issued_schedule as Record<string, unknown> : {};
   const { error: detailsUpdateError } = await admin.from("life_health_policy_details").update({
-    additional_details: { ...savedAdditional, issued_schedule: { ...savedSchedule, policy_start_date: startDate, policy_end_maturity_date: endDate || null } },
+    additional_details: { ...savedAdditional, issued_schedule: { ...savedSchedule, policy_start_date: startDate, policy_end_maturity_date: endDate || null, ppt_end_date: canonicalPaymentFrequency(paymentFrequency) === "One Time" || ppt.trim().toLowerCase().includes("single") ? null : pptEndDate || null, next_installment_date: canonicalPaymentFrequency(paymentFrequency) === "One Time" ? null : nextInstallmentDate || null } },
     proposal_number: proposalNumber,
     premium_paying_term: ppt || null,
     policy_duration: pd || null,
@@ -306,6 +328,7 @@ export async function updateIssuedLifeHealthPolicy(formData: FormData): Promise<
   }
 
   await recordPolicyActivity(admin, policyId, profile.id, POLICY_ACTIVITY_ACTIONS.POLICY_EDITED);
+  if (changingPolicyNumber) await admin.from("audit_logs").insert({ actor_id: profile.id, table_name: "policies", record_id: policyId, action: "policy_number_changed", old_data: { policy_no: policy.policy_no }, new_data: { policy_no: requestedPolicyNumber } });
   if(dateGuard.previousMonth)await recordPreviousMonthPolicyUpload(admin,policyId,profile.id,sourcingDate,dateGuard.approverName);
   if(dateGuard.approverName)await linkConsumedPolicyDateApproval(admin,clean(formData.get("dateApprovalId")),policyId,profile.id);
   revalidateIssuedPolicy(policyId, caseId);
