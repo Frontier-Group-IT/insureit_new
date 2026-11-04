@@ -1,3 +1,4 @@
+import { formatAppDate } from '@/lib/indian-date';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
@@ -153,7 +154,7 @@ export default function SupportScreen() {
 function categoryIcon(category: SupportTicket['category']): keyof typeof MaterialCommunityIcons.glyphMap { return category === 'policy' ? 'file-document-edit-outline' : category === 'documents' ? 'cloud-upload-outline' : category === 'roadside' ? 'car-wrench' : category === 'other' ? 'message-question-outline' : 'shield-check-outline'; }
 function ticketTone(status: SupportTicket['status']) { return status === 'resolved' || status === 'closed' ? { accent: '#12805C', soft: '#E8F8F0' } : status === 'in_progress' ? { accent: '#0B63CE', soft: '#EEF5FF' } : { accent: '#B7791F', soft: '#FFF4E2' }; }
 function statusLabel(status: SupportTicket['status']) { return status === 'in_progress' ? 'In progress' : status === 'resolved' ? 'Resolved' : status === 'closed' ? 'Closed' : 'Open'; }
-function formatDate(value?: string) { return value ? new Date(value).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Today'; }
+function formatDate(value?: string) { return formatAppDate(value, 'Today'); }
 async function callPhone(phone: string) { await Linking.openURL(`tel:${phone.replace(/\s+/g, '')}`); }
 
 const styles = StyleSheet.create({
