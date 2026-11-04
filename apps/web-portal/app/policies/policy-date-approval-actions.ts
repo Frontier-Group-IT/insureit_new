@@ -9,7 +9,6 @@ type ApprovalInput = {
   issuanceDate: string;
   policyNumber: string;
   approverKey: string;
-  justification: string;
   operation: "create" | "edit";
   existingPolicyId?: string | null;
   intermediaryCode?: string;
@@ -47,10 +46,6 @@ export async function requestPolicyDateApproval(input: ApprovalInput): Promise<A
     if (!profile) return { ok: false, error: "Choose a valid policy before requesting approval." };
     if (policyDateDecision(input.issuanceDate) !== "otp_required") {
       return { ok: false, error: "This policy date does not need an OTP approval." };
-    }
-    const justification = input.justification?.trim().replace(/\\s+/g, " ") ?? "";
-    if (justification.length < 12 || justification.length > 500) {
-      return { ok: false, error: "Enter a clear reason (12–500 characters) for the earlier policy date." };
     }
     const requesterName = profile.full_name?.trim();
     if (!requesterName) return { ok: false, error: "Your profile name is missing. Ask an administrator to update it before requesting approval." };
@@ -93,7 +88,7 @@ export async function requestPolicyDateApproval(input: ApprovalInput): Promise<A
       approver_name: approver.name, approver_email: approver.email,
       issuance_date: input.issuanceDate, policy_number: policyNumber,
       operation: input.operation, existing_policy_id: input.operation === "edit" ? input.existingPolicyId : null,
-      requester_name: requesterName, approval_reason: ruleReason, requester_justification: justification,
+      requester_name: requesterName, approval_reason: ruleReason, requester_justification: null,
       code_hash: otpHash(approvalId, code), expires_at: expiresAt,
     });
     if (insertError) return { ok: false, error: "Couldn't start email approval. Please try again." };
@@ -109,7 +104,6 @@ export async function requestPolicyDateApproval(input: ApprovalInput): Promise<A
       ...(originalDate ? [["Previous issuance date", formatPolicyDate(originalDate)] as [string, string]] : []),
       ...(input.intermediaryCode ? [["Policy source", input.intermediaryCode.trim()] as [string, string]] : []),
       ["System approval reason", ruleReason],
-      ["Employee justification", justification],
       ["Requested at", requestTime],
     ];
     const textDetails = details.map(([label, value]) => label + ": " + value).join("\\n");
@@ -155,7 +149,7 @@ export async function requestPolicyDateApproval(input: ApprovalInput): Promise<A
 export async function verifyPolicyDateApproval(
   approvalId: string,
   otp: string,
-  input: Omit<ApprovalInput, "approverKey" | "justification">,
+  input: Omit<ApprovalInput, "approverKey">,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   try {
     const profile = await profileFor(input);
