@@ -17,7 +17,7 @@
 .customer-claim-ref-journey-header {background:linear-gradient(102deg,#23469e 0%,#175da8 55%,#2892b7 100%);}
 .customer-claim-ref-journey .customer-workflow-step {box-shadow:0 2px 5px rgba(54,75,160,.06);}
 .customer-claim-ref-journey .customer-workflow-step a[aria-current="step"] {color:#2559b5;}
-.customer-claim-ref-details {background:#fff;box-shadow:inset 0 0 0 1px rgba(213,214,250,.25);}
+.customer-claim-ref-details {background:#fff;box-shadow:0 5px 18px rgba(45,62,102,.045);}
 .customer-claim-ref-details input {box-shadow:0 2px 6px rgba(63,82,150,.03);}
 .customer-claim-ref-docs {background:#fff;}
 .customer-claim-ref-docs-heading {display:flex;align-items:center;gap:9px;}
@@ -25,10 +25,10 @@
 .customer-claim-ref-docs .customer-claim-ref-tablist {border:none;gap:5px;background:transparent;}
 .customer-claim-ref-docs .customer-claim-ref-tab {border:1px solid #e5e9f9;border-radius:8px;overflow:hidden;min-width:0;}
 .customer-claim-ref-docs .customer-claim-ref-tab[aria-selected="true"] {border-color:#6455ee;box-shadow:0 3px 9px rgba(93,83,211,.16);}
-.customer-claim-ref-docs .customer-claim-ref-card {background:#fff;border-color:#e0e8f7;box-shadow:0 2px 9px rgba(44,68,141,.04);}
-.customer-claim-ref-docs .customer-claim-ref-card:has(a[href]) {background:#fff;}
-.customer-claim-ref-docs .customer-claim-ref-file {border:none;background:rgba(255,255,255,.6);min-height:37px;}
-.customer-claim-ref-docs .customer-claim-ref-file:hover {background:white;}
+.customer-claim-ref-docs .customer-claim-ref-card {background:#fff;border-color:#e2e8f0;box-shadow:0 2px 9px rgba(44,68,141,.04);}
+.customer-claim-ref-docs .customer-claim-ref-card:has(a[href]) {background:#fff;border-color:#cdd5df;}
+.customer-claim-ref-docs .customer-claim-ref-file {border:1px solid #cdd5df;background:#f8fafc;min-height:37px;}
+.customer-claim-ref-docs .customer-claim-ref-file:hover {border-color:#aebbcB;background:#f1f5f9;}
 @media (min-width:1200px) {.customer-claim-ref-summary-cell:nth-child(5),.customer-claim-ref-summary-cell:nth-child(10) {padding-right:75px;}}
 @media (max-width:650px) {.customer-claim-ref-summary-art {opacity:.2;width:120px;} .customer-claim-ref-summary-cell {min-height:65px;} .customer-claim-ref-docs .customer-claim-ref-tablist {grid-template-columns:repeat(2,minmax(0,1fr));}}
 @media (prefers-reduced-motion:reduce) {.customer-claim-ref-page * {animation:none!important;transition:none!important;}}
