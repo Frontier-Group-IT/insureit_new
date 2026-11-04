@@ -107,7 +107,8 @@ export function CustomerStartClaimSelector({
       </section>
 
       <section aria-label="Policy details" data-claim-policy-details="true" className="rounded-2xl border border-[#EDF0F9] bg-white px-4 py-4 shadow-[0_8px_22px_rgba(30,46,98,.06)] sm:px-6">
-        <div className="flex items-center gap-3 border-b border-[#E8EAF2] pb-3">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-5">
+        <div className="flex min-w-0 items-center gap-3 border-b border-[#E8EAF2] pb-3 lg:w-[285px] lg:shrink-0 lg:border-b-0 lg:pb-0">
           <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#F0EEFF] p-1.5 text-[#7938F7]">
             {displayPolicy?.insurer_name && getInsurerLogo(displayPolicy.insurer_name) ? (
               <Image src={getInsurerLogo(displayPolicy.insurer_name)!} alt={`${displayPolicy.insurer_name} logo`} width={36} height={36} unoptimized className="h-full w-full object-contain" />
@@ -118,7 +119,7 @@ export function CustomerStartClaimSelector({
         </div>
         {displayPolicy ? (
           <>
-            <div className="grid grid-cols-2 gap-x-4 gap-y-4 pt-4 lg:grid-cols-4 lg:gap-x-0">
+            <div className="grid min-w-0 flex-1 grid-cols-2 gap-x-4 gap-y-3 lg:grid-cols-4 lg:gap-x-0 lg:border-l lg:border-[#E5E8F1] lg:pl-5 lg:pt-0">
               {[
                 { label: "Policy No.", value: displayPolicy.policy_no || "—", icon: FileText },
                 { label: "Insurer", value: displayPolicy.insurer_name ? shortInsurerName(displayPolicy.insurer_name) : "Insurer not recorded", detail: displayPolicy.policy_product || displayPolicy.policy_type, icon: Landmark },
@@ -140,13 +141,13 @@ export function CustomerStartClaimSelector({
             {!hasActivePolicy && !policyExpired ? <p className="mt-4 border-t border-[#E8EAF2] pt-3 text-[12px] text-[#AA681C]">Policy not currently active</p> : null}
           </>
         ) : (
-          <div className="pt-4">
+          <div className="min-w-0 flex-1 border-t border-[#E8EAF2] pt-3 lg:border-l lg:border-t-0 lg:pl-5 lg:pt-0">
             <p className="text-[13px] font-semibold text-[#17345D]">No policy found for this vehicle</p>
             <p className="mt-1 text-[11px] text-[#657994]">You may still register a claim. Coverage and eligibility will be reviewed separately.</p>
           </div>
         )}
+        </div>
       </section>
-
       <div className="grid gap-3 sm:grid-cols-2">
         <Link href={{ pathname: "/customer/support", query: { account: accountId } }} className="inline-flex min-h-[50px] items-center justify-center gap-2 rounded-xl border border-[#AA9BFF] bg-[#F7F6FF] px-4 text-[14px] font-semibold text-[#6539EF] transition hover:bg-[#F0EDFF]">
           <Headphones className="h-5 w-5" /> Get Assistance

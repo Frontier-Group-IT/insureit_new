@@ -1,0 +1,16 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+const source = readFileSync(new URL("../components/customer-portal/customer-start-claim-selector.tsx", import.meta.url), "utf8");
+const start = source.indexOf('<section aria-label="Policy details"');
+const end = source.indexOf('Get Assistance', start);
+const section = source.slice(start, end);
+assert.ok(start !== -1 && end > start, "Customer Start Claim policy summary must exist");
+assert.match(section, /flex flex-col gap-3 lg:flex-row lg:items-center/, "Desktop must align managed claim heading and details on one row");
+assert.match(section, /lg:w-\[285px\]/, "Claim heading must have a compact reserved column");
+assert.match(section, /grid min-w-0 flex-1 grid-cols-2[^\n]*lg:grid-cols-4/, "All four policy fields must be adjacent on desktop and responsive on mobile");
+for (const label of ['Policy No.', 'Insurer', 'Start Date', 'End Date']) assert.ok(section.includes('label: "' + label + '"'), "Missing policy field: " + label);
+assert.match(section, /Self Tracked Policy" : "Sankalp Managed Claim"/, "Managed and self-tracked policy labels must remain intact");
+assert.match(section, /No policy found for this vehicle/, "Policyless claim fallback must remain");
+assert.match(section, /Policy expired/, "Expired policy notice must remain");
+assert.match(source, /prepareCustomerClaim/, "Existing start-claim action must be unchanged");
+console.log("Customer Start Claim inline policy summary layout regression passed.");
