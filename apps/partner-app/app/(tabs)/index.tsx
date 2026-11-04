@@ -22,6 +22,7 @@ import { PartnerAssets } from '@/lib/partner-assets';
 import { partnerTheme } from '@/lib/theme';
 import { signedInPersonName } from '@/lib/signed-in-person';
 import { usePartnerSession } from '@/providers/partner-session-provider';
+import { isPartnerBranchSession } from '@/lib/partner-session';
 
 type BusinessPeriod = 'all' | 'last6' | 'last_month' | 'mtd';
 
@@ -118,6 +119,7 @@ export default function PartnerHomeScreen() {
   const activity = workspace.data?.activity?.items ?? [];
   const trend = workspace.data?.performance?.trend ?? [];
   const { identity } = context;
+  const isBranchLogin = isPartnerBranchSession(context);
   const periodLabel = BUSINESS_PERIODS.find((item) => item.key === businessPeriod)?.label ?? 'MTD';
   // Resolve the selected period from its own cache key. The query hook can still hold
   // figures from the previously selected period during the first render after a switch.
@@ -307,18 +309,22 @@ export default function PartnerHomeScreen() {
                     : (rangeData ? String(rangeData.policies) : '—')}
                   label={businessPeriod === 'all' ? 'Total Policies' : 'Policies Sold'}
                 />
-                <View style={styles.metricDivider} />
-                <MetricCell
-                  icon={<PartnerCommissionEarnedIcon size={36} />}
-                  value={identity.actor_kind === 'employee'
-                    ? (rangeData?.projected_retention != null ? formatWholeIndianCurrency(rangeData.projected_retention) : '—')
-                    : (rangeData?.scoped_payout != null
-                      ? formatIndianCurrency(rangeData.scoped_payout)
-                      : rangeData?.commission_available
-                        ? formatIndianCurrency(rangeData.commission_earned ?? 0)
-                        : '—')}
-                  label={identity.actor_kind === 'employee' ? 'Projected Retention' : 'Commission Earned'}
-                />
+                {!isBranchLogin ? (
+                  <>
+                    <View style={styles.metricDivider} />
+                    <MetricCell
+                      icon={<PartnerCommissionEarnedIcon size={36} />}
+                      value={identity.actor_kind === 'employee'
+                        ? (rangeData?.projected_retention != null ? formatWholeIndianCurrency(rangeData.projected_retention) : '—')
+                        : (rangeData?.scoped_payout != null
+                          ? formatIndianCurrency(rangeData.scoped_payout)
+                          : rangeData?.commission_available
+                            ? formatIndianCurrency(rangeData.commission_earned ?? 0)
+                            : '—')}
+                      label={identity.actor_kind === 'employee' ? 'Projected Retention' : 'Commission Earned'}
+                    />
+                  </>
+                ) : null}
               </View>
               </>)}
           </View>
