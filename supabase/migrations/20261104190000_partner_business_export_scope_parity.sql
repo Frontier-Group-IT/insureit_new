@@ -65,7 +65,7 @@ begin
     left join public.policies scoped_policy on scoped_policy.id=requested.policy_id
     left join public.intermediaries scoped_intermediary
       on scoped_intermediary.intermediary_code=scoped_policy.intermediary_code
-    where scoped_policy.id is null or not (
+    where scoped_policy.id is null or not coalesce((
       case
         when v_is_branch_login then exists (
           select 1 from public.partner_branch_authorized_policy_ids() authorized
@@ -89,7 +89,7 @@ begin
         )
         else false
       end
-    )
+    ), false)
   ) then
     raise exception 'Policy is not available in this Partner scope' using errcode='42501';
   end if;
