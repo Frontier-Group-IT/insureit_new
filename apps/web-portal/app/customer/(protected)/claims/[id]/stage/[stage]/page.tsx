@@ -5,6 +5,7 @@ import { INTERNAL_JOURNEY_STAGES } from "@insureit/claim-journey";
 import { CUSTOMER_EXTERNAL_STAGE_FIELDS } from "@/lib/customer-claim-stage-fields";
 import { saveCustomerExternalStage, confirmCustomerSpotIntimationSaved } from "./actions";
 import { CustomerClaimStageSubmit } from "@/components/customer-portal/customer-claim-stage-submit";
+import { CustomerClaimStageDraftForm } from "@/components/customer-portal/customer-claim-stage-draft-form";
 import { CustomerClaimEvidenceWorkspace } from "@/components/customer-portal/customer-claim-evidence-workspace";
 import { CustomerClaimVoiceRecorder } from "@/components/customer-portal/customer-claim-voice-recorder";
 import { CustomerClaimDocumentGroups } from "@/components/customer-portal/customer-claim-document-groups";
@@ -138,7 +139,7 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
       )}
     </section> : null}
     {editMode && canEditStage ? (
-      <form id="customer-claim-stage-details-form" action={saveCustomerExternalStage} className="customer-claim-ref-details mt-2 rounded-2xl border border-[#D9E6F7] bg-[#F7F6FF] p-4">
+      <CustomerClaimStageDraftForm id="customer-claim-stage-details-form" accountId={account.id} claimId={claim.id} stage={selected.key} className="customer-claim-ref-details mt-2 rounded-2xl border border-[#D9E6F7] bg-[#F7F6FF] p-4">
         <div className="mb-3 flex items-start justify-between gap-3"><div className="flex items-center gap-2"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-[#6F5AF1] to-[#3697D5] text-white"><ClipboardList className="h-4 w-4"/></span><div><h2 className="text-[15px] font-bold text-[#071D49]">Stage Details</h2></div></div></div><div className={`grid gap-3 sm:grid-cols-2 ${selected.key==="claim_intimation"?"lg:grid-cols-5":selected.key==="work_approval"||selected.key==="payment_encashment"?"lg:grid-cols-5":selected.key==="repair_ri"||selected.key==="delivery_order"?"lg:grid-cols-3":selected.key==="billing"||selected.key==="vehicle_delivery"?"lg:grid-cols-2":"lg:grid-cols-4"}`}>
         <input type="hidden" name="account" value={account.id}/>
         <input type="hidden" name="claim" value={claim.id}/>
@@ -156,7 +157,7 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
           <Link href={{pathname:"/customer/claims",query:{account:account.id}}} className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#B9CBE2] px-5 text-[12px] font-semibold text-[#174A87]">Cancel</Link>
           <CustomerClaimStageSubmit formId="customer-claim-stage-details-form" variant="continue" />
         </div>:null}
-      </form>
+      </CustomerClaimStageDraftForm>
     ):null}
     {selected.key==="spot_intimation" ? <CustomerClaimEvidenceWorkspace documents={documents} claimId={claim.id} accountId={account.id} stage={selected.key} allowUpload={editMode}/> : null}
     {selected.key==="spot_intimation" ? <CustomerClaimVoiceRecorder claimId={claim.id} accountId={account.id}/> : null}
