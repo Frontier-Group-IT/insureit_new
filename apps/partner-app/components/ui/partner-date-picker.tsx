@@ -1,3 +1,4 @@
+import { formatAppDate } from '@/lib/indian-date';
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import { useMemo, useState } from 'react';
@@ -18,7 +19,7 @@ type PartnerDatePickerProps = {
 export function PartnerDatePicker({ label, value, onChange, minimumDate, maximumDate, disabled = false }: PartnerDatePickerProps) {
   const [open, setOpen] = useState(false);
   const displayValue = useMemo(() => value
-    ? `${String(value.getDate()).padStart(2, '0')}/${String(value.getMonth() + 1).padStart(2, '0')}/${value.getFullYear()}`
+    ? formatAppDate(value)
     : 'Select date', [value]);
 
   const openPicker = () => {
