@@ -1,0 +1,13 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+const page = readFileSync(new URL("../app/customer/(protected)/claims/[id]/stage/[stage]/page.tsx", import.meta.url), "utf8");
+assert.ok(page.includes('Boolean(claim.policy_id)'));
+assert.ok(page.includes('Boolean(claim.external_policy_id)'));
+assert.ok(page.includes('driverName:(typeof spotDetails?.driver_name'));
+assert.ok(page.includes('driverNumber:(typeof spotDetails?.driver_phone'));
+assert.ok(page.includes('["Driver Name",milestone?.details?.driver_name||descriptionDriverName]'));
+assert.ok(page.includes('["Driver Number",milestone?.details?.driver_phone||descriptionDriverNumber]'));
+const description = "Driver: AKAKSDLK\nDriver phone: 9897685978";
+assert.equal(description.match(/(?:^|\n)Driver:\s*([^\n]+)/i)?.[1]?.trim(), "AKAKSDLK");
+assert.equal(description.match(/(?:^|\n)Driver phone:\s*([^\n]+)/i)?.[1]?.trim(), "9897685978");
+console.log("Customer claim source and driver fallback regression passed");

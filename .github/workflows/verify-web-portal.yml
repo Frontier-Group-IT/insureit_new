@@ -161,6 +161,8 @@ jobs:
         run: node scripts/customer-policyless-claim-rls-regression.mjs
       - name: Customer Claims phone and insurer number regression
         run: node scripts/customer-claims-phone-claimno-regression.mjs
+      - name: Customer Claim policy source and legacy driver fallback regression
+        run: node scripts/customer-claim-policy-source-driver-fallback-regression.mjs
       - name: Customer Claim Stage Details and Uploaded Document contrast regression
         run: node scripts/customer-claim-stage-document-contrast-regression.mjs
       - name: Customer Home permanent Start Claim regression
