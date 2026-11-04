@@ -235,6 +235,7 @@ export function mergeCustomerClaimOperationsDetails(
   milestones: CustomerClaimMilestone[],
   operations: Record<string, unknown> | null,
   claimId: string,
+  isExternal: boolean,
 ): CustomerClaimMilestone[] {
   if (!operations || typeof operations !== "object" || Array.isArray(operations)) return milestones;
   const merged = milestones.map((milestone) => ({ ...milestone, details: { ...(milestone.details ?? {}) } }));
@@ -255,8 +256,7 @@ export function mergeCustomerClaimOperationsDetails(
       const customerValues = Object.fromEntries(
         Object.entries(existing.details ?? {}).filter(([, value]) => value !== null && value !== undefined && value !== ""),
       );
-      existing.details = existing.milestone_status !== "not_started" && customerValues && 
-        (existing as CustomerClaimMilestone & { recorded_by_actor?: string }).recorded_by_actor === "customer"
+      existing.details = isExternal
         ? { ...visibleDetails, ...customerValues }
         : { ...customerValues, ...visibleDetails };
     } else {
@@ -294,6 +294,7 @@ export async function loadCustomerClaimDetail(customerId: string, claimId: strin
     !operationsResult.error && operationsResult.data && typeof operationsResult.data === "object" && !Array.isArray(operationsResult.data)
       ? operationsResult.data as Record<string, unknown> : null,
     claimId,
+    isExternalCustomerClaim(claim),
   );
   const documents = (documentResult.data ?? []) as CustomerClaimDocument[];
   const tasks = (taskResult.data ?? []) as CustomerClaimTask[];
