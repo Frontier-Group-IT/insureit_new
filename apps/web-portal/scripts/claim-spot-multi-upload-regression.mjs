@@ -97,7 +97,7 @@ assert.match(workflowAccess, /hasEffectiveCapability\(profile, "manage_claims", 
 assert.match(workflowAccess, /canAccessCustomer\(profile\.id, profile\.role, claim\.customer_id, "manage_claims"\)/, "Employee flow must retain customer scope.");
 assert.match(workflowAccess, /profile\.role === "intermediary"/, "Partner flow must be explicit.");
 assert.match(workflowAccess, /rpc\("partner_app_claim_detail", \{ p_claim_id: claimId \}\)/, "Partner flow must prove exact-claim scope through the Partner RPC.");
-assert.match(actions, /claim_service_mode !== "broker_managed"/, "Verification retains the broker-managed boundary.");
+assert.match(actions, /data\.claim_service_mode !== "broker_managed" && \(data\.policy_service_source !== "external" \|\| access\.isPartner\)/, "Self-managed external document mutations remain restricted to authorized Operations users.");
 
 assert.match(actions, /supabase\.rpc\("advance_initial_documents_verified"/, "Initial-document advancement must use the secure RPC.");
 assert.match(actions, /function parseDocumentIds\(value: string\)/, "Bulk verification parses a bounded id set.");
