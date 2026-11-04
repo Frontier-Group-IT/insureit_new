@@ -93,6 +93,9 @@ const nextConfig = {
         source: "/partner/renewals/voice-lab",
         headers: voiceLabHeaders,
       },
+      // Allow microphone recording only on authenticated customer claim pages.
+      { source: "/customer/spot-intimation", headers: voiceLabHeaders },
+      { source: "/customer/claims/:id/stage/:stage", headers: voiceLabHeaders },
       {
         source: "/customers/:id/edit",
         has: [{ type: "query", key: "embedded", value: "1" }],
