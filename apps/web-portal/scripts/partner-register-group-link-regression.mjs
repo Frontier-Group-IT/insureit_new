@@ -15,9 +15,9 @@ assert.match(loader, /\.is\("effective_to", null\)/, "Only current memberships m
 assert.match(loader, /\.from\("intermediary_groups"\)/);
 assert.match(loader, /matchingGroupIds\.length === 1/, "Do not arbitrarily select one of multiple groups");
 assert.match(loader, /groupId,\s*groupName,/, "The exact verified group identity must travel in the Partner row");
-assert.match(register, /Group -<\/span>/, "Use requested Group - Group name layout");
+assert.doesNotMatch(register, /Group -<\/span>/, "Do not display the Group label prefix");
 assert.match(register, /row\.groupId && row\.groupName/, "Missing groups must not be clickable");
-assert.match(register, /Not assigned/, "Unassigned partners must have readable fallback");
+assert.match(register, /row\.groupId && row\.groupName \? <div/, "Unassigned partners must leave the group line empty");
 assert.match(register, /href={`\/intermediaries\/groups\/\$\{encodeURIComponent\(row\.groupId\)\}`}/, "Group name opens detail route");
 assert.match(register, /groupName: string \| null/, "Row type includes group name");
 assert.match(groupDetail, /await requireGroupAssociateManager\(id\)/, "Existing server-side Group detail authorization must remain enforced");
