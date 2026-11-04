@@ -17,8 +17,14 @@ const claimWorkflow = await readFile(new URL("../lib/claim-workflow.ts", import.
 const customerClaimDetail = await readFile(new URL("../../mobile-app/app/customer/claim-detail.tsx", import.meta.url), "utf8");
 const sharedClaimJourney = await readFile(new URL("../../../packages/claim-journey/src/index.ts", import.meta.url), "utf8");
 
-assert.match(workspace, /Spot Intimation Date & Time/, "Claim header must show the combined Spot Intimation Date & Time card.");
-assert.match(workspace, /const spotAt = claim\.spotIntimationAt \?\? claim\.created_at;/, "Spot intimation display must prefer the persisted stage timestamp.");
+// Header display has six fields in a single desktop row. Removed data still belongs to the claim record.
+for (const removed of ["Claim Status", "Spot Intimation Date & Time", "Insurer", "Make & Model"]) {
+  assert.doesNotMatch(workspace, new RegExp('<Info label="' + removed + '"'), removed + " must not reappear in navy summary");
+}
+assert.match(workspace, /<Info label="Vehicle No\. & Model" title=\{vehicleNumberAndModel\}/, "Vehicle number and model must be combined");
+assert.match(workspace, /const vehicleNumberAndModel = \[vehicleNumber, model\]/, "Combined header field must include both values");
+assert.match(workspace, /lg:grid-cols-6/, "Display six remaining summary fields on one row at desktop width");
+assert.equal((workspace.match(/<Info label=/g) ?? []).length, 6, "Navy summary must render precisely six information fields");
 assert.match(workspace, /BulkDocumentVerificationGroup/, "Spot document categories must render through grouped verification.");
 assert.match(workspace, /item\.documents\.length > 0 && item\.documents\.every/, "A category is verified only when every current file is verified.");
 assert.doesNotMatch(bulkVerificationGroup, /type="checkbox"/, "Stage 1 pending files must use the document icon rather than checkbox selection.");
