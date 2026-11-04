@@ -794,7 +794,7 @@ export default function SelfManagedClaimScreen() {
         <View style={styles.bulkUploadShell}>
           <Pressable accessibilityRole="button" disabled={uploadingDocuments} onPress={() => void pickBulkDocuments()} style={[styles.bulkUpload, (documents.bulk.length > 0 || savedBulkCount > 0) && styles.bulkUploadSelected]}>
             {savedBulkCount > 0
-              ? <MaterialCommunityIcons name="check-circle-outline" size={29} color="#18864B" />
+              ? <MaterialCommunityIcons name="file-document-multiple-outline" size={29} color="#0A43A3" />
               : <Image source={require('../../assets/claims/claim-documents.png')} style={styles.bulkUploadIconArtwork} resizeMode="contain" />}
             <View style={styles.bulkUploadCopy}>
               <Text style={styles.bulkUploadTitle}>Upload multiple documents</Text>
@@ -913,7 +913,7 @@ function DocumentReadyTile({ title, fileName, statusText, source, iconName, icon
   const saved = state === 'saved';
   const ready = state === 'ready';
   return <Pressable accessibilityRole="button" accessibilityState={{ selected: state !== 'idle' }} onPress={onPress} style={[styles.documentReadyTile, ready && styles.documentReadyTileReady, saved && styles.documentReadyTileSelected]}>
-    {saved ? <View style={styles.documentSelectedCheck}><MaterialCommunityIcons name="check" size={15} color="#18864B" /></View> : null}
+    
     {state !== 'idle' ? <Pressable accessibilityRole="button" accessibilityLabel={`Remove ${title}`} onPress={(event) => { event.stopPropagation(); onRemove(); }} style={styles.documentRemoveButton}><MaterialCommunityIcons name="close" size={13} color="#C43232" /></Pressable> : null}
     <View style={styles.documentReadyArtworkWrap}>
       {artwork === 'accident-video' ? <AccidentVideoArtwork /> : source ? <Image source={source} style={styles.documentReadyArtwork} resizeMode="contain" /> : iconName ? <MaterialCommunityIcons name={iconName} size={32} color={iconColor ?? '#0A43A3'} /> : null}
