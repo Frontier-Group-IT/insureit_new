@@ -146,6 +146,13 @@ export function PartnerReportsFilters({
           </button>
           {filtersOpen ? (
             <div id="partner-reports-advanced-filters" className="absolute right-0 top-[calc(100%+6px)] z-50 w-[280px] space-y-2 rounded-xl border border-[#dbe3ee] bg-white p-3 shadow-xl">
+              {!insurerOptions.length && !rmOptions.length && !intermediaryOptions.length ? (
+                <label className="block text-[10px] font-semibold text-[#526780]">Business Type
+                  <select aria-label="Quick business filter" value={business} onChange={(event) => navigate({ business: event.target.value })} className={controlClass + " mt-1 w-full"}>
+                    {businesses.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                  </select>
+                </label>
+              ) : <>
               <label className="block text-[10px] font-semibold text-[#526780]">Insurer
                 <select aria-label="Filter insurer" value={insurer} onChange={(event) => changeAdvanced("insurer", event.target.value)} className={controlClass + " mt-1 w-full"}>
                   <option value="">All insurers</option>
@@ -164,6 +171,7 @@ export function PartnerReportsFilters({
                   {intermediaryOptions.map((code) => <option key={code} value={code}>{code}</option>)}
                 </select>
               </label>
+              </>}
             </div>
           ) : null}
         </div>
