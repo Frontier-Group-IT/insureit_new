@@ -121,7 +121,6 @@ export function localIsoDate(value: Date): string {
 }
 
 function formatDateOnly(value: string): string {
-  const [year, month, day] = value.split('-').map(Number);
   return formatAppDate(value);
 }
 
