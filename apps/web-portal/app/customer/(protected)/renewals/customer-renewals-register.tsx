@@ -11,7 +11,7 @@ export type RenewalRegisterItem = {
   id: string; title: string; key: string; vehicleId: string; vehicleNo: string;
   reference: string; insurerName?: string | null; expiry: string; daysUntil: number; status: string;
 };
-export type RenewalCategory = { key: string; title: string; count: number };
+export type RenewalCategory = { key: string; title: string; count: number; due: number; expired: number };
 
 const RENEWAL_ICON_BASE = "/assets/customer-renewals/icons/";
 
@@ -41,7 +41,7 @@ export function CustomerRenewalsRegister({accountId,items,categories}:{
       return matches && (status==="all" || (status==="expired"?item.daysUntil<0:item.daysUntil>=0&&item.daysUntil<=45));
     });
     const known=new Set(categories.map(cat=>cat.key));
-    const groupList=[...categories,...(filtered.some(item=>!known.has(item.key))?[{key:"__other__",title:"Other renewals",count:0}]:[])];
+    const groupList=[...categories,...(filtered.some(item=>!known.has(item.key))?[{key:"__other__",title:"Other renewals",count:0,due:items.filter(item=>!known.has(item.key)&&item.status==="due").length,expired:items.filter(item=>!known.has(item.key)&&item.status==="expired").length}]:[])];
     return {filtered,groupList:groupList.map(cat=>({
       ...cat,records:filtered.filter(item=>cat.key==="__other__"?!known.has(item.key):item.key===cat.key)
         .sort((a,b)=>a.daysUntil-b.daysUntil)
@@ -86,13 +86,17 @@ export function CustomerRenewalsRegister({accountId,items,categories}:{
       </select>
     </div>
     <div className="space-y-3">
-      <div className="grid grid-cols-6 gap-2" role="group" aria-label="Renewal categories">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6" role="group" aria-label="Renewal categories">
         {groups.groupList.slice(0, 6).map(cat => {
           const selected = activeCategory === cat.key;
           return <button key={cat.key} type="button" aria-pressed={selected} aria-expanded={selected} onClick={() => setActiveCategory(selected ? null : cat.key)}
-            className={`flex min-w-0 flex-col items-center justify-center gap-2 rounded-xl border px-1.5 py-3 text-center transition hover:bg-[#F7F8FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6050E5] ${selected ? "border-[#6050E5] bg-[#F1F0FF] shadow-sm" : "border-[#E2E9F5] bg-white"}`}>
-            <span className="grid h-9 w-9 place-items-center rounded-lg"><CategoryIcon title={cat.title}/></span>
-            <strong className="w-full truncate text-[10px] font-semibold text-[#28346A]" title={cat.title}>{cat.title}</strong>
+            className={`flex min-h-[68px] min-w-0 items-start gap-2 rounded-xl border px-2.5 py-3 text-left shadow-[0_2px_8px_rgba(43,65,120,.025)] transition-colors hover:bg-[#F7F8FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6050E5] ${selected ? "border-[#6050E5] bg-[#F1F0FF] shadow-sm" : "border-[#E2E9F5] bg-white"}`}>
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg"><CategoryIcon title={cat.title}/></span>
+            <strong className="min-w-0 flex-1 self-center text-[10px] font-semibold leading-4 text-[#28346A] [overflow-wrap:anywhere]" title={cat.title}>{cat.title}</strong>
+            <span className="flex w-[25px] shrink-0 flex-col items-center gap-1 self-start" aria-label={`Due ${cat.due}, expired ${cat.expired}`}>
+              {cat.due > 0 ? <span title={`${cat.due} due renewals`} className={`${motion.countPulse} inline-flex min-h-[22px] min-w-[25px] items-center justify-center rounded-full border border-[#F7D7A2] bg-[#FFF0D8] px-1 text-[10px] font-bold tabular-nums text-[#B86D09]`}>{cat.due}</span> : null}
+              {cat.expired > 0 ? <span title={`${cat.expired} expired renewals`} className={`${motion.countPulse} inline-flex min-h-[22px] min-w-[25px] items-center justify-center rounded-full border border-[#F6C5CD] bg-[#FDE7E9] px-1 text-[10px] font-bold tabular-nums text-[#C92E40]`}>{cat.expired}</span> : null}
+            </span>
           </button>;
         })}
       </div>
