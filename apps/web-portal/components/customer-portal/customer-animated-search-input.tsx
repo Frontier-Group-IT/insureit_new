@@ -46,7 +46,7 @@ export function CustomerAnimatedSearchInput({ hints, value, defaultValue, onChan
         className={`relative z-10 h-5 w-full min-w-0 appearance-none border-0 bg-transparent p-0 align-middle leading-5 outline-none ring-0 focus:border-0 focus:outline-none focus:ring-0 focus-visible:outline-none ${className}`}
       />
       {!text && active && (
-        <span aria-hidden="true" className="pointer-events-none absolute inset-0 z-0 flex items-center overflow-hidden">
+        <span aria-hidden="true" className="pointer-events-none absolute inset-0 z-0 flex items-center overflow-hidden text-[11px] font-normal text-[#9BA9C0]">
           {previous && !reduceMotion && (
             <span key={`previous-${index}`} className="customer-search-slide-out absolute inset-x-0 top-0 h-5 truncate leading-5">{previous}</span>
           )}
