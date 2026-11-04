@@ -10,7 +10,13 @@ const operations = read("../components/claim-manager/operations-claim-stages.tsx
 const motion = read("../components/claim-manager/operations-claim-stages-motion.css");
 const loader = read("../app/claims/external-claim-readonly-actions.ts");
 
-assert.match(page, /if \(claim\.claim_service_mode === "self_managed"\)/, "Self-managed claims must retain their separate read-only route.");
+assert.match(page, /if \(claim\.claim_service_mode === "self_managed" && claim\.policy_service_source !== "external"\)/, "External self-managed claims must use the Operations workflow, not the separate assistance viewer.");
+assert.match(page, /const isExternalOperationsClaim = claim\.policy_service_source === "external"/, "All external claims must get Operations editing mode.");
+assert.match(page, /unrestrictedStageEditing=\{isExternalOperationsClaim\}/, "External self-managed claims must have the same stage editing controls as broker-managed claims.");
+const stageActions = read("../app/claims/stage-actions.ts");
+const spotActions = read("../app/claims/internal-spot-intimation-actions.ts");
+assert.match(stageActions, /claim\.policy_service_source !== "external" \|\| access\.isPartner/, "Operations-only external self-managed stage writes must remain permission scoped.");
+assert.match(spotActions, /data\.policy_service_source !== "external" \|\| isPartner/, "Operations-only external self-managed Spot Intimation writes must remain permission scoped.");
 assert.match(page, /<SpotClaimHeader heading="Claim Journey" claim=\{\{ \.\.\.claimWithSpotIntimation, policySource:/, "Self-managed claims must reuse the exact Operations blue summary and linked policy context.");
 assert.match(page, /<AssistanceIntakePanel/, "Customer managed evidence panel must remain available.");
 assert.match(header, /heading = "Operations claim journey"/, "Standard Operations header title must remain unchanged.");
