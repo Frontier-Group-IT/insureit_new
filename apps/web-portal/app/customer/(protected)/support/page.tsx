@@ -62,7 +62,7 @@ export default async function CustomerSupportPage({
 
       <section className="space-y-2.5">
         <div className="flex items-start justify-between gap-2">
-          <h2 className="flex items-center gap-2 text-[15px] font-bold text-[#29305D]"><img src="/assets/customer-3d-icons/support.png" alt="" aria-hidden="true" width={34} height={34} className="h-[34px] w-[34px] object-contain" />Quick Help</h2>
+          <h2 className="flex items-center gap-2 text-[15px] font-bold text-[#29305D]"><img src="/assets/customer-3d-icons/help_and_support.png" alt="" aria-hidden="true" width={34} height={34} className="h-[34px] w-[34px] object-contain" />Quick Help</h2>
         </div>
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
           {([
@@ -79,7 +79,7 @@ export default async function CustomerSupportPage({
         </div>
       </section>
 
-      <section id="support-activity" className="space-y-3">
+      <section id="support-activity" className="space-y-3 rounded-2xl border border-[#E2E8F4] bg-white p-3 shadow-[0_6px_22px_rgba(31,48,89,.045)] sm:p-4">
         <CustomerSupportTicketPanel customerId={account.id} claims={claims.map(claim=>({id:claim.id,claim_no:claim.claim_no,status:claim.current_status}))} search={
           <form className="flex h-9 w-full max-w-[465px] items-center gap-2 rounded-lg border border-[#E6E8F4] bg-white px-3 focus-within:border-[#AB9BF5]">
             <Search className="h-3.5 w-3.5 shrink-0 text-[#939AB3]"/>
@@ -87,12 +87,12 @@ export default async function CustomerSupportPage({
             <CustomerAnimatedSearchInput name="q" defaultValue={params.q ?? ""} aria-label="Search support requests" hints={["Search by ticket number or subject…","Search request status…"]} className="text-[10px] text-[#252B5E]"/>
           </form>
         }/>
-        <div className="rounded-xl border border-[#EBEDF7] bg-white p-3 sm:p-4">
+        <div className="border-t border-[#E8EDF6] pt-3">
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {rows.length ? rows.map(item=>(
             <Link key={item.id} href={{pathname:`/customer/support/${item.id}`,query:{account:account.id}}} className="group flex min-h-[105px] flex-col rounded-xl border border-[#E9EBF5] bg-[#FCFCFF] p-3 transition hover:border-[#CFC7F7] hover:shadow-sm">
               <div className="flex items-start gap-2">
-                <img src="/assets/customer-3d-icons/support.png" alt="" aria-hidden="true" width={40} height={40} className="h-10 w-10 shrink-0 object-contain" />
+                <img src="/assets/customer-3d-icons/other_queries.png" alt="" aria-hidden="true" width={40} height={40} className="h-10 w-10 shrink-0 object-contain" />
                 <span className="min-w-0 flex-1"><b className="block truncate text-[10.5px] text-[#252B5C]">{item.subject}</b><small className="text-[9px] text-[#7D86A5]">{item.enquiry_no}</small></span>
                 {item.status.trim().toLowerCase() === "open" ? (
                   <span className="inline-flex shrink-0 origin-center items-center rounded-full border border-[#E8D39C] bg-white px-3 py-1 text-[9px] font-extrabold uppercase tracking-[0.08em] text-[#B88317] shadow-[0_4px_14px_rgba(184,131,23,0.14)] motion-safe:animate-[customerSupportOpenPulse_2.2s_ease-in-out_infinite]">OPEN</span>

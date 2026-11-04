@@ -90,13 +90,13 @@ export function CustomerRenewalsRegister({accountId,items,categories}:{
         {groups.groupList.slice(0, 6).map(cat => {
           const selected = activeCategory === cat.key;
           return <button key={cat.key} type="button" aria-pressed={selected} aria-expanded={selected} onClick={() => setActiveCategory(selected ? null : cat.key)}
-            className={`flex min-h-[68px] min-w-0 items-start gap-2 rounded-xl border px-2.5 py-3 text-left shadow-[0_2px_8px_rgba(43,65,120,.025)] transition-colors hover:bg-[#F7F8FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6050E5] ${selected ? "border-[#6050E5] bg-[#F1F0FF] shadow-sm" : "border-[#E2E9F5] bg-white"}`}>
-            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg"><CategoryIcon title={cat.title}/></span>
-            <strong className="min-w-0 flex-1 self-center text-[10px] font-semibold leading-4 text-[#28346A] [overflow-wrap:anywhere]" title={cat.title}>{cat.title}</strong>
-            <span className="flex w-[25px] shrink-0 flex-col items-center gap-1 self-start" aria-label={`Due ${cat.due}, expired ${cat.expired}`}>
-              {cat.due > 0 ? <span title={`${cat.due} due renewals`} className={`${motion.countPulse} inline-flex min-h-[22px] min-w-[25px] items-center justify-center rounded-full border border-[#F7D7A2] bg-[#FFF0D8] px-1 text-[10px] font-bold tabular-nums text-[#B86D09]`}>{cat.due}</span> : null}
-              {cat.expired > 0 ? <span title={`${cat.expired} expired renewals`} className={`${motion.countPulse} inline-flex min-h-[22px] min-w-[25px] items-center justify-center rounded-full border border-[#F6C5CD] bg-[#FDE7E9] px-1 text-[10px] font-bold tabular-nums text-[#C92E40]`}>{cat.expired}</span> : null}
+            className={`relative flex min-h-[96px] min-w-0 flex-col items-center justify-center gap-2 overflow-visible rounded-xl border px-2 py-3 text-center transition-colors hover:bg-[#F7F8FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6050E5] ${selected ? "border-[#6050E5] bg-[#F1F0FF] shadow-sm" : "border-[#E2E9F5] bg-white"}`}>
+            <span className="absolute right-2 top-2 flex items-center gap-1" aria-label={`Due ${cat.due}, expired ${cat.expired}`}>
+              {cat.due > 0 ? <span title={`${cat.due} due renewals`} className={`${motion.countPulseDue} relative inline-flex min-h-[23px] min-w-[23px] items-center justify-center rounded-full border border-[#F29C26] bg-[#FFAF36] px-1 text-[10px] font-extrabold tabular-nums text-[#572D00]`}>{cat.due}</span> : null}
+              {cat.expired > 0 ? <span title={`${cat.expired} expired renewals`} className={`${motion.countPulseExpired} relative inline-flex min-h-[23px] min-w-[23px] items-center justify-center rounded-full border border-[#DC2F46] bg-[#EF394D] px-1 text-[10px] font-extrabold tabular-nums text-white`}>{cat.expired}</span> : null}
             </span>
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg"><CategoryIcon title={cat.title}/></span>
+            <strong className="w-full truncate text-[10px] font-semibold text-[#28346A]" title={cat.title}>{cat.title}</strong>
           </button>;
         })}
       </div>

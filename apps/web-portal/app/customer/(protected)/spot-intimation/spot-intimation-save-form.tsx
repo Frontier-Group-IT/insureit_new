@@ -89,7 +89,7 @@ export function SpotIntimationSaveForm({ action, children, cancelHref, evidence,
     } finally {
       setPending(false);
     }
-  }} onInput={saveDraft} onChange={saveDraft} aria-busy={pending} className="space-y-4 rounded-2xl border border-[#DBE4F0] bg-white p-4 shadow-[0_6px_24px_rgba(20,58,100,.04)] sm:p-5">
+  }} onInput={saveDraft} onChange={saveDraft} aria-busy={pending} className="flex flex-col gap-4 rounded-2xl border border-[#DBE4F0] bg-white p-4 shadow-[0_6px_24px_rgba(20,58,100,.04)] sm:p-5">
     {children}
     </form>
     {evidence}
