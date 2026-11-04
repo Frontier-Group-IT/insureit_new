@@ -1,0 +1,14 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+const read = p => readFileSync(new URL(p, import.meta.url), "utf8");
+const stage = read("../app/customer/(protected)/claims/[id]/stage/[stage]/page.tsx");
+const css = read("../app/customer/(protected)/claims/[id]/stage/[stage]/customer-claim-reference.css");
+const card = read("../components/customer-portal/customer-claim-compact-document.tsx");
+assert.match(stage, /customer-claim-ref-details mt-2 rounded-2xl border border-\[#DCE3EC\] bg-white p-4/);
+assert.match(css, /\.customer-claim-ref-details \{background:#fff;/);
+assert.match(css, /\.customer-claim-ref-docs \.customer-claim-ref-file \{border:1px solid #cdd5df;background:#f8fafc;/);
+assert.match(css, /\.customer-claim-ref-docs \.customer-claim-ref-card:has\(a\[href\]\) \{background:#fff;border-color:#cdd5df;/);
+assert.doesNotMatch(css, /\.customer-claim-ref-docs \.customer-claim-ref-file \{border:none/);
+assert.match(card, /ordered\.length > 0 \? "border-\[#CDD5DF\]" : "border-\[#E2E8F0\]"/);
+assert.match(card, /uploadCustomerClaimDocument/);
+console.log("Customer claim stage and uploaded document contrast regression passed.");
