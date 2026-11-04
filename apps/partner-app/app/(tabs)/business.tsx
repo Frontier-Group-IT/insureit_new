@@ -23,6 +23,7 @@ import { getPartnerRenewalSummary, type PartnerRenewalSummary } from '@/lib/poli
 import { partnerTheme } from '@/lib/theme';
 import { usePartnerQuery } from '@/lib/use-partner-query';
 import { usePartnerSession } from '@/providers/partner-session-provider';
+import { isPartnerBranchSession } from '@/lib/partner-session';
 
 type OverviewCardProps = {
   icon: PartnerBusinessOverviewIconKind;
@@ -56,6 +57,7 @@ export default function BusinessScreen() {
   const { height: screenHeight } = useWindowDimensions();
   const compactScreen = screenHeight < 800;
   const { context, cacheScopeKey, avatarUri } = usePartnerSession();
+  const isBranchLogin = isPartnerBranchSession(context);
   const [overviewRange, setOverviewRange] = useState<OverviewRange>('mtd');
   const [insurerDates, setInsurerDates] = useState(() => presetDateRange('mtd'));
   const [customInsurerDatesApplied, setCustomInsurerDatesApplied] = useState(true);
@@ -84,7 +86,7 @@ export default function BusinessScreen() {
       getPartnerNetwork(),
       getPartnerRenewalSummary(),
       getPartnerClaimSummary(),
-      getPartnerPayoutSummary(),
+      isBranchLogin ? Promise.resolve(null) : getPartnerPayoutSummary(),
     ]);
 
     if (performanceResult.status === 'rejected') throw performanceResult.reason;
@@ -100,7 +102,7 @@ export default function BusinessScreen() {
         || claimResult.status === 'rejected'
         || payoutResult.status === 'rejected',
     };
-  }, []);
+  }, [isBranchLogin]);
 
   // Compare MTD with the same elapsed calendar dates in the preceding month.
   const comparisonDates = useMemo(() => previousMonthMtdRanges(new Date()), []);
@@ -392,20 +394,22 @@ export default function BusinessScreen() {
               compareLabel={overview ? optionLabel(OVERVIEW_OPTIONS, overviewRange) : mtdLabel}
               onPress={() => router.push('/(tabs)/policies')}
             />
-            <OverviewCard
-              icon="commission"
-              value={context?.identity.actor_kind === 'employee'
-                ? (overview?.projected_retention != null ? formatCompactCurrency(overview.projected_retention) : !overview && mtdCurrent?.projected_retention != null ? formatCompactCurrency(mtdCurrent.projected_retention) : '—')
-                : (overview?.scoped_payout != null ? formatCompactCurrency(overview.scoped_payout) : !overview && mtdCurrent?.scoped_payout != null ? formatCompactCurrency(mtdCurrent.scoped_payout) : '—')}
-              label={context?.identity.actor_kind === 'employee' ? 'Projected Retention' : 'Payout'}
-              changeLabel={overview
-                ? 'Selected range'
-                : context?.identity.actor_kind === 'employee'
-                  ? mtdChange(mtdCurrent?.projected_retention, mtdPrevious?.projected_retention)
-                  : mtdChange(mtdCurrent?.scoped_payout, mtdPrevious?.scoped_payout)}
-              compareLabel={overview ? optionLabel(OVERVIEW_OPTIONS, overviewRange) : mtdLabel}
-              onPress={() => router.push('/business-report')}
-            />
+            {!isBranchLogin ? (
+              <OverviewCard
+                icon="commission"
+                value={context?.identity.actor_kind === 'employee'
+                  ? (overview?.projected_retention != null ? formatCompactCurrency(overview.projected_retention) : !overview && mtdCurrent?.projected_retention != null ? formatCompactCurrency(mtdCurrent.projected_retention) : '—')
+                  : (overview?.scoped_payout != null ? formatCompactCurrency(overview.scoped_payout) : !overview && mtdCurrent?.scoped_payout != null ? formatCompactCurrency(mtdCurrent.scoped_payout) : '—')}
+                label={context?.identity.actor_kind === 'employee' ? 'Projected Retention' : 'Payout'}
+                changeLabel={overview
+                  ? 'Selected range'
+                  : context?.identity.actor_kind === 'employee'
+                    ? mtdChange(mtdCurrent?.projected_retention, mtdPrevious?.projected_retention)
+                    : mtdChange(mtdCurrent?.scoped_payout, mtdPrevious?.scoped_payout)}
+                compareLabel={overview ? optionLabel(OVERVIEW_OPTIONS, overviewRange) : mtdLabel}
+                onPress={() => router.push('/business-report')}
+              />
+            ) : null}
             <OverviewCard
               icon="customers"
               value={overview ? String(overview.customers) : mtdCurrent ? String(mtdCurrent.customers) : '—'}
@@ -514,7 +518,7 @@ export default function BusinessScreen() {
           <View style={[styles.quickGrid, compactScreen && styles.tightContainer]}>
             <QuickAction asset={PartnerAssets.actions.quickRenewals} label="Renewals" meta={`${renewals?.due_30_count ?? 0} due`} onPress={() => router.push('/renewals')} />
             <QuickAction asset={PartnerAssets.actions.quickClaims} label="Claims" meta={`${claims?.active_claims ?? 0} active`} onPress={() => router.push('/(tabs)/claims')} />
-            <PayoutQuickAction payout={payout} onPress={() => router.push('/(tabs)/more')} />
+            {!isBranchLogin ? <PayoutQuickAction payout={payout} onPress={() => router.push('/(tabs)/more')} /> : null}
             <QuickAction asset={PartnerAssets.actions.quickCustomers} label="Add Customer" meta="Create new" onPress={() => router.push('/customer-new' as never)} />
           </View>
 
