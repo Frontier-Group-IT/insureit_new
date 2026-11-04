@@ -10,7 +10,7 @@ const css = readFileSync(resolve(root, "app/customer/(protected)/renewals/renewa
 assert.match(page, /due: summary\.due/, "Due counts must use existing summaries");
 assert.match(page, /expired: summary\.expired/, "Expired counts must use existing summaries");
 assert.match(register, /grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6/, "Cards must adapt to mobile, tablet and desktop");
-assert.match(register, /relative flex min-h-\\[96px\\] min-w-0 flex-col items-center justify-center/, "Restore the original vertically centered category card");
+assert.match(register, /relative flex min-h-\[96px\] min-w-0 flex-col items-center justify-center/, "Restore the original vertically centered category card");
 assert.match(register, /<CategoryIcon title=\{cat\.title\}/, "Existing 3D category artwork retained");
 assert.match(register, /w-full truncate text-\[10px\]/, "Category name displays below the centered icon");
 assert.match(register, /absolute right-2 top-2 flex items-center gap-1/, "Badges show horizontally at top-right");
