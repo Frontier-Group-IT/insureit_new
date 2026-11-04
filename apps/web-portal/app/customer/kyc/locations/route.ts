@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import { createServerSupabaseClient } from "@/lib/auth-server";
+import { createCustomerServerSupabaseClient } from "@/lib/auth-server";
 import { getCustomerWebSession } from "@/lib/customer-web";
 
 export async function GET(request: Request) {
   await getCustomerWebSession();
   const pincode = new URL(request.url).searchParams.get("pincode")?.replace(/\D/g, "").slice(0, 6) ?? "";
   if (pincode.length !== 6) return NextResponse.json({ locations: [] });
-  const supabase = await createServerSupabaseClient();
+  const supabase = await createCustomerServerSupabaseClient();
   const { data, error } = await supabase
     .from("india_locations")
     .select("id,pincode,city_name,district,state_name")
