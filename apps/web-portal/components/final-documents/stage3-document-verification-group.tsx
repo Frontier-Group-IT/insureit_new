@@ -93,7 +93,14 @@ export function Stage3DocumentVerificationGroup({ item, claim, verifications }: 
         )}
         <div className="flex shrink-0 items-center gap-0.5">
           <ReplaceDocumentButton claimId={claim.id} customerId={claim.customer_id} documentType={item.documentType} label={item.title} actionLabel="Upload" iconOnly />
-          {allVerified ? <StatusBadge tone="green" label="Verified" /> : (
+          {allVerified ? (hasSingleFile ? (
+            <DocumentVerificationDetailsButton
+              document={item.documents[0]}
+              verification={latestVerificationForDocument(item.documents[0], verifications) ?? fallbackVerification(claim, item, item.documents[0])}
+              title={item.title}
+              triggerVariant="verified"
+            />
+          ) : <StatusBadge tone="green" label="Verified" />) : (
             <VerificationActionButton
               claimId={claim.id}
               documentIds={selectedDocumentIds}
@@ -127,6 +134,7 @@ export function Stage3DocumentVerificationGroup({ item, claim, verifications }: 
                   verified={verified}
                   rejected={rejected}
                   selected={selected}
+                  showVerifiedDetails={hasMultipleFiles}
                   onSelectedChange={(checked) => setSelectedIds((previous) => {
                     const next = new Set(previous);
                     if (checked) next.add(document.id);
@@ -147,7 +155,7 @@ export function Stage3DocumentVerificationGroup({ item, claim, verifications }: 
   );
 }
 
-function DocumentFileRow({ item, claim, document, verification, verified, rejected, selected, onSelectedChange }: { item: Stage3DocumentVerificationItem; claim: ClaimContext; document: FinalVerificationDocument; verification?: FinalVerificationRow; verified: boolean; rejected: boolean; selected: boolean; onSelectedChange: (checked: boolean) => void }) {
+function DocumentFileRow({ item, claim, document, verification, verified, rejected, selected, showVerifiedDetails, onSelectedChange }: { item: Stage3DocumentVerificationItem; claim: ClaimContext; document: FinalVerificationDocument; verification?: FinalVerificationRow; verified: boolean; rejected: boolean; selected: boolean; showVerifiedDetails: boolean; onSelectedChange: (checked: boolean) => void }) {
   const selectable = !verified && !rejected;
   const router = useRouter();
   const [deletePending, setDeletePending] = useState(false);
@@ -188,7 +196,7 @@ function DocumentFileRow({ item, claim, document, verification, verified, reject
           </button>
           <VerificationActionButton claimId={claim.id} documentId={document.id} itemKey={item.verificationKey} incidentDate={claim.accident_at} policyStartDate={claim.policies?.start_date} policyEndDate={claim.policies?.end_date} prefillDetails={verification?.details ?? null} variant="icon" />
           <ReplaceDocumentButton claimId={claim.id} customerId={claim.customer_id} documentId={document.id} documentType={item.documentType} label={item.title} actionLabel="Replace" iconOnly />
-          {verified ? <DocumentVerificationDetailsButton document={document} verification={verification ?? fallbackVerification(claim, item, document)} title={item.title} /> : null}
+          {verified && showVerifiedDetails ? <DocumentVerificationDetailsButton document={document} verification={verification ?? fallbackVerification(claim, item, document)} title={item.title} triggerVariant="verified" /> : null}
         </div>
       </div>
       {rejected ? <p className="sr-only">{document.rejection_reason ?? "Customer reupload requested."}</p> : null}
