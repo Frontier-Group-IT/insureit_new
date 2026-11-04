@@ -170,6 +170,8 @@ jobs:
         run: node scripts/customer-claims-phone-claimno-regression.mjs
       - name: Customer Claim policy source and legacy driver fallback regression
         run: node scripts/customer-claim-policy-source-driver-fallback-regression.mjs
+      - name: Customer Spot Intimation two-second success popup regression
+        run: node scripts/customer-spot-success-two-second-regression.mjs
       - name: Customer Claim Stage Details and Uploaded Document contrast regression
         run: node scripts/customer-claim-stage-document-contrast-regression.mjs
       - name: Customer Home permanent Start Claim regression
