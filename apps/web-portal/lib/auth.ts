@@ -14,10 +14,16 @@ function getSupabaseEnvironment() {
 
 export function createSupabaseBrowserClient() {
   const { supabaseUrl, supabaseAnonKey } = getSupabaseEnvironment();
+  // Client-side auth state must also be isolated, not merely server cookies.
+  // Customer sign-in/OTP/logout must not replace Operations tokens in localStorage.
+  const isCustomerRoute = typeof window !== "undefined" &&
+    (window.location.pathname === "/customer" || window.location.pathname.startsWith("/customer/"));
+  const storageKey = isCustomerRoute ? "insureit-customer-web-auth" : "insureit-operations-web-auth";
 
   return createSupabaseClient(supabaseUrl, supabaseAnonKey, {
     auth: {
       persistSession: true,
+      storageKey,
       autoRefreshToken: true,
       detectSessionInUrl: true
     }
