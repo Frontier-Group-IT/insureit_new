@@ -17,7 +17,7 @@ for (const [stage, next] of [
   assert.match(stages, new RegExp('\\{ key: "' + stage + '"'));
   assert.match(stages, new RegExp('\\{ key: "' + next + '"'));
 }
-assert.match(stages, /nextStageKey: result\.advanced \? nextStageKeyFor\(milestoneKey\) : null/);
+assert.match(stages, /nextStageKey: nextStageKeyFor\(milestoneKey\)/);
 assert.match(stages, /setSelectedKey\(state\.nextStageKey\)/);
 assert.match(stages, /router\.replace\(\`\$\{partnerManagedJourney/);
 assert.match(stages, /selected\.key === "payment_encashment" \? "lg:grid-cols-\[repeat\(5,minmax\(0,1fr\)\)\] lg:items-start"/);
