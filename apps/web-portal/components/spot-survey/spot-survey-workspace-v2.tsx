@@ -305,18 +305,6 @@ function formatDateShort(value?: string | null) {
   return new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" }).format(date);
 }
 
-function formatIntimationDate(value?: string | null) {
-  if (!value) return "-";
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "-" : new Intl.DateTimeFormat("en-IN", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "Asia/Kolkata" }).format(date);
-}
-
-function formatIntimationTime(value?: string | null) {
-  if (!value) return "-";
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "-" : new Intl.DateTimeFormat("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true, timeZone: "Asia/Kolkata" }).format(date);
-}
-
 function extractDriverName(description?: string | null) {
   if (!description) return null;
   const match = description.match(/driver\s*[:\-]\s*([^,;\n]+)/i) ?? description.match(/driver name\s*[:\-]\s*([^,;\n]+)/i);
