@@ -97,9 +97,10 @@ async function loadAuthorizedPolicyDetails(rows: PartnerPolicyRow[]) {
     const batch = ids.slice(offset,offset+100);
     const { data, error } = await supabase.rpc("partner_app_export_policy_details",{
       p_policy_ids: batch,
-    }).returns<Array<{ policy_id: string; detail: Omit<DetailRow,"id"> }>>();
+    });
     if(error) throw new Error("Authorized Partner export details unavailable.");
-    for(const row of data??[]) if(batch.includes(row.policy_id))details.set(row.policy_id,{ id:row.policy_id, ...row.detail });
+    const scopedRows = (data ?? []) as unknown as Array<{ policy_id: string; detail: Omit<DetailRow,"id"> }>;
+    for(const row of scopedRows) if(batch.includes(row.policy_id))details.set(row.policy_id,{ id:row.policy_id, ...row.detail });
   }
   if(details.size!==ids.length)throw new Error("Partner export detail authorization or completeness check failed.");
   return details;
