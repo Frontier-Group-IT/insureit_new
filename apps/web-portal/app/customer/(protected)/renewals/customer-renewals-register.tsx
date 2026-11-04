@@ -33,7 +33,7 @@ export function CustomerRenewalsRegister({accountId,items,categories}:{
   const [status,setStatus]=useState("due");
   // Open the pending Insurance Policy register on first visit.
   const [activeCategory,setActiveCategory]=useState<string | null>(
-    () => categories.find(cat => cat.key === "insurance_policy")?.key ?? categories[0]?.key ?? null,
+    () => categories.find(cat => cat.key === "insurance_policy")?.key ?? categories[0]?.key ?? (items.length ? "__other__" : null),
   );
   const groups=useMemo(()=>{
     const filtered=items.filter(item=>{
