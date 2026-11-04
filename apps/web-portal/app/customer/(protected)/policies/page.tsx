@@ -83,7 +83,7 @@ export default async function CustomerPoliciesPage({
   });
 
   return (
-    <div className="customer-register-motion space-y-3">
+    <div className="customer-register-motion customer-policies-page space-y-3">
       <CustomerAccountTabs accounts={accounts} selectedId={account.id} pathname="/customer/policies" />
       <section className="customer-register-hero relative isolate overflow-hidden rounded-2xl border border-[#D6E7FA] bg-[#DDEEFF] text-[#102B54] shadow-[0_6px_24px_rgba(20,58,100,.05)]">
         <div className="pointer-events-none absolute inset-0 bg-[url('/assets/policy%20(2).jpeg')] bg-cover bg-center bg-no-repeat opacity-95" />

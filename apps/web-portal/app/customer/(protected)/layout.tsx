@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import "./customer-compact.css";
+import "./customer-full-height.css";
 import "./customer-workflow-motion.css";
 import { CustomerSidebarShell } from "@/components/customer-portal/customer-sidebar-shell";
 import { CustomerHeaderActions } from "@/components/customer-portal/customer-header-actions";
@@ -15,8 +16,8 @@ export default async function CustomerProtectedLayout({ children }: { children: 
         breadcrumbs={<CustomerRouteBreadcrumbs />}
         headerActions={<CustomerHeaderActions name={profile.full_name || "Customer"} userId={user.id} />}
       >
-        <main className="customer-motion-page-enter min-h-[calc(100vh-66px)] px-3 pb-24 pt-4 sm:px-5 sm:pt-5 lg:px-7 lg:pb-6 lg:pt-3">
-          <div className="customer-content-container mx-auto w-full max-w-[1480px]">{children}</div>
+        <main className="customer-motion-page-enter customer-viewport-main min-h-[calc(100vh-66px)] px-3 pb-24 pt-4 sm:px-5 sm:pt-5 lg:px-7 lg:pb-6 lg:pt-3">
+          <div className="customer-content-container customer-viewport-content mx-auto w-full max-w-[1480px]">{children}</div>
         </main>
       </CustomerSidebarShell>
     </div>

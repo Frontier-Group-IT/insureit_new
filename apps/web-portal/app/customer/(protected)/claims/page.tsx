@@ -73,7 +73,7 @@ export default async function CustomerClaimsPage({ searchParams }: { searchParam
     query: { account: account.id, ...(params.q ? { q: params.q } : {}), ...(statusFilter !== "all" ? { filter: statusFilter } : {}), ...changes },
   });
   return (
-    <div className="customer-claims-motion space-y-4 pb-6">
+    <div className="customer-claims-motion customer-claims-page space-y-4 pb-6">
       <CustomerAccountTabs accounts={accounts} selectedId={account.id} pathname="/customer/claims" />
 
       <section className="claims-motion-hero relative isolate overflow-hidden rounded-2xl border border-[#D6E7FA] bg-[#DDEEFF] text-[#102B54] shadow-[0_6px_24px_rgba(20,58,100,.05)]">
