@@ -224,7 +224,8 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
             ok: true,
             message,
             advanced: result.advanced,
-            nextStageKey: nextStageKeyFor(milestoneKey),
+            // Navigate only when the workflow actually advanced. A save-only edit must not skip a locked stage.
+            nextStageKey: result.advanced ? nextStageKeyFor(milestoneKey) : null,
           };
         }
         await advanceInternalSpotIntimation(claimId, formData);
@@ -273,6 +274,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
     try { window.sessionStorage.removeItem(`insureit:spot-intimation-draft:${claimId}`); } catch { /* optional storage */ }
     if (state.nextStageKey) {
       setSelectedKey(state.nextStageKey);
+      // The stage URL is authoritative after a successful transition. Do not race it with router.refresh().
       router.replace(`${partnerManagedJourney ? "/partner" : ""}/claims/${claimId}?stage=${state.nextStageKey}`);
       return;
     }
@@ -393,7 +395,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
             <input type="hidden" name="next_status" value={stageTarget ?? ""} />
             <input type="hidden" name="save_only" value={partnerManagedJourney || selectedSaveOnly ? "true" : "false"} />
             <input type="hidden" name="notes" value={selectedSaveOnly ? `Operations edited ${selected.label} details.` : `Operations completed ${selected.label} and opened the next journey stage.`} />
-            <div className={`grid gap-3 sm:grid-cols-2 ${selected.key === "work_approval" ? "lg:grid-cols-5" : selected.key === "repair_ri" || selected.key === "delivery_order" ? "lg:grid-cols-3" : selected.key === "billing" ? "lg:grid-cols-2" : selected.key === "vehicle_delivery" ? "lg:grid-cols-2" : selected.key === "payment_encashment" ? "lg:grid-cols-5" : "lg:grid-cols-4"}`}>
+            <div className={`grid gap-3 sm:grid-cols-2 ${selected.key === "work_approval" ? "lg:grid-cols-5" : selected.key === "repair_ri" || selected.key === "delivery_order" ? "lg:grid-cols-3" : selected.key === "billing" ? "lg:grid-cols-2" : selected.key === "vehicle_delivery" ? "lg:grid-cols-2" : selected.key === "payment_encashment" ? "lg:grid-cols-[repeat(5,minmax(0,1fr))] lg:items-start" : "lg:grid-cols-4"}`}>
               {fields[selected.key].map((field) => {
                 const value = field.name === "insurer_claim_no" ? insurerClaimNo ?? fieldValue(selectedDetails, field.name) : fieldValue(selectedDetails, field.name);
                 const internalStageTwoSurveyorField = selected.key === "spot_status" && !hasExternalVisualProgress && internalSpotStatusSurveyorFields.has(field.name);
@@ -420,7 +422,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
                 }
                 const useAppDatePicker = field.type === "date" && ((selected.key === "billing" && field.name === "bill_date") || (selected.key === "delivery_order" && field.name === "do_date") || selected.key === "vehicle_delivery" || selected.key === "payment_encashment");
                 return (
-                  <label key={field.name} className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#174EA6]">
+                  <label key={field.name} className="min-w-0 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#174EA6]">
                     {displayLabel}{required && !displayLabel.includes("*") ? <span className="ml-1 text-rose-600">*</span> : null}
                     {useAppDatePicker ? (
                       <AppStyleDateInput name={field.name} value={value} required={required} />
