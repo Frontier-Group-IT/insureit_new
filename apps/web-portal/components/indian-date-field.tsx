@@ -3,7 +3,7 @@
 import { useState, type FocusEventHandler } from "react";
 import { CalendarDays } from "lucide-react";
 import { inlineFieldErrorId } from "@/components/inline-field-validation";
-import { normalizeImportedDate } from "@/lib/indian-date";
+import { formatIndianDate, normalizeImportedDate } from "@/lib/indian-date";
 
 type Props = {
   label?: string;
@@ -31,6 +31,9 @@ export function IndianDateField({ label, name, defaultValue, required = false, d
         </label>
       ) : null}
       <div className="relative">
+        <span aria-hidden="true" className={`${inputClassName ?? defaultInputClassName} flex items-center truncate pr-10`}>
+          {value ? formatIndianDate(value) : "DD/MM/YYYY"}
+        </span>
         <input
           id={`${name}-date`}
           name={name}
@@ -46,7 +49,7 @@ export function IndianDateField({ label, name, defaultValue, required = false, d
             const input = event.currentTarget as HTMLInputElement & { showPicker?: () => void };
             input.showPicker?.();
           }}
-          className={`${inputClassName ?? defaultInputClassName} ${dateControlClassName}`}
+          className={`absolute inset-0 h-full w-full cursor-pointer opacity-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#4F46E5] ${dateControlClassName}`}
         />
         <CalendarDays className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#64748B]" />
       </div>
