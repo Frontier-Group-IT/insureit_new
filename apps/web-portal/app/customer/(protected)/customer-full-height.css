@@ -1,0 +1,48 @@
+/* Customer Portal viewport utilization.
+   Shared structure applies to every protected Customer page without changing
+   data, forms, scrolling, or fixed-size detail components. */
+.customer-compact .customer-viewport-main {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - 66px);
+  min-height: calc(100dvh - 66px);
+}
+.customer-compact .customer-viewport-content {
+  width: 100%;
+  flex: 1 0 auto;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.customer-compact .customer-viewport-content > * {
+  flex: 1 0 auto;
+  min-width: 0;
+}
+/* Registers use available height for their results, never for enlarged cards.
+   Existing spacing utilities and natural page overflow are retained. */
+.customer-compact :is(.customer-claims-page, .customer-vehicles-page, .customer-policies-page) {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.customer-compact :is(.customer-claims-page, .customer-vehicles-page, .customer-policies-page) > .customer-register-panel,
+.customer-compact .customer-claims-page > .claims-motion-panel {
+  flex: 1 0 auto;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.customer-compact .customer-claims-page .claims-motion-results {
+  flex: 1 0 auto;
+}
+.customer-compact .customer-claims-page .claims-motion-pagination {
+  margin-top: auto;
+}
+.customer-compact .customer-vehicles-page > .customer-register-panel > footer,
+.customer-compact .customer-policies-page > .customer-register-panel > p:last-child {
+  margin-top: auto;
+}
+/* Policy rows and tables do not stretch. Their surrounding panel does. */
+@media (max-width: 639px) {
+  .customer-compact .customer-viewport-main { min-height: calc(100dvh - 66px); }
+}
