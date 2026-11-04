@@ -19,8 +19,8 @@ for (const [name, source] of [
     name + ' must not show the decorative saved-document tick',
   );
 }
-assert.doesNotMatch(self, /name="check-circle-outline" size={29} color="#18864B"/);
-assert.match(self, /name="file-document-multiple-outline" size={29}/);
+assert.ok(!self.includes('name="check-circle-outline" size={29} color="#18864B"'));
+assert.ok(self.includes('name="file-document-multiple-outline" size={29}'));
 
 // Keep actual uploaded/verified state, remove actions, and the lock semantics.
 assert.match(self, /saved \? 'Saved' : ready \? 'Ready' : 'Tap to upload'/);
