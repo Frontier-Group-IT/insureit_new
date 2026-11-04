@@ -168,14 +168,17 @@ export async function buildRmPerformancePdf(profile:Profile,query:RmPerformanceQ
       paint(moneyLabel(amount),cx,top-163,10,true,navy,cell-5);
     });
   }
-  function row(name:string,todayCount:number,todayNet:number,periodCount:number,periodNet:number,accent=false,depth=0){
+  function row(name:string,todayCount:number,todayNet:number,periodCount:number,periodNet:number,accent=false,depth=0,hideMetrics=false){
     ensureSpace(22);
     if(accent)page.drawRectangle({x:pageLeft,y:y-13,width:766,height:22,color:soft});
     paint(name,44+Math.min(depth,5)*11,y-5,8.6,accent,accent?navy:secondary,244-Math.min(depth,5)*11);
-    paint(String(todayCount),350,y-5,8.6,accent);
-    paint(moneyLabel(todayNet),429,y-5,8.6,accent,navy,125);
-    paint(String(periodCount),573,y-5,8.6,accent);
-    paint(moneyLabel(periodNet),657,y-5,8.6,accent,navy,135);
+    // Direct Partners is a hierarchy heading: leave all four metric cells truly blank.
+    if(!hideMetrics){
+      paint(String(todayCount),350,y-5,8.6,accent);
+      paint(moneyLabel(todayNet),429,y-5,8.6,accent,navy,125);
+      paint(String(periodCount),573,y-5,8.6,accent);
+      paint(moneyLabel(periodNet),657,y-5,8.6,accent,navy,135);
+    }
     y-=22;
   }
   function tableHeading(){
@@ -212,7 +215,7 @@ export async function buildRmPerformancePdf(profile:Profile,query:RmPerformanceQ
   if(!rows.length)row("No RM production in selected scope",0,0,0,0);
   for(const item of rows){
     if(y<72){nextPage();tableHeading();}
-    row(item.name,item.tp,item.tn,item.pp,item.pn,item.kind==="head",item.indent??0);
+    row(item.name,item.tp,item.tn,item.pp,item.pn,item.kind==="head",item.indent??0,item.kind==="own");
   }
   // The reference specifically excludes the MTD Context graph and trend section.
   return {

@@ -187,7 +187,7 @@ export function BranchRegisterWorkspace({
       </div>
 
       <div className="hidden overflow-x-auto md:block">
-        <table className={`w-full ${applicationBranchView ? "min-w-[1160px]" : hideParentPartner ? "min-w-[820px]" : "min-w-[1040px]"} table-fixed text-left text-[11px] text-[#1E293B]`}>
+        <table className={`w-full ${applicationBranchView ? "min-w-[1160px]" : hideParentPartner ? "min-w-[820px]" : "min-w-[1040px]"} table-fixed ${applicationBranchView ? "text-center" : "text-left"} text-[11px] text-[#1E293B]`}>
           <thead className="sticky top-0 z-10 border-b border-[#E2E8F0] bg-[#F8FAFC] text-[9px] font-bold uppercase tracking-[0.06em] text-[#64748B]">
             <tr>
               <th className="w-[220px] px-3 py-2.5">Branch</th>
@@ -195,7 +195,7 @@ export function BranchRegisterWorkspace({
               {applicationBranchView ? <th className="w-[160px] px-3 py-2.5">Contact Name</th> : <><th className="w-[190px] px-3 py-2.5">Business Group</th><th className="w-[190px] px-3 py-2.5">Assigned Employee</th></>}
               <th className="w-[190px] px-3 py-2.5">Email</th>
               <th className="w-[140px] px-3 py-2.5">Phone Number</th>
-              {applicationBranchView ? <><th className="w-[115px] px-3 py-2.5 text-right">Customer Count</th><th className="w-[145px] px-3 py-2.5 text-right">Net Premium</th></> : null}
+              {applicationBranchView ? <><th className="w-[115px] px-3 py-2.5 text-center">Customer Count</th><th className="w-[145px] px-3 py-2.5 text-center">Net Premium</th></> : null}
               <th className="w-[110px] px-3 py-2.5">Status</th>{canPermanentDelete ? <th className="w-[110px] px-3 py-2.5 text-center">Action</th> : null}
             </tr>
           </thead>
@@ -235,7 +235,7 @@ export function BranchRegisterWorkspace({
                 </>}
                 <td className="px-3 break-all text-[#475569]">{branch.email || "—"}</td>
                 <td className="px-3 text-[#475569]">{branch.phone || "—"}</td>
-                {applicationBranchView ? <><td className="px-3 text-right tabular-nums font-semibold">{branch.customerCount == null ? "—" : branch.customerCount.toLocaleString("en-IN")}</td><td className="px-3 text-right tabular-nums font-semibold">{branch.netPremium == null ? "—" : branch.netPremium.toLocaleString("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 })}</td></> : null}
+                {applicationBranchView ? <><td className="px-3 text-center tabular-nums font-semibold">{branch.customerCount == null ? "—" : branch.customerCount.toLocaleString("en-IN")}</td><td className="px-3 text-center tabular-nums font-semibold">{branch.netPremium == null ? "—" : branch.netPremium.toLocaleString("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 })}</td></> : null}
                 <td className="px-3"><StatusPill status={branch.login_disabled ? "disabled" : branch.invitation_status} /></td>{canPermanentDelete ? <td className="px-3 text-center">{!branch.canonical_only ? <BranchActionMenu branch={branch} /> : null}</td> : null}
               </tr>
             ))}
