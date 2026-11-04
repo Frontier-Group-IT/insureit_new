@@ -55,6 +55,10 @@ type Filters = {
   typeFilter?: IntermediaryType | null;
   success?: string;
   error?: string;
+  periodFrom?: string;
+  periodTo?: string;
+  defaultPeriodFrom?: string;
+  defaultPeriodTo?: string;
 };
 const REGISTERED_STATUS = "iib_registered";
 const APPLICATION_SELECT = "id,registration_status,status,registration_record_id,partner_status,requested_type,final_type,draft_data,partner_record_id,created_at";
@@ -68,6 +72,10 @@ export async function IntermediaryRegister({
   typeFilter = null,
   success,
   error,
+  periodFrom,
+  periodTo,
+  defaultPeriodFrom,
+  defaultPeriodTo,
 }: { selectedType: IntermediaryType | null } & Filters) {
   const profile = await requirePospMispManager(true);
   const admin = createSupabaseAdminClient();
@@ -165,23 +173,12 @@ export async function IntermediaryRegister({
   ).filter((value): value is string => Boolean(value)))];
   const { data: partnerBusinessData, error: partnerBusinessError } =
     selectedType === "partner" && partnerBusinessIds.length
-      ? await admin.rpc("partner_register_business_metrics", { p_partner_ids: partnerBusinessIds })
+      ? await admin.rpc("partner_register_period_business_metrics", { p_partner_ids: partnerBusinessIds, p_from_date: periodFrom, p_to_date: periodTo })
       : { data: [], error: null };
-  type PartnerBusinessMetric = { partner_id: string; customer_count: number | string; net_premium: number | string; payout: number | string };
+  type PartnerBusinessMetric = { partner_id: string; policy_count: number | string; customer_count: number | string; net_premium: number | string; payout: number | string };
   const partnerBusinessMap = new Map<string, PartnerBusinessMetric>(
     ((partnerBusinessData ?? []) as PartnerBusinessMetric[]).map((metric) => [metric.partner_id, metric])
   );
-  // Ranking uses current-month business, independently of the lifetime Net Premium/Payout.
-  // Failure must not silently fall back to lifetime sorting.
-  const { data: mtdBusinessData, error: mtdBusinessError } =
-    selectedType === "partner" && partnerBusinessIds.length
-      ? await admin.rpc("partner_register_mtd_net_premium", { p_partner_ids: partnerBusinessIds })
-      : { data: [], error: null };
-  type PartnerMtdMetric = { partner_id: string; mtd_net_premium: number | string };
-  const mtdBusinessMap = new Map<string, PartnerMtdMetric>(
-    ((mtdBusinessData ?? []) as PartnerMtdMetric[]).map((metric) => [metric.partner_id, metric])
-  );
-
 
   // Fetch current Group membership only for Partners already authorized in this register.
   type CurrentGroupMembership = { partner_id: string; group_id: string };
@@ -235,7 +232,6 @@ export async function IntermediaryRegister({
       const partnerComplete = app?.partner_status === "active_partner";
       const partnerId = displayIdentity(row, app, "partner");
       const metric = app?.partner_record_id && !partnerBusinessError ? partnerBusinessMap.get(app.partner_record_id) : undefined;
-      const mtdMetric = app?.partner_record_id && !mtdBusinessError ? mtdBusinessMap.get(app.partner_record_id) : undefined;
       const linkedLabel = linked ? linkedAccountLabel(linkedType, linked) : "Not created";
       const matchingGroupIds = app?.partner_record_id ? groupsByPartner.get(app.partner_record_id) ?? [] : [];
       // Ambiguous membership fails closed rather than arbitrarily choosing a Group.
@@ -261,9 +257,9 @@ export async function IntermediaryRegister({
         partnerStatus: linked
           ? (isActivatedIntermediaryRegistration(linked) ? "Active" : "Onboarding")
           : "Not Created",
+        policyCount: metric ? Number(metric.policy_count) : null,
         customerCount: metric ? Number(metric.customer_count) : null,
         netPremium: metric ? Number(metric.net_premium) : null,
-        mtdNetPremium: mtdMetric ? Number(mtdMetric.mtd_net_premium) : null,
         payout: metric ? Number(metric.payout) : null,
         active: partnerComplete,
         createType: allowedType,
@@ -284,7 +280,7 @@ export async function IntermediaryRegister({
     });
     return (
       <AppShell title={pageTitle}>
-        <PartnerRegisterClient rows={clientRows} canPermanentDelete={profile.role === "it_super_user"} initialSearch={search} initialStatus={accountStatus} success={success} error={error} loadError={Boolean(loadError)} />
+        <PartnerRegisterClient rows={clientRows} canPermanentDelete={profile.role === "it_super_user"} initialSearch={search} initialStatus={accountStatus} success={success} error={error} loadError={Boolean(loadError || partnerBusinessError)} initialDateFrom={periodFrom ?? ""} initialDateTo={periodTo ?? ""} mtdFrom={defaultPeriodFrom ?? ""} mtdTo={defaultPeriodTo ?? ""} />
       </AppShell>
     );
   }
