@@ -167,7 +167,15 @@ export async function updatePolicyOnboarding(policyId: string, payload: PolicyEd
       p_policy_id: policyId,
       p_payload: normalizedPayload,
     });
-    if (error) return { ok: false, error: "We couldn't save the policy changes. Please try again." };
+    if (error) {
+      // Keep raw SQL/constraint details server-side. Give finance reconciliation
+      // failures an actionable but non-sensitive message rather than generic retry.
+      if (error.code === "23514" && error.message?.includes("policy_payin_details_after_tds_consistency_check")) {
+        console.error("Policy edit failed Pay-in/TDS consistency validation", { policyId, code: error.code });
+        return { ok: false, error: "The policy Pay-in and TDS amounts did not balance, so no changes were saved. Please contact support." };
+      }
+      return { ok: false, error: "We couldn't save the policy changes. Please try again." };
+    }
 
     const result = data as { ok?: boolean; policyId?: string; policyCode?: string } | null;
     if (!result?.ok || !result.policyId) return { ok: false, error: "We couldn't complete the policy update. Please try again." };
