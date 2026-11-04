@@ -1,3 +1,4 @@
+import { formatAppDate, parseAppDate } from '@/lib/indian-date';
 import { useState } from 'react';
 import { Alert, Image, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -70,7 +71,7 @@ export function PartnerSpotIntimation({ data }: { data: PartnerClaimDetail }) {
         </View>
         <View style={styles.card}>
           <View style={styles.sectionHeading}><View style={styles.sectionArtworkWrap}><Image source={CUSTOMER_STAGE_ICON} style={styles.sectionArtwork} resizeMode="contain"/></View><View style={styles.headingCopy}><Text style={styles.sectionTitle}>Incident Details</Text><Text style={styles.subtitle}>Accident date, time and first insurer intimation</Text></View></View>
-          <EditableField label="Accident Date" required value={incidentDate} onChange={setIncidentDate} placeholder="YYYY-MM-DD" editable={editable} icon="calendar-outline"/>
+          <EditableField label="Accident Date" required value={incidentDate} onChange={setIncidentDate} placeholder="DD/MM/YYYY" editable={editable} icon="calendar-outline"/>
           <EditableField label="Accident Time" required value={incidentTime} onChange={setIncidentTime} placeholder="HH:mm" editable={editable} icon="time-outline"/>
           <View style={styles.subheading}><Text style={styles.subheadingText}>Spot Intimation</Text></View>
           <EditableField label="Spot Intimation Date" required value={spotDate} onChange={setSpotDate} placeholder="YYYY-MM-DD" editable={editable} icon="calendar-outline"/>
@@ -96,6 +97,8 @@ function EditableField({label,required,value,onChange,placeholder,editable,icon,
   const [pickerVisible,setPickerVisible]=useState(false);
   const [draftPickerValue,setDraftPickerValue]=useState<Date>(()=>new Date());
   const mode=icon==='calendar-outline'?'date':icon==='time-outline'?'time':null;
+  const [dateDraft,setDateDraft]=useState(() => icon==='calendar-outline' ? formatAppDate(value, '') : '');
+  const setFromPicker=(date: Date) => {const iso=`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;setDateDraft(formatAppDate(iso, ''));onChange(iso);};
   const now=new Date();
   const pickerValue=(()=>{
     if(mode==='date' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
@@ -113,7 +116,7 @@ function EditableField({label,required,value,onChange,placeholder,editable,icon,
   return <View style={styles.fieldWrap}>
     {label ? <Text style={styles.fieldLabel}>{label}{required?<Text style={{color:'#D74747'}}> *</Text>:null}</Text> : null}
     <View style={[styles.field,!editable&&{opacity:.65}]}>
-      <TextInput accessibilityLabel={label} editable={editable} value={value} onChangeText={onChange} placeholder={placeholder} placeholderTextColor="#9EABBC" keyboardType={keyboard} style={styles.editableInput}/>
+      <TextInput accessibilityLabel={label} editable={editable} value={mode==='date'?dateDraft:value} onChangeText={text=>{if(mode==='date'){const digits=text.replace(/\D/g,'').slice(0,8);const formatted=digits.length<=2?digits:digits.length<=4?`${digits.slice(0,2)}/${digits.slice(2)}`:`${digits.slice(0,2)}/${digits.slice(2,4)}/${digits.slice(4)}`;setDateDraft(formatted);onChange(parseAppDate(formatted)??'');}else onChange(text);}} placeholder={placeholder} placeholderTextColor="#9EABBC" keyboardType={keyboard} maxLength={mode==='date'?10:undefined} style={styles.editableInput}/>
       {icon?<Pressable accessibilityRole="button" accessibilityLabel={`Choose ${label}`} accessibilityState={{disabled:!editable}} disabled={!editable} onPress={openPicker} hitSlop={10} style={{minWidth:36,minHeight:36,alignItems:'center',justifyContent:'center'}}><Ionicons name={icon} color="#1857A9" size={20}/></Pressable>:null}
     </View>
     {pickerVisible && mode ? <Modal transparent animationType="fade" visible={pickerVisible} onRequestClose={()=>setPickerVisible(false)}>
@@ -124,9 +127,9 @@ function EditableField({label,required,value,onChange,placeholder,editable,icon,
             if(Platform.OS!=='ios')setPickerVisible(false);
             if(event.type==='dismissed'||!date)return;
             setDraftPickerValue(date);
-            if(Platform.OS!=='ios')onChange(mode==='date'? `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}`:`${pad(date.getHours())}:${pad(date.getMinutes())}`);
+            if(Platform.OS!=='ios') {if(mode==='date') setFromPicker(date); else onChange(`${pad(date.getHours())}:${pad(date.getMinutes())}`);}
           }}/>
-          {Platform.OS==='ios'?<Pressable accessibilityRole="button" accessibilityLabel="Done selecting date or time" onPress={()=>{const date=draftPickerValue;onChange(mode==='date'?`${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}`:`${pad(date.getHours())}:${pad(date.getMinutes())}`);setPickerVisible(false);}} style={pickerModalStyles.done}><Text style={pickerModalStyles.doneText}>Done</Text></Pressable>:null}
+          {Platform.OS==='ios'?<Pressable accessibilityRole="button" accessibilityLabel="Done selecting date or time" onPress={()=>{const date=draftPickerValue;if(mode==='date')setFromPicker(date);else onChange(`${pad(date.getHours())}:${pad(date.getMinutes())}`);setPickerVisible(false);}} style={pickerModalStyles.done}><Text style={pickerModalStyles.doneText}>Done</Text></Pressable>:null}
         </View>
       </View>
     </Modal> : null}

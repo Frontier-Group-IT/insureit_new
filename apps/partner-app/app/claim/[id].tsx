@@ -1,3 +1,4 @@
+import { formatAppDate } from '@/lib/indian-date';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -79,7 +80,7 @@ function formattedStageDate(value: string | null, includeTime = false) {
   if (!value) return null;
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return null;
-  const date = new Intl.DateTimeFormat('en-IN', { day:'2-digit',month:'short',year:'numeric' }).format(parsed);
+  const date = formatAppDate(value);
   return includeTime && /T\d{2}:\d{2}/.test(value || '') ? `${date} · ${new Intl.DateTimeFormat('en-IN', { hour:'numeric',minute:'2-digit',hour12:true }).format(parsed).toLowerCase()}` : date;
 }
 

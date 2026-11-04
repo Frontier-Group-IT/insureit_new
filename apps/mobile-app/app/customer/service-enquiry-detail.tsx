@@ -1,3 +1,4 @@
+import { formatAppDateTime } from '@/lib/indian-date';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -83,7 +84,7 @@ function Info({ label, value, multiline }: { label: string; value: string; multi
 }
 function statusLabel(status: ServiceEnquiry['status']) { return status === 'in_progress' ? 'In progress' : status === 'resolved' ? 'Resolved' : status === 'closed' ? 'Closed' : 'Open'; }
 function statusTone(status: ServiceEnquiry['status']) { return status === 'resolved' || status === 'closed' ? { accent: '#12805C', soft: '#E8F8F0' } : status === 'in_progress' ? { accent: '#0B63CE', soft: '#EEF5FF' } : { accent: '#B7791F', soft: '#FFF4E2' }; }
-function formatDate(value: string) { return new Date(value).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }); }
+function formatDate(value: string) { return formatAppDateTime(value); }
 
 const styles = StyleSheet.create({
   topRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },

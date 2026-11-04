@@ -1,0 +1,47 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+const source=(path)=>readFileSync(fileURLToPath(new URL(path,import.meta.url)),"utf8");
+const ops=source("../components/claim-manager/operations-claim-stages.tsx");
+const stageThree=source("../components/final-documents/final-documents-workspace-v2.tsx");
+const portalField=source("../components/indian-date-field.tsx");
+const customerSpot=source("../app/customer/(protected)/spot-intimation/page.tsx");
+const customerControl=source("../components/customer-portal/customer-date-input.tsx");
+const report=source("../components/reports/report-date-range-picker.tsx");
+const webDate=source("../lib/indian-date.ts");
+const mobile=source("../../mobile-app/lib/indian-date.ts");
+const partner=source("../../partner-app/lib/indian-date.ts");
+const partnerSpot=source("../../partner-app/components/partner-spot-intimation.tsx");
+const partnerPicker=source("../../partner-app/components/ui/partner-date-picker.tsx");
+const customerClaims=source("../../mobile-app/app/customer/claims.tsx");
+const customerRenewals=source("../../mobile-app/app/customer/renewals.tsx");
+const partnerPolicies=source("../../partner-app/app/(tabs)/policies.tsx");
+
+assert.match(ops,/const useAppDatePicker = field\.type === "date"/,"All nine Operations stage form dates must use consistent picker");
+assert.match(ops,/\$\{match\[3\]\}\/\$\{match\[2\]\}\/\$\{match\[1\]\}/,"Operations picker must show DD/MM/YYYY");
+assert.match(ops,/<AppStyleDateInput name="incident_at"/,"Operations accident date picker standardized");
+assert.match(ops,/<AppStyleDateInput name="spot_intimation_at"/,"Operations spot date picker standardized");
+assert.match(stageThree,/const display = matched \? /,"Claim Intimation/Gate-in date must use a formatted overlay");
+assert.match(stageThree,/\$\{matched\[3\]\}\/\$\{matched\[2\]\}\/\$\{matched\[1\]\}/,"Claim Intimation date display");
+assert.match(customerSpot,/<CustomerDateInput name="accidentDate"/);
+assert.match(customerSpot,/<CustomerDateInput name="spotDate"/);
+assert.match(customerControl,/formatIndianDate\(value\)/);
+assert.match(customerControl,/type="date" value=\{value\}/,"Native date picker and ISO posting retained");
+assert.match(portalField,/formatIndianDate\(value\)/,"Shared portal date control displays day-first");
+assert.match(portalField,/type="date"/,"Date submission stays native ISO");
+assert.match(report,/\$\{match\[3\]\}\/\$\{match\[2\]\}\/\$\{match\[1\]\}/,"Reports display DD/MM/YYYY");
+assert.match(webDate,/formatIndianDateTime/,"Shared web date-time formatter exists");
+for (const value of [mobile,partner]) {
+  assert.match(value,/formatAppDate\(/,"Mobile display formatter exists");
+  assert.match(value,/formatAppDateTime\(/,"Mobile date/time formatter exists");
+  assert.match(value,/getFullYear\(\)/,"Local time behavior is preserved for instants");
+  assert.match(value,/Date\.UTC\(year, month - 1, day\)/,"ISO date-only values avoid timezone shifts");
+}
+assert.match(partnerPicker,/formatAppDate\(value\)/,"Partner native date picker label is day-first");
+assert.match(partnerSpot,/placeholder="DD\/MM\/YYYY"/,"Partner Spot Intimation accepts day-first text");
+assert.match(partnerSpot,/parseAppDate\(formatted\)/,"Partner Spot Intimation converts manual day-first entry into ISO");
+assert.match(partnerSpot,/setFromPicker\(date\)/,"Native calendar retains ISO submission");
+assert.match(customerClaims,/formatAppDate\(value\)/,"Customer Claims dates are day-first");
+assert.match(customerRenewals,/formatAppDate\(value\)/,"Customer Renewals dates are day-first");
+assert.match(partnerPolicies,/formatAppDate\(value\)/,"Partner Policies dates are day-first");
+console.log("Indian date ecosystem input and display regression passed");

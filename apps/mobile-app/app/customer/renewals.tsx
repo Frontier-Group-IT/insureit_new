@@ -1,3 +1,4 @@
+import { formatAppDate } from '@/lib/indian-date';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
@@ -256,7 +257,7 @@ function externalToPolicy(policy: ExternalPolicyRow): Policy {
 }
 
 function formatDate(value: string) {
-  return new Date(`${value}T00:00:00`).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  return formatAppDate(value);
 }
 
 const styles = StyleSheet.create({

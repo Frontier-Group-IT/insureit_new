@@ -30,6 +30,21 @@ export function formatIndianDate(value?: string | null) {
     : "";
 }
 
+/** Display an instant in IST, leaving its ISO value and timezone conversion in storage untouched. */
+export function formatIndianDateTime(value?: string | Date | null) {
+  if (!value) return "";
+  if (typeof value === "string" && ISO_DATE.test(value.trim())) return formatIndianDate(value);
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit", month: "2-digit", year: "numeric",
+    hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: "Asia/Kolkata",
+  }).formatToParts(date);
+  const get = (key: string) => parts.find((part) => part.type === key)?.value ?? "";
+  const hour = Number(get("hour"));
+  return `${get("day")}/${get("month")}/${get("year")}, ${String(hour % 12 || 12).padStart(2, "0")}:${get("minute")} ${hour >= 12 ? "PM" : "AM"}`;
+}
+
 export function maskIndianDate(value: string) {
   const digits = value.replace(/\D/g, "").slice(0, 8);
   if (digits.length <= 2) return digits;

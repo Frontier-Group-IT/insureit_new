@@ -421,7 +421,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
                     </fieldset>
                   );
                 }
-                const useAppDatePicker = field.type === "date" && ((selected.key === "billing" && field.name === "bill_date") || (selected.key === "delivery_order" && field.name === "do_date") || selected.key === "vehicle_delivery" || selected.key === "payment_encashment");
+                const useAppDatePicker = field.type === "date";
                 return (
                   <label key={field.name} className="min-w-0 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#174EA6]">
                     {displayLabel}{required && !displayLabel.includes("*") ? <span className="ml-1 text-rose-600">*</span> : null}
@@ -506,7 +506,7 @@ function toDateValue(value: string) {
 function AppStyleDateInput({ name, value, required }: { name: string; value: string; required?: boolean }) {
   const [dateValue, setDateValue] = useState(() => toDateValue(value));
   return (
-    <span className="relative mt-1 flex h-10 w-full items-center justify-between rounded-md border border-[#D9E3F0] bg-white px-3 normal-case tracking-normal text-[#071D49] focus-within:border-[#174EA6]">
+    <span className="relative flex h-full min-h-9 w-full items-center justify-between rounded-md border border-[#D9E3F0] bg-white px-3 normal-case tracking-normal text-[#071D49] focus-within:border-[#174EA6]">
       <span className={`text-[12px] font-medium ${dateValue ? "text-[#071D49]" : "text-[#7B8BA3]"}`}>{dateValue ? formatDisplayDate(dateValue) : "Select date"}</span>
       <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4 fill-none stroke-[#526178] stroke-[1.8]"><rect x="4" y="6" width="16" height="14" rx="2" /><path d="M8 3v6M16 3v6M4 10h16" /></svg>
       <input
@@ -517,7 +517,7 @@ function AppStyleDateInput({ name, value, required }: { name: string; value: str
         onChange={(event) => setDateValue(event.target.value)}
         required={required}
         onClick={(event) => event.currentTarget.showPicker?.()}
-        className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+        className="absolute inset-0 h-full w-full cursor-pointer opacity-0 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#174EA6]"
       />
     </span>
   );
@@ -525,7 +525,7 @@ function AppStyleDateInput({ name, value, required }: { name: string; value: str
 
 function formatDisplayDate(value: string) {
   const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  return match ? `${match[3]}-${match[2]}-${match[1]}` : value;
+  return match ? `${match[3]}/${match[2]}/${match[1]}` : value;
 }
 
 function StageOneForm({ claimId, stage, active, detail, spotDetails, next, accidentAt, spotIntimationAt, formAction, standalone = false, onSubmitStart, onInvalidField }: { claimId: string; stage: (typeof stages)[number]; active: (typeof stages)[number]; detail: StageDetail | undefined; spotDetails?: InternalSpotIntimationDetails | null; next?: ClaimStatus; accidentAt?: string | null; spotIntimationAt?: string | null; formAction: (formData: FormData) => void; standalone?: boolean; onSubmitStart?: () => void; onInvalidField?: (message: string) => void }) {
@@ -591,14 +591,14 @@ function StageOneForm({ claimId, stage, active, detail, spotDetails, next, accid
           <fieldset className="min-w-0">
             <legend className={stageOneLabelClassName}>Accident date &amp; time<span className="ml-1 text-rose-600">*</span></legend>
             <div className="mt-1.5 grid h-9 grid-cols-[1.15fr_0.85fr] overflow-hidden rounded-lg border border-[#CEDBEC] bg-white focus-within:border-[#2F80ED]">
-              <input aria-label="Accident date" name="incident_at" type="date" defaultValue={toDateTimeLocal(incidentValue, "date")} required className={groupedInputClassName} />
+              <AppStyleDateInput name="incident_at" value={toDateTimeLocal(incidentValue, "date")} required />
               <input aria-label="Accident time" name="incident_time" type="time" defaultValue={toDateTimeLocal(incidentValue, "time")} required className={`${groupedInputClassName} border-l border-[#CEDBEC]`} />
             </div>
           </fieldset>
           <fieldset className="min-w-0">
             <legend className={stageOneLabelClassName}>Spot Intimation date &amp; time<span className="ml-1 text-rose-600">*</span></legend>
             <div className="mt-1.5 grid h-9 grid-cols-[1.15fr_0.85fr] overflow-hidden rounded-lg border border-[#CEDBEC] bg-white focus-within:border-[#2F80ED]">
-              <input aria-label="Spot Intimation date" name="spot_intimation_at" type="date" defaultValue={toDateTimeLocal(spotIntimationValue, "date")} required className={groupedInputClassName} />
+              <AppStyleDateInput name="spot_intimation_at" value={toDateTimeLocal(spotIntimationValue, "date")} required />
               <input aria-label="Spot Intimation time" name="spot_intimation_time" type="time" defaultValue={toDateTimeLocal(spotIntimationValue, "time")} required className={`${groupedInputClassName} border-l border-[#CEDBEC]`} />
             </div>
           </fieldset>

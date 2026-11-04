@@ -1,3 +1,4 @@
+import { formatAppDate, formatAppDateTime } from '@/lib/indian-date';
 import { SELF_MANAGED_MILESTONES, type ClaimMilestone, type ClaimMilestoneKey } from '@/lib/claim-service-mode';
 
 export type TimelineMilestone = Pick<ClaimMilestone, 'milestone_key' | 'milestone_status' | 'details' | 'completed_at'>;
@@ -69,9 +70,7 @@ export function formatJourneyDate(milestone: TimelineMilestone | null | undefine
   if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return formatDateOnly(value);
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return 'Date not recorded';
-  return date.toLocaleString('en-IN', {
-    day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true,
-  }).replace(',', ' ·');
+  return formatAppDateTime(date).replace(', ', ' · ');
 }
 
 export function formatJourneyAmount(amount: number | null): string | null {
@@ -122,9 +121,7 @@ export function localIsoDate(value: Date): string {
 }
 
 function formatDateOnly(value: string): string {
-  const [year, month, day] = value.split('-').map(Number);
-  const date = new Date(year, month - 1, day, 12, 0, 0, 0);
-  return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  return formatAppDate(value);
 }
 
 function dateComparable(value: string): string | null {

@@ -1,3 +1,4 @@
+import { formatAppDate } from '@/lib/indian-date';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -356,7 +357,7 @@ function storedDateOrClassFallback(vehicle: Vehicle, value?: string | null) {
 
 function formatDate(value?: string | null) {
   if (!value) return '-';
-  return new Date(value).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  return formatAppDate(value);
 }
 
 const styles = StyleSheet.create({

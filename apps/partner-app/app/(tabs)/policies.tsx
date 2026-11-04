@@ -1,3 +1,4 @@
+import { formatAppDate } from '@/lib/indian-date';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -518,7 +519,7 @@ function formatDate(value: string | null) {
   if (!value) return '—';
   const date = new Date(`${value}T00:00:00`);
   if (Number.isNaN(date.getTime())) return value;
-  return new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: '2-digit' }).format(date);
+  return formatAppDate(value);
 }
 
 function formatUpdatedAt(value: number | null) {

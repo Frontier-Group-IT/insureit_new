@@ -1,3 +1,4 @@
+import { formatAppDate } from '@/lib/indian-date';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -577,7 +578,7 @@ function VehicleDropdown({ vehicles, query, selectedVehicle, open, onToggle, onQ
   </>;
 }
 
-function formatDate(value: string) { return new Date(value).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }); }
+function formatDate(value: string) { return formatAppDate(value); }
 function formatIsoDate(date: Date) { return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`; }
 function daysUntil(value: string) { return Math.ceil((new Date(value).getTime() - Date.now()) / 86400000); }
 function policyCondition(endDate: string): PolicyCondition { const days = daysUntil(endDate); return days < 0 ? 'expired' : days <= 30 ? 'due' : 'active'; }
