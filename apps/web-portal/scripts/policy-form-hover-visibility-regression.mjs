@@ -1,0 +1,21 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+const read = p => readFileSync(new URL(p, import.meta.url),"utf8");
+const css = read("../components/policy-form-motion.module.css");
+const form = read("../components/policy-unified-form.tsx");
+const commercial = read("../components/policy-commercial-shell.tsx");
+const edit = read("../app/policies/[id]/edit/policy-edit-standard.tsx");
+
+assert.match(css,/\.policySection:hover,\s*\.policySection:focus-within/, "Policy section highlight must work without fine-pointer media query.");
+assert.match(css,/\.policySummary:hover,\s*\.policySummary:focus-within/, "Premium summary must provide visible feedback.");
+assert.match(css,/\.policySummaryAction:not\(:disabled\):hover,\s*\.policySummaryAction:not\(:disabled\):focus-visible/, "Enabled summary actions need hover and focus styles.");
+assert.match(css,/\.policyPage :is\(input:not\(:disabled\),select:not\(:disabled\),textarea:not\(:disabled\)\):hover/, "Enabled fields need a visible hover border.");
+assert.match(css,/\.policyPage :is\(input:not\(:disabled\),select:not\(:disabled\),textarea:not\(:disabled\)\):focus-visible/, "Keyboard focus feedback must remain.");
+assert.match(css,/@media \(hover:hover\) and \(pointer:fine\)/, "Card lift must remain limited to fine hover pointers.");
+assert.match(css,/@media \(prefers-reduced-motion:reduce\)/, "Respect reduced-motion accessibility.");
+assert.match(css,/animation: policyEnter 320ms [^;]* backwards;/, "Entrance animation must not override later hover transforms.");
+assert.match(form,/motionStyles\.policySection/, "Policy cards must use the shared motion module.");
+assert.match(form,/motionStyles\.policySummary/, "Summary card must use the shared motion module.");
+assert.match(commercial,/<PolicyUnifiedForm/, "Add Policy must use the shared form.");
+assert.match(edit,/PolicyCommercialShell|PolicyUnifiedForm/, "Edit Policy must use the same form.");
+console.log("Add/Edit Policy hover visibility regression passed.");
