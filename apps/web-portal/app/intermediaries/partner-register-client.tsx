@@ -277,7 +277,7 @@ function PartnerTable({ rows }: { rows: PartnerRegisterRow[] }) {
           <td className="px-3 py-3"><Status value={label} tone="account" /></td>
           <td className="px-3 py-3 text-center font-semibold tabular-nums text-[#17365D]" title="Associate accounts / registered branches">{row.associateCount === null ? "—" : row.associateCount.toLocaleString("en-IN")}/{row.branchCount === null ? "—" : row.branchCount.toLocaleString("en-IN")}</td>
           <td className="px-3 py-3 text-right tabular-nums" title={row.customerCount === null ? "Customer attribution unavailable" : undefined}>{row.customerCount === null ? "—" : row.customerCount.toLocaleString("en-IN")}</td>
-          <td className="px-3 py-3 text-right tabular-nums" title={row.netPremium === null ? "Net premium attribution unavailable" : undefined}>{money(row.netPremium)}</td>
+          <td className="px-3 py-3 text-right tabular-nums" title={row.netPremium === null ? "Net premium attribution unavailable" : "Lifetime net premium with current-month ranking shown below"}><span>{money(row.netPremium)}</span><span className="mt-0.5 block text-[9px] font-semibold text-[#0F766E]" title="Current-month net premium (India time)">MTD {money(row.mtdNetPremium)}</span></td>
           <td className="px-3 py-3 text-right tabular-nums" title={row.payout === null ? "Payout attribution unavailable" : undefined}>{money(row.payout)}</td>
           <td className="px-3 py-3 text-center"><div className="flex flex-col items-center gap-1.5">{renderAction(row)}</div></td>
         </tr>;
