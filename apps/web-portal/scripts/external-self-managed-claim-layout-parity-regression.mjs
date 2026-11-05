@@ -40,4 +40,18 @@ for (const token of ['<form', 'type="submit"', 'resolveAssistanceIntake', 'compl
 for (const token of ['.insert(', '.update(', '.delete(', '.upsert(', '.rpc(']) {
   assert.ok(!loader.includes(token), `External read-only loader must not perform mutations: ${token}`);
 }
+const migration = read("../../../supabase/migrations/20261105170000_self_managed_claim_operations_stage_parity.sql");
+const rollback = read("../../../supabase/rollbacks/20261105170000_self_managed_claim_operations_stage_parity_rollback.sql");
+assert.match(migration, /persist_managed_claim_stage_transition_from_details/, "Stage transition trigger must support self-managed claims.");
+assert.match(migration, /persist_initial_document_submission_from_stage_details/, "Initial document trigger must support self-managed claims.");
+assert.match(migration, /claim_service_mode in \(''broker_managed'', ''self_managed''\)/, "Trigger lookup must accept both management modes.");
+assert.match(migration, /not v_operations_actor/, "Self-managed claim changes must remain Operations-authorized.");
+assert.match(migration, /not \(new\.details \? ''completed_at''\)/, "Saving self-managed historical stage details cannot silently advance a claim.");
+assert.match(rollback, /claim_service_mode = ''broker_managed''/, "Rollback must restore the original managed-only lookup.");
+assert.match(stageActions, /claim\.claim_service_mode === "self_managed" && access\.isPartner/, "Partner users must not modify self-managed Operations stages.");
+assert.match(spotActions, /data\.claim_service_mode === "self_managed" && isPartner/, "Partner users must not edit self-managed Spot Intimation.");
+const verificationActions = read("../app/claims/[id]/spot-survey-actions.ts");
+assert.match(verificationActions, /data\.claim_service_mode === "self_managed" && access\.isPartner/, "Self-managed verification remains Operations-only.");
+assert.match(page, /<OperationsClaimStages/, "All self-managed Operations claims must use the shared nine-stage component.");
+
 console.log("External self-managed claim layout parity and read-only protections passed.");
