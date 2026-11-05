@@ -19,6 +19,7 @@ export function InsuranceVerificationModalButton({
   policyStartDate,
   policyEndDate,
   initialDetails = null,
+  reverify = false,
 }: {
   claimId: string;
   documentId: string;
@@ -26,6 +27,7 @@ export function InsuranceVerificationModalButton({
   policyStartDate?: string | null;
   policyEndDate?: string | null;
   initialDetails?: Record<string, unknown> | null;
+  reverify?: boolean;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -105,6 +107,7 @@ export function InsuranceVerificationModalButton({
           const capacityValue = insurance.capacity.trim();
           formData.set("claimId", claimId);
           formData.set("documentId", documentId);
+          if (reverify) formData.set("reverify", "true");
           formData.set("vehicle_capacity_value", capacityValue);
           formData.set("vehicle_capacity_label", capacity?.label ?? "Vehicle Capacity");
           formData.set("vehicle_capacity_unit", capacity?.unit ?? "");
