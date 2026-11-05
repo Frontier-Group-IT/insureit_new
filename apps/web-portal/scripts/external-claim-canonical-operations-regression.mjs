@@ -56,9 +56,14 @@ assert(!operationsStages.includes('externalVisualCurrentIndex'), 'External curre
 assert(operationsStages.includes('const isCurrent = !journeyComplete && stage.key === active?.key;'), 'Operations current-stage styling must use the shared claims.current_status stage.');
 assert(operationsStages.includes('const isCompleted = journeyComplete || index < activeIndex || (externalStageCompleted && !isCurrent);'), 'Completed Customer milestones may supplement completion styling without replacing the shared current stage.');
 assert(operationsStages.includes('nextStageKey: nextStageKeyFor(milestoneKey)'), 'Successful Stage 2 and Stage 4-8 saves must navigate to the next visible stage even when the save itself is non-advancing.');
-const saveOnlyEffect = operationsStages.slice(operationsStages.indexOf('if (!spotState.ok) return;'), operationsStages.indexOf('}, [claimId, router, spotState.ok]);'));
-assert(saveOnlyEffect.includes('router.refresh();'), 'Spot Intimation Save Details should refresh without advancing.');
-assert(!saveOnlyEffect.includes('setSelectedKey("spot_status")') && !saveOnlyEffect.includes('router.replace('), 'Save-only must not change the visible stage.');
+const saveOnlyEffect = operationsStages.slice(
+  operationsStages.indexOf('if (!spotState.ok) return;'),
+  operationsStages.indexOf('}, [claimId, router, spotState.ok,')
+);
+assert(saveOnlyEffect.includes('const canOpenNext = unrestrictedStageEditing || journeyComplete || activeIndex >= 1'), 'Next tab must be accessible before navigation.');
+assert(saveOnlyEffect.includes('router.replace(`/claims/${claimId}?stage=${nextKey}`);'), 'Successful Spot Intimation save must open the next accessible tab.');
+assert(saveOnlyEffect.includes('router.refresh();'), 'If next stage is inaccessible, keep the current stage and refresh.');
+assert(!saveOnlyEffect.includes('advanceInternalSpotIntimation'), 'Save-only navigation must never advance server workflow.');
 
 assert(finalDocumentsWorkspace.includes('setSuccessNotice(response.advanced ? "Claim Intimation completed. Work Approval is now open." : "Stage details saved.");'), 'Claim Intimation Save Details must provide successful confirmation.');
 assert(finalDocumentsWorkspace.includes('setAdvanceAfterClaimNumber(true);') && finalDocumentsWorkspace.includes('setClaimNumberPromptOpen(true);'), 'Internal Claim Stage 3 must prompt for claim number after a successful save.');
