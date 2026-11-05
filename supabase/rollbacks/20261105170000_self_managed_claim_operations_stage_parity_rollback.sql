@@ -14,12 +14,17 @@ DECLARE
 BEGIN
   FOREACH fn IN ARRAY ARRAY[
     'persist_initial_document_submission_from_stage_details',
-    'persist_managed_claim_stage_transition_from_details'
+    'persist_managed_claim_stage_transition_from_details',
+    'advance_initial_documents_verified',
+    'complete_spot_survey'
   ] LOOP
     SELECT pg_get_functiondef(p.oid) INTO body
       FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
      WHERE n.nspname = 'public' AND p.proname = fn AND p.pronargs = 0;
-    IF body IS NULL OR position(new_lookup IN body) = 0 OR position(new_guard IN body) = 0 THEN
+    IF body IS NULL OR position(new_lookup IN body) = 0
+       OR (fn IN ('persist_initial_document_submission_from_stage_details',
+                  'persist_managed_claim_stage_transition_from_details')
+           AND position(new_guard IN body) = 0) THEN
       RAISE EXCEPTION 'Unexpected modified trigger function definition: %', fn;
     END IF;
     IF fn = 'persist_managed_claim_stage_transition_from_details' THEN
@@ -30,7 +35,10 @@ BEGIN
         '  if v_claim.policy_service_source::text = ''external''',
         '  if v_claim.policy_service_source::text = ''external''');
     END IF;
-    body := replace(body, new_guard, old_guard);
+    IF fn IN ('persist_initial_document_submission_from_stage_details',
+              'persist_managed_claim_stage_transition_from_details') THEN
+      body := replace(body, new_guard, old_guard);
+    END IF;
     body := replace(body, new_lookup, old_lookup);
     EXECUTE body;
   END LOOP;
