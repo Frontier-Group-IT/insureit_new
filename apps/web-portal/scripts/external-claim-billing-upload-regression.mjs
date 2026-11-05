@@ -18,6 +18,8 @@ assert.match(upload, /type==="Final Workshop Bill"[\s\S]*isExternalCustomerClaim
 assert.match(upload, /current!=="billing" && !billing\?\.completed/, "Customer upload must enforce stage availability");
 assert.match(widget, /prepareClaimDocumentUpload[\s\S]*finalizeClaimDocumentUpload/, "Operations must use existing authorized signed upload path");
 assert.match(widget, /uploadCustomerClaimDocument/, "Customer must use account-scoped upload action");
+assert.match(widget, /VerifyDocumentButton claimId=\{claimId\} documentId=\{file\.id\}/, "Operations must be able to verify uploaded bills before stage save.");
+assert.match(widget, /file\.verification_status !== "verified"/, "Only unverified bills should offer a verify action.");
 assert.match(widget, /type="button" disabled=\{pending\}/, "File chooser must not submit billing stage");
 assert.match(widget, /5 \* 1024 \* 1024/, "Maximum document size must remain 5MB");
 console.log("External Claim Billing workshop bill upload regression passed.");
