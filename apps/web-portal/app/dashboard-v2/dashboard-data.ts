@@ -577,35 +577,25 @@ export async function getDashboardCurrentData(
     let pendingDocuments = 0;
 
     const [financialResult, stageDetailResult, documentResult] = await Promise.all([
-      financialClaimIds.length
-        ? admin
-            .from("claim_financials")
-            .select("claim_id,estimate_amount,approved_amount,bill_amount,do_amount,payment_received_amount")
-            .in("claim_id", financialClaimIds)
-            .returns<ClaimFinancialRow[]>()
-        : Promise.resolve({ data: [] as ClaimFinancialRow[], error: null }),
-      internalOpenIds.length
-        ? admin
-            .from("claim_stage_details")
-            .select("claim_id,details,created_at")
-            .in("claim_id", internalOpenIds)
-            .order("created_at", { ascending: false })
-            .limit(5000)
-            .returns<ClaimStageDetailRow[]>()
-        : Promise.resolve({ data: [] as ClaimStageDetailRow[], error: null }),
-      openIds.length
-        ? admin
-            .from("claim_documents")
-            .select("id", { count: "exact", head: true })
-            .in("claim_id", openIds)
-            .in("verification_status", ["pending", "rejected"])
-        : Promise.resolve({ count: 0, error: null }),
+      loadScopedDashboardRows(financialClaimIds, (batch, from, to) => admin
+        .from("claim_financials")
+        .select("claim_id,estimate_amount,approved_amount,bill_amount,do_amount,payment_received_amount")
+        .in("claim_id", batch).order("claim_id").range(from, to)
+        .returns<ClaimFinancialRow[]>()),
+      loadScopedDashboardRows(internalOpenIds, (batch, from, to) => admin
+        .from("claim_stage_details").select("claim_id,details,created_at")
+        .in("claim_id", batch).order("id").range(from, to)
+        .returns<ClaimStageDetailRow[]>()),
+      loadScopedDashboardRows(openIds, (batch, from, to) => admin
+        .from("claim_documents").select("id")
+        .in("claim_id", batch).in("verification_status", ["pending", "rejected"])
+        .order("id").range(from, to).returns<Array<{ id: string }>>()),
     ]);
     if (financialResult.error) warnings.push("Claim financial exposure could not be refreshed.");
     else financialRows = financialResult.data ?? [];
     if (stageDetailResult.error) warnings.push("Claim stage amounts could not be refreshed.");
     if (documentResult.error) warnings.push("Claim document review count could not be refreshed.");
-    else pendingDocuments = documentResult.count ?? 0;
+    else pendingDocuments = documentResult.data?.length ?? 0;
 
     const financialByClaim = new Map(financialRows.map((row) => [row.claim_id, row]));
     const stageAmountsByClaim = buildLatestClaimStageAmounts(stageDetailResult.data ?? []);
@@ -667,11 +657,10 @@ export async function getDashboardCurrentData(
     if (taskClaimError) warnings.push("Task scope could not be refreshed.");
     else if (!taskClaimIds.length) tasks = { open: 0, overdue: 0 };
     else {
-      const taskResult = await admin
-        .from("claim_tasks")
-        .select("id,status,due_date")
-        .in("claim_id", taskClaimIds)
-        .returns<Array<{ id: string; status: string; due_date: string | null }>>();
+      const taskResult = await loadScopedDashboardRows(taskClaimIds, (batch, from, to) => admin
+        .from("claim_tasks").select("id,status,due_date").in("claim_id", batch)
+        .order("id").range(from, to)
+        .returns<Array<{ id: string; status: string; due_date: string | null }>>());
       if (taskResult.error) warnings.push("Task totals could not be refreshed.");
       else {
         const openRows = (taskResult.data ?? []).filter((row) => ["open", "in_progress"].includes(row.status));
