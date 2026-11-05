@@ -1,11 +1,17 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 const src = readFileSync(new URL("../components/customer-portal/customer-claim-stage-submit.tsx", import.meta.url), "utf8");
-assert.match(src, /role="alertdialog"/);
-assert.match(src, /aria-modal="true"/);
+const sharedDialog = readFileSync(new URL("../components/claim-manager/claim-stage-error-dialog.tsx", import.meta.url), "utf8");
+assert.match(src, /<ClaimStageErrorDialog message=\{errorPopup\}/, "Customer claim stage uses the shared centered error popup");
+assert.match(sharedDialog, /role="alertdialog"/);
+assert.match(sharedDialog, /aria-modal="true"/);
+assert.match(sharedDialog, /Check details/, "Error popup shows the requested Check details heading");
+assert.match(sharedDialog, /AlertCircle/, "Error popup uses the standard orange warning icon");
+assert.match(sharedDialog, /h-11 w-full rounded-xl bg-\[#19385E\]/, "Error popup has a full-width navy OK action");
+assert.doesNotMatch(src, /Action required|border-red-100/, "Remove the old compact red error dialog");
 assert.match(src, /setErrorPopup\(result.error\)/);
 assert.match(src, /setErrorPopup\(error instanceof Error/);
-assert.ok(src.includes('onClick={() => setErrorPopup("")}'));
+assert.ok(src.includes('onClose={() => setErrorPopup("")}'), "OK dismisses claim-stage error dialog");
 assert.match(src, /className="relative flex flex-wrap items-center justify-end gap-2"/, "Footer buttons need a stable positioning context.");
 assert.match(src, /role="status" aria-live="polite" className="pointer-events-none absolute right-0 top-full/, "Draft saved feedback must not participate in footer button layout.");
 assert.doesNotMatch(src, /role="status" aria-live="polite" className="w-full/, "Full-width feedback must not shift Cancel vertically.");
@@ -32,6 +38,11 @@ assert.match(src, /clearCustomerClaimDraft\(key\)/, "Clear only on a successful 
 assert.match(src, /if \(result\.error\)/, "Do not discard local data after server errors");
 assert.match(actions, /await saveCustomerExternalStage\(form, false\)/, "Server validation must report success without RSC form reset");
 assert.match(actions, /return \{error:null, destination\}/, "Return a safe success destination");
+assert.match(actions, /const destination = key === "payment_encashment"\s*\? "\/customer\/claims\?account="\+encodeURIComponent\(account\.id\)/, "Successful Stage 9 saves, including completed-stage edits, must return to the scoped Claims Register.");
+assert.match(actions, /: editingCompleted\s*\? "\/customer\/claims\/"\+encodeURIComponent\(claim\.id\)\+"\/stage\/"/, "Earlier completed stages must retain their existing edit destination.");
+assert.match(actions, /if \(navigate\) redirect\(destination\)/, "Preserve existing server action navigation.");
+assert.match(src, /if \(result\.destination\) router\.push\(result\.destination\)/, "Final navigation remains conditional on successful save.");
+
 assert.doesNotMatch(spot, /useActionState\(/, "Spot Intimation errors must not reset uncontrolled form inputs");
 assert.match(spot, /event\.preventDefault\(\)/, "Spot Intimation must preserve inputs on failed submit");
 assert.match(spot, /if \(result\.error\)/, "Spot Intimation server errors must retain entered fields");

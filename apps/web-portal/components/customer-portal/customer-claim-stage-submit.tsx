@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { clearCustomerClaimDraft, customerClaimStageDraftKey, saveCustomerClaimDraft } from "@/components/customer-portal/customer-claim-stage-draft-form";
 import { LoaderCircle } from "lucide-react";
+import { ClaimStageErrorDialog } from "@/components/claim-manager/claim-stage-error-dialog";
 import { saveCustomerClaimStageWithFeedback } from "@/app/customer/(protected)/claims/[id]/stage/[stage]/actions";
 
 export function CustomerClaimStageSubmit({ formId, variant = "intimation" }: { formId: string; variant?: "intimation" | "continue" }) {
@@ -54,13 +55,7 @@ export function CustomerClaimStageSubmit({ formId, variant = "intimation" }: { f
         {saving === "details" ? "Saving..." : variant === "continue" ? "Save & Continue" : "Save Details"}
       </button>
       {feedback ? <p role="status" aria-live="polite" className="pointer-events-none absolute right-0 top-full mt-1 whitespace-nowrap text-right text-[12px] font-semibold text-emerald-700">{feedback}</p> : null}
-      {errorPopup ? <div className="fixed inset-0 z-[200] flex items-center justify-center bg-[#071D49]/40 p-4" role="presentation">
-        <div role="alertdialog" aria-modal="true" aria-labelledby="customer-claim-error-title" aria-describedby="customer-claim-error-message" className="w-full max-w-sm rounded-2xl border border-red-100 bg-white p-5 shadow-2xl">
-          <h2 id="customer-claim-error-title" className="text-[15px] font-bold text-[#17365D]">Action required</h2>
-          <p id="customer-claim-error-message" className="mt-2 text-[12px] text-[#AD2732]">{errorPopup}</p>
-          <div className="mt-5 flex justify-end"><button autoFocus type="button" onClick={() => setErrorPopup("")} className="rounded-lg bg-[#17365D] px-5 py-2 text-[12px] font-semibold text-white">OK</button></div>
-        </div>
-      </div> : null}
+      <ClaimStageErrorDialog message={errorPopup} onClose={() => setErrorPopup("")} />
     </div>
   );
 }

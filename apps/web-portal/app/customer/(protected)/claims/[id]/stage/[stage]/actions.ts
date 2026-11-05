@@ -123,11 +123,15 @@ export async function saveCustomerExternalStage(form:FormData, navigate = true) 
     }
   }
   const next=INTERNAL_JOURNEY_STAGES[index+1];
-  const destination = editingCompleted
-    ? "/customer/claims/"+encodeURIComponent(claim.id)+"/stage/"+encodeURIComponent(key)+"?account="+encodeURIComponent(account.id)+"&mode=edit&saved=updated"
-    : next
-      ? "/customer/claims/"+encodeURIComponent(claim.id)+"/stage/"+encodeURIComponent(next.key)+"?account="+encodeURIComponent(account.id)+"&mode=edit"+(key==="claim_intimation"?"&saved=claim_intimation":"")
-      : "/customer/claims/"+encodeURIComponent(claim.id)+"?account="+encodeURIComponent(account.id);
+  // Saving the final Payment Encashment stage returns to the customer's Claim Register,
+  // including edits to an already-completed Stage 9. Preserve the scoped account.
+  const destination = key === "payment_encashment"
+    ? "/customer/claims?account="+encodeURIComponent(account.id)
+    : editingCompleted
+      ? "/customer/claims/"+encodeURIComponent(claim.id)+"/stage/"+encodeURIComponent(key)+"?account="+encodeURIComponent(account.id)+"&mode=edit&saved=updated"
+      : next
+        ? "/customer/claims/"+encodeURIComponent(claim.id)+"/stage/"+encodeURIComponent(next.key)+"?account="+encodeURIComponent(account.id)+"&mode=edit"+(key==="claim_intimation"?"&saved=claim_intimation":"")
+        : "/customer/claims/"+encodeURIComponent(claim.id)+"?account="+encodeURIComponent(account.id);
   if (navigate) redirect(destination);
   return destination;
 }
