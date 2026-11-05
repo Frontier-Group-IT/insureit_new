@@ -11,7 +11,7 @@ assert.match(sharedDialog, /h-11 w-full rounded-xl bg-\[#19385E\]/, "Error popup
 assert.doesNotMatch(src, /Action required|border-red-100/, "Remove the old compact red error dialog");
 assert.match(src, /setErrorPopup\(result.error\)/);
 assert.match(src, /setErrorPopup\(error instanceof Error/);
-assert.ok(src.includes('onClick={() => setErrorPopup("")}'));
+assert.ok(src.includes('onClose={() => setErrorPopup("")}'), "OK dismisses claim-stage error dialog");
 assert.doesNotMatch(src, /bg-\[#FFF3F3\]/);
 const { readFileSync: read } = await import("node:fs");
 const draft = read(new URL("../components/customer-portal/customer-claim-stage-draft-form.tsx", import.meta.url), "utf8");
