@@ -6,13 +6,19 @@ import { PartnerScreen } from '@/components/partner-screen';
 import { PartnerInsurerLogo } from '@/components/ui/partner-insurer-logo';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { getPartnerInsurerRegister, type PartnerInsurerRegisterRow } from '@/lib/business';
-import { formatIndianCurrency } from '@/lib/format';
 import { usePartnerQuery } from '@/lib/use-partner-query';
 import { usePartnerSession } from '@/providers/partner-session-provider';
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const NAME_WIDTH = 215;
-const METRIC_WIDTH = 106;
+const METRIC_WIDTH = 125;
+
+// This report displays rounded whole rupees. Keep full-precision source values
+// intact for calculations and all other screens.
+const wholeRupeeFormatter = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0, minimumFractionDigits: 0 });
+function formatInsurerRupees(amount: number): string {
+  return `₹${wholeRupeeFormatter.format(amount)}`;
+}
 
 export default function InsurerListScreen() {
   const params = useLocalSearchParams<{ from?: string; to?: string }>();
@@ -72,14 +78,14 @@ export default function InsurerListScreen() {
                       <Text style={styles.insurerName} numberOfLines={2}>{insurer.name}</Text>
                     </View>
                   </View>
-                  <Text style={[styles.metricColumn, styles.number]}>{insurer.policies}</Text>
-                  <Text style={[styles.metricColumn, styles.number]}>{formatIndianCurrency(insurer.premium)}</Text>
+                  <Text style={[styles.metricColumn, styles.number]} numberOfLines={1}>{insurer.policies}</Text>
+                  <Text style={[styles.metricColumn, styles.number]} numberOfLines={1}>{formatInsurerRupees(insurer.premium)}</Text>
                   {employee ? (
                     <>
-                      <Text style={[styles.metricColumn, styles.number]}>{insurer.payin == null ? '—' : formatIndianCurrency(insurer.payin)}</Text>
-                      <Text style={[styles.metricColumn, styles.number]}>{insurer.retention == null ? '—' : formatIndianCurrency(insurer.retention)}</Text>
+                      <Text style={[styles.metricColumn, styles.number]} numberOfLines={1}>{insurer.payin == null ? '—' : formatInsurerRupees(insurer.payin)}</Text>
+                      <Text style={[styles.metricColumn, styles.number]} numberOfLines={1}>{insurer.retention == null ? '—' : formatInsurerRupees(insurer.retention)}</Text>
                     </>
-                  ) : <Text style={[styles.metricColumn, styles.number]}>{insurer.payout == null ? '—' : formatIndianCurrency(insurer.payout)}</Text>}
+                  ) : <Text style={[styles.metricColumn, styles.number]} numberOfLines={1}>{insurer.payout == null ? '—' : formatInsurerRupees(insurer.payout)}</Text>}
                 </View>
               ))}
               {!query.data?.length ? <Text style={styles.empty}>No insurers found for the selected reporting period.</Text> : null}
