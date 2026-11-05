@@ -41,6 +41,8 @@ jobs:
         run: node scripts/claim-payment-stage-authorized-write-regression.mjs
       - name: Operations stage-one multiple documents and voice-note regression
         run: node scripts/operations-claim-stage-one-media-parity-regression.mjs
+      - name: Operations Claim microphone permissions and voice upload regression
+        run: node scripts/operations-claim-microphone-permissions-regression.mjs
       - name: Customer document re-upload dialog layering regression
         run: node scripts/customer-document-reupload-dialog-regression.mjs
       - name: Claim document re-upload Stage 1/3 Internal External parity regression
