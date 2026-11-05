@@ -9,6 +9,7 @@ import { buildIntermediaryDocumentSlots } from "@/lib/intermediary-document-slot
 import { loadPolicyIntakeDuplicateMatches } from "@/lib/policy-intake-duplicate";
 import type { PolicyIntakeOcrField } from "@/app/policy-intakes/ocr-actions";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { loadScopedDashboardRows } from "@/lib/dashboard-scoped-query-batches";
 
 type ProfileLike = { id: string; role?: string | null };
 
@@ -334,15 +335,13 @@ export async function getDashboardCurrentData(
     : Promise.resolve({ data: [] as VehicleRow[], error: null });
 
   const claimRequest = access.viewClaims && claimCustomerIds?.length !== 0
-    ? (() => {
-        let query = admin
-          .from("claims")
+    ? claimCustomerIds === null
+      ? admin.from("claims")
           .select("id,vehicle_id,claim_no,current_status,created_at,updated_at,assistance_status,claim_service_mode,policy_service_source,estimated_loss,approved_amount,settlement_amount,customers(company_name,contact_name),vehicles(vehicle_no)")
-          .order("updated_at", { ascending: false })
-          .limit(10000);
-        if (claimCustomerIds !== null) query = query.in("customer_id", claimCustomerIds);
-        return query.returns<ClaimRow[]>();
-      })()
+          .order("updated_at", { ascending: false }).limit(10000).returns<ClaimRow[]>()
+      : loadScopedDashboardRows(claimCustomerIds, (batch, from, to) => admin.from("claims")
+          .select("id,vehicle_id,claim_no,current_status,created_at,updated_at,assistance_status,claim_service_mode,policy_service_source,estimated_loss,approved_amount,settlement_amount,customers(company_name,contact_name),vehicles(vehicle_no)")
+          .in("customer_id", batch).order("id").range(from, to).returns<ClaimRow[]>())
     : Promise.resolve({ data: [] as ClaimRow[], error: null });
 
   const intermediaryRequest = access.viewIntermediaries && intermediaryIds?.length !== 0
@@ -396,7 +395,7 @@ export async function getDashboardCurrentData(
 
   const policies = policyResult.data ?? [];
   const vehicles = vehicleResult.data ?? [];
-  const claims = claimResult.data ?? [];
+  const claims = [...(claimResult.data ?? [])].sort((a, b) => b.updated_at.localeCompare(a.updated_at));
   const intermediaries = intermediaryResult.data ?? [];
   const intakes = intakeResult.data ?? [];
 
@@ -658,7 +657,9 @@ export async function getDashboardCurrentData(
       taskClaimError = Boolean(result.error);
       taskClaimIds = (result.data ?? []).map((row) => row.id);
     } else if (taskCustomerIds.length) {
-      const result = await admin.from("claims").select("id").in("customer_id", taskCustomerIds).limit(15000).returns<Array<{ id: string }>>();
+      const result = await loadScopedDashboardRows(taskCustomerIds, (batch, from, to) => admin
+        .from("claims").select("id").in("customer_id", batch).order("id")
+        .range(from, to).returns<Array<{ id: string }>>());
       taskClaimError = Boolean(result.error);
       taskClaimIds = (result.data ?? []).map((row) => row.id);
     }
@@ -887,15 +888,18 @@ async function loadDashboardVehicles(
   admin: ReturnType<typeof createSupabaseAdminClient>,
   customerIds: string[] | null,
 ) {
-  const rows: VehicleRow[] = [];
-  for (let from = 0; ; from += dashboardPageSize) {
-    let query = admin
+  if (customerIds !== null) {
+    return loadScopedDashboardRows(customerIds, (batch, from, to) => admin
       .from("vehicles")
       .select("id,customer_id,vehicle_no,vehicle_type,registration_status,authbridge_verified")
-      .order("id", { ascending: true })
-      .range(from, from + dashboardPageSize - 1);
-    if (customerIds !== null) query = query.in("customer_id", customerIds);
-    const result = await query.returns<VehicleRow[]>();
+      .in("customer_id", batch).order("id").range(from, to).returns<VehicleRow[]>());
+  }
+  const rows: VehicleRow[] = [];
+  for (let from = 0; ; from += dashboardPageSize) {
+    const result = await admin.from("vehicles")
+      .select("id,customer_id,vehicle_no,vehicle_type,registration_status,authbridge_verified")
+      .order("id", { ascending: true }).range(from, from + dashboardPageSize - 1)
+      .returns<VehicleRow[]>();
     if (result.error) return { data: null, error: result.error };
     const page = result.data ?? [];
     rows.push(...page);
