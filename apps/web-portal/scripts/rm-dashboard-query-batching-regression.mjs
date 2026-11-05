@@ -6,6 +6,7 @@ const helper = read("../lib/dashboard-scoped-query-batches.ts");
 const scoped = read("../lib/scoped-operations-dashboard.ts");
 const dashboard = read("../app/dashboard-v2/dashboard-data.ts");
 const source = read("../app/dashboard/page.tsx");
+const view = read("../app/dashboard-v2/dashboard-view.tsx");
 
 assert.match(helper, /dashboardScopeBatchSize = 100;/, "Bound UUID list in each PostgREST URL.");
 assert.match(helper, /dashboardScopePageSize = 500;/, "Use explicit pagination below PostgREST row cap.");
@@ -35,4 +36,6 @@ assert.match(dashboard, /\.sort\(\(a, b\) => b\.updated_at\.localeCompare\(a\.up
 assert.match(source, /getEffectivePermissionAccessMap/, "Existing role capabilities remain enforced.");
 assert.match(source, /getOperationsDashboardData\(supabase, profile\)/,
   "Scoped dashboard must continue using signed-in profile.");
+assert.match(dashboard, /b\.created_at\.localeCompare\(a\.created_at\)/, "Latest stage financial values must win after page stitching.");
+assert.match(view, /data\.base\.errors\.includes\("Customer portfolio could not be loaded\."\) \? "—"/, "Failed customer totals must never be displayed as a real zero.");
 console.log("RM Dashboard bounded scope queries, paging and failure handling regression passed.");
