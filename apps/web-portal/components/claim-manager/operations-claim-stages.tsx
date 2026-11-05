@@ -400,11 +400,12 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
         ) : null}
         {stageEditable ? (
           <form action={formAction} onInvalidCapture={(event) => { event.preventDefault(); setErrorNotice("Please complete all required fields before saving this stage."); }} className="mt-3 rounded-xl border border-[#D9E6F7] bg-[#F8FBFF] p-3">
+            {selected.key === "work_approval" ? <div className="mb-3 flex items-center justify-between gap-2 border-b border-[#D9E3F0] pb-3"><div><h2 className="text-[14px] font-bold text-[#071D49]">Stage 4 — Work Approval</h2><p className="text-[11px] text-[#64748B]">Record insurance approval and surveyor details</p></div><span className="shrink-0 rounded-md bg-[#EAF2FF] px-2 py-1 text-[10px] font-semibold text-[#174EA6]">4 of 9</span></div> : null}
             <input type="hidden" name="milestone_key" value={selected.key} />
             <input type="hidden" name="next_status" value={stageTarget ?? ""} />
             <input type="hidden" name="save_only" value={partnerManagedJourney || selectedSaveOnly ? "true" : "false"} />
             <input type="hidden" name="notes" value={selectedSaveOnly ? `Operations edited ${selected.label} details.` : `Operations completed ${selected.label} and opened the next journey stage.`} />
-            <div className={`grid gap-3 sm:grid-cols-2 ${selected.key === "work_approval" ? "lg:grid-cols-5" : selected.key === "repair_ri" || selected.key === "delivery_order" ? "lg:grid-cols-3" : selected.key === "billing" ? "lg:grid-cols-2" : selected.key === "vehicle_delivery" ? "lg:grid-cols-2" : selected.key === "payment_encashment" ? "lg:grid-cols-[repeat(5,minmax(0,1fr))] lg:items-start" : "lg:grid-cols-4"}`}>
+            <div className={`grid gap-3 sm:grid-cols-2 ${selected.key === "work_approval" ? "lg:grid-cols-5 lg:items-start" : selected.key === "repair_ri" || selected.key === "delivery_order" ? "lg:grid-cols-3" : selected.key === "billing" ? "lg:grid-cols-2" : selected.key === "vehicle_delivery" ? "lg:grid-cols-2" : selected.key === "payment_encashment" ? "lg:grid-cols-[repeat(5,minmax(0,1fr))] lg:items-start" : "lg:grid-cols-4"}`}>
               {fields[selected.key].map((field) => {
                 const value = field.name === "insurer_claim_no" ? insurerClaimNo ?? fieldValue(selectedDetails, field.name) : fieldValue(selectedDetails, field.name);
                 const internalStageTwoSurveyorField = selected.key === "spot_status" && !hasExternalVisualProgress && internalSpotStatusSurveyorFields.has(field.name);
@@ -414,15 +415,15 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
                   const yesChecked = value === "true" || value === "yes";
                   const noChecked = value === "false" || value === "no";
                   return (
-                    <fieldset key={field.name} className="min-w-0 max-w-xl">
+                    <fieldset key={field.name} className={selected.key === "work_approval" ? "min-w-0 w-full" : "min-w-0 max-w-xl"}>
                       <legend className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#174EA6]">
                         {displayLabel}{required ? <span className="ml-1 text-rose-600">*</span> : null}
                       </legend>
                       <div className="mt-1 grid grid-cols-2 gap-2">
-                        <label className="flex h-9 cursor-pointer items-center justify-center rounded-md border border-[#D9E3F0] bg-white text-[12px] font-semibold normal-case tracking-normal text-[#071D49] has-[:checked]:border-[#174EA6] has-[:checked]:bg-[#EEF4FF]">
+                        <label className={`flex ${selected.key === "work_approval" ? "h-[38px]" : "h-9"} cursor-pointer items-center justify-center rounded-md border border-[#D9E3F0] bg-white text-[12px] font-semibold normal-case tracking-normal text-[#071D49] has-[:checked]:border-[#174EA6] has-[:checked]:bg-[#EEF4FF]`}>
                           <input className="sr-only" type="radio" name={field.name} value="true" defaultChecked={yesChecked} required={required} />Yes
                         </label>
-                        <label className="flex h-9 cursor-pointer items-center justify-center rounded-md border border-[#D9E3F0] bg-white text-[12px] font-semibold normal-case tracking-normal text-[#071D49] has-[:checked]:border-[#174EA6] has-[:checked]:bg-[#EEF4FF]">
+                        <label className={`flex ${selected.key === "work_approval" ? "h-[38px]" : "h-9"} cursor-pointer items-center justify-center rounded-md border border-[#D9E3F0] bg-white text-[12px] font-semibold normal-case tracking-normal text-[#071D49] has-[:checked]:border-[#174EA6] has-[:checked]:bg-[#EEF4FF]`}>
                           <input className="sr-only" type="radio" name={field.name} value="false" defaultChecked={noChecked} required={required} />{field.name === "vehicle_received" ? "Not Yet" : "No"}
                         </label>
                       </div>
@@ -434,9 +435,9 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
                   <label key={field.name} className="min-w-0 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#174EA6]">
                     {displayLabel}{required && !displayLabel.includes("*") ? <span className="ml-1 text-rose-600">*</span> : null}
                     {useAppDatePicker ? (
-                      <AppStyleDateInput name={field.name} value={value} required={required} />
+                      <AppStyleDateInput name={field.name} value={value} required={required} compact={selected.key === "work_approval"} />
                     ) : field.type === "select" ? (
-                      <select name={field.name} defaultValue={value} required={required} className="mt-1 h-9 w-full rounded-md border border-[#D9E3F0] bg-white px-2 text-[12px] font-medium normal-case tracking-normal text-[#071D49] outline-none focus:border-[#174EA6]">
+                      <select name={field.name} defaultValue={value} required={required} className={`mt-1 ${selected.key === "work_approval" ? "h-[38px]" : "h-9"} w-full rounded-md border border-[#D9E3F0] bg-white px-2 text-[12px] font-medium normal-case tracking-normal text-[#071D49] outline-none focus:border-[#174EA6]`}>
                         <option value="" disabled>Select</option>
                         <option value={field.name === "cashless" ? "true" : "yes"}>Yes</option>
                         <option value={field.name === "cashless" ? "false" : "no"}>No</option>
@@ -448,7 +449,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
                         defaultValue={field.type === "date" ? toDateValue(value) : value}
                         required={required}
                         onClick={field.type === "date" ? (event) => event.currentTarget.showPicker?.() : undefined}
-                        className="mt-1 h-9 w-full rounded-md border border-[#D9E3F0] bg-white px-2 text-[12px] font-medium normal-case tracking-normal text-[#071D49] outline-none focus:border-[#174EA6]"
+                        className={`mt-1 ${selected.key === "work_approval" ? "h-[38px]" : "h-9"} w-full rounded-md border border-[#D9E3F0] bg-white px-2 text-[12px] font-medium normal-case tracking-normal text-[#071D49] outline-none focus:border-[#174EA6]`}
                       />
                     )}
                   </label>
@@ -456,11 +457,12 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
               })}
             </div>
 
-            <div className="mt-3 flex justify-end">
+            <div className={selected.key === "work_approval" ? "mt-3 flex min-h-10 items-center justify-end gap-2 border-t border-[#D9E3F0] pt-3" : "mt-3 flex justify-end"}>
+              {selected.key === "work_approval" ? <button type="button" onClick={() => router.push(partnerManagedJourney ? "/partner/claims" : "/claims")} className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#B9CBE2] bg-white px-4 text-[12px] font-semibold text-[#174A87]">Cancel</button> : null}
               <FormSubmitButton
-                label={selectedSaveOnly ? "Save Details" : selected.key === "payment_encashment" ? "Save & complete claim" : `Save & move to ${nextStageLabel}`}
+                label={selected.key === "work_approval" ? "Save & Continue" : selectedSaveOnly ? "Save Details" : selected.key === "payment_encashment" ? "Save & complete claim" : `Save & move to ${nextStageLabel}`}
                 pendingLabel="Saving..."
-                className="rounded-lg bg-[#071D49] px-4 py-2 text-[11px] font-semibold text-white disabled:opacity-60"
+                className={selected.key === "work_approval" ? "inline-flex min-h-10 min-w-[148px] items-center justify-center rounded-lg bg-[#1253A7] px-4 py-2 text-[11px] font-semibold text-white disabled:opacity-60" : "rounded-lg bg-[#071D49] px-4 py-2 text-[11px] font-semibold text-white disabled:opacity-60"}
               />
             </div>
           </form>
@@ -511,10 +513,10 @@ function toDateValue(value: string) {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
-function AppStyleDateInput({ name, value, required }: { name: string; value: string; required?: boolean }) {
+function AppStyleDateInput({ name, value, required, compact = false }: { name: string; value: string; required?: boolean; compact?: boolean }) {
   const [dateValue, setDateValue] = useState(() => toDateValue(value));
   return (
-    <span className="relative flex h-full min-h-9 w-full items-center justify-between rounded-md border border-[#D9E3F0] bg-white px-3 normal-case tracking-normal text-[#071D49] focus-within:border-[#174EA6]">
+    <span className={`relative flex ${compact ? "h-[38px]" : "h-full min-h-9"} w-full items-center justify-between rounded-md border border-[#D9E3F0] bg-white px-3 normal-case tracking-normal text-[#071D49] focus-within:border-[#174EA6]`}>
       <span className={`text-[12px] font-medium ${dateValue ? "text-[#071D49]" : "text-[#7B8BA3]"}`}>{dateValue ? formatDisplayDate(dateValue) : "Select date"}</span>
       <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4 fill-none stroke-[#526178] stroke-[1.8]"><rect x="4" y="6" width="16" height="14" rx="2" /><path d="M8 3v6M16 3v6M4 10h16" /></svg>
       <input
