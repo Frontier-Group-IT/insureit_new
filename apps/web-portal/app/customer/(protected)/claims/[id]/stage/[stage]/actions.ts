@@ -146,7 +146,7 @@ export async function saveCustomerExternalInsurerClaimNumber(
   rawNumber: string,
 ): Promise<{ error: string | null }> {
   const value = rawNumber.trim();
-  if (!value || value.length > 80 || !/^[A-Za-z0-9][A-Za-z0-9./_#\\- ]*$/.test(value)) {
+  if (!value || value.length > 80 || !/^[A-Za-z0-9][A-Za-z0-9./_# -]*$/.test(value)) {
     return { error: "Enter a valid insurer claim number (up to 80 letters, digits or common separators)." };
   }
   try {
