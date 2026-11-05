@@ -20,6 +20,7 @@ assert.match(voice,/navigator\.mediaDevices\.getUserMedia\(\{ audio: true \}\)/,
 assert.match(voice,/Windows microphone privacy settings/,"Denied microphone message checks OS access");
 assert.match(voice,/router\.refresh\(\)/,"Successful voice upload refreshes document list");
 assert.match(voice,/CustomerErrorDialog/,"Voice errors use popup");
-assert.match(evidence,/type:"Other Document"/,"Bulk uploads are visible");
+assert.match(multi,/name="type" value="Other Document"/,"Bulk uploads retain their original verification category");
+assert.match(evidence,/aria-label="Multiple Documents"/,"Bulk uploaded files are visible in their dedicated section");
 assert.match(evidence,/type:"Incident Voice Note"/,"Voice notes are visible");
 console.log("Customer claim upload and recorder recovery regression passed");
