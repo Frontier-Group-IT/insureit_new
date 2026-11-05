@@ -181,6 +181,8 @@ jobs:
         run: npm run partner-web:core-regression
       - name: Customer Web foundation isolation regression
         run: npm run customer-web:foundation-regression
+      - name: Customer Vehicle Details navy 3D and insurance history regression
+        run: node scripts/customer-vehicle-details-navy-3d-regression.mjs
       - name: Customer Policy Details premium layout and data scope regression
         run: node scripts/customer-policy-details-premium-regression.mjs
       - name: Customer Portal full-height layout regression
