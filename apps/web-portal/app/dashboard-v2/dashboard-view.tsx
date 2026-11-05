@@ -195,8 +195,8 @@ function buildMetricRail(data: DashboardCurrentData, access: DashboardAccess, _b
   if (access.viewCustomers) {
     metrics.push({
       label: "Customers",
-      value: data.base.totals.customers.toLocaleString("en-IN"),
-      meta: `${data.base.totals.activeCustomers} active`,
+      value: data.base.errors.includes("Customer portfolio could not be loaded.") ? "—" : data.base.totals.customers.toLocaleString("en-IN"),
+      meta: data.base.errors.includes("Customer portfolio could not be loaded.") ? "Unable to load" : `${data.base.totals.activeCustomers} active`,
       href: "/customers",
       icon: DASHBOARD_ICON_ASSETS.customers,
     });
