@@ -199,7 +199,7 @@ export function DocumentVerificationModalButton({ claimId, documentId, modalType
   return (
     <div>
       <ClaimStageErrorDialog message={result && !result.ok ? result.message ?? "Verification failed." : rcLookupError || null} onClose={() => { if (result && !result.ok) setResult(null); else setRcLookupError(""); }} />
-      <button type="button" onClick={() => { setResult(null); setOpen(true); }} className={`h-8 w-full rounded-md border text-[12px] font-semibold ${saved ? "border-green-300 bg-green-50 text-green-700" : "border-[#16A36A] bg-white text-[#16895C] hover:bg-[#F2FBF7]"}`}>{saved ? "Verified" : "Verify"}</button>
+      <button type="button" onClick={() => { setResult(null); setOpen(true); }} className={`h-8 w-full rounded-md border text-[12px] font-semibold ${saved ? "border-green-300 bg-green-50 text-green-700" : "border-[#16A36A] bg-white text-[#16895C] hover:bg-[#F2FBF7]"}`}>{reverify || saved ? "Verified" : "Verify"}</button>
       {open && typeof document !== "undefined" ? createPortal(modal, document.body) : null}
     </div>
   );
