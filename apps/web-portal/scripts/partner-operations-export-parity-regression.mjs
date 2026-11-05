@@ -53,4 +53,21 @@ for (const accountType of ["group", "group associate", "branch", "partner", "par
   assert.equal(excludesPolicy("health", scopedPolicy, policy => policy.business_type), true,
     `${accountType}: non-matching business types must remain excluded`);
 }
+const operationsMapping=readFileSync(new URL("../lib/reports/policy-business-mis-export.ts",import.meta.url),"utf8");
+assert.ok(operationsMapping.includes("policyProduct: text(row.policy_type)"),"Operations MIS uses policy_type as Policy Product");
+assert.ok(partner.includes('row.policy_type?.trim() || "",amountOrBlank(detail.insured_declared_value)'),"Partner MIS must display the same policy_type as Operations");
+assert.ok(!partner.includes('row.policy_product||""'),"Do not export the empty Motor policy_product field");
+// Partner XLSX must have the same navy header, light-blue totals row and money formats as Operations.
+for (const token of [
+  'fgColor rgb="FF1F4E78"',
+  'fgColor rgb="FFD9EAF7"',
+  'formatCode="₹#,##0.00;[Red]-₹#,##0.00"',
+  's="${style}"',
+  'pane ySplit="2"',
+]) {
+  assert.ok(partner.includes(token), "Partner Excel styling missing Operations parity token: "+token);
+  assert.ok(ops.includes(token), "Operations Excel reference styling changed: "+token);
+}
+assert.ok(partner.includes("applyWorkbookStyles(new Uint8Array(file), headers)"),"Partner export styles generated XLSX");
+assert.ok(partner.includes("return new Response(styledFile,"),"Partner must send the styled workbook");
 console.log("Partner Operations parity (35 columns, five scoped roles, no finance) passed");
