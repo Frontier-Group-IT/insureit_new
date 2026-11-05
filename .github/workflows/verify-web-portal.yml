@@ -270,6 +270,8 @@ jobs:
         run: npm run portal-auth-email-flow:regression
       - name: Dashboard performance regression
         run: npm run dashboard-performance:regression
+      - name: RM dashboard scoped query batching regression
+        run: node scripts/rm-dashboard-query-batching-regression.mjs
       - name: Dashboard pending intermediary count regression
         run: node scripts/dashboard-pending-intermediary-count-regression.mjs
       - name: Dashboard Claim action pending regression
