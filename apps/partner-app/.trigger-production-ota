@@ -1,6 +1,6 @@
 Partner production OTA trigger
-release=partner-insurer-whole-rupees-pr-4054
-merged_commit=68708e08acbb9374dd7a2c111698191d04fd105e
+release=partner-insurer-mobile-financial-scroll-pr-4071
+merged_commit=2883aae1c0407c6c00f76308e2332da3d88d41c2
 channel=production
 runtime=0.2.0
 requested=2026-11-05
