@@ -24,8 +24,8 @@ async function uploadContext(claimId: string) {
   const access = await requireClaimWorkflowAccess(claimId, "You do not have permission to upload claim documents.");
   const { data, error } = await access.supabase.from("claims").select("id, customer_id, current_status, accident_at, claim_service_mode, policy_service_source").eq("id", claimId).maybeSingle<ClaimForUpload>();
   if (error || !data) throw new Error(error?.message ?? "Claim not found.");
-  if (data.claim_service_mode !== "broker_managed" && (data.policy_service_source !== "external" || access.isPartner)) {
-    throw new Error("Only authorized Operations users can upload documents to self-managed external claims.");
+  if (data.claim_service_mode === "self_managed" && access.isPartner) {
+    throw new Error("Only authorized Operations users can upload documents to self-managed claims.");
   }
   return { ...access, claim: data };
 }
