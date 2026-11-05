@@ -2,7 +2,7 @@ import { formatAppDate } from '@/lib/indian-date';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Image, Keyboard, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
+import { Animated, Image, Keyboard, Modal, Platform, Pressable, StatusBar, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
 
 import { ActiveClaimPopup } from '@/components/active-claim-popup';
 import { ClaimActionBar } from '@/components/external-claim-ui';
@@ -241,7 +241,7 @@ export default function StartClaimScreen() {
               <View style={styles.heroCopy}>
                 <Text style={[styles.eyebrow, styles.iosEyebrow]}>START A CLAIM</Text>
                 <Text style={[styles.title, styles.iosTitle]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.82}>Select the vehicle</Text>
-                <Text style={[styles.subtitle, styles.iosSubtitle]}>
+                <Text style={[styles.subtitle, styles.iosSubtitle]} numberOfLines={2}>
                   Choose the vehicle involved and we’ll use its active policy.
                 </Text>
               </View>
@@ -253,7 +253,7 @@ export default function StartClaimScreen() {
             <View style={styles.heroCopy}>
               <Text style={styles.eyebrow}>START A CLAIM</Text>
               <Text style={styles.title}>Select the vehicle</Text>
-              <Text style={styles.subtitle}>Choose the vehicle involved and we’ll use its active policy.</Text>
+              <Text style={styles.subtitle} numberOfLines={2}>Choose the vehicle involved and we’ll use its active policy.</Text>
             </View>
             <Image accessible={false} source={require('../../assets/brand/start-claim/start-claim-hero.png')} style={styles.heroArtwork} resizeMode="contain" />
           </>
@@ -455,8 +455,13 @@ function VehicleDropdown({ vehicles, query, selectedVehicle, open, onToggle, onQ
   }, []);
   // Anchor the search menu directly under the Vehicle number label on both platforms.
   // Keyboard appearance may reduce the available height, but must not move its top.
-  const menuTop = anchor.y + anchor.height + 4;
-  const availableHeight = Math.max(90, (keyboardTop ?? windowHeight) - menuTop - 10);
+  // measureInWindow uses the Android content-window origin, whereas a
+  // statusBarTranslucent Modal starts at the physical top of the screen.
+  // Compensate for that inset so the search panel stays BELOW the label.
+  const androidModalStatusBarInset = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 0) : 0;
+  const menuTop = anchor.y + anchor.height + androidModalStatusBarInset + 4;
+  const viewportBottom = keyboardTop ?? (windowHeight + androidModalStatusBarInset);
+  const availableHeight = Math.max(90, viewportBottom - menuTop - 10);
 
   function focusSearchInput() {
     requestAnimationFrame(() => {
@@ -593,7 +598,7 @@ const styles = StyleSheet.create({
   subtitle: { color: '#68778D', fontSize: Platform.OS === 'ios' ? 9.5 : 10, lineHeight: 14, fontWeight: Platform.OS === 'ios' ? '400' : '600', marginTop: 4, maxWidth: 190 },
   iosEyebrow: { fontSize: 12, lineHeight: 17, fontWeight: '800', letterSpacing: 1.1 },
   iosTitle: { fontSize: 22, lineHeight: 28, fontWeight: '800', marginTop: 3 },
-  iosSubtitle: { maxWidth: '100%', fontSize: 13, lineHeight: 19, fontWeight: '500', marginTop: 3, paddingRight: 6 },
+  iosSubtitle: { maxWidth: '100%', fontSize: 11.5, lineHeight: 16, fontWeight: '500', marginTop: 3, paddingRight: 3 },
   heroArtwork: { width: '46%', height: 122, marginTop: -2, marginRight: -4 },
   iosHeroArtwork: { width: '42%', height: 104, marginTop: -2 },
   section: { marginBottom: 14 },
