@@ -296,6 +296,8 @@ jobs:
         run: node scripts/policy-form-motion-regression.mjs
       - name: Add and Edit Policy hover visibility regression
         run: node scripts/policy-form-hover-visibility-regression.mjs
+      - name: Policy identifier whitespace normalization regression
+        run: node --experimental-strip-types scripts/policy-identifier-normalization-regression.mjs
       - name: Claims nine-stage and Policy hover motion regression
         run: node scripts/claim-nine-stage-policy-motion-regression.mjs
       - name: Reconciliation stylesheet performance regression
