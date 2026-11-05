@@ -57,4 +57,17 @@ const operationsMapping=readFileSync(new URL("../lib/reports/policy-business-mis
 assert.ok(operationsMapping.includes("policyProduct: text(row.policy_type)"),"Operations MIS uses policy_type as Policy Product");
 assert.ok(partner.includes('row.policy_type?.trim() || "",amountOrBlank(detail.insured_declared_value)'),"Partner MIS must display the same policy_type as Operations");
 assert.ok(!partner.includes('row.policy_product||""'),"Do not export the empty Motor policy_product field");
+// Partner XLSX must have the same navy header, light-blue totals row and money formats as Operations.
+for (const token of [
+  'fgColor rgb="FF1F4E78"',
+  'fgColor rgb="FFD9EAF7"',
+  'formatCode="₹#,##0.00;[Red]-₹#,##0.00"',
+  's="${style}"',
+  'pane ySplit="2"',
+]) {
+  assert.ok(partner.includes(token), "Partner Excel styling missing Operations parity token: "+token);
+  assert.ok(ops.includes(token), "Operations Excel reference styling changed: "+token);
+}
+assert.match(partner,/applyWorkbookStyles\\(new Uint8Array\\(file\\), headers\\)/,"Partner export styles generated XLSX");
+assert.match(partner,/return new Response\\(styledFile,/,"Partner must send the styled workbook");
 console.log("Partner Operations parity (35 columns, five scoped roles, no finance) passed");
