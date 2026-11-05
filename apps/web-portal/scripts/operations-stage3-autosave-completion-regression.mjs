@@ -29,9 +29,9 @@ assert.doesNotMatch(stage3DocumentRow, /\{!rejected \? <VerificationActionButton
 assert.match(stage3DocumentRow, /verified && showVerifiedDetails/, "Verified document details must remain available.");
 const guard = read("../lib/claim-pending-document-guard.ts");
 const stageActions = read("../app/claims/stage-actions.ts");
-assert.match(guard, /requiresManualVerification\\(doc\\.document_type\\)/, "The server must explicitly check document type before blocking a stage.");
+assert.ok(guard.includes("requiresManualVerification(doc.document_type)"), "The server must explicitly check document type before blocking a stage.");
 assert.match(guard, /incidentvoicenote/, "Incident Voice Note must be exempt from manual verification.");
-assert.match(guard, /pending verification: \\$\\{summary\\}/, "Verification gate must provide pending document names.");
+assert.ok(guard.includes("pending verification: ${summary}"), "Verification gate must provide pending document names.");
 assert.match(stageActions, /Verify these documents before saving/, "Stage action must explain exactly which documents to verify.");
 assert.match(stages, /Verify these documents before saving/, "Stage error dialog must explain which documents are pending.");
 assert.match(stage3, /Earlier-stage uploads/, "Stage 3 must expose earlier-stage uploads.");
