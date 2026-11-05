@@ -6,11 +6,14 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { findExistingLinkedClaimCopy, findLinkedClaimPolicyCopy } from "@/lib/linked-claim-policy-copy";
 
 export async function reuseLinkedPolicyCopy(claimId: string): Promise<{ok:boolean;message:string}> {
-  const { supabase } = await requireClaimWorkflowAccess(claimId, "You do not have permission to manage claim documents.");
+  const { supabase, isPartner } = await requireClaimWorkflowAccess(claimId, "You do not have permission to manage claim documents.");
   const { data: claim, error: claimError } = await supabase.from("claims")
     .select("id,customer_id,vehicle_id,policy_id,external_policy_id,claim_service_mode,policy_service_source")
     .eq("id",claimId).maybeSingle();
   if (claimError || !claim) return {ok:false,message:"Claim could not be loaded."};
+  // Keep existing Partner eligibility for internal claims, but do not expand it to external-policy copying.
+  if (isPartner && (claim.policy_service_source === "external" || claim.external_policy_id))
+    return {ok:false,message:"External policy copy reuse is available to Operations only."};
   if (claim.claim_service_mode !== "broker_managed" && claim.policy_service_source !== "external" && !claim.external_policy_id) {
     return {ok:false,message:"This claim cannot reuse a linked policy copy."};
   }
