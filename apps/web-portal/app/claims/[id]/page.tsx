@@ -11,6 +11,7 @@ import { canAccessCustomer } from "@/lib/employee-access-scope";
 import { requireCapability } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { readInternalSpotIntimationDetails, type InternalSpotIntimationDetails } from "@/lib/internal-spot-intimation";
+import { findExistingLinkedClaimCopy, findLinkedClaimPolicyCopy } from "@/lib/linked-claim-policy-copy";
 
 type ClaimDetail = SpotSurveyClaim & {
   customer_id: string;
@@ -161,22 +162,16 @@ export default async function ClaimDetailPage({ params, searchParams }: { params
     file_name: cleanText(document.file_name) || "Unnamed claim document",
     signedUrl: `/claim-documents/${document.id}/open`
   }));
-  const policyDocument = claim.policy_id
-    ? (await admin.from("policy_documents").select("id,file_name,storage_bucket,storage_path").eq("policy_id", claim.policy_id).eq("document_type", "policy_copy").order("created_at", { ascending: false }).limit(1).maybeSingle<{ id: string; file_name: string; storage_bucket: string; storage_path: string }>()).data
-    : externalPolicy
-      ? (await admin.from("customer_documents").select("id,file_name").eq("customer_id", claim.customer_id).eq("external_policy_id", externalPolicy.id).eq("document_type", "policy_copy").order("created_at", { ascending: false }).limit(1).maybeSingle<{ id: string; file_name: string }>()).data
-        ?? (externalPolicy.document_storage_path
-          ? (await admin.from("customer_documents").select("id,file_name").eq("customer_id", claim.customer_id).eq("storage_path", externalPolicy.document_storage_path).eq("document_type", "policy_copy").maybeSingle<{ id: string; file_name: string }>()).data
-          : null)
-      : null;
-  const hasLinkedClaimPolicyCopy = Boolean(claim.policy_id && policyDocument && (documents??[]).some(document =>
-    document.storage_bucket === ("storage_bucket" in policyDocument ? policyDocument.storage_bucket : null)
-    && document.storage_path === ("storage_path" in policyDocument ? policyDocument.storage_path : null)
-  ));
+  const policyDocument = await findLinkedClaimPolicyCopy(admin, claim);
+  const hasLinkedClaimPolicyCopy = policyDocument
+    ? Boolean(await findExistingLinkedClaimCopy(admin, claim.id, claim.customer_id, policyDocument))
+    : false;
   const policyCopy = policyDocument
     ? {
         fileName: policyDocument.file_name,
-        signedUrl: claim.policy_id ? `/policies/documents/${policyDocument.id}/open` : `/customers/documents/${policyDocument.id}/open`,
+        signedUrl: claim.external_policy_id
+          ? `/customers/documents/${policyDocument.id}/open`
+          : `/policies/documents/${policyDocument.id}/open`,
         documentId: policyDocument.id
       }
     : null;
@@ -318,7 +313,7 @@ export default async function ClaimDetailPage({ params, searchParams }: { params
           accidentAt={claim.accident_at}
           spotIntimationAt={effectiveClaimWithSpotIntimation.spotIntimationAt}
           spotDetails={effectiveSpotDetails}
-          spotContent={<SpotSurveyWorkspace claim={{ ...effectiveClaimWithSpotIntimation, policySource: externalPolicy ? "external" : "sibl", policyCopy }} documents={signedDocs} verifications={mergedVerifications} surveyorDetails={surveyorDetails} showContext={false} showSpotDetails={false} canReusePolicyCopy={Boolean(claim.policy_id && policyDocument && !hasLinkedClaimPolicyCopy && claim.policy_service_source !== "external")} />}
+          spotContent={<SpotSurveyWorkspace claim={{ ...effectiveClaimWithSpotIntimation, policySource: externalPolicy ? "external" : "sibl", policyCopy }} documents={signedDocs} verifications={mergedVerifications} surveyorDetails={surveyorDetails} showContext={false} showSpotDetails={false} canReusePolicyCopy={Boolean(policyDocument && !hasLinkedClaimPolicyCopy && (claim.claim_service_mode === "broker_managed" || claim.policy_service_source === "external" || claim.external_policy_id))} />}
           claimIntimationContent={<FinalDocumentsWorkspaceV2 claimId={claim.id} rows={finalRows} dealershipDetails={dealershipDetails} allowStageAdvance={canAdvanceClaimIntimation} showClaimNumberPrompt={claim.policy_service_source !== "external" && !claim.insurer_claim_no?.trim()} />}
           initialStageKey={requestedStage}
           externalCustomerMilestones={externalCustomerMilestones?.map((milestone) => ({ key: milestone.milestone_key, status: milestone.milestone_status }))}
