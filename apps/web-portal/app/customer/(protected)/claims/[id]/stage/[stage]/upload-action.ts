@@ -29,6 +29,7 @@ export async function uploadCustomerClaimDocument(_previous:CustomerClaimUploadS
   if(files.length>10)return {error:"Select up to 10 files at a time."};
   const supported=["application/pdf","image/jpeg","image/png","image/webp","image/heic","video/mp4","video/quicktime","video/webm","audio/mp4","audio/m4a","audio/x-m4a","audio/webm","audio/ogg"];
   for(const file of files){
+    if(type==="Final Workshop Bill" && (!["application/pdf","image/jpeg","image/png"].includes(file.type) || !/\.(pdf|jpe?g|png)$/i.test(file.name) || file.size>5*1024*1024))return {error:"Final workshop bill must be PDF, JPG or PNG and no larger than 5 MB."};
     if(!supported.includes(file.type))return {error:"Unsupported claim document format: "+file.name};
     if(file.size>(file.type.startsWith("video/")?50:5)*1024*1024)return {error:"Claim document exceeds allowed file size: "+file.name};
   }
