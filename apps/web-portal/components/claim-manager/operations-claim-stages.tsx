@@ -415,7 +415,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
                   const yesChecked = value === "true" || value === "yes";
                   const noChecked = value === "false" || value === "no";
                   return (
-                    <fieldset key={field.name} className="min-w-0 w-full">
+                    <fieldset key={field.name} className={selected.key === "work_approval" ? "min-w-0 w-full" : "min-w-0 max-w-xl"}>
                       <legend className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#174EA6]">
                         {displayLabel}{required ? <span className="ml-1 text-rose-600">*</span> : null}
                       </legend>
@@ -457,12 +457,12 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
               })}
             </div>
 
-            <div className="mt-3 flex min-h-10 items-center justify-end gap-2 border-t border-[#D9E3F0] pt-3">
+            <div className={selected.key === "work_approval" ? "mt-3 flex min-h-10 items-center justify-end gap-2 border-t border-[#D9E3F0] pt-3" : "mt-3 flex justify-end"}>
               {selected.key === "work_approval" ? <button type="button" onClick={() => router.push(partnerManagedJourney ? "/partner/claims" : "/claims")} className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#B9CBE2] bg-white px-4 text-[12px] font-semibold text-[#174A87]">Cancel</button> : null}
               <FormSubmitButton
                 label={selected.key === "work_approval" ? "Save & Continue" : selectedSaveOnly ? "Save Details" : selected.key === "payment_encashment" ? "Save & complete claim" : `Save & move to ${nextStageLabel}`}
                 pendingLabel="Saving..."
-                className="inline-flex min-h-10 min-w-[148px] items-center justify-center rounded-lg bg-[#1253A7] px-4 py-2 text-[11px] font-semibold text-white disabled:opacity-60"
+                className={selected.key === "work_approval" ? "inline-flex min-h-10 min-w-[148px] items-center justify-center rounded-lg bg-[#1253A7] px-4 py-2 text-[11px] font-semibold text-white disabled:opacity-60" : "rounded-lg bg-[#071D49] px-4 py-2 text-[11px] font-semibold text-white disabled:opacity-60"}
               />
             </div>
           </form>
