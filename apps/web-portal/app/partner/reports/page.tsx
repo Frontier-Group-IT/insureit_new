@@ -21,7 +21,7 @@ const validDate=(v?:string)=>Boolean(v&&/^\d{4}-\d{2}-\d{2}$/.test(v)&&!Number.i
 function boundsFor(day:string,period:Period,from?:string,to?:string){
  const d=new Date(day+"T00:00:00Z");
  const month=(offset:number)=>new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth()+offset,1)).toISOString().slice(0,10);
- if(period==="custom"&&validDate(from)&&validDate(to)&&from!>to!) return {from:from!,to:to!};
+ if(period==="custom"&&validDate(from)&&validDate(to)&&from!<=to!) return {from:from!,to:to!};
  if(period==="last-month")return {from:month(-1),to:new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),0)).toISOString().slice(0,10)};
  return {from:month(period==="last-6-months"?-5:0),to:day};
 }
