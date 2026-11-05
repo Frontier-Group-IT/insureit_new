@@ -48,4 +48,31 @@ assert.match(spot, /event\.preventDefault\(\)/, "Spot Intimation must preserve i
 assert.match(spot, /if \(result\.error\)/, "Spot Intimation server errors must retain entered fields");
 assert.match(spot, /if \(result\.destination\)/, "Spot Intimation drafts clear only after successful save");
 assert.match(spotPage, /return \{error:null,destination:/, "Spot Intimation success should navigate after client-side draft cleanup");
+
+const customerPdfRoute = read(new URL("../app/customer/(protected)/claims/[id]/download/route.ts", import.meta.url), "utf8");
+const operationsPdfRoute = read(new URL("../app/claims/[id]/download/route.ts", import.meta.url), "utf8");
+const operationsPage = read(new URL("../app/claims/[id]/page.tsx", import.meta.url), "utf8");
+const customerPage = read(new URL("../app/customer/(protected)/claims/[id]/page.tsx", import.meta.url), "utf8");
+const pdfRenderer = read(new URL("../lib/completed-claim-pdf.ts", import.meta.url), "utf8");
+for (const route of [customerPdfRoute,operationsPdfRoute]) {
+  assert.match(route, /INTERNAL_JOURNEY_STAGES\.every\(stage => completedKeys\.has\(stage\.key\)\)/,
+    "Both PDF routes must require all nine completed milestones.");
+  assert.match(route, /renderCompletedClaimPdf\(/, "Both portals must use the same Claim PDF layout.");
+}
+assert.match(operationsPdfRoute, /requireCapability\("view_claims"\)/, "Operations PDF must authenticate role permissions.");
+assert.match(operationsPdfRoute, /canAccessCustomer\(profile\.id, profile\.role, claim\.customer_id, "view_claims"\)/,
+  "Operations PDF must preserve claim/customer scope.");
+assert.match(operationsPdfRoute, /new URL\(request\.url\)\.searchParams\.get\("preview"\) === "1"/,
+  "Operations PDF must support inline preview and attachment download.");
+assert.match(operationsPage, /allNineCompletedForPdf/, "Operations buttons must appear only for nine completed stages.");
+assert.match(operationsPage, /Open PDF/);
+assert.match(operationsPage, /Download PDF/);
+assert.match(customerPage, /const source = isExternalCustomerClaim\(claim\) \? "External" : "Internal"/,
+  "Customer must continue supporting internal and external claim PDFs.");
+assert.match(customerPage, /Open PDF/);
+assert.match(customerPage, /Download Claim Form/);
+assert.match(pdfRenderer, /claim\.policy_service_source === "external" \|\| Boolean\(claim\.external_policy_id\)/,
+  "Shared PDF renderer must label external versus internal correctly.");
+assert.match(pdfRenderer, /new NextResponse\(new Uint8Array\(bytes\)/, "PDF response must remain a real downloadable PDF.");
+
 console.log("Customer claim stage draft/error preservation regressions passed");
