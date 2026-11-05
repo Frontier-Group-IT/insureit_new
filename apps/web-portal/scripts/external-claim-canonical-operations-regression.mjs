@@ -70,7 +70,7 @@ assert(finalDocumentsWorkspace.includes('setAdvanceAfterClaimNumber(true);') && 
 assert(finalDocumentsWorkspace.includes('router.replace(`/claims/${claimId}?stage=work_approval`);'), 'Claim Intimation must still navigate to Stage 4 after saving or dismissing the optional claim-number prompt.');
 assert(finalDocumentsWorkspace.includes('if (advanceToWorkApproval)') && finalDocumentsWorkspace.includes('function closeClaimNumberPrompt(advanceToWorkApproval = advanceAfterClaimNumber)') && finalDocumentsWorkspace.includes('onClick={() => closeClaimNumberPrompt()}'), 'Not Now and Add must preserve successful Stage 3 navigation without passing a click event as a navigation flag.');
 assert(operationsStages.includes('return index >= 0 && index < stages.length - 1 ? stages[index + 1].key : null;'), 'Payment Encashment must remain the terminal Stage 9 with no Stage 10 navigation.');
-assert(operationsStages.includes('label={selectedSaveOnly ? "Save Details"'), 'Historical stages must show an explicit Save Details action.');
+assert(operationsStages.includes('selected.key === "work_approval" ? "Save & Continue"') && operationsStages.includes('selectedSaveOnly ? "Save Details"'), 'Stage 4 Save & Continue may be used for successful navigation, while other historical stages retain Save Details.');
 assert(operationsStages.includes('"Save & complete claim"'), 'The current final stage must expose explicit claim completion wording.');
 assert(operationsStages.includes('`Save & move to ${nextStageLabel}`'), 'The current non-final stage must expose an explicit advance action.');
 
