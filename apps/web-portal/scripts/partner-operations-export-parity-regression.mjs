@@ -53,4 +53,8 @@ for (const accountType of ["group", "group associate", "branch", "partner", "par
   assert.equal(excludesPolicy("health", scopedPolicy, policy => policy.business_type), true,
     `${accountType}: non-matching business types must remain excluded`);
 }
+const operationsMapping=readFileSync(new URL("../lib/reports/policy-business-mis-export.ts",import.meta.url),"utf8");
+assert.match(operationsMapping,/policyProduct: text\\(row\\.policy_type\\)/,"Operations MIS uses policy_type as Policy Product");
+assert.match(partner,/row\\.policy_type\\?\\.trim\\(\\) \\|\\| "",amountOrBlank\\(detail\\.insured_declared_value\\)/,"Partner MIS must display the same policy_type as Operations");
+assert.doesNotMatch(partner,/row\\.policy_product\\s*\\|\\|\\s*""/,"Do not export the empty Motor policy_product field");
 console.log("Partner Operations parity (35 columns, five scoped roles, no finance) passed");
