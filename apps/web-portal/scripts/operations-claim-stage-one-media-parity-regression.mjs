@@ -14,7 +14,7 @@ const readOnly = read("../components/claims/assistance-intake-panel.tsx");
 assert.match(stage, /selected\.key === "spot_intimation"/, "Features belong to Stage 1.");
 assert.match(stage, /<OperationsClaimStageOneAttachments claimId=\{claimId\}/, "Editable stage one must render the controls.");
 assert.match(stage, /!partnerReadOnlyJourney && !partnerManagedJourney && !partnerInternalStageOne/, "Partner read-only/managed screens must not gain Operations upload controls.");
-assert.match(page, /if \(claim\.claim_service_mode === "self_managed" && claim\.policy_service_source !== "external"\)/, "External self-managed claims must use the Operations editable route.");
+assert.doesNotMatch(page, /if \(claim\.claim_service_mode === "self_managed" && claim\.policy_service_source !== "external"\)/, "All self-managed claims must use the Operations editable route.");
 assert.match(page, /unrestrictedStageEditing=\{isExternalOperationsClaim\}/, "Operations must edit self-managed external claims.");
 assert.doesNotMatch(readOnly, /OperationsClaimStageOneAttachments/, "Read-only external viewer must never contain uploading actions.");
 
@@ -32,7 +32,7 @@ assert.match(controls, /cancelClaimDocumentUploads/, "Incomplete storage uploads
 assert.match(controls, /navigator\.mediaDevices\.getUserMedia/, "Voice recording requires explicit microphone permission.");
 assert.match(controls, /stream\.getTracks\(\)\.forEach/, "Microphone resources must be released.");
 assert.match(operations, /requireClaimWorkflowAccess\(claimId/, "Claim upload actions must preserve workflow authorization.");
-assert.match(operations, /data\.policy_service_source !== "external" \|\| access\.isPartner/, "Only authorized Operations users may upload media to self-managed external claims.");
+assert.match(operations, /data\.claim_service_mode === "self_managed" && access\.isPartner/, "Self-managed media uploads must remain Operations-only.");
 assert.match(operations, /expectedAudio = documentType === "Incident Voice Note"/, "Only the intended document category can upload audio.");
 assert.match(operations, /allowedAudioTypes = \["audio\/mp4", "audio\/x-m4a", "audio\/m4a", "audio\/webm", "audio\/ogg"\]/, "Audio must be format-validated.");
 assert.match(operations, /file\.size > maxDocumentSizeBytes/, "Voice uploads must obey the five megabyte server limit.");
