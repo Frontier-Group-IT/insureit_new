@@ -6,9 +6,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { findExistingLinkedClaimCopy, findLinkedClaimPolicyCopy } from "@/lib/linked-claim-policy-copy";
 
 export async function reuseLinkedPolicyCopy(claimId: string): Promise<{ok:boolean;message:string}> {
-  const { supabase, isPartner } = await requireClaimWorkflowAccess(claimId, "You do not have permission to manage claim documents.");
-  // This is an Operations document mutation; Partner read access must not grant reuse rights.
-  if (isPartner) return {ok:false,message:"Only Operations can reuse a policy copy in this claim."};
+  const { supabase } = await requireClaimWorkflowAccess(claimId, "You do not have permission to manage claim documents.");
   const { data: claim, error: claimError } = await supabase.from("claims")
     .select("id,customer_id,vehicle_id,policy_id,external_policy_id,claim_service_mode,policy_service_source")
     .eq("id",claimId).maybeSingle();
