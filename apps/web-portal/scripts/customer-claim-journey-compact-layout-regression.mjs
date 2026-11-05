@@ -10,13 +10,13 @@ assert.match(source,/INTERNAL_JOURNEY_STAGES\.map/,"All stages remain intact");
 assert.match(source,/aria-label=\{stage\.label\}/,"Accessible labels retained");
 const spotPage = readFileSync("app/customer/(protected)/spot-intimation/page.tsx","utf8");
 const spotForm = readFileSync("app/customer/(protected)/spot-intimation/spot-intimation-save-form.tsx","utf8");
-// Hidden form inputs must not create space above the Accident & Spot heading.
-assert.doesNotMatch(spotForm, /className="space-y-4 rounded-2xl border border-\\\[#DBE4F0\\\]/, "No space-y margin above Spot Intimation title");
-assert.match(spotForm, /className="rounded-2xl border border-\\\[#DBE4F0\\\] bg-white p-4/, "Spot form card and padding remain intact");
-assert.match(spotPage, /-mx-4 -mt-4 border-b/, "Heading remains flush with the card top edge");
-assert.match(spotPage, /className="mt-3 grid gap-x-2\\.5 gap-y-3/, "Input rows have an explicit compact gap after the heading");
-// Completed stage checks are solid green, while active and locked stages keep their own tones.
-assert.match(source, /completed\\?"bg-\\\[#149568\\\] text-white"/, "Completed stage indicator is solid green with white check");
-assert.match(source, /current\\?"bg-\\\[#155EEF\\\] text-white/, "Active stage remains blue");
-assert.match(source, /<Check className="customer-claim-motion-check/, "Completed stage renders the check icon");
+// Hidden form inputs must not create automatic margins above the visible title.
+assert.ok(!spotForm.includes('className="space-y-4 rounded-2xl border'), "No space-y margin above Spot Intimation title");
+assert.ok(spotForm.includes('className="rounded-2xl border border-[#DBE4F0] bg-white p-4'), "Spot form card and padding remain intact");
+assert.ok(spotPage.includes('-mx-4 -mt-4 border-b'), "Heading remains flush with card top edge");
+assert.ok(spotPage.includes('className="mt-3 grid gap-x-2.5 gap-y-3'), "Input rows retain a compact gap after the heading");
+// Completed stage checks must be solid green and white; active stays blue.
+assert.ok(source.includes('completed?"bg-[#149568] text-white"'), "Completed stage indicator must be solid green with a white check");
+assert.ok(source.includes('current?"bg-[#155EEF] text-white'), "Active stage indicator remains blue");
+assert.ok(source.includes('<Check className="customer-claim-motion-check'), "Completed stage renders the check icon");
 console.log("Compact full-width customer claim journey regression passed.");
