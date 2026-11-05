@@ -17,7 +17,7 @@ const stageActions = read("../app/claims/stage-actions.ts");
 const spotActions = read("../app/claims/internal-spot-intimation-actions.ts");
 assert.match(stageActions, /claim\.claim_service_mode === "self_managed" && access\.isPartner/, "Self-managed stage writes must reject intermediary identities.");
 assert.match(spotActions, /data\.claim_service_mode === "self_managed" && isPartner/, "Self-managed Spot Intimation must reject intermediary identities.");
-assert.match(page, /<SpotClaimHeader claim=\{\{ \.\.\.effectiveClaimWithSpotIntimation, policySource:/, "All Operations claims must use the shared heading and linked policy context.");
+assert.match(page, /<SpotClaimHeader headerActions=\{claimPdfActions\} claim=\{\{ \.\.\.effectiveClaimWithSpotIntimation, policySource:/, "All Operations claims must use the shared heading and linked policy context with optional PDF header actions.");
 assert.doesNotMatch(page, /<AssistanceIntakePanel/, "Self-managed Operations claims must no longer be routed to the read-only assistance panel.");
 assert.match(header, /heading = "Operations claim journey"/, "Standard Operations header title must remain unchanged.");
 assert.match(header, />\{heading\}<\/h1>/, "Shared header must support the requested Claim Journey title.");
