@@ -7,6 +7,7 @@ const errors = read("../components/customer-portal/customer-error-dialog.tsx");
 const save = read("../app/customer/(protected)/spot-intimation/spot-intimation-save-form.tsx");
 const bulk = read("../components/customer-portal/customer-claim-multiple-upload.tsx");
 const voice = read("../components/customer-portal/customer-claim-voice-recorder.tsx");
+const individual = read("../components/customer-portal/customer-claim-compact-document.tsx");
 const upload = read("../app/customer/(protected)/claims/[id]/stage/[stage]/upload-action.ts");
 
 assert.match(dialog,/setTimeout\(\(\) => closeRef\.current\(\), 1000\)/,"Success must dismiss in one second.");
@@ -36,4 +37,9 @@ assert.doesNotMatch(voice,/<p role="status".*Voice note uploaded successfully/,"
 assert.match(upload,/return \{error:null,uploaded:lastUploaded,uploadedCount\}/,"Keep actual server upload count.");
 assert.match(bulk,/<CustomerErrorDialog/,"Preserve bulk upload error dialog.");
 assert.match(voice,/<CustomerErrorDialog/,"Preserve recorder error dialog.");
+assert.match(individual,/shownUploadId\.current!==uploadState\.uploaded\.id/,"Do not repeat individual document success.");
+assert.match(individual,/setSuccessNotice\(\x60\$\{uploadState\.uploadedCount \?\? 1\} \$\{label\} document uploaded successfully\./,"Individual document result must report actual upload count and category.");
+assert.match(individual,/<CustomerSuccessDialog title="Upload Successful"/,"Use shared confirmation for individual document uploads.");
+assert.match(individual,/<CustomerErrorDialog title="Document upload failed"/,"Individual document upload errors appear in reference popup.");
+assert.doesNotMatch(individual,/<p role="alert"/,"Do not duplicate upload errors inline.");
 console.log("Customer Spot Intimation success popup regression passed.");
