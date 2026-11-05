@@ -64,7 +64,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     accident_location: claim.accident_location,
   };
   try {
-    return await renderCompletedClaimPdf(detail, milestones, documentResult.data ?? [], new URL(request.url).searchParams.get("preview") === "1");
+    return await renderCompletedClaimPdf(detail, milestones.map(milestone => ({
+      details: milestone.details && typeof milestone.details === "object" && !Array.isArray(milestone.details)
+        ? milestone.details as Record<string, unknown> : null,
+    })), documentResult.data ?? [], new URL(request.url).searchParams.get("preview") === "1");
   } catch {
     return NextResponse.json({error:"Unable to generate claim details PDF."},{status:500});
   }
