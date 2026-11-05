@@ -181,7 +181,7 @@ export async function GET(request: NextRequest) {
       safeText(vehicle?.vehicle_class_description)||classNames[vehicleClass]||"",capacity.label,
       safeText(vehicle?.make),safeText(vehicle?.model),safeText(vehicle?.fuel_type),capacity.value,
       amountOrBlank(vehicle?.year),safeText(vehicle?.chassis_no),safeText(vehicle?.engine_no),
-      row.policy_product||"",amountOrBlank(detail.insured_declared_value),
+      row.policy_type?.trim() || "",amountOrBlank(detail.insured_declared_value),
       amountOrBlank(premium?.od_premium),amountOrBlank(premium?.add_on_premium),
       amountOrBlank(premium?.tp_premium),amountOrBlank(premium?.cpa_amount),
       amountOrBlank(premium?.net_premium),amountOrBlank(premium?.gst_amount),
