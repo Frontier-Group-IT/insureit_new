@@ -127,7 +127,7 @@ export async function saveCustomerExternalStage(form:FormData, navigate = true) 
   // including edits to an already-completed Stage 9. Preserve the scoped account.
   const destination = key === "payment_encashment"
     ? "/customer/claims?account="+encodeURIComponent(account.id)
-    : editingCompleted
+    : editingCompleted && key !== "work_approval"
       ? "/customer/claims/"+encodeURIComponent(claim.id)+"/stage/"+encodeURIComponent(key)+"?account="+encodeURIComponent(account.id)+"&mode=edit&saved=updated"
       : next
         ? "/customer/claims/"+encodeURIComponent(claim.id)+"/stage/"+encodeURIComponent(next.key)+"?account="+encodeURIComponent(account.id)+"&mode=edit"+(key==="claim_intimation"?"&saved=claim_intimation":"")
