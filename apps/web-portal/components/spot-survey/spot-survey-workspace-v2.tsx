@@ -84,8 +84,8 @@ const claimHeaderIcons = {
   intimation: "/assets/Custom-Icons/optimized-128/claim-intimation.png"
 } as const;
 
-export function SpotClaimHeader({ claim, heading = "Operations claim journey" }: { claim: SpotSurveyClaim; heading?: string }) {
-  return <InfoStrip claim={claim} heading={heading} />;
+export function SpotClaimHeader({ claim, heading = "Operations claim journey", headerActions }: { claim: SpotSurveyClaim; heading?: string; headerActions?: ReactNode }) {
+  return <InfoStrip claim={claim} heading={heading} headerActions={headerActions} />;
 }
 
 export function SpotSurveyWorkspace({ claim, documents, verifications = [], surveyorDetails = null, showContext = true, showSpotDetails = true, canReusePolicyCopy = false }: { claim: SpotSurveyClaim; documents: SpotSurveyDocument[]; verifications?: SpotSurveyVerification[]; surveyorDetails?: SurveyorDetails | null; showContext?: boolean; showSpotDetails?: boolean; canReusePolicyCopy?: boolean }) {
@@ -152,7 +152,7 @@ function SurveyorColumn({ label, value, href, last = false }: { label: string; v
   return href ? <a href={href} className={`${className} transition hover:bg-[#F7FAFF]`}>{content}</a> : <div className={className}>{content}</div>;
 }
 
-function InfoStrip({ claim, heading = "Operations claim journey" }: { claim: SpotSurveyClaim; heading?: string }) {
+function InfoStrip({ claim, heading = "Operations claim journey", headerActions }: { claim: SpotSurveyClaim; heading?: string; headerActions?: ReactNode }) {
   const customerName = claim.customers?.company_name || claim.customers?.contact_name || "-";
   const make = claim.vehicles?.make || "-";
   const vehicleNumber = claim.vehicles?.vehicle_no || "-";
@@ -169,7 +169,10 @@ function InfoStrip({ claim, heading = "Operations claim journey" }: { claim: Spo
           </span>
           <h1 className="text-[16px] font-bold leading-tight tracking-[-0.025em] text-white sm:text-[18px]">{heading}</h1>
         </div>
-        <Link prefetch={false} href="/claims" className="inline-flex h-8 shrink-0 items-center justify-center rounded-lg bg-[#2086BF]/75 px-3 text-[11px] font-bold text-white transition duration-200 hover:bg-[#2A99D1] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">Back</Link>
+        <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+          {headerActions}
+          <Link prefetch={false} href="/claims" className="inline-flex h-9 shrink-0 items-center justify-center rounded-lg bg-[#2086BF]/75 px-3 text-[11px] font-bold text-white transition duration-200 hover:bg-[#2A99D1] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">Back</Link>
+        </div>
       </div>
       <div className={`${headerStyles.fields} relative grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7`}>
         <Info label="Customer" title={customerName} subtitle={claim.customers?.phone ?? "-"} logo={<HeaderIcon src={claimHeaderIcons.customer} alt="Customer" />} />
