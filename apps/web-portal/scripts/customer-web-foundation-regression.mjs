@@ -98,6 +98,13 @@ assert(phaseOneData.includes("currentCustomerPolicies"), "Customer Policies must
 assert(!phaseOneData.includes("createSupabaseAdminClient"), "Customer Phase 1 must not use admin/service-role data access");
 assert(!phaseOneData.includes("@/lib/partner-web"), "Customer Phase 1 must not depend on Partner authorization");
 
+const addVehiclePage = read("app/customer/(protected)/add-vehicle/page.tsx");
+assert(!addVehiclePage.includes("RC lookup uses the existing Customer API. Verify fetched details before saving."), "Remove the unnecessary RC lookup helper from Add Vehicle");
+assert(addVehiclePage.includes('aria-label="Vehicle form actions"'), "Add Vehicle must have a dedicated action footer");
+assert(addVehiclePage.includes('rounded-xl border border-[#DCE4EE] bg-white px-4 py-3'), "Add Vehicle footer must match the bordered white reference section");
+assert(addVehiclePage.includes('name="account" value={account.id}'), "Preserve the selected Customer account when saving a vehicle");
+assert(addVehiclePage.includes('<button type="submit"'), "Preserve vehicle form submission");
+assert(addVehiclePage.includes('pathname:"/customer/vehicles"'), "Preserve Cancel navigation to customer vehicles");
 const vehiclePage = read("app/customer/(protected)/vehicles/page.tsx");
 const vehicleDetailPage = read("app/customer/(protected)/vehicles/[id]/page.tsx");
 const policyPage = read("app/customer/(protected)/policies/page.tsx");
