@@ -74,9 +74,11 @@ export function CustomerProfileEditor({
             <button
               type="button"
               onClick={() => { setMessage(""); setEditing(true); }}
-              className="inline-flex items-center gap-1.5 rounded-full border border-[#E4DAFB] bg-[#F4EEFF] px-3.5 py-2 text-[10px] font-black text-[#6742BB] transition hover:bg-[#EBE0FF]"
+              aria-label="Edit profile details"
+              title="Edit profile details"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-transparent text-[#6742BB] transition-colors hover:bg-[#F4EEFF] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6742BB]"
             >
-              <Pencil className="h-3.5 w-3.5" /> Edit
+              <Pencil className="h-4 w-4" aria-hidden="true" />
             </button>
             {message ? <p className="mt-2 text-right text-[10px] font-bold text-[#0B7A54]">{message}</p> : null}
           </div>
