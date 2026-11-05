@@ -3,7 +3,7 @@
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { getCustomerWebSession } from "@/lib/customer-web";
 import { resolveCustomerWebScope } from "@/lib/customer-web-data";
-import { loadCustomerClaimDetail } from "@/lib/customer-web-phase2-data";
+import { loadCustomerClaimDetail, isExternalCustomerClaim, buildExternalClaimProjection } from "@/lib/customer-web-phase2-data";
 
 const documentTypes=[
   "RC Copy","Insurance Copy","Driver Licence","GR / Load Bill",
@@ -14,7 +14,7 @@ const documentTypes=[
   "Driver Aadhaar Front","Driver Aadhaar Back","Driver Statement",
   "Road Tax","Local Permit A","Local Permit B","National Permit","Authorization Letter",
   "Aadhaar","PAN","GST","Cancelled Cheque","KYC Form",
-  "TP Affidavit","Towing Bill","Repair Estimate","NCB Verification",
+  "TP Affidavit","Towing Bill","Repair Estimate","NCB Verification","Final Workshop Bill",
 ];
 
 export type CustomerClaimUploadState = { error: string | null; uploaded?: { id: string; document_type: string; created_at: string; file_name: string; verification_status: string | null } | null; uploadedCount?: number };
@@ -34,6 +34,20 @@ export async function uploadCustomerClaimDocument(_previous:CustomerClaimUploadS
   }
   const {account}=await resolveCustomerWebScope(accountId);
   const {claim,milestones,internal_projection}=await loadCustomerClaimDetail(account.id,claimId);
+  if (type==="Final Workshop Bill") {
+    if (String(form.get("stage") || "") !== "billing" || !isExternalCustomerClaim(claim)) {
+      return {error:"Final workshop bills can only be uploaded in External Claim Billing."};
+    }
+    const projection=buildExternalClaimProjection(milestones);
+    const current=projection.current_stage.key;
+    const billing=projection.stages.find(stage=>stage.key==="billing");
+    if (current!=="billing" && !billing?.completed) {
+      return {error:"Billing is not available for this claim yet."};
+    }
+    if (["Settled","Closed","Claim Complete"].includes(claim.current_status)) {
+      return {error:"Completed claims cannot accept new workshop bills."};
+    }
+  }
   // Customers cannot bypass the Stage 2 lock by submitting an old upload form.
   if (String(form.get("stage") || "") === "spot_intimation" &&
     claim.claim_service_mode === "broker_managed" && !claim.external_policy_id &&
