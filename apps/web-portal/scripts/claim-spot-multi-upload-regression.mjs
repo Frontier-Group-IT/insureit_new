@@ -8,6 +8,20 @@ const replacementUploader = await readFile(new URL("../components/spot-survey/re
 const actions = await readFile(new URL("../app/claims/[id]/spot-survey-actions.ts", import.meta.url), "utf8");
 const uploadActions = await readFile(new URL("../app/claims/[id]/claim-document-upload-actions.ts", import.meta.url), "utf8");
 const workflowAccess = await readFile(new URL("../lib/claim-workflow-access.ts", import.meta.url), "utf8");
+const rcPrefill = await readFile(new URL("../app/claims/[id]/claim-rc-prefill-actions.ts", import.meta.url), "utf8");
+const verificationCompat = await readFile(new URL("../app/claims/[id]/claim-document-verification-compat-actions.ts", import.meta.url), "utf8");
+assert.match(verificationCompat, /requireClaimWorkflowAccess\(claimId, "You do not have permission to verify claim documents\."\)/, "Audio and generic document verification must retain claim-scoped authorization.");
+assert.match(verificationCompat, /claim\.claim_service_mode !== "broker_managed"/, "Broker-managed verification remains allowed.");
+assert.match(verificationCompat, /claimSource\?\.policy_service_source !== "external" \|\| isPartner/, "Self-managed document verification must be restricted to authorized non-Partner external Operations.");
+assert.match(verificationCompat, /return await verifySpotSurveyDocument\(formData\)/, "Compatibility action must keep canonical verification and history writes.");
+
+
+// RC prefill must match authorized Operations verification eligibility for external self-managed claims.
+assert.match(rcPrefill, /requireClaimWorkflowAccess\(claimId, "Not permitted to verify RC for this claim\."\)/, "RC prefill must retain the claim-scoped authorization gate.");
+assert.match(rcPrefill, /!isPartner && claim\.claim_service_mode === "self_managed" && linked\?\.policy_service_source === "external"/, "Only non-Partner Operations users may prefill RC details on self-managed external claims.");
+assert.match(rcPrefill, /claim\.claim_service_mode !== "broker_managed" && !selfManagedExternalOperations/, "Existing broker-managed behavior must remain allowed.");
+assert.match(rcPrefill, /linked\.customer_id !== claim\.customer_id/, "Vehicle lookup must continue enforcing claim/customer ownership.");
+
 const insuranceCapacity = await readFile(new URL("../lib/insurance-verification-capacity.ts", import.meta.url), "utf8");
 const insuranceCapacityAction = await readFile(new URL("../app/claims/[id]/insurance-verification-actions.ts", import.meta.url), "utf8");
 const insuranceModal = await readFile(new URL("../components/spot-survey/insurance-verification-modal.tsx", import.meta.url), "utf8");
