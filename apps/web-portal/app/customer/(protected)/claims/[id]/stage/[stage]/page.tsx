@@ -177,7 +177,7 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
             )}
           </label>
         ))}</div>
-        {selected.key!=="claim_intimation"?<div className="mt-5 flex min-h-10 items-center justify-end gap-2 border-t border-[#D9E3F0] pt-4">
+        {selected.key!=="claim_intimation"?<div className={selected.key==="work_approval"?"mt-5 flex min-h-10 items-center justify-end gap-2 border-t border-[#D9E3F0] pt-4":"mt-5 flex flex-wrap items-center justify-end gap-2 border-t border-[#D9E3F0] pt-4"}>
           <Link href={{pathname:"/customer/claims",query:{account:account.id}}} className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#B9CBE2] px-5 text-[12px] font-semibold text-[#174A87]">Cancel</Link>
           <CustomerClaimStageSubmit formId="customer-claim-stage-details-form" variant="continue" />
         </div>:null}
