@@ -162,9 +162,9 @@ export default async function ClaimDetailPage({ params, searchParams }: { params
     file_name: cleanText(document.file_name) || "Unnamed claim document",
     signedUrl: `/claim-documents/${document.id}/open`
   }));
-  const policyDocument = await findLinkedClaimPolicyCopy(admin, claim);
+  const policyDocument = await findLinkedClaimPolicyCopy(admin, claim).catch(() => null);
   const hasLinkedClaimPolicyCopy = policyDocument
-    ? Boolean(await findExistingLinkedClaimCopy(admin, claim.id, claim.customer_id, policyDocument))
+    ? Boolean(await findExistingLinkedClaimCopy(admin, claim.id, claim.customer_id, policyDocument).catch(() => true))
     : false;
   const policyCopy = policyDocument
     ? {
