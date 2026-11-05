@@ -108,13 +108,10 @@ export default async function AddCustomerVehicle({ searchParams }: { searchParam
           {([["fitnessDate","Fitness expiry"],["pucDate","PUC expiry"],["roadTaxDate","Road tax expiry"],["nationalPermitDate","National permit expiry"],["localPermitDate","Local permit expiry"]] as const).map(([name,title])=><label key={name} className={label}>{title}<input name={name} type="date" className={field}/></label>)}
         </div>
       </section>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-[11px] text-[#75849C]">RC lookup uses the existing Customer API. Verify fetched details before saving.</p>
-        <div className="flex items-center gap-2">
-          <Link href={{pathname:"/customer/vehicles",query:{account:account.id}}} className="inline-flex items-center justify-center rounded-lg border border-[#CBD8E8] bg-white px-5 py-2.5 text-[12px] font-semibold text-[#17365F] transition hover:bg-[#F1F6FD]">Cancel</Link>
-          <button type="submit" className="rounded-lg bg-[#17365F] px-5 py-2.5 text-[12px] font-semibold text-white">Save Vehicle</button>
-        </div>
-      </div>
+      <section aria-label="Vehicle form actions" className="flex min-h-[68px] items-center justify-end gap-2 rounded-xl border border-[#DCE4EE] bg-white px-4 py-3">
+        <Link href={{pathname:"/customer/vehicles",query:{account:account.id}}} className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#CBD8E8] bg-white px-5 text-[12px] font-semibold text-[#17365F] transition hover:bg-[#F1F6FD]">Cancel</Link>
+        <button type="submit" className="inline-flex min-h-10 items-center justify-center rounded-lg bg-[#17365F] px-5 text-[12px] font-semibold text-white">Save Vehicle</button>
+      </section>
     </CustomerVehicleForm>
   </div>;
 }
