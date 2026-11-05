@@ -148,8 +148,24 @@ export function OperationsClaimStageOneAttachments({ claimId }: { claimId: strin
       };
       instance.start();
       setRecording(true);
-    } catch {
-      setVoiceMessage({ ok: false, text: "Microphone unavailable. Allow microphone permission or choose an audio file." });
+    } catch (cause) {
+      // getUserMedia can fail even when the browser's site toggle is enabled:
+      // Permissions-Policy, OS privacy, missing/disconnected input, or a busy device.
+      micStream.current?.getTracks().forEach(track => track.stop());
+      micStream.current = null;
+      recorder.current = null;
+      setRecording(false);
+      const name = cause instanceof Error ? cause.name : "";
+      const reason = name === "NotAllowedError" || name === "SecurityError"
+        ? "Microphone access was denied. Allow it for this site and in Windows privacy settings, then retry or choose an audio file."
+        : name === "NotFoundError" || name === "DevicesNotFoundError"
+          ? "No microphone input was found. Connect or enable a microphone in Windows Sound settings, then retry or choose an audio file."
+          : name === "NotReadableError" || name === "TrackStartError"
+            ? "Your microphone is busy or unavailable. Close other apps using it, then retry or choose an audio file."
+            : name === "OverconstrainedError"
+              ? "The selected microphone cannot meet the requested audio settings. Choose another input device or attach an audio file."
+              : "Could not start microphone recording. Check your browser input device, permissions and Windows sound settings, or choose an audio file.";
+      setVoiceMessage({ ok: false, text: reason });
     }
   }
 
