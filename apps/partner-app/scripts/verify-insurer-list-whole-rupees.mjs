@@ -7,7 +7,9 @@ const shared = readFileSync(new URL('../lib/format.ts', import.meta.url), 'utf8'
 // The display formatter is local to this screen: the shared formatter keeps
 // precise paise where needed by other workflows.
 assert.ok(screen.includes("const wholeRupeeFormatter = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0, minimumFractionDigits: 0 });"));
-assert.ok(screen.includes("return `₹${wholeRupeeFormatter.format(amount)}`;"));
+assert.ok(screen.includes('function formatInsurerRupees(amount: number | string): string'));
+assert.ok(screen.includes('const numericAmount = Number(amount);'));
+assert.ok(screen.includes('wholeRupeeFormatter.format(Number.isFinite(numericAmount) ? numericAmount : 0)'));
 assert.ok(!screen.includes('formatIndianCurrency'));
 assert.ok(shared.includes('hasPaise ? 2 : 0'));
 
