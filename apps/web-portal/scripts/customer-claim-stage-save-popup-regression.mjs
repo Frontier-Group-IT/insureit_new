@@ -1,8 +1,14 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 const src = readFileSync(new URL("../components/customer-portal/customer-claim-stage-submit.tsx", import.meta.url), "utf8");
-assert.match(src, /role="alertdialog"/);
-assert.match(src, /aria-modal="true"/);
+const sharedDialog = readFileSync(new URL("../components/claim-manager/claim-stage-error-dialog.tsx", import.meta.url), "utf8");
+assert.match(src, /<ClaimStageErrorDialog message=\{errorPopup\}/, "Customer claim stage uses the shared centered error popup");
+assert.match(sharedDialog, /role="alertdialog"/);
+assert.match(sharedDialog, /aria-modal="true"/);
+assert.match(sharedDialog, /Check details/, "Error popup shows the requested Check details heading");
+assert.match(sharedDialog, /AlertCircle/, "Error popup uses the standard orange warning icon");
+assert.match(sharedDialog, /h-11 w-full rounded-xl bg-\[#19385E\]/, "Error popup has a full-width navy OK action");
+assert.doesNotMatch(src, /Action required|border-red-100/, "Remove the old compact red error dialog");
 assert.match(src, /setErrorPopup\(result.error\)/);
 assert.match(src, /setErrorPopup\(error instanceof Error/);
 assert.ok(src.includes('onClick={() => setErrorPopup("")}'));
