@@ -9,6 +9,7 @@ import { completeClaimJourneyStageWithFeedback } from "@/app/claims/stage-action
 import { ClaimStageSuccessPopup } from "@/components/claim-manager/claim-stage-success-popup";
 import { ClaimStageErrorDialog } from "@/components/claim-manager/claim-stage-error-dialog";
 import { OperationsClaimStageOneAttachments } from "@/components/claim-manager/operations-claim-stage-one-attachments";
+import { ExternalClaimBillUpload, type WorkshopBillDocument } from "@/components/claims/external-claim-bill-upload";
 import { FormSubmitButton } from "@/components/form-submit-button";
 import { managerTransitions, type ClaimStatus } from "@/lib/claim-workflow";
 import type { InternalSpotIntimationDetails } from "@/lib/internal-spot-intimation";
@@ -25,6 +26,7 @@ type Props = {
   details: StageDetail[];
   spotContent: ReactNode;
   claimIntimationContent: ReactNode;
+  billDocuments?: WorkshopBillDocument[];
   initialStageKey?: string;
   accidentAt?: string | null;
   spotIntimationAt?: string | null;
@@ -175,7 +177,7 @@ function nextStageLabelFor(stageKey: StageKey) {
   return nextKey ? stages.find((stage) => stage.key === nextKey)?.label ?? "next stage" : "claim completion";
 }
 
-export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, details, spotContent, claimIntimationContent, initialStageKey, accidentAt, spotIntimationAt, spotDetails, externalCustomerMilestones, unrestrictedStageEditing = false, partnerReadOnlyJourney = false, partnerManagedJourney = false, partnerInternalStageOne = false }: Props) {
+export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, details, spotContent, claimIntimationContent, billDocuments = [], initialStageKey, accidentAt, spotIntimationAt, spotDetails, externalCustomerMilestones, unrestrictedStageEditing = false, partnerReadOnlyJourney = false, partnerManagedJourney = false, partnerInternalStageOne = false }: Props) {
   const router = useRouter();
   const active = stages.find((stage) => (stage.statuses as readonly string[]).includes(currentStatus));
   const activeIndex = active ? stages.findIndex((stage) => stage.key === active.key) : 0;
@@ -405,7 +407,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
             <input type="hidden" name="next_status" value={stageTarget ?? ""} />
             <input type="hidden" name="save_only" value={partnerManagedJourney || selectedSaveOnly ? "true" : "false"} />
             <input type="hidden" name="notes" value={selectedSaveOnly ? `Operations edited ${selected.label} details.` : `Operations completed ${selected.label} and opened the next journey stage.`} />
-            <div className={`grid gap-3 sm:grid-cols-2 ${selected.key === "work_approval" ? "lg:grid-cols-5 lg:items-start" : selected.key === "repair_ri" || selected.key === "delivery_order" ? "lg:grid-cols-3" : selected.key === "billing" ? "lg:grid-cols-2" : selected.key === "vehicle_delivery" ? "lg:grid-cols-2" : selected.key === "payment_encashment" ? "lg:grid-cols-[repeat(5,minmax(0,1fr))] lg:items-start" : "lg:grid-cols-4"}`}>
+            <div className={`grid gap-3 sm:grid-cols-2 ${selected.key === "work_approval" ? "lg:grid-cols-5 lg:items-start" : selected.key === "repair_ri" || selected.key === "delivery_order" ? "lg:grid-cols-3" : selected.key === "billing" ? "lg:grid-cols-3" : selected.key === "vehicle_delivery" ? "lg:grid-cols-2" : selected.key === "payment_encashment" ? "lg:grid-cols-[repeat(5,minmax(0,1fr))] lg:items-start" : "lg:grid-cols-4"}`}>
               {fields[selected.key].map((field) => {
                 const value = field.name === "insurer_claim_no" ? insurerClaimNo ?? fieldValue(selectedDetails, field.name) : fieldValue(selectedDetails, field.name);
                 const internalStageTwoSurveyorField = selected.key === "spot_status" && !hasExternalVisualProgress && internalSpotStatusSurveyorFields.has(field.name);
@@ -455,6 +457,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
                   </label>
                 );
               })}
+              {selected.key === "billing" && unrestrictedStageEditing && !partnerReadOnlyJourney && !partnerManagedJourney ? <ExternalClaimBillUpload mode="operations" claimId={claimId} documents={billDocuments} /> : null}
             </div>
 
             <div className={selected.key === "work_approval" ? "mt-3 flex min-h-10 items-center justify-end gap-2 border-t border-[#D9E3F0] pt-3" : "mt-3 flex justify-end"}>

@@ -116,6 +116,7 @@ export async function prepareClaimDocumentUpload(claimId: string, documentType: 
     const { claim } = await uploadContext(claimId);
     const existingDocument = documentId ? await loadExistingClaimDocument(claim, documentId) : null;
     const persistedDocumentType = existingDocument?.document_type ?? documentType;
+    if (persistedDocumentType === "Final Workshop Bill" && (!["application/pdf", "image/jpeg", "image/png"].includes(file.type) || !/\.(pdf|jpe?g|png)$/i.test(file.name) || file.size > maxDocumentSizeBytes)) throw new Error("Final workshop bill must be PDF, JPG or PNG and no larger than 5 MB.");
     validateSingleDocumentFile(persistedDocumentType, file);
     const fileName = safeFileName(file.name); const path = `${claim.customer_id}/${claim.id}/${Date.now()}-${randomUUID()}-${fileName}`;
     return { ok: true, uploads: [await createSignedUpload(path, fileName, persistedDocumentType, file.type)] };

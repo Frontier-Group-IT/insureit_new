@@ -39,6 +39,8 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Operations claim payment-stage authorized write regression
         run: node scripts/claim-payment-stage-authorized-write-regression.mjs
+      - name: External Claim Billing workshop bill upload regression
+        run: node scripts/external-claim-billing-upload-regression.mjs
       - name: Operations stage-one multiple documents and voice-note regression
         run: node scripts/operations-claim-stage-one-media-parity-regression.mjs
       - name: Operations Claim microphone permissions and voice upload regression
