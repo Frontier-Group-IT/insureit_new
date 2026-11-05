@@ -21,7 +21,9 @@ const sharedClaimJourney = await readFile(new URL("../../../packages/claim-journ
 assert.match(workspace, /<Image src=\{claimHeaderIcons\.claim\} alt="" width=\{34\}/, "Header must use the existing claim illustration.");
 assert.match(workspace, /rounded-xl border border-white bg-white/, "The Claim Journey heading icon must have an opaque white background.");
 assert.match(workspace, /rounded-lg bg-white shadow-\[0_2px_6px_rgba\(0,12,42,\.14\)\]/, "Claim summary icon tiles must be white.");
-assert.match(workspace, /documents\.length\} uploaded file/, "All loaded claim documents must have a visible total.");
+assert.doesNotMatch(workspace, /documents\.length\} uploaded file/, "Remove redundant uploaded-file total from the Document Verification header.");
+assert.match(workspace, /title="Customer Multiple Documents"/, "Customer bulk uploads must have a visible Operations section.");
+assert.match(workspace, /document_type\?\.trim\(\)\.toLowerCase\(\) === "other document"/, "Use the exact customer bulk-upload category.");
 assert.match(bulkVerificationGroup, /useState\(true\)/, "Multiple uploaded document rows must be expanded initially.");
 assert.match(bulkVerificationGroup, /\{item\.documents\.length\} files/, "Multi-file groups must show their file count.");
 
