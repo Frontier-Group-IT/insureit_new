@@ -14,18 +14,24 @@ DECLARE
 BEGIN
   FOREACH fn IN ARRAY ARRAY[
     'persist_initial_document_submission_from_stage_details',
-    'persist_managed_claim_stage_transition_from_details'
+    'persist_managed_claim_stage_transition_from_details',
+    'advance_initial_documents_verified',
+    'complete_spot_survey'
   ] LOOP
     SELECT pg_get_functiondef(p.oid) INTO body
       FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
      WHERE n.nspname = 'public' AND p.proname = fn AND p.pronargs = 0;
     IF body IS NULL OR position(original_lookup IN body) = 0
-       OR position(old_guard IN body) = 0
-       OR position('v_operations_actor' IN body) = 0 THEN
+       OR (fn IN ('persist_initial_document_submission_from_stage_details',
+                   'persist_managed_claim_stage_transition_from_details')
+           AND (position(old_guard IN body) = 0 OR position('v_operations_actor' IN body) = 0)) THEN
       RAISE EXCEPTION 'Unexpected trigger function definition: %', fn;
     END IF;
     body := replace(body, original_lookup, new_lookup);
-    body := replace(body, old_guard, new_guard);
+    IF fn IN ('persist_initial_document_submission_from_stage_details',
+              'persist_managed_claim_stage_transition_from_details') THEN
+      body := replace(body, old_guard, new_guard);
+    END IF;
     IF fn = 'persist_managed_claim_stage_transition_from_details' THEN
       IF position('  if v_claim.policy_service_source::text = ''external''' IN body) = 0 THEN
         RAISE EXCEPTION 'Expected external claim save-only guard missing';
