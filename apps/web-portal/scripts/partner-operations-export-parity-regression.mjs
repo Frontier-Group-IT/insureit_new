@@ -39,4 +39,18 @@ assert.doesNotMatch(parityMigration,/policy_payin_details|policy_intermediary_pa
 assert.match(partner,/console\.error\("Partner Business MIS scoped enrichment failed"/,"RPC error diagnostics must remain server-side");
 assert.match(partner,/batchCount: batch\.length/,"Log batch size, not policy IDs");
 assert.match(partner,/throw new Error\("Authorized Partner export details unavailable\."\)/,"Public errors must remain generic");
+// All Business is sent as business=all by the Overview report and should not eliminate any scoped rows.
+assert.match(partner, /const business = params\\.get\\("business"\\) \\|\\| "all";/);
+const businessFilter = partner.match(/if \\((business !== "all" && normalizedBusinessType\\(policy\\) !== business)\\) return false;/);
+assert.ok(businessFilter, "Export must treat All Business as no additional business-type filter");
+const excludesPolicy = new Function("business", "policy", "normalizedBusinessType", `return ${businessFilter[1]};`);
+for (const accountType of ["group", "group associate", "branch", "partner", "partner associate"]) {
+  const scopedPolicy = { business_type: "motor", accountType };
+  assert.equal(excludesPolicy("all", scopedPolicy, policy => policy.business_type), false,
+    `${accountType}: All Business must include authorized policies`);
+  assert.equal(excludesPolicy("motor", scopedPolicy, policy => policy.business_type), false,
+    `${accountType}: matching business type must remain included`);
+  assert.equal(excludesPolicy("health", scopedPolicy, policy => policy.business_type), true,
+    `${accountType}: non-matching business types must remain excluded`);
+}
 console.log("Partner Operations parity (35 columns, five scoped roles, no finance) passed");
