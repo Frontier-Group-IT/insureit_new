@@ -17,6 +17,15 @@ const claimWorkflow = await readFile(new URL("../lib/claim-workflow.ts", import.
 const customerClaimDetail = await readFile(new URL("../../mobile-app/app/customer/claim-detail.tsx", import.meta.url), "utf8");
 const sharedClaimJourney = await readFile(new URL("../../../packages/claim-journey/src/index.ts", import.meta.url), "utf8");
 
+// Operations claim journey: display customer/Operations claim attachments without hiding bulk file rows.
+assert.match(workspace, /<Image src=\{claimHeaderIcons\.claim\} alt="" width=\{34\}/, "Header must use the existing claim illustration.");
+assert.match(workspace, /rounded-xl border border-white bg-white/, "The Claim Journey heading icon must have an opaque white background.");
+assert.match(workspace, /rounded-lg bg-white shadow-\[0_2px_6px_rgba\(0,12,42,\.14\)\]/, "Claim summary icon tiles must be white.");
+assert.match(workspace, /documents\.length\} uploaded file/, "All loaded claim documents must have a visible total.");
+assert.match(bulkVerificationGroup, /useState\(true\)/, "Multiple uploaded document rows must be expanded initially.");
+assert.match(bulkVerificationGroup, /\{item\.documents\.length\} files/, "Multi-file groups must show their file count.");
+assert.match(operationsStages, /Verify \$\{count\} uploaded document/, "Verification gate errors must be readable.");
+
 // Header displays seven separate fields in a single desktop row. Removed data still belongs to the claim record.
 for (const removed of ["Claim Status", "Spot Intimation Date & Time", "Insurer", "Make & Model"]) {
   assert.doesNotMatch(workspace, new RegExp('<Info label="' + removed + '"'), removed + " must not reappear in navy summary");
