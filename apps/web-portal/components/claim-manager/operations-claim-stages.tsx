@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import "./operations-claim-stages-motion.css";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { advanceInternalSpotIntimation, saveInternalSpotIntimationDetails } from "@/app/claims/internal-spot-intimation-actions";
+import { advanceInternalSpotIntimationWithFeedback, saveInternalSpotIntimationDetails } from "@/app/claims/internal-spot-intimation-actions";
 import { completeClaimJourneyStageWithFeedback } from "@/app/claims/stage-actions";
 import { ClaimStageSuccessPopup } from "@/components/claim-manager/claim-stage-success-popup";
 import { ClaimStageErrorDialog } from "@/components/claim-manager/claim-stage-error-dialog";
@@ -229,7 +229,8 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
             nextStageKey: nextStageKeyFor(milestoneKey),
           };
         }
-        await advanceInternalSpotIntimation(claimId, formData);
+        const advanced = await advanceInternalSpotIntimationWithFeedback(claimId, formData);
+        if (!advanced.ok) return { ok: false, message: advanced.message, advanced: false, nextStageKey: null };
         setSuccessNotice("Claim stage updated.");
         return { ok: true, message: "Claim stage updated.", advanced: true, nextStageKey: "spot_status" };
       } catch (error) {

@@ -1,0 +1,45 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+const read = relative => readFileSync(fileURLToPath(new URL(relative, import.meta.url)), "utf8");
+const dialog = read("../components/customer-portal/customer-success-dialog.tsx");
+const errors = read("../components/customer-portal/customer-error-dialog.tsx");
+const save = read("../app/customer/(protected)/spot-intimation/spot-intimation-save-form.tsx");
+const bulk = read("../components/customer-portal/customer-claim-multiple-upload.tsx");
+const voice = read("../components/customer-portal/customer-claim-voice-recorder.tsx");
+const individual = read("../components/customer-portal/customer-claim-compact-document.tsx");
+const upload = read("../app/customer/(protected)/claims/[id]/stage/[stage]/upload-action.ts");
+
+assert.match(dialog,/setTimeout\(\(\) => closeRef\.current\(\), 1000\)/,"Success must dismiss in one second.");
+assert.match(dialog,/window\.clearTimeout\(timer\)/,"Dismissing/unmounting must cancel pending timer.");
+assert.match(dialog,/role="dialog" aria-modal="true"/,"Use accessible success dialog.");
+assert.match(dialog,/CheckCircle2/,"Use green success icon instead of warning icon.");
+assert.match(dialog,/max-w-\[505px\]/,"Use the existing popup size and layout.");
+assert.match(dialog,/>\s*OK\s*<\/button>/,"Keep an immediate close action.");
+assert.match(errors,/role="alertdialog"/,"Errors must retain a distinct alert dialog.");
+assert.doesNotMatch(errors,/setTimeout/,"Do not auto-close errors before users can read them.");
+
+assert.match(save,/if \(result\.error\)/,"Never show success on save error.");
+assert.match(save,/savedDestination\.current=result\.destination/,"Navigate only on confirmed destination.");
+assert.match(save,/setSuccessNotice\(editMode \? "Spot Intimation changes saved successfully\." : "Spot Intimation details saved successfully\."\)/,"Show correct save confirmation.");
+assert.match(save,/if\(destination\)router\.push\(destination\)/,"Redirect only after success closes.");
+assert.match(save,/if \(pending \|\| successNotice\) return;/,"Avoid duplicate submission while confirmation is shown.");
+
+assert.match(bulk,/shownUploadId\.current===state\.uploaded\.id/,"Do not reopen popup for same uploaded file after refresh.");
+assert.match(bulk,/const count=state\.uploadedCount \?\? 1/,"Use confirmed server count.");
+assert.match(bulk,/setSuccessNotice\(\x60\$\{count\} document/,"Popup must display actual uploaded count.");
+assert.match(bulk,/<CustomerSuccessDialog title="Upload Successful"/,"Use shared success popup.");
+assert.doesNotMatch(bulk,/<p role="status".*document\(s\) uploaded successfully/,"Remove duplicate inline success.");
+assert.match(voice,/shownUploadId\.current===uploadState\.uploaded\.id/,"Do not re-show same voice upload.");
+assert.match(voice,/setSuccessNotice\("Voice note uploaded successfully\."\)/,"Show server-confirmed voice upload message.");
+assert.match(voice,/<CustomerSuccessDialog title="Upload Successful"/,"Use shared success popup for voice.");
+assert.doesNotMatch(voice,/<p role="status".*Voice note uploaded successfully/,"Remove duplicate inline voice message.");
+assert.match(upload,/return \{error:null,uploaded:lastUploaded,uploadedCount\}/,"Keep actual server upload count.");
+assert.match(bulk,/<CustomerErrorDialog/,"Preserve bulk upload error dialog.");
+assert.match(voice,/<CustomerErrorDialog/,"Preserve recorder error dialog.");
+assert.match(individual,/shownUploadId\.current!==uploadState\.uploaded\.id/,"Do not repeat individual document success.");
+assert.match(individual,/setSuccessNotice\(\x60\$\{uploadState\.uploadedCount \?\? 1\} \$\{label\} document uploaded successfully\./,"Individual document result must report actual upload count and category.");
+assert.match(individual,/<CustomerSuccessDialog title="Upload Successful"/,"Use shared confirmation for individual document uploads.");
+assert.match(individual,/<CustomerErrorDialog title="Document upload failed"/,"Individual document upload errors appear in reference popup.");
+assert.doesNotMatch(individual,/<p role="alert"/,"Do not duplicate upload errors inline.");
+console.log("Customer Spot Intimation success popup regression passed.");

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowRight, LoaderCircle } from "lucide-react";
 import { CustomerErrorDialog } from "@/components/customer-portal/customer-error-dialog";
+import { CustomerSuccessDialog } from "@/components/customer-portal/customer-success-dialog";
 import type { SpotDraftFields, SpotDraftResult } from "./draft-actions";
 
 export type SpotSaveState = { error: string | null; destination?: string };
@@ -24,7 +25,15 @@ export function SpotIntimationSaveForm({ action, children, cancelHref, evidence,
   const [pending, setPending] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const [dialogError, setDialogError] = useState<string | null>(null);
+  const [successNotice,setSuccessNotice]=useState<string|null>(null);
+  const savedDestination=useRef<string|null>(null);
   const closeError = useCallback(() => setDialogError(null), []);
+  const closeSuccess=useCallback(()=>{
+    setSuccessNotice(null);
+    const destination=savedDestination.current;
+    savedDestination.current=null;
+    if(destination)router.push(destination);
+  },[router]);
   const syncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const syncSequence = useRef(0);
   const syncQueue = useRef<Promise<void>>(Promise.resolve());
@@ -92,9 +101,9 @@ export function SpotIntimationSaveForm({ action, children, cancelHref, evidence,
   useEffect(() => () => {
     if (syncTimer.current) clearTimeout(syncTimer.current);
   }, []);
-  return <div className="customer-workflow space-y-3"><CustomerErrorDialog message={dialogError} onClose={closeError} /><form ref={formRef} id="customer-spot-intimation-form" noValidate onSubmit={async (event) => {
+  return <div className="customer-workflow space-y-3"><CustomerErrorDialog message={dialogError} onClose={closeError} /><CustomerSuccessDialog title="Saved Successfully" message={successNotice} onClose={closeSuccess}/><form ref={formRef} id="customer-spot-intimation-form" noValidate onSubmit={async (event) => {
     event.preventDefault(); // Prevent native form-action resetting entered values on validation errors.
-    if (pending) return;
+    if (pending || successNotice) return;
     if (syncTimer.current) clearTimeout(syncTimer.current);
     syncSequence.current++;
     saveDraft();
@@ -116,7 +125,8 @@ export function SpotIntimationSaveForm({ action, children, cancelHref, evidence,
       } else if (result.destination) {
         // Only clear the local draft after the backend confirms the save.
         try { window.sessionStorage.removeItem(storageKey); } catch {}
-        router.push(result.destination);
+        savedDestination.current=result.destination;
+        setSuccessNotice(editMode ? "Spot Intimation changes saved successfully." : "Spot Intimation details saved successfully.");
       }
     } catch {
       setDialogError("Unable to save claim details. Your entries are preserved; please try again.");
@@ -131,7 +141,7 @@ export function SpotIntimationSaveForm({ action, children, cancelHref, evidence,
       {pending
         ? <span aria-disabled="true" className="inline-flex min-h-11 items-center justify-center rounded-xl border border-[#B9CBE2] px-6 py-3 text-[13px] font-semibold text-[#9AAAC0] sm:min-w-32">Cancel</span>
         : <Link href={cancelHref} className="inline-flex min-h-11 items-center justify-center rounded-xl border border-[#B9CBE2] bg-white px-6 py-3 text-[13px] font-semibold text-[#17365D] transition hover:bg-[#F0F6FE] sm:min-w-32">Cancel</Link>}
-      <button type="submit" form="customer-spot-intimation-form" disabled={pending} aria-disabled={pending} className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#1253A7] px-6 py-3 text-[13px] font-bold text-white transition hover:bg-[#0B3884] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1253A7] disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto sm:min-w-64">
+      <button type="submit" form="customer-spot-intimation-form" disabled={pending || Boolean(successNotice)} aria-disabled={pending || Boolean(successNotice)} className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#1253A7] px-6 py-3 text-[13px] font-bold text-white transition hover:bg-[#0B3884] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1253A7] disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto sm:min-w-64">
         {pending ? <><LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true"/>Saving...</> : <>{editMode ? "Save Changes" : "Save & Continue"} <ArrowRight className="h-4 w-4" aria-hidden="true"/></>}
       </button>
     </div></div>
