@@ -31,9 +31,11 @@ assert.match(claimIntimation, /if \(advanceToWorkApproval\) \{[\s\S]*?router\.re
 assert.match(claimIntimation, /onClick=\{\(\) => closeClaimNumberPrompt\(\)\}/);
 assert.match(claimIntimation, /closeClaimNumberPrompt\(advanceAfterClaimNumber\)/);
 assert.doesNotMatch(claimIntimation, /router\.replace\(\`\/claims\/\$\{claimId\}\?stage=work_approval\`\);\s*router\.refresh\(\)/);
-assert.match(heading, /operations-journey-cube-top/);
-assert.match(heading, /operations-journey-cube-left/);
-assert.match(heading, /operations-journey-cube-right/);
+
+
+
 assert.match(heading, /\{heading\}/);
+assert.match(heading, /<Image src=\{claimHeaderIcons\.claim\} alt="" width=\{34\}/);
+assert.match(heading, /rounded-xl border border-white bg-white/);
 
 console.log("Operations Claim Journey save navigation, Stage 9 layout and 3D heading regression passed.");

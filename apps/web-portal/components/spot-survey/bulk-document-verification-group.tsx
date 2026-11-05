@@ -64,7 +64,7 @@ export function BulkDocumentVerificationGroup({ item, claim, verifications }: { 
   );
   const selectableKey = selectableIds.join("|");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(true);
 
   useEffect(() => {
     const allowed = new Set(selectableIds);
@@ -102,6 +102,8 @@ export function BulkDocumentVerificationGroup({ item, claim, verifications }: { 
         <div className="flex min-w-0 flex-1 items-center gap-2">
           <DocumentCategoryIcon category={item.key} />
           {hasMultipleFiles ? (
+            <>
+            <span className="shrink-0 rounded-md bg-[#EAF2FF] px-1.5 py-0.5 text-[10px] font-bold text-[#174EA6]">{item.documents.length} files</span>
             <button
               type="button"
               onClick={(event) => { event.stopPropagation(); toggleExpanded(); }}
@@ -109,7 +111,8 @@ export function BulkDocumentVerificationGroup({ item, claim, verifications }: { 
               aria-controls={contentId}
               aria-label={`${isExpanded ? "Collapse" : "Expand"} ${item.title}`}
               className="min-w-0 truncate rounded-lg text-left text-[13px] font-semibold leading-tight text-[#071D49] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]/30"
-            >{item.title}</button>
+            >{item.title} {isExpanded ? "−" : "+"}</button>
+            </>
           ) : (
             <h2 className="truncate text-[13px] font-semibold leading-tight text-[#071D49]">{item.title}</h2>
           )}
