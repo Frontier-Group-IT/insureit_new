@@ -69,6 +69,8 @@ jobs:
         run: node scripts/operations-claim-intimation-calendar-icon-regression.mjs
       - name: Operations Claim Journey save navigation, Stage 9 layout and 3D icon regression
         run: node scripts/operations-claim-save-navigation-layout-regression.mjs
+      - name: Work Approval Stage 4 compact layout and navigation regression
+        run: node scripts/claim-stage4-work-approval-compact-regression.mjs
       - name: Operations claim Customer motion parity regression
         run: node scripts/operations-claim-customer-motion-parity-regression.mjs
       - name: Operations Claim Journey vehicle and insurer header regression
@@ -193,6 +195,8 @@ jobs:
         run: node scripts/indian-date-ecosystem-regression.mjs
       - name: Customer Claims phone and insurer number regression
         run: node scripts/customer-claims-phone-claimno-regression.mjs
+      - name: External Customer Claim Stage 3 insurer number popup regression
+        run: node scripts/customer-external-stage3-claim-number-popup-regression.mjs
       - name: Customer Claims illustrated empty-state regression
         run: node scripts/customer-claims-empty-placeholder-regression.mjs
       - name: Customer Support and Profile visual polish regression
