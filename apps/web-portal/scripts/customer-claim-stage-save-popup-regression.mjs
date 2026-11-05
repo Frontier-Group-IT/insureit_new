@@ -38,6 +38,11 @@ assert.match(src, /clearCustomerClaimDraft\(key\)/, "Clear only on a successful 
 assert.match(src, /if \(result\.error\)/, "Do not discard local data after server errors");
 assert.match(actions, /await saveCustomerExternalStage\(form, false\)/, "Server validation must report success without RSC form reset");
 assert.match(actions, /return \{error:null, destination\}/, "Return a safe success destination");
+assert.match(actions, /const destination = key === "payment_encashment"\s*\? "\/customer\/claims\?account="\+encodeURIComponent\(account\.id\)/, "Successful Stage 9 saves, including completed-stage edits, must return to the scoped Claims Register.");
+assert.match(actions, /: editingCompleted\s*\? "\/customer\/claims\/"\+encodeURIComponent\(claim\.id\)\+"\/stage\/"/, "Earlier completed stages must retain their existing edit destination.");
+assert.match(actions, /if \(navigate\) redirect\(destination\)/, "Preserve existing server action navigation.");
+assert.match(src, /if \(result\.destination\) router\.push\(result\.destination\)/, "Final navigation remains conditional on successful save.");
+
 assert.doesNotMatch(spot, /useActionState\(/, "Spot Intimation errors must not reset uncontrolled form inputs");
 assert.match(spot, /event\.preventDefault\(\)/, "Spot Intimation must preserve inputs on failed submit");
 assert.match(spot, /if \(result\.error\)/, "Spot Intimation server errors must retain entered fields");
