@@ -314,7 +314,7 @@ export default async function ClaimDetailPage({ params, searchParams }: { params
           spotIntimationAt={effectiveClaimWithSpotIntimation.spotIntimationAt}
           spotDetails={effectiveSpotDetails}
           spotContent={<SpotSurveyWorkspace claim={{ ...effectiveClaimWithSpotIntimation, policySource: externalPolicy ? "external" : "sibl", policyCopy }} documents={signedDocs} verifications={mergedVerifications} surveyorDetails={surveyorDetails} showContext={false} showSpotDetails={false} canReusePolicyCopy={Boolean(policyDocument && !hasLinkedClaimPolicyCopy && (claim.claim_service_mode === "broker_managed" || claim.policy_service_source === "external" || claim.external_policy_id))} />}
-          billDocuments={signedDocs.filter(document=>document.document_type==="Final Workshop Bill").map(document=>({id:document.id,file_name:document.file_name}))}
+          billDocuments={signedDocs.filter(document=>document.document_type==="Final Workshop Bill").map(document=>({id:document.id,file_name:document.file_name,verification_status:document.verification_status}))}
           claimIntimationContent={<FinalDocumentsWorkspaceV2 claimId={claim.id} rows={finalRows} dealershipDetails={dealershipDetails} allowStageAdvance={canAdvanceClaimIntimation} showClaimNumberPrompt={claim.policy_service_source !== "external" && !claim.insurer_claim_no?.trim()} />}
           initialStageKey={requestedStage}
           externalCustomerMilestones={externalCustomerMilestones?.map((milestone) => ({ key: milestone.milestone_key, status: milestone.milestone_status }))}
