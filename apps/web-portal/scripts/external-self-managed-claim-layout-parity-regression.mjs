@@ -44,6 +44,8 @@ const migration = read("../../../supabase/migrations/20261105170000_self_managed
 const rollback = read("../../../supabase/rollbacks/20261105170000_self_managed_claim_operations_stage_parity_rollback.sql");
 assert.match(migration, /persist_managed_claim_stage_transition_from_details/, "Stage transition trigger must support self-managed claims.");
 assert.match(migration, /persist_initial_document_submission_from_stage_details/, "Initial document trigger must support self-managed claims.");
+assert.match(migration, /advance_initial_documents_verified/, "Initial document verification must accept self-managed claims.");
+assert.match(migration, /complete_spot_survey/, "Spot-survey completion must accept self-managed claims.");
 assert.match(migration, /claim_service_mode in \(''broker_managed'', ''self_managed''\)/, "Trigger lookup must accept both management modes.");
 assert.match(migration, /not v_operations_actor/, "Self-managed claim changes must remain Operations-authorized.");
 assert.match(migration, /not \(new\.details \? ''completed_at''\)/, "Saving self-managed historical stage details cannot silently advance a claim.");
