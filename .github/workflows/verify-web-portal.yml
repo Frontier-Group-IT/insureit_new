@@ -191,6 +191,8 @@ jobs:
         run: node scripts/indian-date-ecosystem-regression.mjs
       - name: Customer Claims phone and insurer number regression
         run: node scripts/customer-claims-phone-claimno-regression.mjs
+      - name: External Customer Claim Stage 3 insurer number popup regression
+        run: node scripts/customer-external-stage3-claim-number-popup-regression.mjs
       - name: Customer Claims illustrated empty-state regression
         run: node scripts/customer-claims-empty-placeholder-regression.mjs
       - name: Customer Support and Profile visual polish regression
