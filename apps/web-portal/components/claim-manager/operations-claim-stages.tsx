@@ -643,10 +643,10 @@ function toDateTimeLocal(value: string, type?: string) {
   return value;
 }
 function summarizeClaimActionError(message: string): string {
-  const pending = /^Verify first — (\d+) uploaded documents? pending verification\.$/.exec(message.trim());
+  const pending = /^Verify first — (\d+) uploaded documents? pending verification(?:: (.+))?\.$/.exec(message.trim());
   if (pending) {
     const count = Number(pending[1]);
-    return `Verify ${count} uploaded document${count === 1 ? "" : "s"} before saving this stage.`;
+    return `${pending[2] ? `Verify these documents before saving: ${pending[2]}` : `Verify ${count} uploaded document${count === 1 ? "" : "s"} before saving this stage.`}`;
   }
   if (/server components render|digest property|specific message is omitted/i.test(message)) {
     return "Unable to complete the action. Please try again.";
