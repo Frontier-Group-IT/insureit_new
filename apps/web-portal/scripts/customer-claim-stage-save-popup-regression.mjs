@@ -12,6 +12,11 @@ assert.doesNotMatch(src, /Action required|border-red-100/, "Remove the old compa
 assert.match(src, /setErrorPopup\(result.error\)/);
 assert.match(src, /setErrorPopup\(error instanceof Error/);
 assert.ok(src.includes('onClose={() => setErrorPopup("")}'), "OK dismisses claim-stage error dialog");
+assert.match(src, /className="relative flex flex-wrap items-center justify-end gap-2"/, "Footer buttons need a stable positioning context.");
+assert.match(src, /role="status" aria-live="polite" className="pointer-events-none absolute right-0 top-full/, "Draft saved feedback must not participate in footer button layout.");
+assert.doesNotMatch(src, /role="status" aria-live="polite" className="w-full/, "Full-width feedback must not shift Cancel vertically.");
+assert.match(src, /mode === "draft" \? "Draft saved\." : "Details saved\."/);
+
 assert.doesNotMatch(src, /bg-\[#FFF3F3\]/);
 const { readFileSync: read } = await import("node:fs");
 const draft = read(new URL("../components/customer-portal/customer-claim-stage-draft-form.tsx", import.meta.url), "utf8");
