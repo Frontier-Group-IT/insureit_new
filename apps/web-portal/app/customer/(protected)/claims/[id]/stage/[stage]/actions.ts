@@ -136,6 +136,54 @@ export async function saveCustomerExternalStage(form:FormData, navigate = true) 
   return destination;
 }
 
+/**
+ * Customer-only, optional insurer claim-number capture after the first successful
+ * external Stage 3 completion. Do not advance milestones or replace an existing number.
+ */
+export async function saveCustomerExternalInsurerClaimNumber(
+  accountId: string,
+  claimId: string,
+  rawNumber: string,
+): Promise<{ error: string | null }> {
+  const value = rawNumber.trim();
+  if (!value || value.length > 80 || !/^[A-Za-z0-9][A-Za-z0-9./_#\\- ]*$/.test(value)) {
+    return { error: "Enter a valid insurer claim number (up to 80 letters, digits or common separators)." };
+  }
+  try {
+    const { account } = await resolveCustomerWebScope(accountId);
+    const { claim, milestones } = await loadCustomerClaimDetail(account.id, claimId);
+    if (!isExternalCustomerClaim(claim) || claim.claim_service_mode !== "self_managed") {
+      return { error: "This claim does not allow customer insurer-number updates." };
+    }
+    const stageThree = milestones.find(row => row.milestone_key === "claim_intimation");
+    if (!stageThree || !["completed", "not_applicable"].includes(stageThree.milestone_status)) {
+      return { error: "Complete Claim Intimation before adding the insurer claim number." };
+    }
+    if (claim.insurer_claim_no?.trim()) {
+      return { error: "An insurer claim number is already recorded. Contact support to correct it." };
+    }
+    const db = await createCustomerServerSupabaseClient();
+    const { data, error } = await db.from("claims")
+      .update({ insurer_claim_no: value })
+      .eq("id", claim.id)
+      .eq("customer_id", account.id)
+      .is("insurer_claim_no", null)
+      .select("id")
+      .maybeSingle();
+    if (error) {
+      console.error("Customer insurer claim-number update rejected", { code: error.code });
+      return { error: "Unable to save the insurer claim number. Please try again." };
+    }
+    if (!data) {
+      return { error: "The claim number was already updated or your access changed. Refresh and try again." };
+    }
+    revalidatePath("/customer/claims/" + encodeURIComponent(claim.id));
+    return { error: null };
+  } catch {
+    return { error: "Unable to save the insurer claim number. Please try again." };
+  }
+}
+
 /** Save incomplete Stage 3 details without completing the claim milestone. */
 export async function saveCustomerClaimIntimationDraft(form: FormData, navigate = true) {
   const accountId = String(form.get("account") || "");
