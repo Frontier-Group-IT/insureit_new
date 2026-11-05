@@ -126,7 +126,6 @@ export function SpotIntimationSaveForm({ action, children, cancelHref, evidence,
   }} onInput={queueSync} onChange={queueSync} onBlurCapture={() => { if (syncTimer.current) clearTimeout(syncTimer.current); syncDraft(); }} aria-busy={pending} className="space-y-4 rounded-2xl border border-[#DBE4F0] bg-white p-4 shadow-[0_6px_24px_rgba(20,58,100,.04)] sm:p-5">
     {children}
     </form>
-    {saveServerDraft ? <p role="status" aria-live="polite" className="text-right text-[10px] text-[#687A94]">{syncState === "saving" ? "Saving draft…" : syncState === "saved" ? "Draft saved securely" : syncState === "error" ? "Draft not synced yet — entries remain in this browser" : "Details are saved automatically as draft"}</p> : null}
     {evidence}
     <div className="rounded-2xl border border-[#DBE4F0] bg-white p-3 sm:p-4"><div className="flex flex-col-reverse justify-end gap-2 sm:flex-row">
       {pending
