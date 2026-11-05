@@ -598,7 +598,7 @@ export async function getDashboardCurrentData(
     else pendingDocuments = documentResult.data?.length ?? 0;
 
     const financialByClaim = new Map(financialRows.map((row) => [row.claim_id, row]));
-    const stageAmountsByClaim = buildLatestClaimStageAmounts(stageDetailResult.data ?? []);
+    const stageAmountsByClaim = buildLatestClaimStageAmounts([...(stageDetailResult.data ?? [])].sort((a, b) => b.created_at.localeCompare(a.created_at)));
     const actionPendingVehicles = new Set(
       openClaims.map((row) => row.vehicle_id).filter((vehicleId): vehicleId is string => Boolean(vehicleId)),
     ).size;
