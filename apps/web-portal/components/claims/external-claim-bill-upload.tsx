@@ -70,15 +70,15 @@ export function ExternalClaimBillUpload({ mode, claimId, accountId, documents, r
 
   return <div className="min-w-0 text-left">
     <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.04em] text-[#5673B0]">Bill Upload</p>
-    <div className="flex min-h-10 items-center gap-2 rounded-lg border border-[#DCE5F0] bg-[#F8FAFD] px-2 py-1.5">
-      <img src="/assets/customer-claim/stages/billing.png" alt="" className="h-9 w-9 shrink-0 object-contain" />
+    <div className="flex min-h-[76px] items-center gap-2 rounded-2xl border-2 border-[#DFE5ED] bg-[#F8FAFD] px-3 py-2">
+      <img src="/assets/customer-claim/stages/billing.png" alt="" className="h-12 w-12 shrink-0 object-contain" />
       <div className="min-w-0 flex-1">
-        <p className="text-[11px] font-semibold text-[#102B54]">Upload final workshop bill</p>
+        <p className="text-[12px] font-semibold text-[#102B54]">Upload final workshop bill</p>
         <p className="text-[10px] text-[#718096]">PDF, JPG, PNG</p>
       </div>
       {!readonly ? <>
         <input ref={input} type="file" accept=".pdf,.jpg,.jpeg,.png" aria-label="Choose final workshop bill" className="sr-only" onChange={event => selectFile(event.target.files?.[0])} />
-        <button type="button" disabled={pending} onClick={() => input.current?.click()} className="flex shrink-0 items-center gap-1 rounded-lg bg-[#164A9F] px-3 py-2 text-[11px] font-semibold text-white disabled:opacity-50"><UploadCloud className="h-3.5 w-3.5"/>{pending ? "Uploading…" : "Choose File"}</button>
+        <button type="button" disabled={pending} onClick={() => input.current?.click()} className="flex shrink-0 items-center gap-1 rounded-xl bg-[#164A9F] px-4 py-3 text-[12px] font-semibold text-white disabled:opacity-50"><UploadCloud className="h-3.5 w-3.5"/>{pending ? "Uploading…" : "Choose File"}</button>
       </> : null}
     </div>
     {message ? <p role="status" className="mt-1 text-[11px] text-[#315B9A]">{message}</p> : null}
