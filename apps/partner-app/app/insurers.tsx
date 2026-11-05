@@ -16,8 +16,9 @@ const METRIC_WIDTH = 125;
 // This report displays rounded whole rupees. Keep full-precision source values
 // intact for calculations and all other screens.
 const wholeRupeeFormatter = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0, minimumFractionDigits: 0 });
-function formatInsurerRupees(amount: number): string {
-  return `₹${wholeRupeeFormatter.format(amount)}`;
+function formatInsurerRupees(amount: number | string): string {
+  const numericAmount = Number(amount);
+  return `₹${wholeRupeeFormatter.format(Number.isFinite(numericAmount) ? numericAmount : 0)}`;
 }
 
 export default function InsurerListScreen() {
