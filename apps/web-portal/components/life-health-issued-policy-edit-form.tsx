@@ -30,8 +30,8 @@ const documentLabels: Array<[LifeHealthIssuedDocumentType,string]> = [["policy_c
 export function LifeHealthIssuedPolicyEditForm({ initial, insurers, sources, activityItems, documents, commercialAccess, commercialSummary }: Props) {
   const router = useRouter();
   const [form,setForm] = useState(initial);
-  const [endDateMode,setEndDateMode] = useState<DateCalculationMode>("minusOne");
-  const [pptEndDateMode,setPptEndDateMode] = useState<DateCalculationMode>("minusOne");
+  const endDateMode: DateCalculationMode = "minusOne";
+  const pptEndDateMode: DateCalculationMode = "minusOne";
   const [policyNumberUnlocked,setPolicyNumberUnlocked] = useState(false);
   const [dateApproval,setDateApproval] = useState<{id:string;key:string}|null>(null);
   const [dateApprovalOpen,setDateApprovalOpen] = useState(false);
@@ -69,9 +69,6 @@ export function LifeHealthIssuedPolicyEditForm({ initial, insurers, sources, act
     const totalPayout = commercial.payoutBasis === "FIXED_AMOUNT" ? Number(commercial.payoutFixedAmount || 0) : premium * Number(commercial.payoutPercent || 0) / 100;
     return { payinBase, totalPayin, tds, payinAfterTds, totalPayout, retention:payinAfterTds-totalPayout };
   },[commercial,form.finalPremium]);
-  const expectedEnd=useMemo(()=>addYearsByMode(form.startDate,form.pd,endDateMode),[form.startDate,form.pd,endDateMode]);
-  const expectedPptEnd=useMemo(()=>addYearsByMode(form.startDate,form.ppt,pptEndDateMode),[form.startDate,form.ppt,pptEndDateMode]);
-  const expectedNext=useMemo(()=>nextInstallmentFrom(form.startDate,form.paymentFrequency),[form.startDate,form.paymentFrequency]);
   const pptSinglePay=form.ppt.trim().toLowerCase().includes("single");
   const oneTimePayment=canonicalPaymentFrequency(form.paymentFrequency)==="One Time";
   const policyNumberChanged=form.policyNumber.trim().toUpperCase()!==initial.policyNumber.trim().toUpperCase();
@@ -84,8 +81,6 @@ export function LifeHealthIssuedPolicyEditForm({ initial, insurers, sources, act
     }
     return next;
   });
-  const changeEndDateMode=(mode:DateCalculationMode)=>{setEndDateMode(mode);setForm(current=>({...current,endDate:addYearsByMode(current.startDate,current.pd,mode)}))};
-  const changePptEndDateMode=(mode:DateCalculationMode)=>{setPptEndDateMode(mode);setForm(current=>({...current,pptEndDate:addYearsByMode(current.startDate,current.ppt,mode)}))};
   useEffect(()=>{
     if(!commercialModal)return;
     const previous=document.body.style.overflow;
@@ -192,12 +187,11 @@ export function LifeHealthIssuedPolicyEditForm({ initial, insurers, sources, act
           <div>
             <label className={labelClass}>Policy number <Req/></label>
             <div className="flex gap-2"><input aria-label="Policy number" className={inputClass} value={form.policyNumber} readOnly={!policyNumberUnlocked} onChange={event=>set("policyNumber",event.target.value.toUpperCase())}/><button type="button" className="shrink-0 rounded-lg border border-[#BFD3F5] px-3 text-[10px] font-bold text-[#1859B7]" onClick={()=>{setPolicyNumberUnlocked(value=>!value);if(policyNumberUnlocked)set("policyNumber",initial.policyNumber)}}>{policyNumberUnlocked?"Lock":"Change"}</button></div>
-            <p className="mt-1 text-[9px] text-[#667085]">Changing an issued policy number requires confirmation and a unique number.</p>
           </div>
           <Field label="Policy start date" type="date" value={form.startDate} onChange={(v)=>set("startDate",v)} required/>
-          <div><Field label="Policy end / maturity date" type="date" value={form.endDate} onChange={(v)=>set("endDate",v)} required={!pensionPlan}/><div className="mt-1 flex items-center gap-2"><label className="text-[9px] text-[#667085]">Calculation</label><select aria-label="Policy end date calculation" value={endDateMode} className="rounded border border-[#D8DEE9] bg-white px-1 text-[10px]" onChange={e=>changeEndDateMode(e.target.value as DateCalculationMode)}><option value="minusOne">Term minus 1 day</option><option value="sameDay">Same calendar day</option></select></div>{form.endDate&&expectedEnd&&form.endDate!==expectedEnd?<p className="mt-1 text-[9px] text-amber-700">Manual override; calculated value: {expectedEnd}</p>:null}</div>
-          <div>{pptSinglePay?<div><label className={labelClass}>PPT end date</label><input className={inputClass} value="Not applicable · Single Pay" readOnly/></div>:<Field label="PPT end date" type="date" value={form.pptEndDate} onChange={v=>set("pptEndDate",v)}/>}<div className="mt-1 flex items-center gap-2"><label className="text-[9px] text-[#667085]">Calculation</label><select aria-label="PPT end date calculation" value={pptEndDateMode} disabled={pptSinglePay} className="rounded border border-[#D8DEE9] bg-white px-1 text-[10px]" onChange={e=>changePptEndDateMode(e.target.value as DateCalculationMode)}><option value="minusOne">Term minus 1 day</option><option value="sameDay">Same calendar day</option></select></div>{form.pptEndDate&&expectedPptEnd&&form.pptEndDate!==expectedPptEnd?<p className="mt-1 text-[9px] text-amber-700">Manual override; calculated value: {expectedPptEnd}</p>:null}</div>
-          {oneTimePayment?<div><label className={labelClass}>Next installment date</label><input className={inputClass} value="Not applicable · One Time" readOnly/></div>:<div><Field label="Next installment date" type="date" value={form.nextInstallmentDate} onChange={v=>set("nextInstallmentDate",v)}/>{form.nextInstallmentDate&&expectedNext&&form.nextInstallmentDate!==expectedNext?<p className="mt-1 text-[9px] text-amber-700">Manual override; calculated value: {expectedNext}</p>:null}</div>}
+          <Field label="Policy end / maturity date" type="date" value={form.endDate} onChange={(v)=>set("endDate",v)} required={!pensionPlan}/>
+          <div>{pptSinglePay?<div><label className={labelClass}>PPT end date</label><input className={inputClass} value="Not applicable · Single Pay" readOnly/></div>:<Field label="PPT end date" type="date" value={form.pptEndDate} onChange={v=>set("pptEndDate",v)}/>}</div>
+          {oneTimePayment?<div><label className={labelClass}>Next installment date</label><input className={inputClass} value="Not applicable · One Time" readOnly/></div>:<Field label="Next installment date" type="date" value={form.nextInstallmentDate} onChange={v=>set("nextInstallmentDate",v)}/>}
           <Field label="Final premium" value={form.finalPremium} onChange={(v)=>set("finalPremium",v.replace(/[^0-9.]/g,""))} required/>
           <Field label="Sum assured / insured" value={form.sumInsured} onChange={(v)=>set("sumInsured",v.replace(/[^0-9.]/g,""))}/>
         </Section>
