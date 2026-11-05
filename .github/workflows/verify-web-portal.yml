@@ -183,6 +183,8 @@ jobs:
         run: node scripts/customer-claims-phone-claimno-regression.mjs
       - name: Customer Claims illustrated empty-state regression
         run: node scripts/customer-claims-empty-placeholder-regression.mjs
+      - name: Customer Support and Profile visual polish regression
+        run: node scripts/customer-support-profile-visual-polish-regression.mjs
       - name: Customer Renewals subtle alert cards and count badge regression
         run: node scripts/customer-renewals-subtle-alert-cards-regression.mjs
       - name: Customer Claim policy source and legacy driver fallback regression
