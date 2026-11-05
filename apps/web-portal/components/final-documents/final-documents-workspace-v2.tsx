@@ -428,6 +428,26 @@ export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails, al
             <span className="text-[12px] font-semibold text-[#071D49]">{verifiedCount} / {rows.length}</span>
           </div>
         </div>
+        {verificationData ? (() => {
+          const accidentPhotos = verificationData.documents.filter((document) => (document.document_type ?? "").toLowerCase().replace(/[^a-z0-9]/g, "") === "accidentphoto");
+          const voiceNotes = verificationData.documents.filter((document) => (document.document_type ?? "").toLowerCase().replace(/[^a-z0-9]/g, "") === "incidentvoicenote");
+          if (!accidentPhotos.length && !voiceNotes.length) return null;
+          const photoItem: Stage3DocumentVerificationItem = {
+            key: "previous-stage-accident-photo", visualKey: "spot", verificationKey: "spot",
+            title: "Accident Photo", icon: "📷", accent: "bg-[#EEF4FF]",
+            documentType: "Accident Photo", documents: accidentPhotos,
+          };
+          return <div className="mb-3 rounded-xl border border-[#DAE5F3] bg-[#F7FAFF] p-3">
+            <p className="mb-2 text-[12px] font-semibold text-[#17365D]">Earlier-stage uploads</p>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {accidentPhotos.length ? <Stage3DocumentVerificationGroup item={photoItem} claim={verificationData.claim} verifications={verificationData.verifications} /> : null}
+              {voiceNotes.map((document) => <div key={document.id} className="flex items-center justify-between gap-2 rounded-xl border border-[#E2EAF4] bg-white px-3 py-2">
+                <a href={document.signedUrl} target="_blank" rel="noreferrer" className="min-w-0 truncate text-[12px] font-semibold text-[#17365D] hover:underline">Incident Voice Note</a>
+                <span className="shrink-0 text-[10px] font-medium text-[#68758A]">No verification required</span>
+              </div>)}
+            </div>
+          </div>;
+        })() : null}
         <div className="grid overflow-hidden rounded-xl border border-[#D9E3F0] md:grid-cols-5">{finalDocumentTabs.map((tab, index) => <button key={tab} type="button" onClick={() => setActiveTab(index)} className={`flex items-center gap-2 px-4 py-3 text-left text-[12px] font-semibold ${activeTab === index ? "bg-[#071D49] text-white" : "border-l border-[#D9E3F0] bg-[#FBFCFE] text-[#071D49]"}`}><span className={`grid h-5 w-5 place-items-center rounded-full text-[10px] ${activeTab === index ? "bg-white text-[#071D49]" : "bg-[#EEF4FF] text-[#071D49]"}`}>{index + 1}</span>{tab}</button>)}</div>
         {verificationData ? (
           <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
