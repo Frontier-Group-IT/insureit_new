@@ -44,15 +44,15 @@
 .renewalRow:hover .rowArrow svg, .rowArrow:focus-visible svg { transform: translateX(3px); }
 .upcomingBadge { animation: badgeNotice 500ms 500ms ease-out 1 both; }
 @keyframes countGlowDue {
-  0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 166, 30, .55), 0 0 5px rgba(255, 154, 0, .4); filter: brightness(1); }
-  50% { transform: scale(1.14); box-shadow: 0 0 0 7px rgba(255, 166, 30, 0), 0 0 15px 5px rgba(255, 154, 0, .74); filter: brightness(1.12); }
+  0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 166, 30, .08), 0 0 3px rgba(255, 154, 0, .16); }
+  50% { transform: scale(1.035); box-shadow: 0 0 0 3px rgba(255, 166, 30, .04), 0 0 8px 2px rgba(255, 154, 0, .22); }
 }
 @keyframes countGlowExpired {
-  0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(236, 43, 68, .55), 0 0 5px rgba(236, 43, 68, .42); filter: brightness(1); }
-  50% { transform: scale(1.14); box-shadow: 0 0 0 7px rgba(236, 43, 68, 0), 0 0 16px 5px rgba(236, 43, 68, .78); filter: brightness(1.1); }
+  0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(236, 43, 68, .08), 0 0 3px rgba(236, 43, 68, .18); }
+  50% { transform: scale(1.035); box-shadow: 0 0 0 3px rgba(236, 43, 68, .04), 0 0 8px 2px rgba(236, 43, 68, .24); }
 }
-.countPulseDue { animation: countGlowDue 1.65s ease-in-out infinite; }
-.countPulseExpired { animation: countGlowExpired 1.65s ease-in-out infinite; }
+.countPulseDue { animation: countGlowDue 2.6s ease-in-out infinite; }
+.countPulseExpired { animation: countGlowExpired 2.6s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) {
   .pageEnter, .renewalRow, .upcomingBadge, .countPulseDue, .countPulseExpired { animation: none !important; }
   .heroParallax, .pageEnter:hover .heroParallax { transform: none !important; }
