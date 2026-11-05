@@ -16,6 +16,21 @@ assert.match(page,/proposalDate:lifeHealthCase\.sourcing_date/);
 assert.match(page,/customerAddress:customer\.address/);
 assert.match(page,/issuedSchedule\.ppt_end_date/);
 assert.match(page,/issuedSchedule\.next_installment_date/);
+// The Edit Policy screen must be compact without hiding date fields or weakening save rules.
+for (const hidden of [
+  "Policy end date calculation",
+  "PPT end date calculation",
+  "Term minus 1 day",
+  "Same calendar day",
+  "Manual override; calculated value:",
+  "Changing an issued policy number requires confirmation and a unique number.",
+]) assert.ok(!form.includes(hidden), "Unnecessary Edit Policy UI still visible: " + hidden);
+assert.match(form, /const endDateMode: DateCalculationMode = "minusOne"/);
+assert.match(form, /const pptEndDateMode: DateCalculationMode = "minusOne"/);
+assert.match(form, /label="Policy end \/ maturity date" type="date"/);
+assert.match(form, /label="PPT end date" type="date"/);
+assert.match(form, /label="Next installment date" type="date"/);
+assert.match(form, /window\.confirm\("Change the issued policy number/);
 assert.match(form,/addYearsByMode\(next\.startDate,next\.pd,endDateMode\)/);
 assert.match(form,/addYearsByMode\(next\.startDate,next\.ppt,pptEndDateMode\)/);
 assert.match(form,/nextInstallmentFrom\(next\.startDate,next\.paymentFrequency\)/);
