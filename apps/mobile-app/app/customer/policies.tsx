@@ -361,6 +361,7 @@ export default function PoliciesScreen() {
                   primaryValue={vehicle?.vehicle_no ?? 'Vehicle unavailable'}
                   secondaryValue={vehicle?.make ?? '-'}
                   tertiaryValue={vehicle?.model ?? '-'}
+                  fixedTertiaryText
                   tertiaryMuted
                 />
               </View>
@@ -489,6 +490,7 @@ function PolicySummaryColumn({
   primaryValue,
   secondaryValue,
   tertiaryValue,
+  fixedTertiaryText = false,
   tertiaryMuted = false,
   tertiaryDotColor,
 }: {
@@ -499,6 +501,7 @@ function PolicySummaryColumn({
   primaryValue: string;
   secondaryValue: string;
   tertiaryValue: string;
+  fixedTertiaryText?: boolean;
   tertiaryMuted?: boolean;
   tertiaryDotColor?: string;
 }) {
@@ -540,7 +543,7 @@ function PolicySummaryColumn({
         <Text style={styles.summaryPrimary} numberOfLines={1} adjustsFontSizeToFit={Platform.OS === 'ios'} minimumFontScale={0.65}>{primaryValue}</Text>
         <Text style={styles.summarySecondary} numberOfLines={1}>{secondaryValue}</Text>
         <View style={styles.summaryTertiaryRow}>
-          <Text style={[styles.summaryTertiary, tertiaryMuted && styles.summaryTertiaryMuted]} numberOfLines={1} adjustsFontSizeToFit={Platform.OS === 'ios'} minimumFontScale={0.78}>{tertiaryValue}</Text>
+          <Text style={[styles.summaryTertiary, tertiaryMuted && styles.summaryTertiaryMuted]} numberOfLines={1} ellipsizeMode="tail" adjustsFontSizeToFit={Platform.OS === 'ios' && !fixedTertiaryText}>{tertiaryValue}</Text>
           {tertiaryDotColor ? <View style={[styles.expiryDot, { backgroundColor: tertiaryDotColor }]} /> : null}
         </View>
       </View>

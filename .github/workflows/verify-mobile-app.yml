@@ -136,6 +136,8 @@ jobs:
 
       - name: Customer Start Claim iOS reference typography regression
         run: node apps/mobile-app/scripts/customer-start-claim-ios-typography-regression.mjs
+      - name: Customer Start Claim Android anchor and policy model text regression
+        run: node apps/mobile-app/scripts/customer-start-claim-platform-layout-policy-model-regression.mjs
 
       - name: Customer Start Claim manufacturer logo regression
         run: node apps/mobile-app/scripts/customer-start-claim-manufacturer-logo-regression.mjs
