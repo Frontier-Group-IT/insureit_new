@@ -1,8 +1,10 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useActionState, useEffect, useRef, useState, useTransition } from "react";
 import { FileText, LoaderCircle, Upload, Video } from "lucide-react";
 import { uploadCustomerClaimDocument } from "@/app/customer/(protected)/claims/[id]/stage/[stage]/upload-action";
+import { reuseCustomerLinkedPolicyCopy } from "@/app/customer/(protected)/claims/[id]/stage/[stage]/reuse-policy-copy-action";
+import { ClaimStageErrorDialog } from "@/components/claim-manager/claim-stage-error-dialog";
 
 // These images are the same artwork used by the Customer mobile app.
 const artworkBase = "/assets/customer-claim/document-icons/";
@@ -52,10 +54,13 @@ function documentIcon(type: string): string {
 }
 
 export type CustomerClaimFile = { id:string; document_type:string; created_at:string; file_name?:string|null; verification_status?:string|null };
-export function CustomerClaimCompactDocument({label,type,documents,accountId,claimId,stage,allowUpload=true,returnToSpotIntimation=false,accept=".pdf,.jpg,.jpeg,.png,.webp,.heic"}:{
-  label:string;type:string;documents:CustomerClaimFile[];accountId:string;claimId:string;stage:string;allowUpload?:boolean;returnToSpotIntimation?:boolean;accept?:string;
+export function CustomerClaimCompactDocument({label,type,documents,accountId,claimId,stage,allowUpload=true,returnToSpotIntimation=false,canReusePolicyCopy=false,accept=".pdf,.jpg,.jpeg,.png,.webp,.heic"}:{
+  label:string;type:string;documents:CustomerClaimFile[];accountId:string;claimId:string;stage:string;allowUpload?:boolean;returnToSpotIntimation?:boolean;canReusePolicyCopy?:boolean;accept?:string;
 }) {
   const [expanded,setExpanded]=useState(false);
+  const [reusePending,startReuse]=useTransition();
+  const [reuseError,setReuseError]=useState("");
+  const [reused,setReused]=useState(false);
   const [uploadState,uploadAction,uploading]=useActionState(uploadCustomerClaimDocument,{error:null});
   const [recentUploads,setRecentUploads]=useState<CustomerClaimFile[]>([]);
   useEffect(()=>{
@@ -64,6 +69,15 @@ export function CustomerClaimCompactDocument({label,type,documents,accountId,cla
       if(input.current)input.current.value="";
     }
   },[uploadState.uploaded]);
+  const reuseCopy=()=>startReuse(async()=>{
+    setReuseError("");
+    try {
+      const result=await reuseCustomerLinkedPolicyCopy(accountId,claimId,stage);
+      if (!result.ok) { setReuseError(result.message); return; }
+      if (result.uploaded) setRecentUploads(current=>current.some(doc=>doc.id===result.uploaded!.id)?current:[result.uploaded!,...current]);
+      setReused(true);
+    } catch { setReuseError("Unable to reuse the existing policy copy. Please try again."); }
+  });
   const input=useRef<HTMLInputElement>(null);
   const form=useRef<HTMLFormElement>(null);
   const ordered=[...recentUploads,...documents.filter(doc=>!recentUploads.some(recent=>recent.id===doc.id))].sort((a,b)=>Date.parse(b.created_at)-Date.parse(a.created_at));
@@ -78,6 +92,11 @@ export function CustomerClaimCompactDocument({label,type,documents,accountId,cla
         <button type="button" disabled={uploading} onClick={()=>input.current?.click()} aria-label={`Upload ${label}`} title={`Upload ${label}`} className="customer-claim-motion-upload grid h-8 w-8 place-items-center rounded-md border border-[#BCD1F1] text-[#2460B8] hover:bg-[#EDF4FF] disabled:opacity-50" aria-busy={uploading}>{uploading?<LoaderCircle className="customer-claim-motion-spinner h-4 w-4" aria-hidden="true"/>:<Upload className="h-4 w-4" aria-hidden="true"/>}</button>
       </form>:null}
     </div>
+    {canReusePolicyCopy && !reused && allowUpload ? <button type="button" disabled={reusePending} onClick={reuseCopy}
+      className="mt-2 rounded-lg border border-[#BCD1F1] bg-[#EFF5FF] px-3 py-1.5 text-[11px] font-semibold text-[#205CB2] hover:bg-[#E2EDFF] disabled:opacity-50">
+      {reusePending ? "Linking policy copy…" : "Use Existing Policy Copy"}
+    </button> : null}
+    <ClaimStageErrorDialog message={reuseError} onClose={()=>setReuseError("")}/>
     {uploadState.error?<p role="alert" className="mt-2 text-[11px] font-medium text-red-700">{uploadState.error}</p>:null}
     {ordered.length>0?<div className="mt-2 space-y-1.5">
       {openFile(ordered[0])}
