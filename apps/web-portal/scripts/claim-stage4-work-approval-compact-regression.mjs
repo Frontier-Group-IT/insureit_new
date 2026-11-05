@@ -45,7 +45,7 @@ assert.ok(operations.includes('nextStageKey: nextStageKeyFor(milestoneKey)'));
 // stage edit rules and server-side validation remain intact.
 assert.ok(actions.includes('editingCompleted && key !== "work_approval"'));
 assert.ok(actions.includes('const next=INTERNAL_JOURNEY_STAGES[index+1]'));
-assert.ok(actions.includes('if (!previous || !["completed", "not_applicable"].includes(previous.milestone_status)'));
+assert.match(actions, /if\s*\(!previous\s*\|\|\s*!\["completed",\s*"not_applicable"\]\.includes\(previous\.milestone_status\)\)/);
 assert.ok(actions.includes('if (error)'));
 assert.ok(submit.includes('if (result.error)'));
 assert.ok(submit.includes('if (result.destination) router.push(result.destination)'));
