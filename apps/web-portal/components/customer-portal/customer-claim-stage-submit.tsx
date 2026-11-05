@@ -50,7 +50,7 @@ export function CustomerClaimStageSubmit({ formId, variant = "intimation" }: { f
         {saving === "draft" ? "Saving draft..." : "Save Draft"}
       </button> : null}
       <button type="button" data-claim-stage-save={formId} disabled={saving !== null} aria-busy={saving === "details"} onClick={() => void submit("details")}
-        className="inline-flex min-h-10 min-w-[112px] items-center justify-center gap-2 rounded-lg bg-[#1253A7] px-6 text-[12px] font-bold text-white transition hover:bg-[#0B3884] disabled:opacity-70">
+        className={`inline-flex min-h-10 ${variant === "continue" ? "min-w-[148px]" : "min-w-[112px]"} items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-[#1253A7] px-6 text-[12px] font-bold text-white transition hover:bg-[#0B3884] disabled:opacity-70`}>
         {saving === "details" ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
         {saving === "details" ? "Saving..." : variant === "continue" ? "Save & Continue" : "Save Details"}
       </button>
