@@ -41,7 +41,7 @@ for (const [name, source, pattern] of regexChecks) {
 }
 
 if (!form.includes("const result=buildPolicyOcrOnboardingUpdate({")) throw new Error("FAIL: parent must use pure onboarding mapper");
-if (!form.includes("setForm(current=>({...current,...result.next}));")) throw new Error("FAIL: parent must commit mapper output in one React state update");
+if (!form.includes("setForm(current=>normalizePolicyIdentifierFields({...current,...result.next}));")) throw new Error("FAIL: parent must normalize OCR identifiers and commit mapper output in one React state update");
 console.log("PASS: parent uses pure mapper and one atomic React state commit");
 
 for (const forbidden of ["findControl(", "setNativeValue(", "control.disabled = false", "document.querySelector("]) {
