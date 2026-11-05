@@ -135,7 +135,7 @@ export async function GET(request: NextRequest) {
     ? { from: String(params.get("from")), to: String(params.get("to")) }
     : monthBounds(generatedDay, period);
 
-  const business = params.get("business") || "";
+  const business = params.get("business") || "all";
   const insurer = params.get("insurer") || "";
   const rm = params.get("rm") || "";
   const intermediary = params.get("intermediary") || "";
@@ -143,7 +143,7 @@ export async function GET(request: NextRequest) {
   const rows = policies.filter((policy) => {
     const date = policyDate(policy);
     if (!date || date < bounds.from || date > bounds.to) return false;
-    if (business && normalizedBusinessType(policy) !== business) return false;
+    if (business !== "all" && normalizedBusinessType(policy) !== business) return false;
     if (insurer && policy.insurer_name !== insurer) return false;
     if (rm && policy.rm_name !== rm) return false;
     if (intermediary && policy.intermediary_code !== intermediary) return false;
