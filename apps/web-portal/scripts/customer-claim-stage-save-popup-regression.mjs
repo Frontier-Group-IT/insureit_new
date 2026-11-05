@@ -55,7 +55,7 @@ const operationsPage = read(new URL("../app/claims/[id]/page.tsx", import.meta.u
 const customerPage = read(new URL("../app/customer/(protected)/claims/[id]/page.tsx", import.meta.url), "utf8");
 const pdfRenderer = read(new URL("../lib/completed-claim-pdf.ts", import.meta.url), "utf8");
 for (const route of [customerPdfRoute,operationsPdfRoute]) {
-  assert.match(route, /INTERNAL_JOURNEY_STAGES\.every\(stage => completedKeys\.has\(stage\.key\)\)/,
+  assert.match(route, /INTERNAL_JOURNEY_STAGES\.every\(stage\s*=>\s*completedKeys\.has\(stage\.key\)\)/,
     "Both PDF routes must require all nine completed milestones.");
   assert.match(route, /renderCompletedClaimPdf\(/, "Both portals must use the same Claim PDF layout.");
 }
