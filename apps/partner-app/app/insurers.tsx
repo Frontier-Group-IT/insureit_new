@@ -1,5 +1,5 @@
-import { useCallback } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useRef, useState } from 'react';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
@@ -10,8 +10,21 @@ import { usePartnerQuery } from '@/lib/use-partner-query';
 import { usePartnerSession } from '@/providers/partner-session-provider';
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
-const NAME_WIDTH = 215;
-const METRIC_WIDTH = 125;
+const NAME_WIDTH = 158;
+const METRIC_WIDTH = 112;
+
+// Keep the full legal insurer name in the data/accessibility label; show a readable
+// compact display name in the narrow mobile report column.
+function displayInsurerName(name: string): string {
+  return name
+    .replace(/\bGeneral Insurance Company (?:Limited|Ltd\.?)/gi, 'Insurance')
+    .replace(/\bInsurance Company (?:Limited|Ltd\.?)/gi, 'Insurance')
+    .replace(/\bCompany Limited\b/gi, '')
+    .replace(/\bLimited\b/gi, '')
+    .replace(/^The /i, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
 
 // This report displays rounded whole rupees. Keep full-precision source values
 // intact for calculations and all other screens.
@@ -24,6 +37,8 @@ function formatInsurerRupees(amount: number | string): string {
 export default function InsurerListScreen() {
   const params = useLocalSearchParams<{ from?: string; to?: string }>();
   const { context, cacheScopeKey } = usePartnerSession();
+  const tableScrollRef = useRef<ScrollView>(null);
+  const [financialColumnsVisible, setFinancialColumnsVisible] = useState(false);
   const today = new Date();
   const defaultFrom = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-01`;
   const defaultTo = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
@@ -58,6 +73,22 @@ export default function InsurerListScreen() {
       <View style={styles.panel}>
         <Text style={styles.heading}>Insurer</Text>
         <Text style={styles.range}>{validRange ? `${from} to ${to}` : 'Select a date range on Business to view insurers'}</Text>
+        {validRange ? (
+          <View style={styles.scrollGuide}>
+            <Text style={styles.scrollGuideText}>Swipe table sideways for {columns.slice(1).join(', ')}</Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={financialColumnsVisible ? 'Show insurer names and policies' : 'Show financial amount columns'}
+              onPress={() => {
+                tableScrollRef.current?.scrollTo({ x: financialColumnsVisible ? 0 : NAME_WIDTH + METRIC_WIDTH, animated: true });
+                setFinancialColumnsVisible(!financialColumnsVisible);
+              }}
+              style={styles.scrollAction}
+            >
+              <Text style={styles.scrollActionText}>{financialColumnsVisible ? '← Insurers' : 'Amounts →'}</Text>
+            </Pressable>
+          </View>
+        ) : null}
         {!validRange ? (
           <PartnerStateView state="empty" title="Date range unavailable" message="Return to Business and select a reporting period." />
         ) : query.loading && !query.data ? (
@@ -65,7 +96,18 @@ export default function InsurerListScreen() {
         ) : query.error && !query.data ? (
           <PartnerStateView state="error" title="Insurer list unavailable" message={query.error} actionLabel="Try again" onAction={() => void query.refresh()} />
         ) : (
-          <ScrollView horizontal showsHorizontalScrollIndicator contentContainerStyle={styles.horizontalContent}>
+          <ScrollView
+            ref={tableScrollRef}
+            horizontal
+            nestedScrollEnabled
+            directionalLockEnabled
+            showsHorizontalScrollIndicator
+            persistentScrollbar
+            scrollEventThrottle={16}
+            onScroll={(event) => setFinancialColumnsVisible(event.nativeEvent.contentOffset.x > METRIC_WIDTH)}
+            accessibilityLabel="Insurer performance table, scroll horizontally for Net Premium and other financial values"
+            contentContainerStyle={styles.horizontalContent}
+          >
             <View>
               <View style={styles.tableHeader}>
                 <Text style={[styles.columnTitle, styles.insurerColumn]}>INSURER NAME</Text>
@@ -76,7 +118,7 @@ export default function InsurerListScreen() {
                   <View style={styles.insurerColumn}>
                     <View style={styles.insurerCell}>
                       <PartnerInsurerLogo name={insurer.name} style={styles.logo} />
-                      <Text style={styles.insurerName} numberOfLines={2}>{insurer.name}</Text>
+                      <Text style={styles.insurerName} numberOfLines={2} ellipsizeMode="tail" accessibilityLabel={insurer.name}>{displayInsurerName(insurer.name)}</Text>
                     </View>
                   </View>
                   <Text style={[styles.metricColumn, styles.number]} numberOfLines={1}>{insurer.policies}</Text>
@@ -102,7 +144,11 @@ export default function InsurerListScreen() {
 const styles = StyleSheet.create({
   panel: { backgroundColor: '#FFFFFF', borderColor: '#DCE5F0', borderWidth: 1, borderRadius: 15, overflow: 'hidden', marginTop: 12 },
   heading: { fontSize: 15, fontWeight: '800', color: '#14294B', paddingHorizontal: 14, paddingTop: 14 },
-  range: { color: '#728198', fontSize: 10, paddingHorizontal: 14, paddingTop: 3, paddingBottom: 13 },
+  range: { color: '#728198', fontSize: 10, paddingHorizontal: 14, paddingTop: 3, paddingBottom: 8 },
+  scrollGuide: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, paddingHorizontal: 12, paddingBottom: 10 },
+  scrollGuideText: { flex: 1, color: '#536F98', fontSize: 10 },
+  scrollAction: { minHeight: 30, justifyContent: 'center', paddingHorizontal: 9, borderRadius: 8, backgroundColor: '#EAF2FF' },
+  scrollActionText: { color: '#1658AD', fontWeight: '700', fontSize: 10 },
   horizontalContent: { paddingBottom: 3 },
   tableHeader: { flexDirection: 'row', alignItems: 'center', minHeight: 43, backgroundColor: '#F5F8FC' },
   columnTitle: { color: '#7D8BA1', fontSize: 10, fontWeight: '800', paddingHorizontal: 10 },
@@ -111,7 +157,7 @@ const styles = StyleSheet.create({
   tableRow: { minHeight: 60, flexDirection: 'row', alignItems: 'center', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E3EAF2' },
   insurerCell: { flexDirection: 'row', alignItems: 'center', gap: 9, paddingHorizontal: 10 },
   logo: { width: 30, height: 30 },
-  insurerName: { flex: 1, color: '#30466A', fontSize: 11 },
+  insurerName: { flex: 1, color: '#30466A', fontSize: 11.5, fontWeight: '500' },
   number: { color: '#30466A', fontSize: 11, fontWeight: '600' },
   empty: { padding: 18, fontSize: 12, color: '#718198' },
   note: { fontSize: 10, lineHeight: 15, color: '#75839A', paddingHorizontal: 14, paddingVertical: 12 },
