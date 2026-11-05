@@ -68,6 +68,6 @@ for (const token of [
   assert.ok(partner.includes(token), "Partner Excel styling missing Operations parity token: "+token);
   assert.ok(ops.includes(token), "Operations Excel reference styling changed: "+token);
 }
-assert.match(partner,/applyWorkbookStyles\\(new Uint8Array\\(file\\), headers\\)/,"Partner export styles generated XLSX");
-assert.match(partner,/return new Response\\(styledFile,/,"Partner must send the styled workbook");
+assert.ok(partner.includes("applyWorkbookStyles(new Uint8Array(file), headers)"),"Partner export styles generated XLSX");
+assert.ok(partner.includes("return new Response(styledFile,"),"Partner must send the styled workbook");
 console.log("Partner Operations parity (35 columns, five scoped roles, no finance) passed");
