@@ -8,7 +8,7 @@ export const dashboardScopePageSize = 500;
 
 export async function loadScopedDashboardRows<T>(
   ids: readonly string[],
-  loadPage: (ids: string[], from: number, to: number) => Promise<{
+  loadPage: (ids: string[], from: number, to: number) => PromiseLike<{
     data: T[] | null;
     error: { message: string } | null;
   }>,
