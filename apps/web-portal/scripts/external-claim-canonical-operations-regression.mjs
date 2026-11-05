@@ -38,8 +38,8 @@ for (const key of stageKeys) {
 // External claim ownership and live Customer-detail fallback remain intact.
 assert(claimsWorkspace.includes('claim.policy_service_source === "external"'), 'External Claims must be classified by policy source.');
 assert(claimsWorkspace.includes('href={`/claims/${claim.id}`}'), 'External Claim Proceed must navigate directly to the scoped claim view.');
-assert(claimPage.includes('if (claim.claim_service_mode === "self_managed" && claim.policy_service_source !== "external")'), 'Self-managed external claims must use the editable Operations journey.');
-assert(claimPage.includes('<AssistanceIntakePanel'), 'The existing scoped assistance evidence viewer must be retained for other claim types.');
+assert(!claimPage.includes('if (claim.claim_service_mode === "self_managed" && claim.policy_service_source !== "external")'), 'Internal and external self-managed claims must use the editable Operations journey.');
+assert(!claimPage.includes('<AssistanceIntakePanel'), 'Operations claim detail must not route self-managed claims into a separate read-only viewer.');
 assert(claimPage.includes('<OperationsClaimStages'), 'External Claims must reuse the canonical OperationsClaimStages component.');
 assert(claimPage.includes('.select("milestone_key, milestone_status, details")'), 'External Claim detail must read live Customer milestone details for prefilling.');
 assert(claimPage.includes('const externalCustomerFallbackRows: StageDetailRow[]'), 'External Claim detail must build live Customer fallback rows.');

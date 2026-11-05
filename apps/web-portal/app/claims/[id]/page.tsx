@@ -1,7 +1,8 @@
 import { notFound, redirect } from "next/navigation";
+import { ExternalLink, FileDown } from "lucide-react";
+import { INTERNAL_JOURNEY_STAGES } from "@insureit/claim-journey";
 import { ClaimManagerShell } from "@/components/claim-manager/claim-manager-shell";
 import { OperationsClaimStages } from "@/components/claim-manager/operations-claim-stages";
-import { AssistanceIntakePanel } from "@/components/claims/assistance-intake-panel";
 import { finalDocumentDefinitions } from "@/components/final-documents/final-document-groups";
 import { FinalDocumentsWorkspaceV2, type DealershipDetailsV2, type FinalDocumentRowV2 } from "@/components/final-documents/final-documents-workspace-v2";
 import { SpotClaimHeader, SpotSurveyWorkspace, type SpotSurveyClaim, type SpotSurveyDocument, type SpotSurveyVerification, type SurveyorDetails } from "@/components/spot-survey/spot-survey-workspace-v2";
@@ -219,40 +220,28 @@ export default async function ClaimDetailPage({ params, searchParams }: { params
     };
   });
   const dealershipDetails = extractDealershipDetails(stageRows ?? []);
+  // Keep Customer and Operations PDF availability identical: nine persisted stages.
+  const { data: pdfMilestones, error: pdfMilestonesError } = await admin
+    .from("claim_milestones").select("milestone_key,milestone_status").eq("claim_id", claim.id);
+  const completedPdfKeys = new Set((pdfMilestones ?? [])
+    .filter(item => item.milestone_status === "completed" || item.milestone_status === "not_applicable")
+    .map(item => item.milestone_key));
+  const allNineCompletedForPdf = !pdfMilestonesError && INTERNAL_JOURNEY_STAGES.every(stage => completedPdfKeys.has(stage.key));
+  const pdfUrl = `/claims/${encodeURIComponent(claim.id)}/download`;
+  const claimPdfActions = allNineCompletedForPdf ? (
+    <div className="mb-3 flex flex-wrap items-center justify-end gap-2" aria-label="Completed claim PDF actions">
+      <a href={pdfUrl + "?preview=1"} target="_blank" rel="noopener noreferrer"
+        className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-[#B9CBE2] bg-white px-3 text-[12px] font-semibold text-[#174A87] hover:bg-[#F1F6FF]">
+        <ExternalLink className="h-4 w-4" /> Open PDF
+      </a>
+      <a href={pdfUrl}
+        className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-[#B9CBE2] bg-white px-3 text-[12px] font-semibold text-[#174A87] hover:bg-[#F1F6FF]">
+        <FileDown className="h-4 w-4" /> Download PDF
+      </a>
+    </div>
+  ) : null;
   const backHref = "/claims";
   const title = `Documents Verification - ${claimForVerification.claim_no}${claimForVerification.insurer_claim_no ? ` / ${claimForVerification.insurer_claim_no}` : ""}`;
-
-  if (claim.claim_service_mode === "self_managed" && claim.policy_service_source !== "external") {
-    const { data: milestoneRows } = await admin
-      .from("claim_milestones")
-      .select("milestone_key, milestone_status")
-      .eq("claim_id", id)
-      .order("created_at", { ascending: true })
-      .returns<Array<{ milestone_key: string; milestone_status: string }>>();
-
-    return (
-      <ClaimManagerShell title={`Assistance Review - ${claim.claim_no}`} backHref={backHref}>
-        <SpotClaimHeader heading="Claim Journey" claim={{ ...claimWithSpotIntimation, policySource: externalPolicy ? "external" : "sibl", policyCopy }} />
-        <AssistanceIntakePanel
-          claimId={claim.id}
-          claimNo={claim.claim_no}
-          currentStatus={claim.current_status}
-          assistanceStatus={claim.assistance_status}
-          assistanceNote={claim.assistance_notes}
-          customerName={claim.customers?.company_name || claim.customers?.contact_name || "-"}
-          vehicleNo={claim.vehicles?.vehicle_no ?? "-"}
-          documents={signedDocs.map((document) => ({
-            id: document.id,
-            documentType: document.document_type ?? "Document",
-            fileName: document.file_name,
-            verificationStatus: document.verification_status,
-            openUrl: document.signedUrl ?? "#",
-          }))}
-          milestones={(milestoneRows ?? []).map((milestone) => ({ key: milestone.milestone_key, status: milestone.milestone_status }))}
-        />
-      </ClaimManagerShell>
-    );
-  }
 
   const externalCustomerMilestoneResult = claim.policy_service_source === "external"
     ? await admin
@@ -301,6 +290,7 @@ export default async function ClaimDetailPage({ params, searchParams }: { params
 
   return (
     <ClaimManagerShell title={title} backHref={backHref}>
+      {claimPdfActions}
       <div>
         <SpotClaimHeader claim={{ ...effectiveClaimWithSpotIntimation, policySource: externalPolicy ? "external" : "sibl", policyCopy }} />
       </div>
