@@ -18,7 +18,7 @@ assert.ok(screen.includes("insurer.payin == null ? '—'"));
 assert.ok(screen.includes("insurer.retention == null ? '—'"));
 assert.ok(screen.includes("insurer.payout == null ? '—'"));
 assert.ok(screen.includes('numberOfLines={1}>{insurer.policies}</Text>'));
-assert.equal((screen.match(/numberOfLines={1}>/g) ?? []).length, 5, 'All count and money cells must render on one line.');
+assert.equal(screen.split('numberOfLines={1}>').length - 1, 5, 'All count and money cells must render on one line.');
 assert.ok(screen.includes('const METRIC_WIDTH = 125;'));
 assert.ok(screen.includes('getPartnerInsurerRegister(from, to)'));
 assert.ok(screen.includes("context?.identity.actor_kind === 'employee'"), 'Employee/non-employee visibility stays scoped.');
