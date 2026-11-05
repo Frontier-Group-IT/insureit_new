@@ -55,7 +55,7 @@ export function CustomerClaimStageStrip({ claimId, accountId, selectedKey, compl
                 aria-label={stage.label}
                 className={`flex min-h-[42px] w-full min-w-0 items-center justify-center rounded-md border-b px-1 py-1 text-center transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#174EA6] ${selectedStage?"border-b-[#071D49]":"border-b-transparent"} ${current?"bg-[#F7FAFF]":available?"bg-white hover:bg-[#FAFCFF]":"bg-white hover:bg-[#FAFCFF]"}`}>
                 <span className="flex min-w-0 items-center justify-center gap-1">
-                  <span className={`customer-claim-motion-indicator grid h-5 w-5 shrink-0 place-items-center rounded-full ${completed?"bg-[#E8F8F0] text-[#0A9B72]":current?"bg-[#155EEF] text-white shadow-[0_2px_6px_rgba(21,94,239,0.18)]":"bg-[#EEF2F7] text-[#58708F]"}`}>
+                  <span className={`customer-claim-motion-indicator grid h-5 w-5 shrink-0 place-items-center rounded-full ${completed?"bg-[#149568] text-white":current?"bg-[#155EEF] text-white shadow-[0_2px_6px_rgba(21,94,239,0.18)]":"bg-[#EEF2F7] text-[#58708F]"}`}>
                     {completed?<Check className="customer-claim-motion-check h-3.5 w-3.5"/>:current?<span className="text-[9px] font-semibold">{index+1}</span>:<LockKeyhole className="h-3 w-3"/>}
                   </span>
                   <span className={`block whitespace-nowrap text-[clamp(7px,0.62vw,10px)] font-bold leading-none ${current?"text-[#155EEF]":completed?"text-[#3E536F]":"text-[#667A96]"}`}>{stage.label}</span>
