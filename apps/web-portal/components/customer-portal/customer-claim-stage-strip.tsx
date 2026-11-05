@@ -1,5 +1,6 @@
+import Image from "next/image";
 import Link from "next/link";
-import { Check, LockKeyhole, FolderKanban, ExternalLink, FileDown } from "lucide-react";
+import { Check, LockKeyhole, ExternalLink, FileDown } from "lucide-react";
 import { INTERNAL_JOURNEY_STAGES } from "@insureit/claim-journey";
 import { CustomerClaimLogo } from "@/components/customer-portal/customer-claim-logo";
 
@@ -21,7 +22,7 @@ export function CustomerClaimStageStrip({ claimId, accountId, selectedKey, compl
     <div className="customer-workflow customer-claim-ref-journey overflow-hidden rounded-2xl border border-[#DFE8F4] bg-white shadow-[0_8px_22px_rgba(7,29,73,0.035)]">
       <div className="customer-claim-ref-journey-header flex flex-wrap items-center justify-between gap-2 px-4 py-2.5">
         <div className="flex items-center gap-2.5">
-          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-white/20 text-white shadow-sm"><FolderKanban className="h-4 w-4" /></span>
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-white bg-white p-1 shadow-[0_3px_9px_rgba(9,34,76,0.18)]"><Image src="/assets/customer-3d-icons/claims.png" alt="" aria-hidden="true" width={34} height={34} unoptimized className="h-8 w-8 object-contain" /></span>
           <div><h2 className="text-[14px] font-bold tracking-tight text-white">Claim Journey</h2></div>
         </div>
         <div className="ml-auto flex flex-wrap items-center justify-end gap-2">

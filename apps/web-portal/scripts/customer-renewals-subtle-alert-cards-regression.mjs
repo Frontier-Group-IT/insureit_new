@@ -6,12 +6,13 @@ const read = (relative) => readFileSync(fileURLToPath(new URL(relative, import.m
 const register = read("../app/customer/(protected)/renewals/customer-renewals-register.tsx");
 const motion = read("../app/customer/(protected)/renewals/renewals-motion.module.css");
 
-// Alert styling is driven by the existing category counts, not the active status filter.
-assert.match(register, /const hasRenewalAlert = cat\.due > 0 \|\| cat\.expired > 0;/);
-assert.match(register, /const cardTone = hasRenewalAlert/);
-assert.match(register, /"border-\[#F2A7B5\] bg-\[#FFF3F5\] hover:bg-\[#FFEDF1\]"/);
-assert.match(register, /"border-\[#DB7890\] bg-\[#FFF0F3\] shadow-sm hover:bg-\[#FFECEF\]"/);
-assert.match(register, /"border-\[#E2E9F5\] bg-white hover:bg-\[#F7F8FF\]"/);
+// Category cards always use a clean white surface; alerts remain in their count badges.
+assert.ok(register.includes("const cardTone = selected"), "Card tone must depend on selection, not alert counts");
+assert.ok(register.includes('border-[#6050E5] bg-white shadow-sm hover:bg-[#F8FAFF]'), "Selected category remains white with a purple outline");
+assert.ok(register.includes('border-[#E2E9F5] bg-white hover:bg-[#F7F8FF]'), "Unselected category remains white");
+for (const tone of ['bg-[#FFF0F3]', 'bg-[#FFF3F5]', 'bg-[#FFEDF1]', 'bg-[#FFECEF]']) {
+  assert.ok(!register.includes(tone), "Old pink/red card fill must not return: " + tone);
+}
 assert.match(register, /aria-pressed=\{selected\}/);
 assert.match(register, /\$\{cardTone\}/);
 
@@ -36,4 +37,4 @@ assert.match(motion, /countPulseDue \{ animation: countGlowDue 2\.6s/);
 assert.match(motion, /countPulseExpired \{ animation: countGlowExpired 2\.6s/);
 assert.match(motion, /@media \(prefers-reduced-motion: reduce\)/);
 assert.match(motion, /\.countPulseDue, \.countPulseExpired \{ animation: none !important; \}/);
-console.log("Customer Renewals subtle alert cards and count-only badges regression passed.");
+console.log("Customer Renewals white summary cards and count-only alert badges regression passed.");
