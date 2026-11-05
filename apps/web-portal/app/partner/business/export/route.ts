@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { unzipSync, zipSync, strFromU8, strToU8 } from "fflate";
 import * as XLSX from "xlsx";
 import { createServerSupabaseClient } from "@/lib/auth-server";
 import { requirePartnerReportScope } from "@/lib/reports/partner-report-scope";
@@ -48,6 +49,78 @@ function monthBounds(reference: string, mode: string) {
   const start = new Date(Date.UTC(base.getUTCFullYear(), base.getUTCMonth(), 1));
   return { from: start.toISOString().slice(0, 10), to: reference };
 }
+
+function applyWorkbookStyles(buffer: Uint8Array, headers: readonly string[]) {
+  const files = unzipSync(buffer);
+  files["xl/styles.xml"] = strToU8(stylesXml());
+  const sheetPath = "xl/worksheets/sheet1.xml";
+  const xml = strFromU8(files[sheetPath]);
+  files[sheetPath] = strToU8(styleSheetXml(xml, headers));
+  return zipSync(files, { level: 6 });
+}
+
+function styleSheetXml(xml: string, headers: readonly string[]) {
+  const column = (label: string) => XLSX.utils.encode_col(headers.indexOf(label));
+  const MONEY_COLUMNS = new Set(["IDV / SI","OD Premium","Add-On Premium","Third Party Premium","CPA","Net Premium","GST","Gross Premium"].map(column));
+  const PERCENT_COLUMNS = new Set<string>();
+  const NUMERIC_COLUMNS = new Set(["Capacity / GVW","Year of Mfg"].map(column));
+  let styled = xml.replace(/<c r="([A-Z]+)(\d+)"([^>]*)>/g, (full, column: string, rowText: string, attrs: string) => {
+    const row = Number(rowText);
+    let style = 3;
+    if (row === 1) style = 1;
+    else if (row === 2) style = 2;
+    else if (MONEY_COLUMNS.has(column)) style = 5;
+    else if (PERCENT_COLUMNS.has(column)) style = 6;
+    else if (NUMERIC_COLUMNS.has(column)) style = 7;
+    const cleanAttrs = attrs.replace(/\s+s="\d+"/g, "");
+    return `<c r="${column}${rowText}" s="${style}"${cleanAttrs}>`;
+  });
+  styled = styled.replace(
+    /<sheetViews><sheetView workbookViewId="0"\s*\/><\/sheetViews>/,
+    '<sheetViews><sheetView workbookViewId="0"><pane ySplit="2" topLeftCell="A3" activePane="bottomLeft" state="frozen"/><selection pane="bottomLeft" activeCell="A3" sqref="A3"/></sheetView></sheetViews>',
+  );
+  return styled;
+}
+
+function stylesXml() {
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+  <numFmts count="2">
+    <numFmt numFmtId="164" formatCode="₹#,##0.00;[Red]-₹#,##0.00"/>
+    <numFmt numFmtId="165" formatCode="0.00%"/>
+  </numFmts>
+  <fonts count="3">
+    <font><sz val="10"/><name val="Calibri"/><family val="2"/><scheme val="minor"/></font>
+    <font><b/><color rgb="FFFFFFFF"/><sz val="9"/><name val="Calibri"/><family val="2"/><scheme val="minor"/></font>
+    <font><b/><color rgb="FF17365D"/><sz val="10"/><name val="Calibri"/><family val="2"/><scheme val="minor"/></font>
+  </fonts>
+  <fills count="4">
+    <fill><patternFill patternType="none"/></fill>
+    <fill><patternFill patternType="gray125"/></fill>
+    <fill><patternFill patternType="solid"><fgColor rgb="FF1F4E78"/><bgColor indexed="64"/></patternFill></fill>
+    <fill><patternFill patternType="solid"><fgColor rgb="FFD9EAF7"/><bgColor indexed="64"/></patternFill></fill>
+  </fills>
+  <borders count="2">
+    <border><left/><right/><top/><bottom/><diagonal/></border>
+    <border><left style="thin"><color rgb="FFD7DFE8"/></left><right style="thin"><color rgb="FFD7DFE8"/></right><top style="thin"><color rgb="FFD7DFE8"/></top><bottom style="thin"><color rgb="FFD7DFE8"/></bottom><diagonal/></border>
+  </borders>
+  <cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
+  <cellXfs count="8">
+    <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
+    <xf numFmtId="164" fontId="2" fillId="3" borderId="1" xfId="0" applyNumberFormat="1" applyFill="1" applyFont="1" applyBorder="1"><alignment horizontal="right" vertical="center"/></xf>
+    <xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFill="1" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>
+    <xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment vertical="center"/></xf>
+    <xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
+    <xf numFmtId="164" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>
+    <xf numFmtId="165" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>
+    <xf numFmtId="4" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>
+  </cellXfs>
+  <cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>
+  <dxfs count="0"/>
+  <tableStyles count="0" defaultTableStyle="TableStyleMedium2" defaultPivotStyle="PivotStyleLight16"/>
+</styleSheet>`;
+}
+
 
 async function loadPartnerPolicies() {
   const rows: PartnerPolicyRow[] = [];
@@ -181,7 +254,7 @@ export async function GET(request: NextRequest) {
       safeText(vehicle?.vehicle_class_description)||classNames[vehicleClass]||"",capacity.label,
       safeText(vehicle?.make),safeText(vehicle?.model),safeText(vehicle?.fuel_type),capacity.value,
       amountOrBlank(vehicle?.year),safeText(vehicle?.chassis_no),safeText(vehicle?.engine_no),
-      row.policy_product||"",amountOrBlank(detail.insured_declared_value),
+      row.policy_type?.trim() || "",amountOrBlank(detail.insured_declared_value),
       amountOrBlank(premium?.od_premium),amountOrBlank(premium?.add_on_premium),
       amountOrBlank(premium?.tp_premium),amountOrBlank(premium?.cpa_amount),
       amountOrBlank(premium?.net_premium),amountOrBlank(premium?.gst_amount),
@@ -210,7 +283,8 @@ export async function GET(request: NextRequest) {
   XLSX.utils.book_append_sheet(book, sheet, "Business MIS");
   book.Props = { Title: "INSUREIT Partner Business MIS", Subject: "Authorized partner policy production", Company: "InsureIt" };
   const file = XLSX.write(book, { type: "array", bookType: "xlsx", compression: true }) as ArrayBuffer;
-  return new Response(file, {
+  const styledFile = applyWorkbookStyles(new Uint8Array(file), headers);
+  return new Response(styledFile, {
     status: 200,
     headers: {
       "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

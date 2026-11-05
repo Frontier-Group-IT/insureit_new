@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import "./operations-claim-stages-motion.css";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { advanceInternalSpotIntimation, saveInternalSpotIntimationDetails } from "@/app/claims/internal-spot-intimation-actions";
+import { advanceInternalSpotIntimationWithFeedback, saveInternalSpotIntimationDetails } from "@/app/claims/internal-spot-intimation-actions";
 import { completeClaimJourneyStageWithFeedback } from "@/app/claims/stage-actions";
 import { ClaimStageSuccessPopup } from "@/components/claim-manager/claim-stage-success-popup";
 import { ClaimStageErrorDialog } from "@/components/claim-manager/claim-stage-error-dialog";
@@ -229,7 +229,8 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
             nextStageKey: nextStageKeyFor(milestoneKey),
           };
         }
-        await advanceInternalSpotIntimation(claimId, formData);
+        const advanced = await advanceInternalSpotIntimationWithFeedback(claimId, formData);
+        if (!advanced.ok) return { ok: false, message: advanced.message, advanced: false, nextStageKey: null };
         setSuccessNotice("Claim stage updated.");
         return { ok: true, message: "Claim stage updated.", advanced: true, nextStageKey: "spot_status" };
       } catch (error) {
@@ -289,11 +290,18 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
 
   useEffect(() => {
     if (!spotState.ok) return;
-    // Saving Stage 1 details is not a verification or workflow advancement.
-    // Keep the user on Spot Intimation until an authorized transition succeeds.
-    router.refresh();
     try { window.sessionStorage.removeItem(`insureit:spot-intimation-draft:${claimId}`); } catch { /* optional storage */ }
-  }, [claimId, router, spotState.ok]);
+    // Successful Save Details should open the next accessible step immediately.
+    // This is navigation only: the server still owns stage advancement and verification.
+    const nextKey = nextStageKeyFor("spot_intimation");
+    const canOpenNext = unrestrictedStageEditing || journeyComplete || activeIndex >= 1 || (externalCustomerMilestones ?? []).some(milestone => milestone.key === "spot_status" && completedExternalMilestoneStatuses.has(milestone.status));
+    if (nextKey && canOpenNext) {
+      setSelectedKey(nextKey);
+      router.replace(`/claims/${claimId}?stage=${nextKey}`);
+      return;
+    }
+    router.refresh();
+  }, [claimId, router, spotState.ok, unrestrictedStageEditing, journeyComplete, activeIndex, hasExternalVisualProgress]);
 
   return (
     <section className="operations-claim-motion overflow-hidden rounded-2xl border border-[#DFE8F4] bg-white shadow-[0_8px_22px_rgba(7,29,73,0.035)]">
@@ -643,10 +651,10 @@ function toDateTimeLocal(value: string, type?: string) {
   return value;
 }
 function summarizeClaimActionError(message: string): string {
-  const pending = /^Verify first — (\d+) uploaded documents? pending verification\.$/.exec(message.trim());
+  const pending = /^Verify first — (\d+) uploaded documents? pending verification(?:: (.+))?\.$/.exec(message.trim());
   if (pending) {
     const count = Number(pending[1]);
-    return `Verify ${count} uploaded document${count === 1 ? "" : "s"} before saving this stage.`;
+    return `${pending[2] ? `Verify these documents before saving: ${pending[2]}` : `Verify ${count} uploaded document${count === 1 ? "" : "s"} before saving this stage.`}`;
   }
   if (/server components render|digest property|specific message is omitted/i.test(message)) {
     return "Unable to complete the action. Please try again.";

@@ -19,6 +19,12 @@ for (const [stage, next] of [
 }
 assert.match(stages, /nextStageKey: nextStageKeyFor\(milestoneKey\)/);
 assert.match(stages, /setSelectedKey\(state\.nextStageKey\)/);
+assert.match(stages, /if \(!spotState\.ok\) return;/, "Failed Spot Intimation saves must not navigate.");
+assert.match(stages, /const nextKey = nextStageKeyFor\("spot_intimation"\)/, "Stage 1 Save Details should target Spot Status.");
+assert.match(stages, /const canOpenNext = unrestrictedStageEditing \|\| journeyComplete \|\| activeIndex >= 1/, "Only already accessible next stages may open.");
+assert.match(stages, /if \(nextKey && canOpenNext\) \{[\s\S]*?setSelectedKey\(nextKey\);[\s\S]*?router\.replace\(\x60\/claims\/\$\{claimId\}\?stage=\$\{nextKey\}\x60\);/, "Successful Stage 1 save must navigate to next stage.");
+assert.match(stages, /await saveInternalSpotIntimationDetails\(claimId, formData\)/, "Preserve saving without automatic workflow advancement.");
+
 assert.match(stages, /router\.replace\(\`\$\{partnerManagedJourney/);
 assert.match(stages, /selected\.key === "payment_encashment" \? "lg:grid-cols-\[repeat\(5,minmax\(0,1fr\)\)\] lg:items-start"/);
 assert.match(stages, /name: "depreciation_slip_submitted"/);

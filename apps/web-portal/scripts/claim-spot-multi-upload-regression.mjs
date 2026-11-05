@@ -8,6 +8,20 @@ const replacementUploader = await readFile(new URL("../components/spot-survey/re
 const actions = await readFile(new URL("../app/claims/[id]/spot-survey-actions.ts", import.meta.url), "utf8");
 const uploadActions = await readFile(new URL("../app/claims/[id]/claim-document-upload-actions.ts", import.meta.url), "utf8");
 const workflowAccess = await readFile(new URL("../lib/claim-workflow-access.ts", import.meta.url), "utf8");
+const rcPrefill = await readFile(new URL("../app/claims/[id]/claim-rc-prefill-actions.ts", import.meta.url), "utf8");
+const verificationCompat = await readFile(new URL("../app/claims/[id]/claim-document-verification-compat-actions.ts", import.meta.url), "utf8");
+assert.match(verificationCompat, /requireClaimWorkflowAccess\(claimId, "You do not have permission to verify claim documents\."\)/, "Audio and generic document verification must retain claim-scoped authorization.");
+assert.match(verificationCompat, /claim\.claim_service_mode !== "broker_managed"/, "Broker-managed verification remains allowed.");
+assert.match(verificationCompat, /claimSource\?\.policy_service_source !== "external" \|\| isPartner/, "Self-managed document verification must be restricted to authorized non-Partner external Operations.");
+assert.match(verificationCompat, /return await verifySpotSurveyDocument\(formData\)/, "Compatibility action must keep canonical verification and history writes.");
+
+
+// RC prefill must match authorized Operations verification eligibility for external self-managed claims.
+assert.match(rcPrefill, /requireClaimWorkflowAccess\(claimId, "Not permitted to verify RC for this claim\."\)/, "RC prefill must retain the claim-scoped authorization gate.");
+assert.match(rcPrefill, /!isPartner && claim\.claim_service_mode === "self_managed" && linked\?\.policy_service_source === "external"/, "Only non-Partner Operations users may prefill RC details on self-managed external claims.");
+assert.match(rcPrefill, /claim\.claim_service_mode !== "broker_managed" && !selfManagedExternalOperations/, "Existing broker-managed behavior must remain allowed.");
+assert.match(rcPrefill, /linked\.customer_id !== claim\.customer_id/, "Vehicle lookup must continue enforcing claim/customer ownership.");
+
 const insuranceCapacity = await readFile(new URL("../lib/insurance-verification-capacity.ts", import.meta.url), "utf8");
 const insuranceCapacityAction = await readFile(new URL("../app/claims/[id]/insurance-verification-actions.ts", import.meta.url), "utf8");
 const insuranceModal = await readFile(new URL("../components/spot-survey/insurance-verification-modal.tsx", import.meta.url), "utf8");
@@ -21,9 +35,32 @@ const sharedClaimJourney = await readFile(new URL("../../../packages/claim-journ
 assert.match(workspace, /<Image src=\{claimHeaderIcons\.claim\} alt="" width=\{34\}/, "Header must use the existing claim illustration.");
 assert.match(workspace, /rounded-xl border border-white bg-white/, "The Claim Journey heading icon must have an opaque white background.");
 assert.match(workspace, /rounded-lg bg-white shadow-\[0_2px_6px_rgba\(0,12,42,\.14\)\]/, "Claim summary icon tiles must be white.");
-assert.match(workspace, /documents\.length\} uploaded file/, "All loaded claim documents must have a visible total.");
+assert.doesNotMatch(workspace, /documents\.length\} uploaded file/, "Remove redundant uploaded-file total from the Document Verification header.");
+assert.match(workspace, /title="Customer Multiple Documents"/, "Customer bulk uploads must have a visible Operations section.");
+assert.match(workspace, /document_type\?\.trim\(\)\.toLowerCase\(\) === "other document"/, "Use the exact customer bulk-upload category.");
 assert.match(bulkVerificationGroup, /useState\(true\)/, "Multiple uploaded document rows must be expanded initially.");
 assert.match(bulkVerificationGroup, /\{item\.documents\.length\} files/, "Multi-file groups must show their file count.");
+
+
+const verificationModal = await readFile(new URL("../components/spot-survey/document-verification-modal-v3.tsx", import.meta.url), "utf8");
+
+// Verified statuses must open a scoped re-verification UI without acting on every file in the category.
+assert.match(bulkVerificationGroup, /allVerified && hasSingleFile/, "Single-file Verified status must be clickable.");
+assert.match(bulkVerificationGroup, /reverify\s+prefillDetails=/, "Verified file rows must have an exact-document reverify action.");
+assert.match(bulkVerificationGroup, /documentIds=\{\[item\.documents\[0\]\.id\]\}/, "Single-file Verified action must target exactly one document.");
+assert.match(bulkVerificationGroup, /allVerified && hasMultipleFiles/, "Multiple-file Verified category must require a file choice.");
+assert.match(verificationAction, /reverify\?: boolean/, "Only explicit re-verification may repeat a reviewed file.");
+assert.match(verificationAction, /reverify=\{reverify\}/, "Verification modal must receive the reverify flag.");
+assert.match(verificationModal, /if \(reverify\) formData\.set\("reverify", "true"\)/, "Verification form must send explicit reverify intent.");
+assert.match(actions, /reverify && \(isPartner \|\| documentIds\.length !== 1\)/, "Backend must restrict reverify to Operations and one document.");
+assert.match(actions, /documents\[0\]\?\.verification_status !== "verified"/, "Reverify only previously verified documents.");
+assert.match(actions, /const documentsToVerify = reverify \? documents :/, "Reverify must not silently skip already verified files.");
+assert.match(actions, /if \(!reverify\) await advanceAfterInitialDocumentsVerified/, "Reverify must not advance claim stage.");
+assert.match(actions, /Document re-verified successfully/, "Reverify must return a distinct success message.");
+assert.match(actions, /claim_document_verifications"\)\.insert\(attempts\.map/, "Fresh verification review must append to audit history.");
+assert.match(verificationModal, /max-h-\[calc\(100dvh-24px\)\]/, "Modal must stay inside viewport.");
+assert.match(verificationModal, /sm:grid-cols-\[32px_minmax\(0,1fr\)_160px_130px\]/, "Six RC expiry fields must use compact desktop rows.");
+assert.match(verificationModal, /min-h-0 flex-1 overflow-y-auto/, "Small screens must retain accessible scrolling.");
 
 // Header displays seven separate fields in a single desktop row. Removed data still belongs to the claim record.
 for (const removed of ["Claim Status", "Spot Intimation Date & Time", "Insurer", "Make & Model"]) {

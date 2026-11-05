@@ -5,12 +5,17 @@ import { InsuranceVerificationModalButton } from "./insurance-verification-modal
 import { VerifyDocumentButton } from "./verify-buttons";
 import { useState } from "react";
 import { FileCheck2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useTransition } from "react";
+import { verifySpotSurveyDocument } from "@/app/claims/[id]/spot-survey-actions";
 import { createPortal } from "react-dom";
+import { ClaimStageErrorDialog } from "@/components/claim-manager/claim-stage-error-dialog";
 
 const reverifyIconClass = "absolute inset-0 [&_button]:!h-8 [&_button]:!w-8 [&_button]:!min-w-0 [&_button]:!p-0 [&_button]:!border-0 [&_button]:!bg-transparent [&_button]:!text-[0px] [&_button]:!shadow-none [&_button]:!rounded-md [&_button:hover]:!bg-amber-50";
 const verifyHoverOnlyClass = "[&_button]:!rounded-none [&_button]:!border-transparent [&_button]:!bg-transparent [&_button]:transition-colors [&_button:hover]:!rounded-md [&_button:hover]:!border-green-200 [&_button:hover]:!bg-[#F2FBF7]";
 const verifyHeaderPillClass = "[&_button]:!h-auto [&_button]:!w-auto [&_button]:!rounded-full [&_button]:!border [&_button]:!border-slate-200 [&_button]:!bg-slate-100 [&_button]:!px-1.5 [&_button]:!py-0.5 [&_button]:!text-[9px] [&_button]:!font-semibold [&_button]:!text-slate-600 [&_button:hover]:!bg-slate-100";
 const verifyHeaderAttentionPillClass = "motion-safe:[&_button]:animate-pulse [&_button]:!ring-1 [&_button]:!ring-red-300 [&_button]:!shadow-[0_0_12px_rgba(239,68,68,0.28)] [&_button]:!h-auto [&_button]:!w-auto [&_button]:!rounded-full [&_button]:!border [&_button]:!border-red-200 [&_button]:!bg-red-50 [&_button]:!px-1.5 [&_button]:!py-0.5 [&_button]:!text-[9px] [&_button]:!font-semibold [&_button]:!text-red-600 [&_button:hover]:!bg-red-100";
+const reverifyHeaderPillClass = "[&_button]:!h-auto [&_button]:!w-auto [&_button]:!rounded-full [&_button]:!border-0 [&_button]:!bg-green-50 [&_button]:!px-1.5 [&_button]:!py-0.5 [&_button]:!text-[9px] [&_button]:!font-semibold [&_button]:!text-green-700 [&_button:hover]:!bg-green-100";
 const verifyHeaderDisabledClass = "h-auto w-auto rounded-full border border-slate-200 bg-slate-100 px-1.5 py-0.5 text-[9px] font-semibold text-slate-600";
 const verifyHeaderAttentionDisabledClass = "motion-safe:animate-pulse ring-1 ring-red-300 shadow-[0_0_12px_rgba(239,68,68,0.28)] h-auto w-auto rounded-full border border-red-200 bg-red-50 px-1.5 py-0.5 text-[9px] font-semibold text-red-600";
 
@@ -26,9 +31,10 @@ type Props = {
   variant?: "row" | "header" | "icon";
   attention?: boolean;
   prefillDetails?: Record<string, unknown> | null;
+  reverify?: boolean;
 };
 
-export function VerificationActionButton({ claimId, documentId, documentIds, itemKey, incidentDate, policyStartDate, policyEndDate, disabled = false, variant = "row", attention = false, prefillDetails = null }: Props) {
+export function VerificationActionButton({ claimId, documentId, documentIds, itemKey, incidentDate, policyStartDate, policyEndDate, disabled = false, variant = "row", attention = false, prefillDetails = null, reverify = false }: Props) {
   const targetIds = Array.from(new Set((documentIds?.length ? documentIds : documentId ? [documentId] : []).map((id) => id.trim()).filter(Boolean)));
 
   if (disabled || targetIds.length === 0) {
@@ -40,22 +46,22 @@ export function VerificationActionButton({ claimId, documentId, documentIds, ite
   let action;
 
   if (itemKey === "spot") {
-    action = <DocumentVerificationModalButton key={targetDocumentId} claimId={claimId} documentId={targetDocumentId} modalType="spot" incidentDate={incidentDate} initialDetails={prefillDetails} />;
+    action = <DocumentVerificationModalButton key={targetDocumentId} claimId={claimId} documentId={targetDocumentId} modalType="spot" incidentDate={incidentDate} initialDetails={prefillDetails} reverify={reverify} />;
   } else if (itemKey === "rc") {
-    action = <DocumentVerificationModalButton key={targetDocumentId} claimId={claimId} documentId={targetDocumentId} modalType="rc" incidentDate={incidentDate} initialDetails={prefillDetails} />;
+    action = <DocumentVerificationModalButton key={targetDocumentId} claimId={claimId} documentId={targetDocumentId} modalType="rc" incidentDate={incidentDate} initialDetails={prefillDetails} reverify={reverify} />;
   } else if (itemKey === "insurance") {
-    action = <InsuranceVerificationModalButton key={targetDocumentId} claimId={claimId} documentId={targetDocumentId} incidentDate={incidentDate} policyStartDate={policyStartDate} policyEndDate={policyEndDate} initialDetails={prefillDetails} />;
+    action = <InsuranceVerificationModalButton key={targetDocumentId} claimId={claimId} documentId={targetDocumentId} incidentDate={incidentDate} policyStartDate={policyStartDate} policyEndDate={policyEndDate} initialDetails={prefillDetails} reverify={reverify} />;
   } else if (itemKey === "dl") {
-    action = <DocumentVerificationModalButton key={targetDocumentId} claimId={claimId} documentId={targetDocumentId} modalType="dl" incidentDate={incidentDate} initialDetails={prefillDetails} />;
+    action = <DocumentVerificationModalButton key={targetDocumentId} claimId={claimId} documentId={targetDocumentId} modalType="dl" incidentDate={incidentDate} initialDetails={prefillDetails} reverify={reverify} />;
   } else if (itemKey === "gr") {
-    action = <DocumentVerificationModalButton key={targetDocumentId} claimId={claimId} documentId={targetDocumentId} modalType="gr" incidentDate={incidentDate} initialDetails={prefillDetails} />;
+    action = <DocumentVerificationModalButton key={targetDocumentId} claimId={claimId} documentId={targetDocumentId} modalType="gr" incidentDate={incidentDate} initialDetails={prefillDetails} reverify={reverify} />;
   } else {
-    action = <VerifyDocumentButton claimId={claimId} documentId={targetDocumentId} />;
+    action = reverify ? <SimpleDocumentReverifyButton claimId={claimId} documentId={targetDocumentId} /> : <VerifyDocumentButton claimId={claimId} documentId={targetDocumentId} />;
   }
 
   const headerClassName = attention ? verifyHeaderAttentionPillClass : verifyHeaderPillClass;
   if (variant === "icon") return <div title="Reverify document" className="relative h-8 w-8 shrink-0 text-[#174EA6]"><div className={reverifyIconClass}>{action}</div><FileCheck2 aria-hidden="true" size={16} strokeWidth={2} className="pointer-events-none absolute left-2 top-2" /></div>;
-  return <div className={variant === "row" ? verifyHoverOnlyClass : headerClassName}>{action}</div>;
+  return <div className={variant === "row" ? verifyHoverOnlyClass : reverify ? reverifyHeaderPillClass : headerClassName}>{action}</div>;
 }
 
 
@@ -77,5 +83,24 @@ function EmptySelectionVerifyButton({ attention }: { attention: boolean }) {
       </div>,
       document.body,
     ) : null}
+  </>;
+}
+function SimpleDocumentReverifyButton({ claimId, documentId }: { claimId: string; documentId: string }) {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+  return <>
+    <ClaimStageErrorDialog message={error} onClose={() => setError(null)} />
+    <button type="button" disabled={pending} title="Reverify this document" onClick={() => {
+      startTransition(async () => {
+        const values = new FormData();
+        values.set("claimId", claimId);
+        values.set("documentId", documentId);
+        values.set("reverify", "true");
+        const result = await verifySpotSurveyDocument(values);
+        if (result.ok) router.refresh();
+        else setError(result.message ?? "Re-verification failed.");
+      });
+    }} className="h-8 w-full text-[11px] font-semibold">{pending ? "Checking..." : "Reverify"}</button>
   </>;
 }

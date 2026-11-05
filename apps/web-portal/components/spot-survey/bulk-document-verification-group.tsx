@@ -9,7 +9,6 @@ import { Shield, ShieldCheck, Trash2, Mic, Video } from "lucide-react";
 import { useEffect, useMemo, useState, type MouseEvent } from "react";
 import { ClaimDocumentCollapsedStatus } from "@/components/claim-manager/claim-document-collapsed-status";
 import { ReplaceDocumentButton } from "./replace-document-button";
-import { RequestCustomerDocumentReuploadButton } from "./request-customer-document-reupload-button";
 import { VerificationActionButton } from "./verification-action-button";
 import { deleteVerifiedSpotSurveyDocument } from "@/app/claims/[id]/spot-survey-actions";
 import { useRouter } from "next/navigation";
@@ -120,7 +119,29 @@ export function BulkDocumentVerificationGroup({ item, claim, verifications }: { 
         </div>
         <div className="flex shrink-0 items-center gap-0.5">
           <ReplaceDocumentButton claimId={claim.id} customerId={claim.customer_id} documentType={item.documentType} label={item.title} actionLabel="Upload" iconOnly />
-          {allVerified ? <StatusBadge tone="green" label="Verified" /> : (
+          {allVerified && hasMultipleFiles ? (
+            <button
+              type="button"
+              onClick={(event) => { event.stopPropagation(); setIsExpanded(true); }}
+              title="Verified — choose an individual document below to reverify"
+              aria-label={`Verified ${item.title}; show files to reverify`}
+              className="rounded-full border border-green-200 bg-green-50 px-1.5 py-0.5 text-[9px] font-semibold text-green-700 hover:bg-green-100"
+            >Verified</button>
+          ) : allVerified && hasSingleFile ? (
+            <div title="Click to reverify this document" className="rounded-full border border-green-200 bg-green-50 hover:bg-green-100">
+              <VerificationActionButton
+                claimId={claim.id}
+                documentIds={[item.documents[0].id]}
+                itemKey={item.key}
+                incidentDate={claim.accident_at}
+                policyStartDate={claim.policies?.start_date}
+                policyEndDate={claim.policies?.end_date}
+                variant="header"
+                reverify
+                prefillDetails={verifications.find((verification) => verification.document_id === item.documents[0].id && verification.is_valid)?.details ?? null}
+              />
+            </div>
+          ) : (
             <VerificationActionButton
               claimId={claim.id}
               documentIds={selectedDocumentIds}
@@ -216,8 +237,20 @@ function DocumentFileRow({ item, claim, document, verification, verified, reject
           <button type="button" disabled={deletePending} aria-label="Delete document" title="Delete document" className="grid h-8 w-8 shrink-0 place-items-center rounded-md text-red-600 transition hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/30 disabled:opacity-50" onClick={() => setDeleteOpen(true)}>
             <Trash2 aria-hidden="true" size={16} strokeWidth={2} />
           </button>
-          <RequestCustomerDocumentReuploadButton claimId={claim.id} documentId={document.id} fileName={document.file_name} />
           <ReplaceDocumentButton claimId={claim.id} customerId={claim.customer_id} documentId={document.id} documentType={item.documentType} label={item.title} actionLabel="Replace" iconOnly />
+          {verified ? (
+            <VerificationActionButton
+              claimId={claim.id}
+              documentId={document.id}
+              itemKey={item.key}
+              incidentDate={claim.accident_at}
+              policyStartDate={claim.policies?.start_date}
+              policyEndDate={claim.policies?.end_date}
+              variant="icon"
+              reverify
+              prefillDetails={verification?.details ?? null}
+            />
+          ) : null}
           
         </div>
       </div>

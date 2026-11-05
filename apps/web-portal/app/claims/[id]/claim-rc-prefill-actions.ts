@@ -68,9 +68,12 @@ function mapProvider(raw: unknown): Partial<RcDates> {
 export async function getClaimRcVerificationDates(claimId: string): Promise<RcResult> {
   try {
     if (!claimId || typeof claimId !== "string") return { ok: false, message: "Missing claim." };
-    const { claim, supabase } = await requireClaimWorkflowAccess(claimId, "Not permitted to verify RC for this claim.");
-    if (claim.claim_service_mode !== "broker_managed") return { ok: false, message: "This claim is not in the operations verification workflow." };
-    const { data: linked, error: claimError } = await supabase.from("claims").select("vehicle_id,customer_id,policy_id,external_policy_id").eq("id",claimId).single();
+    const { claim, supabase, isPartner } = await requireClaimWorkflowAccess(claimId, "Not permitted to verify RC for this claim.");
+    const { data: linked, error: claimError } = await supabase.from("claims").select("vehicle_id,customer_id,policy_id,external_policy_id,policy_service_source").eq("id",claimId).single();
+    // Match the Operations document-verification scope: self-managed external claims
+    // are allowed for authorized employees, but not intermediary/Partner accounts.
+    const selfManagedExternalOperations = !isPartner && claim.claim_service_mode === "self_managed" && linked?.policy_service_source === "external";
+    if (claim.claim_service_mode !== "broker_managed" && !selfManagedExternalOperations) return { ok: false, message: "This claim is not in the operations verification workflow." };
     if (claimError || !linked?.vehicle_id || linked.customer_id !== claim.customer_id) return { ok: false, message: "Linked claim vehicle could not be confirmed." };
     const { data: vehicle, error: vehicleError } = await supabase.from("vehicles").select("id,customer_id,vehicle_no,fitness_expiry_date,road_tax_expiry_date,puc_expiry_date,local_permit_expiry_date,national_permit_expiry_date").eq("id",linked.vehicle_id).eq("customer_id",claim.customer_id).single();
     if (vehicleError || !vehicle) return { ok: false, message: "Vehicle record was not found." };

@@ -134,6 +134,9 @@ jobs:
       - name: Verify Branch payout visibility and Claim Tracker header
         run: node apps/partner-app/scripts/verify-branch-payout-and-claim-header-regression.mjs
 
+      - name: Verify Insurer List whole-rupee financial display
+        run: node apps/partner-app/scripts/verify-insurer-list-whole-rupees.mjs
+
       - name: Partner app typecheck
         run: npm run typecheck:partner
 

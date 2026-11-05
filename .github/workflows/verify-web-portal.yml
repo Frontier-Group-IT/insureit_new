@@ -41,6 +41,12 @@ jobs:
         run: node scripts/claim-payment-stage-authorized-write-regression.mjs
       - name: Operations stage-one multiple documents and voice-note regression
         run: node scripts/operations-claim-stage-one-media-parity-regression.mjs
+      - name: Operations Claim microphone permissions and voice upload regression
+        run: node scripts/operations-claim-microphone-permissions-regression.mjs
+      - name: Operations Customer bulk visibility and verification error feedback regression
+        run: node scripts/operations-customer-bulk-verification-feedback-regression.mjs
+      - name: Customer Spot Intimation success popup regression
+        run: node scripts/customer-spot-success-popup-regression.mjs
       - name: Customer document re-upload dialog layering regression
         run: node scripts/customer-document-reupload-dialog-regression.mjs
       - name: Claim document re-upload Stage 1/3 Internal External parity regression
@@ -57,6 +63,8 @@ jobs:
         run: node scripts/operations-dashboard-partner-branch-layout-regression.mjs
       - name: Operations claim Stage 3 autosave and green completion regression
         run: node scripts/operations-stage3-autosave-completion-regression.mjs
+      - name: Operations Claim Intimation standard calendar icon regression
+        run: node scripts/operations-claim-intimation-calendar-icon-regression.mjs
       - name: Operations Claim Journey save navigation, Stage 9 layout and 3D icon regression
         run: node scripts/operations-claim-save-navigation-layout-regression.mjs
       - name: Operations claim Customer motion parity regression
@@ -185,6 +193,8 @@ jobs:
         run: node scripts/customer-claims-empty-placeholder-regression.mjs
       - name: Customer Support and Profile visual polish regression
         run: node scripts/customer-support-profile-visual-polish-regression.mjs
+      - name: Customer Claim multiple documents edit and completed view regression
+        run: node scripts/customer-claim-multiple-documents-visibility-regression.mjs
       - name: Customer Renewals subtle alert cards and count badge regression
         run: node scripts/customer-renewals-subtle-alert-cards-regression.mjs
       - name: Customer Claim policy source and legacy driver fallback regression

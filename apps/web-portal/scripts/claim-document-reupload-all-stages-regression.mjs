@@ -11,8 +11,9 @@ const requestButton = read("../components/spot-survey/request-customer-document-
 const server = read("../app/claims/[id]/spot-survey-actions.ts");
 const operations = read("../app/claims/[id]/page.tsx");
 
+assert.doesNotMatch(stage1, /RequestCustomerDocumentReuploadButton/, "Stage 1 rows must not display the removed customer re-upload icon.");
+assert.match(stage3, /<RequestCustomerDocumentReuploadButton claimId=\{claim\.id\} documentId=\{document\.id\} fileName=\{document\.file_name\}/, "Stage 3 must retain its existing exact-document customer re-upload action.");
 for (const source of [stage1, stage3]) {
-  assert.match(source, /<RequestCustomerDocumentReuploadButton claimId=\{claim\.id\} documentId=\{document\.id\} fileName=\{document\.file_name\}/, "Every Operations document row must offer the same exact-document customer re-upload dialog.");
   assert.match(source, /document\.verification_status !== "rejected" && \(document\.verification_status === "verified" \|\| Boolean\(verification\?\.is_valid\)\)/, "An explicitly rejected document must not remain visually verified from historical verification.");
 }
 assert.match(stage3, /<VerificationActionButton[^\n]*variant="icon"/, "Stage 3 pending verification must keep its dedicated icon action.");
