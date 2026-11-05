@@ -49,8 +49,8 @@ function mergeCustomerDriverDescription(existing: string | null, driverName: str
 async function loadManagedClaim(claimId: string, supabase: Awaited<ReturnType<typeof requireClaimWorkflowAccess>>["supabase"], isPartner: boolean) {
   const { data, error } = await supabase.from("claims").select("id,current_status,claim_service_mode,policy_service_source,accident_description").eq("id", claimId).maybeSingle<ClaimRow>();
   if (error || !data) throw new Error(error?.message ?? "Claim not found.");
-  if (data.claim_service_mode !== "broker_managed" && (data.policy_service_source !== "external" || isPartner)) {
-    throw new Error("Only authorized Operations users can edit self-managed external claim Spot Intimation.");
+  if (data.claim_service_mode === "self_managed" && isPartner) {
+    throw new Error("Self-managed claim Spot Intimation is restricted to authorized Operations users.");
   }
   if (!isClaimStatus(data.current_status)) throw new Error("Claim has an unsupported status.");
   return data;
