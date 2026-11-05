@@ -18,8 +18,8 @@ function match(type:string, expected:string) {
     (expected==="Accident Photo"&&["spotphoto","accidentphotos"].includes(normalize(type)));
 }
 
-export function CustomerClaimEvidenceWorkspace({documents,claimId,accountId,stage,returnToSpotIntimation=false,allowUpload=true,onlyUploaded=false}:{
-documents:CustomerClaimFile[];claimId:string;accountId:string;stage:string;returnToSpotIntimation?:boolean;allowUpload?:boolean;onlyUploaded?:boolean
+export function CustomerClaimEvidenceWorkspace({documents,claimId,accountId,stage,returnToSpotIntimation=false,allowUpload=true,onlyUploaded=false,canReusePolicyCopy=false}:{
+documents:CustomerClaimFile[];claimId:string;accountId:string;stage:string;returnToSpotIntimation?:boolean;allowUpload?:boolean;onlyUploaded?:boolean;canReusePolicyCopy?:boolean
 }) {
   // Existing bulk uploads retain the original document_type for Operations verification.
   // Only presentation changes: both editable and completed views share this file list.
@@ -27,7 +27,7 @@ documents:CustomerClaimFile[];claimId:string;accountId:string;stage:string;retur
   return <section className="overflow-hidden rounded-2xl border border-[#D9E3F0] bg-white">
     <header className="border-b border-[#D9E3F0] px-4 py-3"><h2 className="text-[17px] font-semibold text-[#071D49]">Claim Documents</h2></header>
     <div className="grid gap-3 p-3 md:grid-cols-2 xl:grid-cols-3">
-      {definitions.filter(item=>!onlyUploaded||documents.some(doc=>match(doc.document_type,item.type))).map(item=><CustomerClaimCompactDocument key={item.type} label={item.label} type={item.type} accept={item.accept} documents={documents.filter(doc=>match(doc.document_type,item.type))} claimId={claimId} accountId={accountId} stage={stage} returnToSpotIntimation={returnToSpotIntimation} allowUpload={allowUpload && item.type !== "Incident Voice Note"}/>)}
+      {definitions.filter(item=>!onlyUploaded||documents.some(doc=>match(doc.document_type,item.type))).map(item=><CustomerClaimCompactDocument key={item.type} label={item.label} type={item.type} accept={item.accept} documents={documents.filter(doc=>match(doc.document_type,item.type))} claimId={claimId} accountId={accountId} stage={stage} returnToSpotIntimation={returnToSpotIntimation} allowUpload={allowUpload && item.type !== "Incident Voice Note"} canReusePolicyCopy={item.type === "Insurance Copy" && canReusePolicyCopy}/>)}
     </div>
     {(allowUpload || multipleDocuments.length > 0) ? (
       <section aria-label="Multiple Documents" className="mx-3 mb-3 rounded-xl border border-[#D9E3F0] bg-white p-3">

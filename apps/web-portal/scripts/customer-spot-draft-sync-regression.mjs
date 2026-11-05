@@ -26,8 +26,10 @@ assert.match(customerForm, /saveServerDraft\(values\)/,
   "Form should autosave inputs to server");
 assert.match(customerForm, /onBlurCapture=/,
   "Blur must prompt immediate server save when switching to document upload");
-assert.match(customerForm, /Draft not synced yet/,
-  "Failed draft sync must be visible; do not claim save was successful");
+assert.doesNotMatch(customerForm, /Draft not synced yet|Draft saved securely|Saving draft…|Details are saved automatically as draft/,
+  "Do not show internal draft sync status or errors on the Customer frontend");
+assert.match(customerForm, /setSyncState\("error"\)/,
+  "Draft sync failure handling must remain intact behind the scenes");
 assert.match(customerForm, /Only clear the local draft after the backend confirms the save/,
   "Final submission must preserve local drafts on errors");
 assert.match(action, /resolveCustomerWebScope\(accountId\)/,

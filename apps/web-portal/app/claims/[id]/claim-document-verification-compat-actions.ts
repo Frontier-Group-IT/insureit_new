@@ -23,8 +23,17 @@ export async function verifyClaimDocumentWithAdditionalUploadCompat(formData: Fo
     const claimId = String(formData.get("claimId") ?? "").trim();
     const documentIds = parseDocumentIds(String(formData.get("documentId") ?? ""));
     if (!claimId || !documentIds.length) throw new Error("Missing claim or document id.");
-    const { claim, supabase } = await requireClaimWorkflowAccess(claimId, "You do not have permission to verify claim documents.");
-    if (claim.claim_service_mode !== "broker_managed") throw new Error("Operations can process this claim only after assistance is accepted.");
+    const { claim, supabase, isPartner } = await requireClaimWorkflowAccess(claimId, "You do not have permission to verify claim documents.");
+    // Align the legacy-upload compatibility path with canonical Operations verification.
+    // Keep self-managed internal claims and intermediary access outside this exception.
+    if (claim.claim_service_mode !== "broker_managed") {
+      const { data: claimSource, error: sourceError } = await supabase.from("claims")
+        .select("policy_service_source").eq("id", claimId).single();
+      if (sourceError) throw new Error(sourceError.message);
+      if (claimSource?.policy_service_source !== "external" || isPartner) {
+        throw new Error("Operations can process this claim only after assistance is accepted.");
+      }
+    }
 
     const { data: documents, error: documentsError } = await supabase.from("claim_documents").select("id, verification_status, rejection_reason").eq("claim_id", claimId).in("id", documentIds).returns<ClaimDocumentRow[]>();
     if (documentsError) throw new Error(documentsError.message);

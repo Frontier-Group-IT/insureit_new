@@ -503,7 +503,7 @@ function DateField({ label, value, onChange }: { label: string; value: string; o
   const display = matched ? `${matched[3]}/${matched[2]}/${matched[1]}` : "DD/MM/YYYY";
   return <label><span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#174EA6]">{label} <span className="text-red-600">*</span></span>
     <span className="relative mt-1 flex h-10 w-full items-center justify-between rounded-lg border border-[#D9E3F0] bg-white px-3 text-[12px] font-semibold text-[#071D49] focus-within:border-[#174EA6]">
-      <span aria-hidden="true">{display}</span><span aria-hidden="true">▦</span>
+      <span aria-hidden="true">{display}</span><svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4 shrink-0 fill-none stroke-[#526178] stroke-[1.8]"><rect x="4" y="6" width="16" height="14" rx="2" /><path d="M8 3v6M16 3v6M4 10h16" /></svg>
       <input aria-label={label} type="date" value={value} onChange={(event) => onChange(event.target.value)} onClick={(event) => event.currentTarget.showPicker?.()} className="absolute inset-0 h-full w-full cursor-pointer opacity-0" />
     </span>
   </label>;
