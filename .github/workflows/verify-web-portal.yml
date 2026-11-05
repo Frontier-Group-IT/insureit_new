@@ -197,6 +197,8 @@ jobs:
         run: node scripts/customer-support-profile-visual-polish-regression.mjs
       - name: Customer Claim multiple documents edit and completed view regression
         run: node scripts/customer-claim-multiple-documents-visibility-regression.mjs
+      - name: Completed customer claim PDF header regression
+        run: node scripts/customer-completed-claim-pdf-header-regression.mjs
       - name: Customer Renewals subtle alert cards and count badge regression
         run: node scripts/customer-renewals-subtle-alert-cards-regression.mjs
       - name: Customer Claim policy source and legacy driver fallback regression
