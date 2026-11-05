@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 
-export function LifeHealthIssuedPolicyButton({ policyId: _policyId }: { policyId: string }) {
+export function LifeHealthIssuedPolicyButton({ policyId }: { policyId: string }) {
   const [open, setOpen] = useState(false);
 
   return <>
@@ -16,12 +16,12 @@ export function LifeHealthIssuedPolicyButton({ policyId: _policyId }: { policyId
           </div>
           <div className="min-w-0 text-left">
             <h2 id="issued-policy-title" className="text-[14px] font-semibold text-[#17365D]">Policy already issued</h2>
-            <p className="mt-1 text-[10px] leading-5 text-[#667085]">This case has already been issued as a policy. You can view the issued policy in the Policy Register.</p>
+            <p className="mt-1 text-[10px] leading-5 text-[#667085]">This case has already been issued as a policy. Open the issued policy to view and edit its details.</p>
           </div>
         </div>
         <div className="mt-5 flex justify-end gap-2 border-t border-[#E8EDF3] pt-3">
           <button type="button" onClick={() => setOpen(false)} className="rounded-lg border border-[#CAD7E7] bg-white px-3.5 py-2 text-[9px] font-bold text-[#475467]">Close</button>
-          <Link href="/policies" className="rounded-lg bg-[#17365D] px-3.5 py-2 text-[9px] font-bold text-white">View Policy</Link>
+          <Link href={`/policies/${encodeURIComponent(policyId)}/edit`} className="rounded-lg bg-[#17365D] px-3.5 py-2 text-[9px] font-bold text-white">View Policy</Link>
         </div>
       </div>
     </div> : null}
