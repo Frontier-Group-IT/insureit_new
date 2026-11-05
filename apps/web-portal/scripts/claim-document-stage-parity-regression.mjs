@@ -62,8 +62,8 @@ assert.match(stage3Loader, /from\("claim_document_verifications"\)/, "Stage 3 mu
 
 assert.match(claimPage, /spotContent=\{<SpotSurveyWorkspace/, "Operations claim Stage 1 must keep the shared SpotSurveyWorkspace for broker-managed claims.");
 assert.match(claimPage, /claimIntimationContent=\{<FinalDocumentsWorkspaceV2/, "Operations claim Stage 3 must use the shared final-document workspace for broker-managed claims.");
-assert.match(claimPage, /if \(claim\.claim_service_mode === "self_managed" && claim\.policy_service_source !== "external"\)/, "External self-managed claims use Operations, while other self-managed claims retain the assistance view.");
-assert.match(claimPage, /<AssistanceIntakePanel/, "The separate scoped assistance viewer remains available for other self-managed claims.");
+assert.doesNotMatch(claimPage, /if \(claim\.claim_service_mode === "self_managed" && claim\.policy_service_source !== "external"\)/, "All self-managed claims now share the writable Operations nine-stage journey.");
+assert.doesNotMatch(claimPage, /<AssistanceIntakePanel/, "Operations claim page no longer routes internal self-managed claims into a separate assistance view.");
 
 const verifiedStatusFunction = claimWorkflow.match(/export function verifiedStatusFor\(status: ClaimStatus\) \{[\s\S]*?\n\}/)?.[0];
 assert.ok(verifiedStatusFunction, "The document verification status guard must remain available.");
