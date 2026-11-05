@@ -9,6 +9,7 @@ import { CustomerClaimStageDraftForm } from "@/components/customer-portal/custom
 import { CustomerClaimEvidenceWorkspace } from "@/components/customer-portal/customer-claim-evidence-workspace";
 import { CustomerClaimVoiceRecorder } from "@/components/customer-portal/customer-claim-voice-recorder";
 import { CustomerClaimDocumentGroups } from "@/components/customer-portal/customer-claim-document-groups";
+import { ExternalClaimBillUpload } from "@/components/claims/external-claim-bill-upload";
 import { CustomerClaimBooleanChoice } from "@/components/customer-portal/customer-claim-boolean-choice";
 import { Check, Circle, LockKeyhole, CalendarDays, Clock3, ClipboardList } from "lucide-react";
 import { CustomerClaimStageSuccessToast } from "@/components/customer-portal/customer-claim-stage-success-toast";
@@ -164,7 +165,7 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
     </section> : null}
     {editMode && canEditStage ? (
       <CustomerClaimStageDraftForm id="customer-claim-stage-details-form" accountId={account.id} claimId={claim.id} stage={selected.key} className="customer-claim-ref-details mt-2 rounded-2xl border border-[#DCE3EC] bg-white p-4">
-        <div className="mb-3 flex items-start justify-between gap-3"><div className="flex items-center gap-2"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-[#6F5AF1] to-[#3697D5] text-white"><ClipboardList className="h-4 w-4"/></span><div><h2 className="text-[15px] font-bold text-[#071D49]">Stage Details</h2></div></div></div><div className={`grid gap-3 sm:grid-cols-2 ${selected.key==="claim_intimation"?"lg:grid-cols-5":selected.key==="work_approval"||selected.key==="payment_encashment"?"lg:grid-cols-5":selected.key==="repair_ri"||selected.key==="delivery_order"?"lg:grid-cols-3":selected.key==="billing"||selected.key==="vehicle_delivery"?"lg:grid-cols-2":"lg:grid-cols-4"}`}>
+        <div className="mb-3 flex items-start justify-between gap-3"><div className="flex items-center gap-2"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-[#6F5AF1] to-[#3697D5] text-white"><ClipboardList className="h-4 w-4"/></span><div><h2 className="text-[15px] font-bold text-[#071D49]">Stage Details</h2></div></div></div><div className={`grid gap-3 sm:grid-cols-2 ${selected.key==="claim_intimation"?"lg:grid-cols-5":selected.key==="work_approval"||selected.key==="payment_encashment"?"lg:grid-cols-5":selected.key==="repair_ri"||selected.key==="delivery_order"?"lg:grid-cols-3":selected.key==="billing"?"lg:grid-cols-3":selected.key==="vehicle_delivery"?"lg:grid-cols-2":"lg:grid-cols-4"}`}>
         <input type="hidden" name="account" value={account.id}/>
         <input type="hidden" name="claim" value={claim.id}/>
         <input type="hidden" name="stage" value={selected.key}/>
@@ -176,13 +177,16 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
               <input name={field.key} type={field.type} required={!field.optional} maxLength={field.type==="number"?undefined:500} min={field.type==="number"?"0":undefined} step={field.type==="number"?"0.01":undefined} defaultValue={typeof milestone?.details?.[field.key]==="string"||typeof milestone?.details?.[field.key]==="number"?String(milestone.details[field.key]):""} className="mt-1 h-9 w-full rounded-md border border-[#D9E3F0] bg-white px-3 text-[12px] font-semibold normal-case tracking-normal text-[#071D49]"/>
             )}
           </label>
-        ))}</div>
+        ))}
+        {selected.key==="billing" ? <ExternalClaimBillUpload mode="customer" claimId={claim.id} accountId={account.id} documents={documents.filter(doc=>doc.document_type==="Final Workshop Bill")} /> : null}
+        </div>
         {selected.key!=="claim_intimation"?<div className="mt-5 flex flex-wrap items-center justify-end gap-2 border-t border-[#D9E3F0] pt-4">
           <Link href={{pathname:"/customer/claims",query:{account:account.id}}} className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#B9CBE2] px-5 text-[12px] font-semibold text-[#174A87]">Cancel</Link>
           <CustomerClaimStageSubmit formId="customer-claim-stage-details-form" variant="continue" />
         </div>:null}
       </CustomerClaimStageDraftForm>
     ):null}
+    {selected.key==="billing" && external && !canEditStage && documents.some(doc=>doc.document_type==="Final Workshop Bill") ? <section className="rounded-xl border border-[#DCE3EC] bg-white p-4"><ExternalClaimBillUpload mode="customer" claimId={claim.id} accountId={account.id} readonly documents={documents.filter(doc=>doc.document_type==="Final Workshop Bill")} /></section> : null}
     {selected.key==="spot_intimation" ? <CustomerClaimEvidenceWorkspace documents={documents} claimId={claim.id} accountId={account.id} stage={selected.key} allowUpload={editMode} canReusePolicyCopy={canReusePolicyCopy}/> : null}
     {selected.key==="spot_intimation" ? <CustomerClaimVoiceRecorder claimId={claim.id} accountId={account.id}/> : null}
     {selected.key==="spot_intimation" && completed ? (
