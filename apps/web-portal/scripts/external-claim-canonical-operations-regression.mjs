@@ -15,6 +15,8 @@ const mobileClaimDetail = fs.readFileSync(path.join(root, '../mobile-app/app/cus
 const mobileExternalStageOne = fs.readFileSync(path.join(root, '../mobile-app/app/customer/self-managed-claim.tsx'), 'utf8');
 const mobileExternalSpotStatus = fs.readFileSync(path.join(root, '../mobile-app/app/customer/self-managed-spot-status.tsx'), 'utf8');
 const migration = fs.readFileSync(path.join(root, '../../supabase/migrations/20260909121000_external_claim_canonical_operations_workflow.sql'), 'utf8');
+const preserveModeMigration = fs.readFileSync(path.join(root, '../../supabase/migrations/20261105180000_preserve_external_claim_management_mode.sql'), 'utf8');
+const preserveModeRollback = fs.readFileSync(path.join(root, '../../supabase/rollbacks/20261105180000_preserve_external_claim_management_mode_rollback.sql'), 'utf8');
 const enumCastFixMigration = fs.readFileSync(path.join(root, '../../supabase/migrations/20260909133000_fix_external_claim_takeover_milestone_enum_cast.sql'), 'utf8');
 const customerProcessingMigration = fs.readFileSync(path.join(root, '../../supabase/migrations/20260909150000_preserve_external_customer_claim_milestones.sql'), 'utf8');
 const customerMilestoneRpcMigration = fs.readFileSync(path.join(root, '../../supabase/migrations/20260909160000_preserve_external_customer_milestone_rpc.sql'), 'utf8');
@@ -103,12 +105,20 @@ assert(sharedStageMigration.includes('perform public.sync_external_customer_stag
 assert(sharedStageMigration.includes("where c.policy_service_source::text = 'external'"), 'Shared-stage backfill must be scoped only to External Claims.');
 
 // Existing External takeover/preservation boundaries remain intact.
-assert(entry.includes('beginExternalOperationsWorkflow'), 'External Claim entry control must use the protected ownership action.');
-assert(action.includes('hasEffectiveCapability(profile, "manage_claims", "edit")'), 'External ownership transfer must require manage_claims edit permission.');
-assert(action.includes('begin_external_claim_operations_workflow'), 'External ownership transfer must use the atomic database function.');
-assert(migration.includes("claim_service_mode = 'broker_managed'"), 'External Operations ownership must become broker_managed.');
+assert(entry.includes('beginExternalOperationsWorkflow'), 'External Claim entry must use the protected Operations action.');
+assert(action.includes('hasEffectiveCapability(profile, "manage_claims", "edit")'), 'External claim entry requires manage_claims edit permission.');
+assert(action.includes('begin_external_claim_operations_workflow'), 'External entry must use the protected database function.');
+assert(migration.includes("claim_service_mode = 'broker_managed'"), 'Historical takeover migration remains unmodified; new migration supersedes ownership conversion.');
 assert(migration.includes("policy_service_source = 'external'"), 'External policy source must remain external.');
-assert(migration.includes('external_customer_snapshot'), 'Customer milestone details must be preserved as takeover evidence.');
+assert(migration.includes('external_customer_snapshot'), 'Historical takeover migration must remain available for audit and rollback.');
+assert(preserveModeMigration.includes("'claim_service_mode', v_claim.claim_service_mode::text"), 'Operations entry must return the existing mode unchanged.');
+assert(!preserveModeMigration.includes('UPDATE public.claims'), 'Entering Operations must not update the claim.');
+assert(!preserveModeMigration.includes('INSERT INTO public.claim_status_history'), 'Entering Operations must not append history.');
+assert(!preserveModeMigration.includes('INSERT INTO public.claim_stage_details'), 'Entering Operations must not change stage details.');
+assert(preserveModeMigration.includes('public.can_access_claim(auth.uid(), p_claim_id)'), 'Database must retain claim scope checks.');
+assert(preserveModeMigration.includes('public.can_update_claim_status()'), 'Database must preserve Operations permission checks.');
+assert(preserveModeRollback.includes("set claim_service_mode = 'broker_managed'"), 'Rollback must restore prior function definition.');
+assert(action.includes('["self_managed", "broker_managed"].includes'), 'The action must accept both unchanged management classifications.');
 assert(enumCastFixMigration.includes("csd.details->>'milestone_key' = cm.milestone_key::text"), 'External Claim takeover must compare milestone keys using a safe enum-to-text cast.');
 assert(customerProcessingMigration.includes("claim.policy_service_source = 'external'::public.policy_service_source"), 'Customer milestone RLS must preserve External-policy claims after Operations takeover.');
 assert(customerMilestoneRpcMigration.includes("v_claim.policy_service_source = 'external'::public.policy_service_source"), 'Customer milestone RPC must allow externally sourced claims regardless of Operations ownership mode.');
