@@ -19,4 +19,16 @@ assert.ok(spotPage.includes('className="mt-3 grid gap-x-2.5 gap-y-3'), "Input ro
 assert.ok(source.includes('completed?"bg-[#149568] text-white"'), "Completed stage indicator must be solid green with a white check");
 assert.ok(source.includes('current?"bg-[#155EEF] text-white'), "Active stage indicator remains blue");
 assert.ok(source.includes('<Check className="customer-claim-motion-check'), "Completed stage renders the check icon");
+const renewals = readFileSync("app/customer/(protected)/renewals/customer-renewals-register.tsx","utf8");
+assert.ok(source.includes('src="/assets/customer-3d-icons/claims.png"'), "Customer Claim Journey must use the bundled 3D claims artwork");
+assert.ok(source.includes('border border-white bg-white p-1'), "Customer Claim Journey icon tile must have solid white backing");
+assert.ok(!source.includes('<FolderKanban'), "Old flat folder icon must not return to Claim Journey");
+assert.ok(renewals.includes('const cardTone = selected'), "Renewal card styling must be independent of due/expired counts");
+assert.ok(renewals.includes('border-[#6050E5] bg-white'), "Selected renewal category uses a white surface with a visible selected border");
+assert.ok(renewals.includes('border-[#E2E9F5] bg-white'), "Unselected renewal category uses a white surface");
+for (const forbidden of ['bg-[#FFF0F3]', 'bg-[#FFF3F5]', 'bg-[#FFEDF1]', 'bg-[#FFECEF]']) {
+  assert.ok(!renewals.includes(forbidden), "Renewal category must not reintroduce pink/red background: " + forbidden);
+}
+assert.ok(renewals.includes('cat.due > 0 ? <span'), "Due badge must remain visible");
+assert.ok(renewals.includes('cat.expired > 0 ? <span'), "Expired badge must remain visible");
 console.log("Compact full-width customer claim journey regression passed.");
