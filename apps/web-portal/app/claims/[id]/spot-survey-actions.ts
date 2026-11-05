@@ -27,7 +27,7 @@ async function context(claimId: string) {
   const { data, error } = await access.supabase.from("claims").select("id, customer_id, current_status, accident_at, claim_service_mode, policy_service_source").eq("id", claimId).maybeSingle<ClaimForVerification>();
   if (error || !data) throw new Error(error?.message ?? "Claim not found.");
   if (data.claim_service_mode === "self_managed" && access.isPartner) {
-    throw new Error("Only authorized Operations users may manage documents for self-managed external claims.");
+    throw new Error("Only authorized Operations users may manage documents for self-managed claims.");
   }
   return { ...access, claim: data };
 }
