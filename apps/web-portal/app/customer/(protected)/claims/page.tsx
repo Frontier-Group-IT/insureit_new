@@ -5,7 +5,7 @@ import { createCustomerServerSupabaseClient } from "@/lib/auth-server";
 import { CustomerClaimLogo } from "@/components/customer-portal/customer-claim-logo";
 import { CustomerClaimsSearch } from "./customer-claims-search";
 import { INTERNAL_JOURNEY_STAGES, projectInternalClaim } from "@insureit/claim-journey";
-import { CustomerAccountTabs, EmptyCustomerState } from "@/components/customer-portal/customer-phase1";
+import { CustomerAccountTabs } from "@/components/customer-portal/customer-phase1";
 import { resolveCustomerWebScope } from "@/lib/customer-web-data";
 import {
   buildExternalClaimProjection,
@@ -174,7 +174,22 @@ export default async function CustomerClaimsPage({ searchParams }: { searchParam
               })}
             </div>
           </div>
-        ) : <div className="py-8"><EmptyCustomerState title="No matching claims" body="Try another search or status filter." /></div>}
+        ) : (
+          <div className="claims-motion-empty flex min-h-[310px] flex-col items-center justify-center px-4 py-8 text-center" role="status">
+            <img
+              src="/assets/customer-claims/empty-state.svg"
+              alt=""
+              aria-hidden="true"
+              width={560}
+              height={290}
+              className="h-auto w-[190px] max-w-full object-contain sm:w-[245px]"
+            />
+            <h3 className="mt-1 text-[15px] font-bold text-[#15315B]">{claims.length === 0 ? "No claims yet" : "No matching claims"}</h3>
+            <p className="mt-1 max-w-sm text-[12px] leading-5 text-[#71839E]">
+              {claims.length === 0 ? "Your claims will appear here once you start one." : "Try another search or status filter."}
+            </p>
+          </div>
+        )}
 
         <div className="claims-motion-pagination flex flex-wrap items-center justify-between gap-3 border-t border-[#E2E9F3] px-5 py-4 text-[12px] text-[#536681]">
           <span>Showing {filtered.length ? (page - 1) * PAGE_SIZE + 1 : 0}–{Math.min(page * PAGE_SIZE, filtered.length)} of {filtered.length}</span>
