@@ -89,8 +89,16 @@ export function CustomerRenewalsRegister({accountId,items,categories}:{
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6" role="group" aria-label="Renewal categories">
         {groups.groupList.slice(0, 6).map(cat => {
           const selected = activeCategory === cat.key;
+          const hasRenewalAlert = cat.due > 0 || cat.expired > 0;
+          const cardTone = hasRenewalAlert
+            ? selected
+              ? "border-[#DB7890] bg-[#FFF0F3] shadow-sm hover:bg-[#FFECEF]"
+              : "border-[#F2A7B5] bg-[#FFF3F5] hover:bg-[#FFEDF1]"
+            : selected
+              ? "border-[#6050E5] bg-[#F1F0FF] shadow-sm hover:bg-[#ECEAFE]"
+              : "border-[#E2E9F5] bg-white hover:bg-[#F7F8FF]";
           return <button key={cat.key} type="button" aria-pressed={selected} aria-expanded={selected} onClick={() => setActiveCategory(selected ? null : cat.key)}
-            className={`relative flex min-h-[96px] min-w-0 flex-col items-center justify-center gap-2 overflow-visible rounded-xl border px-2 py-3 text-center transition-colors hover:bg-[#F7F8FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6050E5] ${selected ? "border-[#6050E5] bg-[#F1F0FF] shadow-sm" : "border-[#E2E9F5] bg-white"}`}>
+            className={`relative flex min-h-[96px] min-w-0 flex-col items-center justify-center gap-2 overflow-visible rounded-xl border px-2 py-3 text-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6050E5] ${cardTone}`}>
             <span className="absolute right-2 top-2 flex items-center gap-1" aria-label={`Due ${cat.due}, expired ${cat.expired}`}>
               {cat.due > 0 ? <span title={`${cat.due} due renewals`} className={`${motion.countPulseDue} relative inline-flex min-h-[23px] min-w-[23px] items-center justify-center rounded-full border border-[#F29C26] bg-[#FFAF36] px-1 text-[10px] font-extrabold tabular-nums text-[#572D00]`}>{cat.due}</span> : null}
               {cat.expired > 0 ? <span title={`${cat.expired} expired renewals`} className={`${motion.countPulseExpired} relative inline-flex min-h-[23px] min-w-[23px] items-center justify-center rounded-full border border-[#DC2F46] bg-[#EF394D] px-1 text-[10px] font-extrabold tabular-nums text-white`}>{cat.expired}</span> : null}
