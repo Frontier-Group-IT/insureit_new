@@ -40,8 +40,8 @@ assert.match(partner,/console\.error\("Partner Business MIS scoped enrichment fa
 assert.match(partner,/batchCount: batch\.length/,"Log batch size, not policy IDs");
 assert.match(partner,/throw new Error\("Authorized Partner export details unavailable\."\)/,"Public errors must remain generic");
 // All Business is sent as business=all by the Overview report and should not eliminate any scoped rows.
-assert.match(partner, /const business = params\\.get\\("business"\\) \\|\\| "all";/);
-const businessFilter = partner.match(/if \\((business !== "all" && normalizedBusinessType\\(policy\\) !== business)\\) return false;/);
+assert.match(partner, /const business = params\.get\("business"\) \|\| "all";/);
+const businessFilter = partner.match(/if \((business !== "all" && normalizedBusinessType\(policy\) !== business)\) return false;/);
 assert.ok(businessFilter, "Export must treat All Business as no additional business-type filter");
 const excludesPolicy = new Function("business", "policy", "normalizedBusinessType", `return ${businessFilter[1]};`);
 for (const accountType of ["group", "group associate", "branch", "partner", "partner associate"]) {
