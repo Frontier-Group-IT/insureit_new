@@ -1,0 +1,23 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+const read = relative => readFileSync(fileURLToPath(new URL(relative, import.meta.url)), "utf8");
+const workspace = read("../components/customer-portal/customer-claim-evidence-workspace.tsx");
+const completed = read("../components/customer-portal/customer-internal-completed-journey.tsx");
+const bulk = read("../components/customer-portal/customer-claim-multiple-upload.tsx");
+const compact = read("../components/customer-portal/customer-claim-compact-document.tsx");
+
+assert.doesNotMatch(workspace, /label:"Other Documents",type:"Other Document"/, "No redundant Other Documents card");
+for (const name of ["Accident Photo","RC Copy","Insurance Copy","Driver Licence","GR / Load Bill","Accident Video"]) assert.ok(workspace.includes('label:"'+name+'"'), "Keep individual "+name+" card");
+assert.match(workspace, /normalize\(doc\.document_type\) === "otherdocument"/, "Existing bulk files remain categorized for Operations");
+assert.match(workspace, /aria-label="Multiple Documents"/, "Bulk files have dedicated section");
+assert.match(workspace, /multipleDocuments\.map\(doc =>/, "Show every previously uploaded file");
+assert.match(workspace, /customer\/claim-documents\/\$\{encodeURIComponent\(doc\.id\)\}\/open/, "Use existing scoped document open route");
+assert.match(workspace, /\(allowUpload \|\| multipleDocuments\.length > 0\)/, "Show saved bulk files even on completed read-only stages");
+assert.match(workspace, /allowUpload \? <CustomerClaimMultipleUpload/, "Upload only while edit is permitted");
+assert.match(bulk, /name="type" value="Other Document"/, "Retain original document type for verification");
+assert.match(bulk, /router\.refresh\(\)/, "Refresh document list following upload");
+assert.match(completed, /"otherdocument"/, "Completed stage must not filter out bulk uploads");
+assert.match(completed, /allowUpload=\{false\}/, "Completed stages stay read-only");
+assert.match(compact, /document_type/, "Existing individual document records remain supported");
+console.log("Customer bulk uploaded documents visible in edit and completed journey regression passed.");
