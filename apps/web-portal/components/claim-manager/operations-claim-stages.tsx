@@ -293,14 +293,14 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
     // Successful Save Details should open the next accessible step immediately.
     // This is navigation only: the server still owns stage advancement and verification.
     const nextKey = nextStageKeyFor("spot_intimation");
-    const canOpenNext = unrestrictedStageEditing || journeyComplete || activeIndex >= 1 || externalVisualCompletedKeys.has("spot_status");
+    const canOpenNext = unrestrictedStageEditing || journeyComplete || activeIndex >= 1 || (externalCustomerMilestones ?? []).some(milestone => milestone.key === "spot_status" && completedExternalMilestoneStatuses.has(milestone.status));
     if (nextKey && canOpenNext) {
       setSelectedKey(nextKey);
       router.replace(`/claims/${claimId}?stage=${nextKey}`);
       return;
     }
     router.refresh();
-  }, [claimId, router, spotState.ok, unrestrictedStageEditing, journeyComplete, activeIndex, externalVisualCompletedKeys]);
+  }, [claimId, router, spotState.ok, unrestrictedStageEditing, journeyComplete, activeIndex, hasExternalVisualProgress]);
 
   return (
     <section className="operations-claim-motion overflow-hidden rounded-2xl border border-[#DFE8F4] bg-white shadow-[0_8px_22px_rgba(7,29,73,0.035)]">
