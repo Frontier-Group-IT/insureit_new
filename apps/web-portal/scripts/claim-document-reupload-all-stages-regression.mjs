@@ -23,7 +23,7 @@ assert.doesNotMatch(verificationButton, /<RefreshCw/, "Circular refresh icon is 
 assert.match(requestButton, /createPortal\(/, "The request dialog must escape document-card stacking contexts.");
 assert.match(requestButton, /document\.body/, "The request dialog must be attached to document.body.");
 assert.match(requestButton, /requestSpotSurveyDocumentReupload\(formData\)/, "The re-upload dialog must submit the existing authorized server action.");
-assert.match(server, /data\.claim_service_mode !== "broker_managed" && \(data\.policy_service_source !== "external" \|\| access\.isPartner\)/, "External self-managed document requests must be authorized only for Operations, not Partners.");
+assert.match(server, /data\.claim_service_mode === "self_managed" && access\.isPartner/, "All self-managed document requests must remain restricted to authorized Operations, never Partners.");
 assert.match(server, /\.eq\("id", documentId\)\.eq\("claim_id", claimId\)/, "Document re-upload must be claim-scoped.");
 assert.match(server, /event_type: "claim_document_reuploaded"/, "Re-upload requests must retain Customer activity notification behavior.");
 assert.match(stage3Workspace, /document\.verification_status !== "rejected" && \(document\.verification_status === "verified" \|\| Boolean\(verification\?\.is_valid\)\)/, "Stage 3 header counts must respect rejected document status.");
