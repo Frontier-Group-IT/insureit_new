@@ -9,6 +9,7 @@ import { buildIntermediaryDocumentSlots } from "@/lib/intermediary-document-slot
 import { loadPolicyIntakeDuplicateMatches } from "@/lib/policy-intake-duplicate";
 import type { PolicyIntakeOcrField } from "@/app/policy-intakes/ocr-actions";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { loadScopedDashboardRows } from "@/lib/dashboard-scoped-query-batches";
 
 type ProfileLike = { id: string; role?: string | null };
 
@@ -334,15 +335,13 @@ export async function getDashboardCurrentData(
     : Promise.resolve({ data: [] as VehicleRow[], error: null });
 
   const claimRequest = access.viewClaims && claimCustomerIds?.length !== 0
-    ? (() => {
-        let query = admin
-          .from("claims")
+    ? claimCustomerIds === null
+      ? admin.from("claims")
           .select("id,vehicle_id,claim_no,current_status,created_at,updated_at,assistance_status,claim_service_mode,policy_service_source,estimated_loss,approved_amount,settlement_amount,customers(company_name,contact_name),vehicles(vehicle_no)")
-          .order("updated_at", { ascending: false })
-          .limit(10000);
-        if (claimCustomerIds !== null) query = query.in("customer_id", claimCustomerIds);
-        return query.returns<ClaimRow[]>();
-      })()
+          .order("updated_at", { ascending: false }).limit(10000).returns<ClaimRow[]>()
+      : loadScopedDashboardRows(claimCustomerIds, (batch, from, to) => admin.from("claims")
+          .select("id,vehicle_id,claim_no,current_status,created_at,updated_at,assistance_status,claim_service_mode,policy_service_source,estimated_loss,approved_amount,settlement_amount,customers(company_name,contact_name),vehicles(vehicle_no)")
+          .in("customer_id", batch).order("id").range(from, to).returns<ClaimRow[]>())
     : Promise.resolve({ data: [] as ClaimRow[], error: null });
 
   const intermediaryRequest = access.viewIntermediaries && intermediaryIds?.length !== 0
@@ -396,7 +395,7 @@ export async function getDashboardCurrentData(
 
   const policies = policyResult.data ?? [];
   const vehicles = vehicleResult.data ?? [];
-  const claims = claimResult.data ?? [];
+  const claims = [...(claimResult.data ?? [])].sort((a, b) => b.updated_at.localeCompare(a.updated_at));
   const intermediaries = intermediaryResult.data ?? [];
   const intakes = intakeResult.data ?? [];
 
@@ -578,38 +577,28 @@ export async function getDashboardCurrentData(
     let pendingDocuments = 0;
 
     const [financialResult, stageDetailResult, documentResult] = await Promise.all([
-      financialClaimIds.length
-        ? admin
-            .from("claim_financials")
-            .select("claim_id,estimate_amount,approved_amount,bill_amount,do_amount,payment_received_amount")
-            .in("claim_id", financialClaimIds)
-            .returns<ClaimFinancialRow[]>()
-        : Promise.resolve({ data: [] as ClaimFinancialRow[], error: null }),
-      internalOpenIds.length
-        ? admin
-            .from("claim_stage_details")
-            .select("claim_id,details,created_at")
-            .in("claim_id", internalOpenIds)
-            .order("created_at", { ascending: false })
-            .limit(5000)
-            .returns<ClaimStageDetailRow[]>()
-        : Promise.resolve({ data: [] as ClaimStageDetailRow[], error: null }),
-      openIds.length
-        ? admin
-            .from("claim_documents")
-            .select("id", { count: "exact", head: true })
-            .in("claim_id", openIds)
-            .in("verification_status", ["pending", "rejected"])
-        : Promise.resolve({ count: 0, error: null }),
+      loadScopedDashboardRows(financialClaimIds, (batch, from, to) => admin
+        .from("claim_financials")
+        .select("claim_id,estimate_amount,approved_amount,bill_amount,do_amount,payment_received_amount")
+        .in("claim_id", batch).order("claim_id").range(from, to)
+        .returns<ClaimFinancialRow[]>()),
+      loadScopedDashboardRows(internalOpenIds, (batch, from, to) => admin
+        .from("claim_stage_details").select("claim_id,details,created_at")
+        .in("claim_id", batch).order("id").range(from, to)
+        .returns<ClaimStageDetailRow[]>()),
+      loadScopedDashboardRows(openIds, (batch, from, to) => admin
+        .from("claim_documents").select("id")
+        .in("claim_id", batch).in("verification_status", ["pending", "rejected"])
+        .order("id").range(from, to).returns<Array<{ id: string }>>()),
     ]);
     if (financialResult.error) warnings.push("Claim financial exposure could not be refreshed.");
     else financialRows = financialResult.data ?? [];
     if (stageDetailResult.error) warnings.push("Claim stage amounts could not be refreshed.");
     if (documentResult.error) warnings.push("Claim document review count could not be refreshed.");
-    else pendingDocuments = documentResult.count ?? 0;
+    else pendingDocuments = documentResult.data?.length ?? 0;
 
     const financialByClaim = new Map(financialRows.map((row) => [row.claim_id, row]));
-    const stageAmountsByClaim = buildLatestClaimStageAmounts(stageDetailResult.data ?? []);
+    const stageAmountsByClaim = buildLatestClaimStageAmounts([...(stageDetailResult.data ?? [])].sort((a, b) => b.created_at.localeCompare(a.created_at)));
     const actionPendingVehicles = new Set(
       openClaims.map((row) => row.vehicle_id).filter((vehicleId): vehicleId is string => Boolean(vehicleId)),
     ).size;
@@ -658,7 +647,9 @@ export async function getDashboardCurrentData(
       taskClaimError = Boolean(result.error);
       taskClaimIds = (result.data ?? []).map((row) => row.id);
     } else if (taskCustomerIds.length) {
-      const result = await admin.from("claims").select("id").in("customer_id", taskCustomerIds).limit(15000).returns<Array<{ id: string }>>();
+      const result = await loadScopedDashboardRows(taskCustomerIds, (batch, from, to) => admin
+        .from("claims").select("id").in("customer_id", batch).order("id")
+        .range(from, to).returns<Array<{ id: string }>>());
       taskClaimError = Boolean(result.error);
       taskClaimIds = (result.data ?? []).map((row) => row.id);
     }
@@ -666,11 +657,10 @@ export async function getDashboardCurrentData(
     if (taskClaimError) warnings.push("Task scope could not be refreshed.");
     else if (!taskClaimIds.length) tasks = { open: 0, overdue: 0 };
     else {
-      const taskResult = await admin
-        .from("claim_tasks")
-        .select("id,status,due_date")
-        .in("claim_id", taskClaimIds)
-        .returns<Array<{ id: string; status: string; due_date: string | null }>>();
+      const taskResult = await loadScopedDashboardRows(taskClaimIds, (batch, from, to) => admin
+        .from("claim_tasks").select("id,status,due_date").in("claim_id", batch)
+        .order("id").range(from, to)
+        .returns<Array<{ id: string; status: string; due_date: string | null }>>());
       if (taskResult.error) warnings.push("Task totals could not be refreshed.");
       else {
         const openRows = (taskResult.data ?? []).filter((row) => ["open", "in_progress"].includes(row.status));
@@ -887,15 +877,18 @@ async function loadDashboardVehicles(
   admin: ReturnType<typeof createSupabaseAdminClient>,
   customerIds: string[] | null,
 ) {
-  const rows: VehicleRow[] = [];
-  for (let from = 0; ; from += dashboardPageSize) {
-    let query = admin
+  if (customerIds !== null) {
+    return loadScopedDashboardRows(customerIds, (batch, from, to) => admin
       .from("vehicles")
       .select("id,customer_id,vehicle_no,vehicle_type,registration_status,authbridge_verified")
-      .order("id", { ascending: true })
-      .range(from, from + dashboardPageSize - 1);
-    if (customerIds !== null) query = query.in("customer_id", customerIds);
-    const result = await query.returns<VehicleRow[]>();
+      .in("customer_id", batch).order("id").range(from, to).returns<VehicleRow[]>());
+  }
+  const rows: VehicleRow[] = [];
+  for (let from = 0; ; from += dashboardPageSize) {
+    const result = await admin.from("vehicles")
+      .select("id,customer_id,vehicle_no,vehicle_type,registration_status,authbridge_verified")
+      .order("id", { ascending: true }).range(from, from + dashboardPageSize - 1)
+      .returns<VehicleRow[]>();
     if (result.error) return { data: null, error: result.error };
     const page = result.data ?? [];
     rows.push(...page);

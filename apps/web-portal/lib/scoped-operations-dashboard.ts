@@ -1,5 +1,6 @@
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import type { OperationsDashboardData } from "@/lib/operations-dashboard";
+import { loadScopedDashboardRows } from "@/lib/dashboard-scoped-query-batches";
 
 const closedClaimStatuses = ["Claim Complete", "Settled", "Closed"];
 const openTaskStatuses = ["open", "in_progress"];
@@ -12,55 +13,52 @@ export async function getScopedOperationsDashboardData(customerIds: string[]): P
   const in45Days = dateKey(addDays(new Date(), 45));
   const in30DaysAgo = new Date(Date.now() - 30 * 86400000).toISOString();
 
-  const [{ data: customers, error: customersError }, { data: claims, error: claimsError }] = await Promise.all([
-    admin
+  const [customersResult, claimsResult] = await Promise.all([
+    loadScopedDashboardRows(customerIds, (batch, from, to) => admin
       .from("customers")
       .select("id,onboarding_status,created_at,partner_type")
-      .in("id", customerIds)
-      .returns<Array<{ id: string; onboarding_status: string | null; created_at: string; partner_type: string | null }>>(),
-    admin
+      .in("id", batch)
+      .order("id", { ascending: true })
+      .range(from, to)
+      .returns<Array<{ id: string; onboarding_status: string | null; created_at: string; partner_type: string | null }>>()),
+    loadScopedDashboardRows(customerIds, (batch, from, to) => admin
       .from("claims")
       .select("id,claim_no,current_status,created_at,updated_at,customer_id,customers(company_name,contact_name),vehicles(vehicle_no)")
-      .in("customer_id", customerIds)
-      .order("updated_at", { ascending: false })
+      .in("customer_id", batch)
+      .order("id", { ascending: true })
+      .range(from, to)
       .returns<Array<{
-        id: string;
-        claim_no: string;
-        current_status: string;
-        created_at: string;
-        updated_at: string;
-        customer_id: string;
+        id: string; claim_no: string; current_status: string; created_at: string;
+        updated_at: string; customer_id: string;
         customers: { company_name: string | null; contact_name: string } | null;
         vehicles: { vehicle_no: string } | null;
-      }>>(),
+      }>>()),
   ]);
-
+  const { data: customers, error: customersError } = customersResult;
+  const { data: claims, error: claimsError } = claimsResult;
   const claimIds = (claims ?? []).map((claim) => claim.id);
   const scopedCustomerIds = (customers ?? []).map((customer) => customer.id);
 
   const [vehicles, policies, claimTasks, claimDocuments, activity] = await Promise.all([
-    admin.from("vehicles").select("id", { count: "exact", head: true }).in("customer_id", scopedCustomerIds),
-    admin
-      .from("policies")
-      .select("id,end_date")
-      .in("customer_id", scopedCustomerIds)
-      .returns<Array<{ id: string; end_date: string }>>(),
-    claimIds.length
-      ? admin.from("claim_tasks").select("id,status,due_date").in("claim_id", claimIds).returns<Array<{ id: string; status: string; due_date: string | null }>>()
-      : Promise.resolve({ data: [], error: null }),
-    admin
-      .from("claim_documents")
-      .select("id,verification_status")
-      .in("customer_id", scopedCustomerIds)
-      .in("verification_status", ["pending", "rejected"])
-      .returns<Array<{ id: string; verification_status: string }>>(),
-    admin
-      .from("customer_activity_events")
-      .select("id")
-      .in("customer_id", scopedCustomerIds)
-      .in("status", ["new", "seen", "in_progress"])
-      .in("priority", ["high", "critical"])
-      .returns<Array<{ id: string }>>(),
+    loadScopedDashboardRows(scopedCustomerIds, (batch, from, to) => admin
+      .from("vehicles").select("id").in("customer_id", batch).order("id").range(from, to)
+      .returns<Array<{ id: string }>>()),
+    loadScopedDashboardRows(scopedCustomerIds, (batch, from, to) => admin
+      .from("policies").select("id,end_date").in("customer_id", batch).order("id").range(from, to)
+      .returns<Array<{ id: string; end_date: string }>>()),
+    loadScopedDashboardRows(claimIds, (batch, from, to) => admin
+      .from("claim_tasks").select("id,status,due_date").in("claim_id", batch).order("id").range(from, to)
+      .returns<Array<{ id: string; status: string; due_date: string | null }>>()),
+    loadScopedDashboardRows(scopedCustomerIds, (batch, from, to) => admin
+      .from("claim_documents").select("id,verification_status")
+      .in("customer_id", batch).in("verification_status", ["pending", "rejected"])
+      .order("id").range(from, to)
+      .returns<Array<{ id: string; verification_status: string }>>()),
+    loadScopedDashboardRows(scopedCustomerIds, (batch, from, to) => admin
+      .from("customer_activity_events").select("id")
+      .in("customer_id", batch).in("status", ["new", "seen", "in_progress"])
+      .in("priority", ["high", "critical"]).order("id").range(from, to)
+      .returns<Array<{ id: string }>>()),
   ]);
 
   const errors = [
@@ -94,7 +92,7 @@ export async function getScopedOperationsDashboardData(customerIds: string[]): P
       customers: customerRows.length,
       activeCustomers: customerRows.filter((customer) => customer.onboarding_status === "active").length,
       newCustomers: customerRows.filter((customer) => Date.parse(customer.created_at) >= Date.parse(in30DaysAgo)).length,
-      vehicles: vehicles.count ?? 0,
+      vehicles: vehicles.data?.length ?? 0,
       policies: policyRows.length,
       activePolicies,
       expiringPolicies,
@@ -121,7 +119,7 @@ export async function getScopedOperationsDashboardData(customerIds: string[]): P
       highPriorityActivity: activity.data?.length ?? 0,
     },
     recentApplications: [],
-    latestClaims: claimRows.slice(0, 5).map((claim) => ({
+    latestClaims: [...claimRows].sort((a, b) => b.updated_at.localeCompare(a.updated_at)).slice(0, 5).map((claim) => ({
       id: claim.id,
       claim_no: claim.claim_no,
       current_status: claim.current_status,
