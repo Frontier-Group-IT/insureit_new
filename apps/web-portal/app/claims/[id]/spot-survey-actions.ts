@@ -361,8 +361,10 @@ export async function classifySpotSurveyAttachment(formData: FormData): Promise<
     const { profile, claim, supabase, isPartner } = await context(claimId);
     const { data: document, error: documentError } = await supabase.from("claim_documents").select("id, document_type, file_name").eq("id", documentId).eq("claim_id", claimId).maybeSingle<{ id: string; document_type: string; file_name: string }>();
     if (documentError || !document) throw new Error(documentError?.message ?? "Document not found.");
-    if (document.document_type !== "Spot Intimation Attachment") throw new Error("This attachment has already been classified.");
-    const { error: updateError } = await supabase.from("claim_documents").update({ document_type: documentType }).eq("id", documentId).eq("claim_id", claimId).eq("document_type", "Spot Intimation Attachment");
+    // Customer bulk uploads use "Other Document"; Operations bulk uploads use "Spot Intimation Attachment".
+    // Both must be explicitly classified before per-category verification; never update a reviewed category.
+    if (!["Spot Intimation Attachment", "Other Document"].includes(document.document_type)) throw new Error("This attachment has already been classified.");
+    const { error: updateError } = await supabase.from("claim_documents").update({ document_type: documentType }).eq("id", documentId).eq("claim_id", claimId).eq("document_type", document.document_type);
     if (updateError) throw new Error(updateError.message);
     await supabase.from("claim_status_history").insert({ claim_id: claimId, from_status: claim.current_status, to_status: claim.current_status, notes: `${document.file_name} classified as ${documentType} during spot verification.`, changed_by: profile.id });
     revalidateClaimPaths(claimId);

@@ -148,7 +148,7 @@ export default async function CustomerSpotIntimation({searchParams}:{searchParam
       <div className="-mx-4 -mt-4 border-b border-[#D8E3F1] px-4 py-3 sm:-mx-5 sm:-mt-5 sm:px-5">
         <h2 className="text-[17px] font-bold text-[#112B51]">Accident &amp; Spot Intimation Details</h2>
       </div>
-      <div className="grid gap-x-2.5 gap-y-3 pt-1 md:grid-cols-2 xl:grid-cols-[1.2fr_1.2fr_1.15fr_.8fr_1.35fr]">
+      <div className="mt-3 grid gap-x-2.5 gap-y-3 md:grid-cols-2 xl:grid-cols-[1.2fr_1.2fr_1.15fr_.8fr_1.35fr]">
         <label className="min-w-0">
           <span className="block text-[10px] font-bold uppercase tracking-[.025em] text-[#245BB2]">Accident Date &amp; Time <span className="text-rose-500">*</span></span>
           <span className="mt-2 flex min-w-0 overflow-hidden rounded-lg border border-[#CAD8EA] bg-white">
