@@ -67,6 +67,8 @@ jobs:
         run: node scripts/partner-business-period-filter-regression.mjs
       - name: Partner Reports Custom filtering and skeleton loading regression
         run: node scripts/partner-reports-custom-loading-regression.mjs
+      - name: Partner Reports ascending Custom date bounds regression
+        run: node scripts/partner-reports-custom-bounds-regression.mjs
       - name: Partner Reports RM calendar auto-filter regression
         run: node scripts/partner-reports-rm-calendar-regression.mjs
       - name: RM Performance inline Custom calendar regression
