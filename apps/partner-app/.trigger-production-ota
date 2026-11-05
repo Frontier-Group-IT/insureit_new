@@ -1,6 +1,6 @@
 Partner production OTA trigger
-release=partner-claim-tracker-branch-payout-pr-3995
-merged_commit=c9fdb8e8916357df9c82ee9bd722c9ccf6be5fb0
+release=partner-insurer-whole-rupees-pr-4054
+merged_commit=68708e08acbb9374dd7a2c111698191d04fd105e
 channel=production
 runtime=0.2.0
-requested=2026-11-04
+requested=2026-11-05
