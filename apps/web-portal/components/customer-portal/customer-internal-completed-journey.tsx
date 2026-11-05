@@ -25,7 +25,7 @@ const datetime = (value: unknown) => {
   }).format(date);
 };
 const normalize = (value: string) => value.toLowerCase().replace(/[^a-z0-9]/g, "");
-const spotTypes = new Set(["accidentphoto","spotphoto","accidentphotos","rccopy","insurancecopy","driverlicence","grloadbill","accidentvideo"]);
+const spotTypes = new Set(["accidentphoto","spotphoto","accidentphotos","rccopy","insurancecopy","driverlicence","grloadbill","accidentvideo","otherdocument","incidentvoicenote","audio","voicenote","incidentaudio"]);
 
 export function CustomerInternalCompletedJourney({
   claimId, accountId, completedCount, milestones, documents, spot,
