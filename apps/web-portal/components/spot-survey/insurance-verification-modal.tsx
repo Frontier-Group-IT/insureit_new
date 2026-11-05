@@ -19,6 +19,7 @@ export function InsuranceVerificationModalButton({
   policyStartDate,
   policyEndDate,
   initialDetails = null,
+  reverify = false,
 }: {
   claimId: string;
   documentId: string;
@@ -26,6 +27,7 @@ export function InsuranceVerificationModalButton({
   policyStartDate?: string | null;
   policyEndDate?: string | null;
   initialDetails?: Record<string, unknown> | null;
+  reverify?: boolean;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -105,6 +107,7 @@ export function InsuranceVerificationModalButton({
           const capacityValue = insurance.capacity.trim();
           formData.set("claimId", claimId);
           formData.set("documentId", documentId);
+          if (reverify) formData.set("reverify", "true");
           formData.set("vehicle_capacity_value", capacityValue);
           formData.set("vehicle_capacity_label", capacity?.label ?? "Vehicle Capacity");
           formData.set("vehicle_capacity_unit", capacity?.unit ?? "");
@@ -161,7 +164,7 @@ export function InsuranceVerificationModalButton({
   return (
     <div>
       <ClaimStageErrorDialog message={result && !result.ok ? result.message ?? "Verification failed." : capacityError || null} onClose={() => { if (result && !result.ok) setResult(null); else setCapacityError(""); }} />
-      <button type="button" onClick={() => { setResult(null); setOpen(true); }} className={`h-8 w-full rounded-md border text-[12px] font-semibold ${saved ? "border-green-300 bg-green-50 text-green-700" : "border-[#16A36A] bg-white text-[#16895C] hover:bg-[#F2FBF7]"}`}>{saved ? "Verified" : "Verify"}</button>
+      <button type="button" onClick={() => { setResult(null); setOpen(true); }} className={`h-8 w-full rounded-md border text-[12px] font-semibold ${saved ? "border-green-300 bg-green-50 text-green-700" : "border-[#16A36A] bg-white text-[#16895C] hover:bg-[#F2FBF7]"}`}>{reverify || saved ? "Verified" : "Verify"}</button>
       {open && typeof document !== "undefined" ? createPortal(modal, document.body) : null}
     </div>
   );

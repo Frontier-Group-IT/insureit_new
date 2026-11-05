@@ -33,7 +33,7 @@ async function context(claimId: string) {
 }
 
 function collectVerificationDetails(formData: FormData) {
-  const ignored = new Set(["claimId", "documentId"]);
+  const ignored = new Set(["claimId", "documentId", "reverify"]);
   const details: Record<string, string> = {};
   for (const [key, value] of formData.entries()) {
     if (ignored.has(key) || typeof value !== "string") continue;
@@ -154,6 +154,9 @@ export async function verifySpotSurveyDocument(formData: FormData): Promise<Acti
     const claimId = String(formData.get("claimId") ?? "").trim();
     if (!documentIds.length || !claimId) throw new Error("Missing claim or document id.");
     const { profile, claim, supabase, isPartner } = await context(claimId);
+    const reverify = formData.get("reverify") === "true";
+    // Only an explicitly requested, single-document Operations review may repeat a verified result.
+    if (reverify && (isPartner || documentIds.length !== 1)) throw new Error("Re-verification is available to Operations for one document at a time.");
     const rawDetails = collectVerificationDetails(formData);
     const incidentDate = incidentDateOnly(claim.accident_at);
     const { data: selectedDocuments, error: documentError } = await supabase.from("claim_documents").select("id, document_type, verification_status").eq("claim_id", claimId).in("id", documentIds).returns<ClaimDocumentStatus[]>();
@@ -163,7 +166,8 @@ export async function verifySpotSurveyDocument(formData: FormData): Promise<Acti
     const documents = documentIds.map((id) => byId.get(id)).filter((document): document is ClaimDocumentStatus => Boolean(document));
     if (new Set(documents.map((document) => verificationFamilyForDocument(document.document_type))).size !== 1) throw new Error("Selected files must belong to the same document category.");
     if (documents.some((document) => document.verification_status === "rejected")) throw new Error("Replace rejected files before selecting them for verification.");
-    const documentsToVerify = documents.filter((document) => document.verification_status !== "verified");
+    if (reverify && documents[0]?.verification_status !== "verified") throw new Error("Only previously verified documents can be re-verified.");
+    const documentsToVerify = reverify ? documents : documents.filter((document) => document.verification_status !== "verified");
     if (!documentsToVerify.length) return { ok: true, message: "Selected documents are already verified." };
 
     const verifiedAt = new Date().toISOString();
@@ -190,11 +194,11 @@ export async function verifySpotSurveyDocument(formData: FormData): Promise<Acti
     }
     const { error: verificationError } = await supabase.from("claim_document_verifications").insert(attempts.map((attempt) => ({ claim_id: claimId, document_id: attempt.document.id, document_type: attempt.document.document_type, verification_type: verificationTypeForDocument(attempt.document.document_type), incident_date: incidentDate, is_valid: true, invalid_reason: null, details: attempt.detailsPayload, verified_by: profile.id })));
     if (verificationError) throw new Error(verificationError.message);
-    await advanceAfterInitialDocumentsVerified(supabase, claim, profile.id);
+    if (!reverify) await advanceAfterInitialDocumentsVerified(supabase, claim, profile.id);
     const documentLabel = documentsToVerify[0]?.document_type ?? "Document";
-    await supabase.from("claim_status_history").insert({ claim_id: claimId, from_status: claim.current_status, to_status: claim.current_status, notes: `${documentsToVerify.length} ${documentLabel} file${documentsToVerify.length === 1 ? "" : "s"} verified during spot survey.`, changed_by: profile.id });
+    await supabase.from("claim_status_history").insert({ claim_id: claimId, from_status: claim.current_status, to_status: claim.current_status, notes: reverify ? `${documentLabel} document re-verified by Operations.` : `${documentsToVerify.length} ${documentLabel} file${documentsToVerify.length === 1 ? "" : "s"} verified during spot survey.`, changed_by: profile.id });
     revalidateClaimPaths(claimId);
-    return { ok: true, message: `${documentsToVerify.length} document${documentsToVerify.length === 1 ? "" : "s"} verified successfully.` };
+    return { ok: true, message: reverify ? "Document re-verified successfully." : `${documentsToVerify.length} document${documentsToVerify.length === 1 ? "" : "s"} verified successfully.` };
   } catch (error) {
     console.error("verifySpotSurveyDocument failed", error);
     return { ok: false, message: error instanceof Error ? error.message : "Verification failed." };

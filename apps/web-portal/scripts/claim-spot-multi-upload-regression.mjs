@@ -25,6 +25,27 @@ assert.match(workspace, /documents\.length\} uploaded file/, "All loaded claim d
 assert.match(bulkVerificationGroup, /useState\(true\)/, "Multiple uploaded document rows must be expanded initially.");
 assert.match(bulkVerificationGroup, /\{item\.documents\.length\} files/, "Multi-file groups must show their file count.");
 
+
+const verificationModal = await readFile(new URL("../components/spot-survey/document-verification-modal-v3.tsx", import.meta.url), "utf8");
+
+// Verified statuses must open a scoped re-verification UI without acting on every file in the category.
+assert.match(bulkVerificationGroup, /allVerified && hasSingleFile/, "Single-file Verified status must be clickable.");
+assert.match(bulkVerificationGroup, /reverify\s+prefillDetails=/, "Verified file rows must have an exact-document reverify action.");
+assert.match(bulkVerificationGroup, /documentIds=\{\[item\.documents\[0\]\.id\]\}/, "Single-file Verified action must target exactly one document.");
+assert.match(bulkVerificationGroup, /allVerified && hasMultipleFiles/, "Multiple-file Verified category must require a file choice.");
+assert.match(verificationAction, /reverify\?: boolean/, "Only explicit re-verification may repeat a reviewed file.");
+assert.match(verificationAction, /reverify=\{reverify\}/, "Verification modal must receive the reverify flag.");
+assert.match(verificationModal, /if \(reverify\) formData\.set\("reverify", "true"\)/, "Verification form must send explicit reverify intent.");
+assert.match(actions, /reverify && \(isPartner \|\| documentIds\.length !== 1\)/, "Backend must restrict reverify to Operations and one document.");
+assert.match(actions, /documents\[0\]\?\.verification_status !== "verified"/, "Reverify only previously verified documents.");
+assert.match(actions, /const documentsToVerify = reverify \? documents :/, "Reverify must not silently skip already verified files.");
+assert.match(actions, /if \(!reverify\) await advanceAfterInitialDocumentsVerified/, "Reverify must not advance claim stage.");
+assert.match(actions, /Document re-verified successfully/, "Reverify must return a distinct success message.");
+assert.match(actions, /claim_document_verifications"\)\.insert\(attempts\.map/, "Fresh verification review must append to audit history.");
+assert.match(verificationModal, /max-h-\[calc\(100dvh-24px\)\]/, "Modal must stay inside viewport.");
+assert.match(verificationModal, /sm:grid-cols-\[32px_minmax\(0,1fr\)_160px_130px\]/, "Six RC expiry fields must use compact desktop rows.");
+assert.match(verificationModal, /min-h-0 flex-1 overflow-y-auto/, "Small screens must retain accessible scrolling.");
+
 // Header displays seven separate fields in a single desktop row. Removed data still belongs to the claim record.
 for (const removed of ["Claim Status", "Spot Intimation Date & Time", "Insurer", "Make & Model"]) {
   assert.doesNotMatch(workspace, new RegExp('<Info label="' + removed + '"'), removed + " must not reappear in navy summary");
