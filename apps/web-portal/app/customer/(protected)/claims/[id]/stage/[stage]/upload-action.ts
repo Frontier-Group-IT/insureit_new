@@ -89,3 +89,64 @@ export async function uploadCustomerClaimDocument(_previous:CustomerClaimUploadS
   return {error:null,uploaded:lastUploaded,uploadedCount};
 
 }
+
+/**
+ * Video files may be up to 50 MB, above the 25 MB server-action request limit.
+ * Only signed uploads for the authenticated customer's current Stage 1 claim
+ * are permitted. No document is registered until uploaded bytes are verified.
+ */
+export async function prepareCustomerClaimBulkVideo(accountId:string,claimId:string,stage:string,file:{name:string;size:number;type:string}) {
+  try {
+    if(stage!=="spot_intimation")throw new Error("This video uploader is only available in Spot Intimation.");
+    if(!/\.(mp4|mov|webm)$/i.test(file.name)||!["video/mp4","video/quicktime","video/webm"].includes(file.type)||file.size<=0||file.size>50*1024*1024)
+      throw new Error("Select a supported video file no larger than 50 MB.");
+    const {account}=await resolveCustomerWebScope(accountId);
+    const {claim,milestones,internal_projection}=await loadCustomerClaimDetail(account.id,claimId);
+    if(claim.claim_service_mode==="broker_managed"&&!claim.external_policy_id &&
+      ((internal_projection?.completedStageCount??0)>=2||milestones.some(item=>item.milestone_key==="claim_intimation"&&["completed","not_applicable"].includes(item.milestone_status))))
+      throw new Error("Claim Intimation (Stage 2) is complete. Stage 1 documents are locked.");
+    if(claim.claim_service_mode==="broker_managed"&&["Settled","Closed","Claim Complete"].includes(claim.current_status))
+      throw new Error("Completed managed claims cannot accept new customer documents.");
+    await getCustomerWebSession();
+    const ext=file.name.split(".").pop()!.toLowerCase();
+    const path=account.id+"/"+claim.id+"/bulk-video/"+crypto.randomUUID()+"."+ext;
+    const db=createSupabaseAdminClient();
+    const signed=await db.storage.from("claim-documents").createSignedUploadUrl(path,{upsert:false});
+    if(signed.error||!signed.data?.token)throw new Error("Unable to prepare video upload.");
+    return {ok:true,path,token:signed.data.token};
+  } catch(error) {return {ok:false,error:error instanceof Error?error.message:"Unable to prepare video upload."};}
+}
+
+export async function finalizeCustomerClaimBulkVideo(accountId:string,claimId:string,stage:string,path:string,file:{name:string;size:number;type:string}) {
+  try {
+    if(stage!=="spot_intimation")throw new Error("Invalid upload stage.");
+    const {account}=await resolveCustomerWebScope(accountId);
+    const {claim,milestones,internal_projection}=await loadCustomerClaimDetail(account.id,claimId);
+    if(claim.claim_service_mode==="broker_managed"&&!claim.external_policy_id &&
+      ((internal_projection?.completedStageCount??0)>=2||milestones.some(item=>item.milestone_key==="claim_intimation"&&["completed","not_applicable"].includes(item.milestone_status))))
+      throw new Error("Claim Intimation (Stage 2) is complete. Stage 1 documents are locked.");
+    if(claim.claim_service_mode==="broker_managed"&&["Settled","Closed","Claim Complete"].includes(claim.current_status))
+      throw new Error("Completed managed claims cannot accept new customer documents.");
+    const session=await getCustomerWebSession();
+    const folder=account.id+"/"+claim.id+"/bulk-video";
+    const basename=path.slice(folder.length+1);
+    if(!path.startsWith(folder+"/")||!(/^[a-f0-9-]{36}\.(mp4|mov|webm)$/i.test(basename))||
+       !/\.(mp4|mov|webm)$/i.test(file.name)||!["video/mp4","video/quicktime","video/webm"].includes(file.type)||
+       file.size<=0||file.size>50*1024*1024)throw new Error("Invalid video upload.");
+    const db=createSupabaseAdminClient();
+    const objects=await db.storage.from("claim-documents").list(folder,{search:basename,limit:10});
+    const object=objects.data?.find(item=>item.name===basename);
+    if(objects.error||!object)throw new Error("Uploaded video could not be verified.");
+    const actualSize=Number(object.metadata?.size);
+    if(!Number.isFinite(actualSize)||actualSize!==file.size)throw new Error("Uploaded video size does not match the selected file.");
+    const exists=await db.from("claim_documents").select("id").eq("claim_id",claim.id).eq("customer_id",account.id).eq("storage_path",path).maybeSingle();
+    if(exists.error||exists.data)throw new Error("Video already registered or cannot be checked.");
+    const saved=await db.from("claim_documents").insert({
+      claim_id:claim.id,customer_id:account.id,document_type:"Other Document",
+      file_name:file.name.slice(0,180),storage_bucket:"claim-documents",storage_path:path,
+      mime_type:file.type,file_size:actualSize,uploaded_by:session.user.id,
+    }).select("id").single();
+    if(saved.error||!saved.data)throw new Error("Unable to register uploaded video.");
+    return {ok:true};
+  } catch(error) {return {ok:false,error:error instanceof Error?error.message:"Video upload failed."};}
+}
