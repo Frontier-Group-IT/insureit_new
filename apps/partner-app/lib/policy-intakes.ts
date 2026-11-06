@@ -63,36 +63,18 @@ export type PartnerPolicyIntakeUploadProgress = {
   percent?: number;
 };
 
-export async function listPartnerPolicyIntakes(): Promise<IntakeListResponse> {
-  // The API returns 25 rows by default (maximum 50 per request). A single
-  // request silently hides older/completed submissions from the native app.
-  const pageSize = 50;
-  let offset = 0;
-  let total = 0;
-  const intakes: PartnerPolicyIntake[] = [];
-  const seen = new Set<string>();
-  let firstPage: IntakeListResponse | null = null;
+export const POLICY_INTAKE_PAGE_SIZE = 50;
 
-  do {
-    const page = await apiRequest<IntakeListResponse>(`/api/partner/policy-intakes?filter=all&limit=${pageSize}&offset=${offset}`);
-    if (!firstPage) firstPage = page;
-    const items = Array.isArray(page.intakes) ? page.intakes : [];
-    for (const intake of items) {
-      if (!seen.has(intake.id)) {
-        seen.add(intake.id);
-        intakes.push(intake);
-      }
-    }
-    total = typeof page.total === 'number' ? page.total : offset + items.length;
-    offset += items.length;
-    // Do not treat a short page as the end while the server reports more records.
-    if (!items.length || offset >= total) break;
-  } while (true);
-
-  if (offset < total || intakes.length !== total) {
-    throw new Error("Policy Intake list is incomplete. Pull down to retry; no records have been changed.");
+/** Read a single permission-scoped page. Never block initial rendering on older pages. */
+export async function listPartnerPolicyIntakesPage(offset = 0): Promise<IntakeListResponse> {
+  if (!Number.isSafeInteger(offset) || offset < 0) throw new Error('Invalid Policy Intake page offset.');
+  const page = await apiRequest<IntakeListResponse>(
+    `/api/partner/policy-intakes?view=mobile_list&filter=all&limit=${POLICY_INTAKE_PAGE_SIZE}&offset=${offset}`,
+  );
+  if (!Array.isArray(page.intakes) || typeof page.total !== 'number' || !Number.isFinite(page.total) || page.total < 0) {
+    throw new Error('Policy Intake response was incomplete. Please retry.');
   }
-  return { ...firstPage!, intakes, total };
+  return page;
 }
 
 export async function listPartnerPolicyIntakeSources(): Promise<PartnerPolicyIntakeSource[]> {
@@ -196,19 +178,32 @@ async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
   const session = await getCurrentSession();
   if (!session?.access_token) throw new Error('Your session has expired. Sign in again.');
 
-  const response = await fetch(`${portalUrl}${path}`, {
-    ...init,
-    cache: "no-store",
-    headers: {
-      Authorization: `Bearer ${session.access_token}`,
-      'Content-Type': 'application/json',
-      ...(init?.headers ?? {}),
-    },
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${portalUrl}${path}`, {
+      ...init,
+      cache: 'no-store',
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+        'Content-Type': 'application/json',
+        ...(init?.headers ?? {}),
+      },
+    });
+  } catch {
+    throw new Error('Network connection failed. Check your internet and try again.');
+  }
 
   const payload = await response.json().catch(() => null) as ({ ok?: boolean; error?: string } & Partial<T>) | null;
   if (!response.ok || !payload?.ok) {
-    throw new Error(payload?.error || 'Policy Intake request failed.');
+    // Keep diagnostics free of tokens, phone numbers, customer data and URL parameters.
+    if (path.startsWith('/api/partner/policy-intakes?')) {
+      const offset = new URLSearchParams(path.split('?')[1] ?? '').get('offset') ?? '0';
+      console.warn('[partner-policy-intakes] read failed', { status: response.status, offset, category: !response.ok ? 'http' : 'invalid-response' });
+    }
+    if (response.status === 401 || response.status === 403) throw new Error('Your Partner session or access needs refreshing. Sign in again.');
+    if (response.status === 429) throw new Error('Too many requests. Please retry shortly.');
+    if (response.status >= 500) throw new Error('Policy Intake server is temporarily unavailable. Please retry.');
+    throw new Error(payload?.error || `Policy Intake request failed (HTTP ${response.status}).`);
   }
   return payload as T;
 }
