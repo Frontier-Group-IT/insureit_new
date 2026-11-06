@@ -195,7 +195,7 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
     ):null}
     {selected.key==="billing" && external && !canEditStage && documents.some(doc=>doc.document_type==="Final Workshop Bill") ? <section className="rounded-xl border border-[#DCE3EC] bg-white p-4"><ExternalClaimBillUpload mode="customer" claimId={claim.id} accountId={account.id} readonly documents={documents.filter(doc=>doc.document_type==="Final Workshop Bill")} /></section> : null}
     {selected.key==="spot_intimation" ? <CustomerClaimEvidenceWorkspace documents={documents} claimId={claim.id} accountId={account.id} stage={selected.key} allowUpload={editMode} canReusePolicyCopy={canReusePolicyCopy}/> : null}
-    {selected.key==="spot_intimation" ? <CustomerClaimVoiceRecorder claimId={claim.id} accountId={account.id}/> : null}
+    {selected.key==="spot_intimation" ? <CustomerClaimVoiceRecorder claimId={claim.id} accountId={account.id} documents={documents}/> : null}
     {selected.key==="spot_intimation" && completed ? (
       <div className="flex flex-wrap items-center justify-end gap-2 rounded-xl border border-[#D9E6F7] bg-white px-4 py-3">
         <Link href={{pathname:"/customer/claims",query:{account:account.id}}} className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#B9CBE2] px-5 text-[12px] font-semibold text-[#174A87]">Cancel</Link>
