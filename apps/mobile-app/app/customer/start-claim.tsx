@@ -550,6 +550,7 @@ function VehicleDropdown({ vehicles, query, selectedVehicle, open, onToggle, onQ
               autoCapitalize="characters"
               returnKeyType="search"
               placeholder="Search vehicle number, make or model"
+              idleHints={["Search vehicle number, make or model", "Search by registration number", "Search by manufacturer or model"]}
               style={styles.makeSearchInput}
             />
           </View>
