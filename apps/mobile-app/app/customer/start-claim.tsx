@@ -2,6 +2,7 @@ import { formatAppDate } from '@/lib/indian-date';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { CustomerAnimatedSearchInput } from '@/components/customer-animated-search-input';
 import { Animated, Image, Keyboard, Modal, Platform, Pressable, StatusBar, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
 
 import { ActiveClaimPopup } from '@/components/active-claim-popup';
@@ -542,14 +543,13 @@ function VehicleDropdown({ vehicles, query, selectedVehicle, open, onToggle, onQ
         >
           <View style={styles.makeSearch}>
             <MaterialCommunityIcons name="magnify" size={19} color="#145ED7" />
-            <TextInput
+            <CustomerAnimatedSearchInput
               ref={searchInputRef}
               value={query}
               onChangeText={onQueryChange}
               autoCapitalize="characters"
               returnKeyType="search"
               placeholder="Search vehicle number, make or model"
-              placeholderTextColor="#6E7F96"
               style={styles.makeSearchInput}
             />
           </View>

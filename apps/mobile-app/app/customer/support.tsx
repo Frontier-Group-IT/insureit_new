@@ -2,7 +2,8 @@ import { formatAppDate } from '@/lib/indian-date';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
-import { Platform, Linking, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { CustomerAnimatedSearchInput } from '@/components/customer-animated-search-input';
+import { Platform, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { EmptyState, LoadingState, Message, Screen } from '@/components/ui';
 import { getCurrentSession, getCustomerForUser } from '@/lib/auth';
@@ -101,7 +102,7 @@ export default function SupportScreen() {
 
       <View style={styles.searchBox}>
         <MaterialCommunityIcons name="magnify" size={20} color={palette.slate} />
-        <TextInput value={search} onChangeText={setSearch} placeholder="Search tickets or support topics" placeholderTextColor="#8090A6" style={styles.searchInput} />
+        <CustomerAnimatedSearchInput value={search} onChangeText={setSearch} placeholder="Search tickets or support topics" style={styles.searchInput} />
         <Pressable accessibilityRole="button" onPress={() => router.push('/customer/help-faqs')} style={styles.searchFaqButton}>
           <MaterialCommunityIcons name="help-circle-outline" size={19} color={roleTheme.customer.accent} />
         </Pressable>

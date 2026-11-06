@@ -5,7 +5,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Platform, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { AppSearchBar } from '@/components/design-system';
+import { CustomerSearchBar } from '@/components/customer-animated-search-input';
 import { EmptyState, LoadingState, Screen } from '@/components/ui';
 import { getCurrentSession, getCustomerForUser } from '@/lib/auth';
 import { hasAllRequiredDocuments, hasOutstandingRejectedDocumentsForStatus, requestedFinalDocumentTypesFor } from '@/lib/claim-documents';
@@ -106,7 +106,7 @@ export default function ClaimsScreen() {
         <Text style={styles.pageSubtitle} numberOfLines={Platform.OS === 'ios' ? 1 : undefined} adjustsFontSizeToFit={Platform.OS === 'ios'} minimumFontScale={0.8}>Track active claims, actions and completed settlements.</Text>
       </View>
 
-      <AppSearchBar value={query} onChangeText={setQuery} placeholder="Search vehicle, control or claim no." />
+      <CustomerSearchBar value={query} onChangeText={setQuery} placeholder="Search vehicle, control or claim no." />
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroller} contentContainerStyle={styles.filterWrap}>
         {(['All', 'Open', 'Action Required', 'Completed'] as ClaimFilter[]).map((item) => (

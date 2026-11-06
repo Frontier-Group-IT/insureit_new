@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Image, Platform, Pressable, ScrollView, StyleSheet, Text, View, type ImageSourcePropType } from 'react-native';
 import { SvgUri } from 'react-native-svg';
 
-import { AppSearchBar } from '@/components/design-system';
+import { CustomerSearchBar } from '@/components/customer-animated-search-input';
 import { EmptyState, LoadingState, Screen } from '@/components/ui';
 import { getCurrentSession } from '@/lib/auth';
 import { getOperationalCustomerContexts } from '@/lib/customer-context';
@@ -219,7 +219,7 @@ export default function PoliciesScreen() {
           </Pressable>
         </View>
 
-        <AppSearchBar value={query} onChangeText={setQuery} placeholder="Search vehicle, insurer or policy no." />
+        <CustomerSearchBar value={query} onChangeText={setQuery} placeholder="Search vehicle, insurer or policy no." />
       </View>
 
       <View style={styles.filterRow}>

@@ -1,3 +1,4 @@
+import { CustomerAnimatedSearchInput } from '@/components/customer-animated-search-input';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
@@ -9,7 +10,6 @@ import { Platform,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -157,11 +157,10 @@ export default function ExchangeSearchScreen() {
       <View style={styles.searchArea}>
         <View style={styles.searchBox}>
           <MaterialCommunityIcons name="magnify" size={20} color="#718095" />
-          <TextInput
+          <CustomerAnimatedSearchInput
             value={query}
             onChangeText={setQuery}
             placeholder="Search make, model, truck, JCB, city..."
-            placeholderTextColor="#939EAC"
             style={styles.searchInput}
             autoFocus={Boolean(initialQuery)}
           />
