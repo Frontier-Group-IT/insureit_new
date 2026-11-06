@@ -185,6 +185,8 @@ jobs:
         run: npm run customer-web:foundation-regression
       - name: Customer Vehicle Details navy 3D and insurance history regression
         run: node scripts/customer-vehicle-details-navy-3d-regression.mjs
+      - name: Claim date text and Yes-No sizing regression
+        run: node scripts/claim-unified-control-sizing-regression.mjs
       - name: Customer Policy Details premium layout and data scope regression
         run: node scripts/customer-policy-details-premium-regression.mjs
       - name: Customer Portal full-height layout regression
