@@ -80,7 +80,7 @@ export default function PolicyIntakesScreen() {
     try {
       const page = await listPartnerPolicyIntakesPage(nextOffset);
       if (generation !== requestGeneration.current) return;
-      if (!page.intakes.length && nextOffset < page.total) {
+      if (!page.intakes.length && nextOffset < (page.total ?? 0)) {
         throw new Error('More submissions could not be loaded. Try again.');
       }
       setRows((previous) => {
