@@ -18,17 +18,23 @@ export const CUSTOMER_SEARCH_PLACEHOLDER_SIZE = 16;
 type CustomerSearchInputProps = TextInputProps & {
   /** Visible hint; becomes a floating label on focus or when a value is entered. */
   placeholder: string;
+  /** Optional idle prompts that slide upward until the field is focused. */
+  idleHints?: string[];
 };
 
 export const CustomerAnimatedSearchInput = forwardRef<TextInput, CustomerSearchInputProps>(
   function CustomerAnimatedSearchInput(
-    { placeholder, value, defaultValue, onFocus, onBlur, style, ...props },
+    { placeholder, idleHints, value, defaultValue, onFocus, onBlur, style, ...props },
     ref,
   ) {
     const [focused, setFocused] = useState(false);
     const hasValue = String(value ?? defaultValue ?? '').length > 0;
     const float = useRef(new Animated.Value(hasValue ? 1 : 0)).current;
     const [reduceMotion, setReduceMotion] = useState(false);
+    const [hintIndex, setHintIndex] = useState(0);
+    const hintOffset = useRef(new Animated.Value(0)).current;
+    const hints = idleHints?.length && idleHints.length > 1 ? idleHints : null;
+    const showIdleHints = Boolean(hints && !focused && !hasValue && !reduceMotion);
 
     useEffect(() => {
       let alive = true;
@@ -54,6 +60,34 @@ export const CustomerAnimatedSearchInput = forwardRef<TextInput, CustomerSearchI
       return () => animation.stop();
     }, [focused, hasValue, reduceMotion, float]);
 
+    useEffect(() => {
+      if (!showIdleHints || !hints) {
+        hintOffset.stopAnimation();
+        hintOffset.setValue(0);
+        return;
+      }
+
+      const interval = setInterval(() => {
+        Animated.timing(hintOffset, {
+          toValue: 1,
+          duration: 420,
+          easing: Easing.inOut(Easing.cubic),
+          useNativeDriver: true,
+        }).start(({ finished }) => {
+          if (finished) {
+            setHintIndex((index) => (index + 1) % hints.length);
+            hintOffset.setValue(0);
+          }
+        });
+      }, 3000);
+
+      return () => {
+        clearInterval(interval);
+        hintOffset.stopAnimation();
+        hintOffset.setValue(0);
+      };
+    }, [showIdleHints, hints?.length, hintOffset]);
+
     return (
       <View style={styles.container}>
         <Animated.Text
@@ -63,6 +97,7 @@ export const CustomerAnimatedSearchInput = forwardRef<TextInput, CustomerSearchI
           numberOfLines={1}
           style={[
             styles.floatingPlaceholder,
+            showIdleHints && styles.hiddenFloatingPlaceholder,
             {
               top: float.interpolate({ inputRange: [0, 1], outputRange: [14, 1] }),
               fontSize: float.interpolate({ inputRange: [0, 1], outputRange: [16, 11] }),
@@ -71,6 +106,14 @@ export const CustomerAnimatedSearchInput = forwardRef<TextInput, CustomerSearchI
         >
           {placeholder}
         </Animated.Text>
+        {showIdleHints && hints ? (
+          <View pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no" style={styles.idleHintWindow}>
+            <Animated.View style={{ transform: [{ translateY: hintOffset.interpolate({ inputRange: [0, 1], outputRange: [0, -25] }) }] }}>
+              <Animated.Text numberOfLines={1} style={styles.idleHint}>{hints[hintIndex % hints.length]}</Animated.Text>
+              <Animated.Text numberOfLines={1} style={styles.idleHint}>{hints[(hintIndex + 1) % hints.length]}</Animated.Text>
+            </Animated.View>
+          </View>
+        ) : null}
         <TextInput
           {...props}
           ref={ref}
@@ -98,6 +141,23 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     zIndex: 1,
   },
+  hiddenFloatingPlaceholder: { opacity: 0 },
+  idleHintWindow: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 11,
+    height: 25,
+    overflow: 'hidden',
+    zIndex: 1,
+  },
+  idleHint: {
+    height: 25,
+    lineHeight: 25,
+    fontSize: CUSTOMER_SEARCH_PLACEHOLDER_SIZE,
+    fontWeight: '400',
+    color: CUSTOMER_SEARCH_PLACEHOLDER_COLOR,
+  },
   input: { width: '100%', minHeight: 46, paddingVertical: 0 },
   consistentText: { fontSize: CUSTOMER_SEARCH_PLACEHOLDER_SIZE, fontWeight: '400' },
   floatingInputText: { paddingTop: 15 },
@@ -108,10 +168,12 @@ export function CustomerSearchBar({
   value,
   onChangeText,
   placeholder = 'Search',
+  idleHints,
 }: {
   value: string;
   onChangeText: (next: string) => void;
   placeholder?: string;
+  idleHints?: string[];
 }) {
   return (
     <View style={barStyles.bar}>
@@ -120,6 +182,7 @@ export function CustomerSearchBar({
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
+        idleHints={idleHints}
         returnKeyType="search"
       />
       {value ? (
