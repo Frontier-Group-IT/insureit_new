@@ -28,7 +28,8 @@ assert.match(customer,/name=\{field\.key\} type=\{field\.type\} required=\{!fiel
 assert.match(choice,/name=\{name\} value=\{value\}/);
 assert.match(choice,/onClick=\{\(\)=>setValue\(key\)\}/);
 assert.match(customer,/className="flex min-h-9 items-center gap-2 rounded-md border border-\[#D9E3F0\] bg-\[#F1F4F9\]/);
-assert.match(operations,/whitespace-nowrap text-\[9px\] font-semibold uppercase leading-4 tracking-\[0\.01em\]/);
+assert.match(operations,/whitespace-nowrap max-sm:whitespace-normal/);
+assert.match(operations,/text-\[9px\] font-semibold uppercase leading-4 tracking-\[0\.01em\]/);
 assert.match(operations,/2xl:grid-cols-5 lg:items-start/);
 assert.match(customer,/whitespace-nowrap text-\[9px\] font-semibold uppercase leading-4 tracking-\[0\.01em\]/);
 assert.match(customer,/2xl:grid-cols-5 lg:items-start/);
