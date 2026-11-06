@@ -150,7 +150,7 @@ export default async function CustomerSpotIntimation({searchParams}:{searchParam
       </div>
       <div className="mt-3 grid gap-x-2.5 gap-y-3 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-[repeat(5,minmax(0,1fr))]">
         <label className="min-w-0 w-full max-w-[320px]">
-          <span className="block h-4 whitespace-nowrap text-[9px] font-bold uppercase leading-4 tracking-[0.01em] text-[#245BB2] max-sm:whitespace-normal">Accident Date &amp; Time <span className="text-rose-500">*</span></span>
+          <span className="block h-4 max-sm:h-auto whitespace-nowrap text-[9px] font-bold uppercase leading-4 tracking-[0.01em] text-[#245BB2] max-sm:whitespace-normal">Accident Date &amp; Time <span className="text-rose-500">*</span></span>
           <span className="mt-2 flex h-[40px] w-full max-w-[320px] min-w-0 overflow-hidden rounded-lg border border-[#CAD8EA] bg-white">
             <CustomerDateInput name="accidentDate" label="Accident date" defaultValue={editing?existingDateTime(claim.accident_at,"date"):undefined} required className="text-[13px] font-medium text-[#193659]" />
             <span aria-hidden="true" className="my-1.5 w-px shrink-0 bg-[#D6E0ED]"/>
@@ -158,7 +158,7 @@ export default async function CustomerSpotIntimation({searchParams}:{searchParam
           </span>
         </label>
         <label className="min-w-0 w-full max-w-[320px]">
-          <span className="block h-4 whitespace-nowrap text-[9px] font-bold uppercase leading-4 tracking-[0.01em] text-[#245BB2] max-sm:whitespace-normal">Spot Intimation Date &amp; Time <span className="text-rose-500">*</span></span>
+          <span className="block h-4 max-sm:h-auto whitespace-nowrap text-[9px] font-bold uppercase leading-4 tracking-[0.01em] text-[#245BB2] max-sm:whitespace-normal">Spot Intimation Date &amp; Time <span className="text-rose-500">*</span></span>
           <span className="mt-2 flex h-[40px] w-full max-w-[320px] min-w-0 overflow-hidden rounded-lg border border-[#CAD8EA] bg-white">
             <CustomerDateInput name="spotDate" label="Spot intimation date" defaultValue={editing?existingDateTime(claim.spot_intimation_at,"date"):undefined} required className="text-[13px] font-medium text-[#193659]" />
             <span aria-hidden="true" className="my-1.5 w-px shrink-0 bg-[#D6E0ED]"/>
@@ -166,15 +166,15 @@ export default async function CustomerSpotIntimation({searchParams}:{searchParam
           </span>
         </label>
         <label className="min-w-0 w-full max-w-[320px]">
-          <span className="block h-4 whitespace-nowrap text-[9px] font-bold uppercase leading-4 tracking-[0.01em] text-[#245BB2] max-sm:whitespace-normal">Driver Name <span className="text-rose-500">{external?"":"*"}</span></span>
+          <span className="block h-4 max-sm:h-auto whitespace-nowrap text-[9px] font-bold uppercase leading-4 tracking-[0.01em] text-[#245BB2] max-sm:whitespace-normal">Driver Name <span className="text-rose-500">{external?"":"*"}</span></span>
           <input name="driver" defaultValue={editing?driverName:undefined} required={!external} maxLength={120} placeholder="Enter driver name" autoComplete="name" className={"mt-2 "+textFieldClass}/>
         </label>
         <label className="min-w-0 w-full max-w-[320px]">
-          <span className="block h-4 whitespace-nowrap text-[9px] font-bold uppercase leading-4 tracking-[0.01em] text-[#245BB2] max-sm:whitespace-normal">Driver Number <span className="text-rose-500">{external?"":"*"}</span></span>
+          <span className="block h-4 max-sm:h-auto whitespace-nowrap text-[9px] font-bold uppercase leading-4 tracking-[0.01em] text-[#245BB2] max-sm:whitespace-normal">Driver Number <span className="text-rose-500">{external?"":"*"}</span></span>
           <input name="phone" defaultValue={editing?driverPhone:undefined} required={!external} type="tel" maxLength={15} inputMode="tel" placeholder="Enter mobile number" autoComplete="tel" className={"mt-2 "+textFieldClass}/>
         </label>
         <label className="min-w-0 w-full max-w-[320px] md:col-span-2 lg:col-span-1">
-          <span className="block h-4 whitespace-nowrap text-[9px] font-bold uppercase leading-4 tracking-[0.01em] text-[#245BB2] max-sm:whitespace-normal">Location <span className="text-rose-500">{external?"":"*"}</span></span>
+          <span className="block h-4 max-sm:h-auto whitespace-nowrap text-[9px] font-bold uppercase leading-4 tracking-[0.01em] text-[#245BB2] max-sm:whitespace-normal">Location <span className="text-rose-500">{external?"":"*"}</span></span>
           <input name="location" defaultValue={editing?claim.accident_location??"":undefined} required={!external} maxLength={500} placeholder="Enter accident location" className={"mt-2 "+textFieldClass}/>
         </label>
       </div>
