@@ -9,7 +9,7 @@ export function CustomerDateInput({name,defaultValue,required,label,className=""
   name:string;defaultValue?:string;required?:boolean;label:string;className?:string;
 }) {
   const [value,setValue]=useState(defaultValue??"");
-  return <span className={`relative flex h-full min-h-10 min-w-0 flex-1 items-center rounded-md bg-white px-3 ${className}`}>
+  return <span className={`relative flex h-12 w-full max-w-[270px] min-w-0 items-center rounded-md bg-white px-3 ${className}`}>
     <span aria-hidden="true" className="min-w-0 flex-1 truncate">{value?formatIndianDate(value):"DD/MM/YYYY"}</span>
     <CalendarDays aria-hidden="true" className="pointer-events-none h-4 w-4 shrink-0 text-[#526178]"/>
     <input name={name} aria-label={label} type="date" value={value} required={required}
