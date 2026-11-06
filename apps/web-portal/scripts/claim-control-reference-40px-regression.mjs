@@ -36,7 +36,7 @@ assert.match(operations,/text-\[9px\] font-semibold uppercase leading-4 tracking
 assert.match(operations,/2xl:grid-cols-5 lg:items-start/);
 assert.match(customer,/whitespace-nowrap text-\[9px\] font-semibold uppercase leading-4 tracking-\[0\.01em\]/);
 assert.match(customer,/2xl:grid-cols-5 lg:items-start/);
-assert.match(operations,/stageOneLabelClassName = "block h-4 whitespace-nowrap text-\[9px\]/);
+assert.match(operations,/stageOneLabelClassName = "block h-4 max-sm:h-auto whitespace-nowrap text-\[9px\]/);
 assert.match(spot,/const textFieldClass = "block h-\[40px\] w-full max-w-\[320px\]/);
 assert.match(spot,/const splitFieldClass = "block h-\[40px\]/);
 assert.match(spot,/flex h-\[40px\] w-full max-w-\[320px\]/);
