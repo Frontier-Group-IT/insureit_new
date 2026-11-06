@@ -2,11 +2,11 @@
 
 import { useState } from "react";
 
-export function CustomerClaimBooleanChoice({name,value:initial,kind,compact=false}:{name:string;value:string;kind:"boolean"|"yesno";compact?:boolean}){
+export function CustomerClaimBooleanChoice({name,value:initial,kind}:{name:string;value:string;kind:"boolean"|"yesno"}){
   const [value,setValue]=useState(initial);
   const options=kind==="yesno"?[["yes","Yes"],["no","Not Yet"]]:[["true","Yes"],["false","No"]];
-  return <div data-claim-choice role="group" aria-label={name.replace(/_/g," ")} className="mt-1 grid grid-cols-2 gap-2">
+  return <div data-claim-choice role="group" aria-label={name.replace(/_/g," ")} className="mt-1 grid w-full max-w-[254px] grid-cols-2 gap-[10px]">
     <input type="hidden" name={name} value={value}/>
-    {options.map(([key,label])=><button type="button" data-choice-value={key} key={key} aria-pressed={value===key} onClick={()=>setValue(key)} className={`${compact?"h-[38px]":"h-9"} rounded-md border text-[12px] font-medium normal-case tracking-normal transition ${value===key?"border-[#2059BC] bg-[#EDF4FF] text-[#153B79]":"border-[#D9E3F0] bg-white text-[#193451] hover:bg-[#F5F9FF]"}`}>{label}</button>)}
+    {options.map(([key,label])=><button type="button" data-choice-value={key} key={key} aria-pressed={value===key} onClick={()=>setValue(key)} className={`h-[45px] rounded-md border text-[12px] font-medium normal-case tracking-normal transition ${value===key?"border-[#2059BC] bg-[#EDF4FF] text-[#153B79]":"border-[#D9E3F0] bg-white text-[#193451] hover:bg-[#F5F9FF]"}`}>{label}</button>)}
   </div>;
 }
