@@ -51,7 +51,7 @@ const stages = [
 ] as const;
 
 type StageKey = (typeof stages)[number]["key"];
-type ActionState = { ok: boolean; message: string; advanced: boolean; nextStageKey: StageKey | null };
+type ActionState = { ok: boolean; message: string; advanced: boolean; nextStageKey: StageKey | null; completedFinalStage?: boolean };
 
 const stageCompletionTargets: Partial<Record<StageKey, ClaimStatus>> = {
   spot_status: "Final Documents Awaited",
@@ -229,6 +229,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
             // Move to the next visible tab after a successful save, including authorized save-only edits.
             // The server still controls workflow status and stage availability.
             nextStageKey: nextStageKeyFor(milestoneKey),
+            completedFinalStage: milestoneKey === "payment_encashment" && result.advanced,
           };
         }
         const advanced = await advanceInternalSpotIntimationWithFeedback(claimId, formData);
@@ -276,6 +277,12 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
   useEffect(() => {
     if (!state.ok) return;
     try { window.sessionStorage.removeItem(`insureit:spot-intimation-draft:${claimId}`); } catch { /* optional storage */ }
+    if (state.completedFinalStage) {
+      // Only a server-confirmed final-stage advancement returns to the Operations Claim Register.
+      // Save-only edits and failed submissions remain on the claim journey.
+      router.replace("/claims");
+      return;
+    }
     if (state.nextStageKey) {
       setSelectedKey(state.nextStageKey);
       // The stage URL is authoritative after a successful transition. Do not race it with router.refresh().
@@ -283,7 +290,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
       return;
     }
     router.refresh();
-  }, [claimId, router, state.nextStageKey, state.ok]);
+  }, [claimId, router, state.completedFinalStage, state.nextStageKey, state.ok]);
 
   useEffect(() => {
     if (!initialStageKey || !stages.some((stage) => stage.key === initialStageKey)) return;
