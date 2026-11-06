@@ -19,7 +19,7 @@ assert.match(field, /<View style=\{styles\.vehicleSelectorTrigger\} accessible=\
 assert.match(field, /<Text style=\{\[styles\.helper, Platform\.OS === 'ios' && styles\.iosHelper\]\}>Start typing to find a vehicle\.<\/Text>[\s\S]*<\/Pressable>/, 'Helper text must also be within the press target.');
 assert.doesNotMatch(field, /hitSlop=|vehicle-selector-icon-press/, 'Selector must not retain the old icon-only responder or an oversized hit slop.');
 assert.match(selector, /anchorRef\.current\?\.measureInWindow\(\(x, y, width, height\) => \{[\s\S]*setAnchor\(\{ x, y, width, height \}\);[\s\S]*onToggle\(\);/, 'The existing anchored dropdown opening behavior must remain.');
-assert.match(selector, /<Modal[\s\S]*onRequestClose=\{closeSelector\}[\s\S]*<TextInput[\s\S]*onChangeText=\{onQueryChange\}/, 'The modal must retain dismiss and search behavior.');
+assert.match(selector, /<Modal[\s\S]*onRequestClose=\{closeSelector\}[\s\S]*<(?:TextInput|CustomerAnimatedSearchInput)[\s\S]*onChangeText=\{onQueryChange\}/, 'The modal must retain dismiss and search behavior.');
 assert.match(selector, /onSelect\(vehicle\)/, 'Selecting a vehicle must remain available.');
 assert.match(startClaim, /!accountVehicles\.length \? <Text style=\{\[styles\.helper, Platform\.OS === 'ios' && styles\.iosHelper\]\}>Start typing to find a vehicle\.<\/Text> : null/, 'The empty-vehicle state must preserve its helper without duplication.');
 
