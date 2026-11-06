@@ -161,6 +161,7 @@ export default function ExchangeSearchScreen() {
             value={query}
             onChangeText={setQuery}
             placeholder="Search make, model, truck, JCB, city..."
+            idleHints={["Search make, model, truck, JCB, city...", "Search by make or model", "Search by vehicle category or city"]}
             style={styles.searchInput}
             autoFocus={Boolean(initialQuery)}
           />
