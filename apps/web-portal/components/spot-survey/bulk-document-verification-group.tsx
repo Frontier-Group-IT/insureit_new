@@ -238,20 +238,7 @@ function DocumentFileRow({ item, claim, document, verification, verified, reject
             <Trash2 aria-hidden="true" size={16} strokeWidth={2} />
           </button>
           <ReplaceDocumentButton claimId={claim.id} customerId={claim.customer_id} documentId={document.id} documentType={item.documentType} label={item.title} actionLabel="Replace" iconOnly />
-          {verified ? (
-            <VerificationActionButton
-              claimId={claim.id}
-              documentId={document.id}
-              itemKey={item.key}
-              incidentDate={claim.accident_at}
-              policyStartDate={claim.policies?.start_date}
-              policyEndDate={claim.policies?.end_date}
-              variant="icon"
-              reverify
-              prefillDetails={verification?.details ?? null}
-            />
-          ) : null}
-          
+
         </div>
       </div>
       {rejected ? <p className="sr-only">{document.rejection_reason ?? "Customer reupload requested."}</p> : null}
