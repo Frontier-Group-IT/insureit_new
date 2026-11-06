@@ -8,8 +8,8 @@ const tree = read("../app/employees/employee-organization-tree.tsx");
 
 assert.match(page, /getEmployeeAccessScope/);
 assert.match(page, /loadDirectoryPartnerNetwork\(employees\.map/);
-assert.match(workspace, /Organization tree/);
-assert.match(workspace, /Directory table/);
+assert.match(workspace, /Org chart/);
+assert.match(workspace, />Table/);
 assert.match(workspace, /EmployeeTable employees=\{filtered\}/);
 assert.match(loader, /getPospMispManager\(true\)/);
 assert.match(loader, /getAccessibleIntermediaryIds/);
@@ -19,6 +19,6 @@ assert.match(loader, /parent_partner_id/);
 assert.match(tree, /reporting_manager_id/);
 assert.match(tree, /Reporting loop detected/);
 assert.match(tree, /Business network/);
-assert.match(tree, /Show partner network/);
+assert.match(tree, /Partner network/);
 assert.doesNotMatch(loader, /draft_data\.associate_name/);
 console.log("Employee organization tree scoped-network regression: passed");
