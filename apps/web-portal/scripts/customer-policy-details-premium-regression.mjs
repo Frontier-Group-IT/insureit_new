@@ -10,6 +10,12 @@ assert.match(page, /resolveCustomerWebScope\(query\.account\)/, "Customer accoun
 assert.match(page, /loadCustomerPolicyDetail\(account\.id, id, query\.source\)/, "External and internal policy source resolution remains intact");
 assert.doesNotMatch(page, /Back to policies|<ArrowLeft/, "Do not add a redundant Back link above the hero");
 assert.match(page, /<section aria-labelledby="policy-detail-title"/, "Policy header must be the first visible content");
+assert.doesNotMatch(page, /<nav aria-label="Policy details sections"/, "Remove the lower section navigator entirely");
+assert.doesNotMatch(page, /href="#policy-(vehicle|coverage|premium|source)"/, "No duplicate section jump links below the header");
+assert.equal((page.match(/<StatusPill tone=\{status\.tone\}/g) ?? []).length, 1, "Only the hero should show the dynamic policy status");
+assert.doesNotMatch(page, /rounded-full border border-white\/30 bg-white\/95/, "Remove the outer white status badge background from the hero");
+assert.match(page, /<StatusPill tone=\{status\.tone\}>\{statusLabel\}<\/StatusPill>/, "Keep the dynamic Active/Due/Expired status label visible in the hero");
+
 assert.match(page, /getStaticInsurerLogo\(policy\.insurer_name\)/, "Use existing insurer logo mapping");
 assert.match(page, /<CopyPolicyNumber value=\{policy\.policy_no\}/, "Policy number has a copy action");
 assert.match(copy, /navigator\.clipboard\.writeText\(value\)/, "Copy action must write the actual number");
