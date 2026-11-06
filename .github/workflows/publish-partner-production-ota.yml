@@ -21,6 +21,7 @@ concurrency:
 permissions:
   contents: read
   pull-requests: read
+  actions: read
 
 jobs:
   publish:
@@ -88,12 +89,47 @@ jobs:
             const approved = file === 'apps/partner-app/.trigger-production-ota'
               || file === '.github/workflows/publish-partner-production-ota.yml'
               || file === '.github/workflows/verify-partner-app.yml'
-              || /^apps\/partner-app\/(app|components|lib|assets)\//.test(file);
+              || file === '.github/workflows/deploy-production.yml'
+              || /^apps\/partner-app\/(app|components|lib|assets)\//.test(file)
+              // The reviewed Policy Intake change includes its regression tests.
+              || /^apps\/partner-app\/scripts\/verify-policy-intake-[a-z0-9-]+\.mjs$/.test(file)
+              // The corresponding backend endpoint is required for these mobile changes.
+              || file === 'apps/web-portal/app/api/partner/policy-intakes/route.ts';
             const native = /(^|\/)(android|ios)\//.test(file)
               || /\.(gradle|podspec|xcworkspace|xcodeproj|entitlements)$/.test(file);
             if (!approved || native) throw new Error('Auto OTA refused: requires release review for ' + file);
           }
           NODE
+
+      - name: Verify dependent Policy Intake API deployment
+        if: github.event_name == 'push'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          # Every push to main starts the protected web deployment gate.
+          # Requiring its success avoids publishing an OTA against stale backend code,
+          # including a follow-up workflow-only release after a previously failed deploy.
+          echo "Checking production deployment for the exact Partner release commit."
+          for attempt in {1..40}; do
+            run_json=$(curl --fail --silent --show-error \
+              -H "Authorization: Bearer ${GH_TOKEN}" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/deploy-production.yml/runs?head_sha=${GITHUB_SHA}&per_page=20")
+            conclusion=$(jq -r --arg sha "$GITHUB_SHA" '[.workflow_runs[] | select(.head_sha == $sha and .event == "push")] | sort_by(.created_at) | last | .conclusion // empty' <<<"$run_json")
+            if [[ "$conclusion" == "success" ]]; then
+              echo "Dependent production API deployment verified."
+              exit 0
+            fi
+            if [[ "$conclusion" == "failure" || "$conclusion" == "cancelled" || "$conclusion" == "timed_out" ]]; then
+              echo "::error::Dependent API production deployment failed; OTA blocked."
+              exit 1
+            fi
+            sleep 15
+          done
+          echo "::error::Dependent production API deployment not verified; OTA blocked."
+          exit 1
 
       - name: Validate Partner production OTA linkage
         shell: bash
