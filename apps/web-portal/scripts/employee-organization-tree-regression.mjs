@@ -9,7 +9,7 @@ const tree = read("../app/employees/employee-organization-tree.tsx");
 assert.match(page, /getEmployeeAccessScope/);
 assert.match(page, /loadDirectoryPartnerNetwork\(employees\.map/);
 assert.match(workspace, /Org chart/);
-assert.match(workspace, /Org chart/);
+assert.match(workspace, />Table/);
 assert.match(workspace, /EmployeeTable employees=\{filtered\}/);
 assert.match(loader, /getPospMispManager\(true\)/);
 assert.match(loader, /getAccessibleIntermediaryIds/);
