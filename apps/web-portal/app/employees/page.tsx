@@ -10,6 +10,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { appRoles, roleLabels } from "@/lib/roles";
 import { type EmployeeRow } from "./employee-forms";
 import { EmployeeDirectoryWorkspace } from "./employee-directory-workspace";
+import { loadDirectoryPartnerNetwork } from "./load-directory-partner-network";
 
 const NO_EMPLOYEE_ID = "00000000-0000-0000-0000-000000000000";
 
@@ -97,6 +98,7 @@ export default async function EmployeesPage({ searchParams }: { searchParams?: P
     portal_status: portalProfile?.id ? (authStatusById.get(portalProfile.id) ?? "active") : "none",
   })) as EmployeeRow[];
   const managers = managerResult.data ?? [];
+  const network = await loadDirectoryPartnerNetwork(employees.map((employee) => employee.id));
   const portalRoles = appRoles
     .filter((role) => role !== "customer" && role !== "intermediary")
     .map((role) => ({ value: role, label: roleLabels[role] }));
@@ -115,7 +117,7 @@ export default async function EmployeesPage({ searchParams }: { searchParams?: P
             {canManage ? <Link href="/employees/new" className="inline-flex h-10 items-center gap-2 rounded-md bg-[#071D49] px-4 text-[11px] font-semibold text-white"><Plus className="h-4 w-4" />Add employee</Link> : null}
           </div>
         </section>
-        <EmployeeDirectoryWorkspace employees={employees} managers={managers} portalRoles={portalRoles} canManage={canManage} canManagePortalAccess={canManagePortalAccess} initialQuery={params.q?.trim() ?? ""} initialStatus={initialStatus} loadError={loadError} />
+        <EmployeeDirectoryWorkspace employees={employees} partners={network.partners} partnerNetworkError={network.error} managers={managers} portalRoles={portalRoles} canManage={canManage} canManagePortalAccess={canManagePortalAccess} initialQuery={params.q?.trim() ?? ""} initialStatus={initialStatus} loadError={loadError} />
       </div>
     </AppShell>
   );

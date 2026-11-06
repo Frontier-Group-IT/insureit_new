@@ -2,13 +2,15 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { FormSubmitButton } from "@/components/form-submit-button";
+import { EmployeeOrganizationTree, type DirectoryPartner } from "./employee-organization-tree";
 import { setEmployeeStatus } from "./actions";
 import { EmployeeEditForm, EmployeePortalInviteForm, EmployeePortalRoleForm, type EmployeeRow, type PortalRoleOption } from "./employee-forms";
 
 type ManagerOption = Pick<EmployeeRow, "id" | "employee_code" | "full_name">;
 
-export function EmployeeDirectoryWorkspace({ employees, managers, portalRoles, canManage, canManagePortalAccess, initialQuery, initialStatus, loadError }: { employees: EmployeeRow[]; managers: ManagerOption[]; portalRoles: PortalRoleOption[]; canManage: boolean; canManagePortalAccess: boolean; initialQuery: string; initialStatus: string; loadError: string | null }) {
+export function EmployeeDirectoryWorkspace({ employees, partners, partnerNetworkError, managers, portalRoles, canManage, canManagePortalAccess, initialQuery, initialStatus, loadError }: { employees: EmployeeRow[]; partners: DirectoryPartner[]; partnerNetworkError: boolean; managers: ManagerOption[]; portalRoles: PortalRoleOption[]; canManage: boolean; canManagePortalAccess: boolean; initialQuery: string; initialStatus: string; loadError: string | null }) {
   const [query, setQuery] = useState(initialQuery);
+  const [view, setView] = useState<"tree" | "table">("tree");
   const [status, setStatus] = useState(initialStatus);
   const normalized = query.trim().toLowerCase();
   const filtered = useMemo(() => employees.filter((employee) => {
@@ -32,6 +34,7 @@ export function EmployeeDirectoryWorkspace({ employees, managers, portalRoles, c
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-3">
           <h2 className="text-[15px] font-semibold text-[#071D49]">Employee records</h2>
+          <div className="inline-flex rounded-md border border-[#C9D8EA] bg-[#F4F8FE] p-0.5 text-[10px] font-semibold"><button type="button" onClick={() => setView("tree")} aria-pressed={view === "tree"} className={`rounded px-3 py-1.5 ${view === "tree" ? "bg-[#102D57] text-white" : "text-[#3E597B]"}`}>Organization tree</button><button type="button" onClick={() => setView("table")} aria-pressed={view === "table"} className={`rounded px-3 py-1.5 ${view === "table" ? "bg-[#102D57] text-white" : "text-[#3E597B]"}`}>Directory table</button></div>
           <div className="grid grid-cols-3 gap-2 text-center"><Summary value={filtered.length} label="Listed" /><Summary value={activeCount} label="Active" /><Summary value={portalCount} label="Portal active" /></div>
         </div>
         <form onSubmit={(event) => event.preventDefault()} className="flex flex-wrap gap-2">
@@ -39,7 +42,7 @@ export function EmployeeDirectoryWorkspace({ employees, managers, portalRoles, c
           <select value={status} onChange={(event) => setStatus(event.target.value)} className="h-9 rounded-md border border-[#CBD8E8] bg-white px-3 text-[11px]"><option value="">All status</option><option value="active">Active</option><option value="inactive">Inactive</option></select>
         </form>
       </div>
-      {loadError ? <p className="mt-4 rounded-md border border-red-200 bg-red-50 p-3 text-[11px] text-red-700">{loadError}</p> : filtered.length ? <EmployeeTable employees={filtered} managers={managers} portalRoles={portalRoles} canManage={canManage} canManagePortalAccess={canManagePortalAccess} /> : <div className="mt-4 rounded-md border border-dashed border-[#CBD8E8] bg-[#F8FBFF] p-8 text-center text-[11px] text-[#667085]">No employees match these filters.</div>}
+      {loadError ? <p className="mt-4 rounded-md border border-red-200 bg-red-50 p-3 text-[11px] text-red-700">{loadError}</p> : view === "tree" ? <><EmployeeOrganizationTree employees={employees.filter((employee) => !status || employee.employment_status === status)} partners={partners} query={query} />{partnerNetworkError ? <p className="mt-2 text-[10px] text-amber-700">Partner network is temporarily unavailable. Employee hierarchy is still displayed.</p> : null}</> : filtered.length ? <EmployeeTable employees={filtered} managers={managers} portalRoles={portalRoles} canManage={canManage} canManagePortalAccess={canManagePortalAccess} /> : <div className="mt-4 rounded-md border border-dashed border-[#CBD8E8] bg-[#F8FBFF] p-8 text-center text-[11px] text-[#667085]">No employees match these filters.</div>}
     </section>
   );
 }

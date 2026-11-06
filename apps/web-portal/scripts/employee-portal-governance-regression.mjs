@@ -1,3 +1,4 @@
+import "./employee-organization-tree-regression.mjs";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { evaluateEmployeePortalGovernanceGuard } from "../lib/employee-portal-governance-rules.ts";
