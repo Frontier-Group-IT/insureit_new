@@ -209,6 +209,8 @@ jobs:
         run: node scripts/customer-support-profile-visual-polish-regression.mjs
       - name: Customer Claim multiple documents edit and completed view regression
         run: node scripts/customer-claim-multiple-documents-visibility-regression.mjs
+      - name: Customer Spot voice files, delete and white header regression
+        run: node scripts/customer-spot-voice-bulk-delete-white-header-regression.mjs
       - name: Completed customer claim PDF header regression
         run: node scripts/customer-completed-claim-pdf-header-regression.mjs
       - name: Customer Renewals subtle alert cards and count badge regression

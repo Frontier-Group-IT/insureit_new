@@ -4,6 +4,7 @@ import { Check, Pencil } from "lucide-react";
 import { INTERNAL_JOURNEY_STAGES } from "@insureit/claim-journey";
 import { CUSTOMER_EXTERNAL_STAGE_FIELDS } from "@/lib/customer-claim-stage-fields";
 import { CustomerClaimEvidenceWorkspace } from "./customer-claim-evidence-workspace";
+import { CustomerClaimVoiceRecorder } from "./customer-claim-voice-recorder";
 import { CustomerClaimDocumentGroups } from "./customer-claim-document-groups";
 import type { CustomerClaimDocument, CustomerClaimMilestone } from "@/lib/customer-web-phase2-data";
 
@@ -73,7 +74,7 @@ export function CustomerInternalCompletedJourney({
               </div>)}
             </div>
           </div> : <p className="rounded-lg bg-[#F6F9FD] px-3 py-3 text-[12px] text-[#64748B]">No details recorded for this stage yet.</p>}
-          {stage.key === "spot_intimation" && true ? <CustomerClaimEvidenceWorkspace documents={spotDocuments} claimId={claimId} accountId={accountId} stage="spot_intimation" allowUpload={false} /> : null}
+          {stage.key === "spot_intimation" && true ? <><CustomerClaimEvidenceWorkspace documents={spotDocuments} claimId={claimId} accountId={accountId} stage="spot_intimation" allowUpload={false} /><CustomerClaimVoiceRecorder documents={spotDocuments} claimId={claimId} accountId={accountId} allowUpload={false}/></> : null}
           {stage.key === "claim_intimation" ? <CustomerClaimDocumentGroups documents={documents} claimId={claimId} accountId={accountId} stage="claim_intimation" allowUpload={false} /> : null}
         </div> : null}
       </section>;
