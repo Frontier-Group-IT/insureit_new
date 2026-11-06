@@ -81,7 +81,7 @@ export const CustomerAnimatedSearchInput = forwardRef<TextInput, CustomerSearchI
           placeholderTextColor={CUSTOMER_SEARCH_PLACEHOLDER_COLOR}
           onFocus={(event) => { setFocused(true); onFocus?.(event); }}
           onBlur={(event) => { setFocused(false); onBlur?.(event); }}
-          style={[styles.input, style, styles.consistentText]}
+          style={[styles.input, style, styles.consistentText, (focused || hasValue) && styles.floatingInputText]}
         />
       </View>
     );
@@ -100,6 +100,7 @@ const styles = StyleSheet.create({
   },
   input: { width: '100%', minHeight: 46, paddingVertical: 0 },
   consistentText: { fontSize: CUSTOMER_SEARCH_PLACEHOLDER_SIZE, fontWeight: '400' },
+  floatingInputText: { paddingTop: 15 },
 });
 
 /** Customer-only search bar; do not change shared Staff or Partner search styles. */
