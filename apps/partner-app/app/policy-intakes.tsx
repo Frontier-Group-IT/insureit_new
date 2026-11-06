@@ -9,7 +9,7 @@ import { PartnerStatusBadge } from '@/components/ui/partner-status-badge';
 import { PartnerInsurerLogo } from '@/components/ui/partner-insurer-logo';
 import { PartnerAssets } from '@/lib/partner-assets';
 import { getPartnerManufacturerLogoSource } from '@/lib/catalog-logos';
-import { listPartnerPolicyIntakes, type PartnerPolicyIntake } from '@/lib/policy-intakes';
+import { listPartnerPolicyIntakesPage, type PartnerPolicyIntake } from '@/lib/policy-intakes';
 import { partnerTheme } from '@/lib/theme';
 
 type IntakeFilter = 'action_required' | 'in_review' | 'processing' | 'completed' | 'duplicate' | 'rejected' | 'all';
@@ -39,23 +39,70 @@ export default function PolicyIntakesScreen() {
   const [filter, setFilter] = useState<IntakeFilter>('all');
   const [query, setQuery] = useState('');
   const [error, setError] = useState('');
+  const [pageError, setPageError] = useState('');
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [total, setTotal] = useState(0);
+  const [nextOffset, setNextOffset] = useState(0);
+  const requestGeneration = useRef(0);
+  const pageLoadingRef = useRef(false);
 
   const load = useCallback(async (manual = false) => {
+    const generation = ++requestGeneration.current;
     if (manual) setRefreshing(true);
     else setLoading(true);
     setError('');
+    setPageError('');
+    pageLoadingRef.current = false;
     try {
-      const result = await listPartnerPolicyIntakes();
-      setRows(result.intakes);
+      const page = await listPartnerPolicyIntakesPage(0);
+      if (generation !== requestGeneration.current) return;
+      setRows(page.intakes);
+      setTotal(page.total ?? 0);
+      setNextOffset(page.intakes.length);
     } catch (cause) {
+      if (generation !== requestGeneration.current) return;
       setError(cause instanceof Error ? cause.message : 'Policy Intakes could not be loaded.');
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      if (generation === requestGeneration.current) {
+        setLoading(false);
+        setRefreshing(false);
+        setLoadingMore(false);
+      }
     }
   }, []);
 
-  useFocusEffect(useCallback(() => { void load(false); }, [load]));
+  const loadMore = useCallback(async () => {
+    if (pageLoadingRef.current || loading || refreshing || nextOffset >= total) return;
+    pageLoadingRef.current = true;
+    setLoadingMore(true);
+    setPageError('');
+    const generation = requestGeneration.current;
+    try {
+      const page = await listPartnerPolicyIntakesPage(nextOffset);
+      if (generation !== requestGeneration.current) return;
+      if (!page.intakes.length && nextOffset < page.total) {
+        throw new Error('More submissions could not be loaded. Try again.');
+      }
+      setRows((previous) => {
+        const ids = new Set(previous.map((row) => row.id));
+        return [...previous, ...page.intakes.filter((row) => !ids.has(row.id))];
+      });
+      setNextOffset(nextOffset + page.intakes.length);
+      setTotal(page.total ?? total);
+    } catch (cause) {
+      if (generation === requestGeneration.current) {
+        setPageError(cause instanceof Error ? cause.message : 'More submissions could not be loaded.');
+      }
+    } finally {
+      if (generation === requestGeneration.current) setLoadingMore(false);
+      pageLoadingRef.current = false;
+    }
+  }, [loading, refreshing, nextOffset, total]);
+
+  useFocusEffect(useCallback(() => {
+    void load(false);
+    return () => { requestGeneration.current += 1; };
+  }, [load]));
 
   const counts = useMemo<Record<IntakeFilter, number>>(() => ({
     action_required: rows.filter((row) => row.status === 'needs_attention' || (row.status === 'processing' && row.ocr_status === 'failed')).length,
@@ -137,6 +184,7 @@ export default function PolicyIntakesScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void load(true)} tintColor={partnerTheme.colors.brand} colors={[partnerTheme.colors.brand]} />}
       >
+        <Text style={styles.loadedSummary}>Showing {rows.length} of {total} submissions. Filter and search apply to loaded records.</Text>
         {loading && !rows.length ? (
           <PartnerStateView state="loading" title="Loading Policy Intakes" />
         ) : error && !rows.length ? (
@@ -182,11 +230,19 @@ export default function PolicyIntakesScreen() {
             state="empty"
             asset={rows.length ? PartnerAssets.emptyStates.noSearchResults : PartnerAssets.emptyStates.policyUpload}
             title={rows.length ? 'No submissions in this filter' : 'No Policy Intakes yet'}
-            message={rows.length ? 'Try another filter or search term.' : 'Create an intake when you have a policy copy that Operations needs to onboard.'}
+            message={rows.length ? 'Try another filter or search term, or load more submissions below.' : 'Create an intake when you have a policy copy that Operations needs to onboard.'}
             actionLabel={rows.length ? undefined : 'Create first intake'}
             onAction={rows.length ? undefined : () => router.push('/policy-intake-new')}
           />
         )}
+        {rows.length > 0 && nextOffset < total ? (
+          <View style={styles.pagination}>
+            {pageError ? <Text style={styles.pageError}>{pageError}</Text> : null}
+            <Pressable accessibilityRole="button" accessibilityLabel={pageError ? 'Retry loading more submissions' : 'Load more submissions'} disabled={loadingMore || loading || refreshing} onPress={() => void loadMore()} style={[styles.loadMoreButton, (loadingMore || loading || refreshing) && styles.loadMoreDisabled]}>
+              <Text style={styles.loadMoreText}>{loadingMore ? 'Loading more...' : pageError ? 'Retry Load More' : 'Load More'}</Text>
+            </Pressable>
+          </View>
+        ) : null}
       </ScrollView>
 
       <View style={styles.bottomNav}>
@@ -289,7 +345,14 @@ const styles = StyleSheet.create({
   newButton: { minWidth: 65, height: 34, borderRadius: 10, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, backgroundColor: '#183864' }, newButtonText: { color: '#FFFFFF', fontSize: 10, lineHeight: 13, fontWeight: '700' },
   searchBand: { paddingHorizontal: 11, paddingTop: 8, paddingBottom: 8, flexDirection: 'row', backgroundColor: '#0860C8' }, searchBox: { flex: 1, minHeight: 38, borderRadius: 9, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: '#FFFFFF' }, searchInput: { flex: 1, paddingVertical: 0, color: '#1F314C', fontSize: 10.5, lineHeight: 14 },
   filtersWrap: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#DDE4EF', backgroundColor: '#FFFFFF' }, filtersContent: { paddingHorizontal: 10, paddingVertical: 7, gap: 7 }, filterChip: { minHeight: 31, borderRadius: 8, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#F7F8FB', borderWidth: StyleSheet.hairlineWidth, borderColor: '#E0E5ED' }, filterChipActive: { backgroundColor: '#183864', borderColor: '#183864' }, filterLabel: { color: '#4D5D75', fontSize: 9.2, lineHeight: 12, fontWeight: '700' }, filterLabelActive: { color: '#FFFFFF' }, filterCount: { color: '#728099', fontSize: 8.5, lineHeight: 11, fontWeight: '700' }, filterCountActive: { color: '#DDEAFF' },
-  scroll: { flex: 1 }, content: { paddingHorizontal: 9, paddingTop: 9, paddingBottom: 12, gap: 8 }, inlineError: { marginBottom: 5, color: partnerTheme.colors.danger, textAlign: 'center', fontSize: 10 },
+  scroll: { flex: 1 }, content: { paddingHorizontal: 9, paddingTop: 9, paddingBottom: 12, gap: 8 },
+  loadedSummary: { color: '#74839B', fontSize: 9.5, marginHorizontal: 5, marginBottom: 3 },
+  pagination: { paddingHorizontal: 6, paddingTop: 8, paddingBottom: 12, gap: 8 },
+  pageError: { color: partnerTheme.colors.danger, fontSize: 11, textAlign: 'center' },
+  loadMoreButton: { minHeight: 40, borderRadius: 10, borderWidth: 1, borderColor: '#A8C2E5', backgroundColor: '#FFFFFF', justifyContent: 'center', alignItems: 'center' },
+  loadMoreDisabled: { opacity: 0.6 },
+  loadMoreText: { color: '#164DA2', fontSize: 12, fontWeight: '700' },
+  inlineError: { marginBottom: 5, color: partnerTheme.colors.danger, textAlign: 'center', fontSize: 10 },
   card: { borderRadius: 11, paddingHorizontal: 10, paddingVertical: 10, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#E1E7F0', shadowColor: '#0B2447', shadowOpacity: 0.05, shadowRadius: 5, shadowOffset: { width: 0, height: 2 }, elevation: 1 }, pressedCard: { opacity: 0.75 }, rowTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 }, rowArtwork: { width: 38, height: 38, borderRadius: 9, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F3F7FC' }, rowArtworkImage: { width: 31, height: 31 }, identity: { flex: 1, minWidth: 0 }, statusStack: { maxWidth: 92, alignItems: 'flex-end', gap: 4 }, updatedDate: { color: '#7B8799', fontSize: 7, lineHeight: 9, textAlign: 'right' }, number: { color: '#1D2C45', fontSize: 11, lineHeight: 14, fontWeight: '800' }, customer: { marginTop: 2, color: '#687A92', fontSize: 8.5, lineHeight: 11 }, metaLine: { marginTop: 4, color: '#8290A3', fontSize: 8, lineHeight: 10.5 },
   progressWrap: { marginTop: 10, flexDirection: 'row', alignItems: 'flex-start' }, progressStep: { flex: 1, alignItems: 'center' }, progressLineWrap: { width: '100%', minHeight: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }, progressDot: { width: 10, height: 10, borderRadius: 5, alignItems: 'center', justifyContent: 'center', backgroundColor: '#DCE2EC' }, progressDotComplete: { backgroundColor: '#6541F4' }, progressDotRejected: { backgroundColor: '#EA625C' }, progressLine: { position: 'absolute', left: '57%', width: '86%', height: 1.5, backgroundColor: '#DCE2EC' }, progressLineComplete: { backgroundColor: '#6541F4' }, progressLabel: { marginTop: 3, color: '#7D899B', fontSize: 7.5, lineHeight: 10, fontWeight: '500' }, progressLabelActive: { color: '#23344E', fontWeight: '600' },
   attention: { marginTop: 8, minHeight: 28, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 6, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#FFF3DF' }, attentionText: { flex: 1, color: '#9B5C10', fontSize: 8.5, lineHeight: 11, fontWeight: '700' },
