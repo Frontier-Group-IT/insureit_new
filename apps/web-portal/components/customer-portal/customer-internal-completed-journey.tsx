@@ -16,7 +16,15 @@ type SpotFields = {
   location?: string | null;
 };
 const present = (value: unknown) => value !== null && value !== undefined && value !== "" && !(typeof value === "string" && !value.trim());
-const display = (value: unknown) => typeof value === "boolean" ? (value ? "Yes" : "No") : String(value);
+const display = (value: unknown) => {
+  if (typeof value === "boolean") return value ? "Yes" : "No";
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === "true" || normalized === "yes") return "Yes";
+    if (normalized === "false" || normalized === "no") return "No";
+  }
+  return String(value);
+};
 const datetime = (value: unknown) => {
   if (!present(value)) return null;
   const date = new Date(String(value));
