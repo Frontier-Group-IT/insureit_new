@@ -193,7 +193,7 @@ export function AssistanceIntakePanel(props: AssistanceIntakePanelProps) {
                   className={`operations-claim-motion-step-button flex min-h-[42px] w-full min-w-0 items-center justify-center rounded-md border-b px-1 py-1 text-center transition focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#174EA6] ${selected ? "border-b-[#071D49]" : "border-b-transparent"} ${current ? "bg-[#F7FAFF]" : available ? "bg-white hover:bg-[#FAFCFF]" : "cursor-not-allowed bg-white"}`}
                 >
                   <span className="flex min-w-0 items-center justify-center gap-1">
-                    <span className={`operations-claim-motion-indicator grid h-5 w-5 shrink-0 place-items-center rounded-full ${completed ? "bg-[#E8F8F0] text-[#0A9B72]" : current ? "bg-[#155EEF] text-white shadow-[0_2px_6px_rgba(21,94,239,0.18)]" : "bg-[#EEF2F7] text-[#58708F]"}`}>
+                    <span className={`operations-claim-motion-indicator grid h-5 w-5 shrink-0 place-items-center rounded-full ${completed ? "bg-[#16A34A] text-white" : current ? "bg-[#155EEF] text-white shadow-[0_2px_6px_rgba(21,94,239,0.18)]" : "bg-[#EEF2F7] text-[#58708F]"}`}>
                       {completed ? <span className="operations-claim-motion-check"><CheckIcon /></span> : current ? <span className="text-[9px] font-semibold">{index + 1}</span> : <LockIcon />}
                     </span>
                     <span className={`block whitespace-nowrap text-[clamp(7px,0.62vw,10px)] font-bold leading-none ${current ? "text-[#155EEF]" : completed ? "text-[#3E536F]" : "text-[#667A96]"}`}>{stage.label}</span>
