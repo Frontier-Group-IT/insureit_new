@@ -8,6 +8,8 @@ const route = readFileSync('../web-portal/app/api/partner/policy-intakes/route.t
 assert.match(app, /useState<IntakeFilter>\('all'\)/, 'Keep all-submissions default');
 assert.match(api, /export const POLICY_INTAKE_PAGE_SIZE = 50/, 'Page size must match server cap');
 assert.match(api, /export async function listPartnerPolicyIntakesPage\(offset = 0\)/, 'Fetch only requested page');
+assert.match(api, /export async function getPartnerPolicyIntake\(id: string\)/, 'Detail uses authorized single-item lookup');
+assert.match(readFileSync('app/policy-intakes/[id].tsx', 'utf8'), /await getPartnerPolicyIntake\(id\)/, 'Detail screen never depends on fetching all pages');
 assert.match(api, /view=mobile_list&filter=all&limit=\$\{POLICY_INTAKE_PAGE_SIZE\}&offset=\$\{offset\}/, 'Mobile list requests scoped page');
 assert.doesNotMatch(api, /export async function listPartnerPolicyIntakes\(\)/, 'Never require full export before displaying');
 assert.match(app, /await listPartnerPolicyIntakesPage\(0\)/, 'Initial request must load only first page');
