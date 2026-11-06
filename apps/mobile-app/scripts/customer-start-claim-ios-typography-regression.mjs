@@ -47,4 +47,12 @@ assert.match(file, /<Text style=\{styles\.subtitle\} numberOfLines=\{2\}>Choose 
 assert.match(file, /<VehicleDropdown[\s\S]*?onSelect=\{\(vehicle\) => \{/, 'Vehicle selection must remain wired to the existing flow');
 assert.match(file, /<ClaimActionBar[\s\S]*?onPrimary=\{\(\) => void continueClaim\(\)\}/, 'Start Claim action must remain wired');
 
+
+ // Start Claim screenshot correction: regular-weight text must not regress to bold on iOS.
+for (const style of ['iosEyebrow', 'iosTitle', 'iosSubtitle', 'iosSectionLabel', 'iosSectionTitle', 'iosHelper', 'iosSelectValue', 'iosSelectMeta', 'iosAddPolicyText', 'iosPolicyMode', 'iosPolicyNumber', 'iosPolicyInsurer', 'iosPolicyDates']) {
+  assert.match(file, new RegExp(`${style}:\\s*\\{[^}]*fontWeight:\\s*'400'`), `${style} must render at regular weight on iOS`);
+}
+assert.match(file, /policyCardCompact:\s*\{\s*minHeight:\s*82\s*\}/, 'Compact policy card must not retain the old 106pt minimum height');
+assert.match(file, /policyContentCompact:\s*\{\s*minHeight:\s*82,\s*paddingHorizontal:\s*10,\s*paddingVertical:\s*6/, 'Policy content must use compact padding and minimum height');
+
 console.log('Customer Start Claim iOS typography and workflow regression passed.');
