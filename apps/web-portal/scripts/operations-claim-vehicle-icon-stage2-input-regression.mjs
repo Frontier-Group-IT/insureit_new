@@ -1,0 +1,21 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { existsSync } from "node:fs";
+const read = path => readFileSync(fileURLToPath(new URL(path, import.meta.url)), "utf8");
+const stages = read("../components/claim-manager/operations-claim-stages.tsx");
+const header = read("../components/spot-survey/spot-survey-workspace-v2.tsx");
+
+assert.match(stages, /name: "spot_survey_done_date", label: "Spot Survey Done Date \*", type: "date"/);
+assert.match(stages, /name: "surveyor_name"/);
+assert.match(stages, /name: "surveyor_email"/);
+assert.match(stages, /name: "surveyor_phone"/);
+assert.match(stages, /const useAppDatePicker = field\.type === "date"/);
+assert.match(stages, /<AppStyleDateInput name=\{field\.name\} value=\{value\} required=\{required\} compact=\{selected\.key === "work_approval"\}/);
+assert.match(stages, /\$\{compact \? "h-\[38px\]" : "h-9"\} w-full items-center/,"Stage 2 date picker must match the 36px text inputs, not stretch to label height");
+assert.doesNotMatch(stages, /\$\{compact \? "h-\[38px\]" : "h-full min-h-9"\}/);
+assert.match(stages, /type="date"/,"Preserve accessible native calendar input");
+assert.match(header, /vehicle: "\/assets\/customer-3d-icons\/my_vehicles\.png"/);
+assert.match(header, /<Info label="Vehicle No\." title=\{vehicleNumber\} logo=\{<HeaderIcon src=\{claimHeaderIcons\.vehicle\}/);
+assert.ok(existsSync(fileURLToPath(new URL("../public/assets/customer-3d-icons/my_vehicles.png", import.meta.url))),"Visible 3D vehicle image must exist");
+console.log("Operations Stage 2 date height and vehicle header icon regression passed.");
