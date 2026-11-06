@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Building2, ChevronDown, ChevronRight, GitBranch, Handshake, Network, Search, UserRound, Users } from "lucide-react";
+import { Building2, ChevronDown, ChevronRight, GitBranch, Handshake, Network, UserRound } from "lucide-react";
 import type { EmployeeRow } from "./employee-forms";
 
 export type DirectoryPartner = {
@@ -26,8 +26,7 @@ export function EmployeeOrganizationTree({ employees, partners, query }: { emplo
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [showPartners, setShowPartners] = useState(true);
   const [focus, setFocus] = useState("");
-  const [localSearch, setLocalSearch] = useState("");
-  const search = normalized(localSearch || query);
+  const search = normalized(query);
   const employeeById = useMemo(() => new Map(employees.map((employee) => [employee.id, employee])), [employees]);
   const children = useMemo(() => {
     const result = new Map<string, EmployeeRow[]>();
@@ -71,7 +70,6 @@ export function EmployeeOrganizationTree({ employees, partners, query }: { emplo
   const roots = useMemo(() => employees.filter((employee) => !employee.reporting_manager_id || !employeeById.has(employee.reporting_manager_id) || employee.reporting_manager_id === employee.id).sort((a, b) => a.full_name.localeCompare(b.full_name)), [employees, employeeById]);
   const rootList = focus && employeeById.has(focus) ? [employeeById.get(focus)!] : roots;
   const visibleRootList = matchedIds ? rootList.filter((employee) => matchedIds.has(employee.id)) : rootList;
-  const totalPartnerCount = partners.filter((p) => employeeById.has(p.employeeId)).length;
 
   function toggle(id: string) {
     setExpanded((previous) => {
@@ -89,13 +87,14 @@ export function EmployeeOrganizationTree({ employees, partners, query }: { emplo
     const assigned = partnerByEmployee.get(employee.id) ?? [];
     const open = Boolean(search) || expanded.has(employee.id);
     const visibleReports = matchedIds ? reports.filter((item) => matchedIds.has(item.id)) : reports;
-    const visiblePartners = search ? assigned.filter((p) => [p.name, p.code, kindLabel[p.kind]].some((s) => normalized(s).includes(search))) : assigned;
+    const employeeMatches = [employee.full_name, employee.employee_code, employee.department, employee.designation, employee.location].some((s) => normalized(s).includes(search));
+    const visiblePartners = search && !employeeMatches ? assigned.filter((p) => [p.name, p.code, kindLabel[p.kind]].some((s) => normalized(s).includes(search))) : assigned;
     const canExpand = reports.length > 0 || (showPartners && assigned.length > 0);
     return (
       <li className="relative min-w-0 border-l border-[#DCE6F1] pl-4 before:absolute before:left-0 before:top-6 before:w-4 before:border-t before:border-[#DCE6F1]">
-        <div className="flex min-h-[70px] flex-wrap items-center gap-3 rounded-xl border border-[#D8E4F2] bg-white px-3 py-2 shadow-[0_3px_10px_rgba(7,29,73,0.04)] transition hover:border-[#A9C6EF] hover:shadow-sm">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#EAF2FF] text-[#164078]"><UserRound className="h-4 w-4" /></span>
-          <div className="min-w-[160px] flex-1">
+        <div className="flex min-h-[62px] flex-wrap items-center gap-3 rounded-lg border border-[#D8E4F2] bg-white px-3 py-1.5 shadow-[0_3px_10px_rgba(7,29,73,0.04)] transition hover:border-[#A9C6EF] hover:shadow-sm">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#EAF2FF] text-[#164078]"><UserRound className="h-4 w-4" /></span>
+          <div className="min-w-[140px] flex-1">
             <p className="truncate text-[12px] font-bold text-[#102A53]">{employee.full_name}</p>
             <p className="truncate text-[10px] text-[#65758C]">{employee.designation} · {employee.department}</p>
             <p className="text-[9px] text-[#8290A5]">{employee.location || "Location not assigned"} · {employee.employee_code}</p>
@@ -128,19 +127,23 @@ export function EmployeeOrganizationTree({ employees, partners, query }: { emplo
     );
   }
 
-  return <div className="mt-4">
-    <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[#DEE8F2] bg-[#F7FAFE] px-3 py-2">
-      <div className="flex items-center gap-2 text-[11px] font-semibold text-[#193B68]"><Users className="h-4 w-4" /> Reporting structure <span className="text-[10px] font-normal text-[#70839B]">{employees.length} employees · {totalPartnerCount} intermediaries</span></div>
+  return <div className="px-3 pb-3 pt-2 lg:px-4">
+    <div className="mb-2 flex flex-wrap items-center justify-between gap-2 rounded-md bg-[#F6F9FD] px-3 py-1.5">
+      <div className="flex flex-wrap items-center gap-2 text-[10px] text-[#657B94]">
+        <span className="font-semibold text-[#25456C]">Reporting hierarchy</span>
+        <span className="hidden text-[#B6C5D5] sm:inline">/</span>
+        <span>Click an employee to explore their team and network</span>
+      </div>
       <div className="flex flex-wrap items-center gap-2">
-        <label className="flex items-center gap-1 text-[10px] text-[#456079]"><input checked={showPartners} onChange={(e) => setShowPartners(e.target.checked)} type="checkbox" />Show partner network</label>
-        <div className="flex items-center gap-1 rounded-md border border-[#D5E1ED] bg-white px-2"><Search className="h-3.5 w-3.5 text-[#8293A6]" /><input value={localSearch} onChange={(e) => setLocalSearch(e.target.value)} placeholder="Find person or partner" className="h-8 w-44 bg-transparent text-[10px] outline-none" /></div>
-        <button type="button" onClick={() => { setExpanded(new Set(employees.map((e) => e.id))); setFocus(""); }} className="rounded-md border border-[#CAD8EA] bg-white px-2.5 py-1.5 text-[10px] font-semibold text-[#23456C]">Expand all</button>
-        <button type="button" onClick={() => { setExpanded(new Set()); setFocus(""); setLocalSearch(""); }} className="rounded-md border border-[#CAD8EA] bg-white px-2.5 py-1.5 text-[10px] font-semibold text-[#23456C]">Reset</button>
+        <label className="inline-flex cursor-pointer items-center gap-1.5 text-[10px] font-medium text-[#456079]"><input checked={showPartners} onChange={(e) => setShowPartners(e.target.checked)} type="checkbox" className="accent-[#153B6D]" /> Partner network</label>
+        <span className="h-4 border-l border-[#DCE5F0]" />
+        <button type="button" onClick={() => { setExpanded(new Set(employees.map((e) => e.id))); setFocus(""); }} className="rounded border border-[#CEDCEB] bg-white px-2 py-1 text-[10px] font-semibold text-[#23456C] hover:bg-[#EFF5FD]">Expand all</button>
+        <button type="button" onClick={() => { setExpanded(new Set()); setFocus(""); }} className="rounded border border-[#CEDCEB] bg-white px-2 py-1 text-[10px] font-semibold text-[#23456C] hover:bg-[#EFF5FD]">Collapse all</button>
       </div>
     </div>
-    <div className="mt-3 max-h-[72vh] overflow-auto rounded-lg border border-[#E0E9F2] bg-[#FCFDFF] p-4">
-      {focus ? <button type="button" onClick={() => setFocus("")} className="mb-3 rounded-md bg-[#EAF2FF] px-3 py-1.5 text-[10px] font-semibold text-[#214D83]">← Show full organization</button> : null}
-      {visibleRootList.length ? <ul className="max-w-[1500px] space-y-3">{visibleRootList.map((employee) => <EmployeeNode key={employee.id} employee={employee} path={new Set()} />)}</ul> : <p className="p-8 text-center text-[11px] text-[#65758A]">No matching people or partners found.</p>}
+    <div className="min-h-[55vh] max-h-[calc(100vh-265px)] overflow-auto rounded-lg border border-[#E3EBF4] bg-[#FCFDFF] px-2 py-3 sm:px-4">
+      {focus ? <button type="button" onClick={() => setFocus("")} className="mb-3 rounded-md bg-[#EAF2FF] px-3 py-1.5 text-[10px] font-semibold text-[#214D83]">← Full organization</button> : null}
+      {visibleRootList.length ? <ul className="max-w-[1500px] space-y-2">{visibleRootList.map((employee) => <EmployeeNode key={employee.id} employee={employee} path={new Set()} />)}</ul> : <p className="p-8 text-center text-[11px] text-[#65758A]">No matching people or partners found.</p>}
     </div>
   </div>;
 }
