@@ -64,14 +64,14 @@ export default function InsurerListScreen() {
 
   return (
     <PartnerScreen
-      title="Insurance Company List"
+      title="Insurer Performance"
       navyTopBar
       scrollProps={{
         refreshControl: <RefreshControl refreshing={query.refreshing} onRefresh={() => void query.refresh()} />,
       }}
     >
       <View style={styles.panel}>
-        <Text style={styles.heading}>Insurer</Text>
+        <Text style={styles.heading}>Track policies, premiums and insurer-wise business</Text>
         <Text style={styles.range}>{validRange ? `${from} to ${to}` : 'Select a date range on Business to view insurers'}</Text>
         {validRange ? (
           <View style={styles.scrollGuide}>
@@ -143,7 +143,7 @@ export default function InsurerListScreen() {
 
 const styles = StyleSheet.create({
   panel: { backgroundColor: '#FFFFFF', borderColor: '#DCE5F0', borderWidth: 1, borderRadius: 15, overflow: 'hidden', marginTop: 12 },
-  heading: { fontSize: 15, fontWeight: '800', color: '#14294B', paddingHorizontal: 14, paddingTop: 14 },
+  heading: { fontSize: 12, lineHeight: 17, fontWeight: '400', color: '#536785', paddingHorizontal: 14, paddingTop: 12 },
   range: { color: '#728198', fontSize: 10, paddingHorizontal: 14, paddingTop: 3, paddingBottom: 8 },
   scrollGuide: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, paddingHorizontal: 12, paddingBottom: 10 },
   scrollGuideText: { flex: 1, color: '#536F98', fontSize: 10 },
