@@ -4,6 +4,9 @@ const read=path=>readFileSync(new URL(path,import.meta.url),"utf8");
 const operations=read("../components/claim-manager/operations-claim-stages.tsx");
 const customer=read("../app/customer/(protected)/claims/[id]/stage/[stage]/page.tsx");
 const choice=read("../components/customer-portal/customer-claim-boolean-choice.tsx");
+const spot=read("../app/customer/(protected)/spot-intimation/page.tsx");
+const start=read("../components/customer-portal/customer-start-claim-selector.tsx");
+const operationsStart=read("../app/claims/new/add-claim-form.tsx");
 
 // Requested dimensions: text 320x40, date 260x40, Yes/No 122x40 each + 10px gap.
 assert.match(operations,/field\.type === "date" \? "max-w-\[260px\]" : "max-w-\[320px\]"/);
@@ -34,4 +37,12 @@ assert.match(operations,/2xl:grid-cols-5 lg:items-start/);
 assert.match(customer,/whitespace-nowrap text-\[9px\] font-semibold uppercase leading-4 tracking-\[0\.01em\]/);
 assert.match(customer,/2xl:grid-cols-5 lg:items-start/);
 assert.match(operations,/stageOneLabelClassName = "block h-4 whitespace-nowrap text-\[9px\]/);
+assert.match(spot,/const textFieldClass = "block h-\[40px\] w-full max-w-\[320px\]/);
+assert.match(spot,/const splitFieldClass = "block h-\[40px\]/);
+assert.match(spot,/flex h-\[40px\] w-full max-w-\[320px\]/);
+assert.match(spot,/text-\[9px\] font-bold uppercase leading-4 tracking-\[0\.01em\]/);
+assert.match(spot,/2xl:grid-cols-\[repeat\(5,minmax\(0,1fr\)\)\]/);
+assert.match(start,/h-\[40px\] w-full max-w-\[320px\] rounded-lg border/);
+assert.match(operationsStart,/const inputClass = "h-10 w-full/);
+assert.match(operationsStart,/const labelClass = "mb-1 block whitespace-nowrap text-\[9px\]/);
 console.log("Claim forms 320/260/122 x40 and single-line labels regression passed.");
