@@ -25,9 +25,9 @@ assert.match(save,/setSuccessNotice\(editMode \? "Spot Intimation changes saved 
 assert.match(save,/if\(destination\)router\.push\(destination\)/,"Redirect only after success closes.");
 assert.match(save,/if \(pending \|\| successNotice\) return;/,"Avoid duplicate submission while confirmation is shown.");
 
-assert.match(bulk,/shownUploadId\.current===state\.uploaded\.id/,"Do not reopen popup for same uploaded file after refresh.");
-assert.match(bulk,/const count=state\.uploadedCount \?\? 1/,"Use confirmed server count.");
-assert.match(bulk,/setSuccessNotice\(\x60\$\{count\} document/,"Popup must display actual uploaded count.");
+assert.match(bulk,/if\(running\.current \|\| !selected\.length\) return;/,"Prevent duplicate bulk submission while a batch is processing.");
+assert.match(bulk,/if\(result\.error \|\| !result\.uploaded\)/,"Only verified server uploads count as successful.");
+assert.match(bulk,/if\(complete\) setSuccessNotice\(complete\+" document"/,"Success popup must report the confirmed uploaded file count.");
 assert.match(bulk,/<CustomerSuccessDialog title="Upload Successful"/,"Use shared success popup.");
 assert.doesNotMatch(bulk,/<p role="status".*document\(s\) uploaded successfully/,"Remove duplicate inline success.");
 assert.match(voice,/shownUploadId\.current===uploadState\.uploaded\.id/,"Do not re-show same voice upload.");
