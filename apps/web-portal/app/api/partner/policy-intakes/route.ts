@@ -154,6 +154,26 @@ export async function GET(request: Request) {
   if (filter === "completed") query = query.eq("status", "completed");
   if (filter === "in_progress") query = query.in("status", ["processing", "ready_for_review", "in_review"]);
 
+  // Mobile list view uses the exact same authenticated, role-scoped query above.
+  // It deliberately omits the four extra count requests and name-enrichment joins:
+  // the native list shows only fields present in intakeSelect, not submitted_by_name.
+  // This keeps each paginated request small without weakening permissions.
+  if (view === "mobile_list") {
+    try {
+      const { data: intakes, error: listError, count } = await query;
+      if (listError) throw listError;
+      return json({ ok: true, intakes: intakes ?? [], total: count ?? 0 });
+    } catch (cause) {
+      console.error("[partner-policy-intakes] mobile list read failed", {
+        category: "list-query",
+        // No JWT, SQL, PII, or raw database error in production logs.
+        code: typeof cause === "object" && cause !== null && "code" in cause
+          ? String((cause as { code?: unknown }).code ?? "unknown").slice(0, 32) : "unknown",
+      });
+      return json({ ok: false, error: "Policy intakes could not be loaded." }, 500);
+    }
+  }
+
   async function ownedCount(statuses: string[], excluded = false) {
     let countQuery = admin
       .from("policy_intake_requests")
