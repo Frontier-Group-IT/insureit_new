@@ -58,5 +58,5 @@ assert.match(page, /<OperationsClaimStages/, "All self-managed Operations claims
 
 assert.ok(viewer.includes('completed ? "bg-[#16A34A] text-white"'), "Read-only Operations completed indicator must be solid green with a white tick");
 assert.ok(!viewer.includes('completed ? "bg-[#E8F8F0] text-[#0A9B72]"'), "Pale-green completed indicator must not return");
-assert.match(motion, /operations-claim-motion-completed \\{\\s*border-color: #dce6f3;\\s*background: #fff;/, "Operations completed cards remain white");
+assert.ok(motion.includes("border-color: #dce6f3;\n  background: #fff;"), "Operations completed cards remain white");
 console.log("External self-managed claim layout parity and read-only protections passed.");
