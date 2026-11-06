@@ -18,4 +18,24 @@ assert.match(search, /onChangeText=\{onChangeText\}/, 'Preserve controlled query
 assert.match(search, /CUSTOMER_SEARCH_PLACEHOLDER_SIZE = 16/, 'Keep approved reference font size');
 assert.match(search, /CUSTOMER_SEARCH_PLACEHOLDER_COLOR = '#7F8EA4'/, 'Keep approved reference colour');
 
-console.log('Customer Policies idle search placeholder slide regression passed.');
+
+// Every Customer search surface must opt into the shared animated component.
+const pages = [
+  ['../app/customer/claims.tsx', /<CustomerSearchBar[^>]*idleHints=\{\[/],
+  ['../app/customer/vehicles.tsx', /<CustomerAnimatedSearchInput[\s\S]*?idleHints=\{\[/],
+  ['../app/customer/start-claim.tsx', /<CustomerAnimatedSearchInput[\s\S]*?idleHints=\{\[/],
+  ['../app/customer/add-policy.tsx', /<CustomerAnimatedSearchInput[\s\S]*?idleHints=\{\[/],
+  ['../app/customer/support.tsx', /<CustomerAnimatedSearchInput[^>]*idleHints=\{\[/],
+  ['../app/customer/help-faqs.tsx', /<CustomerAnimatedSearchInput[^>]*idleHints=\{\[/],
+  ['../app/customer/exchange/search.tsx', /<CustomerAnimatedSearchInput[\s\S]*?idleHints=\{\[/],
+  ['../components/exchange/ExchangeMarketplaceHome.tsx', /idleHints=\{\[/],
+  ['../components/anchored-search-select.tsx', /idleHints=\{\[/],
+];
+for (const [page, pattern] of pages) {
+  const contents = readFileSync(new URL(page, import.meta.url), 'utf8');
+  assert.match(contents, pattern, `${page} must support slide-up idle search prompts`);
+}
+assert.match(search, /\[placeholder, 'Type to search\.\.\.'\]/, 'Future Customer search inputs must animate by default');
+assert.match(search, /useNativeDriver: true/, 'Vertical slide animation should use the native driver');
+
+console.log('Customer search idle placeholder slide regression passed across all search surfaces.');
