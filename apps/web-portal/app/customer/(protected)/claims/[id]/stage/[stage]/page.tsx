@@ -178,11 +178,11 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
         <input type="hidden" name="claim" value={claim.id}/>
         <input type="hidden" name="stage" value={selected.key}/>
         {CUSTOMER_EXTERNAL_STAGE_FIELDS[selected.key].map(field=>(
-          <label key={field.key} className="customer-claim-ref-field min-w-0 text-[10px] font-semibold uppercase tracking-[0.04em] text-[#5673B0]">{field.label}{field.optional?"":" *"}
+          <label key={field.key} className={`customer-claim-ref-field min-w-0 block w-full ${field.type==="date"?"max-w-[260px]":field.type==="boolean"||field.type==="yesno"?"max-w-[254px]":"max-w-[320px]"} text-[10px] font-semibold uppercase tracking-[0.04em] text-[#5673B0]`}>{field.label}{field.optional?"":" *"}
             {field.type==="boolean"||field.type==="yesno"?(
-<CustomerClaimBooleanChoice compact={selected.key==="work_approval"} name={field.key} kind={field.type} value={typeof milestone?.details?.[field.key]==="boolean"?String(milestone.details[field.key]):typeof milestone?.details?.[field.key]==="string"?String(milestone.details[field.key]):""}/>
+<CustomerClaimBooleanChoice name={field.key} kind={field.type} value={typeof milestone?.details?.[field.key]==="boolean"?String(milestone.details[field.key]):typeof milestone?.details?.[field.key]==="string"?String(milestone.details[field.key]):""}/>
             ):(
-              <input name={field.key} type={field.type} required={!field.optional} maxLength={field.type==="number"?undefined:500} min={field.type==="number"?"0":undefined} step={field.type==="number"?"0.01":undefined} defaultValue={typeof milestone?.details?.[field.key]==="string"||typeof milestone?.details?.[field.key]==="number"?String(milestone.details[field.key]):""} className={`mt-1 ${selected.key==="work_approval"?"h-[38px]":"h-9"} w-full rounded-md border border-[#D9E3F0] bg-white px-3 text-[12px] font-semibold normal-case tracking-normal text-[#071D49]`}/>
+              <input name={field.key} type={field.type} required={!field.optional} maxLength={field.type==="number"?undefined:500} min={field.type==="number"?"0":undefined} step={field.type==="number"?"0.01":undefined} defaultValue={typeof milestone?.details?.[field.key]==="string"||typeof milestone?.details?.[field.key]==="number"?String(milestone.details[field.key]):""} className="mt-1 h-[45px] w-full rounded-md border border-[#D9E3F0] bg-white px-3 text-[12px] font-semibold normal-case tracking-normal text-[#071D49]"/>
             )}
           </label>
         ))}
