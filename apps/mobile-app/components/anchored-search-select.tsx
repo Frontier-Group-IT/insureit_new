@@ -1,5 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useEffect, useRef, useState } from 'react';
+import { CustomerAnimatedSearchInput } from '@/components/customer-animated-search-input';
 import { Dimensions, Keyboard, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { palette } from '@/lib/theme';
@@ -155,14 +156,13 @@ export function AnchoredSearchSelect({
           >
             <View style={styles.search}>
               <MaterialCommunityIcons name="magnify" size={19} color="#145ED7" />
-              <TextInput
+              <CustomerAnimatedSearchInput
                 ref={searchInputRef}
                 value={query}
                 onChangeText={onQueryChange}
                 autoCapitalize={autoCapitalize}
                 returnKeyType="search"
                 placeholder={searchPlaceholder}
-                placeholderTextColor="#6E7F96"
                 style={styles.searchInput}
               />
             </View>
