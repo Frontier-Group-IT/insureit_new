@@ -43,6 +43,9 @@ function checkFile(file: File, voice: boolean): string | null {
 export function OperationsClaimStageOneAttachments({ claimId }: { claimId: string }) {
   const router = useRouter();
   const bulkPicker = useRef<HTMLInputElement>(null);
+  const [selectedBulk, setSelectedBulk] = useState<File[]>([]);
+  const [bulkProgress, setBulkProgress] = useState({ done: 0, total: 0 });
+  const [failedBulk, setFailedBulk] = useState<string[]>([]);
   const audioPicker = useRef<HTMLInputElement>(null);
   const recorder = useRef<MediaRecorder | null>(null);
   const micStream = useRef<MediaStream | null>(null);
@@ -107,18 +110,27 @@ export function OperationsClaimStageOneAttachments({ claimId }: { claimId: strin
     }
     startTransition(async () => {
       let completed = 0;
-      try {
-        for (const file of files) {
+      const failed: File[] = [];
+      if (!voice) setBulkProgress({ done: 0, total: files.length });
+      for (const file of files) {
+        try {
           await uploadOne(file, voice);
           completed++;
+        } catch (error) {
+          failed.push(file);
+          setMessage({ ok: false, text: (error instanceof Error ? error.message : "Upload failed.") + " " + completed + " file(s) already saved; retry only failed files." });
         }
+        if (!voice) setBulkProgress(prev => ({ ...prev, done: prev.done + 1 }));
+      }
+      if (!voice) {
+        setSelectedBulk(failed);
+        setFailedBulk(failed.map(file => file.name));
+      }
+      if (!failed.length) {
         setMessage({ ok: true, text: completed + (voice ? " voice note saved." : " document(s) uploaded successfully.") });
         if (voice) setAudioFile(null);
-        router.refresh();
-      } catch (error) {
-        setMessage({ ok: false, text: (error instanceof Error ? error.message : "Upload failed.") + (completed ? " " + completed + " file(s) were already saved." : "") });
-        if (completed) router.refresh();
       }
+      if (completed) router.refresh();
     });
   }
 
@@ -177,15 +189,38 @@ export function OperationsClaimStageOneAttachments({ claimId }: { claimId: strin
       <section aria-label="Upload multiple claim documents">
         <input ref={bulkPicker} type="file" multiple accept={acceptedDocuments} className="sr-only" aria-label="Select multiple claim documents" onChange={e => {
           const files = Array.from(e.currentTarget.files || []); e.currentTarget.value = "";
-          submitFiles(files, false);
+          if (!files.length) return;
+          setBulkMessage(null);
+          setFailedBulk([]);
+          setSelectedBulk(prev => {
+            const next = [...prev];
+            for (const file of files) {
+              if (next.some(item => item.name === file.name && item.size === file.size && item.lastModified === file.lastModified)) continue;
+              if (next.length >= 10) { setBulkMessage({ ok: false, text: "Select up to 10 files at a time." }); break; }
+              const problem = checkFile(file, false);
+              if (problem) { setBulkMessage({ ok: false, text: problem }); break; }
+              next.push(file);
+            }
+            return next;
+          });
         }} />
         <button type="button" disabled={busy} onClick={() => bulkPicker.current?.click()}
           className="flex w-full items-center gap-3 rounded-xl border-2 border-dashed border-[#C5D8ED] bg-[#F8FAFE] px-4 py-3 text-left transition hover:border-[#4380CD] disabled:opacity-60">
           <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-[#E5F0FF] text-[#1952A1]"><Files className="h-5 w-5" /></span>
           <span className="min-w-0 flex-1"><strong className="block text-[12px] text-[#102A52]">Upload multiple documents</strong>
-            <small className="text-[10px] text-[#7787A2]">{busy ? "Uploading files…" : "Select several files now, or choose more later (up to 10 at once)."}</small></span>
+            <small className="text-[10px] text-[#7787A2]">{busy ? "Uploading files…" : "Select up to 10 files and review them before uploading."}</small></span>
           {busy ? <span className="text-[11px] font-semibold text-[#1952A1]">Uploading…</span> : <Plus className="h-5 w-5 text-[#1952A1]" />}
         </button>
+        {selectedBulk.length ? <div className="mt-2 rounded-lg border border-[#D9E3F0] bg-white p-3">
+          <div className="mb-2 flex justify-between text-xs font-semibold text-[#17365D]"><span>{selectedBulk.length} selected files</span><span>{(selectedBulk.reduce((sum,file)=>sum+file.size,0)/1048576).toFixed(1)} MB total</span></div>
+          <ul className="space-y-1">{selectedBulk.map(file => <li key={file.name+file.size+file.lastModified} className="flex min-w-0 items-center gap-2 rounded-md bg-[#F7FAFD] px-2 py-1.5 text-xs">
+            <span className="min-w-0 flex-1 truncate" title={file.name}>{file.name}</span><span className="shrink-0 text-[#64748B]">{(file.size/1048576).toFixed(1)} MB</span>
+            {failedBulk.includes(file.name) ? <span className="text-red-600">Failed</span> : null}
+            <button type="button" disabled={busy} aria-label={"Remove "+file.name} onClick={() => setSelectedBulk(items=>items.filter(item=>item!==file))} className="rounded p-1 text-[#64748B] disabled:opacity-50"><Trash2 className="h-4 w-4"/></button>
+          </li>)}</ul>
+          {busy ? <p role="status" className="mt-2 text-xs text-[#174A87]">Processed {bulkProgress.done} of {bulkProgress.total} files</p> : null}
+          <button type="button" disabled={busy} onClick={() => submitFiles(selectedBulk, false)} className="mt-3 rounded-lg bg-[#1253A7] px-4 py-2 text-xs font-semibold text-white disabled:opacity-50">Upload Selected Files</button>
+        </div> : null}
         {bulkMessage?.ok ? <p role="status" className="mt-2 text-xs text-emerald-700">{bulkMessage.text}</p> : null}
       </section>
 
