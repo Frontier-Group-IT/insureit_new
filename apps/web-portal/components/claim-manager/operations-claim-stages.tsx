@@ -425,7 +425,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
                   const noChecked = value === "false" || value === "no";
                   return (
                     <fieldset key={field.name} className="min-w-0 w-full max-w-[254px]">
-                      <legend className="block h-4 max-w-full whitespace-nowrap text-[9px] font-semibold uppercase leading-4 tracking-[0.01em] text-[#174EA6] max-sm:whitespace-normal">
+                      <legend className="block h-4 max-sm:h-auto max-w-full whitespace-nowrap text-[9px] font-semibold uppercase leading-4 tracking-[0.01em] text-[#174EA6] max-sm:whitespace-normal">
                         {displayLabel}{required ? <span className="ml-1 text-rose-600">*</span> : null}
                       </legend>
                       <div className="mt-1 grid w-full max-w-[254px] grid-cols-2 gap-[10px]">
@@ -597,7 +597,7 @@ function StageOneForm({ claimId, stage, active, detail, spotDetails, next, accid
   const incidentValue = spotDetails?.incident_at ?? accidentAt ?? (typeof storedIncidentAt === "string" ? storedIncidentAt : "");
   const spotIntimationValue = spotDetails?.spot_intimation_at ?? spotIntimationAt ?? (typeof storedSpotIntimationAt === "string" ? storedSpotIntimationAt : "");
   const groupedFieldNames = new Set(["incident_at", "incident_time", "spot_intimation_at", "spot_intimation_time"]);
-  const stageOneLabelClassName = "block h-4 whitespace-nowrap text-[9px] font-semibold uppercase leading-4 tracking-[0.01em] text-[#174EA6] max-sm:whitespace-normal";
+  const stageOneLabelClassName = "block h-4 max-sm:h-auto whitespace-nowrap text-[9px] font-semibold uppercase leading-4 tracking-[0.01em] text-[#174EA6] max-sm:whitespace-normal";
   const groupedInputClassName = "h-full min-w-0 w-full border-0 bg-transparent pl-2 pr-[10%] text-[11px] font-semibold normal-case tracking-normal text-[#071D49] outline-none";
 
   return (
