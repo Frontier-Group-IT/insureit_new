@@ -102,7 +102,7 @@ export default function SupportScreen() {
 
       <View style={styles.searchBox}>
         <MaterialCommunityIcons name="magnify" size={20} color={palette.slate} />
-        <CustomerAnimatedSearchInput value={search} onChangeText={setSearch} placeholder="Search tickets or support topics" style={styles.searchInput} />
+        <CustomerAnimatedSearchInput value={search} onChangeText={setSearch} placeholder="Search tickets or support topics" idleHints={["Search tickets or support topics", "Search by ticket or enquiry", "Search help and support topics"]} style={styles.searchInput} />
         <Pressable accessibilityRole="button" onPress={() => router.push('/customer/help-faqs')} style={styles.searchFaqButton}>
           <MaterialCommunityIcons name="help-circle-outline" size={19} color={roleTheme.customer.accent} />
         </Pressable>

@@ -5,6 +5,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, ActivityIndicator, Image, Keyboard, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { CustomerAnimatedSearchInput } from '@/components/customer-animated-search-input';
 import { AnchoredSearchSelect } from '@/components/anchored-search-select';
 import { Button, Card, Message, Screen } from '@/components/ui';
 import { getCurrentSession } from '@/lib/auth';
@@ -336,14 +337,14 @@ function VehicleDropdown({ vehicles, protection, query, selectedVehicle, open, o
           >
             <View style={styles.vehicleSearch}>
               <MaterialCommunityIcons name="magnify" size={19} color="#145ED7" />
-              <TextInput
+              <CustomerAnimatedSearchInput
                 ref={searchInputRef}
                 value={query}
                 onChangeText={onQueryChange}
                 autoCapitalize="characters"
                 returnKeyType="search"
                 placeholder="Search vehicle number, make or model"
-                placeholderTextColor="#6E7F96"
+                idleHints={["Search vehicle number, make or model", "Search by registration number", "Search by manufacturer or model"]}
                 style={styles.vehicleSearchInput}
               />
             </View>
