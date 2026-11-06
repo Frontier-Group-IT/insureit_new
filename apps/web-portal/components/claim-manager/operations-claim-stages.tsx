@@ -191,6 +191,11 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
   const [selectedKey, setSelectedKey] = useState(() => stages.some((stage) => stage.key === initialStageKey) ? initialStageKey! : active?.key ?? stages[0].key);
   const selected = stages.find((stage) => stage.key === selectedKey) ?? stages[0];
   const selectedIndex = stages.findIndex((stage) => stage.key === selected.key);
+  // Completed Operations claims retain the nine-stage status strip but no longer show editable stage input forms.
+  // Do not apply this to partner views or active/incomplete claims.
+  const hideCompletedOperationsStagePanel = !partnerReadOnlyJourney && !partnerManagedJourney && (
+    journeyComplete || (hasExternalVisualProgress && stages.every((stage) => externalVisualCompletedKeys.has(stage.key)))
+  );
   const externalSelectedCompleted = hasExternalVisualProgress && externalVisualCompletedKeys.has(selected.key);
   const selectedAvailable = unrestrictedStageEditing || journeyComplete || selectedIndex <= activeIndex || externalSelectedCompleted;
   const selectedIsCurrent = !journeyComplete && selected.key === active?.key;
@@ -347,7 +352,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
         })}
       </ol>
 
-      <div key={selected.key} data-claim-stage-panel={selected.key} className="operations-claim-motion-panel p-4">
+      {!hideCompletedOperationsStagePanel ? <div key={selected.key} data-claim-stage-panel={selected.key} className="operations-claim-motion-panel p-4">
         {selected.key === "spot_intimation" && (!partnerReadOnlyJourney || partnerInternalStageOne) && !partnerManagedJourney ? (
           <>
             <StageOneForm
@@ -479,7 +484,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
         ) : selected.key !== "spot_intimation" && selected.key !== "claim_intimation" ? (
           <p className="mt-3 rounded-lg border border-[#E4ECF6] bg-[#FBFCFE] px-3 py-2 text-[12px] font-medium text-[#526178]">This stage will open when the previous stage is completed.</p>
         ) : null}
-      </div>
+      </div> : null}
 
       {successNotice ? <ClaimStageSuccessPopup message={successNotice} /> : null}
       <ClaimStageErrorDialog message={errorNotice ? summarizeClaimActionError(errorNotice) : null} onClose={() => setErrorNotice(null)} />
