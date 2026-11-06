@@ -19,6 +19,6 @@ assert.match(loader, /parent_partner_id/);
 assert.match(tree, /reporting_manager_id/);
 assert.match(tree, /Reporting loop detected/);
 assert.match(tree, /Business network/);
-assert.match(tree, /Show partner network/);
+assert.match(tree, /Partner network/);
 assert.doesNotMatch(loader, /draft_data\.associate_name/);
 console.log("Employee organization tree scoped-network regression: passed");
