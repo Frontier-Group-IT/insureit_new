@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { CustomerErrorDialog } from "./customer-error-dialog";
 import { CustomerSuccessDialog } from "./customer-success-dialog";
 import { Files, Plus, Loader2, X } from "lucide-react";
-import { uploadCustomerClaimDocument } from "@/app/customer/(protected)/claims/[id]/stage/[stage]/upload-action";
+import { uploadCustomerClaimDocument, prepareCustomerClaimBulkVideo, finalizeCustomerClaimBulkVideo } from "@/app/customer/(protected)/claims/[id]/stage/[stage]/upload-action";
+import { createSupabaseBrowserClient } from "@/lib/auth";
 
 const allowedExtensions = /\.(pdf|jpe?g|png|webp|heic|mp4|mov|webm|m4a|ogg)$/i;
 const videoExtensions = /\.(mp4|mov|webm)$/i;
@@ -55,8 +56,18 @@ export function CustomerClaimMultipleUpload({claimId,accountId,stage,returnToSpo
         data.set("returnToSpotIntimation",returnToSpotIntimation?"1":"0");
         data.append("file",file);
         try {
-          const result=await uploadCustomerClaimDocument({error:null},data);
-          if(result.error || !result.uploaded) throw new Error(result.error || "Upload was not confirmed.");
+          if(videoExtensions.test(file.name) && file.size > 20 * 1024 * 1024) {
+            // Large videos bypass the server-action body limit via a claim-scoped signed URL.
+            const prepared = await prepareCustomerClaimBulkVideo(accountId,claimId,stage,{name:file.name,size:file.size,type:file.type});
+            if(!prepared.ok || !prepared.path || !prepared.token) throw new Error(prepared.error || "Unable to prepare video upload.");
+            const uploaded = await createSupabaseBrowserClient().storage.from("claim-documents").uploadToSignedUrl(prepared.path,prepared.token,file,{contentType:file.type,upsert:false});
+            if(uploaded.error) throw new Error(uploaded.error.message);
+            const saved = await finalizeCustomerClaimBulkVideo(accountId,claimId,stage,prepared.path,{name:file.name,size:file.size,type:file.type});
+            if(!saved.ok) throw new Error(saved.error || "Unable to register video.");
+          } else {
+            const result=await uploadCustomerClaimDocument({error:null},data);
+            if(result.error || !result.uploaded) throw new Error(result.error || "Upload was not confirmed.");
+          }
           complete++;
         } catch(error) {
           failures.push(file.name);
