@@ -229,7 +229,7 @@ export default async function ClaimDetailPage({ params, searchParams }: { params
   const allNineCompletedForPdf = !pdfMilestonesError && INTERNAL_JOURNEY_STAGES.every(stage => completedPdfKeys.has(stage.key));
   const pdfUrl = `/claims/${encodeURIComponent(claim.id)}/download`;
   const claimPdfActions = allNineCompletedForPdf ? (
-    <div className="mb-3 flex flex-wrap items-center justify-end gap-2" aria-label="Completed claim PDF actions">
+    <div className="flex flex-wrap items-center justify-end gap-2" aria-label="Completed claim PDF actions">
       <a href={pdfUrl + "?preview=1"} target="_blank" rel="noopener noreferrer"
         className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-[#B9CBE2] bg-white px-3 text-[12px] font-semibold text-[#174A87] hover:bg-[#F1F6FF]">
         <ExternalLink className="h-4 w-4" /> Open PDF
@@ -290,9 +290,8 @@ export default async function ClaimDetailPage({ params, searchParams }: { params
 
   return (
     <ClaimManagerShell title={title} backHref={backHref}>
-      {claimPdfActions}
       <div>
-        <SpotClaimHeader claim={{ ...effectiveClaimWithSpotIntimation, policySource: externalPolicy ? "external" : "sibl", policyCopy }} />
+        <SpotClaimHeader headerActions={claimPdfActions} claim={{ ...effectiveClaimWithSpotIntimation, policySource: externalPolicy ? "external" : "sibl", policyCopy }} />
       </div>
       <div className="mt-[6px]">
         <OperationsClaimStages

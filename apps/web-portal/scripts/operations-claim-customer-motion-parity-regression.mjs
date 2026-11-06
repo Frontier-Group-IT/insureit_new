@@ -37,4 +37,9 @@ assert.match(motion, /330ms cubic-bezier\(\.2,\.8,\.25,1\)/, "Completed check an
 assert.match(motion, /prefers-reduced-motion:reduce/, "Respect reduced-motion accessibility setting.");
 assert.match(customer, /customer-claim-motion-active/, "Customer stage visual remains unchanged.");
 assert.doesNotMatch(motion, /(?:cursor:pointer|pointer-events:all)/, "Styles must not unlock protected stages.");
+// Completed stage tiles must stay white; success is indicated by the green circular check.
+assert.match(motion, /\.operations-claim-motion \.operations-claim-motion-completed \{\s*border-color: #dce6f3;\s*background: #fff;/, "Completed stage card background stays white");
+assert.match(motion, /\.operations-claim-motion \.operations-claim-motion-completed \.operations-claim-motion-step-button \{\s*background: #fff;/, "Completed stage button background stays white");
+assert.doesNotMatch(motion, /background: #dcfce7|background: #bbf7d0/, "No green completed stage card or hover fill");
+assert.match(operations, /isCompleted \? "bg-\[#16A34A\] text-white/, "Keep filled green tick indicator");
 console.log("Operations internal/external claim motion parity regression passed.");

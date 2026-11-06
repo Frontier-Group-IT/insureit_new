@@ -18,4 +18,13 @@ assert.match(insurerLogo, /export function getInsurerLogo/, "Reuse existing insu
 assert.match(claimPage, /insurance_companies\(name, contact_email, contact_phone\)/, "Operations claim query must supply insurer name");
 assert.match(claimPage, /<SpotClaimHeader/, "Same header is used by claim journey");
 assert.match(header, /export function SpotClaimHeader/, "Internal and external flows share component");
+// Completed PDF actions belong beside Back inside the blue Operations claim header.
+assert.match(claimPage, /const allNineCompletedForPdf = !pdfMilestonesError && INTERNAL_JOURNEY_STAGES\.every/, "PDF still requires all nine persisted milestones");
+assert.match(claimPage, /const claimPdfActions = allNineCompletedForPdf \? \(/, "PDF actions remain completion-gated");
+assert.match(claimPage, /<SpotClaimHeader headerActions=\{claimPdfActions\}/, "Pass PDF actions into the blue claim header");
+assert.doesNotMatch(claimPage, /\{claimPdfActions\}\s*<div>/, "No separate PDF action row above header");
+assert.match(header, /return <InfoStrip claim=\{claim\} heading=\{heading\} headerActions=\{headerActions\}/, "Header forwards optional actions");
+assert.match(header, /\{headerActions\}\s*<Link prefetch=\{false\} href="\/claims"/, "PDF controls appear immediately to the left of Back");
+assert.match(claimPage, /pdfUrl \+ "\?preview=1"[^]*?target="_blank" rel="noopener noreferrer"/, "Preview link remains a new-tab action");
+assert.match(claimPage, /<FileDown className="h-4 w-4" \/> Download PDF/, "Download link remains unchanged");
 console.log("Operations Claim Journey vehicle/model columns and insurer icon regression passed.");

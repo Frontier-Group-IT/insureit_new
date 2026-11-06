@@ -23,7 +23,7 @@ assert.doesNotMatch(stage3, /Pending verification: review uploaded documents/, "
 assert.match(stage3, /<ClaimStageErrorDialog/, "Stage completion errors must continue to use the existing OK popup.");
 assert.match(actions, /requireClaimWorkflowAccess\(claimId/, "Autosave must continue through the existing claim authorization gate.");
 assert.match(stages, /isCompleted \? "bg-\[#16A34A\] text-white/, "Completed step checkmarks must use a filled green circle.");
-assert.match(motion, /operations-claim-motion-completed \.operations-claim-motion-step-button\s*\{\s*background: #dcfce7;/, "Completed stage tiles must have full green backgrounds.");
+assert.match(motion, /operations-claim-motion-completed \.operations-claim-motion-step-button\s*\{\s*background: #fff;/, "Completed stage tiles must remain white while the checkmark stays green.");
 assert.match(stage3DocumentRow, /!rejected && !verified \? <VerificationActionButton/, "Stage 3 must offer verification only for pending documents.");
 assert.doesNotMatch(stage3DocumentRow, /\{!rejected \? <VerificationActionButton/, "Already-verified documents must never display the reverify icon.");
 assert.match(stage3DocumentRow, /verified && showVerifiedDetails/, "Verified document details must remain available.");
