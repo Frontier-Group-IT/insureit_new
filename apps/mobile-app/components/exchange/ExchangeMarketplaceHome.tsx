@@ -1,9 +1,8 @@
+import { CustomerAnimatedSearchInput } from '@/components/customer-animated-search-input';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Animated,
-  Easing,
   Image,
   Linking,
   Modal,
@@ -140,15 +139,11 @@ export function ExchangeMarketplaceHome({
   const [candidateLatLong, setCandidateLatLong] = useState<{ latitude: number; longitude: number } | null>(null);
   const [locationQuery, setLocationQuery] = useState('');
   const [locating, setLocating] = useState(false);
-  const [searchFocused, setSearchFocused] = useState(false);
-  const [hintIndex, setHintIndex] = useState(0);
-  const hintProgress = useRef(new Animated.Value(0)).current;
   const [slideIndex, setSlideIndex] = useState(0);
   const [carouselPaused, setCarouselPaused] = useState(false);
   const carouselRef = useRef<ScrollView>(null);
   const { width: viewportWidth } = useWindowDimensions();
   const carouselWidth = viewportWidth - 36;
-  const searchHints = ['Search trucks...', 'Search tippers...', 'Search pickup vehicles...', 'Search buses...', 'Search construction equipment...', 'Search make or model...'];
   const [masterLocations, setMasterLocations] = useState<string[]>([]);
   const [locationSearchLoading, setLocationSearchLoading] = useState(false);
   const [locationSearchError, setLocationSearchError] = useState(false);
@@ -189,17 +184,6 @@ export function ExchangeMarketplaceHome({
     }, 300);
     return () => { active = false; clearTimeout(timer); };
   }, [locationVisible, addLocationStep, normalizedLocationQuery]);
-
-  useEffect(() => {
-    if (searchFocused || query.trim()) return;
-    const timer = setInterval(() => {
-      hintProgress.setValue(0);
-      Animated.timing(hintProgress, { toValue: 1, duration: 420, easing: Easing.inOut(Easing.cubic), useNativeDriver: true }).start(({ finished }) => {
-        if (finished) { setHintIndex((previous) => (previous + 1) % searchHints.length); hintProgress.setValue(0); }
-      });
-    }, 2800);
-    return () => { clearInterval(timer); hintProgress.stopAnimation(); hintProgress.setValue(0); };
-  }, [searchFocused, query]);
 
   useEffect(() => {
     if (carouselPaused) return;
@@ -260,11 +244,10 @@ export function ExchangeMarketplaceHome({
               <>
             <View style={styles.locationSearch}>
               <MaterialCommunityIcons name="magnify" size={20} color="#7D8898" />
-              <TextInput
+              <CustomerAnimatedSearchInput
                 value={locationQuery}
                 onChangeText={setLocationQuery}
                 placeholder="Search city, district or PIN code"
-                placeholderTextColor="#8993A2"
                 style={styles.locationSearchInput}
                 accessibilityLabel="Search available vehicle locations"
               />
@@ -336,7 +319,7 @@ export function ExchangeMarketplaceHome({
               <>
                 <View style={styles.locationSearch}>
                   <MaterialCommunityIcons name="magnify" size={20} color="#7D8898" />
-                  <TextInput autoFocus value={candidateQuery} onChangeText={setCandidateQuery} placeholder="Search area, city, district or PIN" placeholderTextColor="#8993A2" style={styles.locationSearchInput} accessibilityLabel="Search new location" />
+                  <CustomerAnimatedSearchInput autoFocus value={candidateQuery} onChangeText={setCandidateQuery} placeholder="Search area, city, district or PIN" style={styles.locationSearchInput} accessibilityLabel="Search new location" />
                   {candidateQuery ? <Pressable accessibilityLabel="Clear location search" onPress={() => setCandidateQuery('')}><MaterialCommunityIcons name="close" size={18} color="#6B7E95" /></Pressable> : null}
                 </View>
                 <ScrollView style={styles.locationModalOptions} keyboardShouldPersistTaps="handled">
@@ -397,27 +380,14 @@ export function ExchangeMarketplaceHome({
         <View style={styles.searchFilterRow}>
           <MaterialCommunityIcons name="magnify" size={21} color="#8190A5" />
           <View style={styles.searchEntry}>
-            {!searchFocused && !query ? (
-              <View pointerEvents="none" style={styles.hintViewport}>
-                <Animated.Text style={[styles.hintText, { transform: [{ translateY: hintProgress.interpolate({ inputRange: [0, 1], outputRange: [0, -24] }) }] }]}>
-                  {searchHints[hintIndex]}
-                </Animated.Text>
-                <Animated.Text style={[styles.hintText, { transform: [{ translateY: hintProgress.interpolate({ inputRange: [0, 1], outputRange: [0, -24] }) }] }]}>
-                  {searchHints[(hintIndex + 1) % searchHints.length]}
-                </Animated.Text>
-              </View>
-            ) : null}
-          <TextInput
-            value={query}
-            onChangeText={onQueryChange}
-            placeholder={searchFocused || query ? '' : ' '}
-            
-            onFocus={() => setSearchFocused(true)}
-            onBlur={() => setSearchFocused(false)}
-            placeholderTextColor="#8A95A5"
-            style={[styles.searchInput, !searchFocused && !query && styles.transparentInput]}
-            accessibilityLabel="Search exchange vehicles"
-          />
+            <CustomerAnimatedSearchInput
+              value={query}
+              onChangeText={onQueryChange}
+              placeholder="Search trucks, tippers or vehicles"
+              accessibilityLabel="Search exchange vehicles"
+              returnKeyType="search"
+              style={styles.searchInput}
+            />
           </View>
           {query ? (
             <Pressable onPress={() => onQueryChange('')} hitSlop={8} accessibilityLabel="Clear search">
@@ -885,9 +855,6 @@ const styles = StyleSheet.create({
   searchFilterRow: { marginTop: 14, minHeight: 48, borderRadius: 13, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#F8F9FC', borderWidth: 1, borderColor: '#E2E7F0' },
   searchEntry: { flex: 1, height: 46, minWidth: 0, justifyContent: 'center' },
   searchInput: { width: '100%', height: 46, paddingVertical: 0, color: '#10213D', fontSize: 12, fontWeight: '600' },
-  transparentInput: { color: 'transparent' },
-  hintViewport: { position: 'absolute', left: 0, right: 0, top: 12, height: 23, overflow: 'hidden' },
-  hintText: { height: 24, color: '#8A95A5', fontSize: 12, fontWeight: '600', textAlignVertical: 'center' },
   locationIndicator: { width: 30, height: 42, alignItems: 'center', justifyContent: 'center' },
   segmentedStrip: { marginTop: 9, backgroundColor: '#FFFFFF', borderRadius: 13, borderWidth: 1, borderColor: '#DEE5F0', overflow: 'hidden' },
   segmentedContent: { alignItems: 'stretch', minHeight: 47 },
