@@ -13,7 +13,7 @@ import { PartnerSectionHeader } from '@/components/ui/partner-section-header';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { PartnerAssets } from '@/lib/partner-assets';
 import {
-  listPartnerPolicyIntakes,
+  getPartnerPolicyIntake,
   submitPartnerPolicyIntakeReplacement,
   type PartnerPolicyIntake,
   type PartnerPolicyIntakeUploadProgress,
@@ -39,8 +39,8 @@ export default function PolicyIntakeDetailScreen() {
     setLoading(true);
     setError('');
     try {
-      const result = await listPartnerPolicyIntakes();
-      setRow(result.intakes.find((item) => item.id === id) ?? null);
+      const intake = await getPartnerPolicyIntake(id);
+      setRow(intake);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Policy Intake could not be loaded.');
     } finally {
