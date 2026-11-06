@@ -24,7 +24,8 @@ assert.match(stage3, /<ClaimStageErrorDialog/, "Stage completion errors must con
 assert.match(actions, /requireClaimWorkflowAccess\(claimId/, "Autosave must continue through the existing claim authorization gate.");
 assert.match(stages, /isCompleted \? "bg-\[#16A34A\] text-white/, "Completed step checkmarks must use a filled green circle.");
 assert.match(motion, /operations-claim-motion-completed \.operations-claim-motion-step-button\s*\{\s*background: #fff;/, "Completed stage tiles must remain white while the checkmark stays green.");
-assert.match(stage3DocumentRow, /!rejected && !verified \? <VerificationActionButton/, "Stage 3 must offer verification only for pending documents.");
+assert.match(stage3DocumentRow, /documentIds=\{selectedDocumentIds\}/, "Stage 3 pending documents still have category-level Verify.");
+assert.doesNotMatch(stage3DocumentRow, /variant="icon"/, "No redundant row-level blue document-check icon is rendered.");
 assert.doesNotMatch(stage3DocumentRow, /\{!rejected \? <VerificationActionButton/, "Already-verified documents must never display the reverify icon.");
 assert.match(stage3DocumentRow, /verified && showVerifiedDetails/, "Verified document details must remain available.");
 const guard = read("../lib/claim-pending-document-guard.ts");
