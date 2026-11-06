@@ -25,13 +25,15 @@ assert.ok(stageFields.includes('label: "Surveyor Name", type: "text", optional: 
 assert.ok(stageFields.includes('label: "Surveyor Phone", type: "tel", optional: true'));
 assert.ok(stageFields.includes('label: "Surveyor Email", type: "email", optional: true'));
 
-// Same compact 38px date/text/choice dimensions; date picker functionality retained.
-assert.ok(operations.includes('compact={selected.key === "work_approval"}'));
-assert.ok(operations.includes('compact ? "h-[38px]" : "h-9"'));
-assert.ok(operations.includes('selected.key === "work_approval" ? "h-[38px]" : "h-9"'));
-assert.ok(customer.includes('selected.key==="work_approval"?"h-[38px]":"h-9"'));
-assert.ok(customer.includes('<CustomerClaimBooleanChoice compact={selected.key==="work_approval"}'));
-assert.ok(choice.includes('compact?"h-[38px]":"h-9"'));
+// Unified reference dimensions apply to Stage 4 while retaining its five-column arrangement.
+assert.ok(operations.includes('h-[45px]'));
+assert.ok(operations.includes('max-w-[260px]'));
+assert.ok(operations.includes('max-w-[320px]'));
+assert.ok(operations.includes('max-w-[254px] grid-cols-2 gap-[10px]'));
+assert.ok(customer.includes('field.type==="date"?"max-w-[260px]"'));
+assert.ok(customer.includes('h-[45px] w-full'));
+assert.ok(customer.includes('<CustomerClaimBooleanChoice name={field.key}'));
+assert.ok(choice.includes('h-[45px] rounded-md'));
 assert.ok(operations.includes('onClick={(event) => event.currentTarget.showPicker?.()}'));
 assert.ok(customer.includes('required={!field.optional}'));
 
