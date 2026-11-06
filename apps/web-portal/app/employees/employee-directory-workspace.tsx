@@ -2,13 +2,15 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { FormSubmitButton } from "@/components/form-submit-button";
+import Link from "next/link";
+import { Plus, Search, Network, List } from "lucide-react";
 import { EmployeeOrganizationTree, type DirectoryPartner } from "./employee-organization-tree";
 import { setEmployeeStatus } from "./actions";
 import { EmployeeEditForm, EmployeePortalInviteForm, EmployeePortalRoleForm, type EmployeeRow, type PortalRoleOption } from "./employee-forms";
 
 type ManagerOption = Pick<EmployeeRow, "id" | "employee_code" | "full_name">;
 
-export function EmployeeDirectoryWorkspace({ employees, partners, partnerNetworkError, managers, portalRoles, canManage, canManagePortalAccess, initialQuery, initialStatus, loadError }: { employees: EmployeeRow[]; partners: DirectoryPartner[]; partnerNetworkError: boolean; managers: ManagerOption[]; portalRoles: PortalRoleOption[]; canManage: boolean; canManagePortalAccess: boolean; initialQuery: string; initialStatus: string; loadError: string | null }) {
+export function EmployeeDirectoryWorkspace({ employees, partners, partnerNetworkError, managers, portalRoles, canManage, canManagePortalAccess, scopeLabel, initialQuery, initialStatus, loadError }: { employees: EmployeeRow[]; partners: DirectoryPartner[]; partnerNetworkError: boolean; managers: ManagerOption[]; portalRoles: PortalRoleOption[]; canManage: boolean; canManagePortalAccess: boolean; scopeLabel: string | null; initialQuery: string; initialStatus: string; loadError: string | null }) {
   const [query, setQuery] = useState(initialQuery);
   const [view, setView] = useState<"tree" | "table">("tree");
   const [status, setStatus] = useState(initialStatus);
@@ -18,8 +20,6 @@ export function EmployeeDirectoryWorkspace({ employees, partners, partnerNetwork
     const haystack = [employee.employee_code, employee.full_name, employee.phone, employee.email, employee.department, employee.designation, employee.vertical, employee.location].filter(Boolean).join(" ").toLowerCase();
     return matchesStatus && (!normalized || haystack.includes(normalized));
   }), [employees, normalized, status]);
-  const activeCount = filtered.filter((employee) => employee.employment_status === "active").length;
-  const portalCount = filtered.filter((employee) => employee.portal_status === "active").length;
 
   useEffect(() => {
     const params = new URLSearchParams();
@@ -29,22 +29,38 @@ export function EmployeeDirectoryWorkspace({ employees, partners, partnerNetwork
     if (`${window.location.pathname}${window.location.search}` !== nextUrl) window.history.replaceState(null, "", nextUrl);
   }, [query, status]);
 
+  const visibleEmployees = employees.filter((employee) => !status || employee.employment_status === status);
+
   return (
-    <section className="rounded-lg border border-[#D7E6F5] bg-white p-4 shadow-[0_3px_12px_rgba(7,29,73,0.05)]">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-3">
-          <h2 className="text-[15px] font-semibold text-[#071D49]">Employee records</h2>
-          <div className="inline-flex rounded-md border border-[#C9D8EA] bg-[#F4F8FE] p-0.5 text-[10px] font-semibold"><button type="button" onClick={() => setView("tree")} aria-pressed={view === "tree"} className={`rounded px-3 py-1.5 ${view === "tree" ? "bg-[#102D57] text-white" : "text-[#3E597B]"}`}>Organization tree</button><button type="button" onClick={() => setView("table")} aria-pressed={view === "table"} className={`rounded px-3 py-1.5 ${view === "table" ? "bg-[#102D57] text-white" : "text-[#3E597B]"}`}>Directory table</button></div>
-          <div className="grid grid-cols-3 gap-2 text-center"><Summary value={filtered.length} label="Listed" /><Summary value={activeCount} label="Active" /><Summary value={portalCount} label="Portal active" /></div>
+    <section className="overflow-hidden rounded-xl border border-[#D7E4F1] bg-white shadow-[0_3px_16px_rgba(7,29,73,0.05)]">
+      <header className="border-b border-[#E5EDF6] px-4 py-3 lg:px-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="text-[17px] font-bold tracking-[-0.025em] text-[#071D49]">Employee directory</h1>
+            <p className="mt-0.5 text-[10px] text-[#64758C]">{scopeLabel ?? "Explore reporting lines and assigned distribution partners."}</p>
+          </div>
+          {canManage ? <Link href="/employees/new" className="inline-flex h-9 items-center gap-1.5 rounded-md bg-[#102D57] px-3 text-[10.5px] font-semibold text-white shadow-sm transition hover:bg-[#1A477E]"><Plus className="h-3.5 w-3.5" /> Add employee</Link> : null}
         </div>
-        <form onSubmit={(event) => event.preventDefault()} className="flex flex-wrap gap-2">
-          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search employees" className="h-9 w-56 rounded-md border border-[#CBD8E8] bg-[#F8FBFF] px-3 text-[11px]" />
-          <select value={status} onChange={(event) => setStatus(event.target.value)} className="h-9 rounded-md border border-[#CBD8E8] bg-white px-3 text-[11px]"><option value="">All status</option><option value="active">Active</option><option value="inactive">Inactive</option></select>
-        </form>
-      </div>
-      {loadError ? <p className="mt-4 rounded-md border border-red-200 bg-red-50 p-3 text-[11px] text-red-700">{loadError}</p> : view === "tree" ? <><EmployeeOrganizationTree employees={employees.filter((employee) => !status || employee.employment_status === status)} partners={partners} query={query} />{partnerNetworkError ? <p className="mt-2 text-[10px] text-amber-700">Partner network is temporarily unavailable. Employee hierarchy is still displayed.</p> : null}</> : filtered.length ? <EmployeeTable employees={filtered} managers={managers} portalRoles={portalRoles} canManage={canManage} canManagePortalAccess={canManagePortalAccess} /> : <div className="mt-4 rounded-md border border-dashed border-[#CBD8E8] bg-[#F8FBFF] p-8 text-center text-[11px] text-[#667085]">No employees match these filters.</div>}
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <div className="inline-flex h-9 shrink-0 items-center rounded-md border border-[#D1DEED] bg-[#F4F8FD] p-0.5 text-[10px] font-semibold">
+            <button type="button" onClick={() => setView("tree")} aria-pressed={view === "tree"} className={`inline-flex h-full items-center gap-1.5 rounded px-3 transition ${view === "tree" ? "bg-[#112F5A] text-white shadow-sm" : "text-[#456280] hover:text-[#153D6C]"}`}><Network className="h-3.5 w-3.5" />Org chart</button>
+            <button type="button" onClick={() => setView("table")} aria-pressed={view === "table"} className={`inline-flex h-full items-center gap-1.5 rounded px-3 transition ${view === "table" ? "bg-[#112F5A] text-white shadow-sm" : "text-[#456280] hover:text-[#153D6C]"}`}><List className="h-3.5 w-3.5" />Table</button>
+          </div>
+          <label className="flex h-9 min-w-[190px] flex-1 items-center gap-2 rounded-md border border-[#D2DEEC] bg-[#FAFCFF] px-3 focus-within:border-[#6499D6] sm:max-w-[380px]">
+            <Search className="h-3.5 w-3.5 shrink-0 text-[#7790AB]" />
+            <input aria-label="Search employees and partners" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search employee, partner, POSP or MISP" className="w-full min-w-0 bg-transparent text-[11px] text-[#1B3555] outline-none placeholder:text-[#8A9AAF]" />
+          </label>
+          <select aria-label="Employee status" value={status} onChange={(event) => setStatus(event.target.value)} className="h-9 rounded-md border border-[#D2DEEC] bg-white px-3 text-[10.5px] text-[#284263]"><option value="">All employees</option><option value="active">Active</option><option value="inactive">Inactive</option></select>
+          <span className="ml-auto whitespace-nowrap text-[10px] font-medium text-[#71839B]">{visibleEmployees.length} employees{view === "tree" ? ` · ${partners.filter((partner) => visibleEmployees.some((employee) => employee.id === partner.employeeId)).length} intermediaries` : ""}</span>
+        </div>
+      </header>
+      {loadError ? <p className="m-4 rounded-md border border-red-200 bg-red-50 p-3 text-[11px] text-red-700">{loadError}</p> : view === "tree" ? <>
+        <EmployeeOrganizationTree employees={visibleEmployees} partners={partners} query={query} />
+        {partnerNetworkError ? <p className="mx-4 mb-3 text-[10px] text-amber-700">Partner network is temporarily unavailable. Employee hierarchy is still displayed.</p> : null}
+      </> : filtered.length ? <div className="px-4 pb-4"><EmployeeTable employees={filtered} managers={managers} portalRoles={portalRoles} canManage={canManage} canManagePortalAccess={canManagePortalAccess} /></div> : <div className="m-4 rounded-md border border-dashed border-[#CBD8E8] bg-[#F8FBFF] p-8 text-center text-[11px] text-[#667085]">No employees match these filters.</div>}
     </section>
   );
+
 }
 
 function EmployeeTable({ employees, managers, portalRoles, canManage, canManagePortalAccess }: { employees: EmployeeRow[]; managers: ManagerOption[]; portalRoles: PortalRoleOption[]; canManage: boolean; canManagePortalAccess: boolean }) {
@@ -59,6 +75,3 @@ function EmployeeTable({ employees, managers, portalRoles, canManage, canManageP
   })}</tbody></table></div>;
 }
 
-function Summary({ value, label }: { value: number; label: string }) {
-  return <div className="min-w-14 rounded-md border border-[#D7E6F5] bg-[#F8FBFF] px-2.5 py-2"><p className="text-[15px] font-bold text-[#071D49]">{value}</p><p className="text-[8px] font-semibold uppercase tracking-[0.05em] text-[#667085]">{label}</p></div>;
-}
