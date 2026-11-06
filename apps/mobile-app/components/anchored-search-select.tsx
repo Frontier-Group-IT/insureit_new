@@ -163,6 +163,7 @@ export function AnchoredSearchSelect({
                 autoCapitalize={autoCapitalize}
                 returnKeyType="search"
                 placeholder={searchPlaceholder}
+                idleHints={[searchPlaceholder, "Search by name", "Type to filter options"]}
                 style={styles.searchInput}
               />
             </View>
