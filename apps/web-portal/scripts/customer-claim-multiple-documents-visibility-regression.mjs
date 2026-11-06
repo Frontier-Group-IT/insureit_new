@@ -20,5 +20,8 @@ assert.match(bulk, /name="type" value="Other Document"/, "Retain original docume
 assert.match(bulk, /router\.refresh\(\)/, "Refresh document list following upload");
 assert.match(completed, /"otherdocument"/, "Completed stage must not filter out bulk uploads");
 assert.match(completed, /allowUpload=\{false\}/, "Completed stages stay read-only");
+assert.match(completed, /stage\.key === "claim_intimation" \? \[\] : Object\.entries\(details\)/, "Completed Claim Intimation must not append legacy extra fields after the five canonical fields.");
+assert.match(completed, /\(CUSTOMER_EXTERNAL_STAGE_FIELDS\[stage\.key\] \?\? \[\]\)\.map\(field => \[field\.label, details\[field\.key\]\]\)/, "Keep the canonical Claim Intimation details from the shared stage schema.");
+assert.match(completed, /<CustomerClaimDocumentGroups documents=\{documents\} claimId=\{claimId\} accountId=\{accountId\} stage="claim_intimation"/, "Claim Intimation document verification section remains visible.");
 assert.match(compact, /document_type/, "Existing individual document records remain supported");
 console.log("Customer bulk uploaded documents visible in edit and completed journey regression passed.");
