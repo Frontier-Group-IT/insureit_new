@@ -406,16 +406,43 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
           SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+          SUPABASE_DB_HOST: ${{ vars.SUPABASE_DB_HOST }}
+          SUPABASE_DB_USER: ${{ vars.SUPABASE_DB_USER }}
+          SUPABASE_DB_PORT: ${{ vars.SUPABASE_DB_PORT }}
         run: |
           set -euo pipefail
 
           BASELINE_VERSION="20260912093000"
 
-          test -n "$SUPABASE_ACCESS_TOKEN" || { echo "::error::SUPABASE_ACCESS_TOKEN is not configured."; exit 1; }
           test -n "$SUPABASE_DB_PASSWORD" || { echo "::error::SUPABASE_DB_PASSWORD is not configured."; exit 1; }
           test -n "$SUPABASE_PROJECT_REF" || { echo "::error::SUPABASE_PROJECT_REF is not configured."; exit 1; }
 
-          supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+          # Read-only Postgres parity needs database credentials, NOT a Supabase
+          # management API personal-access token. The dashboard-supplied host/user
+          # are repository variables (never construct or guess a pooler host).
+          # Keep the prior CLI path as a fallback for existing installations.
+          if [[ -n "${SUPABASE_DB_HOST:-}" ]]; then
+            test -n "${SUPABASE_DB_USER:-}" || { echo "::error::SUPABASE_DB_USER is required when SUPABASE_DB_HOST is set."; exit 1; }
+            export PGHOST="$SUPABASE_DB_HOST"
+            export PGUSER="$SUPABASE_DB_USER"
+            export PGPORT="${SUPABASE_DB_PORT:-5432}"
+            export PGDATABASE="postgres"
+            export PGSSLMODE="verify-full"
+            export PGCONNECT_TIMEOUT=15
+            export PGPASSWORD="$SUPABASE_DB_PASSWORD"
+            # Supabase's managed Postgres certificates are trusted by the runner.
+            psql -X -qAt -v ON_ERROR_STOP=1 -c "select 1" | grep -qx '1' || { echo "::error::Cannot connect to configured production database."; exit 1; }
+            echo "Using read-only SQL parity checks via configured Supabase Postgres connection."
+            db_json_query() {
+              psql -X -qAt -v ON_ERROR_STOP=1 -c "$1"
+            }
+          else
+            test -n "$SUPABASE_ACCESS_TOKEN" || { echo "::error::Set SUPABASE_DB_HOST/USER or a privileged SUPABASE_ACCESS_TOKEN."; exit 1; }
+            supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+            db_json_query() {
+              supabase db query --linked --output-format json "$1"
+            }
+          fi
 
           # Compare production only against migration files committed to this release.
           # Supabase CLI commands may create workspace-local files under supabase/migrations;
@@ -435,11 +462,10 @@ jobs:
             echo "$untracked_migrations"
           fi
 
-          remote_json=$(supabase db query --linked --output-format json "
-            select version
+          remote_json=$(db_json_query "
+            select coalesce(json_agg(json_build_object('version', version) order by version), '[]'::json)
             from supabase_migrations.schema_migrations
-            where version >= '$BASELINE_VERSION'
-            order by version;
+            where version >= '$BASELINE_VERSION';
           ")
           remote_versions=$(jq -r '.[].version // empty' <<<"$remote_json" | sort -u)
 
@@ -476,13 +502,15 @@ jobs:
           PY
           )
 
-          production_rpc_json=$(supabase db query --linked --output-format json "
-            select distinct p.proname
-            from pg_proc p
-            join pg_namespace n on n.oid = p.pronamespace
-            where n.nspname = 'public'
-              and has_function_privilege('authenticated', p.oid, 'EXECUTE')
-            order by p.proname;
+          production_rpc_json=$(db_json_query "
+            select coalesce(json_agg(json_build_object('proname', proname) order by proname), '[]'::json)
+            from (
+              select distinct p.proname
+              from pg_proc p
+              join pg_namespace n on n.oid = p.pronamespace
+              where n.nspname = 'public'
+                and has_function_privilege('authenticated', p.oid, 'EXECUTE')
+            ) allowed;
           ")
           production_rpc_names=$(jq -r '.[].proname // empty' <<<"$production_rpc_json" | sort -u)
 
