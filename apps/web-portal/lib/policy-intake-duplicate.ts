@@ -68,11 +68,26 @@ export async function loadPolicyIntakeDuplicateMatches(
 
   if (!normalizedNumbers.length) return { ok: true, matches: new Map() };
 
-  const [policyResult, intakeResult] = await Promise.all([
+  // Historical policy_no_normalized values may still retain punctuation.
+  // Fetch both canonical and OCR-formatted values, then compare only after
+  // applying the same canonicalization to both sides.
+  const rawNumbers = Array.from(new Set(candidates.flatMap((row) =>
+    (row.ocr_fields ?? [])
+      .filter((field) => field.key === "policy_number")
+      .map((field) => field.value?.trim() ?? "")
+      .filter(Boolean),
+  )));
+  const lookupNumbers = Array.from(new Set([...normalizedNumbers, ...rawNumbers]));
+  const [canonicalPolicyResult, formattedPolicyResult, intakeResult] = await Promise.all([
     admin
       .from("policies")
       .select("id,policy_no,policy_no_normalized,policy_code")
-      .in("policy_no_normalized", normalizedNumbers)
+      .in("policy_no_normalized", lookupNumbers)
+      .returns<RegisteredPolicyRow[]>(),
+    admin
+      .from("policies")
+      .select("id,policy_no,policy_no_normalized,policy_code")
+      .in("policy_no", lookupNumbers)
       .returns<RegisteredPolicyRow[]>(),
     admin
       .from("policy_intake_requests")
@@ -83,12 +98,12 @@ export async function loadPolicyIntakeDuplicateMatches(
       .returns<HistoricalIntakeRow[]>(),
   ]);
 
-  if (policyResult.error || intakeResult.error) {
+  if (canonicalPolicyResult.error || formattedPolicyResult.error || intakeResult.error) {
     return { ok: false, error: "Policy duplicate protection is temporarily unavailable." };
   }
 
   const registeredPolicyByNumber = new Map<string, RegisteredPolicyRow>();
-  for (const policy of policyResult.data ?? []) {
+  for (const policy of [...(canonicalPolicyResult.data ?? []), ...(formattedPolicyResult.data ?? [])]) {
     const normalized = normalizePolicyNumber(policy.policy_no_normalized ?? policy.policy_no ?? "");
     if (normalized && !registeredPolicyByNumber.has(normalized)) {
       registeredPolicyByNumber.set(normalized, policy);
