@@ -33,7 +33,8 @@ export const CustomerAnimatedSearchInput = forwardRef<TextInput, CustomerSearchI
     const [reduceMotion, setReduceMotion] = useState(false);
     const [hintIndex, setHintIndex] = useState(0);
     const hintOffset = useRef(new Animated.Value(0)).current;
-    const hints = idleHints?.length && idleHints.length > 1 ? idleHints : null;
+    // All Customer search inputs animate by default. Explicit hints override the safe generic prompts.
+    const hints = idleHints?.length && idleHints.length > 1 ? idleHints : [placeholder, 'Type to search...'];
     const showIdleHints = Boolean(hints && !focused && !hasValue && !reduceMotion);
 
     useEffect(() => {
