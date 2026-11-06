@@ -162,7 +162,6 @@ export function BulkDocumentVerificationGroup({ item, claim, verifications }: { 
         showDocumentRows ? (
           <div id={contentId} className="space-y-2">
             {item.documents.map((document) => {
-              const verification = latestVerificationForDocument(document, verifications);
               const verified = isDocumentVerified(document, verifications);
               const rejected = document.verification_status === "rejected" && !isLegacyAdditionalUpload(document);
               const selected = selectedIds.has(document.id);
@@ -172,7 +171,6 @@ export function BulkDocumentVerificationGroup({ item, claim, verifications }: { 
                   item={item}
                   claim={claim}
                   document={document}
-                  verification={verification}
                   verified={verified}
                   rejected={rejected}
                   selected={selected}
@@ -195,7 +193,7 @@ export function BulkDocumentVerificationGroup({ item, claim, verifications }: { 
   );
 }
 
-function DocumentFileRow({ item, claim, document, verification, verified, rejected, selected, onToggle }: { item: BulkDocumentGroupItem; claim: ClaimContext; document: DocumentRow; verification?: VerificationRow; verified: boolean; rejected: boolean; selected: boolean; onToggle: () => void }) {
+function DocumentFileRow({ item, claim, document, verified, rejected, selected, onToggle }: { item: BulkDocumentGroupItem; claim: ClaimContext; document: DocumentRow; verified: boolean; rejected: boolean; selected: boolean; onToggle: () => void }) {
   const router = useRouter();
   const [deletePending, setDeletePending] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
