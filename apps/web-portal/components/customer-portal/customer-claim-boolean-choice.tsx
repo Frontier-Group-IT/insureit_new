@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-export function CustomerClaimBooleanChoice({name,value:initial,kind,compact=false}:{name:string;value:string;kind:"boolean"|"yesno";compact?:boolean}){
+export function CustomerClaimBooleanChoice({name,value:initial,kind}:{name:string;value:string;kind:"boolean"|"yesno";compact?:boolean}){
   const [value,setValue]=useState(initial);
   const options=kind==="yesno"?[["yes","Yes"],["no","Not Yet"]]:[["true","Yes"],["false","No"]];
   return <div data-claim-choice role="group" aria-label={name.replace(/_/g," ")} className="mt-1 grid w-full max-w-[282px] grid-cols-2 gap-[10px]">
