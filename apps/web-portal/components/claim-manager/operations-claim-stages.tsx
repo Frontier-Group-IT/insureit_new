@@ -417,15 +417,15 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
                   const yesChecked = value === "true" || value === "yes";
                   const noChecked = value === "false" || value === "no";
                   return (
-                    <fieldset key={field.name} className={selected.key === "work_approval" ? "min-w-0 w-full" : "min-w-0 max-w-xl"}>
+                    <fieldset key={field.name} className="min-w-0 w-full max-w-[282px]">
                       <legend className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#174EA6]">
                         {displayLabel}{required ? <span className="ml-1 text-rose-600">*</span> : null}
                       </legend>
-                      <div className="mt-1 grid grid-cols-2 gap-2">
-                        <label className={`flex ${selected.key === "work_approval" ? "h-[38px]" : "h-9"} cursor-pointer items-center justify-center rounded-md border border-[#D9E3F0] bg-white text-[12px] font-semibold normal-case tracking-normal text-[#071D49] has-[:checked]:border-[#174EA6] has-[:checked]:bg-[#EEF4FF]`}>
+                      <div className="mt-1 grid w-full max-w-[282px] grid-cols-2 gap-[10px]">
+                        <label className={`flex h-12 cursor-pointer items-center justify-center rounded-md border border-[#D9E3F0] bg-white text-[12px] font-semibold normal-case tracking-normal text-[#071D49] has-[:checked]:border-[#174EA6] has-[:checked]:bg-[#EEF4FF]`}>
                           <input className="sr-only" type="radio" name={field.name} value="true" defaultChecked={yesChecked} required={required} />Yes
                         </label>
-                        <label className={`flex ${selected.key === "work_approval" ? "h-[38px]" : "h-9"} cursor-pointer items-center justify-center rounded-md border border-[#D9E3F0] bg-white text-[12px] font-semibold normal-case tracking-normal text-[#071D49] has-[:checked]:border-[#174EA6] has-[:checked]:bg-[#EEF4FF]`}>
+                        <label className={`flex h-12 cursor-pointer items-center justify-center rounded-md border border-[#D9E3F0] bg-white text-[12px] font-semibold normal-case tracking-normal text-[#071D49] has-[:checked]:border-[#174EA6] has-[:checked]:bg-[#EEF4FF]`}>
                           <input className="sr-only" type="radio" name={field.name} value="false" defaultChecked={noChecked} required={required} />{field.name === "vehicle_received" ? "Not Yet" : "No"}
                         </label>
                       </div>
@@ -434,12 +434,12 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
                 }
                 const useAppDatePicker = field.type === "date";
                 return (
-                  <label key={field.name} className="min-w-0 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#174EA6]">
+                  <label key={field.name} className={`min-w-0 w-full ${field.type === "date" ? "max-w-[270px]" : "max-w-[340px]"} text-[10px] font-semibold uppercase tracking-[0.08em] text-[#174EA6]`}>
                     {displayLabel}{required && !displayLabel.includes("*") ? <span className="ml-1 text-rose-600">*</span> : null}
                     {useAppDatePicker ? (
-                      <AppStyleDateInput name={field.name} value={value} required={required} compact={selected.key === "work_approval"} />
+                      <AppStyleDateInput name={field.name} value={value} required={required} />
                     ) : field.type === "select" ? (
-                      <select name={field.name} defaultValue={value} required={required} className={`mt-1 ${selected.key === "work_approval" ? "h-[38px]" : "h-9"} w-full rounded-md border border-[#D9E3F0] bg-white px-2 text-[12px] font-medium normal-case tracking-normal text-[#071D49] outline-none focus:border-[#174EA6]`}>
+                      <select name={field.name} defaultValue={value} required={required} className="mt-1 h-12 w-full rounded-md border border-[#D9E3F0] bg-white px-2 text-[12px] font-medium normal-case tracking-normal text-[#071D49] outline-none focus:border-[#174EA6]`}>
                         <option value="" disabled>Select</option>
                         <option value={field.name === "cashless" ? "true" : "yes"}>Yes</option>
                         <option value={field.name === "cashless" ? "false" : "no"}>No</option>
@@ -451,7 +451,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
                         defaultValue={field.type === "date" ? toDateValue(value) : value}
                         required={required}
                         onClick={field.type === "date" ? (event) => event.currentTarget.showPicker?.() : undefined}
-                        className={`mt-1 ${selected.key === "work_approval" ? "h-[38px]" : "h-9"} w-full rounded-md border border-[#D9E3F0] bg-white px-2 text-[12px] font-medium normal-case tracking-normal text-[#071D49] outline-none focus:border-[#174EA6]`}
+                        className="mt-1 h-12 w-full rounded-md border border-[#D9E3F0] bg-white px-2 text-[12px] font-medium normal-case tracking-normal text-[#071D49] outline-none focus:border-[#174EA6]`}
                       />
                     )}
                   </label>
@@ -516,10 +516,10 @@ function toDateValue(value: string) {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
-function AppStyleDateInput({ name, value, required, compact = false }: { name: string; value: string; required?: boolean; compact?: boolean }) {
+function AppStyleDateInput({ name, value, required }: { name: string; value: string; required?: boolean }) {
   const [dateValue, setDateValue] = useState(() => toDateValue(value));
   return (
-    <span className={`relative flex ${compact ? "h-[38px]" : "h-9"} w-full items-center justify-between rounded-md border border-[#D9E3F0] bg-white px-3 normal-case tracking-normal text-[#071D49] focus-within:border-[#174EA6]`}>
+    <span className="relative flex h-12 w-full max-w-[270px] items-center justify-between rounded-md border border-[#D9E3F0] bg-white px-3 normal-case tracking-normal text-[#071D49] focus-within:border-[#174EA6]`}>
       <span className={`text-[12px] font-medium ${dateValue ? "text-[#071D49]" : "text-[#7B8BA3]"}`}>{dateValue ? formatDisplayDate(dateValue) : "Select date"}</span>
       <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4 fill-none stroke-[#526178] stroke-[1.8]"><rect x="4" y="6" width="16" height="14" rx="2" /><path d="M8 3v6M16 3v6M4 10h16" /></svg>
       <input
@@ -601,16 +601,16 @@ function StageOneForm({ claimId, stage, active, detail, spotDetails, next, accid
       </div>
       <div className="p-4">
         <div className="grid items-start gap-2 sm:grid-cols-2 xl:grid-cols-[1.05fr_1.05fr_1fr_0.70fr_1.15fr]">
-          <fieldset className="min-w-0">
+          <fieldset className="min-w-0 max-w-[340px]">
             <legend className={stageOneLabelClassName}>Accident date &amp; time<span className="ml-1 text-rose-600">*</span></legend>
-            <div className="mt-1.5 grid h-9 grid-cols-[1.15fr_0.85fr] overflow-hidden rounded-lg border border-[#CEDBEC] bg-white focus-within:border-[#2F80ED]">
+            <div className="mt-1.5 grid h-12 w-full max-w-[340px] grid-cols-[1.15fr_0.85fr] overflow-hidden rounded-lg border border-[#CEDBEC] bg-white focus-within:border-[#2F80ED]">
               <AppStyleDateInput name="incident_at" value={toDateTimeLocal(incidentValue, "date")} required />
               <input aria-label="Accident time" name="incident_time" type="time" defaultValue={toDateTimeLocal(incidentValue, "time")} required className={`${groupedInputClassName} border-l border-[#CEDBEC]`} />
             </div>
           </fieldset>
-          <fieldset className="min-w-0">
+          <fieldset className="min-w-0 max-w-[340px]">
             <legend className={stageOneLabelClassName}>Spot Intimation date &amp; time<span className="ml-1 text-rose-600">*</span></legend>
-            <div className="mt-1.5 grid h-9 grid-cols-[1.15fr_0.85fr] overflow-hidden rounded-lg border border-[#CEDBEC] bg-white focus-within:border-[#2F80ED]">
+            <div className="mt-1.5 grid h-12 w-full max-w-[340px] grid-cols-[1.15fr_0.85fr] overflow-hidden rounded-lg border border-[#CEDBEC] bg-white focus-within:border-[#2F80ED]">
               <AppStyleDateInput name="spot_intimation_at" value={toDateTimeLocal(spotIntimationValue, "date")} required />
               <input aria-label="Spot Intimation time" name="spot_intimation_time" type="time" defaultValue={toDateTimeLocal(spotIntimationValue, "time")} required className={`${groupedInputClassName} border-l border-[#CEDBEC]`} />
             </div>
@@ -627,14 +627,14 @@ function StageOneForm({ claimId, stage, active, detail, spotDetails, next, accid
               return (
                 <div key={field.name} className="min-w-0">
                   <label htmlFor="spot-intimation-location" className={stageOneLabelClassName}>{field.label}{required ? <span className="ml-1 text-rose-600">*</span> : null}</label>
-                  <input id="spot-intimation-location" name={field.name} value={location} onChange={(event) => setLocation(event.target.value)} required={required} className="mt-1.5 h-9 w-full rounded-lg border border-[#CEDBEC] bg-white px-2.5 text-[12px] font-semibold text-[#071D49] outline-none focus:border-[#2F80ED]" />
+                  <input id="spot-intimation-location" name={field.name} value={location} onChange={(event) => setLocation(event.target.value)} required={required} className="mt-1.5 h-12 w-full max-w-[340px] rounded-lg border border-[#CEDBEC] bg-white px-2.5 text-[12px] font-semibold text-[#071D49] outline-none focus:border-[#2F80ED]" />
                 </div>
               );
             }
             return (
               <label key={field.name} className="min-w-0">
                 <span className={stageOneLabelClassName}>{field.label}{required ? <span className="ml-1 text-rose-600">*</span> : null}</span>
-                <input name={field.name} type={field.type ?? "text"} defaultValue={value} required={required} className="mt-1.5 h-9 w-full rounded-lg border border-[#CEDBEC] bg-white px-2.5 text-[12px] font-semibold normal-case tracking-normal text-[#071D49] outline-none focus:border-[#2F80ED]" />
+                <input name={field.name} type={field.type ?? "text"} defaultValue={value} required={required} className="mt-1.5 h-12 w-full max-w-[340px] rounded-lg border border-[#CEDBEC] bg-white px-2.5 text-[12px] font-semibold normal-case tracking-normal text-[#071D49] outline-none focus:border-[#2F80ED]" />
               </label>
             );
           })}
