@@ -77,6 +77,15 @@ export async function listPartnerPolicyIntakesPage(offset = 0): Promise<IntakeLi
   return page;
 }
 
+/** Fetch the selected authorized intake directly; details must never require the entire list. */
+export async function getPartnerPolicyIntake(id: string): Promise<PartnerPolicyIntake> {
+  if (!id) throw new Error('Policy Intake reference is missing.');
+  const result = await apiRequest<{ ok: true; intake: PartnerPolicyIntake }>(
+    `/api/partner/policy-intakes?id=${encodeURIComponent(id)}`,
+  );
+  return result.intake;
+}
+
 export async function listPartnerPolicyIntakeSources(): Promise<PartnerPolicyIntakeSource[]> {
   const result = await apiRequest<IntakeSourcesResponse>('/api/partner/policy-intakes?view=sources');
   return Array.isArray(result.sources) ? result.sources : [];
