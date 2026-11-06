@@ -11,8 +11,9 @@ assert.doesNotMatch(workspace, /label:"Other Documents",type:"Other Document"/, 
 for (const name of ["Accident Photo","RC Copy","Insurance Copy","Driver Licence","GR / Load Bill","Accident Video"]) assert.ok(workspace.includes('label:"'+name+'"'), "Keep individual "+name+" card");
 assert.match(workspace, /normalize\(doc\.document_type\) === "otherdocument"/, "Existing bulk files remain categorized for Operations");
 assert.match(workspace, /aria-label="Multiple Documents"/, "Bulk files have dedicated section");
-assert.match(workspace, /multipleDocuments\.map\(doc =>/, "Show every previously uploaded file");
-assert.match(workspace, /customer\/claim-documents\/\$\{encodeURIComponent\(doc\.id\)\}\/open/, "Use existing scoped document open route");
+assert.match(workspace, /<CustomerClaimMultipleFiles documents=\{multipleDocuments\}/, "Render existing bulk uploads in shared deletable list");
+const list = read("../components/customer-portal/customer-claim-multiple-files.tsx");
+assert.match(list, /customer\/claim-documents\/\$\{encodeURIComponent\(file\.id\)\}\/open/, "Keep authorized document opening route");
 assert.match(workspace, /\(allowUpload \|\| multipleDocuments\.length > 0\)/, "Show saved bulk files even on completed read-only stages");
 assert.match(workspace, /allowUpload \? <CustomerClaimMultipleUpload/, "Upload only while edit is permitted");
 assert.match(bulk, /name="type" value="Other Document"/, "Retain original document type for verification");
