@@ -18,6 +18,11 @@ for (const [stage, next] of [
   assert.match(stages, new RegExp('\\{ key: "' + next + '"'));
 }
 assert.match(stages, /nextStageKey: nextStageKeyFor\(milestoneKey\)/);
+assert.match(stages, /completedFinalStage: milestoneKey === "payment_encashment" && result\.advanced/, "Redirect eligibility must require server-confirmed Stage 9 advancement.");
+assert.match(stages, /if \(!result\.ok\) return \{ ok: false/, "Failed stage saves must not redirect.");
+assert.match(stages, /if \(state\.completedFinalStage\) \{[\s\S]*?router\.replace\("\/claims"\);[\s\S]*?return;/, "Successful final-stage completion must return to Operations Claim Register.");
+assert.match(stages, /if \(state\.completedFinalStage\)[\s\S]*?if \(state\.nextStageKey\)/, "Final redirect must take priority over ordinary stage navigation.");
+
 assert.match(stages, /setSelectedKey\(state\.nextStageKey\)/);
 assert.match(stages, /if \(!spotState\.ok\) return;/, "Failed Spot Intimation saves must not navigate.");
 assert.match(stages, /const nextKey = nextStageKeyFor\("spot_intimation"\)/, "Stage 1 Save Details should target Spot Status.");
