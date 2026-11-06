@@ -3,6 +3,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { CustomerAnimatedSearchInput } from '@/components/customer-animated-search-input';
 import { Animated, Image, Modal, NativeModules, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { ImageSourcePropType } from 'react-native';
 
@@ -203,11 +204,10 @@ export default function VehiclesScreen() {
   <View style={styles.filterPanel}>
     <View style={styles.globalSearch}>
       <MaterialCommunityIcons name="magnify" size={17} color="#0A43A3" />
-      <TextInput
+      <CustomerAnimatedSearchInput
         value={searchQuery}
         onChangeText={setSearchQuery}
         placeholder="Search vehicles or policies"
-        placeholderTextColor="#7F8EA4"
         style={styles.globalSearchInput}
       />
       {searchQuery ? (
