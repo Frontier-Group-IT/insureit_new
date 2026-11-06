@@ -83,7 +83,7 @@ export default async function CustomerPolicyDetailPage({
                 <p className="mt-1 text-[12px] text-[#E4F0FF]">{policy.insurer_name || "Insurer not available"}</p>
               </div>
             </div>
-            <span className="rounded-full border border-white/30 bg-white/95 px-2 py-1 text-[#16345C] shadow-sm"><StatusPill tone={status.tone}>{statusLabel}</StatusPill></span>
+            <StatusPill tone={status.tone}>{statusLabel}</StatusPill>
           </div>
           <div className="relative mt-4 grid grid-cols-2 gap-2 border-t border-white/20 pt-3 sm:grid-cols-4">
             <div><p className="text-[9px] uppercase tracking-wide text-[#C3DDF6]">Vehicle</p><p className="mt-0.5 break-words text-[12px] font-bold">{policy.vehicle_no || "—"}</p></div>
@@ -92,12 +92,6 @@ export default async function CustomerPolicyDetailPage({
             <div><p className="text-[9px] uppercase tracking-wide text-[#C3DDF6]">Product</p><p className="mt-0.5 break-words text-[12px] font-bold">{policy.policy_product || policy.business_line || "—"}</p></div>
           </div>
         </div>
-        <nav aria-label="Policy details sections" className="flex gap-1 overflow-x-auto bg-[#F5F8FD] px-3 py-2 text-[11px] font-semibold text-[#375B88] sm:px-4">
-          <a className="whitespace-nowrap rounded-lg px-2.5 py-1.5 hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1764C0]" href="#policy-vehicle">Vehicle &amp; owner</a>
-          <a className="whitespace-nowrap rounded-lg px-2.5 py-1.5 hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1764C0]" href="#policy-coverage">Coverage</a>
-          <a className="whitespace-nowrap rounded-lg px-2.5 py-1.5 hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1764C0]" href="#policy-premium">Premium</a>
-          <a className="whitespace-nowrap rounded-lg px-2.5 py-1.5 hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1764C0]" href="#policy-source">More details</a>
-        </nav>
       </section>
 
       <CustomerAccountTabs accounts={accounts} selectedId={account.id} pathname="/customer/policies" />
@@ -164,7 +158,7 @@ export default async function CustomerPolicyDetailPage({
           <section className="policy-detail-card overflow-hidden rounded-2xl border border-[#DDE7F4] bg-white">
             <div className="flex items-center justify-between gap-2 border-b border-[#E6EDF7] px-4 py-3">
               <h2 className="text-[14px] font-bold text-[#16335E]">Policy summary</h2>
-              <StatusPill tone={status.tone}>{statusLabel}</StatusPill>
+
             </div>
             <div className="px-4 py-3">
               <p className="text-[10px] font-semibold uppercase tracking-wide text-[#72839D]">Gross premium</p>
