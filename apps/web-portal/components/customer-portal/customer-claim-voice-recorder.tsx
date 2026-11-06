@@ -1,13 +1,15 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
-import { Mic, Play, Square, Trash2, Upload } from "lucide-react";
+import { Mic, Square, Trash2, Upload } from "lucide-react";
+import type { CustomerClaimFile } from "./customer-claim-compact-document";
+import { CustomerClaimSavedVoiceNotes } from "./customer-claim-saved-voice-notes";
 import { useRouter } from "next/navigation";
 import { CustomerErrorDialog } from "./customer-error-dialog";
 import { CustomerSuccessDialog } from "./customer-success-dialog";
 import { uploadCustomerClaimDocument } from "@/app/customer/(protected)/claims/[id]/stage/[stage]/upload-action";
 
-export function CustomerClaimVoiceRecorder({ claimId, accountId }: { claimId: string; accountId: string }) {
+export function CustomerClaimVoiceRecorder({ claimId, accountId, documents = [], allowUpload = true }: { claimId: string; accountId: string; documents?: CustomerClaimFile[]; allowUpload?: boolean }) {
   const recorder = useRef<MediaRecorder | null>(null);
   const stream = useRef<MediaStream | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -98,18 +100,18 @@ export function CustomerClaimVoiceRecorder({ claimId, accountId }: { claimId: st
       <span className="grid h-9 w-9 place-items-center rounded-lg bg-[#EDF4FF] text-[#2860AD]"><Mic className="h-5 w-5" /></span>
       <h2 className="text-[17px] font-bold text-[#112B51]">Incident Voice Note</h2>
     </div>
-    <div className="flex flex-wrap items-center gap-2">
+    {allowUpload ? <div className="flex flex-wrap items-center gap-2">
       {recording
         ? <button type="button" onClick={stop} className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-xs font-semibold text-white"><Square className="h-4 w-4" /> Stop recording</button>
         : <button type="button" onClick={start} className="inline-flex items-center gap-2 rounded-lg bg-[#1253A7] px-4 py-2 text-xs font-semibold text-white"><Mic className="h-4 w-4" /> Record Voice</button>}
       <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-[#B9CBE2] px-4 py-2 text-xs font-semibold text-[#174A87]"><Upload className="h-4 w-4" /> Choose audio <input type="file" accept="audio/mp4,audio/x-m4a,audio/m4a,audio/webm,audio/ogg" className="sr-only" onChange={event => { const file=event.target.files?.[0]; if (file) setAudioFile(file); }} /></label>
-    </div>
-    {audioUrl && <div className="mt-3 flex flex-wrap items-center gap-2">
-      <Play className="h-4 w-4 text-[#1253A7]" />
+    </div> : null}
+    {allowUpload && audioUrl && <div className="mt-3 flex flex-wrap items-center gap-2">
       <audio controls src={audioUrl} className="h-9 max-w-full" />
       <button type="button" onClick={() => setAudioFile(null)} aria-label="Delete recorded audio" className="rounded-md p-2 text-red-600 hover:bg-red-50"><Trash2 className="h-4 w-4" /></button>
       <button type="button" onClick={upload} disabled={uploadPending} className="rounded-lg bg-[#1253A7] px-4 py-2 text-xs font-semibold text-white">Upload voice note</button>
     </div>}
+    <CustomerClaimSavedVoiceNotes documents={documents} accountId={accountId} claimId={claimId} allowDelete={allowUpload}/>
     <form action={uploadAction} ref={formRef} className="hidden">
       <input type="hidden" name="account" value={accountId} />
       <input type="hidden" name="claim" value={claimId} />
