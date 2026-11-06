@@ -11,7 +11,6 @@ import { CustomerClaimVoiceRecorder } from "@/components/customer-portal/custome
 import { CustomerClaimDocumentGroups } from "@/components/customer-portal/customer-claim-document-groups";
 import { ExternalClaimBillUpload } from "@/components/claims/external-claim-bill-upload";
 import { CustomerClaimBooleanChoice } from "@/components/customer-portal/customer-claim-boolean-choice";
-import { CustomerDateInput } from "@/components/customer-portal/customer-date-input";
 import { Check, Circle, LockKeyhole, CalendarDays, Clock3, ClipboardList } from "lucide-react";
 import { CustomerClaimStageSuccessToast } from "@/components/customer-portal/customer-claim-stage-success-toast";
 import { CustomerInsurerClaimNumberPopup } from "@/components/customer-portal/customer-insurer-claim-number-popup";
@@ -178,13 +177,11 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
         <input type="hidden" name="claim" value={claim.id}/>
         <input type="hidden" name="stage" value={selected.key}/>
         {CUSTOMER_EXTERNAL_STAGE_FIELDS[selected.key].map(field=>(
-          <label key={field.key} className={`customer-claim-ref-field min-w-0 w-full ${field.type==="date"?"max-w-[270px]":field.type==="boolean"||field.type==="yesno"?"max-w-[282px]":"max-w-[340px]"} text-[10px] font-semibold uppercase tracking-[0.04em] text-[#5673B0]`}>{field.label}{field.optional?"":" *"}
+          <label key={field.key} className="customer-claim-ref-field min-w-0 text-[10px] font-semibold uppercase tracking-[0.04em] text-[#5673B0]">{field.label}{field.optional?"":" *"}
             {field.type==="boolean"||field.type==="yesno"?(
 <CustomerClaimBooleanChoice compact={selected.key==="work_approval"} name={field.key} kind={field.type} value={typeof milestone?.details?.[field.key]==="boolean"?String(milestone.details[field.key]):typeof milestone?.details?.[field.key]==="string"?String(milestone.details[field.key]):""}/>
-            ):field.type==="date"?(
-              <CustomerDateInput name={field.key} label={field.label} required={!field.optional} defaultValue={typeof milestone?.details?.[field.key]==="string"?String(milestone.details[field.key]):""} className="mt-1 border border-[#D9E3F0] text-[12px] font-semibold normal-case tracking-normal text-[#071D49]" />
             ):(
-              <input name={field.key} type={field.type} required={!field.optional} maxLength={field.type==="number"?undefined:500} min={field.type==="number"?"0":undefined} step={field.type==="number"?"0.01":undefined} defaultValue={typeof milestone?.details?.[field.key]==="string"||typeof milestone?.details?.[field.key]==="number"?String(milestone.details[field.key]):""} className={`mt-1 h-12 w-full rounded-md border border-[#D9E3F0] bg-white px-3 text-[12px] font-semibold normal-case tracking-normal text-[#071D49]`}/>
+              <input name={field.key} type={field.type} required={!field.optional} maxLength={field.type==="number"?undefined:500} min={field.type==="number"?"0":undefined} step={field.type==="number"?"0.01":undefined} defaultValue={typeof milestone?.details?.[field.key]==="string"||typeof milestone?.details?.[field.key]==="number"?String(milestone.details[field.key]):""} className={`mt-1 ${selected.key==="work_approval"?"h-[38px]":"h-9"} w-full rounded-md border border-[#D9E3F0] bg-white px-3 text-[12px] font-semibold normal-case tracking-normal text-[#071D49]`}/>
             )}
           </label>
         ))}
