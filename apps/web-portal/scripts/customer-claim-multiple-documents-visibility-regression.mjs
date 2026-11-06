@@ -21,7 +21,12 @@ assert.match(bulk, /name="type" value="Other Document"/, "Retain original docume
 assert.match(bulk, /router\.refresh\(\)/, "Refresh document list following upload");
 assert.match(completed, /"otherdocument"/, "Completed stage must not filter out bulk uploads");
 assert.match(completed, /allowUpload=\{false\}/, "Completed stages stay read-only");
-assert.match(completed, /stage\.key === "claim_intimation" \? \[\] : Object\.entries\(details\)/, "Completed Claim Intimation must not append legacy extra fields after the five canonical fields.");
+assert.match(completed, /stage\.key === "spot_intimation" \|\| stage\.key === "claim_intimation" \? \[\] : Object\.entries\(details\)/, "Completed Spot Intimation and Claim Intimation must display only their five canonical fields, without appended raw milestone fields.");
+assert.match(completed, /\["Accident Date & Time", datetime\(spot\.accidentAt\)\]/, "Keep the formatted accident date.");
+assert.match(completed, /\["Spot Intimation Date & Time", datetime\(spot\.spotAt \?\? details\.spot_intimation_at\)\]/, "Keep the formatted spot intimation date.");
+for (const label of ["Driver Name", "Driver Number", "Location"]) assert.ok(completed.includes(`["${label}",`), `Keep canonical ${label} field`);
+assert.match(completed, /<CustomerClaimEvidenceWorkspace documents=\{spotDocuments\}/, "Keep Spot Intimation documents.");
+assert.match(completed, /<CustomerClaimVoiceRecorder documents=\{spotDocuments\}/, "Keep Incident Voice Note section.");
 assert.match(completed, /\(CUSTOMER_EXTERNAL_STAGE_FIELDS\[stage\.key\] \?\? \[\]\)\.map\(field => \[field\.label, details\[field\.key\]\]\)/, "Keep the canonical Claim Intimation details from the shared stage schema.");
 assert.match(completed, /<CustomerClaimDocumentGroups documents=\{documents\} claimId=\{claimId\} accountId=\{accountId\} stage="claim_intimation"/, "Claim Intimation document verification section remains visible.");
 assert.match(completed, /if \(typeof value === "boolean"\) return value \? "Yes" : "No"/, "Native booleans in completed journey must show Yes/No.");
