@@ -219,7 +219,7 @@ export default function PoliciesScreen() {
           </Pressable>
         </View>
 
-        <CustomerSearchBar value={query} onChangeText={setQuery} placeholder="Search vehicle, insurer or policy no." />
+        <CustomerSearchBar value={query} onChangeText={setQuery} placeholder="Search vehicle, insurer or policy no." idleHints={["Search vehicle, insurer or policy no.", "Search by vehicle number", "Search by insurer name", "Search by policy number"]} />
       </View>
 
       <View style={styles.filterRow}>
