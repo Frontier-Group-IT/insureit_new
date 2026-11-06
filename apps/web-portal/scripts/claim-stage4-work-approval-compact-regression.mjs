@@ -25,14 +25,13 @@ assert.ok(stageFields.includes('label: "Surveyor Name", type: "text", optional: 
 assert.ok(stageFields.includes('label: "Surveyor Phone", type: "tel", optional: true'));
 assert.ok(stageFields.includes('label: "Surveyor Email", type: "email", optional: true'));
 
-// Standardized 48px control height and reference widths apply to Stage 4 in both portals.
-assert.ok(operations.includes('relative flex h-12 w-full max-w-[270px]'));
-assert.ok(operations.includes('field.type === "date" ? "max-w-[270px]" : "max-w-[340px]"'));
-assert.ok(operations.includes('max-w-[282px] grid-cols-2 gap-[10px]'));
-assert.ok(customer.includes('field.type==="date"?"max-w-[270px]"'));
-assert.ok(customer.includes('selected.key==="work_approval"?"lg:grid-cols-5 lg:items-start"'));
+// Same compact 38px date/text/choice dimensions; date picker functionality retained.
+assert.ok(operations.includes('compact={selected.key === "work_approval"}'));
+assert.ok(operations.includes('compact ? "h-[38px]" : "h-9"'));
+assert.ok(operations.includes('selected.key === "work_approval" ? "h-[38px]" : "h-9"'));
+assert.ok(customer.includes('selected.key==="work_approval"?"h-[38px]":"h-9"'));
 assert.ok(customer.includes('<CustomerClaimBooleanChoice compact={selected.key==="work_approval"}'));
-assert.ok(choice.includes('h-12 rounded-md'));
+assert.ok(choice.includes('compact?"h-[38px]":"h-9"'));
 assert.ok(operations.includes('onClick={(event) => event.currentTarget.showPicker?.()}'));
 assert.ok(customer.includes('required={!field.optional}'));
 
