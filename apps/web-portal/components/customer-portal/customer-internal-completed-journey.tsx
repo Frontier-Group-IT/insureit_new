@@ -54,7 +54,10 @@ export function CustomerInternalCompletedJourney({
         ["Location", spot.location ?? details.location],
       ] : (CUSTOMER_EXTERNAL_STAGE_FIELDS[stage.key] ?? []).map(field => [field.label, details[field.key]]);
       const fields: Array<[string,unknown]> = entries as Array<[string,unknown]>;
-      const extra = Object.entries(details)
+      // Claim Intimation's five canonical fields already fill one row. Do not append
+      // legacy milestone extras (e.g. contact fields with incorrect date-like values).
+      // This only affects read-only presentation; all persisted details remain intact.
+      const extra = stage.key === "claim_intimation" ? [] : Object.entries(details)
         .filter(([key,value]) => present(value) && !((CUSTOMER_EXTERNAL_STAGE_FIELDS[stage.key] ?? []).some(field => field.key === key)) && !(stage.key === "spot_intimation" && ["spot_intimation_at","driver_name","driver_phone","location"].includes(key)) && ["string","number","boolean"].includes(typeof value))
         .map(([key,value]):[string,unknown] => [key.replace(/_/g," "),value]);
       return <section key={stage.key} className="border-b border-[#E5EBF4] last:border-b-0">
