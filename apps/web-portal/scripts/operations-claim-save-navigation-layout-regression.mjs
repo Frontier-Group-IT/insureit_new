@@ -31,7 +31,7 @@ assert.match(stages, /if \(nextKey && canOpenNext\) \{[\s\S]*?setSelectedKey\(ne
 assert.match(stages, /await saveInternalSpotIntimationDetails\(claimId, formData\)/, "Preserve saving without automatic workflow advancement.");
 
 assert.match(stages, /router\.replace\(\`\$\{partnerManagedJourney/);
-assert.match(stages, /selected\.key === "payment_encashment" \? "lg:grid-cols-\[repeat\(5,minmax\(0,1fr\)\)\] lg:items-start"/);
+assert.match(stages, /selected\.key === "work_approval" \|\| selected\.key === "payment_encashment" \? "lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 lg:items-start"/, "Stages 4 and 9 should reflow responsively while aligning labels and controls.");
 assert.match(stages, /name: "depreciation_slip_submitted"/);
 assert.match(stages, /name: "satisfaction_voucher_submitted"/);
 assert.match(stages, /name: "documents_submit_date"/);
