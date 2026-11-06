@@ -56,4 +56,7 @@ const verificationActions = read("../app/claims/[id]/spot-survey-actions.ts");
 assert.match(verificationActions, /data\.claim_service_mode === "self_managed" && access\.isPartner/, "Self-managed verification remains Operations-only.");
 assert.match(page, /<OperationsClaimStages/, "All self-managed Operations claims must use the shared nine-stage component.");
 
+assert.ok(viewer.includes('completed ? "bg-[#16A34A] text-white"'), "Read-only Operations completed indicator must be solid green with a white tick");
+assert.ok(!viewer.includes('completed ? "bg-[#E8F8F0] text-[#0A9B72]"'), "Pale-green completed indicator must not return");
+assert.ok(motion.includes("border-color: #dce6f3;\n  background: #fff;"), "Operations completed cards remain white");
 console.log("External self-managed claim layout parity and read-only protections passed.");

@@ -31,4 +31,9 @@ for (const forbidden of ['bg-[#FFF0F3]', 'bg-[#FFF3F5]', 'bg-[#FFEDF1]', 'bg-[#F
 }
 assert.ok(renewals.includes('cat.due > 0 ? <span'), "Due badge must remain visible");
 assert.ok(renewals.includes('cat.expired > 0 ? <span'), "Expired badge must remain visible");
+const customerJourneyCss = readFileSync("app/customer/(protected)/claims/[id]/stage/[stage]/customer-claim-reference.css", "utf8");
+assert.ok(customerJourneyCss.includes(".customer-claim-ref-journey .customer-claim-motion-completed { border-color:#dce6f3; background:#fff; }"), "Completed customer journey stages use white cards with neutral borders");
+assert.ok(!customerJourneyCss.includes("background:#f4fffa"), "Completed customer journey must not use a green-tinted background");
+// Stage completion semantics and the filled green Customer tick remain in the shared strip.
+assert.ok(source.includes('completed?"bg-[#149568] text-white"'), "Keep existing solid-green Customer tick");
 console.log("Compact full-width customer claim journey regression passed.");
