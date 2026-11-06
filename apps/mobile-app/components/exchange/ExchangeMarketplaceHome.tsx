@@ -247,6 +247,7 @@ export function ExchangeMarketplaceHome({
                 value={locationQuery}
                 onChangeText={setLocationQuery}
                 placeholder="Search city, district or PIN code"
+                idleHints={["Search city, district or PIN code", "Search by city or district", "Search by PIN code"]}
                 style={styles.locationSearchInput}
                 accessibilityLabel="Search available vehicle locations"
               />
@@ -318,7 +319,7 @@ export function ExchangeMarketplaceHome({
               <>
                 <View style={styles.locationSearch}>
                   <MaterialCommunityIcons name="magnify" size={20} color="#7D8898" />
-                  <CustomerAnimatedSearchInput autoFocus value={candidateQuery} onChangeText={setCandidateQuery} placeholder="Search area, city, district or PIN" style={styles.locationSearchInput} accessibilityLabel="Search new location" />
+                  <CustomerAnimatedSearchInput autoFocus value={candidateQuery} onChangeText={setCandidateQuery} placeholder="Search area, city, district or PIN" idleHints={["Search area, city, district or PIN", "Search by area or city", "Search by PIN code"]} style={styles.locationSearchInput} accessibilityLabel="Search new location" />
                   {candidateQuery ? <Pressable accessibilityLabel="Clear location search" onPress={() => setCandidateQuery('')}><MaterialCommunityIcons name="close" size={18} color="#6B7E95" /></Pressable> : null}
                 </View>
                 <ScrollView style={styles.locationModalOptions} keyboardShouldPersistTaps="handled">
@@ -383,6 +384,7 @@ export function ExchangeMarketplaceHome({
               value={query}
               onChangeText={onQueryChange}
               placeholder="Search trucks, tippers or vehicles"
+              idleHints={["Search trucks, tippers or vehicles", "Search by make or model", "Search by vehicle type"]}
               accessibilityLabel="Search exchange vehicles"
               returnKeyType="search"
               style={styles.searchInput}
