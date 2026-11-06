@@ -16,9 +16,10 @@ assert.match(stage3, /<RequestCustomerDocumentReuploadButton claimId=\{claim\.id
 for (const source of [stage1, stage3]) {
   assert.match(source, /document\.verification_status !== "rejected" && \(document\.verification_status === "verified" \|\| Boolean\(verification\?\.is_valid\)\)/, "An explicitly rejected document must not remain visually verified from historical verification.");
 }
-assert.match(stage3, /<VerificationActionButton[^\n]*variant="icon"/, "Stage 3 pending verification must keep its dedicated icon action.");
-assert.match(stage3, /!rejected && !verified \? <VerificationActionButton/, "Only pending non-rejected documents should offer verification; verified and rejected files must not show the button.");
-assert.match(verificationButton, /<FileCheck2/, "Stage 3 verification icon must not reuse the circular re-upload icon.");
+assert.doesNotMatch(stage3, /<VerificationActionButton[^\n]*variant="icon"/, "Stage 3 must not render the redundant blue document-check icon in file rows.");
+assert.match(stage3, /documentIds=\{selectedDocumentIds\}/, "Pending Stage 3 documents must retain category-level verification through selected file IDs.");
+assert.doesNotMatch(stage1, /variant="icon"/, "Stage 1 file rows must not show the blue document-check reverify icon.");
+assert.match(verificationButton, /<FileCheck2/, "The shared icon implementation remains available to other consumers.");
 assert.doesNotMatch(verificationButton, /<RefreshCw/, "Circular refresh icon is reserved for customer re-upload.");
 assert.match(requestButton, /createPortal\(/, "The request dialog must escape document-card stacking contexts.");
 assert.match(requestButton, /document\.body/, "The request dialog must be attached to document.body.");
