@@ -89,7 +89,7 @@ assert.match(compactOpen,/loadCustomerClaimDetail\(account\.id,claimId\)/,"Docum
 assert.match(compactOpen,/\.eq\("customer_id",account\.id\)/,"Document open must scope to customer");
 assert.match(compactStage1,/CustomerClaimCompactDocument/,"Use shared compact files in Stage 1");
 assert.match(compactStage3,/CustomerClaimCompactDocument/,"Use shared compact files in Stage 3");
-assert.match(spotLayout,/xl:grid-cols-\[1\.2fr_1\.2fr_1\.15fr_\.8fr_1\.35fr\]/,"Spot Intimation Section 1 must use the five-column reference layout");
+assert.match(spotLayout,/lg:grid-cols-3 2xl:grid-cols-\[repeat\(5,minmax\(0,1fr\)\)\]/,"Spot Intimation must reflow and use five aligned columns on very wide screens");
 assert.match(spotLayout,/Accident &amp; Spot Intimation Details/,"Spot Intimation Section 1 must use the reference heading");
 assert.match(spotLayout,/Accident Date &amp; Time/,"Accident date and time must remain grouped");
 assert.match(spotLayout,/Spot Intimation Date &amp; Time/,"Spot intimation date and time must remain grouped");
