@@ -150,7 +150,8 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
               {CUSTOMER_EXTERNAL_STAGE_FIELDS[selected.key].map(field=>{
                 const value=milestone?.details?.[field.key];
                 const present=value!==undefined&&value!==null&&value!=="";
-                const display=present?(typeof value==="boolean"?(value?"Yes":"No"):String(value)):"—";
+                const normalized=typeof value==="string"?value.trim().toLowerCase():null;
+                const display=present?(typeof value==="boolean"?(value?"Yes":"No"):normalized==="true"||normalized==="yes"?"Yes":normalized==="false"||normalized==="no"?"No":String(value)):"—";
                 return <div key={field.key} className="min-w-0">
                   <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.04em] text-[#5673B0]">{field.label}{field.optional?"":" *"}</p>
                   <div aria-label={field.label+" (read only)"} className="flex min-h-9 items-center gap-2 rounded-md border border-[#D9E3F0] bg-[#F1F4F9] px-3 py-2 text-[12px] font-medium text-[#536781]">
@@ -163,7 +164,7 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
           ) : milestone?.details && Object.entries(milestone.details).length ? <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             {Object.entries(milestone.details).filter(([,value])=>["string","number","boolean"].includes(typeof value)).map(([key,value])=><div key={key}>
               <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#174EA6]">{key.replace(/_/g," ")}</p>
-              <div className="min-h-9 rounded-md border border-[#D9E3F0] bg-white px-3 py-2 text-[12px] font-medium text-[#071D49]">{String(value)}</div>
+              <div className="min-h-9 rounded-md border border-[#D9E3F0] bg-white px-3 py-2 text-[12px] font-medium text-[#071D49]">{typeof value==="boolean"?(value?"Yes":"No"):typeof value==="string"&&["true","false","yes","no"].includes(value.trim().toLowerCase())?(["true","yes"].includes(value.trim().toLowerCase())?"Yes":"No"):String(value)}</div>
             </div>)}
           </div>:<p className="text-[12px] text-[#64748B]">No details recorded for this stage yet.</p>}
           <p className="mt-3 flex items-center gap-2 text-[11px] text-[#536781]">{completed?<Check className="h-4 w-4 text-[#0A9B72]"/>:activeIndex===currentIndex?<Circle className="h-4 w-4 text-[#155EEF]"/>:<LockKeyhole className="h-4 w-4"/>}{completed?"Completed":activeIndex===currentIndex?"Current stage":"Upcoming stage"}</p>

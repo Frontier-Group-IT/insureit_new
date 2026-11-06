@@ -16,7 +16,15 @@ type SpotFields = {
   location?: string | null;
 };
 const present = (value: unknown) => value !== null && value !== undefined && value !== "" && !(typeof value === "string" && !value.trim());
-const display = (value: unknown) => typeof value === "boolean" ? (value ? "Yes" : "No") : String(value);
+const display = (value: unknown) => {
+  if (typeof value === "boolean") return value ? "Yes" : "No";
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === "true" || normalized === "yes") return "Yes";
+    if (normalized === "false" || normalized === "no") return "No";
+  }
+  return String(value);
+};
 const datetime = (value: unknown) => {
   if (!present(value)) return null;
   const date = new Date(String(value));
@@ -54,7 +62,10 @@ export function CustomerInternalCompletedJourney({
         ["Location", spot.location ?? details.location],
       ] : (CUSTOMER_EXTERNAL_STAGE_FIELDS[stage.key] ?? []).map(field => [field.label, details[field.key]]);
       const fields: Array<[string,unknown]> = entries as Array<[string,unknown]>;
-      const extra = Object.entries(details)
+      // Claim Intimation's five canonical fields already fill one row. Do not append
+      // legacy milestone extras (e.g. contact fields with incorrect date-like values).
+      // This only affects read-only presentation; all persisted details remain intact.
+      const extra = stage.key === "claim_intimation" ? [] : Object.entries(details)
         .filter(([key,value]) => present(value) && !((CUSTOMER_EXTERNAL_STAGE_FIELDS[stage.key] ?? []).some(field => field.key === key)) && !(stage.key === "spot_intimation" && ["spot_intimation_at","driver_name","driver_phone","location"].includes(key)) && ["string","number","boolean"].includes(typeof value))
         .map(([key,value]):[string,unknown] => [key.replace(/_/g," "),value]);
       return <section key={stage.key} className="border-b border-[#E5EBF4] last:border-b-0">
