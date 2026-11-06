@@ -77,6 +77,8 @@ jobs:
         run: node scripts/claim-stage4-work-approval-compact-regression.mjs
       - name: Operations claim Customer motion parity regression
         run: node scripts/operations-claim-customer-motion-parity-regression.mjs
+      - name: Completed Operations Claim stage input panel regression
+        run: node scripts/operations-claim-completed-hide-input-panel-regression.mjs
       - name: Operations Claim Journey vehicle and insurer header regression
         run: node scripts/operations-claim-header-vehicle-insurer-regression.mjs
       - name: Partner Business Report instant date filter regression
