@@ -6,6 +6,7 @@ const workspace = read("../components/customer-portal/customer-claim-evidence-wo
 const completed = read("../components/customer-portal/customer-internal-completed-journey.tsx");
 const bulk = read("../components/customer-portal/customer-claim-multiple-upload.tsx");
 const compact = read("../components/customer-portal/customer-claim-compact-document.tsx");
+const stagePage = read("../app/customer/(protected)/claims/[id]/stage/[stage]/page.tsx");
 
 assert.doesNotMatch(workspace, /label:"Other Documents",type:"Other Document"/, "No redundant Other Documents card");
 for (const name of ["Accident Photo","RC Copy","Insurance Copy","Driver Licence","GR / Load Bill","Accident Video"]) assert.ok(workspace.includes('label:"'+name+'"'), "Keep individual "+name+" card");
@@ -23,5 +24,12 @@ assert.match(completed, /allowUpload=\{false\}/, "Completed stages stay read-onl
 assert.match(completed, /stage\.key === "claim_intimation" \? \[\] : Object\.entries\(details\)/, "Completed Claim Intimation must not append legacy extra fields after the five canonical fields.");
 assert.match(completed, /\(CUSTOMER_EXTERNAL_STAGE_FIELDS\[stage\.key\] \?\? \[\]\)\.map\(field => \[field\.label, details\[field\.key\]\]\)/, "Keep the canonical Claim Intimation details from the shared stage schema.");
 assert.match(completed, /<CustomerClaimDocumentGroups documents=\{documents\} claimId=\{claimId\} accountId=\{accountId\} stage="claim_intimation"/, "Claim Intimation document verification section remains visible.");
+assert.match(completed, /if \(typeof value === "boolean"\) return value \? "Yes" : "No"/, "Native booleans in completed journey must show Yes/No.");
+assert.match(completed, /const normalized = value\.trim\(\)\.toLowerCase\(\)/, "String boolean values must be normalized before display.");
+assert.match(completed, /normalized === "true" \|\| normalized === "yes"/, "Boolean-like true strings show Yes.");
+assert.match(completed, /normalized === "false" \|\| normalized === "no"/, "Boolean-like false strings show No.");
+assert.match(completed, /return String\(value\)/, "Nonboolean text and dates remain unchanged.");
+assert.match(stagePage, /normalized==="true"\|\|normalized==="yes"\?"Yes":normalized==="false"\|\|normalized==="no"\?"No"/, "Customer stage read-only canonical fields must format boolean-like strings.");
+assert.match(stagePage, /\["true","false","yes","no"\]\.includes\(value\.trim\(\)\.toLowerCase\(\)\)/, "Customer stage fallback fields must format boolean-like strings.");
 assert.match(compact, /document_type/, "Existing individual document records remain supported");
 console.log("Customer bulk uploaded documents visible in edit and completed journey regression passed.");
