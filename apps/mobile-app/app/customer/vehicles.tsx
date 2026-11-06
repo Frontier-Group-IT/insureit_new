@@ -208,6 +208,7 @@ export default function VehiclesScreen() {
         value={searchQuery}
         onChangeText={setSearchQuery}
         placeholder="Search vehicles or policies"
+        idleHints={["Search vehicles or policies", "Search by registration number", "Search by insurer or policy number"]}
         style={styles.globalSearchInput}
       />
       {searchQuery ? (
