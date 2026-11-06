@@ -125,6 +125,9 @@ jobs:
       - name: Customer Add Vehicle error popup regression
         run: node apps/mobile-app/scripts/customer-add-vehicle-error-popup-regression.mjs
 
+      - name: Customer Policies idle placeholder slide regression
+        run: node apps/mobile-app/scripts/customer-policy-search-slide-regression.mjs
+
       - name: Customer Start Claim OTA regression
         run: node apps/mobile-app/scripts/customer-start-claim-ota-regression.mjs
 
