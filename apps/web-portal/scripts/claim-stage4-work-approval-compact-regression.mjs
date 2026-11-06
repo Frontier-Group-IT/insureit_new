@@ -27,7 +27,7 @@ assert.ok(stageFields.includes('label: "Surveyor Email", type: "email", optional
 
 // Same compact 38px date/text/choice dimensions; date picker functionality retained.
 assert.ok(operations.includes('compact={selected.key === "work_approval"}'));
-assert.ok(operations.includes('compact ? "h-[38px]" : "h-full min-h-9"'));
+assert.ok(operations.includes('compact ? "h-[38px]" : "h-9"'));
 assert.ok(operations.includes('selected.key === "work_approval" ? "h-[38px]" : "h-9"'));
 assert.ok(customer.includes('selected.key==="work_approval"?"h-[38px]":"h-9"'));
 assert.ok(customer.includes('<CustomerClaimBooleanChoice compact={selected.key==="work_approval"}'));

@@ -519,7 +519,7 @@ function toDateValue(value: string) {
 function AppStyleDateInput({ name, value, required, compact = false }: { name: string; value: string; required?: boolean; compact?: boolean }) {
   const [dateValue, setDateValue] = useState(() => toDateValue(value));
   return (
-    <span className={`relative flex ${compact ? "h-[38px]" : "h-full min-h-9"} w-full items-center justify-between rounded-md border border-[#D9E3F0] bg-white px-3 normal-case tracking-normal text-[#071D49] focus-within:border-[#174EA6]`}>
+    <span className={`relative flex ${compact ? "h-[38px]" : "h-9"} w-full items-center justify-between rounded-md border border-[#D9E3F0] bg-white px-3 normal-case tracking-normal text-[#071D49] focus-within:border-[#174EA6]`}>
       <span className={`text-[12px] font-medium ${dateValue ? "text-[#071D49]" : "text-[#7B8BA3]"}`}>{dateValue ? formatDisplayDate(dateValue) : "Select date"}</span>
       <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4 fill-none stroke-[#526178] stroke-[1.8]"><rect x="4" y="6" width="16" height="14" rx="2" /><path d="M8 3v6M16 3v6M4 10h16" /></svg>
       <input
