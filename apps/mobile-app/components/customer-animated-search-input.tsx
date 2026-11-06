@@ -1,3 +1,5 @@
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Pressable } from 'react-native';
 import { forwardRef, useEffect, useRef, useState } from 'react';
 import {
   AccessibilityInfo,
@@ -98,4 +100,46 @@ const styles = StyleSheet.create({
   },
   input: { width: '100%', minHeight: 46, paddingVertical: 0 },
   consistentText: { fontSize: CUSTOMER_SEARCH_PLACEHOLDER_SIZE, fontWeight: '400' },
+});
+
+/** Customer-only search bar; do not change shared Staff or Partner search styles. */
+export function CustomerSearchBar({
+  value,
+  onChangeText,
+  placeholder = 'Search',
+}: {
+  value: string;
+  onChangeText: (next: string) => void;
+  placeholder?: string;
+}) {
+  return (
+    <View style={barStyles.bar}>
+      <MaterialCommunityIcons name="magnify" size={21} color="#0A43A3" />
+      <CustomerAnimatedSearchInput
+        value={value}
+        onChangeText={onChangeText}
+        placeholder={placeholder}
+        returnKeyType="search"
+      />
+      {value ? (
+        <Pressable accessibilityRole="button" accessibilityLabel="Clear search" onPress={() => onChangeText('')}>
+          <MaterialCommunityIcons name="close" size={17} color="#7F8EA4" />
+        </Pressable>
+      ) : null}
+    </View>
+  );
+}
+
+const barStyles = StyleSheet.create({
+  bar: {
+    minHeight: 50,
+    borderWidth: 1,
+    borderColor: '#A9C8EE',
+    borderRadius: 16,
+    backgroundColor: '#F3F8FF',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 9,
+    paddingHorizontal: 12,
+  },
 });
