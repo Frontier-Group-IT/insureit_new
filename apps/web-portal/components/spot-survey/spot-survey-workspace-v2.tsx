@@ -75,7 +75,7 @@ const aliases = {
 
 const claimHeaderIcons = {
   customer: "/assets/Custom-Icons/optimized-128/customers.png",
-  vehicle: "/assets/Custom-Icons/optimized-128/fleet-vehicle.png",
+  vehicle: "/assets/customer-3d-icons/my_vehicles.png",
   lossDate: "/assets/Custom-Icons/optimized-128/claims-intimated-today.png",
   policy: "/assets/Custom-Icons/optimized-128/policy.png",
   control: "/assets/Custom-Icons/optimized-128/tasks-work-queue.png",
