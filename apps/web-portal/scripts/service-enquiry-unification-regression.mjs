@@ -11,6 +11,11 @@ const checks = [
   [page.includes('"support_ticket"'), 'Service Enquiries page must support support_ticket records'],
   [page.includes('Support Ticket'), 'Service Enquiries page must label support-ticket rows'],
   [!page.includes('Get Quote Register') && !page.includes('Ticket Register'), 'Both sections must omit the redundant register heading row'],
+  [page.includes('min-h-[calc(100dvh-11rem)] flex-col gap-4') && page.includes('flex min-h-[360px] flex-1 flex-col') && page.includes('flex min-h-0 flex-1 flex-col overflow-x-auto'), 'Register fills available height without stretching table rows'],
+  [page.includes('!sectionRows.length && !error') && page.includes('/illustrations/service-enquiries-empty.svg'), 'Empty illustration only appears when no records and no load error'],
+  [page.includes('section === "quotes" ? "No quote enquiries match the selected filters." : "No ticket enquiries match the selected filters."'), 'Preserve distinct ticket and quote empty-state labels'],
+  [page.includes('Showing {totalRows') && page.includes('requestedPage < totalPages'), 'Pagination remains underneath the full-height register'],
+
   [page.includes('whitespace-nowrap text-[10px] font-black tabular-nums') && page.includes('{row.enquiry_no}'), 'Request numbers must be compact and single-line'],
   [!page.includes('formatDateTime(row.created_at)'), 'Request creation timestamp must be removed from the register'],
   [page.includes('whitespace-nowrap px-3 py-4 text-[10px] font-bold tabular-nums') && page.includes('{vehicle}'), 'Vehicle numbers must use compact no-wrap presentation'],
