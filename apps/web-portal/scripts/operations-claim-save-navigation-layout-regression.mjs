@@ -31,7 +31,7 @@ assert.match(stages, /if \(nextKey && canOpenNext\) \{[\s\S]*?setSelectedKey\(ne
 assert.match(stages, /await saveInternalSpotIntimationDetails\(claimId, formData\)/, "Preserve saving without automatic workflow advancement.");
 
 assert.match(stages, /router\.replace\(\`\$\{partnerManagedJourney/);
-assert.match(stages, /selected\.key === "payment_encashment" \? "gap-2 lg:grid-cols-5 lg:items-start"/, "Stage 9 must show five aligned columns on desktop without waiting for 2xl.");
+assert.ok(stages.includes('selected.key === "payment_encashment" ? "min-w-[1100px] grid-cols-[minmax(240px,1.1fr)_minmax(260px,1.2fr)_minmax(190px,1fr)_minmax(190px,1fr)_minmax(175px,0.9fr)] items-start gap-2"'), "Stage 9 keeps five aligned columns even at narrower widths.");
 assert.ok(stages.includes('selected.key === "work_approval" ? "lg:grid-cols-3 xl:grid-cols-5 lg:items-start"'), "Stage 4 aligns five fields at wide desktop widths.");
 assert.ok(stages.includes('selected.key === "payment_encashment" || selected.key === "delivery_order" || selected.key === "work_approval" ? "" : "max-w-[254px]"'), "Stage 4 and Stage 9 Yes/No controls use their grid cell widths.");
 assert.ok(stages.includes('const useAppDatePicker = field.type === "date"'), "Native date behavior is preserved.");
@@ -57,9 +57,16 @@ console.log("Operations Claim Journey save navigation, Stage 9 layout and 3D hea
 
 
 // Compact inputs preserve the dedicated submit footer and Vehicle Delivery date variant.
-assert.match(stages, /grid min-w-0 items-start gap-2 sm:grid-cols-2/);
+assert.match(stages, /grid min-w-0 items-start gap-2 \$\{selected.key === "payment_encashment" \? "" : "sm:grid-cols-2"\}/);
 assert.match(stages, /<AppStyleDateInput name=\{field.name\} value=\{value\} required=\{required\} compact billingCompact=\{selected.key === "billing"\} vehicleDeliveryCompact=\{selected.key === "vehicle_delivery"\} \/>/);
 assert.ok(stages.includes('vehicleDeliveryCompact ? "h-[34px] max-w-[335px] px-3"'));
 assert.ok(stages.includes('h-[34px] text-[12px]'));
 assert.match(stages, /mt-4 flex min-h-10 flex-wrap items-center justify-end gap-2 border-t border-\[#D9E3F0\] pt-3/);
 assert.ok(stages.includes('selected.key === "repair_ri" ? "" : selected.key === "vehicle_delivery" ? "max-w-[335px]" : "max-w-[260px]"'));
+
+// Stage 9 has exactly one row of five bounded fields: matching heading and input positions.
+assert.match(stages, /selected.key === "payment_encashment" \? "w-full overflow-x-auto pb-1" : ""/, "Allow horizontal scrolling instead of overlapping or wrapping narrow viewports.");
+assert.match(stages, /min-w-\[1100px\] grid-cols-\[minmax\(240px,1\.1fr\)_minmax\(260px,1\.2fr\)_minmax\(190px,1fr\)_minmax\(190px,1fr\)_minmax\(175px,0\.9fr\)\]/, "Five explicit columns preserve a single heading and control row.");
+assert.match(stages, /selected.key === "payment_encashment" \? "h-5" : "h-4/, "Payment choice heading height matches its neighboring labels.");
+assert.match(stages, /selected.key === "payment_encashment" \? "block h-5 whitespace-nowrap" : ""/, "Payment date and amount headings remain on the same single line.");
+assert.match(stages, /selected.key === "payment_encashment" \? "mt-1 block min-w-0 w-full" : ""/, "Date controls have the same vertical gap as choice and amount inputs.");
