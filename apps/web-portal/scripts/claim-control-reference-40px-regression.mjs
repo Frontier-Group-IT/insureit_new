@@ -9,13 +9,13 @@ const start=read("../components/customer-portal/customer-start-claim-selector.ts
 const operationsStart=read("../app/claims/new/add-claim-form.tsx");
 
 // Compact 34px Claim Journey controls across Customer and Operations, retaining Vehicle Delivery variant.
-assert.ok(operations.includes('selected.key === "work_approval" ? "lg:grid-cols-3 xl:grid-cols-5 lg:items-start"'));
+assert.ok(operations.includes('selected.key === "work_approval" ? "min-w-[900px] !grid-cols-5 items-start"'));
 assert.ok(operations.includes('vehicleDeliveryCompact ? "h-[34px] max-w-full px-3"'));
 assert.ok(operations.includes('flex h-[34px] cursor-pointer'));
 assert.ok(operations.includes('grid h-[34px] w-full grid-cols-[1.15fr_0.85fr]'));
 assert.ok(operations.includes('grid min-w-0 items-start gap-2 sm:grid-cols-2 lg:grid-cols-5'), 'Operations Stage 1 keeps all five fields on a single desktop row.');
 assert.ok(operations.includes('text-[14px] font-semibold tracking-[-0.01em] text-[#071D49]">Accident'));
-assert.ok(customer.includes('className="mt-1 h-[34px] w-full rounded-[4px]'));
+assert.ok(customer.includes('className="mt-1 block h-[34px] min-w-0 w-full rounded-[4px]'));
 assert.ok(customer.includes('xl:grid-cols-5 lg:items-start'));
 assert.ok(choice.includes('h-[34px] rounded-[4px]'));
 // Ensure this remains a presentation change: native date field, values, and field validations.
@@ -28,9 +28,9 @@ assert.match(customer,/name=\{field\.key\} type=\{field\.type\} required=\{!fiel
 assert.match(choice,/name=\{name\} value=\{value\}/);
 assert.match(choice,/onClick=\{\(\)=>setValue\(key\)\}/);
 assert.match(customer,/className="flex min-h-\[34px\] items-center gap-2 rounded-md border border-\[#D9E3F0\] bg-\[#F1F4F9\]/);
-assert.match(operations,/whitespace-nowrap \$\{selected\.key === "billing" \? "flex flex-col" : "block max-sm:whitespace-normal"\}/, "Billing labels remain single-line; other stage labels retain responsive wrapping.");
+assert.match(operations,/selected\.key === "billing" \|\| selected\.key === "work_approval" \? "flex flex-col" : "block max-sm:whitespace-normal"/, "Billing labels remain single-line; other stage labels retain responsive wrapping.");
 assert.match(operations,/selected\.key === "spot_status" \? "text-\[8px\]" : "text-\[9px\]"/,"Spot Status uses smaller labels, other Operations stages retain 9px.");
-assert.ok(operations.includes("xl:grid-cols-5 lg:items-start"));
+assert.ok(operations.includes('selected.key === "work_approval" ? "min-w-[900px] !grid-cols-5 items-start"'));
 assert.match(customer,/selected\.key==="spot_status"\?"text-\[8px\]":"text-\[9px\]"/,"Customer Spot Status uses smaller labels, other stages retain 9px.");
 assert.ok(customer.includes("xl:grid-cols-5 lg:items-start"));
 assert.match(operations,/stageOneLabelClassName = "block h-4 max-sm:h-auto whitespace-nowrap text-\[8px\]/, "Stage 1 labels use the smaller font.");
