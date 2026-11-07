@@ -108,7 +108,7 @@ export async function GET(request: Request) {
   if ((employeeRead?.mode === "none") || (!employeeRead && !intakeReadScope)) {
     return requestedId
       ? json({ ok: false, error: "This Policy Intake is not available in your Partner account." }, 404)
-      : json({ ok: true, intakes: [], total: 0, counts: { active: 0, attention: 0, progress: 0, completed: 0 } });
+      : json({ ok: true, intakes: [], total: 0, counts: view === "mobile_list" ? { action_required: 0, in_review: 0, processing: 0, completed: 0, duplicate: 0, rejected: 0, all: 0 } : { active: 0, attention: 0, progress: 0, completed: 0 } });
   }
 
   if (requestedId) {
@@ -141,9 +141,12 @@ export async function GET(request: Request) {
   const offset = Number.isFinite(requestedOffset) ? Math.max(0, Math.min(100000, Math.floor(requestedOffset))) : 0;
   const filter = url.searchParams.get("filter")?.trim().toLowerCase() ?? "all";
 
-  if (!["all", "attention", "in_progress", "completed"].includes(filter)) {
+  const mobileFilters = ["action_required", "in_review", "processing", "completed", "duplicate", "rejected", "all"];
+  if (!(view === "mobile_list" ? mobileFilters : ["all", "attention", "in_progress", "completed"]).includes(filter)) {
     return json({ ok: false, error: "Invalid Policy Intake filter." }, 400);
   }
+  const search = view === "mobile_list" ? (url.searchParams.get("search") ?? "").trim().slice(0, 120) : "";
+  const includeCounts = view === "mobile_list" && url.searchParams.get("include_counts") === "true";
 
   let query = admin
     .from("policy_intake_requests")
@@ -158,17 +161,44 @@ export async function GET(request: Request) {
 
   if (filter === "attention") query = query.eq("status", "needs_attention");
   if (filter === "completed") query = query.eq("status", "completed");
-  if (filter === "in_progress") query = query.in("status", ["processing", "ready_for_review", "in_review"]);
+  if (filter === "in_progress" || filter === "in_review") query = query.in("status", filter === "in_review" ? ["in_review"] : ["processing", "ready_for_review", "in_review"]);
+  if (filter === "duplicate" || filter === "rejected") query = query.eq("status", filter);
+  if (filter === "processing") query = query.eq("status", "processing").neq("ocr_status", "failed");
+  if (filter === "action_required") query = query.or("status.eq.ready_for_review,status.eq.needs_attention,and(status.eq.processing,ocr_status.eq.failed)");
+  if (search) {
+    // A computed field searches OCR values as well as the scalar PIR/source fields.
+    // It is ANDed with the existing server-side identity scope, never used to bypass it.
+    const escaped = search.replace(/[%_\\]/g, (char) => "\\" + char);
+    query = query.ilike("policy_intake_search_text", `%${escaped}%`);
+  }
 
-  // Mobile list view uses the exact same authenticated, role-scoped query above.
-  // It deliberately omits the four extra count requests and name-enrichment joins:
-  // the native list shows only fields present in intakeSelect, not submitted_by_name.
-  // This keeps each paginated request small without weakening permissions.
+  // Count all authorized records by the SAME role scope, independently of page size.
+  // Counts are requested on initial load/refresh; Load More remains one paginated query.
   if (view === "mobile_list") {
     try {
-      const { data: intakes, error: listError, count } = await query;
-      if (listError) throw listError;
-      return json({ ok: true, intakes: intakes ?? [], total: count ?? 0 });
+      // The closure keeps role predicates identical for every count, including OR-based employees.
+      const countFor = async (statusFilter: "all" | "action_required" | "in_review" | "processing" | "completed" | "duplicate" | "rejected") => {
+        let q = admin.from("policy_intake_requests").select("id", { count: "exact", head: true });
+        if (employeeRead?.mode === "or") q = q.or(employeeRead.predicates);
+        else if (employeeRead?.mode === "submitter") q = q.eq("submitted_by_profile_id", employeeRead.profileId);
+        else if (!employeeRead) q = q.or(intakeReadScope);
+        if (statusFilter === "action_required") q = q.or("status.eq.ready_for_review,status.eq.needs_attention,and(status.eq.processing,ocr_status.eq.failed)");
+        else if (statusFilter === "in_review") q = q.eq("status", "in_review");
+        else if (statusFilter === "processing") q = q.eq("status", "processing").neq("ocr_status", "failed");
+        else if (statusFilter !== "all") q = q.eq("status", statusFilter);
+        const result = await q;
+        if (result.error) throw result.error;
+        return result.count ?? 0;
+      };
+      const [listResult, counts] = await Promise.all([
+        query,
+        includeCounts
+          ? Promise.all(mobileFilters.map((name) => countFor(name as Parameters<typeof countFor>[0])))
+              .then((values) => Object.fromEntries(mobileFilters.map((name, i) => [name, values[i]])))
+          : Promise.resolve(undefined),
+      ]);
+      if (listResult.error) throw listResult.error;
+      return json({ ok: true, intakes: listResult.data ?? [], total: listResult.count ?? 0, ...(counts ? { counts } : {}) });
     } catch (cause) {
       console.error("[partner-policy-intakes] mobile list read failed", {
         category: "list-query",
