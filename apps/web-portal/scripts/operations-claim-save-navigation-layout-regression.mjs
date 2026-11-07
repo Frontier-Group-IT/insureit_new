@@ -38,7 +38,8 @@ assert.match(stages, /selected\.key === "spot_status" \|\| selected\.key === "de
 assert.match(stages, /className="mt-1 h-\[34px\] w-full/, "Stage 2 text controls must keep 34px height.");
 assert.match(stages, /billingCompact \? "h-\[34px\] max-w-full/, "Stage 2 date input must preserve 34px height.");
 assert.match(stages, /selected\.key === "payment_encashment" \? "gap-2 lg:grid-cols-5 lg:items-start"/, "Stage 9 must show five aligned columns on desktop without waiting for 2xl.");
-assert.ok(stages.includes('selected.key === "work_approval" ? "lg:grid-cols-3 xl:grid-cols-5 lg:items-start"'), "Stage 4 aligns five fields at wide desktop widths.");
+assert.ok(stages.includes('selected.key === "work_approval" ? "!grid-cols-5 min-w-[900px] lg:items-start"'), "Stage 4 keeps all five fields in one row.");
+assert.ok(stages.includes('selected.key === "work_approval" ? "w-full min-w-0 overflow-x-auto"'), "Stage 4 must scroll rather than wrap or overlap.");
 assert.ok(stages.includes('selected.key === "payment_encashment" || selected.key === "delivery_order" || selected.key === "work_approval" ? "" : "max-w-[254px]"'), "Stage 4 and Stage 9 Yes/No controls use their grid cell widths.");
 assert.ok(stages.includes('const useAppDatePicker = field.type === "date"'), "Native date behavior is preserved.");
 assert.match(stages, /sm:grid-cols-2/, "Keep responsive narrow-screen wrapping.");
