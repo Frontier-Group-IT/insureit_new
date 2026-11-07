@@ -108,9 +108,9 @@ export default function LoginScreen() {
           <Text style={styles.subtitle}>Sign in with your registered Partner or employee account.</Text>
 
           <View style={styles.field}>
-            <View style={styles.fieldIcon}><MaterialCommunityIcons name="email-outline" size={21} color="#0757AC" /></View>
             <PartnerField
               label="Email"
+              labelIcon={<MaterialCommunityIcons name="email-outline" size={16} color="#0757AC" />}
               value={email}
               onChangeText={(value) => {
                 setEmail(value);
@@ -134,10 +134,10 @@ export default function LoginScreen() {
           </View>
 
           <View style={styles.field}>
-            <View style={styles.fieldIcon}><MaterialCommunityIcons name="lock-outline" size={21} color="#0757AC" /></View>
             <PartnerField
               ref={passwordRef}
               label="Password"
+              labelIcon={<MaterialCommunityIcons name="lock-outline" size={16} color="#0757AC" />}
               value={password}
               onChangeText={(value) => {
                 setPassword(value);
@@ -192,6 +192,8 @@ export default function LoginScreen() {
           <View style={styles.button}>
             <PartnerButton
               label="Sign in"
+              backgroundColor="#0866D9"
+              pressedBackgroundColor="#082D70"
               loading={busy}
               disabled={busy}
               onPress={() => void submit()}
@@ -228,8 +230,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 29, fontWeight: '800', letterSpacing: -0.9, color: '#071832' },
   subtitle: { fontSize: 13, lineHeight: 20, color: '#576578', textAlign: 'center', marginTop: 12, marginBottom: 21 },
   field: { marginTop: 15, position: 'relative' },
-  fieldIcon: { position: 'absolute', left: 16, top: 22, zIndex: 2 },
-  loginInput: { paddingLeft: 48, minHeight: 56, backgroundColor: '#F0F4FA', borderColor: '#DCE5F0', borderRadius: 17, color: '#0A1B33', fontSize: 15 },
+  loginInput: { paddingLeft: 14, minHeight: 56, backgroundColor: '#F0F4FA', borderColor: '#DCE5F0', borderRadius: 17, color: '#0A1B33', fontSize: 15 },
   eyeButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', borderRadius: 20 },
   forgotPassword: { alignSelf: 'flex-end', marginTop: 15, paddingVertical: 7, paddingLeft: 12 },
   forgotPasswordText: { color: '#0758AA', fontSize: 13, fontWeight: '700' },
