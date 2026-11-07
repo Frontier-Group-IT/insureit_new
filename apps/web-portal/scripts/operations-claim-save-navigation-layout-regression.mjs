@@ -68,4 +68,4 @@ assert.match(stages, /<AppStyleDateInput name=\{field.name\} value=\{value\} req
 assert.ok(stages.includes('vehicleDeliveryCompact ? "h-[34px] max-w-full px-3"'));
 assert.ok(stages.includes('h-[34px] text-[12px]'));
 assert.match(stages, /mt-4 flex min-h-10 flex-wrap items-center justify-end gap-2 border-t border-\[#D9E3F0\] pt-3/);
-assert.ok(stages.includes('selected.key === "repair_ri" ? "" : selected.key === "vehicle_delivery" ? "max-w-[335px]" : "max-w-[260px]"'));
+assert.ok(stages.includes('selected.key === "repair_ri" ? "" : selected.key === "vehicle_delivery" ? "" : "max-w-[260px]"'));
