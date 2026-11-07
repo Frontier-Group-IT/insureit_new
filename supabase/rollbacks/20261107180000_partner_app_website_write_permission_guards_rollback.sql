@@ -4,7 +4,7 @@ CREATE OR REPLACE FUNCTION public.partner_app_attach_claim_document(p_claim_id u
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO 'public', 'auth'
-AS $function$
+AS $function$;
 declare
   v_customer_id uuid;
   v_id uuid;
@@ -39,14 +39,14 @@ begin
 
   return v_id;
 end;
-$function$
+$function$;
 
 CREATE OR REPLACE FUNCTION public.partner_app_create_claim(p_customer_id uuid, p_vehicle_id uuid, p_policy_id uuid DEFAULT NULL::uuid)
  RETURNS uuid
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO 'public', 'auth'
-AS $function$
+AS $function$;
 declare v_claim_id uuid; v_insurer uuid; v_existing uuid; v_claim_no text;
 begin
  if auth.uid() is null or not public.partner_app_customer_in_scope(p_customer_id) then
@@ -75,14 +75,14 @@ begin
  returning id into v_claim_id;
  return v_claim_id;
 end;
-$function$
+$function$;
 
 CREATE OR REPLACE FUNCTION public.partner_app_insert_claim_stage_detail(p_claim_id uuid, p_stage claim_status, p_details jsonb)
  RETURNS uuid
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO 'public', 'auth'
-AS $function$
+AS $function$;
 declare
   v_actor uuid := auth.uid();
   v_id uuid;
@@ -101,14 +101,14 @@ begin
 
   return v_id;
 end;
-$function$
+$function$;
 
 CREATE OR REPLACE FUNCTION public.partner_app_remove_claim_document(p_claim_id uuid, p_document_id uuid)
  RETURNS text
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO 'public', 'auth'
-AS $function$
+AS $function$;
 declare
   v_storage_path text;
 begin
@@ -130,14 +130,14 @@ begin
 
   return v_storage_path;
 end;
-$function$
+$function$;
 
 CREATE OR REPLACE FUNCTION public.partner_app_save_claim_spot(p_claim_id uuid, p_accident_at timestamp with time zone, p_spot_intimation_at timestamp with time zone, p_location text, p_driver_name text, p_driver_phone text)
  RETURNS boolean
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO 'public', 'auth'
-AS $function$
+AS $function$;
 declare v_customer_id uuid; v_status text;
 begin
  select customer_id,current_status::text into v_customer_id,v_status from public.claims where id=p_claim_id;
@@ -159,14 +159,14 @@ begin
  where id=p_claim_id;
  return true;
 end;
-$function$
+$function$;
 
 CREATE OR REPLACE FUNCTION public.partner_app_save_claim_stage(p_claim_id uuid, p_milestone_key text, p_details jsonb, p_advance boolean DEFAULT true)
  RETURNS jsonb
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO 'public', 'auth'
-AS $function$
+AS $function$;
 declare
   v_status public.claim_status;
   v_detail_stage public.claim_status;
@@ -233,14 +233,14 @@ begin
   select current_status into v_status from public.claims where id=p_claim_id;
   return jsonb_build_object('ok',true,'current_status',v_status::text);
 end;
-$function$
+$function$;
 
 CREATE OR REPLACE FUNCTION public.partner_app_save_insurer_claim_number(p_claim_id uuid, p_insurer_claim_no text)
  RETURNS jsonb
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO 'public', 'auth'
-AS $function$
+AS $function$;
 declare
   v_number text := btrim(coalesce(p_insurer_claim_no, ''));
   v_status text;
@@ -279,6 +279,6 @@ begin
   update public.claims set insurer_claim_no = v_number where id = p_claim_id;
   return jsonb_build_object('ok', true, 'insurer_claim_no', v_number);
 end;
-$function$
+$function$;
 
 DROP FUNCTION IF EXISTS public.partner_app_employee_can_write_web_capability(text);
