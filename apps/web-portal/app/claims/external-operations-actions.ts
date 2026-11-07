@@ -30,7 +30,7 @@ export async function beginExternalOperationsWorkflow(claimId: string): Promise<
     const { data, error } = rpcResult;
 
     if (error) throw new Error(error.message);
-    if (!data?.ok || data.policy_service_source !== "external" || data.claim_service_mode !== "broker_managed") {
+    if (!data?.ok || data.policy_service_source !== "external" || !["self_managed", "broker_managed"].includes(data.claim_service_mode ?? "")) {
       throw new Error("The External Claim could not enter the Operations workflow.");
     }
 
