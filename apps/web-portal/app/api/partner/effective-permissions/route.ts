@@ -8,6 +8,7 @@ export const dynamic = "force-dynamic";
 type Level = "none" | "view" | "edit" | "approve";
 const partnerGrants: Record<string, Level> = {
   view_dashboard: "view",
+  view_reports: "view",
   view_customers: "view",
   create_customers: "edit",
   view_policies: "view",
