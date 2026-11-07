@@ -21,8 +21,8 @@ assert.match(route, /q\.eq\("status", "processing"\)\.neq\("ocr_status", "failed
 assert.match(route, /q\.in\("status", \["ready_for_review", "in_review"\]\)/);
 assert.match(route, /count: "exact", head: true/, "Count without fetching full records.");
 assert.match(sql, /create or replace function public\.policy_intake_search_text\(/);
-assert.match(sql, /intake public\.policy_intake_requests/);
-assert.match(sql, /intake\.ocr_fields::text/, "Include OCR insurer and customer values.");
-assert.match(sql, /intake\.intake_number/, "Include PIR number.");
+assert.match(sql, /create or replace function public\.policy_intake_search_text\(\s*public\.policy_intake_requests\s*\)/, "Avoid exposing the computed field as a standalone RPC.");
+assert.match(sql, /\(\$1\)\.ocr_fields::text/, "Include OCR insurer and customer values.");
+assert.match(sql, /\(\$1\)\.intake_number/, "Include PIR number.");
 assert.doesNotMatch(sql, /^\s*security\s+definer/im, "Computed field must not bypass security by using SECURITY DEFINER.");
 console.log("Partner Intake scoped full counts, server-side search, and migration regression passed.");
