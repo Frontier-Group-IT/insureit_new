@@ -73,6 +73,8 @@ jobs:
         run: node scripts/operations-claim-save-navigation-layout-regression.mjs
       - name: Operations Stage 2 compact date and vehicle icon regression
         run: node scripts/operations-claim-vehicle-icon-stage2-input-regression.mjs
+      - name: Operations Vehicle Delivery 34px compact input regression
+        run: node scripts/operations-vehicle-delivery-compact-controls-regression.mjs
       - name: Work Approval Stage 4 compact layout and navigation regression
         run: node scripts/claim-stage4-work-approval-compact-regression.mjs
       - name: Operations claim Customer motion parity regression

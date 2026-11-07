@@ -9,7 +9,7 @@ import {
   type AddClaimLookup,
 } from "./add-claim-actions";
 
-const inputClass = "h-9 w-full rounded-xl border border-[#CBD5E1] bg-white px-3 text-[12px] text-[#17203A] outline-none transition placeholder:text-[#98A2B3] focus:border-[#4F46E5] focus:ring-2 focus:ring-[#E0E7FF]";
+const inputClass = "h-[34px] w-full rounded-xl border border-[#CBD5E1] bg-white px-3 text-[12px] text-[#17203A] outline-none transition placeholder:text-[#98A2B3] focus:border-[#4F46E5] focus:ring-2 focus:ring-[#E0E7FF]";
 const labelClass = "mb-1 block whitespace-nowrap text-[9px] font-semibold leading-4 tracking-[0.01em] text-[#344054] max-sm:whitespace-normal";
 const readOnlyLabelClass = "mb-0.5 block text-[9px] font-semibold uppercase tracking-[0.04em] text-[#667085]";
 
