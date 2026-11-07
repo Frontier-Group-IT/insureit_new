@@ -27,7 +27,7 @@ assert.match(save,/if \(pending \|\| successNotice\) return;/,"Avoid duplicate s
 
 assert.match(bulk,/if\(running\.current \|\| !selected\.length\) return;/,"Prevent duplicate bulk submission while a batch is processing.");
 assert.match(bulk,/if\(result\.error \|\| !result\.uploaded\)/,"Only verified server uploads count as successful.");
-assert.match(bulk,/if\(complete\) setSuccessNotice\(complete\+" document"/,"Success popup must report the confirmed uploaded file count.");
+assert.match(bulk,/if\(complete\) \{[\s\S]*?setSuccessNotice\(complete\+" document"/,"Success popup must report the confirmed uploaded file count.");
 assert.match(bulk,/<CustomerSuccessDialog title="Upload Successful"/,"Use shared success popup.");
 assert.doesNotMatch(bulk,/<p role="status".*document\(s\) uploaded successfully/,"Remove duplicate inline success.");
 assert.match(voice,/shownUploadId\.current===uploadState\.uploaded\.id/,"Do not re-show same voice upload.");
