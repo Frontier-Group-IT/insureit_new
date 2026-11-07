@@ -31,9 +31,9 @@ assert.ok(operations.includes('max-w-[260px]'));
 assert.ok(operations.includes('max-w-[320px]'));
 assert.ok(operations.includes('selected.key === "payment_encashment" ? "gap-2" : "max-w-[254px] gap-[10px]"'), "Stage 4 retains its original max-width and gap while Stage 9 is compact.");
 assert.ok(customer.includes('field.type==="date"?(selected.key==="repair_ri"?"":"max-w-[260px]")'), "Stage 4 retains date max-width while Repair/RI fills its column.");
-assert.ok(customer.includes('h-9 w-full'), "Customer stage controls use 36px height.");
+assert.ok(customer.includes('h-[34px] w-full'), "Customer stage controls use approved 34px height.");
 assert.ok(customer.includes('<CustomerClaimBooleanChoice compact name={field.key}'), "All Customer stages use compact Yes/No controls.");
-assert.ok(choice.includes('h-9 rounded-md'), "Customer Yes/No controls use compact 36px height.");
+assert.ok(choice.includes('h-[34px] rounded-md'), "Customer Yes/No controls use compact 34px height.");
 assert.ok(operations.includes('onClick={(event) => event.currentTarget.showPicker?.()}'));
 assert.ok(customer.includes('required={!field.optional}'));
 
