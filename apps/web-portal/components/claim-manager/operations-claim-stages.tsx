@@ -367,7 +367,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
             />
             <div className="mt-3">{spotContent}</div>
             {!partnerReadOnlyJourney && !partnerManagedJourney && !partnerInternalStageOne ? <OperationsClaimStageOneAttachments claimId={claimId} /> : null}
-            <div className="mt-3 flex justify-end gap-2">
+            <div className="mt-4 flex flex-wrap justify-end gap-2 border-t border-[#D9E3F0] pt-3">
               <button
                 type="button"
                 disabled={spotSubmitting}
@@ -414,7 +414,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
             <input type="hidden" name="next_status" value={stageTarget ?? ""} />
             <input type="hidden" name="save_only" value={partnerManagedJourney || selectedSaveOnly ? "true" : "false"} />
             <input type="hidden" name="notes" value={selectedSaveOnly ? `Operations edited ${selected.label} details.` : `Operations completed ${selected.label} and opened the next journey stage.`} />
-            <div className={`grid gap-3 sm:grid-cols-2 ${selected.key === "payment_encashment" ? "gap-2 lg:grid-cols-3 xl:grid-cols-5 lg:items-start" : selected.key === "work_approval" ? "lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 lg:items-start" : selected.key === "repair_ri" || selected.key === "delivery_order" || selected.key === "billing" ? "lg:grid-cols-3" : selected.key === "vehicle_delivery" ? "lg:grid-cols-2" : "lg:grid-cols-3 2xl:grid-cols-4"}`}>
+            <div className={`grid items-start gap-3 sm:grid-cols-2 ${selected.key === "payment_encashment" ? "gap-2 lg:grid-cols-3 xl:grid-cols-5 lg:items-start" : selected.key === "work_approval" ? "lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 lg:items-start" : selected.key === "billing" ? "gap-2 md:grid-cols-3" : selected.key === "repair_ri" || selected.key === "delivery_order" ? "lg:grid-cols-3" : selected.key === "vehicle_delivery" ? "lg:grid-cols-2" : "lg:grid-cols-3 2xl:grid-cols-4"}`}>
               {fields[selected.key].map((field) => {
                 const value = field.name === "insurer_claim_no" ? insurerClaimNo ?? fieldValue(selectedDetails, field.name) : fieldValue(selectedDetails, field.name);
                 const internalStageTwoSurveyorField = selected.key === "spot_status" && !hasExternalVisualProgress && internalSpotStatusSurveyorFields.has(field.name);
@@ -429,10 +429,10 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
                         {displayLabel}{required ? <span className="ml-1 text-rose-600">*</span> : null}
                       </legend>
                       <div className={`mt-1 grid w-full grid-cols-2 ${selected.key === "payment_encashment" ? "gap-2" : "max-w-[254px] gap-[10px]"}`}>
-                        <label className={`flex h-[40px] cursor-pointer items-center justify-center rounded-md border border-[#D9E3F0] bg-white text-[12px] font-semibold normal-case tracking-normal text-[#071D49] has-[:checked]:border-[#174EA6] has-[:checked]:bg-[#EEF4FF]`}>
+                        <label className={`flex h-9 cursor-pointer items-center justify-center rounded-md border border-[#D9E3F0] bg-white text-[12px] font-semibold normal-case tracking-normal text-[#071D49] has-[:checked]:border-[#174EA6] has-[:checked]:bg-[#EEF4FF]`}>
                           <input className="sr-only" type="radio" name={field.name} value="true" defaultChecked={yesChecked} required={required} />Yes
                         </label>
-                        <label className={`flex h-[40px] cursor-pointer items-center justify-center rounded-md border border-[#D9E3F0] bg-white text-[12px] font-semibold normal-case tracking-normal text-[#071D49] has-[:checked]:border-[#174EA6] has-[:checked]:bg-[#EEF4FF]`}>
+                        <label className={`flex h-9 cursor-pointer items-center justify-center rounded-md border border-[#D9E3F0] bg-white text-[12px] font-semibold normal-case tracking-normal text-[#071D49] has-[:checked]:border-[#174EA6] has-[:checked]:bg-[#EEF4FF]`}>
                           <input className="sr-only" type="radio" name={field.name} value="false" defaultChecked={noChecked} required={required} />{field.name === "vehicle_received" ? "Not Yet" : "No"}
                         </label>
                       </div>
@@ -441,12 +441,12 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
                 }
                 const useAppDatePicker = field.type === "date";
                 return (
-                  <label key={field.name} className={`min-w-0 block w-full whitespace-nowrap max-sm:whitespace-normal ${selected.key === "payment_encashment" ? "" : field.type === "date" ? "max-w-[260px]" : "max-w-[320px]"} text-[9px] font-semibold uppercase leading-4 tracking-[0.01em] text-[#174EA6]`}>
+                  <label key={field.name} className={`min-w-0 block w-full whitespace-nowrap max-sm:whitespace-normal ${selected.key === "billing" || selected.key === "payment_encashment" ? "" : field.type === "date" ? selected.key === "repair_ri" ? "" : "max-w-[260px]" : "max-w-[320px]"} text-[9px] font-semibold uppercase leading-4 tracking-[0.01em] text-[#174EA6]`}>
                     {displayLabel}{required && !displayLabel.includes("*") ? <span className="ml-1 text-rose-600">*</span> : null}
                     {useAppDatePicker ? (
-                      <AppStyleDateInput name={field.name} value={value} required={required} />
+                      <AppStyleDateInput name={field.name} value={value} required={required} compact billingCompact={selected.key === "billing"} />
                     ) : field.type === "select" ? (
-                      <select name={field.name} defaultValue={value} required={required} className="mt-1 h-[40px] w-full rounded-md border border-[#D9E3F0] bg-white px-2 text-[12px] font-medium normal-case tracking-normal text-[#071D49] outline-none focus:border-[#174EA6]">
+                      <select name={field.name} defaultValue={value} required={required} className={`${selected.key === "billing" ? "h-[34px] text-[11px]" : "h-9 text-[12px]"} mt-1 w-full rounded-md border border-[#D9E3F0] bg-white px-2 font-medium normal-case tracking-normal text-[#071D49] outline-none focus:border-[#174EA6]`}>
                         <option value="" disabled>Select</option>
                         <option value={field.name === "cashless" ? "true" : "yes"}>Yes</option>
                         <option value={field.name === "cashless" ? "false" : "no"}>No</option>
@@ -458,21 +458,21 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
                         defaultValue={field.type === "date" ? toDateValue(value) : value}
                         required={required}
                         onClick={field.type === "date" ? (event) => event.currentTarget.showPicker?.() : undefined}
-                        className="mt-1 h-[40px] w-full rounded-md border border-[#D9E3F0] bg-white px-2 text-[12px] font-medium normal-case tracking-normal text-[#071D49] outline-none focus:border-[#174EA6]"
+                        className="mt-1 h-9 w-full rounded-md border border-[#D9E3F0] bg-white px-2 text-[12px] font-medium normal-case tracking-normal text-[#071D49] outline-none focus:border-[#174EA6]"
                       />
                     )}
                   </label>
                 );
               })}
-              {selected.key === "billing" && unrestrictedStageEditing && !partnerReadOnlyJourney && !partnerManagedJourney ? <ExternalClaimBillUpload mode="operations" claimId={claimId} documents={billDocuments} /> : null}
+              {selected.key === "billing" && unrestrictedStageEditing && !partnerReadOnlyJourney && !partnerManagedJourney ? <ExternalClaimBillUpload mode="operations" claimId={claimId} documents={billDocuments} compact /> : null}
             </div>
 
-            <div className={selected.key === "work_approval" ? "mt-3 flex min-h-10 items-center justify-end gap-2 border-t border-[#D9E3F0] pt-3" : "mt-3 flex justify-end"}>
+            <div className="mt-4 flex min-h-10 flex-wrap items-center justify-end gap-2 border-t border-[#D9E3F0] pt-3">
               {selected.key === "work_approval" ? <button type="button" onClick={() => router.push(partnerManagedJourney ? "/partner/claims" : "/claims")} className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#B9CBE2] bg-white px-4 text-[12px] font-semibold text-[#174A87]">Cancel</button> : null}
               <FormSubmitButton
                 label={selected.key === "work_approval" ? "Save & Continue" : selectedSaveOnly ? "Save Details" : selected.key === "payment_encashment" ? "Save & complete claim" : `Save & move to ${nextStageLabel}`}
                 pendingLabel="Saving..."
-                className={selected.key === "work_approval" ? "inline-flex min-h-10 min-w-[148px] items-center justify-center rounded-lg bg-[#1253A7] px-4 py-2 text-[11px] font-semibold text-white disabled:opacity-60" : "rounded-lg bg-[#071D49] px-4 py-2 text-[11px] font-semibold text-white disabled:opacity-60"}
+                className={selected.key === "work_approval" ? "inline-flex min-h-9 min-w-[148px] items-center justify-center rounded-lg bg-[#1253A7] px-4 py-2 text-[11px] font-semibold text-white disabled:opacity-60" : "inline-flex min-h-9 items-center justify-center rounded-lg bg-[#071D49] px-4 py-2 text-[11px] font-semibold text-white disabled:opacity-60"}
               />
             </div>
           </form>
@@ -523,11 +523,11 @@ function toDateValue(value: string) {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
-function AppStyleDateInput({ name, value, required }: { name: string; value: string; required?: boolean }) {
+function AppStyleDateInput({ name, value, required, compact = false, billingCompact = false }: { name: string; value: string; required?: boolean; compact?: boolean; billingCompact?: boolean }) {
   const [dateValue, setDateValue] = useState(() => toDateValue(value));
   return (
-    <span className="relative flex h-[40px] w-full max-w-[260px] items-center justify-between rounded-md border border-[#D9E3F0] bg-white px-3 normal-case tracking-normal text-[#071D49] focus-within:border-[#174EA6]">
-      <span className={`text-[12px] font-medium ${dateValue ? "text-[#071D49]" : "text-[#7B8BA3]"}`}>{dateValue ? formatDisplayDate(dateValue) : "Select date"}</span>
+    <span className={`relative flex ${billingCompact ? "h-[34px] max-w-full px-2" : compact ? "h-9 max-w-full px-3" : "h-[40px] max-w-[260px] px-3"} w-full items-center justify-between rounded-md border border-[#D9E3F0] bg-white normal-case tracking-normal text-[#071D49] focus-within:border-[#174EA6]`}>
+      <span className={`${billingCompact ? "text-[11px]" : "text-[12px]"} font-medium ${dateValue ? "text-[#071D49]" : "text-[#7B8BA3]"}`}>{dateValue ? formatDisplayDate(dateValue) : "Select date"}</span>
       <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4 fill-none stroke-[#526178] stroke-[1.8]"><rect x="4" y="6" width="16" height="14" rx="2" /><path d="M8 3v6M16 3v6M4 10h16" /></svg>
       <input
         aria-label="Select date"
@@ -610,15 +610,15 @@ function StageOneForm({ claimId, stage, active, detail, spotDetails, next, accid
         <div className="grid items-start gap-2 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-[repeat(5,minmax(0,1fr))]">
           <fieldset className="min-w-0">
             <legend className={stageOneLabelClassName}>Accident date &amp; time<span className="ml-1 text-rose-600">*</span></legend>
-            <div className="mt-1.5 grid h-[40px] w-full max-w-[320px] grid-cols-[1.15fr_0.85fr] overflow-hidden rounded-lg border border-[#CEDBEC] bg-white focus-within:border-[#2F80ED]">
-              <AppStyleDateInput name="incident_at" value={toDateTimeLocal(incidentValue, "date")} required />
+            <div className="mt-1.5 grid h-9 w-full max-w-[320px] grid-cols-[1.15fr_0.85fr] overflow-hidden rounded-lg border border-[#CEDBEC] bg-white focus-within:border-[#2F80ED]">
+              <AppStyleDateInput name="incident_at" value={toDateTimeLocal(incidentValue, "date")} required compact />
               <input aria-label="Accident time" name="incident_time" type="time" defaultValue={toDateTimeLocal(incidentValue, "time")} required className={`${groupedInputClassName} border-l border-[#CEDBEC]`} />
             </div>
           </fieldset>
           <fieldset className="min-w-0">
             <legend className={stageOneLabelClassName}>Spot Intimation date &amp; time<span className="ml-1 text-rose-600">*</span></legend>
-            <div className="mt-1.5 grid h-[40px] w-full max-w-[320px] grid-cols-[1.15fr_0.85fr] overflow-hidden rounded-lg border border-[#CEDBEC] bg-white focus-within:border-[#2F80ED]">
-              <AppStyleDateInput name="spot_intimation_at" value={toDateTimeLocal(spotIntimationValue, "date")} required />
+            <div className="mt-1.5 grid h-9 w-full max-w-[320px] grid-cols-[1.15fr_0.85fr] overflow-hidden rounded-lg border border-[#CEDBEC] bg-white focus-within:border-[#2F80ED]">
+              <AppStyleDateInput name="spot_intimation_at" value={toDateTimeLocal(spotIntimationValue, "date")} required compact />
               <input aria-label="Spot Intimation time" name="spot_intimation_time" type="time" defaultValue={toDateTimeLocal(spotIntimationValue, "time")} required className={`${groupedInputClassName} border-l border-[#CEDBEC]`} />
             </div>
           </fieldset>
@@ -634,14 +634,14 @@ function StageOneForm({ claimId, stage, active, detail, spotDetails, next, accid
               return (
                 <div key={field.name} className="min-w-0">
                   <label htmlFor="spot-intimation-location" className={stageOneLabelClassName}>{field.label}{required ? <span className="ml-1 text-rose-600">*</span> : null}</label>
-                  <input id="spot-intimation-location" name={field.name} value={location} onChange={(event) => setLocation(event.target.value)} required={required} className="mt-1.5 h-[40px] w-full max-w-[320px] rounded-lg border border-[#CEDBEC] bg-white px-2.5 text-[12px] font-semibold text-[#071D49] outline-none focus:border-[#2F80ED]" />
+                  <input id="spot-intimation-location" name={field.name} value={location} onChange={(event) => setLocation(event.target.value)} required={required} className="mt-1.5 h-9 w-full max-w-[320px] rounded-lg border border-[#CEDBEC] bg-white px-2.5 text-[12px] font-semibold text-[#071D49] outline-none focus:border-[#2F80ED]" />
                 </div>
               );
             }
             return (
               <label key={field.name} className="min-w-0">
                 <span className={stageOneLabelClassName}>{field.label}{required ? <span className="ml-1 text-rose-600">*</span> : null}</span>
-                <input name={field.name} type={field.type ?? "text"} defaultValue={value} required={required} className="mt-1.5 h-[40px] w-full max-w-[320px] rounded-lg border border-[#CEDBEC] bg-white px-2.5 text-[12px] font-semibold normal-case tracking-normal text-[#071D49] outline-none focus:border-[#2F80ED]" />
+                <input name={field.name} type={field.type ?? "text"} defaultValue={value} required={required} className="mt-1.5 h-9 w-full max-w-[320px] rounded-lg border border-[#CEDBEC] bg-white px-2.5 text-[12px] font-semibold normal-case tracking-normal text-[#071D49] outline-none focus:border-[#2F80ED]" />
               </label>
             );
           })}

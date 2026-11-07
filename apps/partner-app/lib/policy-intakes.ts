@@ -13,6 +13,8 @@ export type PartnerPolicyIntakeSource = {
   account_status: string;
 };
 
+export type PolicyIntakeReviewAccess = { can_review: boolean; can_finalize: boolean };
+
 export type PartnerPolicyIntake = {
   id: string;
   intake_number: string;
@@ -91,12 +93,29 @@ export async function listPartnerPolicyIntakesPage(
 }
 
 /** Fetch the selected authorized intake directly; details must never require the entire list. */
-export async function getPartnerPolicyIntake(id: string): Promise<PartnerPolicyIntake> {
+export async function getPartnerPolicyIntake(id: string): Promise<PartnerPolicyIntake & { review_access: PolicyIntakeReviewAccess }> {
   if (!id) throw new Error('Policy Intake reference is missing.');
-  const result = await apiRequest<{ ok: true; intake: PartnerPolicyIntake }>(
+  const result = await apiRequest<{ ok: true; intake: PartnerPolicyIntake; review_access: PolicyIntakeReviewAccess }>(
     `/api/partner/policy-intakes?id=${encodeURIComponent(id)}`,
   );
-  return result.intake;
+  return { ...result.intake, review_access: result.review_access ?? { can_review: false, can_finalize: false } };
+}
+
+/** Same Operations notes and transition statuses, guarded by server-side reviewer permission. */
+export async function updatePartnerPolicyIntakeReview(
+  id: string,
+  status: 'needs_attention' | 'rejected',
+  reason: string,
+): Promise<void> {
+  await apiRequest<{ ok: true }>('/api/partner/policy-intakes', {
+    method: 'POST',
+    body: JSON.stringify({ action: 'review_status', id, status, reason }),
+  });
+}
+
+/** Opens the canonical Operations Review/Onboarding flow without passing auth credentials in the URL. */
+export function partnerPolicyIntakeReviewUrl(id: string): string {
+  return `${portalUrl}/policy-intakes/${encodeURIComponent(id)}`;
 }
 
 export async function listPartnerPolicyIntakeSources(): Promise<PartnerPolicyIntakeSource[]> {

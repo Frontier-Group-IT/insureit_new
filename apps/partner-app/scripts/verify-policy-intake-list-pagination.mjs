@@ -26,7 +26,7 @@ assert.doesNotMatch(app, /rows\.filter\(\(row\) => row\.status/, 'Never derive s
 assert.match(route, /includeCounts[\s\S]*url\.searchParams\.get\("include_counts"\)/, 'Counts controlled independently of pagination');
 assert.match(route, /Promise\.all\(mobileFilters\.map/, 'Use scoped exact counts per status');
 assert.match(route, /query\.ilike\("policy_intake_search_text"/, 'Search OCR fields in database');
-assert.match(route, /query\.or\("status\.eq\.needs_attention,and\(status\.eq\.processing,ocr_status\.eq\.failed\)"\)/, 'Preserve Action Required classification');
+assert.match(route, /query\.or\("status\.eq\.ready_for_review,status\.eq\.needs_attention,and\(status\.eq\.processing,ocr_status\.eq\.failed\)"\)/, 'Preserve Action Required classification');
 assert.match(route, /else if \(!employeeRead\) q = q\.or\(intakeReadScope\)/, 'Count queries preserve authorized partner scope');
 
 
@@ -53,4 +53,23 @@ assert.match(route, /else if \(!employeeRead\) query = query\.or\(intakeReadScop
 assert.match(api, /response\.status === 401 \|\| response\.status === 403/, 'Differentiate expired or rejected access');
 assert.match(api, /Network connection failed/, 'Show actionable network failure');
 assert.match(api, /console\.warn\('\[partner-policy-intakes\] read failed'/, 'Record safe error categories');
+const detail = readFileSync('app/policy-intakes/[id].tsx', 'utf8');
+assert.match(route, /status\.eq\.ready_for_review,status\.eq\.needs_attention/, 'Ready-for-review intakes belong under Action Required');
+assert.match(app, /row\.ocr_status === 'completed' \? <PartnerStatusBadge label="Fetched"/, "Expose the same Fetched document-status badge as Operations");
+assert.match(route, /filter === "in_review" \? \["in_review"\]/, 'Only claimed intakes belong under In Review');
+assert.match(api, /export async function updatePartnerPolicyIntakeReview/, 'Mobile reviewer actions must use authenticated API');
+assert.match(detail, /row.review_access.can_review/, 'Do not show reviewer actions to unauthorised accounts');
+assert.match(detail, /row.review_access.can_finalize/, 'Finalization must require separate approve permission');
+assert.match(detail, /Review & Finalize/, 'Keep the existing Operations handoff action');
+assert.match(detail, /Resume Policy Onboarding/, 'Keep the resume action for in-review intakes');
+assert.match(detail, /partnerPolicyIntakeReviewUrl\(row.id\)/, 'Use the existing trusted portal onboarding workflow');
+assert.match(detail, /updatePartnerPolicyIntakeReview\(row.id, status, reviewNote.trim\(\)\)/, 'Keep reviewer request and reject actions on the server');
+assert.doesNotMatch(detail, /access_token.*Linking|Linking.*access_token/, 'Never transmit authentication tokens in browser links');
+assert.match(route, /identity.actor_kind !== "employee"/, 'Nonemployee Partners must never receive Operations review grants');
+assert.match(route, /hasEffectiveCapability\(profile, "review_policy_intakes", "edit"\)/, 'Review requires effective edit permission');
+assert.match(route, /hasEffectiveCapability\(profile, "finalize_policy_intakes", "approve"\)/, 'Finalize requires effective approve permission');
+assert.match(route, /if \(!access.can_review \|\| identity.actor_kind !== "employee"\)/, 'Reject server mutations from regular Partner/POSP/MISP identities');
+assert.match(route, /getPartnerEmployeeIntakeReadScope\(identity\)/, 'Mutations must preserve scoped access');
+assert.match(route, /loadPolicyIntakeDuplicateMatches\(admin, \[intake\]\)/, 'Duplicates cannot be reviewed');
+assert.match(route, /in\("status", \["processing", "ready_for_review", "in_review", "needs_attention"\]\)/, 'Closed intakes must not be mutated');
 console.log('Partner app resilient policy intake page loading regression passed');
