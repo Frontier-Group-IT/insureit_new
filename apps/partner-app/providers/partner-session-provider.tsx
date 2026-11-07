@@ -28,7 +28,7 @@ type PartnerSessionValue = {
 };
 
 const PartnerSessionContextValue = createContext<PartnerSessionValue | null>(null);
-const FOREGROUND_SCOPE_REFRESH_MS = 5 * 60 * 1000;
+const FOREGROUND_SCOPE_REFRESH_MS = 60 * 1000;
 
 export function PartnerSessionProvider({ children }: PropsWithChildren) {
   const [status, setStatus] = useState<SessionStatus>('loading');
@@ -65,6 +65,9 @@ export function PartnerSessionProvider({ children }: PropsWithChildren) {
       }
 
       const nextContext = await resolvePartnerSession();
+      if (contextRef.current && JSON.stringify(contextRef.current.permissions) !== JSON.stringify(nextContext.permissions)) {
+        clearPartnerQueryCache(activeScopeKey.current);
+      }
       contextRef.current = nextContext;
       setContext(nextContext);
       const nextAvatar = await getPartnerProfilePhotoUrl(nextContext.identity.auth_user_id);
@@ -77,9 +80,14 @@ export function PartnerSessionProvider({ children }: PropsWithChildren) {
       const message = cause instanceof Error ? cause.message : 'Partner access could not be resolved.';
 
       if (!blocking && contextRef.current) {
+        // A failed permission refresh must never reuse an old Edit grant.
+        clearPartnerQueryCache(activeScopeKey.current);
+        const restricted = { ...contextRef.current, permissions: {} };
+        contextRef.current = restricted;
+        setContext(restricted);
         setError(message);
         setStatus('ready');
-        return contextRef.current;
+        return restricted;
       }
 
       clearPartnerQueryCache(activeScopeKey.current);
