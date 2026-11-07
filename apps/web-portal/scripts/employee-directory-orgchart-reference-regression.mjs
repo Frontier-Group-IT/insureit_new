@@ -10,7 +10,7 @@ assert.match(chart, /function layoutForest/);
 assert.match(chart, /const CARD_W = 188/);
 assert.match(chart, /<svg aria-hidden="true"/);
 assert.match(chart, /<path key=\{node.key\}/);
-assert.match(chart, / C \\$\{leader.x\}/);
+assert.match(chart, /const middle =/);
 assert.match(chart, /onPointerDown=\{pointerDown\}/);
 assert.match(chart, /onPointerMove=\{pointerMove\}/);
 assert.match(chart, /onWheel=\{onWheel\}/);
