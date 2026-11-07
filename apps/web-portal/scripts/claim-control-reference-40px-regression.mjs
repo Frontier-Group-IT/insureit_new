@@ -13,7 +13,7 @@ assert.ok(operations.includes('selected.key === "work_approval" ? "lg:grid-cols-
 assert.ok(operations.includes('vehicleDeliveryCompact ? "h-[34px] max-w-[335px] px-3"'));
 assert.ok(operations.includes('flex h-[34px] cursor-pointer'));
 assert.ok(operations.includes('grid h-[34px] w-full grid-cols-[1.15fr_0.85fr]'));
-assert.ok(operations.includes('min-[1440px]:grid-cols-5'));
+assert.ok(operations.includes('grid min-w-0 items-start gap-2 sm:grid-cols-2 lg:grid-cols-5'), 'Operations Stage 1 keeps all five fields on a single desktop row.');
 assert.ok(operations.includes('text-[14px] font-semibold tracking-[-0.01em] text-[#071D49]">Accident'));
 assert.ok(customer.includes('className="mt-1 h-[34px] w-full rounded-[4px]'));
 assert.ok(customer.includes('xl:grid-cols-5 lg:items-start'));
@@ -33,7 +33,7 @@ assert.match(operations,/selected\.key === "spot_status" \? "text-\[8px\]" : "te
 assert.ok(operations.includes("xl:grid-cols-5 lg:items-start"));
 assert.match(customer,/selected\.key==="spot_status"\?"text-\[8px\]":"text-\[9px\]"/,"Customer Spot Status uses smaller labels, other stages retain 9px.");
 assert.ok(customer.includes("xl:grid-cols-5 lg:items-start"));
-assert.match(operations,/stageOneLabelClassName = "block h-4 max-sm:h-auto whitespace-nowrap text-\[9px\]/);
+assert.match(operations,/stageOneLabelClassName = "block h-4 max-sm:h-auto whitespace-nowrap text-\[8px\]/, "Stage 1 labels use the smaller font.");
 assert.ok(spot.includes('const textFieldClass = "block h-[34px] w-full'));
 assert.ok(spot.includes('const splitFieldClass = "block h-[34px]'));
 assert.ok(spot.includes("flex h-[34px] w-full"));
