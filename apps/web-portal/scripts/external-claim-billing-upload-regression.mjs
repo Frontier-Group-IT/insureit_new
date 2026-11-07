@@ -14,7 +14,7 @@ assert.match(customer, /selected\.key==="billing"\?"lg:grid-cols-3"/, "Customer 
 assert.match(customer, /ExternalClaimBillUpload mode="customer"[\s\S]*readonly/, "Completed/read-only customer Billing must show the uploaded document");
 assert.match(operations, /selected\.key === "billing" && unrestrictedStageEditing && !partnerReadOnlyJourney && !partnerManagedJourney/, "Operations upload must be external and non-Partner");
 assert.match(operations, /selected\.key === "billing" \? "gap-2 md:grid-cols-3"/, "Operations Billing must align three compact columns");
-assert.match(operations, /billingCompact=\{selected\.key === "billing" \|\| selected\.key === "delivery_order" \|\| selected\.key === "payment_encashment"\}/, "Billing, Delivery Order and Payment Encashment use 34px dates without changing Billing authorization.");
+assert.match(operations, /billingCompact=\{selected\.key === "billing"\}/, "Only the Billing date control opts into 34px.");
 assert.match(operations, /selected\.key === "billing" \? "h-\[34px\] text-\[11px\]"/, "Billing amount uses 34px and 11px typography.");
 assert.match(operations, /documents=\{billDocuments\} compact/, "Operations opts into compact bill upload.");
 assert.match(widget, /compact && mode === "operations"/, "Customer bill upload retains its existing design.");
