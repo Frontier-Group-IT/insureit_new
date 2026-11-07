@@ -408,8 +408,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
           </div>
         ) : null}
         {stageEditable ? (
-          <form action={formAction} onInvalidCapture={(event) => { event.preventDefault(); setErrorNotice("Please complete all required fields before saving this stage."); }} className="mt-3 rounded-xl border border-[#D9E6F7] bg-[#F8FBFF] p-3">
-            {selected.key === "work_approval" ? <div className="mb-3 flex items-center justify-between gap-2 border-b border-[#D9E3F0] pb-3"><div><h2 className="text-[14px] font-bold text-[#071D49]">Stage 4 — Work Approval</h2><p className="text-[11px] text-[#64748B]">Record insurance approval and surveyor details</p></div><span className="shrink-0 rounded-md bg-[#EAF2FF] px-2 py-1 text-[10px] font-semibold text-[#174EA6]">4 of 9</span></div> : null}
+          <form action={formAction} onInvalidCapture={(event) => { event.preventDefault(); setErrorNotice("Please complete all required fields before saving this stage."); }} className={`mt-3 rounded-xl border border-[#D9E6F7] p-3 ${selected.key === "work_approval" ? "bg-white" : "bg-[#F8FBFF]"}`}>
             <input type="hidden" name="milestone_key" value={selected.key} />
             <input type="hidden" name="next_status" value={stageTarget ?? ""} />
             <input type="hidden" name="save_only" value={partnerManagedJourney || selectedSaveOnly ? "true" : "false"} />
@@ -469,7 +468,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
             </div>
             </div>
 
-            <div className={selected.key === "spot_status" || selected.key === "delivery_order" || selected.key === "vehicle_delivery" || selected.key === "payment_encashment" ? "mt-3 flex items-center justify-end gap-2" : "mt-4 flex min-h-10 flex-wrap items-center justify-end gap-2 border-t border-[#D9E3F0] pt-3"}>
+            <div className={selected.key === "spot_status" || selected.key === "delivery_order" || selected.key === "vehicle_delivery" || selected.key === "payment_encashment" || selected.key === "work_approval" ? "mt-3 flex min-h-10 flex-wrap items-center justify-end gap-2" : "mt-4 flex min-h-10 flex-wrap items-center justify-end gap-2 border-t border-[#D9E3F0] pt-3"}>
               {selected.key === "work_approval" ? <button type="button" onClick={() => router.push(partnerManagedJourney ? "/partner/claims" : "/claims")} className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#B9CBE2] bg-white px-4 text-[12px] font-semibold text-[#174A87]">Cancel</button> : null}
               <FormSubmitButton
                 label={selected.key === "work_approval" ? "Save & Continue" : selectedSaveOnly ? "Save Details" : selected.key === "payment_encashment" ? "Save & complete claim" : `Save & move to ${nextStageLabel}`}
