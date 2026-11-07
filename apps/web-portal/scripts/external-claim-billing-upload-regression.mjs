@@ -10,10 +10,10 @@ const operationsPage = read("../app/claims/[id]/page.tsx");
 const operationsUpload = read("../app/claims/[id]/claim-document-upload-actions.ts");
 
 assert.match(customer, /selected\.key==="billing" \? <ExternalClaimBillUpload mode="customer"/, "Customer Billing must have bill upload");
-assert.match(customer, /selected\.key==="billing"\?"grid-cols-3":"sm:grid-cols-2"/, "Customer Billing keeps all three controls on one row");
+assert.match(customer, /selected\.key==="billing"\?"grid-cols-3":selected\.key==="vehicle_delivery"/, "Customer Billing keeps all three controls on one row");
 assert.match(customer, /ExternalClaimBillUpload mode="customer"[\s\S]*readonly/, "Completed/read-only customer Billing must show the uploaded document");
 assert.match(operations, /selected\.key === "billing" && unrestrictedStageEditing && !partnerReadOnlyJourney && !partnerManagedJourney/, "Operations upload must be external and non-Partner");
-assert.match(operations, /selected\.key === "billing" \? "grid-cols-3" : "sm:grid-cols-2"/, "Operations Billing keeps all three controls on one row");
+assert.match(operations, /selected\.key === "billing" \? "grid-cols-3 gap-2"/, "Operations Billing keeps all three controls on one row");
 assert.match(operations, /billingCompact=\{selected\.key === "billing"\}/, "Only the Billing date control opts into 34px.");
 assert.match(operations, /selected\.key === "billing" \? "h-\[34px\] text-\[11px\]"/, "Billing amount uses 34px and 11px typography.");
 assert.match(operations, /documents=\{billDocuments\} compact/, "Operations opts into compact bill upload.");
