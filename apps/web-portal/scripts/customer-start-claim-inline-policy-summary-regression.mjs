@@ -7,7 +7,7 @@ const section = source.slice(start, end);
 assert.ok(start !== -1 && end > start, "Customer Start Claim policy summary must exist");
 assert.match(section, /flex flex-col gap-3 lg:flex-row lg:items-center/, "Desktop must align managed claim heading and details on one row");
 assert.match(section, /lg:w-\[285px\]/, "Claim heading must have a compact reserved column");
-assert.match(section, /grid min-w-0 flex-1 grid-cols-2[^\n]*lg:grid-cols-4/, "All four policy fields must be adjacent on desktop and responsive on mobile");
+assert.match(section, /grid min-w-\[640px\] grid-cols-4 items-start/, "All four policy fields stay adjacent and scroll safely on narrow screens");
 for (const label of ['Policy No.', 'Insurer', 'Start Date', 'End Date']) assert.ok(section.includes('label: "' + label + '"'), "Missing policy field: " + label);
 assert.match(section, /Self Tracked Policy" : "Sankalp Managed Claim"/, "Managed and self-tracked policy labels must remain intact");
 assert.match(section, /No policy found for this vehicle/, "Policyless claim fallback must remain");
