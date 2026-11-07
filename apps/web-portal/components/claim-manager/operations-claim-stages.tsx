@@ -414,7 +414,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
             <input type="hidden" name="next_status" value={stageTarget ?? ""} />
             <input type="hidden" name="save_only" value={partnerManagedJourney || selectedSaveOnly ? "true" : "false"} />
             <input type="hidden" name="notes" value={selectedSaveOnly ? `Operations edited ${selected.label} details.` : `Operations completed ${selected.label} and opened the next journey stage.`} />
-            <div className={`grid gap-3 sm:grid-cols-2 ${selected.key === "delivery_order" ? "gap-2 lg:grid-cols-3 lg:items-start" : selected.key === "payment_encashment" ? "gap-2 lg:grid-cols-3 xl:grid-cols-5 lg:items-start" : selected.key === "work_approval" ? "lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 lg:items-start" : selected.key === "repair_ri" || selected.key === "billing" ? "lg:grid-cols-3" : selected.key === "vehicle_delivery" ? "lg:grid-cols-2" : "lg:grid-cols-3 2xl:grid-cols-4"}`}>
+            <div className={`grid gap-3 sm:grid-cols-2 ${selected.key === "delivery_order" ? "gap-2 lg:grid-cols-3 lg:items-start" : selected.key === "payment_encashment" ? "gap-2 lg:grid-cols-5 lg:items-start" : selected.key === "work_approval" ? "lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 lg:items-start" : selected.key === "repair_ri" || selected.key === "billing" ? "lg:grid-cols-3" : selected.key === "vehicle_delivery" ? "lg:grid-cols-2" : "lg:grid-cols-3 2xl:grid-cols-4"}`}>
               {fields[selected.key].map((field) => {
                 const value = field.name === "insurer_claim_no" ? insurerClaimNo ?? fieldValue(selectedDetails, field.name) : fieldValue(selectedDetails, field.name);
                 const internalStageTwoSurveyorField = selected.key === "spot_status" && !hasExternalVisualProgress && internalSpotStatusSurveyorFields.has(field.name);
@@ -429,10 +429,10 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
                         {displayLabel}{required ? <span className="ml-1 text-rose-600">*</span> : null}
                       </legend>
                       <div className={`mt-1 grid w-full grid-cols-2 ${selected.key === "payment_encashment" || selected.key === "delivery_order" ? "gap-2" : "max-w-[254px] gap-[10px]"}`}>
-                        <label className={`flex ${selected.key === "delivery_order" ? "h-[34px]" : "h-[40px]"} cursor-pointer items-center justify-center rounded-md border border-[#D9E3F0] bg-white text-[12px] font-semibold normal-case tracking-normal text-[#071D49] has-[:checked]:border-[#174EA6] has-[:checked]:bg-[#EEF4FF]`}>
+                        <label className={`flex ${selected.key === "delivery_order" || selected.key === "payment_encashment" ? "h-[34px]" : "h-[40px]"} cursor-pointer items-center justify-center rounded-md border border-[#D9E3F0] bg-white text-[12px] font-semibold normal-case tracking-normal text-[#071D49] has-[:checked]:border-[#174EA6] has-[:checked]:bg-[#EEF4FF]`}>
                           <input className="sr-only" type="radio" name={field.name} value="true" defaultChecked={yesChecked} required={required} />Yes
                         </label>
-                        <label className={`flex ${selected.key === "delivery_order" ? "h-[34px]" : "h-[40px]"} cursor-pointer items-center justify-center rounded-md border border-[#D9E3F0] bg-white text-[12px] font-semibold normal-case tracking-normal text-[#071D49] has-[:checked]:border-[#174EA6] has-[:checked]:bg-[#EEF4FF]`}>
+                        <label className={`flex ${selected.key === "delivery_order" || selected.key === "payment_encashment" ? "h-[34px]" : "h-[40px]"} cursor-pointer items-center justify-center rounded-md border border-[#D9E3F0] bg-white text-[12px] font-semibold normal-case tracking-normal text-[#071D49] has-[:checked]:border-[#174EA6] has-[:checked]:bg-[#EEF4FF]`}>
                           <input className="sr-only" type="radio" name={field.name} value="false" defaultChecked={noChecked} required={required} />{field.name === "vehicle_received" ? "Not Yet" : "No"}
                         </label>
                       </div>
@@ -444,9 +444,9 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
                   <label key={field.name} className={`min-w-0 block w-full whitespace-nowrap max-sm:whitespace-normal ${selected.key === "payment_encashment" || selected.key === "delivery_order" ? "" : field.type === "date" ? "max-w-[260px]" : "max-w-[320px]"} text-[9px] font-semibold uppercase leading-4 tracking-[0.01em] text-[#174EA6]`}>
                     {displayLabel}{required && !displayLabel.includes("*") ? <span className="ml-1 text-rose-600">*</span> : null}
                     {useAppDatePicker ? (
-                      <AppStyleDateInput name={field.name} value={value} required={required} compact={selected.key === "delivery_order"} />
+                      <AppStyleDateInput name={field.name} value={value} required={required} compact={selected.key === "delivery_order" || selected.key === "payment_encashment"} />
                     ) : field.type === "select" ? (
-                      <select name={field.name} defaultValue={value} required={required} className={`mt-1 ${selected.key === "delivery_order" ? "h-[34px]" : "h-[40px]"} w-full rounded-md border border-[#D9E3F0] bg-white px-2 text-[12px] font-medium normal-case tracking-normal text-[#071D49] outline-none focus:border-[#174EA6]`}>
+                      <select name={field.name} defaultValue={value} required={required} className={`mt-1 ${selected.key === "delivery_order" || selected.key === "payment_encashment" ? "h-[34px]" : "h-[40px]"} w-full rounded-md border border-[#D9E3F0] bg-white px-2 text-[12px] font-medium normal-case tracking-normal text-[#071D49] outline-none focus:border-[#174EA6]`}>
                         <option value="" disabled>Select</option>
                         <option value={field.name === "cashless" ? "true" : "yes"}>Yes</option>
                         <option value={field.name === "cashless" ? "false" : "no"}>No</option>
@@ -458,7 +458,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
                         defaultValue={field.type === "date" ? toDateValue(value) : value}
                         required={required}
                         onClick={field.type === "date" ? (event) => event.currentTarget.showPicker?.() : undefined}
-                        className={`mt-1 ${selected.key === "delivery_order" ? "h-[34px]" : "h-[40px]"} w-full rounded-md border border-[#D9E3F0] bg-white px-2 text-[12px] font-medium normal-case tracking-normal text-[#071D49] outline-none focus:border-[#174EA6]`}
+                        className={`mt-1 ${selected.key === "delivery_order" || selected.key === "payment_encashment" ? "h-[34px]" : "h-[40px]"} w-full rounded-md border border-[#D9E3F0] bg-white px-2 text-[12px] font-medium normal-case tracking-normal text-[#071D49] outline-none focus:border-[#174EA6]`}
                       />
                     )}
                   </label>
