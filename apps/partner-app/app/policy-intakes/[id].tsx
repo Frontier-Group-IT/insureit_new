@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, Linking, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -14,8 +14,11 @@ import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { PartnerAssets } from '@/lib/partner-assets';
 import {
   getPartnerPolicyIntake,
+  partnerPolicyIntakeReviewUrl,
+  updatePartnerPolicyIntakeReview,
   submitPartnerPolicyIntakeReplacement,
   type PartnerPolicyIntake,
+  type PolicyIntakeReviewAccess,
   type PartnerPolicyIntakeUploadProgress,
 } from '@/lib/policy-intakes';
 import { partnerTheme } from '@/lib/theme';
@@ -26,7 +29,9 @@ const MAX_FILE_SIZE = 15 * 1024 * 1024;
 export default function PolicyIntakeDetailScreen() {
   const router = useRouter();
   const { id, submitted } = useLocalSearchParams<{ id: string; submitted?: string }>();
-  const [row, setRow] = useState<PartnerPolicyIntake | null>(null);
+  const [row, setRow] = useState<(PartnerPolicyIntake & { review_access: PolicyIntakeReviewAccess }) | null>(null);
+  const [reviewNote, setReviewNote] = useState('');
+  const [reviewBusy, setReviewBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [replacing, setReplacing] = useState(false);
   const [replacementProgress, setReplacementProgress] = useState<PartnerPolicyIntakeUploadProgress | null>(null);
@@ -87,6 +92,44 @@ export default function PolicyIntakeDetailScreen() {
     } finally {
       replacementLockRef.current = false;
       setReplacing(false);
+    }
+  }
+
+  async function submitReviewAction(status: 'needs_attention' | 'rejected') {
+    if (!row?.review_access.can_review || reviewBusy) return;
+    if (!reviewNote.trim()) { setError('Add an Operations note before continuing.'); return; }
+    setReviewBusy(true);
+    setError('');
+    try {
+      await updatePartnerPolicyIntakeReview(row.id, status, reviewNote.trim());
+      setReviewNote('');
+      await load();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not update this intake.');
+    } finally {
+      setReviewBusy(false);
+    }
+  }
+
+  function confirmReviewAction(status: 'needs_attention' | 'rejected') {
+    if (status === 'rejected') {
+      Alert.alert('Reject Policy Intake?', 'This will reject the intake and notify the submitter of your reason.', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Reject', style: 'destructive', onPress: () => void submitReviewAction(status) },
+      ]);
+      return;
+    }
+    void submitReviewAction(status);
+  }
+
+  async function openOperationsReview() {
+    if (!row?.review_access.can_finalize) return;
+    try {
+      // The existing Operations website owns reviewer assignment, duplicate protection,
+      // Policy Onboarding draft persistence and finalization. Never pass an app token in a URL.
+      await Linking.openURL(partnerPolicyIntakeReviewUrl(row.id));
+    } catch {
+      setError('Could not open Operations Policy Intake Review.');
     }
   }
 
@@ -178,6 +221,43 @@ export default function PolicyIntakeDetailScreen() {
                   onPress={() => void replaceDocument()}
                 />
               </View>
+            </View>
+          ) : null}
+
+          {row.review_access.can_review && !['completed', 'rejected', 'duplicate'].includes(row.status) ? (
+            <View style={{ marginHorizontal: 12, marginTop: 12, padding: 12, backgroundColor: '#FFFFFF', borderColor: '#D9E3F0', borderWidth: 1, borderRadius: 12, gap: 10 }}>
+              <Text style={{ fontSize: 14, fontWeight: '700', color: '#17365D' }}>Policy Intake Review</Text>
+              <Text style={{ fontSize: 11, color: '#65768D' }}>Operations-only review. Existing policy and customer permissions apply.</Text>
+              <TextInput
+                value={reviewNote}
+                onChangeText={setReviewNote}
+                multiline
+                maxLength={2000}
+                editable={!reviewBusy}
+                placeholder="Explain what Sales should correct or why the intake is rejected"
+                placeholderTextColor="#9AA5B5"
+                style={{ minHeight: 76, padding: 11, textAlignVertical: 'top', borderWidth: 1, borderColor: '#D9E3F0', borderRadius: 10, color: '#17365D', fontSize: 12 }}
+              />
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <Pressable disabled={reviewBusy} onPress={() => confirmReviewAction('needs_attention')} accessibilityRole="button"
+                  style={{ flex: 1, backgroundColor: '#FFF7E6', paddingVertical: 12, borderRadius: 10, alignItems: 'center', opacity: reviewBusy ? 0.6 : 1 }}>
+                  <Text style={{ color: '#895A12', fontSize: 12, fontWeight: '700' }}>Request info</Text>
+                </Pressable>
+                <Pressable disabled={reviewBusy} onPress={() => confirmReviewAction('rejected')} accessibilityRole="button"
+                  style={{ flex: 1, backgroundColor: '#FFF0F0', paddingVertical: 12, borderRadius: 10, alignItems: 'center', opacity: reviewBusy ? 0.6 : 1 }}>
+                  <Text style={{ color: '#B42318', fontSize: 12, fontWeight: '700' }}>Reject</Text>
+                </Pressable>
+              </View>
+              {row.review_access.can_finalize && (['ready_for_review', 'in_review'].includes(row.status) || (row.status === 'processing' && row.ocr_status === 'failed')) ? (
+                <View style={{ gap: 6 }}>
+                  <PartnerButton
+                    label={row.status === 'in_review' ? 'Resume Policy Onboarding' : 'Review & Finalize'}
+                    icon="arrow-forward-outline"
+                    onPress={() => void openOperationsReview()}
+                  />
+                  <Text style={{ color: '#65768D', fontSize: 10, textAlign: 'center' }}>Continues in the secure Operations portal. Sign in there if requested. Reviewer assignment, draft saving and finalization use the existing website workflow.</Text>
+                </View>
+              ) : null}
             </View>
           ) : null}
 
