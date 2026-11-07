@@ -55,3 +55,12 @@ assert.match(heading, /<Image src=\{claimHeaderIcons\.claim\} alt="" width=\{34\
 assert.match(heading, /rounded-xl border border-white bg-white/);
 
 console.log("Operations Claim Journey save navigation, Stage 9 layout and 3D heading regression passed.");
+
+
+// Compact stage inputs and a separate action footer must not collide at desktop or mobile widths.
+assert.match(stages, /grid items-start gap-3 sm:grid-cols-2/, "Keep stage controls aligned to the top of each grid row.");
+assert.match(stages, /<AppStyleDateInput name=\{field.name\} value=\{value\} required=\{required\} compact \/>/, "Use compact date fields in stage detail forms.");
+assert.match(stages, /compact \? "h-9 max-w-full"/, "Compact date fields use a 36px height without clipping their grid column.");
+assert.match(stages, /className="mt-1 h-9 w-full rounded-md border/, "Text and select controls use compact 36px heights.");
+assert.match(stages, /mt-4 flex min-h-10 flex-wrap items-center justify-end gap-2 border-t border-\[#D9E3F0\] pt-3/, "Save actions have a dedicated wrapping footer with a top separator and clearance.");
+assert.match(stages, /selected.key === "repair_ri" \? "" : "max-w-\[260px\]"/, "Repair/RI date fields fill their grid cells.");
