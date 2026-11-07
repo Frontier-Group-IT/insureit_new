@@ -20,6 +20,7 @@ import { getPartnerNetwork, type PartnerNetworkData } from '@/lib/network';
 import { PartnerAssets } from '@/lib/partner-assets';
 import { getPartnerPayoutSummary, type PartnerPayoutSummary } from '@/lib/payout';
 import { getPartnerRenewalSummary, type PartnerRenewalSummary } from '@/lib/policies';
+import { canPartnerAccess } from '@/lib/partner-permissions';
 import { partnerTheme } from '@/lib/theme';
 import { usePartnerQuery } from '@/lib/use-partner-query';
 import { usePartnerSession } from '@/providers/partner-session-provider';
@@ -516,10 +517,10 @@ export default function BusinessScreen() {
 
           <SectionHeader title="Quick Actions" />
           <View style={[styles.quickGrid, compactScreen && styles.tightContainer]}>
-            <QuickAction asset={PartnerAssets.actions.quickRenewals} label="Renewals" meta={`${renewals?.due_30_count ?? 0} due`} onPress={() => router.push('/renewals')} />
-            <QuickAction asset={PartnerAssets.actions.quickClaims} label="Claims" meta={`${claims?.active_claims ?? 0} active`} onPress={() => router.push('/(tabs)/claims')} />
+            {canPartnerAccess(context, 'view_policies') ? <QuickAction asset={PartnerAssets.actions.quickRenewals} label="Renewals" meta={`${renewals?.due_30_count ?? 0} due`} onPress={() => router.push('/renewals')} /> : null}
+            {canPartnerAccess(context, 'view_claims') ? <QuickAction asset={PartnerAssets.actions.quickClaims} label="Claims" meta={`${claims?.active_claims ?? 0} active`} onPress={() => router.push('/(tabs)/claims')} /> : null}
             {!isBranchLogin ? <PayoutQuickAction payout={payout} onPress={() => router.push('/(tabs)/more')} /> : null}
-            <QuickAction asset={PartnerAssets.actions.quickCustomers} label="Add Customer" meta="Create new" onPress={() => router.push('/customer-new' as never)} />
+            {canPartnerAccess(context, 'create_customers', 'edit') ? <QuickAction asset={PartnerAssets.actions.quickCustomers} label="Add Customer" meta="Create new" onPress={() => router.push('/customer-new' as never)} /> : null}
           </View>
 
           <SectionHeader title="My Network" action={<Pressable onPress={() => router.push('/network')}><Text style={styles.viewAll}>View All ›</Text></Pressable>} />
