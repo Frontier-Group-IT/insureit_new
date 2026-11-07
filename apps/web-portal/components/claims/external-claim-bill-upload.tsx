@@ -72,7 +72,7 @@ export function ExternalClaimBillUpload({ mode, claimId, accountId, documents, r
   return <div className="min-w-0 text-left">
     <p className={compactBilling ? "mb-1 text-[9px] font-semibold uppercase leading-4 tracking-[0.01em] text-[#174EA6]" : "mb-1.5 text-[10px] font-semibold uppercase tracking-[0.04em] text-[#5673B0]"}>Bill Upload</p>
     <div className={compactBilling ? "flex h-[34px] min-w-0 items-center gap-1.5 rounded-md border border-[#D9E3F0] bg-white px-1.5" : "flex min-h-[76px] items-center gap-2 rounded-2xl border-2 border-[#DFE5ED] bg-[#F8FAFD] px-3 py-2"}>
-      <img src="/assets/customer-claim/stages/billing.png" alt="" className={compactBilling ? "h-7 w-7 shrink-0 object-contain" : "h-12 w-12 shrink-0 object-contain"} />
+      <img src="/assets/customer-claim/stages/billing.png" alt="" className={compactBilling ? "hidden h-7 w-7 shrink-0 object-contain sm:block" : "h-12 w-12 shrink-0 object-contain"} />
       <div className="min-w-0 flex-1">
         <p className={compactBilling ? "truncate whitespace-nowrap text-[10px] font-semibold text-[#102B54]" : "text-[12px] font-semibold text-[#102B54]"}>Upload final workshop bill</p>
         {!compactBilling ? <p className="text-[10px] text-[#718096]">PDF, JPG, PNG</p> : null}
