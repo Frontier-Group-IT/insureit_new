@@ -35,7 +35,7 @@ assert.match(stages, /selected\.key === "spot_status" \? "gap-2 lg:grid-cols-4 l
 assert.match(stages, /selected\.key === "spot_status" \|\| selected\.key === "billing"/, "Stage 2 inputs must use full available grid width.");
 assert.match(stages, /selected\.key === "spot_status" \? "text-\[8px\]" : "text-\[9px\]"/, "Only Spot Status labels should be smaller.");
 assert.match(stages, /selected\.key === "spot_status" \|\| selected\.key === "delivery_order" \|\| selected\.key === "payment_encashment" \? "mt-3 flex items-center justify-end gap-2"/, "Stage 2 Save row should have no extra divider.");
-assert.match(stages, /className="mt-1 h-\[34px\] w-full/, "Stage 2 text controls must keep 34px height.");
+assert.match(stages, /className="mt-1 block h-\[34px\] min-w-0 w-full/, "Stage 2 text controls must keep 34px height.");
 assert.match(stages, /billingCompact \? "h-\[34px\] max-w-full/, "Stage 2 date input must preserve 34px height.");
 assert.ok(stages.includes('selected.key === "payment_encashment" ? "min-w-[1120px] grid-cols-[minmax(235px,1.1fr)_minmax(255px,1.2fr)_minmax(190px,1fr)_minmax(190px,1fr)_minmax(185px,0.9fr)] gap-2 items-start"'), "Stage 9 has five aligned single-row columns.");
 assert.ok(stages.includes('selected.key === "work_approval" ? "!grid-cols-5 min-w-[900px] lg:items-start"'), "Stage 4 keeps five inputs aligned in one row.");
