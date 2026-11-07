@@ -1,3 +1,4 @@
+import { requirePartnerWritePermission } from '@/lib/partner-permissions';
 import type { DocumentPickerAsset } from 'expo-document-picker';
 import { Platform } from 'react-native';
 
@@ -130,6 +131,7 @@ export async function submitPartnerPolicyIntake(input: {
   file?: DocumentPickerAsset | null;
   onProgress?: (progress: PartnerPolicyIntakeUploadProgress) => void;
 }) {
+  await requirePartnerWritePermission('create_policy_intakes');
   const proposalForm = input.policyType === 'life' || input.policyType === 'health';
 
   if (!input.file) {
