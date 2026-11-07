@@ -4,13 +4,14 @@ import { ActivityIndicator, Platform, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
+import { canPartnerAccess } from '@/lib/partner-permissions';
 import { partnerTheme } from '@/lib/theme';
 import { usePartnerSession } from '@/providers/partner-session-provider';
 
 type IconName = ComponentProps<typeof Ionicons>['name'];
 
 export default function PartnerTabsLayout() {
-  const { status } = usePartnerSession();
+  const { status, context } = usePartnerSession();
   const insets = useSafeAreaInsets();
 
   if (status === 'loading') {
@@ -32,10 +33,10 @@ export default function PartnerTabsLayout() {
         tabBarStyle: [styles.tabBar, { height: 64 + insets.bottom, paddingBottom: 7 + insets.bottom }],
       }}
     >
-      <Tabs.Screen name="index" options={{ title: 'Home', tabBarIcon: tabIcon('home-outline', 'home') }} />
-      <Tabs.Screen name="business" options={{ title: 'Business', tabBarIcon: tabIcon('briefcase-outline', 'briefcase') }} />
-      <Tabs.Screen name="policies" options={{ title: 'Policies', tabBarIcon: tabIcon('document-text-outline', 'document-text') }} />
-      <Tabs.Screen name="claims" options={{ title: 'Claims', tabBarIcon: tabIcon('shield-outline', 'shield') }} />
+      <Tabs.Screen name="index" options={{ href: canPartnerAccess(context, "view_dashboard") ? undefined : null, title: 'Home', tabBarIcon: tabIcon('home-outline', 'home') }} />
+      <Tabs.Screen name="business" options={{ href: canPartnerAccess(context, "view_dashboard") ? undefined : null, title: 'Business', tabBarIcon: tabIcon('briefcase-outline', 'briefcase') }} />
+      <Tabs.Screen name="policies" options={{ href: canPartnerAccess(context, "view_policies") ? undefined : null, title: 'Policies', tabBarIcon: tabIcon('document-text-outline', 'document-text') }} />
+      <Tabs.Screen name="claims" options={{ href: canPartnerAccess(context, "view_claims") ? undefined : null, title: 'Claims', tabBarIcon: tabIcon('shield-outline', 'shield') }} />
       <Tabs.Screen name="more" options={{ title: 'More', tabBarIcon: tabIcon('grid-outline', 'grid') }} />
     </Tabs>
   );
