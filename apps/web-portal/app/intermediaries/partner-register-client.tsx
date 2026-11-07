@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, Search } from "lucide-react";
+import { AlertTriangle, ChevronDown, Search } from "lucide-react";
 import { IntermediaryTabs } from "./intermediary-tabs";
 import { FormSubmitButton } from "@/components/form-submit-button";
 import { FreshAccountReviewLink } from "./applications/account-review-back-link";
