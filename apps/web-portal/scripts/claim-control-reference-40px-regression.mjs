@@ -28,7 +28,7 @@ assert.match(customer,/name=\{field\.key\} type=\{field\.type\} required=\{!fiel
 assert.match(choice,/name=\{name\} value=\{value\}/);
 assert.match(choice,/onClick=\{\(\)=>setValue\(key\)\}/);
 assert.match(customer,/className="flex min-h-\[34px\] items-center gap-2 rounded-md border border-\[#D9E3F0\] bg-\[#F1F4F9\]/);
-assert.match(operations,/whitespace-nowrap max-sm:whitespace-normal/);
+assert.match(operations,/whitespace-nowrap \$\{selected\.key === "billing" \? "flex flex-col" : "block max-sm:whitespace-normal"\}/, "Billing labels remain single-line; other stage labels retain responsive wrapping.");
 assert.match(operations,/selected\.key === "spot_status" \? "text-\[8px\]" : "text-\[9px\]"/,"Spot Status uses smaller labels, other Operations stages retain 9px.");
 assert.ok(operations.includes("xl:grid-cols-5 lg:items-start"));
 assert.match(customer,/selected\.key==="spot_status"\?"text-\[8px\]":"text-\[9px\]"/,"Customer Spot Status uses smaller labels, other stages retain 9px.");
