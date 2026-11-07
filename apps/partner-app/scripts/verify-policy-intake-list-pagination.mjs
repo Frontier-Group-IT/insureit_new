@@ -20,6 +20,8 @@ assert.match(app, /pageError \? 'Retry Load More' : 'Load More Submissions'/, 'O
 assert.match(app, /requestGeneration\.current/, 'Ignore stale requests after refresh');
 assert.doesNotMatch(app, /Showing \\{rows\\.length\\} of \\{total\\} submissions|Filter and search apply to loaded records|loadedSummary/, 'Never show loaded-record count or explanatory summary in Policy Intake UI');
 assert.match(app, /nextOffset < total/, 'Show Load More only when more authorized submissions exist');
+assert.match(app, /\{visibleRows\.length > 0 && nextOffset < total \? \(/, 'Do not render Load More when the selected filter or search shows zero records');
+assert.doesNotMatch(app, /load more submissions below/i, 'Empty state must not refer to a hidden Load More action');
 assert.match(app, /loadingMore && styles\.loadMoreButtonLoading/, 'Match Policies page loading button state');
 assert.match(app, /<ActivityIndicator size="small" color="#FFFFFF" \/>/, 'Show loading spinner as on Policies page');
 assert.match(app, /<Feather name="chevron-down" size=\{13\} color="#3156B8" \/>/, 'Match Policies page load-more chevron');
