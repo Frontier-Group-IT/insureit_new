@@ -145,8 +145,8 @@ export async function finalizeCustomerClaimBulkVideo(accountId:string,claimId:st
       claim_id:claim.id,customer_id:account.id,document_type:"Other Document",
       file_name:file.name.slice(0,180),storage_bucket:"claim-documents",storage_path:path,
       mime_type:file.type,file_size:actualSize,uploaded_by:session.user.id,
-    }).select("id").single();
+    }).select("id, document_type, created_at, file_name, verification_status").single();
     if(saved.error||!saved.data)throw new Error("Unable to register uploaded video.");
-    return {ok:true};
+    return {ok:true,uploaded:saved.data};
   } catch(error) {return {ok:false,error:error instanceof Error?error.message:"Video upload failed."};}
 }

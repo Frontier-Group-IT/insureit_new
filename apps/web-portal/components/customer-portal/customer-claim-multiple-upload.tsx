@@ -27,7 +27,9 @@ export function CustomerClaimMultipleUpload({claimId,accountId,stage,documents,a
   const [failedFiles,setFailedFiles]=useState<string[]>([]);
   const [expanded,setExpanded]=useState(false);
   const [deletedIds,setDeletedIds]=useState<string[]>([]);
-  const shownDocuments=documents.filter(file=>!deletedIds.includes(file.id));
+  const [recentUploads,setRecentUploads]=useState<CustomerClaimFile[]>([]);
+  const shownDocuments=[...recentUploads,...documents.filter(file=>!recentUploads.some(recent=>recent.id===file.id))]
+    .filter(file=>!deletedIds.includes(file.id));
   const openPicker=()=>{if(allowUpload&&!uploading)picker.current?.click();};
 
   function addFiles(files: File[]) {
@@ -52,6 +54,7 @@ export function CustomerClaimMultipleUpload({claimId,accountId,stage,documents,a
     const batch=[...selected];
     let complete=0;
     const failures:string[]=[];
+    const confirmed:CustomerClaimFile[]=[];
     setProgress({done:0,total:batch.length});
     try {
       for(const file of batch) {
@@ -70,10 +73,12 @@ export function CustomerClaimMultipleUpload({claimId,accountId,stage,documents,a
             const uploaded = await createSupabaseBrowserClient().storage.from("claim-documents").uploadToSignedUrl(prepared.path,prepared.token,file,{contentType:file.type,upsert:false});
             if(uploaded.error) throw new Error(uploaded.error.message);
             const saved = await finalizeCustomerClaimBulkVideo(accountId,claimId,stage,prepared.path,{name:file.name,size:file.size,type:file.type});
-            if(!saved.ok) throw new Error(saved.error || "Unable to register video.");
+            if(!saved.ok || !saved.uploaded) throw new Error(saved.error || "Unable to register video.");
+            confirmed.push(saved.uploaded);
           } else {
             const result=await uploadCustomerClaimDocument({error:null},data);
             if(result.error || !result.uploaded) throw new Error(result.error || "Upload was not confirmed.");
+            confirmed.push(result.uploaded);
           }
           complete++;
         } catch(error) {
@@ -85,14 +90,19 @@ export function CustomerClaimMultipleUpload({claimId,accountId,stage,documents,a
       // Never resubmit files that the server already registered, even when another file fails.
       setSelected(failures.length ? batch.filter(file=>failures.includes(file.name)) : []);
       setFailedFiles(failures);
-      if(complete) setSuccessNotice(complete+" document"+(complete===1?"":"s")+" uploaded successfully."+(failures.length?" "+failures.length+" failed and remain selected.":""));
+      if(complete) {
+        setRecentUploads(previous=>[...confirmed.filter(file=>!previous.some(existing=>existing.id===file.id)),...previous]);
+        setExpanded(true);
+        setSuccessNotice(complete+" document"+(complete===1?"":"s")+" uploaded successfully."+(failures.length?" "+failures.length+" failed and remain selected.":""));
+        router.refresh();
+      }
       else if(failures.length) setErrorNotice("No documents uploaded. Review errors and retry the selected files.");
     } finally {
       running.current=false;
       setUploading(false);
     }
   }
-  const closeSuccess=()=>{setSuccessNotice(null);router.refresh();};
+  const closeSuccess=()=>setSuccessNotice(null);
   return <div className="rounded-xl border-2 border-dashed border-[#C5D8ED] bg-[#F8FAFE] p-3">
     <CustomerErrorDialog title="Document upload failed" message={errorNotice} onClose={()=>setErrorNotice(null)}/>
     <CustomerSuccessDialog title="Upload Successful" message={successNotice} onClose={closeSuccess}/>
