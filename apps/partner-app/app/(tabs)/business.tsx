@@ -438,10 +438,12 @@ export default function BusinessScreen() {
                       <Ionicons name={trendMenuOpen ? 'chevron-up' : 'chevron-down'} size={10} color="#3156B8" />
                     </Pressable>
                   </PartnerAnchoredDropdown>
-                  <Pressable accessibilityRole="button" accessibilityLabel="Open business report" onPress={() => router.push('/business-report')} style={({ pressed }) => [styles.reportButton, pressed && styles.pressed]}>
+                  {canPartnerAccess(context, 'view_reports') ? (
+                   <Pressable accessibilityRole="button" accessibilityLabel="Open business report" onPress={() => router.push('/business-report')} style={({ pressed }) => [styles.reportButton, pressed && styles.pressed]}>
                     <Text style={styles.viewAll}>View Report</Text>
                     <Ionicons name="chevron-forward" size={10} color="#3156B8" />
                   </Pressable>
+                   ) : null}
                 </View>
               )}
             />
@@ -494,7 +496,7 @@ export default function BusinessScreen() {
             )}
           </View>
 
-          <SectionHeader title="Top Insurers" action={<Pressable accessibilityRole="button" accessibilityLabel="View insurer performance" onPress={() => { if (overviewRange === 'custom' && !customInsurerDatesApplied) { setOverviewCustomOpen(true); return; } router.push({ pathname: '/insurers', params: { from: insurerDates.from, to: insurerDates.to } } as never); }}><Text style={styles.viewAll}>View All ›</Text></Pressable>} />
+          <SectionHeader title="Top Insurers" action={canPartnerAccess(context, 'view_reports') ? <Pressable accessibilityRole="button" accessibilityLabel="View insurer performance" onPress={() => { if (overviewRange === 'custom' && !customInsurerDatesApplied) { setOverviewCustomOpen(true); return; } router.push({ pathname: '/insurers', params: { from: insurerDates.from, to: insurerDates.to } } as never); }}><Text style={styles.viewAll}>View All ›</Text></Pressable> : null} />
           {topInsurers?.length ? (
             <View style={styles.insurerGrid}>
               {topInsurers.slice(0, 5).map((insurer) => (
