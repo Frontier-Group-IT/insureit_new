@@ -110,7 +110,8 @@ export default function LoginScreen() {
           <View style={styles.field}>
             <PartnerField
               label="Email"
-              labelIcon={<MaterialCommunityIcons name="email-outline" size={16} color="#0757AC" />}
+              hideLabel
+              leftAccessory={<MaterialCommunityIcons name="email-outline" size={21} color="#0757AC" />}
               value={email}
               onChangeText={(value) => {
                 setEmail(value);
@@ -137,7 +138,8 @@ export default function LoginScreen() {
             <PartnerField
               ref={passwordRef}
               label="Password"
-              labelIcon={<MaterialCommunityIcons name="lock-outline" size={16} color="#0757AC" />}
+              hideLabel
+              leftAccessory={<MaterialCommunityIcons name="lock-outline" size={21} color="#0757AC" />}
               value={password}
               onChangeText={(value) => {
                 setPassword(value);
@@ -230,7 +232,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 29, fontWeight: '800', letterSpacing: -0.9, color: '#071832' },
   subtitle: { fontSize: 13, lineHeight: 20, color: '#576578', textAlign: 'center', marginTop: 12, marginBottom: 21 },
   field: { marginTop: 15, position: 'relative' },
-  loginInput: { paddingLeft: 14, minHeight: 56, backgroundColor: '#F0F4FA', borderColor: '#DCE5F0', borderRadius: 17, color: '#0A1B33', fontSize: 15 },
+  loginInput: { minHeight: 56, backgroundColor: '#F0F4FA', borderColor: '#DCE5F0', borderRadius: 17, color: '#0A1B33', fontSize: 15 },
   eyeButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', borderRadius: 20 },
   forgotPassword: { alignSelf: 'flex-end', marginTop: 15, paddingVertical: 7, paddingLeft: 12 },
   forgotPasswordText: { color: '#0758AA', fontSize: 13, fontWeight: '700' },
