@@ -116,9 +116,9 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
       : q.saved==="claim_intimation" && selected.key==="work_approval" ? <CustomerClaimStageSuccessToast /> : null}
     <CustomerClaimStageStrip claimId={claim.id} accountId={account.id} selectedKey={selected.key} currentKey={INTERNAL_JOURNEY_STAGES[currentIndex]?.key || "spot_intimation"} editMode claimSummary={{controlNo:claim.claim_no,policyNo:claim.policy_no,makeModel:[claim.vehicle_make,claim.vehicle_model].filter(Boolean).join(" - ")||null,vehicleNo:claim.vehicle_no,status:claim.current_status,manufacturer:claim.vehicle_make,insurer:claim.insurer_name,policySource}} completedKeys={INTERNAL_JOURNEY_STAGES.filter((stage,i)=>external?projection?.stages.some(x=>x.key===stage.key&&x.completed):i<(internal_projection?.completedStageCount??0)).map(stage=>stage.key)} />
     {!(editMode && canEditStage) ? <section className="overflow-hidden rounded-2xl border border-[#DFE8F4] bg-white">
-      <h2 className="border-b border-[#D9E3F0] px-5 py-4 text-[17px] font-semibold text-[#071D49]">{selected.key==="spot_intimation"?"Accident & Spot Intimation Details":selected.label+" Details"}</h2>
+      <h2 className="border-b border-[#D9E3F0] px-4 py-2 text-[14px] font-semibold text-[#071D49]">{selected.key==="spot_intimation"?"Accident & Spot Intimation Details":selected.label+" Details"}</h2>
       {selected.key==="spot_intimation" ? (
-        <div className="grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-5">
+        <div className="grid gap-2 p-3 md:grid-cols-2 min-[1440px]:grid-cols-5">
           {([
             ["Accident Date & Time",claim.accident_at],
             ["Spot Intimation Date & Time",claim.spot_intimation_at||(typeof milestone?.details?.spot_intimation_at==="string"?milestone.details.spot_intimation_at:null)],
@@ -133,10 +133,10 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
             const time=valid?new Intl.DateTimeFormat("en-GB",{timeZone:"Asia/Kolkata",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(parsed):"";
             return <div key={label} className={isDateTime?"min-w-0 md:col-span-1 xl:col-span-1":"min-w-0"}>
               <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#174EA6]">{label}{isDateTime?<span className="ml-1 text-red-500">*</span>:null}</p>
-              {isDateTime?<div className="grid min-h-10 grid-cols-2 overflow-hidden rounded-xl border border-[#CAD8EE] bg-white text-[12px] font-medium text-[#18345C]" aria-label={label+" saved date and time"}>
+              {isDateTime?<div className="grid h-[34px] grid-cols-2 overflow-hidden rounded-[4px] border border-[#CAD8EE] bg-white text-[12px] font-medium text-[#18345C]" aria-label={label+" saved date and time"}>
                 <div className="flex min-w-0 items-center justify-between gap-1 border-r border-[#D9E3F0] px-2.5"><span className="truncate">{date||"DD-MM-YYYY"}</span><CalendarDays className="h-3.5 w-3.5 shrink-0 text-[#182B45]"/></div>
                 <div className="flex min-w-0 items-center justify-between gap-1 px-2.5"><span className="truncate">{time||"HH:MM"}</span><Clock3 className="h-3.5 w-3.5 shrink-0 text-[#182B45]"/></div>
-              </div>:<div className="flex min-h-10 items-center overflow-hidden rounded-md border border-[#D9E3F0] bg-white px-3 text-[12px] font-medium text-[#071D49]">
+              </div>:<div className="flex h-[34px] items-center overflow-hidden rounded-[4px] border border-[#D9E3F0] bg-white px-3 text-[12px] font-medium text-[#071D49]">
                 <span className="truncate" title={typeof value==="string"?value:""}>{typeof value==="string"&&value?value:"—"}</span>
               </div>}
             </div>;
@@ -173,7 +173,7 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
     </section> : null}
     {editMode && canEditStage ? (
       <CustomerClaimStageDraftForm id="customer-claim-stage-details-form" accountId={account.id} claimId={claim.id} stage={selected.key} className="customer-claim-ref-details mt-2 rounded-2xl border border-[#DCE3EC] bg-white p-4">
-        <div className="mb-3 flex items-center justify-between gap-3 border-b border-[#D9E3F0] pb-3"><div className="flex items-center gap-2"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-[#6F5AF1] to-[#3697D5] text-white"><ClipboardList className="h-4 w-4"/></span><div><h2 className="text-[15px] font-bold text-[#071D49]">{selected.key==="work_approval"?"Stage 4 — Work Approval":"Stage Details"}</h2>{selected.key==="work_approval"?<p className="text-[11px] text-[#64748B]">Record insurance approval and surveyor details</p>:null}</div></div>{selected.key==="work_approval"?<span className="shrink-0 rounded-md bg-[#EAF2FF] px-2 py-1 text-[10px] font-semibold text-[#174EA6]">4 of 9</span>:null}</div><div className={`grid items-start gap-3 sm:grid-cols-2 ${selected.key==="payment_encashment"?"gap-2 lg:grid-cols-3 xl:grid-cols-5 lg:items-start":selected.key==="claim_intimation"||selected.key==="work_approval"?"lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 lg:items-start":selected.key==="repair_ri"||selected.key==="delivery_order"?"lg:grid-cols-3":selected.key==="billing"?"lg:grid-cols-3":selected.key==="vehicle_delivery"?"lg:grid-cols-2":"lg:grid-cols-3 2xl:grid-cols-4"}`}>
+        <div className="mb-3 flex items-center justify-between gap-3 border-b border-[#D9E3F0] pb-3"><div className="flex items-center gap-2"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-[#6F5AF1] to-[#3697D5] text-white"><ClipboardList className="h-4 w-4"/></span><div><h2 className="text-[14px] font-bold text-[#071D49]">{selected.key==="work_approval"?"Stage 4 — Work Approval":"Stage Details"}</h2>{selected.key==="work_approval"?<p className="text-[11px] text-[#64748B]">Record insurance approval and surveyor details</p>:null}</div></div>{selected.key==="work_approval"?<span className="shrink-0 rounded-md bg-[#EAF2FF] px-2 py-1 text-[10px] font-semibold text-[#174EA6]">4 of 9</span>:null}</div><div className={`grid items-start gap-2 sm:grid-cols-2 ${selected.key==="payment_encashment"?"gap-2 lg:grid-cols-3 xl:grid-cols-5 lg:items-start":selected.key==="claim_intimation"||selected.key==="work_approval"?"lg:grid-cols-3 xl:grid-cols-5 lg:items-start":selected.key==="repair_ri"||selected.key==="delivery_order"?"lg:grid-cols-3":selected.key==="billing"?"lg:grid-cols-3":selected.key==="vehicle_delivery"?"lg:grid-cols-2":"lg:grid-cols-3 2xl:grid-cols-4"}`}>
         <input type="hidden" name="account" value={account.id}/>
         <input type="hidden" name="claim" value={claim.id}/>
         <input type="hidden" name="stage" value={selected.key}/>
@@ -182,7 +182,7 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
             {field.type==="boolean"||field.type==="yesno"?(
 <CustomerClaimBooleanChoice compact name={field.key} kind={field.type} value={typeof milestone?.details?.[field.key]==="boolean"?String(milestone.details[field.key]):typeof milestone?.details?.[field.key]==="string"?String(milestone.details[field.key]):""}/>
             ):(
-              <input name={field.key} type={field.type} required={!field.optional} maxLength={field.type==="number"?undefined:500} min={field.type==="number"?"0":undefined} step={field.type==="number"?"0.01":undefined} defaultValue={typeof milestone?.details?.[field.key]==="string"||typeof milestone?.details?.[field.key]==="number"?String(milestone.details[field.key]):""} className="mt-1 h-[34px] w-full rounded-md border border-[#D9E3F0] bg-white px-3 text-[12px] font-semibold normal-case tracking-normal text-[#071D49]"/>
+              <input name={field.key} type={field.type} required={!field.optional} maxLength={field.type==="number"?undefined:500} min={field.type==="number"?"0":undefined} step={field.type==="number"?"0.01":undefined} defaultValue={typeof milestone?.details?.[field.key]==="string"||typeof milestone?.details?.[field.key]==="number"?String(milestone.details[field.key]):""} className="mt-1 h-[34px] w-full rounded-[4px] border border-[#D9E3F0] bg-white px-3 text-[12px] font-semibold normal-case tracking-normal text-[#071D49]"/>
             )}
           </label>
         ))}
