@@ -18,6 +18,15 @@ assert.match(stage3, /sessionStorage\.getItem\(draftKey\)/, "Saved drafts must b
 assert.match(stage3, /JSON\.stringify\(latestDetailsRef\.current\) === signature/, "Do not clear a newer draft after saving an older snapshot.");
 assert.match(stage3, /lastSavedSignatureRef\.current = signature/, "Skip redundant saves for unchanged snapshots.");
 assert.match(stage3, /role="status"/, "Automatic save must show accessible feedback.");
+assert.match(stage3, /<h2 className="text-\[15px\] font-semibold text-\[#071D49\]">Stage Details<\/h2>/, "Keep the Stage Details title.");
+assert.doesNotMatch(stage3, /Record claim intimation, workshop and estimate details\./, "Remove redundant Stage Details subtitle.");
+assert.doesNotMatch(stage3, /Changes save automatically/, "Remove visible auto-save helper copy.");
+assert.match(stage3, /role="status" aria-live="polite" className="sr-only"/, "Preserve accessible autosave feedback without top-right text.");
+assert.match(stage3, /autoSaveStatus === "error" \? <p role="alert"/, "Keep visible failure feedback.");
+assert.match(stage3, /function Field[\s\S]*?h-\[34px\] w-full/, "All text inputs must be 34px high.");
+assert.match(stage3, /function DateField[\s\S]*?h-\[34px\] w-full/, "Date inputs must be 34px high.");
+assert.equal((stage3.match(/block whitespace-nowrap text-\[9px\] font-semibold uppercase tracking-\[0\.01em\]/g) ?? []).length, 2, "All five field labels use matching compact one-line styling.");
+
 assert.match(stage3, /function saveAndContinue\(\)/, "Explicit stage completion must remain available.");
 assert.doesNotMatch(stage3, /Pending verification: review uploaded documents/, "Do not show an inline verification warning on Stage 3.");
 assert.match(stage3, /<ClaimStageErrorDialog/, "Stage completion errors must continue to use the existing OK popup.");
