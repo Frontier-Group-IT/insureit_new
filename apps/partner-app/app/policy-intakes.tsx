@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Feather, Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -238,8 +238,29 @@ export default function PolicyIntakesScreen() {
         {rows.length > 0 && nextOffset < total ? (
           <View style={styles.pagination}>
             {pageError ? <Text style={styles.pageError}>{pageError}</Text> : null}
-            <Pressable accessibilityRole="button" accessibilityLabel={pageError ? 'Retry loading more submissions' : 'Load more submissions'} disabled={loadingMore || loading || refreshing} onPress={() => void loadMore()} style={[styles.loadMoreButton, (loadingMore || loading || refreshing) && styles.loadMoreDisabled]}>
-              <Text style={styles.loadMoreText}>{loadingMore ? 'Loading more...' : pageError ? 'Retry Load More' : 'Load More'}</Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={loadingMore ? 'Loading more submissions' : pageError ? 'Retry loading more submissions' : 'Load More Submissions'}
+              accessibilityState={{ disabled: loadingMore || loading || refreshing, busy: loadingMore }}
+              disabled={loadingMore || loading || refreshing}
+              onPress={() => void loadMore()}
+              style={({ pressed }) => [
+                styles.loadMoreButton,
+                loadingMore && styles.loadMoreButtonLoading,
+                pressed && !loadingMore && styles.pressed,
+              ]}
+            >
+              {loadingMore ? (
+                <>
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                  <Text style={styles.loadMoreTextLoading}>Loading more submissions…</Text>
+                </>
+              ) : (
+                <>
+                  <Text style={styles.loadMoreText}>{pageError ? 'Retry Load More' : 'Load More Submissions'}</Text>
+                  <Feather name="chevron-down" size={13} color="#3156B8" />
+                </>
+              )}
             </Pressable>
           </View>
         ) : null}
@@ -349,9 +370,10 @@ const styles = StyleSheet.create({
   loadedSummary: { color: '#74839B', fontSize: 9.5, marginHorizontal: 5, marginBottom: 3 },
   pagination: { paddingHorizontal: 6, paddingTop: 8, paddingBottom: 12, gap: 8 },
   pageError: { color: partnerTheme.colors.danger, fontSize: 11, textAlign: 'center' },
-  loadMoreButton: { minHeight: 40, borderRadius: 10, borderWidth: 1, borderColor: '#A8C2E5', backgroundColor: '#FFFFFF', justifyContent: 'center', alignItems: 'center' },
-  loadMoreDisabled: { opacity: 0.6 },
-  loadMoreText: { color: '#164DA2', fontSize: 12, fontWeight: '700' },
+  loadMoreButton: { marginHorizontal: 12, marginTop: 5, minHeight: 36, alignSelf: 'stretch', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, borderRadius: 8, backgroundColor: '#F1F5FD' },
+  loadMoreButtonLoading: { backgroundColor: '#3156B8' },
+  loadMoreText: { color: '#3156B8', fontSize: 8, lineHeight: 11, fontWeight: '800' },
+  loadMoreTextLoading: { color: '#FFFFFF', fontSize: 8.5, lineHeight: 12, fontWeight: '800' },
   inlineError: { marginBottom: 5, color: partnerTheme.colors.danger, textAlign: 'center', fontSize: 10 },
   card: { borderRadius: 11, paddingHorizontal: 10, paddingVertical: 10, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#E1E7F0', shadowColor: '#0B2447', shadowOpacity: 0.05, shadowRadius: 5, shadowOffset: { width: 0, height: 2 }, elevation: 1 }, pressedCard: { opacity: 0.75 }, rowTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 }, rowArtwork: { width: 38, height: 38, borderRadius: 9, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F3F7FC' }, rowArtworkImage: { width: 31, height: 31 }, identity: { flex: 1, minWidth: 0 }, statusStack: { maxWidth: 92, alignItems: 'flex-end', gap: 4 }, updatedDate: { color: '#7B8799', fontSize: 7, lineHeight: 9, textAlign: 'right' }, number: { color: '#1D2C45', fontSize: 11, lineHeight: 14, fontWeight: '800' }, customer: { marginTop: 2, color: '#687A92', fontSize: 8.5, lineHeight: 11 }, metaLine: { marginTop: 4, color: '#8290A3', fontSize: 8, lineHeight: 10.5 },
   progressWrap: { marginTop: 10, flexDirection: 'row', alignItems: 'flex-start' }, progressStep: { flex: 1, alignItems: 'center' }, progressLineWrap: { width: '100%', minHeight: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }, progressDot: { width: 10, height: 10, borderRadius: 5, alignItems: 'center', justifyContent: 'center', backgroundColor: '#DCE2EC' }, progressDotComplete: { backgroundColor: '#6541F4' }, progressDotRejected: { backgroundColor: '#EA625C' }, progressLine: { position: 'absolute', left: '57%', width: '86%', height: 1.5, backgroundColor: '#DCE2EC' }, progressLineComplete: { backgroundColor: '#6541F4' }, progressLabel: { marginTop: 3, color: '#7D899B', fontSize: 7.5, lineHeight: 10, fontWeight: '500' }, progressLabelActive: { color: '#23344E', fontWeight: '600' },
