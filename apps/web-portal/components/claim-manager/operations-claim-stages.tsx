@@ -392,7 +392,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
         {selected.key === "claim_intimation" && !partnerReadOnlyJourney && !partnerManagedJourney ? <div className="mt-3">{claimIntimationContent}</div> : null}
 
         {partnerReadOnlyJourney ? (
-          <div className="rounded-xl border border-[#D9E6F7] bg-[#F8FBFF] p-4">
+          <div className="rounded-xl border border-[#D9E6F7] bg-white p-4">
             <p className="text-xs font-semibold text-[#17365D]">{selected.label}</p>
             <p className="mt-1 text-[11px] text-[#64748B]">Partner claim progress and saved details. Stage modifications are controlled by the Customer and Operations workflows.</p>
             {selectedDetails.length ? selectedDetails.map((row, i) => (
@@ -408,7 +408,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
           </div>
         ) : null}
         {stageEditable ? (
-          <form action={formAction} onInvalidCapture={(event) => { event.preventDefault(); setErrorNotice("Please complete all required fields before saving this stage."); }} className={`mt-3 rounded-xl border border-[#D9E6F7] p-3 ${selected.key === "work_approval" ? "bg-white" : "bg-[#F8FBFF]"}`}>
+          <form action={formAction} onInvalidCapture={(event) => { event.preventDefault(); setErrorNotice("Please complete all required fields before saving this stage."); }} className="mt-3 rounded-xl border border-[#D9E6F7] bg-white p-3">
             <input type="hidden" name="milestone_key" value={selected.key} />
             <input type="hidden" name="next_status" value={stageTarget ?? ""} />
             <input type="hidden" name="save_only" value={partnerManagedJourney || selectedSaveOnly ? "true" : "false"} />

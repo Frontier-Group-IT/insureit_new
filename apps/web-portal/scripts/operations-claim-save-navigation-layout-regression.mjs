@@ -88,3 +88,10 @@ assert.ok(stages.includes('selected.key === "payment_encashment" ? "min-h-8 whit
 assert.ok(stages.includes('selected.key === "payment_encashment" ? "block min-h-8 whitespace-normal break-words leading-4"'), "Date and amount headings align over inputs.");
 assert.doesNotMatch(stages,/selected.key === "payment_encashment" \? "w-full overflow-x-auto/, "Payment stage must not enable scrolling.");
 assert.doesNotMatch(stages,/min-w-\[1120px\]/, "Payment stage must not force a 1120px minimum width.");
+
+// All nine Operations Claim Journey stages use white primary form/detail backgrounds.
+assert.ok(stages.includes('className="mt-3 rounded-xl border border-[#D9E6F7] bg-white p-3"'));
+assert.ok(stages.includes('className="rounded-xl border border-[#D9E6F7] bg-white p-4"'));
+assert.ok(stages.includes('operations-claim-motion-nav grid grid-cols-9'));
+assert.ok(stages.includes('bg-[#EAF2FF] p-2'), "Keep stage-navigation blue.");
+assert.doesNotMatch(stages,/bg-\[#F8FBFF\] p-[34]/);
