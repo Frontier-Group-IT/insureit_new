@@ -280,7 +280,7 @@ export async function IntermediaryRegister({
     });
     return (
       <AppShell title={pageTitle}>
-        <PartnerRegisterClient rows={clientRows} canPermanentDelete={profile.role === "it_super_user"} initialSearch={search} initialStatus={accountStatus} success={success} error={error} loadError={Boolean(loadError || partnerBusinessError)} initialDateFrom={periodFrom ?? ""} initialDateTo={periodTo ?? ""} mtdFrom={defaultPeriodFrom ?? ""} mtdTo={defaultPeriodTo ?? ""} />
+        <PartnerRegisterClient rows={clientRows} canPermanentDelete={profile.role === "it_super_user"} initialSearch={search} initialStatus={accountStatus} success={success} error={error} loadError={Boolean(loadError || partnerBusinessError)} />
       </AppShell>
     );
   }
