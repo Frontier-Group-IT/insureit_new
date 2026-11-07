@@ -9,13 +9,17 @@ const choice = read("../components/customer-portal/customer-claim-boolean-choice
 const submit = read("../components/customer-portal/customer-claim-stage-submit.tsx");
 const stageFields = read("../lib/customer-claim-stage-fields.ts");
 
-// Both views have five equally-sized columns and a descriptive Stage 4 heading.
+// Both forms keep five columns; Operations removes only the redundant Stage 4 form header.
 for (const source of [operations, customer]) {
-  assert.ok(source.includes('Stage 4 — Work Approval'));
-  assert.ok(source.includes('Record insurance approval and surveyor details'));
-  assert.ok(source.includes('4 of 9'));
   assert.ok(source.includes('min-w-[900px] !grid-cols-5 items-start'));
 }
+for (const text of ['Stage 4 — Work Approval', 'Record insurance approval and surveyor details', '4 of 9']) {
+  assert.ok(!operations.includes(text), 'Operations should omit redundant Work Approval heading content: ' + text);
+  assert.ok(customer.includes(text), 'Customer heading is unchanged: ' + text);
+}
+assert.ok(operations.includes('selected.key === "work_approval" ? "mt-3 flex min-h-10 flex-wrap items-center justify-end gap-2"'), 'Work Approval footer has no divider.');
+assert.ok(operations.includes('selected.key === "work_approval" ? "bg-white" : "bg-[#F8FBFF]"'), 'Only Work Approval uses white while other Operations stages retain the light-blue form background.');
+assert.ok(operations.includes('selected.key === "work_approval" ? "Save & Continue"'), 'Keep Work Approval Save & Continue.');
 for (const key of ['approval_received_date', 'cashless', 'surveyor_name', 'surveyor_phone', 'surveyor_email']) {
   assert.ok(operations.includes('name: "' + key + '"'), 'Operations missing ' + key);
   assert.ok(stageFields.includes('key: "' + key + '"'), 'Customer missing ' + key);

@@ -10,6 +10,6 @@ assert.match(stages, /vehicleDeliveryCompact=\{selected\.key === "vehicle_delive
 assert.match(stages, /vehicleDeliveryCompact \? "h-\[34px\] max-w-full px-3"/, "Vehicle Delivery date must be 34px tall");
 assert.match(stages, /selected\.key === "payment_encashment" \|\| selected\.key === "delivery_order" \|\| selected\.key === "vehicle_delivery" \|\| selected\.key === "work_approval" \? "" : "max-w-\[254px\]"/, "Vehicle Received choices use full left column.");
 assert.match(stages, /selected\.key === "vehicle_delivery" \? "lg:grid-cols-2"/, "Vehicle Delivery keeps two equal columns.");
-assert.match(stages, /selected\.key === "spot_status" \|\| selected\.key === "delivery_order" \|\| selected\.key === "vehicle_delivery" \|\| selected\.key === "payment_encashment" \? "mt-3 flex items-center justify-end gap-2"/, "Vehicle Delivery footer has no divider.");
+assert.match(stages, /selected\.key === "spot_status" \|\| selected\.key === "delivery_order" \|\| selected\.key === "vehicle_delivery" \|\| selected\.key === "payment_encashment" \|\| selected\.key === "work_approval" \? "mt-3 flex min-h-10 flex-wrap items-center justify-end gap-2"/, "Vehicle Delivery footer has no divider.");
 assert.match(stages, /label=\{selected\.key === "work_approval" \? "Save & Continue" : selectedSaveOnly \? "Save Details"/, "Save Details navigation must remain unchanged");
 console.log("Operations Vehicle Delivery 34px compact controls regression passed.");
