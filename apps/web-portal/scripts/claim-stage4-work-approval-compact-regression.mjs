@@ -14,7 +14,7 @@ for (const source of [operations, customer]) {
   assert.ok(source.includes('Stage 4 — Work Approval'));
   assert.ok(source.includes('Record insurance approval and surveyor details'));
   assert.ok(source.includes('4 of 9'));
-  assert.ok(source.includes('lg:grid-cols-3 xl:grid-cols-5 lg:items-start'));
+  assert.ok(source.includes('!grid-cols-5 min-w-[900px]'), 'Stage 4 stays in a single five-field row.');
 }
 for (const key of ['approval_received_date', 'cashless', 'surveyor_name', 'surveyor_phone', 'surveyor_email']) {
   assert.ok(operations.includes('name: "' + key + '"'), 'Operations missing ' + key);
@@ -29,7 +29,7 @@ assert.ok(stageFields.includes('label: "Surveyor Email", type: "email", optional
 assert.ok(operations.includes('flex h-[34px] cursor-pointer'));
 assert.ok(operations.includes('vehicleDeliveryCompact ? "h-[34px] max-w-[335px] px-3"'));
 assert.ok(operations.includes('rounded-[4px]'));
-assert.ok(customer.includes('className="mt-1 h-[34px] w-full rounded-[4px]'));
+assert.ok(customer.includes('className="mt-1 block h-[34px] min-w-0 w-full rounded-[4px]'));
 assert.ok(customer.includes('<CustomerClaimBooleanChoice compact name={field.key}'));
 assert.ok(choice.includes('h-[34px] rounded-[4px]'));
 assert.ok(operations.includes('onClick={(event) => event.currentTarget.showPicker?.()}'));
@@ -39,6 +39,9 @@ assert.ok(customer.includes('required={!field.optional}'));
 assert.ok(customer.includes('mt-4 flex min-h-10 flex-wrap items-center justify-end gap-2 border-t'), "Actions retain dedicated wrapping footer space.");
 assert.ok(submit.includes('variant === "continue" ? "min-w-[148px]"'));
 assert.ok(operations.includes('selected.key === "work_approval" ? "Save & Continue"'));
+assert.ok(operations.includes('selected.key === "billing" || selected.key === "work_approval" ? "flex flex-col"'), 'Work Approval labels sit above controls.');
+assert.ok(customer.includes('selected.key==="billing"||selected.key==="work_approval"?"flex flex-col"'), 'Customer Work Approval labels sit above controls.');
+assert.ok(customer.includes('overflow-x-auto') && operations.includes('overflow-x-auto'), 'Narrow-screen fields scroll rather than overlap.');
 assert.ok(operations.includes('nextStageKey: nextStageKeyFor(milestoneKey)'));
 
 // Completed Stage 4 edits must advance to Stage 5, while all other completed
