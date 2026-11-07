@@ -1,4 +1,5 @@
 import type { PartnerSessionContext } from '@/lib/partner-session';
+import { supabase } from '@/lib/supabase';
 
 export type PermissionLevel = 'none' | 'view' | 'edit' | 'approve';
 export type PartnerPermissionMap = Record<string, PermissionLevel>;
@@ -35,4 +36,32 @@ export function requiredPartnerRoutePermission(pathname: string): {
   if (/^\/business(?:\/|$)|^\/business-report(?:\/|$)|^\/insurers(?:\/|$)|^\/impact(?:\/|$)|^\/pulse(?:\/|$)/.test(pathnameNormalized)) return { capability: 'view_dashboard', minimum: 'view' };
   if (/^\/search(?:\/|$)/.test(pathnameNormalized)) return { capability: 'view_dashboard', minimum: 'view' };
   return null;
+}
+
+/** Recheck current effective access before writes; never trust stale navigation state. */
+export async function requirePartnerWritePermission(
+  capability: string,
+  minimum: Exclude<PermissionLevel, 'none'> = 'edit',
+  allowPartnerScoped = false,
+): Promise<void> {
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+  if (!token) throw new Error('Sign in again to continue.');
+  const url = (process.env.EXPO_PUBLIC_PORTAL_URL || 'https://portal.insureit.in').replace(/\/$/, '');
+  const response = await fetch(`${url}/api/partner/effective-permissions`, {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: 'no-store',
+  });
+  if (!response.ok) throw new Error('Permission verification failed. Refresh your session and retry.');
+  const { actor_kind, capabilities } = await response.json() as {
+    actor_kind?: string;
+    capabilities?: PartnerPermissionMap;
+  };
+  if (actor_kind === 'intermediary' && allowPartnerScoped) {
+    // Existing Partner-scoped write RPCs still enforce business ownership.
+    if (rank[capabilities?.view_claims ?? 'none'] >= rank.view) return;
+  }
+  if (!capabilities || rank[capabilities[capability] ?? 'none'] < rank[minimum]) {
+    throw new Error('Your website permission does not allow this action.');
+  }
 }
