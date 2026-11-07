@@ -27,7 +27,7 @@ assert.ok(stageFields.includes('label: "Surveyor Email", type: "email", optional
 
 // Both portals use 34px rectangular fields while keeping the claim workflow unchanged.
 assert.ok(operations.includes('flex h-[34px] cursor-pointer'));
-assert.ok(operations.includes('vehicleDeliveryCompact ? "h-[34px] max-w-[335px] px-3"'));
+assert.ok(operations.includes('vehicleDeliveryCompact ? "h-[34px] max-w-full px-3"'));
 assert.ok(operations.includes('rounded-[4px]'));
 assert.ok(customer.includes('className="mt-1 h-[34px] w-full rounded-[4px]'));
 assert.ok(customer.includes('<CustomerClaimBooleanChoice compact name={field.key}'));
