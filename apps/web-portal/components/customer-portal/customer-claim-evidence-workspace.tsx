@@ -24,7 +24,7 @@ documents:CustomerClaimFile[];claimId:string;accountId:string;stage:string;retur
   return <section className="overflow-hidden rounded-2xl border border-[#D9E3F0] bg-white">
     <header className="border-b border-[#D9E3F0] px-4 py-3"><h2 className="text-[17px] font-semibold text-[#071D49]">Claim Documents</h2></header>
     <div className="grid gap-3 p-3 md:grid-cols-2 xl:grid-cols-3">
-      {definitions.filter(item=>!onlyUploaded||documents.some(doc=>match(doc.document_type,item.type))).map(item=><CustomerClaimCompactDocument key={item.type} label={item.label} type={item.type} accept={item.accept} documents={documents.filter(doc=>match(doc.document_type,item.type))} claimId={claimId} accountId={accountId} stage={stage} returnToSpotIntimation={returnToSpotIntimation} allowUpload={allowUpload && item.type !== "Incident Voice Note"} canReusePolicyCopy={item.type === "Insurance Copy" && canReusePolicyCopy}/>)}
+      {definitions.filter(item=>!onlyUploaded||documents.some(doc=>match(doc.document_type,item.type))).map(item=><CustomerClaimCompactDocument key={item.type} label={item.label} type={item.type} accept={item.accept} documents={documents.filter(doc=>match(doc.document_type,item.type))} claimId={claimId} accountId={accountId} stage={stage} returnToSpotIntimation={returnToSpotIntimation} allowUpload={allowUpload && item.type !== "Incident Voice Note"} canReusePolicyCopy={item.type === "Insurance Copy" && canReusePolicyCopy} showFilePreview={false}/>)}
     </div>
     {(allowUpload || documents.length > 0) ? <div className="mx-3 mb-3">
       <CustomerClaimMultipleUpload documents={documents} claimId={claimId} accountId={accountId} stage={stage} allowUpload={allowUpload} returnToSpotIntimation={returnToSpotIntimation}/>
