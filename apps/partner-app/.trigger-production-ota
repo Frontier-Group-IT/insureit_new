@@ -1,7 +1,7 @@
 Partner production OTA trigger
-release=partner-policy-intake-resilient-pagination-pr-4111
-merged_commit=1d90cec14aefe3b9b58cc8e0556c89efc6a1d5c7
-backend_deployed=manual-vercel-production-run-42220487990
+release=partner-policy-intake-load-more-pr-4118
+merged_commit=07faa39314de949d58b37ff8d487e653a811f5ed
 channel=production
 runtime=0.2.0
 requested=2026-11-07
+source=verified-merge-pr-4118
