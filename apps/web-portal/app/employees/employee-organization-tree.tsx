@@ -5,6 +5,8 @@ import Link from "next/link";
 import { Building2, ChevronDown, ChevronRight, Handshake, LocateFixed, Maximize2, Minus, Plus, UserRound, Users } from "lucide-react";
 import type { EmployeeRow } from "./employee-forms";
 import { EmployeeOrgchartTeamFocus } from "./employee-orgchart-team-focus";
+import { EmployeeOrgchartOverview } from "./employee-orgchart-overview";
+import { EmployeeOrgchartDetails } from "./employee-orgchart-details";
 
 export type DirectoryPartner = {
   id: string;
@@ -76,7 +78,8 @@ function initials(name: string) {
 export function EmployeeOrganizationTree({ employees, partners, query }: { employees: EmployeeRow[]; partners: DirectoryPartner[]; query: string }) {
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set(employees.filter((employee) => !employee.reporting_manager_id || !employees.some((manager) => manager.id === employee.reporting_manager_id)).map((employee) => `employee:${employee.id}`)));
   const [showPartners, setShowPartners] = useState(true);
-  const [mode, setMode] = useState<"team" | "full">("team");
+  const [mode, setMode] = useState<"overview" | "team" | "full">("team");
+  const [detailsId, setDetailsId] = useState("");
   const [department, setDepartment] = useState("");
   const [focus, setFocus] = useState("");
   const [zoom, setZoom] = useState(1);
@@ -97,6 +100,8 @@ export function EmployeeOrganizationTree({ employees, partners, query }: { emplo
   }, []);
 
   const employeeById = useMemo(() => new Map(employees.map((employee) => [employee.id, employee])), [employees]);
+  const closeDetails = useCallback(() => setDetailsId(""), []);
+  const navigateToEmployee = useCallback((id: string) => { setDetailsId(""); setFocus(id); setMode("team"); }, []);
   const reportsByManager = useMemo(() => {
     const result = new Map<string, EmployeeRow[]>();
     for (const employee of employees) {
@@ -191,6 +196,9 @@ export function EmployeeOrganizationTree({ employees, partners, query }: { emplo
 
   const graph = useMemo(() => layoutForest(chartRoots), [chartRoots]);
   const placed = useMemo(() => new Map(graph.positions.map((position) => [position.node.key, position])), [graph]);
+  const selectedDetails = detailsId ? employeeById.get(detailsId) ?? null : null;
+  const detailReports = selectedDetails ? reportsByManager.get(selectedDetails.id) ?? [] : [];
+  const detailPartners = selectedDetails && showPartners ? partnersByEmployee.get(selectedDetails.id) ?? [] : [];
   const fit = useCallback(() => {
     // Never shrink employee names to illegibility just to fit very wide branches.
     const scale = Math.min(1.1, Math.max(0.72, Math.min((viewport.width - 48) / graph.width, (viewport.height - 36) / graph.height)));
@@ -234,7 +242,7 @@ export function EmployeeOrganizationTree({ employees, partners, query }: { emplo
 
   return <div className="relative bg-[#FBFAF7]">
     <div className="relative z-10 flex flex-wrap items-center justify-between gap-2 border-b border-[#E6E4DE] bg-[#FBFAF7] px-3 py-2 sm:px-4">
-      <div className="flex flex-wrap items-center gap-2"><div className="flex items-center gap-2 text-[10px] text-[#758092]"><Users className="h-3.5 w-3.5" /><span>Reporting hierarchy</span><span className="text-[#C4C9D1]">/</span><span>{employees.length} employees</span></div><div className="inline-flex rounded-md border border-[#D9E2EC] bg-white p-0.5 text-[10px] font-semibold"><button type="button" onClick={() => setMode("team")} aria-pressed={mode === "team"} className={`rounded px-2.5 py-1.5 ${mode === "team" ? "bg-[#173D71] text-white" : "text-[#57718D]"}`}>Team focus</button><button type="button" onClick={() => setMode("full")} aria-pressed={mode === "full"} className={`rounded px-2.5 py-1.5 ${mode === "full" ? "bg-[#173D71] text-white" : "text-[#57718D]"}`}>Full chart</button></div></div>
+      <div className="flex flex-wrap items-center gap-2"><div className="flex items-center gap-2 text-[10px] text-[#758092]"><Users className="h-3.5 w-3.5" /><span>Reporting hierarchy</span><span className="text-[#C4C9D1]">/</span><span>{employees.length} employees</span></div><div className="inline-flex rounded-md border border-[#D9E2EC] bg-white p-0.5 text-[10px] font-semibold"><button type="button" onClick={() => setMode("overview")} aria-pressed={mode === "overview"} className={`rounded px-2.5 py-1.5 ${mode === "overview" ? "bg-[#173D71] text-white" : "text-[#57718D]"}`}>Overview</button><button type="button" onClick={() => setMode("team")} aria-pressed={mode === "team"} className={`rounded px-2.5 py-1.5 ${mode === "team" ? "bg-[#173D71] text-white" : "text-[#57718D]"}`}>Team focus</button><button type="button" onClick={() => setMode("full")} aria-pressed={mode === "full"} className={`rounded px-2.5 py-1.5 ${mode === "full" ? "bg-[#173D71] text-white" : "text-[#57718D]"}`}>Full chart</button></div></div>
       <div className="flex flex-wrap items-center gap-1.5">
         <label className="sr-only" htmlFor="orgchart-department">Department</label>
         <select id="orgchart-department" value={department} onChange={(event) => { setDepartment(event.target.value); setFocus(""); }} className="h-8 min-w-[155px] rounded-md border border-[#DBE1E9] bg-white px-2 text-[10.5px] text-[#34445E] shadow-sm">
@@ -248,7 +256,8 @@ export function EmployeeOrganizationTree({ employees, partners, query }: { emplo
         {mode === "full" ? <button type="button" onClick={() => { setExpanded(new Set()); setFocus(""); }} className="h-8 rounded-md border border-[#DBE1E9] bg-white px-2 text-[10px] text-[#40546E] hover:bg-[#EEF4FF]">Collapse all</button> : null}
       </div>
     </div>
-    <div className={mode === "team" ? "block" : "hidden"}><EmployeeOrgchartTeamFocus employees={employees} partners={partners} query={query} department={department} showPartners={showPartners} selectedId={focus} onSelect={setFocus} /></div>
+    {mode === "overview" ? <EmployeeOrgchartOverview employees={employees} partners={showPartners ? partners : []} department={department} query={query} onFocus={navigateToEmployee} /> : null}
+    {mode === "team" ? <EmployeeOrgchartTeamFocus employees={employees} partners={partners} query={query} department={department} showPartners={showPartners} selectedId={focus} onSelect={setFocus} onDetails={setDetailsId} /> : null}
     <div ref={canvasRef} onWheel={onWheel} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp} onPointerCancel={pointerUp} onDragStart={(event) => event.preventDefault()} className={`relative h-[min(74vh,780px)] min-h-[470px] w-full touch-none select-none overflow-hidden bg-[#FAF9F6] ${mode === "full" ? "block" : "hidden"}`} aria-label="Interactive organization chart">
       <div className="absolute right-3 top-3 z-20 flex flex-col gap-1 rounded-md border border-[#E1E2E6] bg-white/95 p-1 shadow-sm">
         <button type="button" title="Zoom in" aria-label="Zoom in" onClick={() => changeZoom(zoom + 0.15)} className="rounded p-1.5 text-[#62718A] hover:bg-[#EDF3FA]"><Plus className="h-4 w-4" /></button>
@@ -256,6 +265,18 @@ export function EmployeeOrganizationTree({ employees, partners, query }: { emplo
         <button type="button" title="Fit chart" aria-label="Fit chart" onClick={fit} className="rounded p-1.5 text-[#62718A] hover:bg-[#EDF3FA]"><Maximize2 className="h-4 w-4" /></button>
         <button type="button" title="Full organization" aria-label="Full organization" onClick={() => setFocus("")} className="rounded p-1.5 text-[#62718A] hover:bg-[#EDF3FA]"><LocateFixed className="h-4 w-4" /></button>
       </div>
+      {graph.positions.length > 0 ? <div className="absolute bottom-3 right-3 z-20 w-[168px] rounded-lg border border-[#D8E2ED] bg-white/95 p-2 shadow-md" data-testid="orgchart-mini-map">
+        <div className="mb-1 text-[9px] font-semibold uppercase tracking-wide text-[#7790A9]">Overview map · click to move</div>
+        <svg viewBox={`0 0 ${graph.width} ${graph.height}`} role="img" aria-label="Mini-map of expanded reporting tree" className="h-[92px] w-full cursor-crosshair rounded bg-[#F3F6FA]" onClick={(event) => {
+          const bounds = event.currentTarget.getBoundingClientRect();
+          const x = (event.clientX - bounds.left) / bounds.width * graph.width;
+          const y = (event.clientY - bounds.top) / bounds.height * graph.height;
+          setOffset({ x: viewport.width / 2 - x * zoom, y: viewport.height / 2 - y * zoom });
+        }}>
+          {graph.positions.map(({ node, x, y }) => <rect key={node.key} x={x - CARD_W / 2} y={y - CARD_H / 2} width={CARD_W} height={CARD_H} rx="15" fill={node.type === "employee" ? "#79A5D9" : "#83C4AA"} />)}
+          <rect x={Math.max(0, -offset.x / zoom)} y={Math.max(0, -offset.y / zoom)} width={viewport.width / zoom} height={viewport.height / zoom} fill="none" stroke="#225897" strokeWidth={Math.max(3, graph.width / 400)} strokeDasharray="12 8" />
+        </svg>
+      </div> : null}
       <div className="pointer-events-none absolute bottom-3 left-3 z-10 rounded bg-white/85 px-2 py-1 text-[10px] text-[#778393] shadow-sm">Drag to pan · Ctrl + scroll to zoom · {Math.round(zoom * 100)}%</div>
       {chartRoots.length === 0 ? <div className="flex h-full items-center justify-center text-[12px] text-[#66768C]">No employees match these filters.</div> : (
         <div className="absolute left-0 top-0 origin-top-left" style={{ width: graph.width, height: graph.height, transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})` }}>
@@ -282,6 +303,7 @@ export function EmployeeOrganizationTree({ employees, partners, query }: { emplo
               </div>
               <div className="flex h-7 w-7 items-center justify-center rounded-full border border-white bg-[#E5EFFE] text-[10px] font-bold text-[#315C91] shadow-sm">{isEmployee ? initials(node.label) : isGroup ? <Users className="h-3.5 w-3.5" /> : isPartner ? <Handshake className="h-3.5 w-3.5" /> : <Building2 className="h-3.5 w-3.5" />}</div>
               {node.partner ? <Link href={`/intermediaries/applications/${node.partner.applicationId}`} title={node.label} className="w-full truncate text-[10px] font-semibold text-[#183A60] hover:underline">{node.label}</Link> : <button type="button" title={node.label} onClick={() => node.employee ? setFocus(node.employee.id) : toggle(node.key)} className="w-full truncate text-[10px] font-semibold text-[#183A60] hover:underline">{node.label}</button>}
+              {node.employee ? <button type="button" onClick={() => setDetailsId(node.employee!.id)} className="absolute right-1 top-1 rounded bg-white/90 px-1 text-[9px] font-semibold text-[#4272A6] hover:bg-[#E5EFFB]" aria-label={`View details for ${node.label}`}>Info</button> : null}
               {hasChildren ? <button type="button" onClick={() => toggle(node.key)} aria-expanded={expandedNode || (isEmployee && Boolean(search || department))} aria-label={`Toggle ${node.label} descendants`} className="absolute -bottom-3 left-1/2 z-10 flex h-6 min-w-8 -translate-x-1/2 items-center justify-center gap-0.5 rounded-full border-2 border-[#FAF9F6] bg-[#477CD5] px-1 text-[9px] font-semibold text-white shadow-sm">{expandedNode ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}{node.count}</button> : null}
               <span className="pointer-events-none absolute -top-2 left-1/2 h-3 w-3 -translate-x-1/2 rounded-full border border-[#CCD7E4] bg-white" />
             </article>;
@@ -289,5 +311,6 @@ export function EmployeeOrganizationTree({ employees, partners, query }: { emplo
         </div>
       )}
     </div>
+    <EmployeeOrgchartDetails employee={selectedDetails} manager={selectedDetails?.reporting_manager_id ? employeeById.get(selectedDetails.reporting_manager_id) : undefined} reports={detailReports} partners={detailPartners} onClose={closeDetails} onFocus={navigateToEmployee} />
   </div>;
 }
