@@ -225,6 +225,46 @@ export function PartnerRegisterClient({
             <option value="">All RMs</option>
             {rmOptions.map((rm) => <option key={rm} value={rm}>{rm}</option>)}
           </select>
+          <div className="relative flex items-center gap-1">
+            <select aria-label="Business period" value={periodSelection}
+              onChange={(event) => selectPeriod(event.target.value as BusinessPeriod)}
+              className="h-9 w-[142px] rounded-lg border border-[#D8E1EC] bg-white px-2.5 text-[9.5px] font-semibold text-[#26374F] outline-none focus:border-[#315FEA]">
+              <option value="all">All</option>
+              <option value="mtd">MTD</option>
+              <option value="last_month">Last Month</option>
+              <option value="custom">Custom</option>
+            </select>
+            {periodSelection === "custom" && !customOpen ? (
+              <button type="button" onClick={() => setCustomOpen(true)}
+                className="h-9 rounded-lg border border-[#D8E1EC] bg-white px-2 text-[9px] font-semibold text-[#315FEA] hover:bg-[#F2F6FF]">
+                Dates
+              </button>
+            ) : null}
+            {customOpen ? (
+              <div className="absolute right-0 top-full z-30 mt-1 w-[290px] rounded-xl border border-[#D8E1EC] bg-white p-3 shadow-lg">
+                <p className="mb-2 text-[10px] font-semibold text-[#17203A]">Custom business dates</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <label className="text-[9px] font-medium text-[#526178]">From
+                    <input type="date" aria-label="Business from date" value={customFrom}
+                      onChange={(event) => { setCustomFrom(event.target.value); setCustomError(""); }}
+                      className="mt-1 block h-9 w-full rounded-lg border border-[#D8E1EC] bg-white px-1 text-[10px] text-[#26374F]" />
+                  </label>
+                  <label className="text-[9px] font-medium text-[#526178]">To
+                    <input type="date" aria-label="Business to date" value={customTo}
+                      onChange={(event) => { setCustomTo(event.target.value); setCustomError(""); }}
+                      className="mt-1 block h-9 w-full rounded-lg border border-[#D8E1EC] bg-white px-1 text-[10px] text-[#26374F]" />
+                  </label>
+                </div>
+                {customError ? <p role="alert" className="mt-2 text-[10px] text-red-700">{customError}</p> : null}
+                <div className="mt-3 flex justify-end gap-2">
+                  <button type="button" onClick={() => { setCustomOpen(false); setPeriodSelection(initialPeriod); setCustomError(""); }}
+                    className="h-8 rounded-lg border border-[#D8E1EC] px-3 text-[10px] font-semibold text-[#526178]">Cancel</button>
+                  <button type="button" onClick={applyCustomPeriod}
+                    className="h-8 rounded-lg bg-[#17365F] px-3 text-[10px] font-semibold text-white">Apply</button>
+                </div>
+              </div>
+            ) : null}
+          </div>
           {extraFilterCount ? <button type="button" onClick={clearExtraFilters} className="h-9 rounded-lg px-2.5 text-[8.5px] font-bold text-[#526178] hover:bg-[#F1F5F9] hover:text-[#17365D]">Clear filters ({extraFilterCount})</button> : null}
           <div className="ml-auto flex flex-wrap items-center justify-end gap-1.5 whitespace-nowrap text-[9.5px] font-semibold">
             <FilterButton label="All" count={scopedRows.length} active={selectedFilter === "all"} onClick={() => selectFilter("all")} />
