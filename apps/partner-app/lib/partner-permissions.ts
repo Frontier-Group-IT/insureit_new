@@ -16,6 +16,12 @@ export function canPartnerAccess(
 }
 
 /** Partner submitter operations are distinct from internal claim-processing authority. */
+export function canPartnerSearch(context: PartnerSessionContext | null | undefined) {
+  return canPartnerAccess(context, 'view_customers')
+    || canPartnerAccess(context, 'view_policies')
+    || canPartnerAccess(context, 'view_claims');
+}
+
 export function canPartnerStartClaim(context: PartnerSessionContext | null | undefined) {
   return context?.identity.actor_kind === 'intermediary'
     ? canPartnerAccess(context, 'view_claims')
@@ -37,7 +43,7 @@ export function requiredPartnerRoutePermission(pathname: string): {
   if (/^\/claims(?:\/|$)|^\/claim(?:\/|$)/.test(pathnameNormalized)) return { capability: 'view_claims', minimum: 'view' };
   if (/^\/business-report(?:\/|$)|^\/insurers(?:\/|$)/.test(pathnameNormalized)) return { capability: 'view_reports', minimum: 'view' };
   if (/^\/business(?:\/|$)|^\/impact(?:\/|$)|^\/pulse(?:\/|$)/.test(pathnameNormalized)) return { capability: 'view_dashboard', minimum: 'view' };
-  if (/^\/search(?:\/|$)/.test(pathnameNormalized)) return { capability: 'view_dashboard', minimum: 'view' };
+  // Cross-module search is checked against each individual View grant, not Dashboard.
   return null;
 }
 
