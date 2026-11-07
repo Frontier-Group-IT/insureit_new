@@ -408,7 +408,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
           </div>
         ) : null}
         {stageEditable ? (
-          <form action={formAction} onInvalidCapture={(event) => { event.preventDefault(); setErrorNotice("Please complete all required fields before saving this stage."); }} className="mt-3 rounded-xl border border-[#D9E6F7] bg-[#F8FBFF] p-3">
+          <form action={formAction} onInvalidCapture={(event) => { event.preventDefault(); setErrorNotice("Please complete all required fields before saving this stage."); }} className={`mt-3 rounded-xl border border-[#D9E6F7] p-3 ${selected.key === "work_approval" ? "bg-white" : "bg-[#F8FBFF]"}`}>
             <input type="hidden" name="milestone_key" value={selected.key} />
             <input type="hidden" name="next_status" value={stageTarget ?? ""} />
             <input type="hidden" name="save_only" value={partnerManagedJourney || selectedSaveOnly ? "true" : "false"} />
