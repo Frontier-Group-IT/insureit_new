@@ -9,11 +9,11 @@ import { createSupabaseBrowserClient } from "@/lib/auth";
 import { VerifyDocumentButton } from "@/components/spot-survey/verify-buttons";
 
 export type WorkshopBillDocument = { id: string; file_name?: string | null; verification_status?: string | null };
-type Props = { mode: "customer" | "operations"; claimId: string; accountId?: string; documents: WorkshopBillDocument[]; readonly?: boolean };
+type Props = { mode: "customer" | "operations"; claimId: string; accountId?: string; documents: WorkshopBillDocument[]; readonly?: boolean; compact?: boolean };
 const documentType = "Final Workshop Bill";
 const maxFileSize = 5 * 1024 * 1024;
 
-export function ExternalClaimBillUpload({ mode, claimId, accountId, documents, readonly = false }: Props) {
+export function ExternalClaimBillUpload({ mode, claimId, accountId, documents, readonly = false, compact = false }: Props) {
   const input = useRef<HTMLInputElement>(null);
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -68,17 +68,18 @@ export function ExternalClaimBillUpload({ mode, claimId, accountId, documents, r
     });
   }
 
+  const compactOperations = compact && mode === "operations";
   return <div className="min-w-0 text-left">
-    <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.04em] text-[#5673B0]">Bill Upload</p>
-    <div className="flex min-h-[76px] items-center gap-2 rounded-2xl border-2 border-[#DFE5ED] bg-[#F8FAFD] px-3 py-2">
-      <img src="/assets/customer-claim/stages/billing.png" alt="" className="h-12 w-12 shrink-0 object-contain" />
+    <p className={compactOperations ? "mb-1 text-[9px] font-semibold uppercase leading-4 tracking-[0.01em] text-[#174EA6]" : "mb-1.5 text-[10px] font-semibold uppercase tracking-[0.04em] text-[#5673B0]"}>Bill Upload</p>
+    <div className={compactOperations ? "flex h-[34px] min-w-0 items-center gap-1.5 rounded-md border border-[#D9E3F0] bg-white px-1.5" : "flex min-h-[76px] items-center gap-2 rounded-2xl border-2 border-[#DFE5ED] bg-[#F8FAFD] px-3 py-2"}>
+      <img src="/assets/customer-claim/stages/billing.png" alt="" className={compactOperations ? "h-7 w-7 shrink-0 object-contain" : "h-12 w-12 shrink-0 object-contain"} />
       <div className="min-w-0 flex-1">
-        <p className="text-[12px] font-semibold text-[#102B54]">Upload final workshop bill</p>
-        <p className="text-[10px] text-[#718096]">PDF, JPG, PNG</p>
+        <p className={compactOperations ? "truncate whitespace-nowrap text-[10px] font-semibold text-[#102B54]" : "text-[12px] font-semibold text-[#102B54]"}>Upload final workshop bill</p>
+        {!compactOperations ? <p className="text-[10px] text-[#718096]">PDF, JPG, PNG</p> : null}
       </div>
       {!readonly ? <>
         <input ref={input} type="file" accept=".pdf,.jpg,.jpeg,.png" aria-label="Choose final workshop bill" className="sr-only" onChange={event => selectFile(event.target.files?.[0])} />
-        <button type="button" disabled={pending} onClick={() => input.current?.click()} className="flex shrink-0 items-center gap-1 rounded-xl bg-[#164A9F] px-4 py-3 text-[12px] font-semibold text-white disabled:opacity-50"><UploadCloud className="h-3.5 w-3.5"/>{pending ? "Uploading…" : "Choose File"}</button>
+        <button type="button" disabled={pending} onClick={() => input.current?.click()} className={compactOperations ? "flex h-[26px] shrink-0 items-center gap-1 whitespace-nowrap rounded bg-[#164A9F] px-2 text-[10px] font-semibold text-white disabled:opacity-50" : "flex shrink-0 items-center gap-1 rounded-xl bg-[#164A9F] px-4 py-3 text-[12px] font-semibold text-white disabled:opacity-50"}><UploadCloud className="h-3.5 w-3.5"/>{pending ? "Uploading…" : "Choose File"}</button>
       </> : null}
     </div>
     {message ? <p role="status" className="mt-1 text-[11px] text-[#315B9A]">{message}</p> : null}
