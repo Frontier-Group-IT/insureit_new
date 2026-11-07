@@ -598,16 +598,16 @@ function StageOneForm({ claimId, stage, active, detail, spotDetails, next, accid
   const spotIntimationValue = spotDetails?.spot_intimation_at ?? spotIntimationAt ?? (typeof storedSpotIntimationAt === "string" ? storedSpotIntimationAt : "");
   const groupedFieldNames = new Set(["incident_at", "incident_time", "spot_intimation_at", "spot_intimation_time"]);
   const stageOneLabelClassName = "block h-4 max-sm:h-auto whitespace-nowrap text-[9px] font-semibold uppercase leading-4 tracking-[0.01em] text-[#174EA6] max-sm:whitespace-normal";
-  const groupedInputClassName = "h-full min-w-0 w-full border-0 bg-transparent pl-2 pr-[10%] text-[11px] font-semibold normal-case tracking-normal text-[#071D49] outline-none";
+  const groupedInputClassName = "h-full min-w-0 w-full border-0 bg-transparent pl-1.5 pr-1 text-[11px] font-semibold normal-case tracking-normal text-[#071D49] outline-none";
 
   return (
     <form ref={formRef} id="spot-intimation-form" action={formAction} onInput={preserveDraft} onChange={preserveDraft} onSubmit={onSubmitStart} onInvalidCapture={(event) => { event.preventDefault(); onInvalidField?.("Please complete all required Spot Intimation fields before saving."); }} className="mt-3 overflow-hidden rounded-2xl border border-[#BFD7F6] bg-white shadow-[0_8px_20px_rgba(23,78,166,0.05)]">
       {!standalone ? <><input type="hidden" name="next_status" value={next} /><input type="hidden" name="notes" value={`Operations updated ${active.label} and moved the claim to ${next}.`} /></> : null}
-      <div className="flex items-center gap-3 border-b border-[#DCE9F8] px-4 py-3">
-        <h3 className="text-[16px] font-semibold tracking-[-0.01em] text-[#071D49]">Accident &amp; Spot Intimation Details</h3>
+      <div className="flex items-center gap-2 border-b border-[#DCE9F8] px-3 py-2">
+        <h3 className="text-[14px] font-semibold tracking-[-0.01em] text-[#071D49]">Accident &amp; Spot Intimation Details</h3>
       </div>
-      <div className="p-4">
-        <div className="grid items-start gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-[repeat(5,minmax(0,1fr))]">
+      <div className="p-3">
+        <div className="grid min-w-0 items-start gap-2 sm:grid-cols-2 lg:grid-cols-3 min-[1440px]:grid-cols-5">
           <fieldset className="min-w-0">
             <legend className={stageOneLabelClassName}>Accident date &amp; time<span className="ml-1 text-rose-600">*</span></legend>
             <div className="mt-1.5 grid h-[34px] w-full grid-cols-[1.15fr_0.85fr] overflow-hidden rounded-[4px] border border-[#CEDBEC] bg-white focus-within:border-[#2F80ED]">
