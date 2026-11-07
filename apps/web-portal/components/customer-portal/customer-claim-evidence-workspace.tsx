@@ -19,15 +19,15 @@ function match(type:string, expected:string) {
 export function CustomerClaimEvidenceWorkspace({documents,claimId,accountId,stage,returnToSpotIntimation=false,allowUpload=true,onlyUploaded=false,canReusePolicyCopy=false}:{
 documents:CustomerClaimFile[];claimId:string;accountId:string;stage:string;returnToSpotIntimation?:boolean;allowUpload?:boolean;onlyUploaded?:boolean;canReusePolicyCopy?:boolean
 }) {
-  // Existing bulk uploads retain the original document_type for Operations verification.
-  // Only presentation changes: both editable and completed views share this file list.
+  // Bulk uploads are stored as Other Document; category-specific uploads stay in their own cards.
+  const multipleDocuments = documents.filter(doc => normalize(doc.document_type) === "otherdocument");
   return <section className="overflow-hidden rounded-2xl border border-[#D9E3F0] bg-white">
     <header className="border-b border-[#D9E3F0] px-4 py-3"><h2 className="text-[17px] font-semibold text-[#071D49]">Claim Documents</h2></header>
     <div className="grid gap-3 p-3 md:grid-cols-2 xl:grid-cols-3">
-      {definitions.filter(item=>!onlyUploaded||documents.some(doc=>match(doc.document_type,item.type))).map(item=><CustomerClaimCompactDocument key={item.type} label={item.label} type={item.type} accept={item.accept} documents={documents.filter(doc=>match(doc.document_type,item.type))} claimId={claimId} accountId={accountId} stage={stage} returnToSpotIntimation={returnToSpotIntimation} allowUpload={allowUpload && item.type !== "Incident Voice Note"} canReusePolicyCopy={item.type === "Insurance Copy" && canReusePolicyCopy} showFilePreview={false}/>)}
+      {definitions.filter(item=>!onlyUploaded||documents.some(doc=>match(doc.document_type,item.type))).map(item=><CustomerClaimCompactDocument key={item.type} label={item.label} type={item.type} accept={item.accept} documents={documents.filter(doc=>match(doc.document_type,item.type))} claimId={claimId} accountId={accountId} stage={stage} returnToSpotIntimation={returnToSpotIntimation} allowUpload={allowUpload && item.type !== "Incident Voice Note"} canReusePolicyCopy={item.type === "Insurance Copy" && canReusePolicyCopy}/>)}
     </div>
-    {(allowUpload || documents.length > 0) ? <div className="mx-3 mb-3">
-      <CustomerClaimMultipleUpload documents={documents} claimId={claimId} accountId={accountId} stage={stage} allowUpload={allowUpload} returnToSpotIntimation={returnToSpotIntimation}/>
+    {(allowUpload || multipleDocuments.length > 0) ? <div className="mx-3 mb-3">
+      <CustomerClaimMultipleUpload documents={multipleDocuments} claimId={claimId} accountId={accountId} stage={stage} allowUpload={allowUpload} returnToSpotIntimation={returnToSpotIntimation}/>
     </div> : null}
   </section>;
 }

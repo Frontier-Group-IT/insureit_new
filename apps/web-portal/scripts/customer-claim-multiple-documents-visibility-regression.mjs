@@ -10,13 +10,14 @@ const stagePage = read("../app/customer/(protected)/claims/[id]/stage/[stage]/pa
 
 assert.doesNotMatch(workspace, /label:"Other Documents",type:"Other Document"/, "No redundant Other Documents card");
 for (const name of ["Accident Photo","RC Copy","Insurance Copy","Driver Licence","GR / Load Bill","Accident Video"]) assert.ok(workspace.includes('label:"'+name+'"'), "Keep individual "+name+" card");
-assert.match(workspace, /<CustomerClaimMultipleUpload documents=\{documents\}/, "Consolidate all claim documents in the dashed upload area");
+assert.match(workspace, /<CustomerClaimMultipleUpload documents=\{multipleDocuments\}/, "Only Other Document bulk uploads belong in the dashed area");
 assert.doesNotMatch(workspace, /<CustomerClaimMultipleFiles/, "Do not render a separate uploaded-documents card");
-assert.match(workspace, /showFilePreview=\{false\}/, "Individual category cards must not duplicate uploaded filenames.");
-assert.match(workspace, /\(allowUpload \|\| documents\.length > 0\)/, "Show all uploaded files in completed read-only stages");
+assert.doesNotMatch(workspace, /showFilePreview=\{false\}/, "Category cards show their own uploaded filenames.");
+assert.match(workspace, /\(allowUpload \|\| multipleDocuments\.length > 0\)/, "Show bulk files on completed read-only stages even without upload action");
 assert.match(workspace, /allowUpload=\{allowUpload\}/, "Only permit upload when editing is allowed");
 assert.match(bulk, /data\.set\("type","Other Document"\)/, "Keep bulk document type for Operations verification");
-assert.match(bulk, /shownDocuments=documents\.filter/, "Consolidated count includes all original document types");
+assert.match(workspace, /multipleDocuments = documents\.filter\(doc => normalize\(doc\.document_type\) === "otherdocument"\)/, "Bulk count excludes RC Copy, Accident Photo, and all other categories");
+assert.match(bulk, /shownDocuments=documents\.filter/, "Count only the prefiltered bulk uploads");
 assert.match(bulk, /shownDocuments\.length===1\?"document":"documents"/, "Document count replaces old help text");
 assert.match(bulk, /shownDocuments\.length\?setExpanded\(v=>!v\):openPicker\(\)/, "Clicking heading expands files or opens picker when empty");
 assert.match(bulk, /<Upload className=/, "Upload action uses icon instead of plus");

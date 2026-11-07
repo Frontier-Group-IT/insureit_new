@@ -13,9 +13,13 @@ const header=read("../components/customer-portal/customer-claim-stage-strip.tsx"
 const spot=read("../app/customer/(protected)/spot-intimation/page.tsx");
 const stage=read("../app/customer/(protected)/claims/[id]/stage/[stage]/page.tsx");
 const completed=read("../components/customer-portal/customer-internal-completed-journey.tsx");
+const compact=read("../components/customer-portal/customer-claim-compact-document.tsx");
+const groups=read("../components/customer-portal/customer-claim-document-groups.tsx");
+const billingUpload=read("../components/claims/external-claim-bill-upload.tsx");
 
 assert.doesNotMatch(evidence,/label:"Incident Voice Note",type:"Incident Voice Note"/, "Voice note must not appear in Claim Documents.");
-assert.match(evidence,/<CustomerClaimMultipleUpload documents=\{documents\}/, "All claim documents must appear in the consolidated dashed upload area.");
+assert.match(evidence,/<CustomerClaimMultipleUpload documents=\{multipleDocuments\}/, "Only bulk-uploaded Other Documents appear in the dashed upload area.");
+assert.match(evidence,/normalize\(doc\.document_type\) === "otherdocument"/, "Categorized attachments stay out of bulk file list.");
 assert.match(bulk,/<CustomerSpotAttachmentDelete accountId=\{accountId\}/, "Bulk rows retain guarded deletion controls.");
 assert.match(bulk,/file\.document_type\.toLowerCase\(\)\.replace/, "Only supported document categories can expose delete.");
 assert.match(voice,/<CustomerClaimSavedVoiceNotes documents=\{documents\}/, "Uploaded recordings belong to voice-note section.");
@@ -41,4 +45,19 @@ assert.match(action,/\.eq\("id", file\.id\)\.eq\("claim_id", claim\.id\)\.eq\("c
 assert.match(action,/\.remove\(\[file\.storage_path\]\)/, "Clean up deleted file from storage.");
 assert.doesNotMatch(action,/createSupabaseAdminClient\(\).*from\("claims"\)\.update/, "No unrelated claim modifications.");
 
+assert.match(compact, /CustomerSpotAttachmentDelete accountId=\{accountId\}/, "Pending category files expose per-file deletion.");
+assert.match(compact, /file\.verification_status === "pending"/, "Only pending category files show a delete button.");
+assert.match(compact, /allowUpload && file\.verification_status/, "Read-only category cards never show delete actions.");
+assert.match(compact, /deletedIds\.includes\(doc\.id\)/, "Category file list and badge count update on delete.");
+assert.match(groups, /allowUpload=\{allowUpload\}/, "Claim Intimation cards inherit stage edit permission.");
+assert.match(billingUpload, /mode === "customer" && !readonly && accountId && file\.verification_status === "pending"/, "Billing only offers delete on editable pending Customer uploads.");
+assert.match(billingUpload, /stage="billing"/, "Billing deletion is checked against its own stage.");
+assert.match(button, /deleteCustomerClaimStageDocument/, "Reused confirmation control calls the scoped stage deletion action.");
+assert.match(action, /export async function deleteCustomerClaimStageDocument/, "Stage files require a separate, server-guarded delete action.");
+assert.match(action, /isExternalCustomerClaim\(claim\)/, "External stage permission cannot be bypassed.");
+assert.match(action, /projection\.current_stage\.key !== stage && !chosen\.completed/, "Stages unavailable for editing cannot delete files.");
+assert.match(action, /file\.verification_status !== "pending"/, "Reviewed files remain protected.");
+assert.match(action, /\.eq\("id", file\.id\)\.eq\("claim_id", claim\.id\)\.eq\("customer_id", account\.id\)/, "Only the exact customer-owned file is deleted.");
+assert.match(action, /\.eq\("document_type", file\.document_type\)\.eq\("verification_status", "pending"\)/, "Operations verification races block deletion.");
+assert.match(action, /type === "finalworkshopbill"/, "Billing deletion is restricted to final workshop bills.");
 console.log("Customer Spot voice-note placement, bulk delete guards, and white header icons passed.");
