@@ -146,7 +146,7 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
       ):(
         <div className="p-4">
           {CUSTOMER_EXTERNAL_STAGE_FIELDS[selected.key] ? (
-            <div className={`grid gap-3 md:grid-cols-2 ${selected.key==="work_approval"||selected.key==="payment_encashment"?"xl:grid-cols-5":selected.key==="repair_ri"||selected.key==="delivery_order"?"xl:grid-cols-3":selected.key==="billing"||selected.key==="vehicle_delivery"?"xl:grid-cols-2":"xl:grid-cols-4"}`}>
+            <div className={`grid gap-3 md:grid-cols-2 ${selected.key==="payment_encashment"?"lg:grid-cols-5":selected.key==="work_approval"?"xl:grid-cols-5":selected.key==="repair_ri"||selected.key==="delivery_order"?"xl:grid-cols-3":selected.key==="billing"||selected.key==="vehicle_delivery"?"xl:grid-cols-2":"xl:grid-cols-4"}`}>
               {CUSTOMER_EXTERNAL_STAGE_FIELDS[selected.key].map(field=>{
                 const value=milestone?.details?.[field.key];
                 const present=value!==undefined&&value!==null&&value!=="";
@@ -173,7 +173,7 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
     </section> : null}
     {editMode && canEditStage ? (
       <CustomerClaimStageDraftForm id="customer-claim-stage-details-form" accountId={account.id} claimId={claim.id} stage={selected.key} className="customer-claim-ref-details mt-2 rounded-2xl border border-[#DCE3EC] bg-white p-4">
-        <div className="mb-3 flex items-center justify-between gap-3 border-b border-[#D9E3F0] pb-3"><div className="flex items-center gap-2"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-[#6F5AF1] to-[#3697D5] text-white"><ClipboardList className="h-4 w-4"/></span><div><h2 className="text-[14px] font-bold text-[#071D49]">{selected.key==="work_approval"?"Stage 4 — Work Approval":"Stage Details"}</h2>{selected.key==="work_approval"?<p className="text-[11px] text-[#64748B]">Record insurance approval and surveyor details</p>:null}</div></div>{selected.key==="work_approval"?<span className="shrink-0 rounded-md bg-[#EAF2FF] px-2 py-1 text-[10px] font-semibold text-[#174EA6]">4 of 9</span>:null}</div><div className={`grid items-start gap-2 sm:grid-cols-2 ${selected.key==="payment_encashment"?"gap-2 lg:grid-cols-3 xl:grid-cols-5 lg:items-start":selected.key==="claim_intimation"||selected.key==="work_approval"?"lg:grid-cols-3 xl:grid-cols-5 lg:items-start":selected.key==="repair_ri"||selected.key==="delivery_order"?"lg:grid-cols-3":selected.key==="billing"?"lg:grid-cols-3":selected.key==="vehicle_delivery"?"lg:grid-cols-2":"lg:grid-cols-3 2xl:grid-cols-4"}`}>
+        <div className="mb-3 flex items-center justify-between gap-3 border-b border-[#D9E3F0] pb-3"><div className="flex items-center gap-2"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-[#6F5AF1] to-[#3697D5] text-white"><ClipboardList className="h-4 w-4"/></span><div><h2 className="text-[14px] font-bold text-[#071D49]">{selected.key==="work_approval"?"Stage 4 — Work Approval":"Stage Details"}</h2>{selected.key==="work_approval"?<p className="text-[11px] text-[#64748B]">Record insurance approval and surveyor details</p>:null}</div></div>{selected.key==="work_approval"?<span className="shrink-0 rounded-md bg-[#EAF2FF] px-2 py-1 text-[10px] font-semibold text-[#174EA6]">4 of 9</span>:null}</div><div className={`grid items-start gap-2 sm:grid-cols-2 ${selected.key==="payment_encashment"?"gap-2 lg:grid-cols-5 lg:items-start":selected.key==="claim_intimation"||selected.key==="work_approval"?"lg:grid-cols-3 xl:grid-cols-5 lg:items-start":selected.key==="repair_ri"||selected.key==="delivery_order"?"lg:grid-cols-3":selected.key==="billing"?"lg:grid-cols-3":selected.key==="vehicle_delivery"?"lg:grid-cols-2":"lg:grid-cols-3 2xl:grid-cols-4"}`}>
         <input type="hidden" name="account" value={account.id}/>
         <input type="hidden" name="claim" value={claim.id}/>
         <input type="hidden" name="stage" value={selected.key}/>
@@ -188,7 +188,7 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
         ))}
         {selected.key==="billing" ? <ExternalClaimBillUpload mode="customer" claimId={claim.id} accountId={account.id} documents={documents.filter(doc=>doc.document_type==="Final Workshop Bill")} /> : null}
         </div>
-        {selected.key!=="claim_intimation"?<div className={"mt-4 flex min-h-10 flex-wrap items-center justify-end gap-2 border-t border-[#D9E3F0] pt-3"}>
+        {selected.key!=="claim_intimation"?<div className={selected.key==="payment_encashment"?"mt-3 flex items-center justify-end gap-2":"mt-4 flex min-h-10 flex-wrap items-center justify-end gap-2 border-t border-[#D9E3F0] pt-3"}>
           <Link href={{pathname:"/customer/claims",query:{account:account.id}}} className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#B9CBE2] px-5 text-[12px] font-semibold text-[#174A87]">Cancel</Link>
           <CustomerClaimStageSubmit formId="customer-claim-stage-details-form" variant="continue" />
         </div>:null}

@@ -116,7 +116,7 @@ export function AddClaimForm() {
         <ClaimOnboardingHeader />
 
         <ClaimSection number="01" title="Claim Details" columns="two">
-          <label className="block w-full max-w-[320px] min-w-0">
+          <label className="block w-full min-w-0">
             <span className={labelClass}>Vehicle Number</span>
             <div className="relative">
               <input
@@ -135,7 +135,7 @@ export function AddClaimForm() {
             {lookupMessage ? <span role="alert" className="mt-1.5 block text-[10px] font-medium text-[#B42318]">{lookupMessage}</span> : null}
           </label>
 
-          <label className="block w-full max-w-[320px] min-w-0">
+          <label className="block w-full min-w-0">
             <span className={labelClass}>Loss Date &amp; Time</span>
             <input
               type="datetime-local"

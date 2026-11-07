@@ -39,7 +39,7 @@ assert.ok(spot.includes('const splitFieldClass = "block h-[34px]'));
 assert.ok(spot.includes("flex h-[34px] w-full"));
 assert.match(spot,/text-\[9px\] font-bold uppercase leading-4 tracking-\[0\.01em\]/);
 assert.ok(spot.includes("min-[1440px]:grid-cols-5"));
-assert.ok(start.includes("h-[34px] w-full max-w-[320px] rounded-[4px] border"));
+assert.ok(start.includes("h-[34px] w-full rounded-[4px] border"));
 assert.ok(operationsStart.includes('const inputClass = "h-[34px] w-full'));
 assert.match(operationsStart,/const labelClass = "mb-1 block whitespace-nowrap text-\[9px\]/);
 console.log("34px compact claim controls and Vehicle Delivery variant regression passed.");
