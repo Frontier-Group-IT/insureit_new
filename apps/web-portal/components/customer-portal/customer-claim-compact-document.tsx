@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { FileText, LoaderCircle, Upload, Video } from "lucide-react";
 import { uploadCustomerClaimDocument } from "@/app/customer/(protected)/claims/[id]/stage/[stage]/upload-action";
 import { reuseCustomerLinkedPolicyCopy } from "@/app/customer/(protected)/claims/[id]/stage/[stage]/reuse-policy-copy-action";
@@ -59,6 +60,7 @@ export type CustomerClaimFile = { id:string; document_type:string; created_at:st
 export function CustomerClaimCompactDocument({label,type,documents,accountId,claimId,stage,allowUpload=true,returnToSpotIntimation=false,canReusePolicyCopy=false,accept=".pdf,.jpg,.jpeg,.png,.webp,.heic"}:{
   label:string;type:string;documents:CustomerClaimFile[];accountId:string;claimId:string;stage:string;allowUpload?:boolean;returnToSpotIntimation?:boolean;canReusePolicyCopy?:boolean;accept?:string;
 }) {
+  const router=useRouter();
   const [expanded,setExpanded]=useState(false);
   const [reusePending,startReuse]=useTransition();
   const [reuseError,setReuseError]=useState("");
@@ -75,6 +77,7 @@ export function CustomerClaimCompactDocument({label,type,documents,accountId,cla
       setRecentUploads(current=>current.some(doc=>doc.id===uploadState.uploaded!.id)?current:[uploadState.uploaded!,...current]);
       if(input.current)input.current.value="";
       setSuccessNotice(`${uploadState.uploadedCount ?? 1} ${label} document uploaded successfully.`);
+      router.refresh(); // Sync the consolidated uploaded-document count after a category upload.
     }
   },[uploadState.uploaded]);
   const reuseCopy=()=>startReuse(async()=>{
@@ -84,6 +87,7 @@ export function CustomerClaimCompactDocument({label,type,documents,accountId,cla
       if (!result.ok) { setReuseError(result.message); return; }
       if (result.uploaded) setRecentUploads(current=>current.some(doc=>doc.id===result.uploaded!.id)?current:[result.uploaded!,...current]);
       setReused(true);
+      router.refresh();
     } catch { setReuseError("Unable to reuse the existing policy copy. Please try again."); }
   });
   const input=useRef<HTMLInputElement>(null);
