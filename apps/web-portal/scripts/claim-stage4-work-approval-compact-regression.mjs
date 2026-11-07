@@ -14,7 +14,7 @@ for (const source of [operations, customer]) {
   assert.ok(source.includes('Stage 4 — Work Approval'));
   assert.ok(source.includes('Record insurance approval and surveyor details'));
   assert.ok(source.includes('4 of 9'));
-  assert.ok(source.includes('lg:grid-cols-3 xl:grid-cols-5 lg:items-start'));
+  assert.ok(source.includes('!grid-cols-5 min-w-[900px]'), "Stage 4 must retain five aligned columns on all viewport sizes.");
 }
 for (const key of ['approval_received_date', 'cashless', 'surveyor_name', 'surveyor_phone', 'surveyor_email']) {
   assert.ok(operations.includes('name: "' + key + '"'), 'Operations missing ' + key);
@@ -29,8 +29,10 @@ assert.ok(stageFields.includes('label: "Surveyor Email", type: "email", optional
 assert.ok(operations.includes('flex h-[34px] cursor-pointer'));
 assert.ok(operations.includes('vehicleDeliveryCompact ? "h-[34px] max-w-[335px] px-3"'));
 assert.ok(operations.includes('rounded-[4px]'));
-assert.ok(customer.includes('className="mt-1 h-[34px] w-full rounded-[4px]'));
+assert.ok(customer.includes('className="mt-1 block h-[34px] min-w-0 w-full rounded-[4px]'));
 assert.ok(customer.includes('<CustomerClaimBooleanChoice compact name={field.key}'));
+assert.ok(operations.includes('overflow-x-auto'), "Operations Stage 4 must scroll without wrapping on narrow screens.");
+assert.ok(customer.includes('overflow-x-auto'), "Customer Stage 4 must scroll without wrapping on narrow screens.");
 assert.ok(choice.includes('h-[34px] rounded-[4px]'));
 assert.ok(operations.includes('onClick={(event) => event.currentTarget.showPicker?.()}'));
 assert.ok(customer.includes('required={!field.optional}'));
