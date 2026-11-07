@@ -75,7 +75,14 @@ function PartnerPermissionBoundary({ children }: { children: React.ReactNode }) 
     const allowed = /^\/claim\/(?:new|select-vehicle)(?:\/|$)/.test(pathname)
       ? canPartnerStartClaim(context)
       : canPartnerAccess(context, required.capability, required.minimum);
-    if (!allowed) return <Redirect href="/access-denied" />;
+    if (!allowed) {
+      // Accounts and other narrow employee roles must still reach their
+      // permitted account/profile features without seeing dashboard data.
+      if (required.capability === 'view_dashboard' && (pathname === '/' || pathname === '/home' || pathname === '/(tabs)')) {
+        return <Redirect href="/(tabs)/more" />;
+      }
+      return <Redirect href="/access-denied" />;
+    }
   }
   return <>{children}</>;
 }
