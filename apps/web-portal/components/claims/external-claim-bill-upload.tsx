@@ -7,6 +7,7 @@ import { uploadCustomerClaimDocument } from "@/app/customer/(protected)/claims/[
 import { prepareClaimDocumentUpload, finalizeClaimDocumentUpload, cancelClaimDocumentUploads } from "@/app/claims/[id]/claim-document-upload-actions";
 import { createSupabaseBrowserClient } from "@/lib/auth";
 import { VerifyDocumentButton } from "@/components/spot-survey/verify-buttons";
+import { CustomerSpotAttachmentDelete } from "@/components/customer-portal/customer-spot-attachment-delete";
 
 export type WorkshopBillDocument = { id: string; file_name?: string | null; verification_status?: string | null };
 type Props = { mode: "customer" | "operations"; claimId: string; accountId?: string; documents: WorkshopBillDocument[]; readonly?: boolean; compact?: boolean };
@@ -19,7 +20,8 @@ export function ExternalClaimBillUpload({ mode, claimId, accountId, documents, r
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState("");
   const [recent, setRecent] = useState<WorkshopBillDocument[]>([]);
-  const files = [...recent, ...documents.filter(doc => !recent.some(item => item.id === doc.id))];
+  const [deletedIds, setDeletedIds] = useState<string[]>([]);
+  const files = [...recent, ...documents.filter(doc => !recent.some(item => item.id === doc.id))].filter(doc => !deletedIds.includes(doc.id));
   const openFile = (id: string) => mode === "customer"
     ? "/customer/claim-documents/" + encodeURIComponent(id) + "/open?account=" + encodeURIComponent(accountId ?? "") + "&claim=" + encodeURIComponent(claimId)
     : "/claim-documents/" + encodeURIComponent(id) + "/open";
@@ -83,6 +85,6 @@ export function ExternalClaimBillUpload({ mode, claimId, accountId, documents, r
       </> : null}
     </div>
     {message ? <p role="status" className="mt-1 text-[11px] text-[#315B9A]">{message}</p> : null}
-    {files.length ? <div className="mt-1 space-y-1">{files.map(file=><div key={file.id} className="flex min-w-0 items-center justify-between gap-2"><a href={openFile(file.id)} target="_blank" rel="noopener noreferrer" className="flex min-w-0 flex-1 items-center gap-1 text-[11px] text-[#155EEF] underline"><FileText className="h-3.5 w-3.5 shrink-0"/><span className="truncate">{file.file_name || "Final workshop bill"}</span></a>{mode === "operations" && file.verification_status !== "verified" ? <div className="w-16 shrink-0"><VerifyDocumentButton claimId={claimId} documentId={file.id} /></div> : null}{file.verification_status === "verified" ? <span className="text-[10px] font-semibold text-emerald-700">Verified</span> : null}</div>)}</div> : null}
+    {files.length ? <div className="mt-1 space-y-1">{files.map(file=><div key={file.id} className="flex min-w-0 items-center justify-between gap-2"><a href={openFile(file.id)} target="_blank" rel="noopener noreferrer" className="flex min-w-0 flex-1 items-center gap-1 text-[11px] text-[#155EEF] underline"><FileText className="h-3.5 w-3.5 shrink-0"/><span className="truncate">{file.file_name || "Final workshop bill"}</span></a>{mode === "customer" && !readonly && accountId && file.verification_status === "pending" ? <CustomerSpotAttachmentDelete accountId={accountId} claimId={claimId} documentId={file.id} fileName={file.file_name || "Final workshop bill"} stage="billing" onDeleted={id=>setDeletedIds(previous=>[...previous,id])} /> : null}{mode === "operations" && file.verification_status !== "verified" ? <div className="w-16 shrink-0"><VerifyDocumentButton claimId={claimId} documentId={file.id} /></div> : null}{file.verification_status === "verified" ? <span className="text-[10px] font-semibold text-emerald-700">Verified</span> : null}</div>)}</div> : null}
   </div>;
 }
