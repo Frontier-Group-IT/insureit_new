@@ -6,6 +6,8 @@ import { partnerTheme } from '@/lib/theme';
 type PartnerFieldProps = ComponentProps<typeof TextInput> & {
   label: string;
   labelIcon?: ReactNode;
+  hideLabel?: boolean;
+  leftAccessory?: ReactNode;
   error?: string;
   helper?: string;
   rightAccessory?: ReactNode;
@@ -15,6 +17,8 @@ export const PartnerField = forwardRef<TextInput, PartnerFieldProps>(function Pa
   {
     label,
     labelIcon,
+    hideLabel = false,
+    leftAccessory,
     error,
     helper,
     rightAccessory,
@@ -30,10 +34,12 @@ export const PartnerField = forwardRef<TextInput, PartnerFieldProps>(function Pa
 
   return (
     <View>
-      <View style={styles.labelRow}>
-        {labelIcon ? <View style={styles.labelIcon}>{labelIcon}</View> : null}
-        <Text style={[styles.label, labelIcon ? styles.inlineLabel : null]}>{label}</Text>
-      </View>
+      {!hideLabel ? (
+        <View style={styles.labelRow}>
+          {labelIcon ? <View style={styles.labelIcon}>{labelIcon}</View> : null}
+          <Text style={[styles.label, labelIcon ? styles.inlineLabel : null]}>{label}</Text>
+        </View>
+      ) : null}
       <View style={styles.inputWrap}>
         <TextInput
           {...inputProps}
@@ -43,6 +49,7 @@ export const PartnerField = forwardRef<TextInput, PartnerFieldProps>(function Pa
           accessibilityState={accessibilityState}
           style={[
             styles.input,
+            Boolean(leftAccessory) && styles.inputWithLeftAccessory,
             Boolean(rightAccessory) && styles.inputWithAccessory,
             inputProps.editable === false && styles.disabled,
             error && styles.inputError,
@@ -50,6 +57,7 @@ export const PartnerField = forwardRef<TextInput, PartnerFieldProps>(function Pa
           ]}
           placeholderTextColor={inputProps.placeholderTextColor || '#9AA3B2'}
         />
+        {leftAccessory ? <View pointerEvents="none" style={styles.leftAccessory}>{leftAccessory}</View> : null}
         {rightAccessory ? <View style={styles.rightAccessory}>{rightAccessory}</View> : null}
       </View>
       {error ? (
@@ -78,6 +86,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: partnerTheme.colors.line,
     ...partnerTheme.typography.body,
+  },
+  inputWithLeftAccessory: { paddingLeft: 52 },
+  leftAccessory: {
+    position: 'absolute',
+    left: 10,
+    top: 0,
+    bottom: 0,
+    width: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   inputWithAccessory: { paddingRight: 52 },
   rightAccessory: {

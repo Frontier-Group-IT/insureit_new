@@ -25,7 +25,7 @@ assert.match(save,/setSuccessNotice\(editMode \? "Spot Intimation changes saved 
 assert.match(save,/if\(destination\)router\.push\(destination\)/,"Redirect only after success closes.");
 assert.match(save,/if \(pending \|\| successNotice\) return;/,"Avoid duplicate submission while confirmation is shown.");
 
-assert.match(bulk,/if\(running\.current \|\| !selected\.length\) return;/,"Prevent duplicate bulk submission while a batch is processing.");
+assert.match(bulk,/if \(!allowUpload \|\| running\.current \|\| !files\.length\) return;/,"Prevent duplicate or read-only direct bulk submissions.");
 assert.match(bulk,/if\(result\.error \|\| !result\.uploaded\)/,"Only verified server uploads count as successful.");
 assert.match(bulk,/if\(complete\) \{[\s\S]*?setSuccessNotice\(complete\+" document"/,"Success popup must report the confirmed uploaded file count.");
 assert.match(bulk,/<CustomerSuccessDialog title="Upload Successful"/,"Use shared success popup.");

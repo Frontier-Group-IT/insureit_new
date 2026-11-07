@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { AppShell } from "@/components/shell";
 import EnquiryInstantFilters from "./instant-filters";
 import { createServerSupabaseClient, getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
@@ -114,6 +115,7 @@ export default async function ServiceEnquiriesPage({ searchParams }: PageProps) 
 
   return (
     <AppShell title="Service Enquiries">
+      <div className="flex min-h-[calc(100dvh-11rem)] flex-col gap-4">
       <header className="flex min-w-0 items-center gap-3 overflow-x-auto border border-[#DCE4F0] bg-white px-4 py-3 [scrollbar-width:thin]">
         <h1 className="shrink-0 whitespace-nowrap text-[18px] font-bold text-[#172844]">Service Enquiries</h1>
         <nav aria-label="Service enquiry sections" className="flex shrink-0 items-center rounded-lg border border-[#DCE4F0] bg-[#F8FAFD] p-1">
@@ -127,8 +129,8 @@ export default async function ServiceEnquiriesPage({ searchParams }: PageProps) 
         <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-700">Service enquiries could not be loaded.</div>
       ) : null}
 
-      <section className="overflow-hidden rounded-xl border border-[#DCE4F0] bg-white">
-        <div className="overflow-x-auto">
+      <section className="flex min-h-[360px] flex-1 flex-col overflow-hidden rounded-xl border border-[#DCE4F0] bg-white">
+        <div className="flex min-h-0 flex-1 flex-col overflow-x-auto">
           <table className="min-w-[1240px] w-full text-left">
             <thead className="border-b border-[#E8ECF4] bg-[#073B81] text-[10px] font-bold text-white">
               <tr>
@@ -164,7 +166,7 @@ export default async function ServiceEnquiriesPage({ searchParams }: PageProps) 
                     </td>
                     <td className="whitespace-nowrap px-3 py-4 text-[10px] font-bold tabular-nums text-[#171D3D]">{vehicle}</td>
                     <td className="px-4 py-4">
-                      <p className="max-w-[260px] whitespace-normal text-[10.5px] leading-4 text-[#59647A]">{stripRedundantVehiclePrefix(row.description)}</p>
+                      <p className="max-w-[260px] whitespace-normal text-[10.5px] leading-4 text-[#59647A]">{stripRedundantVehicleSummary(row.description)}</p>
                     </td>
                     <td className="px-4 py-4">
                       <div className="flex flex-col gap-1.5">
@@ -200,11 +202,15 @@ export default async function ServiceEnquiriesPage({ searchParams }: PageProps) 
                   </tr>
                 );
               })}
-              {!sectionRows.length ? (
-                <tr><td colSpan={9} className="px-5 py-12 text-center text-sm font-semibold text-[#7B8498]">{section === "quotes" ? "No quote enquiries match the selected filters." : "No ticket enquiries match the selected filters."}</td></tr>
-              ) : null}
+
             </tbody>
           </table>
+          {!sectionRows.length && !error ? (
+            <div role="status" className="flex min-h-[240px] flex-1 flex-col items-center justify-center gap-3 px-5 py-10 text-center">
+              <Image src="/illustrations/service-enquiries-empty.svg" width={240} height={170} alt="" aria-hidden="true" className="h-auto w-44 sm:w-52" />
+              <p className="text-[12px] font-semibold text-[#718095]">{section === "quotes" ? "No quote enquiries match the selected filters." : "No ticket enquiries match the selected filters."}</p>
+            </div>
+          ) : null}
         </div>
       </section>
       <div className="flex items-center justify-between border border-t-0 border-[#DCE4F0] bg-white px-4 py-3 text-xs text-[#617189]">
@@ -215,6 +221,7 @@ export default async function ServiceEnquiriesPage({ searchParams }: PageProps) 
           {requestedPage < totalPages ? <Link href={filterUrl({ page: String(requestedPage + 1) })} className="rounded border px-3 py-2">Next</Link> : <span className="opacity-40">Next</span>}
         </div>
       </div>
+      </div>
     </AppShell>
   );
 }
@@ -224,9 +231,13 @@ function Metric({ label, value }: { label: string; value: number }) {
 }
 function serviceLabel(type: ServiceEnquiryRow["service_type"]) { return type === "support_ticket" ? "Support Ticket" : type === "insurance_quote" ? "Insurance Quote" : "Challan Assistance"; }
 function sourceLabel(source: ServiceEnquiryRow["source"]) { return source === "customer_dashboard" ? "Customer app" : source === "guest_signup" ? "Signup guest" : "Login guest"; }
-function stripRedundantVehiclePrefix(description: string) {
-  // Strip only the generated leading vehicle-summary sentence; retain the customer\'s own message.
-  return description.replace(/^\s*Vehicle:\s*[^.\r\n]+(?:\.\s*|$)/i, "").trim();
+function stripRedundantVehicleSummary(description: string) {
+  // Remove only generated "Vehicle: ..." sentences, including after "Requirement: ...".
+  // Keep "New vehicle: ..." model information and the customer's remaining message.
+  return description
+    .replace(/^\s*Vehicle:\s*[^.\r\n]+(?:\.\s*|$)/i, "")
+    .replace(/(\.)\s+Vehicle:\s*[^.\r\n]+(?:\.|$)/i, "$1")
+    .trim();
 }
 function formatDateTime(value: string) { return new Date(value).toLocaleString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }); }
 
