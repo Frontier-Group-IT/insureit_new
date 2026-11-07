@@ -8,13 +8,13 @@ const spot=read("../app/customer/(protected)/spot-intimation/page.tsx");
 const start=read("../components/customer-portal/customer-start-claim-selector.tsx");
 const operationsStart=read("../app/claims/new/add-claim-form.tsx");
 
-// Requested dimensions: text 320x40, date 260x40, Yes/No 122x40 each + 10px gap.
-assert.match(operations,/selected\.key === "payment_encashment" \? "" : field\.type === "date" \? "max-w-\[260px\]" : "max-w-\[320px\]"/,"Stage 9 uses full cell width; other stages retain max widths.");
-assert.match(operations,/relative flex h-\[40px\] w-full max-w-\[260px\]/);
-assert.match(operations,/selected\.key === "payment_encashment" \? "gap-2" : "max-w-\[254px\] gap-\[10px\]"/,"Stage 9 compact controls; other stages retain 254px width and 10px gap.");
-assert.match(operations,/flex h-\[40px\] cursor-pointer/g);
-assert.match(operations,/max-w-\[320px\] rounded-lg/);
-assert.match(operations,/grid h-\[40px\] w-full max-w-\[320px\]/);
+// Operations claim stage controls use the requested 34px rectangular inputs; Customer portal keeps its separate 40px design.
+assert.match(operations,/selected\\.key === "work_approval" \\? "lg:grid-cols-3 xl:grid-cols-5 lg:items-start"/);
+assert.match(operations,/relative flex h-\\[34px\\] w-full items-center justify-between rounded-\\[4px\\]/);
+assert.match(operations,/flex h-\\[34px\\] cursor-pointer/g);
+assert.match(operations,/grid h-\\[34px\\] w-full grid-cols-\\[1\\.15fr_0\\.85fr\\]/);
+assert.match(operations,/mt-1 h-\\[34px\\] w-full rounded-\\[4px\\]/);
+assert.match(operations,/lg:grid-cols-3 xl:grid-cols-\\[repeat\\(5,minmax\\(0,1fr\\)\\)\\]/);
 assert.match(customer,/selected\.key==="payment_encashment"\?"":field\.type==="date"\?"max-w-\[260px\]"/,"Stage 9 fills available grid cell; other stages retain date width.");
 assert.match(customer,/"max-w-\[254px\]":"max-w-\[320px\]"/);
 assert.match(customer,/className="mt-1 h-\[40px\] w-full rounded-md/);
@@ -33,7 +33,7 @@ assert.match(choice,/onClick=\{\(\)=>setValue\(key\)\}/);
 assert.match(customer,/className="flex min-h-9 items-center gap-2 rounded-md border border-\[#D9E3F0\] bg-\[#F1F4F9\]/);
 assert.match(operations,/whitespace-nowrap max-sm:whitespace-normal/);
 assert.match(operations,/text-\[9px\] font-semibold uppercase leading-4 tracking-\[0\.01em\]/);
-assert.match(operations,/2xl:grid-cols-5 lg:items-start/);
+assert.match(operations,/xl:grid-cols-5 lg:items-start/);
 assert.match(customer,/whitespace-nowrap text-\[9px\] font-semibold uppercase leading-4 tracking-\[0\.01em\]/);
 assert.match(customer,/2xl:grid-cols-5 lg:items-start/);
 assert.match(operations,/stageOneLabelClassName = "block h-4 max-sm:h-auto whitespace-nowrap text-\[9px\]/);
@@ -45,4 +45,4 @@ assert.match(spot,/2xl:grid-cols-\[repeat\(5,minmax\(0,1fr\)\)\]/);
 assert.match(start,/h-\[40px\] w-full max-w-\[320px\] rounded-lg border/);
 assert.match(operationsStart,/const inputClass = "h-10 w-full/);
 assert.match(operationsStart,/const labelClass = "mb-1 block whitespace-nowrap text-\[9px\]/);
-console.log("Claim forms 320/260/122 x40 and single-line labels regression passed.");
+console.log("Operations 34px compact claim fields and unchanged Customer 40px field regression passed.");
