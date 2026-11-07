@@ -31,7 +31,7 @@ assert.match(stages, /if \(nextKey && canOpenNext\) \{[\s\S]*?setSelectedKey\(ne
 assert.match(stages, /await saveInternalSpotIntimationDetails\(claimId, formData\)/, "Preserve saving without automatic workflow advancement.");
 
 assert.match(stages, /router\.replace\(\`\$\{partnerManagedJourney/);
-assert.match(stages, /selected\.key === "payment_encashment" \? "gap-2 lg:grid-cols-5 lg:items-start"/, "Stage 9 must show five aligned columns on desktop without waiting for 2xl.");
+assert.ok(stages.includes('selected.key === "payment_encashment" ? "min-w-[1100px] grid-cols-[minmax(240px,1.1fr)_minmax(260px,1.2fr)_minmax(190px,1fr)_minmax(190px,1fr)_minmax(175px,0.9fr)] items-start gap-2"'), "Stage 9 keeps five aligned columns even at narrower widths.");
 assert.ok(stages.includes('selected.key === "work_approval" ? "lg:grid-cols-3 xl:grid-cols-5 lg:items-start"'), "Stage 4 aligns five fields at wide desktop widths.");
 assert.ok(stages.includes('selected.key === "payment_encashment" || selected.key === "delivery_order" || selected.key === "work_approval" ? "" : "max-w-[254px]"'), "Stage 4 and Stage 9 Yes/No controls use their grid cell widths.");
 assert.ok(stages.includes('const useAppDatePicker = field.type === "date"'), "Native date behavior is preserved.");
