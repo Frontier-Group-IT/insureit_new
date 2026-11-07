@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { requirePartnerWritePermission } from '@/lib/partner-permissions';
 
 export type PartnerClaimSummary = {
   total_claims: number;
@@ -148,6 +149,7 @@ export async function getPartnerClaimDetail(claimId: string) {
 
 /** Creates or resumes an authorized Partner claim draft. Authorization is enforced inside the RPC. */
 export async function createPartnerClaim(customerId: string, vehicleId: string, policyId: string | null) {
+  await requirePartnerWritePermission('manage_claims', 'edit', true);
   const { data, error } = await supabase.rpc('partner_app_create_claim', {
     p_customer_id: customerId,
     p_vehicle_id: vehicleId,
@@ -159,6 +161,7 @@ export async function createPartnerClaim(customerId: string, vehicleId: string, 
 }
 
 export async function savePartnerClaimSpot(claimId: string, incidentAt: string, spotAt: string, location: string, driver: string, phone: string) {
+  await requirePartnerWritePermission('manage_claims', 'edit', true);
   const { data, error } = await supabase.rpc('partner_app_save_claim_spot', {
     p_claim_id: claimId, p_accident_at: incidentAt, p_spot_intimation_at: spotAt,
     p_location: location, p_driver_name: driver, p_driver_phone: phone,
@@ -184,6 +187,7 @@ export async function savePartnerClaimStage(
   details: Record<string, string | number | boolean>,
   advance = true,
 ) {
+  await requirePartnerWritePermission('manage_claims', 'edit', true);
   const { data, error } = await supabase.rpc('partner_app_save_claim_stage', {
     p_claim_id: claimId,
     p_milestone_key: milestoneKey,
@@ -204,6 +208,7 @@ export async function attachPartnerClaimDocument(input: {
   fileSize?: number | null;
   milestoneKey?: string | null;
 }) {
+  await requirePartnerWritePermission('manage_claims', 'edit', true);
   const { data, error } = await supabase.rpc('partner_app_attach_claim_document', {
     p_claim_id: input.claimId,
     p_document_type: input.documentType,
@@ -220,6 +225,7 @@ export async function attachPartnerClaimDocument(input: {
 
 /** Delete only an authorized claim document; the database RPC verifies claim scope and uploader. */
 export async function removePartnerClaimDocument(claimId: string, documentId: string) {
+  await requirePartnerWritePermission('manage_claims', 'edit', true);
   const { data, error } = await supabase.rpc('partner_app_remove_claim_document', {
     p_claim_id: claimId,
     p_document_id: documentId,
@@ -236,6 +242,7 @@ export async function removePartnerClaimDocument(claimId: string, documentId: st
 export async function savePartnerInsurerClaimNumber(claimId: string, claimNumber: string) {
   const value = claimNumber.trim();
   if (!value || value.length > 80) throw new Error('Enter a valid insurer claim number (up to 80 characters).');
+  await requirePartnerWritePermission('manage_claims', 'edit', true);
   const { data, error } = await supabase.rpc('partner_app_save_insurer_claim_number', {
     p_claim_id: claimId,
     p_insurer_claim_no: value,
