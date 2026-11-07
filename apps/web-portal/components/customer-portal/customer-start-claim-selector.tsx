@@ -90,7 +90,7 @@ export function CustomerStartClaimSelector({
             id="claim-vehicle"
             value={vehicleId}
             onChange={(event) => { setVehicleId(event.target.value); setPolicyDialogOpen(false); setExistingClaimDialogOpen(false); setConfirmationDialogOpen(false); confirmationGrantedRef.current = false; setConfirming(false); }}
-            className="h-[40px] w-full max-w-[320px] rounded-lg border border-[#D6DDFC] bg-white px-4 text-[13px] font-medium text-[#19294D] outline-none transition focus:border-[#7546F5] focus:ring-2 focus:ring-[#F0EBFF]"
+            className="h-9 w-full max-w-[320px] rounded-lg border border-[#D6DDFC] bg-white px-4 text-[13px] font-medium text-[#19294D] outline-none transition focus:border-[#7546F5] focus:ring-2 focus:ring-[#F0EBFF]"
           >
             {vehicles.map((item) => (
               <option key={item.id} value={item.id}>

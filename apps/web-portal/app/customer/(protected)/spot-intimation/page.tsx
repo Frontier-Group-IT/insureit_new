@@ -132,8 +132,8 @@ export default async function CustomerSpotIntimation({searchParams}:{searchParam
     return {error:null,destination:"/customer/claims/"+encodeURIComponent(owned.id)+"/stage/spot_status?account="+encodeURIComponent(authorized.id)};
   }
 
-  const textFieldClass = "block h-[40px] w-full max-w-[320px] min-w-0 rounded-lg border border-[#CAD8EA] bg-white px-3 text-[13px] font-medium text-[#193659] outline-none transition placeholder:text-[#95A3B8] focus-visible:border-[#2D7FF0] focus-visible:ring-2 focus-visible:ring-[#DCEBFF]";
-  const splitFieldClass = "block h-[40px] min-w-0 flex-1 bg-transparent px-3 text-[13px] font-medium text-[#193659] outline-none";
+  const textFieldClass = "block h-9 w-full max-w-[320px] min-w-0 rounded-lg border border-[#CAD8EA] bg-white px-3 text-[13px] font-medium text-[#193659] outline-none transition placeholder:text-[#95A3B8] focus-visible:border-[#2D7FF0] focus-visible:ring-2 focus-visible:ring-[#DCEBFF]";
+  const splitFieldClass = "block h-9 min-w-0 flex-1 bg-transparent px-3 text-[13px] font-medium text-[#193659] outline-none";
   // The exact customer-owned linked policy copy is offered without duplicating
   // an already-attached claim file.
   const copyAdmin = createSupabaseAdminClient();
@@ -151,7 +151,7 @@ export default async function CustomerSpotIntimation({searchParams}:{searchParam
       <div className="mt-3 grid gap-x-2.5 gap-y-3 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-[repeat(5,minmax(0,1fr))]">
         <label className="min-w-0 w-full max-w-[320px]">
           <span className="block h-4 max-sm:h-auto whitespace-nowrap text-[9px] font-bold uppercase leading-4 tracking-[0.01em] text-[#245BB2] max-sm:whitespace-normal">Accident Date &amp; Time <span className="text-rose-500">*</span></span>
-          <span className="mt-2 flex h-[40px] w-full max-w-[320px] min-w-0 overflow-hidden rounded-lg border border-[#CAD8EA] bg-white">
+          <span className="mt-1 flex h-9 w-full max-w-[320px] min-w-0 overflow-hidden rounded-lg border border-[#CAD8EA] bg-white">
             <CustomerDateInput name="accidentDate" label="Accident date" defaultValue={editing?existingDateTime(claim.accident_at,"date"):undefined} required className="text-[13px] font-medium text-[#193659]" />
             <span aria-hidden="true" className="my-1.5 w-px shrink-0 bg-[#D6E0ED]"/>
             <AutoCloseTimeInput name="accidentTime" defaultValue={editing?existingDateTime(claim.accident_at,"time"):undefined} required ariaLabel="Accident time" className={splitFieldClass}/>
@@ -159,7 +159,7 @@ export default async function CustomerSpotIntimation({searchParams}:{searchParam
         </label>
         <label className="min-w-0 w-full max-w-[320px]">
           <span className="block h-4 max-sm:h-auto whitespace-nowrap text-[9px] font-bold uppercase leading-4 tracking-[0.01em] text-[#245BB2] max-sm:whitespace-normal">Spot Intimation Date &amp; Time <span className="text-rose-500">*</span></span>
-          <span className="mt-2 flex h-[40px] w-full max-w-[320px] min-w-0 overflow-hidden rounded-lg border border-[#CAD8EA] bg-white">
+          <span className="mt-1 flex h-9 w-full max-w-[320px] min-w-0 overflow-hidden rounded-lg border border-[#CAD8EA] bg-white">
             <CustomerDateInput name="spotDate" label="Spot intimation date" defaultValue={editing?existingDateTime(claim.spot_intimation_at,"date"):undefined} required className="text-[13px] font-medium text-[#193659]" />
             <span aria-hidden="true" className="my-1.5 w-px shrink-0 bg-[#D6E0ED]"/>
             <AutoCloseTimeInput name="spotTime" defaultValue={editing?existingDateTime(claim.spot_intimation_at,"time"):undefined} required ariaLabel="Spot intimation time" className={splitFieldClass}/>
@@ -167,15 +167,15 @@ export default async function CustomerSpotIntimation({searchParams}:{searchParam
         </label>
         <label className="min-w-0 w-full max-w-[320px]">
           <span className="block h-4 max-sm:h-auto whitespace-nowrap text-[9px] font-bold uppercase leading-4 tracking-[0.01em] text-[#245BB2] max-sm:whitespace-normal">Driver Name <span className="text-rose-500">{external?"":"*"}</span></span>
-          <input name="driver" defaultValue={editing?driverName:undefined} required={!external} maxLength={120} placeholder="Enter driver name" autoComplete="name" className={"mt-2 "+textFieldClass}/>
+          <input name="driver" defaultValue={editing?driverName:undefined} required={!external} maxLength={120} placeholder="Enter driver name" autoComplete="name" className={"mt-1 "+textFieldClass}/>
         </label>
         <label className="min-w-0 w-full max-w-[320px]">
           <span className="block h-4 max-sm:h-auto whitespace-nowrap text-[9px] font-bold uppercase leading-4 tracking-[0.01em] text-[#245BB2] max-sm:whitespace-normal">Driver Number <span className="text-rose-500">{external?"":"*"}</span></span>
-          <input name="phone" defaultValue={editing?driverPhone:undefined} required={!external} type="tel" maxLength={15} inputMode="tel" placeholder="Enter mobile number" autoComplete="tel" className={"mt-2 "+textFieldClass}/>
+          <input name="phone" defaultValue={editing?driverPhone:undefined} required={!external} type="tel" maxLength={15} inputMode="tel" placeholder="Enter mobile number" autoComplete="tel" className={"mt-1 "+textFieldClass}/>
         </label>
         <label className="min-w-0 w-full max-w-[320px] md:col-span-2 lg:col-span-1">
           <span className="block h-4 max-sm:h-auto whitespace-nowrap text-[9px] font-bold uppercase leading-4 tracking-[0.01em] text-[#245BB2] max-sm:whitespace-normal">Location <span className="text-rose-500">{external?"":"*"}</span></span>
-          <input name="location" defaultValue={editing?claim.accident_location??"":undefined} required={!external} maxLength={500} placeholder="Enter accident location" className={"mt-2 "+textFieldClass}/>
+          <input name="location" defaultValue={editing?claim.accident_location??"":undefined} required={!external} maxLength={500} placeholder="Enter accident location" className={"mt-1 "+textFieldClass}/>
         </label>
       </div>
     </SpotIntimationSaveForm>
