@@ -1,9 +1,10 @@
 -- Computed PostgREST field for authorized Partner Policy Intake search.
 -- The existing route applies its authenticated role/lead-source filters first.
+-- The composite argument is unnamed to avoid a new callable RPC endpoint.
 -- This function has no SECURITY DEFINER privileges and never returns records.
 -- Deploy before publishing the Partner app that uses ?search=.
 create or replace function public.policy_intake_search_text(
-  intake public.policy_intake_requests
+  public.policy_intake_requests
 )
 returns text
 language sql
@@ -12,12 +13,12 @@ parallel safe
 as $function$
   select concat_ws(
     ' ',
-    intake.intake_number,
-    intake.customer_mobile,
-    intake.lead_source_name,
-    intake.lead_source_code,
-    intake.status,
-    intake.ocr_fields::text
+    ($1).intake_number,
+    ($1).customer_mobile,
+    ($1).lead_source_name,
+    ($1).lead_source_code,
+    ($1).status,
+    ($1).ocr_fields::text
   );
 $function$;
 
