@@ -14,7 +14,7 @@ for (const source of [operations, customer]) {
   assert.ok(source.includes('Stage 4 — Work Approval'));
   assert.ok(source.includes('Record insurance approval and surveyor details'));
   assert.ok(source.includes('4 of 9'));
-  assert.ok(source.includes('lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 lg:items-start'));
+  assert.ok(source.includes('lg:grid-cols-3 xl:grid-cols-5 lg:items-start'));
 }
 for (const key of ['approval_received_date', 'cashless', 'surveyor_name', 'surveyor_phone', 'surveyor_email']) {
   assert.ok(operations.includes('name: "' + key + '"'), 'Operations missing ' + key);
@@ -25,15 +25,12 @@ assert.ok(stageFields.includes('label: "Surveyor Name", type: "text", optional: 
 assert.ok(stageFields.includes('label: "Surveyor Phone", type: "tel", optional: true'));
 assert.ok(stageFields.includes('label: "Surveyor Email", type: "email", optional: true'));
 
-// Unified reference dimensions apply to Stage 4 while retaining its five-column arrangement.
-assert.ok(operations.includes('h-[40px]'));
-assert.ok(operations.includes('max-w-[260px]'));
-assert.ok(operations.includes('max-w-[320px]'));
-assert.ok(operations.includes('selected.key === "payment_encashment" ? "gap-2" : "max-w-[254px] gap-[10px]"'), "Stage 4 retains its original max-width and gap while Stage 9 is compact.");
-assert.ok(customer.includes('field.type==="date"?(selected.key==="repair_ri"?"":"max-w-[260px]")'), "Stage 4 retains date max-width while Repair/RI fills its column.");
-assert.ok(customer.includes('h-9 w-full'), "Customer stage controls use 36px height.");
-assert.ok(customer.includes('<CustomerClaimBooleanChoice compact name={field.key}'), "All Customer stages use compact Yes/No controls.");
-assert.ok(choice.includes('h-9 rounded-md'), "Customer Yes/No controls use compact 36px height.");
+// Both portals use 34px rectangular controls; preserve the field and submit contracts.
+assert.ok(operations.includes('flex h-[34px] cursor-pointer'));
+assert.ok(operations.includes('rounded-[4px]'));
+assert.ok(customer.includes('className="mt-1 h-[34px] w-full rounded-[4px]'));
+assert.ok(customer.includes('<CustomerClaimBooleanChoice compact name={field.key}'));
+assert.ok(choice.includes('h-[34px] rounded-[4px]'));
 assert.ok(operations.includes('onClick={(event) => event.currentTarget.showPicker?.()}'));
 assert.ok(customer.includes('required={!field.optional}'));
 

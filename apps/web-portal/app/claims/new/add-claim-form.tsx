@@ -9,7 +9,7 @@ import {
   type AddClaimLookup,
 } from "./add-claim-actions";
 
-const inputClass = "h-9 w-full rounded-xl border border-[#CBD5E1] bg-white px-3 text-[12px] text-[#17203A] outline-none transition placeholder:text-[#98A2B3] focus:border-[#4F46E5] focus:ring-2 focus:ring-[#E0E7FF]";
+const inputClass = "h-[34px] w-full rounded-[4px] border border-[#CBD5E1] bg-white px-3 text-[12px] text-[#17203A] outline-none transition placeholder:text-[#98A2B3] focus:border-[#4F46E5] focus:ring-2 focus:ring-[#E0E7FF]";
 const labelClass = "mb-1 block whitespace-nowrap text-[9px] font-semibold leading-4 tracking-[0.01em] text-[#344054] max-sm:whitespace-normal";
 const readOnlyLabelClass = "mb-0.5 block text-[9px] font-semibold uppercase tracking-[0.04em] text-[#667085]";
 
@@ -279,7 +279,7 @@ function ClaimOnboardingHeader() {
   return (
     <section className="overflow-hidden rounded-xl border border-[#D7E1EE] bg-white shadow-[0_4px_18px_rgba(23,54,93,0.06)]">
       <div className="flex min-h-[64px] items-center justify-between gap-4 bg-[#1D416C] px-5 py-3 sm:px-6">
-        <h1 className="text-[18px] font-semibold tracking-[-0.02em] text-white">Claim Onboarding</h1>
+        <h1 className="text-[14px] font-semibold tracking-[-0.02em] text-white">Claim Onboarding</h1>
         <Link href="/claims" className="shrink-0 rounded-lg border border-white/20 bg-white/[0.03] px-4 py-2 text-[10px] font-semibold text-white transition hover:border-white/35 hover:bg-white/[0.08]">Back</Link>
       </div>
       <div className="grid grid-cols-1 bg-white sm:grid-cols-3">

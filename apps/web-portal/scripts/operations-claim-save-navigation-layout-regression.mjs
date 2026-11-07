@@ -32,10 +32,10 @@ assert.match(stages, /await saveInternalSpotIntimationDetails\(claimId, formData
 
 assert.match(stages, /router\.replace\(\`\$\{partnerManagedJourney/);
 assert.match(stages, /selected\.key === "payment_encashment" \? "gap-2 lg:grid-cols-3 xl:grid-cols-5 lg:items-start"/, "Stage 9 must show five aligned columns on desktop without waiting for 2xl.");
-assert.match(stages, /selected\.key === "work_approval" \? "lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 lg:items-start"/, "Stage 4 should keep its existing layout.");
-assert.match(stages, /selected\.key === "payment_encashment" \? "" : "max-w-\[254px\]"/, "Stage 9 Yes/No controls should use available grid cell width.");
-assert.match(stages, /selected\.key === "payment_encashment" \? "gap-2" : "max-w-\[254px\] gap-\[10px\]"/, "Stage 9 Yes/No options should fit compactly.");
-assert.match(stages, /selected\.key === "payment_encashment" \? "" : field\.type === "date"/, "Stage 9 date and amount fields should use full grid-column width.");
+assert.ok(stages.includes('selected.key === "work_approval" ? "lg:grid-cols-3 xl:grid-cols-5 lg:items-start"'), "Stage 4 aligns five 34px inputs at wide desktop widths.");
+assert.ok(stages.includes('selected.key === "payment_encashment" || selected.key === "work_approval" ? "" : "max-w-[254px]"'), "Stage 4 and Stage 9 controls use their grid cell widths.");
+assert.ok(stages.includes('className={`mt-1 grid w-full grid-cols-2 ${"gap-2"}`}'), "Compact Yes/No controls retain close spacing.");
+assert.ok(stages.includes('const useAppDatePicker = field.type === "date"'), "Native dates preserved.");
 assert.match(stages, /sm:grid-cols-2/, "Keep responsive narrow-screen wrapping.");
 assert.match(stages, /name: "depreciation_slip_submitted"/);
 assert.match(stages, /name: "satisfaction_voucher_submitted"/);
@@ -57,10 +57,9 @@ assert.match(heading, /rounded-xl border border-white bg-white/);
 console.log("Operations Claim Journey save navigation, Stage 9 layout and 3D heading regression passed.");
 
 
-// Compact stage inputs and a separate action footer must not collide at desktop or mobile widths.
-assert.match(stages, /grid items-start gap-3 sm:grid-cols-2/, "Keep stage controls aligned to the top of each grid row.");
-assert.match(stages, /<AppStyleDateInput name=\{field.name\} value=\{value\} required=\{required\} compact billingCompact=\{selected.key === "billing"\} \/>/, "Keep 36px stage dates and apply 34px only to Billing.");
-assert.match(stages, /billingCompact \? "h-\[34px\] max-w-full px-2" : compact \? "h-9 max-w-full px-3"/, "Billing uses 34px, other stage dates preserve 36px.");
-assert.match(stages, /selected.key === "billing" \? "h-\[34px\] text-\[11px\]" : "h-9 text-\[12px\]"/, "Billing amount uses 34px while other stage inputs retain 36px.");
-assert.match(stages, /mt-4 flex min-h-10 flex-wrap items-center justify-end gap-2 border-t border-\[#D9E3F0\] pt-3/, "Save actions have a dedicated wrapping footer with a top separator and clearance.");
-assert.match(stages, /selected.key === "repair_ri" \? "" : "max-w-\[260px\]"/, "Repair/RI date fields fill their grid cells.");
+// Compact input styling must not alter the action footer or Repair/RI date widths.
+assert.match(stages, /grid min-w-0 items-start gap-2 sm:grid-cols-2/);
+assert.match(stages, /<AppStyleDateInput name=\{field.name\} value=\{value\} required=\{required\} compact billingCompact=\{selected.key === "billing"\} \/>/);
+assert.ok(stages.includes('relative flex ${"h-[34px] max-w-full px-2"}'), "All stage dates use 34px.");
+assert.match(stages, /mt-4 flex min-h-10 flex-wrap items-center justify-end gap-2 border-t border-\[#D9E3F0\] pt-3/);
+assert.ok(stages.includes('selected.key === "repair_ri" ? "" : "max-w-[260px]"'), "Repair/RI date fields remain full-width.");
