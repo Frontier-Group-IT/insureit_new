@@ -1,7 +1,7 @@
 # Employee Organization Explorer — Team Focus UX (2026-11-07)
 
 ## Scope
-PR #4120 on branch `feat/employee-orgchart-focus-navigation-20261107`. Implements approved phases 1–3 only (readability, drag safety, focused navigation). Do not merge or deploy before review/approval.
+PR #4120 on branch `feat/employee-orgchart-focus-navigation-20261107`. Implements approved phases 1–5 (readability, drag safety, focused navigation, employee details, overview and mini-map). Do not merge or deploy before review/approval.
 
 ## Data and authorization (unchanged)
 - `/employees` server page continues to require `view_employees` and employee access scope.
@@ -20,6 +20,12 @@ PR #4120 on branch `feat/employee-orgchart-focus-navigation-20261107`. Implement
 - Authenticated browser validation: wide sales team, multiple hierarchy roots, RM > POSP/MISP business networks, restricted roles, mobile widths, search, focus navigation, blank-canvas dragging with no selected text, Full Chart zoom/pan.
 - Do not claim a production deployment without verifying a corresponding deployment workflow.
 
-## Deferred phases
-- Phase 4 detailed employee side drawer with authorized actions.
-- Phase 5 organization overview, mini-map and further motion/visual polish.
+## Phases 4–5 implemented
+- Accessible, read-only employee drawer shows scoped contact details, direct reports, manager and assigned partners. It supports employee-to-employee navigation, Escape and a close control.
+- Overview mode groups only visible employees by department and exposes navigable reporting roots.
+- Full Chart has a clickable mini-map for panning between diagram regions. Canvas interactions, employee data and partner permissions remain unchanged.
+- No new database privileges, schema changes or data mutations.
+
+## Outstanding quality gates
+- Run latest Verify web portal CI, then authenticated browser visual/interaction QA across roles, wide teams, partners, desktop/mobile and keyboard navigation.
+- No merge or deployment until explicitly approved.
