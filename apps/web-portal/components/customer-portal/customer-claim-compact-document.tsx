@@ -8,6 +8,7 @@ import { reuseCustomerLinkedPolicyCopy } from "@/app/customer/(protected)/claims
 import { ClaimStageErrorDialog } from "@/components/claim-manager/claim-stage-error-dialog";
 import { CustomerSuccessDialog } from "./customer-success-dialog";
 import { CustomerErrorDialog } from "./customer-error-dialog";
+import { CustomerSpotAttachmentDelete } from "./customer-spot-attachment-delete";
 
 // These images are the same artwork used by the Customer mobile app.
 const artworkBase = "/assets/customer-claim/document-icons/";
@@ -67,6 +68,7 @@ export function CustomerClaimCompactDocument({label,type,documents,accountId,cla
   const [reused,setReused]=useState(false);
   const [uploadState,uploadAction,uploading]=useActionState(uploadCustomerClaimDocument,{error:null});
   const [recentUploads,setRecentUploads]=useState<CustomerClaimFile[]>([]);
+  const [deletedIds,setDeletedIds]=useState<string[]>([]);
   const [successNotice,setSuccessNotice]=useState<string|null>(null);
   const [errorNotice,setErrorNotice]=useState<string|null>(null);
   const shownUploadId=useRef<string|null>(null);
@@ -92,8 +94,13 @@ export function CustomerClaimCompactDocument({label,type,documents,accountId,cla
   });
   const input=useRef<HTMLInputElement>(null);
   const form=useRef<HTMLFormElement>(null);
-  const ordered=[...recentUploads,...documents.filter(doc=>!recentUploads.some(recent=>recent.id===doc.id))].sort((a,b)=>Date.parse(b.created_at)-Date.parse(a.created_at));
-  const openFile=(file:CustomerClaimFile)=><a key={file.id} href={`/customer/claim-documents/${encodeURIComponent(file.id)}/open?account=${encodeURIComponent(accountId)}&claim=${encodeURIComponent(claimId)}`} target="_blank" rel="noopener noreferrer" className="customer-claim-ref-file flex min-w-0 items-center gap-2 rounded-md border border-[#CCD4DF] bg-[#F8FAFC] px-2 py-2 text-[11px] text-[#204D83] transition-colors hover:border-[#AEBBCB] hover:bg-[#F1F5F9] focus-visible:outline-2 focus-visible:outline-[#1769DC]" title={file.file_name||label}><FileText className="h-4 w-4 shrink-0"/><span className="truncate">{file.file_name||label}</span></a>;
+  const ordered=[...recentUploads,...documents.filter(doc=>!recentUploads.some(recent=>recent.id===doc.id))].filter(doc=>!deletedIds.includes(doc.id)).sort((a,b)=>Date.parse(b.created_at)-Date.parse(a.created_at));
+  const openFile=(file:CustomerClaimFile)=><div key={file.id} className="customer-claim-ref-file flex min-w-0 items-center rounded-md border border-[#CCD4DF] bg-[#F8FAFC] pr-1 transition-colors hover:border-[#AEBBCB] hover:bg-[#F1F5F9]">
+    <a href={`/customer/claim-documents/${encodeURIComponent(file.id)}/open?account=${encodeURIComponent(accountId)}&claim=${encodeURIComponent(claimId)}`} target="_blank" rel="noopener noreferrer" className="flex min-w-0 flex-1 items-center gap-2 px-2 py-2 text-[11px] text-[#204D83] focus-visible:outline-2 focus-visible:outline-[#1769DC]" title={file.file_name||label}><FileText className="h-4 w-4 shrink-0"/><span className="truncate">{file.file_name||label}</span></a>
+    {allowUpload && file.verification_status === "pending" && (stage === "spot_intimation" || stage === "claim_intimation") ?
+      <CustomerSpotAttachmentDelete accountId={accountId} claimId={claimId} documentId={file.id} fileName={file.file_name||label} stage={stage}
+        onDeleted={id=>setDeletedIds(previous=>[...previous,id])}/> : null}
+  </div>;;
   return <article className={`customer-claim-ref-card customer-workflow customer-workflow-document min-w-0 rounded-xl border bg-white px-3 py-2.5 ${ordered.length > 0 ? "border-[#CDD5DF]" : "border-[#E2E8F0]"}`}>
     <CustomerErrorDialog title="Document upload failed" message={errorNotice} onClose={()=>setErrorNotice(null)}/>
     <CustomerSuccessDialog title="Upload Successful" message={successNotice} onClose={()=>setSuccessNotice(null)}/>
