@@ -88,3 +88,17 @@ assert.match(stage3Workspace, /submitFinalDocumentsDraft\(stageDetailsForm\(\)\)
 assert.match(finalActions, /draft: true/, "Partial Stage 3 drafts must be distinguishable from completed details.");
 assert.match(finalActions, /hasFieldValues/, "Empty and populated drafts must be handled.");
 assert.match(finalActions, /verification_type: "final_documents_dealership_details"/, "Draft entries must use the existing details loader.");
+
+
+// Operations Billing must keep three aligned 34px controls without changing the Customer upload layout.
+const operationsBilling = await readFile(new URL("../components/claim-manager/operations-claim-stages.tsx", import.meta.url), "utf8");
+const billUpload = await readFile(new URL("../components/claims/external-claim-bill-upload.tsx", import.meta.url), "utf8");
+assert.match(operationsBilling, /selected\.key === "billing" \? "gap-2 md:grid-cols-3 md:items-start"/, "Operations Billing fields stay in one desktop row.");
+assert.match(operationsBilling, /compact=\{selected\.key === "billing"\}/, "Only the Billing date control gets the 34px presentation.");
+assert.match(operationsBilling, /selected\.key === "billing" \? "h-\[34px\] text-\[11px\]"/, "Billing amount must use the same 34px height.");
+assert.match(operationsBilling, /<ExternalClaimBillUpload mode="operations" claimId=\{claimId\} documents=\{billDocuments\} compact \/>/, "Operations must explicitly opt into the compact upload control.");
+assert.match(billUpload, /compact && mode === "operations"/, "Customer bill uploads must retain their existing presentation.");
+assert.match(billUpload, /"flex h-\[34px\] min-w-0 items-center/, "Workshop bill upload box must be 34px high.");
+assert.match(billUpload, /"h-7 w-7 shrink-0 object-contain"/, "Retain the workshop bill illustration in the compact upload field.");
+assert.match(billUpload, /"flex h-\[26px\] shrink-0 items-center/, "Choose File remains present and fits inside the 34px box.");
+assert.match(billUpload, /prepareClaimDocumentUpload\(claimId, documentType/, "Operations upload authorization flow must remain present.");
