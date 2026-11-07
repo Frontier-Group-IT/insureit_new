@@ -414,7 +414,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
             <input type="hidden" name="next_status" value={stageTarget ?? ""} />
             <input type="hidden" name="save_only" value={partnerManagedJourney || selectedSaveOnly ? "true" : "false"} />
             <input type="hidden" name="notes" value={selectedSaveOnly ? `Operations edited ${selected.label} details.` : `Operations completed ${selected.label} and opened the next journey stage.`} />
-            <div className={`grid min-w-0 items-start gap-2 sm:grid-cols-2 ${selected.key === "delivery_order" ? "gap-2 lg:grid-cols-3 lg:items-start" : selected.key === "payment_encashment" ? "gap-2 lg:grid-cols-5 lg:items-start" : selected.key === "work_approval" ? "lg:grid-cols-3 xl:grid-cols-5 lg:items-start" : selected.key === "billing" ? "gap-2 md:grid-cols-3" : selected.key === "repair_ri" ? "lg:grid-cols-3" : selected.key === "vehicle_delivery" ? "lg:grid-cols-2" : "lg:grid-cols-3 2xl:grid-cols-4"}`}>
+            <div className={`grid min-w-0 items-start gap-2 sm:grid-cols-2 ${selected.key === "spot_status" ? "gap-2 lg:grid-cols-4 lg:items-start" : selected.key === "delivery_order" ? "gap-2 lg:grid-cols-3 lg:items-start" : selected.key === "payment_encashment" ? "gap-2 lg:grid-cols-5 lg:items-start" : selected.key === "work_approval" ? "lg:grid-cols-3 xl:grid-cols-5 lg:items-start" : selected.key === "billing" ? "gap-2 md:grid-cols-3" : selected.key === "repair_ri" ? "lg:grid-cols-3" : selected.key === "vehicle_delivery" ? "lg:grid-cols-2" : "lg:grid-cols-3 2xl:grid-cols-4"}`}>
               {fields[selected.key].map((field) => {
                 const value = field.name === "insurer_claim_no" ? insurerClaimNo ?? fieldValue(selectedDetails, field.name) : fieldValue(selectedDetails, field.name);
                 const internalStageTwoSurveyorField = selected.key === "spot_status" && !hasExternalVisualProgress && internalSpotStatusSurveyorFields.has(field.name);
@@ -441,7 +441,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
                 }
                 const useAppDatePicker = field.type === "date";
                 return (
-                  <label key={field.name} className={`min-w-0 block w-full whitespace-nowrap max-sm:whitespace-normal ${selected.key === "billing" || selected.key === "payment_encashment" || selected.key === "delivery_order" || selected.key === "work_approval" ? "" : field.type === "date" ? selected.key === "repair_ri" ? "" : selected.key === "vehicle_delivery" ? "max-w-[335px]" : "max-w-[260px]" : "max-w-[320px]"} text-[9px] font-semibold uppercase leading-4 tracking-[0.01em] text-[#174EA6]`}>
+                  <label key={field.name} className={`min-w-0 block w-full whitespace-nowrap max-sm:whitespace-normal ${selected.key === "spot_status" || selected.key === "billing" || selected.key === "payment_encashment" || selected.key === "delivery_order" || selected.key === "work_approval" ? "" : field.type === "date" ? selected.key === "repair_ri" ? "" : selected.key === "vehicle_delivery" ? "max-w-[335px]" : "max-w-[260px]" : "max-w-[320px]"} ${selected.key === "spot_status" ? "text-[8px]" : "text-[9px]"} font-semibold uppercase leading-4 tracking-[0.01em] text-[#174EA6]`}>
                     {displayLabel}{required && !displayLabel.includes("*") ? <span className="ml-1 text-rose-600">*</span> : null}
                     {useAppDatePicker ? (
                       <AppStyleDateInput name={field.name} value={value} required={required} compact billingCompact={selected.key === "billing"} vehicleDeliveryCompact={selected.key === "vehicle_delivery"} />
@@ -467,7 +467,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
               {selected.key === "billing" && unrestrictedStageEditing && !partnerReadOnlyJourney && !partnerManagedJourney ? <ExternalClaimBillUpload mode="operations" claimId={claimId} documents={billDocuments} compact /> : null}
             </div>
 
-            <div className={selected.key === "delivery_order" || selected.key === "payment_encashment" ? "mt-3 flex items-center justify-end gap-2" : "mt-4 flex min-h-10 flex-wrap items-center justify-end gap-2 border-t border-[#D9E3F0] pt-3"}>
+            <div className={selected.key === "spot_status" || selected.key === "delivery_order" || selected.key === "payment_encashment" ? "mt-3 flex items-center justify-end gap-2" : "mt-4 flex min-h-10 flex-wrap items-center justify-end gap-2 border-t border-[#D9E3F0] pt-3"}>
               {selected.key === "work_approval" ? <button type="button" onClick={() => router.push(partnerManagedJourney ? "/partner/claims" : "/claims")} className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#B9CBE2] bg-white px-4 text-[12px] font-semibold text-[#174A87]">Cancel</button> : null}
               <FormSubmitButton
                 label={selected.key === "work_approval" ? "Save & Continue" : selectedSaveOnly ? "Save Details" : selected.key === "payment_encashment" ? "Save & complete claim" : `Save & move to ${nextStageLabel}`}
@@ -597,7 +597,7 @@ function StageOneForm({ claimId, stage, active, detail, spotDetails, next, accid
   const incidentValue = spotDetails?.incident_at ?? accidentAt ?? (typeof storedIncidentAt === "string" ? storedIncidentAt : "");
   const spotIntimationValue = spotDetails?.spot_intimation_at ?? spotIntimationAt ?? (typeof storedSpotIntimationAt === "string" ? storedSpotIntimationAt : "");
   const groupedFieldNames = new Set(["incident_at", "incident_time", "spot_intimation_at", "spot_intimation_time"]);
-  const stageOneLabelClassName = "block h-4 max-sm:h-auto whitespace-nowrap text-[9px] font-semibold uppercase leading-4 tracking-[0.01em] text-[#174EA6] max-sm:whitespace-normal";
+  const stageOneLabelClassName = "block h-4 max-sm:h-auto whitespace-nowrap text-[8px] font-semibold uppercase leading-4 tracking-[0.01em] text-[#174EA6] max-sm:whitespace-normal";
   const groupedInputClassName = "h-full min-w-0 w-full border-0 bg-transparent pl-1.5 pr-1 text-[11px] font-semibold normal-case tracking-normal text-[#071D49] outline-none";
 
   return (
@@ -607,7 +607,7 @@ function StageOneForm({ claimId, stage, active, detail, spotDetails, next, accid
         <h3 className="text-[14px] font-semibold tracking-[-0.01em] text-[#071D49]">Accident &amp; Spot Intimation Details</h3>
       </div>
       <div className="p-3">
-        <div className="grid min-w-0 items-start gap-2 sm:grid-cols-2 lg:grid-cols-3 min-[1440px]:grid-cols-5">
+        <div className="grid min-w-0 items-start gap-2 sm:grid-cols-2 lg:grid-cols-5">
           <fieldset className="min-w-0">
             <legend className={stageOneLabelClassName}>Accident date &amp; time<span className="ml-1 text-rose-600">*</span></legend>
             <div className="mt-1.5 grid h-[34px] w-full grid-cols-[1.15fr_0.85fr] overflow-hidden rounded-[4px] border border-[#CEDBEC] bg-white focus-within:border-[#2F80ED]">

@@ -31,6 +31,12 @@ assert.match(stages, /if \(nextKey && canOpenNext\) \{[\s\S]*?setSelectedKey\(ne
 assert.match(stages, /await saveInternalSpotIntimationDetails\(claimId, formData\)/, "Preserve saving without automatic workflow advancement.");
 
 assert.match(stages, /router\.replace\(\`\$\{partnerManagedJourney/);
+assert.match(stages, /selected\.key === "spot_status" \? "gap-2 lg:grid-cols-4 lg:items-start"/, "Stage 2 must show all four Spot Status fields in a single desktop row.");
+assert.match(stages, /selected\.key === "spot_status" \|\| selected\.key === "billing"/, "Stage 2 inputs must use full available grid width.");
+assert.match(stages, /selected\.key === "spot_status" \? "text-\[8px\]" : "text-\[9px\]"/, "Only Spot Status labels should be smaller.");
+assert.match(stages, /selected\.key === "spot_status" \|\| selected\.key === "delivery_order" \|\| selected\.key === "payment_encashment" \? "mt-3 flex items-center justify-end gap-2"/, "Stage 2 Save row should have no extra divider.");
+assert.match(stages, /className="mt-1 h-\[34px\] w-full/, "Stage 2 text controls must keep 34px height.");
+assert.match(stages, /billingCompact \? "h-\[34px\] max-w-full/, "Stage 2 date input must preserve 34px height.");
 assert.match(stages, /selected\.key === "payment_encashment" \? "gap-2 lg:grid-cols-5 lg:items-start"/, "Stage 9 must show five aligned columns on desktop without waiting for 2xl.");
 assert.ok(stages.includes('selected.key === "work_approval" ? "lg:grid-cols-3 xl:grid-cols-5 lg:items-start"'), "Stage 4 aligns five fields at wide desktop widths.");
 assert.ok(stages.includes('selected.key === "payment_encashment" || selected.key === "delivery_order" || selected.key === "work_approval" ? "" : "max-w-[254px]"'), "Stage 4 and Stage 9 Yes/No controls use their grid cell widths.");
