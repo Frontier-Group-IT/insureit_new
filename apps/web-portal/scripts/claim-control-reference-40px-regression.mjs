@@ -10,7 +10,7 @@ const operationsStart=read("../app/claims/new/add-claim-form.tsx");
 
 // Requested dimensions: text 320x40, date 260x40, Yes/No 122x40 each + 10px gap.
 assert.match(operations,/selected\.key === "payment_encashment" \? "" : field\.type === "date" \? "max-w-\[260px\]" : "max-w-\[320px\]"/,"Stage 9 uses full cell width; other stages retain max widths.");
-assert.match(operations,/relative flex h-\[40px\] w-full max-w-\[260px\]/);
+assert.match(operations,/compact \? "h-\[34px\] px-2" : "h-\[40px\] max-w-\[260px\] px-3"/,"Non-billing date fields retain 40px by 260px while Billing uses 34px.");
 assert.match(operations,/selected\.key === "payment_encashment" \? "gap-2" : "max-w-\[254px\] gap-\[10px\]"/,"Stage 9 compact controls; other stages retain 254px width and 10px gap.");
 assert.match(operations,/flex h-\[40px\] cursor-pointer/g);
 assert.match(operations,/max-w-\[320px\] rounded-lg/);
