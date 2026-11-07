@@ -10,6 +10,9 @@ import { PartnerInsurerLogo } from '@/components/ui/partner-insurer-logo';
 import { PartnerAssets } from '@/lib/partner-assets';
 import { getPartnerManufacturerLogoSource } from '@/lib/catalog-logos';
 import { listPartnerPolicyIntakesPage, type PartnerPolicyIntake, type PartnerIntakeFilter, type PartnerIntakeCounts } from '@/lib/policy-intakes';
+import { canPartnerAccess } from '@/lib/partner-permissions';
+import { canPartnerAccess } from '@/lib/partner-permissions';
+import { usePartnerSession } from '@/providers/partner-session-provider';
 import { partnerTheme } from '@/lib/theme';
 
 type IntakeFilter = PartnerIntakeFilter;
