@@ -34,7 +34,7 @@ assert.match(stages, /router\.replace\(\`\$\{partnerManagedJourney/);
 assert.match(stages, /selected\.key === "spot_status" \? "grid-cols-4 gap-2 items-start"/, "Spot Status stays in four columns without scrolling at all widths.");
 assert.match(stages, /selected\.key === "spot_status" \|\| selected\.key === "billing"/, "Stage 2 inputs must use full available grid width.");
 assert.match(stages, /selected\.key === "spot_status" \? "text-\[8px\]" : "text-\[9px\]"/, "Only Spot Status labels should be smaller.");
-assert.match(stages, /selected\.key === "spot_status" \|\| selected\.key === "delivery_order" \|\| selected\.key === "vehicle_delivery" \|\| selected\.key === "payment_encashment" \? "mt-3 flex items-center justify-end gap-2"/, "Stage 2 Save row should have no extra divider.");
+assert.match(stages, /selected\.key === "spot_status" \|\| selected\.key === "delivery_order" \|\| selected\.key === "vehicle_delivery" \|\| selected\.key === "payment_encashment" \|\| selected\.key === "work_approval" \? "mt-3 flex min-h-10 flex-wrap items-center justify-end gap-2"/, "Stage 2 and Work Approval Save footer have no extra divider.");
 assert.match(stages, /className="mt-1 block h-\[34px\] w-full/, "Stage 2 text controls must keep 34px height.");
 assert.match(stages, /billingCompact \? "mt-1 h-\[34px\] max-w-full/, "Stage 2 date input must preserve 34px height.");
 assert.ok(stages.includes('selected.key === "payment_encashment" ? "w-full grid-cols-[minmax(0,0.9fr)_minmax(0,1fr)_minmax(0,1.05fr)_minmax(0,1.05fr)_minmax(0,0.85fr)] gap-2 items-start"'), "Stage 9 has five aligned single-row columns.");
