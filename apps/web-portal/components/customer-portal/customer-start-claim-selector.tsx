@@ -84,13 +84,13 @@ export function CustomerStartClaimSelector({
       </section>
 
       <section className="rounded-2xl border border-[#EDF0F9] bg-white px-5 py-5 shadow-[0_8px_22px_rgba(30,46,98,.06)] sm:px-6">
-        <div className="mb-4 flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-xl bg-[#F0EEFF] text-[#6337F6]"><CarFront className="h-5 w-5" aria-hidden="true" /></span><label htmlFor="claim-vehicle" className="text-[16px] font-bold text-[#111E4A]">Select your vehicle</label></div>
+        <div className="mb-4 flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-xl bg-[#F0EEFF] text-[#6337F6]"><CarFront className="h-5 w-5" aria-hidden="true" /></span><label htmlFor="claim-vehicle" className="whitespace-nowrap text-[13px] font-bold text-[#111E4A]">Select your vehicle</label></div>
         {vehicles.length ? (
           <select
             id="claim-vehicle"
             value={vehicleId}
             onChange={(event) => { setVehicleId(event.target.value); setPolicyDialogOpen(false); setExistingClaimDialogOpen(false); setConfirmationDialogOpen(false); confirmationGrantedRef.current = false; setConfirming(false); }}
-            className="h-[34px] w-full rounded-lg border border-[#D6DDFC] bg-white px-3 text-[13px] font-medium text-[#19294D] outline-none transition focus:border-[#7546F5] focus:ring-2 focus:ring-[#F0EBFF]"
+            className="h-[34px] w-full rounded-lg border border-[#D6DDFC] bg-white px-4 text-[13px] font-medium text-[#19294D] outline-none transition focus:border-[#7546F5] focus:ring-2 focus:ring-[#F0EBFF]"
           >
             {vehicles.map((item) => (
               <option key={item.id} value={item.id}>

@@ -378,15 +378,10 @@ export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails, al
         </div>
       ) : null}
       <section className="rounded-2xl border border-[#DFE8F4] bg-white p-4 shadow-[0_8px_22px_rgba(7,29,73,0.035)]">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <h2 className="text-[15px] font-semibold text-[#071D49]">Stage Details</h2>
-            <p className="mt-1 text-[12px] text-[#68758A]">Record claim intimation, workshop and estimate details.</p>
-          </div>
-          <span role="status" aria-live="polite" className="text-[11px] font-medium text-[#60758F]">{autoSaveStatus === "saving" ? "Saving automatically…" : autoSaveStatus === "saved" ? "Saved" : autoSaveStatus === "error" ? "Save failed — draft retained" : "Changes save automatically"}</span>
-        </div>
+        <h2 className="text-[15px] font-semibold text-[#071D49]">Stage Details</h2>
+        <span role="status" aria-live="polite" className="sr-only">{autoSaveStatus === "saving" ? "Saving automatically…" : autoSaveStatus === "saved" ? "Saved" : autoSaveStatus === "error" ? "Save failed — draft retained" : ""}</span>
         {autoSaveStatus === "error" ? <p role="alert" className="mt-2 text-[11px] text-red-700">{autoSaveError}</p> : null}
-        <div className="mt-3 grid gap-3 md:grid-cols-5">
+        <div className="mt-2 grid gap-3 md:grid-cols-5">
           <DateField label="Claim Intimation Date" value={details.claim_intimation_date} onChange={(value) => updateStageDetail("claim_intimation_date", value)} />
           <Field label="Dealership Name" value={details.dealership_name} onChange={(value) => updateStageDetail("dealership_name", value)} />
           <Field label="Dealership Location" value={details.dealership_location} onChange={(value) => updateStageDetail("dealership_location", value)} />
@@ -517,12 +512,12 @@ function documentVisual(row: FinalDocumentRowV2): DocumentVisual {
   return { key: "document", accent: "bg-[#EEF4FF]", fallbackIcon: "📄" };
 }
 
-function Field({ label, value, onChange, inputMode }: { label: string; value: string; onChange: (value: string) => void; inputMode?: "decimal" | "numeric" }) { return <label><span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#174EA6]">{label} <span className="text-red-600">*</span></span><input value={value} inputMode={inputMode} onChange={(event) => onChange(event.target.value)} className="mt-1 h-10 w-full rounded-lg border border-[#D9E3F0] bg-white px-3 text-[12px] font-semibold text-[#071D49] outline-none focus:border-[#174EA6]" /></label>; }
+function Field({ label, value, onChange, inputMode }: { label: string; value: string; onChange: (value: string) => void; inputMode?: "decimal" | "numeric" }) { return <label className="block min-w-0"><span className="block whitespace-nowrap text-[9px] font-semibold uppercase tracking-[0.01em] text-[#174EA6]">{label} <span className="text-red-600">*</span></span><input value={value} inputMode={inputMode} onChange={(event) => onChange(event.target.value)} className="mt-1 h-[34px] w-full rounded-lg border border-[#D9E3F0] bg-white px-3 text-[12px] font-semibold text-[#071D49] outline-none focus:border-[#174EA6]" /></label>; }
 function DateField({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
   const matched = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   const display = matched ? `${matched[3]}/${matched[2]}/${matched[1]}` : "DD/MM/YYYY";
-  return <label><span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#174EA6]">{label} <span className="text-red-600">*</span></span>
-    <span className="relative mt-1 flex h-10 w-full items-center justify-between rounded-lg border border-[#D9E3F0] bg-white px-3 text-[12px] font-semibold text-[#071D49] focus-within:border-[#174EA6]">
+  return <label className="block min-w-0"><span className="block whitespace-nowrap text-[9px] font-semibold uppercase tracking-[0.01em] text-[#174EA6]">{label} <span className="text-red-600">*</span></span>
+    <span className="relative mt-1 flex h-[34px] w-full items-center justify-between rounded-lg border border-[#D9E3F0] bg-white px-3 text-[12px] font-semibold text-[#071D49] focus-within:border-[#174EA6]">
       <span aria-hidden="true">{display}</span><svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4 shrink-0 fill-none stroke-[#526178] stroke-[1.8]"><rect x="4" y="6" width="16" height="14" rx="2" /><path d="M8 3v6M16 3v6M4 10h16" /></svg>
       <input aria-label={label} type="date" value={value} onChange={(event) => onChange(event.target.value)} onClick={(event) => event.currentTarget.showPicker?.()} className="absolute inset-0 h-full w-full cursor-pointer opacity-0" />
     </span>

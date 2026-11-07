@@ -137,7 +137,7 @@ export function SpotIntimationSaveForm({ action, children, cancelHref, evidence,
     {children}
     </form>
     {evidence}
-    <div className="rounded-2xl border border-[#DBE4F0] bg-white p-3 sm:p-4"><div className="flex flex-col-reverse justify-end gap-2 sm:flex-row">
+    <div className="rounded-2xl border border-[#DBE4F0] bg-white p-3 sm:p-4"><div className="flex flex-col-reverse justify-end gap-2 border-t border-[#D9E3F0] pt-3 sm:flex-row">
       {pending
         ? <span aria-disabled="true" className="inline-flex min-h-11 items-center justify-center rounded-xl border border-[#B9CBE2] px-6 py-3 text-[13px] font-semibold text-[#9AAAC0] sm:min-w-32">Cancel</span>
         : <Link href={cancelHref} className="inline-flex min-h-11 items-center justify-center rounded-xl border border-[#B9CBE2] bg-white px-6 py-3 text-[13px] font-semibold text-[#17365D] transition hover:bg-[#F0F6FE] sm:min-w-32">Cancel</Link>}

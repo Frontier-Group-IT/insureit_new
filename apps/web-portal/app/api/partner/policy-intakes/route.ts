@@ -6,6 +6,8 @@ import { getServerAccessToken } from "@/lib/auth-server";
 import { extractPolicyIntakeDocumentTrusted } from "@/lib/policy-intake-ocr-service";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { getPartnerEmployeeIntakeReadScope } from "@/lib/partner-policy-intake-read-access";
+import { hasEffectiveCapability } from "@/lib/effective-permissions";
+import { loadPolicyIntakeDuplicateMatches } from "@/lib/policy-intake-duplicate";
 
 const BUCKET = "policy-documents";
 const MAX_FILE_SIZE = 15 * 1024 * 1024;
@@ -51,7 +53,8 @@ type RequestBody =
   | { action: "complete"; id: string; number: string; lead_source_id?: string; policy_type: PolicyType; customer_mobile: string; storage_path: string; file: UploadMeta }
   | { action: "submit_without_proposal"; lead_source_id?: string; policy_type: "life" | "health"; customer_mobile: string }
   | { action: "prepare_response"; id: string; file: UploadMeta }
-  | { action: "complete_response"; id: string; storage_path: string; file: UploadMeta };
+  | { action: "complete_response"; id: string; storage_path: string; file: UploadMeta }
+  | { action: "review_status"; id: string; status: "needs_attention" | "rejected"; reason: string };
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 180;
@@ -105,7 +108,7 @@ export async function GET(request: Request) {
   if ((employeeRead?.mode === "none") || (!employeeRead && !intakeReadScope)) {
     return requestedId
       ? json({ ok: false, error: "This Policy Intake is not available in your Partner account." }, 404)
-      : json({ ok: true, intakes: [], total: 0, counts: { active: 0, attention: 0, progress: 0, completed: 0 } });
+      : json({ ok: true, intakes: [], total: 0, counts: view === "mobile_list" ? { action_required: 0, in_review: 0, processing: 0, completed: 0, duplicate: 0, rejected: 0, all: 0 } : { active: 0, attention: 0, progress: 0, completed: 0 } });
   }
 
   if (requestedId) {
@@ -126,7 +129,10 @@ export async function GET(request: Request) {
       return json({ ok: false, error: "This Policy Intake is not available in your Partner account." }, 404);
     }
 
-    return json({ ok: true, intake });
+    // Reviewer controls are only provided to currently active, authorized employees.
+    // A readable intake alone never grants Operations mutation rights.
+    const access = await resolvePolicyIntakeReviewerAccess(identity);
+    return json({ ok: true, intake, review_access: access });
   }
 
   const requestedLimit = Number(url.searchParams.get("limit") ?? "25");
@@ -135,9 +141,12 @@ export async function GET(request: Request) {
   const offset = Number.isFinite(requestedOffset) ? Math.max(0, Math.min(100000, Math.floor(requestedOffset))) : 0;
   const filter = url.searchParams.get("filter")?.trim().toLowerCase() ?? "all";
 
-  if (!["all", "attention", "in_progress", "completed"].includes(filter)) {
+  const mobileFilters = ["action_required", "in_review", "processing", "completed", "duplicate", "rejected", "all"];
+  if (!(view === "mobile_list" ? mobileFilters : ["all", "attention", "in_progress", "completed"]).includes(filter)) {
     return json({ ok: false, error: "Invalid Policy Intake filter." }, 400);
   }
+  const search = view === "mobile_list" ? (url.searchParams.get("search") ?? "").trim().slice(0, 120) : "";
+  const includeCounts = view === "mobile_list" && url.searchParams.get("include_counts") === "true";
 
   let query = admin
     .from("policy_intake_requests")
@@ -152,17 +161,44 @@ export async function GET(request: Request) {
 
   if (filter === "attention") query = query.eq("status", "needs_attention");
   if (filter === "completed") query = query.eq("status", "completed");
-  if (filter === "in_progress") query = query.in("status", ["processing", "ready_for_review", "in_review"]);
+  if (filter === "in_progress" || filter === "in_review") query = query.in("status", filter === "in_review" ? ["in_review"] : ["processing", "ready_for_review", "in_review"]);
+  if (filter === "duplicate" || filter === "rejected") query = query.eq("status", filter);
+  if (filter === "processing") query = query.eq("status", "processing").neq("ocr_status", "failed");
+  if (filter === "action_required") query = query.or("status.eq.ready_for_review,status.eq.needs_attention,and(status.eq.processing,ocr_status.eq.failed)");
+  if (search) {
+    // A computed field searches OCR values as well as the scalar PIR/source fields.
+    // It is ANDed with the existing server-side identity scope, never used to bypass it.
+    const escaped = search.replace(/[%_\\]/g, (char) => "\\" + char);
+    query = query.ilike("policy_intake_search_text", `%${escaped}%`);
+  }
 
-  // Mobile list view uses the exact same authenticated, role-scoped query above.
-  // It deliberately omits the four extra count requests and name-enrichment joins:
-  // the native list shows only fields present in intakeSelect, not submitted_by_name.
-  // This keeps each paginated request small without weakening permissions.
+  // Count all authorized records by the SAME role scope, independently of page size.
+  // Counts are requested on initial load/refresh; Load More remains one paginated query.
   if (view === "mobile_list") {
     try {
-      const { data: intakes, error: listError, count } = await query;
-      if (listError) throw listError;
-      return json({ ok: true, intakes: intakes ?? [], total: count ?? 0 });
+      // The closure keeps role predicates identical for every count, including OR-based employees.
+      const countFor = async (statusFilter: "all" | "action_required" | "in_review" | "processing" | "completed" | "duplicate" | "rejected") => {
+        let q = admin.from("policy_intake_requests").select("id", { count: "exact", head: true });
+        if (employeeRead?.mode === "or") q = q.or(employeeRead.predicates);
+        else if (employeeRead?.mode === "submitter") q = q.eq("submitted_by_profile_id", employeeRead.profileId);
+        else if (!employeeRead) q = q.or(intakeReadScope);
+        if (statusFilter === "action_required") q = q.or("status.eq.ready_for_review,status.eq.needs_attention,and(status.eq.processing,ocr_status.eq.failed)");
+        else if (statusFilter === "in_review") q = q.eq("status", "in_review");
+        else if (statusFilter === "processing") q = q.eq("status", "processing").neq("ocr_status", "failed");
+        else if (statusFilter !== "all") q = q.eq("status", statusFilter);
+        const result = await q;
+        if (result.error) throw result.error;
+        return result.count ?? 0;
+      };
+      const [listResult, counts] = await Promise.all([
+        query,
+        includeCounts
+          ? Promise.all(mobileFilters.map((name) => countFor(name as Parameters<typeof countFor>[0])))
+              .then((values) => Object.fromEntries(mobileFilters.map((name, i) => [name, values[i]])))
+          : Promise.resolve(undefined),
+      ]);
+      if (listResult.error) throw listResult.error;
+      return json({ ok: true, intakes: listResult.data ?? [], total: listResult.count ?? 0, ...(counts ? { counts } : {}) });
     } catch (cause) {
       console.error("[partner-policy-intakes] mobile list read failed", {
         category: "list-query",
@@ -302,6 +338,9 @@ export async function POST(request: Request) {
     return json({ ok: false, error: "Invalid request." }, 400);
   }
 
+  if (body.action === "review_status") {
+    return updateMobileIntakeReview(auth.identity, body);
+  }
   if (body.action === "prepare") {
     return prepareUpload(auth.identity, auth.scope, body);
   }
@@ -319,6 +358,63 @@ export async function POST(request: Request) {
   }
 
   return json({ ok: false, error: "Unsupported request." }, 400);
+}
+
+type IntakeReviewAccess = { can_review: boolean; can_finalize: boolean };
+
+async function resolvePolicyIntakeReviewerAccess(identity: PartnerIdentity): Promise<IntakeReviewAccess> {
+  if (identity.actor_kind !== "employee" || !identity.profile_id) return { can_review: false, can_finalize: false };
+  const admin = createSupabaseAdminClient();
+  const { data: profile, error } = await admin.from("profiles").select("id,role,is_active")
+    .eq("id", identity.profile_id).maybeSingle<{ id: string; role: string | null; is_active: boolean | null }>();
+  if (error || !profile || profile.is_active !== true) return { can_review: false, can_finalize: false };
+  const head = profile.role === "operations_head_life";
+  const [review, finalize] = await Promise.all([
+    head ? Promise.resolve(true) : hasEffectiveCapability(profile, "review_policy_intakes", "edit"),
+    head ? Promise.resolve(true) : hasEffectiveCapability(profile, "finalize_policy_intakes", "approve"),
+  ]);
+  return { can_review: review, can_finalize: review && finalize };
+}
+
+async function updateMobileIntakeReview(
+  identity: PartnerIdentity,
+  body: { id: string; status: "needs_attention" | "rejected"; reason: string },
+) {
+  // Do not accept an intermediary's ability to read an intake as permission to review it.
+  const access = await resolvePolicyIntakeReviewerAccess(identity);
+  if (!access.can_review || identity.actor_kind !== "employee") {
+    return json({ ok: false, error: "Operations review permission is required." }, 403);
+  }
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(body.id ?? "")) {
+    return json({ ok: false, error: "Invalid Policy Intake reference." }, 400);
+  }
+  if (!["needs_attention", "rejected"].includes(body.status)) {
+    return json({ ok: false, error: "Invalid review action." }, 400);
+  }
+  const reason = typeof body.reason === "string" ? body.reason.trim() : "";
+  if (!reason || reason.length > 2000) return json({ ok: false, error: "Add a short reason (up to 2,000 characters)." }, 400);
+  const readScope = await getPartnerEmployeeIntakeReadScope(identity);
+  if (readScope.mode === "none") return json({ ok: false, error: "This intake is outside your permitted scope." }, 403);
+  const admin = createSupabaseAdminClient();
+  // Enforce the same duplicate protection used by the Operations Review page.
+  let readable = admin.from("policy_intake_requests")
+    .select("id,intake_number,status,created_at,ocr_fields").eq("id", body.id);
+  if (readScope.mode === "or") readable = readable.or(readScope.predicates);
+  else if (readScope.mode === "submitter") readable = readable.eq("submitted_by_profile_id", readScope.profileId);
+  const { data: intake, error: readError } = await readable.maybeSingle();
+  if (readError || !intake) return json({ ok: false, error: "This intake is unavailable in your permitted scope." }, 403);
+  const duplicate = await loadPolicyIntakeDuplicateMatches(admin, [intake]);
+  if (!duplicate.ok) return json({ ok: false, error: duplicate.error }, 503);
+  if (duplicate.matches.has(body.id)) return json({ ok: false, error: "This intake is a duplicate and cannot be reviewed." }, 409);
+  let query = admin.from("policy_intake_requests").update({
+    status: body.status, attention_reason: reason, assigned_to_profile_id: identity.profile_id,
+  }).eq("id", body.id).in("status", ["processing", "ready_for_review", "in_review", "needs_attention"]);
+  if (readScope.mode === "or") query = query.or(readScope.predicates);
+  else if (readScope.mode === "submitter") query = query.eq("submitted_by_profile_id", readScope.profileId);
+  const { data, error } = await query.select("id").maybeSingle<{ id: string }>();
+  if (error) return json({ ok: false, error: "Could not update this Policy Intake." }, 500);
+  if (!data) return json({ ok: false, error: "Intake is unavailable, closed, or outside your permitted scope. Refresh and try again." }, 409);
+  return json({ ok: true });
 }
 
 async function authenticate(request: Request) {

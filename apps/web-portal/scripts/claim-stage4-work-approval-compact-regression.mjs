@@ -29,16 +29,16 @@ assert.ok(stageFields.includes('label: "Surveyor Email", type: "email", optional
 assert.ok(operations.includes('h-[40px]'));
 assert.ok(operations.includes('max-w-[260px]'));
 assert.ok(operations.includes('max-w-[320px]'));
-assert.ok(operations.includes('selected.key === "payment_encashment" || selected.key === "delivery_order" ? "gap-2" : "max-w-[254px] gap-[10px]"'), "Stage 4 retains its original max-width and gap while Stages 7 and 9 are compact.");
-assert.ok(customer.includes('selected.key==="payment_encashment"?"":field.type==="date"?"max-w-[260px]"'), "Stage 4 retains date max-width while Stage 9 fills its column.");
-assert.ok(customer.includes('h-[40px] w-full'));
-assert.ok(customer.includes('<CustomerClaimBooleanChoice compact={selected.key==="payment_encashment"} name={field.key}'), "Only Stage 9 opts in to compact Yes/No controls.");
-assert.ok(choice.includes('compact ? "h-[34px]" : "h-[40px]"'), "Stage 4 keeps 40px choices; Stage 9 uses 34px.");
+assert.ok(operations.includes('selected.key === "payment_encashment" || selected.key === "delivery_order" ? "gap-2" : "max-w-[254px] gap-[10px]"'), "Stage 4 retains its original max-width and gap while Stage 9 is compact.");
+assert.ok(customer.includes('field.type==="date"?(selected.key==="repair_ri"?"":"max-w-[260px]")'), "Stage 4 retains date max-width while Repair/RI fills its column.");
+assert.ok(customer.includes('h-[34px] w-full'), "Customer stage controls use approved 34px height.");
+assert.ok(customer.includes('<CustomerClaimBooleanChoice compact name={field.key}'), "All Customer stages use compact Yes/No controls.");
+assert.ok(choice.includes('h-[34px] rounded-md'), "Customer Yes/No controls use compact 34px height.");
 assert.ok(operations.includes('onClick={(event) => event.currentTarget.showPicker?.()}'));
 assert.ok(customer.includes('required={!field.optional}'));
 
 // Actions keep Cancel and Save alongside each other and reserve Save width while pending.
-assert.ok(customer.includes('selected.key==="work_approval"?"mt-5 flex min-h-10 items-center justify-end'));
+assert.ok(customer.includes('mt-4 flex min-h-10 flex-wrap items-center justify-end gap-2 border-t'), "Actions retain dedicated wrapping footer space.");
 assert.ok(submit.includes('variant === "continue" ? "min-w-[148px]"'));
 assert.ok(operations.includes('selected.key === "work_approval" ? "Save & Continue"'));
 assert.ok(operations.includes('nextStageKey: nextStageKeyFor(milestoneKey)'));

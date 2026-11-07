@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { FileText, LoaderCircle, Upload, Video } from "lucide-react";
 import { uploadCustomerClaimDocument } from "@/app/customer/(protected)/claims/[id]/stage/[stage]/upload-action";
 import { reuseCustomerLinkedPolicyCopy } from "@/app/customer/(protected)/claims/[id]/stage/[stage]/reuse-policy-copy-action";
@@ -56,9 +57,10 @@ function documentIcon(type: string): string {
 }
 
 export type CustomerClaimFile = { id:string; document_type:string; created_at:string; file_name?:string|null; verification_status?:string|null };
-export function CustomerClaimCompactDocument({label,type,documents,accountId,claimId,stage,allowUpload=true,returnToSpotIntimation=false,canReusePolicyCopy=false,accept=".pdf,.jpg,.jpeg,.png,.webp,.heic"}:{
-  label:string;type:string;documents:CustomerClaimFile[];accountId:string;claimId:string;stage:string;allowUpload?:boolean;returnToSpotIntimation?:boolean;canReusePolicyCopy?:boolean;accept?:string;
+export function CustomerClaimCompactDocument({label,type,documents,accountId,claimId,stage,allowUpload=true,returnToSpotIntimation=false,canReusePolicyCopy=false,showFilePreview=true,accept=".pdf,.jpg,.jpeg,.png,.webp,.heic"}:{
+  label:string;type:string;documents:CustomerClaimFile[];accountId:string;claimId:string;stage:string;allowUpload?:boolean;returnToSpotIntimation?:boolean;canReusePolicyCopy?:boolean;showFilePreview?:boolean;accept?:string;
 }) {
+  const router=useRouter();
   const [expanded,setExpanded]=useState(false);
   const [reusePending,startReuse]=useTransition();
   const [reuseError,setReuseError]=useState("");
@@ -75,6 +77,7 @@ export function CustomerClaimCompactDocument({label,type,documents,accountId,cla
       setRecentUploads(current=>current.some(doc=>doc.id===uploadState.uploaded!.id)?current:[uploadState.uploaded!,...current]);
       if(input.current)input.current.value="";
       setSuccessNotice(`${uploadState.uploadedCount ?? 1} ${label} document uploaded successfully.`);
+      router.refresh(); // Sync the consolidated uploaded-document count after a category upload.
     }
   },[uploadState.uploaded]);
   const reuseCopy=()=>startReuse(async()=>{
@@ -84,6 +87,7 @@ export function CustomerClaimCompactDocument({label,type,documents,accountId,cla
       if (!result.ok) { setReuseError(result.message); return; }
       if (result.uploaded) setRecentUploads(current=>current.some(doc=>doc.id===result.uploaded!.id)?current:[result.uploaded!,...current]);
       setReused(true);
+      router.refresh();
     } catch { setReuseError("Unable to reuse the existing policy copy. Please try again."); }
   });
   const input=useRef<HTMLInputElement>(null);
@@ -95,7 +99,7 @@ export function CustomerClaimCompactDocument({label,type,documents,accountId,cla
     <CustomerSuccessDialog title="Upload Successful" message={successNotice} onClose={()=>setSuccessNotice(null)}/>
     <div className="flex items-center justify-between gap-2">
       <div className="flex min-w-0 flex-1 items-center gap-2">{type.toLowerCase().replace(/[^a-z0-9]/g,"")==="accidentvideo"?<span aria-hidden="true" className="grid h-7 w-7 shrink-0 place-items-center rounded-md bg-[#F21E38] text-white"><Video className="h-4 w-4 fill-current"/></span>:<img src={documentIcon(type)} alt="" aria-hidden="true" loading="lazy" className="h-7 w-7 shrink-0 object-contain" />}<h3 className="min-w-0 text-[12px] font-semibold text-[#102B54]">{label}</h3></div>
-      {ordered.length>0?<button type="button" aria-expanded={ordered.length>1?expanded:undefined} aria-label={ordered.length>1?`${ordered.length} uploaded, ${expanded?'collapse':'expand'} documents`:`${ordered.length} uploaded`} onClick={ordered.length>1?()=>setExpanded(v=>!v):undefined} className={`inline-flex shrink-0 items-center gap-1 rounded-full bg-[#EDF8F2] px-2 py-0.5 text-[10px] font-semibold text-[#087A57] ${ordered.length>1?'cursor-pointer transition hover:bg-[#DFF3E8] focus-visible:outline-2 focus-visible:outline-[#16835D]':'cursor-default'}`}>{ordered.length} Uploaded</button>:null}
+      {showFilePreview && ordered.length>0?<button type="button" aria-expanded={ordered.length>1?expanded:undefined} aria-label={ordered.length>1?`${ordered.length} uploaded, ${expanded?'collapse':'expand'} documents`:`${ordered.length} uploaded`} onClick={ordered.length>1?()=>setExpanded(v=>!v):undefined} className={`inline-flex shrink-0 items-center gap-1 rounded-full bg-[#EDF8F2] px-2 py-0.5 text-[10px] font-semibold text-[#087A57] ${ordered.length>1?'cursor-pointer transition hover:bg-[#DFF3E8] focus-visible:outline-2 focus-visible:outline-[#16835D]':'cursor-default'}`}>{ordered.length} Uploaded</button>:null}
       {allowUpload?<form action={uploadAction} ref={form}>
         <input type="hidden" name="account" value={accountId}/><input type="hidden" name="claim" value={claimId}/><input type="hidden" name="stage" value={stage}/><input type="hidden" name="type" value={type}/><input type="hidden" name="returnToSpotIntimation" value={returnToSpotIntimation?"1":"0"}/>
         <input ref={input} type="file" name="file" required accept={accept} className="sr-only" aria-label={`Choose ${label}`} onChange={e=>{if(e.currentTarget.files?.length)form.current?.requestSubmit();}}/>
@@ -107,7 +111,7 @@ export function CustomerClaimCompactDocument({label,type,documents,accountId,cla
       {reusePending ? "Linking policy copy…" : "Use Existing Policy Copy"}
     </button> : null}
     <ClaimStageErrorDialog message={reuseError} onClose={()=>setReuseError("")}/>
-    {ordered.length>0?<div className="mt-2 space-y-1.5">
+    {showFilePreview && ordered.length>0?<div className="mt-2 space-y-1.5">
       {openFile(ordered[0])}
       {ordered.length>1&&expanded?ordered.slice(1).map(openFile):null}
     </div>:null}

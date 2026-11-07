@@ -22,5 +22,5 @@ assert.ok(dateField.includes('type="date" value={value} onChange={(event) => onC
 assert.ok(dateField.includes('onClick={(event) => event.currentTarget.showPicker?.()}'));
 assert.ok(dateField.includes('aria-label={label}'));
 assert.ok(dateField.includes('DD/MM/YYYY'));
-assert.ok(dateField.includes('h-10 w-full'));
+assert.ok(dateField.includes('h-[34px] w-full'), 'Claim Intimation calendar field follows the approved 34px compact height');
 console.log("Operations Claim Intimation calendar icon parity regression passed.");

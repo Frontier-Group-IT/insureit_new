@@ -20,8 +20,8 @@ assert.match(voice,/navigator\.mediaDevices\.getUserMedia\(\{ audio: true \}\)/,
 assert.match(voice,/Windows microphone privacy settings/,"Denied microphone message checks OS access");
 assert.match(voice,/router\.refresh\(\)/,"Successful voice upload refreshes document list");
 assert.match(voice,/CustomerErrorDialog/,"Voice errors use popup");
-assert.match(multi,/name="type" value="Other Document"/,"Bulk uploads retain their original verification category");
-assert.match(evidence,/aria-label="Multiple Documents"/,"Bulk uploaded files are visible in their dedicated section");
+assert.match(multi,/data\.set\("type","Other Document"\)/,"Bulk uploads retain their original verification category");
+assert.match(evidence,/<CustomerClaimMultipleUpload documents=\{documents\}/,"Bulk uploaded files are visible in the shared dashed upload area");
 assert.doesNotMatch(evidence,/label:"Incident Voice Note",type:"Incident Voice Note"/,"Voice notes must not appear as a document card");
 assert.match(voice,/<CustomerClaimSavedVoiceNotes/,"Uploaded voice notes appear in their dedicated section");
 const operations=read("../components/claim-manager/operations-claim-stage-one-attachments.tsx");

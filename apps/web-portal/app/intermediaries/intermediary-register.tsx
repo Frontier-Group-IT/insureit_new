@@ -59,6 +59,9 @@ type Filters = {
   periodTo?: string;
   defaultPeriodFrom?: string;
   defaultPeriodTo?: string;
+  selectedPeriod?: "all" | "mtd" | "last_month" | "custom";
+  selectedCustomFrom?: string;
+  selectedCustomTo?: string;
 };
 const REGISTERED_STATUS = "iib_registered";
 const APPLICATION_SELECT = "id,registration_status,status,registration_record_id,partner_status,requested_type,final_type,draft_data,partner_record_id,created_at";
@@ -76,6 +79,9 @@ export async function IntermediaryRegister({
   periodTo,
   defaultPeriodFrom,
   defaultPeriodTo,
+  selectedPeriod = "all",
+  selectedCustomFrom,
+  selectedCustomTo,
 }: { selectedType: IntermediaryType | null } & Filters) {
   const profile = await requirePospMispManager(true);
   const admin = createSupabaseAdminClient();
@@ -280,7 +286,7 @@ export async function IntermediaryRegister({
     });
     return (
       <AppShell title={pageTitle}>
-        <PartnerRegisterClient rows={clientRows} canPermanentDelete={profile.role === "it_super_user"} initialSearch={search} initialStatus={accountStatus} success={success} error={error} loadError={Boolean(loadError || partnerBusinessError)} />
+        <PartnerRegisterClient rows={clientRows} canPermanentDelete={profile.role === "it_super_user"} initialSearch={search} initialStatus={accountStatus} initialPeriod={selectedPeriod} initialDateFrom={selectedCustomFrom} initialDateTo={selectedCustomTo} success={success} error={error} loadError={Boolean(loadError || partnerBusinessError)} />
       </AppShell>
     );
   }

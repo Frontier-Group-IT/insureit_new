@@ -31,17 +31,12 @@ assert.match(stages, /if \(nextKey && canOpenNext\) \{[\s\S]*?setSelectedKey\(ne
 assert.match(stages, /await saveInternalSpotIntimationDetails\(claimId, formData\)/, "Preserve saving without automatic workflow advancement.");
 
 assert.match(stages, /router\.replace\(\`\$\{partnerManagedJourney/);
-assert.match(stages, /selected\.key === "delivery_order" \? "gap-2 lg:grid-cols-3 lg:items-start"/, "The three Delivery Order inputs must occupy the full desktop row.");
 assert.match(stages, /selected\.key === "payment_encashment" \? "gap-2 lg:grid-cols-5 lg:items-start"/, "Stage 9 must show five aligned columns on desktop without waiting for 2xl.");
 assert.match(stages, /selected\.key === "work_approval" \? "lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 lg:items-start"/, "Stage 4 should keep its existing layout.");
-assert.match(stages, /selected\.key === "payment_encashment" \|\| selected\.key === "delivery_order" \? "" : "max-w-\[254px\]"/, "Stage 7 and 9 Yes/No controls use their entire grid cell.");
-assert.match(stages, /selected\.key === "payment_encashment" \|\| selected\.key === "delivery_order" \? "gap-2" : "max-w-\[254px\] gap-\[10px\]"/, "Stages 7 and 9 Yes/No options fit compactly.");
-assert.match(stages, /compact=\{selected\.key === "delivery_order" \|\| selected\.key === "payment_encashment"\}/, "Delivery Order and Payment Encashment dates use 34px compact mode.");
-assert.match(stages, /selected\.key === "delivery_order" \|\| selected\.key === "payment_encashment" \? "h-\[34px\]" : "h-\[40px\]"/, "Delivery Order and Payment Encashment controls are 34px tall.");
-assert.doesNotMatch(stages, /selected\.key === "delivery_order"[^\n]*border-t/, "Delivery Order form must not add vertical dividers.");
-assert.match(stages, /selected\.key === "payment_encashment" \|\| selected\.key === "delivery_order" \? "" : field\.type === "date"/, "Stages 7 and 9 date and amount fields use full grid-column width.");
+assert.match(stages, /selected\.key === "payment_encashment" \|\| selected\.key === "delivery_order" \? "" : "max-w-\[254px\]"/, "Stage 9 Yes/No controls should use available grid cell width.");
+assert.match(stages, /selected\.key === "payment_encashment" \|\| selected\.key === "delivery_order" \? "gap-2" : "max-w-\[254px\] gap-\[10px\]"/, "Stage 9 Yes/No options should fit compactly.");
+assert.match(stages, /selected\.key === "billing" \|\| selected\.key === "payment_encashment" \|\| selected\.key === "delivery_order" \? "" : field\.type === "date"/, "Stage 9 date and amount fields should use full grid-column width.");
 assert.match(stages, /sm:grid-cols-2/, "Keep responsive narrow-screen wrapping.");
-assert.match(stages, /selected\.key === "work_approval" \? "mt-3 flex min-h-10 items-center justify-end gap-2 border-t[^\n]*: "mt-3 flex justify-end"/, "Stage 9 save row must not introduce a divider.");
 assert.match(stages, /name: "depreciation_slip_submitted"/);
 assert.match(stages, /name: "satisfaction_voucher_submitted"/);
 assert.match(stages, /name: "documents_submit_date"/);
@@ -60,3 +55,16 @@ assert.match(heading, /<Image src=\{claimHeaderIcons\.claim\} alt="" width=\{34\
 assert.match(heading, /rounded-xl border border-white bg-white/);
 
 console.log("Operations Claim Journey save navigation, Stage 9 layout and 3D heading regression passed.");
+
+
+// Compact stage inputs and a separate action footer must not collide at desktop or mobile widths.
+assert.match(stages, /grid items-start gap-3 sm:grid-cols-2/, "Keep stage controls aligned to the top of each grid row.");
+assert.match(stages, /<AppStyleDateInput name=\{field.name\} value=\{value\} required=\{required\} compact billingCompact=\{selected.key === "billing" \|\| selected.key === "delivery_order" \|\| selected.key === "payment_encashment"\} vehicleDeliveryCompact=\{selected.key === "vehicle_delivery"\} \/>/, "Keep 36px stage dates and apply 34px only to Billing.");
+assert.match(stages, /billingCompact \? "h-\[34px\] max-w-full px-2" : vehicleDeliveryCompact \? "h-\[34px\] max-w-\[335px\] px-3" : compact \? "h-9 max-w-full px-3"/, "Billing uses 34px, other stage dates preserve 36px.");
+assert.match(stages, /selected.key === "billing" \? "h-\[34px\] text-\[11px\]" : selected.key === "delivery_order" \|\| selected.key === "payment_encashment" \? "h-\[34px\] text-\[12px\]" : "h-9 text-\[12px\]"/, "Billing amount uses 34px while other stage inputs retain 36px.");
+assert.match(stages, /mt-4 flex min-h-10 flex-wrap items-center justify-end gap-2 border-t border-\[#D9E3F0\] pt-3/, "Save actions have a dedicated wrapping footer with a top separator and clearance.");
+assert.match(stages, /selected.key === "repair_ri" \? "" : selected.key === "vehicle_delivery" \? "max-w-\[335px\]" : "max-w-\[260px\]"/, "Repair/RI stays full width; Vehicle Delivery keeps its reference width.");
+
+assert.match(stages,/selected\.key === "delivery_order" \? "gap-2 lg:grid-cols-3 lg:items-start"/,"DO keeps three equal desktop columns.");
+assert.match(stages,/selected\.key === "vehicle_delivery" \|\| selected\.key === "delivery_order" \|\| selected\.key === "payment_encashment" \? "h-\[34px\]" : "h-9"/,"Stage 7 and 9 Yes/No controls are 34px.");
+assert.match(stages,/selected\.key === "delivery_order" \|\| selected\.key === "payment_encashment" \? "mt-3 flex items-center justify-end gap-2"/,"Stage 7/9 form footers have no divider.");
