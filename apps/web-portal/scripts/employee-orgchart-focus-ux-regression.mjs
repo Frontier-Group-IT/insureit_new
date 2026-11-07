@@ -7,7 +7,7 @@ const loader = read("../app/employees/load-directory-partner-network.ts");
 const page = read("../app/employees/page.tsx");
 const workspace = read("../app/employees/employee-directory-workspace.tsx");
 
-assert.match(chart, /useState<"team" \| "full">\("team"\)/);
+assert.match(chart, /useState<"overview" \| "team" \| "full">\("team"\)/);
 assert.match(chart, /EmployeeOrgchartTeamFocus/);
 assert.match(chart, /Team focus/);
 assert.match(chart, /Full chart/);
