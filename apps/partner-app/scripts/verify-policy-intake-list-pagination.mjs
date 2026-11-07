@@ -18,7 +18,7 @@ assert.match(app, /setRows\(\(previous\) => \{[\s\S]*?new Set\(previous\.map\(\(
 assert.match(app, /setPageError\(/, 'Later-page failures must not overwrite loaded records');
 assert.match(app, /pageError \? 'Retry Load More' : 'Load More Submissions'/, 'Offer explicit retry for failed page');
 assert.match(app, /requestGeneration\.current/, 'Ignore stale requests after refresh');
-assert.match(app, /Showing \{rows\.length\} of \{total\} submissions/, 'Clearly identify loaded subset');
+assert.doesNotMatch(app, /Showing \\{rows\\.length\\} of \\{total\\} submissions|Filter and search apply to loaded records|loadedSummary/, 'Never show loaded-record count or explanatory summary in Policy Intake UI');
 assert.match(app, /nextOffset < total/, 'Show Load More only when more authorized submissions exist');
 assert.match(app, /loadingMore && styles\.loadMoreButtonLoading/, 'Match Policies page loading button state');
 assert.match(app, /<ActivityIndicator size="small" color="#FFFFFF" \/>/, 'Show loading spinner as on Policies page');
