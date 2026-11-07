@@ -6,7 +6,7 @@ const api = readFileSync('lib/policy-intakes.ts', 'utf8');
 const route = readFileSync('../web-portal/app/api/partner/policy-intakes/route.ts', 'utf8');
 
 assert.match(app, /useState<IntakeFilter>\('all'\)/, 'Keep all-submissions default');
-assert.match(api, /export const POLICY_INTAKE_PAGE_SIZE = 50/, 'Page size must match server cap');
+assert.match(api, /export const POLICY_INTAKE_PAGE_SIZE = 10/, 'Intake initial load and each Load More must match Policies: 10 per request');
 assert.match(api, /export async function listPartnerPolicyIntakesPage\(offset = 0\)/, 'Fetch only requested page');
 assert.match(api, /export async function getPartnerPolicyIntake\(id: string\)/, 'Detail uses authorized single-item lookup');
 assert.match(readFileSync('app/policy-intakes/[id].tsx', 'utf8'), /await getPartnerPolicyIntake\(id\)/, 'Detail screen never depends on fetching all pages');
@@ -16,9 +16,17 @@ assert.match(app, /await listPartnerPolicyIntakesPage\(0\)/, 'Initial request mu
 assert.match(app, /await listPartnerPolicyIntakesPage\(nextOffset\)/, 'Load more must request next offset');
 assert.match(app, /setRows\(\(previous\) => \{[\s\S]*?new Set\(previous\.map\(\(row\) => row\.id\)\)/, 'Keep previously loaded records and dedupe');
 assert.match(app, /setPageError\(/, 'Later-page failures must not overwrite loaded records');
-assert.match(app, /pageError \? 'Retry Load More' : 'Load More'/, 'Offer explicit retry for failed page');
+assert.match(app, /pageError \? 'Retry Load More' : 'Load More Submissions'/, 'Offer explicit retry for failed page');
 assert.match(app, /requestGeneration\.current/, 'Ignore stale requests after refresh');
 assert.match(app, /Showing \{rows\.length\} of \{total\} submissions/, 'Clearly identify loaded subset');
+assert.match(app, /nextOffset < total/, 'Show Load More only when more authorized submissions exist');
+assert.match(app, /loadingMore && styles\.loadMoreButtonLoading/, 'Match Policies page loading button state');
+assert.match(app, /<ActivityIndicator size="small" color="#FFFFFF" \/>/, 'Show loading spinner as on Policies page');
+assert.match(app, /<Feather name="chevron-down" size=\{13\} color="#3156B8" \/>/, 'Match Policies page load-more chevron');
+assert.match(app, /accessibilityState=\{\{ disabled: loadingMore \|\| loading \|\| refreshing, busy: loadingMore \}\}/, 'Prevent repeated taps during loading');
+assert.match(app, /setRows\(page\.intakes\)/, 'Refresh restores first page');
+assert.match(app, /setNextOffset\(page\.intakes\.length\)/, 'Refresh resets next offset to the first-page boundary');
+assert.match(app, /\[filter, query, rows\]/, 'Retain existing filter and search behavior for loaded submissions');
 assert.match(route, /if \(view === "mobile_list"\)/, 'Mobile server path must be specific');
 assert.match(route, /if \(employeeRead\?\.mode === "or"\) query = query\.or\(employeeRead\.predicates\)/, 'Preserve employee read scope');
 assert.match(route, /else if \(!employeeRead\) query = query\.or\(intakeReadScope\)/, 'Preserve partner read scope');
