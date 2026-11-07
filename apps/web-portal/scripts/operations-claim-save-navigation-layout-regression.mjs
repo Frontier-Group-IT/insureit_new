@@ -39,7 +39,7 @@ assert.match(stages, /selected\.key === "payment_encashment" \|\| selected\.key 
 assert.match(stages, /compact=\{selected\.key === "delivery_order"\}/, "Only Delivery Order dates opt in to 34px compact mode.");
 assert.match(stages, /selected\.key === "delivery_order" \? "h-\[34px\]" : "h-\[40px\]"/, "Delivery Order controls are 34px tall.");
 assert.doesNotMatch(stages, /selected\.key === "delivery_order"[^\n]*border-t/, "Delivery Order form must not add vertical dividers.");
-assert.match(stages, /selected\.key === "payment_encashment" \? "" : field\.type === "date"/, "Stage 9 date and amount fields should use full grid-column width.");
+assert.match(stages, /selected\.key === "payment_encashment" \|\| selected\.key === "delivery_order" \? "" : field\.type === "date"/, "Stages 7 and 9 date and amount fields use full grid-column width.");
 assert.match(stages, /sm:grid-cols-2/, "Keep responsive narrow-screen wrapping.");
 assert.match(stages, /name: "depreciation_slip_submitted"/);
 assert.match(stages, /name: "satisfaction_voucher_submitted"/);
