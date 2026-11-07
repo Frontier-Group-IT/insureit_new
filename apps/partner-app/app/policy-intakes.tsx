@@ -229,12 +229,12 @@ export default function PolicyIntakesScreen() {
             state="empty"
             asset={rows.length ? PartnerAssets.emptyStates.noSearchResults : PartnerAssets.emptyStates.policyUpload}
             title={rows.length ? 'No submissions in this filter' : 'No Policy Intakes yet'}
-            message={rows.length ? 'Try another filter or search term, or load more submissions below.' : 'Create an intake when you have a policy copy that Operations needs to onboard.'}
+            message={rows.length ? 'Try another filter or search term.' : 'Create an intake when you have a policy copy that Operations needs to onboard.'}
             actionLabel={rows.length ? undefined : 'Create first intake'}
             onAction={rows.length ? undefined : () => router.push('/policy-intake-new')}
           />
         )}
-        {rows.length > 0 && nextOffset < total ? (
+        {visibleRows.length > 0 && nextOffset < total ? (
           <View style={styles.pagination}>
             {pageError ? <Text style={styles.pageError}>{pageError}</Text> : null}
             <Pressable
