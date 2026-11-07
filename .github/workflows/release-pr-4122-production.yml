@@ -1,3 +1,5 @@
+# Re-trigger PR #4122 approved production sequence on 2026-11-07 after stale-main release abort.
+# Same safeguards, no native builds, portal must succeed before Partner production OTA.
 name: Release PR 4122 Portal then Partner OTA (one-time)
 
 # This workflow is triggered by merging this reviewed one-time release file.
