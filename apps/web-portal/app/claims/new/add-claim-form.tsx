@@ -295,7 +295,7 @@ function ClaimOnboardingHeader() {
 }
 
 function ClaimSection({ number, title, children, columns }: { number: string; title: string; children: ReactNode; columns: "two" | "four" }) {
-  const grid = columns === "two" ? "md:grid-cols-2" : "md:grid-cols-2 xl:grid-cols-4";
+  const grid = columns === "two" ? "grid-cols-2 min-w-[620px] items-start" : "md:grid-cols-2 xl:grid-cols-4";
   return (
     <section className="overflow-hidden rounded-xl border border-[#D9E2F0] bg-white shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
       <div className="flex min-h-[50px] items-center border-b border-[#E4EAF1] bg-[#FBFCFE] px-4 py-2.5">
@@ -304,7 +304,7 @@ function ClaimSection({ number, title, children, columns }: { number: string; ti
           <h2 className="text-[13px] font-semibold text-[#17203A]">{title}</h2>
         </div>
       </div>
-      <div className={`grid min-w-0 grid-cols-1 gap-x-3 gap-y-3 p-3.5 sm:p-4 ${grid}`}>{children}</div>
+      <div className={columns === "two" ? "w-full overflow-x-auto" : ""}><div className={`grid min-w-0 grid-cols-1 gap-x-3 gap-y-3 p-3.5 sm:p-4 ${grid}`}>{children}</div></div>
     </section>
   );
 }
