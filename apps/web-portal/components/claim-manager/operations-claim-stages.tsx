@@ -428,7 +428,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
                       <legend className="block h-4 max-sm:h-auto max-w-full whitespace-nowrap text-[9px] font-semibold uppercase leading-4 tracking-[0.01em] text-[#174EA6] max-sm:whitespace-normal">
                         {displayLabel}{required ? <span className="ml-1 text-rose-600">*</span> : null}
                       </legend>
-                      <div className={`mt-1 grid w-full grid-cols-2 ${"gap-2"}`}>
+                      <div className="mt-1 grid w-full grid-cols-2 gap-2">
                         <label className={`flex h-[34px] cursor-pointer items-center justify-center rounded-[4px] border border-[#D9E3F0] bg-white text-[12px] font-semibold normal-case tracking-normal text-[#071D49] has-[:checked]:border-[#174EA6] has-[:checked]:bg-[#EEF4FF]`}>
                           <input className="sr-only" type="radio" name={field.name} value="true" defaultChecked={yesChecked} required={required} />Yes
                         </label>
@@ -441,7 +441,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
                 }
                 const useAppDatePicker = field.type === "date";
                 return (
-                  <label key={field.name} className={`min-w-0 block w-full whitespace-nowrap max-sm:whitespace-normal ${""} text-[9px] font-semibold uppercase leading-4 tracking-[0.01em] text-[#174EA6]`}>
+                  <label key={field.name} className="min-w-0 block w-full whitespace-nowrap max-sm:whitespace-normal text-[9px] font-semibold uppercase leading-4 tracking-[0.01em] text-[#174EA6]">
                     {displayLabel}{required && !displayLabel.includes("*") ? <span className="ml-1 text-rose-600">*</span> : null}
                     {useAppDatePicker ? (
                       <AppStyleDateInput name={field.name} value={value} required={required} />
