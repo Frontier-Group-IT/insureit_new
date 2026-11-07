@@ -19,6 +19,7 @@ import { usePartnerQuery } from '@/lib/use-partner-query';
 import { getPartnerQueryCache } from '@/lib/partner-query-cache';
 import { formatIndianCurrency } from '@/lib/format';
 import { PartnerAssets } from '@/lib/partner-assets';
+import { canPartnerAccess } from '@/lib/partner-permissions';
 import { partnerTheme } from '@/lib/theme';
 import { signedInPersonName } from '@/lib/signed-in-person';
 import { usePartnerSession } from '@/providers/partner-session-provider';
@@ -363,7 +364,13 @@ export default function PartnerHomeScreen() {
                     label: 'Customers',
                     onPress: () => router.push('/customers'),
                   },
-                ]}
+                ].filter(action => canPartnerAccess(
+                  context,
+                  action.key === 'policy-intake' ? 'create_policy_intakes'
+                    : action.key === 'renewals' ? 'view_policies'
+                    : action.key === 'claims' ? 'view_claims' : 'view_customers',
+                  action.key === 'policy-intake' ? 'edit' : 'view',
+                ))}
               />
             </View>
           </PartnerEnter>
