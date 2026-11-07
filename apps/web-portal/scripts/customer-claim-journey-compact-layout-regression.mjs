@@ -42,7 +42,7 @@ assert.match(customerStagePage,/selected\.key==="spot_status"\?"gap-2 lg:grid-co
 assert.match(customerStagePage,/selected\.key==="spot_status"\|\|selected\.key==="payment_encashment"\?""/,"Spot Status fields use the full grid cell width.");
 assert.match(customerStagePage,/selected\.key==="spot_status"\?"text-\[8px\]":"text-\[9px\]"/,"Spot Status has smaller heading text above each input.");
 assert.match(customerStagePage,/selected\.key==="spot_status"\|\|selected\.key==="payment_encashment"\?"mt-3 flex items-center justify-end gap-2"/,"Spot Status has no action footer divider.");
-assert.match(customerStagePage,/className="mt-1 h-\[34px\] w-full/,"Stage 2 controls are 34px tall.");
+assert.match(customerStagePage,/className="mt-1 h-\[34px\] min-w-0 w-full max-w-full/,"Claim controls stay 34px and width-bounded.");
 const completedInternalJourney = readFileSync("components/customer-portal/customer-internal-completed-journey.tsx","utf8");
 assert.match(completedInternalJourney,/stage\.key === "spot_status" \? "lg:grid-cols-4" : "lg:grid-cols-3 xl:grid-cols-5"/,"Internal customer completed Spot Status also uses four columns.");
 assert.ok(customerStagePage.includes('selected.key==="payment_encashment"?"min-w-[1120px] grid-cols-[minmax(235px,1.1fr)_minmax(255px,1.2fr)_minmax(190px,1fr)_minmax(190px,1fr)_minmax(185px,0.9fr)] items-start gap-2"'),"Customer Payment Encashment keeps five bounded fields in one row.");
@@ -51,3 +51,9 @@ assert.match(customerStagePage,/selected\.key==="payment_encashment"\?"":field\.
 assert.match(customerStagePage,/<CustomerClaimBooleanChoice compact name=\{field\.key\}/,"All stages use compact Yes/No controls.");
 assert.match(customerChoices,/compact \? "gap-2" : "max-w-\[254px\] gap-\[10px\]"/,"Compact Yes/No buttons must fit narrower desktop columns while preserving other stages.");
 console.log("Compact full-width customer claim journey regression passed.");
+
+// Delivery Order labels and 34px fields stay side-by-side in Customer editable and read-only views.
+assert.ok(customerStagePage.includes('selected.key==="delivery_order"?"min-w-[720px] grid-cols-[repeat(3,minmax(0,1fr))] items-start gap-2"'));
+assert.ok(customerStagePage.includes('selected.key==="payment_encashment"||selected.key==="delivery_order"?"w-full overflow-x-auto pb-1"'));
+assert.ok(customerStagePage.includes('selected.key==="delivery_order"?"block h-4 whitespace-nowrap"'));
+assert.ok(customerStagePage.includes('selected.key==="delivery_order"?"overflow-x-auto p-4":"p-4"'));
