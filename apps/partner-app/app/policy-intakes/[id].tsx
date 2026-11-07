@@ -123,7 +123,7 @@ export default function PolicyIntakeDetailScreen() {
   }
 
   async function openOperationsReview() {
-    if (!row?.review_access.can_finalize) return;
+    if (!row?.review_access.can_review) return;
     try {
       // The existing Operations website owns reviewer assignment, duplicate protection,
       // Policy Onboarding draft persistence and finalization. Never pass an app token in a URL.
@@ -228,6 +228,20 @@ export default function PolicyIntakeDetailScreen() {
             <View style={{ marginHorizontal: 12, marginTop: 12, padding: 12, backgroundColor: '#FFFFFF', borderColor: '#D9E3F0', borderWidth: 1, borderRadius: 12, gap: 10 }}>
               <Text style={{ fontSize: 14, fontWeight: '700', color: '#17365D' }}>Policy Intake Review</Text>
               <Text style={{ fontSize: 11, color: '#65768D' }}>Operations-only review. Existing policy and customer permissions apply.</Text>
+              <View style={{ borderRadius: 10, backgroundColor: '#F4F7FC', padding: 10, gap: 5 }}>
+                <Text style={{ color: '#17365D', fontSize: 11, fontWeight: '700' }}>Fetched policy details (OCR)</Text>
+                {(row.ocr_fields ?? []).length ? row.ocr_fields.map((field) => (
+                  <View key={field.key} style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 10, paddingVertical: 3 }}>
+                    <Text style={{ flex: 1, color: '#697991', fontSize: 10 }}>{field.label || field.key.replace(/_/g, ' ')}</Text>
+                    <Text style={{ flex: 2, color: '#17365D', fontSize: 11, textAlign: 'right' }}>
+                      {field.value || '—'}{typeof field.confidence === 'number' && field.confidence < 0.9 ? ' · Review' : ''}
+                    </Text>
+                  </View>
+                )) : <Text style={{ color: '#65768D', fontSize: 11 }}>No automatic extraction available. Review the original policy document in Operations.</Text>}
+              </View>
+              <Pressable onPress={() => void openOperationsReview()} accessibilityRole="button" style={{ alignItems: 'center', paddingVertical: 8 }}>
+                <Text style={{ color: '#315B9A', fontSize: 11, fontWeight: '700' }}>Open full policy document & review on website</Text>
+              </Pressable>
               <TextInput
                 value={reviewNote}
                 onChangeText={setReviewNote}
