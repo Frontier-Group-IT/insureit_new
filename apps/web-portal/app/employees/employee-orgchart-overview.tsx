@@ -20,7 +20,7 @@ export function EmployeeOrgchartOverview({
   const groups = new Map<string, EmployeeRow[]>();
   const matches = (e: EmployeeRow) => (!department || normalize(e.department) === normalize(department)) &&
     (!query || [e.full_name, e.employee_code, e.department, e.designation, e.location].some((v) => normalize(v).includes(normalize(query))) ||
-      partners.some((p) => p.employeeId === e.id && [p.name, p.code, p.kind].some((v) => normalize(v).includes(normalize(query))));
+      partners.some((p) => p.employeeId === e.id && [p.name, p.code, p.kind].some((v) => normalize(v).includes(normalize(query)))));
   for (const employee of employees.filter(matches)) {
     const label = employee.department?.trim() || "Unassigned department";
     const key = normalize(label);
