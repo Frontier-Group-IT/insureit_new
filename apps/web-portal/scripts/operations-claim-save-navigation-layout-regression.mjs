@@ -32,7 +32,10 @@ assert.match(stages, /await saveInternalSpotIntimationDetails\(claimId, formData
 
 assert.match(stages, /router\.replace\(\`\$\{partnerManagedJourney/);
 assert.match(stages, /selected\.key === "payment_encashment" \? "gap-2 lg:grid-cols-5 lg:items-start"/, "Stage 9 must show five aligned columns on desktop without waiting for 2xl.");
-assert.ok(stages.includes('selected.key === "work_approval" ? "lg:grid-cols-3 xl:grid-cols-5 lg:items-start"'), "Stage 4 aligns five fields at wide desktop widths.");
+assert.ok(stages.includes('selected.key === "work_approval" ? "!grid-cols-5 min-w-[900px] lg:items-start"'), "Stage 4 always keeps five fields in one row.");
+assert.ok(stages.includes('selected.key === "work_approval" ? "w-full min-w-0 overflow-x-auto" : "w-full min-w-0"'), "Smaller viewports scroll Stage 4 horizontally instead of wrapping or overlapping.");
+assert.ok(stages.includes('selected.key === "work_approval" ? "flex flex-col" : "max-sm:whitespace-normal"'), "Stage 4 labels stack above their input controls.");
+assert.match(stages, /className="mt-1 block h-\[34px\] min-w-0 w-full/, "Text input controls are block-level and cannot share their label row.");
 assert.ok(stages.includes('selected.key === "payment_encashment" || selected.key === "delivery_order" || selected.key === "work_approval" ? "" : "max-w-[254px]"'), "Stage 4 and Stage 9 Yes/No controls use their grid cell widths.");
 assert.ok(stages.includes('const useAppDatePicker = field.type === "date"'), "Native date behavior is preserved.");
 assert.match(stages, /sm:grid-cols-2/, "Keep responsive narrow-screen wrapping.");
