@@ -1,5 +1,3 @@
-import { Files } from "lucide-react";
-import { CustomerClaimMultipleFiles } from "./customer-claim-multiple-files";
 import { CustomerClaimMultipleUpload } from "./customer-claim-multiple-upload";
 import { CustomerClaimCompactDocument, type CustomerClaimFile } from "./customer-claim-compact-document";
 
@@ -23,20 +21,13 @@ documents:CustomerClaimFile[];claimId:string;accountId:string;stage:string;retur
 }) {
   // Existing bulk uploads retain the original document_type for Operations verification.
   // Only presentation changes: both editable and completed views share this file list.
-  const multipleDocuments = documents.filter(doc => normalize(doc.document_type) === "otherdocument");
   return <section className="overflow-hidden rounded-2xl border border-[#D9E3F0] bg-white">
     <header className="border-b border-[#D9E3F0] px-4 py-3"><h2 className="text-[17px] font-semibold text-[#071D49]">Claim Documents</h2></header>
     <div className="grid gap-3 p-3 md:grid-cols-2 xl:grid-cols-3">
       {definitions.filter(item=>!onlyUploaded||documents.some(doc=>match(doc.document_type,item.type))).map(item=><CustomerClaimCompactDocument key={item.type} label={item.label} type={item.type} accept={item.accept} documents={documents.filter(doc=>match(doc.document_type,item.type))} claimId={claimId} accountId={accountId} stage={stage} returnToSpotIntimation={returnToSpotIntimation} allowUpload={allowUpload && item.type !== "Incident Voice Note"} canReusePolicyCopy={item.type === "Insurance Copy" && canReusePolicyCopy}/>)}
     </div>
-    {(allowUpload || multipleDocuments.length > 0) ? (
-      <section aria-label="Multiple Documents" className="mx-3 mb-3 rounded-xl border border-[#D9E3F0] bg-white p-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h3 className="flex items-center gap-2 text-[13px] font-semibold text-[#102B54]"><Files className="h-4 w-4 text-[#2460B8]" aria-hidden="true"/>Multiple Documents</h3>
-        </div>
-        <CustomerClaimMultipleFiles documents={multipleDocuments} claimId={claimId} accountId={accountId} allowDelete={allowUpload && stage === "spot_intimation"} />
-        {allowUpload ? <CustomerClaimMultipleUpload claimId={claimId} accountId={accountId} stage={stage} returnToSpotIntimation={returnToSpotIntimation}/> : null}
-      </section>
-    ) : null}
+    {(allowUpload || documents.length > 0) ? <div className="mx-3 mb-3">
+      <CustomerClaimMultipleUpload documents={documents} claimId={claimId} accountId={accountId} stage={stage} allowUpload={allowUpload} returnToSpotIntimation={returnToSpotIntimation}/>
+    </div> : null}
   </section>;
 }
