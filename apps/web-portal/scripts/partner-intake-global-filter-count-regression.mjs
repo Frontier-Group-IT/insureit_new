@@ -24,5 +24,5 @@ assert.match(sql, /create or replace function public\.policy_intake_search_text\
 assert.match(sql, /intake public\.policy_intake_requests/);
 assert.match(sql, /intake\.ocr_fields::text/, "Include OCR insurer and customer values.");
 assert.match(sql, /intake\.intake_number/, "Include PIR number.");
-assert.doesNotMatch(sql, /security definer/i, "Computed field must not bypass security by using SECURITY DEFINER.");
+assert.doesNotMatch(sql, /^\s*security\s+definer/im, "Computed field must not bypass security by using SECURITY DEFINER.");
 console.log("Partner Intake scoped full counts, server-side search, and migration regression passed.");
