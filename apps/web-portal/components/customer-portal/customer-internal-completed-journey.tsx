@@ -78,7 +78,7 @@ export function CustomerInternalCompletedJourney({
         {stage.key !== "payment_encashment" ? <div className="space-y-3 border-t border-[#E5EBF4] px-4 py-3">
           {fields.length || extra.length ? <div className="rounded-xl border border-[#DFE7F2] bg-white">
             <h3 className="border-b border-[#DFE7F2] px-3 py-3 text-[15px] font-semibold text-[#102B54]">{stage.key === "spot_intimation" ? "Accident & Spot Intimation Details" : stage.label+" Details"}</h3>
-            <div className="grid gap-3 p-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+            <div className={`grid gap-3 p-3 sm:grid-cols-2 ${stage.key === "spot_status" ? "lg:grid-cols-4" : "lg:grid-cols-3 xl:grid-cols-5"}`}>
               {[...fields,...extra].map(([label,value]) => <div key={label} className="min-w-0">
                 <p className="mb-1 text-[10px] font-semibold uppercase text-[#5673B0]">{label}</p>
                 <div className="flex min-h-9 items-center rounded-md border border-[#D9E3F0] bg-[#F4F6FA] px-3 py-2 text-[12px] font-medium text-[#18345C] break-words">{present(value) ? display(value) : "Not provided"}</div>
