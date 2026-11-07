@@ -63,4 +63,4 @@ assert.match(stages, /<AppStyleDateInput name=\{field.name\} value=\{value\} req
 assert.match(stages, /billingCompact \? "h-\[34px\] max-w-full px-2" : vehicleDeliveryCompact \? "h-\[34px\] max-w-\[335px\] px-3" : compact \? "h-9 max-w-full px-3"/, "Billing uses 34px, other stage dates preserve 36px.");
 assert.match(stages, /selected.key === "billing" \? "h-\[34px\] text-\[11px\]" : "h-9 text-\[12px\]"/, "Billing amount uses 34px while other stage inputs retain 36px.");
 assert.match(stages, /mt-4 flex min-h-10 flex-wrap items-center justify-end gap-2 border-t border-\[#D9E3F0\] pt-3/, "Save actions have a dedicated wrapping footer with a top separator and clearance.");
-assert.match(stages, /selected.key === "repair_ri" \? "" : "max-w-\[260px\]"/, "Repair/RI date fields fill their grid cells.");
+assert.match(stages, /selected.key === "repair_ri" \? "" : selected.key === "vehicle_delivery" \? "max-w-\[335px\]" : "max-w-\[260px\]"/, "Repair/RI stays full width; Vehicle Delivery keeps its reference width.");
