@@ -32,15 +32,16 @@ assert.match(stages, /await saveInternalSpotIntimationDetails\(claimId, formData
 
 assert.match(stages, /router\.replace\(\`\$\{partnerManagedJourney/);
 assert.match(stages, /selected\.key === "delivery_order" \? "gap-2 lg:grid-cols-3 lg:items-start"/, "The three Delivery Order inputs must occupy the full desktop row.");
-assert.match(stages, /selected\.key === "payment_encashment" \? "gap-2 lg:grid-cols-3 xl:grid-cols-5 lg:items-start"/, "Stage 9 must show five aligned columns on desktop without waiting for 2xl.");
+assert.match(stages, /selected\.key === "payment_encashment" \? "gap-2 lg:grid-cols-5 lg:items-start"/, "Stage 9 must show five aligned columns on desktop without waiting for 2xl.");
 assert.match(stages, /selected\.key === "work_approval" \? "lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 lg:items-start"/, "Stage 4 should keep its existing layout.");
 assert.match(stages, /selected\.key === "payment_encashment" \|\| selected\.key === "delivery_order" \? "" : "max-w-\[254px\]"/, "Stage 7 and 9 Yes/No controls use their entire grid cell.");
 assert.match(stages, /selected\.key === "payment_encashment" \|\| selected\.key === "delivery_order" \? "gap-2" : "max-w-\[254px\] gap-\[10px\]"/, "Stages 7 and 9 Yes/No options fit compactly.");
-assert.match(stages, /compact=\{selected\.key === "delivery_order"\}/, "Only Delivery Order dates opt in to 34px compact mode.");
-assert.match(stages, /selected\.key === "delivery_order" \? "h-\[34px\]" : "h-\[40px\]"/, "Delivery Order controls are 34px tall.");
+assert.match(stages, /compact=\{selected\.key === "delivery_order" \|\| selected\.key === "payment_encashment"\}/, "Delivery Order and Payment Encashment dates use 34px compact mode.");
+assert.match(stages, /selected\.key === "delivery_order" \|\| selected\.key === "payment_encashment" \? "h-\[34px\]" : "h-\[40px\]"/, "Delivery Order and Payment Encashment controls are 34px tall.");
 assert.doesNotMatch(stages, /selected\.key === "delivery_order"[^\n]*border-t/, "Delivery Order form must not add vertical dividers.");
 assert.match(stages, /selected\.key === "payment_encashment" \|\| selected\.key === "delivery_order" \? "" : field\.type === "date"/, "Stages 7 and 9 date and amount fields use full grid-column width.");
 assert.match(stages, /sm:grid-cols-2/, "Keep responsive narrow-screen wrapping.");
+assert.match(stages, /selected\.key === "work_approval" \? "mt-3 flex min-h-10 items-center justify-end gap-2 border-t[^\n]*: "mt-3 flex justify-end"/, "Stage 9 save row must not introduce a divider.");
 assert.match(stages, /name: "depreciation_slip_submitted"/);
 assert.match(stages, /name: "satisfaction_voucher_submitted"/);
 assert.match(stages, /name: "documents_submit_date"/);
