@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, CalendarDays, ChevronDown, Search } from "lucide-react";
+import { AlertTriangle, ChevronDown, Search } from "lucide-react";
 import { IntermediaryTabs } from "./intermediary-tabs";
 import { FormSubmitButton } from "@/components/form-submit-button";
 import { FreshAccountReviewLink } from "./applications/account-review-back-link";
@@ -55,10 +55,6 @@ export function PartnerRegisterClient({
   error,
   loadError,
   canPermanentDelete,
-  initialDateFrom,
-  initialDateTo,
-  mtdFrom,
-  mtdTo,
 }: {
   rows: PartnerRegisterRow[];
   canPermanentDelete: boolean;
@@ -67,10 +63,6 @@ export function PartnerRegisterClient({
   success?: string;
   error?: string;
   loadError: boolean;
-  initialDateFrom: string;
-  initialDateTo: string;
-  mtdFrom: string;
-  mtdTo: string;
 }) {
   const router = useRouter();
   const [search, setSearch] = useState(initialSearch);
@@ -78,8 +70,6 @@ export function PartnerRegisterClient({
   const [status, setStatus] = useState(initialFilter);
   const [selectedFilter, setSelectedFilter] = useState<PartnerFilter>(initialFilter || "all");
   const [rmFilter, setRmFilter] = useState("");
-  const [dateFrom, setDateFrom] = useState(initialDateFrom);
-  const [dateTo, setDateTo] = useState(initialDateTo);
   const [currentPage, setCurrentPage] = useState(1);
   const normalized = search.trim().toLowerCase();
 
@@ -87,7 +77,7 @@ export function PartnerRegisterClient({
   const searchedRows = useMemo(() => normalized ? rows.filter((row) => row.searchText.includes(normalized) || (normalized.replace(/\D/g, "").length >= 3 && row.mobile.replace(/\D/g, "").includes(normalized.replace(/\D/g, "")))) : rows, [normalized, rows]);
   const scopedRows = useMemo(() => searchedRows.filter((row) => {
     if (rmFilter && row.assignedRm !== rmFilter) return false;
-    return (row.policyCount ?? 0) > 0;
+    return true;
   }), [searchedRows, rmFilter]);
   const counts = useMemo(() => scopedRows.reduce((acc, row) => {
     if (row.active) acc.active += 1;
@@ -96,8 +86,8 @@ export function PartnerRegisterClient({
   }, { active: 0, onboarding: 0 }), [scopedRows]);
   const visibleRows = useMemo(() => {
     const filtered = status === "active" ? scopedRows.filter((row) => row.active) : status === "onboarding" ? scopedRows.filter((row) => !row.active) : scopedRows;
-    // Full authorized result set ranked BEFORE pagination. Every listed partner
-    // has at least one policy issued within the selected date range.
+    // All authorized partners remain visible, including those with no MTD business.
+    // Rank highest MTD net premium first, before pagination.
     return [...filtered].sort((a, b) => (b.netPremium ?? 0) - (a.netPremium ?? 0)
       || (b.policyCount ?? 0) - (a.policyCount ?? 0)
       || a.displayName.localeCompare(b.displayName));
@@ -108,19 +98,15 @@ export function PartnerRegisterClient({
   const pageRows = visibleRows.slice(pageStartIndex, pageStartIndex + PARTNER_PAGE_SIZE);
   const showingStart = totalRecords === 0 ? 0 : pageStartIndex + 1;
   const showingEnd = totalRecords === 0 ? 0 : Math.min(pageStartIndex + PARTNER_PAGE_SIZE, totalRecords);
-  const hasCustomRange = Boolean(dateFrom && dateTo && (dateFrom !== mtdFrom || dateTo !== mtdTo));
-  const extraFilterCount = Number(Boolean(rmFilter)) + Number(hasCustomRange);
+  const extraFilterCount = Number(Boolean(rmFilter));
 
   useEffect(() => {
     const params = new URLSearchParams();
     if (search.trim()) params.set("q", search.trim());
     if (status) params.set("account_status", status);
-    if (initialDateFrom && initialDateTo && (initialDateFrom !== mtdFrom || initialDateTo !== mtdTo)) { params.set("from", initialDateFrom); params.set("to", initialDateTo); }
     const nextUrl = `/intermediaries/partner${params.size ? `?${params.toString()}` : ""}`;
     if (`${window.location.pathname}${window.location.search}` !== nextUrl) window.history.replaceState(null, "", nextUrl);
-  }, [search, status, initialDateFrom, initialDateTo, mtdFrom, mtdTo]);
-
-  useEffect(() => { setDateFrom(initialDateFrom); setDateTo(initialDateTo); }, [initialDateFrom, initialDateTo]);
+  }, [search, status]);
 
   useEffect(() => {
     setCurrentPage((page) => Math.min(page, totalPages));
@@ -161,31 +147,8 @@ export function PartnerRegisterClient({
     setCurrentPage(1);
   }
 
-  function applyBusinessRange(from: string, to: string) {
-    if (!from || !to || from > to) return;
-    const params = new URLSearchParams();
-    if (search.trim()) params.set("q", search.trim());
-    if (status) params.set("account_status", status);
-    if (from !== mtdFrom || to !== mtdTo) { params.set("from", from); params.set("to", to); }
-    router.replace(`/intermediaries/partner${params.size ? `?${params.toString()}` : ""}`, { scroll: false });
-  }
-  function changeFrom(value: string) {
-    const nextTo = value && dateTo && value > dateTo ? "" : dateTo;
-    setDateFrom(value); setDateTo(nextTo); setCurrentPage(1);
-    if (value && nextTo) applyBusinessRange(value, nextTo);
-  }
-  function changeTo(value: string) {
-    const nextFrom = value && dateFrom && value < dateFrom ? "" : dateFrom;
-    setDateFrom(nextFrom); setDateTo(value); setCurrentPage(1);
-    if (value && nextFrom) applyBusinessRange(nextFrom, value);
-  }
-  function resetToMtd() {
-    setDateFrom(mtdFrom); setDateTo(mtdTo); setCurrentPage(1);
-    applyBusinessRange(mtdFrom, mtdTo);
-  }
   function clearExtraFilters() {
     setRmFilter("");
-    resetToMtd();
   }
 
   return (
@@ -205,13 +168,6 @@ export function PartnerRegisterClient({
             <option value="">All RMs</option>
             {rmOptions.map((rm) => <option key={rm} value={rm}>{rm}</option>)}
           </select>
-          <PartnerDateRangeFilter
-            fromDate={dateFrom}
-            toDate={dateTo}
-            onFromDateChange={changeFrom}
-            onToDateChange={changeTo}
-            onClear={resetToMtd}
-          />
           {extraFilterCount ? <button type="button" onClick={clearExtraFilters} className="h-9 rounded-lg px-2.5 text-[8.5px] font-bold text-[#526178] hover:bg-[#F1F5F9] hover:text-[#17365D]">Clear filters ({extraFilterCount})</button> : null}
           <div className="ml-auto flex flex-wrap items-center justify-end gap-1.5 whitespace-nowrap text-[9.5px] font-semibold">
             <FilterButton label="All" count={scopedRows.length} active={selectedFilter === "all"} onClick={() => selectFilter("all")} />
@@ -219,7 +175,7 @@ export function PartnerRegisterClient({
             <FilterButton label="Onboarding" count={counts.onboarding} active={selectedFilter === "onboarding"} onClick={() => selectFilter("onboarding")} />
           </div>
         </div>
-        {loadError ? <div className="px-4 py-12 text-center text-[11px] text-red-700">The register could not be loaded. Please refresh the page and try again.</div> : pageRows.length ? <PartnerTable rows={pageRows} /> : <div className="px-4 py-16 text-center"><p className="text-[12px] font-semibold">No records found</p><p className="mt-1 text-[10px] text-[#64748B]">Try changing the search, RM, business date range or status filter.</p></div>}
+        {loadError ? <div className="px-4 py-12 text-center text-[11px] text-red-700">The register could not be loaded. Please refresh the page and try again.</div> : pageRows.length ? <PartnerTable rows={pageRows} /> : <div className="px-4 py-16 text-center"><p className="text-[12px] font-semibold">No records found</p><p className="mt-1 text-[10px] text-[#64748B]">Try changing the search, RM or status filter.</p></div>}
         {!loadError ? (
           <div className="flex flex-col gap-3 border-t border-[#E7ECF3] bg-white px-4 py-3.5 text-[10px] text-[#64748B] sm:flex-row sm:items-center sm:justify-between">
             <span>Showing {showingStart}–{showingEnd} of {totalRecords}</span>
@@ -233,44 +189,6 @@ export function PartnerRegisterClient({
       </section>
     </div>
   );
-}
-
-function PartnerDateRangeFilter({
-  fromDate,
-  toDate,
-  onFromDateChange,
-  onToDateChange,
-  onClear,
-}: {
-  fromDate: string;
-  toDate: string;
-  onFromDateChange: (value: string) => void;
-  onToDateChange: (value: string) => void;
-  onClear: () => void;
-}) {
-  const label = fromDate || toDate
-    ? `${fromDate ? shortDate(fromDate) : "Any"} – ${toDate ? shortDate(toDate) : "Any"}`
-    : "MTD";
-  return <details className="group relative">
-    <summary className="flex h-9 min-w-[160px] cursor-pointer list-none items-center justify-between gap-2 rounded-lg border border-[#D8E1EC] bg-white px-2.5 text-[9.5px] font-semibold text-[#26374F] outline-none transition hover:border-[#AFC0D4] focus-visible:ring-2 focus-visible:ring-[#315FEA]/10 [&::-webkit-details-marker]:hidden">
-      <span className="flex min-w-0 items-center gap-2"><CalendarDays className="h-3.5 w-3.5 shrink-0 text-[#8090A5]" /><span className="truncate">{label}</span></span>
-      <ChevronDown className="h-3.5 w-3.5 shrink-0 text-[#8090A5] transition group-open:rotate-180" />
-    </summary>
-    <div className="absolute right-0 top-10 z-40 w-[292px] rounded-xl border border-[#D7E0EA] bg-white p-3 shadow-[0_18px_45px_rgba(15,23,42,.16)]">
-      <div className="grid grid-cols-2 gap-2">
-        <label><span className="mb-1 block text-[8px] font-bold text-[#7C899B]">From</span><input type="date" value={fromDate} max={toDate || undefined} onChange={(event) => onFromDateChange(event.target.value)} className="h-9 w-full rounded-lg border border-[#D7E0EA] px-2 text-[9.5px] font-semibold text-[#334155] outline-none focus:border-[#17365D]" /></label>
-        <label><span className="mb-1 block text-[8px] font-bold text-[#7C899B]">To</span><input type="date" value={toDate} min={fromDate || undefined} onChange={(event) => onToDateChange(event.target.value)} className="h-9 w-full rounded-lg border border-[#D7E0EA] px-2 text-[9.5px] font-semibold text-[#334155] outline-none focus:border-[#17365D]" /></label>
-      </div>
-      <div className="mt-2 flex justify-end">
-        <button type="button" onClick={(event) => { onClear(); event.currentTarget.closest("details")?.removeAttribute("open"); }} className="rounded-lg px-2.5 py-1.5 text-[9px] font-bold text-[#64748B] hover:bg-[#F8FAFC]">Reset to MTD</button>
-      </div>
-    </div>
-  </details>;
-}
-
-function shortDate(value: string) {
-  const [year, month, day] = value.split("-");
-  return year && month && day ? `${day}/${month}/${year.slice(-2)}` : value;
 }
 
 function FilterButton({ label, count, active, onClick }: { label: string; count: number; active: boolean; onClick: () => void }) {

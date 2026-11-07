@@ -23,20 +23,17 @@ assert.match(sql, /grant execute on function public\.partner_register_period_bus
 
 assert.match(page, /Date\.now\(\) \+ 330 \* 60 \* 1000/, "MTD must follow India's business date.");
 assert.match(page, /today\.slice\(0, 8\) \+ "01"/, "Default from date should be first day of month.");
-assert.match(page, /validDate\(q\.from\) && validDate\(q\.to\) && q\.from <= q\.to/, "Invalid/inverted dates must never reach database.");
-assert.match(page, /periodFrom=\{periodFrom\}/);
-assert.match(page, /periodTo=\{periodTo\}/);
+assert.doesNotMatch(page, /q\.from|q\.to|validDate/, "Partner register must ignore custom business date overrides.");
+assert.match(page, /periodFrom=\{mtdFrom\}/);
+assert.match(page, /periodTo=\{today\}/);
 assert.match(loader, /admin\.rpc\("partner_register_period_business_metrics", \{ p_partner_ids: partnerBusinessIds, p_from_date: periodFrom, p_to_date: periodTo \}\)/, "Run period business calculation for entire authorized partner set.");
 assert.match(loader, /policyCount: metric \? Number\(metric\.policy_count\) : null/, "Expose actual policy count, not onboarding date.");
 assert.match(loader, /loadError=\{Boolean\(loadError \|\| partnerBusinessError\)\}/, "Do not show false zero records on RPC failure.");
-assert.match(client, /\(row\.policyCount \?\? 0\) > 0/, "Remove partners without policies issued in period.");
+assert.doesNotMatch(client, /\(row\.policyCount \?\? 0\) > 0/, "Partners with zero MTD business must stay visible.");
 assert.doesNotMatch(client, /indiaDateKey\(row\.onboardingDate\)/, "Partner onboarding date must never filter period business.");
 assert.match(client, /\(b\.netPremium \?\? 0\) - \(a\.netPremium \?\? 0\)/, "Rank highest business first.");
 assert.ok(client.indexOf("return [...filtered].sort(") < client.indexOf("visibleRows.slice(pageStartIndex"), "Rank before pagination.");
-assert.match(client, /router\.replace\(`\/intermediaries\/partner/, "Date changes must trigger a fresh server calculation.");
-assert.match(client, /onFromDateChange=\{changeFrom\}/);
-assert.match(client, /onToDateChange=\{changeTo\}/);
-assert.match(client, /onClear=\{resetToMtd\}/);
-assert.match(client, /setDateFrom\(mtdFrom\); setDateTo\(mtdTo\)/, "Reset dates must return to MTD.");
+assert.doesNotMatch(client, /PartnerDateRangeFilter|applyBusinessRange|initialDateFrom|initialDateTo/, "Remove business date selector and state completely.");
+assert.match(client, /return true;/, "Authorized partners must not be excluded for having zero MTD policies.");
 assert.doesNotMatch(client, /onboarding date or status filter/, "Empty state should use business date terminology.");
 console.log("Partner register issuance-period ranking and authorization regression passed.");
