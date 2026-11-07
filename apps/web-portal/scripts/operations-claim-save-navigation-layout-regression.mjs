@@ -34,12 +34,12 @@ assert.match(stages, /router\.replace\(\`\$\{partnerManagedJourney/);
 assert.match(stages, /selected\.key === "spot_status" \? "grid-cols-4 gap-2 items-start"/, "Spot Status stays in four columns without scrolling at all widths.");
 assert.match(stages, /selected\.key === "spot_status" \|\| selected\.key === "billing"/, "Stage 2 inputs must use full available grid width.");
 assert.match(stages, /selected\.key === "spot_status" \? "text-\[8px\]" : "text-\[9px\]"/, "Only Spot Status labels should be smaller.");
-assert.match(stages, /selected\.key === "spot_status" \|\| selected\.key === "delivery_order" \|\| selected\.key === "payment_encashment" \? "mt-3 flex items-center justify-end gap-2"/, "Stage 2 Save row should have no extra divider.");
+assert.match(stages, /selected\.key === "spot_status" \|\| selected\.key === "delivery_order" \|\| selected\.key === "vehicle_delivery" \|\| selected\.key === "payment_encashment" \? "mt-3 flex items-center justify-end gap-2"/, "Stage 2 Save row should have no extra divider.");
 assert.match(stages, /className="mt-1 h-\[34px\] w-full/, "Stage 2 text controls must keep 34px height.");
 assert.match(stages, /billingCompact \? "mt-1 h-\[34px\] max-w-full/, "Stage 2 date input must preserve 34px height.");
 assert.ok(stages.includes('selected.key === "payment_encashment" ? "min-w-[1120px] grid-cols-[minmax(235px,1.1fr)_minmax(255px,1.2fr)_minmax(190px,1fr)_minmax(190px,1fr)_minmax(185px,0.9fr)] gap-2 items-start"'), "Stage 9 has five aligned single-row columns.");
 assert.ok(stages.includes('selected.key === "work_approval" ? "lg:grid-cols-3 xl:grid-cols-5 lg:items-start"'), "Stage 4 aligns five fields at wide desktop widths.");
-assert.ok(stages.includes('selected.key === "payment_encashment" || selected.key === "delivery_order" || selected.key === "work_approval" ? "" : "max-w-[254px]"'), "Stage 4 and Stage 9 Yes/No controls use their grid cell widths.");
+assert.ok(stages.includes('selected.key === "payment_encashment" || selected.key === "delivery_order" || selected.key === "vehicle_delivery" || selected.key === "work_approval" ? "" : "max-w-[254px]"'), "Stage 4 and Stage 9 Yes/No controls use their grid cell widths.");
 assert.ok(stages.includes('const useAppDatePicker = field.type === "date"'), "Native date behavior is preserved.");
 assert.match(stages, /sm:grid-cols-2/, "Keep responsive narrow-screen wrapping.");
 assert.match(stages, /name: "depreciation_slip_submitted"/);
@@ -65,19 +65,18 @@ console.log("Operations Claim Journey save navigation, Stage 9 layout and 3D hea
 // Compact inputs preserve the dedicated submit footer and Vehicle Delivery date variant.
 assert.match(stages, /grid min-w-0 items-start gap-2 \$\{selected.key === "payment_encashment" \|\| selected.key === "billing" \|\| selected.key === "delivery_order" \|\| selected.key === "spot_status" \? "" : "sm:grid-cols-2"\}/);
 assert.match(stages, /<AppStyleDateInput name=\{field.name\} value=\{value\} required=\{required\} compact billingCompact=\{selected.key === "billing"\} vehicleDeliveryCompact=\{selected.key === "vehicle_delivery"\} \/>/);
-assert.ok(stages.includes('vehicleDeliveryCompact ? "h-[34px] max-w-[335px] px-3"'));
+assert.ok(stages.includes('vehicleDeliveryCompact ? "h-[34px] max-w-full px-3"'));
 assert.ok(stages.includes('h-[34px] text-[12px]'));
 assert.match(stages, /mt-4 flex min-h-10 flex-wrap items-center justify-end gap-2 border-t border-\[#D9E3F0\] pt-3/);
-assert.ok(stages.includes('selected.key === "repair_ri" ? "" : selected.key === "vehicle_delivery" ? "max-w-[335px]" : "max-w-[260px]"'));
+assert.ok(stages.includes('selected.key === "repair_ri" ? "" : selected.key === "vehicle_delivery" ? "" : "max-w-[260px]"'));
 
 // Delivery Order input labels and inputs occupy three bounded columns, including narrow-screen scrolling.
 assert.ok(stages.includes('selected.key === "delivery_order" ? "min-w-[720px] grid-cols-[repeat(3,minmax(0,1fr))] gap-2 items-start"'));
 assert.ok(stages.includes('selected.key === "payment_encashment" || selected.key === "delivery_order" ? "w-full overflow-x-auto pb-1" : ""'));
 assert.ok(stages.includes('selected.key === "payment_encashment" || selected.key === "delivery_order" || selected.key === "spot_status" ? "mt-1 block w-full min-w-0" : ""'));
 
-// Four equal Spot Status columns: headings above 34px controls; no wrapping into row two or horizontal scroll.
+// Spot Status has four equal-width columns, block headings and aligned compact controls with no scroll.
 assert.ok(stages.includes('selected.key === "spot_status" ? "grid-cols-4 gap-2 items-start"'));
 assert.ok(stages.includes('selected.key === "spot_status" ? "!whitespace-normal" : ""'));
 assert.ok(stages.includes('selected.key === "spot_status" ? "block min-h-8 lg:min-h-4 leading-4 break-words"'));
-assert.ok(stages.includes('selected.key === "payment_encashment" || selected.key === "delivery_order" || selected.key === "spot_status" ? "mt-1 block w-full min-w-0"'));
 assert.doesNotMatch(stages,/selected.key === "spot_status" \? "w-full overflow-x-auto"/);
