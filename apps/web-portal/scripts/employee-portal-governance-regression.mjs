@@ -1,3 +1,5 @@
+import "./employee-orgchart-explorer-phase45-regression.mjs";
+import "./employee-orgchart-focus-ux-regression.mjs";
 import "./employee-directory-orgchart-reference-regression.mjs";
 import "./employee-directory-compact-layout-regression.mjs";
 import "./employee-organization-tree-regression.mjs";
