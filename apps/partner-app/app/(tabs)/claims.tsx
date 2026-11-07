@@ -30,6 +30,7 @@ import {
   type PartnerClaimSummary,
 } from '@/lib/claims';
 import { PartnerAssets } from '@/lib/partner-assets';
+import { canPartnerStartClaim } from '@/lib/partner-permissions';
 import { partnerTheme } from '@/lib/theme';
 import { useDebouncedValue } from '@/lib/use-debounced-value';
 import { usePartnerPageQuery } from '@/lib/use-partner-page-query';
@@ -240,6 +241,7 @@ export default function ClaimsScreen() {
           ))}
         </View>
 
+      {canPartnerStartClaim(context) ? (
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Add Claim"
@@ -252,6 +254,7 @@ export default function ClaimsScreen() {
           </View>
           <Ionicons name="arrow-forward" size={21} color="#FFFFFF" />
         </Pressable>
+      ) : null}
 
         {(collection.stale || summary.stale) ? (
           <View style={styles.banner}>

@@ -6,6 +6,8 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getPartnerManufacturerLogoSource } from '@/lib/catalog-logos';
 import { getPartnerClaimDetail, savePartnerInsurerClaimNumber, type PartnerClaimDetail } from '@/lib/claims';
+import { canPartnerStartClaim } from '@/lib/partner-permissions';
+import { usePartnerSession } from '@/providers/partner-session-provider';
 import { PartnerAssets } from '@/lib/partner-assets';
 import { PartnerClaimDocuments } from '@/components/partner-claim-documents';
 import { PartnerInsurerLogo } from '@/components/ui/partner-insurer-logo';
@@ -94,6 +96,8 @@ export default function ClaimTrackerScreen() {
     return () => cancelAnimationFrame(frame);
   }, []));
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { context } = usePartnerSession();
+  const mayEditClaim = canPartnerStartClaim(context);
   const [data, setData] = useState<PartnerClaimDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -114,9 +118,9 @@ export default function ClaimTrackerScreen() {
   useEffect(() => { void load(); }, [load]);
 
   const tracker = data ? getClaimTrackerState(data) : null;
-  const openClaimNumber = () => { setClaimNumber(data?.claim.insurer_claim_no || ''); setClaimNumberOpen(true); };
+  const openClaimNumber = () => { if (!mayEditClaim) return; setClaimNumber(data?.claim.insurer_claim_no || ''); setClaimNumberOpen(true); };
   const saveClaimNumber = async () => {
-    if (!data || claimNumberSaving) return;
+    if (!mayEditClaim || !data || claimNumberSaving) return;
     const value = claimNumber.trim();
     if (!value || value.length > 80) { Alert.alert('Action required', 'Enter a valid insurer claim number (up to 80 characters).'); return; }
     setClaimNumberSaving(true);
@@ -208,7 +212,7 @@ export default function ClaimTrackerScreen() {
             </View>
           </>}
       </ScrollView>
-      <Modal transparent visible={claimNumberOpen} animationType="fade" onRequestClose={() => { if (!claimNumberSaving) setClaimNumberOpen(false); }}>
+      <Modal transparent visible={mayEditClaim && claimNumberOpen} animationType="fade" onRequestClose={() => { if (!claimNumberSaving) setClaimNumberOpen(false); }}>
         <View style={styles.claimModalBackdrop}>
           <View style={styles.claimModalCard}>
             <View style={styles.claimModalIcon}><Ionicons name="shield-checkmark-outline" size={29} color="#0B347A" /></View>

@@ -20,6 +20,7 @@ import { getPartnerNetwork, type PartnerNetworkData } from '@/lib/network';
 import { PartnerAssets } from '@/lib/partner-assets';
 import { getPartnerPayoutSummary, type PartnerPayoutSummary } from '@/lib/payout';
 import { getPartnerRenewalSummary, type PartnerRenewalSummary } from '@/lib/policies';
+import { canPartnerAccess } from '@/lib/partner-permissions';
 import { partnerTheme } from '@/lib/theme';
 import { usePartnerQuery } from '@/lib/use-partner-query';
 import { usePartnerSession } from '@/providers/partner-session-provider';
@@ -437,10 +438,12 @@ export default function BusinessScreen() {
                       <Ionicons name={trendMenuOpen ? 'chevron-up' : 'chevron-down'} size={10} color="#3156B8" />
                     </Pressable>
                   </PartnerAnchoredDropdown>
-                  <Pressable accessibilityRole="button" accessibilityLabel="Open business report" onPress={() => router.push('/business-report')} style={({ pressed }) => [styles.reportButton, pressed && styles.pressed]}>
+                  {canPartnerAccess(context, 'view_reports') ? (
+                   <Pressable accessibilityRole="button" accessibilityLabel="Open business report" onPress={() => router.push('/business-report')} style={({ pressed }) => [styles.reportButton, pressed && styles.pressed]}>
                     <Text style={styles.viewAll}>View Report</Text>
                     <Ionicons name="chevron-forward" size={10} color="#3156B8" />
                   </Pressable>
+                   ) : null}
                 </View>
               )}
             />
@@ -493,7 +496,7 @@ export default function BusinessScreen() {
             )}
           </View>
 
-          <SectionHeader title="Top Insurers" action={<Pressable accessibilityRole="button" accessibilityLabel="View insurer performance" onPress={() => { if (overviewRange === 'custom' && !customInsurerDatesApplied) { setOverviewCustomOpen(true); return; } router.push({ pathname: '/insurers', params: { from: insurerDates.from, to: insurerDates.to } } as never); }}><Text style={styles.viewAll}>View All ›</Text></Pressable>} />
+          <SectionHeader title="Top Insurers" action={canPartnerAccess(context, 'view_reports') ? <Pressable accessibilityRole="button" accessibilityLabel="View insurer performance" onPress={() => { if (overviewRange === 'custom' && !customInsurerDatesApplied) { setOverviewCustomOpen(true); return; } router.push({ pathname: '/insurers', params: { from: insurerDates.from, to: insurerDates.to } } as never); }}><Text style={styles.viewAll}>View All ›</Text></Pressable> : null} />
           {topInsurers?.length ? (
             <View style={styles.insurerGrid}>
               {topInsurers.slice(0, 5).map((insurer) => (
@@ -516,10 +519,10 @@ export default function BusinessScreen() {
 
           <SectionHeader title="Quick Actions" />
           <View style={[styles.quickGrid, compactScreen && styles.tightContainer]}>
-            <QuickAction asset={PartnerAssets.actions.quickRenewals} label="Renewals" meta={`${renewals?.due_30_count ?? 0} due`} onPress={() => router.push('/renewals')} />
-            <QuickAction asset={PartnerAssets.actions.quickClaims} label="Claims" meta={`${claims?.active_claims ?? 0} active`} onPress={() => router.push('/(tabs)/claims')} />
+            {canPartnerAccess(context, 'view_policies') ? <QuickAction asset={PartnerAssets.actions.quickRenewals} label="Renewals" meta={`${renewals?.due_30_count ?? 0} due`} onPress={() => router.push('/renewals')} /> : null}
+            {canPartnerAccess(context, 'view_claims') ? <QuickAction asset={PartnerAssets.actions.quickClaims} label="Claims" meta={`${claims?.active_claims ?? 0} active`} onPress={() => router.push('/(tabs)/claims')} /> : null}
             {!isBranchLogin ? <PayoutQuickAction payout={payout} onPress={() => router.push('/(tabs)/more')} /> : null}
-            <QuickAction asset={PartnerAssets.actions.quickCustomers} label="Add Customer" meta="Create new" onPress={() => router.push('/customer-new' as never)} />
+            {canPartnerAccess(context, 'create_customers', 'edit') ? <QuickAction asset={PartnerAssets.actions.quickCustomers} label="Add Customer" meta="Create new" onPress={() => router.push('/customer-new' as never)} /> : null}
           </View>
 
           <SectionHeader title="My Network" action={<Pressable onPress={() => router.push('/network')}><Text style={styles.viewAll}>View All ›</Text></Pressable>} />

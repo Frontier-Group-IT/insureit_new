@@ -1,7 +1,9 @@
-import { Stack } from 'expo-router';
+import { Redirect, Stack, usePathname } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { canPartnerAccess, canPartnerSearch, canPartnerStartClaim, requiredPartnerRoutePermission } from '@/lib/partner-permissions';
+import { usePartnerSession } from '@/providers/partner-session-provider';
 import { PartnerErrorBoundary } from '@/components/partner-error-boundary';
 import { PartnerBiometricLockProvider } from '@/providers/partner-biometric-lock-provider';
 import { PartnerNativeRuntimeProvider } from '@/providers/partner-native-runtime-provider';
@@ -21,6 +23,7 @@ export default function RootLayout() {
               <PartnerSensitivePrivacyProvider>
                 <PartnerSearchProvider>
                   <StatusBar style="dark" />
+                  <PartnerPermissionBoundary>
                   <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
                     <Stack.Screen name="index" />
                     <Stack.Screen name="login" />
@@ -52,6 +55,7 @@ export default function RootLayout() {
                     <Stack.Screen name="policy-intakes/[id]" />
                     <Stack.Screen name="access-denied" />
                   </Stack>
+                  </PartnerPermissionBoundary>
                 </PartnerSearchProvider>
               </PartnerSensitivePrivacyProvider>
             </PartnerNativeRuntimeProvider>
@@ -61,4 +65,27 @@ export default function RootLayout() {
       </PartnerErrorBoundary>
     </SafeAreaProvider>
   );
+}
+
+function PartnerPermissionBoundary({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const { context, status } = usePartnerSession();
+  const required = requiredPartnerRoutePermission(pathname);
+  if (status === 'ready' && pathname === '/search' && !canPartnerSearch(context)) {
+    return <Redirect href="/access-denied" />;
+  }
+  if (status === 'ready' && required) {
+    const allowed = /^\/claim\/(?:new|select-vehicle)(?:\/|$)/.test(pathname)
+      ? canPartnerStartClaim(context)
+      : canPartnerAccess(context, required.capability, required.minimum);
+    if (!allowed) {
+      // Accounts and other narrow employee roles must still reach their
+      // permitted account/profile features without seeing dashboard data.
+      if (required.capability === 'view_dashboard' && (pathname === '/' || pathname === '/home' || pathname === '/(tabs)')) {
+        return <Redirect href="/(tabs)/more" />;
+      }
+      return <Redirect href="/access-denied" />;
+    }
+  }
+  return <>{children}</>;
 }

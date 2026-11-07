@@ -14,6 +14,7 @@ import { listPartnerClaims, type PartnerClaimRow } from '@/lib/claims';
 import { listPartnerCustomers, type PartnerCustomerRow } from '@/lib/customers';
 import { PartnerAssets } from '@/lib/partner-assets';
 import { listPartnerPolicies, type PartnerPolicyRow } from '@/lib/policies';
+import { canPartnerAccess } from '@/lib/partner-permissions';
 import { partnerTheme } from '@/lib/theme';
 import { useDebouncedValue } from '@/lib/use-debounced-value';
 import { usePartnerSearch } from '@/providers/partner-search-provider';
@@ -61,9 +62,9 @@ export default function SearchScreen() {
     setPartialError('');
 
     void Promise.allSettled([
-      listPartnerCustomers({ search, limit: 6, offset: 0 }),
-      listPartnerPolicies({ search, limit: 6, offset: 0, lifecycle: 'all' }),
-      listPartnerClaims({ search, limit: 6, offset: 0, state: 'all' }),
+      canPartnerAccess(context, 'view_customers') ? listPartnerCustomers({ search, limit: 6, offset: 0 }) : Promise.resolve([] as PartnerCustomerRow[]),
+      canPartnerAccess(context, 'view_policies') ? listPartnerPolicies({ search, limit: 6, offset: 0, lifecycle: 'all' }) : Promise.resolve([] as PartnerPolicyRow[]),
+      canPartnerAccess(context, 'view_claims') ? listPartnerClaims({ search, limit: 6, offset: 0, state: 'all' }) : Promise.resolve([] as PartnerClaimRow[]),
     ]).then(([customers, policies, claims]) => {
       if (requestId !== requestIdRef.current) return;
 
@@ -76,7 +77,7 @@ export default function SearchScreen() {
       setPartialError(failed ? String(failed) + ' search section' + (failed === 1 ? '' : 's') + ' could not be refreshed.' : '');
       setLoading(false);
     });
-  }, [debouncedQuery]);
+  }, [debouncedQuery, context?.permissions]);
 
   const hasResults = results.customers.length + results.policies.length + results.claims.length > 0;
   const ready = debouncedQuery.trim().length >= 2;

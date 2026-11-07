@@ -9,6 +9,7 @@ import { PartnerButton } from '@/components/ui/partner-button';
 import { PartnerConfirmDialog } from '@/components/ui/partner-confirm-dialog';
 import { PartnerProfileAvatar } from '@/components/ui/partner-profile-avatar';
 import { PartnerProfileMenuIcon, type PartnerProfileMenuIconKind } from '@/components/ui/partner-profile-menu-icon';
+import { canPartnerAccess, canPartnerSearch } from '@/lib/partner-permissions';
 import { partnerTheme } from '@/lib/theme';
 import { signedInPersonName, signedInPersonRole } from '@/lib/signed-in-person';
 import { usePartnerSession } from '@/providers/partner-session-provider';
@@ -121,17 +122,17 @@ export default function MoreScreen() {
       ) : null}
 
       <MenuSection title="WORK">
-        <MenuRow iconKind="search" title="Search all business" helper="Customers, policies and claims" onPress={() => router.push('/search')} />
-        <MenuRow iconKind="policy-intake" title="Policy Intake" onPress={() => router.push('/policy-intakes')} />
-        <MenuRow iconKind="renewals" title="Renewals" onPress={() => router.push('/renewals')} />
-        <MenuRow iconKind="customers" title="Customers" onPress={() => router.push('/customers')} last />
+        {canPartnerSearch(context) ? <MenuRow iconKind="search" title="Search all business" helper="Customers, policies and claims" onPress={() => router.push('/search')} /> : null}
+        {canPartnerAccess(context, 'view_policy_intakes') ? <MenuRow iconKind="policy-intake" title="Policy Intake" onPress={() => router.push('/policy-intakes')} /> : null}
+        {canPartnerAccess(context, 'view_policies') ? <MenuRow iconKind="renewals" title="Renewals" onPress={() => router.push('/renewals')} /> : null}
+        {canPartnerAccess(context, 'view_customers') ? <MenuRow iconKind="customers" title="Customers" onPress={() => router.push('/customers')} last /> : null}
       </MenuSection>
 
       <MenuSection title="INSIGHTS">
         <MenuRow iconKind="week" title="Your Week" onPress={() => router.push('/weekly-story')} />
-        <MenuRow iconKind="impact" title="My Impact" onPress={() => router.push('/impact')} />
+        {canPartnerAccess(context, 'view_dashboard') ? <MenuRow iconKind="impact" title="My Impact" onPress={() => router.push('/impact')} /> : null}
         <MenuRow iconKind="journey" title="My Journey" onPress={() => router.push('/journey')} />
-        <MenuRow iconKind="activity" title="Activity" onPress={() => router.push('/activity')} last />
+        {canPartnerAccess(context, 'view_notifications') ? <MenuRow iconKind="activity" title="Activity" onPress={() => router.push('/activity')} last /> : null}
       </MenuSection>
 
       <MenuSection title="GROW & LEARN">

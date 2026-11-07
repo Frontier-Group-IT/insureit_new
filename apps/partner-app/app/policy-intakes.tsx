@@ -10,6 +10,8 @@ import { PartnerInsurerLogo } from '@/components/ui/partner-insurer-logo';
 import { PartnerAssets } from '@/lib/partner-assets';
 import { getPartnerManufacturerLogoSource } from '@/lib/catalog-logos';
 import { listPartnerPolicyIntakesPage, type PartnerPolicyIntake, type PartnerIntakeFilter, type PartnerIntakeCounts } from '@/lib/policy-intakes';
+import { canPartnerAccess } from '@/lib/partner-permissions';
+import { usePartnerSession } from '@/providers/partner-session-provider';
 import { partnerTheme } from '@/lib/theme';
 
 type IntakeFilter = PartnerIntakeFilter;
@@ -26,6 +28,7 @@ const FILTERS: Array<{ key: IntakeFilter; label: string }> = [
 
 export default function PolicyIntakesScreen() {
   const router = useRouter();
+  const { context } = usePartnerSession();
   const mainScrollRef = useRef<ScrollView>(null);
   useFocusEffect(useCallback(() => {
     const reset = () => mainScrollRef.current?.scrollTo({ y: 0, animated: false });
@@ -125,10 +128,12 @@ export default function PolicyIntakesScreen() {
           <Text style={styles.eyebrow}>POLICY INTAKE</Text>
           <Text style={styles.title}>My Submissions</Text>
         </View>
+        {canPartnerAccess(context, 'create_policy_intakes', 'edit') ? (
         <Pressable accessibilityRole="button" accessibilityLabel="Create new policy intake" onPress={() => router.push('/policy-intake-new')} style={({ pressed }) => [styles.newButton, pressed && styles.pressed]}>
           <Ionicons name="add" size={17} color="#FFFFFF" />
           <Text style={styles.newButtonText}>New</Text>
         </Pressable>
+        ) : null}
       </View>
 
       <View style={styles.searchBand}>

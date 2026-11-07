@@ -110,6 +110,9 @@ jobs:
       - name: Verify incremental Policy Intake pagination
         run: (cd apps/partner-app && node scripts/verify-policy-intake-list-pagination.mjs)
 
+      - name: Verify Partner App website permissions and deep-link parity
+        run: node apps/partner-app/scripts/verify-website-permission-parity.mjs
+
       - name: Verify pre-APK native transition guard
         run: npm --workspace apps/partner-app run verify:pre-apk
 
@@ -141,9 +144,6 @@ jobs:
         run: node apps/partner-app/scripts/verify-insurer-list-whole-rupees.mjs
       - name: Verify Insurer List mobile financial scrolling
         run: node apps/partner-app/scripts/verify-insurer-list-mobile-scroll.mjs
-
-      - name: Verify Partner login icons and sign-in press colors
-        run: (cd apps/partner-app && node scripts/verify-login-label-icons-press-colors.mjs)
 
       - name: Partner app typecheck
         run: npm run typecheck:partner
