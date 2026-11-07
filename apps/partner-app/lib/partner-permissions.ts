@@ -35,7 +35,8 @@ export function requiredPartnerRoutePermission(pathname: string): {
   if (/^\/customers?(?:\/|$)/.test(pathnameNormalized)) return { capability: 'view_customers', minimum: 'view' };
   if (/^\/policies(?:\/|$)|^\/policy(?:\/|$)|^\/renewals(?:\/|$)/.test(pathnameNormalized)) return { capability: 'view_policies', minimum: 'view' };
   if (/^\/claims(?:\/|$)|^\/claim(?:\/|$)/.test(pathnameNormalized)) return { capability: 'view_claims', minimum: 'view' };
-  if (/^\/business(?:\/|$)|^\/business-report(?:\/|$)|^\/insurers(?:\/|$)|^\/impact(?:\/|$)|^\/pulse(?:\/|$)/.test(pathnameNormalized)) return { capability: 'view_dashboard', minimum: 'view' };
+  if (/^\/business-report(?:\/|$)|^\/insurers(?:\/|$)/.test(pathnameNormalized)) return { capability: 'view_reports', minimum: 'view' };
+  if (/^\/business(?:\/|$)|^\/impact(?:\/|$)|^\/pulse(?:\/|$)/.test(pathnameNormalized)) return { capability: 'view_dashboard', minimum: 'view' };
   if (/^\/search(?:\/|$)/.test(pathnameNormalized)) return { capability: 'view_dashboard', minimum: 'view' };
   return null;
 }
