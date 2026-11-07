@@ -22,7 +22,7 @@ assert.match(widget, /flex h-\[34px\] min-w-0 items-center/, "Operations upload 
 assert.match(widget, /hidden h-7 w-7 shrink-0 object-contain sm:block/, "The workshop-bill illustration is hidden on narrow screens to prevent overlap.");
 assert.match(widget, /flex h-\[26px\] shrink-0 items-center/, "Choose File remains visible and fits within 34px.");
 assert.match(customer, /ExternalClaimBillUpload mode="customer"[^\n]*compact \/>/, "Customer Billing opts into a 34px upload control.");
-assert.match(operations, /selected\.key === "billing" \? "flex flex-col" : "block max-sm:whitespace-normal"/, "Operations Billing headings and controls occupy separate aligned lines.");
+assert.match(operations, /selected\.key === "billing" \|\| selected\.key === "work_approval" \? "flex flex-col" : "block max-sm:whitespace-normal"/, "Operations Billing and Work Approval headings stay above controls.");
 assert.match(customer, /selected\.key==="billing"\?"flex flex-col":"block"/, "Customer Billing headings and controls occupy separate aligned lines.");
 assert.match(operations, /billingCompact \? "mt-1 h-\[34px\]/, "Billing Date receives the same top gap as Bill Amount.");
 assert.match(customer, /selected\.key==="billing"\|\|selected\.key==="spot_status"/, "Customer Billing columns have no restrictive date or amount widths.");
