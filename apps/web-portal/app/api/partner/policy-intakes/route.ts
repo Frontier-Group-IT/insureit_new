@@ -162,10 +162,7 @@ export async function GET(request: Request) {
   if (search) {
     // A computed field searches OCR values as well as the scalar PIR/source fields.
     // It is ANDed with the existing server-side identity scope, never used to bypass it.
-    const escaped = search.replace(/[\\%_]/g, "\\  if (filter === "attention") query = query.eq("status", "needs_attention");
-  if (filter === "completed") query = query.eq("status", "completed");
-  if (filter === "in_progress") query = query.in("status", ["processing", "ready_for_review", "in_review"]);
-");
+    const escaped = search.replace(/[%_\\]/g, (char) => "\\" + char);
     query = query.ilike("policy_intake_search_text", `%${escaped}%`);
   }
 
