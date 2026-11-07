@@ -31,7 +31,12 @@ assert.match(stages, /if \(nextKey && canOpenNext\) \{[\s\S]*?setSelectedKey\(ne
 assert.match(stages, /await saveInternalSpotIntimationDetails\(claimId, formData\)/, "Preserve saving without automatic workflow advancement.");
 
 assert.match(stages, /router\.replace\(\`\$\{partnerManagedJourney/);
-assert.match(stages, /selected\.key === "work_approval" \|\| selected\.key === "payment_encashment" \? "lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 lg:items-start"/, "Stages 4 and 9 should reflow responsively while aligning labels and controls.");
+assert.match(stages, /selected\.key === "payment_encashment" \? "gap-2 lg:grid-cols-3 xl:grid-cols-5 lg:items-start"/, "Stage 9 must show five aligned columns on desktop without waiting for 2xl.");
+assert.match(stages, /selected\.key === "work_approval" \? "lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 lg:items-start"/, "Stage 4 should keep its existing layout.");
+assert.match(stages, /selected\.key === "payment_encashment" \? "" : "max-w-\[254px\]"/, "Stage 9 Yes/No controls should use available grid cell width.");
+assert.match(stages, /selected\.key === "payment_encashment" \? "gap-2" : "max-w-\[254px\] gap-\[10px\]"/, "Stage 9 Yes/No options should fit compactly.");
+assert.match(stages, /selected\.key === "payment_encashment" \? "" : field\.type === "date"/, "Stage 9 date and amount fields should use full grid-column width.");
+assert.match(stages, /sm:grid-cols-2/, "Keep responsive narrow-screen wrapping.");
 assert.match(stages, /name: "depreciation_slip_submitted"/);
 assert.match(stages, /name: "satisfaction_voucher_submitted"/);
 assert.match(stages, /name: "documents_submit_date"/);
