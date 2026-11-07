@@ -13,7 +13,14 @@ assert.match(customer, /selected\.key==="billing" \? <ExternalClaimBillUpload mo
 assert.match(customer, /selected\.key==="billing"\?"lg:grid-cols-3"/, "Customer Billing must have a third column");
 assert.match(customer, /ExternalClaimBillUpload mode="customer"[\s\S]*readonly/, "Completed/read-only customer Billing must show the uploaded document");
 assert.match(operations, /selected\.key === "billing" && unrestrictedStageEditing && !partnerReadOnlyJourney && !partnerManagedJourney/, "Operations upload must be external and non-Partner");
-assert.match(operations, /selected\.key === "billing" \? "lg:grid-cols-3"/, "Operations Billing must have a third column");
+assert.match(operations, /selected\.key === "billing" \? "gap-2 md:grid-cols-3"/, "Operations Billing must align three compact columns");
+assert.match(operations, /billingCompact=\{selected\.key === "billing"\}/, "Only the Billing date control opts into 34px.");
+assert.match(operations, /selected\.key === "billing" \? "h-\[34px\] text-\[11px\]"/, "Billing amount uses 34px and 11px typography.");
+assert.match(operations, /documents=\{billDocuments\} compact/, "Operations opts into compact bill upload.");
+assert.match(widget, /compact && mode === "operations"/, "Customer bill upload retains its existing design.");
+assert.match(widget, /flex h-\[34px\] min-w-0 items-center/, "Operations upload control is 34px high.");
+assert.match(widget, /h-7 w-7 shrink-0 object-contain/, "The workshop-bill illustration remains visible.");
+assert.match(widget, /flex h-\[26px\] shrink-0 items-center/, "Choose File remains visible and fits within 34px.");
 assert.match(operationsPage, /billDocuments=\{signedDocs\.filter/, "Operations must display persisted bill files");
 assert.match(upload, /type==="Final Workshop Bill"[\s\S]*isExternalCustomerClaim\(claim\)/, "Customer upload must verify external policy");
 assert.match(upload, /current!=="billing" && !billing\?\.completed/, "Customer upload must enforce stage availability");

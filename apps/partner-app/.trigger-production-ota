@@ -1,7 +1,8 @@
 Partner production OTA trigger
-release=partner-policy-intake-load-more-pr-4118
-merged_commit=07faa39314de949d58b37ff8d487e653a811f5ed
+release=partner-policy-intake-operations-review-pr-4126
+merged_commit=308b4a790499986f9d67b406eab7f9f878c8a729
 channel=production
 runtime=0.2.0
 requested=2026-11-07
-source=verified-merge-pr-4118
+source=verified-merge-pr-4126
+no_native_build=true

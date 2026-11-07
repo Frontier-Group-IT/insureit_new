@@ -55,3 +55,12 @@ assert.match(heading, /<Image src=\{claimHeaderIcons\.claim\} alt="" width=\{34\
 assert.match(heading, /rounded-xl border border-white bg-white/);
 
 console.log("Operations Claim Journey save navigation, Stage 9 layout and 3D heading regression passed.");
+
+
+// Compact stage inputs and a separate action footer must not collide at desktop or mobile widths.
+assert.match(stages, /grid items-start gap-3 sm:grid-cols-2/, "Keep stage controls aligned to the top of each grid row.");
+assert.match(stages, /<AppStyleDateInput name=\{field.name\} value=\{value\} required=\{required\} compact billingCompact=\{selected.key === "billing"\} vehicleDeliveryCompact=\{selected.key === "vehicle_delivery"\} \/>/, "Keep 36px stage dates and apply 34px only to Billing.");
+assert.match(stages, /billingCompact \? "h-\[34px\] max-w-full px-2" : vehicleDeliveryCompact \? "h-\[34px\] max-w-\[335px\] px-3" : compact \? "h-9 max-w-full px-3"/, "Billing uses 34px, other stage dates preserve 36px.");
+assert.match(stages, /selected.key === "billing" \? "h-\[34px\] text-\[11px\]" : "h-9 text-\[12px\]"/, "Billing amount uses 34px while other stage inputs retain 36px.");
+assert.match(stages, /mt-4 flex min-h-10 flex-wrap items-center justify-end gap-2 border-t border-\[#D9E3F0\] pt-3/, "Save actions have a dedicated wrapping footer with a top separator and clearance.");
+assert.match(stages, /selected.key === "repair_ri" \? "" : "max-w-\[260px\]"/, "Repair/RI date fields fill their grid cells.");

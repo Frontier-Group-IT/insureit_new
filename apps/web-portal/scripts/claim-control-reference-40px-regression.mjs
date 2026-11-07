@@ -8,14 +8,14 @@ const spot=read("../app/customer/(protected)/spot-intimation/page.tsx");
 const start=read("../components/customer-portal/customer-start-claim-selector.tsx");
 const operationsStart=read("../app/claims/new/add-claim-form.tsx");
 
-// Existing input widths remain intact except the agreed Vehicle Delivery date (335px); selected surfaces use 34px.
-assert.match(operations,/selected\.key === "vehicle_delivery" \? "max-w-\[335px\]" : "max-w-\[260px\]"/,"Vehicle Delivery date uses reference width; other date inputs keep their original width.");
-assert.match(operations,/relative flex h-\[40px\] w-full max-w-\[260px\]/);
+// Keep established widths and stage-specific sizes; Customer, Start Claim and Vehicle Delivery controls are 34px.
+assert.match(operations,/selected\.key === "vehicle_delivery" \? "max-w-\[335px\]" : "max-w-\[260px\]"/,"Vehicle Delivery date retains its approved reference width.");
+assert.match(operations,/vehicleDeliveryCompact \? "h-\[34px\] max-w-\[335px\] px-3"/,"Vehicle Delivery date uses 34px while preserving the existing Billing and Stage 1 variants.");
 assert.match(operations,/selected\.key === "payment_encashment" \? "gap-2" : "max-w-\[254px\] gap-\[10px\]"/,"Stage 9 compact controls; other stages retain 254px width and 10px gap.");
-assert.match(operations,/selected\.key === "vehicle_delivery" \? "h-\[34px\]" : "h-\[40px\]"/,"Vehicle Delivery choices are compact; other stages retain prior height.");
+assert.match(operations,/selected\.key === "vehicle_delivery" \? "h-\[34px\]" : "h-9"/);
 assert.match(operations,/max-w-\[320px\] rounded-lg/);
-assert.match(operations,/grid h-\[40px\] w-full max-w-\[320px\]/);
-assert.match(customer,/selected\.key==="payment_encashment"\?"":field\.type==="date"\?"max-w-\[260px\]"/,"Stage 9 fills available grid cell; other stages retain date width.");
+assert.match(operations,/grid h-9 w-full max-w-\[320px\]/);
+assert.match(customer,/field\.type==="date"\?\(selected\.key==="repair_ri"\?"":"max-w-\[260px\]"\)/,"Repair/RI fills available grid cell; other stages retain date width.");
 assert.match(customer,/"max-w-\[254px\]":"max-w-\[320px\]"/);
 assert.match(customer,/className="mt-1 h-\[34px\] w-full rounded-md/);
 assert.match(choice,/compact \? "gap-2" : "max-w-\[254px\] gap-\[10px\]"/,"Compact Stage 9 controls; other stages keep original sizing.");
@@ -37,12 +37,12 @@ assert.match(operations,/2xl:grid-cols-5 lg:items-start/);
 assert.match(customer,/whitespace-nowrap text-\[9px\] font-semibold uppercase leading-4 tracking-\[0\.01em\]/);
 assert.match(customer,/2xl:grid-cols-5 lg:items-start/);
 assert.match(operations,/stageOneLabelClassName = "block h-4 max-sm:h-auto whitespace-nowrap text-\[9px\]/);
-assert.match(spot,/const textFieldClass = "block h-\[40px\] w-full max-w-\[320px\]/);
-assert.match(spot,/const splitFieldClass = "block h-\[40px\]/);
-assert.match(spot,/flex h-\[40px\] w-full max-w-\[320px\]/);
+assert.match(spot,/const textFieldClass = "block h-9 w-full max-w-\[320px\]/);
+assert.match(spot,/const splitFieldClass = "block h-9/);
+assert.match(spot,/flex h-9 w-full max-w-\[320px\]/);
 assert.match(spot,/text-\[9px\] font-bold uppercase leading-4 tracking-\[0\.01em\]/);
 assert.match(spot,/2xl:grid-cols-\[repeat\(5,minmax\(0,1fr\)\)\]/);
 assert.match(start,/h-\[34px\] w-full max-w-\[320px\] rounded-lg border/);
 assert.match(operationsStart,/const inputClass = "h-\[34px\] w-full/);
 assert.match(operationsStart,/const labelClass = "mb-1 block whitespace-nowrap text-\[9px\]/);
-console.log("Claim forms: reference widths, scoped 34px compact controls and single-line labels regression passed.");
+console.log("Claim input widths and approved compact 34px variant regression passed.");
