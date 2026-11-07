@@ -14,7 +14,7 @@ for (const source of [operations, customer]) {
   assert.ok(source.includes('Stage 4 — Work Approval'));
   assert.ok(source.includes('Record insurance approval and surveyor details'));
   assert.ok(source.includes('4 of 9'));
-  assert.ok(source.includes('lg:grid-cols-3 xl:grid-cols-5 lg:items-start'));
+  assert.ok(source.includes('!grid-cols-5 min-w-[900px]'), "Stage 4 must retain five aligned columns on all viewport sizes.");
 }
 for (const key of ['approval_received_date', 'cashless', 'surveyor_name', 'surveyor_phone', 'surveyor_email']) {
   assert.ok(operations.includes('name: "' + key + '"'), 'Operations missing ' + key);
@@ -29,8 +29,10 @@ assert.ok(stageFields.includes('label: "Surveyor Email", type: "email", optional
 assert.ok(operations.includes('flex h-[34px] cursor-pointer'));
 assert.ok(operations.includes('vehicleDeliveryCompact ? "h-[34px] max-w-[335px] px-3"'));
 assert.ok(operations.includes('rounded-[4px]'));
-assert.ok(customer.includes('className="mt-1 h-[34px] w-full rounded-[4px]'));
+assert.ok(customer.includes('className="mt-1 block h-[34px] min-w-0 w-full rounded-[4px]'));
 assert.ok(customer.includes('<CustomerClaimBooleanChoice compact name={field.key}'));
+assert.ok(operations.includes('overflow-x-auto'), "Operations Stage 4 must scroll without wrapping on narrow screens.");
+assert.ok(customer.includes('overflow-x-auto'), "Customer Stage 4 must scroll without wrapping on narrow screens.");
 assert.ok(choice.includes('h-[34px] rounded-[4px]'));
 assert.ok(operations.includes('onClick={(event) => event.currentTarget.showPicker?.()}'));
 assert.ok(customer.includes('required={!field.optional}'));
@@ -51,3 +53,19 @@ assert.ok(submit.includes('if (result.error)'));
 assert.ok(submit.includes('if (result.destination) router.push(result.destination)'));
 
 console.log("Stage 4 compact Work Approval layout and guarded next-stage navigation regression passed.");
+
+
+// Start Claim has its own fields: preserve their labels/inputs in one horizontal row without adding Stage 4 questions.
+const operationsStart = read("../app/claims/new/add-claim-form.tsx");
+const customerStart = read("../components/customer-portal/customer-start-claim-selector.tsx");
+const internalCompleted = read("../components/customer-portal/customer-internal-completed-journey.tsx");
+assert.ok(operationsStart.includes('columns === "two" ? "grid-cols-2 min-w-[620px] items-start"'), "Operations Start Claim inputs must remain on one row.");
+assert.ok(operationsStart.includes('grid-flow-col auto-cols-[minmax(170px,1fr)]'), "Operations Start Claim read-only fields must not wrap.");
+assert.ok(operationsStart.includes('min-w-0 overflow-x-auto'), "Operations Start Claim must scroll on narrow screens.");
+assert.ok(customerStart.includes('grid min-w-[640px] grid-cols-4 items-start'), "Customer Start Claim policy headings and values must remain in one row.");
+assert.ok(customerStart.includes('overflow-x-auto'), "Customer Start Claim policy summary must fit narrow screens without overlap.");
+assert.ok(internalCompleted.includes('grid-flow-col auto-cols-[minmax(170px,1fr)] min-w-[900px]'), "Internal Customer Work Approval completed details must stay on one row.");
+
+assert.ok(operations.includes('selected.key === "work_approval" ? "flex flex-col"'), "Operations Work Approval labels must sit above controls.");
+assert.ok(customer.includes('selected.key==="work_approval"?"flex flex-col"'), "Customer Work Approval labels must sit above controls.");
+assert.ok(customer.includes('selected.key==="work_approval"?"min-w-0 overflow-x-auto"'), "Customer Work Approval uses a contained horizontal scroll area.");
