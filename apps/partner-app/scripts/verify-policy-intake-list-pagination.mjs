@@ -16,7 +16,7 @@ assert.match(api, /export async function listPartnerPolicyIntakesPage\(/, 'Keep 
 assert.match(api, /filter: PartnerIntakeFilter = 'all'/, 'Send selected status to server');
 assert.match(api, /params\.set\('search', search\.trim\(\)\.slice\(0, 120\)\)/, 'Search full dataset on server, not loaded rows');
 assert.match(api, /params\.set\('include_counts', 'true'\)/, 'Fetch full status counts separately from page data');
-assert.match(api, /page\.counts\[key\] >= 0/, 'Reject missing full counts on initial request');
+assert.match(api, /page\.counts\?\.\[key\]/, 'Reject missing full counts on initial request');
 assert.match(app, /await listPartnerPolicyIntakesPage\(0, filter, debouncedQuery, filter === 'all' && !debouncedQuery\)/, 'Fetch first filtered page');
 assert.match(app, /await listPartnerPolicyIntakesPage\(nextOffset, filter, debouncedQuery, false\)/, 'Load more in the current filter and search');
 assert.match(app, /if \(page\.counts\) setCounts\(page\.counts\)/, 'Use server-reported totals');
