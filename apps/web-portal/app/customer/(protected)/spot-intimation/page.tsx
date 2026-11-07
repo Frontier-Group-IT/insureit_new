@@ -152,7 +152,7 @@ export default async function CustomerSpotIntimation({searchParams}:{searchParam
         <label className="min-w-0 w-full">
           <span className="block h-4 max-sm:h-auto whitespace-nowrap text-[9px] font-bold uppercase leading-4 tracking-[0.01em] text-[#245BB2] max-sm:whitespace-normal">Accident Date &amp; Time <span className="text-rose-500">*</span></span>
           <span className="mt-1.5 flex h-[34px] w-full min-w-0 overflow-hidden rounded-[4px] border border-[#CAD8EA] bg-white">
-            <CustomerDateInput name="accidentDate" label="Accident date" defaultValue={editing?existingDateTime(claim.accident_at,"date"):undefined} required className="text-[13px] font-medium text-[#193659]" />
+            <CustomerDateInput compact name="accidentDate" label="Accident date" defaultValue={editing?existingDateTime(claim.accident_at,"date"):undefined} required className="text-[13px] font-medium text-[#193659]" />
             <span aria-hidden="true" className="my-1.5 w-px shrink-0 bg-[#D6E0ED]"/>
             <AutoCloseTimeInput name="accidentTime" defaultValue={editing?existingDateTime(claim.accident_at,"time"):undefined} required ariaLabel="Accident time" className={splitFieldClass}/>
           </span>
@@ -160,7 +160,7 @@ export default async function CustomerSpotIntimation({searchParams}:{searchParam
         <label className="min-w-0 w-full">
           <span className="block h-4 max-sm:h-auto whitespace-nowrap text-[9px] font-bold uppercase leading-4 tracking-[0.01em] text-[#245BB2] max-sm:whitespace-normal">Spot Intimation Date &amp; Time <span className="text-rose-500">*</span></span>
           <span className="mt-1.5 flex h-[34px] w-full min-w-0 overflow-hidden rounded-[4px] border border-[#CAD8EA] bg-white">
-            <CustomerDateInput name="spotDate" label="Spot intimation date" defaultValue={editing?existingDateTime(claim.spot_intimation_at,"date"):undefined} required className="text-[13px] font-medium text-[#193659]" />
+            <CustomerDateInput compact name="spotDate" label="Spot intimation date" defaultValue={editing?existingDateTime(claim.spot_intimation_at,"date"):undefined} required className="text-[13px] font-medium text-[#193659]" />
             <span aria-hidden="true" className="my-1.5 w-px shrink-0 bg-[#D6E0ED]"/>
             <AutoCloseTimeInput name="spotTime" defaultValue={editing?existingDateTime(claim.spot_intimation_at,"time"):undefined} required ariaLabel="Spot intimation time" className={splitFieldClass}/>
           </span>
