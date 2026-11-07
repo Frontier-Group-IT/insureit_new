@@ -14,6 +14,8 @@ const claimRpc = app('lib/claims.ts');
 const customers = app('lib/customers.ts');
 const intake = app('lib/policy-intakes.ts');
 const intakeList = app('app/policy-intakes.tsx');
+const searchScreen = app('app/search.tsx');
+const businessScreen = app('app/(tabs)/business.tsx');
 const endpoint = web('app/api/partner/effective-permissions/route.ts');
 const intakeRoute = web('app/api/partner/policy-intakes/route.ts');
 const migration = readFileSync(new URL('../../../supabase/migrations/20261107180000_partner_app_website_write_permission_guards.sql', import.meta.url), 'utf8');
@@ -53,4 +55,9 @@ for (const rpc of ['partner_app_create_claim','partner_app_save_claim_spot','par
   assert.ok(match >= 0, rpc + ' must have a database guard');
   assert.match(migration.slice(match, match + 1200), /partner_app_employee_can_write_web_capability\('manage_claims'\)/, rpc + ' database guard must use live permission');
 }
+assert.match(searchScreen, /canPartnerAccess\(context, 'view_customers'\) \? listPartnerCustomers/, 'Customer searches must respect View');
+assert.match(searchScreen, /canPartnerAccess\(context, 'view_policies'\) \? listPartnerPolicies/, 'Policy searches must respect View');
+assert.match(searchScreen, /canPartnerAccess\(context, 'view_claims'\) \? listPartnerClaims/, 'Claim searches must respect View');
+assert.match(businessScreen, /canPartnerAccess\(context, 'create_customers', 'edit'\)/, 'Business create buttons must use website Edit');
+assert.match(businessScreen, /canPartnerAccess\(context, 'view_reports'\)/, 'Reports use website report visibility');
 console.log('Partner App / website effective permission parity contract passed');
