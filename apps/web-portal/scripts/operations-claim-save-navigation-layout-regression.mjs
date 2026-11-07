@@ -63,9 +63,14 @@ console.log("Operations Claim Journey save navigation, Stage 9 layout and 3D hea
 
 
 // Compact inputs preserve the dedicated submit footer and Vehicle Delivery date variant.
-assert.match(stages, /grid min-w-0 items-start gap-2 \$\{selected.key === "payment_encashment" \|\| selected.key === "billing" \? "" : "sm:grid-cols-2"\}/);
+assert.match(stages, /grid min-w-0 items-start gap-2 \$\{selected.key === "payment_encashment" \|\| selected.key === "billing" \|\| selected.key === "delivery_order" \? "" : "sm:grid-cols-2"\}/);
 assert.match(stages, /<AppStyleDateInput name=\{field.name\} value=\{value\} required=\{required\} compact billingCompact=\{selected.key === "billing"\} vehicleDeliveryCompact=\{selected.key === "vehicle_delivery"\} \/>/);
 assert.ok(stages.includes('vehicleDeliveryCompact ? "h-[34px] max-w-full px-3"'));
 assert.ok(stages.includes('h-[34px] text-[12px]'));
 assert.match(stages, /mt-4 flex min-h-10 flex-wrap items-center justify-end gap-2 border-t border-\[#D9E3F0\] pt-3/);
 assert.ok(stages.includes('selected.key === "repair_ri" ? "" : selected.key === "vehicle_delivery" ? "" : "max-w-[260px]"'));
+
+// Delivery Order input labels and inputs occupy three bounded columns, including narrow-screen scrolling.
+assert.ok(stages.includes('selected.key === "delivery_order" ? "min-w-[720px] grid-cols-[repeat(3,minmax(0,1fr))] gap-2 items-start"'));
+assert.ok(stages.includes('selected.key === "payment_encashment" || selected.key === "delivery_order" ? "w-full overflow-x-auto pb-1" : ""'));
+assert.ok(stages.includes('selected.key === "payment_encashment" || selected.key === "delivery_order" ? "mt-1 block w-full min-w-0" : ""'));

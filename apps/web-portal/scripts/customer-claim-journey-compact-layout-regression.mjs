@@ -51,3 +51,8 @@ assert.match(customerStagePage,/selected\.key==="payment_encashment"\?"":field\.
 assert.match(customerStagePage,/<CustomerClaimBooleanChoice compact name=\{field\.key\}/,"All stages use compact Yes/No controls.");
 assert.match(customerChoices,/compact \? "gap-2" : "max-w-\[254px\] gap-\[10px\]"/,"Compact Yes/No buttons must fit narrower desktop columns while preserving other stages.");
 console.log("Compact full-width customer claim journey regression passed.");
+
+// Delivery Order shares a single bounded row in Customer editable and read-only stage views.
+assert.ok(customerStagePage.includes('selected.key==="delivery_order"?"min-w-[720px] grid-cols-[repeat(3,minmax(0,1fr))] items-start gap-2"'));
+assert.ok(customerStagePage.includes('selected.key==="payment_encashment"||selected.key==="delivery_order"?"w-full overflow-x-auto pb-1"'));
+assert.ok(customerStagePage.includes('selected.key==="delivery_order"?"overflow-x-auto p-4":"p-4"'));
