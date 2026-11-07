@@ -42,7 +42,7 @@ jobs:
           test "$VERCEL_PROJECT_ID" = "prj_OLXA2UB1LwMd0UidP8MNa1O9MLuq"
           test "$VERCEL_ORG_ID" = "team_DsOUqnF8Pbd7YGNt8RCE8NgA"
           git fetch origin main
-          test "$(git rev-parse origin/main)" = "$GITHUB_SHA" || { echo "::error::main advanced. Do not deploy a stale snapshot."; exit 1; }
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main || { echo "::error::Release commit is not an ancestor of main."; exit 1; }
           test -f supabase/migrations/20261107133000_partner_policy_intake_search_text.sql
           test -f supabase/migrations/20261105180000_preserve_external_claim_management_mode.sql
       - name: Set up Node
@@ -58,7 +58,7 @@ jobs:
       - name: Refuse stale source commit
         run: |
           git fetch origin main
-          test "$(git rev-parse origin/main)" = "$GITHUB_SHA" || { echo "::error::main advanced during build."; exit 1; }
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main || { echo "::error::Release commit left main during build."; exit 1; }
       - name: Publish prebuilt Portal to production
         run: |
           vercel deploy --prebuilt --archive=tgz --prod --yes | tee portal-deploy-result.txt
