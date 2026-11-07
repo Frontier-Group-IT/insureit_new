@@ -9,13 +9,13 @@ const start=read("../components/customer-portal/customer-start-claim-selector.ts
 const operationsStart=read("../app/claims/new/add-claim-form.tsx");
 
 // Compact 34px Claim Journey controls across Customer and Operations, retaining Vehicle Delivery variant.
-assert.ok(operations.includes('selected.key === "work_approval" ? "lg:grid-cols-3 xl:grid-cols-5 lg:items-start"'));
+assert.ok(operations.includes('selected.key === "work_approval" ? "!grid-cols-5 min-w-[900px] lg:items-start"'));
 assert.ok(operations.includes('vehicleDeliveryCompact ? "h-[34px] max-w-[335px] px-3"'));
 assert.ok(operations.includes('flex h-[34px] cursor-pointer'));
 assert.ok(operations.includes('grid h-[34px] w-full grid-cols-[1.15fr_0.85fr]'));
 assert.ok(operations.includes('grid min-w-0 items-start gap-2 sm:grid-cols-2 lg:grid-cols-5'), 'Operations Stage 1 keeps all five fields on a single desktop row.');
 assert.ok(operations.includes('text-[14px] font-semibold tracking-[-0.01em] text-[#071D49]">Accident'));
-assert.ok(customer.includes('className="mt-1 h-[34px] w-full rounded-[4px]'));
+assert.ok(customer.includes('className="mt-1 block h-[34px] min-w-0 w-full rounded-[4px]'));
 assert.ok(customer.includes('xl:grid-cols-5 lg:items-start'));
 assert.ok(choice.includes('h-[34px] rounded-[4px]'));
 // Ensure this remains a presentation change: native date field, values, and field validations.
