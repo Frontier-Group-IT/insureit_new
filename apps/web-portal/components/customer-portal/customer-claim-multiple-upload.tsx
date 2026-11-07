@@ -4,7 +4,7 @@ import { useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CustomerErrorDialog } from "./customer-error-dialog";
 import { CustomerSuccessDialog } from "./customer-success-dialog";
-import { Files, Upload, ChevronDown, ChevronUp, FileText, ExternalLink, Loader2, X } from "lucide-react";
+import { Files, Upload, ChevronDown, ChevronUp, FileText, ExternalLink, Loader2 } from "lucide-react";
 import type { CustomerClaimFile } from "./customer-claim-compact-document";
 import { CustomerSpotAttachmentDelete } from "./customer-spot-attachment-delete";
 import { uploadCustomerClaimDocument, prepareCustomerClaimBulkVideo, finalizeCustomerClaimBulkVideo } from "@/app/customer/(protected)/claims/[id]/stage/[stage]/upload-action";
@@ -12,19 +12,16 @@ import { createSupabaseBrowserClient } from "@/lib/auth";
 
 const allowedExtensions = /\.(pdf|jpe?g|png|webp|heic|mp4|mov|webm|m4a|ogg)$/i;
 const videoExtensions = /\.(mp4|mov|webm)$/i;
-const sizeLabel = (size: number) => (size / (1024 * 1024)).toFixed(1) + " MB";
 
 export function CustomerClaimMultipleUpload({claimId,accountId,stage,documents,allowUpload=true,returnToSpotIntimation=false}:{claimId:string;accountId:string;stage:string;documents:CustomerClaimFile[];allowUpload?:boolean;returnToSpotIntimation?:boolean}) {
   const router=useRouter();
   const documentListId=useId();
   const picker=useRef<HTMLInputElement>(null);
   const running=useRef(false);
-  const [selected,setSelected]=useState<File[]>([]);
   const [uploading,setUploading]=useState(false);
   const [progress,setProgress]=useState({done:0,total:0});
   const [errorNotice,setErrorNotice]=useState<string|null>(null);
   const [successNotice,setSuccessNotice]=useState<string|null>(null);
-  const [failedFiles,setFailedFiles]=useState<string[]>([]);
   const [expanded,setExpanded]=useState(false);
   const [deletedIds,setDeletedIds]=useState<string[]>([]);
   const [recentUploads,setRecentUploads]=useState<CustomerClaimFile[]>([]);
@@ -32,26 +29,19 @@ export function CustomerClaimMultipleUpload({claimId,accountId,stage,documents,a
     .filter(file=>!deletedIds.includes(file.id));
   const openPicker=()=>{if(allowUpload&&!uploading)picker.current?.click();};
 
-  function addFiles(files: File[]) {
-    const unique=[...selected];
-    for(const file of files) {
-      if(unique.some(item=>item.name===file.name && item.size===file.size && item.lastModified===file.lastModified)) continue;
-      if(unique.length>=10) {setErrorNotice("Select up to 10 files at a time.");return;}
-      if(!file.size || !allowedExtensions.test(file.name)) {setErrorNotice("Unsupported or empty document: "+file.name);return;}
-      const limit=videoExtensions.test(file.name)?50:5;
-      if(file.size>limit*1024*1024) {setErrorNotice(file.name+" exceeds "+limit+" MB.");return;}
-      unique.push(file);
+  async function uploadFiles(files: File[]) {
+    if (!allowUpload || running.current || !files.length) return;
+    // Validate the entire selection before submitting any file.
+    if (files.length > 10) {setErrorNotice("Select up to 10 files at a time.");return;}
+    for (const file of files) {
+      if (!file.size || !allowedExtensions.test(file.name)) {setErrorNotice("Unsupported or empty document: "+file.name);return;}
+      const limit = videoExtensions.test(file.name) ? 50 : 5;
+      if (file.size > limit*1024*1024) {setErrorNotice(file.name+" exceeds "+limit+" MB.");return;}
     }
-    setFailedFiles([]);
-    setSelected(unique);
-  }
-
-  async function submitSelected() {
-    if(running.current || !selected.length) return;
     running.current=true;
     setUploading(true);
     setErrorNotice(null);
-    const batch=[...selected];
+    const batch=files;
     let complete=0;
     const failures:string[]=[];
     const confirmed:CustomerClaimFile[]=[];
@@ -83,20 +73,19 @@ export function CustomerClaimMultipleUpload({claimId,accountId,stage,documents,a
           complete++;
         } catch(error) {
           failures.push(file.name);
-          if(!errorNotice) setErrorNotice(error instanceof Error ? error.message : "Upload failed.");
+          // Failed files remain on the user device and can be selected again.
+          console.error("Customer bulk file upload failed", error instanceof Error ? error.message : "Unknown error");
         }
         setProgress(prev=>({...prev,done:prev.done+1}));
       }
-      // Never resubmit files that the server already registered, even when another file fails.
-      setSelected(failures.length ? batch.filter(file=>failures.includes(file.name)) : []);
-      setFailedFiles(failures);
+      // Successfully registered files are never automatically retried.
       if(complete) {
         setRecentUploads(previous=>[...confirmed.filter(file=>!previous.some(existing=>existing.id===file.id)),...previous]);
         setExpanded(true);
-        setSuccessNotice(complete+" document"+(complete===1?"":"s")+" uploaded successfully."+(failures.length?" "+failures.length+" failed and remain selected.":""));
+        setSuccessNotice(complete+" document"+(complete===1?"":"s")+" uploaded successfully.");
         router.refresh();
       }
-      else if(failures.length) setErrorNotice("No documents uploaded. Review errors and retry the selected files.");
+      if(failures.length) setErrorNotice(failures.length+" file"+(failures.length===1?"":"s")+" failed: "+failures.join(", ")+". Select the failed files again using the upload icon.");
     } finally {
       running.current=false;
       setUploading(false);
@@ -107,7 +96,7 @@ export function CustomerClaimMultipleUpload({claimId,accountId,stage,documents,a
     <CustomerErrorDialog title="Document upload failed" message={errorNotice} onClose={()=>setErrorNotice(null)}/>
     <CustomerSuccessDialog title="Upload Successful" message={successNotice} onClose={closeSuccess}/>
 
-    <input ref={picker} type="file" name="file" multiple accept=".pdf,.jpg,.jpeg,.png,.webp,.heic,.mp4,.mov,.webm,.m4a,.ogg" className="sr-only" aria-label="Select multiple claim documents" onChange={event=>{addFiles(Array.from(event.currentTarget.files||[]));event.currentTarget.value="";}}/>
+    <input ref={picker} type="file" name="file" multiple accept=".pdf,.jpg,.jpeg,.png,.webp,.heic,.mp4,.mov,.webm,.m4a,.ogg" className="sr-only" aria-label="Select multiple claim documents" disabled={!allowUpload || uploading} onChange={event=>{const files=Array.from(event.currentTarget.files||[]);event.currentTarget.value="";void uploadFiles(files);}}/>
     <div className="flex min-w-0 items-center gap-2">
       <button type="button" onClick={()=>shownDocuments.length?setExpanded(v=>!v):openPicker()}
         aria-expanded={shownDocuments.length?expanded:undefined} aria-controls={shownDocuments.length?documentListId:undefined}
@@ -136,15 +125,6 @@ export function CustomerClaimMultipleUpload({claimId,accountId,stage,documents,a
             onDeleted={id=>setDeletedIds(prev=>[...prev,id])}/> : null}
       </div>)}
     </div> : null}
-    {selected.length>0 && allowUpload ? <div className="mt-2 rounded-lg border border-[#D9E3F0] bg-white p-3">
-      <div className="mb-2 flex justify-between text-xs font-semibold text-[#17365D]"><span>{selected.length} selected files</span><span>{sizeLabel(selected.reduce((sum,file)=>sum+file.size,0))} total</span></div>
-      <ul className="space-y-1">{selected.map(file=><li key={file.name+file.size+file.lastModified} className="flex min-w-0 items-center gap-2 rounded-md bg-[#F7FAFD] px-2 py-1.5 text-xs">
-        <span className="min-w-0 flex-1 truncate" title={file.name}>{file.name}</span><span className="shrink-0 text-[#64748B]">{sizeLabel(file.size)}</span>
-        {failedFiles.includes(file.name)?<span className="text-red-600">Failed</span>:null}
-        <button type="button" disabled={uploading} aria-label={"Remove "+file.name} onClick={()=>setSelected(current=>current.filter(item=>item!==file))} className="rounded p-1 text-[#64748B] disabled:opacity-40"><X className="h-4 w-4"/></button>
-      </li>)}</ul>
-      {uploading?<p role="status" className="mt-2 text-xs text-[#174A87]">Processed {progress.done} of {progress.total} files</p>:null}
-      <button type="button" disabled={uploading} onClick={submitSelected} className="mt-3 rounded-lg bg-[#1253A7] px-4 py-2 text-xs font-semibold text-white disabled:opacity-50">Upload Selected Files</button>
-    </div>:null}
+    {uploading ? <p role="status" aria-live="polite" className="mt-2 px-1 text-[11px] font-medium text-[#174A87]">Uploading documents: {progress.done} of {progress.total} processed</p> : null}
   </div>;
 }
