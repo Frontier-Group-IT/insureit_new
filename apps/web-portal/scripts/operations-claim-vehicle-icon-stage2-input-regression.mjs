@@ -12,7 +12,7 @@ assert.match(stages, /name: "surveyor_email"/);
 assert.match(stages, /name: "surveyor_phone"/);
 assert.match(stages, /const useAppDatePicker = field\.type === "date"/);
 assert.match(stages, /<AppStyleDateInput name=\{field\.name\} value=\{value\} required=\{required\}/);
-assert.match(stages, /compact \? "h-9 max-w-full" : "h-\[40px\] max-w-\[260px\]"/, "Stage 2 uses a compact 36px date picker while standalone Stage 1 retains 40px");
+assert.match(stages, /billingCompact \? "h-\[34px\] max-w-full px-2" : compact \? "h-9 max-w-full px-3" : "h-\[40px\] max-w-\[260px\] px-3"/, "Stage 2 retains 36px dates, Stage 1 retains 40px, Billing uses 34px");
 assert.doesNotMatch(stages, /h-full min-h-9/, "Do not stretch date input to label height");
 assert.match(stages, /type="date"/,"Preserve accessible native calendar input");
 assert.match(header, /vehicle: "\/assets\/customer-3d-icons\/my_vehicles\.png"/);
