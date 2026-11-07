@@ -9,12 +9,13 @@ const start=read("../components/customer-portal/customer-start-claim-selector.ts
 const operationsStart=read("../app/claims/new/add-claim-form.tsx");
 
 // Operations claim stage controls use the requested 34px rectangular inputs; Customer portal keeps its separate 40px design.
-assert.match(operations,/selected\\.key === "work_approval" \\? "lg:grid-cols-3 xl:grid-cols-5 lg:items-start"/);
-assert.match(operations,/relative flex h-\\[34px\\] w-full items-center justify-between rounded-\\[4px\\]/);
-assert.match(operations,/flex h-\\[34px\\] cursor-pointer/g);
-assert.match(operations,/grid h-\\[34px\\] w-full grid-cols-\\[1\\.15fr_0\\.85fr\\]/);
-assert.match(operations,/mt-1 h-\\[34px\\] w-full rounded-\\[4px\\]/);
-assert.match(operations,/lg:grid-cols-3 xl:grid-cols-\\[repeat\\(5,minmax\\(0,1fr\\)\\)\\]/);
+assert.ok(operations.includes('selected.key === "work_approval" ? "lg:grid-cols-3 xl:grid-cols-5 lg:items-start"'));
+assert.ok(operations.includes('relative flex h-[34px] w-full items-center justify-between rounded-[4px]'));
+assert.ok(operations.includes('flex h-[34px] cursor-pointer'));
+assert.ok(operations.includes('grid h-[34px] w-full grid-cols-[1.15fr_0.85fr]'));
+assert.ok(operations.includes('mt-1 h-[34px] w-full rounded-[4px]'));
+assert.ok(operations.includes('min-[1440px]:grid-cols-5'));
+assert.ok(operations.includes('text-[14px] font-semibold tracking-[-0.01em] text-[#071D49]">Accident'));
 assert.match(customer,/selected\.key==="payment_encashment"\?"":field\.type==="date"\?"max-w-\[260px\]"/,"Stage 9 fills available grid cell; other stages retain date width.");
 assert.match(customer,/"max-w-\[254px\]":"max-w-\[320px\]"/);
 assert.match(customer,/className="mt-1 h-\[40px\] w-full rounded-md/);
