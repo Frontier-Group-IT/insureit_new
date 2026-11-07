@@ -63,7 +63,7 @@ console.log("Operations Claim Journey save navigation, Stage 9 layout and 3D hea
 
 
 // Compact inputs preserve the dedicated submit footer and Vehicle Delivery date variant.
-assert.match(stages, /grid min-w-0 items-start gap-2 \$\{selected.key === "payment_encashment" \? "" : "sm:grid-cols-2"\}/);
+assert.match(stages, /grid min-w-0 items-start gap-2 \$\{selected.key === "payment_encashment" \|\| selected.key === "billing" \? "" : "sm:grid-cols-2"\}/);
 assert.match(stages, /<AppStyleDateInput name=\{field.name\} value=\{value\} required=\{required\} compact billingCompact=\{selected.key === "billing"\} vehicleDeliveryCompact=\{selected.key === "vehicle_delivery"\} \/>/);
 assert.ok(stages.includes('vehicleDeliveryCompact ? "h-[34px] max-w-[335px] px-3"'));
 assert.ok(stages.includes('h-[34px] text-[12px]'));
