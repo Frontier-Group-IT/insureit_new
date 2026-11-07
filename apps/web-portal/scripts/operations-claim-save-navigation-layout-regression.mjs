@@ -72,7 +72,7 @@ assert.ok(stages.includes('selected.key === "repair_ri" ? "" : selected.key === 
 
 // Delivery Order input labels and inputs occupy three bounded columns, including narrow-screen scrolling.
 assert.ok(stages.includes('selected.key === "delivery_order" ? "min-w-[720px] grid-cols-[repeat(3,minmax(0,1fr))] gap-2 items-start"'));
-assert.ok(stages.includes('selected.key === "payment_encashment" || selected.key === "delivery_order" ? "w-full overflow-x-auto pb-1" : ""'));
+assert.ok(stages.includes('selected.key === "payment_encashment" || selected.key === "delivery_order" || selected.key === "work_approval" ? "w-full overflow-x-auto pb-1" : ""'));
 assert.ok(stages.includes('selected.key === "payment_encashment" || selected.key === "delivery_order" || selected.key === "spot_status" ? "mt-1 block w-full min-w-0" : ""'));
 
 // Spot Status has four equal-width columns, block headings and aligned compact controls with no scroll.
