@@ -110,6 +110,9 @@ jobs:
       - name: Verify incremental Policy Intake pagination
         run: (cd apps/partner-app && node scripts/verify-policy-intake-list-pagination.mjs)
 
+      - name: Verify Partner App website permissions and deep-link parity
+        run: node apps/partner-app/scripts/verify-website-permission-parity.mjs
+
       - name: Verify pre-APK native transition guard
         run: npm --workspace apps/partner-app run verify:pre-apk
 
