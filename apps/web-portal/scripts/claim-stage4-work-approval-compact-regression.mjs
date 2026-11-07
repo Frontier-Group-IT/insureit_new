@@ -16,7 +16,7 @@ for (const source of [operations, customer]) {
   assert.ok(source.includes('4 of 9'));
 }
 assert.ok(operations.includes('lg:grid-cols-3 xl:grid-cols-5 lg:items-start'), 'Operations Stage 4 should fit five fields at xl width');
-assert.ok(customer.includes('lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 lg:items-start'), 'Customer Stage 4 is unchanged');
+assert.ok(customer.includes('lg:grid-cols-3 xl:grid-cols-5 lg:items-start'), 'Customer Stage 4 should also align five fields at wide desktop widths');
 for (const key of ['approval_received_date', 'cashless', 'surveyor_name', 'surveyor_phone', 'surveyor_email']) {
   assert.ok(operations.includes('name: "' + key + '"'), 'Operations missing ' + key);
   assert.ok(stageFields.includes('key: "' + key + '"'), 'Customer missing ' + key);
@@ -26,15 +26,15 @@ assert.ok(stageFields.includes('label: "Surveyor Name", type: "text", optional: 
 assert.ok(stageFields.includes('label: "Surveyor Phone", type: "tel", optional: true'));
 assert.ok(stageFields.includes('label: "Surveyor Email", type: "email", optional: true'));
 
-// Operations stage fields use 34px rectangular inputs and five desktop columns; Customer stays unchanged.
+// Both portals use 34px rectangular fields and five desktop columns.
 assert.ok(operations.includes('h-[34px]'));
 assert.ok(!operations.includes('h-[40px]'));
 assert.ok(operations.includes('rounded-[4px]'));
 assert.ok(operations.includes('className="mt-1 grid w-full grid-cols-2 gap-2"'));
-assert.ok(customer.includes('selected.key==="payment_encashment"?"":field.type==="date"?"max-w-[260px]"'), "Stage 4 retains date max-width while Stage 9 fills its column.");
-assert.ok(customer.includes('h-[40px] w-full'));
-assert.ok(customer.includes('<CustomerClaimBooleanChoice compact={selected.key==="payment_encashment"} name={field.key}'), "Only Stage 9 opts in to compact Yes/No controls.");
-assert.ok(choice.includes('h-[40px] rounded-md'));
+assert.ok(customer.includes('customer-claim-ref-field min-w-0 block w-full'));
+assert.ok(customer.includes('h-[34px] w-full'));
+assert.ok(customer.includes('<CustomerClaimBooleanChoice compact name={field.key}'), "All Customer stage choices use compact controls.");
+assert.ok(choice.includes('h-[34px] rounded-[4px]'));
 assert.ok(operations.includes('onClick={(event) => event.currentTarget.showPicker?.()}'));
 assert.ok(customer.includes('required={!field.optional}'));
 
