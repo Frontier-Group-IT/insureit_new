@@ -597,7 +597,7 @@ function StageOneForm({ claimId, stage, active, detail, spotDetails, next, accid
   const incidentValue = spotDetails?.incident_at ?? accidentAt ?? (typeof storedIncidentAt === "string" ? storedIncidentAt : "");
   const spotIntimationValue = spotDetails?.spot_intimation_at ?? spotIntimationAt ?? (typeof storedSpotIntimationAt === "string" ? storedSpotIntimationAt : "");
   const groupedFieldNames = new Set(["incident_at", "incident_time", "spot_intimation_at", "spot_intimation_time"]);
-  const stageOneLabelClassName = "block h-4 max-sm:h-auto whitespace-nowrap text-[9px] font-semibold uppercase leading-4 tracking-[0.01em] text-[#174EA6] max-sm:whitespace-normal";
+  const stageOneLabelClassName = "block h-4 max-sm:h-auto whitespace-nowrap text-[8px] font-semibold uppercase leading-4 tracking-[0.01em] text-[#174EA6] max-sm:whitespace-normal";
   const groupedInputClassName = "h-full min-w-0 w-full border-0 bg-transparent pl-1.5 pr-1 text-[11px] font-semibold normal-case tracking-normal text-[#071D49] outline-none";
 
   return (
@@ -607,7 +607,7 @@ function StageOneForm({ claimId, stage, active, detail, spotDetails, next, accid
         <h3 className="text-[14px] font-semibold tracking-[-0.01em] text-[#071D49]">Accident &amp; Spot Intimation Details</h3>
       </div>
       <div className="p-3">
-        <div className="grid min-w-0 items-start gap-2 sm:grid-cols-2 lg:grid-cols-3 min-[1440px]:grid-cols-5">
+        <div className="grid min-w-0 items-start gap-2 sm:grid-cols-2 lg:grid-cols-5">
           <fieldset className="min-w-0">
             <legend className={stageOneLabelClassName}>Accident date &amp; time<span className="ml-1 text-rose-600">*</span></legend>
             <div className="mt-1.5 grid h-[34px] w-full grid-cols-[1.15fr_0.85fr] overflow-hidden rounded-[4px] border border-[#CEDBEC] bg-white focus-within:border-[#2F80ED]">
