@@ -33,7 +33,7 @@ export default function PartnerTabsLayout() {
         tabBarStyle: [styles.tabBar, { height: 64 + insets.bottom, paddingBottom: 7 + insets.bottom }],
       }}
     >
-      <Tabs.Screen name="index" options={{ title: 'Home', tabBarIcon: tabIcon('home-outline', 'home') }} />
+      <Tabs.Screen name="index" options={{ href: canPartnerAccess(context, "view_dashboard") ? undefined : null, title: 'Home', tabBarIcon: tabIcon('home-outline', 'home') }} />
       <Tabs.Screen name="business" options={{ href: canPartnerAccess(context, "view_dashboard") ? undefined : null, title: 'Business', tabBarIcon: tabIcon('briefcase-outline', 'briefcase') }} />
       <Tabs.Screen name="policies" options={{ href: canPartnerAccess(context, "view_policies") ? undefined : null, title: 'Policies', tabBarIcon: tabIcon('document-text-outline', 'document-text') }} />
       <Tabs.Screen name="claims" options={{ href: canPartnerAccess(context, "view_claims") ? undefined : null, title: 'Claims', tabBarIcon: tabIcon('shield-outline', 'shield') }} />
