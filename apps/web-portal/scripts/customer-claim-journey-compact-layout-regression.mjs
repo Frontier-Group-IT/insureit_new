@@ -44,9 +44,11 @@ assert.match(customerStagePage,/selected\.key==="spot_status"\?"text-\[8px\]":"t
 assert.match(customerStagePage,/selected\.key==="spot_status"\|\|selected\.key==="payment_encashment"\?"mt-3 flex items-center justify-end gap-2"/,"Spot Status has no action footer divider.");
 assert.match(customerStagePage,/className="mt-1 h-\[34px\] w-full/,"Stage 2 controls are 34px tall.");
 const completedInternalJourney = readFileSync("components/customer-portal/customer-internal-completed-journey.tsx","utf8");
-assert.match(completedInternalJourney,/stage\.key === "spot_status" \? "lg:grid-cols-4" : "lg:grid-cols-3 xl:grid-cols-5"/,"Internal customer completed Spot Status also uses four columns.");
+assert.match(completedInternalJourney,/stage\.key === "spot_status" \? "sm:grid-cols-2 lg:grid-cols-4"/,"Internal customer completed Spot Status also uses four columns.");
+assert.match(completedInternalJourney,/stage\.key === "work_approval" \? "grid-flow-col auto-cols-\[minmax\(170px,1fr\)\] min-w-\[900px\]"/,"Completed Internal Work Approval remains on one horizontal row.");
 assert.match(customerStagePage,/selected\.key==="payment_encashment"\?"gap-2 lg:grid-cols-5 lg:items-start"/,"Customer Payment Encashment must show all five fields on desktop.");
-assert.match(customerStagePage,/selected\.key==="claim_intimation"\|\|selected\.key==="work_approval"\?"lg:grid-cols-3 xl:grid-cols-5 lg:items-start"/,"Other customer stage grids must retain their previous layout.");
+assert.match(customerStagePage,/selected\.key==="work_approval"\?"!grid-cols-5 min-w-\[900px\] lg:items-start"/,"External customer Stage 4 remains in one row.");
+assert.match(customerStagePage,/selected\.key==="claim_intimation"\?"lg:grid-cols-3 xl:grid-cols-5 lg:items-start"/,"Claim Intimation layout stays unchanged.");
 assert.match(customerStagePage,/selected\.key==="payment_encashment"\?"":field\.type==="date"/,"Customer Stage 9 field widths must fit their columns.");
 assert.match(customerStagePage,/<CustomerClaimBooleanChoice compact name=\{field\.key\}/,"All stages use compact Yes/No controls.");
 assert.match(customerChoices,/compact \? "gap-2" : "max-w-\[254px\] gap-\[10px\]"/,"Compact Yes/No buttons must fit narrower desktop columns while preserving other stages.");
