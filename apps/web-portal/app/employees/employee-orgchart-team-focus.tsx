@@ -13,7 +13,7 @@ function initials(value: string) {
 }
 
 export function EmployeeOrgchartTeamFocus({
-  employees, partners, query, department, showPartners, selectedId, onSelect,
+  employees, partners, query, department, showPartners, selectedId, onSelect, onDetails,
 }: {
   employees: EmployeeRow[];
   partners: DirectoryPartner[];
@@ -22,6 +22,7 @@ export function EmployeeOrgchartTeamFocus({
   showPartners: boolean;
   selectedId: string;
   onSelect: (id: string) => void;
+  onDetails: (id: string) => void;
 }) {
   const [page, setPage] = useState(0);
   const [partnerExpanded, setPartnerExpanded] = useState(false);
@@ -86,8 +87,9 @@ export function EmployeeOrgchartTeamFocus({
   const partnerPages = Math.max(1, Math.ceil(ownPartners.length / PAGE_SIZE));
 
   const employeeCard = (employee: EmployeeRow, large = false) => (
-    <button key={employee.id} type="button" onClick={() => onSelect(employee.id)}
-      className={`group min-w-0 rounded-xl border text-left transition-colors hover:border-[#82AADB] hover:bg-[#F3F8FE] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#5685C4] ${large ? "w-full max-w-[335px] border-[#89B0E9] bg-[#EFF5FF] p-4 shadow-md" : "border-[#D7E2ED] bg-white p-3 shadow-[0_2px_9px_rgba(16,39,72,0.07)]"}`}>
+    <div key={employee.id} className={large ? "w-full max-w-[335px]" : "min-w-0"}>
+    <button type="button" onClick={() => onSelect(employee.id)}
+      className={`group min-w-0 rounded-xl border text-left transition-colors hover:border-[#82AADB] hover:bg-[#F3F8FE] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#5685C4] ${large ? "w-full border-[#89B0E9] bg-[#EFF5FF] p-4 shadow-md" : "w-full border-[#D7E2ED] bg-white p-3 shadow-[0_2px_9px_rgba(16,39,72,0.07)]"}`}>
       <div className="flex items-center gap-3">
         <div className={`flex shrink-0 items-center justify-center rounded-full bg-[#E6F0FF] font-semibold text-[#245790] ${large ? "h-12 w-12 text-[14px]" : "h-10 w-10 text-[12px]"}`}>{initials(employee.full_name) || <UserRound className="h-4 w-4" />}</div>
         <div className="min-w-0 flex-1">
@@ -102,6 +104,8 @@ export function EmployeeOrgchartTeamFocus({
         {showPartners ? <span className="inline-flex items-center gap-1"><Handshake className="h-3 w-3" />{partners.filter((partner) => partner.employeeId === employee.id).length} associates</span> : null}
       </div>
     </button>
+    <button type="button" onClick={() => onDetails(employee.id)} className="mt-1 w-full rounded-md py-1 text-center text-[10px] font-semibold text-[#37699A] hover:bg-[#EAF2FC] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#5685C4]">View details</button>
+    </div>
   );
 
   return <div className="min-h-[490px] bg-[#FAFAF8] px-4 py-4 sm:px-6" data-testid="employee-team-focus">
