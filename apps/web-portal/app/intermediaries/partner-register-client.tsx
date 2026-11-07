@@ -40,6 +40,7 @@ export type PartnerRegisterRow = {
 };
 
 type PartnerFilter = "" | "all" | "active" | "onboarding";
+type BusinessPeriod = "all" | "mtd" | "last_month" | "custom";
 
 const PARTNER_PAGE_SIZE = 10;
 const partnerActionBaseClassName = "inline-flex h-9 items-center justify-center whitespace-nowrap rounded-lg border bg-transparent px-3 text-[9px] font-semibold transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 active:translate-y-px";
@@ -51,6 +52,9 @@ export function PartnerRegisterClient({
   rows,
   initialSearch,
   initialStatus,
+  initialPeriod = "all",
+  initialDateFrom,
+  initialDateTo,
   success,
   error,
   loadError,
@@ -60,6 +64,9 @@ export function PartnerRegisterClient({
   canPermanentDelete: boolean;
   initialSearch: string;
   initialStatus: string;
+  initialPeriod?: BusinessPeriod;
+  initialDateFrom?: string;
+  initialDateTo?: string;
   success?: string;
   error?: string;
   loadError: boolean;
@@ -70,6 +77,11 @@ export function PartnerRegisterClient({
   const [status, setStatus] = useState(initialFilter);
   const [selectedFilter, setSelectedFilter] = useState<PartnerFilter>(initialFilter || "all");
   const [rmFilter, setRmFilter] = useState("");
+  const [periodSelection, setPeriodSelection] = useState<BusinessPeriod>(initialPeriod);
+  const [customOpen, setCustomOpen] = useState(false);
+  const [customFrom, setCustomFrom] = useState(initialDateFrom ?? "");
+  const [customTo, setCustomTo] = useState(initialDateTo ?? "");
+  const [customError, setCustomError] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const normalized = search.trim().toLowerCase();
 
@@ -86,8 +98,8 @@ export function PartnerRegisterClient({
   }, { active: 0, onboarding: 0 }), [scopedRows]);
   const visibleRows = useMemo(() => {
     const filtered = status === "active" ? scopedRows.filter((row) => row.active) : status === "onboarding" ? scopedRows.filter((row) => !row.active) : scopedRows;
-    // All authorized partners remain visible, including those with no MTD business.
-    // Rank highest MTD net premium first, before pagination.
+    // Include all authorized partners even with zero business in the selected period.
+    // Rank by selected-period net premium before pagination.
     return [...filtered].sort((a, b) => (b.netPremium ?? 0) - (a.netPremium ?? 0)
       || (b.policyCount ?? 0) - (a.policyCount ?? 0)
       || a.displayName.localeCompare(b.displayName));
@@ -101,20 +113,29 @@ export function PartnerRegisterClient({
   const extraFilterCount = Number(Boolean(rmFilter));
 
   useEffect(() => {
-    const params = new URLSearchParams();
+    // Preserve period and custom dates when updating text/status filters.
+    const params = new URLSearchParams(window.location.search);
     if (search.trim()) params.set("q", search.trim());
+    else params.delete("q");
     if (status) params.set("account_status", status);
-    const nextUrl = `/intermediaries/partner${params.size ? `?${params.toString()}` : ""}`;
-    if (`${window.location.pathname}${window.location.search}` !== nextUrl) window.history.replaceState(null, "", nextUrl);
+    else params.delete("account_status");
+    const nextUrl = "/intermediaries/partner" + (params.size ? "?" + params.toString() : "");
+    if (window.location.pathname + window.location.search !== nextUrl) window.history.replaceState(null, "", nextUrl);
   }, [search, status]);
+
+  useEffect(() => {
+    setPeriodSelection(initialPeriod);
+    setCustomFrom(initialDateFrom ?? "");
+    setCustomTo(initialDateTo ?? "");
+    setCurrentPage(1);
+  }, [initialPeriod, initialDateFrom, initialDateTo]);
 
   useEffect(() => {
     setCurrentPage((page) => Math.min(page, totalPages));
   }, [totalPages]);
 
   // Keep the ranking fresh without reloading the page or polling in background tabs.
-  // New business appears after the next foreground refresh; a new India calendar
-  // month recomputes the MTD amount on the next refresh without stored counters.
+  // A foreground refresh recalculates the selected reporting period.
   useEffect(() => {
     let lastSyncAt = Date.now();
     const refreshIfDue = () => {
