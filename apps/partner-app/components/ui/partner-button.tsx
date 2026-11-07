@@ -16,6 +16,8 @@ export function PartnerButton({
   disabled = false,
   fullWidth = true,
   trailing,
+  backgroundColor,
+  pressedBackgroundColor,
 }: {
   label: string;
   onPress: () => void;
@@ -26,6 +28,8 @@ export function PartnerButton({
   disabled?: boolean;
   fullWidth?: boolean;
   trailing?: ReactNode;
+  backgroundColor?: string;
+  pressedBackgroundColor?: string;
 }) {
   const blocked = disabled || loading;
   const foreground = variant === 'primary'
@@ -46,7 +50,9 @@ export function PartnerButton({
         size === 'compact' ? styles.compact : styles.regular,
         fullWidth && styles.fullWidth,
         styles[variant],
+        backgroundColor && variant === 'primary' && { backgroundColor, borderColor: backgroundColor },
         pressed && !blocked && styles.pressed,
+        pressed && !blocked && variant === 'primary' && pressedBackgroundColor && { backgroundColor: pressedBackgroundColor, borderColor: pressedBackgroundColor },
         blocked && styles.disabled,
       ]}
     >
