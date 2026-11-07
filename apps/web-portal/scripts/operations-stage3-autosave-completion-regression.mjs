@@ -4,6 +4,11 @@ import { fileURLToPath } from "node:url";
 
 const read = (path) => readFileSync(fileURLToPath(new URL(path, import.meta.url)), "utf8");
 const stage3 = read("../components/final-documents/final-documents-workspace-v2.tsx");
+const customerStage = read("../app/customer/(protected)/claims/[id]/stage/[stage]/page.tsx");
+const customerBooleanChoice = read("../components/customer-portal/customer-claim-boolean-choice.tsx");
+const customerStart = read("../components/customer-portal/customer-start-claim-selector.tsx");
+const operationsStart = read("../app/claims/new/add-claim-form.tsx");
+
 const stage3DocumentRow = read("../components/final-documents/stage3-document-verification-group.tsx");
 const stages = read("../components/claim-manager/operations-claim-stages.tsx");
 const motion = read("../components/claim-manager/operations-claim-stages-motion.css");
@@ -47,4 +52,10 @@ assert.match(stages, /Verify these documents before saving/, "Stage error dialog
 assert.match(stage3, /Earlier-stage uploads/, "Stage 3 must expose earlier-stage uploads.");
 assert.match(stage3, /verificationKey: "spot"/, "Stage 3 must allow existing Accident Photo verification.");
 assert.match(stage3, /No verification required/, "Voice Note must be accessible without manual verification.");
+assert.match(customerStage, /className="mt-1 h-\\[34px\\] w-full/, "Customer claim stage inputs must be 34px.");
+assert.match(customerBooleanChoice, /h-\\[34px\\] rounded-md border/, "Customer claim stage choices must be 34px.");
+assert.match(customerStart, /className="h-\\[34px\\] w-full max-w-\\[320px\\]/, "Customer Start Claim selection must be 34px.");
+assert.match(operationsStart, /const inputClass = "h-\\[34px\\] w-full/, "Operations Claim Onboarding inputs must be 34px.");
+assert.match(customerStage, /whitespace-nowrap text-\\[9px\\] font-semibold uppercase/, "Customer stage labels stay compact.");
+assert.match(stage3, /saveFinalDealershipDetails\\(stageDetailsForm\\(snapshot\\)\\)/, "Both internal and external Operations stages preserve autosave.");
 console.log("Operations Stage 3 autosave and completed-stage styling regression passed.");
