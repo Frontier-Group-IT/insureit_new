@@ -105,8 +105,8 @@ export default function PolicyIntakesScreen() {
   }, [load]));
 
   const counts = useMemo<Record<IntakeFilter, number>>(() => ({
-    action_required: rows.filter((row) => row.status === 'needs_attention' || (row.status === 'processing' && row.ocr_status === 'failed')).length,
-    in_review: rows.filter((row) => ['ready_for_review', 'in_review'].includes(row.status)).length,
+    action_required: rows.filter((row) => row.status === 'ready_for_review' || row.status === 'needs_attention' || (row.status === 'processing' && row.ocr_status === 'failed')).length,
+    in_review: rows.filter((row) => row.status === 'in_review').length,
     processing: rows.filter((row) => row.status === 'processing' && row.ocr_status !== 'failed').length,
     completed: rows.filter((row) => row.status === 'completed').length,
     duplicate: rows.filter((row) => row.status === 'duplicate').length,
@@ -279,8 +279,8 @@ export default function PolicyIntakesScreen() {
 
 function matchesFilter(row: PartnerPolicyIntake, filter: IntakeFilter) {
   if (filter === 'all') return true;
-  if (filter === 'action_required') return row.status === 'needs_attention' || (row.status === 'processing' && row.ocr_status === 'failed');
-  if (filter === 'in_review') return ['ready_for_review', 'in_review'].includes(row.status);
+  if (filter === 'action_required') return row.status === 'ready_for_review' || row.status === 'needs_attention' || (row.status === 'processing' && row.ocr_status === 'failed');
+  if (filter === 'in_review') return row.status === 'in_review';
   if (filter === 'processing') return row.status === 'processing' && row.ocr_status !== 'failed';
   return row.status === filter;
 }
