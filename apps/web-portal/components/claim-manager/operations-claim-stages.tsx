@@ -392,7 +392,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
         {selected.key === "claim_intimation" && !partnerReadOnlyJourney && !partnerManagedJourney ? <div className="mt-3">{claimIntimationContent}</div> : null}
 
         {partnerReadOnlyJourney ? (
-          <div className="rounded-xl border border-[#D9E6F7] bg-[#F8FBFF] p-4">
+          <div className="rounded-xl border border-[#D9E6F7] bg-white p-4">
             <p className="text-xs font-semibold text-[#17365D]">{selected.label}</p>
             <p className="mt-1 text-[11px] text-[#64748B]">Partner claim progress and saved details. Stage modifications are controlled by the Customer and Operations workflows.</p>
             {selectedDetails.length ? selectedDetails.map((row, i) => (
@@ -408,7 +408,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
           </div>
         ) : null}
         {stageEditable ? (
-          <form action={formAction} onInvalidCapture={(event) => { event.preventDefault(); setErrorNotice("Please complete all required fields before saving this stage."); }} className="mt-3 rounded-xl border border-[#D9E6F7] bg-[#F8FBFF] p-3">
+          <form action={formAction} onInvalidCapture={(event) => { event.preventDefault(); setErrorNotice("Please complete all required fields before saving this stage."); }} className="mt-3 rounded-xl border border-[#D9E6F7] bg-white p-3">
             {selected.key === "work_approval" ? <div className="mb-3 flex items-center justify-between gap-2 border-b border-[#D9E3F0] pb-3"><div><h2 className="text-[14px] font-bold text-[#071D49]">Stage 4 — Work Approval</h2><p className="text-[11px] text-[#64748B]">Record insurance approval and surveyor details</p></div><span className="shrink-0 rounded-md bg-[#EAF2FF] px-2 py-1 text-[10px] font-semibold text-[#174EA6]">4 of 9</span></div> : null}
             <input type="hidden" name="milestone_key" value={selected.key} />
             <input type="hidden" name="next_status" value={stageTarget ?? ""} />
