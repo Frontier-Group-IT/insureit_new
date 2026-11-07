@@ -71,10 +71,9 @@ export default async function ServiceEnquiriesPage({ searchParams }: PageProps) 
     const result = await builder;
     return result.count ?? 0;
   };
-  const [ticketCount, quoteCount, openCount] = await Promise.all([
+  const [ticketCount, quoteCount] = await Promise.all([
     countFor(["support_ticket", "challan_assistance"]),
     countFor(["insurance_quote"]),
-    countFor(selectedServiceTypes, "open"),
   ]);
 
   let matchedCustomerIds: string[] = [];
@@ -128,23 +127,18 @@ export default async function ServiceEnquiriesPage({ searchParams }: PageProps) 
         <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-700">Service enquiries could not be loaded.</div>
       ) : null}
 
-      <div className="flex items-center gap-2 rounded-t-xl border border-b-0 border-[#DCE4F0] bg-white px-4 py-3">
-        <h2 className="text-sm font-bold text-[#172844]">{section === "quotes" ? "Get Quote Register" : "Ticket Register"}</h2>
-        <span className="rounded-full bg-[#EAF2FF] px-3 py-1 text-[11px] font-semibold text-[#1A4D90]">{openCount} open</span>
-        <span className="ml-auto text-[11px] text-[#718095]">{totalRows} matching</span>
-      </div>
-      <section className="overflow-hidden rounded-b-xl border border-[#DCE4F0] bg-white">
+      <section className="overflow-hidden rounded-xl border border-[#DCE4F0] bg-white">
         <div className="overflow-x-auto">
-          <table className="min-w-[1050px] w-full text-left">
+          <table className="min-w-[1100px] w-full text-left">
             <thead className="border-b border-[#E8ECF4] bg-[#073B81] text-[10px] font-bold text-white">
               <tr>
-                <th className="px-4 py-3">Request</th>
+                <th className="whitespace-nowrap px-3 py-3">Request</th>
                 <th className="px-4 py-3">Service</th>
                 <th className="px-4 py-3">Customer / Guest</th>
-                <th className="px-4 py-3">Vehicle</th>
+                <th className="whitespace-nowrap px-3 py-3">Vehicle</th>
                 <th className="px-4 py-3">Details</th>
                 <th className="px-4 py-3">Contact</th>
-                <th className="px-4 py-3">Consent</th>
+                <th className="whitespace-nowrap px-3 py-3">Consent</th>
                 <th className="px-4 py-3">Status</th>
               </tr>
             </thead>
@@ -156,10 +150,9 @@ export default async function ServiceEnquiriesPage({ searchParams }: PageProps) 
                 const vehicle = row.vehicles?.vehicle_no || row.vehicle_no || (row.details?.newVehicle ? "New vehicle" : "—");
                 return (
                   <tr key={row.id} className="align-top text-[11px] text-[#34405A]">
-                    <td className="px-4 py-4">
-                      <p className="font-black text-[#171D3D]">{row.enquiry_no}</p>
-                      <p className="mt-1 text-[10px] text-[#7B8498]">{formatDateTime(row.created_at)}</p>
-                      <span className="mt-2 inline-flex rounded-full bg-[#EEF3FF] px-2 py-1 text-[9px] font-black text-[#3156B8]">{sourceLabel(row.source)}</span>
+                    <td className="px-3 py-4">
+                      <p className="whitespace-nowrap text-[10px] font-black tabular-nums text-[#171D3D]">{row.enquiry_no}</p>
+                      <span className="mt-1 inline-flex whitespace-nowrap rounded-full bg-[#EEF3FF] px-2 py-1 text-[9px] font-black text-[#3156B8]">{sourceLabel(row.source)}</span>
                     </td>
                     <td className="px-4 py-4">
                       <p className="font-black text-[#171D3D]">{serviceLabel(row.service_type)}</p>
@@ -169,7 +162,7 @@ export default async function ServiceEnquiriesPage({ searchParams }: PageProps) 
                       <p className="font-black text-[#171D3D]">{name}</p>
                       <p className="mt-1 text-[10px] text-[#7B8498]">{row.customer_id ? row.customers?.customer_code || "Existing customer" : "Verified guest"}</p>
                     </td>
-                    <td className="px-4 py-4 font-bold text-[#171D3D]">{vehicle}</td>
+                    <td className="whitespace-nowrap px-3 py-4 text-[10px] font-bold tabular-nums text-[#171D3D]">{vehicle}</td>
                     <td className="px-4 py-4">
                       <p className="max-w-[260px] whitespace-normal text-[10.5px] leading-4 text-[#59647A]">{row.description}</p>
                     </td>
@@ -179,13 +172,13 @@ export default async function ServiceEnquiriesPage({ searchParams }: PageProps) 
                         {email ? <a className="max-w-[180px] truncate font-semibold text-[#56637A] hover:text-[#0B63CE] hover:underline" href={`mailto:${email}`}>{email}</a> : null}
                       </div>
                     </td>
-                    <td className="px-4 py-4">
+                    <td className="px-3 py-4">
                       <div className="flex flex-col items-start gap-1.5">
-                        <span className={`inline-flex rounded-full px-2 py-1 text-[9px] font-black ${row.consent_accepted ? "bg-[#EAF8F0] text-[#147A55]" : "bg-[#F3F5F9] text-[#7B8498]"}`}>
+                        <span className={`inline-flex whitespace-nowrap rounded-full px-2 py-1 text-[9px] font-black ${row.consent_accepted ? "bg-[#EAF8F0] text-[#147A55]" : "bg-[#F3F5F9] text-[#7B8498]"}`}>
                           {row.service_type === "support_ticket" ? "App support request" : row.consent_accepted ? "Consent captured" : "Legacy request"}
                         </span>
-                        {row.whatsapp_opt_in ? <span className="inline-flex rounded-full bg-[#EAF7F2] px-2 py-1 text-[9px] font-black text-[#15765B]">WhatsApp allowed</span> : null}
-                        {row.consent_accepted_at ? <span className="text-[9px] text-[#8A93A6]">{formatDateTime(row.consent_accepted_at)}</span> : null}
+                        {row.whatsapp_opt_in ? <span className="inline-flex whitespace-nowrap rounded-full bg-[#EAF7F2] px-2 py-1 text-[9px] font-black text-[#15765B]">WhatsApp allowed</span> : null}
+                        {row.consent_accepted_at ? <span className="whitespace-nowrap text-[9px] tabular-nums text-[#8A93A6]">{formatDateTime(row.consent_accepted_at)}</span> : null}
                       </div>
                     </td>
                     <td className="px-4 py-4">
