@@ -38,6 +38,13 @@ assert.ok(!customerJourneyCss.includes("background:#f4fffa"), "Completed custome
 assert.ok(source.includes('completed?"bg-[#149568] text-white"'), "Keep existing solid-green Customer tick");
 const customerStagePage = readFileSync("app/customer/(protected)/claims/[id]/stage/[stage]/page.tsx", "utf8");
 const customerChoices = readFileSync("components/customer-portal/customer-claim-boolean-choice.tsx", "utf8");
+assert.match(customerStagePage,/selected\.key==="spot_status"\?"gap-2 lg:grid-cols-4 lg:items-start"/,"Customer external Spot Status displays four fields in one desktop row.");
+assert.match(customerStagePage,/selected\.key==="spot_status"\|\|selected\.key==="payment_encashment"\?""/,"Spot Status fields use the full grid cell width.");
+assert.match(customerStagePage,/selected\.key==="spot_status"\?"text-\[8px\]":"text-\[9px\]"/,"Spot Status has smaller heading text above each input.");
+assert.match(customerStagePage,/selected\.key==="spot_status"\|\|selected\.key==="payment_encashment"\?"mt-3 flex items-center justify-end gap-2"/,"Spot Status has no action footer divider.");
+assert.match(customerStagePage,/className="mt-1 h-\[34px\] w-full/,"Stage 2 controls are 34px tall.");
+const completedInternalJourney = readFileSync("components/customer-portal/customer-internal-completed-journey.tsx","utf8");
+assert.match(completedInternalJourney,/stage\.key === "spot_status" \? "lg:grid-cols-4" : "lg:grid-cols-3 xl:grid-cols-5"/,"Internal customer completed Spot Status also uses four columns.");
 assert.match(customerStagePage,/selected\.key==="payment_encashment"\?"gap-2 lg:grid-cols-5 lg:items-start"/,"Customer Payment Encashment must show all five fields on desktop.");
 assert.match(customerStagePage,/selected\.key==="claim_intimation"\|\|selected\.key==="work_approval"\?"lg:grid-cols-3 xl:grid-cols-5 lg:items-start"/,"Other customer stage grids must retain their previous layout.");
 assert.match(customerStagePage,/selected\.key==="payment_encashment"\?"":field\.type==="date"/,"Customer Stage 9 field widths must fit their columns.");
