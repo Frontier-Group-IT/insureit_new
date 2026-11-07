@@ -4,6 +4,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getPartnerClaimDetail, type PartnerClaimDetail } from '@/lib/claims';
+import { canPartnerStartClaim } from '@/lib/partner-permissions';
+import { usePartnerSession } from '@/providers/partner-session-provider';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { PartnerSpotIntimation } from '@/components/partner-spot-intimation';
 import { PartnerClaimStageEditor } from '@/components/partner-claim-stage-editor';
@@ -11,6 +13,8 @@ import { CLAIM_STAGES, formatClaimDate, getClaimTrackerState, getStageHistory, t
 
 export default function PartnerClaimStageScreen() {
   const router = useRouter();
+  const { context } = usePartnerSession();
+  const mayEditClaim = canPartnerStartClaim(context);
   const mainScrollRef = useRef<ScrollView>(null);
   useFocusEffect(useCallback(() => {
     const reset = () => mainScrollRef.current?.scrollTo({ y: 0, animated: false });
@@ -37,8 +41,8 @@ export default function PartnerClaimStageScreen() {
   const current = data && stage ? getClaimTrackerState(data) : null;
   const stageIndex = stage ? CLAIM_STAGES.findIndex(item => item.key === stage.key) : -1;
   const stageState = current ? stageIndex < current.completed ? 'Completed' : stageIndex === current.index ? 'Current stage' : 'Upcoming' : '';
-  if (!loading && !error && data && stage?.key === 'spot_intimation') return <PartnerSpotIntimation data={data} />;
-  if (!loading && !error && data && stage && stage.key !== 'spot_intimation') {
+  if (mayEditClaim && !loading && !error && data && stage?.key === 'spot_intimation') return <PartnerSpotIntimation data={data} />;
+  if (mayEditClaim && !loading && !error && data && stage && stage.key !== 'spot_intimation') {
     return <PartnerClaimStageEditor data={data} stage={stage.key} />;
   }
   return <SafeAreaView style={styles.root} edges={['top','bottom']}>
