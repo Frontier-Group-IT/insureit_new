@@ -6,7 +6,7 @@ const read = p => readFileSync(fileURLToPath(new URL(p,import.meta.url)),"utf8")
 const evidence=read("../components/customer-portal/customer-claim-evidence-workspace.tsx");
 const voice=read("../components/customer-portal/customer-claim-voice-recorder.tsx");
 const saved=read("../components/customer-portal/customer-claim-saved-voice-notes.tsx");
-const bulk=read("../components/customer-portal/customer-claim-multiple-files.tsx");
+const bulk=read("../components/customer-portal/customer-claim-multiple-upload.tsx");
 const button=read("../components/customer-portal/customer-spot-attachment-delete.tsx");
 const action=read("../app/customer/(protected)/claims/[id]/stage/[stage]/delete-document-action.ts");
 const header=read("../components/customer-portal/customer-claim-stage-strip.tsx");
@@ -15,8 +15,9 @@ const stage=read("../app/customer/(protected)/claims/[id]/stage/[stage]/page.tsx
 const completed=read("../components/customer-portal/customer-internal-completed-journey.tsx");
 
 assert.doesNotMatch(evidence,/label:"Incident Voice Note",type:"Incident Voice Note"/, "Voice note must not appear in Claim Documents.");
-assert.match(evidence,/<CustomerClaimMultipleFiles documents=\{multipleDocuments\}/, "Bulk documents must be listed in their section.");
-assert.match(bulk,/<CustomerSpotAttachmentDelete accountId=\{accountId\}/, "Bulk rows expose delete only when editable.");
+assert.match(evidence,/<CustomerClaimMultipleUpload documents=\{documents\}/, "All claim documents must appear in the consolidated dashed upload area.");
+assert.match(bulk,/<CustomerSpotAttachmentDelete accountId=\{accountId\}/, "Bulk rows retain guarded deletion controls.");
+assert.match(bulk,/file\.document_type\.toLowerCase\(\)\.replace/, "Only supported document categories can expose delete.");
 assert.match(voice,/<CustomerClaimSavedVoiceNotes documents=\{documents\}/, "Uploaded recordings belong to voice-note section.");
 assert.match(saved, /<audio controls preload="none"/, "Saved voice recordings retain playable audio.");
 assert.match(saved, /<CustomerSpotAttachmentDelete accountId=\{accountId\}/, "Saved voice notes have a conditional delete control.");
