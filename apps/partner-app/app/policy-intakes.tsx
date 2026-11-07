@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -9,10 +9,10 @@ import { PartnerStatusBadge } from '@/components/ui/partner-status-badge';
 import { PartnerInsurerLogo } from '@/components/ui/partner-insurer-logo';
 import { PartnerAssets } from '@/lib/partner-assets';
 import { getPartnerManufacturerLogoSource } from '@/lib/catalog-logos';
-import { listPartnerPolicyIntakesPage, type PartnerPolicyIntake } from '@/lib/policy-intakes';
+import { listPartnerPolicyIntakesPage, type PartnerPolicyIntake, type PartnerIntakeFilter, type PartnerIntakeCounts } from '@/lib/policy-intakes';
 import { partnerTheme } from '@/lib/theme';
 
-type IntakeFilter = 'action_required' | 'in_review' | 'processing' | 'completed' | 'duplicate' | 'rejected' | 'all';
+type IntakeFilter = PartnerIntakeFilter;
 
 const FILTERS: Array<{ key: IntakeFilter; label: string }> = [
   { key: 'action_required', label: 'Action Required' },
@@ -38,6 +38,12 @@ export default function PolicyIntakesScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState<IntakeFilter>('all');
   const [query, setQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
+  const [counts, setCounts] = useState<PartnerIntakeCounts>({ action_required: 0, in_review: 0, processing: 0, completed: 0, duplicate: 0, rejected: 0, all: 0 });
+  useEffect(() => {
+    const id = setTimeout(() => setDebouncedQuery(query.trim()), 300);
+    return () => clearTimeout(id);
+  }, [query]);
   const [error, setError] = useState('');
   const [pageError, setPageError] = useState('');
   const [loadingMore, setLoadingMore] = useState(false);
@@ -53,11 +59,13 @@ export default function PolicyIntakesScreen() {
     setError('');
     setPageError('');
     pageLoadingRef.current = false;
+    if (!manual) setRows([]);
     try {
-      const page = await listPartnerPolicyIntakesPage(0);
+      const page = await listPartnerPolicyIntakesPage(0, filter, debouncedQuery, filter === 'all' && !debouncedQuery);
       if (generation !== requestGeneration.current) return;
       setRows(page.intakes);
-      setTotal(page.total ?? 0);
+      if (page.counts) setCounts(page.counts);
+      setTotal(page.total);
       setNextOffset(page.intakes.length);
     } catch (cause) {
       if (generation !== requestGeneration.current) return;
@@ -69,7 +77,7 @@ export default function PolicyIntakesScreen() {
         setLoadingMore(false);
       }
     }
-  }, []);
+  }, [filter, debouncedQuery]);
 
   const loadMore = useCallback(async () => {
     if (pageLoadingRef.current || loading || refreshing || nextOffset >= total) return;
@@ -78,7 +86,7 @@ export default function PolicyIntakesScreen() {
     setPageError('');
     const generation = requestGeneration.current;
     try {
-      const page = await listPartnerPolicyIntakesPage(nextOffset);
+      const page = await listPartnerPolicyIntakesPage(nextOffset, filter, debouncedQuery, false);
       if (generation !== requestGeneration.current) return;
       if (!page.intakes.length && nextOffset < (page.total ?? 0)) {
         throw new Error('More submissions could not be loaded. Try again.');
@@ -88,48 +96,24 @@ export default function PolicyIntakesScreen() {
         return [...previous, ...page.intakes.filter((row) => !ids.has(row.id))];
       });
       setNextOffset(nextOffset + page.intakes.length);
-      setTotal(page.total ?? total);
+      setTotal(page.total);
     } catch (cause) {
       if (generation === requestGeneration.current) {
         setPageError(cause instanceof Error ? cause.message : 'More submissions could not be loaded.');
       }
     } finally {
       if (generation === requestGeneration.current) setLoadingMore(false);
-      pageLoadingRef.current = false;
+      if (generation === requestGeneration.current) pageLoadingRef.current = false;
     }
-  }, [loading, refreshing, nextOffset, total]);
+  }, [loading, refreshing, nextOffset, total, filter, debouncedQuery]);
 
   useFocusEffect(useCallback(() => {
     void load(false);
     return () => { requestGeneration.current += 1; };
   }, [load]));
 
-  const counts = useMemo<Record<IntakeFilter, number>>(() => ({
-    action_required: rows.filter((row) => row.status === 'needs_attention' || (row.status === 'processing' && row.ocr_status === 'failed')).length,
-    in_review: rows.filter((row) => ['ready_for_review', 'in_review'].includes(row.status)).length,
-    processing: rows.filter((row) => row.status === 'processing' && row.ocr_status !== 'failed').length,
-    completed: rows.filter((row) => row.status === 'completed').length,
-    duplicate: rows.filter((row) => row.status === 'duplicate').length,
-    rejected: rows.filter((row) => row.status === 'rejected').length,
-    all: rows.length,
-  }), [rows]);
-
-  const visibleRows = useMemo(() => {
-    const search = query.trim().toLowerCase();
-    return rows.filter((row) => {
-      if (!matchesFilter(row, filter)) return false;
-      if (!search) return true;
-      const haystack = [
-        row.intake_number,
-        row.customer_mobile,
-        row.lead_source_name,
-        row.lead_source_code,
-        row.status,
-        ...row.ocr_fields.flatMap((item) => [item.label, item.value]),
-      ].filter(Boolean).join(' ').toLowerCase();
-      return haystack.includes(search);
-    });
-  }, [filter, query, rows]);
+  // The API has already applied the selected status and search to the full authorized dataset.
+  const visibleRows = rows;
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
@@ -227,11 +211,11 @@ export default function PolicyIntakesScreen() {
         ) : (
           <PartnerStateView
             state="empty"
-            asset={rows.length ? PartnerAssets.emptyStates.noSearchResults : PartnerAssets.emptyStates.policyUpload}
-            title={rows.length ? 'No submissions in this filter' : 'No Policy Intakes yet'}
-            message={rows.length ? 'Try another filter or search term.' : 'Create an intake when you have a policy copy that Operations needs to onboard.'}
-            actionLabel={rows.length ? undefined : 'Create first intake'}
-            onAction={rows.length ? undefined : () => router.push('/policy-intake-new')}
+            asset={filter !== 'all' || debouncedQuery ? PartnerAssets.emptyStates.noSearchResults : PartnerAssets.emptyStates.policyUpload}
+            title={filter !== 'all' || debouncedQuery ? 'No submissions in this filter' : 'No Policy Intakes yet'}
+            message={filter !== 'all' || debouncedQuery ? 'Try another filter or search term.' : 'Create an intake when you have a policy copy that Operations needs to onboard.'}
+            actionLabel={filter !== 'all' || debouncedQuery ? undefined : 'Create first intake'}
+            onAction={filter !== 'all' || debouncedQuery ? undefined : () => router.push('/policy-intake-new')}
           />
         )}
         {visibleRows.length > 0 && nextOffset < total ? (
@@ -274,14 +258,6 @@ export default function PolicyIntakesScreen() {
       </View>
     </SafeAreaView>
   );
-}
-
-function matchesFilter(row: PartnerPolicyIntake, filter: IntakeFilter) {
-  if (filter === 'all') return true;
-  if (filter === 'action_required') return row.status === 'needs_attention' || (row.status === 'processing' && row.ocr_status === 'failed');
-  if (filter === 'in_review') return ['ready_for_review', 'in_review'].includes(row.status);
-  if (filter === 'processing') return row.status === 'processing' && row.ocr_status !== 'failed';
-  return row.status === filter;
 }
 
 function IntakeRecordLogo({ row }: { row: PartnerPolicyIntake }) {
