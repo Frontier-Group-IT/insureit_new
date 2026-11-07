@@ -13,7 +13,7 @@ assert.match(stages, /name: "surveyor_phone"/);
 assert.match(stages, /const useAppDatePicker = field\.type === "date"/);
 assert.match(stages, /<AppStyleDateInput name=\{field\.name\} value=\{value\} required=\{required\}/);
 assert.ok(stages.includes('vehicleDeliveryCompact ? "h-[34px] max-w-full px-3"'), "Preserve Vehicle Delivery compact date variant");
-assert.ok(stages.includes('relative flex ${billingCompact ? "h-[34px] max-w-full px-2"'), "All Operations dates use 34px compact styling");
+assert.ok(stages.includes('relative flex ${billingCompact ? "mt-1 h-[34px] max-w-full px-2"'), "All Operations dates use 34px compact styling");
 assert.doesNotMatch(stages, /h-full min-h-9/, "Do not stretch date input to label height");
 assert.match(stages, /type="date"/,"Preserve accessible native calendar input");
 assert.match(header, /vehicle: "\/assets\/customer-3d-icons\/my_vehicles\.png"/);
