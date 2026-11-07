@@ -5,13 +5,14 @@ import { useRouter } from "next/navigation";
 import { Trash2 } from "lucide-react";
 import { ClaimDocumentDeleteConfirmation } from "@/components/claim-manager/claim-document-delete-confirmation";
 import { CustomerErrorDialog } from "./customer-error-dialog";
-import { deleteCustomerSpotAttachment } from "@/app/customer/(protected)/claims/[id]/stage/[stage]/delete-document-action";
+import { deleteCustomerSpotAttachment, deleteCustomerClaimStageDocument } from "@/app/customer/(protected)/claims/[id]/stage/[stage]/delete-document-action";
 
 export function CustomerSpotAttachmentDelete({
-  accountId, claimId, documentId, fileName, onDeleted,
+  accountId, claimId, documentId, fileName, onDeleted, stage,
 }: {
   accountId: string; claimId: string; documentId: string;
   fileName: string; onDeleted?: (id: string) => void;
+  stage?: "spot_intimation" | "claim_intimation" | "billing";
 }) {
   const router = useRouter();
   const [confirming, setConfirming] = useState(false);
@@ -19,7 +20,9 @@ export function CustomerSpotAttachmentDelete({
   const [error, setError] = useState<string | null>(null);
 
   const remove = () => startTransition(async () => {
-    const result = await deleteCustomerSpotAttachment(accountId, claimId, documentId);
+    const result = stage
+      ? await deleteCustomerClaimStageDocument(accountId, claimId, documentId, stage)
+      : await deleteCustomerSpotAttachment(accountId, claimId, documentId);
     setConfirming(false);
     if (!result.ok) { setError(result.message); return; }
     onDeleted?.(documentId);
