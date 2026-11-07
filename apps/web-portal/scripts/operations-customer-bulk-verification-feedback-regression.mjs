@@ -7,6 +7,8 @@ const actions = read("../app/claims/[id]/spot-survey-actions.ts");
 const spotActions = read("../app/claims/internal-spot-intimation-actions.ts");
 const stages = read("../components/claim-manager/operations-claim-stages.tsx");
 const guard = read("../lib/claim-pending-document-guard.ts");
+const verificationModal = read("../components/spot-survey/document-verification-modal-v3.tsx");
+const legacyVerificationModal = read("../components/spot-survey/document-verification-modal.tsx");
 
 // Customer-uploaded Other Document files are visible and can be explicitly categorized.
 // Classification does not bypass document verification or expand categories/permissions.
@@ -32,4 +34,12 @@ assert.match(stages, /<ClaimStageErrorDialog message=\{errorNotice \? summarizeC
 assert.match(guard, /requireVerifiedClaimDocuments/, "Preserve verification gate.");
 assert.match(guard, /doc\.verification_status !== "verified" && doc\.verification_status !== "rejected"/, "Keep existing pending count logic.");
 
+for (const [name, modal] of [["current", verificationModal], ["legacy", legacyVerificationModal]]) {
+  assert.match(modal, /if \(!open \|\| !result\?\.ok\) return;/, name + " dialog closes only on confirmed successful save.");
+  assert.match(modal, /window\.setTimeout\(\(\) => setOpen\(false\), 1000\)/, name + " dialog closes one second after success.");
+  assert.match(modal, /window\.clearTimeout\(timeout\)/, name + " dialog clears a pending timer when closed or reopened.");
+  assert.match(modal, /\[open, result\?\.ok\]/, name + " dialog timer follows current open/success state.");
+  assert.match(modal, /if \(response\.ok\)/, name + " dialog retains server-confirmed save gating.");
+  assert.match(modal, /router\.refresh\(\)/, name + " dialog still refreshes verification data.");
+}
 console.log("Operations Customer bulk visibility and verification error feedback regression passed.");

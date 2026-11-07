@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { verifySpotSurveyDocument } from "@/app/claims/[id]/spot-survey-actions";
 
 type ModalType = "rc" | "insurance";
@@ -13,6 +13,14 @@ export function DocumentVerificationModalButton({ claimId, documentId, modalType
   const [pending, startTransition] = useTransition();
   const [result, setResult] = useState<Result | null>(null);
   const [verified, setVerified] = useState(false);
+  // Only a server-confirmed successful verification closes the dialog.
+  // Cleanup prevents a stale timeout from closing a reopened dialog.
+  useEffect(() => {
+    if (!open || !result?.ok) return;
+    const timeout = window.setTimeout(() => setOpen(false), 1000);
+    return () => window.clearTimeout(timeout);
+  }, [open, result?.ok]);
+
   const incident = dateOnly(incidentDate);
 
   return (

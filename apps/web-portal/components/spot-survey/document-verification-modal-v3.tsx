@@ -31,6 +31,14 @@ export function DocumentVerificationModalButton({ claimId, documentId, modalType
   const [pending, startTransition] = useTransition();
   const [result, setResult] = useState<Result | null>(null);
   const [saved, setSaved] = useState(false);
+  // Only a server-confirmed successful verification closes the dialog.
+  // Cleanup prevents a stale timeout from closing a reopened dialog.
+  useEffect(() => {
+    if (!open || !result?.ok) return;
+    const timeout = window.setTimeout(() => setOpen(false), 1000);
+    return () => window.clearTimeout(timeout);
+  }, [open, result?.ok]);
+
   const [rcLoading, setRcLoading] = useState(false);
   const [rcLookupMessage, setRcLookupMessage] = useState("");
   const [rcLookupError, setRcLookupError] = useState("");
