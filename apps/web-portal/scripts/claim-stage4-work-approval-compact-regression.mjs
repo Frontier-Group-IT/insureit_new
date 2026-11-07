@@ -65,3 +65,7 @@ assert.ok(operationsStart.includes('min-w-0 overflow-x-auto'), "Operations Start
 assert.ok(customerStart.includes('grid min-w-[640px] grid-cols-4 items-start'), "Customer Start Claim policy headings and values must remain in one row.");
 assert.ok(customerStart.includes('overflow-x-auto'), "Customer Start Claim policy summary must fit narrow screens without overlap.");
 assert.ok(internalCompleted.includes('grid-flow-col auto-cols-[minmax(170px,1fr)] min-w-[900px]'), "Internal Customer Work Approval completed details must stay on one row.");
+
+assert.ok(operations.includes('selected.key === "work_approval" ? "flex flex-col"'), "Operations Work Approval labels must sit above controls.");
+assert.ok(customer.includes('selected.key==="work_approval"?"flex flex-col"'), "Customer Work Approval labels must sit above controls.");
+assert.ok(customer.includes('selected.key==="work_approval"?"min-w-0 overflow-x-auto"'), "Customer Work Approval uses a contained horizontal scroll area.");
