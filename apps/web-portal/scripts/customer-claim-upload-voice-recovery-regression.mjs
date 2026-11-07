@@ -21,7 +21,8 @@ assert.match(voice,/Windows microphone privacy settings/,"Denied microphone mess
 assert.match(voice,/router\.refresh\(\)/,"Successful voice upload refreshes document list");
 assert.match(voice,/CustomerErrorDialog/,"Voice errors use popup");
 assert.match(multi,/data\.set\("type","Other Document"\)/,"Bulk uploads retain their original verification category");
-assert.match(evidence,/<CustomerClaimMultipleUpload documents=\{documents\}/,"Bulk uploaded files are visible in the shared dashed upload area");
+assert.match(evidence,/<CustomerClaimMultipleUpload documents=\{multipleDocuments\}/,"Only bulk Other Document uploads appear in the shared dashed upload area");
+assert.match(evidence,/normalize\(doc\.document_type\) === "otherdocument"/,"Individual category uploads stay in their own file cards");
 assert.doesNotMatch(evidence,/label:"Incident Voice Note",type:"Incident Voice Note"/,"Voice notes must not appear as a document card");
 assert.match(voice,/<CustomerClaimSavedVoiceNotes/,"Uploaded voice notes appear in their dedicated section");
 const operations=read("../components/claim-manager/operations-claim-stage-one-attachments.tsx");
