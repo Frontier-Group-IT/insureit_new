@@ -40,6 +40,7 @@ export type PartnerRegisterRow = {
 };
 
 type PartnerFilter = "" | "all" | "active" | "onboarding";
+type BusinessPeriod = "all" | "mtd" | "last_month" | "custom";
 
 const PARTNER_PAGE_SIZE = 10;
 const partnerActionBaseClassName = "inline-flex h-9 items-center justify-center whitespace-nowrap rounded-lg border bg-transparent px-3 text-[9px] font-semibold transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 active:translate-y-px";
@@ -51,6 +52,9 @@ export function PartnerRegisterClient({
   rows,
   initialSearch,
   initialStatus,
+  initialPeriod = "all",
+  initialDateFrom,
+  initialDateTo,
   success,
   error,
   loadError,
@@ -60,6 +64,9 @@ export function PartnerRegisterClient({
   canPermanentDelete: boolean;
   initialSearch: string;
   initialStatus: string;
+  initialPeriod?: BusinessPeriod;
+  initialDateFrom?: string;
+  initialDateTo?: string;
   success?: string;
   error?: string;
   loadError: boolean;
@@ -70,6 +77,11 @@ export function PartnerRegisterClient({
   const [status, setStatus] = useState(initialFilter);
   const [selectedFilter, setSelectedFilter] = useState<PartnerFilter>(initialFilter || "all");
   const [rmFilter, setRmFilter] = useState("");
+  const [periodSelection, setPeriodSelection] = useState<BusinessPeriod>(initialPeriod);
+  const [customOpen, setCustomOpen] = useState(false);
+  const [customFrom, setCustomFrom] = useState(initialDateFrom ?? "");
+  const [customTo, setCustomTo] = useState(initialDateTo ?? "");
+  const [customError, setCustomError] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const normalized = search.trim().toLowerCase();
 
@@ -86,8 +98,8 @@ export function PartnerRegisterClient({
   }, { active: 0, onboarding: 0 }), [scopedRows]);
   const visibleRows = useMemo(() => {
     const filtered = status === "active" ? scopedRows.filter((row) => row.active) : status === "onboarding" ? scopedRows.filter((row) => !row.active) : scopedRows;
-    // All authorized partners remain visible, including those with no MTD business.
-    // Rank highest MTD net premium first, before pagination.
+    // Include all authorized partners even with zero business in the selected period.
+    // Rank by selected-period net premium before pagination.
     return [...filtered].sort((a, b) => (b.netPremium ?? 0) - (a.netPremium ?? 0)
       || (b.policyCount ?? 0) - (a.policyCount ?? 0)
       || a.displayName.localeCompare(b.displayName));
@@ -101,20 +113,29 @@ export function PartnerRegisterClient({
   const extraFilterCount = Number(Boolean(rmFilter));
 
   useEffect(() => {
-    const params = new URLSearchParams();
+    // Preserve period and custom dates when updating text/status filters.
+    const params = new URLSearchParams(window.location.search);
     if (search.trim()) params.set("q", search.trim());
+    else params.delete("q");
     if (status) params.set("account_status", status);
-    const nextUrl = `/intermediaries/partner${params.size ? `?${params.toString()}` : ""}`;
-    if (`${window.location.pathname}${window.location.search}` !== nextUrl) window.history.replaceState(null, "", nextUrl);
+    else params.delete("account_status");
+    const nextUrl = "/intermediaries/partner" + (params.size ? "?" + params.toString() : "");
+    if (window.location.pathname + window.location.search !== nextUrl) window.history.replaceState(null, "", nextUrl);
   }, [search, status]);
+
+  useEffect(() => {
+    setPeriodSelection(initialPeriod);
+    setCustomFrom(initialDateFrom ?? "");
+    setCustomTo(initialDateTo ?? "");
+    setCurrentPage(1);
+  }, [initialPeriod, initialDateFrom, initialDateTo]);
 
   useEffect(() => {
     setCurrentPage((page) => Math.min(page, totalPages));
   }, [totalPages]);
 
   // Keep the ranking fresh without reloading the page or polling in background tabs.
-  // New business appears after the next foreground refresh; a new India calendar
-  // month recomputes the MTD amount on the next refresh without stored counters.
+  // A foreground refresh recalculates the selected reporting period.
   useEffect(() => {
     let lastSyncAt = Date.now();
     const refreshIfDue = () => {
@@ -151,6 +172,42 @@ export function PartnerRegisterClient({
     setRmFilter("");
   }
 
+  function navigatePeriod(next: BusinessPeriod, from?: string, to?: string) {
+    const params = new URLSearchParams(window.location.search);
+    if (next === "all") params.delete("period");
+    else params.set("period", next);
+    if (next === "custom" && from && to) {
+      params.set("from", from);
+      params.set("to", to);
+    } else {
+      params.delete("from");
+      params.delete("to");
+    }
+    setCurrentPage(1);
+    router.push("/intermediaries/partner" + (params.size ? "?" + params.toString() : ""));
+  }
+
+  function selectPeriod(next: BusinessPeriod) {
+    setPeriodSelection(next);
+    setCustomError("");
+    if (next === "custom") {
+      setCustomOpen(true);
+      return;
+    }
+    setCustomOpen(false);
+    navigatePeriod(next);
+  }
+
+  function applyCustomPeriod() {
+    if (!customFrom || !customTo || customFrom > customTo) {
+      setCustomError("Choose a valid From and To date.");
+      return;
+    }
+    setCustomError("");
+    setCustomOpen(false);
+    navigatePeriod("custom", customFrom, customTo);
+  }
+
   return (
     <div className="mx-auto max-w-[1480px] space-y-4 pb-6">
       {success ? <WorkflowSuccessToast message={successMessage} durationMs={4000} /> : null}
@@ -168,6 +225,46 @@ export function PartnerRegisterClient({
             <option value="">All RMs</option>
             {rmOptions.map((rm) => <option key={rm} value={rm}>{rm}</option>)}
           </select>
+          <div className="relative flex items-center gap-1">
+            <select aria-label="Business period" value={periodSelection}
+              onChange={(event) => selectPeriod(event.target.value as BusinessPeriod)}
+              className="h-9 w-[142px] rounded-lg border border-[#D8E1EC] bg-white px-2.5 text-[9.5px] font-semibold text-[#26374F] outline-none focus:border-[#315FEA]">
+              <option value="all">All</option>
+              <option value="mtd">MTD</option>
+              <option value="last_month">Last Month</option>
+              <option value="custom">Custom</option>
+            </select>
+            {periodSelection === "custom" && !customOpen ? (
+              <button type="button" onClick={() => setCustomOpen(true)}
+                className="h-9 rounded-lg border border-[#D8E1EC] bg-white px-2 text-[9px] font-semibold text-[#315FEA] hover:bg-[#F2F6FF]">
+                Dates
+              </button>
+            ) : null}
+            {customOpen ? (
+              <div className="absolute right-0 top-full z-30 mt-1 w-[290px] rounded-xl border border-[#D8E1EC] bg-white p-3 shadow-lg">
+                <p className="mb-2 text-[10px] font-semibold text-[#17203A]">Custom business dates</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <label className="text-[9px] font-medium text-[#526178]">From
+                    <input type="date" aria-label="Business from date" value={customFrom}
+                      onChange={(event) => { setCustomFrom(event.target.value); setCustomError(""); }}
+                      className="mt-1 block h-9 w-full rounded-lg border border-[#D8E1EC] bg-white px-1 text-[10px] text-[#26374F]" />
+                  </label>
+                  <label className="text-[9px] font-medium text-[#526178]">To
+                    <input type="date" aria-label="Business to date" value={customTo}
+                      onChange={(event) => { setCustomTo(event.target.value); setCustomError(""); }}
+                      className="mt-1 block h-9 w-full rounded-lg border border-[#D8E1EC] bg-white px-1 text-[10px] text-[#26374F]" />
+                  </label>
+                </div>
+                {customError ? <p role="alert" className="mt-2 text-[10px] text-red-700">{customError}</p> : null}
+                <div className="mt-3 flex justify-end gap-2">
+                  <button type="button" onClick={() => { setCustomOpen(false); setPeriodSelection(initialPeriod); setCustomError(""); }}
+                    className="h-8 rounded-lg border border-[#D8E1EC] px-3 text-[10px] font-semibold text-[#526178]">Cancel</button>
+                  <button type="button" onClick={applyCustomPeriod}
+                    className="h-8 rounded-lg bg-[#17365F] px-3 text-[10px] font-semibold text-white">Apply</button>
+                </div>
+              </div>
+            ) : null}
+          </div>
           {extraFilterCount ? <button type="button" onClick={clearExtraFilters} className="h-9 rounded-lg px-2.5 text-[8.5px] font-bold text-[#526178] hover:bg-[#F1F5F9] hover:text-[#17365D]">Clear filters ({extraFilterCount})</button> : null}
           <div className="ml-auto flex flex-wrap items-center justify-end gap-1.5 whitespace-nowrap text-[9.5px] font-semibold">
             <FilterButton label="All" count={scopedRows.length} active={selectedFilter === "all"} onClick={() => selectFilter("all")} />

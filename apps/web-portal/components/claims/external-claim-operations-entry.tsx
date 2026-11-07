@@ -21,7 +21,7 @@ export function ExternalClaimOperationsEntry({ claimId, auto = false, activeClai
   function enterWorkflow() {
     if (pending || (activeClaimId && activeClaimId !== claimId)) return;
     // The parent lock is set synchronously before the transition starts, so
-    // simultaneous clicks on different rows cannot start multiple takeovers.
+    // simultaneous clicks on different rows cannot open conflicting claims.
     if (onClaimStart && !onClaimStart(claimId)) return;
     setMessage("");
     startTransition(async () => {
@@ -44,7 +44,7 @@ export function ExternalClaimOperationsEntry({ claimId, auto = false, activeClai
     if (!auto || started.current) return;
     started.current = true;
     enterWorkflow();
-    // This is intentionally a one-shot ownership handoff for direct External Claim links.
+    // Open the authorized Operations view once for a direct External Claim link.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [auto, claimId]);
 
