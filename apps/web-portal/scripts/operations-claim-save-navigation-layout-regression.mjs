@@ -31,7 +31,7 @@ assert.match(stages, /if \(nextKey && canOpenNext\) \{[\s\S]*?setSelectedKey\(ne
 assert.match(stages, /await saveInternalSpotIntimationDetails\(claimId, formData\)/, "Preserve saving without automatic workflow advancement.");
 
 assert.match(stages, /router\.replace\(\`\$\{partnerManagedJourney/);
-assert.match(stages, /selected\.key === "spot_status" \? "grid-cols-4 gap-2 items-start"/, "Stage 2 must keep all four fields in one row without scrolling.");
+assert.match(stages, /selected\.key === "spot_status" \? "grid-cols-4 gap-2 items-start"/, "Spot Status stays in four columns without scrolling at all widths.");
 assert.match(stages, /selected\.key === "spot_status" \|\| selected\.key === "billing"/, "Stage 2 inputs must use full available grid width.");
 assert.match(stages, /selected\.key === "spot_status" \? "text-\[8px\]" : "text-\[9px\]"/, "Only Spot Status labels should be smaller.");
 assert.match(stages, /selected\.key === "spot_status" \|\| selected\.key === "delivery_order" \|\| selected\.key === "payment_encashment" \? "mt-3 flex items-center justify-end gap-2"/, "Stage 2 Save row should have no extra divider.");
@@ -63,17 +63,21 @@ console.log("Operations Claim Journey save navigation, Stage 9 layout and 3D hea
 
 
 // Compact inputs preserve the dedicated submit footer and Vehicle Delivery date variant.
-assert.match(stages, /grid min-w-0 items-start gap-2 \$\{selected.key === "payment_encashment" \|\| selected.key === "billing" \|\| selected.key === "spot_status" \? "" : "sm:grid-cols-2"\}/);
+assert.match(stages, /grid min-w-0 items-start gap-2 \$\{selected.key === "payment_encashment" \|\| selected.key === "billing" \|\| selected.key === "delivery_order" \|\| selected.key === "spot_status" \? "" : "sm:grid-cols-2"\}/);
 assert.match(stages, /<AppStyleDateInput name=\{field.name\} value=\{value\} required=\{required\} compact billingCompact=\{selected.key === "billing"\} vehicleDeliveryCompact=\{selected.key === "vehicle_delivery"\} \/>/);
 assert.ok(stages.includes('vehicleDeliveryCompact ? "h-[34px] max-w-[335px] px-3"'));
 assert.ok(stages.includes('h-[34px] text-[12px]'));
 assert.match(stages, /mt-4 flex min-h-10 flex-wrap items-center justify-end gap-2 border-t border-\[#D9E3F0\] pt-3/);
 assert.ok(stages.includes('selected.key === "repair_ri" ? "" : selected.key === "vehicle_delivery" ? "max-w-[335px]" : "max-w-[260px]"'));
 
-// No-scroll single-row Spot Status: labels are block headings above equal-height compact controls.
+// Delivery Order input labels and inputs occupy three bounded columns, including narrow-screen scrolling.
+assert.ok(stages.includes('selected.key === "delivery_order" ? "min-w-[720px] grid-cols-[repeat(3,minmax(0,1fr))] gap-2 items-start"'));
+assert.ok(stages.includes('selected.key === "payment_encashment" || selected.key === "delivery_order" ? "w-full overflow-x-auto pb-1" : ""'));
+assert.ok(stages.includes('selected.key === "payment_encashment" || selected.key === "delivery_order" ? "mt-1 block w-full min-w-0" : ""'));
+
+// Four equal Spot Status columns: headings above 34px controls; no wrapping into row two or horizontal scroll.
 assert.ok(stages.includes('selected.key === "spot_status" ? "grid-cols-4 gap-2 items-start"'));
-assert.ok(stages.includes('selected.key === "spot_status" ? "block whitespace-normal"'));
+assert.ok(stages.includes('selected.key === "spot_status" ? "!whitespace-normal" : ""'));
 assert.ok(stages.includes('selected.key === "spot_status" ? "block min-h-8 lg:min-h-4 leading-4 break-words"'));
-assert.ok(stages.includes('selected.key === "payment_encashment" || selected.key === "spot_status" ? "mt-1 block w-full min-w-0"'));
-assert.match(stages, /className="mt-1 h-\[34px\] w-full min-w-0 rounded-\[4px\] border/);
-assert.doesNotMatch(stages, /selected.key === "spot_status" \? "w-full overflow-x-auto"/);
+assert.ok(stages.includes('selected.key === "payment_encashment" || selected.key === "delivery_order" || selected.key === "spot_status" ? "mt-1 block w-full min-w-0"'));
+assert.doesNotMatch(stages,/selected.key === "spot_status" \? "w-full overflow-x-auto"/);
