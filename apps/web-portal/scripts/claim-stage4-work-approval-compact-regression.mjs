@@ -33,7 +33,7 @@ assert.ok(operations.includes('selected.key === "payment_encashment" || selected
 assert.ok(customer.includes('selected.key==="payment_encashment"?"":field.type==="date"?"max-w-[260px]"'), "Stage 4 retains date max-width while Stage 9 fills its column.");
 assert.ok(customer.includes('h-[40px] w-full'));
 assert.ok(customer.includes('<CustomerClaimBooleanChoice compact={selected.key==="payment_encashment"} name={field.key}'), "Only Stage 9 opts in to compact Yes/No controls.");
-assert.ok(choice.includes('h-[40px] rounded-md'));
+assert.ok(choice.includes('compact ? "h-[34px]" : "h-[40px]"'), "Stage 4 keeps 40px choices; Stage 9 uses 34px.");
 assert.ok(operations.includes('onClick={(event) => event.currentTarget.showPicker?.()}'));
 assert.ok(customer.includes('required={!field.optional}'));
 
