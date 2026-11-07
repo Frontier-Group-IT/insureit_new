@@ -33,7 +33,7 @@ assert.match(client, /row\.payout === null/);
 assert.match(loader, /selectedType === "partner"\s*\? await fetchAllPages<IntermediaryRow, unknown>/, "All authorized Partners must be paginated before ranking");
 assert.match(loader, /\.order\("id", \{ ascending: false \}\)/, "Partner backend pagination must use deterministic ordering");
 assert.match(client, /return \[\.\.\.filtered\]\.sort\(/, "Business ranking must use a copy, not mutate source data");
-assert.match(client, /\(row\.policyCount \?\? 0\) > 0/, "Only period-producing partners should appear");
+assert.doesNotMatch(client, /\(row\.policyCount \?\? 0\) > 0/, "All authorized partners, including zero-business partners, should appear");
 assert.match(client, /\(b\.netPremium \?\? 0\) - \(a\.netPremium \?\? 0\)/, "Rank by period net premium descending");
 assert.ok(client.indexOf("return [...filtered].sort(") < client.indexOf("visibleRows.slice(pageStartIndex"), "Business priority must apply before page slicing");
 console.log("Partner Register business metrics migration and UI contract regression passed");
