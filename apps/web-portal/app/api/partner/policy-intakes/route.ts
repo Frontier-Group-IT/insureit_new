@@ -338,6 +338,18 @@ export async function POST(request: Request) {
     return json({ ok: false, error: "Invalid request." }, 400);
   }
 
+  // Partner-owned submissions keep their established server-side account scope.
+  // Employees must also hold the exact website creation right; a view-only
+  // Policy Intake grant must never permit an API upload/submit/replace action.
+  if (auth.identity.actor_kind === "employee" && body.action !== "review_status") {
+    const admin = createSupabaseAdminClient();
+    const { data: profile } = await admin.from("profiles")
+      .select("id,role,is_active").eq("id", auth.identity.profile_id).maybeSingle();
+    if (!profile?.is_active || !(await hasEffectiveCapability(profile, "create_policy_intakes", "edit"))) {
+      return json({ ok: false, error: "Policy Intake creation permission is required." }, 403);
+    }
+  }
+
   if (body.action === "review_status") {
     return updateMobileIntakeReview(auth.identity, body);
   }
