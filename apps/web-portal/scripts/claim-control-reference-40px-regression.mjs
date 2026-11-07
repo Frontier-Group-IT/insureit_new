@@ -15,7 +15,7 @@ assert.match(operations,/selected\.key === "payment_encashment" \? "gap-2" : "ma
 assert.match(operations,/flex h-9 cursor-pointer/g);
 assert.match(operations,/max-w-\[320px\] rounded-lg/);
 assert.match(operations,/grid h-9 w-full max-w-\[320px\]/);
-assert.match(customer,/selected\.key==="payment_encashment"\?"":field\.type==="date"\?"max-w-\[260px\]"/,"Stage 9 fills available grid cell; other stages retain date width.");
+assert.match(customer,/field\.type==="date"\?\(selected\.key==="repair_ri"\?"":"max-w-\[260px\]"\)/,"Repair/RI fills available grid cell; other stages retain date width.");
 assert.match(customer,/"max-w-\[254px\]":"max-w-\[320px\]"/);
 assert.match(customer,/className="mt-1 h-9 w-full rounded-md/);
 assert.match(choice,/compact \? "gap-2" : "max-w-\[254px\] gap-\[10px\]"/,"Compact Stage 9 controls; other stages keep original sizing.");
