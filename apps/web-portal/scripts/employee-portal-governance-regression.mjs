@@ -1,3 +1,4 @@
+import "./employee-directory-orgchart-reference-regression.mjs";
 import "./employee-directory-compact-layout-regression.mjs";
 import "./employee-organization-tree-regression.mjs";
 import { readFileSync } from "node:fs";

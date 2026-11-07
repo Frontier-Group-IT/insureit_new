@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent, type WheelEvent } from "react";
 import Link from "next/link";
-import { Building2, ChevronDown, ChevronRight, GitBranch, Handshake, Network, UserRound } from "lucide-react";
+import { Building2, ChevronDown, ChevronRight, Handshake, LocateFixed, Maximize2, Minus, Plus, UserRound, Users } from "lucide-react";
 import type { EmployeeRow } from "./employee-forms";
 
 export type DirectoryPartner = {
@@ -16,30 +16,97 @@ export type DirectoryPartner = {
   branches: { id: string; name: string; code: string | null }[];
 };
 
-function normalized(value: string | null | undefined) {
-  return (value ?? "").toLocaleLowerCase().trim();
+type ChartNode = {
+  key: string;
+  label: string;
+  subtitle: string;
+  detail: string;
+  type: "employee" | "group" | "partner" | "branch";
+  employee?: EmployeeRow;
+  partner?: DirectoryPartner;
+  count: number;
+  children: ChartNode[];
+};
+
+type Positioned = { node: ChartNode; x: number; y: number; parent: string | null };
+const CARD_W = 188;
+const CARD_H = 100;
+const H_GAP = 24;
+const V_GAP = 84;
+const MARGIN = 80;
+const normalize = (value: string | null | undefined) => (value ?? "").trim().toLocaleLowerCase();
+
+function layoutForest(roots: ChartNode[]) {
+  const widths = new Map<string, number>();
+  const measure = (node: ChartNode): number => {
+    const childWidth = node.children.reduce((sum, child, index) => sum + measure(child) + (index ? H_GAP : 0), 0);
+    const width = Math.max(CARD_W, childWidth);
+    widths.set(node.key, width);
+    return width;
+  };
+  const totalWidth = roots.reduce((sum, node, index) => sum + measure(node) + (index ? H_GAP * 2 : 0), 0);
+  const positions: Positioned[] = [];
+  let deepest = 0;
+  const place = (node: ChartNode, left: number, depth: number, parent: string | null) => {
+    const width = widths.get(node.key) ?? CARD_W;
+    const x = left + width / 2;
+    const y = MARGIN + depth * (CARD_H + V_GAP);
+    deepest = Math.max(deepest, depth);
+    positions.push({ node, x, y, parent });
+    const childrenWidth = node.children.reduce((sum, child, index) => sum + (widths.get(child.key) ?? CARD_W) + (index ? H_GAP : 0), 0);
+    let next = left + (width - childrenWidth) / 2;
+    for (const child of node.children) {
+      place(child, next, depth + 1, node.key);
+      next += (widths.get(child.key) ?? CARD_W) + H_GAP;
+    }
+  };
+  let next = MARGIN;
+  for (const root of roots) {
+    place(root, next, 0, null);
+    next += (widths.get(root.key) ?? CARD_W) + H_GAP * 2;
+  }
+  return { positions, width: Math.max(600, totalWidth + MARGIN * 2), height: Math.max(420, (deepest + 1) * (CARD_H + V_GAP) + MARGIN * 2) };
 }
 
-const kindLabel = { partner: "Partner", posp: "POSP", misp: "MISP" } as const;
+function initials(name: string) {
+  return name.trim().split(/\s+/).slice(0, 2).map((part) => part[0] ?? "").join("").toUpperCase();
+}
 
 export function EmployeeOrganizationTree({ employees, partners, query }: { employees: EmployeeRow[]; partners: DirectoryPartner[]; query: string }) {
-  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [expanded, setExpanded] = useState<Set<string>>(() => new Set(employees.filter((employee) => !employee.reporting_manager_id || !employees.some((manager) => manager.id === employee.reporting_manager_id)).map((employee) => `employee:${employee.id}`)));
   const [showPartners, setShowPartners] = useState(true);
+  const [department, setDepartment] = useState("");
   const [focus, setFocus] = useState("");
-  const search = normalized(query);
+  const [zoom, setZoom] = useState(1);
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const [viewport, setViewport] = useState({ width: 1050, height: 590 });
+  const canvasRef = useRef<HTMLDivElement>(null);
+  const dragRef = useRef<{ x: number; y: number; originX: number; originY: number } | null>(null);
+
+  useEffect(() => {
+    const element = canvasRef.current;
+    if (!element) return;
+    const resize = new ResizeObserver((entries) => {
+      const box = entries[0]?.contentRect;
+      if (box) setViewport({ width: box.width, height: box.height });
+    });
+    resize.observe(element);
+    return () => resize.disconnect();
+  }, []);
+
   const employeeById = useMemo(() => new Map(employees.map((employee) => [employee.id, employee])), [employees]);
-  const children = useMemo(() => {
+  const reportsByManager = useMemo(() => {
     const result = new Map<string, EmployeeRow[]>();
     for (const employee of employees) {
       if (!employee.reporting_manager_id || !employeeById.has(employee.reporting_manager_id) || employee.reporting_manager_id === employee.id) continue;
-      const list = result.get(employee.reporting_manager_id) ?? [];
-      list.push(employee);
-      result.set(employee.reporting_manager_id, list);
+      const reports = result.get(employee.reporting_manager_id) ?? [];
+      reports.push(employee);
+      result.set(employee.reporting_manager_id, reports);
     }
-    for (const list of result.values()) list.sort((a, b) => a.full_name.localeCompare(b.full_name));
+    for (const reports of result.values()) reports.sort((a, b) => a.full_name.localeCompare(b.full_name));
     return result;
   }, [employees, employeeById]);
-  const partnerByEmployee = useMemo(() => {
+  const partnersByEmployee = useMemo(() => {
     const result = new Map<string, DirectoryPartner[]>();
     for (const partner of partners) {
       if (!employeeById.has(partner.employeeId)) continue;
@@ -49,101 +116,171 @@ export function EmployeeOrganizationTree({ employees, partners, query }: { emplo
     }
     for (const list of result.values()) list.sort((a, b) => a.name.localeCompare(b.name));
     return result;
-  }, [partners, employeeById]);
-
-  const matchedIds = useMemo(() => {
-    if (!search) return null;
+  }, [employeeById, partners]);
+  const departments = useMemo(() => [...new Set(employees.map((employee) => employee.department?.trim()).filter((s): s is string => Boolean(s)))].sort((a, b) => a.localeCompare(b)), [employees]);
+  const search = normalize(query);
+  const matched = useMemo(() => {
+    if (!search && !department) return null;
     const ids = new Set<string>();
-    const matches = (employee: EmployeeRow) => [employee.full_name, employee.employee_code, employee.department, employee.designation, employee.location].some((s) => normalized(s).includes(search));
     for (const employee of employees) {
-      if (!matches(employee) && !(partnerByEmployee.get(employee.id) ?? []).some((p) => [p.name, p.code, kindLabel[p.kind]].some((s) => normalized(s).includes(search)))) continue;
+      const text = [employee.full_name, employee.employee_code, employee.designation, employee.department, employee.location].join(" ").toLowerCase();
+      const assigned = partnersByEmployee.get(employee.id) ?? [];
+      const matchName = !search || text.includes(search) || assigned.some((partner) => [partner.name, partner.code, partner.kind].some((s) => normalize(s).includes(search)));
+      const matchDepartment = !department || normalize(employee.department) === normalize(department);
+      if (!matchName || !matchDepartment) continue;
       let current: EmployeeRow | undefined = employee;
-      const visited = new Set<string>();
-      while (current && !visited.has(current.id)) {
-        visited.add(current.id);
+      const seen = new Set<string>();
+      while (current && !seen.has(current.id)) {
+        seen.add(current.id);
         ids.add(current.id);
         current = current.reporting_manager_id ? employeeById.get(current.reporting_manager_id) : undefined;
       }
     }
     return ids;
-  }, [employees, employeeById, partnerByEmployee, search]);
-  const roots = useMemo(() => employees.filter((employee) => !employee.reporting_manager_id || !employeeById.has(employee.reporting_manager_id) || employee.reporting_manager_id === employee.id).sort((a, b) => a.full_name.localeCompare(b.full_name)), [employees, employeeById]);
-  const rootList = focus && employeeById.has(focus) ? [employeeById.get(focus)!] : roots;
-  const visibleRootList = matchedIds ? rootList.filter((employee) => matchedIds.has(employee.id)) : rootList;
+  }, [employees, employeeById, partnersByEmployee, search, department]);
 
-  function toggle(id: string) {
-    setExpanded((previous) => {
-      const next = new Set(previous);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
-    });
-  }
+  const roots = useMemo(() => employees
+    .filter((e) => !e.reporting_manager_id || !employeeById.has(e.reporting_manager_id) || e.reporting_manager_id === e.id)
+    .sort((a, b) => a.full_name.localeCompare(b.full_name)), [employees, employeeById]);
 
-  function EmployeeNode({ employee, path }: { employee: EmployeeRow; path: Set<string> }) {
-    if (path.has(employee.id)) return <p className="text-[10px] text-amber-700">Reporting loop detected — review manager assignments.</p>;
-    const nextPath = new Set(path);
-    nextPath.add(employee.id);
-    const reports = children.get(employee.id) ?? [];
-    const assigned = partnerByEmployee.get(employee.id) ?? [];
-    const open = Boolean(search) || expanded.has(employee.id);
-    const visibleReports = matchedIds ? reports.filter((item) => matchedIds.has(item.id)) : reports;
-    const employeeMatches = [employee.full_name, employee.employee_code, employee.department, employee.designation, employee.location].some((s) => normalized(s).includes(search));
-    const visiblePartners = search && !employeeMatches ? assigned.filter((p) => [p.name, p.code, kindLabel[p.kind]].some((s) => normalized(s).includes(search))) : assigned;
-    const canExpand = reports.length > 0 || (showPartners && assigned.length > 0);
-    return (
-      <li className="relative min-w-0 border-l border-[#DCE6F1] pl-4 before:absolute before:left-0 before:top-6 before:w-4 before:border-t before:border-[#DCE6F1]">
-        <div className="flex min-h-[62px] flex-wrap items-center gap-3 rounded-lg border border-[#D8E4F2] bg-white px-3 py-1.5 shadow-[0_3px_10px_rgba(7,29,73,0.04)] transition hover:border-[#A9C6EF] hover:shadow-sm">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#EAF2FF] text-[#164078]"><UserRound className="h-4 w-4" /></span>
-          <div className="min-w-[140px] flex-1">
-            <p className="truncate text-[12px] font-bold text-[#102A53]">{employee.full_name}</p>
-            <p className="truncate text-[10px] text-[#65758C]">{employee.designation} · {employee.department}</p>
-            <p className="text-[9px] text-[#8290A5]">{employee.location || "Location not assigned"} · {employee.employee_code}</p>
-          </div>
-          <div className="flex flex-wrap items-center gap-1.5 text-[9px] font-semibold">
-            {reports.length > 0 ? <span className="rounded-full bg-[#EAF2FF] px-2 py-1 text-[#22558E]">{reports.length} direct reports</span> : null}
-            {showPartners && assigned.length > 0 ? <span className="rounded-full bg-[#EAF8F2] px-2 py-1 text-[#097250]">{assigned.length} associates</span> : null}
-            <button type="button" onClick={() => setFocus(employee.id)} title="Focus on this employee" className="rounded-md border border-[#E0E8F2] p-1.5 text-[#667C98] hover:bg-[#EFF5FD]"><Network className="h-3.5 w-3.5" /></button>
-            {canExpand ? <button type="button" aria-expanded={open} aria-label={open ? `Collapse ${employee.full_name}` : `Expand ${employee.full_name}`} onClick={() => toggle(employee.id)} className="rounded-md border border-[#DCE6F1] p-1.5 text-[#234D7B] hover:bg-[#EFF5FD]">{open ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}</button> : null}
-          </div>
-        </div>
-        {open && (visibleReports.length || (showPartners && visiblePartners.length)) ? (
-          <ul className="mt-2 space-y-2">
-            {visibleReports.map((report) => <EmployeeNode key={report.id} employee={report} path={nextPath} />)}
-            {showPartners && visiblePartners.length ? (
-              <li className="ml-4 rounded-lg border border-dashed border-[#C9DFD6] bg-[#F8FCFA] p-2">
-                <div className="mb-2 flex items-center gap-2 text-[10px] font-bold text-[#13654B]"><Handshake className="h-3.5 w-3.5" /> Business network · {visiblePartners.length}</div>
-                <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
-                  {visiblePartners.map((partner) => <div key={partner.id} className="min-w-0 rounded-md border border-[#D8E8DF] bg-white p-2.5">
-                    <div className="flex items-center gap-2"><Building2 className="h-4 w-4 shrink-0 text-[#378064]" /><Link href={`/intermediaries/applications/${partner.applicationId}`} className="truncate text-[11px] font-semibold text-[#153658] hover:underline">{partner.name}</Link></div>
-                    <p className="mt-1 text-[9px] text-[#687F92]">{kindLabel[partner.kind]} · {partner.code || "Registration pending"} · {partner.status.replaceAll("_", " ")}</p>
-                    {partner.branches.length ? <details className="mt-2 border-t border-[#E5EFE8] pt-2"><summary className="cursor-pointer text-[10px] font-semibold text-[#24725B]">{partner.branches.length} branches</summary><ul className="mt-1 space-y-1">{partner.branches.map((branch) => <li key={branch.id} className="text-[10px] text-[#52667A]"><GitBranch className="mr-1 inline h-3 w-3" />{branch.name}</li>)}</ul></details> : null}
-                  </div>)}
-                </div>
-              </li>
-            ) : null}
-          </ul>
-        ) : null}
-      </li>
-    );
-  }
+  const chartRoots = useMemo(() => {
+    const make = (employee: EmployeeRow, depth: number, ancestors: Set<string>): ChartNode => {
+      const key = `employee:${employee.id}`;
+      if (ancestors.has(employee.id)) return { key: `loop:${employee.id}`, label: "Reporting loop detected", subtitle: "Review manager assignments", detail: "", type: "group", count: 0, children: [] };
+      const nextAncestors = new Set(ancestors);
+      nextAncestors.add(employee.id);
+      const reports = (reportsByManager.get(employee.id) ?? []).filter((child) => !matched || matched.has(child.id));
+      const assigned = partnersByEmployee.get(employee.id) ?? [];
+      const open = Boolean(search || department) || expanded.has(key);
+      const children: ChartNode[] = open ? reports.map((child) => make(child, depth + 1, nextAncestors)) : [];
+      if (open && showPartners && assigned.length) {
+        for (const kind of ["partner", "posp", "misp"] as const) {
+          const records = assigned.filter((partner) => partner.kind === kind).filter((partner) =>
+            !search || normalize([partner.name, partner.code, partner.kind].join(" ")).includes(search) ||
+            normalize([employee.full_name, employee.employee_code, employee.designation, employee.department].join(" ")).includes(search)
+          );
+          if (!records.length) continue;
+          const groupKey = `group:${employee.id}:${kind}`;
+          const groupOpen = expanded.has(groupKey) || Boolean(search);
+          children.push({
+            key: groupKey, label: kind === "partner" ? "Partners" : kind.toUpperCase(), subtitle: "Business network",
+            detail: `${records.length} assigned`, type: "group", count: records.length,
+            children: groupOpen ? records.map((partner) => ({
+              key: `partner:${partner.id}`, label: partner.name, subtitle: kind.toUpperCase(),
+              detail: partner.code || "Registration pending", type: "partner" as const, partner,
+              count: partner.branches.length,
+              children: expanded.has(`partner:${partner.id}`) ? partner.branches.map((branch) => ({
+                key: `branch:${branch.id}`, label: branch.name, subtitle: "Partner branch",
+                detail: branch.code || "", type: "branch" as const, count: 0, children: [],
+              })) : [],
+            })) : [],
+          });
+        }
+      }
+      return {
+        key, label: employee.full_name, subtitle: employee.designation || "Employee",
+        detail: [employee.department, employee.location].filter(Boolean).join(" · "),
+        type: "employee", employee, count: reports.length + (showPartners ? assigned.length : 0), children,
+      };
+    };
+    const list = focus && employeeById.has(focus) ? [employeeById.get(focus)!] : roots;
+    return list.filter((employee) => !matched || matched.has(employee.id)).map((employee) => make(employee, 0, new Set()));
+  }, [roots, focus, employeeById, reportsByManager, partnersByEmployee, matched, search, department, expanded, showPartners]);
 
-  return <div className="px-3 pb-3 pt-2 lg:px-4">
-    <div className="mb-2 flex flex-wrap items-center justify-between gap-2 rounded-md bg-[#F6F9FD] px-3 py-1.5">
-      <div className="flex flex-wrap items-center gap-2 text-[10px] text-[#657B94]">
-        <span className="font-semibold text-[#25456C]">Reporting hierarchy</span>
-        <span className="hidden text-[#B6C5D5] sm:inline">/</span>
-        <span>Click an employee to explore their team and network</span>
-      </div>
-      <div className="flex flex-wrap items-center gap-2">
-        <label className="inline-flex cursor-pointer items-center gap-1.5 text-[10px] font-medium text-[#456079]"><input checked={showPartners} onChange={(e) => setShowPartners(e.target.checked)} type="checkbox" className="accent-[#153B6D]" /> Partner network</label>
-        <span className="h-4 border-l border-[#DCE5F0]" />
-        <button type="button" onClick={() => { setExpanded(new Set(employees.map((e) => e.id))); setFocus(""); }} className="rounded border border-[#CEDCEB] bg-white px-2 py-1 text-[10px] font-semibold text-[#23456C] hover:bg-[#EFF5FD]">Expand all</button>
-        <button type="button" onClick={() => { setExpanded(new Set()); setFocus(""); }} className="rounded border border-[#CEDCEB] bg-white px-2 py-1 text-[10px] font-semibold text-[#23456C] hover:bg-[#EFF5FD]">Collapse all</button>
+  const graph = useMemo(() => layoutForest(chartRoots), [chartRoots]);
+  const placed = useMemo(() => new Map(graph.positions.map((position) => [position.node.key, position])), [graph]);
+  const fit = useCallback(() => {
+    const scale = Math.min(1.12, Math.max(0.18, Math.min((viewport.width - 32) / graph.width, (viewport.height - 28) / graph.height)));
+    setZoom(scale);
+    setOffset({ x: (viewport.width - graph.width * scale) / 2, y: Math.max(10, (viewport.height - graph.height * scale) / 2) });
+  }, [viewport, graph]);
+  useEffect(() => { fit(); }, [fit]);
+  const changeZoom = (next: number) => {
+    const scale = Math.max(0.2, Math.min(1.8, next));
+    const centerX = viewport.width / 2;
+    const centerY = viewport.height / 2;
+    setOffset((previous) => ({ x: centerX - (centerX - previous.x) * scale / zoom, y: centerY - (centerY - previous.y) * scale / zoom }));
+    setZoom(scale);
+  };
+  const onWheel = (event: WheelEvent<HTMLDivElement>) => {
+    if (!event.ctrlKey && !event.metaKey) return;
+    event.preventDefault();
+    changeZoom(zoom * (event.deltaY > 0 ? 0.9 : 1.1));
+  };
+  const pointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    if (event.button !== 0 || (event.target as HTMLElement).closest("button,a,select,input")) return;
+    dragRef.current = { x: event.clientX, y: event.clientY, originX: offset.x, originY: offset.y };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+  const pointerMove = (event: PointerEvent<HTMLDivElement>) => {
+    if (!dragRef.current) return;
+    setOffset({ x: dragRef.current.originX + event.clientX - dragRef.current.x, y: dragRef.current.originY + event.clientY - dragRef.current.y });
+  };
+  const pointerUp = (event: PointerEvent<HTMLDivElement>) => {
+    dragRef.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+  };
+  const toggle = (key: string) => setExpanded((previous) => {
+    const next = new Set(previous);
+    if (next.has(key)) next.delete(key); else next.add(key);
+    return next;
+  });
+
+  return <div className="relative bg-[#FBFAF7]">
+    <div className="relative z-10 flex flex-wrap items-center justify-between gap-2 border-b border-[#E6E4DE] bg-[#FBFAF7] px-3 py-2 sm:px-4">
+      <div className="flex items-center gap-2 text-[10px] text-[#758092]"><Users className="h-3.5 w-3.5" /><span>Reporting hierarchy</span><span className="text-[#C4C9D1]">/</span><span>{employees.length} employees</span></div>
+      <div className="flex flex-wrap items-center gap-1.5">
+        <label className="sr-only" htmlFor="orgchart-department">Department</label>
+        <select id="orgchart-department" value={department} onChange={(event) => { setDepartment(event.target.value); setFocus(""); }} className="h-8 min-w-[155px] rounded-md border border-[#DBE1E9] bg-white px-2 text-[10.5px] text-[#34445E] shadow-sm">
+          <option value="">All departments</option>
+          {departments.map((name) => <option key={name} value={name}>{name}</option>)}
+        </select>
+        <label className="flex h-8 items-center gap-1.5 rounded-md border border-[#DBE1E9] bg-white px-2 text-[10px] text-[#485973]">
+          <input type="checkbox" checked={showPartners} onChange={(event) => setShowPartners(event.target.checked)} className="accent-[#2B65CA]" />Partner network
+        </label>
+        <button type="button" onClick={() => { setExpanded(new Set(employees.map((employee) => `employee:${employee.id}`))); setFocus(""); }} className="h-8 rounded-md border border-[#DBE1E9] bg-white px-2 text-[10px] text-[#40546E] hover:bg-[#EEF4FF]">Expand all</button>
+        <button type="button" onClick={() => { setExpanded(new Set()); setFocus(""); }} className="h-8 rounded-md border border-[#DBE1E9] bg-white px-2 text-[10px] text-[#40546E] hover:bg-[#EEF4FF]">Collapse all</button>
       </div>
     </div>
-    <div className="min-h-[55vh] max-h-[calc(100vh-265px)] overflow-auto rounded-lg border border-[#E3EBF4] bg-[#FCFDFF] px-2 py-3 sm:px-4">
-      {focus ? <button type="button" onClick={() => setFocus("")} className="mb-3 rounded-md bg-[#EAF2FF] px-3 py-1.5 text-[10px] font-semibold text-[#214D83]">← Full organization</button> : null}
-      {visibleRootList.length ? <ul className="max-w-[1500px] space-y-2">{visibleRootList.map((employee) => <EmployeeNode key={employee.id} employee={employee} path={new Set()} />)}</ul> : <p className="p-8 text-center text-[11px] text-[#65758A]">No matching people or partners found.</p>}
+    <div ref={canvasRef} onWheel={onWheel} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp} onPointerCancel={pointerUp} className="relative h-[min(74vh,780px)] min-h-[470px] w-full touch-none overflow-hidden bg-[#FAF9F6]" aria-label="Interactive organization chart">
+      <div className="absolute right-3 top-3 z-20 flex flex-col gap-1 rounded-md border border-[#E1E2E6] bg-white/95 p-1 shadow-sm">
+        <button type="button" title="Zoom in" aria-label="Zoom in" onClick={() => changeZoom(zoom + 0.15)} className="rounded p-1.5 text-[#62718A] hover:bg-[#EDF3FA]"><Plus className="h-4 w-4" /></button>
+        <button type="button" title="Zoom out" aria-label="Zoom out" onClick={() => changeZoom(zoom - 0.15)} className="rounded p-1.5 text-[#62718A] hover:bg-[#EDF3FA]"><Minus className="h-4 w-4" /></button>
+        <button type="button" title="Fit chart" aria-label="Fit chart" onClick={fit} className="rounded p-1.5 text-[#62718A] hover:bg-[#EDF3FA]"><Maximize2 className="h-4 w-4" /></button>
+        <button type="button" title="Full organization" aria-label="Full organization" onClick={() => setFocus("")} className="rounded p-1.5 text-[#62718A] hover:bg-[#EDF3FA]"><LocateFixed className="h-4 w-4" /></button>
+      </div>
+      <div className="pointer-events-none absolute bottom-3 left-3 z-10 rounded bg-white/85 px-2 py-1 text-[10px] text-[#778393] shadow-sm">Drag to pan · Ctrl + scroll to zoom · {Math.round(zoom * 100)}%</div>
+      {chartRoots.length === 0 ? <div className="flex h-full items-center justify-center text-[12px] text-[#66768C]">No employees match these filters.</div> : (
+        <div className="absolute left-0 top-0 origin-top-left" style={{ width: graph.width, height: graph.height, transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})` }}>
+          <svg aria-hidden="true" className="pointer-events-none absolute inset-0 h-full w-full overflow-visible" viewBox={`0 0 ${graph.width} ${graph.height}`}>
+            {graph.positions.map(({ node, x, y, parent }) => {
+              const leader = parent ? placed.get(parent) : undefined;
+              if (!leader) return null;
+              const startY = leader.y + CARD_H / 2;
+              const endY = y - CARD_H / 2;
+              const middle = (startY + endY) / 2;
+              return <path key={node.key} d={`M ${leader.x} ${startY} C ${leader.x} ${middle}, ${x} ${middle}, ${x} ${endY}`} fill="none" stroke={node.type === "employee" ? "#B9C4D4" : "#9CC4BB"} strokeWidth="1.35" strokeDasharray={node.type === "employee" ? undefined : "4 4"} />;
+            })}
+          </svg>
+          {graph.positions.map(({ node, x, y }) => {
+            const isEmployee = node.type === "employee";
+            const isGroup = node.type === "group";
+            const isPartner = node.type === "partner";
+            const hasChildren = node.children.length > 0 || node.count > 0;
+            const expandedNode = expanded.has(node.key);
+            return <article key={node.key} className={`absolute flex flex-col items-center justify-between rounded-lg border px-2.5 py-2 text-center shadow-[0_2px_7px_rgba(31,46,66,0.11)] transition-colors ${isGroup ? "border-[#B7D2ED] bg-[#EDF5FF]" : isEmployee && focus === node.employee?.id ? "border-[#82AEEA] bg-[#E9F2FF]" : isPartner || node.type === "branch" ? "border-[#BEDDD3] bg-[#F9FFFC]" : "border-[#D9DFE7] bg-white hover:border-[#9CB9E2]"}`} style={{ width: CARD_W, height: CARD_H, left: x - CARD_W / 2, top: y - CARD_H / 2 }}>
+              <div className="w-full">
+                <p className="truncate text-[10px] font-semibold text-[#34465C]" title={node.subtitle}>{node.subtitle}</p>
+                <p className="mt-0.5 truncate text-[9px] text-[#8A96A8]">{node.detail}</p>
+              </div>
+              <div className="flex h-7 w-7 items-center justify-center rounded-full border border-white bg-[#E5EFFE] text-[10px] font-bold text-[#315C91] shadow-sm">{isEmployee ? initials(node.label) : isGroup ? <Users className="h-3.5 w-3.5" /> : isPartner ? <Handshake className="h-3.5 w-3.5" /> : <Building2 className="h-3.5 w-3.5" />}</div>
+              {node.partner ? <Link href={`/intermediaries/applications/${node.partner.applicationId}`} title={node.label} className="w-full truncate text-[10px] font-semibold text-[#183A60] hover:underline">{node.label}</Link> : <button type="button" title={node.label} onClick={() => node.employee ? setFocus(node.employee.id) : toggle(node.key)} className="w-full truncate text-[10px] font-semibold text-[#183A60] hover:underline">{node.label}</button>}
+              {hasChildren ? <button type="button" onClick={() => toggle(node.key)} aria-expanded={expandedNode || (isEmployee && Boolean(search || department))} aria-label={`Toggle ${node.label} descendants`} className="absolute -bottom-3 left-1/2 z-10 flex h-6 min-w-8 -translate-x-1/2 items-center justify-center gap-0.5 rounded-full border-2 border-[#FAF9F6] bg-[#477CD5] px-1 text-[9px] font-semibold text-white shadow-sm">{expandedNode ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}{node.count}</button> : null}
+              <span className="pointer-events-none absolute -top-2 left-1/2 h-3 w-3 -translate-x-1/2 rounded-full border border-[#CCD7E4] bg-white" />
+            </article>;
+          })}
+        </div>
+      )}
     </div>
   </div>;
 }
