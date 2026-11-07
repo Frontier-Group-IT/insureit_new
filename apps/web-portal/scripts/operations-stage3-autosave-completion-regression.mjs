@@ -54,7 +54,7 @@ assert.match(stage3, /verificationKey: "spot"/, "Stage 3 must allow existing Acc
 assert.match(stage3, /No verification required/, "Voice Note must be accessible without manual verification.");
 assert.match(customerStage, /className="mt-1 h-\[34px\] w-full/, "Customer claim stage inputs must be 34px.");
 assert.match(customerBooleanChoice, /h-\[34px\] rounded-md border/, "Customer claim stage choices must be 34px.");
-assert.match(customerStart, /className="h-\[34px\] w-full max-w-\[320px\]/, "Customer Start Claim selection must be 34px.");
+assert.match(customerStart, /className="h-\[34px\] w-full rounded-lg/, "Customer Start Claim selection must be 34px.");
 assert.match(operationsStart, /const inputClass = "h-\[34px\] w-full/, "Operations Claim Onboarding inputs must be 34px.");
 assert.match(customerStage, /whitespace-nowrap text-\[9px\] font-semibold uppercase/, "Customer stage labels stay compact.");
 assert.match(stage3, /saveFinalDealershipDetails\(stageDetailsForm\(snapshot\)\)/, "Both internal and external Operations stages preserve autosave.");
