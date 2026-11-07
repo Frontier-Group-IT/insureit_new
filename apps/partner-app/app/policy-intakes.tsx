@@ -184,7 +184,6 @@ export default function PolicyIntakesScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void load(true)} tintColor={partnerTheme.colors.brand} colors={[partnerTheme.colors.brand]} />}
       >
-        <Text style={styles.loadedSummary}>Showing {rows.length} of {total} submissions. Filter and search apply to loaded records.</Text>
         {loading && !rows.length ? (
           <PartnerStateView state="loading" title="Loading Policy Intakes" />
         ) : error && !rows.length ? (
@@ -367,7 +366,6 @@ const styles = StyleSheet.create({
   searchBand: { paddingHorizontal: 11, paddingTop: 8, paddingBottom: 8, flexDirection: 'row', backgroundColor: '#0860C8' }, searchBox: { flex: 1, minHeight: 38, borderRadius: 9, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: '#FFFFFF' }, searchInput: { flex: 1, paddingVertical: 0, color: '#1F314C', fontSize: 10.5, lineHeight: 14 },
   filtersWrap: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#DDE4EF', backgroundColor: '#FFFFFF' }, filtersContent: { paddingHorizontal: 10, paddingVertical: 7, gap: 7 }, filterChip: { minHeight: 31, borderRadius: 8, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#F7F8FB', borderWidth: StyleSheet.hairlineWidth, borderColor: '#E0E5ED' }, filterChipActive: { backgroundColor: '#183864', borderColor: '#183864' }, filterLabel: { color: '#4D5D75', fontSize: 9.2, lineHeight: 12, fontWeight: '700' }, filterLabelActive: { color: '#FFFFFF' }, filterCount: { color: '#728099', fontSize: 8.5, lineHeight: 11, fontWeight: '700' }, filterCountActive: { color: '#DDEAFF' },
   scroll: { flex: 1 }, content: { paddingHorizontal: 9, paddingTop: 9, paddingBottom: 12, gap: 8 },
-  loadedSummary: { color: '#74839B', fontSize: 9.5, marginHorizontal: 5, marginBottom: 3 },
   pagination: { paddingHorizontal: 6, paddingTop: 8, paddingBottom: 12, gap: 8 },
   pageError: { color: partnerTheme.colors.danger, fontSize: 11, textAlign: 'center' },
   loadMoreButton: { marginHorizontal: 12, marginTop: 5, minHeight: 36, alignSelf: 'stretch', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, borderRadius: 8, backgroundColor: '#F1F5FD' },
