@@ -1,6 +1,7 @@
 import type { Session } from '@supabase/supabase-js';
 
 import { supabase } from '@/lib/supabase';
+import type { PartnerPermissionMap } from '@/lib/partner-permissions';
 
 export type PartnerIdentity =
   | {
@@ -41,6 +42,7 @@ export type PartnerCommercialScope = {
 export type PartnerSessionContext = {
   identity: PartnerIdentity;
   scope: PartnerCommercialScope;
+  permissions: PartnerPermissionMap;
 };
 
 /** Identify authenticated Branch accounts by server-provided identity/scope—not name or intermediary role alone. */
@@ -90,9 +92,24 @@ export async function resolvePartnerSession(): Promise<PartnerSessionContext> {
   const { data: scope, error: scopeError } = await supabase.rpc('partner_app_commercial_scope');
   if (scopeError) throw scopeError;
   if (!scope) throw new Error('Commercial access scope is unavailable.');
+  const session = await getCurrentSession();
+  if (!session?.access_token) throw new Error('The Partner session expired.');
+  const response = await fetch(
+    `${(process.env.EXPO_PUBLIC_PORTAL_URL || 'https://portal.insureit.in').replace(/\\/$/, '')}/api/partner/effective-permissions`,
+    { headers: { Authorization: `Bearer ${session.access_token}` }, cache: 'no-store' },
+  );
+  if (!response.ok) throw new Error('Permissions could not be verified. Sign in again or retry.');
+  const access = await response.json() as {
+    actor_kind?: string;
+    capabilities?: PartnerPermissionMap;
+  };
+  if (access.actor_kind !== identity.actor_kind || !access.capabilities) {
+    throw new Error('Partner authorization does not match the current account.');
+  }
 
   return {
     identity,
     scope: scope as PartnerCommercialScope,
+    permissions: access.capabilities,
   };
 }
