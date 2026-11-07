@@ -36,6 +36,7 @@ assert.match(api, /Network connection failed/, 'Show actionable network failure'
 assert.match(api, /console\.warn\('\[partner-policy-intakes\] read failed'/, 'Record safe error categories');
 const detail = readFileSync('app/policy-intakes/[id].tsx', 'utf8');
 assert.match(app, /row.status === 'ready_for_review' \|\| row.status === 'needs_attention'/, 'Ready-for-review intakes must show under Action Required');
+assert.match(app, /row\.ocr_status === 'completed' \? <PartnerStatusBadge label="Fetched"/, "Expose the same Fetched document-status badge as Operations");
 assert.match(app, /if \(filter === 'in_review'\) return row.status === 'in_review'/, 'Only claimed intakes belong under In Review');
 assert.match(api, /export async function updatePartnerPolicyIntakeReview/, 'Mobile reviewer actions must use authenticated API');
 assert.match(detail, /row.review_access.can_review/, 'Do not show reviewer actions to unauthorised accounts');
