@@ -30,7 +30,7 @@ assert.match(choice,/onClick=\{\(\)=>setValue\(key\)\}/);
 assert.match(customer,/className="flex min-h-\[34px\] items-center gap-2 rounded-md border border-\[#D9E3F0\] bg-\[#F1F4F9\]/);
 assert.match(operations,/selected\.key === "billing" \|\| selected\.key === "work_approval" \? "flex flex-col" : "block max-sm:whitespace-normal"/, "Billing and Work Approval labels sit above their inputs while other stages remain responsive.");
 assert.match(operations,/selected\.key === "spot_status" \? "text-\[8px\]" : "text-\[9px\]"/,"Spot Status uses smaller labels, other Operations stages retain 9px.");
-assert.ok(operations.includes("xl:grid-cols-5 lg:items-start"));
+assert.ok(operations.includes('selected.key === "work_approval" ? "!grid-cols-5 min-w-[900px] lg:items-start"'), "Operations Stage 4 retains five columns.");
 assert.match(customer,/selected\.key==="spot_status"\?"text-\[8px\]":"text-\[9px\]"/,"Customer Spot Status uses smaller labels, other stages retain 9px.");
 assert.ok(customer.includes("xl:grid-cols-5 lg:items-start"));
 assert.match(operations,/stageOneLabelClassName = "block h-4 max-sm:h-auto whitespace-nowrap text-\[8px\]/, "Stage 1 labels use the smaller font.");
