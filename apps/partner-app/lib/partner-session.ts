@@ -95,7 +95,7 @@ export async function resolvePartnerSession(): Promise<PartnerSessionContext> {
   const session = await getCurrentSession();
   if (!session?.access_token) throw new Error('The Partner session expired.');
   const response = await fetch(
-    `${(process.env.EXPO_PUBLIC_PORTAL_URL || 'https://portal.insureit.in').replace(/\\/$/, '')}/api/partner/effective-permissions`,
+    `${(process.env.EXPO_PUBLIC_PORTAL_URL || 'https://portal.insureit.in').replace(/\/$/, '')}/api/partner/effective-permissions`,
     { headers: { Authorization: `Bearer ${session.access_token}` }, cache: 'no-store' },
   );
   if (!response.ok) throw new Error('Permissions could not be verified. Sign in again or retry.');
