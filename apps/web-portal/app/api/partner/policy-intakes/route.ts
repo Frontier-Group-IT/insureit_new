@@ -105,7 +105,7 @@ export async function GET(request: Request) {
   if ((employeeRead?.mode === "none") || (!employeeRead && !intakeReadScope)) {
     return requestedId
       ? json({ ok: false, error: "This Policy Intake is not available in your Partner account." }, 404)
-      : json({ ok: true, intakes: [], total: 0, counts: { active: 0, attention: 0, progress: 0, completed: 0 } });
+      : json({ ok: true, intakes: [], total: 0, counts: view === "mobile_list" ? { action_required: 0, in_review: 0, processing: 0, completed: 0, duplicate: 0, rejected: 0, all: 0 } : { active: 0, attention: 0, progress: 0, completed: 0 } });
   }
 
   if (requestedId) {
