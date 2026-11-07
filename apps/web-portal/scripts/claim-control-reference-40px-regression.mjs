@@ -17,9 +17,9 @@ assert.match(operations,/max-w-\[320px\] rounded-lg/);
 assert.match(operations,/grid h-\[40px\] w-full max-w-\[320px\]/);
 assert.match(customer,/selected\.key==="payment_encashment"\?"":field\.type==="date"\?"max-w-\[260px\]"/,"Stage 9 fills available grid cell; other stages retain date width.");
 assert.match(customer,/"max-w-\[254px\]":"max-w-\[320px\]"/);
-assert.match(customer,/className="mt-1 h-\[40px\] w-full rounded-md/);
+assert.match(customer,/selected\.key==="payment_encashment"\?"mt-1 h-\[34px\] w-full/,"Stage 9 input is 34px; other stages retain 40px.");
 assert.match(choice,/compact \? "gap-2" : "max-w-\[254px\] gap-\[10px\]"/,"Compact Stage 9 controls; other stages keep original sizing.");
-assert.match(choice,/h-\[40px\] rounded-md/);
+assert.match(choice,/compact \? "h-\[34px\]" : "h-\[40px\]"/,"Only Stage 9 has 34px Yes/No controls.");
 
 // Ensure this remains a presentation change: native date field, values, and field validations.
 assert.match(operations,/name=\{field\.name\} value=\{value\} required=\{required\}/);
@@ -42,7 +42,7 @@ assert.match(spot,/const splitFieldClass = "block h-\[40px\]/);
 assert.match(spot,/flex h-\[40px\] w-full max-w-\[320px\]/);
 assert.match(spot,/text-\[9px\] font-bold uppercase leading-4 tracking-\[0\.01em\]/);
 assert.match(spot,/2xl:grid-cols-\[repeat\(5,minmax\(0,1fr\)\)\]/);
-assert.match(start,/h-\[40px\] w-full max-w-\[320px\] rounded-lg border/);
-assert.match(operationsStart,/const inputClass = "h-10 w-full/);
+assert.match(start,/h-\[34px\] w-full rounded-lg border/,"Customer Start Claim selector is full-width and 34px high.");
+assert.match(operationsStart,/const inputClass = "h-\[34px\] w-full/,"Operations Start Claim entry inputs use 34px height.");
 assert.match(operationsStart,/const labelClass = "mb-1 block whitespace-nowrap text-\[9px\]/);
 console.log("Claim forms 320/260/122 x40 and single-line labels regression passed.");
