@@ -172,6 +172,42 @@ export function PartnerRegisterClient({
     setRmFilter("");
   }
 
+  function navigatePeriod(next: BusinessPeriod, from?: string, to?: string) {
+    const params = new URLSearchParams(window.location.search);
+    if (next === "all") params.delete("period");
+    else params.set("period", next);
+    if (next === "custom" && from && to) {
+      params.set("from", from);
+      params.set("to", to);
+    } else {
+      params.delete("from");
+      params.delete("to");
+    }
+    setCurrentPage(1);
+    router.push("/intermediaries/partner" + (params.size ? "?" + params.toString() : ""));
+  }
+
+  function selectPeriod(next: BusinessPeriod) {
+    setPeriodSelection(next);
+    setCustomError("");
+    if (next === "custom") {
+      setCustomOpen(true);
+      return;
+    }
+    setCustomOpen(false);
+    navigatePeriod(next);
+  }
+
+  function applyCustomPeriod() {
+    if (!customFrom || !customTo || customFrom > customTo) {
+      setCustomError("Choose a valid From and To date.");
+      return;
+    }
+    setCustomError("");
+    setCustomOpen(false);
+    navigatePeriod("custom", customFrom, customTo);
+  }
+
   return (
     <div className="mx-auto max-w-[1480px] space-y-4 pb-6">
       {success ? <WorkflowSuccessToast message={successMessage} durationMs={4000} /> : null}
