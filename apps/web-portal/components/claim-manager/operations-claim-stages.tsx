@@ -414,7 +414,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
             <input type="hidden" name="next_status" value={stageTarget ?? ""} />
             <input type="hidden" name="save_only" value={partnerManagedJourney || selectedSaveOnly ? "true" : "false"} />
             <input type="hidden" name="notes" value={selectedSaveOnly ? `Operations edited ${selected.label} details.` : `Operations completed ${selected.label} and opened the next journey stage.`} />
-            <div className={`grid gap-3 sm:grid-cols-2 ${selected.key === "work_approval" || selected.key === "payment_encashment" ? "lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 lg:items-start" : selected.key === "repair_ri" || selected.key === "delivery_order" || selected.key === "billing" ? "lg:grid-cols-3" : selected.key === "vehicle_delivery" ? "lg:grid-cols-2" : "lg:grid-cols-3 2xl:grid-cols-4"}`}>
+            <div className={`grid gap-3 sm:grid-cols-2 ${selected.key === "payment_encashment" ? "gap-2 lg:grid-cols-3 xl:grid-cols-5 lg:items-start" : selected.key === "work_approval" ? "lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 lg:items-start" : selected.key === "repair_ri" || selected.key === "delivery_order" || selected.key === "billing" ? "lg:grid-cols-3" : selected.key === "vehicle_delivery" ? "lg:grid-cols-2" : "lg:grid-cols-3 2xl:grid-cols-4"}`}>
               {fields[selected.key].map((field) => {
                 const value = field.name === "insurer_claim_no" ? insurerClaimNo ?? fieldValue(selectedDetails, field.name) : fieldValue(selectedDetails, field.name);
                 const internalStageTwoSurveyorField = selected.key === "spot_status" && !hasExternalVisualProgress && internalSpotStatusSurveyorFields.has(field.name);
@@ -424,11 +424,11 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
                   const yesChecked = value === "true" || value === "yes";
                   const noChecked = value === "false" || value === "no";
                   return (
-                    <fieldset key={field.name} className="min-w-0 w-full max-w-[254px]">
+                    <fieldset key={field.name} className={`min-w-0 w-full ${selected.key === "payment_encashment" ? "" : "max-w-[254px]"}`}>
                       <legend className="block h-4 max-sm:h-auto max-w-full whitespace-nowrap text-[9px] font-semibold uppercase leading-4 tracking-[0.01em] text-[#174EA6] max-sm:whitespace-normal">
                         {displayLabel}{required ? <span className="ml-1 text-rose-600">*</span> : null}
                       </legend>
-                      <div className="mt-1 grid w-full max-w-[254px] grid-cols-2 gap-[10px]">
+                      <div className={`mt-1 grid w-full grid-cols-2 ${selected.key === "payment_encashment" ? "gap-2" : "max-w-[254px] gap-[10px]"}`}>
                         <label className={`flex h-[40px] cursor-pointer items-center justify-center rounded-md border border-[#D9E3F0] bg-white text-[12px] font-semibold normal-case tracking-normal text-[#071D49] has-[:checked]:border-[#174EA6] has-[:checked]:bg-[#EEF4FF]`}>
                           <input className="sr-only" type="radio" name={field.name} value="true" defaultChecked={yesChecked} required={required} />Yes
                         </label>
@@ -441,7 +441,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
                 }
                 const useAppDatePicker = field.type === "date";
                 return (
-                  <label key={field.name} className={`min-w-0 block w-full whitespace-nowrap max-sm:whitespace-normal ${field.type === "date" ? "max-w-[260px]" : "max-w-[320px]"} text-[9px] font-semibold uppercase leading-4 tracking-[0.01em] text-[#174EA6]`}>
+                  <label key={field.name} className={`min-w-0 block w-full whitespace-nowrap max-sm:whitespace-normal ${selected.key === "payment_encashment" ? "" : field.type === "date" ? "max-w-[260px]" : "max-w-[320px]"} text-[9px] font-semibold uppercase leading-4 tracking-[0.01em] text-[#174EA6]`}>
                     {displayLabel}{required && !displayLabel.includes("*") ? <span className="ml-1 text-rose-600">*</span> : null}
                     {useAppDatePicker ? (
                       <AppStyleDateInput name={field.name} value={value} required={required} />
