@@ -425,7 +425,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
                   const yesChecked = value === "true" || value === "yes";
                   const noChecked = value === "false" || value === "no";
                   return (
-                    <fieldset key={field.name} className={`min-w-0 w-full ${selected.key === "payment_encashment" || selected.key === "delivery_order" || selected.key === "work_approval" ? "" : "max-w-[254px]"}`}>
+                    <fieldset key={field.name} className={`min-w-0 w-full ${selected.key === "payment_encashment" || selected.key === "delivery_order" || selected.key === "vehicle_delivery" || selected.key === "work_approval" ? "" : "max-w-[254px]"}`}>
                       <legend className={`block max-w-full whitespace-nowrap text-[9px] font-semibold uppercase leading-4 tracking-[0.01em] text-[#174EA6] ${selected.key === "payment_encashment" ? "h-5" : "h-4 max-sm:h-auto max-sm:whitespace-normal"}`}>
                         {displayLabel}{required ? <span className="ml-1 text-rose-600">*</span> : null}
                       </legend>
@@ -442,7 +442,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
                 }
                 const useAppDatePicker = field.type === "date";
                 return (
-                  <label key={field.name} className={`min-w-0 block w-full whitespace-nowrap max-sm:whitespace-normal ${selected.key === "spot_status" || selected.key === "billing" || selected.key === "payment_encashment" || selected.key === "delivery_order" || selected.key === "work_approval" ? "" : field.type === "date" ? selected.key === "repair_ri" ? "" : selected.key === "vehicle_delivery" ? "max-w-[335px]" : "max-w-[260px]" : "max-w-[320px]"} ${selected.key === "spot_status" ? "text-[8px]" : "text-[9px]"} font-semibold uppercase leading-4 tracking-[0.01em] text-[#174EA6]`}>
+                  <label key={field.name} className={`min-w-0 block w-full whitespace-nowrap max-sm:whitespace-normal ${selected.key === "spot_status" || selected.key === "billing" || selected.key === "payment_encashment" || selected.key === "delivery_order" || selected.key === "work_approval" ? "" : field.type === "date" ? selected.key === "repair_ri" ? "" : selected.key === "vehicle_delivery" ? "" : "max-w-[260px]" : "max-w-[320px]"} ${selected.key === "spot_status" ? "text-[8px]" : "text-[9px]"} font-semibold uppercase leading-4 tracking-[0.01em] text-[#174EA6]`}>
                     <span className={selected.key === "payment_encashment" ? "block h-5 whitespace-nowrap" : ""}>{displayLabel}{required && !displayLabel.includes("*") ? <span className="ml-1 text-rose-600">*</span> : null}</span>
                     {useAppDatePicker ? (
                       <span className={selected.key === "payment_encashment" ? "mt-1 block w-full min-w-0" : ""}><AppStyleDateInput name={field.name} value={value} required={required} compact billingCompact={selected.key === "billing"} vehicleDeliveryCompact={selected.key === "vehicle_delivery"} /></span>
@@ -469,7 +469,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
             </div>
             </div>
 
-            <div className={selected.key === "spot_status" || selected.key === "delivery_order" || selected.key === "payment_encashment" ? "mt-3 flex items-center justify-end gap-2" : "mt-4 flex min-h-10 flex-wrap items-center justify-end gap-2 border-t border-[#D9E3F0] pt-3"}>
+            <div className={selected.key === "spot_status" || selected.key === "delivery_order" || selected.key === "vehicle_delivery" || selected.key === "payment_encashment" ? "mt-3 flex items-center justify-end gap-2" : "mt-4 flex min-h-10 flex-wrap items-center justify-end gap-2 border-t border-[#D9E3F0] pt-3"}>
               {selected.key === "work_approval" ? <button type="button" onClick={() => router.push(partnerManagedJourney ? "/partner/claims" : "/claims")} className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#B9CBE2] bg-white px-4 text-[12px] font-semibold text-[#174A87]">Cancel</button> : null}
               <FormSubmitButton
                 label={selected.key === "work_approval" ? "Save & Continue" : selectedSaveOnly ? "Save Details" : selected.key === "payment_encashment" ? "Save & complete claim" : `Save & move to ${nextStageLabel}`}
@@ -528,7 +528,7 @@ function toDateValue(value: string) {
 function AppStyleDateInput({ name, value, required, compact = false, billingCompact = false, vehicleDeliveryCompact = false }: { name: string; value: string; required?: boolean; compact?: boolean; billingCompact?: boolean; vehicleDeliveryCompact?: boolean }) {
   const [dateValue, setDateValue] = useState(() => toDateValue(value));
   return (
-    <span className={`relative flex ${billingCompact ? "h-[34px] max-w-full px-2" : vehicleDeliveryCompact ? "h-[34px] max-w-[335px] px-3" : "h-[34px] max-w-full px-2"} w-full items-center justify-between rounded-[4px] border border-[#D9E3F0] bg-white normal-case tracking-normal text-[#071D49] focus-within:border-[#174EA6]`}>
+    <span className={`relative flex ${billingCompact ? "h-[34px] max-w-full px-2" : vehicleDeliveryCompact ? "h-[34px] max-w-full px-3" : "h-[34px] max-w-full px-2"} w-full items-center justify-between rounded-[4px] border border-[#D9E3F0] bg-white normal-case tracking-normal text-[#071D49] focus-within:border-[#174EA6]`}>
       <span className={`${billingCompact ? "text-[11px]" : "text-[12px]"} font-medium ${dateValue ? "text-[#071D49]" : "text-[#7B8BA3]"}`}>{dateValue ? formatDisplayDate(dateValue) : "Select date"}</span>
       <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4 fill-none stroke-[#526178] stroke-[1.8]"><rect x="4" y="6" width="16" height="14" rx="2" /><path d="M8 3v6M16 3v6M4 10h16" /></svg>
       <input
