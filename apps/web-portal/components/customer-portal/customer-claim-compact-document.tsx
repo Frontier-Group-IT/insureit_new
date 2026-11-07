@@ -98,7 +98,7 @@ export function CustomerClaimCompactDocument({label,type,documents,accountId,cla
   const openFile=(file:CustomerClaimFile)=><div key={file.id} className="customer-claim-ref-file flex min-w-0 items-center rounded-md border border-[#CCD4DF] bg-[#F8FAFC] pr-1 transition-colors hover:border-[#AEBBCB] hover:bg-[#F1F5F9]">
     <a href={`/customer/claim-documents/${encodeURIComponent(file.id)}/open?account=${encodeURIComponent(accountId)}&claim=${encodeURIComponent(claimId)}`} target="_blank" rel="noopener noreferrer" className="flex min-w-0 flex-1 items-center gap-2 px-2 py-2 text-[11px] text-[#204D83] focus-visible:outline-2 focus-visible:outline-[#1769DC]" title={file.file_name||label}><FileText className="h-4 w-4 shrink-0"/><span className="truncate">{file.file_name||label}</span></a>
     {allowUpload && file.verification_status === "pending" && (stage === "spot_intimation" || stage === "claim_intimation") ?
-      <CustomerSpotAttachmentDelete accountId={accountId} claimId={claimId} documentId={file.id} fileName={file.file_name||label} stage={stage}
+      <CustomerSpotAttachmentDelete accountId={accountId} claimId={claimId} documentId={file.id} fileName={file.file_name||label} stage={stage === "spot_intimation" ? "spot_intimation" : "claim_intimation"}
         onDeleted={id=>setDeletedIds(previous=>[...previous,id])}/> : null}
   </div>;;
   return <article className={`customer-claim-ref-card customer-workflow customer-workflow-document min-w-0 rounded-xl border bg-white px-3 py-2.5 ${ordered.length > 0 ? "border-[#CDD5DF]" : "border-[#E2E8F0]"}`}>
