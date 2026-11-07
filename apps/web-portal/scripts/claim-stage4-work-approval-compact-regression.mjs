@@ -14,7 +14,7 @@ for (const source of [operations, customer]) {
   assert.ok(source.includes('Stage 4 — Work Approval'));
   assert.ok(source.includes('Record insurance approval and surveyor details'));
   assert.ok(source.includes('4 of 9'));
-  assert.ok(source.includes('lg:grid-cols-5 lg:items-start'));
+  assert.ok(source.includes('lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 lg:items-start'));
 }
 for (const key of ['approval_received_date', 'cashless', 'surveyor_name', 'surveyor_phone', 'surveyor_email']) {
   assert.ok(operations.includes('name: "' + key + '"'), 'Operations missing ' + key);
@@ -26,14 +26,14 @@ assert.ok(stageFields.includes('label: "Surveyor Phone", type: "tel", optional: 
 assert.ok(stageFields.includes('label: "Surveyor Email", type: "email", optional: true'));
 
 // Unified reference dimensions apply to Stage 4 while retaining its five-column arrangement.
-assert.ok(operations.includes('h-[45px]'));
+assert.ok(operations.includes('h-[40px]'));
 assert.ok(operations.includes('max-w-[260px]'));
 assert.ok(operations.includes('max-w-[320px]'));
 assert.ok(operations.includes('max-w-[254px] grid-cols-2 gap-[10px]'));
 assert.ok(customer.includes('field.type==="date"?"max-w-[260px]"'));
-assert.ok(customer.includes('h-[45px] w-full'));
+assert.ok(customer.includes('h-[40px] w-full'));
 assert.ok(customer.includes('<CustomerClaimBooleanChoice name={field.key}'));
-assert.ok(choice.includes('h-[45px] rounded-md'));
+assert.ok(choice.includes('h-[40px] rounded-md'));
 assert.ok(operations.includes('onClick={(event) => event.currentTarget.showPicker?.()}'));
 assert.ok(customer.includes('required={!field.optional}'));
 
