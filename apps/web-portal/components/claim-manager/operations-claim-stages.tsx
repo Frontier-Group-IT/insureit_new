@@ -414,7 +414,8 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
             <input type="hidden" name="next_status" value={stageTarget ?? ""} />
             <input type="hidden" name="save_only" value={partnerManagedJourney || selectedSaveOnly ? "true" : "false"} />
             <input type="hidden" name="notes" value={selectedSaveOnly ? `Operations edited ${selected.label} details.` : `Operations completed ${selected.label} and opened the next journey stage.`} />
-            <div className={`grid min-w-0 items-start gap-2 sm:grid-cols-2 ${selected.key === "spot_status" ? "gap-2 lg:grid-cols-4 lg:items-start" : selected.key === "delivery_order" ? "gap-2 lg:grid-cols-3 lg:items-start" : selected.key === "payment_encashment" ? "gap-2 lg:grid-cols-5 lg:items-start" : selected.key === "work_approval" ? "lg:grid-cols-3 xl:grid-cols-5 lg:items-start" : selected.key === "billing" ? "gap-2 md:grid-cols-3" : selected.key === "repair_ri" ? "lg:grid-cols-3" : selected.key === "vehicle_delivery" ? "lg:grid-cols-2" : "lg:grid-cols-3 2xl:grid-cols-4"}`}>
+            <div className={selected.key === "work_approval" ? "w-full min-w-0 overflow-x-auto" : "w-full min-w-0"}>
+            <div className={`grid min-w-0 items-start gap-2 sm:grid-cols-2 ${selected.key === "spot_status" ? "gap-2 lg:grid-cols-4 lg:items-start" : selected.key === "delivery_order" ? "gap-2 lg:grid-cols-3 lg:items-start" : selected.key === "payment_encashment" ? "gap-2 lg:grid-cols-5 lg:items-start" : selected.key === "work_approval" ? "!grid-cols-5 min-w-[900px] lg:items-start" : selected.key === "billing" ? "gap-2 md:grid-cols-3" : selected.key === "repair_ri" ? "lg:grid-cols-3" : selected.key === "vehicle_delivery" ? "lg:grid-cols-2" : "lg:grid-cols-3 2xl:grid-cols-4"}`}>
               {fields[selected.key].map((field) => {
                 const value = field.name === "insurer_claim_no" ? insurerClaimNo ?? fieldValue(selectedDetails, field.name) : fieldValue(selectedDetails, field.name);
                 const internalStageTwoSurveyorField = selected.key === "spot_status" && !hasExternalVisualProgress && internalSpotStatusSurveyorFields.has(field.name);
@@ -441,7 +442,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
                 }
                 const useAppDatePicker = field.type === "date";
                 return (
-                  <label key={field.name} className={`min-w-0 block w-full whitespace-nowrap max-sm:whitespace-normal ${selected.key === "spot_status" || selected.key === "billing" || selected.key === "payment_encashment" || selected.key === "delivery_order" || selected.key === "work_approval" ? "" : field.type === "date" ? selected.key === "repair_ri" ? "" : selected.key === "vehicle_delivery" ? "max-w-[335px]" : "max-w-[260px]" : "max-w-[320px]"} ${selected.key === "spot_status" ? "text-[8px]" : "text-[9px]"} font-semibold uppercase leading-4 tracking-[0.01em] text-[#174EA6]`}>
+                  <label key={field.name} className={`min-w-0 block w-full whitespace-nowrap ${selected.key === "work_approval" ? "flex flex-col" : "max-sm:whitespace-normal"} ${selected.key === "spot_status" || selected.key === "billing" || selected.key === "payment_encashment" || selected.key === "delivery_order" || selected.key === "work_approval" ? "" : field.type === "date" ? selected.key === "repair_ri" ? "" : selected.key === "vehicle_delivery" ? "max-w-[335px]" : "max-w-[260px]" : "max-w-[320px]"} ${selected.key === "spot_status" ? "text-[8px]" : "text-[9px]"} font-semibold uppercase leading-4 tracking-[0.01em] text-[#174EA6]`}>
                     {displayLabel}{required && !displayLabel.includes("*") ? <span className="ml-1 text-rose-600">*</span> : null}
                     {useAppDatePicker ? (
                       <AppStyleDateInput name={field.name} value={value} required={required} compact billingCompact={selected.key === "billing"} vehicleDeliveryCompact={selected.key === "vehicle_delivery"} />
@@ -458,13 +459,14 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
                         defaultValue={field.type === "date" ? toDateValue(value) : value}
                         required={required}
                         onClick={field.type === "date" ? (event) => event.currentTarget.showPicker?.() : undefined}
-                        className="mt-1 h-[34px] w-full rounded-[4px] border border-[#D9E3F0] bg-white px-2 text-[12px] font-medium normal-case tracking-normal text-[#071D49] outline-none focus:border-[#174EA6]"
+                        className="mt-1 block h-[34px] min-w-0 w-full rounded-[4px] border border-[#D9E3F0] bg-white px-2 text-[12px] font-medium normal-case tracking-normal text-[#071D49] outline-none focus:border-[#174EA6]"
                       />
                     )}
                   </label>
                 );
               })}
               {selected.key === "billing" && unrestrictedStageEditing && !partnerReadOnlyJourney && !partnerManagedJourney ? <ExternalClaimBillUpload mode="operations" claimId={claimId} documents={billDocuments} compact /> : null}
+            </div>
             </div>
 
             <div className={selected.key === "spot_status" || selected.key === "delivery_order" || selected.key === "payment_encashment" ? "mt-3 flex items-center justify-end gap-2" : "mt-4 flex min-h-10 flex-wrap items-center justify-end gap-2 border-t border-[#D9E3F0] pt-3"}>
