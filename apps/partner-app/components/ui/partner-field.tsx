@@ -5,6 +5,7 @@ import { partnerTheme } from '@/lib/theme';
 
 type PartnerFieldProps = ComponentProps<typeof TextInput> & {
   label: string;
+  labelIcon?: ReactNode;
   error?: string;
   helper?: string;
   rightAccessory?: ReactNode;
@@ -13,6 +14,7 @@ type PartnerFieldProps = ComponentProps<typeof TextInput> & {
 export const PartnerField = forwardRef<TextInput, PartnerFieldProps>(function PartnerField(
   {
     label,
+    labelIcon,
     error,
     helper,
     rightAccessory,
@@ -28,7 +30,10 @@ export const PartnerField = forwardRef<TextInput, PartnerFieldProps>(function Pa
 
   return (
     <View>
-      <Text style={styles.label}>{label}</Text>
+      <View style={styles.labelRow}>
+        {labelIcon ? <View style={styles.labelIcon}>{labelIcon}</View> : null}
+        <Text style={[styles.label, labelIcon ? styles.inlineLabel : null]}>{label}</Text>
+      </View>
       <View style={styles.inputWrap}>
         <TextInput
           {...inputProps}
@@ -59,7 +64,10 @@ export const PartnerField = forwardRef<TextInput, PartnerFieldProps>(function Pa
 });
 
 const styles = StyleSheet.create({
-  label: { marginBottom: 7, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.label },
+  labelRow: { flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 7 },
+  labelIcon: { alignItems: 'center', justifyContent: 'center' },
+  label: { color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.label },
+  inlineLabel: { color: partnerTheme.colors.ink },
   inputWrap: { position: 'relative' },
   input: {
     minHeight: partnerTheme.control.fieldHeight,
