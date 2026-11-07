@@ -46,7 +46,8 @@ assert.match(customerStagePage,/className="mt-1 h-\[34px\] w-full/,"Stage 2 cont
 const completedInternalJourney = readFileSync("components/customer-portal/customer-internal-completed-journey.tsx","utf8");
 assert.match(completedInternalJourney,/stage\.key === "spot_status" \? "lg:grid-cols-4" : "lg:grid-cols-3 xl:grid-cols-5"/,"Internal customer completed Spot Status also uses four columns.");
 assert.ok(customerStagePage.includes('selected.key==="payment_encashment"?"min-w-[1120px] grid-cols-[minmax(235px,1.1fr)_minmax(255px,1.2fr)_minmax(190px,1fr)_minmax(190px,1fr)_minmax(185px,0.9fr)] items-start gap-2"'),"Customer Payment Encashment keeps five bounded fields in one row.");
-assert.match(customerStagePage,/selected\.key==="claim_intimation"\|\|selected\.key==="work_approval"\?"lg:grid-cols-3 xl:grid-cols-5 lg:items-start"/,"Other customer stage grids must retain their previous layout.");
+assert.match(customerStagePage,/selected\.key==="work_approval"\?"!grid-cols-5 min-w-\[900px\] lg:items-start"/,"Customer Stage 4 keeps five nonoverlapping columns.");
+assert.match(customerStagePage,/selected\.key==="claim_intimation"\?"lg:grid-cols-3 xl:grid-cols-5 lg:items-start"/,"Claim Intimation layout remains unchanged.");
 assert.match(customerStagePage,/selected\.key==="payment_encashment"\?"":field\.type==="date"/,"Customer Stage 9 field widths must fit their columns.");
 assert.match(customerStagePage,/<CustomerClaimBooleanChoice compact name=\{field\.key\}/,"All stages use compact Yes/No controls.");
 assert.match(customerChoices,/compact \? "gap-2" : "max-w-\[254px\] gap-\[10px\]"/,"Compact Yes/No buttons must fit narrower desktop columns while preserving other stages.");
