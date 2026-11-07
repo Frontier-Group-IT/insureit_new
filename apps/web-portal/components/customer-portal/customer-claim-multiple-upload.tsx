@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CustomerErrorDialog } from "./customer-error-dialog";
 import { CustomerSuccessDialog } from "./customer-success-dialog";
@@ -16,6 +16,7 @@ const sizeLabel = (size: number) => (size / (1024 * 1024)).toFixed(1) + " MB";
 
 export function CustomerClaimMultipleUpload({claimId,accountId,stage,documents,allowUpload=true,returnToSpotIntimation=false}:{claimId:string;accountId:string;stage:string;documents:CustomerClaimFile[];allowUpload?:boolean;returnToSpotIntimation?:boolean}) {
   const router=useRouter();
+  const documentListId=useId();
   const picker=useRef<HTMLInputElement>(null);
   const running=useRef(false);
   const [selected,setSelected]=useState<File[]>([]);
@@ -99,7 +100,7 @@ export function CustomerClaimMultipleUpload({claimId,accountId,stage,documents,a
     <input ref={picker} type="file" name="file" multiple accept=".pdf,.jpg,.jpeg,.png,.webp,.heic,.mp4,.mov,.webm,.m4a,.ogg" className="sr-only" aria-label="Select multiple claim documents" onChange={event=>{addFiles(Array.from(event.currentTarget.files||[]));event.currentTarget.value="";}}/>
     <div className="flex min-w-0 items-center gap-2">
       <button type="button" onClick={()=>shownDocuments.length?setExpanded(v=>!v):openPicker()}
-        aria-expanded={shownDocuments.length?expanded:undefined} aria-controls="customer-claim-multiple-document-list"
+        aria-expanded={shownDocuments.length?expanded:undefined} aria-controls={shownDocuments.length?documentListId:undefined}
         className="flex min-w-0 flex-1 items-center gap-3 rounded-lg px-1 py-1 text-left hover:bg-[#EDF4FF] focus-visible:outline-2 focus-visible:outline-[#1769DC]">
         <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-[#E5F0FF] text-[#1952A1]"><Files className="h-6 w-6" aria-hidden="true"/></span>
         <span className="min-w-0 flex-1"><strong className="block text-[12px] text-[#102A52]">Upload multiple documents</strong>
@@ -112,7 +113,7 @@ export function CustomerClaimMultipleUpload({claimId,accountId,stage,documents,a
         {uploading?<Loader2 className="h-5 w-5 animate-spin" aria-hidden="true"/>:<Upload className="h-5 w-5" aria-hidden="true"/>}
       </button>:null}
     </div>
-    {shownDocuments.length>0 && expanded ? <div id="customer-claim-multiple-document-list" className="mt-3 grid gap-2 border-t border-[#D9E3F0] pt-3 sm:grid-cols-2">
+    {shownDocuments.length>0 && expanded ? <div id={documentListId} className="mt-3 grid gap-2 border-t border-[#D9E3F0] pt-3 sm:grid-cols-2">
       {shownDocuments.map(file=><div key={file.id} className="flex min-w-0 items-center gap-1 rounded-lg border border-[#D9E3F0] bg-white pr-1">
         <a href={"/customer/claim-documents/"+encodeURIComponent(file.id)+"/open?account="+encodeURIComponent(accountId)+"&claim="+encodeURIComponent(claimId)} target="_blank" rel="noopener noreferrer" title={file.file_name||"Uploaded document"}
           className="flex min-w-0 flex-1 items-center gap-2 px-2 py-2 text-[11px] text-[#204D83] hover:underline focus-visible:outline-2 focus-visible:outline-[#1769DC]">
