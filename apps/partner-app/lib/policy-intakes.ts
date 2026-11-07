@@ -63,7 +63,7 @@ export type PartnerPolicyIntakeUploadProgress = {
   percent?: number;
 };
 
-export const POLICY_INTAKE_PAGE_SIZE = 50;
+export const POLICY_INTAKE_PAGE_SIZE = 10;
 
 /** Read a single permission-scoped page. Never block initial rendering on older pages. */
 export async function listPartnerPolicyIntakesPage(offset = 0): Promise<IntakeListResponse> {
