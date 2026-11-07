@@ -129,7 +129,7 @@ export default async function ServiceEnquiriesPage({ searchParams }: PageProps) 
 
       <section className="overflow-hidden rounded-xl border border-[#DCE4F0] bg-white">
         <div className="overflow-x-auto">
-          <table className="min-w-[1100px] w-full text-left">
+          <table className="min-w-[1240px] w-full text-left">
             <thead className="border-b border-[#E8ECF4] bg-[#073B81] text-[10px] font-bold text-white">
               <tr>
                 <th className="whitespace-nowrap px-3 py-3">Request</th>
@@ -139,6 +139,7 @@ export default async function ServiceEnquiriesPage({ searchParams }: PageProps) 
                 <th className="px-4 py-3">Details</th>
                 <th className="px-4 py-3">Contact</th>
                 <th className="whitespace-nowrap px-3 py-3">Consent</th>
+                <th className="whitespace-nowrap px-3 py-3">Date &amp; Time</th>
                 <th className="px-4 py-3">Status</th>
               </tr>
             </thead>
@@ -156,7 +157,6 @@ export default async function ServiceEnquiriesPage({ searchParams }: PageProps) 
                     </td>
                     <td className="px-4 py-4">
                       <p className="font-black text-[#171D3D]">{serviceLabel(row.service_type)}</p>
-                      <p className="mt-1 max-w-[170px] text-[10px] leading-4 text-[#707A90]">{row.subject}</p>{row.service_type === "support_ticket" ? <p className="mt-1 text-[9px] font-bold capitalize text-[#7B8498]">{row.category || "Support"} · {row.priority || "medium"} priority</p> : null}
                     </td>
                     <td className="px-4 py-4">
                       <p className="font-black text-[#171D3D]">{name}</p>
@@ -164,7 +164,7 @@ export default async function ServiceEnquiriesPage({ searchParams }: PageProps) 
                     </td>
                     <td className="whitespace-nowrap px-3 py-4 text-[10px] font-bold tabular-nums text-[#171D3D]">{vehicle}</td>
                     <td className="px-4 py-4">
-                      <p className="max-w-[260px] whitespace-normal text-[10.5px] leading-4 text-[#59647A]">{row.description}</p>
+                      <p className="max-w-[260px] whitespace-normal text-[10.5px] leading-4 text-[#59647A]">{stripRedundantVehiclePrefix(row.description)}</p>
                     </td>
                     <td className="px-4 py-4">
                       <div className="flex flex-col gap-1.5">
@@ -178,9 +178,9 @@ export default async function ServiceEnquiriesPage({ searchParams }: PageProps) 
                           {row.service_type === "support_ticket" ? "App support request" : row.consent_accepted ? "Consent captured" : "Legacy request"}
                         </span>
                         {row.whatsapp_opt_in ? <span className="inline-flex whitespace-nowrap rounded-full bg-[#EAF7F2] px-2 py-1 text-[9px] font-black text-[#15765B]">WhatsApp allowed</span> : null}
-                        {row.consent_accepted_at ? <span className="whitespace-nowrap text-[9px] tabular-nums text-[#8A93A6]">{formatDateTime(row.consent_accepted_at)}</span> : null}
                       </div>
                     </td>
+                    <td className="whitespace-nowrap px-3 py-4 text-[10px] tabular-nums text-[#59647A]">{formatDateTime(row.created_at)}</td>
                     <td className="px-4 py-4">
                       {canEdit ? (
                         <form action={updateServiceEnquiryStatus} className="flex items-center gap-2">
@@ -201,7 +201,7 @@ export default async function ServiceEnquiriesPage({ searchParams }: PageProps) 
                 );
               })}
               {!sectionRows.length ? (
-                <tr><td colSpan={8} className="px-5 py-12 text-center text-sm font-semibold text-[#7B8498]">{section === "quotes" ? "No quote enquiries match the selected filters." : "No ticket enquiries match the selected filters."}</td></tr>
+                <tr><td colSpan={9} className="px-5 py-12 text-center text-sm font-semibold text-[#7B8498]">{section === "quotes" ? "No quote enquiries match the selected filters." : "No ticket enquiries match the selected filters."}</td></tr>
               ) : null}
             </tbody>
           </table>
@@ -224,6 +224,10 @@ function Metric({ label, value }: { label: string; value: number }) {
 }
 function serviceLabel(type: ServiceEnquiryRow["service_type"]) { return type === "support_ticket" ? "Support Ticket" : type === "insurance_quote" ? "Insurance Quote" : "Challan Assistance"; }
 function sourceLabel(source: ServiceEnquiryRow["source"]) { return source === "customer_dashboard" ? "Customer app" : source === "guest_signup" ? "Signup guest" : "Login guest"; }
+function stripRedundantVehiclePrefix(description: string) {
+  // Strip only the generated leading vehicle-summary sentence; retain the customer\'s own message.
+  return description.replace(/^\s*Vehicle:\s*[^.\r\n]+(?:\.\s*|$)/i, "").trim();
+}
 function formatDateTime(value: string) { return new Date(value).toLocaleString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }); }
 
 function SectionLink({ href, active, label, count }: { href: string; active: boolean; label: string; count: number }) {
