@@ -10,14 +10,18 @@ const stagePage = read("../app/customer/(protected)/claims/[id]/stage/[stage]/pa
 
 assert.doesNotMatch(workspace, /label:"Other Documents",type:"Other Document"/, "No redundant Other Documents card");
 for (const name of ["Accident Photo","RC Copy","Insurance Copy","Driver Licence","GR / Load Bill","Accident Video"]) assert.ok(workspace.includes('label:"'+name+'"'), "Keep individual "+name+" card");
-assert.match(workspace, /normalize\(doc\.document_type\) === "otherdocument"/, "Existing bulk files remain categorized for Operations");
-assert.match(workspace, /aria-label="Multiple Documents"/, "Bulk files have dedicated section");
-assert.match(workspace, /<CustomerClaimMultipleFiles documents=\{multipleDocuments\}/, "Render existing bulk uploads in shared deletable list");
-const list = read("../components/customer-portal/customer-claim-multiple-files.tsx");
-assert.match(list, /customer\/claim-documents\/\$\{encodeURIComponent\(file\.id\)\}\/open/, "Keep authorized document opening route");
-assert.match(workspace, /\(allowUpload \|\| multipleDocuments\.length > 0\)/, "Show saved bulk files even on completed read-only stages");
-assert.match(workspace, /allowUpload \? <CustomerClaimMultipleUpload/, "Upload only while edit is permitted");
-assert.match(bulk, /name="type" value="Other Document"/, "Retain original document type for verification");
+assert.match(workspace, /<CustomerClaimMultipleUpload documents=\{documents\}/, "Consolidate all claim documents in the dashed upload area");
+assert.doesNotMatch(workspace, /<CustomerClaimMultipleFiles/, "Do not render a separate uploaded-documents card");
+assert.match(workspace, /\(allowUpload \|\| documents\.length > 0\)/, "Show all uploaded files in completed read-only stages");
+assert.match(workspace, /allowUpload=\{allowUpload\}/, "Only permit upload when editing is allowed");
+assert.match(bulk, /data\.set\("type","Other Document"\)/, "Keep bulk document type for Operations verification");
+assert.match(bulk, /shownDocuments=documents\.filter/, "Consolidated count includes all original document types");
+assert.match(bulk, /shownDocuments\.length===1\?"document":"documents"/, "Document count replaces old help text");
+assert.match(bulk, /shownDocuments\.length\?setExpanded\(v=>!v\):openPicker\(\)/, "Clicking heading expands files or opens picker when empty");
+assert.match(bulk, /<Upload className=/, "Upload action uses icon instead of plus");
+assert.doesNotMatch(bulk, /<Plus className=/, "Remove the old plus icon");
+assert.match(bulk, /file\.document_type/, "Expanded rows identify document categories");
+assert.match(bulk, /CustomerSpotAttachmentDelete/, "Preserve guarded pending-Other-Document deletion");
 assert.match(bulk, /router\.refresh\(\)/, "Refresh document list following upload");
 assert.match(completed, /"otherdocument"/, "Completed stage must not filter out bulk uploads");
 assert.match(completed, /allowUpload=\{false\}/, "Completed stages stay read-only");
