@@ -1,6 +1,7 @@
 Partner production OTA trigger
-release=partner-insurer-mobile-financial-scroll-pr-4071
-merged_commit=2883aae1c0407c6c00f76308e2332da3d88d41c2
+release=partner-policy-intake-resilient-pagination-pr-4111
+merged_commit=1d90cec14aefe3b9b58cc8e0556c89efc6a1d5c7
+backend_deployed=manual-vercel-production-run-42220487990
 channel=production
 runtime=0.2.0
-requested=2026-11-05
+requested=2026-11-07
