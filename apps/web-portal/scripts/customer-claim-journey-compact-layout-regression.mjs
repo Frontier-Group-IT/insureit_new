@@ -38,9 +38,12 @@ assert.ok(!customerJourneyCss.includes("background:#f4fffa"), "Completed custome
 assert.ok(source.includes('completed?"bg-[#149568] text-white"'), "Keep existing solid-green Customer tick");
 const customerStagePage = readFileSync("app/customer/(protected)/claims/[id]/stage/[stage]/page.tsx", "utf8");
 const customerChoices = readFileSync("components/customer-portal/customer-claim-boolean-choice.tsx", "utf8");
-assert.match(customerStagePage,/selected\.key==="payment_encashment"\?"gap-2 lg:grid-cols-3 xl:grid-cols-5 lg:items-start"/,"Customer Payment Encashment must show all five fields on desktop.");
+assert.match(customerStagePage,/selected\.key==="payment_encashment"\?"gap-2 lg:grid-cols-5 lg:items-start"/,"Customer Payment Encashment must show all five fields on desktop.");
 assert.match(customerStagePage,/selected\.key==="claim_intimation"\|\|selected\.key==="work_approval"\?"lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 lg:items-start"/,"Other customer stage grids must retain their previous layout.");
 assert.match(customerStagePage,/selected\.key==="payment_encashment"\?"":field\.type==="date"/,"Customer Stage 9 field widths must fit their columns.");
 assert.match(customerStagePage,/compact=\{selected\.key==="payment_encashment"\}/,"Only Stage 9 should use compact Yes/No controls.");
 assert.match(customerChoices,/compact \? "gap-2" : "max-w-\[254px\] gap-\[10px\]"/,"Compact Yes/No buttons must fit narrower desktop columns while preserving other stages.");
+assert.match(customerStagePage,/selected\.key==="payment_encashment"\?"mt-1 h-\[34px\] w-full/,"Payment Encashment entry fields must be 34px high.");
+assert.match(customerStagePage,/selected\.key==="payment_encashment"\?"mt-3 flex flex-wrap items-center justify-end gap-2"/,"Payment Encashment save buttons must not have a divider.");
+assert.match(customerChoices,/compact \? "h-\[34px\]" : "h-\[40px\]"/,"Only compact customer Yes/No options use 34px height.");
 console.log("Compact full-width customer claim journey regression passed.");
