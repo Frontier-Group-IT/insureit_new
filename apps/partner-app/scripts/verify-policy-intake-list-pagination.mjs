@@ -7,13 +7,30 @@ const route = readFileSync('../web-portal/app/api/partner/policy-intakes/route.t
 
 assert.match(app, /useState<IntakeFilter>\('all'\)/, 'Keep all-submissions default');
 assert.match(api, /export const POLICY_INTAKE_PAGE_SIZE = 10/, 'Intake initial load and each Load More must match Policies: 10 per request');
-assert.match(api, /export async function listPartnerPolicyIntakesPage\(offset = 0\)/, 'Fetch only requested page');
+
 assert.match(api, /export async function getPartnerPolicyIntake\(id: string\)/, 'Detail uses authorized single-item lookup');
 assert.match(readFileSync('app/policy-intakes/[id].tsx', 'utf8'), /await getPartnerPolicyIntake\(id\)/, 'Detail screen never depends on fetching all pages');
-assert.match(api, /view=mobile_list&filter=all&limit=\$\{POLICY_INTAKE_PAGE_SIZE\}&offset=\$\{offset\}/, 'Mobile list requests scoped page');
+
 assert.doesNotMatch(api, /export async function listPartnerPolicyIntakes\(\)/, 'Never require full export before displaying');
-assert.match(app, /await listPartnerPolicyIntakesPage\(0\)/, 'Initial request must load only first page');
-assert.match(app, /await listPartnerPolicyIntakesPage\(nextOffset\)/, 'Load more must request next offset');
+assert.match(api, /export async function listPartnerPolicyIntakesPage\(/, 'Keep offset-based paginated list function');
+assert.match(api, /filter: PartnerIntakeFilter = 'all'/, 'Send selected status to server');
+assert.match(api, /params\.set\('search', search\.trim\(\)\.slice\(0, 120\)\)/, 'Search full dataset on server, not loaded rows');
+assert.match(api, /params\.set\('include_counts', 'true'\)/, 'Fetch full status counts separately from page data');
+assert.match(api, /page\.counts\[key\] >= 0/, 'Reject missing full counts on initial request');
+assert.match(app, /await listPartnerPolicyIntakesPage\(0, filter, debouncedQuery, filter === 'all' && !debouncedQuery\)/, 'Fetch first filtered page');
+assert.match(app, /await listPartnerPolicyIntakesPage\(nextOffset, filter, debouncedQuery, false\)/, 'Load more in the current filter and search');
+assert.match(app, /if \(page\.counts\) setCounts\(page\.counts\)/, 'Use server-reported totals');
+assert.match(app, /const visibleRows = rows;/, 'Never filter only the currently loaded page');
+assert.match(app, /setTimeout\(\(\) => setDebouncedQuery\(query\.trim\(\)\), 300\)/, 'Debounce server searches');
+assert.doesNotMatch(app, /rows\.filter\(\(row\) => row\.status/, 'Never derive status counts from loaded rows');
+assert.match(route, /includeCounts[\s\S]*url\.searchParams\.get\("include_counts"\)/, 'Counts controlled independently of pagination');
+assert.match(route, /Promise\.all\(mobileFilters\.map/, 'Use scoped exact counts per status');
+assert.match(route, /query\.ilike\("policy_intake_search_text"/, 'Search OCR fields in database');
+assert.match(route, /query\.or\("status\.eq\.needs_attention,and\(status\.eq\.processing,ocr_status\.eq\.failed\)"\)/, 'Preserve Action Required classification');
+assert.match(route, /else if \(!employeeRead\) q = q\.or\(intakeReadScope\)/, 'Count queries preserve authorized partner scope');
+
+
+
 assert.match(app, /setRows\(\(previous\) => \{[\s\S]*?new Set\(previous\.map\(\(row\) => row\.id\)\)/, 'Keep previously loaded records and dedupe');
 assert.match(app, /setPageError\(/, 'Later-page failures must not overwrite loaded records');
 assert.match(app, /pageError \? 'Retry Load More' : 'Load More Submissions'/, 'Offer explicit retry for failed page');
@@ -28,11 +45,11 @@ assert.match(app, /<Feather name="chevron-down" size=\{13\} color="#3156B8" \/>/
 assert.match(app, /accessibilityState=\{\{ disabled: loadingMore \|\| loading \|\| refreshing, busy: loadingMore \}\}/, 'Prevent repeated taps during loading');
 assert.match(app, /setRows\(page\.intakes\)/, 'Refresh restores first page');
 assert.match(app, /setNextOffset\(page\.intakes\.length\)/, 'Refresh resets next offset to the first-page boundary');
-assert.match(app, /\[filter, query, rows\]/, 'Retain existing filter and search behavior for loaded submissions');
+
 assert.match(route, /if \(view === "mobile_list"\)/, 'Mobile server path must be specific');
 assert.match(route, /if \(employeeRead\?\.mode === "or"\) query = query\.or\(employeeRead\.predicates\)/, 'Preserve employee read scope');
 assert.match(route, /else if \(!employeeRead\) query = query\.or\(intakeReadScope\)/, 'Preserve partner read scope');
-assert.match(route, /return json\(\{ ok: true, intakes: intakes \?\? \[\], total: count \?\? 0 \}\)/, 'Use scoped result and count');
+
 assert.match(api, /response\.status === 401 \|\| response\.status === 403/, 'Differentiate expired or rejected access');
 assert.match(api, /Network connection failed/, 'Show actionable network failure');
 assert.match(api, /console\.warn\('\[partner-policy-intakes\] read failed'/, 'Record safe error categories');
