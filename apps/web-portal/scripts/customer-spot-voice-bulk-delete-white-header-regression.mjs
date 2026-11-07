@@ -15,7 +15,8 @@ const stage=read("../app/customer/(protected)/claims/[id]/stage/[stage]/page.tsx
 const completed=read("../components/customer-portal/customer-internal-completed-journey.tsx");
 
 assert.doesNotMatch(evidence,/label:"Incident Voice Note",type:"Incident Voice Note"/, "Voice note must not appear in Claim Documents.");
-assert.match(evidence,/<CustomerClaimMultipleUpload documents=\{documents\}/, "All claim documents must appear in the consolidated dashed upload area.");
+assert.match(evidence,/<CustomerClaimMultipleUpload documents=\{multipleDocuments\}/, "Only bulk-uploaded Other Documents appear in the dashed upload area.");
+assert.match(evidence,/normalize\(doc\.document_type\) === "otherdocument"/, "Categorized attachments stay out of bulk file list.");
 assert.match(bulk,/<CustomerSpotAttachmentDelete accountId=\{accountId\}/, "Bulk rows retain guarded deletion controls.");
 assert.match(bulk,/file\.document_type\.toLowerCase\(\)\.replace/, "Only supported document categories can expose delete.");
 assert.match(voice,/<CustomerClaimSavedVoiceNotes documents=\{documents\}/, "Uploaded recordings belong to voice-note section.");
