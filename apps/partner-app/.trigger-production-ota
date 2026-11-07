@@ -1,8 +1,9 @@
 Partner production OTA trigger
-release=partner-policy-intake-operations-review-pr-4126
-merged_commit=308b4a790499986f9d67b406eab7f9f878c8a729
+release=partner-recovery-missing-public-env-2026-11-07
+source=verified-current-main-via-approved-ota-workflow
+reason=pr-4122-one-time-ota-was-published-with-empty-supabase-public-key
 channel=production
 runtime=0.2.0
 requested=2026-11-07
-source=verified-merge-pr-4126
 no_native_build=true
+database_changes=false
