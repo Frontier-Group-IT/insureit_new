@@ -209,6 +209,7 @@ export default function PolicyIntakesScreen() {
                   </View>
                   <View style={styles.statusStack}>
                     <PartnerStatusBadge label={statusLabel(row)} tone={statusTone(row)} />
+                    {row.ocr_status === 'completed' ? <PartnerStatusBadge label="Fetched" tone="success" /> : null}
                     <Text style={styles.updatedDate}>Updated {formatDate(row.updated_at || row.created_at)}</Text>
                   </View>
                 </View>
