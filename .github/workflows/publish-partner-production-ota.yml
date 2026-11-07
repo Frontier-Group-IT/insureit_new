@@ -124,11 +124,17 @@ jobs:
           console.log(`Partner production runtime ${expo.version}; project ${projectId}`);
           NODE
 
-      - name: Require Expo token
+      - name: Require Expo token and mobile public configuration
         shell: bash
         run: |
           set -euo pipefail
+          # The one-time PR #4122 release published without this public key.
+          # Partner's Supabase module throws at startup when it is missing.
+          # Do not print any environment variable values in this check.
           [ -n "${EXPO_TOKEN:-}" ] || { echo "EXPO_TOKEN is missing." >&2; exit 1; }
+          [ -n "${EXPO_PUBLIC_SUPABASE_URL:-}" ] || { echo "Partner Supabase URL is missing." >&2; exit 1; }
+          [ -n "${EXPO_PUBLIC_SUPABASE_ANON_KEY:-}" ] || { echo "Partner Supabase publishable key is missing; refusing to publish a crashing OTA." >&2; exit 1; }
+          [ -n "${EXPO_PUBLIC_PORTAL_URL:-}" ] || { echo "Partner Portal URL is missing." >&2; exit 1; }
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
