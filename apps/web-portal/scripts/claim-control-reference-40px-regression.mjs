@@ -9,16 +9,16 @@ const start=read("../components/customer-portal/customer-start-claim-selector.ts
 const operationsStart=read("../app/claims/new/add-claim-form.tsx");
 
 // Requested dimensions: text 320x40, date 260x40, Yes/No 122x40 each + 10px gap.
-assert.match(operations,/field\.type === "date" \? "max-w-\[260px\]" : "max-w-\[320px\]"/);
+assert.match(operations,/selected\.key === "payment_encashment" \? "" : field\.type === "date" \? "max-w-\[260px\]" : "max-w-\[320px\]"/,"Stage 9 uses full cell width; other stages retain max widths.");
 assert.match(operations,/relative flex h-\[40px\] w-full max-w-\[260px\]/);
-assert.match(operations,/max-w-\[254px\] grid-cols-2 gap-\[10px\]/);
+assert.match(operations,/selected\.key === "payment_encashment" \? "gap-2" : "max-w-\[254px\] gap-\[10px\]"/,"Stage 9 compact controls; other stages retain 254px width and 10px gap.");
 assert.match(operations,/flex h-\[40px\] cursor-pointer/g);
 assert.match(operations,/max-w-\[320px\] rounded-lg/);
 assert.match(operations,/grid h-\[40px\] w-full max-w-\[320px\]/);
-assert.match(customer,/field\.type==="date"\?"max-w-\[260px\]"/);
+assert.match(customer,/selected\.key==="payment_encashment"\?"":field\.type==="date"\?"max-w-\[260px\]"/,"Stage 9 fills available grid cell; other stages retain date width.");
 assert.match(customer,/"max-w-\[254px\]":"max-w-\[320px\]"/);
 assert.match(customer,/className="mt-1 h-\[40px\] w-full rounded-md/);
-assert.match(choice,/max-w-\[254px\] grid-cols-2 gap-\[10px\]/);
+assert.match(choice,/compact \? "gap-2" : "max-w-\[254px\] gap-\[10px\]"/,"Compact Stage 9 controls; other stages keep original sizing.");
 assert.match(choice,/h-\[40px\] rounded-md/);
 
 // Ensure this remains a presentation change: native date field, values, and field validations.
