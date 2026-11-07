@@ -1,3 +1,4 @@
+import { requirePartnerWritePermission } from '@/lib/partner-permissions';
 import { supabase } from '@/lib/supabase';
 
 export type PartnerCustomerSummary = {
@@ -155,6 +156,7 @@ export type PartnerCustomerDocument = {
   uri: string; name: string; mimeType: string; size: number;
 };
 export async function createPartnerCustomer(input: NewPartnerCustomer, documents: PartnerCustomerDocument[]): Promise<string> {
+  await requirePartnerWritePermission('create_customers');
   if (documents.length) throw new Error('KYC uploads are not configured yet. Please remove selected documents before saving.');
   // Fail closed until the partner-scoped creation RPC is present and verified.
   // No service-role API or direct INSERT is permitted from the mobile client.
