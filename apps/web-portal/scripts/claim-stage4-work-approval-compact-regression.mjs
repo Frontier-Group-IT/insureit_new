@@ -18,7 +18,7 @@ for (const text of ['Stage 4 — Work Approval', 'Record insurance approval and 
   assert.ok(customer.includes(text), 'Customer heading is unchanged: ' + text);
 }
 assert.ok(operations.includes('selected.key === "work_approval" ? "mt-3 flex min-h-10 flex-wrap items-center justify-end gap-2"'), 'Work Approval footer has no divider.');
-assert.ok(operations.includes('selected.key === "work_approval" ? "bg-white" : "bg-[#F8FBFF]"'), 'Only Work Approval uses white while other Operations stages retain the light-blue form background.');
+assert.ok(operations.includes('className="mt-3 rounded-xl border border-[#D9E6F7] bg-white p-3"'), 'Work Approval and all other Operations stages use the approved white form background.');
 assert.ok(operations.includes('selected.key === "work_approval" ? "Save & Continue"'), 'Keep Work Approval Save & Continue.');
 for (const key of ['approval_received_date', 'cashless', 'surveyor_name', 'surveyor_phone', 'surveyor_email']) {
   assert.ok(operations.includes('name: "' + key + '"'), 'Operations missing ' + key);
