@@ -29,10 +29,10 @@ assert.ok(stageFields.includes('label: "Surveyor Email", type: "email", optional
 assert.ok(operations.includes('h-[40px]'));
 assert.ok(operations.includes('max-w-[260px]'));
 assert.ok(operations.includes('max-w-[320px]'));
-assert.ok(operations.includes('max-w-[254px] grid-cols-2 gap-[10px]'));
-assert.ok(customer.includes('field.type==="date"?"max-w-[260px]"'));
+assert.ok(operations.includes('selected.key === "payment_encashment" ? "gap-2" : "max-w-[254px] gap-[10px]"'), "Stage 4 retains its original max-width and gap while Stage 9 is compact.");
+assert.ok(customer.includes('selected.key==="payment_encashment"?"":field.type==="date"?"max-w-[260px]"'), "Stage 4 retains date max-width while Stage 9 fills its column.");
 assert.ok(customer.includes('h-[40px] w-full'));
-assert.ok(customer.includes('<CustomerClaimBooleanChoice name={field.key}'));
+assert.ok(customer.includes('<CustomerClaimBooleanChoice compact={selected.key==="payment_encashment"} name={field.key}'), "Only Stage 9 opts in to compact Yes/No controls.");
 assert.ok(choice.includes('h-[40px] rounded-md'));
 assert.ok(operations.includes('onClick={(event) => event.currentTarget.showPicker?.()}'));
 assert.ok(customer.includes('required={!field.optional}'));
