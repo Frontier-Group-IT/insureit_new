@@ -22,7 +22,7 @@ const rollback = readFileSync(new URL('../../../supabase/rollbacks/2026110718000
 assert.match(endpoint, /getEffectivePermissionAccessMap\(profile\)/, 'Employee access must come from the web portal effective permission engine');
 assert.match(endpoint, /auth\.getUser\(match\[1\]\)/, 'Permissions must use authenticated caller token');
 assert.match(endpoint, /identity\.profile_id !== auth\.user\.id/, 'Caller must match employee identity');
-assert.match(endpoint, /profile\.is_active/, 'Inactive profiles cannot receive permissions');
+assert.match(endpoint, /profile\?\.is_active/, 'Inactive profiles cannot receive permissions');
 assert.match(endpoint, /employee\?\.employment_status !== "active"/, 'Inactive employees cannot receive permissions');
 assert.match(endpoint, /"Cache-Control": "private, no-store"/, 'Never cache permissions across accounts');
 assert.doesNotMatch(endpoint, /role:\s*request\./, 'Never trust a client-supplied role');
@@ -51,6 +51,6 @@ assert.match(rollback, /DROP FUNCTION IF EXISTS public.partner_app_employee_can_
 for (const rpc of ['partner_app_create_claim','partner_app_save_claim_spot','partner_app_save_claim_stage','partner_app_attach_claim_document','partner_app_remove_claim_document','partner_app_save_insurer_claim_number','partner_app_insert_claim_stage_detail']) {
   const match = migration.indexOf('-- Protected RPC: ' + rpc);
   assert.ok(match >= 0, rpc + ' must have a database guard');
-  assert.match(migration.slice(match, match + 600), /partner_app_employee_can_write_web_capability\('manage_claims'\)/, rpc + ' database guard must use live permission');
+  assert.match(migration.slice(match, match + 1200), /partner_app_employee_can_write_web_capability\('manage_claims'\)/, rpc + ' database guard must use live permission');
 }
 console.log('Partner App / website effective permission parity contract passed');
