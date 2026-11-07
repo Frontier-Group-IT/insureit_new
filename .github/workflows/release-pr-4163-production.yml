@@ -1,0 +1,138 @@
+# Approved one-time PR #4163 production release; SQL migration must be applied first.
+# No APK/AAB/IPA. Portal deploy must pass before Partner production OTA.
+name: Release PR 4163 Portal then Partner OTA (one-time)
+
+# This workflow is triggered by merging this reviewed one-time release file.
+# It never builds an APK, AAB or IPA, and it does not change normal deploy settings.
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/release-pr-4163-production.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: insureit-pr4163-sequenced-release
+  cancel-in-progress: false
+
+jobs:
+  deploy-portal:
+    name: Deploy verified Portal from main using prebuilt CLI
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: production
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+    steps:
+      - name: Checkout release commit
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Validate production target and existing migration prerequisites
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$VERCEL_TOKEN"
+          test "$VERCEL_PROJECT_ID" = "prj_OLXA2UB1LwMd0UidP8MNa1O9MLuq"
+          test "$VERCEL_ORG_ID" = "team_DsOUqnF8Pbd7YGNt8RCE8NgA"
+          git fetch origin main
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main || { echo "::error::Release commit is not an ancestor of main."; exit 1; }
+          test -f supabase/migrations/20261107133000_partner_policy_intake_search_text.sql
+          test -f supabase/migrations/20261105180000_preserve_external_claim_management_mode.sql
+          test -f supabase/migrations/20261107180000_partner_app_website_write_permission_guards.sql
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+      - name: Read existing production Vercel configuration
+        run: vercel pull --yes --environment=production
+      - name: Build Portal against production environment
+        run: vercel build --prod
+      - name: Refuse stale source commit
+        run: |
+          git fetch origin main
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main || { echo "::error::Release commit left main during build."; exit 1; }
+      - name: Publish prebuilt Portal to production
+        run: |
+          vercel deploy --prebuilt --archive=tgz --prod --yes | tee portal-deploy-result.txt
+      - name: Portal deployment summary
+        run: |
+          echo "### INSUREIT Portal production" >> "$GITHUB_STEP_SUMMARY"
+          echo "Source: $GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"
+          echo "Prebuilt Vercel CLI deployment; existing project/team and environment preserved." >> "$GITHUB_STEP_SUMMARY"
+
+  publish-partner:
+    name: Publish Partner production OTA after Portal deploy
+    needs: deploy-portal
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: production
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN_PARTNER }}
+      EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL || 'https://ilzhsfqqjyppzzvfscmh.supabase.co' }}
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+      EXPO_PUBLIC_PORTAL_URL: https://portal.insureit.in
+    steps:
+      - name: Checkout same release commit
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Verify release commit and Partner Expo identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$EXPO_TOKEN" || { echo "::error::Partner Expo token missing"; exit 1; }
+          git fetch origin main
+          git merge-base --is-ancestor HEAD origin/main
+          node <<'NODE'
+          const partner = require('./apps/partner-app/app.json').expo;
+          const customer = require('./apps/mobile-app/app.json').expo;
+          if (partner.version !== '0.2.0' || partner.runtimeVersion?.policy !== 'appVersion') throw Error('Unexpected Partner release runtime');
+          if (!partner.extra?.eas?.projectId || partner.extra.eas.projectId === customer.extra?.eas?.projectId) throw Error('Wrong Partner Expo project');
+          NODE
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Verify Partner app contracts
+        run: |
+          npm --workspace apps/partner-app run typecheck
+          npm --workspace apps/partner-app run verify:routes
+          npm --workspace apps/partner-app run verify:phase5
+          npm --workspace apps/partner-app run verify:visual
+          npm --workspace apps/partner-app run verify:pre-apk
+          npm --workspace apps/partner-app run verify:phase6
+          npm --workspace apps/partner-app run verify:uat
+          npm run lint:partner
+      - name: Validate linked Expo project
+        working-directory: apps/partner-app
+        run: |
+          npx eas-cli whoami
+          npx eas-cli project:info --non-interactive
+      - name: Publish OTA to Partner production channel (no native build)
+        working-directory: apps/partner-app
+        run: |
+          npx eas-cli update --channel production --environment production --message "INSUREIT Partner PR 4163 website permission parity production release from $GITHUB_SHA" --non-interactive --json > partner-production-update.json
+          node -e "const a=require('./partner-production-update.json'); console.log('Partner OTA result generated:',Array.isArray(a)?a.length:'ok')"
+      - name: OTA release summary
+        run: |
+          echo "### INSUREIT Partner production OTA" >> "$GITHUB_STEP_SUMMARY"
+          echo "Channel: production; Partner runtime: 0.2.0" >> "$GITHUB_STEP_SUMMARY"
+          echo "Source: $GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"
+          echo "No APK, AAB, IPA, native build or app store submission." >> "$GITHUB_STEP_SUMMARY"
