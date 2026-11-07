@@ -84,7 +84,7 @@ export async function listPartnerPolicyIntakesPage(
     throw new Error('Policy Intake response was incomplete. Please retry.');
   }
   if (includeCounts && (!page.counts || !(['all', 'action_required', 'in_review', 'processing', 'completed', 'duplicate', 'rejected'] as const)
-    .every((key) => typeof page.counts?.[key] === 'number' && Number.isFinite(page.counts[key]) && page.counts[key] >= 0))) {
+    .every((key) => typeof page.counts?.[key] === 'number' && Number.isFinite(page.counts?.[key]) && (page.counts?.[key] ?? -1) >= 0))) {
     throw new Error('Policy Intake status counts could not be loaded. Please retry.');
   }
   return page;
