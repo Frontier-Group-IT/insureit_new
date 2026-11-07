@@ -88,3 +88,10 @@ assert.ok(stages.includes('selected.key === "payment_encashment" ? "min-h-8 whit
 assert.ok(stages.includes('selected.key === "payment_encashment" ? "block min-h-8 whitespace-normal break-words leading-4"'), "Date and amount headings align over inputs.");
 assert.doesNotMatch(stages,/selected.key === "payment_encashment" \? "w-full overflow-x-auto/, "Payment stage must not enable scrolling.");
 assert.doesNotMatch(stages,/min-w-\[1120px\]/, "Payment stage must not force a 1120px minimum width.");
+
+// Shared stage form applies to editable stages 2, 4-9; stage 1 and stage 3 own white workspaces.
+assert.ok(stages.includes('className="mt-3 rounded-xl border border-[#D9E6F7] bg-white p-3"'), "All editable Operations claim stage form panels must use white background.");
+assert.ok(stages.includes('className="rounded-xl border border-[#D9E6F7] bg-white p-4"'), "Read-only stage detail container must be white.");
+assert.doesNotMatch(stages,/border border-\[#D9E6F7\] bg-\[#F8FBFF\] p-[34]/, "No light-blue shared claim detail panels.");
+assert.ok(stages.includes('operations-claim-motion-nav grid grid-cols-9'), "Preserve existing stage navigation surface.");
+assert.ok(stages.includes('bg-[#EAF2FF] p-2'), "Do not change blue stage navigation background.");
