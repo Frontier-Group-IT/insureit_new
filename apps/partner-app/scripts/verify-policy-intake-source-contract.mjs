@@ -18,7 +18,8 @@ requireText(service, 'listPartnerPolicyIntakeSources()', 'Policy Intake service 
 requireText(service, "'/api/partner/policy-intakes?view=sources'", 'Policy Intake source loader must call the dedicated ?view=sources endpoint.');
 requireText(service, 'Array.isArray(result.sources) ? result.sources : []', 'Policy Intake source response must be normalized defensively.');
 requireText(service, 'Array.isArray(page.intakes)', 'Each requested Policy Intake page must be validated as an array.');
-requireText(service, 'export async function listPartnerPolicyIntakesPage(offset = 0)', 'Policy Intake list must load authorized pages independently.');
+requireText(service, 'export async function listPartnerPolicyIntakesPage(', 'Policy Intake list must load authorized pages independently.');
+requireText(service, 'offset = 0,', 'Keep default offset at the first authorized page.');
 
 requireText(screen, 'listPartnerPolicyIntakeSources()', 'New Policy Intake must load lead sources from the dedicated source endpoint.');
 requireText(screen, 'const nextSources = Array.isArray(result) ? result : [];', 'New Policy Intake must normalize source data before array operations.');
