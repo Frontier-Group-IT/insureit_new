@@ -18,7 +18,8 @@ assert.match(route, /query\.ilike\("policy_intake_search_text"/, "Search full au
 assert.match(route, /if \(filter === "action_required"\) query = query\.or\(/);
 assert.match(route, /if \(statusFilter === "action_required"\) q = q\.or\(/);
 assert.match(route, /q\.eq\("status", "processing"\)\.neq\("ocr_status", "failed"\)/, "Exclude failed OCR from Processing.");
-assert.match(route, /q\.in\("status", \["ready_for_review", "in_review"\]\)/);
+assert.match(route, /q\.eq\("status", "in_review"\)/, "In Review includes only claimed review items.");
+assert.match(route, /status\.eq\.ready_for_review,status\.eq\.needs_attention/, "Ready for Review belongs under Action Required.");
 assert.match(route, /count: "exact", head: true/, "Count without fetching full records.");
 assert.match(sql, /create or replace function public\.policy_intake_search_text\(/);
 assert.match(sql, /create or replace function public\.policy_intake_search_text\(\s*public\.policy_intake_requests\s*\)/, "Avoid exposing the computed field as a standalone RPC.");
