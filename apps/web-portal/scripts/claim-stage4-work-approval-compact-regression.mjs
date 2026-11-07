@@ -53,3 +53,15 @@ assert.ok(submit.includes('if (result.error)'));
 assert.ok(submit.includes('if (result.destination) router.push(result.destination)'));
 
 console.log("Stage 4 compact Work Approval layout and guarded next-stage navigation regression passed.");
+
+
+// Start Claim has its own fields: preserve their labels/inputs in one horizontal row without adding Stage 4 questions.
+const operationsStart = read("../app/claims/new/add-claim-form.tsx");
+const customerStart = read("../components/customer-portal/customer-start-claim-selector.tsx");
+const internalCompleted = read("../components/customer-portal/customer-internal-completed-journey.tsx");
+assert.ok(operationsStart.includes('columns === "two" ? "grid-cols-2 min-w-[520px]"'), "Operations Start Claim inputs must remain on one row.");
+assert.ok(operationsStart.includes('grid-flow-col auto-cols-[minmax(170px,1fr)]'), "Operations Start Claim read-only fields must not wrap.");
+assert.ok(operationsStart.includes('min-w-0 overflow-x-auto'), "Operations Start Claim must scroll on narrow screens.");
+assert.ok(customerStart.includes('grid min-w-[640px] grid-cols-4 items-start'), "Customer Start Claim policy headings and values must remain in one row.");
+assert.ok(customerStart.includes('overflow-x-auto'), "Customer Start Claim policy summary must fit narrow screens without overlap.");
+assert.ok(internalCompleted.includes('grid-flow-col auto-cols-[minmax(170px,1fr)] min-w-[900px]'), "Internal Customer Work Approval completed details must stay on one row.");
