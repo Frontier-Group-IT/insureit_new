@@ -15,6 +15,9 @@ const customers = app('lib/customers.ts');
 const intake = app('lib/policy-intakes.ts');
 const intakeList = app('app/policy-intakes.tsx');
 const endpoint = web('app/api/partner/effective-permissions/route.ts');
+const intakeRoute = web('app/api/partner/policy-intakes/route.ts');
+const migration = readFileSync(new URL('../../../supabase/migrations/20261107180000_partner_app_website_write_permission_guards.sql', import.meta.url), 'utf8');
+const rollback = readFileSync(new URL('../../../supabase/rollbacks/20261107180000_partner_app_website_write_permission_guards_rollback.sql', import.meta.url), 'utf8');
 
 assert.match(endpoint, /getEffectivePermissionAccessMap\(profile\)/, 'Employee access must come from the web portal effective permission engine');
 assert.match(endpoint, /auth\.getUser\(match\[1\]\)/, 'Permissions must use authenticated caller token');
@@ -40,4 +43,14 @@ for (const rpc of ['create_claim', 'save_claim_spot', 'save_claim_stage', 'attac
 }
 assert.match(customers, /requirePartnerWritePermission\('create_customers'\)/, 'Creation requires create_customers');
 assert.match(intake, /requirePartnerWritePermission\('create_policy_intakes'\)/, 'Intake submission requires create_policy_intakes');
+assert.match(intakeRoute, /hasEffectiveCapability\(profile, "create_policy_intakes", "edit"\)/, 'Backend intake write must block view-only employees');
+assert.match(migration, /partner_app_employee_can_write_web_capability/, 'Database must enforce employee write grants');
+assert.match(migration, /auth.uid\(\)/, 'Guard must use caller identity');
+assert.match(migration, /Website claim edit permission is required/, 'Claim writes deny missing edit grants');
+assert.match(rollback, /DROP FUNCTION IF EXISTS public.partner_app_employee_can_write_web_capability/, 'Reversible migration is required');
+for (const rpc of ['partner_app_create_claim','partner_app_save_claim_spot','partner_app_save_claim_stage','partner_app_attach_claim_document','partner_app_remove_claim_document','partner_app_save_insurer_claim_number','partner_app_insert_claim_stage_detail']) {
+  const match = migration.indexOf('-- Protected RPC: ' + rpc);
+  assert.ok(match >= 0, rpc + ' must have a database guard');
+  assert.match(migration.slice(match, match + 600), /partner_app_employee_can_write_web_capability\('manage_claims'\)/, rpc + ' database guard must use live permission');
+}
 console.log('Partner App / website effective permission parity contract passed');
