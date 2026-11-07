@@ -18,7 +18,7 @@ assert.match(workspace, /\(allowUpload \|\| multipleDocuments\.length > 0\)/, "S
 assert.match(workspace, /allowUpload=\{allowUpload\}/, "Only permit upload when editing is allowed");
 assert.match(bulk, /data\.set\("type","Other Document"\)/, "Keep bulk document type for Operations verification");
 assert.match(workspace, /multipleDocuments = documents\.filter\(doc => normalize\(doc\.document_type\) === "otherdocument"\)/, "Bulk count excludes RC Copy, Accident Photo, and all other categories");
-assert.match(bulk, /shownDocuments=documents\.filter/, "Count only the prefiltered bulk uploads");
+assert.match(bulk, /shownDocuments=\[\.\.\.recentUploads,\.\.\.documents\.filter/, "Count only confirmed bulk uploads, including files saved just now, without duplicates");
 assert.match(bulk, /shownDocuments\.length===1\?"document":"documents"/, "Document count replaces old help text");
 assert.match(bulk, /shownDocuments\.length\?setExpanded\(v=>!v\):openPicker\(\)/, "Clicking heading expands files or opens picker when empty");
 assert.match(bulk, /<Upload className=/, "Upload action uses icon instead of plus");
