@@ -32,6 +32,7 @@ import {
   type PartnerPolicySummary,
 } from '@/lib/policies';
 import { PartnerAssets } from '@/lib/partner-assets';
+import { canPartnerAccess } from '@/lib/partner-permissions';
 import { partnerTheme } from '@/lib/theme';
 import { getPartnerUnreadActivityCount } from '@/lib/engagement';
 import { useDebouncedValue } from '@/lib/use-debounced-value';
@@ -307,6 +308,7 @@ export default function PoliciesScreen() {
         ))}
       </View>
 
+      {canPartnerAccess(context, 'view_policy_intakes') ? (
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Open Policy Intake"
@@ -320,6 +322,7 @@ export default function PoliciesScreen() {
         </View>
         <Feather name="chevron-right" size={20} color="#FFFFFF" />
       </Pressable>
+      ) : null}
 
       {isOffline || collection.stale || summary.stale ? (
         <View style={styles.feedback}>
