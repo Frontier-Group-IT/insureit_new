@@ -178,7 +178,7 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
         <input type="hidden" name="claim" value={claim.id}/>
         <input type="hidden" name="stage" value={selected.key}/>
         {CUSTOMER_EXTERNAL_STAGE_FIELDS[selected.key].map(field=>(
-          <label key={field.key} className={`customer-claim-ref-field min-w-0 w-full ${selected.key==="billing"?"flex flex-col":"block"} ${selected.key==="spot_status"||selected.key==="payment_encashment"?"":field.type==="date"?(selected.key==="repair_ri"?"":"max-w-[260px]"):field.type==="boolean"||field.type==="yesno"?"max-w-[254px]":"max-w-[320px]"} whitespace-nowrap ${selected.key==="spot_status"?"text-[8px]":"text-[9px]"} font-semibold uppercase leading-4 tracking-[0.01em] text-[#5673B0] max-sm:whitespace-normal`}>{field.label}{field.optional?"":" *"}
+          <label key={field.key} className={`customer-claim-ref-field min-w-0 w-full ${selected.key==="billing"?"flex flex-col":"block"} ${selected.key==="billing"||selected.key==="spot_status"||selected.key==="payment_encashment"?"":field.type==="date"?(selected.key==="repair_ri"?"":"max-w-[260px]"):field.type==="boolean"||field.type==="yesno"?"max-w-[254px]":"max-w-[320px]"} whitespace-nowrap ${selected.key==="spot_status"?"text-[8px]":"text-[9px]"} font-semibold uppercase leading-4 tracking-[0.01em] text-[#5673B0] max-sm:whitespace-normal`}>{field.label}{field.optional?"":" *"}
             {field.type==="boolean"||field.type==="yesno"?(
 <CustomerClaimBooleanChoice compact name={field.key} kind={field.type} value={typeof milestone?.details?.[field.key]==="boolean"?String(milestone.details[field.key]):typeof milestone?.details?.[field.key]==="string"?String(milestone.details[field.key]):""}/>
             ):(
