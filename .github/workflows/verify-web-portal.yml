@@ -159,6 +159,8 @@ jobs:
         run: node --experimental-strip-types scripts/policy-date-otp-regression.mjs
       - name: Policy intake workflow regression
         run: npm run policy-intake:workflow-regression
+      - name: Partner Intake full counts and scoped OCR search regression
+        run: node scripts/partner-intake-global-filter-count-regression.mjs
       - name: Life Health case global status search regression
         run: node scripts/life-health-case-global-search-regression.mjs
       - name: Life Health issued edit parity regression
