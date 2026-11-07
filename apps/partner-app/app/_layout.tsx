@@ -72,7 +72,7 @@ function PartnerPermissionBoundary({ children }: { children: React.ReactNode }) 
   const { context, status } = usePartnerSession();
   const required = requiredPartnerRoutePermission(pathname);
   if (status === 'ready' && required) {
-    const allowed = /^\\/claim\\/(?:new|select-vehicle)(?:\\/|$)/.test(pathname)
+    const allowed = /^\/claim\/(?:new|select-vehicle)(?:\/|$)/.test(pathname)
       ? canPartnerStartClaim(context)
       : canPartnerAccess(context, required.capability, required.minimum);
     if (!allowed) return <Redirect href="/access-denied" />;
