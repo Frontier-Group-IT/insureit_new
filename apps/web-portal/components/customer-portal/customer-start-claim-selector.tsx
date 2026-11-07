@@ -119,7 +119,7 @@ export function CustomerStartClaimSelector({
         </div>
         {displayPolicy ? (
           <>
-            <div className="grid min-w-0 flex-1 grid-cols-2 gap-x-4 gap-y-3 lg:grid-cols-4 lg:gap-x-0 lg:border-l lg:border-[#E5E8F1] lg:pl-5 lg:pt-0">
+            <div className="min-w-0 flex-1 overflow-x-auto lg:border-l lg:border-[#E5E8F1] lg:pl-5"><div className="grid min-w-[640px] grid-cols-4 items-start gap-x-3 lg:gap-x-0">
               {[
                 { label: "Policy No.", value: displayPolicy.policy_no || "—", icon: FileText },
                 { label: "Insurer", value: displayPolicy.insurer_name ? shortInsurerName(displayPolicy.insurer_name) : "Insurer not recorded", detail: displayPolicy.policy_product || displayPolicy.policy_type, icon: Landmark },
@@ -137,7 +137,7 @@ export function CustomerStartClaimSelector({
                   </div>
                 </div>
               ))}
-            </div>
+            </div></div>
             {!hasActivePolicy && !policyExpired ? <p className="mt-4 border-t border-[#E8EAF2] pt-3 text-[12px] text-[#AA681C]">Policy not currently active</p> : null}
           </>
         ) : (
