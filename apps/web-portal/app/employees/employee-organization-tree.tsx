@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent, type WheelEvent } from "react";
 import Link from "next/link";
-import { Building2, ChevronDown, ChevronRight, Focus, GitBranch, Handshake, LocateFixed, Maximize2, Minus, Plus, UserRound, Users } from "lucide-react";
+import { Building2, ChevronDown, ChevronRight, Handshake, LocateFixed, Maximize2, Minus, Plus, UserRound, Users } from "lucide-react";
 import type { EmployeeRow } from "./employee-forms";
 
 export type DirectoryPartner = {
@@ -73,7 +73,7 @@ function initials(name: string) {
 }
 
 export function EmployeeOrganizationTree({ employees, partners, query }: { employees: EmployeeRow[]; partners: DirectoryPartner[]; query: string }) {
-  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [expanded, setExpanded] = useState<Set<string>>(() => new Set(employees.filter((employee) => !employee.reporting_manager_id || !employees.some((manager) => manager.id === employee.reporting_manager_id)).map((employee) => `employee:${employee.id}`)));
   const [showPartners, setShowPartners] = useState(true);
   const [department, setDepartment] = useState("");
   const [focus, setFocus] = useState("");
@@ -151,7 +151,7 @@ export function EmployeeOrganizationTree({ employees, partners, query }: { emplo
       nextAncestors.add(employee.id);
       const reports = (reportsByManager.get(employee.id) ?? []).filter((child) => !matched || matched.has(child.id));
       const assigned = partnersByEmployee.get(employee.id) ?? [];
-      const open = Boolean(search || department) || depth < 1 || expanded.has(key);
+      const open = Boolean(search || department) || expanded.has(key);
       const children: ChartNode[] = open ? reports.map((child) => make(child, depth + 1, nextAncestors)) : [];
       if (open && showPartners && assigned.length) {
         for (const kind of ["partner", "posp", "misp"] as const) {
