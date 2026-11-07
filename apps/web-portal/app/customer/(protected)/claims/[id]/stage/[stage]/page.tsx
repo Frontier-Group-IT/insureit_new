@@ -146,7 +146,7 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
       ):(
         <div className={selected.key==="delivery_order"?"overflow-x-auto p-4":"p-4"}>
           {CUSTOMER_EXTERNAL_STAGE_FIELDS[selected.key] ? (
-            <div className={`grid gap-3 ${selected.key==="delivery_order"?"min-w-[720px] grid-cols-[repeat(3,minmax(0,1fr))] items-start gap-2":"md:grid-cols-2"} ${selected.key==="spot_status"?"lg:grid-cols-4":selected.key==="payment_encashment"?"lg:grid-cols-5":selected.key==="work_approval"?"xl:grid-cols-5":selected.key==="repair_ri"?"xl:grid-cols-3":selected.key==="billing"||selected.key==="vehicle_delivery"?"xl:grid-cols-2":"xl:grid-cols-4"}`}>
+            <div className={`grid gap-3 ${selected.key==="delivery_order"?"min-w-[720px] grid-cols-[repeat(3,minmax(0,1fr))] items-start gap-2":"md:grid-cols-2"} ${selected.key==="delivery_order"?"":selected.key==="spot_status"?"lg:grid-cols-4":selected.key==="payment_encashment"?"lg:grid-cols-5":selected.key==="work_approval"?"xl:grid-cols-5":selected.key==="repair_ri"?"xl:grid-cols-3":selected.key==="billing"||selected.key==="vehicle_delivery"?"xl:grid-cols-2":"xl:grid-cols-4"}`}>
               {CUSTOMER_EXTERNAL_STAGE_FIELDS[selected.key].map(field=>{
                 const value=milestone?.details?.[field.key];
                 const present=value!==undefined&&value!==null&&value!=="";
