@@ -57,8 +57,8 @@ function documentIcon(type: string): string {
 }
 
 export type CustomerClaimFile = { id:string; document_type:string; created_at:string; file_name?:string|null; verification_status?:string|null };
-export function CustomerClaimCompactDocument({label,type,documents,accountId,claimId,stage,allowUpload=true,returnToSpotIntimation=false,canReusePolicyCopy=false,accept=".pdf,.jpg,.jpeg,.png,.webp,.heic"}:{
-  label:string;type:string;documents:CustomerClaimFile[];accountId:string;claimId:string;stage:string;allowUpload?:boolean;returnToSpotIntimation?:boolean;canReusePolicyCopy?:boolean;accept?:string;
+export function CustomerClaimCompactDocument({label,type,documents,accountId,claimId,stage,allowUpload=true,returnToSpotIntimation=false,canReusePolicyCopy=false,showFilePreview=true,accept=".pdf,.jpg,.jpeg,.png,.webp,.heic"}:{
+  label:string;type:string;documents:CustomerClaimFile[];accountId:string;claimId:string;stage:string;allowUpload?:boolean;returnToSpotIntimation?:boolean;canReusePolicyCopy?:boolean;showFilePreview?:boolean;accept?:string;
 }) {
   const router=useRouter();
   const [expanded,setExpanded]=useState(false);
@@ -111,7 +111,7 @@ export function CustomerClaimCompactDocument({label,type,documents,accountId,cla
       {reusePending ? "Linking policy copy…" : "Use Existing Policy Copy"}
     </button> : null}
     <ClaimStageErrorDialog message={reuseError} onClose={()=>setReuseError("")}/>
-    {ordered.length>0?<div className="mt-2 space-y-1.5">
+    {showFilePreview && ordered.length>0?<div className="mt-2 space-y-1.5">
       {openFile(ordered[0])}
       {ordered.length>1&&expanded?ordered.slice(1).map(openFile):null}
     </div>:null}
