@@ -51,7 +51,7 @@ CREATE OR REPLACE FUNCTION public.partner_app_attach_claim_document(p_claim_id u
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO 'public', 'auth'
-AS $function$;
+AS $function$
 declare
   v_customer_id uuid;
   v_id uuid;
@@ -98,7 +98,7 @@ CREATE OR REPLACE FUNCTION public.partner_app_create_claim(p_customer_id uuid, p
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO 'public', 'auth'
-AS $function$;
+AS $function$
 declare v_claim_id uuid; v_insurer uuid; v_existing uuid; v_claim_no text;
 begin
   IF (public.partner_app_current_identity() ->> 'actor_kind') = 'employee'
@@ -139,7 +139,7 @@ CREATE OR REPLACE FUNCTION public.partner_app_insert_claim_stage_detail(p_claim_
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO 'public', 'auth'
-AS $function$;
+AS $function$
 declare
   v_actor uuid := auth.uid();
   v_id uuid;
@@ -170,7 +170,7 @@ CREATE OR REPLACE FUNCTION public.partner_app_remove_claim_document(p_claim_id u
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO 'public', 'auth'
-AS $function$;
+AS $function$
 declare
   v_storage_path text;
 begin
@@ -204,7 +204,7 @@ CREATE OR REPLACE FUNCTION public.partner_app_save_claim_spot(p_claim_id uuid, p
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO 'public', 'auth'
-AS $function$;
+AS $function$
 declare v_customer_id uuid; v_status text;
 begin
   IF (public.partner_app_current_identity() ->> 'actor_kind') = 'employee'
@@ -238,7 +238,7 @@ CREATE OR REPLACE FUNCTION public.partner_app_save_claim_stage(p_claim_id uuid, 
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO 'public', 'auth'
-AS $function$;
+AS $function$
 declare
   v_status public.claim_status;
   v_detail_stage public.claim_status;
@@ -317,7 +317,7 @@ CREATE OR REPLACE FUNCTION public.partner_app_save_insurer_claim_number(p_claim_
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO 'public', 'auth'
-AS $function$;
+AS $function$
 declare
   v_number text := btrim(coalesce(p_insurer_claim_no, ''));
   v_status text;
