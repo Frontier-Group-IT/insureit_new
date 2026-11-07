@@ -7,6 +7,7 @@ const completed = read("../components/customer-portal/customer-internal-complete
 const bulk = read("../components/customer-portal/customer-claim-multiple-upload.tsx");
 const compact = read("../components/customer-portal/customer-claim-compact-document.tsx");
 const stagePage = read("../app/customer/(protected)/claims/[id]/stage/[stage]/page.tsx");
+const uploadAction = read("../app/customer/(protected)/claims/[id]/stage/[stage]/upload-action.ts");
 
 assert.doesNotMatch(workspace, /label:"Other Documents",type:"Other Document"/, "No redundant Other Documents card");
 for (const name of ["Accident Photo","RC Copy","Insurance Copy","Driver Licence","GR / Load Bill","Accident Video"]) assert.ok(workspace.includes('label:"'+name+'"'), "Keep individual "+name+" card");
@@ -43,4 +44,16 @@ assert.match(completed, /return String\(value\)/, "Nonboolean text and dates rem
 assert.match(stagePage, /normalized==="true"\|\|normalized==="yes"\?"Yes":normalized==="false"\|\|normalized==="no"\?"No"/, "Customer stage read-only canonical fields must format boolean-like strings.");
 assert.match(stagePage, /\["true","false","yes","no"\]\.includes\(value\.trim\(\)\.toLowerCase\(\)\)/, "Customer stage fallback fields must format boolean-like strings.");
 assert.match(compact, /document_type/, "Existing individual document records remain supported");
+assert.match(bulk,/const \[recentUploads,setRecentUploads\]=useState<CustomerClaimFile\[\]>\(\[\]\)/, "Keep confirmed uploads locally for immediate display.");
+assert.match(bulk,/shownDocuments=\[\.\.\.recentUploads,\.\.\.documents\.filter/, "Combine server documents and confirmed uploads without duplicates.");
+assert.match(bulk,/confirmed\.push\(result\.uploaded\)/, "Registered standard uploads update the inline list.");
+assert.match(bulk,/confirmed\.push\(saved\.uploaded\)/, "Registered signed video uploads update the inline list.");
+assert.match(bulk,/setRecentUploads\(previous=>/, "After confirmed upload update the uploaded count immediately.");
+assert.match(bulk,/setExpanded\(true\)/, "Automatically expand uploaded filenames after a successful batch.");
+assert.match(bulk,/if\(complete\) \{[\s\S]*router\.refresh\(\)/, "Refresh the server document snapshot after successful upload.");
+assert.match(bulk,/const closeSuccess=\(\)=>setSuccessNotice\(null\)/, "Closing success dialog should not control refreshing or expansion.");
+assert.match(bulk,/shownDocuments\.length\?setExpanded\(v=>!v\):openPicker\(\)/, "Clicking uploaded count toggles the same section.");
+assert.match(bulk,/onDeleted=\{id=>setDeletedIds/, "Deleting one file updates the inline count and list.");
+assert.match(uploadAction,/select\("id, document_type, created_at, file_name, verification_status"\)\.single\(\)/, "Finalized signed video returns confirmed file data.");
+assert.match(uploadAction,/return \{ok:true,uploaded:saved\.data\};/, "Signed video returns a real persisted document, not a client-side guess.");
 console.log("Customer bulk uploaded documents visible in edit and completed journey regression passed.");
