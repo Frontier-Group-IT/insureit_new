@@ -5,6 +5,7 @@ const app = (p) => readFileSync(new URL('../' + p, import.meta.url), 'utf8');
 const web = (p) => readFileSync(new URL('../../web-portal/' + p, import.meta.url), 'utf8');
 
 const session = app('lib/partner-session.ts');
+const sessionProvider = app('providers/partner-session-provider.tsx');
 const guard = app('lib/partner-permissions.ts');
 const layout = app('app/_layout.tsx');
 const tabs = app('app/(tabs)/_layout.tsx');
@@ -29,6 +30,8 @@ assert.match(endpoint, /employee\?\.employment_status !== "active"/, 'Inactive e
 assert.match(endpoint, /"Cache-Control": "private, no-store"/, 'Never cache permissions across accounts');
 assert.doesNotMatch(endpoint, /role:\s*request\./, 'Never trust a client-supplied role');
 assert.match(session, /permissions: access\.capabilities/, 'Mobile session uses server grants');
+assert.match(sessionProvider, /permissions: \{\}/, 'Failed refresh must not keep stale permission grants');
+assert.match(sessionProvider, /clearPartnerQueryCache\(activeScopeKey\.current\)/, 'Revoked access must clear stale local data cache');
 assert.match(guard, /rank\[context\.permissions\[capability\] \?\? 'none'\]/, 'Unknown permission must deny');
 assert.match(guard, /requirePartnerWritePermission/, 'Mobile writes recheck live grants');
 assert.match(layout, /requiredPartnerRoutePermission\(pathname\)/, 'Deep links must check permission');
