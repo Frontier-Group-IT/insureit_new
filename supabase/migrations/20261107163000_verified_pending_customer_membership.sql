@@ -14,7 +14,7 @@ begin
     raise exception 'Authentication is required.';
   end if;
 
-  -- auth.users.phone is server-controlled; raw_user_meta_data is user-editable.
+  -- Auth-managed confirmed phone is required; editable profile metadata is not proof.
   -- Require a confirmed phone before activating pending links.
   select case
     when nullif(phone, '') is null or phone_confirmed_at is null then null
