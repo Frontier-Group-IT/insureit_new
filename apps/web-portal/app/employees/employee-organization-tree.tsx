@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent, t
 import Link from "next/link";
 import { Building2, ChevronDown, ChevronRight, Handshake, LocateFixed, Maximize2, Minus, Plus, UserRound, Users } from "lucide-react";
 import type { EmployeeRow } from "./employee-forms";
+import { EmployeeOrgchartTeamFocus } from "./employee-orgchart-team-focus";
 
 export type DirectoryPartner = {
   id: string;
@@ -75,6 +76,7 @@ function initials(name: string) {
 export function EmployeeOrganizationTree({ employees, partners, query }: { employees: EmployeeRow[]; partners: DirectoryPartner[]; query: string }) {
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set(employees.filter((employee) => !employee.reporting_manager_id || !employees.some((manager) => manager.id === employee.reporting_manager_id)).map((employee) => `employee:${employee.id}`)));
   const [showPartners, setShowPartners] = useState(true);
+  const [mode, setMode] = useState<"team" | "full">("team");
   const [department, setDepartment] = useState("");
   const [focus, setFocus] = useState("");
   const [zoom, setZoom] = useState(1);
@@ -190,13 +192,14 @@ export function EmployeeOrganizationTree({ employees, partners, query }: { emplo
   const graph = useMemo(() => layoutForest(chartRoots), [chartRoots]);
   const placed = useMemo(() => new Map(graph.positions.map((position) => [position.node.key, position])), [graph]);
   const fit = useCallback(() => {
-    const scale = Math.min(1.12, Math.max(0.18, Math.min((viewport.width - 32) / graph.width, (viewport.height - 28) / graph.height)));
+    // Never shrink employee names to illegibility just to fit very wide branches.
+    const scale = Math.min(1.1, Math.max(0.72, Math.min((viewport.width - 48) / graph.width, (viewport.height - 36) / graph.height)));
     setZoom(scale);
-    setOffset({ x: (viewport.width - graph.width * scale) / 2, y: Math.max(10, (viewport.height - graph.height * scale) / 2) });
+    setOffset({ x: graph.width * scale > viewport.width ? 20 : (viewport.width - graph.width * scale) / 2, y: Math.max(10, (viewport.height - graph.height * scale) / 2) });
   }, [viewport, graph]);
-  useEffect(() => { fit(); }, [fit]);
+  useEffect(() => { if (mode === "full") fit(); }, [fit, mode]);
   const changeZoom = (next: number) => {
-    const scale = Math.max(0.2, Math.min(1.8, next));
+    const scale = Math.max(0.72, Math.min(1.6, next));
     const centerX = viewport.width / 2;
     const centerY = viewport.height / 2;
     setOffset((previous) => ({ x: centerX - (centerX - previous.x) * scale / zoom, y: centerY - (centerY - previous.y) * scale / zoom }));
@@ -208,12 +211,15 @@ export function EmployeeOrganizationTree({ employees, partners, query }: { emplo
     changeZoom(zoom * (event.deltaY > 0 ? 0.9 : 1.1));
   };
   const pointerDown = (event: PointerEvent<HTMLDivElement>) => {
-    if (event.button !== 0 || (event.target as HTMLElement).closest("button,a,select,input")) return;
+    if (event.button !== 0 || (event.target as HTMLElement).closest("button,a,select,input,summary")) return;
+    // The diagram is draggable, not selectable. Stop browser text selection at its source.
+    event.preventDefault();
     dragRef.current = { x: event.clientX, y: event.clientY, originX: offset.x, originY: offset.y };
     event.currentTarget.setPointerCapture(event.pointerId);
   };
   const pointerMove = (event: PointerEvent<HTMLDivElement>) => {
     if (!dragRef.current) return;
+    if (Math.hypot(event.clientX - dragRef.current.x, event.clientY - dragRef.current.y) < 4) return;
     setOffset({ x: dragRef.current.originX + event.clientX - dragRef.current.x, y: dragRef.current.originY + event.clientY - dragRef.current.y });
   };
   const pointerUp = (event: PointerEvent<HTMLDivElement>) => {
@@ -228,7 +234,7 @@ export function EmployeeOrganizationTree({ employees, partners, query }: { emplo
 
   return <div className="relative bg-[#FBFAF7]">
     <div className="relative z-10 flex flex-wrap items-center justify-between gap-2 border-b border-[#E6E4DE] bg-[#FBFAF7] px-3 py-2 sm:px-4">
-      <div className="flex items-center gap-2 text-[10px] text-[#758092]"><Users className="h-3.5 w-3.5" /><span>Reporting hierarchy</span><span className="text-[#C4C9D1]">/</span><span>{employees.length} employees</span></div>
+      <div className="flex flex-wrap items-center gap-2"><div className="flex items-center gap-2 text-[10px] text-[#758092]"><Users className="h-3.5 w-3.5" /><span>Reporting hierarchy</span><span className="text-[#C4C9D1]">/</span><span>{employees.length} employees</span></div><div className="inline-flex rounded-md border border-[#D9E2EC] bg-white p-0.5 text-[10px] font-semibold"><button type="button" onClick={() => setMode("team")} aria-pressed={mode === "team"} className={`rounded px-2.5 py-1.5 ${mode === "team" ? "bg-[#173D71] text-white" : "text-[#57718D]"}`}>Team focus</button><button type="button" onClick={() => setMode("full")} aria-pressed={mode === "full"} className={`rounded px-2.5 py-1.5 ${mode === "full" ? "bg-[#173D71] text-white" : "text-[#57718D]"}`}>Full chart</button></div></div>
       <div className="flex flex-wrap items-center gap-1.5">
         <label className="sr-only" htmlFor="orgchart-department">Department</label>
         <select id="orgchart-department" value={department} onChange={(event) => { setDepartment(event.target.value); setFocus(""); }} className="h-8 min-w-[155px] rounded-md border border-[#DBE1E9] bg-white px-2 text-[10.5px] text-[#34445E] shadow-sm">
@@ -238,11 +244,12 @@ export function EmployeeOrganizationTree({ employees, partners, query }: { emplo
         <label className="flex h-8 items-center gap-1.5 rounded-md border border-[#DBE1E9] bg-white px-2 text-[10px] text-[#485973]">
           <input type="checkbox" checked={showPartners} onChange={(event) => setShowPartners(event.target.checked)} className="accent-[#2B65CA]" />Partner network
         </label>
-        <button type="button" onClick={() => { setExpanded(new Set(employees.map((employee) => `employee:${employee.id}`))); setFocus(""); }} className="h-8 rounded-md border border-[#DBE1E9] bg-white px-2 text-[10px] text-[#40546E] hover:bg-[#EEF4FF]">Expand all</button>
-        <button type="button" onClick={() => { setExpanded(new Set()); setFocus(""); }} className="h-8 rounded-md border border-[#DBE1E9] bg-white px-2 text-[10px] text-[#40546E] hover:bg-[#EEF4FF]">Collapse all</button>
+        {mode === "full" ? <button type="button" onClick={() => { setExpanded(new Set(employees.map((employee) => `employee:${employee.id}`))); setFocus(""); }} className="h-8 rounded-md border border-[#DBE1E9] bg-white px-2 text-[10px] text-[#40546E] hover:bg-[#EEF4FF]">Expand all</button> : null}
+        {mode === "full" ? <button type="button" onClick={() => { setExpanded(new Set()); setFocus(""); }} className="h-8 rounded-md border border-[#DBE1E9] bg-white px-2 text-[10px] text-[#40546E] hover:bg-[#EEF4FF]">Collapse all</button> : null}
       </div>
     </div>
-    <div ref={canvasRef} onWheel={onWheel} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp} onPointerCancel={pointerUp} className="relative h-[min(74vh,780px)] min-h-[470px] w-full touch-none overflow-hidden bg-[#FAF9F6]" aria-label="Interactive organization chart">
+    <div className={mode === "team" ? "block" : "hidden"}><EmployeeOrgchartTeamFocus employees={employees} partners={partners} query={query} department={department} showPartners={showPartners} selectedId={focus} onSelect={setFocus} /></div>
+    <div ref={canvasRef} onWheel={onWheel} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp} onPointerCancel={pointerUp} onDragStart={(event) => event.preventDefault()} className={`relative h-[min(74vh,780px)] min-h-[470px] w-full touch-none select-none overflow-hidden bg-[#FAF9F6] ${mode === "full" ? "block" : "hidden"}`} aria-label="Interactive organization chart">
       <div className="absolute right-3 top-3 z-20 flex flex-col gap-1 rounded-md border border-[#E1E2E6] bg-white/95 p-1 shadow-sm">
         <button type="button" title="Zoom in" aria-label="Zoom in" onClick={() => changeZoom(zoom + 0.15)} className="rounded p-1.5 text-[#62718A] hover:bg-[#EDF3FA]"><Plus className="h-4 w-4" /></button>
         <button type="button" title="Zoom out" aria-label="Zoom out" onClick={() => changeZoom(zoom - 0.15)} className="rounded p-1.5 text-[#62718A] hover:bg-[#EDF3FA]"><Minus className="h-4 w-4" /></button>
