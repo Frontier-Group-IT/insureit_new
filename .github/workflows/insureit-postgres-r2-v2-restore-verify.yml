@@ -71,8 +71,6 @@ jobs:
             insureit-v2-restore-check:/tmp/offline-roles.sql
           docker cp "$RUNNER_TEMP/insureit-db-v2-restore/roles.sql" \
             insureit-v2-restore-check:/tmp/roles.sql
-          docker cp "$RUNNER_TEMP/insureit-db-v2-restore/database.dump" \
-            insureit-v2-restore-check:/tmp/database.dump
           if ! docker exec -u postgres insureit-v2-restore-check \
             psql -X -v ON_ERROR_STOP=1 -d postgres -f /tmp/offline-roles.sql \
             > "$RUNNER_TEMP/v2-fixture.log" 2>&1; then
