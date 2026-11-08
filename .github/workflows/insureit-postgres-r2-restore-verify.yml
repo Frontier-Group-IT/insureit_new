@@ -134,6 +134,15 @@ jobs:
                   --command "SET session_replication_role = replica" --file "/tmp/$part.sql" \
                 > "$RUNNER_TEMP/restore-$part.log" 2>&1; then
                 python scripts/backup/classify_pg_restore_error.py "$part" "$RUNNER_TEMP/restore-$part.log"
+                # Diagnostic-only COPY replay in isolated network-disabled DB.
+                # The preceding strict transaction has rolled back on failure.
+                # Keep any raw COPY/SQL output private and always fail the job.
+                timeout 240 docker exec -u postgres insureit-restore-check \
+                  psql -X --set ON_ERROR_STOP=0 -d postgres \
+                    --command "SET session_replication_role = replica" --file /tmp/data.sql \
+                  > "$RUNNER_TEMP/restore-data-diagnostics.log" 2>&1 || true
+                python scripts/backup/summarize_pg_restore_errors.py \
+                  "$RUNNER_TEMP/restore-data-diagnostics.log" || true
                 echo "ISOLATED RESTORE INCOMPLETE: component=$part; restore blocked; existing R2 archive preserved"
                 exit 1
               fi
