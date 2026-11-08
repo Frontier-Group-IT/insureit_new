@@ -171,12 +171,12 @@ jobs:
           # printing SQL output, JWT values, private data or function bodies.
           if ! docker exec -u postgres insureit-fixture-smoke \
             psql -X --set ON_ERROR_STOP=1 -A -t -d postgres -c \
-            "select
+            "SET request.jwt.claims = '{\\"sub\\":\\"5e8c0014-ae02-43a1-a78f-a515527b048f\\",\\"role\\":\\"authenticated\\",\\"email\\":\\"offline@example.invalid\\"}';
+             select
               (select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace
                 where n.nspname='auth' and p.pronargs=0 and
                 (p.proname,p.prorettype) in
                 (('uid','uuid'::regtype),('jwt','jsonb'::regtype),('role','text'::regtype),('email','text'::regtype)))=4
-              and (select set_config('request.jwt.claims','{\"sub\":\"5e8c0014-ae02-43a1-a78f-a515527b048f\",\"role\":\"authenticated\",\"email\":\"offline@example.invalid\"}',false)) is not null
               and auth.uid()='5e8c0014-ae02-43a1-a78f-a515527b048f'::uuid
               and auth.role()='authenticated'
               and auth.email()='offline@example.invalid'
