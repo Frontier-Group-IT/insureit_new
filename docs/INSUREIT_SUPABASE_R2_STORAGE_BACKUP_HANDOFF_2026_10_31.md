@@ -1,3 +1,11 @@
+## 2026-11-08 — Verified isolated Auth bootstrap architecture (PR #4177)
+
+- The *real pinned Supabase Postgres 17 Docker image* contains `auth.uid()`, `auth.role()` and `auth.email()` already; `auth.jwt()` is absent. A secret-free, no-port, `--network none` container catalog probe reported `uid|jwt|role|email|postgres_schema_CREATE = 1|0|1|1|0`. The managed `auth` schema is not writable by ordinary `postgres`, so prior attempt to redefine all helpers failed with `permission_denied`.
+- Corrected approach follows Supabase's self-hosted Docker roles-init pattern: mount **only** a test-only SQL script at `/docker-entrypoint-initdb.d/init-scripts/99-roles.sql` which sets `supabase_auth_admin`'s password to the **ephemeral container POSTGRES_PASSWORD**, never a production secret. Use loopback inside the network-isolated container to connect as its authorized scoped `supabase_auth_admin` role.
+- Added one **missing** helper from read-only live INSUREIT `pg_get_functiondef`: `auth.jwt() RETURNS jsonb` reading `request.jwt.claim` / `request.jwt.claims`. Do **not** redefine the image's pre-existing `auth.uid`, `auth.role` or `auth.email`, change schema ownership or elevate `postgres`.
+- Secret-free CI on the actual image #42455585060 validated this architecture: `offline_fixture_smoke` passed with four available Auth functions, and backup unit/static tests passed. An additional RLS policy compilation/JWT behavior regression is being tested in subsequent PR commits.
+- Unlike earlier speculative changes, this targets a concretely **observed** missing platform helper, yet it **does not** certify end-to-end recovery until the actual encrypted roles/schema/data archive passes the manual isolated restoration, plus Auth/Storage counts. Keep daily independent PostgreSQL backups disabled until those gates pass. No production changes or R2 deletions.
+
 ## 2026-11-08 — Root-cause investigation: managed Supabase Auth helper bootstrap missing from offline target
 
 - Prior isolate: encrypted R2 archive validated; 7/7 extensions available and installed; fixture and roles.sql passed; schema.sql failed at line **42085** with a reference to missing `auth` function. This is not evidence that production is damaged or that ciphertext is corrupted. Data SQL never ran.
