@@ -88,9 +88,9 @@ export function EmployeeOrgchartTeamFocus({
   const partnerPages = Math.max(1, Math.ceil(ownPartners.length / PAGE_SIZE));
 
   const employeeCard = (employee: EmployeeRow, large = false) => (
-    <div key={employee.id} className={large ? "w-full max-w-[335px]" : "min-w-0"}>
+    <div key={employee.id} className={large ? "org-reveal w-full max-w-[335px]" : "org-reveal min-w-0"}>
     <button type="button" onClick={() => onSelect(employee.id)}
-      className={`group min-w-0 rounded-xl border text-left transition-colors hover:border-[#82AADB] hover:bg-[#F3F8FE] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#5685C4] ${large ? "w-full border-[#89B0E9] bg-[#EFF5FF] p-4 shadow-md" : "w-full border-[#D7E2ED] bg-white p-3 shadow-[0_2px_9px_rgba(16,39,72,0.07)]"}`}>
+      className={`org-interactive-card group min-w-0 rounded-xl border text-left transition-colors hover:border-[#82AADB] hover:bg-[#F3F8FE] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#5685C4] ${large ? "w-full border-[#89B0E9] bg-[#EFF5FF] p-4 shadow-md" : "w-full border-[#D7E2ED] bg-white p-3 shadow-[0_2px_9px_rgba(16,39,72,0.07)]"}`}>
       <div className="flex items-center gap-3">
         <div className={`flex shrink-0 items-center justify-center rounded-full bg-[#E6F0FF] font-semibold text-[#245790] ${large ? "h-12 w-12 text-[14px]" : "h-10 w-10 text-[12px]"}`}>{initials(employee.full_name) || <UserRound className="h-4 w-4" />}</div>
         <div className="min-w-0 flex-1">
@@ -126,7 +126,7 @@ export function EmployeeOrgchartTeamFocus({
       </div>
     </div> : null}
 
-    {focused ? <div className="flex flex-col items-center">
+    {focused ? <div key={focused.id} className="org-reveal flex flex-col items-center">
       {parent ? <button type="button" onClick={() => onSelect(parent.id)} className="mb-2 rounded-lg border border-[#DDE6EE] bg-white px-4 py-2 text-[10px] text-[#667D96] hover:border-[#99B7D7]"><span className="font-semibold text-[#284A70]">{parent.full_name}</span> · {parent.designation}</button> : null}
       {parent ? <div className="h-5 w-px bg-[#B9CBDB]" /> : null}
       {employeeCard(focused, true)}
@@ -134,7 +134,7 @@ export function EmployeeOrgchartTeamFocus({
       <div className="rounded-full bg-[#DFEAF8] px-3 py-1 text-[10px] font-semibold text-[#365D87]">{children.length} direct reports</div>
       <div className="h-5 w-px bg-[#B9CBDB]" />
       {children.length ? <>
-        <div className="grid w-full max-w-[1020px] grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <div key={`${currentId}-${page}`} className="org-reveal grid w-full max-w-[1020px] grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {visibleReports.map((employee) => employeeCard(employee))}
         </div>
         {pages > 1 ? <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-[11px] text-[#516B89]">
@@ -145,14 +145,14 @@ export function EmployeeOrgchartTeamFocus({
       </> : <p className="mt-2 text-[10.5px] text-[#7A8DA2]">No direct reports in this view</p>}
     </div> : <div className="py-24 text-center text-[12px] text-[#7A8DA2]">No employees available.</div>}
 
-    {showPartners && focused && ownPartners.length ? <section className="mx-auto mt-6 max-w-[1020px] rounded-xl border border-[#D9EAE3] bg-white p-3">
+    {showPartners && focused && ownPartners.length ? <section className="org-reveal mx-auto mt-6 max-w-[1020px] rounded-xl border border-[#D9EAE3] bg-white p-3 transition-colors hover:border-[#A8D5C1]">
       <button type="button" onClick={() => { setPartnerExpanded((v) => !v); setPartnerPage(0); }} aria-expanded={partnerExpanded} className="flex w-full items-center justify-between gap-2 text-left">
         <span className="flex items-center gap-2 text-[11px] font-semibold text-[#216B57]"><Handshake className="h-4 w-4" />Business network <span className="rounded-full bg-[#E5F6EE] px-2 py-0.5 text-[10px]">{ownPartners.length} assigned</span></span>
         <ChevronDown className={`h-4 w-4 text-[#568C7D] transition-transform ${partnerExpanded ? "rotate-180" : ""}`} />
       </button>
       {partnerExpanded ? <>
-        <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          {partnersShown.map((partner) => <div key={partner.id} className="min-w-0 rounded-lg border border-[#D8E9E1] bg-[#FAFFFC] p-3">
+        <div key={`${currentId}-${partnerPage}`} className="org-disclosure-content mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          {partnersShown.map((partner) => <div key={partner.id} className="org-interactive-card min-w-0 rounded-lg border border-[#D8E9E1] bg-[#FAFFFC] p-3">
             <div className="flex items-center gap-2"><Building2 className="h-4 w-4 text-[#347966]" /><Link href={`/intermediaries/applications/${partner.applicationId}`} className="truncate text-[11px] font-semibold text-[#1F5361] hover:underline">{partner.name}</Link></div>
             <p className="mt-1 text-[9.5px] text-[#69887D]">{partner.kind.toUpperCase()} · {partner.code || "Registration pending"} · {partner.status.replaceAll("_", " ")}</p>
             <PartnerRelationships partner={partner} />
