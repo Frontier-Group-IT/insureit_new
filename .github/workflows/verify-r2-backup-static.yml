@@ -25,7 +25,7 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m pip install boto3==1.35.99 cryptography==44.0.2 pyyaml==6.0.2
-      - run: python -m py_compile scripts/backup/supabase_storage_to_r2.py scripts/backup/verify_r2_restore.py scripts/backup/monitor_github_backup.py scripts/backup/monitor_postgres_backup.py scripts/backup/postgres_to_r2.py scripts/backup/verify_postgres_r2_restore.py scripts/backup/classify_pg_restore_error.py scripts/backup/audit_postgres_archive_coverage.py scripts/backup/verify_postgres_offline_row_counts.py
+      - run: python -m py_compile scripts/backup/supabase_storage_to_r2.py scripts/backup/verify_r2_restore.py scripts/backup/monitor_github_backup.py scripts/backup/monitor_postgres_backup.py scripts/backup/postgres_to_r2.py scripts/backup/verify_postgres_r2_restore.py scripts/backup/classify_pg_restore_error.py scripts/backup/audit_postgres_archive_coverage.py scripts/backup/verify_postgres_offline_row_counts.py scripts/backup/summarize_pg_restore_errors.py
       - run: python -m unittest discover -s scripts/backup -p 'test_*.py' -v
       - name: Validate workflow safety guard
         run: |
@@ -88,6 +88,9 @@ jobs:
           assert 'isolated_supabase_extensions.sql' in steps_text
           assert 'isolated_supabase_auth_helpers.sql' in steps_text
           assert 'ISOLATED AUTH HELPERS INCOMPLETE' in steps_text
+          assert 'summarize_pg_restore_errors.py' in steps_text
+          assert '--set ON_ERROR_STOP=0' in steps_text
+          assert 'ISOLATED RESTORE INCOMPLETE' in steps_text
           assert 'required_extension_installation' in steps_text
           assert 'required_extension_availability' in steps_text
           assert '--network none' in steps_text
