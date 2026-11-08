@@ -235,6 +235,7 @@ jobs:
             "$RUNNER_TEMP/fixture-smoke.log" > "$RUNNER_TEMP/copy-diagnostic.txt"
           if ! grep -q 'sqlstate=22P02 category=invalid_text_representation' \
             "$RUNNER_TEMP/copy-diagnostic.txt"; then
+            cat "$RUNNER_TEMP/copy-diagnostic.txt"
             echo "OFFLINE SQLSTATE SMOKE FAILED: expected category not detected"
             exit 1
           fi
