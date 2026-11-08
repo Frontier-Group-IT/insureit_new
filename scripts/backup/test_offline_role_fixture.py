@@ -15,6 +15,11 @@ class OfflineRoleFixtureTests(unittest.TestCase):
         self.assertNotIn("PASSWORD '", self.sql.upper())
         self.assertNotIn("CREATE EXTENSION", self.sql.upper())
 
+    def test_reserved_supabase_role_creation_is_skipped(self):
+        self.assertIn("left(role_name, 9) = 'supabase_'", self.sql)
+        self.assertIn("CONTINUE;", self.sql)
+        self.assertIn("The strict roles.sql import will report any missing dependency", self.sql)
+
     def test_idempotent_and_offline_only(self):
         self.assertIn("IF NOT EXISTS", self.sql)
         self.assertIn("NEVER apply to the managed INSUREIT database", self.sql)
