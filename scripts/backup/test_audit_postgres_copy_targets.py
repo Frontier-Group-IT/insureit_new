@@ -1,11 +1,13 @@
 import tempfile
+import json
+from unittest import mock
 import unittest
 from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).parent))
 from audit_postgres_copy_targets import (
-    copy_destinations, split_identifiers, verify_targets,
+    copy_destinations, split_identifiers, verify_targets, isolated_catalog,
 )
 
 
@@ -55,6 +57,22 @@ class OfflineCopyCompatibilityTests(unittest.TestCase):
     def test_quoted_identifiers(self):
         self.assertEqual(split_identifiers('"auth"."weird""name"', "."), ["auth", 'weird"name'])
         self.assertEqual(split_identifiers('"id", "user name"', ","), ["id", "user name"])
+
+    def test_isolated_catalog_reads_only_local_pg_catalog(self):
+        result = mock.Mock(returncode=0, stdout=json.dumps([
+            {"schema": "auth", "table": "users", "columns": ["id", "email"]},
+            {"schema": "storage", "table": "objects", "columns": ["id", "bucket_id"]},
+        ]), stderr="")
+        with mock.patch("audit_postgres_copy_targets.subprocess.run", return_value=result) as run:
+            catalog = isolated_catalog("insureit-restore-check")
+            self.assertEqual(catalog[("auth", "users")], {"id", "email"})
+            args = run.call_args.args[0]
+            self.assertEqual(args[:6], ["docker", "exec", "-u", "postgres", "insureit-restore-check", "psql"])
+            self.assertNotIn("--network", args)
+
+    def test_rejects_any_other_container(self):
+        with self.assertRaises(ValueError):
+            isolated_catalog("production-postgres")
 
     def test_invalid_copy_is_rejected(self):
         with self.assertRaises(ValueError):
