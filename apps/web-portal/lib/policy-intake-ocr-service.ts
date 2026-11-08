@@ -9,6 +9,7 @@ import { refineNewIndiaCommercialPolicy } from "@/lib/policy-ocr-new-india-refin
 import { refineNewIndiaStructuredPolicy } from "@/lib/policy-ocr-new-india-structured-refiner";
 import { refineApprovedMotorPolicyLayout } from "@/lib/policy-ocr-approved-layout-refiner";
 import { refineIciciBundledTwoWheelerText } from "@/lib/policy-ocr-icici-3005-text-refiner";
+import { extractNativePdfTextPages } from "@/lib/policy-ocr-native-pdf";
 import { shouldRunPolicyOcrLayoutParser } from "@/lib/policy-ocr-layout-mode";
 
 const MAX_FILE_SIZE = 15 * 1024 * 1024;
@@ -59,7 +60,16 @@ export async function extractPolicyIntakeDocumentTrusted(formData: FormData): Pr
     if (base.parserId === "iffco_tokio_commercial_motor_v1" && parsed.fields.find((field) => field.key === "policy_product")?.value !== "SAOD") parsed = refineIffcoStructuredFinancials(tables, parsed);
     if (base.parserId === "new_india_motor_v1") parsed = refineNewIndiaStructuredPolicy(tables, parsed);
     parsed = refineApprovedMotorPolicyLayout(pages,tables,parsed);
-    parsed = refineIciciBundledTwoWheelerText(pages, parsed);
+    let textEvidencePages = pages;
+    if (file.type === "application/pdf" && /ICICI\\s+LOMBARD/i.test(pages.slice(0, 2).join(" "))) {
+      try {
+        const localPages = await extractNativePdfTextPages(new Uint8Array(await file.arrayBuffer()));
+        if (localPages.length) textEvidencePages = localPages.map((page) => page.text);
+      } catch {
+        // Preserve OCR-only flow when the PDF lacks locally extractable text.
+      }
+    }
+    parsed = refineIciciBundledTwoWheelerText(textEvidencePages, parsed);
     if (!parsed.fields.length) return { ok:false, error:"No supported policy details could be read from this document." };
     return { ok:true, fields:parsed.fields, parserId:parsed.parserId, parserVersion:parsed.parserVersion, warnings:parsed.warnings };
   } catch (error) {
