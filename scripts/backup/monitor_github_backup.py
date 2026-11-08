@@ -16,6 +16,7 @@ WORKFLOW = "insureit-supabase-storage-r2-backup.yml"
 MARKER = "<!-- INSUREIT_R2_BACKUP_ALERT_V1 -->"
 TITLE = "INSUREIT: automatic R2 document backup needs attention"
 UTC = dt.timezone.utc
+MAX_EXPECTED_START_DELAY = dt.timedelta(hours=3)
 
 
 def iso(value):
@@ -60,9 +61,13 @@ def scheduled_status(runs, now):
                  and r.get("head_branch") == "main"
                  and start <= iso(r["created_at"]) <= now]
     scheduled.sort(key=lambda r: iso(r["created_at"]), reverse=True)
-    if any(r.get("conclusion") == "success" and r.get("status") == "completed"
-           for r in scheduled):
-        return "success", scheduled[0] if scheduled else None
+    successful = [r for r in scheduled if r.get("conclusion") == "success"
+                  and r.get("status") == "completed"]
+    if successful:
+        best = max(successful, key=lambda r: iso(r["created_at"]))
+        if iso(best["created_at"]) > latest_target(now) + MAX_EXPECTED_START_DELAY:
+            return "late", best
+        return "success", best
     if any(r.get("status") in ("queued", "waiting", "pending", "in_progress",
                               "requested") for r in scheduled):
         return "still_running", scheduled[0]
@@ -81,17 +86,20 @@ def find_open_issue(repo, token):
 
 def alert(repo, token, cause, run_url=None):
     existing = find_open_issue(repo, token)
+    safe_completion = "late" in cause.lower()
     details = (
         f"{MARKER}\n\n"
         f"**Status:** Backup requires investigation.\n\n"
         f"**Cause:** {cause}\n\n"
         f"**Workflow:** \`{WORKFLOW}\` — daily 7 PM IST (13:30 UTC).\n\n"
         + (f"**Run:** {run_url}\n\n" if run_url else "")
-        + "**Impact:** The most recent successful encrypted backup remains preserved, "
-          "but today's scheduled backup has not been confirmed successful.\n\n"
-          "**Action:** Check the backup job and its in-job sample restore verification. "
+        + ("**Impact:** Archive verified, but it started outside the 3-hour freshness SLA.\n\n"
+           if safe_completion else
+           "**Impact:** The most recent successful encrypted backup remains preserved, "
+           "but the target backup has not been confirmed successful.\n\n")
+        + "**Action:** Check the backup job and its in-job sample restore verification. "
           "Do not delete or expire existing R2 data.\n\n"
-          "This issue is automatically closed when a subsequent backup workflow succeeds. "
+          "This issue closes only when a subsequent scheduled backup meets the freshness SLA. "
           "For email/mobile notifications, watch or subscribe to repository Issues.\n"
     )
     if existing:
@@ -131,7 +139,16 @@ def main():
         if run.get("head_branch") != "main":
             raise RuntimeError("Non-main backup run not accepted")
         if run.get("conclusion") == "success":
-            recover(repo, token)
+            created = iso(run["created_at"])
+            nominal = latest_target(created)
+            if run.get("event") == "schedule" and created > nominal + MAX_EXPECTED_START_DELAY:
+                alert(repo, token,
+                      f"Backup completed successfully but started >3h late for target {nominal.isoformat()}",
+                      run.get("html_url"))
+            elif run.get("event") == "schedule":
+                recover(repo, token)
+            else:
+                print("Manual backup succeeded; scheduled freshness alert remains unchanged")
         else:
             alert(repo, token, "Backup workflow completed with conclusion " +
                   str(run.get("conclusion")), run.get("html_url"))

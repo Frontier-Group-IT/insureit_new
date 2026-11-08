@@ -8,6 +8,8 @@ on:
   schedule:
     # Watch for a missing 19:00 IST backup at 22:47 IST (17:17 UTC).
     - cron: '17 17 * * *'
+    # Additional watchdog checks reduce reliance on a single delayed GitHub cron.
+    - cron: '17 */2 * * *'
   workflow_dispatch:
 
 permissions:
@@ -31,7 +33,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Report failed or missing backup through GitHub Issues
+      - name: Report failed, late or missing Storage backup through GitHub Issues
         env:
           GH_TOKEN: ${{ github.token }}
         run: python -u scripts/backup/monitor_github_backup.py
+      - name: Independently report stale PostgreSQL R2 archive
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python -u scripts/backup/monitor_postgres_backup.py

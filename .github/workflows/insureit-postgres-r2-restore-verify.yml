@@ -34,6 +34,8 @@ jobs:
           R2_BUCKET: insureit-production-backups
           RESTORE_DIR: ${{ runner.temp }}/insureit-db-restore
         run: python -u scripts/backup/verify_postgres_r2_restore.py
+      - name: Audit auth, storage and public schema coverage in decrypted archive
+        run: python scripts/backup/audit_postgres_archive_coverage.py "$RUNNER_TEMP/insureit-db-restore"
       - name: Restore into isolated Supabase PostgreSQL 17 container
         run: |
           set -euo pipefail
@@ -83,6 +85,20 @@ jobs:
           # Keep potentially sensitive SQL errors out of public GitHub logs.
           # A plain Postgres 17 image may lack Supabase platform roles/extensions.
           for part in roles schema data; do
+            # Supabase's documented restore procedure disables triggers for the
+            # data COPY stage; this is safe ONLY in the isolated disposable DB.
+            if [ "$part" = data ]; then
+              if ! timeout 600 docker exec -u postgres insureit-restore-check \
+                psql -X --single-transaction --set ON_ERROR_STOP=1 --dbname postgres \
+                  --command "SET session_replication_role = replica" --file "/tmp/$part.sql" \
+                > "$RUNNER_TEMP/restore-$part.log" 2>&1; then
+                python scripts/backup/classify_pg_restore_error.py "$part" "$RUNNER_TEMP/restore-$part.log"
+                echo "ISOLATED RESTORE INCOMPLETE: component=$part; restore blocked; existing R2 archive preserved"
+                exit 1
+              fi
+              echo "Isolated restore component validated: $part"
+              continue
+            fi
             if ! timeout 600 docker exec -u postgres insureit-restore-check \
               psql -X --set ON_ERROR_STOP=1 --dbname postgres --file "/tmp/$part.sql" \
               > "$RUNNER_TEMP/restore-$part.log" 2>&1; then
@@ -101,7 +117,10 @@ jobs:
             echo "ISOLATED RESTORE FAILED: no public tables restored"
             exit 1
           fi
-          echo "ISOLATED RESTORE PASSED: public_table_count=$count"
+          echo "Isolated public schema table count checked"
+          python scripts/backup/verify_postgres_offline_row_counts.py \
+            "$RUNNER_TEMP/insureit-db-restore" insureit-restore-check
+          echo "ISOLATED RESTORE PASSED: public table count and archived auth/storage row counts verified"
       - name: Remove temporary SQL and isolated database
         if: always()
         run: |
