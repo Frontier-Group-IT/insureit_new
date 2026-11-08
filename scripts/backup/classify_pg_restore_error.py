@@ -37,6 +37,42 @@ def classify(contents):
     return "unknown_sql_failure"
 
 
+
+SAFE_SCHEMAS = (
+    "auth", "storage", "extensions", "vault", "public", "realtime",
+    "pg_catalog", "graphql", "supabase_migrations",
+)
+MISSING_DEPENDENCY = re.compile(
+    r'\b(?P<kind>function|type|operator)\s+(?P<object>.{1,200}?)\s+does not exist\b',
+    re.I,
+)
+PSQL_LINE = re.compile(r'\bpsql:[^:\n]*:(?P<line>[0-9]{1,8}):\s*(?:ERROR|FATAL):', re.I)
+
+
+def dependency_details(contents):
+    """Only fixed schema/kind categories and a SQL line number; no SQL text."""
+    for line in contents.splitlines():
+        if not re.search(r'(?:ERROR:|FATAL:|psql:.*error:)', line, re.I):
+            continue
+        match = MISSING_DEPENDENCY.search(line)
+        if not match:
+            continue
+        signature = match.group("object")
+        schema = "unqualified_or_other"
+        for allowed in SAFE_SCHEMAS:
+            if re.search(r'(?<![A-Za-z0-9_])"?' + re.escape(allowed)
+                         + r'"?\s*\.\s*"?[A-Za-z_][A-Za-z0-9_]*',
+                         signature, re.I):
+                schema = allowed
+                break
+        loc = PSQL_LINE.search(line)
+        return {
+            "kind": match.group("kind").lower(),
+            "schema": schema,
+            "sql_line": int(loc.group("line")) if loc else None,
+        }
+    return None
+
 def main():
     if len(sys.argv) != 3 or sys.argv[1] not in ("extensions", "fixture", "roles", "schema", "data"):
         raise SystemExit("usage: classify_pg_restore_error.py extensions|fixture|roles|schema|data LOGFILE")
@@ -47,6 +83,11 @@ def main():
         return
     category = classify(raw.decode("utf-8", "replace"))
     print(f"RESTORE DIAGNOSTIC: component={sys.argv[1]} category={category}")
+    if category == "missing_function_or_type":
+        details = dependency_details(raw.decode("utf-8", "replace"))
+        if details:
+            sql_line = details["sql_line"] if details["sql_line"] is not None else "unknown"
+            print(f"RESTORE DEPENDENCY: kind={details['kind']} schema={details['schema']} sql_line={sql_line}")
     print("Restore remains FAILED. Review Supabase-compatible isolated target; no SQL content logged.")
 
 
