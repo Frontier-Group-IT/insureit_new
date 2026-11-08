@@ -43,7 +43,7 @@ jobs:
           # This pinned image is from the official Supabase self-hosted docker-compose.yml.
           # Do not attach it to production, map ports, or provide production DB credentials.
           docker run --detach --name insureit-restore-check --network none \
-            --mount "type=bind,source=$GITHUB_WORKSPACE/scripts/backup/fixtures/isolated_supabase_auth_helpers.sql,target=/docker-entrypoint-initdb.d/init-scripts/96-insureit-auth-helpers.sql,readonly" \
+            --mount "type=bind,source=$GITHUB_WORKSPACE/scripts/backup/fixtures/isolated_supabase_auth_role_login.sql,target=/docker-entrypoint-initdb.d/init-scripts/99-roles.sql,readonly" \
             --env POSTGRES_PASSWORD=ephemeral-not-for-use \
             --env POSTGRES_DB=postgres \
             supabase/postgres:17.6.1.136 >/dev/null
@@ -103,9 +103,19 @@ jobs:
           docker cp "$RUNNER_TEMP/insureit-db-restore/roles.sql" insureit-restore-check:/tmp/roles.sql
           docker cp "$RUNNER_TEMP/insureit-db-restore/schema.sql" insureit-restore-check:/tmp/schema.sql
           docker cp "$RUNNER_TEMP/insureit-db-restore/data.sql" insureit-restore-check:/tmp/data.sql
-          # The four Auth helpers are installed at first boot from the
-          # mounted offline-only SQL before managed schema ownership locks.
-          # Do not grant postgres CREATE on auth or replace platform role grants.
+          # The official Supabase Docker first-boot roles pattern sets a
+          # disposable password for the Auth schema owner (auth admin).
+          # Use only that scoped role to install four read-only JWT helpers.
+          docker cp scripts/backup/fixtures/isolated_supabase_auth_helpers.sql \
+            insureit-restore-check:/tmp/offline-auth-helpers.sql
+          if ! docker exec -u postgres --env PGPASSWORD=ephemeral-not-for-use insureit-restore-check \
+            psql -h 127.0.0.1 -U supabase_auth_admin -X --set ON_ERROR_STOP=1 \
+              -d postgres -f /tmp/offline-auth-helpers.sql \
+            > "$RUNNER_TEMP/restore-auth-bootstrap.log" 2>&1; then
+            python scripts/backup/classify_pg_restore_error.py auth_bootstrap "$RUNNER_TEMP/restore-auth-bootstrap.log"
+            echo "ISOLATED AUTH BOOTSTRAP FAILED: no production resources affected"
+            exit 1
+          fi
           auth_helpers="$(docker exec -u postgres insureit-restore-check psql -X -A -t -d postgres -c \
             "select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname='auth' and p.proname in ('uid','jwt','role','email') and p.pronargs=0;" 2>/dev/null || true)"
           if [ "$auth_helpers" != "4" ]; then
