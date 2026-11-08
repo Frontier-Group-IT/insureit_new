@@ -17,6 +17,7 @@ export type DirectoryPartner = {
   kind: "partner" | "posp" | "misp";
   status: string;
   branches: { id: string; name: string; code: string | null }[];
+  associates: { id: string; name: string; designation: string | null; role: string | null; status: string }[];
 };
 
 type ChartNode = {
