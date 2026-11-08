@@ -103,7 +103,10 @@ jobs:
             echo "ISOLATED RESTORE FAILED: no public tables restored"
             exit 1
           fi
-          echo "ISOLATED RESTORE PASSED: public_table_count=$count"
+          echo "Isolated public schema table count checked"
+          python scripts/backup/verify_postgres_offline_row_counts.py \
+            "$RUNNER_TEMP/insureit-db-restore" insureit-restore-check
+          echo "ISOLATED RESTORE PASSED: public table count and archived auth/storage row counts verified"
       - name: Remove temporary SQL and isolated database
         if: always()
         run: |
