@@ -13,6 +13,13 @@ assert(policiesPage.includes("includeActionRequired: canReviewPolicyIntakes"), "
 assert(policiesPage.includes("loadPolicyIntakeReviewSummary(admin, {"), "Policy Register must pass the authorized scope to intake summary");
 assert(policiesPage.includes("PolicyIntakePolicyRegisterLinksPortal"), "Policy Register must mount the Policy Intake quick-link portal");
 
+const duplicateDetector = read("lib/policy-intake-duplicate.ts");
+assert(duplicateDetector.includes('const lookupNumbers = Array.from(new Set([...normalizedNumbers, ...rawNumbers]))'), "Registered policy search must include original OCR formatting alongside canonical values");
+assert(duplicateDetector.includes('.in("policy_no_normalized", lookupNumbers)'), "Look up canonical and legacy formatted normalized policy numbers");
+assert(duplicateDetector.includes('.in("policy_no", lookupNumbers)'), "Also search the original registered policy number");
+assert(duplicateDetector.includes("normalizePolicyNumber(policy.policy_no_normalized ?? policy.policy_no ?? \"\")"), "Always compare duplicate candidates after canonical normalization");
+assert(duplicateDetector.includes("canonicalPolicyResult.error || formattedPolicyResult.error || intakeResult.error"), "Failed duplicate checks must fail closed");
+
 const summary = read("lib/policy-intake-review-summary.ts");
 assert(summary.includes("actionRequired: number | null"), "Policy Register summary must support hiding reviewer-only Action Required");
 assert(summary.includes("proposalPending: number | null"), "Policy Register summary must expose the Life / Health Case Register pending count");
