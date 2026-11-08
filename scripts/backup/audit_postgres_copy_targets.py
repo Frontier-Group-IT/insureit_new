@@ -98,7 +98,7 @@ FROM (
 
 
 def isolated_catalog(container):
-    if container != "insureit-restore-check":
+    if container not in ("insureit-restore-check", "insureit-fixture-smoke"):
         raise ValueError("Only isolated INSUREIT recovery container is allowed")
     process = subprocess.run(
         ["docker", "exec", "-u", "postgres", container, "psql",
@@ -130,8 +130,8 @@ def verify_targets(targets, catalog):
 
 
 def main():
-    if len(sys.argv) != 3 or sys.argv[2] != "insureit-restore-check":
-        raise ValueError("Usage: audit_postgres_copy_targets.py DATA_SQL insureit-restore-check")
+    if len(sys.argv) != 3 or sys.argv[2] not in ("insureit-restore-check", "insureit-fixture-smoke"):
+        raise ValueError("Usage: audit_postgres_copy_targets.py DATA_SQL OFFLINE_CONTAINER")
     targets = copy_destinations(sys.argv[1])
     catalog = isolated_catalog(sys.argv[2])
     failures = verify_targets(targets, catalog)
