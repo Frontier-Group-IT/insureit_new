@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import { FormSubmitButton } from "@/components/form-submit-button";
-import { createEmployee, sendEmployeePortalInvite, updateEmployee, updateEmployeePortalRole, type EmployeeActionState } from "./actions";
+import { createEmployee, sendEmployeePortalInvite, updateEmployee, updateEmployeeProfile, updateEmployeePortalRole, type EmployeeActionState } from "./actions";
 
 export type EmployeeRow = {
   id: string;
@@ -68,7 +68,7 @@ export function EmployeeCreateForm({ managers, portalRoles }: { managers: Manage
 }
 
 export function EmployeeEditForm({ employee, managers, compact = false }: { employee: EmployeeRow; managers: ManagerOption[]; compact?: boolean }) {
-  const action = updateEmployee.bind(null, employee.id);
+  const action = (compact ? updateEmployeeProfile : updateEmployee).bind(null, employee.id);
   const [state, formAction] = useActionState(action, initialEmployeeActionState);
   return (
     <form action={formAction} className="space-y-4">
