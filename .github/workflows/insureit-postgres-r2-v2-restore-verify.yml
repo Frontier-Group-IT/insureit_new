@@ -55,6 +55,18 @@ jobs:
             echo "V2 OFFLINE RESTORE FAILED: PostgreSQL startup"
             exit 1
           fi
+          # Validate the authenticated complete-dump TOC before executing
+          # any restored customer SQL in the isolated container.
+          docker cp "$RUNNER_TEMP/insureit-db-v2-restore/database.dump" \
+            insureit-v2-restore-check:/tmp/database.dump
+          if ! docker exec -u postgres insureit-v2-restore-check \
+            pg_restore --list /tmp/database.dump \
+            > "$RUNNER_TEMP/insureit-db-v2-restore/private-toc.txt" 2>/dev/null; then
+            echo "V2 CUSTOM DUMP REJECTED: could not inspect TOC"
+            exit 1
+          fi
+          python scripts/backup/audit_postgres_v2_toc.py \
+            "$RUNNER_TEMP/insureit-db-v2-restore/private-toc.txt"
           docker cp scripts/backup/fixtures/isolated_supabase_roles.sql \
             insureit-v2-restore-check:/tmp/offline-roles.sql
           docker cp "$RUNNER_TEMP/insureit-db-v2-restore/roles.sql" \
