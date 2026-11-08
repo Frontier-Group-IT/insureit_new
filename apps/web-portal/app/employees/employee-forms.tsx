@@ -67,12 +67,12 @@ export function EmployeeCreateForm({ managers, portalRoles }: { managers: Manage
   );
 }
 
-export function EmployeeEditForm({ employee, managers }: { employee: EmployeeRow; managers: ManagerOption[] }) {
+export function EmployeeEditForm({ employee, managers, compact = false }: { employee: EmployeeRow; managers: ManagerOption[]; compact?: boolean }) {
   const action = updateEmployee.bind(null, employee.id);
   const [state, formAction] = useActionState(action, initialEmployeeActionState);
   return (
     <form action={formAction} className="space-y-4">
-      <EmployeeFields employee={employee} managers={managers} />
+      <EmployeeFields employee={employee} managers={managers} compact={compact} />
       <ActionMessage state={state} />
       <FormSubmitButton label="Save changes" pendingLabel="Saving" className="inline-flex h-9 items-center justify-center rounded-md bg-[#071D49] px-4 text-[11px] font-semibold text-white disabled:opacity-70" />
     </form>
@@ -148,9 +148,9 @@ export function EmployeePortalInviteForm({ employee, portalRoles }: { employee: 
   );
 }
 
-function EmployeeFields({ employee, managers }: { employee?: EmployeeRow; managers: ManagerOption[] }) {
+function EmployeeFields({ employee, managers, compact = false }: { employee?: EmployeeRow; managers: ManagerOption[]; compact?: boolean }) {
   return (
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+    <div className={compact ? "grid gap-3 sm:grid-cols-2" : "grid gap-3 sm:grid-cols-2 lg:grid-cols-4"}>
       <label className={labelClass}>Employee code<input name="employee_code" defaultValue={employee?.employee_code ?? ""} className={inputClass} placeholder="SIBL/0015" required /></label>
       <label className={`${labelClass} sm:col-span-2`}>Full name<input name="full_name" defaultValue={employee?.full_name ?? ""} className={inputClass} required /></label>
       <label className={labelClass}>Mobile<input name="phone" defaultValue={employee?.phone ?? ""} className={inputClass} inputMode="tel" placeholder="+91" /></label>
