@@ -45,8 +45,8 @@ export function EmployeeOrgchartDetails({
   ];
 
   return <div className="absolute inset-0 z-40 flex justify-end" data-testid="employee-details-drawer">
-    <button aria-label="Close employee details" type="button" onClick={onClose} className="absolute inset-0 cursor-default bg-[#102846]/20 backdrop-blur-[1px]" />
-    <aside role="dialog" aria-modal="true" aria-labelledby="orgchart-details-heading" className="relative z-10 flex h-full w-full max-w-[560px] flex-col border-l border-[#DCE5EF] bg-white shadow-[-14px_0_35px_rgba(14,36,64,0.15)]">
+    <button aria-label="Close employee details" type="button" onClick={onClose} className="org-drawer-backdrop absolute inset-0 cursor-default bg-[#102846]/20 backdrop-blur-[1px]" />
+    <aside role="dialog" aria-modal="true" aria-labelledby="orgchart-details-heading" className="org-drawer-panel relative z-10 flex h-full w-full max-w-[560px] flex-col border-l border-[#DCE5EF] bg-white shadow-[-14px_0_35px_rgba(14,36,64,0.15)]">
       <header className="flex items-center justify-between gap-3 border-b border-[#E5EDF6] px-5 py-4">
         <div><p className="text-[10px] font-semibold uppercase tracking-wide text-[#7588A0]">Employee workspace</p><h2 id="orgchart-details-heading" className="text-[16px] font-bold text-[#112E56]">{employee.full_name}</h2></div>
         <button ref={closeRef} type="button" aria-label="Close details panel" onClick={onClose} className="rounded-md border border-[#DDE6F0] p-2 text-[#536D89] hover:bg-[#F3F7FC]"><X className="h-4 w-4" /></button>
@@ -65,6 +65,7 @@ export function EmployeeOrgchartDetails({
         {tabs.map(({ key, label }) => <button key={key} type="button" role="tab" aria-selected={tab === key} onClick={() => { setTab(key); setEditing(false); }} className={`shrink-0 rounded-md px-3 py-2 text-[11px] font-semibold ${tab === key ? "bg-[#153762] text-white" : "text-[#58708E] hover:bg-[#F0F5FB]"}`}>{label}</button>)}
       </div>
       <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-5">
+        <div key={`${employee.id}-${tab}`} className="org-reveal space-y-4">
         {tab === "profile" ? <>
           <div className="flex items-start justify-between gap-2">
             <h3 className="text-[12px] font-bold text-[#1C426E]">Employee information</h3>
@@ -103,6 +104,7 @@ export function EmployeeOrgchartDetails({
           <p className="text-[10px] leading-4 text-[#73869D]">This section uses existing portal-account permissions. Editing employee details does not grant role-management privileges.</p>
           {employee.profile_id ? <EmployeePortalRoleForm key={employee.id} employee={employee} portalRoles={portalRoles} /> : <EmployeePortalInviteForm key={employee.id} employee={employee} portalRoles={portalRoles} />}
         </> : null}
+        </div>
       </div>
       <footer className="border-t border-[#E5EDF6] bg-[#F9FBFD] px-5 py-3 text-[10px] text-[#8091A6]">Permanent employee deletion is not available in the Organization Explorer.</footer>
     </aside>
