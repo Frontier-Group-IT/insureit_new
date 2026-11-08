@@ -130,10 +130,15 @@ jobs:
             # data COPY stage; this is safe ONLY in the isolated disposable DB.
             if [ "$part" = data ]; then
               if ! timeout 600 docker exec -u postgres insureit-restore-check \
-                psql -X --single-transaction --set ON_ERROR_STOP=1 --dbname postgres \
+                psql -X --single-transaction --set ON_ERROR_STOP=1 --set VERBOSITY=verbose \
+                  --set SHOW_CONTEXT=never --dbname postgres \
                   --command "SET session_replication_role = replica" --file "/tmp/$part.sql" \
                 > "$RUNNER_TEMP/restore-$part.log" 2>&1; then
                 python scripts/backup/classify_pg_restore_error.py "$part" "$RUNNER_TEMP/restore-$part.log"
+                # PostgreSQL SQLSTATE from the FIRST strict COPY failure is
+                # more useful than thousands of cascading replay errors.
+                # Print only a fixed category, SQLSTATE and input line.
+                python scripts/backup/diagnose_pg_restore_data.py "$RUNNER_TEMP/restore-$part.log"
                 # Diagnostic-only COPY replay in isolated network-disabled DB.
                 # The preceding strict transaction has rolled back on failure.
                 # Keep any raw COPY/SQL output private and always fail the job.
