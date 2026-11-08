@@ -85,6 +85,8 @@ jobs:
           assert 'isolated_supabase_roles.sql' in steps_text
           assert 'supabase/postgres:17.6.1.136' in steps_text
           assert 'pg_available_extensions' in steps_text
+          assert 'isolated_supabase_extensions.sql' in steps_text
+          assert 'required_extension_installation' in steps_text
           assert 'required_extension_availability' in steps_text
           assert '--network none' in steps_text
           assert 'audit_postgres_archive_coverage.py' in steps_text
@@ -133,4 +135,18 @@ jobs:
             echo "OFFLINE FIXTURE SMOKE FAILED; no SQL logged"
             exit 1
           fi
-          echo "OFFLINE FIXTURE SMOKE PASSED: role names initialized without production secrets"
+          docker cp scripts/backup/fixtures/isolated_supabase_extensions.sql insureit-fixture-smoke:/tmp/offline-extensions.sql
+          if ! docker exec -u postgres insureit-fixture-smoke \
+            psql -X --set ON_ERROR_STOP=1 -d postgres -f /tmp/offline-extensions.sql \
+            > "$RUNNER_TEMP/fixture-smoke.log" 2>&1; then
+            python scripts/backup/classify_pg_restore_error.py extensions "$RUNNER_TEMP/fixture-smoke.log"
+            echo "OFFLINE EXTENSION SMOKE FAILED; no SQL logged"
+            exit 1
+          fi
+          installed="$(docker exec -u postgres insureit-fixture-smoke psql -X -A -t -d postgres -c \
+            "select count(*) from pg_extension where extname in ('hypopg','index_advisor','pg_stat_statements','pg_trgm','pgcrypto','supabase_vault','uuid-ossp');")"
+          if [ "$installed" != "7" ]; then
+            echo "OFFLINE EXTENSION SMOKE FAILED: incomplete extension initialization"
+            exit 1
+          fi
+          echo "OFFLINE FIXTURE + EXTENSION SMOKE PASSED: seven extensions installed, no production secrets"
