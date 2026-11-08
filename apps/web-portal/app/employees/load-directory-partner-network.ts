@@ -57,6 +57,23 @@ export async function loadDirectoryPartnerNetwork(visibleEmployeeIds: string[]):
     }
   }
 
+  // Load only accounts attached to intermediaries in the viewer-scoped register.
+  // Never return authentication IDs, emails, phones or addresses in this directory view.
+  type Associate = { id: string; intermediary_id: string; name: string; designation: string | null; role: string | null; status: string };
+  const associates = new Map<string, DirectoryPartner["associates"]>();
+  const intermediaryIds = [...new Set(intermediaryRows.map((row) => row.id))];
+  for (let i = 0; i < intermediaryIds.length; i += 100) {
+    const { data, error } = await admin.from("partner_portal_associate_accounts")
+      .select("id,intermediary_id,name,designation,role,status")
+      .in("intermediary_id", intermediaryIds.slice(i, i + 100))
+      .returns<Associate[]>();
+    if (error) return { partners: [], error: true };
+    for (const account of data ?? []) {
+      const list = associates.get(account.intermediary_id) ?? [];
+      if (!list.some((item) => item.id === account.id)) list.push({ id: account.id, name: account.name, designation: account.designation, role: account.role, status: account.status });
+      associates.set(account.intermediary_id, list);
+    }
+  }
   const visible = new Set(visibleEmployeeIds);
   const result: DirectoryPartner[] = [];
   const seen = new Set<string>();
@@ -83,6 +100,7 @@ export async function loadDirectoryPartnerNetwork(visibleEmployeeIds: string[]):
       kind,
       status: app.partner_status ?? intermediary.account_status,
       branches: app.partner_record_id ? branches.get(app.partner_record_id) ?? [] : [],
+      associates: (associates.get(intermediary.id) ?? []).sort((a, b) => a.name.localeCompare(b.name)),
     });
     seen.add(intermediary.id);
   }

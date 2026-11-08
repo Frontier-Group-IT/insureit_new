@@ -55,7 +55,7 @@ export function EmployeeDirectoryWorkspace({ employees, partners, partnerNetwork
         </div>
       </header>
       {loadError ? <p className="m-4 rounded-md border border-red-200 bg-red-50 p-3 text-[11px] text-red-700">{loadError}</p> : view === "tree" ? <>
-        <EmployeeOrganizationTree employees={visibleEmployees} partners={partners} query={query} />
+        <EmployeeOrganizationTree employees={visibleEmployees} partners={partners} query={query} managers={managers} portalRoles={portalRoles} canManage={canManage} canManagePortalAccess={canManagePortalAccess} />
         {partnerNetworkError ? <p className="mx-4 mb-3 text-[10px] text-amber-700">Partner network is temporarily unavailable. Employee hierarchy is still displayed.</p> : null}
       </> : filtered.length ? <div className="px-4 pb-4"><EmployeeTable employees={filtered} managers={managers} portalRoles={portalRoles} canManage={canManage} canManagePortalAccess={canManagePortalAccess} /></div> : <div className="m-4 rounded-md border border-dashed border-[#CBD8E8] bg-[#F8FBFF] p-8 text-center text-[11px] text-[#667085]">No employees match these filters.</div>}
     </section>

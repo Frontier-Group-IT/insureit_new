@@ -17,6 +17,7 @@ export type DirectoryPartner = {
   kind: "partner" | "posp" | "misp";
   status: string;
   branches: { id: string; name: string; code: string | null }[];
+  associates: { id: string; name: string; designation: string | null; role: string | null; status: string }[];
 };
 
 type ChartNode = {
@@ -75,7 +76,7 @@ function initials(name: string) {
   return name.trim().split(/\s+/).slice(0, 2).map((part) => part[0] ?? "").join("").toUpperCase();
 }
 
-export function EmployeeOrganizationTree({ employees, partners, query }: { employees: EmployeeRow[]; partners: DirectoryPartner[]; query: string }) {
+export function EmployeeOrganizationTree({ employees, partners, query, managers, portalRoles, canManage, canManagePortalAccess }: { employees: EmployeeRow[]; partners: DirectoryPartner[]; query: string; managers: Pick<EmployeeRow, "id" | "employee_code" | "full_name">[]; portalRoles: { value: string; label: string }[]; canManage: boolean; canManagePortalAccess: boolean }) {
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set(employees.filter((employee) => !employee.reporting_manager_id || !employees.some((manager) => manager.id === employee.reporting_manager_id)).map((employee) => `employee:${employee.id}`)));
   const [showPartners, setShowPartners] = useState(true);
   const [mode, setMode] = useState<"overview" | "team" | "full">("team");
@@ -311,6 +312,6 @@ export function EmployeeOrganizationTree({ employees, partners, query }: { emplo
         </div>
       )}
     </div>
-    <EmployeeOrgchartDetails employee={selectedDetails} manager={selectedDetails?.reporting_manager_id ? employeeById.get(selectedDetails.reporting_manager_id) : undefined} reports={detailReports} partners={detailPartners} onClose={closeDetails} onFocus={navigateToEmployee} />
+    <EmployeeOrgchartDetails employee={selectedDetails} manager={selectedDetails?.reporting_manager_id ? employeeById.get(selectedDetails.reporting_manager_id) : undefined} reports={detailReports} partners={detailPartners} managers={managers} portalRoles={portalRoles} canManage={canManage} canManagePortalAccess={canManagePortalAccess} onClose={closeDetails} onFocus={navigateToEmployee} />
   </div>;
 }

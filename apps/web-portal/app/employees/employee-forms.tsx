@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import { FormSubmitButton } from "@/components/form-submit-button";
-import { createEmployee, sendEmployeePortalInvite, updateEmployee, updateEmployeePortalRole, type EmployeeActionState } from "./actions";
+import { createEmployee, sendEmployeePortalInvite, updateEmployee, updateEmployeeProfile, updateEmployeePortalRole, type EmployeeActionState } from "./actions";
 
 export type EmployeeRow = {
   id: string;
@@ -67,12 +67,12 @@ export function EmployeeCreateForm({ managers, portalRoles }: { managers: Manage
   );
 }
 
-export function EmployeeEditForm({ employee, managers }: { employee: EmployeeRow; managers: ManagerOption[] }) {
-  const action = updateEmployee.bind(null, employee.id);
+export function EmployeeEditForm({ employee, managers, compact = false }: { employee: EmployeeRow; managers: ManagerOption[]; compact?: boolean }) {
+  const action = (compact ? updateEmployeeProfile : updateEmployee).bind(null, employee.id);
   const [state, formAction] = useActionState(action, initialEmployeeActionState);
   return (
     <form action={formAction} className="space-y-4">
-      <EmployeeFields employee={employee} managers={managers} />
+      <EmployeeFields employee={employee} managers={managers} compact={compact} />
       <ActionMessage state={state} />
       <FormSubmitButton label="Save changes" pendingLabel="Saving" className="inline-flex h-9 items-center justify-center rounded-md bg-[#071D49] px-4 text-[11px] font-semibold text-white disabled:opacity-70" />
     </form>
@@ -148,10 +148,10 @@ export function EmployeePortalInviteForm({ employee, portalRoles }: { employee: 
   );
 }
 
-function EmployeeFields({ employee, managers }: { employee?: EmployeeRow; managers: ManagerOption[] }) {
+function EmployeeFields({ employee, managers, compact = false }: { employee?: EmployeeRow; managers: ManagerOption[]; compact?: boolean }) {
   return (
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-      <label className={labelClass}>Employee code<input name="employee_code" defaultValue={employee?.employee_code ?? ""} className={inputClass} placeholder="SIBL/0015" required /></label>
+    <div className={compact ? "grid gap-3 sm:grid-cols-2" : "grid gap-3 sm:grid-cols-2 lg:grid-cols-4"}>
+      {compact && employee ? <label className={labelClass}>Employee code<input value={employee.employee_code} readOnly aria-readonly="true" className={`${inputClass} bg-[#F2F5F9] text-[#60758D]`} /><input type="hidden" name="employee_code" value={employee.employee_code} /></label> : <label className={labelClass}>Employee code<input name="employee_code" defaultValue={employee?.employee_code ?? ""} className={inputClass} placeholder="SIBL/0015" required /></label>}
       <label className={`${labelClass} sm:col-span-2`}>Full name<input name="full_name" defaultValue={employee?.full_name ?? ""} className={inputClass} required /></label>
       <label className={labelClass}>Mobile<input name="phone" defaultValue={employee?.phone ?? ""} className={inputClass} inputMode="tel" placeholder="+91" /></label>
       <label className={`${labelClass} sm:col-span-2`}>Work email<input name="email" defaultValue={employee?.email ?? ""} className={inputClass} type="email" /></label>
@@ -159,14 +159,18 @@ function EmployeeFields({ employee, managers }: { employee?: EmployeeRow; manage
       <label className={labelClass}>Designation<input name="designation" defaultValue={employee?.designation ?? ""} className={inputClass} required /></label>
       <label className={labelClass}>Vertical<input name="vertical" defaultValue={employee?.vertical ?? ""} className={inputClass} placeholder="All" /></label>
       <label className={labelClass}>Location<input name="location" defaultValue={employee?.location ?? ""} className={inputClass} placeholder="Pan India" /></label>
-      <label className={`${labelClass} sm:col-span-2`}>
+      {compact && employee ? <>
+        <input type="hidden" name="reporting_manager_id" value={employee.reporting_manager_id ?? ""} />
+        <input type="hidden" name="reporting_manager_employee_code" value={employee.reporting_manager_employee_code ?? ""} />
+        <p className="sm:col-span-2 rounded-md border border-[#DCE5EE] bg-[#F5F8FC] px-3 py-2 text-[10px] text-[#61768D]">Reporting changes are reviewed separately. This editor preserves the current manager.</p>
+      </> : <>      <label className={`${labelClass} sm:col-span-2`}>
         Reporting manager
         <select name="reporting_manager_id" defaultValue={employee?.reporting_manager_id ?? ""} className={inputClass}>
           <option value="">No linked manager yet</option>
           {managers.filter((manager) => manager.id !== employee?.id).map((manager) => <option key={manager.id} value={manager.id}>{manager.full_name} ({manager.employee_code})</option>)}
         </select>
       </label>
-      <label className={`${labelClass} sm:col-span-2`}>Pending manager code<input name="reporting_manager_employee_code" defaultValue={employee?.reporting_manager_employee_code ?? ""} className={inputClass} placeholder="Use only when the manager is not onboarded" /></label>
+      <label className={`${labelClass} sm:col-span-2`}>Pending manager code<input name="reporting_manager_employee_code" defaultValue={employee?.reporting_manager_employee_code ?? ""} className={inputClass} placeholder="Use only when the manager is not onboarded" /></label></>}
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import "./employee-network-associates-workspace-regression.mjs";
 import "./employee-orgchart-explorer-phase45-regression.mjs";
 import "./employee-orgchart-focus-ux-regression.mjs";
 import "./employee-directory-orgchart-reference-regression.mjs";

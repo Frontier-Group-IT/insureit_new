@@ -233,6 +233,35 @@ export async function updateEmployee(
   }
 }
 
+// The compact Organization Explorer editor only changes profile fields.
+// Never trust hidden or read-only browser inputs for identity or manager links.
+export async function updateEmployeeProfile(
+  employeeId: string,
+  previousState: EmployeeActionState,
+  submittedData: FormData,
+): Promise<EmployeeActionState> {
+  try {
+    await requireEmployeeManager();
+    const supabase = await createServerSupabaseClient();
+    const { data: current, error } = await supabase.from("employees")
+      .select("employee_code,reporting_manager_id,reporting_manager_employee_code")
+      .eq("id", employeeId)
+      .single<{ employee_code: string; reporting_manager_id: string | null; reporting_manager_employee_code: string | null }>();
+    if (error || !current) return { status: "error", message: "Employee record could not be verified. No changes were saved." };
+    const safeData = new FormData();
+    for (const key of ["full_name", "phone", "email", "department", "designation", "vertical", "location"]) {
+      const value = submittedData.get(key);
+      if (typeof value === "string") safeData.set(key, value);
+    }
+    safeData.set("employee_code", current.employee_code);
+    safeData.set("reporting_manager_id", current.reporting_manager_id ?? "");
+    safeData.set("reporting_manager_employee_code", current.reporting_manager_employee_code ?? "");
+    return await updateEmployee(employeeId, previousState, safeData);
+  } catch (error) {
+    return { status: "error", message: friendlyError(error instanceof Error ? error.message : "Could not update employee.") };
+  }
+}
+
 export async function sendEmployeePortalInvite(
   employeeId: string,
   _previousState: EmployeeActionState,

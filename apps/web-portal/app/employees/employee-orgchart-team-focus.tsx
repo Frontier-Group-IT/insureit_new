@@ -5,6 +5,7 @@ import { ArrowLeft, Building2, ChevronDown, ChevronRight, Handshake, Network, Us
 import Link from "next/link";
 import type { EmployeeRow } from "./employee-forms";
 import type { DirectoryPartner } from "./employee-organization-tree";
+import { PartnerRelationships } from "./partner-relationships";
 
 const PAGE_SIZE = 6;
 const normalize = (value: string | null | undefined) => (value ?? "").trim().toLocaleLowerCase();
@@ -154,7 +155,7 @@ export function EmployeeOrgchartTeamFocus({
           {partnersShown.map((partner) => <div key={partner.id} className="min-w-0 rounded-lg border border-[#D8E9E1] bg-[#FAFFFC] p-3">
             <div className="flex items-center gap-2"><Building2 className="h-4 w-4 text-[#347966]" /><Link href={`/intermediaries/applications/${partner.applicationId}`} className="truncate text-[11px] font-semibold text-[#1F5361] hover:underline">{partner.name}</Link></div>
             <p className="mt-1 text-[9.5px] text-[#69887D]">{partner.kind.toUpperCase()} · {partner.code || "Registration pending"} · {partner.status.replaceAll("_", " ")}</p>
-            {partner.branches.length ? <details className="mt-2 text-[10px] text-[#347966]"><summary className="cursor-pointer">{partner.branches.length} branches</summary><ul className="mt-1 space-y-1">{partner.branches.map((branch) => <li key={branch.id}>{branch.name}</li>)}</ul></details> : null}
+            <PartnerRelationships partner={partner} />
           </div>)}
         </div>
         {partnerPages > 1 ? <div className="mt-3 flex items-center justify-center gap-3 text-[10px]">
