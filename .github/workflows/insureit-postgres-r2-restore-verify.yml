@@ -144,6 +144,17 @@ jobs:
               psql -X --set ON_ERROR_STOP=1 --dbname postgres --file "/tmp/$part.sql" \
               > "$RUNNER_TEMP/restore-$part.log" 2>&1; then
               python scripts/backup/classify_pg_restore_error.py "$part" "$RUNNER_TEMP/restore-$part.log"
+              if [ "$part" = schema ]; then
+                # A second, bounded diagnostic-only replay in the same disposable
+                # --network none container collects multiple SQL error classes,
+                # so repeated manual runs don't reveal only one blocker.
+                # This NEVER bypasses the strict failure or publishes raw SQL.
+                timeout 240 docker exec -u postgres insureit-restore-check \
+                  psql -X --set ON_ERROR_STOP=0 --dbname postgres --file /tmp/schema.sql \
+                  > "$RUNNER_TEMP/restore-schema-diagnostics.log" 2>&1 || true
+                python scripts/backup/summarize_pg_restore_errors.py \
+                  "$RUNNER_TEMP/restore-schema-diagnostics.log" || true
+              fi
               echo "ISOLATED RESTORE INCOMPLETE: component=$part; restore blocked; existing R2 archive preserved"
               exit 1
             fi
