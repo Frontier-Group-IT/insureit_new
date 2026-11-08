@@ -25,7 +25,7 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m pip install boto3==1.35.99 cryptography==44.0.2 pyyaml==6.0.2
-      - run: python -m py_compile scripts/backup/supabase_storage_to_r2.py scripts/backup/verify_r2_restore.py scripts/backup/monitor_github_backup.py scripts/backup/postgres_to_r2.py scripts/backup/verify_postgres_r2_restore.py scripts/backup/classify_pg_restore_error.py
+      - run: python -m py_compile scripts/backup/supabase_storage_to_r2.py scripts/backup/verify_r2_restore.py scripts/backup/monitor_github_backup.py scripts/backup/postgres_to_r2.py scripts/backup/verify_postgres_r2_restore.py scripts/backup/classify_pg_restore_error.py scripts/backup/audit_postgres_archive_coverage.py
       - run: python -m unittest discover -s scripts/backup -p 'test_*.py' -v
       - name: Validate workflow safety guard
         run: |
@@ -51,7 +51,7 @@ jobs:
           assert restore['permissions']['contents'] == 'read'
           monitor = yaml.safe_load(pathlib.Path('.github/workflows/insureit-r2-backup-monitor.yml').read_text())
           triggers = monitor.get('on', monitor.get(True, {}))
-          assert triggers['schedule'] == [{'cron': '17 17 * * *'}]
+          assert {'17 17 * * *', '17 */2 * * *'} == {item['cron'] for item in triggers['schedule']}
           assert triggers['workflow_run']['types'] == ['completed']
           assert monitor['permissions']['actions'] == 'read'
           assert monitor['permissions']['issues'] == 'write'
@@ -85,6 +85,7 @@ jobs:
           assert 'pg_available_extensions' in steps_text
           assert 'required_extension_availability' in steps_text
           assert '--network none' in steps_text
+          assert 'audit_postgres_archive_coverage.py' in steps_text
           assert 'verify_postgres_r2_restore.py' in steps_text
           assert 'docker rm --force --volumes' in steps_text
           assert 'DATABASE_URL' not in steps_text and 'SUPABASE_SERVICE_ROLE_KEY' not in steps_text
