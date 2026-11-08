@@ -1,0 +1,54 @@
+/* Scoped, lightweight interactions for the Employee Organization Explorer.
+   Animation is visual only: controls, network permissions and data are unchanged. */
+.insureit-org-motion { --org-ease: cubic-bezier(.22, 1, .36, 1); }
+.insureit-org-motion button:not(:disabled),
+.insureit-org-motion a,
+.insureit-org-motion summary {
+  transition: background-color 180ms ease, border-color 180ms ease,
+    color 180ms ease, box-shadow 200ms ease, transform 200ms var(--org-ease);
+}
+.insureit-org-motion button:not(:disabled):active,
+.insureit-org-motion summary:active { transform: scale(.985); }
+.insureit-org-motion button:focus-visible,
+.insureit-org-motion summary:focus-visible,
+.insureit-org-motion a:focus-visible {
+  outline: 2px solid #5088cf; outline-offset: 2px;
+}
+.insureit-org-motion .org-interactive-card {
+  transition: transform 230ms var(--org-ease), box-shadow 230ms ease, border-color 180ms ease;
+}
+@media (hover: hover) {
+  .insureit-org-motion .org-interactive-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 7px 18px rgba(16, 39, 72, .11);
+  }
+}
+.insureit-org-motion .org-reveal { animation: org-reveal 245ms var(--org-ease) both; }
+.insureit-org-motion .org-drawer-backdrop { animation: org-backdrop 200ms ease-out both; }
+.insureit-org-motion .org-drawer-panel { animation: org-drawer-in 260ms var(--org-ease) both; }
+.insureit-org-motion .org-disclosure-content { animation: org-reveal 220ms var(--org-ease) both; }
+.insureit-org-motion .org-disclosure summary { border-radius: 5px; }
+.insureit-org-motion .org-disclosure[open] summary { color: #17644f; }
+.insureit-org-motion .org-disclosure[open] .org-disclosure-content { transform-origin: top center; }
+.insureit-org-motion .org-mode-panel { animation: org-reveal 240ms var(--org-ease) both; }
+.insureit-org-motion .org-canvas-camera { transition: transform 250ms var(--org-ease); }
+.insureit-org-motion .org-canvas-camera[data-dragging="true"] { transition: none; }
+@keyframes org-reveal {
+  from { opacity: 0; transform: translateY(7px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes org-backdrop { from { opacity: 0; } to { opacity: 1; } }
+@keyframes org-drawer-in {
+  from { opacity: .65; transform: translateX(18px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .insureit-org-motion *,
+  .insureit-org-motion *::before,
+  .insureit-org-motion *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
