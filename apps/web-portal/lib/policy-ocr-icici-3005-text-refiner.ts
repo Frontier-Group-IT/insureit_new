@@ -11,7 +11,7 @@ export function refineIciciBundledTwoWheelerText(
 ): ParsedPolicyResult {
   const firstTwo = pages.slice(0, 2).join("\n");
   if (!/ICICI\s+LOMBARD/i.test(firstTwo)
-    || !/Product\s+Code\s*:\s*3005\b/i.test(firstTwo)
+    || !/Product\s+Code\s*:\s*3005\b/i.test(pages[0] ?? "")
     || !/Bundled\s*[-–—]?\s*Two\s+Wheeler\s+Policy/i.test(firstTwo)) return parsed;
 
   const fields = new Map(parsed.fields.map((field) => [field.key, field]));
