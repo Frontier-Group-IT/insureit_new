@@ -18,6 +18,11 @@ class RestoreDiagnosticsTests(unittest.TestCase):
         self.assertEqual(classify('psql: ERROR: extension "example" is not available'), "extension_missing")
         self.assertEqual(classify("psql: ERROR: permission denied for relation private"), "permission_denied")
 
+    def test_fixture_ambiguity_and_role_privileges_redact_object_names(self):
+        self.assertEqual(classify('psql:/tmp/a.sql:19: ERROR: column reference "secret_name" is ambiguous'), "ambiguous_column")
+        self.assertEqual(classify('psql: ERROR: permission denied to create role "admin_secret"'), "role_creation_denied")
+        self.assertNotIn("secret_name", classify('psql: ERROR: column reference "secret_name" is ambiguous'))
+
     def test_ignores_non_error_content(self):
         self.assertEqual(classify("INSERT INTO customers VALUES ('private');"), "unknown_sql_failure")
 

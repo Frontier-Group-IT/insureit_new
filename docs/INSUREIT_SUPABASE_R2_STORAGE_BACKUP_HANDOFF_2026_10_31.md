@@ -1,3 +1,17 @@
+## 2026-11-08 — Secret-free image smoke reproduced and fixed the role fixture blocker
+
+- Backup-specific PR #4173 initial real-image smoke run #42451286264 **failed** with sanitized `RESTORE DIAGNOSTIC: component=fixture category=reserved_role`, confirming the isolated Supabase image rejected an attempt to create a platform-reserved role. This failure did not decrypt or access R2 archives or connect to production.
+- Fixed only the **offline test fixture** to skip the creation of names beginning with `supabase_`, leaving all corresponding platform permissions unchanged. The existing strict `roles.sql` restore remains responsible for failing on missing dependencies; the fix does not skip archived SQL commands.
+- Follow-up smoke run #42451383092 **passed** on the pinned `supabase/postgres:17.6.1.136` image in a `--network none`, no-port disposable container, and backup unit/static tests passed.
+- This validates offline fixture initialization only. **No end-to-end database recovery has yet passed.** Continue with manual restore after CI/merge approval; verify encrypted archive, schema, data and Auth/Storage counts before enabling scheduled PostgreSQL-to-R2 backups.
+
+## 2026-11-08 — Supabase offline fixture setup failure; reproduce without production secrets
+
+- User's manual isolated R2 restoration on the merged Supabase PostgreSQL image `supabase/postgres:17.6.1.136` passed archive coverage and extension availability `7/7`, but stopped while applying `scripts/backup/fixtures/isolated_supabase_roles.sql` with `ISOLATED ROLE FIXTURE FAILED: offline environment setup incomplete`. Actual database roles/schema/data restoration was not reached. The fixture SQL error is unknown because logs were deliberately private. Do not infer missing production data or corrupted R2 archive.
+- A separate branch `fix/offline-pg-role-fixture-diagnostics-20261108` now classifies *fixture* failures using an allowlist of generic labels only, without printing private SQL, role identifiers, object names or customer content.
+- Added a **secret-free, real-image GitHub CI fixture smoke test**: starts a disposable `supabase/postgres:17.6.1.136` container with `--network none` and no port maps, applies the exact fixture SQL, prints sanitized category on failure and deletes container/logs. This permits reproducing the role precondition independent of encrypted R2 archives.
+- No production Supabase writes, R2 deletions, new paid resources, or automated database backup schedule. Next: inspect CI smoke diagnostic; correct observed fixture issue, obtain all required CI passes, merge only with user approval, rerun full recovery workflow and verify archived Auth/Storage SQL and row counts before enabling daily PostgreSQL exports.
+
 ## 2026-11-08 — Backup frequency and recovery-readiness audit; PR safeguards only
 
 - User requested (1) daily encrypted PostgreSQL archives after restore and coverage validation, (2) improved detection of delayed/missed GitHub backup schedules and (3) authentic recovery checks for roles, schema, records, auth data and Storage metadata. These goals are approved; production database write, R2 deletion, new paid Supabase resource and unverified recovery claims are not.

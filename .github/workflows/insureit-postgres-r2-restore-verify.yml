@@ -75,6 +75,7 @@ jobs:
           if ! docker exec -u postgres insureit-restore-check \
             psql -X --set ON_ERROR_STOP=1 --dbname postgres --file /tmp/offline-fixture-roles.sql \
             > "$RUNNER_TEMP/restore-fixture.log" 2>&1; then
+            python scripts/backup/classify_pg_restore_error.py fixture "$RUNNER_TEMP/restore-fixture.log"
             echo "ISOLATED ROLE FIXTURE FAILED: offline environment setup incomplete"
             exit 1
           fi
