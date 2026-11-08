@@ -72,7 +72,7 @@ export function EmployeeOrgchartDetails({
           </div>
           {editing && canManage ? <div className="rounded-lg border border-[#D6E4F2] bg-[#F8FBFF] p-3">
             <p className="mb-3 text-[10px] text-[#67809E]">Uses the existing authorized employee editor. Reporting changes and employee code corrections should be reviewed carefully before saving.</p>
-            <EmployeeEditForm key={employee.id} employee={employee} managers={managers} />
+            <EmployeeEditForm key={employee.id} employee={employee} managers={managers} compact />
           </div> : <div className="space-y-3">
             <div className="grid grid-cols-2 gap-2">
               <div className="rounded-lg bg-[#F5F8FC] p-3"><p className="text-[9px] uppercase tracking-wide text-[#8A9AAD]">Department</p><p className="mt-1 text-[11px] font-semibold text-[#23456B]">{employee.department}</p></div>
