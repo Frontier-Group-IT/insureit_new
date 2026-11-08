@@ -89,6 +89,8 @@ jobs:
           assert '--network none' in steps_text
           assert 'audit_postgres_archive_coverage.py' in steps_text
           assert 'verify_postgres_offline_row_counts.py' in steps_text
+          assert 'SET session_replication_role = replica' in steps_text
+          assert '--single-transaction' in steps_text
           assert 'verify_postgres_r2_restore.py' in steps_text
           assert 'docker rm --force --volumes' in steps_text
           assert 'DATABASE_URL' not in steps_text and 'SUPABASE_SERVICE_ROLE_KEY' not in steps_text
