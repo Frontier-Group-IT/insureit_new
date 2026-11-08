@@ -39,6 +39,8 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: OCR-only Layout Parser opt-in regression
         run: node scripts/policy-ocr-layout-off-regression.mjs
+      - name: ICICI 3005 OCR-only field regression
+        run: node --experimental-strip-types scripts/policy-ocr-icici-3005-text-regression.mjs
       - name: Operations claim payment-stage authorized write regression
         run: node scripts/claim-payment-stage-authorized-write-regression.mjs
       - name: External Claim Billing workshop bill upload regression
