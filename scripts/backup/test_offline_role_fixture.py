@@ -20,6 +20,14 @@ class OfflineRoleFixtureTests(unittest.TestCase):
         self.assertIn("CONTINUE;", self.sql)
         self.assertIn("The strict roles.sql import will report any missing dependency", self.sql)
 
+    def test_offline_extensions_have_explicit_allowlist(self):
+        extensions = (Path(__file__).parent / "fixtures" /
+                      "isolated_supabase_extensions.sql").read_text()
+        self.assertIn("NEVER execute on a production", extensions)
+        self.assertIn("CREATE EXTENSION IF NOT EXISTS supabase_vault WITH SCHEMA vault", extensions)
+        self.assertEqual(extensions.count("CREATE EXTENSION IF NOT EXISTS"), 7)
+        self.assertNotIn("DROP EXTENSION", extensions)
+
     def test_idempotent_and_offline_only(self):
         self.assertIn("IF NOT EXISTS", self.sql)
         self.assertIn("NEVER apply to the managed INSUREIT database", self.sql)
