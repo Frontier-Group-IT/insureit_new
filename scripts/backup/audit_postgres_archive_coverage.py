@@ -25,7 +25,7 @@ def inspect(roles, schema, data):
         if not p.is_file() or p.stat().st_size == 0:
             raise RuntimeError("Missing SQL backup component")
     sql = data.read_text(encoding="utf-8", errors="replace")
-    markers = {(m.group("schema") or "public").lower(), m.group("table").lower())
+    markers = {((m.group("schema") or "public").lower(), m.group("table").lower())
                for m in COPY.finditer(sql)}
     missing = REQUIRED_DATA - markers
     schema_sql = schema.read_text(encoding="utf-8", errors="replace")
