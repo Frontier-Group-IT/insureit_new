@@ -100,7 +100,7 @@ export function refineIcici3005OutstandingFields(
     const stillMissing = match[1].split(",").map((key) => key.trim())
       .filter((key) => !fields.get(key)?.value?.trim());
     return stillMissing.length
-      ? [`Review required. Missing or uncertain fields: \${stillMissing.join(", ")}.`]
+      ? [`Review required. Missing or uncertain fields: ${stillMissing.join(", ")}.`]
       : [];
   });
   return {
@@ -145,5 +145,5 @@ function isoDate(value: string | undefined): string | null {
   if (!month || year < 2000 || year > 2100) return null;
   const date = new Date(Date.UTC(year, month - 1, day));
   if (date.getUTCFullYear() !== year || date.getUTCMonth() + 1 !== month || date.getUTCDate() !== day) return null;
-  return `\${year}-\${String(month).padStart(2, "0")}-\${String(day).padStart(2, "0")}`;
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
