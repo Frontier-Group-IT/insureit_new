@@ -63,8 +63,8 @@ export function refineIcici3005OutstandingFields(
   const tp = labelledMoney(lines2, /Basic\s+Third\s+Party\s+Liability/i);
   const liabilityTotal = labelledMoney(lines2, /Total\s+Liability\s+Premium\s*\(\s*B\s*\)/i);
   const net = labelledMoney(lines2, /Total\s+Package\s+Premium\s*\(\s*A\s*\+\s*B\s*\)/i);
-  const tax = labelledMoney(lines2, /Total\s+Tax\s+Payable/i);
-  const gross = labelledMoney(lines2, /Total\s+Premium\s+Payable/i);
+  const tax = labelledMoney(lines2, /Total\s+Tax\s+Payable(?:\s+in)?/i);
+  const gross = labelledMoney(lines2, /Total\s+Premium\s+Payable(?:\s+in)?/i);
   const od = number(fields.get("od_premium")?.value)
     ?? labelledMoney(lines2, /Total\s+Own\s+Damage\s+Premium\s*\(\s*A\s*\)/i);
   const cpa = number(fields.get("cpa_premium")?.value);
