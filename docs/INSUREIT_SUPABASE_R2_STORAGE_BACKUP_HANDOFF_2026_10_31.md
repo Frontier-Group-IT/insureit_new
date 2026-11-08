@@ -1,3 +1,9 @@
+## 2026-11-08 — Data import gets same redacted multi-error fallback
+
+- Extended the diagnostic-only replay to the `data.sql` stage, still within the same `--network none` disposable container. Strict `--single-transaction ON_ERROR_STOP=1` is the only success path. On failure, it is rolled back; then a bounded `ON_ERROR_STOP=0` local diagnostic COPY replay (with session trigger bypass only in this isolated DB) collects errors privately.
+- Both schema and data diagnostics publish allowlisted error-category **counts only** via `summarize_pg_restore_errors.py`; no SQL text, object names, customer data or credentials. Any restore error remains a hard workflow failure regardless of secondary diagnosis. Always cleanup removes the data, logs and container.
+- This is for **one-run actionable diagnosis**, not a claim of full Supabase recoverability. Further issues may still require architecture work; do not enable daily PostgreSQL-to-R2 scheduling until full Auth/Storage/public data parity passes.
+
 ## 2026-11-08 — Schema replay fail-closed multi-error diagnostic improvement
 
 - The actual isolated target has exactly three original Supabase Auth functions (`auth.uid`, `auth.role`, `auth.email`); only `auth.jwt` is missing. Do not replace the already platform-owned functions. Corrected isolated bootstrap uses a local disposable Auth admin connection initialized via Supabase's official roles-init pattern, and installs only the production-catalog-verified `auth.jwt() returns jsonb`. Real-image CI `offline_fixture_smoke` passed on run #42455585060 after this correction, without production credentials or network.
