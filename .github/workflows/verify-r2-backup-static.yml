@@ -213,3 +213,30 @@ jobs:
             exit 1
           fi
           echo "OFFLINE AUTH BOOTSTRAP PASSED: 4 helpers and synthetic RLS dependency compiled"
+          # Reproduce an intentionally invalid COPY in this same offline image.
+          # Assert that verbose psql reports the first SQLSTATE and never
+          # expose the private database error text in GitHub logs.
+          docker exec -u postgres insureit-fixture-smoke \
+            psql -X --set ON_ERROR_STOP=1 -d postgres \
+            -c "CREATE TABLE public.insureit_copy_diag_smoke (value uuid);" \
+            > "$RUNNER_TEMP/fixture-smoke.log" 2>&1
+          printf 'COPY public.insureit_copy_diag_smoke (value) FROM stdin;\\ninvalid-uuid-synthetic\\n\\\\.\\n' \
+            > "$RUNNER_TEMP/invalid-copy.sql"
+          docker cp "$RUNNER_TEMP/invalid-copy.sql" insureit-fixture-smoke:/tmp/invalid-copy.sql
+          if docker exec -u postgres insureit-fixture-smoke \
+            psql -X --single-transaction --set ON_ERROR_STOP=1 \
+              --set VERBOSITY=verbose --set SHOW_CONTEXT=never \
+              -d postgres -f /tmp/invalid-copy.sql \
+            > "$RUNNER_TEMP/fixture-smoke.log" 2>&1; then
+            echo "OFFLINE SQLSTATE SMOKE FAILED: deliberately invalid COPY incorrectly succeeded"
+            exit 1
+          fi
+          python scripts/backup/diagnose_pg_restore_data.py \
+            "$RUNNER_TEMP/fixture-smoke.log" > "$RUNNER_TEMP/copy-diagnostic.txt"
+          if ! grep -q 'sqlstate=22P02 category=invalid_text_representation' \
+            "$RUNNER_TEMP/copy-diagnostic.txt"; then
+            echo "OFFLINE SQLSTATE SMOKE FAILED: expected category not detected"
+            exit 1
+          fi
+          echo "OFFLINE SQLSTATE SMOKE PASSED: first COPY failure classified without SQL content"
+
