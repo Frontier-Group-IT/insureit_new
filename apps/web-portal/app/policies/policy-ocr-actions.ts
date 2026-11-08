@@ -11,6 +11,7 @@ import { parsePolicyDocument, type ParsedPolicyField } from "@/lib/policy-ocr-pa
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { refineAdditionalMotorPolicy } from "@/lib/policy-ocr-additional-motor-refiner";
 import { refineIciciLombardMotorPolicy } from "@/lib/policy-ocr-icici-lombard-refiner";
+import { refineIciciBundledTwoWheelerText } from "@/lib/policy-ocr-icici-3005-text-refiner";
 import { refineDigitCommercialPolicyV2 } from "@/lib/policy-ocr-digit-refiner-v2";
 import { refineIffcoCommercialPolicyV2 } from "@/lib/policy-ocr-iffco-refiner-v2";
 import {
@@ -234,14 +235,16 @@ async function extractPolicyFile(
       }
     }
 
+    parsed = refineIciciBundledTwoWheelerText(pages, parsed);
+
     if (!parsed.fields.length) return { ok: false, error: "No supported policy details could be read from this document. Please review the file and enter the details manually if needed." };
 
     return {
       ok: true,
       fields: parsed.fields,
-      model: usedNativePdfVehicleEvidence
-        ? "Google Document AI Enterprise OCR + Layout Parser + native PDF text"
-        : "Google Document AI Enterprise OCR + Layout Parser",
+      model: shouldRunPolicyOcrLayoutParser(file.type)
+        ? "Google Document AI Enterprise OCR + Layout Parser"
+        : "Google Document AI Enterprise OCR (text-only)",
       parserId: parsed.parserId,
       parserVersion: parsed.parserVersion,
       extractionMethod: usedNativePdfVehicleEvidence ? "google_document_ai+native_pdf_text" : "google_document_ai",
