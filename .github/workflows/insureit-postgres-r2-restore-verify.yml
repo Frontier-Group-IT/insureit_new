@@ -34,6 +34,8 @@ jobs:
           R2_BUCKET: insureit-production-backups
           RESTORE_DIR: ${{ runner.temp }}/insureit-db-restore
         run: python -u scripts/backup/verify_postgres_r2_restore.py
+      - name: Audit auth, storage and public schema coverage in decrypted archive
+        run: python scripts/backup/audit_postgres_archive_coverage.py "$RUNNER_TEMP/insureit-db-restore"
       - name: Restore into isolated Supabase PostgreSQL 17 container
         run: |
           set -euo pipefail
