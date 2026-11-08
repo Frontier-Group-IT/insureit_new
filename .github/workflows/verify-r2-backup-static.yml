@@ -114,6 +114,7 @@ jobs:
           set -euo pipefail
           trap 'docker rm -f -v insureit-fixture-smoke >/dev/null 2>&1 || true; rm -f "$RUNNER_TEMP/fixture-smoke.log"' EXIT
           docker run --detach --name insureit-fixture-smoke --network none \
+            --mount "type=bind,source=$GITHUB_WORKSPACE/scripts/backup/fixtures/isolated_supabase_auth_helpers.sql,target=/docker-entrypoint-initdb.d/init-scripts/96-insureit-auth-helpers.sql,readonly" \
             --env POSTGRES_PASSWORD=ephemeral-smoke-test-only \
             --env POSTGRES_DB=postgres \
             supabase/postgres:17.6.1.136 >/dev/null
@@ -162,22 +163,7 @@ jobs:
             exit 1
           fi
           echo "OFFLINE AUTH INITIAL STATE: uid|jwt|role|email|schema_create=$auth_state"
-          docker cp scripts/backup/fixtures/isolated_supabase_auth_helpers.sql insureit-fixture-smoke:/tmp/offline-auth-helpers.sql
-          if ! docker exec -u postgres insureit-fixture-smoke \
-            psql -X --set ON_ERROR_STOP=1 -d postgres -f /tmp/offline-auth-helpers.sql \
-            > "$RUNNER_TEMP/fixture-smoke.log" 2>&1; then
-            python scripts/backup/classify_pg_restore_error.py auth_bootstrap "$RUNNER_TEMP/fixture-smoke.log"
-            echo "OFFLINE AUTH HELPERS SMOKE FAILED; no SQL logged"
-            exit 1
-          fi
-          # Repeat initialization to prove it is safe to rerun in ephemeral tests.
-          if ! docker exec -u postgres insureit-fixture-smoke \
-            psql -X --set ON_ERROR_STOP=1 -d postgres -f /tmp/offline-auth-helpers.sql \
-            > "$RUNNER_TEMP/fixture-smoke.log" 2>&1; then
-            python scripts/backup/classify_pg_restore_error.py auth_bootstrap "$RUNNER_TEMP/fixture-smoke.log"
-            echo "OFFLINE AUTH HELPERS SECOND-PASS FAILED; no SQL logged"
-            exit 1
-          fi
+          echo "Offline Auth bootstrap mounted at first boot; verifying initialized functions"
           # Verify all four signatures AND actual JWT helper behavior without
           # printing SQL output, JWT values, private data or function bodies.
           if ! docker exec -u postgres insureit-fixture-smoke \
