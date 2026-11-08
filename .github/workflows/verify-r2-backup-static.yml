@@ -266,5 +266,21 @@ jobs:
             exit 1
           fi
           echo "OFFLINE COPY COMPATIBILITY SMOKE PASSED: existing table accepted and missing Auth table detected"
+          # Safe structural signal only: current managed Supabase project
+          # has these newer Auth/Storage features. Record Boolean target
+          # compatibility, not customer data or full table definitions.
+          managed_parity="$(docker exec -u postgres insureit-fixture-smoke psql \
+            -X -A -t -d postgres -c \
+            "select (to_regclass('auth.oauth_clients') is not null)::int,
+                    (to_regclass('storage.buckets_vectors') is not null)::int,
+                    (to_regclass('storage.vector_indexes') is not null)::int,
+                    exists(select 1 from information_schema.columns
+                           where table_schema='auth' and table_name='flow_state'
+                             and column_name='oauth_client_state_id')::int;" 2>/dev/null || true)"
+          if ! [[ "$managed_parity" =~ ^[01]\\|[01]\\|[01]\\|[01]$ ]]; then
+            echo "OFFLINE MANAGED SCHEMA PARITY PROBE FAILED"
+            exit 1
+          fi
+          echo "OFFLINE MANAGED SCHEMA PARITY (oauth_clients|buckets_vectors|vector_indexes|flow_state_new_column): $managed_parity"
 
 
