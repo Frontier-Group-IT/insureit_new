@@ -1,3 +1,10 @@
+## 2026-11-08 — Isolated schema SQL now blocked by missing function/type
+
+- User-provided manual restore log confirms encrypted R2 archive and auth/storage archive-marker checks completed previously, Supabase PostgreSQL `17.6.1.136` image started, 7/7 required extensions were **available**, offline role fixture succeeded, and `roles.sql` replay passed. `schema.sql` stopped with sanitized `RESTORE DIAGNOSTIC: component=schema category=missing_function_or_type`. `data.sql` was not attempted. The missing identifier is unknown and must not be invented.
+- A likely compatibility gap is **extension availability versus installation**. Read-only live INSUREIT inventory shows `hypopg`, `index_advisor`, `pg_stat_statements`, `pg_trgm`, `pgcrypto`, `supabase_vault`, and `uuid-ossp` installed, under `extensions` or `vault`. Their availability alone did not prove the isolated database installed them.
+- Branch `fix/pg-restore-offline-extension-init-20261108` adds an explicit, **offline-only**, exact allowlist for installing those seven extensions in the corresponding schemas. A local `pg_extension` count must be 7/7 or the workflow fails before loading SQL. An independent secret-free real-image smoke test checks the same fixture in `--network none` Docker. Errors remain sanitized. Actual app-specific functions and type dependencies may still require further investigation.
+- This does not assert complete Supabase service restoration, correct extension version parity, any restored production data, successful disaster recovery, or successful daily PostgreSQL backups. Existing encrypted R2 archives remain preserved; no production SQL executed and no automatic PostgreSQL backup schedule added.
+
 ## 2026-11-08 — Secret-free image smoke reproduced and fixed the role fixture blocker
 
 - Backup-specific PR #4173 initial real-image smoke run #42451286264 **failed** with sanitized `RESTORE DIAGNOSTIC: component=fixture category=reserved_role`, confirming the isolated Supabase image rejected an attempt to create a platform-reserved role. This failure did not decrypt or access R2 archives or connect to production.
