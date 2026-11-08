@@ -114,6 +114,7 @@ jobs:
           set -euo pipefail
           trap 'docker rm -f -v insureit-fixture-smoke >/dev/null 2>&1 || true; rm -f "$RUNNER_TEMP/fixture-smoke.log"' EXIT
           docker run --detach --name insureit-fixture-smoke --network none \
+            --mount "type=bind,source=$GITHUB_WORKSPACE/scripts/backup/fixtures/isolated_supabase_auth_role_login.sql,target=/docker-entrypoint-initdb.d/init-scripts/99-roles.sql,readonly" \
             --env POSTGRES_PASSWORD=ephemeral-smoke-test-only \
             --env POSTGRES_DB=postgres \
             supabase/postgres:17.6.1.136 >/dev/null
@@ -162,11 +163,19 @@ jobs:
             exit 1
           fi
           echo "OFFLINE AUTH INITIAL STATE: uid|jwt|role|email|schema_create=$auth_state"
-          echo "Testing authorized local Auth admin connection without production secrets"
-          if docker exec -u postgres insureit-fixture-smoke psql -X -U supabase_auth_admin -d postgres -A -t -c "select 1;" > "$RUNNER_TEMP/fixture-smoke.log" 2>&1; then
-            echo "OFFLINE AUTH ADMIN CONNECTION: available"
-          else
-            echo "OFFLINE AUTH ADMIN CONNECTION: unavailable"
+          docker cp scripts/backup/fixtures/isolated_supabase_auth_helpers.sql insureit-fixture-smoke:/tmp/offline-auth-helpers.sql
+          if ! docker exec -u postgres --env PGPASSWORD=ephemeral-smoke-test-only insureit-fixture-smoke \
+            psql -h 127.0.0.1 -U supabase_auth_admin -X --set ON_ERROR_STOP=1 -d postgres \
+              -f /tmp/offline-auth-helpers.sql \
+            > "$RUNNER_TEMP/fixture-smoke.log" 2>&1; then
+            python scripts/backup/classify_pg_restore_error.py auth_bootstrap "$RUNNER_TEMP/fixture-smoke.log"
+            echo "OFFLINE AUTH ADMIN BOOTSTRAP FAILED; no SQL logged"
+            exit 1
           fi
-          echo "Testing local postgres role Auth-schema access (no privilege changes)"
-          echo "OFFLINE BASE IMAGE PRECONDITIONS CHECKED: seven extensions; no production secrets"
+          helpers="$(docker exec -u postgres insureit-fixture-smoke psql -X -A -t -d postgres -c \
+            "select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='auth' and p.pronargs=0 and p.proname in ('uid','jwt','role','email');")"
+          if [ "$helpers" != "4" ]; then
+            echo "OFFLINE AUTH BOOTSTRAP INCOMPLETE: helper count $helpers/4"
+            exit 1
+          fi
+          echo "OFFLINE AUTH BOOTSTRAP PASSED: four helpers created by scoped Auth role"
