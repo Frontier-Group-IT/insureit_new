@@ -36,4 +36,6 @@ jobs:
       - name: Report failed or missing backup through GitHub Issues
         env:
           GH_TOKEN: ${{ github.token }}
-        run: python -u scripts/backup/monitor_github_backup.py
+        run: |
+          python -u scripts/backup/monitor_github_backup.py
+          python -u scripts/backup/monitor_postgres_backup.py
