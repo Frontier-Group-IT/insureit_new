@@ -71,7 +71,7 @@ export function EmployeeOrgchartDetails({
             {canManage ? <button type="button" onClick={() => setEditing((value) => !value)} className="inline-flex items-center gap-1.5 rounded-md border border-[#CCDCEA] bg-white px-3 py-1.5 text-[10px] font-semibold text-[#315E8C] hover:bg-[#EFF6FD]"><Pencil className="h-3.5 w-3.5" />{editing ? "Cancel edit" : "Edit employee"}</button> : null}
           </div>
           {editing && canManage ? <div className="rounded-lg border border-[#D6E4F2] bg-[#F8FBFF] p-3">
-            <p className="mb-3 text-[10px] text-[#67809E]">Uses the existing authorized employee editor. Reporting changes and employee code corrections should be reviewed carefully before saving.</p>
+            <p className="mb-3 text-[10px] text-[#67809E]">Profile details use the existing authorized save workflow. Employee code and reporting changes are locked here pending the separate governed change workflow.</p>
             <EmployeeEditForm key={employee.id} employee={employee} managers={managers} compact />
           </div> : <div className="space-y-3">
             <div className="grid grid-cols-2 gap-2">
