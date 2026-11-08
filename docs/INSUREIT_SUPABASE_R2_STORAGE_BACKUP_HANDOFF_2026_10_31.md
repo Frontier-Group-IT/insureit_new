@@ -1,3 +1,10 @@
+## 2026-11-08 — Secret-free image smoke reproduced and fixed the role fixture blocker
+
+- Backup-specific PR #4173 initial real-image smoke run #42451286264 **failed** with sanitized `RESTORE DIAGNOSTIC: component=fixture category=reserved_role`, confirming the isolated Supabase image rejected an attempt to create a platform-reserved role. This failure did not decrypt or access R2 archives or connect to production.
+- Fixed only the **offline test fixture** to skip the creation of names beginning with `supabase_`, leaving all corresponding platform permissions unchanged. The existing strict `roles.sql` restore remains responsible for failing on missing dependencies; the fix does not skip archived SQL commands.
+- Follow-up smoke run #42451383092 **passed** on the pinned `supabase/postgres:17.6.1.136` image in a `--network none`, no-port disposable container, and backup unit/static tests passed.
+- This validates offline fixture initialization only. **No end-to-end database recovery has yet passed.** Continue with manual restore after CI/merge approval; verify encrypted archive, schema, data and Auth/Storage counts before enabling scheduled PostgreSQL-to-R2 backups.
+
 ## 2026-11-08 — Supabase offline fixture setup failure; reproduce without production secrets
 
 - User's manual isolated R2 restoration on the merged Supabase PostgreSQL image `supabase/postgres:17.6.1.136` passed archive coverage and extension availability `7/7`, but stopped while applying `scripts/backup/fixtures/isolated_supabase_roles.sql` with `ISOLATED ROLE FIXTURE FAILED: offline environment setup incomplete`. Actual database roles/schema/data restoration was not reached. The fixture SQL error is unknown because logs were deliberately private. Do not infer missing production data or corrupted R2 archive.
