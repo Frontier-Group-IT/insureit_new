@@ -10,6 +10,8 @@ on:
       - '.github/workflows/insureit-r2-backup-monitor.yml'
       - '.github/workflows/insureit-postgres-r2-manual.yml'
       - '.github/workflows/insureit-postgres-r2-restore-verify.yml'
+      - '.github/workflows/insureit-postgres-r2-v2-manual.yml'
+      - '.github/workflows/insureit-postgres-r2-v2-restore-verify.yml'
   workflow_dispatch:
 
 permissions:
@@ -25,7 +27,7 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m pip install boto3==1.35.99 cryptography==44.0.2 pyyaml==6.0.2
-      - run: python -m py_compile scripts/backup/supabase_storage_to_r2.py scripts/backup/verify_r2_restore.py scripts/backup/monitor_github_backup.py scripts/backup/monitor_postgres_backup.py scripts/backup/postgres_to_r2.py scripts/backup/verify_postgres_r2_restore.py scripts/backup/classify_pg_restore_error.py scripts/backup/audit_postgres_archive_coverage.py scripts/backup/verify_postgres_offline_row_counts.py scripts/backup/summarize_pg_restore_errors.py scripts/backup/diagnose_pg_restore_data.py scripts/backup/audit_postgres_copy_targets.py
+      - run: python -m py_compile scripts/backup/supabase_storage_to_r2.py scripts/backup/verify_r2_restore.py scripts/backup/monitor_github_backup.py scripts/backup/monitor_postgres_backup.py scripts/backup/postgres_to_r2.py scripts/backup/verify_postgres_r2_restore.py scripts/backup/classify_pg_restore_error.py scripts/backup/audit_postgres_archive_coverage.py scripts/backup/verify_postgres_offline_row_counts.py scripts/backup/summarize_pg_restore_errors.py scripts/backup/diagnose_pg_restore_data.py scripts/backup/audit_postgres_copy_targets.py scripts/backup/postgres_v2_to_r2.py scripts/backup/verify_postgres_v2_r2.py scripts/backup/verify_postgres_v2_rows.py
       - run: python -m unittest discover -s scripts/backup -p 'test_*.py' -v
       - name: Validate workflow safety guard
         run: |
@@ -109,6 +111,26 @@ jobs:
           assert 'docker rm --force --volumes' in steps_text
           assert 'DATABASE_URL' not in steps_text and 'SUPABASE_SERVICE_ROLE_KEY' not in steps_text
           assert 'classify_pg_restore_error.py' in steps_text
+          v2backup = yaml.safe_load(pathlib.Path('.github/workflows/insureit-postgres-r2-v2-manual.yml').read_text())
+          v2restore = yaml.safe_load(pathlib.Path('.github/workflows/insureit-postgres-r2-v2-restore-verify.yml').read_text())
+          for flow, jobname in ((v2backup,'postgres_v2_backup'),(v2restore,'restore_v2')):
+              trig = flow.get('on', flow.get(True, {}))
+              assert 'workflow_dispatch' in trig and 'schedule' not in trig
+              assert flow['permissions']['contents'] == 'read'
+              job_v2 = flow['jobs'][jobname]
+              assert job_v2['environment'] == 'insureit-production-backup'
+              assert 'refs/heads/main' in job_v2['if']
+          backup_steps = str(v2backup['jobs']['postgres_v2_backup']['steps'])
+          restore_steps = str(v2restore['jobs']['restore_v2']['steps'])
+          assert 'pg_dump -Fc' in backup_steps and 'postgres_v2_to_r2.py' in backup_steps
+          assert 'postgresql/v2' in pathlib.Path('scripts/backup/postgres_v2_to_r2.py').read_text()
+          assert '--network none' in restore_steps and 'createdb -T template0' in restore_steps
+          assert '--single-transaction --exit-on-error' in restore_steps
+          assert 'verify_postgres_v2_rows.py' in restore_steps
+          assert 'docker rm -f -v insureit-v2-restore-check' in restore_steps
+          assert 'DATABASE_URL' not in restore_steps and 'SUPABASE_SERVICE_ROLE_KEY' not in restore_steps
+          assert 's3.delete_object' not in pathlib.Path('scripts/backup/postgres_v2_to_r2.py').read_text()
+          print('Manual V2 consistent database recovery workflow guards verified')
           print('Manual offline database recovery rehearsal guards verified')
           PY
 
@@ -284,3 +306,82 @@ jobs:
           echo "OFFLINE MANAGED SCHEMA PARITY (oauth_clients|buckets_vectors|vector_indexes|flow_state_new_column): $managed_parity"
 
 
+
+  offline_v2_smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run synthetic full managed schema, custom dump and strict restore with no network
+        run: |
+          set -euo pipefail
+          trap 'docker rm -f -v insureit-v2-restore-check >/dev/null 2>&1 || true; rm -f "$RUNNER_TEMP/v2-smoke.sql" "$RUNNER_TEMP/v2-smoke-data.sql" "$RUNNER_TEMP/v2-smoke.log"' EXIT
+          docker run -d --name insureit-v2-restore-check --network none \
+            --env POSTGRES_PASSWORD=ephemeral-synthetic-only \
+            --env POSTGRES_DB=postgres \
+            supabase/postgres:17.6.1.136 >/dev/null
+          ready=0
+          for i in $(seq 1 60); do
+            if docker exec insureit-v2-restore-check pg_isready -U postgres >/dev/null 2>&1; then
+              ready=1
+              break
+            fi
+            sleep 2
+          done
+          if [ "$ready" != 1 ]; then
+            echo "V2 SYNTHETIC RESTORE FAILED: container startup"
+            exit 1
+          fi
+          docker exec -u postgres insureit-v2-restore-check createdb -T template0 v2_synthetic
+          cat > "$RUNNER_TEMP/v2-smoke.sql" <<'SYNTHETIC_SQL'
+          CREATE SCHEMA auth;
+          CREATE SCHEMA storage;
+          CREATE SCHEMA supabase_migrations;
+          CREATE TABLE auth.users (id uuid PRIMARY KEY, email text NOT NULL UNIQUE);
+          CREATE TABLE storage.buckets (id text PRIMARY KEY);
+          CREATE TABLE storage.objects (
+            id uuid PRIMARY KEY,
+            bucket_id text NOT NULL REFERENCES storage.buckets(id),
+            owner_id uuid REFERENCES auth.users(id)
+          );
+          CREATE TABLE supabase_migrations.schema_migrations (version text PRIMARY KEY);
+          CREATE TABLE public.motor_policies (
+            id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+            user_id uuid NOT NULL REFERENCES auth.users(id),
+            premium numeric(12,2) NOT NULL CHECK (premium >= 0)
+          );
+          ALTER TABLE public.motor_policies ENABLE ROW LEVEL SECURITY;
+          CREATE POLICY synthetic_read ON public.motor_policies FOR SELECT USING (true);
+          INSERT INTO auth.users VALUES ('00000000-0000-0000-0000-000000000001','synthetic@example.invalid');
+          INSERT INTO storage.buckets VALUES ('synthetic-bucket');
+          INSERT INTO storage.objects VALUES ('00000000-0000-0000-0000-000000000002','synthetic-bucket','00000000-0000-0000-0000-000000000001');
+          INSERT INTO supabase_migrations.schema_migrations VALUES ('20261108');
+          INSERT INTO public.motor_policies(user_id,premium) VALUES ('00000000-0000-0000-0000-000000000001',100.00);
+          SYNTHETIC_SQL
+          docker cp "$RUNNER_TEMP/v2-smoke.sql" insureit-v2-restore-check:/tmp/v2-smoke.sql
+          docker exec -u postgres insureit-v2-restore-check \
+            psql -X -v ON_ERROR_STOP=1 -d v2_synthetic -f /tmp/v2-smoke.sql > "$RUNNER_TEMP/v2-smoke.log" 2>&1
+          docker exec -u postgres insureit-v2-restore-check \
+            pg_dump -Fc -f /tmp/synthetic.dump v2_synthetic > "$RUNNER_TEMP/v2-smoke.log" 2>&1
+          docker exec -u postgres insureit-v2-restore-check createdb -T template0 insureit_verify
+          docker exec -u postgres insureit-v2-restore-check \
+            pg_restore --single-transaction --exit-on-error --no-owner \
+              -d insureit_verify /tmp/synthetic.dump > "$RUNNER_TEMP/v2-smoke.log" 2>&1
+          docker exec -u postgres insureit-v2-restore-check \
+            pg_restore --data-only -f /tmp/v2-smoke-data.sql /tmp/synthetic.dump \
+            > "$RUNNER_TEMP/v2-smoke.log" 2>&1
+          docker cp insureit-v2-restore-check:/tmp/v2-smoke-data.sql "$RUNNER_TEMP/v2-smoke-data.sql"
+          python scripts/backup/verify_postgres_v2_rows.py "$RUNNER_TEMP/v2-smoke-data.sql"
+          policy="$(docker exec -u postgres insureit-v2-restore-check \
+            psql -XAt -d insureit_verify -c \
+            "select count(*) from pg_policies where schemaname='public' and tablename='motor_policies';")"
+          if [ "$policy" != 1 ]; then
+            echo "V2 SYNTHETIC RESTORE FAILED: RLS policy missing"
+            exit 1
+          fi
+          echo "V2 SYNTHETIC FULL RESTORE PASSED: clean template0 + managed schema + strict data + all COPY parity + RLS"
