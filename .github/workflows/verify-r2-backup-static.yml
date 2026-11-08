@@ -220,8 +220,8 @@ jobs:
             psql -X --set ON_ERROR_STOP=1 -d postgres \
             -c "CREATE TABLE public.insureit_copy_diag_smoke (value uuid);" \
             > "$RUNNER_TEMP/fixture-smoke.log" 2>&1
-          printf 'COPY public.insureit_copy_diag_smoke (value) FROM stdin;\\ninvalid-uuid-synthetic\\n\\\\.\\n' \
-            > "$RUNNER_TEMP/invalid-copy.sql"
+          printf '%s\\n' 'COPY public.insureit_copy_diag_smoke (value) FROM stdin;' \\
+            'invalid-uuid-synthetic' '\\.' > "$RUNNER_TEMP/invalid-copy.sql"
           docker cp "$RUNNER_TEMP/invalid-copy.sql" insureit-fixture-smoke:/tmp/invalid-copy.sql
           if docker exec -u postgres insureit-fixture-smoke \
             psql -X --single-transaction --set ON_ERROR_STOP=1 \
@@ -235,8 +235,6 @@ jobs:
             "$RUNNER_TEMP/fixture-smoke.log" > "$RUNNER_TEMP/copy-diagnostic.txt"
           if ! grep -q 'sqlstate=22P02 category=invalid_text_representation' \
             "$RUNNER_TEMP/copy-diagnostic.txt"; then
-            echo "SYNTHETIC COPY POSTGRES OUTPUT (no production data):"
-            cat "$RUNNER_TEMP/fixture-smoke.log"
             cat "$RUNNER_TEMP/copy-diagnostic.txt"
             echo "OFFLINE SQLSTATE SMOKE FAILED: expected category not detected"
             exit 1
