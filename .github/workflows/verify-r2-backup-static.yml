@@ -25,7 +25,7 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m pip install boto3==1.35.99 cryptography==44.0.2 pyyaml==6.0.2
-      - run: python -m py_compile scripts/backup/supabase_storage_to_r2.py scripts/backup/verify_r2_restore.py scripts/backup/monitor_github_backup.py scripts/backup/monitor_postgres_backup.py scripts/backup/postgres_to_r2.py scripts/backup/verify_postgres_r2_restore.py scripts/backup/classify_pg_restore_error.py scripts/backup/audit_postgres_archive_coverage.py scripts/backup/verify_postgres_offline_row_counts.py scripts/backup/summarize_pg_restore_errors.py
+      - run: python -m py_compile scripts/backup/supabase_storage_to_r2.py scripts/backup/verify_r2_restore.py scripts/backup/monitor_github_backup.py scripts/backup/monitor_postgres_backup.py scripts/backup/postgres_to_r2.py scripts/backup/verify_postgres_r2_restore.py scripts/backup/classify_pg_restore_error.py scripts/backup/audit_postgres_archive_coverage.py scripts/backup/verify_postgres_offline_row_counts.py scripts/backup/summarize_pg_restore_errors.py scripts/backup/diagnose_pg_restore_data.py scripts/backup/audit_postgres_copy_targets.py
       - run: python -m unittest discover -s scripts/backup -p 'test_*.py' -v
       - name: Validate workflow safety guard
         run: |
@@ -98,6 +98,11 @@ jobs:
           assert '--network none' in steps_text
           assert 'audit_postgres_archive_coverage.py' in steps_text
           assert 'verify_postgres_offline_row_counts.py' in steps_text
+          assert 'diagnose_pg_restore_data.py' in steps_text
+          assert 'audit_postgres_copy_targets.py' in steps_text
+          assert 'OFFLINE COPY TARGET AUDIT' in pathlib.Path('scripts/backup/audit_postgres_copy_targets.py').read_text()
+          assert '--set VERBOSITY=verbose' in steps_text
+          assert '--set SHOW_CONTEXT=never' in steps_text
           assert 'SET session_replication_role = replica' in steps_text
           assert '--single-transaction' in steps_text
           assert 'verify_postgres_r2_restore.py' in steps_text
@@ -210,3 +215,72 @@ jobs:
             exit 1
           fi
           echo "OFFLINE AUTH BOOTSTRAP PASSED: 4 helpers and synthetic RLS dependency compiled"
+          # Reproduce an intentionally invalid COPY in this same offline image.
+          # Assert that verbose psql reports the first SQLSTATE and never
+          # expose the private database error text in GitHub logs.
+          docker exec -u postgres insureit-fixture-smoke \
+            psql -X --set ON_ERROR_STOP=1 -d postgres \
+            -c "CREATE TABLE public.insureit_copy_diag_smoke (value uuid);" \
+            > "$RUNNER_TEMP/fixture-smoke.log" 2>&1
+          cat > "$RUNNER_TEMP/invalid-copy.sql" <<'COPY_SAMPLE_EOF'
+          COPY public.insureit_copy_diag_smoke (value) FROM stdin;
+          invalid-uuid-synthetic
+          \.
+          COPY_SAMPLE_EOF
+          docker cp "$RUNNER_TEMP/invalid-copy.sql" insureit-fixture-smoke:/tmp/invalid-copy.sql
+          if docker exec -u postgres insureit-fixture-smoke \
+            psql -X --single-transaction --set ON_ERROR_STOP=1 \
+              --set VERBOSITY=verbose --set SHOW_CONTEXT=never \
+              -d postgres -f /tmp/invalid-copy.sql \
+            > "$RUNNER_TEMP/fixture-smoke.log" 2>&1; then
+            echo "OFFLINE SQLSTATE SMOKE FAILED: deliberately invalid COPY incorrectly succeeded"
+            exit 1
+          fi
+          python scripts/backup/diagnose_pg_restore_data.py \
+            "$RUNNER_TEMP/fixture-smoke.log" > "$RUNNER_TEMP/copy-diagnostic.txt"
+          if ! grep -q 'sqlstate=22P02 category=invalid_text_representation' \
+            "$RUNNER_TEMP/copy-diagnostic.txt"; then
+            cat "$RUNNER_TEMP/copy-diagnostic.txt"
+            echo "OFFLINE SQLSTATE SMOKE FAILED: expected category not detected"
+            exit 1
+          fi
+          echo "OFFLINE SQLSTATE SMOKE PASSED: first COPY failure classified without SQL content"
+
+          # Integration-test the offline pg_catalog compatibility query against
+          # the real Supabase image, without access to production/R2 data.
+          cat > "$RUNNER_TEMP/copy-targets.sql" <<'COPY_TARGET_EOF'
+          COPY public.insureit_copy_diag_smoke (value) FROM stdin;
+          \.
+          COPY auth.example_nonexistent_smoke_only (id) FROM stdin;
+          \.
+          COPY_TARGET_EOF
+          if python scripts/backup/audit_postgres_copy_targets.py \
+              "$RUNNER_TEMP/copy-targets.sql" insureit-fixture-smoke \
+              > "$RUNNER_TEMP/copy-target-audit.log" 2>&1; then
+            echo "OFFLINE COPY COMPATIBILITY TEST FAILED: nonexistent Auth table was accepted"
+            exit 1
+          fi
+          if ! grep -q 'targets=2 missing_tables=1 missing_column_sets=0' \
+                "$RUNNER_TEMP/copy-target-audit.log"; then
+            echo "OFFLINE COPY COMPATIBILITY TEST FAILED: expected missing-table summary unavailable"
+            exit 1
+          fi
+          echo "OFFLINE COPY COMPATIBILITY SMOKE PASSED: existing table accepted and missing Auth table detected"
+          # Safe structural signal only: current managed Supabase project
+          # has these newer Auth/Storage features. Record Boolean target
+          # compatibility, not customer data or full table definitions.
+          managed_parity="$(docker exec -u postgres insureit-fixture-smoke psql \
+            -X -A -t -d postgres -c \
+            "select (to_regclass('auth.oauth_clients') is not null)::int,
+                    (to_regclass('storage.buckets_vectors') is not null)::int,
+                    (to_regclass('storage.vector_indexes') is not null)::int,
+                    exists(select 1 from information_schema.columns
+                           where table_schema='auth' and table_name='flow_state'
+                             and column_name='oauth_client_state_id')::int;" 2>/dev/null || true)"
+          if ! [[ "$managed_parity" =~ ^[01]\\|[01]\\|[01]\\|[01]$ ]]; then
+            echo "OFFLINE MANAGED SCHEMA PARITY PROBE FAILED"
+            exit 1
+          fi
+          echo "OFFLINE MANAGED SCHEMA PARITY (oauth_clients|buckets_vectors|vector_indexes|flow_state_new_column): $managed_parity"
+
+
