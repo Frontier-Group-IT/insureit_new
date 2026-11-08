@@ -74,6 +74,15 @@ jobs:
             -ec 'exec pg_dump -Fc --dbname="$DATABASE_URL" --file=/out/database.dump'
           test -s "$RUNNER_TEMP/insureit-postgres-v2-dump/roles.sql"
           test -s "$RUNNER_TEMP/insureit-postgres-v2-dump/database.dump"
+          # Audit every critical schema family from pg_restore's private TOC
+          # before publishing encrypted ciphertext to R2. The TOC never
+          # becomes a GitHub artifact or public log.
+          docker run --rm --network none --user "$(id -u):$(id -g)" \
+            --mount "type=bind,source=$RUNNER_TEMP/insureit-postgres-v2-dump,target=/out" \
+            --entrypoint sh supabase/postgres:17.6.1.136 \
+            -ec 'pg_restore --list /out/database.dump > /out/private-toc.txt'
+          python scripts/backup/audit_postgres_v2_toc.py \
+            "$RUNNER_TEMP/insureit-postgres-v2-dump/private-toc.txt"
           echo "One consistent pg_dump schema/data snapshot and role component produced"
       - name: Encrypt, upload and authenticate v2 archive readback
         env:
