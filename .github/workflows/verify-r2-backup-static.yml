@@ -89,6 +89,8 @@ jobs:
           assert 'isolated_supabase_auth_helpers.sql' in steps_text
           assert 'ISOLATED AUTH HELPERS INCOMPLETE' in steps_text
           assert 'summarize_pg_restore_errors.py' in steps_text
+          assert 'restore-schema-diagnostics.log' in steps_text
+          assert 'restore-data-diagnostics.log' in steps_text
           assert '--set ON_ERROR_STOP=0' in steps_text
           assert 'ISOLATED RESTORE INCOMPLETE' in steps_text
           assert 'required_extension_installation' in steps_text
