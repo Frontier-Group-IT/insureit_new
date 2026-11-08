@@ -61,7 +61,7 @@ def extract_v2(archive_file, output_dir):
         if len(members) != len(EXPECTED):
             raise RuntimeError("Unexpected v2 member count")
         if {m.name for m in members} != set(EXPECTED):
-            raise RuntimeError("Unexpected v2 members")
+            raise ValueError("Unexpected v2 members")
         for item in members:
             if not item.isfile() or not 0 < item.size <= MAX_UNPACKED:
                 raise RuntimeError("Invalid v2 member")
