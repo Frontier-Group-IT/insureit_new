@@ -86,6 +86,8 @@ jobs:
           assert 'supabase/postgres:17.6.1.136' in steps_text
           assert 'pg_available_extensions' in steps_text
           assert 'isolated_supabase_extensions.sql' in steps_text
+          assert 'isolated_supabase_auth_helpers.sql' in steps_text
+          assert 'ISOLATED AUTH HELPERS INCOMPLETE' in steps_text
           assert 'required_extension_installation' in steps_text
           assert 'required_extension_availability' in steps_text
           assert '--network none' in steps_text
@@ -149,4 +151,42 @@ jobs:
             echo "OFFLINE EXTENSION SMOKE FAILED: incomplete extension initialization"
             exit 1
           fi
-          echo "OFFLINE FIXTURE + EXTENSION SMOKE PASSED: seven extensions installed, no production secrets"
+          docker cp scripts/backup/fixtures/isolated_supabase_auth_helpers.sql insureit-fixture-smoke:/tmp/offline-auth-helpers.sql
+          if ! docker exec -u postgres insureit-fixture-smoke \
+            psql -X --set ON_ERROR_STOP=1 -d postgres -f /tmp/offline-auth-helpers.sql \
+            > "$RUNNER_TEMP/fixture-smoke.log" 2>&1; then
+            python scripts/backup/classify_pg_restore_error.py auth_bootstrap "$RUNNER_TEMP/fixture-smoke.log"
+            echo "OFFLINE AUTH HELPERS SMOKE FAILED; no SQL logged"
+            exit 1
+          fi
+          # Repeat initialization to prove it is safe to rerun in ephemeral tests.
+          if ! docker exec -u postgres insureit-fixture-smoke \
+            psql -X --set ON_ERROR_STOP=1 -d postgres -f /tmp/offline-auth-helpers.sql \
+            > "$RUNNER_TEMP/fixture-smoke.log" 2>&1; then
+            python scripts/backup/classify_pg_restore_error.py auth_bootstrap "$RUNNER_TEMP/fixture-smoke.log"
+            echo "OFFLINE AUTH HELPERS SECOND-PASS FAILED; no SQL logged"
+            exit 1
+          fi
+          # Verify all four signatures AND actual JWT helper behavior without
+          # printing SQL output, JWT values, private data or function bodies.
+          if ! docker exec -u postgres insureit-fixture-smoke \
+            psql -X --set ON_ERROR_STOP=1 -A -t -d postgres -c \
+            "select
+              (select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+                where n.nspname='auth' and p.pronargs=0 and
+                (p.proname,p.prorettype) in
+                (('uid','uuid'::regtype),('jwt','jsonb'::regtype),('role','text'::regtype),('email','text'::regtype)))=4
+              and (select set_config('request.jwt.claims','{\"sub\":\"5e8c0014-ae02-43a1-a78f-a515527b048f\",\"role\":\"authenticated\",\"email\":\"offline@example.invalid\"}',false)) is not null
+              and auth.uid()='5e8c0014-ae02-43a1-a78f-a515527b048f'::uuid
+              and auth.role()='authenticated'
+              and auth.email()='offline@example.invalid'
+              and auth.jwt()->>'sub'='5e8c0014-ae02-43a1-a78f-a515527b048f';" \
+            > "$RUNNER_TEMP/fixture-smoke.log" 2>&1; then
+            echo "OFFLINE AUTH HELPERS BEHAVIOR CHECK FAILED; no query output logged"
+            exit 1
+          fi
+          if ! grep -qx 't' "$RUNNER_TEMP/fixture-smoke.log"; then
+            echo "OFFLINE AUTH HELPERS BEHAVIOR MISMATCH"
+            exit 1
+          fi
+          echo "OFFLINE FIXTURE SMOKE PASSED: 7 extensions, 4 Auth helpers and JWT behavior verified; no production secrets"
