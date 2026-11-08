@@ -85,6 +85,20 @@ jobs:
           # Keep potentially sensitive SQL errors out of public GitHub logs.
           # A plain Postgres 17 image may lack Supabase platform roles/extensions.
           for part in roles schema data; do
+            # Supabase's documented restore procedure disables triggers for the
+            # data COPY stage; this is safe ONLY in the isolated disposable DB.
+            if [ "$part" = data ]; then
+              if ! timeout 600 docker exec -u postgres insureit-restore-check \
+                psql -X --single-transaction --set ON_ERROR_STOP=1 --dbname postgres \
+                  --command "SET session_replication_role = replica" --file "/tmp/$part.sql" \
+                > "$RUNNER_TEMP/restore-$part.log" 2>&1; then
+                python scripts/backup/classify_pg_restore_error.py "$part" "$RUNNER_TEMP/restore-$part.log"
+                echo "ISOLATED RESTORE INCOMPLETE: component=$part; restore blocked; existing R2 archive preserved"
+                exit 1
+              fi
+              echo "Isolated restore component validated: $part"
+              continue
+            fi
             if ! timeout 600 docker exec -u postgres insureit-restore-check \
               psql -X --set ON_ERROR_STOP=1 --dbname postgres --file "/tmp/$part.sql" \
               > "$RUNNER_TEMP/restore-$part.log" 2>&1; then
