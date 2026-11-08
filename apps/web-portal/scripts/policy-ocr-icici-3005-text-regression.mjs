@@ -49,6 +49,36 @@ assert.equal(value(result, "cpa_opted"), "Yes");
 assert.equal(value(result, "policy_number"), "TEST-POLICY");
 assert.match(result.parserVersion, /icici-3005-text-v1/);
 
+// Native PDF pages often preserve whitespace, page decorations, and tables.
+// This shape mirrors the supplied three-page ICICI product-3005 PDF without PII.
+const nativePages = [
+  `ICICI Lombard General Insurance Company Limited
+Product Code: 3005 UIN: TEST-UIN
+  Insured & Vehicle Details
+  Name of Insured                          SAMPLE CUSTOMER
+  Period of Insurance - Own Damage         Nov 06, 2026 to Nov 05, 2027
+  Vehicle Make / Model                     CHETAK / C3001
+  RTO City                                 MADHYA PRADESH-JABALPUR
+  Vehicle Registration No.                 NEW
+  Engine No.                               E20TEST41667
+  Chassis No.                              SAMPLECHASSIS123456
+
+  The commencement of coverage of risk depends on payment.`,
+  `CERTIFICATE OF INSURANCE CUM POLICY SCHEDULE
+  Bundled – Two Wheeler Policy              0            1
+  Product Code: 3005 UIN: TEST-UIN
+  Premium Details
+  OWN DAMAGE(A)                             LIABILITY(B)
+  Basic OD Premium                  1,758.00   Basic Third Party Liability 3,273.00
+                                               PA Cover for Owner Driver 575.00
+  Total Own Damage Premium(A)       1,758.00   Total Liability Premium(B) 3,848.00`,
+];
+const nativeResult = refineIciciBundledTwoWheelerText(nativePages, contaminated);
+assert.equal(value(nativeResult, "vehicle_make"), "CHETAK");
+assert.equal(value(nativeResult, "vehicle_model"), "C3001");
+assert.equal(value(nativeResult, "vehicle_engine_number"), "E20TEST41667");
+assert.equal(value(nativeResult, "cpa_premium"), "575");
+
 // A missing labelled source must not leave a false extracted value selected.
 const missing = refineIciciBundledTwoWheelerText(
   [pages[0].replace(/Engine No\.[^\n]*/, "Engine No."), pages[1].replace(/PA Cover for Owner Driver[^\n]*/, "Owner driver cover")],
