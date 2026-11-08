@@ -25,7 +25,7 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m pip install boto3==1.35.99 cryptography==44.0.2 pyyaml==6.0.2
-      - run: python -m py_compile scripts/backup/supabase_storage_to_r2.py scripts/backup/verify_r2_restore.py scripts/backup/monitor_github_backup.py scripts/backup/monitor_postgres_backup.py scripts/backup/postgres_to_r2.py scripts/backup/verify_postgres_r2_restore.py scripts/backup/classify_pg_restore_error.py scripts/backup/audit_postgres_archive_coverage.py scripts/backup/verify_postgres_offline_row_counts.py
+      - run: python -m py_compile scripts/backup/supabase_storage_to_r2.py scripts/backup/verify_r2_restore.py scripts/backup/monitor_github_backup.py scripts/backup/monitor_postgres_backup.py scripts/backup/postgres_to_r2.py scripts/backup/verify_postgres_r2_restore.py scripts/backup/classify_pg_restore_error.py scripts/backup/audit_postgres_archive_coverage.py scripts/backup/verify_postgres_offline_row_counts.py scripts/backup/summarize_pg_restore_errors.py
       - run: python -m unittest discover -s scripts/backup -p 'test_*.py' -v
       - name: Validate workflow safety guard
         run: |
@@ -86,6 +86,13 @@ jobs:
           assert 'supabase/postgres:17.6.1.136' in steps_text
           assert 'pg_available_extensions' in steps_text
           assert 'isolated_supabase_extensions.sql' in steps_text
+          assert 'isolated_supabase_auth_helpers.sql' in steps_text
+          assert 'ISOLATED AUTH HELPERS INCOMPLETE' in steps_text
+          assert 'summarize_pg_restore_errors.py' in steps_text
+          assert 'restore-schema-diagnostics.log' in steps_text
+          assert 'restore-data-diagnostics.log' in steps_text
+          assert '--set ON_ERROR_STOP=0' in steps_text
+          assert 'ISOLATED RESTORE INCOMPLETE' in steps_text
           assert 'required_extension_installation' in steps_text
           assert 'required_extension_availability' in steps_text
           assert '--network none' in steps_text
@@ -112,6 +119,7 @@ jobs:
           set -euo pipefail
           trap 'docker rm -f -v insureit-fixture-smoke >/dev/null 2>&1 || true; rm -f "$RUNNER_TEMP/fixture-smoke.log"' EXIT
           docker run --detach --name insureit-fixture-smoke --network none \
+            --mount "type=bind,source=$GITHUB_WORKSPACE/scripts/backup/fixtures/isolated_supabase_auth_role_login.sql,target=/docker-entrypoint-initdb.d/init-scripts/99-roles.sql,readonly" \
             --env POSTGRES_PASSWORD=ephemeral-smoke-test-only \
             --env POSTGRES_DB=postgres \
             supabase/postgres:17.6.1.136 >/dev/null
@@ -149,4 +157,56 @@ jobs:
             echo "OFFLINE EXTENSION SMOKE FAILED: incomplete extension initialization"
             exit 1
           fi
-          echo "OFFLINE FIXTURE + EXTENSION SMOKE PASSED: seven extensions installed, no production secrets"
+          auth_state="$(docker exec -u postgres insureit-fixture-smoke psql -X -A -t -d postgres -c \
+            "select (to_regprocedure('auth.uid()') is not null)::int,
+                    (to_regprocedure('auth.jwt()') is not null)::int,
+                    (to_regprocedure('auth.role()') is not null)::int,
+                    (to_regprocedure('auth.email()') is not null)::int,
+                    (has_schema_privilege(current_user,'auth','CREATE'))::int;" 2>/dev/null || true)"
+          if ! [[ "$auth_state" =~ ^[01]\\|[01]\\|[01]\\|[01]\\|[01]$ ]]; then
+            echo "OFFLINE AUTH STATE UNAVAILABLE"
+            exit 1
+          fi
+          echo "OFFLINE AUTH INITIAL STATE: uid|jwt|role|email|schema_create=$auth_state"
+          docker cp scripts/backup/fixtures/isolated_supabase_auth_helpers.sql insureit-fixture-smoke:/tmp/offline-auth-helpers.sql
+          if ! docker exec -u postgres --env PGPASSWORD=ephemeral-smoke-test-only insureit-fixture-smoke \
+            psql -h 127.0.0.1 -U supabase_auth_admin -X --set ON_ERROR_STOP=1 -d postgres \
+              -f /tmp/offline-auth-helpers.sql \
+            > "$RUNNER_TEMP/fixture-smoke.log" 2>&1; then
+            python scripts/backup/classify_pg_restore_error.py auth_bootstrap "$RUNNER_TEMP/fixture-smoke.log"
+            echo "OFFLINE AUTH ADMIN BOOTSTRAP FAILED; no SQL logged"
+            exit 1
+          fi
+          helpers="$(docker exec -u postgres insureit-fixture-smoke psql -X -A -t -d postgres -c \
+            "select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='auth' and p.pronargs=0 and p.proname in ('uid','jwt','role','email');")"
+          if [ "$helpers" != "4" ]; then
+            echo "OFFLINE AUTH BOOTSTRAP INCOMPLETE: helper count $helpers/4"
+            exit 1
+          fi
+          # Run synthetic schema DDL that actually references Auth helpers,
+          # as archived RLS policies and application functions may do.
+          if ! docker exec -u postgres insureit-fixture-smoke \
+            psql -X --set ON_ERROR_STOP=1 -d postgres -c \
+            "CREATE TABLE public.insureit_auth_smoke_only (id uuid PRIMARY KEY);
+             ALTER TABLE public.insureit_auth_smoke_only ENABLE ROW LEVEL SECURITY;
+             CREATE POLICY auth_smoke_read ON public.insureit_auth_smoke_only
+               FOR SELECT USING (auth.uid() IS NOT NULL AND
+                                 (auth.jwt() ->> 'role') = 'authenticated');" \
+            > "$RUNNER_TEMP/fixture-smoke.log" 2>&1; then
+            python scripts/backup/classify_pg_restore_error.py schema "$RUNNER_TEMP/fixture-smoke.log"
+            echo "OFFLINE AUTH/RLS SCHEMA SMOKE FAILED"
+            exit 1
+          fi
+          if ! docker exec -u postgres insureit-fixture-smoke \
+            psql -X --set ON_ERROR_STOP=1 -A -t -d postgres -c \
+            "SET request.jwt.claims = '{\"role\":\"authenticated\"}';
+             SELECT (auth.jwt() ->> 'role')='authenticated';" \
+            > "$RUNNER_TEMP/fixture-smoke.log" 2>&1; then
+            echo "OFFLINE AUTH JWT BEHAVIOR CHECK FAILED"
+            exit 1
+          fi
+          if ! grep -qx 't' "$RUNNER_TEMP/fixture-smoke.log"; then
+            echo "OFFLINE AUTH JWT BEHAVIOR MISMATCH"
+            exit 1
+          fi
+          echo "OFFLINE AUTH BOOTSTRAP PASSED: 4 helpers and synthetic RLS dependency compiled"
