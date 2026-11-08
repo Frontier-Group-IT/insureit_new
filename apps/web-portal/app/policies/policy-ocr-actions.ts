@@ -12,6 +12,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { refineAdditionalMotorPolicy } from "@/lib/policy-ocr-additional-motor-refiner";
 import { refineIciciLombardMotorPolicy } from "@/lib/policy-ocr-icici-lombard-refiner";
 import { refineIciciBundledTwoWheelerText } from "@/lib/policy-ocr-icici-3005-text-refiner";
+import { refineIcici3005OutstandingFields } from "@/lib/policy-ocr-icici-3005-outstanding-fields";
 import { refineDigitCommercialPolicyV2 } from "@/lib/policy-ocr-digit-refiner-v2";
 import { refineIffcoCommercialPolicyV2 } from "@/lib/policy-ocr-iffco-refiner-v2";
 import {
@@ -241,6 +242,7 @@ async function extractPolicyFile(
       nativePolicyTextPages.length ? nativePolicyTextPages : pages,
       parsed,
     );
+    parsed = refineIcici3005OutstandingFields(nativePolicyTextPages.length ? nativePolicyTextPages : pages, parsed);
 
     if (!parsed.fields.length) return { ok: false, error: "No supported policy details could be read from this document. Please review the file and enter the details manually if needed." };
 
