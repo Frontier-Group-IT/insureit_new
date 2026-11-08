@@ -97,3 +97,40 @@ jobs:
           assert 'classify_pg_restore_error.py' in steps_text
           print('Manual offline database recovery rehearsal guards verified')
           PY
+
+  offline_fixture_smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Test Supabase Postgres 17 role fixture without backup or network
+        run: |
+          set -euo pipefail
+          trap 'docker rm -f -v insureit-fixture-smoke >/dev/null 2>&1 || true; rm -f "$RUNNER_TEMP/fixture-smoke.log"' EXIT
+          docker run --detach --name insureit-fixture-smoke --network none \
+            --env POSTGRES_PASSWORD=ephemeral-smoke-test-only \
+            --env POSTGRES_DB=postgres \
+            supabase/postgres:17.6.1.136 >/dev/null
+          ready=0
+          for i in $(seq 1 60); do
+            if docker exec insureit-fixture-smoke pg_isready -U postgres >/dev/null 2>&1; then
+              ready=1
+              break
+            fi
+            sleep 2
+          done
+          if [ "$ready" != 1 ]; then
+            echo "OFFLINE FIXTURE SMOKE FAILED: container not ready"
+            exit 1
+          fi
+          docker cp scripts/backup/fixtures/isolated_supabase_roles.sql insureit-fixture-smoke:/tmp/offline-fixture-roles.sql
+          if ! docker exec -u postgres insureit-fixture-smoke \
+            psql -X --set ON_ERROR_STOP=1 --dbname postgres --file /tmp/offline-fixture-roles.sql \
+            > "$RUNNER_TEMP/fixture-smoke.log" 2>&1; then
+            python scripts/backup/classify_pg_restore_error.py fixture "$RUNNER_TEMP/fixture-smoke.log"
+            echo "OFFLINE FIXTURE SMOKE FAILED; no SQL logged"
+            exit 1
+          fi
+          echo "OFFLINE FIXTURE SMOKE PASSED: role names initialized without production secrets"
