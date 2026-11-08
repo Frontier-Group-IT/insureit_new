@@ -10,6 +10,9 @@ from pathlib import Path
 
 MAX_READ = 1_000_000
 CLASSES = (
+    ("ambiguous_column", re.compile(r'column reference .{0,200} is ambiguous', re.I)),
+    ("role_creation_denied", re.compile(r'permission denied to create role|must have CREATEROLE privilege', re.I)),
+    ("reserved_role", re.compile(r'reserved role|role name .{0,200} is reserved', re.I)),
     ("role_missing", re.compile(r'role .{0,200} does not exist', re.I)),
     ("role_exists", re.compile(r'role .{0,200} already exists', re.I)),
     ("extension_missing", re.compile(r'extension .{0,200} is not available', re.I)),
@@ -35,8 +38,8 @@ def classify(contents):
 
 
 def main():
-    if len(sys.argv) != 3 or sys.argv[1] not in ("roles", "schema", "data"):
-        raise SystemExit("usage: classify_pg_restore_error.py roles|schema|data LOGFILE")
+    if len(sys.argv) != 3 or sys.argv[1] not in ("fixture", "roles", "schema", "data"):
+        raise SystemExit("usage: classify_pg_restore_error.py fixture|roles|schema|data LOGFILE")
     with open(Path(sys.argv[2]), "rb") as f:
         raw = f.read(MAX_READ + 1)
     if len(raw) > MAX_READ:
