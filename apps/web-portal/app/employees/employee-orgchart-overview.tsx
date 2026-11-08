@@ -47,7 +47,7 @@ export function EmployeeOrgchartOverview({
     {grouped.length ? <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{grouped.map((group) => {
       const sorted = [...group.members].sort((a, b) => a.full_name.localeCompare(b.full_name));
       const representative = sorted.find((e) => !group.members.some((candidate) => candidate.id === e.reporting_manager_id)) ?? sorted[0];
-      return <article key={group.key} className="rounded-xl border border-[#DCE6F1] bg-white p-4 shadow-[0_2px_10px_rgba(26,55,87,0.04)]">
+      return <article key={group.key} className="org-interactive-card org-reveal rounded-xl border border-[#DCE6F1] bg-white p-4 shadow-[0_2px_10px_rgba(26,55,87,0.04)]">
         <button type="button" onClick={() => onFocus(representative.id)} className="flex w-full items-center justify-between gap-2 text-left"><span className="truncate text-[12px] font-bold text-[#244771]">{group.label}</span><ChevronRight className="h-4 w-4 shrink-0 text-[#8095AD]" /></button>
         <div className="mt-3 flex gap-3 border-y border-[#EDF2F7] py-2.5 text-[10px] text-[#71849C]"><span className="inline-flex items-center gap-1"><Users className="h-3.5 w-3.5" />{group.members.length} employees</span><span className="inline-flex items-center gap-1"><Handshake className="h-3.5 w-3.5" />{group.associates} associates</span></div>
         <p className="mt-2 truncate text-[10px] text-[#697E97]">Explore from {representative.full_name}</p>
