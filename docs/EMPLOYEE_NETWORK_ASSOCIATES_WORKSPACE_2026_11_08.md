@@ -13,9 +13,9 @@ PR #4170 adds read-only partner associate disclosure and a permission-aware empl
 
 ### Employee workspace
 - Profile / Reporting / Network / Portal Access sections; the last tab requires `manage_users:approve`. Editing requires `manage_employees:edit`.
-- The compact profile editor reuses the existing `updateEmployee` server action and preserves the Directory Table's management path. Employee code, reporting manager ID, and pending manager code are locked in this workspace, pending a governed correction/reassignment workflow.
+- The compact profile editor uses the dedicated `updateEmployeeProfile` server wrapper, which rechecks manage permission, reads the current employee code and reporting links from the database, ignores client-supplied changes to those fields, then calls the existing `updateEmployee` save action. This preserves the Directory Table's management path. Employee code, reporting manager ID, and pending manager code are locked in this workspace, pending a governed correction/reassignment workflow.
 - No permanent deletion in Organization Explorer. Normal employee deactivation remains in the existing governed operation.
-- The existing edit server action is **not** made atomic by this PR and therefore remains a known follow-up risk.
+- The underlying employee/profile synchronization is **not** made atomic by this PR and therefore remains a known follow-up risk.
 
 ## Separate follow-up PR (not included here)
 
