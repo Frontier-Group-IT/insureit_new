@@ -178,4 +178,30 @@ jobs:
             echo "OFFLINE AUTH BOOTSTRAP INCOMPLETE: helper count $helpers/4"
             exit 1
           fi
-          echo "OFFLINE AUTH BOOTSTRAP PASSED: four helpers created by scoped Auth role"
+          # Run synthetic schema DDL that actually references Auth helpers,
+          # as archived RLS policies and application functions may do.
+          if ! docker exec -u postgres insureit-fixture-smoke \
+            psql -X --set ON_ERROR_STOP=1 -d postgres -c \
+            "CREATE TABLE public.insureit_auth_smoke_only (id uuid PRIMARY KEY);
+             ALTER TABLE public.insureit_auth_smoke_only ENABLE ROW LEVEL SECURITY;
+             CREATE POLICY auth_smoke_read ON public.insureit_auth_smoke_only
+               FOR SELECT USING (auth.uid() IS NOT NULL AND
+                                 (auth.jwt() ->> 'role') = 'authenticated');" \
+            > "$RUNNER_TEMP/fixture-smoke.log" 2>&1; then
+            python scripts/backup/classify_pg_restore_error.py schema "$RUNNER_TEMP/fixture-smoke.log"
+            echo "OFFLINE AUTH/RLS SCHEMA SMOKE FAILED"
+            exit 1
+          fi
+          if ! docker exec -u postgres insureit-fixture-smoke \
+            psql -X --set ON_ERROR_STOP=1 -A -t -d postgres -c \
+            "SET request.jwt.claims = '{\"role\":\"authenticated\"}';
+             SELECT (auth.jwt() ->> 'role')='authenticated';" \
+            > "$RUNNER_TEMP/fixture-smoke.log" 2>&1; then
+            echo "OFFLINE AUTH JWT BEHAVIOR CHECK FAILED"
+            exit 1
+          fi
+          if ! grep -qx 't' "$RUNNER_TEMP/fixture-smoke.log"; then
+            echo "OFFLINE AUTH JWT BEHAVIOR MISMATCH"
+            exit 1
+          fi
+          echo "OFFLINE AUTH BOOTSTRAP PASSED: 4 helpers and synthetic RLS dependency compiled"
