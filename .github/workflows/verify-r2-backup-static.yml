@@ -220,8 +220,11 @@ jobs:
             psql -X --set ON_ERROR_STOP=1 -d postgres \
             -c "CREATE TABLE public.insureit_copy_diag_smoke (value uuid);" \
             > "$RUNNER_TEMP/fixture-smoke.log" 2>&1
-          printf '%s\\n' 'COPY public.insureit_copy_diag_smoke (value) FROM stdin;' \\
-            'invalid-uuid-synthetic' '\\.' > "$RUNNER_TEMP/invalid-copy.sql"
+          cat > "$RUNNER_TEMP/invalid-copy.sql" <<'COPY_SAMPLE_EOF'
+          COPY public.insureit_copy_diag_smoke (value) FROM stdin;
+          invalid-uuid-synthetic
+          \.
+          COPY_SAMPLE_EOF
           docker cp "$RUNNER_TEMP/invalid-copy.sql" insureit-fixture-smoke:/tmp/invalid-copy.sql
           if docker exec -u postgres insureit-fixture-smoke \
             psql -X --single-transaction --set ON_ERROR_STOP=1 \
