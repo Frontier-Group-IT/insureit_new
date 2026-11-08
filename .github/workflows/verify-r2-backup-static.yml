@@ -246,3 +246,25 @@ jobs:
           fi
           echo "OFFLINE SQLSTATE SMOKE PASSED: first COPY failure classified without SQL content"
 
+          # Integration-test the offline pg_catalog compatibility query against
+          # the real Supabase image, without access to production/R2 data.
+          cat > "$RUNNER_TEMP/copy-targets.sql" <<'COPY_TARGET_EOF'
+          COPY public.insureit_copy_diag_smoke (value) FROM stdin;
+          \.
+          COPY auth.example_nonexistent_smoke_only (id) FROM stdin;
+          \.
+          COPY_TARGET_EOF
+          if python scripts/backup/audit_postgres_copy_targets.py \
+              "$RUNNER_TEMP/copy-targets.sql" insureit-fixture-smoke \
+              > "$RUNNER_TEMP/copy-target-audit.log" 2>&1; then
+            echo "OFFLINE COPY COMPATIBILITY TEST FAILED: nonexistent Auth table was accepted"
+            exit 1
+          fi
+          if ! grep -q 'targets=2 missing_tables=1 missing_column_sets=0' \
+                "$RUNNER_TEMP/copy-target-audit.log"; then
+            echo "OFFLINE COPY COMPATIBILITY TEST FAILED: expected missing-table summary unavailable"
+            exit 1
+          fi
+          echo "OFFLINE COPY COMPATIBILITY SMOKE PASSED: existing table accepted and missing Auth table detected"
+
+
