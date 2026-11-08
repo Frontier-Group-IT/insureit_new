@@ -195,6 +195,7 @@ async function extractPolicyFile(
     }
     parsed = refineApprovedMotorPolicyLayout(pages, tables, parsed);
 
+    let nativePolicyTextPages: string[] = [];
     let usedNativePdfVehicleEvidence = false;
     if (file.type === "application/pdf" && (
       (parsed.parserId === "new_india_motor_v1" && needsNewIndiaNativeVehicleFallback(parsed))
@@ -202,6 +203,7 @@ async function extractPolicyFile(
     )) {
       try {
         const nativePages = await extractNativePdfTextPages(fileBytes);
+        nativePolicyTextPages = nativePages.map((page) => page.text);
 
         if (parsed.parserId === "new_india_motor_v1") {
           const nativeRefined = refineNewIndiaNativePdfVehicleEvidence(nativePages, parsed);
@@ -235,7 +237,10 @@ async function extractPolicyFile(
       }
     }
 
-    parsed = refineIciciBundledTwoWheelerText(pages, parsed);
+    parsed = refineIciciBundledTwoWheelerText(
+      nativePolicyTextPages.length ? nativePolicyTextPages : pages,
+      parsed,
+    );
 
     if (!parsed.fields.length) return { ok: false, error: "No supported policy details could be read from this document. Please review the file and enter the details manually if needed." };
 
