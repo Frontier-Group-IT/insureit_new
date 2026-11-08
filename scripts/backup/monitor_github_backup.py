@@ -97,7 +97,7 @@ def alert(repo, token, cause, run_url=None):
            if safe_completion else
            "**Impact:** The most recent successful encrypted backup remains preserved, "
            "but the target backup has not been confirmed successful.\n\n")
-          "**Action:** Check the backup job and its in-job sample restore verification. "
+        + "**Action:** Check the backup job and its in-job sample restore verification. "
           "Do not delete or expire existing R2 data.\n\n"
           "This issue closes only when a subsequent scheduled backup meets the freshness SLA. "
           "For email/mobile notifications, watch or subscribe to repository Issues.\n"
