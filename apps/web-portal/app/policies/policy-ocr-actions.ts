@@ -20,6 +20,7 @@ import {
 import { refineNewIndiaCommercialPolicy } from "@/lib/policy-ocr-new-india-refiner";
 import { refineNewIndiaStructuredPolicy } from "@/lib/policy-ocr-new-india-structured-refiner";
 import { refineApprovedMotorPolicyLayout } from "@/lib/policy-ocr-approved-layout-refiner";
+import { shouldRunPolicyOcrLayoutParser } from "@/lib/policy-ocr-layout-mode";
 import {
   extractNativePdfTextPages,
   refineIciciNativePdfEvidence,
@@ -179,7 +180,7 @@ async function extractPolicyFile(
           ? refineNewIndiaCommercialPolicy(pages, baseParsed)
           : refineAdditionalMotorPolicy(pages, baseParsed);
 
-    const tables = file.type === "application/pdf"
+    const tables = shouldRunPolicyOcrLayoutParser(file.type)
       ? await processLayoutTables({ config, content, mimeType: file.type, accessToken: googleAccessToken, signal: controller.signal })
       : [];
     if (baseParsed.parserId === "iffco_tokio_commercial_motor_v1" && parsed.fields.find((field) => field.key === "policy_product")?.value !== "SAOD") {
