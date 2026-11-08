@@ -74,8 +74,8 @@ def dependency_details(contents):
     return None
 
 def main():
-    if len(sys.argv) != 3 or sys.argv[1] not in ("extensions", "fixture", "roles", "schema", "data"):
-        raise SystemExit("usage: classify_pg_restore_error.py extensions|fixture|roles|schema|data LOGFILE")
+    if len(sys.argv) != 3 or sys.argv[1] not in ("auth_bootstrap", "extensions", "fixture", "roles", "schema", "data"):
+        raise SystemExit("usage: classify_pg_restore_error.py auth_bootstrap|extensions|fixture|roles|schema|data LOGFILE")
     with open(Path(sys.argv[2]), "rb") as f:
         raw = f.read(MAX_READ + 1)
     if len(raw) > MAX_READ:
