@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Building2, ChevronDown, ChevronRight, Handshake, LocateFixed, Maximize2, Minus, Plus, UserRound, Users } from "lucide-react";
 import type { EmployeeRow } from "./employee-forms";
 import { EmployeeOrgchartTeamFocus } from "./employee-orgchart-team-focus";
+import "./employee-orgchart-motion.css";
 import { EmployeeOrgchartOverview } from "./employee-orgchart-overview";
 import { EmployeeOrgchartDetails } from "./employee-orgchart-details";
 
@@ -87,6 +88,7 @@ export function EmployeeOrganizationTree({ employees, partners, query, managers,
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [viewport, setViewport] = useState({ width: 1050, height: 590 });
   const canvasRef = useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const dragRef = useRef<{ x: number; y: number; originX: number; originY: number } | null>(null);
 
   useEffect(() => {
@@ -229,10 +231,12 @@ export function EmployeeOrganizationTree({ employees, partners, query, managers,
   const pointerMove = (event: PointerEvent<HTMLDivElement>) => {
     if (!dragRef.current) return;
     if (Math.hypot(event.clientX - dragRef.current.x, event.clientY - dragRef.current.y) < 4) return;
+    setIsDragging(true);
     setOffset({ x: dragRef.current.originX + event.clientX - dragRef.current.x, y: dragRef.current.originY + event.clientY - dragRef.current.y });
   };
   const pointerUp = (event: PointerEvent<HTMLDivElement>) => {
     dragRef.current = null;
+    setIsDragging(false);
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
   };
   const toggle = (key: string) => setExpanded((previous) => {
@@ -241,7 +245,7 @@ export function EmployeeOrganizationTree({ employees, partners, query, managers,
     return next;
   });
 
-  return <div className="relative bg-[#FBFAF7]">
+  return <div className="insureit-org-motion relative bg-[#FBFAF7]">
     <div className="relative z-10 flex flex-wrap items-center justify-between gap-2 border-b border-[#E6E4DE] bg-[#FBFAF7] px-3 py-2 sm:px-4">
       <div className="flex flex-wrap items-center gap-2"><div className="flex items-center gap-2 text-[10px] text-[#758092]"><Users className="h-3.5 w-3.5" /><span>Reporting hierarchy</span><span className="text-[#C4C9D1]">/</span><span>{employees.length} employees</span></div><div className="inline-flex rounded-md border border-[#D9E2EC] bg-white p-0.5 text-[10px] font-semibold"><button type="button" onClick={() => setMode("overview")} aria-pressed={mode === "overview"} className={`rounded px-2.5 py-1.5 ${mode === "overview" ? "bg-[#173D71] text-white" : "text-[#57718D]"}`}>Overview</button><button type="button" onClick={() => setMode("team")} aria-pressed={mode === "team"} className={`rounded px-2.5 py-1.5 ${mode === "team" ? "bg-[#173D71] text-white" : "text-[#57718D]"}`}>Team focus</button><button type="button" onClick={() => setMode("full")} aria-pressed={mode === "full"} className={`rounded px-2.5 py-1.5 ${mode === "full" ? "bg-[#173D71] text-white" : "text-[#57718D]"}`}>Full chart</button></div></div>
       <div className="flex flex-wrap items-center gap-1.5">
@@ -257,8 +261,8 @@ export function EmployeeOrganizationTree({ employees, partners, query, managers,
         {mode === "full" ? <button type="button" onClick={() => { setExpanded(new Set()); setFocus(""); }} className="h-8 rounded-md border border-[#DBE1E9] bg-white px-2 text-[10px] text-[#40546E] hover:bg-[#EEF4FF]">Collapse all</button> : null}
       </div>
     </div>
-    {mode === "overview" ? <EmployeeOrgchartOverview employees={employees} partners={showPartners ? partners : []} department={department} query={query} onFocus={navigateToEmployee} /> : null}
-    {mode === "team" ? <EmployeeOrgchartTeamFocus employees={employees} partners={partners} query={query} department={department} showPartners={showPartners} selectedId={focus} onSelect={setFocus} onDetails={setDetailsId} /> : null}
+    {mode === "overview" ? <div className="org-mode-panel" key="overview"><EmployeeOrgchartOverview employees={employees} partners={showPartners ? partners : []} department={department} query={query} onFocus={navigateToEmployee} /></div> : null}
+    {mode === "team" ? <div className="org-mode-panel" key="team"><EmployeeOrgchartTeamFocus employees={employees} partners={partners} query={query} department={department} showPartners={showPartners} selectedId={focus} onSelect={setFocus} onDetails={setDetailsId} /></div> : null}
     <div ref={canvasRef} onWheel={onWheel} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp} onPointerCancel={pointerUp} onDragStart={(event) => event.preventDefault()} className={`relative h-[min(74vh,780px)] min-h-[470px] w-full touch-none select-none overflow-hidden bg-[#FAF9F6] ${mode === "full" ? "block" : "hidden"}`} aria-label="Interactive organization chart">
       <div className="absolute right-3 top-3 z-20 flex flex-col gap-1 rounded-md border border-[#E1E2E6] bg-white/95 p-1 shadow-sm">
         <button type="button" title="Zoom in" aria-label="Zoom in" onClick={() => changeZoom(zoom + 0.15)} className="rounded p-1.5 text-[#62718A] hover:bg-[#EDF3FA]"><Plus className="h-4 w-4" /></button>
@@ -280,7 +284,7 @@ export function EmployeeOrganizationTree({ employees, partners, query, managers,
       </div> : null}
       <div className="pointer-events-none absolute bottom-3 left-3 z-10 rounded bg-white/85 px-2 py-1 text-[10px] text-[#778393] shadow-sm">Drag to pan · Ctrl + scroll to zoom · {Math.round(zoom * 100)}%</div>
       {chartRoots.length === 0 ? <div className="flex h-full items-center justify-center text-[12px] text-[#66768C]">No employees match these filters.</div> : (
-        <div className="absolute left-0 top-0 origin-top-left" style={{ width: graph.width, height: graph.height, transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})` }}>
+        <div className="org-canvas-camera absolute left-0 top-0 origin-top-left" data-dragging={isDragging} style={{ width: graph.width, height: graph.height, transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})` }}>
           <svg aria-hidden="true" className="pointer-events-none absolute inset-0 h-full w-full overflow-visible" viewBox={`0 0 ${graph.width} ${graph.height}`}>
             {graph.positions.map(({ node, x, y, parent }) => {
               const leader = parent ? placed.get(parent) : undefined;
@@ -297,7 +301,7 @@ export function EmployeeOrganizationTree({ employees, partners, query, managers,
             const isPartner = node.type === "partner";
             const hasChildren = node.children.length > 0 || node.count > 0;
             const expandedNode = expanded.has(node.key);
-            return <article key={node.key} className={`absolute flex flex-col items-center justify-between rounded-lg border px-2.5 py-2 text-center shadow-[0_2px_7px_rgba(31,46,66,0.11)] transition-colors ${isGroup ? "border-[#B7D2ED] bg-[#EDF5FF]" : isEmployee && focus === node.employee?.id ? "border-[#82AEEA] bg-[#E9F2FF]" : isPartner || node.type === "branch" ? "border-[#BEDDD3] bg-[#F9FFFC]" : "border-[#D9DFE7] bg-white hover:border-[#9CB9E2]"}`} style={{ width: CARD_W, height: CARD_H, left: x - CARD_W / 2, top: y - CARD_H / 2 }}>
+            return <article key={node.key} className={`org-interactive-card absolute flex flex-col items-center justify-between rounded-lg border px-2.5 py-2 text-center shadow-[0_2px_7px_rgba(31,46,66,0.11)] transition-colors ${isGroup ? "border-[#B7D2ED] bg-[#EDF5FF]" : isEmployee && focus === node.employee?.id ? "border-[#82AEEA] bg-[#E9F2FF]" : isPartner || node.type === "branch" ? "border-[#BEDDD3] bg-[#F9FFFC]" : "border-[#D9DFE7] bg-white hover:border-[#9CB9E2]"}`} style={{ width: CARD_W, height: CARD_H, left: x - CARD_W / 2, top: y - CARD_H / 2 }}>
               <div className="w-full">
                 <p className="truncate text-[10px] font-semibold text-[#34465C]" title={node.subtitle}>{node.subtitle}</p>
                 <p className="mt-0.5 truncate text-[9px] text-[#8A96A8]">{node.detail}</p>
