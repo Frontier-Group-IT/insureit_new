@@ -8,6 +8,7 @@ import { refineIffcoStructuredFinancials, type StructuredPolicyTable } from "@/l
 import { refineNewIndiaCommercialPolicy } from "@/lib/policy-ocr-new-india-refiner";
 import { refineNewIndiaStructuredPolicy } from "@/lib/policy-ocr-new-india-structured-refiner";
 import { refineApprovedMotorPolicyLayout } from "@/lib/policy-ocr-approved-layout-refiner";
+import { shouldRunPolicyOcrLayoutParser } from "@/lib/policy-ocr-layout-mode";
 
 const MAX_FILE_SIZE = 15 * 1024 * 1024;
 const OCR_TIMEOUT_MS = 120 * 1000;
@@ -53,7 +54,7 @@ export async function extractPolicyIntakeDocumentTrusted(formData: FormData): Pr
       : base.parserId === "iffco_tokio_commercial_motor_v1" ? refineIffcoCommercialPolicyV2(pages, base)
       : base.parserId === "new_india_motor_v1" ? refineNewIndiaCommercialPolicy(pages, base)
       : refineAdditionalMotorPolicy(pages, base);
-    const tables = file.type === "application/pdf" ? await layoutTables(config,content,file.type,token,controller.signal) : [];
+    const tables = shouldRunPolicyOcrLayoutParser(file.type) ? await layoutTables(config,content,file.type,token,controller.signal) : [];
     if (base.parserId === "iffco_tokio_commercial_motor_v1" && parsed.fields.find((field) => field.key === "policy_product")?.value !== "SAOD") parsed = refineIffcoStructuredFinancials(tables, parsed);
     if (base.parserId === "new_india_motor_v1") parsed = refineNewIndiaStructuredPolicy(tables, parsed);
     parsed = refineApprovedMotorPolicyLayout(pages,tables,parsed);
