@@ -69,6 +69,24 @@ jobs:
             exit 1
           fi
           echo "Isolated target extension availability preflight passed (7/7)"
+          # Availability is not installation: initialize the read-only observed
+          # production extension set only in this disposable --network none target.
+          docker cp scripts/backup/fixtures/isolated_supabase_extensions.sql insureit-restore-check:/tmp/offline-extensions.sql
+          if ! timeout 180 docker exec -u postgres insureit-restore-check \
+            psql -X --set ON_ERROR_STOP=1 --dbname postgres --file /tmp/offline-extensions.sql \
+            > "$RUNNER_TEMP/restore-extensions.log" 2>&1; then
+            python scripts/backup/classify_pg_restore_error.py extensions "$RUNNER_TEMP/restore-extensions.log"
+            echo "ISOLATED EXTENSION INITIALIZATION FAILED: database archive preserved"
+            exit 1
+          fi
+          installed="$(docker exec -u postgres insureit-restore-check \
+            psql -X -A -t --set ON_ERROR_STOP=1 -d postgres -c \
+            "select count(*) from pg_extension where extname in ($required_extensions);" 2>/dev/null || true)"
+          if [ "$installed" != "7" ]; then
+            echo "ISOLATED TARGET INCOMPLETE: installed_extension_count=$installed/7"
+            exit 1
+          fi
+          echo "Offline extension installation passed (7/7; no production grants)"
           # Supabase CLI role dumps can reference reserved platform roles
           # absent from vanilla postgres:17. This is a *test-only* scaffold.
           docker cp scripts/backup/fixtures/isolated_supabase_roles.sql insureit-restore-check:/tmp/offline-fixture-roles.sql
