@@ -11,7 +11,7 @@ import urllib.parse
 
 from monitor_github_backup import api, iso
 
-WORKFLOW = "insureit-postgres-r2-manual.yml"
+WORKFLOWS = ("insureit-postgres-r2-manual.yml", "insureit-postgres-r2-v2-manual.yml")
 MARKER = "<!-- INSUREIT_PG_R2_FRESHNESS_V1 -->"
 TITLE = "INSUREIT: PostgreSQL R2 archive is stale (daily backup not yet enabled)"
 MAX_AGE = dt.timedelta(hours=30)
@@ -76,7 +76,12 @@ def main():
     repo = os.environ["GITHUB_REPOSITORY"]
     token = os.environ["GH_TOKEN"]
     query = urllib.parse.urlencode({"branch": "main", "per_page": 100})
-    runs = api("GET", f"/repos/{repo}/actions/workflows/{WORKFLOW}/runs?{query}", token).get("workflow_runs", [])
+    runs = []
+    # Track legacy and new v2 encrypted archive freshness independently of
+    # restore certification. A successful export is NOT a recovery guarantee.
+    for workflow in WORKFLOWS:
+        response = api("GET", f"/repos/{repo}/actions/workflows/{workflow}/runs?{query}", token)
+        runs.extend(response.get("workflow_runs", []))
     status, latest = status_from_runs(runs, dt.datetime.now(dt.timezone.utc))
     reconcile(repo, token, status, latest)
 
