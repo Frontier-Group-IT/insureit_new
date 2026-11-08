@@ -35,15 +35,15 @@ def main():
     with path.open("rb") as handle:
         raw = handle.read(LIMIT_BYTES + 1)
     if len(raw) > LIMIT_BYTES:
-        print("ISOLATED SCHEMA DIAGNOSTIC: output exceeded safe limit; no SQL output published")
+        print("ISOLATED SQL DIAGNOSTIC: output exceeded safe limit; no SQL output published")
         raw = raw[:LIMIT_BYTES]
     counts = summarize(raw.decode("utf-8", "replace"))
     if not counts:
-        print("ISOLATED SCHEMA DIAGNOSTIC: no categorized SQL errors found")
+        print("ISOLATED SQL DIAGNOSTIC: no categorized SQL errors found")
         return
-    print("ISOLATED SCHEMA DIAGNOSTIC: redacted error category counts; failed restore remains FAILED")
+    print("ISOLATED SQL DIAGNOSTIC: redacted error category counts; failed restore remains FAILED")
     for category, count in sorted(counts.items()):
-        print(f"ISOLATED SCHEMA ERROR: category={category} count={count}")
+        print(f"ISOLATED SQL ERROR: category={category} count={count}")
     print("Isolated diagnostic replay never proves a successful database restoration.")
 
 
@@ -51,5 +51,5 @@ if __name__ == "__main__":
     try:
         main()
     except Exception as exc:
-        print(f"ISOLATED SCHEMA DIAGNOSTIC FAILED: {type(exc).__name__}", file=sys.stderr)
+        print(f"ISOLATED SQL DIAGNOSTIC FAILED: {type(exc).__name__}", file=sys.stderr)
         sys.exit(1)
