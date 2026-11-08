@@ -129,6 +129,12 @@ jobs:
             # Supabase's documented restore procedure disables triggers for the
             # data COPY stage; this is safe ONLY in the isolated disposable DB.
             if [ "$part" = data ]; then
+              # Before importing customer data, verify every COPY destination
+              # and column exists in the isolated Supabase target. The managed
+              # Auth/Storage schema may differ between hosted and Docker releases.
+              # Only safe issue counts and schema categories reach CI logs.
+              python scripts/backup/audit_postgres_copy_targets.py \
+                "$RUNNER_TEMP/insureit-db-restore/data.sql" insureit-restore-check
               if ! timeout 600 docker exec -u postgres insureit-restore-check \
                 psql -X --single-transaction --set ON_ERROR_STOP=1 --set VERBOSITY=verbose \
                   --set SHOW_CONTEXT=never --dbname postgres \
