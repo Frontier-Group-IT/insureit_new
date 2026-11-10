@@ -72,9 +72,10 @@ const intakePage = read("app/policy-intakes/page.tsx");
 assert(intakePage.includes("type PolicyIntakeSearchParams = { view?: string }"), "Policy Intake route must accept the view query parameter");
 assert(intakePage.includes('if (value === "in_review") return "in_review"'), "In Review deep links must be valid for reviewer and owner views");
 assert(intakePage.includes('return reviewer ? "action" : "all"'), "Non-reviewers must still reject reviewer-only Action Required as their default/deep-link fallback");
-assert(intakePage.includes("hierarchyIntakeRoles.has(profile.role)"), "Hierarchy roles must use verified reporting-subtree Partner/Branch scope");
-assert(intakePage.includes("getRmPolicyIntakePredicates(profile.id, profile.role)"), "RM intake scope must be resolved on the server");
-assert(intakePage.includes('else if (!reviewer) submitterFilter = profile.id'), "Non-RM non-reviewers must remain scoped to their own submissions");
+const intakeScope = read("lib/partner-policy-intake-read-access.ts");
+assert(intakePage.includes("getPartnerEmployeeIntakeReadScope") && intakeScope.includes("hierarchyIntakeRoles.has(profile.role)"), "Hierarchy roles retain verified reporting-subtree Partner/Branch scope");
+assert(intakeScope.includes("getRmPolicyIntakePredicates(profileId, profile.role)"), "RM intake scope remains resolved on the server");
+assert(intakeScope.includes('return { mode:"submitter",profileId }'), "Non-reviewers remain scoped to their own submissions");
 assert(intakePage.includes('page = page.eq("submitted_by_profile_id", submitterFilter)'), "Non-RM own-submitter filtering must be applied to database queries");
 assert(intakePage.includes("initialView={initialView}"), "Policy Intake route must pass the deep-linked initial view into the workspace");
 
