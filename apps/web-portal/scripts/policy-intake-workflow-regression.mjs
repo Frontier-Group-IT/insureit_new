@@ -108,8 +108,8 @@ assert(workspace.includes("Policy Intake Queue"),"Operations intake queue must u
 assert(workspace.includes("Action Required")&&workspace.includes("RegisterPagination"),"Operations intake queue must expose status views and pagination");
 assert(workspace.includes("rowTones")&&workspace.includes("ready_for_review"),"Intake rows must retain status-based background coding");
 assert(workspace.includes("All Lead Source")&&workspace.includes("All Detail Status")&&workspace.includes("From date")&&workspace.includes("To date"),"Operations queue must expose lead-source, OCR and date filters");
-assert(workspace.includes('inReview: baseFiltered.filter((row) => row.status === "in_review").length'),"Global In Review count must include every in-review intake so status buckets reconcile to All");
-assert(workspace.includes('myActiveWork: baseFiltered.filter((row) => row.status === "in_review" && row.assigned_to_profile_id === currentProfileId).length'),"Personal active-work count must remain a separate reviewer subset");
+assert(workspace.includes("inReview: bucketCounts.in_review") && workspace.includes("policyIntakeStatusCounts(baseFiltered"),"Global In Review uses the canonical effective status buckets, excluding derived duplicates");
+assert(workspace.includes('myActiveWork: baseFiltered.filter((row) => policyIntakeBucket(row, false) === "in_review"') && workspace.includes('row.assigned_to_profile_id === currentProfileId'),"My Active Work remains assigned-reviewer subset of effective In Review");
 assert(workspace.includes('{ value: "in_review", label: "In Review", count: stats.inReview }'),"Reviewer queue must expose global In Review as a primary status bucket");
 assert(workspace.includes('My Active Work <span className="ml-1.5 opacity-80">{stats.myActiveWork}</span>'),"Reviewer queue must keep My Active Work as a separate personal shortcut");
 assert(workspace.includes("Policy Type"),"Policy Intake Queue must show Policy Type beside Lead Source");
