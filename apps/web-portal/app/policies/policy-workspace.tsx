@@ -349,12 +349,6 @@ export function PolicyWorkspace({ rows, sourceOptions = [], isRelationshipManage
     [controlFiltered, timeScope, mtdEnd, mtdStart],
   );
 
-  // Keep issuance-date MTD reporting accurate while making older matching policies discoverable.
-  // This does not change authorized rows or silently expand the selected reporting period.
-  const searchMatchesOutsideMtd = timeScope === "mtd" && query.trim()
-    ? Math.max(0, controlFiltered.length - baseFiltered.length)
-    : 0;
-
   const stats = useMemo(() => {
     const active = baseFiltered.filter((row) => row.status === "Active").length;
     const expiring = baseFiltered.filter((row) => row.status === "Expiring soon").length;
@@ -460,7 +454,23 @@ export function PolicyWorkspace({ rows, sourceOptions = [], isRelationshipManage
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8B93AA]" />
               <input
                 value={query}
-                onChange={(event) => { setQuery(event.target.value); setPage(1); }}
+                onChange={(event) => {
+                  const nextQuery = event.target.value;
+                  setQuery(nextQuery);
+                  setPage(1);
+                  // A global search should not be restricted by a previous MTD, RM, source,
+                  // business, status or custom date selection. Authorization remains server-scoped.
+                  if (nextQuery.trim()) {
+                    setTimeScope("all");
+                    setBusiness("all");
+                    setSource("all");
+                    setRm("all");
+                    setView("all");
+                    setFromDate("");
+                    setToDate("");
+                    try { window.sessionStorage.setItem(POLICY_REGISTER_PERIOD_KEY, "all"); } catch {}
+                  }
+                }}
                 placeholder="Search policy, customer, insurer, RM, vehicle, chassis, engine, risk or source"
                 aria-label="Search policy, customer, insurer, RM, vehicle, chassis, engine, risk or source"
                 className="h-10 w-full rounded-xl border border-[#CBD5E1] bg-white pl-10 pr-3 text-[12px] text-[#0F172A] outline-none transition focus:border-[#17365D] focus:ring-2 focus:ring-[#17365D]/10"
@@ -531,17 +541,6 @@ export function PolicyWorkspace({ rows, sourceOptions = [], isRelationshipManage
           </div>
         </div>
       </div>
-
-      {searchMatchesOutsideMtd > 0 ? (
-        <div className="flex flex-wrap items-center gap-2 border-b border-[#E5ECF5] bg-[#F8FAFC] px-4 py-2 text-[11px] text-[#475569]" role="status">
-          <span>{searchMatchesOutsideMtd} matching {searchMatchesOutsideMtd === 1 ? "policy is" : "policies are"} outside the current month-to-date issuance period.</span>
-          <button
-            type="button"
-            onClick={() => changeTimeScope("all")}
-            className="rounded-lg border border-[#AFC3DB] bg-white px-2.5 py-1 font-semibold text-[#174EA6] hover:bg-[#EAF2FF] focus:outline-none focus:ring-2 focus:ring-[#17365D]/20"
-          >Show all dates</button>
-        </div>
-      ) : null}
 
       <div className="mobile-card-list p-3 md:hidden">
         {pageRows.map((policy) => <PolicyMobileCard key={policy.id} policy={policy} />)}
