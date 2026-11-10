@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { CalendarDays, ChevronDown, FileText, Plus, RotateCcw, Search } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   RegisterEmpty,
   RegisterPagination,
@@ -152,6 +153,28 @@ export function PolicyIntakeWorkspace({ rows, reviewer, creator, currentProfileI
   const [ocr, setOcr] = useState("all");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
+  const router = useRouter();
+  // The website previously retained a stale SSR list indefinitely while open.
+  // Refresh only when visible, and on return from another tab; the server rechecks
+  // the same authorized scope and canonical effective statuses on every refresh.
+  useEffect(() => {
+    let lastRefresh = Date.now();
+    const refreshVisible = () => {
+      if (document.visibilityState !== "visible") return;
+      const now = Date.now();
+      if (now - lastRefresh < 5000) return;
+      lastRefresh = now;
+      router.refresh();
+    };
+    window.addEventListener("focus", refreshVisible);
+    document.addEventListener("visibilitychange", refreshVisible);
+    const interval = window.setInterval(refreshVisible, 60000);
+    return () => {
+      window.removeEventListener("focus", refreshVisible);
+      document.removeEventListener("visibilitychange", refreshVisible);
+      window.clearInterval(interval);
+    };
+  }, [router]);
   const [page, setPage] = useState(1);
 
   const sources = useMemo(() => Array.from(new Map(rows.map((row) => [`${row.lead_source_type}:${row.lead_source_name}`, { value: `${row.lead_source_type}:${row.lead_source_name}`, label: `${row.lead_source_name} · ${row.lead_source_type.toUpperCase()}` }])).values()).sort((a, b) => a.label.localeCompare(b.label)), [rows]);
@@ -201,7 +224,7 @@ export function PolicyIntakeWorkspace({ rows, reviewer, creator, currentProfileI
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8B93AA]" />
             <input value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} placeholder="Search PIR, customer, vehicle, policy, insurer or source" aria-label="Search PIR, customer, vehicle, policy, insurer or source" className="h-10 w-full rounded-xl border border-[#CBD5E1] bg-white pl-10 pr-3 text-[12px] text-[#0F172A] outline-none transition focus:border-[#17365D] focus:ring-2 focus:ring-[#17365D]/10" />
           </label>
-          <button type="button" onClick={reset} aria-label="Reset filters" title="Reset filters" className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#CBD5E1] bg-white text-[#475569] transition hover:border-[#9FB2C8] hover:bg-[#F8FAFC] focus:outline-none focus:ring-2 focus:ring-[#17365D]/10"><RotateCcw className="h-4 w-4" /></button>
+          <button type="button" onClick={() => { reset(); router.refresh(); }} aria-label="Reset filters and refresh Policy Intake counts" title="Reset filters and refresh counts" className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#CBD5E1] bg-white text-[#475569] transition hover:border-[#9FB2C8] hover:bg-[#F8FAFC] focus:outline-none focus:ring-2 focus:ring-[#17365D]/10"><RotateCcw className="h-4 w-4" /></button>
         </div>
         {creator ? <Link prefetch={false} href="/policy-intakes/new" className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-[#17365D] px-3 text-[11px] font-bold text-white shadow-[0_10px_24px_rgba(23,54,93,.22)]"><Plus className="h-4 w-4" />New Intake</Link> : null}
       </div>
