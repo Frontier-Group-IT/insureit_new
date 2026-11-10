@@ -17,17 +17,19 @@ assert.match(api, /filter: PartnerIntakeFilter = 'all'/, 'Send selected status t
 assert.match(api, /params\.set\('search', search\.trim\(\)\.slice\(0, 120\)\)/, 'Search full dataset on server, not loaded rows');
 assert.match(api, /params\.set\('include_counts', 'true'\)/, 'Fetch full status counts separately from page data');
 assert.match(api, /page\.counts\?\.\[key\]/, 'Reject missing full counts on initial request');
-assert.match(app, /await listPartnerPolicyIntakesPage\(0, filter, debouncedQuery, filter === 'all' && !debouncedQuery\)/, 'Fetch first filtered page');
 assert.match(app, /await listPartnerPolicyIntakesPage\(nextOffset, filter, debouncedQuery, false\)/, 'Load more in the current filter and search');
 assert.match(app, /if \(page\.counts\) setCounts\(page\.counts\)/, 'Use server-reported totals');
+assert.match(app, /listPartnerPolicyIntakesPage\(0, filter, debouncedQuery, true\)/, 'Always refresh current search/filter scoped counts');
+assert.match(route, /loadPolicyIntakeDuplicateMatches\(admin, candidates\)/, 'Mobile must share Operations derived duplicate policy checks');
+assert.match(route, /policyIntakeStatusCounts\(eligible, duplicateIds\)/, 'Status counts must reflect effective statuses of every scoped intake');
+assert.match(route, /policyIntakeBucket\(row, duplicateIds\.has\(row\.id\)\) === filter/, 'Status filter must use same effective classification as counts');
+assert.match(route, /pageIds = filtered\.slice\(offset, offset \+ limit\)/, 'Still return only requested page size');
+assert.match(route, /employeeRead\?\.mode === "or"/, 'Preserve employee scope');
+assert.match(route, /q = q\.or\(intakeReadScope\)/, 'Search remains scoped for partner accounts');
 assert.match(app, /const visibleRows = rows;/, 'Never filter only the currently loaded page');
 assert.match(app, /setTimeout\(\(\) => setDebouncedQuery\(query\.trim\(\)\), 300\)/, 'Debounce server searches');
 assert.doesNotMatch(app, /rows\.filter\(\(row\) => row\.status/, 'Never derive status counts from loaded rows');
 assert.match(route, /includeCounts[\s\S]*url\.searchParams\.get\("include_counts"\)/, 'Counts controlled independently of pagination');
-assert.match(route, /Promise\.all\(mobileFilters\.map/, 'Use scoped exact counts per status');
-assert.match(route, /query\.ilike\("policy_intake_search_text"/, 'Search OCR fields in database');
-assert.match(route, /query\.or\("status\.eq\.ready_for_review,status\.eq\.needs_attention,and\(status\.eq\.processing,ocr_status\.eq\.failed\)"\)/, 'Preserve Action Required classification');
-assert.match(route, /else if \(!employeeRead\) q = q\.or\(intakeReadScope\)/, 'Count queries preserve authorized partner scope');
 
 
 
@@ -56,7 +58,6 @@ assert.match(api, /console\.warn\('\[partner-policy-intakes\] read failed'/, 'Re
 const detail = readFileSync('app/policy-intakes/[id].tsx', 'utf8');
 assert.match(route, /status\.eq\.ready_for_review,status\.eq\.needs_attention/, 'Ready-for-review intakes belong under Action Required');
 assert.match(app, /row\.ocr_status === 'completed' \? <PartnerStatusBadge label="Fetched"/, "Expose the same Fetched document-status badge as Operations");
-assert.match(route, /filter === "in_review" \? \["in_review"\]/, 'Only claimed intakes belong under In Review');
 assert.match(api, /export async function updatePartnerPolicyIntakeReview/, 'Mobile reviewer actions must use authenticated API');
 assert.match(detail, /row.review_access.can_review/, 'Do not show reviewer actions to unauthorised accounts');
 assert.match(detail, /row.review_access.can_finalize/, 'Finalization must require separate approve permission');
