@@ -17,16 +17,16 @@ assert.match(api, /filter: PartnerIntakeFilter = 'all'/, 'Send selected status t
 assert.match(api, /params\.set\('search', search\.trim\(\)\.slice\(0, 120\)\)/, 'Search full dataset on server, not loaded rows');
 assert.match(api, /params\.set\('include_counts', 'true'\)/, 'Fetch full status counts separately from page data');
 assert.match(api, /page\.counts\?\.\[key\]/, 'Reject missing full counts on initial request');
-assert.match(app, /await listPartnerPolicyIntakesPage\(0, filter, debouncedQuery, filter === 'all' && !debouncedQuery\)/, 'Fetch first filtered page');
+assert.match(app, /await listPartnerPolicyIntakesPage\(0, filter, debouncedQuery, true\)/, 'Fetch first filtered page');
 assert.match(app, /await listPartnerPolicyIntakesPage\(nextOffset, filter, debouncedQuery, false\)/, 'Load more in the current filter and search');
-assert.match(app, /if \(page\.counts\) setCounts\(page\.counts\)/, 'Use server-reported totals');
+assert.match(app, /setCounts\(page\.counts\)/, 'Use server-reported totals');
 assert.match(app, /const visibleRows = rows;/, 'Never filter only the currently loaded page');
 assert.match(app, /setTimeout\(\(\) => setDebouncedQuery\(query\.trim\(\)\), 300\)/, 'Debounce server searches');
 assert.doesNotMatch(app, /rows\.filter\(\(row\) => row\.status/, 'Never derive status counts from loaded rows');
 assert.match(route, /includeCounts[\s\S]*url\.searchParams\.get\("include_counts"\)/, 'Counts controlled independently of pagination');
 assert.match(route, /Promise\.all\(mobileFilters\.map/, 'Use scoped exact counts per status');
-assert.match(route, /query\.ilike\("policy_intake_search_text"/, 'Search OCR fields in database');
-assert.match(route, /query\.or\("status\.eq\.ready_for_review,status\.eq\.needs_attention,and\(status\.eq\.processing,ocr_status\.eq\.failed\)"\)/, 'Preserve Action Required classification');
+assert.match(route, /query\.ilike\("search_text"/, 'Search OCR fields in database');
+assert.match(route, /query\.or\("effective_status\.eq\.ready_for_review,effective_status\.eq\.needs_attention,and\(effective_status\.eq\.processing,ocr_status\.eq\.failed\)"\)/, 'Preserve Action Required classification');
 assert.match(route, /else if \(!employeeRead\) q = q\.or\(intakeReadScope\)/, 'Count queries preserve authorized partner scope');
 
 
@@ -72,4 +72,9 @@ assert.match(route, /if \(!access.can_review \|\| identity.actor_kind !== "emplo
 assert.match(route, /getPartnerEmployeeIntakeReadScope\(identity\)/, 'Mutations must preserve scoped access');
 assert.match(route, /loadPolicyIntakeDuplicateMatches\(admin, \[intake\]\)/, 'Duplicates cannot be reviewed');
 assert.match(route, /in\("status", \["processing", "ready_for_review", "in_review", "needs_attention"\]\)/, 'Closed intakes must not be mutated');
+
+assert.match(route, /policy_intake_effective_list/, 'Mobile list and counts use canonical Duplicate classifications');
+assert.match(route, /effective_status\.eq\.ready_for_review/, 'Action Required excludes effective Duplicate rows');
+assert.match(route, /q\.ilike\("search_text"/, 'Count queries follow the same global search as list');
+assert.match(app, /listPartnerPolicyIntakesPage\(0, filter, debouncedQuery, true\)/, 'Refresh counts on filtered and searched pages');
 console.log('Partner app resilient policy intake page loading regression passed');
