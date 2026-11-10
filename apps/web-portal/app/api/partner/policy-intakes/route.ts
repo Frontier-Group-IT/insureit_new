@@ -8,6 +8,9 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { getPartnerEmployeeIntakeReadScope } from "@/lib/partner-policy-intake-read-access";
 import { hasEffectiveCapability } from "@/lib/effective-permissions";
 import { loadPolicyIntakeDuplicateMatches } from "@/lib/policy-intake-duplicate";
+import type { PolicyIntakeDuplicateCandidate } from "@/lib/policy-intake-duplicate";
+import { policyIntakeBucket, policyIntakeStatusCounts } from "@/lib/policy-intake-status-buckets";
+import { fetchAllPages } from "@/lib/fetch-all-pages";
 
 const BUCKET = "policy-documents";
 const MAX_FILE_SIZE = 15 * 1024 * 1024;
@@ -148,61 +151,65 @@ export async function GET(request: Request) {
   const search = view === "mobile_list" ? (url.searchParams.get("search") ?? "").trim().slice(0, 120) : "";
   const includeCounts = view === "mobile_list" && url.searchParams.get("include_counts") === "true";
 
-  let query = admin
-    .from("policy_intake_requests")
-    .select(intakeSelect, { count: "exact" })
-    .order("created_at", { ascending: false })
-    .order("id", { ascending: false })
-    .range(offset, offset + limit - 1);
-
-  if (employeeRead?.mode === "or") query = query.or(employeeRead.predicates);
-  else if (employeeRead?.mode === "submitter") query = query.eq("submitted_by_profile_id",employeeRead.profileId);
-  else if (!employeeRead) query = query.or(intakeReadScope);
-
-  if (filter === "attention") query = query.eq("status", "needs_attention");
-  if (filter === "completed") query = query.eq("status", "completed");
-  if (filter === "in_progress" || filter === "in_review") query = query.in("status", filter === "in_review" ? ["in_review"] : ["processing", "ready_for_review", "in_review"]);
-  if (filter === "duplicate" || filter === "rejected") query = query.eq("status", filter);
-  if (filter === "processing") query = query.eq("status", "processing").neq("ocr_status", "failed");
-  if (filter === "action_required") query = query.or("status.eq.ready_for_review,status.eq.needs_attention,and(status.eq.processing,ocr_status.eq.failed)");
-  if (search) {
-    // A computed field searches OCR values as well as the scalar PIR/source fields.
-    // It is ANDed with the existing server-side identity scope, never used to bypass it.
-    const escaped = search.replace(/[%_\\]/g, (char) => "\\" + char);
-    query = query.ilike("policy_intake_search_text", `%${escaped}%`);
-  }
-
-  // Count all authorized records by the SAME role scope, independently of page size.
-  // Counts are requested on initial load/refresh; Load More remains one paginated query.
   if (view === "mobile_list") {
     try {
-      // The closure keeps role predicates identical for every count, including OR-based employees.
-      const countFor = async (statusFilter: "all" | "action_required" | "in_review" | "processing" | "completed" | "duplicate" | "rejected") => {
-        let q = admin.from("policy_intake_requests").select("id", { count: "exact", head: true });
-        if (employeeRead?.mode === "or") q = q.or(employeeRead.predicates);
-        else if (employeeRead?.mode === "submitter") q = q.eq("submitted_by_profile_id", employeeRead.profileId);
-        else if (!employeeRead) q = q.or(intakeReadScope);
-        if (statusFilter === "action_required") q = q.or("status.eq.ready_for_review,status.eq.needs_attention,and(status.eq.processing,ocr_status.eq.failed)");
-        else if (statusFilter === "in_review") q = q.eq("status", "in_review");
-        else if (statusFilter === "processing") q = q.eq("status", "processing").neq("ocr_status", "failed");
-        else if (statusFilter !== "all") q = q.eq("status", statusFilter);
-        const result = await q;
-        if (result.error) throw result.error;
-        return result.count ?? 0;
-      };
-      const [listResult, counts] = await Promise.all([
-        query,
-        includeCounts
-          ? Promise.all(mobileFilters.map((name) => countFor(name as Parameters<typeof countFor>[0])))
-              .then((values) => Object.fromEntries(mobileFilters.map((name, i) => [name, values[i]])))
-          : Promise.resolve(undefined),
-      ]);
-      if (listResult.error) throw listResult.error;
-      return json({ ok: true, intakes: listResult.data ?? [], total: listResult.count ?? 0, ...(counts ? { counts } : {}) });
+      type Candidate = PolicyIntakeDuplicateCandidate & { ocr_status: string };
+      // Duplicate is a computed Operations classification, not necessarily a
+      // stored status. Resolve ALL visible candidates before counting/paging.
+      const candidatesResult = await fetchAllPages<Candidate, unknown>((from, to) => {
+        let scoped = admin.from("policy_intake_requests")
+          .select("id,intake_number,status,ocr_status,ocr_fields,created_at")
+          .order("created_at", { ascending: false }).order("id", { ascending: false })
+          .range(from, to);
+        if (employeeRead?.mode === "or") scoped = scoped.or(employeeRead.predicates);
+        else if (employeeRead?.mode === "submitter") scoped = scoped.eq("submitted_by_profile_id", employeeRead.profileId);
+        else if (!employeeRead) scoped = scoped.or(intakeReadScope);
+        return scoped.returns<Candidate[]>();
+      });
+      if (candidatesResult.error) throw candidatesResult.error;
+      const candidates = candidatesResult.data ?? [];
+      const duplicates = await loadPolicyIntakeDuplicateMatches(admin, candidates);
+      if (!duplicates.ok) throw new Error("Policy Intake duplicate verification failed.");
+      const duplicateIds = new Set(duplicates.matches.keys());
+
+      // Search at the database with the existing computed field. Scope never
+      // changes for search, and totals always represent all matching records.
+      let searchableIds: Set<string> | null = null;
+      if (search) {
+        const escaped = search.replace(/[%_\\]/g, (char) => "\\" + char);
+        const searched = await fetchAllPages<{ id: string }, unknown>((from, to) => {
+          let q = admin.from("policy_intake_requests").select("id")
+            .ilike("policy_intake_search_text", `%${escaped}%`)
+            .order("created_at", { ascending: false }).order("id", { ascending: false })
+            .range(from, to);
+          if (employeeRead?.mode === "or") q = q.or(employeeRead.predicates);
+          else if (employeeRead?.mode === "submitter") q = q.eq("submitted_by_profile_id", employeeRead.profileId);
+          else if (!employeeRead) q = q.or(intakeReadScope);
+          return q.returns<Array<{ id: string }>>();
+        });
+        if (searched.error) throw searched.error;
+        searchableIds = new Set((searched.data ?? []).map((row) => row.id));
+      }
+      const eligible = searchableIds ? candidates.filter((row) => searchableIds!.has(row.id)) : candidates;
+      const counts = includeCounts ? policyIntakeStatusCounts(eligible, duplicateIds) : undefined;
+      const filtered = filter === "all" ? eligible
+        : eligible.filter((row) => policyIntakeBucket(row, duplicateIds.has(row.id)) === filter);
+      const pageIds = filtered.slice(offset, offset + limit).map((row) => row.id);
+      if (!pageIds.length) return json({ ok: true, intakes: [], total: filtered.length, ...(counts ? { counts } : {}) });
+      let pageQuery = admin.from("policy_intake_requests").select(intakeSelect).in("id", pageIds);
+      if (employeeRead?.mode === "or") pageQuery = pageQuery.or(employeeRead.predicates);
+      else if (employeeRead?.mode === "submitter") pageQuery = pageQuery.eq("submitted_by_profile_id", employeeRead.profileId);
+      else if (!employeeRead) pageQuery = pageQuery.or(intakeReadScope);
+      const result = await pageQuery;
+      if (result.error) throw result.error;
+      const byId = new Map((result.data ?? []).map((row) => [row.id, row]));
+      const intakes = pageIds.map((id) => byId.get(id)).filter((row): row is NonNullable<typeof row> => Boolean(row))
+        .map((row) => duplicateIds.has(row.id) ? { ...row, status: "duplicate" } : row);
+      if (intakes.length !== pageIds.length) throw new Error("Policy Intake scope changed during paging.");
+      return json({ ok: true, intakes, total: filtered.length, ...(counts ? { counts } : {}) });
     } catch (cause) {
-      console.error("[partner-policy-intakes] mobile list read failed", {
-        category: "list-query",
-        // No JWT, SQL, PII, or raw database error in production logs.
+      console.error("[partner-policy-intakes] mobile classification failed", {
+        category: "scoped-status-read",
         code: typeof cause === "object" && cause !== null && "code" in cause
           ? String((cause as { code?: unknown }).code ?? "unknown").slice(0, 32) : "unknown",
       });
@@ -210,6 +217,18 @@ export async function GET(request: Request) {
     }
   }
 
+  let query = admin
+    .from("policy_intake_requests")
+    .select(intakeSelect, { count: "exact" })
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: false })
+    .range(offset, offset + limit - 1);
+  if (employeeRead?.mode === "or") query = query.or(employeeRead.predicates);
+  else if (employeeRead?.mode === "submitter") query = query.eq("submitted_by_profile_id", employeeRead.profileId);
+  else if (!employeeRead) query = query.or(intakeReadScope);
+  if (filter === "attention") query = query.eq("status", "needs_attention");
+  if (filter === "completed") query = query.eq("status", "completed");
+  if (filter === "in_progress") query = query.in("status", ["processing", "ready_for_review", "in_review"]);
   async function ownedCount(statuses: string[], excluded = false) {
     let countQuery = admin
       .from("policy_intake_requests")
