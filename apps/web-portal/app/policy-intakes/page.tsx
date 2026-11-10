@@ -2,15 +2,16 @@ import { AppShell } from "@/components/shell";
 import { ItSuperUserDeletePanel } from "@/components/it-super-user-delete-panel";
 import { PolicyIntakeWorkspace, type PolicyIntakeViewKey, type PolicyIntakeWorkspaceRow } from "@/components/policy-intake-workspace";
 import { hasEffectiveCapability } from "@/lib/effective-permissions";
-import { loadPolicyIntakeDuplicateMatches } from "@/lib/policy-intake-duplicate";
+
 import { requirePolicyIntakeViewer } from "@/lib/policy-intake-server";
 import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
 import { requireCapability } from "@/lib/master-data-server";
-import { getEmployeeAccessScope } from "@/lib/employee-access-scope";
-import { getOperationsHeadDownlinePolicyScope, operationsHeadPolicyFilter } from "@/lib/policy-access-scope";
+
+
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { fetchAllPages } from "@/lib/fetch-all-pages";
-import { getRmPolicyIntakePredicates, hierarchyIntakeRoles } from "@/lib/rm-policy-intake-scope";
+import { getPartnerEmployeeIntakeReadScope } from "@/lib/partner-policy-intake-read-access";
+
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -44,37 +45,18 @@ export default async function PolicyIntakesPage({ searchParams }: { searchParams
   const organizationViewer = ["super_admin", "admin", "it_super_user"].includes(profile.role ?? "");
   const initialView = resolveInitialView(params?.view, reviewer, organizationViewer);
   const admin = createSupabaseAdminClient();
-  let intakeOrFilter: string | null = null;
-  let submitterFilter: string | null = null;
-  if (isDownlineHead) {
-    const [scope, employeeScope] = await Promise.all([
-      getOperationsHeadDownlinePolicyScope(profile.id),
-      getEmployeeAccessScope(profile.id, profile.role, "view_policies"),
-    ]);
-    const filter = operationsHeadPolicyFilter(scope);
-    const { data: allowedPolicies, error: scopeError } = filter
-      ? await admin.from("policies").select("id").or(filter).returns<Array<{ id: string }>>()
-      : { data: [] as Array<{ id: string }>, error: null };
-    if (scopeError) throw new Error("downline_policy_intake_scope_unavailable");
-    const predicates: string[] = [];
-    if (scope.intermediaryCodes.length) predicates.push(`lead_source_code.in.(${scope.intermediaryCodes.join(",")})`);
-    if (employeeScope.profileIds.length) predicates.push(`submitted_by_profile_id.in.(${employeeScope.profileIds.join(",")})`);
-    if (allowedPolicies?.length) predicates.push(`final_policy_id.in.(${allowedPolicies.map(row => row.id).join(",")})`);
-    if (predicates.length) intakeOrFilter = predicates.join(",");
-    else submitterFilter = "00000000-0000-0000-0000-000000000000";
-  } else if (profile.role === "super_admin") {
-    // Super Admin reviews all intakes regardless of reporting hierarchy.
-    // Leave both database filters unset for organization-wide visibility.
-  } else if (profile.role && hierarchyIntakeRoles.has(profile.role)) {
-    // Hierarchy visibility includes the entire reporting subtree, verified Partners and Branches.
-    // Review permission must not widen the list to unrelated organizations.
-    const predicates = await getRmPolicyIntakePredicates(profile.id, profile.role);
-    intakeOrFilter = predicates.join(",");
-  } else if (!reviewer) submitterFilter = profile.id;
+  // Exactly the same read scope resolver as the authenticated Partner App API.
+  // No role may widen the list merely because the Portal renders it.
+  const readScope = await getPartnerEmployeeIntakeReadScope({
+    actor_kind: "employee", profile_id: profile.id,
+  });
+  const intakeOrFilter = readScope.mode === "or" ? readScope.predicates : null;
+  const submitterFilter = readScope.mode === "submitter" ? readScope.profileId
+    : readScope.mode === "none" ? "00000000-0000-0000-0000-000000000000" : null;
   // Fetch the entire authorized result set, not only the first 500/1000 records.
   const { data, error } = await fetchAllPages<PolicyIntakeListRow, unknown>((from, to) => {
-    let page = admin.from("policy_intake_requests")
-      .select("id,intake_number,status,policy_type,lead_source_name,lead_source_type,lead_source_code,customer_mobile,created_at,ocr_status,ocr_fields,file_name,assigned_to_profile_id,submitted_by_profile_id,submitted_by_portal_account_id")
+    let page = admin.from("policy_intake_effective_list")
+      .select("id,intake_number,status,effective_status,policy_type,lead_source_name,lead_source_type,lead_source_code,customer_mobile,created_at,ocr_status,ocr_fields,file_name,assigned_to_profile_id,submitted_by_profile_id,submitted_by_portal_account_id")
       .order("created_at", { ascending: false })
       .order("id", { ascending: false })
       .range(from, to);
@@ -89,7 +71,7 @@ export default async function PolicyIntakesPage({ searchParams }: { searchParams
     code: (error as { code?: string }).code ?? "unknown",
     scope: intakeOrFilter ? "hierarchy" : submitterFilter ? "submitter" : "organization",
   });
-  const rows = data ?? [];
+  const rows = (data ?? []).map((row) => ({ ...row, status: row.effective_status ?? row.status }));
   // A privileged viewer with no rows must not be told the organization has no intakes
   // without checking the underlying table independently. This is only a diagnostic
   // consistency guard; it does not change authorization or widen any user's scope.
@@ -180,18 +162,10 @@ export default async function PolicyIntakesPage({ searchParams }: { searchParams
       || (portalAccount ? "Partner contact unavailable" : "Sales user");
     return { ...row, submitted_by_name: submittedBy };
   });
-  const duplicateCheck = error ? null : await loadPolicyIntakeDuplicateMatches(admin, rows);
-  const workspaceRows = duplicateCheck?.ok
-    ? rowsWithSubmitters.map((row) => duplicateCheck.matches.has(row.id) ? { ...row, status: "Duplicate" } : row)
-    : [];
-  if (duplicateCheck && !duplicateCheck.ok) {
-    console.error("[policy-intakes] duplicate verification failed", {
-      profileId: profile.id,
-      role: profile.role,
-      rowCount: rows.length,
-    });
-  }
-  const unavailable = Boolean(error || zeroListMismatch || zeroListCheckFailed || (duplicateCheck && !duplicateCheck.ok));
+  // Duplicate is a read-only effective status from the shared database view,
+  // not a mutation of stored policy intake status.
+  const workspaceRows = rowsWithSubmitters;
+  const unavailable = Boolean(error || zeroListMismatch || zeroListCheckFailed);
 
   return <AppShell title={reviewer ? "Policy Intakes" : "My Policy Intakes"}>
     {profile.role === "it_super_user" && !unavailable ? <ItSuperUserDeletePanel
