@@ -74,7 +74,7 @@ for(const path of [
 assert.ok(read("app/policies/life-health-case-documents/[documentId]/view/route.ts").includes("canAccessOperationsHeadCase(requester.id, document.case_id)"));
 const intakes=read("lib/policy-intake-server.ts");
 assert.ok(intakes.includes("canAccessOperationsHeadIntake(profile.id, intakeId)"));
-assert.ok(read("app/policy-intakes/page.tsx").includes("submitted_by_profile_id.in."));
+assert.ok(read("app/policy-intakes/page.tsx").includes("getPartnerEmployeeIntakeReadScope") && read("lib/partner-policy-intake-read-access.ts").includes("submitted_by_profile_id.in."), "Life Head policy intake must retain downline scope via shared resolver");
 assert.ok(read("app/policy-intakes/actions.ts").includes("requirePolicyIntakeFinalizer(id)"));
 assert.ok(read("app/policy-intakes/policy-copy-state-actions.ts").includes("requirePolicyIntakeFinalizer(id)"));
 assert.ok(read("app/policies/new/page.tsx").includes("allowedCustomerIds.has(row.id)"));
