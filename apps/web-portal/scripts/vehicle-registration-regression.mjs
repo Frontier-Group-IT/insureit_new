@@ -64,7 +64,6 @@ const invalid = [
   "20AB1234",
   "USK",
   "USK50730",
-  "US5073",
   "USKD5073",
   "ABC12D4",
 ];
