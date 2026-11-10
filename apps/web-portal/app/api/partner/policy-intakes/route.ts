@@ -67,6 +67,7 @@ export async function GET(request: Request) {
   const scope = auth.scope;
   const admin = createSupabaseAdminClient();
   const intakeSelect = "id,intake_number,status,policy_type,lead_source_name,lead_source_type,lead_source_code,customer_mobile,file_name,ocr_status,ocr_fields,attention_reason,created_at,updated_at,final_policy_id,submitted_by_profile_id,submitted_by_portal_account_id";
+  const effectiveSelect = intakeSelect + ",effective_status";
   const url = new URL(request.url);
   const requestedId = url.searchParams.get("id")?.trim();
   const view = url.searchParams.get("view")?.trim().toLowerCase();
@@ -113,8 +114,8 @@ export async function GET(request: Request) {
 
   if (requestedId) {
     let detailQuery = admin
-      .from("policy_intake_requests")
-      .select(intakeSelect)
+      .from("policy_intake_effective_list")
+      .select(effectiveSelect)
       .eq("id", requestedId);
 
     if (employeeRead?.mode === "or") detailQuery = detailQuery.or(employeeRead.predicates);
@@ -132,7 +133,7 @@ export async function GET(request: Request) {
     // Reviewer controls are only provided to currently active, authorized employees.
     // A readable intake alone never grants Operations mutation rights.
     const access = await resolvePolicyIntakeReviewerAccess(identity);
-    return json({ ok: true, intake, review_access: access });
+    return json({ ok: true, intake: { ...intake, status: intake.effective_status ?? intake.status }, review_access: access });
   }
 
   const requestedLimit = Number(url.searchParams.get("limit") ?? "25");
@@ -149,8 +150,8 @@ export async function GET(request: Request) {
   const includeCounts = view === "mobile_list" && url.searchParams.get("include_counts") === "true";
 
   let query = admin
-    .from("policy_intake_requests")
-    .select(intakeSelect, { count: "exact" })
+    .from(view === "mobile_list" ? "policy_intake_effective_list" : "policy_intake_requests")
+    .select(view === "mobile_list" ? effectiveSelect : intakeSelect, { count: "exact" })
     .order("created_at", { ascending: false })
     .order("id", { ascending: false })
     .range(offset, offset + limit - 1);
@@ -160,16 +161,16 @@ export async function GET(request: Request) {
   else if (!employeeRead) query = query.or(intakeReadScope);
 
   if (filter === "attention") query = query.eq("status", "needs_attention");
-  if (filter === "completed") query = query.eq("status", "completed");
-  if (filter === "in_progress" || filter === "in_review") query = query.in("status", filter === "in_review" ? ["in_review"] : ["processing", "ready_for_review", "in_review"]);
-  if (filter === "duplicate" || filter === "rejected") query = query.eq("status", filter);
-  if (filter === "processing") query = query.eq("status", "processing").neq("ocr_status", "failed");
-  if (filter === "action_required") query = query.or("status.eq.ready_for_review,status.eq.needs_attention,and(status.eq.processing,ocr_status.eq.failed)");
+  if (filter === "completed") query = query.eq(view === "mobile_list" ? "effective_status" : "status", "completed");
+  if (filter === "in_progress" || filter === "in_review") query = query.in(view === "mobile_list" ? "effective_status" : "status", filter === "in_review" ? ["in_review"] : ["processing", "ready_for_review", "in_review"]);
+  if (filter === "duplicate" || filter === "rejected") query = query.eq(view === "mobile_list" ? "effective_status" : "status", filter);
+  if (filter === "processing") query = query.eq("effective_status", "processing").neq("ocr_status", "failed");
+  if (filter === "action_required") query = query.or("effective_status.eq.ready_for_review,effective_status.eq.needs_attention,and(effective_status.eq.processing,ocr_status.eq.failed)");
   if (search) {
     // A computed field searches OCR values as well as the scalar PIR/source fields.
     // It is ANDed with the existing server-side identity scope, never used to bypass it.
     const escaped = search.replace(/[%_\\]/g, (char) => "\\" + char);
-    query = query.ilike("policy_intake_search_text", `%${escaped}%`);
+    query = query.ilike("search_text", `%${escaped}%`);
   }
 
   // Count all authorized records by the SAME role scope, independently of page size.
@@ -178,14 +179,15 @@ export async function GET(request: Request) {
     try {
       // The closure keeps role predicates identical for every count, including OR-based employees.
       const countFor = async (statusFilter: "all" | "action_required" | "in_review" | "processing" | "completed" | "duplicate" | "rejected") => {
-        let q = admin.from("policy_intake_requests").select("id", { count: "exact", head: true });
+        let q = admin.from("policy_intake_effective_list").select("id", { count: "exact", head: true });
         if (employeeRead?.mode === "or") q = q.or(employeeRead.predicates);
         else if (employeeRead?.mode === "submitter") q = q.eq("submitted_by_profile_id", employeeRead.profileId);
         else if (!employeeRead) q = q.or(intakeReadScope);
-        if (statusFilter === "action_required") q = q.or("status.eq.ready_for_review,status.eq.needs_attention,and(status.eq.processing,ocr_status.eq.failed)");
-        else if (statusFilter === "in_review") q = q.eq("status", "in_review");
-        else if (statusFilter === "processing") q = q.eq("status", "processing").neq("ocr_status", "failed");
-        else if (statusFilter !== "all") q = q.eq("status", statusFilter);
+        if (statusFilter === "action_required") q = q.or("effective_status.eq.ready_for_review,effective_status.eq.needs_attention,and(effective_status.eq.processing,ocr_status.eq.failed)");
+        else if (statusFilter === "in_review") q = q.eq("effective_status", "in_review");
+        else if (statusFilter === "processing") q = q.eq("effective_status", "processing").neq("ocr_status", "failed");
+        else if (statusFilter !== "all") q = q.eq("effective_status", statusFilter);
+        if (search) q = q.ilike("search_text", `%${search.replace(/[%_\\]/g, (char) => "\\" + char)}%`);
         const result = await q;
         if (result.error) throw result.error;
         return result.count ?? 0;
@@ -198,7 +200,7 @@ export async function GET(request: Request) {
           : Promise.resolve(undefined),
       ]);
       if (listResult.error) throw listResult.error;
-      return json({ ok: true, intakes: listResult.data ?? [], total: listResult.count ?? 0, ...(counts ? { counts } : {}) });
+      return json({ ok: true, intakes: (listResult.data ?? []).map((row) => ({ ...row, status: row.effective_status ?? row.status })), total: listResult.count ?? 0, ...(counts ? { counts } : {}) });
     } catch (cause) {
       console.error("[partner-policy-intakes] mobile list read failed", {
         category: "list-query",
