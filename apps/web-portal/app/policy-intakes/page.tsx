@@ -17,6 +17,7 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 type PolicyIntakeListRow = Omit<PolicyIntakeWorkspaceRow, "submitted_by_name"> & {
+  effective_status: string;
   submitted_by_profile_id: string | null;
   submitted_by_portal_account_id: string | null;
 };
