@@ -349,6 +349,12 @@ export function PolicyWorkspace({ rows, sourceOptions = [], isRelationshipManage
     [controlFiltered, timeScope, mtdEnd, mtdStart],
   );
 
+  // Keep issuance-date MTD reporting accurate while making older matching policies discoverable.
+  // This does not change authorized rows or silently expand the selected reporting period.
+  const searchMatchesOutsideMtd = timeScope === "mtd" && query.trim()
+    ? Math.max(0, controlFiltered.length - baseFiltered.length)
+    : 0;
+
   const stats = useMemo(() => {
     const active = baseFiltered.filter((row) => row.status === "Active").length;
     const expiring = baseFiltered.filter((row) => row.status === "Expiring soon").length;
@@ -525,6 +531,17 @@ export function PolicyWorkspace({ rows, sourceOptions = [], isRelationshipManage
           </div>
         </div>
       </div>
+
+      {searchMatchesOutsideMtd > 0 ? (
+        <div className="flex flex-wrap items-center gap-2 border-b border-[#E5ECF5] bg-[#F8FAFC] px-4 py-2 text-[11px] text-[#475569]" role="status">
+          <span>{searchMatchesOutsideMtd} matching {searchMatchesOutsideMtd === 1 ? "policy is" : "policies are"} outside the current month-to-date issuance period.</span>
+          <button
+            type="button"
+            onClick={() => changeTimeScope("all")}
+            className="rounded-lg border border-[#AFC3DB] bg-white px-2.5 py-1 font-semibold text-[#174EA6] hover:bg-[#EAF2FF] focus:outline-none focus:ring-2 focus:ring-[#17365D]/20"
+          >Show all dates</button>
+        </div>
+      ) : null}
 
       <div className="mobile-card-list p-3 md:hidden">
         {pageRows.map((policy) => <PolicyMobileCard key={policy.id} policy={policy} />)}
