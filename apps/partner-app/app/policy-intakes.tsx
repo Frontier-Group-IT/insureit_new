@@ -64,10 +64,11 @@ export default function PolicyIntakesScreen() {
     pageLoadingRef.current = false;
     if (!manual) setRows([]);
     try {
-      const page = await listPartnerPolicyIntakesPage(0, filter, debouncedQuery, filter === 'all' && !debouncedQuery);
+      const page = await listPartnerPolicyIntakesPage(0, filter, debouncedQuery, true);
       if (generation !== requestGeneration.current) return;
       setRows(page.intakes);
-      if (page.counts) setCounts(page.counts);
+      if (!page.counts) throw new Error('Policy Intake status counts were not returned.');
+      setCounts(page.counts);
       setTotal(page.total);
       setNextOffset(page.intakes.length);
     } catch (cause) {
