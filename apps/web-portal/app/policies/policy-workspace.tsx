@@ -454,7 +454,23 @@ export function PolicyWorkspace({ rows, sourceOptions = [], isRelationshipManage
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8B93AA]" />
               <input
                 value={query}
-                onChange={(event) => { setQuery(event.target.value); setPage(1); }}
+                onChange={(event) => {
+                  const nextQuery = event.target.value;
+                  setQuery(nextQuery);
+                  setPage(1);
+                  // A global search should not be restricted by a previous MTD, RM, source,
+                  // business, status or custom date selection. Authorization remains server-scoped.
+                  if (nextQuery.trim()) {
+                    setTimeScope("all");
+                    setBusiness("all");
+                    setSource("all");
+                    setRm("all");
+                    setView("all");
+                    setFromDate("");
+                    setToDate("");
+                    try { window.sessionStorage.setItem(POLICY_REGISTER_PERIOD_KEY, "all"); } catch {}
+                  }
+                }}
                 placeholder="Search policy, customer, insurer, RM, vehicle, chassis, engine, risk or source"
                 aria-label="Search policy, customer, insurer, RM, vehicle, chassis, engine, risk or source"
                 className="h-10 w-full rounded-xl border border-[#CBD5E1] bg-white pl-10 pr-3 text-[12px] text-[#0F172A] outline-none transition focus:border-[#17365D] focus:ring-2 focus:ring-[#17365D]/10"
