@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { CalendarDays, ChevronDown, FileText, Plus, RotateCcw, Search } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   RegisterEmpty,
   RegisterPagination,
@@ -13,6 +14,7 @@ import {
 import { PolicyIntakeOcrRetryButton } from "@/components/policy-intake-ocr-retry-button";
 import type { PolicyIntakeOcrField } from "@/app/policy-intakes/ocr-actions";
 import { getInsurerLogo } from "@/lib/insurer-logo";
+import { policyIntakeBucket, policyIntakeStatusCounts } from "@/lib/policy-intake-status-buckets";
 
 export type PolicyIntakeWorkspaceRow = {
   id: string;
@@ -59,7 +61,7 @@ function policyTypeLabel(value: string | null) {
   return "—";
 }
 function isDuplicate(row: PolicyIntakeWorkspaceRow) {
-  return row.status.toLowerCase() === "duplicate";
+  return policyIntakeBucket(row, false) === "duplicate";
 }
 function canRetryOcr(row: PolicyIntakeWorkspaceRow) {
   if (isProposal(row) || row.status !== "processing") return false;
@@ -153,6 +155,25 @@ export function PolicyIntakeWorkspace({ rows, reviewer, creator, currentProfileI
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [page, setPage] = useState(1);
+  const router = useRouter();
+  const refresh = useCallback(() => router.refresh(), [router]);
+  // Server data can change while a reviewer stays on this page. Refresh the
+  // scoped snapshot without resetting selected status/search/date filters.
+  useEffect(() => {
+    const onFocus = () => { if (document.visibilityState === "visible") refresh(); };
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === "visible") refresh();
+    }, 60_000);
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
+    window.addEventListener("policy-intake:changed", onFocus);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
+      window.removeEventListener("policy-intake:changed", onFocus);
+    };
+  }, [refresh]);
 
   const sources = useMemo(() => Array.from(new Map(rows.map((row) => [`${row.lead_source_type}:${row.lead_source_name}`, { value: `${row.lead_source_type}:${row.lead_source_name}`, label: `${row.lead_source_name} · ${row.lead_source_type.toUpperCase()}` }])).values()).sort((a, b) => a.label.localeCompare(b.label)), [rows]);
 
@@ -164,25 +185,23 @@ export function PolicyIntakeWorkspace({ rows, reviewer, creator, currentProfileI
     return (!query.trim() || haystack.includes(query.trim().toLowerCase())) && (source === "all" || sourceKey === source) && (ocr === "all" || detailStatus === ocr) && (!fromDate || created >= fromDate) && (!toDate || created <= toDate);
   }), [rows, query, source, ocr, fromDate, toDate]);
 
-  const stats = useMemo(() => ({
-    all: baseFiltered.length,
-    action: baseFiltered.filter((row) => row.status === "ready_for_review" || row.status === "needs_attention" || (row.status === "processing" && row.ocr_status === "failed")).length,
-    inReview: baseFiltered.filter((row) => row.status === "in_review").length,
-    myActiveWork: baseFiltered.filter((row) => row.status === "in_review" && row.assigned_to_profile_id === currentProfileId).length,
-    processing: baseFiltered.filter((row) => row.status === "processing" && row.ocr_status !== "failed").length,
-    completed: baseFiltered.filter((row) => row.status === "completed").length,
-    duplicate: baseFiltered.filter(isDuplicate).length,
-    rejected: baseFiltered.filter((row) => row.status === "rejected").length,
-  }), [baseFiltered, currentProfileId]);
+  const stats = useMemo(() => {
+    const bucketCounts = policyIntakeStatusCounts(baseFiltered, new Set(
+      baseFiltered.filter(isDuplicate).map((row) => row.id),
+    ));
+    return { all: bucketCounts.all, action: bucketCounts.action_required,
+      inReview: bucketCounts.in_review, processing: bucketCounts.processing,
+      completed: bucketCounts.completed, duplicate: bucketCounts.duplicate,
+      rejected: bucketCounts.rejected,
+      myActiveWork: baseFiltered.filter((row) => policyIntakeBucket(row, false) === "in_review" &&
+        row.assigned_to_profile_id === currentProfileId).length };
+  }, [baseFiltered, currentProfileId]);
 
   const filtered = useMemo(() => baseFiltered.filter((row) => {
     if (view === "all") return true;
-    if (view === "action") return row.status === "ready_for_review" || row.status === "needs_attention" || (row.status === "processing" && row.ocr_status === "failed");
-    if (view === "in_review") return row.status === "in_review";
-    if (view === "mine") return row.status === "in_review" && row.assigned_to_profile_id === currentProfileId;
-    if (view === "processing") return row.status === "processing" && row.ocr_status !== "failed";
-    if (view === "duplicate") return isDuplicate(row);
-    return row.status === view;
+    if (view === "mine") return policyIntakeBucket(row, false) === "in_review" &&
+      row.assigned_to_profile_id === currentProfileId;
+    return policyIntakeBucket(row, false) === (view === "action" ? "action_required" : view);
   }), [baseFiltered, view, currentProfileId]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
@@ -201,7 +220,8 @@ export function PolicyIntakeWorkspace({ rows, reviewer, creator, currentProfileI
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8B93AA]" />
             <input value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} placeholder="Search PIR, customer, vehicle, policy, insurer or source" aria-label="Search PIR, customer, vehicle, policy, insurer or source" className="h-10 w-full rounded-xl border border-[#CBD5E1] bg-white pl-10 pr-3 text-[12px] text-[#0F172A] outline-none transition focus:border-[#17365D] focus:ring-2 focus:ring-[#17365D]/10" />
           </label>
-          <button type="button" onClick={reset} aria-label="Reset filters" title="Reset filters" className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#CBD5E1] bg-white text-[#475569] transition hover:border-[#9FB2C8] hover:bg-[#F8FAFC] focus:outline-none focus:ring-2 focus:ring-[#17365D]/10"><RotateCcw className="h-4 w-4" /></button>
+          <button type="button" onClick={refresh} aria-label="Refresh Policy Intake counts" title="Refresh counts from database" className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border border-[#CBD5E1] bg-white px-2 text-[10px] font-semibold text-[#475569] hover:bg-[#F8FAFC]"><RotateCcw className="h-4 w-4" />Refresh</button>
+           <button type="button" onClick={reset} aria-label="Reset filters" title="Reset filters" className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#CBD5E1] bg-white text-[#475569] transition hover:border-[#9FB2C8] hover:bg-[#F8FAFC] focus:outline-none focus:ring-2 focus:ring-[#17365D]/10"><RotateCcw className="h-4 w-4" /></button>
         </div>
         {creator ? <Link prefetch={false} href="/policy-intakes/new" className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-[#17365D] px-3 text-[11px] font-bold text-white shadow-[0_10px_24px_rgba(23,54,93,.22)]"><Plus className="h-4 w-4" />New Intake</Link> : null}
       </div>
