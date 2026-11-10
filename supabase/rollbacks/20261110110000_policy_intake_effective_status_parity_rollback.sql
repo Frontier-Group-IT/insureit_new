@@ -1,0 +1,1 @@
+DROP VIEW IF EXISTS public.policy_intake_effective_list;
