@@ -15,6 +15,10 @@ const repoRoot = path.resolve(portalRoot, "../..");
 const valid = [
   "MP20AB1234",
   "MP20DD0002",
+  "USK5073",
+  "usk-5073",
+  "ABC1234",
+  "ABC1",
   "24BH3275H",
   "24BH3275HK",
   " 24 bh-3275 h ",
@@ -24,6 +28,7 @@ for (const value of valid) {
 }
 
 assert.equal(normalizeVehicleRegistrationNumber(" 24 bh-3275 h "), "24BH3275H");
+assert.equal(normalizeVehicleRegistrationNumber(" usk-5073 "), "USK5073");
 
 assert.equal(
   displayVehicleRegistrationNumber({
@@ -57,6 +62,11 @@ const invalid = [
   "BH24BH3275H",
   "MP20AB",
   "20AB1234",
+  "USK",
+  "USK50730",
+  "US5073",
+  "USKD5073",
+  "ABC12D4",
 ];
 for (const value of invalid) {
   assert.equal(isValidVehicleRegistrationNumber(value), false, `${value} should be rejected`);
@@ -77,6 +87,7 @@ assert.doesNotMatch(onboardingActions, /starting with 2 letters and ending with 
 
 const vehicleMasterActions = fs.readFileSync(path.join(portalRoot, "app/vehicles/vehicle-master-actions.ts"), "utf8");
 assert.match(vehicleMasterActions, /registration_mode/);
+assert.match(vehicleMasterActions, /isValidVehicleRegistrationNumber\(rawVehicleNo\)/);
 assert.match(vehicleMasterActions, /registration_status: registrationStatus/);
 assert.match(vehicleMasterActions, /vehicle_no_normalized: vehicleNoNormalized/);
 assert.match(vehicleMasterActions, /registrationStatus = "registration_pending"/);
@@ -132,4 +143,4 @@ assert.match(transitionMigration, /new\.vehicle_no_normalized := normalized_regi
 const gateway = fs.readFileSync(path.join(repoRoot, "infrastructure/icall-gateway/server.js"), "utf8");
 assert.match(gateway, /const bharatSeries = \/\^\\d\{2\}BH/);
 
-console.log("Vehicle registration regression passed, including BH-series, scoped Vehicle Master access, RM read-only vehicle details and RM Reports access.");
+console.log("Vehicle registration regression passed, including legacy USK5073, standard and BH-series formats, scoped Vehicle Master access, RM read-only vehicle details and RM Reports access.");
