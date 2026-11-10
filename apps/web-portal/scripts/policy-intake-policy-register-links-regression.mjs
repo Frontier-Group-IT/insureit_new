@@ -74,7 +74,7 @@ assert(intakePage.includes('if (value === "in_review") return "in_review"'), "In
 assert(intakePage.includes('return reviewer ? "action" : "all"'), "Non-reviewers must still reject reviewer-only Action Required as their default/deep-link fallback");
 const intakeScope = read("lib/partner-policy-intake-read-access.ts");
 assert(intakePage.includes("getPartnerEmployeeIntakeReadScope") && intakeScope.includes("hierarchyIntakeRoles.has(profile.role)"), "Hierarchy roles retain verified reporting-subtree Partner/Branch scope");
-assert(intakeScope.includes("getRmPolicyIntakePredicates(profileId, profile.role)"), "RM intake scope remains resolved on the server");
+assert(/getRmPolicyIntakePredicates\(profileId,\s*profile.role\)/.test(intakeScope), "RM intake scope remains resolved on the server");
 assert(intakeScope.includes('return { mode:"submitter",profileId }'), "Non-reviewers remain scoped to their own submissions");
 assert(intakePage.includes('page = page.eq("submitted_by_profile_id", submitterFilter)'), "Non-RM own-submitter filtering must be applied to database queries");
 assert(intakePage.includes("initialView={initialView}"), "Policy Intake route must pass the deep-linked initial view into the workspace");
