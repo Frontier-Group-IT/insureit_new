@@ -88,7 +88,9 @@ assert(caseRegister.includes("const pendingCount = caseSummary?.pending"), "Case
 const workspace = read("components/policy-intake-workspace.tsx");
 assert(workspace.includes("export type PolicyIntakeViewKey"), "Policy Intake view keys must remain explicit and typed");
 assert(workspace.includes('useState<ViewKey>(initialView ?? (reviewer ? "action" : "all"))'), "Policy Intake workspace must honor the validated owner In Review deep link without granting reviewer defaults");
-assert(workspace.includes('action: baseFiltered.filter((row) => row.status === "ready_for_review" || row.status === "needs_attention" || (row.status === "processing" && row.ocr_status === "failed")).length'), "Policy Intake workspace Action Required semantics must include ready-for-review, needs-attention, and failed OCR rows");
-assert(workspace.includes('inReview: baseFiltered.filter((row) => row.status === "in_review").length'), "Policy Intake workspace In Review semantics must remain unchanged");
+const statusBuckets = read("lib/policy-intake-status-buckets.ts");
+assert(workspace.includes('action: bucketCounts.action_required') && statusBuckets.includes('row.status === "ready_for_review"') && statusBuckets.includes('row.status === "needs_attention"') && statusBuckets.includes('row.ocr_status === "failed"'), "Action Required uses the shared full-status definition, excluding derived duplicates");
+assert(workspace.includes('inReview: bucketCounts.in_review') && statusBuckets.includes('row.status === "in_review"'), "In Review uses canonical effective classification");
+
 
 console.log("policy intake policy register links regression: ok");
