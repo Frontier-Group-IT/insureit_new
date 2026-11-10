@@ -55,16 +55,16 @@ export default function PolicyIntakesScreen() {
   const requestGeneration = useRef(0);
   const pageLoadingRef = useRef(false);
 
-  const load = useCallback(async (manual = false) => {
+  const load = useCallback(async (manual = false, background = false) => {
     const generation = ++requestGeneration.current;
     if (manual) setRefreshing(true);
-    else setLoading(true);
+    else if (!background) setLoading(true);
     setError('');
     setPageError('');
     pageLoadingRef.current = false;
-    if (!manual) setRows([]);
+    if (!manual && !background) setRows([]);
     try {
-      const page = await listPartnerPolicyIntakesPage(0, filter, debouncedQuery, filter === 'all' && !debouncedQuery);
+      const page = await listPartnerPolicyIntakesPage(0, filter, debouncedQuery, true);
       if (generation !== requestGeneration.current) return;
       setRows(page.intakes);
       if (page.counts) setCounts(page.counts);
@@ -112,7 +112,11 @@ export default function PolicyIntakesScreen() {
 
   useFocusEffect(useCallback(() => {
     void load(false);
-    return () => { requestGeneration.current += 1; };
+    const refreshInterval = setInterval(() => void load(false, true), 60_000);
+    return () => {
+      clearInterval(refreshInterval);
+      requestGeneration.current += 1;
+    };
   }, [load]));
 
   // The API has already applied the selected status and search to the full authorized dataset.
@@ -220,8 +224,8 @@ export default function PolicyIntakesScreen() {
             asset={filter !== 'all' || debouncedQuery ? PartnerAssets.emptyStates.noSearchResults : PartnerAssets.emptyStates.policyUpload}
             title={filter !== 'all' || debouncedQuery ? 'No submissions in this filter' : 'No Policy Intakes yet'}
             message={filter !== 'all' || debouncedQuery ? 'Try another filter or search term.' : 'Create an intake when you have a policy copy that Operations needs to onboard.'}
-            actionLabel={filter !== 'all' || debouncedQuery ? undefined : 'Create first intake'}
-            onAction={filter !== 'all' || debouncedQuery ? undefined : () => router.push('/policy-intake-new')}
+            actionLabel={filter !== 'all' || debouncedQuery || !canPartnerAccess(context, 'create_policy_intakes', 'edit') ? undefined : 'Create first intake'}
+            onAction={filter !== 'all' || debouncedQuery || !canPartnerAccess(context, 'create_policy_intakes', 'edit') ? undefined : () => router.push('/policy-intake-new')}
           />
         )}
         {visibleRows.length > 0 && nextOffset < total ? (
