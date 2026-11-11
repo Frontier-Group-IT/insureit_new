@@ -382,7 +382,27 @@ jobs:
             echo "V2 SYNTHETIC RESTORE FAILED: container startup"
             exit 1
           fi
-          docker exec -u postgres insureit-v2-restore-check createdb -T template0 v2_synthetic
+          # The pinned image performs a transient PostgreSQL restart
+          # during startup. A positive pg_isready is not sufficient for
+          # immediate createdb; retry only known startup/connection errors.
+          created=0
+          for attempt in $(seq 1 20); do
+            if docker exec -u postgres insureit-v2-restore-check \
+              createdb -T template0 v2_synthetic \
+              > "$RUNNER_TEMP/v2-smoke.log" 2>&1; then
+              created=1
+              break
+            fi
+            if ! grep -Eqi 'terminating connection due to administrator command|connection refused|could not connect|No such file or directory' "$RUNNER_TEMP/v2-smoke.log"; then
+              echo "V2 SYNTHETIC TARGET CREATE FAILED: nontransient error"
+              exit 1
+            fi
+            sleep 2
+          done
+          if [ "$created" != 1 ]; then
+            echo "V2 SYNTHETIC TARGET CREATE FAILED: offline PG17 unavailable"
+            exit 1
+          fi
           cat > "$RUNNER_TEMP/v2-smoke.sql" <<'SYNTHETIC_SQL'
           CREATE SCHEMA auth;
           CREATE SCHEMA storage;
