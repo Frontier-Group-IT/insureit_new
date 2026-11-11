@@ -25,7 +25,8 @@ export function refineIciciBundledTwoWheelerText(
   const model = pair?.[2]?.trim() ?? null;
   // Product 3005 often prints identity labels with their values in a column
   // rather than using the "Name of the Insured :" convention.
-  const name = explicitIdentityValue(riskLines, /^Name\s+of\s+(?:the\s+)?Insured\b\s*:?\s*(.*)$/i, false);
+  const name = explicitIdentityValue(riskLines, /^Name\s+of\s+(?:the\s+)?Insured\b\s*:?\s*(.*)$/i, false)
+    ?? nameFromIciciLabelColumn(riskLines);
   const phone = explicitIdentityValue(riskLines, /^(?:Mobile(?:\s+(?:No\.?|Number))?|Contact\s+(?:No\.?|Number)|Phone(?:\s+(?:No\.?|Number))?)\b\s*:?\s*(.*)$/i, true);
   const engine = exactLabeledId(riskLines, /^Engine\s+No\.?\s*:?\s+([A-Z0-9-]{8,24})$/i);
   const cpaLine = scheduleLines.map((line) =>
@@ -90,6 +91,32 @@ function explicitIdentityValue(lines: string[], label: RegExp, isPhone: boolean)
         && !/\b(?:policy|vehicle|period|registration|premium|insurance|motor)\b/i.test(name)
         && !/\d{5,}/.test(name)) return name;
     }
+  }
+  return null;
+}
+
+/**
+ * Native ICICI PDFs can render the labels as a column, followed by the
+ * corresponding values as a separate column (rather than inline pairs).
+ * Only consume the first value when a complete, recognizable label run
+ * precedes it. This is the exact PDF "Name of Insured" value, not a new field.
+ */
+function nameFromIciciLabelColumn(lines: string[]): string | null {
+  const nameLabel = /^Name\s+of\s+(?:the\s+)?Insured\s*:?$/i;
+  const nextLabels = /^(?:Period\s+of\s+Insurance|Vehicle\s+Make\s*\/\s*Model|RTO\s+City|Vehicle\s+Registration|Engine\s+No|Chassis\s+No|Current\s+Year\s+NCB|Vehicle\s+Usage)\b/i;
+  for (let i = 0; i < lines.length; i += 1) {
+    if (!nameLabel.test(lines[i])) continue;
+    let j = i + 1;
+    let labels = 0;
+    while (j < lines.length && nextLabels.test(lines[j])) { labels++; j++; }
+    if (labels < 2 || j >= lines.length) continue;
+    const candidate = lines[j].replace(/\s+/g, " ").trim();
+    if (candidate.length < 3 || candidate.length > 120
+      || !/[A-Za-z]{2}/.test(candidate)
+      || /\d{5,}/.test(candidate)
+      || /^(?:Period|Vehicle|Policy|Engine|Chassis|Registration|RTO|Previous|Current)\b/i.test(candidate)
+      || /\b(?:\d{1,2}\s+[A-Za-z]{3}\s+\d{4}\s+to\s+\d{1,2})\b/i.test(candidate)) continue;
+    return candidate;
   }
   return null;
 }
