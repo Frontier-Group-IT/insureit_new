@@ -23,7 +23,7 @@ export default function ActivityScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [query, setQuery] = useState('');
-  const [activityFilter, setActivityFilter] = useState<'unread' | 'read' | 'all'>('unread');
+  const [activityFilter, setActivityFilter] = useState<'unread' | 'read' | 'all'>('all');
   const [readKeys, setReadKeys] = useState<Set<string>>(new Set());
 
   const load = useCallback(async () => {
@@ -34,11 +34,6 @@ export default function ActivityScreen() {
       const nextReadKeys = await getPartnerActivityReadKeys(nextData.items);
       setData(nextData);
       setReadKeys(nextReadKeys);
-      const unreadCount = nextData.items.reduce(
-        (count, item) => count + (nextReadKeys.has(partnerActivityEventKey(item)) ? 0 : 1),
-        0,
-      );
-      setActivityFilter(unreadCount > 0 ? 'unread' : 'all');
     } catch {
       setData(null);
       setError('Recent activity could not be loaded.');
@@ -148,6 +143,7 @@ export default function ActivityScreen() {
                 const isRenewal = item.kind === 'renewal' || /renewal/i.test(item.title);
                 const isClaim = item.kind === 'claim' || /claim/i.test(item.title);
                 const tint = isRenewal ? 'renewal' : isClaim ? 'claim' : 'other';
+                const status = attentionStatus(item.title);
                 return (
                   <Pressable
                     key={`${item.kind}-${item.title}`}
@@ -185,7 +181,12 @@ export default function ActivityScreen() {
                         : tint === 'claim' ? styles.attentionDividerClaim : styles.attentionDividerOther,
                     ]} />
                     <View style={styles.attentionBody}>
-                      <Text style={styles.attentionTitle}>{item.title}</Text>
+                      <Text style={[
+                        styles.attentionTitle,
+                        status === 'active' ? styles.attentionTitleActive
+                          : status === 'due' ? styles.attentionTitleDue
+                            : status === 'expired' ? styles.attentionTitleExpired : null,
+                      ]}>{item.title}</Text>
                       <Text style={styles.attentionText}>{item.subtitle}</Text>
                     </View>
                   </Pressable>
@@ -271,7 +272,7 @@ export default function ActivityScreen() {
                     </View>
 
                     <View style={styles.itemBody}>
-                      <View style={styles.itemTop}>
+                      <View style={styles.itemMeta}>
                         <View style={styles.kindPill}>
                           <Text style={[styles.kind, toneText(item.tone)]}>{labelFor(item.kind)}</Text>
                         </View>
@@ -313,6 +314,14 @@ function labelFor(kind: PartnerActivityData['items'][number]['kind']) {
   if (kind === 'claim') return 'CLAIM';
   if (kind === 'intake') return 'OPERATIONS';
   return 'LEARN';
+}
+
+function attentionStatus(title: string): 'active' | 'due' | 'expired' | null {
+  // Prefer the more urgent state when an attention title mentions multiple states.
+  if (/\bexpired\b/i.test(title)) return 'expired';
+  if (/\bdue\b/i.test(title)) return 'due';
+  if (/\bactive\b/i.test(title)) return 'active';
+  return null;
 }
 
 function toneText(tone: PartnerActivityData['items'][number]['tone']) {
@@ -423,9 +432,9 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 3 },
     elevation: 2,
   },
-  attentionCardRenewal: { backgroundColor: '#EAF3FF', borderColor: '#B9D7FF' },
-  attentionCardClaim: { backgroundColor: '#F1EBFF', borderColor: '#D3BFFF' },
-  attentionCardOther: { backgroundColor: '#F0F3FC', borderColor: '#D7E0F3' },
+  attentionCardRenewal: { backgroundColor: '#FFFFFF', borderColor: '#B9D7FF' },
+  attentionCardClaim: { backgroundColor: '#FFFFFF', borderColor: '#D3BFFF' },
+  attentionCardOther: { backgroundColor: '#FFFFFF', borderColor: '#D7E0F3' },
   attentionIcon: {
     width: 44,
     height: 44,
@@ -465,6 +474,9 @@ const styles = StyleSheet.create({
     lineHeight: 17,
     fontWeight: '800',
   },
+  attentionTitleActive: { color: '#16834B' },
+  attentionTitleDue: { color: '#C56B12' },
+  attentionTitleExpired: { color: '#DC3545' },
   attentionText: {
     marginTop: 2,
     color: '#667084',
@@ -579,11 +591,9 @@ const styles = StyleSheet.create({
   insurerLogo: { width: 44, height: 30 },
   eventArtworkImage: { width: 32, height: 32 },
   itemBody: { flex: 1, minWidth: 0 },
-  itemTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 6,
+  itemMeta: {
+    alignItems: 'flex-end',
+    gap: 1,
   },
   kindPill: {
     alignSelf: 'flex-start',
