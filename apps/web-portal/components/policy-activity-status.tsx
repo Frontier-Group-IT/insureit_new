@@ -19,6 +19,7 @@ export async function PolicyActivityStatus({ policyId, createdBy, createdAt, upd
         meta: activity.meta ?? (activity.actorName ? `Created By: ${activity.actorName}` : null),
         at: activity.at,
       }))}
+      detailed
       emptyText="Activity not recorded"
     />
   );
