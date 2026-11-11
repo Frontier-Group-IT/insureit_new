@@ -13,4 +13,23 @@ assert.match(footer, /const original = findOriginalSaveButton\(\);[\s\S]*?origin
 assert.match(footer, /observer\.observe\(original/, "Loading and disabled state must remain synced from the actual form.");
 assert.match(page, /<PolicyEditActionFooter \/>/, "Standard Edit Policy must keep the bottom action footer.");
 assert.match(unified, /onClick=\{\(\)=>submitPolicy\(\)\}/, "The original validated save handler must remain intact through its approval-aware wrapper.");
+const activity = read("../lib/policy-activity.ts");
+const motorEdit = read("../app/policies/policy-edit-actions.ts");
+const nonMotorEdit = read("../app/policies/non-motor-policy-actions.ts");
+const lifeHealthEdit = read("../app/policies/life-health-issued-policy-edit-actions.ts");
+const activityCard = read("../components/standard-activity-status-card.tsx");
+for (const [name, edit] of [["Motor", motorEdit], ["Non-Motor", nonMotorEdit], ["Life/Health", lifeHealthEdit]]) {
+  assert.match(edit, /capturePolicyEditSnapshot\(admin, (?:policyId|id)\)/, name + " editor captures pre-save state");
+  assert.match(edit, /const activityAfter = await capturePolicyEditSnapshot/, name + " editor captures post-save state");
+  assert.match(edit, /changedPolicyEditFields\(activityBefore, activityAfter\)/, name + " activity records actual changes");
+}
+for (const field of ["policy_no", "status", "premium_amount", "start_date", "end_date", "net_premium", "gross_premium", "policy_product", "insurance_company_id", "proposal_number", "next_installment_date", "deductible"]) {
+  assert.ok(activity.includes(field), field + " is part of reviewed policy activity coverage");
+}
+assert.match(activity, /new_data: \{ changed_fields: changedFields \?\? null \}/, "Save only audited field names, not financial or customer data");
+assert.match(activity, /changedFields: action === POLICY_ACTIVITY_ACTIONS.POLICY_EDITED/, "Activity reader must decode field names from immutable audit");
+assert.match(activity, /"Policy updated — change details unavailable"/, "Historical edits without change data cannot pretend to know what changed");
+assert.match(activity, /changedFields\.join\(", "\)/, "Show the specific changed field list");
+assert.match(activity, /"Policy saved — no tracked field changes"/, "A save without tracked changes must not claim a business change");
+assert.match(activityCard, /item\.meta/, "Activity UI continues to display actual field details and timestamp");
 console.log("Policy Edit single action-row regression passed.");

@@ -8,7 +8,7 @@ import { canAccessPolicyCommercials } from "@/lib/policy-commercial-access";
 import { requirePolicyEditor } from "@/lib/policy-access-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { resolvePolicyIntermediarySource } from "@/lib/policy-intermediary-source";
-import { POLICY_ACTIVITY_ACTIONS, recordPolicyActivity } from "@/lib/policy-activity";
+import { POLICY_ACTIVITY_ACTIONS, recordPolicyActivity, capturePolicyEditSnapshot, changedPolicyEditFields } from "@/lib/policy-activity";
 
 export type PolicyEditPayload = {
   vehicleClass: string;
@@ -109,6 +109,7 @@ export async function updatePolicyOnboarding(policyId: string, payload: PolicyEd
     if (!sourceResolution.ok) return { ok: false, error: sourceResolution.error };
 
     const admin = createSupabaseAdminClient();
+    const activityBefore = await capturePolicyEditSnapshot(admin, policyId).catch(() => null);
     const { data: existingDate, error: existingDateError } = await admin.from("policies").select("issuance_date").eq("id", policyId).maybeSingle<{issuance_date: string | null}>();
     if (existingDateError || !existingDate) return { ok: false, error: "Could not confirm the existing policy date." };
     if (existingDate.issuance_date !== payload.policy.issuanceDate && dateDecision === "otp_required" && !payload.dateApprovalId) return { ok: false, error: "Email OTP approval is required to change this policy to an earlier-month date." };
@@ -180,7 +181,9 @@ export async function updatePolicyOnboarding(policyId: string, payload: PolicyEd
     const result = data as { ok?: boolean; policyId?: string; policyCode?: string } | null;
     if (!result?.ok || !result.policyId) return { ok: false, error: "We couldn't complete the policy update. Please try again." };
 
-    await recordPolicyActivity(admin, result.policyId, profile.id, POLICY_ACTIVITY_ACTIONS.POLICY_EDITED);
+    const activityAfter = await capturePolicyEditSnapshot(admin, result.policyId).catch(() => null);
+    await recordPolicyActivity(admin, result.policyId, profile.id, POLICY_ACTIVITY_ACTIONS.POLICY_EDITED,
+      changedPolicyEditFields(activityBefore, activityAfter));
     revalidatePath("/policies");
     revalidatePath(`/policies/${policyId}/edit`);
     return { ok: true, policyId: result.policyId, policyCode: result.policyCode ?? "" };

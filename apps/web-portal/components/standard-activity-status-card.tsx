@@ -55,10 +55,10 @@ export function StandardActivityStatusCard({
                   <p className="text-[8px] font-bold uppercase tracking-[0.06em] text-[#8190A4]">
                     {index === 0 ? "Latest Action" : "Previous Action"}
                   </p>
-                  <p className="mt-1 truncate text-[12px] font-semibold text-[#183A64]">{item.title}</p>
+                  <p className="mt-1 break-words text-[12px] font-semibold text-[#183A64]">{item.title}</p>
                 </div>
                 <div className="flex shrink-0 flex-wrap items-center gap-x-7 gap-y-1 text-[9px] text-[#8190A4]">
-                  {item.meta ? <span>Details: {item.meta}</span> : null}
+                  {item.meta ? <span className="max-w-[420px] break-words">Details: {item.meta}</span> : null}
                   <span>At: {formatTimestamp(item.at)}</span>
                 </div>
               </div>

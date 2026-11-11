@@ -16,7 +16,7 @@ export async function PolicyActivityStatus({ policyId, createdBy, createdAt, upd
       items={activities.map((activity) => ({
         id: activity.id,
         title: activity.action,
-        meta: activity.meta ?? (activity.actorName ? `Created By: ${activity.actorName}` : null),
+        meta: [activity.meta, activity.actorName && activity.actorName !== "Not recorded" && !activity.meta?.includes("Uploaded by:") ? `By: ${activity.actorName}` : null].filter(Boolean).join(" · ") || null,
         at: activity.at,
       }))}
       emptyText="Activity not recorded"
