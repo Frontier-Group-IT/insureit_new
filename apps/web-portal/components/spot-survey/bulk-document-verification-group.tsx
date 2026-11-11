@@ -188,7 +188,7 @@ export function BulkDocumentVerificationGroup({ item, claim, verifications }: { 
               showLabels={item.key === "spot" || item.key === "insurance"}
             />
           </div>
-        ) : null
+        )
       ) : null}
     </article>
   );
