@@ -82,4 +82,19 @@ assert.match(route, /if \(!access.can_review \|\| identity.actor_kind !== "emplo
 assert.match(route, /getPartnerEmployeeIntakeReadScope\(identity\)/, 'Mutations must preserve scoped access');
 assert.match(route, /loadPolicyIntakeDuplicateMatches\(admin, \[intake\]\)/, 'Duplicates cannot be reviewed');
 assert.match(route, /in\("status", \["processing", "ready_for_review", "in_review", "needs_attention"\]\)/, 'Closed intakes must not be mutated');
+// Duplicate details must agree with the canonical Operations website, not raw stored status.
+assert.match(route, /const duplicateCheck = await loadPolicyIntakeDuplicateMatches\(admin, \[intake\]\)/, 'Detail must check the same canonical policy number matcher');
+assert.match(route, /intake: match \? \{ \.\.\.intake, status: "duplicate" \} : intake/, 'Detail must return effective duplicate state');
+assert.match(route, /duplicate_match/, 'Detail must return the matching record details');
+assert.match(route, /target_path: access.can_review \|\| access.can_finalize/, 'Link is only exposed to authorized Operations reviewers');
+assert.match(route, /review_access: match \? \{ can_review: false, can_finalize: false \}/, 'Duplicate must not offer review or finalization actions');
+assert.match(detail, /row.status === 'duplicate' && row.duplicate_match/, 'Mobile detail must display a duplicate notice');
+assert.match(detail, /View Existing Policy/, 'Registered policy duplicates must link to the existing policy');
+assert.match(detail, /View Earlier Intake/, 'Earlier intake duplicates must link to that intake');
+assert.match(detail, /row.attention_reason && row.status !== 'duplicate'/, 'Duplicate must not offer replacement actions');
+assert.match(detail, /!\['completed', 'rejected', 'duplicate'\]\.includes\(row.status\)/, 'Duplicate must not offer review actions');
+assert.match(api, /export function partnerPolicyIntakeMatchUrl\(path: string\)/, 'Match destination must use trusted portal URL validation');
+assert.ok(api.includes(String.raw`/^\/policies\/`), 'Registered policy URL must use the existing policy edit route');
+assert.ok(api.includes(String.raw`/^\/policy-intakes\/`), 'Earlier intake URL must use existing intake detail route');
+
 console.log('Partner app resilient policy intake page loading regression passed');

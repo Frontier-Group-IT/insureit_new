@@ -15,6 +15,13 @@ export type PartnerPolicyIntakeSource = {
 };
 
 export type PolicyIntakeReviewAccess = { can_review: boolean; can_finalize: boolean };
+export type PolicyIntakeDuplicateMatch = {
+  kind: 'registered_policy' | 'earlier_intake';
+  policy_number: string;
+  intake_number: string | null;
+  // Null when the account cannot open the matching record in Operations.
+  target_path: string | null;
+};
 
 export type PartnerPolicyIntake = {
   id: string;
@@ -94,12 +101,12 @@ export async function listPartnerPolicyIntakesPage(
 }
 
 /** Fetch the selected authorized intake directly; details must never require the entire list. */
-export async function getPartnerPolicyIntake(id: string): Promise<PartnerPolicyIntake & { review_access: PolicyIntakeReviewAccess }> {
+export async function getPartnerPolicyIntake(id: string): Promise<PartnerPolicyIntake & { review_access: PolicyIntakeReviewAccess; duplicate_match: PolicyIntakeDuplicateMatch | null }> {
   if (!id) throw new Error('Policy Intake reference is missing.');
-  const result = await apiRequest<{ ok: true; intake: PartnerPolicyIntake; review_access: PolicyIntakeReviewAccess }>(
+  const result = await apiRequest<{ ok: true; intake: PartnerPolicyIntake; review_access: PolicyIntakeReviewAccess; duplicate_match: PolicyIntakeDuplicateMatch | null }>(
     `/api/partner/policy-intakes?id=${encodeURIComponent(id)}`,
   );
-  return { ...result.intake, review_access: result.review_access ?? { can_review: false, can_finalize: false } };
+  return { ...result.intake, review_access: result.review_access ?? { can_review: false, can_finalize: false }, duplicate_match: result.duplicate_match ?? null };
 }
 
 /** Same Operations notes and transition statuses, guarded by server-side reviewer permission. */
@@ -117,6 +124,13 @@ export async function updatePartnerPolicyIntakeReview(
 /** Opens the canonical Operations Review/Onboarding flow without passing auth credentials in the URL. */
 export function partnerPolicyIntakeReviewUrl(id: string): string {
   return `${portalUrl}/policy-intakes/${encodeURIComponent(id)}`;
+}
+
+/** Accept only canonical Operations paths, never a supplied external URL. */
+export function partnerPolicyIntakeMatchUrl(path: string): string | null {
+  if (!/^\/policies\/[0-9a-f-]{36}\/edit$/i.test(path) &&
+      !/^\/policy-intakes\/[0-9a-f-]{36}$/i.test(path)) return null;
+  return `${portalUrl}${path}`;
 }
 
 export async function listPartnerPolicyIntakeSources(): Promise<PartnerPolicyIntakeSource[]> {

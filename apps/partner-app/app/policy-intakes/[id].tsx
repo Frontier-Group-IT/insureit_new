@@ -15,10 +15,12 @@ import { PartnerAssets } from '@/lib/partner-assets';
 import {
   getPartnerPolicyIntake,
   partnerPolicyIntakeReviewUrl,
+  partnerPolicyIntakeMatchUrl,
   updatePartnerPolicyIntakeReview,
   submitPartnerPolicyIntakeReplacement,
   type PartnerPolicyIntake,
   type PolicyIntakeReviewAccess,
+  type PolicyIntakeDuplicateMatch,
   type PartnerPolicyIntakeUploadProgress,
 } from '@/lib/policy-intakes';
 import { partnerTheme } from '@/lib/theme';
@@ -29,7 +31,7 @@ const MAX_FILE_SIZE = 15 * 1024 * 1024;
 export default function PolicyIntakeDetailScreen() {
   const router = useRouter();
   const { id, submitted } = useLocalSearchParams<{ id: string; submitted?: string }>();
-  const [row, setRow] = useState<(PartnerPolicyIntake & { review_access: PolicyIntakeReviewAccess }) | null>(null);
+  const [row, setRow] = useState<(PartnerPolicyIntake & { review_access: PolicyIntakeReviewAccess; duplicate_match: PolicyIntakeDuplicateMatch | null }) | null>(null);
   const [reviewNote, setReviewNote] = useState('');
   const [reviewBusy, setReviewBusy] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -122,6 +124,17 @@ export default function PolicyIntakeDetailScreen() {
     void submitReviewAction(status);
   }
 
+  async function openDuplicateMatch() {
+    const targetPath = row?.duplicate_match?.target_path;
+    const url = targetPath ? partnerPolicyIntakeMatchUrl(targetPath) : null;
+    if (!url) return;
+    try {
+      await Linking.openURL(url);
+    } catch {
+      setError('Could not open the existing policy or earlier intake in Operations.');
+    }
+  }
+
   async function openOperationsReview() {
     if (!row?.review_access.can_review) return;
     try {
@@ -202,7 +215,7 @@ export default function PolicyIntakeDetailScreen() {
             </View>
           ) : null}
 
-          {row.attention_reason ? (
+          {row.attention_reason && row.status !== 'duplicate' ? (
             <View style={styles.attention}>
               <View style={styles.attentionTop}>
                 <View style={styles.attentionArtworkWrap}><Image source={PartnerAssets.status.policyAttention} style={styles.attentionArtwork} resizeMode="contain" /></View>
@@ -221,6 +234,32 @@ export default function PolicyIntakeDetailScreen() {
                   onPress={() => void replaceDocument()}
                 />
               </View>
+            </View>
+          ) : null}
+
+          {row.status === 'duplicate' && row.duplicate_match ? (
+            <View style={styles.duplicatePanel}>
+              <View style={styles.duplicateHeader}>
+                <Image source={PartnerAssets.status.policyAttention} style={{ width: 19, height: 19 }} resizeMode="contain" accessibilityLabel="Duplicate policy intake" />
+                <Text style={styles.duplicateTitle}>DUPLICATE POLICY INTAKE</Text>
+              </View>
+              <Text style={styles.duplicateText}>
+                {row.duplicate_match.kind === 'registered_policy'
+                  ? `Policy ${row.duplicate_match.policy_number} already exists in the Policy Register.`
+                  : `Policy ${row.duplicate_match.policy_number} was already submitted under ${row.duplicate_match.intake_number}.`}
+              </Text>
+              <Text style={styles.duplicateHint}>Review and Policy Onboarding actions are disabled for this intake.</Text>
+              {row.duplicate_match.target_path ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={row.duplicate_match.kind === 'registered_policy' ? 'View Existing Policy' : 'View Earlier Intake'}
+                  onPress={() => void openDuplicateMatch()}
+                  style={({ pressed }) => [styles.duplicateLink, pressed && styles.pressed]}
+                >
+                  <Text style={styles.duplicateLinkText}>{row.duplicate_match.kind === 'registered_policy' ? 'View Existing Policy' : 'View Earlier Intake'}</Text>
+                  <Ionicons name="open-outline" size={14} color="#9F2436" />
+                </Pressable>
+              ) : null}
             </View>
           ) : null}
 
@@ -372,19 +411,19 @@ function IntakeProgress({ row }: { row: PartnerPolicyIntake }) {
         ? 2
         : 1;
 
-  const rejected = row.status === 'rejected';
+  const rejected = row.status === 'rejected' || row.status === 'duplicate';
 
   return (
     <View
       accessibilityLabel={rejected
-        ? `Policy Intake status: rejected at ${statusLabel(row)}`
+        ? `Policy Intake status: ${statusLabel(row)}`
         : `Policy Intake progress: step ${activeStep} of 4, ${statusLabel(row)}`}
       accessibilityRole="progressbar"
       accessibilityValue={{
         min: 1,
         max: 4,
         now: activeStep,
-        text: rejected ? `Rejected: ${statusLabel(row)}` : `Step ${activeStep} of 4: ${statusLabel(row)}`,
+        text: rejected ? `Closed: ${statusLabel(row)}` : `Step ${activeStep} of 4: ${statusLabel(row)}`,
       }}
       style={styles.progressWrap}
     >
@@ -477,13 +516,13 @@ function Detail({ label, value, last = false }: { label: string; value: string; 
 }
 
 function statusBadgeStyle(row: PartnerPolicyIntake) {
-  if (row.status === 'rejected') return styles.statusBadgeRejected;
+  if (row.status === 'rejected' || row.status === 'duplicate') return styles.statusBadgeRejected;
   if (row.status === 'completed') return styles.statusBadgeCompleted;
   return styles.statusBadgeProcessing;
 }
 
 function statusBadgeTextStyle(row: PartnerPolicyIntake) {
-  if (row.status === 'rejected') return styles.statusBadgeTextRejected;
+  if (row.status === 'rejected' || row.status === 'duplicate') return styles.statusBadgeTextRejected;
   if (row.status === 'completed') return styles.statusBadgeTextCompleted;
   return styles.statusBadgeTextProcessing;
 }
@@ -497,6 +536,7 @@ function statusLabel(row: PartnerPolicyIntake) {
     needs_attention: 'Your response is needed',
     completed: 'Policy onboarding completed',
     rejected: 'Intake rejected',
+    duplicate: 'Duplicate',
   } as Record<string, string>)[row.status] || humanize(row.status);
 }
 
@@ -508,6 +548,7 @@ function statusHelp(row: PartnerPolicyIntake) {
   if (row.status === 'needs_attention') return 'Read the Operations note below and upload a replacement policy copy.';
   if (row.status === 'completed') return 'The final policy was linked and this intake is closed.';
   if (row.status === 'rejected') return 'This intake was closed without policy onboarding.';
+  if (row.status === 'duplicate') return 'The policy was found in an existing record. Review and onboarding are disabled.';
   return 'Track this submission here.';
 }
 
@@ -541,6 +582,13 @@ function humanize(value: string) {
 }
 
 const styles = StyleSheet.create({
+  duplicatePanel: { marginHorizontal: 12, marginTop: 12, padding: 12, borderRadius: 12, backgroundColor: '#FFF1F2', borderWidth: 1, borderColor: '#FECACA', gap: 7 },
+  duplicateHeader: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  duplicateTitle: { color: '#A91F3B', fontSize: 11, fontWeight: '800', letterSpacing: 0.3 },
+  duplicateText: { color: '#9F2436', fontSize: 11, lineHeight: 17 },
+  duplicateHint: { color: '#B42338', fontSize: 10, lineHeight: 15 },
+  duplicateLink: { alignSelf: 'flex-start', minHeight: 34, flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 12, borderRadius: 8, borderWidth: 1, borderColor: '#FECACA', backgroundColor: '#FFFFFF' },
+  duplicateLinkText: { color: '#9F2436', fontSize: 11, fontWeight: '700' },
   banner: { marginBottom: 10 },
   statusCard: { paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: partnerTheme.colors.line, backgroundColor: partnerTheme.colors.surface },
   statusTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },

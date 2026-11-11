@@ -135,7 +135,33 @@ export async function GET(request: Request) {
     // Reviewer controls are only provided to currently active, authorized employees.
     // A readable intake alone never grants Operations mutation rights.
     const access = await resolvePolicyIntakeReviewerAccess(identity);
-    return json({ ok: true, intake, review_access: access });
+    // Detail must use the same derived duplicate classification as the list and
+    // Operations website, without changing the stored intake status.
+    const duplicateCheck = await loadPolicyIntakeDuplicateMatches(admin, [intake]);
+    if (!duplicateCheck.ok) {
+      return json({ ok: false, error: duplicateCheck.error }, 503);
+    }
+    const match = duplicateCheck.matches.get(intake.id) ?? null;
+    // Matching destinations follow Operations website permissions. A Partner
+    // with read access to an intake must not gain access to another policy.
+    const duplicate_match = match
+      ? {
+          kind: match.kind,
+          policy_number: match.kind === "registered_policy" ? match.policyNumber : match.normalizedPolicyNumber,
+          intake_number: match.kind === "earlier_intake" ? match.intakeNumber : null,
+          target_path: access.can_review || access.can_finalize
+            ? match.kind === "registered_policy"
+              ? `/policies/${match.policyId}/edit`
+              : `/policy-intakes/${match.intakeId}`
+            : null,
+        }
+      : null;
+    return json({
+      ok: true,
+      intake: match ? { ...intake, status: "duplicate" } : intake,
+      review_access: match ? { can_review: false, can_finalize: false } : access,
+      duplicate_match,
+    });
   }
 
   const requestedLimit = Number(url.searchParams.get("limit") ?? "25");
