@@ -67,14 +67,46 @@ export function EmployeeCreateForm({ managers, portalRoles }: { managers: Manage
   );
 }
 
-export function EmployeeEditForm({ employee, managers, compact = false }: { employee: EmployeeRow; managers: ManagerOption[]; compact?: boolean }) {
+export function EmployeeEditForm({ employee, managers, compact = false, onDirtyChange }: { employee: EmployeeRow; managers: ManagerOption[]; compact?: boolean; onDirtyChange?: (dirty: boolean) => void }) {
   const action = (compact ? updateEmployeeProfile : updateEmployee).bind(null, employee.id);
-  const [state, formAction] = useActionState(action, initialEmployeeActionState);
+  const [state, formAction, pending] = useActionState(action, initialEmployeeActionState);
+  const [dirty, setDirty] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
+  const savedValuesRef = useRef("");
+  const signature = (form: HTMLFormElement) => {
+    const entries = [...new FormData(form).entries()]
+      .filter(([, value]) => typeof value === "string")
+      .map(([key, value]) => [key, String(value)] as const);
+    return JSON.stringify(entries);
+  };
+  useEffect(() => {
+    if (formRef.current) savedValuesRef.current = signature(formRef.current);
+    setDirty(false);
+    onDirtyChange?.(false);
+    // Mount or employee identity change establishes a new baseline.
+  }, [employee.id]);
+  useEffect(() => {
+    if (state.status === "success" && formRef.current) {
+      savedValuesRef.current = signature(formRef.current);
+      setDirty(false);
+      onDirtyChange?.(false);
+    }
+  }, [state, onDirtyChange]);
+  const detectChanges = () => {
+    if (!formRef.current) return;
+    const changed = signature(formRef.current) !== savedValuesRef.current;
+    setDirty(changed);
+    onDirtyChange?.(changed);
+  };
   return (
-    <form action={formAction} className="space-y-4">
+    <form ref={formRef} action={formAction} onInput={detectChanges} onChange={detectChanges} className="space-y-4">
+      {compact ? <div className="flex items-center justify-between gap-2 rounded-md border border-[#DFE8F3] bg-white px-3 py-2 text-[10px]">
+        <span className="font-semibold text-[#3D5D7E]">{pending ? "Saving verified changes…" : dirty ? "Unsaved profile changes" : state.status === "success" ? "Changes saved" : "Profile is up to date"}</span>
+        <span aria-hidden="true" className={`h-2 w-2 shrink-0 rounded-full ${pending ? "animate-pulse bg-[#4478C3]" : dirty ? "bg-[#E7A14E]" : state.status === "success" ? "bg-[#20A271]" : "bg-[#B3C5D8]"}`} />
+      </div> : null}
       <EmployeeFields employee={employee} managers={managers} compact={compact} />
       <ActionMessage state={state} />
-      <FormSubmitButton label="Save changes" pendingLabel="Saving" className="inline-flex h-9 items-center justify-center rounded-md bg-[#071D49] px-4 text-[11px] font-semibold text-white disabled:opacity-70" />
+      <FormSubmitButton label={dirty && compact ? "Save profile changes" : "Save changes"} pendingLabel="Saving" className="inline-flex h-9 items-center justify-center rounded-md bg-[#071D49] px-4 text-[11px] font-semibold text-white disabled:opacity-70" />
     </form>
   );
 }
