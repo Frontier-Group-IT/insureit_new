@@ -126,13 +126,32 @@ export default function PolicyIntakeDetailScreen() {
   }
 
   async function openDuplicateMatch() {
-    const targetPath = row?.duplicate_match?.target_path;
-    const url = targetPath ? partnerPolicyIntakeMatchUrl(targetPath) : null;
-    if (!url) return;
+    const match = row?.duplicate_match;
+    const targetPath = match?.target_path;
+    if (!match || !targetPath) return;
+
+    if (match.kind === 'registered_policy') {
+      // The server supplies a canonical, access-checked Policy Register match.
+      // Navigate to the same in-app Policy Details screen used by Policies,
+      // which independently checks the current user's policy read scope.
+      const policyId = /^\/policies\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i.exec(targetPath)?.[1];
+      if (!policyId) {
+        setError('The existing policy link is unavailable. Please refresh the intake.');
+        return;
+      }
+      router.push(`/policy/${policyId}` as never);
+      return;
+    }
+
+    const url = partnerPolicyIntakeMatchUrl(targetPath);
+    if (!url) {
+      setError('The earlier intake link is unavailable. Please refresh the intake.');
+      return;
+    }
     try {
       await Linking.openURL(url);
     } catch {
-      setError('Could not open the existing policy or earlier intake in Operations.');
+      setError('Could not open the earlier intake in Operations.');
     }
   }
 
@@ -304,7 +323,7 @@ export default function PolicyIntakeDetailScreen() {
                 <Pressable
                   accessibilityRole="button"
                   accessibilityLabel={row.duplicate_match.kind === 'registered_policy' ? 'View Existing Policy' : 'View Earlier Intake'}
-                  accessibilityHint={row.duplicate_match.kind === 'registered_policy' ? 'Opens the matched policy record. Editing is available only where Operations permits it.' : 'Opens the earlier policy intake in Operations.'}
+                  accessibilityHint={row.duplicate_match.kind === 'registered_policy' ? 'Opens the matched policy in the Partner App Policy Details screen.' : 'Opens the earlier policy intake in Operations.'}
                   onPress={() => void openDuplicateMatch()}
                   style={({ pressed }) => [styles.duplicateLink, pressed && styles.pressed]}
                 >
