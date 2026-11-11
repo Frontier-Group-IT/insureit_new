@@ -8,6 +8,7 @@ const motion = read("../components/claim-manager/operations-claim-stages-motion.
 const customer = read("../components/customer-portal/customer-claim-stage-strip.tsx");
 const customerMotion = read("../app/customer/(protected)/claims/[id]/stage/[stage]/customer-claim-reference.css");
 const claimPage = read("../app/claims/[id]/page.tsx");
+const spotWorkspace = read("../components/spot-survey/spot-survey-workspace-v2.tsx");
 
 assert.match(operations, /import "\.\/operations-claim-stages-motion\.css"/, "Operations stage component must load scoped CSS.");
 assert.match(claimPage, /<OperationsClaimStages/, "Operations claim page must use shared stages for both claim sources.");
@@ -42,4 +43,9 @@ assert.match(motion, /\.operations-claim-motion \.operations-claim-motion-comple
 assert.match(motion, /\.operations-claim-motion \.operations-claim-motion-completed \.operations-claim-motion-step-button \{\s*background: #fff;/, "Completed stage button background stays white");
 assert.doesNotMatch(motion, /background: #dcfce7|background: #bbf7d0/, "No green completed stage card or hover fill");
 assert.match(operations, /isCompleted \? "bg-\[#16A34A\] text-white/, "Keep filled green tick indicator");
-console.log("Operations internal/external claim motion parity regression passed.");
+assert.match(spotWorkspace, /<section data-claim-document-verification="true"/, "Operations Stage 1 document verification must remain permanently visible.");
+assert.doesNotMatch(spotWorkspace, /<details data-claim-document-verification="true"/, "The main document verification panel must not be collapsible.");
+assert.doesNotMatch(spotWorkspace, /<summary className=/, "The main document verification heading must not toggle its document cards.");
+assert.match(spotWorkspace, /\{verifiedCount\} \/ \{items\.length\}/, "Keep the existing document verification counter.");
+assert.match(spotWorkspace, /<BulkDocumentVerificationGroup item=\{item\} claim=\{claim\} verifications=\{verifications\}/, "Preserve per-category document verification actions.");
+console.log("Operations internal/external claim motion parity and always-visible Document Verification regression passed.");
