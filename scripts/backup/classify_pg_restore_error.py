@@ -73,6 +73,30 @@ def dependency_details(contents):
         }
     return None
 
+# pg_restore writes the TOC entry that failed to its *private* stderr log.
+# Return only a bounded numeric entry id and a fixed, allowlisted object kind/
+# schema. Never echo the object name, SQL, table contents, or a freeform field.
+PG_RESTORE_TOC = re.compile(
+    r"(?im)^pg_restore:\\s+from TOC entry\\s+(?P<entry>[0-9]{1,8});\\s+"
+    r"[0-9]+\\s+[0-9]+\\s+(?P<kind>DEFAULT ACL|TABLE DATA|SEQUENCE SET|"
+    r"ACL|SCHEMA|EXTENSION|TABLE|FUNCTION|TYPE|POLICY|TRIGGER|INDEX|"
+    r"CONSTRAINT|FK CONSTRAINT|VIEW|MATERIALIZED VIEW)\\s+"
+    r"(?P<schema>[^\\s]+)"
+)
+
+
+def toc_error_context(contents):
+    match = PG_RESTORE_TOC.search(contents)
+    if not match:
+        return None
+    raw_schema = match.group("schema").strip('"').lower()
+    return {
+        "toc_entry": int(match.group("entry")),
+        "kind": match.group("kind").lower().replace(" ", "_"),
+        "schema": raw_schema if raw_schema in SAFE_SCHEMAS else "other_or_unqualified",
+    }
+
+
 def main():
     if len(sys.argv) != 3 or sys.argv[1] not in ("auth_bootstrap", "extensions", "fixture", "roles", "schema", "data"):
         raise SystemExit("usage: classify_pg_restore_error.py auth_bootstrap|extensions|fixture|roles|schema|data LOGFILE")
@@ -83,6 +107,10 @@ def main():
         return
     category = classify(raw.decode("utf-8", "replace"))
     print(f"RESTORE DIAGNOSTIC: component={sys.argv[1]} category={category}")
+    if category == "permission_denied":
+        context = toc_error_context(raw.decode("utf-8", "replace"))
+        if context:
+            print(f"RESTORE PERMISSION CONTEXT: toc_entry={context['toc_entry']} kind={context['kind']} schema={context['schema']}")
     if category == "missing_function_or_type":
         details = dependency_details(raw.decode("utf-8", "replace"))
         if details:
