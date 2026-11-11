@@ -166,9 +166,11 @@ def main():
     print("CAVEAT: Metadata-level observation only; actual R2 file integrity was "
           "separately verified, service recovery and live source parity are not certified.",
           flush=True)
-    # A REVIEW should be visible as a yellow/incomplete result in the logs.
-    # Do not fail the protected workflow just because source changed after
-    # the immutable manifest snapshot; operator reviews aggregate counts.
+    # GitHub job must NOT show a green success when the result is REVIEW.
+    # Live post-snapshot additions alone do NOT trigger REVIEW; source drift
+    # during two scans or stable pre-snapshot discrepancies do.
+    if result["status"] == "REVIEW":
+        raise SystemExit(2)
 
 
 if __name__ == "__main__":
