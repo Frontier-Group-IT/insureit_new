@@ -417,3 +417,51 @@ jobs:
           fi
           echo "V2 SYNTHETIC NO-ACL IMPORT PASSED: business records still imported (ACL assurance excluded)"
           echo "V2 SYNTHETIC FULL RESTORE PASSED: clean template0 + managed schema + strict data + all COPY parity + RLS"
+
+  offline_function_privilege_probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Read isolated PG17 role capability only; no credentials or business data
+        run: |
+          set -euo pipefail
+          trap 'docker rm -f -v insureit-v2-privilege-probe >/dev/null 2>&1 || true' EXIT
+          docker run -d --name insureit-v2-privilege-probe --network none \
+            -e POSTGRES_PASSWORD=ephemeral-synthetic-only \
+            -e POSTGRES_DB=postgres \
+            supabase/postgres:17.6.1.136 >/dev/null
+          ready=0
+          for i in $(seq 1 60); do
+            if docker exec insureit-v2-privilege-probe pg_isready -U postgres >/dev/null 2>&1; then
+              ready=1
+              break
+            fi
+            sleep 2
+          done
+          test "$ready" = 1
+          flags="$(docker exec -u postgres insureit-v2-privilege-probe \
+            psql -XAt -v ON_ERROR_STOP=1 -d postgres -c \
+            "select (select rolsuper::integer from pg_roles where rolname='postgres'),
+                    (select rolsuper::integer from pg_roles where rolname='supabase_admin'),
+                    pg_has_role('postgres','supabase_admin','SET')::integer;" 2>/dev/null)"
+          if ! [[ "$flags" =~ ^[01]\\|[01]\\|[01]$ ]]; then
+            echo "OFFLINE PG17 ROLE PROBE FAILED: unexpected role metadata"
+            exit 1
+          fi
+          echo "OFFLINE PG17 ROLE FLAGS (postgres-superuser|admin-superuser|can-set-admin): $flags"
+          if docker exec -u postgres insureit-v2-privilege-probe \
+            psql -XAt -v ON_ERROR_STOP=1 -d postgres -c \
+            "SET ROLE supabase_admin; SELECT rolsuper::integer FROM pg_roles WHERE rolname=current_user;" \
+            > "$RUNNER_TEMP/v2-role-probe.log" 2>&1; then
+            if grep -qx 1 "$RUNNER_TEMP/v2-role-probe.log"; then
+              echo "OFFLINE PG17 PRIVILEGED ROLE SWITCH: supported"
+            else
+              echo "OFFLINE PG17 PRIVILEGED ROLE SWITCH: unsupported or not superuser"
+            fi
+          else
+            echo "OFFLINE PG17 PRIVILEGED ROLE SWITCH: permission denied"
+          fi
+          rm -f "$RUNNER_TEMP/v2-role-probe.log"
