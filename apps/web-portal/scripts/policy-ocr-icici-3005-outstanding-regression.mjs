@@ -129,7 +129,7 @@ assert.equal(value(unreconciled,"od_premium"),undefined,"Never invent OD when pr
 // CPA must enable the premium total only for the exact verified C3503
 // OCR path, never for unverified/synthetic liability additions.
 const onboarding=readFileSync(new URL("../components/policy-unified-form.tsx",import.meta.url),"utf8");
-assert.match(onboarding,/exactIciciChetakC3503\?\{cpaOpted:"Yes"/);
+assert.match(onboarding,/if\(exactIciciChetakC3503\)setForm\(current=>\(\{\.\.\.current,cpaOpted:"Yes"\}\)\)/);
 assert.match(onboarding,/field\.key==="cpa_premium"/);
 
 // Product 3003 and other insurers stay entirely unchanged.
