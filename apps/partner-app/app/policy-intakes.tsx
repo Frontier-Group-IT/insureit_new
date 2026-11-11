@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -40,6 +40,7 @@ export default function PolicyIntakesScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState<IntakeFilter>('all');
+  const [showAllStatuses, setShowAllStatuses] = useState(false);
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [counts, setCounts] = useState<PartnerIntakeCounts>({ action_required: 0, in_review: 0, processing: 0, completed: 0, duplicate: 0, rejected: 0, all: 0 });
@@ -157,7 +158,7 @@ export default function PolicyIntakesScreen() {
       </View>
 
       <View style={styles.filtersWrap}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filtersContent}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll} contentContainerStyle={styles.filtersContent}>
           {FILTERS.map((item) => {
             const active = filter === item.key;
             return (
@@ -168,7 +169,67 @@ export default function PolicyIntakesScreen() {
             );
           })}
         </ScrollView>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="See all Policy Intake statuses"
+          onPress={() => setShowAllStatuses(true)}
+          style={({ pressed }) => [styles.seeAllButton, pressed && styles.pressed]}
+        >
+          <Text style={styles.seeAllText}>See all</Text>
+          <Ionicons name="chevron-down" size={13} color="#3156B8" />
+        </Pressable>
       </View>
+
+      <Modal
+        visible={showAllStatuses}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowAllStatuses(false)}
+      >
+        <View style={styles.sheetRoot}>
+          <Pressable
+            style={styles.sheetBackdrop}
+            accessibilityRole="button"
+            accessibilityLabel="Close status selection"
+            onPress={() => setShowAllStatuses(false)}
+          />
+          <View style={styles.sheet} accessibilityViewIsModal>
+            <View style={styles.sheetHeader}>
+              <Text style={styles.sheetTitle}>Select status</Text>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Close status selection"
+                onPress={() => setShowAllStatuses(false)}
+                style={styles.sheetClose}
+              >
+                <Ionicons name="close" size={20} color="#53647D" />
+              </Pressable>
+            </View>
+            {FILTERS.map((item) => {
+              const selected = filter === item.key;
+              return (
+                <Pressable
+                  key={item.key}
+                  accessibilityRole="radio"
+                  accessibilityLabel={item.label}
+                  accessibilityState={{ checked: selected }}
+                  onPress={() => {
+                    setFilter(item.key);
+                    setShowAllStatuses(false);
+                  }}
+                  style={({ pressed }) => [styles.sheetOption, selected && styles.sheetOptionSelected, pressed && styles.pressed]}
+                >
+                  <View style={[styles.sheetRadio, selected && styles.sheetRadioSelected]}>
+                    {selected ? <View style={styles.sheetRadioDot} /> : null}
+                  </View>
+                  <Text style={[styles.sheetOptionText, selected && styles.sheetOptionTextSelected]}>{item.label}</Text>
+                  <Text style={styles.sheetOptionCount}>{counts[item.key]}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+      </Modal>
 
       <ScrollView
         ref={mainScrollRef}
@@ -360,7 +421,8 @@ const styles = StyleSheet.create({
   titleCopy: { flex: 1 }, eyebrow: { color: '#D5E9FF', fontSize: 7.5, lineHeight: 9, letterSpacing: 0.85, fontWeight: '800' }, title: { marginTop: 1, color: '#FFFFFF', fontSize: 14, lineHeight: 17, fontWeight: '800' },
   newButton: { minWidth: 65, height: 34, borderRadius: 10, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, backgroundColor: '#183864' }, newButtonText: { color: '#FFFFFF', fontSize: 10, lineHeight: 13, fontWeight: '700' },
   searchBand: { paddingHorizontal: 11, paddingTop: 8, paddingBottom: 8, flexDirection: 'row', backgroundColor: '#0860C8' }, searchBox: { flex: 1, minHeight: 38, borderRadius: 9, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: '#FFFFFF' }, searchInput: { flex: 1, paddingVertical: 0, color: '#1F314C', fontSize: 10.5, lineHeight: 14 },
-  filtersWrap: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#DDE4EF', backgroundColor: '#FFFFFF' }, filtersContent: { paddingHorizontal: 10, paddingVertical: 7, gap: 7 }, filterChip: { minHeight: 31, borderRadius: 8, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#F7F8FB', borderWidth: StyleSheet.hairlineWidth, borderColor: '#E0E5ED' }, filterChipActive: { backgroundColor: '#183864', borderColor: '#183864' }, filterLabel: { color: '#4D5D75', fontSize: 9.2, lineHeight: 12, fontWeight: '700' }, filterLabelActive: { color: '#FFFFFF' }, filterCount: { color: '#728099', fontSize: 8.5, lineHeight: 11, fontWeight: '700' }, filterCountActive: { color: '#DDEAFF' },
+  filtersWrap: { flexDirection: 'row', alignItems: 'center', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#DDE4EF', backgroundColor: '#FFFFFF' }, filterScroll: { flex: 1 }, seeAllButton: { minHeight: 31, flexDirection: 'row', alignItems: 'center', gap: 3, justifyContent: 'center', paddingHorizontal: 12, marginRight: 8, borderLeftWidth: StyleSheet.hairlineWidth, borderLeftColor: '#DDE4EF' }, seeAllText: { color: '#3156B8', fontSize: 10, fontWeight: '800' }, filtersContent: { paddingHorizontal: 10, paddingVertical: 7, gap: 7 }, filterChip: { minHeight: 31, borderRadius: 8, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#F7F8FB', borderWidth: StyleSheet.hairlineWidth, borderColor: '#E0E5ED' }, filterChipActive: { backgroundColor: '#183864', borderColor: '#183864' }, filterLabel: { color: '#4D5D75', fontSize: 9.2, lineHeight: 12, fontWeight: '700' }, filterLabelActive: { color: '#FFFFFF' }, filterCount: { color: '#728099', fontSize: 8.5, lineHeight: 11, fontWeight: '700' }, filterCountActive: { color: '#DDEAFF' },
+  sheetRoot: { flex: 1, justifyContent: 'flex-end' }, sheetBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(8,23,45,0.46)' }, sheet: { paddingHorizontal: 16, paddingTop: 10, paddingBottom: 32, borderTopLeftRadius: 20, borderTopRightRadius: 20, backgroundColor: '#FFFFFF' }, sheetHeader: { minHeight: 46, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }, sheetTitle: { color: '#172B49', fontSize: 15, fontWeight: '800' }, sheetClose: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' }, sheetOption: { minHeight: 45, flexDirection: 'row', alignItems: 'center', gap: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E3E9F2', paddingHorizontal: 6 }, sheetOptionSelected: { backgroundColor: '#F1F6FF' }, sheetRadio: { width: 18, height: 18, borderRadius: 9, borderWidth: 1.5, borderColor: '#A7B5C8', alignItems: 'center', justifyContent: 'center' }, sheetRadioSelected: { borderColor: '#3156B8' }, sheetRadioDot: { width: 9, height: 9, borderRadius: 5, backgroundColor: '#3156B8' }, sheetOptionText: { flex: 1, color: '#34465E', fontSize: 12, fontWeight: '600' }, sheetOptionTextSelected: { color: '#193C79', fontWeight: '800' }, sheetOptionCount: { color: '#6C7B90', fontSize: 11, fontWeight: '700' },
   scroll: { flex: 1 }, content: { paddingHorizontal: 9, paddingTop: 9, paddingBottom: 12, gap: 8 },
   pagination: { paddingHorizontal: 6, paddingTop: 8, paddingBottom: 12, gap: 8 },
   pageError: { color: partnerTheme.colors.danger, fontSize: 11, textAlign: 'center' },

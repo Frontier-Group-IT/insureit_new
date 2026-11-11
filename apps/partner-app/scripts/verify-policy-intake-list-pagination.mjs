@@ -6,6 +6,18 @@ const api = readFileSync('lib/policy-intakes.ts', 'utf8');
 const route = readFileSync('../web-portal/app/api/partner/policy-intakes/route.ts', 'utf8');
 
 assert.match(app, /useState<IntakeFilter>\('all'\)/, 'Keep all-submissions default');
+assert.match(app, /const \[showAllStatuses, setShowAllStatuses\] = useState\(false\)/, 'See all sheet defaults closed');
+assert.match(app, /accessibilityLabel="See all Policy Intake statuses"/, 'A visible See all control opens the selection sheet');
+assert.match(app, /onPress=\{\(\) => setShowAllStatuses\(true\)\}/, 'See all must open the sheet');
+assert.match(app, /<Modal[\s\S]*?visible=\{showAllStatuses\}[\s\S]*?animationType="slide"/, 'Use a slide-up bottom sheet');
+assert.match(app, /<Text style=\{styles\.sheetTitle\}>Select status<\/Text>/, 'Bottom sheet has the status title');
+assert.match(app, /\{FILTERS\.map\(\(item\) => \{[\s\S]*?accessibilityRole="radio"/, 'Reuse the existing seven status filters with single-select radio controls');
+assert.match(app, /accessibilityState=\{\{ checked: selected \}\}/, 'Current selected status is highlighted accessibly');
+assert.match(app, /setFilter\(item\.key\);\s*setShowAllStatuses\(false\);/, 'Tapping a status immediately filters and closes sheet');
+assert.doesNotMatch(app, /Clear all|>Apply<|<Text[^>]*>Apply<\/Text>/, 'Single-select status sheet needs no Clear all or Apply buttons');
+assert.match(app, /onRequestClose=\{\(\) => setShowAllStatuses\(false\)\}/, 'Back closes sheet without changing selection');
+assert.match(app, /\{counts\[item\.key\]\}/, 'Status counts remain tied to the server-filter results');
+
 assert.match(api, /export const POLICY_INTAKE_PAGE_SIZE = 10/, 'Intake initial load and each Load More must match Policies: 10 per request');
 
 assert.match(api, /export async function getPartnerPolicyIntake\(id: string\)/, 'Detail uses authorized single-item lookup');
