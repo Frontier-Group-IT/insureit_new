@@ -1,3 +1,103 @@
+# INSUREIT — CURRENT BACKUP / RESTORE DRILL HANDOFF (verified 2026-11-11)
+
+> **START HERE FOR FUTURE AI AGENTS. This is the latest authoritative status for this drill.** The chronological notes below are preserved as historical evidence and include older phrases such as “NOT MERGED”, “FAILED”, and “PR pending” describing *earlier states*. Do **not** interpret them as the current status. Check the linked GitHub run before making any new certification claim. Last update based on the successful full-file Storage verification run #1 on **11 November 2026** (GitHub run 42981463054, completed approximately **14:02 IST / 08:32 UTC**).
+
+## 0. Executive status / what is and is not proven
+
+| Recovery component | Latest **verified** status | What this does **not** prove |
+| --- | --- | --- |
+| Production PostgreSQL v2 encrypted backup → R2 | **PASSED:** actual read-only logical dump, authenticated encrypted upload and R2 readback on [run 42965931610](https://github.com/Frontier-Group-IT/insureit_new/actions/runs/42965931610) | Does not by itself mean an operational Supabase stack can be restored |
+| Actual PostgreSQL v2 archive → disposable PG17 | **PASSED:** authenticated R2 retrieval, complete strict `pg_restore` (including archive ACLs), **all 230/230 archived COPY targets** with **zero row-count mismatches** on [run 42978088652](https://github.com/Frontier-Group-IT/insureit_new/actions/runs/42978088652) | Does not reproduce production role memberships/attributes, object ownership, Auth services or Storage file bytes |
+| Real-source role attributes / memberships / object ownership | **INCOMPLETE:** two role-name placeholders created in disposable DB; `--no-owner` used | Exact source roles, original owners, `SECURITY DEFINER` behavior, service login privileges and RLS execution semantics are **NOT certified** |
+| Supabase Storage encrypted file backup → R2 | Daily encrypted incremental workflow already present at **19:00 IST**; its in-job verification is **sample-based** | No same-snapshot comparison has established that *every live source object* made it into the last Storage manifest |
+| **Every file in the committed Storage R2 manifest** | **PASSED:** [manual all-file run 42981463054](https://github.com/Frontier-Group-IT/insureit_new/actions/runs/42981463054), **3,534/3,534 archived objects**, **1,673,527,245 decrypted bytes**, **0 reported failures**, **8 populated + 1 empty bucket**, SHA-256 and exact length for every file | Does not prove all current/live source objects were present in that older snapshot, or that a separate Storage service can serve/re-authorize those files |
+| Full Supabase / INSUREIT disaster recovery | **NOT CERTIFIED** | Auth providers/JWT/SMTP configuration, role parity, original ownership, Storage service recovery, Edge Functions/integrations, app-level tests, RPO/RTO, operational failover remain |
+
+**Scope separation:** “PostgreSQL v2 recovery rehearsal passed” and “all **archived Storage files** were integrity-verified” are accurate. “Entire INSUREIT/Supabase is disaster-recovery certified” is **NOT** accurate. **Independent automatic PostgreSQL-to-R2 scheduling is still disabled/manual-only.** Existing daily Storage-to-R2 scheduling is a different, already-present workflow.
+
+## 1. Evidence from latest real protected runs (do not conflate counts)
+
+### A. Encrypted PostgreSQL v2 backup: SUCCESS
+
+- [Workflow run #2, ID 42965931610](https://github.com/Frontier-Group-IT/insureit_new/actions/runs/42965931610) — `INSUREIT PostgreSQL R2 v2 consistent backup (manual gate)`, **success**, on production-source read-only export.
+- Real `pg_dump` custom TOC: **231 table definitions**, **230 COPY data targets**, **287 RLS policies**, **20 sequence records**, **missing required data coverage = 0**. Exported roles separately into `roles.sql`; archive includes `database.dump`.
+- V2 archive encrypted, uploaded to private Cloudflare R2 bucket `insureit-production-backups`, authenticated R2 readback. New v2 artifacts are under `postgresql/v2/`. Existing `postgresql/v1`/legacy backups were preserved; no pruning or deletes.
+- Main-only manual backup workflow: `.github/workflows/insureit-postgres-r2-v2-manual.yml`; protected environment `insureit-production-backup`. Encryption configuration is secret-managed; **NEVER print or copy** database URLs, passwords, encryption keys, Supabase service keys or customer files into logs/issues/PRs.
+
+### B. Actual PostgreSQL v2 isolated restore: SUCCESS, WITH EXPLICIT LIMITS
+
+- [Workflow run #4, ID 42978088652](https://github.com/Frontier-Group-IT/insureit_new/actions/runs/42978088652), `INSUREIT PostgreSQL R2 v2 isolated restore verification (manual only)`, job `restore_v2`, success.
+- Verified log markers:
+  - `V2 R2 ARCHIVE VERIFIED: components=2 unpacked_bytes=11946136`
+  - `V2 CUSTOM ARCHIVE TOC: table_definitions=231 copy_data_targets=230 policies=287 sequences=20 missing_required_data=0`
+  - `V2 OFFLINE ADMIN PRECHECK PASSED`
+  - **`V2 STRICT RESTORE PASSED: schema, data and archive privileges imported by isolated local superuser`**
+  - `V2 OFFLINE ROW PARITY: archived_copy_tables=230 mismatched_tables=0`
+  - **`V2 ISOLATED DATA_AND_ACL_REPLAY PASSED: all COPY tables reconciled with 2 offline role-name placeholders`**
+  - **`V2 ROLE SEMANTICS NOT VERIFIED`** and **`V2 FULL RECOVERY NOT CERTIFIED`**
+- The successful *actual* run did **not** use the reduced-assurance `--no-acl` fallback: it replayed the full archive ACL entries. But the disposable target contained **two `NOLOGIN` role-name placeholders** and `pg_restore --no-owner` assigns ownership differently from managed production. Replayed GRANTs do not establish source identity/permissions.
+- Isolated `supabase/postgres:17.6.1.136` Docker with **`--network none`**, disposable database, temporary synthetic local admin password; no production SQL mutation. The workflow deleted the plaintext data, private logs and container after verification. It is **not a restored production-ready Supabase stack**.
+
+### C. Actual full-file Supabase Storage backup verification: SUCCESS
+
+- [Manual workflow run #1, ID 42981463054](https://github.com/Frontier-Group-IT/insureit_new/actions/runs/42981463054), `INSUREIT R2 Storage all-file recovery verification (manual only)`, job `verify_storage_files`, **success**, elapsed **49m 38s** (job 49m 31s).
+- EXACT verified success marker:
+  ```text
+  STORAGE FULL R2 OBJECT VERIFICATION PASSED: objects=3534 buckets_with_objects=8 empty_buckets=1 validated_bytes=1673527245 manifest_entries=3534 snapshot=20261110T203147Z
+  ```
+- Snapshot `20261110T203147Z` means **10 November 2026 20:31:47 UTC = 11 November 2026 02:01:47 IST**. Run completed on **11 November 2026 ~08:32 UTC / 14:02 IST**. **3,534 / 3,534 manifest objects**, total **1,673,527,245 decrypted bytes (about 1.67 decimal GB)**, **8 buckets containing files and 1 empty bucket**. The verifier performed an authenticated manifest retrieval, R2 GET, AES-GCM decrypt, exact file length and SHA-256 validation for **every referenced blob**; any missing/corrupted file would fail the job.
+- The workflow used only R2 secrets, performed **no Supabase API access, no plaintext persistence, and no R2 writes or deletes**. Its own caveat explicitly says: `live source parity, upload to a recovery Storage endpoint, and application access were NOT verified.`
+- **Critical distinction**: a separate read-only live production query on 11 November found **9 `storage.buckets` and 3,603 `storage.objects` metadata rows**. This is **69 more records** than the **3,534 files in the earlier R2 manifest**, but these are **different observation/snapshot times** and metadata record counts versus archived file entries. **DO NOT assert 69 files were omitted, lost, or corrupt.** Resolve only by a controlled *same-period* source-to-manifest identity/bucket inventory reconciliation. Do not log actual file names/paths or customer documents.
+- Storage scripts/workflows: `scripts/backup/supabase_storage_to_r2.py`, `scripts/backup/verify_r2_restore.py`; scheduled `.github/workflows/insureit-supabase-storage-r2-backup.yml` (daily 19:00 IST, default fast per-bucket sample verification); manual all-object `.github/workflows/insureit-r2-storage-complete-verify.yml` (`VERIFY_STORAGE_SCOPE=all`, protected `insureit-production-backup`). Storage prefix `supabase-storage/v1/`. The manual full verifier was added in **merged PR #4236** and has **already been run successfully**; do not leave it labelled “pending”.
+
+## 2. Timeline of the drill and merged fixes (do not reopen resolved blockers)
+
+| Sequence | PR / live evidence | What changed or what was learned |
+| --- | --- | --- |
+| Original v1 restore attempt | Legacy archive / notes below | Filtered Supabase CLI `schema.sql` did not recreate managed Auth/Storage table families needed by `data.sql` — historical audit showed **217 COPY targets, 32 missing table definitions and 3 column-set mismatches**. **Legacy v1 recovery never certified**; existing v1 archive preserved. |
+| v2 design merged | [PR #4183](https://github.com/Frontier-Group-IT/insureit_new/pull/4183), merge `75d8acc` | Consistent raw `pg_dump -Fc` schema/data archive, authenticated encrypted R2 v2, TOC coverage and network-isolated transactional restore; manual/protected workflows only. |
+| First manual v2 backup failed | Initial job log | Supabase CLI `roles.sql` export worked; `pg_dump` misparsed raw `DATABASE_URL` with unescaped `@` in password as a DNS hostname. Not source-data corruption or R2 failure. Potential password fragment appeared in failed log; review credential exposure/rotation through secure operational channels (not confirmed completed). |
+| Connection fix merged | [PR #4195](https://github.com/Frontier-Group-IT/insureit_new/pull/4195), merge `90eb946` | Split checked libpq connection fields plus locked-down transient `.pgpass`, no raw DB URL passed into Docker. **Then PostgreSQL v2 encrypted backup run 42965931610 PASSED**. |
+| First strict v2 restore failed | Protected initial runs | `permission_denied` at function TOC entry **869**. Retry with `--no-acl` also failed at same function: this was **not** an ACL-only issue. |
+| Diagnostic/controlled fallback merged | [PR #4210](https://github.com/Frontier-Group-IT/insureit_new/pull/4210), merge `72f2fe2` | Bounded redacted TOC error diagnostics, isolated strict `--no-acl` trial only for classified permission failure; degraded success must not be called complete DR. |
+| Offline admin privilege fix merged | [PR #4216](https://github.com/Frontier-Group-IT/insureit_new/pull/4216), merge `79333e3` | Real-image synthetic tests showed local `postgres` is not superuser and cannot switch to `supabase_admin`. Isolated local `supabase_admin` superuser can restore restricted-language functions; no change to managed production roles. |
+| Next strict restore failed | Subsequent protected job | Function issue resolved, but `role_missing` occurred because platform-managed role names were missing in standalone image. |
+| Bounded missing-role bootstrap merged | [PR #4229](https://github.com/Frontier-Group-IT/insureit_new/pull/4229), merge `0da1bc4` | Static allowlist of **15** read-only source role names, creates absent names only as inert `NOLOGIN` placeholders in the isolated target; strict replay still mandatory. **Then PostgreSQL restore run 42978088652 PASSED, with 2 placeholders and 0 COPY mismatches.** |
+| Full Storage-byte audit merged | [PR #4236](https://github.com/Frontier-Group-IT/insureit_new/pull/4236), merge `ce93178` | Manual protected, R2-read-only `VERIFY_STORAGE_SCOPE=all` in-memory SHA/size checks; existing scheduled Storage backup unchanged. Secret-free CI passed. **Then Storage all-file run 42981463054 PASSED 3,534/3,534**. |
+| Latest state | **2026-11-11** | PostgreSQL archive and full isolated schema/data/ACL row-count replay verified; every *archived* Storage object verified; **whole Supabase service restore/permissions/source completeness not yet certified**. |
+
+All six named PRs above are **merged** as verified via GitHub, not draft or pending. Other historical PR/notes below describe earlier attempts and their contemporaneous states.
+
+## 3. Production read-only discovery for role and service restoration
+
+- Production Supabase project: `ilzhsfqqjyppzzvfscmh` in `Insureit_Pro_Plan`. Current primary live source is **production-only**; no proven isolated preview DB. Website currently relies on the existing Cloudflare deployment; **do not deploy** or assume a Vercel Preview database as part of this drill.
+- Observed live PostgreSQL server version **17.6**, while the disposable target image used `supabase/postgres:17.6.1.136`. Do not casually change versions without reproducible evidence.
+- Read-only metadata `pg_roles`: **15 non-`pg_*` role names**, including `anon`, `authenticated`, `authenticator`, `postgres`, `service_role`, and Supabase service/admin roles. **19 role membership edges** with `admin_option`, `inherit_option`, `set_option`; many source roles have attributes materially different from a `NOLOGIN` placeholder.
+- Source ownership is heterogeneous: `public` application tables predominantly `postgres`; `auth` tables `supabase_auth_admin`; `storage` tables `supabase_storage_admin`; `realtime` and `vault` have managed owners. Multiple `SECURITY DEFINER` functions rely on owner privileges. **Never simply grant superuser or BYPASSRLS in production to “fix restore”.**
+- Read-only live counts at investigation: `auth.users=86`, `auth.identities=90`, `storage.buckets=9`, `storage.objects=3603`. Counts can change; these are not a matched point-in-time file inventory.
+- Existing supplementary report: [`docs/INSUREIT_DISASTER_RECOVERY_READINESS_2026_11_11.md`](./INSUREIT_DISASTER_RECOVERY_READINESS_2026_11_11.md). This *current handoff section supersedes* older “full-file verification pending” text in that report; no need to create another competing handoff.
+
+## 4. NEXT ACTIONS for subsequent AI agent — safe, evidence-driven order
+
+1. **Start here; don't rerun the already passing expensive checks by default.** Inspect current GitHub main, `AGENTS.md`, this handoff, and the three successful run links above. Check for later changes before declaring state. Preserve exact existing archive/manifest pointers and v1 backups.
+2. **Source → Storage R2 manifest coverage parity (highest immediate gap).** Design a **read-only**, timestamp-aware comparison of current Supabase Storage inventory and the encrypted R2 manifest's bucket/object identities, **with no customer filenames, paths, documents or identifiers printed**. Snapshot `20261110T203147Z` and later `storage.objects=3603` cannot be directly compared as if simultaneous. Consider a fresh *approved* Storage backup plus all-file manifest verification/reconciliation at aligned times, reporting only aggregate counts and hashed identities. Distinguish object metadata rows from retrievable file versions. Avoid PII, mutation and false “69 missing files” conclusions.
+3. **Role/owner parity rehearsal in a disposable isolated target.** Collect the source role *attributes and membership flags* **read-only** (not password hashes/secret grants), compare with offline target, and reconstruct using a reviewed least-privilege recovery plan. Restore original object owners and validate grants, RLS, `SECURITY DEFINER`, Realtime/Auth/Storage role behavior. **Do not** change production roles, use indiscriminate superuser grants, or infer success from 2 placeholder names.
+4. **Supabase service-layer DR.** Validate Auth users/identities against an independently configured disposable Auth service; separately provision JWT signing secrets/API keys, OAuth providers, email/SMTP, redirects, Edge Functions, Storage service wiring and external integrations through a **secure, approval-gated credential path**. For a new environment, existing tokens may require re-authentication. No real-customer login or email without explicit permission.
+5. **Storage actual recovery.** The all-file R2 test proves bytes are recoverable from the manifest. Next independently verify authorized **download/serve** of a small synthetic dataset on a recovery Storage endpoint, content types, bucket policies and application document flows. No production overwrite or dual-running destructive actions.
+6. **Recovery readiness policy / key escrow / RPO-RTO.** Agree owner, encrypted key escrow, retention/no-prune rules, restore runbook, alerting, frequency and recovery objectives. The existing daily Storage backup and monitor are active code; **do not silently enable a new daily PostgreSQL-to-R2 schedule**. User approval is required after complete recovery readiness checks.
+7. **Code change workflow.** For fixes, inspect first, use a dedicated reviewable branch + PR, run the relevant GitHub Actions CI (including web if repository requires), **do not merge/deploy without explicit approval**. Protected/manual workflows require explicit authorization; never run them on PR builds or expose private data in CI.
+
+## 5. Practical guardrails / how to interpret future run outputs
+
+- **No production database DDL/DML** for diagnosis. SQL catalog and aggregate reads are allowed when scoped; avoid user rows, credential tables, customer documents and service secrets. Production-only Supabase means “staging” must be a fully isolated, temporary target, **not** a separate schema in the real DB unless separately approved.
+- **No R2 DELETE/prune/overwrite of verified immutable archives** and no changes to existing v1/v2 pointers except by an expressly approved backup workflow. Both PostgreSQL and Storage encryption keys are secrets in the protected GitHub environment, not in repository documentation.
+- **PostgreSQL:** `V2 COPY ROW PARITY PASSED` with 2 placeholder roles means **complete archived table row-count parity**, not exact row-by-row content hash versus live source, not original privileges, and not operational Auth/Storage recovery. The actual successful run's `V2 STRICT RESTORE PASSED` **did** import ACL entries; `--no-acl` fallback was not used.
+- **Storage:** `STORAGE FULL R2 OBJECT VERIFICATION PASSED` means every **manifest-referenced object at the manifest snapshot** decrypted and matched its stored SHA-256/byte count, **not** that 3,534 is equal to all current metadata rows or that customer documents were uploaded into another working Storage backend.
+- **GitHub warnings:** Node.js 20 action deprecation and Ubuntu `ubuntu-latest` migration notices appeared on successful workflows; do not confuse warnings with failed backup integrity.
+- **Follow-up documentation:** append new dated entries at the **top of this file**, update this authoritative header/status and retain prior evidence for auditability. Every claim of completed verification should have an actual protected workflow run link, and explicitly distinguish *verified*, *not yet tested*, and *blocked*.
+
+---
+
 ## 2026-11-11 — v2 raw restore missing-role compatibility, draft PR #4229 (NOT MERGED)
 
 - **Observed protected run:** the existing encrypted v2 R2 custom-dump archive authenticated and passed TOC coverage (231 table definitions, 230 table-data targets, 287 RLS policies, 20 sequence records, no missing required data families). The disposable PostgreSQL 17 admin precheck passed, then strict `pg_restore` failed with `category=role_missing`. The previous ACL-omission fallback did not execute because it intentionally handles `permission_denied` only. **The failing role name and TOC entry were not included in the sanitized run output; do not claim the exact one was identified or that real restore is certified.** No R2 archive corruption, production SQL failure or missing user table is shown.
