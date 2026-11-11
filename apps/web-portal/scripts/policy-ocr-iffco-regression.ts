@@ -202,11 +202,11 @@ for (const testCase of cases) {
 }
 
 const nameFixtures = [
-  { name: "labeled inline IFFCO", pages: ["IFFCO-TOKIO GENERAL INSURANCE CO.LTD\\nName of Insured: MR RAJESH KUMAR\\nPolicy # N9200341"], expected: "MR RAJESH KUMAR" },
-  { name: "labeled next-line IFFCO", pages: ["IFFCO-TOKIO GENERAL INSURANCE CO.LTD\\nName & Address of Insured\\nM/S GREEN CARGO PRIVATE LIMITED\\nAddress: Jabalpur"], expected: "M/S GREEN CARGO PRIVATE LIMITED" },
-  { name: "unlabeled owner driver is not identity", pages: ["IFFCO-TOKIO GENERAL INSURANCE CO.LTD\\nInsured Motor Vehicle Details\\nOwner Driver : Sunil Patel"], expected: undefined },
-  { name: "empty insured name must stay absent", pages: ["IFFCO-TOKIO GENERAL INSURANCE CO.LTD\\nInsured Name: N/A\\nPolicy # N9200341"], expected: undefined },
-  { name: "insurer and policy fields must not become identity", pages: ["IFFCO-TOKIO GENERAL INSURANCE CO.LTD\\nInsured Name: Vehicle Details\\nPolicy # N9200341"], expected: undefined },
+  { name: "labeled inline IFFCO", pages: ["IFFCO-TOKIO GENERAL INSURANCE CO.LTD\nName of Insured: MR RAJESH KUMAR\nPolicy # N9200341"], expected: "MR RAJESH KUMAR" },
+  { name: "labeled next-line IFFCO", pages: ["IFFCO-TOKIO GENERAL INSURANCE CO.LTD\nName & Address of Insured\nM/S GREEN CARGO PRIVATE LIMITED\nAddress: Jabalpur"], expected: "M/S GREEN CARGO PRIVATE LIMITED" },
+  { name: "unlabeled owner driver is not identity", pages: ["IFFCO-TOKIO GENERAL INSURANCE CO.LTD\nInsured Motor Vehicle Details\nOwner Driver : Sunil Patel"], expected: undefined },
+  { name: "empty insured name must stay absent", pages: ["IFFCO-TOKIO GENERAL INSURANCE CO.LTD\nInsured Name: N/A\nPolicy # N9200341"], expected: undefined },
+  { name: "insurer and policy fields must not become identity", pages: ["IFFCO-TOKIO GENERAL INSURANCE CO.LTD\nInsured Name: Vehicle Details\nPolicy # N9200341"], expected: undefined },
 ];
 for (const fixture of nameFixtures) {
   const parsed = refinePolicyIntakeInsuredName(fixture.pages, { parserId: "iffco_tokio_commercial_motor_v2", parserVersion: "test-v2", fields: [], warnings: [] });
