@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createSupabaseWithAccessToken } from "@/lib/auth";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { getEffectivePermissionAccessMap } from "@/lib/effective-permissions";
+import { canAccessPolicyCommercials } from "@/lib/policy-commercial-access";
 
 export const dynamic = "force-dynamic";
 
@@ -49,7 +50,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Employee access inactive." }, { status: 403 });
     }
     const capabilities = await getEffectivePermissionAccessMap(profile);
-    return NextResponse.json({ actor_kind: "employee", capabilities }, {
+    return NextResponse.json({ actor_kind: "employee", capabilities, can_view_insurer_commercials: canAccessPolicyCommercials(profile) }, {
       headers: { "Cache-Control": "private, no-store" },
     });
   }
@@ -63,7 +64,7 @@ export async function GET(request: Request) {
   if (scopeError || !scope || scope.actor_kind !== "intermediary") {
     return NextResponse.json({ error: "Partner scope unavailable." }, { status: 403 });
   }
-  return NextResponse.json({ actor_kind: "intermediary", capabilities: partnerGrants }, {
+  return NextResponse.json({ actor_kind: "intermediary", capabilities: partnerGrants, can_view_insurer_commercials: false }, {
     headers: { "Cache-Control": "private, no-store" },
   });
 }

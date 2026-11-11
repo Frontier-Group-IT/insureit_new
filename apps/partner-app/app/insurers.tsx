@@ -89,6 +89,7 @@ export default function InsurerListScreen() {
   const router = useRouter();
   const { context, cacheScopeKey } = usePartnerSession();
   const employee = context?.identity.actor_kind === 'employee';
+  const canViewCommercials = employee && context?.can_view_insurer_commercials === true;
   const initialRange = getPresetRange('mtd');
   const [range, setRange] = useState(() => ({
     from: typeof params.from === 'string' && DATE_PATTERN.test(params.from) ? params.from : initialRange.from,
@@ -120,7 +121,7 @@ export default function InsurerListScreen() {
   });
   // Amounts aliases premium because the existing RPC has no independent Amount field.
   const columns: Array<{ key: Metric | 'policies'; label: string }> = employee
-    ? [{ key: 'policies', label: 'Policies' }, { key: 'amounts', label: 'Amount' }, { key: 'premium', label: 'Net Premium' }, { key: 'payin', label: 'Pay-In' }, { key: 'retention', label: 'Retention' }]
+    ? [{ key: 'policies', label: 'Policies' }, { key: 'amounts', label: 'Amount' }, { key: 'premium', label: 'Net Premium' }, ...(canViewCommercials ? [{ key: 'payin' as const, label: 'Pay-In' }, { key: 'retention' as const, label: 'Retention' }] : [])]
     : [{ key: 'policies', label: 'Policies' }, { key: 'amounts', label: 'Amount' }, { key: 'premium', label: 'Net Premium' }, { key: 'payout', label: 'Payout' }];
   const insurers = useMemo(() => {
     const term = search.trim().toLocaleLowerCase();
@@ -131,13 +132,13 @@ export default function InsurerListScreen() {
       if (sortKey === 'name_desc') return displayInsurerName(right.name).localeCompare(displayInsurerName(left.name));
       if (sortKey === 'policies_asc') return left.policies - right.policies;
       if (sortKey === 'policies_desc') return right.policies - left.policies;
-      if (sortKey === 'payin_desc' && employee) return Number(right.payin ?? 0) - Number(left.payin ?? 0);
-      if (sortKey === 'retention_desc' && employee) return Number(right.retention ?? 0) - Number(left.retention ?? 0);
+      if (sortKey === 'payin_desc' && canViewCommercials) return Number(right.payin ?? 0) - Number(left.payin ?? 0);
+      if (sortKey === 'retention_desc' && canViewCommercials) return Number(right.retention ?? 0) - Number(left.retention ?? 0);
       return sortKey === 'amount_asc'
         ? Number(left.premium ?? 0) - Number(right.premium ?? 0)
         : Number(right.premium ?? 0) - Number(left.premium ?? 0);
     });
-  }, [query.data, search, sortKey, employee]);
+  }, [query.data, search, sortKey, canViewCommercials]);
 
   const openDateRange = () => {
     if (dateExpanded) {
@@ -312,8 +313,8 @@ export default function InsurerListScreen() {
                       onPress={() => {
                         if (column.key === 'policies') setSortKey('policies_desc');
                         else if (column.key === 'premium' || column.key === 'amounts') setSortKey('amount_desc');
-                        else if (column.key === 'payin' && employee) setSortKey('payin_desc');
-                        else if (column.key === 'retention' && employee) setSortKey('retention_desc');
+                        else if (column.key === 'payin' && canViewCommercials) setSortKey('payin_desc');
+                        else if (column.key === 'retention' && canViewCommercials) setSortKey('retention_desc');
                       }}
                       style={styles.metricHeaderCell}>
                       <Text numberOfLines={2} style={styles.metricHeaderText}>{column.label.toUpperCase()}</Text>
