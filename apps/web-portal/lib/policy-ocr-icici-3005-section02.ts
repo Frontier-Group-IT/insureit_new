@@ -32,8 +32,8 @@ export function refineIcici3005Section02Evidence(
   // Generic classification may return Bundled with only .82 confidence, below
   // the import panel's .90 auto-selection threshold, or misread liability
   // headings as a different product. Trust this document-specific heading.
-  const bundledHeading = /Bundled\s*[-–—]?\s*Two\s+Wheeler\s+Policy/i.exec(second)
-    ?? /Bundled\s*[-–—]?\s*Two\s+Wheeler\s+Policy/i.exec(first);
+  const scheduleHeading = /Bundled\s*[-–—]?\s*Two\s+Wheeler\s+Policy/i.exec(second);
+  const bundledHeading = scheduleHeading ?? /Bundled\s*[-–—]?\s*Two\s+Wheeler\s+Policy/i.exec(first);
   if (bundledHeading) {
     const prior = byKey.get("policy_product");
     if (prior?.value !== "Bundled" || (prior.confidence ?? 0) < 0.99) {
@@ -42,7 +42,7 @@ export function refineIcici3005Section02Evidence(
         label: "Policy product",
         value: "Bundled",
         confidence: 0.99,
-        page: bundledHeading[0] && /Bundled\s*[-–—]?\s*Two\s+Wheeler\s+Policy/i.test(second) ? 2 : 1,
+        page: scheduleHeading ? 2 : 1,
         evidence: bundledHeading[0],
       });
       changedKeys.push("policy_product");
