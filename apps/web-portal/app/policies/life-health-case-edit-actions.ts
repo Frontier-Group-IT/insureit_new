@@ -57,7 +57,6 @@ export async function updateLifeHealthCaseDetails(formData: FormData) {
     payment_mode: paymentMode,
     premium_amount: premium,
     sourcing_date: sourcingDate,
-    remarks: clean(formData.get("remarks")) || null,
     updated_at: new Date().toISOString(),
   }).eq("id", caseId);
   if (caseError) return { ok: false as const, error: "Case details could not be updated." };
@@ -65,4 +64,42 @@ export async function updateLifeHealthCaseDetails(formData: FormData) {
   revalidatePath(`/policies/life-health-cases/${caseId}`);
   revalidatePath("/policies/life-health-cases");
   return { ok: true as const };
+}
+
+/**
+ * A case remark is append-only. The normal case-save and conversion flows do
+ * not submit or replace remarks. Guard against concurrent writes to the same
+ * case so an older browser session cannot erase a newer entry.
+ */
+export async function appendLifeHealthCaseRemark(formData: FormData): Promise<{ok:true;remarks:string}|{ok:false;error:string}> {
+  const caseId = clean(formData.get("caseId"));
+  const newRemark = clean(formData.get("newRemark"));
+  if (!caseId) return {ok:false,error:"Case reference is missing."};
+  const {profile:requester} = await getAuthenticatedProfile(await getServerAccessToken());
+  if (requester?.role === "operations_head_life") await requireOperationsHeadRecordOwnership("life_health_case",caseId);
+  else await requirePolicyCreator();
+  if (!newRemark || newRemark.length > 2000) return {ok:false,error:"Enter a remark of up to 2000 characters."};
+  const admin = createSupabaseAdminClient();
+  const {data:caseRow,error:loadError} = await admin.from("life_health_cases")
+    .select("id,remarks,final_policy_id").eq("id",caseId)
+    .maybeSingle<{id:string;remarks:string|null;final_policy_id:string|null}>();
+  if (loadError || !caseRow) return {ok:false,error:"Case could not be loaded."};
+  if (caseRow.final_policy_id) return {ok:false,error:"Issued cases cannot be edited."};
+  const old = caseRow.remarks?.trim() ?? "";
+  const timestamp = new Intl.DateTimeFormat("en-IN",{
+    timeZone:"Asia/Kolkata",day:"2-digit",month:"short",year:"numeric",
+    hour:"2-digit",minute:"2-digit",hour12:true,
+  }).format(new Date());
+  const addition = `[${timestamp}] ${newRemark}`;
+  const remarks = old ? `${old}\n\n${addition}` : addition;
+  if (remarks.length > 50000) return {ok:false,error:"The remarks history is full."};
+  let update = admin.from("life_health_cases")
+    .update({remarks,updated_at:new Date().toISOString()})
+    .eq("id",caseId).is("final_policy_id",null);
+  update = caseRow.remarks === null ? update.is("remarks",null) : update.eq("remarks",caseRow.remarks);
+  const {data:saved,error:saveError} = await update.select("id").maybeSingle<{id:string}>();
+  if (saveError || !saved) return {ok:false,error:"Remarks changed in another session. Reload and try again."};
+  revalidatePath(`/policies/life-health-cases/${caseId}`);
+  revalidatePath("/policies/life-health-cases");
+  return {ok:true,remarks};
 }
