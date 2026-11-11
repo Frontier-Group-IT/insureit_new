@@ -63,7 +63,15 @@ export async function listPartnerClaims({
 
 export type PartnerClaimDocument = { id: string; name: string; category: string | null };
 
+export type PartnerClaimFinancialMilestone = {
+  key: 'work_approval' | 'claim_intimation' | 'billing' | 'delivery_order' | 'payment_encashment';
+  status: string;
+  amount: number | string | null;
+};
+
 export type PartnerClaimDetail = {
+  /** Returned only for a claim already authorized by the scoped detail RPC. */
+  financial_milestones?: PartnerClaimFinancialMilestone[];
   /** Null means the scoped API has not supplied document inventory. */
   documents: PartnerClaimDocument[] | null;
   claim: {
@@ -72,6 +80,7 @@ export type PartnerClaimDetail = {
     insurer_claim_no: string | null;
     current_status: string | null;
     claim_service_mode: string | null;
+    external_policy_id?: string | null;
     assistance_status: string | null;
     accident_at: string | null;
     spot_intimation_at?: string | null;
