@@ -246,6 +246,25 @@ jobs:
             echo "OFFLINE FIXTURE SMOKE FAILED: container not ready"
             exit 1
           fi
+          # supabase/postgres image can restart PostgreSQL once after the
+          # first pg_isready reports success. Require consecutive real SQL
+          # queries to succeed before running any non-idempotent fixture.
+          stable=0
+          for attempt in $(seq 1 40); do
+            if docker exec -u postgres insureit-fixture-smoke \
+              psql -XAt -v ON_ERROR_STOP=1 -d postgres -c 'SELECT 1' \
+              > "$RUNNER_TEMP/fixture-smoke.log" 2>&1; then
+              stable=$((stable + 1))
+              if [ "$stable" -ge 5 ]; then break; fi
+            else
+              stable=0
+            fi
+            sleep 2
+          done
+          if [ "$stable" -lt 5 ]; then
+            echo "OFFLINE FIXTURE SMOKE FAILED: PostgreSQL not stably ready"
+            exit 1
+          fi
           docker cp scripts/backup/fixtures/isolated_supabase_roles.sql insureit-fixture-smoke:/tmp/offline-fixture-roles.sql
           if ! docker exec -u postgres insureit-fixture-smoke \
             psql -X --set ON_ERROR_STOP=1 --dbname postgres --file /tmp/offline-fixture-roles.sql \
