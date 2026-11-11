@@ -8,8 +8,12 @@ export default function AccessDeniedScreen() {
   const { status, error, refresh, signOut } = usePartnerSession();
   const retryable = status === 'unavailable';
 
-  if (status === 'ready') return <Redirect href="/(tabs)" />;
   if (status === 'signed_out') return <Redirect href="/login" />;
+
+  async function retryVerification() {
+    const resolved = await refresh();
+    if (resolved) router.replace('/(tabs)');
+  }
 
   async function returnToLogin() {
     try {
@@ -36,7 +40,7 @@ export default function AccessDeniedScreen() {
             accessibilityRole="button"
             accessibilityLabel="Retry account verification"
             disabled={status === 'loading'}
-            onPress={() => void refresh()}
+            onPress={() => void retryVerification()}
             style={[styles.button, status === 'loading' && styles.disabledButton]}
           >
             {status === 'loading'
