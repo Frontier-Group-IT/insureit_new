@@ -227,13 +227,18 @@ export default function PolicyIntakeDetailScreen() {
                 <Ionicons name="reader-outline" size={27} color="#17365D" />
               </View>
               <View style={styles.statusBody}>
-                <Text numberOfLines={1} style={styles.intakeNumber}>{row.intake_number}</Text>
+                <Text numberOfLines={1} style={styles.intakeNumber}>{fields.get('policy_number')?.value?.trim() || row.intake_number}</Text>
                 <View style={styles.intakeSummaryCompact}>
-                  <Text numberOfLines={1} style={styles.summaryLine}>{[row.customer_mobile, row.lead_source_name].filter(Boolean).join(' · ')}</Text>
                   <Text numberOfLines={1} style={styles.summaryLine}>
-                    {[fields.get('policy_number')?.value?.trim() || 'Policy pending',
-                      fields.get('vehicle_registration_number')?.value?.trim()
-                        || (row.policy_type === 'motor' ? 'Vehicle pending' : 'Policy details pending')].join(' · ')}
+                    {[row.customer_mobile, 'Customer name pending'].filter(Boolean).join(' · ')}
+                  </Text>
+                  <Text numberOfLines={2} style={styles.summaryLine}>
+                    {[
+                      row.lead_source_name?.trim(),
+                      fields.get('insured_name')?.value?.trim() && row.lead_source_name?.trim()?.toLowerCase() !== fields.get('insured_name')?.value?.trim()?.toLowerCase()
+                        ? `(${fields.get('insured_name')?.value?.trim()})`
+                        : null,
+                    ].filter(Boolean).join(' ')}
                   </Text>
                   {row.status !== 'duplicate' && row.status !== 'ready_for_review'
                     ? <Text style={styles.statusHelp}>{statusHelp(row)}</Text> : null}
