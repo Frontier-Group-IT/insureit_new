@@ -339,10 +339,10 @@ for (const testCase of cases) {
 }
 
 const universalFixtures = [
-  { name: "inline Universal Sompo", pages: ["Universal Sompo General Insurance Company Limited\\nName of Insured : SWAPNA CREATIONS\\nPolicy No USG1299235"], expected: "SWAPNA CREATIONS" },
-  { name: "next-line Universal Sompo", pages: ["Universal Sompo General Insurance Company Limited\\nPolicy Holder Name\\nM/S R K MOTORS\\nAddress: Jabalpur"], expected: "M/S R K MOTORS" },
-  { name: "do not infer from proposer other label", pages: ["Universal Sompo General Insurance Company Limited\\nVehicle Owner: SURESH KUMAR"], expected: undefined },
-  { name: "do not infer from address block", pages: ["Universal Sompo General Insurance Company Limited\\nName of Insured\\nAddress: Jabalpur"], expected: undefined },
+  { name: "inline Universal Sompo", pages: ["Universal Sompo General Insurance Company Limited\nName of Insured : SWAPNA CREATIONS\nPolicy No USG1299235"], expected: "SWAPNA CREATIONS" },
+  { name: "next-line Universal Sompo", pages: ["Universal Sompo General Insurance Company Limited\nPolicy Holder Name\nM/S R K MOTORS\nAddress: Jabalpur"], expected: "M/S R K MOTORS" },
+  { name: "do not infer from proposer other label", pages: ["Universal Sompo General Insurance Company Limited\nVehicle Owner: SURESH KUMAR"], expected: undefined },
+  { name: "do not infer from address block", pages: ["Universal Sompo General Insurance Company Limited\nName of Insured\nAddress: Jabalpur"], expected: undefined },
   { name: "do not alter unsupported insurers", pages: ["Name of Insured: TEST CUSTOMER"], expected: undefined, parser: "national_motor_v1" },
 ];
 for (const fixture of universalFixtures) {
