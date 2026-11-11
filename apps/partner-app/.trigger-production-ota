@@ -1,9 +1,9 @@
 Partner production OTA trigger
-release=partner-activity-claim-manufacturer-unread-pr-4225
-source=merged-main-99499e1ed03ea7540ce936ec5e9f24d21908403e
-reason=user-approved-production-release-after-partner-and-web-ci-and-verified-migration
+release=partner-activity-needs-attention-cards-pr-4235
+source=verified-merged-main-fab15141ea1db3052bfc3d4aacd11fd1efff7eaf
+reason=user-approved-merge-publish-after-partner-and-web-ci
 channel=production
 runtime=0.2.0
 requested=2026-11-11
 no_native_build=true
-database_migration=partner_activity_claim_vehicle_manufacturer_applied_verified
+database_changes=false
