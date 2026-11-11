@@ -1,7 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useCallback, useMemo, useRef, useState } from 'react';
-import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import { Modal, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useCallback, useMemo, useState } from 'react';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
@@ -13,7 +12,6 @@ import { usePartnerSession } from '@/providers/partner-session-provider';
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 type Metric = 'amounts' | 'premium' | 'payin' | 'retention' | 'payout';
-type DatePreset = 'mtd' | 'last_month' | 'custom';
 type SortKey = 'amount_desc' | 'amount_asc' | 'policies_desc' | 'policies_asc' | 'name_asc' | 'name_desc' | 'payin_desc' | 'retention_desc';
 const FINANCIAL_COLUMN_WIDTH = 118;
 const ROW_HEIGHT = 62;
@@ -89,7 +87,6 @@ function metricValue(row: PartnerInsurerRegisterRow, metric: Metric): number | s
 export default function InsurerListScreen() {
   const params = useLocalSearchParams<{ from?: string; to?: string }>();
   const router = useRouter();
-  const amountScrollRef = useRef<ScrollView>(null);
   const { context, cacheScopeKey } = usePartnerSession();
   const employee = context?.identity.actor_kind === 'employee';
   const initialRange = getPresetRange('mtd');
@@ -98,13 +95,14 @@ export default function InsurerListScreen() {
     to: typeof params.to === 'string' && DATE_PATTERN.test(params.to) ? params.to : initialRange.to,
   }));
   const [draft, setDraft] = useState(range);
-  const [dateModalOpen, setDateModalOpen] = useState(false);
-  const [datePreset, setDatePreset] = useState<DatePreset>('custom');
-  const [metric, setMetric] = useState<Metric>('amounts');
+  const [dateExpanded, setDateExpanded] = useState(false);
   const [search, setSearch] = useState('');
   const [sortKey, setSortKey] = useState<SortKey>('amount_desc');
-  const [sortModalOpen, setSortModalOpen] = useState(false);
-  const [pickerTarget, setPickerTarget] = useState<'from' | 'to' | null>(null);
+  const [pickerTarget, setPickerTarget] = useState<'from' | 'to'>('from');
+  const [calendarMonth, setCalendarMonth] = useState(() => {
+    const date = parseLocal(range.from);
+    return new Date(date.getFullYear(), date.getMonth(), 1);
+  });
   const validRange = validDateRange(range.from, range.to);
   const validDraft = validDateRange(draft.from, draft.to);
   const { from, to } = range;
@@ -120,67 +118,56 @@ export default function InsurerListScreen() {
     fetcher: fetchInsurers,
     staleTimeMs: 90_000,
   });
-  const options: Array<{ key: Metric; label: string }> = employee
-    ? [{ key: 'amounts', label: 'Amounts' }, { key: 'premium', label: 'Net Premium' }, { key: 'payin', label: 'Pay-In' }, { key: 'retention', label: 'Retention' }]
-    : [{ key: 'amounts', label: 'Amounts' }, { key: 'premium', label: 'Net Premium' }, { key: 'payout', label: 'Payout' }];
-  // Never expose employee-only metrics to Partner identities.
-  const selectedMetric = options.some((option) => option.key === metric) ? metric : 'amounts';
   // Amounts aliases premium because the existing RPC has no independent Amount field.
   const columns: Array<{ key: Metric | 'policies'; label: string }> = employee
     ? [{ key: 'policies', label: 'Policies' }, { key: 'amounts', label: 'Amount' }, { key: 'premium', label: 'Net Premium' }, { key: 'payin', label: 'Pay-In' }, { key: 'retention', label: 'Retention' }]
     : [{ key: 'policies', label: 'Policies' }, { key: 'amounts', label: 'Amount' }, { key: 'premium', label: 'Net Premium' }, { key: 'payout', label: 'Payout' }];
-  const sortOptions: Array<{ key: SortKey; label: string }> = [
-    { key: 'amount_desc', label: 'Highest Net Premium' },
-    { key: 'amount_asc', label: 'Lowest Net Premium' },
-    { key: 'policies_desc', label: 'Most Policies' },
-    { key: 'policies_asc', label: 'Fewest Policies' },
-    { key: 'name_asc', label: 'Insurer Name A–Z' },
-    { key: 'name_desc', label: 'Insurer Name Z–A' },
-    ...(employee ? [
-      { key: 'payin_desc' as SortKey, label: 'Highest Pay-In' },
-      { key: 'retention_desc' as SortKey, label: 'Highest Retention' },
-    ] : []),
-  ];
-  const sortForCurrentUser = sortOptions.some((option) => option.key === sortKey) ? sortKey : 'amount_desc';
-  const scrollToMetric = (key: Metric) => {
-    setMetric(key);
-    const index = columns.findIndex((column) => column.key === key);
-    amountScrollRef.current?.scrollTo({ x: Math.max(0, index) * FINANCIAL_COLUMN_WIDTH, animated: true });
-  };
-
   const insurers = useMemo(() => {
     const term = search.trim().toLocaleLowerCase();
     const filtered = (query.data ?? []).filter((row) =>
       !term || row.name.toLocaleLowerCase().includes(term) || displayInsurerName(row.name).toLocaleLowerCase().includes(term));
     return [...filtered].sort((left, right) => {
-      if (sortForCurrentUser === 'name_asc') return displayInsurerName(left.name).localeCompare(displayInsurerName(right.name));
-      if (sortForCurrentUser === 'name_desc') return displayInsurerName(right.name).localeCompare(displayInsurerName(left.name));
-      if (sortForCurrentUser === 'policies_asc') return left.policies - right.policies;
-      if (sortForCurrentUser === 'policies_desc') return right.policies - left.policies;
-      if (sortForCurrentUser === 'payin_desc' && employee) return Number(right.payin ?? 0) - Number(left.payin ?? 0);
-      if (sortForCurrentUser === 'retention_desc' && employee) return Number(right.retention ?? 0) - Number(left.retention ?? 0);
-      return sortForCurrentUser === 'amount_asc'
+      if (sortKey === 'name_asc') return displayInsurerName(left.name).localeCompare(displayInsurerName(right.name));
+      if (sortKey === 'name_desc') return displayInsurerName(right.name).localeCompare(displayInsurerName(left.name));
+      if (sortKey === 'policies_asc') return left.policies - right.policies;
+      if (sortKey === 'policies_desc') return right.policies - left.policies;
+      if (sortKey === 'payin_desc' && employee) return Number(right.payin ?? 0) - Number(left.payin ?? 0);
+      if (sortKey === 'retention_desc' && employee) return Number(right.retention ?? 0) - Number(left.retention ?? 0);
+      return sortKey === 'amount_asc'
         ? Number(left.premium ?? 0) - Number(right.premium ?? 0)
         : Number(right.premium ?? 0) - Number(left.premium ?? 0);
     });
-  }, [query.data, search, sortForCurrentUser, employee]);
+  }, [query.data, search, sortKey, employee]);
 
   const openDateRange = () => {
+    if (dateExpanded) {
+      setDateExpanded(false);
+      return;
+    }
     setDraft(range);
-    setPickerTarget(null);
-    setDatePreset('custom');
-    setDateModalOpen(true);
+    setPickerTarget('from');
+    const start = parseLocal(range.from);
+    setCalendarMonth(new Date(start.getFullYear(), start.getMonth(), 1));
+    setDateExpanded(true);
   };
-  const handlePickedDate = (event: DateTimePickerEvent, selected?: Date) => {
-    if (Platform.OS === 'android') setPickerTarget(null);
-    if (event.type === 'dismissed' || !selected || !pickerTarget) return;
-    setDatePreset('custom');
-    setDraft((current) => ({ ...current, [pickerTarget]: isoLocal(selected) }));
+  const selectDate = (day: number) => {
+    const selected = isoLocal(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), day));
+    setDraft((current) => ({ ...current, [pickerTarget]: selected }));
+    if (pickerTarget === 'from') setPickerTarget('to');
   };
-  const applyPreset = (preset: Exclude<DatePreset, 'custom'>) => {
-    setDatePreset(preset);
-    setDraft(getPresetRange(preset));
+  const changeMonth = (step: number) => {
+    setCalendarMonth((current) => new Date(current.getFullYear(), current.getMonth() + step, 1));
   };
+  const calendarCells = useMemo(() => {
+    const year = calendarMonth.getFullYear();
+    const month = calendarMonth.getMonth();
+    const leading = new Date(year, month, 1).getDay();
+    const days = new Date(year, month + 1, 0).getDate();
+    return [...Array<null>(leading).fill(null), ...Array.from({ length: days }, (_, i) => i + 1)];
+  }, [calendarMonth]);
+  const today = new Date();
+  const isCurrentMonth = calendarMonth.getFullYear() === today.getFullYear()
+    && calendarMonth.getMonth() === today.getMonth();
 
   return (
     <PartnerScreen title="Insurer-wise Performance" hideTopBar fullWidth
@@ -210,33 +197,95 @@ export default function InsurerListScreen() {
         </View>
       </View>
 
-      <ScrollView horizontal nestedScrollEnabled showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.filterRow} accessibilityLabel="Financial filters, Date Range and Sort">
-        {options.map((option) => (
-          <Pressable key={option.key} accessibilityRole="button"
-            accessibilityState={{ selected: selectedMetric === option.key }}
-            onPress={() => scrollToMetric(option.key)}
-            style={[styles.chip, selectedMetric === option.key && styles.selectedChip]}>
-            <Text style={[styles.chipText, selectedMetric === option.key && styles.selectedChipText]}>{option.label}</Text>
-          </Pressable>
-        ))}
-        <Pressable accessibilityRole="button" accessibilityLabel="Date Range, open date picker"
-          onPress={openDateRange} style={styles.chip}>
-          <Ionicons name="calendar-outline" size={14} color="#155BB6" />
-          <Text style={styles.chipText}>Date Range</Text>
-          <Ionicons name="chevron-down" size={12} color="#155BB6" />
+      <View style={styles.dateSection}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Date Range"
+          accessibilityState={{ expanded: dateExpanded }} onPress={openDateRange}
+          style={styles.dateRangeTrigger}>
+          <Ionicons name="calendar-outline" size={18} color="#155BB6" />
+          <View style={styles.dateRangeCopy}>
+            <Text style={styles.dateRangeTitle}>Date Range</Text>
+            <Text style={styles.dateRangeValue}>{validRange ? formatRange(from, to) : 'Select a valid reporting range'}</Text>
+          </View>
+          <Ionicons name={dateExpanded ? 'chevron-up' : 'chevron-down'} size={18} color="#155BB6" />
         </Pressable>
-        <Pressable accessibilityRole="button" accessibilityLabel="Sort insurer register"
-          onPress={() => setSortModalOpen(true)} style={styles.chip}>
-          <Ionicons name="swap-vertical-outline" size={14} color="#155BB6" />
-          <Text style={styles.chipText}>Sort</Text>
-          <Ionicons name="chevron-down" size={12} color="#155BB6" />
-        </Pressable>
-      </ScrollView>
+        {dateExpanded ? (
+          <View style={styles.datePanel}>
+            <View style={styles.dateFields}>
+              {(['from', 'to'] as const).map((field) => (
+                <Pressable key={field} accessibilityRole="button"
+                  accessibilityLabel={field === 'from' ? 'Select From Date' : 'Select To Date'}
+                  accessibilityState={{ selected: pickerTarget === field }}
+                  onPress={() => {
+                    setPickerTarget(field);
+                    const selected = parseLocal(draft[field]);
+                    setCalendarMonth(new Date(selected.getFullYear(), selected.getMonth(), 1));
+                  }}
+                  style={[styles.dateButton, pickerTarget === field && styles.dateButtonActive]}>
+                  <Text style={styles.dateButtonLabel}>{field === 'from' ? 'From Date' : 'To Date'}</Text>
+                  <Text style={styles.dateButtonText}>{parseLocal(draft[field]).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</Text>
+                </Pressable>
+              ))}
+            </View>
+            <View style={styles.calendarWrap}>
+              <View style={styles.monthRow}>
+                <Pressable accessibilityRole="button" accessibilityLabel="Previous month"
+                  onPress={() => changeMonth(-1)} style={styles.monthArrow}>
+                  <Ionicons name="chevron-back" size={18} color="#155BB6" />
+                </Pressable>
+                <Text style={styles.monthTitle}>
+                  {calendarMonth.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}
+                </Text>
+                <Pressable accessibilityRole="button" accessibilityLabel="Next month"
+                  disabled={isCurrentMonth} onPress={() => changeMonth(1)}
+                  style={styles.monthArrow}>
+                  <Ionicons name="chevron-forward" size={18} color={isCurrentMonth ? '#BDC8D7' : '#155BB6'} />
+                </Pressable>
+              </View>
+              <View style={styles.calendarGrid}>
+                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+                  <View key={day} style={styles.calendarCell}>
+                    <Text style={styles.weekdayText}>{day}</Text>
+                  </View>
+                ))}
+                {calendarCells.map((day, index) => {
+                  const value = day == null ? null : isoLocal(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), day));
+                  const disabled = value != null && value > isoLocal(today);
+                  const selected = value != null && value === draft[pickerTarget];
+                  const inRange = value != null && value >= draft.from && value <= draft.to;
+                  return (
+                    <View key={index} style={styles.calendarCell}>
+                      {day != null ? (
+                        <Pressable accessibilityRole="button" accessibilityLabel={value ?? ''}
+                          accessibilityState={{ selected, disabled }} disabled={disabled}
+                          onPress={() => selectDate(day)}
+                          style={[styles.dayButton, inRange && styles.dayInRange, selected && styles.daySelected]}>
+                          <Text style={[styles.dayText, disabled && styles.dayDisabledText,
+                            selected && styles.daySelectedText]}>{day}</Text>
+                        </Pressable>
+                      ) : null}
+                    </View>
+                  );
+                })}
+              </View>
+            </View>
+            <Text style={styles.dateNote}>Select From and To dates using this calendar (maximum 366 days).</Text>
+            {!validDraft ? <Text style={styles.invalidRange}>Choose a valid range: From Date must be on or before To Date, within 366 days.</Text> : null}
+            <View style={styles.modalActions}>
+              <Pressable accessibilityRole="button" onPress={() => setDateExpanded(false)} style={styles.cancel}>
+                <Text style={styles.cancelText}>Cancel</Text>
+              </Pressable>
+              <Pressable accessibilityRole="button" disabled={!validDraft}
+                onPress={() => { setRange(draft); setDateExpanded(false); }}
+                style={[styles.apply, !validDraft && styles.applyDisabled]}>
+                <Text style={styles.applyText}>Apply</Text>
+              </Pressable>
+            </View>
+          </View>
+        ) : null}
+      </View>
 
       <View style={styles.registerArea}>
         <View style={styles.rangeRow}>
-          <Text style={styles.rangeText}>{validRange ? formatRange(from, to) : 'Select a valid reporting range'}</Text>
           <Text style={styles.countText}>{insurers.length} insurers</Text>
         </View>
         <View style={styles.register}>
@@ -303,101 +352,6 @@ export default function InsurerListScreen() {
         </View>
       </View>
 
-      <Modal visible={sortModalOpen} transparent animationType="slide" onRequestClose={() => setSortModalOpen(false)}>
-        <View style={styles.modalShade}>
-          <Pressable style={StyleSheet.absoluteFillObject} onPress={() => setSortModalOpen(false)} accessibilityLabel="Close sort options" />
-          <View style={styles.modalPanel}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Sort Insurers</Text>
-              <Pressable accessibilityRole="button" accessibilityLabel="Close sort"
-                onPress={() => setSortModalOpen(false)} style={styles.closeButton}>
-                <Ionicons name="close" color="#526781" size={20} />
-              </Pressable>
-            </View>
-            {sortOptions.map((option) => (
-              <Pressable key={option.key} accessibilityRole="button"
-                accessibilityState={{ selected: sortForCurrentUser === option.key }}
-                onPress={() => { setSortKey(option.key); setSortModalOpen(false); }}
-                style={styles.sortOption}>
-                <Text style={[styles.sortOptionText, sortForCurrentUser === option.key && styles.sortOptionSelected]}>{option.label}</Text>
-                {sortForCurrentUser === option.key ? <Ionicons name="checkmark-circle" size={19} color="#155BB6" /> : null}
-              </Pressable>
-            ))}
-          </View>
-        </View>
-      </Modal>
-
-      <Modal visible={dateModalOpen} transparent animationType="slide"
-        onRequestClose={() => { setPickerTarget(null); setDateModalOpen(false); }}>
-        <View style={styles.modalShade}>
-          <Pressable style={StyleSheet.absoluteFillObject}
-            onPress={() => { setPickerTarget(null); setDateModalOpen(false); }}
-            accessibilityLabel="Close date range" />
-          <View style={styles.modalPanel}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Date Range</Text>
-              <Pressable accessibilityRole="button" accessibilityLabel="Close date range"
-                onPress={() => { setPickerTarget(null); setDateModalOpen(false); }} style={styles.closeButton}>
-                <Ionicons name="close" color="#526781" size={20} />
-              </Pressable>
-            </View>
-            <View style={styles.presets}>
-              {([['mtd', 'This Month'], ['last_month', 'Last Month'], ['custom', 'Custom Range']] as const).map(([key, label]) => (
-                <Pressable key={key} accessibilityRole="button"
-                  accessibilityState={{ selected: datePreset === key }}
-                  onPress={() => {
-                    setPickerTarget(null);
-                    if (key === 'custom') setDatePreset('custom');
-                    else applyPreset(key);
-                  }}
-                  style={[styles.preset, datePreset === key && styles.presetActive]}>
-                  <Text style={[styles.presetText, datePreset === key && styles.presetTextActive]}>{label}</Text>
-                </Pressable>
-              ))}
-            </View>
-            <View style={styles.dateFields}>
-              {(['from', 'to'] as const).map((field) => (
-                <Pressable key={field} accessibilityRole="button"
-                  accessibilityLabel={field === 'from' ? 'From Date, open calendar' : 'To Date, open calendar'}
-                  onPress={() => { setDatePreset('custom'); setPickerTarget(field); }}
-                  style={[styles.dateButton, pickerTarget === field && styles.dateButtonActive]}>
-                  <Text style={styles.dateButtonLabel}>{field === 'from' ? 'From Date' : 'To Date'}</Text>
-                  <View style={styles.dateButtonValue}>
-                    <Text style={styles.dateButtonText}>{parseLocal(draft[field]).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</Text>
-                    <Ionicons name="calendar-outline" size={16} color="#155BB6" />
-                  </View>
-                </Pressable>
-              ))}
-            </View>
-            {pickerTarget ? (
-              <View style={styles.calendarWrap}>
-                <Text style={styles.calendarLabel}>Select {pickerTarget === 'from' ? 'From Date' : 'To Date'}</Text>
-                <DateTimePicker key={pickerTarget}
-                  value={parseLocal(draft[pickerTarget])}
-                  mode="date" display={Platform.OS === 'ios' ? 'inline' : 'default'}
-                  maximumDate={new Date()} onChange={handlePickedDate} />
-                {Platform.OS === 'ios' ? (
-                  <Pressable accessibilityRole="button" onPress={() => setPickerTarget(null)} style={styles.calendarDone}>
-                    <Text style={styles.calendarDoneText}>Done</Text>
-                  </Pressable>
-                ) : null}
-              </View>
-            ) : null}
-            <Text style={styles.dateNote}>Choose a maximum of 366 days. The range updates the insurer register.</Text>
-            {!validDraft ? <Text style={styles.invalidRange}>Select a valid date range (From Date must not be after To Date).</Text> : null}
-            <View style={styles.modalActions}>
-              <Pressable accessibilityRole="button" onPress={() => { setPickerTarget(null); setDateModalOpen(false); }} style={styles.cancel}>
-                <Text style={styles.cancelText}>Cancel</Text>
-              </Pressable>
-              <Pressable accessibilityRole="button" disabled={!validDraft}
-                onPress={() => { setRange(draft); setPickerTarget(null); setDateModalOpen(false); }}
-                style={[styles.apply, !validDraft && styles.applyDisabled]}>
-                <Text style={styles.applyText}>Apply</Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </PartnerScreen>
   );
 }
@@ -413,14 +367,40 @@ const styles = StyleSheet.create({
   headerSearchBand: { backgroundColor: '#0860C8', marginHorizontal: -16, paddingHorizontal: 12, paddingTop: 4, paddingBottom: 12 },
   headerSearch: { backgroundColor: '#FFFFFF', borderRadius: 10, minHeight: 42, paddingHorizontal: 12, alignItems: 'center', flexDirection: 'row', gap: 9 },
   headerSearchInput: { flex: 1, color: '#233D62', fontSize: 12, paddingVertical: 6 },
-  filterRow: { alignItems: 'center', gap: 7, paddingHorizontal: 12, paddingVertical: 10 },
-  chip: { minHeight: 36, flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 9, borderWidth: 1, borderColor: '#DCE4F0', backgroundColor: '#FFFFFF', paddingHorizontal: 12 },
-  chipText: { color: '#375778', fontSize: 11, fontWeight: '700' },
-  selectedChip: { backgroundColor: '#183864', borderColor: '#183864' },
-  selectedChipText: { color: '#FFFFFF' },
+  dateSection: { marginHorizontal: 10, marginTop: 10, marginBottom: 8 },
+  dateRangeTrigger: { minHeight: 54, borderRadius: 11, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE6F2', paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  dateRangeCopy: { flex: 1, gap: 3 },
+  dateRangeTitle: { fontSize: 12, fontWeight: '800', color: '#173D7B' },
+  dateRangeValue: { fontSize: 10.5, fontWeight: '600', color: '#667D9C' },
+  datePanel: { paddingHorizontal: 10, paddingVertical: 12, backgroundColor: '#FFFFFF', borderRadius: 11, marginTop: 7, borderColor: '#DCE6F2', borderWidth: 1 },
+  dateFields: { flexDirection: 'row', gap: 9 },
+  dateButton: { flex: 1, minWidth: 0, borderWidth: 1, borderColor: '#DCE6F2', borderRadius: 10, padding: 10, gap: 5 },
+  dateButtonActive: { borderColor: '#155BB6', backgroundColor: '#F2F7FF' },
+  dateButtonLabel: { fontSize: 10, color: '#667D9C', fontWeight: '700' },
+  dateButtonText: { color: '#1F3A64', fontSize: 11, fontWeight: '700' },
+  calendarWrap: { marginTop: 12, borderRadius: 10, padding: 6, backgroundColor: '#F8FAFF' },
+  monthRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
+  monthArrow: { minHeight: 38, minWidth: 38, alignItems: 'center', justifyContent: 'center' },
+  monthTitle: { fontSize: 15, fontWeight: '800', color: '#173D7B' },
+  calendarGrid: { flexDirection: 'row', flexWrap: 'wrap' },
+  calendarCell: { width: '14.2857%', alignItems: 'center', justifyContent: 'center', paddingVertical: 3 },
+  weekdayText: { fontSize: 10, color: '#718198', fontWeight: '700' },
+  dayButton: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
+  dayInRange: { backgroundColor: '#E5F1FF' },
+  daySelected: { backgroundColor: '#155BB6' },
+  dayText: { fontSize: 12, color: '#243B60', fontWeight: '600' },
+  dayDisabledText: { color: '#BCC5D1' },
+  daySelectedText: { color: '#FFFFFF', fontWeight: '800' },
+  dateNote: { marginTop: 9, fontSize: 10, color: '#718198' },
+  invalidRange: { marginTop: 7, color: '#B42318', fontSize: 11 },
+  modalActions: { flexDirection: 'row', gap: 10, marginTop: 12 },
+  cancel: { flex: 1, minHeight: 42, alignItems: 'center', justifyContent: 'center', borderRadius: 9, backgroundColor: '#EEF2F7' },
+  cancelText: { color: '#526781', fontWeight: '700', fontSize: 12 },
+  apply: { flex: 1, minHeight: 42, alignItems: 'center', justifyContent: 'center', borderRadius: 9, backgroundColor: '#155BB6' },
+  applyDisabled: { opacity: 0.45 },
+  applyText: { color: '#FFFFFF', fontWeight: '800', fontSize: 12 },
   registerArea: { paddingHorizontal: 10, paddingTop: 3, paddingBottom: 18 },
   rangeRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, paddingHorizontal: 3, marginBottom: 8 },
-  rangeText: { color: '#667D9C', fontSize: 10.5, fontWeight: '600' },
   countText: { color: '#667D9C', fontSize: 10.5 },
   register: { overflow: 'hidden', borderRadius: 12, borderWidth: 1, borderColor: '#DCE6F2', backgroundColor: '#FFFFFF' },
   registerContents: { flexDirection: 'row', alignItems: 'flex-start' },
@@ -437,35 +417,4 @@ const styles = StyleSheet.create({
   empty: { padding: 18, fontSize: 12, color: '#718198' },
   retry: { minHeight: 38, alignItems: 'center', justifyContent: 'center' },
   retryText: { color: '#1D5AB0', fontSize: 12, fontWeight: '700' },
-  modalShade: { flex: 1, backgroundColor: 'rgba(9,25,51,0.48)', justifyContent: 'flex-end' },
-  modalPanel: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingHorizontal: 16, paddingTop: 16, paddingBottom: 26 },
-  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
-  modalTitle: { fontSize: 16, fontWeight: '800', color: '#173D7B' },
-  closeButton: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
-  sortOption: { minHeight: 43, paddingHorizontal: 6, flexDirection: 'row', alignItems: 'center', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E3EAF3' },
-  sortOptionText: { flex: 1, color: '#4B5F7C', fontSize: 12, fontWeight: '600' },
-  sortOptionSelected: { color: '#155BB6', fontWeight: '800' },
-  presets: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 12 },
-  preset: { paddingHorizontal: 9, paddingVertical: 9, borderRadius: 9, backgroundColor: '#F3F6FA', borderWidth: 1, borderColor: '#E1E8F2' },
-  presetActive: { backgroundColor: '#E8F2FF', borderColor: '#90B4E9' },
-  presetText: { color: '#536987', fontSize: 11, fontWeight: '600' },
-  presetTextActive: { color: '#155BB6' },
-  dateFields: { flexDirection: 'row', gap: 9 },
-  dateButton: { flex: 1, minWidth: 0, borderWidth: 1, borderColor: '#DCE6F2', borderRadius: 10, padding: 10, gap: 5 },
-  dateButtonActive: { borderColor: '#155BB6', backgroundColor: '#F2F7FF' },
-  dateButtonLabel: { fontSize: 10, color: '#667D9C', fontWeight: '700' },
-  dateButtonValue: { flexDirection: 'row', gap: 5, justifyContent: 'space-between', alignItems: 'center' },
-  dateButtonText: { color: '#1F3A64', fontSize: 10.5, fontWeight: '700' },
-  calendarWrap: { marginTop: 9, alignItems: 'center', backgroundColor: '#F8FAFF', borderRadius: 12, paddingVertical: 7, paddingHorizontal: 4 },
-  calendarLabel: { alignSelf: 'flex-start', paddingHorizontal: 10, color: '#375778', fontSize: 11, fontWeight: '700' },
-  calendarDone: { minHeight: 36, alignSelf: 'stretch', alignItems: 'center', justifyContent: 'center' },
-  calendarDoneText: { color: '#155BB6', fontSize: 12, fontWeight: '800' },
-  dateNote: { marginTop: 9, color: '#718198', fontSize: 10 },
-  invalidRange: { marginTop: 7, color: '#B42318', fontSize: 11 },
-  modalActions: { flexDirection: 'row', gap: 10, marginTop: 15 },
-  cancel: { flex: 1, minHeight: 42, alignItems: 'center', justifyContent: 'center', borderRadius: 9, backgroundColor: '#EEF2F7' },
-  cancelText: { color: '#526781', fontWeight: '700', fontSize: 12 },
-  apply: { flex: 1, minHeight: 42, alignItems: 'center', justifyContent: 'center', borderRadius: 9, backgroundColor: '#155BB6' },
-  applyDisabled: { opacity: 0.45 },
-  applyText: { color: '#FFFFFF', fontWeight: '800', fontSize: 12 },
 });
