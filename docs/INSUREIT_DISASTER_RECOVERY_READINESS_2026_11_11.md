@@ -1,3 +1,5 @@
+> **Historical assessment notice (updated 11 November 2026):** This report was drafted *before* the actual 3,534-file R2 complete verification succeeded and before daily PostgreSQL scheduling was merged. Do not treat its “not yet merged/executed” or “PostgreSQL schedule not yet enabled” instructions as current. The live status and all run evidence are in [the consolidated original handoff](./INSUREIT_SUPABASE_R2_STORAGE_BACKUP_HANDOFF_2026_10_31.md); the actionable certification gates are in [the full DR plan](./INSUREIT_FULL_DISASTER_RECOVERY_CERTIFICATION_PLAN_2026_11_11.md). The new Storage source-to-manifest audit is separate and not yet executed.
+
 # INSUREIT disaster recovery readiness — 11 November 2026
 
 This is a **recovery assessment**, not authorization to restore production,
