@@ -87,7 +87,9 @@ jobs:
           assert 'source_inventory(database_url)' in verifier
           assert 'validate_manifest(s3' in verifier
           assert 'checked_connection(database_url)' in verifier
-          assert 'default_transaction_read_only=on' in verifier
+          assert "SET LOCAL statement_timeout = '120s'" in verifier
+          assert 'default_transaction_read_only' not in verifier
+          assert 'options=' not in verifier
           assert 'SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY' in verifier
           assert 'FROM storage.objects' in verifier and 'FROM storage.buckets' in verifier
           assert 'archived_at IS NULL' in verifier and 'is_delete_marker' in verifier
