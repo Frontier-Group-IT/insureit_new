@@ -12,7 +12,12 @@ const editAction = read("app/policies/life-health-case-edit-actions.ts");
 
 assert.match(create, /<LifeHealthRemarksEditor value=\{form\.remarks\}/, "Create Case uses remarks popup");
 assert.doesNotMatch(create, /<textarea value=\{form\.remarks\}/, "No inline remarks textarea in Create Case");
-assert.match(detail, /<LifeHealthRemarksEditor value=\{form\.remarks\}/, "Case Details uses remarks popup");
+assert.match(detail, /useState<"activity"\|"remarks">\("activity"\)/, "Case Details selects Activity Status by default");
+assert.match(detail, /role="tablist" aria-label="Activity Status and Remarks"/, "Case Details combines Activity Status and Remarks into tabs");
+assert.match(detail, /Saved remarks · Read only/, "Saved Case Details remarks are read-only");
+assert.match(detail, /role="dialog" aria-modal="true" aria-label="Add case remark"/, "Case Details new remark opens an accessible popup");
+assert.match(detail, /appendLifeHealthCaseRemark\(data\)/, "New Case Details remark uses append-only server action");
+assert.doesNotMatch(detail, /<LifeHealthRemarksEditor/, "Do not retain editable remarks popup on Case Details");
 assert.doesNotMatch(detail, /aria-expanded=\{remarksOpen\}/, "Remove duplicate legacy remarks accordion");
 assert.match(editor, /role="dialog" aria-modal="true"/, "Accessible modal dialog");
 assert.match(editor, /onChange\(draft\.trim\(\)\)/, "Modal Add Remark copies draft to form");
@@ -20,7 +25,11 @@ assert.match(editor, /\{value\}<\/p>/, "Committed remarks preview is visible in 
 assert.match(editor, /setDraft\(value\); setOpen\(true\)/, "Open starts with saved input");
 assert.match(editor, /setOpen\(false\)/, "Cancel dismisses without changing committed remarks");
 assert.match(newAction, /remarks:remarks\|\|null/, "Create Case still persists remarks");
-assert.match(editAction, /remarks: clean\(formData\.get\("remarks"\)\) \|\| null/, "Edit Case still persists remarks");
+assert.doesNotMatch(editAction.slice(editAction.indexOf("export async function updateLifeHealthCaseDetails"), editAction.indexOf("export async function appendLifeHealthCaseRemark")), /remarks: clean\(formData\.get\("remarks"\)\)/, "Normal Case Details saves must not overwrite remark history");
+assert.match(editAction, /export async function appendLifeHealthCaseRemark/, "Only the append action writes new Case Details remarks");
+assert.match(editAction, /requireOperationsHeadRecordOwnership\("life_health_case",caseId\)/, "Append keeps operations-head ownership guard");
+assert.match(editAction, /requirePolicyCreator\(\)/, "Append keeps creator authorization guard");
+assert.match(editAction, /\.is\("final_policy_id",null\)/, "Issued cases cannot receive new editable case remarks");
 assert.match(registerPage, /lead_source,remarks,final_policy_id/, "Register loads authorized saved remarks");
 assert.match(registerPage, /remarks: row\.remarks \|\| ""/, "Register mapping retains remarks");
 assert.match(register, /<th className="px-3 py-3">Remarks<\/th>/, "Case Register includes remarks column");
