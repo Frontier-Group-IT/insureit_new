@@ -59,4 +59,14 @@ expect(activity.includes("readKeys.has(partnerActivityEventKey(item))"), "Unread
 expect(activity.includes("styles.itemCardUnread") && activity.includes("styles.unreadDot"), "Unread notifications are subtly highlighted and marked");
 expect(activity.includes("styles.titleRead") && activity.includes("styles.subtitleUnread"), "Read and unread text contrast differs without changing layout");
 
+expect(activity.includes("styles.attentionCardRenewal") && activity.includes("styles.attentionCardClaim"), "Needs-attention cards use distinct blue and lavender themes");
+expect(activity.includes("styles.attentionIcon") && activity.includes("styles.attentionGlyphBadge"), "Needs-attention cards have reference-style white icon tiles with compact badges");
+expect(activity.includes('name="calendar-outline"') && activity.includes('name="sync"'), "Renewal card shows calendar and refresh icons");
+expect(activity.includes('name="document-text-outline"') && activity.includes('name="shield-checkmark"'), "Claim card shows document and shield icons");
+expect(!activity.includes('source={PartnerAssets.status.opportunityAlert}'), "Needs-attention cards no longer repeat generic alert artwork");
+expect(!activity.includes('name="chevron-forward" size={21} color="#06155E"'), "Needs-attention cards do not show a right arrow");
+expect(!activity.includes("#FFF9EA") && !activity.includes("#F2DCA9"), "Old yellow attention-card palette is removed");
+expect(activity.includes('onPress={() => router.push(item.route as never)}'), "Needs-attention cards preserve destination navigation");
+expect(activity.includes('data.attention.slice(0, 3)'), "Needs-attention list retains its original maximum length");
+
 if (!process.exitCode) console.log("Partner activity unread/search regression passed.");

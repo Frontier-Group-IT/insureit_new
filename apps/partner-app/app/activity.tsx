@@ -144,23 +144,53 @@ export default function ActivityScreen() {
               <Text style={styles.sectionTitle}>Needs attention</Text>
             </View>
             <View style={styles.attentionList}>
-              {data.attention.slice(0, 3).map((item) => (
-                <Pressable
-                  key={`${item.kind}-${item.title}`}
-                  onPress={() => router.push(item.route as never)}
-                  style={styles.attentionCard}
-                >
-                  <View style={styles.attentionIcon}>
-                    <Image source={PartnerAssets.status.opportunityAlert} style={styles.attentionArtwork} resizeMode="contain" />
-                  </View>
-                  <View style={styles.attentionDivider} />
-                  <View style={styles.attentionBody}>
-                    <Text style={styles.attentionTitle}>{item.title}</Text>
-                    <Text style={styles.attentionText}>{item.subtitle}</Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={21} color="#06155E" />
-                </Pressable>
-              ))}
+              {data.attention.slice(0, 3).map((item) => {
+                const isRenewal = item.kind === 'renewal' || /renewal/i.test(item.title);
+                const isClaim = item.kind === 'claim' || /claim/i.test(item.title);
+                const tint = isRenewal ? 'renewal' : isClaim ? 'claim' : 'other';
+                return (
+                  <Pressable
+                    key={`${item.kind}-${item.title}`}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${item.title}. ${item.subtitle}`}
+                    onPress={() => router.push(item.route as never)}
+                    style={[
+                      styles.attentionCard,
+                      tint === 'renewal' ? styles.attentionCardRenewal
+                        : tint === 'claim' ? styles.attentionCardClaim : styles.attentionCardOther,
+                    ]}
+                  >
+                    <View style={styles.attentionIcon}>
+                      {isRenewal ? (
+                        <View style={styles.attentionGlyph}>
+                          <Ionicons name="calendar-outline" size={23} color="#4338D6" />
+                          <View style={[styles.attentionGlyphBadge, styles.attentionBadgeRenewal]}>
+                            <Ionicons name="sync" size={12} color="#FFFFFF" />
+                          </View>
+                        </View>
+                      ) : isClaim ? (
+                        <View style={styles.attentionGlyph}>
+                          <Ionicons name="document-text-outline" size={24} color="#5236D9" />
+                          <View style={[styles.attentionGlyphBadge, styles.attentionBadgeClaim]}>
+                            <Ionicons name="shield-checkmark" size={11} color="#FFFFFF" />
+                          </View>
+                        </View>
+                      ) : (
+                        <Ionicons name="notifications-outline" size={25} color="#4338D6" />
+                      )}
+                    </View>
+                    <View style={[
+                      styles.attentionDivider,
+                      tint === 'renewal' ? styles.attentionDividerRenewal
+                        : tint === 'claim' ? styles.attentionDividerClaim : styles.attentionDividerOther,
+                    ]} />
+                    <View style={styles.attentionBody}>
+                      <Text style={styles.attentionTitle}>{item.title}</Text>
+                      <Text style={styles.attentionText}>{item.subtitle}</Text>
+                    </View>
+                  </Pressable>
+                );
+              })}
             </View>
           </> : null}
 
@@ -381,28 +411,53 @@ const styles = StyleSheet.create({
   },
   attentionList: { gap: 8 },
   attentionCard: {
-    minHeight: 58,
+    minHeight: 62,
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: 12,
     paddingHorizontal: 12,
-    backgroundColor: '#FFF9EA',
     borderWidth: 1,
-    borderColor: '#F2DCA9',
+    shadowColor: '#5668A4',
+    shadowOpacity: 0.07,
+    shadowRadius: 7,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
   },
+  attentionCardRenewal: { backgroundColor: '#EAF3FF', borderColor: '#B9D7FF' },
+  attentionCardClaim: { backgroundColor: '#F1EBFF', borderColor: '#D3BFFF' },
+  attentionCardOther: { backgroundColor: '#F0F3FC', borderColor: '#D7E0F3' },
   attentionIcon: {
     width: 44,
     height: 44,
+    borderRadius: 11,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#4A35F1',
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 1,
+  },
+  attentionGlyph: { width: 30, height: 30, alignItems: 'center', justifyContent: 'center' },
+  attentionGlyphBadge: {
+    position: 'absolute',
+    right: -3,
+    bottom: -2,
+    width: 17,
+    height: 17,
+    borderRadius: 9,
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  attentionArtwork: { width: 41, height: 41 },
-  attentionDivider: {
-    width: 1,
-    height: 31,
-    marginHorizontal: 10,
-    backgroundColor: '#E9D6AC',
-  },
+  attentionBadgeRenewal: { backgroundColor: '#1478DC' },
+  attentionBadgeClaim: { backgroundColor: '#5037D7' },
+  attentionDivider: { width: 1, height: 31, marginHorizontal: 10 },
+  attentionDividerRenewal: { backgroundColor: '#B5CEF3' },
+  attentionDividerClaim: { backgroundColor: '#CEBAF5' },
+  attentionDividerOther: { backgroundColor: '#D0D9EB' },
   attentionBody: { flex: 1, minWidth: 0 },
   attentionTitle: {
     color: '#10152A',
