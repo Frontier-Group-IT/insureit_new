@@ -21,6 +21,6 @@ for (const key of ['policy_number', 'cpa_premium', 'cpa_opted']) assert.ok(summa
 assert.equal((summary.match(/\['/g) || []).length, 3, 'Duplicate summary contains only website OCR fields');
 assert.ok(detail.includes("row.status !== 'duplicate' ? <View style={reviewStyles.reviewStatus}>"), 'Duplicate does not show redundant review status card');
 assert.ok(detail.includes('partnerPolicyIntakeMatchUrl(targetPath)'), 'Existing policy navigation uses trusted portal link');
-assert.ok(api.includes('`/policies/${match.policyId}/edit`'), 'Server resolves matching policy edit page, not another arbitrary policy');
+assert.ok(api.includes('`/policies/${match.policyId}`'), 'Server resolves matching policy details view page, not another arbitrary policy');
 assert.ok(links.includes('/^\\/policies\\/[0-9a-f-]{36}\\/edit$/i'), 'Mobile only accepts canonical existing-policy URL');
 console.log('Partner Duplicate Policy Intake website parity regression passed');
