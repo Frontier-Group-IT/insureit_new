@@ -58,6 +58,7 @@ const SECTION_02 = new Set([
   "vehicle_fuel_type",
   "vehicle_manufacturing_year",
   "vehicle_capacity",
+  "vehicle_motor_power_kw",
   "vehicle_chassis_number",
   "vehicle_engine_number",
   "vehicle_rto_name",
@@ -275,7 +276,15 @@ export function buildPolicyOcrOnboardingUpdate(input: OcrApplyInput): OcrApplyRe
     }
   }
 
-  setText("vehicle_make", (value) => { next.make = value; }, (raw) => manufacturer(raw, input.manufacturers));
+  // ICICI bundled Chetak C3001 identifies the model/brand as CHETAK;
+  // the portal manufacturer dropdown uses the verified OEM Bajaj Auto.
+  // Keep the raw OCR make unchanged for audit and restrict the alias to
+  // the exact model and two-wheeler classification.
+  const isIciciChetakC3001 = /^CHETAK$/i.test(byKey.get("vehicle_make")?.value.trim() ?? "")
+    && /^C3001$/i.test(byKey.get("vehicle_model")?.value.trim() ?? "")
+    && next.vehicleClass === "TWP";
+  setText("vehicle_make", (value) => { next.make = value; }, (raw) =>
+    manufacturer(isIciciChetakC3001 ? "Bajaj Auto" : raw, input.manufacturers));
   setText("vehicle_model", (value) => { next.model = value; }, (raw) => {
     const value = raw.trim();
     return value.length >= 2 && value.length <= 100 && !/^(MODEL|DESCRIPTION|FUEL TYPE)$/i.test(value) ? value : "";
@@ -286,7 +295,19 @@ export function buildPolicyOcrOnboardingUpdate(input: OcrApplyInput): OcrApplyRe
   setText("vehicle_rto_name", (value) => { next.rtoName = value; });
   setText("vehicle_chassis_number", (value) => { next.chassisNo = value; }, vehicleIdentifier);
   setText("vehicle_engine_number", (value) => { next.engineNo = value; }, vehicleIdentifier);
-  setText("vehicle_capacity", (value) => { next.capacity = value; }, capacity);
+  // The source's "2" is seating capacity, not 2 kW. For verified
+  // electric Chetak C3001 use the separately labelled CC/KW 4.2 value.
+  // Keep the original seating field intact in the extraction review.
+  if (!isIciciChetakC3001) {
+    setText("vehicle_capacity", (value) => { next.capacity = value; }, capacity);
+  }
+  if (isIciciChetakC3001 && next.fuelType === "Electric") {
+    setText("vehicle_motor_power_kw", (value) => { next.capacity = value; }, (raw) => {
+      const trimmed = raw.trim();
+      return /^\d{1,2}(?:\.\d{1,2})?$/.test(trimmed)
+        && Number(trimmed) > 0 && Number(trimmed) <= 50 ? String(Number(trimmed)) : "";
+    });
+  }
 
   setText("policy_product", (value) => { next.policyProduct = value; }, (raw) => policyProduct(raw, next.vehicleClass));
   setText("policy_number", (value) => { next.policyNo = value; }, policyNumber);
