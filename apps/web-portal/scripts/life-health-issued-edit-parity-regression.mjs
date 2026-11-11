@@ -48,4 +48,15 @@ assert.match(customer,/address: customerAddress/);
 assert.match(customer,/address_street: customerAddress/);
 assert.match(schedule,/DateCalculationMode/);
 assert.match(issuance,/function addYearsByMode/);
+
+// Life and Health edits use the same actual field-level audit trail.
+assert.match(action, /const beforeChanges = await capturePolicyChangeSnapshot\(admin, policyId, true\)/);
+assert.match(action, /const afterChanges = await capturePolicyChangeSnapshot\(admin, policyId, true\)/);
+assert.match(action, /diffPolicyChangeSnapshots\(beforeChanges, afterChanges\)/);
+assert.match(form, /<StandardActivityStatusCard items=\{activityItems\} emptyText="Activity not recorded" detailed\/>/, "Life/Health Activity Status must show actual changed fields.");
+const changeReader = read("../lib/policy-activity-changes.ts");
+for (const field of ["life.payment_frequency", "life.payment_mode", "life.premium_amount", "schedule.ppt_end_date", "schedule.next_installment_date"]) {
+  assert.ok(changeReader.includes(field), "Track Life/Health edit: " + field);
+}
+
 console.log("Life/Health issued edit parity regression passed.");
