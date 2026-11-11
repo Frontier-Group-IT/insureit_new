@@ -257,10 +257,10 @@ export default function PolicyIntakesScreen() {
                   <IntakeRecordLogo row={row} />
                   <View style={styles.identity}>
                     <View style={styles.intakeNumberRow}>
-                      <Text numberOfLines={1} style={styles.number}>{row.intake_number}</Text>
+                      <Text numberOfLines={1} style={styles.number}>{field(row, 'policy_number') || 'Policy pending'}</Text>
                     </View>
-                    <Text numberOfLines={1} style={styles.customer}>{row.customer_mobile} · {row.lead_source_name}</Text>
-                    <Text numberOfLines={1} style={styles.metaLine}>{field(row, 'policy_number') || 'Policy pending'} · {field(row, 'vehicle_registration_number') || 'Vehicle pending'}</Text>
+                    <Text numberOfLines={1} style={styles.customer}>{[row.customer_mobile, field(row, 'insured_name') || field(row, 'customer_name') || field(row, 'name_of_insured') || 'Customer name pending'].filter(Boolean).join(' · ')}</Text>
+                    <Text numberOfLines={1} style={styles.metaLine}>{`${row.lead_source_name || 'Lead source unavailable'} (${row.submitted_by_name?.trim() || 'Submitter unavailable'})`}</Text>
                   </View>
                   <View style={styles.statusStack}>
                     {row.status === 'ready_for_review' || row.status === 'in_review' ? (

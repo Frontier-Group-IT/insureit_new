@@ -51,6 +51,82 @@ type UploadMeta = {
   size: number;
 };
 
+type SubmitterNamedIntake = { submitted_by_profile_id: string | null; submitted_by_portal_account_id: string | null };
+async function resolveIntakeSubmitterNames<T extends SubmitterNamedIntake>(
+  admin: ReturnType<typeof createSupabaseAdminClient>,
+  intakes: T[],
+): Promise<Array<T & { submitted_by_name: string }>> {
+  // Resolve submitter names only for records already authorized by intakeReadScope.
+  // Never infer the submitter from the lead source: multiple users share that source.
+  const profileIds = Array.from(new Set(intakes.map((row) => row.submitted_by_profile_id).filter((id): id is string => Boolean(id))));
+  const accountIds = Array.from(new Set(intakes.map((row) => row.submitted_by_portal_account_id).filter((id): id is string => Boolean(id))));
+  const [profilesResult, associatesResult, portalAccountsResult] = await Promise.all([
+    profileIds.length ? admin.from("profiles").select("id,full_name").in("id", profileIds) : Promise.resolve({ data: [] as Array<{id:string;full_name:string|null}>, error: null }),
+    accountIds.length ? admin.from("partner_portal_associate_accounts").select("id,name").in("id", accountIds) : Promise.resolve({ data: [] as Array<{id:string;name:string|null}>, error: null }),
+    accountIds.length ? admin.from("intermediary_portal_accounts").select("id,intermediary_id").in("id", accountIds) : Promise.resolve({ data: [] as Array<{id:string;intermediary_id:string|null}>, error: null }),
+  ]);
+  if (profilesResult.error || associatesResult.error || portalAccountsResult.error) {
+    throw new Error("Could not resolve policy intake submitters.");
+  }
+  // Branch records must show their designated contact, not their organization name.
+  // Resolve only the identities actually present in the already authorized intake rows.
+  const [branchLinksResult, branchAccessResult] = await Promise.all([
+    profileIds.length
+      ? admin.from("partner_branch_login_links").select("profile_id,branch_id").in("profile_id", profileIds)
+      : Promise.resolve({ data: [] as Array<{profile_id:string;branch_id:string}>, error: null }),
+    profileIds.length
+      ? admin.from("portal_access_identities").select("profile_id,entity_id").in("profile_id", profileIds).eq("entity_type", "branch")
+      : Promise.resolve({ data: [] as Array<{profile_id:string;entity_id:string}>, error: null }),
+  ]);
+  if (branchLinksResult.error || branchAccessResult.error) throw new Error("Could not resolve branch submitters.");
+  const legacyPartnerIds = [...new Set((branchAccessResult.data ?? []).map(row => row.entity_id).filter(Boolean))];
+  const legacyProfilesResult = legacyPartnerIds.length
+    ? await admin.from("partner_branch_profiles").select("id,partner_id,contact_name").in("partner_id", legacyPartnerIds)
+    : { data: [] as Array<{id:string;partner_id:string;contact_name:string|null}>, error: null };
+  if (legacyProfilesResult.error) throw new Error("Could not resolve branch contacts.");
+  const legacyProfileIds = [...new Set((legacyProfilesResult.data ?? []).map(row => row.id))];
+  const branchIds = [...new Set((branchLinksResult.data ?? []).map(row => row.branch_id).filter(Boolean))];
+  const branchConditions = [
+    ...(branchIds.length ? [`id.in.(${branchIds.join(",")})`] : []),
+    ...(legacyProfileIds.length ? [`legacy_branch_profile_id.in.(${legacyProfileIds.join(",")})`] : []),
+  ];
+  const branchResult = branchConditions.length
+    ? await admin.from("partner_branches").select("id,legacy_branch_profile_id,contact_name").or(branchConditions.join(","))
+    : { data: [] as Array<{id:string;legacy_branch_profile_id:string|null;contact_name:string|null}>, error: null };
+  if (branchResult.error) throw new Error("Could not resolve branch contacts.");
+  const contactByBranchId = new Map((branchResult.data ?? []).map(row => [row.id, row.contact_name?.trim() || ""]));
+  const contactByLegacyId = new Map((branchResult.data ?? []).filter(row => row.legacy_branch_profile_id).map(row => [row.legacy_branch_profile_id!, row.contact_name?.trim() || ""]));
+  const contactByLegacyPartner = new Map((legacyProfilesResult.data ?? []).map(row => [row.partner_id, contactByLegacyId.get(row.id) || row.contact_name?.trim() || ""]));
+  const branchContactByProfile = new Map<string,string>();
+  for (const row of branchLinksResult.data ?? []) branchContactByProfile.set(row.profile_id, contactByBranchId.get(row.branch_id) || "");
+  for (const row of branchAccessResult.data ?? []) {
+    if (!branchContactByProfile.get(row.profile_id)) branchContactByProfile.set(row.profile_id, contactByLegacyPartner.get(row.entity_id) || "");
+  }
+  const intermediaryIds = Array.from(new Set((portalAccountsResult.data ?? []).map((row) => row.intermediary_id).filter((id): id is string => Boolean(id))));
+  const intermediaryResult = intermediaryIds.length
+    ? await admin.from("intermediaries").select("id,display_name").in("id", intermediaryIds)
+    : { data: [] as Array<{id:string;display_name:string|null}>, error: null };
+  if (intermediaryResult.error) throw new Error("Could not resolve policy intake submitters.");
+  const profileNames = new Map((profilesResult.data ?? []).map((row) => [row.id, row.full_name?.trim() || ""]));
+  const accountNames = new Map((associatesResult.data ?? []).map((row) => [row.id, row.name?.trim() || ""]));
+  const intermediaryNames = new Map((intermediaryResult.data ?? []).map((row) => [row.id, row.display_name?.trim() || ""]));
+  for (const account of portalAccountsResult.data ?? []) {
+    if (account.intermediary_id && !accountNames.has(account.id)) {
+      accountNames.set(account.id, intermediaryNames.get(account.intermediary_id) || "");
+    }
+  }
+  return intakes.map((row) => ({
+    ...row,
+    submitted_by_name:
+      (row.submitted_by_portal_account_id ? (associatesResult.data ?? []).find(account => account.id === row.submitted_by_portal_account_id)?.name?.trim() : "")
+      || (row.submitted_by_profile_id ? branchContactByProfile.get(row.submitted_by_profile_id) : "")
+      || (row.submitted_by_profile_id ? profileNames.get(row.submitted_by_profile_id) : "")
+      || (row.submitted_by_portal_account_id ? accountNames.get(row.submitted_by_portal_account_id) : "")
+      || "Unknown submitter",
+  }));
+
+}
+
 type RequestBody =
   | { action: "prepare"; lead_source_id?: string; policy_type: PolicyType; customer_mobile: string; file: UploadMeta }
   | { action: "complete"; id: string; number: string; lead_source_id?: string; policy_type: PolicyType; customer_mobile: string; storage_path: string; file: UploadMeta }
@@ -243,7 +319,9 @@ export async function GET(request: Request) {
       const intakes = pageIds.map((id) => byId.get(id)).filter((row): row is NonNullable<typeof row> => Boolean(row))
         .map((row) => duplicateIds.has(row.id) ? { ...row, status: "duplicate" } : row);
       if (intakes.length !== pageIds.length) throw new Error("Policy Intake scope changed during paging.");
-      return json({ ok: true, intakes, total: filtered.length, ...(counts ? { counts } : {}) });
+      // Resolve names only after the page has passed the existing authorization scope.
+      const namedIntakes = await resolveIntakeSubmitterNames(admin, intakes);
+      return json({ ok: true, intakes: namedIntakes, total: filtered.length, ...(counts ? { counts } : {}) });
     } catch (cause) {
       console.error("[partner-policy-intakes] mobile classification failed", {
         category: "scoped-status-read",
@@ -303,75 +381,7 @@ export async function GET(request: Request) {
 
     if (listResult.error) throw listResult.error;
 
-    // Resolve submitter names only for records already authorized by intakeReadScope.
-    // Never infer the submitter from the lead source: multiple users share that source.
-    const intakes = listResult.data ?? [];
-    const profileIds = Array.from(new Set(intakes.map((row) => row.submitted_by_profile_id).filter((id): id is string => Boolean(id))));
-    const accountIds = Array.from(new Set(intakes.map((row) => row.submitted_by_portal_account_id).filter((id): id is string => Boolean(id))));
-    const [profilesResult, associatesResult, portalAccountsResult] = await Promise.all([
-      profileIds.length ? admin.from("profiles").select("id,full_name").in("id", profileIds) : Promise.resolve({ data: [] as Array<{id:string;full_name:string|null}>, error: null }),
-      accountIds.length ? admin.from("partner_portal_associate_accounts").select("id,name").in("id", accountIds) : Promise.resolve({ data: [] as Array<{id:string;name:string|null}>, error: null }),
-      accountIds.length ? admin.from("intermediary_portal_accounts").select("id,intermediary_id").in("id", accountIds) : Promise.resolve({ data: [] as Array<{id:string;intermediary_id:string|null}>, error: null }),
-    ]);
-    if (profilesResult.error || associatesResult.error || portalAccountsResult.error) {
-      throw new Error("Could not resolve policy intake submitters.");
-    }
-    // Branch records must show their designated contact, not their organization name.
-    // Resolve only the identities actually present in the already authorized intake rows.
-    const [branchLinksResult, branchAccessResult] = await Promise.all([
-      profileIds.length
-        ? admin.from("partner_branch_login_links").select("profile_id,branch_id").in("profile_id", profileIds)
-        : Promise.resolve({ data: [] as Array<{profile_id:string;branch_id:string}>, error: null }),
-      profileIds.length
-        ? admin.from("portal_access_identities").select("profile_id,entity_id").in("profile_id", profileIds).eq("entity_type", "branch")
-        : Promise.resolve({ data: [] as Array<{profile_id:string;entity_id:string}>, error: null }),
-    ]);
-    if (branchLinksResult.error || branchAccessResult.error) throw new Error("Could not resolve branch submitters.");
-    const legacyPartnerIds = [...new Set((branchAccessResult.data ?? []).map(row => row.entity_id).filter(Boolean))];
-    const legacyProfilesResult = legacyPartnerIds.length
-      ? await admin.from("partner_branch_profiles").select("id,partner_id,contact_name").in("partner_id", legacyPartnerIds)
-      : { data: [] as Array<{id:string;partner_id:string;contact_name:string|null}>, error: null };
-    if (legacyProfilesResult.error) throw new Error("Could not resolve branch contacts.");
-    const legacyProfileIds = [...new Set((legacyProfilesResult.data ?? []).map(row => row.id))];
-    const branchIds = [...new Set((branchLinksResult.data ?? []).map(row => row.branch_id).filter(Boolean))];
-    const branchConditions = [
-      ...(branchIds.length ? [`id.in.(${branchIds.join(",")})`] : []),
-      ...(legacyProfileIds.length ? [`legacy_branch_profile_id.in.(${legacyProfileIds.join(",")})`] : []),
-    ];
-    const branchResult = branchConditions.length
-      ? await admin.from("partner_branches").select("id,legacy_branch_profile_id,contact_name").or(branchConditions.join(","))
-      : { data: [] as Array<{id:string;legacy_branch_profile_id:string|null;contact_name:string|null}>, error: null };
-    if (branchResult.error) throw new Error("Could not resolve branch contacts.");
-    const contactByBranchId = new Map((branchResult.data ?? []).map(row => [row.id, row.contact_name?.trim() || ""]));
-    const contactByLegacyId = new Map((branchResult.data ?? []).filter(row => row.legacy_branch_profile_id).map(row => [row.legacy_branch_profile_id!, row.contact_name?.trim() || ""]));
-    const contactByLegacyPartner = new Map((legacyProfilesResult.data ?? []).map(row => [row.partner_id, contactByLegacyId.get(row.id) || row.contact_name?.trim() || ""]));
-    const branchContactByProfile = new Map<string,string>();
-    for (const row of branchLinksResult.data ?? []) branchContactByProfile.set(row.profile_id, contactByBranchId.get(row.branch_id) || "");
-    for (const row of branchAccessResult.data ?? []) {
-      if (!branchContactByProfile.get(row.profile_id)) branchContactByProfile.set(row.profile_id, contactByLegacyPartner.get(row.entity_id) || "");
-    }
-    const intermediaryIds = Array.from(new Set((portalAccountsResult.data ?? []).map((row) => row.intermediary_id).filter((id): id is string => Boolean(id))));
-    const intermediaryResult = intermediaryIds.length
-      ? await admin.from("intermediaries").select("id,display_name").in("id", intermediaryIds)
-      : { data: [] as Array<{id:string;display_name:string|null}>, error: null };
-    if (intermediaryResult.error) throw new Error("Could not resolve policy intake submitters.");
-    const profileNames = new Map((profilesResult.data ?? []).map((row) => [row.id, row.full_name?.trim() || ""]));
-    const accountNames = new Map((associatesResult.data ?? []).map((row) => [row.id, row.name?.trim() || ""]));
-    const intermediaryNames = new Map((intermediaryResult.data ?? []).map((row) => [row.id, row.display_name?.trim() || ""]));
-    for (const account of portalAccountsResult.data ?? []) {
-      if (account.intermediary_id && !accountNames.has(account.id)) {
-        accountNames.set(account.id, intermediaryNames.get(account.intermediary_id) || "");
-      }
-    }
-    const namedIntakes = intakes.map((row) => ({
-      ...row,
-      submitted_by_name:
-        (row.submitted_by_portal_account_id ? (associatesResult.data ?? []).find(account => account.id === row.submitted_by_portal_account_id)?.name?.trim() : "")
-        || (row.submitted_by_profile_id ? branchContactByProfile.get(row.submitted_by_profile_id) : "")
-        || (row.submitted_by_profile_id ? profileNames.get(row.submitted_by_profile_id) : "")
-        || (row.submitted_by_portal_account_id ? accountNames.get(row.submitted_by_portal_account_id) : "")
-        || "Unknown submitter",
-    }));
+    const namedIntakes = await resolveIntakeSubmitterNames(admin, listResult.data ?? []);
     return json({
       ok: true,
       intakes: namedIntakes,

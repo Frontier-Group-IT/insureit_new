@@ -58,7 +58,12 @@ assert.doesNotMatch(app, /openStatusButton: \{[^}]*minWidth/, 'Avoid oversized R
 assert.doesNotMatch(app, /<PartnerStatusBadge label="Fetched"/, 'Do not show a second Fetched pill');
 assert.doesNotMatch(app, /accessibilityLabel="Document data fetched"/, 'No green OCR checkmark next to the PIR number');
 assert.doesNotMatch(app, /<Ionicons name="checkmark" size=\{15\} color="#16A34A"/, 'Do not reintroduce the PIR green checkmark');
-assert.ok(app.includes('<View style={styles.intakeNumberRow}>') && app.includes('<Text numberOfLines={1} style={styles.number}>{row.intake_number}</Text>'), 'Keep PIR number card layout');
+assert.ok(app.includes('<View style={styles.intakeNumberRow}>') && app.includes("<Text numberOfLines={1} style={styles.number}>{field(row, 'policy_number') || 'Policy pending'}</Text>"), 'Cards show policy number at the original title font size with honest pending fallback');
+assert.match(app, /field\(row, 'insured_name'\) \|\| field\(row, 'customer_name'\) \|\| field\(row, 'name_of_insured'\)/, 'Customer name follows the mobile number using extracted insured-name data');
+assert.match(app, /row\.lead_source_name \|\| 'Lead source unavailable'\} \(\$\{row\.submitted_by_name\?\.trim\(\) \|\| 'Submitter unavailable'\}\)/, 'Third line shows lead source followed by actual submitter in parentheses');
+assert.doesNotMatch(app, /style=\{styles\.number\}>\{row\.intake_number\}/, 'Do not show PIR identifier as the title');
+assert.match(route, /resolveIntakeSubmitterNames\(admin, intakes\)/, 'Mobile list must resolve actual submitters after authorized paging');
+assert.match(route, /resolveIntakeSubmitterNames\(admin, listResult\.data \?\? \[\]\)/, 'Standard list uses the same canonical submitter resolution logic');
 assert.match(app, /row\.ocr_status === 'failed' && \(row\.status === 'processing' \|\| row\.status === 'needs_attention'\)/, 'Only show OCR failure warning when action is needed');
 assert.match(app, /<Text style={styles\.updatedDate}>{formatDate\(row\.updated_at \|\| row\.created_at\)}<\/Text>/, 'Keep timestamp but remove Updated prefix');
 assert.doesNotMatch(app, /Updated \{formatDate/, 'Remove redundant Updated text from timestamp');
