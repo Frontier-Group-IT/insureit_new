@@ -48,6 +48,8 @@ assert.match(app, /accessibilityRole="button"[\s\S]*?event\.stopPropagation\(\);
 assert.match(app, /<PartnerStatusBadge label={statusLabel\(row\)} tone={statusTone\(row\)} \/>/, 'Other intake workflow states keep the existing badge');
 assert.match(app, /openStatusText: \{ color: '#FFFFFF'/, 'Ready and In Review labels use white text');
 assert.match(app, /styles\.openStatusButton/, 'Keep the action compact and aligned with the existing timestamp');
+assert.match(app, /openStatusButton: \{ minHeight: 25, alignSelf: 'flex-end', paddingHorizontal: 7, borderRadius: 7/, 'Ready button must wrap text and chevron without a fixed minimum width');
+assert.doesNotMatch(app, /openStatusButton: \{[^}]*minWidth/, 'Avoid oversized Ready button background');
 assert.doesNotMatch(app, /<PartnerStatusBadge label="Fetched"/, 'Do not show a second Fetched pill');
 assert.doesNotMatch(app, /accessibilityLabel="Document data fetched"/, 'No green OCR checkmark next to the PIR number');
 assert.doesNotMatch(app, /<Ionicons name="checkmark" size=\{15\} color="#16A34A"/, 'Do not reintroduce the PIR green checkmark');
