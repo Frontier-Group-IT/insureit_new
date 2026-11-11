@@ -166,9 +166,10 @@ export async function GET(request: Request) {
       const { data } = await admin.from("partner_portal_associate_accounts").select("name").eq("id", intake.submitted_by_portal_account_id).maybeSingle();
       submittedByName = data?.name?.trim() || null;
     }
+    Object.assign(intake, { submitted_by_name: submittedByName });
     return json({
       ok: true,
-      intake: { ...intake, ...(match ? { status: "duplicate" } : {}), submitted_by_name: submittedByName },
+      intake: match ? { ...intake, status: "duplicate" } : intake,
       review_access: match ? { can_review: false, can_finalize: false } : access,
       duplicate_match,
     });
