@@ -1,22 +1,25 @@
 #!/usr/bin/env python3
 """Read-only, timestamp-aware INSUREIT Storage-source to R2-manifest coverage audit.
 
-Reads ONLY authenticated Supabase Storage bucket/object LIST endpoints and
+Reads ONLY PostgreSQL Storage metadata SELECTs on the authorized source and
 Cloudflare R2 GET for the encrypted manifest. Does NOT download Storage
 content, write any source object, write R2 objects, or print object identifiers.
-Two source inventories give a bounded view of concurrent changes, not a
-database-transaction snapshot. This is a coverage preflight, NOT complete DR.
+Each source inventory is a repeatable-read, read-only SQL transaction.
+Two independent transactions detect interim changes but do not recreate a
+historical source transaction. This is a coverage preflight, NOT complete DR.
 """
 import base64
 import datetime as dt
 import json
 import os
 import sys
+import time
 
 import boto3
 from botocore.config import Config
 
-from supabase_storage_to_r2 import SOURCE_REF, list_buckets, list_files, required
+from supabase_storage_to_r2 import SOURCE_REF, required
+from prepare_pg_dump_connection import checked_connection
 from verify_r2_restore import validate_manifest
 
 MAX_SOURCE_ENTRIES = 100000
@@ -40,30 +43,94 @@ def snapshot_time(value):
     )
 
 
-def source_inventory(base, key):
-    buckets = list_buckets(key, base)
-    if not buckets:
-        raise RuntimeError("Source bucket list is unexpectedly empty")
-    objects = {}
-    for bucket in buckets:
-        for path, row in list_files(bucket, key, base):
-            identifier = json.dumps(
-                [bucket, path], ensure_ascii=False, separators=(",", ":")
-            )
-            if identifier in objects:
-                raise RuntimeError("Duplicate Storage source identifier")
-            if len(objects) >= MAX_SOURCE_ENTRIES:
-                raise RuntimeError("Storage source inventory exceeds safe audit bound")
-            metadata = row.get("metadata") or {}
-            objects[identifier] = {
-                "created_at": row.get("created_at"),
-                "updated_at": row.get("updated_at"),
-                "size": metadata.get("size"),
-            }
-    if not objects:
-        raise RuntimeError("Source has no objects; refusing parity conclusion")
-    return buckets, objects
+def db_connect(database_url):
+    """Checked source-only TLS connection, no raw URL handed to libpq.
 
+    The production secret may have unescaped '@' in its password. Reuse the
+    validated parser from the successful PostgreSQL backup workflow.
+    """
+    import psycopg
+
+    host, port, db, user, password, tls = checked_connection(database_url)
+    return psycopg.connect(
+        host=host, port=port, dbname=db, user=user, password=password,
+        sslmode=tls, connect_timeout=20,
+        options="-c default_transaction_read_only=on -c statement_timeout=120000",
+    )
+
+
+def as_iso(value):
+    return value.isoformat() if isinstance(value, dt.datetime) else value
+
+
+def size_int(value):
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        raise ValueError("Invalid Storage size")
+    try:
+        parsed = int(value)
+    except (ValueError, TypeError) as exc:
+        raise ValueError("Non-numeric Storage size") from exc
+    if parsed < 0:
+        raise ValueError("Negative Storage size")
+    return parsed
+
+
+def source_inventory(database_url):
+    """One repeatable-read, read-only source inventory from Storage metadata.
+
+    Unlike recursive HTTP per-prefix listing, this reads exactly two bounded
+    indexed PostgreSQL catalog relations, no file bytes. Does not modify the
+    managed 'storage' schema. All names remain only in process memory.
+    """
+    checked_connection(database_url)  # Validate source before any network.
+    objects = {}
+    with db_connect(database_url) as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY"
+            )
+            cursor.execute("SELECT id FROM storage.buckets ORDER BY id")
+            buckets = [str(row[0]) for row in cursor.fetchall()]
+            if not buckets or len(buckets) != len(set(buckets)):
+                raise RuntimeError("Source bucket inventory invalid")
+            cursor.execute(
+                "SELECT bucket_id, name, created_at, updated_at, "
+                "metadata->>'size' AS file_size "
+                "FROM storage.objects "
+                "WHERE archived_at IS NULL "
+                "AND NOT COALESCE(is_delete_marker, false) "
+                "ORDER BY bucket_id, name"
+            )
+            while True:
+                batch = cursor.fetchmany(512)
+                if not batch:
+                    break
+                for bucket, name, created, updated, size in batch:
+                    if not isinstance(name, str) or not name:
+                        raise RuntimeError("Storage object name absent")
+                    # Match the existing Storage API backup collector's
+                    # documented empty-directory sentinel handling.
+                    if name.rsplit("/", 1)[-1] == ".emptyFolderPlaceholder":
+                        continue
+                    if str(bucket) not in buckets:
+                        raise RuntimeError("Storage object bucket not in source catalog")
+                    identifier = json.dumps(
+                        [str(bucket), name], ensure_ascii=False, separators=(",", ":")
+                    )
+                    if identifier in objects:
+                        raise RuntimeError("Duplicate current Storage source object")
+                    if len(objects) >= MAX_SOURCE_ENTRIES:
+                        raise RuntimeError("Storage source audit exceeds safe row limit")
+                    objects[identifier] = {
+                        "created_at": as_iso(created),
+                        "updated_at": as_iso(updated),
+                        "size": size_int(size),
+                    }
+    if not objects:
+        raise RuntimeError("Source object inventory unexpectedly empty")
+    return buckets, objects
 
 def compare(buckets_a, before, buckets_b, after, manifest):
     expected_buckets = set(manifest["buckets"])
@@ -95,9 +162,11 @@ def compare(buckets_a, before, buckets_b, after, manifest):
             continue
         stable_in_manifest += 1
         meta = entry.get("source", {})
+        # PostgreSQL timestamps usually format as "+00:00"; Storage API
+        # timestamps may use "Z". Compare parsed instants, not formatting.
         if old_enough and modified and modified <= reference and (
-            meta.get("updated_at") != value.get("updated_at")
-            or meta.get("size") != value.get("size")
+            iso_time(meta.get("updated_at")) != modified
+            or size_int(meta.get("size")) != value.get("size")
         ):
             stale_prior += 1
 
@@ -130,10 +199,9 @@ def compare(buckets_a, before, buckets_b, after, manifest):
 
 
 def main():
-    base = required("SUPABASE_URL").rstrip("/")
-    if base != f"https://{SOURCE_REF}.supabase.co":
-        raise RuntimeError("Unexpected source project")
-    source_key = required("SUPABASE_SERVICE_ROLE_KEY")
+    # Authenticate the exact source PostgreSQL project, not an arbitrary URL.
+    database_url = required("DATABASE_URL")
+    checked_connection(database_url)
     key = base64.b64decode(required("BACKUP_ENCRYPTION_KEY"), validate=True)
     if len(key) != 32:
         raise RuntimeError("Invalid encryption key length")
@@ -148,30 +216,44 @@ def main():
                       retries={"mode": "standard", "max_attempts": 4}),
     )
     manifest, _ = validate_manifest(s3, required("R2_BUCKET"), key)
-    buckets_before, before = source_inventory(base, source_key)
-    buckets_after, after = source_inventory(base, source_key)
+    print(
+        f"STORAGE PARITY PHASE: authenticated R2 manifest; "
+        f"archive_entries={len(manifest['entries'])}; "
+        f"buckets={len(manifest['buckets'])}", flush=True
+    )
+    started = time.monotonic()
+    buckets_before, before = source_inventory(database_url)
+    print(
+        f"STORAGE PARITY PHASE: first read-only SQL snapshot complete; "
+        f"source_objects={len(before)}; buckets={len(buckets_before)}; "
+        f"elapsed_seconds={int(time.monotonic()-started)}", flush=True
+    )
+    buckets_after, after = source_inventory(database_url)
+    print(
+        f"STORAGE PARITY PHASE: second read-only SQL snapshot complete; "
+        f"source_objects={len(after)}; buckets={len(buckets_after)}; "
+        f"elapsed_seconds={int(time.monotonic()-started)}", flush=True
+    )
     result = compare(buckets_before, before, buckets_after, after, manifest)
 
     # Print aggregate metrics ONLY. Identifier strings, bucket names, paths,
-    # source keys, credentials and the manifest JSON never enter public logs.
+    # source keys, credentials and manifest JSON never enter public logs.
     details = " ".join(f"{k}={v}" for k, v in result.items())
     print("STORAGE SOURCE MANIFEST COVERAGE AUDIT: " + details, flush=True)
     if result["status"] == "REVIEW":
-        print("STORAGE SOURCE COVERAGE NEEDS REVIEW: change/drift or source discrepancy; "
-              "NOT proof of missing/corrupt R2 files", flush=True)
-    else:
-        print("STORAGE HISTORIC COVERAGE PRECHECK PASSED: two current source listings "
-              "agree with pre-snapshot manifest identities; not a time-travel DB snapshot",
+        print("STORAGE SOURCE COVERAGE NEEDS REVIEW: source drift or pre-snapshot "
+              "discrepancy; this is NOT evidence of corrupted R2 file bytes.",
               flush=True)
-    print("CAVEAT: Metadata-level observation only; actual R2 file integrity was "
-          "separately verified, service recovery and live source parity are not certified.",
-          flush=True)
-    # GitHub job must NOT show a green success when the result is REVIEW.
-    # Live post-snapshot additions alone do NOT trigger REVIEW; source drift
-    # during two scans or stable pre-snapshot discrepancies do.
+    else:
+        print("STORAGE HISTORIC COVERAGE PRECHECK PASSED: repeatable-read SQL "
+              "snapshots agree with source identities; no historic transaction "
+              "snapshot can be reconstructed.", flush=True)
+    print("CAVEAT: PostgreSQL Storage METADATA only; the successful independent "
+          "R2 all-file checksum test is separate. Operational service and full "
+          "historical Storage source completeness remain unverified.", flush=True)
+    # Keep an inconclusive audit red rather than falsely green.
     if result["status"] == "REVIEW":
         raise SystemExit(2)
-
 
 if __name__ == "__main__":
     try:
