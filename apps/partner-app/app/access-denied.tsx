@@ -12,8 +12,11 @@ export default function AccessDeniedScreen() {
   if (status === 'signed_out') return <Redirect href="/login" />;
 
   async function returnToLogin() {
-    await signOut();
-    router.replace('/login');
+    try {
+      await signOut();
+    } finally {
+      router.replace('/login');
+    }
   }
 
   return (
