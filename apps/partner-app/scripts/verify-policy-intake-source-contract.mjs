@@ -73,4 +73,35 @@ for (const removed of [
 requireText(manufacturerLogo, 'getPartnerManufacturerLogoSource(name)', 'Partner manufacturer logo must reuse the catalog mapping.');
 requireText(manufacturerLogo, 'fallback ?? null', 'Partner manufacturer logo must preserve fallback artwork.');
 
+
+// Website detail parity: keep all authorized OCR fields visible without a
+// reviewer-only duplicate dump or hiding data behind short summary disclosures.
+for (const required of [
+  'const vehicleReviewKeys:',
+  'const policyReviewKeys:',
+  "'vehicle_chassis_number'",
+  "'vehicle_engine_number'",
+  "'vehicle_rto_name'",
+  "'vehicle_fuel_type'",
+  "'vehicle_manufacturing_year'",
+  "'vehicle_capacity'",
+  "'cpa_opted'",
+  "'cpa_premium'",
+  "'tax_amount'",
+  "'gross_premium'",
+  'row.ocr_warnings',
+  'row.submitted_by_name',
+  'getPartnerPolicyIntakeDocumentUrl(row.id)',
+  'View policy copy',
+  'Review status',
+  'Review notes',
+  'row.review_access.can_review',
+  'row.review_access.can_finalize',
+  'Review & Finalize',
+]) requireText(detailScreen, required, `Partner Intake detail must preserve website parity: ${required}`);
+requireText(service, '/api/partner/policy-intakes/${encodeURIComponent(id)}/document', 'Partner document viewer must use existing scoped signed URL endpoint.');
+requireText(api, 'ocr_fields,ocr_warnings,attention_reason', 'Detail API must include OCR review notes.');
+requireText(api, 'submitted_by_name: submittedByName', 'Detail API must return actual submitter rather than guessing lead source.');
+if (detailScreen.includes('Fetched policy details (OCR)')) throw new Error('Remove duplicate unstructured OCR review dump.');
+
 console.log('Partner Policy Intake source, policy-type and detail presentation contracts verified.');

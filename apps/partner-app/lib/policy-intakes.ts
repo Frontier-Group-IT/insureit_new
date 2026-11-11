@@ -34,6 +34,8 @@ export type PartnerPolicyIntake = {
   customer_mobile: string;
   file_name: string;
   ocr_status: string;
+  ocr_warnings?: string[];
+  submitted_by_name?: string | null;
   ocr_fields: Array<{ key: string; label: string; value: string; confidence?: number | null }>;
   attention_reason: string | null;
   created_at: string;
@@ -107,6 +109,18 @@ export async function getPartnerPolicyIntake(id: string): Promise<PartnerPolicyI
     `/api/partner/policy-intakes?id=${encodeURIComponent(id)}`,
   );
   return { ...result.intake, review_access: result.review_access ?? { can_review: false, can_finalize: false }, duplicate_match: result.duplicate_match ?? null };
+}
+
+/** Authorised short-lived policy-copy URL, using the same scoped document endpoint as the website. */
+export async function getPartnerPolicyIntakeDocumentUrl(id: string): Promise<string> {
+  if (!/^[0-9a-f-]{36}$/i.test(id)) throw new Error('Invalid Policy Intake reference.');
+  const result = await apiRequest<{ ok: true; url: string }>(
+    `/api/partner/policy-intakes/${encodeURIComponent(id)}/document`,
+  );
+  if (!result.url || !/^https:\/\//i.test(result.url)) {
+    throw new Error('A secure policy document link is unavailable.');
+  }
+  return result.url;
 }
 
 /** Same Operations notes and transition statuses, guarded by server-side reviewer permission. */
