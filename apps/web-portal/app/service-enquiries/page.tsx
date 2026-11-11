@@ -131,7 +131,12 @@ export default async function ServiceEnquiriesPage({ searchParams }: PageProps) 
 
       <section className="flex min-h-[360px] flex-1 flex-col overflow-hidden rounded-xl border border-[#DCE4F0] bg-white">
         <div className="flex min-h-0 flex-1 flex-col overflow-x-auto">
-          <table className="min-w-[1240px] w-full text-left">
+          <table className="min-w-[1380px] w-full table-fixed text-left">
+            <colgroup>
+              <col className="w-[9%]" /><col className="w-[9%]" /><col className="w-[13%]" />
+              <col className="w-[9%]" /><col className="w-[14%]" /><col className="w-[14%]" />
+              <col className="w-[10%]" /><col className="w-[9%]" /><col className="w-[13%]" />
+            </colgroup>
             <thead className="border-b border-[#E8ECF4] bg-[#073B81] text-[10px] font-bold text-white">
               <tr>
                 <th className="whitespace-nowrap px-3 py-3">Request</th>
@@ -152,48 +157,51 @@ export default async function ServiceEnquiriesPage({ searchParams }: PageProps) 
                 const email = row.customer_id ? row.customers?.email : row.guest_email;
                 const vehicle = row.vehicles?.vehicle_no || row.vehicle_no || (row.details?.newVehicle ? "New vehicle" : "—");
                 return (
-                  <tr key={row.id} className="align-top text-[11px] text-[#34405A]">
-                    <td className="px-3 py-4">
-                      <p className="whitespace-nowrap text-[10px] font-black tabular-nums text-[#171D3D]">{row.enquiry_no}</p>
-                      <span className="mt-1 inline-flex whitespace-nowrap rounded-full bg-[#EEF3FF] px-2 py-1 text-[9px] font-black text-[#3156B8]">{sourceLabel(row.source)}</span>
+                  <tr key={row.id} className="align-middle text-[11px] text-[#34405A]">
+                    <td className="px-3 py-3">
+                      <p className="truncate whitespace-nowrap text-[10px] font-black tabular-nums text-[#171D3D]" title={row.enquiry_no}>{row.enquiry_no}</p>
+                      <span className="mt-1 inline-flex max-w-full truncate whitespace-nowrap rounded-full bg-[#EEF3FF] px-2 py-1 text-[9px] font-black text-[#3156B8]" title={sourceLabel(row.source)}>{sourceLabel(row.source)}</span>
                     </td>
-                    <td className="px-4 py-4">
-                      <p className="font-black text-[#171D3D]">{serviceLabel(row.service_type)}</p>
+                    <td className="px-3 py-3">
+                      <p className="line-clamp-2 break-words font-black leading-4 text-[#171D3D]" title={serviceLabel(row.service_type)}>{serviceLabel(row.service_type)}</p>
                     </td>
-                    <td className="px-4 py-4">
-                      <p className="font-black text-[#171D3D]">{name}</p>
-                      <p className="mt-1 text-[10px] text-[#7B8498]">{row.customer_id ? row.customers?.customer_code || "Existing customer" : "Verified guest"}</p>
+                    <td className="px-3 py-3">
+                      <p className="line-clamp-2 break-words font-black leading-4 text-[#171D3D]" title={name}>{name}</p>
+                      <p className="mt-1 truncate text-[10px] text-[#7B8498]" title={row.customer_id ? row.customers?.customer_code || "Existing customer" : "Verified guest"}>{row.customer_id ? row.customers?.customer_code || "Existing customer" : "Verified guest"}</p>
                     </td>
-                    <td className="whitespace-nowrap px-3 py-4 text-[10px] font-bold tabular-nums text-[#171D3D]">{vehicle}</td>
-                    <td className="px-4 py-4">
-                      <p className="max-w-[260px] whitespace-normal text-[10.5px] leading-4 text-[#59647A]">{stripRedundantVehicleSummary(row.description)}</p>
+                    <td className="px-3 py-3 text-[10px] font-bold tabular-nums text-[#171D3D]"><p className="truncate whitespace-nowrap" title={vehicle}>{vehicle}</p></td>
+                    <td className="px-3 py-3">
+                      <p className="line-clamp-2 break-words text-[10.5px] leading-4 text-[#59647A]" title={row.description}>{stripRedundantVehicleSummary(row.description)}</p>
                     </td>
-                    <td className="px-4 py-4">
-                      <div className="flex flex-col gap-1.5">
-                        {phone ? <a className="font-black text-[#0B63CE] hover:underline" href={`tel:${phone}`}>{phone}</a> : <span className="text-[#9AA2B2]">No phone</span>}
-                        {email ? <a className="max-w-[180px] truncate font-semibold text-[#56637A] hover:text-[#0B63CE] hover:underline" href={`mailto:${email}`}>{email}</a> : null}
+                    <td className="px-3 py-3">
+                      <div className="flex min-w-0 flex-col gap-1">
+                        {phone ? <a className="block truncate font-black text-[#0B63CE] hover:underline" title={phone} href={`tel:${phone}`}>{phone}</a> : <span className="text-[#9AA2B2]">No phone</span>}
+                        {email ? <a className="block truncate font-semibold text-[#56637A] hover:text-[#0B63CE] hover:underline" title={email} href={`mailto:${email}`}>{email}</a> : null}
                       </div>
                     </td>
-                    <td className="px-3 py-4">
-                      <div className="flex flex-col items-start gap-1.5">
-                        <span className={`inline-flex whitespace-nowrap rounded-full px-2 py-1 text-[9px] font-black ${row.consent_accepted ? "bg-[#EAF8F0] text-[#147A55]" : "bg-[#F3F5F9] text-[#7B8498]"}`}>
+                    <td className="px-3 py-3">
+                      <div className="flex min-w-0 flex-col items-start gap-1">
+                        <span className={`inline-flex max-w-full truncate whitespace-nowrap rounded-full px-2 py-1 text-[9px] font-black ${row.consent_accepted ? "bg-[#EAF8F0] text-[#147A55]" : "bg-[#F3F5F9] text-[#7B8498]"}`}>
                           {row.service_type === "support_ticket" ? "App support request" : row.consent_accepted ? "Consent captured" : "Legacy request"}
                         </span>
-                        {row.whatsapp_opt_in ? <span className="inline-flex whitespace-nowrap rounded-full bg-[#EAF7F2] px-2 py-1 text-[9px] font-black text-[#15765B]">WhatsApp allowed</span> : null}
+                        {row.whatsapp_opt_in ? <span className="inline-flex max-w-full truncate whitespace-nowrap rounded-full bg-[#EAF7F2] px-2 py-1 text-[9px] font-black text-[#15765B]">WhatsApp allowed</span> : null}
                       </div>
                     </td>
-                    <td className="whitespace-nowrap px-3 py-4 text-[10px] tabular-nums text-[#59647A]">{formatDateTime(row.created_at)}</td>
-                    <td className="px-4 py-4">
+                    <td className="px-3 py-3 text-[10px] tabular-nums text-[#59647A]" title={formatDateTime(row.created_at)}>
+                      <p className="whitespace-nowrap font-semibold text-[#27324A]">{formatEnquiryDate(row.created_at)}</p>
+                      <p className="mt-1 whitespace-nowrap text-[#7B8498]">{formatEnquiryTime(row.created_at)}</p>
+                    </td>
+                    <td className="px-3 py-3">
                       {canEdit ? (
-                        <form action={updateServiceEnquiryStatus} className="flex items-center gap-2">
+                        <form action={updateServiceEnquiryStatus} className="flex items-center gap-2 whitespace-nowrap">
                           <input type="hidden" name="id" value={row.id} />
-                          <select name="status" defaultValue={row.status} className="h-9 rounded-xl border border-[#DCE3EF] bg-white px-2 text-[10px] font-bold text-[#27324A]">
+                          <select name="status" defaultValue={row.status} className="h-9 min-w-0 flex-1 rounded-xl border border-[#DCE3EF] bg-white px-2 text-[10px] font-bold text-[#27324A]">
                             <option value="open">Open</option>
                             <option value="in_progress">In progress</option>
                             <option value="resolved">Resolved</option>
                             <option value="closed">Closed</option>
                           </select>
-                          <button type="submit" className="h-9 rounded-xl bg-[#17213E] px-3 text-[10px] font-black text-white">Save</button>
+                          <button type="submit" className="h-9 shrink-0 rounded-xl bg-[#17213E] px-3 text-[10px] font-black text-white">Save</button>
                         </form>
                       ) : (
                         <span className="inline-flex rounded-full bg-[#F3F5F9] px-2.5 py-1 text-[9px] font-black uppercase text-[#5B6579]">{row.status.replace("_", " ")}</span>
@@ -240,6 +248,8 @@ function stripRedundantVehicleSummary(description: string) {
     .trim();
 }
 function formatDateTime(value: string) { return new Date(value).toLocaleString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }); }
+function formatEnquiryDate(value: string) { return new Date(value).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }); }
+function formatEnquiryTime(value: string) { return new Date(value).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true }); }
 
 function SectionLink({ href, active, label, count }: { href: string; active: boolean; label: string; count: number }) {
   return <Link href={href} aria-current={active ? "page" : undefined} className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition-colors ${active ? "bg-[#17213E] text-white shadow-sm" : "text-[#56637A] hover:bg-[#F0F4FA]"}`}>{label}<span className={`rounded-full px-2 py-0.5 text-[10px] ${active ? "bg-white/20 text-white" : "bg-[#EAF0F9] text-[#36517D]"}`}>{count}</span></Link>;
