@@ -13,6 +13,7 @@ for (const label of required) {
   assert.ok(form.includes(label), "Policy Edit is missing Case Open & Issue field: " + label);
 }
 assert.match(page,/proposalDate:lifeHealthCase\.sourcing_date/);
+assert.match(page, /meta: \[activity\.meta, activity\.actorName/, "Life and Health activity entries must include real field-level edit details, not only creator metadata.");
 assert.match(page,/customerAddress:customer\.address/);
 assert.match(page,/issuedSchedule\.ppt_end_date/);
 assert.match(page,/issuedSchedule\.next_installment_date/);
