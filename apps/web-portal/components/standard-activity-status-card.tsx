@@ -28,10 +28,12 @@ export function StandardActivityStatusCard({
   items,
   emptyText = "No activity recorded yet.",
   open = false,
+  detailed = false,
 }: {
   items: StandardActivityItem[];
   emptyText?: string;
   open?: boolean;
+  detailed?: boolean;
 }) {
   return (
     <details
@@ -51,14 +53,15 @@ export function StandardActivityStatusCard({
                 key={item.id}
                 className="flex flex-col gap-3 border-b border-[#E6EBF1] px-4 py-3 last:border-b-0 sm:flex-row sm:items-center sm:justify-between"
               >
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <p className="text-[8px] font-bold uppercase tracking-[0.06em] text-[#8190A4]">
                     {index === 0 ? "Latest Action" : "Previous Action"}
                   </p>
-                  <p className="mt-1 truncate text-[12px] font-semibold text-[#183A64]">{item.title}</p>
+                  <p className="mt-1 text-[12px] font-semibold text-[#183A64]">{item.title}</p>
+                  {detailed && item.meta ? <p className="mt-1 whitespace-normal break-words text-[10px] leading-relaxed text-[#52637B]">{item.meta}</p> : null}
                 </div>
                 <div className="flex shrink-0 flex-wrap items-center gap-x-7 gap-y-1 text-[9px] text-[#8190A4]">
-                  {item.meta ? <span>Details: {item.meta}</span> : null}
+                  {!detailed && item.meta ? <span>Details: {item.meta}</span> : null}
                   <span>At: {formatTimestamp(item.at)}</span>
                 </div>
               </div>
