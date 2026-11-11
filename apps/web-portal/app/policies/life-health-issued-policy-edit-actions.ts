@@ -233,7 +233,6 @@ export async function updateIssuedLifeHealthPolicy(formData: FormData): Promise<
     rm_employee_id: rmEmployeeId,
     rm_name: rmName,
     rm_code: rmCode,
-    remarks: remarks || null,
     updated_at: new Date().toISOString(),
   }).eq("id", caseId).eq("final_policy_id", policyId);
   if (caseError) return { ok: false, error: "The Life/Health case could not be updated." };
@@ -255,7 +254,6 @@ export async function updateIssuedLifeHealthPolicy(formData: FormData): Promise<
     lead_source: leadSource,
     rm_name: rmName,
     rm_employee_id: rmEmployeeId,
-    remarks: remarks || null,
     updated_at: new Date().toISOString(),
   }).eq("id", policyId);
   if (policyError) return { ok: false, error: "The policy record could not be updated." };
@@ -333,4 +331,36 @@ export async function updateIssuedLifeHealthPolicy(formData: FormData): Promise<
   if(dateGuard.approverName)await linkConsumedPolicyDateApproval(admin,clean(formData.get("dateApprovalId")),policyId,profile.id);
   revalidateIssuedPolicy(policyId, caseId);
   return { ok: true };
+}
+/**
+ * Append a new Life/Health issued policy remark without exposing any path to edit
+ * previously saved policy remarks. The normal policy edit action does not write
+ * either policy or case remarks, so later form saves cannot overwrite the history.
+ */
+export async function appendIssuedLifeHealthRemark(formData: FormData): Promise<{ ok:true; remarks:string } | { ok:false; error:string }> {
+  const policyId = clean(formData.get("policyId"));
+  const caseId = clean(formData.get("caseId"));
+  const newRemark = clean(formData.get("newRemark"));
+  if (!policyId || !caseId) return { ok:false, error:"Policy reference is missing." };
+  await requirePolicyEditor(policyId);
+  if (!newRemark || newRemark.length > 2000) return { ok:false, error:"Enter a remark of up to 2000 characters." };
+  const { admin, valid } = await validatePolicyCase(policyId,caseId);
+  if (!valid) return { ok:false, error:"The linked Life/Health policy case is no longer available." };
+  const [{ data: policy, error: loadError }, { data: caseRow, error: caseLoadError }] = await Promise.all([
+    admin.from("policies").select("remarks").eq("id",policyId).maybeSingle<{remarks:string|null}>(),
+    admin.from("life_health_cases").select("remarks").eq("id",caseId).eq("final_policy_id",policyId).maybeSingle<{remarks:string|null}>(),
+  ]);
+  if (loadError || caseLoadError || !policy || !caseRow) return { ok:false, error:"Could not load the existing policy remarks." };
+  const previous = (policy.remarks || caseRow.remarks || "").trim();
+  const timestamp = new Intl.DateTimeFormat("en-IN",{ timeZone:"Asia/Kolkata", day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit",hour12:true }).format(new Date());
+  const appended = `[${timestamp}] ${newRemark}`;
+  const remarks = previous ? `${previous}\n\n${appended}` : appended;
+  if (remarks.length > 50000) return { ok:false, error:"The remarks history has reached its maximum size." };
+  // Match the loaded value to avoid replacing a concurrent append with stale history.
+  let update = admin.from("policies").update({ remarks, updated_at:new Date().toISOString() }).eq("id",policyId);
+  update = policy.remarks === null ? update.is("remarks",null) : update.eq("remarks",policy.remarks);
+  const { data: saved, error: saveError } = await update.select("id").maybeSingle<{id:string}>();
+  if (saveError || !saved) return { ok:false, error:"Remarks changed in another session. Reload the page and try again." };
+  revalidateIssuedPolicy(policyId,caseId);
+  return { ok:true, remarks };
 }

@@ -4,8 +4,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import { useEffect, useMemo, useState, useTransition, type ReactNode } from "react";
-import { Eye, HandCoins, Phone, Trash2, Upload } from "lucide-react";
-import { updateIssuedLifeHealthPolicy } from "@/app/policies/life-health-issued-policy-edit-actions";
+import { Eye, HandCoins, MessageSquareText, Phone, Trash2, Upload } from "lucide-react";
+import { appendIssuedLifeHealthRemark, updateIssuedLifeHealthPolicy } from "@/app/policies/life-health-issued-policy-edit-actions";
 import { isPensionLifePolicy } from "@/lib/life-health-pension-maturity";
 import { addYearsByMode, nextInstallmentFrom, canonicalPaymentFrequency, type DateCalculationMode } from "@/lib/life-health-issued-schedule";
 import { PolicyDateApprovalDialog } from "@/components/policy-date-approval-dialog";
@@ -30,6 +30,12 @@ const documentLabels: Array<[LifeHealthIssuedDocumentType,string]> = [["policy_c
 export function LifeHealthIssuedPolicyEditForm({ initial, insurers, sources, activityItems, documents, commercialAccess, commercialSummary }: Props) {
   const router = useRouter();
   const [form,setForm] = useState(initial);
+  const [infoTab,setInfoTab] = useState<"activity"|"remarks">("activity");
+  const [savedRemarks,setSavedRemarks] = useState(initial.remarks);
+  const [remarksModalOpen,setRemarksModalOpen] = useState(false);
+  const [remarkDraft,setRemarkDraft] = useState("");
+  const [remarkError,setRemarkError] = useState<string|null>(null);
+  const [remarkPending,startRemarkTransition] = useTransition();
   const endDateMode: DateCalculationMode = "minusOne";
   const pptEndDateMode: DateCalculationMode = "minusOne";
   const [policyNumberUnlocked,setPolicyNumberUnlocked] = useState(false);
@@ -90,6 +96,25 @@ export function LifeHealthIssuedPolicyEditForm({ initial, insurers, sources, act
     return()=>{document.body.style.overflow=previous;window.removeEventListener("keydown",close)};
   },[commercialModal]);
   const updateCommercial=(key:string,value:string)=>setCommercial((current)=>({...current,[key]:value}));
+  function saveRemark() {
+    if (!remarkDraft.trim() || remarkPending) return;
+    setRemarkError(null);
+    startRemarkTransition(async () => {
+      try {
+        const data = new FormData();
+        data.set("policyId",form.policyId);
+        data.set("caseId",form.caseId);
+        data.set("newRemark",remarkDraft.trim());
+        const result = await appendIssuedLifeHealthRemark(data);
+        if (!result.ok) { setRemarkError(result.error); return; }
+        setSavedRemarks(result.remarks);
+        setRemarkDraft("");
+        setRemarksModalOpen(false);
+        setInfoTab("remarks");
+        router.refresh();
+      } catch { setRemarkError("Could not add the remark. Reload to check whether it was saved before retrying."); }
+    });
+  }
   const changeCommercialBasis=(side:"payin"|"payout",basis:CommercialBasis)=>{
     if(side==="payin")setCommercial((current)=>({...current,payinBasis:basis,payinPercent:basis==="FIXED_AMOUNT"?"":current.payinPercent,payinFixedAmount:basis==="NET_PREMIUM_PERCENT"?"":current.payinFixedAmount}));
     else setCommercial((current)=>({...current,payoutBasis:basis,payoutPercent:basis==="FIXED_AMOUNT"?"":current.payoutPercent,payoutFixedAmount:basis==="NET_PREMIUM_PERCENT"?"":current.payoutFixedAmount}));
@@ -170,7 +195,7 @@ export function LifeHealthIssuedPolicyEditForm({ initial, insurers, sources, act
 
   return <div className="mx-auto max-w-[1480px] pb-8">
     <div className="overflow-hidden rounded-t-xl border border-b-0 border-[#D9E2F0] bg-white shadow-[0_8px_22px_rgba(15,23,42,.05)]"><div className="flex min-h-[58px] items-center bg-[linear-gradient(135deg,#071D49_0%,#123B75_60%,#315B9A_100%)] px-5 text-white"><h1 className="text-[15px] font-semibold">Edit Policy</h1></div></div>
-    <nav className="mb-4 flex min-h-[40px] items-center gap-5 rounded-b-xl border border-t-0 border-[#D9E2F0] bg-white px-5 text-[9px] font-semibold text-[#667085]"><span className="border-b-2 border-[#4F46E5] py-3 text-[#3346B8]">01&nbsp; Source</span><span>02&nbsp; Customer / Proposer</span><span>03&nbsp; Policy Product &amp; Case</span><span>04&nbsp; Premium &amp; Payment</span><span>05&nbsp; Issued Policy</span></nav>
+    <nav className="mb-4 flex min-h-[40px] items-center gap-5 rounded-b-xl border border-t-0 border-[#D9E2F0] bg-white px-5 text-[9px] font-semibold text-[#667085]"><span className="border-b-2 border-[#4F46E5] py-3 text-[#3346B8]">01&nbsp; Source</span><span>02&nbsp; Customer / Proposer</span><span>03&nbsp; Policy Product &amp; Case</span><span>04&nbsp; Issued Policy</span></nav>
     <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_336px]">
       <div className="space-y-4">
         <Section number="01" title="Policy source & ownership">
@@ -182,9 +207,8 @@ export function LifeHealthIssuedPolicyEditForm({ initial, insurers, sources, act
         </Section>
         <Section number="02" title="Customer / proposer"><div><label className={labelClass}>Customer record</label><div className="grid h-10 grid-cols-2 rounded-xl border border-[#D8DEE9] bg-[#F8FAFC] p-1 text-[10px] font-semibold"><span className="grid place-items-center rounded-lg bg-[#17365D] text-white">Existing</span><span className="grid place-items-center text-[#98A2B3]">Linked</span></div></div><Field label="Client / proposer name" value={form.customerName} onChange={(v)=>set("customerName",v)} required/><Field label="Client mobile number" value={form.customerPhone} onChange={(v)=>set("customerPhone",v.replace(/\D/g,"").slice(0,10))} required/><Field label="Email" value={form.customerEmail} onChange={(v)=>set("customerEmail",v)}/><Field label="Address" value={form.customerAddress} onChange={(v)=>set("customerAddress",v)}/></Section>
         <Section number="03" title="Policy product & case details"><div><label className={labelClass}>Insurance company <Req/></label><select className={inputClass} value={form.insurerId} onChange={(e)=>set("insurerId",e.target.value)}>{insurers.map((i)=><option key={i.value} value={i.value}>{i.label}</option>)}</select></div><Field label="Product name" value={form.productName} onChange={(v)=>set("productName",v)}/><Field label="Case / proposal number" value={form.proposalNumber} onChange={(v)=>set("proposalNumber",v.toUpperCase())}/><Select label="PPT · Premium Paying Term" value={form.ppt} onChange={(v)=>set("ppt",v)} options={["Single Pay",...years]} optional/><Select label="PD · Policy Duration / Term" value={form.pd} onChange={(v)=>set("pd",v)} options={years} optional/><Select label="Payment frequency" value={form.paymentFrequency} onChange={(v)=>set("paymentFrequency",v)} options={frequencies}/></Section>
-        <Section number="04" title="Premium & payment"><Field label="Case premium amount" value={form.premiumAmount} onChange={(v)=>set("premiumAmount",v.replace(/[^0-9.]/g,""))}/><Select label="Payment mode" value={form.paymentMode} onChange={(v)=>set("paymentMode",v)} options={modes}/><div><label className={labelClass}>Remarks</label><textarea className="h-10 w-full resize-none rounded-xl border border-[#D8DEE9] px-3 py-2.5 text-[11px] outline-none transition hover:border-[#B8C2D1] focus:border-[#315B9A] focus:ring-2 focus:ring-[#DCE8FA]" value={form.remarks} onChange={(e)=>set("remarks",e.target.value)} rows={1}/></div></Section>
-        <Section number="05" title="Issued policy details">
-          <div>
+        <Section number="04" title="Issued policy details">
+                  <div>
             <label className={labelClass}>Policy number <Req/></label>
             <div className="flex gap-2"><input aria-label="Policy number" className={inputClass} value={form.policyNumber} readOnly={!policyNumberUnlocked} onChange={event=>set("policyNumber",event.target.value.toUpperCase())}/><button type="button" className="shrink-0 rounded-lg border border-[#BFD3F5] px-3 text-[10px] font-bold text-[#1859B7]" onClick={()=>{setPolicyNumberUnlocked(value=>!value);if(policyNumberUnlocked)set("policyNumber",initial.policyNumber)}}>{policyNumberUnlocked?"Lock":"Change"}</button></div>
           </div>
@@ -193,7 +217,12 @@ export function LifeHealthIssuedPolicyEditForm({ initial, insurers, sources, act
           <div>{pptSinglePay?<div><label className={labelClass}>PPT end date</label><input className={inputClass} value="Not applicable · Single Pay" readOnly/></div>:<Field label="PPT end date" type="date" value={form.pptEndDate} onChange={v=>set("pptEndDate",v)}/>}</div>
           {oneTimePayment?<div><label className={labelClass}>Next installment date</label><input className={inputClass} value="Not applicable · One Time" readOnly/></div>:<Field label="Next installment date" type="date" value={form.nextInstallmentDate} onChange={v=>set("nextInstallmentDate",v)}/>}
           <Field label="Final premium" value={form.finalPremium} onChange={(v)=>set("finalPremium",v.replace(/[^0-9.]/g,""))} required/>
-          <Field label="Sum assured / insured" value={form.sumInsured} onChange={(v)=>set("sumInsured",v.replace(/[^0-9.]/g,""))}/>
+          <div className="grid gap-3 md:col-span-2 md:grid-cols-2 xl:col-span-4 xl:grid-cols-4">
+            <Field label="Sum assured / insured" value={form.sumInsured} onChange={(v)=>set("sumInsured",v.replace(/[^0-9.]/g,""))}/>
+            <Field label="Case premium amount" value={form.premiumAmount} onChange={(v)=>set("premiumAmount",v.replace(/[^0-9.]/g,""))}/>
+            <Select label="Payment mode" value={form.paymentMode} onChange={(v)=>set("paymentMode",v)} options={modes}/>
+            <div><label className={labelClass}>Remarks</label><button type="button" onClick={()=>{setRemarkError(null);setRemarksModalOpen(true);}} className="flex h-10 w-full items-center justify-between rounded-xl border border-[#BFD3F5] bg-[#F8FBFF] px-3 text-[11px] font-semibold text-[#17365D] hover:bg-[#EEF5FF]"><span className="inline-flex items-center gap-2"><MessageSquareText className="h-4 w-4"/>Add Remark</span><span className="text-[10px] text-[#315B9A]">Open</span></button></div>
+          </div>
         </Section>
       </div>
       <aside className="self-start rounded-2xl border border-[#D9E2F0] bg-white shadow-sm xl:sticky xl:top-4">
@@ -203,12 +232,19 @@ export function LifeHealthIssuedPolicyEditForm({ initial, insurers, sources, act
       </aside>
     </div>
     {error?<div className="mt-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[10px] font-semibold text-red-700">{error}</div>:null}
-    <div className="mt-4"><StandardActivityStatusCard items={activityItems} emptyText="Activity not recorded"/></div>
+    <div className="mt-4 overflow-hidden rounded-2xl border border-[#DDE4EE] bg-white shadow-sm">
+      <div className="flex border-b border-[#E6EBF1] px-3 pt-2" role="tablist" aria-label="Activity status and remarks">
+        <button type="button" role="tab" aria-selected={infoTab==="activity"} onClick={()=>setInfoTab("activity")} className={`rounded-t-lg px-4 py-2.5 text-[11px] font-semibold ${infoTab==="activity"?"border-b-2 border-[#17365D] bg-[#F8FBFF] text-[#17365D]":"text-[#667085]"}`}>Activity Status</button>
+        <button type="button" role="tab" aria-selected={infoTab==="remarks"} onClick={()=>setInfoTab("remarks")} className={`rounded-t-lg px-4 py-2.5 text-[11px] font-semibold ${infoTab==="remarks"?"border-b-2 border-[#17365D] bg-[#F8FBFF] text-[#17365D]":"text-[#667085]"}`}>Remarks</button>
+      </div>
+      <div role="tabpanel" className="p-3">{infoTab==="activity"?<StandardActivityStatusCard items={activityItems} emptyText="Activity not recorded" open/>:<div className="rounded-xl border border-[#DDE4EE] bg-[#FBFCFE] p-4"><p className="mb-2 text-[9px] font-bold uppercase text-[#667085]">Saved remarks · Read only</p><p className="whitespace-pre-wrap break-words text-[11px] leading-5 text-[#17365D]">{savedRemarks.trim()||"No remarks added yet."}</p></div>}</div>
+    </div>
     <div className="mt-3 flex flex-col gap-3 border border-[#DDE4EE] bg-white px-4 py-3 shadow-[0_6px_18px_rgba(15,23,42,0.035)] lg:flex-row lg:items-center lg:justify-between">
       <div className="flex min-w-0 flex-wrap items-center gap-2">{documentLabels.map(([type,label])=>{const doc=documentState.find((item)=>item.type===type);return <div key={type} className="relative">{doc?<div className={`inline-flex h-10 overflow-hidden rounded-xl border border-[#A9DCC2] bg-[#F0FBF5] text-[#168653] ${documentPending?"opacity-70":""}`}><label title={doc.fileName} className={`inline-flex items-center gap-2 px-3 text-[10px] font-semibold transition hover:bg-[#E7F8EF] ${documentPending?"cursor-wait":"cursor-pointer"}`}><Upload className="h-4 w-4"/>{documentPending?"Uploading…":`Replace ${label}`}<input type="file" accept="application/pdf,image/jpeg,image/png,image/webp" className="hidden" disabled={documentPending} onChange={(e)=>uploadDocument(type,e.target.files?.[0])}/></label><button type="button" aria-label={`Delete ${label}`} title={`Delete ${label}`} disabled={documentPending} onClick={()=>removeDocument(type,label)} className="grid w-9 shrink-0 place-items-center border-l border-[#A9DCC2] bg-white text-red-600 transition hover:bg-red-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-red-500 disabled:cursor-not-allowed disabled:opacity-50"><Trash2 className="h-3.5 w-3.5" aria-hidden="true"/></button><a href={doc.viewUrl||undefined} target="_blank" rel="noreferrer" aria-label={`View ${label}`} title={`View ${doc.fileName}`} className={`grid w-9 shrink-0 place-items-center border-l border-[#A9DCC2] transition ${doc.viewUrl?"hover:bg-[#E7F8EF]":"pointer-events-none opacity-50"}`}><Eye className="h-3.5 w-3.5" aria-hidden="true"/></a></div>:<label className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl border border-[#BFD3F5] px-3 text-[10px] font-semibold text-[#1859B7] hover:bg-[#F5F9FF]"><Upload className="h-4 w-4"/>{documentPending?"Uploading…":`Add ${label}`}<input type="file" accept="application/pdf,image/jpeg,image/png,image/webp" className="hidden" disabled={documentPending} onChange={(e)=>uploadDocument(type,e.target.files?.[0])}/></label>}</div>})}</div>
       <div className="flex shrink-0 justify-end gap-2"><Link href="/policies" className="rounded-xl border border-[#CBD5E1] px-4 py-2.5 text-[10px] font-semibold">Cancel</Link><button type="button" onClick={()=>save()} disabled={pending||documentPending} className="rounded-xl bg-[#17365D] px-5 py-2.5 text-[10px] font-bold text-white disabled:opacity-60">{pending?"Saving changes…":"Save Policy Changes"}</button></div>
     </div>
     {dateApprovalOpen&&dateApprovalRequired?<PolicyDateApprovalDialog issuanceDate={form.sourcingDate} policyNumber={form.policyNumber} operation="edit" existingPolicyId={form.policyId} intermediaryCode={selectedSource?.code} verifiedApprovalId={dateApprovalId} onApproved={id=>setDateApproval(id?{id,key:approvalKey}:null)} onClose={()=>setDateApprovalOpen(false)} onConfirm={()=>save(true)} submitting={pending}/>:null}
+    {remarksModalOpen&&typeof document!=="undefined"?createPortal(<div className="fixed inset-0 z-[9999] grid h-[100dvh] w-screen place-items-center bg-[#071D49]/60 p-3 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Add policy remark"><div className="w-full max-w-[520px] overflow-hidden rounded-2xl border border-[#D9E2F0] bg-white shadow-2xl"><div className="flex items-center justify-between border-b border-[#E6EBF2] px-5 py-4"><h2 className="text-[14px] font-bold text-[#17365D]">Add Remark</h2><button type="button" aria-label="Close remark popup" onClick={()=>setRemarksModalOpen(false)} disabled={remarkPending} className="rounded-lg px-2 py-1 text-lg text-[#667085] hover:bg-[#F8FAFC]">×</button></div><div className="space-y-3 p-5"><p className="text-[10px] text-[#667085]">Saved remarks are read-only. A new remark is appended to the history.</p><textarea autoFocus aria-label="New remark" rows={5} maxLength={2000} value={remarkDraft} onChange={e=>setRemarkDraft(e.target.value)} placeholder="Write a new remark…" className="w-full resize-y rounded-xl border border-[#D8DEE9] p-3 text-[11px] text-[#17203A] outline-none focus:border-[#315B9A] focus:ring-2 focus:ring-[#DCE8FA]"/>{remarkError?<p role="alert" className="text-[10px] text-red-600">{remarkError}</p>:null}</div><div className="flex justify-end gap-2 border-t border-[#E6EBF2] bg-[#F8FAFC] p-4"><button type="button" onClick={()=>setRemarksModalOpen(false)} disabled={remarkPending} className="rounded-xl border border-[#CBD5E1] px-4 py-2.5 text-[10px] font-semibold">Cancel</button><button type="button" onClick={saveRemark} disabled={remarkPending||!remarkDraft.trim()} className="rounded-xl bg-[#17365D] px-5 py-2.5 text-[10px] font-bold text-white disabled:opacity-50">{remarkPending?"Adding…":"Add Remark"}</button></div></div></div>,document.body):null}
     {commercialModal==="payin"?<ProjectedPayinModal commercial={commercial} update={updateCommercial} calculations={commercialCalculations} onBasisChange={(basis)=>changeCommercialBasis("payin",basis)} onClose={()=>setCommercialModal(null)}/>:null}
     {commercialModal==="payout"?<PartnerPayoutModal commercial={commercial} update={updateCommercial} calculations={commercialCalculations} onBasisChange={(basis)=>changeCommercialBasis("payout",basis)} onClose={()=>setCommercialModal(null)}/>:null}
   </div>;

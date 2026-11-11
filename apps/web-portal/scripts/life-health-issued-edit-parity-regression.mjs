@@ -48,4 +48,15 @@ assert.match(customer,/address: customerAddress/);
 assert.match(customer,/address_street: customerAddress/);
 assert.match(schedule,/DateCalculationMode/);
 assert.match(issuance,/function addYearsByMode/);
+// The fourth section is now Issued Policy; premium and payment stay editable there.
+assert.ok(!form.includes('title="Premium & payment"'), "Standalone Premium & payment section must be removed");
+assert.ok(form.includes('<Section number="04" title="Issued policy details">'), "Issued policy must be section four");
+assert.ok(form.includes('xl:grid-cols-4') && form.includes('label="Sum assured / insured"') && form.includes('label="Case premium amount"') && form.includes('label="Payment mode"'), "All amounts and payment mode remain together in the issued policy section");
+assert.ok(form.includes('role="tablist"') && form.includes('useState<"activity"|"remarks">("activity")'), "Activity Status is the selected default tab");
+assert.ok(form.includes('Saved remarks · Read only') && !form.includes('set("remarks",e.target.value)'), "Previously saved remarks must not be editable");
+assert.ok(form.includes('appendIssuedLifeHealthRemark(data)') && form.includes('role="dialog" aria-modal="true" aria-label="Add policy remark"'), "New remarks use the authorized add-only popup");
+assert.ok(action.includes('export async function appendIssuedLifeHealthRemark'), "Remark append must be authorized on the server");
+assert.ok(action.includes('await requirePolicyEditor(policyId)') && action.includes('validatePolicyCase(policyId,caseId)'), "Remark append checks policy permissions and case linkage");
+const policyUpdates = action.slice(action.indexOf('export async function updateIssuedLifeHealthPolicy('), action.indexOf('/**\n * Append a new Life/Health'));
+assert.ok(!policyUpdates.includes('    remarks: remarks || null,\n    updated_at: new Date().toISOString(),'), "Normal policy save cannot overwrite historical remarks");
 console.log("Life/Health issued edit parity regression passed.");
