@@ -33,7 +33,7 @@ assert.match(operations,/selected\.key === "spot_status" \? "text-\[8px\]" : "te
 assert.ok(operations.includes('selected.key === "work_approval" ? "min-w-[900px] !grid-cols-5 items-start"'));
 assert.match(customer,/selected\.key==="spot_status"\?"text-\[8px\]":"text-\[9px\]"/,"Customer Spot Status uses smaller labels, other stages retain 9px.");
 assert.ok(customer.includes("xl:grid-cols-5 lg:items-start"));
-assert.match(operations,/stageOneLabelClassName = "block h-4 max-sm:h-auto whitespace-nowrap text-\[8px\]/, "Stage 1 labels use the smaller font.");
+assert.match(operations,/stageOneLabelClassName = "block min-h-8 text-\[10px\]/, "Stage 1 input labels use readable 10px text with space for wrapping.");
 assert.ok(spot.includes('const textFieldClass = "block h-[34px] w-full'));
 assert.ok(spot.includes('const splitFieldClass = "block h-[34px]'));
 assert.ok(spot.includes("flex h-[34px] w-full"));
