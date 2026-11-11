@@ -24,6 +24,7 @@ export function SpotIntimationSaveForm({ action, children, cancelHref, evidence,
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
+  const restoredDraftKey=useRef<string|null>(null);
   const [dialogError, setDialogError] = useState<string | null>(null);
   const [successNotice,setSuccessNotice]=useState<string|null>(null);
   const savedDestination=useRef<string|null>(null);
@@ -45,7 +46,9 @@ export function SpotIntimationSaveForm({ action, children, cancelHref, evidence,
   // File upload redirects to this page; preserve the unsaved fields for this claim.
   useEffect(() => {
     const form = formRef.current;
-    if (!form) return;
+    // A server refresh must not overwrite inputs the customer is editing.
+    if (!form || restoredDraftKey.current === storageKey) return;
+    restoredDraftKey.current=storageKey;
     try {
       const raw = sessionStorage.getItem(storageKey);
       const local = raw ? JSON.parse(raw) as { savedAt: number; values: Record<string, string> } : null;
@@ -56,7 +59,11 @@ export function SpotIntimationSaveForm({ action, children, cancelHref, evidence,
       if (!values) return;
       for (const name of fieldNames) {
         const input = form.elements.namedItem(name);
-        if (input instanceof HTMLInputElement && typeof values[name] === "string") input.value = values[name];
+        if (input instanceof HTMLInputElement && typeof values[name] === "string") {
+          input.value = values[name];
+          // The date picker renders a controlled DD/MM/YYYY display.
+          if (input.type === "date") input.dispatchEvent(new CustomEvent("customer-spot-draft-restore", { detail: values[name] }));
+        }
       }
     } catch {
       // Browser storage restrictions must not block claim entry.

@@ -4,7 +4,6 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import { Mic, Square, Trash2, Upload } from "lucide-react";
 import type { CustomerClaimFile } from "./customer-claim-compact-document";
 import { CustomerClaimSavedVoiceNotes } from "./customer-claim-saved-voice-notes";
-import { useRouter } from "next/navigation";
 import { CustomerErrorDialog } from "./customer-error-dialog";
 import { uploadCustomerClaimDocument } from "@/app/customer/(protected)/claims/[id]/stage/[stage]/upload-action";
 
@@ -19,7 +18,7 @@ export function CustomerClaimVoiceRecorder({ claimId, accountId, documents = [],
   const [error, setError] = useState("");
   const [uploadErrorNotice,setUploadErrorNotice]=useState<string|null>(null);
   const shownUploadId=useRef<string|null>(null);
-  const router = useRouter();
+  const [recentVoiceNotes,setRecentVoiceNotes]=useState<CustomerClaimFile[]>([]);
   const [uploadState, uploadAction, uploadPending] = useActionState(uploadCustomerClaimDocument, {error:null});
   useEffect(() => {if(uploadState.error)setUploadErrorNotice(uploadState.error);},[uploadState.error]);
   useEffect(() => {
@@ -27,7 +26,9 @@ export function CustomerClaimVoiceRecorder({ claimId, accountId, documents = [],
     shownUploadId.current=uploadState.uploaded.id;
     setAudioFile(null);
     if(fileRef.current)fileRef.current.value="";
-    router.refresh();
+    // Render confirmed audio locally without refreshing unsaved Spot Intimation fields.
+    setRecentVoiceNotes(previous=>previous.some(note=>note.id===uploadState.uploaded!.id)
+      ? previous : [uploadState.uploaded!,...previous]);
   },[uploadState.uploaded?.id,uploadState.error]);
   useEffect(() => {
     if (!audioFile) { setAudioUrl(null); return; }
@@ -104,7 +105,7 @@ export function CustomerClaimVoiceRecorder({ claimId, accountId, documents = [],
       <button type="button" onClick={() => setAudioFile(null)} aria-label="Delete recorded audio" className="rounded-md p-2 text-red-600 hover:bg-red-50"><Trash2 className="h-4 w-4" /></button>
       <button type="button" onClick={upload} disabled={uploadPending} className="rounded-lg bg-[#1253A7] px-4 py-2 text-xs font-semibold text-white">Upload voice note</button>
     </div>}
-    <CustomerClaimSavedVoiceNotes documents={documents} accountId={accountId} claimId={claimId} allowDelete={allowUpload}/>
+    <CustomerClaimSavedVoiceNotes documents={[...recentVoiceNotes,...documents.filter(doc=>!recentVoiceNotes.some(note=>note.id===doc.id))]} accountId={accountId} claimId={claimId} allowDelete={allowUpload}/>
     <form action={uploadAction} ref={formRef} className="hidden">
       <input type="hidden" name="account" value={accountId} />
       <input type="hidden" name="claim" value={claimId} />

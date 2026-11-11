@@ -18,7 +18,8 @@ assert.match(multi,/router\.refresh\(\)/,"Successful bulk upload refreshes docum
 assert.match(multi,/CustomerErrorDialog/,"Bulk upload errors use popup");
 assert.match(voice,/navigator\.mediaDevices\.getUserMedia\(\{ audio: true \}\)/,"Microphone request preserved");
 assert.match(voice,/Windows microphone privacy settings/,"Denied microphone message checks OS access");
-assert.match(voice,/router\.refresh\(\)/,"Successful voice upload refreshes document list");
+assert.doesNotMatch(voice,/router\.refresh\(\)/,"Successful voice upload must not refresh unsaved Spot Intimation fields");
+assert.match(voice,/setRecentVoiceNotes\(previous=>/,"Confirmed voice uploads render immediately without a route refresh");
 assert.match(voice,/CustomerErrorDialog/,"Voice errors use popup");
 assert.match(multi,/data\.set\("type","Other Document"\)/,"Bulk uploads retain their original verification category");
 assert.match(evidence,/<CustomerClaimMultipleUpload documents=\{multipleDocuments\}/,"Only bulk Other Document uploads appear in the shared dashed upload area");
