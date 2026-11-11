@@ -128,6 +128,19 @@ const POLICY_EDIT_FIELDS = {
     premium_paying_term: "Premium-paying term", policy_duration: "Policy duration",
     payment_frequency: "Payment frequency", payment_mode: "Payment mode",
     premium_amount: "Case premium", remarks: "Case remarks" },
+  nonMotor: { category: "Non-Motor category", risk_title: "Risk description",
+    risk_location: "Risk location", occupancy_type: "Occupancy", transit_from: "Transit origin",
+    transit_to: "Transit destination", transit_mode: "Transit mode", nature_of_business: "Nature of business",
+    liability_type: "Liability cover", employee_count: "Employee count",
+    annual_wages: "Annual wages", annual_turnover: "Annual turnover",
+    sum_insured: "Non-Motor sum insured", deductible: "Deductible",
+    proposal_number: "Non-Motor proposal number", previous_insurer: "Previous insurer",
+    previous_policy_number: "Previous policy number", previous_claims: "Prior claims",
+    add_ons: "Add-ons", warranties: "Warranties", special_conditions: "Special conditions",
+    endorsements: "Endorsements" },
+  issuedSchedule: { policy_start_date: "Issued policy start date",
+    policy_end_maturity_date: "Policy maturity date", ppt_end_date: "Premium-paying term end",
+    next_installment_date: "Next instalment date" },
 } as const;
 
 export type PolicyEditSnapshot = Record<string, string | null>;
@@ -135,7 +148,7 @@ export type PolicyEditSnapshot = Record<string, string | null>;
 // Read-only, allowlisted field snapshot for a confirmed policy. Never store
 // arbitrary JSON, customer PII, financial values or raw remarks in audit logs.
 export async function capturePolicyEditSnapshot(admin: AdminClient, policyId: string): Promise<PolicyEditSnapshot | null> {
-  const [policy, premium, payin, payout, lifeCase] = await Promise.all([
+  const [policy, premium, payin, payout, lifeCase, nonMotor, issuedDetails] = await Promise.all([
     admin.from("policies")
       .select(Object.keys(POLICY_EDIT_FIELDS.policy).join(",")).eq("id",policyId).maybeSingle(),
     admin.from("policy_premium_details")
@@ -148,8 +161,13 @@ export async function capturePolicyEditSnapshot(admin: AdminClient, policyId: st
     admin.from("life_health_cases")
       .select(Object.keys(POLICY_EDIT_FIELDS.case).join(",")).eq("final_policy_id",policyId)
       .order("converted_at",{ascending:false}).limit(1).maybeSingle(),
+    admin.from("non_motor_policy_details")
+      .select(Object.keys(POLICY_EDIT_FIELDS.nonMotor).join(",")).eq("policy_id",policyId).maybeSingle(),
+    admin.from("life_health_policy_details")
+      .select("additional_details").eq("policy_id",policyId).maybeSingle(),
   ]);
-  if (policy.error || !policy.data || premium.error || payin.error || payout.error || lifeCase.error) return null;
+  if (policy.error || !policy.data || premium.error || payin.error || payout.error
+    || lifeCase.error || nonMotor.error || issuedDetails.error) return null;
   const snapshot: PolicyEditSnapshot = {};
   const sources: Array<[string, Record<string, string>, Record<string, unknown> | null]> = [
     ["policy", POLICY_EDIT_FIELDS.policy, policy.data as Record<string, unknown>],
@@ -157,12 +175,23 @@ export async function capturePolicyEditSnapshot(admin: AdminClient, policyId: st
     ["payin", POLICY_EDIT_FIELDS.payin, payin.data as Record<string, unknown> | null],
     ["payout", POLICY_EDIT_FIELDS.payout, payout.data as Record<string, unknown> | null],
     ["case", POLICY_EDIT_FIELDS.case, lifeCase.data as Record<string, unknown> | null],
+    ["nonMotor", POLICY_EDIT_FIELDS.nonMotor, nonMotor.data as Record<string, unknown> | null],
   ];
   for (const [prefix, fields, data] of sources) {
     for (const key of Object.keys(fields)) {
       const value = data?.[key];
       snapshot[`${prefix}.${key}`] = value === undefined || value === null ? null : String(value).trim();
     }
+  }
+  // Store only field labels: never persist raw issued-schedule JSON in an audit record.
+  const additional = (issuedDetails.data as { additional_details?: unknown } | null)?.additional_details;
+  const schedule = additional && typeof additional === "object" && !Array.isArray(additional)
+    ? (additional as Record<string, unknown>).issued_schedule : null;
+  const issuedSchedule = schedule && typeof schedule === "object" && !Array.isArray(schedule)
+    ? schedule as Record<string, unknown> : null;
+  for (const key of Object.keys(POLICY_EDIT_FIELDS.issuedSchedule)) {
+    const value = issuedSchedule?.[key];
+    snapshot[`issuedSchedule.${key}`] = value === undefined || value === null ? null : String(value).trim();
   }
   return snapshot;
 }
@@ -183,7 +212,10 @@ export function changedPolicyEditFields(before: PolicyEditSnapshot | null, after
 function policyEditTitle(changed: string[] | null): string {
   if (!changed) return "Policy updated — change details unavailable";
   if (changed.length === 0) return "Policy saved — no tracked field changes";
-  if (changed.length > 1) return "Policy details updated";
+  if (changed.length > 1) {
+    const remaining = changed.length - 2;
+    return `${changed[0]}, ${changed[1]}${remaining ? ` + ${remaining} more` : ""} updated`;
+  }
   const single = changed[0];
   if (single === "Policy number") return "Policy number changed";
   if (single === "Policy status") return "Policy status changed";
