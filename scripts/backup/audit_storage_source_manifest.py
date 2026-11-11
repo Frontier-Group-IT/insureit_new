@@ -55,7 +55,6 @@ def db_connect(database_url):
     return psycopg.connect(
         host=host, port=port, dbname=db, user=user, password=password,
         sslmode=tls, connect_timeout=20,
-        options="-c default_transaction_read_only=on -c statement_timeout=120000",
     )
 
 
@@ -91,6 +90,9 @@ def source_inventory(database_url):
             cursor.execute(
                 "SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY"
             )
+            # SET LOCAL is transaction-scoped. Never change default session
+            # state on a pooled connection to the live Supabase database.
+            cursor.execute("SET LOCAL statement_timeout = '120s'")
             cursor.execute("SELECT id FROM storage.buckets ORDER BY id")
             buckets = [str(row[0]) for row in cursor.fetchall()]
             if not buckets or len(buckets) != len(set(buckets)):
