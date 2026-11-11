@@ -106,6 +106,25 @@ class PostgresBackupMonitorTests(unittest.TestCase):
                     pg.main()
                     self.assertEqual(mocked.call_args.args[2],"fresh")
 
+    def test_storage_completion_does_not_fail_postgres_monitor(self):
+        import json, os, tempfile
+        storage_event = {"workflow_run": {
+            **run("2026-11-11T13:30:00Z"), "event":"schedule",
+            "name":"INSUREIT Supabase Storage backup to R2 (daily 7 PM IST)"
+        }}
+        with tempfile.TemporaryDirectory() as tmp:
+            file = Path(tmp) / "storage-event.json"
+            file.write_text(json.dumps(storage_event), encoding="utf-8")
+            with patch.dict(os.environ, {
+                "GITHUB_REPOSITORY":"Frontier-Group-IT/insureit_new",
+                "GH_TOKEN":"synthetic",
+                "GITHUB_EVENT_NAME":"workflow_run",
+                "GITHUB_EVENT_PATH":str(file),
+            }):
+                with patch.object(pg,"reconcile") as mocked:
+                    pg.main()
+                    mocked.assert_not_called()
+
     def test_manual_workflow_completion_does_not_close_scheduled_alert(self):
         import json, os, tempfile
         event = {
