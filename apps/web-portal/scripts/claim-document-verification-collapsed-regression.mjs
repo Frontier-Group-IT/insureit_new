@@ -16,4 +16,8 @@ assert.match(panel, /\{verifiedCount\} \/ \{items\.length\}/, "Keep the verifica
 assert.match(panel, /<BulkDocumentVerificationGroup /, "Preserve document verification actions");
 assert.match(panel, /<ReusePolicyCopyButton /, "Preserve linked policy copy reuse");
 assert.match(panel, /<FinalizeInitialDocumentVerificationButton /, "Preserve finalization workflow");
-console.log("Operations Claim Document Verification always-expanded regression passed");
+const group = readFileSync("components/spot-survey/bulk-document-verification-group.tsx", "utf8");
+assert.ok(group.includes('const [isExpanded, setIsExpanded] = useState(item.key !== "rc");'), "Only RC Copy starts collapsed");
+assert.ok(group.includes('const showDocumentRows = hasSingleFile || (hasMultipleFiles && isExpanded);'), "Single-file rows and other multi-file categories stay visible by default");
+assert.ok(group.includes("<ClaimDocumentCollapsedStatus") && group.includes("verifiedCount={verifiedFileCount}") && group.includes("pendingCount={pendingFileCount}"), "Collapsed RC Copy shows verification counts");
+console.log("Operations Claim Document Verification always-expanded and RC Copy collapsed-default regression passed");
