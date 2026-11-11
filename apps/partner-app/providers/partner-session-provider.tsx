@@ -66,7 +66,8 @@ export function PartnerSessionProvider({ children }: PropsWithChildren) {
       }
 
       const nextContext = await resolvePartnerSession();
-      if (contextRef.current && JSON.stringify(contextRef.current.permissions) !== JSON.stringify(nextContext.permissions)) {
+      if (contextRef.current && (JSON.stringify(contextRef.current.permissions) !== JSON.stringify(nextContext.permissions)
+        || contextRef.current.can_view_insurer_commercials !== nextContext.can_view_insurer_commercials)) {
         clearPartnerQueryCache(activeScopeKey.current);
       }
       contextRef.current = nextContext;
@@ -84,7 +85,7 @@ export function PartnerSessionProvider({ children }: PropsWithChildren) {
       if (!blocking && contextRef.current) {
         // A failed permission refresh must never reuse an old Edit grant.
         clearPartnerQueryCache(activeScopeKey.current);
-        const restricted = { ...contextRef.current, permissions: {} };
+        const restricted = { ...contextRef.current, permissions: {}, can_view_insurer_commercials: false };
         contextRef.current = restricted;
         setContext(restricted);
         setError(message);
