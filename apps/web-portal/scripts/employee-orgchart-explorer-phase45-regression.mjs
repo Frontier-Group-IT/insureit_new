@@ -21,7 +21,7 @@ assert.match(drawer, /role="dialog"/);
 assert.match(drawer, /aria-modal="true"/);
 assert.match(drawer, /event\.key === "Escape"/);
 assert.match(drawer, /onClose\(\)/);
-assert.match(drawer, /onFocus\(manager\.id\)/);
+assert.match(drawer, /navigateSafely\(\{ type: "focus", employeeId: manager\.id \}\)/);
 assert.match(drawer, /partners\.map/);
 assert.match(drawer, /employee\.email/);
 assert.match(team, /onDetails\(employee\.id\)/);
