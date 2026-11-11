@@ -30,7 +30,9 @@ assert.ok(!screen.includes('DateTimePicker'), 'Avoid clipped native inline calen
 assert.ok(!screen.includes('dateModalOpen'), 'Date range is inline, not modal');
 assert.ok(!screen.includes('accessibilityLabel="Financial filters, Date Range and Sort"'), 'Financial filter row removed');
 assert.ok(!screen.includes('accessibilityLabel="Sort insurer register"'), 'Sort filter removed');
-assert.ok(screen.includes("label: 'Pay-In'") && screen.includes("label: 'Retention'"), 'Employee columns retained');
+assert.ok(screen.includes("label: 'Pay-In'") && screen.includes("label: 'Retention'"), 'Employee commercial columns retained');
+assert.ok(!screen.includes("label: 'Amount'") && !screen.includes("key: 'amounts'"), 'Do not duplicate Net Premium as Amount');
+assert.ok(screen.includes("label: 'Net Premium'"), 'Preserve Net Premium as the single premium field');
 assert.ok(screen.includes("label: 'Payout'"), 'Non-employee payout column retained');
 assert.ok(screen.includes('showsHorizontalScrollIndicator'), 'Wide register preserves horizontal scrolling');
 
