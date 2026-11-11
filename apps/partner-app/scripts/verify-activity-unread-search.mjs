@@ -69,9 +69,9 @@ expect(!activity.includes("#FFF9EA") && !activity.includes("#F2DCA9"), "Old yell
 expect(activity.includes('onPress={() => router.push(item.route as never)}'), "Needs-attention cards preserve destination navigation");
 expect(activity.includes('data.attention.slice(0, 3)'), "Needs-attention list retains its original maximum length");
 
-const logoTileStyle = activity.match(/  logoTile: \\{([\\s\\S]*?)\\n  \\},/)?.[1] ?? "";
+const logoTileStyle = activity.split("  logoTile: {")[1]?.split("  },")[0] ?? "";
 expect(Boolean(logoTileStyle), "Recent activity still has a dedicated logo alignment container");
-expect(!/backgroundColor\\s*:/.test(logoTileStyle), "Policy insurer and claim manufacturer logos have no white tile background");
+expect(!logoTileStyle.includes("backgroundColor"), "Policy insurer and claim manufacturer logos have no white tile background");
 expect(activity.includes("style={logo ? styles.insurerLogo : styles.eventArtworkImage}"), "Logo and fallback icon sizing stays unchanged");
 expect(activity.includes("source={logo ?? activityAsset(item.kind)}"), "Existing manufacturer, insurer and fallback asset behavior remains intact");
 expect(activity.includes("backgroundColor: '#FFFFFF'") && activity.includes("attentionIcon:"), "Needs-attention white icon tiles are retained");
