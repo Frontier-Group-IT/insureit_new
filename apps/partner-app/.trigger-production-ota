@@ -1,7 +1,7 @@
 Partner production OTA trigger
-release=partner-activity-needs-attention-cards-pr-4235
-source=verified-merged-main-fab15141ea1db3052bfc3d4aacd11fd1efff7eaf
-reason=user-approved-merge-publish-after-partner-and-web-ci
+release=partner-duplicate-intake-website-parity-pr-4238
+source=verified-merged-main-8960a94ea1d180b7b82f24c324b8bde31f5aec59
+reason=user-approved-merge-and-publish-after-automatic-ota-gate-blocked-new-regression-script
 channel=production
 runtime=0.2.0
 requested=2026-11-11
