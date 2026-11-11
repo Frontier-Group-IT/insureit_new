@@ -105,15 +105,18 @@ export function SpotSurveyWorkspace({ claim, documents, verifications = [], surv
       {showSpotDetails ? <SpotSurveyDetailsPanel driverName={driverName} driverMobile={driverMobile} lossLocation={lossLocation} /> : null}
       {customerMultipleDocuments.length ? <UnclassifiedAttachments claimId={claim.id} documents={customerMultipleDocuments} title="Customer Multiple Documents" /> : null}
       {unclassifiedAttachments.length ? <UnclassifiedAttachments claimId={claim.id} documents={unclassifiedAttachments} /> : null}
-      <section className="rounded-2xl border border-[#DFE8F4] bg-white px-4 py-3 shadow-[0_10px_24px_rgba(7,29,73,0.04)]">
-        <div className="mb-3 flex items-center justify-between gap-4">
-          <h1 className="text-[20px] font-semibold leading-tight tracking-[-0.02em] text-[#071D49]">Document Verification</h1>
-          <div className="flex items-center gap-1.5 rounded-lg bg-[#F4F7FC] px-2.5 py-1.5">
-            <span className="text-[9px] font-semibold uppercase tracking-[0.08em] text-[#68758A]">Documents Verified</span>
-            <span className="text-[12px] font-semibold text-[#071D49]">{verifiedCount} / {items.length}</span>
+      <details data-claim-document-verification="true" className="group rounded-2xl border border-[#DFE8F4] bg-white px-4 py-3 shadow-[0_10px_24px_rgba(7,29,73,0.04)]">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-4 marker:hidden [&::-webkit-details-marker]:hidden">
+          <h2 className="text-[20px] font-semibold leading-tight tracking-[-0.02em] text-[#071D49]">Document Verification</h2>
+          <div className="flex shrink-0 items-center gap-2">
+            <div className="flex items-center gap-1.5 rounded-lg bg-[#F4F7FC] px-2.5 py-1.5">
+              <span className="text-[9px] font-semibold uppercase tracking-[0.08em] text-[#68758A]">Documents Verified</span>
+              <span className="text-[12px] font-semibold text-[#071D49]">{verifiedCount} / {items.length}</span>
+            </div>
+            <span aria-hidden="true" className="text-[13px] font-bold text-[#456287] transition-transform group-open:rotate-180">⌄</span>
           </div>
-        </div>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        </summary>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {items.map((item) => <div key={item.key} className="space-y-1.5"><BulkDocumentVerificationGroup item={item} claim={claim} verifications={verifications} />{item.key === "insurance" && canReusePolicyCopy ? <ReusePolicyCopyButton claimId={claim.id} /> : null}</div>)}
         </div>
         {allDocumentsVerified ? (
@@ -121,7 +124,7 @@ export function SpotSurveyWorkspace({ claim, documents, verifications = [], surv
           claim.current_status === "Initial Documents Verified" || claim.current_status === "Claim Intimated" ? <SurveyorDeputationForm claimId={claim.id} /> :
           canFinalizeInitialDocuments ? <FinalizeInitialDocumentVerificationButton claimId={claim.id} /> : null
         ) : null}
-      </section>
+      </details>
     </div>
   );
 }
