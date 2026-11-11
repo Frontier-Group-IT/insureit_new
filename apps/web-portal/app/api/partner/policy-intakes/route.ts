@@ -151,7 +151,7 @@ export async function GET(request: Request) {
           intake_number: match.kind === "earlier_intake" ? match.intakeNumber : null,
           target_path: access.can_review || access.can_finalize
             ? match.kind === "registered_policy"
-              ? `/policies/${match.policyId}/edit`
+              ? `/policies/${match.policyId}`
               : `/policy-intakes/${match.intakeId}`
             : null,
         }
