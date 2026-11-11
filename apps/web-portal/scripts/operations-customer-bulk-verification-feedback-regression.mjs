@@ -12,11 +12,22 @@ const legacyVerificationModal = read("../components/spot-survey/document-verific
 
 // Customer-uploaded Other Document files are visible and can be explicitly categorized.
 // Classification does not bypass document verification or expand categories/permissions.
-assert.match(spot, /const customerMultipleDocuments = documents\.filter/);
+assert.match(spot, /const unclassifiedAttachments = documents\.filter/, "Customer and Operations uploads share one classification list.");
 assert.match(spot, /document_type\?\.trim\(\)\.toLowerCase\(\) === "other document"/);
-assert.match(spot, /<UnclassifiedAttachments claimId=\{claim\.id\} documents=\{customerMultipleDocuments\} title="Customer Multiple Documents"/);
+assert.match(spot, /<UnclassifiedAttachments claimId=\{claim\.id\} documents=\{unclassifiedAttachments\}/, "Only the combined classification section renders.");
+assert.doesNotMatch(spot, /title="Customer Multiple Documents"/, "Do not show a second customer-only section.");
+assert.match(spot, />Unclassified Documents<\/h2>/, "Use a single descriptive heading.");
 assert.match(spot, /documents\.map\(\(document\) => \(/, "Each uploaded file must render.");
 assert.match(spot, /document\.signedUrl \? <Link/, "Uploaded file preview remains authorized.");
+assert.match(spot, /\{document\.file_name\}<\/Link>/, "Filename itself must open signed file.");
+assert.doesNotMatch(spot, />Preview<\/Link>/, "Remove redundant Preview text.");
+assert.match(spot, /<DeleteUnclassifiedDocumentButton claimId=\{claimId\} documentId=\{document\.id\} fileName=\{document\.file_name\}/, "Every unclassified row must have its own delete control.");
+const deletion = read("../components/spot-survey/delete-unclassified-document-button.tsx");
+assert.match(deletion, /window\.confirm\(/, "Require confirmation before deleting.");
+assert.match(deletion, /deleteVerifiedSpotSurveyDocument\(claimId, documentId\)/, "Use existing scoped deletion action.");
+assert.match(deletion, /type="button"/, "Delete must not accidentally submit classification form.");
+assert.match(deletion, /<ClaimStageErrorDialog/, "Report failed deletion in the existing error dialog.");
+assert.match(actions, /\.from\("claim_document_verifications"\)[\s\S]*?\.update\(\{ document_id: null \}\)/, "Preserve audit trail before deletion.");
 assert.match(spot, /<input type="hidden" name="documentId" value=\{document\.id\}/, "Classification must target exact document.");
 assert.match(actions, /\["Spot Intimation Attachment", "Other Document"\]\.includes\(document\.document_type\)/, "Classify both Operations and Customer bulk uploads.");
 assert.match(actions, /\.eq\("id", documentId\)\.eq\("claim_id", claimId\)\.eq\("document_type", document\.document_type\)/, "Classify the exact current unclassified row.");
