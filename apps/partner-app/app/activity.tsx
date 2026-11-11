@@ -100,7 +100,7 @@ export default function ActivityScreen() {
   }
 
   return (
-    <PartnerScreen title="What changed" hideTopBar>
+    <PartnerScreen title="Activity" hideTopBar fullWidth statusBarColor="#0879DF">
       <View style={styles.hero}>
         <View style={styles.heroShapeOne} />
         <View style={styles.heroShapeTwo} />
@@ -118,7 +118,7 @@ export default function ActivityScreen() {
         </View>
         <View style={styles.heroText}>
           <Text style={styles.heroEyebrow}>ACTIVITY</Text>
-          <Text style={styles.heroTitle}>What changed</Text>
+          <Text style={styles.heroTitle}>Activity</Text>
         </View>
       </View>
 
@@ -281,7 +281,7 @@ export default function ActivityScreen() {
                           {isUnread ? <View style={styles.unreadDot} accessibilityLabel="Unread" /> : null}
                         </View>
                       </View>
-                      <Text numberOfLines={1} style={[styles.title, !isUnread && styles.titleRead]}>{item.title}</Text>
+                      <Text numberOfLines={1} ellipsizeMode="middle" style={[styles.title, !isUnread && styles.titleRead]}>{item.title}</Text>
                       <Text numberOfLines={1} style={[styles.subtitle, isUnread && styles.subtitleUnread]}>{item.subtitle}</Text>
                     </View>
                   </Pressable>
@@ -346,7 +346,6 @@ function formatDate(value: string) {
 const styles = StyleSheet.create({
   hero: {
     height: 76,
-    marginHorizontal: -partnerTheme.spacing.lg,
     overflow: 'hidden',
     flexDirection: 'row',
     alignItems: 'center',
@@ -405,8 +404,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   body: {
-    marginHorizontal: -partnerTheme.spacing.lg,
-    paddingHorizontal: 18,
+    paddingHorizontal: 8,
     paddingTop: 9,
     paddingBottom: 10,
     backgroundColor: '#F3F6FB',
@@ -592,6 +590,7 @@ const styles = StyleSheet.create({
   eventArtworkImage: { width: 32, height: 32 },
   itemBody: { flex: 1, minWidth: 0 },
   itemMeta: {
+    alignSelf: 'stretch',
     alignItems: 'flex-end',
     gap: 1,
   },
