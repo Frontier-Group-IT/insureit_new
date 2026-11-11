@@ -164,6 +164,7 @@ export default function PolicyIntakeDetailScreen() {
   return (
     <PartnerScreen
       title="Policy Intake"
+      navyTopBar
       onBack={() => router.back()}
     >
       {submitted === '1' && row ? (
@@ -208,12 +209,16 @@ export default function PolicyIntakeDetailScreen() {
               </View>
               <View style={styles.statusBody}>
                 <Text numberOfLines={1} style={styles.intakeNumber}>{row.intake_number}</Text>
-                <Text style={styles.statusHelp}>{statusHelp(row)}</Text>
+                {row.status !== 'duplicate' ? <Text style={styles.statusHelp}>{statusHelp(row)}</Text> : null}
               </View>
               <View style={styles.statusMeta}>
-                <View style={[styles.statusBadge, statusBadgeStyle(row)]}>
-                  <Text style={[styles.statusBadgeText, statusBadgeTextStyle(row)]}>{statusLabel(row)}</Text>
-                </View>
+                {row.status === 'duplicate' ? (
+                  <Text numberOfLines={2} style={styles.submittedByName}>{row.submitted_by_name?.trim() || 'Submitter unavailable'}</Text>
+                ) : (
+                  <View style={[styles.statusBadge, statusBadgeStyle(row)]}>
+                    <Text style={[styles.statusBadgeText, statusBadgeTextStyle(row)]}>{statusLabel(row)}</Text>
+                  </View>
+                )}
                 <Text style={styles.statusDate}>{formatDate(row.updated_at)}</Text>
               </View>
             </View>
@@ -252,6 +257,29 @@ export default function PolicyIntakeDetailScreen() {
             </View>
           ) : null}
 
+          {row.status === 'duplicate' ? (
+            <View style={styles.policyCopyCard}>
+              <View style={styles.policyCopyHeading}>
+                <Ionicons name="document-text-outline" size={17} color="#315B9A" />
+                <Text style={reviewStyles.sectionLabel}>{proposalForm ? 'PROPOSAL FORM' : 'POLICY COPY'}</Text>
+              </View>
+              <Text numberOfLines={2} style={reviewStyles.documentName}>{row.file_name || 'Not attached'}</Text>
+              {row.file_name ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={proposalForm ? 'View proposal form' : 'View policy copy'}
+                  disabled={openingDocument}
+                  onPress={() => void openPolicyCopy()}
+                  style={({ pressed }) => [reviewStyles.documentButton, pressed && styles.pressed]}
+                >
+                  <Ionicons name="document-text-outline" size={15} color="#17365D" />
+                  <Text style={reviewStyles.documentButtonText}>{openingDocument ? 'Opening…' : proposalForm ? 'View proposal form' : 'View policy copy'}</Text>
+                  <Ionicons name="open-outline" size={13} color="#315B9A" />
+                </Pressable>
+              ) : null}
+            </View>
+          ) : null}
+
           {row.status === 'duplicate' && row.duplicate_match ? (
             <View style={styles.duplicatePanel}>
               <View style={styles.duplicateHeader}>
@@ -280,19 +308,27 @@ export default function PolicyIntakeDetailScreen() {
 
           <View style={reviewStyles.sheet}>
             <Text style={reviewStyles.sheetTitle}>Policy Intake Review</Text>
-            <Text style={reviewStyles.sheetCaption}>Same submitted and fetched details as the Operations website.</Text>
-
-            <ReviewBlock number="01" title="Source & customer">
-              <ReviewPair label="Submitted by" value={row.submitted_by_name || 'Not available'} source="SALES" />
-              <ReviewPair label="Customer mobile" value={row.customer_mobile} source="SALES" />
-              <ReviewPair label="Lead source" value={row.lead_source_name} source="SALES" />
-              <ReviewPair label="Intermediary" value={`${row.lead_source_type.toUpperCase()}${row.lead_source_code ? ` · ${row.lead_source_code}` : ''}`} source="SALES" />
-              <ReviewPair label="Policy type" value={policyTypeLabel(row.policy_type)} />
-              <ReviewPair label="Submitted" value={formatDate(row.created_at)} />
-            </ReviewBlock>
-
             {!proposalForm ? (
               <>
+                {row.status === 'duplicate' ? (
+                  <>
+                    <ReviewBlock number="02" title="Vehicle details">
+                      {vehicleReviewKeys.some(([key]) => Boolean(fields.get(key)?.value?.trim())) ? (
+                        vehicleReviewKeys.filter(([key]) => Boolean(fields.get(key)?.value?.trim())).map(([key, label]) => (
+                          <ReviewPair key={key} label={label} value={fields.get(key)?.value} source="OCR" confidence={fields.get(key)?.confidence} />
+                        ))
+                      ) : (
+                        <Text style={reviewStyles.emptyVehicle}>No vehicle details were fetched from the saved policy copy.</Text>
+                      )}
+                    </ReviewBlock>
+                    <ReviewBlock number="03" title="Policy & premium">
+                      {duplicatePolicyReviewKeys.map(([key, label]) => (
+                        <ReviewPair key={key} label={label} value={fields.get(key)?.value} source={fields.has(key) ? 'OCR' : undefined} confidence={fields.get(key)?.confidence} />
+                      ))}
+                    </ReviewBlock>
+                  </>
+                ) : (
+                  <>
                 <ReviewBlock number="02" title="Vehicle details" make={fields.get('vehicle_make')?.value}>
                   {vehicleReviewKeys.map(([key, label]) => (
                     <ReviewPair key={key} label={label} value={fields.get(key)?.value} source={fields.has(key) ? 'OCR' : undefined} confidence={fields.get(key)?.confidence} />
@@ -303,7 +339,9 @@ export default function PolicyIntakeDetailScreen() {
                     <ReviewPair key={key} label={label} value={fields.get(key)?.value} source={fields.has(key) ? 'OCR' : undefined} confidence={fields.get(key)?.confidence} />
                   ))}
                 </ReviewBlock>
-                {missingVehicleExtraction ? (
+                  </>
+                )}
+                {missingVehicleExtraction && row.status !== 'duplicate' ? (
                   <Text style={reviewStyles.warningText}>Vehicle identifiers require confirmation against the policy copy.</Text>
                 ) : null}
                 {row.ocr_warnings?.length ? (
@@ -319,6 +357,7 @@ export default function PolicyIntakeDetailScreen() {
               <Text style={reviewStyles.caption}>Life / Health proposal forms are reviewed manually. No motor OCR fields are expected.</Text>
             )}
 
+            {row.status !== 'duplicate' ? (
             <View style={reviewStyles.documentBox}>
               <Text style={reviewStyles.sectionLabel}>{proposalForm ? 'Proposal form' : 'Policy copy'}</Text>
               <Text style={reviewStyles.documentName} numberOfLines={2}>{row.file_name || 'Not attached'}</Text>
@@ -332,12 +371,14 @@ export default function PolicyIntakeDetailScreen() {
               ) : null}
             </View>
 
-            <View style={reviewStyles.reviewStatus}>
+            ) : null}
+
+            {row.status !== 'duplicate' ? <View style={reviewStyles.reviewStatus}>
               <Text style={reviewStyles.sectionLabel}>Review status</Text>
               <ReviewPair label="Workflow" value={statusLabel(row)} />
               <ReviewPair label="Detail fetch" value={row.ocr_status === 'completed' ? 'Details fetched' : row.ocr_status === 'failed' ? 'Manual review' : humanize(row.ocr_status)} />
               <ReviewPair label="Reviewer" value={row.status === 'completed' ? 'Completed by Operations' : ['in_review','needs_attention'].includes(row.status) ? 'Operations team' : 'Not assigned'} />
-            </View>
+            </View> : null}
 
             {row.review_access.can_review && !['completed', 'rejected', 'duplicate'].includes(row.status) ? (
               <View style={reviewStyles.actions}>
@@ -389,6 +430,11 @@ const vehicleReviewKeys: Array<[string, string]> = [
   ['vehicle_rto_state','RTO state'],
   ['vehicle_class','Vehicle class'],
 ];
+const duplicatePolicyReviewKeys: Array<[string, string]> = [
+  ['policy_number','Policy number'],
+  ['cpa_premium','CPA amount'],
+  ['cpa_opted','CPA opted'],
+];
 const policyReviewKeys: Array<[string, string]> = [
   ['policy_product','Policy product'],
   ['policy_number','Policy number'],
@@ -421,6 +467,7 @@ const reviewStyles=StyleSheet.create({
   sheet:{marginHorizontal:8,marginTop:9,marginBottom:8,borderWidth:1,borderColor:'#DCE5EF',borderRadius:12,backgroundColor:'#FFFFFF',padding:10,gap:8},
   sheetTitle:{fontSize:14,fontWeight:'800',color:'#17365D'},
   sheetCaption:{fontSize:10,color:'#65768D'},
+  emptyVehicle:{fontSize:10,color:'#68758A',paddingVertical:10},
   block:{borderRadius:10,borderWidth:1,borderColor:'#E2E9F3',overflow:'hidden'},
   blockHeader:{flexDirection:'row',alignItems:'center',gap:8,paddingHorizontal:10,paddingVertical:8,backgroundColor:'#EDF3FC'},
   number:{fontSize:10,color:'#315B9A',fontWeight:'800'},
@@ -599,15 +646,6 @@ function statusHelp(row: PartnerPolicyIntake) {
   return 'Track this submission here.';
 }
 
-function policyTypeLabel(value: PartnerPolicyIntake['policy_type']) {
-  return ({
-    motor: 'Motor',
-    non_motor: 'Non-Motor',
-    life: 'Life',
-    health: 'Health',
-  } as const)[value || 'motor'] || 'Motor';
-}
-
 function pendingLabel(row: PartnerPolicyIntake) {
   return row.ocr_status === 'failed' ? 'Manual review' : row.ocr_status === 'completed' ? 'Not found' : 'Fetching…';
 }
@@ -629,6 +667,9 @@ function humanize(value: string) {
 }
 
 const styles = StyleSheet.create({
+  policyCopyCard: { marginHorizontal: 12, marginTop: 12, padding: 12, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE5EF', gap: 7 },
+  policyCopyHeading: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  submittedByName: { fontSize: 10, fontWeight: '800', color: '#17365D', textAlign: 'right' },
   duplicatePanel: { marginHorizontal: 12, marginTop: 12, padding: 12, borderRadius: 12, backgroundColor: '#FFF1F2', borderWidth: 1, borderColor: '#FECACA', gap: 7 },
   duplicateHeader: { flexDirection: 'row', alignItems: 'center', gap: 7 },
   duplicateTitle: { color: '#A91F3B', fontSize: 11, fontWeight: '800', letterSpacing: 0.3 },

@@ -1,0 +1,26 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+
+const detail = readFileSync('app/policy-intakes/[id].tsx', 'utf8');
+const api = readFileSync('../web-portal/app/api/partner/policy-intakes/route.ts', 'utf8');
+const links = readFileSync('lib/policy-intakes.ts', 'utf8');
+assert.ok(detail.includes('navyTopBar'), 'Policy Intake header uses the shared navy variant');
+assert.ok(detail.includes('row.submitted_by_name?.trim()'), 'Duplicate header displays actual submitter name');
+assert.ok(!detail.includes("row.status === 'duplicate' ? <Text style={styles.statusHelp}"), 'Duplicate does not show the status explanation in header');
+assert.ok(detail.includes("row.status !== 'duplicate' ? <Text style={styles.statusHelp}"), 'No duplicate header explanation');
+assert.ok(detail.includes("row.status === 'duplicate' ? ("), 'Duplicate UI is scoped');
+assert.ok(!detail.includes('Same submitted and fetched details as the Operations website.'), 'Remove redundant review subtitle');
+assert.ok(!detail.includes('Source & customer'), 'Remove redundant Source & customer block');
+const copy = detail.indexOf('style={styles.policyCopyCard}');
+const duplicate = detail.indexOf('style={styles.duplicatePanel}');
+assert.ok(copy > 0 && duplicate > copy, 'Policy copy appears above duplicate warning');
+assert.ok(detail.includes('getPartnerPolicyIntakeDocumentUrl(row.id)'), 'Policy copy keeps authenticated signed URL lookup');
+assert.ok(detail.includes("const duplicatePolicyReviewKeys"), 'Use website-size compact policy summary');
+const summary = detail.slice(detail.indexOf('const duplicatePolicyReviewKeys'), detail.indexOf('const policyReviewKeys'));
+for (const key of ['policy_number', 'cpa_premium', 'cpa_opted']) assert.ok(summary.includes(key), key + ' must be shown');
+assert.equal((summary.match(/\['/g) || []).length, 3, 'Duplicate summary contains only website OCR fields');
+assert.ok(detail.includes("row.status !== 'duplicate' ? <View style={reviewStyles.reviewStatus}>"), 'Duplicate does not show redundant review status card');
+assert.ok(detail.includes('partnerPolicyIntakeMatchUrl(targetPath)'), 'Existing policy navigation uses trusted portal link');
+assert.ok(api.includes('`/policies/${match.policyId}/edit`'), 'Server resolves matching policy edit page, not another arbitrary policy');
+assert.ok(links.includes('/^\\/policies\\/[0-9a-f-]{36}\\/edit$/i'), 'Mobile only accepts canonical existing-policy URL');
+console.log('Partner Duplicate Policy Intake website parity regression passed');
