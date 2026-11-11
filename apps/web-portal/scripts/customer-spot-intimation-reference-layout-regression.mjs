@@ -21,7 +21,7 @@ const strip = fs.readFileSync(new URL('../components/customer-portal/customer-cl
 assert(strip.includes('centerSummaryIcons && (label === "Vehicle No." || label === "Policy Source")'), 'Summary icon alignment must be scoped to the two requested fields.');
 const uploads = fs.readFileSync(new URL('../components/customer-portal/customer-claim-multiple-upload.tsx', import.meta.url), 'utf8');
 assert(uploads.includes('const [expanded,setExpanded]=useState(false)'), 'Bulk files should start collapsed.');
-assert(uploads.includes('setExpanded(false);\n        router.refresh()'), 'Bulk uploads must collapse after successful upload while refreshing data.');
+assert(uploads.includes('setExpanded(!returnToSpotIntimation);\n        router.refresh()'), 'Bulk uploads must collapse on Spot Intimation and retain existing expansion on other claim stages.');
 assert(uploads.includes('sm:grid-cols-2 xl:grid-cols-4'), 'Expanded bulk documents should show four columns on large screens.');
 
 console.log('Customer portal Spot Intimation reference layout regression checks passed.');
