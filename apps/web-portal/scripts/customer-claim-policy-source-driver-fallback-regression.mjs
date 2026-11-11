@@ -3,6 +3,13 @@ import { readFileSync } from "node:fs";
 const page = readFileSync(new URL("../app/customer/(protected)/claims/[id]/stage/[stage]/page.tsx", import.meta.url), "utf8");
 assert.ok(page.includes('Boolean(claim.policy_id)'));
 assert.ok(page.includes('Boolean(claim.external_policy_id)'));
+const spotPage = readFileSync(new URL("../app/customer/(protected)/spot-intimation/page.tsx", import.meta.url), "utf8");
+const sourceRule = /const policySource=claim\.policy_service_source==="external"\|\|Boolean\(claim\.external_policy_id\)[\s\S]*?\?"External Policy"[\s\S]*?:claim\.policy_service_source==="sibl"\|\|Boolean\(claim\.policy_id\)[\s\S]*?\?"Sankalp Policy"[\s\S]*?:"—"/;
+assert.match(page, sourceRule, "Claim Journey resolves source from linked policy IDs");
+assert.match(spotPage, sourceRule, "Spot Intimation must use identical source priority and legacy fallback");
+assert.match(spotPage, /insurer:claim\.insurer_name,policySource\}/, "Spot header uses resolved source");
+assert.doesNotMatch(spotPage, /policySource:claim\.policy_service_source==="sibl"/, "Do not revert to nullable source-only check");
+
 assert.ok(page.includes('driverName:(typeof spotDetails?.driver_name'));
 assert.ok(page.includes('driverNumber:(typeof spotDetails?.driver_phone'));
 assert.ok(page.includes('["Driver Name",milestone?.details?.driver_name||descriptionDriverName]'));
