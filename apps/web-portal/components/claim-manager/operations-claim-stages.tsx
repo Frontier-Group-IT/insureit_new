@@ -598,7 +598,7 @@ function StageOneForm({ claimId, stage, active, detail, spotDetails, next, accid
   const incidentValue = spotDetails?.incident_at ?? accidentAt ?? (typeof storedIncidentAt === "string" ? storedIncidentAt : "");
   const spotIntimationValue = spotDetails?.spot_intimation_at ?? spotIntimationAt ?? (typeof storedSpotIntimationAt === "string" ? storedSpotIntimationAt : "");
   const groupedFieldNames = new Set(["incident_at", "incident_time", "spot_intimation_at", "spot_intimation_time"]);
-  const stageOneLabelClassName = "block min-h-8 text-[10px] font-semibold uppercase leading-4 tracking-[0.01em] text-[#174EA6]";
+  const stageOneLabelClassName = "block text-[10px] font-semibold uppercase leading-4 tracking-[0.01em] text-[#174EA6]";
   const groupedInputClassName = "h-full min-w-0 w-full border-0 bg-transparent pl-1.5 pr-1 text-[11px] font-semibold normal-case tracking-normal text-[#071D49] outline-none";
 
   return (
@@ -611,14 +611,14 @@ function StageOneForm({ claimId, stage, active, detail, spotDetails, next, accid
         <div className="grid min-w-0 items-start gap-2 sm:grid-cols-2 lg:grid-cols-5">
           <fieldset className="min-w-0">
             <legend className={stageOneLabelClassName}>Accident date &amp; time<span className="ml-1 text-rose-600">*</span></legend>
-            <div className="mt-1.5 grid h-[34px] w-full grid-cols-[1.15fr_0.85fr] overflow-hidden rounded-[4px] border border-[#CEDBEC] bg-white focus-within:border-[#2F80ED]">
+            <div className="mt-[3px] grid h-[34px] w-full grid-cols-[1.15fr_0.85fr] overflow-hidden rounded-[4px] border border-[#CEDBEC] bg-white focus-within:border-[#2F80ED]">
               <AppStyleDateInput name="incident_at" value={toDateTimeLocal(incidentValue, "date")} required compact />
               <input aria-label="Accident time" name="incident_time" type="time" defaultValue={toDateTimeLocal(incidentValue, "time")} required className={`${groupedInputClassName} border-l border-[#CEDBEC]`} />
             </div>
           </fieldset>
           <fieldset className="min-w-0">
             <legend className={stageOneLabelClassName}>Spot Intimation date &amp; time<span className="ml-1 text-rose-600">*</span></legend>
-            <div className="mt-1.5 grid h-[34px] w-full grid-cols-[1.15fr_0.85fr] overflow-hidden rounded-[4px] border border-[#CEDBEC] bg-white focus-within:border-[#2F80ED]">
+            <div className="mt-[3px] grid h-[34px] w-full grid-cols-[1.15fr_0.85fr] overflow-hidden rounded-[4px] border border-[#CEDBEC] bg-white focus-within:border-[#2F80ED]">
               <AppStyleDateInput name="spot_intimation_at" value={toDateTimeLocal(spotIntimationValue, "date")} required compact />
               <input aria-label="Spot Intimation time" name="spot_intimation_time" type="time" defaultValue={toDateTimeLocal(spotIntimationValue, "time")} required className={`${groupedInputClassName} border-l border-[#CEDBEC]`} />
             </div>
@@ -635,14 +635,14 @@ function StageOneForm({ claimId, stage, active, detail, spotDetails, next, accid
               return (
                 <div key={field.name} className="min-w-0">
                   <label htmlFor="spot-intimation-location" className={stageOneLabelClassName}>{field.label}{required ? <span className="ml-1 text-rose-600">*</span> : null}</label>
-                  <input id="spot-intimation-location" name={field.name} value={location} onChange={(event) => setLocation(event.target.value)} required={required} className="mt-1.5 h-[34px] w-full rounded-[4px] border border-[#CEDBEC] bg-white px-2.5 text-[12px] font-semibold text-[#071D49] outline-none focus:border-[#2F80ED]" />
+                  <input id="spot-intimation-location" name={field.name} value={location} onChange={(event) => setLocation(event.target.value)} required={required} className="mt-[3px] h-[34px] w-full rounded-[4px] border border-[#CEDBEC] bg-white px-2.5 text-[12px] font-semibold text-[#071D49] outline-none focus:border-[#2F80ED]" />
                 </div>
               );
             }
             return (
               <label key={field.name} className="min-w-0">
                 <span className={stageOneLabelClassName}>{field.label}{required ? <span className="ml-1 text-rose-600">*</span> : null}</span>
-                <input name={field.name} type={field.type ?? "text"} defaultValue={value} required={required} className="mt-1.5 h-[34px] w-full rounded-[4px] border border-[#CEDBEC] bg-white px-2.5 text-[12px] font-semibold normal-case tracking-normal text-[#071D49] outline-none focus:border-[#2F80ED]" />
+                <input name={field.name} type={field.type ?? "text"} defaultValue={value} required={required} className="mt-[3px] h-[34px] w-full rounded-[4px] border border-[#CEDBEC] bg-white px-2.5 text-[12px] font-semibold normal-case tracking-normal text-[#071D49] outline-none focus:border-[#2F80ED]" />
               </label>
             );
           })}
