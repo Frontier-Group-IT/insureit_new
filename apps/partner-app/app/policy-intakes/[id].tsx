@@ -169,7 +169,7 @@ export default function PolicyIntakeDetailScreen() {
       navyStatusBar
       fullWidth
       bottomNavigation={<PolicyIntakeDetailNavigation router={router} canViewDashboard={canPartnerAccess(context, "view_dashboard")} canViewPolicies={canPartnerAccess(context, "view_policies")} canViewClaims={canPartnerAccess(context, "view_claims")} />}
-      topBarIcon="reader-outline"
+      topBarIcon="documents-outline"
       onBack={() => router.back()}
     >
       {submitted === '1' && row ? (
