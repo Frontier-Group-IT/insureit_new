@@ -9,6 +9,7 @@ import { SurveyorDeputationForm } from "./surveyor-deputation-form";
 import { FinalizeInitialDocumentVerificationButton } from "./finalize-initial-document-verification-button";
 import { classifySpotSurveyAttachmentForm } from "@/app/claims/[id]/spot-survey-actions";
 import { ClassifySubmitButton } from "./classify-submit-button";
+import { DeleteUnclassifiedDocumentButton } from "./delete-unclassified-document-button";
 import type { InternalSpotIntimationDetails } from "@/lib/internal-spot-intimation";
 import { getVehicleBrandLogo } from "@/lib/vehicle-brand-logo";
 import { getInsurerLogo } from "@/lib/insurer-logo";
@@ -90,8 +91,9 @@ export function SpotClaimHeader({ claim, heading = "Operations claim journey", h
 
 export function SpotSurveyWorkspace({ claim, documents, verifications = [], surveyorDetails = null, showContext = true, showSpotDetails = true, canReusePolicyCopy = false }: { claim: SpotSurveyClaim; documents: SpotSurveyDocument[]; verifications?: SpotSurveyVerification[]; surveyorDetails?: SurveyorDetails | null; showContext?: boolean; showSpotDetails?: boolean; canReusePolicyCopy?: boolean }) {
   const items = buildDocumentItems(documents);
-  const unclassifiedAttachments = documents.filter(isUnclassifiedSpotAttachment);
-  const customerMultipleDocuments = documents.filter((document) => document.document_type?.trim().toLowerCase() === "other document");
+  const unclassifiedAttachments = documents.filter((document) =>
+    isUnclassifiedSpotAttachment(document) || document.document_type?.trim().toLowerCase() === "other document",
+  );
   const verifiedCount = items.filter((item) => isItemVerified(item, verifications)).length;
   const allDocumentsVerified = items.length > 0 && verifiedCount === items.length;
   const canFinalizeInitialDocuments = ["Initial Documents Pending", "Initial Documents Verification Pending", "Initial Documents Submitted", "Documents Pending", "Documents Submitted"].includes(claim.current_status ?? "");
@@ -103,7 +105,6 @@ export function SpotSurveyWorkspace({ claim, documents, verifications = [], surv
     <div className="mx-auto max-w-[1440px] space-y-2 pb-4">
       {showContext ? <SpotClaimHeader claim={claim} /> : null}
       {showSpotDetails ? <SpotSurveyDetailsPanel driverName={driverName} driverMobile={driverMobile} lossLocation={lossLocation} /> : null}
-      {customerMultipleDocuments.length ? <UnclassifiedAttachments claimId={claim.id} documents={customerMultipleDocuments} title="Customer Multiple Documents" /> : null}
       {unclassifiedAttachments.length ? <UnclassifiedAttachments claimId={claim.id} documents={unclassifiedAttachments} /> : null}
       <section className="rounded-2xl border border-[#DFE8F4] bg-white px-4 py-3 shadow-[0_10px_24px_rgba(7,29,73,0.04)]">
         <div className="mb-3 flex items-center justify-between gap-4">
@@ -230,23 +231,21 @@ function StripDetail({ icon, label, value, href, isLocation = false }: { icon: s
   return <div className={className}>{content}</div>;
 }
 
-function UnclassifiedAttachments({ claimId, documents, title = "Unclassified Spot Attachments" }: { claimId: string; documents: SpotSurveyDocument[]; title?: string }) {
+function UnclassifiedAttachments({ claimId, documents }: { claimId: string; documents: SpotSurveyDocument[] }) {
   const categories = ["Accident Photo", "Accident Video", "RC Copy", "Insurance Copy", "Driver Licence", "GR / Load Bill"];
-  const customerUpload = title === "Customer Multiple Documents";
   return (
     <section className="rounded-2xl border border-amber-200 bg-white px-4 py-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h2 className="text-[16px] font-semibold text-[#071D49]">{title}</h2>
-          <p className="text-[12px] text-[#6E5A2B]">{customerUpload ? "Customer-uploaded files are awaiting a verification category. Assign each file before verifying it." : "Assign each bulk-uploaded file to the correct verification category before verifying it."}</p>
+          <h2 className="text-[16px] font-semibold text-[#071D49]">Unclassified Documents</h2>
+          <p className="text-[12px] text-[#6E5A2B]">Assign each uploaded file to its verification category before verifying it.</p>
         </div>
         <span className="rounded-full border border-amber-200 bg-white px-2 py-1 text-[11px] font-semibold text-amber-800">{documents.length} file{documents.length === 1 ? "" : "s"} to classify</span>
       </div>
       <div className="mt-3 space-y-2">
         {documents.map((document) => (
           <form key={document.id} action={classifySpotSurveyAttachmentForm} className="flex flex-wrap items-center gap-2 rounded-lg border border-amber-100 bg-white px-3 py-2">
-            <span className="min-w-0 flex-1 truncate text-[12px] font-semibold text-[#071D49]">{document.file_name}</span>
-            {document.signedUrl ? <Link href={document.signedUrl} target="_blank" className="text-[11px] font-semibold text-[#174EA6]">Preview</Link> : null}
+            {document.signedUrl ? <Link href={document.signedUrl} target="_blank" rel="noopener noreferrer" title={document.file_name} className="min-w-0 flex-1 truncate text-[12px] font-semibold text-[#174EA6] underline-offset-2 hover:underline focus-visible:underline">{document.file_name}</Link> : <span className="min-w-0 flex-1 truncate text-[12px] font-semibold text-[#071D49]">{document.file_name}</span>}
             <input type="hidden" name="claimId" value={claimId} />
             <input type="hidden" name="documentId" value={document.id} />
             <select name="documentType" defaultValue="" required className="h-8 rounded-md border border-[#B8C5D6] bg-white px-2 text-[11px] font-medium text-[#071D49]">
@@ -254,6 +253,7 @@ function UnclassifiedAttachments({ claimId, documents, title = "Unclassified Spo
               {categories.map((category) => <option key={category} value={category}>{category}</option>)}
             </select>
             <ClassifySubmitButton />
+            <DeleteUnclassifiedDocumentButton claimId={claimId} documentId={document.id} fileName={document.file_name} />
           </form>
         ))}
       </div>
