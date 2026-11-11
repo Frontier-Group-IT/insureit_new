@@ -27,7 +27,7 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m pip install boto3==1.35.99 cryptography==44.0.2 pyyaml==6.0.2
-      - run: python -m py_compile scripts/backup/supabase_storage_to_r2.py scripts/backup/verify_r2_restore.py scripts/backup/monitor_github_backup.py scripts/backup/monitor_postgres_backup.py scripts/backup/postgres_to_r2.py scripts/backup/verify_postgres_r2_restore.py scripts/backup/classify_pg_restore_error.py scripts/backup/audit_postgres_archive_coverage.py scripts/backup/verify_postgres_offline_row_counts.py scripts/backup/summarize_pg_restore_errors.py scripts/backup/diagnose_pg_restore_data.py scripts/backup/audit_postgres_copy_targets.py scripts/backup/postgres_v2_to_r2.py scripts/backup/verify_postgres_v2_r2.py scripts/backup/verify_postgres_v2_rows.py scripts/backup/audit_postgres_v2_toc.py
+      - run: python -m py_compile scripts/backup/supabase_storage_to_r2.py scripts/backup/verify_r2_restore.py scripts/backup/monitor_github_backup.py scripts/backup/monitor_postgres_backup.py scripts/backup/postgres_to_r2.py scripts/backup/verify_postgres_r2_restore.py scripts/backup/classify_pg_restore_error.py scripts/backup/audit_postgres_archive_coverage.py scripts/backup/verify_postgres_offline_row_counts.py scripts/backup/summarize_pg_restore_errors.py scripts/backup/diagnose_pg_restore_data.py scripts/backup/audit_postgres_copy_targets.py scripts/backup/postgres_v2_to_r2.py scripts/backup/verify_postgres_v2_r2.py scripts/backup/verify_postgres_v2_rows.py scripts/backup/audit_postgres_v2_toc.py scripts/backup/prepare_pg_dump_connection.py
       - run: python -m unittest discover -s scripts/backup -p 'test_*.py' -v
       - name: Validate workflow safety guard
         run: |
@@ -122,7 +122,13 @@ jobs:
               assert 'refs/heads/main' in job_v2['if']
           backup_steps = str(v2backup['jobs']['postgres_v2_backup']['steps'])
           restore_steps = str(v2restore['jobs']['restore_v2']['steps'])
-          assert 'pg_dump -Fc' in backup_steps and 'postgres_v2_to_r2.py' in backup_steps
+          assert 'pg_dump --no-password -Fc' in backup_steps and 'postgres_v2_to_r2.py' in backup_steps
+          assert 'prepare_pg_dump_connection.py' in backup_steps
+          assert '--env-file' in backup_steps and 'PGPASSFILE=' in backup_steps
+          assert '--env DATABASE_URL' not in backup_steps
+          assert '--dbname="$DATABASE_URL"' not in backup_steps
+          assert 'insureit-pg-v2-connection' in backup_steps
+          assert 'rm -rf "$RUNNER_TEMP/insureit-pg-v2-connection"' in backup_steps
           assert 'postgresql/v2' in pathlib.Path('scripts/backup/postgres_v2_to_r2.py').read_text()
           assert '--network none' in restore_steps and 'createdb -T template0' in restore_steps
           assert '--single-transaction --exit-on-error' in restore_steps
