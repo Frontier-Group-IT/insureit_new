@@ -100,6 +100,9 @@ const datePos = activity.indexOf('<View style={styles.dateAndUnread}>', metaStar
 const metaEnd = activity.indexOf('</View>', datePos) + '</View>'.length;
 expect(metaStart >= 0 && badgePos > metaStart && datePos > badgePos && datePos < metaEnd, "Category badge is above the right-side date and unread indicator");
 expect(activity.includes("itemMeta: {") && activity.includes("alignItems: 'flex-end'"), "Activity category and date metadata align to the right");
+const kindPillStyle = activity.split("  kindPill: {")[1]?.split("  },")[0] ?? "";
+expect(kindPillStyle.includes("alignSelf: 'flex-end'"), "Category badge itself aligns right; no flex-start override");
+expect(!kindPillStyle.includes("alignSelf: 'flex-start'"), "Category badge cannot override right-aligned metadata with left alignment");
 expect(activity.includes("styles.itemCardUnread") && activity.includes("styles.unreadDot") &&
   activity.includes("styles.titleRead"), "Unread highlight, dot and muted read state remain intact");
 
