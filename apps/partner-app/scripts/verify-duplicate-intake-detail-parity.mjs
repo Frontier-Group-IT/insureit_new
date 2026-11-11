@@ -6,7 +6,7 @@ const api = readFileSync('../web-portal/app/api/partner/policy-intakes/route.ts'
 const links = readFileSync('lib/policy-intakes.ts', 'utf8');
 assert.ok(detail.includes('navyTopBar'), 'Policy Intake header uses the shared navy variant');
 assert.ok(detail.includes('row.submitted_by_name?.trim()'), 'Duplicate header displays actual submitter name');
-assert.ok(detail.includes("row.status === 'duplicate' ? <Text style={styles.statusHelp}"), 'Duplicate status explanation is conditionally removed from header' ) === false;
+assert.ok(!detail.includes("row.status === 'duplicate' ? <Text style={styles.statusHelp}"), 'Duplicate does not show the status explanation in header');
 assert.ok(detail.includes("row.status !== 'duplicate' ? <Text style={styles.statusHelp}"), 'No duplicate header explanation');
 assert.ok(detail.includes("row.status === 'duplicate' ? ("), 'Duplicate UI is scoped');
 assert.ok(!detail.includes('Same submitted and fetched details as the Operations website.'), 'Remove redundant review subtitle');
