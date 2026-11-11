@@ -594,7 +594,7 @@ const styles = StyleSheet.create({
     gap: 1,
   },
   kindPill: {
-    alignSelf: 'flex-start',
+    alignSelf: 'flex-end',
     borderRadius: 4,
     paddingHorizontal: 4,
     paddingVertical: 1,
