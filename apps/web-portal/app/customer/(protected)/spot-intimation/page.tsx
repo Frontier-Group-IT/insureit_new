@@ -132,8 +132,8 @@ export default async function CustomerSpotIntimation({searchParams}:{searchParam
     return {error:null,destination:"/customer/claims/"+encodeURIComponent(owned.id)+"/stage/spot_status?account="+encodeURIComponent(authorized.id)};
   }
 
-  const textFieldClass = "block h-[34px] w-full min-w-0 rounded-[4px] border border-[#CAD8EA] bg-white px-3 text-[13px] font-medium text-[#193659] outline-none transition placeholder:text-[#95A3B8] focus-visible:border-[#2D7FF0] focus-visible:ring-2 focus-visible:ring-[#DCEBFF]";
-  const splitFieldClass = "block h-[34px] min-w-0 flex-1 bg-transparent px-1.5 text-[13px] font-medium text-[#193659] outline-none";
+  const textFieldClass = "block h-[42px] w-full min-w-0 rounded-[4px] border border-[#CAD8EA] bg-white px-3 text-[13px] font-medium text-[#193659] outline-none transition placeholder:text-[#95A3B8] focus-visible:border-[#2D7FF0] focus-visible:ring-2 focus-visible:ring-[#DCEBFF]";
+  const splitFieldClass = "block h-[42px] min-w-0 flex-1 bg-transparent px-1.5 text-[13px] font-medium text-[#193659] outline-none";
   // The exact customer-owned linked policy copy is offered without duplicating
   // an already-attached claim file.
   const copyAdmin = createSupabaseAdminClient();
@@ -142,39 +142,39 @@ export default async function CustomerSpotIntimation({searchParams}:{searchParam
     ? !(await findExistingLinkedClaimCopy(copyAdmin, claim.id, account.id, availablePolicyCopy).catch(() => true))
     : false;
   return <div className="mx-auto w-full max-w-[90rem] space-y-3">
-    <CustomerClaimStageStrip claimId={claim.id} accountId={account.id} hideStageNav selectedKey="spot_intimation" currentKey="spot_intimation" completedKeys={editing?["spot_intimation"]:[]} claimSummary={{controlNo:claim.claim_no,policyNo:claim.policy_no,makeModel:[claim.vehicle_make,claim.vehicle_model].filter(Boolean).join(" - ")||null,vehicleNo:claim.vehicle_no,status:claim.current_status,manufacturer:claim.vehicle_make,insurer:claim.insurer_name,policySource:claim.policy_service_source==="sibl"?"Sankalp Policy":claim.policy_service_source==="external"||claim.external_policy_id?"External Policy":"—"}}/>
+    <CustomerClaimStageStrip claimId={claim.id} accountId={account.id} centerSummaryIcons hideStageNav selectedKey="spot_intimation" currentKey="spot_intimation" completedKeys={editing?["spot_intimation"]:[]} claimSummary={{controlNo:claim.claim_no,policyNo:claim.policy_no,makeModel:[claim.vehicle_make,claim.vehicle_model].filter(Boolean).join(" - ")||null,vehicleNo:claim.vehicle_no,status:claim.current_status,manufacturer:claim.vehicle_make,insurer:claim.insurer_name,policySource:claim.policy_service_source==="sibl"?"Sankalp Policy":claim.policy_service_source==="external"||claim.external_policy_id?"External Policy":"—"}}/>
     <SpotIntimationSaveForm action={editing?submitCorrection:submit} editMode={editing} serverDraft={serverDraft} saveServerDraft={claim.current_status === "Draft" ? saveCustomerSpotDraft.bind(null, account.id, claim.id) : undefined} draftKey={account.id+":"+claim.id+(editing?":edit":"")} cancelHref={editing?detailsHref:`/customer/start-claim?account=${encodeURIComponent(account.id)}`} evidence={<><CustomerClaimEvidenceWorkspace documents={documents} claimId={claim.id} accountId={account.id} stage="spot_intimation" canReusePolicyCopy={canReusePolicyCopy} returnToSpotIntimation/><CustomerClaimVoiceRecorder claimId={claim.id} accountId={account.id} documents={documents}/></>}>
       <input type="hidden" name="account" value={account.id}/><input type="hidden" name="claim" value={claim.id}/>
       <div className="-mx-4 -mt-4 border-b border-[#D8E3F1] px-4 py-2 sm:-mx-5 sm:-mt-5 sm:px-5">
         <h2 className="text-[14px] font-bold text-[#112B51]">Accident &amp; Spot Intimation Details</h2>
       </div>
-      <div className="mt-3 grid min-w-0 gap-x-2 gap-y-2 md:grid-cols-2 lg:grid-cols-3 min-[1440px]:grid-cols-5">
+      <div className="mt-4 grid min-w-0 gap-x-3 gap-y-4 py-2 md:grid-cols-2 lg:grid-cols-3 min-[1440px]:grid-cols-5 sm:py-3">
         <label className="min-w-0 w-full">
-          <span className="block h-4 max-sm:h-auto whitespace-nowrap text-[9px] font-bold uppercase leading-4 tracking-[0.01em] text-[#245BB2] max-sm:whitespace-normal">Accident Date &amp; Time <span className="text-rose-500">*</span></span>
-          <span className="mt-1 flex h-[34px] w-full min-w-0 overflow-hidden rounded-[4px] border border-[#CAD8EA] bg-white">
+          <span className="block min-h-5 whitespace-nowrap text-[11px] font-bold uppercase leading-5 tracking-[0.01em] text-[#245BB2] max-sm:whitespace-normal">Accident Date &amp; Time <span className="text-rose-500">*</span></span>
+          <span className="mt-1 flex h-[42px] w-full min-w-0 overflow-hidden rounded-[4px] border border-[#CAD8EA] bg-white">
             <CustomerDateInput compact name="accidentDate" label="Accident date" defaultValue={editing?existingDateTime(claim.accident_at,"date"):undefined} required className="text-[13px] font-medium text-[#193659]" />
             <span aria-hidden="true" className="my-1.5 w-px shrink-0 bg-[#D6E0ED]"/>
             <AutoCloseTimeInput name="accidentTime" defaultValue={editing?existingDateTime(claim.accident_at,"time"):undefined} required ariaLabel="Accident time" className={splitFieldClass}/>
           </span>
         </label>
         <label className="min-w-0 w-full">
-          <span className="block h-4 max-sm:h-auto whitespace-nowrap text-[9px] font-bold uppercase leading-4 tracking-[0.01em] text-[#245BB2] max-sm:whitespace-normal">Spot Intimation Date &amp; Time <span className="text-rose-500">*</span></span>
-          <span className="mt-1 flex h-[34px] w-full min-w-0 overflow-hidden rounded-[4px] border border-[#CAD8EA] bg-white">
+          <span className="block min-h-5 whitespace-nowrap text-[11px] font-bold uppercase leading-5 tracking-[0.01em] text-[#245BB2] max-sm:whitespace-normal">Spot Intimation Date &amp; Time <span className="text-rose-500">*</span></span>
+          <span className="mt-1 flex h-[42px] w-full min-w-0 overflow-hidden rounded-[4px] border border-[#CAD8EA] bg-white">
             <CustomerDateInput compact name="spotDate" label="Spot intimation date" defaultValue={editing?existingDateTime(claim.spot_intimation_at,"date"):undefined} required className="text-[13px] font-medium text-[#193659]" />
             <span aria-hidden="true" className="my-1.5 w-px shrink-0 bg-[#D6E0ED]"/>
             <AutoCloseTimeInput name="spotTime" defaultValue={editing?existingDateTime(claim.spot_intimation_at,"time"):undefined} required ariaLabel="Spot intimation time" className={splitFieldClass}/>
           </span>
         </label>
         <label className="min-w-0 w-full">
-          <span className="block h-4 max-sm:h-auto whitespace-nowrap text-[9px] font-bold uppercase leading-4 tracking-[0.01em] text-[#245BB2] max-sm:whitespace-normal">Driver Name <span className="text-rose-500">{external?"":"*"}</span></span>
+          <span className="block min-h-5 whitespace-nowrap text-[11px] font-bold uppercase leading-5 tracking-[0.01em] text-[#245BB2] max-sm:whitespace-normal">Driver Name <span className="text-rose-500">{external?"":"*"}</span></span>
           <input name="driver" defaultValue={editing?driverName:undefined} required={!external} maxLength={120} placeholder="Enter driver name" autoComplete="name" className={"mt-1 "+textFieldClass}/>
         </label>
         <label className="min-w-0 w-full">
-          <span className="block h-4 max-sm:h-auto whitespace-nowrap text-[9px] font-bold uppercase leading-4 tracking-[0.01em] text-[#245BB2] max-sm:whitespace-normal">Driver Number <span className="text-rose-500">{external?"":"*"}</span></span>
+          <span className="block min-h-5 whitespace-nowrap text-[11px] font-bold uppercase leading-5 tracking-[0.01em] text-[#245BB2] max-sm:whitespace-normal">Driver Number <span className="text-rose-500">{external?"":"*"}</span></span>
           <input name="phone" defaultValue={editing?driverPhone:undefined} required={!external} type="tel" maxLength={15} inputMode="tel" placeholder="Enter mobile number" autoComplete="tel" className={"mt-1 "+textFieldClass}/>
         </label>
         <label className="min-w-0 w-full md:col-span-2 lg:col-span-1">
-          <span className="block h-4 max-sm:h-auto whitespace-nowrap text-[9px] font-bold uppercase leading-4 tracking-[0.01em] text-[#245BB2] max-sm:whitespace-normal">Location <span className="text-rose-500">{external?"":"*"}</span></span>
+          <span className="block min-h-5 whitespace-nowrap text-[11px] font-bold uppercase leading-5 tracking-[0.01em] text-[#245BB2] max-sm:whitespace-normal">Location <span className="text-rose-500">{external?"":"*"}</span></span>
           <input name="location" defaultValue={editing?claim.accident_location??"":undefined} required={!external} maxLength={500} placeholder="Enter accident location" className={"mt-1 "+textFieldClass}/>
         </label>
       </div>
