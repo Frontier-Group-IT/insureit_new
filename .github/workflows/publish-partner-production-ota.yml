@@ -87,6 +87,8 @@ jobs:
           for (const file of files) {
             const approved = file === 'apps/partner-app/.trigger-production-ota'
               || file === 'apps/partner-app/scripts/verify-policy-intake-list-pagination.mjs'
+              || file === 'apps/partner-app/scripts/verify-insurer-list-mobile-scroll.mjs'
+              || file === 'apps/partner-app/scripts/verify-insurer-list-whole-rupees.mjs'
               || file === '.github/workflows/publish-partner-production-ota.yml'
               || file === '.github/workflows/verify-partner-app.yml'
               || /^apps\/partner-app\/(app|components|lib|assets)\//.test(file);
