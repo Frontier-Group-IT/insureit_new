@@ -575,7 +575,6 @@ const styles = StyleSheet.create({
     borderRadius: 9,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FBFCFF',
   },
   insurerLogo: { width: 44, height: 30 },
   eventArtworkImage: { width: 32, height: 32 },
