@@ -24,8 +24,12 @@ assert.doesNotMatch(screen, /sortButton|searchRow|tableScrollRef|Swipe table sid
 assert.match(screen, /<ScrollView horizontal nestedScrollEnabled directionalLockEnabled/, 'Financial register scrolls horizontally');
 assert.match(screen, /styles\.fixedNames/, 'Insurer names must stay pinned');
 assert.match(screen, /styles\.financialRow/, 'All financial columns must scroll as one register');
-for (const label of ["label: 'Policies'", "label: 'Amount'", "label: 'Net Premium'", "label: 'Pay-In'", "label: 'Retention'", "label: 'Payout'"])
+for (const label of ["label: 'Policies'", "label: 'Net Premium'", "label: 'Pay-In'", "label: 'Retention'", "label: 'Payout'"])
   assert.ok(screen.includes(label), 'Missing register column ' + label);
+assert.doesNotMatch(screen, /label: 'Amount'|key: 'amounts'/, 'Duplicate Amount column must not return');
+assert.match(screen, /const canViewCommercials = employee && context\?\.can_view_insurer_commercials === true/, 'Commercial columns require the authenticated permission');
+assert.match(screen, /headerTitleRow: \{ flexDirection: 'row', alignItems: 'center'/, 'Header icon and title must align in the same row');
+assert.match(screen, /<View style=\{styles\.headerTitleRow\}>[\s\S]*?<Pressable[\s\S]*?bar-chart-outline[\s\S]*?Insurer-wise Performance/, 'Header icon sits with the title, not above it');
 assert.match(screen, /const columns: Array<\{ key: Metric \| 'policies'; label: string \}> = employee/, 'Actor-specific column sets');
 assert.match(screen, /getPartnerInsurerRegister\(from, to\)/, 'Keep authorized RPC');
 assert.match(screen, /setRange\(draft\)/, 'Applying date range refreshes query');
