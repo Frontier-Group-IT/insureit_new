@@ -11,7 +11,7 @@ import { usePartnerQuery } from '@/lib/use-partner-query';
 import { usePartnerSession } from '@/providers/partner-session-provider';
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
-type Metric = 'amounts' | 'premium' | 'payin' | 'retention' | 'payout';
+type Metric = 'premium' | 'payin' | 'retention' | 'payout';
 type SortKey = 'amount_desc' | 'amount_asc' | 'policies_desc' | 'policies_asc' | 'name_asc' | 'name_desc' | 'payin_desc' | 'retention_desc';
 const FINANCIAL_COLUMN_WIDTH = 118;
 const ROW_HEIGHT = 62;
@@ -119,10 +119,11 @@ export default function InsurerListScreen() {
     fetcher: fetchInsurers,
     staleTimeMs: 90_000,
   });
-  // Amounts aliases premium because the existing RPC has no independent Amount field.
+  // Net Premium is the sole premium metric. The removed Amount column duplicated this RPC value.
+  // Commercial figures remain visible only when the authenticated server grant permits them.
   const columns: Array<{ key: Metric | 'policies'; label: string }> = employee
-    ? [{ key: 'policies', label: 'Policies' }, { key: 'amounts', label: 'Amount' }, { key: 'premium', label: 'Net Premium' }, ...(canViewCommercials ? [{ key: 'payin' as const, label: 'Pay-In' }, { key: 'retention' as const, label: 'Retention' }] : [])]
-    : [{ key: 'policies', label: 'Policies' }, { key: 'amounts', label: 'Amount' }, { key: 'premium', label: 'Net Premium' }, { key: 'payout', label: 'Payout' }];
+    ? [{ key: 'policies', label: 'Policies' }, { key: 'premium', label: 'Net Premium' }, ...(canViewCommercials ? [{ key: 'payin' as const, label: 'Pay-In' }, { key: 'retention' as const, label: 'Retention' }] : [])]
+    : [{ key: 'policies', label: 'Policies' }, { key: 'premium', label: 'Net Premium' }, { key: 'payout', label: 'Payout' }];
   const insurers = useMemo(() => {
     const term = search.trim().toLocaleLowerCase();
     const filtered = (query.data ?? []).filter((row) =>
@@ -177,13 +178,15 @@ export default function InsurerListScreen() {
       <View style={styles.referenceHeader}>
         <View style={styles.headerOrbLarge} />
         <View style={styles.headerOrbSmall} />
-        <Pressable accessibilityRole="button" accessibilityLabel="Back to Business"
-          onPress={() => router.back()} style={styles.headerIcon}>
-          <Ionicons name="bar-chart-outline" size={21} color="#FFFFFF" />
-        </Pressable>
         <View style={styles.headerCopy}>
           <Text style={styles.headerEyebrow}>BUSINESS PERFORMANCE</Text>
-          <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Insurer-wise Performance</Text>
+          <View style={styles.headerTitleRow}>
+            <Pressable accessibilityRole="button" accessibilityLabel="Back to Business"
+              onPress={() => router.back()} style={styles.headerIcon}>
+              <Ionicons name="bar-chart-outline" size={21} color="#FFFFFF" />
+            </Pressable>
+            <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Insurer-wise Performance</Text>
+          </View>
         </View>
       </View>
       <View style={styles.headerSearchBand}>
@@ -312,7 +315,7 @@ export default function InsurerListScreen() {
                       accessibilityLabel={`Sort by ${column.label}`}
                       onPress={() => {
                         if (column.key === 'policies') setSortKey('policies_desc');
-                        else if (column.key === 'premium' || column.key === 'amounts') setSortKey('amount_desc');
+                        else if (column.key === 'premium') setSortKey('amount_desc');
                         else if (column.key === 'payin' && canViewCommercials) setSortKey('payin_desc');
                         else if (column.key === 'retention' && canViewCommercials) setSortKey('retention_desc');
                       }}
@@ -358,13 +361,14 @@ export default function InsurerListScreen() {
 }
 
 const styles = StyleSheet.create({
-  referenceHeader: { marginHorizontal: -16, height: 58, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', overflow: 'hidden', backgroundColor: '#0860C8' },
+  referenceHeader: { marginHorizontal: -16, height: 64, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', overflow: 'hidden', backgroundColor: '#0860C8' },
   headerOrbLarge: { position: 'absolute', right: -38, top: -52, width: 170, height: 130, borderRadius: 90, backgroundColor: '#0D74E3', opacity: 0.9 },
   headerOrbSmall: { position: 'absolute', right: 95, top: -25, width: 85, height: 85, borderRadius: 45, backgroundColor: '#096BD7', opacity: 0.8 },
   headerIcon: { width: 37, height: 37, borderRadius: 8, backgroundColor: '#FFFFFF25', alignItems: 'center', justifyContent: 'center', marginRight: 9 },
   headerCopy: { flex: 1, minWidth: 0 },
-  headerEyebrow: { fontSize: 8.5, color: '#DAEAFF', fontWeight: '800', letterSpacing: 1.1 },
-  headerTitle: { fontSize: 18, fontWeight: '800', color: '#FFFFFF', lineHeight: 23 },
+  headerEyebrow: { marginLeft: 46, marginBottom: 2, fontSize: 8.5, color: '#DAEAFF', fontWeight: '800', letterSpacing: 1.1 },
+  headerTitleRow: { flexDirection: 'row', alignItems: 'center', minWidth: 0 },
+  headerTitle: { flex: 1, minWidth: 0, fontSize: 18, fontWeight: '800', color: '#FFFFFF', lineHeight: 23 },
   headerSearchBand: { backgroundColor: '#0860C8', marginHorizontal: -16, paddingHorizontal: 12, paddingTop: 4, paddingBottom: 12 },
   headerSearch: { backgroundColor: '#FFFFFF', borderRadius: 10, minHeight: 42, paddingHorizontal: 12, alignItems: 'center', flexDirection: 'row', gap: 9 },
   headerSearchInput: { flex: 1, color: '#233D62', fontSize: 12, paddingVertical: 6 },
