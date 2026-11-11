@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { LifeHealthRemarksEditor } from "@/components/life-health-remarks-editor";
 import { useEffect, useMemo, useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { FileSizeExceededPopup } from "@/components/file-size-exceeded-popup";
-import { CalendarDays, ChevronDown, Eye, LoaderCircle, Trash2, Upload, ShieldCheck, MessageSquareText, BarChart3, Save, ArrowRight, X } from "lucide-react";
+import { CalendarDays, ChevronDown, Eye, LoaderCircle, Trash2, Upload, ShieldCheck, BarChart3, Save, ArrowRight, X } from "lucide-react";
 import { convertLifeHealthCaseToPolicy, deleteLifeHealthCaseDocument, uploadLifeHealthCaseDocument } from "@/app/policies/life-health-policy-actions";
 import { updateLifeHealthCaseDetails } from "@/app/policies/life-health-case-edit-actions";
 import { isPensionLifePolicy } from "@/lib/life-health-pension-maturity";
@@ -82,7 +83,7 @@ function nextInstallmentFrom(start:string,frequency:string){
 export function LifeHealthCaseDetail({caseData,insurers,documents,activities}:Props){
   const router=useRouter(),isIssued=Boolean(caseData.finalPolicyId),docMap=useMemo(()=>new Map(documents.map(d=>[d.document_type,d])),[documents]);
   const[uploading,startUpload]=useTransition(),[converting,startConvert]=useTransition(),[saving,startSave]=useTransition(),[deleting,startDelete]=useTransition();
-  const[documentToDelete,setDocumentToDelete]=useState<DocumentRow|null>(null),[deleteError,setDeleteError]=useState<string|null>(null),[deletingDocumentId,setDeletingDocumentId]=useState<string|null>(null),[error,setError]=useState<string|null>(null),[saveSuccess,setSaveSuccess]=useState(false),[copy,setCopy]=useState<File|null>(null),[activityOpen,setActivityOpen]=useState(false),[remarksOpen,setRemarksOpen]=useState(false),[uploadingType,setUploadingType]=useState<string|null>(null);
+  const[documentToDelete,setDocumentToDelete]=useState<DocumentRow|null>(null),[deleteError,setDeleteError]=useState<string|null>(null),[deletingDocumentId,setDeletingDocumentId]=useState<string|null>(null),[error,setError]=useState<string|null>(null),[saveSuccess,setSaveSuccess]=useState(false),[copy,setCopy]=useState<File|null>(null),[activityOpen,setActivityOpen]=useState(false),[uploadingType,setUploadingType]=useState<string|null>(null);
   const[form,setForm]=useState({customerName:caseData.customerName,customerPhone:caseData.customerPhone,customerAddress:caseData.customerAddress,insurerId:caseData.insurerId,productName:caseData.productName,proposalNumber:caseData.proposalNumber,ppt:caseData.ppt,pd:caseData.pd,paymentFrequency:canonicalPaymentFrequency(caseData.paymentFrequency),paymentMode:normalizeCasePaymentMode(caseData.paymentMode),premiumAmount:String(caseData.premiumAmount||""),sourcingDate:caseData.sourcingDate,remarks:caseData.remarks});
   const[issuedApproval,setIssuedApproval]=useState<{id:string;key:string}|null>(null);
   const[dateApprovalOpen,setDateApprovalOpen]=useState(false);
@@ -161,7 +162,7 @@ export function LifeHealthCaseDetail({caseData,insurers,documents,activities}:Pr
     <Section number="04" title="Premium & payment" contentClassName="md:grid-cols-2 xl:grid-cols-3" premium>
       <FieldWrap title="Premium amount" required><input className={field} value={form.premiumAmount} onChange={e=>set("premiumAmount",e.target.value.replace(/[^0-9.]/g,""))} inputMode="decimal"/></FieldWrap>
       <FieldWrap title="Payment mode" required><select className={field} value={form.paymentMode} onChange={e=>set("paymentMode",e.target.value)}><option value="" disabled>Select payment mode</option>{legacyCash?<option value="Cash" disabled>Cash (legacy case)</option>:null}{modes.map(v=><option key={v} value={v}>{v}</option>)}</select></FieldWrap>
-      <FieldWrap title="Remarks"><input className={field} value={form.remarks} onChange={e=>set("remarks",e.target.value)} placeholder="Optional servicing / underwriting note"/></FieldWrap>
+      <LifeHealthRemarksEditor value={form.remarks} onChange={value=>{set("remarks",value);setSaveSuccess(false)}} disabled={saving||converting} />
     </Section>
 
     <Section number="05" title="Mark Policy Issued" highlight contentClassName="md:grid-cols-2 xl:grid-cols-4">
@@ -176,8 +177,6 @@ export function LifeHealthCaseDetail({caseData,insurers,documents,activities}:Pr
     </Section>
 
     <section className="overflow-hidden rounded-2xl border border-[#DFE8F4] bg-white shadow-[0_8px_20px_rgba(36,79,145,.06)] transition-all duration-300 hover:border-[#B9CCEA] hover:shadow-[0_12px_28px_rgba(36,79,145,.1)]"><button type="button" aria-expanded={activityOpen} onClick={()=>setActivityOpen(v=>!v)} className="flex w-full items-center justify-between px-4 py-3 text-left text-[11px] font-semibold text-[#17365D] transition-colors hover:bg-[#F2F7FF]"><span className="flex items-center gap-3"><span className="grid h-8 w-8 place-items-center rounded-lg bg-[#EAF2FF] text-[#254F91]"><BarChart3 className="h-4 w-4"/></span><span><span className="block text-[12px]">Activity Status</span><span className="block text-[9px] font-normal text-[#687D9B]">Update current activity status</span></span></span><ChevronDown className={`h-4 w-4 transition-transform ${activityOpen?"rotate-180":""}`}/></button>{activityOpen?<div className="border-t p-4"><div className="overflow-hidden rounded-xl border border-[#D9E2F0] bg-[#FBFCFE]">{activities.map((activity,index)=><div key={activity.id} className={`grid gap-2 px-4 py-3 md:grid-cols-[minmax(0,1fr)_260px_190px] md:items-center ${index?"border-t border-[#D9E2F0]":""}`}><div><p className="text-[8px] font-bold uppercase tracking-[.06em] text-[#8090A5]">{index===0?"Latest Action":"Previous Action"}</p><p className="mt-1 text-[12px] font-semibold text-[#17365D]">{activity.action}</p></div><p className="text-[9px] text-[#7A8AA0] md:text-right">Details: Created By: <span className="font-medium text-[#53657D]">{activity.createdBy}</span></p><p className="text-[9px] text-[#7A8AA0] md:text-right">At: {activityDate(activity.createdAt)}</p></div>)}</div></div>:null}</section>
-    <section className="overflow-hidden rounded-2xl border border-[#DFE8F4] bg-white shadow-[0_8px_20px_rgba(36,79,145,.06)] transition-all duration-300 hover:border-[#B9CCEA] hover:shadow-[0_12px_28px_rgba(36,79,145,.1)]"><button type="button" aria-expanded={remarksOpen} onClick={()=>setRemarksOpen(v=>!v)} className="flex w-full items-center justify-between px-4 py-3 text-left text-[11px] font-semibold text-[#17365D] transition-colors hover:bg-[#F2F7FF]"><span className="flex items-center gap-3"><span className="grid h-8 w-8 place-items-center rounded-lg bg-[#EAF2FF] text-[#254F91]"><MessageSquareText className="h-4 w-4"/></span><span><span className="block text-[12px]">Remarks / Activity Note</span><span className="block text-[9px] font-normal text-[#687D9B]">Add any additional notes</span></span></span><ChevronDown className={`h-4 w-4 transition-transform ${remarksOpen?"rotate-180":""}`}/></button>{remarksOpen?<div className="border-t p-4"><textarea className={`${field} h-20 py-2`} aria-label="Remarks / activity note" value={form.remarks} onChange={e=>set("remarks",e.target.value)}/></div>:null}</section>
-
     {oversizedLimitMb!==null?<FileSizeExceededPopup maxSizeMb={oversizedLimitMb} onClose={()=>setOversizedLimitMb(null)}/>:null}
     {error?<div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[10px] font-semibold text-red-700">{error}</div>:null}
     {saveSuccess?<div role="status" aria-live="polite" className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-[11px] font-semibold text-emerald-800">Case details saved successfully.</div>:null}

@@ -11,7 +11,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-type CaseRow = { id: string; case_number: string; business_line: string; status: string; sourcing_date: string; product_name: string; proposal_number: string; premium_amount: number; customer_id: string; insurance_company_id: string; rm_name: string | null; lead_source: string | null; final_policy_id: string | null; created_at: string };
+type CaseRow = { id: string; case_number: string; business_line: string; status: string; sourcing_date: string; product_name: string; proposal_number: string; premium_amount: number; customer_id: string; insurance_company_id: string; rm_name: string | null; lead_source: string | null; remarks: string | null; final_policy_id: string | null; created_at: string };
 type CustomerRow = { id: string; contact_name: string; company_name: string | null; phone: string };
 type InsurerRow = { id: string; name: string };
 type CaseFilter = "pending" | "issued" | "all";
@@ -28,11 +28,11 @@ export default async function LifeHealthCasesPage({ searchParams }: { searchPara
   const [{ data: rows, error }, caseSummary] = await Promise.all([
     downlineCaseFilter !== null
       ? downlineCaseFilter.length
-        ? admin.from("life_health_cases").select("id,case_number,business_line,status,sourcing_date,product_name,proposal_number,premium_amount,customer_id,insurance_company_id,rm_name,lead_source,final_policy_id,created_at")
+        ? admin.from("life_health_cases").select("id,case_number,business_line,status,sourcing_date,product_name,proposal_number,premium_amount,customer_id,insurance_company_id,rm_name,lead_source,remarks,final_policy_id,created_at")
             .or(downlineCaseFilter)
             .order("created_at", { ascending: false }).limit(500).returns<CaseRow[]>()
         : Promise.resolve({ data: [] as CaseRow[], error: null })
-      : admin.from("life_health_cases").select("id,case_number,business_line,status,sourcing_date,product_name,proposal_number,premium_amount,customer_id,insurance_company_id,rm_name,lead_source,final_policy_id,created_at").order("created_at", { ascending: false }).limit(500).returns<CaseRow[]>(),
+      : admin.from("life_health_cases").select("id,case_number,business_line,status,sourcing_date,product_name,proposal_number,premium_amount,customer_id,insurance_company_id,rm_name,lead_source,remarks,final_policy_id,created_at").order("created_at", { ascending: false }).limit(500).returns<CaseRow[]>(),
     downlineCaseFilter !== null ? Promise.resolve(null) : loadLifeHealthCaseSummary(admin),
   ]);
   if (error) return <AppShell title="Life / Health Cases"><div className="rounded-xl border border-red-200 bg-red-50 px-4 py-4 text-[10px] text-red-700">Life / Health cases could not be loaded.</div></AppShell>;
@@ -67,6 +67,7 @@ export default async function LifeHealthCasesPage({ searchParams }: { searchPara
       sourcingDate: row.sourcing_date,
       rmName: row.rm_name || "",
       leadSource: row.lead_source || "",
+      remarks: row.remarks || "",
       premiumAmount: Number(row.premium_amount || 0),
       finalPolicyId: row.final_policy_id,
     };
