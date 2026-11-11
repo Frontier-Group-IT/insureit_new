@@ -75,6 +75,34 @@ function stageMoney(data: PartnerClaimDetail, key: string): number | null {
   const value = Number(String(raw).replace(/[,₹\s]/g, ''));
   return Number.isFinite(value) && value >= 0 ? value : null;
 }
+const FINANCIAL_STAGES = [
+  { label: 'Estimate', key: 'claim_intimation' },
+  { label: 'Bill', key: 'billing' },
+  { label: 'DO', key: 'delivery_order' },
+  { label: 'Received', key: 'payment_encashment' },
+] as const;
+
+/** External claims use Customer Portal financial milestones, never legacy status inference. */
+function externalFinancialRows(data: PartnerClaimDetail) {
+  if (!data.claim.external_policy_id) return [];
+  const milestones = data.financial_milestones;
+  if (!Array.isArray(milestones)) return [];
+
+  // An actual saved Work Approval milestone (or Operations stage detail) must
+  // exist. Later legacy status labels alone must not unlock financial content.
+  const approved = milestones.some(item => item.key === 'work_approval' && item.status === 'completed')
+    || Boolean(recordedStage(data, 'work_approval'));
+  if (!approved) return [];
+
+  return FINANCIAL_STAGES.flatMap(item => {
+    const saved = [...milestones].reverse().find(entry => entry.key === item.key && entry.status === 'completed');
+    if (!saved || (typeof saved.amount !== 'number' && typeof saved.amount !== 'string')) return [];
+    if (typeof saved.amount === 'string' && !saved.amount.trim()) return [];
+    const amount = Number(String(saved.amount).replace(/[,₹\s]/g, ''));
+    return Number.isFinite(amount) && amount >= 0 ? [{ label: item.label, amount }] : [];
+  });
+}
+
 function formatRupees(value: number | null) {
   return value === null ? '—' : '₹' + value.toLocaleString('en-IN', { maximumFractionDigits: 2 });
 }
@@ -118,6 +146,7 @@ export default function ClaimTrackerScreen() {
   useEffect(() => { void load(); }, [load]);
 
   const tracker = data ? getClaimTrackerState(data) : null;
+  const financialRows = data ? externalFinancialRows(data) : [];
   const openClaimNumber = () => { if (!mayEditClaim) return; setClaimNumber(data?.claim.insurer_claim_no || ''); setClaimNumberOpen(true); };
   const saveClaimNumber = async () => {
     if (!mayEditClaim || !data || claimNumberSaving) return;
@@ -198,10 +227,10 @@ export default function ClaimTrackerScreen() {
                 </Pressable>;
               })}</View>}
             </View>
-            <View style={styles.financeCard}>
+            {financialRows.length > 0 ? <View style={styles.financeCard}>
               <View style={styles.financeHeader}><Image source={require("../../../mobile-app/assets/claims/accounts-finance.png")} resizeMode="contain" style={styles.financeArtwork} accessibilityLabel="Financial progress" /><View><Text style={styles.financeTitle}>FINANCIAL PROGRESS</Text><Text style={styles.financeSub}>Claim value movement</Text></View></View>
-              {([{ label:'Estimate', key:'claim_intimation' },{label:'Bill',key:'billing'},{label:'DO',key:'delivery_order'},{label:'Received',key:'payment_encashment'}] as const).map(item => <View key={item.key} style={styles.financeRow}><Text style={styles.financeLabel}>{item.label}</Text><Text style={styles.financeValue}>{formatRupees(stageMoney(data,item.key))}</Text></View>)}
-            </View>
+              {financialRows.map(item => <View key={item.label} style={styles.financeRow}><Text style={styles.financeLabel}>{item.label}</Text><Text style={styles.financeValue}>{formatRupees(item.amount)}</Text></View>)}
+            </View> : null}
             <View style={styles.panel}>
               <Pressable accessibilityRole="button" accessibilityState={{ expanded: documentsOpen }} onPress={() => setDocumentsOpen(v => !v)} style={styles.panelHeader}>
                 <Image source={PartnerAssets.actions.claimDocumentsFolder} resizeMode="contain" style={styles.documentsIcon}/>
