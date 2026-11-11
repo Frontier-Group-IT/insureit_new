@@ -215,10 +215,10 @@ assert.match(workspace, /min-h-\[48px\]/, "Operations claim header and summary s
 assert.match(headerCss, /\.header\s*\{[^}]*border: 0;/s, "Operations claim header must have no outer border");
 assert.match(bulkVerificationGroup, /motionStyles\.card/, "Document groups must use motion styling");
 assert.match(motionCss, /prefers-reduced-motion: reduce/, "Document animation must respect reduced-motion preference");
-assert.doesNotMatch(unclassifiedDeleteButton, /window\\.confirm\\(/, "Unclassified delete must not use the browser-native confirmation.");
-assert.match(unclassifiedDeleteButton, /<ClaimDocumentDeleteConfirmation filename=\\{fileName\\} pending=\\{pending\\}/, "Unclassified document delete must reuse the shared confirmation modal.");
-assert.match(unclassifiedDeleteButton, /onConfirm=\\{removeDocument\\}/, "Document deletion must only occur after modal confirmation.");
-assert.match(unclassifiedDeleteButton, /deleteVerifiedSpotSurveyDocument\\(claimId, documentId\\)/, "Preserve exact claim/document-scoped deletion action.");
-assert.match(sharedDeleteConfirmation, /Delete Document\\?/, "Shared dialog must retain the approved title.");
+assert.doesNotMatch(unclassifiedDeleteButton, /window\.confirm\(/, "Unclassified delete must not use the browser-native confirmation.");
+assert.match(unclassifiedDeleteButton, /<ClaimDocumentDeleteConfirmation filename=\{fileName\} pending=\{pending\}/, "Unclassified document delete must reuse the shared confirmation modal.");
+assert.match(unclassifiedDeleteButton, /onConfirm=\{removeDocument\}/, "Document deletion must only occur after modal confirmation.");
+assert.match(unclassifiedDeleteButton, /deleteVerifiedSpotSurveyDocument\(claimId, documentId\)/, "Preserve exact claim/document-scoped deletion action.");
+assert.match(sharedDeleteConfirmation, /Delete Document\?/, "Shared dialog must retain the approved title.");
 assert.match(sharedDeleteConfirmation, /role="alertdialog"/, "Shared dialog must retain accessible confirmation semantics.");
 console.log("Claim spot upload, scoped Partner authorization, bulk verification, direct storage, exact replacement and insurance validity regression passed.");
