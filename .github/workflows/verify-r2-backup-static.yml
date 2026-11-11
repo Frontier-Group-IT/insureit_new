@@ -76,6 +76,15 @@ jobs:
           assert 'secrets.' not in str(monitor), 'No production secrets in alert workflow'
           assert monitor['jobs']['monitor']['if'] == "github.ref == 'refs/heads/main'"
           assert 'monitor_postgres_backup.py' in str(monitor['jobs']['monitor']['steps'])
+          assert 'INSUREIT PostgreSQL R2 v2 consistent backup (daily 3:15 AM IST + manual)' in triggers['workflow_run']['workflows']
+          storage_monitor = monitor['jobs']['monitor']['steps'][-2]
+          assert 'workflow_run.name' in storage_monitor.get('if','')
+          pg_monitor = monitor['jobs']['monitor']['steps'][-1]
+          assert pg_monitor['if'] == 'always()'
+          pg_checker = pathlib.Path('scripts/backup/monitor_postgres_backup.py').read_text()
+          assert 'WORKFLOW = "insureit-postgres-r2-v2-manual.yml"' in pg_checker
+          assert 'failed_scheduled_run' in pg_checker and 'missing_scheduled' in pg_checker
+          assert 'GRACE = dt.timedelta(hours=3)' in pg_checker
           assert 'DATABASE_URL' not in str(monitor) and 'DB_BACKUP_ENCRYPTION_KEY' not in str(monitor)
           pg = yaml.safe_load(pathlib.Path('.github/workflows/insureit-postgres-r2-manual.yml').read_text())
           pg_triggers = pg.get('on', pg.get(True, {}))
@@ -130,11 +139,21 @@ jobs:
           v2restore = yaml.safe_load(pathlib.Path('.github/workflows/insureit-postgres-r2-v2-restore-verify.yml').read_text())
           for flow, jobname in ((v2backup,'postgres_v2_backup'),(v2restore,'restore_v2')):
               trig = flow.get('on', flow.get(True, {}))
-              assert 'workflow_dispatch' in trig and 'schedule' not in trig
+              assert 'workflow_dispatch' in trig
               assert flow['permissions']['contents'] == 'read'
               job_v2 = flow['jobs'][jobname]
               assert job_v2['environment'] == 'insureit-production-backup'
               assert 'refs/heads/main' in job_v2['if']
+          v2backup_triggers = v2backup.get('on', v2backup.get(True, {}))
+          v2restore_triggers = v2restore.get('on', v2restore.get(True, {}))
+          assert v2backup_triggers['schedule'] == [{'cron':'45 21 * * *'}], 'Daily 03:15 IST v2 schedule required'
+          assert 'schedule' not in v2restore_triggers, 'Isolated restore MUST remain manual'
+          assert 'schedule' in v2backup['jobs']['postgres_v2_backup']['if']
+          assert 'workflow_dispatch' in v2backup['jobs']['postgres_v2_backup']['if']
+          assert 'schedule' not in v2restore['jobs']['restore_v2']['if']
+          assert v2backup['concurrency']['cancel-in-progress'] is False
+          assert v2backup['permissions']['contents'] == 'read'
+          assert v2backup['jobs']['postgres_v2_backup']['timeout-minutes'] == 90
           backup_steps = str(v2backup['jobs']['postgres_v2_backup']['steps'])
           restore_steps = str(v2restore['jobs']['restore_v2']['steps'])
           assert 'pg_dump --no-password -Fc' in backup_steps and 'postgres_v2_to_r2.py' in backup_steps
@@ -175,7 +194,7 @@ jobs:
           assert 'docker rm -f -v insureit-v2-restore-check' in restore_steps
           assert 'DATABASE_URL' not in restore_steps and 'SUPABASE_SERVICE_ROLE_KEY' not in restore_steps
           assert 's3.delete_object' not in pathlib.Path('scripts/backup/postgres_v2_to_r2.py').read_text()
-          print('Manual V2 consistent database recovery workflow guards verified')
+          print('Daily encrypted V2 backup and protected manual restore workflow guards verified')
           print('Manual offline database recovery rehearsal guards verified')
           PY
 
