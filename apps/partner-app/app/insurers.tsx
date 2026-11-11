@@ -1,10 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
+import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { Modal, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
-import { PartnerDatePicker } from '@/components/ui/partner-date-picker';
 import { PartnerInsurerLogo } from '@/components/ui/partner-insurer-logo';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { getPartnerInsurerRegister, type PartnerInsurerRegisterRow } from '@/lib/business';
@@ -14,6 +14,9 @@ import { usePartnerSession } from '@/providers/partner-session-provider';
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 type Metric = 'amounts' | 'premium' | 'payin' | 'retention' | 'payout';
 type DatePreset = 'mtd' | 'last_month' | 'custom';
+type SortKey = 'amount_desc' | 'amount_asc' | 'policies_desc' | 'policies_asc' | 'name_asc' | 'name_desc' | 'payin_desc' | 'retention_desc';
+const FINANCIAL_COLUMN_WIDTH = 118;
+const ROW_HEIGHT = 62;
 
 // Display aliases only: never alter the full insurer name used for the RPC,
 // logo lookup, searches or accessibility.
@@ -85,6 +88,8 @@ function metricValue(row: PartnerInsurerRegisterRow, metric: Metric): number | s
 
 export default function InsurerListScreen() {
   const params = useLocalSearchParams<{ from?: string; to?: string }>();
+  const router = useRouter();
+  const amountScrollRef = useRef<ScrollView>(null);
   const { context, cacheScopeKey } = usePartnerSession();
   const employee = context?.identity.actor_kind === 'employee';
   const initialRange = getPresetRange('mtd');
@@ -97,7 +102,9 @@ export default function InsurerListScreen() {
   const [datePreset, setDatePreset] = useState<DatePreset>('custom');
   const [metric, setMetric] = useState<Metric>('amounts');
   const [search, setSearch] = useState('');
-  const [sortByAmount, setSortByAmount] = useState(true);
+  const [sortKey, setSortKey] = useState<SortKey>('amount_desc');
+  const [sortModalOpen, setSortModalOpen] = useState(false);
+  const [pickerTarget, setPickerTarget] = useState<'from' | 'to' | null>(null);
   const validRange = validDateRange(range.from, range.to);
   const validDraft = validDateRange(draft.from, draft.to);
   const { from, to } = range;
@@ -118,22 +125,57 @@ export default function InsurerListScreen() {
     : [{ key: 'amounts', label: 'Amounts' }, { key: 'premium', label: 'Net Premium' }, { key: 'payout', label: 'Payout' }];
   // Never expose employee-only metrics to Partner identities.
   const selectedMetric = options.some((option) => option.key === metric) ? metric : 'amounts';
-  const selectedLabel = selectedMetric === 'amounts' ? 'Net Premium' : options.find((option) => option.key === selectedMetric)?.label ?? 'Net Premium';
+  // Amounts aliases premium because the existing RPC has no independent Amount field.
+  const columns: Array<{ key: Metric | 'policies'; label: string }> = employee
+    ? [{ key: 'policies', label: 'Policies' }, { key: 'amounts', label: 'Amount' }, { key: 'premium', label: 'Net Premium' }, { key: 'payin', label: 'Pay-In' }, { key: 'retention', label: 'Retention' }]
+    : [{ key: 'policies', label: 'Policies' }, { key: 'amounts', label: 'Amount' }, { key: 'premium', label: 'Net Premium' }, { key: 'payout', label: 'Payout' }];
+  const sortOptions: Array<{ key: SortKey; label: string }> = [
+    { key: 'amount_desc', label: 'Highest Net Premium' },
+    { key: 'amount_asc', label: 'Lowest Net Premium' },
+    { key: 'policies_desc', label: 'Most Policies' },
+    { key: 'policies_asc', label: 'Fewest Policies' },
+    { key: 'name_asc', label: 'Insurer Name A–Z' },
+    { key: 'name_desc', label: 'Insurer Name Z–A' },
+    ...(employee ? [
+      { key: 'payin_desc' as SortKey, label: 'Highest Pay-In' },
+      { key: 'retention_desc' as SortKey, label: 'Highest Retention' },
+    ] : []),
+  ];
+  const sortForCurrentUser = sortOptions.some((option) => option.key === sortKey) ? sortKey : 'amount_desc';
+  const scrollToMetric = (key: Metric) => {
+    setMetric(key);
+    const index = columns.findIndex((column) => column.key === key);
+    amountScrollRef.current?.scrollTo({ x: Math.max(0, index) * FINANCIAL_COLUMN_WIDTH, animated: true });
+  };
 
   const insurers = useMemo(() => {
     const term = search.trim().toLocaleLowerCase();
     const filtered = (query.data ?? []).filter((row) =>
       !term || row.name.toLocaleLowerCase().includes(term) || displayInsurerName(row.name).toLocaleLowerCase().includes(term));
     return [...filtered].sort((left, right) => {
-      if (!sortByAmount) return displayInsurerName(left.name).localeCompare(displayInsurerName(right.name));
-      return Number(metricValue(right, selectedMetric) ?? 0) - Number(metricValue(left, selectedMetric) ?? 0);
+      if (sortForCurrentUser === 'name_asc') return displayInsurerName(left.name).localeCompare(displayInsurerName(right.name));
+      if (sortForCurrentUser === 'name_desc') return displayInsurerName(right.name).localeCompare(displayInsurerName(left.name));
+      if (sortForCurrentUser === 'policies_asc') return left.policies - right.policies;
+      if (sortForCurrentUser === 'policies_desc') return right.policies - left.policies;
+      if (sortForCurrentUser === 'payin_desc' && employee) return Number(right.payin ?? 0) - Number(left.payin ?? 0);
+      if (sortForCurrentUser === 'retention_desc' && employee) return Number(right.retention ?? 0) - Number(left.retention ?? 0);
+      return sortForCurrentUser === 'amount_asc'
+        ? Number(left.premium ?? 0) - Number(right.premium ?? 0)
+        : Number(right.premium ?? 0) - Number(left.premium ?? 0);
     });
-  }, [query.data, search, selectedMetric, sortByAmount]);
+  }, [query.data, search, sortForCurrentUser, employee]);
 
   const openDateRange = () => {
     setDraft(range);
+    setPickerTarget(null);
     setDatePreset('custom');
     setDateModalOpen(true);
+  };
+  const handlePickedDate = (event: DateTimePickerEvent, selected?: Date) => {
+    if (Platform.OS === 'android') setPickerTarget(null);
+    if (event.type === 'dismissed' || !selected || !pickerTarget) return;
+    setDatePreset('custom');
+    setDraft((current) => ({ ...current, [pickerTarget]: isoLocal(selected) }));
   };
   const applyPreset = (preset: Exclude<DatePreset, 'custom'>) => {
     setDatePreset(preset);
