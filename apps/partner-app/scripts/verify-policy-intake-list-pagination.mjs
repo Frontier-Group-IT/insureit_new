@@ -39,7 +39,12 @@ assert.match(route, /pageIds = filtered\.slice\(offset, offset \+ limit\)/, 'Sti
 assert.match(route, /employeeRead\?\.mode === "or"/, 'Preserve employee scope');
 assert.match(route, /q = q\.or\(intakeReadScope\)/, 'Search remains scoped for partner accounts');
 assert.match(app, /const visibleRows = rows;/, 'Never filter only the currently loaded page');
-assert.match(app, /<PartnerStatusBadge label={statusLabel\(row\)} tone={statusTone\(row\)} \/>/, 'Keep existing workflow status badge');
+assert.match(app, /row\.status === 'ready_for_review' \|\| row\.status === 'in_review'/, 'Only Ready and In Review become buttons');
+assert.match(app, /styles\.openStatusReady : styles\.openStatusInReview/, 'Ready and In Review receive distinct solid button colors');
+assert.match(app, /accessibilityRole="button"[\s\S]*?event\.stopPropagation\(\);[\s\S]*?router\.push\(\{ pathname: '\/policy-intakes\/\[id\]'/, 'Status button opens details once without triggering the parent card');
+assert.match(app, /<PartnerStatusBadge label={statusLabel\(row\)} tone={statusTone\(row\)} \/>/, 'Other intake workflow states keep the existing badge');
+assert.match(app, /openStatusText: \{ color: '#FFFFFF'/, 'Ready and In Review labels use white text');
+assert.match(app, /styles\.openStatusButton/, 'Keep the action compact and aligned with the existing timestamp');
 assert.doesNotMatch(app, /<PartnerStatusBadge label="Fetched"/, 'Do not show a second Fetched pill');
 assert.doesNotMatch(app, /accessibilityLabel="Document data fetched"/, 'No green OCR checkmark next to the PIR number');
 assert.doesNotMatch(app, /<Ionicons name="checkmark" size=\{15\} color="#16A34A"/, 'Do not reintroduce the PIR green checkmark');
