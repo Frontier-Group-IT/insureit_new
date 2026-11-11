@@ -5,8 +5,8 @@ const component = readFileSync("components/spot-survey/spot-survey-workspace-v2.
 const page = readFileSync("app/claims/[id]/page.tsx", "utf8");
 assert.match(page, /<SpotSurveyWorkspace /, "Keep the existing claim stage-one workspace");
 assert.match(component, /<details data-claim-document-verification="true" className=/, "Document Verification must be expandable");
-assert.doesNotMatch(component, /<details data-claim-document-verification="true"[^>]*\\sopen(?:\\s|=|>)/, "Document Verification must start collapsed");
-assert.match(component, /<summary className=[^>]*>[\\s\\S]*Document Verification[\\s\\S]*Documents Verified/, "Summary keeps heading and verification count visible");
+assert.ok(!component.slice(component.indexOf('<details data-claim-document-verification="true"'), component.indexOf(">", component.indexOf('<details data-claim-document-verification="true"'))).includes(" open"), "Document Verification must start collapsed");
+const summary = component.slice(component.indexOf("<summary "), component.indexOf("</summary>")); assert.ok(summary.includes("Document Verification") && summary.includes("Documents Verified") && summary.includes("{verifiedCount} / {items.length}"), "Summary keeps heading and verification count visible");
 const start = component.indexOf('<details data-claim-document-verification="true"');
 const end = component.indexOf("</details>", start);
 const panel = component.slice(start, end);
