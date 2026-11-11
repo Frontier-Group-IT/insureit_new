@@ -33,7 +33,8 @@ assert.match(operations,/selected\.key === "spot_status" \? "text-\[8px\]" : "te
 assert.ok(operations.includes('selected.key === "work_approval" ? "min-w-[900px] !grid-cols-5 items-start"'));
 assert.match(customer,/selected\.key==="spot_status"\?"text-\[8px\]":"text-\[9px\]"/,"Customer Spot Status uses smaller labels, other stages retain 9px.");
 assert.ok(customer.includes("xl:grid-cols-5 lg:items-start"));
-assert.match(operations,/stageOneLabelClassName = "block min-h-8 text-\[10px\]/, "Stage 1 input labels use readable 10px text with space for wrapping.");
+assert.match(operations,/stageOneLabelClassName = "block text-\[10px\]/, "Stage 1 uses naturally sized 10px labels without a forced minimum height.");
+assert.equal((operations.match(/mt-\[3px\]/g) ?? []).length, 4, "Stage 1 date/time groups and remaining inputs use an exact 3px label-to-input gap.");
 assert.ok(spot.includes('const textFieldClass = "block h-[34px] w-full'));
 assert.ok(spot.includes('const splitFieldClass = "block h-[34px]'));
 assert.ok(spot.includes("flex h-[34px] w-full"));
