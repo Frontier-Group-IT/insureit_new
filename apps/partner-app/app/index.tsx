@@ -11,7 +11,7 @@ export default function IndexScreen() {
     return <View style={styles.loading}><ActivityIndicator color={partnerTheme.colors.brand} /></View>;
   }
   if (status === 'ready') return <Redirect href="/(tabs)" />;
-  if (status === 'denied') return <Redirect href="/access-denied" />;
+  if (status === 'denied' || status === 'unavailable') return <Redirect href="/access-denied" />;
   return <Redirect href="/login" />;
 }
 
