@@ -173,7 +173,9 @@ requireText(policyIntakeNew, 'submitPartnerPolicyIntake({', 'New Policy Intake m
 requireText(policyIntakeNew, 'savePartnerPolicyIntakeDraft({', 'New Policy Intake must preserve draft saving.');
 requireText(policyIntakeNew, 'loadPartnerPolicyIntakeDraft()', 'New Policy Intake must preserve draft restore.');
 for (const intakeDetailAsset of ['emptyStates.policyUpload', 'status.documentUpload', 'status.policyAttention']) requireText(policyIntakeDetail, `PartnerAssets.${intakeDetailAsset}`, `Policy Intake detail is missing ${intakeDetailAsset} artwork.`);
-requireText(policyIntakeDetail, 'topBarIcon="document-text-outline"', 'Policy Intake detail must use the professional unboxed document icon in the header.');
+requireText(policyIntakeDetail, 'topBarIcon="documents-outline"', 'Policy Intake detail must use the unboxed professional documents icon in the header.');
+requireText(policyIntakeDetail, 'fullWidth', 'Policy Intake detail sections should fill the mobile width.');
+requireText(policyIntakeDetail, 'style={styles.intakeSummary}', 'The intake identity details must remain readable below the PIR number.');
 requireText(policyIntakeDetail, '<Ionicons name="document-text-outline" size={27}', 'Policy Intake PIR summary must use the professional plain icon instead of a boxed insurer logo.');
 requireText(policyIntakeDetail, '<PartnerManufacturerLogo', 'Policy Intake vehicle disclosure must use manufacturer identity artwork.');
 requireText(policyIntakeDetail, 'function statusBadgeStyle(row: PartnerPolicyIntake)', 'Policy Intake detail must keep centralized semantic status-badge mapping.');

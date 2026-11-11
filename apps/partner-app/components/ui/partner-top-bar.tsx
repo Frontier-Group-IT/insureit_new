@@ -21,9 +21,12 @@ export function PartnerTopBar({
   showArtwork = true,
   iconName,
   navy = false,
+  edgeToEdge = false,
 }: {
   title: string;
   navy?: boolean;
+  /** A full-width screen has no parent gutter to counteract. */
+  edgeToEdge?: boolean;
   eyebrow?: string;
   subtitle?: string;
   onBack?: () => void;
@@ -39,7 +42,7 @@ export function PartnerTopBar({
   const resolvedArtwork = showArtwork && !iconName ? (artwork ?? resolvePartnerScreenArtwork({ title, eyebrow })) : undefined;
 
   return (
-    <View style={[styles.root, navy && styles.navyRoot]}>
+    <View style={[styles.root, navy && styles.navyRoot, edgeToEdge && styles.edgeToEdge]}>
       {onBack ? (
         <Pressable
           accessibilityLabel="Back"
@@ -96,6 +99,7 @@ const styles = StyleSheet.create({
   },
   navyRoot: { backgroundColor: '#071E49', marginHorizontal: -partnerTheme.spacing.lg, paddingHorizontal: partnerTheme.spacing.lg },
   navyText: { color: '#FFFFFF' },
+  edgeToEdge: { marginHorizontal: 0, paddingHorizontal: partnerTheme.spacing.lg },
   plainIconWrap: { width: 38, alignItems: 'center', justifyContent: 'center' },
   artworkWrap: {
     width: 40,

@@ -303,6 +303,7 @@ export function PartnerScreen({
           <PartnerTopBar
             title={title}
             navy={navyTopBar}
+            edgeToEdge={fullWidth}
             iconName={topBarIcon}
             eyebrow={eyebrow}
             subtitle={subtitle}

@@ -164,7 +164,8 @@ export default function PolicyIntakeDetailScreen() {
     <PartnerScreen
       title="Policy Intake"
       navyTopBar
-      topBarIcon="document-text-outline"
+      fullWidth
+      topBarIcon="documents-outline"
       onBack={() => router.back()}
     >
       {submitted === '1' && row ? (
@@ -204,13 +205,7 @@ export default function PolicyIntakeDetailScreen() {
               </View>
               <View style={styles.statusBody}>
                 <Text numberOfLines={1} style={styles.intakeNumber}>{row.intake_number}</Text>
-                <Text numberOfLines={1} style={styles.summaryLine}>{[row.customer_mobile, row.lead_source_name].filter(Boolean).join(' · ')}</Text>
-                <Text numberOfLines={1} style={styles.summaryLine}>
-                  {[fields.get('policy_number')?.value?.trim() || 'Policy pending',
-                    fields.get('vehicle_registration_number')?.value?.trim()
-                      || (row.policy_type === 'motor' ? 'Vehicle pending' : 'Policy details pending')].join(' · ')}
-                </Text>
-                {row.status !== 'duplicate' ? <Text style={styles.statusHelp}>{statusHelp(row)}</Text> : null}
+
               </View>
               <View style={styles.statusMeta}>
                 {row.status === 'duplicate' ? (
@@ -222,6 +217,16 @@ export default function PolicyIntakeDetailScreen() {
                 )}
                 <Text style={styles.statusDate}>{formatDate(row.updated_at)}</Text>
               </View>
+            </View>
+            <View style={styles.intakeSummary}>
+              <Text numberOfLines={1} style={styles.summaryLine}>{[row.customer_mobile, row.lead_source_name].filter(Boolean).join(' · ')}</Text>
+              <Text numberOfLines={1} style={styles.summaryLine}>
+                {[fields.get('policy_number')?.value?.trim() || 'Policy pending',
+                  fields.get('vehicle_registration_number')?.value?.trim()
+                    || (row.policy_type === 'motor' ? 'Vehicle pending' : 'Policy details pending')].join(' · ')}
+              </Text>
+              {row.status !== 'duplicate' && row.status !== 'ready_for_review'
+                ? <Text style={styles.statusHelp}>{statusHelp(row)}</Text> : null}
             </View>
             <IntakeProgress row={row} />
           </View>
@@ -313,31 +318,31 @@ export default function PolicyIntakeDetailScreen() {
               <>
                 {row.status === 'duplicate' ? (
                   <>
-                    <ReviewBlock number="02" title="Vehicle details">
+                    <ReviewBlock title="Vehicle details">
                       {vehicleReviewKeys.some(([key]) => Boolean(fields.get(key)?.value?.trim())) ? (
                         vehicleReviewKeys.filter(([key]) => Boolean(fields.get(key)?.value?.trim())).map(([key, label]) => (
-                          <ReviewPair key={key} label={label} value={fields.get(key)?.value} source="OCR" confidence={fields.get(key)?.confidence} />
+                          <ReviewPair key={key} label={label} value={fields.get(key)?.value} confidence={fields.get(key)?.confidence} />
                         ))
                       ) : (
                         <Text style={reviewStyles.emptyVehicle}>No vehicle details were fetched from the saved policy copy.</Text>
                       )}
                     </ReviewBlock>
-                    <ReviewBlock number="03" title="Policy & premium">
+                    <ReviewBlock title="Policy & premium">
                       {duplicatePolicyReviewKeys.map(([key, label]) => (
-                        <ReviewPair key={key} label={label} value={fields.get(key)?.value} source={fields.has(key) ? 'OCR' : undefined} confidence={fields.get(key)?.confidence} />
+                        <ReviewPair key={key} label={label} value={fields.get(key)?.value} confidence={fields.get(key)?.confidence} />
                       ))}
                     </ReviewBlock>
                   </>
                 ) : (
                   <>
-                <ReviewBlock number="02" title="Vehicle details" make={fields.get('vehicle_make')?.value}>
+                <ReviewBlock title="Vehicle details" make={fields.get('vehicle_make')?.value}>
                   {vehicleReviewKeys.map(([key, label]) => (
-                    <ReviewPair key={key} label={label} value={fields.get(key)?.value} source={fields.has(key) ? 'OCR' : undefined} confidence={fields.get(key)?.confidence} />
+                    <ReviewPair key={key} label={label} value={fields.get(key)?.value} confidence={fields.get(key)?.confidence} />
                   ))}
                 </ReviewBlock>
-                <ReviewBlock number="03" title="Policy & premium">
+                <ReviewBlock title="Policy & premium">
                   {policyReviewKeys.map(([key, label]) => (
-                    <ReviewPair key={key} label={label} value={fields.get(key)?.value} source={fields.has(key) ? 'OCR' : undefined} confidence={fields.get(key)?.confidence} />
+                    <ReviewPair key={key} label={label} value={fields.get(key)?.value} confidence={fields.get(key)?.confidence} />
                   ))}
                 </ReviewBlock>
                   </>
@@ -451,33 +456,31 @@ const policyReviewKeys: Array<[string, string]> = [
   ['tax_amount','Printed GST'],
   ['gross_premium','Printed gross premium'],
 ];
-function ReviewBlock({number,title,children,make}:{number:string;title:string;children:ReactNode;make?:string}) {
+function ReviewBlock({title,children,make}:{title:string;children:ReactNode;make?:string}) {
   return <View style={reviewStyles.block}>
-    <View style={reviewStyles.blockHeader}><Text style={reviewStyles.number}>{number}</Text>{make ? <PartnerManufacturerLogo name={make} fallback={PartnerAssets.actions.addVehicle} style={{width:22,height:22}} /> : null}<Text style={reviewStyles.blockTitle}>{title}</Text></View>
+    <View style={reviewStyles.blockHeader}>{make ? <PartnerManufacturerLogo name={make} fallback={PartnerAssets.actions.addVehicle} style={{width:22,height:22}} /> : null}<Text style={reviewStyles.blockTitle}>{title}</Text></View>
     <View style={reviewStyles.rows}>{children}</View>
   </View>;
 }
-function ReviewPair({label,value,source,confidence}:{label:string;value?:string|null;source?:string;confidence?:number|null}) {
+function ReviewPair({label,value,confidence}:{label:string;value?:string|null;confidence?:number|null}) {
   const caution=typeof confidence === 'number' && confidence < .9;
   return <View style={reviewStyles.pair}>
-    <View style={reviewStyles.pairLabelRow}><Text style={reviewStyles.pairLabel}>{label}</Text>{source ? <Text style={reviewStyles.sourceTag}>{source}</Text> : null}</View>
+    <View style={reviewStyles.pairLabelRow}><Text style={reviewStyles.pairLabel}>{label}</Text></View>
     <Text selectable style={[reviewStyles.pairValue,caution && reviewStyles.lowConfidence]}>{value?.trim() || '—'}{caution ? ' · Review' : ''}</Text>
   </View>;
 }
 const reviewStyles=StyleSheet.create({
-  sheet:{marginHorizontal:-partnerTheme.spacing.lg,marginTop:9,marginBottom:8,borderWidth:1,borderColor:'#DCE5EF',borderRadius:10,backgroundColor:'#FFFFFF',padding:10,gap:8},
+  sheet:{marginHorizontal:8,marginTop:9,marginBottom:8,borderWidth:1,borderColor:'#DCE5EF',borderRadius:10,backgroundColor:'#FFFFFF',padding:10,gap:8},
   sheetTitle:{fontSize:14,fontWeight:'800',color:'#17365D'},
   sheetCaption:{fontSize:10,color:'#65768D'},
   emptyVehicle:{fontSize:10,color:'#68758A',paddingVertical:10},
   block:{borderRadius:10,borderWidth:1,borderColor:'#E2E9F3',overflow:'hidden'},
   blockHeader:{flexDirection:'row',alignItems:'center',gap:8,paddingHorizontal:10,paddingVertical:8,backgroundColor:'#EDF3FC'},
-  number:{fontSize:10,color:'#315B9A',fontWeight:'800'},
   blockTitle:{fontSize:12,color:'#17365D',fontWeight:'800'},
   rows:{paddingHorizontal:9,paddingVertical:3},
   pair:{flexDirection:'row',alignItems:'flex-start',gap:8,paddingVertical:6,borderBottomWidth:StyleSheet.hairlineWidth,borderBottomColor:'#E5EAF2'},
   pairLabelRow:{flex:1,flexDirection:'row',flexWrap:'wrap',gap:4,alignItems:'center'},
   pairLabel:{fontSize:10,color:'#62758E',lineHeight:15},
-  sourceTag:{fontSize:8,color:'#526DB6',fontWeight:'700',backgroundColor:'#EDF2FF',paddingHorizontal:4,borderRadius:3,overflow:'hidden'},
   pairValue:{flex:1.4,textAlign:'right',fontSize:11,lineHeight:16,color:'#193659',fontWeight:'600'},
   lowConfidence:{color:'#A46B14'},
   warningBox:{padding:9,backgroundColor:'#FFF8EA',borderRadius:8,gap:3},
@@ -626,7 +629,7 @@ function statusLabel(row: PartnerPolicyIntake) {
   if (row.status === 'processing' && row.ocr_status === 'failed') return 'Manual review required';
   return ({
     processing: 'Fetching policy details',
-    ready_for_review: 'Ready for Operations review',
+    ready_for_review: 'Ready for Review',
     in_review: 'In Operations review',
     needs_attention: 'Your response is needed',
     completed: 'Policy onboarding completed',
@@ -668,10 +671,10 @@ function humanize(value: string) {
 }
 
 const styles = StyleSheet.create({
-  policyCopyCard: { marginHorizontal: -partnerTheme.spacing.lg, marginTop: 12, padding: 12, borderRadius: 10, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE5EF', gap: 7 },
+  policyCopyCard: { marginHorizontal: 8, marginTop: 12, padding: 12, borderRadius: 10, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE5EF', gap: 7 },
   policyCopyHeading: { flexDirection: 'row', alignItems: 'center', gap: 7 },
   submittedByName: { fontSize: 10, fontWeight: '800', color: '#17365D', textAlign: 'right' },
-  duplicatePanel: { marginHorizontal: -partnerTheme.spacing.lg, marginTop: 12, padding: 12, borderRadius: 10, backgroundColor: '#FFF1F2', borderWidth: 1, borderColor: '#FECACA', gap: 7 },
+  duplicatePanel: { marginHorizontal: 8, marginTop: 12, padding: 12, borderRadius: 10, backgroundColor: '#FFF1F2', borderWidth: 1, borderColor: '#FECACA', gap: 7 },
   duplicateHeader: { flexDirection: 'row', alignItems: 'center', gap: 7 },
   duplicateTitle: { color: '#A91F3B', fontSize: 11, fontWeight: '800', letterSpacing: 0.3 },
   duplicateText: { color: '#9F2436', fontSize: 11, lineHeight: 17 },
@@ -679,12 +682,13 @@ const styles = StyleSheet.create({
   duplicateLink: { alignSelf: 'flex-start', minHeight: 34, flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 12, borderRadius: 8, borderWidth: 1, borderColor: '#FECACA', backgroundColor: '#FFFFFF' },
   duplicateLinkText: { color: '#9F2436', fontSize: 11, fontWeight: '700' },
   banner: { marginBottom: 10 },
-  statusCard: { marginHorizontal: -partnerTheme.spacing.lg, paddingHorizontal: 12, paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: partnerTheme.colors.line, backgroundColor: partnerTheme.colors.surface },
+  statusCard: { marginHorizontal: 0, paddingHorizontal: 12, paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: partnerTheme.colors.line, backgroundColor: partnerTheme.colors.surface },
   statusTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
-  statusLogoWrap: { width: 34, height: 43, alignItems: 'center', justifyContent: 'center' },
+  statusLogoWrap: { width: 34, height: 37, alignItems: 'center', justifyContent: 'center' },
   statusLogo: { width: 38, height: 38 },
   statusBody: { flex: 1, minWidth: 0, paddingTop: 2 },
   intakeNumber: { color: partnerTheme.colors.ink, ...partnerTheme.typography.sectionTitle },
+  intakeSummary: { marginTop: 5, paddingLeft: 44, paddingRight: 2 },
   summaryLine: { marginTop: 3, color: '#64748B', fontSize: 11, lineHeight: 16 },
   statusHelp: { marginTop: 4, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
   statusMeta: { maxWidth: '42%', alignItems: 'flex-end', gap: 5 },
