@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useRef, useState, type PropsWithChildren, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useRef, useState, type ComponentProps, type PropsWithChildren, type ReactNode } from 'react';
 import {
   Animated,
   Platform,
@@ -47,6 +47,7 @@ export function PartnerScreen({
   stickyControls,
   stickyHeaderNavy = false,
   navyTopBar = false,
+  topBarIcon,
   stickyStartY = 100,
 }: PropsWithChildren<{
   title: string;
@@ -69,6 +70,8 @@ export function PartnerScreen({
   stickyHeaderNavy?: boolean;
   /** Use the existing bottom-navigation navy for this screen's top heading only. */
   navyTopBar?: boolean;
+  /** Optional plain icon in place of header artwork, with no icon tile background. */
+  topBarIcon?: ComponentProps<typeof Ionicons>['name'];
   stickyStartY?: number;
   heroSearch?: {
     value: string;
@@ -300,6 +303,7 @@ export function PartnerScreen({
           <PartnerTopBar
             title={title}
             navy={navyTopBar}
+            iconName={topBarIcon}
             eyebrow={eyebrow}
             subtitle={subtitle}
             onBack={onBack}
