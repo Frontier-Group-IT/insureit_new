@@ -17,7 +17,7 @@ export async function requireVerifiedClaimDocuments(
     requiresManualVerification(doc.document_type) && doc.verification_status !== "verified" && doc.verification_status !== "rejected",
   );
   if (pending.length) {
-    const names = Array.from(new Set(pending.map((doc) => (doc.document_type || "Other Document").replace(/[\\r\\n]/g, " ").trim().slice(0, 60))));
+    const names = Array.from(new Set(pending.map((doc) => (doc.document_type || "Other Document").replace(/[\r\n]/g, " ").trim().slice(0, 60))));
     const summary = names.slice(0, 6).join(", ") + (names.length > 6 ? ", and others" : "");
     throw new Error(`Verify first — ${pending.length} uploaded document${pending.length === 1 ? "" : "s"} pending verification: ${summary}.`);
   }

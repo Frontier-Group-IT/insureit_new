@@ -27,7 +27,8 @@ assert.doesNotMatch(spot, /\{documents\.length\} uploaded file/, "Remove redunda
 // Stage 1 known validation failures must cross the server action boundary as safe feedback.
 assert.match(spotActions, /export async function advanceInternalSpotIntimationWithFeedback/);
 assert.match(spotActions, /await advanceInternalSpotIntimation\(claimId, formData\)/, "Preserve the original authorized workflow action.");
-assert.match(spotActions, /Verify \$\{count\} uploaded document/, "Return a specific pending count.");
+assert.match(spotActions, /"Verification Pending — " \+ count \+ " documents require verification: " \+ names/, "Return actual pending count and document names.");
+assert.match(spotActions, /"Verification Pending — Verify the " \+ names/, "Return the exact single pending document name.");
 assert.match(stages, /const advanced = await advanceInternalSpotIntimationWithFeedback\(claimId, formData\)/);
 assert.match(stages, /if \(!advanced\.ok\) return \{ ok: false, message: advanced\.message/, "Expected failures must reach the existing popup.");
 assert.match(stages, /<ClaimStageErrorDialog message=\{errorNotice \? summarizeClaimActionError\(errorNotice\)/, "Retain the accessible popup.");

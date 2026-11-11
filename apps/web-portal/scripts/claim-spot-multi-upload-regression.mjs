@@ -86,7 +86,7 @@ assert.match(verificationAction, /Please select a document before verifying\./, 
 assert.match(verificationAction, /aria-describedby="verify-selection-message"/, "Document warning must describe the reference popup accessibly.");
 assert.match(verificationAction, /h-\[50px\] w-full rounded-xl/, "Document warning must keep the full-width reference OK button.");
 const operationsStages = await readFile(new URL("../components/claim-manager/operations-claim-stages.tsx", import.meta.url), "utf8");
-assert.match(operationsStages, /Verify \$\{count\} uploaded document/, "Verification gate errors must be readable.");
+assert.match(operationsStages, /Verification Pending — /, "Verification gate errors must retain document count and names.");
 const sharedClaimErrorDialog = await readFile(new URL("../components/claim-manager/claim-stage-error-dialog.tsx", import.meta.url), "utf8");
 assert.match(sharedClaimErrorDialog, /title = "Check details"/, "Claim action errors must retain the Check details reference title.");
 assert.match(sharedClaimErrorDialog, /role="alertdialog"/, "Claim errors must render in an accessible popup.");

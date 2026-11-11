@@ -118,20 +118,54 @@ export async function advanceInternalSpotIntimationWithFeedback(
   } catch (error) {
     const reason = error instanceof Error ? error.message : "";
     console.error("Operations Spot Intimation advancement rejected", { claimId, reason });
-    const pending = /^Verify first — (\\d+) uploaded documents? pending verification\\.$/.exec(reason);
-    if (pending) {
-      const count = Number(pending[1]);
-      return { ok: false, message: `Verify ${count} uploaded document${count === 1 ? "" : "s"} before saving this stage.` };
-    }
-    const safeMessages = [
-      "Unable to check document verification. Please try again.",
-      "This status change is not allowed for the current claim stage.",
-      "Claim has an unsupported status.",
-    ];
-    if (/^Please complete the required Spot Intimation fields: [a-zA-Z, ]+\\.$/.test(reason)) {
-      return { ok: false, message: reason };
-    }
-    return { ok: false, message: safeMessages.includes(reason) ? reason : "Unable to advance Spot Intimation. Please review the required details and document verification." };
+    return { ok: false, message: spotIntimationFeedback(reason, "advance") };
+  }
+}
+
+/**
+ * Only expose expected validation failures: database errors and access details
+ * must not become user-visible.
+ */
+function spotIntimationFeedback(reason: string, operation: "save" | "advance"): string {
+  const pending = /^Verify first — (\d+) uploaded documents? pending verification: (.+)\.$/.exec(reason);
+  if (pending) {
+    const count = Number(pending[1]);
+    const names = pending[2];
+    return count === 1
+      ? "Verification Pending — Verify the " + names + " before proceeding."
+      : "Verification Pending — " + count + " documents require verification: " + names + ".";
+  }
+  const missing = /^Please complete the required Spot Intimation fields: ([a-zA-Z, ]+)\.$/.exec(reason);
+  if (missing) return "Required Details Missing — Please enter " + missing[1] + ".";
+  if ([
+    "Accident date/time and Spot Intimation date/time are required.",
+    "Enter valid accident and Spot Intimation date/time values.",
+    "Accident and Spot Intimation date/time cannot be in the future.",
+    "Spot Intimation cannot be earlier than the accident.",
+  ].includes(reason)) return "Invalid Date or Time — " + reason;
+  if ([
+    "This status change is not allowed for the current claim stage.",
+    "Claim has an unsupported status.",
+  ].includes(reason)) return "Action Not Allowed — This claim cannot advance from its current stage.";
+  if (reason === "Unable to check document verification. Please try again.") return reason;
+  if (reason === "The Spot Intimation changes could not be persisted. Refresh the claim and try again." ||
+      reason === "Accident details were saved, but the stage history could not be recorded. Please refresh the claim and retry Save Details. Do not advance the stage.") return reason;
+  return operation === "save"
+    ? "Unable to Save — Please retry or contact support."
+    : "Unable to Advance — Please retry or contact support.";
+}
+
+export async function saveInternalSpotIntimationDetailsWithFeedback(
+  claimId: string,
+  formData: FormData,
+): Promise<{ ok: boolean; message: string }> {
+  try {
+    await saveInternalSpotIntimationDetails(claimId, formData);
+    return { ok: true, message: "Spot Intimation details saved." };
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : "";
+    console.error("Operations Spot Intimation save rejected", { claimId, reason });
+    return { ok: false, message: spotIntimationFeedback(reason, "save") };
   }
 }
 
