@@ -10,6 +10,7 @@ import { refineNewIndiaStructuredPolicy } from "@/lib/policy-ocr-new-india-struc
 import { refineApprovedMotorPolicyLayout } from "@/lib/policy-ocr-approved-layout-refiner";
 import { refineIciciBundledTwoWheelerText } from "@/lib/policy-ocr-icici-3005-text-refiner";
 import { refineIcici3005OutstandingFields } from "@/lib/policy-ocr-icici-3005-outstanding-fields";
+import { refineIcici3005Section02Evidence } from "@/lib/policy-ocr-icici-3005-section02";
 import { extractNativePdfTextPages } from "@/lib/policy-ocr-native-pdf";
 import { shouldRunPolicyOcrLayoutParser } from "@/lib/policy-ocr-layout-mode";
 
@@ -62,7 +63,7 @@ export async function extractPolicyIntakeDocumentTrusted(formData: FormData): Pr
     if (base.parserId === "new_india_motor_v1") parsed = refineNewIndiaStructuredPolicy(tables, parsed);
     parsed = refineApprovedMotorPolicyLayout(pages,tables,parsed);
     let textEvidencePages = pages;
-    if (file.type === "application/pdf" && /ICICI\\s+LOMBARD/i.test(pages.slice(0, 2).join(" "))) {
+    if (file.type === "application/pdf" && /ICICI\s+LOMBARD/i.test(pages.slice(0, 2).join(" "))) {
       try {
         const localPages = await extractNativePdfTextPages(new Uint8Array(await file.arrayBuffer()));
         if (localPages.length) textEvidencePages = localPages.map((page) => page.text);
@@ -72,6 +73,7 @@ export async function extractPolicyIntakeDocumentTrusted(formData: FormData): Pr
     }
     parsed = refineIciciBundledTwoWheelerText(textEvidencePages, parsed);
     parsed = refineIcici3005OutstandingFields(textEvidencePages, parsed);
+    parsed = refineIcici3005Section02Evidence(textEvidencePages, parsed);
     if (!parsed.fields.length) return { ok:false, error:"No supported policy details could be read from this document." };
     return { ok:true, fields:parsed.fields, parserId:parsed.parserId, parserVersion:parsed.parserVersion, warnings:parsed.warnings };
   } catch (error) {
