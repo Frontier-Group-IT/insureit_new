@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import "./operations-claim-stages-motion.css";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { advanceInternalSpotIntimationWithFeedback, saveInternalSpotIntimationDetails } from "@/app/claims/internal-spot-intimation-actions";
+import { advanceInternalSpotIntimationWithFeedback, saveInternalSpotIntimationDetailsWithFeedback } from "@/app/claims/internal-spot-intimation-actions";
 import { completeClaimJourneyStageWithFeedback } from "@/app/claims/stage-actions";
 import { ClaimStageSuccessPopup } from "@/components/claim-manager/claim-stage-success-popup";
 import { ClaimStageErrorDialog } from "@/components/claim-manager/claim-stage-error-dialog";
@@ -248,13 +248,14 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
   const [spotState, spotFormAction] = useActionState(
     async (_previous: { ok: boolean; message: string }, formData: FormData) => {
       try {
-        await saveInternalSpotIntimationDetails(claimId, formData);
+        const saved = await saveInternalSpotIntimationDetailsWithFeedback(claimId, formData);
+        if (!saved.ok) return { ok: false, message: saved.message };
         setSuccessNotice("Spot Intimation details saved.");
         return { ok: true, message: "Spot Intimation details saved." };
       } catch (error) {
         const message = error instanceof Error && error.message && !error.message.includes("NEXT_REDIRECT")
           ? error.message
-          : "The save request failed. Please refresh the claim to check whether the details were saved before trying again.";
+          : "Unable to Save — Please retry or contact support.";
         console.error("Operations Spot Intimation save failed", { claimId, message });
         return { ok: false, message };
       } finally {
@@ -664,14 +665,22 @@ function toDateTimeLocal(value: string, type?: string) {
   return value;
 }
 function summarizeClaimActionError(message: string): string {
-  const pending = /^Verify first — (\d+) uploaded documents? pending verification(?:: (.+))?\.$/.exec(message.trim());
+  const reason = message.trim();
+  // Stage 1 server feedback is already validated, including actual document
+  // names. Preserve it instead of truncating it to a generic 105-char error.
+  if (/^(Verification Pending|Required Details Missing|Invalid Date or Time|Action Not Allowed|Unable to Save|Unable to Advance) — /.test(reason)) {
+    return reason.slice(0, 500);
+  }
+  const pending = /^Verify first — (\d+) uploaded documents? pending verification(?:: (.+))?\.$/.exec(reason);
   if (pending) {
     const count = Number(pending[1]);
-    return `${pending[2] ? `Verify these documents before saving: ${pending[2]}` : `Verify ${count} uploaded document${count === 1 ? "" : "s"} before saving this stage.`}`;
+    return pending[2]
+      ? "Verification Pending — " + (count === 1 ? "Verify the " + pending[2] + " before proceeding." : count + " documents require verification: " + pending[2] + ".")
+      : "Verification Pending — Verify " + count + " uploaded document" + (count === 1 ? "" : "s") + " before proceeding.";
   }
-  if (/server components render|digest property|specific message is omitted/i.test(message)) {
-    return "Unable to complete the action. Please try again.";
+  if (/server components render|digest property|specific message is omitted/i.test(reason)) {
+    return "Unable to Save — Please retry or contact support.";
   }
-  const firstLine = message.split(/[\r\n]+/)[0]?.trim() || "";
-  return firstLine.length > 105 ? "Unable to complete the action. Please try again." : firstLine || "Unable to complete the action. Please try again.";
+  const firstLine = reason.split(/[\r\n]+/)[0]?.trim() || "";
+  return firstLine.length > 105 ? "Unable to Save — Please retry or contact support." : firstLine || "Unable to Save — Please retry or contact support.";
 }
