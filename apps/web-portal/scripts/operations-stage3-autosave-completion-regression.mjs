@@ -48,7 +48,7 @@ assert.ok(guard.includes("requiresManualVerification(doc.document_type)"), "The 
 assert.match(guard, /incidentvoicenote/, "Incident Voice Note must be exempt from manual verification.");
 assert.ok(guard.includes("pending verification: ${summary}"), "Verification gate must provide pending document names.");
 assert.match(stageActions, /Verify these documents before saving/, "Stage action must explain exactly which documents to verify.");
-assert.match(stages, /Verify these documents before saving/, "Stage error dialog must explain which documents are pending.");
+assert.match(stages, /Verification Pending — /, "Stage error dialog must retain specific pending-document count and names.");
 assert.match(stage3, /Earlier-stage uploads/, "Stage 3 must expose earlier-stage uploads.");
 assert.match(stage3, /verificationKey: "spot"/, "Stage 3 must allow existing Accident Photo verification.");
 assert.match(stage3, /No verification required/, "Voice Note must be accessible without manual verification.");
