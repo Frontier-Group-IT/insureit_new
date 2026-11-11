@@ -7,7 +7,6 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { PartnerScreen } from '@/components/partner-screen';
 import { PartnerBanner } from '@/components/ui/partner-banner';
 import { PartnerButton } from '@/components/ui/partner-button';
-import { PartnerManufacturerLogo } from '@/components/ui/partner-manufacturer-logo';
 import { PartnerSectionHeader } from '@/components/ui/partner-section-header';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { PartnerAssets } from '@/lib/partner-assets';
@@ -24,12 +23,15 @@ import {
   type PartnerPolicyIntakeUploadProgress,
 } from '@/lib/policy-intakes';
 import { partnerTheme } from '@/lib/theme';
+import { canPartnerAccess } from '@/lib/partner-permissions';
+import { usePartnerSession } from '@/providers/partner-session-provider';
 
 const ALLOWED_TYPES = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
 const MAX_FILE_SIZE = 15 * 1024 * 1024;
 
 export default function PolicyIntakeDetailScreen() {
   const router = useRouter();
+  const { context } = usePartnerSession();
   const { id, submitted } = useLocalSearchParams<{ id: string; submitted?: string }>();
   const [row, setRow] = useState<(PartnerPolicyIntake & { review_access: PolicyIntakeReviewAccess; duplicate_match: PolicyIntakeDuplicateMatch | null }) | null>(null);
   const [reviewNote, setReviewNote] = useState('');
@@ -164,8 +166,10 @@ export default function PolicyIntakeDetailScreen() {
     <PartnerScreen
       title="Policy Intake"
       navyTopBar
+      navyStatusBar
       fullWidth
-      topBarIcon="documents-outline"
+      bottomNavigation={<PolicyIntakeDetailNavigation router={router} canViewDashboard={canPartnerAccess(context, "view_dashboard")} canViewPolicies={canPartnerAccess(context, "view_policies")} canViewClaims={canPartnerAccess(context, "view_claims")} />}
+      topBarIcon="reader-outline"
       onBack={() => router.back()}
     >
       {submitted === '1' && row ? (
@@ -201,13 +205,13 @@ export default function PolicyIntakeDetailScreen() {
           <View style={styles.statusCard}>
             <View style={styles.statusTop}>
               <View style={styles.statusLogoWrap}>
-                <Ionicons name="document-text-outline" size={27} color="#17365D" />
+                <Ionicons name="reader-outline" size={27} color="#17365D" />
               </View>
               <View style={styles.statusBody}>
                 <Text numberOfLines={1} style={styles.intakeNumber}>{row.intake_number}</Text>
 
               </View>
-              <View style={styles.statusMeta}>
+              <View style={[styles.statusMeta, row.status === 'duplicate' && styles.statusMetaDuplicate]}>
                 {row.status === 'duplicate' ? (
                   <Text numberOfLines={2} style={styles.submittedByName}>{row.submitted_by_name?.trim() || 'Submitter unavailable'}</Text>
                 ) : (
@@ -266,7 +270,7 @@ export default function PolicyIntakeDetailScreen() {
           {row.status === 'duplicate' ? (
             <View style={styles.policyCopyCard}>
               <View style={styles.policyCopyHeading}>
-                <Ionicons name="document-text-outline" size={17} color="#315B9A" />
+                <Ionicons name="document-attach-outline" size={17} color="#315B9A" />
                 <Text style={reviewStyles.sectionLabel}>{proposalForm ? 'PROPOSAL FORM' : 'POLICY COPY'}</Text>
               </View>
               <Text numberOfLines={2} style={reviewStyles.documentName}>{row.file_name || 'Not attached'}</Text>
@@ -278,7 +282,7 @@ export default function PolicyIntakeDetailScreen() {
                   onPress={() => void openPolicyCopy()}
                   style={({ pressed }) => [reviewStyles.documentButton, pressed && styles.pressed]}
                 >
-                  <Ionicons name="document-text-outline" size={15} color="#17365D" />
+                  <Ionicons name="document-attach-outline" size={15} color="#17365D" />
                   <Text style={reviewStyles.documentButtonText}>{openingDocument ? 'Opening…' : proposalForm ? 'View proposal form' : 'View policy copy'}</Text>
                   <Ionicons name="open-outline" size={13} color="#315B9A" />
                 </Pressable>
@@ -289,7 +293,7 @@ export default function PolicyIntakeDetailScreen() {
           {row.status === 'duplicate' && row.duplicate_match ? (
             <View style={styles.duplicatePanel}>
               <View style={styles.duplicateHeader}>
-                <Image source={PartnerAssets.status.policyAttention} style={{ width: 19, height: 19 }} resizeMode="contain" accessibilityLabel="Duplicate policy intake" />
+                <Ionicons name="alert-circle-outline" size={19} color="#A91F3B" accessibilityLabel="Duplicate policy intake" />
                 <Text style={styles.duplicateTitle}>DUPLICATE POLICY INTAKE</Text>
               </View>
               <Text style={styles.duplicateText}>
@@ -335,7 +339,7 @@ export default function PolicyIntakeDetailScreen() {
                   </>
                 ) : (
                   <>
-                <ReviewBlock title="Vehicle details" make={fields.get('vehicle_make')?.value}>
+                <ReviewBlock title="Vehicle details">
                   {vehicleReviewKeys.map(([key, label]) => (
                     <ReviewPair key={key} label={label} value={fields.get(key)?.value} confidence={fields.get(key)?.confidence} />
                   ))}
@@ -370,7 +374,7 @@ export default function PolicyIntakeDetailScreen() {
               {row.file_name ? (
                 <Pressable accessibilityRole="button" accessibilityLabel={proposalForm ? 'View proposal form' : 'View policy copy'}
                   disabled={openingDocument} onPress={() => void openPolicyCopy()} style={reviewStyles.documentButton}>
-                  <Ionicons name="document-text-outline" size={15} color="#17365D" />
+                  <Ionicons name="document-attach-outline" size={15} color="#17365D" />
                   <Text style={reviewStyles.documentButtonText}>{openingDocument ? 'Opening…' : proposalForm ? 'View proposal form' : 'View policy copy'}</Text>
                   <Ionicons name="open-outline" size={13} color="#315B9A" />
                 </Pressable>
@@ -422,6 +426,41 @@ export default function PolicyIntakeDetailScreen() {
   );
 }
 
+function PolicyIntakeDetailNavigation({
+  router, canViewDashboard, canViewPolicies, canViewClaims,
+}: {
+  router: ReturnType<typeof useRouter>;
+  canViewDashboard: boolean;
+  canViewPolicies: boolean;
+  canViewClaims: boolean;
+}) {
+  const items: Array<{ label: string; icon: keyof typeof Ionicons.glyphMap; path: string; available: boolean; active?: boolean }> = [
+    { label: 'Home', icon: 'home-outline', path: '/(tabs)', available: canViewDashboard },
+    { label: 'Business', icon: 'briefcase-outline', path: '/(tabs)/business', available: canViewDashboard },
+    { label: 'Policies', icon: 'document-text', path: '/(tabs)/policies', available: canViewPolicies, active: true },
+    { label: 'Claims', icon: 'shield-checkmark-outline', path: '/(tabs)/claims', available: canViewClaims },
+    { label: 'More', icon: 'grid-outline', path: '/(tabs)/more', available: true },
+  ];
+  return <View style={styles.bottomNav}>
+    {items.map((item) => (
+      <Pressable
+        key={item.label}
+        accessibilityRole="button"
+        accessibilityLabel={item.label}
+        accessibilityState={{ disabled: !item.available, selected: Boolean(item.active) }}
+        disabled={!item.available}
+        onPress={() => router.push(item.path as never)}
+        style={({ pressed }) => [styles.navItem, !item.available && styles.navDisabled, pressed && styles.pressed]}
+      >
+        <View style={[styles.navIconWrap, item.active && styles.navIconWrapActive]}>
+          <Ionicons name={item.icon} size={19} color={item.active ? '#633DF1' : '#60738F'} />
+        </View>
+        <Text style={[styles.navLabel, item.active && styles.navLabelActive]}>{item.label}</Text>
+      </Pressable>
+    ))}
+  </View>;
+}
+
 const vehicleReviewKeys: Array<[string, string]> = [
   ['vehicle_registration_status','Registration status'],
   ['vehicle_registration_number','Registration number'],
@@ -456,9 +495,9 @@ const policyReviewKeys: Array<[string, string]> = [
   ['tax_amount','Printed GST'],
   ['gross_premium','Printed gross premium'],
 ];
-function ReviewBlock({title,children,make}:{title:string;children:ReactNode;make?:string}) {
+function ReviewBlock({title,children}:{title:string;children:ReactNode}) {
   return <View style={reviewStyles.block}>
-    <View style={reviewStyles.blockHeader}>{make ? <PartnerManufacturerLogo name={make} fallback={PartnerAssets.actions.addVehicle} style={{width:22,height:22}} /> : null}<Text style={reviewStyles.blockTitle}>{title}</Text></View>
+    <View style={reviewStyles.blockHeader}><Ionicons name={title === "Vehicle details" ? "car-sport-outline" : "shield-checkmark-outline"} size={17} color="#315B9A" /><Text style={reviewStyles.blockTitle}>{title}</Text></View>
     <View style={reviewStyles.rows}>{children}</View>
   </View>;
 }
@@ -673,7 +712,7 @@ function humanize(value: string) {
 const styles = StyleSheet.create({
   policyCopyCard: { marginHorizontal: 8, marginTop: 12, padding: 12, borderRadius: 10, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE5EF', gap: 7 },
   policyCopyHeading: { flexDirection: 'row', alignItems: 'center', gap: 7 },
-  submittedByName: { fontSize: 10, fontWeight: '800', color: '#17365D', textAlign: 'right' },
+  submittedByName: { fontSize: 10, fontWeight: '500', color: '#17365D', textAlign: 'right', lineHeight: 15 },
   duplicatePanel: { marginHorizontal: 8, marginTop: 12, padding: 12, borderRadius: 10, backgroundColor: '#FFF1F2', borderWidth: 1, borderColor: '#FECACA', gap: 7 },
   duplicateHeader: { flexDirection: 'row', alignItems: 'center', gap: 7 },
   duplicateTitle: { color: '#A91F3B', fontSize: 11, fontWeight: '800', letterSpacing: 0.3 },
@@ -692,6 +731,7 @@ const styles = StyleSheet.create({
   summaryLine: { marginTop: 3, color: '#64748B', fontSize: 11, lineHeight: 16 },
   statusHelp: { marginTop: 4, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
   statusMeta: { maxWidth: '42%', alignItems: 'flex-end', gap: 5 },
+  statusMetaDuplicate: { paddingTop: 9 },
   statusBadge: { maxWidth: '100%', borderRadius: 999, paddingHorizontal: 9, paddingVertical: 5 },
   statusBadgeCompleted: { backgroundColor: '#E8F7EE' },
   statusBadgeRejected: { backgroundColor: '#FDECEC' },
@@ -742,5 +782,12 @@ const styles = StyleSheet.create({
   detailRowLast: { borderBottomWidth: 0 },
   detailLabel: { color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
   detailValue: { flex: 1, color: partnerTheme.colors.ink, textAlign: 'right', ...partnerTheme.typography.caption },
+  bottomNav: { height: 58, flexDirection: 'row', alignItems: 'center', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#DDE3EC', backgroundColor: '#FFFFFF' },
+  navItem: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  navDisabled: { opacity: 0.35 },
+  navIconWrap: { minWidth: 36, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  navIconWrapActive: { backgroundColor: '#EEE9FF' },
+  navLabel: { marginTop: 1, color: '#60738F', fontSize: 7.5, lineHeight: 10, fontWeight: '600' },
+  navLabelActive: { color: '#633DF1', fontWeight: '800' },
   pressed: { backgroundColor: partnerTheme.colors.pressed },
 });
