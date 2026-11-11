@@ -71,7 +71,8 @@ export function PartnerSessionProvider({ children }: PropsWithChildren) {
       }
       contextRef.current = nextContext;
       setContext(nextContext);
-      const nextAvatar = await getPartnerProfilePhotoUrl(nextContext.identity.auth_user_id);
+      // Profile pictures are optional and must never block an authorized login.
+      const nextAvatar = await getPartnerProfilePhotoUrl(nextContext.identity.auth_user_id).catch(() => null);
       setAvatarUri(nextAvatar);
       lastAvatarResolvedAt.current = Date.now();
       setStatus('ready');
@@ -116,7 +117,7 @@ export function PartnerSessionProvider({ children }: PropsWithChildren) {
       return null;
     }
 
-    const nextAvatar = await getPartnerProfilePhotoUrl(authUserId);
+    const nextAvatar = await getPartnerProfilePhotoUrl(authUserId).catch(() => null);
     setAvatarUri(nextAvatar);
     lastAvatarResolvedAt.current = Date.now();
     return nextAvatar;
