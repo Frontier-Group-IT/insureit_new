@@ -117,7 +117,7 @@ assert.match(detail, /View Earlier Intake/, 'Earlier intake duplicates must link
 assert.match(detail, /row.attention_reason && row.status !== 'duplicate'/, 'Duplicate must not offer replacement actions');
 assert.match(detail, /!\['completed', 'rejected', 'duplicate'\]\.includes\(row.status\)/, 'Duplicate must not offer review actions');
 assert.match(api, /export function partnerPolicyIntakeMatchUrl\(path: string\)/, 'Match destination must use trusted portal URL validation');
-assert.ok(api.includes(String.raw`/^\/policies\/`), 'Registered policy URL must use the existing policy edit route');
+assert.ok(api.includes(String.raw`/^\/policies\/`), 'Registered policy URL must use the existing policy details view route');
 assert.ok(api.includes(String.raw`/^\/policy-intakes\/`), 'Earlier intake URL must use existing intake detail route');
 
 console.log('Partner app resilient policy intake page loading regression passed');
