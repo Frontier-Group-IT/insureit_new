@@ -5,7 +5,10 @@ const app = readFileSync('app/policy-intakes.tsx', 'utf8');
 const api = readFileSync('lib/policy-intakes.ts', 'utf8');
 const route = readFileSync('../web-portal/app/api/partner/policy-intakes/route.ts', 'utf8');
 
-assert.match(app, /useState<IntakeFilter>\('all'\)/, 'Keep all-submissions default');
+assert.match(app, /useState<IntakeFilter>\('action_required'\)/, 'Select Action Required by default on Policy Intake');
+assert.match(app, /<Ionicons name="list" size=\{17\} color="#0860C8" \/>/, 'See all uses the reference list icon');
+assert.doesNotMatch(app, /<Ionicons name="chevron-down" size=\{13\} color="#3156B8" \/>/, 'See all does not show a dropdown arrow');
+assert.match(app, /seeAllButton:\s*\{[^}]*borderRadius:\s*18/, 'See all retains the rounded pill treatment');
 assert.match(app, /const \[showAllStatuses, setShowAllStatuses\] = useState\(false\)/, 'See all sheet defaults closed');
 assert.match(app, /accessibilityLabel="See all Policy Intake statuses"/, 'A visible See all control opens the selection sheet');
 assert.match(app, /onPress=\{\(\) => setShowAllStatuses\(true\)\}/, 'See all must open the sheet');
