@@ -280,11 +280,16 @@ export function buildPolicyOcrOnboardingUpdate(input: OcrApplyInput): OcrApplyRe
   // the portal manufacturer dropdown uses the verified OEM Bajaj Auto.
   // Keep the raw OCR make unchanged for audit and restrict the alias to
   // the exact model and two-wheeler classification.
-  const isIciciChetakElectric = /^CHETAK$/i.test(byKey.get("vehicle_make")?.value.trim() ?? "")
-    && /^(?:C3001|C3503)$/i.test(byKey.get("vehicle_model")?.value.trim() ?? "")
-    && next.vehicleClass === "TWP"
-    && byKey.get("vehicle_fuel_type")?.value.trim().toLowerCase() === "electric"
-    && byKey.get("vehicle_motor_power_kw")?.value.trim() === "4.2";
+  const chetakIdentity = /^CHETAK$/i.test(byKey.get("vehicle_make")?.value.trim() ?? "")
+    && next.vehicleClass === "TWP";
+  // Preserve the existing C3001 alias. C3503 requires independently
+  // extracted electric and 4.2 kW evidence from the matching schedule.
+  const isIciciChetakElectric = chetakIdentity && (
+    /^C3001$/i.test(byKey.get("vehicle_model")?.value.trim() ?? "")
+    || (/^C3503$/i.test(byKey.get("vehicle_model")?.value.trim() ?? "")
+      && byKey.get("vehicle_fuel_type")?.value.trim().toLowerCase() === "electric"
+      && byKey.get("vehicle_motor_power_kw")?.value.trim() === "4.2")
+  );
   setText("vehicle_make", (value) => { next.make = value; }, (raw) =>
     manufacturer(isIciciChetakElectric ? "Bajaj Auto" : raw, input.manufacturers));
   setText("vehicle_model", (value) => { next.model = value; }, (raw) => {
