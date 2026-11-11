@@ -37,8 +37,8 @@ assert.ok(screen.includes('showsHorizontalScrollIndicator'), 'Wide register pres
 
 const sessionSource = readFileSync(new URL('../lib/partner-session.ts', import.meta.url), 'utf8');
 const providerSource = readFileSync(new URL('../providers/partner-session-provider.tsx', import.meta.url), 'utf8');
-const permissionEndpoint = readFileSync(new URL('../../../web-portal/app/api/partner/effective-permissions/route.ts', import.meta.url), 'utf8');
-const commercialAccess = readFileSync(new URL('../../../web-portal/lib/policy-commercial-access.ts', import.meta.url), 'utf8');
+const permissionEndpoint = readFileSync(new URL('../../web-portal/app/api/partner/effective-permissions/route.ts', import.meta.url), 'utf8');
+const commercialAccess = readFileSync(new URL('../../web-portal/lib/policy-commercial-access.ts', import.meta.url), 'utf8');
 const migration = readFileSync(new URL('../../../supabase/migrations/20261111173000_partner_insurer_register_commercial_authorization.sql', import.meta.url), 'utf8');
 assert.ok(screen.includes("const canViewCommercials = employee && context?.can_view_insurer_commercials === true"), 'Fail closed on commercial permission');
 assert.ok(screen.includes("...(canViewCommercials ? [{ key: 'payin' as const") && screen.includes("{ key: 'retention' as const"), 'Commercial columns require permission');
