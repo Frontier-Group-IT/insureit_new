@@ -138,6 +138,13 @@ jobs:
           assert 'V2 FULL RECOVERY NOT CERTIFIED' in restore_steps
           assert 'V2 ISOLATED RECOVERY CHECK PASSED' in restore_steps
           assert '--verbose --single-transaction --exit-on-error' in restore_steps
+          assert 'V2 OFFLINE ADMIN PRECHECK PASSED' in restore_steps
+          assert '--username=supabase_admin' in restore_steps
+          assert '--host=127.0.0.1' in restore_steps
+          assert '--network none' in restore_steps
+          assert 'PGPASSWORD=ephemeral-v2-recovery-only' in restore_steps
+          assert 'supabase_admin' in pathlib.Path('scripts/backup/verify_postgres_v2_rows.py').read_text()
+          assert 'ephemeral-v2-recovery-only' in pathlib.Path('scripts/backup/verify_postgres_v2_rows.py').read_text()
           assert 'v2-restore-no-acl.log' in restore_steps
           assert 'verify_postgres_v2_rows.py' in restore_steps
           assert 'audit_postgres_v2_toc.py' in restore_steps and 'audit_postgres_v2_toc.py' in backup_steps
@@ -336,7 +343,7 @@ jobs:
           set -euo pipefail
           trap 'docker rm -f -v insureit-v2-restore-check >/dev/null 2>&1 || true; rm -f "$RUNNER_TEMP/v2-smoke.sql" "$RUNNER_TEMP/v2-smoke-data.sql" "$RUNNER_TEMP/v2-smoke-toc.txt" "$RUNNER_TEMP/v2-smoke.log"' EXIT
           docker run -d --name insureit-v2-restore-check --network none \
-            --env POSTGRES_PASSWORD=ephemeral-synthetic-only \
+            --env POSTGRES_PASSWORD=ephemeral-v2-recovery-only \
             --env POSTGRES_DB=postgres \
             supabase/postgres:17.6.1.136 >/dev/null
           ready=0
@@ -380,15 +387,50 @@ jobs:
           docker cp "$RUNNER_TEMP/v2-smoke.sql" insureit-v2-restore-check:/tmp/v2-smoke.sql
           docker exec -u postgres insureit-v2-restore-check \
             psql -X -v ON_ERROR_STOP=1 -d v2_synthetic -f /tmp/v2-smoke.sql > "$RUNNER_TEMP/v2-smoke.log" 2>&1
+          # Construct a synthetic function using an untrusted language.
+          # The offline image's ordinary postgres role cannot restore it;
+          # only the image's independently verified superuser can.
+          docker exec -u postgres --env PGPASSWORD=ephemeral-v2-recovery-only \
+            insureit-v2-restore-check \
+            psql -h 127.0.0.1 -U supabase_admin -X -v ON_ERROR_STOP=1 \
+              -d v2_synthetic -c \
+              "CREATE FUNCTION public.insureit_synthetic_internal(cstring) RETURNS integer AS 'int4in' LANGUAGE internal;" \
+            > "$RUNNER_TEMP/v2-smoke.log" 2>&1
           docker exec -u postgres insureit-v2-restore-check \
             pg_dump -Fc -f /tmp/synthetic.dump v2_synthetic > "$RUNNER_TEMP/v2-smoke.log" 2>&1
           docker exec -u postgres insureit-v2-restore-check \
             pg_restore --list /tmp/synthetic.dump > "$RUNNER_TEMP/v2-smoke-toc.txt" 2>/dev/null
           python scripts/backup/audit_postgres_v2_toc.py "$RUNNER_TEMP/v2-smoke-toc.txt"
-          docker exec -u postgres insureit-v2-restore-check createdb -T template0 insureit_verify
           docker exec -u postgres insureit-v2-restore-check \
+            createdb -T template0 insureit_unprivileged
+          if docker exec -u postgres insureit-v2-restore-check \
             pg_restore --single-transaction --exit-on-error --no-owner \
+              -d insureit_unprivileged /tmp/synthetic.dump \
+              > "$RUNNER_TEMP/v2-smoke.log" 2>&1; then
+            echo "V2 UNPRIVILEGED FUNCTION PROBE FAILED: unexpectedly restored untrusted language"
+            exit 1
+          fi
+          if ! grep -Eqi 'permission denied|superuser' "$RUNNER_TEMP/v2-smoke.log"; then
+            echo "V2 UNPRIVILEGED FUNCTION PROBE FAILED: unexpected error class"
+            exit 1
+          fi
+          echo "V2 UNPRIVILEGED FUNCTION PROBE PASSED: strict import rejected untrusted function"
+          docker exec -u postgres insureit-v2-restore-check createdb -T template0 insureit_verify
+          docker exec -u postgres --env PGPASSWORD=ephemeral-v2-recovery-only \
+            insureit-v2-restore-check \
+            pg_restore --host=127.0.0.1 --username=supabase_admin \
+              --single-transaction --exit-on-error --no-owner \
               -d insureit_verify /tmp/synthetic.dump > "$RUNNER_TEMP/v2-smoke.log" 2>&1
+          privileged_function="$(docker exec -u postgres --env PGPASSWORD=ephemeral-v2-recovery-only \
+            insureit-v2-restore-check \
+            psql -h 127.0.0.1 -U supabase_admin -XAt -v ON_ERROR_STOP=1 \
+              -d insureit_verify -c \
+              "select (to_regprocedure('public.insureit_synthetic_internal(cstring)') is not null)::int;")"
+          if [ "$privileged_function" != 1 ]; then
+            echo "V2 PRIVILEGED FUNCTION RESTORE FAILED: synthetic function missing"
+            exit 1
+          fi
+          echo "V2 PRIVILEGED FUNCTION RESTORE PASSED: all schema/data and restricted-language function"
           docker exec -u postgres insureit-v2-restore-check \
             pg_restore --data-only -f /tmp/v2-smoke-data.sql /tmp/synthetic.dump \
             > "$RUNNER_TEMP/v2-smoke.log" 2>&1
@@ -406,14 +448,81 @@ jobs:
           # denial, so it is an option/parity smoke, not proof of root cause.
           docker exec -u postgres insureit-v2-restore-check \
             createdb -T template0 insureit_verify_no_acl
-          docker exec -u postgres insureit-v2-restore-check \
-            pg_restore --single-transaction --exit-on-error --no-owner --no-acl \
+          docker exec -u postgres --env PGPASSWORD=ephemeral-v2-recovery-only \
+            insureit-v2-restore-check \
+            pg_restore --host=127.0.0.1 --username=supabase_admin \
+              --single-transaction --exit-on-error --no-owner --no-acl \
               -d insureit_verify_no_acl /tmp/synthetic.dump > "$RUNNER_TEMP/v2-smoke.log" 2>&1
-          no_acl_rows="$(docker exec -u postgres insureit-v2-restore-check \
-            psql -XAt -d insureit_verify_no_acl -c 'select count(*) from public.motor_policies;')"
+          no_acl_rows="$(docker exec -u postgres --env PGPASSWORD=ephemeral-v2-recovery-only \
+            insureit-v2-restore-check \
+            psql -h 127.0.0.1 -U supabase_admin -XAt \
+              -d insureit_verify_no_acl -c 'select count(*) from public.motor_policies;')"
           if [ "$no_acl_rows" != 1 ]; then
             echo "V2 NO-ACL SYNTHETIC IMPORT FAILED: missing business data"
             exit 1
           fi
           echo "V2 SYNTHETIC NO-ACL IMPORT PASSED: business records still imported (ACL assurance excluded)"
           echo "V2 SYNTHETIC FULL RESTORE PASSED: clean template0 + managed schema + strict data + all COPY parity + RLS"
+
+  offline_function_privilege_probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Read isolated PG17 role capability only; no credentials or business data
+        run: |
+          set -euo pipefail
+          trap 'docker rm -f -v insureit-v2-privilege-probe >/dev/null 2>&1 || true' EXIT
+          docker run -d --name insureit-v2-privilege-probe --network none \
+            -e POSTGRES_PASSWORD=ephemeral-synthetic-only \
+            -e POSTGRES_DB=postgres \
+            supabase/postgres:17.6.1.136 >/dev/null
+          ready=0
+          for i in $(seq 1 60); do
+            if docker exec insureit-v2-privilege-probe pg_isready -U postgres >/dev/null 2>&1; then
+              ready=1
+              break
+            fi
+            sleep 2
+          done
+          test "$ready" = 1
+          flags="$(docker exec -u postgres insureit-v2-privilege-probe \
+            psql -XAt -v ON_ERROR_STOP=1 -d postgres -c \
+            "select (select rolsuper::integer from pg_roles where rolname='postgres'),
+                    (select rolsuper::integer from pg_roles where rolname='supabase_admin'),
+                    pg_has_role('postgres','supabase_admin','SET')::integer;" 2>/dev/null)"
+          if ! [[ "$flags" =~ ^[01]\\|[01]\\|[01]$ ]]; then
+            echo "OFFLINE PG17 ROLE PROBE FAILED: unexpected role metadata"
+            exit 1
+          fi
+          echo "OFFLINE PG17 ROLE FLAGS (postgres-superuser|admin-superuser|can-set-admin): $flags"
+          if docker exec -u postgres insureit-v2-privilege-probe \
+            psql -XAt -v ON_ERROR_STOP=1 -d postgres -c \
+            "SET ROLE supabase_admin; SELECT rolsuper::integer FROM pg_roles WHERE rolname=current_user;" \
+            > "$RUNNER_TEMP/v2-role-probe.log" 2>&1; then
+            if grep -qx 1 "$RUNNER_TEMP/v2-role-probe.log"; then
+              echo "OFFLINE PG17 PRIVILEGED ROLE SWITCH: supported"
+            else
+              echo "OFFLINE PG17 PRIVILEGED ROLE SWITCH: unsupported or not superuser"
+            fi
+          else
+            echo "OFFLINE PG17 PRIVILEGED ROLE SWITCH: permission denied"
+          fi
+          # Authenticate the preinstalled isolated admin using only this
+          # disposable container's synthetic test password; no live secrets.
+          if docker exec -u postgres --env PGPASSWORD=ephemeral-synthetic-only \
+            insureit-v2-privilege-probe \
+            psql -h 127.0.0.1 -U supabase_admin -XAt -v ON_ERROR_STOP=1 -d postgres \
+            -c "SELECT rolsuper::integer FROM pg_roles WHERE rolname=current_user;" \
+            > "$RUNNER_TEMP/v2-role-probe.log" 2>&1; then
+            if grep -qx 1 "$RUNNER_TEMP/v2-role-probe.log"; then
+              echo "OFFLINE PG17 ADMIN AUTHENTICATION: supported"
+            else
+              echo "OFFLINE PG17 ADMIN AUTHENTICATION: unprivileged"
+            fi
+          else
+            echo "OFFLINE PG17 ADMIN AUTHENTICATION: unavailable"
+          fi
+          rm -f "$RUNNER_TEMP/v2-role-probe.log"

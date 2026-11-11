@@ -76,8 +76,16 @@ def restored_counts(counts):
         f"SELECT {i}::integer AS key, count(*)::bigint AS n FROM {quote(schema)}.{quote(table)}"
         for i, (schema, table) in enumerate(ordered)
     )
+    # The single-transaction restore is owned by the *offline* local
+    # supabase_admin superuser because raw functions may require untrusted
+    # language privileges. Query with the same isolated role: the offline
+    # 'postgres' role lacks rights over all newly restored admin-owned tables.
+    # This password is a public, synthetic value used ONLY in a disposable
+    # '--network none' container; it is never a Supabase production secret.
     proc = subprocess.run([
-        "docker", "exec", "-u", "postgres", CONTAINER, "psql",
+        "docker", "exec", "-u", "postgres",
+        "--env", "PGPASSWORD=ephemeral-v2-recovery-only",
+        CONTAINER, "psql", "-h", "127.0.0.1", "-U", "supabase_admin",
         "-X", "-q", "-A", "-t", "-v", "ON_ERROR_STOP=1",
         "-d", DATABASE, "-c", query,
     ], capture_output=True, text=True, check=False, timeout=180)
