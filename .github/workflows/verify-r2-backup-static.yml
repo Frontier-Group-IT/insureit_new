@@ -587,6 +587,63 @@ jobs:
           else
             echo "OFFLINE RESERVED ROLE BOOTSTRAP: rejected"
           fi
+          # Build a real custom dump whose GRANT references a role
+          # absent from the later target. This reproduces the new failure
+          # class with synthetic rows and no production access.
+          missing_role="$(docker exec -u postgres insureit-roles-probe \
+            psql -XAt -v ON_ERROR_STOP=1 -d postgres -c \
+            "select name from (values ('anon'),('authenticated'),
+              ('authenticator'),('cli_login_postgres'),('dashboard_user'),
+              ('postgres'),('service_role'),('supabase_admin'),
+              ('supabase_auth_admin'),('supabase_etl_admin'),
+              ('supabase_privileged_role'),('supabase_read_only_user'),
+              ('supabase_realtime_admin'),('supabase_replication_admin'),
+              ('supabase_storage_admin')) as expected(name)
+              where not exists (select 1 from pg_roles r where r.rolname = expected.name)
+              order by name limit 1;")"
+          if [ -n "$missing_role" ]; then
+            if ! [[ "$missing_role" =~ ^[a-z][a-z0-9_]{0,62}$ ]]; then
+              echo "OFFLINE ROLE REPLAY FIXTURE FAILED: unexpected identifier"
+              exit 1
+            fi
+            docker exec -u postgres --env PGPASSWORD=ephemeral-role-probe-only \
+              insureit-roles-probe psql -h 127.0.0.1 -U supabase_admin \
+              -X -v ON_ERROR_STOP=1 -d postgres -c \
+              "CREATE ROLE \"$missing_role\" NOLOGIN;" \
+              > "$RUNNER_TEMP/role-probe.log" 2>&1
+            docker exec -u postgres insureit-roles-probe createdb -T template0 synthetic_source
+            docker exec -u postgres insureit-roles-probe psql -X -v ON_ERROR_STOP=1 \
+              -d synthetic_source -c \
+              "CREATE TABLE public.synthetic_grant_test (id integer PRIMARY KEY);
+               INSERT INTO public.synthetic_grant_test VALUES (1);
+               GRANT SELECT ON public.synthetic_grant_test TO \"$missing_role\";" \
+              > "$RUNNER_TEMP/role-probe.log" 2>&1
+            docker exec -u postgres insureit-roles-probe \
+              pg_dump -Fc -f /tmp/synthetic_roles.dump synthetic_source \
+              > "$RUNNER_TEMP/role-probe.log" 2>&1
+            docker exec -u postgres insureit-roles-probe psql -X -v ON_ERROR_STOP=1 \
+              -d synthetic_source -c \
+              "REVOKE SELECT ON public.synthetic_grant_test FROM \"$missing_role\";" \
+              > "$RUNNER_TEMP/role-probe.log" 2>&1
+            docker exec -u postgres --env PGPASSWORD=ephemeral-role-probe-only \
+              insureit-roles-probe psql -h 127.0.0.1 -U supabase_admin \
+              -X -v ON_ERROR_STOP=1 -d postgres -c "DROP ROLE \"$missing_role\";" \
+              > "$RUNNER_TEMP/role-probe.log" 2>&1
+            docker exec -u postgres insureit-roles-probe createdb -T template0 synthetic_target
+            if docker exec -u postgres --env PGPASSWORD=ephemeral-role-probe-only \
+              insureit-roles-probe pg_restore -h 127.0.0.1 -U supabase_admin \
+              --single-transaction --exit-on-error --no-owner \
+              -d synthetic_target /tmp/synthetic_roles.dump \
+              > "$RUNNER_TEMP/role-probe.log" 2>&1; then
+              echo "OFFLINE MISSING-ROLE SMOKE FAILED: grant unexpectedly succeeded"
+              exit 1
+            fi
+            if ! grep -Eqi 'role .+ does not exist' "$RUNNER_TEMP/role-probe.log"; then
+              echo "OFFLINE MISSING-ROLE SMOKE FAILED: unexpected failure class"
+              exit 1
+            fi
+            echo "OFFLINE MISSING-ROLE FAILURE REPRODUCED: strict synthetic grant required absent role"
+          fi
           # Test bootstrap in this *same* network-disabled container using
           # fixed names from the source role metadata; never in production.
           docker cp scripts/backup/fixtures/isolated_source_role_names.sql \
@@ -625,4 +682,32 @@ jobs:
             exit 1
           fi
           echo "OFFLINE ROLE BOOTSTRAP PRIVILEGE BOUNDARY PASS: synthetic roles are non-superuser"
+          if [ -n "$missing_role" ]; then
+            # Previous restore's single transaction rolled back. With only
+            # exact source-catalog role names added, ALL original archive
+            # objects and ACLs must restore without omitting any entries.
+            docker exec -u postgres --env PGPASSWORD=ephemeral-role-probe-only \
+              insureit-roles-probe pg_restore -h 127.0.0.1 -U supabase_admin \
+              --single-transaction --exit-on-error --no-owner \
+              -d synthetic_target /tmp/synthetic_roles.dump \
+              > "$RUNNER_TEMP/role-probe.log" 2>&1
+            parity="$(docker exec -u postgres --env PGPASSWORD=ephemeral-role-probe-only \
+              insureit-roles-probe psql -h 127.0.0.1 -U supabase_admin \
+              -XAt -v ON_ERROR_STOP=1 -d synthetic_target -c \
+              "SELECT (count(*) = 1)::integer FROM public.synthetic_grant_test;")"
+            if [ "$parity" != 1 ]; then
+              echo "OFFLINE MISSING-ROLE REPLAY FAILED: synthetic row parity"
+              exit 1
+            fi
+            synthetic_acl="$(docker exec -u postgres --env PGPASSWORD=ephemeral-role-probe-only \
+              insureit-roles-probe psql -h 127.0.0.1 -U supabase_admin \
+              -XAt -v ON_ERROR_STOP=1 -d synthetic_target -c \
+              "SELECT has_table_privilege('$missing_role',
+                'public.synthetic_grant_test', 'SELECT')::integer;")"
+            if [ "$synthetic_acl" != 1 ]; then
+              echo "OFFLINE MISSING-ROLE REPLAY FAILED: original synthetic grant missing"
+              exit 1
+            fi
+            echo "OFFLINE MISSING-ROLE STRICT REPLAY PASS: ACL and data restored with allowlisted placeholder"
+          fi
 
