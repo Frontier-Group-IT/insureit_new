@@ -209,7 +209,16 @@ export default function PolicyIntakeDetailScreen() {
               </View>
               <View style={styles.statusBody}>
                 <Text numberOfLines={1} style={styles.intakeNumber}>{row.intake_number}</Text>
-
+                {row.status === 'duplicate' ? (
+                  <View style={styles.intakeSummaryCompact}>
+                    <Text numberOfLines={1} style={styles.summaryLine}>{[row.customer_mobile, row.lead_source_name].filter(Boolean).join(' · ')}</Text>
+                    <Text numberOfLines={1} style={styles.summaryLine}>
+                      {[fields.get('policy_number')?.value?.trim() || 'Policy pending',
+                        fields.get('vehicle_registration_number')?.value?.trim()
+                          || (row.policy_type === 'motor' ? 'Vehicle pending' : 'Policy details pending')].join(' · ')}
+                    </Text>
+                  </View>
+                ) : null}
               </View>
               <View style={[styles.statusMeta, row.status === 'duplicate' && styles.statusMetaDuplicate]}>
                 {row.status === 'duplicate' ? (
@@ -222,7 +231,7 @@ export default function PolicyIntakeDetailScreen() {
                 <Text style={styles.statusDate}>{formatDate(row.updated_at)}</Text>
               </View>
             </View>
-            <View style={styles.intakeSummary}>
+            {row.status !== 'duplicate' ? <View style={styles.intakeSummary}>
               <Text numberOfLines={1} style={styles.summaryLine}>{[row.customer_mobile, row.lead_source_name].filter(Boolean).join(' · ')}</Text>
               <Text numberOfLines={1} style={styles.summaryLine}>
                 {[fields.get('policy_number')?.value?.trim() || 'Policy pending',
@@ -231,8 +240,8 @@ export default function PolicyIntakeDetailScreen() {
               </Text>
               {row.status !== 'duplicate' && row.status !== 'ready_for_review'
                 ? <Text style={styles.statusHelp}>{statusHelp(row)}</Text> : null}
-            </View>
-            <IntakeProgress row={row} />
+            </View> : null}
+            {row.status !== 'duplicate' ? <IntakeProgress row={row} /> : null}
           </View>
 
           {row.final_policy_id ? (
@@ -301,11 +310,11 @@ export default function PolicyIntakeDetailScreen() {
                   ? `Policy ${row.duplicate_match.policy_number} already exists in the Policy Register.`
                   : `Policy ${row.duplicate_match.policy_number} was already submitted under ${row.duplicate_match.intake_number}.`}
               </Text>
-              <Text style={styles.duplicateHint}>Review and Policy Onboarding actions are disabled for this intake.</Text>
               {row.duplicate_match.target_path ? (
                 <Pressable
                   accessibilityRole="button"
                   accessibilityLabel={row.duplicate_match.kind === 'registered_policy' ? 'View Existing Policy' : 'View Earlier Intake'}
+                  accessibilityHint={row.duplicate_match.kind === 'registered_policy' ? 'Opens the matched policy record. Editing is available only where Operations permits it.' : 'Opens the earlier policy intake in Operations.'}
                   onPress={() => void openDuplicateMatch()}
                   style={({ pressed }) => [styles.duplicateLink, pressed && styles.pressed]}
                 >
@@ -717,7 +726,6 @@ const styles = StyleSheet.create({
   duplicateHeader: { flexDirection: 'row', alignItems: 'center', gap: 7 },
   duplicateTitle: { color: '#A91F3B', fontSize: 11, fontWeight: '800', letterSpacing: 0.3 },
   duplicateText: { color: '#9F2436', fontSize: 11, lineHeight: 17 },
-  duplicateHint: { color: '#B42338', fontSize: 10, lineHeight: 15 },
   duplicateLink: { alignSelf: 'flex-start', minHeight: 34, flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 12, borderRadius: 8, borderWidth: 1, borderColor: '#FECACA', backgroundColor: '#FFFFFF' },
   duplicateLinkText: { color: '#9F2436', fontSize: 11, fontWeight: '700' },
   banner: { marginBottom: 10 },
@@ -728,6 +736,7 @@ const styles = StyleSheet.create({
   statusBody: { flex: 1, minWidth: 0, paddingTop: 2 },
   intakeNumber: { color: partnerTheme.colors.ink, ...partnerTheme.typography.sectionTitle },
   intakeSummary: { marginTop: 5, paddingLeft: 44, paddingRight: 2 },
+  intakeSummaryCompact: { marginTop: 0, marginBottom: 0 },
   summaryLine: { marginTop: 3, color: '#64748B', fontSize: 11, lineHeight: 16 },
   statusHelp: { marginTop: 4, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
   statusMeta: { maxWidth: '42%', alignItems: 'flex-end', gap: 5 },
