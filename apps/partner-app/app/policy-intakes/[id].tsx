@@ -209,16 +209,16 @@ export default function PolicyIntakeDetailScreen() {
               </View>
               <View style={styles.statusBody}>
                 <Text numberOfLines={1} style={styles.intakeNumber}>{row.intake_number}</Text>
-                {row.status === 'duplicate' ? (
-                  <View style={styles.intakeSummaryCompact}>
-                    <Text numberOfLines={1} style={styles.summaryLine}>{[row.customer_mobile, row.lead_source_name].filter(Boolean).join(' · ')}</Text>
-                    <Text numberOfLines={1} style={styles.summaryLine}>
-                      {[fields.get('policy_number')?.value?.trim() || 'Policy pending',
-                        fields.get('vehicle_registration_number')?.value?.trim()
-                          || (row.policy_type === 'motor' ? 'Vehicle pending' : 'Policy details pending')].join(' · ')}
-                    </Text>
-                  </View>
-                ) : null}
+                <View style={styles.intakeSummaryCompact}>
+                  <Text numberOfLines={1} style={styles.summaryLine}>{[row.customer_mobile, row.lead_source_name].filter(Boolean).join(' · ')}</Text>
+                  <Text numberOfLines={1} style={styles.summaryLine}>
+                    {[fields.get('policy_number')?.value?.trim() || 'Policy pending',
+                      fields.get('vehicle_registration_number')?.value?.trim()
+                        || (row.policy_type === 'motor' ? 'Vehicle pending' : 'Policy details pending')].join(' · ')}
+                  </Text>
+                  {row.status !== 'duplicate' && row.status !== 'ready_for_review'
+                    ? <Text style={styles.statusHelp}>{statusHelp(row)}</Text> : null}
+                </View>
               </View>
               <View style={[styles.statusMeta, row.status === 'duplicate' && styles.statusMetaDuplicate]}>
                 {row.status === 'duplicate' ? (
@@ -231,16 +231,6 @@ export default function PolicyIntakeDetailScreen() {
                 <Text style={styles.statusDate}>{formatDate(row.updated_at)}</Text>
               </View>
             </View>
-            {row.status !== 'duplicate' ? <View style={styles.intakeSummary}>
-              <Text numberOfLines={1} style={styles.summaryLine}>{[row.customer_mobile, row.lead_source_name].filter(Boolean).join(' · ')}</Text>
-              <Text numberOfLines={1} style={styles.summaryLine}>
-                {[fields.get('policy_number')?.value?.trim() || 'Policy pending',
-                  fields.get('vehicle_registration_number')?.value?.trim()
-                    || (row.policy_type === 'motor' ? 'Vehicle pending' : 'Policy details pending')].join(' · ')}
-              </Text>
-              {row.status !== 'duplicate' && row.status !== 'ready_for_review'
-                ? <Text style={styles.statusHelp}>{statusHelp(row)}</Text> : null}
-            </View> : null}
             {row.status !== 'duplicate' ? <IntakeProgress row={row} /> : null}
           </View>
 
@@ -355,7 +345,7 @@ export default function PolicyIntakeDetailScreen() {
                 </ReviewBlock>
                 <ReviewBlock title="Policy & premium">
                   {policyReviewKeys.map(([key, label]) => (
-                    <ReviewPair key={key} label={label} value={fields.get(key)?.value} confidence={fields.get(key)?.confidence} />
+                    <ReviewPair key={key} label={label} value={key === 'insurer_name' ? shortInsurerName(fields.get(key)?.value) : fields.get(key)?.value} confidence={fields.get(key)?.confidence} />
                   ))}
                 </ReviewBlock>
                   </>
@@ -510,6 +500,38 @@ function ReviewBlock({title,children}:{title:string;children:ReactNode}) {
     <View style={reviewStyles.rows}>{children}</View>
   </View>;
 }
+function shortInsurerName(fullName?: string | null): string {
+  const name = fullName?.trim() ?? '';
+  if (!name) return '';
+  // Presentation-only aliases: preserve the exact insurer name in OCR, review and backend.
+  const aliases: Array<[RegExp, string]> = [
+    [/\bicici\s*lombard\b/i, 'ICICI Lombard'],
+    [/\bhdfc\s*ergo\b/i, 'HDFC ERGO'],
+    [/\bbajaj\s*allianz\b/i, 'Bajaj Allianz'],
+    [/\btata\s*aig\b/i, 'Tata AIG'],
+    [/\bsbi\s*general\b/i, 'SBI General'],
+    [/\biffco\s*tokio\b/i, 'IFFCO Tokio'],
+    [/\breliance\s*general\b/i, 'Reliance General'],
+    [/\broyal\s*sundaram\b/i, 'Royal Sundaram'],
+    [/\bnew\s*india\s*assurance\b/i, 'New India Assurance'],
+    [/\bunited\s*india\s*insurance\b/i, 'United India'],
+    [/\boriental\s*insurance\b/i, 'Oriental Insurance'],
+    [/\bnational\s*insurance\b/i, 'National Insurance'],
+    [/\bshriram\s*general\b/i, 'Shriram General'],
+    [/\bchola(?:mandalam)?\s*ms\b/i, 'Chola MS'],
+    [/\buniversal\s*sompo\b/i, 'Universal Sompo'],
+    [/\bgo\s*digit\b/i, 'Digit'],
+    [/\backo\b/i, 'ACKO'],
+    [/\bliberty\s*general\b/i, 'Liberty General'],
+    [/\bkotak\s*mahindra\b/i, 'Kotak Mahindra'],
+    [/\bfuture\s*generali\b/i, 'Future Generali'],
+    [/\bmagma\s*hdi\b/i, 'Magma HDI'],
+    [/\bzuno\b/i, 'Zuno'],
+  ];
+  return aliases.find(([pattern]) => pattern.test(name))?.[1]
+    ?? name.replace(/\s+(?:General\s+)?Insurance\s+(?:Company\s+)?(?:Limited|Ltd\.?|Co\.?\s*Ltd\.?)$/i, '').trim();
+}
+
 function ReviewPair({label,value,confidence}:{label:string;value?:string|null;confidence?:number|null}) {
   const caution=typeof confidence === 'number' && confidence < .9;
   return <View style={reviewStyles.pair}>
@@ -735,9 +757,8 @@ const styles = StyleSheet.create({
   statusLogo: { width: 38, height: 38 },
   statusBody: { flex: 1, minWidth: 0, paddingTop: 2 },
   intakeNumber: { color: partnerTheme.colors.ink, ...partnerTheme.typography.sectionTitle },
-  intakeSummary: { marginTop: 5, paddingLeft: 44, paddingRight: 2 },
-  intakeSummaryCompact: { marginTop: 0, marginBottom: 0 },
-  summaryLine: { marginTop: 3, color: '#64748B', fontSize: 11, lineHeight: 16 },
+  intakeSummaryCompact: { marginTop: 2, marginBottom: 0 },
+  summaryLine: { marginTop: 1, color: '#64748B', fontSize: 11, lineHeight: 16 },
   statusHelp: { marginTop: 4, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
   statusMeta: { maxWidth: '42%', alignItems: 'flex-end', gap: 5 },
   statusMetaDuplicate: { paddingTop: 9 },
