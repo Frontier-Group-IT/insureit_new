@@ -45,7 +45,8 @@ assert.doesNotMatch(motion, /background: #dcfce7|background: #bbf7d0/, "No green
 assert.match(operations, /isCompleted \? "bg-\[#16A34A\] text-white/, "Keep filled green tick indicator");
 assert.match(spotWorkspace, /<section data-claim-document-verification="true"/, "Operations Stage 1 document verification must remain permanently visible.");
 assert.doesNotMatch(spotWorkspace, /<details data-claim-document-verification="true"/, "The main document verification panel must not be collapsible.");
-assert.doesNotMatch(spotWorkspace, /<summary className=/, "The main document verification heading must not toggle its document cards.");
+const verificationPanel = spotWorkspace.slice(spotWorkspace.indexOf('<section data-claim-document-verification="true"'), spotWorkspace.indexOf("</section>", spotWorkspace.indexOf('<section data-claim-document-verification="true"')));
+assert.doesNotMatch(verificationPanel, /<summary\b/, "Only the separate bulk unclassified list may collapse; the main Document Verification heading must not toggle its cards.");
 assert.match(spotWorkspace, /\{verifiedCount\} \/ \{items\.length\}/, "Keep the existing document verification counter.");
 assert.match(spotWorkspace, /<BulkDocumentVerificationGroup item=\{item\} claim=\{claim\} verifications=\{verifications\}/, "Preserve per-category document verification actions.");
 console.log("Operations internal/external claim motion parity and always-visible Document Verification regression passed.");
