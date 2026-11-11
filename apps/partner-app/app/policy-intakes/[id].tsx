@@ -165,6 +165,7 @@ export default function PolicyIntakeDetailScreen() {
     <PartnerScreen
       title="Policy Intake"
       navyTopBar
+      topBarIcon="document-text-outline"
       onBack={() => router.back()}
     >
       {submitted === '1' && row ? (
@@ -200,15 +201,16 @@ export default function PolicyIntakeDetailScreen() {
           <View style={styles.statusCard}>
             <View style={styles.statusTop}>
               <View style={styles.statusLogoWrap}>
-                <PartnerInsurerLogo
-                  name={fields.get('insurer_name')?.value}
-                  fallback={PartnerAssets.navigation.policies}
-                  style={styles.statusLogo}
-                  accessibilityLabel={fields.get('insurer_name')?.value ? `${fields.get('insurer_name')?.value} logo` : 'Insurer'}
-                />
+                <Ionicons name="document-text-outline" size={27} color="#17365D" />
               </View>
               <View style={styles.statusBody}>
                 <Text numberOfLines={1} style={styles.intakeNumber}>{row.intake_number}</Text>
+                <Text numberOfLines={1} style={styles.summaryLine}>{[row.customer_mobile, row.lead_source_name].filter(Boolean).join(' · ')}</Text>
+                <Text numberOfLines={1} style={styles.summaryLine}>
+                  {[fields.get('policy_number')?.value?.trim() || 'Policy pending',
+                    fields.get('vehicle_registration_number')?.value?.trim()
+                      || (row.policy_type === 'motor' ? 'Vehicle pending' : 'Policy details pending')].join(' · ')}
+                </Text>
                 {row.status !== 'duplicate' ? <Text style={styles.statusHelp}>{statusHelp(row)}</Text> : null}
               </View>
               <View style={styles.statusMeta}>
@@ -464,7 +466,7 @@ function ReviewPair({label,value,source,confidence}:{label:string;value?:string|
   </View>;
 }
 const reviewStyles=StyleSheet.create({
-  sheet:{marginHorizontal:8,marginTop:9,marginBottom:8,borderWidth:1,borderColor:'#DCE5EF',borderRadius:12,backgroundColor:'#FFFFFF',padding:10,gap:8},
+  sheet:{marginHorizontal:-partnerTheme.spacing.lg,marginTop:9,marginBottom:8,borderWidth:1,borderColor:'#DCE5EF',borderRadius:10,backgroundColor:'#FFFFFF',padding:10,gap:8},
   sheetTitle:{fontSize:14,fontWeight:'800',color:'#17365D'},
   sheetCaption:{fontSize:10,color:'#65768D'},
   emptyVehicle:{fontSize:10,color:'#68758A',paddingVertical:10},
@@ -667,10 +669,10 @@ function humanize(value: string) {
 }
 
 const styles = StyleSheet.create({
-  policyCopyCard: { marginHorizontal: 12, marginTop: 12, padding: 12, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE5EF', gap: 7 },
+  policyCopyCard: { marginHorizontal: -partnerTheme.spacing.lg, marginTop: 12, padding: 12, borderRadius: 10, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE5EF', gap: 7 },
   policyCopyHeading: { flexDirection: 'row', alignItems: 'center', gap: 7 },
   submittedByName: { fontSize: 10, fontWeight: '800', color: '#17365D', textAlign: 'right' },
-  duplicatePanel: { marginHorizontal: 12, marginTop: 12, padding: 12, borderRadius: 12, backgroundColor: '#FFF1F2', borderWidth: 1, borderColor: '#FECACA', gap: 7 },
+  duplicatePanel: { marginHorizontal: -partnerTheme.spacing.lg, marginTop: 12, padding: 12, borderRadius: 10, backgroundColor: '#FFF1F2', borderWidth: 1, borderColor: '#FECACA', gap: 7 },
   duplicateHeader: { flexDirection: 'row', alignItems: 'center', gap: 7 },
   duplicateTitle: { color: '#A91F3B', fontSize: 11, fontWeight: '800', letterSpacing: 0.3 },
   duplicateText: { color: '#9F2436', fontSize: 11, lineHeight: 17 },
@@ -678,12 +680,13 @@ const styles = StyleSheet.create({
   duplicateLink: { alignSelf: 'flex-start', minHeight: 34, flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 12, borderRadius: 8, borderWidth: 1, borderColor: '#FECACA', backgroundColor: '#FFFFFF' },
   duplicateLinkText: { color: '#9F2436', fontSize: 11, fontWeight: '700' },
   banner: { marginBottom: 10 },
-  statusCard: { paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: partnerTheme.colors.line, backgroundColor: partnerTheme.colors.surface },
+  statusCard: { marginHorizontal: -partnerTheme.spacing.lg, paddingHorizontal: 12, paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: partnerTheme.colors.line, backgroundColor: partnerTheme.colors.surface },
   statusTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
-  statusLogoWrap: { width: 46, height: 46, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F7F8FB', borderWidth: 1, borderColor: partnerTheme.colors.line },
+  statusLogoWrap: { width: 34, height: 43, alignItems: 'center', justifyContent: 'center' },
   statusLogo: { width: 38, height: 38 },
   statusBody: { flex: 1, minWidth: 0, paddingTop: 2 },
   intakeNumber: { color: partnerTheme.colors.ink, ...partnerTheme.typography.sectionTitle },
+  summaryLine: { marginTop: 3, color: '#64748B', fontSize: 11, lineHeight: 16 },
   statusHelp: { marginTop: 4, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
   statusMeta: { maxWidth: '42%', alignItems: 'flex-end', gap: 5 },
   statusBadge: { maxWidth: '100%', borderRadius: 999, paddingHorizontal: 9, paddingVertical: 5 },
