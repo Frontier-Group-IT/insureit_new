@@ -8,6 +8,7 @@ function assert(condition, message) {
 
 assert(!page.includes('Back to Start Claim'), 'Back to Start Claim must be removed.');
 assert(page.includes('Accident &amp; Spot Intimation Details'), 'Reference section title must be present.');
+assert(page.includes('-mx-4 -mt-1 border-b border-[#D8E3F1] px-4 py-2 sm:-mx-5 sm:-mt-1'), 'Spot Intimation title and divider must sit lower inside the card.');
 assert(page.includes('Accident Date &amp; Time'), 'Accident date/time must be grouped.');
 assert(page.includes('Spot Intimation Date &amp; Time'), 'Spot intimation date/time must be grouped.');
 assert(page.includes('Driver Number'), 'Driver Number label must match the reference.');
@@ -19,6 +20,8 @@ assert(page.includes('gap-y-4 py-2'), 'Spot details card must provide additional
 
 const strip = fs.readFileSync(new URL('../components/customer-portal/customer-claim-stage-strip.tsx', import.meta.url), 'utf8');
 assert(strip.includes('centerSummaryIcons && (label === "Vehicle No." || label === "Policy Source")'), 'Summary icon alignment must be scoped to the two requested fields.');
+assert(strip.includes('centerSummaryIcons && label === "Vehicle No." ? <CustomerClaimLogo value={claimSummary.manufacturer} kind="vehicle" size={32} />'), 'Spot Intimation Vehicle No. must show manufacturer branding.');
+assert(strip.includes('centerSummaryIcons && label === "Policy Source" ? <CustomerClaimLogo value={claimSummary.insurer} kind="insurer" size={32} />'), 'Spot Intimation Policy Source must show insurer branding.');
 const uploads = fs.readFileSync(new URL('../components/customer-portal/customer-claim-multiple-upload.tsx', import.meta.url), 'utf8');
 assert(uploads.includes('const [expanded,setExpanded]=useState(false)'), 'Bulk files should start collapsed.');
 assert(uploads.includes('setExpanded(!returnToSpotIntimation);\n        router.refresh()'), 'Bulk uploads must collapse on Spot Intimation and retain existing expansion on other claim stages.');
