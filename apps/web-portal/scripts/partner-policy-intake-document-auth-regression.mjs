@@ -17,5 +17,5 @@ assert.ok(source.includes('query.or(predicates.join(","))'), 'Document query mus
 assert.ok(source.includes('.eq("id", id)'), 'Document query must pin the requested intake ID');
 assert.ok(source.includes('.createSignedUrl(intake.storage_path, 300)'), 'Only a short-lived signed URL is returned');
 assert.ok(!source.includes('console.log(token)'), 'Never log tokens');
-assert.ok(opener.includes('getPartnerPolicyIntakeDocumentUrl(row'), 'Avoid returning unsigned document URLs');
+assert.ok(opener.includes('apiRequest<{ ok: true; url: string }>'), 'Avoid returning unsigned document URLs');
 console.log('Partner Policy Intake document authentication regression passed');
