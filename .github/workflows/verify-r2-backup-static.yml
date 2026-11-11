@@ -650,6 +650,27 @@ jobs:
             sleep 2
           done
           test "$ready" = 1
+          # Image init runs extra SQL after pg_isready initially succeeds.
+          # Wait for the network-disabled local admin role to authenticate
+          # repeatedly, so role inventory never captures an intermediate
+          # catalog while the entrypoint is still creating managed roles.
+          stable_admin=0
+          for attempt in $(seq 1 45); do
+            if docker exec -u postgres --env PGPASSWORD=ephemeral-role-probe-only \
+              insureit-roles-probe psql -h 127.0.0.1 -U supabase_admin \
+              -XAt -v ON_ERROR_STOP=1 -d postgres -c 'SELECT 1' \
+              2>/dev/null | grep -qx 1; then
+              stable_admin=$((stable_admin + 1))
+              if [ "$stable_admin" -ge 4 ]; then break; fi
+            else
+              stable_admin=0
+            fi
+            sleep 2
+          done
+          if [ "$stable_admin" -lt 4 ]; then
+            echo "OFFLINE ADMIN STABILITY CHECK FAILED"
+            exit 1
+          fi
           # Exact names from read-only source pg_roles catalog: aggregate
           # only. No credentials, customer records or role names in public log.
           # pg_isready can turn positive during image startup before the
