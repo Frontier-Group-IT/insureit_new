@@ -197,9 +197,6 @@ export default function PolicyIntakesScreen() {
                   <View style={styles.identity}>
                     <View style={styles.intakeNumberRow}>
                       <Text numberOfLines={1} style={styles.number}>{row.intake_number}</Text>
-                      {row.ocr_status === 'completed' ? (
-                        <Ionicons name="checkmark" size={15} color="#16A34A" accessibilityLabel="Document data fetched" />
-                      ) : null}
                     </View>
                     <Text numberOfLines={1} style={styles.customer}>{row.customer_mobile} · {row.lead_source_name}</Text>
                     <Text numberOfLines={1} style={styles.metaLine}>{field(row, 'policy_number') || 'Policy pending'} · {field(row, 'vehicle_registration_number') || 'Vehicle pending'}</Text>
