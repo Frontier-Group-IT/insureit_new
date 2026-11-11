@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 const app = readFileSync('app/policy-intakes.tsx', 'utf8');
+assert.match(app, /function IntakeProgress\(\{ row \}: \{ row: PartnerPolicyIntake \}\) \{\s*if \(row\.status === 'duplicate' \|\| row\.status === 'rejected'\) return null;/, 'Duplicate and Rejected intake cards hide the entire progress tracker in every filter');
 const api = readFileSync('lib/policy-intakes.ts', 'utf8');
 const route = readFileSync('../web-portal/app/api/partner/policy-intakes/route.ts', 'utf8');
 
