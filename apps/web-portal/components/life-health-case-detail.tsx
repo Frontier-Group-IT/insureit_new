@@ -1,13 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { LifeHealthRemarksEditor } from "@/components/life-health-remarks-editor";
 import { useEffect, useMemo, useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { FileSizeExceededPopup } from "@/components/file-size-exceeded-popup";
-import { CalendarDays, ChevronDown, Eye, LoaderCircle, Trash2, Upload, ShieldCheck, BarChart3, Save, ArrowRight, X } from "lucide-react";
+import { CalendarDays, Eye, LoaderCircle, Trash2, Upload, ShieldCheck, MessageSquareText, Save, ArrowRight, X } from "lucide-react";
 import { convertLifeHealthCaseToPolicy, deleteLifeHealthCaseDocument, uploadLifeHealthCaseDocument } from "@/app/policies/life-health-policy-actions";
-import { updateLifeHealthCaseDetails } from "@/app/policies/life-health-case-edit-actions";
+import { appendLifeHealthCaseRemark, updateLifeHealthCaseDetails } from "@/app/policies/life-health-case-edit-actions";
 import { isPensionLifePolicy } from "@/lib/life-health-pension-maturity";
 import { PolicyDateApprovalDialog } from "@/components/policy-date-approval-dialog";
 import { policyDateDecision } from "@/lib/policy-date-rule";
@@ -83,8 +82,14 @@ function nextInstallmentFrom(start:string,frequency:string){
 export function LifeHealthCaseDetail({caseData,insurers,documents,activities}:Props){
   const router=useRouter(),isIssued=Boolean(caseData.finalPolicyId),docMap=useMemo(()=>new Map(documents.map(d=>[d.document_type,d])),[documents]);
   const[uploading,startUpload]=useTransition(),[converting,startConvert]=useTransition(),[saving,startSave]=useTransition(),[deleting,startDelete]=useTransition();
-  const[documentToDelete,setDocumentToDelete]=useState<DocumentRow|null>(null),[deleteError,setDeleteError]=useState<string|null>(null),[deletingDocumentId,setDeletingDocumentId]=useState<string|null>(null),[error,setError]=useState<string|null>(null),[saveSuccess,setSaveSuccess]=useState(false),[copy,setCopy]=useState<File|null>(null),[activityOpen,setActivityOpen]=useState(false),[uploadingType,setUploadingType]=useState<string|null>(null);
-  const[form,setForm]=useState({customerName:caseData.customerName,customerPhone:caseData.customerPhone,customerAddress:caseData.customerAddress,insurerId:caseData.insurerId,productName:caseData.productName,proposalNumber:caseData.proposalNumber,ppt:caseData.ppt,pd:caseData.pd,paymentFrequency:canonicalPaymentFrequency(caseData.paymentFrequency),paymentMode:normalizeCasePaymentMode(caseData.paymentMode),premiumAmount:String(caseData.premiumAmount||""),sourcingDate:caseData.sourcingDate,remarks:caseData.remarks});
+  const[documentToDelete,setDocumentToDelete]=useState<DocumentRow|null>(null),[deleteError,setDeleteError]=useState<string|null>(null),[deletingDocumentId,setDeletingDocumentId]=useState<string|null>(null),[error,setError]=useState<string|null>(null),[saveSuccess,setSaveSuccess]=useState(false),[copy,setCopy]=useState<File|null>(null),[uploadingType,setUploadingType]=useState<string|null>(null);
+  const[form,setForm]=useState({customerName:caseData.customerName,customerPhone:caseData.customerPhone,customerAddress:caseData.customerAddress,insurerId:caseData.insurerId,productName:caseData.productName,proposalNumber:caseData.proposalNumber,ppt:caseData.ppt,pd:caseData.pd,paymentFrequency:canonicalPaymentFrequency(caseData.paymentFrequency),paymentMode:normalizeCasePaymentMode(caseData.paymentMode),premiumAmount:String(caseData.premiumAmount||""),sourcingDate:caseData.sourcingDate});
+  const[infoTab,setInfoTab]=useState<"activity"|"remarks">("activity");
+  const[savedRemarks,setSavedRemarks]=useState(caseData.remarks);
+  const[remarkOpen,setRemarkOpen]=useState(false);
+  const[remarkDraft,setRemarkDraft]=useState("");
+  const[remarkError,setRemarkError]=useState<string|null>(null);
+  const[remarkPending,startRemark]=useTransition();
   const[issuedApproval,setIssuedApproval]=useState<{id:string;key:string}|null>(null);
   const[dateApprovalOpen,setDateApprovalOpen]=useState(false);
   const[issue,setIssue]=useState<IssueState>({policyNumber:"",issuanceDate:"",startDate:"",endDate:"",pptEndDate:"",nextInstallmentDate:"",finalPremium:String(caseData.premiumAmount||""),sumInsured:""});
@@ -109,6 +114,24 @@ export function LifeHealthCaseDetail({caseData,insurers,documents,activities}:Pr
 
   const editData=()=>{const d=new FormData();d.set("caseId",caseData.id);Object.entries(form).forEach(([k,v])=>d.set(k,v));return d};
   const saveDetails=()=>{setError(null);setSaveSuccess(false);startSave(async()=>{try{const result=await updateLifeHealthCaseDetails(editData());if(!result.ok){setError(result.error);return}setSaveSuccess(true);router.refresh()}catch{setError("Could not save case details. Please retry.")}})};
+  const addRemark=()=>{
+    if(!remarkDraft.trim()||remarkPending)return;
+    setRemarkError(null);
+    startRemark(async()=>{
+      try{
+        const data=new FormData();
+        data.set("caseId",caseData.id);
+        data.set("newRemark",remarkDraft.trim());
+        const result=await appendLifeHealthCaseRemark(data);
+        if(!result.ok){setRemarkError(result.error);return;}
+        setSavedRemarks(result.remarks);
+        setRemarkDraft("");
+        setRemarkOpen(false);
+        setInfoTab("remarks");
+        router.refresh();
+      }catch{setRemarkError("Could not add remark. Reload and check saved remarks before retrying.");}
+    });
+  };
   const [oversizedLimitMb,setOversizedLimitMb]=useState<number|null>(null);
   const upload=(type:string,file:File|null)=>{if(!file)return;setError(null);if(!file.size){setError("Choose a non-empty document.");return}if(file.size>4*1024*1024){setOversizedLimitMb(4);return}if(!["application/pdf","image/jpeg","image/png","image/webp"].includes(file.type)){setError("Upload a PDF, JPG, PNG or WebP document.");return}const d=new FormData();d.set("caseId",caseData.id);d.set("documentType",type);d.set("file",file);setUploadingType(type);startUpload(async()=>{try{const r=await uploadLifeHealthCaseDocument(d);if(!r.ok){setError(r.error);return}router.refresh()}catch(error){console.error("Life/Health document upload failed",error);setError(/UnrecognizedActionError|Server Action .* was not found|unexpected response was received from the server/i.test(error instanceof Error ? `${error.name} ${error.message}` : String(error)) ? "The portal version changed while this page was open. Reload the page, check whether the document was already uploaded, and try again if needed." : "The upload request failed before the server returned a response. Please reload the page and retry. If it continues, contact support.")}finally{setUploadingType(null)}})};
   const deleteDocument=(document:DocumentRow)=>{setDeleteError(null);setDocumentToDelete(document)};
@@ -162,7 +185,6 @@ export function LifeHealthCaseDetail({caseData,insurers,documents,activities}:Pr
     <Section number="04" title="Premium & payment" contentClassName="md:grid-cols-2 xl:grid-cols-3" premium>
       <FieldWrap title="Premium amount" required><input className={field} value={form.premiumAmount} onChange={e=>set("premiumAmount",e.target.value.replace(/[^0-9.]/g,""))} inputMode="decimal"/></FieldWrap>
       <FieldWrap title="Payment mode" required><select className={field} value={form.paymentMode} onChange={e=>set("paymentMode",e.target.value)}><option value="" disabled>Select payment mode</option>{legacyCash?<option value="Cash" disabled>Cash (legacy case)</option>:null}{modes.map(v=><option key={v} value={v}>{v}</option>)}</select></FieldWrap>
-      <LifeHealthRemarksEditor value={form.remarks} onChange={value=>{set("remarks",value);setSaveSuccess(false)}} disabled={saving||converting} />
     </Section>
 
     <Section number="05" title="Mark Policy Issued" highlight contentClassName="md:grid-cols-2 xl:grid-cols-4">
@@ -176,7 +198,20 @@ export function LifeHealthCaseDetail({caseData,insurers,documents,activities}:Pr
       <FieldWrap title="Sum assured / insured"><input className={field} value={issue.sumInsured} onChange={e=>setI("sumInsured",e.target.value.replace(/[^0-9.]/g,""))}/></FieldWrap>
     </Section>
 
-    <section className="overflow-hidden rounded-2xl border border-[#DFE8F4] bg-white shadow-[0_8px_20px_rgba(36,79,145,.06)] transition-all duration-300 hover:border-[#B9CCEA] hover:shadow-[0_12px_28px_rgba(36,79,145,.1)]"><button type="button" aria-expanded={activityOpen} onClick={()=>setActivityOpen(v=>!v)} className="flex w-full items-center justify-between px-4 py-3 text-left text-[11px] font-semibold text-[#17365D] transition-colors hover:bg-[#F2F7FF]"><span className="flex items-center gap-3"><span className="grid h-8 w-8 place-items-center rounded-lg bg-[#EAF2FF] text-[#254F91]"><BarChart3 className="h-4 w-4"/></span><span><span className="block text-[12px]">Activity Status</span><span className="block text-[9px] font-normal text-[#687D9B]">Update current activity status</span></span></span><ChevronDown className={`h-4 w-4 transition-transform ${activityOpen?"rotate-180":""}`}/></button>{activityOpen?<div className="border-t p-4"><div className="overflow-hidden rounded-xl border border-[#D9E2F0] bg-[#FBFCFE]">{activities.map((activity,index)=><div key={activity.id} className={`grid gap-2 px-4 py-3 md:grid-cols-[minmax(0,1fr)_260px_190px] md:items-center ${index?"border-t border-[#D9E2F0]":""}`}><div><p className="text-[8px] font-bold uppercase tracking-[.06em] text-[#8090A5]">{index===0?"Latest Action":"Previous Action"}</p><p className="mt-1 text-[12px] font-semibold text-[#17365D]">{activity.action}</p></div><p className="text-[9px] text-[#7A8AA0] md:text-right">Details: Created By: <span className="font-medium text-[#53657D]">{activity.createdBy}</span></p><p className="text-[9px] text-[#7A8AA0] md:text-right">At: {activityDate(activity.createdAt)}</p></div>)}</div></div>:null}</section>
+    <section className="overflow-hidden rounded-2xl border border-[#DFE8F4] bg-white shadow-[0_8px_20px_rgba(36,79,145,.06)]">
+      <div role="tablist" aria-label="Activity Status and Remarks" className="flex border-b border-[#E6EBF1] px-3 pt-2">
+        <button type="button" role="tab" aria-selected={infoTab==="activity"} onClick={()=>setInfoTab("activity")} className={`rounded-t-lg px-4 py-2.5 text-[11px] font-semibold ${infoTab==="activity"?"border-b-2 border-[#17365D] bg-[#F8FBFF] text-[#17365D]":"text-[#667085]"}`}>Activity Status</button>
+        <button type="button" role="tab" aria-selected={infoTab==="remarks"} onClick={()=>setInfoTab("remarks")} className={`rounded-t-lg px-4 py-2.5 text-[11px] font-semibold ${infoTab==="remarks"?"border-b-2 border-[#17365D] bg-[#F8FBFF] text-[#17365D]":"text-[#667085]"}`}>Remarks</button>
+      </div>
+      <div role="tabpanel" className="p-3">
+        {infoTab==="activity"?<div className="overflow-hidden rounded-xl border border-[#D9E2F0] bg-[#FBFCFE]">{activities.length?activities.map((activity,index)=><div key={activity.id} className={`grid gap-2 px-4 py-3 md:grid-cols-[minmax(0,1fr)_260px_190px] md:items-center ${index?"border-t border-[#D9E2F0]":""}`}><div><p className="text-[8px] font-bold uppercase tracking-[.06em] text-[#8090A5]">{index===0?"Latest Action":"Previous Action"}</p><p className="mt-1 text-[12px] font-semibold text-[#17365D]">{activity.action}</p></div><p className="text-[9px] text-[#7A8AA0] md:text-right">Details: Created By: <span className="font-medium text-[#53657D]">{activity.createdBy}</span></p><p className="text-[9px] text-[#7A8AA0] md:text-right">At: {activityDate(activity.createdAt)}</p></div>):<p className="p-4 text-[10px] text-[#7A8AA0]">Activity not recorded.</p>}</div>:
+        <div className="rounded-xl border border-[#D9E2F0] bg-[#FBFCFE] p-4">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3"><p className="text-[9px] font-bold uppercase tracking-[.07em] text-[#667085]">Saved remarks · Read only</p><button type="button" onClick={()=>{setRemarkError(null);setRemarkOpen(true);}} disabled={saving||converting} className="inline-flex h-9 items-center gap-2 rounded-xl border border-[#BFD3F5] bg-white px-3 text-[10px] font-bold text-[#17365D] hover:bg-[#EEF5FF] disabled:opacity-50"><MessageSquareText className="h-4 w-4"/>Add Remark</button></div>
+          <p className="whitespace-pre-wrap break-words text-[11px] leading-5 text-[#17365D]">{savedRemarks.trim()||"No remarks added yet."}</p>
+        </div>}
+      </div>
+    </section>
+    {remarkOpen?<div className="fixed inset-0 z-[1100] grid h-[100dvh] w-screen place-items-center bg-[#101828]/60 p-3" role="presentation"><div role="dialog" aria-modal="true" aria-label="Add case remark" className="w-full max-w-[520px] overflow-hidden rounded-2xl bg-white shadow-2xl"><div className="flex items-center justify-between border-b border-[#E6ECF5] px-5 py-4"><h2 className="text-[14px] font-bold text-[#17365D]">Add Remark</h2><button type="button" disabled={remarkPending} onClick={()=>setRemarkOpen(false)} aria-label="Close remarks" className="rounded-lg p-1.5 text-[#64748B] hover:bg-[#F3F6FB]"><X className="h-4 w-4"/></button></div><div className="space-y-3 p-5"><p className="text-[10px] text-[#667085]">Existing remarks cannot be edited. New remarks are appended to the history.</p><textarea autoFocus aria-label="New remark" value={remarkDraft} onChange={event=>setRemarkDraft(event.target.value)} maxLength={2000} rows={5} placeholder="Enter a new remark…" className="w-full resize-y rounded-xl border border-[#CBD5E1] bg-white px-3 py-2.5 text-[12px] text-[#17203A] outline-none focus:border-[#315B9A] focus:ring-2 focus:ring-[#DCE8FA]"/>{remarkError?<p role="alert" className="text-[10px] text-red-600">{remarkError}</p>:null}</div><div className="flex justify-end gap-2 border-t border-[#E6ECF5] bg-[#F8FAFC] p-4"><button type="button" disabled={remarkPending} onClick={()=>setRemarkOpen(false)} className="rounded-xl border border-[#CBD5E1] bg-white px-4 py-2.5 text-[10px] font-semibold">Cancel</button><button type="button" disabled={remarkPending||!remarkDraft.trim()} onClick={addRemark} className="rounded-xl bg-[#17365D] px-5 py-2.5 text-[10px] font-bold text-white disabled:opacity-50">{remarkPending?"Adding…":"Add Remark"}</button></div></div></div>:null}
     {oversizedLimitMb!==null?<FileSizeExceededPopup maxSizeMb={oversizedLimitMb} onClose={()=>setOversizedLimitMb(null)}/>:null}
     {error?<div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[10px] font-semibold text-red-700">{error}</div>:null}
     {saveSuccess?<div role="status" aria-live="polite" className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-[11px] font-semibold text-emerald-800">Case details saved successfully.</div>:null}
