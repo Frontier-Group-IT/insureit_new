@@ -126,10 +126,11 @@ class ReadOnlyParityTests(unittest.TestCase):
                          created.isoformat())
         sql = [args[0][0] for args in cursor.execute.call_args_list]
         self.assertTrue(sql[0].startswith("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY"))
-        self.assertTrue(sql[1].startswith("SELECT id FROM storage.buckets"))
-        self.assertIn("FROM storage.objects", sql[2])
-        self.assertIn("archived_at IS NULL", sql[2])
-        self.assertIn("is_delete_marker", sql[2])
+        self.assertTrue(sql[1].startswith("SET LOCAL statement_timeout"))
+        self.assertTrue(sql[2].startswith("SELECT id FROM storage.buckets"))
+        self.assertIn("FROM storage.objects", sql[3])
+        self.assertIn("archived_at IS NULL", sql[3])
+        self.assertIn("is_delete_marker", sql[3])
         self.assertFalse(any("INSERT " in stmt or "DELETE " in stmt or "UPDATE " in stmt
                              for stmt in sql))
 
@@ -159,8 +160,8 @@ class ReadOnlyParityTests(unittest.TestCase):
         self.assertEqual(kwargs["password"], synthetic[4])
         self.assertEqual(kwargs["sslmode"], "require")
         self.assertNotIn("synthetic-url-with-raw-@-password", str(kwargs))
-        self.assertIn("default_transaction_read_only=on", kwargs["options"])
-        self.assertIn("statement_timeout=120000", kwargs["options"])
+        self.assertNotIn("options", kwargs)
+        self.assertEqual(kwargs["connect_timeout"], 20)
 
     def test_postgres_and_api_timestamp_encodings_compare_equal(self):
         records = {identifier("p1.pdf"): source(
