@@ -95,7 +95,7 @@ def compare(buckets_a, before, buckets_b, after, manifest):
             continue
         stable_in_manifest += 1
         meta = entry.get("source", {})
-        if old_enough and modified <= reference and (
+        if old_enough and modified and modified <= reference and (
             meta.get("updated_at") != value.get("updated_at")
             or meta.get("size") != value.get("size")
         ):
