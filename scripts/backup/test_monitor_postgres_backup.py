@@ -39,7 +39,7 @@ class PostgresBackupMonitorTests(unittest.TestCase):
             if "r2-v2-manual.yml" in path:
                 return {"workflow_runs": [run(recent)]}
             return {"workflow_runs": [run("2026-11-03T06:12:39Z")]}
-        with patch.dict(os.environ, {"GITHUB_REPOSITORY":"Frontier-Group-IT/insureit_new", "GH_TOKEN":"fake"}):
+        with patch.dict(os.environ, {"GITHUB_REPOSITORY":"Frontier-Group-IT/insureit_new", "GH_TOKEN":"fake", "GITHUB_EVENT_NAME":"schedule"}):
             with patch.object(pg, "api", side_effect=fake_api):
                 with patch.object(pg, "reconcile") as reconcile:
                     pg.main()
