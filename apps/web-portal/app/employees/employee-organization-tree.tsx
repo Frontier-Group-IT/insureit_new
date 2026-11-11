@@ -82,6 +82,7 @@ export function EmployeeOrganizationTree({ employees, partners, query, managers,
   const [showPartners, setShowPartners] = useState(true);
   const [mode, setMode] = useState<"overview" | "team" | "full">("team");
   const [detailsId, setDetailsId] = useState("");
+  const [hoveredEmployeeId, setHoveredEmployeeId] = useState<string | null>(null);
   const [department, setDepartment] = useState("");
   const [focus, setFocus] = useState("");
   const [zoom, setZoom] = useState(1);
@@ -199,6 +200,17 @@ export function EmployeeOrganizationTree({ employees, partners, query, managers,
 
   const graph = useMemo(() => layoutForest(chartRoots), [chartRoots]);
   const placed = useMemo(() => new Map(graph.positions.map((position) => [position.node.key, position])), [graph]);
+  // Highlight only the authorized reporting chain; stop on missing/cyclic manager references.
+  const pathEmployeeIds = useMemo(() => {
+    const result = new Set<string>();
+    const activeId = hoveredEmployeeId || detailsId || focus;
+    let current = activeId ? employeeById.get(activeId) : undefined;
+    while (current && !result.has(current.id)) {
+      result.add(current.id);
+      current = current.reporting_manager_id ? employeeById.get(current.reporting_manager_id) : undefined;
+    }
+    return result;
+  }, [hoveredEmployeeId, detailsId, focus, employeeById]);
   const selectedDetails = detailsId ? employeeById.get(detailsId) ?? null : null;
   const detailReports = selectedDetails ? reportsByManager.get(selectedDetails.id) ?? [] : [];
   const detailPartners = selectedDetails && showPartners ? partnersByEmployee.get(selectedDetails.id) ?? [] : [];
@@ -292,7 +304,8 @@ export function EmployeeOrganizationTree({ employees, partners, query, managers,
               const startY = leader.y + CARD_H / 2;
               const endY = y - CARD_H / 2;
               const middle = (startY + endY) / 2;
-              return <path key={node.key} d={`M ${leader.x} ${startY} C ${leader.x} ${middle}, ${x} ${middle}, ${x} ${endY}`} fill="none" stroke={node.type === "employee" ? "#B9C4D4" : "#9CC4BB"} strokeWidth="1.35" strokeDasharray={node.type === "employee" ? undefined : "4 4"} />;
+              const highlighted = Boolean(node.employee && leader.node.employee && pathEmployeeIds.has(node.employee.id) && pathEmployeeIds.has(leader.node.employee.id));
+              return <path key={node.key} className={`org-reporting-line ${highlighted ? "org-reporting-line-active" : ""}`} d={`M ${leader.x} ${startY} C ${leader.x} ${middle}, ${x} ${middle}, ${x} ${endY}`} fill="none" stroke={highlighted ? "#3F7DD2" : node.type === "employee" ? "#B9C4D4" : "#9CC4BB"} strokeWidth={highlighted ? "2.6" : "1.35"} strokeDasharray={node.type === "employee" ? undefined : "4 4"} />;
             })}
           </svg>
           {graph.positions.map(({ node, x, y }) => {
@@ -301,7 +314,7 @@ export function EmployeeOrganizationTree({ employees, partners, query, managers,
             const isPartner = node.type === "partner";
             const hasChildren = node.children.length > 0 || node.count > 0;
             const expandedNode = expanded.has(node.key);
-            return <article key={node.key} className={`org-interactive-card absolute flex flex-col items-center justify-between rounded-lg border px-2.5 py-2 text-center shadow-[0_2px_7px_rgba(31,46,66,0.11)] transition-colors ${isGroup ? "border-[#B7D2ED] bg-[#EDF5FF]" : isEmployee && focus === node.employee?.id ? "border-[#82AEEA] bg-[#E9F2FF]" : isPartner || node.type === "branch" ? "border-[#BEDDD3] bg-[#F9FFFC]" : "border-[#D9DFE7] bg-white hover:border-[#9CB9E2]"}`} style={{ width: CARD_W, height: CARD_H, left: x - CARD_W / 2, top: y - CARD_H / 2 }}>
+            return <article key={node.key} onMouseEnter={() => node.employee && setHoveredEmployeeId(node.employee.id)} onMouseLeave={() => node.employee && setHoveredEmployeeId(null)} onFocusCapture={() => node.employee && setHoveredEmployeeId(node.employee.id)} onBlurCapture={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setHoveredEmployeeId(null); }} className={`org-interactive-card org-positioned-card ${node.employee && pathEmployeeIds.has(node.employee.id) ? "org-path-card" : ""} absolute flex flex-col items-center justify-between rounded-lg border px-2.5 py-2 text-center shadow-[0_2px_7px_rgba(31,46,66,0.11)] transition-colors ${isGroup ? "border-[#B7D2ED] bg-[#EDF5FF]" : isEmployee && focus === node.employee?.id ? "border-[#82AEEA] bg-[#E9F2FF]" : isPartner || node.type === "branch" ? "border-[#BEDDD3] bg-[#F9FFFC]" : "border-[#D9DFE7] bg-white hover:border-[#9CB9E2]"}`} style={{ width: CARD_W, height: CARD_H, left: x - CARD_W / 2, top: y - CARD_H / 2 }}>
               <div className="w-full">
                 <p className="truncate text-[10px] font-semibold text-[#34465C]" title={node.subtitle}>{node.subtitle}</p>
                 <p className="mt-0.5 truncate text-[9px] text-[#8A96A8]">{node.detail}</p>
