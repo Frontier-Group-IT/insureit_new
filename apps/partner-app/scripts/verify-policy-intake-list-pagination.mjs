@@ -27,6 +27,15 @@ assert.match(route, /pageIds = filtered\.slice\(offset, offset \+ limit\)/, 'Sti
 assert.match(route, /employeeRead\?\.mode === "or"/, 'Preserve employee scope');
 assert.match(route, /q = q\.or\(intakeReadScope\)/, 'Search remains scoped for partner accounts');
 assert.match(app, /const visibleRows = rows;/, 'Never filter only the currently loaded page');
+assert.match(app, /<PartnerStatusBadge label={statusLabel\(row\)} tone={statusTone\(row\)} \/>/, 'Keep existing workflow status badge');
+assert.doesNotMatch(app, /<PartnerStatusBadge label="Fetched"/, 'Do not show a second Fetched pill');
+assert.match(app, /row\.ocr_status === 'completed' \? \([\s\S]*?<Ionicons name="checkmark" size={15} color="#16A34A"/, 'A fetched intake must show a plain green check immediately beside the PIR number');
+assert.match(app, /<View style={styles\.intakeNumberRow}>[\s\S]*?<Text numberOfLines={1} style={styles\.number}>{row\.intake_number}<\/Text>/, 'Place OCR check in same number row');
+assert.match(app, /intakeNumberRow: \{ flexDirection: 'row', alignItems: 'center', gap: 4 \}/, 'Keep PIR number and plain icon tightly inline without badge styling');
+assert.match(app, /row\.ocr_status === 'failed' && \(row\.status === 'processing' \|\| row\.status === 'needs_attention'\)/, 'Only show OCR failure warning when action is needed');
+assert.match(app, /<Text style={styles\.updatedDate}>{formatDate\(row\.updated_at \|\| row\.created_at\)}<\/Text>/, 'Keep timestamp but remove Updated prefix');
+assert.doesNotMatch(app, /Updated \{formatDate/, 'Remove redundant Updated text from timestamp');
+
 assert.match(app, /setTimeout\(\(\) => setDebouncedQuery\(query\.trim\(\)\), 300\)/, 'Debounce server searches');
 assert.doesNotMatch(app, /rows\.filter\(\(row\) => row\.status/, 'Never derive status counts from loaded rows');
 assert.match(route, /includeCounts[\s\S]*url\.searchParams\.get\("include_counts"\)/, 'Counts controlled independently of pagination');
