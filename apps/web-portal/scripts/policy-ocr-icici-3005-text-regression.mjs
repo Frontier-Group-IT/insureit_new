@@ -6,7 +6,7 @@ const pages = [
   `ICICI Lombard General Insurance Company Limited
 Product Code: 3005 UIN: TEST-UIN
 Insured & Vehicle Details
-Name of Insured                           SAMPLE CUSTOMER
+Name of Insured                           SAMPLE CUSTOMER\nMobile No.                                9876543210
 Vehicle Make / Model                     CHETAK / C3001
 RTO City                                 MADHYA PRADESH-JABALPUR
 Vehicle Registration No.                 NEW
@@ -41,6 +41,8 @@ const contaminated = {
 };
 const value = (result, key) => result.fields.find((entry) => entry.key === key)?.value;
 const result = refineIciciBundledTwoWheelerText(pages, contaminated);
+assert.equal(value(result, "insured_name"), "SAMPLE CUSTOMER");
+assert.equal(value(result, "insured_phone"), "9876543210");
 assert.equal(value(result, "vehicle_make"), "CHETAK");
 assert.equal(value(result, "vehicle_model"), "C3001");
 assert.equal(value(result, "vehicle_engine_number"), "E20TEST41667");
@@ -74,10 +76,34 @@ Product Code: 3005 UIN: TEST-UIN
   Total Own Damage Premium(A)       1,758.00   Total Liability Premium(B) 3,848.00`,
 ];
 const nativeResult = refineIciciBundledTwoWheelerText(nativePages, contaminated);
+assert.equal(value(nativeResult, "insured_name"), "SAMPLE CUSTOMER");
 assert.equal(value(nativeResult, "vehicle_make"), "CHETAK");
 assert.equal(value(nativeResult, "vehicle_model"), "C3001");
 assert.equal(value(nativeResult, "vehicle_engine_number"), "E20TEST41667");
 assert.equal(value(nativeResult, "cpa_premium"), "575");
+
+// ICICI native PDF may flatten the label column before the value column.
+// The exact Name of Insured value must reach the existing insured_name field.
+const columnPages = [
+  pages[0]
+    .replace("Name of Insured                           SAMPLE CUSTOMER\nMobile No.                                9876543210\nVehicle Make / Model                     CHETAK / C3001",
+      "Name of Insured\nPeriod of Insurance\nVehicle Make / Model\nRTO City\nSAMPLE CUSTOMER\nNov 06, 2026 to Nov 05, 2027\nCHETAK / C3001"),
+  pages[1],
+];
+const columnResult = refineIciciBundledTwoWheelerText(columnPages, contaminated);
+assert.equal(value(columnResult, "insured_name"), "SAMPLE CUSTOMER");
+assert.equal(columnResult.fields.some((entry) => entry.key === "customer_name"), false, "reuse insured_name field, no separate customer column");
+
+// Masked phone values are never inferred or imported.
+const masked = refineIciciBundledTwoWheelerText(
+  [pages[0].replace("9876543210", "98******10"), pages[1]], contaminated,
+);
+assert.equal(value(masked, "insured_phone"), undefined);
+const absentIdentity = refineIciciBundledTwoWheelerText(
+  [pages[0].replace(/Name of Insured[^\\n]*/, "Name of Insured").replace(/Mobile No\\.[^\\n]*/, "Mobile No."), pages[1]], contaminated,
+);
+assert.equal(value(absentIdentity, "insured_name"), undefined);
+assert.equal(value(absentIdentity, "insured_phone"), undefined);
 
 // A missing labelled source must not leave a false extracted value selected.
 const missing = refineIciciBundledTwoWheelerText(

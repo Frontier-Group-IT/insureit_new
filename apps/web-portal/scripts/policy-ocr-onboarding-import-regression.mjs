@@ -16,6 +16,8 @@ const regexChecks = [
   ["CPA opted remains verification-only", panel, /const VERIFICATION_FIELDS = new Set\(\["cpa_opted"/],
   ["Current-vs-extracted review remains", panel, /Current<\/span>[\s\S]*Extracted<\/span>[\s\S]*Status<\/span>/],
   ["Panel delegates application to parent", panel, /const outcome = await onApply\(chosen\)/],
+  ["OCR apply carries existing insured identity", form, /current:\{registrationNo:form\.registrationNo,insuredName:form\.insuredName,phoneNo:form\.phoneNo,vehicleClass:/],
+  ["Phone requires manual selection", panel, /field\.key !== INSURED_PHONE_FIELD/],
   ["Importer receives current form context", form, /context=\{ocrImportContext\}[\s\S]*onApply=\{applyPolicyOcrFields\}/],
   ["Shared importer moved to onboarding header", form, /variant="header" context=\{ocrImportContext\}/],
   ["RC verified Section 02 is explicitly protected", form, /protectedKeys:appliedRc\?\[\.\.\.SECTION_02_OCR_FIELDS\]:\[\]/],
