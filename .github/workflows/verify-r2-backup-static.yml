@@ -526,3 +526,55 @@ jobs:
             echo "OFFLINE PG17 ADMIN AUTHENTICATION: unavailable"
           fi
           rm -f "$RUNNER_TEMP/v2-role-probe.log"
+
+  offline_managed_roles_probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Probe matching offline Supabase 17 managed role availability safely
+        run: |
+          set -euo pipefail
+          trap 'docker rm -f -v insureit-roles-probe >/dev/null 2>&1 || true; rm -f "$RUNNER_TEMP/role-probe.log"' EXIT
+          docker run -d --name insureit-roles-probe --network none \
+            --env POSTGRES_PASSWORD=ephemeral-role-probe-only \
+            --env POSTGRES_DB=postgres \
+            supabase/postgres:17.6.1.136 >/dev/null
+          ready=0
+          for i in $(seq 1 60); do
+            if docker exec insureit-roles-probe pg_isready -U postgres >/dev/null 2>&1; then ready=1; break; fi
+            sleep 2
+          done
+          test "$ready" = 1
+          # Exact names from read-only source pg_roles catalog: aggregate
+          # only. No credentials, customer records or role names in public log.
+          roles="$(docker exec -u postgres insureit-roles-probe psql -XAt \
+            -v ON_ERROR_STOP=1 -d postgres -c \
+            "select count(*)::integer,
+                    count(*) filter (where rolname like 'supabase_%')::integer
+               from pg_roles
+              where rolname in (
+                'anon','authenticated','authenticator','cli_login_postgres',
+                'dashboard_user','postgres','service_role','supabase_admin',
+                'supabase_auth_admin','supabase_etl_admin','supabase_privileged_role',
+                'supabase_read_only_user','supabase_realtime_admin',
+                'supabase_replication_admin','supabase_storage_admin');")"
+          if ! [[ "$roles" =~ ^[0-9]+\\|[0-9]+$ ]]; then
+            echo "OFFLINE ROLE INVENTORY ERROR"
+            exit 1
+          fi
+          echo "OFFLINE SOURCE ROLE COVERAGE (present_total|present_managed): $roles"
+          # Check if image superuser is allowed to create reserved prefix
+          # roles. Use only an artificial test-only role, never an actual
+          # live role name. Destroy container at job completion.
+          if docker exec -u postgres --env PGPASSWORD=ephemeral-role-probe-only \
+            insureit-roles-probe psql -h 127.0.0.1 -U supabase_admin \
+            -X -v ON_ERROR_STOP=1 -d postgres -c \
+            'CREATE ROLE supabase_insureit_offline_probe NOLOGIN;' \
+            > "$RUNNER_TEMP/role-probe.log" 2>&1; then
+            echo "OFFLINE RESERVED ROLE BOOTSTRAP: allowed"
+          else
+            echo "OFFLINE RESERVED ROLE BOOTSTRAP: rejected"
+          fi
