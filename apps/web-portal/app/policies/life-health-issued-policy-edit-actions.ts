@@ -346,9 +346,12 @@ export async function appendIssuedLifeHealthRemark(formData: FormData): Promise<
   if (!newRemark || newRemark.length > 2000) return { ok:false, error:"Enter a remark of up to 2000 characters." };
   const { admin, valid } = await validatePolicyCase(policyId,caseId);
   if (!valid) return { ok:false, error:"The linked Life/Health policy case is no longer available." };
-  const { data: policy, error: loadError } = await admin.from("policies").select("remarks").eq("id",policyId).maybeSingle<{remarks:string|null}>();
-  if (loadError || !policy) return { ok:false, error:"Could not load the existing policy remarks." };
-  const previous = policy.remarks?.trim() ?? "";
+  const [{ data: policy, error: loadError }, { data: caseRow, error: caseLoadError }] = await Promise.all([
+    admin.from("policies").select("remarks").eq("id",policyId).maybeSingle<{remarks:string|null}>(),
+    admin.from("life_health_cases").select("remarks").eq("id",caseId).eq("final_policy_id",policyId).maybeSingle<{remarks:string|null}>(),
+  ]);
+  if (loadError || caseLoadError || !policy || !caseRow) return { ok:false, error:"Could not load the existing policy remarks." };
+  const previous = (policy.remarks || caseRow.remarks || "").trim();
   const timestamp = new Intl.DateTimeFormat("en-IN",{ timeZone:"Asia/Kolkata", day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit",hour12:true }).format(new Date());
   const appended = `[${timestamp}] ${newRemark}`;
   const remarks = previous ? `${previous}\n\n${appended}` : appended;
