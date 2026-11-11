@@ -65,13 +65,22 @@ export function refineIcici3005OutstandingFields(
   const net = labelledMoney(lines2, /Total\s+Package\s+Premium\s*\(\s*A\s*\+\s*B\s*\)/i);
   const tax = labelledMoney(lines2, /Total\s+Tax\s+Payable(?:\s+in)?/i);
   const gross = labelledMoney(lines2, /Total\s+Premium\s+Payable(?:\s+in)?/i);
-  const od = number(fields.get("od_premium")?.value)
-    ?? labelledMoney(lines2, /Total\s+Own\s+Damage\s+Premium\s*\(\s*A\s*\)/i);
+  const printedOd = labelledMoney(lines2, /Total\s+Own\s+Damage\s+Premium\s*\(\s*A\s*\)/i);
+  // Prefer the separately labelled total OD to any generic OCR guess.
+  const od = printedOd ?? number(fields.get("od_premium")?.value);
   const cpa = number(fields.get("cpa_premium")?.value);
   const liabilityReconciles = tp != null && cpa != null && liabilityTotal != null
     && close(tp + cpa, liabilityTotal);
   const netReconciles = tp != null && cpa != null && od != null && net != null
     && close(od + tp + cpa, net);
+  // Only import / correct OD when all three printed totals corroborate
+  // it: basic TP + owner-driver CPA = liability, and OD + liability = net.
+  if (printedOd != null && printedOd > 0 && liabilityReconciles && netReconciles) {
+    const existingOd = number(fields.get("od_premium")?.value);
+    setWhen("od_premium", "OD premium", String(printedOd), 2,
+      "ICICI Total Own Damage Premium(A); reconciled with basic TP, CPA, liability and package",
+      existingOd != null && !close(existingOd, printedOd));
+  }
   if (tp != null && tp > 0 && (liabilityReconciles || netReconciles)) {
     const existing = number(fields.get("tp_premium")?.value);
     setWhen("tp_premium", "Third party premium", String(tp), 2,
