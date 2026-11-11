@@ -29,7 +29,7 @@ for (const field of ["policy_no", "status", "premium_amount", "start_date", "end
 assert.match(activity, /new_data: \{ changed_fields: changedFields \?\? null \}/, "Save only audited field names, not financial or customer data");
 assert.match(activity, /changedFields: action === POLICY_ACTIVITY_ACTIONS.POLICY_EDITED/, "Activity reader must decode field names from immutable audit");
 assert.match(activity, /"Policy updated — change details unavailable"/, "Historical edits without change data cannot pretend to know what changed");
-assert.match(activity, /changed\.join\(", "\)/, "Show the specific changed field list");
+assert.match(activity, /changedFields\.join\(", "\)/, "Show the specific changed field list");
 assert.match(activity, /"Policy saved — no tracked field changes"/, "A save without tracked changes must not claim a business change");
 assert.match(activityCard, /item\.meta/, "Activity UI continues to display actual field details and timestamp");
 console.log("Policy Edit single action-row regression passed.");
