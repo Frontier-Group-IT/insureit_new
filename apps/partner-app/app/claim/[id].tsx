@@ -98,7 +98,7 @@ function externalFinancialRows(data: PartnerClaimDetail) {
     const saved = [...milestones].reverse().find(entry => entry.key === item.key && entry.status === 'completed');
     if (!saved || (typeof saved.amount !== 'number' && typeof saved.amount !== 'string')) return [];
     if (typeof saved.amount === 'string' && !saved.amount.trim()) return [];
-    const amount = Number(String(saved.amount).replace(/[,₹\\s]/g, ''));
+    const amount = Number(String(saved.amount).replace(/[,₹\s]/g, ''));
     return Number.isFinite(amount) && amount >= 0 ? [{ label: item.label, amount }] : [];
   });
 }
