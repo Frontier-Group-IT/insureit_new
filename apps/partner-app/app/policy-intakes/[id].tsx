@@ -7,7 +7,6 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { PartnerScreen } from '@/components/partner-screen';
 import { PartnerBanner } from '@/components/ui/partner-banner';
 import { PartnerButton } from '@/components/ui/partner-button';
-import { PartnerInsurerLogo } from '@/components/ui/partner-insurer-logo';
 import { PartnerManufacturerLogo } from '@/components/ui/partner-manufacturer-logo';
 import { PartnerSectionHeader } from '@/components/ui/partner-section-header';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
