@@ -21,6 +21,64 @@ class RestoreVerificationTests(unittest.TestCase):
         self.assertEqual(len(sample), 5)
         self.assertIn(("claim", {}), sample)
 
+    def test_complete_scope_covers_every_entry_without_sampling(self):
+        grouped = {
+            "policy-documents": [(str(i), {"bytes": i}) for i in range(5)],
+            "claim-documents": [("claim", {"bytes": 6})],
+        }
+        samples = restore.planned_entries(grouped, "sample")
+        complete = restore.planned_entries(grouped, "all")
+        self.assertEqual(len(samples), 3)
+        self.assertEqual(len(complete), 6)
+        self.assertEqual({x[0] for x in complete},
+                         {"0", "1", "2", "3", "4", "claim"})
+        self.assertEqual(complete, restore.select_all_entries(grouped))
+        with self.assertRaises(ValueError):
+            restore.planned_entries(grouped, "invalid")
+        with self.assertRaises(ValueError):
+            restore.planned_entries(grouped, "")
+
+    def test_complete_verification_validates_every_encrypted_blob(self):
+        import hashlib
+        key = bytes(range(32))
+        manifest = {}
+        for i in range(4):
+            identity = json.dumps(["docs", f"{i}.pdf"], separators=(",", ":"))
+            content = f"synthetic-{i}".encode()
+            manifest[identity] = (
+                "supabase-storage/v1/blobs/" + str(i) + ".aes", content
+            )
+        s3 = Mock()
+
+        def get_object(*, Bucket, Key):
+            for identity, (blob, payload) in manifest.items():
+                if Key == blob:
+                    return {"Body": Mock(read=Mock(
+                        return_value=encrypt(payload, key, identity)
+                    ))}
+            raise RuntimeError("Unexpected synthetic blob")
+
+        s3.get_object.side_effect = get_object
+        grouped = {"docs": []}
+        for identity, (blob, payload) in manifest.items():
+            grouped["docs"].append((identity, {
+                "blob": blob,
+                "bytes": len(payload),
+                "sha256": hashlib.sha256(payload).hexdigest(),
+            }))
+        count, verified_bytes = restore.verify_selected(
+            s3, "private-r2", key, restore.planned_entries(grouped, "all")
+        )
+        self.assertEqual(count, len(manifest))
+        self.assertEqual(verified_bytes, sum(len(p) for _, p in manifest.values()))
+        self.assertEqual(s3.get_object.call_count, len(manifest))
+        # Corrupting even the last object must fail the all-file check.
+        grouped["docs"][-1][1]["sha256"] = "0" * 64
+        with self.assertRaises(RuntimeError):
+            restore.verify_selected(
+                s3, "private-r2", key, restore.planned_entries(grouped, "all")
+            )
+
     def test_manifest_with_empty_bucket_can_be_verified(self):
         manifest = {"buckets": ["policy-documents", "support-ticket-files"]}
         grouped = {"policy-documents": [("sample-1", {})]}
