@@ -1,5 +1,4 @@
 import Image from "next/image";
-import { CalendarDays, CarFront, FileText, Hash, Factory, CalendarCheck, ChevronDown, Settings2 } from "lucide-react";
 import { getStaticInsurerLogo } from "@/lib/insurer-logo";
 import { VehicleInsuranceHistoryRow } from "./vehicle-insurance-history-row";
 import {
@@ -49,9 +48,9 @@ export default async function CustomerVehicleDetailPage({
     ["Local permit expiry", formatCustomerDate(vehicle.local_permit_expiry_date)],
   ];
   const sections = [
-    { title: "Vehicle Ownership", fields: ownership, icons: [Hash, CalendarDays, Factory, CalendarDays, CarFront], image: "/assets/customer-3d-icons/vehicle_register.png" },
-    { title: "Vehicle Specification", fields: specification, icons: [CarFront, FileText, Settings2], image: "/assets/customer-3d-icons/brand_new_vehicle.png" },
-    { title: "Compliance & Permit", fields: compliance, icons: [CalendarCheck, CalendarCheck, CalendarCheck, CalendarCheck, CalendarCheck], image: "/assets/customer-3d-icons/e_challan.png" },
+    { title: "Vehicle Ownership", fields: ownership, image: "/assets/customer-3d-icons/vehicle_register.png" },
+    { title: "Vehicle Specification", fields: specification, image: "/assets/customer-3d-icons/brand_new_vehicle.png" },
+    { title: "Compliance & Permit", fields: compliance, image: "/assets/customer-3d-icons/e_challan.png" },
   ];
 
   return (
@@ -61,7 +60,6 @@ export default async function CustomerVehicleDetailPage({
         <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 hidden w-[42%] overflow-hidden sm:block">
           <div className="absolute -right-8 -top-16 h-44 w-44 rounded-full border-[25px] border-white/10" />
           <div className="absolute bottom-[-56px] right-28 h-40 w-40 rounded-full bg-[#82C5FF]/10 blur-2xl" />
-          <Image src="/assets/customer-3d-icons/vehicle_and_policy.png" alt="" width={132} height={132} className="absolute -bottom-8 right-8 h-32 w-32 object-contain opacity-80" />
         </div>
         <div className="relative flex items-center gap-3">
           <Image src="/assets/customer-3d-icons/my_vehicles.png" alt="" width={56} height={56} className="h-14 w-14 shrink-0 object-contain drop-shadow-md" />
@@ -75,14 +73,11 @@ export default async function CustomerVehicleDetailPage({
             <h2 className="text-[13px] font-bold text-[#17365F]">{section.title}</h2>
           </div>
           <dl className={"grid gap-x-3 gap-y-3 px-2 py-3 " + (i === 1 ? "sm:grid-cols-2 lg:grid-cols-3" : "sm:grid-cols-2 lg:grid-cols-5")}>
-            {section.fields.map(([label, value], fieldIndex) => {
-              const Icon = section.icons[fieldIndex];
+            {section.fields.map(([label, value]) => {
               return <div key={label} className="min-w-0">
                 <dt className="mb-1.5 text-[10px] font-semibold text-[#5C7190]">{label}</dt>
                 <dd className="flex min-h-[38px] items-center gap-2 overflow-hidden rounded-md border border-[#DBE5F1] bg-white px-2.5 text-[11px] font-semibold text-[#244264] shadow-[0_1px_3px_rgba(18,47,88,0.04)]">
-                  <Icon className="h-3.5 w-3.5 shrink-0 text-[#315987]" />
                   <span className="min-w-0 flex-1 break-words">{value}</span>
-                  {(i === 2 || label === "Manufacturer" || label === "Manufacturing year" || label === "Model") ? <ChevronDown className="h-3.5 w-3.5 shrink-0 text-[#6482A5]" /> : null}
                 </dd>
               </div>;
             })}
