@@ -30,8 +30,8 @@ assert.match(screen, /const columns: Array<\{ key: Metric \| 'policies'; label: 
 assert.match(screen, /getPartnerInsurerRegister\(from, to\)/, 'Keep authorized RPC');
 assert.match(screen, /setRange\(draft\)/, 'Applying date range refreshes query');
 assert.match(screen, /validDateRange\(draft\.from, draft\.to\)/, 'Reject invalid ranges');
-assert.match(screen, /if \(sortKey === 'payin_desc' && employee\)/, 'Pay-In sort is employee-only');
-assert.match(screen, /if \(sortKey === 'retention_desc' && employee\)/, 'Retention sort is employee-only');
+assert.match(screen, /if \(sortKey === 'payin_desc' && canViewCommercials\)/, 'Pay-In sort is commercially authorized only');
+assert.match(screen, /if \(sortKey === 'retention_desc' && canViewCommercials\)/, 'Retention sort is commercially authorized only');
 assert.match(screen, /accessibilityLabel=\{\`Sort by \$\{column\.label\}\`\}/, 'Column header sorting preserved');
 assert.doesNotMatch(screen, /arrow-forward|summaryCard/, 'No row navigation or summary card');
 console.log('Partner insurer inline date range and full scrollable register regression passed.');
