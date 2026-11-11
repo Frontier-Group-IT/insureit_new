@@ -55,7 +55,7 @@ const ACTIVITY_TABLE_NAME = "policies";
 const RECONCILIATION_ACTOR_NAME = "System Reconciliation";
 
 type AdminClient = ReturnType<typeof createSupabaseAdminClient>;
-type AuditRow = { id: string; actor_id: string | null; action: string; created_at: string; new_data?: { approved_by?: string | null; issuance_date?: string } | null };
+type AuditRow = { id: string; actor_id: string | null; action: string; created_at: string; new_data?: { approved_by?: string | null; issuance_date?: string; changed_fields?: unknown } | null };
 type DocumentRow = { uploaded_by: string | null; created_at: string; updated_at: string };
 type ProfileRow = { id: string; full_name: string | null };
 type LifeHealthCaseActivityRow = {
@@ -73,6 +73,7 @@ type ActivityCandidate = {
   actorName?: string | null;
   approvedBy?: string | null;
   policyDate?: string | null;
+  changedFields?: string[] | null;
   at: string;
 };
 
@@ -107,17 +108,105 @@ function materiallyLater(updatedAt: string | null | undefined, createdAt: string
   return timestamp(updatedAt) - timestamp(createdAt) > 1000;
 }
 
+const POLICY_EDIT_FIELDS = {
+  policy: {
+    policy_no: "Policy number", status: "Policy status", business_line: "Business line",
+    policy_type: "Policy category", policy_product: "Policy product", insurance_company_id: "Insurer",
+    issuance_date: "Issuance date", start_date: "Policy start date", end_date: "Policy expiry date",
+    policy_term: "Policy term", premium_amount: "Premium", insured_declared_value: "Sum insured / IDV",
+    intermediary_type: "Intermediary type", intermediary_code: "Intermediary code",
+    lead_source: "Lead source", rm_name: "Relationship manager", remarks: "Remarks",
+  },
+  premium: { od_premium: "OD premium", tp_premium: "TP premium", add_on_premium: "Add-on premium",
+    net_premium: "Net premium", gst_amount: "GST", gross_premium: "Gross premium" },
+  payin: { commercial_basis: "Pay-in basis", projected_commission_percent: "Pay-in rate",
+    projected_commission_amount: "Projected insurer pay-in", insurer_scheme_amount: "Insurer incentive",
+    total_projected_payin: "Total projected pay-in", commercial_status: "Pay-in entry status" },
+  payout: { payout_basis: "Partner payout basis", partner_payout_percent: "Partner payout rate",
+    partner_payout_amount: "Partner payout amount", commercial_status: "Payout entry status" },
+  case: { product_name: "Life/Health product", proposal_number: "Proposal number",
+    premium_paying_term: "Premium-paying term", policy_duration: "Policy duration",
+    payment_frequency: "Payment frequency", payment_mode: "Payment mode",
+    premium_amount: "Case premium", remarks: "Case remarks" },
+} as const;
+
+export type PolicyEditSnapshot = Record<string, string | null>;
+
+// Read-only, allowlisted field snapshot for a confirmed policy. Never store
+// arbitrary JSON, customer PII, financial values or raw remarks in audit logs.
+export async function capturePolicyEditSnapshot(admin: AdminClient, policyId: string): Promise<PolicyEditSnapshot | null> {
+  const [policy, premium, payin, payout, lifeCase] = await Promise.all([
+    admin.from("policies")
+      .select(Object.keys(POLICY_EDIT_FIELDS.policy).join(",")).eq("id",policyId).maybeSingle(),
+    admin.from("policy_premium_details")
+      .select(Object.keys(POLICY_EDIT_FIELDS.premium).join(",")).eq("policy_id",policyId).maybeSingle(),
+    admin.from("policy_payin_details")
+      .select(Object.keys(POLICY_EDIT_FIELDS.payin).join(",")).eq("policy_id",policyId).maybeSingle(),
+    admin.from("policy_intermediary_payouts")
+      .select(Object.keys(POLICY_EDIT_FIELDS.payout).join(",")).eq("policy_id",policyId)
+      .order("created_at",{ascending:false}).limit(1).maybeSingle(),
+    admin.from("life_health_cases")
+      .select(Object.keys(POLICY_EDIT_FIELDS.case).join(",")).eq("final_policy_id",policyId)
+      .order("converted_at",{ascending:false}).limit(1).maybeSingle(),
+  ]);
+  if (policy.error || !policy.data || premium.error || payin.error || payout.error || lifeCase.error) return null;
+  const snapshot: PolicyEditSnapshot = {};
+  const sources: Array<[string, Record<string, string>, Record<string, unknown> | null]> = [
+    ["policy", POLICY_EDIT_FIELDS.policy, policy.data as Record<string, unknown>],
+    ["premium", POLICY_EDIT_FIELDS.premium, premium.data as Record<string, unknown> | null],
+    ["payin", POLICY_EDIT_FIELDS.payin, payin.data as Record<string, unknown> | null],
+    ["payout", POLICY_EDIT_FIELDS.payout, payout.data as Record<string, unknown> | null],
+    ["case", POLICY_EDIT_FIELDS.case, lifeCase.data as Record<string, unknown> | null],
+  ];
+  for (const [prefix, fields, data] of sources) {
+    for (const key of Object.keys(fields)) {
+      const value = data?.[key];
+      snapshot[`${prefix}.${key}`] = value === undefined || value === null ? null : String(value).trim();
+    }
+  }
+  return snapshot;
+}
+
+export function changedPolicyEditFields(before: PolicyEditSnapshot | null, after: PolicyEditSnapshot | null): string[] | null {
+  if (!before || !after) return null;
+  const names: string[] = [];
+  const groups = POLICY_EDIT_FIELDS as Record<string, Record<string, string>>;
+  for (const [prefix, fields] of Object.entries(groups)) {
+    for (const [key, label] of Object.entries(fields)) {
+      const fullKey = `${prefix}.${key}`;
+      if (before[fullKey] !== after[fullKey]) names.push(label);
+    }
+  }
+  return [...new Set(names)];
+}
+
+function policyEditTitle(changed: string[] | null): string {
+  if (!changed) return "Policy updated — change details unavailable";
+  if (changed.length === 0) return "Policy saved — no tracked field changes";
+  if (changed.length > 1) return "Policy details updated";
+  const single = changed[0];
+  if (single === "Policy number") return "Policy number changed";
+  if (single === "Policy status") return "Policy status changed";
+  if (single === "Insurer") return "Insurer changed";
+  if (/premium|pay-in|payout|GST|incentive|rate/i.test(single)) return `${single} updated`;
+  return `${single} updated`;
+}
+
 export async function recordPolicyActivity(
   admin: AdminClient,
   policyId: string,
   actorId: string | null,
   action: PolicyActivityAction,
+  changedFields?: string[] | null,
 ) {
   const { error } = await admin.from("audit_logs").insert({
     actor_id: actorId,
     action,
     table_name: ACTIVITY_TABLE_NAME,
     record_id: policyId,
+    ...(action === POLICY_ACTIVITY_ACTIONS.POLICY_EDITED
+      ? { new_data: { changed_fields: changedFields ?? null } }
+      : {}),
   });
   return !error;
 }
@@ -176,6 +265,10 @@ export async function loadPolicyActivityHistory({
       actorName: reconciliationActorName(action, row.actor_id),
       approvedBy: action === POLICY_ACTIVITY_ACTIONS.PREVIOUS_MONTH_POLICY_UPLOADED ? row.new_data?.approved_by : null,
       policyDate: action === POLICY_ACTIVITY_ACTIONS.PREVIOUS_MONTH_POLICY_UPLOADED ? row.new_data?.issuance_date : null,
+      changedFields: action === POLICY_ACTIVITY_ACTIONS.POLICY_EDITED
+        && Array.isArray(row.new_data?.changed_fields)
+        ? row.new_data.changed_fields.filter((item): item is string => typeof item === "string").slice(0, 30)
+        : null,
       at: row.created_at,
     });
   }
@@ -256,13 +349,21 @@ export async function loadPolicyActivityHistory({
     .sort((a, b) => timestamp(b.at) - timestamp(a.at))
     .map((candidate) => ({
       id: candidate.id,
-      action: ACTION_LABELS[candidate.action],
+      action: candidate.action === POLICY_ACTIVITY_ACTIONS.POLICY_EDITED
+        ? policyEditTitle(candidate.changedFields ?? null)
+        : ACTION_LABELS[candidate.action],
       actorName: candidate.actorName?.trim() || (candidate.actorId ? actorNames.get(candidate.actorId) : null) || "Not recorded",
-      meta: candidate.action === POLICY_ACTIVITY_ACTIONS.PREVIOUS_MONTH_POLICY_UPLOADED
-        ? (candidate.approvedBy ? "Approved by: " + candidate.approvedBy : "Uploaded within the permitted date window")
-          + " · Uploaded by: " + (candidate.actorId ? actorNames.get(candidate.actorId) ?? "Not recorded" : "Not recorded")
-          + (candidate.policyDate ? " · Insurance date: " + candidate.policyDate : "")
-        : undefined,
+      meta: candidate.action === POLICY_ACTIVITY_ACTIONS.POLICY_EDITED
+        ? candidate.changedFields === null || candidate.changedFields === undefined
+          ? "Fields changed were not recorded for this edit"
+          : candidate.changedFields.length
+            ? "Changed: " + candidate.changedFields.join(", ")
+            : "No tracked field values changed"
+        : candidate.action === POLICY_ACTIVITY_ACTIONS.PREVIOUS_MONTH_POLICY_UPLOADED
+          ? (candidate.approvedBy ? "Approved by: " + candidate.approvedBy : "Uploaded within the permitted date window")
+            + " · Uploaded by: " + (candidate.actorId ? actorNames.get(candidate.actorId) ?? "Not recorded" : "Not recorded")
+            + (candidate.policyDate ? " · Insurance date: " + candidate.policyDate : "")
+          : undefined,
       at: candidate.at,
     }));
 }
