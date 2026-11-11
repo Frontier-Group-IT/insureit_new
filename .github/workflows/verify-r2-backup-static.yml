@@ -464,4 +464,19 @@ jobs:
           else
             echo "OFFLINE PG17 PRIVILEGED ROLE SWITCH: permission denied"
           fi
+          # Authenticate the preinstalled isolated admin using only this
+          # disposable container's synthetic test password; no live secrets.
+          if docker exec -u postgres --env PGPASSWORD=ephemeral-synthetic-only \
+            insureit-v2-privilege-probe \
+            psql -h 127.0.0.1 -U supabase_admin -XAt -v ON_ERROR_STOP=1 -d postgres \
+            -c "SELECT rolsuper::integer FROM pg_roles WHERE rolname=current_user;" \
+            > "$RUNNER_TEMP/v2-role-probe.log" 2>&1; then
+            if grep -qx 1 "$RUNNER_TEMP/v2-role-probe.log"; then
+              echo "OFFLINE PG17 ADMIN AUTHENTICATION: supported"
+            else
+              echo "OFFLINE PG17 ADMIN AUTHENTICATION: unprivileged"
+            fi
+          else
+            echo "OFFLINE PG17 ADMIN AUTHENTICATION: unavailable"
+          fi
           rm -f "$RUNNER_TEMP/v2-role-probe.log"
