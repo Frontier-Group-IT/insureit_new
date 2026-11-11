@@ -74,6 +74,33 @@ def select_samples(grouped, per_bucket=DEFAULT_SAMPLES_PER_BUCKET):
     return chosen
 
 
+def select_all_entries(grouped):
+    """Every referenced object, deterministic order, no source/R2 writes."""
+    return [
+        entry
+        for bucket in sorted(grouped)
+        for entry in sorted(grouped[bucket], key=lambda item: item[0])
+    ]
+
+
+def planned_entries(grouped, scope):
+    if scope == "sample":
+        return select_samples(grouped)
+    if scope == "all":
+        return select_all_entries(grouped)
+    raise ValueError("Unsupported Storage R2 verification scope")
+
+
+def verify_selected(s3, bucket, key, entries):
+    """Stream one encrypted blob at a time into memory, never persist plaintext."""
+    verified_count = 0
+    verified_bytes = 0
+    for identifier, entry in entries:
+        verified_bytes += verify_sample(s3, bucket, key, identifier, entry)
+        verified_count += 1
+    return verified_count, verified_bytes
+
+
 def validate_bucket_coverage(manifest, grouped):
     recorded = set(manifest["buckets"])
     populated = set(grouped)
@@ -108,21 +135,38 @@ def main():
         config=Config(connect_timeout=15, read_timeout=45,
                       retries={"mode": "standard", "max_attempts": 4}),
     )
+    # Existing scheduled Storage backup keeps its fast per-bucket sample
+    # verification. The new protected MANUAL workflow explicitly requests
+    # every encrypted object, with no changes to the daily backup cadence.
+    scope = os.environ.get("VERIFY_STORAGE_SCOPE", "sample").strip()
     manifest, grouped = validate_manifest(s3, bucket, key_raw)
-    chosen = select_samples(grouped)
     empty_buckets = validate_bucket_coverage(manifest, grouped)
+    chosen = planned_entries(grouped, scope)
     if not chosen:
         raise RuntimeError("No backup objects available to restore")
-    count = 0
-    bytes_checked = 0
-    for identifier, entry in chosen:
-        bytes_checked += verify_sample(s3, bucket, key_raw, identifier, entry)
-        count += 1
-    # No customer names, object paths, or data bytes are printed.
-    print(f"RESTORE VERIFIED: {count} file samples across {len(grouped)} buckets; "
-          f"{bytes_checked} decrypted bytes validated; "
-          f"manifest entries={len(manifest['entries'])}; empty buckets={len(empty_buckets)}; "
-          f"snapshot={manifest['created_at']}", flush=True)
+    if scope == "all" and len(chosen) != len(manifest["entries"]):
+        raise RuntimeError("Complete Storage manifest coverage mismatch")
+    count, bytes_checked = verify_selected(s3, bucket, key_raw, chosen)
+    if scope == "all":
+        if count != len(manifest["entries"]):
+            raise RuntimeError("Complete Storage object count mismatch")
+        print(
+            f"STORAGE FULL R2 OBJECT VERIFICATION PASSED: objects={count} "
+            f"buckets_with_objects={len(grouped)} empty_buckets={len(empty_buckets)} "
+            f"validated_bytes={bytes_checked} manifest_entries={len(manifest['entries'])} "
+            f"snapshot={manifest['created_at']}", flush=True
+        )
+        print(
+            "CAVEAT: All archived Storage file bytes verified in R2; "
+            "live source parity, upload to a recovery Storage endpoint, "
+            "and application access were NOT verified.", flush=True
+        )
+    else:
+        # Keep the existing success marker for the scheduled backup watchdog.
+        print(f"RESTORE VERIFIED: {count} file samples across {len(grouped)} buckets; "
+              f"{bytes_checked} decrypted bytes validated; "
+              f"manifest entries={len(manifest['entries'])}; empty buckets={len(empty_buckets)}; "
+              f"snapshot={manifest['created_at']}", flush=True)
     print("No Supabase access; R2 operations read-only; no plaintext persisted.", flush=True)
 
 
@@ -130,5 +174,5 @@ if __name__ == "__main__":
     try:
         main()
     except Exception as exc:
-        print(f"RESTORE FAILED: {type(exc).__name__}: {exc}", file=sys.stderr)
+        print(f"RESTORE FAILED: {type(exc).__name__}; private object identifiers withheld", file=sys.stderr)
         sys.exit(1)
