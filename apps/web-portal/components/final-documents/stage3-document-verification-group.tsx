@@ -41,7 +41,7 @@ export function Stage3DocumentVerificationGroup({ item, claim, verifications }: 
   );
   const selectableKey = selectableIds.join("|");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(() => item.documents.length > 0 && item.documents.every((document) => isDocumentVerified(document, verifications)));
 
   useEffect(() => {
     const allowed = new Set(selectableIds);
@@ -55,13 +55,17 @@ export function Stage3DocumentVerificationGroup({ item, claim, verifications }: 
   const hasNoFiles = item.documents.length === 0;
   const hasSingleFile = item.documents.length === 1;
   const hasMultipleFiles = item.documents.length > 1;
-  const showDocumentRows = hasSingleFile || (hasMultipleFiles && isExpanded);
+  const showDocumentRows = !hasNoFiles && isExpanded;
+
+  useEffect(() => {
+    setIsExpanded(!hasNoFiles && pendingFileCount === 0);
+  }, [hasNoFiles, pendingFileCount]);
   const contentId = `claim-final-document-group-${claim.id}-${item.key}`;
   const toggleExpanded = () => {
-    if (hasMultipleFiles) setIsExpanded((expanded) => !expanded);
+    if (!hasNoFiles) setIsExpanded((expanded) => !expanded);
   };
   const handleCardClick = (event: MouseEvent<HTMLElement>) => {
-    if (!hasMultipleFiles) return;
+    if (hasNoFiles) return;
     const target = event.target;
     if (target instanceof Element && target.closest("button, a, input, label, select, textarea")) return;
     toggleExpanded();
@@ -70,10 +74,10 @@ export function Stage3DocumentVerificationGroup({ item, claim, verifications }: 
   return (
     <article
       onClick={handleCardClick}
-      className={`${motionStyles.card} rounded-xl border bg-white ${hasNoFiles ? "px-2.5 py-2" : "p-2.5"} shadow-[0_6px_16px_rgba(7,29,73,0.028)] ${allVerified ? `border-green-200 ${motionStyles.verified}` : "border-[#E2EAF4]"} ${hasMultipleFiles ? "cursor-pointer" : ""}`}
+      className={`${motionStyles.card} rounded-xl border bg-white ${hasNoFiles ? "px-2.5 py-2" : "p-2.5"} shadow-[0_6px_16px_rgba(7,29,73,0.028)] ${allVerified ? `border-green-200 ${motionStyles.verified}` : "border-[#E2EAF4]"} ${!hasNoFiles ? "cursor-pointer" : ""}`}
     >
       <div className={`flex items-center justify-between gap-2 ${showDocumentRows ? "mb-2" : ""}`}>
-        {hasMultipleFiles ? (
+        {!hasNoFiles ? (
           <button
             type="button"
             onClick={(event) => {
@@ -148,7 +152,7 @@ export function Stage3DocumentVerificationGroup({ item, claim, verifications }: 
               );
             })}
           </div>
-        ) : hasMultipleFiles ? (
+        ) : pendingFileCount > 0 ? (
           <div id={contentId}>
             <ClaimDocumentCollapsedStatus verifiedCount={verifiedFileCount} pendingCount={pendingFileCount} showLabels />
           </div>
