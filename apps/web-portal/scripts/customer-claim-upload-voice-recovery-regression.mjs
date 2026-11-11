@@ -38,7 +38,7 @@ assert.match(multi,/!file.size \|\| !allowedExtensions.test\(file.name\)/,"Rejec
 assert.match(multi,/if \(!allowUpload \|\| running.current \|\| !files.length\) return;/,"Prevent concurrent uploads.");
 assert.match(multi,/Uploading documents: \{progress.done\} of \{progress.total\} processed/,"Show compact upload progress inside existing section.");
 assert.doesNotMatch(multi,/setSelected\(|<ul className="space-y-1"/,"Remove the selected-files preview entirely.");
-assert.match(multi,/setExpanded\(!returnToSpotIntimation\)/,"Spot Intimation collapses after upload while other claim stages retain expanded upload lists.");
+assert.match(multi,/setExpanded\(false\)/,"All Customer claim bulk uploads must collapse after successful upload.");
 assert.match(multi,/prepareCustomerClaimBulkVideo/,"Large customer videos must bypass the server-action body size limit.");
 assert.match(upload,/createSignedUploadUrl\(path,\{upsert:false\}\)/,"Signed large-video uploads must not overwrite records.");
 assert.match(upload,/loadCustomerClaimDetail\(account\.id,claimId\)/,"Signed upload prepare/finalize must validate customer claim ownership.");
