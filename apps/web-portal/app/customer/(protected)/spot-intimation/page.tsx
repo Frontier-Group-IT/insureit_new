@@ -141,8 +141,15 @@ export default async function CustomerSpotIntimation({searchParams}:{searchParam
   const canReusePolicyCopy = availablePolicyCopy
     ? !(await findExistingLinkedClaimCopy(copyAdmin, claim.id, account.id, availablePolicyCopy).catch(() => true))
     : false;
+  // Resolve legacy claims from the actual linked policy when the stored source is null.
+  // External linkage takes priority, matching the Customer Claim Journey details page.
+  const policySource=claim.policy_service_source==="external"||Boolean(claim.external_policy_id)
+    ?"External Policy"
+    :claim.policy_service_source==="sibl"||Boolean(claim.policy_id)
+      ?"Sankalp Policy"
+      :"—";
   return <div className="mx-auto w-full max-w-[90rem] space-y-3">
-    <CustomerClaimStageStrip claimId={claim.id} accountId={account.id} hideStageNav selectedKey="spot_intimation" currentKey="spot_intimation" completedKeys={editing?["spot_intimation"]:[]} claimSummary={{controlNo:claim.claim_no,policyNo:claim.policy_no,makeModel:[claim.vehicle_make,claim.vehicle_model].filter(Boolean).join(" - ")||null,vehicleNo:claim.vehicle_no,status:claim.current_status,manufacturer:claim.vehicle_make,insurer:claim.insurer_name,policySource:claim.policy_service_source==="sibl"?"Sankalp Policy":claim.policy_service_source==="external"||claim.external_policy_id?"External Policy":"—"}}/>
+    <CustomerClaimStageStrip claimId={claim.id} accountId={account.id} hideStageNav selectedKey="spot_intimation" currentKey="spot_intimation" completedKeys={editing?["spot_intimation"]:[]} claimSummary={{controlNo:claim.claim_no,policyNo:claim.policy_no,makeModel:[claim.vehicle_make,claim.vehicle_model].filter(Boolean).join(" - ")||null,vehicleNo:claim.vehicle_no,status:claim.current_status,manufacturer:claim.vehicle_make,insurer:claim.insurer_name,policySource}}/>
     <SpotIntimationSaveForm action={editing?submitCorrection:submit} editMode={editing} serverDraft={serverDraft} saveServerDraft={claim.current_status === "Draft" ? saveCustomerSpotDraft.bind(null, account.id, claim.id) : undefined} draftKey={account.id+":"+claim.id+(editing?":edit":"")} cancelHref={editing?detailsHref:`/customer/start-claim?account=${encodeURIComponent(account.id)}`} evidence={<><CustomerClaimEvidenceWorkspace documents={documents} claimId={claim.id} accountId={account.id} stage="spot_intimation" canReusePolicyCopy={canReusePolicyCopy} returnToSpotIntimation/><CustomerClaimVoiceRecorder claimId={claim.id} accountId={account.id} documents={documents}/></>}>
       <input type="hidden" name="account" value={account.id}/><input type="hidden" name="claim" value={claim.id}/>
       <div className="-mx-4 -mt-4 border-b border-[#D8E3F1] px-4 py-2 sm:-mx-5 sm:-mt-5 sm:px-5">
