@@ -183,125 +183,218 @@ export default function InsurerListScreen() {
   };
 
   return (
-    <PartnerScreen
-      title="Insurer-wise Performance"
-      navyTopBar
-      scrollProps={{
-        refreshControl: <RefreshControl refreshing={query.refreshing} onRefresh={() => void query.refresh()} />,
-      }}
+    <PartnerScreen title="Insurer-wise Performance" hideTopBar fullWidth
+      scrollProps={{ refreshControl: <RefreshControl refreshing={query.refreshing} onRefresh={() => void query.refresh()} /> }}
     >
-      <Text style={styles.subtitle}>Track policies, premium and business by insurer</Text>
+      <View style={styles.referenceHeader}>
+        <View style={styles.headerOrbLarge} />
+        <View style={styles.headerOrbSmall} />
+        <Pressable accessibilityRole="button" accessibilityLabel="Back to Business"
+          onPress={() => router.back()} style={styles.headerIcon}>
+          <Ionicons name="bar-chart-outline" size={21} color="#FFFFFF" />
+        </Pressable>
+        <View style={styles.headerCopy}>
+          <Text style={styles.headerEyebrow}>BUSINESS PERFORMANCE</Text>
+          <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Insurer-wise Performance</Text>
+        </View>
+      </View>
+      <View style={styles.headerSearchBand}>
+        <View style={styles.headerSearch}>
+          <Ionicons name="search-outline" size={18} color="#8698AE" />
+          <TextInput value={search} onChangeText={setSearch} placeholder="Search insurer"
+            placeholderTextColor="#94A2B5" autoCapitalize="none" autoCorrect={false}
+            accessibilityLabel="Search insurer" style={styles.headerSearchInput} />
+          {search ? <Pressable accessibilityRole="button" accessibilityLabel="Clear insurer search" onPress={() => setSearch('')}>
+            <Ionicons name="close-circle" size={17} color="#94A2B5" />
+          </Pressable> : null}
+        </View>
+      </View>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow} accessibilityLabel="Financial metric and date range filters">
+      <ScrollView horizontal nestedScrollEnabled showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.filterRow} accessibilityLabel="Financial filters, Date Range and Sort">
         {options.map((option) => (
-          <Pressable key={option.key} accessibilityRole="button" accessibilityState={{ selected: selectedMetric === option.key }}
-            onPress={() => setMetric(option.key)}
+          <Pressable key={option.key} accessibilityRole="button"
+            accessibilityState={{ selected: selectedMetric === option.key }}
+            onPress={() => scrollToMetric(option.key)}
             style={[styles.chip, selectedMetric === option.key && styles.selectedChip]}>
             <Text style={[styles.chipText, selectedMetric === option.key && styles.selectedChipText]}>{option.label}</Text>
           </Pressable>
         ))}
-        <Pressable accessibilityRole="button" accessibilityLabel="Date Range, open date picker" onPress={openDateRange} style={styles.dateChip}>
-          <Ionicons name="calendar-outline" size={14} color="#1659AA" />
-          <Text style={styles.dateChipText}>Date Range</Text>
-          <Ionicons name="chevron-down" size={12} color="#1659AA" />
+        <Pressable accessibilityRole="button" accessibilityLabel="Date Range, open date picker"
+          onPress={openDateRange} style={styles.chip}>
+          <Ionicons name="calendar-outline" size={14} color="#155BB6" />
+          <Text style={styles.chipText}>Date Range</Text>
+          <Ionicons name="chevron-down" size={12} color="#155BB6" />
+        </Pressable>
+        <Pressable accessibilityRole="button" accessibilityLabel="Sort insurer register"
+          onPress={() => setSortModalOpen(true)} style={styles.chip}>
+          <Ionicons name="swap-vertical-outline" size={14} color="#155BB6" />
+          <Text style={styles.chipText}>Sort</Text>
+          <Ionicons name="chevron-down" size={12} color="#155BB6" />
         </Pressable>
       </ScrollView>
 
-      <View style={styles.searchRow}>
-        <View style={styles.searchBox}>
-          <Ionicons name="search-outline" size={17} color="#7890AA" />
-          <TextInput value={search} onChangeText={setSearch} placeholder="Search insurer" placeholderTextColor="#8391A6"
-            autoCapitalize="none" autoCorrect={false} accessibilityLabel="Search insurer" style={styles.searchInput} />
-          {search ? <Pressable accessibilityRole="button" accessibilityLabel="Clear insurer search" onPress={() => setSearch('')}>
-            <Ionicons name="close-circle" size={16} color="#718198" />
+      <View style={styles.registerArea}>
+        <View style={styles.rangeRow}>
+          <Text style={styles.rangeText}>{validRange ? formatRange(from, to) : 'Select a valid reporting range'}</Text>
+          <Text style={styles.countText}>{insurers.length} insurers</Text>
+        </View>
+        <View style={styles.register}>
+          <View style={styles.registerContents}>
+            <View style={styles.fixedNames}>
+              <View style={styles.registerHeader}><Text style={styles.columnTitle}>INSURER</Text></View>
+              {!validRange || (query.loading && !query.data) || (query.error && !query.data) ? null
+                : insurers.map((insurer) => (
+                  <View key={insurer.name} style={styles.tableRow}>
+                    <PartnerInsurerLogo name={insurer.name} style={styles.logo} />
+                    <Text style={styles.insurerName} numberOfLines={2} ellipsizeMode="tail"
+                      accessibilityLabel={insurer.name}>{displayInsurerName(insurer.name)}</Text>
+                  </View>
+                ))}
+            </View>
+            <ScrollView horizontal nestedScrollEnabled directionalLockEnabled
+              ref={amountScrollRef} showsHorizontalScrollIndicator
+              accessibilityLabel="Swipe financial columns horizontally. Insurer names remain visible.">
+              <View>
+                <View style={styles.registerHeader}>
+                  {columns.map((column) => (
+                    <Pressable key={column.key} accessibilityRole="button"
+                      accessibilityLabel={`Sort by ${column.label}`}
+                      onPress={() => {
+                        if (column.key === 'policies') setSortKey('policies_desc');
+                        else if (column.key === 'premium' || column.key === 'amounts') setSortKey('amount_desc');
+                        else if (column.key === 'payin' && employee) setSortKey('payin_desc');
+                        else if (column.key === 'retention' && employee) setSortKey('retention_desc');
+                      }}
+                      style={styles.metricHeaderCell}>
+                      <Text numberOfLines={2} style={styles.metricHeaderText}>{column.label.toUpperCase()}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+                {(!validRange || (query.loading && !query.data) || (query.error && !query.data)) ? null
+                  : insurers.map((insurer) => (
+                    <View key={insurer.name} style={styles.financialRow}>
+                      {columns.map((column) => {
+                        const amount = column.key === 'policies' ? null : metricValue(insurer, column.key);
+                        return (
+                          <Text key={column.key} style={styles.metricCell} numberOfLines={1}
+                            adjustsFontSizeToFit minimumFontScale={0.75}>
+                            {column.key === 'policies' ? insurer.policies :
+                              amount == null ? '—' : formatInsurerRupees(amount)}
+                          </Text>
+                        );
+                      })}
+                    </View>
+                  ))}
+              </View>
+            </ScrollView>
+          </View>
+          {!validRange ? <PartnerStateView state="empty" title="Date range unavailable"
+            message="Choose a valid range of up to 366 days." />
+            : query.loading && !query.data ? <PartnerStateView state="loading" title="Loading insurers" />
+            : query.error && !query.data ? <PartnerStateView state="error" title="Insurer list unavailable"
+              message={query.error} actionLabel="Try again" onAction={() => void query.refresh()} />
+            : !insurers.length ? <Text style={styles.empty}>
+                {search.trim() ? 'No insurers match your search.' : 'No insurers found for the selected reporting period.'}
+              </Text> : null}
+          {query.error && query.data ? <Pressable accessibilityRole="button" onPress={() => void query.refresh()} style={styles.retry}>
+            <Text style={styles.retryText}>Refresh failed. Tap to retry.</Text>
           </Pressable> : null}
         </View>
-        <Pressable accessibilityRole="button" accessibilityLabel={sortByAmount ? 'Sort insurer names alphabetically' : 'Sort insurers by selected amount'}
-          onPress={() => setSortByAmount((current) => !current)} style={styles.sortButton}>
-          <Ionicons name={sortByAmount ? 'filter-outline' : 'text-outline'} size={19} color="#1659AA" />
-        </Pressable>
-      </View>
-      <View style={styles.rangeRow}>
-        <Text style={styles.rangeText}>{validRange ? formatRange(from, to) : 'Select a valid reporting range'}</Text>
-        <Text style={styles.countText}>{insurers.length} insurers</Text>
       </View>
 
-      <View style={styles.register}>
-        <View style={styles.registerHeader}>
-          <Text style={[styles.columnTitle, styles.nameHeading]}>INSURER</Text>
-          <Text style={[styles.columnTitle, styles.policiesHeading]}>POLICIES</Text>
-          <Text style={[styles.columnTitle, styles.amountHeading]}>{selectedLabel.toUpperCase()}</Text>
-        </View>
-        {!validRange ? (
-          <PartnerStateView state="empty" title="Date range unavailable" message="Choose a valid range of up to 366 days." />
-        ) : query.loading && !query.data ? (
-          <PartnerStateView state="loading" title="Loading insurers" />
-        ) : query.error && !query.data ? (
-          <PartnerStateView state="error" title="Insurer list unavailable" message={query.error} actionLabel="Try again" onAction={() => void query.refresh()} />
-        ) : insurers.length ? (
-          insurers.map((insurer) => {
-            const amount = metricValue(insurer, selectedMetric);
-            return (
-              <View key={insurer.name} style={styles.tableRow} accessibilityLabel={`${insurer.name}, ${insurer.policies} policies, ${selectedLabel} ${amount == null ? 'unavailable' : formatInsurerRupees(amount)}`}>
-                <View style={styles.nameCell}>
-                  <PartnerInsurerLogo name={insurer.name} style={styles.logo} />
-                  <Text style={styles.insurerName} numberOfLines={2} ellipsizeMode="tail" accessibilityLabel={insurer.name}>
-                    {displayInsurerName(insurer.name)}
-                  </Text>
-                </View>
-                <Text style={styles.policyCount} numberOfLines={1}>{insurer.policies}</Text>
-                <Text style={styles.amountValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>
-                  {amount == null ? '—' : formatInsurerRupees(amount)}
-                </Text>
-              </View>
-            );
-          })
-        ) : (
-          <Text style={styles.empty}>{search.trim() ? 'No insurers match your search.' : 'No insurers found for the selected reporting period.'}</Text>
-        )}
-        {query.error && query.data ? (
-          <Pressable onPress={() => void query.refresh()} accessibilityRole="button" style={styles.retry}>
-            <Text style={styles.retryText}>Refresh failed. Tap to retry.</Text>
-          </Pressable>
-        ) : null}
-      </View>
-
-      <Modal visible={dateModalOpen} transparent animationType="slide" onRequestClose={() => setDateModalOpen(false)}>
+      <Modal visible={sortModalOpen} transparent animationType="slide" onRequestClose={() => setSortModalOpen(false)}>
         <View style={styles.modalShade}>
+          <Pressable style={StyleSheet.absoluteFillObject} onPress={() => setSortModalOpen(false)} accessibilityLabel="Close sort options" />
+          <View style={styles.modalPanel}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Sort Insurers</Text>
+              <Pressable accessibilityRole="button" accessibilityLabel="Close sort"
+                onPress={() => setSortModalOpen(false)} style={styles.closeButton}>
+                <Ionicons name="close" color="#526781" size={20} />
+              </Pressable>
+            </View>
+            {sortOptions.map((option) => (
+              <Pressable key={option.key} accessibilityRole="button"
+                accessibilityState={{ selected: sortForCurrentUser === option.key }}
+                onPress={() => { setSortKey(option.key); setSortModalOpen(false); }}
+                style={styles.sortOption}>
+                <Text style={[styles.sortOptionText, sortForCurrentUser === option.key && styles.sortOptionSelected]}>{option.label}</Text>
+                {sortForCurrentUser === option.key ? <Ionicons name="checkmark-circle" size={19} color="#155BB6" /> : null}
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={dateModalOpen} transparent animationType="slide"
+        onRequestClose={() => { setPickerTarget(null); setDateModalOpen(false); }}>
+        <View style={styles.modalShade}>
+          <Pressable style={StyleSheet.absoluteFillObject}
+            onPress={() => { setPickerTarget(null); setDateModalOpen(false); }}
+            accessibilityLabel="Close date range" />
           <View style={styles.modalPanel}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Date Range</Text>
-              <Pressable accessibilityLabel="Close date range" accessibilityRole="button" onPress={() => setDateModalOpen(false)} style={styles.closeButton}>
+              <Pressable accessibilityRole="button" accessibilityLabel="Close date range"
+                onPress={() => { setPickerTarget(null); setDateModalOpen(false); }} style={styles.closeButton}>
                 <Ionicons name="close" color="#526781" size={20} />
               </Pressable>
             </View>
             <View style={styles.presets}>
               {([['mtd', 'This Month'], ['last_month', 'Last Month'], ['custom', 'Custom Range']] as const).map(([key, label]) => (
-                <Pressable key={key} onPress={() => key === 'custom' ? setDatePreset('custom') : applyPreset(key)}
-                  accessibilityRole="button" accessibilityState={{ selected: datePreset === key }}
+                <Pressable key={key} accessibilityRole="button"
+                  accessibilityState={{ selected: datePreset === key }}
+                  onPress={() => {
+                    setPickerTarget(null);
+                    if (key === 'custom') setDatePreset('custom');
+                    else applyPreset(key);
+                  }}
                   style={[styles.preset, datePreset === key && styles.presetActive]}>
                   <Text style={[styles.presetText, datePreset === key && styles.presetTextActive]}>{label}</Text>
                 </Pressable>
               ))}
             </View>
             <View style={styles.dateFields}>
-              <View style={styles.dateField}>
-                <PartnerDatePicker label="From Date" value={parseLocal(draft.from)} maximumDate={new Date()}
-                  onChange={(date) => { setDatePreset('custom'); setDraft((current) => ({ ...current, from: isoLocal(date) })); }} />
-              </View>
-              <View style={styles.dateField}>
-                <PartnerDatePicker label="To Date" value={parseLocal(draft.to)} maximumDate={new Date()}
-                  onChange={(date) => { setDatePreset('custom'); setDraft((current) => ({ ...current, to: isoLocal(date) })); }} />
-              </View>
+              {(['from', 'to'] as const).map((field) => (
+                <Pressable key={field} accessibilityRole="button"
+                  accessibilityLabel={field === 'from' ? 'From Date, open calendar' : 'To Date, open calendar'}
+                  onPress={() => { setDatePreset('custom'); setPickerTarget(field); }}
+                  style={[styles.dateButton, pickerTarget === field && styles.dateButtonActive]}>
+                  <Text style={styles.dateButtonLabel}>{field === 'from' ? 'From Date' : 'To Date'}</Text>
+                  <View style={styles.dateButtonValue}>
+                    <Text style={styles.dateButtonText}>{parseLocal(draft[field]).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</Text>
+                    <Ionicons name="calendar-outline" size={16} color="#155BB6" />
+                  </View>
+                </Pressable>
+              ))}
             </View>
-            <Text style={styles.dateNote}>Select up to 366 days. Dates use your device calendar.</Text>
-            {!validDraft ? <Text style={styles.invalidRange}>Select a valid date range, with From Date on or before To Date.</Text> : null}
+            {pickerTarget ? (
+              <View style={styles.calendarWrap}>
+                <Text style={styles.calendarLabel}>Select {pickerTarget === 'from' ? 'From Date' : 'To Date'}</Text>
+                <DateTimePicker key={pickerTarget}
+                  value={parseLocal(draft[pickerTarget])}
+                  mode="date" display={Platform.OS === 'ios' ? 'inline' : 'default'}
+                  maximumDate={new Date()} onChange={handlePickedDate} />
+                {Platform.OS === 'ios' ? (
+                  <Pressable accessibilityRole="button" onPress={() => setPickerTarget(null)} style={styles.calendarDone}>
+                    <Text style={styles.calendarDoneText}>Done</Text>
+                  </Pressable>
+                ) : null}
+              </View>
+            ) : null}
+            <Text style={styles.dateNote}>Choose a maximum of 366 days. The range updates the insurer register.</Text>
+            {!validDraft ? <Text style={styles.invalidRange}>Select a valid date range (From Date must not be after To Date).</Text> : null}
             <View style={styles.modalActions}>
-              <Pressable accessibilityRole="button" onPress={() => setDateModalOpen(false)} style={styles.cancel}><Text style={styles.cancelText}>Cancel</Text></Pressable>
-              <Pressable accessibilityRole="button" disabled={!validDraft} onPress={() => { setRange(draft); setDateModalOpen(false); }}
-                style={[styles.apply, !validDraft && styles.applyDisabled]}><Text style={styles.applyText}>Apply</Text></Pressable>
+              <Pressable accessibilityRole="button" onPress={() => { setPickerTarget(null); setDateModalOpen(false); }} style={styles.cancel}>
+                <Text style={styles.cancelText}>Cancel</Text>
+              </Pressable>
+              <Pressable accessibilityRole="button" disabled={!validDraft}
+                onPress={() => { setRange(draft); setPickerTarget(null); setDateModalOpen(false); }}
+                style={[styles.apply, !validDraft && styles.applyDisabled]}>
+                <Text style={styles.applyText}>Apply</Text>
+              </Pressable>
             </View>
-            {Platform.OS === 'web' ? <Text style={styles.dateNote}>Use the Partner mobile app to open the native date picker.</Text> : null}
           </View>
         </View>
       </Modal>
