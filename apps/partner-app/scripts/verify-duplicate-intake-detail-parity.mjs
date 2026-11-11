@@ -26,6 +26,14 @@ assert.ok(links.includes('/^\\/policies\\/[0-9a-f-]{36}$/i'), 'Mobile only accep
 assert.ok(detail.includes('topBarIcon="documents-outline"'), 'Use the professional unboxed documents icon');
 assert.ok(detail.includes('fullWidth'), 'Intake detail uses edge-to-edge mobile content');
 assert.ok(detail.includes('style={styles.intakeSummary}'), 'Phone/source and policy/vehicle summary have a full-width area');
+assert.ok(detail.includes('style={styles.intakeSummaryCompact}'), 'Duplicate PIR metadata sits directly under the number without a right-side timestamp gap');
+assert.ok(detail.includes("{row.status !== 'duplicate' ? <View style={styles.intakeSummary}>"), 'Only nonduplicate pages render the summary under the full header row');
+assert.ok(detail.includes("{row.status !== 'duplicate' ? <IntakeProgress row={row} /> : null}"), 'Duplicate pages must not display the Uploaded/Read/Review/Done tracker');
+assert.ok(!detail.includes('Review and Policy Onboarding actions are disabled for this intake.'), 'No redundant duplicate disabled-actions message');
+assert.ok(detail.includes("row.duplicate_match.kind === 'registered_policy' ? 'View Existing Policy' : 'View Earlier Intake'"), 'Duplicate policy action keeps the existing policy destination');
+assert.ok(detail.includes('onPress={() => void openDuplicateMatch()}'), 'View Existing Policy remains actionable');
+assert.ok(links.includes('return `${portalUrl}${path}`;'), 'Existing policy link opens the canonical authenticated Operations destination');
+assert.ok(api.includes('target_path: access.can_review || access.can_finalize'), 'Never expose existing-policy link without reviewer authorization');
 assert.ok(detail.includes("ready_for_review: 'Ready for Review'"), 'Short ready status text');
 assert.ok(!detail.includes('source="OCR"') && !detail.includes("source={fields.has(key) ? 'OCR' : undefined}"), 'Review rows should not repeat OCR badges');
 assert.ok(!detail.includes('number="02"') && !detail.includes('number="03"'), 'Review sections omit numeric prefixes');
