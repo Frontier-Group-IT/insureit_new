@@ -25,16 +25,30 @@ export function EmployeeOrgchartDetails({
   const closeRef = useRef<HTMLButtonElement>(null);
   const [tab, setTab] = useState<Tab>("profile");
   const [editing, setEditing] = useState(false);
+  const [dirty, setDirty] = useState(false);
+  const [pendingNavigation, setPendingNavigation] = useState<{ type: "close" } | { type: "tab"; tab: Tab } | { type: "focus"; employeeId: string } | { type: "cancel-edit" } | null>(null);
+  const performNavigation = (destination: NonNullable<typeof pendingNavigation>) => {
+    setDirty(false);
+    setPendingNavigation(null);
+    if (destination.type === "close") onClose();
+    else if (destination.type === "focus") onFocus(destination.employeeId);
+    else if (destination.type === "cancel-edit") setEditing(false);
+    else { setTab(destination.tab); setEditing(false); }
+  };
+  const navigateSafely = (destination: NonNullable<typeof pendingNavigation>) => {
+    if (dirty && editing) setPendingNavigation(destination);
+    else performNavigation(destination);
+  };
   const employeeId = employee?.id;
-  useEffect(() => { setTab("profile"); setEditing(false); }, [employeeId]);
+  useEffect(() => { setTab("profile"); setEditing(false); setDirty(false); setPendingNavigation(null); }, [employeeId]);
   useEffect(() => {
     if (!employee) return;
     const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     closeRef.current?.focus();
-    const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") onClose(); };
+    const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") { if (pendingNavigation) setPendingNavigation(null); else navigateSafely({ type: "close" }); } };
     window.addEventListener("keydown", onKey);
     return () => { window.removeEventListener("keydown", onKey); previous?.focus(); };
-  }, [employeeId, onClose, employee]);
+  }, [employeeId, onClose, employee, pendingNavigation, dirty, editing]);
   if (!employee) return null;
   const canSeeAccess = canManagePortalAccess;
   const tabs: { key: Tab; label: string }[] = [
@@ -45,11 +59,11 @@ export function EmployeeOrgchartDetails({
   ];
 
   return <div className="absolute inset-0 z-40 flex justify-end" data-testid="employee-details-drawer">
-    <button aria-label="Close employee details" type="button" onClick={onClose} className="org-drawer-backdrop absolute inset-0 cursor-default bg-[#102846]/20 backdrop-blur-[1px]" />
+    <button aria-label="Close employee details" type="button" onClick={() => navigateSafely({ type: "close" })} className="org-drawer-backdrop absolute inset-0 cursor-default bg-[#102846]/20 backdrop-blur-[1px]" />
     <aside role="dialog" aria-modal="true" aria-labelledby="orgchart-details-heading" className="org-drawer-panel relative z-10 flex h-full w-full max-w-[560px] flex-col border-l border-[#DCE5EF] bg-white shadow-[-14px_0_35px_rgba(14,36,64,0.15)]">
       <header className="flex items-center justify-between gap-3 border-b border-[#E5EDF6] px-5 py-4">
         <div><p className="text-[10px] font-semibold uppercase tracking-wide text-[#7588A0]">Employee workspace</p><h2 id="orgchart-details-heading" className="text-[16px] font-bold text-[#112E56]">{employee.full_name}</h2></div>
-        <button ref={closeRef} type="button" aria-label="Close details panel" onClick={onClose} className="rounded-md border border-[#DDE6F0] p-2 text-[#536D89] hover:bg-[#F3F7FC]"><X className="h-4 w-4" /></button>
+        <button ref={closeRef} type="button" aria-label="Close details panel" onClick={() => navigateSafely({ type: "close" })} className="rounded-md border border-[#DDE6F0] p-2 text-[#536D89] hover:bg-[#F3F7FC]"><X className="h-4 w-4" /></button>
       </header>
       <div className="border-b border-[#E5EDF6] bg-[#F8FBFF] px-5 py-4">
         <div className="flex items-center gap-3">
@@ -62,18 +76,18 @@ export function EmployeeOrgchartDetails({
         </div>
       </div>
       <div className="flex gap-1 overflow-x-auto border-b border-[#E5EDF6] px-4 py-2" role="tablist" aria-label="Employee workspace sections">
-        {tabs.map(({ key, label }) => <button key={key} type="button" role="tab" aria-selected={tab === key} onClick={() => { setTab(key); setEditing(false); }} className={`shrink-0 rounded-md px-3 py-2 text-[11px] font-semibold ${tab === key ? "bg-[#153762] text-white" : "text-[#58708E] hover:bg-[#F0F5FB]"}`}>{label}</button>)}
+        {tabs.map(({ key, label }) => <button key={key} type="button" role="tab" aria-selected={tab === key} onClick={() => navigateSafely({ type: "tab", tab: key })} className={`shrink-0 rounded-md px-3 py-2 text-[11px] font-semibold ${tab === key ? "bg-[#153762] text-white" : "text-[#58708E] hover:bg-[#F0F5FB]"}`}>{label}</button>)}
       </div>
       <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-5">
         <div key={`${employee.id}-${tab}`} className="org-reveal space-y-4">
         {tab === "profile" ? <>
           <div className="flex items-start justify-between gap-2">
             <h3 className="text-[12px] font-bold text-[#1C426E]">Employee information</h3>
-            {canManage ? <button type="button" onClick={() => setEditing((value) => !value)} className="inline-flex items-center gap-1.5 rounded-md border border-[#CCDCEA] bg-white px-3 py-1.5 text-[10px] font-semibold text-[#315E8C] hover:bg-[#EFF6FD]"><Pencil className="h-3.5 w-3.5" />{editing ? "Cancel edit" : "Edit employee"}</button> : null}
+            {canManage ? <button type="button" onClick={() => editing ? navigateSafely({ type: "cancel-edit" }) : setEditing(true)} className="inline-flex items-center gap-1.5 rounded-md border border-[#CCDCEA] bg-white px-3 py-1.5 text-[10px] font-semibold text-[#315E8C] hover:bg-[#EFF6FD]"><Pencil className="h-3.5 w-3.5" />{editing ? "Cancel edit" : "Edit employee"}</button> : null}
           </div>
           {editing && canManage ? <div className="rounded-lg border border-[#D6E4F2] bg-[#F8FBFF] p-3">
             <p className="mb-3 text-[10px] text-[#67809E]">Profile details use the existing authorized save workflow. Employee code and reporting changes are locked here pending the separate governed change workflow.</p>
-            <EmployeeEditForm key={employee.id} employee={employee} managers={managers} compact />
+            <EmployeeEditForm key={employee.id} employee={employee} managers={managers} compact onDirtyChange={setDirty} />
           </div> : <div className="space-y-3">
             <div className="grid grid-cols-2 gap-2">
               <div className="rounded-lg bg-[#F5F8FC] p-3"><p className="text-[9px] uppercase tracking-wide text-[#8A9AAD]">Department</p><p className="mt-1 text-[11px] font-semibold text-[#23456B]">{employee.department}</p></div>
@@ -91,8 +105,8 @@ export function EmployeeOrgchartDetails({
             <div className="rounded-lg bg-[#EFF8F3] p-3"><p className="text-[20px] font-bold text-[#167056]">{partners.length}</p><p className="text-[10px] text-[#7C8FA5]">Assigned intermediaries</p></div>
           </div>
           <h3 className="text-[11px] font-bold text-[#23466F]">Reporting manager</h3>
-          {manager ? <button type="button" onClick={() => onFocus(manager.id)} className="flex w-full items-center justify-between rounded-lg border border-[#DFE9F3] bg-white px-3 py-3 text-left text-[11px] font-semibold text-[#315A83] hover:bg-[#F2F7FC]">{manager.full_name}<ChevronRight className="h-4 w-4" /></button> : <p className="text-[11px] text-[#7A8FA6]">No linked manager within your visible directory.</p>}
-          {reports.length ? <><h3 className="flex items-center gap-2 text-[11px] font-bold text-[#23466F]"><Users className="h-4 w-4" />Direct reports</h3><div className="max-h-72 space-y-1 overflow-y-auto">{reports.map((person) => <button key={person.id} type="button" onClick={() => onFocus(person.id)} className="flex w-full items-center justify-between rounded-lg bg-[#F6F9FD] px-3 py-2 text-left text-[11px] text-[#3C6184] hover:bg-[#EAF3FC]">{person.full_name}<ChevronRight className="h-4 w-4" /></button>)}</div></> : null}
+          {manager ? <button type="button" onClick={() => navigateSafely({ type: "focus", employeeId: manager.id })} className="flex w-full items-center justify-between rounded-lg border border-[#DFE9F3] bg-white px-3 py-3 text-left text-[11px] font-semibold text-[#315A83] hover:bg-[#F2F7FC]">{manager.full_name}<ChevronRight className="h-4 w-4" /></button> : <p className="text-[11px] text-[#7A8FA6]">No linked manager within your visible directory.</p>}
+          {reports.length ? <><h3 className="flex items-center gap-2 text-[11px] font-bold text-[#23466F]"><Users className="h-4 w-4" />Direct reports</h3><div className="max-h-72 space-y-1 overflow-y-auto">{reports.map((person) => <button key={person.id} type="button" onClick={() => navigateSafely({ type: "focus", employeeId: person.id })} className="flex w-full items-center justify-between rounded-lg bg-[#F6F9FD] px-3 py-2 text-left text-[11px] text-[#3C6184] hover:bg-[#EAF3FC]">{person.full_name}<ChevronRight className="h-4 w-4" /></button>)}</div></> : null}
           <p className="rounded-md bg-[#F7FAFC] p-3 text-[10px] text-[#697E94]">Reporting-manager changes are handled through the employee editor and must not automatically reassign partners.</p>
         </> : null}
         {tab === "network" ? <>
@@ -106,6 +120,14 @@ export function EmployeeOrgchartDetails({
         </> : null}
         </div>
       </div>
+      {pendingNavigation ? <div role="alertdialog" aria-modal="true" aria-labelledby="employee-unsaved-title" aria-describedby="employee-unsaved-description" className="absolute inset-x-3 bottom-14 z-30 rounded-xl border border-[#EDCEA4] bg-white p-4 shadow-[0_12px_35px_rgba(20,46,81,.2)]" data-testid="employee-unsaved-confirmation">
+        <h3 id="employee-unsaved-title" className="text-[12px] font-bold text-[#193B65]">Discard unsaved changes?</h3>
+        <p id="employee-unsaved-description" className="mt-1 text-[10.5px] leading-5 text-[#6A7E93]">You have edited employee information that has not been saved. Leaving this section will lose those changes.</p>
+        <div className="mt-3 flex justify-end gap-2">
+          <button type="button" autoFocus onClick={() => setPendingNavigation(null)} className="rounded-md border border-[#C9DAE9] bg-white px-3 py-2 text-[10px] font-semibold text-[#355D83]">Keep editing</button>
+          <button type="button" onClick={() => performNavigation(pendingNavigation)} className="rounded-md bg-[#A34435] px-3 py-2 text-[10px] font-semibold text-white hover:bg-[#8D372B]">Discard and continue</button>
+        </div>
+      </div> : null}
       <footer className="border-t border-[#E5EDF6] bg-[#F9FBFD] px-5 py-3 text-[10px] text-[#8091A6]">Permanent employee deletion is not available in the Organization Explorer.</footer>
     </aside>
   </div>;
