@@ -43,6 +43,8 @@ jobs:
         run: node --experimental-strip-types scripts/policy-ocr-icici-3005-text-regression.mjs
       - name: ICICI 3005 missing field and preservation regression
         run: node --experimental-strip-types scripts/policy-ocr-icici-3005-outstanding-regression.mjs
+      - name: ICICI 3005 section02/03 autofill regression
+        run: node --experimental-strip-types scripts/policy-ocr-icici-3005-section02-regression.mjs
       - name: Operations claim payment-stage authorized write regression
         run: node scripts/claim-payment-stage-authorized-write-regression.mjs
       - name: External Claim Billing workshop bill upload regression
