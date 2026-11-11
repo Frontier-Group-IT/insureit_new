@@ -302,7 +302,7 @@ export default function InsurerListScreen() {
                 ))}
             </View>
             <ScrollView horizontal nestedScrollEnabled directionalLockEnabled
-              ref={amountScrollRef} showsHorizontalScrollIndicator
+              showsHorizontalScrollIndicator
               accessibilityLabel="Swipe financial columns horizontally. Insurer names remain visible.">
               <View>
                 <View style={styles.registerHeader}>
