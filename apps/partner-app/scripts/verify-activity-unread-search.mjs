@@ -76,4 +76,31 @@ expect(activity.includes("style={logo ? styles.insurerLogo : styles.eventArtwork
 expect(activity.includes("source={logo ?? activityAsset(item.kind)}"), "Existing manufacturer, insurer and fallback asset behavior remains intact");
 expect(activity.includes("backgroundColor: '#FFFFFF'") && activity.includes("attentionIcon:"), "Needs-attention white icon tiles are retained");
 
+const attentionThemeStyles = ['attentionCardRenewal', 'attentionCardClaim', 'attentionCardOther']
+  .map((name) => activity.split(`  ${name}: {`)[1]?.split('},')[0] ?? '');
+expect(attentionThemeStyles.every((style) => style.includes("backgroundColor: '#FFFFFF'")), "Every Needs-attention card has a white background");
+expect(attentionThemeStyles.every((style) => style.includes('borderColor:')), "Distinct subtle attention card borders remain");
+expect(activity.includes("status === 'active' ? styles.attentionTitleActive") &&
+  activity.includes("status === 'due' ? styles.attentionTitleDue") &&
+  activity.includes("status === 'expired' ? styles.attentionTitleExpired"), "Entire attention title uses the Active, Due or Expired status color");
+expect(activity.includes("attentionTitleActive: { color: '#16834B' }") &&
+  activity.includes("attentionTitleDue: { color: '#C56B12' }") &&
+  activity.includes("attentionTitleExpired: { color: '#DC3545' }"), "Green, orange and red status colors are defined");
+expect(activity.includes("function attentionStatus(title: string)") &&
+  activity.includes("return null;"), "Unknown attention statuses stay neutral instead of being misclassified");
+expect(activity.includes("styles.attentionText") && activity.includes("onPress={() => router.push(item.route as never)}"), "Attention subtitles and card destinations are preserved");
+expect(activity.includes("useState<'unread' | 'read' | 'all'>('all')"), "Recent Activity defaults to All");
+expect(!activity.includes("setActivityFilter(unreadCount > 0 ? 'unread' : 'all')"), "Loading unread receipts does not override the All default");
+expect(activity.includes("onPress={() => setActivityFilter(key)}") &&
+  activity.includes("activityFilter === 'unread' && isRead") &&
+  activity.includes("activityFilter === 'read' && !isRead"), "Manual Unread and Read filters remain functional");
+const metaStart = activity.indexOf('<View style={styles.itemMeta}>');
+const badgePos = activity.indexOf('<View style={styles.kindPill}>', metaStart);
+const datePos = activity.indexOf('<View style={styles.dateAndUnread}>', metaStart);
+const metaEnd = activity.indexOf('</View>', datePos) + '</View>'.length;
+expect(metaStart >= 0 && badgePos > metaStart && datePos > badgePos && datePos < metaEnd, "Category badge is above the right-side date and unread indicator");
+expect(activity.includes("itemMeta: {") && activity.includes("alignItems: 'flex-end'"), "Activity category and date metadata align to the right");
+expect(activity.includes("styles.itemCardUnread") && activity.includes("styles.unreadDot") &&
+  activity.includes("styles.titleRead"), "Unread highlight, dot and muted read state remain intact");
+
 if (!process.exitCode) console.log("Partner activity unread/search regression passed.");
