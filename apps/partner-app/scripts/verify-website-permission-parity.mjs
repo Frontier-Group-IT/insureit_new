@@ -6,6 +6,8 @@ const web = (p) => readFileSync(new URL('../../web-portal/' + p, import.meta.url
 
 const session = app('lib/partner-session.ts');
 const sessionProvider = app('providers/partner-session-provider.tsx');
+const accessDenied = app('app/access-denied.tsx');
+const entry = app('app/index.tsx');
 const guard = app('lib/partner-permissions.ts');
 const layout = app('app/_layout.tsx');
 const tabs = app('app/(tabs)/_layout.tsx');
@@ -63,4 +65,22 @@ assert.match(searchScreen, /canPartnerAccess\(context, 'view_policies'\) \? list
 assert.match(searchScreen, /canPartnerAccess\(context, 'view_claims'\) \? listPartnerClaims/, 'Claim searches must respect View');
 assert.match(businessScreen, /canPartnerAccess\(context, 'create_customers', 'edit'\)/, 'Business create buttons must use website Edit');
 assert.match(businessScreen, /canPartnerAccess\(context, 'view_reports'\)/, 'Reports use website report visibility');
+// Transient identity/permission API errors must not masquerade as revoked access.
+assert.match(session, /class PartnerSessionResolutionError extends Error/, 'Session failures must carry a known access category.');
+assert.match(session, /'denied' \| 'retryable'/, 'Session failures distinguish verified denial from temporary faults.');
+assert.match(session, /if \(response\.status === 403\).*?'denied'/, 'Explicit server 403 remains a real denial.');
+assert.match(session, /if \(!response\.ok\).*?'retryable'/, 'Temporary permission API outages must be retryable.');
+assert.match(session, /identityError\) throw identityError/, 'An RPC failure is not automatically an account denial.');
+assert.match(session, /permission_identity_mismatch/, 'Actual authorization mismatches still deny access.');
+assert.match(sessionProvider, /setStatus\(kind === 'denied' \? 'denied' : 'unavailable'\)/, 'Only explicit denial produces denied state.');
+assert.match(sessionProvider, /permissions: \{\}/, 'Failed background permission rechecks must still revoke cached grants.');
+assert.match(sessionProvider, /getPartnerProfilePhotoUrl\(nextContext\.identity\.auth_user_id\)\.catch\(\(\) => null\)/, 'Optional avatar errors cannot block authorization.');
+assert.match(entry, /status === 'denied' \|\| status === 'unavailable'/, 'Entry route must expose both denial and recoverable failure.');
+assert.match(accessDenied, /status === 'unavailable'/, 'Retry screen must distinguish transient failure.');
+assert.match(accessDenied, /await refresh\(\)/, 'Retry must re-run actual authorization, not bypass it.');
+assert.match(accessDenied, /if \(resolved\) router\.replace\('\/\(tabs\)'\)/, 'Only successful resolution opens the app.');
+assert.match(accessDenied, /disabled=\{status === 'loading'\}/, 'Prevent repeat retries while verification is in progress.');
+assert.match(accessDenied, /await signOut\(\)/, 'User must retain a manual sign-out option.');
+assert.doesNotMatch(accessDenied, /if \(status === 'ready'\) return <Redirect/, 'Forbidden deep links must not create a route redirect loop.');
+
 console.log('Partner App / website effective permission parity contract passed');

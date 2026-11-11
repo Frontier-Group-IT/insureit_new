@@ -45,6 +45,23 @@ export type PartnerSessionContext = {
   permissions: PartnerPermissionMap;
 };
 
+export type PartnerSessionFailureKind = 'denied' | 'retryable';
+
+export class PartnerSessionResolutionError extends Error {
+  constructor(
+    public readonly kind: PartnerSessionFailureKind,
+    public readonly reason: string,
+  ) {
+    super(reason);
+    this.name = 'PartnerSessionResolutionError';
+  }
+}
+
+/** Never infer account revocation from network, RPC or temporary API errors. */
+export function classifyPartnerSessionFailure(error: unknown): PartnerSessionFailureKind {
+  return error instanceof PartnerSessionResolutionError ? error.kind : 'retryable';
+}
+
 /** Identify authenticated Branch accounts by server-provided identity/scope—not name or intermediary role alone. */
 export function isPartnerBranchSession(context: PartnerSessionContext | null | undefined): boolean {
   if (context?.identity.actor_kind !== 'intermediary') return false;
@@ -87,24 +104,25 @@ export async function resolvePartnerSession(): Promise<PartnerSessionContext> {
     identity = activatedIdentity as PartnerIdentity | null;
   }
 
-  if (!identity) throw new Error('This account is not enabled for INSUREIT Partner.');
+  if (!identity) throw new PartnerSessionResolutionError('denied', 'partner_identity_not_enabled');
 
   const { data: scope, error: scopeError } = await supabase.rpc('partner_app_commercial_scope');
   if (scopeError) throw scopeError;
-  if (!scope) throw new Error('Commercial access scope is unavailable.');
+  if (!scope) throw new PartnerSessionResolutionError('denied', 'commercial_scope_missing');
   const session = await getCurrentSession();
-  if (!session?.access_token) throw new Error('The Partner session expired.');
+  if (!session?.access_token) throw new PartnerSessionResolutionError('retryable', 'session_expired');
   const response = await fetch(
     `${(process.env.EXPO_PUBLIC_PORTAL_URL || 'https://portal.insureit.in').replace(/\/$/, '')}/api/partner/effective-permissions`,
     { headers: { Authorization: `Bearer ${session.access_token}` }, cache: 'no-store' },
   );
-  if (!response.ok) throw new Error('Permissions could not be verified. Sign in again or retry.');
+  if (response.status === 403) throw new PartnerSessionResolutionError('denied', 'permission_api_forbidden');
+  if (!response.ok) throw new PartnerSessionResolutionError('retryable', 'permission_api_unavailable');
   const access = await response.json() as {
     actor_kind?: string;
     capabilities?: PartnerPermissionMap;
   };
   if (access.actor_kind !== identity.actor_kind || !access.capabilities) {
-    throw new Error('Partner authorization does not match the current account.');
+    throw new PartnerSessionResolutionError('denied', 'permission_identity_mismatch');
   }
 
   return {
