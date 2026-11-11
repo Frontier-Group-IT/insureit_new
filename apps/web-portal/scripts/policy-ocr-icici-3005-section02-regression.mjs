@@ -79,7 +79,7 @@ const promoted = refineIcici3005Section02Evidence(pages, lowConfidence);
 assert.equal(value(promoted, "policy_product"), "Bundled");
 assert.equal(field(promoted, "policy_product").confidence, .99);
 assert.equal(field(promoted, "policy_product").page, 2);
-assert.match(field(promoted, "policy_product").evidence, /Bundled\\s*[-–—]?\\s*Two\\s+Wheeler\\s+Policy/i);
+assert.equal(field(promoted, "policy_product").evidence, "Bundled – Two Wheeler Policy");
 assert.ok(field(promoted, "policy_product").confidence >= .9, "Must pass review panel auto-selection threshold");
 assert.equal(value(promoted, "vehicle_registration_status"), "registration_pending");
 assert.equal(value(promoted, "vehicle_registration_number"), undefined);
