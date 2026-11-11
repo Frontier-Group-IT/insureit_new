@@ -68,7 +68,7 @@ export function SpotIntimationSaveForm({ action, children, cancelHref, evidence,
     } catch {
       // Browser storage restrictions must not block claim entry.
     }
-  }, [storageKey, serverDraft?.updatedAt]);
+  }, [storageKey, serverDraft]);
 
   const collectDraft = (): SpotDraftFields | null => {
     const form = formRef.current;
