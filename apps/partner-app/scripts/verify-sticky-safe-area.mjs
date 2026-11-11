@@ -9,7 +9,8 @@ const claims = read('app/(tabs)/claims.tsx');
 
 assert.match(root, /import \{ SafeAreaProvider \} from 'react-native-safe-area-context'/);
 assert.match(root, /<SafeAreaProvider>[\s\S]*<PartnerErrorBoundary>[\s\S]*<Stack[\s\S]*<\/PartnerErrorBoundary>[\s\S]*<\/SafeAreaProvider>/);
-assert.match(screen, /<SafeAreaView style=\{\[styles\.safeArea, navyStatusBar && styles\.navyStatusArea\]\} edges=\{\['top'\]\}>/, 'Shared screen must preserve top safe area while optionally matching navy status bar.');
+assert.match(screen, /<SafeAreaView style=\{\[styles\.safeArea, navyStatusBar && styles\.navyStatusArea, statusBarColor \? \{ backgroundColor: statusBarColor \} : null\]\} edges=\{\['top'\]\}>/, 'Shared screen must preserve top safe area, navy fallback and opt-in Activity blue.');
+assert.match(screen, /statusBarColor \? \{ backgroundColor: statusBarColor \} : null/, 'Per-screen status color must be applied only when explicitly provided.');
 for (const file of [policies, claims]) {
   assert.match(file, /<SafeAreaView style=\{styles\.safeArea\} edges=\{\['top'\]\}>/);
 }

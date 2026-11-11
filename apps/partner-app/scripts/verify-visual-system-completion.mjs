@@ -181,8 +181,9 @@ requireText(policyIntakeDetail, '"car-sport-outline"', 'Policy Intake vehicle se
 requireText(policyIntakeDetail, '"shield-checkmark-outline"', 'Policy Intake premium section must use a professional vector insurance icon.');
 requireText(policyIntakeDetail, 'function statusBadgeStyle(row: PartnerPolicyIntake)', 'Policy Intake detail must keep centralized semantic status-badge mapping.');
 requireText(policyIntakeDetail, 'navyStatusBar', 'Policy Intake detail must opt into navy status area and white system icons.');
-requireText(screen, "backgroundColor={navyStatusBar ? '#071E49' : undefined}", 'Native Android status bar background must be navy on opt-in pages.');
-requireText(screen, "navyStatusBar || (showFixedHeader && stickyHeaderNavy) ? 'light' : 'dark'", 'Status bar foreground must switch to white only when requested.');
+requireText(screen, "backgroundColor={statusBarColor ?? (navyStatusBar ? '#071E49' : undefined)}", 'Android status bar must preserve navy opt-in fallback while supporting the Activity blue.');
+requireText(screen, "statusBarColor || navyStatusBar || (showFixedHeader && stickyHeaderNavy) ? 'light' : 'dark'", 'Status bar foreground must stay white on navy and explicitly colored screens only.');
+requireText(screen, 'statusBarColor ? { backgroundColor: statusBarColor } : null', 'Activity color must extend into the top native safe area without changing other screens.');
 requireText(screen, 'bottomNavigation ? (', 'Partner screen must host a fixed footer outside scrollable detail content.');
 requireText(policyIntakeDetail, 'bottomNavigation={<PolicyIntakeDetailNavigation', 'Both Policy Intake detail states must render the five-tab footer.');
 for (const tab of ["Home", "Business", "Policies", "Claims", "More"]) requireText(policyIntakeDetail, "label: '" + tab + "'", 'Policy Intake footer must include ' + tab + '.');

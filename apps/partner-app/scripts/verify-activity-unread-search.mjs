@@ -103,4 +103,14 @@ expect(activity.includes("itemMeta: {") && activity.includes("alignItems: 'flex-
 expect(activity.includes("styles.itemCardUnread") && activity.includes("styles.unreadDot") &&
   activity.includes("styles.titleRead"), "Unread highlight, dot and muted read state remain intact");
 
+// Activity-only layout refresh: title, iOS/Android safe-area color, compact width and reference overflow.
+expect(activity.includes('<PartnerScreen title="Activity" hideTopBar fullWidth statusBarColor="#0879DF">'), "Activity title, full-width screen and blue status-bar opt-in are configured");
+expect(activity.includes('<Text style={styles.heroTitle}>Activity</Text>') && !activity.includes('What changed'), "Visible Activity header no longer says What changed");
+expect(screen.includes('statusBarColor?: string;') && screen.includes('statusBarColor ? { backgroundColor: statusBarColor } : null'), "Shared PartnerScreen supports an opt-in colored safe area");
+expect(screen.includes("backgroundColor={statusBarColor ?? (navyStatusBar ? '#071E49' : undefined)}") && screen.includes("style={statusBarColor || navyStatusBar"), "Status bar uses matching color and light system indicators");
+expect(activity.includes('  body: {') && activity.includes('    paddingHorizontal: 8,') && activity.includes("  hero: {") && !activity.includes('marginHorizontal: -partnerTheme.spacing.lg'), "Activity cards use compact 8px margins and a full-width header");
+expect(activity.includes('numberOfLines={1} ellipsizeMode="middle"') && activity.includes('{item.title}</Text>'), "Long policy/claim references truncate in the middle instead of clipping");
+expect(activity.includes('alignSelf: \'stretch\',') && activity.includes("alignItems: 'flex-end'"), "Category badge remains right aligned above date/time");
+expect(activity.includes('styles.dateAndUnread') && activity.includes('styles.unreadDot') && activity.includes('styles.itemCardUnread'), "Date and unread styles are preserved");
+
 if (!process.exitCode) console.log("Partner activity unread/search regression passed.");
