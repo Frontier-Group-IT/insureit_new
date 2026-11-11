@@ -110,7 +110,6 @@ export default function LoginScreen() {
           <View style={styles.field}>
             <PartnerField
               label="Email"
-              hideLabel
               leftAccessory={<MaterialCommunityIcons name="email-outline" size={21} color="#0757AC" />}
               value={email}
               onChangeText={(value) => {
@@ -138,7 +137,6 @@ export default function LoginScreen() {
             <PartnerField
               ref={passwordRef}
               label="Password"
-              hideLabel
               leftAccessory={<MaterialCommunityIcons name="lock-outline" size={21} color="#0757AC" />}
               value={password}
               onChangeText={(value) => {
