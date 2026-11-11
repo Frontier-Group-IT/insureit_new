@@ -31,6 +31,9 @@ for (const source of [stage1Group, stage3Group]) {
   assert.match(source, /ClaimDocumentCollapsedStatus/, "Collapsed multi-file cards must use the shared compact reference summary.");
   assert.match(source, /verifiedFileCount/, "Collapsed multi-file cards must calculate the verified-file count.");
   assert.match(source, /pendingFileCount/, "Collapsed multi-file cards must calculate the pending/unverified-file count.");
+  assert.match(source, /setIsExpanded\(!hasNoFiles && pendingFileCount === 0\)/, "Internal and External claim stages auto-expand categories with zero pending files.");
+  assert.match(source, /\) : pendingFileCount > 0 \? \(/, "Verified-only groups must not show zero-pending summary pills.");
+  assert.match(source, /item\.documents\.every\(\(document\) => isDocumentVerified\(document, verifications\)\)/, "All-verified file rows are visible initially.");
   assert.doesNotMatch(source, /FILES ARE UPLOADED/, "Collapsed multi-file cards must not restore the old large uploaded-file text.");
 }
 
