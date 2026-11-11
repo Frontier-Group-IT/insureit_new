@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -39,7 +39,8 @@ export default function PolicyIntakesScreen() {
   const [rows, setRows] = useState<PartnerPolicyIntake[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [filter, setFilter] = useState<IntakeFilter>('all');
+  const [filter, setFilter] = useState<IntakeFilter>('action_required');
+  const [showAllStatuses, setShowAllStatuses] = useState(false);
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [counts, setCounts] = useState<PartnerIntakeCounts>({ action_required: 0, in_review: 0, processing: 0, completed: 0, duplicate: 0, rejected: 0, all: 0 });
@@ -157,7 +158,7 @@ export default function PolicyIntakesScreen() {
       </View>
 
       <View style={styles.filtersWrap}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filtersContent}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll} contentContainerStyle={styles.filtersContent}>
           {FILTERS.map((item) => {
             const active = filter === item.key;
             return (
@@ -168,7 +169,67 @@ export default function PolicyIntakesScreen() {
             );
           })}
         </ScrollView>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="See all Policy Intake statuses"
+          onPress={() => setShowAllStatuses(true)}
+          style={({ pressed }) => [styles.seeAllButton, pressed && styles.pressed]}
+        >
+          <Ionicons name="list" size={17} color="#0860C8" />
+          <Text style={styles.seeAllText}>See all</Text>
+        </Pressable>
       </View>
+
+      <Modal
+        visible={showAllStatuses}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowAllStatuses(false)}
+      >
+        <View style={styles.sheetRoot}>
+          <Pressable
+            style={styles.sheetBackdrop}
+            accessibilityRole="button"
+            accessibilityLabel="Close status selection"
+            onPress={() => setShowAllStatuses(false)}
+          />
+          <View style={styles.sheet} accessibilityViewIsModal>
+            <View style={styles.sheetHeader}>
+              <Text style={styles.sheetTitle}>Select status</Text>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Close status selection"
+                onPress={() => setShowAllStatuses(false)}
+                style={styles.sheetClose}
+              >
+                <Ionicons name="close" size={20} color="#53647D" />
+              </Pressable>
+            </View>
+            {FILTERS.map((item) => {
+              const selected = filter === item.key;
+              return (
+                <Pressable
+                  key={item.key}
+                  accessibilityRole="radio"
+                  accessibilityLabel={item.label}
+                  accessibilityState={{ checked: selected }}
+                  onPress={() => {
+                    setFilter(item.key);
+                    setShowAllStatuses(false);
+                  }}
+                  style={({ pressed }) => [styles.sheetOption, selected && styles.sheetOptionSelected, pressed && styles.pressed]}
+                >
+                  <View style={[styles.sheetRadio, selected && styles.sheetRadioSelected]}>
+                    {selected ? <View style={styles.sheetRadioDot} /> : null}
+                  </View>
+                  <Text style={[styles.sheetOptionText, selected && styles.sheetOptionTextSelected]}>{item.label}</Text>
+                  <Text style={styles.sheetOptionCount}>{counts[item.key]}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+      </Modal>
 
       <ScrollView
         ref={mainScrollRef}
@@ -197,15 +258,31 @@ export default function PolicyIntakesScreen() {
                   <View style={styles.identity}>
                     <View style={styles.intakeNumberRow}>
                       <Text numberOfLines={1} style={styles.number}>{row.intake_number}</Text>
-                      {row.ocr_status === 'completed' ? (
-                        <Ionicons name="checkmark" size={15} color="#16A34A" accessibilityLabel="Document data fetched" />
-                      ) : null}
                     </View>
                     <Text numberOfLines={1} style={styles.customer}>{row.customer_mobile} · {row.lead_source_name}</Text>
                     <Text numberOfLines={1} style={styles.metaLine}>{field(row, 'policy_number') || 'Policy pending'} · {field(row, 'vehicle_registration_number') || 'Vehicle pending'}</Text>
                   </View>
                   <View style={styles.statusStack}>
-                    <PartnerStatusBadge label={statusLabel(row)} tone={statusTone(row)} />
+                    {row.status === 'ready_for_review' || row.status === 'in_review' ? (
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={`Open Policy Intake ${row.intake_number}. ${statusLabel(row)}`}
+                        onPress={(event) => {
+                          event.stopPropagation();
+                          router.push({ pathname: '/policy-intakes/[id]', params: { id: row.id } });
+                        }}
+                        style={({ pressed }) => [
+                          styles.openStatusButton,
+                          row.status === 'ready_for_review' ? styles.openStatusReady : styles.openStatusInReview,
+                          pressed && styles.pressed,
+                        ]}
+                      >
+                        <Text style={styles.openStatusText}>{statusLabel(row)}</Text>
+                        <Ionicons name="chevron-forward" size={11} color="#FFFFFF" />
+                      </Pressable>
+                    ) : (
+                      <PartnerStatusBadge label={statusLabel(row)} tone={statusTone(row)} />
+                    )}
                     {row.ocr_status === 'failed' && (row.status === 'processing' || row.status === 'needs_attention') ? (
                       <View style={styles.ocrWarning} accessibilityLabel="OCR extraction failed">
                         <Ionicons name="alert-circle-outline" size={11} color="#B66B0B" />
@@ -338,7 +415,7 @@ function field(row: PartnerPolicyIntake, key: string) { return row.ocr_fields?.f
 
 function statusLabel(row: PartnerPolicyIntake) {
   if (row.status === 'processing' && row.ocr_status === 'failed') return 'Action Required';
-  return ({ processing: 'Processing', ready_for_review: 'Ready', in_review: 'In review', needs_attention: 'Action Required', completed: 'Completed', duplicate: 'Duplicate', rejected: 'Rejected' } as Record<string, string>)[row.status] || humanize(row.status);
+  return ({ processing: 'Processing', ready_for_review: 'Ready', in_review: 'In Review', needs_attention: 'Action Required', completed: 'Completed', duplicate: 'Duplicate', rejected: 'Rejected' } as Record<string, string>)[row.status] || humanize(row.status);
 }
 
 function statusTone(row: PartnerPolicyIntake): 'success' | 'warning' | 'danger' | 'info' {
@@ -360,7 +437,8 @@ const styles = StyleSheet.create({
   titleCopy: { flex: 1 }, eyebrow: { color: '#D5E9FF', fontSize: 7.5, lineHeight: 9, letterSpacing: 0.85, fontWeight: '800' }, title: { marginTop: 1, color: '#FFFFFF', fontSize: 14, lineHeight: 17, fontWeight: '800' },
   newButton: { minWidth: 65, height: 34, borderRadius: 10, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, backgroundColor: '#183864' }, newButtonText: { color: '#FFFFFF', fontSize: 10, lineHeight: 13, fontWeight: '700' },
   searchBand: { paddingHorizontal: 11, paddingTop: 8, paddingBottom: 8, flexDirection: 'row', backgroundColor: '#0860C8' }, searchBox: { flex: 1, minHeight: 38, borderRadius: 9, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: '#FFFFFF' }, searchInput: { flex: 1, paddingVertical: 0, color: '#1F314C', fontSize: 10.5, lineHeight: 14 },
-  filtersWrap: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#DDE4EF', backgroundColor: '#FFFFFF' }, filtersContent: { paddingHorizontal: 10, paddingVertical: 7, gap: 7 }, filterChip: { minHeight: 31, borderRadius: 8, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#F7F8FB', borderWidth: StyleSheet.hairlineWidth, borderColor: '#E0E5ED' }, filterChipActive: { backgroundColor: '#183864', borderColor: '#183864' }, filterLabel: { color: '#4D5D75', fontSize: 9.2, lineHeight: 12, fontWeight: '700' }, filterLabelActive: { color: '#FFFFFF' }, filterCount: { color: '#728099', fontSize: 8.5, lineHeight: 11, fontWeight: '700' }, filterCountActive: { color: '#DDEAFF' },
+  filtersWrap: { flexDirection: 'row', alignItems: 'center', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#DDE4EF', backgroundColor: '#FFFFFF' }, filterScroll: { flex: 1 }, seeAllButton: { minHeight: 35, flexDirection: 'row', alignItems: 'center', gap: 6, justifyContent: 'center', paddingHorizontal: 12, marginRight: 9, borderRadius: 18, borderWidth: StyleSheet.hairlineWidth, borderColor: '#E4EBF5', backgroundColor: '#FFFFFF', shadowColor: '#1B416C', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 5, elevation: 2 }, seeAllText: { color: '#0860C8', fontSize: 12, fontWeight: '700' }, filtersContent: { paddingHorizontal: 10, paddingVertical: 7, gap: 7 }, filterChip: { minHeight: 31, borderRadius: 8, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#F7F8FB', borderWidth: StyleSheet.hairlineWidth, borderColor: '#E0E5ED' }, filterChipActive: { backgroundColor: '#183864', borderColor: '#183864' }, filterLabel: { color: '#4D5D75', fontSize: 9.2, lineHeight: 12, fontWeight: '700' }, filterLabelActive: { color: '#FFFFFF' }, filterCount: { color: '#728099', fontSize: 8.5, lineHeight: 11, fontWeight: '700' }, filterCountActive: { color: '#DDEAFF' },
+  sheetRoot: { flex: 1, justifyContent: 'flex-end' }, sheetBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(8,23,45,0.46)' }, sheet: { paddingHorizontal: 16, paddingTop: 10, paddingBottom: 32, borderTopLeftRadius: 20, borderTopRightRadius: 20, backgroundColor: '#FFFFFF' }, sheetHeader: { minHeight: 46, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }, sheetTitle: { color: '#172B49', fontSize: 15, fontWeight: '800' }, sheetClose: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' }, sheetOption: { minHeight: 45, flexDirection: 'row', alignItems: 'center', gap: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E3E9F2', paddingHorizontal: 6 }, sheetOptionSelected: { backgroundColor: '#F1F6FF' }, sheetRadio: { width: 18, height: 18, borderRadius: 9, borderWidth: 1.5, borderColor: '#A7B5C8', alignItems: 'center', justifyContent: 'center' }, sheetRadioSelected: { borderColor: '#3156B8' }, sheetRadioDot: { width: 9, height: 9, borderRadius: 5, backgroundColor: '#3156B8' }, sheetOptionText: { flex: 1, color: '#34465E', fontSize: 12, fontWeight: '600' }, sheetOptionTextSelected: { color: '#193C79', fontWeight: '800' }, sheetOptionCount: { color: '#6C7B90', fontSize: 11, fontWeight: '700' },
   scroll: { flex: 1 }, content: { paddingHorizontal: 9, paddingTop: 9, paddingBottom: 12, gap: 8 },
   pagination: { paddingHorizontal: 6, paddingTop: 8, paddingBottom: 12, gap: 8 },
   pageError: { color: partnerTheme.colors.danger, fontSize: 11, textAlign: 'center' },
@@ -369,7 +447,7 @@ const styles = StyleSheet.create({
   loadMoreText: { color: '#3156B8', fontSize: 8, lineHeight: 11, fontWeight: '800' },
   loadMoreTextLoading: { color: '#FFFFFF', fontSize: 8.5, lineHeight: 12, fontWeight: '800' },
   inlineError: { marginBottom: 5, color: partnerTheme.colors.danger, textAlign: 'center', fontSize: 10 },
-  card: { borderRadius: 11, paddingHorizontal: 10, paddingVertical: 10, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#E1E7F0', shadowColor: '#0B2447', shadowOpacity: 0.05, shadowRadius: 5, shadowOffset: { width: 0, height: 2 }, elevation: 1 }, pressedCard: { opacity: 0.75 }, rowTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 }, rowArtwork: { width: 38, height: 38, borderRadius: 9, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F3F7FC' }, rowArtworkImage: { width: 31, height: 31 }, identity: { flex: 1, minWidth: 0 }, intakeNumberRow: { flexDirection: 'row', alignItems: 'center', gap: 4 }, ocrWarning: { flexDirection: 'row', alignItems: 'center', gap: 2 }, ocrWarningText: { color: '#B66B0B', fontSize: 7.5, fontWeight: '700' }, statusStack: { maxWidth: 92, alignItems: 'flex-end', gap: 4 }, updatedDate: { color: '#7B8799', fontSize: 7, lineHeight: 9, textAlign: 'right' }, number: { color: '#1D2C45', fontSize: 11, lineHeight: 14, fontWeight: '800' }, customer: { marginTop: 2, color: '#687A92', fontSize: 8.5, lineHeight: 11 }, metaLine: { marginTop: 4, color: '#8290A3', fontSize: 8, lineHeight: 10.5 },
+  card: { borderRadius: 11, paddingHorizontal: 10, paddingVertical: 10, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#E1E7F0', shadowColor: '#0B2447', shadowOpacity: 0.05, shadowRadius: 5, shadowOffset: { width: 0, height: 2 }, elevation: 1 }, pressedCard: { opacity: 0.75 }, rowTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 }, rowArtwork: { width: 38, height: 38, borderRadius: 9, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F3F7FC' }, rowArtworkImage: { width: 31, height: 31 }, identity: { flex: 1, minWidth: 0 }, intakeNumberRow: { flexDirection: 'row', alignItems: 'center', gap: 4 }, ocrWarning: { flexDirection: 'row', alignItems: 'center', gap: 2 }, ocrWarningText: { color: '#B66B0B', fontSize: 7.5, fontWeight: '700' }, statusStack: { maxWidth: 92, alignItems: 'flex-end', gap: 4 }, openStatusButton: { minHeight: 27, minWidth: 70, paddingHorizontal: 9, borderRadius: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 3 }, openStatusReady: { backgroundColor: '#1763C5' }, openStatusInReview: { backgroundColor: '#6746D8' }, openStatusText: { color: '#FFFFFF', fontSize: 9, fontWeight: '800', lineHeight: 12 }, updatedDate: { color: '#7B8799', fontSize: 7, lineHeight: 9, textAlign: 'right' }, number: { color: '#1D2C45', fontSize: 11, lineHeight: 14, fontWeight: '800' }, customer: { marginTop: 2, color: '#687A92', fontSize: 8.5, lineHeight: 11 }, metaLine: { marginTop: 4, color: '#8290A3', fontSize: 8, lineHeight: 10.5 },
   progressWrap: { marginTop: 10, flexDirection: 'row', alignItems: 'flex-start' }, progressStep: { flex: 1, alignItems: 'center' }, progressLineWrap: { width: '100%', minHeight: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }, progressDot: { width: 10, height: 10, borderRadius: 5, alignItems: 'center', justifyContent: 'center', backgroundColor: '#DCE2EC' }, progressDotComplete: { backgroundColor: '#6541F4' }, progressDotRejected: { backgroundColor: '#EA625C' }, progressLine: { position: 'absolute', left: '57%', width: '86%', height: 1.5, backgroundColor: '#DCE2EC' }, progressLineComplete: { backgroundColor: '#6541F4' }, progressLabel: { marginTop: 3, color: '#7D899B', fontSize: 7.5, lineHeight: 10, fontWeight: '500' }, progressLabelActive: { color: '#23344E', fontWeight: '600' },
   attention: { marginTop: 8, minHeight: 28, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 6, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#FFF3DF' }, attentionText: { flex: 1, color: '#9B5C10', fontSize: 8.5, lineHeight: 11, fontWeight: '700' },
   bottomNav: { height: 58, flexDirection: 'row', alignItems: 'center', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#DDE3EC', backgroundColor: '#FFFFFF' }, navItem: { flex: 1, alignItems: 'center', justifyContent: 'center' }, navIconWrap: { minWidth: 36, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center' }, navIconWrapActive: { backgroundColor: '#EEE9FF' }, navLabel: { marginTop: 1, color: '#60738F', fontSize: 7.5, lineHeight: 10, fontWeight: '600' }, navLabelActive: { color: '#633DF1', fontWeight: '800' }, pressed: { opacity: 0.7 },

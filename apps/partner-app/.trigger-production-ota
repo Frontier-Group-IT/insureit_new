@@ -1,7 +1,7 @@
 Partner production OTA trigger
-release=partner-login-visible-email-password-labels-pr-4192
-source=verified-main-merge-9ef703108c33ebabbc9095671041e6a9396a8978
-reason=approved-production-release-after-automatic-gate-rejected-regression-script
+release=partner-intake-ready-inreview-buttons-pr-4217
+source=verified-main-merge-573f77549b97177d4b96ffc9c0078abcecbba4f6
+reason=approved-production-release-after-partner-and-portal-ci
 channel=production
 runtime=0.2.0
 requested=2026-11-11

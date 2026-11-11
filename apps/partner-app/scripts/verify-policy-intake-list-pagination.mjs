@@ -5,7 +5,22 @@ const app = readFileSync('app/policy-intakes.tsx', 'utf8');
 const api = readFileSync('lib/policy-intakes.ts', 'utf8');
 const route = readFileSync('../web-portal/app/api/partner/policy-intakes/route.ts', 'utf8');
 
-assert.match(app, /useState<IntakeFilter>\('all'\)/, 'Keep all-submissions default');
+assert.match(app, /useState<IntakeFilter>\('action_required'\)/, 'Select Action Required by default on Policy Intake');
+assert.match(app, /<Ionicons name="list" size=\{17\} color="#0860C8" \/>/, 'See all uses the reference list icon');
+assert.doesNotMatch(app, /<Ionicons name="chevron-down" size=\{13\} color="#3156B8" \/>/, 'See all does not show a dropdown arrow');
+assert.match(app, /seeAllButton:\s*\{[^}]*borderRadius:\s*18/, 'See all retains the rounded pill treatment');
+assert.match(app, /const \[showAllStatuses, setShowAllStatuses\] = useState\(false\)/, 'See all sheet defaults closed');
+assert.match(app, /accessibilityLabel="See all Policy Intake statuses"/, 'A visible See all control opens the selection sheet');
+assert.match(app, /onPress=\{\(\) => setShowAllStatuses\(true\)\}/, 'See all must open the sheet');
+assert.match(app, /<Modal[\s\S]*?visible=\{showAllStatuses\}[\s\S]*?animationType="slide"/, 'Use a slide-up bottom sheet');
+assert.match(app, /<Text style=\{styles\.sheetTitle\}>Select status<\/Text>/, 'Bottom sheet has the status title');
+assert.match(app, /\{FILTERS\.map\(\(item\) => \{[\s\S]*?accessibilityRole="radio"/, 'Reuse the existing seven status filters with single-select radio controls');
+assert.match(app, /accessibilityState=\{\{ checked: selected \}\}/, 'Current selected status is highlighted accessibly');
+assert.match(app, /setFilter\(item\.key\);\s*setShowAllStatuses\(false\);/, 'Tapping a status immediately filters and closes sheet');
+assert.doesNotMatch(app, /Clear all|>Apply<|<Text[^>]*>Apply<\/Text>/, 'Single-select status sheet needs no Clear all or Apply buttons');
+assert.match(app, /onRequestClose=\{\(\) => setShowAllStatuses\(false\)\}/, 'Back closes sheet without changing selection');
+assert.match(app, /\{counts\[item\.key\]\}/, 'Status counts remain tied to the server-filter results');
+
 assert.match(api, /export const POLICY_INTAKE_PAGE_SIZE = 10/, 'Intake initial load and each Load More must match Policies: 10 per request');
 
 assert.match(api, /export async function getPartnerPolicyIntake\(id: string\)/, 'Detail uses authorized single-item lookup');
@@ -27,11 +42,16 @@ assert.match(route, /pageIds = filtered\.slice\(offset, offset \+ limit\)/, 'Sti
 assert.match(route, /employeeRead\?\.mode === "or"/, 'Preserve employee scope');
 assert.match(route, /q = q\.or\(intakeReadScope\)/, 'Search remains scoped for partner accounts');
 assert.match(app, /const visibleRows = rows;/, 'Never filter only the currently loaded page');
-assert.match(app, /<PartnerStatusBadge label={statusLabel\(row\)} tone={statusTone\(row\)} \/>/, 'Keep existing workflow status badge');
+assert.match(app, /row\.status === 'ready_for_review' \|\| row\.status === 'in_review'/, 'Only Ready and In Review become buttons');
+assert.match(app, /styles\.openStatusReady : styles\.openStatusInReview/, 'Ready and In Review receive distinct solid button colors');
+assert.match(app, /accessibilityRole="button"[\s\S]*?event\.stopPropagation\(\);[\s\S]*?router\.push\(\{ pathname: '\/policy-intakes\/\[id\]'/, 'Status button opens details once without triggering the parent card');
+assert.match(app, /<PartnerStatusBadge label={statusLabel\(row\)} tone={statusTone\(row\)} \/>/, 'Other intake workflow states keep the existing badge');
+assert.match(app, /openStatusText: \{ color: '#FFFFFF'/, 'Ready and In Review labels use white text');
+assert.match(app, /styles\.openStatusButton/, 'Keep the action compact and aligned with the existing timestamp');
 assert.doesNotMatch(app, /<PartnerStatusBadge label="Fetched"/, 'Do not show a second Fetched pill');
-assert.ok(app.includes("row.ocr_status === 'completed' ? (") && app.includes('<Ionicons name="checkmark" size={15} color="#16A34A"'), 'Completed OCR shows a plain green check');
-assert.ok(app.includes('<View style={styles.intakeNumberRow}>') && app.includes('<Text numberOfLines={1} style={styles.number}>{row.intake_number}</Text>'), 'Check belongs immediately beside intake number');
-assert.ok(app.includes("intakeNumberRow: { flexDirection: 'row', alignItems: 'center', gap: 4 }"), 'No icon badge background or border');
+assert.doesNotMatch(app, /accessibilityLabel="Document data fetched"/, 'No green OCR checkmark next to the PIR number');
+assert.doesNotMatch(app, /<Ionicons name="checkmark" size=\{15\} color="#16A34A"/, 'Do not reintroduce the PIR green checkmark');
+assert.ok(app.includes('<View style={styles.intakeNumberRow}>') && app.includes('<Text numberOfLines={1} style={styles.number}>{row.intake_number}</Text>'), 'Keep PIR number card layout');
 assert.match(app, /row\.ocr_status === 'failed' && \(row\.status === 'processing' \|\| row\.status === 'needs_attention'\)/, 'Only show OCR failure warning when action is needed');
 assert.match(app, /<Text style={styles\.updatedDate}>{formatDate\(row\.updated_at \|\| row\.created_at\)}<\/Text>/, 'Keep timestamp but remove Updated prefix');
 assert.doesNotMatch(app, /Updated \{formatDate/, 'Remove redundant Updated text from timestamp');
@@ -66,7 +86,7 @@ assert.match(api, /Network connection failed/, 'Show actionable network failure'
 assert.match(api, /console\.warn\('\[partner-policy-intakes\] read failed'/, 'Record safe error categories');
 const detail = readFileSync('app/policy-intakes/[id].tsx', 'utf8');
 assert.match(readFileSync('../web-portal/lib/policy-intake-status-buckets.ts', 'utf8'), /row.status === "ready_for_review"/, 'Ready-for-review intakes belong to canonical Action Required unless duplicate');
-assert.ok(app.includes('accessibilityLabel="Document data fetched"') && app.includes('<Ionicons name="checkmark" size={15} color="#16A34A"'), 'Expose fetched OCR success as a plain green check beside the PIR number');
+assert.doesNotMatch(app, /accessibilityLabel="Document data fetched"/, 'OCR success must not render an extra green check beside the PIR number');
 assert.match(api, /export async function updatePartnerPolicyIntakeReview/, 'Mobile reviewer actions must use authenticated API');
 assert.match(detail, /row.review_access.can_review/, 'Do not show reviewer actions to unauthorised accounts');
 assert.match(detail, /row.review_access.can_finalize/, 'Finalization must require separate approve permission');

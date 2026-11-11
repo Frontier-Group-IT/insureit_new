@@ -86,6 +86,7 @@ jobs:
           if (!files.length) throw new Error('No changes to publish');
           for (const file of files) {
             const approved = file === 'apps/partner-app/.trigger-production-ota'
+              || file === 'apps/partner-app/scripts/verify-policy-intake-list-pagination.mjs'
               || file === '.github/workflows/publish-partner-production-ota.yml'
               || file === '.github/workflows/verify-partner-app.yml'
               || /^apps\/partner-app\/(app|components|lib|assets)\//.test(file);

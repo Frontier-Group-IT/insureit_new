@@ -33,6 +33,36 @@
 .insureit-org-motion .org-mode-panel { animation: org-reveal 240ms var(--org-ease) both; }
 .insureit-org-motion .org-canvas-camera { transition: transform 250ms var(--org-ease); }
 .insureit-org-motion .org-canvas-camera[data-dragging="true"] { transition: none; }
+/* Animate reflow instead of replacing every position with a hard jump.
+   Hover elevation is CSS-only; dragging still disables camera tweening. */
+.insureit-org-motion .org-positioned-card {
+  transition: left 280ms var(--org-ease), top 280ms var(--org-ease),
+    transform 200ms var(--org-ease), box-shadow 200ms ease, border-color 180ms ease;
+}
+.insureit-org-motion .org-path-card {
+  border-color: #7FAEE5;
+  box-shadow: 0 0 0 2px rgba(76, 131, 206, .14), 0 4px 13px rgba(34, 80, 136, .1);
+}
+.insureit-org-motion .org-reporting-line {
+  transition: stroke 200ms ease, stroke-width 200ms ease, opacity 200ms ease;
+}
+.insureit-org-motion .org-reporting-line-active {
+  filter: drop-shadow(0 0 2px rgba(63, 125, 210, .22));
+}
+.insureit-org-motion .org-focus-ring {
+  animation: org-focus-pop 300ms var(--org-ease) both;
+}
+@keyframes org-focus-pop {
+  from { opacity: .55; transform: scale(.987); }
+  to { opacity: 1; transform: scale(1); }
+}
+/* Avoid promoting hundreds of cards to permanent GPU layers; only the moving
+   camera needs compositing, and user-requested reduced motion wins. */
+.insureit-org-motion .org-canvas-camera { backface-visibility: hidden; }
+.insureit-org-motion .org-interactive-card:focus-within {
+  border-color: #568FCE;
+  box-shadow: 0 0 0 2px rgba(76, 131, 206, .2);
+}
 @keyframes org-reveal {
   from { opacity: 0; transform: translateY(7px); }
   to { opacity: 1; transform: translateY(0); }

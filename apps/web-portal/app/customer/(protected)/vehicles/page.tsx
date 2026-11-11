@@ -59,7 +59,7 @@ export default async function CustomerVehiclesPage({
       status,
     };
   });
-  return <div className="space-y-3">
+  return <div className="flex min-h-0 flex-1 flex-col gap-3">
     <CustomerAccountTabs accounts={accounts} selectedId={account.id} pathname="/customer/vehicles" />
     {params.added === "1" ? <div role="status" className="flex items-center gap-2 rounded-xl border border-[#B4E5CE] bg-[#ECFBF3] px-4 py-3 text-sm font-semibold text-[#116747]"><CheckCircle2 className="h-5 w-5"/>Vehicle saved successfully. You can add its policy or start a claim.</div> : null}
     <CustomerVehiclesRegister accountId={account.id} items={items} initialQuery={params.q ?? ""} />

@@ -14,6 +14,7 @@ import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { PartnerAssets } from '@/lib/partner-assets';
 import {
   getPartnerPolicyIntake,
+  getPartnerPolicyIntakeDocumentUrl,
   partnerPolicyIntakeReviewUrl,
   partnerPolicyIntakeMatchUrl,
   updatePartnerPolicyIntakeReview,
@@ -34,12 +35,11 @@ export default function PolicyIntakeDetailScreen() {
   const [row, setRow] = useState<(PartnerPolicyIntake & { review_access: PolicyIntakeReviewAccess; duplicate_match: PolicyIntakeDuplicateMatch | null }) | null>(null);
   const [reviewNote, setReviewNote] = useState('');
   const [reviewBusy, setReviewBusy] = useState(false);
+  const [openingDocument, setOpeningDocument] = useState(false);
   const [loading, setLoading] = useState(true);
   const [replacing, setReplacing] = useState(false);
   const [replacementProgress, setReplacementProgress] = useState<PartnerPolicyIntakeUploadProgress | null>(null);
   const [error, setError] = useState('');
-  const [showPolicyExtraction, setShowPolicyExtraction] = useState(false);
-  const [showVehicleExtraction, setShowVehicleExtraction] = useState(false);
   const replacementLockRef = useRef(false);
 
   const load = useCallback(async () => {
@@ -132,6 +132,21 @@ export default function PolicyIntakeDetailScreen() {
       await Linking.openURL(url);
     } catch {
       setError('Could not open the existing policy or earlier intake in Operations.');
+    }
+  }
+
+  async function openPolicyCopy() {
+    if (!row?.file_name || openingDocument) return;
+    setOpeningDocument(true);
+    setError('');
+    try {
+      // Signed URL is issued only after server-side intake read-scope verification.
+      const url = await getPartnerPolicyIntakeDocumentUrl(row.id);
+      await Linking.openURL(url);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not open the policy copy.');
+    } finally {
+      setOpeningDocument(false);
     }
   }
 
@@ -263,143 +278,175 @@ export default function PolicyIntakeDetailScreen() {
             </View>
           ) : null}
 
-          {row.review_access.can_review && !['completed', 'rejected', 'duplicate'].includes(row.status) ? (
-            <View style={{ marginHorizontal: 12, marginTop: 12, padding: 12, backgroundColor: '#FFFFFF', borderColor: '#D9E3F0', borderWidth: 1, borderRadius: 12, gap: 10 }}>
-              <Text style={{ fontSize: 14, fontWeight: '700', color: '#17365D' }}>Policy Intake Review</Text>
-              <Text style={{ fontSize: 11, color: '#65768D' }}>Operations-only review. Existing policy and customer permissions apply.</Text>
-              <View style={{ borderRadius: 10, backgroundColor: '#F4F7FC', padding: 10, gap: 5 }}>
-                <Text style={{ color: '#17365D', fontSize: 11, fontWeight: '700' }}>Fetched policy details (OCR)</Text>
-                {(row.ocr_fields ?? []).length ? row.ocr_fields.map((field) => (
-                  <View key={field.key} style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 10, paddingVertical: 3 }}>
-                    <Text style={{ flex: 1, color: '#697991', fontSize: 10 }}>{field.label || field.key.replace(/_/g, ' ')}</Text>
-                    <Text style={{ flex: 2, color: '#17365D', fontSize: 11, textAlign: 'right' }}>
-                      {field.value || '—'}{typeof field.confidence === 'number' && field.confidence < 0.9 ? ' · Review' : ''}
-                    </Text>
+          <View style={reviewStyles.sheet}>
+            <Text style={reviewStyles.sheetTitle}>Policy Intake Review</Text>
+            <Text style={reviewStyles.sheetCaption}>Same submitted and fetched details as the Operations website.</Text>
+
+            <ReviewBlock number="01" title="Source & customer">
+              <ReviewPair label="Submitted by" value={row.submitted_by_name || 'Not available'} source="SALES" />
+              <ReviewPair label="Customer mobile" value={row.customer_mobile} source="SALES" />
+              <ReviewPair label="Lead source" value={row.lead_source_name} source="SALES" />
+              <ReviewPair label="Intermediary" value={`${row.lead_source_type.toUpperCase()}${row.lead_source_code ? ` · ${row.lead_source_code}` : ''}`} source="SALES" />
+              <ReviewPair label="Policy type" value={policyTypeLabel(row.policy_type)} />
+              <ReviewPair label="Submitted" value={formatDate(row.created_at)} />
+            </ReviewBlock>
+
+            {!proposalForm ? (
+              <>
+                <ReviewBlock number="02" title="Vehicle details" make={fields.get('vehicle_make')?.value}>
+                  {vehicleReviewKeys.map(([key, label]) => (
+                    <ReviewPair key={key} label={label} value={fields.get(key)?.value} source={fields.has(key) ? 'OCR' : undefined} confidence={fields.get(key)?.confidence} />
+                  ))}
+                </ReviewBlock>
+                <ReviewBlock number="03" title="Policy & premium">
+                  {policyReviewKeys.map(([key, label]) => (
+                    <ReviewPair key={key} label={label} value={fields.get(key)?.value} source={fields.has(key) ? 'OCR' : undefined} confidence={fields.get(key)?.confidence} />
+                  ))}
+                </ReviewBlock>
+                {missingVehicleExtraction ? (
+                  <Text style={reviewStyles.warningText}>Vehicle identifiers require confirmation against the policy copy.</Text>
+                ) : null}
+                {row.ocr_warnings?.length ? (
+                  <View style={reviewStyles.warningBox}>
+                    <Text style={reviewStyles.warningHeading}>Review notes</Text>
+                    {row.ocr_warnings.map((warning, index) => (
+                      <Text key={index} style={reviewStyles.warningText}>{warning}</Text>
+                    ))}
                   </View>
-                )) : <Text style={{ color: '#65768D', fontSize: 11 }}>No automatic extraction available. Review the original policy document in Operations.</Text>}
-              </View>
-              <Pressable onPress={() => void openOperationsReview()} accessibilityRole="button" style={{ alignItems: 'center', paddingVertical: 8 }}>
-                <Text style={{ color: '#315B9A', fontSize: 11, fontWeight: '700' }}>Open full policy document & review on website</Text>
-              </Pressable>
-              <TextInput
-                value={reviewNote}
-                onChangeText={setReviewNote}
-                multiline
-                maxLength={2000}
-                editable={!reviewBusy}
-                placeholder="Explain what Sales should correct or why the intake is rejected"
-                placeholderTextColor="#9AA5B5"
-                style={{ minHeight: 76, padding: 11, textAlignVertical: 'top', borderWidth: 1, borderColor: '#D9E3F0', borderRadius: 10, color: '#17365D', fontSize: 12 }}
-              />
-              <View style={{ flexDirection: 'row', gap: 8 }}>
-                <Pressable disabled={reviewBusy} onPress={() => confirmReviewAction('needs_attention')} accessibilityRole="button"
-                  style={{ flex: 1, backgroundColor: '#FFF7E6', paddingVertical: 12, borderRadius: 10, alignItems: 'center', opacity: reviewBusy ? 0.6 : 1 }}>
-                  <Text style={{ color: '#895A12', fontSize: 12, fontWeight: '700' }}>Request info</Text>
+                ) : null}
+              </>
+            ) : (
+              <Text style={reviewStyles.caption}>Life / Health proposal forms are reviewed manually. No motor OCR fields are expected.</Text>
+            )}
+
+            <View style={reviewStyles.documentBox}>
+              <Text style={reviewStyles.sectionLabel}>{proposalForm ? 'Proposal form' : 'Policy copy'}</Text>
+              <Text style={reviewStyles.documentName} numberOfLines={2}>{row.file_name || 'Not attached'}</Text>
+              {row.file_name ? (
+                <Pressable accessibilityRole="button" accessibilityLabel={proposalForm ? 'View proposal form' : 'View policy copy'}
+                  disabled={openingDocument} onPress={() => void openPolicyCopy()} style={reviewStyles.documentButton}>
+                  <Ionicons name="document-text-outline" size={15} color="#17365D" />
+                  <Text style={reviewStyles.documentButtonText}>{openingDocument ? 'Opening…' : proposalForm ? 'View proposal form' : 'View policy copy'}</Text>
+                  <Ionicons name="open-outline" size={13} color="#315B9A" />
                 </Pressable>
-                <Pressable disabled={reviewBusy} onPress={() => confirmReviewAction('rejected')} accessibilityRole="button"
-                  style={{ flex: 1, backgroundColor: '#FFF0F0', paddingVertical: 12, borderRadius: 10, alignItems: 'center', opacity: reviewBusy ? 0.6 : 1 }}>
-                  <Text style={{ color: '#B42318', fontSize: 12, fontWeight: '700' }}>Reject</Text>
-                </Pressable>
-              </View>
-              {row.review_access.can_finalize && (['ready_for_review', 'in_review'].includes(row.status) || (row.status === 'processing' && row.ocr_status === 'failed')) ? (
-                <View style={{ gap: 6 }}>
-                  <PartnerButton
-                    label={row.status === 'in_review' ? 'Resume Policy Onboarding' : 'Review & Finalize'}
-                    icon="arrow-forward-outline"
-                    onPress={() => void openOperationsReview()}
-                  />
-                  <Text style={{ color: '#65768D', fontSize: 10, textAlign: 'center' }}>Continues in the secure Operations portal. Sign in there if requested. Reviewer assignment, draft saving and finalization use the existing website workflow.</Text>
-                </View>
               ) : null}
             </View>
-          ) : null}
 
-          <PartnerSectionHeader title="Submission" />
-          <View style={styles.details}>
-            <Detail label="Customer mobile" value={row.customer_mobile} />
-            <Detail label="Lead source" value={row.lead_source_name} />
-            <Detail label="Intermediary" value={`${row.lead_source_type.toUpperCase()}${row.lead_source_code ? ` · ${row.lead_source_code}` : ''}`} />
-            <Detail label="Policy type" value={policyTypeLabel(row.policy_type)} />
-            <Detail
-              label={proposalForm ? 'Proposal form' : 'Policy copy'}
-              value={row.file_name || (proposalForm ? 'Not attached (optional)' : 'Not available')}
-            />
-            <Detail label="Submitted" value={formatDate(row.created_at)} last />
-          </View>
+            <View style={reviewStyles.reviewStatus}>
+              <Text style={reviewStyles.sectionLabel}>Review status</Text>
+              <ReviewPair label="Workflow" value={statusLabel(row)} />
+              <ReviewPair label="Detail fetch" value={row.ocr_status === 'completed' ? 'Details fetched' : row.ocr_status === 'failed' ? 'Manual review' : humanize(row.ocr_status)} />
+              <ReviewPair label="Reviewer" value={row.status === 'completed' ? 'Completed by Operations' : ['in_review','needs_attention'].includes(row.status) ? 'Operations team' : 'Not assigned'} />
+            </View>
 
-          {proposalForm ? (
-            <>
-              <PartnerSectionHeader title="Operations review" meta="No OCR for Life / Health proposal forms" />
-              <View style={styles.proposalNote}>
-                <Ionicons name="shield-checkmark-outline" size={18} color="#4F28E9" />
-                <Text style={styles.proposalNoteText}>
-                  {row.file_name
-                    ? 'Proposal form saved securely for Operations review. Policy and risk details are not extracted automatically.'
-                    : 'Proposal form was skipped. Operations can review and continue this Life / Health intake manually.'}
-                </Text>
+            {row.review_access.can_review && !['completed', 'rejected', 'duplicate'].includes(row.status) ? (
+              <View style={reviewStyles.actions}>
+                <Text style={reviewStyles.sectionLabel}>Operations note</Text>
+                <TextInput
+                  value={reviewNote}
+                  onChangeText={setReviewNote}
+                  multiline maxLength={2000} editable={!reviewBusy}
+                  placeholder="Explain what Sales should correct or why the intake is rejected"
+                  placeholderTextColor="#9AA5B5"
+                  style={reviewStyles.noteInput}
+                />
+                <View style={reviewStyles.actionRow}>
+                  <Pressable disabled={reviewBusy} onPress={() => confirmReviewAction('needs_attention')}
+                    accessibilityRole="button" style={[reviewStyles.actionButton, { backgroundColor: '#FFF7E6', opacity: reviewBusy ? .6 : 1 }]}>
+                    <Text style={{ color: '#895A12', fontSize: 12, fontWeight: '700' }}>Request info</Text>
+                  </Pressable>
+                  <Pressable disabled={reviewBusy} onPress={() => confirmReviewAction('rejected')}
+                    accessibilityRole="button" style={[reviewStyles.actionButton, { backgroundColor: '#FFF0F0', opacity: reviewBusy ? .6 : 1 }]}>
+                    <Text style={{ color: '#B42318', fontSize: 12, fontWeight: '700' }}>Reject</Text>
+                  </Pressable>
+                </View>
+                {row.review_access.can_finalize && (['ready_for_review', 'in_review'].includes(row.status) || (row.status === 'processing' && row.ocr_status === 'failed')) ? (
+                  <>
+                    <PartnerButton label={row.status === 'in_review' ? 'Resume Policy Onboarding' : 'Review & Finalize'} icon="arrow-forward-outline" onPress={() => void openOperationsReview()} />
+                    <Text style={reviewStyles.caption}>Final corrections and onboarding continue securely in the Operations website.</Text>
+                  </>
+                ) : null}
               </View>
-            </>
-          ) : (
-            <>
-              <PartnerSectionHeader title="Extracted details" meta={row.ocr_status === 'completed' ? 'OCR complete' : humanize(row.ocr_status)} />
-              <DetailDisclosure
-                title="Policy details"
-                leading={
-                  <View style={styles.disclosureLogoWrap}>
-                    <PartnerInsurerLogo
-                      name={fields.get('insurer_name')?.value}
-                      fallback={PartnerAssets.navigation.policies}
-                      style={styles.disclosureLogo}
-                      accessibilityLabel={fields.get('insurer_name')?.value ? `${fields.get('insurer_name')?.value} logo` : 'Insurer'}
-                    />
-                  </View>
-                }
-                summary={fields.get('policy_number')?.value || fields.get('insurer_name')?.value || pendingLabel(row)}
-                expanded={showPolicyExtraction}
-                onPress={() => setShowPolicyExtraction((value) => !value)}
-              >
-                <View style={styles.details}>
-                  <Detail label="Policy number" value={fields.get('policy_number')?.value || pendingLabel(row)} />
-                  <Detail label="Insurer" value={fields.get('insurer_name')?.value || pendingLabel(row)} />
-                  <Detail label="Product" value={fields.get('policy_product')?.value || pendingLabel(row)} />
-                  <Detail label="Valid from" value={fields.get('policy_start_date')?.value || pendingLabel(row)} />
-                  <Detail label="Valid upto" value={fields.get('policy_end_date')?.value || pendingLabel(row)} last />
-                </View>
-              </DetailDisclosure>
-
-              {missingVehicleExtraction ? (
-                <View style={styles.banner}><PartnerBanner tone="warning" title="Vehicle details need review" message="The policy was read, but vehicle identifiers were not extracted. Operations should verify them against the policy copy; no vehicle information has been assumed." /></View>
-              ) : null}
-              <DetailDisclosure
-                title="Vehicle details"
-                leading={
-                  <View style={styles.disclosureLogoWrap}>
-                    <PartnerManufacturerLogo
-                      name={fields.get('vehicle_make')?.value}
-                      fallback={PartnerAssets.actions.addVehicle}
-                      style={styles.disclosureLogo}
-                      accessibilityLabel={fields.get('vehicle_make')?.value ? `${fields.get('vehicle_make')?.value} logo` : 'Vehicle manufacturer'}
-                    />
-                  </View>
-                }
-                summary={fields.get('vehicle_registration_number')?.value || [fields.get('vehicle_make')?.value, fields.get('vehicle_model')?.value].filter(Boolean).join(' · ') || pendingLabel(row)}
-                expanded={showVehicleExtraction}
-                onPress={() => setShowVehicleExtraction((value) => !value)}
-              >
-                <View style={styles.details}>
-                  <Detail label="Registration" value={fields.get('vehicle_registration_number')?.value || pendingLabel(row)} />
-                  <Detail label="Make" value={fields.get('vehicle_make')?.value || pendingLabel(row)} />
-                  <Detail label="Model" value={fields.get('vehicle_model')?.value || pendingLabel(row)} />
-                  <Detail label="Chassis" value={fields.get('vehicle_chassis_number')?.value || pendingLabel(row)} last />
-                </View>
-              </DetailDisclosure>
-            </>
-          )}
+            ) : null}
+          </View>
         </>
       )}
     </PartnerScreen>
   );
 }
+
+const vehicleReviewKeys: Array<[string, string]> = [
+  ['vehicle_registration_status','Registration status'],
+  ['vehicle_registration_number','Registration number'],
+  ['vehicle_make','Vehicle make'],
+  ['vehicle_model','Vehicle model'],
+  ['vehicle_fuel_type','Fuel type'],
+  ['vehicle_manufacturing_year','Manufacturing year'],
+  ['vehicle_capacity','Vehicle capacity'],
+  ['vehicle_chassis_number','Chassis number'],
+  ['vehicle_engine_number','Engine number'],
+  ['vehicle_rto_name','RTO name'],
+  ['vehicle_rto_state','RTO state'],
+  ['vehicle_class','Vehicle class'],
+];
+const policyReviewKeys: Array<[string, string]> = [
+  ['policy_product','Policy product'],
+  ['policy_number','Policy number'],
+  ['insurer_name','Insurance company'],
+  ['idv','IDV / Sum insured'],
+  ['od_premium','OD premium'],
+  ['tp_premium','TP premium'],
+  ['cpa_premium','CPA amount'],
+  ['cpa_opted','CPA opted'],
+  ['policy_start_date','Valid from'],
+  ['policy_end_date','Valid upto'],
+  ['total_premium','Printed net premium'],
+  ['tax_amount','Printed GST'],
+  ['gross_premium','Printed gross premium'],
+];
+function ReviewBlock({number,title,children,make}:{number:string;title:string;children:ReactNode;make?:string}) {
+  return <View style={reviewStyles.block}>
+    <View style={reviewStyles.blockHeader}><Text style={reviewStyles.number}>{number}</Text>{make ? <PartnerManufacturerLogo name={make} fallback={PartnerAssets.actions.addVehicle} style={{width:22,height:22}} /> : null}<Text style={reviewStyles.blockTitle}>{title}</Text></View>
+    <View style={reviewStyles.rows}>{children}</View>
+  </View>;
+}
+function ReviewPair({label,value,source,confidence}:{label:string;value?:string|null;source?:string;confidence?:number|null}) {
+  const caution=typeof confidence === 'number' && confidence < .9;
+  return <View style={reviewStyles.pair}>
+    <View style={reviewStyles.pairLabelRow}><Text style={reviewStyles.pairLabel}>{label}</Text>{source ? <Text style={reviewStyles.sourceTag}>{source}</Text> : null}</View>
+    <Text selectable style={[reviewStyles.pairValue,caution && reviewStyles.lowConfidence]}>{value?.trim() || '—'}{caution ? ' · Review' : ''}</Text>
+  </View>;
+}
+const reviewStyles=StyleSheet.create({
+  sheet:{marginHorizontal:8,marginTop:9,marginBottom:8,borderWidth:1,borderColor:'#DCE5EF',borderRadius:12,backgroundColor:'#FFFFFF',padding:10,gap:8},
+  sheetTitle:{fontSize:14,fontWeight:'800',color:'#17365D'},
+  sheetCaption:{fontSize:10,color:'#65768D'},
+  block:{borderRadius:10,borderWidth:1,borderColor:'#E2E9F3',overflow:'hidden'},
+  blockHeader:{flexDirection:'row',alignItems:'center',gap:8,paddingHorizontal:10,paddingVertical:8,backgroundColor:'#EDF3FC'},
+  number:{fontSize:10,color:'#315B9A',fontWeight:'800'},
+  blockTitle:{fontSize:12,color:'#17365D',fontWeight:'800'},
+  rows:{paddingHorizontal:9,paddingVertical:3},
+  pair:{flexDirection:'row',alignItems:'flex-start',gap:8,paddingVertical:6,borderBottomWidth:StyleSheet.hairlineWidth,borderBottomColor:'#E5EAF2'},
+  pairLabelRow:{flex:1,flexDirection:'row',flexWrap:'wrap',gap:4,alignItems:'center'},
+  pairLabel:{fontSize:10,color:'#62758E',lineHeight:15},
+  sourceTag:{fontSize:8,color:'#526DB6',fontWeight:'700',backgroundColor:'#EDF2FF',paddingHorizontal:4,borderRadius:3,overflow:'hidden'},
+  pairValue:{flex:1.4,textAlign:'right',fontSize:11,lineHeight:16,color:'#193659',fontWeight:'600'},
+  lowConfidence:{color:'#A46B14'},
+  warningBox:{padding:9,backgroundColor:'#FFF8EA',borderRadius:8,gap:3},
+  warningHeading:{fontSize:10,fontWeight:'800',color:'#995E20'},
+  warningText:{fontSize:10,lineHeight:16,color:'#946320'},
+  documentBox:{padding:10,borderRadius:10,backgroundColor:'#F4F7FC',gap:6},
+  documentName:{fontSize:10,fontWeight:'600',color:'#344B69'},
+  documentButton:{minHeight:42,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:8,backgroundColor:'#FFFFFF',borderWidth:1,borderColor:'#D6E1EF',borderRadius:9},
+  documentButtonText:{fontSize:11,fontWeight:'700',color:'#17365D'},
+  sectionLabel:{fontSize:10,fontWeight:'800',color:'#526680'},
+  reviewStatus:{padding:9,borderRadius:10,backgroundColor:'#F8FAFD'},
+  actions:{gap:9},
+  noteInput:{minHeight:72,padding:10,textAlignVertical:'top',borderWidth:1,borderColor:'#D9E3F0',borderRadius:10,color:'#17365D',fontSize:12},
+  actionRow:{flexDirection:'row',gap:8},
+  actionButton:{flex:1,minHeight:43,alignItems:'center',justifyContent:'center',borderRadius:10},
+  caption:{fontSize:10,color:'#65768D',lineHeight:15,textAlign:'center'},
+});
 
 function IntakeProgress({ row }: { row: PartnerPolicyIntake }) {
   const manual = row.status === 'processing' && row.ocr_status === 'failed';

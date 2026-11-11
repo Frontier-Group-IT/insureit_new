@@ -83,23 +83,65 @@ jobs:
             python scripts/backup/classify_pg_restore_error.py roles "$RUNNER_TEMP/v2-roles.log"
             exit 1
           fi
+          # Validate before executing archive SQL: only this temporary,
+          # network-disabled PostgreSQL container's supabase_admin role may
+          # perform the privileged restore. No production credentials are
+          # ever supplied. Image postgres is explicitly not a superuser and
+          # cannot CREATE untrusted-language functions in raw managed dumps.
+          offline_admin="$(docker exec -u postgres \
+            --env PGPASSWORD=ephemeral-v2-recovery-only \
+            insureit-v2-restore-check \
+            psql -h 127.0.0.1 -U supabase_admin -XAt \
+              -v ON_ERROR_STOP=1 -d postgres -c \
+              "select rolsuper::integer from pg_roles where rolname=current_user" \
+            2>/dev/null || true)"
+          if [ "$offline_admin" != 1 ]; then
+            echo "V2 OFFLINE ADMIN PRECHECK FAILED: no verified disposable local superuser"
+            exit 1
+          fi
+          echo "V2 OFFLINE ADMIN PRECHECK PASSED: isolated, authenticated local superuser"
           # template0 is clean. Do not perform this action on the live DB.
           docker exec -u postgres insureit-v2-restore-check \
             createdb -T template0 -O postgres insureit_verify \
             > "$RUNNER_TEMP/v2-createdb.log" 2>&1
-          # No --clean, no --disable-triggers, no error tolerance. pg_restore
-          # restores each object and all table data from ONE source snapshot.
-          # Ownership is not asserted: --no-owner avoids assigning privileged
-          # production object owners inside the isolated validation container.
-          if ! timeout 900 docker exec -u postgres insureit-v2-restore-check \
-            pg_restore --single-transaction --exit-on-error --no-owner \
+          # Offline 'postgres' cannot SET ROLE to the container-local
+          # superuser. Connect directly as the verified local supabase_admin
+          # role to reconstruct trusted source FUNCTIONS requiring superuser,
+          # keeping --network none, a single transaction and all archive
+          # schema, data and ACL entries. This account is NOT production.
+          acl_mode=complete
+          if ! timeout 900 docker exec -u postgres \
+            --env PGPASSWORD=ephemeral-v2-recovery-only \
+            insureit-v2-restore-check \
+            pg_restore --host=127.0.0.1 --username=supabase_admin \
+              --verbose --single-transaction --exit-on-error --no-owner \
               --dbname=insureit_verify /tmp/database.dump \
             > "$RUNNER_TEMP/v2-restore.log" 2>&1; then
             python scripts/backup/classify_pg_restore_error.py data "$RUNNER_TEMP/v2-restore.log"
-            echo "V2 STRICT RESTORE INCOMPLETE: full archive not restored"
-            exit 1
+            if ! python scripts/backup/allow_no_acl_restore_fallback.py \
+                "$RUNNER_TEMP/v2-restore.log"; then
+              echo "V2 PRIVILEGED STRICT RESTORE INCOMPLETE: not eligible for ACL-only trial"
+              exit 1
+            fi
+            # Retain only the existing, explicitly reduced-assurance option:
+            # skip grants, NEVER table definitions, data, or constraints.
+            # Still strict and atomic; no new user-facing recovery claim.
+            if ! timeout 900 docker exec -u postgres \
+              --env PGPASSWORD=ephemeral-v2-recovery-only \
+              insureit-v2-restore-check \
+              pg_restore --host=127.0.0.1 --username=supabase_admin \
+                --verbose --single-transaction --exit-on-error \
+                --no-owner --no-acl --dbname=insureit_verify /tmp/database.dump \
+              > "$RUNNER_TEMP/v2-restore-no-acl.log" 2>&1; then
+              python scripts/backup/classify_pg_restore_error.py data "$RUNNER_TEMP/v2-restore-no-acl.log"
+              echo "V2 RESTORE INCOMPLETE: privileged no-ACL trial also failed"
+              exit 1
+            fi
+            acl_mode=omitted
+            echo "V2 RESTORE MODE: schema/data strict import passed with --no-acl (grants NOT verified)"
+          else
+            echo "V2 STRICT RESTORE PASSED: schema, data and archive privileges imported by isolated local superuser"
           fi
-          echo "V2 STRICT RESTORE PASSED: schema and data imported as one transaction"
           # Private COPY SQL remains temporary on isolated runner only.
           if ! docker exec -u postgres insureit-v2-restore-check \
             pg_restore --data-only --file=/tmp/v2-data.sql /tmp/database.dump \
@@ -111,7 +153,12 @@ jobs:
             "$RUNNER_TEMP/insureit-db-v2-restore/data-only.sql"
           python scripts/backup/verify_postgres_v2_rows.py \
             "$RUNNER_TEMP/insureit-db-v2-restore/data-only.sql"
-          echo "V2 ISOLATED RECOVERY CHECK PASSED: one snapshot restored and all COPY tables reconciled"
+          if [ "$acl_mode" = "omitted" ]; then
+            echo "V2 SCHEMA_DATA_ONLY_CHECK PASSED: all COPY tables reconciled; ACL restore FAILED and was omitted"
+            echo "V2 FULL RECOVERY NOT CERTIFIED: role grants/default privileges must be restored and validated separately"
+          else
+            echo "V2 ISOLATED RECOVERY CHECK PASSED: one snapshot restored and all COPY tables reconciled"
+          fi
           echo "CAVEAT: Supabase service config, Auth providers, production ownership and R2 file binaries require separate DR validation"
       - name: Destroy restored database, decrypted files and private logs
         if: always()

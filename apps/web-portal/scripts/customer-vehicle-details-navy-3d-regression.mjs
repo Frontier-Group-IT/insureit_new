@@ -7,7 +7,7 @@ const read = (path) => readFileSync(fileURLToPath(new URL(path, root)), "utf8");
 const page = read("app/customer/(protected)/vehicles/[id]/page.tsx");
 const row = read("app/customer/(protected)/vehicles/[id]/vehicle-insurance-history-row.tsx");
 const src = [
-  "my_vehicles.png", "vehicle_and_policy.png", "vehicle_register.png",
+  "my_vehicles.png", "vehicle_register.png",
   "brand_new_vehicle.png", "e_challan.png", "policy_related.png",
 ];
 for (const name of src) {
@@ -17,6 +17,8 @@ for (const name of src) {
 for (const heading of ["Vehicle Details", "Vehicle Ownership", "Vehicle Specification", "Compliance & Permit", "Insurance History"]) {
   assert(page.includes(heading), "Missing heading: " + heading);
 }
+assert(!page.includes("vehicle_and_policy.png"), "Right-side header vehicle illustration should be removed");
+assert(!page.includes("ChevronDown") && !page.includes("section.icons") && !page.includes("<Icon "), "Read-only vehicle details must not show leading icons or dropdown chevrons");
 assert(!page.includes("ArrowLeft"), "Redundant back arrow should be removed; breadcrumb supplies navigation");
 assert(!page.includes("SectionIcon"), "Old circular section icons should be removed");
 assert(!page.includes('padStart(2, "0")'), "Section number circles should not be rendered");

@@ -69,7 +69,7 @@ export async function GET(request: Request) {
   const identity = auth.identity;
   const scope = auth.scope;
   const admin = createSupabaseAdminClient();
-  const intakeSelect = "id,intake_number,status,policy_type,lead_source_name,lead_source_type,lead_source_code,customer_mobile,file_name,ocr_status,ocr_fields,attention_reason,created_at,updated_at,final_policy_id,submitted_by_profile_id,submitted_by_portal_account_id";
+  const intakeSelect = "id,intake_number,status,policy_type,lead_source_name,lead_source_type,lead_source_code,customer_mobile,file_name,ocr_status,ocr_fields,ocr_warnings,attention_reason,created_at,updated_at,final_policy_id,submitted_by_profile_id,submitted_by_portal_account_id";
   const url = new URL(request.url);
   const requestedId = url.searchParams.get("id")?.trim();
   const view = url.searchParams.get("view")?.trim().toLowerCase();
@@ -156,6 +156,17 @@ export async function GET(request: Request) {
             : null,
         }
       : null;
+    // Resolve the submitter only after the intake passes the existing read-scope check.
+    // Do not misidentify the lead source organization as the submitting employee.
+    let submittedByName: string | null = null;
+    if (intake.submitted_by_profile_id) {
+      const { data } = await admin.from("profiles").select("full_name").eq("id", intake.submitted_by_profile_id).maybeSingle();
+      submittedByName = data?.full_name?.trim() || null;
+    } else if (intake.submitted_by_portal_account_id) {
+      const { data } = await admin.from("partner_portal_associate_accounts").select("name").eq("id", intake.submitted_by_portal_account_id).maybeSingle();
+      submittedByName = data?.name?.trim() || null;
+    }
+    Object.assign(intake, { submitted_by_name: submittedByName });
     return json({
       ok: true,
       intake: match ? { ...intake, status: "duplicate" } : intake,
