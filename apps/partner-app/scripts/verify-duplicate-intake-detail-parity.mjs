@@ -21,6 +21,14 @@ for (const key of ['policy_number', 'cpa_premium', 'cpa_opted']) assert.ok(summa
 assert.equal((summary.match(/\['/g) || []).length, 3, 'Duplicate summary contains only website OCR fields');
 assert.ok(detail.includes("row.status !== 'duplicate' ? <View style={reviewStyles.reviewStatus}>"), 'Duplicate does not show redundant review status card');
 assert.ok(detail.includes('partnerPolicyIntakeMatchUrl(targetPath)'), 'Existing policy navigation uses trusted portal link');
-assert.ok(api.includes('`/policies/${match.policyId}/edit`'), 'Server resolves matching policy edit page, not another arbitrary policy');
-assert.ok(links.includes('/^\\/policies\\/[0-9a-f-]{36}\\/edit$/i'), 'Mobile only accepts canonical existing-policy URL');
+assert.ok(api.includes('`/policies/${match.policyId}`'), 'Server resolves matching policy details view page, not another arbitrary policy');
+assert.ok(links.includes('/^\\/policies\\/[0-9a-f-]{36}$/i'), 'Mobile only accepts canonical read-only policy details URL');
+assert.ok(detail.includes('topBarIcon="document-text-outline"'), 'Use the professional unboxed document icon');
+assert.ok(detail.includes("row.customer_mobile, row.lead_source_name"), 'Show customer mobile and lead source below PIR number');
+assert.ok(detail.includes("fields.get('policy_number')?.value?.trim()"), 'Show extracted policy number below PIR number');
+assert.ok(detail.includes("'Vehicle pending'"), 'Show vehicle-pending indicator when OCR has no registration number');
+assert.ok(detail.includes("marginHorizontal: -partnerTheme.spacing.lg"), 'Use full content width for intake sections');
+assert.ok(detail.includes("styles.statusLogoWrap"), 'Keep a plain icon alignment container');
+assert.ok(detail.includes('<Ionicons name="document-text-outline" size={27} color="#17365D" />'), 'Use a plain professional icon in the PIR card');
+assert.ok(!detail.includes('<PartnerInsurerLogo'), 'Do not use insurer/logo tile in PIR card');
 console.log('Partner Duplicate Policy Intake website parity regression passed');

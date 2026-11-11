@@ -142,7 +142,7 @@ export function partnerPolicyIntakeReviewUrl(id: string): string {
 
 /** Accept only canonical Operations paths, never a supplied external URL. */
 export function partnerPolicyIntakeMatchUrl(path: string): string | null {
-  if (!/^\/policies\/[0-9a-f-]{36}\/edit$/i.test(path) &&
+  if (!/^\/policies\/[0-9a-f-]{36}$/i.test(path) &&
       !/^\/policy-intakes\/[0-9a-f-]{36}$/i.test(path)) return null;
   return `${portalUrl}${path}`;
 }
