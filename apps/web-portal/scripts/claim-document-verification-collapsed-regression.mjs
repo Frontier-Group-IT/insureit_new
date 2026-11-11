@@ -17,7 +17,9 @@ assert.match(panel, /<BulkDocumentVerificationGroup /, "Preserve document verifi
 assert.match(panel, /<ReusePolicyCopyButton /, "Preserve linked policy copy reuse");
 assert.match(panel, /<FinalizeInitialDocumentVerificationButton /, "Preserve finalization workflow");
 const group = readFileSync("components/spot-survey/bulk-document-verification-group.tsx", "utf8");
-assert.ok(group.includes("const [isExpanded, setIsExpanded] = useState(false);"), "All document groups start collapsed");
-assert.ok(group.includes("const showDocumentRows = !hasNoFiles && isExpanded;"), "Single-file and multi-file document rows stay hidden until expanded");
+assert.ok(group.includes("const [isExpanded, setIsExpanded] = useState(false);"), "Multi-file Stage 1 categories start collapsed, regardless of verification status");
+assert.ok(group.includes("const showDocumentRows = hasSingleFile || (hasMultipleFiles && isExpanded);"), "A single verified or unverified document is always visible");
+assert.ok(group.includes(") : hasMultipleFiles ? ("), "Multi-file categories retain compact summary even when zero pending");
+assert.ok(group.includes("if (hasMultipleFiles) setIsExpanded((expanded) => !expanded);"), "Expand/collapse controls affect multi-file categories only");
 assert.ok(group.includes("<ClaimDocumentCollapsedStatus") && group.includes("verifiedCount={verifiedFileCount}") && group.includes("pendingCount={pendingFileCount}"), "Collapsed RC Copy shows verification counts");
 console.log("Operations Claim Document Verification always-visible and all document categories collapsed-default regression passed");

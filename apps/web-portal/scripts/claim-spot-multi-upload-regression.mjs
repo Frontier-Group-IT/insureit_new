@@ -41,7 +41,8 @@ assert.doesNotMatch(workspace, /documents\.length\} uploaded file/, "Remove redu
 assert.match(workspace, />Unclassified Documents<\/h2>/, "Customer and Operations bulk uploads share one visible classification section.");
 assert.match(workspace, /<UnclassifiedAttachments claimId=\{claim\.id\} documents=\{unclassifiedAttachments\}/, "Combined classification must include every unclassified upload.");
 assert.match(workspace, /document_type\?\.trim\(\)\.toLowerCase\(\) === "other document"/, "Use the exact customer bulk-upload category.");
-assert.match(bulkVerificationGroup, /useState\(false\)/, "All uploaded document categories must start collapsed.");
+assert.match(bulkVerificationGroup, /useState\(false\)/, "Multi-upload categories start collapsed regardless of verification outcome.");
+assert.match(bulkVerificationGroup, /const showDocumentRows = hasSingleFile \|\| \(hasMultipleFiles && isExpanded\)/, "Single uploaded file stays visible whether verified or unverified.");
 assert.match(bulkVerificationGroup, /\{item\.documents\.length\} \{hasSingleFile \? "file" : "files"\}/, "All populated document categories show their file count.");
 
 

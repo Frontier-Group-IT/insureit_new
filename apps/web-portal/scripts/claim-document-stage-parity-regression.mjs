@@ -31,6 +31,9 @@ for (const source of [stage1Group, stage3Group]) {
   assert.match(source, /ClaimDocumentCollapsedStatus/, "Collapsed multi-file cards must use the shared compact reference summary.");
   assert.match(source, /verifiedFileCount/, "Collapsed multi-file cards must calculate the verified-file count.");
   assert.match(source, /pendingFileCount/, "Collapsed multi-file cards must calculate the pending/unverified-file count.");
+  assert.match(source, /const showDocumentRows = hasSingleFile \|\| \(hasMultipleFiles && isExpanded\)/, "Every single uploaded file must be shown directly regardless of verification status.");
+  assert.match(source, /useState\(false\)/, "Multi-file groups start collapsed regardless of verification status.");
+  assert.match(source, /\) : hasMultipleFiles \? \(/, "Only multi-file groups use the collapsed summary.");
   assert.doesNotMatch(source, /FILES ARE UPLOADED/, "Collapsed multi-file cards must not restore the old large uploaded-file text.");
 }
 
