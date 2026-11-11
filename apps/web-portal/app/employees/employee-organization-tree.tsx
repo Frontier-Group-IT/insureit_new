@@ -199,6 +199,17 @@ export function EmployeeOrganizationTree({ employees, partners, query, managers,
 
   const graph = useMemo(() => layoutForest(chartRoots), [chartRoots]);
   const placed = useMemo(() => new Map(graph.positions.map((position) => [position.node.key, position])), [graph]);
+  // Limit DOM cards on large expanded diagrams; the complete layout and mini-map
+  // remain intact so keyboard navigation, node counts and fit calculations agree.
+  const visibleChartPositions = useMemo(() => {
+    if (graph.positions.length <= 80 || mode !== "full") return graph.positions;
+    const padding = 300;
+    const left = -offset.x / zoom - padding;
+    const top = -offset.y / zoom - padding;
+    const right = left + viewport.width / zoom + padding * 2;
+    const bottom = top + viewport.height / zoom + padding * 2;
+    return graph.positions.filter(({ x, y }) => x + CARD_W / 2 >= left && x - CARD_W / 2 <= right && y + CARD_H / 2 >= top && y - CARD_H / 2 <= bottom);
+  }, [graph, mode, offset.x, offset.y, zoom, viewport.width, viewport.height]);
   const selectedDetails = detailsId ? employeeById.get(detailsId) ?? null : null;
   const detailReports = selectedDetails ? reportsByManager.get(selectedDetails.id) ?? [] : [];
   const detailPartners = selectedDetails && showPartners ? partnersByEmployee.get(selectedDetails.id) ?? [] : [];
@@ -272,7 +283,14 @@ export function EmployeeOrganizationTree({ employees, partners, query, managers,
       </div>
       {graph.positions.length > 0 ? <div className="absolute bottom-3 right-3 z-20 w-[168px] rounded-lg border border-[#D8E2ED] bg-white/95 p-2 shadow-md" data-testid="orgchart-mini-map">
         <div className="mb-1 text-[9px] font-semibold uppercase tracking-wide text-[#7790A9]">Overview map · click to move</div>
-        <svg viewBox={`0 0 ${graph.width} ${graph.height}`} role="img" aria-label="Mini-map of expanded reporting tree" className="h-[92px] w-full cursor-crosshair rounded bg-[#F3F6FA]" onClick={(event) => {
+        <svg viewBox={`0 0 ${graph.width} ${graph.height}`} role="button" tabIndex={0} aria-label="Chart mini-map: arrow keys pan, Enter fits diagram; click to move to a location" className="h-[92px] w-full cursor-crosshair rounded bg-[#F3F6FA] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#4A87CC]" onKeyDown={(event) => {
+          const delta = 64;
+          if (event.key === "ArrowLeft") { event.preventDefault(); setOffset((p) => ({ ...p, x: p.x + delta })); }
+          else if (event.key === "ArrowRight") { event.preventDefault(); setOffset((p) => ({ ...p, x: p.x - delta })); }
+          else if (event.key === "ArrowUp") { event.preventDefault(); setOffset((p) => ({ ...p, y: p.y + delta })); }
+          else if (event.key === "ArrowDown") { event.preventDefault(); setOffset((p) => ({ ...p, y: p.y - delta })); }
+          else if (event.key === "Enter" || event.key === " ") { event.preventDefault(); fit(); }
+        }} onClick={(event) => {
           const bounds = event.currentTarget.getBoundingClientRect();
           const x = (event.clientX - bounds.left) / bounds.width * graph.width;
           const y = (event.clientY - bounds.top) / bounds.height * graph.height;
@@ -283,10 +301,11 @@ export function EmployeeOrganizationTree({ employees, partners, query, managers,
         </svg>
       </div> : null}
       <div className="pointer-events-none absolute bottom-3 left-3 z-10 rounded bg-white/85 px-2 py-1 text-[10px] text-[#778393] shadow-sm">Drag to pan · Ctrl + scroll to zoom · {Math.round(zoom * 100)}%</div>
+      <span className="sr-only" role="status">Displaying {visibleChartPositions.length} of {graph.positions.length} expanded chart nodes.</span>
       {chartRoots.length === 0 ? <div className="flex h-full items-center justify-center text-[12px] text-[#66768C]">No employees match these filters.</div> : (
         <div className="org-canvas-camera absolute left-0 top-0 origin-top-left" data-dragging={isDragging} style={{ width: graph.width, height: graph.height, transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})` }}>
           <svg aria-hidden="true" className="pointer-events-none absolute inset-0 h-full w-full overflow-visible" viewBox={`0 0 ${graph.width} ${graph.height}`}>
-            {graph.positions.map(({ node, x, y, parent }) => {
+            {visibleChartPositions.map(({ node, x, y, parent }) => {
               const leader = parent ? placed.get(parent) : undefined;
               if (!leader) return null;
               const startY = leader.y + CARD_H / 2;
@@ -295,7 +314,7 @@ export function EmployeeOrganizationTree({ employees, partners, query, managers,
               return <path key={node.key} d={`M ${leader.x} ${startY} C ${leader.x} ${middle}, ${x} ${middle}, ${x} ${endY}`} fill="none" stroke={node.type === "employee" ? "#B9C4D4" : "#9CC4BB"} strokeWidth="1.35" strokeDasharray={node.type === "employee" ? undefined : "4 4"} />;
             })}
           </svg>
-          {graph.positions.map(({ node, x, y }) => {
+          {visibleChartPositions.map(({ node, x, y }) => {
             const isEmployee = node.type === "employee";
             const isGroup = node.type === "group";
             const isPartner = node.type === "partner";
