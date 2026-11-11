@@ -112,11 +112,8 @@ export default function ActivityScreen() {
         >
           <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
         </Pressable>
-        <View style={styles.heroIcon}>
-          <Ionicons name="megaphone" size={23} color="#4A35F1" />
-        </View>
+        <Ionicons name="notifications-outline" size={23} color="#FFFFFF" style={styles.heroActivityIcon} />
         <View style={styles.heroText}>
-          <Text style={styles.heroEyebrow}>ACTIVITY</Text>
           <Text style={styles.heroTitle}>Activity</Text>
         </View>
       </View>
@@ -378,25 +375,9 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     justifyContent: 'center',
   },
-  heroIcon: {
-    width: 39,
-    height: 39,
-    marginRight: 10,
-    borderRadius: 7,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
-  },
+  heroActivityIcon: { marginRight: 10 },
   heroText: { justifyContent: 'center' },
-  heroEyebrow: {
-    color: '#D9E7FF',
-    fontSize: 9,
-    lineHeight: 11,
-    fontWeight: '800',
-    letterSpacing: 1.1,
-  },
   heroTitle: {
-    marginTop: 1,
     color: '#FFFFFF',
     fontSize: 16,
     lineHeight: 20,
