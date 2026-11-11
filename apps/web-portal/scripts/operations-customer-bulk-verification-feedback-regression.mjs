@@ -23,7 +23,9 @@ assert.match(spot, /\{document\.file_name\}<\/Link>/, "Filename itself must open
 assert.doesNotMatch(spot, />Preview<\/Link>/, "Remove redundant Preview text.");
 assert.match(spot, /<DeleteUnclassifiedDocumentButton claimId=\{claimId\} documentId=\{document\.id\} fileName=\{document\.file_name\}/, "Every unclassified row must have its own delete control.");
 const deletion = read("../components/spot-survey/delete-unclassified-document-button.tsx");
-assert.match(deletion, /window\.confirm\(/, "Require confirmation before deleting.");
+assert.doesNotMatch(deletion, /window\.confirm\(/, "Unclassified deletion must not show a browser-native popup.");
+assert.match(deletion, /<ClaimDocumentDeleteConfirmation filename=\{fileName\} pending=\{pending\}/, "Require the existing styled confirmation dialog before deleting.");
+assert.match(deletion, /onConfirm=\{removeDocument\}/, "Only confirmation may invoke the delete action.");
 assert.match(deletion, /deleteVerifiedSpotSurveyDocument\(claimId, documentId\)/, "Use existing scoped deletion action.");
 assert.match(deletion, /type="button"/, "Delete must not accidentally submit classification form.");
 assert.match(deletion, /<ClaimStageErrorDialog/, "Report failed deletion in the existing error dialog.");
