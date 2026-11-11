@@ -53,6 +53,13 @@ Never attempt to certify a self-hosted Supabase service using only the single-co
 
 **Stop:** any missing managed role, unexpected privilege escalation or incomplete object ownership prevents role/RLS certification. A successful `--no-owner` dump replay is insufficient.
 
+### Live platform service inventory (read-only, 11 November 2026)
+
+- Connected Supabase project is `Insureit_Web` / `ilzhsfqqjyppzzvfscmh`, region `ap-northeast-2`, database version **PostgreSQL 17.6.1.164** reported by the project metadata API. The successful standalone restore used the pinned `supabase/postgres:17.6.1.136` image; a live service stack must verify version and managed-service compatibility before signoff.
+- Eight installed database extensions were observed: `hypopg` 1.4.1, `index_advisor` 0.2.0, `pg_stat_statements` 1.11, `pg_trgm` 1.6, `pgcrypto` 1.3, `plpgsql` 1.0, `supabase_vault` 0.3.1 and `uuid-ossp` 1.1. A genuine replacement target must support all extensions required by restored SQL, not merely the ones present in a generic image.
+- **12 ACTIVE Edge Functions** in the managed project: `create-user`, `profile-context`, `send-sms-2factor`, `part-location-action`, `guest-service-enquiry`, `customer-firebase-bind`, `customer-firebase-signup`, `customer-firebase-doc-read`, `customer-firebase-upload-url`, `customer-firebase-registration-check`, `customer-firebase-session-bridge`, `customer-firebase-operator-preview`. The service metadata reports `verify_jwt=true` on **4** and `false` on **8**. This does **not** by itself establish an authorization vulnerability: functions with JWT verification disabled can implement another authorization method. Every route, especially the eight, requires explicit source review and safe synthetic authorization testing before recovery certification.
+- No live production Auth/OAuth/SMTP JWT secret values were retrieved, logged, or copied into source control. The recovered stack must obtain fresh scoped credentials and reconstruct external integrations via a secure operator-approved procedure.
+
 ### Gate D — Supabase Auth and service-layer recovery (OPEN)
 
 **Action:** Build a **separate recovery Supabase stack**, with isolated network, fresh service secrets, recovered DB/Storage wiring, pinned versions of GoTrue/Auth, Storage API, Realtime, API gateway/PostgREST, and Edge Functions. Treat external services (SMS/email/payment/webhooks/OAuth) as **disabled/sandboxed** unless expressly approved. Supply JWT secrets, OAuth credentials, redirects, SMTP, external endpoints and encryption keys through a secure operator-controlled secret vault; none should be committed or copied to GitHub logs.
