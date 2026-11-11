@@ -54,7 +54,7 @@ function parseLocal(value: string) {
   const [year, month, day] = value.split('-').map(Number);
   return new Date(year, month - 1, day);
 }
-function getPresetRange(preset: Exclude<DatePreset, 'custom'>) {
+function getPresetRange(preset: 'mtd' | 'last_month') {
   const today = new Date();
   const from = preset === 'mtd'
     ? new Date(today.getFullYear(), today.getMonth(), 1)
