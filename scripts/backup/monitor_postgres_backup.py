@@ -125,6 +125,9 @@ def main():
         with open(os.environ["GITHUB_EVENT_PATH"], encoding="utf-8") as fp:
             run = json.load(fp)["workflow_run"]
         if run.get("name") != WORKFLOW_NAME:
+            if run.get("name") == "INSUREIT Supabase Storage backup to R2 (daily 7 PM IST)":
+                print("Storage workflow completed; PostgreSQL monitored independently")
+                return
             raise RuntimeError("Unexpected workflow_run source")
         if run.get("head_branch") != "main":
             print("Ignoring non-main PostgreSQL backup run")
