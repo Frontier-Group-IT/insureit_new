@@ -25,9 +25,13 @@ assert.ok(api.includes('`/policies/${match.policyId}`'), 'Server resolves matchi
 assert.ok(links.includes('/^\\/policies\\/[0-9a-f-]{36}$/i'), 'Mobile only accepts canonical read-only policy details URL');
 assert.ok(detail.includes('topBarIcon="documents-outline"'), 'Use the professional unboxed documents icon');
 assert.ok(detail.includes('fullWidth'), 'Intake detail uses edge-to-edge mobile content');
-assert.ok(detail.includes('style={styles.intakeSummary}'), 'Phone/source and policy/vehicle summary have a full-width area');
-assert.ok(detail.includes('style={styles.intakeSummaryCompact}'), 'Duplicate PIR metadata sits directly under the number without a right-side timestamp gap');
-assert.ok(detail.includes("{row.status !== 'duplicate' ? <View style={styles.intakeSummary}>"), 'Only nonduplicate pages render the summary under the full header row');
+assert.ok(detail.includes('style={styles.intakeSummaryCompact}'), 'Phone/source and policy/vehicle summary sit below the PIR on all statuses');
+assert.ok(detail.includes('style={styles.intakeSummaryCompact}'), 'PIR metadata sits directly under the number without a right-side timestamp gap');
+assert.ok(!detail.includes("row.status === 'duplicate' ? (\n                  <View style={styles.intakeSummaryCompact}>"), 'Compact header is unconditional for all workflow statuses');
+assert.ok(detail.includes("key === 'insurer_name' ? shortInsurerName(fields.get(key)?.value) : fields.get(key)?.value"), 'Only insurer display values are shortened');
+assert.ok(detail.includes("[/\\bicici\\s*lombard\\b/i, 'ICICI Lombard']"), 'Recognize ICICI Lombard legal name');
+assert.ok(detail.includes("return aliases.find("), 'Unknown insurer names fall back to a display-safe name');
+assert.ok(!detail.includes("row.status !== 'duplicate' ? <View style={styles.intakeSummary}>"), 'All statuses use the same compact header and do not render a delayed lower summary');
 assert.ok(detail.includes("{row.status !== 'duplicate' ? <IntakeProgress row={row} /> : null}"), 'Duplicate pages must not display the Uploaded/Read/Review/Done tracker');
 assert.ok(!detail.includes('Review and Policy Onboarding actions are disabled for this intake.'), 'No redundant duplicate disabled-actions message');
 assert.ok(detail.includes("row.duplicate_match.kind === 'registered_policy' ? 'View Existing Policy' : 'View Earlier Intake'"), 'Duplicate policy action keeps the existing policy destination');
