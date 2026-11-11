@@ -82,6 +82,18 @@ assert.equal(value(nativeResult, "vehicle_model"), "C3001");
 assert.equal(value(nativeResult, "vehicle_engine_number"), "E20TEST41667");
 assert.equal(value(nativeResult, "cpa_premium"), "575");
 
+// ICICI native PDF may flatten the label column before the value column.
+// The exact Name of Insured value must reach the existing insured_name field.
+const columnPages = [
+  pages[0]
+    .replace("Name of Insured                           SAMPLE CUSTOMER\nMobile No.                                9876543210\nVehicle Make / Model                     CHETAK / C3001",
+      "Name of Insured\nPeriod of Insurance\nVehicle Make / Model\nRTO City\nSAMPLE CUSTOMER\nNov 06, 2026 to Nov 05, 2027\nCHETAK / C3001"),
+  pages[1],
+];
+const columnResult = refineIciciBundledTwoWheelerText(columnPages, contaminated);
+assert.equal(value(columnResult, "insured_name"), "SAMPLE CUSTOMER");
+assert.equal(columnResult.fields.some((entry) => entry.key === "customer_name"), false, "reuse insured_name field, no separate customer column");
+
 // Masked phone values are never inferred or imported.
 const masked = refineIciciBundledTwoWheelerText(
   [pages[0].replace("9876543210", "98******10"), pages[1]], contaminated,
