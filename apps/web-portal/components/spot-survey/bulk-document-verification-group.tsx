@@ -64,7 +64,7 @@ export function BulkDocumentVerificationGroup({ item, claim, verifications }: { 
   );
   const selectableKey = selectableIds.join("|");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
-  const [isExpanded, setIsExpanded] = useState(item.key !== "rc");
+  const [isExpanded, setIsExpanded] = useState(false);
 
   useEffect(() => {
     const allowed = new Set(selectableIds);
@@ -81,13 +81,13 @@ export function BulkDocumentVerificationGroup({ item, claim, verifications }: { 
   const hasNoFiles = item.documents.length === 0;
   const hasSingleFile = item.documents.length === 1;
   const hasMultipleFiles = item.documents.length > 1;
-  const showDocumentRows = hasSingleFile || (hasMultipleFiles && isExpanded);
+  const showDocumentRows = !hasNoFiles && isExpanded;
   const contentId = `claim-document-group-${claim.id}-${item.key}`;
   const toggleExpanded = () => {
-    if (hasMultipleFiles) setIsExpanded((expanded) => !expanded);
+    if (!hasNoFiles) setIsExpanded((expanded) => !expanded);
   };
   const handleCardClick = (event: MouseEvent<HTMLElement>) => {
-    if (!hasMultipleFiles) return;
+    if (hasNoFiles) return;
     const target = event.target;
     if (target instanceof Element && target.closest("button, a, input, label, select, textarea")) return;
     toggleExpanded();
@@ -96,14 +96,14 @@ export function BulkDocumentVerificationGroup({ item, claim, verifications }: { 
   return (
     <article
       onClick={handleCardClick}
-      className={`${motionStyles.card} rounded-xl border bg-white ${hasNoFiles ? "px-2.5 py-2" : "p-2.5"} shadow-[0_6px_16px_rgba(7,29,73,0.028)] ${allVerified ? `border-green-200 ${motionStyles.verified}` : "border-[#E2EAF4]"} ${hasMultipleFiles ? "cursor-pointer" : ""}`}
+      className={`${motionStyles.card} rounded-xl border bg-white ${hasNoFiles ? "px-2.5 py-2" : "p-2.5"} shadow-[0_6px_16px_rgba(7,29,73,0.028)] ${allVerified ? `border-green-200 ${motionStyles.verified}` : "border-[#E2EAF4]"} ${!hasNoFiles ? "cursor-pointer" : ""}`}
     >
       <div className={`flex items-center justify-between gap-2 ${showDocumentRows ? "mb-2" : ""}`}>
         <div className="flex min-w-0 flex-1 items-center gap-2">
           <DocumentCategoryIcon category={item.key} />
-          {hasMultipleFiles ? (
+          {!hasNoFiles ? (
             <>
-            <span className="shrink-0 rounded-md bg-[#EAF2FF] px-1.5 py-0.5 text-[10px] font-bold text-[#174EA6]">{item.documents.length} files</span>
+            <span className="shrink-0 rounded-md bg-[#EAF2FF] px-1.5 py-0.5 text-[10px] font-bold text-[#174EA6]">{item.documents.length} {hasSingleFile ? "file" : "files"}</span>
             <button
               type="button"
               onClick={(event) => { event.stopPropagation(); toggleExpanded(); }}
@@ -180,7 +180,7 @@ export function BulkDocumentVerificationGroup({ item, claim, verifications }: { 
               );
             })}
           </div>
-        ) : hasMultipleFiles ? (
+        ) : (
           <div id={contentId}>
             <ClaimDocumentCollapsedStatus
               verifiedCount={verifiedFileCount}
@@ -188,7 +188,7 @@ export function BulkDocumentVerificationGroup({ item, claim, verifications }: { 
               showLabels={item.key === "spot" || item.key === "insurance"}
             />
           </div>
-        ) : null
+        )
       ) : null}
     </article>
   );

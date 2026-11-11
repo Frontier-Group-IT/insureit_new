@@ -41,8 +41,8 @@ assert.doesNotMatch(workspace, /documents\.length\} uploaded file/, "Remove redu
 assert.match(workspace, />Unclassified Documents<\/h2>/, "Customer and Operations bulk uploads share one visible classification section.");
 assert.match(workspace, /<UnclassifiedAttachments claimId=\{claim\.id\} documents=\{unclassifiedAttachments\}/, "Combined classification must include every unclassified upload.");
 assert.match(workspace, /document_type\?\.trim\(\)\.toLowerCase\(\) === "other document"/, "Use the exact customer bulk-upload category.");
-assert.match(bulkVerificationGroup, /useState\(item\.key !== "rc"\)/, "RC Copy starts collapsed while other multiple-upload categories remain expanded initially.");
-assert.match(bulkVerificationGroup, /\{item\.documents\.length\} files/, "Multi-file groups must show their file count.");
+assert.match(bulkVerificationGroup, /useState\(false\)/, "All uploaded document categories must start collapsed.");
+assert.match(bulkVerificationGroup, /\{item\.documents\.length\} \{hasSingleFile \? "file" : "files"\}/, "All populated document categories show their file count.");
 
 
 const verificationModal = await readFile(new URL("../components/spot-survey/document-verification-modal-v3.tsx", import.meta.url), "utf8");
