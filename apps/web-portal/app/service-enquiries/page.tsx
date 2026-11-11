@@ -166,7 +166,7 @@ export default async function ServiceEnquiriesPage({ searchParams }: PageProps) 
                       <p className="line-clamp-2 break-words font-black leading-4 text-[#171D3D]" title={serviceLabel(row.service_type)}>{serviceLabel(row.service_type)}</p>
                     </td>
                     <td className="px-3 py-3">
-                      <p className="line-clamp-2 break-words font-black leading-4 text-[#171D3D]" title={name}>{name}</p>
+                      <p className="block w-full truncate whitespace-nowrap font-black leading-4 text-[#171D3D]" title={name}>{name}</p>
                       <p className="mt-1 truncate text-[10px] text-[#7B8498]" title={row.customer_id ? row.customers?.customer_code || "Existing customer" : "Verified guest"}>{row.customer_id ? row.customers?.customer_code || "Existing customer" : "Verified guest"}</p>
                     </td>
                     <td className="px-3 py-3 text-[10px] font-bold tabular-nums text-[#171D3D]"><p className="truncate whitespace-nowrap" title={vehicle}>{vehicle}</p></td>
