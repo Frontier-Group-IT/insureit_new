@@ -103,8 +103,8 @@ export function refineIcici3005Section02Evidence(
   const model = byKey.get("vehicle_model")?.value?.trim().toUpperCase();
   // Require the schedule's actual model to match the insured/vehicle identity.
   // A different model on the same PDF must never supply fuel or power evidence.
-  const matchingSchedule = make === "CHETAK" && row?.[1]?.toUpperCase() === model;
-  const validYear = matchingSchedule && Number(row[3]) >= 2020 && Number(row[3]) <= 2035 ? row[3] : null;
+  const matchingSchedule = Boolean(row && make === "CHETAK" && row[1].toUpperCase() === model);
+  const validYear = row && matchingSchedule && Number(row[3]) >= 2020 && Number(row[3]) <= 2035 ? row[3] : null;
   if (validYear) addIfMissing("vehicle_manufacturing_year", "Manufacturing year",
     validYear, 2, `Vehicle schedule Mfg Yr for CHETAK/${model}`);
 
@@ -113,7 +113,7 @@ export function refineIcici3005Section02Evidence(
     // C3503 requires matching model + 4.2 kW evidence rather than a name-only guess.
     addIfMissing("vehicle_fuel_type", "Fuel type", "Electric", 2,
       `Verified electric CHETAK/${model} with 4.2 kW vehicle schedule`, 0.94);
-    if (matchingSchedule) addIfMissing("vehicle_motor_power_kw", "Motor power (kW)", row[2], 2,
+    if (row && matchingSchedule) addIfMissing("vehicle_motor_power_kw", "Motor power (kW)", row[2], 2,
       `CC/KW column for CHETAK/${model} in vehicle schedule`, 0.99);
   }
 
