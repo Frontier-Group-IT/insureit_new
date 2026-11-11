@@ -77,11 +77,11 @@ def dependency_details(contents):
 # Return only a bounded numeric entry id and a fixed, allowlisted object kind/
 # schema. Never echo the object name, SQL, table contents, or a freeform field.
 PG_RESTORE_TOC = re.compile(
-    r"(?im)^pg_restore:\\s+from TOC entry\\s+(?P<entry>[0-9]{1,8});\\s+"
-    r"[0-9]+\\s+[0-9]+\\s+(?P<kind>DEFAULT ACL|TABLE DATA|SEQUENCE SET|"
+    r"(?im)^pg_restore:\s+from TOC entry\s+(?P<entry>[0-9]{1,8});\s+"
+    r"[0-9]+\s+[0-9]+\s+(?P<kind>DEFAULT ACL|TABLE DATA|SEQUENCE SET|"
     r"ACL|SCHEMA|EXTENSION|TABLE|FUNCTION|TYPE|POLICY|TRIGGER|INDEX|"
-    r"CONSTRAINT|FK CONSTRAINT|VIEW|MATERIALIZED VIEW)\\s+"
-    r"(?P<schema>[^\\s]+)"
+    r"CONSTRAINT|FK CONSTRAINT|VIEW|MATERIALIZED VIEW)\s+"
+    r"(?P<schema>[^\s]+)"
 )
 
 
