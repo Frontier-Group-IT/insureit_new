@@ -1,3 +1,4 @@
+import "./employee-explorer-intelligent-discovery-phase2-regression.mjs";
 import "./employee-explorer-premium-motion-phase1-regression.mjs";
 import "./employee-explorer-motion-regression.mjs";
 import "./employee-network-associates-workspace-regression.mjs";
