@@ -1,9 +1,9 @@
 Partner production OTA trigger
-release=partner-activity-blue-status-fullwidth-pr-4279-resync
-source=verified-merged-main-c3b8787971847e0ba50d503749690529544d6a86
-reason=user-approved-merge-and-publish-resynced-after-concurrent-release-marker
+release=partner-activity-badge-right-pr-4291
+source=verified-merged-main-90adc61f881d417fe307fb6b7b998b6a1b74d9d3
+reason=user-approved-merge-and-publish-after-green-partner-and-web-ci
 channel=production
 runtime=0.2.0
 requested=2026-11-11
 no_native_build=true
-database_changes=none-in-pr-4279
+database_changes=none-in-pr-4291
