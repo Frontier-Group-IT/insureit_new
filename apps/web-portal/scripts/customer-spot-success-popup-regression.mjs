@@ -32,7 +32,8 @@ assert.match(bulk,/if\(complete\) \{[\s\S]*?setRecentUploads/,"Bulk upload must 
 assert.doesNotMatch(bulk,/CustomerSuccessDialog|setSuccessNotice|Upload Successful/,"Bulk upload must not display success popups.");
 assert.doesNotMatch(bulk,/<p role="status".*document\(s\) uploaded successfully/,"Remove duplicate inline success.");
 assert.match(voice,/shownUploadId\.current===uploadState\.uploaded\.id/,"Do not re-show same voice upload.");
-assert.match(voice,/router\.refresh\(\)/,"Confirmed voice uploads must refresh the document list automatically.");
+assert.match(voice,/setRecentVoiceNotes\(previous=>/,"Confirmed voice uploads must appear in the dedicated list immediately.");
+assert.doesNotMatch(voice,/router\.refresh\(\)/,"Voice upload must not refresh away unsaved Spot Intimation details.");
 assert.doesNotMatch(voice,/CustomerSuccessDialog|setSuccessNotice|Upload Successful/,"Voice uploads must not display success popups.");
 assert.doesNotMatch(voice,/<p role="status".*Voice note uploaded successfully/,"Remove duplicate inline voice message.");
 assert.match(upload,/return \{error:null,uploaded:lastUploaded,uploadedCount\}/,"Keep actual server upload count.");
