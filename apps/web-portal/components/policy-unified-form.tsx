@@ -465,10 +465,8 @@ export function PolicyUnifiedForm({ mode, insurers, customers = [], rms, sources
         && fields.some(field=>field.key==="vehicle_fuel_type"&&field.value==="Electric")
         && fields.some(field=>field.key==="vehicle_motor_power_kw"&&field.value==="4.2")
         && selectedCpa?.value.replace(/,/g,"")==="575";
-      setForm(current=>normalizePolicyIdentifierFields({
-        ...current,...result.next,
-        ...(exactIciciChetakC3503?{cpaOpted:"Yes" as const}:{}),
-      }));
+      setForm(current=>normalizePolicyIdentifierFields({...current,...result.next}));
+      if(exactIciciChetakC3503)setForm(current=>({...current,cpaOpted:"Yes"}));
       if(result.registrationMode!==vehicleRegistrationMode)setVehicleRegistrationMode(result.registrationMode);
       if(result.touchedSection02){setLookupError(null);setRegistrationTouched(false);setRcReview(null);if(!appliedRc)setAppliedRc(null);}
     }
