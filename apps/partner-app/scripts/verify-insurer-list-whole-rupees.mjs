@@ -14,7 +14,8 @@ for (const field of ['premium', 'payin', 'retention', 'payout']) {
   assert.ok(screen.includes(`return row.${field}`) || (field === 'premium' && screen.includes('return row.premium')), `Must preserve role-available money field ${field}`);
 }
 assert.ok(screen.includes("amount == null ? '—' : formatInsurerRupees(amount)"), 'Missing amounts render unavailable, not zero');
-assert.ok(screen.includes('numberOfLines={1} adjustsFontSizeToFit'), 'Display full amounts in narrow metric cell');
+assert.ok(screen.includes("column.key === 'policies' ? insurer.policies"), 'Policies remains a separate always-visible column');
+assert.ok(screen.includes('adjustsFontSizeToFit minimumFontScale={0.75}'), 'Display full amounts in scrolling metric cells');
 assert.ok(screen.includes('getPartnerInsurerRegister(from, to)'));
 assert.ok(screen.includes("context?.identity.actor_kind === 'employee'"), 'Employee/non-employee amounts remain scoped');
 const formatter = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0, minimumFractionDigits: 0 });
