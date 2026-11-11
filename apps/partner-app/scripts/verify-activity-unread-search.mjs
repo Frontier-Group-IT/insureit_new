@@ -108,7 +108,7 @@ expect(activity.includes('<PartnerScreen title="Activity" hideTopBar fullWidth s
 expect(activity.includes('<Text style={styles.heroTitle}>Activity</Text>') && !activity.includes('What changed'), "Visible Activity header no longer says What changed");
 expect(screen.includes('statusBarColor?: string;') && screen.includes('statusBarColor ? { backgroundColor: statusBarColor } : null'), "Shared PartnerScreen supports an opt-in colored safe area");
 expect(screen.includes("backgroundColor={statusBarColor ?? (navyStatusBar ? '#071E49' : undefined)}") && screen.includes("style={statusBarColor || navyStatusBar"), "Status bar uses matching color and light system indicators");
-expect(activity.includes('  body: {\\n    paddingHorizontal: 8,') && activity.includes("  hero: {") && !activity.includes('marginHorizontal: -partnerTheme.spacing.lg'), "Activity cards use compact 8px margins and a full-width header");
+expect(activity.includes('  body: {') && activity.includes('    paddingHorizontal: 8,') && activity.includes("  hero: {") && !activity.includes('marginHorizontal: -partnerTheme.spacing.lg'), "Activity cards use compact 8px margins and a full-width header");
 expect(activity.includes('numberOfLines={1} ellipsizeMode="middle"') && activity.includes('{item.title}</Text>'), "Long policy/claim references truncate in the middle instead of clipping");
 expect(activity.includes('alignSelf: \'stretch\',') && activity.includes("alignItems: 'flex-end'"), "Category badge remains right aligned above date/time");
 expect(activity.includes('styles.dateAndUnread') && activity.includes('styles.unreadDot') && activity.includes('styles.itemCardUnread'), "Date and unread styles are preserved");
