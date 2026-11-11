@@ -9,6 +9,7 @@ import { requirePolicyEditor } from "@/lib/policy-access-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { resolvePolicyIntermediarySource } from "@/lib/policy-intermediary-source";
 import { POLICY_ACTIVITY_ACTIONS, recordPolicyActivity } from "@/lib/policy-activity";
+import { capturePolicyChangeSnapshot, diffPolicyChangeSnapshots } from "@/lib/policy-activity-changes";
 
 export type PolicyEditPayload = {
   vehicleClass: string;
@@ -162,6 +163,8 @@ export async function updatePolicyOnboarding(policyId: string, payload: PolicyEd
       payin: protectedPayin,
       payout: protectedPayout,
     };
+    // Read-only audit snapshot; the existing RPC remains the only save operation.
+    const beforeChanges = await capturePolicyChangeSnapshot(admin, policyId);
     const { data, error } = await admin.rpc("save_motor_policy_with_date_approval_v1", { p_requester: profile.id, p_approval_id: payload.dateApprovalId ?? null, 
       p_operation: "edit",
       p_policy_id: policyId,
@@ -180,7 +183,9 @@ export async function updatePolicyOnboarding(policyId: string, payload: PolicyEd
     const result = data as { ok?: boolean; policyId?: string; policyCode?: string } | null;
     if (!result?.ok || !result.policyId) return { ok: false, error: "We couldn't complete the policy update. Please try again." };
 
-    await recordPolicyActivity(admin, result.policyId, profile.id, POLICY_ACTIVITY_ACTIONS.POLICY_EDITED);
+    const afterChanges = await capturePolicyChangeSnapshot(admin, result.policyId);
+    await recordPolicyActivity(admin, result.policyId, profile.id, POLICY_ACTIVITY_ACTIONS.POLICY_EDITED,
+      diffPolicyChangeSnapshots(beforeChanges, afterChanges));
     revalidatePath("/policies");
     revalidatePath(`/policies/${policyId}/edit`);
     return { ok: true, policyId: result.policyId, policyCode: result.policyCode ?? "" };
