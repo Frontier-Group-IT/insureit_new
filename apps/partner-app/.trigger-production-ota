@@ -1,7 +1,7 @@
 Partner production OTA trigger
-release=partner-insurer-payin-commercial-authorization-pr-4275
+release=partner-insurer-payin-authorization-republish-20261111
 source=verified-merged-main-17546ea30af4547e8738c80f3049c0cc4f915904
-reason=user-approved-merge-and-publish-after-partner-and-web-ci
+reason=user-explicitly-requested-publish-again-previous-ota-success-unverified
 channel=production
 runtime=0.2.0
 requested=2026-11-11
