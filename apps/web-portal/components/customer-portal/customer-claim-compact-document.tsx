@@ -6,7 +6,6 @@ import { FileText, LoaderCircle, Upload, Video } from "lucide-react";
 import { uploadCustomerClaimDocument } from "@/app/customer/(protected)/claims/[id]/stage/[stage]/upload-action";
 import { reuseCustomerLinkedPolicyCopy } from "@/app/customer/(protected)/claims/[id]/stage/[stage]/reuse-policy-copy-action";
 import { ClaimStageErrorDialog } from "@/components/claim-manager/claim-stage-error-dialog";
-import { CustomerSuccessDialog } from "./customer-success-dialog";
 import { CustomerErrorDialog } from "./customer-error-dialog";
 import { CustomerSpotAttachmentDelete } from "./customer-spot-attachment-delete";
 
@@ -69,7 +68,6 @@ export function CustomerClaimCompactDocument({label,type,documents,accountId,cla
   const [uploadState,uploadAction,uploading]=useActionState(uploadCustomerClaimDocument,{error:null});
   const [recentUploads,setRecentUploads]=useState<CustomerClaimFile[]>([]);
   const [deletedIds,setDeletedIds]=useState<string[]>([]);
-  const [successNotice,setSuccessNotice]=useState<string|null>(null);
   const [errorNotice,setErrorNotice]=useState<string|null>(null);
   const shownUploadId=useRef<string|null>(null);
   useEffect(()=>{if(uploadState.error)setErrorNotice(uploadState.error);},[uploadState.error]);
@@ -78,7 +76,6 @@ export function CustomerClaimCompactDocument({label,type,documents,accountId,cla
       shownUploadId.current=uploadState.uploaded.id;
       setRecentUploads(current=>current.some(doc=>doc.id===uploadState.uploaded!.id)?current:[uploadState.uploaded!,...current]);
       if(input.current)input.current.value="";
-      setSuccessNotice(`${uploadState.uploadedCount ?? 1} ${label} document uploaded successfully.`);
       router.refresh(); // Sync the consolidated uploaded-document count after a category upload.
     }
   },[uploadState.uploaded]);
@@ -103,7 +100,6 @@ export function CustomerClaimCompactDocument({label,type,documents,accountId,cla
   </div>;;
   return <article className={`customer-claim-ref-card customer-workflow customer-workflow-document min-w-0 rounded-xl border bg-white px-3 py-2.5 ${ordered.length > 0 ? "border-[#CDD5DF]" : "border-[#E2E8F0]"}`}>
     <CustomerErrorDialog title="Document upload failed" message={errorNotice} onClose={()=>setErrorNotice(null)}/>
-    <CustomerSuccessDialog title="Upload Successful" message={successNotice} onClose={()=>setSuccessNotice(null)}/>
     <div className="flex items-center justify-between gap-2">
       <div className="flex min-w-0 flex-1 items-center gap-2">{type.toLowerCase().replace(/[^a-z0-9]/g,"")==="accidentvideo"?<span aria-hidden="true" className="grid h-7 w-7 shrink-0 place-items-center rounded-md bg-[#F21E38] text-white"><Video className="h-4 w-4 fill-current"/></span>:<img src={documentIcon(type)} alt="" aria-hidden="true" loading="lazy" className="h-7 w-7 shrink-0 object-contain" />}<h3 className="min-w-0 text-[12px] font-semibold text-[#102B54]">{label}</h3></div>
       {showFilePreview && ordered.length>0?<button type="button" aria-expanded={ordered.length>1?expanded:undefined} aria-label={ordered.length>1?`${ordered.length} uploaded, ${expanded?'collapse':'expand'} documents`:`${ordered.length} uploaded`} onClick={ordered.length>1?()=>setExpanded(v=>!v):undefined} className={`inline-flex shrink-0 items-center gap-1 rounded-full bg-[#EDF8F2] px-2 py-0.5 text-[10px] font-semibold text-[#087A57] ${ordered.length>1?'cursor-pointer transition hover:bg-[#DFF3E8] focus-visible:outline-2 focus-visible:outline-[#16835D]':'cursor-default'}`}>{ordered.length} Uploaded</button>:null}
