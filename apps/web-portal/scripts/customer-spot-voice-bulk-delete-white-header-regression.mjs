@@ -22,7 +22,7 @@ assert.match(evidence,/<CustomerClaimMultipleUpload documents=\{multipleDocument
 assert.match(evidence,/normalize\(doc\.document_type\) === "otherdocument"/, "Categorized attachments stay out of bulk file list.");
 assert.match(bulk,/<CustomerSpotAttachmentDelete accountId=\{accountId\}/, "Bulk rows retain guarded deletion controls.");
 assert.match(bulk,/file\.document_type\.toLowerCase\(\)\.replace/, "Only supported document categories can expose delete.");
-assert.match(voice,/<CustomerClaimSavedVoiceNotes documents=\{documents\}/, "Uploaded recordings belong to voice-note section.");
+assert.match(voice,/<CustomerClaimSavedVoiceNotes documents=\{\[\.\.\.recentVoiceNotes,\.\.\.documents\.filter/, "New recordings appear locally in their dedicated voice-note section.");
 assert.match(saved, /<audio controls preload="none"/, "Saved voice recordings retain playable audio.");
 assert.match(saved, /<CustomerSpotAttachmentDelete accountId=\{accountId\}/, "Saved voice notes have a conditional delete control.");
 assert.doesNotMatch(voice,/<Play className=/, "Remove redundant blue play icon from recording preview.");
