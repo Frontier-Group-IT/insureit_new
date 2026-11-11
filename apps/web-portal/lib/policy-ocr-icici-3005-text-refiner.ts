@@ -23,6 +23,10 @@ export function refineIciciBundledTwoWheelerText(
   const pair = riskLines.map((line) => line.match(/^Vehicle\s+Make\s*\/\s*Model\s*:?\s+([A-Z][A-Z0-9 .-]{1,36}?)\s*\/\s*([A-Z0-9][A-Z0-9 .-]{1,36})\s*$/i)).find(Boolean);
   const make = pair?.[1]?.trim() ?? null;
   const model = pair?.[2]?.trim() ?? null;
+  // Product 3005 often prints identity labels with their values in a column
+  // rather than using the "Name of the Insured :" convention.
+  const name = explicitIdentityValue(riskLines, /^Name\s+of\s+(?:the\s+)?Insured\b\s*:?\s*(.*)$/i, false);
+  const phone = explicitIdentityValue(riskLines, /^(?:Mobile(?:\s+(?:No\.?|Number))?|Contact\s+(?:No\.?|Number)|Phone(?:\s+(?:No\.?|Number))?)\b\s*:?\s*(.*)$/i, true);
   const engine = exactLabeledId(riskLines, /^Engine\s+No\.?\s*:?\s+([A-Z0-9-]{8,24})$/i);
   const cpaLine = scheduleLines.map((line) =>
     line.match(/^PA\s+Cover\s+for\s+Owner\s*[- ]?\s*Driver\s+([\d,]+\.\d{2})\s*$/i)
@@ -41,6 +45,9 @@ export function refineIciciBundledTwoWheelerText(
     fields.set(key, field);
   }
 
+  // Never replace a pre-existing verified identity with an unsupported guess.
+  if (name) correct("insured_name", name, "Insured name", 1, "ICICI explicitly labelled insured name");
+  if (phone) correct("insured_phone", phone, "Insured phone", 1, "ICICI explicitly labelled complete mobile number; manual selection required");
   correct("vehicle_make", make, "Vehicle make", 1, "ICICI Vehicle Make / Model (risk assumption letter)");
   correct("vehicle_model", model, "Vehicle model", 1, "ICICI Vehicle Make / Model (risk assumption letter)");
   correct("vehicle_engine_number", engine, "Engine number", 1, "ICICI Engine No. (risk assumption letter)");
@@ -60,6 +67,29 @@ function exactLabeledId(lines: string[], label: RegExp): string | null {
   for (const line of lines) {
     const match = line.match(label);
     if (match?.[1] && /[A-Z]/i.test(match[1]) && /\d/.test(match[1])) return match[1].toUpperCase();
+  }
+  return null;
+}
+
+/** Only return an explicitly labelled identity, never nearby unrelated values. */
+function explicitIdentityValue(lines: string[], label: RegExp, isPhone: boolean): string | null {
+  for (let index = 0; index < lines.length; index += 1) {
+    const match = lines[index].match(label);
+    if (!match) continue;
+    const raw = match[1]?.trim() || (lines[index + 1] && !/^(?:Name|Period|Vehicle|RTO|Engine|Chassis|Mobile|Phone|Contact|Current|Previous|The commencement)\b/i.test(lines[index + 1]) ? lines[index + 1] : "");
+    if (!raw) continue;
+    if (isPhone) {
+      if (/[xX*•]/.test(raw)) continue;
+      const digits = raw.replace(/\D/g, "");
+      const mobile = digits.startsWith("91") && digits.length === 12 ? digits.slice(2) : digits;
+      if (/^[6-9]\d{9}$/.test(mobile)) return mobile;
+    } else {
+      const name = raw.replace(/\s+/g, " ").trim();
+      if (name.length >= 3 && name.length <= 120
+        && /[A-Za-z]{2}/.test(name)
+        && !/\b(?:policy|vehicle|period|registration|premium|insurance|motor)\b/i.test(name)
+        && !/\d{5,}/.test(name)) return name;
+    }
   }
   return null;
 }
