@@ -41,4 +41,22 @@ expect(policies.includes("unreadActivityCount > 99 ? \"99+\" : unreadActivityCou
 expect(policies.includes("styles.unreadBadge"), "Policies bell displays red unread badge");
 expect(!screen.includes("setBadgeCountAsync"), "Feature does not alter the OS application icon badge");
 
+const logoCatalog = read("lib/catalog-logos.ts");
+const makerMigration = fs.readFileSync(
+  new URL("../../../supabase/migrations/20261111121500_partner_activity_claim_vehicle_manufacturer.sql", import.meta.url),
+  "utf8",
+);
+expect(engagement.includes("manufacturer?: string | null"), "Partner activity supports optional manufacturer without breaking older API responses");
+expect(makerMigration.includes("left join public.vehicles v on v.id=cl.vehicle_id"), "Claim manufacturer comes from the linked claim vehicle");
+expect(makerMigration.includes("nullif(trim(v.make),'') manufacturer"), "Manufacturer is resolved from the vehicle make");
+expect(makerMigration.includes("'manufacturer',manufacturer"), "Scoped activity API includes manufacturer in its payload");
+expect(makerMigration.includes("c.lead_source_intermediary_id=any(v_intermediary_ids)"), "Partner claim scope is preserved");
+expect(logoCatalog.includes("getPartnerManufacturerLogoSource"), "Bundled manufacturer logo lookup exists");
+expect(activity.includes("item.kind === 'claim'"), "Only claim activities use manufacturer logos");
+expect(activity.includes("getPartnerManufacturerLogoSource(item.manufacturer)"), "Claim logo lookup uses manufacturer, not claim status");
+expect(activity.includes("logo ?? activityAsset(item.kind)"), "Unknown manufacturers retain the original claim icon fallback");
+expect(activity.includes("readKeys.has(partnerActivityEventKey(item))"), "Unread UI follows persisted receipt state");
+expect(activity.includes("styles.itemCardUnread") && activity.includes("styles.unreadDot"), "Unread notifications are subtly highlighted and marked");
+expect(activity.includes("styles.titleRead") && activity.includes("styles.subtitleUnread"), "Read and unread text contrast differs without changing layout");
+
 if (!process.exitCode) console.log("Partner activity unread/search regression passed.");

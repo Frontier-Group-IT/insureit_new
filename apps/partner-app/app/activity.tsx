@@ -5,7 +5,7 @@ import { useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
-import { getPartnerInsurerLogoSource } from '@/lib/catalog-logos';
+import { getPartnerInsurerLogoSource, getPartnerManufacturerLogoSource } from '@/lib/catalog-logos';
 import {
   getPartnerActivity,
   getPartnerActivityReadKeys,
@@ -222,17 +222,20 @@ export default function ActivityScreen() {
           {filteredItems.length ? (
             <View style={styles.activityList}>
               {filteredItems.map((item) => {
-                const insurerLogo = getPartnerInsurerLogoSource(item.meta);
+                const isUnread = !readKeys.has(partnerActivityEventKey(item));
+                const logo = item.kind === 'claim'
+                  ? getPartnerManufacturerLogoSource(item.manufacturer)
+                  : getPartnerInsurerLogoSource(item.meta);
                 return (
                   <Pressable
                     key={`${item.kind}-${item.entity_id}-${item.event_at}`}
                     onPress={() => openActivity(item)}
-                    style={styles.itemCard}
+                    style={[styles.itemCard, isUnread && styles.itemCardUnread]}
                   >
                     <View style={styles.logoTile}>
                       <Image
-                        source={insurerLogo ?? activityAsset(item.kind)}
-                        style={insurerLogo ? styles.insurerLogo : styles.eventArtworkImage}
+                        source={logo ?? activityAsset(item.kind)}
+                        style={logo ? styles.insurerLogo : styles.eventArtworkImage}
                         resizeMode="contain"
                       />
                     </View>
@@ -242,10 +245,13 @@ export default function ActivityScreen() {
                         <View style={styles.kindPill}>
                           <Text style={[styles.kind, toneText(item.tone)]}>{labelFor(item.kind)}</Text>
                         </View>
-                        <Text style={styles.date}>{formatDate(item.event_at)}</Text>
+                        <View style={styles.dateAndUnread}>
+                          <Text style={styles.date}>{formatDate(item.event_at)}</Text>
+                          {isUnread ? <View style={styles.unreadDot} accessibilityLabel="Unread" /> : null}
+                        </View>
                       </View>
-                      <Text numberOfLines={1} style={styles.title}>{item.title}</Text>
-                      <Text numberOfLines={1} style={styles.subtitle}>{item.subtitle}</Text>
+                      <Text numberOfLines={1} style={[styles.title, !isUnread && styles.titleRead]}>{item.title}</Text>
+                      <Text numberOfLines={1} style={[styles.subtitle, isUnread && styles.subtitleUnread]}>{item.subtitle}</Text>
                     </View>
                   </Pressable>
                 );
@@ -502,6 +508,11 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     elevation: 1,
   },
+  itemCardUnread: {
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#C6DDFB',
+  },
   logoTile: {
     width: 52,
     height: 50,
@@ -538,6 +549,8 @@ const styles = StyleSheet.create({
   textAttention: { color: '#9A6500' },
   textLearn: { color: '#A3630D' },
   textOps: { color: '#667085' },
+  dateAndUnread: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  unreadDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#2379D5' },
   date: {
     color: '#71809C',
     fontSize: 9.5,
@@ -550,6 +563,8 @@ const styles = StyleSheet.create({
     lineHeight: 13,
     fontWeight: '800',
   },
+  titleRead: { fontWeight: '600' },
+  subtitleUnread: { color: '#334A68', fontWeight: '600' },
   subtitle: {
     marginTop: 1,
     color: '#68758E',

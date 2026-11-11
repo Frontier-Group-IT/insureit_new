@@ -134,6 +134,9 @@ jobs:
       - name: Verify claim journey milestone deduplication
         run: node apps/partner-app/scripts/verify-claim-journey-deduplication.mjs
 
+      - name: Verify Partner notification manufacturer icons and unread styles
+        run: npm --workspace apps/partner-app run verify:activity-unread-search
+
       - name: Verify Partner scoped claim document inventory
         run: node apps/partner-app/scripts/verify-claim-document-inventory.mjs
 
