@@ -98,21 +98,30 @@ export function refineIcici3005Section02Evidence(
   // this model in a single row before using its manufacturing year/power.
   const heading = second.search(/Vehicle\s+Registration[\s\S]{0,240}?\bMake\b[\s\S]{0,160}?\bModel\b/i);
   const table = heading < 0 ? "" : second.slice(heading).split(/Vehicle\s+IDV/i)[0].slice(0, 1800);
-  const row = table.match(/\bNEW\s+CHETAK\s+C3001\s+[\s\S]{0,100}?\b(4\.2)\s+(20\d{2})\s+([1-9]\d?)\b/i);
-  const validYear = row && Number(row[2]) >= 2020 && Number(row[2]) <= 2035 ? row[2] : null;
-  if (validYear) addIfMissing("vehicle_manufacturing_year", "Manufacturing year",
-    validYear, 2, "Vehicle schedule Mfg Yr for CHETAK/C3001");
-
+  const row = table.match(/\bNEW\s+CHETAK\s+(C3001|C3503)\s+[\s\S]{0,100}?\b(4\.2)\s+(20\d{2})\s+([1-9]\d?)\b/i);
   const make = byKey.get("vehicle_make")?.value?.trim().toUpperCase();
   const model = byKey.get("vehicle_model")?.value?.trim().toUpperCase();
-  if (make === "CHETAK" && model === "C3001") {
-    // C3001 is the Bajaj Chetak electric variant; corroborated by Bajaj Auto's
-    // published 2025 launch and 2026 C-series specification documentation.
+  // Require the schedule's actual model to match the insured/vehicle identity.
+  // A different model on the same PDF must never supply fuel or power evidence.
+  const matchingSchedule = Boolean(row && make === "CHETAK" && row[1].toUpperCase() === model);
+  const validYear = row && matchingSchedule && Number(row[3]) >= 2020 && Number(row[3]) <= 2035 ? row[3] : null;
+  if (validYear) addIfMissing("vehicle_manufacturing_year", "Manufacturing year",
+    validYear, 2, `Vehicle schedule Mfg Yr for CHETAK/${model}`);
+
+  if (make === "CHETAK" && (model === "C3001" || (model === "C3503" && matchingSchedule))) {
+    // These exact Chetak electric variants use the schedule's CC/KW column.
+    // C3503 requires matching model + 4.2 kW evidence rather than a name-only guess.
     addIfMissing("vehicle_fuel_type", "Fuel type", "Electric", 2,
-      "Verified model mapping: Bajaj Chetak C3001 electric scooter", 0.94);
-    if (row) addIfMissing("vehicle_motor_power_kw", "Motor power (kW)", row[1], 2,
-      "CC/KW column for CHETAK/C3001 in vehicle schedule", 0.99);
+      `Verified electric CHETAK/${model} with 4.2 kW vehicle schedule`, 0.94);
+    if (row && matchingSchedule) addIfMissing("vehicle_motor_power_kw", "Motor power (kW)", row[2], 2,
+      `CC/KW column for CHETAK/${model} in vehicle schedule`, 0.99);
   }
+
+  // Product 3005 risk-assumption page prints the full 17-character VIN
+  // alongside Chassis No.; the schedule table may wrap its final character.
+  const pageOneChassis = first.match(/^[ \t]*Chassis\s+No\.?[ \t]*:?[ \t]*([A-HJ-NPR-Z0-9]{17})[ \t]*$/im);
+  if (pageOneChassis) addIfMissing("vehicle_chassis_number", "Chassis number", pageOneChassis[1], 1,
+    "Explicit Chassis No. on ICICI risk-assumption letter", 0.995);
 
   if (!changedKeys.length) return parsed;
   // Existing warnings and all original field objects remain intact except

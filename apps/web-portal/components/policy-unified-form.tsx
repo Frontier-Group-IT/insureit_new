@@ -453,7 +453,20 @@ export function PolicyUnifiedForm({ mode, insurers, customers = [], rms, sources
       rcVerified:Boolean(appliedRc),
     });
     if(result.applied){
+      // The 3005/C3503 bundled schedule explicitly charges owner-driver CPA.
+      // The import helper intentionally does not toggle CPA for general policies
+      // (where liability additions can be confused with owner-driver cover).
+      // Only enable it for this verified insurer/model/amount combination.
+      const selectedCpa=fields.find(field=>field.key==="cpa_premium");
+      const exactIciciChetakC3503=result.next.vehicleClass==="TWP"
+        && result.next.policyProduct==="Bundled"
+        && /^C3503$/i.test(result.next.model)
+        && /ICICI\s+LOMBARD/i.test(insurers.find(item=>item.value===result.next.insurerId)?.label??"")
+        && fields.some(field=>field.key==="vehicle_fuel_type"&&field.value==="Electric")
+        && fields.some(field=>field.key==="vehicle_motor_power_kw"&&field.value==="4.2")
+        && selectedCpa?.value.replace(/,/g,"")==="575";
       setForm(current=>normalizePolicyIdentifierFields({...current,...result.next}));
+      if(exactIciciChetakC3503)setForm(current=>({...current,cpaOpted:"Yes"}));
       if(result.registrationMode!==vehicleRegistrationMode)setVehicleRegistrationMode(result.registrationMode);
       if(result.touchedSection02){setLookupError(null);setRegistrationTouched(false);setRcReview(null);if(!appliedRc)setAppliedRc(null);}
     }

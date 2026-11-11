@@ -129,6 +129,39 @@ assert.equal(applied.next.cpa, "575");
 assert.equal(applied.next.validFrom, "2026-11-06");
 assert.equal(applied.next.validUpto, "2027-11-05");
 
+// Regression from the supplied 3005/460148698/00/000 policy (PII removed):
+// C3503 has an explicit 4.2 kW schedule and a full VIN on the risk page;
+// the second-page chassis column wraps its last character.
+const c3503Pages = [
+  pages[0].replaceAll("C3001", "C3503")
+    .replace("Chassis No.                                  TESTCHASSIS123456", "Chassis No.                                  MD2C59206TAG78456"),
+  pages[1].replaceAll("C3001", "C3503")
+    .replace("TESTCHASSIS", "MD2C59206TAG7845\\n6"),
+];
+const c3503Base = { ...parsed, fields: parsed.fields
+  .filter(field=>!["vehicle_chassis_number","vehicle_fuel_type","vehicle_motor_power_kw","vehicle_manufacturing_year"].includes(field.key))
+  .map(field=>field.key==="vehicle_model"?{...field,value:"C3503"}:field)
+};
+const c3503 = refineIcici3005Section02Evidence(c3503Pages,c3503Base);
+assert.equal(value(c3503,"vehicle_chassis_number"),"MD2C59206TAG78456");
+assert.equal(value(c3503,"vehicle_fuel_type"),"Electric");
+assert.equal(value(c3503,"vehicle_motor_power_kw"),"4.2");
+assert.equal(value(c3503,"vehicle_manufacturing_year"),"2026");
+const c3503Applied=buildPolicyOcrOnboardingUpdate({
+  mode:"create",registrationMode:"unregistered",current,rcVerified:false,
+  manufacturers:["Bajaj Auto Limited","Tata Motors"],insurers:[],fields:c3503.fields,
+});
+assert.equal(c3503Applied.next.chassisNo,"MD2C59206TAG78456");
+assert.equal(c3503Applied.next.fuelType,"Electric");
+assert.equal(c3503Applied.next.make,"Bajaj Auto Limited");
+assert.equal(c3503Applied.next.model,"C3503");
+assert.equal(c3503Applied.next.capacity,"4.2");
+const wrongModel = refineIcici3005Section02Evidence(c3503Pages,{
+  ...c3503Base,fields:c3503Base.fields.map(field=>field.key==="vehicle_model"?{...field,value:"C3502"}:field),
+});
+assert.equal(value(wrongModel,"vehicle_fuel_type"),undefined,"Do not infer fuel for a mismatched schedule");
+assert.equal(value(wrongModel,"vehicle_motor_power_kw"),undefined,"Do not import a different model's motor power");
+
 // Existing vehicle/edit mode must never overwrite protected section-02 data.
 const rcProtected = buildPolicyOcrOnboardingUpdate({
   mode: "create", registrationMode: "registered",

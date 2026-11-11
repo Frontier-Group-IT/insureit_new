@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import assert from "node:assert/strict";
 // @ts-expect-error -- direct Node TypeScript regression with strip-types.
 import { refineIcici3005OutstandingFields } from "../lib/policy-ocr-icici-3005-outstanding-fields.ts";
@@ -95,6 +96,41 @@ const mismatched = refineIcici3005OutstandingFields(
 assert.equal(value(mismatched, "tp_premium"), undefined);
 assert.equal(value(mismatched, "gross_premium"), "22");
 assert.equal(value(mismatched, "tax_amount"), "1");
+
+// Real C3503 premium schedule: OD 2,266 + basic TP 3,273 + owner-driver
+// CPA 575 = 6,114 net. Printed tax 1,101 and gross 7,215 reconcile.
+const c3503FinancialPages=[
+  pages[0].replaceAll("C3001","C3503"),
+  pages[1].replace("Basic OD Premium                 1,758.00","Basic OD Premium                 1,583.00")
+    .replace("Total Own Damage Premium(A)      1,758.00", "Total Own Damage Premium(A)      2,266.00")
+    .replace("Total Package Premium(A+B):     5,606.00", "Total Package Premium(A+B):     6,114.00")
+    .replace("Total Tax Payable in ₹           1,009.00", "Total Tax Payable in ₹           1,101.00")
+    .replace("Total Premium Payable In ₹       6,615.00", "Total Premium Payable In ₹       7,215.00"),
+];
+const c3503Before={ ...before,fields:before.fields
+  .filter(field=>field.key!=="od_premium")
+  .map(field=>field.key==="vehicle_model"?{...field,value:"C3503"}:field)
+};
+const c3503After=refineIcici3005OutstandingFields(c3503FinancialPages,c3503Before);
+assert.equal(value(c3503After,"od_premium"),"2266");
+assert.equal(value(c3503After,"tp_premium"),"3273");
+assert.equal(value(c3503After,"total_premium"),"6114");
+assert.equal(value(c3503After,"tax_amount"),"1101");
+assert.equal(value(c3503After,"gross_premium"),"7215");
+// A previously inaccurate OD is corrected only if all totals agree.
+const staleOd={...c3503Before,fields:[...c3503Before.fields,
+  {key:"od_premium",label:"OD premium",value:"0",confidence:.82,page:2,evidence:"generic OCR"}]};
+assert.equal(value(refineIcici3005OutstandingFields(c3503FinancialPages,staleOd),"od_premium"),"2266");
+const unreconciled=refineIcici3005OutstandingFields(
+  [c3503FinancialPages[0],c3503FinancialPages[1].replace("3,848.00","9,848.00")],c3503Before
+);
+assert.equal(value(unreconciled,"od_premium"),undefined,"Never invent OD when printed totals contradict");
+
+// CPA must enable the premium total only for the exact verified C3503
+// OCR path, never for unverified/synthetic liability additions.
+const onboarding=readFileSync(new URL("../components/policy-unified-form.tsx",import.meta.url),"utf8");
+assert.match(onboarding,/if\(exactIciciChetakC3503\)setForm\(current=>\(\{\.\.\.current,cpaOpted:"Yes"\}\)\)/);
+assert.match(onboarding,/field\.key==="cpa_premium"/);
 
 // Product 3003 and other insurers stay entirely unchanged.
 assert.equal(refineIcici3005OutstandingFields([pages[0].replace("3005", "3003"), pages[1]], before), before);
