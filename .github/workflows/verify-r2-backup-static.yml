@@ -6,6 +6,7 @@ on:
       - 'scripts/backup/**'
       - '.github/workflows/insureit-supabase-storage-r2-backup.yml'
       - '.github/workflows/insureit-r2-restore-verify.yml'
+      - '.github/workflows/insureit-r2-storage-complete-verify.yml'
       - '.github/workflows/verify-r2-backup-static.yml'
       - '.github/workflows/insureit-r2-backup-monitor.yml'
       - '.github/workflows/insureit-postgres-r2-manual.yml'
@@ -51,6 +52,20 @@ jobs:
           assert verify['environment'] == 'insureit-production-backup'
           assert 'SUPABASE_SERVICE_ROLE_KEY' not in str(verify)
           assert restore['permissions']['contents'] == 'read'
+          complete = yaml.safe_load(pathlib.Path('.github/workflows/insureit-r2-storage-complete-verify.yml').read_text())
+          ct = complete.get('on', complete.get(True, {}))
+          assert 'workflow_dispatch' in ct and 'schedule' not in str(ct)
+          assert complete['permissions']['contents'] == 'read'
+          cj = complete['jobs']['verify_storage_files']
+          assert cj['environment'] == 'insureit-production-backup'
+          assert 'refs/heads/main' in cj['if']
+          steps = str(cj['steps'])
+          assert 'VERIFY_STORAGE_SCOPE' in steps and 'all' in steps
+          assert 'verify_r2_restore.py' in steps
+          assert 'SUPABASE_SERVICE_ROLE_KEY' not in steps
+          assert 'SUPABASE_URL' not in steps
+          assert 'aws s3 rm' not in steps and 'delete_object' not in steps
+          assert 'STORAGE FULL R2 OBJECT VERIFICATION PASSED' in pathlib.Path('scripts/backup/verify_r2_restore.py').read_text()
           monitor = yaml.safe_load(pathlib.Path('.github/workflows/insureit-r2-backup-monitor.yml').read_text())
           triggers = monitor.get('on', monitor.get(True, {}))
           assert {'17 17 * * *', '17 */2 * * *'} == {item['cron'] for item in triggers['schedule']}
