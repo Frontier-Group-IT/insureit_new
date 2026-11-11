@@ -79,7 +79,8 @@ export function CustomerClaimMultipleUpload({claimId,accountId,stage,documents,a
       // Successfully registered files are never automatically retried.
       if(complete) {
         setRecentUploads(previous=>[...confirmed.filter(file=>!previous.some(existing=>existing.id===file.id)),...previous]);
-        setExpanded(true);
+        // Spot Intimation stays collapsed after uploads; other claim stages keep their existing expanded view.
+        setExpanded(!returnToSpotIntimation);
         router.refresh();
       }
       if(failures.length) setErrorNotice(failures.length+" file"+(failures.length===1?"":"s")+" failed: "+failures.join(", ")+". Select the failed files again using the upload icon.");
@@ -107,7 +108,7 @@ export function CustomerClaimMultipleUpload({claimId,accountId,stage,documents,a
         {uploading?<Loader2 className="h-5 w-5 animate-spin" aria-hidden="true"/>:<Upload className="h-5 w-5" aria-hidden="true"/>}
       </button>:null}
     </div>
-    {shownDocuments.length>0 && expanded ? <div id={documentListId} className="mt-3 grid gap-2 border-t border-[#D9E3F0] pt-3 sm:grid-cols-2">
+    {shownDocuments.length>0 && expanded ? <div id={documentListId} className="mt-3 grid gap-2 border-t border-[#D9E3F0] pt-3 sm:grid-cols-2 xl:grid-cols-4">
       {shownDocuments.map(file=><div key={file.id} className="flex min-w-0 items-center gap-1 rounded-lg border border-[#D9E3F0] bg-white pr-1">
         <a href={"/customer/claim-documents/"+encodeURIComponent(file.id)+"/open?account="+encodeURIComponent(accountId)+"&claim="+encodeURIComponent(claimId)} target="_blank" rel="noopener noreferrer" title={file.file_name||"Uploaded document"}
           className="flex min-w-0 flex-1 items-center gap-2 px-2 py-2 text-[11px] text-[#204D83] hover:underline focus-visible:outline-2 focus-visible:outline-[#1769DC]">

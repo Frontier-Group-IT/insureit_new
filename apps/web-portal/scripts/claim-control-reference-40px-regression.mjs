@@ -8,7 +8,7 @@ const spot=read("../app/customer/(protected)/spot-intimation/page.tsx");
 const start=read("../components/customer-portal/customer-start-claim-selector.tsx");
 const operationsStart=read("../app/claims/new/add-claim-form.tsx");
 
-// Compact 34px Claim Journey controls across Customer and Operations, retaining Vehicle Delivery variant.
+// Compact 34px Claim Journey controls across Customer and Operations, with taller Spot Intimation form controls.
 assert.ok(operations.includes('selected.key === "work_approval" ? "min-w-[900px] !grid-cols-5 items-start"'));
 assert.ok(operations.includes('vehicleDeliveryCompact ? "h-[34px] max-w-full px-3"'));
 assert.ok(operations.includes('flex h-[34px] cursor-pointer'));
@@ -35,12 +35,12 @@ assert.match(customer,/selected\.key==="spot_status"\?"text-\[8px\]":"text-\[9px
 assert.ok(customer.includes("xl:grid-cols-5 lg:items-start"));
 assert.match(operations,/stageOneLabelClassName = "block text-\[10px\]/, "Stage 1 uses naturally sized 10px labels without a forced minimum height.");
 assert.equal((operations.match(/mt-\[3px\]/g) ?? []).length, 4, "Stage 1 date/time groups and remaining inputs use an exact 3px label-to-input gap.");
-assert.ok(spot.includes('const textFieldClass = "block h-[34px] w-full'));
-assert.ok(spot.includes('const splitFieldClass = "block h-[34px]'));
-assert.ok(spot.includes("flex h-[34px] w-full"));
-assert.match(spot,/text-\[9px\] font-bold uppercase leading-4 tracking-\[0\.01em\]/);
+assert.ok(spot.includes('const textFieldClass = "block h-[42px] w-full'));
+assert.ok(spot.includes('const splitFieldClass = "block h-[42px]'));
+assert.ok(spot.includes("flex h-[42px] w-full"));
+assert.match(spot,/text-\[11px\] font-bold uppercase leading-5 tracking-\[0\.01em\]/);
 assert.ok(spot.includes("min-[1440px]:grid-cols-5"));
 assert.ok(start.includes("h-[34px] w-full rounded-[4px] border"));
 assert.ok(operationsStart.includes('const inputClass = "h-[34px] w-full'));
 assert.match(operationsStart,/const labelClass = "mb-1 block whitespace-nowrap text-\[9px\]/);
-console.log("34px compact claim controls and Vehicle Delivery variant regression passed.");
+console.log("Compact claim controls, taller Spot Intimation fields and Vehicle Delivery variant regression passed.");

@@ -4,7 +4,7 @@ import { Check, LockKeyhole, ExternalLink, FileDown } from "lucide-react";
 import { INTERNAL_JOURNEY_STAGES } from "@insureit/claim-journey";
 import { CustomerClaimLogo } from "@/components/customer-portal/customer-claim-logo";
 
-export function CustomerClaimStageStrip({ claimId, accountId, selectedKey, completedKeys, currentKey, editMode = false, hideStageNav = false, claimSummary }: {
+export function CustomerClaimStageStrip({ claimId, accountId, selectedKey, completedKeys, currentKey, editMode = false, hideStageNav = false, centerSummaryIcons = false, claimSummary }: {
   claimId: string;
   accountId: string;
   selectedKey: string;
@@ -12,6 +12,7 @@ export function CustomerClaimStageStrip({ claimId, accountId, selectedKey, compl
   currentKey: string;
   editMode?: boolean;
   hideStageNav?: boolean;
+  centerSummaryIcons?: boolean;
   claimSummary?: { controlNo: string | null; policyNo: string | null; makeModel: string | null; vehicleNo: string | null; status: string | null; manufacturer: string | null; insurer: string | null; policySource: string };
 }) {
   const activeIndex = INTERNAL_JOURNEY_STAGES.findIndex(stage => stage.key === currentKey);
@@ -22,7 +23,7 @@ export function CustomerClaimStageStrip({ claimId, accountId, selectedKey, compl
     <div className="customer-workflow customer-claim-ref-journey overflow-hidden rounded-2xl border border-[#DFE8F4] bg-white shadow-[0_8px_22px_rgba(7,29,73,0.035)]">
       <div className="customer-claim-ref-journey-header flex flex-wrap items-center justify-between gap-2 px-4 py-2.5">
         <div className="flex items-center gap-2.5">
-          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-white bg-white p-1 shadow-[0_3px_9px_rgba(9,34,76,0.18)]"><Image src="/assets/customer-3d-icons/claims.png" alt="" aria-hidden="true" width={34} height={34} unoptimized className="h-8 w-8 object-contain" /></span>
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-white bg-white p-1 shadow-[0_3px_9px_rgba(9,34,76,0.18)]"><Image src="/assets/customer-3d-icons/claims.png" alt="" aria-hidden="true" width={34} height={34} unoptimized className="h-8 w-8 object-contain object-center" /></span>
           <div><h2 className="text-[14px] font-bold tracking-tight text-white">Claim Journey</h2></div>
         </div>
         <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
@@ -41,7 +42,7 @@ export function CustomerClaimStageStrip({ claimId, accountId, selectedKey, compl
           {label:"Vehicle No.",value:claimSummary.vehicleNo,icon:"/assets/customer-3d-icons/vehicle_register.png"},
           {label:"Claim Status",value:claimSummary.status,icon:"/assets/Custom-Icons/optimized-128/claim-approval.png"},
           {label:"Policy Source",value:claimSummary.policySource,icon:"/assets/customer-3d-icons/policy_related.png"},
-        ]).map(({label,value,icon})=><div key={label} className="group flex min-w-0 items-center gap-2 border-b border-white/10 px-3 py-2.5 transition-colors duration-200 hover:bg-white/10 sm:border-b-0 xl:border-r xl:border-white/15 xl:last:border-r-0"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-white text-[#17365D] shadow-[0_2px_6px_rgba(0,12,42,.14)] transition-transform duration-200 motion-safe:group-hover:scale-105">{label === "Policy No." && claimSummary.insurer ? <CustomerClaimLogo value={claimSummary.insurer} kind="insurer" size={32} /> : label === "Make & Model" && claimSummary.manufacturer ? <CustomerClaimLogo value={claimSummary.manufacturer} kind="vehicle" size={32} /> : <img src={icon} alt="" aria-hidden="true" width={32} height={32} className="h-8 w-8 object-contain" />}</span><div className="min-w-0 flex-1"><p className="mb-0.5 truncate text-[9px] font-semibold uppercase tracking-[0.05em] text-white/80">{label}</p><p className="truncate whitespace-nowrap text-[12px] font-bold leading-5 text-white" title={value||"—"} aria-label={`${label}: ${value||"—"}`}>{value||"—"}</p></div></div>)} 
+        ]).map(({label,value,icon})=><div key={label} className="group flex min-w-0 items-center gap-2 border-b border-white/10 px-3 py-2.5 transition-colors duration-200 hover:bg-white/10 sm:border-b-0 xl:border-r xl:border-white/15 xl:last:border-r-0"><span className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-white text-[#17365D] shadow-[0_2px_6px_rgba(0,12,42,.14)] transition-transform duration-200 motion-safe:group-hover:scale-105 ${centerSummaryIcons && (label === "Vehicle No." || label === "Policy Source") ? "self-center" : ""}`}>{label === "Policy No." && claimSummary.insurer ? <CustomerClaimLogo value={claimSummary.insurer} kind="insurer" size={32} /> : label === "Make & Model" && claimSummary.manufacturer ? <CustomerClaimLogo value={claimSummary.manufacturer} kind="vehicle" size={32} /> : <img src={icon} alt="" aria-hidden="true" width={32} height={32} className="h-8 w-8 object-contain" />}</span><div className="min-w-0 flex-1"><p className="mb-0.5 truncate text-[9px] font-semibold uppercase tracking-[0.05em] text-white/80">{label}</p><p className="truncate whitespace-nowrap text-[12px] font-bold leading-5 text-white" title={value||"—"} aria-label={`${label}: ${value||"—"}`}>{value||"—"}</p></div></div>)} 
       </div> : null}
       {!hideStageNav ? <nav aria-label="Nine-stage claim journey" className="customer-claim-stage-nav w-full overflow-x-auto">
         <ol className="customer-claim-ref-stage-grid grid w-full min-w-0 grid-cols-9 gap-1.5 border-y border-[#D5E3F7] bg-[#EAF2FF] p-2">
