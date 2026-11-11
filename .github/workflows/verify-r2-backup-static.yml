@@ -574,17 +574,26 @@ jobs:
           test "$ready" = 1
           # Exact names from read-only source pg_roles catalog: aggregate
           # only. No credentials, customer records or role names in public log.
-          roles="$(docker exec -u postgres insureit-roles-probe psql -XAt \
-            -v ON_ERROR_STOP=1 -d postgres -c \
-            "select count(*)::integer,
-                    count(*) filter (where rolname like 'supabase_%')::integer
-               from pg_roles
-              where rolname in (
-                'anon','authenticated','authenticator','cli_login_postgres',
-                'dashboard_user','postgres','service_role','supabase_admin',
-                'supabase_auth_admin','supabase_etl_admin','supabase_privileged_role',
-                'supabase_read_only_user','supabase_realtime_admin',
-                'supabase_replication_admin','supabase_storage_admin');")"
+          # pg_isready can turn positive during image startup before the
+          # final PostgreSQL server/socket is stable. Guard the first actual
+          # SQL query with bounded retries to avoid a startup race.
+          roles=""
+          for attempt in $(seq 1 30); do
+            if roles="$(docker exec -u postgres insureit-roles-probe psql -XAt \
+              -v ON_ERROR_STOP=1 -d postgres -c \
+              "select count(*)::integer,
+                      count(*) filter (where rolname like 'supabase_%')::integer
+                 from pg_roles
+                where rolname in (
+                  'anon','authenticated','authenticator','cli_login_postgres',
+                  'dashboard_user','postgres','service_role','supabase_admin',
+                  'supabase_auth_admin','supabase_etl_admin','supabase_privileged_role',
+                  'supabase_read_only_user','supabase_realtime_admin',
+                  'supabase_replication_admin','supabase_storage_admin');" 2>/dev/null)"; then
+              break
+            fi
+            sleep 2
+          done
           if ! [[ "$roles" =~ ^[0-9]+\\|[0-9]+$ ]]; then
             echo "OFFLINE ROLE INVENTORY ERROR"
             exit 1
