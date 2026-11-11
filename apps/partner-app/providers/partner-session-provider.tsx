@@ -7,13 +7,14 @@ import { getPartnerProfilePhotoUrl } from '@/lib/partner-profile-photo';
 import { clearPartnerQueryCache } from '@/lib/partner-query-cache';
 import {
   getCurrentSession,
+  classifyPartnerSessionFailure,
   type PartnerSessionContext,
   resolvePartnerSession,
   signOut as signOutFromSupabase,
 } from '@/lib/partner-session';
 import { supabase } from '@/lib/supabase';
 
-type SessionStatus = 'loading' | 'signed_out' | 'ready' | 'denied';
+type SessionStatus = 'loading' | 'signed_out' | 'ready' | 'denied' | 'unavailable';
 
 type PartnerSessionValue = {
   status: SessionStatus;
@@ -95,8 +96,13 @@ export function PartnerSessionProvider({ children }: PropsWithChildren) {
       setContext(null);
       setAvatarUri(null);
       lastAvatarResolvedAt.current = 0;
-      setError(message);
-      setStatus('denied');
+      const kind = classifyPartnerSessionFailure(cause);
+      // Do not expose raw RPC/HTTP errors or account identifiers in the UI.
+      console.warn('Partner session resolution failed', { kind, reason: cause instanceof Error && 'reason' in cause ? String(cause.reason) : 'unexpected_error' });
+      setError(kind === 'denied'
+        ? 'Your account is not currently authorized for INSUREIT Partner. Contact support if access is expected.'
+        : 'Unable to verify your account right now. Check your connection and retry.');
+      setStatus(kind === 'denied' ? 'denied' : 'unavailable');
       return null;
     }
   }, []);
