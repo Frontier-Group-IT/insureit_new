@@ -27,6 +27,12 @@ Never attempt to certify a self-hosted Supabase service using only the single-co
 - Current owner distribution of table/view/sequence metadata includes: `public` predominantly `postgres` (203 objects), `auth` `supabase_auth_admin` (28), `storage` `supabase_storage_admin` (10), `realtime` `supabase_realtime_admin` (10) plus `supabase_admin` (1), `vault` `supabase_admin` (2), and `supabase_migrations` `postgres` (1).
 - Earlier read-only observation: 86 Auth users and 90 identities. These are live counts at different moments, not protected restored snapshots. This report intentionally contains no customer identities, document names, role passwords or application secrets.
 
+### 11 November 2026 — source-parity audit timeout and guarded remediation
+
+- The first manually launched source coverage run [#43011426945](https://github.com/Frontier-Group-IT/insureit_new/actions/runs/43011426945) was **cancelled at its 45-minute timeout** before any reconciliation result. This was **not** a corrupt file finding, nor did it pass Gate B. The original source scanner used two serial recursive per-folder Storage HTTP listing sweeps with no intermediate progress; the exact blocking HTTP call was not visible in logs.
+- **Targeted remediation:** only the manual source-parity audit is changed to query `storage.buckets`/`storage.objects` through **source-allowlisted, authenticated PostgreSQL connections**, each in read-only repeatable-read transactions. The tool filters archived versions and delete markers, maps SQL metadata into the original manifest comparison, prints aggregate phase/timing markers, normalizes timestamp encodings, and uses a 20-minute job timeout plus bounded SQL statement timeout.
+- Daily PostgreSQL and Storage backups, R2 encryption/readback, all-file Storage verifier, and isolated PostgreSQL restore workflows are **unchanged**. This fix must pass repository CI and be merged before a fresh protected manual source audit can be claimed as executed. The audit still cannot reproduce exact historical source state without an aligned snapshot.
+
 ## 2. Certification gates, in required order
 
 ### Gate A — Prove unattended backup operations (OPEN)
@@ -39,7 +45,7 @@ Never attempt to certify a self-hosted Supabase service using only the single-co
 
 ### Gate B — Storage source-to-backup completeness and file serving (OPEN)
 
-**Action:** Run [the protected manual source-manifest audit workflow](../.github/workflows/insureit-r2-storage-source-parity-audit.yml) only after its PR has been merged. It authenticates the latest immutable R2 manifest; performs two live Supabase Storage LIST sweeps, compares bucket/identity/updated_at/size coverage, logs *only counts*, and labels concurrent drift/incomplete metadata as `REVIEW`.
+**Action:** Run [the protected manual source-manifest audit workflow](../.github/workflows/insureit-r2-storage-source-parity-audit.yml) only after its PR has been merged. It authenticates the latest immutable R2 manifest; performs two separate **read-only, repeatable-read PostgreSQL Storage metadata snapshots** via the already-protected production `DATABASE_URL`, compares bucket/object identity/updated_at/size coverage, logs *only aggregate counts*, and labels concurrent drift/incomplete metadata as `REVIEW`. No Storage HTTP recursive LIST requests are made; no Supabase source SQL writes are permitted.
 
 **Pass evidence:** zero pre-snapshot stable source identities missing from the manifest, zero old stable metadata mismatches and complete bucket coverage, plus a fresh 100%-byte verifier result tied to the correct manifest snapshot. This **still does not prove a historic transactionally consistent source snapshot**; for rigorous certification, capture a same-period source inventory at backup start and finish, reconcile object generations/updated_at, changed/deleted objects and Storage metadata rows, and verify no unsupported file families.
 
