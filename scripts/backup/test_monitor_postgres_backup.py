@@ -30,11 +30,14 @@ class PostgresBackupMonitorTests(unittest.TestCase):
 
     def test_v2_archive_is_included_in_freshness_scan(self):
         import os
+        # This tests pg.main(), which evaluates the actual current UTC time.
+        # A fixed November 8 success becomes stale as the calendar advances.
+        recent = (dt.datetime.now(UTC) - dt.timedelta(minutes=5)).isoformat().replace("+00:00", "Z")
         paths = []
         def fake_api(method, path, token):
             paths.append(path)
             if "r2-v2-manual.yml" in path:
-                return {"workflow_runs": [run("2026-11-08T02:00:00Z")]}
+                return {"workflow_runs": [run(recent)]}
             return {"workflow_runs": [run("2026-11-03T06:12:39Z")]}
         with patch.dict(os.environ, {"GITHUB_REPOSITORY":"Frontier-Group-IT/insureit_new", "GH_TOKEN":"fake"}):
             with patch.object(pg, "api", side_effect=fake_api):
