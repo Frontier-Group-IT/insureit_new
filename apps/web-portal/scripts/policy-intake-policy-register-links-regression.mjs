@@ -69,6 +69,16 @@ assert(!quickLinks.includes("Clock3"), "In Review must not render a separate sta
 assert(!quickLinks.includes("ChevronRight"), "Policy Intake status links must not add chevrons that waste header space");
 
 const queue = read("components/policy-intake-workspace.tsx");
+
+assert(!queue.includes('>Policy / Insurer</th>'), "Redundant Policy / Insurer heading must not appear in the intake queue");
+assert(queue.includes('>Insurer / Policy</th>'), "Keep the leading Insurer / Policy column");
+const tableMarkup = queue.slice(queue.indexOf('<table className="w-full'), queue.indexOf('</table>') + '</table>'.length);
+const headingMarkup = tableMarkup.slice(tableMarkup.indexOf('<thead'), tableMarkup.indexOf('</thead>'));
+assert.equal((headingMarkup.match(/<th /g) ?? []).length, 8, "Policy Intake queue must have eight headers after removing the redundant column");
+const tableRowMarkup = tableMarkup.slice(tableMarkup.indexOf('<tbody'), tableMarkup.indexOf('</tbody>'));
+assert.equal((tableRowMarkup.match(/<td /g) ?? []).length, 8, "Policy Intake queue must have eight data cells aligned with headers");
+assert(tableMarkup.includes('min-w-[1180px]'), "Compact table minimum width to fit eight columns");
+
 assert(!queue.includes('row.policy_type?"Policy copy":"Historical"'), "Policy Type table rows must not display a redundant Policy copy subtitle");
 assert(queue.includes('row.ocr_status === "completed" ? "Unregistered" : "Fetching…"'), "Fetched vehicles without a registration number display Unregistered");
 assert(queue.includes('field(row, "vehicle_registration_number") ||'), "Existing registration numbers remain visible");
