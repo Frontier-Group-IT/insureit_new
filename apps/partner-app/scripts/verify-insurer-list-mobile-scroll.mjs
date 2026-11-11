@@ -2,23 +2,28 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 const screen = readFileSync(new URL('../app/insurers.tsx', import.meta.url), 'utf8');
 
-// Narrow phone: compact readable legal-name aliases and a visible financial-scroll control.
-assert.match(screen, /const NAME_WIDTH = 158;/);
-assert.match(screen, /const METRIC_WIDTH = 112;/);
+// Reference redesign: financial metric pills + date range replace sideways tables.
 assert.match(screen, /function displayInsurerName\(name: string\): string/);
-assert.match(screen, /accessibilityLabel=\{insurer\.name\}/, 'Keep full legal name for accessibility.');
-assert.match(screen, /numberOfLines=\{2\} ellipsizeMode="tail"/, 'Keep two-line readable truncation.');
-assert.match(screen, /Swipe table sideways for/);
-assert.match(screen, /Amounts →/);
-assert.match(screen, /← Insurers/);
-assert.match(screen, /tableScrollRef\.current\?\.scrollTo/, 'Show a working amount navigation control.');
-assert.match(screen, /ref=\{tableScrollRef\}/);
-assert.match(screen, /horizontal\s+nestedScrollEnabled\s+directionalLockEnabled/);
-assert.match(screen, /showsHorizontalScrollIndicator/);
-assert.match(screen, /accessibilityLabel="Insurer performance table, scroll horizontally/);
-assert.match(screen, /const columns = employee/, 'Keep employee authorization-dependent columns.');
-assert.match(screen, /getPartnerInsurerRegister\(from, to\)/, 'Do not replace authorized data.');
-for (const name of ['POLICIES', 'NET PREMIUM', 'PAY-IN', 'RETENTION', 'PAYOUT']) assert.ok(screen.includes(name), 'Missing ' + name);
-for (const field of ['premium', 'payin', 'retention', 'payout']) assert.ok(screen.includes(`formatInsurerRupees(insurer.${field})`), 'Missing money field ' + field);
-assert.match(screen, /new Intl\.NumberFormat\('en-IN', \{ maximumFractionDigits: 0, minimumFractionDigits: 0 \}\)/, 'Keep nearest whole-rupee presentation.');
-console.log('Partner insurer mobile horizontal financial navigation regression passed.');
+assert.match(screen, /const NAME_ALIASES: Array<\[RegExp, string\]>/);
+for (const alias of ['United India', 'New India', 'ICICI Lombard', 'Tata AIG', 'Go Digit'])
+  assert.ok(screen.includes(alias), `Required short company name: ${alias}`);
+assert.match(screen, /accessibilityLabel=\{insurer\.name\}/, 'Full legal name stays accessible');
+assert.match(screen, /numberOfLines=\{2\} ellipsizeMode="tail"/);
+assert.doesNotMatch(screen, /tableScrollRef|Swipe table sideways|Amounts →|← Insurers/, 'Remove old sideways navigation');
+assert.match(screen, /contentContainerStyle=\{styles\.filterRow\}/, 'Metric row is scrollable on narrow phones');
+assert.match(screen, /Date Range, open date picker/, 'Date Range control follows financial metrics');
+assert.match(screen, /<PartnerDatePicker label="From Date"/);
+assert.match(screen, /<PartnerDatePicker label="To Date"/);
+assert.match(screen, /validDateRange\(draft\.from, draft\.to\)/, 'Reject invalid or oversized date range');
+assert.match(screen, /setRange\(draft\)/, 'Apply only validated dates');
+assert.match(screen, /getPartnerInsurerRegister\(from, to\)/, 'Keep authorized RPC');
+assert.match(screen, /const options: Array<\{ key: Metric; label: string \}> = employee/, 'Scope metric options to actor identity');
+assert.match(screen, /\{ key: 'payin', label: 'Pay-In' \}/);
+assert.match(screen, /\{ key: 'retention', label: 'Retention' \}/);
+assert.match(screen, /\{ key: 'payout', label: 'Payout' \}/);
+assert.match(screen, /const selectedMetric = options\.some/, 'Cannot select employee-only metric as partner');
+assert.match(screen, /metricValue\(insurer, selectedMetric\)/, 'Metric actually updates displayed amounts');
+assert.match(screen, /search\.trim\(\)/, 'Client-side search implemented');
+assert.match(screen, /<PartnerInsurerLogo name=\{insurer\.name\}/);
+assert.doesNotMatch(screen, /chevron-forward|arrow-forward|styles\.summaryCard/, 'No row arrows or summary card');
+console.log('Partner insurer performance compact vertical register regression passed.');
