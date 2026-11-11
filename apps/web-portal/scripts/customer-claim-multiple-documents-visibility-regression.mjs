@@ -51,7 +51,7 @@ assert.match(bulk,/confirmed\.push\(saved\.uploaded\)/, "Registered signed video
 assert.match(bulk,/setRecentUploads\(previous=>/, "After confirmed upload update the uploaded count immediately.");
 assert.match(bulk,/setExpanded\(true\)/, "Automatically expand uploaded filenames after a successful batch.");
 assert.match(bulk,/if\(complete\) \{[\s\S]*router\.refresh\(\)/, "Refresh the server document snapshot after successful upload.");
-assert.match(bulk,/const closeSuccess=\(\)=>setSuccessNotice\(null\)/, "Closing success dialog should not control refreshing or expansion.");
+assert.doesNotMatch(bulk,/closeSuccess|setSuccessNotice|CustomerSuccessDialog/, "Successful bulk uploads must not show a confirmation dialog.");
 assert.match(bulk,/shownDocuments\.length\?setExpanded\(v=>!v\):openPicker\(\)/, "Clicking uploaded count toggles the same section.");
 assert.match(bulk,/onDeleted=\{id=>setDeletedIds/, "Deleting one file updates the inline count and list.");
 assert.match(uploadAction,/select\("id, document_type, created_at, file_name, verification_status"\)\.single\(\)/, "Finalized signed video returns confirmed file data.");
