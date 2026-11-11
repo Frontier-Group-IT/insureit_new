@@ -28,7 +28,9 @@ assert.match(stages, /if \(!spotState\.ok\) return;/, "Failed Spot Intimation sa
 assert.match(stages, /const nextKey = nextStageKeyFor\("spot_intimation"\)/, "Stage 1 Save Details should target Spot Status.");
 assert.match(stages, /const canOpenNext = unrestrictedStageEditing \|\| journeyComplete \|\| activeIndex >= 1/, "Only already accessible next stages may open.");
 assert.match(stages, /if \(nextKey && canOpenNext\) \{[\s\S]*?setSelectedKey\(nextKey\);[\s\S]*?router\.replace\(\x60\/claims\/\$\{claimId\}\?stage=\$\{nextKey\}\x60\);/, "Successful Stage 1 save must navigate to next stage.");
-assert.match(stages, /await saveInternalSpotIntimationDetails\(claimId, formData\)/, "Preserve saving without automatic workflow advancement.");
+assert.match(stages, /await saveInternalSpotIntimationDetailsWithFeedback\(claimId, formData\)/, "Save Details must use server-safe feedback without automatic workflow advancement.");
+const internalSpotActions = read("app/claims/internal-spot-intimation-actions.ts");
+assert.match(internalSpotActions, /await saveInternalSpotIntimationDetails\(claimId, formData\)/, "The feedback wrapper must call the original authorized save-only action.");
 
 assert.match(stages, /router\.replace\(\`\$\{partnerManagedJourney/);
 assert.match(stages, /selected\.key === "spot_status" \? "grid-cols-4 gap-2 items-start"/, "Spot Status stays in four columns without scrolling at all widths.");
