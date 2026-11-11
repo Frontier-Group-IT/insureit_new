@@ -64,7 +64,7 @@ export function BulkDocumentVerificationGroup({ item, claim, verifications }: { 
   );
   const selectableKey = selectableIds.join("|");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(item.key !== "rc");
 
   useEffect(() => {
     const allowed = new Set(selectableIds);
