@@ -356,6 +356,8 @@ jobs:
         run: npm run policy-ocr:additional-regression
       - name: ICICI Lombard OCR regression
         run: npm run policy-ocr:icici-lombard-regression
+      - name: ICICI 3005 Bundled product and registration regression
+        run: node --experimental-strip-types scripts/policy-ocr-icici-3005-section02-regression.mjs
       - name: Tata AIG bundled two-wheeler OCR regression
         run: npm run policy-ocr:tata-aig-regression
       - name: Approved OCR layout regression
