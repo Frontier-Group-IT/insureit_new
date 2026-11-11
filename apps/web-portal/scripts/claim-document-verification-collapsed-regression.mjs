@@ -17,4 +17,4 @@ assert.ok(panel.indexOf("<summary") < panel.indexOf("BulkDocumentVerificationGro
 assert.match(panel, /<BulkDocumentVerificationGroup /, "Preserve document verification actions");
 assert.match(panel, /<ReusePolicyCopyButton /, "Preserve linked policy copy reuse");
 assert.match(panel, /<FinalizeInitialDocumentVerificationButton /, "Preserve finalization workflow");
-console.log("Operations Claim Document Verification collapsed-default regression passed");
+console.log("Operations Document Verification open and RC Copy collapsed-default regression passed");
