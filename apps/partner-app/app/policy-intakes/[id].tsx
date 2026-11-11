@@ -240,7 +240,7 @@ export default function PolicyIntakeDetailScreen() {
           {row.status === 'duplicate' && row.duplicate_match ? (
             <View style={styles.duplicatePanel}>
               <View style={styles.duplicateHeader}>
-                <Ionicons name="alert-circle-outline" size={17} color="#B42338" />
+                <Image source={PartnerAssets.status.policyAttention} style={{ width: 19, height: 19 }} resizeMode="contain" accessibilityLabel="Duplicate policy intake" />
                 <Text style={styles.duplicateTitle}>DUPLICATE POLICY INTAKE</Text>
               </View>
               <Text style={styles.duplicateText}>
