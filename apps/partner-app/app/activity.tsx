@@ -15,7 +15,6 @@ import {
   type PartnerActivityItem,
 } from '@/lib/engagement';
 import { PartnerAssets } from '@/lib/partner-assets';
-import { partnerTheme } from '@/lib/theme';
 
 export default function ActivityScreen() {
   const router = useRouter();
