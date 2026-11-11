@@ -19,6 +19,7 @@ export function PartnerTopBar({
   actionLabel = 'Action',
   onAction,
   showArtwork = true,
+  iconName,
   navy = false,
 }: {
   title: string;
@@ -33,8 +34,9 @@ export function PartnerTopBar({
   actionLabel?: string;
   onAction?: () => void;
   showArtwork?: boolean;
+  iconName?: IconName;
 }) {
-  const resolvedArtwork = showArtwork ? (artwork ?? resolvePartnerScreenArtwork({ title, eyebrow })) : undefined;
+  const resolvedArtwork = showArtwork && !iconName ? (artwork ?? resolvePartnerScreenArtwork({ title, eyebrow })) : undefined;
 
   return (
     <View style={[styles.root, navy && styles.navyRoot]}>
@@ -52,6 +54,11 @@ export function PartnerTopBar({
         </Pressable>
       ) : null}
 
+      {iconName ? (
+        <View style={styles.plainIconWrap}>
+          <Ionicons name={iconName} size={27} color={navy ? '#FFFFFF' : '#17365D'} />
+        </View>
+      ) : null}
       {resolvedArtwork ? (
         <View style={styles.artworkWrap}>
           <Image source={resolvedArtwork} style={styles.artwork} resizeMode="contain" />
@@ -89,6 +96,7 @@ const styles = StyleSheet.create({
   },
   navyRoot: { backgroundColor: '#071E49', marginHorizontal: -partnerTheme.spacing.lg, paddingHorizontal: partnerTheme.spacing.lg },
   navyText: { color: '#FFFFFF' },
+  plainIconWrap: { width: 38, alignItems: 'center', justifyContent: 'center' },
   artworkWrap: {
     width: 40,
     height: 40,
