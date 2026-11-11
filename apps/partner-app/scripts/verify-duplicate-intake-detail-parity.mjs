@@ -20,7 +20,12 @@ const summary = detail.slice(detail.indexOf('const duplicatePolicyReviewKeys'), 
 for (const key of ['policy_number', 'cpa_premium', 'cpa_opted']) assert.ok(summary.includes(key), key + ' must be shown');
 assert.equal((summary.match(/\['/g) || []).length, 3, 'Duplicate summary contains only website OCR fields');
 assert.ok(detail.includes("row.status !== 'duplicate' ? <View style={reviewStyles.reviewStatus}>"), 'Duplicate does not show redundant review status card');
-assert.ok(detail.includes('partnerPolicyIntakeMatchUrl(targetPath)'), 'Existing policy navigation uses trusted portal link');
+assert.ok(detail.includes("match.kind === 'registered_policy'"), 'Registered duplicate policies must take the in-app Policy Details route');
+assert.ok(detail.includes('router.push(`/policy/${policyId}` as never)'), 'Registered duplicate policies must open the native Policy Details screen');
+assert.ok(detail.includes('const policyId = /^\\/policies\\/('), 'Policy link must extract an exact server-provided policy UUID');
+assert.ok(detail.includes('if (!policyId)'), 'Invalid policy IDs must not navigate');
+assert.ok(detail.includes('partnerPolicyIntakeMatchUrl(targetPath)'), 'Earlier intake links still use the allowlisted Operations portal URL');
+assert.ok(detail.includes('await Linking.openURL(url)'), 'Earlier intake navigation stays available');
 assert.ok(api.includes('`/policies/${match.policyId}`'), 'Server resolves matching policy details view page, not another arbitrary policy');
 assert.ok(links.includes('/^\\/policies\\/[0-9a-f-]{36}$/i'), 'Mobile only accepts canonical read-only policy details URL');
 assert.ok(detail.includes('topBarIcon="documents-outline"'), 'Use the professional unboxed documents icon');
@@ -36,6 +41,7 @@ assert.ok(detail.includes("{row.status !== 'duplicate' ? <IntakeProgress row={ro
 assert.ok(!detail.includes('Review and Policy Onboarding actions are disabled for this intake.'), 'No redundant duplicate disabled-actions message');
 assert.ok(detail.includes("row.duplicate_match.kind === 'registered_policy' ? 'View Existing Policy' : 'View Earlier Intake'"), 'Duplicate policy action keeps the existing policy destination');
 assert.ok(detail.includes('onPress={() => void openDuplicateMatch()}'), 'View Existing Policy remains actionable');
+assert.ok(detail.includes("Opens the matched policy in the Partner App Policy Details screen."), 'Accessible action communicates in-app navigation');
 assert.ok(links.includes('return `${portalUrl}${path}`;'), 'Existing policy link opens the canonical authenticated Operations destination');
 assert.ok(api.includes('target_path: access.can_review || access.can_finalize'), 'Never expose existing-policy link without reviewer authorization');
 assert.ok(detail.includes("ready_for_review: 'Ready for Review'"), 'Short ready status text');
