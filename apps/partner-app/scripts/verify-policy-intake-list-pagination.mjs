@@ -60,7 +60,7 @@ assert.doesNotMatch(app, /accessibilityLabel="Document data fetched"/, 'No green
 assert.doesNotMatch(app, /<Ionicons name="checkmark" size=\{15\} color="#16A34A"/, 'Do not reintroduce the PIR green checkmark');
 assert.ok(app.includes('<View style={styles.intakeNumberRow}>') && app.includes("<Text numberOfLines={1} style={styles.number}>{field(row, 'policy_number') || 'Policy pending'}</Text>"), 'Cards show policy number at the original title font size with honest pending fallback');
 assert.match(app, /field\(row, 'insured_name'\) \|\| field\(row, 'customer_name'\) \|\| field\(row, 'name_of_insured'\)/, 'Customer name follows the mobile number using extracted insured-name data');
-assert.match(app, /row\.lead_source_name, row\.submitted_by_name\?\.trim\(\) \|\| 'Submitter unavailable'/, 'Third line displays lead source and real submitter, not vehicle or PIR metadata');
+assert.match(app, /row\.lead_source_name \|\| 'Lead source unavailable'\} \(\$\{row\.submitted_by_name\?\.trim\(\) \|\| 'Submitter unavailable'\}\)/, 'Third line shows lead source followed by actual submitter in parentheses');
 assert.doesNotMatch(app, /style=\{styles\.number\}>\{row\.intake_number\}/, 'Do not show PIR identifier as the title');
 assert.match(route, /resolveIntakeSubmitterNames\(admin, intakes\)/, 'Mobile list must resolve actual submitters after authorized paging');
 assert.match(route, /resolveIntakeSubmitterNames\(admin, listResult\.data \?\? \[\]\)/, 'Standard list uses the same canonical submitter resolution logic');
