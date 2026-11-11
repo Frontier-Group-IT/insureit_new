@@ -2,6 +2,8 @@
 import { refineAdditionalMotorPolicy } from "../lib/policy-ocr-additional-motor-refiner.ts";
 // @ts-expect-error -- Runtime import uses the explicit .ts suffix for Node's strip-types runner.
 import { parsePolicyDocument } from "../lib/policy-ocr-parsers.ts";
+// @ts-expect-error -- Node runs TS regression files using --experimental-strip-types.
+import { refinePolicyIntakeInsuredName } from "../lib/policy-ocr-insured-name-refiner.ts";
 
 type Expected = Record<string, string | undefined>;
 type Case = {
@@ -334,6 +336,19 @@ for (const testCase of cases) {
   } else {
     console.log(`PASS: ${testCase.name}`);
   }
+}
+
+const universalFixtures = [
+  { name: "inline Universal Sompo", pages: ["Universal Sompo General Insurance Company Limited\\nName of Insured : SWAPNA CREATIONS\\nPolicy No USG1299235"], expected: "SWAPNA CREATIONS" },
+  { name: "next-line Universal Sompo", pages: ["Universal Sompo General Insurance Company Limited\\nPolicy Holder Name\\nM/S R K MOTORS\\nAddress: Jabalpur"], expected: "M/S R K MOTORS" },
+  { name: "do not infer from proposer other label", pages: ["Universal Sompo General Insurance Company Limited\\nVehicle Owner: SURESH KUMAR"], expected: undefined },
+  { name: "do not infer from address block", pages: ["Universal Sompo General Insurance Company Limited\\nName of Insured\\nAddress: Jabalpur"], expected: undefined },
+  { name: "do not alter unsupported insurers", pages: ["Name of Insured: TEST CUSTOMER"], expected: undefined, parser: "national_motor_v1" },
+];
+for (const fixture of universalFixtures) {
+  const parsed = refinePolicyIntakeInsuredName(fixture.pages, { parserId: fixture.parser ?? "universal_sompo_motor_v1", parserVersion: "test-v1", fields: [], warnings: [] });
+  const actual = parsed.fields.find((field) => field.key === "insured_name")?.value;
+  if (actual !== fixture.expected) { failures++; console.error(`FAIL insured name: ${fixture.name}. Expected ${fixture.expected ?? "<missing>"}; got ${actual ?? "<missing>"}`); }
 }
 
 if (failures) {
