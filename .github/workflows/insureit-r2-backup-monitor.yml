@@ -4,6 +4,7 @@ on:
   workflow_run:
     workflows:
       - INSUREIT Supabase Storage backup to R2 (daily 7 PM IST)
+      - INSUREIT PostgreSQL R2 v2 consistent backup (daily 3:15 AM IST + manual)
     types: [completed]
   schedule:
     # Watch for a missing 19:00 IST backup at 22:47 IST (17:17 UTC).
@@ -34,10 +35,11 @@ jobs:
         with:
           python-version: '3.12'
       - name: Report failed, late or missing Storage backup through GitHub Issues
+        if: github.event_name != 'workflow_run' || github.event.workflow_run.name == 'INSUREIT Supabase Storage backup to R2 (daily 7 PM IST)'
         env:
           GH_TOKEN: ${{ github.token }}
         run: python -u scripts/backup/monitor_github_backup.py
-      - name: Independently report stale PostgreSQL R2 archive
+      - name: Independently report failed, late or missing scheduled PostgreSQL R2 archive
         if: always()
         env:
           GH_TOKEN: ${{ github.token }}
