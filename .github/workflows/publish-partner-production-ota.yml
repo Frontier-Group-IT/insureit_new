@@ -92,6 +92,7 @@ jobs:
               || file === 'apps/partner-app/scripts/verify-sticky-safe-area.mjs'
               || file === 'apps/partner-app/scripts/verify-visual-system-completion.mjs'
               || file === 'apps/partner-app/scripts/verify-website-permission-parity.mjs'
+              || file === 'apps/partner-app/providers/partner-session-provider.tsx'
               || file === 'apps/partner-app/scripts/verify-insurer-list-mobile-scroll.mjs'
               || file === 'apps/partner-app/scripts/verify-insurer-list-whole-rupees.mjs'
               || file === '.github/workflows/publish-partner-production-ota.yml'
