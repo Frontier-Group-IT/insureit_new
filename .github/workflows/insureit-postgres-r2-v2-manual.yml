@@ -1,7 +1,11 @@
-name: INSUREIT PostgreSQL R2 v2 consistent backup (manual gate)
+name: INSUREIT PostgreSQL R2 v2 consistent backup (daily 3:15 AM IST + manual)
 
 on:
   workflow_dispatch:
+  schedule:
+    # 03:15 IST every day = 21:45 UTC previous calendar day.
+    # Separate from Storage's existing 19:00 IST run by >8 hours.
+    - cron: '45 21 * * *'
 
 permissions:
   contents: read
@@ -12,7 +16,7 @@ concurrency:
 
 jobs:
   postgres_v2_backup:
-    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch'
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'workflow_dispatch' || github.event_name == 'schedule')
     runs-on: ubuntu-latest
     timeout-minutes: 90
     environment: insureit-production-backup
