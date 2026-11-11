@@ -280,11 +280,13 @@ export function buildPolicyOcrOnboardingUpdate(input: OcrApplyInput): OcrApplyRe
   // the portal manufacturer dropdown uses the verified OEM Bajaj Auto.
   // Keep the raw OCR make unchanged for audit and restrict the alias to
   // the exact model and two-wheeler classification.
-  const isIciciChetakC3001 = /^CHETAK$/i.test(byKey.get("vehicle_make")?.value.trim() ?? "")
-    && /^C3001$/i.test(byKey.get("vehicle_model")?.value.trim() ?? "")
-    && next.vehicleClass === "TWP";
+  const isIciciChetakElectric = /^CHETAK$/i.test(byKey.get("vehicle_make")?.value.trim() ?? "")
+    && /^(?:C3001|C3503)$/i.test(byKey.get("vehicle_model")?.value.trim() ?? "")
+    && next.vehicleClass === "TWP"
+    && byKey.get("vehicle_fuel_type")?.value.trim().toLowerCase() === "electric"
+    && byKey.get("vehicle_motor_power_kw")?.value.trim() === "4.2";
   setText("vehicle_make", (value) => { next.make = value; }, (raw) =>
-    manufacturer(isIciciChetakC3001 ? "Bajaj Auto" : raw, input.manufacturers));
+    manufacturer(isIciciChetakElectric ? "Bajaj Auto" : raw, input.manufacturers));
   setText("vehicle_model", (value) => { next.model = value; }, (raw) => {
     const value = raw.trim();
     return value.length >= 2 && value.length <= 100 && !/^(MODEL|DESCRIPTION|FUEL TYPE)$/i.test(value) ? value : "";
@@ -298,10 +300,10 @@ export function buildPolicyOcrOnboardingUpdate(input: OcrApplyInput): OcrApplyRe
   // The source's "2" is seating capacity, not 2 kW. For verified
   // electric Chetak C3001 use the separately labelled CC/KW 4.2 value.
   // Keep the original seating field intact in the extraction review.
-  if (!isIciciChetakC3001) {
+  if (!isIciciChetakElectric) {
     setText("vehicle_capacity", (value) => { next.capacity = value; }, capacity);
   }
-  if (isIciciChetakC3001 && next.fuelType === "Electric") {
+  if (isIciciChetakElectric && next.fuelType === "Electric") {
     setText("vehicle_motor_power_kw", (value) => { next.capacity = value; }, (raw) => {
       const trimmed = raw.trim();
       return /^\d{1,2}(?:\.\d{1,2})?$/.test(trimmed)
