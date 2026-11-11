@@ -57,10 +57,13 @@ for (const required of [
   'title="Policy Intake"',
   'topBarIcon="documents-outline"',
   'fullWidth',
-  '<Ionicons name="document-text-outline" size={27}',
-  '<PartnerManufacturerLogo',
+  '<Ionicons name="reader-outline" size={27}',
+  '"car-sport-outline"',
+  '"shield-checkmark-outline"',
   'statusBadgeStyle(row)',
   'statusDate',
+  'navyStatusBar',
+  'bottomNavigation={<PolicyIntakeDetailNavigation',
 ]) {
   requireText(detailScreen, required, `Policy Intake detail redesign must preserve ${required}.`);
 }
