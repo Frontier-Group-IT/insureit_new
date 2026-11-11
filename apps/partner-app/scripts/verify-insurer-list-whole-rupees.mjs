@@ -34,6 +34,27 @@ assert.ok(screen.includes("label: 'Pay-In'") && screen.includes("label: 'Retenti
 assert.ok(screen.includes("label: 'Payout'"), 'Non-employee payout column retained');
 assert.ok(screen.includes('showsHorizontalScrollIndicator'), 'Wide register preserves horizontal scrolling');
 
+
+const sessionSource = readFileSync(new URL('../lib/partner-session.ts', import.meta.url), 'utf8');
+const providerSource = readFileSync(new URL('../providers/partner-session-provider.tsx', import.meta.url), 'utf8');
+const permissionEndpoint = readFileSync(new URL('../../../web-portal/app/api/partner/effective-permissions/route.ts', import.meta.url), 'utf8');
+const commercialAccess = readFileSync(new URL('../../../web-portal/lib/policy-commercial-access.ts', import.meta.url), 'utf8');
+const migration = readFileSync(new URL('../../../supabase/migrations/20261111173000_partner_insurer_register_commercial_authorization.sql', import.meta.url), 'utf8');
+assert.ok(screen.includes("const canViewCommercials = employee && context?.can_view_insurer_commercials === true"), 'Fail closed on commercial permission');
+assert.ok(screen.includes("...(canViewCommercials ? [{ key: 'payin' as const") && screen.includes("{ key: 'retention' as const"), 'Commercial columns require permission');
+assert.ok(screen.includes("if (sortKey === 'payin_desc' && canViewCommercials)") && screen.includes("if (sortKey === 'retention_desc' && canViewCommercials)"), 'Commercial sorts require permission');
+assert.ok(screen.includes("{ key: 'payout', label: 'Payout' }"), 'Partner payout remains available');
+assert.ok(sessionSource.includes("can_view_insurer_commercials: identity.actor_kind === 'employee' && access.can_view_insurer_commercials === true"), 'Commercial grant is authenticated and fail-closed');
+assert.ok(providerSource.includes("can_view_insurer_commercials: false"), 'Session refresh failure removes commercial permission');
+assert.ok(permissionEndpoint.includes('canAccessPolicyCommercials(profile)'), 'API uses existing Operations commercial guard');
+assert.ok(permissionEndpoint.includes('can_view_insurer_commercials: false'), 'Intermediaries cannot receive employee commercial grant');
+assert.ok(migration.includes("where p.id = auth.uid() and v_actor = 'employee'"), 'RPC checks calling employee identity');
+assert.ok(migration.includes("v_actor='employee' and v_commercial_allowed"), 'RPC redacts Pay-In and Retention for unauthorized employees');
+assert.ok(migration.includes("when v_actor='intermediary'"), 'Existing partner payout computation remains scoped');
+const configuredIds = [...commercialAccess.matchAll(/"([0-9a-f-]{36})"/g)].map((match) => match[1]).sort();
+const migrationIds = [...migration.matchAll(/'([0-9a-f-]{36})'::uuid/g)].map((match) => match[1]).sort();
+assert.deepEqual(migrationIds, configuredIds, 'Database and Operations commercial allowlists must stay in sync');
+
 const formatter = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0, minimumFractionDigits: 0 });
 for (const [value, expected] of [
   [592992, '₹5,92,992'], [427895.28, '₹4,27,895'], [153273.96, '₹1,53,274'],
