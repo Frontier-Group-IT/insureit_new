@@ -43,6 +43,7 @@ export type PartnerSessionContext = {
   identity: PartnerIdentity;
   scope: PartnerCommercialScope;
   permissions: PartnerPermissionMap;
+  can_view_insurer_commercials: boolean;
 };
 
 export type PartnerSessionFailureKind = 'denied' | 'retryable';
@@ -120,6 +121,7 @@ export async function resolvePartnerSession(): Promise<PartnerSessionContext> {
   const access = await response.json() as {
     actor_kind?: string;
     capabilities?: PartnerPermissionMap;
+    can_view_insurer_commercials?: boolean;
   };
   if (access.actor_kind !== identity.actor_kind || !access.capabilities) {
     throw new PartnerSessionResolutionError('denied', 'permission_identity_mismatch');
@@ -129,5 +131,6 @@ export async function resolvePartnerSession(): Promise<PartnerSessionContext> {
     identity,
     scope: scope as PartnerCommercialScope,
     permissions: access.capabilities,
+    can_view_insurer_commercials: identity.actor_kind === 'employee' && access.can_view_insurer_commercials === true,
   };
 }
