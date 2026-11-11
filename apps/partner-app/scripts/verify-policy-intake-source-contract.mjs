@@ -55,7 +55,8 @@ requireText(api, 'if (!proposalForm) {', 'Partner Policy Intake API must gate OC
 
 for (const required of [
   'title="Policy Intake"',
-  '<PartnerInsurerLogo',
+  'topBarIcon="document-text-outline"',
+  '<Ionicons name="document-text-outline" size={27}',
   '<PartnerManufacturerLogo',
   'statusBadgeStyle(row)',
   'statusDate',
