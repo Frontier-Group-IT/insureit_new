@@ -1,7 +1,7 @@
 Partner production OTA trigger
-release=partner-intake-policy-copy-view-summary-pr-4248
-source=verified-merged-main-fe4c2d268929093e05315f75b5a7ec4fb17b9370
-reason=user-approved-publish-after-protected-automatic-ota-gate-blocked-verify-web-portal-workflow
+release=partner-activity-transparent-insurer-manufacturer-logos-pr-4249
+source=verified-merged-main-9ca9f041188c359984cbf243dfc2e0ac9ac62e0d
+reason=user-approved-merge-and-publish-after-partner-and-web-ci
 channel=production
 runtime=0.2.0
 requested=2026-11-11
