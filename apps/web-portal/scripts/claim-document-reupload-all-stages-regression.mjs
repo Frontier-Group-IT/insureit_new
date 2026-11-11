@@ -6,13 +6,15 @@ const read = (path) => readFileSync(fileURLToPath(new URL(path, import.meta.url)
 const stage1 = read("../components/spot-survey/bulk-document-verification-group.tsx");
 const stage3 = read("../components/final-documents/stage3-document-verification-group.tsx");
 const stage3Workspace = read("../components/final-documents/final-documents-workspace-v2.tsx");
+const billUpload = read("../components/claims/external-claim-bill-upload.tsx");
 const verificationButton = read("../components/spot-survey/verification-action-button.tsx");
 const requestButton = read("../components/spot-survey/request-customer-document-reupload-button.tsx");
 const server = read("../app/claims/[id]/spot-survey-actions.ts");
 const operations = read("../app/claims/[id]/page.tsx");
 
-assert.doesNotMatch(stage1, /RequestCustomerDocumentReuploadButton/, "Stage 1 rows must not display the removed customer re-upload icon.");
+assert.match(stage1, /<RequestCustomerDocumentReuploadButton claimId=\{claim\.id\} documentId=\{document\.id\} fileName=\{document\.file_name\}/, "Stage 1 must offer exact-file customer re-upload for both internal and external claims.");
 assert.match(stage3, /<RequestCustomerDocumentReuploadButton claimId=\{claim\.id\} documentId=\{document\.id\} fileName=\{document\.file_name\}/, "Stage 3 must retain its existing exact-document customer re-upload action.");
+assert.match(billUpload, /mode === "operations" && !readonly \? <RequestCustomerDocumentReuploadButton claimId=\{claimId\} documentId=\{file\.id\}/, "Operations Billing must provide exact-file customer re-upload without exposing the action in customer mode.");
 for (const source of [stage1, stage3]) {
   assert.match(source, /document\.verification_status !== "rejected" && \(document\.verification_status === "verified" \|\| Boolean\(verification\?\.is_valid\)\)/, "An explicitly rejected document must not remain visually verified from historical verification.");
 }
@@ -30,4 +32,4 @@ assert.match(server, /event_type: "claim_document_reuploaded"/, "Re-upload reque
 assert.match(stage3Workspace, /document\.verification_status !== "rejected" && \(document\.verification_status === "verified" \|\| Boolean\(verification\?\.is_valid\)\)/, "Stage 3 header counts must respect rejected document status.");
 assert.match(operations, /<SpotSurveyWorkspace/, "Operations Stage 1 must remain shared for internal and external claims.");
 assert.match(operations, /<FinalDocumentsWorkspaceV2/, "Operations Stage 3 must remain shared for internal and external claims.");
-console.log("Operations Stage 1/3 internal/external re-upload and pending-only Stage 3 verification regressions passed.");
+console.log("Operations Stage 1/3 and Billing upload re-upload regressions passed.");

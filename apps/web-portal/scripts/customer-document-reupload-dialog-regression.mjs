@@ -6,7 +6,7 @@ const read = (path) => readFileSync(fileURLToPath(new URL(path, import.meta.url)
 const modal = read("../components/spot-survey/request-customer-document-reupload-button.tsx");
 const stageOne = read("../components/spot-survey/bulk-document-verification-group.tsx");
 
-assert.doesNotMatch(stageOne, /RequestCustomerDocumentReuploadButton/, "Stage 1 document rows must not display the removed customer re-upload action.");
+assert.match(stageOne, /<RequestCustomerDocumentReuploadButton claimId=\{claim\.id\} documentId=\{document\.id\} fileName=\{document\.file_name\}/, "Stage 1 uploaded file rows must display the exact-document customer re-upload action.");
 assert.match(modal, /createPortal\(/, "Dialog must use a React portal to escape nested clipping and stacking contexts.");
 assert.match(modal, /document\.body/, "Dialog must be mounted at document.body.");
 assert.match(modal, /fixed inset-0 z-\[9999\]/, "Backdrop must cover the viewport above claim cards.");
