@@ -1,0 +1,121 @@
+name: INSUREIT PostgreSQL R2 v2 isolated restore verification (manual only)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: insureit-postgres-restore-rehearsal
+  cancel-in-progress: false
+
+jobs:
+  restore_v2:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    environment: insureit-production-backup
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install pinned read-only R2 verification dependencies
+        run: python -m pip install boto3==1.35.99 cryptography==44.0.2
+      - name: Verify and stage encrypted v2 archive from private R2
+        env:
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          DB_BACKUP_ENCRYPTION_KEY: ${{ secrets.DB_BACKUP_ENCRYPTION_KEY }}
+          R2_BUCKET: insureit-production-backups
+          RESTORE_DIR: ${{ runner.temp }}/insureit-db-v2-restore
+        run: python -u scripts/backup/verify_postgres_v2_r2.py
+      - name: Restore the complete snapshot into disposable offline database
+        run: |
+          set -euo pipefail
+          # A pristine template0 database avoids seeded managed Auth/Storage
+          # table version conflicts in the Supabase image's default database.
+          docker run -d --name insureit-v2-restore-check --network none \
+            --env POSTGRES_PASSWORD=ephemeral-v2-recovery-only \
+            --env POSTGRES_DB=postgres \
+            supabase/postgres:17.6.1.136 >/dev/null
+          ready=0
+          for i in $(seq 1 60); do
+            if docker exec insureit-v2-restore-check pg_isready -U postgres >/dev/null 2>&1; then
+              ready=1
+              break
+            fi
+            sleep 2
+          done
+          if [ "$ready" != 1 ]; then
+            echo "V2 OFFLINE RESTORE FAILED: PostgreSQL startup"
+            exit 1
+          fi
+          # Validate the authenticated complete-dump TOC before executing
+          # any restored customer SQL in the isolated container.
+          docker cp "$RUNNER_TEMP/insureit-db-v2-restore/database.dump" \
+            insureit-v2-restore-check:/tmp/database.dump
+          if ! docker exec -u postgres insureit-v2-restore-check \
+            pg_restore --list /tmp/database.dump \
+            > "$RUNNER_TEMP/insureit-db-v2-restore/private-toc.txt" 2>/dev/null; then
+            echo "V2 CUSTOM DUMP REJECTED: could not inspect TOC"
+            exit 1
+          fi
+          python scripts/backup/audit_postgres_v2_toc.py \
+            "$RUNNER_TEMP/insureit-db-v2-restore/private-toc.txt"
+          docker cp scripts/backup/fixtures/isolated_supabase_roles.sql \
+            insureit-v2-restore-check:/tmp/offline-roles.sql
+          docker cp "$RUNNER_TEMP/insureit-db-v2-restore/roles.sql" \
+            insureit-v2-restore-check:/tmp/roles.sql
+          if ! docker exec -u postgres insureit-v2-restore-check \
+            psql -X -v ON_ERROR_STOP=1 -d postgres -f /tmp/offline-roles.sql \
+            > "$RUNNER_TEMP/v2-fixture.log" 2>&1; then
+            python scripts/backup/classify_pg_restore_error.py fixture "$RUNNER_TEMP/v2-fixture.log"
+            exit 1
+          fi
+          if ! docker exec -u postgres insureit-v2-restore-check \
+            psql -X -v ON_ERROR_STOP=1 -d postgres -f /tmp/roles.sql \
+            > "$RUNNER_TEMP/v2-roles.log" 2>&1; then
+            python scripts/backup/classify_pg_restore_error.py roles "$RUNNER_TEMP/v2-roles.log"
+            exit 1
+          fi
+          # template0 is clean. Do not perform this action on the live DB.
+          docker exec -u postgres insureit-v2-restore-check \
+            createdb -T template0 -O postgres insureit_verify \
+            > "$RUNNER_TEMP/v2-createdb.log" 2>&1
+          # No --clean, no --disable-triggers, no error tolerance. pg_restore
+          # restores each object and all table data from ONE source snapshot.
+          # Ownership is not asserted: --no-owner avoids assigning privileged
+          # production object owners inside the isolated validation container.
+          if ! timeout 900 docker exec -u postgres insureit-v2-restore-check \
+            pg_restore --single-transaction --exit-on-error --no-owner \
+              --dbname=insureit_verify /tmp/database.dump \
+            > "$RUNNER_TEMP/v2-restore.log" 2>&1; then
+            python scripts/backup/classify_pg_restore_error.py data "$RUNNER_TEMP/v2-restore.log"
+            echo "V2 STRICT RESTORE INCOMPLETE: full archive not restored"
+            exit 1
+          fi
+          echo "V2 STRICT RESTORE PASSED: schema and data imported as one transaction"
+          # Private COPY SQL remains temporary on isolated runner only.
+          if ! docker exec -u postgres insureit-v2-restore-check \
+            pg_restore --data-only --file=/tmp/v2-data.sql /tmp/database.dump \
+            > "$RUNNER_TEMP/v2-data-extract.log" 2>&1; then
+            echo "V2 ROW AUDIT FAILED: could not extract offline COPY inventory"
+            exit 1
+          fi
+          docker cp insureit-v2-restore-check:/tmp/v2-data.sql \
+            "$RUNNER_TEMP/insureit-db-v2-restore/data-only.sql"
+          python scripts/backup/verify_postgres_v2_rows.py \
+            "$RUNNER_TEMP/insureit-db-v2-restore/data-only.sql"
+          echo "V2 ISOLATED RECOVERY CHECK PASSED: one snapshot restored and all COPY tables reconciled"
+          echo "CAVEAT: Supabase service config, Auth providers, production ownership and R2 file binaries require separate DR validation"
+      - name: Destroy restored database, decrypted files and private logs
+        if: always()
+        run: |
+          docker rm -f -v insureit-v2-restore-check >/dev/null 2>&1 || true
+          rm -rf "$RUNNER_TEMP/insureit-db-v2-restore"
+          rm -f "$RUNNER_TEMP"/v2-*.log

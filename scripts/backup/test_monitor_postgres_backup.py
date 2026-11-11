@@ -28,6 +28,22 @@ class PostgresBackupMonitorTests(unittest.TestCase):
         self.assertEqual(pg.status_from_runs([run("2026-11-08T03:00:00Z","failure")],NOW)[0],
                          "no_successful_archive")
 
+    def test_v2_archive_is_included_in_freshness_scan(self):
+        import os
+        paths = []
+        def fake_api(method, path, token):
+            paths.append(path)
+            if "r2-v2-manual.yml" in path:
+                return {"workflow_runs": [run("2026-11-08T02:00:00Z")]}
+            return {"workflow_runs": [run("2026-11-03T06:12:39Z")]}
+        with patch.dict(os.environ, {"GITHUB_REPOSITORY":"Frontier-Group-IT/insureit_new", "GH_TOKEN":"fake"}):
+            with patch.object(pg, "api", side_effect=fake_api):
+                with patch.object(pg, "reconcile") as reconcile:
+                    pg.main()
+                    self.assertEqual(len(paths), 2)
+                    self.assertTrue(any("r2-v2-manual.yml" in p for p in paths))
+                    self.assertEqual(reconcile.call_args.args[2], "fresh")
+
     def test_open_issue_once_and_close_on_recovery(self):
         with patch.object(pg,"find_issue",return_value=None):
             with patch.object(pg,"api",return_value={"number":123}) as spy:

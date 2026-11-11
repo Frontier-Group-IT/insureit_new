@@ -1,0 +1,98 @@
+name: INSUREIT PostgreSQL R2 v2 consistent backup (manual gate)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: insureit-production-postgres-backup
+  cancel-in-progress: false
+
+jobs:
+  postgres_v2_backup:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    environment: insureit-production-backup
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: supabase/setup-cli@v3
+        with:
+          version: 2.122.1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Check exact INSUREIT source and backup key without revealing credentials
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DB_BACKUP_ENCRYPTION_KEY: ${{ secrets.DB_BACKUP_ENCRYPTION_KEY }}
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+        run: |
+          python - <<'PY'
+          import base64, os
+          from urllib.parse import urlsplit
+          if any(not os.environ.get(k) for k in (
+                  "DATABASE_URL", "DB_BACKUP_ENCRYPTION_KEY",
+                  "R2_ACCOUNT_ID", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY")):
+              raise SystemExit("Missing backup configuration")
+          if len(base64.b64decode(os.environ["DB_BACKUP_ENCRYPTION_KEY"], validate=True)) != 32:
+              raise SystemExit("Invalid key length")
+          db = urlsplit(os.environ["DATABASE_URL"])
+          ref = "ilzhsfqqjyppzzvfscmh"
+          direct = db.hostname == f"db.{ref}.supabase.co" and db.username == "postgres"
+          pooler = (db.hostname and db.hostname.endswith(".pooler.supabase.com")
+                    and db.username == f"postgres.{ref}")
+          if not (direct or pooler) or db.path != "/postgres" or not db.password:
+              raise SystemExit("Database must be authorized INSUREIT source")
+          print("V2 encrypted backup source validated")
+          PY
+      - name: Install pinned R2 encryption dependencies
+        run: python -m pip install boto3==1.35.99 cryptography==44.0.2
+      - name: Export roles and one consistent PostgreSQL schema/data snapshot
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          set -euo pipefail
+          mkdir -m 700 -p "$RUNNER_TEMP/insureit-postgres-v2-dump"
+          # Globals are separate; they are not transactionally tied to the dump.
+          supabase db dump --db-url "$DATABASE_URL" --role-only \
+            -f "$RUNNER_TEMP/insureit-postgres-v2-dump/roles.sql"
+          # A single raw pg_dump custom archive preserves the source schema
+          # and data together, including managed Auth/Storage structures which
+          # Supabase CLI's filtered schema.sql does not include.
+          # This is a read-only export; no production SQL mutation.
+          docker run --rm --user "$(id -u):$(id -g)" \
+            --env DATABASE_URL \
+            --mount "type=bind,source=$RUNNER_TEMP/insureit-postgres-v2-dump,target=/out" \
+            --entrypoint sh supabase/postgres:17.6.1.136 \
+            -ec 'exec pg_dump -Fc --dbname="$DATABASE_URL" --file=/out/database.dump'
+          test -s "$RUNNER_TEMP/insureit-postgres-v2-dump/roles.sql"
+          test -s "$RUNNER_TEMP/insureit-postgres-v2-dump/database.dump"
+          # Audit every critical schema family from pg_restore's private TOC
+          # before publishing encrypted ciphertext to R2. The TOC never
+          # becomes a GitHub artifact or public log.
+          docker run --rm --network none --user "$(id -u):$(id -g)" \
+            --mount "type=bind,source=$RUNNER_TEMP/insureit-postgres-v2-dump,target=/out" \
+            --entrypoint sh supabase/postgres:17.6.1.136 \
+            -ec 'pg_restore --list /out/database.dump > /out/private-toc.txt'
+          python scripts/backup/audit_postgres_v2_toc.py \
+            "$RUNNER_TEMP/insureit-postgres-v2-dump/private-toc.txt"
+          echo "One consistent pg_dump schema/data snapshot and role component produced"
+      - name: Encrypt, upload and authenticate v2 archive readback
+        env:
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          DB_BACKUP_ENCRYPTION_KEY: ${{ secrets.DB_BACKUP_ENCRYPTION_KEY }}
+          PG_DUMP_DIR: ${{ runner.temp }}/insureit-postgres-v2-dump
+          R2_BUCKET: insureit-production-backups
+        run: python -u scripts/backup/postgres_v2_to_r2.py
+      - name: Permanently remove runner plaintext
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/insureit-postgres-v2-dump"
