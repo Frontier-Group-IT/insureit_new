@@ -1,4 +1,5 @@
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { policyChangeDescription, type TrackedPolicyChange } from "@/lib/policy-activity-changes";
 
 export const POLICY_ACTIVITY_ACTIONS = {
   POLICY_CREATED: "policy_created",
@@ -23,7 +24,7 @@ type AuditedPolicyActivityAction = Exclude<PolicyActivityAction, "life_health_ca
 const ACTION_LABELS: Record<PolicyActivityAction, string> = {
   policy_created: "Policy Created",
   previous_month_policy_uploaded: "Previous-month policy uploaded",
-  policy_edited: "Policy Edited",
+  policy_edited: "Policy updated — change details not recorded",
   policy_doc_uploaded: "Policy Doc. Uploaded",
   policy_doc_replaced: "Policy Doc. Replaced",
   policy_doc_removed: "Policy Doc. Removed",
@@ -55,7 +56,7 @@ const ACTIVITY_TABLE_NAME = "policies";
 const RECONCILIATION_ACTOR_NAME = "System Reconciliation";
 
 type AdminClient = ReturnType<typeof createSupabaseAdminClient>;
-type AuditRow = { id: string; actor_id: string | null; action: string; created_at: string; new_data?: { approved_by?: string | null; issuance_date?: string } | null };
+type AuditRow = { id: string; actor_id: string | null; action: string; created_at: string; new_data?: { approved_by?: string | null; issuance_date?: string; changes?: TrackedPolicyChange[] } | null };
 type DocumentRow = { uploaded_by: string | null; created_at: string; updated_at: string };
 type ProfileRow = { id: string; full_name: string | null };
 type LifeHealthCaseActivityRow = {
@@ -73,6 +74,7 @@ type ActivityCandidate = {
   actorName?: string | null;
   approvedBy?: string | null;
   policyDate?: string | null;
+  changes?: TrackedPolicyChange[] | null;
   at: string;
 };
 
@@ -112,12 +114,15 @@ export async function recordPolicyActivity(
   policyId: string,
   actorId: string | null,
   action: PolicyActivityAction,
+  changes?: TrackedPolicyChange[] | null,
 ) {
   const { error } = await admin.from("audit_logs").insert({
     actor_id: actorId,
     action,
     table_name: ACTIVITY_TABLE_NAME,
     record_id: policyId,
+    ...(action === POLICY_ACTIVITY_ACTIONS.POLICY_EDITED && changes !== null && changes !== undefined
+      ? { new_data: { changes } } : {}),
   });
   return !error;
 }
@@ -176,6 +181,7 @@ export async function loadPolicyActivityHistory({
       actorName: reconciliationActorName(action, row.actor_id),
       approvedBy: action === POLICY_ACTIVITY_ACTIONS.PREVIOUS_MONTH_POLICY_UPLOADED ? row.new_data?.approved_by : null,
       policyDate: action === POLICY_ACTIVITY_ACTIONS.PREVIOUS_MONTH_POLICY_UPLOADED ? row.new_data?.issuance_date : null,
+      changes: action === POLICY_ACTIVITY_ACTIONS.POLICY_EDITED && Array.isArray(row.new_data?.changes) ? row.new_data.changes : null,
       at: row.created_at,
     });
   }
@@ -256,13 +262,16 @@ export async function loadPolicyActivityHistory({
     .sort((a, b) => timestamp(b.at) - timestamp(a.at))
     .map((candidate) => ({
       id: candidate.id,
-      action: ACTION_LABELS[candidate.action],
+      action: candidate.action === POLICY_ACTIVITY_ACTIONS.POLICY_EDITED && candidate.changes
+        ? policyChangeDescription(candidate.changes).title : ACTION_LABELS[candidate.action],
       actorName: candidate.actorName?.trim() || (candidate.actorId ? actorNames.get(candidate.actorId) : null) || "Not recorded",
-      meta: candidate.action === POLICY_ACTIVITY_ACTIONS.PREVIOUS_MONTH_POLICY_UPLOADED
-        ? (candidate.approvedBy ? "Approved by: " + candidate.approvedBy : "Uploaded within the permitted date window")
-          + " · Uploaded by: " + (candidate.actorId ? actorNames.get(candidate.actorId) ?? "Not recorded" : "Not recorded")
-          + (candidate.policyDate ? " · Insurance date: " + candidate.policyDate : "")
-        : undefined,
+      meta: candidate.action === POLICY_ACTIVITY_ACTIONS.POLICY_EDITED
+        ? (candidate.changes ? policyChangeDescription(candidate.changes).detail : "Older edit: the changed fields were not recorded")
+        : candidate.action === POLICY_ACTIVITY_ACTIONS.PREVIOUS_MONTH_POLICY_UPLOADED
+          ? (candidate.approvedBy ? "Approved by: " + candidate.approvedBy : "Uploaded within the permitted date window")
+            + " · Uploaded by: " + (candidate.actorId ? actorNames.get(candidate.actorId) ?? "Not recorded" : "Not recorded")
+            + (candidate.policyDate ? " · Insurance date: " + candidate.policyDate : "")
+          : undefined,
       at: candidate.at,
     }));
 }
