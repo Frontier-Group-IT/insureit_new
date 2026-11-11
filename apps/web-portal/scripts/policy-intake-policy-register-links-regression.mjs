@@ -68,6 +68,11 @@ assert(!quickLinks.includes("AlertTriangle"), "Action Required must not render a
 assert(!quickLinks.includes("Clock3"), "In Review must not render a separate status icon");
 assert(!quickLinks.includes("ChevronRight"), "Policy Intake status links must not add chevrons that waste header space");
 
+const queue = read("components/policy-intake-workspace.tsx");
+assert(!queue.includes('row.policy_type?"Policy copy":"Historical"'), "Policy Type table rows must not display a redundant Policy copy subtitle");
+assert(queue.includes('row.ocr_status === "completed" ? "Unregistered" : "Fetching…"'), "Fetched vehicles without a registration number display Unregistered");
+assert(queue.includes('field(row, "vehicle_registration_number") ||'), "Existing registration numbers remain visible");
+assert(queue.includes('isProposal(row)?"—":field(row, "vehicle_registration_number")'), "Proposal-only rows keep their existing non-vehicle placeholder");
 const intakePage = read("app/policy-intakes/page.tsx");
 assert(intakePage.includes("type PolicyIntakeSearchParams = { view?: string }"), "Policy Intake route must accept the view query parameter");
 assert(intakePage.includes('if (value === "in_review") return "in_review"'), "In Review deep links must be valid for reviewer and owner views");
