@@ -63,15 +63,24 @@ jobs:
           # Globals are separate; they are not transactionally tied to the dump.
           supabase db dump --db-url "$DATABASE_URL" --role-only \
             -f "$RUNNER_TEMP/insureit-postgres-v2-dump/roles.sql"
+          # Some existing production DATABASE_URL passwords contain an
+          # unescaped @. libpq parses that URL as a bad hostname even though
+          # the Supabase CLI can dump roles. Split into separate libpq fields,
+          # using a 0600 pgpass file rather than exposing PGPASSWORD or a URL
+          # in the Docker process args, environment or public logs.
+          python scripts/backup/prepare_pg_dump_connection.py \
+            "$RUNNER_TEMP/insureit-pg-v2-connection"
           # A single raw pg_dump custom archive preserves the source schema
           # and data together, including managed Auth/Storage structures which
           # Supabase CLI's filtered schema.sql does not include.
           # This is a read-only export; no production SQL mutation.
           docker run --rm --user "$(id -u):$(id -g)" \
-            --env DATABASE_URL \
+            --env-file "$RUNNER_TEMP/insureit-pg-v2-connection/libpq.env" \
+            --env PGPASSFILE=/run/insureit-pg-v2-connection/.pgpass \
+            --mount "type=bind,source=$RUNNER_TEMP/insureit-pg-v2-connection,target=/run/insureit-pg-v2-connection,readonly" \
             --mount "type=bind,source=$RUNNER_TEMP/insureit-postgres-v2-dump,target=/out" \
             --entrypoint sh supabase/postgres:17.6.1.136 \
-            -ec 'exec pg_dump -Fc --dbname="$DATABASE_URL" --file=/out/database.dump'
+            -ec 'exec pg_dump --no-password -Fc --file=/out/database.dump'
           test -s "$RUNNER_TEMP/insureit-postgres-v2-dump/roles.sql"
           test -s "$RUNNER_TEMP/insureit-postgres-v2-dump/database.dump"
           # Audit every critical schema family from pg_restore's private TOC
@@ -95,4 +104,6 @@ jobs:
         run: python -u scripts/backup/postgres_v2_to_r2.py
       - name: Permanently remove runner plaintext
         if: always()
-        run: rm -rf "$RUNNER_TEMP/insureit-postgres-v2-dump"
+        run: |
+          rm -rf "$RUNNER_TEMP/insureit-postgres-v2-dump"
+          rm -rf "$RUNNER_TEMP/insureit-pg-v2-connection"
