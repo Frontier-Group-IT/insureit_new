@@ -1,8 +1,10 @@
 """Synthetic, read-only tests for the full source-vs-R2 Storage manifest audit."""
-import copy
+import datetime as dt
+import sys
+import types
 import json
 import unittest
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import audit_storage_source_manifest as audit
 
@@ -99,18 +101,83 @@ class ReadOnlyParityTests(unittest.TestCase):
         self.assertEqual(status["manifest_not_currently_listed"], 1)
         self.assertEqual(status["stable_prior_source_not_in_manifest"], 0)
 
-    def test_inventory_uses_listing_only_and_keeps_identifiers_private(self):
-        rows = [("SECRET PRIVATE CUSTOMER.pdf", {
-            "id":"synthetic", "created_at":BEFORE,"updated_at":BEFORE,
-            "metadata":{"size":12}
-        })]
-        with patch.object(audit,"list_buckets",return_value=["docs"]):
-            with patch.object(audit,"list_files",return_value=iter(rows)):
-                buckets, data = audit.source_inventory("https://example.invalid","test")
-        self.assertEqual(buckets, ["docs"])
-        self.assertEqual(len(data),1)
+    def test_inventory_uses_only_repeatable_read_postgres_sql(self):
+        cursor = MagicMock()
+        cursor.fetchall.return_value = [("docs",), ("empty",)]
+        created = dt.datetime(2026, 11, 10, 18, 0, tzinfo=dt.timezone.utc)
+        cursor.fetchmany.side_effect = [
+            [("docs", "SECRET PRIVATE CUSTOMER.pdf", created, created, "12"),
+             ("docs", "directory/.emptyFolderPlaceholder", created, created, "0")],
+            [],
+        ]
+        db = MagicMock()
+        db.cursor.return_value.__enter__.return_value = cursor
+        db.__enter__.return_value = db
+        with patch.object(audit, "checked_connection") as checked:
+            with patch.object(audit, "db_connect", return_value=db) as connect:
+                buckets, data = audit.source_inventory("source-secret-URL")
+        checked.assert_called_once_with("source-secret-URL")
+        connect.assert_called_once_with("source-secret-URL")
+        self.assertEqual(buckets, ["docs", "empty"])
+        self.assertEqual(len(data), 1)
         self.assertIn(identifier("SECRET PRIVATE CUSTOMER.pdf"), data)
-        self.assertEqual(data[identifier("SECRET PRIVATE CUSTOMER.pdf")]["size"],12)
+        self.assertEqual(data[identifier("SECRET PRIVATE CUSTOMER.pdf")]["size"], 12)
+        self.assertEqual(data[identifier("SECRET PRIVATE CUSTOMER.pdf")]["created_at"],
+                         created.isoformat())
+        sql = [args[0][0] for args in cursor.execute.call_args_list]
+        self.assertTrue(sql[0].startswith("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY"))
+        self.assertTrue(sql[1].startswith("SET LOCAL statement_timeout"))
+        self.assertTrue(sql[2].startswith("SELECT id FROM storage.buckets"))
+        self.assertIn("FROM storage.objects", sql[3])
+        self.assertIn("archived_at IS NULL", sql[3])
+        self.assertIn("is_delete_marker", sql[3])
+        self.assertFalse(any("INSERT " in stmt or "DELETE " in stmt or "UPDATE " in stmt
+                             for stmt in sql))
+
+    def test_rejects_duplicate_current_objects_and_invalid_source_data(self):
+        cursor = MagicMock()
+        cursor.fetchall.return_value = [("docs",)]
+        created = dt.datetime(2026, 11, 10, 18, 0, tzinfo=dt.timezone.utc)
+        record = ("docs", "private.pdf", created, created, "12")
+        cursor.fetchmany.side_effect = [[record, record], []]
+        db = MagicMock()
+        db.cursor.return_value.__enter__.return_value = cursor
+        db.__enter__.return_value = db
+        with patch.object(audit, "checked_connection"):
+            with patch.object(audit, "db_connect", return_value=db):
+                with self.assertRaisesRegex(RuntimeError, "Duplicate current"):
+                    audit.source_inventory("example-source")
+
+    def test_connection_is_exact_source_and_does_not_pass_raw_uri_to_libpq(self):
+        synthetic = ("db.ilzhsfqqjyppzzvfscmh.supabase.co", 5432,
+                     "postgres", "postgres", "synthetic@123@123", "require")
+        mock_connect = MagicMock()
+        with patch.object(audit, "checked_connection", return_value=synthetic):
+            with patch.dict(sys.modules, {"psycopg": types.SimpleNamespace(connect=mock_connect)}):
+                audit.db_connect("synthetic-url-with-raw-@-password")
+        kwargs = mock_connect.call_args.kwargs
+        self.assertEqual(kwargs["host"], synthetic[0])
+        self.assertEqual(kwargs["password"], synthetic[4])
+        self.assertEqual(kwargs["sslmode"], "require")
+        self.assertNotIn("synthetic-url-with-raw-@-password", str(kwargs))
+        self.assertNotIn("options", kwargs)
+        self.assertEqual(kwargs["connect_timeout"], 20)
+
+    def test_postgres_and_api_timestamp_encodings_compare_equal(self):
+        records = {identifier("p1.pdf"): source(
+            created="2026-11-10T18:00:00+00:00",
+            updated="2026-11-10T18:00:00+00:00")}
+        result = audit.compare(["docs","empty"], records,
+                               ["docs","empty"], records, manifest("p1.pdf"))
+        self.assertEqual(result["stable_prior_manifest_metadata_mismatches"], 0)
+        self.assertEqual(result["status"], "PASS_HISTORIC_MANIFEST_COVERAGE")
+
+    def test_read_only_source_size_parser_rejects_invalid_values(self):
+        self.assertEqual(audit.size_int("12"), 12)
+        self.assertIsNone(audit.size_int(None))
+        for item in ("not-an-integer", -1, True):
+            with self.assertRaises(ValueError):
+                audit.size_int(item)
 
     def test_iso_parse_rejects_timezone_naive_values(self):
         self.assertIsNone(audit.iso_time("2026-11-11T12:30:00"))

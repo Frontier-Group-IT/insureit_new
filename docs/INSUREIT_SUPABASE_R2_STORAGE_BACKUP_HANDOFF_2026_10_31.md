@@ -1,5 +1,13 @@
 # INSUREIT — CURRENT BACKUP / RESTORE DRILL HANDOFF (verified 2026-11-11)
 
+## 2026-11-11 — First Storage source-parity audit cancelled; bounded read-only SQL remedy
+
+- [Manual source-parity run #43011426945](https://github.com/Frontier-Group-IT/insureit_new/actions/runs/43011426945) was **cancelled due to configured 45-minute job timeout**. Steps for checkout, Python and pinned dependencies passed. The source comparison Python step produced no phase or result output before cancellation. This is **NOT** a pass, missing-file confirmation, or R2 corruption proof.
+- Potential bottleneck: the audit's previous recursive serial Supabase Storage HTTP `/object/list` traversal was invoked twice. Which phase stalled cannot be established from the log because the script had no pre-comparison progress markers.
+- **Fix branch** `fix/insureit-storage-source-parity-readonly-sql-20261111`: reuse the proven source-specific `checked_connection` parser and protected `DATABASE_URL` (which can contain unescaped `@`), connect to live source with TLS, perform two separate `REPEATABLE READ, READ ONLY` PostgreSQL transactions restricted to `storage.buckets` and `storage.objects`, filter archived/deleted generations, normalize source timestamps and sizes, retain same encrypted R2 manifest authentication/coverage logic, emit only aggregate phase/timing markers and fail on `REVIEW`. New bounded SQL timeout and 20-minute workflow timeout; no Supabase Storage API recursion, customer content retrieval, production SQL writes, R2 PUT/DELETE or scheduled backup changes.
+- **Do not call the issue resolved until the final PR CI passes and the protected manual workflow completes with an actual aggregate comparison.** The two SQL source snapshots cannot reconstruct the exact historical point-in-time backup inventory, so any `PASS_HISTORIC_MANIFEST_COVERAGE` result is a bounded precheck, not full recovery certification.
+
+
 ## 2026-11-11 — Continuation: BOTH automatic encrypted R2 backups configured; full service DR remains open
 
 - **Daily schedules on GitHub main (merged PR #4256):** encrypted PostgreSQL v2 `45 21 * * *` UTC (**03:15 IST**) and encrypted Supabase Storage `30 13 * * *` UTC (**19:00 IST**). GitHub failed/missed-run monitoring now watches both; the PostgreSQL restore and Storage full-byte verification are still **manual-only**. At this update, the first **unattended scheduled PostgreSQL run** had **not yet been observed**, and protected-environment auto-approval and alert recipient delivery are not proven. Do not call scheduling operationally validated until a real `event=schedule` success appears.

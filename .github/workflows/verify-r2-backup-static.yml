@@ -28,7 +28,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: python -m pip install boto3==1.35.99 cryptography==44.0.2 pyyaml==6.0.2
+      - run: python -m pip install boto3==1.35.99 cryptography==44.0.2 pyyaml==6.0.2 'psycopg[binary]==3.2.9'
       - run: python -m py_compile scripts/backup/supabase_storage_to_r2.py scripts/backup/verify_r2_restore.py scripts/backup/monitor_github_backup.py scripts/backup/monitor_postgres_backup.py scripts/backup/postgres_to_r2.py scripts/backup/verify_postgres_r2_restore.py scripts/backup/classify_pg_restore_error.py scripts/backup/audit_postgres_archive_coverage.py scripts/backup/verify_postgres_offline_row_counts.py scripts/backup/summarize_pg_restore_errors.py scripts/backup/diagnose_pg_restore_data.py scripts/backup/audit_postgres_copy_targets.py scripts/backup/postgres_v2_to_r2.py scripts/backup/verify_postgres_v2_r2.py scripts/backup/verify_postgres_v2_rows.py scripts/backup/audit_postgres_v2_toc.py scripts/backup/prepare_pg_dump_connection.py scripts/backup/allow_no_acl_restore_fallback.py scripts/backup/audit_storage_source_manifest.py
       - run: python -m unittest discover -s scripts/backup -p 'test_*.py' -v
       - name: Validate workflow safety guard
@@ -74,17 +74,27 @@ jobs:
           parity_job = source_parity['jobs']['audit']
           assert parity_job['environment'] == 'insureit-production-backup'
           assert "refs/heads/main" in parity_job['if']
-          assert parity_job['timeout-minutes'] == 45
+          assert parity_job['timeout-minutes'] == 20
           parity_steps = str(parity_job['steps'])
           assert 'audit_storage_source_manifest.py' in parity_steps
-          assert 'SUPABASE_URL' in parity_steps and 'SUPABASE_SERVICE_ROLE_KEY' in parity_steps
+          assert 'DATABASE_URL' in parity_steps
+          assert 'SUPABASE_URL' not in parity_steps and 'SUPABASE_SERVICE_ROLE_KEY' not in parity_steps
+          assert 'psycopg[binary]==3.2.9' in parity_steps
           assert 'BACKUP_ENCRYPTION_KEY' in parity_steps
           assert 'delete_object' not in parity_steps and 'put_object' not in parity_steps
           verifier = pathlib.Path('scripts/backup/audit_storage_source_manifest.py').read_text()
           assert 'STORAGE SOURCE MANIFEST COVERAGE AUDIT' in verifier
-          assert 'source_inventory(base, source_key)' in verifier
+          assert 'source_inventory(database_url)' in verifier
           assert 'validate_manifest(s3' in verifier
-          assert 'list_files(bucket, key, base)' in verifier
+          assert 'checked_connection(database_url)' in verifier
+          assert "SET LOCAL statement_timeout = '120s'" in verifier
+          assert 'default_transaction_read_only' not in verifier
+          assert 'options=' not in verifier
+          assert 'SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY' in verifier
+          assert 'FROM storage.objects' in verifier and 'FROM storage.buckets' in verifier
+          assert 'archived_at IS NULL' in verifier and 'is_delete_marker' in verifier
+          assert 'list_files(' not in verifier and 'list_buckets(' not in verifier
+          assert 'STORAGE PARITY PHASE:' in verifier
           assert 'source_bucket' not in parity_steps  # only aggregate metrics on public workflow
           monitor = yaml.safe_load(pathlib.Path('.github/workflows/insureit-r2-backup-monitor.yml').read_text())
           triggers = monitor.get('on', monitor.get(True, {}))
