@@ -293,7 +293,7 @@ export default function PolicyIntakeDetailScreen() {
 
             {!proposalForm ? (
               <>
-                <ReviewBlock number="02" title="Vehicle details">
+                <ReviewBlock number="02" title="Vehicle details" make={fields.get('vehicle_make')?.value}>
                   {vehicleReviewKeys.map(([key, label]) => (
                     <ReviewPair key={key} label={label} value={fields.get(key)?.value} source={fields.has(key) ? 'OCR' : undefined} confidence={fields.get(key)?.confidence} />
                   ))}
@@ -404,9 +404,9 @@ const policyReviewKeys: Array<[string, string]> = [
   ['tax_amount','Printed GST'],
   ['gross_premium','Printed gross premium'],
 ];
-function ReviewBlock({number,title,children}:{number:string;title:string;children:ReactNode}) {
+function ReviewBlock({number,title,children,make}:{number:string;title:string;children:ReactNode;make?:string}) {
   return <View style={reviewStyles.block}>
-    <View style={reviewStyles.blockHeader}><Text style={reviewStyles.number}>{number}</Text><Text style={reviewStyles.blockTitle}>{title}</Text></View>
+    <View style={reviewStyles.blockHeader}><Text style={reviewStyles.number}>{number}</Text>{make ? <PartnerManufacturerLogo name={make} fallback={PartnerAssets.actions.addVehicle} style={{width:22,height:22}} /> : null}<Text style={reviewStyles.blockTitle}>{title}</Text></View>
     <View style={reviewStyles.rows}>{children}</View>
   </View>;
 }
