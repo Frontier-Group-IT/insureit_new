@@ -2,7 +2,11 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 const app = readFileSync('app/policy-intakes.tsx', 'utf8');
-assert.match(app, /function IntakeProgress\(\{ row \}: \{ row: PartnerPolicyIntake \}\) \{\s*if \(row\.status === 'duplicate' \|\| row\.status === 'rejected'\) return null;/, 'Duplicate and Rejected intake cards hide the entire progress tracker in every filter');
+assert.match(app, /\{filter === 'all' \? <IntakeProgress row=\{row\} \/> : null\}/, 'Progress timeline renders only when the All status filter is selected');
+assert.doesNotMatch(app, /<IntakeProgress row=\{row\} \/>(?!\s*: null)/, 'Do not render an unconditional timeline in each status filter');
+assert.match(app, /function IntakeProgress\(\{ row \}: \{ row: PartnerPolicyIntake \}\) \{/, 'Retain the existing per-record progress component');
+assert.doesNotMatch(app, /if \(row\.status === 'duplicate' \|\| row\.status === 'rejected'\) return null;/, 'All must show the timeline even for Duplicate and Rejected submissions');
+assert.match(app, /const rejected = row\.status === 'rejected' \|\| row\.status === 'duplicate';/, 'Preserve rejected/duplicate progress indicator styling');
 const api = readFileSync('lib/policy-intakes.ts', 'utf8');
 const route = readFileSync('../web-portal/app/api/partner/policy-intakes/route.ts', 'utf8');
 

@@ -293,7 +293,7 @@ export default function PolicyIntakesScreen() {
                   </View>
                 </View>
 
-                <IntakeProgress row={row} />
+                {filter === 'all' ? <IntakeProgress row={row} /> : null}
 
                 {row.attention_reason ? (
                   <View style={styles.attention}>
@@ -383,8 +383,6 @@ function IntakeRecordLogo({ row }: { row: PartnerPolicyIntake }) {
 }
 
 function IntakeProgress({ row }: { row: PartnerPolicyIntake }) {
-  if (row.status === 'duplicate' || row.status === 'rejected') return null;
-
   const manual = row.status === 'processing' && row.ocr_status === 'failed';
   const activeStep = row.status === 'completed' ? 4 : row.status === 'in_review' ? 3 : row.status === 'ready_for_review' || row.status === 'needs_attention' || manual ? 2 : 1;
   const rejected = row.status === 'rejected' || row.status === 'duplicate';
