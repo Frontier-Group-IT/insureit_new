@@ -77,7 +77,7 @@ function initials(name: string) {
   return name.trim().split(/\s+/).slice(0, 2).map((part) => part[0] ?? "").join("").toUpperCase();
 }
 
-export function EmployeeOrganizationTree({ employees, partners, query, managers, portalRoles, canManage, canManagePortalAccess }: { employees: EmployeeRow[]; partners: DirectoryPartner[]; query: string; managers: Pick<EmployeeRow, "id" | "employee_code" | "full_name">[]; portalRoles: { value: string; label: string }[]; canManage: boolean; canManagePortalAccess: boolean }) {
+export function EmployeeOrganizationTree({ employees, partners, query, focusRequest, managers, portalRoles, canManage, canManagePortalAccess }: { employees: EmployeeRow[]; partners: DirectoryPartner[]; query: string; focusRequest?: { employeeId: string; sequence: number } | null; managers: Pick<EmployeeRow, "id" | "employee_code" | "full_name">[]; portalRoles: { value: string; label: string }[]; canManage: boolean; canManagePortalAccess: boolean }) {
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set(employees.filter((employee) => !employee.reporting_manager_id || !employees.some((manager) => manager.id === employee.reporting_manager_id)).map((employee) => `employee:${employee.id}`)));
   const [showPartners, setShowPartners] = useState(true);
   const [mode, setMode] = useState<"overview" | "team" | "full">("team");
@@ -104,6 +104,7 @@ export function EmployeeOrganizationTree({ employees, partners, query, managers,
   }, []);
 
   const employeeById = useMemo(() => new Map(employees.map((employee) => [employee.id, employee])), [employees]);
+  useEffect(() => { if (focusRequest && employeeById.has(focusRequest.employeeId)) { setDepartment(""); setFocus(focusRequest.employeeId); setMode("team"); } }, [focusRequest, employeeById]);
   const closeDetails = useCallback(() => setDetailsId(""), []);
   const navigateToEmployee = useCallback((id: string) => { setDetailsId(""); setFocus(id); setMode("team"); }, []);
   const reportsByManager = useMemo(() => {
