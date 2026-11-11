@@ -446,7 +446,7 @@ export function PolicyUnifiedForm({ mode, insurers, customers = [], rms, sources
     const result=buildPolicyOcrOnboardingUpdate({
       mode,
       registrationMode:vehicleRegistrationMode,
-      current:{registrationNo:form.registrationNo,vehicleClass:form.vehicleClass,make:form.make,model:form.model,fuelType:form.fuelType,manufacturingYear:form.manufacturingYear,capacity:form.capacity,chassisNo:form.chassisNo,engineNo:form.engineNo,rtoState:form.rtoState,rtoName:form.rtoName,policyProduct:form.policyProduct,idv:form.idv,od:form.od,tp:form.tp,cpa:form.cpa,policyNo:form.policyNo,insurerId:form.insurerId,validFrom:form.validFrom,validUpto:form.validUpto},
+      current:{registrationNo:form.registrationNo,insuredName:form.insuredName,phoneNo:form.phoneNo,vehicleClass:form.vehicleClass,make:form.make,model:form.model,fuelType:form.fuelType,manufacturingYear:form.manufacturingYear,capacity:form.capacity,chassisNo:form.chassisNo,engineNo:form.engineNo,rtoState:form.rtoState,rtoName:form.rtoName,policyProduct:form.policyProduct,idv:form.idv,od:form.od,tp:form.tp,cpa:form.cpa,policyNo:form.policyNo,insurerId:form.insurerId,validFrom:form.validFrom,validUpto:form.validUpto},
       fields,
       manufacturers,
       insurers,
