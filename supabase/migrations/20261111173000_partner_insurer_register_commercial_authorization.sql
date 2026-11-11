@@ -32,7 +32,7 @@ begin
   -- Commercial access follows apps/web-portal/lib/policy-commercial-access.ts.
   -- Aggregate reports cannot prove the case-specific authorization required for
   -- operations_head_life, so that role is denied aggregate Pay-In/Retention.
-  select coalesce(p.is_active, false) and (
+  select coalesce(p.is_active, false) and p.role::text <> 'operations_head_life' and (
       p.role::text = 'accounts'
       or p.id = any(array[
         '87e3985c-3488-401b-a3bc-5e270c74c759'::uuid,
