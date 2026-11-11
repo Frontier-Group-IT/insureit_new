@@ -49,7 +49,7 @@ assert.match(bulk,/shownDocuments=\[\.\.\.recentUploads,\.\.\.documents\.filter/
 assert.match(bulk,/confirmed\.push\(result\.uploaded\)/, "Registered standard uploads update the inline list.");
 assert.match(bulk,/confirmed\.push\(saved\.uploaded\)/, "Registered signed video uploads update the inline list.");
 assert.match(bulk,/setRecentUploads\(previous=>/, "After confirmed upload update the uploaded count immediately.");
-assert.match(bulk,/setExpanded\(true\)/, "Automatically expand uploaded filenames after a successful batch.");
+assert.match(bulk,/setExpanded\(!returnToSpotIntimation\)/, "Bulk uploads collapse on Spot Intimation but remain expanded after upload on other claim stages.");
 assert.match(bulk,/if\(complete\) \{[\s\S]*router\.refresh\(\)/, "Refresh the server document snapshot after successful upload.");
 assert.doesNotMatch(bulk,/closeSuccess|setSuccessNotice|CustomerSuccessDialog/, "Successful bulk uploads must not show a confirmation dialog.");
 assert.match(bulk,/shownDocuments\.length\?setExpanded\(v=>!v\):openPicker\(\)/, "Clicking uploaded count toggles the same section.");
