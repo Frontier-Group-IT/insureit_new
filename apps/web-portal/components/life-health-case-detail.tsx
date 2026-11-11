@@ -5,7 +5,7 @@ import { LifeHealthRemarksEditor } from "@/components/life-health-remarks-editor
 import { useEffect, useMemo, useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { FileSizeExceededPopup } from "@/components/file-size-exceeded-popup";
-import { CalendarDays, ChevronDown, Eye, LoaderCircle, Trash2, Upload, ShieldCheck, MessageSquareText, BarChart3, Save, ArrowRight, X } from "lucide-react";
+import { CalendarDays, ChevronDown, Eye, LoaderCircle, Trash2, Upload, ShieldCheck, BarChart3, Save, ArrowRight, X } from "lucide-react";
 import { convertLifeHealthCaseToPolicy, deleteLifeHealthCaseDocument, uploadLifeHealthCaseDocument } from "@/app/policies/life-health-policy-actions";
 import { updateLifeHealthCaseDetails } from "@/app/policies/life-health-case-edit-actions";
 import { isPensionLifePolicy } from "@/lib/life-health-pension-maturity";
