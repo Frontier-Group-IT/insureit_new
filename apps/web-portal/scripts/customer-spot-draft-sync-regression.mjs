@@ -2,12 +2,14 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
-const [customerPage, customerForm, action, operations, migration] = await Promise.all([
+const [customerPage, customerForm, action, operations, migration, dateInput, voice] = await Promise.all([
   read("../app/customer/(protected)/spot-intimation/page.tsx"),
   read("../app/customer/(protected)/spot-intimation/spot-intimation-save-form.tsx"),
   read("../app/customer/(protected)/spot-intimation/draft-actions.ts"),
   read("../app/claims/[id]/page.tsx"),
   read("../../../supabase/migrations/20261104165000_customer_spot_draft_sync.sql"),
+  read("../components/customer-portal/customer-date-input.tsx"),
+  read("../components/customer-portal/customer-claim-voice-recorder.tsx"),
 ]);
 
 assert.match(customerPage, /saveServerDraft=\{claim\.current_status === "Draft"/,
@@ -64,4 +66,9 @@ assert.match(migration, /c\.current_status = 'Draft'/,
 assert.doesNotMatch(migration, /ALTER TABLE public\.claims|CREATE TRIGGER/,
   "Draft migration cannot alter existing claim status triggers");
 
+assert.match(customerForm,/restoredDraftKey\.current === storageKey/,"Route refresh must not overwrite already edited fields");
+assert.match(customerForm,/input\.dispatchEvent\(new CustomEvent\("customer-spot-draft-restore"/,"Restored date values must notify the controlled date picker");
+assert.match(dateInput,/setValue\(event\.detail\)/,"Date display state must match restored input values");
+assert.match(voice,/setRecentVoiceNotes\(previous=>/,"Voice-note upload shows confirmed file locally");
+assert.doesNotMatch(voice,/router\.refresh\(\)/,"Voice-note upload must not reset an unsaved claim form");
 console.log("Internal and External customer Spot Intimation draft sync regression passed.");
