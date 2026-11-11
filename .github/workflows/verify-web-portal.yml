@@ -193,6 +193,8 @@ jobs:
         run: node --experimental-strip-types scripts/operations-head-life-intermediary-regression.mjs
       - name: Claims Head least-privilege regression
         run: node --experimental-strip-types scripts/claims-head-least-privilege-regression.mjs
+      - name: Partner Policy Intake signed document authorization regression
+        run: node scripts/partner-policy-intake-document-auth-regression.mjs
       - name: Policy Intake Policy Register quick-link regression
         run: node scripts/policy-intake-policy-register-links-regression.mjs
       - name: Partner web core security regression
