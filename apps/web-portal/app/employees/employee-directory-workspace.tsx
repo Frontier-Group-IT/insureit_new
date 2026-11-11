@@ -5,6 +5,7 @@ import { FormSubmitButton } from "@/components/form-submit-button";
 import Link from "next/link";
 import { Plus, Search, Network, List } from "lucide-react";
 import { EmployeeOrganizationTree, type DirectoryPartner } from "./employee-organization-tree";
+import { EmployeeExplorerCommand } from "./employee-explorer-command";
 import { setEmployeeStatus } from "./actions";
 import { EmployeeEditForm, EmployeePortalInviteForm, EmployeePortalRoleForm, type EmployeeRow, type PortalRoleOption } from "./employee-forms";
 
@@ -14,6 +15,7 @@ export function EmployeeDirectoryWorkspace({ employees, partners, partnerNetwork
   const [query, setQuery] = useState(initialQuery);
   const [view, setView] = useState<"tree" | "table">("tree");
   const [status, setStatus] = useState(initialStatus);
+  const [focusRequest, setFocusRequest] = useState<{ employeeId: string; sequence: number } | null>(null);
   const normalized = query.trim().toLowerCase();
   const filtered = useMemo(() => employees.filter((employee) => {
     const matchesStatus = !status || employee.employment_status === status;
@@ -50,12 +52,13 @@ export function EmployeeDirectoryWorkspace({ employees, partners, partnerNetwork
             <Search className="h-3.5 w-3.5 shrink-0 text-[#7790AB]" />
             <input aria-label="Search employees and partners" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search employee, partner, POSP or MISP" className="w-full min-w-0 bg-transparent text-[11px] text-[#1B3555] outline-none placeholder:text-[#8A9AAF]" />
           </label>
+          <EmployeeExplorerCommand employees={visibleEmployees} partners={partners} onChoose={(employeeId) => { setQuery(""); setView("tree"); setFocusRequest((previous) => ({ employeeId, sequence: (previous?.sequence ?? 0) + 1 })); }} />
           <select aria-label="Employee status" value={status} onChange={(event) => setStatus(event.target.value)} className="h-9 rounded-md border border-[#D2DEEC] bg-white px-3 text-[10.5px] text-[#284263]"><option value="">All employees</option><option value="active">Active</option><option value="inactive">Inactive</option></select>
           <span className="ml-auto whitespace-nowrap text-[10px] font-medium text-[#71839B]">{visibleEmployees.length} employees{view === "tree" ? ` · ${partners.filter((partner) => visibleEmployees.some((employee) => employee.id === partner.employeeId)).length} intermediaries` : ""}</span>
         </div>
       </header>
       {loadError ? <p className="m-4 rounded-md border border-red-200 bg-red-50 p-3 text-[11px] text-red-700">{loadError}</p> : view === "tree" ? <>
-        <EmployeeOrganizationTree employees={visibleEmployees} partners={partners} query={query} managers={managers} portalRoles={portalRoles} canManage={canManage} canManagePortalAccess={canManagePortalAccess} />
+        <EmployeeOrganizationTree employees={visibleEmployees} partners={partners} query={query} focusRequest={focusRequest} managers={managers} portalRoles={portalRoles} canManage={canManage} canManagePortalAccess={canManagePortalAccess} />
         {partnerNetworkError ? <p className="mx-4 mb-3 text-[10px] text-amber-700">Partner network is temporarily unavailable. Employee hierarchy is still displayed.</p> : null}
       </> : filtered.length ? <div className="px-4 pb-4"><EmployeeTable employees={filtered} managers={managers} portalRoles={portalRoles} canManage={canManage} canManagePortalAccess={canManagePortalAccess} /></div> : <div className="m-4 rounded-md border border-dashed border-[#CBD8E8] bg-[#F8FBFF] p-8 text-center text-[11px] text-[#667085]">No employees match these filters.</div>}
     </section>
