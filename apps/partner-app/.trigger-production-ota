@@ -1,7 +1,7 @@
 Partner production OTA trigger
-release=partner-remove-green-pir-check-pr-4206
-source=verified-main-merge-a71d7c31944c8cd80b8895ec4b368a24694fc6b1
-reason=approved-production-release-after-auto-gate-rejected-regression-test-file
+release=partner-intake-ready-inreview-buttons-pr-4217
+source=verified-main-merge-573f77549b97177d4b96ffc9c0078abcecbba4f6
+reason=approved-production-release-after-partner-and-portal-ci
 channel=production
 runtime=0.2.0
 requested=2026-11-11
