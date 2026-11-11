@@ -308,20 +308,6 @@ export default function PolicyIntakeDetailScreen() {
 
           <View style={reviewStyles.sheet}>
             <Text style={reviewStyles.sheetTitle}>Policy Intake Review</Text>
-            {row.status !== 'duplicate' ? (
-              <>
-                <Text style={reviewStyles.sheetCaption}>Same submitted and fetched details as the Operations website.</Text>
-                <ReviewBlock number="01" title="Source & customer">
-                  <ReviewPair label="Submitted by" value={row.submitted_by_name || 'Not available'} source="SALES" />
-                  <ReviewPair label="Customer mobile" value={row.customer_mobile} source="SALES" />
-                  <ReviewPair label="Lead source" value={row.lead_source_name} source="SALES" />
-                  <ReviewPair label="Intermediary" value={`${row.lead_source_type.toUpperCase()}${row.lead_source_code ? ` · ${row.lead_source_code}` : ''}`} source="SALES" />
-                  <ReviewPair label="Policy type" value={policyTypeLabel(row.policy_type)} />
-                  <ReviewPair label="Submitted" value={formatDate(row.created_at)} />
-                </ReviewBlock>
-              </>
-            ) : null}
-
             {!proposalForm ? (
               <>
                 {row.status === 'duplicate' ? (
@@ -658,15 +644,6 @@ function statusHelp(row: PartnerPolicyIntake) {
   if (row.status === 'rejected') return 'This intake was closed without policy onboarding.';
   if (row.status === 'duplicate') return 'The policy was found in an existing record. Review and onboarding are disabled.';
   return 'Track this submission here.';
-}
-
-function policyTypeLabel(value: PartnerPolicyIntake['policy_type']) {
-  return ({
-    motor: 'Motor',
-    non_motor: 'Non-Motor',
-    life: 'Life',
-    health: 'Health',
-  } as const)[value || 'motor'] || 'Motor';
 }
 
 function pendingLabel(row: PartnerPolicyIntake) {
