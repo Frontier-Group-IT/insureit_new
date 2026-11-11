@@ -34,6 +34,8 @@ assert.ok(detail.includes("fields.get('policy_number')?.value?.trim()"), 'Show e
 assert.ok(detail.includes("'Vehicle pending'"), 'Show vehicle-pending indicator when OCR has no registration number');
 assert.ok(detail.includes('sheet:{marginHorizontal:8,'), 'Use full-width intake review with compact symmetric gutters');
 assert.ok(detail.includes("styles.statusLogoWrap"), 'Keep a plain icon alignment container');
-assert.ok(detail.includes('<Ionicons name="document-text-outline" size={27} color="#17365D" />'), 'Use a plain professional icon in the PIR card');
+assert.ok(detail.includes('<Ionicons name="reader-outline" size={27} color="#17365D" />'), 'Use a plain professional reader icon in the PIR card');
+assert.ok(detail.includes('navyStatusBar'), 'Show a navy system status bar on both duplicate and ready-for-review pages');
+assert.ok(detail.includes('bottomNavigation={<PolicyIntakeDetailNavigation'), 'Keep five-item bottom navigation on intake detail');
 assert.ok(!detail.includes('<PartnerInsurerLogo'), 'Do not use insurer/logo tile in PIR card');
 console.log('Partner Duplicate Policy Intake website parity regression passed');
