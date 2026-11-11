@@ -27,6 +27,15 @@ assert.match(route, /pageIds = filtered\.slice\(offset, offset \+ limit\)/, 'Sti
 assert.match(route, /employeeRead\?\.mode === "or"/, 'Preserve employee scope');
 assert.match(route, /q = q\.or\(intakeReadScope\)/, 'Search remains scoped for partner accounts');
 assert.match(app, /const visibleRows = rows;/, 'Never filter only the currently loaded page');
+assert.match(app, /<PartnerStatusBadge label={statusLabel\(row\)} tone={statusTone\(row\)} \/>/, 'Keep existing workflow status badge');
+assert.doesNotMatch(app, /<PartnerStatusBadge label="Fetched"/, 'Do not show a second Fetched pill');
+assert.ok(app.includes("row.ocr_status === 'completed' ? (") && app.includes('<Ionicons name="checkmark" size={15} color="#16A34A"'), 'Completed OCR shows a plain green check');
+assert.ok(app.includes('<View style={styles.intakeNumberRow}>') && app.includes('<Text numberOfLines={1} style={styles.number}>{row.intake_number}</Text>'), 'Check belongs immediately beside intake number');
+assert.ok(app.includes("intakeNumberRow: { flexDirection: 'row', alignItems: 'center', gap: 4 }"), 'No icon badge background or border');
+assert.match(app, /row\.ocr_status === 'failed' && \(row\.status === 'processing' \|\| row\.status === 'needs_attention'\)/, 'Only show OCR failure warning when action is needed');
+assert.match(app, /<Text style={styles\.updatedDate}>{formatDate\(row\.updated_at \|\| row\.created_at\)}<\/Text>/, 'Keep timestamp but remove Updated prefix');
+assert.doesNotMatch(app, /Updated \{formatDate/, 'Remove redundant Updated text from timestamp');
+
 assert.match(app, /setTimeout\(\(\) => setDebouncedQuery\(query\.trim\(\)\), 300\)/, 'Debounce server searches');
 assert.doesNotMatch(app, /rows\.filter\(\(row\) => row\.status/, 'Never derive status counts from loaded rows');
 assert.match(route, /includeCounts[\s\S]*url\.searchParams\.get\("include_counts"\)/, 'Counts controlled independently of pagination');
@@ -57,7 +66,7 @@ assert.match(api, /Network connection failed/, 'Show actionable network failure'
 assert.match(api, /console\.warn\('\[partner-policy-intakes\] read failed'/, 'Record safe error categories');
 const detail = readFileSync('app/policy-intakes/[id].tsx', 'utf8');
 assert.match(readFileSync('../web-portal/lib/policy-intake-status-buckets.ts', 'utf8'), /row.status === "ready_for_review"/, 'Ready-for-review intakes belong to canonical Action Required unless duplicate');
-assert.match(app, /row\.ocr_status === 'completed' \? <PartnerStatusBadge label="Fetched"/, "Expose the same Fetched document-status badge as Operations");
+assert.ok(app.includes('accessibilityLabel="Document data fetched"') && app.includes('<Ionicons name="checkmark" size={15} color="#16A34A"'), 'Expose fetched OCR success as a plain green check beside the PIR number');
 assert.match(api, /export async function updatePartnerPolicyIntakeReview/, 'Mobile reviewer actions must use authenticated API');
 assert.match(detail, /row.review_access.can_review/, 'Do not show reviewer actions to unauthorised accounts');
 assert.match(detail, /row.review_access.can_finalize/, 'Finalization must require separate approve permission');
