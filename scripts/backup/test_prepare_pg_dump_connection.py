@@ -2,6 +2,7 @@
 import contextlib
 import io
 import os
+import runpy
 from pathlib import Path
 import stat
 import tempfile
@@ -92,7 +93,7 @@ class SafePgDumpConnectionTests(unittest.TestCase):
                 with mock.patch("sys.argv", ["prepare_pg_dump_connection.py", str(Path(tmp) / "protected")]):
                     with contextlib.redirect_stderr(err):
                         with self.assertRaises(SystemExit):
-                            main()
+                            runpy.run_module("prepare_pg_dump_connection", run_name="__main__")
         self.assertNotIn("TEST_SECRET_TOKEN", err.getvalue())
         self.assertIn("credentials withheld", err.getvalue())
 
