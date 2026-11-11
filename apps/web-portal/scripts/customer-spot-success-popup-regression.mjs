@@ -8,6 +8,7 @@ const save = read("../app/customer/(protected)/spot-intimation/spot-intimation-s
 const bulk = read("../components/customer-portal/customer-claim-multiple-upload.tsx");
 const voice = read("../components/customer-portal/customer-claim-voice-recorder.tsx");
 const individual = read("../components/customer-portal/customer-claim-compact-document.tsx");
+const vault = read("../components/customer-portal/customer-document-vault.tsx");
 const upload = read("../app/customer/(protected)/claims/[id]/stage/[stage]/upload-action.ts");
 
 assert.match(dialog,/setTimeout\(\(\) => closeRef\.current\(\), 1000\)/,"Success must dismiss in one second.");
@@ -27,19 +28,22 @@ assert.match(save,/if \(pending \|\| successNotice\) return;/,"Avoid duplicate s
 
 assert.match(bulk,/if \(!allowUpload \|\| running\.current \|\| !files\.length\) return;/,"Prevent duplicate or read-only direct bulk submissions.");
 assert.match(bulk,/if\(result\.error \|\| !result\.uploaded\)/,"Only verified server uploads count as successful.");
-assert.match(bulk,/if\(complete\) \{[\s\S]*?setSuccessNotice\(complete\+" document"/,"Success popup must report the confirmed uploaded file count.");
-assert.match(bulk,/<CustomerSuccessDialog title="Upload Successful"/,"Use shared success popup.");
+assert.match(bulk,/if\(complete\) \{[\s\S]*?setRecentUploads/,"Bulk upload must still display confirmed files.");
+assert.doesNotMatch(bulk,/CustomerSuccessDialog|setSuccessNotice|Upload Successful/,"Bulk upload must not display success popups.");
 assert.doesNotMatch(bulk,/<p role="status".*document\(s\) uploaded successfully/,"Remove duplicate inline success.");
 assert.match(voice,/shownUploadId\.current===uploadState\.uploaded\.id/,"Do not re-show same voice upload.");
-assert.match(voice,/setSuccessNotice\("Voice note uploaded successfully\."\)/,"Show server-confirmed voice upload message.");
-assert.match(voice,/<CustomerSuccessDialog title="Upload Successful"/,"Use shared success popup for voice.");
+assert.match(voice,/router\.refresh\(\)/,"Confirmed voice uploads must refresh the document list automatically.");
+assert.doesNotMatch(voice,/CustomerSuccessDialog|setSuccessNotice|Upload Successful/,"Voice uploads must not display success popups.");
 assert.doesNotMatch(voice,/<p role="status".*Voice note uploaded successfully/,"Remove duplicate inline voice message.");
 assert.match(upload,/return \{error:null,uploaded:lastUploaded,uploadedCount\}/,"Keep actual server upload count.");
 assert.match(bulk,/<CustomerErrorDialog/,"Preserve bulk upload error dialog.");
 assert.match(voice,/<CustomerErrorDialog/,"Preserve recorder error dialog.");
 assert.match(individual,/shownUploadId\.current!==uploadState\.uploaded\.id/,"Do not repeat individual document success.");
-assert.match(individual,/setSuccessNotice\(\x60\$\{uploadState\.uploadedCount \?\? 1\} \$\{label\} document uploaded successfully\./,"Individual document result must report actual upload count and category.");
-assert.match(individual,/<CustomerSuccessDialog title="Upload Successful"/,"Use shared confirmation for individual document uploads.");
+assert.match(individual,/setRecentUploads/,"Confirmed individual uploads must remain visible.");
+assert.match(individual,/router\.refresh\(\)/,"Confirmed individual uploads must refresh the document count.");
+assert.doesNotMatch(individual,/CustomerSuccessDialog|setSuccessNotice|Upload Successful/,"Individual uploads must not display success popups.");
 assert.match(individual,/<CustomerErrorDialog title="Document upload failed"/,"Individual document upload errors appear in reference popup.");
 assert.doesNotMatch(individual,/<p role="alert"/,"Do not duplicate upload errors inline.");
-console.log("Customer Spot Intimation success popup regression passed.");
+assert.doesNotMatch(vault,/setMessage\("Document uploaded\."\)/,"Customer document vault must not show upload success messages.");
+assert.match(vault,/setMessage\(body\.error \|\| "Document upload failed\."\)/,"Customer vault upload errors must remain visible.");
+console.log("Customer Spot Intimation save/error dialog and silent upload regression passed.");

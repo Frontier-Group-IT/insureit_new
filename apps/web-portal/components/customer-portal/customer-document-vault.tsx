@@ -26,7 +26,6 @@ export function CustomerDocumentVault({ customerId, documents }: { customerId: s
       const response = await fetch("/api/customer/documents", { method: "POST", body: form });
       const body = await response.json() as { error?: string };
       if (!response.ok) return setMessage(body.error || "Document upload failed.");
-      setMessage("Document uploaded.");
       if (inputRef.current) inputRef.current.value = "";
       router.refresh();
     } catch { setMessage("Document upload failed."); }
