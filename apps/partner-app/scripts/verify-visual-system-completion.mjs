@@ -175,7 +175,7 @@ requireText(policyIntakeNew, 'loadPartnerPolicyIntakeDraft()', 'New Policy Intak
 for (const intakeDetailAsset of ['emptyStates.policyUpload', 'status.documentUpload', 'status.policyAttention']) requireText(policyIntakeDetail, `PartnerAssets.${intakeDetailAsset}`, `Policy Intake detail is missing ${intakeDetailAsset} artwork.`);
 requireText(policyIntakeDetail, 'topBarIcon="documents-outline"', 'Policy Intake detail must use the unboxed professional documents icon in the header.');
 requireText(policyIntakeDetail, 'fullWidth', 'Policy Intake detail sections should fill the mobile width.');
-requireText(policyIntakeDetail, 'style={styles.intakeSummary}', 'The intake identity details must remain readable below the PIR number.');
+requireText(policyIntakeDetail, 'style={styles.intakeSummaryCompact}', 'The intake identity details must sit immediately below the PIR number for every intake status.');
 requireText(policyIntakeDetail, '<Ionicons name="reader-outline" size={27}', 'Policy Intake PIR summary must use the updated professional reader icon.');
 requireText(policyIntakeDetail, '"car-sport-outline"', 'Policy Intake vehicle section must use a professional vector vehicle icon.');
 requireText(policyIntakeDetail, '"shield-checkmark-outline"', 'Policy Intake premium section must use a professional vector insurance icon.');
