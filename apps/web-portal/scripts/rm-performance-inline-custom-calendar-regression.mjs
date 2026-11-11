@@ -34,4 +34,12 @@ assert(rmMatches({policyRmId:"jatin-id",employeeId:"jatin-id",policyRmName:"Jati
 assert(rmMatches({policyRmId:null,employeeId:"pramod-id",policyRmName:"Pramod  Kumar Nayak",employeeName:"PRAMOD KUMAR NAYAK"}));
 assert(!rmMatches({policyRmId:"other-rm-id",employeeId:"jatin-id",policyRmName:"Jatin Kumar Buwaniwala",employeeName:"JATIN KUMAR BHUWANIWALA"}));
 
-console.log("RM Performance inline custom calendar regression passed.");
+const reportActions = readFileSync(new URL("../app/rm-performance/rm-report-actions.tsx", import.meta.url), "utf8");
+assert.match(reportActions, /if\(!response\.ok\|\|!result\.ok\)throw new Error/, "Do not show success until the email API confirms acceptance.");
+assert.match(reportActions, /setTo\(""\);\s*setOpen\(false\);\s*setSuccess\(true\);/, "Success must clear recipient, close entry modal and show success popup.");
+assert.match(reportActions, /window\.setTimeout\(\(\)=>setSuccess\(false\),3000\)/, "Success popup must auto-dismiss after three seconds.");
+assert.match(reportActions, /window\.clearTimeout\(timeout\)/, "Success dismissal timer must be cleaned up.");
+assert.match(reportActions, /role="status" aria-live="polite"/, "Success popup must be announced accessibly.");
+assert.match(reportActions, /catch\(error\)\{setMessage\(/, "Failed email submissions retain inline error feedback and recipient for retry.");
+assert.doesNotMatch(reportActions, /setMessage\("Report emailed successfully\."\)/, "Successful sending must not leave a message inside the email form.");
+console.log("RM Performance inline calendar and report email confirmation regression passed.");
