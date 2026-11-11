@@ -7,6 +7,7 @@ on:
       - '.github/workflows/insureit-supabase-storage-r2-backup.yml'
       - '.github/workflows/insureit-r2-restore-verify.yml'
       - '.github/workflows/insureit-r2-storage-complete-verify.yml'
+      - '.github/workflows/insureit-r2-storage-source-parity-audit.yml'
       - '.github/workflows/verify-r2-backup-static.yml'
       - '.github/workflows/insureit-r2-backup-monitor.yml'
       - '.github/workflows/insureit-postgres-r2-manual.yml'
@@ -28,7 +29,7 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m pip install boto3==1.35.99 cryptography==44.0.2 pyyaml==6.0.2
-      - run: python -m py_compile scripts/backup/supabase_storage_to_r2.py scripts/backup/verify_r2_restore.py scripts/backup/monitor_github_backup.py scripts/backup/monitor_postgres_backup.py scripts/backup/postgres_to_r2.py scripts/backup/verify_postgres_r2_restore.py scripts/backup/classify_pg_restore_error.py scripts/backup/audit_postgres_archive_coverage.py scripts/backup/verify_postgres_offline_row_counts.py scripts/backup/summarize_pg_restore_errors.py scripts/backup/diagnose_pg_restore_data.py scripts/backup/audit_postgres_copy_targets.py scripts/backup/postgres_v2_to_r2.py scripts/backup/verify_postgres_v2_r2.py scripts/backup/verify_postgres_v2_rows.py scripts/backup/audit_postgres_v2_toc.py scripts/backup/prepare_pg_dump_connection.py scripts/backup/allow_no_acl_restore_fallback.py
+      - run: python -m py_compile scripts/backup/supabase_storage_to_r2.py scripts/backup/verify_r2_restore.py scripts/backup/monitor_github_backup.py scripts/backup/monitor_postgres_backup.py scripts/backup/postgres_to_r2.py scripts/backup/verify_postgres_r2_restore.py scripts/backup/classify_pg_restore_error.py scripts/backup/audit_postgres_archive_coverage.py scripts/backup/verify_postgres_offline_row_counts.py scripts/backup/summarize_pg_restore_errors.py scripts/backup/diagnose_pg_restore_data.py scripts/backup/audit_postgres_copy_targets.py scripts/backup/postgres_v2_to_r2.py scripts/backup/verify_postgres_v2_r2.py scripts/backup/verify_postgres_v2_rows.py scripts/backup/audit_postgres_v2_toc.py scripts/backup/prepare_pg_dump_connection.py scripts/backup/allow_no_acl_restore_fallback.py scripts/backup/audit_storage_source_manifest.py
       - run: python -m unittest discover -s scripts/backup -p 'test_*.py' -v
       - name: Validate workflow safety guard
         run: |
@@ -66,6 +67,25 @@ jobs:
           assert 'SUPABASE_URL' not in steps
           assert 'aws s3 rm' not in steps and 'delete_object' not in steps
           assert 'STORAGE FULL R2 OBJECT VERIFICATION PASSED' in pathlib.Path('scripts/backup/verify_r2_restore.py').read_text()
+          source_parity = yaml.safe_load(pathlib.Path('.github/workflows/insureit-r2-storage-source-parity-audit.yml').read_text())
+          parity_triggers = source_parity.get('on', source_parity.get(True, {}))
+          assert 'workflow_dispatch' in parity_triggers and 'schedule' not in str(parity_triggers)
+          assert source_parity['permissions']['contents'] == 'read'
+          parity_job = source_parity['jobs']['audit']
+          assert parity_job['environment'] == 'insureit-production-backup'
+          assert "refs/heads/main" in parity_job['if']
+          assert parity_job['timeout-minutes'] == 45
+          parity_steps = str(parity_job['steps'])
+          assert 'audit_storage_source_manifest.py' in parity_steps
+          assert 'SUPABASE_URL' in parity_steps and 'SUPABASE_SERVICE_ROLE_KEY' in parity_steps
+          assert 'BACKUP_ENCRYPTION_KEY' in parity_steps
+          assert 'delete_object' not in parity_steps and 'put_object' not in parity_steps
+          verifier = pathlib.Path('scripts/backup/audit_storage_source_manifest.py').read_text()
+          assert 'STORAGE SOURCE MANIFEST COVERAGE AUDIT' in verifier
+          assert 'source_inventory(base, source_key)' in verifier
+          assert 'validate_manifest(s3' in verifier
+          assert 'list_files(bucket, key, base)' in verifier
+          assert 'source_bucket' not in parity_steps  # only aggregate metrics on public workflow
           monitor = yaml.safe_load(pathlib.Path('.github/workflows/insureit-r2-backup-monitor.yml').read_text())
           triggers = monitor.get('on', monitor.get(True, {}))
           assert {'17 17 * * *', '17 */2 * * *'} == {item['cron'] for item in triggers['schedule']}
