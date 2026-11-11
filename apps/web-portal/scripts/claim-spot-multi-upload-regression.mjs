@@ -40,6 +40,15 @@ assert.match(workspace, /rounded-lg bg-white shadow-\[0_2px_6px_rgba\(0,12,42,\.
 assert.doesNotMatch(workspace, /documents\.length\} uploaded file/, "Remove redundant uploaded-file total from the Document Verification header.");
 assert.match(workspace, />Unclassified Documents<\/h2>/, "Customer and Operations bulk uploads share one visible classification section.");
 assert.match(workspace, /<UnclassifiedAttachments claimId=\{claim\.id\} documents=\{unclassifiedAttachments\}/, "Combined classification must include every unclassified upload.");
+
+assert.match(workspace, /<details data-operations-multiple-documents="true" className="group/, "Operations bulk unclassified files must be collapsed by default.");
+assert.match(workspace, /<summary className="flex cursor-pointer/, "Operations users must be able to expand the bulk classification list.");
+assert.match(workspace, /\{documents\.length\} file/, "File count must remain visible in the collapsed Operations header.");
+assert.match(workspace, /<form key=\{document\.id\} action=\{classifySpotSurveyAttachmentForm\}/, "Expanding must preserve exact-file classification.");
+assert.match(workspace, /<DeleteUnclassifiedDocumentButton claimId=\{claimId\} documentId=\{document\.id\}/, "Expanding must preserve document delete actions.");
+assert.match(workspace, /<section data-claim-document-verification="true"/, "Main Operations Document Verification must remain permanently expanded.");
+assert.doesNotMatch(workspace, /<details data-claim-document-verification="true"/, "Never collapse the main verification grid.");
+
 assert.match(workspace, /document_type\?\.trim\(\)\.toLowerCase\(\) === "other document"/, "Use the exact customer bulk-upload category.");
 assert.match(bulkVerificationGroup, /useState\(false\)/, "Multi-upload categories start collapsed regardless of verification outcome.");
 assert.match(bulkVerificationGroup, /const showDocumentRows = hasSingleFile \|\| \(hasMultipleFiles && isExpanded\)/, "Single uploaded file stays visible whether verified or unverified.");

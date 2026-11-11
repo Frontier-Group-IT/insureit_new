@@ -79,8 +79,8 @@ export function CustomerClaimMultipleUpload({claimId,accountId,stage,documents,a
       // Successfully registered files are never automatically retried.
       if(complete) {
         setRecentUploads(previous=>[...confirmed.filter(file=>!previous.some(existing=>existing.id===file.id)),...previous]);
-        // Spot Intimation stays collapsed after uploads; other claim stages keep their existing expanded view.
-        setExpanded(!returnToSpotIntimation);
+        // Keep bulk documents collapsed after every successful upload, across Start Claim and all claim journeys.
+        setExpanded(false);
         router.refresh();
       }
       if(failures.length) setErrorNotice(failures.length+" file"+(failures.length===1?"":"s")+" failed: "+failures.join(", ")+". Select the failed files again using the upload icon.");

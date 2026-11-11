@@ -24,7 +24,7 @@ assert(strip.includes('centerSummaryIcons && label === "Vehicle No." ? <Customer
 assert(strip.includes('centerSummaryIcons && label === "Policy Source" ? <CustomerClaimLogo value={claimSummary.insurer} kind="insurer" size={32} />'), 'Spot Intimation Policy Source must show insurer branding.');
 const uploads = fs.readFileSync(new URL('../components/customer-portal/customer-claim-multiple-upload.tsx', import.meta.url), 'utf8');
 assert(uploads.includes('const [expanded,setExpanded]=useState(false)'), 'Bulk files should start collapsed.');
-assert(uploads.includes('setExpanded(!returnToSpotIntimation);\n        router.refresh()'), 'Bulk uploads must collapse on Spot Intimation and retain existing expansion on other claim stages.');
+assert(uploads.includes('setExpanded(false);\n        router.refresh()'), 'Bulk uploads must collapse on every claim workflow after upload.');
 assert(uploads.includes('sm:grid-cols-2 xl:grid-cols-4'), 'Expanded bulk documents should show four columns on large screens.');
 
 console.log('Customer portal Spot Intimation reference layout regression checks passed.');
