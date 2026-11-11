@@ -1,6 +1,6 @@
 Partner production OTA trigger
-release=partner-activity-transparent-insurer-manufacturer-logos-pr-4249
-source=verified-merged-main-9ca9f041188c359984cbf243dfc2e0ac9ac62e0d
+release=partner-policy-intake-detail-fullwidth-pr-4255
+source=verified-merged-main-984c173748ab1b5a2f5b89739d1df09b320ec362
 reason=user-approved-merge-and-publish-after-partner-and-web-ci
 channel=production
 runtime=0.2.0
