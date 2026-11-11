@@ -176,11 +176,23 @@ for (const intakeDetailAsset of ['emptyStates.policyUpload', 'status.documentUpl
 requireText(policyIntakeDetail, 'topBarIcon="documents-outline"', 'Policy Intake detail must use the unboxed professional documents icon in the header.');
 requireText(policyIntakeDetail, 'fullWidth', 'Policy Intake detail sections should fill the mobile width.');
 requireText(policyIntakeDetail, 'style={styles.intakeSummary}', 'The intake identity details must remain readable below the PIR number.');
-requireText(policyIntakeDetail, '<Ionicons name="document-text-outline" size={27}', 'Policy Intake PIR summary must use the professional plain icon instead of a boxed insurer logo.');
-requireText(policyIntakeDetail, '<PartnerManufacturerLogo', 'Policy Intake vehicle disclosure must use manufacturer identity artwork.');
+requireText(policyIntakeDetail, '<Ionicons name="reader-outline" size={27}', 'Policy Intake PIR summary must use the updated professional reader icon.');
+requireText(policyIntakeDetail, '"car-sport-outline"', 'Policy Intake vehicle section must use a professional vector vehicle icon.');
+requireText(policyIntakeDetail, '"shield-checkmark-outline"', 'Policy Intake premium section must use a professional vector insurance icon.');
 requireText(policyIntakeDetail, 'function statusBadgeStyle(row: PartnerPolicyIntake)', 'Policy Intake detail must keep centralized semantic status-badge mapping.');
+requireText(policyIntakeDetail, 'navyStatusBar', 'Policy Intake detail must opt into navy status area and white system icons.');
+requireText(screen, "backgroundColor={navyStatusBar ? '#071E49' : undefined}", 'Native Android status bar background must be navy on opt-in pages.');
+requireText(screen, "navyStatusBar || (showFixedHeader && stickyHeaderNavy) ? 'light' : 'dark'", 'Status bar foreground must switch to white only when requested.');
+requireText(screen, 'bottomNavigation ? (', 'Partner screen must host a fixed footer outside scrollable detail content.');
+requireText(policyIntakeDetail, 'bottomNavigation={<PolicyIntakeDetailNavigation', 'Both Policy Intake detail states must render the five-tab footer.');
+for (const tab of ["Home", "Business", "Policies", "Claims", "More"]) requireText(policyIntakeDetail, "label: '" + tab + "'", 'Policy Intake footer must include ' + tab + '.');
+requireText(policyIntakeDetail, "navDisabled: { opacity: 0.35 }", 'Restricted tabs must not expose unauthorized navigation.');
+requireText(policyIntakeDetail, "submittedByName: { fontSize: 10, fontWeight: '500'", 'Submitter name must no longer be bold.');
+requireText(policyIntakeDetail, 'statusMetaDuplicate: { paddingTop: 9 }', 'Duplicate submitter name must be slightly lower.');
+
 requireText(policyIntakeDetail, 'submitPartnerPolicyIntakeReplacement({', 'Policy Intake detail must preserve the replacement upload service path.');
-if (policyIntakeDetail.includes('git-network-outline') || policyIntakeDetail.includes('alert-circle-outline')) throw new Error('Policy Intake status and attention surfaces must not regress to generic feature glyphs.');
+if (policyIntakeDetail.includes('git-network-outline')) throw new Error('Policy Intake must not reintroduce obsolete generic network icons.');
+requireText(policyIntakeDetail, '<Ionicons name="alert-circle-outline"', 'Duplicate policy warning must use a clear attention icon.');
 
 for (const detailAsset of ['products.motorInsurance', 'products.healthInsurance', 'products.familyInsurance', 'products.commercialInsurance']) requireText(policyDetail, `PartnerAssets.${detailAsset}`, `Policy detail is missing ${detailAsset} artwork.`);
 requireText(policyDetail, 'icon="person-outline"', 'Policy detail customer row must use a clear person profile icon.');

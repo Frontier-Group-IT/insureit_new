@@ -47,6 +47,8 @@ export function PartnerScreen({
   stickyControls,
   stickyHeaderNavy = false,
   navyTopBar = false,
+  navyStatusBar = false,
+  bottomNavigation,
   topBarIcon,
   stickyStartY = 100,
 }: PropsWithChildren<{
@@ -70,6 +72,10 @@ export function PartnerScreen({
   stickyHeaderNavy?: boolean;
   /** Use the existing bottom-navigation navy for this screen's top heading only. */
   navyTopBar?: boolean;
+  /** Opt in to a navy status area with white system icons. */
+  navyStatusBar?: boolean;
+  /** Fixed navigation beneath the scroll content. */
+  bottomNavigation?: ReactNode;
   /** Optional plain icon in place of header artwork, with no icon tile background. */
   topBarIcon?: ComponentProps<typeof Ionicons>['name'];
   stickyStartY?: number;
@@ -204,10 +210,11 @@ export function PartnerScreen({
 
   return (
     <PartnerStickyContext.Provider value={showFixedHeader}>
-    {isFocused ? <StatusBar style={showFixedHeader && stickyHeaderNavy ? 'light' : 'dark'} /> : null}
-    <View style={styles.safeArea}>
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
+    {isFocused ? <StatusBar style={navyStatusBar || (showFixedHeader && stickyHeaderNavy) ? 'light' : 'dark'} backgroundColor={navyStatusBar ? '#071E49' : undefined} /> : null}
+    <View style={[styles.safeArea, navyStatusBar && styles.navyStatusArea]}>
+      <SafeAreaView style={[styles.safeArea, navyStatusBar && styles.navyStatusArea]} edges={['top']}>
       <Animated.ScrollView
+        style={navyStatusBar ? styles.contentCanvas : undefined}
         ref={scrollRef}
         {...scrollProps}
         scrollEventThrottle={scrollProps?.scrollEventThrottle ?? 16}
@@ -326,6 +333,11 @@ export function PartnerScreen({
         {children}
       </Animated.ScrollView>
       </SafeAreaView>
+      {bottomNavigation ? (
+        <View style={[styles.bottomNavigation, { paddingBottom: safeAreaInsets.bottom }]}>
+          {bottomNavigation}
+        </View>
+      ) : null}
       {showFixedHeader && safeAreaInsets.top > 0 ? <View pointerEvents="none" style={[styles.stickyStatusBarShield, stickyHeaderNavy && styles.navyStickyBackground, { height: safeAreaInsets.top }]} /> : null}
       {showFixedHeader && (isHomeHero || (stickyHeading && stickyControls)) ? (
         <View style={[styles.fixedWhiteHeader, stickyHeaderNavy && styles.navyStickyBackground, { top: safeAreaInsets.top }]} pointerEvents="box-none">
@@ -350,6 +362,9 @@ function homeInitials(title: string) {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#F5F7FB' },
+  navyStatusArea: { backgroundColor: '#071E49' },
+  contentCanvas: { backgroundColor: '#F5F7FB' },
+  bottomNavigation: { backgroundColor: '#FFFFFF' },
   fullWidthContent: { paddingHorizontal: 0 },
   content: {
     flexGrow: 1,
