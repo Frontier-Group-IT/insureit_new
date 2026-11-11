@@ -66,7 +66,7 @@ assert.match(api, /Network connection failed/, 'Show actionable network failure'
 assert.match(api, /console\.warn\('\[partner-policy-intakes\] read failed'/, 'Record safe error categories');
 const detail = readFileSync('app/policy-intakes/[id].tsx', 'utf8');
 assert.match(readFileSync('../web-portal/lib/policy-intake-status-buckets.ts', 'utf8'), /row.status === "ready_for_review"/, 'Ready-for-review intakes belong to canonical Action Required unless duplicate');
-assert.match(app, /row\.ocr_status === 'completed' \? <PartnerStatusBadge label="Fetched"/, "Expose the same Fetched document-status badge as Operations");
+assert.ok(app.includes('accessibilityLabel="Document data fetched"') && app.includes('<Ionicons name="checkmark" size={15} color="#16A34A"'), 'Expose fetched OCR success as a plain green check beside the PIR number');
 assert.match(api, /export async function updatePartnerPolicyIntakeReview/, 'Mobile reviewer actions must use authenticated API');
 assert.match(detail, /row.review_access.can_review/, 'Do not show reviewer actions to unauthorised accounts');
 assert.match(detail, /row.review_access.can_finalize/, 'Finalization must require separate approve permission');
