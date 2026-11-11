@@ -64,7 +64,7 @@ export function BulkDocumentVerificationGroup({ item, claim, verifications }: { 
   );
   const selectableKey = selectableIds.join("|");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(() => item.documents.length > 0 && item.documents.every((document) => isDocumentVerified(document, verifications)));
 
   useEffect(() => {
     const allowed = new Set(selectableIds);
@@ -82,6 +82,10 @@ export function BulkDocumentVerificationGroup({ item, claim, verifications }: { 
   const hasSingleFile = item.documents.length === 1;
   const hasMultipleFiles = item.documents.length > 1;
   const showDocumentRows = !hasNoFiles && isExpanded;
+
+  useEffect(() => {
+    setIsExpanded(!hasNoFiles && pendingFileCount === 0);
+  }, [hasNoFiles, pendingFileCount]);
   const contentId = `claim-document-group-${claim.id}-${item.key}`;
   const toggleExpanded = () => {
     if (!hasNoFiles) setIsExpanded((expanded) => !expanded);
@@ -180,7 +184,7 @@ export function BulkDocumentVerificationGroup({ item, claim, verifications }: { 
               );
             })}
           </div>
-        ) : (
+        ) : pendingFileCount > 0 ? (
           <div id={contentId}>
             <ClaimDocumentCollapsedStatus
               verifiedCount={verifiedFileCount}
@@ -188,7 +192,7 @@ export function BulkDocumentVerificationGroup({ item, claim, verifications }: { 
               showLabels={item.key === "spot" || item.key === "insurance"}
             />
           </div>
-        )
+        ) : null
       ) : null}
     </article>
   );
