@@ -48,6 +48,7 @@ export function PartnerScreen({
   stickyHeaderNavy = false,
   navyTopBar = false,
   navyStatusBar = false,
+  statusBarColor,
   bottomNavigation,
   topBarIcon,
   stickyStartY = 100,
@@ -74,6 +75,8 @@ export function PartnerScreen({
   navyTopBar?: boolean;
   /** Opt in to a navy status area with white system icons. */
   navyStatusBar?: boolean;
+  /** Screen-specific top safe-area/status color; keeps other Partner screens unchanged. */
+  statusBarColor?: string;
   /** Fixed navigation beneath the scroll content. */
   bottomNavigation?: ReactNode;
   /** Optional plain icon in place of header artwork, with no icon tile background. */
@@ -210,11 +213,11 @@ export function PartnerScreen({
 
   return (
     <PartnerStickyContext.Provider value={showFixedHeader}>
-    {isFocused ? <StatusBar style={navyStatusBar || (showFixedHeader && stickyHeaderNavy) ? 'light' : 'dark'} backgroundColor={navyStatusBar ? '#071E49' : undefined} /> : null}
-    <View style={[styles.safeArea, navyStatusBar && styles.navyStatusArea]}>
-      <SafeAreaView style={[styles.safeArea, navyStatusBar && styles.navyStatusArea]} edges={['top']}>
+    {isFocused ? <StatusBar style={statusBarColor || navyStatusBar || (showFixedHeader && stickyHeaderNavy) ? 'light' : 'dark'} backgroundColor={statusBarColor ?? (navyStatusBar ? '#071E49' : undefined)} /> : null}
+    <View style={[styles.safeArea, navyStatusBar && styles.navyStatusArea, statusBarColor ? { backgroundColor: statusBarColor } : null]}>
+      <SafeAreaView style={[styles.safeArea, navyStatusBar && styles.navyStatusArea, statusBarColor ? { backgroundColor: statusBarColor } : null]} edges={['top']}>
       <Animated.ScrollView
-        style={navyStatusBar ? styles.contentCanvas : undefined}
+        style={navyStatusBar || statusBarColor ? styles.contentCanvas : undefined}
         ref={scrollRef}
         {...scrollProps}
         scrollEventThrottle={scrollProps?.scrollEventThrottle ?? 16}
