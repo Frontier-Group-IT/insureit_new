@@ -66,6 +66,36 @@ for (const original of protectedData) {
 }
 assert.equal(value(result,"vehicle_capacity"),"2","seating evidence must not be rewritten in OCR");
 
+// The generic parser returns Bundled at .82, below the review panel's
+// .90 automatic-selection threshold. Explicit product-3005 heading must
+// promote it without changing unrelated OCR fields or registration status.
+const lowConfidence = {
+  ...parsed,
+  fields: parsed.fields.map((item) => item.key === "policy_product"
+    ? { ...item, confidence: .82, evidence: "generic inferred product" }
+    : item),
+};
+const promoted = refineIcici3005Section02Evidence(pages, lowConfidence);
+assert.equal(value(promoted, "policy_product"), "Bundled");
+assert.equal(field(promoted, "policy_product").confidence, .99);
+assert.equal(field(promoted, "policy_product").page, 2);
+assert.match(field(promoted, "policy_product").evidence, /Bundled\\s*[-–—]?\\s*Two\\s+Wheeler\\s+Policy/i);
+assert.ok(field(promoted, "policy_product").confidence >= .9, "Must pass review panel auto-selection threshold");
+assert.equal(value(promoted, "vehicle_registration_status"), "registration_pending");
+assert.equal(value(promoted, "vehicle_registration_number"), undefined);
+
+const missingProduct = { ...parsed, fields: parsed.fields.filter((item) => item.key !== "policy_product") };
+assert.equal(value(refineIcici3005Section02Evidence(pages, missingProduct), "policy_product"), "Bundled");
+const genericMisclassification = {
+  ...parsed, fields: parsed.fields.map((item) => item.key === "policy_product"
+    ? { ...item, value: "Third Party", confidence: .82 } : item),
+};
+assert.equal(value(refineIcici3005Section02Evidence(pages, genericMisclassification), "policy_product"), "Bundled");
+
+// A document without the exact heading must not have its product rewritten.
+const noBundledHeading = [pages[0], pages[1].replace("Bundled – Two Wheeler Policy", "Two Wheeler Policy")];
+assert.equal(refineIcici3005Section02Evidence(noBundledHeading, lowConfidence), lowConfidence);
+
 const current = {
   registrationNo: "MP20AB1234", insuredName: "", phoneNo: "",
   vehicleClass: "", make: "", model: "", fuelType: "", manufacturingYear: "",
