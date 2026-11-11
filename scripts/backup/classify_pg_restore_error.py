@@ -107,7 +107,7 @@ SOURCE_ROLE_NAMES = frozenset({
     "supabase_read_only_user", "supabase_realtime_admin",
     "supabase_replication_admin", "supabase_storage_admin",
 })
-ROLE_NAME_ERROR = re.compile(r"role\\s+[\"']?(?P<name>[A-Za-z_][A-Za-z0-9_]*)[\"']?\\s+does not exist", re.I)
+ROLE_NAME_ERROR = re.compile(r"role\s+[\"']?(?P<name>[A-Za-z_][A-Za-z0-9_]*)[\"']?\s+does not exist", re.I)
 
 
 def missing_role_context(contents):
