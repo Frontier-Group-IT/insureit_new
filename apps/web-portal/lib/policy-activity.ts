@@ -170,12 +170,12 @@ export async function capturePolicyEditSnapshot(admin: AdminClient, policyId: st
     || lifeCase.error || nonMotor.error || issuedDetails.error) return null;
   const snapshot: PolicyEditSnapshot = {};
   const sources: Array<[string, Record<string, string>, Record<string, unknown> | null]> = [
-    ["policy", POLICY_EDIT_FIELDS.policy, policy.data as Record<string, unknown>],
-    ["premium", POLICY_EDIT_FIELDS.premium, premium.data as Record<string, unknown> | null],
-    ["payin", POLICY_EDIT_FIELDS.payin, payin.data as Record<string, unknown> | null],
-    ["payout", POLICY_EDIT_FIELDS.payout, payout.data as Record<string, unknown> | null],
-    ["case", POLICY_EDIT_FIELDS.case, lifeCase.data as Record<string, unknown> | null],
-    ["nonMotor", POLICY_EDIT_FIELDS.nonMotor, nonMotor.data as Record<string, unknown> | null],
+    ["policy", POLICY_EDIT_FIELDS.policy, policy.data as unknown as Record<string, unknown>],
+    ["premium", POLICY_EDIT_FIELDS.premium, premium.data as unknown as unknown as Record<string, unknown> | null],
+    ["payin", POLICY_EDIT_FIELDS.payin, payin.data as unknown as unknown as Record<string, unknown> | null],
+    ["payout", POLICY_EDIT_FIELDS.payout, payout.data as unknown as unknown as Record<string, unknown> | null],
+    ["case", POLICY_EDIT_FIELDS.case, lifeCase.data as unknown as unknown as Record<string, unknown> | null],
+    ["nonMotor", POLICY_EDIT_FIELDS.nonMotor, nonMotor.data as unknown as unknown as Record<string, unknown> | null],
   ];
   for (const [prefix, fields, data] of sources) {
     for (const key of Object.keys(fields)) {
@@ -186,9 +186,9 @@ export async function capturePolicyEditSnapshot(admin: AdminClient, policyId: st
   // Store only field labels: never persist raw issued-schedule JSON in an audit record.
   const additional = (issuedDetails.data as { additional_details?: unknown } | null)?.additional_details;
   const schedule = additional && typeof additional === "object" && !Array.isArray(additional)
-    ? (additional as Record<string, unknown>).issued_schedule : null;
+    ? (additional as unknown as Record<string, unknown>).issued_schedule : null;
   const issuedSchedule = schedule && typeof schedule === "object" && !Array.isArray(schedule)
-    ? schedule as Record<string, unknown> : null;
+    ? schedule as unknown as Record<string, unknown> : null;
   for (const key of Object.keys(POLICY_EDIT_FIELDS.issuedSchedule)) {
     const value = issuedSchedule?.[key];
     snapshot[`issuedSchedule.${key}`] = value === undefined || value === null ? null : String(value).trim();
