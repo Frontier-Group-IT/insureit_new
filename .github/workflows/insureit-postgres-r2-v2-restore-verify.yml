@@ -100,6 +100,56 @@ jobs:
             exit 1
           fi
           echo "V2 OFFLINE ADMIN PRECHECK PASSED: isolated, authenticated local superuser"
+          # A filtered Supabase CLI roles.sql does not necessarily define
+          # all roles referenced by a raw pg_dump of platform-managed schemas.
+          # Seed ONLY role names confirmed in a read-only INSUREIT source role
+          # catalog. Newly created placeholders have NOLOGIN, no inheritance
+          # grants, no superuser powers, and no service credentials. They are
+          # used only in this throwaway --network none DB, never production.
+          known_roles_before="$(docker exec -u postgres insureit-v2-restore-check \
+            psql -XAt -v ON_ERROR_STOP=1 -d postgres -c \
+            "select count(*) from pg_roles
+              where rolname in ('anon','authenticated','authenticator',
+                'cli_login_postgres','dashboard_user','postgres','service_role',
+                'supabase_admin','supabase_auth_admin','supabase_etl_admin',
+                'supabase_privileged_role','supabase_read_only_user',
+                'supabase_realtime_admin','supabase_replication_admin',
+                'supabase_storage_admin');")"
+          if ! [[ "$known_roles_before" =~ ^[0-9]+$ ]] || [ "$known_roles_before" -gt 15 ]; then
+            echo "V2 OFFLINE ROLE INVENTORY FAILED"
+            exit 1
+          fi
+          docker cp scripts/backup/fixtures/isolated_source_role_names.sql \
+            insureit-v2-restore-check:/tmp/isolated-source-role-names.sql
+          if ! docker exec -u postgres \
+            --env PGPASSWORD=ephemeral-v2-recovery-only \
+            insureit-v2-restore-check \
+            psql -h 127.0.0.1 -U supabase_admin -X -q \
+              -v ON_ERROR_STOP=1 -d postgres \
+              -f /tmp/isolated-source-role-names.sql \
+            > "$RUNNER_TEMP/v2-offline-role-bootstrap.log" 2>&1; then
+            python scripts/backup/classify_pg_restore_error.py roles \
+              "$RUNNER_TEMP/v2-offline-role-bootstrap.log"
+            echo "V2 OFFLINE ROLE BOOTSTRAP FAILED"
+            exit 1
+          fi
+          known_roles_after="$(docker exec -u postgres insureit-v2-restore-check \
+            psql -XAt -v ON_ERROR_STOP=1 -d postgres -c \
+            "select count(*) from pg_roles
+              where rolname in ('anon','authenticated','authenticator',
+                'cli_login_postgres','dashboard_user','postgres','service_role',
+                'supabase_admin','supabase_auth_admin','supabase_etl_admin',
+                'supabase_privileged_role','supabase_read_only_user',
+                'supabase_realtime_admin','supabase_replication_admin',
+                'supabase_storage_admin');")"
+          if [ "$known_roles_after" != 15 ]; then
+            echo "V2 OFFLINE ROLE BOOTSTRAP INCOMPLETE"
+            exit 1
+          fi
+          source_role_placeholders=$((15 - known_roles_before))
+          echo "V2 OFFLINE SOURCE ROLE NAMES VERIFIED: expected=15 added_placeholders=$source_role_placeholders"
+          # Placeholder roles make object/ACL import mechanically testable,
+          # but they do not prove original role attributes, logins or grants.
           # template0 is clean. Do not perform this action on the live DB.
           docker exec -u postgres insureit-v2-restore-check \
             createdb -T template0 -O postgres insureit_verify \
@@ -156,6 +206,10 @@ jobs:
           if [ "$acl_mode" = "omitted" ]; then
             echo "V2 SCHEMA_DATA_ONLY_CHECK PASSED: all COPY tables reconciled; ACL restore FAILED and was omitted"
             echo "V2 FULL RECOVERY NOT CERTIFIED: role grants/default privileges must be restored and validated separately"
+          elif [ "$source_role_placeholders" -gt 0 ]; then
+            echo "V2 ISOLATED DATA_AND_ACL_REPLAY PASSED: all COPY tables reconciled with $source_role_placeholders offline role-name placeholders"
+            echo "V2 ROLE SEMANTICS NOT VERIFIED: original login attributes, membership and owner permissions were not reconstructed"
+            echo "V2 FULL RECOVERY NOT CERTIFIED: service and source role parity remain unverified"
           else
             echo "V2 ISOLATED RECOVERY CHECK PASSED: one snapshot restored and all COPY tables reconciled"
           fi

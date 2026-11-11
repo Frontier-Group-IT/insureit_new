@@ -98,6 +98,32 @@ def toc_error_context(contents):
     }
 
 
+# Exact role NAME family collected from the live source catalog only.
+# Never output database role identifiers, function names or SQL from errors.
+SOURCE_ROLE_NAMES = frozenset({
+    "anon", "authenticated", "authenticator", "cli_login_postgres",
+    "dashboard_user", "postgres", "service_role", "supabase_admin",
+    "supabase_auth_admin", "supabase_etl_admin", "supabase_privileged_role",
+    "supabase_read_only_user", "supabase_realtime_admin",
+    "supabase_replication_admin", "supabase_storage_admin",
+})
+ROLE_NAME_ERROR = re.compile(r"role\s+[\"']?(?P<name>[A-Za-z_][A-Za-z0-9_]*)[\"']?\s+does not exist", re.I)
+
+
+def missing_role_context(contents):
+    for line in contents.splitlines():
+        if not re.search(r"(?:ERROR:|FATAL:|psql:.*error:)", line, re.I):
+            continue
+        match = ROLE_NAME_ERROR.search(line)
+        if match:
+            role = match.group("name").lower()
+            return {
+                "source_catalog_match": int(role in SOURCE_ROLE_NAMES),
+                "managed_family": int(role.startswith("supabase_")),
+            }
+    return None
+
+
 def main():
     if len(sys.argv) != 3 or sys.argv[1] not in ("auth_bootstrap", "extensions", "fixture", "roles", "schema", "data"):
         raise SystemExit("usage: classify_pg_restore_error.py auth_bootstrap|extensions|fixture|roles|schema|data LOGFILE")
@@ -108,10 +134,15 @@ def main():
         return
     category = classify(raw.decode("utf-8", "replace"))
     print(f"RESTORE DIAGNOSTIC: component={sys.argv[1]} category={category}")
-    if category == "permission_denied":
+    if category in ("permission_denied", "role_missing"):
         context = toc_error_context(raw.decode("utf-8", "replace"))
         if context:
-            print(f"RESTORE PERMISSION CONTEXT: toc_entry={context['toc_entry']} kind={context['kind']} schema={context['schema']}")
+            label = "RESTORE PERMISSION CONTEXT" if category == "permission_denied" else "RESTORE ROLE TOC CONTEXT"
+            print(f"{label}: toc_entry={context['toc_entry']} kind={context['kind']} schema={context['schema']}")
+        if category == "role_missing":
+            match = missing_role_context(raw.decode("utf-8", "replace"))
+            if match:
+                print(f"RESTORE ROLE CLASS: source_catalog_match={match['source_catalog_match']} managed_family={match['managed_family']}")
     if category == "missing_function_or_type":
         details = dependency_details(raw.decode("utf-8", "replace"))
         if details:
