@@ -1,9 +1,9 @@
 Partner production OTA trigger
-release=partner-login-input-icons-pr-4165
-source=verified-main-merge-f9b79827de2976f99dd79c8de82e7f59f332061f
-reason=approved-login-ui-release-after-auto-gate-blocked-reviewed-regression-script
+release=partner-intake-inline-fetched-check-pr-4191
+source=verified-main-merge-4e11e046e7bf9826a0c9c1706d6de344ba467ee0
+reason=approved-production-release-after-auto-gate-blocked-reviewed-regression-script
 channel=production
 runtime=0.2.0
-requested=2026-11-07
+requested=2026-11-11
 no_native_build=true
 database_changes=false
