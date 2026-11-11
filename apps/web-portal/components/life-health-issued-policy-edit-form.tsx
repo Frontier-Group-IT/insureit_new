@@ -4,8 +4,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import { useEffect, useMemo, useState, useTransition, type ReactNode } from "react";
-import { Eye, HandCoins, Phone, Trash2, Upload } from "lucide-react";
-import { updateIssuedLifeHealthPolicy } from "@/app/policies/life-health-issued-policy-edit-actions";
+import { Eye, HandCoins, MessageSquareText, Phone, Trash2, Upload } from "lucide-react";
+import { appendIssuedLifeHealthRemark, updateIssuedLifeHealthPolicy } from "@/app/policies/life-health-issued-policy-edit-actions";
 import { isPensionLifePolicy } from "@/lib/life-health-pension-maturity";
 import { addYearsByMode, nextInstallmentFrom, canonicalPaymentFrequency, type DateCalculationMode } from "@/lib/life-health-issued-schedule";
 import { PolicyDateApprovalDialog } from "@/components/policy-date-approval-dialog";
@@ -30,6 +30,12 @@ const documentLabels: Array<[LifeHealthIssuedDocumentType,string]> = [["policy_c
 export function LifeHealthIssuedPolicyEditForm({ initial, insurers, sources, activityItems, documents, commercialAccess, commercialSummary }: Props) {
   const router = useRouter();
   const [form,setForm] = useState(initial);
+  const [infoTab,setInfoTab] = useState<"activity"|"remarks">("activity");
+  const [savedRemarks,setSavedRemarks] = useState(initial.remarks);
+  const [remarksModalOpen,setRemarksModalOpen] = useState(false);
+  const [remarkDraft,setRemarkDraft] = useState("");
+  const [remarkError,setRemarkError] = useState<string|null>(null);
+  const [remarkPending,startRemarkTransition] = useTransition();
   const endDateMode: DateCalculationMode = "minusOne";
   const pptEndDateMode: DateCalculationMode = "minusOne";
   const [policyNumberUnlocked,setPolicyNumberUnlocked] = useState(false);
@@ -90,6 +96,25 @@ export function LifeHealthIssuedPolicyEditForm({ initial, insurers, sources, act
     return()=>{document.body.style.overflow=previous;window.removeEventListener("keydown",close)};
   },[commercialModal]);
   const updateCommercial=(key:string,value:string)=>setCommercial((current)=>({...current,[key]:value}));
+  function saveRemark() {
+    if (!remarkDraft.trim() || remarkPending) return;
+    setRemarkError(null);
+    startRemarkTransition(async () => {
+      try {
+        const data = new FormData();
+        data.set("policyId",form.policyId);
+        data.set("caseId",form.caseId);
+        data.set("newRemark",remarkDraft.trim());
+        const result = await appendIssuedLifeHealthRemark(data);
+        if (!result.ok) { setRemarkError(result.error); return; }
+        setSavedRemarks(result.remarks);
+        setRemarkDraft("");
+        setRemarksModalOpen(false);
+        setInfoTab("remarks");
+        router.refresh();
+      } catch { setRemarkError("Could not add the remark. Reload to check whether it was saved before retrying."); }
+    });
+  }
   const changeCommercialBasis=(side:"payin"|"payout",basis:CommercialBasis)=>{
     if(side==="payin")setCommercial((current)=>({...current,payinBasis:basis,payinPercent:basis==="FIXED_AMOUNT"?"":current.payinPercent,payinFixedAmount:basis==="NET_PREMIUM_PERCENT"?"":current.payinFixedAmount}));
     else setCommercial((current)=>({...current,payoutBasis:basis,payoutPercent:basis==="FIXED_AMOUNT"?"":current.payoutPercent,payoutFixedAmount:basis==="NET_PREMIUM_PERCENT"?"":current.payoutFixedAmount}));
@@ -170,7 +195,7 @@ export function LifeHealthIssuedPolicyEditForm({ initial, insurers, sources, act
 
   return <div className="mx-auto max-w-[1480px] pb-8">
     <div className="overflow-hidden rounded-t-xl border border-b-0 border-[#D9E2F0] bg-white shadow-[0_8px_22px_rgba(15,23,42,.05)]"><div className="flex min-h-[58px] items-center bg-[linear-gradient(135deg,#071D49_0%,#123B75_60%,#315B9A_100%)] px-5 text-white"><h1 className="text-[15px] font-semibold">Edit Policy</h1></div></div>
-    <nav className="mb-4 flex min-h-[40px] items-center gap-5 rounded-b-xl border border-t-0 border-[#D9E2F0] bg-white px-5 text-[9px] font-semibold text-[#667085]"><span className="border-b-2 border-[#4F46E5] py-3 text-[#3346B8]">01&nbsp; Source</span><span>02&nbsp; Customer / Proposer</span><span>03&nbsp; Policy Product &amp; Case</span><span>04&nbsp; Premium &amp; Payment</span><span>05&nbsp; Issued Policy</span></nav>
+    <nav className="mb-4 flex min-h-[40px] items-center gap-5 rounded-b-xl border border-t-0 border-[#D9E2F0] bg-white px-5 text-[9px] font-semibold text-[#667085]"><span className="border-b-2 border-[#4F46E5] py-3 text-[#3346B8]">01&nbsp; Source</span><span>02&nbsp; Customer / Proposer</span><span>03&nbsp; Policy Product &amp; Case</span><span>04&nbsp; Issued Policy</span></nav>
     <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_336px]">
       <div className="space-y-4">
         <Section number="01" title="Policy source & ownership">
@@ -182,9 +207,8 @@ export function LifeHealthIssuedPolicyEditForm({ initial, insurers, sources, act
         </Section>
         <Section number="02" title="Customer / proposer"><div><label className={labelClass}>Customer record</label><div className="grid h-10 grid-cols-2 rounded-xl border border-[#D8DEE9] bg-[#F8FAFC] p-1 text-[10px] font-semibold"><span className="grid place-items-center rounded-lg bg-[#17365D] text-white">Existing</span><span className="grid place-items-center text-[#98A2B3]">Linked</span></div></div><Field label="Client / proposer name" value={form.customerName} onChange={(v)=>set("customerName",v)} required/><Field label="Client mobile number" value={form.customerPhone} onChange={(v)=>set("customerPhone",v.replace(/\D/g,"").slice(0,10))} required/><Field label="Email" value={form.customerEmail} onChange={(v)=>set("customerEmail",v)}/><Field label="Address" value={form.customerAddress} onChange={(v)=>set("customerAddress",v)}/></Section>
         <Section number="03" title="Policy product & case details"><div><label className={labelClass}>Insurance company <Req/></label><select className={inputClass} value={form.insurerId} onChange={(e)=>set("insurerId",e.target.value)}>{insurers.map((i)=><option key={i.value} value={i.value}>{i.label}</option>)}</select></div><Field label="Product name" value={form.productName} onChange={(v)=>set("productName",v)}/><Field label="Case / proposal number" value={form.proposalNumber} onChange={(v)=>set("proposalNumber",v.toUpperCase())}/><Select label="PPT · Premium Paying Term" value={form.ppt} onChange={(v)=>set("ppt",v)} options={["Single Pay",...years]} optional/><Select label="PD · Policy Duration / Term" value={form.pd} onChange={(v)=>set("pd",v)} options={years} optional/><Select label="Payment frequency" value={form.paymentFrequency} onChange={(v)=>set("paymentFrequency",v)} options={frequencies}/></Section>
-        <Section number="04" title="Premium & payment"><Field label="Case premium amount" value={form.premiumAmount} onChange={(v)=>set("premiumAmount",v.replace(/[^0-9.]/g,""))}/><Select label="Payment mode" value={form.paymentMode} onChange={(v)=>set("paymentMode",v)} options={modes}/><div><label className={labelClass}>Remarks</label><textarea className="h-10 w-full resize-none rounded-xl border border-[#D8DEE9] px-3 py-2.5 text-[11px] outline-none transition hover:border-[#B8C2D1] focus:border-[#315B9A] focus:ring-2 focus:ring-[#DCE8FA]" value={form.remarks} onChange={(e)=>set("remarks",e.target.value)} rows={1}/></div></Section>
-        <Section number="05" title="Issued policy details">
-          <div>
+        <Section number="04" title="Issued policy details">
+                  <div>
             <label className={labelClass}>Policy number <Req/></label>
             <div className="flex gap-2"><input aria-label="Policy number" className={inputClass} value={form.policyNumber} readOnly={!policyNumberUnlocked} onChange={event=>set("policyNumber",event.target.value.toUpperCase())}/><button type="button" className="shrink-0 rounded-lg border border-[#BFD3F5] px-3 text-[10px] font-bold text-[#1859B7]" onClick={()=>{setPolicyNumberUnlocked(value=>!value);if(policyNumberUnlocked)set("policyNumber",initial.policyNumber)}}>{policyNumberUnlocked?"Lock":"Change"}</button></div>
           </div>
@@ -193,7 +217,12 @@ export function LifeHealthIssuedPolicyEditForm({ initial, insurers, sources, act
           <div>{pptSinglePay?<div><label className={labelClass}>PPT end date</label><input className={inputClass} value="Not applicable · Single Pay" readOnly/></div>:<Field label="PPT end date" type="date" value={form.pptEndDate} onChange={v=>set("pptEndDate",v)}/>}</div>
           {oneTimePayment?<div><label className={labelClass}>Next installment date</label><input className={inputClass} value="Not applicable · One Time" readOnly/></div>:<Field label="Next installment date" type="date" value={form.nextInstallmentDate} onChange={v=>set("nextInstallmentDate",v)}/>}
           <Field label="Final premium" value={form.finalPremium} onChange={(v)=>set("finalPremium",v.replace(/[^0-9.]/g,""))} required/>
-          <Field label="Sum assured / insured" value={form.sumInsured} onChange={(v)=>set("sumInsured",v.replace(/[^0-9.]/g,""))}/>
+          <div className="grid gap-3 md:col-span-2 md:grid-cols-2 xl:col-span-4 xl:grid-cols-4">
+            <Field label="Sum assured / insured" value={form.sumInsured} onChange={(v)=>set("sumInsured",v.replace(/[^0-9.]/g,""))}/>
+            <Field label="Case premium amount" value={form.premiumAmount} onChange={(v)=>set("premiumAmount",v.replace(/[^0-9.]/g,""))}/>
+            <Select label="Payment mode" value={form.paymentMode} onChange={(v)=>set("paymentMode",v)} options={modes}/>
+            <div><label className={labelClass}>Remarks</label><button type="button" onClick={()=>{setRemarkError(null);setRemarksModalOpen(true);}} className="flex h-10 w-full items-center justify-between rounded-xl border border-[#BFD3F5] bg-[#F8FBFF] px-3 text-[11px] font-semibold text-[#17365D] hover:bg-[#EEF5FF]"><span className="inline-flex items-center gap-2"><MessageSquareText className="h-4 w-4"/>Add Remark</span><span className="text-[10px] text-[#315B9A]">Open</span></button></div>
+          </div>
         </Section>
       </div>
       <aside className="self-start rounded-2xl border border-[#D9E2F0] bg-white shadow-sm xl:sticky xl:top-4">
