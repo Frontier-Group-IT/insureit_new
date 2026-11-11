@@ -141,6 +141,8 @@ jobs:
         run: node scripts/associate-actions-menu-interaction-regression.mjs
       - name: User Management viewport modal regression
         run: node scripts/user-management-modal-viewport-regression.mjs
+      - name: Claims Document Verification collapsed-default regression
+        run: node scripts/claim-document-verification-collapsed-regression.mjs
       - name: Claim multi-file upload regression
         run: node scripts/claim-multi-document-upload-regression.mjs
       - name: Claim linked policy copy reuse regression
