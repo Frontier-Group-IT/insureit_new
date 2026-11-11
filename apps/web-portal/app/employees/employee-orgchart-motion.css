@@ -33,6 +33,13 @@
 .insureit-org-motion .org-mode-panel { animation: org-reveal 240ms var(--org-ease) both; }
 .insureit-org-motion .org-canvas-camera { transition: transform 250ms var(--org-ease); }
 .insureit-org-motion .org-canvas-camera[data-dragging="true"] { transition: none; }
+/* Avoid promoting hundreds of cards to permanent GPU layers; only the moving
+   camera needs compositing, and user-requested reduced motion wins. */
+.insureit-org-motion .org-canvas-camera { backface-visibility: hidden; }
+.insureit-org-motion .org-interactive-card:focus-within {
+  border-color: #568FCE;
+  box-shadow: 0 0 0 2px rgba(76, 131, 206, .2);
+}
 @keyframes org-reveal {
   from { opacity: 0; transform: translateY(7px); }
   to { opacity: 1; transform: translateY(0); }
