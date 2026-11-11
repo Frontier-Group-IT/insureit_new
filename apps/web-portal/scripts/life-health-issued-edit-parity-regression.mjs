@@ -59,4 +59,14 @@ assert.ok(action.includes('export async function appendIssuedLifeHealthRemark'),
 assert.ok(action.includes('await requirePolicyEditor(policyId)') && action.includes('validatePolicyCase(policyId,caseId)'), "Remark append checks policy permissions and case linkage");
 const policyUpdates = action.slice(action.indexOf('export async function updateIssuedLifeHealthPolicy('), action.indexOf('/**\n * Append a new Life/Health'));
 assert.ok(!policyUpdates.includes('    remarks: remarks || null,\n    updated_at: new Date().toISOString(),'), "Normal policy save cannot overwrite historical remarks");
+
+// Real field-level activity data for Life and Health, including schedule edits.
+assert.match(action, /const beforeChanges = await capturePolicyChangeSnapshot\(admin, policyId, true\)/);
+assert.match(action, /const afterChanges = await capturePolicyChangeSnapshot\(admin, policyId, true\)/);
+assert.match(action, /diffPolicyChangeSnapshots\(beforeChanges, afterChanges\)/);
+assert.match(form, /<StandardActivityStatusCard items=\{activityItems\} emptyText="Activity not recorded" open detailed\/>/);
+const changeReader = read("../lib/policy-activity-changes.ts");
+for (const field of ["life.payment_frequency", "life.payment_mode", "life.premium_amount", "schedule.ppt_end_date", "schedule.next_installment_date"]) {
+  assert.ok(changeReader.includes(field), "Track Life/Health field: " + field);
+}
 console.log("Life/Health issued edit parity regression passed.");
