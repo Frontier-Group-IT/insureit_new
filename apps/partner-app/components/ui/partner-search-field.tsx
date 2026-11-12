@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   Animated,
+  Keyboard,
   Pressable,
   Text,
   StyleSheet,
@@ -98,6 +99,7 @@ export function PartnerSearchField({
 }) {
   const [focused, setFocused] = useState(false);
   const [chosen, setChosen] = useState("");
+  useEffect(() => { if (!value.trim()) setChosen(""); }, [value]);
   const searchTerm = value.trim().toLowerCase();
   const seen = new Set<string>();
   const matches = (suggestions || []).filter(item => { const normalized = item?.trim().toLowerCase(); if (!normalized || seen.has(normalized) || !normalized.includes(searchTerm)) return false; seen.add(normalized); return true; }).slice(0, 5);
@@ -154,7 +156,13 @@ export function PartnerSearchField({
           accessibilityRole="button"
           accessibilityLabel="Clear search"
           hitSlop={6}
-          onPress={onClear}
+          onPress={() => {
+            setChosen("");
+            setFocused(false);
+            onChangeText("");
+            onClear?.();
+            Keyboard.dismiss();
+          }}
           style={({ pressed }) => [styles.clear, pressed && styles.clearPressed]}
         >
           <Ionicons name="close" size={16} color={partnerTheme.colors.inkMuted} />

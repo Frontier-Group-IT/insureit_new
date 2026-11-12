@@ -151,3 +151,11 @@ expect(searchField.includes("style={styles.suggestionList}"), "Partner autocompl
 expect(policies.includes("suggestions={debouncedSearch.length >= 2 ? collection.rows"), "Policy suggestions use existing authorized paginated server search.");
 expect(claimRegister.includes("suggestions={debouncedSearch.length >= 2 ? rows"), "Claim suggestions use existing authorized paginated server search.");
 expect(customerRegister.includes("suggestions={debouncedSearch.length >= 2 ? collection.rows"), "Customer suggestions use existing authorized paginated server search.");
+
+
+expect(searchField.includes('if (!value.trim()) setChosen("")'), "Clearing Partner search resets the selected suggestion.");
+expect(searchField.includes('onChangeText("");') && searchField.includes('onClear?.();'), "Shared Partner search X always resets controlled query even without an optional clear callback.");
+expect(searchField.includes('Keyboard.dismiss();'), "Shared Partner search dismisses the keyboard when clearing.");
+expect(policies.includes("onClear={() => setQuery('')}"), "Partner policies clear query to refresh server results.");
+expect(policies.includes("setVisibleLimit(PAGE_SIZE)"), "Partner policies reset pagination when search changes.");
+expect(claimRegister.includes("setVisibleLimit(PAGE_SIZE)"), "Partner claims reset pagination when search changes.");
