@@ -57,26 +57,29 @@ export function CustomerVehiclesRegister({ accountId, items, initialQuery = "" }
         </div>
       </header>
       <div className="w-full overflow-x-auto rounded-xl border border-[#E2EAF5]">
-        <table className="w-full min-w-[1040px] border-collapse text-center">
+        <table className="w-full min-w-[1330px] table-fixed border-collapse text-center">
+          <colgroup><col className="w-[12%]" /><col className="w-[7%]" /><col className="w-[19%]" /><col className="w-[7%]" /><col className="w-[16%]" /><col className="w-[14%]" /><col className="w-[20%]" /><col className="w-[5%]" /></colgroup>
           <thead className="bg-[#F4F7FB] text-[11px] font-semibold uppercase tracking-wide text-[#7188A8]">
             <tr>
-              {["Vehicle", "Make / Model", "Type", "Chassis No.", "Engine No.", "Policy"].map(heading =>
+              {["Vehicle", "Make", "Model", "Type", "Chassis No.", "Engine No.", "Policy No.", "Insurer"].map(heading =>
                 <th key={heading} scope="col" className="border-b border-[#E2EAF5] px-3 py-3">{heading}</th>
               )}
             </tr>
           </thead>
           <tbody className="divide-y divide-[#E2EAF5]">
-            {visibleRows.length===0 ? <tr><td colSpan={6} className="p-8 text-center text-sm text-[#637B9B]">No matching vehicles. Try another search or filter.</td></tr> : visibleRows.map(v => {
+            {visibleRows.length===0 ? <tr><td colSpan={8} className="p-8 text-center text-sm text-[#637B9B]">No matching vehicles. Try another search or filter.</td></tr> : visibleRows.map(v => {
               return <tr key={v.id} role="link" tabIndex={0} aria-label={`View details for vehicle ${v.number}`}
                 onClick={() => openVehicle(v.id)}
                 onKeyDown={event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); openVehicle(v.id); } }}
                 className="customer-register-row cursor-pointer bg-white transition-colors hover:bg-[#F2F7FF] focus-visible:bg-[#EAF3FF] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#1769DC]">
                 <td className="px-3 py-3"><strong className="whitespace-nowrap text-[13px] text-[#15376B]">{v.number}</strong></td>
-                <td className="px-3 py-3"><span className="flex items-center justify-center gap-2"><ManufacturerMark make={v.make}/><span className="min-w-0"><strong className="block max-w-[220px] truncate text-[12px] text-[#142C56]">{v.model||"—"}</strong></span></span></td>
+                <td className="px-3 py-3"><div className="flex justify-center"><ManufacturerMark make={v.make}/></div></td>
+                <td className="px-3 py-3 text-left"><strong className="block truncate whitespace-nowrap text-[12px] text-[#142C56]" title={v.model || undefined}>{v.model||"—"}</strong></td>
                 <td className="px-3 py-3 text-[12px] font-medium text-[#264572]">{v.type||"—"}</td>
                 <td className="px-3 py-3 text-[12px] text-[#264572]">{v.chassis||"—"}</td>
                 <td className="px-3 py-3 text-[12px] text-[#264572]">{v.engine||"—"}</td>
-                <td className="px-3 py-2 text-[12px] text-[#264572]"><div className="flex min-w-[185px] flex-col items-center divide-y divide-[#E7EDF6]">{v.policies.length ? v.policies.map(p => <div key={p.id} className="flex w-full min-w-0 items-center justify-center gap-2 py-1.5"><MasterLogo src={getInsurerLogo(p.insurerName)} alt={`${p.insurerName || "Unknown insurer"} logo`} initials={p.insurerName ? p.insurerName.slice(0,2).toUpperCase() : "—"}/><span className="min-w-0 break-all text-center">{p.number}</span></div>) : <span className="py-2 text-[#7186A0]">No policies linked</span>}</div></td>
+                <td className="px-3 py-2 text-left text-[12px] text-[#264572]"><div className="min-w-0">{v.policies.length ? v.policies.map((p,index) => <div key={p.id} className={`flex min-h-11 items-center py-1.5 ${index ? "border-t border-[#E7EDF6]" : ""}`}><span className="whitespace-nowrap" title={p.number}>{p.number}</span></div>) : <span className="flex min-h-11 items-center text-[#7186A0]">No policies linked</span>}</div></td>
+                <td className="px-2 py-2 text-[12px] text-[#264572]"><div>{v.policies.length ? v.policies.map((p,index) => <div key={p.id} className={`flex min-h-11 items-center justify-center py-1.5 ${index ? "border-t border-[#E7EDF6]" : ""}`}><MasterLogo src={getInsurerLogo(p.insurerName)} alt={`${p.insurerName || "Unknown insurer"} logo`} initials={p.insurerName ? p.insurerName.slice(0,2).toUpperCase() : "—"}/></div>) : <span className="flex min-h-11 items-center justify-center text-[#7186A0]">—</span>}</div></td>
               </tr>;
             })}
           </tbody>
