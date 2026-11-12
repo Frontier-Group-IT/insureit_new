@@ -6,7 +6,6 @@ import { createPortal } from "react-dom";
 import { useEffect, useMemo, useState, useTransition, type ReactNode } from "react";
 import { Eye, HandCoins, MessageSquareText, Phone, Trash2, Upload } from "lucide-react";
 import { appendIssuedLifeHealthRemark, updateIssuedLifeHealthPolicy } from "@/app/policies/life-health-issued-policy-edit-actions";
-import { isPensionLifePolicy } from "@/lib/life-health-pension-maturity";
 import { addYearsByMode, nextInstallmentFrom, canonicalPaymentFrequency, type DateCalculationMode } from "@/lib/life-health-issued-schedule";
 import { PolicyDateApprovalDialog } from "@/components/policy-date-approval-dialog";
 import { needsPolicyDateApproval, policyDateDecision } from "@/lib/policy-date-rule";
@@ -63,8 +62,7 @@ export function LifeHealthIssuedPolicyEditForm({ initial, insurers, sources, act
   const dateApprovalId = dateApproval?.key===approvalKey?dateApproval.id:null;
   const dateApprovalRequired=needsPolicyDateApproval(form.sourcingDate,initial.sourcingDate);
   const insurer = insurers.find((item)=>item.value === form.insurerId)?.label ?? "Not selected";
-  const pensionPlan = isPensionLifePolicy(form.businessLine,form.productName);
-  const required = [form.sourcingDate,form.proposalDate,form.policyNumber,form.sourceId,form.customerName,form.customerPhone,form.insurerId,form.productName,form.proposalNumber,form.paymentFrequency,form.premiumAmount,form.paymentMode,form.startDate,...(pensionPlan?[]:[form.endDate]),form.finalPremium];
+  const required = [form.sourcingDate,form.proposalDate,form.policyNumber,form.sourceId,form.customerName,form.customerPhone,form.insurerId,form.productName,form.proposalNumber,form.paymentFrequency,form.premiumAmount,form.paymentMode,form.startDate,form.finalPremium];
   const completion = Math.round(required.filter(Boolean).length/required.length*100);
   const commercialCalculations = useMemo(()=>{
     const premium = Number(form.finalPremium || 0);
@@ -213,7 +211,7 @@ export function LifeHealthIssuedPolicyEditForm({ initial, insurers, sources, act
             <div className="flex gap-2"><input aria-label="Policy number" className={inputClass} value={form.policyNumber} readOnly={!policyNumberUnlocked} onChange={event=>set("policyNumber",event.target.value.toUpperCase())}/><button type="button" className="shrink-0 rounded-lg border border-[#BFD3F5] px-3 text-[10px] font-bold text-[#1859B7]" onClick={()=>{setPolicyNumberUnlocked(value=>!value);if(policyNumberUnlocked)set("policyNumber",initial.policyNumber)}}>{policyNumberUnlocked?"Lock":"Change"}</button></div>
           </div>
           <Field label="Policy start date" type="date" value={form.startDate} onChange={(v)=>set("startDate",v)} required/>
-          <Field label="Policy end / maturity date" type="date" value={form.endDate} onChange={(v)=>set("endDate",v)} required={!pensionPlan}/>
+          <Field label="Policy end / maturity date" type="date" value={form.endDate} onChange={(v)=>set("endDate",v)}/>
           <div>{pptSinglePay?<div><label className={labelClass}>PPT end date</label><input className={inputClass} value="Not applicable · Single Pay" readOnly/></div>:<Field label="PPT end date" type="date" value={form.pptEndDate} onChange={v=>set("pptEndDate",v)}/>}</div>
           {oneTimePayment?<div><label className={labelClass}>Next installment date</label><input className={inputClass} value="Not applicable · One Time" readOnly/></div>:<Field label="Next installment date" type="date" value={form.nextInstallmentDate} onChange={v=>set("nextInstallmentDate",v)}/>}
           <Field label="Final premium" value={form.finalPremium} onChange={(v)=>set("finalPremium",v.replace(/[^0-9.]/g,""))} required/>
