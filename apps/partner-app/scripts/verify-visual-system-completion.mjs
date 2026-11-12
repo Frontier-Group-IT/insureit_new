@@ -307,4 +307,23 @@ for (const [name, source] of [
   }
 }
 
+// Business workspace resilience: Network is supplemental, never a page-wide blocker.
+requireText(business, "key: 'business:workspace:v2'", 'Business dashboard must isolate its primary cache from old network-coupled entries.');
+requireText(business, "key: 'business:network'", 'Partner Network must have an independently cached query.');
+requireText(business, "retryTransientBusinessRead(getPartnerBusinessPerformance)", 'Business performance must retry transient request errors.');
+requireText(business, "retryTransientBusinessRead(getPartnerNetwork)", 'Partner Network must retry transient errors independently.');
+requireText(business, "if (!isLikelyConnectivityError(error)) throw error", 'Permission/authorization errors must never be retried as connectivity errors.');
+requireText(business, "workspace.loading && !performance", 'Business page loading must not depend on a Network response.');
+requireText(business, ") : !performance ? (", 'Only missing business performance may trigger a full-page Business error.');
+requireText(business, "network ? network.total_partners : '—'", 'Partner Network must have an honest unavailable placeholder, not invented counts.');
+requireText(business, "networkQuery.refresh()", 'Partner Network needs an independent recovery control.');
+requireText(business, "networkQuery.ensureFresh()", 'Reopening Business must refresh the Network section.');
+requireText(business, "networkQuery.error || networkQuery.stale", 'Supplemental Network failures should show a non-blocking warning.');
+if (business.includes("if (networkResult.status === 'rejected') throw networkResult.reason")) {
+  throw new Error('Business workspace must not fail when Partner Network fails.');
+}
+if (business.includes("!performance || !network")) {
+  throw new Error('Business workspace must not hide existing business metrics for missing Network data.');
+}
+
 console.log('Partner visual-system completion contracts verified.');
