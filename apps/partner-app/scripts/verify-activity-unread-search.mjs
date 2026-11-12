@@ -132,4 +132,10 @@ expect(activity.includes('numberOfLines={1} ellipsizeMode="middle"') && activity
 expect(activity.includes("styles.itemRow") && activity.includes("styles.kindPill") && activity.includes("styles.dateAndUnread"), "Compact rows retain category and date metadata on the right");
 expect(activity.includes('styles.dateAndUnread') && activity.includes('styles.unreadDot') && activity.includes('styles.itemCardUnread'), "Date and unread styles are preserved");
 
+expect(activity.includes('<Text style={styles.heroTitle}>Activity</Text>'), "Activity retains one clear main heading");
+expect(!activity.includes('<Text style={styles.heroEyebrow}>ACTIVITY</Text>'), "Redundant small ACTIVITY eyebrow is removed");
+expect(!activity.includes('name="megaphone"') && !activity.includes('styles.heroIcon'), "Old megaphone and its boxed tile are removed from Activity header");
+expect(activity.includes('name="notifications-outline" size={23} color="#FFFFFF" style={styles.heroActivityIcon}'), "Header uses a relevant notification icon directly against blue");
+expect(activity.includes('name="calendar-outline"') && activity.includes('name="document-text-outline"'), "Distinct renewal and claim attention icons remain intact");
+
 if (!process.exitCode) console.log("Partner activity unread/search regression passed.");
