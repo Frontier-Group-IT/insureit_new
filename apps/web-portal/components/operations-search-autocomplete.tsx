@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
 import { createPortal } from "react-dom";
+import { X } from "lucide-react";
 
 /** Search suggestions are built only from the register's already-authorized rows. */
 export function OperationsSearchAutocomplete({value,onChange,options,placeholder,hints,className="",label}:{
@@ -41,6 +42,7 @@ export function OperationsSearchAutocomplete({value,onChange,options,placeholder
     return ()=>{window.removeEventListener("resize",place);window.removeEventListener("scroll",place,true);};
   },[visible]);
   function select(item:string){onChange(item);setOpen(false);setActive(0);}
+  function clearSearch(){onChange("");setOpen(false);setActive(0);}
   function keys(e:KeyboardEvent<HTMLSpanElement>){
     if(e.key==="Escape"){setOpen(false);return;}
     if(e.key==="ArrowDown"&&matches.length){e.preventDefault();setOpen(true);setActive(i=>Math.min(i+1,matches.length-1));}
@@ -54,7 +56,12 @@ export function OperationsSearchAutocomplete({value,onChange,options,placeholder
       onFocus={()=>{setFocused(true);setOpen(true);}}
       onBlur={()=>{setFocused(false);setOpen(false);}}
       onChange={e=>{onChange(e.target.value);setActive(0);setOpen(true);}}
-      className={className}/>
+      className={`${className} ${value ? "pr-8" : ""}`}/>
+    {value ? <button type="button" aria-label="Clear search" title="Clear search"
+      className="absolute right-1 top-1/2 z-10 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-full bg-white text-[#64748B] hover:bg-[#EFF5FC] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#174EA6]"
+      onMouseDown={event=>event.preventDefault()} onClick={clearSearch}>
+      <X className="h-4 w-4" aria-hidden="true"/>
+    </button> : null}
     {visible?createPortal(
       <div role="listbox" aria-label={label+" suggestions"} style={position}
         className="overflow-y-auto rounded-xl border border-[#DCE5EF] bg-white p-1 shadow-[0_14px_35px_rgba(15,23,42,.18)]">

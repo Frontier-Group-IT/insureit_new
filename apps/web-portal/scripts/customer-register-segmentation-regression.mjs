@@ -81,3 +81,14 @@ assert.match(policyClearSearch, /new URLSearchParams\(searchParams\.toString\(\)
 assert.match(policyClearSearch, /onChange=\{changeSearch\}/, "Manual deletion and clear button must share the URL reset path.");
 assert.match(suggest, /aria-label="Clear search"/, "Shared Customer autocomplete must expose an accessible clear button.");
 assert.match(suggest, /onChange\(""\)/, "Shared Customer autocomplete clears controlled query state.");
+
+
+
+const operationsClear = read("../components/operations-search-autocomplete.tsx");
+const operationsPolicy = read("../components/backoffice-policy-register.tsx");
+const operationsClaim = read("../app/claims/claims-workspace.tsx");
+assert.match(operationsClear, /aria-label="Clear search"/, "Operations search fields provide an accessible clear action.");
+assert.match(operationsClear, /function clearSearch\(\)\{onChange\(""\)/, "Clear button restores the unsearched register through controlled state.");
+assert.match(operationsClear, /onClick=\{clearSearch\}/, "All shared operations search inputs use the clear action.");
+assert.match(operationsPolicy, /onChange=\{value=>\{setQuery\(value\);setPage\(1\);\}\}/, "Policy searches reset pagination, including on clear.");
+assert.match(operationsClaim, /if \(query\.trim\(\)\) params\.set\("q", query\.trim\(\)\)/, "Claim URL drops q after clearing.");
