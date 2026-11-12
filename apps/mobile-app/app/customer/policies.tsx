@@ -219,7 +219,7 @@ export default function PoliciesScreen() {
           </Pressable>
         </View>
 
-        <CustomerSearchBar value={query} onChangeText={setQuery} placeholder="Search vehicle, insurer or policy no." idleHints={["Search vehicle, insurer or policy no.", "Search by vehicle number", "Search by insurer name", "Search by policy number"]} />
+        <CustomerSearchBar value={query} onChangeText={setQuery} suggestions={policies.filter(policy => categoryFilter === "All" || getPolicyCategory(policy) === categoryFilter).flatMap(policy => [policy.policy_no, policy.policy_type, policy.policy_product || "", vehicles.find(vehicle => vehicle.id === policy.vehicle_id)?.vehicle_no || "", companies.find(company => company.id === policy.insurance_company_id)?.name || ""])} placeholder="Search vehicle, insurer or policy no." idleHints={["Search vehicle, insurer or policy no.", "Search by vehicle number", "Search by insurer name", "Search by policy number"]} />
       </View>
 
       <View style={styles.filterRow}>

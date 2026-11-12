@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 const search = readFileSync(new URL('../components/customer-animated-search-input.tsx', import.meta.url), 'utf8');
 const policies = readFileSync(new URL('../app/customer/policies.tsx', import.meta.url), 'utf8');
 
-assert.match(policies, /<CustomerSearchBar[^>]*idleHints=\{\[/, 'Policies must opt into automatic placeholder hints');
+assert.match(policies, /<CustomerSearchBar[\s\S]*?idleHints=\{\[/, 'Policies must opt into automatic placeholder hints');
 for (const hint of ['Search vehicle, insurer or policy no.', 'Search by vehicle number', 'Search by insurer name', 'Search by policy number']) {
   assert.ok(policies.includes(hint), `Policy search hint missing: ${hint}`);
 }
@@ -21,7 +21,7 @@ assert.match(search, /CUSTOMER_SEARCH_PLACEHOLDER_COLOR = '#7F8EA4'/, 'Keep appr
 
 // Every Customer search surface must opt into the shared animated component.
 const pages = [
-  ['../app/customer/claims.tsx', /<CustomerSearchBar[^>]*idleHints=\{\[/],
+  ['../app/customer/claims.tsx', /<CustomerSearchBar[\s\S]*?idleHints=\{\[/],
   ['../app/customer/vehicles.tsx', /<CustomerAnimatedSearchInput[\s\S]*?idleHints=\{\[/],
   ['../app/customer/start-claim.tsx', /<CustomerAnimatedSearchInput[\s\S]*?idleHints=\{\[/],
   ['../app/customer/add-policy.tsx', /<CustomerAnimatedSearchInput[\s\S]*?idleHints=\{\[/],
@@ -39,3 +39,14 @@ assert.match(search, /\[placeholder, 'Type to search\.\.\.'\]/, 'Future Customer
 assert.match(search, /useNativeDriver: true/, 'Vertical slide animation should use the native driver');
 
 console.log('Customer search idle placeholder slide regression passed across all search surfaces.');
+
+
+const claims = readFileSync(new URL('../app/customer/claims.tsx', import.meta.url), 'utf8');
+const vehicles = readFileSync(new URL('../app/customer/vehicles.tsx', import.meta.url), 'utf8');
+assert.match(search, /export function CustomerSearchSuggestionList/, 'Shared search suggestions must be available to Customer screens.');
+assert.match(search, /query.length<2/, 'Do not display suggestions until two characters.');
+assert.match(search, /slice\(0,5\)/, 'Limit visible suggestions.');
+assert.match(search, /Keyboard.dismiss\(\)/, 'Tapping suggestion dismisses mobile keyboard.');
+assert.match(policies, /suggestions=\{policies\.filter/, 'Policy suggestions use existing Customer-scoped data.');
+assert.match(claims, /suggestions=\{claims\.filter/, 'Claim suggestions follow current status filter.');
+assert.match(vehicles, /<CustomerSearchSuggestionList/, 'Vehicle register displays matching vehicles and policies.');

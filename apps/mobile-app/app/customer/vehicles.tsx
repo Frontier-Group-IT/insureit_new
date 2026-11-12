@@ -3,7 +3,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { CustomerAnimatedSearchInput } from '@/components/customer-animated-search-input';
+import { CustomerAnimatedSearchInput, CustomerSearchSuggestionList } from '@/components/customer-animated-search-input';
 import { Animated, Image, Modal, NativeModules, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { ImageSourcePropType } from 'react-native';
 
@@ -217,6 +217,8 @@ export default function VehiclesScreen() {
         </Pressable>
       ) : null}
     </View>
+    <CustomerSearchSuggestionList value={searchQuery} onSelect={setSearchQuery}
+      suggestions={vehicles.flatMap(vehicle => [vehicle.vehicle_no,vehicle.make || "",vehicle.model || "",vehicle.chassis_no || "",vehicle.engine_no || "",...policies.filter(p => p.vehicle_id === vehicle.id).map(p => p.policy_no),...externalPolicies.filter(p => p.vehicle_id === vehicle.id).map(p => p.policy_no)])} />
   </View>
 ) : null}
 
