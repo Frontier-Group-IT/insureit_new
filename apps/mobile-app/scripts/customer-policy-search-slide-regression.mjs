@@ -50,3 +50,10 @@ assert.match(search, /Keyboard.dismiss\(\)/, 'Tapping suggestion dismisses mobil
 assert.match(policies, /suggestions=\{policies\.filter/, 'Policy suggestions use existing Customer-scoped data.');
 assert.match(claims, /suggestions=\{claims\.filter/, 'Claim suggestions follow current status filter.');
 assert.match(vehicles, /<CustomerSearchSuggestionList/, 'Vehicle register displays matching vehicles and policies.');
+
+
+assert.match(search, /accessibilityLabel="Clear search" onPress=\{\(\) => \{ onChangeText\(''\); Keyboard\.dismiss\(\); \}\}/, "Customer App shared search X clears controlled query and dismisses keyboard.");
+assert.match(search, /if \(!value\.trim\(\)\) setChosen\(''\)/, "Cleared query resets chosen autocomplete suggestion.");
+const vehicleClear = readFileSync(new URL('../app/customer/vehicles.tsx', import.meta.url), 'utf8');
+assert.match(vehicleClear, /setSearchQuery\(''\); Keyboard\.dismiss\(\)/, "Vehicle search clear restores list and dismisses keyboard.");
+assert.match(policies, /!query\.trim\(\) \|\| text\.includes/, "Policies display applicable records after clear.");
