@@ -3,7 +3,6 @@ import { readFileSync } from "node:fs";
 
 const read = (path) => readFileSync(new URL(path, import.meta.url), "utf8");
 const page = read("../app/customer/(protected)/policies/[id]/page.tsx");
-const copy = read("../app/customer/(protected)/policies/[id]/copy-policy-number.tsx");
 const styles = read("../app/customer/(protected)/policies/[id]/policy-details.css");
 
 assert.match(page, /resolveCustomerWebScope\(query\.account\)/, "Customer account scope must remain checked");
@@ -17,9 +16,11 @@ assert.doesNotMatch(page, /rounded-full border border-white\/30 bg-white\/95/, "
 assert.match(page, /<StatusPill tone=\{status\.tone\}>\{statusLabel\}<\/StatusPill>/, "Keep the dynamic Active/Due/Expired status label visible in the hero");
 
 assert.match(page, /getStaticInsurerLogo\(policy\.insurer_name\)/, "Use existing insurer logo mapping");
-assert.match(page, /<CopyPolicyNumber value=\{policy\.policy_no\}/, "Policy number has a copy action");
-assert.match(copy, /navigator\.clipboard\.writeText\(value\)/, "Copy action must write the actual number");
-assert.match(copy, /catch \{[\s\S]*?setCopied\(false\)/, "Never claim copied if clipboard fails");
+assert.doesNotMatch(page, /CopyPolicyNumber/, "Policy hero must not offer a copy action");
+const hero = page.slice(page.indexOf('<section aria-labelledby="policy-detail-title"'), page.indexOf('</section>', page.indexOf('<section aria-labelledby="policy-detail-title"')));
+assert.match(hero, /id="policy-detail-title"[^>]*>\{policy\.policy_no\}<\/h1>/, "Keep policy number prominently visible");
+assert.doesNotMatch(hero, /sourceName|policy\.policy_type|policy\.insurer_name/, "Hero excludes source, policy type and insurer subtitle");
+assert.match(hero, /<StatusPill tone=\{status\.tone\}>\{statusLabel\}<\/StatusPill>/, "Keep policy status visible");
 assert.match(page, /<CustomerAccountTabs accounts=\{accounts\} selectedId=\{account\.id\}/, "Preserve account tabs and scope");
 assert.match(page, /policy\.vehicle_id \?/, "Only show linked vehicle navigation when a vehicle exists");
 assert.match(page, /query: \{ account: account\.id \}/, "Linked vehicle navigation must retain customer account scope");
