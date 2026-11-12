@@ -107,7 +107,7 @@ export default async function CustomerPoliciesPage({
       <section className="customer-register-panel overflow-hidden rounded-2xl border border-[#D9E2EF] bg-white shadow-[0_8px_30px_rgba(24,42,72,.04)]">
         <div className="flex flex-wrap items-center gap-2 border-b border-[#E4EAF2] px-3 py-3 sm:px-4 xl:flex-nowrap">
           <h2 className="flex shrink-0 items-center gap-2 text-[17px] font-bold text-[#102B54]"><img src="/assets/Custom-Icons/optimized-128/documents.png" alt="" aria-hidden="true" width={34} height={34} className="h-[34px] w-[34px] object-contain" />Policy Register</h2>
-          <CustomerPolicyAnimatedSearch accountId={account.id} query={currentQuery} status={statusFilter ?? "all"} source={sourceFilter ?? "all"} />
+          <CustomerPolicyAnimatedSearch accountId={account.id} query={currentQuery} status={statusFilter ?? "all"} source={sourceFilter ?? "all"} suggestions={policies.filter(policy => (statusFilter === "all" || customerPolicyTone(policy.end_date).tone === statusFilter) && (sourceFilter === "all" || (sourceFilter === "external" ? policy.source === "external" : policy.source !== "external"))).flatMap(policy => [policy.policy_no, policy.policy_type, policy.policy_product, policy.insurer_name, policy.vehicle_no, policy.vehicle_make, policy.vehicle_model].filter((v): v is string => Boolean(v)))} />
           <div aria-label="Policy status filter" className="ml-auto flex flex-wrap items-center gap-1 rounded-lg border border-[#D8E2F0] bg-[#F8FAFD] p-1">
             {[
               ["all", "All", policies.length],
