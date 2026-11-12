@@ -35,4 +35,23 @@ assert(row.includes('event.key === "Enter"') && row.includes('event.key === " "'
 assert(row.includes('onClick={openPolicy}') && row.includes("router.push(href)"), "Entire row must be clickable");
 assert(row.includes('insurerLogo') && row.includes('alt={insurerName}'), "Use insurer logo instead of visible insurer names");
 assert(!row.includes('>View →</'), "Old Action link must be removed");
+
+// Customer Vehicle Register: 8 distinct columns, accessible logos, aligned policy rows.
+const register = read("app/customer/(protected)/vehicles/customer-vehicles-register.tsx");
+const vehiclesPage = read("app/customer/(protected)/vehicles/page.tsx");
+assert.match(register, /\["Vehicle", "Make", "Model", "Type", "Chassis No\.", "Engine No\.", "Policy No\.", "Insurer"\]/, "Separate Make/Model and Policy Number/Insurer columns");
+assert.doesNotMatch(register, /"Make \/ Model"|"Policy"\]\.map\(heading/, "Old combined headings must not return");
+assert.match(register, /<td colSpan=\{8\}/, "Empty state spans all eight columns");
+assert.match(register, /<ManufacturerMark make=\{v\.make\}\/>/, "Make cell shows only the existing manufacturer mark");
+assert.match(register, /<td className="px-3 py-3 text-left"><strong className="block truncate whitespace-nowrap/, "Model must be left-aligned, single-line and truncated");
+assert.match(register, /title=\{v\.model \|\| undefined\}/, "Long model retains its complete hover title");
+assert.match(register, /<td className="px-3 py-2 text-left text-\[12px\]/, "Policy numbers must be left-aligned");
+assert.match(register, /<span className="whitespace-nowrap" title=\{p\.number\}>\{p\.number\}<\/span>/, "Full policy numbers remain on one line");
+assert.match(register, /v\.policies\.map\(\(p,index\) =>/g, "Multiple policies have matching row order across number and icon cells");
+assert.match(register, /getInsurerLogo\(p\.insurerName\)/, "Insurer column only displays existing insurer logo");
+assert.match(register, /alt=\{\x60\$\{p\.insurerName \|\| "Unknown insurer"\} logo\x60\}/, "Insurer logo remains accessible");
+assert.match(register, /const pageSize = 6;/, "Pagination size remains unchanged");
+assert.match(register, /setStatusFilter\(e\.target\.value\)/, "Vehicle status filter remains unchanged");
+assert.match(register, /onClick=\{\(\) => openVehicle\(v\.id\)\}/, "Clicking a register row still navigates to vehicle details");
+assert.match(vehiclesPage, /loadCustomerWebVehicles\(account\.id\)/, "Vehicle data remains scoped to selected customer");
 console.log("Customer vehicle navy, 3D headings and clickable insurance history regression passed.");
