@@ -70,3 +70,14 @@ assert.match(backoffice, /OperationsSearchAutocomplete/, "Operations customer re
 assert.match(opsVehicle, /OperationsSearchAutocomplete/, "Operations vehicle register uses authorized suggestions.");
 assert.match(opsPolicy, /OperationsSearchAutocomplete/, "Operations policy register uses authorized suggestions.");
 assert.match(opsClaims, /OperationsSearchAutocomplete/, "Operations claims queue uses authorized suggestions.");
+
+
+const policyClearSearch = read("../app/customer/(protected)/policies/customer-policy-animated-search.tsx");
+assert.match(policyClearSearch, /params\.delete\("q"\)/, "Clearing Policy Search must remove stale server-side q.");
+assert.match(policyClearSearch, /params\.delete\("page"\)/, "Clearing Policy Search must reset pagination.");
+assert.match(policyClearSearch, /router\.replace\(/, "Clearing Policy Search must refresh results without a full-page reload.");
+assert.match(policyClearSearch, /params\.set\("account", accountId\)/, "Clear search retains the selected authorized account.");
+assert.match(policyClearSearch, /new URLSearchParams\(searchParams\.toString\(\)\)/, "Clear search retains selected source and lifecycle filters.");
+assert.match(policyClearSearch, /onChange=\{changeSearch\}/, "Manual deletion and clear button must share the URL reset path.");
+assert.match(suggest, /aria-label="Clear search"/, "Shared Customer autocomplete must expose an accessible clear button.");
+assert.match(suggest, /onChange\(""\)/, "Shared Customer autocomplete clears controlled query state.");
