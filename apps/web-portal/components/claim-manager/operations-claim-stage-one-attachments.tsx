@@ -47,6 +47,7 @@ export function OperationsClaimStageOneAttachments({ claimId }: { claimId: strin
   const uploadLock = useRef(false);
   const [selectedBulk, setSelectedBulk] = useState<File[]>([]);
   const [bulkProgress, setBulkProgress] = useState({ done: 0, total: 0 });
+  const [bulkUploading, setBulkUploading] = useState(false);
   const [failedBulk, setFailedBulk] = useState<string[]>([]);
   const audioPicker = useRef<HTMLInputElement>(null);
   const recorder = useRef<MediaRecorder | null>(null);
@@ -57,6 +58,12 @@ export function OperationsClaimStageOneAttachments({ claimId }: { claimId: strin
   const [recording, setRecording] = useState(false);
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!bulkMessage?.ok) return;
+    const timeout = window.setTimeout(() => setBulkMessage(null), 3000);
+    return () => window.clearTimeout(timeout);
+  }, [bulkMessage]);
 
   useEffect(() => {
     if (!audioFile) { setAudioUrl(null); return; }
@@ -112,6 +119,7 @@ export function OperationsClaimStageOneAttachments({ claimId }: { claimId: strin
     }
     uploadLock.current = true;
     if (!voice) {
+      setBulkUploading(true);
       setSelectedBulk(files);
       setFailedBulk([]);
     }
@@ -141,6 +149,7 @@ export function OperationsClaimStageOneAttachments({ claimId }: { claimId: strin
       if (completed) router.refresh();
       } finally {
         uploadLock.current = false;
+        if (!voice) setBulkUploading(false);
       }
     });
   }
@@ -205,22 +214,22 @@ export function OperationsClaimStageOneAttachments({ claimId }: { claimId: strin
           // A new selection is a separate batch, never a merge with prior failures.
           submitFiles(files, false);
         }} />
-        <button type="button" disabled={busy} onClick={() => bulkPicker.current?.click()}
+        <button type="button" disabled={busy || bulkUploading} onClick={() => bulkPicker.current?.click()}
           className="flex w-full items-center gap-3 rounded-xl border-2 border-dashed border-[#C5D8ED] bg-[#F8FAFE] px-4 py-3 text-left transition hover:border-[#4380CD] disabled:opacity-60">
           <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-[#E5F0FF] text-[#1952A1]"><Files className="h-5 w-5" /></span>
           <span className="min-w-0 flex-1"><strong className="block text-[12px] text-[#102A52]">Upload multiple documents</strong>
-            <small className="text-[10px] text-[#7787A2]">{busy ? "Uploading files…" : "Select up to 10 files to upload immediately."}</small></span>
-          {busy ? <span className="text-[11px] font-semibold text-[#1952A1]">Uploading…</span> : <Plus className="h-5 w-5 text-[#1952A1]" />}
+            <small className="text-[10px] text-[#7787A2]">{bulkUploading ? "Uploading files…" : "Select up to 10 files to upload immediately."}</small></span>
+          {bulkUploading ? <span className="text-[11px] font-semibold text-[#1952A1]">Uploading…</span> : <Plus className="h-5 w-5 text-[#1952A1]" />}
         </button>
         {selectedBulk.length ? <div className="mt-2 rounded-lg border border-[#D9E3F0] bg-white p-3">
-          <div className="mb-2 flex justify-between text-xs font-semibold text-[#17365D]"><span>{busy ? "Uploading" : "Failed to upload"} {selectedBulk.length} file{selectedBulk.length === 1 ? "" : "s"}</span><span>{(selectedBulk.reduce((sum,file)=>sum+file.size,0)/1048576).toFixed(1)} MB total</span></div>
+          <div className="mb-2 flex justify-between text-xs font-semibold text-[#17365D]"><span>{bulkUploading ? "Uploading" : "Failed to upload"} {selectedBulk.length} file{selectedBulk.length === 1 ? "" : "s"}</span><span>{(selectedBulk.reduce((sum,file)=>sum+file.size,0)/1048576).toFixed(1)} MB total</span></div>
           <ul className="space-y-1">{selectedBulk.map(file => <li key={file.name+file.size+file.lastModified} className="flex min-w-0 items-center gap-2 rounded-md bg-[#F7FAFD] px-2 py-1.5 text-xs">
             <span className="min-w-0 flex-1 truncate" title={file.name}>{file.name}</span><span className="shrink-0 text-[#64748B]">{(file.size/1048576).toFixed(1)} MB</span>
             {failedBulk.includes(file.name) ? <span className="text-red-600">Failed</span> : null}
-            <button type="button" disabled={busy} aria-label={"Remove "+file.name} onClick={() => setSelectedBulk(items=>items.filter(item=>item!==file))} className="rounded p-1 text-[#64748B] disabled:opacity-50"><Trash2 className="h-4 w-4"/></button>
+            <button type="button" disabled={busy || bulkUploading} aria-label={"Remove "+file.name} onClick={() => setSelectedBulk(items=>items.filter(item=>item!==file))} className="rounded p-1 text-[#64748B] disabled:opacity-50"><Trash2 className="h-4 w-4"/></button>
           </li>)}</ul>
-          {busy ? <p role="status" className="mt-2 text-xs text-[#174A87]">Processed {bulkProgress.done} of {bulkProgress.total} files</p> : null}
-          {!busy && failedBulk.length > 0 ? <button type="button" onClick={() => submitFiles(selectedBulk, false)} className="mt-3 rounded-lg bg-[#1253A7] px-4 py-2 text-xs font-semibold text-white">Retry failed files</button> : null}
+          {bulkUploading ? <p role="status" className="mt-2 text-xs text-[#174A87]">Processed {bulkProgress.done} of {bulkProgress.total} files</p> : null}
+          {!bulkUploading && failedBulk.length > 0 ? <button type="button" onClick={() => submitFiles(selectedBulk, false)} className="mt-3 rounded-lg bg-[#1253A7] px-4 py-2 text-xs font-semibold text-white">Retry failed files</button> : null}
         </div> : null}
         {bulkMessage?.ok ? <p role="status" className="mt-2 text-xs text-emerald-700">{bulkMessage.text}</p> : null}
       </section>
