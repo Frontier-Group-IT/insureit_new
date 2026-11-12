@@ -53,3 +53,20 @@ assert.match(customerVehicles, /CustomerSearchAutocomplete/, "Vehicle register u
 assert.match(customerRenewals, /CustomerSearchAutocomplete/, "Renewal register uses suggestions.");
 assert.match(customerClaims, /suggestions=\{enriched\.filter/, "Claim suggestions retain status-scope filtering.");
 assert.match(customerClaimSearch, /CustomerSearchAutocomplete/, "Claim register uses suggestions.");
+
+
+
+const autoSuggest = read("../components/operations-search-autocomplete.tsx");
+const opsVehicle = read("../components/backoffice-vehicle-register.tsx");
+const opsPolicy = read("../components/backoffice-policy-register.tsx");
+const opsClaims = read("../app/claims/claims-workspace.tsx");
+assert.match(autoSuggest, /q.length<2/, "Suggestions require two entered characters.");
+assert.match(autoSuggest, /slice\(0,5\)/, "Suggestions are limited to five matches.");
+assert.match(autoSuggest, /ArrowDown/, "Keyboard navigation must remain available.");
+assert.match(autoSuggest, /Escape/, "Escape must dismiss suggestions.");
+assert.match(autoSuggest, /createPortal\(/, "Dropdown must escape register overflow clipping.");
+assert.match(autoSuggest, /prefers-reduced-motion/, "Animated prompts respect reduced motion.");
+assert.match(backoffice, /OperationsSearchAutocomplete/, "Operations customer register uses authorized suggestions.");
+assert.match(opsVehicle, /OperationsSearchAutocomplete/, "Operations vehicle register uses authorized suggestions.");
+assert.match(opsPolicy, /OperationsSearchAutocomplete/, "Operations policy register uses authorized suggestions.");
+assert.match(opsClaims, /OperationsSearchAutocomplete/, "Operations claims queue uses authorized suggestions.");
