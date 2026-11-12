@@ -271,17 +271,19 @@ export default function ActivityScreen() {
                     </View>
 
                     <View style={styles.itemBody}>
-                      <View style={styles.itemMeta}>
+                      <View style={styles.itemRow}>
+                        <Text numberOfLines={1} ellipsizeMode="middle" style={[styles.title, !isUnread && styles.titleRead]}>{item.title}</Text>
                         <View style={styles.kindPill}>
                           <Text style={[styles.kind, toneText(item.tone)]}>{labelFor(item.kind)}</Text>
                         </View>
+                      </View>
+                      <View style={styles.itemRow}>
+                        <Text numberOfLines={1} style={[styles.subtitle, isUnread && styles.subtitleUnread]}>{item.subtitle}</Text>
                         <View style={styles.dateAndUnread}>
                           <Text style={styles.date}>{formatDate(item.event_at)}</Text>
                           {isUnread ? <View style={styles.unreadDot} accessibilityLabel="Unread" /> : null}
                         </View>
                       </View>
-                      <Text numberOfLines={1} ellipsizeMode="middle" style={[styles.title, !isUnread && styles.titleRead]}>{item.title}</Text>
-                      <Text numberOfLines={1} style={[styles.subtitle, isUnread && styles.subtitleUnread]}>{item.subtitle}</Text>
                     </View>
                   </Pressable>
                 );
@@ -558,11 +560,11 @@ const styles = StyleSheet.create({
   },
   activityList: { gap: 5 },
   itemCard: {
-    minHeight: 63,
+    minHeight: 54,
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: 12,
-    paddingVertical: 5,
+    paddingVertical: 4,
     paddingLeft: 5,
     paddingRight: 8,
     backgroundColor: '#FFFFFF',
@@ -579,7 +581,7 @@ const styles = StyleSheet.create({
   },
   logoTile: {
     width: 52,
-    height: 50,
+    height: 44,
     marginRight: 4,
     borderRadius: 9,
     alignItems: 'center',
@@ -587,14 +589,16 @@ const styles = StyleSheet.create({
   },
   insurerLogo: { width: 44, height: 30 },
   eventArtworkImage: { width: 32, height: 32 },
-  itemBody: { flex: 1, minWidth: 0 },
-  itemMeta: {
-    alignSelf: 'stretch',
-    alignItems: 'flex-end',
-    gap: 1,
+  itemBody: { flex: 1, minWidth: 0, gap: 3 },
+  itemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 6,
+    minWidth: 0,
   },
   kindPill: {
-    alignSelf: 'flex-end',
+    flexShrink: 0,
     borderRadius: 4,
     paddingHorizontal: 4,
     paddingVertical: 1,
@@ -611,7 +615,7 @@ const styles = StyleSheet.create({
   textAttention: { color: '#9A6500' },
   textLearn: { color: '#A3630D' },
   textOps: { color: '#667085' },
-  dateAndUnread: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  dateAndUnread: { flexDirection: 'row', alignItems: 'center', gap: 5, flexShrink: 0 },
   unreadDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#2379D5' },
   date: {
     color: '#71809C',
@@ -619,7 +623,8 @@ const styles = StyleSheet.create({
     lineHeight: 11,
   },
   title: {
-    marginTop: 2,
+    flexShrink: 1,
+    minWidth: 0,
     color: '#08122E',
     fontSize: 10.5,
     lineHeight: 13,
@@ -628,7 +633,8 @@ const styles = StyleSheet.create({
   titleRead: { fontWeight: '600' },
   subtitleUnread: { color: '#334A68', fontWeight: '600' },
   subtitle: {
-    marginTop: 1,
+    flexShrink: 1,
+    minWidth: 0,
     color: '#68758E',
     fontSize: 9.5,
     lineHeight: 12,

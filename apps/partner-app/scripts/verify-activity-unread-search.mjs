@@ -94,15 +94,31 @@ expect(!activity.includes("setActivityFilter(unreadCount > 0 ? 'unread' : 'all')
 expect(activity.includes("onPress={() => setActivityFilter(key)}") &&
   activity.includes("activityFilter === 'unread' && isRead") &&
   activity.includes("activityFilter === 'read' && !isRead"), "Manual Unread and Read filters remain functional");
-const metaStart = activity.indexOf('<View style={styles.itemMeta}>');
-const badgePos = activity.indexOf('<View style={styles.kindPill}>', metaStart);
-const datePos = activity.indexOf('<View style={styles.dateAndUnread}>', metaStart);
-const metaEnd = activity.indexOf('</View>', datePos) + '</View>'.length;
-expect(metaStart >= 0 && badgePos > metaStart && datePos > badgePos && datePos < metaEnd, "Category badge is above the right-side date and unread indicator");
-expect(activity.includes("itemMeta: {") && activity.includes("alignItems: 'flex-end'"), "Activity category and date metadata align to the right");
+const cardStart = activity.indexOf('<View style={styles.itemBody}>');
+const rowOneStart = activity.indexOf('<View style={styles.itemRow}>', cardStart);
+const rowTwoStart = activity.indexOf('<View style={styles.itemRow}>', rowOneStart + 1);
+const referencePos = activity.indexOf('{item.title}</Text>', rowOneStart);
+const badgePos = activity.indexOf('<View style={styles.kindPill}>', rowOneStart);
+const customerPos = activity.indexOf('{item.subtitle}</Text>', rowTwoStart);
+const datePos = activity.indexOf('<View style={styles.dateAndUnread}>', rowTwoStart);
+expect(cardStart >= 0 && rowOneStart > cardStart && rowTwoStart > rowOneStart &&
+  referencePos > rowOneStart && referencePos < badgePos && badgePos < rowTwoStart,
+  "Row one places the reference at left and the category badge at right");
+expect(customerPos > rowTwoStart && customerPos < datePos &&
+  datePos > rowTwoStart, "Row two places customer at left and timestamp/unread dot at right");
+const itemRowStyle = activity.split("  itemRow: {")[1]?.split("  },")[0] ?? "";
+expect(itemRowStyle.includes("flexDirection: 'row'") &&
+  itemRowStyle.includes("justifyContent: 'space-between'") &&
+  itemRowStyle.includes("alignItems: 'center'"), "Activity uses two horizontally balanced, vertically aligned compact rows");
 const kindPillStyle = activity.split("  kindPill: {")[1]?.split("  },")[0] ?? "";
-expect(kindPillStyle.includes("alignSelf: 'flex-end'"), "Category badge itself aligns right; no flex-start override");
-expect(!kindPillStyle.includes("alignSelf: 'flex-start'"), "Category badge cannot override right-aligned metadata with left alignment");
+expect(kindPillStyle.includes('flexShrink: 0') && !kindPillStyle.includes("alignSelf: 'flex-start'"),
+  "Badge stays at right without shrinking or forcing left alignment");
+expect(activity.includes("  itemBody: { flex: 1, minWidth: 0, gap: 3 }") &&
+  activity.includes("    minHeight: 54,") && activity.includes("    paddingVertical: 4,"),
+  "Activity card removes excess blank height and retains two compact rows");
+expect(activity.includes("  title: {\\n    flexShrink: 1,") ||
+  (activity.includes("  title: {") && activity.includes("  subtitle: {") && activity.includes("    minWidth: 0,")),
+  "Long references and customer names shrink without displacing right-side metadata");
 expect(activity.includes("styles.itemCardUnread") && activity.includes("styles.unreadDot") &&
   activity.includes("styles.titleRead"), "Unread highlight, dot and muted read state remain intact");
 
@@ -113,7 +129,7 @@ expect(screen.includes('statusBarColor?: string;') && screen.includes('statusBar
 expect(screen.includes("backgroundColor={statusBarColor ?? (navyStatusBar ? '#071E49' : undefined)}") && screen.includes("style={statusBarColor || navyStatusBar"), "Status bar uses matching color and light system indicators");
 expect(activity.includes('  body: {') && activity.includes('    paddingHorizontal: 8,') && activity.includes("  hero: {") && !activity.includes('marginHorizontal: -partnerTheme.spacing.lg'), "Activity cards use compact 8px margins and a full-width header");
 expect(activity.includes('numberOfLines={1} ellipsizeMode="middle"') && activity.includes('{item.title}</Text>'), "Long policy/claim references truncate in the middle instead of clipping");
-expect(activity.includes('alignSelf: \'stretch\',') && activity.includes("alignItems: 'flex-end'"), "Category badge remains right aligned above date/time");
+expect(activity.includes("styles.itemRow") && activity.includes("styles.kindPill") && activity.includes("styles.dateAndUnread"), "Compact rows retain category and date metadata on the right");
 expect(activity.includes('styles.dateAndUnread') && activity.includes('styles.unreadDot') && activity.includes('styles.itemCardUnread'), "Date and unread styles are preserved");
 
 if (!process.exitCode) console.log("Partner activity unread/search regression passed.");
