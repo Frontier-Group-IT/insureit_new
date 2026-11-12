@@ -52,8 +52,10 @@ assert.match(css, /\.customer-vehicles-page > \.customer-register-panel > footer
 assert.match(css, /\.customer-policies-page > \.customer-register-panel > p:last-child/, "Policy summary footer must sit at panel bottom");
 assert.match(claims, /filtered\.slice\(\(page - 1\) \* PAGE_SIZE, page \* PAGE_SIZE\)/, "Claim pagination data must remain unchanged");
 assert.match(vehiclePage, /flex min-h-0 flex-1 flex-col gap-3/, "Vehicle page wrapper must stretch its register to available viewport height");
-assert.match(vehicles, /border-collapse text-center/, "Vehicle columns must be centered");
-assert.match(vehicles, /items-center justify-center gap-2 py-1\.5/, "Policy logo and number must be inline and centered");
+assert.match(vehicles, /border-collapse text-center/, "Vehicle register retains centered defaults for other columns");
+assert.match(vehicles, /"Policy No\.", "Insurer"/, "Policy number and insurer logo occupy distinct columns");
+assert.match(vehicles, /<td className="px-3 py-2 text-left text-\[12px\]/, "Policy number records align left");
+assert.match(vehicles, /<td className="px-2 py-2 text-\[12px\]/, "Insurer logo has its own centered cell");
 assert.doesNotMatch(vehicles, /p\.status ===|Insurer not specified/, "Vehicle register must not render policy status or insurer names");
 assert.match(vehicles, /Showing \{rows\.length/, "Vehicle pagination data must remain unchanged");
 assert.match(policies, /Showing \{sourceFilteredRows\.length\}/, "Policy record counts must remain unchanged");
