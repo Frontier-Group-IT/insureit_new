@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { OperationsSearchAutocomplete } from "./operations-search-autocomplete";
 import { useMemo, useState } from "react";
 import { Eye, Plus, Search, Truck, ShieldCheck } from "lucide-react";
 
@@ -16,7 +17,7 @@ export function BackofficeCustomerRegister({ rows, title = "Customer Register" }
   return <div className="mx-auto max-w-[1480px] overflow-hidden rounded-2xl border border-[#D9E2EE] bg-white shadow-sm">
     <div className="flex flex-wrap items-center gap-3 border-b border-[#E6EBF2] bg-[#F8FAFC] px-4 py-3">
       <h1 className="shrink-0 text-[16px] font-semibold text-[#17365D]">{title}</h1>
-      <label className="relative block min-w-[210px] max-w-[410px] flex-1"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#94A3B8]"/><input value={query} onChange={(e)=>setQuery(e.target.value)} placeholder="Search customer, code, mobile or city" className="h-10 w-full rounded-xl border border-[#D8E0EA] bg-white pl-9 pr-3 text-[10.5px] outline-none"/></label>
+      <label className="relative block min-w-[210px] max-w-[410px] flex-1"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#94A3B8]"/><OperationsSearchAutocomplete label="Search customers" value={query} onChange={setQuery} options={rows.flatMap(r => [r.contact_name,r.customer_code,r.company_name || "",r.phone,r.city || ""])} placeholder="Search customer, code, mobile or city" hints={["Search customer…","Search mobile…","Search city…"]} className="h-10 w-full rounded-xl border border-[#D8E0EA] bg-white pl-9 pr-3 text-[10.5px] outline-none"/></label>
       <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
         <div className="flex gap-1 rounded-xl border border-[#D8E2EE] bg-[#F8FAFC] p-1">{([{ id: "all", text: "All", count: rows.length }, { id: "active", text: "Active", count: activeCount }, { id: "inactive", text: "Inactive", count: rows.length - activeCount }] as const).map((option) => <button key={option.id} type="button" onClick={() => setView(option.id)} className={`rounded-lg px-3 py-2 text-[10.5px] font-bold ${view === option.id ? "bg-[#17365D] text-white" : "text-[#53627A]"}`}>{option.text} {option.count}</button>)}</div>
         <Link prefetch={false} href="/customers/data-entry/new" className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#17365D] px-4 text-[10.5px] font-bold text-white"><Plus className="h-4 w-4"/>Add Customer</Link>
