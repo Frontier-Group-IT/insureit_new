@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { type QueueClaimRow } from "@/components/claim-manager/claim-queue-table";
+import { OperationsSearchAutocomplete } from "@/components/operations-search-autocomplete";
 import { claimStatuses, isCustomerActionAwaited, isDocumentVerificationPending, isManagerActionRequired, isOpenClaimStatus, operationsQueueForKey, terminalClaimStatuses, type ClaimStatus } from "@/lib/claim-workflow";
 import { getInsurerLogo } from "@/lib/insurer-logo";
 
@@ -66,7 +67,7 @@ export function ClaimsWorkspace({ rows, initialParams, loadError, canAddClaim }:
           </nav>
         </div>
         <form onSubmit={(event) => event.preventDefault()} className="flex min-w-0 flex-1 items-center gap-2 max-md:flex-col max-md:items-stretch lg:justify-end">
-          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search by customer, vehicle no., claim no., policy no., control no." aria-label="Search claims" className="h-10 min-w-0 flex-1 rounded-lg border border-[#CCD6E4] bg-white px-3.5 text-[12px] font-normal text-[#071D49] shadow-sm outline-none placeholder:text-[#7A8797] focus:border-[#174EA6] focus:ring-4 focus:ring-blue-100 lg:max-w-[520px]" />
+          <OperationsSearchAutocomplete value={query} onChange={setQuery} options={rows.flatMap(claim => [claim.claim_no,claim.insurer_claim_no || "",claim.customers?.contact_name || "",claim.customers?.company_name || "",claim.vehicles?.vehicle_no || "",claim.policies?.policy_no || "",claim.insurance_companies?.name || ""])} label="Search claims" placeholder="Search by customer, vehicle no., claim no., policy no., control no." hints={["Search customer…","Search vehicle…","Search claim number…","Search policy…"]} className="h-10 w-full min-w-0 rounded-lg border border-[#CCD6E4] bg-white px-3.5 text-[12px] font-normal text-[#071D49] shadow-sm outline-none focus:border-[#174EA6] focus:ring-4 focus:ring-blue-100" />
           <select value={selectedStage || "all"} onChange={(event) => { setSelectedStage(event.target.value === "all" ? "" : event.target.value); setSelectedStatus(""); }} aria-label="Filter by claim stage" className="h-10 w-[220px] rounded-lg border border-[#D4DDE9] bg-white px-3 text-[12px] font-medium text-[#071D49] shadow-sm outline-none focus:border-[#174EA6] max-md:w-full"><option value="all">All claim stages</option>{workflowStages.map((stage) => <option key={stage.key} value={stage.key}>{stage.label}</option>)}</select>
           {canAddClaim ? <Link prefetch={false} href="/claims/new" className="inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-[#003A83] px-4 text-[12px] font-semibold text-white shadow-sm transition hover:bg-[#073E83] max-md:w-full"><span aria-hidden="true" className="text-[16px] leading-none">+</span><span>Add Claim</span></Link> : null}
         </form>
