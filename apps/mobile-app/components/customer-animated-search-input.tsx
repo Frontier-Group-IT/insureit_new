@@ -1,5 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Pressable } from 'react-native';
+import { Keyboard, Pressable, Text } from 'react-native';
 import { forwardRef, useEffect, useRef, useState } from 'react';
 import {
   AccessibilityInfo,
@@ -170,13 +170,16 @@ export function CustomerSearchBar({
   onChangeText,
   placeholder = 'Search',
   idleHints,
+  suggestions,
 }: {
   value: string;
   onChangeText: (next: string) => void;
   placeholder?: string;
   idleHints?: string[];
+  suggestions?: readonly string[];
 }) {
   return (
+    <View style={barStyles.suggestionHolder}>
     <View style={barStyles.bar}>
       <MaterialCommunityIcons name="magnify" size={21} color="#0A43A3" />
       <CustomerAnimatedSearchInput
@@ -192,10 +195,39 @@ export function CustomerSearchBar({
         </Pressable>
       ) : null}
     </View>
+    {suggestions ? <CustomerSearchSuggestionList value={value} suggestions={suggestions} onSelect={onChangeText} /> : null}
+    </View>
   );
 }
 
+/** Suggest only loaded/authorized Customer records; tap sets the existing search filter. */
+export function CustomerSearchSuggestionList({value,suggestions,onSelect}:{
+  value:string;suggestions:readonly string[];onSelect:(value:string)=>void;
+}) {
+  const [chosen,setChosen] = useState('');
+  const query=value.trim().toLowerCase();
+  if(query.length<2||value===chosen)return null;
+  const seen=new Set<string>();
+  const matches=suggestions.filter(item=>{
+    const text=item?.trim();const normalized=text?.toLowerCase();
+    if(!normalized||seen.has(normalized)||!normalized.includes(query))return false;
+    seen.add(normalized);return true;
+  }).slice(0,5);
+  return <View style={barStyles.suggestions} accessibilityLabel="Search suggestions">
+    {matches.length?matches.map(item=><Pressable key={item} accessibilityRole="button"
+      accessibilityLabel={`Use suggestion ${item}`} onPress={()=>{
+        setChosen(item);onSelect(item);Keyboard.dismiss();
+      }} style={barStyles.suggestionRow}><Text numberOfLines={1} style={barStyles.suggestionText}>{item}</Text></Pressable>)
+      :<Text style={barStyles.suggestionEmpty}>No matching suggestions</Text>}
+  </View>;
+}
+
 const barStyles = StyleSheet.create({
+  suggestionHolder: { width: '100%', zIndex: 25 },
+  suggestions: { marginTop: 3, borderWidth: 1, borderColor: '#DCE8F4', borderRadius: 12, backgroundColor: '#FFFFFF', overflow: 'hidden', elevation: 4 },
+  suggestionRow: { minHeight: 36, justifyContent: 'center', paddingHorizontal: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: '#E7EDF5' },
+  suggestionText: { fontSize: 12, color: '#17365D', fontWeight: '600' },
+  suggestionEmpty: { paddingHorizontal: 12, paddingVertical: 10, fontSize: 11, color: '#64748B' },
   bar: {
     minHeight: 50,
     borderWidth: 1,
