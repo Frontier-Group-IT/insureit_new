@@ -171,6 +171,8 @@ jobs:
         run: node --experimental-strip-types scripts/policy-date-otp-regression.mjs
       - name: Policy intake workflow regression
         run: npm run policy-intake:workflow-regression
+      - name: Semi-auto Motor Intake booking readiness and security regression
+        run: node --experimental-strip-types scripts/policy-intake-semi-auto-regression.mjs
       - name: Partner Intake full counts and scoped OCR search regression
         run: node scripts/partner-intake-global-filter-count-regression.mjs
       - name: Life Health case global status search regression
