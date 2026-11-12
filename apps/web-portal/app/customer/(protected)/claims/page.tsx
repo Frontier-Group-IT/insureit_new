@@ -99,7 +99,7 @@ export default async function CustomerClaimsPage({ searchParams }: { searchParam
             <img src="/assets/Custom-Icons/optimized-128/claim-documents.png" alt="" aria-hidden="true" width={34} height={34} className="h-[34px] w-[34px] object-contain" />My Claims
           </h2>
           <div className="min-w-[190px] flex-1 lg:ml-2 lg:max-w-[390px]">
-            <CustomerClaimsSearch initialQuery={params.q ?? ""} accountId={account.id} />
+            <CustomerClaimsSearch initialQuery={params.q ?? ""} accountId={account.id} suggestions={enriched.filter(item => matchesStatus(item, statusFilter)).flatMap(({claim,stage}) => [customerName, customerMobile, claim.vehicle_no, claim.claim_no, claim.insurer_claim_no, claim.policy_no, claim.insurer_name, claim.vehicle_make, claim.vehicle_model, stage].filter((v): v is string => Boolean(v)))} />
           </div>
           <div className="ml-auto flex items-center gap-2">
             <details className="group relative">
