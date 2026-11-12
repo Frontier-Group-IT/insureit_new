@@ -4,6 +4,71 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { resolveCustomerWebScope } from "@/lib/customer-web-data";
 import { loadCustomerClaimDetail, isExternalCustomerClaim, buildExternalClaimProjection } from "@/lib/customer-web-phase2-data";
 
+type Claim = Awaited<ReturnType<typeof loadCustomerClaimDetail>>["claim"];
+type ClaimFileLocation = { document_type: string; storage_bucket: string | null; storage_path: string | null };
+
+/**
+ * An Insurance Copy reused from the customer's linked policy is a reference to
+ * shared storage, not a claim-owned upload. Verify the exact source document
+ * against the policy linked to this customer and vehicle before detaching it.
+ */
+async function isLinkedPolicyCopy(
+  db: ReturnType<typeof createSupabaseAdminClient>,
+  claim: Claim,
+  customerId: string,
+  file: ClaimFileLocation,
+): Promise<boolean> {
+  if (file.document_type.toLowerCase().replace(/[^a-z0-9]/g, "") !== "insurancecopy" ||
+      !file.storage_bucket || !file.storage_path || file.storage_path.includes("..")) return false;
+
+  if (claim.external_policy_id) {
+    const { data: linked, error: policyError } = await db.from("external_policies")
+      .select("id").eq("id", claim.external_policy_id).eq("customer_id", customerId)
+      .eq("vehicle_id", claim.vehicle_id).maybeSingle();
+    if (policyError) throw policyError;
+    if (!linked) return false;
+    const { data, error } = await db.from("customer_documents").select("id")
+      .eq("customer_id", customerId).eq("external_policy_id", linked.id)
+      .eq("document_type", "policy_copy").eq("storage_bucket", file.storage_bucket)
+      .eq("storage_path", file.storage_path).limit(1);
+    if (error) throw error;
+    return Boolean(data?.length);
+  }
+
+  if (!claim.policy_id) return false;
+  const { data: linked, error: policyError } = await db.from("policies")
+    .select("id").eq("id", claim.policy_id).eq("customer_id", customerId)
+    .eq("vehicle_id", claim.vehicle_id).maybeSingle();
+  if (policyError) throw policyError;
+  if (!linked) return false;
+  const { data, error } = await db.from("policy_documents").select("id")
+    .eq("policy_id", linked.id).eq("document_type", "policy_copy")
+    .eq("storage_bucket", file.storage_bucket).eq("storage_path", file.storage_path).limit(1);
+  if (error) throw error;
+  return Boolean(data?.length);
+}
+
+/** Never delete bytes still used by another claim, customer or policy record. */
+async function cleanupUnreferencedClaimStorage(
+  db: ReturnType<typeof createSupabaseAdminClient>,
+  bucket: string,
+  path: string,
+  documentId: string,
+): Promise<void> {
+  for (const table of ["claim_documents", "policy_documents", "customer_documents"] as const) {
+    const { count, error } = await db.from(table).select("id", { count: "exact", head: true })
+      .eq("storage_bucket", bucket).eq("storage_path", path);
+    // A failed reference check must leave the stored file intact.
+    if (error || count === null) {
+      console.error("Customer claim document reference check failed", { documentId, table });
+      return;
+    }
+    if (count > 0) return;
+  }
+  const { error } = await db.storage.from(bucket).remove([path]);
+  if (error) console.error("Customer claim attachment orphan cleanup failed", { documentId, code: error.name });
+}
+
 /**
  * Customer deletion is limited to still-pending, customer-owned Spot Intimation
  * bulk uploads and voice notes. Verification history and other claim documents
@@ -115,8 +180,10 @@ export async function deleteCustomerClaimStageDocument(
       return { ok: false, message: "This document has been reviewed and cannot be deleted. Contact support." };
 
     const path = String(file.storage_path || "");
-    if (file.storage_bucket !== "claim-documents" ||
-        !path.startsWith(account.id + "/" + claim.id + "/") || path.includes(".."))
+    const isClaimOwnedUpload = file.storage_bucket === "claim-documents" &&
+      path.startsWith(account.id + "/" + claim.id + "/") && !path.includes("..");
+    const isPolicyReference = await isLinkedPolicyCopy(db, claim, account.id, file);
+    if (!isClaimOwnedUpload && !isPolicyReference)
       return { ok: false, message: "Document storage details are invalid. Contact support." };
 
     // Prevent deletion after concurrent Operations verification.
@@ -126,9 +193,10 @@ export async function deleteCustomerClaimStageDocument(
       .select("id").maybeSingle();
     if (deleteError || !removed)
       return { ok: false, message: "The document has changed or could not be deleted. Refresh and retry." };
-    const { error: storageError } = await db.storage.from("claim-documents").remove([path]);
-    if (storageError)
-      console.error("Customer claim file storage cleanup failed", { documentId, code: storageError.name });
+    // Reused policy copies are detached from the claim only. Never delete
+    // their shared storage object; another policy or claim may still use it.
+    if (isClaimOwnedUpload && !isPolicyReference)
+      await cleanupUnreferencedClaimStorage(db, "claim-documents", path, documentId);
     return { ok: true, message: "Document deleted successfully." };
   } catch (error) {
     console.error("Customer claim stage document deletion failed", error instanceof Error ? error.name : "Unknown");
