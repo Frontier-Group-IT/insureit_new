@@ -11,7 +11,6 @@ import {
   loadCustomerWebVehicles,
   resolveCustomerWebScope,
 } from "@/lib/customer-web-data";
-import { CopyPolicyNumber } from "./copy-policy-number";
 import "./policy-details.css";
 
 export const dynamic = "force-dynamic";
@@ -74,20 +73,13 @@ export default async function CustomerPolicyDetailPage({
           <div aria-hidden="true" className="pointer-events-none absolute -right-12 -top-24 h-64 w-64 rounded-full border-[28px] border-white/[.07]" />
           <div aria-hidden="true" className="pointer-events-none absolute bottom-0 right-[25%] h-20 w-32 rounded-full bg-[#9BDAFF]/10 blur-2xl" />
           <div className="relative flex flex-wrap items-start justify-between gap-3">
-            <div className="flex min-w-0 flex-1 items-start gap-3">
+            <div className="flex min-w-0 flex-1 items-center gap-3">
               <span className="grid h-14 w-14 shrink-0 place-items-center rounded-xl border border-white/90 bg-white p-1.5 shadow-[0_5px_14px_rgba(2,18,43,.18)]">
                 {insurerLogo
                   ? <Image src={insurerLogo} alt="" aria-hidden="true" width={48} height={48} unoptimized className="h-11 w-11 object-contain" />
                   : <Image src="/assets/Custom-Icons/optimized-128/policy.png" alt="" aria-hidden="true" width={48} height={48} unoptimized className="h-11 w-11 object-contain" />}
               </span>
-              <div className="min-w-0">
-                <p className="text-[10px] font-semibold uppercase tracking-[.12em] text-[#C8E1FF]">{sourceName} · {policy.policy_type || "Insurance"}</p>
-                <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                  <h1 id="policy-detail-title" className="min-w-0 break-all text-[clamp(17px,2vw,23px)] font-extrabold tracking-tight">{policy.policy_no}</h1>
-                  <CopyPolicyNumber value={policy.policy_no} />
-                </div>
-                <p className="mt-1 text-[12px] text-[#E4F0FF]">{policy.insurer_name || "Insurer not available"}</p>
-              </div>
+              <h1 id="policy-detail-title" className="min-w-0 break-all text-[clamp(17px,2vw,23px)] font-extrabold tracking-tight">{policy.policy_no}</h1>
             </div>
             <StatusPill tone={status.tone}>{statusLabel}</StatusPill>
           </div>
