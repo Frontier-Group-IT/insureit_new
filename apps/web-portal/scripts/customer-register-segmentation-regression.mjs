@@ -92,3 +92,18 @@ assert.match(operationsClear, /function clearSearch\(\)\{onChange\(""\)/, "Clear
 assert.match(operationsClear, /onClick=\{clearSearch\}/, "All shared operations search inputs use the clear action.");
 assert.match(operationsPolicy, /onChange=\{value=>\{setQuery\(value\);setPage\(1\);\}\}/, "Policy searches reset pagination, including on clear.");
 assert.match(operationsClaim, /if \(query\.trim\(\)\) params\.set\("q", query\.trim\(\)\)/, "Claim URL drops q after clearing.");
+
+
+const customerPolicyDetail = read("../app/customer/(protected)/policies/[id]/page.tsx");
+const policyHeroStart = customerPolicyDetail.indexOf('<section aria-labelledby="policy-detail-title"');
+const policyHeroEnd = customerPolicyDetail.indexOf('</section>', policyHeroStart);
+assert.ok(policyHeroStart >= 0 && policyHeroEnd > policyHeroStart, "Customer policy hero exists.");
+const policyHero = customerPolicyDetail.slice(policyHeroStart, policyHeroEnd);
+assert.match(policyHero, /id="policy-detail-title"[^>]*>\{policy\.policy_no\}<\/h1>/, "Policy hero retains the policy number heading.");
+assert.match(policyHero, /getStaticInsurerLogo|insurerLogo/, "Policy hero retains insurer logo with existing fallback.");
+assert.match(policyHero, /<StatusPill tone=\{status\.tone\}>\{statusLabel\}<\/StatusPill>/, "Policy hero retains status.");
+assert.doesNotMatch(policyHero, /CopyPolicyNumber|sourceName|policy\.policy_type|policy\.insurer_name/, "Policy hero removes copy control and secondary text.");
+assert.match(policyHero, /items-center gap-3/, "Policy number aligns vertically with insurer logo.");
+assert.match(policyHero, /Vehicle<\/p>|Valid from<\/p>|Valid until<\/p>|Product<\/p>/, "Vehicle, validity and product summary remain in the header.");
+assert.match(customerPolicyDetail, /<Detail label="Insurer" value=\{policy\.insurer_name\} \/>/, "Insurer remains available in policy details.");
+assert.match(customerPolicyDetail, /<Detail label="Intermediary type" value=\{sourceName\} \/>/, "Source remains available in additional policy details.");
