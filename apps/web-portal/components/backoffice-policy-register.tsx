@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { OperationsSearchAutocomplete } from "./operations-search-autocomplete";
 import Link from "next/link";
 import { Eye, FileText, Plus, RotateCcw, Search } from "lucide-react";
 import { getInsurerLogo } from "@/lib/insurer-logo";
@@ -97,11 +98,10 @@ export function BackofficePolicyRegister({ rows }: { rows: Row[] }) {
             <h2 className="shrink-0 text-[18px] font-semibold leading-tight text-[#0F172A]">Policy Portfolio</h2>
             <label className="relative ml-1 min-w-0 flex-1 lg:max-w-[430px]">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8B93AA]" />
-              <input
-                value={query}
-                onChange={(event) => { setQuery(event.target.value); setPage(1); }}
+              <OperationsSearchAutocomplete label="Search policies" value={query} onChange={value=>{setQuery(value);setPage(1);}}
+                options={rows.flatMap(r => [r.policy_no,r.policy_type,r.customers?.contact_name || "",r.vehicles?.vehicle_no || "",r.vehicles?.chassis_no || "",r.vehicles?.engine_no || "",r.insurance_companies?.name || ""])}
                 placeholder="Search policy, customer, insurer, vehicle, chassis or engine"
-                aria-label="Search policy, customer, insurer, vehicle, chassis or engine"
+                hints={["Search policy number…","Search customer…","Search vehicle…","Search insurer…"]}
                 className="h-10 w-full rounded-xl border border-[#CBD5E1] bg-white pl-10 pr-3 text-[12px] text-[#0F172A] outline-none transition focus:border-[#17365D] focus:ring-2 focus:ring-[#17365D]/10"
               />
             </label>
