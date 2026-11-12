@@ -13,6 +13,7 @@ import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { PartnerRotatingSearchPlaceholder } from '@/components/ui/partner-search-field';
 import { PartnerInsurerLogo } from '@/components/ui/partner-insurer-logo';
 import { getPartnerBusinessPerformance, getPartnerBusinessReportNet, getPartnerTopInsurers, type PartnerTopInsurer, type PartnerBusinessPerformance } from '@/lib/business';
+import { isLikelyConnectivityError } from '@/lib/partner-query-cache';
 import { getPartnerClaimSummary, type PartnerClaimSummary } from '@/lib/claims';
 import { formatIndianCurrency } from '@/lib/format';
 import { getPartnerBusinessRange, type PartnerBusinessRangeSummary } from '@/lib/home';
@@ -76,26 +77,22 @@ export default function BusinessScreen() {
 
   const fetchBusinessWorkspace = useCallback(async (): Promise<{
     performance: PartnerBusinessPerformance;
-    network: PartnerNetworkData;
     renewals: PartnerRenewalSummary | null;
     claims: PartnerClaimSummary | null;
     payout: PartnerPayoutSummary | null;
     secondaryWarning: boolean;
   }> => {
-    const [performanceResult, networkResult, renewalResult, claimResult, payoutResult] = await Promise.allSettled([
-      getPartnerBusinessPerformance(),
-      getPartnerNetwork(),
+    const [performanceResult, renewalResult, claimResult, payoutResult] = await Promise.allSettled([
+      retryTransientBusinessRead(getPartnerBusinessPerformance),
       getPartnerRenewalSummary(),
       getPartnerClaimSummary(),
       isBranchLogin ? Promise.resolve(null) : getPartnerPayoutSummary(),
     ]);
 
-    if (performanceResult.status === 'rejected') throw performanceResult.reason;
-    if (networkResult.status === 'rejected') throw networkResult.reason;
+    if (performanceResult.status === 'rejected') throw new Error(`Business performance could not be loaded: ${describeBusinessError(performanceResult.reason)}`);
 
     return {
       performance: performanceResult.value,
-      network: networkResult.value,
       renewals: renewalResult.status === 'fulfilled' ? renewalResult.value : null,
       claims: claimResult.status === 'fulfilled' ? claimResult.value : null,
       payout: payoutResult.status === 'fulfilled' ? payoutResult.value : null,
@@ -139,17 +136,25 @@ export default function BusinessScreen() {
 
   const workspace = usePartnerQuery({
     scopeKey: cacheScopeKey,
-    key: 'business:workspace',
+    key: 'business:workspace:v2',
     fetcher: fetchBusinessWorkspace,
+    staleTimeMs: 90_000,
+  });
+  // Network is supplemental. Its own scoped cache and errors must not blank business metrics.
+  const fetchBusinessNetwork = useCallback(() => retryTransientBusinessRead(getPartnerNetwork), []);
+  const networkQuery = usePartnerQuery<PartnerNetworkData>({
+    scopeKey: cacheScopeKey,
+    key: 'business:network',
+    fetcher: fetchBusinessNetwork,
     staleTimeMs: 90_000,
   });
 
   useFocusEffect(useCallback(() => {
-    void Promise.all([workspace.ensureFresh(), currentMtd.ensureFresh(), previousMtd.ensureFresh(), netTrend.ensureFresh()]);
-  }, [workspace.ensureFresh, currentMtd.ensureFresh, previousMtd.ensureFresh, netTrend.ensureFresh]));
+    void Promise.all([workspace.ensureFresh(), networkQuery.ensureFresh(), currentMtd.ensureFresh(), previousMtd.ensureFresh(), netTrend.ensureFresh()]);
+  }, [workspace.ensureFresh, networkQuery.ensureFresh, currentMtd.ensureFresh, previousMtd.ensureFresh, netTrend.ensureFresh]));
 
   const performance = workspace.data?.performance ?? null;
-  const network = workspace.data?.network ?? null;
+  const network = networkQuery.data;
   const renewals = workspace.data?.renewals ?? null;
   const claims = workspace.data?.claims ?? null;
   const payout = workspace.data?.payout ?? null;
@@ -283,16 +288,16 @@ export default function BusinessScreen() {
         refreshControl: (
           <RefreshControl
             refreshing={workspace.refreshing}
-            onRefresh={() => void Promise.all([workspace.refresh(), currentMtd.refresh(), previousMtd.refresh(), netTrend.refresh()])}
+            onRefresh={() => void Promise.all([workspace.refresh(), networkQuery.refresh(), currentMtd.refresh(), previousMtd.refresh(), netTrend.refresh()])}
             tintColor={partnerTheme.colors.brand}
             colors={[partnerTheme.colors.brand]}
           />
         ),
       }}
     >
-      {workspace.loading && (!performance || !network) ? (
+      {workspace.loading && !performance ? (
         <PartnerStateView state="loading" title="Loading business workspace" />
-      ) : !performance || !network ? (
+      ) : !performance ? (
         <PartnerStateView
           state="error"
           title="Business workspace unavailable"
@@ -331,14 +336,16 @@ export default function BusinessScreen() {
 
           <BusinessSearchSlot controls={businessSearchControls} />
 
-          {workspace.stale || workspace.error || workspace.data?.secondaryWarning ? (
+          {workspace.stale || workspace.error || workspace.data?.secondaryWarning || networkQuery.error || networkQuery.stale ? (
             <View style={styles.feedback}>
               <PartnerBanner
                 tone="warning"
-                title={workspace.offline ? "You're offline" : workspace.stale ? 'Showing cached information' : undefined}
+                title={workspace.offline || networkQuery.offline ? "You're offline" : workspace.stale || networkQuery.stale ? 'Showing cached information' : undefined}
                 message={workspace.stale
                   ? `Last refreshed ${formatCacheTime(workspace.updatedAt)}. Pull down to try again.`
-                  : workspace.error || 'Some secondary business information could not be refreshed.'}
+                  : workspace.error || (networkQuery.error
+                    ? `Partner Network could not be refreshed: ${networkQuery.error}`
+                    : 'Some secondary business information could not be refreshed.')}
               />
             </View>
           ) : null}
@@ -526,11 +533,17 @@ export default function BusinessScreen() {
           </View>
 
           <SectionHeader title="My Network" action={<Pressable onPress={() => router.push('/network')}><Text style={styles.viewAll}>View All ›</Text></Pressable>} />
+          {!network && !networkQuery.loading ? (
+            <Pressable accessibilityRole="button" accessibilityLabel="Retry Partner Network data" onPress={() => void networkQuery.refresh()} style={styles.networkRetry}>
+              <Ionicons name="refresh-outline" size={15} color="#3156B8" />
+              <Text style={styles.networkRetryText}>Partner Network unavailable. Retry</Text>
+            </Pressable>
+          ) : null}
           <View style={[styles.networkGrid, compactScreen && styles.tightNetwork]}>
             <Pressable accessibilityRole="button" onPress={() => router.push('/network')} style={({ pressed }) => [styles.networkTile, pressed && styles.pressed]}>
               <BlueIcon icon="people" badge="+" size={27} />
               <View style={styles.networkBody}>
-                <Text style={styles.networkValue}>{network.total_partners}</Text>
+                <Text style={styles.networkValue}>{network ? network.total_partners : '—'}</Text>
                 <Text style={styles.networkLabel}>Partner Family</Text>
               </View>
               <Ionicons name="chevron-forward" size={14} color="#3156B8" />
@@ -548,6 +561,22 @@ export default function BusinessScreen() {
       )}
     </PartnerScreen>
   );
+}
+
+// Retry only connectivity/timeouts once. Permission and validation errors fail immediately.
+async function retryTransientBusinessRead<T>(read: () => Promise<T>): Promise<T> {
+  try {
+    return await read();
+  } catch (error) {
+    if (!isLikelyConnectivityError(error)) throw error;
+    return read();
+  }
+}
+
+function describeBusinessError(error: unknown): string {
+  if (error instanceof Error && error.message.trim()) return error.message;
+  if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') return error.message;
+  return 'Unknown request error';
 }
 
 function DropdownMenu<T extends string>({
@@ -890,6 +919,8 @@ const styles = StyleSheet.create({
   generatedIconBadgeText: { color: '#FFFFFF', fontSize: 8, lineHeight: 10, fontWeight: Platform.OS === 'ios' ? '400' : '900' },
   quickLabel: { marginTop: 3, color: '#14367B', textAlign: 'center', ...partnerTheme.typography.meta, fontWeight: Platform.OS === 'ios' ? '400' : '800' },
   quickMeta: { marginTop: 1, color: '#718198', textAlign: 'center', ...partnerTheme.typography.meta, fontWeight: Platform.OS === 'ios' ? '400' : '500' },
+  networkRetry: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 9, paddingVertical: 7 },
+  networkRetryText: { color: '#3156B8', fontSize: 11, fontWeight: '700' },
   networkGrid: { flexDirection: 'row', gap: 5, marginBottom: 2 },
   networkTile: { flex: 1, minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 7, borderRadius: 16, paddingVertical: 6, paddingHorizontal: 10, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#DDE6F1', ...partnerTheme.shadowSoft },
   networkIcon: { width: 24, height: 24 },
