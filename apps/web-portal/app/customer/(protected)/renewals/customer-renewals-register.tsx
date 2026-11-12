@@ -65,7 +65,7 @@ export function CustomerRenewalsRegister({accountId,items,categories}:{
       <p className="max-w-sm text-[11px] leading-5 text-[#7384A5]">{emptyDescription}</p>
     </div>
   );
-  return <div className={`customer-register-motion space-y-4 text-[#293461] ${motion.pageEnter}`}>
+  return <div className={`customer-register-motion customer-renewals-page gap-4 text-[#293461] ${motion.pageEnter}`}>
     <section className="customer-register-hero relative isolate min-h-[175px] overflow-hidden rounded-xl border border-[#E1E8F9] bg-[#EDF4FF]">
       <div aria-hidden="true" className={`pointer-events-none absolute -inset-2 bg-[url('/assets/renewal.jpeg')] bg-cover bg-center ${motion.heroParallax}`}/>
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#F0F5FF]/95 via-[#F0F5FF]/75 via-40% to-transparent"/>
@@ -79,13 +79,13 @@ export function CustomerRenewalsRegister({accountId,items,categories}:{
         </div>
       </div>
     </section>
-    <div className={`customer-register-panel grid gap-2 sm:grid-cols-[minmax(0,1fr)_190px] ${motion.controls}`}>
+    <div className={`customer-renewals-controls grid gap-2 sm:grid-cols-[minmax(0,1fr)_190px] ${motion.controls}`}>
       <label className="customer-register-control flex h-10 min-w-0 items-center gap-2 rounded-lg border border-[#E0E7F4] bg-white px-3 text-[#8090B0]"><Search className="h-4 w-4 shrink-0"/><input aria-label="Search renewals" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search by reference number, vehicle number or policy..." className="min-w-0 flex-1 border-0 bg-transparent text-[11px] text-[#253760] outline-none placeholder:text-[11px] placeholder:font-normal placeholder:text-[#9BA9C0]"/></label>
       <select aria-label="Filter by status" value={status} onChange={e=>setStatus(e.target.value)} className={`customer-register-control h-10 rounded-lg border border-[#E0E7F4] bg-white px-3 text-[11px] font-semibold text-[#53648C] ${motion.filterControl}`}>
         <option value="all">All Status</option><option value="due">Due</option><option value="expired">Expired</option>
       </select>
     </div>
-    <div className="space-y-3">
+    <div className="customer-renewals-results gap-3">
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6" role="group" aria-label="Renewal categories">
         {groups.groupList.slice(0, 6).map(cat => {
           const selected = activeCategory === cat.key;
@@ -128,7 +128,7 @@ export function CustomerRenewalsRegister({accountId,items,categories}:{
           </div> : emptyState}
         </section>;
       })() : null}
-      {!selectedGroup && !groups.filtered.length ? <section className="rounded-xl border border-[#E2E9F5] bg-white">{emptyState}</section> : null}
+      {!selectedGroup && !groups.filtered.length ? <section className="customer-renewals-empty rounded-xl border border-[#E2E9F5] bg-white">{emptyState}</section> : null}
     </div>
   </div>;
 }

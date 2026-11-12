@@ -34,7 +34,7 @@ export default async function CustomerRenewalsPage({
     expired: summary.expired,
   }));
   return (
-    <div className="space-y-3">
+    <div className="flex min-h-0 flex-1 flex-col gap-3">
       <CustomerAccountTabs accounts={accounts} selectedId={account.id} pathname="/customer/renewals" />
       <CustomerRenewalsRegister accountId={account.id} items={items} categories={categories} />
     </div>
