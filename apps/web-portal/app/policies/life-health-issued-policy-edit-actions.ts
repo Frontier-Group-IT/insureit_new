@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { isPensionLifePolicy } from "@/lib/life-health-pension-maturity";
 import { validScheduleDate, canonicalPaymentFrequency } from "@/lib/life-health-issued-schedule";
 import { requirePolicyEditor } from "@/lib/policy-access-server";
 import { canAccessPolicyCommercials } from "@/lib/policy-commercial-access";
@@ -135,7 +134,6 @@ export async function updateIssuedLifeHealthPolicy(formData: FormData): Promise<
   const sourceId = clean(formData.get("sourceId"));
   const insurerId = clean(formData.get("insurerId"));
   const productName = clean(formData.get("productName"));
-  const pensionPlan = isPensionLifePolicy(businessLine, productName);
   const proposalNumber = clean(formData.get("proposalNumber")).toUpperCase();
   const ppt = clean(formData.get("ppt"));
   const pd = clean(formData.get("pd"));
@@ -169,7 +167,7 @@ export async function updateIssuedLifeHealthPolicy(formData: FormData): Promise<
   if (!validScheduleDate(proposalDate)) return { ok: false, error: "Enter a valid proposal date." };
   if (!requestedPolicyNumber || !normalizedPolicyNumber || requestedPolicyNumber.length > 120) return { ok: false, error: "Enter a valid policy number." };
   if ((pptEndDate && !validScheduleDate(pptEndDate)) || (nextInstallmentDate && !validScheduleDate(nextInstallmentDate))) return { ok: false, error: "Enter valid PPT End and Next Installment dates." };
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate) || (!pensionPlan && !endDate) || (endDate && !/^\d{4}-\d{2}-\d{2}$/.test(endDate))) return { ok: false, error: "Enter valid policy start and end dates." };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate) || (endDate && !/^\d{4}-\d{2}-\d{2}$/.test(endDate))) return { ok: false, error: "Enter a valid policy start date and, if provided, a valid policy end date." };
   if (endDate && endDate < startDate) return { ok: false, error: "Policy end date cannot be before the start date." };
   if (pptEndDate && pptEndDate < startDate) return { ok: false, error: "PPT End Date cannot be before the policy start date." };
   if (nextInstallmentDate && nextInstallmentDate < startDate) return { ok: false, error: "Next Installment Date cannot be before the policy start date." };

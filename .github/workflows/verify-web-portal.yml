@@ -179,6 +179,8 @@ jobs:
         run: node scripts/life-health-case-global-search-regression.mjs
       - name: Life Health issued edit parity regression
         run: node scripts/life-health-issued-edit-parity-regression.mjs
+      - name: Life Health optional maturity case and edit regression
+        run: node scripts/life-health-pension-maturity-regression.mjs
       - name: Life Health issued View Policy direct navigation regression
         run: node scripts/life-health-issued-view-navigation-regression.mjs
       - name: Partner Operations non-commercial export parity regression
