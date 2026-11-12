@@ -21,6 +21,9 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { PartnerBanner } from '@/components/ui/partner-banner';
 import { PartnerRotatingSearchPlaceholder } from '@/components/ui/partner-search-field';
 import { PartnerTopBar } from '@/components/ui/partner-top-bar';
+import { PartnerProfileAvatar } from '@/components/ui/partner-profile-avatar';
+import { signedInPersonName } from '@/lib/signed-in-person';
+import { usePartnerSession } from '@/providers/partner-session-provider';
 import { getPartnerUnreadActivityCount } from '@/lib/engagement';
 import { partnerTheme } from '@/lib/theme';
 import { usePartnerNetwork } from '@/providers/partner-network-provider';
@@ -91,6 +94,7 @@ export function PartnerScreen({
   };
 }>) {
   const { isOffline } = usePartnerNetwork();
+  const { context, avatarUri } = usePartnerSession();
   const router = useRouter();
   const isFocused = useIsFocused();
   const safeAreaInsets = useSafeAreaInsets();
@@ -292,7 +296,13 @@ export function PartnerScreen({
                     onPress={() => router.push('/profile')}
                     style={({ pressed }) => [styles.homeHeroAvatar, pressed && styles.homeSearchPressed]}
                   >
-                    <Text style={styles.homeHeroAvatarText}>{homeInitials(title)}</Text>
+                    <PartnerProfileAvatar
+                      name={context ? signedInPersonName(context.identity) : title}
+                      uri={avatarUri}
+                      size={36}
+                      backgroundColor="rgba(255,255,255,0.14)"
+                      textColor="#FFFFFF"
+                    />
                   </Pressable>
                 </View>
               </View>
