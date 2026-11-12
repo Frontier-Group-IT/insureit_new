@@ -7,6 +7,8 @@ const claims = read("../app/customer/(protected)/claims/page.tsx");
 const vehicles = read("../app/customer/(protected)/vehicles/customer-vehicles-register.tsx");
 const vehiclePage = read("../app/customer/(protected)/vehicles/page.tsx");
 const policies = read("../app/customer/(protected)/policies/page.tsx");
+const renewalsPage = read("../app/customer/(protected)/renewals/page.tsx");
+const renewals = read("../app/customer/(protected)/renewals/customer-renewals-register.tsx");
 const pages = [
   "../app/customer/(protected)/home/page.tsx",
   "../app/customer/(protected)/vehicles/page.tsx",
@@ -35,7 +37,16 @@ for (const [name, source, marker] of [
   ["Claims", claims, "customer-claims-page"],
   ["Vehicles", vehicles, "customer-vehicles-page"],
   ["Policies", policies, "customer-policies-page"],
+  ["Renewals", renewals, "customer-renewals-page"],
 ]) assert.ok(source.includes(marker), `${name} register is missing full-height styling hook`);
+assert.match(css, /\.customer-renewals-page > \.customer-renewals-results/, "Renewal results must stretch beneath the category cards");
+assert.match(css, /\.customer-renewals-results > \.customer-register-card/, "Selected renewal register uses remaining viewport height");
+assert.match(css, /\.customer-renewals-results > \.customer-renewals-empty/, "Empty renewal results also fill available height");
+assert.match(renewalsPage, /flex min-h-0 flex-1 flex-col gap-3/, "Renewals page must propagate available height through the account switcher");
+assert.match(renewals, /customer-renewals-controls grid gap-2/, "Renewal search and filters retain compact grid layout");
+assert.match(renewals, /customer-renewals-results gap-3/, "Renewal result groups must consume remaining space");
+assert.match(css, /\.customer-renewals-page > \.customer-renewals-controls\s*\{\s*flex:\s*0 0 auto/, "Renewals search must not stretch");
+assert.match(css, /\.customer-compact :is\(\.customer-claims-page, \.customer-vehicles-page, \.customer-policies-page, \.customer-renewals-page\)/, "All four register pages use shared viewport-height rules");
 assert.match(css, /\.customer-claims-page \.claims-motion-pagination\s*\{\s*margin-top:\s*auto/, "Claims pagination must sit at panel bottom");
 assert.match(css, /\.customer-vehicles-page > \.customer-register-panel > footer/, "Vehicle pagination must sit at panel bottom");
 assert.match(css, /\.customer-policies-page > \.customer-register-panel > p:last-child/, "Policy summary footer must sit at panel bottom");
