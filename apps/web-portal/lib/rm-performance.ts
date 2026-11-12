@@ -60,6 +60,7 @@ export type RmPerformanceData = {
   todayBusinessLineCounts: Record<"life" | "health", number>;
   mtdBusinessLineCounts: Record<"life" | "health", number>;
   ytdTrend: PolicyBusinessNetReport["trend"];
+  mtdPriorEquivalent: { from: string; to: string; netPremium: number } | null;
   rows: RmPerformanceRow[];
   recentPolicies: PolicyBusinessNetReport["register"]["rows"];
   sourceCoverageComplete: boolean;
@@ -72,6 +73,7 @@ export async function loadRmPerformance(profile: ViewerProfile, query: RmPerform
   const today = indiaDate(new Date());
   const monthStart = `${today.slice(0, 8)}01`;
   const selectedPeriod = resolvePeriod(query, today, monthStart);
+  const priorEquivalent = selectedPeriod.key === "mtd" ? previousMonthMatchingRange(selectedPeriod.to) : null;
   const todayQuery = {
     period: "custom",
     from: today,
@@ -89,7 +91,7 @@ export async function loadRmPerformance(profile: ViewerProfile, query: RmPerform
     pageSize: String(REPORT_PAGE_SIZE),
   } as const;
 
-  const [todayPayload, mtdPayload, ytdPayload] = await Promise.all([
+  const [todayPayload, mtdPayload, ytdPayload, priorEquivalentPayload] = await Promise.all([
     loadPolicyBusinessNetReport(profile, todayQuery),
     loadPolicyBusinessNetReport(profile, mtdQuery),
     loadPolicyBusinessNetReport(profile, {
@@ -99,6 +101,10 @@ export async function loadRmPerformance(profile: ViewerProfile, query: RmPerform
       rm: selectedRmId ?? undefined,
       page: "1",
     }),
+    priorEquivalent ? loadPolicyBusinessNetReport(profile, {
+      period: "custom", from: priorEquivalent.from, to: priorEquivalent.to,
+      rm: selectedRmId ?? undefined, page: "1",
+    }) : Promise.resolve(null),
   ]);
 
   // The report RPC caps register pages at 200 rows even if a larger pageSize is requested.
@@ -253,6 +259,10 @@ export async function loadRmPerformance(profile: ViewerProfile, query: RmPerform
     todayBusinessLineCounts: lifeHealthCounts(todayRegisterRows),
     mtdBusinessLineCounts: lifeHealthCounts(mtdRegisterRows),
     ytdTrend: ytdPayload.report.trend.slice(-6),
+    mtdPriorEquivalent: priorEquivalent && priorEquivalentPayload ? {
+      from: priorEquivalent.from, to: priorEquivalent.to,
+      netPremium: priorEquivalentPayload.report.summary.net_premium,
+    } : null,
     rows,
     recentPolicies: mtdPayload.report.register.rows.slice(0, 10),
     sourceCoverageComplete:
@@ -444,6 +454,17 @@ function previousMonthRange(isoDate: string) {
   const lastDay = new Date(Date.UTC(previousYear, previousMonth, 0)).getUTCDate();
   const prefix = `${previousYear}-${String(previousMonth).padStart(2, "0")}`;
   return { from: `${prefix}-01`, to: `${prefix}-${String(lastDay).padStart(2, "0")}` };
+}
+
+// Match the current MTD end day in the prior month, clamping for short months.
+function previousMonthMatchingRange(isoDate: string) {
+  const [year, month, day] = isoDate.split("-").map(Number);
+  const previous = new Date(Date.UTC(year, month - 2, 1));
+  const previousYear = previous.getUTCFullYear();
+  const previousMonth = previous.getUTCMonth() + 1;
+  const previousLastDay = new Date(Date.UTC(previousYear, previousMonth, 0)).getUTCDate();
+  const prefix = `${previousYear}-${String(previousMonth).padStart(2, "0")}`;
+  return { from: `${prefix}-01`, to: `${prefix}-${String(Math.min(day, previousLastDay)).padStart(2, "0")}` };
 }
 
 function sixMonthTrendStart(isoDate: string) {
