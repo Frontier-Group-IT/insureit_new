@@ -5,6 +5,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PartnerBanner } from '@/components/ui/partner-banner';
+import { PartnerSearchField } from '@/components/ui/partner-search-field';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { PartnerPagination } from '@/components/ui/partner-pagination';
 import {
@@ -126,22 +127,13 @@ export default function CustomersScreen() {
       </View>
 
       <View style={styles.searchBand}>
-        <View style={styles.searchBox}>
-          <Ionicons name="search-outline" size={17} color="#7F8EA3" />
-          <TextInput
-            value={query}
-            onChangeText={setQuery}
-            placeholder="Search name, code, phone, email or city"
-            placeholderTextColor="#98A5B8"
-            style={styles.searchInput}
-            returnKeyType="search"
-          />
-          {query ? (
-            <Pressable accessibilityRole="button" accessibilityLabel="Clear search" onPress={() => setQuery('')} hitSlop={8}>
-              <Ionicons name="close-circle" size={17} color="#9BA7B8" />
-            </Pressable>
-          ) : null}
-        </View>
+        <PartnerSearchField
+          value={query} onChangeText={setQuery} onClear={() => setQuery('')}
+          placeholder="Search name, code, phone, email or city"
+          placeholders={["Search customer name…","Search mobile number…","Search customer code…","Search city…"]}
+          suggestions={debouncedSearch.length >= 2 ? collection.rows.flatMap(row => [row.customer_name,row.customer_code || "",row.phone || "",row.email || "",row.city || ""]) : []}
+          containerStyle={styles.searchBox}
+        />
         <Pressable accessibilityRole="button" accessibilityLabel="Refresh customers" onPress={() => void refreshAll()} style={({ pressed }) => [styles.refreshButton, pressed && styles.pressed]}>
           <Ionicons name="refresh" size={18} color="#173E73" />
         </Pressable>
