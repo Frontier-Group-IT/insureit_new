@@ -1,9 +1,10 @@
 Partner production OTA trigger
-release=partner-business-workspace-resilience-pr-4315
-source=verified-merged-main-6fe0805d3e98daf0b28ae4331bdb33bc6b6b1e83
-reason=user-approved-merge-and-publish-after-partner-and-web-ci
+release=partner-profile-photo-header-4317
+source=verified-merged-main-965295969a8a9eb9833e6214aeb1067d8e8e474c
+reason=user-approved-merge-and-publish-both-app-avatar-photos
 channel=production
 runtime=0.2.0
 requested=2026-11-12
 no_native_build=true
-database_changes=none-in-pr-4315
+database_changes=none
+customer_production_ota=separate-0.3.0-workflow
