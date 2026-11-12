@@ -363,16 +363,6 @@ export function PartnerScreen({
   );
 }
 
-function homeInitials(title: string) {
-  const name = title.replace(/^Good\s+(Morning|Afternoon|Evening)\s+/i, '').trim();
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join('') || 'IP';
-}
-
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#F5F7FB' },
   navyStatusArea: { backgroundColor: '#071E49' },
