@@ -60,6 +60,7 @@ export type RmPerformanceData = {
   todayBusinessLineCounts: Record<"life" | "health", number>;
   mtdBusinessLineCounts: Record<"life" | "health", number>;
   ytdTrend: PolicyBusinessNetReport["trend"];
+  mtdComparison: { from: string; to: string; netPremium: number } | null;
   rows: RmPerformanceRow[];
   recentPolicies: PolicyBusinessNetReport["register"]["rows"];
   sourceCoverageComplete: boolean;
@@ -72,6 +73,7 @@ export async function loadRmPerformance(profile: ViewerProfile, query: RmPerform
   const today = indiaDate(new Date());
   const monthStart = `${today.slice(0, 8)}01`;
   const selectedPeriod = resolvePeriod(query, today, monthStart);
+  const previousEquivalent = selectedPeriod.key === "mtd" ? previousMonthMatchingRange(selectedPeriod.to) : null;
   const todayQuery = {
     period: "custom",
     from: today,
@@ -89,7 +91,7 @@ export async function loadRmPerformance(profile: ViewerProfile, query: RmPerform
     pageSize: String(REPORT_PAGE_SIZE),
   } as const;
 
-  const [todayPayload, mtdPayload, ytdPayload] = await Promise.all([
+  const [todayPayload, mtdPayload, ytdPayload, comparisonPayload] = await Promise.all([
     loadPolicyBusinessNetReport(profile, todayQuery),
     loadPolicyBusinessNetReport(profile, mtdQuery),
     loadPolicyBusinessNetReport(profile, {
@@ -99,6 +101,10 @@ export async function loadRmPerformance(profile: ViewerProfile, query: RmPerform
       rm: selectedRmId ?? undefined,
       page: "1",
     }),
+    previousEquivalent ? loadPolicyBusinessNetReport(profile, {
+      period: "custom", from: previousEquivalent.from, to: previousEquivalent.to,
+      rm: selectedRmId ?? undefined, page: "1",
+    }) : Promise.resolve(null),
   ]);
 
   // The report RPC caps register pages at 200 rows even if a larger pageSize is requested.
@@ -188,11 +194,11 @@ export async function loadRmPerformance(profile: ViewerProfile, query: RmPerform
   // filtered report must remain isolated: do not load additional personnel for RM logins.
   if (!selectedRmId && profile.role !== "relationship_manager") {
     const { data: personnel, error: hierarchyError } = await createSupabaseAdminClient()
-      .from("employees").select("id,full_name,designation,reporting_manager_id");
+      .from("employees").select("id,full_name,designation,reporting_manager_id,employment_status");
     if (hierarchyError) throw new Error("RM reporting hierarchy could not be loaded.");
-    const people = (personnel ?? []) as Array<{id:string;full_name:string|null;designation:string|null;reporting_manager_id:string|null}>;
+    const people = (personnel ?? []) as Array<{id:string;full_name:string|null;designation:string|null;reporting_manager_id:string|null;employment_status:string|null}>;
     const byId = new Map(people.map(p => [p.id,p]));
-    const norm = (s:string) => s.trim().toLocaleLowerCase("en-IN").replace(/\\s+/g," ");
+    const norm = (s:string) => s.trim().toLocaleLowerCase("en-IN").replace(/\s+/g," ");
     const byName = new Map<string,typeof people>();
     for (const p of people) {
       const key = norm(p.full_name ?? "");
@@ -217,7 +223,7 @@ export async function loadRmPerformance(profile: ViewerProfile, query: RmPerform
         visited.add(parentId);
         const person = byId.get(parentId);
         if (!person) break;
-        const isSalesHead = /sales head|sales manager|relationship manager|^rm$/i.test(person.designation ?? "");
+        const isSalesHead = /sales head|sales manager|head motors|relationship manager|^rm$|cluster manager|regional manager/i.test(person.designation ?? "");
         if (!isSalesHead) break;
         if (!resolved.has(parentId)) {
           rows.push({employeeId:person.id,name:person.full_name ?? "Unnamed manager",managerId:person.reporting_manager_id,
@@ -226,6 +232,28 @@ export async function loadRmPerformance(profile: ViewerProfile, query: RmPerform
           resolved.set(parentId,parentId);
         }
         parentId = person.reporting_manager_id;
+      }
+    }
+    // Enrich only represented teams: active reporting RMs with no sales still
+    // belong under their verified manager. Never introduce unrelated root teams.
+    const childrenByManager = new Map<string, typeof people>();
+    for (const person of people) {
+      if (!person.reporting_manager_id || person.employment_status?.toLowerCase() !== "active") continue;
+      childrenByManager.set(person.reporting_manager_id, [...(childrenByManager.get(person.reporting_manager_id) ?? []), person]);
+    }
+    for (let index = 0; index < rows.length; index++) {
+      const managerId = rows[index].employeeId;
+      if (!managerId) continue;
+      for (const person of childrenByManager.get(managerId) ?? []) {
+        if (resolved.has(person.id)) continue;
+        if (!/relationship manager|^rm$|sales head|sales manager|head motors|cluster manager|regional manager/i.test(person.designation ?? "")) continue;
+        rows.push({
+          employeeId: person.id, name: person.full_name ?? "Unnamed RM",
+          managerId: person.reporting_manager_id, designation: person.designation,
+          todayPolicies: 0, todayNetPremium: 0, mtdPolicies: 0, mtdNetPremium: 0,
+          averageNetPremium: 0, contributionPercent: 0, sources: [],
+        });
+        resolved.set(person.id, person.id);
       }
     }
   }
@@ -253,6 +281,10 @@ export async function loadRmPerformance(profile: ViewerProfile, query: RmPerform
     todayBusinessLineCounts: lifeHealthCounts(todayRegisterRows),
     mtdBusinessLineCounts: lifeHealthCounts(mtdRegisterRows),
     ytdTrend: ytdPayload.report.trend.slice(-6),
+    mtdComparison: previousEquivalent && comparisonPayload ? {
+      from: previousEquivalent.from, to: previousEquivalent.to,
+      netPremium: comparisonPayload.report.summary.net_premium,
+    } : null,
     rows,
     recentPolicies: mtdPayload.report.register.rows.slice(0, 10),
     sourceCoverageComplete:
@@ -444,6 +476,17 @@ function previousMonthRange(isoDate: string) {
   const lastDay = new Date(Date.UTC(previousYear, previousMonth, 0)).getUTCDate();
   const prefix = `${previousYear}-${String(previousMonth).padStart(2, "0")}`;
   return { from: `${prefix}-01`, to: `${prefix}-${String(lastDay).padStart(2, "0")}` };
+}
+
+// Compare the same calendar days, clamping for shorter previous months.
+function previousMonthMatchingRange(isoDate: string) {
+  const [year, month, day] = isoDate.split("-").map(Number);
+  const previous = new Date(Date.UTC(year, month - 2, 1));
+  const prevYear = previous.getUTCFullYear();
+  const prevMonth = previous.getUTCMonth() + 1;
+  const lastDay = new Date(Date.UTC(prevYear, prevMonth, 0)).getUTCDate();
+  const prefix = `${prevYear}-${String(prevMonth).padStart(2, "0")}`;
+  return { from: `${prefix}-01`, to: `${prefix}-${String(Math.min(day, lastDay)).padStart(2, "0")}` };
 }
 
 function sixMonthTrendStart(isoDate: string) {
