@@ -10,6 +10,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LoadingState, Message, Screen } from '@/components/ui';
 import { ensureCustomerForUser, getCurrentSession, getOnboardingApplicationForUser, getProfile, signOut } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
+import { publishCustomerProfilePhoto } from '@/lib/customer-profile-photo';
 import { palette, roleTheme } from '@/lib/theme';
 import type { Customer, CustomerDocument, CustomerOnboardingApplication, CustomerOnboardingDocument, Profile } from '@/lib/types';
 
@@ -274,6 +275,7 @@ export default function ProfileScreen() {
       const previousPhoto = profilePhoto;
       setProfilePhoto(data);
       setAvatarUri(signedPhoto.data.signedUrl);
+      publishCustomerProfilePhoto({ customerId: customer.id, url: signedPhoto.data.signedUrl });
       setMessage({ text: 'Profile photo updated.', type: 'success' });
 
       if (previousPhoto) {
