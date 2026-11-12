@@ -18,12 +18,15 @@
   flex: 1 0 auto;
   min-width: 0;
 }
-/* Registers use available height for their results, never for enlarged cards.
-   Existing spacing utilities and natural page overflow are retained. */
-.customer-compact :is(.customer-claims-page, .customer-vehicles-page, .customer-policies-page) {
+/* Register pages consume the remaining viewport below the shared header.
+   Only the containing panels expand; table rows, cards and banners keep their natural size.
+   A minimum rather than fixed height keeps long lists and smaller screens scrollable. */
+.customer-compact :is(.customer-claims-page, .customer-vehicles-page, .customer-policies-page, .customer-renewals-page) {
   display: flex;
+  flex: 1 0 auto;
   flex-direction: column;
   min-width: 0;
+  min-height: 0;
 }
 .customer-compact :is(.customer-claims-page, .customer-vehicles-page, .customer-policies-page) > .customer-register-panel,
 .customer-compact .customer-claims-page > .claims-motion-panel {
@@ -31,6 +34,24 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
+}
+/* The renewal toolbar is a grid, not a register panel, so keep it natural-height.
+   The selected results panel (or empty-state panel) uses spare space below categories. */
+.customer-compact .customer-renewals-page > .customer-renewals-controls {
+  flex: 0 0 auto;
+}
+.customer-compact .customer-renewals-page > .customer-renewals-results {
+  display: flex;
+  flex: 1 0 auto;
+  flex-direction: column;
+  min-width: 0;
+}
+.customer-compact .customer-renewals-results > [aria-label="Renewal categories"] {
+  flex: 0 0 auto;
+}
+.customer-compact .customer-renewals-results > .customer-register-card,
+.customer-compact .customer-renewals-results > .customer-renewals-empty {
+  flex: 1 0 auto;
 }
 .customer-compact .customer-claims-page .claims-motion-results {
   flex: 1 0 auto;
