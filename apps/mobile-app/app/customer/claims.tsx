@@ -106,7 +106,7 @@ export default function ClaimsScreen() {
         <Text style={styles.pageSubtitle} numberOfLines={Platform.OS === 'ios' ? 1 : undefined} adjustsFontSizeToFit={Platform.OS === 'ios'} minimumFontScale={0.8}>Track active claims, actions and completed settlements.</Text>
       </View>
 
-      <CustomerSearchBar value={query} onChangeText={setQuery} placeholder="Search vehicle, control or claim no." idleHints={["Search vehicle, control or claim no.", "Search by vehicle number", "Search by claim number"]} />
+      <CustomerSearchBar value={query} onChangeText={setQuery} suggestions={claims.filter(claim => matchesFilter(claim, filter, documents, tasks, milestonesByClaimId.get(claim.id) ?? [])).flatMap(claim => [claim.claim_no,claim.insurer_claim_no || "",claim.current_status,claim.accident_location || "",vehicles.find(vehicle => vehicle.id === claim.vehicle_id)?.vehicle_no || "",policies.find(policy => policy.id === claim.policy_id)?.policy_no || ""])} placeholder="Search vehicle, control or claim no." idleHints={["Search vehicle, control or claim no.", "Search by vehicle number", "Search by claim number"]} />
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroller} contentContainerStyle={styles.filterWrap}>
         {(['All', 'Open', 'Action Required', 'Completed'] as ClaimFilter[]).map((item) => (
