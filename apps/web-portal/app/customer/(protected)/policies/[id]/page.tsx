@@ -8,6 +8,7 @@ import {
   formatCustomerDate,
   formatCustomerMoney,
   loadCustomerPolicyDetail,
+  loadCustomerWebVehicles,
   resolveCustomerWebScope,
 } from "@/lib/customer-web-data";
 import { CopyPolicyNumber } from "./copy-policy-number";
@@ -51,6 +52,11 @@ export default async function CustomerPolicyDetailPage({
   const query = searchParams ? await searchParams : {};
   const { account, accounts } = await resolveCustomerWebScope(query.account);
   const policy = await loadCustomerPolicyDetail(account.id, id, query.source);
+  // Read the linked vehicle only within the already-authorized customer scope.
+  // Do not change policy records or infer missing technical / financial values.
+  const linkedVehicle = policy.vehicle_id
+    ? (await loadCustomerWebVehicles(account.id)).find((vehicle) => vehicle.id === policy.vehicle_id) ?? null
+    : null;
   const status = customerPolicyTone(policy.end_date);
   const statusLabel = status.tone === "due" ? "Due in " + status.days + " days" : status.tone;
   const sourceName = policy.source === "external" ? "External policy" : "INSUREIT policy";
@@ -142,15 +148,16 @@ export default async function CustomerPolicyDetailPage({
                 <Detail label="Policy issuance date" value="—" />
                 <Detail label="Lead source" value="—" />
                 <Detail label="Phone number" value="—" />
-                <Detail label="Vehicle class" value="—" />
+                <Detail label="Vehicle class" value={linkedVehicle?.vehicle_type} />
                 <Detail label="Fuel type" value="—" />
-                <Detail label="Manufacturing year" value="—" />
+                <Detail label="Manufacturing year" value={linkedVehicle?.year == null ? null : String(linkedVehicle.year)} />
+                <Detail label="Registration date" value={linkedVehicle?.registration_date ? formatCustomerDate(linkedVehicle.registration_date) : null} />
                 <Detail label="RTO" value="—" />
                 <Detail label="Capacity" value="—" />
-                <Detail label="Chassis number" value="—" />
-                <Detail label="Engine number" value="—" />
+                <Detail label="Chassis number" value={linkedVehicle?.chassis_no} />
+                <Detail label="Engine number" value={linkedVehicle?.engine_no} />
               </dl>
-              <p className="flex items-start gap-1.5 border-t border-[#E6EDF7] py-2 text-[10px] text-[#7888A0]"><Info className="mt-0.5 h-3.5 w-3.5 shrink-0"/>Missing technical details are not available in the current policy record. No values are estimated.</p>
+              <p className="flex items-start gap-1.5 border-t border-[#E6EDF7] py-2 text-[10px] text-[#7888A0]"><Info className="mt-0.5 h-3.5 w-3.5 shrink-0"/>Technical details are shown only when available in the linked vehicle record. Missing values are not estimated.</p>
             </div>
           </details>
         </main>
