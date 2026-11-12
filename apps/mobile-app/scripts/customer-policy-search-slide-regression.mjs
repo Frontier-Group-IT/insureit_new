@@ -39,3 +39,14 @@ assert.match(search, /\[placeholder, 'Type to search\.\.\.'\]/, 'Future Customer
 assert.match(search, /useNativeDriver: true/, 'Vertical slide animation should use the native driver');
 
 console.log('Customer search idle placeholder slide regression passed across all search surfaces.');
+
+
+const claims = readFileSync(new URL('../app/customer/claims.tsx', import.meta.url), 'utf8');
+const vehicles = readFileSync(new URL('../app/customer/vehicles.tsx', import.meta.url), 'utf8');
+assert.match(search, /export function CustomerSearchSuggestionList/, 'Shared search suggestions must be available to Customer screens.');
+assert.match(search, /query.length<2/, 'Do not display suggestions until two characters.');
+assert.match(search, /slice\(0,5\)/, 'Limit visible suggestions.');
+assert.match(search, /Keyboard.dismiss\(\)/, 'Tapping suggestion dismisses mobile keyboard.');
+assert.match(policies, /suggestions=\{policies\.filter/, 'Policy suggestions use existing Customer-scoped data.');
+assert.match(claims, /suggestions=\{claims\.filter/, 'Claim suggestions follow current status filter.');
+assert.match(vehicles, /<CustomerSearchSuggestionList/, 'Vehicle register displays matching vehicles and policies.');
