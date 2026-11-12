@@ -6,6 +6,7 @@ import { getInsurerLogo } from "@/lib/insurer-logo";
 import motion from "./renewals-motion.module.css";
 import { useMemo, useState } from "react";
 import { CalendarDays, CarFront, FileText, Search, Clock3 } from "lucide-react";
+import { CustomerSearchAutocomplete } from "@/components/customer-portal/customer-search-autocomplete";
 
 export type RenewalRegisterItem = {
   id: string; title: string; key: string; vehicleId: string; vehicleNo: string;
@@ -80,7 +81,7 @@ export function CustomerRenewalsRegister({accountId,items,categories}:{
       </div>
     </section>
     <div className={`customer-renewals-controls grid gap-2 sm:grid-cols-[minmax(0,1fr)_190px] ${motion.controls}`}>
-      <label className="customer-register-control flex h-10 min-w-0 items-center gap-2 rounded-lg border border-[#E0E7F4] bg-white px-3 text-[#8090B0]"><Search className="h-4 w-4 shrink-0"/><input aria-label="Search renewals" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search by reference number, vehicle number or policy..." className="min-w-0 flex-1 border-0 bg-transparent text-[11px] text-[#253760] outline-none placeholder:text-[11px] placeholder:font-normal placeholder:text-[#9BA9C0]"/></label>
+      <label className="customer-register-control flex h-10 min-w-0 items-center gap-2 rounded-lg border border-[#E0E7F4] bg-white px-3 text-[#8090B0]"><Search className="h-4 w-4 shrink-0"/><CustomerSearchAutocomplete label="Search renewals" value={query} onChange={setQuery} options={items.flatMap(item => [item.vehicleNo, item.title, item.reference, item.insurerName || ""])} hints={["Search reference number…", "Search vehicle number…", "Search policy…"]} className="text-[12px] text-[#253760]"/></label>
       <select aria-label="Filter by status" value={status} onChange={e=>setStatus(e.target.value)} className={`customer-register-control h-10 rounded-lg border border-[#E0E7F4] bg-white px-3 text-[11px] font-semibold text-[#53648C] ${motion.filterControl}`}>
         <option value="all">All Status</option><option value="due">Due</option><option value="expired">Expired</option>
       </select>

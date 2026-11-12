@@ -1,6 +1,6 @@
 "use client";
 import "../customer-register-motion.css";
-import { CustomerAnimatedSearchInput } from "@/components/customer-portal/customer-animated-search-input";
+import { CustomerSearchAutocomplete } from "@/components/customer-portal/customer-search-autocomplete";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
@@ -49,7 +49,7 @@ export function CustomerVehiclesRegister({ accountId, items, initialQuery = "" }
         <h2 className="flex shrink-0 items-center gap-2 text-[17px] font-bold text-[#102B54]"><img src="/assets/customer-3d-icons/vehicle_register.png" alt="" aria-hidden="true" width={44} height={44} className="h-11 w-11 shrink-0 object-contain"/>Vehicle Register</h2>
         <label className="customer-register-control flex w-full min-w-0 items-center gap-2 rounded-lg border border-[#DCE7F5] bg-[#FAFCFF] px-3 py-2 sm:w-[250px] lg:w-[320px]">
           <Search className="h-4 w-4 shrink-0 text-[#7D95B7]" aria-hidden="true"/><span className="sr-only">Search vehicles</span>
-          <CustomerAnimatedSearchInput aria-label="Search vehicles" value={query} onChange={e=>{setQuery(e.target.value);setPage(1);}} hints={["Search registration number…", "Search chassis number…", "Search engine number…", "Search make or model…", "Search policy number…"]} className="text-[13px] text-[#203650] placeholder:text-[#95A2B7]"/>
+          <CustomerSearchAutocomplete label="Search vehicles" value={query} onChange={value=>{setQuery(value);setPage(1);}} options={items.flatMap(v => [v.number, v.make, v.model, v.chassis, v.engine, ...v.policies.map(p => p.number), ...v.policies.map(p => p.insurerName || "")])} hints={["Search registration number…", "Search chassis number…", "Search engine number…", "Search make or model…", "Search policy number…"]} className="text-[13px] text-[#203650]"/>
         </label>
         <div className="ml-auto flex flex-wrap items-center gap-2">
         <select aria-label="Vehicle status filter" value={statusFilter} onChange={e=>{setStatusFilter(e.target.value);setPage(1);}} className="customer-register-control rounded-lg border border-[#DCE7F5] bg-white px-3 py-2 text-[13px] text-[#263F67]"><option value="all">All Status</option><option value="insured">Insured</option><option value="uninsured">Uninsured</option><option value="due">Due</option><option value="active">Active</option><option value="inactive">Inactive</option><option value="expired">Expired</option></select>
