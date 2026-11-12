@@ -1,7 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Image, Modal, Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { getCurrentSession, getProfile, routeSignedInUser } from '@/lib/auth';
@@ -14,6 +14,7 @@ import {
   type RememberedCustomerAccount,
 } from '@/lib/customer-account-vault';
 import { getSelectedCustomerContext } from '@/lib/customer-context';
+import { getCustomerProfilePhotoUrl, subscribeCustomerProfilePhoto } from '@/lib/customer-profile-photo';
 import { palette } from '@/lib/theme';
 
 export function CustomerAccountSwitcherButton({ initial = 'C', style }: { initial?: string; style?: StyleProp<ViewStyle> }) {
@@ -21,6 +22,9 @@ export function CustomerAccountSwitcherButton({ initial = 'C', style }: { initia
   const insets = useSafeAreaInsets();
   const [open, setOpen] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [avatarUri, setAvatarUri] = useState<string | null>(null);
+  const activeCustomerId = useRef<string | null>(null);
+  const avatarRequest = useRef(0);
   const [accounts, setAccounts] = useState<RememberedCustomerAccount[]>([]);
   const [busyUserId, setBusyUserId] = useState<string | null>(null);
   const [error, setError] = useState('');
@@ -48,6 +52,39 @@ export function CustomerAccountSwitcherButton({ initial = 'C', style }: { initia
     return () => { active = false; };
   }, []);
 
+  // Refresh short-lived signed URLs on navigation focus, and discard stale
+  // responses when the signed-in account changes or this screen loses focus.
+  useFocusEffect(useCallback(() => {
+    let active = true;
+    const request = ++avatarRequest.current;
+    setAvatarUri(null);
+    activeCustomerId.current = null;
+    void (async () => {
+      try {
+        const session = await getCurrentSession();
+        if (!active || request !== avatarRequest.current || !session?.user) return;
+        const context = await getSelectedCustomerContext();
+        if (!active || request !== avatarRequest.current) return;
+        const customerId = context?.customer_id ?? null;
+        activeCustomerId.current = customerId;
+        if (!customerId) return;
+        const url = await getCustomerProfilePhotoUrl(customerId);
+        const currentSession = await getCurrentSession();
+        if (active && request === avatarRequest.current && currentSession?.user.id === session.user.id) setAvatarUri(url);
+      } catch {
+        if (active && request === avatarRequest.current) setAvatarUri(null);
+      }
+    })();
+    return () => { active = false; avatarRequest.current++; };
+  }, []));
+
+  useEffect(() => subscribeCustomerProfilePhoto(({ customerId, url }) => {
+    if (activeCustomerId.current === customerId) {
+      avatarRequest.current++;
+      setAvatarUri(url);
+    }
+  }), []);
+
   async function openSwitcher() {
     setError('');
     try {
@@ -73,6 +110,9 @@ export function CustomerAccountSwitcherButton({ initial = 'C', style }: { initia
     try {
       const session = await switchToRememberedCustomerAccount(account.userId);
       targetSessionInstalled = true;
+      avatarRequest.current++;
+      activeCustomerId.current = null;
+      setAvatarUri(null);
       await routeSignedInUser(session.user, router);
       setCurrentUserId(account.userId);
       setOpen(false);
@@ -113,7 +153,7 @@ export function CustomerAccountSwitcherButton({ initial = 'C', style }: { initia
         onPress={() => void openSwitcher()}
         style={[styles.trigger, style]}
       >
-        <Text style={styles.triggerText}>{initial.trim().charAt(0).toUpperCase() || 'C'}</Text>
+        {avatarUri ? <Image source={{ uri: avatarUri }} style={styles.triggerImage} onError={() => setAvatarUri(null)} /> : <Text style={styles.triggerText}>{initial.trim().charAt(0).toUpperCase() || 'C'}</Text>}
       </Pressable>
 
       <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
@@ -145,7 +185,7 @@ export function CustomerAccountSwitcherButton({ initial = 'C', style }: { initia
                     onPress={() => void switchAccount(account)}
                     style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
                   >
-                    <View style={styles.avatar}><Text style={styles.avatarText}>{initials(account.displayName)}</Text></View>
+                    <View style={styles.avatar}>{active && avatarUri ? <Image source={{ uri: avatarUri }} style={styles.avatarImage} onError={() => setAvatarUri(null)} /> : <Text style={styles.avatarText}>{initials(account.displayName)}</Text>}</View>
                     <View style={styles.copy}>
                       <Text style={styles.name} numberOfLines={1}>{account.displayName}</Text>
                       <Text style={[styles.meta, account.requiresReauth && styles.warning]} numberOfLines={1}>
@@ -188,6 +228,7 @@ function initials(name: string) {
 const styles = StyleSheet.create({
   trigger: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#12305F', borderWidth: 2, borderColor: 'rgba(255,255,255,0.96)', alignItems: 'center', justifyContent: 'center' },
   triggerText: { color: '#FFFFFF', fontSize: 16, fontWeight: '900' },
+  triggerImage: { width: '100%', height: '100%', borderRadius: 20 },
   overlay: { flex: 1, justifyContent: 'flex-end' },
   backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(4,10,22,0.58)' },
   sheet: { maxHeight: '78%', borderTopLeftRadius: 28, borderTopRightRadius: 28, backgroundColor: '#FFFFFF', paddingHorizontal: 18, paddingTop: 9, shadowColor: '#000000', shadowOpacity: 0.28, shadowRadius: 18, elevation: 18 },
@@ -202,6 +243,7 @@ const styles = StyleSheet.create({
   rowPressed: { opacity: 0.72 },
   avatar: { width: 52, height: 52, borderRadius: 26, backgroundColor: '#0B3D78', borderWidth: 2, borderColor: '#DCE8F4', alignItems: 'center', justifyContent: 'center' },
   avatarText: { color: '#FFFFFF', fontSize: 17, fontWeight: '900', letterSpacing: 0.7 },
+  avatarImage: { width: '100%', height: '100%', borderRadius: 26 },
   copy: { flex: 1, minWidth: 0 },
   name: { color: palette.ink, fontSize: 15, fontWeight: '800' },
   meta: { color: palette.slate, fontSize: 11, fontWeight: '600', marginTop: 4 },
