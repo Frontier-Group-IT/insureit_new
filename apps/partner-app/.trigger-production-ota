@@ -1,10 +1,10 @@
 Partner production OTA trigger
-release=partner-activity-two-row-and-header-prs-4305-4306
-source_two_row=verified-merged-main-f7f71c3a2d122d10dfa8adb9c43dfcd322e28a60
-source_header=verified-merged-main-3fca695e7a083d5c9d2dfa6c8eb39c8cd0d3747c
-reason=user-approved-merge-and-publish-after-green-partner-and-web-ci
+release=partner-claim-financial-progress-20261112-v2
+source=verified-merged-main-e6c8f16e073a9e684f9671fa70fb801602aef9bb
+reason=user-approved-production-publish-after-current-main-checks
 channel=production
 runtime=0.2.0
 requested=2026-11-12
 no_native_build=true
-database_changes=none-in-these-features
+database_changes=already-applied-20261111184500_partner_claim_external_financial_milestones
+previous_trigger_pr=4309-superseded-main-moved
