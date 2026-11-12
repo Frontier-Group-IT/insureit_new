@@ -70,3 +70,13 @@ assert.match(backoffice, /OperationsSearchAutocomplete/, "Operations customer re
 assert.match(opsVehicle, /OperationsSearchAutocomplete/, "Operations vehicle register uses authorized suggestions.");
 assert.match(opsPolicy, /OperationsSearchAutocomplete/, "Operations policy register uses authorized suggestions.");
 assert.match(opsClaims, /OperationsSearchAutocomplete/, "Operations claims queue uses authorized suggestions.");
+
+
+const operationsClear = read("../components/operations-search-autocomplete.tsx");
+const operationsPolicy = read("../components/backoffice-policy-register.tsx");
+const operationsClaim = read("../app/claims/claims-workspace.tsx");
+assert.match(operationsClear, /aria-label="Clear search"/, "Operations search fields provide an accessible clear action.");
+assert.match(operationsClear, /function clearSearch\(\)\{onChange\(""\)/, "Clear button restores the unsearched register through controlled state.");
+assert.match(operationsClear, /onClick=\{clearSearch\}/, "All shared operations search inputs use the clear action.");
+assert.match(operationsPolicy, /onChange=\{value=>\{setQuery\(value\);setPage\(1\);\}\}/, "Policy searches reset pagination, including on clear.");
+assert.match(operationsClaim, /if \(query\.trim\(\)\) params\.set\("q", query\.trim\(\)\)/, "Claim URL drops q after clearing.");
