@@ -139,3 +139,15 @@ expect(activity.includes('name="notifications-outline" size={23} color="#FFFFFF"
 expect(activity.includes('name="calendar-outline"') && activity.includes('name="document-text-outline"'), "Distinct renewal and claim attention icons remain intact");
 
 if (!process.exitCode) console.log("Partner activity unread/search regression passed.");
+
+
+const searchField = read("components/ui/partner-search-field.tsx");
+const claimRegister = read("app/(tabs)/claims.tsx");
+const customerRegister = read("app/customers.tsx");
+expect(searchField.includes("suggestions?: readonly string[]"), "Shared Partner input accepts suggestion sources.");
+expect(searchField.includes("searchTerm.length >= 2"), "Partner suggestions appear after two characters.");
+expect(searchField.includes(".slice(0, 5)"), "Partner suggestions show at most five records.");
+expect(searchField.includes("style={styles.suggestionList}"), "Partner autocomplete has a compact dropdown.");
+expect(policies.includes("suggestions={debouncedSearch.length >= 2 ? collection.rows"), "Policy suggestions use existing authorized paginated server search.");
+expect(claimRegister.includes("suggestions={debouncedSearch.length >= 2 ? rows"), "Claim suggestions use existing authorized paginated server search.");
+expect(customerRegister.includes("suggestions={debouncedSearch.length >= 2 ? collection.rows"), "Customer suggestions use existing authorized paginated server search.");
