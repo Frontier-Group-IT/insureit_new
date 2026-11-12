@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Pressable,
+  Text,
   StyleSheet,
   TextInput,
   View,
@@ -81,6 +82,7 @@ export function PartnerSearchField({
   onClear,
   placeholder = 'Search',
   placeholders,
+  suggestions,
   autoFocus = false,
   containerStyle,
 }: {
@@ -90,10 +92,16 @@ export function PartnerSearchField({
   onClear?: () => void;
   placeholder?: string;
   placeholders?: string[];
+  suggestions?: readonly string[];
   autoFocus?: boolean;
   containerStyle?: StyleProp<ViewStyle>;
 }) {
   const [focused, setFocused] = useState(false);
+  const [chosen, setChosen] = useState("");
+  const searchTerm = value.trim().toLowerCase();
+  const seen = new Set<string>();
+  const matches = (suggestions || []).filter(item => { const normalized = item?.trim().toLowerCase(); if (!normalized || seen.has(normalized) || !normalized.includes(searchTerm)) return false; seen.add(normalized); return true; }).slice(0, 5);
+  const showSuggestions = focused && searchTerm.length >= 2 && value !== chosen && !!suggestions;
   const rotating = !focused && !value;
   const rotatingItems = placeholders?.length ? placeholders : [
     placeholder,
@@ -120,7 +128,7 @@ export function PartnerSearchField({
           autoCorrect={false}
           value={value}
           onBlur={() => setFocused(false)}
-          onChangeText={onChangeText}
+          onChangeText={next => { setChosen(""); onChangeText(next); }}
           onFocus={() => setFocused(true)}
           onSubmitEditing={onSubmit}
           placeholder={rotating ? '' : placeholder}
@@ -130,6 +138,17 @@ export function PartnerSearchField({
           style={styles.input}
         />
       </View>
+      {showSuggestions ? (
+        <View style={styles.suggestionList} accessibilityLabel="Search suggestions">
+          {matches.length ? matches.map(item => (
+            <Pressable key={item} accessibilityRole="button" accessibilityLabel={`Use suggestion ${item}`}
+              onPress={() => { setChosen(item); onChangeText(item); setFocused(false); }}
+              style={styles.suggestionRow}>
+              <Text numberOfLines={1} style={styles.suggestionText}>{item}</Text>
+            </Pressable>
+          )) : <Text style={styles.suggestionEmpty}>No matching suggestions</Text>}
+        </View>
+      ) : null}
       {value ? (
         <Pressable
           accessibilityRole="button"
@@ -146,6 +165,10 @@ export function PartnerSearchField({
 }
 
 const styles = StyleSheet.create({
+  suggestionList: { position: 'absolute', top: 46, left: 0, right: 0, zIndex: 300, backgroundColor: '#FFFFFF', borderColor: '#DCE5EF', borderWidth: 1, borderRadius: 11, overflow: 'hidden', elevation: 12 },
+  suggestionRow: { minHeight: 38, justifyContent: 'center', paddingHorizontal: 12, borderBottomColor: '#EEF2F6', borderBottomWidth: StyleSheet.hairlineWidth },
+  suggestionText: { fontSize: 11, fontWeight: '600', color: '#17365D' },
+  suggestionEmpty: { paddingHorizontal: 12, paddingVertical: 11, fontSize: 11, color: '#64748B' },
   wrap: {
     height: 44,
     flexDirection: 'row',
