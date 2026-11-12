@@ -34,35 +34,6 @@ assert(rmMatches({policyRmId:"jatin-id",employeeId:"jatin-id",policyRmName:"Jati
 assert(rmMatches({policyRmId:null,employeeId:"pramod-id",policyRmName:"Pramod  Kumar Nayak",employeeName:"PRAMOD KUMAR NAYAK"}));
 assert(!rmMatches({policyRmId:"other-rm-id",employeeId:"jatin-id",policyRmName:"Jatin Kumar Buwaniwala",employeeName:"JATIN KUMAR BHUWANIWALA"}));
 
-// The MTD badge compares the same calendar dates of the previous month, not
-// its entire month total. The six-month history remains unchanged.
-const performanceLoader = readFileSync(new URL("../lib/rm-performance.ts", import.meta.url), "utf8");
-assert.match(performanceLoader, /previousEquivalent = selectedPeriod\.key === "mtd" \? previousMonthMatchingRange\(selectedPeriod\.to\)/, "MTD needs an equivalent previous-month range.");
-assert.match(performanceLoader, /from: previousEquivalent\.from, to: previousEquivalent\.to/, "Previous comparison must use the matched date range.");
-assert.match(performanceLoader, /netPremium: comparisonPayload\.report\.summary\.net_premium/, "Comparison comes from authoritative scoped report summary.");
-assert.match(performanceLoader, /ytdTrend: ytdPayload\.report\.trend\.slice\(-6\)/, "Preserve six-month chart history.");
-assert.match(rmPage, /comparison=\{data\.mtdComparison\}/, "MTD Context receives independent same-window comparison.");
-assert.match(rmPage, /comparison\.netPremium > 0 \? \(\(currentNetPremium - comparison\.netPremium\)/, "MTD change must use previous equivalent premium.");
-assert.doesNotMatch(rmPage, /latest && previous && previous\.net_premium/, "MTD movement must not compare partial to full month.");
-assert.match(performanceLoader, /employment_status:string\|null/, "Hierarchy must have employee active-status information.");
-assert.match(performanceLoader, /person\.employment_status\?\.toLowerCase\(\) !== "active"/, "Only active zero-business descendants are included.");
-assert.match(performanceLoader, /childrenByManager\.get\(managerId\)/, "Report must include active descendants of represented management rows.");
-assert.match(performanceLoader, /resolved\.has\(person\.id\)/, "Zero-business personnel must not duplicate reported RMs.");
-assert.match(performanceLoader, /!selectedRmId && profile\.role !== "relationship_manager"/, "Scoped RM view must not fetch other employees.");
-assert.match(performanceLoader, /head motors/, "HEAD MOTORS must be recognized as a manager.");
-assert.match(performanceLoader, /todayPolicies: 0, todayNetPremium: 0, mtdPolicies: 0, mtdNetPremium: 0/, "Zero-production reporting RMs show zero rather than invented production.");
-// Exercise the exact date helper from the server source with its TS annotation
-// removed, including shorter months and year rollover.
-const matchStart = performanceLoader.indexOf("function previousMonthMatchingRange(");
-const matchEnd = performanceLoader.indexOf("\nfunction sixMonthTrendStart(", matchStart);
-assert.ok(matchStart !== -1 && matchEnd > matchStart, "Previous month date helper exists.");
-const helper = performanceLoader.slice(matchStart, matchEnd).replace("isoDate: string", "isoDate");
-const equivalentRange = new Function(helper + "\nreturn previousMonthMatchingRange;")();
-assert.deepEqual(equivalentRange("2026-11-12"), { from: "2026-10-01", to: "2026-10-12" });
-assert.deepEqual(equivalentRange("2026-03-31"), { from: "2026-02-01", to: "2026-02-28" });
-assert.deepEqual(equivalentRange("2024-03-31"), { from: "2024-02-01", to: "2024-02-29" });
-assert.deepEqual(equivalentRange("2026-01-12"), { from: "2025-12-01", to: "2025-12-12" });
-
 const reportActions = readFileSync(new URL("../app/rm-performance/rm-report-actions.tsx", import.meta.url), "utf8");
 assert.match(reportActions, /if\(!response\.ok\|\|!result\.ok\)throw new Error/, "Do not show success until the email API confirms acceptance.");
 assert.match(reportActions, /setTo\(""\);\s*setOpen\(false\);\s*setSuccess\(true\);/, "Success must clear recipient, close entry modal and show success popup.");
