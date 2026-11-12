@@ -36,6 +36,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId }: { rows: SemiAutoInt
   const [result, setResult] = useState<SemiAutoActionResult | null>(null);
   const [busy, setBusy] = useState<"checking" | "booking" | "editing" | null>(null);
   const [done, setDone] = useState<{ policyCode: string; policyId: string } | null>(null);
+  const [takeover, setTakeover] = useState<{ intakeId: string; reviewerName: string } | null>(null);
   const selected = rows.find(row => row.id === selectedId);
   const visible = useMemo(() => {
     const query = search.toLowerCase().trim();
@@ -48,9 +49,9 @@ export function SemiAutoPolicyWorkspace({ rows, profileId }: { rows: SemiAutoInt
   async function selectRow(id: string) {
     const next = ++requestId.current;
     if (selectedId === id) {
-      setSelectedId(null); setResult(null); setDone(null); setBusy(null); return;
+      setSelectedId(null); setResult(null); setDone(null); setBusy(null); setTakeover(null); return;
     }
-    setSelectedId(id); setResult(null); setDone(null); setBusy("checking");
+    setSelectedId(id); setResult(null); setDone(null); setTakeover(null); setBusy("checking");
     try {
       const assessment = await checkSemiAutoIntake(id);
       if (requestId.current === next) setResult(assessment);
@@ -103,13 +104,43 @@ export function SemiAutoPolicyWorkspace({ rows, profileId }: { rows: SemiAutoInt
     try {
       const response = await editSemiAutoIntake(selectedId);
       if (requestId.current !== next) return;
-      if (response.ok && response.editUrl) {
+      if (response.assignmentConflict) {
+        // Do not silently change the current reviewer. Show the assignee's
+        // name and ask for a separate, explicit takeover confirmation.
+        setTakeover({ intakeId: selectedId, reviewerName: response.assignmentConflict.reviewerName });
+      } else if (response.ok && response.editUrl) {
         router.push(response.editUrl);
       } else {
         setResult(response);
       }
     } catch {
       if (requestId.current === next) setResult({ ok: false, ready: false, issues: [{ section: "Intake", field: "Open onboarding draft", message: "The draft could not be opened. Try again from the standard Policy Intake Review page." }] });
+    } finally {
+      if (requestId.current === next) setBusy(null);
+    }
+  }
+
+  async function confirmTakeover() {
+    if (!takeover || isWaiting || takeover.intakeId !== selectedId) return;
+    const intakeId = takeover.intakeId;
+    const next = ++requestId.current;
+    setTakeover(null);
+    setBusy("editing");
+    try {
+      // The server verifies the current assignment, duplicate status and
+      // authorized reviewer/finalizer rights again before claiming anything.
+      const response = await editSemiAutoIntake(intakeId, true);
+      if (requestId.current !== next) return;
+      if (response.ok && response.editUrl) {
+        router.push(response.editUrl);
+      } else {
+        setResult(response);
+      }
+    } catch {
+      if (requestId.current === next) setResult({
+        ok: false, ready: false,
+        issues: [{ section: "Intake", field: "Reviewer takeover", message: "Unable to take over and open this Intake. Recheck its assignment in the Policy Intake Review page." }],
+      });
     } finally {
       if (requestId.current === next) setBusy(null);
     }
@@ -202,6 +233,29 @@ export function SemiAutoPolicyWorkspace({ rows, profileId }: { rows: SemiAutoInt
           </>
         )}
       </section>
+      {takeover ? (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center bg-[#101d37]/60 px-4 py-6" role="presentation">
+          <div role="alertdialog" aria-modal="true" aria-labelledby="semi-auto-takeover-title" aria-describedby="semi-auto-takeover-description"
+            className="w-full max-w-[440px] rounded-2xl border border-[#d6e2f1] bg-white p-5 shadow-[0_24px_80px_rgba(12,28,52,.3)]">
+            <h3 id="semi-auto-takeover-title" className="text-[15px] font-bold text-[#193657]">Take over this Policy Intake?</h3>
+            <p id="semi-auto-takeover-description" className="mt-2 text-[12px] leading-5 text-[#52647b]">
+              This Intake is currently assigned to <strong className="text-[#1b3a61]">{takeover.reviewerName}</strong>.
+              Choosing <strong>Take over &amp; open</strong> changes its assigned Operations reviewer to you,
+              then opens the existing Policy Onboarding draft for correction. No policy will be booked.
+            </p>
+            <div className="mt-5 flex flex-wrap justify-end gap-2">
+              <button type="button" autoFocus onClick={() => setTakeover(null)}
+                className="min-h-10 rounded-lg border border-[#cbd6e5] bg-white px-4 text-[11px] font-semibold text-[#38516e]">
+                Cancel
+              </button>
+              <button type="button" onClick={() => { void confirmTakeover(); }}
+                className="min-h-10 rounded-lg bg-[#174b83] px-4 text-[11px] font-bold text-white">
+                Take over &amp; open
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

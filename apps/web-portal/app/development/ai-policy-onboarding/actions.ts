@@ -28,6 +28,7 @@ type FieldResult = { ok: true; intake: Intake; draft: PolicyIntakeDraft; revisio
 export type SemiAutoActionResult = {
   ok: boolean; ready: boolean; issues: SemiAutoIssue[];
   policyCode?: string; policyId?: string; editUrl?: string;
+  assignmentConflict?: { reviewerName: string };
 };
 
 function issue(field: string, message: string, section: SemiAutoIssue["section"] = "Intake"): SemiAutoIssue {
@@ -249,9 +250,20 @@ export async function bookSemiAutoIntake(id: string, confirmed: boolean): Promis
   return { ok: false, ready: false, issues: [issue(result.kind, result.error, "Policy")] };
 }
 
-export async function editSemiAutoIntake(id: string): Promise<SemiAutoActionResult> {
+export async function editSemiAutoIntake(id: string, takeOver = false): Promise<SemiAutoActionResult> {
   await requireDevelopmentPolicyOperator(id);
-  const handoff = await preparePolicyIntakeHandoff(id);
-  if (!handoff.ok) return { ok: false, ready: false, issues: [issue("Intake handoff", handoff.error)] };
+  // Only a second, explicitly confirmed action may take ownership of an assigned
+  // Intake. The canonical handoff verifies permissions, duplicates and the live
+  // assignee again and atomically claims the record before opening its draft.
+  const handoff = await preparePolicyIntakeHandoff(id, takeOver === true);
+  if (!handoff.ok) {
+    if (handoff.conflict) {
+      return {
+        ok: false, ready: false, assignmentConflict: { reviewerName: handoff.reviewerName },
+        issues: [issue("Reviewer assignment", handoff.error)],
+      };
+    }
+    return { ok: false, ready: false, issues: [issue("Intake handoff", handoff.error)] };
+  }
   return { ok: true, ready: false, issues: [], editUrl: "/policies/new?intake_id=" + encodeURIComponent(id) };
 }

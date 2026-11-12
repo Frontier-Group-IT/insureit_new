@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { checkSemiAutoReadiness } from "../lib/policy-intake-semi-auto.ts";
+import { policyIntakeBucket } from "../lib/policy-intake-status-buckets.ts";
 
 const text = path => readFileSync(new URL("../" + path, import.meta.url), "utf8");
 const draft = {
@@ -42,12 +43,29 @@ assert(containsField(issues({
   ocrFields: [{ key: "total_premium", value: "4000" }, { key: "tax_amount", value: "720" }, { key: "gross_premium", value: "5250" }],
 }), "Printed totals"), "Premium reconciliation mismatch must block");
 
+assert.equal(policyIntakeBucket({ status: "ready_for_review", ocr_status: "completed" }, true), "duplicate",
+  "Ready for Review rows with a registered-policy or earlier-Intake match are duplicates, not actionable");
+assert.equal(policyIntakeBucket({ status: "in_review", ocr_status: "completed" }, true), "duplicate",
+  "Assigned or In Review Intakes still become duplicates when a policy-number match is found");
+assert.equal(policyIntakeBucket({ status: "in_review", ocr_status: "completed" }, false), "in_review",
+  "Genuine, non-duplicate In Review Intakes remain visible");
+assert.equal(policyIntakeBucket({ status: "processing", ocr_status: "pending" }, false), "processing",
+  "Unfinished OCR rows should not become booking candidates");
 const server = text("app/development/ai-policy-onboarding/actions.ts");
 const client = text("components/development/semi-auto-policy-workspace.tsx");
 const nav = text("components/claim-manager/app-navigation.tsx");
 const page = text("app/development/ai-policy-onboarding/page.tsx");
 assert(nav.includes("/development/ai-policy-onboarding"), "Development menu must link to the new workspace");
 assert(page.includes('requireCapability("manage_system", "approve")'), "Route requires Development authority");
+assert(page.includes("fetchAllPages<CandidateIntake"), "Candidate list must load all relevant rows before pagination");
+assert(page.includes("loadPolicyIntakeDuplicateMatches(admin, list.data ?? [])"), "Shared authoritative duplicate detection must run for every candidate");
+assert(page.includes("policyIntakeBucket(row, duplicates.matches.has(row.id))"), "Effective status must match the Policy Intake register");
+assert(page.includes('bucket === "action_required" || bucket === "in_review"'), "Only the same actionable and in-review buckets should be offered");
+assert(page.indexOf("const duplicates =") < page.indexOf(".slice((safePage - 1) * PAGE_SIZE"),
+  "Pagination must take place only AFTER duplicate classification and queue filtering");
+assert(page.includes("excludedDuplicateCount"), "Excluded duplicate count should be visible to the operator");
+assert(page.includes("const safePage ="), "Pagination must not strand users on a now-empty page after duplicate removal");
+assert(!page.includes('.range((page - 1) * PAGE_SIZE'), "Never page raw status rows before resolving duplicates");
 assert(server.includes('requirePolicyIntakeFinalizer(id)') && server.includes('requirePolicyIntakeReviewer(id)'), "Each selected Intake requires reviewer and finalizer rights");
 assert(server.includes("preparePolicyIntakeHandoff(id)"), "Booking must use the canonical Intake claim/draft workflow");
 assert(server.includes("await onboardPolicy(bookingPayload)"), "Booking must use canonical policy onboarding, never a direct insert");
@@ -55,4 +73,15 @@ assert(!server.includes('.from("policies").insert('), "Semi-auto action must nev
 assert(client.includes("await checkSemiAutoIntake(id)"), "Selecting a row must run read-only preflight");
 assert(client.includes("window.confirm("), "Booking must require a deliberate final confirmation");
 assert(client.includes("bookSemiAutoIntake(selectedId, true)"), "Booking path must be separate from checkbox selection");
+assert(server.includes("assignmentConflict: { reviewerName: handoff.reviewerName }"),
+  "Handoff must report the actual current reviewer to the UI rather than silently overwriting assignment");
+assert(server.includes("preparePolicyIntakeHandoff(id, takeOver === true)"),
+  "Assignment takeover must use the existing authorized and compare-and-set canonical handoff");
+assert(client.includes("setTakeover({ intakeId: selectedId, reviewerName: response.assignmentConflict.reviewerName })"),
+  "Assigned Intake correction must open an explicit reviewer takeover prompt");
+assert(client.includes('role="alertdialog"') && client.includes("Take over &amp; open"),
+  "Reviewer takeover requires a visible accessible confirmation dialog");
+assert(client.includes("editSemiAutoIntake(intakeId, true)"),
+  "Only the separate confirmation action can request reviewer takeover");
+assert(client.includes("No policy will be booked."), "Takeover must clearly distinguish correction from booking");
 console.log("Semi-auto Motor onboarding regression checks passed.");
