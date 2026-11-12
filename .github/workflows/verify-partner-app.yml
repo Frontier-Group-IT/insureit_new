@@ -143,6 +143,9 @@ jobs:
       - name: Verify external claim financial progress after Work Approval
         run: node apps/partner-app/scripts/verify-external-claim-financial-progress.mjs
 
+      - name: Verify Partner header profile photos across tabs
+        run: node apps/partner-app/scripts/verify-header-profile-photo.mjs
+
       - name: Verify Partner scoped claim document inventory
         run: node apps/partner-app/scripts/verify-claim-document-inventory.mjs
 

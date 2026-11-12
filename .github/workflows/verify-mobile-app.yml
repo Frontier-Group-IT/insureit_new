@@ -89,6 +89,9 @@ jobs:
       - name: Customer notification bell panel regression
         run: node apps/mobile-app/scripts/customer-notification-panel-regression.mjs
 
+      - name: Customer shared profile photo avatar regression
+        run: node apps/mobile-app/scripts/customer-header-profile-photo-regression.mjs
+
       - name: Customer secure multi-account regression
         run: node apps/mobile-app/scripts/customer-multi-account-security-regression.mjs
 

@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Image, StyleSheet, Text, View, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
 
 import { partnerTheme } from '@/lib/theme';
@@ -20,14 +21,16 @@ export function PartnerProfileAvatar({
   textStyle?: StyleProp<TextStyle>;
 }) {
   const radius = size / 2;
+  const [failedUri, setFailedUri] = useState<string | null>(null);
+  useEffect(() => { setFailedUri(null); }, [uri]);
 
   return (
     <View
       accessibilityLabel={`${name || 'Partner'} profile photo`}
       style={[styles.base, { width: size, height: size, borderRadius: radius, backgroundColor }, style]}
     >
-      {uri ? (
-        <Image source={{ uri }} style={styles.image} resizeMode="cover" />
+      {uri && failedUri !== uri ? (
+        <Image source={{ uri }} style={styles.image} resizeMode="cover" onError={() => setFailedUri(uri)} />
       ) : (
         <Text style={[styles.text, { color: textColor, fontSize: Math.max(10, Math.round(size * 0.32)) }, textStyle]}>
           {initials(name)}
