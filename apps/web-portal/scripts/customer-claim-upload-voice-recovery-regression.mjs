@@ -46,8 +46,9 @@ assert.match(upload,/Stage 1 documents are locked/,"Signed uploads must keep Sta
 assert.match(upload,/actualSize!==file\.size/,"Video finalize must check uploaded object size.");
 assert.match(operations,/multiple accept=\{acceptedDocuments\}/,"Operations must support multiple-file selection.");
 assert.match(operations,/selectedBulk\.length/,"Operations must show selected files.");
-assert.match(operations,/Upload Selected Files/,"Operations must confirm before upload.");
-assert.doesNotMatch(operations,/submitFiles\(files, false\)/,"Operations picker must not upload immediately.");
+assert.doesNotMatch(operations,/Upload Selected Files/,"Operations must not require a second confirmation.");
+assert.match(operations,/submitFiles\(files, false\)/,"Operations picker starts a direct upload on selection.");
+assert.match(operations,/uploadLock\.current/,"Operations must guard against concurrent uploads.");
 assert.match(operations,/uploadToSignedUrl/,"Operations signed direct-storage uploads stay intact.");
 assert.match(operations,/setSelectedBulk\(failed\)/,"Operations retry must retain failed files only.");
 console.log("Customer claim upload and recorder recovery regression passed");

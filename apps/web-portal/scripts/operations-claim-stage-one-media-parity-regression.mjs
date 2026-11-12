@@ -37,4 +37,21 @@ assert.match(operations, /expectedAudio = documentType === "Incident Voice Note"
 assert.match(operations, /allowedAudioTypes = \["audio\/mp4", "audio\/x-m4a", "audio\/m4a", "audio\/webm", "audio\/ogg"\]/, "Audio must be format-validated.");
 assert.match(operations, /file\.size > maxDocumentSizeBytes/, "Voice uploads must obey the five megabyte server limit.");
 assert.match(controls, /router\.refresh\(\)/, "Successful uploads must refresh claim evidence.");
+
+// The Operations document picker must upload immediately without a second confirmation.
+assert.match(controls, /submitFiles\(files, false\);/, "Selecting documents must start uploading directly.");
+assert.doesNotMatch(controls, />Upload Selected Files</, "Remove redundant second upload confirmation.");
+assert.match(controls, /uploadLock\.current = true/, "Lock submissions synchronously to avoid duplicate batches.");
+assert.match(controls, /if \(!files\.length \|\| uploadLock\.current\) return/, "An in-flight upload cannot be restarted.");
+assert.match(controls, /files\.length > \(voice \? 1 : 10\)/, "Ten-file limit must still be enforced.");
+assert.match(controls, /const problem = checkFile\(file, voice\)/, "Each selected file must be validated before upload.");
+assert.match(controls, /setBulkProgress\(\{ done: 0, total: files\.length \}\)/, "Track upload progress for every chosen batch.");
+assert.match(controls, /setBulkProgress\(prev => \(\{ \.\.\.prev, done: prev\.done \+ 1 \}\)\)/, "Progress must advance per file.");
+assert.match(controls, /setSelectedBulk\(failed\)/, "Only failed files are retained after upload.");
+assert.match(controls, /Retry failed files/, "Allow retry only when files failed.");
+assert.match(controls, /submitFiles\(selectedBulk, false\)/, "Retry uses only the saved failed files.");
+assert.match(controls, /setSelectedBulk\(files\)/, "Show selected files while uploading.");
+assert.match(controls, /setBulkUploading\(false\)/, "Restore picker after upload completes.");
+assert.match(controls, /window\.setTimeout\(\(\) => setBulkMessage\(null\), 3000\)/, "Success notice disappears after three seconds.");
+assert.match(controls, /if \(voice\) setAudioFile\(null\)/, "Voice-note behavior remains intact.");
 console.log("Operations Stage 1 internal/external upload and voice parity regression passed.");
