@@ -32,3 +32,24 @@ assert.match(workspace, /filteredRows\.slice\(\(safePage - 1\) \* PAGE_SIZE, saf
 assert.match(workspace, /pageSize=\{PAGE_SIZE\}/, "Pagination label must use the same 15-row page size.");
 assert.match(page, /<CustomerWorkspace key=\{registerTitle\}/, "Both Internal and External customer registers must share the page size.");
 console.log("Customer internal/external register segmentation and 15-row pagination regression passed.");
+
+
+const suggest = read("../components/customer-portal/customer-search-autocomplete.tsx");
+const customerPolicies = read("../app/customer/(protected)/policies/page.tsx");
+const customerPolicySearch = read("../app/customer/(protected)/policies/customer-policy-animated-search.tsx");
+const customerVehicles = read("../app/customer/(protected)/vehicles/customer-vehicles-register.tsx");
+const customerRenewals = read("../app/customer/(protected)/renewals/customer-renewals-register.tsx");
+const customerClaims = read("../app/customer/(protected)/claims/page.tsx");
+const customerClaimSearch = read("../app/customer/(protected)/claims/customer-claims-search.tsx");
+assert.match(suggest, /q\.length < 2/, "Show suggestions after two characters.");
+assert.match(suggest, /\.slice\(0, 5\)/, "Limit dropdown suggestions to five.");
+assert.match(suggest, /createPortal\(/, "Keep dropdown above overflow-hidden register cards.");
+assert.match(suggest, /ArrowDown/, "Support suggestion keyboard navigation.");
+assert.match(suggest, /ArrowUp/, "Support reverse suggestion navigation.");
+assert.match(suggest, /Escape/, "Support dismissal.");
+assert.match(customerPolicies, /suggestions=\{policies\.filter/, "Use already authorized policy rows.");
+assert.match(customerPolicySearch, /CustomerSearchAutocomplete/, "Policy register uses suggestions.");
+assert.match(customerVehicles, /CustomerSearchAutocomplete/, "Vehicle register uses suggestions.");
+assert.match(customerRenewals, /CustomerSearchAutocomplete/, "Renewal register uses suggestions.");
+assert.match(customerClaims, /suggestions=\{enriched\.filter/, "Claim suggestions retain status-scope filtering.");
+assert.match(customerClaimSearch, /CustomerSearchAutocomplete/, "Claim register uses suggestions.");
