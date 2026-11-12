@@ -6,6 +6,8 @@ const switcher = read('apps/mobile-app/components/customer-account-switcher.tsx'
 const helper = read('apps/mobile-app/lib/customer-profile-photo.ts');
 const profile = read('apps/mobile-app/app/customer/profile.tsx');
 const screen = read('apps/mobile-app/components/ui.tsx');
+const liveScreen = read('apps/mobile-app/components/customer-aware-ui.tsx');
+const babel = read('apps/mobile-app/babel.config.js');
 
 assert.match(helper, /\.eq\('customer_id', customerId\)/, 'Photo access must be scoped to the current customer');
 assert.match(helper, /\.eq\('document_type', 'Profile Photo'\)/, 'Use the same document kind as the Profile screen');
@@ -22,5 +24,7 @@ assert.match(switcher, /onError=\{\(\) => setAvatarUri\(null\)\}/, 'Broken photo
 assert.match(switcher, /onPress=\{\(\) => void openSwitcher\(\)\}/, 'Top-right avatar still opens Switch Account');
 assert.match(switcher, /active && avatarUri \? <Image/, 'Only the active account displays its own photo');
 assert.match(screen, /<CustomerAccountSwitcherButton initial=\{profileInitial\} \/>/, 'Keep shared header integration');
+assert.match(liveScreen, /<CustomerAccountSwitcherButton initial=\{profileInitial\} \/>/, 'Actual customer-aware header must use the photo-aware account switcher');
+assert.match(babel, /customer-aware-ui/, 'Confirm active Customer header component path');
 
 console.log('Customer top-right profile photo and account-switch security contracts passed.');
