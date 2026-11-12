@@ -1,9 +1,9 @@
 Partner production OTA trigger
-release=partner-external-claim-financial-after-work-approval-pr-4298
+release=partner-external-claim-financial-progress-republish-20261112
 source=verified-merged-main-e6c8f16e073a9e684f9671fa70fb801602aef9bb
-reason=user-approved-merge-and-publish-after-partner-and-web-ci
+reason=user-approved-production-publish-previous-ota-result-unverified
 channel=production
 runtime=0.2.0
-requested=2026-11-11
+requested=2026-11-12
 no_native_build=true
-database_changes=applied-20261111184500_partner_claim_external_financial_milestones
+database_changes=already-applied-20261111184500_partner_claim_external_financial_milestones
