@@ -190,7 +190,7 @@ export function CustomerSearchBar({
         returnKeyType="search"
       />
       {value ? (
-        <Pressable accessibilityRole="button" accessibilityLabel="Clear search" onPress={() => onChangeText('')}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Clear search" onPress={() => { onChangeText(''); Keyboard.dismiss(); }}>
           <MaterialCommunityIcons name="close" size={17} color="#7F8EA4" />
         </Pressable>
       ) : null}
@@ -205,6 +205,9 @@ export function CustomerSearchSuggestionList({value,suggestions,onSelect}:{
   value:string;suggestions:readonly string[];onSelect:(value:string)=>void;
 }) {
   const [chosen,setChosen] = useState('');
+  // A cleared query must also clear the last accepted suggestion, otherwise
+  // retyping the same term can keep suggestions hidden.
+  useEffect(() => { if (!value.trim()) setChosen(''); }, [value]);
   const query=value.trim().toLowerCase();
   if(query.length<2||value===chosen)return null;
   const seen=new Set<string>();

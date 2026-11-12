@@ -4,7 +4,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { CustomerAnimatedSearchInput, CustomerSearchSuggestionList } from '@/components/customer-animated-search-input';
-import { Animated, Image, Modal, NativeModules, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Animated, Image, Keyboard, Modal, NativeModules, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { ImageSourcePropType } from 'react-native';
 
 import { EmptyState, LoadingState, Screen } from '@/components/ui';
@@ -212,7 +212,7 @@ export default function VehiclesScreen() {
         style={styles.globalSearchInput}
       />
       {searchQuery ? (
-        <Pressable accessibilityRole="button" onPress={() => setSearchQuery('')} style={styles.clearSearch}>
+        <Pressable accessibilityRole="button" onPress={() => { setSearchQuery(''); Keyboard.dismiss(); }} style={styles.clearSearch}>
           <MaterialCommunityIcons name="close" size={14} color="#7A8799" />
         </Pressable>
       ) : null}
