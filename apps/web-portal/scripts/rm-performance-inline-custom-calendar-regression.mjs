@@ -34,6 +34,29 @@ assert(rmMatches({policyRmId:"jatin-id",employeeId:"jatin-id",policyRmName:"Jati
 assert(rmMatches({policyRmId:null,employeeId:"pramod-id",policyRmName:"Pramod  Kumar Nayak",employeeName:"PRAMOD KUMAR NAYAK"}));
 assert(!rmMatches({policyRmId:"other-rm-id",employeeId:"jatin-id",policyRmName:"Jatin Kumar Buwaniwala",employeeName:"JATIN KUMAR BHUWANIWALA"}));
 
+// The MTD percentage must compare equivalent prior-month dates only.
+const rmLoader = readFileSync(new URL("../lib/rm-performance.ts", import.meta.url), "utf8");
+assert.match(rmLoader, /selectedPeriod\.key === "mtd" \? previousMonthMatchingRange\(selectedPeriod\.to\) : null/, "Comparison RPC is MTD-only");
+assert.match(rmLoader, /from: priorEquivalent\.from, to: priorEquivalent\.to/, "Previous MTD uses equivalent date boundaries");
+assert.match(rmLoader, /netPremium: priorEquivalentPayload\.report\.summary\.net_premium/, "Use authoritative summary premium");
+assert.match(rmLoader, /rm: selectedRmId \?\? undefined/, "Preserve filtered RM scope in report RPCs");
+assert.match(rmLoader, /ytdTrend: ytdPayload\.report\.trend\.slice\(-6\)/, "Keep six-month trend untouched");
+assert.match(rmPage, /periodLabel === "MTD" \? \(priorEquivalent && priorEquivalent\.netPremium > 0/, "Use equivalent dates exclusively in MTD badge");
+assert.match(rmPage, /: previousMovement;/, "Do not change Last Month and Custom trend comparison");
+assert.match(rmPage, /Compared with \$\{priorEquivalent\.from\} to \$\{priorEquivalent\.to\}/, "Show the exact comparison window");
+assert.match(rmLoader, /if \(!selectedRmId && profile\.role !== "relationship_manager"\)/, "Preserve existing RM hierarchy scope");
+assert.doesNotMatch(rmLoader, /childrenByManager = new Map<string, typeof people>/, "Never reintroduce reverted zero-business hierarchy logic");
+// Evaluate only the pure date helper, including leap year and month rollover.
+const dateStart = rmLoader.indexOf("function previousMonthMatchingRange(");
+const dateEnd = rmLoader.indexOf("\nfunction sixMonthTrendStart(", dateStart);
+assert.ok(dateStart >= 0 && dateEnd > dateStart, "Date range helper must exist");
+const dateHelper = rmLoader.slice(dateStart, dateEnd).replace("isoDate: string", "isoDate");
+const equivalent = new Function(dateHelper + "\nreturn previousMonthMatchingRange;")();
+assert.deepEqual(equivalent("2026-11-12"), { from: "2026-10-01", to: "2026-10-12" });
+assert.deepEqual(equivalent("2026-03-31"), { from: "2026-02-01", to: "2026-02-28" });
+assert.deepEqual(equivalent("2024-03-31"), { from: "2024-02-01", to: "2024-02-29" });
+assert.deepEqual(equivalent("2026-01-12"), { from: "2025-12-01", to: "2025-12-12" });
+
 const reportActions = readFileSync(new URL("../app/rm-performance/rm-report-actions.tsx", import.meta.url), "utf8");
 assert.match(reportActions, /if\(!response\.ok\|\|!result\.ok\)throw new Error/, "Do not show success until the email API confirms acceptance.");
 assert.match(reportActions, /setTo\(""\);\s*setOpen\(false\);\s*setSuccess\(true\);/, "Success must clear recipient, close entry modal and show success popup.");
