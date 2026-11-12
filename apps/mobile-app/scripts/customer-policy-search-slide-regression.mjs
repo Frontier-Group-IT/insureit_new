@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 const search = readFileSync(new URL('../components/customer-animated-search-input.tsx', import.meta.url), 'utf8');
 const policies = readFileSync(new URL('../app/customer/policies.tsx', import.meta.url), 'utf8');
 
-assert.match(policies, /<CustomerSearchBar[\\s\\S]*?idleHints=\{\[/, 'Policies must opt into automatic placeholder hints');
+assert.match(policies, /<CustomerSearchBar[\s\S]*?idleHints=\{\[/, 'Policies must opt into automatic placeholder hints');
 for (const hint of ['Search vehicle, insurer or policy no.', 'Search by vehicle number', 'Search by insurer name', 'Search by policy number']) {
   assert.ok(policies.includes(hint), `Policy search hint missing: ${hint}`);
 }
@@ -21,7 +21,7 @@ assert.match(search, /CUSTOMER_SEARCH_PLACEHOLDER_COLOR = '#7F8EA4'/, 'Keep appr
 
 // Every Customer search surface must opt into the shared animated component.
 const pages = [
-  ['../app/customer/claims.tsx', /<CustomerSearchBar[\\s\\S]*?idleHints=\{\[/],
+  ['../app/customer/claims.tsx', /<CustomerSearchBar[\s\S]*?idleHints=\{\[/],
   ['../app/customer/vehicles.tsx', /<CustomerAnimatedSearchInput[\s\S]*?idleHints=\{\[/],
   ['../app/customer/start-claim.tsx', /<CustomerAnimatedSearchInput[\s\S]*?idleHints=\{\[/],
   ['../app/customer/add-policy.tsx', /<CustomerAnimatedSearchInput[\s\S]*?idleHints=\{\[/],
