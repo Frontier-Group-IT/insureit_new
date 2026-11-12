@@ -116,6 +116,7 @@ export default function ClaimsScreen() {
         value={query}
         onChangeText={setQuery}
         onClear={() => setQuery('')}
+        suggestions={debouncedSearch.length >= 2 ? rows.flatMap(r => [r.claim_no || "",r.insurer_claim_no || "",r.customer_name,r.vehicle_no || "",r.policy_no || "",r.insurer_name || ""]) : []}
         placeholder="Search customer, claim number, vehicle number..."
         placeholders={['Search customer...', 'Search claim number...', 'Search vehicle number...']}
         containerStyle={styles.searchField}

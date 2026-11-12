@@ -174,6 +174,7 @@ export default function PoliciesScreen() {
           value={query}
           onChangeText={setQuery}
           onClear={() => setQuery('')}
+          suggestions={debouncedSearch.length >= 2 ? collection.rows.flatMap(r => [r.policy_no || "",r.policy_code || "",r.customer_name,r.vehicle_no || "",r.insurer_name || "",r.policy_product || ""]) : []}
           placeholder="Search customer, vehicle number or policy number..."
           placeholders={['Search customer...', 'Search vehicle number...', 'Search policy number...']}
           containerStyle={styles.searchField}
