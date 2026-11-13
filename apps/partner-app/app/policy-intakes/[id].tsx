@@ -375,7 +375,7 @@ export default function PolicyIntakeDetailScreen() {
                     </ReviewBlock>
                     <ReviewBlock title="Policy & premium">
                       {duplicatePolicyReviewKeys.map(([key, label]) => (
-                        <ReviewPair key={key} label={label} value={fields.get(key)?.value} confidence={fields.get(key)?.confidence} singleLine={key === 'vehicle_make'} />
+                        <ReviewPair key={key} label={label} value={fields.get(key)?.value} confidence={fields.get(key)?.confidence} />
                       ))}
                     </ReviewBlock>
                   </>
