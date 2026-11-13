@@ -111,7 +111,6 @@ for (const required of [
   'policyReviewKeys.filter(([key]) => Boolean(fields.get(key)?.value?.trim())).map',
   'number="02"',
   'number="03"',
-  'Fetched from the uploaded policy copy for Operations review.',
   'No vehicle details were fetched from the saved policy copy.',
   'No policy or premium details were fetched from the saved policy copy.',
   'Fetching vehicle details from the policy copy…',

@@ -62,10 +62,6 @@ export default function PolicyIntakeDetailScreen() {
   }, [load]);
 
   const fields = useMemo(() => new Map((row?.ocr_fields ?? []).map((field) => [field.key, field])), [row?.ocr_fields]);
-  // Motor classification is not evidence that vehicle identifiers were extracted.
-  const missingVehicleExtraction = row?.policy_type === 'motor' && row.ocr_status === 'completed' &&
-    !['vehicle_registration_number', 'vehicle_make', 'vehicle_model', 'vehicle_chassis_number']
-      .some((key) => Boolean(fields.get(key)?.value?.trim()));
   const proposalForm = row?.policy_type === 'life' || row?.policy_type === 'health';
 
   async function replaceDocument() {
@@ -361,7 +357,7 @@ export default function PolicyIntakeDetailScreen() {
                   </>
                 ) : (
                   <>
-                <ReviewBlock title="Vehicle details" number="02" description="Fetched from the uploaded policy copy for Operations review.">
+                <ReviewBlock title="Vehicle details" number="02">
                   {vehicleReviewKeys.some(([key]) => Boolean(fields.get(key)?.value?.trim())) ? (
                     vehicleReviewKeys.filter(([key]) => Boolean(fields.get(key)?.value?.trim())).map(([key, label]) => (
                       <ReviewPair key={key} label={label} value={fields.get(key)?.value} confidence={fields.get(key)?.confidence} />
@@ -370,7 +366,7 @@ export default function PolicyIntakeDetailScreen() {
                     <Text style={reviewStyles.emptyVehicle}>{row.ocr_status === 'processing' ? 'Fetching vehicle details from the policy copy…' : 'No vehicle details were fetched from the saved policy copy.'}</Text>
                   )}
                 </ReviewBlock>
-                <ReviewBlock title="Policy & premium" number="03" description="Extracted values are for Operations to verify during Policy Onboarding.">
+                <ReviewBlock title="Policy & premium" number="03">
                   {policyReviewKeys.some(([key]) => Boolean(fields.get(key)?.value?.trim())) ? (
                     policyReviewKeys.filter(([key]) => Boolean(fields.get(key)?.value?.trim())).map(([key, label]) => (
                       <ReviewPair key={key} label={label} value={key === 'insurer_name' ? shortInsurerName(fields.get(key)?.value) : fields.get(key)?.value} confidence={fields.get(key)?.confidence} />
@@ -381,9 +377,6 @@ export default function PolicyIntakeDetailScreen() {
                 </ReviewBlock>
                   </>
                 )}
-                {missingVehicleExtraction && row.status !== 'duplicate' ? (
-                  <Text style={reviewStyles.warningText}>Vehicle identifiers require confirmation against the policy copy.</Text>
-                ) : null}
                 {row.ocr_warnings?.length ? (
                   <View style={reviewStyles.warningBox}>
                     <Text style={reviewStyles.warningHeading}>Review notes</Text>
@@ -421,32 +414,46 @@ export default function PolicyIntakeDetailScreen() {
             </View> : null}
 
             {row.review_access.can_review && !['completed', 'rejected', 'duplicate'].includes(row.status) ? (
-              <View style={reviewStyles.actions}>
-                <Text style={reviewStyles.sectionLabel}>Operations note</Text>
-                <TextInput
-                  value={reviewNote}
-                  onChangeText={setReviewNote}
-                  multiline maxLength={2000} editable={!reviewBusy}
-                  placeholder="Explain what Sales should correct or why the intake is rejected"
-                  placeholderTextColor="#9AA5B5"
-                  style={reviewStyles.noteInput}
-                />
-                <View style={reviewStyles.actionRow}>
-                  <Pressable disabled={reviewBusy} onPress={() => confirmReviewAction('needs_attention')}
-                    accessibilityRole="button" style={[reviewStyles.actionButton, { backgroundColor: '#FFF7E6', opacity: reviewBusy ? .6 : 1 }]}>
-                    <Text style={{ color: '#895A12', fontSize: 12, fontWeight: '700' }}>Request info</Text>
-                  </Pressable>
-                  <Pressable disabled={reviewBusy} onPress={() => confirmReviewAction('rejected')}
-                    accessibilityRole="button" style={[reviewStyles.actionButton, { backgroundColor: '#FFF0F0', opacity: reviewBusy ? .6 : 1 }]}>
-                    <Text style={{ color: '#B42318', fontSize: 12, fontWeight: '700' }}>Reject</Text>
-                  </Pressable>
-                </View>
+              <View style={reviewStyles.reviewActions}>
                 {row.review_access.can_finalize && (['ready_for_review', 'in_review'].includes(row.status) || (row.status === 'processing' && row.ocr_status === 'failed')) ? (
-                  <>
-                    <PartnerButton label={row.status === 'in_review' ? 'Resume Policy Onboarding' : 'Review & Finalize'} icon="arrow-forward-outline" onPress={() => void openOperationsReview()} />
-                    <Text style={reviewStyles.caption}>Final corrections and onboarding continue securely in the Operations website.</Text>
-                  </>
+                  <PartnerButton label={row.status === 'in_review' ? 'Resume Policy Onboarding' : 'Review & Finalize'} icon="arrow-forward-outline" onPress={() => void openOperationsReview()} />
                 ) : null}
+                <View style={reviewStyles.operationsNoteCard}>
+                  <Text style={reviewStyles.operationsNoteHeading}>Operations Note</Text>
+                  <TextInput
+                    value={reviewNote}
+                    onChangeText={setReviewNote}
+                    multiline
+                    maxLength={2000}
+                    editable={!reviewBusy}
+                    accessibilityLabel="Operations note for requesting information or rejecting intake"
+                    placeholder="Explain what Sales should correct, or why this is rejected"
+                    placeholderTextColor="#94A3B8"
+                    style={reviewStyles.noteInput}
+                  />
+                  <View style={reviewStyles.actionRow}>
+                    <Pressable
+                      disabled={reviewBusy}
+                      onPress={() => confirmReviewAction('needs_attention')}
+                      accessibilityRole="button"
+                      accessibilityLabel="Request information from submitter"
+                      style={[reviewStyles.actionButton, reviewStyles.requestInfoButton, reviewBusy && reviewStyles.actionDisabled]}
+                    >
+                      <Ionicons name="warning-outline" size={15} color="#A65C18" />
+                      <Text style={reviewStyles.requestInfoText}>Request info</Text>
+                    </Pressable>
+                    <Pressable
+                      disabled={reviewBusy}
+                      onPress={() => confirmReviewAction('rejected')}
+                      accessibilityRole="button"
+                      accessibilityLabel="Reject policy intake"
+                      style={[reviewStyles.actionButton, reviewStyles.rejectButton, reviewBusy && reviewStyles.actionDisabled]}
+                    >
+                      <Ionicons name="close-circle-outline" size={15} color="#B42318" />
+                      <Text style={reviewStyles.rejectText}>Reject</Text>
+                    </Pressable>
+                  </View>
+                </View>
               </View>
             ) : null}
           </View>
@@ -649,10 +656,17 @@ const reviewStyles=StyleSheet.create({
   documentButtonText:{fontSize:11,fontWeight:'700',color:'#17365D'},
   sectionLabel:{fontSize:10,fontWeight:'800',color:'#526680'},
   reviewStatus:{padding:9,borderRadius:10,backgroundColor:'#F8FAFD'},
-  actions:{gap:9},
-  noteInput:{minHeight:72,padding:10,textAlignVertical:'top',borderWidth:1,borderColor:'#D9E3F0',borderRadius:10,color:'#17365D',fontSize:12},
+  reviewActions:{gap:12},
+  operationsNoteCard:{padding:12,borderWidth:1,borderColor:'#DFE7F2',borderRadius:14,backgroundColor:'#FFFFFF',gap:10},
+  operationsNoteHeading:{fontSize:10,fontWeight:'800',color:'#5C7190',textTransform:'uppercase',letterSpacing:.7},
+  noteInput:{minHeight:66,maxHeight:120,paddingHorizontal:12,paddingVertical:10,textAlignVertical:'top',borderWidth:1,borderColor:'#D4C9FF',borderRadius:11,color:'#17365D',fontSize:12},
   actionRow:{flexDirection:'row',gap:8},
-  actionButton:{flex:1,minHeight:43,alignItems:'center',justifyContent:'center',borderRadius:10},
+  actionButton:{flex:1,minHeight:42,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:7,borderRadius:12},
+  requestInfoButton:{backgroundColor:'#FFF9EC'},
+  requestInfoText:{color:'#A65C18',fontSize:11,fontWeight:'700'},
+  rejectButton:{backgroundColor:'#FFF0F0'},
+  rejectText:{color:'#B42318',fontSize:11,fontWeight:'700'},
+  actionDisabled:{opacity:.6},
   caption:{fontSize:10,color:'#65768D',lineHeight:15,textAlign:'center'},
 });
 

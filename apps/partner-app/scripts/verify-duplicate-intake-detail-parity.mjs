@@ -66,4 +66,19 @@ assert.ok(detail.includes("setRejectConfirmationOpen(false); void submitReviewAc
 assert.ok(detail.includes("onPress={() => setRejectConfirmationOpen(false)}"), 'Cancel exits without rejecting');
 assert.ok(detail.includes("disabled={reviewBusy}"), 'Prevent duplicate rejection interaction while the action is busy');
 assert.ok(detail.includes('notify the submitter with your Operations note'), 'Preserve clear rejection notification explanation');
+const operationsNoteCard = detail.indexOf('style={reviewStyles.operationsNoteCard}');
+const resumeButton = detail.indexOf("label={row.status === 'in_review' ? 'Resume Policy Onboarding' : 'Review & Finalize'}");
+assert.ok(resumeButton >= 0 && operationsNoteCard > resumeButton, 'Operations Note card must be below Resume Policy Onboarding');
+assert.ok(detail.includes('style={reviewStyles.operationsNoteHeading}>Operations Note'), 'Operations Note must have a compact shared heading');
+assert.ok(detail.includes('style={reviewStyles.actionRow}') && detail.includes('style={[reviewStyles.actionButton, reviewStyles.requestInfoButton') && detail.includes('style={[reviewStyles.actionButton, reviewStyles.rejectButton'), 'Request info and Reject must remain together inside Operations Note card');
+assert.ok(detail.includes('reviewStyles.operationsNoteCard') && detail.includes('operationsNoteCard:{padding:12,borderWidth:1'), 'Operations Note has a compact professional bordered layout');
+assert.ok(detail.includes("confirmReviewAction('needs_attention')") && detail.includes("confirmReviewAction('rejected')"), 'Preserve review actions and rejection confirmation');
+for (const removed of [
+  'Final corrections and onboarding continue securely in the Operations website.',
+  'Vehicle identifiers require confirmation against the policy copy.',
+  'Fetched from the uploaded policy copy for Operations review.',
+  'Extracted values are for Operations to verify during Policy Onboarding.',
+]) {
+  assert.ok(!detail.includes(removed), 'Remove requested redundant copy: ' + removed);
+}
 console.log('Partner Duplicate Policy Intake website parity regression passed');
