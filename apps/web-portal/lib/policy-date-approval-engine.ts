@@ -143,7 +143,6 @@ export async function verifyPolicyDateApprovalForVerifiedActor(
   profile: {id:string;role:string;full_name?:string|null},
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   try {
-    const profile = await profileFor(input);
     if (!profile) return { ok: false, error: "This policy cannot be approved from your account." };
     if (!/^[0-9a-f-]{36}$/i.test(approvalId) || !/^\d{6}$/.test(otp)) {
       return { ok: false, error: "Enter the six-digit code sent to the approver." };
