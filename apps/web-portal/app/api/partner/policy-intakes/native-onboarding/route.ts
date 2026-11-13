@@ -4,6 +4,7 @@ import { requestPolicyDateApprovalForVerifiedActor, verifyPolicyDateApprovalForV
 import { POLICY_DATE_APPROVERS } from "@/lib/policy-date-rule";
 import { lookupPolicyRegistrationRcForVerifiedActor } from "@/lib/policy-rc-lookup-engine";
 import { getEffectivePermission } from "@/lib/permission-management";
+import { isAppRole } from "@/lib/roles";
 import { getOperationsHeadDownlinePolicyScope } from "@/lib/policy-access-scope";
 import { createSupabaseWithAccessToken } from "@/lib/auth";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
@@ -36,7 +37,7 @@ export async function POST(request:Request){
   if(authError||!user)return reply("Your session has expired. Sign in again.",401);
   const admin=createSupabaseAdminClient();
   const {data:profile}=await admin.from("profiles").select("id,role,is_active,full_name").eq("id",user.id).maybeSingle<{id:string;role:string;is_active:boolean;full_name:string|null}>();
-  if(!profile?.is_active)return reply("Operations access is unavailable.",403);
+  if(!profile?.is_active||!isAppRole(profile.role))return reply("Operations access is unavailable.",403);
   const head=profile.role==="operations_head_life";
   const [review,finalize]=await Promise.all([
     head?Promise.resolve(true):hasEffectiveCapability(profile,"review_policy_intakes","edit"),
