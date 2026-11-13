@@ -50,4 +50,17 @@ assert.match(screen,/motorProductSection=section\('03','Policy product, premium 
 assert.match(screen,/label:'GST',value:gst/, 'Motor summary includes GST.');
 assert.match(screen,/label:'Gross premium',value:gross/, 'Motor summary includes gross.');
 assert.match(screen,/isMotor&&data\?\.commercialAccess/, 'Commercial information stays permission-gated.');
-console.log('Product-type layouts, Motor Operations compact layout, date picker, scoped draft isolation and Motor-only booking guard verified.');
+assert.match(screen,/const \[commercialModal,setCommercialModal\]=useState<'payin'\|'payout'\|null>\(null\)/, 'Separate commercial popup state required.');
+assert.match(screen,/accessibilityLabel="Insurer Pay-In popup"/, 'Insurer Pay-In entry must open its own popup.');
+assert.match(screen,/accessibilityLabel="Partner Payout popup"/, 'Partner Payout entry must open its own popup.');
+assert.match(screen,/commercialModal==='payin'\?'Projected Insurer Pay-in':'Partner Payout'/, 'Each modal needs the correct heading.');
+assert.match(screen,/insurerPayinFields\.map\(/, 'Pay-in popup must use scoped insurer fields.');
+assert.match(screen,/partnerPayoutFields\.filter\(/, 'Payout popup must use scoped payout fields.');
+assert.match(screen,/accessibilityLabel="Save and close commercial popup"/, 'Commercial popup needs a Save & Close action.');
+assert.match(screen,/Boolean\(commercialModal\)&&isMotor&&Boolean\(data\?\.commercialAccess\)/, 'Commercial modals must be strictly Motor and permission gated.');
+assert.match(screen,/placeholder=""/, 'Onboarding text inputs must have empty placeholders.');
+assert.doesNotMatch(screen,/placeholder=\{'Enter '\+f\.label\.toLowerCase\(\)\}/, 'Remove all generated input placeholder copy.');
+assert.doesNotMatch(screen,/displayed\|\|'Select '/, 'Do not show synthetic select placeholders.');
+assert.match(screen,/hidePlaceholder/, 'Onboarding dates must opt out of placeholder copy.');
+assert.match(date,/hidePlaceholder\?:boolean/, 'Date placeholder removal must be opt-in to avoid other screens.');
+console.log('Product-type layouts, Motor Operations compact layout, separated financial popups, empty input placeholders and Motor-only booking guard verified.');
