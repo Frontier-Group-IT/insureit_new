@@ -500,17 +500,23 @@ export default function NativePolicyOnboarding(){
           </Pressable>
           {commercialExpanded?<Text style={styles.notice}>Life, Health and Non Motor commercial calculations must be completed and approved in the Operations Portal. The native form does not submit these figures.</Text>:null}
         </View>:null}
-        {isMotor&&data?.commercialAccess?<>
-          <Pressable accessibilityRole="button" accessibilityLabel="Payin–Payout" accessibilityState={{expanded:commercialExpanded}}
-            onPress={()=>setCommercialExpanded(open=>!open)} style={styles.commercialToggle}>
-            <Ionicons name="cash-outline" size={17} color="#254C83"/>
-            <Text style={styles.commercialToggleTitle}>Payin–Payout</Text>
-            <Ionicons name={commercialExpanded?'chevron-up':'chevron-down'} size={16} color="#63758D"/>
+        {isMotor&&data?.commercialAccess?<View style={styles.commercialCards}>
+          <Text style={styles.commercialHeading}>Payin–Payout</Text>
+          <Pressable accessibilityRole="button" accessibilityLabel="Insurer Pay-In popup"
+            onPress={()=>setCommercialModal('payin')} style={styles.commercialAction}>
+            <Ionicons name="arrow-down-circle-outline" size={19} color="#147D73"/>
+            <Text style={styles.commercialActionTitle}>Insurer Pay-In</Text>
+            <Text style={styles.commercialActionValue}>{draft.projectedOdPercent||draft.projectedTpPercent||draft.insurerScheme?rupees(payinTotal):'Not entered'}</Text>
+            <Ionicons name="chevron-forward" size={15} color="#63758D"/>
           </Pressable>
-          {commercialExpanded?<View style={styles.commercialBody}>
-            {section('','Insurer pay-in & partner payout',commercial)}
-          </View>:null}
-        </>:null}
+          <Pressable accessibilityRole="button" accessibilityLabel="Partner Payout popup"
+            onPress={()=>setCommercialModal('payout')} style={styles.commercialAction}>
+            <Ionicons name="wallet-outline" size={19} color="#7452BA"/>
+            <Text style={styles.commercialActionTitle}>Partner Payout</Text>
+            <Text style={styles.commercialActionValue}>{draft.payoutOdPercent||draft.payoutTpPercent||draft.flatPayoutAmount?rupees(payoutTotal):'Not entered'}</Text>
+            <Ionicons name="chevron-forward" size={15} color="#63758D"/>
+          </Pressable>
+        </View>:null}
         <View style={styles.summaryDocuments}>
           <Text style={styles.commercialToggleTitle}>Documents</Text>
           <Text style={styles.muted}>Submitted policy copy</Text>
@@ -586,6 +592,16 @@ const styles=StyleSheet.create({
   input:{minHeight:42,borderWidth:1,borderColor:'#D8E1EC',backgroundColor:'#FFFFFF',borderRadius:9,paddingHorizontal:11,fontSize:12,color:'#183653'},
   inputRow:{minHeight:42,borderWidth:1,borderColor:'#D8E1EC',borderRadius:9,paddingHorizontal:11,flexDirection:'row',alignItems:'center',justifyContent:'space-between'},
   value:{color:'#183653',fontSize:12,flex:1},placeholder:{color:'#97A5B7'},
+  commercialCards:{marginHorizontal:12,marginBottom:12,gap:8},
+  commercialHeading:{fontSize:11,color:'#26436B',fontWeight:'800'},
+  commercialAction:{minHeight:48,flexDirection:'row',gap:9,alignItems:'center',paddingHorizontal:11,borderWidth:1,borderColor:'#DDE6F0',borderRadius:10,backgroundColor:'#F8FAFD'},
+  commercialActionTitle:{flex:1,fontSize:11,fontWeight:'700',color:'#17365D'},
+  commercialActionValue:{fontSize:10,color:'#53657D',fontWeight:'600'},
+  commercialSheet:{backgroundColor:'#FFFFFF',borderTopLeftRadius:20,borderTopRightRadius:20,padding:16,maxHeight:'85%',gap:8},
+  commercialModalContent:{paddingBottom:12},
+  calculatedRow:{flexDirection:'row',justifyContent:'space-between',padding:12,borderTopWidth:1,borderColor:'#E1E9F3'},
+  readonlyInput:{backgroundColor:'#F3F6FA',color:'#738196'},
+  commercialSave:{backgroundColor:'#17365D',borderRadius:10,padding:13,alignItems:'center'},
   summary:{padding:14,gap:7},summaryCaption:{fontSize:10,fontWeight:'700',color:'#426188'},summaryProgress:{marginLeft:'auto',backgroundColor:'#E1EAF8',borderRadius:18,paddingHorizontal:9,paddingVertical:5},commercialToggle:{marginHorizontal:12,marginBottom:9,flexDirection:'row',alignItems:'center',gap:8,padding:11,borderWidth:1,borderColor:'#DDE6F0',borderRadius:10,backgroundColor:'#F8FAFD'},commercialToggleTitle:{flex:1,color:'#26436B',fontSize:11,fontWeight:'700'},commercialBody:{paddingHorizontal:12},summaryDocuments:{marginHorizontal:12,marginBottom:11,padding:12,flexDirection:'row',alignItems:'center',gap:10,borderColor:'#E1E9F3',borderWidth:1,borderRadius:10},documentAction:{marginHorizontal:12,marginBottom:12,flexDirection:'row',gap:8},total:{fontSize:20,color:'#1B385B',fontWeight:'800'},notice:{fontSize:10,lineHeight:16,color:'#65758E',paddingHorizontal:14,paddingBottom:13},
   actions:{flexDirection:'row',gap:8,marginBottom:11},secondary:{flex:1,borderWidth:1,borderColor:'#CDD9EB',borderRadius:10,padding:13,alignItems:'center'},secondaryText:{fontWeight:'700',fontSize:11,color:'#25466E'},
   primary:{flex:1,backgroundColor:'#243F9E',borderRadius:10,padding:13,alignItems:'center'},primaryText:{fontSize:11,fontWeight:'800',color:'white'},disabled:{opacity:.48},
