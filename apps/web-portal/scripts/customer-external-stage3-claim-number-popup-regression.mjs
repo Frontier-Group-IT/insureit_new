@@ -13,7 +13,7 @@ assert.match(page, /item\.milestone_key === "claim_intimation" && item\.mileston
 assert.match(page, /!claim\.insurer_claim_no\?\.trim\(\)/, "Do not prompt when number already exists.");
 assert.match(page, /<CustomerInsurerClaimNumberPopup/, "Stage 4 must render popup.");
 assert.match(page, /stage\/work_approval\?account=/, "Popup must continue into Stage 4.");
-assert.match(actions, /key==="claim_intimation"\?"&saved=claim_intimation":""/, "Only first completion should mark transition.");
+assert.match(actions, /key==="claim_intimation" && !editingCompleted\?"&saved=claim_intimation":""/, "Only initial Stage 3 completion marks the optional insurer-number transition.");
 assert.match(submit, /saveCustomerClaimStageWithFeedback\(mode, data\)/, "Stage 3 must first save on the server.");
 
 assert.match(popup, /Add insurer claim number\?/, "Match reference heading.");
