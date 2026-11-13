@@ -60,3 +60,13 @@ export async function requestNativePolicyDateApproval(intakeId:string,revision:n
 export async function verifyNativePolicyDateApproval(intakeId:string,revision:number,approvalId:string,otp:string){
   return request<{verified:boolean}>({action:'approval_verify',intake_id:intakeId,revision,approval_id:approvalId,otp});
 }
+
+export type NativeRcReview={
+  registrationNumber:string;ownerName:string|null;mobileNumber:string|null;vehicleClass:string|null;
+  make:string|null;model:string|null;fuelType:string|null;manufacturingYear:string|null;
+  engineCapacity:string|null;seatingCapacity:string|null;grossWeight:string|null;
+  chassisNumber:string|null;engineNumber:string|null;rtoName:string|null;rtoState:string|null;
+};
+export async function lookupNativePolicyRc(intakeId:string,registrationNumber:string){
+  return request<{review:NativeRcReview}>({action:'rc_lookup',intake_id:intakeId,registration_no:registrationNumber});
+}
