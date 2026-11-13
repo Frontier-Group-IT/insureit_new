@@ -192,8 +192,7 @@ export default function PolicyIntakeDetailScreen() {
         return;
       }
       // The app has received the user's only reviewer-change confirmation.
-      // The native API checks reviewer assignment and prepares the existing draft.
-      // Policy Onboarding stays inside the Partner App.
+      // The native API checks reviewer assignment and prepares the saved draft.
       await prepareNativePolicyOnboarding(latest.id, confirmedConflict, latest.reviewer_conflict_id);
       setReviewerConflictName(null);
       router.push({ pathname: '/policy-intakes/onboarding', params: { id: latest.id } });
@@ -401,14 +400,6 @@ export default function PolicyIntakeDetailScreen() {
                 </ReviewBlock>
                   </>
                 )}
-                {row.status === 'duplicate' && row.ocr_warnings?.length ? (
-                  <View style={reviewStyles.warningBox}>
-                    <Text style={reviewStyles.warningHeading}>Review notes</Text>
-                    {row.ocr_warnings.map((warning, index) => (
-                      <Text key={index} style={reviewStyles.warningText}>{warning}</Text>
-                    ))}
-                  </View>
-                ) : null}
               </>
             ) : (
               <Text style={reviewStyles.caption}>Life / Health proposal forms are reviewed manually. No motor OCR fields are expected.</Text>
@@ -436,15 +427,6 @@ export default function PolicyIntakeDetailScreen() {
               <ReviewPair label="Detail fetch" value={row.ocr_status === 'completed' ? 'Details fetched' : row.ocr_status === 'failed' ? 'Manual review' : humanize(row.ocr_status)} />
               <ReviewPair label="Reviewer" value={row.status === 'completed' ? 'Completed by Operations' : ['in_review','needs_attention'].includes(row.status) ? 'Operations team' : 'Not assigned'} />
             </View> : null}
-
-            {row.status !== 'duplicate' && row.ocr_warnings?.length ? (
-              <View style={reviewStyles.warningBox}>
-                <Text style={reviewStyles.warningHeading}>Review notes</Text>
-                {row.ocr_warnings.map((warning, index) => (
-                  <Text key={index} style={reviewStyles.warningText}>{warning}</Text>
-                ))}
-              </View>
-            ) : null}
 
             {row.review_access.can_review && !['completed', 'rejected', 'duplicate'].includes(row.status) ? (
               <View style={reviewStyles.reviewActions}>
@@ -487,6 +469,17 @@ export default function PolicyIntakeDetailScreen() {
                     </Pressable>
                   </View>
                 </View>
+              </View>
+            ) : null}
+
+            {/* Always last, after every available section and Operations action,
+                including duplicate, pending and read-only intake statuses. */}
+            {row.ocr_warnings?.length ? (
+              <View style={reviewStyles.warningBox}>
+                <Text style={reviewStyles.warningHeading}>Review notes</Text>
+                {row.ocr_warnings.map((warning, index) => (
+                  <Text key={index} style={reviewStyles.warningText}>{warning}</Text>
+                ))}
               </View>
             ) : null}
           </View>

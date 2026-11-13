@@ -442,7 +442,7 @@ export default function AddVehicleScreen() {
   }
 
   return (
-    <Screen title="Add Vehicle" showLogout showTitleHeader={false} topSpacing="compact">
+    <Screen title="Add Vehicle" showLogout showTitleHeader={false} topSpacing="compact" keyboardLayout="stable">
       <View style={styles.modalHeader}><View><Text style={styles.modalEyebrow}>VEHICLE ONBOARDING</Text><Text style={styles.compactTitle}>Add Vehicle</Text></View><Pressable accessibilityRole="button" onPress={() => router.back()} style={styles.modalClose}><MaterialCommunityIcons name="close" size={20} color={palette.navy} /></Pressable></View>
       <Card style={styles.formCard}>
         <View pointerEvents="none" style={styles.formAccentOne} />

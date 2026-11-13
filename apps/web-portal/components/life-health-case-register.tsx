@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { MessageSquareText, Search, X } from "lucide-react";
+import { Search, X } from "lucide-react";
 import { LifeHealthIssuedPolicyButton } from "@/components/life-health-issued-policy-button";
 
 export type LifeHealthCaseRegisterRow = {
@@ -20,6 +20,7 @@ export type LifeHealthCaseRegisterRow = {
   remarks: string;
   premiumAmount: number;
   finalPolicyId: string | null;
+  status: string;
 };
 
 function normalize(value: string | number | null | undefined) {
@@ -33,17 +34,16 @@ export function LifeHealthCaseRegister({
 }: {
   rows: LifeHealthCaseRegisterRow[];
   emptyLabel: string;
-  statusFilter: "pending" | "issued" | "all";
+  statusFilter: "pending" | "rejected" | "issued" | "all";
 }) {
   const [query, setQuery] = useState("");
-  const [remarksToView, setRemarksToView] = useState<LifeHealthCaseRegisterRow | null>(null);
   const normalizedQuery = normalize(query);
 
   const filteredRows = useMemo(() => {
     // Search all authorized cases regardless of the active status tab.
-    if (!normalizedQuery) return rows.filter((row) => statusFilter === "all" || (statusFilter === "issued" ? Boolean(row.finalPolicyId) : !row.finalPolicyId));
+    if (!normalizedQuery) return rows.filter((row) => statusFilter === "all" || (statusFilter === "issued" ? Boolean(row.finalPolicyId) : statusFilter === "rejected" ? row.status === "rejected" && !row.finalPolicyId : !row.finalPolicyId && row.status !== "rejected"));
     return rows.filter((row) => {
-      const status = row.finalPolicyId ? "issued" : "awaiting policy";
+      const status = row.finalPolicyId ? "issued" : row.status === "rejected" ? "rejected" : "awaiting policy";
       const searchable = [
         row.caseNumber,
         row.businessLine,
@@ -96,7 +96,7 @@ export function LifeHealthCaseRegister({
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[1280px] text-left text-[10px]">
+        <table className="w-full min-w-[1120px] text-left text-[10px]">
           <thead className="border-b bg-[#F8FAFC] text-[8px] uppercase tracking-[.05em] text-[#64748B]">
             <tr>
               <th className="px-4 py-3">Case</th>
@@ -107,7 +107,6 @@ export function LifeHealthCaseRegister({
               <th className="px-3 py-3">RM / Source</th>
               <th className="px-3 py-3 text-right">Premium</th>
               <th className="px-3 py-3">Status</th>
-              <th className="px-3 py-3">Remarks</th>
               <th className="px-4 py-3 text-right">Action</th>
             </tr>
           </thead>
@@ -134,24 +133,16 @@ export function LifeHealthCaseRegister({
                 </td>
                 <td className="px-3 py-3 text-right font-semibold">₹{Number(row.premiumAmount || 0).toLocaleString("en-IN")}</td>
                 <td className="px-3 py-3">
-                  <span className={`rounded-full px-2 py-1 text-[8px] font-bold ${row.finalPolicyId ? "bg-[#EAF7F2] text-[#18794E]" : "bg-[#FFF3CD] text-[#A96A00]"}`}>
-                    {row.finalPolicyId ? "Issued" : "Awaiting policy"}
+                  <span className={`rounded-full px-2 py-1 text-[8px] font-bold ${row.finalPolicyId ? "bg-[#EAF7F2] text-[#18794E]" : row.status === "rejected" ? "bg-red-50 text-red-700" : "bg-[#FFF3CD] text-[#A96A00]"}`}>
+                    {row.finalPolicyId ? "Issued" : row.status === "rejected" ? "Rejected" : "Awaiting policy"}
                   </span>
-                </td>
-                <td className="px-3 py-3">
-                  {row.remarks.trim() ? (
-                    <button type="button" onClick={() => setRemarksToView(row)} className="inline-flex max-w-[170px] items-center gap-1.5 rounded-lg border border-[#CAD7E7] bg-[#F6F9FE] px-2.5 py-1.5 text-left text-[9px] font-semibold text-[#17365D] hover:bg-[#E9F2FF]" title={row.remarks}>
-                      <MessageSquareText className="h-3.5 w-3.5 shrink-0" />
-                      <span className="truncate">{row.remarks}</span>
-                    </button>
-                  ) : <span className="text-[#98A2B3]">—</span>}
                 </td>
                 <td className="px-4 py-3 text-right">
                   {row.finalPolicyId ? (
                     <LifeHealthIssuedPolicyButton policyId={row.finalPolicyId} />
                   ) : (
                     <Link href={`/policies/life-health-cases/${row.id}`} className="rounded-lg border border-[#CAD7E7] bg-white px-2.5 py-1.5 text-[8.5px] font-bold text-[#315B9A]">
-                      Open / Issue
+                      {row.status === "rejected" ? "View Rejection" : "Open / Issue"}
                     </Link>
                   )}
                 </td>
@@ -160,24 +151,6 @@ export function LifeHealthCaseRegister({
           </tbody>
         </table>
       </div>
-
-      {remarksToView ? (
-        <div className="fixed inset-0 z-[1100] flex items-center justify-center bg-[#101828]/60 p-4" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setRemarksToView(null); }}>
-          <div role="dialog" aria-modal="true" aria-labelledby="register-remarks-title" className="w-full max-w-[520px] overflow-hidden rounded-2xl bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-[#E6ECF5] px-5 py-4">
-              <h2 id="register-remarks-title" className="text-[14px] font-bold text-[#17365D]">Remarks · {remarksToView.caseNumber}</h2>
-              <button type="button" onClick={() => setRemarksToView(null)} aria-label="Close remarks" className="rounded-lg p-1.5 text-[#64748B] hover:bg-[#F3F6FB]"><X className="h-4 w-4" /></button>
-            </div>
-            <div className="p-5">
-              <p className="whitespace-pre-wrap break-words text-[12px] leading-5 text-[#344054]">{remarksToView.remarks}</p>
-              <div className="mt-5 flex justify-end gap-2">
-                {!remarksToView.finalPolicyId ? <Link href={`/policies/life-health-cases/${remarksToView.id}`} className="inline-flex h-10 items-center rounded-xl border border-[#CAD7E7] px-4 text-[11px] font-semibold text-[#17365D]">Edit in Case Details</Link> : null}
-                <button type="button" onClick={() => setRemarksToView(null)} className="h-10 rounded-xl bg-[#17365D] px-4 text-[11px] font-bold text-white">Close</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      ) : null}
 
       {!filteredRows.length ? (
         <div className="px-4 py-16 text-center">

@@ -82,8 +82,10 @@ for (const removed of [
   assert.ok(!detail.includes(removed), 'Remove requested redundant copy: ' + removed);
 }
 const statusIndex = detail.indexOf('style={reviewStyles.reviewStatus}');
-const notesIndex = detail.indexOf('style={reviewStyles.warningBox}', statusIndex);
-assert.ok(statusIndex > 0 && notesIndex > statusIndex, 'Review notes follow Review status');
+const rejectIndex = detail.indexOf('accessibilityLabel="Reject policy intake"');
+const notesIndex = detail.indexOf("{row.ocr_warnings?.length ? (");
+assert.ok(statusIndex > 0 && rejectIndex > statusIndex && notesIndex > rejectIndex, 'Review notes are last, below Operations actions for all statuses including duplicates');
+assert.equal((detail.match(/<Text style=\{reviewStyles.warningHeading\}>Review notes<\/Text>/g) || []).length, 1, 'Only one Review Notes section exists');
 assert.ok(!detail.includes('This intake was closed without policy onboarding.'), 'No rejected-intake explanatory sentence');
 assert.ok(detail.includes("row.status !== 'rejected'"), 'Rejected header does not include a redundant description');
 assert.ok(detail.includes("row.status === 'rejected' ? 'Operations rejection note'"), 'Rejected note is labeled correctly');

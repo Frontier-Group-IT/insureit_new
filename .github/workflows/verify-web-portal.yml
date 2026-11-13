@@ -177,6 +177,10 @@ jobs:
         run: node scripts/partner-intake-global-filter-count-regression.mjs
       - name: Life Health case global status search regression
         run: node scripts/life-health-case-global-search-regression.mjs
+      - name: Life Health case rejection status, reason and authorization regression
+        run: node scripts/life-health-case-rejection-regression.mjs
+      - name: Life Health Case Details error popup selector regression
+        run: node scripts/life-health-case-error-popup-regression.mjs
       - name: Life Health issued edit parity regression
         run: node scripts/life-health-issued-edit-parity-regression.mjs
       - name: Life Health optional maturity case and edit regression
@@ -187,6 +191,8 @@ jobs:
         run: node scripts/partner-operations-export-parity-regression.mjs
       - name: Life Health remarks popup and Case Register regression
         run: node scripts/life-health-remarks-popup-regression.mjs
+      - name: Life Health Create Case full-width remarks and appended preview regression
+        run: node scripts/life-health-create-case-full-width-remarks-regression.mjs
       - name: Life Health payment mode validation regression
         run: node scripts/life-health-payment-mode-validation-regression.mjs
       - name: Life Health native onboarding architecture regression

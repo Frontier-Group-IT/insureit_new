@@ -67,6 +67,14 @@ const customerCss = read("../app/customer/(protected)/claims/[id]/stage/[stage]/
 assert.match(customer, /<CustomerDateInput name=\{field\.key\}/, "Customer claim-stage dates use the shared Indian date control.");
 assert.match(customer, /field\.type==="date"/, "Apply date control only to date fields, leaving other inputs unchanged.");
 assert.match(customerDate, /formatIndianDate\(value\)/, "Date fields show DD/MM/YYYY.");
+assert.match(customerDate, /compact \? "h-\[34px\] min-h-\[34px\] w-full shrink-0 px-1\.5"/,
+  "Compact claim date inputs must retain the same 34px height as adjacent text fields inside flex-col labels.");
+assert.doesNotMatch(customerDate, /compact \? "min-h-0 px-1\.5"/,
+  "Compact date fields must not permit collapsing below their target height.");
+assert.match(customerDate, /: "h-full min-h-10 flex-1 px-3"/,
+  "Noncompact date inputs must keep their existing flexible sizing.");
+assert.match(customer, /className="mt-1 h-\[34px\] rounded-\[4px\] border border-\[#D9E3F0\]/,
+  "Customer claim stage preserves the 34px input-height design and date border.");
 assert.match(customerDate, /type="date" value=\{value\}/, "Keep native YYYY-MM-DD values for FormData.");
 assert.match(customerDraft, /customer-spot-draft-restore/, "Restored date drafts update the visible date text.");
 assert.match(customer, /formatIndianDate\(value\)/, "Read-only date fields also show Indian dates.");

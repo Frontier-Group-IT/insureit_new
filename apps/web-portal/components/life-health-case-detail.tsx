@@ -7,6 +7,7 @@ import { FileSizeExceededPopup } from "@/components/file-size-exceeded-popup";
 import { CalendarDays, Eye, LoaderCircle, Trash2, Upload, ShieldCheck, MessageSquareText, Save, ArrowRight, X } from "lucide-react";
 import { convertLifeHealthCaseToPolicy, deleteLifeHealthCaseDocument, uploadLifeHealthCaseDocument } from "@/app/policies/life-health-policy-actions";
 import { appendLifeHealthCaseRemark, updateLifeHealthCaseDetails } from "@/app/policies/life-health-case-edit-actions";
+import { rejectLifeHealthCase } from "@/app/policies/life-health-case-reject-actions";
 import { isPensionLifePolicy } from "@/lib/life-health-pension-maturity";
 import { PolicyDateApprovalDialog } from "@/components/policy-date-approval-dialog";
 import { policyDateDecision } from "@/lib/policy-date-rule";
@@ -84,12 +85,16 @@ export function LifeHealthCaseDetail({caseData,insurers,documents,activities}:Pr
   const[uploading,startUpload]=useTransition(),[converting,startConvert]=useTransition(),[saving,startSave]=useTransition(),[deleting,startDelete]=useTransition();
   const[documentToDelete,setDocumentToDelete]=useState<DocumentRow|null>(null),[deleteError,setDeleteError]=useState<string|null>(null),[deletingDocumentId,setDeletingDocumentId]=useState<string|null>(null),[error,setError]=useState<string|null>(null),[saveSuccess,setSaveSuccess]=useState(false),[copy,setCopy]=useState<File|null>(null),[uploadingType,setUploadingType]=useState<string|null>(null);
   const[form,setForm]=useState({customerName:caseData.customerName,customerPhone:caseData.customerPhone,customerAddress:caseData.customerAddress,insurerId:caseData.insurerId,productName:caseData.productName,proposalNumber:caseData.proposalNumber,ppt:caseData.ppt,pd:caseData.pd,paymentFrequency:canonicalPaymentFrequency(caseData.paymentFrequency),paymentMode:normalizeCasePaymentMode(caseData.paymentMode),premiumAmount:String(caseData.premiumAmount||""),sourcingDate:caseData.sourcingDate});
-  const[infoTab,setInfoTab]=useState<"activity"|"remarks">("activity");
+  const[infoTab,setInfoTab]=useState<"activity"|"remarks"|null>(null);
   const[savedRemarks,setSavedRemarks]=useState(caseData.remarks);
   const[remarkOpen,setRemarkOpen]=useState(false);
   const[remarkDraft,setRemarkDraft]=useState("");
   const[remarkError,setRemarkError]=useState<string|null>(null);
   const[remarkPending,startRemark]=useTransition();
+  const[rejectOpen,setRejectOpen]=useState(false);
+  const[rejectReason,setRejectReason]=useState("");
+  const[rejectError,setRejectError]=useState<string|null>(null);
+  const[rejectPending,startReject]=useTransition();
   const[issuedApproval,setIssuedApproval]=useState<{id:string;key:string}|null>(null);
   const[dateApprovalOpen,setDateApprovalOpen]=useState(false);
   const[issue,setIssue]=useState<IssueState>({policyNumber:"",issuanceDate:"",startDate:"",endDate:"",pptEndDate:"",nextInstallmentDate:"",finalPremium:String(caseData.premiumAmount||""),sumInsured:""});
@@ -138,10 +143,32 @@ export function LifeHealthCaseDetail({caseData,insurers,documents,activities}:Pr
   const confirmDocumentDelete=()=>{if(!documentToDelete||deleting)return;const document=documentToDelete;setDeleteError(null);setDeletingDocumentId(document.id);startDelete(async()=>{try{const result=await deleteLifeHealthCaseDocument(caseData.id,document.id);if(!result.ok){setDeleteError(result.error);return}setDocumentToDelete(null);router.refresh()}catch(cause){setDeleteError(cause instanceof Error?cause.message:"Could not delete the document. Please retry.")}finally{setDeletingDocumentId(null)}})};
   const convert=(approvalConfirmed=false)=>{setError(null);if(["invalid","future"].includes(policyDateDecision(issue.issuanceDate))){setError("Choose a valid policy issuance date in the current or an earlier month.");return;}if(!issue.policyNumber.trim()||!issue.startDate||!issue.finalPremium){setError("Complete the issued policy number, policy start date, and final premium before approval.");return;}if(issueApprovalRequired){if(!approvalConfirmed){setDateApprovalOpen(true);return;}if(!dateApprovalId){setDateApprovalOpen(true);return;}setDateApprovalOpen(false);}startConvert(async()=>{const savedResult=await updateLifeHealthCaseDetails(editData());if(!savedResult.ok){setError(savedResult.error);return}const d=new FormData();d.set("caseId",caseData.id);Object.entries(issue).forEach(([k,v])=>d.set(k,v));if(dateApprovalId)d.set("dateApprovalId",dateApprovalId);if(copy)d.set("policyCopy",copy);const r=await convertLifeHealthCaseToPolicy(d);if(!r.ok){setError(r.error);return}router.replace("/policies")})};
 
+  const confirmReject=()=>{
+    if(!rejectReason.trim()||rejectPending)return;
+    setRejectError(null);
+    startReject(async()=>{
+      try{
+        const result=await rejectLifeHealthCase(caseData.id,rejectReason);
+        if(!result.ok){setRejectError(result.error);return;}
+        setRejectOpen(false);
+        router.replace("/policies/life-health-cases?status=rejected");
+        router.refresh();
+      }catch{setRejectError("Could not reject this case. Refresh the page and try again.");}
+    });
+  };
+
+  if(caseData.status==="rejected")return <div className="mx-auto max-w-[1480px] rounded-2xl border border-red-200 bg-white p-5 text-[11px] text-[#17365D]"><h2 className="text-[15px] font-bold text-red-700">Case Rejected</h2><p className="mt-2">This case is rejected and cannot be issued.</p><p className="mt-3 whitespace-pre-wrap rounded-xl bg-red-50 p-3 text-[11px] text-[#475467]">{caseData.remarks||"No rejection remarks available."}</p><Link className="mt-4 inline-block font-bold underline" href="/policies/life-health-cases?status=rejected">Back to Rejected cases</Link></div>;
   if(isIssued)return <div className="mx-auto max-w-[1480px] rounded-2xl border border-[#D9E2F0] bg-white p-5 text-[11px] text-[#17365D]">This case is issued and closed. <Link className="font-bold underline" href={`/policies/${encodeURIComponent(caseData.finalPolicyId!)}/edit`}>View Policy {caseData.finalPolicyNo}</Link></div>;
 
   const legacyCash=form.paymentMode==="Cash";
   return <div className="mx-auto w-full max-w-[1480px] space-y-3 pb-10">
+    {rejectOpen?<div className="fixed inset-0 z-[1200] grid h-[100dvh] w-screen place-items-center bg-[#101828]/60 p-4" role="presentation">
+      <div role="dialog" aria-modal="true" aria-labelledby="reject-case-title" className="w-full max-w-[480px] rounded-2xl bg-white shadow-2xl">
+        <div className="border-b border-[#E6ECF5] px-5 py-4"><h2 id="reject-case-title" className="text-[15px] font-bold text-[#17365D]">Reject Life / Health Case?</h2><p className="mt-1 text-[11px] text-[#667085]">Case {caseData.caseNumber} will move to Rejected. A reason is required.</p></div>
+        <div className="space-y-2 p-5"><label htmlFor="life-health-rejection-reason" className="text-[10px] font-bold text-[#475467]">Reason for rejection <span className="text-red-600">*</span></label><textarea id="life-health-rejection-reason" autoFocus value={rejectReason} onChange={event=>setRejectReason(event.target.value)} maxLength={2000} rows={4} placeholder="Enter the reason for rejecting this case..." className="w-full resize-y rounded-xl border border-[#CBD5E1] bg-white px-3 py-2.5 text-[12px] text-[#17203A] outline-none focus:border-[#315B9A] focus:ring-2 focus:ring-[#DCE8FA]"/>{rejectError?<p role="alert" className="text-[11px] font-semibold text-red-700">{rejectError}</p>:null}</div>
+        <div className="flex justify-end gap-2 border-t border-[#E6ECF5] bg-[#F8FAFC] p-4"><button type="button" disabled={rejectPending} onClick={()=>{setRejectOpen(false);setRejectReason("");setRejectError(null)}} className="rounded-xl border border-[#CBD5E1] bg-white px-4 py-2.5 text-[10px] font-semibold">Cancel</button><button type="button" disabled={rejectPending||!rejectReason.trim()} onClick={confirmReject} className="rounded-xl bg-[#C42B31] px-5 py-2.5 text-[10px] font-bold text-white disabled:opacity-50">{rejectPending?"Rejecting…":"Confirm Reject"}</button></div>
+      </div>
+    </div>:null}
     {documentToDelete?<div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#101828]/55 p-4" role="presentation" onMouseDown={event=>{if(event.target===event.currentTarget&&!deleting)setDocumentToDelete(null)}}>
       <div role="alertdialog" aria-modal="true" aria-labelledby="delete-document-title" aria-describedby="delete-document-message" className="w-full max-w-[430px] rounded-[24px] bg-white px-6 pb-6 pt-7 text-center shadow-[0_24px_70px_rgba(16,24,40,0.25)]">
         <span className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-[#FFF0F0] text-[#C22B30]"><Trash2 className="h-7 w-7" aria-hidden="true"/></span>
@@ -199,21 +226,21 @@ export function LifeHealthCaseDetail({caseData,insurers,documents,activities}:Pr
     </Section>
 
     <section className="overflow-hidden rounded-2xl border border-[#DFE8F4] bg-white shadow-[0_8px_20px_rgba(36,79,145,.06)]">
-      <div role="tablist" aria-label="Activity Status and Remarks" className="flex border-b border-[#E6EBF1] px-3 pt-2">
-        <button type="button" role="tab" aria-selected={infoTab==="activity"} onClick={()=>setInfoTab("activity")} className={`rounded-t-lg px-4 py-2.5 text-[11px] font-semibold ${infoTab==="activity"?"border-b-2 border-[#17365D] bg-[#F8FBFF] text-[#17365D]":"text-[#667085]"}`}>Activity Status</button>
-        <button type="button" role="tab" aria-selected={infoTab==="remarks"} onClick={()=>setInfoTab("remarks")} className={`rounded-t-lg px-4 py-2.5 text-[11px] font-semibold ${infoTab==="remarks"?"border-b-2 border-[#17365D] bg-[#F8FBFF] text-[#17365D]":"text-[#667085]"}`}>Remarks</button>
+      <div role="group" aria-label="Activity Status and Remarks" className="flex border-b border-[#E6EBF1] px-3 pt-2">
+        <button type="button" aria-expanded={infoTab==="activity"} aria-controls="life-health-case-info-panel" onClick={()=>setInfoTab(current=>current==="activity"?null:"activity")} className={`rounded-t-lg px-4 py-2.5 text-[11px] font-semibold ${infoTab==="activity"?"border-b-2 border-[#17365D] bg-[#F8FBFF] text-[#17365D]":"text-[#667085]"}`}>Activity Status</button>
+        <button type="button" aria-expanded={infoTab==="remarks"} aria-controls="life-health-case-info-panel" onClick={()=>setInfoTab(current=>current==="remarks"?null:"remarks")} className={`rounded-t-lg px-4 py-2.5 text-[11px] font-semibold ${infoTab==="remarks"?"border-b-2 border-[#17365D] bg-[#F8FBFF] text-[#17365D]":"text-[#667085]"}`}>Remarks</button>
       </div>
-      <div role="tabpanel" className="p-3">
+      {infoTab!==null?<div id="life-health-case-info-panel" role="region" aria-label={infoTab==="activity"?"Activity Status":"Remarks"} className="p-3">
         {infoTab==="activity"?<div className="overflow-hidden rounded-xl border border-[#D9E2F0] bg-[#FBFCFE]">{activities.length?activities.map((activity,index)=><div key={activity.id} className={`grid gap-2 px-4 py-3 md:grid-cols-[minmax(0,1fr)_260px_190px] md:items-center ${index?"border-t border-[#D9E2F0]":""}`}><div><p className="text-[8px] font-bold uppercase tracking-[.06em] text-[#8090A5]">{index===0?"Latest Action":"Previous Action"}</p><p className="mt-1 text-[12px] font-semibold text-[#17365D]">{activity.action}</p></div><p className="text-[9px] text-[#7A8AA0] md:text-right">Details: Created By: <span className="font-medium text-[#53657D]">{activity.createdBy}</span></p><p className="text-[9px] text-[#7A8AA0] md:text-right">At: {activityDate(activity.createdAt)}</p></div>):<p className="p-4 text-[10px] text-[#7A8AA0]">Activity not recorded.</p>}</div>:
         <div className="rounded-xl border border-[#D9E2F0] bg-[#FBFCFE] p-4">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-3"><p className="text-[9px] font-bold uppercase tracking-[.07em] text-[#667085]">Saved remarks · Read only</p><button type="button" onClick={()=>{setRemarkError(null);setRemarkOpen(true);}} disabled={saving||converting} className="inline-flex h-9 items-center gap-2 rounded-xl border border-[#BFD3F5] bg-white px-3 text-[10px] font-bold text-[#17365D] hover:bg-[#EEF5FF] disabled:opacity-50"><MessageSquareText className="h-4 w-4"/>Add Remark</button></div>
           <p className="whitespace-pre-wrap break-words text-[11px] leading-5 text-[#17365D]">{savedRemarks.trim()||"No remarks added yet."}</p>
         </div>}
-      </div>
+      </div>:null}
     </section>
     {remarkOpen?<div className="fixed inset-0 z-[1100] grid h-[100dvh] w-screen place-items-center bg-[#101828]/60 p-3" role="presentation"><div role="dialog" aria-modal="true" aria-label="Add case remark" className="w-full max-w-[520px] overflow-hidden rounded-2xl bg-white shadow-2xl"><div className="flex items-center justify-between border-b border-[#E6ECF5] px-5 py-4"><h2 className="text-[14px] font-bold text-[#17365D]">Add Remark</h2><button type="button" disabled={remarkPending} onClick={()=>setRemarkOpen(false)} aria-label="Close remarks" className="rounded-lg p-1.5 text-[#64748B] hover:bg-[#F3F6FB]"><X className="h-4 w-4"/></button></div><div className="space-y-3 p-5"><p className="text-[10px] text-[#667085]">Existing remarks cannot be edited. New remarks are appended to the history.</p><textarea autoFocus aria-label="New remark" value={remarkDraft} onChange={event=>setRemarkDraft(event.target.value)} maxLength={2000} rows={5} placeholder="Enter a new remark…" className="w-full resize-y rounded-xl border border-[#CBD5E1] bg-white px-3 py-2.5 text-[12px] text-[#17203A] outline-none focus:border-[#315B9A] focus:ring-2 focus:ring-[#DCE8FA]"/>{remarkError?<p role="alert" className="text-[10px] text-red-600">{remarkError}</p>:null}</div><div className="flex justify-end gap-2 border-t border-[#E6ECF5] bg-[#F8FAFC] p-4"><button type="button" disabled={remarkPending} onClick={()=>setRemarkOpen(false)} className="rounded-xl border border-[#CBD5E1] bg-white px-4 py-2.5 text-[10px] font-semibold">Cancel</button><button type="button" disabled={remarkPending||!remarkDraft.trim()} onClick={addRemark} className="rounded-xl bg-[#17365D] px-5 py-2.5 text-[10px] font-bold text-white disabled:opacity-50">{remarkPending?"Adding…":"Add Remark"}</button></div></div></div>:null}
     {oversizedLimitMb!==null?<FileSizeExceededPopup maxSizeMb={oversizedLimitMb} onClose={()=>setOversizedLimitMb(null)}/>:null}
-    {error?<div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[10px] font-semibold text-red-700">{error}</div>:null}
+    {error?<div role="alert" data-life-health-case-error="true" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[10px] font-semibold text-red-700">{error}</div>:null}
     {saveSuccess?<div role="status" aria-live="polite" className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-[11px] font-semibold text-emerald-800">Case details saved successfully.</div>:null}
 
     <div role="group" aria-label="Case documents" className="flex flex-wrap items-center gap-2 px-1 py-1.5">
@@ -221,8 +248,9 @@ export function LifeHealthCaseDetail({caseData,insurers,documents,activities}:Pr
     </div>
     <section className="flex flex-wrap items-center justify-end gap-2 rounded-2xl border border-[#D9E5F4] bg-white px-4 py-3 shadow-[0_8px_24px_rgba(23,54,93,.06)]">
       <Link href="/policies/life-health-cases" className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border border-[#CAD7E7] bg-white px-4 text-[10px] font-semibold text-[#17365D] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#F2F6FC]"><X className="h-3.5 w-3.5" />Cancel</Link>
-      <button type="button" onClick={saveDetails} disabled={saving||converting} className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border border-[#BFD3EE] bg-[#EFF5FF] px-4 text-[10px] font-bold text-[#17365D] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#E0EDFF] disabled:opacity-60"><Save className="h-3.5 w-3.5"/>{saving?"Saving…":"Save Case Details"}</button>
-      <button type="button" onClick={()=>convert()} disabled={converting} className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[linear-gradient(100deg,#133766,#2064AD)] px-5 text-[10px] font-bold text-white shadow-[0_8px_18px_rgba(25,78,147,.18)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_10px_24px_rgba(25,78,147,.3)] disabled:opacity-60"><ShieldCheck className="h-4 w-4"/>{converting?"Creating…":"Create Policy & Close Case"}<ArrowRight className="h-3.5 w-3.5"/></button>
+      <button type="button" onClick={()=>{setRejectError(null);setRejectOpen(true)}} disabled={saving||converting||uploading||deleting} className="inline-flex h-10 items-center justify-center rounded-xl border border-red-200 bg-red-50 px-4 text-[10px] font-bold text-red-700 hover:bg-red-100 disabled:opacity-60">Reject</button>
+      <button type="button" onClick={saveDetails} disabled={saving||converting||rejectPending} className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border border-[#BFD3EE] bg-[#EFF5FF] px-4 text-[10px] font-bold text-[#17365D] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#E0EDFF] disabled:opacity-60"><Save className="h-3.5 w-3.5"/>{saving?"Saving…":"Save Case Details"}</button>
+      <button type="button" onClick={()=>convert()} disabled={converting||rejectPending} className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[linear-gradient(100deg,#133766,#2064AD)] px-5 text-[10px] font-bold text-white shadow-[0_8px_18px_rgba(25,78,147,.18)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_10px_24px_rgba(25,78,147,.3)] disabled:opacity-60"><ShieldCheck className="h-4 w-4"/>{converting?"Creating…":"Create Policy & Close Case"}<ArrowRight className="h-3.5 w-3.5"/></button>
     </section>
     {dateApprovalOpen&&issueApprovalRequired?<PolicyDateApprovalDialog issuanceDate={issue.issuanceDate} policyNumber={issue.policyNumber} operation="create" intermediaryCode={caseData.intermediaryCode} verifiedApprovalId={dateApprovalId} onApproved={id=>setIssuedApproval(id?{id,key:issueApprovalKey}:null)} onClose={()=>setDateApprovalOpen(false)} onConfirm={()=>convert(true)} submitting={converting}/>:null}
   </div>

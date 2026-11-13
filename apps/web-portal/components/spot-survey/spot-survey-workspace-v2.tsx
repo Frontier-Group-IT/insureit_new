@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { CarFront } from "lucide-react";
 import type { ReactNode } from "react";
 import headerStyles from "./claim-journey-header.module.css";
 import { BulkDocumentVerificationGroup, type BulkDocumentGroupItem } from "./bulk-document-verification-group";
@@ -76,7 +77,7 @@ const aliases = {
 
 const claimHeaderIcons = {
   customer: "/assets/Custom-Icons/optimized-128/customers.png",
-  vehicle: "/assets/customer-3d-icons/my_vehicles.png",
+  vehicle: "/assets/customer-3d-icons/brand_new_vehicle.png",
   lossDate: "/assets/Custom-Icons/optimized-128/claims-intimated-today.png",
   policy: "/assets/Custom-Icons/optimized-128/policy.png",
   control: "/assets/Custom-Icons/optimized-128/tasks-work-queue.png",
@@ -165,7 +166,7 @@ function InfoStrip({ claim, heading = "Operations claim journey", headerActions 
   return (
     <section aria-label="Claim Journey summary" className={`${headerStyles.header} overflow-hidden rounded-[20px] text-white`}>
       <div aria-hidden="true" className={headerStyles.sheen} />
-      <div className="relative flex min-h-[48px] items-center justify-between gap-2 px-3 py-2 sm:px-4">
+      <div className="relative flex min-h-[48px] items-center justify-between gap-2 border-b border-white/20 px-3 py-2 sm:px-4">
         <div className="flex min-w-0 items-center gap-3">
           <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-white bg-white shadow-[0_4px_12px_rgba(0,12,42,0.2)]">
             <Image src={claimHeaderIcons.claim} alt="" width={34} height={34} className="h-[34px] w-[34px] object-contain drop-shadow-[0_2px_2px_rgba(0,12,42,0.16)]" />
@@ -180,9 +181,9 @@ function InfoStrip({ claim, heading = "Operations claim journey", headerActions 
       <div className={`${headerStyles.fields} relative grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7`}>
         <Info label="Customer" title={customerName} subtitle={claim.customers?.phone ?? "-"} logo={<HeaderIcon src={claimHeaderIcons.customer} alt="Customer" />} />
         <Info label="Vehicle No." title={vehicleNumber} logo={<HeaderIcon src={claimHeaderIcons.vehicle} alt="Vehicle" />} />
-        <Info label="Model" title={model} logo={<ManufacturerLogo name={make} />} />
+        <Info label="Model" title={model} singleLine logo={<ManufacturerLogo name={make} />} />
         <Info label="Loss Date" title={formatDateShort(claim.accident_at)} logo={<HeaderIcon src={claimHeaderIcons.lossDate} alt="Loss date" />} />
-        <Info label="Policy No." title={claim.policies?.policy_no ?? "-"} logo={<InsurerLogo name={insurerName} />} />
+        <Info label="Policy No." title={claim.policies?.policy_no ?? "-"} singleLine logo={<InsurerLogo name={insurerName} />} />
         <Info label="Control No." title={claim.claim_no} logo={<HeaderIcon src={claimHeaderIcons.control} alt="Control number" />} />
         <Info label="Claim No." title={claim.insurer_claim_no ?? "-"} logo={<HeaderIcon src={claimHeaderIcons.claim} alt="Claim number" />} />
       </div>
@@ -206,7 +207,7 @@ function formatAmount(value: number | null | undefined) {
   return typeof value === "number" ? value.toLocaleString("en-IN") : "Not available";
 }
 
-function Info({ icon, label, title, subtitle, logo }: { icon?: string; label: string; title: string; subtitle?: string | null; logo?: ReactNode }) {
+function Info({ icon, label, title, subtitle, logo, singleLine = false }: { icon?: string; label: string; title: string; subtitle?: string | null; logo?: ReactNode; singleLine?: boolean }) {
   return (
     <div className={`flex min-h-[48px] min-w-0 items-center gap-2 px-3 py-1.5 ${headerStyles.field}`}>
       <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-white shadow-[0_2px_6px_rgba(0,12,42,.14)]">
@@ -214,7 +215,7 @@ function Info({ icon, label, title, subtitle, logo }: { icon?: string; label: st
       </span>
       <span className="min-w-0 flex-1">
         <span className="block text-[9px] font-semibold uppercase leading-[1.25] tracking-[0.045em] text-white/75">{label}</span>
-        <span className="mt-0.5 block break-words text-[12px] font-bold leading-4 text-white">{title}</span>
+        <span title={singleLine ? title : undefined} className={`mt-0.5 block min-w-0 text-[12px] font-bold leading-4 text-white ${singleLine ? "truncate whitespace-nowrap" : "break-words"}`}>{title}</span>
         {subtitle ? <span className="block break-words text-[10px] font-medium leading-4 text-white/80">{subtitle}</span> : null}
       </span>
     </div>
@@ -293,7 +294,7 @@ function HeaderIcon({ src, alt }: { src: string; alt: string }) {
 
 function ManufacturerLogo({ name }: { name: string }) {
   const src = getVehicleBrandLogo(name);
-  if (!src) return <HeaderIcon src={claimHeaderIcons.vehicle} alt="Vehicle manufacturer" />;
+  if (!src) return <CarFront aria-label="Vehicle manufacturer" className="h-[26px] w-[26px] text-[#1769B4]" strokeWidth={1.9} />;
   return <Image src={src} alt={name && name !== "-" ? `${name} logo` : "Vehicle manufacturer"} width={36} height={24} className="max-h-6 max-w-9 object-contain" />;
 }
 

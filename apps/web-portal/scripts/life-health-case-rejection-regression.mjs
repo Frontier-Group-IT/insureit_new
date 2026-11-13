@@ -1,0 +1,32 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+
+const read = (path) => readFileSync(new URL(path, import.meta.url), "utf8");
+const detail = read("../components/life-health-case-detail.tsx");
+const register = read("../components/life-health-case-register.tsx");
+const registerPage = read("../app/policies/life-health-cases/page.tsx");
+const summary = read("../lib/life-health-case-summary.ts");
+const reject = read("../app/policies/life-health-case-reject-actions.ts");
+const edit = read("../app/policies/life-health-case-edit-actions.ts");
+const policy = read("../app/policies/life-health-policy-actions.ts");
+
+assert.match(detail, /Confirm Reject/, "Confirmation button exists");
+assert.match(detail, /Reason for rejection/, "Reason is required in popup");
+assert.match(detail, /rejectLifeHealthCase\(caseData\.id,rejectReason\)/, "Rejection is server backed");
+assert.match(detail, /href="\/policies\/life-health-cases"[^>]*>.*?Cancel<\/Link>[\s\S]*?Reject<\/button>/, "Reject is immediately after Cancel");
+assert.match(detail, /caseData\.status==="rejected"/, "Rejected case has a read-only view");
+assert.match(reject, /requireOperationsHeadRecordOwnership\("life_health_case", caseId\)/, "Operations Head record scope enforced");
+assert.match(reject, /requirePolicyCreator\(\)/, "Policy editor authorization enforced");
+assert.match(reject, /reason\.length > 2000/, "Server validates rejection reason");
+assert.match(reject, /\.eq\("status", row\.status\)\.is\("final_policy_id", null\)/, "Concurrent issuance cannot be rejected");
+assert.match(reject, /rejection: \{ reason, rejected_at: now, rejected_by: profile\.id \}/, "Rejection attribution is persisted");
+assert.match(reject, /Case rejected: \$\{reason\}/, "Reason is appended to case remarks");
+assert.match(registerPage, /label: "Rejected", count: rejectedCount/, "Rejected tab includes exact count");
+assert.match(register, /statusFilter === "rejected"/, "Rejected filter is distinct");
+assert.match(register, /row\.status === "rejected" \? "Rejected"/, "Rejected status displayed on row");
+assert.match(summary, /\.neq\("status", "rejected"\)/, "Pending count excludes rejected");
+assert.match(summary, /\.eq\("status", "rejected"\)/, "Rejected count comes from database");
+assert.match(edit, /row\.status === "rejected"/, "Case detail updates block rejected");
+assert.match(policy, /caseRow\.status==="rejected"/, "Policy conversion refuses rejected");
+assert.match(policy, /if\(caseUpdateError\|\|!caseUpdated\)/, "Policy conversion verifies atomic case status update");
+console.log("Life/Health case rejection contracts passed.");
