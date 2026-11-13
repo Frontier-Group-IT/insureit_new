@@ -79,7 +79,7 @@ export async function createLifeHealthCase(formData:FormData):Promise<LifeHealth
     ? await admin.from("posp_misp_onboarding_profiles").select("associate_employee_id").eq("application_id",intermediary.application_id).maybeSingle<{associate_employee_id:string|null}>()
     : {data:null,error:null};
   if(ownerError)return{ok:false,error:"Current RM assignment could not be verified. Refresh the source and try again."};
-  const rmEmployeeId=currentOwner?.associate_employee_id??intermediary.associate_employee_id;
+  const rmEmployeeId=currentOwner ? currentOwner.associate_employee_id : intermediary.associate_employee_id;
   if(!rmEmployeeId)return{ok:false,error:"This source does not have a current RM assignment. Update the intermediary master before booking."};
   const {data:currentRm,error:rmLookupError}=await admin.from("employees").select("id,full_name,employee_code,employment_status").eq("id",rmEmployeeId).maybeSingle<{id:string;full_name:string;employee_code:string;employment_status:string}>();
   if(rmLookupError||!currentRm||currentRm.employment_status!=="active")return{ok:false,error:"The current source RM is unavailable or inactive. Reassign the source before booking."};
