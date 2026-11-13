@@ -13,7 +13,7 @@ import { PartnerAssets } from '@/lib/partner-assets';
 import {
   getPartnerPolicyIntake,
   getPartnerPolicyIntakeDocumentUrl,
-  partnerPolicyIntakeReviewUrl,
+  createPartnerPolicyIntakeBridgeUrl,
   partnerPolicyIntakeMatchUrl,
   updatePartnerPolicyIntakeReview,
   submitPartnerPolicyIntakeReplacement,
@@ -33,7 +33,7 @@ export default function PolicyIntakeDetailScreen() {
   const router = useRouter();
   const { context } = usePartnerSession();
   const { id, submitted } = useLocalSearchParams<{ id: string; submitted?: string }>();
-  const [row, setRow] = useState<(PartnerPolicyIntake & { review_access: PolicyIntakeReviewAccess; reviewer_conflict_name: string | null; duplicate_match: PolicyIntakeDuplicateMatch | null }) | null>(null);
+  const [row, setRow] = useState<(PartnerPolicyIntake & { review_access: PolicyIntakeReviewAccess; reviewer_conflict_name: string | null; reviewer_conflict_id: string | null; duplicate_match: PolicyIntakeDuplicateMatch | null }) | null>(null);
   const [reviewNote, setReviewNote] = useState('');
   const [reviewBusy, setReviewBusy] = useState(false);
   const [openingDocument, setOpeningDocument] = useState(false);
@@ -191,10 +191,12 @@ export default function PolicyIntakeDetailScreen() {
         setReviewerConflictName(latest.reviewer_conflict_name);
         return;
       }
-      // Confirming here only allows browser navigation. The Operations website
-      // rechecks the reviewer and requires its own authorized takeover action.
+      // The app has received the user's only reviewer-change confirmation.
+      // The website atomically rechecks the exact assignment and applies the
+      // existing secure handoff after redeeming a single-use browser code.
+      const url = await createPartnerPolicyIntakeBridgeUrl(latest.id, confirmedConflict, latest.reviewer_conflict_id);
       setReviewerConflictName(null);
-      await Linking.openURL(partnerPolicyIntakeReviewUrl(latest.id));
+      await Linking.openURL(url);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Could not open Operations Policy Intake Review.');
     } finally {
@@ -468,7 +470,7 @@ export default function PolicyIntakeDetailScreen() {
               <View style={reviewerStyles.warningIcon}><Ionicons name="warning-outline" size={20} color="#B66B0B" /></View>
               <View style={reviewerStyles.headerText}>
                 <Text style={reviewerStyles.title}>Change reviewer?</Text>
-                <Text style={reviewerStyles.message}>This intake is currently being reviewed by <Text style={reviewerStyles.bold}>{reviewerConflictName}</Text>. If you continue, the Operations website will ask you to confirm changing the reviewer to you before proceeding with Policy Onboarding.</Text>
+                <Text style={reviewerStyles.message}>This intake is currently being reviewed by <Text style={reviewerStyles.bold}>{reviewerConflictName}</Text>. If you continue, the reviewer will be changed to you and you can proceed with Policy Onboarding.</Text>
               </View>
               <Pressable accessibilityRole="button" accessibilityLabel="Close reviewer change dialog" onPress={() => setReviewerConflictName(null)} style={reviewerStyles.close}><Ionicons name="close" size={19} color="#7A8798" /></Pressable>
             </View>
