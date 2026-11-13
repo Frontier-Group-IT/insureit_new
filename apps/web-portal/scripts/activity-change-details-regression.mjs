@@ -38,6 +38,7 @@ assert.match(policyActivity, /cpa_amount: "CPA amount"/, "CPA amount must be tra
 assert.match(policyActivity, /describePolicyEditChanges/, "Policy edits must store actual changed source fields");
 assert.match(policyEdit, /describePolicyEditChanges\(activityBefore, activityAfter\)/, "Policy edit action must use safe old/new details");
 assert.match(policyActivity, /premiumSourceChanged/, "Derived pay-in review resets must not replace manual CPA edits");
+assert.match(policyActivity, /cpaAmountChanged && entry.key==="premium.cpa_opted"/, "CPA-only editing must not create a second automatic CPA toggle event");
 for(const column of ["premium.net_premium","premium.gst_amount","premium.gross_premium","policy.premium_amount","payin.total_projected_payin"]){
   assert.ok(policyActivity.includes('"'+column+'"'), column+" must be treated as a calculated value");
 }
