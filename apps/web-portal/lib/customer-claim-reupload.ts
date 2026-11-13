@@ -19,7 +19,7 @@ export type ClaimReuploadRequest = {
   id: string;
   documentType: string;
   reason: string;
-  stage: "spot_intimation" | "claim_intimation";
+  stage: "spot_intimation" | "claim_intimation" | "billing";
   status: "action_required" | "awaiting_verification";
 };
 
@@ -46,6 +46,7 @@ const spotDocuments = new Set([
   "audio", "voicenote", "incidentaudio", "otherdocument",
 ]);
 export function claimReuploadStage(documentType: string): ClaimReuploadRequest["stage"] {
+  if (normalizeClaimDocumentType(documentType) === "finalworkshopbill") return "billing";
   return spotDocuments.has(normalizeClaimDocumentType(documentType)) ? "spot_intimation" : "claim_intimation";
 }
 
