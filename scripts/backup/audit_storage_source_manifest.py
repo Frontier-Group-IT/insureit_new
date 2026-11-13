@@ -57,7 +57,7 @@ def compatible_timestamp(archived_text, source_text):
         return True, False
     if not isinstance(archived_text, str):
         return False, False
-    fraction = re.search(r"\\.(\\d+)(?:Z|[+-]\\d{2}:\\d{2})$", archived_text)
+    fraction = re.search(r"\.(\d+)(?:Z|[+-]\d{2}:\d{2})$", archived_text)
     if not fraction or len(fraction.group(1)) != 3:
         return False, False
     truncated_source = source.replace(
