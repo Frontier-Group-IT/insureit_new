@@ -27,4 +27,19 @@ expectIncludes("showError('Invalid registration number'", 'registration validati
 expectNotIncludes('<Message type="error">', 'inline error banner');
 expectNotIncludes("setMessage('Search and select the insurer to save policy details.')", 'legacy inline insurer error');
 
+// Add Vehicle must not apply two simultaneous automatic keyboard adjustments on iOS.
+const screenSource = fs.readFileSync(new URL('../components/ui.tsx', import.meta.url), 'utf8');
+expectIncludes('topSpacing="compact" keyboardLayout="stable"', 'Add Vehicle opts in to stable keyboard geometry');
+if (!screenSource.includes("keyboardLayout = 'automatic'") ||
+    !screenSource.includes("const stableKeyboardLayout = keyboardLayout === 'stable'") ||
+    !screenSource.includes("Platform.OS === 'ios' && !stableKeyboardLayout ? 'padding' : undefined") ||
+    !screenSource.includes('automaticallyAdjustKeyboardInsets={!stableKeyboardLayout}')) {
+  throw new Error('Stable keyboard mode must disable both iOS keyboard padding and automatic scroll insets while preserving defaults on all other screens.');
+}
+if (!screenSource.includes('keyboardShouldPersistTaps="handled"') ||
+    !screenSource.includes('<ScrollView') ||
+    !screenSource.includes('styles.fixedBrandRow')) {
+  throw new Error('Add Vehicle must remain manually scrollable with its existing fixed Customer header.');
+}
+
 console.log('Customer Add Vehicle error popup regression passed.');
