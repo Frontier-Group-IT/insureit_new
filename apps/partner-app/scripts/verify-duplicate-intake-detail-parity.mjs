@@ -7,7 +7,8 @@ const links = readFileSync('lib/policy-intakes.ts', 'utf8');
 assert.ok(detail.includes('navyTopBar'), 'Policy Intake header uses the shared navy variant');
 assert.ok(detail.includes('row.submitted_by_name?.trim()'), 'Duplicate header displays actual submitter name');
 assert.ok(!detail.includes("row.status === 'duplicate' ? <Text style={styles.statusHelp}"), 'Duplicate does not show the status explanation in header');
-assert.ok(detail.includes("row.status !== 'duplicate' && row.status !== 'ready_for_review'"), 'No duplicate or Ready for Review explanation');
+assert.ok(detail.includes("row.status !== 'duplicate' && row.status !== 'ready_for_review' && row.status !== 'in_review'"), 'No duplicate, Ready for Review or in-review helper text');
+assert.ok(!detail.includes('An Operations user is reviewing this intake.'), 'Remove redundant in-review sentence completely');
 assert.ok(detail.includes("row.status === 'duplicate' ? ("), 'Duplicate UI is scoped');
 assert.ok(!detail.includes('Same submitted and fetched details as the Operations website.'), 'Remove redundant review subtitle');
 assert.ok(!detail.includes('Source & customer'), 'Remove redundant Source & customer block');
@@ -28,7 +29,7 @@ assert.ok(detail.includes('partnerPolicyIntakeMatchUrl(targetPath)'), 'Earlier i
 assert.ok(detail.includes('await Linking.openURL(url)'), 'Earlier intake navigation stays available');
 assert.ok(api.includes('`/policies/${match.policyId}`'), 'Server resolves matching policy details view page, not another arbitrary policy');
 assert.ok(links.includes('/^\\/policies\\/[0-9a-f-]{36}$/i'), 'Mobile only accepts canonical read-only policy details URL');
-assert.ok(detail.includes('topBarIcon="documents-outline"'), 'Use the professional unboxed documents icon');
+assert.ok(detail.includes('topBarIcon="document-text-outline"'), 'Use the professional unboxed documents icon');
 assert.ok(detail.includes('fullWidth'), 'Intake detail uses edge-to-edge mobile content');
 assert.ok(detail.includes('style={styles.intakeSummaryCompact}'), 'Phone/source and policy/vehicle summary sit below the PIR on all statuses');
 assert.ok(detail.includes('style={styles.intakeSummaryCompact}'), 'PIR metadata sits directly under the number without a right-side timestamp gap');
@@ -52,7 +53,7 @@ assert.ok(detail.includes("fields.get('policy_number')?.value?.trim()"), 'Show e
 assert.ok(detail.includes("'Vehicle pending'"), 'Show vehicle-pending indicator when OCR has no registration number');
 assert.ok(detail.includes('sheet:{marginHorizontal:8,'), 'Use full-width intake review with compact symmetric gutters');
 assert.ok(detail.includes("styles.statusLogoWrap"), 'Keep a plain icon alignment container');
-assert.ok(detail.includes('<Ionicons name="reader-outline" size={27} color="#17365D" />'), 'Use a plain professional reader icon in the PIR card');
+assert.ok(detail.includes('<Ionicons name="document-text-outline" size={27} color="#17365D" />'), 'Use a plain professional reader icon in the PIR card');
 assert.ok(detail.includes('navyStatusBar'), 'Show a navy system status bar on both duplicate and ready-for-review pages');
 assert.ok(detail.includes('bottomNavigation={<PolicyIntakeDetailNavigation'), 'Keep five-item bottom navigation on intake detail');
 assert.ok(!detail.includes('<PartnerInsurerLogo'), 'Do not use insurer/logo tile in PIR card');
