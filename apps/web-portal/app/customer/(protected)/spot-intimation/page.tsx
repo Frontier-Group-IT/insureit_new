@@ -133,7 +133,7 @@ export default async function CustomerSpotIntimation({searchParams}:{searchParam
   }
 
   const textFieldClass = "block h-[42px] w-full min-w-0 rounded-[4px] border border-[#CAD8EA] bg-white px-3 text-[13px] font-medium text-[#193659] outline-none transition placeholder:text-[#95A3B8] focus-visible:border-[#2D7FF0] focus-visible:ring-2 focus-visible:ring-[#DCEBFF]";
-  const splitFieldClass = "block h-[42px] min-w-0 flex-1 bg-transparent px-1.5 text-[13px] font-medium text-[#193659] outline-none";
+  const splitFieldClass = "block h-[34px] min-w-0 flex-[2_1_0%] self-center bg-transparent px-1.5 text-[13px] font-medium text-[#193659] outline-none";
   // The exact customer-owned linked policy copy is offered without duplicating
   // an already-attached claim file.
   const copyAdmin = createSupabaseAdminClient();
@@ -159,7 +159,7 @@ export default async function CustomerSpotIntimation({searchParams}:{searchParam
         <label className="min-w-0 w-full">
           <span className="block min-h-5 whitespace-nowrap text-[11px] font-bold uppercase leading-5 tracking-[0.01em] text-[#245BB2] max-sm:whitespace-normal">Accident Date &amp; Time <span className="text-rose-500">*</span></span>
           <span className="mt-1 flex h-[42px] w-full min-w-0 overflow-hidden rounded-[4px] border border-[#CAD8EA] bg-white">
-            <CustomerDateInput compact name="accidentDate" label="Accident date" defaultValue={editing?existingDateTime(claim.accident_at,"date"):undefined} required className="text-[13px] font-medium text-[#193659]" />
+            <CustomerDateInput compact splitTime name="accidentDate" label="Accident date" defaultValue={editing?existingDateTime(claim.accident_at,"date"):undefined} required className="text-[13px] font-medium text-[#193659]" />
             <span aria-hidden="true" className="my-1.5 w-px shrink-0 bg-[#D6E0ED]"/>
             <AutoCloseTimeInput name="accidentTime" defaultValue={editing?existingDateTime(claim.accident_at,"time"):undefined} required ariaLabel="Accident time" className={splitFieldClass}/>
           </span>
@@ -167,7 +167,7 @@ export default async function CustomerSpotIntimation({searchParams}:{searchParam
         <label className="min-w-0 w-full">
           <span className="block min-h-5 whitespace-nowrap text-[11px] font-bold uppercase leading-5 tracking-[0.01em] text-[#245BB2] max-sm:whitespace-normal">Spot Intimation Date &amp; Time <span className="text-rose-500">*</span></span>
           <span className="mt-1 flex h-[42px] w-full min-w-0 overflow-hidden rounded-[4px] border border-[#CAD8EA] bg-white">
-            <CustomerDateInput compact name="spotDate" label="Spot intimation date" defaultValue={editing?existingDateTime(claim.spot_intimation_at,"date"):undefined} required className="text-[13px] font-medium text-[#193659]" />
+            <CustomerDateInput compact splitTime name="spotDate" label="Spot intimation date" defaultValue={editing?existingDateTime(claim.spot_intimation_at,"date"):undefined} required className="text-[13px] font-medium text-[#193659]" />
             <span aria-hidden="true" className="my-1.5 w-px shrink-0 bg-[#D6E0ED]"/>
             <AutoCloseTimeInput name="spotTime" defaultValue={editing?existingDateTime(claim.spot_intimation_at,"time"):undefined} required ariaLabel="Spot intimation time" className={splitFieldClass}/>
           </span>

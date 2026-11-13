@@ -67,8 +67,8 @@ const customerCss = read("../app/customer/(protected)/claims/[id]/stage/[stage]/
 assert.match(customer, /<CustomerDateInput name=\{field\.key\}/, "Customer claim-stage dates use the shared Indian date control.");
 assert.match(customer, /field\.type==="date"/, "Apply date control only to date fields, leaving other inputs unchanged.");
 assert.match(customerDate, /formatIndianDate\(value\)/, "Date fields show DD/MM/YYYY.");
-assert.match(customerDate, /compact \? "h-\[34px\] min-h-\[34px\] w-full shrink-0 px-1\.5"/,
-  "Compact claim date inputs must retain the same 34px height as adjacent text fields inside flex-col labels.");
+assert.match(customerDate, /splitTime \? "h-\[34px\] min-h-\[34px\] min-w-0 flex-\[3_1_0%\] px-1\.5" : "h-\[34px\] min-h-\[34px\] w-full shrink-0 px-1\.5"/,
+  "Compact claim date inputs retain their full-width 34px default while Spot Intimation opts into width sharing.");
 assert.doesNotMatch(customerDate, /compact \? "min-h-0 px-1\.5"/,
   "Compact date fields must not permit collapsing below their target height.");
 assert.match(customerDate, /: "h-full min-h-10 flex-1 px-3"/,

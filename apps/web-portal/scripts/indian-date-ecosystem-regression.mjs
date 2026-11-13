@@ -23,8 +23,8 @@ assert.match(ops,/<AppStyleDateInput name="incident_at"/,"Operations accident da
 assert.match(ops,/<AppStyleDateInput name="spot_intimation_at"/,"Operations spot date picker standardized");
 assert.match(stageThree,/const display = matched \? /,"Claim Intimation/Gate-in date must use a formatted overlay");
 assert.match(stageThree,/\$\{matched\[3\]\}\/\$\{matched\[2\]\}\/\$\{matched\[1\]\}/,"Claim Intimation date display");
-assert.match(customerSpot,/<CustomerDateInput compact name="accidentDate"/);
-assert.match(customerSpot,/<CustomerDateInput compact name="spotDate"/);
+assert.match(customerSpot,/<CustomerDateInput compact splitTime name="accidentDate"/);
+assert.match(customerSpot,/<CustomerDateInput compact splitTime name="spotDate"/);
 assert.match(customerControl,/formatIndianDate\(value\)/);
 assert.match(customerControl,/type="date" value=\{value\}/,"Native date picker and ISO posting retained");
 assert.match(portalField,/formatIndianDate\(value\)/,"Shared portal date control displays day-first");
