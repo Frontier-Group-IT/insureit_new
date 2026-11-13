@@ -143,7 +143,7 @@ function DocumentPickerControl({
             aria-label={`${label} actions`}
             className="inline-flex h-9 items-stretch overflow-hidden rounded-xl border border-[#BFD3F7] bg-[#F7FAFF] text-[#174EA6]"
           >
-            <button type="button" onClick={() => inputRef.current?.click()} disabled={deleting} title={`Replace ${label}`} className="inline-flex min-w-0 items-center gap-2 px-3 text-[10px] font-semibold transition hover:bg-[#EEF5FF] disabled:opacity-50"><RefreshCw className="h-3.5 w-3.5"/>Replace {label}</button>
+            {type === "policy_copy" ? <button type="button" onClick={viewSavedDocument} title={existingDocument.fileName} aria-label={`Open ${existingDocument.fileName}`} className="inline-flex max-w-[220px] min-w-0 items-center gap-2 px-3 text-[10px] font-semibold hover:bg-[#EEF5FF]"><FileText className="h-3.5 w-3.5 shrink-0"/><span className="truncate">{existingDocument.fileName}</span></button> : <button type="button" onClick={() => inputRef.current?.click()} disabled={deleting} title={`Replace ${label}`} className="inline-flex min-w-0 items-center gap-2 px-3 text-[10px] font-semibold transition hover:bg-[#EEF5FF] disabled:opacity-50"><RefreshCw className="h-3.5 w-3.5"/>Replace {label}</button>}
             {onDeleteExisting ? (
               <button
                 type="button"
@@ -157,10 +157,11 @@ function DocumentPickerControl({
               </button>
             ) : null}
             <button type="button" onClick={viewSavedDocument} aria-label={`View ${label}`} title={existingDocument.fileName} className="inline-flex w-9 items-center justify-center border-l border-[#E3E8EF] hover:bg-[#EEF5FF]"><Files className="h-3.5 w-3.5" /></button>
+            {type === "policy_copy" ? <button type="button" onClick={() => inputRef.current?.click()} disabled={deleting} aria-label={`Replace ${label}`} title={`Replace ${label}`} className="inline-flex w-9 items-center justify-center border-l border-[#E3E8EF] hover:bg-[#EEF5FF] disabled:opacity-50"><RefreshCw className="h-3.5 w-3.5"/></button> : null}
           </div>
-          <span title={existingDocument.fileName} className="max-w-[220px] truncate pl-1 text-[8px] font-medium leading-3 text-[#6B7A90]">
+          {type !== "policy_copy" ? <span title={existingDocument.fileName} className="max-w-[220px] truncate pl-1 text-[8px] font-medium leading-3 text-[#6B7A90]">
             {existingDocument.fileName}
-          </span>
+          </span> : null}
         </div>
       ) : (
         <div className="flex min-w-0 flex-col items-start gap-1">
