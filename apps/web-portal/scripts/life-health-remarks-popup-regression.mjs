@@ -30,7 +30,9 @@ assert.doesNotMatch(editor, /Edit Remarks|View or edit remarks|setDraft\(value\)
 assert.match(editor, /setDraft\(""\)/, "Add Remark initializes a fresh draft");
 assert.match(editor, /onChange\(previous \?/, "New remarks append to existing case draft");
 assert.match(editor, /Existing remarks · Read only/, "Previously added remarks are shown read-only inside the popup");
-assert.match(editor, /Remarks added · Read only/, "Remarks remain inside their own single-row field without an inline note below");
+assert.match(editor, /Remarks added · Read only/, "Remarks status remains in the field");
+assert.match(editor, /aria-label="Added remarks"/, "Added remarks are displayed below the field");
+assert.match(editor, /Added remarks · Read only/, "Previously added remarks are read-only below the Add Remark control");
 assert.doesNotMatch(editor, /aria-label="Current remarks"/, "No separate remarks preview beneath the input field");
 assert.match(editor, /onClick=\{\(\) => setOpen\(false\)\}/, "Cancel dismisses without changing committed remarks");
 assert.match(newAction, /remarks:remarks\|\|null/, "Create Case still persists remarks");
