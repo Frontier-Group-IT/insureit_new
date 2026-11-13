@@ -37,7 +37,7 @@ const normalize = (value: string) => value.toLowerCase().replace(/[^a-z0-9]/g, "
 const spotTypes = new Set(["accidentphoto","spotphoto","accidentphotos","rccopy","insurancecopy","driverlicence","grloadbill","accidentvideo","otherdocument","incidentvoicenote","audio","voicenote","incidentaudio"]);
 
 export function CustomerInternalCompletedJourney({
-  claimId, accountId, completedCount, milestones, documents, spot,
+  claimId, accountId, completedCount, milestones, documents, spot, reuploadDocumentType, reuploadRequestId, reuploadStage,
 }: {
   claimId: string;
   accountId: string;
@@ -45,6 +45,9 @@ export function CustomerInternalCompletedJourney({
   milestones: CustomerClaimMilestone[];
   documents: CustomerClaimDocument[];
   spot: SpotFields;
+  reuploadDocumentType?: string | null;
+  reuploadRequestId?: string | null;
+  reuploadStage?: "spot_intimation" | "claim_intimation" | null;
 }) {
   const completedStages = Math.max(0, Math.min(completedCount, INTERNAL_JOURNEY_STAGES.length));
   const spotDocuments = documents.filter(doc => spotTypes.has(normalize(doc.document_type)));
@@ -87,8 +90,8 @@ export function CustomerInternalCompletedJourney({
             </div>
             </div>
           </div> : <p className="rounded-lg bg-[#F6F9FD] px-3 py-3 text-[12px] text-[#64748B]">No details recorded for this stage yet.</p>}
-          {stage.key === "spot_intimation" && true ? <><CustomerClaimEvidenceWorkspace documents={spotDocuments} claimId={claimId} accountId={accountId} stage="spot_intimation" allowUpload={false} /><CustomerClaimVoiceRecorder documents={spotDocuments} claimId={claimId} accountId={accountId} allowUpload={false}/></> : null}
-          {stage.key === "claim_intimation" ? <CustomerClaimDocumentGroups documents={documents} claimId={claimId} accountId={accountId} stage="claim_intimation" allowUpload={false} /> : null}
+          {stage.key === "spot_intimation" && true ? <><CustomerClaimEvidenceWorkspace documents={spotDocuments} claimId={claimId} accountId={accountId} stage="spot_intimation" allowUpload={false} reuploadDocumentType={reuploadStage === "spot_intimation" ? reuploadDocumentType : null} reuploadRequestId={reuploadStage === "spot_intimation" ? reuploadRequestId : null} /><CustomerClaimVoiceRecorder documents={spotDocuments} claimId={claimId} accountId={accountId} allowUpload={false}/></> : null}
+          {stage.key === "claim_intimation" ? <CustomerClaimDocumentGroups documents={documents} claimId={claimId} accountId={accountId} stage="claim_intimation" allowUpload={false} reuploadDocumentType={reuploadStage === "claim_intimation" ? reuploadDocumentType : null} reuploadRequestId={reuploadStage === "claim_intimation" ? reuploadRequestId : null} /> : null}
         </div> : null}
       </section>;
     })}
