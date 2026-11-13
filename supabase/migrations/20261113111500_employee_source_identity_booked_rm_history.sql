@@ -375,6 +375,57 @@ BEFORE INSERT OR UPDATE OF lead_source_id,lead_source_name,lead_source_code
 ON public.policy_intake_requests FOR EACH ROW
 EXECUTE FUNCTION public.canonicalize_intake_source_identity();
 
+-- Existing generic AFTER UPDATE onboarding triggers also synchronize PAN, bank,
+-- child profiles, registration, and group data. An employee-name or *official*
+-- HR-code correction must NEVER execute those business workflows.
+-- Keep the full existing behavior for owner changes / regular onboarding edits;
+-- make only canonical associate-name and associate-employee-code edits inert.
+DO $scope_onboarding_triggers$
+DECLARE
+  v_cols text;
+  v_name text;
+  v_definition text;
+  v_updated text;
+BEGIN
+  SELECT string_agg(quote_ident(column_name),', ' ORDER BY ordinal_position)
+    INTO v_cols
+  FROM information_schema.columns
+  WHERE table_schema='public' AND table_name='posp_misp_onboarding_profiles'
+    AND column_name NOT IN ('associate_name','associate_employee_code','updated_at','updated_by');
+
+  FOREACH v_name IN ARRAY ARRAY[
+    'intermediary_profile_sync_shared_identity',
+    'queue_intermediary_pan_after_profile_save',
+    'queue_intermediary_pan_verification_on_document_stage',
+    'trg_sync_intermediary_application_link',
+    'trg_sync_intermediary_application_status',
+    'trg_sync_partner_details_to_linked_accounts',
+    'trg_sync_partner_intermediary',
+    'trg_sync_posp_misp_profile_to_intermediary'
+  ] LOOP
+    SELECT pg_get_triggerdef(t.oid) INTO v_definition FROM pg_trigger t
+    WHERE t.tgrelid='public.posp_misp_onboarding_profiles'::regclass
+      AND t.tgname=v_name AND NOT t.tgisinternal;
+
+    IF v_definition IS NULL THEN
+      RAISE EXCEPTION 'Missing onboarding trigger %, migration must be reviewed against current schema',v_name;
+    END IF;
+
+    IF POSITION('AFTER INSERT OR UPDATE ON' IN v_definition)>0 THEN
+      v_updated:=REPLACE(v_definition,'AFTER INSERT OR UPDATE ON',
+        'AFTER INSERT OR UPDATE OF '||v_cols||' ON');
+    ELSIF POSITION('AFTER UPDATE ON' IN v_definition)>0 THEN
+      v_updated:=REPLACE(v_definition,'AFTER UPDATE ON',
+        'AFTER UPDATE OF '||v_cols||' ON');
+    ELSE
+      RAISE EXCEPTION 'Unexpected event scope of onboarding trigger %: %',v_name,v_definition;
+    END IF;
+    EXECUTE format('DROP TRIGGER %I ON public.posp_misp_onboarding_profiles',v_name);
+    EXECUTE v_updated;
+  END LOOP;
+END;
+$scope_onboarding_triggers$;
+
 -- The migration is conditional on existing UUIDs, never on matching two names.
 UPDATE public.policies p SET source_intermediary_id=i.id
 FROM public.intermediaries i
