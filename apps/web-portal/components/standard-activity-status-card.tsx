@@ -28,21 +28,14 @@ export function StandardActivityStatusCard({
   items,
   emptyText = "No activity recorded yet.",
   open = false,
+  embedded = false,
 }: {
   items: StandardActivityItem[];
   emptyText?: string;
   open?: boolean;
+  embedded?: boolean;
 }) {
-  return (
-    <details
-      open={open}
-      className="group overflow-hidden rounded-2xl border border-[#DDE4EE] bg-white shadow-[0_6px_18px_rgba(15,23,42,0.035)]"
-    >
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-[10.5px] font-semibold text-[#334155] [&::-webkit-details-marker]:hidden">
-        <span>Activity Status</span>
-        <ChevronDown className="h-4 w-4 text-[#64748B] transition group-open:rotate-180" />
-      </summary>
-
+  const rows = (
       <div className="border-t border-[#E6EBF1] px-4 py-3">
         <div className="overflow-hidden rounded-xl border border-[#DDE4EE] bg-[#FBFCFE]">
           {items.length ? (
@@ -68,6 +61,19 @@ export function StandardActivityStatusCard({
           )}
         </div>
       </div>
+  );
+
+  if (embedded) {
+    return <div className="overflow-hidden rounded-xl border border-[#DDE4EE] bg-white">{rows}</div>;
+  }
+
+  return (
+    <details open={open} className="group overflow-hidden rounded-2xl border border-[#DDE4EE] bg-white shadow-[0_6px_18px_rgba(15,23,42,0.035)]">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-[10.5px] font-semibold text-[#334155] [&::-webkit-details-marker]:hidden">
+        <span>Activity Status</span>
+        <ChevronDown className="h-4 w-4 text-[#64748B] transition group-open:rotate-180" />
+      </summary>
+      {rows}
     </details>
   );
 }
