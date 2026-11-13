@@ -20,11 +20,12 @@ assert.match(dialog,/>\s*OK\s*<\/button>/,"Keep an immediate close action.");
 assert.match(errors,/role="alertdialog"/,"Errors must retain a distinct alert dialog.");
 assert.doesNotMatch(errors,/setTimeout/,"Do not auto-close errors before users can read them.");
 
-assert.match(save,/if \(result\.error\)/,"Never show success on save error.");
-assert.match(save,/savedDestination\.current=result\.destination/,"Navigate only on confirmed destination.");
-assert.match(save,/setSuccessNotice\(editMode \? "Spot Intimation changes saved successfully\." : "Spot Intimation details saved successfully\."\)/,"Show correct save confirmation.");
-assert.match(save,/if\(destination\)router\.push\(destination\)/,"Redirect only after success closes.");
-assert.match(save,/if \(pending \|\| successNotice\) return;/,"Avoid duplicate submission while confirmation is shown.");
+assert.match(save,/if \(result\.error\)/,"Never navigate on save error.");
+assert.match(save,/else if \(result\.destination\)/,"Navigate only on confirmed destination.");
+assert.match(save,/router\.push\(result\.destination\)/,"Navigate directly following a confirmed save.");
+assert.match(save,/if \(!navigating\) setPending\(false\)/,"Keep Saving... visible during navigation.");
+assert.match(save,/if \(pending\) return;/,"Prevent duplicate submissions during save and navigation.");
+assert.doesNotMatch(save,/CustomerSuccessDialog|successNotice|savedDestination/, "Spot Intimation no longer shows a success popup.");
 
 assert.match(bulk,/if \(!allowUpload \|\| running\.current \|\| !files\.length\) return;/,"Prevent duplicate or read-only direct bulk submissions.");
 assert.match(bulk,/if\(result\.error \|\| !result\.uploaded\)/,"Only verified server uploads count as successful.");
