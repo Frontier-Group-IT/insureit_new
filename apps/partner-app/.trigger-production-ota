@@ -1,9 +1,10 @@
 Partner production OTA trigger
-release=partner-search-suggestions-4327
-source=verified-merged-main-f2b619f6be3a4b556b6248a9d06c5d132f4fb020
-reason=user-approved-merge-and-publish-partner-search
+release=partner-intake-secure-onboarding-4346
+source=verified-merged-main-758f2c030e32b773309575248bf5dbcd4edc9678
+reason=user-approved-merge-and-publish-secure-reviewer-handoff
 channel=production
 runtime=0.2.0
-requested=2026-11-12
+requested=2026-11-13
 no_native_build=true
-database_changes=none
+database_migration=partner_policy_intake_web_handoff_tickets_applied
+web_deployment=must_be_verified_before_release
