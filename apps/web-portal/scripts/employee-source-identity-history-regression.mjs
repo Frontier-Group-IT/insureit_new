@@ -46,6 +46,14 @@ assert.match(sql, /UPDATE public\.employees report/);
 assert.match(sql, /Legacy associate_id is intentionally not overwritten/);
 assert.doesNotMatch(sql, /SET\s+associate_id\s*=/i, "Do not destroy legacy associate codes");
 
+// SQL migration must be executable and avoid broadening live column-specific
+// onboarding triggers (PAN, IIB and application workflow are unrelated).
+assert.equal((sql.match(/AS \\$\\n/g) ?? []).length, 0, "Invalid single-dollar function opening");
+assert.equal((sql.match(/^\\$;$/gm) ?? []).length, 0, "Invalid single-dollar function closing");
+assert.match(sql, /v_updated:=REPLACE\\(v_definition,'associate_name, ',''\\)/);
+assert.doesNotMatch(sql, /'queue_intermediary_pan_after_profile_save',/);
+assert.doesNotMatch(sql, /'queue_intermediary_pan_verification_on_document_stage',/);
+assert.match(sql, /'trg_sync_posp_misp_profile_to_intermediary'/);
 assert.match(sql, /identity_maintenance\.employee_source_sync_backup_20261113/);
 assert.match(sql, /historical policy ownership\/group changed/);
 assert.match(sql, /historical case owner changed/);
