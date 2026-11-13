@@ -77,6 +77,7 @@ const aliases = {
 
 const claimHeaderIcons = {
   customer: "/assets/Custom-Icons/optimized-128/customers.png",
+  vehicle: "/assets/customer-3d-icons/brand_new_vehicle.png",
   lossDate: "/assets/Custom-Icons/optimized-128/claims-intimated-today.png",
   policy: "/assets/Custom-Icons/optimized-128/policy.png",
   control: "/assets/Custom-Icons/optimized-128/tasks-work-queue.png",
@@ -179,7 +180,7 @@ function InfoStrip({ claim, heading = "Operations claim journey", headerActions 
       </div>
       <div className={`${headerStyles.fields} relative grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7`}>
         <Info label="Customer" title={customerName} subtitle={claim.customers?.phone ?? "-"} logo={<HeaderIcon src={claimHeaderIcons.customer} alt="Customer" />} />
-        <Info label="Vehicle No." title={vehicleNumber} logo={<CarFront aria-label="Vehicle" className="h-[26px] w-[26px] text-[#1769B4]" strokeWidth={1.9} />} />
+        <Info label="Vehicle No." title={vehicleNumber} logo={<HeaderIcon src={claimHeaderIcons.vehicle} alt="Vehicle" />} />
         <Info label="Model" title={model} singleLine logo={<ManufacturerLogo name={make} />} />
         <Info label="Loss Date" title={formatDateShort(claim.accident_at)} logo={<HeaderIcon src={claimHeaderIcons.lossDate} alt="Loss date" />} />
         <Info label="Policy No." title={claim.policies?.policy_no ?? "-"} singleLine logo={<InsurerLogo name={insurerName} />} />
