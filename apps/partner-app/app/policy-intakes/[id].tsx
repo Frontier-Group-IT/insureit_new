@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { Alert, Image, Linking, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Image, Linking, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -36,6 +36,7 @@ export default function PolicyIntakeDetailScreen() {
   const [row, setRow] = useState<(PartnerPolicyIntake & { review_access: PolicyIntakeReviewAccess; duplicate_match: PolicyIntakeDuplicateMatch | null }) | null>(null);
   const [reviewNote, setReviewNote] = useState('');
   const [reviewBusy, setReviewBusy] = useState(false);
+  const [rejectConfirmationOpen, setRejectConfirmationOpen] = useState(false);
   const [openingDocument, setOpeningDocument] = useState(false);
   const [loading, setLoading] = useState(true);
   const [replacing, setReplacing] = useState(false);
@@ -116,10 +117,13 @@ export default function PolicyIntakeDetailScreen() {
 
   function confirmReviewAction(status: 'needs_attention' | 'rejected') {
     if (status === 'rejected') {
-      Alert.alert('Reject Policy Intake?', 'This will reject the intake and notify the submitter of your reason.', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Reject', style: 'destructive', onPress: () => void submitReviewAction(status) },
-      ]);
+      if (reviewBusy) return;
+      if (!reviewNote.trim()) {
+        setError('Add an Operations note before rejecting this intake.');
+        return;
+      }
+      setError('');
+      setRejectConfirmationOpen(true);
       return;
     }
     void submitReviewAction(status);
@@ -440,6 +444,52 @@ export default function PolicyIntakeDetailScreen() {
           </View>
         </>
       )}
+      <Modal
+        visible={rejectConfirmationOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => { if (!reviewBusy) setRejectConfirmationOpen(false); }}
+      >
+        <View style={styles.rejectModalOverlay}>
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            accessibilityRole="button"
+            accessibilityLabel="Cancel policy intake rejection"
+            disabled={reviewBusy}
+            onPress={() => setRejectConfirmationOpen(false)}
+          />
+          <View style={styles.rejectModalCard} accessibilityViewIsModal>
+            <View style={styles.rejectModalIcon}>
+              <Ionicons name="alert-circle-outline" size={22} color="#B42318" />
+            </View>
+            <Text style={styles.rejectModalTitle}>Reject Policy Intake?</Text>
+            <Text style={styles.rejectModalMessage}>
+              This will reject the intake and notify the submitter with your Operations note.
+            </Text>
+            <Text numberOfLines={3} style={styles.rejectModalNote}>{reviewNote.trim()}</Text>
+            <View style={styles.rejectModalActions}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Cancel rejection"
+                disabled={reviewBusy}
+                onPress={() => setRejectConfirmationOpen(false)}
+                style={[styles.rejectModalButton, styles.rejectModalCancel]}
+              >
+                <Text style={styles.rejectModalCancelText}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Confirm reject policy intake"
+                disabled={reviewBusy}
+                onPress={() => { setRejectConfirmationOpen(false); void submitReviewAction('rejected'); }}
+                style={[styles.rejectModalButton, styles.rejectModalConfirm, reviewBusy && styles.rejectModalDisabled]}
+              >
+                <Text style={styles.rejectModalConfirmText}>Reject Intake</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </PartnerScreen>
   );
 }
@@ -760,6 +810,19 @@ function humanize(value: string) {
 }
 
 const styles = StyleSheet.create({
+  rejectModalOverlay: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 24, backgroundColor: 'rgba(10,25,50,0.50)' },
+  rejectModalCard: { width: '100%', maxWidth: 330, borderRadius: 16, backgroundColor: '#FFFFFF', padding: 18, alignItems: 'center', gap: 9, elevation: 8 },
+  rejectModalIcon: { width: 42, height: 42, borderRadius: 21, backgroundColor: '#FFF0EE', alignItems: 'center', justifyContent: 'center' },
+  rejectModalTitle: { fontSize: 16, fontWeight: '800', color: '#17365D', textAlign: 'center' },
+  rejectModalMessage: { fontSize: 12, lineHeight: 18, color: '#64748B', textAlign: 'center' },
+  rejectModalNote: { alignSelf: 'stretch', borderRadius: 8, backgroundColor: '#F5F7FB', paddingHorizontal: 10, paddingVertical: 8, fontSize: 11, color: '#344B69', lineHeight: 16 },
+  rejectModalActions: { flexDirection: 'row', alignSelf: 'stretch', gap: 8, marginTop: 6 },
+  rejectModalButton: { flex: 1, minHeight: 40, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
+  rejectModalCancel: { borderWidth: 1, borderColor: '#D5E0EF', backgroundColor: '#FFFFFF' },
+  rejectModalCancelText: { fontSize: 12, fontWeight: '700', color: '#344B69' },
+  rejectModalConfirm: { backgroundColor: '#B42318' },
+  rejectModalConfirmText: { fontSize: 12, fontWeight: '800', color: '#FFFFFF' },
+  rejectModalDisabled: { opacity: 0.5 },
   policyCopyCard: { marginHorizontal: 8, marginTop: 12, padding: 12, borderRadius: 10, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE5EF', gap: 7 },
   policyCopyHeading: { flexDirection: 'row', alignItems: 'center', gap: 7 },
   submittedByName: { fontSize: 10, fontWeight: '500', color: '#17365D', textAlign: 'right', lineHeight: 15 },
