@@ -106,6 +106,8 @@ jobs:
 
       - name: Verify Policy Intake source API contract
         run: node apps/partner-app/scripts/verify-policy-intake-source-contract.mjs
+      - name: Verify Policy Intake detail header identity parity
+        run: node apps/partner-app/scripts/verify-intake-detail-identity-header.mjs
 
       - name: Verify incremental Policy Intake pagination
         run: (cd apps/partner-app && node scripts/verify-policy-intake-list-pagination.mjs)
