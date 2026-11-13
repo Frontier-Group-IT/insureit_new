@@ -45,6 +45,10 @@ jobs:
         run: node --experimental-strip-types scripts/policy-ocr-icici-3005-outstanding-regression.mjs
       - name: ICICI 3005 section02/03 autofill regression
         run: node --experimental-strip-types scripts/policy-ocr-icici-3005-section02-regression.mjs
+      - name: SEC-PR-04 policy document access compatibility baseline
+        run: node scripts/sec-pr-04-policy-access-baseline-regression.mjs
+      - name: SEC-PR-04 policy scope and replacement authorization regression
+        run: node scripts/sec-pr-04-policy-scope-replacement-regression.mjs
       - name: Operations claim payment-stage authorized write regression
         run: node scripts/claim-payment-stage-authorized-write-regression.mjs
       - name: External Claim Billing workshop bill upload regression
