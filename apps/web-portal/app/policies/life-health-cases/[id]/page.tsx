@@ -16,7 +16,7 @@ type InsurerRow = { id:string; name:string };
 type DocumentRow = { id:string; document_type:string; file_name:string; created_at:string; uploaded_by:string|null };
 type PolicyRow = { id:string; policy_no:string; policy_code:string|null };
 type ProfileRow = { id:string; full_name:string|null };
-type CaseAuditRow = {id:string;actor_id:string|null;created_at:string;new_data:{changed_fields?:unknown}|null};
+type CaseAuditRow = {id:string;actor_id:string|null;created_at:string;action:string;new_data:{changed_fields?:unknown}|null};
 type ActivityRow = { id:string; action:string; createdAt:string; createdBy:string;changes?:string[] };
 
 const documentAction=(type:string)=>type==="policy_copy"?"Policy Doc. Uploaded":type==="proposal_form"?"Proposal Form Uploaded":type==="kyc"?"KYC Uploaded":"Document Uploaded";
@@ -45,9 +45,9 @@ export default async function LifeHealthCasePage({ params }: { params: Promise<{
   ]);
 
   const {data:caseEditAudits}=await admin.from("audit_logs")
-    .select("id,actor_id,created_at,new_data")
+    .select("id,actor_id,created_at,action,new_data")
     .eq("table_name","life_health_cases").eq("record_id",id)
-    .eq("action","life_health_case_edited").order("created_at",{ascending:false})
+    .in("action",["life_health_case_edited","life_health_case_remark_added"]).order("created_at",{ascending:false})
     .limit(100).returns<CaseAuditRow[]>();
   const documents=documentsResult.data??[];
   const actorIds=Array.from(new Set([caseRow.created_by,caseRow.converted_by,...documents.map(document=>document.uploaded_by),...(caseEditAudits??[]).map(audit=>audit.actor_id)].filter((value):value is string=>Boolean(value))));
@@ -71,8 +71,9 @@ export default async function LifeHealthCasePage({ params }: { params: Promise<{
           &&/^(?:₹[0-9,]+[.][0-9]{2}|Not set)$/.test(match[3]);
         return safeText(match[2])&&safeText(match[3]);
       };
-      const changes=Array.isArray(raw)?raw.filter(safeChange).slice(0,20):[];
-      return {id:`case-audit-${audit.id}`,action:changes.length===1?changes[0].split(":")[0]+" Updated":"Case Details Updated",
+      const changes=audit.action==="life_health_case_remark_added"?["Remarks changed (values hidden)"]:
+        Array.isArray(raw)?raw.filter(safeChange).slice(0,20):[];
+      return {id:`case-audit-${audit.id}`,action:audit.action==="life_health_case_remark_added"?"Remark Added":changes.length===1?changes[0].split(":")[0].replace(/ changed \(values hidden\)$/,"")+" Updated":"Case Details Updated",
         createdAt:audit.created_at,createdBy:audit.actor_id?actorNames.get(audit.actor_id)||"User":"User",changes};
     }),
     ...(caseRow.converted_at?[{id:`converted-${caseRow.id}`,action:"Policy Created & Case Closed",createdAt:caseRow.converted_at,createdBy:caseRow.converted_by?actorNames.get(caseRow.converted_by)||"User":"User"}]:[]),
