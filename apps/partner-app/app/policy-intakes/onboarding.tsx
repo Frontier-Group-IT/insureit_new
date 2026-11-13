@@ -109,6 +109,7 @@ const productExtras:ProductField[]=[
   {key:'previousClaims',label:'Previous claims'},
   {key:'addOns',label:'Add-ons',wide:true},
   {key:'specialConditions',label:'Special conditions',wide:true},
+  {key:'remarks',label:'Remarks',wide:true},
 ];
 const commercial = [
   {key:'payoutBasis',label:'Pay-in / payout basis',options:['NET','FLAT']},
@@ -158,7 +159,13 @@ export default function NativePolicyOnboarding(){
   const updateProduct=(key:string,value:string)=>{
     if(productType==='Motor')return;
     setDraft(current=>current?{...current,productDrafts:{
-      ...current.productDrafts,[productType]:{...current.productDrafts?.[productType],[key]:value}
+      ...current.productDrafts,[productType]:{
+        ...current.productDrafts?.[productType],[key]:value,
+        ...(productType==='Non Motor'&&['netPremium','gstAmount'].includes(key)?{
+          grossPremium:String(Number(key==='netPremium'?value:current.productDrafts?.[productType]?.netPremium||'0')+
+            Number(key==='gstAmount'?value:current.productDrafts?.[productType]?.gstAmount||'0'))
+        }:{})
+      }
     }}:current);
     setDirty(true);
     setVerifiedApprovalId(null);
@@ -348,6 +355,7 @@ export default function NativePolicyOnboarding(){
     if(!draft)return null;
     if(f.key==='insuredName'||f.key==='phoneNo')return field({key:f.key as FieldKey,label:f.label,required:f.required});
     const current=String(productValues[f.key]??'');
+    if(f.key==='grossPremium')return <View key={f.key} style={styles.field}><Text style={styles.label}>{f.label}</Text><View style={styles.inputRow}><Text style={styles.value}>{current||'0.00'}</Text></View></View>;
     if(f.date)return <PartnerPolicyDateField key={f.key} label={f.label} value={current} required={f.required} onChange={v=>updateProduct(f.key,v)}/>;
     const options=f.key==='insurerId'?data?.insurers??[]:(f.options??[]).map(value=>({value,label:value}));
     return <View key={f.key} style={[styles.field,f.wide&&styles.wideField]}>
@@ -383,6 +391,7 @@ export default function NativePolicyOnboarding(){
       ]:productCaseFields):productType==='Non Motor'?productSection('03','Risk details',riskFields[productValues.category]??riskFields.Other):productSection('03','Policy product & case details',lifeProduct)}
       {isMotor?section('04','Premium & payment',premiumFields):productSection('04',productType==='Non Motor'?'Cover, premium & validity':'Premium & payment',productType==='Non Motor'?otherPremium:lifePremium)}
       {!isMotor&&productType==='Non Motor'?productSection('05','Additional policy details',productExtras):null}
+      {!isMotor&&productType!=='Non Motor'?productSection('05','Remarks',[{key:'remarks',label:'Remarks',wide:true}]):null}
       <View style={styles.section}>
         <View style={styles.sectionHead}>
           <Ionicons name="pie-chart-outline" size={18} color="#254C83"/>
@@ -395,6 +404,14 @@ export default function NativePolicyOnboarding(){
           <Text style={styles.total}>₹{(isMotor?net:amount(productValues[productType==='Non Motor'?'grossPremium':'premiumAmount']||'0')).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})}</Text>
           <Text style={styles.muted}>{isMotor?'Estimated Motor premium · Final amount confirmed on booking':'Draft values only · Final booking and uploads are completed through the Operations Portal'}</Text>
         </View>
+        {!isMotor&&data?.commercialAccess?<View style={styles.commercialBody}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Payin–Payout" accessibilityState={{expanded:commercialExpanded}}
+            onPress={()=>setCommercialExpanded(open=>!open)} style={styles.commercialToggle}>
+            <Ionicons name="cash-outline" size={17} color="#254C83"/><Text style={styles.commercialToggleTitle}>Payin–Payout</Text>
+            <Ionicons name={commercialExpanded?'chevron-up':'chevron-down'} size={16} color="#63758D"/>
+          </Pressable>
+          {commercialExpanded?<Text style={styles.notice}>Life, Health and Non Motor commercial calculations must be completed and approved in the Operations Portal. The native form does not submit these figures.</Text>:null}
+        </View>:null}
         {isMotor&&data?.commercialAccess?<>
           <Pressable accessibilityRole="button" accessibilityLabel="Payin–Payout" accessibilityState={{expanded:commercialExpanded}}
             onPress={()=>setCommercialExpanded(open=>!open)} style={styles.commercialToggle}>
