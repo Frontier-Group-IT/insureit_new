@@ -56,4 +56,13 @@ assert.ok(detail.includes('<Ionicons name="reader-outline" size={27} color="#173
 assert.ok(detail.includes('navyStatusBar'), 'Show a navy system status bar on both duplicate and ready-for-review pages');
 assert.ok(detail.includes('bottomNavigation={<PolicyIntakeDetailNavigation'), 'Keep five-item bottom navigation on intake detail');
 assert.ok(!detail.includes('<PartnerInsurerLogo'), 'Do not use insurer/logo tile in PIR card');
+assert.ok(!detail.includes('Alert.alert('), 'Reject flow must not display a native Android browser/system confirmation');
+assert.ok(detail.includes('<Modal') && detail.includes('transparent') && detail.includes('animationType="fade"'), 'Reject confirmation is a compact in-app modal');
+assert.ok(detail.includes('maxWidth: 330') && detail.includes('styles.rejectModalCard'), 'Reject modal uses constrained compact professional layout');
+assert.ok(detail.includes("setRejectConfirmationOpen(true)"), 'Reject action requests explicit confirmation without submitting');
+assert.ok(detail.includes("if (!reviewNote.trim())"), 'Reject requires an Operations note before confirmation');
+assert.ok(detail.includes("setRejectConfirmationOpen(false); void submitReviewAction('rejected');"), 'Only explicit confirm invokes existing scoped rejection action');
+assert.ok(detail.includes("onPress={() => setRejectConfirmationOpen(false)}"), 'Cancel exits without rejecting');
+assert.ok(detail.includes("disabled={reviewBusy}"), 'Prevent duplicate rejection interaction while the action is busy');
+assert.ok(detail.includes('notify the submitter with your Operations note'), 'Preserve clear rejection notification explanation');
 console.log('Partner Duplicate Policy Intake website parity regression passed');
