@@ -214,6 +214,8 @@ requireText(nativeOnboarding, 'fullWidth={fullWidth}', 'Source date must use the
 if (nativeOnboarding.includes("Existing draft ·") || nativeOnboarding.includes("Saved revision ")) throw new Error('No redundant draft revision subtitle on Policy Onboarding.');
 if (nativeOnboarding.includes("{section('01','Policy source & ownership',policy)}")) throw new Error('Do not restore separate full-size RM and source code fields.');
 requireText(nativeOnboarding, "key:'rmName'|'intermediaryCode'", 'Retain editable source identity values until native master options exist.');
+requireText(nativeOnboarding, 'items.map(item=>field(item))', 'Other onboarding sections must not pass array indices as width overrides.');
+requireText(nativeOnboarding, "{isMotor?null:<Text style={styles.notice}>Final booking and commercial calculations", 'Non-Motor final booking remains website-only.');
 
 requireText(nativeOnboarding, 'useState(false)', 'Commercial section initializes collapsed.');
 requireText(nativeOnboarding, 'accessibilityState={{expanded:commercialExpanded}}', 'Commercial collapse is accessible and controlled.');
