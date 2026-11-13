@@ -54,7 +54,6 @@ export function CustomerInternalCompletedJourney({
   const stageTwoLocked = completedStages >= 2 || milestones.some(item => item.milestone_key === "claim_intimation" && (item.milestone_status === "completed" || item.milestone_status === "not_applicable"));
   return <section className="overflow-hidden rounded-2xl border border-[#DCE5F1] bg-white">
     {INTERNAL_JOURNEY_STAGES.slice(0,completedStages).map((stage) => {
-      const status = "Completed";
       const milestone = milestones.find(item => item.milestone_key === stage.key);
       const details = milestone?.details ?? {};
       const entries = stage.key === "spot_intimation" ? [
@@ -74,15 +73,14 @@ export function CustomerInternalCompletedJourney({
       return <section key={stage.key} className="border-b border-[#E5EBF4] last:border-b-0">
         <div className="flex items-center gap-3 px-4 py-3">
           <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-[#188460] text-white"><Check className="h-4 w-4"/></span>
-          <span className="min-w-0 flex-1"><span className="block text-[14px] font-bold text-[#132D54]">{stage.label}</span><span className="text-[11px] text-[#71819A]">{status}</span></span>
+          <span className="min-w-0 flex-1 text-[14px] font-bold text-[#132D54]">{stage.label}</span>
           {milestone?.completed_at ? <span className="hidden text-[11px] text-[#536782] sm:inline">{new Date(milestone.completed_at).toLocaleDateString("en-GB",{timeZone:"Asia/Kolkata",day:"2-digit",month:"short",year:"numeric"})}</span> : null}
           {stage.key === "spot_intimation" && !stageTwoLocked ? <Link href={`/customer/spot-intimation?account=${encodeURIComponent(accountId)}&id=${encodeURIComponent(claimId)}&mode=edit`} aria-label="Edit Spot Intimation" title="Edit Spot Intimation" className="ml-2 inline-flex h-9 w-9 items-center justify-center rounded-lg bg-transparent text-[#17365D] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#155BAA]"><Pencil className="h-4 w-4" aria-hidden="true" /></Link> : null}
         </div>
-        {stage.key !== "payment_encashment" ? <div className="space-y-3 border-t border-[#E5EBF4] px-4 py-3">
-          {fields.length || extra.length ? <div className="rounded-xl border border-[#DFE7F2] bg-white">
-            <h3 className="border-b border-[#DFE7F2] px-3 py-3 text-[15px] font-semibold text-[#102B54]">{stage.key === "spot_intimation" ? "Accident & Spot Intimation Details" : stage.label+" Details"}</h3>
+        <div className="space-y-3 border-t border-[#E5EBF4] px-4 py-3">
+          {fields.length || extra.length ? <div className="min-w-0">
             <div className={stage.key === "work_approval" ? "min-w-0 overflow-x-auto" : "min-w-0"}>
-            <div className={`grid gap-3 p-3 ${stage.key === "work_approval" ? "grid-flow-col auto-cols-[minmax(170px,1fr)] min-w-[900px]" : stage.key === "spot_status" ? "sm:grid-cols-2 lg:grid-cols-4" : "sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5"}`}>
+            <div className={`grid gap-3 ${stage.key === "work_approval" ? "grid-flow-col auto-cols-[minmax(170px,1fr)] min-w-[900px]" : stage.key === "spot_status" ? "sm:grid-cols-2 lg:grid-cols-4" : "sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5"}`}>
               {[...fields,...extra].map(([label,value]) => <div key={label} className="min-w-0">
                 <p className="mb-1 text-[10px] font-semibold uppercase text-[#5673B0]">{label}</p>
                 <div className="flex min-h-9 items-center rounded-md border border-[#D9E3F0] bg-[#F4F6FA] px-3 py-2 text-[12px] font-medium text-[#18345C] break-words">{present(value) ? display(value) : "Not provided"}</div>
@@ -92,7 +90,7 @@ export function CustomerInternalCompletedJourney({
           </div> : <p className="rounded-lg bg-[#F6F9FD] px-3 py-3 text-[12px] text-[#64748B]">No details recorded for this stage yet.</p>}
           {stage.key === "spot_intimation" && true ? <><CustomerClaimEvidenceWorkspace documents={spotDocuments} claimId={claimId} accountId={accountId} stage="spot_intimation" allowUpload={false} reuploadDocumentType={reuploadStage === "spot_intimation" ? reuploadDocumentType : null} reuploadRequestId={reuploadStage === "spot_intimation" ? reuploadRequestId : null} /><CustomerClaimVoiceRecorder documents={spotDocuments} claimId={claimId} accountId={accountId} allowUpload={false}/></> : null}
           {stage.key === "claim_intimation" ? <CustomerClaimDocumentGroups documents={documents} claimId={claimId} accountId={accountId} stage="claim_intimation" allowUpload={false} reuploadDocumentType={reuploadStage === "claim_intimation" ? reuploadDocumentType : null} reuploadRequestId={reuploadStage === "claim_intimation" ? reuploadRequestId : null} /> : null}
-        </div> : null}
+        </div>
       </section>;
     })}
   </section>;
