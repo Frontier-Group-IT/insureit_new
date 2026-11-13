@@ -54,6 +54,11 @@ assert.match(sql, /v_updated:=REPLACE\(v_definition,'associate_name, ',''\)/);
 assert.doesNotMatch(sql, /'queue_intermediary_pan_after_profile_save',/);
 assert.doesNotMatch(sql, /'queue_intermediary_pan_verification_on_document_stage',/);
 assert.match(sql, /'trg_sync_posp_misp_profile_to_intermediary'/);
+const beforeGuard = sql.split("CREATE TEMP TABLE identity_sync_before_guard ON COMMIT DROP AS\n")[1]?.split(";\n")[0];
+const afterGuard = sql.split("CREATE TEMP TABLE identity_sync_after_guard ON COMMIT DROP AS\n")[1]?.split(";\n")[0];
+assert.ok(beforeGuard && afterGuard, "Both protected-data fingerprint queries must exist");
+assert.equal(afterGuard, beforeGuard, "Before/after protected-data fingerprints must exclude exactly the same fields, including new UUID columns");
+
 assert.match(sql, /identity_maintenance\.employee_source_sync_backup_20261113/);
 assert.match(sql, /historical policy ownership\/group changed/);
 assert.match(sql, /historical case owner changed/);
