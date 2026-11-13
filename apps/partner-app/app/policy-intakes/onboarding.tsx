@@ -396,7 +396,7 @@ export default function NativePolicyOnboarding(){
   </View>;
   const section=(number:string,title:string,items:Field[])=><View style={styles.section} key={number}>
     <View style={styles.sectionHead}>{number?<Text style={styles.number}>{number}</Text>:null}<Text style={styles.sectionTitle}>{title}</Text></View>
-    <View style={styles.fields}>{items.map(field)}</View>
+    <View style={styles.fields}>{items.map(item=>field(item))}</View>
   </View>;
   return <PartnerScreen title="Policy Onboarding" eyebrow="POLICY INTAKE" onBack={()=>router.back()} navyTopBar navyStatusBar topBarIcon="document-text-outline">
     {loading?<View style={styles.wait}><ActivityIndicator color="#2843A9"/><Text style={styles.muted}>Loading saved Policy Onboarding…</Text></View>:null}
