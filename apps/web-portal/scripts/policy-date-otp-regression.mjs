@@ -21,13 +21,14 @@ assert.equal(policyDateApprovalReason("2025-12-20", "2026-01-16"), "Previous-mon
 
 
 const read = name=>fs.readFileSync(new URL(name,import.meta.url),"utf8");
-const motor = read("../app/policies/policy-onboarding-actions.ts");
+const motor = read("../lib/policy-onboarding-engine.ts");
 const edit = read("../app/policies/policy-edit-actions.ts");
 const nonmotor = read("../app/policies/non-motor-policy-actions.ts");
 const life = read("../app/policies/life-health-policy-actions.ts");
 const lifeEdit = read("../app/policies/life-health-issued-policy-edit-actions.ts");
 const lifeEditUi = read("../components/life-health-issued-policy-edit-form.tsx");
-const otp = read("../app/policies/policy-date-approval-actions.ts");
+const otp = read("../lib/policy-date-approval-engine.ts");
+assert.match(read("../app/policies/policy-date-approval-actions.ts"), /requestPolicyDateApprovalForVerifiedActor/, "Website must reuse verified OTP service");
 const migration = read("../../../supabase/migrations/20261103114500_policy_issuance_email_otp_approval.sql");
 assert.equal((motor.match(/save_motor_policy_with_date_approval_v1/g)||[]).length,3,"All motor create/intake/replacement paths must use atomic wrapper");
 assert.match(edit,/save_motor_policy_with_date_approval_v1/);
