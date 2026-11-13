@@ -672,23 +672,36 @@ function overviewTrend(changeLabel?: string): { icon: keyof typeof Ionicons.glyp
   return null;
 }
 
+// Use three equal, readable premium intervals so the axis has real ₹ units.
+// The rounded axis ceiling (rather than the raw maximum) also drives bar heights.
+function trendScale(values: number[]): { step: number; top: number } {
+  const peak = Math.max(0, ...values.map((value) => Number.isFinite(value) ? value : 0));
+  if (peak <= 0) return { step: 1, top: 3 };
+  const rawStep = peak / 3;
+  const magnitude = Math.pow(10, Math.floor(Math.log10(rawStep)));
+  const niceMultiple = [1, 2, 2.5, 5, 10].find((multiple) => multiple * magnitude >= rawStep) ?? 10;
+  const step = niceMultiple * magnitude;
+  return { step, top: step * 3 };
+}
+
 function TrendChart({ data, emptyMessage, compact = false }: { data: TrendPoint[]; emptyMessage?: string; compact?: boolean }) {
   if (!data.length) {
     return <View style={styles.chartEmpty}><Text style={styles.emptyCompactText}>{emptyMessage || 'No trend data available.'}</Text></View>;
   }
-  const max = Math.max(1, ...data.map((item) => Number(item.premium || 0)));
+  const points = data.slice(-6);
+  const { step, top } = trendScale(points.map((item) => Number(item.premium || 0)));
+  const axisLabels = [3, 2, 1, 0].map((multiple) => formatCompactCurrency(multiple * step));
   return (
     <View style={[styles.chartCard, compact && styles.chartCompact]}>
       <View style={[styles.chartYAxis, compact && styles.chartYAxisCompact]}>
-        <Text numberOfLines={1} style={styles.axisText}>High</Text>
-        <Text numberOfLines={1} style={styles.axisText}>Mid</Text>
-        <Text numberOfLines={1} style={styles.axisText}>Low</Text>
-        <Text style={styles.axisText}>0</Text>
+        {axisLabels.map((label, index) => (
+          <Text key={index} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} style={styles.axisText}>{label}</Text>
+        ))}
       </View>
       <View style={[styles.chart, compact && styles.chartPlotCompact]}>
-        {data.slice(-6).map((item, index) => {
-          const premium = Number(item.premium || 0);
-          const height = Math.max(3, Math.round((premium / max) * (compact ? 52 : 70)));
+        {points.map((item, index) => {
+          const premium = Math.max(0, Number(item.premium || 0));
+          const height = premium > 0 ? Math.max(3, Math.round((premium / top) * (compact ? 52 : 70))) : 0;
           const label = item.month === 'MTD' ? 'MTD' : item.month === 'LAST' ? 'Last' : item.month === 'CUSTOM' ? 'Custom' : shortMonth(item.month);
           return (
             <View key={`${item.month}-${index}`} style={styles.barColumn}>
@@ -884,8 +897,8 @@ const styles = StyleSheet.create({
   vsText: { marginTop: 1, maxWidth: 72, color: '#9AA7B8', textAlign: 'center', ...partnerTheme.typography.meta, fontWeight: Platform.OS === 'ios' ? '400' : '500' },
   chartCard: { minHeight: 110, flexDirection: 'row', borderRadius: 16, paddingHorizontal: 12, paddingTop: 17, paddingBottom: 8, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#DDE6F1', ...partnerTheme.shadowSoft },
   chartEmpty: { minHeight: 120, alignItems: 'center', justifyContent: 'center', borderRadius: 16, padding: 12, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#DDE6F1' },
-  chartYAxis: { width: 38, height: 85, justifyContent: 'space-between', paddingVertical: 5 },
-  axisText: { color: '#8795A9', ...partnerTheme.typography.meta, fontWeight: Platform.OS === 'ios' ? '400' : partnerTheme.typography.meta.fontWeight },
+  chartYAxis: { width: 44, height: 85, justifyContent: 'space-between', paddingVertical: 5 },
+  axisText: { color: '#8795A9', fontSize: 9, ...partnerTheme.typography.meta, fontWeight: Platform.OS === 'ios' ? '400' : partnerTheme.typography.meta.fontWeight },
   chart: { flex: 1, height: 91, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'center', gap: 6 },
   barColumn: { flex: 1, maxWidth: 54, height: '100%', alignItems: 'center', justifyContent: 'flex-end' },
   barValue: { position: 'absolute', left: -4, right: -4, height: 13, color: '#3156B8', textAlign: 'center', fontSize: 8, lineHeight: 12, fontWeight: Platform.OS === 'ios' ? '400' : '700' },
