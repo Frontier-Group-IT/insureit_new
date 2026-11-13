@@ -82,6 +82,7 @@ export type PolicyActivityDisplay = {
   action: string;
   actorName: string;
   meta?: string;
+  changes?: string[] | null;
   at: string;
 };
 
@@ -385,11 +386,14 @@ export async function loadPolicyActivityHistory({
         ? policyEditTitle(candidate.changedFields ?? null)
         : ACTION_LABELS[candidate.action],
       actorName: candidate.actorName?.trim() || (candidate.actorId ? actorNames.get(candidate.actorId) : null) || "Not recorded",
+      changes: candidate.action === POLICY_ACTIVITY_ACTIONS.POLICY_EDITED
+        ? candidate.changedFields?.map(field => `${field} changed (previous/new values not stored)`) ?? null
+        : null,
       meta: candidate.action === POLICY_ACTIVITY_ACTIONS.POLICY_EDITED
         ? candidate.changedFields === null || candidate.changedFields === undefined
           ? "Fields changed were not recorded for this edit"
           : candidate.changedFields.length
-            ? "Changed: " + candidate.changedFields.join(", ")
+            ? undefined
             : "No tracked field values changed"
         : candidate.action === POLICY_ACTIVITY_ACTIONS.PREVIOUS_MONTH_POLICY_UPLOADED
           ? (candidate.approvedBy ? "Approved by: " + candidate.approvedBy : "Uploaded within the permitted date window")
