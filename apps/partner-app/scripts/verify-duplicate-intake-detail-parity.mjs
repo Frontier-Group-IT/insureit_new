@@ -46,7 +46,7 @@ assert.ok(links.includes('return `${portalUrl}${path}`;'), 'Existing policy link
 assert.ok(api.includes('target_path: access.can_review || access.can_finalize'), 'Never expose existing-policy link without reviewer authorization');
 assert.ok(detail.includes("ready_for_review: 'Ready for Review'"), 'Short ready status text');
 assert.ok(!detail.includes('source="OCR"') && !detail.includes("source={fields.has(key) ? 'OCR' : undefined}"), 'Review rows should not repeat OCR badges');
-assert.ok(!detail.includes('number="02"') && !detail.includes('number="03"'), 'Review sections omit numeric prefixes');
+assert.ok(detail.includes('<ReviewBlock title="Vehicle details">') && detail.includes('<ReviewBlock title="Policy & premium">'), 'Duplicate intake review sections retain unnumbered headings');
 assert.ok(detail.includes("row.customer_mobile, row.lead_source_name"), 'Show customer mobile and lead source below PIR number');
 assert.ok(detail.includes("fields.get('policy_number')?.value?.trim()"), 'Show extracted policy number below PIR number');
 assert.ok(detail.includes("'Vehicle pending'"), 'Show vehicle-pending indicator when OCR has no registration number');
