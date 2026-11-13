@@ -45,7 +45,7 @@ export function reuploadDocumentStage(documentType: string, documents: ClaimDocu
     initialClaimDocuments.some((required) => matchesRequiredDocument(documentType, required.type))) return 'spot_intimation';
   const stage = (latest as ClaimDocument & { milestone_key?: string | null } | undefined)?.milestone_key;
   if (stage && validStages.includes(stage as ClaimMilestoneKey)) return stage as ClaimMilestoneKey;
-  if (normalized.includes('approval pdf') || normalized.includes('surveyor approval')) return 'work_approval';
+  if (normalized.includes('approval pdf') || normalized.includes('surveyor approval') || normalized.includes('work approval attachment')) return 'work_approval';
   if (normalized.includes('final workshop bill')) return 'billing';
   if (normalized.includes('assessment report')) return 'delivery_order';
   return 'claim_intimation';
