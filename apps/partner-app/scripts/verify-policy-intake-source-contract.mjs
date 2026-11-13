@@ -55,7 +55,7 @@ requireText(api, 'if (!proposalForm) {', 'Partner Policy Intake API must gate OC
 
 for (const required of [
   'title="Policy Intake"',
-  'topBarIcon="document-text-outline"',
+  'artwork={PartnerAssets.actions.quickPolicyIntake}',
   'fullWidth',
   '<Ionicons name="document-text-outline" size={27}',
   '"car-sport-outline"',
@@ -109,13 +109,19 @@ for (const required of [
   'vehicleReviewKeys.filter(([key]) => Boolean(fields.get(key)?.value?.trim())).map',
   'policyReviewKeys.some(([key]) => Boolean(fields.get(key)?.value?.trim()))',
   'policyReviewKeys.filter(([key]) => Boolean(fields.get(key)?.value?.trim())).map',
-  'number="02"',
-  'number="03"',
+  '<ReviewBlock title="Vehicle details">',
+  '<ReviewBlock title="Policy & premium">',
   'No vehicle details were fetched from the saved policy copy.',
   'No policy or premium details were fetched from the saved policy copy.',
   'Fetching vehicle details from the policy copy…',
   'Fetching policy and premium details…',
 ]) requireText(detailScreen, required, `Sparse OCR must preserve compact extracted-only review behavior: ${required}`);
+if (detailScreen.includes('number="02"') || detailScreen.includes('number="03"') || detailScreen.includes('reviewStyles.blockNumber')) {
+  throw new Error('Policy Intake Review section headings must remain number-free.');
+}
+if (detailScreen.includes('topBarIcon="document-text-outline"')) {
+  throw new Error('Policy Intake Review top bar must use the 3D-style intake artwork.');
+}
 if (detailScreen.includes('vehicleReviewKeys.map(([key, label]) =>') ||
     detailScreen.includes('policyReviewKeys.map(([key, label]) =>')) {
   throw new Error('Non-duplicate review must not render all OCR labels as empty dashes.');

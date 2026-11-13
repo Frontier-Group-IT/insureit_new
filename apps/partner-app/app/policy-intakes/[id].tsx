@@ -211,7 +211,7 @@ export default function PolicyIntakeDetailScreen() {
       navyStatusBar
       fullWidth
       bottomNavigation={<PolicyIntakeDetailNavigation router={router} canViewDashboard={canPartnerAccess(context, "view_dashboard")} canViewPolicies={canPartnerAccess(context, "view_policies")} canViewClaims={canPartnerAccess(context, "view_claims")} />}
-      topBarIcon="document-text-outline"
+      artwork={PartnerAssets.actions.quickPolicyIntake}
       onBack={() => router.back()}
     >
       {submitted === '1' && row ? (
@@ -383,7 +383,7 @@ export default function PolicyIntakeDetailScreen() {
                   </>
                 ) : (
                   <>
-                <ReviewBlock title="Vehicle details" number="02">
+                <ReviewBlock title="Vehicle details">
                   {vehicleReviewKeys.some(([key]) => Boolean(fields.get(key)?.value?.trim())) ? (
                     vehicleReviewKeys.filter(([key]) => Boolean(fields.get(key)?.value?.trim())).map(([key, label]) => (
                       <ReviewPair key={key} label={label} value={fields.get(key)?.value} confidence={fields.get(key)?.confidence} singleLine={key === 'vehicle_make'} />
@@ -392,7 +392,7 @@ export default function PolicyIntakeDetailScreen() {
                     <Text style={reviewStyles.emptyVehicle}>{row.ocr_status === 'processing' ? 'Fetching vehicle details from the policy copy…' : 'No vehicle details were fetched from the saved policy copy.'}</Text>
                   )}
                 </ReviewBlock>
-                <ReviewBlock title="Policy & premium" number="03">
+                <ReviewBlock title="Policy & premium">
                   {policyReviewKeys.some(([key]) => Boolean(fields.get(key)?.value?.trim())) ? (
                     policyReviewKeys.filter(([key]) => Boolean(fields.get(key)?.value?.trim())).map(([key, label]) => (
                       <ReviewPair key={key} label={label} value={key === 'insurer_name' ? shortInsurerName(fields.get(key)?.value) : fields.get(key)?.value} confidence={fields.get(key)?.confidence} />
@@ -629,10 +629,9 @@ const policyReviewKeys: Array<[string, string]> = [
   ['tax_amount','Printed GST'],
   ['gross_premium','Printed gross premium'],
 ];
-function ReviewBlock({title,children,number,description}:{title:string;children:ReactNode;number?:string;description?:string}) {
+function ReviewBlock({title,children,description}:{title:string;children:ReactNode;description?:string}) {
   return <View style={reviewStyles.block}>
     <View style={reviewStyles.blockHeader}>
-      {number ? <Text style={reviewStyles.blockNumber}>{number}</Text> : null}
       <Ionicons name={title === "Vehicle details" ? "car-sport-outline" : "shield-checkmark-outline"} size={18} color="#315B9A" />
       <View style={reviewStyles.blockHeading}>
         <Text style={reviewStyles.blockTitle}>{title}</Text>
@@ -689,7 +688,6 @@ const reviewStyles=StyleSheet.create({
   block:{borderRadius:10,borderWidth:1,borderColor:'#E2E9F3',overflow:'hidden'},
   blockHeader:{flexDirection:'row',alignItems:'center',gap:8,paddingHorizontal:10,paddingVertical:8,backgroundColor:'#EDF3FC'},
   blockTitle:{fontSize:12,color:'#17365D',fontWeight:'800'},
-  blockNumber:{fontSize:10,color:'#315B9A',fontWeight:'800',minWidth:17},
   blockHeading:{flex:1,gap:2},
   blockDescription:{fontSize:9,lineHeight:13,color:'#71829A'},
   rows:{paddingHorizontal:9,paddingVertical:3},
