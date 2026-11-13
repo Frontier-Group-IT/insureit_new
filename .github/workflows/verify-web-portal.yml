@@ -51,6 +51,8 @@ jobs:
         run: node --experimental-strip-types scripts/daily-report-phase3-scope-regression.mjs
       - name: Daily Report Phase 4 busy-day pagination and category accuracy regression
         run: node --experimental-strip-types scripts/daily-report-phase4-completeness-regression.mjs
+      - name: Daily Report Phase 5 source and timestamp accuracy regression
+        run: node scripts/daily-report-phase5-accuracy-regression.mjs
       - name: OCR-only Layout Parser opt-in regression
         run: node scripts/policy-ocr-layout-off-regression.mjs
       - name: ICICI 3005 OCR-only field regression

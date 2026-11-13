@@ -82,6 +82,7 @@ function outcome(action: string): string {
   if (/reject/i.test(action)) return "Rejected";
   if (/review_started/i.test(action)) return "In review";
   if (/attention_requested/i.test(action)) return "Needs attention";
+  if (/upload/i.test(action)) return "Uploaded";
   if (/delet|remov|archiv/i.test(action)) return "Deleted";
   if (/creat|add|upload|invit/i.test(action)) return "Created";
   if (/approv|verif/i.test(action)) return "Approved";
@@ -138,7 +139,7 @@ export async function loadDailyActivityReport(viewer: Viewer, query: DailyActivi
         .in("actor_id", actorIds).gte("created_at", startIso).lt("created_at", endIso)
         .order("created_at", {ascending:false}).limit(limit);
       if (type !== "all") {
-        if (type === "policy") q = q.or("table_name.eq.policies,table_name.like.policy_%");
+        if (type === "policy") q = q.or("table_name.eq.policies,and(table_name.like.policy_%,table_name.neq.policy_intake_requests)");
         else if (type === "intake") q = q.eq("table_name", "policy_intake_requests");
         else if (type === "case") q = q.eq("table_name", "life_health_cases");
         else if (type === "customer") q = q.eq("table_name", "customers");

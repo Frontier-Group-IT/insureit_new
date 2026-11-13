@@ -27,7 +27,7 @@ assert.deepEqual(dailyHasMore(1245, 1170, 40), {hasNext: false, truncated: true}
 assert.match(source, /const \{ page, start, sourceLimit \} = dailyPageWindow\(query.page\)/);
 assert.match(source, /const limit = sourceLimit/);
 assert.match(source, /dailyHasMore\(events.length, start, page\)/);
-assert.match(source, /table_name\.eq\.policies,table_name\.like\.policy_%/, "Policy activity filter covers related policy tables");
+assert.match(source, /table_name\.eq\.policies,and\(table_name\.like\.policy_%,table_name\.neq\.policy_intake_requests\)/, "Policy filter includes related policy tables but excludes intake before pagination");
 assert.match(source, /\.not\("table_name", "like", "policy_%"\)/, "Other activity filter excludes policy sub-types");
 assert.match(source, /\.not\("table_name", "ilike", "claim%"\)/, "Other activity filter excludes claim sub-types");
 assert.match(page, /payload\?\.truncated/, "The UI discloses safe pagination truncation");
