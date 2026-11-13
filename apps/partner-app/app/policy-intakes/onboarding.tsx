@@ -120,15 +120,6 @@ const commercial = [
   {key:'flatPayoutAmount',label:'Flat payout amount (₹)'},
 ] satisfies Field[];
 
-function onboardingPlaceholder(key:string,label:string):string {
-  const placeholders:Record<string,string>={
-    insuredName:'Name on proposal',phoneNo:'10 digit mobile',address:'Customer address',
-    productName:'Product / plan name',proposalNumber:'Proposal number',
-    insurerId:'Select insurer',ppt:'Select term',pd:'Select term',
-    paymentFrequency:'Select frequency',paymentMode:'Select mode',
-  };
-  return placeholders[key]??'Enter '+label.toLowerCase();
-}
 function amount(value:string){const n=Number(value);return Number.isFinite(n)&&n>0?n:0;}
 export default function NativePolicyOnboarding(){
   const { id }=useLocalSearchParams<{id:string}>();
@@ -347,14 +338,14 @@ export default function NativePolicyOnboarding(){
       <Text style={styles.label}>{f.label}{f.required?<Text style={styles.star}> *</Text>:null}</Text>
       {options.length?(
         <Pressable accessibilityRole="button" accessibilityLabel={f.label} onPress={()=>setPicker({key:f.key,items:options})} style={styles.inputRow}>
-          <Text numberOfLines={1} style={[styles.value,!current&&styles.placeholder]}>{displayed||onboardingPlaceholder(f.key,f.label)}</Text>
+          <Text numberOfLines={1} style={styles.value}>{displayed}</Text>
           <Ionicons name="chevron-down" size={15} color="#63758D"/>
         </Pressable>
       ):(
-        <TextInput accessibilityLabel={f.label} value={current} onChangeText={v=>update(f.key,v)} placeholder={onboardingPlaceholder(f.key,f.label)}
+        <TextInput accessibilityLabel={f.label} value={current} onChangeText={v=>update(f.key,v)}
           autoCapitalize={['registrationNo','chassisNo','engineNo','policyNo'].includes(f.key)?'characters':'sentences'}
           keyboardType={['phoneNo','idv','od','tp','cpa','capacity','manufacturingYear'].includes(f.key)?'numeric':'default'}
-          style={styles.input} placeholderTextColor="#9AA7B9" />
+          style={styles.input} />
       )}
     </View>;
   };
@@ -368,11 +359,11 @@ export default function NativePolicyOnboarding(){
     return <View key={f.key} style={[styles.field,f.wide&&styles.wideField]}>
       <Text style={styles.label}>{f.label}{f.required?<Text style={styles.star}> *</Text>:null}</Text>
       {options.length?<Pressable accessibilityRole="button" accessibilityLabel={f.label} style={styles.inputRow} onPress={()=>setPicker({key:f.key,items:options,product:true})}>
-        <Text style={[styles.value,!current&&styles.placeholder]} numberOfLines={1}>{options.find(o=>o.value===current)?.label||onboardingPlaceholder(f.key,f.label)}</Text>
+        <Text style={styles.value} numberOfLines={1}>{options.find(o=>o.value===current)?.label||''}</Text>
         <Ionicons name="chevron-down" size={15} color="#63758D"/>
       </Pressable>:<TextInput accessibilityLabel={f.label} value={current} onChangeText={v=>updateProduct(f.key,v)}
         keyboardType={['premiumAmount','sumInsured','deductible','netPremium','gstAmount','grossPremium','employeeCount','annualWages','annualTurnover','projectValue'].includes(f.key)?'numeric':'default'}
-        placeholder={onboardingPlaceholder(f.key,f.label)} placeholderTextColor="#9AA7B9" style={styles.input}/>}
+        style={styles.input}/>}
     </View>;
   };
   // Keep RM and code editable: native prepare API does not expose website
@@ -380,7 +371,7 @@ export default function NativePolicyOnboarding(){
   const sourceMeta=(key:'rmName'|'intermediaryCode',label:string)=><View style={styles.sourceMeta}>
     <Text style={styles.sourceMetaLabel}>{label}</Text>
     <TextInput accessibilityLabel={label} value={draft?.[key]??''} onChangeText={value=>update(key,value)}
-      placeholder={label==='RM'?'Assigned RM':'Source code'} placeholderTextColor="#9AA7B9" style={styles.sourceMetaInput}/>
+      style={styles.sourceMetaInput}/>
   </View>;
   const sourceSection=()=> <View style={styles.section}>
     <View style={styles.sectionHead}><Text style={styles.number}>01</Text><Text style={styles.sectionTitle}>Policy source & ownership</Text></View>
@@ -483,7 +474,7 @@ export default function NativePolicyOnboarding(){
           {(data?.approvers??[]).map(approver=><Pressable key={approver.key} onPress={()=>setApproverKey(approver.key)} style={styles.choice}><Text style={styles.choiceText}>{approverKey===approver.key?'● ':'○ '}{approver.name}</Text></Pressable>)}
           <Pressable disabled={approvalBusy||!approverKey} style={[styles.primary,styles.bookButton]} onPress={()=>void requestApproval()}><Text style={styles.primaryText}>{approvalBusy?'Sending…':'Send Approval Request'}</Text></Pressable>
         </> : <>
-          <TextInput accessibilityLabel="Six-digit approval code" keyboardType="numeric" maxLength={6} value={approvalCode} onChangeText={setApprovalCode} placeholder="6-digit approval code" style={styles.input}/>
+          <TextInput accessibilityLabel="Six-digit approval code" keyboardType="numeric" maxLength={6} value={approvalCode} onChangeText={setApprovalCode} style={styles.input}/>
           <Pressable disabled={approvalBusy||approvalCode.length!==6} style={[styles.primary,styles.bookButton]} onPress={()=>void verifyApproval()}><Text style={styles.primaryText}>{approvalBusy?'Checking…':'Verify Approval'}</Text></Pressable>
         </>}
       </View></View>
@@ -508,7 +499,7 @@ const styles=StyleSheet.create({
   fields:{padding:12,flexDirection:'row',flexWrap:'wrap',columnGap:10,rowGap:11},field:{width:'48%',minWidth:0,gap:5},sourceCell:{width:'48%',minWidth:0,gap:3},sourcePrimary:{width:'100%'},sourceMeta:{flexDirection:'row',alignItems:'center',gap:5,minHeight:23},sourceMetaLabel:{fontSize:9,fontWeight:'700',color:'#72839C'},sourceMetaInput:{flex:1,minWidth:0,fontSize:10,color:'#25466E',fontWeight:'600',paddingVertical:2,paddingHorizontal:1},wideField:{width:'100%'},label:{fontSize:10,color:'#65758E',fontWeight:'700'},star:{color:'#B93333'},
   input:{minHeight:42,borderWidth:1,borderColor:'#D8E1EC',backgroundColor:'#FFFFFF',borderRadius:9,paddingHorizontal:11,fontSize:12,color:'#183653'},
   inputRow:{minHeight:42,borderWidth:1,borderColor:'#D8E1EC',borderRadius:9,paddingHorizontal:11,flexDirection:'row',alignItems:'center',justifyContent:'space-between'},
-  value:{color:'#183653',fontSize:12,flex:1},placeholder:{color:'#97A5B7'},
+  value:{color:'#183653',fontSize:12,flex:1},
   summary:{paddingHorizontal:12,paddingVertical:9,gap:6},summaryStatusRow:{flexDirection:'row',justifyContent:'space-between',alignItems:'center'},summaryStatusValue:{fontSize:10,fontWeight:'700',color:'#A96A00'},documentStatus:{fontSize:10,color:'#738196'},documentList:{paddingHorizontal:13,paddingTop:8,paddingBottom:3},documentRow:{flexDirection:'row',gap:8,alignItems:'center',paddingVertical:6},documentName:{fontSize:11,color:'#25466E'},summaryCaption:{fontSize:10,fontWeight:'700',color:'#426188'},summaryProgress:{marginLeft:'auto',backgroundColor:'#E1EAF8',borderRadius:18,paddingHorizontal:9,paddingVertical:5},commercialToggle:{marginHorizontal:12,marginBottom:9,flexDirection:'row',alignItems:'center',gap:8,padding:11,borderWidth:1,borderColor:'#DDE6F0',borderRadius:10,backgroundColor:'#F8FAFD'},commercialToggleTitle:{flex:1,color:'#26436B',fontSize:11,fontWeight:'700'},commercialBody:{paddingHorizontal:12},summaryDocuments:{marginHorizontal:12,marginBottom:11,padding:12,flexDirection:'row',alignItems:'center',gap:10,borderColor:'#E1E9F3',borderWidth:1,borderRadius:10},documentAction:{marginHorizontal:12,marginBottom:12,flexDirection:'row',gap:8},total:{fontSize:20,color:'#1B385B',fontWeight:'800'},notice:{fontSize:10,lineHeight:16,color:'#65758E',paddingHorizontal:14,paddingBottom:13},
   actions:{flexDirection:'row',gap:8,marginBottom:11},secondary:{flex:1,borderWidth:1,borderColor:'#CDD9EB',borderRadius:10,padding:13,alignItems:'center'},secondaryText:{fontWeight:'700',fontSize:11,color:'#25466E'},
   primary:{flex:1,backgroundColor:'#243F9E',borderRadius:10,padding:13,alignItems:'center'},primaryText:{fontSize:11,fontWeight:'800',color:'white'},disabled:{opacity:.48},
