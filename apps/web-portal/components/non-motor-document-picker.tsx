@@ -130,7 +130,7 @@ function DocumentPickerControl({
             {stagedPreviewUrl ? <button type="button" onClick={() => window.open(stagedPreviewUrl,"_blank","noopener,noreferrer")} title={shownName} className="inline-flex max-w-[220px] min-w-0 items-center gap-2 px-3 text-[10px] font-semibold hover:bg-[#EEF5FF]"><FileText className="h-3.5 w-3.5 shrink-0"/><span className="truncate">{shownName}</span></button> : <button type="button" onClick={() => inputRef.current?.click()} title={`Replace ${label}`} className="inline-flex min-w-0 items-center gap-2 px-3 text-[10px] font-semibold hover:bg-[#EEF5FF]"><RefreshCw className="h-3.5 w-3.5"/>Replace {label}</button>}
             <button type="button" onClick={() => setShowDeleteConfirmation(true)} aria-label={`Delete selected ${label}`} className="inline-flex w-9 items-center justify-center border-l border-[#E3E8EF] text-red-600 hover:bg-red-50"><Trash2 className="h-3.5 w-3.5"/></button>
             {stagedPreviewUrl ? <button type="button" onClick={() => window.open(stagedPreviewUrl,"_blank","noopener,noreferrer")} aria-label={`View selected ${label}`} className="inline-flex w-9 items-center justify-center border-l border-[#E3E8EF] hover:bg-[#EEF5FF]"><Files className="h-3.5 w-3.5"/></button>:null}
-            {<button type="button" onClick={() => inputRef.current?.click()} aria-label={`Replace ${label}`} title={`Replace ${label}`} className="inline-flex w-9 items-center justify-center border-l border-[#E3E8EF] hover:bg-[#EEF5FF]"><RefreshCw className="h-3.5 w-3.5"/></button>
+            <button type="button" onClick={() => inputRef.current?.click()} aria-label={`Replace ${label}`} title={`Replace ${label}`} className="inline-flex w-9 items-center justify-center border-l border-[#E3E8EF] hover:bg-[#EEF5FF]"><RefreshCw className="h-3.5 w-3.5"/></button>
           </div>
           {stagedReplacement ? <span className="pl-1 text-[8px] leading-3 text-[#667085]">Will replace the saved document after Save.</span> : null}
         </div>
@@ -141,7 +141,7 @@ function DocumentPickerControl({
             aria-label={`${label} actions`}
             className="inline-flex h-9 items-stretch overflow-hidden rounded-xl border border-[#BFD3F7] bg-[#F7FAFF] text-[#174EA6]"
           >
-            {<button type="button" onClick={viewSavedDocument} title={existingDocument.fileName} aria-label={`Open ${existingDocument.fileName}`} className="inline-flex max-w-[220px] min-w-0 items-center gap-2 px-3 text-[10px] font-semibold hover:bg-[#EEF5FF]"><FileText className="h-3.5 w-3.5 shrink-0"/><span className="truncate">{existingDocument.fileName}</span></button>}
+            <button type="button" onClick={viewSavedDocument} title={existingDocument.fileName} aria-label={`Open ${existingDocument.fileName}`} className="inline-flex max-w-[220px] min-w-0 items-center gap-2 px-3 text-[10px] font-semibold hover:bg-[#EEF5FF]"><FileText className="h-3.5 w-3.5 shrink-0"/><span className="truncate">{existingDocument.fileName}</span></button>
             {onDeleteExisting ? (
               <button
                 type="button"
@@ -155,7 +155,7 @@ function DocumentPickerControl({
               </button>
             ) : null}
             <button type="button" onClick={viewSavedDocument} aria-label={`View ${label}`} title={existingDocument.fileName} className="inline-flex w-9 items-center justify-center border-l border-[#E3E8EF] hover:bg-[#EEF5FF]"><Files className="h-3.5 w-3.5" /></button>
-            {<button type="button" onClick={() => inputRef.current?.click()} disabled={deleting} aria-label={`Replace ${label}`} title={`Replace ${label}`} className="inline-flex w-9 items-center justify-center border-l border-[#E3E8EF] hover:bg-[#EEF5FF] disabled:opacity-50"><RefreshCw className="h-3.5 w-3.5"/></button>
+            <button type="button" onClick={() => inputRef.current?.click()} disabled={deleting} aria-label={`Replace ${label}`} title={`Replace ${label}`} className="inline-flex w-9 items-center justify-center border-l border-[#E3E8EF] hover:bg-[#EEF5FF] disabled:opacity-50"><RefreshCw className="h-3.5 w-3.5"/></button>
           </div>
         </div>
       ) : (
