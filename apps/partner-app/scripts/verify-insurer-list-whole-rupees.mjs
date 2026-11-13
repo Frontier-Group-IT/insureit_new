@@ -13,9 +13,12 @@ assert.ok(shared.includes('hasPaise ? 2 : 0'));
 for (const field of ['premium', 'payin', 'retention', 'payout']) {
   assert.ok(screen.includes(`return row.${field}`) || (field === 'premium' && screen.includes('return row.premium')), `Must preserve role-available money field ${field}`);
 }
-assert.ok(screen.includes("amount == null ? '—' : formatInsurerRupees(amount)"), 'Missing amounts render unavailable, not zero');
+assert.ok(screen.includes("const exactAmount = amount == null ? '—' : formatInsurerRupees(amount)"), 'Missing amounts render unavailable, not zero');
+assert.ok(screen.includes("amount == null ? '—' : formatInsurerCompactRupees(amount)"), 'Compact display must preserve missing-value fallback');
 assert.ok(screen.includes("column.key === 'policies' ? insurer.policies"), 'Policies remains a separate always-visible column');
-assert.ok(screen.includes('adjustsFontSizeToFit minimumFontScale={0.75}'), 'Display full amounts in scrolling metric cells');
+assert.ok(screen.includes('adjustsFontSizeToFit minimumFontScale={0.7}'), 'Compact amount cells must fit on narrow devices');
+assert.ok(screen.includes('onPress={() => Alert.alert('), 'Tapping a compact amount must show the original full rupee value');
+assert.ok(screen.includes('accessibilityLabel={`${insurer.name}, ${column.label}, ${exactAmount}. Tap for full amount`}'), 'Exact rupees must remain available to accessibility users');
 assert.ok(screen.includes('getPartnerInsurerRegister(from, to)'));
 assert.ok(screen.includes("context?.identity.actor_kind === 'employee'"), 'Employee/non-employee amounts remain scoped');
 
@@ -34,7 +37,15 @@ assert.ok(screen.includes("label: 'Pay-In'") && screen.includes("label: 'Retenti
 assert.ok(!screen.includes("label: 'Amount'") && !screen.includes("key: 'amounts'"), 'Do not duplicate Net Premium as Amount');
 assert.ok(screen.includes("label: 'Net Premium'"), 'Preserve Net Premium as the single premium field');
 assert.ok(screen.includes("label: 'Payout'"), 'Non-employee payout column retained');
-assert.ok(screen.includes('showsHorizontalScrollIndicator'), 'Wide register preserves horizontal scrolling');
+assert.ok(!screen.includes('showsHorizontalScrollIndicator'), 'All permitted columns should be on screen, not horizontally scrolled');
+assert.ok(!screen.includes('<ScrollView horizontal'), 'Remove nested horizontal financial scroller');
+assert.ok(screen.includes("fixedNames: { width: '31%'"), 'Insurer names get responsive width');
+assert.ok(screen.includes("financialColumns: { flex: 1, minWidth: 0 }"), 'Remaining permitted financial columns fill the row');
+assert.ok(screen.includes("policyColumn: { width: '17%' }"), 'Policies column stays narrower than financial amounts');
+assert.ok(screen.includes("amountColumn: { flex: 1, minWidth: 0 }"), 'Each authorized money column shares remaining width');
+assert.ok(screen.includes('const ROW_HEIGHT = 46'), 'Rows use compact, aligned height');
+assert.ok(screen.includes('function formatInsurerCompactRupees(amount: number | string): string'), 'Compact formatting is limited to the insurer table');
+for (const suffix of ["'Cr'", "'L'", "'k'"]) assert.ok(screen.includes(suffix), `Missing compact rupee suffix ${suffix}`);
 
 
 const sessionSource = readFileSync(new URL('../lib/partner-session.ts', import.meta.url), 'utf8');
