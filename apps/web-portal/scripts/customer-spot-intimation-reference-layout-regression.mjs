@@ -16,6 +16,13 @@ assert(page.includes('min-[1440px]:grid-cols-5'), 'Wide desktop section must use
 assert(page.includes('centerSummaryIcons'), 'Spot Intimation must center Vehicle Number and Policy Source icons.');
 assert(page.includes('text-[11px] font-bold uppercase leading-5'), 'Input labels must be larger and legible.');
 assert(page.includes('h-[42px]'), 'Form inputs must use taller controls.');
+const dateInput = fs.readFileSync(new URL('../components/customer-portal/customer-date-input.tsx', import.meta.url), 'utf8');
+assert(page.includes('CustomerDateInput compact splitTime name="accidentDate"'), 'Accident date must use the width-sharing compact picker.');
+assert(page.includes('CustomerDateInput compact splitTime name="spotDate"'), 'Spot intimation date must use the width-sharing compact picker.');
+assert(dateInput.includes('h-[34px] min-h-[34px] min-w-0 flex-[3_1_0%]'), 'Split date picker must keep 34px height and a shrinkable 60% width.');
+assert(page.includes('h-[34px] min-w-0 flex-[2_1_0%] self-center'), 'Time picker must keep 34px height and the remaining 40% width.');
+assert(page.includes('flex h-[42px] w-full min-w-0 overflow-hidden'), 'Combined date/time outer control must remain 42px high.');
+
 assert(page.includes('gap-y-4 py-2'), 'Spot details card must provide additional vertical spacing.');
 
 const strip = fs.readFileSync(new URL('../components/customer-portal/customer-claim-stage-strip.tsx', import.meta.url), 'utf8');
