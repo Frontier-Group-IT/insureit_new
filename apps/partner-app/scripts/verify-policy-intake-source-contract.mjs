@@ -143,7 +143,7 @@ if (detailScreen.includes("row.status === 'duplicate' && row.ocr_warnings?.lengt
 requireText(detailScreen, 'row.ocr_warnings.map((warning, index)', 'Preserve all OCR warning messages.');
 requireText(service, '/api/partner/policy-intakes/${encodeURIComponent(id)}/document', 'Partner document viewer must use existing scoped signed URL endpoint.');
 requireText(api, 'ocr_fields,ocr_warnings,attention_reason', 'Detail API must include OCR review notes.');
-requireText(api, 'submitted_by_name: submittedByName', 'Detail API must return actual submitter rather than guessing lead source.');
+requireText(api, 'resolveIntakeSubmitterNames(admin, [intake])', 'Detail API must resolve the actual authorized submitter rather than guessing lead source.');
 if (detailScreen.includes('Fetched policy details (OCR)')) throw new Error('Remove duplicate unstructured OCR review dump.');
 
 console.log('Partner Policy Intake source, policy-type and detail presentation contracts verified.');
