@@ -73,6 +73,11 @@ export async function uploadNonMotorPolicyDocument(formData: FormData): Promise<
     .returns<ExistingDocumentRow[]>();
 
   if (existingError) return { ok: false, error: "The existing policy document could not be checked." };
+  // A policy-creation capability alone cannot authorize replacing existing
+  // documents; retain initial upload for authorized creators.
+  if (existingRows?.length && requester?.role !== "operations_head_life") {
+    await requirePolicyEditor(policyId);
+  }
 
   const fileName = safeFileName(fileValue.name);
   const storagePath = `${policyId}/${documentType}/${crypto.randomUUID()}-${fileName}`;
