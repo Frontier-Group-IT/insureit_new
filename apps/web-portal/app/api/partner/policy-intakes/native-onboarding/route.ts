@@ -17,6 +17,7 @@ import type { PolicyIntakeOcrField } from "@/app/policy-intakes/ocr-actions";
 export const dynamic = "force-dynamic";
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const fields = ["registrationMode","issuanceDate","rmName","intermediaryType","leadSource","intermediaryCode","businessLine","registrationNo","insuredName","phoneNo","vehicleClass","make","model","fuelType","capacity","manufacturingYear","chassisNo","engineNo","rtoState","rtoName","policyProduct","idv","od","tp","cpaOpted","cpa","policyNo","insurerId","validFrom","validUpto","payoutBasis","projectedOdPercent","projectedTpPercent","insurerScheme","payinBillNo","payinBilledAmount","payinBillDate","payinStatus","retention","payoutOdPercent","payoutTpPercent","flatPayoutAmount","payoutStatus","payoutDate","payoutVoucherNo","remarks"] as const;
+const nativeOptionalFields = ["addOnPremium","tpValidUpto","cpaValidUpto"] as const;
 const commercialFields = ["payoutBasis","projectedOdPercent","projectedTpPercent","insurerScheme","payinBillNo","payinBilledAmount","payinBillDate","payinStatus","retention","payoutOdPercent","payoutTpPercent","flatPayoutAmount","payoutStatus","payoutDate","payoutVoucherNo"] as const;
 type Input = { action?: "prepare" | "save" | "book" | "approval_request" | "approval_verify"; intake_id?: string; take_over?: boolean; expected_reviewer_id?: string | null; revision?: number; draft?: PolicyIntakeDraft; resolution?: PolicyOnboardingPayload["resolution"]; date_approval_id?: string | null; approver_key?: string; approval_id?: string; otp?: string };
 type Intake = { id:string; intake_number:string; lead_source_type:"posp"|"misp"|"partner"; lead_source_name:string; lead_source_code:string|null; customer_mobile:string; ocr_fields:PolicyIntakeOcrField[]; status:string; assigned_to_profile_id:string|null; created_at:string; matched_customer_id:string|null };
@@ -131,6 +132,8 @@ export async function POST(request:Request){
     // The website draft can contain extra form fields (e.g. add-ons and bundled validity).
     // Allow editing only the approved shared subset while preserving the rest exactly.
     if(fields.some(key=>typeof body.draft?.[key]!=="string"||body.draft[key].length>4000))return reply("Invalid onboarding draft fields.",400);
+    const extraValues=body.draft as unknown as Record<string,unknown>;
+    if(nativeOptionalFields.some(key=>extraValues[key]!=null&&(typeof extraValues[key]!=="string"||(extraValues[key] as string).length>4000)))return reply("Invalid premium or bundled validity values.",400);
     if(!["registered","unregistered"].includes(body.draft.registrationMode)||!["Yes","No"].includes(body.draft.cpaOpted))return reply("Invalid onboarding draft options.",400);
     const {data:stored,error:storedError}=await admin.from("policy_intake_onboarding_drafts")
       .select("draft_payload,revision").eq("intake_id",intake.id).maybeSingle<{draft_payload:PolicyIntakeDraft;revision:number}>();
@@ -140,6 +143,7 @@ export async function POST(request:Request){
       if(!commercialAccess && (commercialFields as readonly string[]).includes(key))continue;
       saveDraft[key]=body.draft[key];
     }
+    for(const key of nativeOptionalFields)if(extraValues[key]!=null)saveDraft[key]=extraValues[key];
     const {data,error}=await admin.from("policy_intake_onboarding_drafts")
       .update({draft_payload:saveDraft,revision:(body.revision as number)+1,updated_by_profile_id:user.id,updated_at:new Date().toISOString()})
       .eq("intake_id",intake.id).eq("revision",body.revision as number).select("revision").maybeSingle<{revision:number}>();
@@ -193,5 +197,5 @@ export async function POST(request:Request){
   // Never return restricted insurance pay-in, retention or partner payout values to non-commercial reviewers.
   const visibleDraft={...draft};
   if(!commercialAccess)for(const key of commercialFields)visibleDraft[key]="";
-  return good({draft:visibleDraft,revision,intake_number:intake.intake_number,insurers,manufacturers,approvers:POLICY_DATE_APPROVERS.map(a=>({key:a.key,name:a.name}))});
+  return good({draft:visibleDraft,revision,intake_number:intake.intake_number,insurers,manufacturers,commercialAccess,approvers:POLICY_DATE_APPROVERS.map(a=>({key:a.key,name:a.name}))});
 }
