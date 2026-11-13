@@ -11,7 +11,7 @@ export type NativePolicyDraft = {
   policyNo: string; insurerId: string; validFrom: string; validUpto: string;
   payoutBasis: string; projectedOdPercent: string; projectedTpPercent: string; insurerScheme: string; payinBillNo: string; payinBilledAmount: string; payinBillDate: string; payinStatus: string; retention: string; payoutOdPercent: string; payoutTpPercent: string; flatPayoutAmount: string; payoutStatus: string; payoutDate: string; payoutVoucherNo: string; remarks: string;
 };
-export type NativeOnboardingData = { draft: NativePolicyDraft; revision: number; intake_number: string; insurers: {value:string;label:string}[]; manufacturers: string[] };
+export type NativeOnboardingData = { draft: NativePolicyDraft; revision: number; intake_number: string; insurers: {value:string;label:string}[]; manufacturers: string[]; approvers:{key:string;name:string}[] };
 async function request<T>(body: Record<string, unknown>): Promise<T> {
   const session = await getCurrentSession();
   if (!session?.access_token) throw new Error('Your Partner session has expired. Sign in again.');
@@ -52,4 +52,11 @@ export async function bookNativePolicyOnboarding(
   return request<{booking:NativePolicyBookingResult}>({
     action:'book',intake_id:intakeId,revision,resolution,date_approval_id:dateApprovalId??null,
   });
+}
+
+export async function requestNativePolicyDateApproval(intakeId:string,revision:number,approverKey:string){
+  return request<{approval_id:string;expires_at:string}>({action:'approval_request',intake_id:intakeId,revision,approver_key:approverKey});
+}
+export async function verifyNativePolicyDateApproval(intakeId:string,revision:number,approvalId:string,otp:string){
+  return request<{verified:boolean}>({action:'approval_verify',intake_id:intakeId,revision,approval_id:approvalId,otp});
 }
