@@ -1,5 +1,5 @@
 import { formatAppDate } from '@/lib/indian-date';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
@@ -143,7 +143,8 @@ export default function ClaimTrackerScreen() {
     catch { setError('This claim could not be loaded in your Partner scope.'); }
     finally { setLoading(false); }
   }, [id]);
-  useEffect(() => { void load(); }, [load]);
+  // Stage editors save on a separate route; refresh the authorized claim snapshot on return.
+  useFocusEffect(useCallback(() => { void load(); }, [load]));
 
   const tracker = data ? getClaimTrackerState(data) : null;
   const financialRows = data ? externalFinancialRows(data) : [];
