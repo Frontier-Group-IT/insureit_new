@@ -4,7 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 import { PartnerScreen } from '@/components/partner-screen';
-import { prepareNativePolicyOnboarding, saveNativePolicyOnboarding, bookNativePolicyOnboarding, type NativePolicyDraft, type NativeOnboardingData } from '@/lib/policy-onboarding';
+import { prepareNativePolicyOnboarding, saveNativePolicyOnboarding, bookNativePolicyOnboarding, requestNativePolicyDateApproval, verifyNativePolicyDateApproval, type NativePolicyDraft, type NativeOnboardingData } from '@/lib/policy-onboarding';
 
 type FieldKey = keyof NativePolicyDraft;
 type Field = { key:FieldKey; label:string; required?:boolean; options?:string[] };
@@ -55,6 +55,12 @@ export default function NativePolicyOnboarding(){
   const [loading,setLoading]=useState(true);
   const [saving,setSaving]=useState(false);
   const [booking,setBooking]=useState(false);
+  const [dateApprovalOpen,setDateApprovalOpen]=useState(false);
+  const [approvalBusy,setApprovalBusy]=useState(false);
+  const [approverKey,setApproverKey]=useState("");
+  const [approvalRequestId,setApprovalRequestId]=useState<string|null>(null);
+  const [verifiedApprovalId,setVerifiedApprovalId]=useState<string|null>(null);
+  const [approvalCode,setApprovalCode]=useState("");
   const [picker,setPicker]=useState<{key:FieldKey;items:{value:string;label:string}[]}|null>(null);
   const [dirty,setDirty]=useState(false);
   const load=useCallback(async()=>{
@@ -70,6 +76,8 @@ export default function NativePolicyOnboarding(){
   const update=(key:FieldKey,value:string)=>{
     setDraft(current=>current?{...current,[key]:value}:current);
     setDirty(true);
+    setVerifiedApprovalId(null);
+    setApprovalRequestId(null);
   };
   const save=async(goBack=false)=>{
     if(!draft||!data||saving)return;
@@ -94,7 +102,7 @@ export default function NativePolicyOnboarding(){
         setData(current=>current?{...current,revision}:current);
         setDirty(false);
       }
-      const {booking:result}=await bookNativePolicyOnboarding(id,revision,resolution);
+      const {booking:result}=await bookNativePolicyOnboarding(id,revision,resolution,verifiedApprovalId);
       if(result.ok){
         Alert.alert('Policy booked','Policy '+result.policyCode+' was booked successfully.',[
           {text:'OK',onPress:()=>router.replace('/policy-intakes')},
@@ -129,7 +137,11 @@ export default function NativePolicyOnboarding(){
         Alert.alert('Policy verification',message,choices);
         return;
       }
-      setError(result.error);
+      if(result.kind==='validation'&&result.error.includes('Email OTP approval is required')){
+        setDateApprovalOpen(true);
+      }else{
+        setError(result.error);
+      }
     }catch(e){
       setError('The booking response could not be confirmed. Check Policy Register before retrying to avoid duplicates. '+(e instanceof Error?e.message:''));
     }finally{setBooking(false);}
