@@ -7,15 +7,15 @@ const headerCss = read("../components/spot-survey/claim-journey-header.module.cs
 const claimPage = read("../app/claims/[id]/page.tsx");
 const insurerLogo = read("../lib/insurer-logo.ts");
 
-assert.match(header, /<Info label="Vehicle No\\." title=\\{vehicleNumber\\} logo=\\{<CarFront/, "Vehicle number uses a clear CarFront icon.");
-assert.doesNotMatch(header, /claimHeaderIcons\\.vehicle/, "Do not retain the old multi-vehicle illustration.");
-assert.match(header, /import \\{ CarFront \\} from "lucide-react"/, "Use the existing icon library.");
+assert.match(header, /<Info label="Vehicle No\." title=\{vehicleNumber\} logo=\{<CarFront/, "Vehicle number uses a clear CarFront icon.");
+assert.doesNotMatch(header, /claimHeaderIcons\.vehicle/, "Do not retain the old multi-vehicle illustration.");
+assert.match(header, /import \{ CarFront \} from "lucide-react"/, "Use the existing icon library.");
 assert.match(header, /<Info label="Model" title=\{model\} singleLine logo=\{<ManufacturerLogo name=\{make\} \/>\}/, "Model must stay in one line and retain manufacturer icon");
 assert.doesNotMatch(header, /label="Vehicle No\. & Model"/, "Combined vehicle/model field must be removed");
 assert.match(header, /lg:grid-cols-7/, "Claim header must accommodate seven fields");
-assert.match(header, /items-center justify-between gap-2 border-b border-white\\/20 px-3 py-2 sm:px-4/, "Exactly the title and PDF/Back action row gets the horizontal divider.");
-assert.match(header, /singleLine \\? "truncate whitespace-nowrap" : "break-words"/, "Only model and policy values truncate to one line.");
-assert.match(header, /title=\\{singleLine \\? title : undefined\\}/, "Hover reveals the full model or policy number.");
+assert.match(header, /items-center justify-between gap-2 border-b border-white\/20 px-3 py-2 sm:px-4/, "Exactly the title and PDF/Back action row gets the horizontal divider.");
+assert.match(header, /singleLine \? "truncate whitespace-nowrap" : "break-words"/, "Only model and policy values truncate to one line.");
+assert.match(header, /title=\{singleLine \? title : undefined\}/, "Hover reveals the full model or policy number.");
 assert.doesNotMatch(header, /label.*border-b/, "Do not place horizontal rules beneath individual field labels.");
 
 assert.match(headerCss, /\.field:not\(:nth-child\(7n\)\) \{ border-right: 1px solid rgba\(255, 255, 255, \.20\); \}/, "Desktop claim header has light dividers after the first six items, not the seventh");
