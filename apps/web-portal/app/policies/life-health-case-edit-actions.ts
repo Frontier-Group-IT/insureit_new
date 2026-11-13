@@ -44,6 +44,8 @@ export async function updateLifeHealthCaseDetails(formData: FormData) {
   if (row.final_policy_id || row.status === "rejected") return { ok: false as const, error: "Issued or rejected cases cannot be edited." };
   if (!row.customer_id) return { ok: false as const, error: "The case customer reference is missing." };
 
+  const {data:oldCustomer}=await admin.from("customers").select("contact_name,phone,address_street").eq("id",row.customer_id).maybeSingle<{contact_name:string;phone:string;address_street:string|null}>();
+  if(!oldCustomer)return {ok:false as const,error:"Customer details could not be verified for this edit."};
   const { error: customerError } = await admin.from("customers").update({ contact_name: customerName, phone: customerPhone, address: customerAddress || null, address_street: customerAddress || null, updated_at: new Date().toISOString() }).eq("id", row.customer_id);
   if (customerError) return { ok: false as const, error: "Customer details could not be updated." };
 
@@ -80,6 +82,10 @@ export async function updateLifeHealthCaseDetails(formData: FormData) {
   compare("Payment frequency",row.payment_frequency,paymentFrequency);
   compare("Payment mode",row.payment_mode,paymentMode);
   compare("Sourcing date",row.sourcing_date,sourcingDate);
+  if(oldCustomer.contact_name.trim()!==customerName)changes.push("Customer name changed (values hidden)");
+  const maskMobile=(phone:string)=>{const digits=phone.replace(/\D/g,"");return digits?"••••••"+digits.slice(-4):"Not set";};
+  if(oldCustomer.phone!==customerPhone)changes.push(`Mobile number: ${maskMobile(oldCustomer.phone)} → ${maskMobile(customerPhone)}`);
+  if((oldCustomer.address_street||"").trim()!==customerAddress)changes.push("Address changed (values hidden)");
   if(row.insurance_company_id!==insurerId)changes.push("Insurer changed (values hidden)");
   if(row.proposal_number!==clean(formData.get("proposalNumber")).toUpperCase())changes.push("Proposal number changed (values hidden)");
   if(changes.length){
