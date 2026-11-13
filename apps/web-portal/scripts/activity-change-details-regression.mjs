@@ -25,4 +25,32 @@ for (const path of ["../components/customer-activity-status.tsx", "../components
 assert.match(read("../components/standard-activity-status-card.tsx"), /item\.changes\?\.length/, "shared UI must render individual changes");
 assert.match(read("../lib/customer-activity.ts"), /describeAuditedChanges\("customer"/, "customer audits must use recorded old/new snapshots");
 assert.match(read("../lib/vehicle-activity.ts"), /describeAuditedChanges\("vehicle"/, "vehicle audits must not invent differences");
+
+const policyActivity = read("../lib/policy-activity.ts");
+const policyEdit = read("../app/policies/policy-edit-actions.ts");
+const caseEdit = read("../app/policies/life-health-case-edit-actions.ts");
+const casePage = read("../app/policies/life-health-cases/[id]/page.tsx");
+const caseDetail = read("../components/life-health-case-detail.tsx");
+const claimActivity = read("../components/claim-activity-status.tsx");
+const claimPage = read("../app/claims/[id]/page.tsx");
+
+assert.match(policyActivity, /cpa_amount: "CPA amount"/, "CPA amount must be tracked independently");
+assert.match(policyActivity, /describePolicyEditChanges/, "Policy edits must store actual changed source fields");
+assert.match(policyEdit, /describePolicyEditChanges\(activityBefore, activityAfter\)/, "Policy edit action must use safe old/new details");
+assert.match(policyActivity, /premiumSourceChanged/, "Derived pay-in review resets must not replace manual CPA edits");
+for(const column of ["premium.net_premium","premium.gst_amount","premium.gross_premium","policy.premium_amount","payin.total_projected_payin"]){
+  assert.ok(policyActivity.includes('"'+column+'"'), column+" must be treated as a calculated value");
+}
+assert.match(policyActivity, /formatAuditedPremiumValue/, "Approved premium amounts must be formatted");
+assert.match(policyActivity, /field.includes\(" → "\)/, "Formatted before/after entries must not be overwritten by legacy display text");
+assert.match(caseEdit, /life_health_case_edited/, "Case changes must create their own audit event");
+assert.match(caseEdit, /const changes: string\[\]/, "Case editor must compare user-editable values");
+assert.match(casePage, /caseEditAudits/, "Case Register must read edit events after record authorization");
+assert.match(caseDetail, /activity.changes\?\.length/, "Case Activity Status must render changed values");
+assert.match(claimActivity, /claim_status_history/, "Claim Activity Status must read recorded claim transitions");
+assert.match(claimActivity, /claim_stage_details/, "Claim Activity Status must compare saved stage details");
+assert.match(claimActivity, /const LABELS/, "Claim audit must use a strict visible-field allowlist");
+assert.doesNotMatch(claimActivity, /notes.*return|\.changes:.*notes/, "Claim status notes must not leak personal details");
+assert.match(claimPage, /<ClaimActivityStatus claimId=\{claim.id\}/, "Claim Activity Status should appear only after authorized claim lookup");
+
 console.log("Activity change details regression passed.");
