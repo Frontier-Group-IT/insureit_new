@@ -37,6 +37,8 @@ jobs:
           cache-dependency-path: apps/web-portal/package.json
       - name: Install dependencies
         run: npm install --no-audit --no-fund
+      - name: Life/Health issued policy continuous field grid regression
+        run: node scripts/life-health-issued-policy-continuous-grid-regression.mjs
       - name: Activity Status field-change and privacy regression
         run: node --experimental-strip-types scripts/activity-change-details-regression.mjs
       - name: OCR-only Layout Parser opt-in regression
