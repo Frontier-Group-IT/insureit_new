@@ -32,7 +32,9 @@ assert.match(editAction, /requirePolicyCreator\(\)/, "Append keeps creator autho
 assert.match(editAction, /\.is\("final_policy_id",null\)/, "Issued cases cannot receive new editable case remarks");
 assert.match(registerPage, /lead_source,remarks,final_policy_id/, "Register loads authorized saved remarks");
 assert.match(registerPage, /remarks: row\.remarks \|\| ""/, "Register mapping retains remarks");
-assert.match(register, /<th className="px-3 py-3">Remarks<\/th>/, "Case Register includes remarks column");
-assert.match(register, /setRemarksToView\(row\)/, "Case Register opens full remarks popup");
-assert.match(register, /Edit in Case Details/, "Pending cases can edit saved remarks through existing form");
-console.log("Life/Health remarks popup and Case Register regression passed");
+assert.doesNotMatch(register, /<th[^>]*>Remarks<\/th>/, "Life & Health Case Register has no Remarks column");
+assert.doesNotMatch(register, /setRemarksToView|remarksToView|MessageSquareText|register-remarks-title/, "Life & Health Case Register removes the remarks popup and actions");
+assert.match(register, /<th className="px-4 py-3 text-right">Action<\/th>/, "Action column is preserved");
+assert.match(register, /<LifeHealthIssuedPolicyButton policyId=\{row\.finalPolicyId\}/, "Issued policy navigation is preserved");
+assert.match(register, /href=\{\`\/policies\/life-health-cases\/\$\{row\.id\}\`\}/, "Pending case navigation is preserved");
+console.log("Life/Health remarks preservation and Remarks-free Case Register regression passed");
