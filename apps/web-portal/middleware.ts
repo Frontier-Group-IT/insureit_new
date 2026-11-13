@@ -198,6 +198,11 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Public, code-fragment-only Partner browser bridge entry. Its exchange
+  // endpoints authenticate and authorize independently; never skip protection
+  // for /policy-intakes/[id] or /policies/new.
+  if (pathname === "/policy-intakes/bridge") return NextResponse.next();
+
   const isRenewalVoiceLab = pathname === "/partner/renewals/voice-lab";
   // Select the appropriate independently authenticated session based on the
   // requested workspace, never by the cached role cookie or another workspace.
