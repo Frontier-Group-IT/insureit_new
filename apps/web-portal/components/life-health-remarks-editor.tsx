@@ -69,7 +69,6 @@ export function LifeHealthRemarksEditor({ value, onChange, disabled = false }: P
             <div>
               <label htmlFor="life-health-remarks-input" className="mb-2 block text-[11px] font-semibold text-[#344054]">New remark</label>
               <textarea id="life-health-remarks-input" autoFocus value={draft} onChange={(event) => setDraft(event.target.value)} rows={4} maxLength={2000} placeholder="Enter a new remark" className="w-full resize-y rounded-xl border border-[#CBD5E1] bg-white px-3 py-2.5 text-[12px] text-[#17203A] outline-none focus:border-[#315B9A] focus:ring-2 focus:ring-[#DCE8FA]" />
-              <p className="mt-2 text-[10px] text-[#667085]">New remarks are appended to this case draft and saved when you select Create Case. Previous entries cannot be edited.</p>
             </div>
             <div className="flex justify-end gap-2">
               <button type="button" onClick={() => setOpen(false)} className="h-10 rounded-xl border border-[#CBD5E1] bg-white px-4 text-[11px] font-semibold text-[#344054]">Cancel</button>
