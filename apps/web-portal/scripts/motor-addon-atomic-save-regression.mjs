@@ -35,7 +35,7 @@ assert.ok(addonAdjustment, 'Reviewed add-on Pay-in adjustment must be present');
 const payinUpdates = addonAdjustment[1].match(/UPDATE public\.policy_payin_details pi/g) ?? [];
 assert.equal(payinUpdates.length, 1, 'Pay-in and TDS must update in ONE statement, never split into two');
 for (const column of ['projected_od_amount', 'total_projected_payin', 'tds_amount', 'payin_after_tds']) {
-  assert.match(addonAdjustment[1], new RegExp('\\\\b'+column+'\\\\s*='), column+' must be in the same UPDATE');
+  assert.match(addonAdjustment[1], new RegExp('\\b'+column+'\\s*='), column+' must be in the same UPDATE');
 }
 assert.match(atomicPayinMigration, /REVOKE ALL ON FUNCTION public\.save_motor_policy_with_addon_v1[\s\S]*FROM PUBLIC, anon, authenticated/, 'Privileged booking function stays restricted');
 assert.match(atomicPayinMigration, /GRANT EXECUTE ON FUNCTION public\.save_motor_policy_with_addon_v1[\s\S]*TO service_role/, 'Service role retains booking access');
