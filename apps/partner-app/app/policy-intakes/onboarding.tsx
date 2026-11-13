@@ -123,7 +123,7 @@ export default function NativePolicyOnboarding(){
       <View style={styles.section}>
         <View style={styles.sectionHead}><Ionicons name="calculator-outline" size={18} color="#254C83"/><Text style={styles.sectionTitle}>Onboarding summary</Text></View>
         <View style={styles.summary}><Text style={styles.muted}>OD + TP + CPA (before applicable taxes)</Text><Text style={styles.total}>₹{net.toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})}</Text></View>
-        <Text style={styles.notice}>This is a draft summary, not the final policy premium calculation. Final taxes, premiums, validation and booking must use the website's authoritative booking engine.</Text>
+        <Text style={styles.notice}>This is a draft summary, not the final policy premium calculation. Final taxes, premiums, validation and booking must use the website&apos;s authoritative booking engine.</Text>
       </View>
       <View style={styles.actions}>
         <Pressable accessibilityRole="button" disabled={saving} style={styles.secondary} onPress={()=>void save(true)}><Text style={styles.secondaryText}>{saving?'Saving…':'Save & return to Intake'}</Text></Pressable>
