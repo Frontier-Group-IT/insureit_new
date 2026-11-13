@@ -287,9 +287,9 @@ export async function loadCustomerClaimDetail(customerId: string, claimId: strin
     supabase.from("claim_tasks").select("id,claim_id,title,status").eq("claim_id", claimId).eq("status", "open"),
     supabase.rpc("customer_claim_operations_stage_details", { p_claim_id: claimId }),
     supabase.from("customer_activity_events")
-      .select("id,title,message,metadata,created_at")
+      .select("id,event_type,title,message,metadata,created_at")
       .eq("customer_id", customerId).eq("claim_id", claimId)
-      .eq("event_type", "claim_document_reuploaded")
+      .in("event_type", ["claim_document_reuploaded", "claim_document_reupload_resolved"])
       .order("created_at", { ascending: false }).limit(50),
   ]);
 
