@@ -64,7 +64,8 @@ export async function updateLifeHealthCaseDetails(formData: FormData) {
   // Record only approved, user-editable case fields. Never store the
   // customer's name/mobile/address, raw proposal number or remarks.
   const changes: string[] = [];
-  const compare = (label:string,oldValue:string|null|number,newValue:string|null|number,format:(v:string|number|null)=>string=(v)=>String(v??"Not set")) => {
+  const safeText = (value:string|number|null) => {const s=String(value??"").trim();return !s?"Not set":/^[a-zA-Z0-9 ._\/-]{1,70}$/.test(s)?s:"Changed";};
+  const compare = (label:string,oldValue:string|null|number,newValue:string|null|number,format:(v:string|number|null)=>string=safeText) => {
     if(String(oldValue??"").trim()!==String(newValue??"").trim())
       changes.push(`${label}: ${format(oldValue)} → ${format(newValue)}`);
   };
