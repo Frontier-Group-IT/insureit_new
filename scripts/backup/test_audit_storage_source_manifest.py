@@ -60,6 +60,87 @@ class ReadOnlyParityTests(unittest.TestCase):
         self.assertEqual(status["status"], "REVIEW")
         self.assertNotIn("SECRET_PRIVATE", str(status))
 
+    def test_api_millisecond_timestamp_matches_sql_microseconds(self):
+        # Storage API serializes some PG timestamps to JS milliseconds.
+        api_timestamp = "2026-11-10T18:00:00.123Z"
+        sql_timestamp = "2026-11-10T18:00:00.123456+00:00"
+        entry = manifest("policy.pdf")
+        entry["entries"][identifier("policy.pdf")]["source"]["updated_at"] = api_timestamp
+        source_metadata = {
+            identifier("policy.pdf"): source(
+                created=BEFORE, updated=sql_timestamp, size=12
+            )
+        }
+        result = audit.compare(["docs", "empty"], source_metadata,
+                               ["docs", "empty"], source_metadata, entry)
+        self.assertEqual(result["status"], "PASS_HISTORIC_MANIFEST_COVERAGE")
+        self.assertEqual(result["stable_prior_manifest_metadata_mismatches"], 0)
+        self.assertEqual(result["timestamp_precision_compatible"], 1)
+        self.assertEqual(result["timestamp_true_mismatches"], 0)
+        self.assertEqual(result["size_true_mismatches"], 0)
+
+    def test_timestamps_outside_actual_manifest_precision_still_fail(self):
+        archive = manifest("policy.pdf")
+        archive["entries"][identifier("policy.pdf")]["source"]["updated_at"] = (
+            "2026-11-10T18:00:00.123Z"
+        )
+        source_metadata = {identifier("policy.pdf"): source(
+            created=BEFORE, updated="2026-11-10T18:00:00.124001+00:00"
+        )}
+        result = audit.compare(["docs","empty"], source_metadata,
+                               ["docs","empty"], source_metadata, archive)
+        self.assertEqual(result["status"], "REVIEW")
+        self.assertEqual(result["timestamp_true_mismatches"], 1)
+        self.assertEqual(result["timestamp_precision_compatible"], 0)
+        self.assertEqual(result["size_true_mismatches"], 0)
+
+    def test_no_precision_downgrade_when_archive_has_microseconds(self):
+        self.assertEqual(
+            audit.compatible_timestamp(
+                "2026-11-10T18:00:00.123456Z",
+                "2026-11-10T18:00:00.123499+00:00",
+            ), (False, False)
+        )
+        self.assertEqual(
+            audit.compatible_timestamp(
+                "2026-11-10T18:00:00.123456Z",
+                "2026-11-10T18:00:00.123456+00:00",
+            ), (True, False)
+        )
+        self.assertEqual(
+            audit.compatible_timestamp(
+                "2026-11-10T18:00:00Z",
+                "2026-11-10T18:00:00.123+00:00",
+            ), (False, False)
+        )
+
+    def test_size_changes_are_not_ignored_by_timestamp_normalization(self):
+        archive = manifest("policy.pdf")
+        archive["entries"][identifier("policy.pdf")]["source"]["updated_at"] = (
+            "2026-11-10T18:00:00.123Z"
+        )
+        source_metadata = {identifier("policy.pdf"): source(
+            created=BEFORE, updated="2026-11-10T18:00:00.123456+00:00", size=15
+        )}
+        result = audit.compare(["docs","empty"], source_metadata,
+                               ["docs","empty"], source_metadata, archive)
+        self.assertEqual(result["status"], "REVIEW")
+        self.assertEqual(result["timestamp_precision_compatible"], 1)
+        self.assertEqual(result["size_true_mismatches"], 1)
+        self.assertEqual(result["timestamp_true_mismatches"], 0)
+        self.assertEqual(result["stable_prior_manifest_metadata_mismatches"], 1)
+
+    def test_missing_archive_metadata_is_unverifiable_not_pass(self):
+        archive = manifest("policy.pdf")
+        archive["entries"][identifier("policy.pdf")]["source"] = {
+            "updated_at": None, "size": None
+        }
+        current = {identifier("policy.pdf"): source()}
+        result = audit.compare(["docs","empty"], current,
+                               ["docs","empty"], current, archive)
+        self.assertEqual(result["archive_metadata_unverifiable"], 1)
+        self.assertEqual(result["status"], "REVIEW")
+
     def test_stable_old_metadata_mismatch_requires_review(self):
         prior = {identifier("private.pdf"): source(size=15)}
         status = audit.compare(["docs", "empty"], prior,
