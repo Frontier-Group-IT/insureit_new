@@ -464,7 +464,7 @@ export async function loadExistingVehicleForPolicyOnboarding(vehicleId: string):
   }
 }
 
-export async function onboardPolicyForVerifiedActor(payload: PolicyOnboardingPayload, profile: Awaited<ReturnType<typeof requirePolicyCreator>>, intakeScopeVerified = false): Promise<PolicyOnboardingResult> {
+export async function onboardPolicyForVerifiedActor(payload: PolicyOnboardingPayload, profile: { id: string; role: string }, intakeScopeVerified = false): Promise<PolicyOnboardingResult> {
   if (isBundledMotorCover(String(payload.vehicle.classCode ?? ""), String(payload.policy.policyType ?? ""))) {
     payload = {...payload, policy:{...payload.policy,validUpto: String(payload.policy.odValidUpto || motorBundledExpiry(String(payload.policy.validFrom ?? ""),1))}};
   }
