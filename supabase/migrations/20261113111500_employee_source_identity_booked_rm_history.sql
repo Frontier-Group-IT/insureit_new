@@ -126,11 +126,11 @@ BEGIN
   END IF;
 
   -- New bookings inherit the currently assigned employee once, at creation.
-  SELECT COALESCE(o.associate_employee_id,i.associate_employee_id),e.full_name
+  SELECT CASE WHEN o.application_id IS NOT NULL THEN o.associate_employee_id ELSE i.associate_employee_id END,e.full_name
     INTO v_employee_id,v_employee_name
   FROM public.intermediaries i
   LEFT JOIN public.posp_misp_onboarding_profiles o ON o.application_id=i.application_id
-  LEFT JOIN public.employees e ON e.id=COALESCE(o.associate_employee_id,i.associate_employee_id)
+  LEFT JOIN public.employees e ON e.id=CASE WHEN o.application_id IS NOT NULL THEN o.associate_employee_id ELSE i.associate_employee_id END
   WHERE (NEW.source_intermediary_id IS NOT NULL AND i.id=NEW.source_intermediary_id)
      OR (NEW.source_intermediary_id IS NULL AND i.intermediary_code=NEW.intermediary_code)
   ORDER BY (i.id=NEW.source_intermediary_id) DESC, i.updated_at DESC NULLS LAST
