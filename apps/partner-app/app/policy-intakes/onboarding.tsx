@@ -15,8 +15,6 @@ const policy = [
   {key:'businessLine',label:'Policy type',required:true,options:['Motor','Life','Health','Non Motor']},
   {key:'intermediaryType',label:'Intermediary type',required:true,options:['POSP','MISP','SIBL / Partner']},
   {key:'leadSource',label:'Lead source',required:true},
-  {key:'intermediaryCode',label:'Lead source code'},
-  {key:'rmName',label:'Relationship manager'},
 ] satisfies Field[];
 const proposer = [
   {key:'insuredName',label:'Client / proposer name',required:true},
@@ -64,8 +62,8 @@ const lifeProduct:ProductField[]=[
   {key:'insurerId',label:'Insurance company',required:true},
   {key:'productName',label:'Product name',required:true},
   {key:'proposalNumber',label:'Case / proposal number',required:true},
-  {key:'ppt',label:'PPT · Premium paying term',options:['Single Pay',...yearOptions]},
-  {key:'pd',label:'PD · Policy duration',options:yearOptions},
+  {key:'ppt',label:'PPT - Premium paying term',options:['Single Pay',...yearOptions]},
+  {key:'pd',label:'PD - Policy duration / term',options:yearOptions},
   {key:'paymentFrequency',label:'Payment frequency',required:true,options:paymentFrequencies},
 ];
 const lifePremium:ProductField[]=[
@@ -368,6 +366,21 @@ export default function NativePolicyOnboarding(){
         placeholder={'Enter '+f.label.toLowerCase()} placeholderTextColor="#9AA7B9" style={styles.input}/>}
     </View>;
   };
+  // Keep RM and code editable: native prepare API does not expose website
+  // source-master options, so it cannot safely impersonate a master dropdown.
+  const sourceMeta=(key:'rmName'|'intermediaryCode',label:string)=><View style={styles.sourceMeta}>
+    <Text style={styles.sourceMetaLabel}>{label}</Text>
+    <TextInput accessibilityLabel={label} value={draft?.[key]??''} onChangeText={value=>update(key,value)}
+      placeholder={label==='RM'?'Assigned RM':'Source code'} placeholderTextColor="#9AA7B9" style={styles.sourceMetaInput}/>
+  </View>;
+  const sourceSection=()=> <View style={styles.section}>
+    <View style={styles.sectionHead}><Text style={styles.number}>01</Text><Text style={styles.sectionTitle}>Policy source & ownership</Text></View>
+    <View style={styles.fields}>{policy.map(item=><View key={item.key} style={styles.sourceCell}>
+      {field(item)}
+      {item.key==='intermediaryType'?sourceMeta('rmName','RM'):null}
+      {item.key==='leadSource'?sourceMeta('intermediaryCode','ID'):null}
+    </View>)}</View>
+  </View>;
   const productSection=(number:string,title:string,items:ProductField[])=><View style={styles.section} key={number+'-'+title}>
     <View style={styles.sectionHead}><Text style={styles.number}>{number}</Text><Text style={styles.sectionTitle}>{title}</Text></View>
     <View style={styles.fields}>{items.map(detailField)}</View>
@@ -381,8 +394,8 @@ export default function NativePolicyOnboarding(){
     {error?<View style={styles.error}><Ionicons name="alert-circle-outline" size={16} color="#B42318"/><Text style={styles.errorText}>{error}</Text></View>:null}
     {!loading&&!draft?<Pressable style={styles.retry} onPress={()=>void load()}><Text style={styles.retryText}>Retry loading</Text></Pressable>:null}
     {draft?<>
-      <View style={styles.status}><View><Text style={styles.intake}>{data?.intake_number||'Policy Intake'}</Text><Text style={styles.muted}>Existing draft · {dirty?'Unsaved changes':'Saved revision '+data?.revision}</Text></View><View style={styles.progress}><Text style={styles.progressText}>{filled}% complete</Text></View></View>
-      {section('01','Policy source & ownership',policy)}
+      <View style={styles.status}><View><Text style={styles.intake}>{data?.intake_number||'Policy Intake'}</Text><Text style={styles.draftStatus}>{dirty?'Unsaved changes':'Draft'}</Text></View><View style={styles.progress}><Text style={styles.progressText}>{filled}%</Text></View></View>
+      {sourceSection()}
       {isMotor?section('02','Customer / Proposer',proposer):productSection('02',productType==='Non Motor'?'Customer & policy':'Customer / Proposer',productType==='Non Motor'?[...commonPerson,...otherPolicy]:commonPerson)}
       {isMotor?section('','Vehicle identification — Motor',vehicle):null}
       {isMotor&&draft.registrationMode==='registered'?<Pressable accessibilityRole="button" disabled={lookingUpRc} style={[styles.secondary,{marginBottom:11}]} onPress={()=>void fetchRc()}><Text style={styles.secondaryText}>{lookingUpRc?'Fetching RC…':'Fetch RC Details'}</Text></Pressable>:null}
@@ -399,10 +412,9 @@ export default function NativePolicyOnboarding(){
           <View style={styles.summaryProgress}><Text style={styles.progressText}>{filled}%</Text></View>
         </View>
         <View style={styles.summary}>
-          <Text style={styles.summaryCaption}>POLICY STATUS  ·  In progress</Text>
-          <Text style={styles.muted}>{isMotor?'ESTIMATED MOTOR PREMIUM':productType==='Non Motor'?'GROSS PREMIUM':'PREMIUM AMOUNT'}</Text>
+          <View style={styles.summaryStatusRow}><Text style={styles.summaryCaption}>Policy status</Text><Text style={styles.summaryStatusValue}>In progress</Text></View>
+          <Text style={styles.muted}>{isMotor?'Estimated premium':productType==='Non Motor'?'Gross premium':'Premium'}</Text>
           <Text style={styles.total}>₹{(isMotor?net:amount(productValues[productType==='Non Motor'?'grossPremium':'premiumAmount']||'0')).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})}</Text>
-          <Text style={styles.muted}>{isMotor?'Estimated Motor premium · Final amount confirmed on booking':'Draft values only · Final booking and uploads are completed through the Operations Portal'}</Text>
         </View>
         {!isMotor&&data?.commercialAccess?<View style={styles.commercialBody}>
           <Pressable accessibilityRole="button" accessibilityLabel="Payin–Payout" accessibilityState={{expanded:commercialExpanded}}
@@ -425,16 +437,19 @@ export default function NativePolicyOnboarding(){
         </>:null}
         <View style={styles.summaryDocuments}>
           <Text style={styles.commercialToggleTitle}>Documents</Text>
-          <Text style={styles.muted}>Submitted policy copy</Text>
+          <Text style={styles.documentStatus}>Operations Portal</Text>
         </View>
-        <Text style={styles.notice}>{isMotor?'This draft summary is not the final policy premium calculation. Taxes, premiums, validation and booking remain with the Operations booking engine.':'Draft values are informational. Final commercial calculations and case creation must use the Operations Portal.'}</Text>
+        {isMotor?null:<Text style={styles.notice}>Final booking and commercial calculations are completed in the Operations Portal.</Text>}
       </View>
       <View style={styles.section}>
         <View style={styles.sectionHead}>
           <Ionicons name="cloud-upload-outline" size={18} color="#254C83"/>
           <Text style={styles.sectionTitle}>Upload Forms</Text>
         </View>
-        <Text style={styles.notice}>{isMotor?'Proposal Form, Illustration Form, Payment Receipt and Other Form uploads are managed on the Operations website. The native Motor booking API does not currently accept these uploads.':'Proposal Form, Benefit Illustration, Premium Receipt and Other Document must be uploaded through the Operations Portal. This native form cannot upload or submit these documents.'}</Text>
+        <View style={styles.documentList}>
+          {(isMotor?['Proposal Form','Illustration Form','Payment Receipt','Other Form']:['Proposal Form','Benefit Illustration','Premium Receipt','Other Document']).map(name=><View key={name} style={styles.documentRow}><Ionicons name="document-outline" size={15} color="#6D819D"/><Text style={styles.documentName}>{name}</Text></View>)}
+        </View>
+        <Text style={styles.notice}>{isMotor?'The native Motor booking API does not currently accept these uploads. Use the Operations Portal.':'Upload documents through the Operations Portal.'}</Text>
         <Pressable accessibilityRole="button" disabled={viewingCopy} style={[styles.secondary,styles.documentAction]} onPress={()=>void openCopy()}>
           <Ionicons name="document-text-outline" size={17} color="#25466E"/>
           <Text style={styles.secondaryText}>{viewingCopy?'Opening document…':'View submitted policy copy'}</Text>
@@ -476,16 +491,16 @@ const styles=StyleSheet.create({
   wait:{padding:28,alignItems:'center',gap:12},muted:{fontSize:11,color:'#738196',lineHeight:17},
   error:{flexDirection:'row',gap:8,backgroundColor:'#FFF0EF',padding:12,borderRadius:11,marginBottom:10},errorText:{flex:1,color:'#A32924',fontSize:12},
   retry:{padding:14,backgroundColor:'#DFE8FF',borderRadius:10,alignItems:'center'},retryText:{color:'#1B397A',fontWeight:'700'},
-  status:{backgroundColor:'#FFFFFF',borderRadius:13,borderWidth:1,borderColor:'#DFE6F1',padding:13,flexDirection:'row',justifyContent:'space-between',alignItems:'center',marginBottom:10},
+  status:{backgroundColor:'#FFFFFF',borderRadius:13,borderWidth:1,borderColor:'#DFE6F1',padding:12,flexDirection:'row',justifyContent:'space-between',alignItems:'center',marginBottom:9,gap:8},draftStatus:{fontSize:10,color:'#738196',marginTop:2},
   intake:{color:'#1C375D',fontWeight:'800',fontSize:14},progress:{borderRadius:20,backgroundColor:'#EAEFFA',paddingVertical:6,paddingHorizontal:10},progressText:{color:'#324D9E',fontWeight:'700',fontSize:11},
   section:{backgroundColor:'#FFFFFF',borderWidth:1,borderColor:'#DFE6F0',borderRadius:13,marginBottom:11,overflow:'hidden'},
   sectionHead:{flexDirection:'row',gap:9,alignItems:'center',paddingHorizontal:13,paddingVertical:12,backgroundColor:'#EAF1FA'},
   number:{fontSize:11,color:'#355EA0',fontWeight:'800'},sectionTitle:{fontSize:13,color:'#1B385B',fontWeight:'800'},
-  fields:{padding:12,flexDirection:'row',flexWrap:'wrap',columnGap:10,rowGap:11},field:{width:'48%',minWidth:0,gap:5},wideField:{width:'100%'},label:{fontSize:10,color:'#65758E',fontWeight:'700'},star:{color:'#B93333'},
+  fields:{padding:12,flexDirection:'row',flexWrap:'wrap',columnGap:10,rowGap:11},field:{width:'48%',minWidth:0,gap:5},sourceCell:{width:'48%',minWidth:0,gap:3},sourceMeta:{flexDirection:'row',alignItems:'center',gap:5,minHeight:23},sourceMetaLabel:{fontSize:9,fontWeight:'700',color:'#72839C'},sourceMetaInput:{flex:1,minWidth:0,fontSize:10,color:'#25466E',fontWeight:'600',paddingVertical:2,paddingHorizontal:1},wideField:{width:'100%'},label:{fontSize:10,color:'#65758E',fontWeight:'700'},star:{color:'#B93333'},
   input:{minHeight:42,borderWidth:1,borderColor:'#D8E1EC',backgroundColor:'#FFFFFF',borderRadius:9,paddingHorizontal:11,fontSize:12,color:'#183653'},
   inputRow:{minHeight:42,borderWidth:1,borderColor:'#D8E1EC',borderRadius:9,paddingHorizontal:11,flexDirection:'row',alignItems:'center',justifyContent:'space-between'},
   value:{color:'#183653',fontSize:12,flex:1},placeholder:{color:'#97A5B7'},
-  summary:{padding:14,gap:7},summaryCaption:{fontSize:10,fontWeight:'700',color:'#426188'},summaryProgress:{marginLeft:'auto',backgroundColor:'#E1EAF8',borderRadius:18,paddingHorizontal:9,paddingVertical:5},commercialToggle:{marginHorizontal:12,marginBottom:9,flexDirection:'row',alignItems:'center',gap:8,padding:11,borderWidth:1,borderColor:'#DDE6F0',borderRadius:10,backgroundColor:'#F8FAFD'},commercialToggleTitle:{flex:1,color:'#26436B',fontSize:11,fontWeight:'700'},commercialBody:{paddingHorizontal:12},summaryDocuments:{marginHorizontal:12,marginBottom:11,padding:12,flexDirection:'row',alignItems:'center',gap:10,borderColor:'#E1E9F3',borderWidth:1,borderRadius:10},documentAction:{marginHorizontal:12,marginBottom:12,flexDirection:'row',gap:8},total:{fontSize:20,color:'#1B385B',fontWeight:'800'},notice:{fontSize:10,lineHeight:16,color:'#65758E',paddingHorizontal:14,paddingBottom:13},
+  summary:{paddingHorizontal:12,paddingVertical:9,gap:6},summaryStatusRow:{flexDirection:'row',justifyContent:'space-between',alignItems:'center'},summaryStatusValue:{fontSize:10,fontWeight:'700',color:'#A96A00'},documentStatus:{fontSize:10,color:'#738196'},documentList:{paddingHorizontal:13,paddingTop:8,paddingBottom:3},documentRow:{flexDirection:'row',gap:8,alignItems:'center',paddingVertical:6},documentName:{fontSize:11,color:'#25466E'},summaryCaption:{fontSize:10,fontWeight:'700',color:'#426188'},summaryProgress:{marginLeft:'auto',backgroundColor:'#E1EAF8',borderRadius:18,paddingHorizontal:9,paddingVertical:5},commercialToggle:{marginHorizontal:12,marginBottom:9,flexDirection:'row',alignItems:'center',gap:8,padding:11,borderWidth:1,borderColor:'#DDE6F0',borderRadius:10,backgroundColor:'#F8FAFD'},commercialToggleTitle:{flex:1,color:'#26436B',fontSize:11,fontWeight:'700'},commercialBody:{paddingHorizontal:12},summaryDocuments:{marginHorizontal:12,marginBottom:11,padding:12,flexDirection:'row',alignItems:'center',gap:10,borderColor:'#E1E9F3',borderWidth:1,borderRadius:10},documentAction:{marginHorizontal:12,marginBottom:12,flexDirection:'row',gap:8},total:{fontSize:20,color:'#1B385B',fontWeight:'800'},notice:{fontSize:10,lineHeight:16,color:'#65758E',paddingHorizontal:14,paddingBottom:13},
   actions:{flexDirection:'row',gap:8,marginBottom:11},secondary:{flex:1,borderWidth:1,borderColor:'#CDD9EB',borderRadius:10,padding:13,alignItems:'center'},secondaryText:{fontWeight:'700',fontSize:11,color:'#25466E'},
   primary:{flex:1,backgroundColor:'#243F9E',borderRadius:10,padding:13,alignItems:'center'},primaryText:{fontSize:11,fontWeight:'800',color:'white'},disabled:{opacity:.48},
   bookButton:{marginBottom:11,flexDirection:'row',justifyContent:'center',gap:8},
