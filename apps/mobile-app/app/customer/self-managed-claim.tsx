@@ -72,10 +72,12 @@ function waitForClaimUploadRetry(attempt: number) {
 
 export default function SelfManagedClaimScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ externalPolicyId?: string; id?: string }>();
+  const params = useLocalSearchParams<{ externalPolicyId?: string; id?: string; documentType?: string }>();
   const externalPolicyId = typeof params.externalPolicyId === 'string' ? params.externalPolicyId : '';
   const claimId = typeof params.id === 'string' ? params.id : '';
   const editing = Boolean(claimId);
+  const focusDocumentType = typeof params.documentType === 'string' ? params.documentType : '';
+  const [documentSectionY, setDocumentSectionY] = useState<number | null>(null);
   const [policy, setPolicy] = useState<ExternalPolicy | null>(null);
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [insurerName, setInsurerName] = useState('Insurance company');
@@ -723,7 +725,7 @@ export default function SelfManagedClaimScreen() {
   if (loading) return <Screen title="Spot Intimation"><LoadingState label={editing ? 'Opening Spot Intimation' : 'Opening policy'} /></Screen>;
 
   return (
-    <Screen title="Spot Intimation" showTitleHeader={false}>
+    <Screen title="Spot Intimation" showTitleHeader={false} scrollTargetY={focusDocumentType ? documentSectionY : null}>
       <ExternalClaimStageHeader
         step={1}
         title="Spot Intimation"
@@ -776,20 +778,21 @@ export default function SelfManagedClaimScreen() {
         ) : null}
       </ClaimFormSection>
 
-      <View style={styles.documentReadyCard}>
+      <View style={styles.documentReadyCard} onLayout={(event) => { if (focusDocumentType && documentSectionY === null) setDocumentSectionY(event.nativeEvent.layout.y); }}>
         <View style={styles.documentReadyHeader}>
           <View style={styles.documentReadyHeaderCopy}>
             <Text style={styles.documentReadyTitle}>Upload claim documents</Text>
+            {focusDocumentType ? <Text style={styles.reuploadHint}>Please replace the rejected {focusDocumentType} document below.</Text> : null}
           </View>
           <View style={styles.documentReadyBadge}><Text style={styles.documentReadyBadgeText}>Optional now</Text></View>
         </View>
         <View style={styles.documentReadyGrid}>
-          <DocumentReadyTile title="RC Copy" fileName={savedDocumentFor('rc')?.file_name ?? documents.rc[0]?.name ?? ''} source={require('../../assets/brand/spot-intimation/glossy_green_vehicle_document_icon.png')} state={tileState('rc')} onPress={() => void pickDocument('rc')} onRemove={() => requestDelete('rc', savedDocumentFor('rc')?.file_name ?? documents.rc[0]?.name ?? 'RC Copy')} />
-          <DocumentReadyTile title="Insurance Copy" fileName={savedDocumentFor('insurance')?.file_name ?? documents.insurance[0]?.name ?? ''} source={require('../../assets/brand/spot-intimation/glossy_blue_secure_policy_document_icon.png')} state={tileState('insurance')} onPress={() => void pickDocument('insurance')} onRemove={() => requestDelete('insurance', savedDocumentFor('insurance')?.file_name ?? documents.insurance[0]?.name ?? 'Insurance Copy')} />
-          <DocumentReadyTile title="Driver Licence" fileName={savedDocumentFor('licence')?.file_name ?? documents.licence[0]?.name ?? ''} source={require('../../assets/brand/spot-intimation/glossy_purple_id_card_icon.png')} state={tileState('licence')} onPress={() => void pickDocument('licence')} onRemove={() => requestDelete('licence', savedDocumentFor('licence')?.file_name ?? documents.licence[0]?.name ?? 'Driver Licence')} />
-          <DocumentReadyTile title="GR / Load Bill" fileName={savedDocumentFor('gr')?.file_name ?? documents.gr[0]?.name ?? ''} source={require('../../assets/brand/spot-intimation/glossy_orange_delivery_document_icon.png')} state={tileState('gr')} onPress={() => void pickDocument('gr')} onRemove={() => requestDelete('gr', savedDocumentFor('gr')?.file_name ?? documents.gr[0]?.name ?? 'GR / Load Bill')} />
-          <DocumentReadyTile title="Accident Photo" statusText={mediaStatusLabel('accident_photo')} source={require('../../assets/brand/spot-intimation/glossy_pink_camera_document_icon.png')} state={tileState('accident_photo')} onPress={() => void pickDocument('accident_photo')} onRemove={() => requestDelete('accident_photo', `${mediaCount('accident_photo')} accident photo${mediaCount('accident_photo') === 1 ? '' : 's'}`)} />
-          <DocumentReadyTile title="Accident Video" statusText={videoProcessingStatus || mediaStatusLabel('accident_video')} artwork="accident-video" state={tileState('accident_video')} onPress={() => void pickDocument('accident_video')} onRemove={() => requestDelete('accident_video', `${mediaCount('accident_video')} accident video${mediaCount('accident_video') === 1 ? '' : 's'}`)} />
+          <DocumentReadyTile title="RC Copy" focusReupload={focusDocumentType === 'RC Copy'} fileName={savedDocumentFor('rc')?.file_name ?? documents.rc[0]?.name ?? ''} source={require('../../assets/brand/spot-intimation/glossy_green_vehicle_document_icon.png')} state={tileState('rc')} onPress={() => void pickDocument('rc')} onRemove={() => requestDelete('rc', savedDocumentFor('rc')?.file_name ?? documents.rc[0]?.name ?? 'RC Copy')} />
+          <DocumentReadyTile title="Insurance Copy" focusReupload={focusDocumentType === 'Insurance Copy'} fileName={savedDocumentFor('insurance')?.file_name ?? documents.insurance[0]?.name ?? ''} source={require('../../assets/brand/spot-intimation/glossy_blue_secure_policy_document_icon.png')} state={tileState('insurance')} onPress={() => void pickDocument('insurance')} onRemove={() => requestDelete('insurance', savedDocumentFor('insurance')?.file_name ?? documents.insurance[0]?.name ?? 'Insurance Copy')} />
+          <DocumentReadyTile title="Driver Licence" focusReupload={focusDocumentType === 'Driver Licence'} fileName={savedDocumentFor('licence')?.file_name ?? documents.licence[0]?.name ?? ''} source={require('../../assets/brand/spot-intimation/glossy_purple_id_card_icon.png')} state={tileState('licence')} onPress={() => void pickDocument('licence')} onRemove={() => requestDelete('licence', savedDocumentFor('licence')?.file_name ?? documents.licence[0]?.name ?? 'Driver Licence')} />
+          <DocumentReadyTile title="GR / Load Bill" focusReupload={focusDocumentType === 'GR / Load Bill'} fileName={savedDocumentFor('gr')?.file_name ?? documents.gr[0]?.name ?? ''} source={require('../../assets/brand/spot-intimation/glossy_orange_delivery_document_icon.png')} state={tileState('gr')} onPress={() => void pickDocument('gr')} onRemove={() => requestDelete('gr', savedDocumentFor('gr')?.file_name ?? documents.gr[0]?.name ?? 'GR / Load Bill')} />
+          <DocumentReadyTile title="Accident Photo" focusReupload={focusDocumentType === 'Accident Photo'} statusText={mediaStatusLabel('accident_photo')} source={require('../../assets/brand/spot-intimation/glossy_pink_camera_document_icon.png')} state={tileState('accident_photo')} onPress={() => void pickDocument('accident_photo')} onRemove={() => requestDelete('accident_photo', `${mediaCount('accident_photo')} accident photo${mediaCount('accident_photo') === 1 ? '' : 's'}`)} />
+          <DocumentReadyTile title="Accident Video" focusReupload={focusDocumentType === 'Accident Video'} statusText={videoProcessingStatus || mediaStatusLabel('accident_video')} artwork="accident-video" state={tileState('accident_video')} onPress={() => void pickDocument('accident_video')} onRemove={() => requestDelete('accident_video', `${mediaCount('accident_video')} accident video${mediaCount('accident_video') === 1 ? '' : 's'}`)} />
         </View>
         <View style={styles.bulkUploadShell}>
           <Pressable accessibilityRole="button" disabled={uploadingDocuments} onPress={() => void pickBulkDocuments()} style={[styles.bulkUpload, (documents.bulk.length > 0 || savedBulkCount > 0) && styles.bulkUploadSelected]}>
@@ -909,10 +912,10 @@ export default function SelfManagedClaimScreen() {
   );
 }
 
-function DocumentReadyTile({ title, fileName, statusText, source, iconName, iconColor, artwork, state, onPress, onRemove }: { title: string; fileName?: string; statusText?: string; source?: any; iconName?: DocumentTileIconName; iconColor?: string; artwork?: 'accident-video'; state: DocumentTileState; onPress: () => void; onRemove: () => void }) {
+function DocumentReadyTile({ title, fileName, statusText, source, iconName, iconColor, artwork, state, focusReupload = false, onPress, onRemove }: { title: string; fileName?: string; statusText?: string; source?: any; iconName?: DocumentTileIconName; iconColor?: string; artwork?: 'accident-video'; state: DocumentTileState; focusReupload?: boolean; onPress: () => void; onRemove: () => void }) {
   const saved = state === 'saved';
   const ready = state === 'ready';
-  return <Pressable accessibilityRole="button" accessibilityState={{ selected: state !== 'idle' }} onPress={onPress} style={[styles.documentReadyTile, ready && styles.documentReadyTileReady, saved && styles.documentReadyTileSelected]}>
+  return <Pressable accessibilityRole="button" accessibilityState={{ selected: state !== 'idle' }} onPress={onPress} style={[styles.documentReadyTile, ready && styles.documentReadyTileReady, saved && styles.documentReadyTileSelected, focusReupload && styles.documentReadyTileReupload]}>
     
     {state !== 'idle' ? <Pressable accessibilityRole="button" accessibilityLabel={`Remove ${title}`} onPress={(event) => { event.stopPropagation(); onRemove(); }} style={styles.documentRemoveButton}><MaterialCommunityIcons name="close" size={13} color="#C43232" /></Pressable> : null}
     <View style={styles.documentReadyArtworkWrap}>
@@ -978,6 +981,8 @@ const styles = StyleSheet.create({
   documentReadyBadgeText: { color: '#0A43A3', fontSize: 8.5, fontWeight: Platform.OS === 'ios' ? '400' : '900' },
   documentReadyGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   documentReadyTile: { position: 'relative', width: '31.5%', minWidth: 0, minHeight: 106, borderRadius: 14, backgroundColor: '#F7FAFF', borderWidth: 1.5, borderColor: '#E2EAF4', paddingVertical: 8, paddingHorizontal: 5, alignItems: 'center', justifyContent: 'center' },
+  reuploadHint: { marginTop: 5, color: '#9E5D00', fontSize: 11, fontWeight: '700' },
+  documentReadyTileReupload: { borderColor: '#E2A043', backgroundColor: '#FFF5E6', borderWidth: 2 },
   documentReadyTileReady: { backgroundColor: '#F2F7FF', borderColor: '#6D9EE8' },
   documentReadyTileSelected: { backgroundColor: '#EFFAF4', borderColor: '#52B57F', shadowColor: '#18864B', shadowOpacity: 0.08, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 1 },
   documentSelectedCheck: { position: 'absolute', top: 5, left: 5, width: 22, height: 22, borderRadius: 11, backgroundColor: 'rgba(46, 173, 99, 0.16)', alignItems: 'center', justifyContent: 'center' },

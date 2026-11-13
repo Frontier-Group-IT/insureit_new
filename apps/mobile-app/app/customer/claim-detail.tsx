@@ -2,8 +2,8 @@ import { formatAppDate, formatAppDateTime } from '@/lib/indian-date';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { projectInternalClaim } from '@insureit/claim-journey';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Platform, Image, Linking, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { ImageSourcePropType } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
@@ -11,6 +11,7 @@ import Svg, { Circle } from 'react-native-svg';
 import { ClaimFinancialSummary } from '@/components/external-claim-ui';
 import { EmptyState, LoadingState, Message, Screen } from '@/components/ui';
 import { hasAllRequiredDocuments, hasOutstandingRejectedDocumentsForStatus, requestedFinalDocumentTypesFor } from '@/lib/claim-documents';
+import { outstandingClaimReuploads, reuploadDocumentStage, reuploadDocumentType, type ClaimReuploadNotice } from '@/lib/customer-claim-reupload';
 import { getInsurerLogoSource, getVehicleBrandLogoSource } from '@/lib/catalog-logos';
 import { customerInsurerDisplayName } from '@/lib/customer-insurer-display';
 import { SELF_MANAGED_MILESTONES, type ClaimMilestone, type ClaimMilestoneKey } from '@/lib/claim-service-mode';
@@ -29,7 +30,7 @@ type ClaimWithOwnership = Claim & {
 };
 
 type PolicyDisplay = Pick<Policy, 'id' | 'customer_id' | 'vehicle_id' | 'insurance_company_id' | 'policy_no' | 'policy_type' | 'start_date' | 'end_date'> & { source: 'sibl' | 'external' };
-type ReuploadNotice = { id: string; title: string; message: string | null; metadata: Record<string, unknown> | null; created_at: string };
+
 
 export default function ClaimDetailScreen() {
   const router = useRouter();
@@ -40,7 +41,7 @@ export default function ClaimDetailScreen() {
   const [insurer, setInsurer] = useState<InsuranceCompany | null>(null);
   const [documents, setDocuments] = useState<ClaimDocument[]>([]);
   const [tasks, setTasks] = useState<ClaimTask[]>([]);
-  const [reuploadNotices, setReuploadNotices] = useState<ReuploadNotice[]>([]);
+  const [reuploadNotices, setReuploadNotices] = useState<ClaimReuploadNotice[]>([]);
   const [milestones, setMilestones] = useState<ClaimMilestone[]>([]);
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(true);
@@ -69,7 +70,7 @@ export default function ClaimDetailScreen() {
       setClaim(nextClaim);
       setDocuments(documentsResult.data ?? []);
       setTasks(tasksResult.data ?? []);
-      setReuploadNotices((activityResult.data ?? []) as ReuploadNotice[]);
+      setReuploadNotices((activityResult.data ?? []) as ClaimReuploadNotice[]);
       setMilestones((milestoneResult.data ?? []) as ClaimMilestone[]);
       if (!nextClaim) { setLoading(false); return; }
 
@@ -97,6 +98,20 @@ export default function ClaimDetailScreen() {
     return () => { active = false; };
   }, [id]);
 
+  useFocusEffect(useCallback(() => {
+    let active = true;
+    if (!id) return () => { active = false; };
+    void Promise.all([
+      supabase.from('claim_documents').select('*').eq('claim_id', id).order('created_at', { ascending: false }),
+      supabase.from('customer_activity_events').select('id,title,message,metadata,created_at').eq('claim_id', id).eq('event_type', 'claim_document_reuploaded').order('created_at', { ascending: false }).limit(30),
+    ]).then(([documentResult, activityResult]) => {
+      if (!active) return;
+      if (!documentResult.error) setDocuments(documentResult.data ?? []);
+      if (!activityResult.error) setReuploadNotices((activityResult.data ?? []) as ClaimReuploadNotice[]);
+    });
+    return () => { active = false; };
+  }, [id]));
+
   const selfManaged = claim?.policy_service_source === 'external' || claim?.claim_service_mode === 'self_managed';
 
   useEffect(() => {
@@ -119,6 +134,7 @@ export default function ClaimDetailScreen() {
   const completedKeys = useMemo(() => new Set(milestones.filter((item) => item.milestone_status === 'completed' || item.milestone_status === 'not_applicable').map((item) => item.milestone_key)), [milestones]);
   const selfStageIndex = useMemo(() => Math.max(0, SELF_MANAGED_MILESTONES.findIndex((stage) => !completedKeys.has(stage.key))), [completedKeys]);
   const requestedFinalDocumentTypes = useMemo(() => claim ? requestedFinalDocumentTypesFor(claim.id, tasks) : [], [claim, tasks]);
+  const outstandingReuploads = useMemo(() => outstandingClaimReuploads(reuploadNotices, documents), [reuploadNotices, documents]);
   const internalProjection = useMemo(() => projectInternalClaim(claim?.current_status, {
     hasRejectedDocuments: claim ? hasOutstandingRejectedDocumentsForStatus(claim, documents, requestedFinalDocumentTypes) : false,
     hasRequiredDocuments: claim ? hasAllRequiredDocuments(claim, documents, requestedFinalDocumentTypes) : false,
@@ -145,6 +161,16 @@ export default function ClaimDetailScreen() {
 
   function openInternalStage(key: ClaimMilestoneKey) {
     router.push({ pathname: '/customer/internal-claim-stage', params: { id: claimId, key } });
+  }
+
+  function openReuploadStage(documentType: string) {
+    const key = reuploadDocumentStage(documentType, documents);
+    if (selfManaged) {
+      if (key === 'spot_intimation') return router.push({ pathname: '/customer/self-managed-claim', params: { id: claimId, documentType } });
+      if (key === 'spot_status') return openSelfStage(key);
+      return router.push({ pathname: '/customer/self-managed-milestone', params: { id: claimId, key, documentType, suppressClaimPrompt: '1' } });
+    }
+    router.push({ pathname: '/customer/internal-claim-stage', params: { id: claimId, key, documentType } });
   }
 
   function openRequiredDocumentStage() {
@@ -188,7 +214,7 @@ export default function ClaimDetailScreen() {
     <Screen title="Claim Tracker" showLogout showTitleHeader={false} topSpacing="compact">
       <View style={styles.pageHeading}><View style={styles.pageHeadingCopy}><Text style={styles.pageTitle}>Claim Tracker</Text></View>{selfManaged ? <View style={styles.headingActions}><View style={styles.assistanceActionWrap}>{showAssistanceTooltip ? <View pointerEvents="none" style={styles.assistanceTooltip}><Text style={styles.assistanceTooltipText}>Need help? Tap here.</Text><View style={styles.assistanceTooltipArrow} /></View> : null}<Pressable accessibilityRole="button" accessibilityLabel="Get Assistance" accessibilityHint="Opens Sankalp claim assistance" hitSlop={6} onPress={openAssistance} style={({ pressed }) => [styles.assistanceIconButton, pressed && styles.assistanceIconButtonPressed]}><MaterialCommunityIcons name="account-voice" size={21} color="#168161" /><Text style={styles.assistanceActionLabel}>Get Assistance</Text></Pressable></View></View> : null}</View>
       {message ? <Message type="error">{message}</Message> : null}
-      {reuploadNotices.length ? <View style={styles.reuploadNotice}><View style={styles.reuploadNoticeIcon}><MaterialCommunityIcons name="file-alert-outline" size={19} color="#A15C00" /></View><View style={styles.reuploadNoticeCopy}><Text style={styles.reuploadNoticeTitle}>Action needed: replace a claim document</Text>{reuploadNotices.map((notice) => <View key={notice.id} style={styles.reuploadNoticeItem}><Text style={styles.reuploadNoticeDocument}>{typeof notice.metadata?.document_type === 'string' ? notice.metadata.document_type : notice.title}</Text><Text style={styles.reuploadNoticeText}>{notice.message || 'Operations could not verify this file. Please upload a clearer replacement.'}</Text></View>)}<Pressable accessibilityRole="button" onPress={() => selfManaged ? (currentStage ? openSelfStage(currentStage.key) : undefined) : openRequiredDocumentStage()} style={styles.reuploadNoticeAction}><Text style={styles.reuploadNoticeActionText}>Open stage</Text><MaterialCommunityIcons name="arrow-right" size={16} color="#8A4B00" /></Pressable></View></View> : null}
+      {outstandingReuploads.length ? <View style={styles.reuploadNotice}><View style={styles.reuploadNoticeIcon}><MaterialCommunityIcons name="file-alert-outline" size={19} color="#A15C00" /></View><View style={styles.reuploadNoticeCopy}><Text style={styles.reuploadNoticeTitle}>Action needed: replace a claim document</Text>{outstandingReuploads.map((notice) => <View key={notice.id} style={styles.reuploadNoticeItem}><Text style={styles.reuploadNoticeDocument}>{reuploadDocumentType(notice)}</Text><Text style={styles.reuploadNoticeText}>{notice.message || 'Operations could not verify this file. Please upload a clearer replacement.'}</Text><Pressable accessibilityRole="button" onPress={() => openReuploadStage(reuploadDocumentType(notice))} style={styles.reuploadNoticeAction}><Text style={styles.reuploadNoticeActionText}>Open stage</Text><MaterialCommunityIcons name="arrow-right" size={16} color="#8A4B00" /></Pressable></View>)}</View></View> : null}
 
       <View style={[styles.heroCard, compactClaimIntimation && styles.heroCardCompact, { borderColor: tone.border }]}>
         <View style={[styles.heroOrbLarge, compactClaimIntimation && styles.heroOrbLargeCompact]} /><View style={[styles.heroOrbSmall, compactClaimIntimation && styles.heroOrbSmallCompact]} />

@@ -51,9 +51,11 @@ const WORK_APPROVAL_ICONS = {
 
 export default function SelfManagedMilestoneScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ id?: string; key?: string; suppressClaimPrompt?: string }>();
+  const params = useLocalSearchParams<{ id?: string; key?: string; suppressClaimPrompt?: string; documentType?: string }>();
   const claimId = typeof params.id === 'string' ? params.id : '';
   const key = (typeof params.key === 'string' ? params.key : '') as ClaimMilestoneKey;
+  const focusDocumentType = typeof params.documentType === 'string' ? params.documentType : '';
+  const [documentSectionY, setDocumentSectionY] = useState<number | null>(null);
   const definition = SELF_MANAGED_MILESTONES.find((item) => item.key === key);
   const [values, setValues] = useState<Values>({});
   const [milestones, setMilestones] = useState<ClaimMilestone[]>([]);
@@ -250,7 +252,7 @@ export default function SelfManagedMilestoneScreen() {
   const primaryLabel = saving ? 'Saving...' : key === 'payment_encashment' ? 'Complete Claim' : key === 'vehicle_delivery' && values.vehicle_received !== 'yes' ? 'Save Vehicle Status' : 'Save & Continue';
 
   return (
-    <Screen title={definition.label} showTitleHeader={false}>
+    <Screen title={definition.label} showTitleHeader={false} scrollTargetY={focusDocumentType ? documentSectionY : null}>
       {documentUploadStage ? <CompactDocumentStageHeader
         step={step}
         title={definition.label}
@@ -274,7 +276,7 @@ export default function SelfManagedMilestoneScreen() {
         vehicleMeta={vehicleMeta}
       />
 
-      {loading ? <Text style={styles.loading}>Loading saved details...</Text> : ExternalClaimMilestoneStageBody(key, values, set, milestones, claimId, customerId)}
+      {loading ? <Text style={styles.loading}>Loading saved details...</Text> : ExternalClaimMilestoneStageBody(key, values, set, milestones, claimId, customerId, focusDocumentType, (y) => setDocumentSectionY((current) => current ?? y))}
 
       {documentUploadStage ? <CompactDocumentActionBar
         claimId={claimId}
@@ -347,7 +349,7 @@ export default function SelfManagedMilestoneScreen() {
   );
 }
 
-export function ExternalClaimMilestoneStageBody(key: ClaimMilestoneKey, values: Values, set: (field: FieldKey, value: string) => void, milestones: ClaimMilestone[], claimId: string, customerId: string) {
+export function ExternalClaimMilestoneStageBody(key: ClaimMilestoneKey, values: Values, set: (field: FieldKey, value: string) => void, milestones: ClaimMilestone[], claimId: string, customerId: string, focusDocumentType = '', onDocumentSectionLayout?: (y: number) => void) {
   if (key === 'claim_intimation') return <>
     <ClaimFormSection title="Stage Details" subtitle="Record claim intimation, workshop and estimate details" iconImage={require('../../assets/claims/claim-intimation.png')}>
       <DateField label="Claim Intimation Date *" value={values.claim_intimation_date ?? ''} onChange={(v) => set('claim_intimation_date', v)} />
@@ -356,7 +358,7 @@ export function ExternalClaimMilestoneStageBody(key: ClaimMilestoneKey, values: 
       <Gap /><DateField label="Gate-in Date *" value={values.gate_in_date ?? ''} onChange={(v) => set('gate_in_date', v)} />
       <Gap /><MoneyField label="Estimate Amount *" value={values.estimate_amount ?? ''} onChange={(v) => set('estimate_amount', v)} />
     </ClaimFormSection>
-    {claimId && customerId ? <ExternalClaimDocumentTabs claimId={claimId} customerId={customerId} /> : null}
+    {claimId && customerId ? <View onLayout={(event) => { if (focusDocumentType) onDocumentSectionLayout?.(event.nativeEvent.layout.y); }}><ExternalClaimDocumentTabs claimId={claimId} customerId={customerId} focusDocumentType={focusDocumentType} /></View> : null}
   </>;
 
   if (key === 'work_approval') return <>
@@ -367,7 +369,7 @@ export function ExternalClaimMilestoneStageBody(key: ClaimMilestoneKey, values: 
       <Gap /><TextField label="Surveyor Phone (Optional)" value={values.surveyor_phone ?? ''} onChangeText={(v) => set('surveyor_phone', v)} keyboardType="phone-pad" />
       <Gap /><TextField label="Surveyor Email (Optional)" value={values.surveyor_email ?? ''} onChangeText={(v) => set('surveyor_email', v)} keyboardType="email-address" autoCapitalize="none" />
     </ClaimFormSection>
-    {claimId && customerId ? <WorkApprovalPdfUpload claimId={claimId} customerId={customerId} /> : null}
+    {claimId && customerId ? <View style={focusDocumentType ? styles.deepLinkUploadFocus : undefined} onLayout={(event) => { if (focusDocumentType) onDocumentSectionLayout?.(event.nativeEvent.layout.y); }}>{focusDocumentType ? <Text style={styles.deepLinkUploadMessage}>Please replace {focusDocumentType} below.</Text> : null}<WorkApprovalPdfUpload claimId={claimId} customerId={customerId} /></View> : null}
   </>;
 
   if (key === 'repair_ri') return <ClaimFormSection title="Stage Details" subtitle="Repair completion and re-inspection details" iconImage={require('../../assets/claims/claim-assessment.png')}>
@@ -377,17 +379,18 @@ export function ExternalClaimMilestoneStageBody(key: ClaimMilestoneKey, values: 
     <Gap /><DateField label="RI Done Date *" value={values.ri_done_date ?? ''} onChange={(v) => set('ri_done_date', v)} />
   </ClaimFormSection>;
 
-  if (key === 'billing') return <ClaimFormSection title="Stage Details" subtitle="Record the final workshop bill" iconImage={require('../../assets/claims/receipts-posted.png')}>
+  if (key === 'billing') return <View onLayout={(event) => { if (focusDocumentType) onDocumentSectionLayout?.(event.nativeEvent.layout.y); }}><ClaimFormSection title="Stage Details" subtitle="Record the final workshop bill" iconImage={require('../../assets/claims/receipts-posted.png')}>
     <DateField label="Bill Date *" value={values.bill_date ?? ''} onChange={(v) => set('bill_date', v)} />
     <Gap /><MoneyField label="Bill Amount *" value={values.bill_amount ?? ''} onChange={(v) => set('bill_amount', v)} />
-    {claimId ? <><Gap /><FinalBillUpload claimId={claimId} /></> : null}
-  </ClaimFormSection>;
+    {claimId ? <><Gap /><View style={focusDocumentType ? styles.deepLinkUploadFocus : undefined}>{focusDocumentType ? <Text style={styles.deepLinkUploadMessage}>Please replace {focusDocumentType} below.</Text> : null}<FinalBillUpload claimId={claimId} /></View></> : null}
+  </ClaimFormSection></View>;
 
   if (key === 'delivery_order') {
     const bill = milestoneAmount(milestones, 'billing', 'bill_amount');
     const currentDo = numberValue(values.do_amount);
     const contribution = bill !== null && currentDo !== null ? Math.max(0, bill - currentDo) : null;
     return <>
+      <View onLayout={(event) => { if (focusDocumentType) onDocumentSectionLayout?.(event.nativeEvent.layout.y); }}>
       <ClaimFormSection title="Stage Details" subtitle="Record assessment and delivery order details" iconImage={require('../../assets/claims/claim-documents.png')}>
         <ClaimChoice label="Assessment Received? *" value={values.assessment_received} options={[{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }]} onChange={(v) => set('assessment_received', v)} />
         <Gap /><DateField label="DO Date *" value={values.do_date ?? ''} onChange={(v) => set('do_date', v)} />
@@ -395,7 +398,7 @@ export function ExternalClaimMilestoneStageBody(key: ClaimMilestoneKey, values: 
         {claimId && customerId ? <>
           <Gap />
           <Text style={styles.deliveryReportSectionLabel}>Assistance Upload</Text>
-          <DeliveryOrderDocuments claimId={claimId} customerId={customerId} />
+          <View style={focusDocumentType ? styles.deepLinkUploadFocus : undefined}>{focusDocumentType ? <Text style={styles.deepLinkUploadMessage}>Please replace {focusDocumentType} below.</Text> : null}<DeliveryOrderDocuments claimId={claimId} customerId={customerId} /></View>
         </> : null}
         <ClaimFinancialSummary rows={[
           ...(bill !== null ? [{ label: 'Bill Amount', value: currency(bill) }] : []),
@@ -403,6 +406,7 @@ export function ExternalClaimMilestoneStageBody(key: ClaimMilestoneKey, values: 
           ...(contribution !== null ? [{ label: 'Customer Contribution', value: currency(contribution), emphasis: true }] : []),
         ]} />
       </ClaimFormSection>
+      </View>
     </>;
   }
 
@@ -1072,6 +1076,8 @@ function milestoneAmount(milestones: ClaimMilestone[], key: ClaimMilestoneKey, f
 function currency(value: number) { return `₹${Math.round(value).toLocaleString('en-IN')}`; }
 
 const styles = StyleSheet.create({
+  deepLinkUploadFocus: { borderWidth: 2, borderColor: '#DCA04E', backgroundColor: '#FFF7EA', borderRadius: 12, padding: 8 },
+  deepLinkUploadMessage: { color: '#9E5D00', fontSize: 11, fontWeight: '700', marginBottom: 6 },
   loading: { color: '#7A8799', fontSize: 11, fontWeight: Platform.OS === 'ios' ? '400' : '600', padding: 16 },
   gap: { height: 10 },
   subsectionHeader: { marginTop: 17, marginBottom: 10, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#E5EAF0', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },

@@ -45,6 +45,7 @@ type ExternalClaimDocumentTabsProps = {
   customerId: string;
   mode?: 'self-managed' | 'broker-managed';
   uploadsEnabled?: boolean;
+  focusDocumentType?: string;
 };
 
 export function ExternalClaimDocumentTabs({
@@ -52,6 +53,7 @@ export function ExternalClaimDocumentTabs({
   customerId,
   mode = 'self-managed',
   uploadsEnabled = true,
+  focusDocumentType = '',
 }: ExternalClaimDocumentTabsProps) {
   const isManaged = mode === 'broker-managed';
   const [activeKey, setActiveKey] = useState(finalDocumentGroups[0].key);
@@ -76,6 +78,12 @@ export function ExternalClaimDocumentTabs({
     })();
     return () => { active = false; };
   }, [claimId]);
+
+  useEffect(() => {
+    if (!focusDocumentType) return;
+    const matchingGroup = finalDocumentGroups.find((group) => group.documents.some((doc) => matchesClaimIntimationDocument(focusDocumentType, doc.type)));
+    if (matchingGroup) setActiveKey(matchingGroup.key);
+  }, [focusDocumentType]);
 
   const groups = useMemo(() => finalDocumentGroups.map((group: FinalDocumentGroup) => ({
     key: group.key,
@@ -358,6 +366,7 @@ export function ExternalClaimDocumentTabs({
         </View>
       </View>
 
+      {focusDocumentType ? <Text style={styles.reuploadFocusHint}>Please replace the rejected {focusDocumentType} document.</Text> : null}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabs}>
         {groups.map((item, index) => {
           const active = item.key === activeGroup.key;
@@ -378,7 +387,7 @@ export function ExternalClaimDocumentTabs({
           const uploading = uploadingType === document.type;
           const canModify = uploadsEnabled && (!isManaged || uploaded?.verification_status !== 'verified');
           const artwork = documentArtwork(document.type);
-          return <View key={document.type} style={[styles.documentCard, uploaded && styles.documentCardUploaded, replacementRequested && styles.documentCardReuploadRequested, !canModify && styles.documentCardReadOnly]}>
+          return <View key={document.type} style={[styles.documentCard, uploaded && styles.documentCardUploaded, replacementRequested && styles.documentCardReuploadRequested, !canModify && styles.documentCardReadOnly, focusDocumentType && matchesClaimIntimationDocument(focusDocumentType, document.type) && styles.reuploadFocusCard]}>
             {uploaded && canModify ? <Pressable accessibilityRole="button" accessibilityLabel={`Delete ${document.title}`} disabled={Boolean(uploadingType)} onPress={() => requestIndividualDelete(uploaded)} hitSlop={8} style={styles.documentDeleteButton}><MaterialCommunityIcons name="close" size={15} color="#C43232" /></Pressable> : null}
             <Image source={artwork} style={styles.documentArtwork} resizeMode="contain" />
             <Text style={styles.documentTitle} numberOfLines={2}>{document.title}</Text>
@@ -464,6 +473,8 @@ export function ExternalClaimDocumentTabs({
 }
 
 const styles = StyleSheet.create({
+  reuploadFocusHint: { marginVertical: 7, fontSize: 11, fontWeight: '700', color: '#9E5D00' },
+  reuploadFocusCard: { borderColor: '#DCA04E', borderWidth: 2, backgroundColor: '#FFF7EA' },
   card: { borderRadius: 18, borderWidth: 1, borderColor: '#D7E2EF', backgroundColor: '#FFFFFF', marginBottom: 8, overflow: 'hidden', shadowColor: '#14375F', shadowOpacity: 0.06, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 1 },
   headerRow: { paddingHorizontal: 11, paddingTop: 10, paddingBottom: 9, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 9 },
   title: { color: palette.navy, fontSize: 14.5, fontWeight: '900' }, optional: { color: '#62738A', fontWeight: '700' },

@@ -23,7 +23,7 @@ type ScreenTopSpacing = 'default' | 'compact' | 'tight' | 'legacy';
 // Opt out of automatic keyboard-driven layout movement on long, manually scrollable forms.
 type ScreenKeyboardLayout = 'automatic' | 'stable';
 
-export function Screen({ title, subtitle, children, showLogout = false, showTitleHeader = true, showBackNavigation = true, topSpacing = 'default', keyboardLayout = 'automatic' }: PropsWithChildren<{ title: string; subtitle?: string; showLogout?: boolean; showTitleHeader?: boolean; showBackNavigation?: boolean; topSpacing?: ScreenTopSpacing; keyboardLayout?: ScreenKeyboardLayout }>) {
+export function Screen({ title, subtitle, children, showLogout = false, showTitleHeader = true, showBackNavigation = true, topSpacing = 'default', keyboardLayout = 'automatic', scrollTargetY = null }: PropsWithChildren<{ title: string; subtitle?: string; showLogout?: boolean; showTitleHeader?: boolean; showBackNavigation?: boolean; topSpacing?: ScreenTopSpacing; keyboardLayout?: ScreenKeyboardLayout; scrollTargetY?: number | null }>) {
   const router = useRouter();
   const pathname = usePathname();
   const routeParams = useLocalSearchParams();
@@ -42,6 +42,11 @@ export function Screen({ title, subtitle, children, showLogout = false, showTitl
   const profileTopPadding = insets.top + topPaddingFor(topSpacing);
   const dashboardLogoEnabled = pathname !== '/customer/start-claim';
   const stableKeyboardLayout = keyboardLayout === 'stable';
+  const scrollRef = useRef<ScrollView>(null);
+  useEffect(() => {
+    if (scrollTargetY == null || !Number.isFinite(scrollTargetY)) return;
+    scrollRef.current?.scrollTo({ y: Math.max(0, scrollTargetY - 95), animated: true });
+  }, [scrollTargetY]);
   void showLogout;
 
   useEffect(() => {
@@ -165,6 +170,7 @@ export function Screen({ title, subtitle, children, showLogout = false, showTitl
       ) : null}
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' && !stableKeyboardLayout ? 'padding' : undefined} style={styles.keyboard}>
         <ScrollView
+          ref={scrollRef}
           style={styles.screen}
           contentContainerStyle={[styles.screenContent, showProfile && [styles.screenContentWithTabs, { paddingTop: profileTopPadding }], !showProfile && { paddingTop: insets.top + 18 }, compactTopSpacing && { paddingTop: insets.top + topPaddingFor('compact') }, legalTopSpacing && { paddingTop: insets.top + topPaddingFor('default') }, loadingOnly && styles.screenContentLoading]}
           keyboardShouldPersistTaps="handled"

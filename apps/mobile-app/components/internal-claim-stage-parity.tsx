@@ -60,7 +60,9 @@ const READ_ONLY_FIELD_STYLE = { opacity: 0.68 } as const;
 
 export default function InternalClaimStageParity() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ id?: string; key?: string }>();
+  const params = useLocalSearchParams<{ id?: string; key?: string; documentType?: string }>();
+  const focusDocumentType = typeof params.documentType === 'string' ? params.documentType : '';
+  const [documentSectionY, setDocumentSectionY] = useState<number | null>(null);
   const claimId = typeof params.id === 'string' ? params.id : '';
   const stageKey = (typeof params.key === 'string' ? params.key : '') as InternalJourneyStageKey;
   const definition = INTERNAL_JOURNEY_STAGES.find((item) => item.key === stageKey);
@@ -176,7 +178,7 @@ export default function InternalClaimStageParity() {
   }
 
   return (
-    <Screen title={definition.label} showTitleHeader={false}>
+    <Screen title={definition.label} showTitleHeader={false} scrollTargetY={focusDocumentType ? documentSectionY : null}>
       <InternalManagedClaimHeader
         title={definition.label}
         claimNo={claimNo}
@@ -193,12 +195,15 @@ export default function InternalClaimStageParity() {
       </View>
 
       {stageKey === 'claim_intimation' ? (
-        <ExternalClaimDocumentTabs
-          claimId={claim.id}
-          customerId={claim.customer_id}
-          mode="broker-managed"
-          uploadsEnabled={UPLOAD_STATUSES.has(claim.current_status)}
-        />
+        <View onLayout={(event) => { if (focusDocumentType && documentSectionY === null) setDocumentSectionY(event.nativeEvent.layout.y); }}>
+          <ExternalClaimDocumentTabs
+            claimId={claim.id}
+            customerId={claim.customer_id}
+            mode="broker-managed"
+            focusDocumentType={focusDocumentType}
+            uploadsEnabled={UPLOAD_STATUSES.has(claim.current_status)}
+          />
+        </View>
       ) : null}
 
       {stageKey !== 'claim_intimation' ? (
