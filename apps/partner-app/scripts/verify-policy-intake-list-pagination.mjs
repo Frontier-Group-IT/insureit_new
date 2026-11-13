@@ -123,7 +123,7 @@ assert.match(route, /review_access: match \? \{ can_review: false, can_finalize:
 assert.match(detail, /row.status === 'duplicate' && row.duplicate_match/, 'Mobile detail must display a duplicate notice');
 assert.match(detail, /View Existing Policy/, 'Registered policy duplicates must link to the existing policy');
 assert.match(detail, /View Earlier Intake/, 'Earlier intake duplicates must link to that intake');
-assert.match(detail, /row.attention_reason && row.status !== 'duplicate'/, 'Duplicate must not offer replacement actions');
+assert.match(detail, /row\.attention_reason\?\.trim\(\) && row\.status !== 'duplicate'/, 'Duplicate must not offer replacement actions and empty Operations notes must not show a banner');
 assert.match(detail, /!\['completed', 'rejected', 'duplicate'\]\.includes\(row.status\)/, 'Duplicate must not offer review actions');
 assert.match(api, /export function partnerPolicyIntakeMatchUrl\(path: string\)/, 'Match destination must use trusted portal URL validation');
 assert.ok(api.includes(String.raw`/^\/policies\/`), 'Registered policy URL must use the existing policy details view route');
