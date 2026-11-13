@@ -160,9 +160,11 @@ DECLARE
   v_partner_id uuid;
 BEGIN
   IF NULLIF(BTRIM(COALESCE(NEW.intermediary_code,'')),'') IS NULL THEN
-    IF TG_OP = 'UPDATE' AND NEW.intermediary_code IS DISTINCT FROM OLD.intermediary_code THEN
-      NEW.source_intermediary_id := NULL;
-      NEW.source_partner_id := NULL;
+    IF TG_OP = 'UPDATE' THEN
+      IF NEW.intermediary_code IS DISTINCT FROM OLD.intermediary_code THEN
+        NEW.source_intermediary_id := NULL;
+        NEW.source_partner_id := NULL;
+      END IF;
     END IF;
     RETURN NEW;
   END IF;
@@ -192,7 +194,9 @@ BEGIN
     NEW.source_partner_id := NULL;
     SELECT display_name INTO v_name FROM public.intermediaries WHERE id=v_id;
     IF v_name IS NOT NULL THEN NEW.lead_source := v_name; END IF;
-  ELSIF TG_OP='INSERT' OR NEW.intermediary_code IS DISTINCT FROM OLD.intermediary_code THEN
+  ELSIF TG_OP='INSERT' THEN
+    NEW.source_intermediary_id := NULL;
+  ELSIF NEW.intermediary_code IS DISTINCT FROM OLD.intermediary_code THEN
     -- Do not attach a different entity on an unrecognized intermediary code.
     NEW.source_intermediary_id := NULL;
   END IF;
@@ -203,7 +207,9 @@ BEGIN
     IF v_partner_id IS NOT NULL THEN
       NEW.source_partner_id:=v_partner_id;
       IF v_name IS NOT NULL THEN NEW.lead_source:=v_name; END IF;
-    ELSIF TG_OP='INSERT' OR NEW.intermediary_code IS DISTINCT FROM OLD.intermediary_code THEN
+    ELSIF TG_OP='INSERT' THEN
+      NEW.source_partner_id:=NULL;
+    ELSIF NEW.intermediary_code IS DISTINCT FROM OLD.intermediary_code THEN
       NEW.source_partner_id:=NULL;
     END IF;
   END IF;
