@@ -35,19 +35,6 @@ const vehicle = [
   {key:'chassisNo',label:'Chassis number'},
   {key:'engineNo',label:'Engine number'},
 ] satisfies Field[];
-const product = [
-  {key:'policyProduct',label:'Policy product',required:true,options:['Comprehensive','Third Party','SAOD','Bundled']},
-  {key:'policyNo',label:'Policy number',required:true},
-  {key:'insurerId',label:'Insurance company',required:true},
-  {key:'idv',label:'IDV (₹)',required:true},
-  {key:'od',label:'OD premium (₹)',required:true},
-  {key:'addOnPremium',label:'Add-on premium (₹)'},
-  {key:'tp',label:'TP premium (₹)',required:true},
-  {key:'cpa',label:'CPA amount (₹)'},
-  {key:'cpaOpted',label:'CPA opted',options:['Yes','No']},
-  {key:'validFrom',label:'Validity from (YYYY-MM-DD)',required:true},
-  {key:'validUpto',label:'Validity up to (YYYY-MM-DD)',required:true},
-] satisfies Field[];
 const premiumFields:Field[] = [
   {key:'idv',label:'Insured declared value (₹)',required:true},
   {key:'od',label:'OD premium (₹)',required:true},
@@ -280,7 +267,7 @@ export default function NativePolicyOnboarding(){
     </View>;
   };
   const section=(number:string,title:string,items:Field[])=><View style={styles.section} key={number}>
-    <View style={styles.sectionHead}><Text style={styles.number}>{number}</Text><Text style={styles.sectionTitle}>{title}</Text></View>
+    <View style={styles.sectionHead}>{number?<Text style={styles.number}>{number}</Text>:null}<Text style={styles.sectionTitle}>{title}</Text></View>
     <View style={styles.fields}>{items.map(field)}</View>
   </View>;
   return <PartnerScreen title="Policy Onboarding" eyebrow="POLICY INTAKE" onBack={()=>router.back()} navyTopBar navyStatusBar topBarIcon="document-text-outline">
