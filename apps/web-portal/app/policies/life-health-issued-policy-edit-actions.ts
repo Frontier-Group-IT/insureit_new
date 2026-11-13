@@ -6,7 +6,7 @@ import { requirePolicyEditor } from "@/lib/policy-access-server";
 import { canAccessPolicyCommercials } from "@/lib/policy-commercial-access";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { consumePolicyDateApproval, recordPreviousMonthPolicyUpload, linkConsumedPolicyDateApproval } from "@/lib/policy-date-approval-server";
-import { recordPolicyActivity, capturePolicyEditSnapshot, changedPolicyEditFields, POLICY_ACTIVITY_ACTIONS } from "@/lib/policy-activity";
+import { recordPolicyActivity, capturePolicyEditSnapshot, describePolicyEditChanges, POLICY_ACTIVITY_ACTIONS } from "@/lib/policy-activity";
 
 export type LifeHealthIssuedPolicyEditResult = { ok: true } | { ok: false; error: string };
 export type LifeHealthPolicyCopyResult =
@@ -326,7 +326,7 @@ export async function updateIssuedLifeHealthPolicy(formData: FormData): Promise<
 
   const activityAfter = await capturePolicyEditSnapshot(admin, policyId).catch(() => null);
   await recordPolicyActivity(admin, policyId, profile.id, POLICY_ACTIVITY_ACTIONS.POLICY_EDITED,
-    changedPolicyEditFields(activityBefore, activityAfter));
+    describePolicyEditChanges(activityBefore, activityAfter));
   if (changingPolicyNumber) await admin.from("audit_logs").insert({ actor_id: profile.id, table_name: "policies", record_id: policyId, action: "policy_number_changed", old_data: { policy_no: policy.policy_no }, new_data: { policy_no: requestedPolicyNumber } });
   if(dateGuard.previousMonth)await recordPreviousMonthPolicyUpload(admin,policyId,profile.id,sourcingDate,dateGuard.approverName);
   if(dateGuard.approverName)await linkConsumedPolicyDateApproval(admin,clean(formData.get("dateApprovalId")),policyId,profile.id);
