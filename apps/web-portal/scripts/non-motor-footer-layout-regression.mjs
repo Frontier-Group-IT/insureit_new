@@ -15,9 +15,9 @@ assert.ok(footer.indexOf("<NonMotorDocumentPicker") < footer.indexOf(">Cancel</L
 assert.doesNotMatch(footer, /\bfixed\b|\bsticky\b|bottom-0|z-40/, "Footer controls must not be viewport-fixed");
 assert.match(src, /<NonMotorLiveSummary/, "Non-Motor summary must remain available");
 const picker = readFileSync(new URL("../components/non-motor-document-picker.tsx", import.meta.url), "utf8");
-assert.match(picker, /type === "policy_copy" \? <button type="button" onClick=\{viewSavedDocument\}/, "Saved policy copy filename opens the document");
+assert.match(picker, /<button type="button" onClick=\{viewSavedDocument\} title=\{existingDocument\.fileName\}/, "Every saved document filename opens the document");
 assert.match(picker, /\{existingDocument\.fileName\}<\/span>/, "Use actual saved filename as action label");
-assert.match(picker, /type === "policy_copy" \? <button type="button" onClick=\{\(\) => inputRef\.current\?\.click\(\)\}/, "Replace policy copy has its own icon button");
+assert.match(picker, /<button type="button" onClick=\{\(\) => inputRef\.current\?\.click\(\)\} disabled=\{deleting\} aria-label=/, "Every saved document has a dedicated Replace icon");
 assert.match(picker, /aria-label=\{\`Replace \$\{label\}\`\}/, "Replace icon is accessible");
 assert.match(picker, /onClick=\{viewSavedDocument\} aria-label=\{\`View \$\{label\}\`\}/, "Existing view button stays available");
 assert.match(picker, /onDeleteExisting \?/, "Existing delete control stays available");
