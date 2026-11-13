@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { onboardPolicyForVerifiedActor, type PolicyOnboardingPayload } from "@/lib/policy-onboarding-engine";
+import { getEffectivePermission } from "@/lib/permission-management";
+import { getOperationsHeadDownlinePolicyScope } from "@/lib/policy-access-scope";
 import { createSupabaseWithAccessToken } from "@/lib/auth";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { hasEffectiveCapability } from "@/lib/effective-permissions";
@@ -13,7 +16,7 @@ export const dynamic = "force-dynamic";
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const fields = ["registrationMode","issuanceDate","rmName","intermediaryType","leadSource","intermediaryCode","businessLine","registrationNo","insuredName","phoneNo","vehicleClass","make","model","fuelType","capacity","manufacturingYear","chassisNo","engineNo","rtoState","rtoName","policyProduct","idv","od","tp","cpaOpted","cpa","policyNo","insurerId","validFrom","validUpto","payoutBasis","projectedOdPercent","projectedTpPercent","insurerScheme","payinBillNo","payinBilledAmount","payinBillDate","payinStatus","retention","payoutOdPercent","payoutTpPercent","flatPayoutAmount","payoutStatus","payoutDate","payoutVoucherNo","remarks"] as const;
 const commercialFields = ["payoutBasis","projectedOdPercent","projectedTpPercent","insurerScheme","payinBillNo","payinBilledAmount","payinBillDate","payinStatus","retention","payoutOdPercent","payoutTpPercent","flatPayoutAmount","payoutStatus","payoutDate","payoutVoucherNo"] as const;
-type Input = { action?: "prepare" | "save"; intake_id?: string; take_over?: boolean; expected_reviewer_id?: string | null; revision?: number; draft?: PolicyIntakeDraft };
+type Input = { action?: "prepare" | "save" | "book"; intake_id?: string; take_over?: boolean; expected_reviewer_id?: string | null; revision?: number; draft?: PolicyIntakeDraft; resolution?: PolicyOnboardingPayload["resolution"]; date_approval_id?: string | null };
 type Intake = { id:string; intake_number:string; lead_source_type:"posp"|"misp"|"partner"; lead_source_name:string; lead_source_code:string|null; customer_mobile:string; ocr_fields:PolicyIntakeOcrField[]; status:string; assigned_to_profile_id:string|null; created_at:string; matched_customer_id:string|null };
 function reply(error:string,status:number){return NextResponse.json({ok:false,error},{status,headers:{"Cache-Control":"no-store"}});}
 function good(data:Record<string,unknown>){return NextResponse.json({ok:true,...data},{headers:{"Cache-Control":"no-store"}});}
@@ -23,7 +26,7 @@ export async function POST(request:Request){
   if(!token)return reply("Partner authentication required.",401);
   let body:Input;
   try{body=await request.json() as Input;}catch{return reply("Invalid onboarding request.",400);}
-  if(!uuid.test(body.intake_id??"")||!["prepare","save"].includes(body.action??""))return reply("Invalid onboarding request.",400);
+  if(!uuid.test(body.intake_id??"")||!["prepare","save","book"].includes(body.action??""))return reply("Invalid onboarding request.",400);
   const scoped=createSupabaseWithAccessToken(token);
   const {data:{user},error:authError}=await scoped.auth.getUser(token);
   if(authError||!user)return reply("Your session has expired. Sign in again.",401);
@@ -47,6 +50,55 @@ export async function POST(request:Request){
   const dup=await loadPolicyIntakeDuplicateMatches(admin,[intake]);
   if(!dup.ok)return reply("Duplicate verification is unavailable.",503);
   if(dup.matches.has(intake.id))return reply("Duplicate intakes cannot be onboarded.",409);
+  if(body.action==="book"){
+    if(intake.status!=="in_review"||intake.assigned_to_profile_id!==user.id)return reply("You are no longer the assigned reviewer.",409);
+    if(!Number.isSafeInteger(body.revision)||(body.revision??0)<1)return reply("Save your latest draft before booking.",400);
+    const canCreate=await hasEffectiveCapability(profile,"create_policies","edit");
+    const legacy=await getEffectivePermission(profile.id,profile.role,"view_policies");
+    if(!head&&!canCreate&&!["edit","approve"].includes(legacy.access))return reply("Policy booking permission is required.",403);
+    if(head){
+      const downline=await getOperationsHeadDownlinePolicyScope(profile.id);
+      if(!intake.lead_source_code||!downline.intermediaryCodes.includes(intake.lead_source_code))return reply("This lead source is outside your approved downline.",403);
+    }
+    const {data:stored,error:storedError}=await admin.from("policy_intake_onboarding_drafts")
+      .select("draft_payload,revision").eq("intake_id",intake.id).maybeSingle<{draft_payload:PolicyIntakeDraft & Record<string,unknown>;revision:number}>();
+    if(storedError||!stored||stored.revision!==body.revision)return reply("Your draft changed. Reload and save before booking.",409);
+    const d=stored.draft_payload;
+    if(d.businessLine!=="Motor")return reply("This native booking flow currently supports Motor policies only.",400);
+    const resolution=body.resolution;
+    if(resolution && (typeof resolution!=="object"||Array.isArray(resolution)))return reply("Invalid booking resolution.",400);
+    const isCpm=d.vehicleClass==="CPM";
+    const isThirdParty=d.policyProduct==="Third Party";
+    const payload:PolicyOnboardingPayload={
+      sourceIntakeId:intake.id,draftRevision:stored.revision,dateApprovalId:body.date_approval_id??null,
+      customer:{name:d.insuredName,phone:d.phoneNo,type:"individual",source:d.leadSource},
+      vehicle:{
+        registrationMode:d.registrationMode,registrationNumber:d.registrationMode==="registered"?d.registrationNo:"",
+        classCode:d.vehicleClass,make:d.make,model:d.model,fuelType:d.fuelType,manufacturingYear:d.manufacturingYear,
+        capacity:d.capacity,chassisNumber:d.chassisNo,engineNumber:d.engineNo,rtoName:d.rtoName,rtoState:d.rtoState,
+        registrationStatus:d.registrationMode==="unregistered"?"registration_pending":"",
+      },
+      policy:{
+        issuanceDate:d.issuanceDate,rmName:d.rmName,intermediaryType:d.intermediaryType,leadSource:d.leadSource,intermediaryCode:d.intermediaryCode,
+        businessLine:d.businessLine,policyType:d.policyProduct,idv:isThirdParty?"0":d.idv,policyNumber:d.policyNo,
+        insuranceCompanyId:d.insurerId,validFrom:d.validFrom,validUpto:d.validUpto,
+        odValidUpto:d.validUpto,tpValidUpto:String(d.tpValidUpto??""),cpaValidUpto:String(d.cpaValidUpto??""),remarks:d.remarks,
+      },
+      premium:{
+        od:isThirdParty?"0":d.od,tp:isCpm?"0":d.tp,addOnPremium:String(d.addOnPremium??"0"),
+        cpaOpted:!isCpm&&d.cpaOpted==="Yes",cpa:isCpm?"0":d.cpa,
+      },
+      payin:{basis:"NET",odPercent:commercialAccess?d.projectedOdPercent:"",tpPercent:commercialAccess?d.projectedTpPercent:"",scheme:commercialAccess?d.insurerScheme:"",provided:false},
+      billing:{billNumber:"",billedAmount:"0",billDate:"",status:"Unbilled"},
+      payout:{retention:commercialAccess?d.retention:"",odPercent:commercialAccess?d.payoutOdPercent:"",tpPercent:commercialAccess?d.payoutTpPercent:"",flatAmount:commercialAccess?d.flatPayoutAmount:"",status:"Pending",date:"",voucherNumber:"",provided:false},
+      authbridge:{applied:false,transactionId:"",providerTransactionId:"",lookedUpAt:""},
+      resolution,
+    };
+    // The same server-only engine and transactional RPC used by the website handles
+    // validation, customer/vehicle matching, coverage conflicts, date approval and booking.
+    const result=await onboardPolicyForVerifiedActor(payload,profile,true);
+    return good({booking:result});
+  }
   if(body.action==="save"){
     if(intake.status!=="in_review"||intake.assigned_to_profile_id!==user.id)return reply("You are no longer the assigned reviewer.",409);
     if(!Number.isSafeInteger(body.revision)||!body.revision||!body.draft||typeof body.draft!=="object"||Array.isArray(body.draft))return reply("Invalid draft revision or values.",400);
