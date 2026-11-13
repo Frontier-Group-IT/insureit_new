@@ -119,6 +119,11 @@ export default async function DailyReportPage({ searchParams }: Props) {
             </table>
           </div>
         )}
+        {!error && payload?.truncated ? (
+          <p role="status" className="border-t border-amber-200 bg-amber-50 px-4 py-2 text-[10px] font-semibold text-amber-900">
+            This day exceeds the safe report pagination limit. Earlier activities may not be shown. Use a narrower employee or activity filter to see additional entries.
+          </p>
+        ) : null}
         {!error && payload ? (
           <div className="flex items-center justify-between border-t border-[#e4e9f1] px-4 py-3 text-[10px] text-[#66758B]">
             <span>Page {filters.page} · {payload.pageSize} per page</span>

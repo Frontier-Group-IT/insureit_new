@@ -49,3 +49,11 @@ Check one-day Asia/Kolkata midnight boundaries, date/employee/type filters, 30-r
 - Manual hierarchy-role UI verification remains outstanding.
 - Audit performance index is absent; do not change the production schema as part of this phase.
 - Partner/mobile and other operational code paths require separate future coverage audits.
+
+## Phase 4 completeness check (13 Nov 2026)
+
+- Read-only 30-day samples show separate busiest days of 313 audit events, 127 policy creations and 113 intake creations. These maxima may have occurred on different dates; they must not be added into an observed report count.
+- The previous 15-page ceiling is replaced with 40 pages of 30 items, retaining bounded per-source reads (up to 1,230 requested per source on the final page). Beyond 40 pages, show explicit truncation messaging rather than claim there are no more events.
+- Audit policy-related tables now enter the Policy filter, while Policy and Claim subcategories are excluded from Other, with a regression test.
+- Authenticated user, manager and organization UI acceptance remains necessary after an approved release; no preview environment is available.
+- The missing audit actor/time index is a separate optimization recommendation. No SQL, production write, merge or deployment was performed.

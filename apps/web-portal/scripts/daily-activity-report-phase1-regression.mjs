@@ -18,8 +18,8 @@ assert.match(source, /\.in\("created_by",actorIds\)/, "Created rows are employee
 assert.match(source, /\.in\("finalized_by_profile_id",actorIds\)/, "Finalization scope uses actual actor");
 assert.match(source, /\.in\("converted_by",actorIds\)/, "Case conversions use actual actor");
 assert.match(source, /\.gte\("created_at",startIso\)\.lt\("created_at",endIso\)/, "Date filter is applied by the database");
-assert.match(source, /SOURCE_CAP = 480/, "Per-source fetch is bounded");
-assert.match(source, /PAGE_SIZE = 30/, "Client never downloads entire activity table");
+assert.match(source, /const limit = sourceLimit/, "Per-source fetch remains bounded");
+assert.match(source, /dailyPageWindow\(query.page\)/, "All pages use tested server-side page bounds");
 assert.match(source, /source:"Record history"/, "Reconstructed history source is labeled");
 assert.match(page, /Phase 1 shows existing recorded events/, "Incomplete historical coverage is disclosed");
 assert.match(page, /type="date"/, "Date filter is present");
