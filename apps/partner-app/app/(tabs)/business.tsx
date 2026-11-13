@@ -726,7 +726,7 @@ function ProductTile({ icon, label, share }: { icon: keyof typeof Ionicons.glyph
       <View style={styles.productIconWrap}>
         <Ionicons name={icon} size={23} color="#123B83" />
       </View>
-      <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} style={styles.productLabel}>{label}</Text>
+      <Text numberOfLines={1} ellipsizeMode="tail" accessibilityLabel={label} style={styles.productLabel}>{label}</Text>
       <Text style={styles.productShare}>{share}%</Text>
     </View>
   );
