@@ -35,7 +35,7 @@ assert.match(screen,/Final case creation, documents, risk validation and permiss
 assert.match(screen,/isMotor&&data\?\.commercialAccess/,'Motor financial entry still permission-gated');
 assert.match(screen,/saveNativePolicyOnboarding\(id,data.revision,draft\)/,'Draft save remains functional');
 // Motor follows Operations structure; other product types retain draft-only screens.
-assert.match(screen,/isMotor\?policy.slice\(0,4\):policy/, 'Do not add duplicate source-code and RM form rows in Motor.');
+assert.match(screen,/policy\.slice\(0,4\)\.map\(item/, 'Motor and non-Motor source sections use only four primary rows.');
 assert.match(screen,/isMotor&&f.key==='intermediaryType'&&draft.rmName/, 'Show RM beneath intermediary type.');
 assert.match(screen,/isMotor&&f.key==='leadSource'&&draft.intermediaryCode/, 'Show source code beneath lead source.');
 assert.match(screen,/isMotor&&f.key==='issuanceDate'\?'Policy issuance date'/, 'Motor uses policy issuance label.');
@@ -45,7 +45,7 @@ assert.match(screen,/accessibilityState=\{\{selected:draft\?\.registrationMode==
 assert.match(screen,/styles.registrationRow/, 'Registration number is full width with an inline RC action.');
 assert.match(screen,/accessibilityLabel="Fetch RC details"/, 'Keep authorized RC lookup.');
 assert.match(screen,/disabled=\{lookingUpRc\|\|!registrationValid\}/, 'Do not fetch an empty or invalid registration.');
-assert.match(screen,/motorVehicleFields.slice\(0,7\)\.map\(field\)/, 'Keep Motor fields in paired columns.');
+assert.match(screen,/motorVehicleFields\.slice\(0,7\)\.map\(item=>field\(item\)\)/, 'Keep Motor fields in paired columns without accidental width overrides.');
 assert.match(screen,/motorProductSection=section\('03','Policy product, premium & validity'/, 'Combine Motor policy and premium details into Operations section 03.');
 assert.match(screen,/label:'GST',value:gst/, 'Motor summary includes GST.');
 assert.match(screen,/label:'Gross premium',value:gross/, 'Motor summary includes gross.');
