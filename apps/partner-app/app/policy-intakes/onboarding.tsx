@@ -4,14 +4,15 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 import { PartnerScreen } from '@/components/partner-screen';
+import { PartnerPolicyDateField } from '@/components/policy-intakes/partner-policy-date-field';
 import { getPartnerPolicyIntakeDocumentUrl } from '@/lib/policy-intakes';
-import { prepareNativePolicyOnboarding, saveNativePolicyOnboarding, bookNativePolicyOnboarding, requestNativePolicyDateApproval, verifyNativePolicyDateApproval, lookupNativePolicyRc, type NativePolicyDraft, type NativeOnboardingData } from '@/lib/policy-onboarding';
+import { prepareNativePolicyOnboarding, saveNativePolicyOnboarding, bookNativePolicyOnboarding, requestNativePolicyDateApproval, verifyNativePolicyDateApproval, lookupNativePolicyRc, type NativePolicyDraft, type NativeOnboardingData, type NativeProductType } from '@/lib/policy-onboarding';
 
 type FieldKey = keyof NativePolicyDraft;
 type Field = { key:FieldKey; label:string; required?:boolean; options?:string[] };
 const policy = [
-  {key:'issuanceDate',label:'Policy issuance date',required:true},
-  {key:'businessLine',label:'Policy type',required:true,options:['Motor']},
+  {key:'issuanceDate',label:'Proposal date',required:true},
+  {key:'businessLine',label:'Policy type',required:true,options:['Motor','Life','Health','Non Motor']},
   {key:'intermediaryType',label:'Intermediary type',required:true,options:['POSP','MISP','SIBL / Partner']},
   {key:'leadSource',label:'Lead source',required:true},
   {key:'intermediaryCode',label:'Lead source code'},
@@ -49,6 +50,65 @@ const productCaseFields:Field[] = [
   {key:'policyNo',label:'Policy number',required:true},
   {key:'validFrom',label:'Validity from (YYYY-MM-DD)',required:true},
   {key:'validUpto',label:'Validity up to (YYYY-MM-DD)',required:true},
+];
+type ProductField = {key:string;label:string;required?:boolean;options?:string[];date?:boolean;wide?:boolean};
+const yearOptions=Array.from({length:100},(_,i)=>i===0?'1 Year':(i+1)+' Years');
+const paymentFrequencies=['Monthly','Quarterly','Half Yearly','Annually','One Time'];
+const paymentModes=['Cheque','NEFT/RTGS','UPI','Credit/Debit Card','Net Banking'];
+const commonPerson:ProductField[]=[
+  {key:'insuredName',label:'Client / proposer name',required:true},
+  {key:'phoneNo',label:'Client mobile number',required:true},
+  {key:'address',label:'Address',wide:true},
+];
+const lifeProduct:ProductField[]=[
+  {key:'insurerId',label:'Insurance company',required:true},
+  {key:'productName',label:'Product name',required:true},
+  {key:'proposalNumber',label:'Case / proposal number',required:true},
+  {key:'ppt',label:'PPT · Premium paying term',options:['Single Pay',...yearOptions]},
+  {key:'pd',label:'PD · Policy duration',options:yearOptions},
+  {key:'paymentFrequency',label:'Payment frequency',required:true,options:paymentFrequencies},
+];
+const lifePremium:ProductField[]=[
+  {key:'premiumAmount',label:'Premium amount (₹)',required:true},
+  {key:'paymentMode',label:'Payment mode',required:true,options:paymentModes},
+];
+const nonMotorCategories=['Fire & Property','Marine','Engineering','Liability','Burglary','Employee Compensation','Cyber','Travel','Personal Accident','Package Policy','Other'];
+const riskFields:Record<string,ProductField[]>={
+  'Fire & Property':[{key:'riskTitle',label:'Risk / property description',required:true},{key:'riskLocation',label:'Risk location',required:true},{key:'occupancyType',label:'Occupancy type'}],
+  'Burglary':[{key:'riskTitle',label:'Risk / property description',required:true},{key:'riskLocation',label:'Risk location',required:true}],
+  'Package Policy':[{key:'riskTitle',label:'Risk / property description',required:true},{key:'riskLocation',label:'Risk location',required:true}],
+  'Marine':[{key:'cargoDescription',label:'Cargo description',required:true},{key:'transitFrom',label:'Transit from',required:true},{key:'transitTo',label:'Transit to',required:true},{key:'transitMode',label:'Transit mode'}],
+  'Engineering':[{key:'projectName',label:'Project name',required:true},{key:'projectValue',label:'Project value (₹)'},{key:'riskLocation',label:'Risk location',required:true}],
+  'Liability':[{key:'natureOfBusiness',label:'Nature of business',required:true},{key:'liabilityType',label:'Liability type',required:true}],
+  'Employee Compensation':[{key:'employeeCount',label:'Employee count',required:true},{key:'annualWages',label:'Annual wages (₹)',required:true}],
+  'Cyber':[{key:'businessName',label:'Business name',required:true},{key:'annualTurnover',label:'Annual turnover (₹)',required:true}],
+  'Travel':[{key:'riskTitle',label:'Travel / insured risk',required:true},{key:'riskLocation',label:'Destination',required:true}],
+  'Personal Accident':[{key:'riskTitle',label:'Insured activity / risk',required:true}],
+  'Other':[{key:'riskTitle',label:'Risk description',required:true}],
+};
+const otherPolicy:ProductField[]=[
+  {key:'category',label:'Policy category',required:true,options:nonMotorCategories},
+  {key:'customerType',label:'Customer type',options:['Individual','Organisation']},
+  {key:'productName',label:'Product / policy name',required:true},
+  {key:'policyNumber',label:'Policy number',required:true},
+  {key:'insurerId',label:'Insurance company',required:true},
+];
+const otherPremium:ProductField[]=[
+  {key:'sumInsured',label:'Sum insured / limit (₹)',required:true},
+  {key:'deductible',label:'Deductible / excess (₹)'},
+  {key:'netPremium',label:'Net premium (₹)'},
+  {key:'gstAmount',label:'GST (₹)'},
+  {key:'grossPremium',label:'Gross premium (₹)',required:true},
+  {key:'startDate',label:'Policy start',required:true,date:true},
+  {key:'endDate',label:'Policy expiry',required:true,date:true},
+];
+const productExtras:ProductField[]=[
+  {key:'proposalNumber',label:'Proposal number'},
+  {key:'previousInsurer',label:'Previous insurer'},
+  {key:'previousPolicyNumber',label:'Previous policy number'},
+  {key:'previousClaims',label:'Previous claims'},
+  {key:'addOns',label:'Add-ons',wide:true},
+  {key:'specialConditions',label:'Special conditions',wide:true},
 ];
 const commercial = [
   {key:'payoutBasis',label:'Pay-in / payout basis',options:['NET','FLAT']},
@@ -92,6 +152,17 @@ export default function NativePolicyOnboarding(){
     finally{setLoading(false);}
   },[id]);
   useEffect(()=>{void load();},[load]);
+  const productType:NativeProductType=(draft?.businessLine==='Life'||draft?.businessLine==='Health'||draft?.businessLine==='Non Motor')?draft.businessLine:'Motor';
+  const isMotor=productType==='Motor';
+  const productValues=(productType==='Motor'?{}:draft?.productDrafts?.[productType])??{};
+  const updateProduct=(key:string,value:string)=>{
+    if(productType==='Motor')return;
+    setDraft(current=>current?{...current,productDrafts:{
+      ...current.productDrafts,[productType]:{...current.productDrafts?.[productType],[key]:value}
+    }}:current);
+    setDirty(true);
+    setVerifiedApprovalId(null);
+  };
   const update=(key:FieldKey,value:string)=>{
     setDraft(current=>{
       if(!current)return current;
