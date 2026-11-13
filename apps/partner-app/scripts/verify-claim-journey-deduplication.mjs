@@ -7,6 +7,12 @@ const trackerLogic = readFileSync(fileURLToPath(new URL('../lib/claim-tracker.ts
 const detailScreen = readFileSync(fileURLToPath(new URL('../app/claim/stage.tsx', import.meta.url)), 'utf8');
 assert.match(trackerScreen, /CLAIM_STAGES\.map/);
 assert.match(trackerScreen, /getClaimTrackerState\(data\)/);
+const trackerFocusRefresh = trackerScreen.match(/useFocusEffect\(useCallback\(\(\) => \{ void load\(\); \}, \[load\]\)\)/g) ?? [];
+assert.equal(trackerFocusRefresh.length, 1, 'Claim Tracker must refetch on focus after a saved stage');
+assert.doesNotMatch(trackerScreen, /useEffect\(\(\) => \{ void load\(\); \}, \[load\]\)/, 'Focus refresh replaces mount-only refresh');
+assert.match(trackerScreen, /setData\(await getPartnerClaimDetail\(id\)\)/, 'Tracker must reload latest scoped claim detail');
+assert.match(trackerLogic, /progress: Math\.round\(completed \/ CLAIM_STAGES\.length \* 100\)/, 'Preserve nine-stage completion math');
+
 assert.match(trackerLogic, /data\.status_history\.map/);
 assert.match(trackerLogic, /data\.stages\.map/);
 assert.match(trackerLogic, /getStageHistory/);
