@@ -111,16 +111,17 @@ const productExtras:ProductField[]=[
   {key:'specialConditions',label:'Special conditions',wide:true},
   {key:'remarks',label:'Remarks',wide:true},
 ];
-const commercial = [
-  {key:'payoutBasis',label:'Pay-in / payout basis',options:['NET','FLAT']},
-  {key:'projectedOdPercent',label:'Insurer OD pay-in (%)'},
-  {key:'projectedTpPercent',label:'Insurer TP pay-in (%)'},
+const insurerPayinFields:Field[]=[
+  {key:'projectedOdPercent',label:'OD Pay-in %'},
+  {key:'projectedTpPercent',label:'TP/CPA Pay-in %'},
   {key:'insurerScheme',label:'Insurer scheme'},
-  {key:'retention',label:'Retention (₹)'},
-  {key:'payoutOdPercent',label:'Partner OD payout (%)'},
-  {key:'payoutTpPercent',label:'Partner TP payout (%)'},
-  {key:'flatPayoutAmount',label:'Flat payout amount (₹)'},
-] satisfies Field[];
+];
+const partnerPayoutFields:Field[]=[
+  {key:'payoutOdPercent',label:'Payout OD %'},
+  {key:'payoutTpPercent',label:'Payout TP/CPA %'},
+  {key:'payoutBasis',label:'Payout basis',options:['NET','OD','FLAT']},
+  {key:'flatPayoutAmount',label:'Total agreed payout'},
+];
 
 function amount(value:string){const n=Number(value);return Number.isFinite(n)&&n>0?n:0;}
 export default function NativePolicyOnboarding(){
@@ -143,6 +144,7 @@ export default function NativePolicyOnboarding(){
   const [picker,setPicker]=useState<{key:string;items:{value:string;label:string}[];product?:boolean}|null>(null);
   const [dirty,setDirty]=useState(false);
   const [commercialExpanded,setCommercialExpanded]=useState(false);
+  const [commercialModal,setCommercialModal]=useState<'payin'|'payout'|null>(null);
   const load=useCallback(async()=>{
     if(!id)return;
     setLoading(true);setError('');
@@ -322,6 +324,13 @@ export default function NativePolicyOnboarding(){
     ?(amount(draft.od)+amount(draft.cpa)+amount(draft.addOnPremium||'0'))*.18+amount(draft.tp)*.05
     :net*.18):0,[draft,net]);
   const gross=net+gst;
+  const payinTotal=draft?
+    (amount(draft.od)+amount(draft.addOnPremium||'0'))*amount(draft.projectedOdPercent)/100
+    +(amount(draft.tp)+(draft.vehicleClass==='CPM'?0:amount(draft.cpa)))*amount(draft.projectedTpPercent)/100
+    +amount(draft.insurerScheme):0;
+  const payoutTotal=draft?draft.payoutBasis==='FLAT'?amount(draft.flatPayoutAmount):
+    (amount(draft.od)+amount(draft.addOnPremium||'0'))*amount(draft.payoutOdPercent)/100
+    +(draft.payoutBasis==='OD'?0:(amount(draft.tp)+(draft.vehicleClass==='CPM'?0:amount(draft.cpa)))*amount(draft.payoutTpPercent)/100):0;
   const rupees=(value:number)=>'₹'+value.toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
   const filled=useMemo(()=>{
     if(!draft)return 0;
@@ -337,7 +346,7 @@ export default function NativePolicyOnboarding(){
     if(!draft)return null;
     const raw=draft[f.key];
     const current=typeof raw==='string'?raw:'';
-    if(['issuanceDate','validFrom','validUpto','tpValidUpto','cpaValidUpto'].includes(f.key))return <PartnerPolicyDateField key={f.key} label={isMotor&&f.key==='issuanceDate'?'Policy issuance date':f.label.replace(' (YYYY-MM-DD)','')} value={current} required={f.required} onChange={v=>update(f.key,v)}/>;
+    if(['issuanceDate','validFrom','validUpto','tpValidUpto','cpaValidUpto'].includes(f.key))return <PartnerPolicyDateField key={f.key} hidePlaceholder label={isMotor&&f.key==='issuanceDate'?'Policy issuance date':f.label.replace(' (YYYY-MM-DD)','')} value={current} required={f.required} onChange={v=>update(f.key,v)}/>;
     const productOptions=f.key==='policyProduct'?(draft.vehicleClass==='CPM'?['Comprehensive','SAOD']:['Comprehensive','Third Party','SAOD',...(['PCP','TWP'].includes(draft.vehicleClass)?['Bundled']:[]) ]):f.options??[];
     const options=f.key==='insurerId'?data?.insurers??[]:f.key==='make'?(data?.manufacturers??[]).map(x=>({value:x,label:x})):productOptions.map(x=>({value:x,label:x}));
     const displayed=options.find(x=>x.value===current)?.label??current;
@@ -345,11 +354,11 @@ export default function NativePolicyOnboarding(){
       <Text style={styles.label}>{f.label}{f.required?<Text style={styles.star}> *</Text>:null}</Text>
       {options.length?(
         <Pressable accessibilityRole="button" accessibilityLabel={f.label} onPress={()=>setPicker({key:f.key,items:options})} style={styles.inputRow}>
-          <Text numberOfLines={1} style={[styles.value,!current&&styles.placeholder]}>{displayed||'Select '+f.label.toLowerCase()}</Text>
+          <Text numberOfLines={1} style={[styles.value,!current&&styles.placeholder]}>{displayed}</Text>
           <Ionicons name="chevron-down" size={15} color="#63758D"/>
         </Pressable>
       ):(
-        <TextInput accessibilityLabel={f.label} value={current} onChangeText={v=>update(f.key,v)} placeholder={'Enter '+f.label.toLowerCase()}
+        <TextInput accessibilityLabel={f.label} value={current} onChangeText={v=>update(f.key,v)} placeholder=""
           autoCapitalize={['registrationNo','chassisNo','engineNo','policyNo'].includes(f.key)?'characters':'sentences'}
           keyboardType={['phoneNo','idv','od','tp','cpa','capacity','manufacturingYear'].includes(f.key)?'numeric':'default'}
           style={styles.input} placeholderTextColor="#9AA7B9" />
@@ -363,16 +372,16 @@ export default function NativePolicyOnboarding(){
     if(f.key==='insuredName'||f.key==='phoneNo')return field({key:f.key as FieldKey,label:f.label,required:f.required});
     const current=String(productValues[f.key]??'');
     if(f.key==='grossPremium')return <View key={f.key} style={styles.field}><Text style={styles.label}>{f.label}</Text><View style={styles.inputRow}><Text style={styles.value}>{current||'0.00'}</Text></View></View>;
-    if(f.date)return <PartnerPolicyDateField key={f.key} label={f.label} value={current} required={f.required} onChange={v=>updateProduct(f.key,v)}/>;
+    if(f.date)return <PartnerPolicyDateField key={f.key} hidePlaceholder label={f.label} value={current} required={f.required} onChange={v=>updateProduct(f.key,v)}/>;
     const options=f.key==='insurerId'?data?.insurers??[]:(f.options??[]).map(value=>({value,label:value}));
     return <View key={f.key} style={[styles.field,f.wide&&styles.wideField]}>
       <Text style={styles.label}>{f.label}{f.required?<Text style={styles.star}> *</Text>:null}</Text>
       {options.length?<Pressable accessibilityRole="button" accessibilityLabel={f.label} style={styles.inputRow} onPress={()=>setPicker({key:f.key,items:options,product:true})}>
-        <Text style={[styles.value,!current&&styles.placeholder]} numberOfLines={1}>{options.find(o=>o.value===current)?.label||'Select '+f.label.toLowerCase()}</Text>
+        <Text style={[styles.value,!current&&styles.placeholder]} numberOfLines={1}>{options.find(o=>o.value===current)?.label||''}</Text>
         <Ionicons name="chevron-down" size={15} color="#63758D"/>
       </Pressable>:<TextInput accessibilityLabel={f.label} value={current} onChangeText={v=>updateProduct(f.key,v)}
         keyboardType={['premiumAmount','sumInsured','deductible','netPremium','gstAmount','grossPremium','employeeCount','annualWages','annualTurnover','projectValue'].includes(f.key)?'numeric':'default'}
-        placeholder={'Enter '+f.label.toLowerCase()} placeholderTextColor="#9AA7B9" style={styles.input}/>}
+        placeholder="" placeholderTextColor="#9AA7B9" style={styles.input}/>}
     </View>;
   };
   const productSection=(number:string,title:string,items:ProductField[])=><View style={styles.section} key={number+'-'+title}>
@@ -430,7 +439,7 @@ export default function NativePolicyOnboarding(){
       <Text style={styles.label}>Registration No. <Text style={styles.star}>*</Text></Text>
       <View style={styles.registrationRow}>
         <TextInput accessibilityLabel="Registration number" value={draft.registrationNo}
-          autoCapitalize="characters" placeholder="MP20AB1234" placeholderTextColor="#97A5B7"
+          autoCapitalize="characters" placeholder="" placeholderTextColor="#97A5B7"
           onChangeText={value=>update('registrationNo',value.toUpperCase().replace(/\s/g,''))}
           style={styles.registrationInput}/>
         <Pressable accessibilityRole="button" accessibilityLabel="Fetch RC details"
@@ -446,8 +455,8 @@ export default function NativePolicyOnboarding(){
       <View style={styles.field}>
         <Text style={styles.label}>RTO {draft?.vehicleClass==='CPM'?null:<Text style={styles.star}>*</Text>}</Text>
         <View style={styles.rtoRow}>
-          <TextInput accessibilityLabel="RTO state" value={draft?.rtoState??''} onChangeText={value=>update('rtoState',value)} placeholder="State" placeholderTextColor="#97A5B7" style={[styles.input,styles.rtoInput]}/>
-          <TextInput accessibilityLabel="RTO name" value={draft?.rtoName??''} onChangeText={value=>update('rtoName',value)} placeholder="Name" placeholderTextColor="#97A5B7" style={[styles.input,styles.rtoInput]}/>
+          <TextInput accessibilityLabel="RTO state" value={draft?.rtoState??''} onChangeText={value=>update('rtoState',value)} placeholder="" placeholderTextColor="#97A5B7" style={[styles.input,styles.rtoInput]}/>
+          <TextInput accessibilityLabel="RTO name" value={draft?.rtoName??''} onChangeText={value=>update('rtoName',value)} placeholder="" placeholderTextColor="#97A5B7" style={[styles.input,styles.rtoInput]}/>
         </View>
       </View>
       {motorVehicleFields.slice(7).map(field)}
@@ -538,7 +547,7 @@ export default function NativePolicyOnboarding(){
           {(data?.approvers??[]).map(approver=><Pressable key={approver.key} onPress={()=>setApproverKey(approver.key)} style={styles.choice}><Text style={styles.choiceText}>{approverKey===approver.key?'● ':'○ '}{approver.name}</Text></Pressable>)}
           <Pressable disabled={approvalBusy||!approverKey} style={[styles.primary,styles.bookButton]} onPress={()=>void requestApproval()}><Text style={styles.primaryText}>{approvalBusy?'Sending…':'Send Approval Request'}</Text></Pressable>
         </> : <>
-          <TextInput accessibilityLabel="Six-digit approval code" keyboardType="numeric" maxLength={6} value={approvalCode} onChangeText={setApprovalCode} placeholder="6-digit approval code" style={styles.input}/>
+          <TextInput accessibilityLabel="Six-digit approval code" keyboardType="numeric" maxLength={6} value={approvalCode} onChangeText={setApprovalCode} placeholder="" style={styles.input}/>
           <Pressable disabled={approvalBusy||approvalCode.length!==6} style={[styles.primary,styles.bookButton]} onPress={()=>void verifyApproval()}><Text style={styles.primaryText}>{approvalBusy?'Checking…':'Verify Approval'}</Text></Pressable>
         </>}
       </View></View>
