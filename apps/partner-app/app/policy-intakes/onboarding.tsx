@@ -120,6 +120,15 @@ const commercial = [
   {key:'flatPayoutAmount',label:'Flat payout amount (₹)'},
 ] satisfies Field[];
 
+function onboardingPlaceholder(key:string,label:string):string {
+  const placeholders:Record<string,string>={
+    insuredName:'Name on proposal',phoneNo:'10 digit mobile',address:'Customer address',
+    productName:'Product / plan name',proposalNumber:'Proposal number',
+    insurerId:'Select insurer',ppt:'Select term',pd:'Select term',
+    paymentFrequency:'Select frequency',paymentMode:'Select mode',
+  };
+  return placeholders[key]??'Enter '+label.toLowerCase();
+}
 function amount(value:string){const n=Number(value);return Number.isFinite(n)&&n>0?n:0;}
 export default function NativePolicyOnboarding(){
   const { id }=useLocalSearchParams<{id:string}>();
@@ -338,11 +347,11 @@ export default function NativePolicyOnboarding(){
       <Text style={styles.label}>{f.label}{f.required?<Text style={styles.star}> *</Text>:null}</Text>
       {options.length?(
         <Pressable accessibilityRole="button" accessibilityLabel={f.label} onPress={()=>setPicker({key:f.key,items:options})} style={styles.inputRow}>
-          <Text numberOfLines={1} style={[styles.value,!current&&styles.placeholder]}>{displayed||'Select '+f.label.toLowerCase()}</Text>
+          <Text numberOfLines={1} style={[styles.value,!current&&styles.placeholder]}>{displayed||onboardingPlaceholder(f.key,f.label)}</Text>
           <Ionicons name="chevron-down" size={15} color="#63758D"/>
         </Pressable>
       ):(
-        <TextInput accessibilityLabel={f.label} value={current} onChangeText={v=>update(f.key,v)} placeholder={'Enter '+f.label.toLowerCase()}
+        <TextInput accessibilityLabel={f.label} value={current} onChangeText={v=>update(f.key,v)} placeholder={onboardingPlaceholder(f.key,f.label)}
           autoCapitalize={['registrationNo','chassisNo','engineNo','policyNo'].includes(f.key)?'characters':'sentences'}
           keyboardType={['phoneNo','idv','od','tp','cpa','capacity','manufacturingYear'].includes(f.key)?'numeric':'default'}
           style={styles.input} placeholderTextColor="#9AA7B9" />
@@ -359,11 +368,11 @@ export default function NativePolicyOnboarding(){
     return <View key={f.key} style={[styles.field,f.wide&&styles.wideField]}>
       <Text style={styles.label}>{f.label}{f.required?<Text style={styles.star}> *</Text>:null}</Text>
       {options.length?<Pressable accessibilityRole="button" accessibilityLabel={f.label} style={styles.inputRow} onPress={()=>setPicker({key:f.key,items:options,product:true})}>
-        <Text style={[styles.value,!current&&styles.placeholder]} numberOfLines={1}>{options.find(o=>o.value===current)?.label||'Select '+f.label.toLowerCase()}</Text>
+        <Text style={[styles.value,!current&&styles.placeholder]} numberOfLines={1}>{options.find(o=>o.value===current)?.label||onboardingPlaceholder(f.key,f.label)}</Text>
         <Ionicons name="chevron-down" size={15} color="#63758D"/>
       </Pressable>:<TextInput accessibilityLabel={f.label} value={current} onChangeText={v=>updateProduct(f.key,v)}
         keyboardType={['premiumAmount','sumInsured','deductible','netPremium','gstAmount','grossPremium','employeeCount','annualWages','annualTurnover','projectValue'].includes(f.key)?'numeric':'default'}
-        placeholder={'Enter '+f.label.toLowerCase()} placeholderTextColor="#9AA7B9" style={styles.input}/>}
+        placeholder={onboardingPlaceholder(f.key,f.label)} placeholderTextColor="#9AA7B9" style={styles.input}/>}
     </View>;
   };
   // Keep RM and code editable: native prepare API does not expose website
