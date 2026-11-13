@@ -61,6 +61,8 @@ jobs:
         run: node scripts/customer-claim-document-open-session-regression.mjs
       - name: Customer document re-upload dialog layering regression
         run: node scripts/customer-document-reupload-dialog-regression.mjs
+      - name: Customer Portal document re-upload warning and direct-stage regression
+        run: node scripts/customer-claim-reupload-portal-parity-regression.mjs
       - name: Claim document re-upload Stage 1/3 Internal External parity regression
         run: node scripts/claim-document-reupload-all-stages-regression.mjs
       - name: Internal and External claim stage error popup regression
