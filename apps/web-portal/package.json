@@ -14,7 +14,7 @@
     "access-control:portal-governance-regression": "node --experimental-strip-types scripts/employee-portal-governance-regression.mjs",
     "access-control:release-blockers-regression": "node --experimental-strip-types scripts/release-blocker-security-regression.mjs",
     "access-control:backoffice-data-entry-regression": "node --experimental-strip-types scripts/backoffice-data-entry-regression.mjs",
-    "policy-intake:workflow-regression": "node --experimental-strip-types scripts/policy-intake-workflow-regression.mjs && node scripts/policy-intake-n8n-bridge-regression.mjs",
+    "policy-intake:workflow-regression": "node --experimental-strip-types scripts/policy-intake-workflow-regression.mjs && node scripts/policy-intake-n8n-bridge-regression.mjs && node --experimental-strip-types scripts/policy-intake-n8n-validation-tests.mjs",
     "policy-onboarding:life-health-native-regression": "node scripts/life-health-native-onboarding-regression.mjs && node scripts/life-health-document-upload-guard-regression.mjs && node scripts/life-health-issued-document-upload-regression.mjs && node scripts/life-health-case-upload-errors-regression.mjs && node scripts/stale-server-action-recovery-regression.mjs && node scripts/term-and-manufacturing-year-range-regression.mjs && node scripts/posp-misp-life-head-document-stage-regression.mjs && node scripts/life-health-pension-maturity-regression.mjs",
     "vehicle-policy-intake:resume-regression": "node scripts/vehicle-policy-intake-resume-regression.mjs",
     "vehicle-prefix:new-regression": "node scripts/new-vehicle-prefix-regression.mjs",
