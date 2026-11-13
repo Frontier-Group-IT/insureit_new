@@ -25,4 +25,19 @@ function calc(od,tp,cpa,addon,isGcv) {
 assert.deepEqual(calc(1000,200,100,300,false),[1600,288]);
 assert.deepEqual(calc(1000,200,100,300,true),[1600,262]);
 assert.deepEqual(calc(1000,200,100,0,true),[1300,208]);
-console.log('Motor Add-on Premium static wiring and GST regression checks passed');
+
+// The current production RPC must match the reviewed 2026-11-04 atomic
+// Pay-in/TDS fix. PostgreSQL CHECK constraints run after each UPDATE:
+// updating total before TDS in a separate statement is invalid.
+const atomicPayinMigration = read('../../../supabase/migrations/20261104183000_motor_addon_payin_tds_atomic_consistency.sql');
+const addonAdjustment = atomicPayinMigration.match(/IF v_amount > 0 THEN([\s\S]*?)UPDATE public\.policy_intermediary_payouts po/);
+assert.ok(addonAdjustment, 'Reviewed add-on Pay-in adjustment must be present');
+const payinUpdates = addonAdjustment[1].match(/UPDATE public\.policy_payin_details pi/g) ?? [];
+assert.equal(payinUpdates.length, 1, 'Pay-in and TDS must update in ONE statement, never split into two');
+for (const column of ['projected_od_amount', 'total_projected_payin', 'tds_amount', 'payin_after_tds']) {
+  assert.match(addonAdjustment[1], new RegExp('\\\\b'+column+'\\\\s*='), column+' must be in the same UPDATE');
+}
+assert.match(atomicPayinMigration, /REVOKE ALL ON FUNCTION public\.save_motor_policy_with_addon_v1[\s\S]*FROM PUBLIC, anon, authenticated/, 'Privileged booking function stays restricted');
+assert.match(atomicPayinMigration, /GRANT EXECUTE ON FUNCTION public\.save_motor_policy_with_addon_v1[\s\S]*TO service_role/, 'Service role retains booking access');
+
+console.log('Motor Add-on Premium static wiring, GST and atomic Pay-in/TDS regression checks passed');
