@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FolderOpen, CarFront, UserRound, ScrollText, ShieldCheck, ClipboardList } from "lucide-react";
 import { CustomerClaimCompactDocument, type CustomerClaimFile } from "./customer-claim-compact-document";
 const groups = [
@@ -43,10 +43,14 @@ const groups = [
 
 const groupIcons=[CarFront,UserRound,ScrollText,ShieldCheck,ClipboardList];
 const normalized=(s:string)=>s.toLowerCase().replace(/[^a-z0-9]/g,"");
-export function CustomerClaimDocumentGroups({documents,claimId,accountId,stage,showSaveDetails=false,showDraftAction=false,draftAction,allowUpload=true,canReusePolicyCopy=false}:{
-  documents:CustomerClaimFile[];claimId:string;accountId:string;stage:string;showSaveDetails?:boolean;showDraftAction?:boolean;draftAction?:(form:FormData)=>Promise<void>;allowUpload?:boolean;canReusePolicyCopy?:boolean;
+export function CustomerClaimDocumentGroups({documents,claimId,accountId,stage,showSaveDetails=false,showDraftAction=false,draftAction,allowUpload=true,canReusePolicyCopy=false,reuploadDocumentType,reuploadRequestId}:{
+  documents:CustomerClaimFile[];claimId:string;accountId:string;stage:string;showSaveDetails?:boolean;showDraftAction?:boolean;draftAction?:(form:FormData)=>Promise<void>;allowUpload?:boolean;canReusePolicyCopy?:boolean;reuploadDocumentType?:string|null;reuploadRequestId?:string|null;
 }) {
-  const [active,setActive]=useState(0);
+  const requestedGroup = reuploadDocumentType
+    ? groups.findIndex(group => group.types.some(item => normalized(item.type) === normalized(reuploadDocumentType)))
+    : -1;
+  const [active,setActive]=useState(requestedGroup >= 0 ? requestedGroup : 0);
+  useEffect(() => { if (requestedGroup >= 0) setActive(requestedGroup); }, [requestedGroup]);
   const expectedTypes = new Set(groups.flatMap(group => group.types.map(item => normalized(item.type))));
   const uploadedTypes = new Set(documents.filter(doc => expectedTypes.has(normalized(doc.document_type))).map(doc => normalized(doc.document_type)));
   const legacyDocuments = documents.filter(doc => !expectedTypes.has(normalized(doc.document_type)));
@@ -56,13 +60,13 @@ export function CustomerClaimDocumentGroups({documents,claimId,accountId,stage,s
       {groups.map((group,i)=><button key={group.name} type="button" role="tab" aria-selected={i===active} onClick={()=>setActive(i)} className={`customer-claim-ref-tab flex min-h-10 items-center gap-2 px-3 text-left text-[11px] font-semibold ${i===active?"bg-gradient-to-r from-[#6042E8] to-[#4F90EA] text-white":"bg-[#FAFCFF] text-[#183257] hover:bg-[#EDF4FF]"}`}>{(() => { const Icon=groupIcons[i];return <Icon className="h-4 w-4 shrink-0" />;})()}<span className={`inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] ${i===active?"bg-white text-[#5144D8]":"bg-[#EAF1FF] text-[#1D3C6B]"}`}>{i+1}</span>{group.name}</button>)}
     </div>
     <div role="tabpanel" className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
-      {groups[active].types.map(item=><CustomerClaimCompactDocument key={item.type} label={item.label} type={item.type} documents={documents.filter(doc=>normalized(doc.document_type)===normalized(item.type))} claimId={claimId} accountId={accountId} stage={stage} allowUpload={allowUpload} canReusePolicyCopy={item.type === "Insurance Copy" && canReusePolicyCopy}/>)}
+      {groups[active].types.map(item=><CustomerClaimCompactDocument key={item.type} label={item.label} type={item.type} documents={documents.filter(doc=>normalized(doc.document_type)===normalized(item.type))} claimId={claimId} accountId={accountId} stage={stage} reuploadTarget={Boolean(reuploadRequestId && reuploadDocumentType && normalized(item.type)===normalized(reuploadDocumentType))} reuploadRequestId={reuploadRequestId && reuploadDocumentType && normalized(item.type)===normalized(reuploadDocumentType) ? reuploadRequestId : undefined} allowUpload={allowUpload || Boolean(reuploadRequestId && reuploadDocumentType && normalized(item.type)===normalized(reuploadDocumentType))} canReusePolicyCopy={item.type === "Insurance Copy" && canReusePolicyCopy}/>)}
     </div>
     {active===4 && legacyDocuments.length>0 ? <div className="mt-4 border-t border-[#E5EBF5] pt-3">
       <p className="mb-2 text-[11px] font-semibold text-[#536781]">Previously uploaded document types</p>
       <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
         {Array.from(new Set(legacyDocuments.map(doc=>doc.document_type))).map(type=>(
-          <CustomerClaimCompactDocument key={type} label={type} type={type} documents={legacyDocuments.filter(doc=>doc.document_type===type)} claimId={claimId} accountId={accountId} stage={stage} allowUpload={false}/>
+          <CustomerClaimCompactDocument key={type} label={type} type={type} documents={legacyDocuments.filter(doc=>doc.document_type===type)} claimId={claimId} accountId={accountId} stage={stage} reuploadTarget={Boolean(reuploadRequestId && reuploadDocumentType && normalized(type)===normalized(reuploadDocumentType))} reuploadRequestId={reuploadRequestId && reuploadDocumentType && normalized(type)===normalized(reuploadDocumentType) ? reuploadRequestId : undefined} allowUpload={Boolean(reuploadRequestId && reuploadDocumentType && normalized(type)===normalized(reuploadDocumentType))}/>
         ))}
       </div>
     </div> : null}

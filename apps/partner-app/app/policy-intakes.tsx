@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Image, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -12,6 +12,7 @@ import { listPartnerPolicyIntakesPage, type PartnerPolicyIntake, type PartnerInt
 import { canPartnerAccess } from '@/lib/partner-permissions';
 import { usePartnerSession } from '@/providers/partner-session-provider';
 import { partnerTheme } from '@/lib/theme';
+import { PartnerAssets } from '@/lib/partner-assets';
 
 type IntakeFilter = PartnerIntakeFilter;
 
@@ -243,7 +244,7 @@ export default function PolicyIntakesScreen() {
       <ScrollView
         ref={mainScrollRef}
         style={styles.scroll}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, !loading && !error && visibleRows.length === 0 && styles.emptyContent]}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void load(true)} tintColor={partnerTheme.colors.brand} colors={[partnerTheme.colors.brand]} />}
       >
@@ -316,16 +317,12 @@ export default function PolicyIntakesScreen() {
           </>
         ) : (
           <View style={styles.compactEmpty} accessibilityLiveRegion="polite">
-            <View style={styles.emptyIllustration}>
-              <Ionicons
-                name={debouncedQuery ? 'search-outline' : EMPTY_SUBMISSION_COPY[filter].icon}
-                size={30}
-                color="#4267BC"
-              />
-              <View style={styles.emptyIllustrationAccent}>
-                <Ionicons name={debouncedQuery ? 'close-outline' : filter === 'action_required' ? 'checkmark' : 'ellipsis-horizontal'} size={13} color="#FFFFFF" />
-              </View>
-            </View>
+            <Image
+              source={debouncedQuery ? PartnerAssets.emptyStates.noSearchResults : PartnerAssets.emptyStates.noPolicies}
+              style={styles.emptyIllustrationImage}
+              resizeMode="contain"
+              accessibilityLabel={debouncedQuery ? 'No search results illustration' : 'No policy submissions illustration'}
+            />
             <Text style={styles.compactEmptyTitle}>
               {debouncedQuery ? 'No matching submissions' : EMPTY_SUBMISSION_COPY[filter].title}
             </Text>
@@ -469,9 +466,9 @@ const styles = StyleSheet.create({
   searchBand: { paddingHorizontal: 11, paddingTop: 8, paddingBottom: 8, flexDirection: 'row', backgroundColor: '#0860C8' }, searchBox: { flex: 1, minHeight: 38, borderRadius: 9, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: '#FFFFFF' }, searchInput: { flex: 1, paddingVertical: 0, color: '#1F314C', fontSize: 10.5, lineHeight: 14 },
   filtersWrap: { flexDirection: 'row', alignItems: 'center', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#DDE4EF', backgroundColor: '#FFFFFF' }, filterScroll: { flex: 1 }, seeAllButton: { minHeight: 35, flexDirection: 'row', alignItems: 'center', gap: 6, justifyContent: 'center', paddingHorizontal: 12, marginRight: 9, borderRadius: 18, borderWidth: StyleSheet.hairlineWidth, borderColor: '#E4EBF5', backgroundColor: '#FFFFFF', shadowColor: '#1B416C', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 5, elevation: 2 }, seeAllText: { color: '#0860C8', fontSize: 12, fontWeight: '700' }, filtersContent: { paddingHorizontal: 10, paddingVertical: 7, gap: 7 }, filterChip: { minHeight: 31, borderRadius: 8, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#F7F8FB', borderWidth: StyleSheet.hairlineWidth, borderColor: '#E0E5ED' }, filterChipActive: { backgroundColor: '#183864', borderColor: '#183864' }, filterLabel: { color: '#4D5D75', fontSize: 9.2, lineHeight: 12, fontWeight: '700' }, filterLabelActive: { color: '#FFFFFF' }, filterCount: { color: '#728099', fontSize: 8.5, lineHeight: 11, fontWeight: '700' }, filterCountActive: { color: '#DDEAFF' },
   sheetRoot: { flex: 1, justifyContent: 'flex-end' }, sheetBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(8,23,45,0.46)' }, sheet: { paddingHorizontal: 16, paddingTop: 10, paddingBottom: 32, borderTopLeftRadius: 20, borderTopRightRadius: 20, backgroundColor: '#FFFFFF' }, sheetHeader: { minHeight: 46, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }, sheetTitle: { color: '#172B49', fontSize: 15, fontWeight: '800' }, sheetClose: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' }, sheetOption: { minHeight: 45, flexDirection: 'row', alignItems: 'center', gap: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E3E9F2', paddingHorizontal: 6 }, sheetOptionSelected: { backgroundColor: '#F1F6FF' }, sheetRadio: { width: 18, height: 18, borderRadius: 9, borderWidth: 1.5, borderColor: '#A7B5C8', alignItems: 'center', justifyContent: 'center' }, sheetRadioSelected: { borderColor: '#3156B8' }, sheetRadioDot: { width: 9, height: 9, borderRadius: 5, backgroundColor: '#3156B8' }, sheetOptionText: { flex: 1, color: '#34465E', fontSize: 12, fontWeight: '600' }, sheetOptionTextSelected: { color: '#193C79', fontWeight: '800' }, sheetOptionCount: { color: '#6C7B90', fontSize: 11, fontWeight: '700' },
-  compactEmpty: { marginHorizontal: 8, marginTop: 22, paddingHorizontal: 18, paddingVertical: 16, alignItems: 'center', gap: 6 },
-  emptyIllustration: { width: 64, height: 64, borderRadius: 24, alignItems: 'center', justifyContent: 'center', marginBottom: 4, backgroundColor: '#EAF1FF', borderWidth: 1, borderColor: '#D5E3FF' },
-  emptyIllustrationAccent: { position: 'absolute', bottom: 4, right: 2, width: 21, height: 21, borderRadius: 11, alignItems: 'center', justifyContent: 'center', backgroundColor: '#6550D6', borderWidth: 2, borderColor: '#F5F7FB' },
+  emptyContent: { flexGrow: 1 },
+  compactEmpty: { flex: 1, minHeight: 250, marginHorizontal: 8, paddingHorizontal: 18, paddingVertical: 24, alignItems: 'center', justifyContent: 'center', gap: 8 },
+  emptyIllustrationImage: { width: 180, height: 180, maxWidth: '100%', marginBottom: 2 },
   compactEmptyTitle: { color: '#1A3050', fontSize: 15, lineHeight: 20, fontWeight: '800', textAlign: 'center' },
   compactEmptyMessage: { color: '#72809A', fontSize: 11, lineHeight: 16, textAlign: 'center', maxWidth: 280 },
   emptyCreateButton: { marginTop: 7, minHeight: 35, paddingHorizontal: 12, borderRadius: 9, borderWidth: 1, borderColor: '#C7D9F8', backgroundColor: '#F0F5FF', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5 },

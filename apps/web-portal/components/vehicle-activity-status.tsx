@@ -15,7 +15,8 @@ export async function VehicleActivityStatus({ vehicleId, createdAt, updatedAt }:
       items={activities.map((activity) => ({
         id: activity.id,
         title: activity.action,
-        meta: activity.actorName ? `Created By: ${activity.actorName}` : null,
+        changes: activity.changes,
+        meta: activity.actorName && activity.actorName !== "Not recorded" ? `By: ${activity.actorName}` : null,
         at: activity.at,
       }))}
       emptyText="Activity not recorded"

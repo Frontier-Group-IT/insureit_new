@@ -4,6 +4,7 @@ import { INTERNAL_JOURNEY_STAGES, projectInternalClaim } from "@insureit/claim-j
 import { ExternalLink, FileDown, FileText, Pencil } from "lucide-react";
 import { resolveCustomerWebScope } from "@/lib/customer-web-data";
 import { CustomerClaimStageStrip } from "@/components/customer-portal/customer-claim-stage-strip";
+import { CustomerClaimReuploadNotice } from "@/components/customer-portal/customer-claim-reupload-notice";
 import { loadCustomerClaimDetail, isExternalCustomerClaim, buildExternalClaimProjection } from "@/lib/customer-web-phase2-data";
 
 export const dynamic = "force-dynamic";
@@ -19,7 +20,7 @@ export default async function CustomerClaimDetailPage({
   const { id } = await params;
   const q = searchParams ? await searchParams : {};
   const { account } = await resolveCustomerWebScope(q.account);
-  const { claim, milestones } = await loadCustomerClaimDetail(account.id, id);
+  const { claim, milestones, reuploadRequests } = await loadCustomerClaimDetail(account.id, id);
   // The downloadable claim form is a final document, not a Stage 1 preview.
   // Require completion of every stage, even if a claim-level status was advanced.
   const completedKeys = new Set(milestones.filter(m => m.milestone_status === "completed" || m.milestone_status === "not_applicable").map(m => m.milestone_key));
@@ -52,6 +53,7 @@ export default async function CustomerClaimDetailPage({
 
   return (
     <div className="customer-claim-ref-page w-full min-w-0 space-y-4 pb-8">
+      <CustomerClaimReuploadNotice requests={reuploadRequests} claimId={claim.id} accountId={account.id} />
       {!externalProjection ? <CustomerClaimStageStrip claimId={claim.id} accountId={account.id} selectedKey={editStage} currentKey={editStage} completedKeys={internalCompletedKeys} editMode claimSummary={{controlNo:claim.claim_no,policyNo:claim.policy_no,makeModel:[claim.vehicle_make,claim.vehicle_model].filter(Boolean).join(" - ")||null,vehicleNo:claim.vehicle_no,status:claim.current_status,manufacturer:claim.vehicle_make,insurer:claim.insurer_name,policySource:claim.policy_service_source==="sibl"?"Sankalp Policy":claim.policy_service_source==="external"||claim.external_policy_id?"External Policy":"—"}} /> : null}
       <section className="overflow-hidden rounded-2xl border border-[#D9E3F0] bg-white shadow-[0_8px_35px_rgba(22,49,83,.05)]">
         <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[#E0E8F3] px-5 py-4">

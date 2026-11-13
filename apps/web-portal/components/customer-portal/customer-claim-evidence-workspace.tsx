@@ -16,18 +16,21 @@ function match(type:string, expected:string) {
     (expected==="Accident Photo"&&["spotphoto","accidentphotos"].includes(normalize(type)));
 }
 
-export function CustomerClaimEvidenceWorkspace({documents,claimId,accountId,stage,returnToSpotIntimation=false,allowUpload=true,onlyUploaded=false,canReusePolicyCopy=false}:{
-documents:CustomerClaimFile[];claimId:string;accountId:string;stage:string;returnToSpotIntimation?:boolean;allowUpload?:boolean;onlyUploaded?:boolean;canReusePolicyCopy?:boolean
+export function CustomerClaimEvidenceWorkspace({documents,claimId,accountId,stage,returnToSpotIntimation=false,allowUpload=true,onlyUploaded=false,canReusePolicyCopy=false,reuploadDocumentType,reuploadRequestId}:{
+documents:CustomerClaimFile[];claimId:string;accountId:string;stage:string;returnToSpotIntimation?:boolean;allowUpload?:boolean;onlyUploaded?:boolean;canReusePolicyCopy?:boolean;reuploadDocumentType?:string|null;reuploadRequestId?:string|null
 }) {
   // Bulk uploads are stored as Other Document; category-specific uploads stay in their own cards.
   const multipleDocuments = documents.filter(doc => normalize(doc.document_type) === "otherdocument");
   return <section className="overflow-hidden rounded-2xl border border-[#D9E3F0] bg-white">
     <header className="border-b border-[#D9E3F0] px-4 py-3"><h2 className="text-[17px] font-semibold text-[#071D49]">Claim Documents</h2></header>
     <div className="grid gap-3 p-3 md:grid-cols-2 xl:grid-cols-3">
-      {definitions.filter(item=>!onlyUploaded||documents.some(doc=>match(doc.document_type,item.type))).map(item=><CustomerClaimCompactDocument key={item.type} label={item.label} type={item.type} accept={item.accept} documents={documents.filter(doc=>match(doc.document_type,item.type))} claimId={claimId} accountId={accountId} stage={stage} returnToSpotIntimation={returnToSpotIntimation} allowUpload={allowUpload && item.type !== "Incident Voice Note"} canReusePolicyCopy={item.type === "Insurance Copy" && canReusePolicyCopy}/>)}
+      {definitions.filter(item=>!onlyUploaded||documents.some(doc=>match(doc.document_type,item.type))).map(item=><CustomerClaimCompactDocument key={item.type} label={item.label} type={item.type} accept={item.accept} documents={documents.filter(doc=>match(doc.document_type,item.type))} claimId={claimId} accountId={accountId} stage={stage} returnToSpotIntimation={returnToSpotIntimation} reuploadTarget={Boolean(reuploadRequestId && reuploadDocumentType && match(item.type,reuploadDocumentType))} reuploadRequestId={reuploadRequestId && reuploadDocumentType && match(item.type,reuploadDocumentType) ? reuploadRequestId : undefined} allowUpload={(allowUpload && item.type !== "Incident Voice Note") || Boolean(reuploadRequestId && reuploadDocumentType && match(item.type,reuploadDocumentType))} canReusePolicyCopy={item.type === "Insurance Copy" && canReusePolicyCopy}/>)}
+      {reuploadRequestId && reuploadDocumentType && normalize(reuploadDocumentType)!=="otherdocument" && !definitions.some(item=>match(item.type,reuploadDocumentType)) ?
+        <CustomerClaimCompactDocument label={reuploadDocumentType} type={reuploadDocumentType} documents={documents.filter(doc=>match(doc.document_type,reuploadDocumentType))}
+          claimId={claimId} accountId={accountId} stage={stage} reuploadTarget reuploadRequestId={reuploadRequestId} allowUpload/> : null}
     </div>
-    {(allowUpload || multipleDocuments.length > 0) ? <div className="mx-3 mb-3">
-      <CustomerClaimMultipleUpload documents={multipleDocuments} claimId={claimId} accountId={accountId} stage={stage} allowUpload={allowUpload} returnToSpotIntimation={returnToSpotIntimation}/>
+    {(allowUpload || multipleDocuments.length > 0) ? <div id={reuploadDocumentType && normalize(reuploadDocumentType)==="otherdocument" ? "claim-reupload-target" : undefined} className="mx-3 mb-3">
+      <CustomerClaimMultipleUpload documents={multipleDocuments} claimId={claimId} accountId={accountId} stage={stage} allowUpload={allowUpload || Boolean(reuploadRequestId && reuploadDocumentType && normalize(reuploadDocumentType)==="otherdocument")} reuploadRequestId={reuploadDocumentType && normalize(reuploadDocumentType)==="otherdocument" ? reuploadRequestId : null} returnToSpotIntimation={returnToSpotIntimation}/>
     </div> : null}
   </section>;
 }

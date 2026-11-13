@@ -66,7 +66,7 @@ export default async function EditPolicyPage({ params }: { params: Promise<{ id:
       const { data:signed } = await admin.storage.from(row.storage_bucket).createSignedUrl(row.storage_path, 60 * 60);
       return { id:row.id, type:row.document_type as "policy_copy"|"proposal_form"|"benefit_illustration"|"premium_receipt"|"other_document", fileName:row.file_name, viewUrl:signed?.signedUrl || "" };
     }));
-    const activityItems = activityHistory.map((activity)=>({ id:activity.id, title:activity.action, meta:activity.actorName ? `Created By: ${activity.actorName}` : null, at:activity.at }));
+    const activityItems = activityHistory.map((activity)=>({ id:activity.id, title:activity.action, changes:activity.changes, meta:[activity.meta, activity.actorName !== "Not recorded" ? `By: ${activity.actorName}` : null].filter(Boolean).join(" · ") || null, at:activity.at }));
     const payin = payinResult.data;
     const payout = payoutResult.data;
     const payinBasis: "NET_PREMIUM_PERCENT"|"FIXED_AMOUNT" = payin?.commercial_basis === "NET_PREMIUM_PERCENT" ? "NET_PREMIUM_PERCENT" : "FIXED_AMOUNT";
