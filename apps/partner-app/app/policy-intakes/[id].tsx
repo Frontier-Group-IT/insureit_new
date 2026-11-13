@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { Alert, Image, Linking, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Image, Linking, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -33,10 +33,12 @@ export default function PolicyIntakeDetailScreen() {
   const router = useRouter();
   const { context } = usePartnerSession();
   const { id, submitted } = useLocalSearchParams<{ id: string; submitted?: string }>();
-  const [row, setRow] = useState<(PartnerPolicyIntake & { review_access: PolicyIntakeReviewAccess; duplicate_match: PolicyIntakeDuplicateMatch | null }) | null>(null);
+  const [row, setRow] = useState<(PartnerPolicyIntake & { review_access: PolicyIntakeReviewAccess; reviewer_conflict_name: string | null; duplicate_match: PolicyIntakeDuplicateMatch | null }) | null>(null);
   const [reviewNote, setReviewNote] = useState('');
   const [reviewBusy, setReviewBusy] = useState(false);
   const [openingDocument, setOpeningDocument] = useState(false);
+  const [openingReview, setOpeningReview] = useState(false);
+  const [reviewerConflictName, setReviewerConflictName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [replacing, setReplacing] = useState(false);
   const [replacementProgress, setReplacementProgress] = useState<PartnerPolicyIntakeUploadProgress | null>(null);
@@ -170,14 +172,33 @@ export default function PolicyIntakeDetailScreen() {
     }
   }
 
-  async function openOperationsReview() {
-    if (!row?.review_access.can_review) return;
+  async function openOperationsReview(confirmedConflict = false) {
+    if (!row?.review_access.can_finalize || openingReview) return;
+    setOpeningReview(true);
+    setError('');
     try {
-      // The existing Operations website owns reviewer assignment, duplicate protection,
-      // Policy Onboarding draft persistence and finalization. Never pass an app token in a URL.
-      await Linking.openURL(partnerPolicyIntakeReviewUrl(row.id));
-    } catch {
-      setError('Could not open Operations Policy Intake Review.');
+      // Refresh server-authorized assignment before showing the pre-navigation
+      // prompt. This GET does not claim or change the reviewer.
+      const latest = await getPartnerPolicyIntake(row.id);
+      setRow(latest);
+      if (!latest.review_access.can_finalize || latest.duplicate_match ||
+          !['in_review', 'ready_for_review', 'processing'].includes(latest.status)) {
+        setReviewerConflictName(null);
+        setError('This intake is no longer available for Policy Onboarding.');
+        return;
+      }
+      if (latest.reviewer_conflict_name && !confirmedConflict) {
+        setReviewerConflictName(latest.reviewer_conflict_name);
+        return;
+      }
+      // Confirming here only allows browser navigation. The Operations website
+      // rechecks the reviewer and requires its own authorized takeover action.
+      setReviewerConflictName(null);
+      await Linking.openURL(partnerPolicyIntakeReviewUrl(latest.id));
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not open Operations Policy Intake Review.');
+    } finally {
+      setOpeningReview(false);
     }
   }
 
@@ -431,7 +452,7 @@ export default function PolicyIntakeDetailScreen() {
                 </View>
                 {row.review_access.can_finalize && (['ready_for_review', 'in_review'].includes(row.status) || (row.status === 'processing' && row.ocr_status === 'failed')) ? (
                   <>
-                    <PartnerButton label={row.status === 'in_review' ? 'Resume Policy Onboarding' : 'Review & Finalize'} icon="arrow-forward-outline" onPress={() => void openOperationsReview()} />
+                    <PartnerButton label={openingReview ? 'Checking reviewer…' : row.status === 'in_review' ? 'Resume Policy Onboarding' : 'Review & Finalize'} icon="arrow-forward-outline" disabled={openingReview} onPress={() => void openOperationsReview()} />
                     <Text style={reviewStyles.caption}>Final corrections and onboarding continue securely in the Operations website.</Text>
                   </>
                 ) : null}
@@ -440,6 +461,28 @@ export default function PolicyIntakeDetailScreen() {
           </View>
         </>
       )}
+      <Modal transparent visible={Boolean(reviewerConflictName)} animationType="fade" onRequestClose={() => setReviewerConflictName(null)}>
+        <View style={reviewerStyles.backdrop}>
+          <View style={reviewerStyles.dialog} accessibilityRole="alert">
+            <View style={reviewerStyles.header}>
+              <View style={reviewerStyles.warningIcon}><Ionicons name="warning-outline" size={20} color="#B66B0B" /></View>
+              <View style={reviewerStyles.headerText}>
+                <Text style={reviewerStyles.title}>Change reviewer?</Text>
+                <Text style={reviewerStyles.message}>This intake is currently being reviewed by <Text style={reviewerStyles.bold}>{reviewerConflictName}</Text>. If you continue, the Operations website will ask you to confirm changing the reviewer to you before proceeding with Policy Onboarding.</Text>
+              </View>
+              <Pressable accessibilityRole="button" accessibilityLabel="Close reviewer change dialog" onPress={() => setReviewerConflictName(null)} style={reviewerStyles.close}><Ionicons name="close" size={19} color="#7A8798" /></Pressable>
+            </View>
+            <View style={reviewerStyles.actions}>
+              <Pressable accessibilityRole="button" disabled={openingReview} onPress={() => setReviewerConflictName(null)} style={[reviewerStyles.action, reviewerStyles.cancel]}>
+                <Text style={reviewerStyles.cancelText}>Keep current reviewer</Text>
+              </Pressable>
+              <Pressable accessibilityRole="button" disabled={openingReview} onPress={() => void openOperationsReview(true)} style={[reviewerStyles.action, reviewerStyles.continue]}>
+                <Text style={reviewerStyles.continueText}>{openingReview ? 'Opening…' : 'Change reviewer & continue'}</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </PartnerScreen>
   );
 }
@@ -758,6 +801,24 @@ function formatDate(value: string) {
 function humanize(value: string) {
   return value.replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
+
+const reviewerStyles = StyleSheet.create({
+  backdrop: { flex: 1, backgroundColor: 'rgba(15,23,42,0.48)', justifyContent: 'center', paddingHorizontal: 18 },
+  dialog: { borderRadius: 18, padding: 18, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE5EF' },
+  header: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  warningIcon: { height: 36, width: 36, borderRadius: 18, backgroundColor: '#FFF7E8', alignItems: 'center', justifyContent: 'center' },
+  headerText: { flex: 1 },
+  title: { fontSize: 15, lineHeight: 20, fontWeight: '700', color: '#17365D' },
+  message: { fontSize: 11, lineHeight: 18, marginTop: 7, color: '#64748B' },
+  bold: { fontWeight: '700', color: '#334155' },
+  close: { padding: 4 },
+  actions: { flexDirection: 'row', gap: 9, marginTop: 20 },
+  action: { flex: 1, minHeight: 44, borderRadius: 11, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 6 },
+  cancel: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D8E0EA' },
+  continue: { backgroundColor: '#17365D' },
+  cancelText: { color: '#475569', fontSize: 10, fontWeight: '700', textAlign: 'center' },
+  continueText: { color: '#FFFFFF', fontSize: 10, fontWeight: '700', textAlign: 'center' },
+});
 
 const styles = StyleSheet.create({
   policyCopyCard: { marginHorizontal: 8, marginTop: 12, padding: 12, borderRadius: 10, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE5EF', gap: 7 },
