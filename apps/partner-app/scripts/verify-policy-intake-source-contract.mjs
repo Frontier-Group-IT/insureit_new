@@ -183,11 +183,11 @@ if (detailScreen.includes('Fetched policy details (OCR)')) throw new Error('Remo
 const nativeOnboarding = fs.readFileSync(path.join(root, 'app/policy-intakes/onboarding.tsx'), 'utf8');
 const nativeApi = fs.readFileSync(path.resolve(root, '../web-portal/app/api/partner/policy-intakes/native-onboarding/route.ts'), 'utf8');
 for (const expected of [
-  "section('01','Policy source & ownership',policy)",
-  "section('02','Customer / Proposer',proposer)",
-  "section('','Vehicle identification — Motor',vehicle)",
-  "section('03','Policy product & case details'",
-  "section('04','Premium & payment',premiumFields)",
+  "section('01','Policy source & ownership',isMotor?policy.slice(0,4):policy)",
+  "isMotor?motorVehicleSection",
+  "motorProductSection=section('03','Policy product, premium & validity',motorProductFields)",
+  "styles.registrationToggle",
+  "styles.registrationRow",
   "Onboarding summary",
   "Upload Forms",
   "View submitted policy copy",
@@ -206,5 +206,5 @@ for (const safeguard of ['saveNativePolicyOnboarding(id,data.revision,draft)', '
   requireText(nativeOnboarding, safeguard, 'Preserve existing save, booking, RC lookup and document access: ' + safeguard);
 }
 requireText(nativeApi, 'if(d.businessLine!=="Motor")', 'Do not misrepresent Motor-only native booking as Life/Health parity.');
-requireText(nativeOnboarding, 'does not currently accept these uploads', 'Disclose that website-only uploads are not wired to native Motor onboarding.');
+requireText(nativeOnboarding, 'Form uploads are available in Operations Portal.', 'Disclose web-only uploads without redundant descriptions.');
 console.log('Partner Policy Intake source, policy-type and detail presentation contracts verified.');
