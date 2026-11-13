@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useMemo, useState } from 'react';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
@@ -13,8 +13,7 @@ import { usePartnerSession } from '@/providers/partner-session-provider';
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 type Metric = 'premium' | 'payin' | 'retention' | 'payout';
 type SortKey = 'amount_desc' | 'amount_asc' | 'policies_desc' | 'policies_asc' | 'name_asc' | 'name_desc' | 'payin_desc' | 'retention_desc';
-const FINANCIAL_COLUMN_WIDTH = 118;
-const ROW_HEIGHT = 62;
+const ROW_HEIGHT = 46;
 
 // Display aliases only: never alter the full insurer name used for the RPC,
 // logo lookup, searches or accessibility.
@@ -46,6 +45,21 @@ const wholeRupeeFormatter = new Intl.NumberFormat('en-IN', { maximumFractionDigi
 function formatInsurerRupees(amount: number | string): string {
   const numericAmount = Number(amount);
   return `₹${wholeRupeeFormatter.format(Number.isFinite(numericAmount) ? numericAmount : 0)}`;
+}
+// Compact table cells show readable rupee bands; tapping reveals the exact
+// rounded whole-rupee amount used by the previous financial register.
+function formatInsurerCompactRupees(amount: number | string): string {
+  const numeric = Number(amount);
+  if (!Number.isFinite(numeric)) return '—';
+  const rounded = Math.round(numeric);
+  const absolute = Math.abs(rounded);
+  const [divisor, suffix] = absolute >= 10_000_000 ? [10_000_000, 'Cr']
+    : absolute >= 100_000 ? [100_000, 'L']
+    : absolute >= 1_000 ? [1_000, 'k']
+    : [1, ''];
+  if (divisor === 1) return formatInsurerRupees(rounded);
+  const compact = (rounded / divisor).toFixed(2).replace(/\\.?0+$/, '');
+  return `₹${compact}${suffix}`;
 }
 function isoLocal(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -305,42 +319,49 @@ export default function InsurerListScreen() {
                   </View>
                 ))}
             </View>
-            <ScrollView horizontal nestedScrollEnabled directionalLockEnabled
-              showsHorizontalScrollIndicator
-              accessibilityLabel="Swipe financial columns horizontally. Insurer names remain visible.">
-              <View>
-                <View style={styles.registerHeader}>
-                  {columns.map((column) => (
-                    <Pressable key={column.key} accessibilityRole="button"
-                      accessibilityLabel={`Sort by ${column.label}`}
-                      onPress={() => {
-                        if (column.key === 'policies') setSortKey('policies_desc');
-                        else if (column.key === 'premium') setSortKey('amount_desc');
-                        else if (column.key === 'payin' && canViewCommercials) setSortKey('payin_desc');
-                        else if (column.key === 'retention' && canViewCommercials) setSortKey('retention_desc');
-                      }}
-                      style={styles.metricHeaderCell}>
-                      <Text numberOfLines={2} style={styles.metricHeaderText}>{column.label.toUpperCase()}</Text>
-                    </Pressable>
-                  ))}
-                </View>
-                {(!validRange || (query.loading && !query.data) || (query.error && !query.data)) ? null
-                  : insurers.map((insurer) => (
-                    <View key={insurer.name} style={styles.financialRow}>
-                      {columns.map((column) => {
-                        const amount = column.key === 'policies' ? null : metricValue(insurer, column.key);
-                        return (
-                          <Text key={column.key} style={styles.metricCell} numberOfLines={1}
-                            adjustsFontSizeToFit minimumFontScale={0.75}>
-                            {column.key === 'policies' ? insurer.policies :
-                              amount == null ? '—' : formatInsurerRupees(amount)}
-                          </Text>
-                        );
-                      })}
-                    </View>
-                  ))}
+            <View style={styles.financialColumns}>
+              <View style={styles.registerHeader}>
+                {columns.map((column) => (
+                  <Pressable key={column.key} accessibilityRole="button"
+                    accessibilityLabel={`Sort by ${column.label}`}
+                    onPress={() => {
+                      if (column.key === 'policies') setSortKey('policies_desc');
+                      else if (column.key === 'premium') setSortKey('amount_desc');
+                      else if (column.key === 'payin' && canViewCommercials) setSortKey('payin_desc');
+                      else if (column.key === 'retention' && canViewCommercials) setSortKey('retention_desc');
+                    }}
+                    style={[styles.metricHeaderCell, column.key === 'policies' ? styles.policyColumn : styles.amountColumn]}>
+                    <Text numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.8}
+                      style={styles.metricHeaderText}>{column.label.toUpperCase()}</Text>
+                  </Pressable>
+                ))}
               </View>
-            </ScrollView>
+              {(!validRange || (query.loading && !query.data) || (query.error && !query.data)) ? null
+                : insurers.map((insurer) => (
+                  <View key={insurer.name} style={styles.financialRow}>
+                    {columns.map((column) => {
+                      const amount = column.key === 'policies' ? null : metricValue(insurer, column.key);
+                      const cellStyle = [styles.metricCell, column.key === 'policies' ? styles.policyColumn : styles.amountColumn];
+                      if (column.key === 'policies') {
+                        return <Text key={column.key} style={cellStyle} numberOfLines={1}
+                          adjustsFontSizeToFit minimumFontScale={0.8}>{insurer.policies}</Text>;
+                      }
+                      const exactAmount = amount == null ? '—' : formatInsurerRupees(amount);
+                      return (
+                        <Pressable key={column.key} accessibilityRole="button"
+                          accessibilityLabel={`${insurer.name}, ${column.label}, ${exactAmount}. Tap for full amount`}
+                          onPress={() => Alert.alert(`${displayInsurerName(insurer.name)} · ${column.label}`, exactAmount)}
+                          style={[styles.metricPressable, column.key === 'policies' ? styles.policyColumn : styles.amountColumn]}>
+                          <Text style={styles.metricAmountText} numberOfLines={1}
+                            adjustsFontSizeToFit minimumFontScale={0.7}>
+                            {amount == null ? '—' : formatInsurerCompactRupees(amount)}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                ))}
+            </View>
           </View>
           {!validRange ? <PartnerStateView state="empty" title="Date range unavailable"
             message="Choose a valid range of up to 366 days." />
@@ -408,17 +429,22 @@ const styles = StyleSheet.create({
   rangeRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, paddingHorizontal: 3, marginBottom: 8 },
   countText: { color: '#667D9C', fontSize: 10.5 },
   register: { overflow: 'hidden', borderRadius: 12, borderWidth: 1, borderColor: '#DCE6F2', backgroundColor: '#FFFFFF' },
-  registerContents: { flexDirection: 'row', alignItems: 'flex-start' },
-  fixedNames: { width: 148, borderRightWidth: 1, borderRightColor: '#D8E4F3', backgroundColor: '#FFFFFF' },
-  registerHeader: { flexDirection: 'row', alignItems: 'center', height: 42, paddingHorizontal: 8, backgroundColor: '#E9F1FE', borderBottomWidth: 1, borderBottomColor: '#DCE6F2' },
-  columnTitle: { color: '#38577E', fontSize: 10, fontWeight: '800' },
-  metricHeaderCell: { width: FINANCIAL_COLUMN_WIDTH, minHeight: 38, justifyContent: 'center', paddingHorizontal: 6 },
-  metricHeaderText: { textAlign: 'right', color: '#38577E', fontSize: 9.5, fontWeight: '800' },
-  tableRow: { height: ROW_HEIGHT, flexDirection: 'row', alignItems: 'center', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E2EBF4', paddingHorizontal: 8, gap: 7 },
-  logo: { width: 28, height: 28 },
-  insurerName: { flex: 1, color: '#28466D', fontSize: 10.5, fontWeight: '700', lineHeight: 14 },
+  registerContents: { flexDirection: 'row', alignItems: 'flex-start', width: '100%' },
+  fixedNames: { width: '31%', borderRightWidth: 1, borderRightColor: '#D8E4F3', backgroundColor: '#FFFFFF' },
+  financialColumns: { flex: 1, minWidth: 0 },
+  registerHeader: { flexDirection: 'row', alignItems: 'center', height: 38, paddingHorizontal: 3, backgroundColor: '#E9F1FE', borderBottomWidth: 1, borderBottomColor: '#DCE6F2' },
+  columnTitle: { color: '#38577E', fontSize: 9, fontWeight: '800' },
+  metricHeaderCell: { minWidth: 0, minHeight: 36, justifyContent: 'center', paddingHorizontal: 1 },
+  policyColumn: { width: '17%' },
+  amountColumn: { flex: 1, minWidth: 0 },
+  metricHeaderText: { textAlign: 'right', color: '#38577E', fontSize: 8, fontWeight: '800' },
+  tableRow: { height: ROW_HEIGHT, flexDirection: 'row', alignItems: 'center', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E2EBF4', paddingHorizontal: 4, gap: 4 },
+  logo: { width: 21, height: 21 },
+  insurerName: { flex: 1, minWidth: 0, color: '#28466D', fontSize: 9.2, fontWeight: '700', lineHeight: 12 },
   financialRow: { flexDirection: 'row', alignItems: 'center', height: ROW_HEIGHT, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E2EBF4' },
-  metricCell: { width: FINANCIAL_COLUMN_WIDTH, paddingHorizontal: 6, textAlign: 'right', color: '#163C7A', fontSize: 11.5, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  metricCell: { minWidth: 0, paddingHorizontal: 1, textAlign: 'right', color: '#163C7A', fontSize: 9.5, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  metricPressable: { minWidth: 0, height: ROW_HEIGHT, justifyContent: 'center', paddingHorizontal: 1 },
+  metricAmountText: { color: '#163C7A', textAlign: 'right', fontSize: 9.5, fontWeight: '700', fontVariant: ['tabular-nums'] },
   empty: { padding: 18, fontSize: 12, color: '#718198' },
   retry: { minHeight: 38, alignItems: 'center', justifyContent: 'center' },
   retryText: { color: '#1D5AB0', fontSize: 12, fontWeight: '700' },
