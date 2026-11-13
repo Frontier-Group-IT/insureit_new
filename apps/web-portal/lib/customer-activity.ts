@@ -1,4 +1,5 @@
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { activityChangeTitle, describeAuditedChanges } from "@/lib/activity-change-details";
 
 export const CUSTOMER_ACTIVITY_ACTIONS = {
   CUSTOMER_CREATED: "customer_created",
@@ -95,6 +96,7 @@ type ActivityCandidate = {
   at: string;
   viaLabel?: string | null;
   originCustomerId?: string | null;
+  changes?: string[] | null;
 };
 
 export type CustomerActivityDisplay = {
@@ -103,6 +105,7 @@ export type CustomerActivityDisplay = {
   actorName: string;
   via: string | null;
   under: string | null;
+  changes: string[] | null;
   at: string;
 };
 
@@ -263,6 +266,9 @@ export async function loadCustomerActivityHistory({
       viaLabel,
       originCustomerId: metadataValue(row.new_data, "origin_customer_id")
         ?? (action === CUSTOMER_ACTIVITY_ACTIONS.CUSTOMER_CREATED ? originCustomerId : null),
+      changes: action === CUSTOMER_ACTIVITY_ACTIONS.CUSTOMER_EDITED
+        ? describeAuditedChanges("customer", row.old_data, row.new_data)
+        : null,
     });
   }
 
@@ -305,7 +311,10 @@ export async function loadCustomerActivityHistory({
     .sort((a, b) => timestamp(b.at) - timestamp(a.at))
     .map((candidate) => ({
       id: candidate.id,
-      action: ACTION_LABELS[candidate.action],
+      action: candidate.action === CUSTOMER_ACTIVITY_ACTIONS.CUSTOMER_EDITED
+        ? activityChangeTitle("Customer", candidate.changes ?? null)
+        : ACTION_LABELS[candidate.action],
+      changes: candidate.changes ?? null,
       actorName: candidate.actorName?.trim() || (candidate.actorId ? actorNames.get(candidate.actorId) : null) || "Not recorded",
       via: candidate.viaLabel ?? null,
       under: candidate.originCustomerId ? originNames.get(candidate.originCustomerId) ?? "Parent customer" : null,
