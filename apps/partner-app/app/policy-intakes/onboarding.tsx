@@ -323,7 +323,8 @@ export default function NativePolicyOnboarding(){
   },[draft,productType,isMotor,productValues]);
   const field=(f:Field)=>{
     if(!draft)return null;
-    const current=draft[f.key]??'';
+    const raw=draft[f.key];
+    const current=typeof raw==='string'?raw:'';
     if(['issuanceDate','validFrom','validUpto','tpValidUpto','cpaValidUpto'].includes(f.key))return <PartnerPolicyDateField key={f.key} label={f.label.replace(' (YYYY-MM-DD)','')} value={current} required={f.required} onChange={v=>update(f.key,v)}/>;
     const productOptions=f.key==='policyProduct'?(draft.vehicleClass==='CPM'?['Comprehensive','SAOD']:['Comprehensive','Third Party','SAOD',...(['PCP','TWP'].includes(draft.vehicleClass)?['Bundled']:[]) ]):f.options??[];
     const options=f.key==='insurerId'?data?.insurers??[]:f.key==='make'?(data?.manufacturers??[]).map(x=>({value:x,label:x})):productOptions.map(x=>({value:x,label:x}));
