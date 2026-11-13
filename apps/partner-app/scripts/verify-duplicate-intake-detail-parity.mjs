@@ -81,4 +81,15 @@ for (const removed of [
 ]) {
   assert.ok(!detail.includes(removed), 'Remove requested redundant copy: ' + removed);
 }
+const statusIndex = detail.indexOf('style={reviewStyles.reviewStatus}');
+const notesIndex = detail.indexOf('style={reviewStyles.warningBox}');
+assert.ok(statusIndex > 0 && notesIndex > statusIndex, 'OCR Review notes must appear after Review status');
+assert.ok(!detail.includes('This intake was closed without policy onboarding.'), 'Remove redundant rejected-intake explanation entirely');
+assert.ok(detail.includes("row.status !== 'rejected'"), 'Do not show rejected-intake explanatory header line');
+assert.ok(detail.includes("row.status === 'rejected' ? 'Operations rejection note'"), 'Show appropriate rejected-state comment heading');
+assert.ok(detail.includes('<Text selectable style={styles.attentionText}>{row.attention_reason}</Text>'), 'Display entire Operations comment without line limit');
+assert.ok(detail.includes("attention: { marginTop: 10, paddingHorizontal: 16"), 'Pad attention banner so the comment is not clipped against the screen');
+assert.ok(detail.includes("attentionText: { marginTop: 7, color: '#80511A', fontSize: 12, lineHeight: 19"), 'Use readable multiline comment text');
+assert.ok(detail.includes("singleLine={key === 'vehicle_make'}"), 'Vehicle Make is restricted to one display line');
+assert.ok(detail.includes('numberOfLines={singleLine ? 1 : undefined}'), 'Only the requested Vehicle Make field is truncated to one line');
 console.log('Partner Duplicate Policy Intake website parity regression passed');
