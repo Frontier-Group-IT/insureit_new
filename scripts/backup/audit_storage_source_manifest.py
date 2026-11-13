@@ -11,6 +11,7 @@ historical source transaction. This is a coverage preflight, NOT complete DR.
 import base64
 import datetime as dt
 import json
+import re
 import os
 import sys
 import time
@@ -35,6 +36,36 @@ def iso_time(value):
         return parsed.astimezone(dt.timezone.utc)
     except ValueError:
         return None
+
+
+
+def compatible_timestamp(archived_text, source_text):
+    """Return (compatible, truncated), never invent missing precision.
+
+    The R2 manifest was produced from Supabase Storage's HTTP listing, which
+    can serialize PostgreSQL microsecond timestamps at JS millisecond precision.
+    Only accept source sub-millisecond precision when the archived timestamp
+    explicitly contains exactly three fractional digits. Other differences
+    remain reportable mismatches. The R2 blob SHA256 and byte checks remain
+    independent and unchanged.
+    """
+    archived = iso_time(archived_text)
+    source = iso_time(source_text)
+    if archived is None or source is None:
+        return False, False
+    if archived == source:
+        return True, False
+    if not isinstance(archived_text, str):
+        return False, False
+    fraction = re.search(r"\\.(\\d+)(?:Z|[+-]\\d{2}:\\d{2})$", archived_text)
+    if not fraction or len(fraction.group(1)) != 3:
+        return False, False
+    truncated_source = source.replace(
+        microsecond=(source.microsecond // 1000) * 1000
+    )
+    if archived == truncated_source:
+        return True, True
+    return False, False
 
 
 def snapshot_time(value):
@@ -146,6 +177,11 @@ def compare(buckets_a, before, buckets_b, after, manifest):
     changed_between_scans = len(set(before) | set(after)) - len(stable)
     missing_prior = 0
     stale_prior = 0
+    compatible_submillisecond_timestamps = 0
+    true_timestamp_mismatches = 0
+    true_size_mismatches = 0
+    mismatches_both = 0
+    unverified_archive_metadata = 0
     post_snapshot_added = 0
     unknown_metadata = 0
     stable_in_manifest = 0
@@ -164,13 +200,31 @@ def compare(buckets_a, before, buckets_b, after, manifest):
             continue
         stable_in_manifest += 1
         meta = entry.get("source", {})
-        # PostgreSQL timestamps usually format as "+00:00"; Storage API
-        # timestamps may use "Z". Compare parsed instants, not formatting.
-        if old_enough and modified and modified <= reference and (
-            iso_time(meta.get("updated_at")) != modified
-            or size_int(meta.get("size")) != value.get("size")
-        ):
-            stale_prior += 1
+        # Only compare objects whose last source modification predates
+        # the archived manifest. Old API listings may serialize 3-decimal
+        # timestamps, whereas PostgreSQL retains microseconds.
+        if old_enough and modified and modified <= reference:
+            saved_timestamp = meta.get("updated_at")
+            saved_size = size_int(meta.get("size"))
+            source_size = value.get("size")
+            if iso_time(saved_timestamp) is None or saved_size is None or source_size is None:
+                unverified_archive_metadata += 1
+                stale_prior += 1
+                continue
+            time_ok, used_precision = compatible_timestamp(
+                saved_timestamp, value.get("updated_at")
+            )
+            size_ok = saved_size == source_size
+            if used_precision:
+                compatible_submillisecond_timestamps += 1
+            if not time_ok:
+                true_timestamp_mismatches += 1
+            if not size_ok:
+                true_size_mismatches += 1
+            if not time_ok and not size_ok:
+                mismatches_both += 1
+            if not time_ok or not size_ok:
+                stale_prior += 1
 
     result = {
         "source_before": len(before),
@@ -185,6 +239,11 @@ def compare(buckets_a, before, buckets_b, after, manifest):
         "post_snapshot_source_additions": post_snapshot_added,
         "stable_prior_source_not_in_manifest": missing_prior,
         "stable_prior_manifest_metadata_mismatches": stale_prior,
+        "timestamp_precision_compatible": compatible_submillisecond_timestamps,
+        "timestamp_true_mismatches": true_timestamp_mismatches,
+        "size_true_mismatches": true_size_mismatches,
+        "timestamp_and_size_mismatches": mismatches_both,
+        "archive_metadata_unverifiable": unverified_archive_metadata,
         "metadata_timestamp_unknown": unknown_metadata,
         "manifest_not_currently_listed": len(set(archive) - set(after)),
         "snapshot": manifest["created_at"],
@@ -247,9 +306,9 @@ def main():
               "discrepancy; this is NOT evidence of corrupted R2 file bytes.",
               flush=True)
     else:
-        print("STORAGE HISTORIC COVERAGE PRECHECK PASSED: repeatable-read SQL "
-              "snapshots agree with source identities; no historic transaction "
-              "snapshot can be reconstructed.", flush=True)
+        print("STORAGE HISTORIC COVERAGE PRECHECK PASSED: stable archived "
+              "identities and metadata agree at manifest timestamp precision; "
+              "this does not reconstruct a historic source snapshot.", flush=True)
     print("CAVEAT: PostgreSQL Storage METADATA only; the successful independent "
           "R2 all-file checksum test is separate. Operational service and full "
           "historical Storage source completeness remain unverified.", flush=True)
