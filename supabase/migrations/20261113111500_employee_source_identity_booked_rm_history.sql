@@ -101,7 +101,7 @@ UNION ALL SELECT 'intermediary_group_memberships',id,md5(to_jsonb(t)::text) FROM
 -- A name/code correction is NOT a source transfer. Even changing a policy's
 -- source code must never infer a new booked RM from today's partner owner.
 CREATE OR REPLACE FUNCTION public.sync_policy_rm_employee_id()
-RETURNS trigger LANGUAGE plpgsql SET search_path TO 'public' AS $$
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public' AS $$
 DECLARE
   v_employee_id uuid;
   v_employee_name text;
@@ -145,7 +145,7 @@ $$;
 -- Resolve the UUID when a source is first chosen. A later code correction must
 -- preserve a matching UUID; a user explicitly choosing another code can change it.
 CREATE OR REPLACE FUNCTION public.set_policy_source_identity()
-RETURNS trigger LANGUAGE plpgsql SET search_path TO 'public' AS $$
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public' AS $$
 DECLARE
   v_id uuid;
   v_code text;
@@ -195,7 +195,7 @@ EXECUTE FUNCTION public.sync_policy_intermediary_group_snapshot();
 -- Partner/POSP/MISP name/code identity corrections propagate to current labels,
 -- never to policy/case RM ownership or audit actors.
 CREATE OR REPLACE FUNCTION public.sync_intermediary_identity_labels()
-RETURNS trigger LANGUAGE plpgsql SET search_path TO 'public' AS $$
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public' AS $$
 BEGIN
   IF NEW.intermediary_code IS NOT DISTINCT FROM OLD.intermediary_code
     AND NEW.display_name IS NOT DISTINCT FROM OLD.display_name THEN RETURN NEW; END IF;
@@ -228,7 +228,7 @@ FOR EACH ROW EXECUTE FUNCTION public.sync_intermediary_identity_labels();
 -- If the Partner master is the editing entrypoint, bring its matching Partner
 -- intermediary forward. Do not apply the Partner's identity to child POSP codes.
 CREATE OR REPLACE FUNCTION public.sync_partner_master_identity_to_intermediary()
-RETURNS trigger LANGUAGE plpgsql SET search_path TO 'public' AS $$
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public' AS $$
 BEGIN
   IF NEW.partner_code IS DISTINCT FROM OLD.partner_code
      OR NEW.display_name IS DISTINCT FROM OLD.display_name THEN
@@ -251,7 +251,7 @@ FOR EACH ROW EXECUTE FUNCTION public.sync_partner_master_identity_to_intermediar
 -- values by UUID. Never re-resolve business ownership through today's RM.
 -- Legacy associate_id is retained, and a separate current HR code is populated.
 CREATE OR REPLACE FUNCTION public.sync_employee_canonical_identity()
-RETURNS trigger LANGUAGE plpgsql SET search_path TO 'public' AS $$
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public' AS $$
 BEGIN
   UPDATE public.profiles p
      SET full_name=NEW.full_name,employee_code=NEW.employee_code,
@@ -304,7 +304,7 @@ ON public.employees FOR EACH ROW EXECUTE FUNCTION public.sync_employee_canonical
 
 -- Guard new onboarding selections against hand-written code/name aliases.
 CREATE OR REPLACE FUNCTION public.canonicalize_onboarding_employee_identity()
-RETURNS trigger LANGUAGE plpgsql SET search_path TO 'public' AS $$
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public' AS $$
 DECLARE v_full_name text; v_code text;
 BEGIN
   IF NEW.associate_employee_id IS NULL THEN RETURN NEW; END IF;
@@ -327,7 +327,7 @@ EXECUTE FUNCTION public.canonicalize_onboarding_employee_identity();
 -- Canonicalize new case displays from the booked employee and selected source UUID.
 -- This does not assign/change any RM; the UUID stored at booking remains immutable.
 CREATE OR REPLACE FUNCTION public.canonicalize_case_identity_labels()
-RETURNS trigger LANGUAGE plpgsql SET search_path TO 'public' AS $
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public' AS $
 DECLARE v_rm_name text; v_rm_code text; v_source_name text; v_source_code text;
 BEGIN
   IF NEW.rm_employee_id IS NOT NULL THEN
@@ -356,7 +356,7 @@ EXECUTE FUNCTION public.canonicalize_case_identity_labels();
 
 -- Intake source ID is stable even if its display name or external code changes.
 CREATE OR REPLACE FUNCTION public.canonicalize_intake_source_identity()
-RETURNS trigger LANGUAGE plpgsql SET search_path TO 'public' AS $
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public' AS $
 DECLARE v_name text; v_code text;
 BEGIN
   IF NEW.lead_source_id IS NOT NULL THEN
@@ -425,6 +425,18 @@ BEGIN
   END LOOP;
 END;
 $scope_onboarding_triggers$;
+
+-- Trigger bodies need to update UUID-linked dependent tables atomically even when
+-- the editor cannot edit those tables directly. Do not expose these definer
+-- functions as callable public RPCs; only the registered triggers invoke them.
+REVOKE ALL ON FUNCTION public.sync_policy_rm_employee_id() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.set_policy_source_identity() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.sync_intermediary_identity_labels() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.sync_partner_master_identity_to_intermediary() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.sync_employee_canonical_identity() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.canonicalize_onboarding_employee_identity() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.canonicalize_case_identity_labels() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.canonicalize_intake_source_identity() FROM PUBLIC, anon, authenticated;
 
 -- The migration is conditional on existing UUIDs, never on matching two names.
 UPDATE public.policies p SET source_intermediary_id=i.id
