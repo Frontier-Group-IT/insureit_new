@@ -346,7 +346,7 @@ export default function NativePolicyOnboarding(){
     if(!draft)return null;
     const raw=draft[f.key];
     const current=typeof raw==='string'?raw:'';
-    if(['issuanceDate','validFrom','validUpto','tpValidUpto','cpaValidUpto'].includes(f.key))return <PartnerPolicyDateField key={f.key} hidePlaceholder label={isMotor&&f.key==='issuanceDate'?'Policy issuance date':f.label.replace(' (YYYY-MM-DD)','')} value={current} required={f.required} onChange={v=>update(f.key,v)}/>;
+    if(['issuanceDate','validFrom','validUpto','tpValidUpto','cpaValidUpto'].includes(f.key))return <PartnerPolicyDateField key={f.key} label={isMotor&&f.key==='issuanceDate'?'Policy issuance date':f.label.replace(' (YYYY-MM-DD)','')} value={current} required={f.required} onChange={v=>update(f.key,v)}/>;
     const productOptions=f.key==='policyProduct'?(draft.vehicleClass==='CPM'?['Comprehensive','SAOD']:['Comprehensive','Third Party','SAOD',...(['PCP','TWP'].includes(draft.vehicleClass)?['Bundled']:[]) ]):f.options??[];
     const options=f.key==='insurerId'?data?.insurers??[]:f.key==='make'?(data?.manufacturers??[]).map(x=>({value:x,label:x})):productOptions.map(x=>({value:x,label:x}));
     const displayed=options.find(x=>x.value===current)?.label??current;
@@ -354,7 +354,7 @@ export default function NativePolicyOnboarding(){
       <Text style={styles.label}>{f.label}{f.required?<Text style={styles.star}> *</Text>:null}</Text>
       {options.length?(
         <Pressable accessibilityRole="button" accessibilityLabel={f.label} onPress={()=>setPicker({key:f.key,items:options})} style={styles.inputRow}>
-          <Text numberOfLines={1} style={[styles.value,!current&&styles.placeholder]}>{displayed}</Text>
+          <Text numberOfLines={1} style={[styles.value,!current&&styles.placeholder]}>{displayed||'Select '+f.label.toLowerCase()}</Text>
           <Ionicons name="chevron-down" size={15} color="#63758D"/>
         </Pressable>
       ):(
@@ -372,12 +372,12 @@ export default function NativePolicyOnboarding(){
     if(f.key==='insuredName'||f.key==='phoneNo')return field({key:f.key as FieldKey,label:f.label,required:f.required});
     const current=String(productValues[f.key]??'');
     if(f.key==='grossPremium')return <View key={f.key} style={styles.field}><Text style={styles.label}>{f.label}</Text><View style={styles.inputRow}><Text style={styles.value}>{current||'0.00'}</Text></View></View>;
-    if(f.date)return <PartnerPolicyDateField key={f.key} hidePlaceholder label={f.label} value={current} required={f.required} onChange={v=>updateProduct(f.key,v)}/>;
+    if(f.date)return <PartnerPolicyDateField key={f.key} label={f.label} value={current} required={f.required} onChange={v=>updateProduct(f.key,v)}/>;
     const options=f.key==='insurerId'?data?.insurers??[]:(f.options??[]).map(value=>({value,label:value}));
     return <View key={f.key} style={[styles.field,f.wide&&styles.wideField]}>
       <Text style={styles.label}>{f.label}{f.required?<Text style={styles.star}> *</Text>:null}</Text>
       {options.length?<Pressable accessibilityRole="button" accessibilityLabel={f.label} style={styles.inputRow} onPress={()=>setPicker({key:f.key,items:options,product:true})}>
-        <Text style={[styles.value,!current&&styles.placeholder]} numberOfLines={1}>{options.find(o=>o.value===current)?.label||''}</Text>
+        <Text style={[styles.value,!current&&styles.placeholder]} numberOfLines={1}>{options.find(o=>o.value===current)?.label||'Select '+f.label.toLowerCase()}</Text>
         <Ionicons name="chevron-down" size={15} color="#63758D"/>
       </Pressable>:<TextInput accessibilityLabel={f.label} value={current} onChangeText={v=>updateProduct(f.key,v)}
         keyboardType={['premiumAmount','sumInsured','deductible','netPremium','gstAmount','grossPremium','employeeCount','annualWages','annualTurnover','projectValue'].includes(f.key)?'numeric':'default'}
