@@ -2,6 +2,19 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 const app = readFileSync('app/policy-intakes.tsx', 'utf8');
+// Empty selected status/search results use existing illustration assets, centered only
+// when there are no rows (never replacing errors, loading, or populated results).
+assert.match(app, /import \{ PartnerAssets \} from '@\/lib\/partner-assets'/, 'Reuse Partner App artwork registry');
+assert.match(app, /debouncedQuery \? PartnerAssets\.emptyStates\.noSearchResults : PartnerAssets\.emptyStates\.noPolicies/, 'Use search artwork for empty search and policy artwork for empty status');
+assert.match(app, /<Image[\s\S]*?style=\{styles\.emptyIllustrationImage\}[\s\S]*?resizeMode="contain"/, 'Render the illustration without cropping');
+assert.match(app, /contentContainerStyle=\{\[styles\.content, !loading && !error && visibleRows\.length === 0 && styles\.emptyContent\]\}/, 'Only the successful empty state grows to fill available scroll area');
+assert.match(app, /compactEmpty: \{ flex: 1, minHeight: 250,[^}]*justifyContent: 'center'/, 'Center illustration, title and message vertically');
+assert.doesNotMatch(app, /styles\.emptyIllustrationAccent|styles\.emptyIllustration\}/, 'Remove the tiny legacy empty-state icon');
+assert.match(app, /<PartnerStateView state="loading"/, 'Loading retains its own state');
+assert.match(app, /<PartnerStateView state="error"/, 'Errors retain their own state and retry');
+assert.match(app, /visibleRows\.map\(\(row\) =>/, 'Available records remain visible');
+assert.match(app, /<View style=\{styles\.bottomNav\}>/, 'Bottom navigation remains outside the scroll body');
+
 assert.match(app, /\{filter === 'all' \? <IntakeProgress row=\{row\} \/> : null\}/, 'Progress timeline renders only when the All status filter is selected');
 assert.doesNotMatch(app, /<IntakeProgress row=\{row\} \/>(?!\s*: null)/, 'Do not render an unconditional timeline in each status filter');
 assert.match(app, /function IntakeProgress\(\{ row \}: \{ row: PartnerPolicyIntake \}\) \{/, 'Retain the existing per-record progress component');
