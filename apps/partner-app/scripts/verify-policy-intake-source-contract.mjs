@@ -92,14 +92,20 @@ for (const required of [
 ]) requireText(detailScreen, required, 'Preserve intake information and actions: ' + required);
 // Keep status and timestamp together in the top-right stack without losing summary data.
 requireText(detailScreen, '<View style={styles.statusTitleRow}>', 'Policy Intake header must place status beside the title.');
-requireText(detailScreen, "statusMeta: { flexShrink: 0, maxWidth: '58%', alignItems: 'flex-end', gap: 4 }", 'Status/date should stack and align right.');
+requireText(detailScreen, "statusMeta: { flexShrink: 0, maxWidth: '47%', alignItems: 'flex-end', gap: 3 }", 'Status/date should remain compact and right aligned.');
 requireText(detailScreen, '<Text style={styles.statusDate}>{formatDate(row.updated_at)}</Text>', 'Preserve the updated date and time.');
 const summaryHeaderStart = detailScreen.indexOf('<View style={styles.statusTitleRow}>');
-const summaryDetailsStart = detailScreen.indexOf('<View style={styles.intakeSummaryCompact}>', summaryHeaderStart);
+const identityStart = detailScreen.indexOf('<View style={styles.statusIdentity}>', summaryHeaderStart);
+const summaryDetailsStart = detailScreen.indexOf('<View style={styles.intakeSummaryCompact}>', identityStart);
 const headerStatusPosition = detailScreen.indexOf('<View style={[styles.statusMeta,', summaryHeaderStart);
-if (!(summaryHeaderStart >= 0 && headerStatusPosition > summaryHeaderStart && headerStatusPosition < summaryDetailsStart)) {
-  throw new Error('Policy Intake status and time must appear within the top-right title row.');
+if (!(summaryHeaderStart >= 0 && identityStart > summaryHeaderStart &&
+      summaryDetailsStart > identityStart && headerStatusPosition > summaryDetailsStart)) {
+  throw new Error('Identity details must follow the title directly, independent of the right-aligned status/date.');
 }
+requireText(detailScreen, "intakeSummaryCompact: { marginTop: 0, marginBottom: 0 }", 'Remove the empty space beneath the title.');
+requireText(detailScreen, "intakeNumber: { color: partnerTheme.colors.ink, fontSize: 14, lineHeight: 19, fontWeight: '500' }", 'Use compact medium-weight title on Android and iOS.');
+requireText(detailScreen, "pairValue:{flex:1.4,textAlign:'right',fontSize:10.5,lineHeight:15,color:'#193659',fontWeight:'400'}", 'Preserve all OCR values with normal-weight typography.');
+requireText(detailScreen, "sheetTitle:{fontSize:13,fontWeight:'500'", 'Use compact section headings on both platforms.');
 if ((detailScreen.match(/<View style=\{\[styles.statusMeta,/g) || []).length !== 1) {
   throw new Error('Policy Intake summary must render status/date only once.');
 }
