@@ -16,7 +16,7 @@ assert.match(screen,/productType==='Non Motor'\?'Customer & policy':'Customer \/
 assert.match(screen,/productType==='Non Motor'\?productSection\('03','Risk details'/);
 assert.match(screen,/productSection\('03','Policy product & case details',lifeProduct\)/);
 assert.match(screen,/productSection\('04',productType==='Non Motor'\?'Cover, premium & validity':'Premium & payment'/);
-for(const label of ['PPT · Premium paying term','PD · Policy duration','Payment frequency','Premium amount (₹)','Payment mode','Case / proposal number','Address','Risk location','Sum insured / limit (₹)','Policy category']){
+for(const label of ['PPT - Premium paying term','PD - Policy duration / term','Payment frequency','Premium amount (₹)','Payment mode','Case / proposal number','Address','Risk location','Sum insured / limit (₹)','Policy category']){
   assert.ok(screen.includes(label), 'Missing Operations field '+label);
 }
 for(const label of ['Proposal Form','Benefit Illustration','Premium Receipt','Other Document']){
