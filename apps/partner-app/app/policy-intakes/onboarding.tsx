@@ -38,11 +38,22 @@ const product = [
   {key:'insurerId',label:'Insurance company',required:true},
   {key:'idv',label:'IDV (₹)',required:true},
   {key:'od',label:'OD premium (₹)',required:true},
+  {key:'addOnPremium',label:'Add-on premium (₹)'},
   {key:'tp',label:'TP premium (₹)',required:true},
   {key:'cpa',label:'CPA amount (₹)'},
   {key:'cpaOpted',label:'CPA opted',options:['Yes','No']},
   {key:'validFrom',label:'Validity from (YYYY-MM-DD)',required:true},
   {key:'validUpto',label:'Validity up to (YYYY-MM-DD)',required:true},
+] satisfies Field[];
+const commercial = [
+  {key:'payoutBasis',label:'Pay-in / payout basis',options:['NET','FLAT']},
+  {key:'projectedOdPercent',label:'Insurer OD pay-in (%)'},
+  {key:'projectedTpPercent',label:'Insurer TP pay-in (%)'},
+  {key:'insurerScheme',label:'Insurer scheme'},
+  {key:'retention',label:'Retention (₹)'},
+  {key:'payoutOdPercent',label:'Partner OD payout (%)'},
+  {key:'payoutTpPercent',label:'Partner TP payout (%)'},
+  {key:'flatPayoutAmount',label:'Flat payout amount (₹)'},
 ] satisfies Field[];
 
 function amount(value:string){const n=Number(value);return Number.isFinite(n)&&n>0?n:0;}
@@ -74,7 +85,16 @@ export default function NativePolicyOnboarding(){
   },[id]);
   useEffect(()=>{void load();},[load]);
   const update=(key:FieldKey,value:string)=>{
-    setDraft(current=>current?{...current,[key]:value}:current);
+    setDraft(current=>{
+      if(!current)return current;
+      const next={...current,[key]:value};
+      if(key==='registrationMode'&&value==='unregistered')next.registrationNo='';
+      if(key==='vehicleClass'&&value!==current.vehicleClass)next.policyProduct='';
+      if(key==='vehicleClass'&&value==='CPM'){next.tp='0';next.cpa='0';next.cpaOpted='No';}
+      if(key==='policyProduct'&&value==='Third Party'){next.idv='0';next.od='0';}
+      if(key==='cpa')next.cpaOpted=amount(value)>0?'Yes':'No';
+      return next;
+    });
     setDirty(true);
     setVerifiedApprovalId(null);
     setApprovalRequestId(null);
@@ -167,7 +187,7 @@ export default function NativePolicyOnboarding(){
     }catch(e){setError(e instanceof Error?e.message:'Approval could not be verified.');}
     finally{setApprovalBusy(false);}
   }
-  const net=useMemo(()=>draft?amount(draft.od)+amount(draft.tp)+amount(draft.cpa):0,[draft]);
+  const net=useMemo(()=>draft?amount(draft.od)+amount(draft.tp)+amount(draft.cpa)+amount(draft.addOnPremium||'0'):0,[draft]);
   const filled=useMemo(()=>{
     if(!draft)return 0;
     const required=[...policy,...vehicle,...product].filter(field=>field.required);
@@ -176,7 +196,8 @@ export default function NativePolicyOnboarding(){
   const field=(f:Field)=>{
     if(!draft)return null;
     const current=draft[f.key]??'';
-    const options=f.key==='insurerId'?data?.insurers??[]:f.key==='make'?(data?.manufacturers??[]).map(x=>({value:x,label:x})):(f.options??[]).map(x=>({value:x,label:x}));
+    const productOptions=f.key==='policyProduct'?(draft.vehicleClass==='CPM'?['Comprehensive','SAOD']:['Comprehensive','Third Party','SAOD',...(['PCP','TWP'].includes(draft.vehicleClass)?['Bundled']:[]) ]):f.options??[];
+    const options=f.key==='insurerId'?data?.insurers??[]:f.key==='make'?(data?.manufacturers??[]).map(x=>({value:x,label:x})):productOptions.map(x=>({value:x,label:x}));
     const displayed=options.find(x=>x.value===current)?.label??current;
     return <View key={f.key} style={styles.field}>
       <Text style={styles.label}>{f.label}{f.required?<Text style={styles.star}> *</Text>:null}</Text>
@@ -205,10 +226,13 @@ export default function NativePolicyOnboarding(){
       <View style={styles.status}><View><Text style={styles.intake}>{data?.intake_number||'Policy Intake'}</Text><Text style={styles.muted}>Existing draft · {dirty?'Unsaved changes':'Saved revision '+data?.revision}</Text></View><View style={styles.progress}><Text style={styles.progressText}>{filled}% complete</Text></View></View>
       {section('01','Policy source & ownership',policy)}
       {section('02','Insured & vehicle identification',vehicle)}
-      {section('03','Policy product, premium & validity',product)}
+      {section('03','Policy product, premium & validity',draft.policyProduct==='Bundled'&&['PCP','TWP'].includes(draft.vehicleClass)?[
+        ...product,{key:'tpValidUpto',label:'TP validity up to (YYYY-MM-DD)',required:true},{key:'cpaValidUpto',label:'CPA validity up to (YYYY-MM-DD)',required:true}
+      ]:product)}
+      {data?.commercialAccess?section('04','Insurer pay-in & partner payout',commercial):null}
       <View style={styles.section}>
         <View style={styles.sectionHead}><Ionicons name="calculator-outline" size={18} color="#254C83"/><Text style={styles.sectionTitle}>Onboarding summary</Text></View>
-        <View style={styles.summary}><Text style={styles.muted}>OD + TP + CPA (before applicable taxes)</Text><Text style={styles.total}>₹{net.toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})}</Text></View>
+        <View style={styles.summary}><Text style={styles.muted}>OD + TP + Add-on + CPA (before applicable taxes)</Text><Text style={styles.total}>₹{net.toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})}</Text></View>
         <Text style={styles.notice}>This is a draft summary, not the final policy premium calculation. Final taxes, premiums, validation and booking must use the website&apos;s authoritative booking engine.</Text>
       </View>
       <View style={styles.actions}>
