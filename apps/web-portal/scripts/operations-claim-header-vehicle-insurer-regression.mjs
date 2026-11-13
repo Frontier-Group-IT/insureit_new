@@ -7,9 +7,10 @@ const headerCss = read("../components/spot-survey/claim-journey-header.module.cs
 const claimPage = read("../app/claims/[id]/page.tsx");
 const insurerLogo = read("../lib/insurer-logo.ts");
 
-assert.match(header, /<Info label="Vehicle No\." title=\{vehicleNumber\} logo=\{<CarFront/, "Vehicle number uses a clear CarFront icon.");
-assert.doesNotMatch(header, /claimHeaderIcons\.vehicle/, "Do not retain the old multi-vehicle illustration.");
-assert.match(header, /import \{ CarFront \} from "lucide-react"/, "Use the existing icon library.");
+assert.match(header, /vehicle: "\/assets\/customer-3d-icons\/brand_new_vehicle\.png"/, "Use the existing dedicated 3D vehicle artwork.");
+assert.match(header, /<Info label="Vehicle No\." title=\{vehicleNumber\} logo=\{<HeaderIcon src=\{claimHeaderIcons\.vehicle\} alt="Vehicle" \/>/, "Vehicle Number shows the 3D vehicle graphic in the existing white icon container.");
+assert.doesNotMatch(header, /vehicle: "\/assets\/customer-3d-icons\/my_vehicles\.png"/, "Do not return to the old multi-vehicle icon.");
+assert.match(header, /import \{ CarFront \} from "lucide-react"/, "Preserve the manufacturer-logo fallback.");
 assert.match(header, /<Info label="Model" title=\{model\} singleLine logo=\{<ManufacturerLogo name=\{make\} \/>\}/, "Model must stay in one line and retain manufacturer icon");
 assert.doesNotMatch(header, /label="Vehicle No\. & Model"/, "Combined vehicle/model field must be removed");
 assert.match(header, /lg:grid-cols-7/, "Claim header must accommodate seven fields");
