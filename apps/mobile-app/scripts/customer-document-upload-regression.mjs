@@ -29,4 +29,33 @@ for (const [screen, content] of [['claim intimation', claim], ['self managed vau
 assert.match(transport, /if \(xhr\.status === 0\)/);
 assert.match(claim, /'metadata', error/);
 assert.match(selfManaged, /'metadata', insertError/);
+
+// Rejected claim documents must navigate to the original upload stage, not the
+// claim's current (possibly 100%-completed) processing or payment stage.
+const tracker = read('app/customer/claim-detail.tsx');
+const reuploads = read('lib/customer-claim-reupload.ts');
+const spotUpload = read('app/customer/self-managed-claim.tsx');
+const spotInternal = read('components/internal-claim-stage-one-tracker.tsx');
+const milestone = read('app/customer/self-managed-milestone.tsx');
+const internalParity = read('components/internal-claim-stage-parity.tsx');
+const sharedScreen = read('components/ui.tsx');
+assert.match(tracker, /outstandingClaimReuploads\(reuploadNotices, documents\)/);
+assert.match(tracker, /openReuploadStage\(reuploadDocumentType\(notice\)\)/);
+assert.match(tracker, /reuploadDocumentStage\(documentType, documents\)/);
+assert.doesNotMatch(tracker, /onPress=\{\(\) => selfManaged \? \(currentStage \? openSelfStage\(currentStage\.key\)/);
+assert.match(tracker, /useFocusEffect\(useCallback\(\(\) => \{/);
+assert.match(reuploads, /latest\?\.verification_status === 'rejected'/);
+assert.match(reuploads, /seen\.some/);
+assert.match(reuploads, /initialClaimDocuments\.some/);
+assert.match(reuploads, /return 'spot_intimation'/);
+assert.match(reuploads, /return 'claim_intimation'/);
+assert.match(spotUpload, /scrollTargetY=\{focusDocumentType \? documentSectionY : null\}/);
+assert.match(spotUpload, /focusReupload=\{focusDocumentType === 'RC Copy'\}/);
+assert.match(spotInternal, /scrollTargetY=\{focusDocumentType \? documentSectionY : null\}/);
+assert.match(milestone, /focusDocumentType=\{focusDocumentType\}/);
+assert.match(internalParity, /focusDocumentType=\{focusDocumentType\}/);
+assert.match(claim, /setActiveKey\(matchingGroup\.key\)/);
+assert.match(claim, /styles\.reuploadFocusCard/);
+assert.match(sharedScreen, /scrollRef\.current\?\.scrollTo/);
+
 console.log('Customer document upload regression contracts passed.');
