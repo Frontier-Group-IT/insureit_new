@@ -8,7 +8,7 @@ const footer = src.slice(start, end);
 assert.match(footer, /<NonMotorDocumentPicker/);
 assert.match(footer, /flex flex-wrap items-center justify-between gap-3/, "Documents and Save/Cancel are in a single responsive row");
 assert.doesNotMatch(footer, /border-b border-\[#E7ECF3\]/, "No separate document and action rows");
-assert.match(footer, /flex flex-wrap items-center justify-end gap-2/);
+assert.match(footer, /flex shrink-0 items-center justify-end gap-2/, "Cancel and save remain grouped on the right");
 assert.match(footer, />Cancel<\/Link>/);
 assert.match(footer, /onClick=\{\(\)=>submit\(\)\}/, "Final-save action must remain available via submission wrapper");
 assert.ok(footer.indexOf("<NonMotorDocumentPicker") < footer.indexOf(">Cancel</Link>"), "Document uploads must precede final actions");
