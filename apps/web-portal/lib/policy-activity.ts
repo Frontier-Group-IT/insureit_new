@@ -265,6 +265,31 @@ export function describePolicyEditChanges(before: PolicyEditSnapshot | null, aft
         : `${entry.label} changed (values hidden)`).slice(0,30);
 }
 
+function readPolicyAuditFieldChanges(raw:unknown):string[]|null {
+  if(!Array.isArray(raw)) return null;
+  const fieldLabels = new Set(Object.values(POLICY_EDIT_FIELDS).flatMap(fields=>Object.values(fields)));
+  const withValues=new Set([...DISPLAYABLE_PREMIUM_VALUES,...DISPLAYABLE_PUBLIC_VALUES]
+    .map(path=>{const [group,key]=path.split(".");return (POLICY_EDIT_FIELDS as Record<string,Record<string,string>>)[group]?.[key];})
+    .filter((label):label is string=>Boolean(label)));
+  const accepted:string[]=[];
+  for(const item of raw.slice(0,30)){
+    if(typeof item!=="string"||item.length>180)continue;
+    if(fieldLabels.has(item)){
+      // Old records only knew that calculated totals changed. Do not make
+      // them look like manual edits, or invent the prior CPA amount.
+      if(!["Net premium","GST","Gross premium","Premium","Projected insurer pay-in",
+        "Total projected pay-in","Partner payout amount"].includes(item))accepted.push(item);
+      continue;
+    }
+    const hidden=item.match(/^(.*?) changed \(values hidden\)$/);
+    if(hidden&&fieldLabels.has(hidden[1])){accepted.push(item);continue;}
+    const parsed=item.match(/^(.*?): (.*?) → (.*?)$/);
+    if(parsed&&withValues.has(parsed[1])&&parsed[2].length<=70&&parsed[3].length<=70
+       &&!/[<>\r\n]/.test(parsed[2]+parsed[3]))accepted.push(item);
+  }
+  return accepted.length?accepted:raw.length?null:[];
+}
+
 function policyEditTitle(changed: string[] | null): string {
   if (!changed) return "Policy updated — change details unavailable";
   if (changed.length === 0) return "Policy saved — no tracked field changes";
@@ -355,7 +380,7 @@ export async function loadPolicyActivityHistory({
       policyDate: action === POLICY_ACTIVITY_ACTIONS.PREVIOUS_MONTH_POLICY_UPLOADED ? row.new_data?.issuance_date : null,
       changedFields: action === POLICY_ACTIVITY_ACTIONS.POLICY_EDITED
         && Array.isArray(row.new_data?.changed_fields)
-        ? row.new_data.changed_fields.filter((item): item is string => typeof item === "string").slice(0, 30)
+        ? readPolicyAuditFieldChanges(row.new_data.changed_fields)
         : null,
       at: row.created_at,
     });
