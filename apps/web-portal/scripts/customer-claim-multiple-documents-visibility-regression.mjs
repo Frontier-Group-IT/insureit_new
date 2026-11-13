@@ -15,7 +15,7 @@ assert.match(workspace, /<CustomerClaimMultipleUpload documents=\{multipleDocume
 assert.doesNotMatch(workspace, /<CustomerClaimMultipleFiles/, "Do not render a separate uploaded-documents card");
 assert.doesNotMatch(workspace, /showFilePreview=\{false\}/, "Category cards show their own uploaded filenames.");
 assert.match(workspace, /\(allowUpload \|\| multipleDocuments\.length > 0\)/, "Show bulk files on completed read-only stages even without upload action");
-assert.match(workspace, /allowUpload=\{allowUpload\}/, "Only permit upload when editing is allowed");
+assert.match(workspace, /allowUpload=\{\(allowUpload && item\.type !== "Incident Voice Note"\) \|\| Boolean\(reuploadRequestId/, "Only permit uploads during normal editing or for the exact active re-upload request");
 assert.match(bulk, /data\.set\("type","Other Document"\)/, "Keep bulk document type for Operations verification");
 assert.match(workspace, /multipleDocuments = documents\.filter\(doc => normalize\(doc\.document_type\) === "otherdocument"\)/, "Bulk count excludes RC Copy, Accident Photo, and all other categories");
 assert.match(bulk, /shownDocuments=\[\.\.\.recentUploads,\.\.\.documents\.filter/, "Count only confirmed bulk uploads, including files saved just now, without duplicates");

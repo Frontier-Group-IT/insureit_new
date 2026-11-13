@@ -1,3 +1,4 @@
+import { resolveClaimReuploadRequests, type ClaimReuploadEvent } from "@/lib/customer-claim-reupload";
 import { cache } from "react";
 import { notFound } from "next/navigation";
 import { projectInternalClaim } from "@insureit/claim-journey";
@@ -280,11 +281,16 @@ export async function loadCustomerClaimDetail(customerId: string, claimId: strin
   if (!claim) notFound();
 
   const supabase = await createCustomerServerSupabaseClient();
-  const [milestoneResult, documentResult, taskResult, operationsResult] = await Promise.all([
+  const [milestoneResult, documentResult, taskResult, operationsResult, reuploadResult] = await Promise.all([
     supabase.from("claim_milestones").select("id,claim_id,milestone_key,milestone_status,details,completed_at,updated_at").eq("claim_id", claimId),
     supabase.from("claim_documents").select("id,claim_id,document_type,verification_status,created_at,file_name").eq("claim_id", claimId).order("created_at", { ascending: false }),
     supabase.from("claim_tasks").select("id,claim_id,title,status").eq("claim_id", claimId).eq("status", "open"),
     supabase.rpc("customer_claim_operations_stage_details", { p_claim_id: claimId }),
+    supabase.from("customer_activity_events")
+      .select("id,event_type,title,message,metadata,created_at")
+      .eq("customer_id", customerId).eq("claim_id", claimId)
+      .in("event_type", ["claim_document_reuploaded", "claim_document_reupload_resolved"])
+      .order("created_at", { ascending: false }).limit(50),
   ]);
 
   if (documentResult.error) throw new Error("Claim documents could not be loaded. Please retry.");
@@ -297,12 +303,18 @@ export async function loadCustomerClaimDetail(customerId: string, claimId: strin
     isExternalCustomerClaim(claim),
   );
   const documents = (documentResult.data ?? []) as CustomerClaimDocument[];
+  // Same scoped activity source as the Customer App. Do not expose other customers' events.
+  if (reuploadResult.error) throw new Error("Claim re-upload requests could not be loaded. Please retry.");
+  const reuploadRequests = resolveClaimReuploadRequests(
+    (reuploadResult.data ?? []) as ClaimReuploadEvent[], documents,
+  );
   const tasks = (taskResult.data ?? []) as CustomerClaimTask[];
 
   return {
     claim,
     milestones,
     documents,
+    reuploadRequests,
     tasks,
     internal_projection: isExternalCustomerClaim(claim)
       ? null

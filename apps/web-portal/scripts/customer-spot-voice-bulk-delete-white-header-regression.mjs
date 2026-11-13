@@ -49,7 +49,7 @@ assert.match(compact, /CustomerSpotAttachmentDelete accountId=\{accountId\}/, "P
 assert.match(compact, /file\.verification_status === "pending"/, "Only pending category files show a delete button.");
 assert.match(compact, /allowUpload && file\.verification_status/, "Read-only category cards never show delete actions.");
 assert.match(compact, /deletedIds\.includes\(doc\.id\)/, "Category file list and badge count update on delete.");
-assert.match(groups, /allowUpload=\{allowUpload\}/, "Claim Intimation cards inherit stage edit permission.");
+assert.match(groups, /allowUpload=\{allowUpload \|\| Boolean\(reuploadRequestId/, "Claim Intimation cards allow standard edits or the exact authorized replacement.");
 assert.match(billingUpload, /mode === "customer" && !readonly && accountId && file\.verification_status === "pending"/, "Billing only offers delete on editable pending Customer uploads.");
 assert.match(billingUpload, /stage="billing"/, "Billing deletion is checked against its own stage.");
 assert.match(button, /deleteCustomerClaimStageDocument/, "Reused confirmation control calls the scoped stage deletion action.");

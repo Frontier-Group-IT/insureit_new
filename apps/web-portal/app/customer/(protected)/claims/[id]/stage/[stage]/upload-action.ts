@@ -4,6 +4,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { getCustomerWebSession } from "@/lib/customer-web";
 import { resolveCustomerWebScope } from "@/lib/customer-web-data";
 import { loadCustomerClaimDetail, isExternalCustomerClaim, buildExternalClaimProjection } from "@/lib/customer-web-phase2-data";
+import { sameClaimDocumentType } from "@/lib/customer-claim-reupload";
 
 const documentTypes=[
   "RC Copy","Insurance Copy","Driver Licence","GR / Load Bill",
@@ -23,7 +24,6 @@ export async function uploadCustomerClaimDocument(_previous:CustomerClaimUploadS
   const accountId=String(form.get("account")||"");
   const claimId=String(form.get("claim")||"");
   const type=String(form.get("type")||"");
-  if(!documentTypes.includes(type))return {error:"Unsupported claim document category."};
   const files=form.getAll("file").filter((value):value is File=>value instanceof File&&value.size>0);
   if(!files.length)return {error:"Select at least one file to upload."};
   if(files.length>10)return {error:"Select up to 10 files at a time."};
@@ -34,7 +34,14 @@ export async function uploadCustomerClaimDocument(_previous:CustomerClaimUploadS
     if(file.size>(file.type.startsWith("video/")?50:5)*1024*1024)return {error:"Claim document exceeds allowed file size: "+file.name};
   }
   const {account}=await resolveCustomerWebScope(accountId);
-  const {claim,milestones,internal_projection}=await loadCustomerClaimDetail(account.id,claimId);
+  const {claim,milestones,internal_projection,reuploadRequests}=await loadCustomerClaimDetail(account.id,claimId);
+  const requestId = String(form.get("reupload_request") || "");
+  // The bypass is claim/account/document/stage scoped, not a general completed-claim unlock.
+  const authorizedReplacement = Boolean(requestId && reuploadRequests.some(request =>
+    request.id === requestId && request.status === "action_required"
+    && request.stage === String(form.get("stage") || "")
+    && sameClaimDocumentType(request.documentType, type)));
+  if (!documentTypes.includes(type) && !authorizedReplacement) return {error:"Unsupported claim document category."};
   if (type==="Final Workshop Bill") {
     if (String(form.get("stage") || "") !== "billing" || !isExternalCustomerClaim(claim)) {
       return {error:"Final workshop bills can only be uploaded in External Claim Billing."};
@@ -45,7 +52,7 @@ export async function uploadCustomerClaimDocument(_previous:CustomerClaimUploadS
     if (current!=="billing" && !billing?.completed) {
       return {error:"Billing is not available for this claim yet."};
     }
-    if (["Settled","Closed","Claim Complete"].includes(claim.current_status)) {
+    if (["Settled","Closed","Claim Complete"].includes(claim.current_status) && !authorizedReplacement) {
       return {error:"Completed claims cannot accept new workshop bills."};
     }
   }
@@ -54,10 +61,10 @@ export async function uploadCustomerClaimDocument(_previous:CustomerClaimUploadS
     claim.claim_service_mode === "broker_managed" && !claim.external_policy_id &&
     ((internal_projection?.completedStageCount ?? 0) >= 2 ||
       milestones.some(item => item.milestone_key === "claim_intimation" &&
-        ["completed", "not_applicable"].includes(item.milestone_status)))) {
+        ["completed", "not_applicable"].includes(item.milestone_status))) && !authorizedReplacement) {
     return {error:"Claim Intimation (Stage 2) is complete. Stage 1 documents are locked."};
   }
-  if(claim.claim_service_mode==="broker_managed" && ["Settled","Closed","Claim Complete"].includes(claim.current_status))
+  if(claim.claim_service_mode==="broker_managed" && ["Settled","Closed","Claim Complete"].includes(claim.current_status) && !authorizedReplacement)
     return {error:"Completed managed claims cannot accept new customer documents."};
   const session=await getCustomerWebSession();
   // Customer account and claim ownership have been checked by the server above.
@@ -95,17 +102,20 @@ export async function uploadCustomerClaimDocument(_previous:CustomerClaimUploadS
  * Only signed uploads for the authenticated customer's current Stage 1 claim
  * are permitted. No document is registered until uploaded bytes are verified.
  */
-export async function prepareCustomerClaimBulkVideo(accountId:string,claimId:string,stage:string,file:{name:string;size:number;type:string}) {
+export async function prepareCustomerClaimBulkVideo(accountId:string,claimId:string,stage:string,file:{name:string;size:number;type:string},reuploadRequestId?:string|null) {
   try {
     if(stage!=="spot_intimation")throw new Error("This video uploader is only available in Spot Intimation.");
     if(!/\.(mp4|mov|webm)$/i.test(file.name)||!["video/mp4","video/quicktime","video/webm"].includes(file.type)||file.size<=0||file.size>50*1024*1024)
       throw new Error("Select a supported video file no larger than 50 MB.");
     const {account}=await resolveCustomerWebScope(accountId);
-    const {claim,milestones,internal_projection}=await loadCustomerClaimDetail(account.id,claimId);
+    const {claim,milestones,internal_projection,reuploadRequests}=await loadCustomerClaimDetail(account.id,claimId);
+    const authorizedReplacement=Boolean(reuploadRequestId && reuploadRequests.some(request =>
+      request.id===reuploadRequestId && request.status==="action_required"
+      && request.stage===stage && sameClaimDocumentType(request.documentType,"Other Document")));
     if(claim.claim_service_mode==="broker_managed"&&!claim.external_policy_id &&
-      ((internal_projection?.completedStageCount??0)>=2||milestones.some(item=>item.milestone_key==="claim_intimation"&&["completed","not_applicable"].includes(item.milestone_status))))
+      ((internal_projection?.completedStageCount??0)>=2||milestones.some(item=>item.milestone_key==="claim_intimation"&&["completed","not_applicable"].includes(item.milestone_status)))&&!authorizedReplacement)
       throw new Error("Claim Intimation (Stage 2) is complete. Stage 1 documents are locked.");
-    if(claim.claim_service_mode==="broker_managed"&&["Settled","Closed","Claim Complete"].includes(claim.current_status))
+    if(claim.claim_service_mode==="broker_managed"&&["Settled","Closed","Claim Complete"].includes(claim.current_status)&&!authorizedReplacement)
       throw new Error("Completed managed claims cannot accept new customer documents.");
     await getCustomerWebSession();
     const ext=file.name.split(".").pop()!.toLowerCase();
@@ -117,15 +127,18 @@ export async function prepareCustomerClaimBulkVideo(accountId:string,claimId:str
   } catch(error) {return {ok:false,error:error instanceof Error?error.message:"Unable to prepare video upload."};}
 }
 
-export async function finalizeCustomerClaimBulkVideo(accountId:string,claimId:string,stage:string,path:string,file:{name:string;size:number;type:string}) {
+export async function finalizeCustomerClaimBulkVideo(accountId:string,claimId:string,stage:string,path:string,file:{name:string;size:number;type:string},reuploadRequestId?:string|null) {
   try {
     if(stage!=="spot_intimation")throw new Error("Invalid upload stage.");
     const {account}=await resolveCustomerWebScope(accountId);
-    const {claim,milestones,internal_projection}=await loadCustomerClaimDetail(account.id,claimId);
+    const {claim,milestones,internal_projection,reuploadRequests}=await loadCustomerClaimDetail(account.id,claimId);
+    const authorizedReplacement=Boolean(reuploadRequestId && reuploadRequests.some(request =>
+      request.id===reuploadRequestId && request.status==="action_required"
+      && request.stage===stage && sameClaimDocumentType(request.documentType,"Other Document")));
     if(claim.claim_service_mode==="broker_managed"&&!claim.external_policy_id &&
-      ((internal_projection?.completedStageCount??0)>=2||milestones.some(item=>item.milestone_key==="claim_intimation"&&["completed","not_applicable"].includes(item.milestone_status))))
+      ((internal_projection?.completedStageCount??0)>=2||milestones.some(item=>item.milestone_key==="claim_intimation"&&["completed","not_applicable"].includes(item.milestone_status)))&&!authorizedReplacement)
       throw new Error("Claim Intimation (Stage 2) is complete. Stage 1 documents are locked.");
-    if(claim.claim_service_mode==="broker_managed"&&["Settled","Closed","Claim Complete"].includes(claim.current_status))
+    if(claim.claim_service_mode==="broker_managed"&&["Settled","Closed","Claim Complete"].includes(claim.current_status)&&!authorizedReplacement)
       throw new Error("Completed managed claims cannot accept new customer documents.");
     const session=await getCustomerWebSession();
     const folder=account.id+"/"+claim.id+"/bulk-video";
