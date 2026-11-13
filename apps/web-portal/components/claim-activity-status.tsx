@@ -71,7 +71,7 @@ export async function ClaimActivityStatus({claimId}:{claimId:string}){
       .map(([key,label])=>`${label}: ${format(key,before[key])} → ${format(key,values[key])}`);
     if(changes.length){
       events.push({
-        id:"stage:"+row.id,title:group.replaceAll("_"," ").replace(/\b\w/g,v=>v.toUpperCase())+" updated",
+        id:"stage:"+row.id,title:group==="other"?"Claim stage updated":group.replaceAll("_"," ").replace(/\b\w/g,v=>v.toUpperCase())+" updated",
         at:row.created_at,meta:"By: "+(row.created_by?names.get(row.created_by)||"User":"Not recorded"),
         changes:changes.slice(0,20),
       });
