@@ -8,6 +8,13 @@ ALTER TABLE public.policies
   REFERENCES public.intermediaries(id) ON DELETE SET NULL;
 CREATE INDEX IF NOT EXISTS policies_source_intermediary_id_idx
   ON public.policies(source_intermediary_id);
+-- A small number of historical Partner policies have no intermediary register row.
+-- Retain their real parent Partner UUID instead of inventing an intermediary.
+ALTER TABLE public.policies
+  ADD COLUMN IF NOT EXISTS source_partner_id uuid
+  REFERENCES public.partners(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS policies_source_partner_id_idx
+  ON public.policies(source_partner_id);
 
 -- A canonical HR code is separate from the legacy 'associate_id' used by external integrations.
 ALTER TABLE public.posp_misp_onboarding_profiles
@@ -29,7 +36,7 @@ INSERT INTO identity_maintenance.employee_source_sync_backup_20261113(table_name
 SELECT 'policies',p.id,jsonb_build_object(
   'rm_employee_id',p.rm_employee_id,'rm_name',p.rm_name,
   'intermediary_code',p.intermediary_code,'lead_source',p.lead_source,
-  'source_intermediary_id',p.source_intermediary_id,
+  'source_intermediary_id',p.source_intermediary_id,'source_partner_id',p.source_partner_id,
   'intermediary_group_id',p.intermediary_group_id,
   'intermediary_group_code',p.intermediary_group_code,
   'intermediary_group_name',p.intermediary_group_name)
@@ -83,7 +90,7 @@ FROM public.employees e ON CONFLICT DO NOTHING;
 -- A migration that changes bank, PAN, compliance, documents, workflow, finance,
 -- group membership or audit facts must roll back rather than silently proceed.
 CREATE TEMP TABLE identity_sync_before_guard ON COMMIT DROP AS
-SELECT 'policies'::text dataset,id,md5((to_jsonb(t)-ARRAY['source_intermediary_id','rm_name','intermediary_code','lead_source','updated_at'])::text) fingerprint FROM public.policies t
+SELECT 'policies'::text dataset,id,md5((to_jsonb(t)-ARRAY['source_intermediary_id','source_partner_id','rm_name','intermediary_code','lead_source','updated_at'])::text) fingerprint FROM public.policies t
 UNION ALL SELECT 'life_health_cases',id,md5((to_jsonb(t)-ARRAY['rm_name','rm_code','intermediary_code','lead_source','updated_at'])::text) FROM public.life_health_cases t
 UNION ALL SELECT 'posp_misp_onboarding_profiles',id,md5((to_jsonb(t)-ARRAY['associate_name','associate_employee_code','updated_at','updated_by'])::text) FROM public.posp_misp_onboarding_profiles t
 UNION ALL SELECT 'intermediary_onboarding_applications',id,md5(((to_jsonb(t)-ARRAY['draft_data','updated_at']) ||
@@ -150,12 +157,23 @@ DECLARE
   v_id uuid;
   v_code text;
   v_name text;
+  v_partner_id uuid;
 BEGIN
   IF NULLIF(BTRIM(COALESCE(NEW.intermediary_code,'')),'') IS NULL THEN
     IF TG_OP = 'UPDATE' AND NEW.intermediary_code IS DISTINCT FROM OLD.intermediary_code THEN
       NEW.source_intermediary_id := NULL;
+      NEW.source_partner_id := NULL;
     END IF;
     RETURN NEW;
+  END IF;
+
+  IF NEW.source_partner_id IS NOT NULL AND NEW.source_intermediary_id IS NULL THEN
+    SELECT partner_code,display_name INTO v_code,v_name
+      FROM public.partners WHERE id=NEW.source_partner_id;
+    IF v_code=NEW.intermediary_code THEN
+      IF v_name IS NOT NULL THEN NEW.lead_source:=v_name; END IF;
+      RETURN NEW;
+    END IF;
   END IF;
 
   IF NEW.source_intermediary_id IS NOT NULL THEN
@@ -171,18 +189,30 @@ BEGIN
     WHERE intermediary_code=NEW.intermediary_code ORDER BY id LIMIT 1;
   IF v_id IS NOT NULL THEN
     NEW.source_intermediary_id := v_id;
+    NEW.source_partner_id := NULL;
     SELECT display_name INTO v_name FROM public.intermediaries WHERE id=v_id;
     IF v_name IS NOT NULL THEN NEW.lead_source := v_name; END IF;
   ELSIF TG_OP='INSERT' OR NEW.intermediary_code IS DISTINCT FROM OLD.intermediary_code THEN
-    -- Do not attach a different entity on an unrecognized code.
+    -- Do not attach a different entity on an unrecognized intermediary code.
     NEW.source_intermediary_id := NULL;
+  END IF;
+
+  IF NEW.source_intermediary_id IS NULL THEN
+    SELECT id,display_name INTO v_partner_id,v_name
+      FROM public.partners WHERE partner_code=NEW.intermediary_code ORDER BY id LIMIT 1;
+    IF v_partner_id IS NOT NULL THEN
+      NEW.source_partner_id:=v_partner_id;
+      IF v_name IS NOT NULL THEN NEW.lead_source:=v_name; END IF;
+    ELSIF TG_OP='INSERT' OR NEW.intermediary_code IS DISTINCT FROM OLD.intermediary_code THEN
+      NEW.source_partner_id:=NULL;
+    END IF;
   END IF;
   RETURN NEW;
 END;
 $$;
 DROP TRIGGER IF EXISTS a_set_policy_source_identity ON public.policies;
 CREATE TRIGGER a_set_policy_source_identity
-BEFORE INSERT OR UPDATE OF intermediary_code,source_intermediary_id
+BEFORE INSERT OR UPDATE OF intermediary_code,source_intermediary_id,source_partner_id
 ON public.policies FOR EACH ROW EXECUTE FUNCTION public.set_policy_source_identity();
 
 -- Group fields are booking-time snapshots as well. Never recalculate them
@@ -232,6 +262,12 @@ RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public' AS
 BEGIN
   IF NEW.partner_code IS DISTINCT FROM OLD.partner_code
      OR NEW.display_name IS DISTINCT FROM OLD.display_name THEN
+    UPDATE public.policies p
+       SET intermediary_code=NEW.partner_code,lead_source=NEW.display_name
+     WHERE p.source_partner_id=NEW.id
+       AND (p.intermediary_code IS DISTINCT FROM NEW.partner_code
+         OR p.lead_source IS DISTINCT FROM NEW.display_name);
+
     UPDATE public.intermediaries i
        SET intermediary_code=NEW.partner_code,display_name=NEW.display_name
      WHERE i.application_id=NEW.source_application_id
@@ -441,8 +477,13 @@ REVOKE ALL ON FUNCTION public.canonicalize_intake_source_identity() FROM PUBLIC,
 -- The migration is conditional on existing UUIDs, never on matching two names.
 UPDATE public.policies p SET source_intermediary_id=i.id
 FROM public.intermediaries i
-WHERE p.source_intermediary_id IS NULL
+WHERE p.source_intermediary_id IS NULL AND p.source_partner_id IS NULL
   AND p.intermediary_code=i.intermediary_code;
+
+UPDATE public.policies p SET source_partner_id=pm.id
+FROM public.partners pm
+WHERE p.source_partner_id IS NULL AND p.source_intermediary_id IS NULL
+  AND p.intermediary_code=pm.partner_code;
 
 UPDATE public.policies p SET rm_name=e.full_name FROM public.employees e
  WHERE p.rm_employee_id=e.id AND p.rm_name IS DISTINCT FROM e.full_name;
@@ -483,6 +524,12 @@ UPDATE public.policies p
 FROM public.intermediaries i WHERE p.source_intermediary_id=i.id
  AND (p.intermediary_code IS DISTINCT FROM i.intermediary_code
   OR p.lead_source IS DISTINCT FROM i.display_name);
+
+UPDATE public.policies p
+ SET intermediary_code=pm.partner_code,lead_source=pm.display_name
+FROM public.partners pm WHERE p.source_partner_id=pm.id
+ AND (p.intermediary_code IS DISTINCT FROM pm.partner_code
+   OR p.lead_source IS DISTINCT FROM pm.display_name);
 
 UPDATE public.profiles p
  SET full_name=e.full_name,employee_code=e.employee_code,
