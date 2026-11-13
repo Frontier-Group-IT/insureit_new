@@ -259,7 +259,7 @@ export default function PolicyIntakeDetailScreen() {
                       fields.get('vehicle_registration_number')?.value?.trim()
                         || (row.policy_type === 'motor' ? 'Vehicle pending' : 'Policy details pending')].join(' · ')}
                   </Text>
-                  {row.status !== 'duplicate' && row.status !== 'ready_for_review' && row.status !== 'in_review'
+                  {row.status !== 'duplicate' && row.status !== 'ready_for_review' && row.status !== 'in_review' && row.status !== 'rejected'
                     ? <Text style={styles.statusHelp}>{statusHelp(row)}</Text> : null}
                 </View>
               </View>
@@ -287,13 +287,13 @@ export default function PolicyIntakeDetailScreen() {
             </View>
           ) : null}
 
-          {row.attention_reason && row.status !== 'duplicate' ? (
+          {row.attention_reason?.trim() && row.status !== 'duplicate' ? (
             <View style={styles.attention}>
               <View style={styles.attentionTop}>
                 <View style={styles.attentionArtworkWrap}><Image source={PartnerAssets.status.policyAttention} style={styles.attentionArtwork} resizeMode="contain" /></View>
-                <Text style={styles.attentionTitle}>Operations needs your response</Text>
+                <Text style={styles.attentionTitle}>{row.status === 'rejected' ? 'Operations rejection note' : 'Operations needs your response'}</Text>
               </View>
-              <Text style={styles.attentionText}>{row.attention_reason}</Text>
+              <Text selectable style={styles.attentionText}>{row.attention_reason}</Text>
 
               {replacementProgress ? <ReplacementProgress progress={replacementProgress} /> : null}
 
@@ -367,7 +367,7 @@ export default function PolicyIntakeDetailScreen() {
                     <ReviewBlock title="Vehicle details">
                       {vehicleReviewKeys.some(([key]) => Boolean(fields.get(key)?.value?.trim())) ? (
                         vehicleReviewKeys.filter(([key]) => Boolean(fields.get(key)?.value?.trim())).map(([key, label]) => (
-                          <ReviewPair key={key} label={label} value={fields.get(key)?.value} confidence={fields.get(key)?.confidence} />
+                          <ReviewPair key={key} label={label} value={fields.get(key)?.value} confidence={fields.get(key)?.confidence} singleLine={key === 'vehicle_make'} />
                         ))
                       ) : (
                         <Text style={reviewStyles.emptyVehicle}>No vehicle details were fetched from the saved policy copy.</Text>
@@ -384,7 +384,7 @@ export default function PolicyIntakeDetailScreen() {
                 <ReviewBlock title="Vehicle details" number="02">
                   {vehicleReviewKeys.some(([key]) => Boolean(fields.get(key)?.value?.trim())) ? (
                     vehicleReviewKeys.filter(([key]) => Boolean(fields.get(key)?.value?.trim())).map(([key, label]) => (
-                      <ReviewPair key={key} label={label} value={fields.get(key)?.value} confidence={fields.get(key)?.confidence} />
+                      <ReviewPair key={key} label={label} value={fields.get(key)?.value} confidence={fields.get(key)?.confidence} singleLine={key === 'vehicle_make'} />
                     ))
                   ) : (
                     <Text style={reviewStyles.emptyVehicle}>{row.ocr_status === 'processing' ? 'Fetching vehicle details from the policy copy…' : 'No vehicle details were fetched from the saved policy copy.'}</Text>
@@ -437,6 +437,15 @@ export default function PolicyIntakeDetailScreen() {
               <ReviewPair label="Reviewer" value={row.status === 'completed' ? 'Completed by Operations' : ['in_review','needs_attention'].includes(row.status) ? 'Operations team' : 'Not assigned'} />
             </View> : null}
 
+            {row.status !== 'duplicate' && row.ocr_warnings?.length ? (
+              <View style={reviewStyles.warningBox}>
+                <Text style={reviewStyles.warningHeading}>Review notes</Text>
+                {row.ocr_warnings.map((warning, index) => (
+                  <Text key={index} style={reviewStyles.warningText}>{warning}</Text>
+                ))}
+              </View>
+            ) : null}
+
             {row.review_access.can_review && !['completed', 'rejected', 'duplicate'].includes(row.status) ? (
               <View style={reviewStyles.reviewActions}>
                 {row.review_access.can_finalize && (['ready_for_review', 'in_review'].includes(row.status) || (row.status === 'processing' && row.ocr_status === 'failed')) ? (
@@ -478,14 +487,6 @@ export default function PolicyIntakeDetailScreen() {
                     </Pressable>
                   </View>
                 </View>
-              </View>
-            ) : null}
-            {row.status !== 'duplicate' && row.ocr_warnings?.length ? (
-              <View style={reviewStyles.warningBox}>
-                <Text style={reviewStyles.warningHeading}>Review notes</Text>
-                {row.ocr_warnings.map((warning, index) => (
-                  <Text key={index} style={reviewStyles.warningText}>{warning}</Text>
-                ))}
               </View>
             ) : null}
           </View>
@@ -677,11 +678,11 @@ function shortInsurerName(fullName?: string | null): string {
     ?? name.replace(/\s+(?:General\s+)?Insurance\s+(?:Company\s+)?(?:Limited|Ltd\.?|Co\.?\s*Ltd\.?)$/i, '').trim();
 }
 
-function ReviewPair({label,value,confidence}:{label:string;value?:string|null;confidence?:number|null}) {
+function ReviewPair({label,value,confidence,singleLine=false}:{label:string;value?:string|null;confidence?:number|null;singleLine?:boolean}) {
   const caution=typeof confidence === 'number' && confidence < .9;
   return <View style={reviewStyles.pair}>
     <View style={reviewStyles.pairLabelRow}><Text style={reviewStyles.pairLabel}>{label}</Text></View>
-    <Text selectable style={[reviewStyles.pairValue,caution && reviewStyles.lowConfidence]}>{value?.trim() || '—'}{caution ? ' · Review' : ''}</Text>
+    <Text selectable numberOfLines={singleLine ? 1 : undefined} ellipsizeMode="tail" style={[reviewStyles.pairValue,caution && reviewStyles.lowConfidence]}>{value?.trim() || '—'}{caution ? ' · Review' : ''}</Text>
   </View>;
 }
 const reviewStyles=StyleSheet.create({
@@ -869,7 +870,6 @@ function statusHelp(row: PartnerPolicyIntake) {
   if (row.status === 'ready_for_review') return 'The extracted details are ready for an Operations reviewer.';
   if (row.status === 'needs_attention') return 'Read the Operations note below and upload a replacement policy copy.';
   if (row.status === 'completed') return 'The final policy was linked and this intake is closed.';
-  if (row.status === 'rejected') return 'This intake was closed without policy onboarding.';
   if (row.status === 'duplicate') return 'The policy was found in an existing record. Review and onboarding are disabled.';
   return 'Track this submission here.';
 }
@@ -968,12 +968,12 @@ const styles = StyleSheet.create({
   progressLabel: { marginTop: 5, color: partnerTheme.colors.inkSubtle, ...partnerTheme.typography.meta },
   progressLabelActive: { color: partnerTheme.colors.ink },
   finalPolicy: { marginTop: 10 },
-  attention: { marginTop: 10, paddingVertical: 10, borderTopWidth: StyleSheet.hairlineWidth, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: '#F0D7AE', backgroundColor: '#FFF7E8' },
+  attention: { marginTop: 10, paddingHorizontal: 16, paddingVertical: 12, borderTopWidth: StyleSheet.hairlineWidth, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: '#F0D7AE', backgroundColor: '#FFF7E8' },
   attentionTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   attentionArtworkWrap: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center' },
   attentionArtwork: { width: 36, height: 36 },
   attentionTitle: { flex: 1, color: '#80511A', ...partnerTheme.typography.bodyStrong },
-  attentionText: { marginTop: 5, color: '#80511A', ...partnerTheme.typography.caption },
+  attentionText: { marginTop: 7, color: '#80511A', fontSize: 12, lineHeight: 19, flexShrink: 1 },
   replacementProgress: { marginTop: 9 },
   replacementProgressTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   replacementArtworkWrap: { width: 30, height: 30, alignItems: 'center', justifyContent: 'center' },

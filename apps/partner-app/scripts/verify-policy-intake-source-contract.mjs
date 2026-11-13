@@ -120,14 +120,12 @@ if (detailScreen.includes('vehicleReviewKeys.map(([key, label]) =>') ||
     detailScreen.includes('policyReviewKeys.map(([key, label]) =>')) {
   throw new Error('Non-duplicate review must not render all OCR labels as empty dashes.');
 }
-// Review Notes must be visually below the Operations Note controls, not above Policy Copy.
-const operationsNotePosition = detailScreen.indexOf('<Text style={reviewStyles.operationsNoteHeading}>Operations Note</Text>');
-const requestInfoPosition = detailScreen.indexOf('accessibilityLabel="Request information from submitter"');
-const rejectPosition = detailScreen.indexOf('accessibilityLabel="Reject policy intake"');
+// Latest requested layout: Review Notes directly below Review Status, before Operations actions.
+const statusPosition = detailScreen.indexOf('style={reviewStyles.reviewStatus}');
 const movedNotesPosition = detailScreen.indexOf("{row.status !== 'duplicate' && row.ocr_warnings?.length ? (");
-if (!(operationsNotePosition >= 0 && requestInfoPosition > operationsNotePosition &&
-      rejectPosition > requestInfoPosition && movedNotesPosition > rejectPosition)) {
-  throw new Error('Policy Intake Review Notes must follow the Operations Note and both actions.');
+const operationsNotePosition = detailScreen.indexOf('<Text style={reviewStyles.operationsNoteHeading}>Operations Note</Text>');
+if (!(statusPosition >= 0 && movedNotesPosition > statusPosition && operationsNotePosition > movedNotesPosition)) {
+  throw new Error('Policy Intake Review Notes must follow Review Status before Operations actions.');
 }
 requireText(detailScreen, "row.status === 'duplicate' && row.ocr_warnings?.length", 'Duplicate Policy Intake review notes must remain in the existing duplicate summary.');
 requireText(detailScreen, 'row.ocr_warnings.map((warning, index)', 'Preserve all original OCR review warning details.');
