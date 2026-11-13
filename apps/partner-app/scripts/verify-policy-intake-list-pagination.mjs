@@ -134,7 +134,7 @@ assert.match(detail, /latest\.reviewer_conflict_name && !confirmedConflict/, 'Sh
 assert.match(detail, /<Modal transparent visible=\{Boolean\(reviewerConflictName\)\}/, 'Reviewer conflict uses compact in-app popup');
 assert.match(detail, /Keep current reviewer/, 'Cancel preserves the existing reviewer');
 assert.match(detail, /Change reviewer & continue/, 'Explicit confirmation is required before navigation');
-assert.match(detail, /pathname: '\\/policy-intakes\\/onboarding'/, 'Continue navigates within Partner App');
+assert.ok(detail.includes("pathname: '/policy-intakes/onboarding'"), 'Continue navigates within Partner App');
 assert.doesNotMatch(detail, /takeOverReviewer|assigned_to_profile_id.*update/, 'App must not take over reviewer assignment directly');
 assert.match(route, /reviewer_conflict_name: reviewerConflictName/, 'Server preflight supplies the conflict name');
 assert.match(route, /access\.can_finalize && identity\.actor_kind === "employee"/, 'Reviewer name is revealed only with active finalizer access');
