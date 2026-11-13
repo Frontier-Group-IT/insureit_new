@@ -259,6 +259,7 @@ export async function GET(request: Request) {
       intake: match ? { ...intake, status: "duplicate" } : intake,
       review_access: match ? { can_review: false, can_finalize: false } : access,
       reviewer_conflict_name: reviewerConflictName,
+      reviewer_conflict_id: reviewerConflictName ? intake.assigned_to_profile_id : null,
       duplicate_match,
     });
   }
