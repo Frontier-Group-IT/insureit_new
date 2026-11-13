@@ -129,4 +129,15 @@ assert.match(api, /export function partnerPolicyIntakeMatchUrl\(path: string\)/,
 assert.ok(api.includes(String.raw`/^\/policies\/`), 'Registered policy URL must use the existing policy details view route');
 assert.ok(api.includes(String.raw`/^\/policy-intakes\/`), 'Earlier intake URL must use existing intake detail route');
 
+assert.match(detail, /const latest = await getPartnerPolicyIntake\(row\.id\)/, 'Resume must refresh authorized reviewer assignment before opening Operations');
+assert.match(detail, /latest\.reviewer_conflict_name && !confirmedConflict/, 'Show conflict modal before browser navigation');
+assert.match(detail, /<Modal transparent visible=\{Boolean\(reviewerConflictName\)\}/, 'Reviewer conflict uses compact in-app popup');
+assert.match(detail, /Keep current reviewer/, 'Cancel preserves the existing reviewer');
+assert.match(detail, /Change reviewer & continue/, 'Explicit confirmation is required before navigation');
+assert.match(detail, /await Linking\.openURL\(partnerPolicyIntakeReviewUrl\(latest\.id\)\)/, 'Continue opens the existing protected Operations URL only');
+assert.doesNotMatch(detail, /takeOverReviewer|assigned_to_profile_id.*update/, 'App must not take over reviewer assignment directly');
+assert.match(route, /reviewer_conflict_name: reviewerConflictName/, 'Server preflight supplies the conflict name');
+assert.match(route, /access\.can_finalize && identity\.actor_kind === "employee"/, 'Reviewer name is revealed only with active finalizer access');
+assert.match(route, /intake\.assigned_to_profile_id !== identity\.profile_id/, 'Only show the conflict for another assigned reviewer');
+
 console.log('Partner app resilient policy intake page loading regression passed');
