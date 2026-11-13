@@ -242,9 +242,7 @@ export function describePolicyEditChanges(before: PolicyEditSnapshot | null, aft
       const fullKey = `${prefix}.${key}`;
       if (before[fullKey] !== after[fullKey]) entries.push({key:fullKey,label});
     }
-  const sourceChanged = entries.some(entry => DISPLAYABLE_PREMIUM_VALUES.has(entry.key));
-  return entries.filter(entry => !DERIVED_PREMIUM_FIELDS.has(entry.key) || !sourceChanged)
-    .filter(entry => !DERIVED_PREMIUM_FIELDS.has(entry.key))
+  return entries.filter(entry => !DERIVED_PREMIUM_FIELDS.has(entry.key))
     .map(entry => DISPLAYABLE_PREMIUM_VALUES.has(entry.key)
       ? `${entry.label}: ${formatAuditedPremiumValue(entry.key,before[entry.key])} → ${formatAuditedPremiumValue(entry.key,after[entry.key])}`
       : `${entry.label} changed (values hidden)`).slice(0,30);
@@ -257,7 +255,7 @@ function policyEditTitle(changed: string[] | null): string {
     const remaining = changed.length - 2;
     return `${changed[0]}, ${changed[1]}${remaining ? ` + ${remaining} more` : ""} updated`;
   }
-  const single = changed[0].split(":")[0].replace(/ changed \\(values hidden\\)$/, "");
+  const single = changed[0].split(":")[0].replace(/ changed \(values hidden\)$/, "");
   if (single === "Policy number") return "Policy number changed";
   if (single === "Policy status") return "Policy status changed";
   if (single === "Insurer") return "Insurer changed";
