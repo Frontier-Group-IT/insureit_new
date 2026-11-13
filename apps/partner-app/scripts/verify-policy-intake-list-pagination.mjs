@@ -117,7 +117,7 @@ assert.match(detail, /row.review_access.can_review/, 'Do not show reviewer actio
 assert.match(detail, /row.review_access.can_finalize/, 'Finalization must require separate approve permission');
 assert.match(detail, /Review & Finalize/, 'Keep the existing Operations handoff action');
 assert.match(detail, /Resume Policy Onboarding/, 'Keep the resume action for in-review intakes');
-assert.match(detail, /createPartnerPolicyIntakeBridgeUrl\(latest.id, confirmedConflict, latest.reviewer_conflict_id\)/, 'Use secure one-time browser bridge bound to confirmed reviewer');
+assert.ok(detail.includes('await prepareNativePolicyOnboarding(latest.id, confirmedConflict, latest.reviewer_conflict_id)'), 'Native reviewer confirmation prepares app onboarding draft');
 assert.match(detail, /updatePartnerPolicyIntakeReview\(row.id, status, reviewNote.trim\(\)\)/, 'Keep reviewer request and reject actions on the server');
 assert.doesNotMatch(detail, /access_token.*Linking|Linking.*access_token/, 'Never transmit authentication tokens in browser links');
 assert.match(route, /identity.actor_kind !== "employee"/, 'Nonemployee Partners must never receive Operations review grants');
@@ -147,7 +147,7 @@ assert.match(detail, /latest\.reviewer_conflict_name && !confirmedConflict/, 'Sh
 assert.match(detail, /<Modal transparent visible=\{Boolean\(reviewerConflictName\)\}/, 'Reviewer conflict uses compact in-app popup');
 assert.match(detail, /Keep current reviewer/, 'Cancel preserves the existing reviewer');
 assert.match(detail, /Change reviewer & continue/, 'Explicit confirmation is required before navigation');
-assert.match(detail, /await Linking\.openURL\(url\)/, 'Continue opens the single-use website bridge after server-side issuance');
+assert.ok(detail.includes("pathname: '/policy-intakes/onboarding'"), 'Continue navigates within Partner App');
 assert.doesNotMatch(detail, /takeOverReviewer|assigned_to_profile_id.*update/, 'App must not take over reviewer assignment directly');
 assert.match(route, /reviewer_conflict_name: reviewerConflictName/, 'Server preflight supplies the conflict name');
 assert.match(route, /access\.can_finalize && identity\.actor_kind === "employee"/, 'Reviewer name is revealed only with active finalizer access');
@@ -177,5 +177,22 @@ assert.match(app, /!debouncedQuery && filter === 'all' && canPartnerAccess\(cont
 assert.match(app, /onPress=\{\(\) => router\.push\('\/policy-intake-new'\)\}/, 'Create first intake keeps existing navigation');
 assert.match(app, /<PartnerStateView state="loading"/, 'Keep existing loading feedback');
 assert.match(app, /<PartnerStateView state="error"/, 'Keep existing error feedback');
+
+const nativeForm = readFileSync('app/policy-intakes/onboarding.tsx', 'utf8');
+const nativeClient = readFileSync('lib/policy-onboarding.ts', 'utf8');
+const nativeApi = readFileSync('../web-portal/app/api/partner/policy-intakes/native-onboarding/route.ts', 'utf8');
+assert.match(nativeForm, /Policy source & ownership/, 'Show source and ownership natively');
+assert.match(nativeForm, /Insured & vehicle identification/, 'Show vehicle and insured details natively');
+assert.match(nativeForm, /Policy product, premium & validity/, 'Show policy product details natively');
+assert.match(nativeForm, /Save & return to Intake/, 'Draft can be saved and reopened');
+assert.match(nativeForm, /Book Active Policy/, 'Native Book Policy button uses shared server engine');
+assert.ok(nativeForm.includes('bookNativePolicyOnboarding(id,revision,resolution,verifiedApprovalId)'), 'Booking uses revision-checked authenticated endpoint');
+assert.match(nativeClient, /saveNativePolicyOnboarding/, 'Native draft uses authenticated API');
+assert.match(nativeApi, /loadPolicyIntakeDuplicateMatches/, 'Native backend blocks duplicates');
+assert.match(nativeApi, /onboardPolicyForVerifiedActor/, 'Native booking calls authoritative website booking engine');
+assert.match(readFileSync('../web-portal/lib/policy-onboarding-engine.ts','utf8'), /save_motor_policy_with_date_approval_v1/, 'Native and website use the same transactional policy RPC');
+assert.match(nativeApi, /hasEffectiveCapability\(profile,"finalize_policy_intakes","approve"\)/, 'Native API enforces Operations approve capability');
+assert.match(nativeApi, /\.eq\("revision",body.revision as number\)/, 'Optimistic draft concurrency is preserved');
+assert.ok(detail.includes("router.push({ pathname: '/policy-intakes/onboarding'"), 'Policy Onboarding opens in the native route');
 
 console.log('Partner app resilient policy intake page loading regression passed');

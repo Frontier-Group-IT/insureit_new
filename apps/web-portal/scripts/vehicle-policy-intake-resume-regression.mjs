@@ -160,7 +160,7 @@ assert(policyPage.includes("authoritativeInitialValues={vehicleHandoff}"));
 assert(policyPage.includes("preselectedVehicleId={vehicleHandoff ? params.vehicle_id ?? null : null}"));
 assert(!policyPage.includes('dangerouslySetInnerHTML={{ __html: \'try{sessionStorage.removeItem("insureit:policy-onboarding:draft:v2")}catch{}\' }}'));
 
-const policyActions=read("app/policies/policy-onboarding-actions.ts");
+const policyActions=read("lib/policy-onboarding-engine.ts");
 assert(policyActions.includes("finalize_policy_intake_motor_v1"));
 assert(policyActions.includes("sourceIntakeId"));
 assert(policyActions.includes('vehicleClass === "PCP" || vehicleClass === "TWP" || vehicleClass === "MISD"'),"existing MISD vehicles must reload capacity from engine_capacity_cc");

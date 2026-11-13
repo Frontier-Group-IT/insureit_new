@@ -13,7 +13,6 @@ import { PartnerAssets } from '@/lib/partner-assets';
 import {
   getPartnerPolicyIntake,
   getPartnerPolicyIntakeDocumentUrl,
-  createPartnerPolicyIntakeBridgeUrl,
   partnerPolicyIntakeMatchUrl,
   updatePartnerPolicyIntakeReview,
   submitPartnerPolicyIntakeReplacement,
@@ -23,6 +22,7 @@ import {
   type PartnerPolicyIntakeUploadProgress,
 } from '@/lib/policy-intakes';
 import { partnerTheme } from '@/lib/theme';
+import { prepareNativePolicyOnboarding } from '@/lib/policy-onboarding';
 import { canPartnerAccess } from '@/lib/partner-permissions';
 import { usePartnerSession } from '@/providers/partner-session-provider';
 
@@ -192,11 +192,10 @@ export default function PolicyIntakeDetailScreen() {
         return;
       }
       // The app has received the user's only reviewer-change confirmation.
-      // The website atomically rechecks the exact assignment and applies the
-      // existing secure handoff after redeeming a single-use browser code.
-      const url = await createPartnerPolicyIntakeBridgeUrl(latest.id, confirmedConflict, latest.reviewer_conflict_id);
+      // The native API checks reviewer assignment and prepares the saved draft.
+      await prepareNativePolicyOnboarding(latest.id, confirmedConflict, latest.reviewer_conflict_id);
       setReviewerConflictName(null);
-      await Linking.openURL(url);
+      router.push({ pathname: '/policy-intakes/onboarding', params: { id: latest.id } });
     } catch (cause) {
       setReviewerConflictName(null);
       setError(cause instanceof Error ? cause.message : 'Could not open Operations Policy Intake Review.');
