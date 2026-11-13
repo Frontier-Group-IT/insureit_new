@@ -29,7 +29,7 @@ assert.ok(detail.includes('partnerPolicyIntakeMatchUrl(targetPath)'), 'Earlier i
 assert.ok(detail.includes('await Linking.openURL(url)'), 'Earlier intake navigation stays available');
 assert.ok(api.includes('`/policies/${match.policyId}`'), 'Server resolves matching policy details view page, not another arbitrary policy');
 assert.ok(links.includes('/^\\/policies\\/[0-9a-f-]{36}$/i'), 'Mobile only accepts canonical read-only policy details URL');
-assert.ok(detail.includes('artwork={PartnerAssets.actions.quickPolicyIntake}'), 'Use existing 3D-style Policy Intake header artwork');
+assert.ok(detail.includes('topBarIcon="document-text-outline"'), 'Use the professional unboxed documents icon');
 assert.ok(detail.includes('fullWidth'), 'Intake detail uses edge-to-edge mobile content');
 assert.ok(detail.includes('style={styles.intakeSummaryCompact}'), 'Policy, insured identity and lead-source details share a compact header on all statuses');
 assert.ok(detail.includes('style={styles.intakeSummaryCompact}'), 'Customer and lead-source metadata sit directly below the policy number');
