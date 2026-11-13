@@ -38,13 +38,15 @@ export async function ClaimActivityStatus({claimId}:{claimId:string}){
   const admin=createSupabaseAdminClient();
   const [statusResult,stageResult]=await Promise.all([
     admin.from("claim_status_history").select("id,from_status,to_status,changed_by,created_at")
-      .eq("claim_id",claimId).order("created_at",{ascending:true}).limit(150).returns<ClaimStatusRow[]>(),
+      .eq("claim_id",claimId).order("created_at",{ascending:false}).limit(150).returns<ClaimStatusRow[]>(),
     admin.from("claim_stage_details").select("id,stage,details,created_by,created_at")
-      .eq("claim_id",claimId).order("created_at",{ascending:true}).limit(250).returns<ClaimStageRow[]>(),
+      .eq("claim_id",claimId).order("created_at",{ascending:false}).limit(250).returns<ClaimStageRow[]>(),
   ]);
   if(statusResult.error||stageResult.error) return null;
-  const statuses=statusResult.data??[];
-  const stages=stageResult.data??[];
+  // Fetch the newest events, then restore chronological order for genuine
+  // before/after comparisons within each saved claim milestone.
+  const statuses=[...(statusResult.data??[])].reverse();
+  const stages=[...(stageResult.data??[])].reverse();
   const authors=[...new Set([
     ...statuses.map(x=>x.changed_by),...stages.map(x=>x.created_by)
   ].filter((x):x is string=>Boolean(x)))];
