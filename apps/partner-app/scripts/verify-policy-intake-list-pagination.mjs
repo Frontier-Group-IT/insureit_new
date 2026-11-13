@@ -104,7 +104,7 @@ assert.match(detail, /row.review_access.can_review/, 'Do not show reviewer actio
 assert.match(detail, /row.review_access.can_finalize/, 'Finalization must require separate approve permission');
 assert.match(detail, /Review & Finalize/, 'Keep the existing Operations handoff action');
 assert.match(detail, /Resume Policy Onboarding/, 'Keep the resume action for in-review intakes');
-assert.match(detail, /partnerPolicyIntakeReviewUrl\(latest.id\)/, 'Use the existing trusted portal onboarding workflow after refreshing authorized intake data');
+assert.match(detail, /createPartnerPolicyIntakeBridgeUrl\(latest.id, confirmedConflict, latest.reviewer_conflict_id\)/, 'Use secure one-time browser bridge bound to confirmed reviewer');
 assert.match(detail, /updatePartnerPolicyIntakeReview\(row.id, status, reviewNote.trim\(\)\)/, 'Keep reviewer request and reject actions on the server');
 assert.doesNotMatch(detail, /access_token.*Linking|Linking.*access_token/, 'Never transmit authentication tokens in browser links');
 assert.match(route, /identity.actor_kind !== "employee"/, 'Nonemployee Partners must never receive Operations review grants');
@@ -134,10 +134,17 @@ assert.match(detail, /latest\.reviewer_conflict_name && !confirmedConflict/, 'Sh
 assert.match(detail, /<Modal transparent visible=\{Boolean\(reviewerConflictName\)\}/, 'Reviewer conflict uses compact in-app popup');
 assert.match(detail, /Keep current reviewer/, 'Cancel preserves the existing reviewer');
 assert.match(detail, /Change reviewer & continue/, 'Explicit confirmation is required before navigation');
-assert.match(detail, /await Linking\.openURL\(partnerPolicyIntakeReviewUrl\(latest\.id\)\)/, 'Continue opens the existing protected Operations URL only');
+assert.match(detail, /await Linking\.openURL\(url\)/, 'Continue opens the single-use website bridge after server-side issuance');
 assert.doesNotMatch(detail, /takeOverReviewer|assigned_to_profile_id.*update/, 'App must not take over reviewer assignment directly');
 assert.match(route, /reviewer_conflict_name: reviewerConflictName/, 'Server preflight supplies the conflict name');
 assert.match(route, /access\.can_finalize && identity\.actor_kind === "employee"/, 'Reviewer name is revealed only with active finalizer access');
 assert.match(route, /intake\.assigned_to_profile_id !== identity\.profile_id/, 'Only show the conflict for another assigned reviewer');
+
+assert.match(api, /export async function createPartnerPolicyIntakeBridgeUrl/, 'Partner App requests secure one-use website handoff code');
+assert.match(api, /refresh_token: session.refresh_token/, 'App transfers refresh token only via authenticated HTTPS request body');
+assert.match(api, /policy-intakes\/bridge#code=/, 'Only opaque one-time code goes in URL fragment');
+assert.doesNotMatch(api, /bridge\?access_token|bridge\?refresh_token/, 'Supabase credentials must not appear in browser URL');
+assert.match(detail, /If you continue, the reviewer will be changed to you/, 'Single reviewer confirmation says what action will follow');
+assert.match(route, /reviewer_conflict_id: reviewerConflictName \? intake.assigned_to_profile_id : null/, 'Exact reviewer is bound to takeover confirmation');
 
 console.log('Partner app resilient policy intake page loading regression passed');
