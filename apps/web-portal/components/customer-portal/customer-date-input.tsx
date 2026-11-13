@@ -20,7 +20,7 @@ export function CustomerDateInput({name,defaultValue,required,label,className=""
     input.addEventListener("customer-spot-draft-restore",restore);
     return ()=>input.removeEventListener("customer-spot-draft-restore",restore);
   },[]);
-  return <span className={`relative flex h-full min-w-0 flex-1 items-center rounded-md bg-white ${compact ? "min-h-0 px-1.5" : "min-h-10 px-3"} ${className}`}>
+  return <span className={`relative flex min-w-0 items-center rounded-md bg-white ${compact ? "h-[34px] min-h-[34px] w-full shrink-0 px-1.5" : "h-full min-h-10 flex-1 px-3"} ${className}`}>
     <span aria-hidden="true" className="min-w-0 flex-1 truncate">{value?formatIndianDate(value):"DD/MM/YYYY"}</span>
     <CalendarDays aria-hidden="true" className="pointer-events-none h-4 w-4 shrink-0 text-[#526178]"/>
     <input ref={inputRef} name={name} aria-label={label} type="date" value={value} required={required}
