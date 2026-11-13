@@ -142,7 +142,7 @@ assert(normalizePolicyMoney("8179.549999999999") === "8179.55", "Money normaliza
 assert(normalizePolicyMoney("2607.000000000001") === "2607.00", "Money normalization failed for 2607.000000000001");
 assert(normalizePolicyMoney("425") === "425.00", "Money normalization failed for 425");
 assert(normalizePolicyMoney("0.005") === "0.01", "Money normalization failed for 0.005");
-const policyOnboardingAction = read("app/policies/policy-onboarding-actions.ts");
+const policyOnboardingAction = read("lib/policy-onboarding-engine.ts");
 assert(policyOnboardingAction.includes('addOnPremium: moneyOrZero(payload.premium.addOnPremium)'), "Policy booking must normalize Add-on Premium before RPC");
 assert(policyOnboardingAction.includes('lowerMessage.includes("invalid add-on premium")'), "Policy booking must identify Add-on Premium errors");
 const policyOnboardingForm = read("components/policy-unified-form.tsx");
