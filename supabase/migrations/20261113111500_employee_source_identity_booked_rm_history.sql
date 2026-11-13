@@ -608,7 +608,7 @@ $assert$;
 -- Validate *all* non-identity columns, including rows indirectly touched by
 -- onboarding synchronization triggers. FULL JOIN also catches adds/deletes.
 CREATE TEMP TABLE identity_sync_after_guard ON COMMIT DROP AS
-SELECT 'policies'::text dataset,id,md5((to_jsonb(t)-ARRAY['source_intermediary_id','rm_name','intermediary_code','lead_source','updated_at'])::text) fingerprint FROM public.policies t
+SELECT 'policies'::text dataset,id,md5((to_jsonb(t)-ARRAY['source_intermediary_id','source_partner_id','rm_name','intermediary_code','lead_source','updated_at'])::text) fingerprint FROM public.policies t
 UNION ALL SELECT 'life_health_cases',id,md5((to_jsonb(t)-ARRAY['rm_name','rm_code','intermediary_code','lead_source','updated_at'])::text) FROM public.life_health_cases t
 UNION ALL SELECT 'posp_misp_onboarding_profiles',id,md5((to_jsonb(t)-ARRAY['associate_name','associate_employee_code','updated_at','updated_by'])::text) FROM public.posp_misp_onboarding_profiles t
 UNION ALL SELECT 'intermediary_onboarding_applications',id,md5(((to_jsonb(t)-ARRAY['draft_data','updated_at']) ||
