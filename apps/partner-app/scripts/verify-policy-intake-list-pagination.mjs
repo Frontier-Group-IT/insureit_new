@@ -177,6 +177,6 @@ assert.match(nativeClient, /saveNativePolicyOnboarding/, 'Native draft uses auth
 assert.match(nativeApi, /loadPolicyIntakeDuplicateMatches/, 'Native backend blocks duplicates');
 assert.match(nativeApi, /hasEffectiveCapability\(profile,"finalize_policy_intakes","approve"\)/, 'Native API enforces Operations approve capability');
 assert.match(nativeApi, /\.eq\("revision",body.revision as number\)/, 'Optimistic draft concurrency is preserved');
-assert.match(detail, /router\.push\(\{ pathname: '\/policy-intakes\/onboarding'/, 'Policy Onboarding opens in the native route');
+assert.ok(detail.includes("router.push({ pathname: '/policy-intakes/onboarding'"), 'Policy Onboarding opens in the native route');
 
 console.log('Partner app resilient policy intake page loading regression passed');
