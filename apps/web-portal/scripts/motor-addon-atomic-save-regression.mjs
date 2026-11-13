@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 const read = (path) => readFileSync(new URL(path, import.meta.url), 'utf8');
-const onboarding = read('../app/policies/policy-onboarding-actions.ts');
+const onboarding = read('../lib/policy-onboarding-engine.ts');
+assert.match(read('../app/policies/policy-onboarding-actions.ts'), /onboardPolicyForVerifiedActor/, 'Website action must delegate to shared booking engine');
 const editing = read('../app/policies/policy-edit-actions.ts');
 const form = read('../components/policy-unified-form.tsx');
 const migration = read('../../../supabase/migrations/20261021193000_motor_policy_addon_atomic_save.sql');
