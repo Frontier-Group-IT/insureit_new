@@ -37,6 +37,8 @@ jobs:
           cache-dependency-path: apps/web-portal/package.json
       - name: Install dependencies
         run: npm install --no-audit --no-fund
+      - name: Canonical identity sync and historical booked RM preservation regression
+        run: node scripts/employee-source-identity-history-regression.mjs
       - name: Life/Health issued policy continuous field grid regression
         run: node scripts/life-health-issued-policy-continuous-grid-regression.mjs
       - name: Activity Status field-change and privacy regression
