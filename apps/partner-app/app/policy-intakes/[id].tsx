@@ -192,7 +192,7 @@ export default function PolicyIntakeDetailScreen() {
       navyStatusBar
       fullWidth
       bottomNavigation={<PolicyIntakeDetailNavigation router={router} canViewDashboard={canPartnerAccess(context, "view_dashboard")} canViewPolicies={canPartnerAccess(context, "view_policies")} canViewClaims={canPartnerAccess(context, "view_claims")} />}
-      topBarIcon="documents-outline"
+      topBarIcon="document-text-outline"
       onBack={() => router.back()}
     >
       {submitted === '1' && row ? (
@@ -228,7 +228,7 @@ export default function PolicyIntakeDetailScreen() {
           <View style={styles.statusCard}>
             <View style={styles.statusTop}>
               <View style={styles.statusLogoWrap}>
-                <Ionicons name="reader-outline" size={27} color="#17365D" />
+                <Ionicons name="document-text-outline" size={27} color="#17365D" />
               </View>
               <View style={styles.statusBody}>
                 <Text numberOfLines={1} style={styles.intakeNumber}>{row.intake_number}</Text>
@@ -239,7 +239,7 @@ export default function PolicyIntakeDetailScreen() {
                       fields.get('vehicle_registration_number')?.value?.trim()
                         || (row.policy_type === 'motor' ? 'Vehicle pending' : 'Policy details pending')].join(' · ')}
                   </Text>
-                  {row.status !== 'duplicate' && row.status !== 'ready_for_review'
+                  {row.status !== 'duplicate' && row.status !== 'ready_for_review' && row.status !== 'in_review'
                     ? <Text style={styles.statusHelp}>{statusHelp(row)}</Text> : null}
                 </View>
               </View>
@@ -574,7 +574,8 @@ const policyReviewKeys: Array<[string, string]> = [
 function ReviewBlock({title,children,number,description}:{title:string;children:ReactNode;number?:string;description?:string}) {
   return <View style={reviewStyles.block}>
     <View style={reviewStyles.blockHeader}>
-      {number ? <Text style={reviewStyles.blockNumber}>{number}</Text> : <Ionicons name={title === "Vehicle details" ? "car-sport-outline" : "shield-checkmark-outline"} size={17} color="#315B9A" />}
+      {number ? <Text style={reviewStyles.blockNumber}>{number}</Text> : null}
+      <Ionicons name={title === "Vehicle details" ? "car-sport-outline" : "shield-checkmark-outline"} size={18} color="#315B9A" />
       <View style={reviewStyles.blockHeading}>
         <Text style={reviewStyles.blockTitle}>{title}</Text>
         {description ? <Text style={reviewStyles.blockDescription}>{description}</Text> : null}
@@ -798,7 +799,6 @@ function statusHelp(row: PartnerPolicyIntake) {
   if (row.status === 'processing' && row.ocr_status === 'failed') return 'Automatic extraction was unavailable. Operations can continue from the saved policy copy.';
   if (row.status === 'processing') return 'The uploaded policy copy is being read automatically.';
   if (row.status === 'ready_for_review') return 'The extracted details are ready for an Operations reviewer.';
-  if (row.status === 'in_review') return 'An Operations user is reviewing this intake.';
   if (row.status === 'needs_attention') return 'Read the Operations note below and upload a replacement policy copy.';
   if (row.status === 'completed') return 'The final policy was linked and this intake is closed.';
   if (row.status === 'rejected') return 'This intake was closed without policy onboarding.';
