@@ -60,7 +60,8 @@ assert.match(screen,/accessibilityLabel="Save and close commercial popup"/, 'Com
 assert.match(screen,/Boolean\(commercialModal\)&&isMotor&&Boolean\(data\?\.commercialAccess\)/, 'Commercial modals must be strictly Motor and permission gated.');
 assert.match(screen,/placeholder=""/, 'Onboarding text inputs must have empty placeholders.');
 assert.doesNotMatch(screen,/placeholder=\{'Enter '\+f\.label\.toLowerCase\(\)\}/, 'Remove all generated input placeholder copy.');
-assert.doesNotMatch(screen,/displayed\|\|'Select '/, 'Do not show synthetic select placeholders.');
-assert.match(screen,/hidePlaceholder/, 'Onboarding dates must opt out of placeholder copy.');
+assert.match(screen,/displayed\|\|'Select '\+f\.label\.toLowerCase\(\)/, 'Dropdowns retain selection prompts, unlike text inputs.');
+assert.match(screen,/options\.find\(o=>o\.value===current\)\?\.label\|\|'Select '/, 'Non-Motor dropdowns retain selection prompts.');
+assert.doesNotMatch(screen,/<PartnerPolicyDateField[^>]*hidePlaceholder/, 'Onboarding date fields should display the agreed DD/MM/YYYY indicator.');
 assert.match(date,/hidePlaceholder\?:boolean/, 'Date placeholder removal must be opt-in to avoid other screens.');
 console.log('Product-type layouts, Motor Operations compact layout, separated financial popups, empty input placeholders and Motor-only booking guard verified.');
