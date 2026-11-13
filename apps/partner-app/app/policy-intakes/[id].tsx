@@ -198,6 +198,7 @@ export default function PolicyIntakeDetailScreen() {
       setReviewerConflictName(null);
       await Linking.openURL(url);
     } catch (cause) {
+      setReviewerConflictName(null);
       setError(cause instanceof Error ? cause.message : 'Could not open Operations Policy Intake Review.');
     } finally {
       setOpeningReview(false);
