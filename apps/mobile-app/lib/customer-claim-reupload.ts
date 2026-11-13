@@ -38,11 +38,13 @@ export function outstandingClaimReuploads(notices: ClaimReuploadNotice[], docume
 export function reuploadDocumentStage(documentType: string, documents: ClaimDocument[]): ClaimMilestoneKey {
   const latest = [...documents].sort((a, b) => Date.parse(b.created_at ?? '') - Date.parse(a.created_at ?? ''))
     .find((doc) => matchesRequiredDocument(doc.document_type, documentType) || matchesRequiredDocument(documentType, doc.document_type));
-  const stage = (latest as ClaimDocument & { milestone_key?: string | null } | undefined)?.milestone_key;
-  if (stage && validStages.includes(stage as ClaimMilestoneKey)) return stage as ClaimMilestoneKey;
   const normalized = documentType.toLowerCase();
+  // Initial documents always belong to Spot Intimation even if older imports
+  // lack a milestone or saved an inconsistent one.
   if (normalized.includes('incident voice note') || normalized.includes('spot intimation attachment') ||
     initialClaimDocuments.some((required) => matchesRequiredDocument(documentType, required.type))) return 'spot_intimation';
+  const stage = (latest as ClaimDocument & { milestone_key?: string | null } | undefined)?.milestone_key;
+  if (stage && validStages.includes(stage as ClaimMilestoneKey)) return stage as ClaimMilestoneKey;
   if (normalized.includes('approval pdf') || normalized.includes('surveyor approval')) return 'work_approval';
   if (normalized.includes('final workshop bill')) return 'billing';
   if (normalized.includes('assessment report')) return 'delivery_order';
