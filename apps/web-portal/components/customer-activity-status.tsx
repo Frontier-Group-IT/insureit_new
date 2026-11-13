@@ -18,8 +18,9 @@ export async function CustomerActivityStatus(props: CustomerActivityStatusProps)
       items={activities.map((activity) => ({
         id: activity.id,
         title: activity.action,
+        changes: activity.changes,
         meta: [
-          activity.actorName ? `Created By: ${activity.actorName}` : null,
+          activity.actorName && activity.actorName !== "Not recorded" ? `By: ${activity.actorName}` : null,
           activity.via ? `Via: ${activity.via}` : null,
           activity.under ? `Under: ${activity.under}` : null,
         ]
