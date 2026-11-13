@@ -147,4 +147,22 @@ assert.doesNotMatch(api, /bridge\?access_token|bridge\?refresh_token/, 'Supabase
 assert.match(detail, /If you continue, the reviewer will be changed to you/, 'Single reviewer confirmation says what action will follow');
 assert.match(route, /reviewer_conflict_id: reviewerConflictName \? intake.assigned_to_profile_id : null/, 'Exact reviewer is bound to takeover confirmation');
 
+// Compact context-specific empty state should never affect the existing list query, pagination or error/loading states.
+assert.match(app, /const EMPTY_SUBMISSION_COPY: Record<IntakeFilter,/, 'Each intake status has an explicit empty-state message');
+for (const title of [
+  'No action required', 'No submissions in review', 'Nothing processing right now',
+  'No completed submissions yet', 'No duplicate submissions', 'No rejected submissions',
+  'No policy submissions yet',
+]) {
+  assert.ok(app.includes(title), `Missing contextual empty state: ${title}`);
+}
+assert.match(app, /debouncedQuery \? 'No matching submissions' : EMPTY_SUBMISSION_COPY\[filter\]\.title/, 'Search takes precedence over filter empty copy');
+assert.match(app, /styles\.compactEmpty/, 'Use a compact inline empty illustration, not an oversized panel');
+assert.match(app, /styles\.emptyIllustration/, 'Use a subtle blue/purple illustration');
+assert.doesNotMatch(app, /state="empty"/, 'Do not use the large shared empty-state card for filtered submissions');
+assert.match(app, /!debouncedQuery && filter === 'all' && canPartnerAccess\(context, 'create_policy_intakes', 'edit'\)/, 'Only authorized users in an unfiltered All view see the Create first intake action');
+assert.match(app, /onPress=\{\(\) => router\.push\('\/policy-intake-new'\)\}/, 'Create first intake keeps existing navigation');
+assert.match(app, /<PartnerStateView state="loading"/, 'Keep existing loading feedback');
+assert.match(app, /<PartnerStateView state="error"/, 'Keep existing error feedback');
+
 console.log('Partner app resilient policy intake page loading regression passed');
