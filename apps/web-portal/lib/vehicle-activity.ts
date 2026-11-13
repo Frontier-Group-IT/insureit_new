@@ -1,4 +1,5 @@
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { activityChangeTitle, describeAuditedChanges, describeNamedChanges } from "@/lib/activity-change-details";
 
 export const VEHICLE_ACTIVITY_ACTIONS = {
   VEHICLE_CREATED: "vehicle_created",
@@ -22,13 +23,14 @@ const TRACKED_ACTIONS = Object.values(VEHICLE_ACTIVITY_ACTIONS);
 const ACTIVITY_TABLE_NAME = "vehicles";
 
 type AdminClient = ReturnType<typeof createSupabaseAdminClient>;
-type AuditRow = { id: string; actor_id: string | null; action: string; created_at: string };
+type AuditRow = { id: string; actor_id: string | null; action: string; created_at: string; old_data?: Record<string, unknown> | null; new_data?: Record<string, unknown> | null };
 type ProfileRow = { id: string; full_name: string | null };
 
 type ActivityCandidate = {
   id: string;
   action: VehicleActivityAction;
   actorId: string | null;
+  changes?: string[] | null;
   at: string;
 };
 
@@ -36,6 +38,7 @@ export type VehicleActivityDisplay = {
   id: string;
   action: string;
   actorName: string;
+  changes: string[] | null;
   at: string;
 };
 
@@ -80,7 +83,7 @@ export async function loadVehicleActivityHistory({
   const admin = createSupabaseAdminClient();
   const { data: auditRows } = await admin
     .from("audit_logs")
-    .select("id,actor_id,action,created_at")
+.select("id,actor_id,action,created_at,old_data,new_data")
     .eq("table_name", ACTIVITY_TABLE_NAME)
     .eq("record_id", vehicleId)
     .in("action", TRACKED_ACTIONS)
@@ -98,6 +101,10 @@ export async function loadVehicleActivityHistory({
       id: `audit:${row.id}`,
       action,
       actorId: row.actor_id,
+      changes: action === VEHICLE_ACTIVITY_ACTIONS.VEHICLE_EDITED || action === VEHICLE_ACTIVITY_ACTIONS.VEHICLE_REGISTRATION_UPDATED
+        ? describeAuditedChanges("vehicle", row.old_data, row.new_data)
+          ?? describeNamedChanges("vehicle", row.new_data?.changed_fields)
+        : null,
       at: row.created_at,
     });
   }
@@ -145,7 +152,12 @@ export async function loadVehicleActivityHistory({
     .sort((a, b) => timestamp(b.at) - timestamp(a.at))
     .map((candidate) => ({
       id: candidate.id,
-      action: ACTION_LABELS[candidate.action],
+      action: candidate.action === VEHICLE_ACTIVITY_ACTIONS.VEHICLE_EDITED
+        ? activityChangeTitle("Vehicle", candidate.changes ?? null)
+        : candidate.action === VEHICLE_ACTIVITY_ACTIONS.VEHICLE_REGISTRATION_UPDATED && candidate.changes?.length
+          ? "Vehicle registration details updated"
+          : ACTION_LABELS[candidate.action],
+      changes: candidate.changes ?? null,
       actorName: candidate.actorId ? actorNames.get(candidate.actorId) ?? "Not recorded" : "Not recorded",
       at: candidate.at,
     }));
