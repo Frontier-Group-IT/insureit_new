@@ -61,10 +61,10 @@ export async function uploadCustomerClaimDocument(_previous:CustomerClaimUploadS
     claim.claim_service_mode === "broker_managed" && !claim.external_policy_id &&
     ((internal_projection?.completedStageCount ?? 0) >= 2 ||
       milestones.some(item => item.milestone_key === "claim_intimation" &&
-        ["completed", "not_applicable"].includes(item.milestone_status)))) && !authorizedReplacement) {
+        ["completed", "not_applicable"].includes(item.milestone_status))) && !authorizedReplacement) {
     return {error:"Claim Intimation (Stage 2) is complete. Stage 1 documents are locked."};
   }
-  if(claim.claim_service_mode==="broker_managed" && ["Settled","Closed","Claim Complete"].includes(claim.current_status)) && !authorizedReplacement
+  if(claim.claim_service_mode==="broker_managed" && ["Settled","Closed","Claim Complete"].includes(claim.current_status) && !authorizedReplacement)
     return {error:"Completed managed claims cannot accept new customer documents."};
   const session=await getCustomerWebSession();
   // Customer account and claim ownership have been checked by the server above.
