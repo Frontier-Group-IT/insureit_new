@@ -115,9 +115,9 @@ export async function POST(request:Request){
         od:isThirdParty?"0":d.od,tp:isCpm?"0":d.tp,addOnPremium:String(d.addOnPremium??"0"),
         cpaOpted:!isCpm&&d.cpaOpted==="Yes",cpa:isCpm?"0":d.cpa,
       },
-      payin:{basis:"NET",odPercent:commercialAccess?d.projectedOdPercent:"",tpPercent:commercialAccess?d.projectedTpPercent:"",scheme:commercialAccess?d.insurerScheme:"",provided:false},
+      payin:{basis:d.payoutBasis||"NET",odPercent:commercialAccess?d.projectedOdPercent:"",tpPercent:commercialAccess?d.projectedTpPercent:"",scheme:commercialAccess?d.insurerScheme:"",provided:commercialAccess&&Boolean(d.projectedOdPercent.trim()||d.projectedTpPercent.trim()||d.insurerScheme.trim())},
       billing:{billNumber:"",billedAmount:"0",billDate:"",status:"Unbilled"},
-      payout:{retention:commercialAccess?d.retention:"",odPercent:commercialAccess?d.payoutOdPercent:"",tpPercent:commercialAccess?d.payoutTpPercent:"",flatAmount:commercialAccess?d.flatPayoutAmount:"",status:"Pending",date:"",voucherNumber:"",provided:false},
+      payout:{retention:commercialAccess?d.retention:"",odPercent:commercialAccess?d.payoutOdPercent:"",tpPercent:commercialAccess?d.payoutTpPercent:"",flatAmount:commercialAccess?d.flatPayoutAmount:"",status:"Pending",date:"",voucherNumber:"",provided:commercialAccess&&Boolean(d.payoutOdPercent.trim()||d.payoutTpPercent.trim()||d.flatPayoutAmount.trim())},
       authbridge:{applied:false,transactionId:"",providerTransactionId:"",lookedUpAt:""},
       resolution,
     };
