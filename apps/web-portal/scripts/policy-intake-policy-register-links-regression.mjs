@@ -96,7 +96,7 @@ assert(intakePage.includes("initialView={initialView}"), "Policy Intake route mu
 
 const caseRegister = read("app/policies/life-health-cases/page.tsx");
 assert(caseRegister.includes('Case register'), "Proposal Pending destination must remain the Case Register");
-assert(caseRegister.includes('type CaseFilter = "pending" | "issued" | "all"'), "Case Register must retain its pending default view");
+assert(caseRegister.includes('type CaseFilter = "pending" | "rejected" | "issued" | "all"'), "Case Register must retain its pending default view");
 assert(caseRegister.includes("loadLifeHealthCaseSummary(admin)"), "Case Register tabs must use the same shared exact-count loader as Policy Register Proposal Pending");
 assert(caseRegister.includes("const pendingCount = caseSummary?.pending"), "Case Register Pending must prefer the exact shared database count");
 
