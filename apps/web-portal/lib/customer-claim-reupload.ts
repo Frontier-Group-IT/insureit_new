@@ -5,6 +5,7 @@
 export type ClaimReuploadEvent = {
   id: string;
   title: string;
+  event_type: string;
   message: string | null;
   metadata: Record<string, unknown> | null;
   created_at: string;
@@ -57,6 +58,9 @@ export function resolveClaimReuploadRequests(
   const seenTypes = new Set<string>();
   const sortedEvents = [...events].sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at));
   return sortedEvents.flatMap((event): ClaimReuploadRequest[] => {
+    // The trigger also writes "Replacement document received" events; only
+    // original Operations requests may generate a customer-facing notice.
+    if (!event.title.toLowerCase().includes("reupload requested")) return [];
     const type = typeof event.metadata?.document_type === "string"
       ? event.metadata.document_type.trim() : "";
     const documentId = typeof event.metadata?.document_id === "string"
@@ -68,11 +72,15 @@ export function resolveClaimReuploadRequests(
     if (seenTypes.has(family)) return [];
     seenTypes.add(family);
     if (original.verification_status !== "rejected") return [];
-    const replacement = documents
-      .filter(doc => doc.id !== original.id && sameClaimDocumentType(doc.document_type, type)
+    const resolvedId = typeof event.metadata?.resolved_by_document_id === "string"
+      ? event.metadata.resolved_by_document_id : "";
+    const replacement = documents.find(doc => doc.id === resolvedId && sameClaimDocumentType(doc.document_type, type))
+      ?? documents.filter(doc => doc.id !== original.id && sameClaimDocumentType(doc.document_type, type)
         && Date.parse(doc.created_at) > Date.parse(event.created_at))
-      .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at))[0];
+        .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at))[0];
     if (replacement?.verification_status === "verified") return [];
+    if (event.event_type === "claim_document_reupload_resolved" && !replacement) return [];
+    if (event.event_type === "claim_document_reupload_resolved" && replacement?.verification_status === "rejected") return [];
     return [{
       id: event.id,
       documentType: type,
