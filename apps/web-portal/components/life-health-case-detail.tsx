@@ -7,6 +7,7 @@ import { FileSizeExceededPopup } from "@/components/file-size-exceeded-popup";
 import { CalendarDays, Eye, LoaderCircle, Trash2, Upload, ShieldCheck, MessageSquareText, Save, ArrowRight, X } from "lucide-react";
 import { convertLifeHealthCaseToPolicy, deleteLifeHealthCaseDocument, uploadLifeHealthCaseDocument } from "@/app/policies/life-health-policy-actions";
 import { appendLifeHealthCaseRemark, updateLifeHealthCaseDetails } from "@/app/policies/life-health-case-edit-actions";
+import { rejectLifeHealthCase } from "@/app/policies/life-health-case-reject-actions";
 import { isPensionLifePolicy } from "@/lib/life-health-pension-maturity";
 import { PolicyDateApprovalDialog } from "@/components/policy-date-approval-dialog";
 import { policyDateDecision } from "@/lib/policy-date-rule";
@@ -90,6 +91,10 @@ export function LifeHealthCaseDetail({caseData,insurers,documents,activities}:Pr
   const[remarkDraft,setRemarkDraft]=useState("");
   const[remarkError,setRemarkError]=useState<string|null>(null);
   const[remarkPending,startRemark]=useTransition();
+  const[rejectOpen,setRejectOpen]=useState(false);
+  const[rejectReason,setRejectReason]=useState("");
+  const[rejectError,setRejectError]=useState<string|null>(null);
+  const[rejectPending,startReject]=useTransition();
   const[issuedApproval,setIssuedApproval]=useState<{id:string;key:string}|null>(null);
   const[dateApprovalOpen,setDateApprovalOpen]=useState(false);
   const[issue,setIssue]=useState<IssueState>({policyNumber:"",issuanceDate:"",startDate:"",endDate:"",pptEndDate:"",nextInstallmentDate:"",finalPremium:String(caseData.premiumAmount||""),sumInsured:""});
@@ -138,10 +143,32 @@ export function LifeHealthCaseDetail({caseData,insurers,documents,activities}:Pr
   const confirmDocumentDelete=()=>{if(!documentToDelete||deleting)return;const document=documentToDelete;setDeleteError(null);setDeletingDocumentId(document.id);startDelete(async()=>{try{const result=await deleteLifeHealthCaseDocument(caseData.id,document.id);if(!result.ok){setDeleteError(result.error);return}setDocumentToDelete(null);router.refresh()}catch(cause){setDeleteError(cause instanceof Error?cause.message:"Could not delete the document. Please retry.")}finally{setDeletingDocumentId(null)}})};
   const convert=(approvalConfirmed=false)=>{setError(null);if(["invalid","future"].includes(policyDateDecision(issue.issuanceDate))){setError("Choose a valid policy issuance date in the current or an earlier month.");return;}if(!issue.policyNumber.trim()||!issue.startDate||!issue.finalPremium){setError("Complete the issued policy number, policy start date, and final premium before approval.");return;}if(issueApprovalRequired){if(!approvalConfirmed){setDateApprovalOpen(true);return;}if(!dateApprovalId){setDateApprovalOpen(true);return;}setDateApprovalOpen(false);}startConvert(async()=>{const savedResult=await updateLifeHealthCaseDetails(editData());if(!savedResult.ok){setError(savedResult.error);return}const d=new FormData();d.set("caseId",caseData.id);Object.entries(issue).forEach(([k,v])=>d.set(k,v));if(dateApprovalId)d.set("dateApprovalId",dateApprovalId);if(copy)d.set("policyCopy",copy);const r=await convertLifeHealthCaseToPolicy(d);if(!r.ok){setError(r.error);return}router.replace("/policies")})};
 
+  const confirmReject=()=>{
+    if(!rejectReason.trim()||rejectPending)return;
+    setRejectError(null);
+    startReject(async()=>{
+      try{
+        const result=await rejectLifeHealthCase(caseData.id,rejectReason);
+        if(!result.ok){setRejectError(result.error);return;}
+        setRejectOpen(false);
+        router.replace("/policies/life-health-cases?status=rejected");
+        router.refresh();
+      }catch{setRejectError("Could not reject this case. Refresh the page and try again.");}
+    });
+  };
+
+  if(caseData.status==="rejected")return <div className="mx-auto max-w-[1480px] rounded-2xl border border-red-200 bg-white p-5 text-[11px] text-[#17365D]"><h2 className="text-[15px] font-bold text-red-700">Case Rejected</h2><p className="mt-2">This case is rejected and cannot be issued.</p><p className="mt-3 whitespace-pre-wrap rounded-xl bg-red-50 p-3 text-[11px] text-[#475467]">{caseData.remarks||"No rejection remarks available."}</p><Link className="mt-4 inline-block font-bold underline" href="/policies/life-health-cases?status=rejected">Back to Rejected cases</Link></div>;
   if(isIssued)return <div className="mx-auto max-w-[1480px] rounded-2xl border border-[#D9E2F0] bg-white p-5 text-[11px] text-[#17365D]">This case is issued and closed. <Link className="font-bold underline" href={`/policies/${encodeURIComponent(caseData.finalPolicyId!)}/edit`}>View Policy {caseData.finalPolicyNo}</Link></div>;
 
   const legacyCash=form.paymentMode==="Cash";
   return <div className="mx-auto w-full max-w-[1480px] space-y-3 pb-10">
+    {rejectOpen?<div className="fixed inset-0 z-[1200] grid h-[100dvh] w-screen place-items-center bg-[#101828]/60 p-4" role="presentation">
+      <div role="dialog" aria-modal="true" aria-labelledby="reject-case-title" className="w-full max-w-[480px] rounded-2xl bg-white shadow-2xl">
+        <div className="border-b border-[#E6ECF5] px-5 py-4"><h2 id="reject-case-title" className="text-[15px] font-bold text-[#17365D]">Reject Life / Health Case?</h2><p className="mt-1 text-[11px] text-[#667085]">Case {caseData.caseNumber} will move to Rejected. A reason is required.</p></div>
+        <div className="space-y-2 p-5"><label htmlFor="life-health-rejection-reason" className="text-[10px] font-bold text-[#475467]">Reason for rejection <span className="text-red-600">*</span></label><textarea id="life-health-rejection-reason" autoFocus value={rejectReason} onChange={event=>setRejectReason(event.target.value)} maxLength={2000} rows={4} placeholder="Enter the reason for rejecting this case..." className="w-full resize-y rounded-xl border border-[#CBD5E1] bg-white px-3 py-2.5 text-[12px] text-[#17203A] outline-none focus:border-[#315B9A] focus:ring-2 focus:ring-[#DCE8FA]"/>{rejectError?<p role="alert" className="text-[11px] font-semibold text-red-700">{rejectError}</p>:null}</div>
+        <div className="flex justify-end gap-2 border-t border-[#E6ECF5] bg-[#F8FAFC] p-4"><button type="button" disabled={rejectPending} onClick={()=>{setRejectOpen(false);setRejectReason("");setRejectError(null)}} className="rounded-xl border border-[#CBD5E1] bg-white px-4 py-2.5 text-[10px] font-semibold">Cancel</button><button type="button" disabled={rejectPending||!rejectReason.trim()} onClick={confirmReject} className="rounded-xl bg-[#C42B31] px-5 py-2.5 text-[10px] font-bold text-white disabled:opacity-50">{rejectPending?"Rejecting…":"Confirm Reject"}</button></div>
+      </div>
+    </div>:null}
     {documentToDelete?<div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#101828]/55 p-4" role="presentation" onMouseDown={event=>{if(event.target===event.currentTarget&&!deleting)setDocumentToDelete(null)}}>
       <div role="alertdialog" aria-modal="true" aria-labelledby="delete-document-title" aria-describedby="delete-document-message" className="w-full max-w-[430px] rounded-[24px] bg-white px-6 pb-6 pt-7 text-center shadow-[0_24px_70px_rgba(16,24,40,0.25)]">
         <span className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-[#FFF0F0] text-[#C22B30]"><Trash2 className="h-7 w-7" aria-hidden="true"/></span>
@@ -221,8 +248,9 @@ export function LifeHealthCaseDetail({caseData,insurers,documents,activities}:Pr
     </div>
     <section className="flex flex-wrap items-center justify-end gap-2 rounded-2xl border border-[#D9E5F4] bg-white px-4 py-3 shadow-[0_8px_24px_rgba(23,54,93,.06)]">
       <Link href="/policies/life-health-cases" className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border border-[#CAD7E7] bg-white px-4 text-[10px] font-semibold text-[#17365D] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#F2F6FC]"><X className="h-3.5 w-3.5" />Cancel</Link>
-      <button type="button" onClick={saveDetails} disabled={saving||converting} className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border border-[#BFD3EE] bg-[#EFF5FF] px-4 text-[10px] font-bold text-[#17365D] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#E0EDFF] disabled:opacity-60"><Save className="h-3.5 w-3.5"/>{saving?"Saving…":"Save Case Details"}</button>
-      <button type="button" onClick={()=>convert()} disabled={converting} className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[linear-gradient(100deg,#133766,#2064AD)] px-5 text-[10px] font-bold text-white shadow-[0_8px_18px_rgba(25,78,147,.18)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_10px_24px_rgba(25,78,147,.3)] disabled:opacity-60"><ShieldCheck className="h-4 w-4"/>{converting?"Creating…":"Create Policy & Close Case"}<ArrowRight className="h-3.5 w-3.5"/></button>
+      <button type="button" onClick={()=>{setRejectError(null);setRejectOpen(true)}} disabled={saving||converting||uploading||deleting} className="inline-flex h-10 items-center justify-center rounded-xl border border-red-200 bg-red-50 px-4 text-[10px] font-bold text-red-700 hover:bg-red-100 disabled:opacity-60">Reject</button>
+      <button type="button" onClick={saveDetails} disabled={saving||converting||rejectPending} className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border border-[#BFD3EE] bg-[#EFF5FF] px-4 text-[10px] font-bold text-[#17365D] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#E0EDFF] disabled:opacity-60"><Save className="h-3.5 w-3.5"/>{saving?"Saving…":"Save Case Details"}</button>
+      <button type="button" onClick={()=>convert()} disabled={converting||rejectPending} className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[linear-gradient(100deg,#133766,#2064AD)] px-5 text-[10px] font-bold text-white shadow-[0_8px_18px_rgba(25,78,147,.18)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_10px_24px_rgba(25,78,147,.3)] disabled:opacity-60"><ShieldCheck className="h-4 w-4"/>{converting?"Creating…":"Create Policy & Close Case"}<ArrowRight className="h-3.5 w-3.5"/></button>
     </section>
     {dateApprovalOpen&&issueApprovalRequired?<PolicyDateApprovalDialog issuanceDate={issue.issuanceDate} policyNumber={issue.policyNumber} operation="create" intermediaryCode={caseData.intermediaryCode} verifiedApprovalId={dateApprovalId} onApproved={id=>setIssuedApproval(id?{id,key:issueApprovalKey}:null)} onClose={()=>setDateApprovalOpen(false)} onConfirm={()=>convert(true)} submitting={converting}/>:null}
   </div>
