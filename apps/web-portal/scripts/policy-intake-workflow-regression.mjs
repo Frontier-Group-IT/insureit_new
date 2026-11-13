@@ -167,4 +167,28 @@ const migration=read("../../supabase/migrations/202608240001_policy_intake_workf
 const lineage=read("../../supabase/migrations/20260824164500_policy_intake_document_lineage.sql");assert(lineage.includes("create table if not exists public.policy_intake_documents"),"Intake document history migration missing");assert(lineage.includes("source_intake_id"),"Official policy document must retain its source intake lineage");
 const permissions=read("lib/permission-management.ts");assert(permissions.includes('label:"Initiate policy intake"'),"Permission UI must use Initiate terminology");assert(permissions.includes('label:"Review policy intake"'),"Permission UI must use Review terminology");assert(permissions.includes('label:"Finalize policy intake"'),"Permission UI must expose separate Finalize authority");
 const navigation=read("components/claim-manager/app-navigation.tsx");assert(navigation.includes('key:"policy-intakes"'),"Fleet navigation must contain a Policy Intakes group");assert(navigation.includes('href:"/policy-intakes/new"'),"Sales intake creation link missing");
+const bridgeIssue=read("app/api/partner/policy-intakes/bridge/issue/route.ts");
+const bridgeConsume=read("app/api/partner/policy-intakes/bridge/consume/route.ts");
+const bridgeContinue=read("app/api/partner/policy-intakes/bridge/continue/route.ts");
+const bridgePage=read("app/policy-intakes/bridge/page.tsx");
+const bridgeCrypto=read("lib/partner-intake-web-bridge.ts");
+const bridgeMigration=read("../../supabase/migrations/20261113055000_partner_policy_intake_web_handoff_tickets.sql");
+const middleware=read("middleware.ts");
+assert.match(bridgeIssue,/getPartnerEmployeeIntakeReadScope/, "Bridge issuance enforces scoped employee visibility");
+assert.match(bridgeIssue,/hasEffectiveCapability\(profile, "finalize_policy_intakes", "approve"\)/, "Bridge issuance requires finalizer approval");
+assert.match(bridgeIssue,/expected_reviewer_id !== intake.assigned_to_profile_id/, "Takeover confirmation must match the exact reviewer");
+assert.match(bridgeIssue,/loadPolicyIntakeDuplicateMatches/, "Duplicate intake must not be bridged");
+assert.match(bridgeConsume,/\.delete\(\)\.eq\("code_hash", code_hash\)/, "Redeeming a bridge ticket must be atomic and single-use");
+assert.match(bridgeConsume,/\.auth\.getUser\(session.access_token\)/, "Bridge verifies the actual Supabase identity");
+assert.match(bridgeContinue,/intent\.expected_reviewer_id/, "Website must recheck assignment at commit");
+assert.match(bridgeContinue,/preparePolicyIntakeHandoff\(intent.intake_id, intent.take_over\)/, "Resume reuses existing authorized draft handoff");
+assert.match(bridgePage,/window\.history\.replaceState/, "Remove one-use code fragment before network calls");
+assert.match(bridgePage,/window\.location\.replace\(result.path\)/, "Successful handoff opens Policy Onboarding");
+assert.match(bridgeCrypto,/AES-GCM/, "Bridge keeps sessions encrypted at rest");
+assert.match(bridgeCrypto,/PARTNER_INTAKE_BRIDGE_KEY/, "Bridge requires a configured encryption key");
+assert.match(bridgeMigration,/enable row level security/, "Single-use ticket table must enforce RLS");
+assert.match(bridgeMigration,/revoke all on public\.partner_policy_intake_web_handoff_tickets/, "No public ticket reads");
+assert.match(middleware,/pathname === "\/policy-intakes\/bridge"/, "Only the bridge entry may bypass initial website cookie check");
+assert.doesNotMatch(middleware,/pathname === "\/policies\/new"\) return NextResponse.next/, "Onboarding must stay behind portal authentication");
+
 console.log("policy intake workflow regression: ok");
