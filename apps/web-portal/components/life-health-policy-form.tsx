@@ -113,10 +113,12 @@ export function LifeHealthPolicyForm({ policyType, insurers, source }: Props) {
       </div>
       <LifeHealthSummaryRail>{summary}</LifeHealthSummaryRail>
     </div>
-    <section id="life-health-onboarding-remarks" aria-label="Remarks" className="mt-3 w-full min-w-0 rounded-2xl border border-[#D9E2F0] bg-white p-3 shadow-sm">
-      <LifeHealthRemarksEditor value={form.remarks} onChange={(value) => update("remarks", value)} disabled={isPending} />
-    </section>
-    <div className="mt-3 w-full">{bottomSection}</div>
+    <div id="life-health-onboarding-footer" className="mt-3 flex w-full min-w-0 flex-col gap-3">
+      <section id="life-health-onboarding-remarks" aria-label="Remarks" className="w-full min-w-0 self-stretch rounded-2xl border border-[#D9E2F0] bg-white p-3 shadow-sm">
+        <LifeHealthRemarksEditor value={form.remarks} onChange={(value) => update("remarks", value)} disabled={isPending} />
+      </section>
+      <div className="w-full min-w-0 self-stretch">{bottomSection}</div>
+    </div>
     {error ? <ErrorModal message={error} onClose={() => setError(null)} /> : null}
     {commercialModal === "payin" ? <ProjectedPayinModal form={form} update={update} calculations={commercialCalculations} onBasisChange={(basis) => changeCommercialBasis("payin", basis)} onClose={() => setCommercialModal(null)} /> : null}
     {commercialModal === "payout" ? <PartnerPayoutModal form={form} update={update} calculations={commercialCalculations} onBasisChange={(basis) => changeCommercialBasis("payout", basis)} onClose={() => setCommercialModal(null)} /> : null}

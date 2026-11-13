@@ -7,7 +7,11 @@ const action = readFileSync(new URL("../app/policies/life-health-policy-actions.
 
 const editorTag = '<LifeHealthRemarksEditor value={form.remarks} onChange={(value) => update("remarks", value)} disabled={isPending} />';
 const remarksIndex = form.indexOf('id="life-health-onboarding-remarks"');
-const actionIndex = form.indexOf('<div className="mt-3 w-full">{bottomSection}</div>');
+const actionIndex = form.indexOf('<div className="w-full min-w-0 self-stretch">{bottomSection}</div>');
+const footerIndex = form.indexOf('id="life-health-onboarding-footer"');
+assert(footerIndex > 0 && footerIndex < remarksIndex && remarksIndex < actionIndex, "Remarks must be the first block inside the shared full-width footer");
+assert.match(form.slice(footerIndex, remarksIndex), /flex w-full min-w-0 flex-col gap-3/, "Footer stacks both blocks full width");
+assert.match(form.slice(remarksIndex, actionIndex), /self-stretch/, "Remarks stretches to the same width as the actions");
 assert(remarksIndex > 0 && actionIndex > remarksIndex, "Full-width Remarks section must be directly above the final action area");
 assert(form.slice(remarksIndex, actionIndex).includes(editorTag), "Existing remarks editor and form binding are preserved");
 assert.equal(form.split(editorTag).length - 1, 1, "Remarks editor is rendered only once");
