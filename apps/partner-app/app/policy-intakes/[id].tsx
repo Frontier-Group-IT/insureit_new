@@ -211,7 +211,7 @@ export default function PolicyIntakeDetailScreen() {
       navyStatusBar
       fullWidth
       bottomNavigation={<PolicyIntakeDetailNavigation router={router} canViewDashboard={canPartnerAccess(context, "view_dashboard")} canViewPolicies={canPartnerAccess(context, "view_policies")} canViewClaims={canPartnerAccess(context, "view_claims")} />}
-      topBarIcon="document-text-outline"
+      artwork={PartnerAssets.actions.quickPolicyIntake}
       onBack={() => router.back()}
     >
       {submitted === '1' && row ? (
@@ -247,7 +247,7 @@ export default function PolicyIntakeDetailScreen() {
           <View style={styles.statusCard}>
             <View style={styles.statusTop}>
               <View style={styles.statusLogoWrap}>
-                <Ionicons name="document-text-outline" size={27} color="#17365D" />
+                <Image source={PartnerAssets.actions.policyChecklist} style={styles.statusArtwork} resizeMode="contain" accessibilityLabel="Policy document" />
               </View>
               <View style={styles.statusBody}>
                 <Text numberOfLines={2} style={styles.intakeNumber}>{fields.get('policy_number')?.value?.trim() || 'Policy pending'}</Text>
@@ -383,7 +383,7 @@ export default function PolicyIntakeDetailScreen() {
                   </>
                 ) : (
                   <>
-                <ReviewBlock title="Vehicle details" number="02">
+                <ReviewBlock title="Vehicle details">
                   {vehicleReviewKeys.some(([key]) => Boolean(fields.get(key)?.value?.trim())) ? (
                     vehicleReviewKeys.filter(([key]) => Boolean(fields.get(key)?.value?.trim())).map(([key, label]) => (
                       <ReviewPair key={key} label={label} value={fields.get(key)?.value} confidence={fields.get(key)?.confidence} singleLine={key === 'vehicle_make'} />
@@ -392,7 +392,7 @@ export default function PolicyIntakeDetailScreen() {
                     <Text style={reviewStyles.emptyVehicle}>{row.ocr_status === 'processing' ? 'Fetching vehicle details from the policy copy…' : 'No vehicle details were fetched from the saved policy copy.'}</Text>
                   )}
                 </ReviewBlock>
-                <ReviewBlock title="Policy & premium" number="03">
+                <ReviewBlock title="Policy & premium">
                   {policyReviewKeys.some(([key]) => Boolean(fields.get(key)?.value?.trim())) ? (
                     policyReviewKeys.filter(([key]) => Boolean(fields.get(key)?.value?.trim())).map(([key, label]) => (
                       <ReviewPair key={key} label={label} value={key === 'insurer_name' ? shortInsurerName(fields.get(key)?.value) : fields.get(key)?.value} confidence={fields.get(key)?.confidence} />
@@ -426,7 +426,6 @@ export default function PolicyIntakeDetailScreen() {
 
             {row.status !== 'duplicate' ? <View style={reviewStyles.reviewStatus}>
               <Text style={reviewStyles.sectionLabel}>Review status</Text>
-              <ReviewPair label="Workflow" value={statusLabel(row)} />
               <ReviewPair label="Detail fetch" value={row.ocr_status === 'completed' ? 'Details fetched' : row.ocr_status === 'failed' ? 'Manual review' : humanize(row.ocr_status)} />
               <ReviewPair label="Reviewer" value={row.status === 'completed' ? 'Completed by Operations' : ['in_review','needs_attention'].includes(row.status) ? 'Operations team' : 'Not assigned'} />
             </View> : null}
@@ -629,10 +628,9 @@ const policyReviewKeys: Array<[string, string]> = [
   ['tax_amount','Printed GST'],
   ['gross_premium','Printed gross premium'],
 ];
-function ReviewBlock({title,children,number,description}:{title:string;children:ReactNode;number?:string;description?:string}) {
+function ReviewBlock({title,children,description}:{title:string;children:ReactNode;description?:string}) {
   return <View style={reviewStyles.block}>
     <View style={reviewStyles.blockHeader}>
-      {number ? <Text style={reviewStyles.blockNumber}>{number}</Text> : null}
       <Ionicons name={title === "Vehicle details" ? "car-sport-outline" : "shield-checkmark-outline"} size={18} color="#315B9A" />
       <View style={reviewStyles.blockHeading}>
         <Text style={reviewStyles.blockTitle}>{title}</Text>
@@ -678,7 +676,7 @@ function ReviewPair({label,value,confidence,singleLine=false}:{label:string;valu
   const caution=typeof confidence === 'number' && confidence < .9;
   return <View style={reviewStyles.pair}>
     <View style={reviewStyles.pairLabelRow}><Text style={reviewStyles.pairLabel}>{label}</Text></View>
-    <Text selectable numberOfLines={singleLine ? 1 : undefined} ellipsizeMode="tail" style={[reviewStyles.pairValue,caution && reviewStyles.lowConfidence]}>{value?.trim() || '—'}{caution ? ' · Review' : ''}</Text>
+    <Text selectable numberOfLines={singleLine ? 1 : undefined} ellipsizeMode="tail" style={[reviewStyles.pairValue,caution && reviewStyles.lowConfidence]}>{value?.trim() || '—'}</Text>
   </View>;
 }
 const reviewStyles=StyleSheet.create({
@@ -689,7 +687,6 @@ const reviewStyles=StyleSheet.create({
   block:{borderRadius:10,borderWidth:1,borderColor:'#E2E9F3',overflow:'hidden'},
   blockHeader:{flexDirection:'row',alignItems:'center',gap:8,paddingHorizontal:10,paddingVertical:8,backgroundColor:'#EDF3FC'},
   blockTitle:{fontSize:12,color:'#17365D',fontWeight:'800'},
-  blockNumber:{fontSize:10,color:'#315B9A',fontWeight:'800',minWidth:17},
   blockHeading:{flex:1,gap:2},
   blockDescription:{fontSize:9,lineHeight:13,color:'#71829A'},
   rows:{paddingHorizontal:9,paddingVertical:3},
@@ -935,6 +932,7 @@ const styles = StyleSheet.create({
   statusCard: { marginHorizontal: 0, paddingHorizontal: 12, paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: partnerTheme.colors.line, backgroundColor: partnerTheme.colors.surface },
   statusTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   statusLogoWrap: { width: 34, height: 37, alignItems: 'center', justifyContent: 'center' },
+  statusArtwork: { width: 34, height: 36 },
   statusLogo: { width: 38, height: 38 },
   statusBody: { flex: 1, minWidth: 0, paddingTop: 2 },
   intakeNumber: { color: partnerTheme.colors.ink, ...partnerTheme.typography.sectionTitle },
