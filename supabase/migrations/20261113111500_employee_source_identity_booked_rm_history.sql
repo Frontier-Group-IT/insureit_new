@@ -79,6 +79,25 @@ SELECT 'employees',e.id,jsonb_build_object(
  'reporting_manager_employee_code',e.reporting_manager_employee_code)
 FROM public.employees e ON CONFLICT DO NOTHING;
 
+-- Transaction-local, non-PII signatures reject unrelated trigger side effects.
+-- A migration that changes bank, PAN, compliance, documents, workflow, finance,
+-- group membership or audit facts must roll back rather than silently proceed.
+CREATE TEMP TABLE identity_sync_before_guard ON COMMIT DROP AS
+SELECT 'policies'::text dataset,id,md5((to_jsonb(t)-ARRAY['source_intermediary_id','rm_name','intermediary_code','lead_source','updated_at'])::text) fingerprint FROM public.policies t
+UNION ALL SELECT 'life_health_cases',id,md5((to_jsonb(t)-ARRAY['rm_name','rm_code','intermediary_code','lead_source','updated_at'])::text) FROM public.life_health_cases t
+UNION ALL SELECT 'posp_misp_onboarding_profiles',id,md5((to_jsonb(t)-ARRAY['associate_name','associate_employee_code','updated_at','updated_by'])::text) FROM public.posp_misp_onboarding_profiles t
+UNION ALL SELECT 'intermediary_onboarding_applications',id,md5(((to_jsonb(t)-ARRAY['draft_data','updated_at']) ||
+  jsonb_build_object('draft_preserved',COALESCE(t.draft_data,'{}'::jsonb)-'associate_name'-'associate_employee_code'))::text) FROM public.intermediary_onboarding_applications t
+UNION ALL SELECT 'policy_intake_requests',id,md5((to_jsonb(t)-ARRAY['lead_source_code','lead_source_name','updated_at'])::text) FROM public.policy_intake_requests t
+UNION ALL SELECT 'profiles',id,md5((to_jsonb(t)-ARRAY['full_name','employee_code','phone','email','department','designation','updated_at'])::text) FROM public.profiles t
+UNION ALL SELECT 'employees',id,md5((to_jsonb(t)-ARRAY['reporting_manager_employee_code','updated_at'])::text) FROM public.employees t
+UNION ALL SELECT 'intermediaries',id,md5((to_jsonb(t)-ARRAY['updated_at','updated_by'])::text) FROM public.intermediaries t
+UNION ALL SELECT 'partners',id,md5((to_jsonb(t)-ARRAY['updated_at'])::text) FROM public.partners t
+UNION ALL SELECT 'intermediary_onboarding_contacts',id,md5(to_jsonb(t)::text) FROM public.intermediary_onboarding_contacts t
+UNION ALL SELECT 'intermediary_onboarding_documents',id,md5(to_jsonb(t)::text) FROM public.intermediary_onboarding_documents t
+UNION ALL SELECT 'pan_verification_jobs',id,md5(to_jsonb(t)::text) FROM public.pan_verification_jobs t
+UNION ALL SELECT 'intermediary_group_memberships',id,md5(to_jsonb(t)::text) FROM public.intermediary_group_memberships t;
+
 -- A name/code correction is NOT a source transfer. Even changing a policy's
 -- source code must never infer a new booked RM from today's partner owner.
 CREATE OR REPLACE FUNCTION public.sync_policy_rm_employee_id()
@@ -441,5 +460,36 @@ BEGIN
   ) THEN RAISE EXCEPTION 'identity sync abort: partner owner / legacy code changed'; END IF;
 END;
 $assert$;
+
+-- Validate *all* non-identity columns, including rows indirectly touched by
+-- onboarding synchronization triggers. FULL JOIN also catches adds/deletes.
+CREATE TEMP TABLE identity_sync_after_guard ON COMMIT DROP AS
+SELECT 'policies'::text dataset,id,md5((to_jsonb(t)-ARRAY['source_intermediary_id','rm_name','intermediary_code','lead_source','updated_at'])::text) fingerprint FROM public.policies t
+UNION ALL SELECT 'life_health_cases',id,md5((to_jsonb(t)-ARRAY['rm_name','rm_code','intermediary_code','lead_source','updated_at'])::text) FROM public.life_health_cases t
+UNION ALL SELECT 'posp_misp_onboarding_profiles',id,md5((to_jsonb(t)-ARRAY['associate_name','associate_employee_code','updated_at','updated_by'])::text) FROM public.posp_misp_onboarding_profiles t
+UNION ALL SELECT 'intermediary_onboarding_applications',id,md5(((to_jsonb(t)-ARRAY['draft_data','updated_at']) ||
+  jsonb_build_object('draft_preserved',COALESCE(t.draft_data,'{}'::jsonb)-'associate_name'-'associate_employee_code'))::text) FROM public.intermediary_onboarding_applications t
+UNION ALL SELECT 'policy_intake_requests',id,md5((to_jsonb(t)-ARRAY['lead_source_code','lead_source_name','updated_at'])::text) FROM public.policy_intake_requests t
+UNION ALL SELECT 'profiles',id,md5((to_jsonb(t)-ARRAY['full_name','employee_code','phone','email','department','designation','updated_at'])::text) FROM public.profiles t
+UNION ALL SELECT 'employees',id,md5((to_jsonb(t)-ARRAY['reporting_manager_employee_code','updated_at'])::text) FROM public.employees t
+UNION ALL SELECT 'intermediaries',id,md5((to_jsonb(t)-ARRAY['updated_at','updated_by'])::text) FROM public.intermediaries t
+UNION ALL SELECT 'partners',id,md5((to_jsonb(t)-ARRAY['updated_at'])::text) FROM public.partners t
+UNION ALL SELECT 'intermediary_onboarding_contacts',id,md5(to_jsonb(t)::text) FROM public.intermediary_onboarding_contacts t
+UNION ALL SELECT 'intermediary_onboarding_documents',id,md5(to_jsonb(t)::text) FROM public.intermediary_onboarding_documents t
+UNION ALL SELECT 'pan_verification_jobs',id,md5(to_jsonb(t)::text) FROM public.pan_verification_jobs t
+UNION ALL SELECT 'intermediary_group_memberships',id,md5(to_jsonb(t)::text) FROM public.intermediary_group_memberships t;
+
+DO $guards$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM identity_sync_before_guard b
+    FULL OUTER JOIN identity_sync_after_guard a
+      ON a.dataset=b.dataset AND a.id=b.id
+    WHERE b.fingerprint IS DISTINCT FROM a.fingerprint
+  ) THEN
+    RAISE EXCEPTION 'Identity-only migration modified protected business/compliance/financial/history data; rolled back';
+  END IF;
+END;
+$guards$;
 
 COMMIT;
