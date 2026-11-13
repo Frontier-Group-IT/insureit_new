@@ -74,14 +74,14 @@ const lifePremium:ProductField[]=[
 ];
 const nonMotorCategories=['Fire & Property','Marine','Engineering','Liability','Burglary','Employee Compensation','Cyber','Travel','Personal Accident','Package Policy','Other'];
 const riskFields:Record<string,ProductField[]>={
-  'Fire & Property':[{key:'riskTitle',label:'Risk / property description',required:true},{key:'riskLocation',label:'Risk location',required:true},{key:'occupancyType',label:'Occupancy type'}],
+  'Fire & Property':[{key:'riskTitle',label:'Risk / property description',required:true},{key:'riskLocation',label:'Risk location',required:true},{key:'occupancyType',label:'Occupancy type',required:true}],
   'Burglary':[{key:'riskTitle',label:'Risk / property description',required:true},{key:'riskLocation',label:'Risk location',required:true}],
   'Package Policy':[{key:'riskTitle',label:'Risk / property description',required:true},{key:'riskLocation',label:'Risk location',required:true}],
-  'Marine':[{key:'cargoDescription',label:'Cargo description',required:true},{key:'transitFrom',label:'Transit from',required:true},{key:'transitTo',label:'Transit to',required:true},{key:'transitMode',label:'Transit mode'}],
+  'Marine':[{key:'cargoDescription',label:'Cargo description',required:true},{key:'transitFrom',label:'Transit from',required:true},{key:'transitTo',label:'Transit to',required:true},{key:'transitMode',label:'Transit mode',required:true,options:['Road','Rail','Air','Sea','Multimodal']}],
   'Engineering':[{key:'projectName',label:'Project name',required:true},{key:'projectValue',label:'Project value (₹)'},{key:'riskLocation',label:'Risk location',required:true}],
-  'Liability':[{key:'natureOfBusiness',label:'Nature of business',required:true},{key:'liabilityType',label:'Liability type',required:true}],
-  'Employee Compensation':[{key:'employeeCount',label:'Employee count',required:true},{key:'annualWages',label:'Annual wages (₹)',required:true}],
-  'Cyber':[{key:'businessName',label:'Business name',required:true},{key:'annualTurnover',label:'Annual turnover (₹)',required:true}],
+  'Liability':[{key:'natureOfBusiness',label:'Nature of business',required:true},{key:'liabilityType',label:'Liability type',required:true},{key:'riskLocation',label:'Risk location'}],
+  'Employee Compensation':[{key:'natureOfBusiness',label:'Nature of business',required:true},{key:'employeeCount',label:'Employee count',required:true},{key:'annualWages',label:'Annual wages (₹)',required:true},{key:'riskLocation',label:'Risk location'}],
+  'Cyber':[{key:'businessName',label:'Business name',required:true},{key:'natureOfBusiness',label:'Nature of business',required:true},{key:'annualTurnover',label:'Annual turnover (₹)'}],
   'Travel':[{key:'riskTitle',label:'Travel / insured risk',required:true},{key:'riskLocation',label:'Destination',required:true}],
   'Personal Accident':[{key:'riskTitle',label:'Insured activity / risk',required:true}],
   'Other':[{key:'riskTitle',label:'Risk description',required:true}],
