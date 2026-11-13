@@ -49,7 +49,7 @@ export async function updateLifeHealthCaseDetails(formData: FormData) {
   const { error: customerError } = await admin.from("customers").update({ contact_name: customerName, phone: customerPhone, address: customerAddress || null, address_street: customerAddress || null, updated_at: new Date().toISOString() }).eq("id", row.customer_id);
   if (customerError) return { ok: false as const, error: "Customer details could not be updated." };
 
-  const { error: caseError } = await admin.from("life_health_cases").update({
+  const { data: savedCase, error: caseError } = await admin.from("life_health_cases").update({
     insurance_company_id: insurerId,
     product_name: clean(formData.get("productName")),
     proposal_number: clean(formData.get("proposalNumber")).toUpperCase(),
@@ -60,8 +60,8 @@ export async function updateLifeHealthCaseDetails(formData: FormData) {
     premium_amount: premium,
     sourcing_date: sourcingDate,
     updated_at: new Date().toISOString(),
-  }).eq("id", caseId).neq("status", "rejected").is("final_policy_id", null);
-  if (caseError) return { ok: false as const, error: "Case details could not be updated." };
+  }).eq("id", caseId).neq("status", "rejected").is("final_policy_id", null).select("id").maybeSingle<{id:string}>();
+  if (caseError || !savedCase) return { ok: false as const, error: "Case details could not be updated." };
   await recordDailyWorkflowActivity(admin,{actorId:profile.id,table:"life_health_cases",recordId:caseId,action:"life_health_case_edited"});
 
   revalidatePath(`/policies/life-health-cases/${caseId}`);
