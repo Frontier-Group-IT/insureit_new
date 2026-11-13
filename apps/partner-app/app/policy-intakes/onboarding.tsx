@@ -465,7 +465,7 @@ export default function NativePolicyOnboarding(){
       </View>
     </View>:null}
     <View style={styles.fields}>
-      {motorVehicleFields.slice(0,7).map(field)}
+      {motorVehicleFields.slice(0,7).map(item=>field(item))}
       <View style={styles.field}>
         <Text style={styles.label}>RTO {draft?.vehicleClass==='CPM'?null:<Text style={styles.star}>*</Text>}</Text>
         <View style={styles.rtoRow}>
@@ -473,7 +473,7 @@ export default function NativePolicyOnboarding(){
           <TextInput accessibilityLabel="RTO name" value={draft?.rtoName??''} onChangeText={value=>update('rtoName',value)} style={[styles.input,styles.rtoInput]}/>
         </View>
       </View>
-      {motorVehicleFields.slice(7).map(field)}
+      {motorVehicleFields.slice(7).map(item=>field(item))}
     </View>
   </View>;
   const motorProductSection=section('03','Policy product, premium & validity',motorProductFields);
