@@ -26,6 +26,7 @@ assert.doesNotMatch(detail, /<LifeHealthRemarksEditor/, "Do not retain editable 
 assert.doesNotMatch(detail, /aria-expanded=\{remarksOpen\}/, "Remove duplicate legacy remarks accordion");
 assert.match(editor, /role="dialog" aria-modal="true"/, "Accessible add-only modal dialog");
 assert.match(editor, /aria-label="Add Remark"/, "Create Case button is always Add Remark");
+assert.doesNotMatch(editor, /New remarks are appended to this case draft and saved when you select Create Case/, "Remove explanatory paragraph from Add Remark popup");
 assert.doesNotMatch(editor, /Edit Remarks|View or edit remarks|setDraft\(value\)/, "Previously added remarks cannot be reopened for editing");
 assert.match(editor, /setDraft\(""\)/, "Add Remark initializes a fresh draft");
 assert.match(editor, /onChange\(previous \?/, "New remarks append to existing case draft");
