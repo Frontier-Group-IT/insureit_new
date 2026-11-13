@@ -172,9 +172,12 @@ assert.match(nativeForm, /Policy source & ownership/, 'Show source and ownership
 assert.match(nativeForm, /Insured & vehicle identification/, 'Show vehicle and insured details natively');
 assert.match(nativeForm, /Policy product, premium & validity/, 'Show policy product details natively');
 assert.match(nativeForm, /Save & return to Intake/, 'Draft can be saved and reopened');
-assert.match(nativeForm, /Book Policy remains locked/, 'Unvalidated mobile booking must not be enabled');
+assert.match(nativeForm, /Book Active Policy/, 'Native Book Policy button uses shared server engine');
+assert.match(nativeForm, /bookNativePolicyOnboarding\(id,revision,resolution\)/, 'Booking uses revision-checked authenticated endpoint');
 assert.match(nativeClient, /saveNativePolicyOnboarding/, 'Native draft uses authenticated API');
 assert.match(nativeApi, /loadPolicyIntakeDuplicateMatches/, 'Native backend blocks duplicates');
+assert.match(nativeApi, /onboardPolicyForVerifiedActor/, 'Native booking calls authoritative website booking engine');
+assert.match(readFileSync('../web-portal/lib/policy-onboarding-engine.ts','utf8'), /save_motor_policy_with_date_approval_v1/, 'Native and website use the same transactional policy RPC');
 assert.match(nativeApi, /hasEffectiveCapability\(profile,"finalize_policy_intakes","approve"\)/, 'Native API enforces Operations approve capability');
 assert.match(nativeApi, /\.eq\("revision",body.revision as number\)/, 'Optimistic draft concurrency is preserved');
 assert.ok(detail.includes("router.push({ pathname: '/policy-intakes/onboarding'"), 'Policy Onboarding opens in the native route');
