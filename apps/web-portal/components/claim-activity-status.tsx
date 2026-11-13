@@ -24,7 +24,7 @@ const format=(key:string,v:unknown)=>{
   }
   if(typeof v!=="string" && typeof v!=="number")return "Changed";
   const text=String(v).trim();
-  return /^(?:\\d{4}-\\d{2}-\\d{2}(?:T[0-9:.Z+-]+)?|Yes|No|true|false)$/.test(text)?text:"Changed";
+  return /^(?:\d{4}-\d{2}-\d{2}(?:T[0-9:.Z+-]+)?|Yes|No|true|false)$/.test(text)?text:"Changed";
 };
 const date=(value:string)=>Number.isNaN(Date.parse(value))?0:Date.parse(value);
 
