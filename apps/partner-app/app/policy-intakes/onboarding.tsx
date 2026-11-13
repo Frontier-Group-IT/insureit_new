@@ -545,6 +545,50 @@ export default function NativePolicyOnboarding(){
 
     </>:null}
 
+    <Modal transparent visible={Boolean(commercialModal)&&isMotor&&Boolean(data?.commercialAccess)}
+      animationType="slide" onRequestClose={()=>setCommercialModal(null)}>
+      <View style={styles.scrim}>
+        <View style={styles.commercialSheet}>
+          <View style={styles.sheetTitle}>
+            <Text style={styles.sectionTitle}>{commercialModal==='payin'?'Projected Insurer Pay-in':'Partner Payout'}</Text>
+            <Pressable accessibilityRole="button" accessibilityLabel="Close commercial popup" onPress={()=>setCommercialModal(null)}>
+              <Ionicons name="close" size={22} color="#4C5970"/>
+            </Pressable>
+          </View>
+          <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.commercialModalContent}>
+            {commercialModal==='payin'?<>
+              <View style={styles.fields}>{insurerPayinFields.map(f=><View key={f.key} style={styles.field}>
+                <Text style={styles.label}>{f.label}</Text>
+                <TextInput accessibilityLabel={f.label} value={String(draft?.[f.key]??'')} onChangeText={v=>update(f.key,v)}
+                  keyboardType="decimal-pad" placeholder="" style={styles.input}/>
+              </View>)}</View>
+              <View style={styles.calculatedRow}>
+                <Text style={styles.premiumLabel}>Projected total pay-in</Text>
+                <Text style={styles.premiumValue}>{rupees(payinTotal)}</Text>
+              </View>
+            </>:<>
+              <View style={styles.fields}>
+                {partnerPayoutFields.filter(f=>f.key!=='flatPayoutAmount'||draft?.payoutBasis==='FLAT').map(f=>
+                  f.key==='payoutBasis'?field(f):<View key={f.key} style={styles.field}>
+                    <Text style={styles.label}>{f.label}</Text>
+                    <TextInput accessibilityLabel={f.label} value={String(draft?.[f.key]??'')}
+                      editable={f.key==='flatPayoutAmount'||(draft?.payoutBasis!=='FLAT'&&(f.key!=='payoutTpPercent'||draft?.payoutBasis==='NET'))}
+                      onChangeText={v=>update(f.key,v)} keyboardType="decimal-pad" placeholder=""
+                      style={[styles.input,(f.key!=='flatPayoutAmount'&&(draft?.payoutBasis==='FLAT'||f.key==='payoutTpPercent'&&draft?.payoutBasis!=='NET'))&&styles.readonlyInput]}/>
+                  </View>
+                )}
+              </View>
+              <View style={styles.calculatedRow}>
+                <Text style={styles.premiumLabel}>Total agreed payout</Text>
+                <Text style={styles.premiumValue}>{rupees(payoutTotal)}</Text>
+              </View>
+            </>}
+          </ScrollView>
+          <Pressable accessibilityRole="button" accessibilityLabel="Save and close commercial popup" onPress={()=>setCommercialModal(null)}
+            style={styles.commercialSave}><Text style={styles.primaryText}>Save & Close</Text></Pressable>
+        </View>
+      </View>
+    </Modal>
     <Modal transparent visible={dateApprovalOpen} animationType="fade" onRequestClose={()=>setDateApprovalOpen(false)}>
       <View style={styles.scrim}><View style={styles.sheet}>
         <View style={styles.sheetTitle}><Text style={styles.sectionTitle}>Policy Date Approval</Text><Pressable onPress={()=>setDateApprovalOpen(false)} accessibilityLabel="Close approval"><Ionicons name="close" size={21} color="#4C5970"/></Pressable></View>
