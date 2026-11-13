@@ -66,3 +66,9 @@ Use the existing `ParsedPolicyField` shape when writing authorized `ocr_fields` 
 - New n8n response contains a numeric premium breakdown. Website independently reconciles Basic OD + add-ons, TP + CPA, OD + liability, net + rounded tax, exact IGST round-off and proposed OD/TP/CPA fields. Failing or malformed responses fall back to Google.
 - Configure only after credential and synthetic/negative tests. Env: `INSUREIT_N8N_OCR_MODE=off|shadow|prefer`, `INSUREIT_N8N_OCR_ALLOWED_INTAKE_IDS=<approved UUIDs>`, `INSUREIT_N8N_OCR_WEBHOOK_URL`, `INSUREIT_N8N_OCR_HEADER_SECRET`. Do not enable on production yet.
 - No auto-finalize, customer or vehicle creation, or policy booking; existing authorized review still required.
+
+## Current validation and publication state
+- **2026-11-13:** New n8n draft now contains a separate manual synthetic fixture, routed through the real ICICI parser and response formatter. A synthetic example completed successfully in n8n execution 8: 17 proposed fields, all 13 checks true; Basic OD ₹1,758 + TP ₹3,273 + CPA ₹575 + rounded tax ₹1,009 = gross ₹6,615. Data-retention settings restored to none after inspection.
+- The workflow is **not published** and there is **no assigned Header Auth credential**. No real website-to-n8n request or write has been performed.
+- Browser/production integration cannot be tested without separately configured secure n8n credential and explicitly approved test intake. Keep `INSUREIT_N8N_OCR_MODE` unset/off and allowlist empty until approval.
+- The PR's router handles both Operations and Partner upload/replacement flows, with per-intake opt-in, document identity checks, native-PDF ICICI 3005 gating, shadow/prefer modes, and Google fallback. The existing finalization permissions and draft-revision controls stay intact; **full automated onboarding is not yet implemented**.
