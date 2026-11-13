@@ -10,7 +10,7 @@ import type { SpotDraftFields, SpotDraftResult } from "./draft-actions";
 export type SpotSaveState = { error: string | null; destination?: string };
 const initialState: SpotSaveState = { error: null };
 
-export function SpotIntimationSaveForm({ action, children, cancelHref, evidence, draftKey, editMode = false, serverDraft, saveServerDraft }: {
+export function SpotIntimationSaveForm({ action, children, cancelHref, evidence, draftKey, serverDraft, saveServerDraft }: {
   action: (state: SpotSaveState, form: FormData) => Promise<SpotSaveState>;
   children: React.ReactNode;
   cancelHref: string;
