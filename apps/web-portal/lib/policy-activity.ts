@@ -256,7 +256,9 @@ export function describePolicyEditChanges(before: PolicyEditSnapshot | null, aft
       if (before[fullKey] !== after[fullKey]) entries.push({key:fullKey,label});
     }
   const premiumSourceChanged = entries.some(entry=>DISPLAYABLE_PREMIUM_VALUES.has(entry.key));
+  const cpaAmountChanged=entries.some(entry=>entry.key==="premium.cpa_amount");
   return entries.filter(entry => !DERIVED_PREMIUM_FIELDS.has(entry.key)
+      && !(cpaAmountChanged && entry.key==="premium.cpa_opted")
       && !(premiumSourceChanged && AUTO_REVIEW_STATUS_FIELDS.has(entry.key)))
     .map(entry => DISPLAYABLE_PREMIUM_VALUES.has(entry.key)
       ? `${entry.label}: ${formatAuditedPremiumValue(entry.key,before[entry.key])} → ${formatAuditedPremiumValue(entry.key,after[entry.key])}`
