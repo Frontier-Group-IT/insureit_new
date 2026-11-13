@@ -138,7 +138,7 @@ requireText(businessOverviewIcons, "customers: { icon: 'people' }", 'Customers m
 requireText(businessOverviewIcons, "backgroundColor: '#EDF6FF'", 'Business Overview KPI icons must keep the soft professional blue tile.');
 requireText(business, 'function productIcon(', 'Business product cards must keep differentiated product icon mapping.');
 requireText(business, '<Text numberOfLines={1} ellipsizeMode="tail" accessibilityLabel={label} style={styles.productLabel}>{label}</Text>', 'All Business by Product tiles must use a common font size and truncate long names with a trailing ellipsis, preserving full accessible names.');
-if (/numberOfLines=\\{1\\}\\s+adjustsFontSizeToFit\\s+minimumFontScale=\\{0\\.75\\}\\s+style=\\{styles\\.productLabel\\}/.test(business)) throw new Error('Business product names must not shrink individually to fit.');
+if (business.includes('numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} style={styles.productLabel}')) throw new Error('Business product names must not shrink individually to fit.');
 
 requireText(business, 'const [overviewCustomOpen, setOverviewCustomOpen] = useState(false);', 'Business Overview must track custom-range panel visibility independently from the selected period.');
 requireText(business, "setOverviewCustomOpen((open) => (overviewRange === 'custom' ? !open : true));", 'Selecting Custom again must toggle the Business Overview custom range panel.');
