@@ -477,7 +477,7 @@ export async function loadPolicyActivityHistory({
         : null,
       meta: candidate.action === POLICY_ACTIVITY_ACTIONS.POLICY_EDITED
         ? candidate.changedFields === null || candidate.changedFields === undefined
-          ? "Fields changed were not recorded for this edit"
+          ? "The original edited field and previous/new values were not recorded"
           : candidate.changedFields.length
             ? undefined
             : "No tracked field values changed"
