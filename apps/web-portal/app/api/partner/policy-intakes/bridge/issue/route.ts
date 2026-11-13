@@ -64,6 +64,9 @@ export async function POST(request: Request) {
     return reply({ ok: false, error: "The reviewer assignment changed. Refresh the intake." }, 409);
   }
 
+  // Best-effort bounded-retention cleanup; expired encrypted sessions must not accumulate.
+  await admin.from("partner_policy_intake_web_handoff_tickets").delete()
+    .lt("expires_at", new Date().toISOString());
   const code = newBridgeCode();
   const expires_at = bridgeExpiry();
   const sealed_session = await sealBridgePayload({
