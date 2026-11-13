@@ -31,11 +31,8 @@ grant execute on function vapt_private.sec_pr_02_is_verified_broker_claim_eviden
 create policy "sec pr 02 protect verified broker claim metadata"
 on public.claim_documents as restrictive for delete to authenticated
 using (
-  verification_status <> 'verified'
-  or not exists (
-    select 1 from public.claims c
-    where c.id = claim_documents.claim_id
-      and c.claim_service_mode = 'broker_managed'
+  not vapt_private.sec_pr_02_is_verified_broker_claim_evidence(
+    claim_documents.storage_bucket, claim_documents.storage_path
   )
 );
 
