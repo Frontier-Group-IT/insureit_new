@@ -37,9 +37,11 @@ export default async function DailyReportPage({ searchParams }: Props) {
     });
     return `/reports/daily?${params.toString()}`;
   };
-  const format = new Intl.DateTimeFormat("en-IN", {
+  const formatDate = new Intl.DateTimeFormat("en-IN", {
     timeZone:"Asia/Kolkata",day:"2-digit",month:"short",year:"numeric",
-    hour:"2-digit",minute:"2-digit",hour12:true,
+  });
+  const formatTime = new Intl.DateTimeFormat("en-IN", {
+    timeZone:"Asia/Kolkata",hour:"2-digit",minute:"2-digit",hour12:true,
   });
   return (
     <div className="space-y-3">
@@ -100,9 +102,9 @@ export default async function DailyReportPage({ searchParams }: Props) {
               </thead>
               <tbody className="divide-y divide-[#edf1f6]">
                 {payload.rows.map(row=>{
-                  const parts = format.formatToParts(new Date(row.occurredAt));
-                  const date = parts.filter(p=>["day","month","year"].includes(p.type)).map(p=>p.value).join(" ");
-                  const time = parts.filter(p=>["hour","minute","dayPeriod"].includes(p.type)).map(p=>p.value).join(" ");
+                  const occurredAt = new Date(row.occurredAt);
+                  const date = formatDate.format(occurredAt);
+                  const time = formatTime.format(occurredAt);
                   return (
                     <tr key={row.id} className="text-[11px] text-[#30435D] hover:bg-[#F9FBFF]">
                       <td className="px-4 py-3"><span className="font-bold">{row.employeeName}</span>{row.employeeCode?<span className="block text-[9px] text-[#8794A6]">{row.employeeCode}</span>:null}</td>
