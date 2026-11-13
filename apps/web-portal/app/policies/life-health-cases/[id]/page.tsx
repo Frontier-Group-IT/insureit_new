@@ -59,8 +59,19 @@ export default async function LifeHealthCasePage({ params }: { params: Promise<{
     ...(caseEditAudits??[]).map(audit=>{
       const raw=audit.new_data?.changed_fields;
       // Only accept the labelled changes written by our trusted case editor.
-      const changes=Array.isArray(raw)?raw.filter((change):change is string=>
-        typeof change==="string" && /^(Product|Premium|Premium paying term|Policy duration|Payment frequency|Payment mode|Sourcing date): |^(Insurer|Proposal number) changed \(values hidden\)$/.test(change)).slice(0,20):[];
+      const safeText=(value:string)=>/^(?:[a-zA-Z0-9 ._\/-]{1,70}|Not set|Changed)$/.test(value);
+      const safeChange=(change:unknown):change is string=>{
+        if(typeof change!=="string"||change.length>180)return false;
+        if(/^(Insurer|Proposal number|Customer name|Address) changed \(values hidden\)$/.test(change))return true;
+        const mobile=change.match(/^Mobile number: (••••••[0-9]{4}|Not set) → (••••••[0-9]{4}|Not set)$/);
+        if(mobile)return true;
+        const match=change.match(/^(Product|Premium|Premium paying term|Policy duration|Payment frequency|Payment mode|Sourcing date): (.*?) → (.*?)$/);
+        if(!match)return false;
+        if(match[1]==="Premium")return /^(?:₹[0-9,]+[.][0-9]{2}|Not set)$/.test(match[2])
+          &&/^(?:₹[0-9,]+[.][0-9]{2}|Not set)$/.test(match[3]);
+        return safeText(match[2])&&safeText(match[3]);
+      };
+      const changes=Array.isArray(raw)?raw.filter(safeChange).slice(0,20):[];
       return {id:`case-audit-${audit.id}`,action:changes.length===1?changes[0].split(":")[0]+" Updated":"Case Details Updated",
         createdAt:audit.created_at,createdBy:audit.actor_id?actorNames.get(audit.actor_id)||"User":"User",changes};
     }),
