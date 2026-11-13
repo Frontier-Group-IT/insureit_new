@@ -36,7 +36,7 @@ assert.ok(customer.includes("xl:grid-cols-5 lg:items-start"));
 assert.match(operations,/stageOneLabelClassName = "block text-\[10px\]/, "Stage 1 uses naturally sized 10px labels without a forced minimum height.");
 assert.equal((operations.match(/mt-\[3px\]/g) ?? []).length, 4, "Stage 1 date/time groups and remaining inputs use an exact 3px label-to-input gap.");
 assert.ok(spot.includes('const textFieldClass = "block h-[42px] w-full'));
-assert.ok(spot.includes('const splitFieldClass = "block h-[42px]'));
+assert.ok(spot.includes('const splitFieldClass = "block h-[34px]'), "Spot Intimation inner time picker remains 34px high.");
 assert.ok(spot.includes("flex h-[42px] w-full"));
 assert.match(spot,/text-\[11px\] font-bold uppercase leading-5 tracking-\[0\.01em\]/);
 assert.ok(spot.includes("min-[1440px]:grid-cols-5"));
