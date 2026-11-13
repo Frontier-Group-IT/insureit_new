@@ -401,7 +401,7 @@ export default function PolicyIntakeDetailScreen() {
                 </ReviewBlock>
                   </>
                 )}
-                {row.ocr_warnings?.length ? (
+                {row.status === 'duplicate' && row.ocr_warnings?.length ? (
                   <View style={reviewStyles.warningBox}>
                     <Text style={reviewStyles.warningHeading}>Review notes</Text>
                     {row.ocr_warnings.map((warning, index) => (
@@ -478,6 +478,14 @@ export default function PolicyIntakeDetailScreen() {
                     </Pressable>
                   </View>
                 </View>
+              </View>
+            ) : null}
+            {row.status !== 'duplicate' && row.ocr_warnings?.length ? (
+              <View style={reviewStyles.warningBox}>
+                <Text style={reviewStyles.warningHeading}>Review notes</Text>
+                {row.ocr_warnings.map((warning, index) => (
+                  <Text key={index} style={reviewStyles.warningText}>{warning}</Text>
+                ))}
               </View>
             ) : null}
           </View>
