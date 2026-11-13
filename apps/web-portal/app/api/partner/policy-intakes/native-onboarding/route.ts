@@ -49,18 +49,17 @@ export async function POST(request:Request){
   if(body.action==="save"){
     if(intake.status!=="in_review"||intake.assigned_to_profile_id!==user.id)return reply("You are no longer the assigned reviewer.",409);
     if(!Number.isSafeInteger(body.revision)||!body.revision||!body.draft||typeof body.draft!=="object"||Array.isArray(body.draft))return reply("Invalid draft revision or values.",400);
-    // Preserve the website draft contract; reject missing, unknown or oversized values.
-    const keys=Object.keys(body.draft);
-    if(keys.length!==fields.length||keys.some(key=>!fields.includes(key as typeof fields[number]))||
-       fields.some(key=>typeof body.draft?.[key]!=="string"||body.draft[key].length>4000))return reply("Invalid onboarding draft fields.",400);
+    // The website draft can contain extra form fields (e.g. add-ons and bundled validity).
+    // Allow editing only the approved shared subset while preserving the rest exactly.
+    if(fields.some(key=>typeof body.draft?.[key]!=="string"||body.draft[key].length>4000))return reply("Invalid onboarding draft fields.",400);
     if(!["registered","unregistered"].includes(body.draft.registrationMode)||!["Yes","No"].includes(body.draft.cpaOpted))return reply("Invalid onboarding draft options.",400);
-    let saveDraft = body.draft;
-    if(!commercialAccess){
-      const {data:stored,error:storedError}=await admin.from("policy_intake_onboarding_drafts")
-        .select("draft_payload,revision").eq("intake_id",intake.id).maybeSingle<{draft_payload:PolicyIntakeDraft;revision:number}>();
-      if(storedError||!stored||stored.revision!==body.revision)return reply("Draft changed. Reload the latest version.",409);
-      saveDraft={...body.draft};
-      for(const key of commercialFields) saveDraft[key]=stored.draft_payload[key];
+    const {data:stored,error:storedError}=await admin.from("policy_intake_onboarding_drafts")
+      .select("draft_payload,revision").eq("intake_id",intake.id).maybeSingle<{draft_payload:PolicyIntakeDraft;revision:number}>();
+    if(storedError||!stored||stored.revision!==body.revision)return reply("Draft changed. Reload the latest version.",409);
+    const saveDraft:Record<string,unknown>={...stored.draft_payload};
+    for(const key of fields){
+      if(!commercialAccess && (commercialFields as readonly string[]).includes(key))continue;
+      saveDraft[key]=body.draft[key];
     }
     const {data,error}=await admin.from("policy_intake_onboarding_drafts")
       .update({draft_payload:saveDraft,revision:(body.revision as number)+1,updated_by_profile_id:user.id,updated_at:new Date().toISOString()})
