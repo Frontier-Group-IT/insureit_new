@@ -200,33 +200,35 @@ export async function updateEmployee(
         updated_by: actorId,
       })
       .eq("id", employeeId)
-      .select("full_name")
+      .select("full_name,employee_code")
       .single();
 
     if (error || !employee) {
       return { status: "error", message: friendlyError(error?.message ?? "Could not update employee.") };
     }
 
-    const admin = createSupabaseAdminClient();
-    const { error: profileError } = await admin
+    // The database's AFTER UPDATE employee-identity trigger synchronizes the
+    // portal profile, booked-RM names/codes and intermediary display snapshots
+    // inside the *same transaction* as this employee update. Do not perform a
+    // second independent profile write: that used to allow partial success.
+    const { data: profile, error: profileError } = await createSupabaseAdminClient()
       .from("profiles")
-      .update({
-        full_name: fullName,
-        phone: textValue(formData, "phone"),
-        email: textValue(formData, "email"),
-        employee_code: employeeCode,
-        department,
-        designation,
-        updated_by: actorId,
-      })
-      .eq("employee_id", employeeId);
-
-    if (profileError) {
-      return { status: "error", message: "The employee details were saved, but portal access could not be synchronized. Please try again." };
+      .select("employee_code,full_name")
+      .eq("employee_id", employeeId)
+      .maybeSingle<{ employee_code: string | null; full_name: string }>();
+    if (profileError || (profile && (
+      profile.employee_code !== employee.employee_code ||
+      profile.full_name !== employee.full_name
+    ))) {
+      return { status: "error", message: "Employee identity synchronization could not be verified. Please contact IT before editing again." };
     }
 
     revalidatePath("/employees");
     revalidatePath("/organization");
+    revalidatePath("/intermediaries");
+    revalidatePath("/policies");
+    revalidatePath("/policies/life-health-cases");
+    revalidatePath("/policy-intakes");
     return { status: "success", message: `${employee.full_name}'s details were updated.` };
   } catch (error) {
     return { status: "error", message: friendlyError(error instanceof Error ? error.message : "Could not update employee.") };

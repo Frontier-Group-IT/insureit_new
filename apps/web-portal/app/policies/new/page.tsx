@@ -78,6 +78,16 @@ export default async function NewPolicyPage({ searchParams }: { searchParams: Pr
   const manufacturerOptions = cachedManufacturers.map((option) => option.value);
 
   const intermediaryRows = (intermediariesResult.data ?? []).filter(item => !scoped || scoped.intermediaryCodes.includes(item.intermediary_code?.trim() ?? ""));
+  // Prefer the current onboarding owner over an intermediary's cached owner:
+  // after a Partner/POSP/MISP RM transfer the cache may still hold the old RM.
+  const sourceApplicationIds = [...new Set(intermediaryRows.map(item => item.application_id).filter((id): id is string => Boolean(id)))];
+  const sourceOwnersResult = sourceApplicationIds.length
+    ? await admin.from("posp_misp_onboarding_profiles").select("application_id,associate_employee_id").in("application_id", sourceApplicationIds)
+        .returns<Array<{application_id:string;associate_employee_id:string|null}>>()
+    : { data: [] as Array<{application_id:string;associate_employee_id:string|null}>, error: null };
+  if (sourceOwnersResult.error) return <SetupError />;
+  const currentOwnerByApplication = new Map((sourceOwnersResult.data ?? [])
+    .map(item => [item.application_id, item.associate_employee_id] as const));
   const partnerApplicationIds = intermediaryRows.filter((item) => item.intermediary_type === "partner" && !item.associate_employee_id && item.application_id).map((item) => item.application_id!).filter((value, index, values) => values.indexOf(value) === index);
   const partnerApplicationsResult = partnerApplicationIds.length ? await admin.from("intermediary_onboarding_applications").select("id,partner_record_id").in("id", partnerApplicationIds).returns<ApplicationPartnerRow[]>() : { data: [] as ApplicationPartnerRow[], error: null };
   if (partnerApplicationsResult.error) return <SetupError />;
@@ -93,7 +103,10 @@ export default async function NewPolicyPage({ searchParams }: { searchParams: Pr
   const rmOptions: PolicyRmOption[] = salesEmployees.filter(employee => !scoped || scoped.employeeIds.includes(employee.id)).map((employee) => { const name = employee.full_name?.trim() || "Unnamed Sales Employee"; return { value: name, label: employee.employee_code ? `${name} - ${employee.employee_code}` : name }; });
   const sourceOptions = intermediaryRows.filter((item) => item.intermediary_code?.trim() && item.display_name?.trim()).map((item) => {
     const partnerRecordId = item.application_id ? partnerRecordByApplication.get(item.application_id) : null;
-    const associateEmployeeId = item.associate_employee_id || (partnerRecordId ? associateByPartnerRecord.get(partnerRecordId) : null) || null;
+    const currentOwnerKnown = Boolean(item.application_id && currentOwnerByApplication.has(item.application_id));
+    const associateEmployeeId = currentOwnerKnown
+      ? (currentOwnerByApplication.get(item.application_id!) ?? null)
+      : (item.associate_employee_id || (partnerRecordId ? associateByPartnerRecord.get(partnerRecordId) : null) || null);
     const associate = associateEmployeeId ? employeeById.get(associateEmployeeId) : null;
     return { type: item.intermediary_type === "posp" ? "POSP" as const : item.intermediary_type === "misp" ? "MISP" as const : "SIBL / Partner" as const, value: item.id, label: item.display_name.trim(), code: item.intermediary_code!.trim(), rmName: associate?.full_name?.trim() || "", rmCode: associate?.employee_code?.trim() || "", mobile: item.mobile?.replace(/\D/g, "").slice(-10) || "" };
   });
