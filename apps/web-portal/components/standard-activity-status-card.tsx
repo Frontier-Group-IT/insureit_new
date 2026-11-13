@@ -4,6 +4,7 @@ export type StandardActivityItem = {
   id: string;
   title: string;
   meta?: string | null;
+  changes?: string[] | null;
   at?: string | null;
 };
 
@@ -44,11 +45,12 @@ export function StandardActivityStatusCard({
                 key={item.id}
                 className="flex flex-col gap-3 border-b border-[#E6EBF1] px-4 py-3 last:border-b-0 sm:flex-row sm:items-center sm:justify-between"
               >
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <p className="text-[8px] font-bold uppercase tracking-[0.06em] text-[#8190A4]">
                     {index === 0 ? "Latest Action" : "Previous Action"}
                   </p>
                   <p className="mt-1 break-words text-[12px] font-semibold text-[#183A64]">{item.title}</p>
+                  {item.changes?.length ? <ul className="mt-2 space-y-1 text-[10px] text-[#52657E]">{item.changes.map((change, changeIndex) => <li key={`${item.id}:change:${changeIndex}`} className="break-words">• {change}</li>)}</ul> : null}
                 </div>
                 <div className="flex shrink-0 flex-wrap items-center gap-x-7 gap-y-1 text-[9px] text-[#8190A4]">
                   {item.meta ? <span className="max-w-[420px] break-words">Details: {item.meta}</span> : null}
