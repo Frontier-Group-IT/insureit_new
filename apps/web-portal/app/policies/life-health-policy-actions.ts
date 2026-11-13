@@ -123,7 +123,7 @@ export async function deleteLifeHealthCaseDocument(caseId:string,documentId:stri
     await requirePolicyCreator();
   }
   const admin=createSupabaseAdminClient();
-  const{data:caseRow,error:caseError}=await admin.from("life_health_cases").select("id,final_policy_id").eq("id",caseId).maybeSingle<{id:string;final_policy_id:string|null}>();
+  const{data:caseRow,error:caseError}=await admin.from("life_health_cases").select("id,final_policy_id,status").eq("id",caseId).maybeSingle<{id:string;final_policy_id:string|null;status:string}>();
   if(caseError||!caseRow)return{ok:false,error:"This case is no longer available."};
   if(caseRow.final_policy_id||caseRow.status==="rejected")return{ok:false,error:"Issued or rejected cases cannot have documents deleted."};
   const{data:document,error:documentError}=await admin.from("life_health_case_documents").select("id,storage_bucket,storage_path").eq("case_id",caseId).eq("id",documentId).maybeSingle<{id:string;storage_bucket:string;storage_path:string}>();
