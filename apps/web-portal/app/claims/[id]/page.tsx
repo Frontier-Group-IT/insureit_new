@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { ExternalLink, FileDown } from "lucide-react";
 import { INTERNAL_JOURNEY_STAGES } from "@insureit/claim-journey";
 import { ClaimManagerShell } from "@/components/claim-manager/claim-manager-shell";
+import { ClaimActivityStatus } from "@/components/claim-activity-status";
 import { OperationsClaimStages } from "@/components/claim-manager/operations-claim-stages";
 import { finalDocumentDefinitions } from "@/components/final-documents/final-document-groups";
 import { FinalDocumentsWorkspaceV2, type DealershipDetailsV2, type FinalDocumentRowV2 } from "@/components/final-documents/final-documents-workspace-v2";
@@ -310,6 +311,7 @@ export default async function ClaimDetailPage({ params, searchParams }: { params
           unrestrictedStageEditing={isExternalOperationsClaim}
         />
       </div>
+      <div className="mt-2"><ClaimActivityStatus claimId={claim.id}/></div>
     </ClaimManagerShell>
   );
 }
