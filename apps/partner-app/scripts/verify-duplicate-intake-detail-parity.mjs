@@ -29,7 +29,7 @@ assert.ok(detail.includes('partnerPolicyIntakeMatchUrl(targetPath)'), 'Earlier i
 assert.ok(detail.includes('await Linking.openURL(url)'), 'Earlier intake navigation stays available');
 assert.ok(api.includes('`/policies/${match.policyId}`'), 'Server resolves matching policy details view page, not another arbitrary policy');
 assert.ok(links.includes('/^\\/policies\\/[0-9a-f-]{36}$/i'), 'Mobile only accepts canonical read-only policy details URL');
-assert.ok(detail.includes('topBarIcon="document-text-outline"'), 'Use the professional unboxed documents icon');
+assert.ok(detail.includes('artwork={PartnerAssets.actions.quickPolicyIntake}'), 'Use a bundled 3D Policy Intake header icon');
 assert.ok(detail.includes('fullWidth'), 'Intake detail uses edge-to-edge mobile content');
 assert.ok(detail.includes('style={styles.intakeSummaryCompact}'), 'Policy, insured identity and lead-source details share a compact header on all statuses');
 assert.ok(detail.includes('style={styles.intakeSummaryCompact}'), 'Customer and lead-source metadata sit directly below the policy number');
@@ -53,7 +53,7 @@ assert.ok(detail.includes("{fields.get('policy_number')?.value?.trim() || 'Polic
 assert.ok(!detail.includes("'Vehicle pending'"), 'Do not show old vehicle-pending header copy');
 assert.ok(detail.includes('sheet:{marginHorizontal:8,'), 'Use full-width intake review with compact symmetric gutters');
 assert.ok(detail.includes("styles.statusLogoWrap"), 'Keep a plain icon alignment container');
-assert.ok(detail.includes('<Ionicons name="document-text-outline" size={27} color="#17365D" />'), 'Use a plain professional reader icon in the PIR card');
+assert.ok(detail.includes('source={PartnerAssets.actions.policyChecklist}'), 'Use a bundled 3D policy-document icon in the PIR card');
 assert.ok(detail.includes('navyStatusBar'), 'Show a navy system status bar on both duplicate and ready-for-review pages');
 assert.ok(detail.includes('bottomNavigation={<PolicyIntakeDetailNavigation'), 'Keep five-item bottom navigation on intake detail');
 assert.ok(!detail.includes('<PartnerInsurerLogo'), 'Do not use insurer/logo tile in PIR card');
