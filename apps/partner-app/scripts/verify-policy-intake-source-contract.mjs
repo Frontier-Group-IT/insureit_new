@@ -55,9 +55,9 @@ requireText(api, 'if (!proposalForm) {', 'Partner Policy Intake API must gate OC
 
 for (const required of [
   'title="Policy Intake"',
-  'topBarIcon="document-text-outline"',
+  'artwork={PartnerAssets.actions.quickPolicyIntake}',
   'fullWidth',
-  '<Ionicons name="document-text-outline" size={27}',
+  'source={PartnerAssets.actions.policyChecklist}',
   '"car-sport-outline"',
   '"shield-checkmark-outline"',
   'statusBadgeStyle(row)',
@@ -75,6 +75,21 @@ for (const removed of [
 ]) {
   if (detailScreen.includes(removed)) throw new Error(`Policy Intake detail must not restore removed UI: ${removed}`);
 }
+// Presentation-only cleanup: no numbered review blocks or OCR confidence suffixes.
+for (const forbidden of ['number="02"', 'number="03"', ' · Review', '<ReviewPair label="Workflow"']) {
+  if (detailScreen.includes(forbidden)) throw new Error('Policy Intake detail must not show redundant review labels: ' + forbidden);
+}
+for (const required of [
+  'artwork={PartnerAssets.actions.quickPolicyIntake}',
+  'source={PartnerAssets.actions.policyChecklist}',
+  '<ReviewBlock title="Vehicle details">',
+  '<ReviewBlock title="Policy & premium">',
+  '<ReviewPair label="Detail fetch"',
+  '<ReviewPair label="Reviewer"',
+  'statusBadgeStyle(row)',
+  'statusLabel(row)',
+  'row.review_access.can_finalize',
+]) requireText(detailScreen, required, 'Preserve intake information and actions: ' + required);
 requireText(manufacturerLogo, 'getPartnerManufacturerLogoSource(name)', 'Partner manufacturer logo must reuse the catalog mapping.');
 requireText(manufacturerLogo, 'fallback ?? null', 'Partner manufacturer logo must preserve fallback artwork.');
 
@@ -109,8 +124,6 @@ for (const required of [
   'vehicleReviewKeys.filter(([key]) => Boolean(fields.get(key)?.value?.trim())).map',
   'policyReviewKeys.some(([key]) => Boolean(fields.get(key)?.value?.trim()))',
   'policyReviewKeys.filter(([key]) => Boolean(fields.get(key)?.value?.trim())).map',
-  'number="02"',
-  'number="03"',
   'No vehicle details were fetched from the saved policy copy.',
   'No policy or premium details were fetched from the saved policy copy.',
   'Fetching vehicle details from the policy copy…',
