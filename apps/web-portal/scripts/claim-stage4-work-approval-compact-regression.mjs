@@ -55,3 +55,29 @@ assert.ok(submit.includes('if (result.error)'));
 assert.ok(submit.includes('if (result.destination) router.push(result.destination)'));
 
 console.log("Stage 4 compact Work Approval layout and guarded next-stage navigation regression passed.");
+
+
+// Customer external and internal stage views use the same visible Indian date
+// format while keeping native ISO submission and strict server date validation.
+const customerDate = read("../components/customer-portal/customer-date-input.tsx");
+const customerDraft = read("../components/customer-portal/customer-claim-stage-draft-form.tsx");
+const customerCss = read("../app/customer/(protected)/claims/[id]/stage/[stage]/customer-claim-reference.css");
+assert.match(customer, /<CustomerDateInput name=\{field\.key\}/, "Customer claim-stage dates use the shared Indian date control.");
+assert.match(customer, /field\.type==="date"/, "Apply date control only to date fields, leaving other inputs unchanged.");
+assert.match(customerDate, /formatIndianDate\(value\)/, "Date fields show DD/MM/YYYY.");
+assert.match(customerDate, /type="date" value=\{value\}/, "Keep native YYYY-MM-DD values for FormData.");
+assert.match(customerDraft, /customer-spot-draft-restore/, "Restored date drafts update the visible date text.");
+assert.match(customer, /formatIndianDate\(value\)/, "Read-only date fields also show Indian dates.");
+assert.match(customer, /date\|\|"DD\/MM\/YYYY"/, "Spot Intimation read-only date placeholder has slashes.");
+assert.match(customer, /!\["spot_intimation", "claim_intimation"\]\.includes\(selected\.key\)/,
+  "Stages 1 and 3 must remain naturally compact.");
+assert.match(customer, /fullHeightStage \? "customer-claim-stage-viewport-form" : ""/,
+  "All other editable stage cards use full-height layout.");
+assert.match(customer, /fullHeightStage \? "customer-claim-stage-viewport" : ""/,
+  "All other read-only stage cards use full-height layout.");
+assert.match(customerCss, /min-height: max\(420px, calc\(100dvh - 365px\)\)/,
+  "Stage card fills remaining desktop height.");
+assert.match(customerCss, /customer-claim-stage-viewport-form > div:last-child\s*\{\s*margin-top: auto;/,
+  "Full-height form buttons align to card bottom.");
+assert.match(actions, /const date=dateKey\?values\[dateKey\]:null/,
+  "Dates are still validated as existing ISO stage values before persistence.");
