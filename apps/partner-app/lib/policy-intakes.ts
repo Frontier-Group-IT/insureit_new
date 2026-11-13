@@ -103,12 +103,12 @@ export async function listPartnerPolicyIntakesPage(
 }
 
 /** Fetch the selected authorized intake directly; details must never require the entire list. */
-export async function getPartnerPolicyIntake(id: string): Promise<PartnerPolicyIntake & { review_access: PolicyIntakeReviewAccess; duplicate_match: PolicyIntakeDuplicateMatch | null }> {
+export async function getPartnerPolicyIntake(id: string): Promise<PartnerPolicyIntake & { review_access: PolicyIntakeReviewAccess; reviewer_conflict_name: string | null; reviewer_conflict_id: string | null; duplicate_match: PolicyIntakeDuplicateMatch | null }> {
   if (!id) throw new Error('Policy Intake reference is missing.');
-  const result = await apiRequest<{ ok: true; intake: PartnerPolicyIntake; review_access: PolicyIntakeReviewAccess; duplicate_match: PolicyIntakeDuplicateMatch | null }>(
+  const result = await apiRequest<{ ok: true; intake: PartnerPolicyIntake; review_access: PolicyIntakeReviewAccess; reviewer_conflict_name: string | null; reviewer_conflict_id: string | null; duplicate_match: PolicyIntakeDuplicateMatch | null }>(
     `/api/partner/policy-intakes?id=${encodeURIComponent(id)}`,
   );
-  return { ...result.intake, review_access: result.review_access ?? { can_review: false, can_finalize: false }, duplicate_match: result.duplicate_match ?? null };
+  return { ...result.intake, review_access: result.review_access ?? { can_review: false, can_finalize: false }, reviewer_conflict_name: result.reviewer_conflict_name ?? null, reviewer_conflict_id: result.reviewer_conflict_id ?? null, duplicate_match: result.duplicate_match ?? null };
 }
 
 /** Authorised short-lived policy-copy URL, using the same scoped document endpoint as the website. */
@@ -133,6 +133,19 @@ export async function updatePartnerPolicyIntakeReview(
     method: 'POST',
     body: JSON.stringify({ action: 'review_status', id, status, reason }),
   });
+}
+
+/** Prepare a one-time browser session code without placing Supabase tokens in a URL. */
+export async function createPartnerPolicyIntakeBridgeUrl(id: string, takeOver: boolean, expectedReviewerId: string | null): Promise<string> {
+  if (!/^[0-9a-f-]{36}$/i.test(id)) throw new Error('Invalid Policy Intake reference.');
+  const session = await getCurrentSession();
+  if (!session?.access_token || !session.refresh_token) throw new Error('Your Partner session has expired. Sign in again.');
+  const result = await apiRequest<{ ok: true; code: string }>('/api/partner/policy-intakes/bridge/issue', {
+    method: 'POST',
+    body: JSON.stringify({ intake_id: id, refresh_token: session.refresh_token, take_over: takeOver, expected_reviewer_id: expectedReviewerId }),
+  });
+  if (!/^[A-Za-z0-9_-]{43}$/.test(result.code ?? '')) throw new Error('Secure onboarding handoff could not be created.');
+  return `${portalUrl}/policy-intakes/bridge#code=${encodeURIComponent(result.code)}`;
 }
 
 /** Opens the canonical Operations Review/Onboarding flow without passing auth credentials in the URL. */

@@ -67,7 +67,7 @@ assert.ok(detail.includes("onPress={() => setRejectConfirmationOpen(false)}"), '
 assert.ok(detail.includes("disabled={reviewBusy}"), 'Prevent duplicate rejection interaction while the action is busy');
 assert.ok(detail.includes('notify the submitter with your Operations note'), 'Preserve clear rejection notification explanation');
 const operationsNoteCard = detail.indexOf('style={reviewStyles.operationsNoteCard}');
-const resumeButton = detail.indexOf("label={row.status === 'in_review' ? 'Resume Policy Onboarding' : 'Review & Finalize'}");
+const resumeButton = detail.indexOf("label={openingReview ? 'Checking reviewer…' : row.status === 'in_review' ? 'Resume Policy Onboarding' : 'Review & Finalize'}");
 assert.ok(resumeButton >= 0 && operationsNoteCard > resumeButton, 'Operations Note card must be below Resume Policy Onboarding');
 assert.ok(detail.includes('style={reviewStyles.operationsNoteHeading}>Operations Note'), 'Operations Note must have a compact shared heading');
 assert.ok(detail.includes('style={reviewStyles.actionRow}') && detail.includes('style={[reviewStyles.actionButton, reviewStyles.requestInfoButton') && detail.includes('style={[reviewStyles.actionButton, reviewStyles.rejectButton'), 'Request info and Reject must remain together inside Operations Note card');
