@@ -103,12 +103,12 @@ export async function listPartnerPolicyIntakesPage(
 }
 
 /** Fetch the selected authorized intake directly; details must never require the entire list. */
-export async function getPartnerPolicyIntake(id: string): Promise<PartnerPolicyIntake & { review_access: PolicyIntakeReviewAccess; duplicate_match: PolicyIntakeDuplicateMatch | null }> {
+export async function getPartnerPolicyIntake(id: string): Promise<PartnerPolicyIntake & { review_access: PolicyIntakeReviewAccess; reviewer_conflict_name: string | null; duplicate_match: PolicyIntakeDuplicateMatch | null }> {
   if (!id) throw new Error('Policy Intake reference is missing.');
-  const result = await apiRequest<{ ok: true; intake: PartnerPolicyIntake; review_access: PolicyIntakeReviewAccess; duplicate_match: PolicyIntakeDuplicateMatch | null }>(
+  const result = await apiRequest<{ ok: true; intake: PartnerPolicyIntake; review_access: PolicyIntakeReviewAccess; reviewer_conflict_name: string | null; duplicate_match: PolicyIntakeDuplicateMatch | null }>(
     `/api/partner/policy-intakes?id=${encodeURIComponent(id)}`,
   );
-  return { ...result.intake, review_access: result.review_access ?? { can_review: false, can_finalize: false }, duplicate_match: result.duplicate_match ?? null };
+  return { ...result.intake, review_access: result.review_access ?? { can_review: false, can_finalize: false }, reviewer_conflict_name: result.reviewer_conflict_name ?? null, duplicate_match: result.duplicate_match ?? null };
 }
 
 /** Authorised short-lived policy-copy URL, using the same scoped document endpoint as the website. */
