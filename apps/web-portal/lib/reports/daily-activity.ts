@@ -65,6 +65,13 @@ function groupForAudit(table: string | null): Exclude<DailyActivityGroup, "all">
 function actionLabel(action: string): string {
   const names: Record<string, string> = {
     policy_created: "Policy Add", policy_edited: "Policy Edit",
+    policy_intake_review_started: "Policy Intake Review Started",
+    policy_intake_attention_requested: "Policy Intake Attention Requested",
+    policy_intake_rejected: "Policy Intake Rejected",
+    policy_intake_response_uploaded: "Policy Intake Response Uploaded",
+    life_health_case_edited: "Policy Edit Case Register",
+    life_health_case_remark_added: "Case Remark Added",
+    life_health_case_rejected: "Case Rejected",
     customer_created: "Customer Add", customer_edited: "Customer Edit",
     vehicle_created: "Vehicle Add", vehicle_edited: "Vehicle Edit",
     life_health_case_created: "Case Created", life_health_case_closed: "Case Closed",
@@ -74,6 +81,8 @@ function actionLabel(action: string): string {
 
 function outcome(action: string): string {
   if (/reject/i.test(action)) return "Rejected";
+  if (/review_started/i.test(action)) return "In review";
+  if (/attention_requested/i.test(action)) return "Needs attention";
   if (/delet|remov|archiv/i.test(action)) return "Deleted";
   if (/creat|add|upload|invit/i.test(action)) return "Created";
   if (/approv|verif/i.test(action)) return "Approved";
