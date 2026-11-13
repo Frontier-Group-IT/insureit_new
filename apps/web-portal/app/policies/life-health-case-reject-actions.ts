@@ -5,6 +5,7 @@ import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server
 import { requirePolicyCreator } from "@/lib/policy-access-server";
 import { requireOperationsHeadRecordOwnership } from "@/lib/operations-head-record-authorization";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { recordDailyWorkflowActivity } from "@/lib/daily-workflow-audit";
 
 /** Reject a still-pending case without deleting its customer or documents. */
 export async function rejectLifeHealthCase(caseId: string, submittedReason: string):
@@ -52,6 +53,7 @@ export async function rejectLifeHealthCase(caseId: string, submittedReason: stri
   update = row.remarks === null ? update.is("remarks", null) : update.eq("remarks", row.remarks);
   const { data: saved, error: saveError } = await update.select("id").maybeSingle<{ id: string }>();
   if (saveError || !saved) return { ok: false, error: "The case changed in another session. Refresh and try again." };
+  await recordDailyWorkflowActivity(admin,{actorId:profile.id,table:"life_health_cases",recordId:caseId,action:"life_health_case_rejected"});
 
   revalidatePath("/policies/life-health-cases");
   revalidatePath(`/policies/life-health-cases/${caseId}`);
