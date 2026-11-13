@@ -80,7 +80,7 @@ const authbridgeApi = fs.readFileSync(path.join(portalRoot, "lib/authbridge-rc-a
 assert.match(authbridgeApi, /from "@\/lib\/vehicle-registration"/);
 assert.doesNotMatch(authbridgeApi, /function isValidVehicleRegistrationNumber/);
 
-const onboardingActions = fs.readFileSync(path.join(portalRoot, "app/policies/policy-onboarding-actions.ts"), "utf8");
+const onboardingActions = fs.readFileSync(path.join(portalRoot, "lib/policy-onboarding-engine.ts"), "utf8");
 assert.match(onboardingActions, /isValidVehicleRegistrationNumber\(rawRegistration\)/);
 assert.doesNotMatch(onboardingActions, /starting with 2 letters and ending with 2 digits/);
 
