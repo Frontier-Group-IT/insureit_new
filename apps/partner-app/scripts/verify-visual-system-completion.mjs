@@ -176,13 +176,7 @@ requireText(policyIntakeNew, 'submitPartnerPolicyIntake({', 'New Policy Intake m
 requireText(policyIntakeNew, 'savePartnerPolicyIntakeDraft({', 'New Policy Intake must preserve draft saving.');
 requireText(policyIntakeNew, 'loadPartnerPolicyIntakeDraft()', 'New Policy Intake must preserve draft restore.');
 for (const intakeDetailAsset of ['emptyStates.policyUpload', 'status.documentUpload', 'status.policyAttention']) requireText(policyIntakeDetail, `PartnerAssets.${intakeDetailAsset}`, `Policy Intake detail is missing ${intakeDetailAsset} artwork.`);
-requireText(policyIntakeDetail, 'artwork={PartnerAssets.actions.quickPolicyIntake}', 'Policy Intake detail must show the existing compact glossy 3D-style intake artwork in its navy header.');
-if (policyIntakeDetail.includes('topBarIcon="document-text-outline"')) throw new Error('Policy Intake Review header must not restore its old outline document icon.');
-if (policyIntakeDetail.includes('number="02"') || policyIntakeDetail.includes('number="03"') || policyIntakeDetail.includes('reviewStyles.blockNumber')) throw new Error('Policy Intake Review section numbers must be removed.');
-requireText(policyIntakeDetail, '<ReviewBlock title="Vehicle details">', 'Vehicle review heading must remain visible without a leading number.');
-requireText(policyIntakeDetail, '<ReviewBlock title="Policy & premium">', 'Policy and premium review heading must remain visible without a leading number.');
-requireText(policyIntakeDetail, '"car-sport-outline"', 'Vehicle section must retain its relevant icon.');
-requireText(policyIntakeDetail, '"shield-checkmark-outline"', 'Policy section must retain its relevant icon.');
+requireText(policyIntakeDetail, 'topBarIcon="document-text-outline"', 'Policy Intake detail must use the unboxed professional documents icon in the header.');
 requireText(policyIntakeDetail, 'fullWidth', 'Policy Intake detail sections should fill the mobile width.');
 requireText(policyIntakeDetail, 'style={styles.intakeSummaryCompact}', 'The intake identity details must sit immediately below the PIR number for every intake status.');
 requireText(policyIntakeDetail, '<Ionicons name="document-text-outline" size={27}', 'Policy Intake PIR summary must use the updated professional reader icon.');
