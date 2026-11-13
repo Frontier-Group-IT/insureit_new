@@ -120,15 +120,27 @@ if (detailScreen.includes('vehicleReviewKeys.map(([key, label]) =>') ||
     detailScreen.includes('policyReviewKeys.map(([key, label]) =>')) {
   throw new Error('Non-duplicate review must not render all OCR labels as empty dashes.');
 }
-// Latest requested layout: Review Notes directly below Review Status, before Operations actions.
+// Review Notes is the final section for every status, including Duplicate,
+// Action Required, In Review, Processing, Completed and Rejected.
 const statusPosition = detailScreen.indexOf('style={reviewStyles.reviewStatus}');
-const movedNotesPosition = detailScreen.indexOf("{row.status !== 'duplicate' && row.ocr_warnings?.length ? (");
 const operationsNotePosition = detailScreen.indexOf('<Text style={reviewStyles.operationsNoteHeading}>Operations Note</Text>');
-if (!(statusPosition >= 0 && movedNotesPosition > statusPosition && operationsNotePosition > movedNotesPosition)) {
-  throw new Error('Policy Intake Review Notes must follow Review Status before Operations actions.');
+const requestPosition = detailScreen.indexOf('accessibilityLabel="Request information from submitter"');
+const rejectPosition = detailScreen.indexOf('accessibilityLabel="Reject policy intake"');
+const reviewNotesPosition = detailScreen.indexOf("{row.ocr_warnings?.length ? (");
+const sheetEndPosition = detailScreen.indexOf('      <Modal', reviewNotesPosition);
+if (!(statusPosition >= 0 && operationsNotePosition > statusPosition &&
+      requestPosition > operationsNotePosition && rejectPosition > requestPosition &&
+      reviewNotesPosition > rejectPosition && sheetEndPosition > reviewNotesPosition)) {
+  throw new Error('Review Notes must be last, below all sections and Operations actions.');
 }
-requireText(detailScreen, "row.status === 'duplicate' && row.ocr_warnings?.length", 'Duplicate Policy Intake review notes must remain in the existing duplicate summary.');
-requireText(detailScreen, 'row.ocr_warnings.map((warning, index)', 'Preserve all original OCR review warning details.');
+if ((detailScreen.match(/<Text style=\{reviewStyles.warningHeading\}>Review notes<\/Text>/g) || []).length !== 1) {
+  throw new Error('Review Notes must render exactly once across all intake statuses.');
+}
+if (detailScreen.includes("row.status === 'duplicate' && row.ocr_warnings?.length") ||
+    detailScreen.includes("row.status !== 'duplicate' && row.ocr_warnings?.length")) {
+  throw new Error('Review Notes must not use different placement by intake status.');
+}
+requireText(detailScreen, 'row.ocr_warnings.map((warning, index)', 'Preserve all OCR warning messages.');
 requireText(service, '/api/partner/policy-intakes/${encodeURIComponent(id)}/document', 'Partner document viewer must use existing scoped signed URL endpoint.');
 requireText(api, 'ocr_fields,ocr_warnings,attention_reason', 'Detail API must include OCR review notes.');
 requireText(api, 'submitted_by_name: submittedByName', 'Detail API must return actual submitter rather than guessing lead source.');
