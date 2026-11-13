@@ -20,6 +20,18 @@ export const dynamic = "force-dynamic";
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const fields = ["registrationMode","issuanceDate","rmName","intermediaryType","leadSource","intermediaryCode","businessLine","registrationNo","insuredName","phoneNo","vehicleClass","make","model","fuelType","capacity","manufacturingYear","chassisNo","engineNo","rtoState","rtoName","policyProduct","idv","od","tp","cpaOpted","cpa","policyNo","insurerId","validFrom","validUpto","payoutBasis","projectedOdPercent","projectedTpPercent","insurerScheme","payinBillNo","payinBilledAmount","payinBillDate","payinStatus","retention","payoutOdPercent","payoutTpPercent","flatPayoutAmount","payoutStatus","payoutDate","payoutVoucherNo","remarks"] as const;
 const nativeOptionalFields = ["addOnPremium","tpValidUpto","cpaValidUpto"] as const;
+// Only known product-specific draft keys can be saved from the mobile client.
+// Booking remains Motor-only; these fields are not passed into Motor booking payloads.
+const productDraftKeys = new Set([
+  "address","productName","proposalNumber","ppt","pd","paymentFrequency","premiumAmount","paymentMode",
+  "customerType","contactName","email","policyNumber","category","status","riskTitle","riskLocation",
+  "occupancyType","cargoDescription","transitFrom","transitTo","transitMode","projectName",
+  "projectValue","natureOfBusiness","liabilityType","employeeCount","annualWages","businessName",
+  "annualTurnover","sumInsured","deductible","netPremium","gstAmount","grossPremium",
+  "startDate","endDate","previousInsurer","previousPolicyNumber","previousClaims",
+  "addOns","warranties","specialConditions","endorsements","remarks"
+]);
+const nonMotorTypes = ["Life","Health","Non Motor"] as const;
 const commercialFields = ["payoutBasis","projectedOdPercent","projectedTpPercent","insurerScheme","payinBillNo","payinBilledAmount","payinBillDate","payinStatus","retention","payoutOdPercent","payoutTpPercent","flatPayoutAmount","payoutStatus","payoutDate","payoutVoucherNo"] as const;
 type Input = { action?: "prepare" | "save" | "book" | "approval_request" | "approval_verify" | "rc_lookup"; intake_id?: string; take_over?: boolean; expected_reviewer_id?: string | null; revision?: number; draft?: PolicyIntakeDraft; resolution?: PolicyOnboardingPayload["resolution"]; date_approval_id?: string | null; approver_key?: string; approval_id?: string; otp?: string; registration_no?: string };
 type Intake = { id:string; intake_number:string; lead_source_type:"posp"|"misp"|"partner"; lead_source_name:string; lead_source_code:string|null; customer_mobile:string; ocr_fields:PolicyIntakeOcrField[]; status:string; assigned_to_profile_id:string|null; created_at:string; matched_customer_id:string|null };
@@ -146,6 +158,17 @@ export async function POST(request:Request){
     const extraValues=body.draft as unknown as Record<string,unknown>;
     if(nativeOptionalFields.some(key=>extraValues[key]!=null&&(typeof extraValues[key]!=="string"||(extraValues[key] as string).length>4000)))return reply("Invalid premium or bundled validity values.",400);
     if(!["registered","unregistered"].includes(body.draft.registrationMode)||!["Yes","No"].includes(body.draft.cpaOpted))return reply("Invalid onboarding draft options.",400);
+    if(!["Motor",...nonMotorTypes].includes(body.draft.businessLine))return reply("Unsupported policy type.",400);
+    const proposedProductDrafts = (body.draft as unknown as Record<string,unknown>).productDrafts;
+    if(proposedProductDrafts!==undefined){
+      if(!proposedProductDrafts||typeof proposedProductDrafts!=="object"||Array.isArray(proposedProductDrafts))return reply("Invalid product draft.",400);
+      const entries=Object.entries(proposedProductDrafts);
+      if(entries.length>nonMotorTypes.length||entries.some(([type,values])=>
+        !(nonMotorTypes as readonly string[]).includes(type)||
+        !values||typeof values!=="object"||Array.isArray(values)||
+        Object.entries(values).some(([key,value])=>!productDraftKeys.has(key)||typeof value!=="string"||value.length>2000)
+      ))return reply("Unsupported product draft fields.",400);
+    }
     const {data:stored,error:storedError}=await admin.from("policy_intake_onboarding_drafts")
       .select("draft_payload,revision").eq("intake_id",intake.id).maybeSingle<{draft_payload:PolicyIntakeDraft;revision:number}>();
     if(storedError||!stored||stored.revision!==body.revision)return reply("Draft changed. Reload the latest version.",409);
@@ -155,6 +178,10 @@ export async function POST(request:Request){
       saveDraft[key]=body.draft[key];
     }
     for(const key of nativeOptionalFields)if(extraValues[key]!=null)saveDraft[key]=extraValues[key];
+    if(proposedProductDrafts!==undefined){
+      // Keep each product's form separate from Motor and from restricted commercials.
+      saveDraft.productDrafts=proposedProductDrafts;
+    }
     const {data,error}=await admin.from("policy_intake_onboarding_drafts")
       .update({draft_payload:saveDraft,revision:(body.revision as number)+1,updated_by_profile_id:user.id,updated_at:new Date().toISOString()})
       .eq("intake_id",intake.id).eq("revision",body.revision as number).select("revision").maybeSingle<{revision:number}>();
