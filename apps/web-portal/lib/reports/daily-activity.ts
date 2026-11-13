@@ -241,7 +241,7 @@ export async function loadDailyActivityReport(viewer: Viewer, query: DailyActivi
     if (!ids.length) return;
     const {data,error} = await admin.from(table).select(`id,${column}`).in("id",ids);
     if(error) throw new Error(`Could not resolve activity reference: ${error.message}`);
-    for(const row of (data ?? []) as Record<string,unknown>[]) {
+    for(const row of (data ?? []) as unknown as Record<string,unknown>[]) {
       const value=row[column];
       if(typeof row.id==="string" && typeof value==="string" && value.trim()) refs.set(`${table}:${row.id}`,value);
     }
