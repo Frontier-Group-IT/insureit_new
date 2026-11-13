@@ -151,7 +151,7 @@ export default function PolicyIntakeDetailScreen() {
       return;
     }
     try {
-      router.push({ pathname: '/policy-intakes/onboarding', params: { id: latest.id } });
+      await Linking.openURL(url);
     } catch {
       setError('Could not open the earlier intake in Operations.');
     }
@@ -192,11 +192,11 @@ export default function PolicyIntakeDetailScreen() {
         return;
       }
       // The app has received the user's only reviewer-change confirmation.
-      // The website atomically rechecks the exact assignment and applies the
-      // existing secure handoff after redeeming a single-use browser code.
+      // The native API checks reviewer assignment and prepares the existing draft.
+      // Policy Onboarding stays inside the Partner App.
       await prepareNativePolicyOnboarding(latest.id, confirmedConflict, latest.reviewer_conflict_id);
       setReviewerConflictName(null);
-      await Linking.openURL(url);
+      router.push({ pathname: '/policy-intakes/onboarding', params: { id: latest.id } });
     } catch (cause) {
       setReviewerConflictName(null);
       setError(cause instanceof Error ? cause.message : 'Could not open Operations Policy Intake Review.');
