@@ -34,6 +34,33 @@ export async function deleteLifeHealthCase(caseId: string): Promise<DeleteLifeHe
     .returns<CaseDocument[]>();
   if (documentsError) return { ok: false, error: `Unable to verify linked case documents: ${documentsError.message}` };
 
+  // A durable audit request must exist before any irreversible policy/case changes.
+  // Use the canonical audit_logs schema; never place actual document paths in the event.
+  const { data: auditRequest, error: auditRequestError } = await admin.from("audit_logs")
+    .insert({
+      actor_id: profile.id,
+      action: "life_health_case_delete_requested",
+      table_name: "life_health_cases",
+      record_id: caseId,
+      new_data: {
+        phase: "requested",
+        document_count: documents?.length ?? 0,
+        linked_policy_present: Boolean(existing.final_policy_id),
+      },
+    })
+    .select("id")
+    .single<{ id: string }>();
+  if (auditRequestError || !auditRequest?.id) {
+    return { ok: false, error: "Audit logging is unavailable; no case or policy was deleted." };
+  }
+
+  const updateAuditOutcome = async (phase: string, details: Record<string, unknown>) => {
+    const { error } = await admin.from("audit_logs")
+      .update({ action: "life_health_case_delete_" + phase, new_data: { phase, ...details } })
+      .eq("id", auditRequest.id);
+    return !error;
+  };
+
   // An issued Life / Health case and its generated policy point at each other.
   // Break only that case -> policy link before asking the existing guarded policy
   // deletion workflow to remove the policy. All normal policy dependency guards
@@ -49,9 +76,11 @@ export async function deleteLifeHealthCase(caseId: string): Promise<DeleteLifeHe
       .maybeSingle<{ id: string }>();
 
     if (unlinkError) {
+      await updateAuditOutcome("blocked", { stage: "unlink_policy", linked_policy_deleted: false });
       return { ok: false, error: `Unable to release the linked issued policy: ${unlinkError.message}` };
     }
     if (!unlinkedCase) {
+      await updateAuditOutcome("blocked", { stage: "unlink_policy_conflict", linked_policy_deleted: false });
       return { ok: false, error: "The linked policy changed while preparing deletion. Refresh and try again." };
     }
 
@@ -63,6 +92,11 @@ export async function deleteLifeHealthCase(caseId: string): Promise<DeleteLifeHe
         .eq("id", caseId)
         .is("final_policy_id", null);
 
+      await updateAuditOutcome(restoreError ? "partial_failure" : "blocked", {
+        stage: "linked_policy_delete",
+        case_policy_link_restored: !restoreError,
+        linked_policy_deleted: false,
+      });
       return {
         ok: false,
         error: restoreError
@@ -74,6 +108,7 @@ export async function deleteLifeHealthCase(caseId: string): Promise<DeleteLifeHe
 
   const { error: deleteError } = await admin.from("life_health_cases").delete().eq("id", caseId).is("final_policy_id", null);
   if (deleteError) {
+    await updateAuditOutcome("partial_failure", { stage: "case_delete", linked_policy_deleted: Boolean(existing.final_policy_id) });
     const referenced = deleteError.code === "23503" || /foreign key|violates/i.test(deleteError.message);
     return { ok: false, error: referenced ? "Cannot delete this case because another record still references it." : `Unable to delete the case: ${deleteError.message}` };
   }
@@ -83,23 +118,32 @@ export async function deleteLifeHealthCase(caseId: string): Promise<DeleteLifeHe
     if (!document.storage_bucket || !document.storage_path) continue;
     byBucket.set(document.storage_bucket, [...(byBucket.get(document.storage_bucket) ?? []), document.storage_path]);
   }
-  await Promise.allSettled(Array.from(byBucket.entries()).map(([bucket, paths]) => admin.storage.from(bucket).remove(paths)));
-
-  await admin.from("audit_logs").insert({
-    actor_id: profile.id,
-    action: "delete",
-    entity_type: "life_health_case",
-    entity_id: caseId,
-    metadata: {
-      case_number: existing.case_number,
-      deleted_by: "it_super_user",
-      document_count: documents?.length ?? 0,
+  const storageResults = await Promise.allSettled(
+    Array.from(byBucket.entries()).map(async ([bucket, paths]) => {
+      const { error } = await admin.storage.from(bucket).remove(paths);
+      if (error) throw error;
+    }),
+  );
+  const failedStorageBatches = storageResults.filter(result => result.status === "rejected").length;
+  const auditComplete = await updateAuditOutcome(
+    failedStorageBatches ? "partial_failure" : "completed",
+    {
+      deleted_case: true,
       linked_policy_deleted: Boolean(existing.final_policy_id),
-      linked_policy_id: existing.final_policy_id
-    }
-  });
+      storage_batches: storageResults.length,
+      failed_storage_batches: failedStorageBatches,
+    },
+  );
 
   revalidatePath("/policies/life-health-cases");
   revalidatePath("/policies");
+  if (!auditComplete) return {
+    ok: false,
+    error: "The case deletion ran, but its audit completion could not be recorded. Contact IT to reconcile before retrying.",
+  };
+  if (failedStorageBatches) return {
+    ok: false,
+    error: "The case was deleted, but some document cleanup failed. Contact IT to reconcile remaining files.",
+  };
   return { ok: true };
 }
