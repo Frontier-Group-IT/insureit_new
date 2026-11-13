@@ -273,6 +273,7 @@ export default function NativePolicyOnboarding(){
       <View style={styles.status}><View><Text style={styles.intake}>{data?.intake_number||'Policy Intake'}</Text><Text style={styles.muted}>Existing draft · {dirty?'Unsaved changes':'Saved revision '+data?.revision}</Text></View><View style={styles.progress}><Text style={styles.progressText}>{filled}% complete</Text></View></View>
       {section('01','Policy source & ownership',policy)}
       {section('02','Insured & vehicle identification',vehicle)}
+      {draft.registrationMode==='registered'?<Pressable accessibilityRole="button" disabled={lookingUpRc} style={[styles.secondary,{marginBottom:11}]} onPress={()=>void fetchRc()}><Text style={styles.secondaryText}>{lookingUpRc?'Fetching RC…':'Fetch RC Details'}</Text></Pressable>:null}
       {section('03','Policy product, premium & validity',draft.policyProduct==='Bundled'&&['PCP','TWP'].includes(draft.vehicleClass)?[
         ...product,{key:'tpValidUpto',label:'TP validity up to (YYYY-MM-DD)',required:true},{key:'cpaValidUpto',label:'CPA validity up to (YYYY-MM-DD)',required:true}
       ]:product)}
@@ -282,6 +283,7 @@ export default function NativePolicyOnboarding(){
         <View style={styles.summary}><Text style={styles.muted}>OD + TP + Add-on + CPA (before applicable taxes)</Text><Text style={styles.total}>₹{net.toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})}</Text></View>
         <Text style={styles.notice}>This is a draft summary, not the final policy premium calculation. Final taxes, premiums, validation and booking must use the website&apos;s authoritative booking engine.</Text>
       </View>
+      <Pressable accessibilityRole="button" disabled={viewingCopy} style={[styles.secondary,{marginBottom:11}]} onPress={()=>void openCopy()}><Text style={styles.secondaryText}>{viewingCopy?'Opening document…':'View Policy Copy'}</Text></Pressable>
       <View style={styles.actions}>
         <Pressable accessibilityRole="button" disabled={saving} style={styles.secondary} onPress={()=>void save(true)}><Text style={styles.secondaryText}>{saving?'Saving…':'Save & return to Intake'}</Text></Pressable>
         <Pressable accessibilityRole="button" disabled={saving||!dirty} style={[styles.primary,(saving||!dirty)&&styles.disabled]} onPress={()=>void save()}><Text style={styles.primaryText}>{saving?'Saving…':'Save draft'}</Text></Pressable>
