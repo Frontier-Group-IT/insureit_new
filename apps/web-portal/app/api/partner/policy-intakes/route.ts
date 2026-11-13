@@ -193,7 +193,7 @@ export async function GET(request: Request) {
   if (requestedId) {
     let detailQuery = admin
       .from("policy_intake_requests")
-      .select(intakeSelect)
+      .select(`${intakeSelect},assigned_to_profile_id`)
       .eq("id", requestedId);
 
     if (employeeRead?.mode === "or") detailQuery = detailQuery.or(employeeRead.predicates);
@@ -243,10 +243,22 @@ export async function GET(request: Request) {
       submittedByName = data?.name?.trim() || null;
     }
     Object.assign(intake, { submitted_by_name: submittedByName });
+    // Read-only preflight for the Partner App. The website's handoff action remains
+    // the sole authority to change reviewer assignment after a fresh conflict check.
+    let reviewerConflictName: string | null = null;
+    if (access.can_finalize && identity.actor_kind === "employee" &&
+        intake.assigned_to_profile_id && intake.assigned_to_profile_id !== identity.profile_id &&
+        ["in_review", "ready_for_review", "processing"].includes(intake.status) && !match) {
+      const { data: assignedProfile, error: assignedError } = await admin.from("profiles")
+        .select("full_name").eq("id", intake.assigned_to_profile_id).maybeSingle<{ full_name: string | null }>();
+      if (assignedError) return json({ ok: false, error: "Could not check the current reviewer. Please retry." }, 503);
+      reviewerConflictName = assignedProfile?.full_name?.trim() || "another Operations user";
+    }
     return json({
       ok: true,
       intake: match ? { ...intake, status: "duplicate" } : intake,
       review_access: match ? { can_review: false, can_finalize: false } : access,
+      reviewer_conflict_name: reviewerConflictName,
       duplicate_match,
     });
   }
