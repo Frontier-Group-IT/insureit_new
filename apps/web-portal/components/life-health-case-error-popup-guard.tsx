@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
-const INLINE_ERROR_SELECTOR = ".border-red-200.bg-red-50";
+// Target only the actual Case Details validation error, never visual button styles.
+const INLINE_ERROR_SELECTOR = '[data-life-health-case-error="true"]';
 
 export function LifeHealthCaseErrorPopupGuard() {
   const [message, setMessage] = useState<string | null>(null);
