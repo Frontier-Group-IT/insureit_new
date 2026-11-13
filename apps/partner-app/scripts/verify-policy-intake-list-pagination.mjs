@@ -173,7 +173,7 @@ assert.match(nativeForm, /Insured & vehicle identification/, 'Show vehicle and i
 assert.match(nativeForm, /Policy product, premium & validity/, 'Show policy product details natively');
 assert.match(nativeForm, /Save & return to Intake/, 'Draft can be saved and reopened');
 assert.match(nativeForm, /Book Active Policy/, 'Native Book Policy button uses shared server engine');
-assert.match(nativeForm, /bookNativePolicyOnboarding\(id,revision,resolution\)/, 'Booking uses revision-checked authenticated endpoint');
+assert.ok(nativeForm.includes('bookNativePolicyOnboarding(id,revision,resolution,verifiedApprovalId)'), 'Booking uses revision-checked authenticated endpoint');
 assert.match(nativeClient, /saveNativePolicyOnboarding/, 'Native draft uses authenticated API');
 assert.match(nativeApi, /loadPolicyIntakeDuplicateMatches/, 'Native backend blocks duplicates');
 assert.match(nativeApi, /onboardPolicyForVerifiedActor/, 'Native booking calls authoritative website booking engine');
