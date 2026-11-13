@@ -11,6 +11,7 @@ import { refineApprovedMotorPolicyLayout } from "@/lib/policy-ocr-approved-layou
 import { refineIciciBundledTwoWheelerText } from "@/lib/policy-ocr-icici-3005-text-refiner";
 import { refineIcici3005OutstandingFields } from "@/lib/policy-ocr-icici-3005-outstanding-fields";
 import { refineIcici3005Section02Evidence } from "@/lib/policy-ocr-icici-3005-section02";
+import { refinePolicyIntakeInsuredName } from "@/lib/policy-ocr-insured-name-refiner";
 import { extractNativePdfTextPages } from "@/lib/policy-ocr-native-pdf";
 import { shouldRunPolicyOcrLayoutParser } from "@/lib/policy-ocr-layout-mode";
 
@@ -74,6 +75,7 @@ export async function extractPolicyIntakeDocumentTrusted(formData: FormData): Pr
     parsed = refineIciciBundledTwoWheelerText(textEvidencePages, parsed);
     parsed = refineIcici3005OutstandingFields(textEvidencePages, parsed);
     parsed = refineIcici3005Section02Evidence(textEvidencePages, parsed);
+    parsed = refinePolicyIntakeInsuredName(pages, parsed);
     if (!parsed.fields.length) return { ok:false, error:"No supported policy details could be read from this document." };
     return { ok:true, fields:parsed.fields, parserId:parsed.parserId, parserVersion:parsed.parserVersion, warnings:parsed.warnings };
   } catch (error) {
