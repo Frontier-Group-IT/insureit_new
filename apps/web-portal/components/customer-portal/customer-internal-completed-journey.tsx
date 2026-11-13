@@ -47,7 +47,7 @@ export function CustomerInternalCompletedJourney({
   spot: SpotFields;
   reuploadDocumentType?: string | null;
   reuploadRequestId?: string | null;
-  reuploadStage?: "spot_intimation" | "claim_intimation" | null;
+  reuploadStage?: "spot_intimation" | "claim_intimation" | "billing" | null;
 }) {
   const completedStages = Math.max(0, Math.min(completedCount, INTERNAL_JOURNEY_STAGES.length));
   const spotDocuments = documents.filter(doc => spotTypes.has(normalize(doc.document_type)));
