@@ -1,11 +1,11 @@
 Partner production OTA trigger
-release=partner-native-policy-onboarding-pr-4355
+release=partner-insurer-compact-pr-4394
 source=verified-merged-main
-reason=user-approved-native-policy-onboarding
+reason=user-approved-compact-insurer-table
 channel=production
 runtime=0.2.0
 requested=2026-11-13
 no_native_build=true
 no_apk=true
 no_aab=true
-backend=required_before_ota
+backend=no_changes
