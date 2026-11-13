@@ -5,7 +5,10 @@
 begin;
 -- Definer lookup prevents a caller's claim_documents RLS from hiding protected
 -- metadata during the Storage DELETE decision.
-create or replace function public.sec_pr_02_is_verified_broker_claim_evidence(p_bucket text, p_path text)
+create schema if not exists vapt_private;
+revoke all on schema vapt_private from public;
+grant usage on schema vapt_private to authenticated;
+create or replace function vapt_private.sec_pr_02_is_verified_broker_claim_evidence(p_bucket text, p_path text)
 returns boolean
 language sql stable security definer
 set search_path = ''
@@ -19,13 +22,27 @@ as $fn$
       and c.claim_service_mode = 'broker_managed'
   );
 $fn$;
-revoke all on function public.sec_pr_02_is_verified_broker_claim_evidence(text,text) from public;
-grant execute on function public.sec_pr_02_is_verified_broker_claim_evidence(text,text) to authenticated;
+revoke all on function vapt_private.sec_pr_02_is_verified_broker_claim_evidence(text,text) from public;
+grant execute on function vapt_private.sec_pr_02_is_verified_broker_claim_evidence(text,text) to authenticated;
+
+-- A Storage-only guard is not sufficient if the metadata row can first be
+-- deleted through an independently permissive claim_documents DELETE policy.
+-- This restrictive metadata policy protects the same retained evidence.
+create policy "sec pr 02 protect verified broker claim metadata"
+on public.claim_documents as restrictive for delete to authenticated
+using (
+  verification_status <> 'verified'
+  or not exists (
+    select 1 from public.claims c
+    where c.id = claim_documents.claim_id
+      and c.claim_service_mode = 'broker_managed'
+  )
+);
 
 create policy "sec pr 02 protect verified broker claim evidence"
 on storage.objects as restrictive for delete to authenticated
 using (
   bucket_id <> 'claim-documents'
-  or not public.sec_pr_02_is_verified_broker_claim_evidence(bucket_id, name)
+  or not vapt_private.sec_pr_02_is_verified_broker_claim_evidence(bucket_id, name)
 );
 commit;
