@@ -21,7 +21,7 @@ const activityCard = read("../components/standard-activity-status-card.tsx");
 for (const [name, edit] of [["Motor", motorEdit], ["Non-Motor", nonMotorEdit], ["Life/Health", lifeHealthEdit]]) {
   assert.match(edit, /capturePolicyEditSnapshot\(admin, (?:policyId|id)\)/, name + " editor captures pre-save state");
   assert.match(edit, /const activityAfter = await capturePolicyEditSnapshot/, name + " editor captures post-save state");
-  assert.match(edit, name === "Motor" ? /describePolicyEditChanges\(activityBefore, activityAfter\)/ : /changedPolicyEditFields\(activityBefore, activityAfter\)/, name + " activity records actual changes");
+  assert.match(edit, /describePolicyEditChanges\(activityBefore, activityAfter\)/, name + " activity records actual changes");
 }
 for (const field of ["policy_no", "status", "premium_amount", "start_date", "end_date", "net_premium", "gross_premium", "policy_product", "insurance_company_id", "proposal_number", "next_installment_date", "deductible"]) {
   assert.ok(activity.includes(field), field + " is part of reviewed policy activity coverage");
