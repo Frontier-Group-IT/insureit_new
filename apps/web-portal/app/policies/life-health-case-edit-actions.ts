@@ -39,7 +39,7 @@ export async function updateLifeHealthCaseDetails(formData: FormData) {
   if (!PAYMENT_FREQUENCIES.has(paymentFrequency)) return { ok: false as const, error: "Select a valid payment frequency." };
   if (!PAYMENT_MODES.has(paymentMode)) return { ok: false as const, error: "Select a valid payment mode." };
 
-  const { data: row } = await admin.from("life_health_cases").select("id,customer_id,final_policy_id,status").eq("id", caseId).maybeSingle<{ id: string; customer_id: string; final_policy_id: string | null; status: string }>();
+  const { data: row } = await admin.from("life_health_cases").select("id,customer_id,final_policy_id,status,insurance_company_id,product_name,proposal_number,premium_paying_term,policy_duration,payment_frequency,payment_mode,premium_amount,sourcing_date").eq("id", caseId).maybeSingle<{ id: string; customer_id: string; final_policy_id: string | null; status: string; insurance_company_id:string;product_name:string;proposal_number:string;premium_paying_term:string|null;policy_duration:string|null;payment_frequency:string;payment_mode:string;premium_amount:number;sourcing_date:string }>();
   if (!row) return { ok: false as const, error: "This case is no longer available." };
   if (row.final_policy_id || row.status === "rejected") return { ok: false as const, error: "Issued or rejected cases cannot be edited." };
   if (!row.customer_id) return { ok: false as const, error: "The case customer reference is missing." };
@@ -60,6 +60,34 @@ export async function updateLifeHealthCaseDetails(formData: FormData) {
     updated_at: new Date().toISOString(),
   }).eq("id", caseId).neq("status", "rejected").is("final_policy_id", null);
   if (caseError) return { ok: false as const, error: "Case details could not be updated." };
+
+  // Record only approved, user-editable case fields. Never store the
+  // customer's name/mobile/address, raw proposal number or remarks.
+  const changes: string[] = [];
+  const compare = (label:string,oldValue:string|null|number,newValue:string|null|number,format:(v:string|number|null)=>string=(v)=>String(v??"Not set")) => {
+    if(String(oldValue??"").trim()!==String(newValue??"").trim())
+      changes.push(`${label}: ${format(oldValue)} → ${format(newValue)}`);
+  };
+  const currency=(value:string|number|null)=> {
+    const n=Number(value??0);
+    return Number.isFinite(n) ? `₹${n.toLocaleString("en-IN",{minimumFractionDigits:2,maximumFractionDigits:2})}` : "Not set";
+  };
+  compare("Product",row.product_name,clean(formData.get("productName")));
+  compare("Premium",row.premium_amount,premium,currency);
+  compare("Premium paying term",row.premium_paying_term,clean(formData.get("ppt"))||null);
+  compare("Policy duration",row.policy_duration,clean(formData.get("pd"))||null);
+  compare("Payment frequency",row.payment_frequency,paymentFrequency);
+  compare("Payment mode",row.payment_mode,paymentMode);
+  compare("Sourcing date",row.sourcing_date,sourcingDate);
+  if(row.insurance_company_id!==insurerId)changes.push("Insurer changed (values hidden)");
+  if(row.proposal_number!==clean(formData.get("proposalNumber")).toUpperCase())changes.push("Proposal number changed (values hidden)");
+  if(changes.length){
+    const {error:auditError}=await admin.from("audit_logs").insert({
+      actor_id:requester?.id??null,action:"life_health_case_edited",table_name:"life_health_cases",
+      record_id:caseId,new_data:{changed_fields:changes.slice(0,20)},
+    });
+    if(auditError) console.error("Life/Health case activity audit could not be recorded",{caseId,code:auditError.code});
+  }
 
   revalidatePath(`/policies/life-health-cases/${caseId}`);
   revalidatePath("/policies/life-health-cases");
