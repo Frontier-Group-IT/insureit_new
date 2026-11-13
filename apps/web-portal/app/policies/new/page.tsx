@@ -103,7 +103,10 @@ export default async function NewPolicyPage({ searchParams }: { searchParams: Pr
   const rmOptions: PolicyRmOption[] = salesEmployees.filter(employee => !scoped || scoped.employeeIds.includes(employee.id)).map((employee) => { const name = employee.full_name?.trim() || "Unnamed Sales Employee"; return { value: name, label: employee.employee_code ? `${name} - ${employee.employee_code}` : name }; });
   const sourceOptions = intermediaryRows.filter((item) => item.intermediary_code?.trim() && item.display_name?.trim()).map((item) => {
     const partnerRecordId = item.application_id ? partnerRecordByApplication.get(item.application_id) : null;
-    const associateEmployeeId = (item.application_id ? currentOwnerByApplication.get(item.application_id) : null) || item.associate_employee_id || (partnerRecordId ? associateByPartnerRecord.get(partnerRecordId) : null) || null;
+    const currentOwnerKnown = Boolean(item.application_id && currentOwnerByApplication.has(item.application_id));
+    const associateEmployeeId = currentOwnerKnown
+      ? (currentOwnerByApplication.get(item.application_id!) ?? null)
+      : (item.associate_employee_id || (partnerRecordId ? associateByPartnerRecord.get(partnerRecordId) : null) || null);
     const associate = associateEmployeeId ? employeeById.get(associateEmployeeId) : null;
     return { type: item.intermediary_type === "posp" ? "POSP" as const : item.intermediary_type === "misp" ? "MISP" as const : "SIBL / Partner" as const, value: item.id, label: item.display_name.trim(), code: item.intermediary_code!.trim(), rmName: associate?.full_name?.trim() || "", rmCode: associate?.employee_code?.trim() || "", mobile: item.mobile?.replace(/\D/g, "").slice(-10) || "" };
   });
