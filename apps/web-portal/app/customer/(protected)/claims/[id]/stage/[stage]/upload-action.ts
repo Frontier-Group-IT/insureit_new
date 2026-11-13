@@ -102,17 +102,20 @@ export async function uploadCustomerClaimDocument(_previous:CustomerClaimUploadS
  * Only signed uploads for the authenticated customer's current Stage 1 claim
  * are permitted. No document is registered until uploaded bytes are verified.
  */
-export async function prepareCustomerClaimBulkVideo(accountId:string,claimId:string,stage:string,file:{name:string;size:number;type:string}) {
+export async function prepareCustomerClaimBulkVideo(accountId:string,claimId:string,stage:string,file:{name:string;size:number;type:string},reuploadRequestId?:string|null) {
   try {
     if(stage!=="spot_intimation")throw new Error("This video uploader is only available in Spot Intimation.");
     if(!/\.(mp4|mov|webm)$/i.test(file.name)||!["video/mp4","video/quicktime","video/webm"].includes(file.type)||file.size<=0||file.size>50*1024*1024)
       throw new Error("Select a supported video file no larger than 50 MB.");
     const {account}=await resolveCustomerWebScope(accountId);
-    const {claim,milestones,internal_projection}=await loadCustomerClaimDetail(account.id,claimId);
+    const {claim,milestones,internal_projection,reuploadRequests}=await loadCustomerClaimDetail(account.id,claimId);
+    const authorizedReplacement=Boolean(reuploadRequestId && reuploadRequests.some(request =>
+      request.id===reuploadRequestId && request.status==="action_required"
+      && request.stage===stage && sameClaimDocumentType(request.documentType,"Other Document")));
     if(claim.claim_service_mode==="broker_managed"&&!claim.external_policy_id &&
-      ((internal_projection?.completedStageCount??0)>=2||milestones.some(item=>item.milestone_key==="claim_intimation"&&["completed","not_applicable"].includes(item.milestone_status))))
+      ((internal_projection?.completedStageCount??0)>=2||milestones.some(item=>item.milestone_key==="claim_intimation"&&["completed","not_applicable"].includes(item.milestone_status)))&&!authorizedReplacement)
       throw new Error("Claim Intimation (Stage 2) is complete. Stage 1 documents are locked.");
-    if(claim.claim_service_mode==="broker_managed"&&["Settled","Closed","Claim Complete"].includes(claim.current_status))
+    if(claim.claim_service_mode==="broker_managed"&&["Settled","Closed","Claim Complete"].includes(claim.current_status)&&!authorizedReplacement)
       throw new Error("Completed managed claims cannot accept new customer documents.");
     await getCustomerWebSession();
     const ext=file.name.split(".").pop()!.toLowerCase();
@@ -128,11 +131,14 @@ export async function finalizeCustomerClaimBulkVideo(accountId:string,claimId:st
   try {
     if(stage!=="spot_intimation")throw new Error("Invalid upload stage.");
     const {account}=await resolveCustomerWebScope(accountId);
-    const {claim,milestones,internal_projection}=await loadCustomerClaimDetail(account.id,claimId);
+    const {claim,milestones,internal_projection,reuploadRequests}=await loadCustomerClaimDetail(account.id,claimId);
+    const authorizedReplacement=Boolean(reuploadRequestId && reuploadRequests.some(request =>
+      request.id===reuploadRequestId && request.status==="action_required"
+      && request.stage===stage && sameClaimDocumentType(request.documentType,"Other Document")));
     if(claim.claim_service_mode==="broker_managed"&&!claim.external_policy_id &&
-      ((internal_projection?.completedStageCount??0)>=2||milestones.some(item=>item.milestone_key==="claim_intimation"&&["completed","not_applicable"].includes(item.milestone_status))))
+      ((internal_projection?.completedStageCount??0)>=2||milestones.some(item=>item.milestone_key==="claim_intimation"&&["completed","not_applicable"].includes(item.milestone_status)))&&!authorizedReplacement)
       throw new Error("Claim Intimation (Stage 2) is complete. Stage 1 documents are locked.");
-    if(claim.claim_service_mode==="broker_managed"&&["Settled","Closed","Claim Complete"].includes(claim.current_status))
+    if(claim.claim_service_mode==="broker_managed"&&["Settled","Closed","Claim Complete"].includes(claim.current_status)&&!authorizedReplacement)
       throw new Error("Completed managed claims cannot accept new customer documents.");
     const session=await getCustomerWebSession();
     const folder=account.id+"/"+claim.id+"/bulk-video";
