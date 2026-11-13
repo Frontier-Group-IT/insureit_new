@@ -394,7 +394,7 @@ EXECUTE FUNCTION public.canonicalize_onboarding_employee_identity();
 -- Canonicalize new case displays from the booked employee and selected source UUID.
 -- This does not assign/change any RM; the UUID stored at booking remains immutable.
 CREATE OR REPLACE FUNCTION public.canonicalize_case_identity_labels()
-RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public' AS $
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public' AS $$
 DECLARE v_rm_name text; v_rm_code text; v_source_name text; v_source_code text;
 BEGIN
   IF NEW.rm_employee_id IS NOT NULL THEN
@@ -414,7 +414,7 @@ BEGIN
   END IF;
   RETURN NEW;
 END;
-$;
+$$;
 DROP TRIGGER IF EXISTS a_canonicalize_case_identity_labels ON public.life_health_cases;
 CREATE TRIGGER a_canonicalize_case_identity_labels
 BEFORE INSERT OR UPDATE OF rm_employee_id,rm_name,rm_code,intermediary_id,intermediary_code,lead_source
@@ -423,7 +423,7 @@ EXECUTE FUNCTION public.canonicalize_case_identity_labels();
 
 -- Intake source ID is stable even if its display name or external code changes.
 CREATE OR REPLACE FUNCTION public.canonicalize_intake_source_identity()
-RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public' AS $
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public' AS $$
 DECLARE v_name text; v_code text;
 BEGIN
   IF NEW.lead_source_id IS NOT NULL THEN
@@ -435,7 +435,7 @@ BEGIN
   END IF;
   RETURN NEW;
 END;
-$;
+$$;
 DROP TRIGGER IF EXISTS a_canonicalize_intake_source_identity ON public.policy_intake_requests;
 CREATE TRIGGER a_canonicalize_intake_source_identity
 BEFORE INSERT OR UPDATE OF lead_source_id,lead_source_name,lead_source_code
