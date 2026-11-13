@@ -369,7 +369,7 @@ export function ExternalClaimMilestoneStageBody(key: ClaimMilestoneKey, values: 
       <Gap /><TextField label="Surveyor Phone (Optional)" value={values.surveyor_phone ?? ''} onChangeText={(v) => set('surveyor_phone', v)} keyboardType="phone-pad" />
       <Gap /><TextField label="Surveyor Email (Optional)" value={values.surveyor_email ?? ''} onChangeText={(v) => set('surveyor_email', v)} keyboardType="email-address" autoCapitalize="none" />
     </ClaimFormSection>
-    {claimId && customerId ? <WorkApprovalPdfUpload claimId={claimId} customerId={customerId} /> : null}
+    {claimId && customerId ? <View style={focusDocumentType ? styles.deepLinkUploadFocus : undefined} onLayout={(event) => { if (focusDocumentType) onDocumentSectionLayout?.(event.nativeEvent.layout.y); }}>{focusDocumentType ? <Text style={styles.deepLinkUploadMessage}>Please replace {focusDocumentType} below.</Text> : null}<WorkApprovalPdfUpload claimId={claimId} customerId={customerId} /></View> : null}
   </>;
 
   if (key === 'repair_ri') return <ClaimFormSection title="Stage Details" subtitle="Repair completion and re-inspection details" iconImage={require('../../assets/claims/claim-assessment.png')}>
@@ -382,7 +382,7 @@ export function ExternalClaimMilestoneStageBody(key: ClaimMilestoneKey, values: 
   if (key === 'billing') return <ClaimFormSection title="Stage Details" subtitle="Record the final workshop bill" iconImage={require('../../assets/claims/receipts-posted.png')}>
     <DateField label="Bill Date *" value={values.bill_date ?? ''} onChange={(v) => set('bill_date', v)} />
     <Gap /><MoneyField label="Bill Amount *" value={values.bill_amount ?? ''} onChange={(v) => set('bill_amount', v)} />
-    {claimId ? <><Gap /><FinalBillUpload claimId={claimId} /></> : null}
+    {claimId ? <><Gap /><View style={focusDocumentType ? styles.deepLinkUploadFocus : undefined} onLayout={(event) => { if (focusDocumentType) onDocumentSectionLayout?.(event.nativeEvent.layout.y); }}>{focusDocumentType ? <Text style={styles.deepLinkUploadMessage}>Please replace {focusDocumentType} below.</Text> : null}<FinalBillUpload claimId={claimId} /></View></> : null}
   </ClaimFormSection>;
 
   if (key === 'delivery_order') {
@@ -397,7 +397,7 @@ export function ExternalClaimMilestoneStageBody(key: ClaimMilestoneKey, values: 
         {claimId && customerId ? <>
           <Gap />
           <Text style={styles.deliveryReportSectionLabel}>Assistance Upload</Text>
-          <DeliveryOrderDocuments claimId={claimId} customerId={customerId} />
+          <View style={focusDocumentType ? styles.deepLinkUploadFocus : undefined} onLayout={(event) => { if (focusDocumentType) onDocumentSectionLayout?.(event.nativeEvent.layout.y); }}>{focusDocumentType ? <Text style={styles.deepLinkUploadMessage}>Please replace {focusDocumentType} below.</Text> : null}<DeliveryOrderDocuments claimId={claimId} customerId={customerId} /></View>
         </> : null}
         <ClaimFinancialSummary rows={[
           ...(bill !== null ? [{ label: 'Bill Amount', value: currency(bill) }] : []),
@@ -1074,6 +1074,8 @@ function milestoneAmount(milestones: ClaimMilestone[], key: ClaimMilestoneKey, f
 function currency(value: number) { return `₹${Math.round(value).toLocaleString('en-IN')}`; }
 
 const styles = StyleSheet.create({
+  deepLinkUploadFocus: { borderWidth: 2, borderColor: '#DCA04E', backgroundColor: '#FFF7EA', borderRadius: 12, padding: 8 },
+  deepLinkUploadMessage: { color: '#9E5D00', fontSize: 11, fontWeight: '700', marginBottom: 6 },
   loading: { color: '#7A8799', fontSize: 11, fontWeight: Platform.OS === 'ios' ? '400' : '600', padding: 16 },
   gap: { height: 10 },
   subsectionHeader: { marginTop: 17, marginBottom: 10, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#E5EAF0', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
