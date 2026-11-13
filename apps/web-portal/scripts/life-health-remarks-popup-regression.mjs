@@ -12,8 +12,13 @@ const editAction = read("app/policies/life-health-case-edit-actions.ts");
 
 assert.match(create, /<LifeHealthRemarksEditor value=\{form\.remarks\}/, "Create Case uses remarks popup");
 assert.doesNotMatch(create, /<textarea value=\{form\.remarks\}/, "No inline remarks textarea in Create Case");
-assert.match(detail, /useState<"activity"\|"remarks">\("activity"\)/, "Case Details selects Activity Status by default");
-assert.match(detail, /role="tablist" aria-label="Activity Status and Remarks"/, "Case Details combines Activity Status and Remarks into tabs");
+assert.match(detail, /useState<"activity"\|"remarks"\|null>\(null\)/, "Case Details starts with Activity Status and Remarks collapsed");
+assert.match(detail, /role="group" aria-label="Activity Status and Remarks"/, "Case Details retains both activity and remarks controls");
+assert.match(detail, /onClick=\{\(\)=>setInfoTab\(current=>current==="activity"\?null:"activity"\)\}/, "Activity Status toggles open and closed");
+assert.match(detail, /onClick=\{\(\)=>setInfoTab\(current=>current==="remarks"\?null:"remarks"\)\}/, "Remarks toggles open and closed");
+assert.match(detail, /\{infoTab!==null\?<div id="life-health-case-info-panel"/, "Collapsed case activity and remarks render no content panel");
+assert.match(detail, /aria-expanded=\{infoTab==="activity"\}/, "Activity Status exposes its expanded state");
+assert.match(detail, /aria-expanded=\{infoTab==="remarks"\}/, "Remarks exposes its expanded state");
 assert.match(detail, /Saved remarks · Read only/, "Saved Case Details remarks are read-only");
 assert.match(detail, /role="dialog" aria-modal="true" aria-label="Add case remark"/, "Case Details new remark opens an accessible popup");
 assert.match(detail, /appendLifeHealthCaseRemark\(data\)/, "New Case Details remark uses append-only server action");
