@@ -130,6 +130,7 @@ RETURNS trigger LANGUAGE plpgsql SET search_path TO 'public' AS $$
 DECLARE
   v_id uuid;
   v_code text;
+  v_name text;
 BEGIN
   IF NULLIF(BTRIM(COALESCE(NEW.intermediary_code,'')),'') IS NULL THEN
     IF TG_OP = 'UPDATE' AND NEW.intermediary_code IS DISTINCT FROM OLD.intermediary_code THEN
@@ -140,13 +141,19 @@ BEGIN
 
   IF NEW.source_intermediary_id IS NOT NULL THEN
     SELECT intermediary_code INTO v_code FROM public.intermediaries WHERE id=NEW.source_intermediary_id;
-    IF v_code=NEW.intermediary_code THEN RETURN NEW; END IF;
+    IF v_code=NEW.intermediary_code THEN
+      SELECT display_name INTO v_name FROM public.intermediaries WHERE id=NEW.source_intermediary_id;
+      IF v_name IS NOT NULL THEN NEW.lead_source := v_name; END IF;
+      RETURN NEW;
+    END IF;
   END IF;
 
   SELECT id INTO v_id FROM public.intermediaries
     WHERE intermediary_code=NEW.intermediary_code ORDER BY id LIMIT 1;
   IF v_id IS NOT NULL THEN
     NEW.source_intermediary_id := v_id;
+    SELECT display_name INTO v_name FROM public.intermediaries WHERE id=v_id;
+    IF v_name IS NOT NULL THEN NEW.lead_source := v_name; END IF;
   ELSIF TG_OP='INSERT' OR NEW.intermediary_code IS DISTINCT FROM OLD.intermediary_code THEN
     -- Do not attach a different entity on an unrecognized code.
     NEW.source_intermediary_id := NULL;
@@ -297,6 +304,57 @@ CREATE TRIGGER a_canonicalize_onboarding_employee_identity
 BEFORE INSERT OR UPDATE OF associate_employee_id,associate_name,associate_employee_code
 ON public.posp_misp_onboarding_profiles FOR EACH ROW
 EXECUTE FUNCTION public.canonicalize_onboarding_employee_identity();
+
+-- Canonicalize new case displays from the booked employee and selected source UUID.
+-- This does not assign/change any RM; the UUID stored at booking remains immutable.
+CREATE OR REPLACE FUNCTION public.canonicalize_case_identity_labels()
+RETURNS trigger LANGUAGE plpgsql SET search_path TO 'public' AS $
+DECLARE v_rm_name text; v_rm_code text; v_source_name text; v_source_code text;
+BEGIN
+  IF NEW.rm_employee_id IS NOT NULL THEN
+    SELECT full_name,employee_code INTO v_rm_name,v_rm_code
+    FROM public.employees WHERE id=NEW.rm_employee_id;
+    IF v_rm_name IS NOT NULL THEN
+      NEW.rm_name:=v_rm_name; NEW.rm_code:=v_rm_code;
+    END IF;
+  END IF;
+  IF NEW.intermediary_id IS NOT NULL THEN
+    SELECT display_name,intermediary_code INTO v_source_name,v_source_code
+    FROM public.intermediaries WHERE id=NEW.intermediary_id;
+    IF v_source_name IS NOT NULL THEN
+      NEW.lead_source:=v_source_name;
+      NEW.intermediary_code:=v_source_code;
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$;
+DROP TRIGGER IF EXISTS a_canonicalize_case_identity_labels ON public.life_health_cases;
+CREATE TRIGGER a_canonicalize_case_identity_labels
+BEFORE INSERT OR UPDATE OF rm_employee_id,rm_name,rm_code,intermediary_id,intermediary_code,lead_source
+ON public.life_health_cases FOR EACH ROW
+EXECUTE FUNCTION public.canonicalize_case_identity_labels();
+
+-- Intake source ID is stable even if its display name or external code changes.
+CREATE OR REPLACE FUNCTION public.canonicalize_intake_source_identity()
+RETURNS trigger LANGUAGE plpgsql SET search_path TO 'public' AS $
+DECLARE v_name text; v_code text;
+BEGIN
+  IF NEW.lead_source_id IS NOT NULL THEN
+    SELECT display_name,intermediary_code INTO v_name,v_code
+    FROM public.intermediaries WHERE id=NEW.lead_source_id;
+    IF v_name IS NOT NULL THEN
+      NEW.lead_source_name:=v_name; NEW.lead_source_code:=v_code;
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$;
+DROP TRIGGER IF EXISTS a_canonicalize_intake_source_identity ON public.policy_intake_requests;
+CREATE TRIGGER a_canonicalize_intake_source_identity
+BEFORE INSERT OR UPDATE OF lead_source_id,lead_source_name,lead_source_code
+ON public.policy_intake_requests FOR EACH ROW
+EXECUTE FUNCTION public.canonicalize_intake_source_identity();
 
 -- The migration is conditional on existing UUIDs, never on matching two names.
 UPDATE public.policies p SET source_intermediary_id=i.id
