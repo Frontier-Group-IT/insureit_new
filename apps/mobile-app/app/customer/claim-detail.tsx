@@ -2,8 +2,8 @@ import { formatAppDate, formatAppDateTime } from '@/lib/indian-date';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { projectInternalClaim } from '@insureit/claim-journey';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Platform, Image, Linking, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { ImageSourcePropType } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
@@ -97,6 +97,20 @@ export default function ClaimDetailScreen() {
     })();
     return () => { active = false; };
   }, [id]);
+
+  useFocusEffect(useCallback(() => {
+    let active = true;
+    if (!id) return () => { active = false; };
+    void Promise.all([
+      supabase.from('claim_documents').select('*').eq('claim_id', id).order('created_at', { ascending: false }),
+      supabase.from('customer_activity_events').select('id,title,message,metadata,created_at').eq('claim_id', id).eq('event_type', 'claim_document_reuploaded').order('created_at', { ascending: false }).limit(30),
+    ]).then(([documentResult, activityResult]) => {
+      if (!active) return;
+      if (!documentResult.error) setDocuments(documentResult.data ?? []);
+      if (!activityResult.error) setReuploadNotices((activityResult.data ?? []) as ClaimReuploadNotice[]);
+    });
+    return () => { active = false; };
+  }, [id]));
 
   const selfManaged = claim?.policy_service_source === 'external' || claim?.claim_service_mode === 'self_managed';
 
