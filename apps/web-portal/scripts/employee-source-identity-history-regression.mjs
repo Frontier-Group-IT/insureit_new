@@ -58,7 +58,7 @@ assert.match(sql, /CASE WHEN o\.application_id IS NOT NULL THEN o\.associate_emp
 assert.match(life, /currentOwner \? currentOwner\.associate_employee_id : intermediary\.associate_employee_id/, "Case booking must not fall back to stale RM when onboarding is unassigned");
 assert.match(life, /rm_name:currentRm\.full_name,rm_code:currentRm\.employee_code/);
 assert.doesNotMatch(life, /rmName=clean\(formData\.get\("rmName"\)\),rmCode=/, "Never trust submitted RM code as identity");
-assert.match(policyNew, /currentOwnerByApplication\.get\(item\.application_id\)/, "New policy form must show the current owner");
+assert.match(policyNew, /currentOwnerByApplication\.get\(item\.application_id!?\)/, "New policy form must show the current owner");
 assert.match(sql, /CREATE OR REPLACE FUNCTION public\.canonicalize_case_identity_labels\(\)/);
 assert.match(sql, /CREATE OR REPLACE FUNCTION public\.canonicalize_intake_source_identity\(\)/);
 
