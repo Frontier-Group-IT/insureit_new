@@ -898,7 +898,7 @@ const styles = StyleSheet.create({
   chartCard: { minHeight: 110, flexDirection: 'row', borderRadius: 16, paddingHorizontal: 12, paddingTop: 17, paddingBottom: 8, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#DDE6F1', ...partnerTheme.shadowSoft },
   chartEmpty: { minHeight: 120, alignItems: 'center', justifyContent: 'center', borderRadius: 16, padding: 12, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#DDE6F1' },
   chartYAxis: { width: 44, height: 85, justifyContent: 'space-between', paddingVertical: 5 },
-  axisText: { color: '#8795A9', fontSize: 9, ...partnerTheme.typography.meta, fontWeight: Platform.OS === 'ios' ? '400' : partnerTheme.typography.meta.fontWeight },
+  axisText: { color: '#8795A9', ...partnerTheme.typography.meta, fontSize: 9, fontWeight: Platform.OS === 'ios' ? '400' : partnerTheme.typography.meta.fontWeight },
   chart: { flex: 1, height: 91, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'center', gap: 6 },
   barColumn: { flex: 1, maxWidth: 54, height: '100%', alignItems: 'center', justifyContent: 'flex-end' },
   barValue: { position: 'absolute', left: -4, right: -4, height: 13, color: '#3156B8', textAlign: 'center', fontSize: 8, lineHeight: 12, fontWeight: Platform.OS === 'ios' ? '400' : '700' },
