@@ -31,8 +31,8 @@ assert.ok(api.includes('`/policies/${match.policyId}`'), 'Server resolves matchi
 assert.ok(links.includes('/^\\/policies\\/[0-9a-f-]{36}$/i'), 'Mobile only accepts canonical read-only policy details URL');
 assert.ok(detail.includes('topBarIcon="document-text-outline"'), 'Use the professional unboxed documents icon');
 assert.ok(detail.includes('fullWidth'), 'Intake detail uses edge-to-edge mobile content');
-assert.ok(detail.includes('style={styles.intakeSummaryCompact}'), 'Phone/source and policy/vehicle summary sit below the PIR on all statuses');
-assert.ok(detail.includes('style={styles.intakeSummaryCompact}'), 'PIR metadata sits directly under the number without a right-side timestamp gap');
+assert.ok(detail.includes('style={styles.intakeSummaryCompact}'), 'Policy, insured identity and lead-source details share a compact header on all statuses');
+assert.ok(detail.includes('style={styles.intakeSummaryCompact}'), 'Customer and lead-source metadata sit directly below the policy number');
 assert.ok(!detail.includes("row.status === 'duplicate' ? (\n                  <View style={styles.intakeSummaryCompact}>"), 'Compact header is unconditional for all workflow statuses');
 assert.ok(detail.includes("key === 'insurer_name' ? shortInsurerName(fields.get(key)?.value) : fields.get(key)?.value"), 'Only insurer display values are shortened');
 assert.ok(detail.includes("[/\\bicici\\s*lombard\\b/i, 'ICICI Lombard']"), 'Recognize ICICI Lombard legal name');
@@ -48,9 +48,9 @@ assert.ok(api.includes('target_path: access.can_review || access.can_finalize'),
 assert.ok(detail.includes("ready_for_review: 'Ready for Review'"), 'Short ready status text');
 assert.ok(!detail.includes('source="OCR"') && !detail.includes("source={fields.has(key) ? 'OCR' : undefined}"), 'Review rows should not repeat OCR badges');
 assert.ok(detail.includes('<ReviewBlock title="Vehicle details">') && detail.includes('<ReviewBlock title="Policy & premium">'), 'Duplicate intake review sections retain unnumbered headings');
-assert.ok(detail.includes("row.customer_mobile, row.lead_source_name"), 'Show customer mobile and lead source below PIR number');
-assert.ok(detail.includes("fields.get('policy_number')?.value?.trim()"), 'Show extracted policy number below PIR number');
-assert.ok(detail.includes("'Vehicle pending'"), 'Show vehicle-pending indicator when OCR has no registration number');
+assert.ok(detail.includes("row.customer_mobile, fields.get('insured_name')"), 'Show customer mobile and OCR insured name below policy number');
+assert.ok(detail.includes("{fields.get('policy_number')?.value?.trim() || 'Policy pending'}"), 'Show extracted policy number as the header title');
+assert.ok(!detail.includes("'Vehicle pending'"), 'Do not show old vehicle-pending header copy');
 assert.ok(detail.includes('sheet:{marginHorizontal:8,'), 'Use full-width intake review with compact symmetric gutters');
 assert.ok(detail.includes("styles.statusLogoWrap"), 'Keep a plain icon alignment container');
 assert.ok(detail.includes('<Ionicons name="document-text-outline" size={27} color="#17365D" />'), 'Use a plain professional reader icon in the PIR card');
