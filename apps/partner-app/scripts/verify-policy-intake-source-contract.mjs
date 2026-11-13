@@ -79,8 +79,8 @@ requireText(manufacturerLogo, 'getPartnerManufacturerLogoSource(name)', 'Partner
 requireText(manufacturerLogo, 'fallback ?? null', 'Partner manufacturer logo must preserve fallback artwork.');
 
 
-// Website detail parity: keep all authorized OCR fields visible without a
-// reviewer-only duplicate dump or hiding data behind short summary disclosures.
+// Website detail parity: keep populated authorized OCR fields and review notes
+// visible, but do not render empty placeholder rows for sparse OCR results.
 for (const required of [
   'const vehicleReviewKeys:',
   'const policyReviewKeys:',
@@ -104,6 +104,23 @@ for (const required of [
   'row.review_access.can_finalize',
   'Review & Finalize',
 ]) requireText(detailScreen, required, `Partner Intake detail must preserve website parity: ${required}`);
+for (const required of [
+  'vehicleReviewKeys.some(([key]) => Boolean(fields.get(key)?.value?.trim()))',
+  'vehicleReviewKeys.filter(([key]) => Boolean(fields.get(key)?.value?.trim())).map',
+  'policyReviewKeys.some(([key]) => Boolean(fields.get(key)?.value?.trim()))',
+  'policyReviewKeys.filter(([key]) => Boolean(fields.get(key)?.value?.trim())).map',
+  'number="02"',
+  'number="03"',
+  'Fetched from the uploaded policy copy for Operations review.',
+  'No vehicle details were fetched from the saved policy copy.',
+  'No policy or premium details were fetched from the saved policy copy.',
+  'Fetching vehicle details from the policy copy…',
+  'Fetching policy and premium details…',
+]) requireText(detailScreen, required, `Sparse OCR must preserve compact extracted-only review behavior: ${required}`);
+if (detailScreen.includes('vehicleReviewKeys.map(([key, label]) =>') ||
+    detailScreen.includes('policyReviewKeys.map(([key, label]) =>')) {
+  throw new Error('Non-duplicate review must not render all OCR labels as empty dashes.');
+}
 requireText(service, '/api/partner/policy-intakes/${encodeURIComponent(id)}/document', 'Partner document viewer must use existing scoped signed URL endpoint.');
 requireText(api, 'ocr_fields,ocr_warnings,attention_reason', 'Detail API must include OCR review notes.');
 requireText(api, 'submitted_by_name: submittedByName', 'Detail API must return actual submitter rather than guessing lead source.');

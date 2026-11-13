@@ -357,15 +357,23 @@ export default function PolicyIntakeDetailScreen() {
                   </>
                 ) : (
                   <>
-                <ReviewBlock title="Vehicle details">
-                  {vehicleReviewKeys.map(([key, label]) => (
-                    <ReviewPair key={key} label={label} value={fields.get(key)?.value} confidence={fields.get(key)?.confidence} />
-                  ))}
+                <ReviewBlock title="Vehicle details" number="02" description="Fetched from the uploaded policy copy for Operations review.">
+                  {vehicleReviewKeys.some(([key]) => Boolean(fields.get(key)?.value?.trim())) ? (
+                    vehicleReviewKeys.filter(([key]) => Boolean(fields.get(key)?.value?.trim())).map(([key, label]) => (
+                      <ReviewPair key={key} label={label} value={fields.get(key)?.value} confidence={fields.get(key)?.confidence} />
+                    ))
+                  ) : (
+                    <Text style={reviewStyles.emptyVehicle}>{row.ocr_status === 'processing' ? 'Fetching vehicle details from the policy copy…' : 'No vehicle details were fetched from the saved policy copy.'}</Text>
+                  )}
                 </ReviewBlock>
-                <ReviewBlock title="Policy & premium">
-                  {policyReviewKeys.map(([key, label]) => (
-                    <ReviewPair key={key} label={label} value={key === 'insurer_name' ? shortInsurerName(fields.get(key)?.value) : fields.get(key)?.value} confidence={fields.get(key)?.confidence} />
-                  ))}
+                <ReviewBlock title="Policy & premium" number="03" description="Extracted values are for Operations to verify during Policy Onboarding.">
+                  {policyReviewKeys.some(([key]) => Boolean(fields.get(key)?.value?.trim())) ? (
+                    policyReviewKeys.filter(([key]) => Boolean(fields.get(key)?.value?.trim())).map(([key, label]) => (
+                      <ReviewPair key={key} label={label} value={key === 'insurer_name' ? shortInsurerName(fields.get(key)?.value) : fields.get(key)?.value} confidence={fields.get(key)?.confidence} />
+                    ))
+                  ) : (
+                    <Text style={reviewStyles.emptyVehicle}>{row.ocr_status === 'processing' ? 'Fetching policy and premium details…' : 'No policy or premium details were fetched from the saved policy copy.'}</Text>
+                  )}
                 </ReviewBlock>
                   </>
                 )}
@@ -513,9 +521,15 @@ const policyReviewKeys: Array<[string, string]> = [
   ['tax_amount','Printed GST'],
   ['gross_premium','Printed gross premium'],
 ];
-function ReviewBlock({title,children}:{title:string;children:ReactNode}) {
+function ReviewBlock({title,children,number,description}:{title:string;children:ReactNode;number?:string;description?:string}) {
   return <View style={reviewStyles.block}>
-    <View style={reviewStyles.blockHeader}><Ionicons name={title === "Vehicle details" ? "car-sport-outline" : "shield-checkmark-outline"} size={17} color="#315B9A" /><Text style={reviewStyles.blockTitle}>{title}</Text></View>
+    <View style={reviewStyles.blockHeader}>
+      {number ? <Text style={reviewStyles.blockNumber}>{number}</Text> : <Ionicons name={title === "Vehicle details" ? "car-sport-outline" : "shield-checkmark-outline"} size={17} color="#315B9A" />}
+      <View style={reviewStyles.blockHeading}>
+        <Text style={reviewStyles.blockTitle}>{title}</Text>
+        {description ? <Text style={reviewStyles.blockDescription}>{description}</Text> : null}
+      </View>
+    </View>
     <View style={reviewStyles.rows}>{children}</View>
   </View>;
 }
@@ -566,6 +580,9 @@ const reviewStyles=StyleSheet.create({
   block:{borderRadius:10,borderWidth:1,borderColor:'#E2E9F3',overflow:'hidden'},
   blockHeader:{flexDirection:'row',alignItems:'center',gap:8,paddingHorizontal:10,paddingVertical:8,backgroundColor:'#EDF3FC'},
   blockTitle:{fontSize:12,color:'#17365D',fontWeight:'800'},
+  blockNumber:{fontSize:10,color:'#315B9A',fontWeight:'800',minWidth:17},
+  blockHeading:{flex:1,gap:2},
+  blockDescription:{fontSize:9,lineHeight:13,color:'#71829A'},
   rows:{paddingHorizontal:9,paddingVertical:3},
   pair:{flexDirection:'row',alignItems:'flex-start',gap:8,paddingVertical:6,borderBottomWidth:StyleSheet.hairlineWidth,borderBottomColor:'#E5EAF2'},
   pairLabelRow:{flex:1,flexDirection:'row',flexWrap:'wrap',gap:4,alignItems:'center'},
