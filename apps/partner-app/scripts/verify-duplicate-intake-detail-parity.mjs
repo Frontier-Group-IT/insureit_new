@@ -70,7 +70,7 @@ const resumeButton = detail.indexOf("label={row.status === 'in_review' ? 'Resume
 assert.ok(resumeButton >= 0 && operationsNoteCard > resumeButton, 'Operations Note card must be below Resume Policy Onboarding');
 assert.ok(detail.includes('style={reviewStyles.operationsNoteHeading}>Operations Note'), 'Operations Note must have a compact shared heading');
 assert.ok(detail.includes('style={reviewStyles.actionRow}') && detail.includes('style={[reviewStyles.actionButton, reviewStyles.requestInfoButton') && detail.includes('style={[reviewStyles.actionButton, reviewStyles.rejectButton'), 'Request info and Reject must remain together inside Operations Note card');
-assert.ok(detail.includes('styles.operationsNoteCard') && detail.includes('operationsNoteCard:{padding:12,borderWidth:1'), 'Operations Note has a compact professional bordered layout');
+assert.ok(detail.includes('reviewStyles.operationsNoteCard') && detail.includes('operationsNoteCard:{padding:12,borderWidth:1'), 'Operations Note has a compact professional bordered layout');
 assert.ok(detail.includes("confirmReviewAction('needs_attention')") && detail.includes("confirmReviewAction('rejected')"), 'Preserve review actions and rejection confirmation');
 for (const removed of [
   'Final corrections and onboarding continue securely in the Operations website.',
