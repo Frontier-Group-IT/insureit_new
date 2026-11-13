@@ -104,6 +104,9 @@ jobs:
           console.log(`Verified Business header banner: ${width}x${height}, ${bytes.length} bytes, PNG.`);
           NODE
 
+      - name: Verify product-specific native Policy Onboarding layouts
+        run: node apps/partner-app/scripts/verify-product-type-onboarding-layouts.mjs
+
       - name: Verify Policy Intake source API contract
         run: node apps/partner-app/scripts/verify-policy-intake-source-contract.mjs
       - name: Verify Policy Intake detail header identity parity
