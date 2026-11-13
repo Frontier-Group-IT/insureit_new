@@ -134,7 +134,7 @@ assert(unifiedForm.includes('flatPayoutAmount: saved.form.flatPayoutAmount ?? ""
 assert(unifiedForm.includes('(form.flatPayoutAmount??"").trim()!==""'),"FLAT payout entered-state must tolerate legacy drafts without flatPayoutAmount.");
 const saveConfirmation=read("components/policy-save-confirmation.tsx");
 const policyDocumentActions=read("app/policies/policy-document-actions.ts");
-const policyOnboardingActions=read("app/policies/policy-onboarding-actions.ts");
+const policyOnboardingActions=read("lib/policy-onboarding-engine.ts");
 assert(saveConfirmation.includes('POLICY_INTAKE_PENDING_KEY = "insureit:policy-intake:pending:v1"'),"Policy save confirmation must recognize Policy Intake onboarding context");
 assert(saveConfirmation.includes("if (getPendingPolicyIntakeId()) return;"),"Policy Intake onboarding must bypass the generic policy-copy upload choice modal");
 assert(saveConfirmation.includes("getPendingPolicyIntakeId() ? legacySaveButtonLabel : saveButtonLabel"),"Policy Intake onboarding must retain Book Active Policy wording instead of Upload Policy");
@@ -160,7 +160,7 @@ assert(handoff.includes("loadPolicyIntakeDuplicateMatches(admin,[intake])"),"Pol
 assert(handoff.includes("duplicate and cannot be sent to Policy Onboarding")&&handoff.includes("duplicate and cannot continue in Policy Onboarding"),"Duplicate intakes must be blocked both before handoff and when reopening an existing onboarding draft");
 assert(handoff.includes("resolveConfirmedIntakeCustomerId"),"Policy Intake handoff must re-confirm mobile matches against insured identity");
 assert(handoff.includes("ocrInsuredName"),"Existing Intake drafts must use OCR insured identity to defend against legacy phone-only matches");
-const onboardingActions=read("app/policies/policy-onboarding-actions.ts");
+const onboardingActions=read("lib/policy-onboarding-engine.ts");
 assert(onboardingActions.includes("selectedIdentityMatches"),"Policy booking must validate a preselected customer against the submitted insured name and mobile");
 assert(onboardingActions.includes("if (!selectedIdentityMatches) selectedCustomerId = null"),"Stale or phone-only customer selections must be cleared before policy booking");
 const migration=read("../../supabase/migrations/202608240001_policy_intake_workflow.sql");assert(migration.includes("create table if not exists public.policy_intake_requests"),"Intake table migration missing");assert(migration.includes("enable row level security"),"Intake table must enable RLS");assert(migration.includes("revoke all on public.policy_intake_requests from anon, authenticated"),"Browser roles must not receive direct intake-table access");
