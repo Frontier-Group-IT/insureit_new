@@ -113,6 +113,18 @@ if (businessGrowthIcon.includes('name="arrow-up"')) throw new Error('Shared busi
 for (const businessAsset of ['actions.quickRenewals', 'actions.quickClaims', 'actions.quickCustomers']) {
   requireText(business, `PartnerAssets.${businessAsset}`, `Business is missing ${businessAsset} artwork.`);
 }
+
+for (const word of ['>High</Text>', '>Mid</Text>', '>Low</Text>']) {
+  if (business.includes(word)) throw new Error('Month-wise Trend must not render qualitative axis label ' + word);
+}
+requireText(business, 'function trendScale(values: number[])', 'Business trend must derive an adaptive numeric premium axis.');
+requireText(business, 'const rawStep = peak / 3;', 'Trend scale must use equal premium intervals.');
+requireText(business, '[1, 2, 2.5, 5, 10].find(', 'Trend interval must round to readable rupee ticks.');
+requireText(business, '[3, 2, 1, 0].map((multiple) => formatCompactCurrency(multiple * step))', 'Trend Y-axis ticks must display rupee values including zero.');
+requireText(business, 'Math.round((premium / top) * (compact ? 52 : 70))', 'Trend bars must scale to the same rounded axis ceiling as labels.');
+requireText(business, 'const points = data.slice(-6);', 'Trend axis and chart must derive from the same six plotted months.');
+requireText(business, 'formatCompactCurrency(premium)', 'Preserve original monthly premium labels.');
+
 requireText(business, 'function BlueIcon(', 'Business must keep the shared blue generated-icon treatment.');
 requireText(business, '<PartnerBusinessOverviewIcon kind={icon} size={24} />', 'Business Overview KPI cards must use the professional shared KPI icon component.');
 for (const kind of ['premium', 'policies', 'commission', 'customers']) {
