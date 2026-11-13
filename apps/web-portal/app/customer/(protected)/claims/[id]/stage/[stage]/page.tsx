@@ -14,9 +14,7 @@ import { CustomerClaimBooleanChoice } from "@/components/customer-portal/custome
 import { CustomerDateInput } from "@/components/customer-portal/customer-date-input";
 import { formatIndianDate } from "@/lib/indian-date";
 import { Check, Circle, LockKeyhole, CalendarDays, Clock3, ClipboardList } from "lucide-react";
-import { CustomerClaimStageSuccessToast } from "@/components/customer-portal/customer-claim-stage-success-toast";
 import { CustomerInsurerClaimNumberPopup } from "@/components/customer-portal/customer-insurer-claim-number-popup";
-import { CustomerSpotSaveSuccess } from "@/components/customer-portal/customer-spot-save-success";
 import { CustomerClaimStageStrip } from "@/components/customer-portal/customer-claim-stage-strip";
 import { CustomerInternalCompletedJourney } from "@/components/customer-portal/customer-internal-completed-journey";
 import { resolveCustomerWebScope } from "@/lib/customer-web-data";
@@ -27,7 +25,7 @@ import { findExistingLinkedClaimCopy, findLinkedClaimPolicyCopy } from "@/lib/li
 export const dynamic="force-dynamic";
 export const revalidate=0;
 
-export default async function CustomerClaimStage({params,searchParams}:{params:Promise<{id:string;stage:string}>;searchParams?:Promise<{account?:string;mode?:string;saved?:string;updated?:string}>}) {
+export default async function CustomerClaimStage({params,searchParams}:{params:Promise<{id:string;stage:string}>;searchParams?:Promise<{account?:string;mode?:string;saved?:string}>}) {
   const p=await params;const q=searchParams?await searchParams:{};
   const {account}=await resolveCustomerWebScope(q.account);
   const {claim,milestones,documents,internal_projection}=await loadCustomerClaimDetail(account.id,p.id);
@@ -64,7 +62,6 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
   const completedInternalStages = !external ? (internal_projection?.completedStageCount ?? 0) : 0;
   if (!external && completedInternalStages > 0) {
     return <div className="customer-claim-ref-page space-y-3">
-      {q.updated==="1" && selected.key==="spot_intimation" ? <CustomerSpotSaveSuccess /> : null}
       <CustomerClaimStageStrip
         claimId={claim.id}
         accountId={account.id}
@@ -117,7 +114,7 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
           claimId={claim.id}
           destination={"/customer/claims/"+encodeURIComponent(claim.id)+"/stage/work_approval?account="+encodeURIComponent(account.id)+"&mode=edit"}
         />
-      : q.saved==="claim_intimation" && selected.key==="work_approval" ? <CustomerClaimStageSuccessToast /> : null}
+      : null}
     <CustomerClaimStageStrip claimId={claim.id} accountId={account.id} selectedKey={selected.key} currentKey={INTERNAL_JOURNEY_STAGES[currentIndex]?.key || "spot_intimation"} editMode claimSummary={{controlNo:claim.claim_no,policyNo:claim.policy_no,makeModel:[claim.vehicle_make,claim.vehicle_model].filter(Boolean).join(" - ")||null,vehicleNo:claim.vehicle_no,status:claim.current_status,manufacturer:claim.vehicle_make,insurer:claim.insurer_name,policySource}} completedKeys={INTERNAL_JOURNEY_STAGES.filter((stage,i)=>external?projection?.stages.some(x=>x.key===stage.key&&x.completed):i<(internal_projection?.completedStageCount??0)).map(stage=>stage.key)} />
     {!(editMode && canEditStage) ? <section className={`overflow-hidden rounded-2xl border border-[#DFE8F4] bg-white ${fullHeightStage ? "customer-claim-stage-viewport" : ""}`}>
       <h2 className="border-b border-[#D9E3F0] px-4 py-2 text-[14px] font-semibold text-[#071D49]">{selected.key==="spot_intimation"?"Accident & Spot Intimation Details":selected.label+" Details"}</h2>
