@@ -81,4 +81,15 @@ for (const removed of [
 ]) {
   assert.ok(!detail.includes(removed), 'Remove requested redundant copy: ' + removed);
 }
+const statusIndex = detail.indexOf('style={reviewStyles.reviewStatus}');
+const notesIndex = detail.indexOf('style={reviewStyles.warningBox}', statusIndex);
+assert.ok(statusIndex > 0 && notesIndex > statusIndex, 'Review notes follow Review status');
+assert.ok(!detail.includes('This intake was closed without policy onboarding.'), 'No rejected-intake explanatory sentence');
+assert.ok(detail.includes("row.status !== 'rejected'"), 'Rejected header does not include a redundant description');
+assert.ok(detail.includes("row.status === 'rejected' ? 'Operations rejection note'"), 'Rejected note is labeled correctly');
+assert.ok(detail.includes('<Text selectable style={styles.attentionText}>{row.attention_reason}</Text>'), 'Full Operations note is displayed without a truncation limit');
+assert.ok(detail.includes('attention: { marginTop: 10, paddingHorizontal: 16'), 'Note has padding away from clipped left screen edge');
+assert.ok(detail.includes("attentionText: { marginTop: 7, color: '#80511A', fontSize: 12, lineHeight: 19"), 'Multiline text is readable');
+assert.ok(detail.includes("singleLine={key === 'vehicle_make'}"), 'Vehicle Make is rendered on one line only');
+assert.ok(detail.includes('numberOfLines={singleLine ? 1 : undefined}'), 'Other OCR values retain natural wrapping');
 console.log('Partner Duplicate Policy Intake website parity regression passed');
