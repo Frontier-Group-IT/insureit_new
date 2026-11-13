@@ -10,9 +10,9 @@ export type ClaimReuploadNotice = {
   created_at: string;
 };
 
+// Only these stages expose an editable claim-document upload section.
 const validStages: ClaimMilestoneKey[] = [
-  'spot_intimation', 'spot_status', 'claim_intimation', 'work_approval',
-  'repair_ri', 'billing', 'delivery_order', 'vehicle_delivery', 'payment_encashment',
+  'spot_intimation', 'claim_intimation', 'work_approval', 'billing', 'delivery_order',
 ];
 
 export function reuploadDocumentType(notice: ClaimReuploadNotice): string {
