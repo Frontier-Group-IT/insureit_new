@@ -379,17 +379,18 @@ export function ExternalClaimMilestoneStageBody(key: ClaimMilestoneKey, values: 
     <Gap /><DateField label="RI Done Date *" value={values.ri_done_date ?? ''} onChange={(v) => set('ri_done_date', v)} />
   </ClaimFormSection>;
 
-  if (key === 'billing') return <ClaimFormSection title="Stage Details" subtitle="Record the final workshop bill" iconImage={require('../../assets/claims/receipts-posted.png')}>
+  if (key === 'billing') return <View onLayout={(event) => { if (focusDocumentType) onDocumentSectionLayout?.(event.nativeEvent.layout.y); }}><ClaimFormSection title="Stage Details" subtitle="Record the final workshop bill" iconImage={require('../../assets/claims/receipts-posted.png')}>
     <DateField label="Bill Date *" value={values.bill_date ?? ''} onChange={(v) => set('bill_date', v)} />
     <Gap /><MoneyField label="Bill Amount *" value={values.bill_amount ?? ''} onChange={(v) => set('bill_amount', v)} />
-    {claimId ? <><Gap /><View style={focusDocumentType ? styles.deepLinkUploadFocus : undefined} onLayout={(event) => { if (focusDocumentType) onDocumentSectionLayout?.(event.nativeEvent.layout.y); }}>{focusDocumentType ? <Text style={styles.deepLinkUploadMessage}>Please replace {focusDocumentType} below.</Text> : null}<FinalBillUpload claimId={claimId} /></View></> : null}
-  </ClaimFormSection>;
+    {claimId ? <><Gap /><View style={focusDocumentType ? styles.deepLinkUploadFocus : undefined}>{focusDocumentType ? <Text style={styles.deepLinkUploadMessage}>Please replace {focusDocumentType} below.</Text> : null}<FinalBillUpload claimId={claimId} /></View></> : null}
+  </ClaimFormSection></View>;
 
   if (key === 'delivery_order') {
     const bill = milestoneAmount(milestones, 'billing', 'bill_amount');
     const currentDo = numberValue(values.do_amount);
     const contribution = bill !== null && currentDo !== null ? Math.max(0, bill - currentDo) : null;
     return <>
+      <View onLayout={(event) => { if (focusDocumentType) onDocumentSectionLayout?.(event.nativeEvent.layout.y); }}>
       <ClaimFormSection title="Stage Details" subtitle="Record assessment and delivery order details" iconImage={require('../../assets/claims/claim-documents.png')}>
         <ClaimChoice label="Assessment Received? *" value={values.assessment_received} options={[{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }]} onChange={(v) => set('assessment_received', v)} />
         <Gap /><DateField label="DO Date *" value={values.do_date ?? ''} onChange={(v) => set('do_date', v)} />
@@ -397,7 +398,7 @@ export function ExternalClaimMilestoneStageBody(key: ClaimMilestoneKey, values: 
         {claimId && customerId ? <>
           <Gap />
           <Text style={styles.deliveryReportSectionLabel}>Assistance Upload</Text>
-          <View style={focusDocumentType ? styles.deepLinkUploadFocus : undefined} onLayout={(event) => { if (focusDocumentType) onDocumentSectionLayout?.(event.nativeEvent.layout.y); }}>{focusDocumentType ? <Text style={styles.deepLinkUploadMessage}>Please replace {focusDocumentType} below.</Text> : null}<DeliveryOrderDocuments claimId={claimId} customerId={customerId} /></View>
+          <View style={focusDocumentType ? styles.deepLinkUploadFocus : undefined}>{focusDocumentType ? <Text style={styles.deepLinkUploadMessage}>Please replace {focusDocumentType} below.</Text> : null}<DeliveryOrderDocuments claimId={claimId} customerId={customerId} /></View>
         </> : null}
         <ClaimFinancialSummary rows={[
           ...(bill !== null ? [{ label: 'Bill Amount', value: currency(bill) }] : []),
@@ -405,6 +406,7 @@ export function ExternalClaimMilestoneStageBody(key: ClaimMilestoneKey, values: 
           ...(contribution !== null ? [{ label: 'Customer Contribution', value: currency(contribution), emphasis: true }] : []),
         ]} />
       </ClaimFormSection>
+      </View>
     </>;
   }
 
