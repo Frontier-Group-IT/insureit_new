@@ -11,11 +11,11 @@ import { RequestCustomerDocumentReuploadButton } from "@/components/spot-survey/
 import { CustomerSpotAttachmentDelete } from "@/components/customer-portal/customer-spot-attachment-delete";
 
 export type WorkshopBillDocument = { id: string; file_name?: string | null; verification_status?: string | null };
-type Props = { mode: "customer" | "operations"; claimId: string; accountId?: string; documents: WorkshopBillDocument[]; readonly?: boolean; compact?: boolean };
+type Props = { mode: "customer" | "operations"; claimId: string; accountId?: string; documents: WorkshopBillDocument[]; readonly?: boolean; compact?: boolean; reuploadRequestId?: string | null };
 const documentType = "Final Workshop Bill";
 const maxFileSize = 5 * 1024 * 1024;
 
-export function ExternalClaimBillUpload({ mode, claimId, accountId, documents, readonly = false, compact = false }: Props) {
+export function ExternalClaimBillUpload({ mode, claimId, accountId, documents, readonly = false, compact = false, reuploadRequestId }: Props) {
   const input = useRef<HTMLInputElement>(null);
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -43,6 +43,7 @@ export function ExternalClaimBillUpload({ mode, claimId, accountId, documents, r
           form.set("claim", claimId);
           form.set("stage", "billing");
           form.set("type", documentType);
+          if (reuploadRequestId) form.set("reupload_request", reuploadRequestId);
           form.set("file", file);
           const result = await uploadCustomerClaimDocument({ error: null }, form);
           if (result.error) throw new Error(result.error);
@@ -72,7 +73,7 @@ export function ExternalClaimBillUpload({ mode, claimId, accountId, documents, r
   }
 
   const compactBilling = compact;
-  return <div className="min-w-0 text-left">
+  return <div id={reuploadRequestId ? "claim-reupload-target" : undefined} tabIndex={reuploadRequestId ? -1 : undefined} className={`min-w-0 text-left ${reuploadRequestId ? "rounded-lg ring-2 ring-[#E2A64C] bg-[#FFF9EF]" : ""}`}>
     <p className={compactBilling ? "mb-1 text-[9px] font-semibold uppercase leading-4 tracking-[0.01em] text-[#174EA6]" : "mb-1.5 text-[10px] font-semibold uppercase tracking-[0.04em] text-[#5673B0]"}>Bill Upload</p>
     <div className={compactBilling ? "flex h-[34px] min-w-0 items-center gap-1.5 rounded-md border border-[#D9E3F0] bg-white px-1.5" : "flex min-h-[76px] items-center gap-2 rounded-2xl border-2 border-[#DFE5ED] bg-[#F8FAFD] px-3 py-2"}>
       <img src="/assets/customer-claim/stages/billing.png" alt="" className={compactBilling ? "hidden h-7 w-7 shrink-0 object-contain sm:block" : "h-12 w-12 shrink-0 object-contain"} />
