@@ -58,7 +58,7 @@ function formatInsurerCompactRupees(amount: number | string): string {
     : absolute >= 1_000 ? [1_000, 'k']
     : [1, ''];
   if (divisor === 1) return formatInsurerRupees(rounded);
-  const compact = (rounded / divisor).toFixed(2).replace(/\\.?0+$/, '');
+  const compact = (rounded / divisor).toFixed(2).replace(/\.?0+$/, '');
   return `₹${compact}${suffix}`;
 }
 function isoLocal(date: Date) {
