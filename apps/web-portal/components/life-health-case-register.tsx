@@ -20,6 +20,7 @@ export type LifeHealthCaseRegisterRow = {
   remarks: string;
   premiumAmount: number;
   finalPolicyId: string | null;
+  status: string;
 };
 
 function normalize(value: string | number | null | undefined) {
@@ -33,16 +34,16 @@ export function LifeHealthCaseRegister({
 }: {
   rows: LifeHealthCaseRegisterRow[];
   emptyLabel: string;
-  statusFilter: "pending" | "issued" | "all";
+  statusFilter: "pending" | "rejected" | "issued" | "all";
 }) {
   const [query, setQuery] = useState("");
   const normalizedQuery = normalize(query);
 
   const filteredRows = useMemo(() => {
     // Search all authorized cases regardless of the active status tab.
-    if (!normalizedQuery) return rows.filter((row) => statusFilter === "all" || (statusFilter === "issued" ? Boolean(row.finalPolicyId) : !row.finalPolicyId));
+    if (!normalizedQuery) return rows.filter((row) => statusFilter === "all" || (statusFilter === "issued" ? Boolean(row.finalPolicyId) : statusFilter === "rejected" ? row.status === "rejected" && !row.finalPolicyId : !row.finalPolicyId && row.status !== "rejected"));
     return rows.filter((row) => {
-      const status = row.finalPolicyId ? "issued" : "awaiting policy";
+      const status = row.finalPolicyId ? "issued" : row.status === "rejected" ? "rejected" : "awaiting policy";
       const searchable = [
         row.caseNumber,
         row.businessLine,
@@ -132,8 +133,8 @@ export function LifeHealthCaseRegister({
                 </td>
                 <td className="px-3 py-3 text-right font-semibold">₹{Number(row.premiumAmount || 0).toLocaleString("en-IN")}</td>
                 <td className="px-3 py-3">
-                  <span className={`rounded-full px-2 py-1 text-[8px] font-bold ${row.finalPolicyId ? "bg-[#EAF7F2] text-[#18794E]" : "bg-[#FFF3CD] text-[#A96A00]"}`}>
-                    {row.finalPolicyId ? "Issued" : "Awaiting policy"}
+                  <span className={`rounded-full px-2 py-1 text-[8px] font-bold ${row.finalPolicyId ? "bg-[#EAF7F2] text-[#18794E]" : row.status === "rejected" ? "bg-red-50 text-red-700" : "bg-[#FFF3CD] text-[#A96A00]"}`}>
+                    {row.finalPolicyId ? "Issued" : row.status === "rejected" ? "Rejected" : "Awaiting policy"}
                   </span>
                 </td>
                 <td className="px-4 py-3 text-right">
@@ -141,7 +142,7 @@ export function LifeHealthCaseRegister({
                     <LifeHealthIssuedPolicyButton policyId={row.finalPolicyId} />
                   ) : (
                     <Link href={`/policies/life-health-cases/${row.id}`} className="rounded-lg border border-[#CAD7E7] bg-white px-2.5 py-1.5 text-[8.5px] font-bold text-[#315B9A]">
-                      Open / Issue
+                      {row.status === "rejected" ? "View Rejection" : "Open / Issue"}
                     </Link>
                   )}
                 </td>

@@ -39,9 +39,9 @@ export async function updateLifeHealthCaseDetails(formData: FormData) {
   if (!PAYMENT_FREQUENCIES.has(paymentFrequency)) return { ok: false as const, error: "Select a valid payment frequency." };
   if (!PAYMENT_MODES.has(paymentMode)) return { ok: false as const, error: "Select a valid payment mode." };
 
-  const { data: row } = await admin.from("life_health_cases").select("id,customer_id,final_policy_id").eq("id", caseId).maybeSingle<{ id: string; customer_id: string; final_policy_id: string | null }>();
+  const { data: row } = await admin.from("life_health_cases").select("id,customer_id,final_policy_id,status").eq("id", caseId).maybeSingle<{ id: string; customer_id: string; final_policy_id: string | null; status: string }>();
   if (!row) return { ok: false as const, error: "This case is no longer available." };
-  if (row.final_policy_id) return { ok: false as const, error: "Issued cases cannot be edited." };
+  if (row.final_policy_id || row.status === "rejected") return { ok: false as const, error: "Issued or rejected cases cannot be edited." };
   if (!row.customer_id) return { ok: false as const, error: "The case customer reference is missing." };
 
   const { error: customerError } = await admin.from("customers").update({ contact_name: customerName, phone: customerPhone, address: customerAddress || null, address_street: customerAddress || null, updated_at: new Date().toISOString() }).eq("id", row.customer_id);
@@ -58,7 +58,7 @@ export async function updateLifeHealthCaseDetails(formData: FormData) {
     premium_amount: premium,
     sourcing_date: sourcingDate,
     updated_at: new Date().toISOString(),
-  }).eq("id", caseId);
+  }).eq("id", caseId).neq("status", "rejected").is("final_policy_id", null);
   if (caseError) return { ok: false as const, error: "Case details could not be updated." };
 
   revalidatePath(`/policies/life-health-cases/${caseId}`);
@@ -81,10 +81,10 @@ export async function appendLifeHealthCaseRemark(formData: FormData): Promise<{o
   if (!newRemark || newRemark.length > 2000) return {ok:false,error:"Enter a remark of up to 2000 characters."};
   const admin = createSupabaseAdminClient();
   const {data:caseRow,error:loadError} = await admin.from("life_health_cases")
-    .select("id,remarks,final_policy_id").eq("id",caseId)
-    .maybeSingle<{id:string;remarks:string|null;final_policy_id:string|null}>();
+    .select("id,remarks,final_policy_id,status").eq("id",caseId)
+    .maybeSingle<{id:string;remarks:string|null;final_policy_id:string|null;status:string}>();
   if (loadError || !caseRow) return {ok:false,error:"Case could not be loaded."};
-  if (caseRow.final_policy_id) return {ok:false,error:"Issued cases cannot be edited."};
+  if (caseRow.final_policy_id || caseRow.status === "rejected") return {ok:false,error:"Issued or rejected cases cannot be edited."};
   const old = caseRow.remarks?.trim() ?? "";
   const timestamp = new Intl.DateTimeFormat("en-IN",{
     timeZone:"Asia/Kolkata",day:"2-digit",month:"short",year:"numeric",
@@ -95,7 +95,7 @@ export async function appendLifeHealthCaseRemark(formData: FormData): Promise<{o
   if (remarks.length > 50000) return {ok:false,error:"The remarks history is full."};
   let update = admin.from("life_health_cases")
     .update({remarks,updated_at:new Date().toISOString()})
-    .eq("id",caseId).is("final_policy_id",null);
+    .eq("id",caseId).is("final_policy_id",null).neq("status","rejected");
   update = caseRow.remarks === null ? update.is("remarks",null) : update.eq("remarks",caseRow.remarks);
   const {data:saved,error:saveError} = await update.select("id").maybeSingle<{id:string}>();
   if (saveError || !saved) return {ok:false,error:"Remarks changed in another session. Reload and try again."};
