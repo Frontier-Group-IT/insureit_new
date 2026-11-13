@@ -284,8 +284,14 @@ function readPolicyAuditFieldChanges(raw:unknown):string[]|null {
     const hidden=item.match(/^(.*?) changed \(values hidden\)$/);
     if(hidden&&fieldLabels.has(hidden[1])){accepted.push(item);continue;}
     const parsed=item.match(/^(.*?): (.*?) → (.*?)$/);
-    if(parsed&&withValues.has(parsed[1])&&parsed[2].length<=70&&parsed[3].length<=70
-       &&!/[<>\r\n]/.test(parsed[2]+parsed[3]))accepted.push(item);
+    if(parsed&&withValues.has(parsed[1])){
+      const isAmount=["OD premium","TP premium","CPA amount","Add-on premium"].includes(parsed[1]);
+      const isBoolean=parsed[1]==="CPA opted";
+      const safe=(value:string)=>isBoolean?/^(Yes|No|Not set)$/.test(value)
+        :isAmount?/^(₹[0-9,]+[.][0-9]{2}|Not set|Changed)$/.test(value)
+        :/^(?:[a-zA-Z0-9 ._\/-]{1,70}|Not set|Changed)$/.test(value);
+      if(safe(parsed[2])&&safe(parsed[3]))accepted.push(item);
+    }
   }
   return accepted.length?accepted:raw.length?null:[];
 }
