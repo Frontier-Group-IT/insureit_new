@@ -80,7 +80,7 @@ for (const removed of ["Claim Status", "Spot Intimation Date & Time", "Insurer",
   assert.doesNotMatch(workspace, new RegExp('<Info label="' + removed + '"'), removed + " must not reappear in navy summary");
 }
 assert.ok(workspace.includes('<Info label="Vehicle No." title={vehicleNumber}'), "Vehicle number must have a separate field");
-assert.ok(workspace.includes('<Info label="Model" title={model} logo={<ManufacturerLogo name={make} />} />'), "Model must have its own field with manufacturer logo");
+assert.ok(workspace.includes('<Info label="Model" title={model} singleLine logo={<ManufacturerLogo name={make} />} />'), "Model must have its own field with manufacturer logo");
 assert.doesNotMatch(workspace, /vehicleNumberAndModel/, "Combined vehicle number/model display must be removed");
 assert.match(workspace, /lg:grid-cols-7/, "Display seven separate summary fields on one row at desktop width");
 assert.equal((workspace.match(/<Info label=/g) ?? []).length, 7, "Navy summary must render precisely seven information fields");

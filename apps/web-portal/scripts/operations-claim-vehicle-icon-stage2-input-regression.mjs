@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { existsSync } from "node:fs";
 const read = path => readFileSync(fileURLToPath(new URL(path, import.meta.url)), "utf8");
 const stages = read("../components/claim-manager/operations-claim-stages.tsx");
 const header = read("../components/spot-survey/spot-survey-workspace-v2.tsx");
@@ -16,7 +15,7 @@ assert.ok(stages.includes('vehicleDeliveryCompact ? "h-[34px] max-w-full px-3"')
 assert.ok(stages.includes('relative flex ${billingCompact ? "mt-1 h-[34px] max-w-full px-2"'), "All Operations dates use 34px compact styling");
 assert.doesNotMatch(stages, /h-full min-h-9/, "Do not stretch date input to label height");
 assert.match(stages, /type="date"/,"Preserve accessible native calendar input");
-assert.match(header, /vehicle: "\/assets\/customer-3d-icons\/my_vehicles\.png"/);
-assert.match(header, /<Info label="Vehicle No\." title=\{vehicleNumber\} logo=\{<HeaderIcon src=\{claimHeaderIcons\.vehicle\}/);
-assert.ok(existsSync(fileURLToPath(new URL("../public/assets/customer-3d-icons/my_vehicles.png", import.meta.url))),"Visible 3D vehicle image must exist");
+assert.match(header, /import \{ CarFront \} from "lucide-react"/, "Use the standard vehicle-front outline icon.");
+assert.match(header, /<Info label="Vehicle No\." title=\{vehicleNumber\} logo=\{<CarFront/, "Vehicle number must use the clear front-view icon.");
+assert.doesNotMatch(header, /claimHeaderIcons\.vehicle|customer-3d-icons\/my_vehicles\.png/, "Do not restore the old multi-vehicle header illustration.");
 console.log("Operations Stage 2 date height and vehicle header icon regression passed.");
