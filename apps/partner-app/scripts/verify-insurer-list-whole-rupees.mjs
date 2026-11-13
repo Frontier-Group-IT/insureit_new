@@ -44,6 +44,8 @@ assert.ok(screen.includes("financialColumns: { flex: 1, minWidth: 0 }"), 'Remain
 assert.ok(screen.includes("policyColumn: { width: '17%' }"), 'Policies column stays narrower than financial amounts');
 assert.ok(screen.includes("amountColumn: { flex: 1, minWidth: 0 }"), 'Each authorized money column shares remaining width');
 assert.ok(screen.includes('const ROW_HEIGHT = 46'), 'Rows use compact, aligned height');
+assert.ok(screen.includes("financialRow: { flexDirection: 'row', alignItems: 'center', height: ROW_HEIGHT, paddingHorizontal: 3"), 'Financial rows and header must share horizontal inset');
+assert.ok(screen.includes('const exactAmount = amount == null'), 'Do not replace exact rupee figures with compacted values in disclosure');
 assert.ok(screen.includes('function formatInsurerCompactRupees(amount: number | string): string'), 'Compact formatting is limited to the insurer table');
 for (const suffix of ["'Cr'", "'L'", "'k'"]) assert.ok(screen.includes(suffix), `Missing compact rupee suffix ${suffix}`);
 
