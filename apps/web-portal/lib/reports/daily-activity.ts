@@ -2,6 +2,7 @@ import "server-only";
 
 import { getEmployeeAccessScope } from "@/lib/employee-access-scope";
 import { resolveDailyReportActorIds } from "@/lib/reports/daily-activity-actor-scope";
+import { dailyPageWindow, dailyHasMore, DAILY_PAGE_SIZE } from "@/lib/reports/daily-activity-pagination";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 export type DailyActivityGroup = "all" | "policy" | "intake" | "case" | "customer" | "vehicle" | "claim" | "other";
@@ -20,9 +21,6 @@ type Policy = { id: string; created_by: string | null; policy_no: string | null;
 type Intake = { id: string; submitted_by_profile_id: string | null; intake_number: string; created_at: string; finalized_at: string | null; finalized_by_profile_id: string | null };
 type Case = { id: string; created_by: string | null; case_number: string; created_at: string; converted_at: string | null; converted_by: string | null };
 type RawActivity = Omit<DailyActivityRow, "employeeName" | "employeeCode"> & { table?: string; recordId?: string };
-const PAGE_SIZE = 30;
-const MAX_PAGE = 15;
-const SOURCE_CAP = 480;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -98,7 +96,7 @@ export async function loadDailyActivityReport(viewer: Viewer, query: DailyActivi
   const type = DAILY_ACTIVITY_GROUPS.some(item => item.value === query.type)
     ? query.type as DailyActivityGroup : "all";
   const date = safeDate(query.date);
-  const page = Math.min(MAX_PAGE, Math.max(1, Number.parseInt(query.page ?? "1", 10) || 1));
+  const { page, start, sourceLimit } = dailyPageWindow(query.page);
   const employee = scope === "all" ? (query.employee ?? "").trim().slice(0, 80) : "";
   const from = new Date(`${date}T00:00:00+05:30`);
   const to = new Date(from.getTime() + 86_400_000);
@@ -126,9 +124,9 @@ export async function loadDailyActivityReport(viewer: Viewer, query: DailyActivi
       (p.employee_code ?? "").toLocaleLowerCase("en-IN").includes(normalizedEmployee))
     .map(p => p.id);
   const filters = { scope, type, date, employee, page };
-  if (!actorIds.length) return { rows: [] as DailyActivityRow[], hasNext: false, filters, coverageLimited: true, pageSize: PAGE_SIZE };
+  if (!actorIds.length) return { rows: [] as DailyActivityRow[], hasNext: false, truncated: false, filters, coverageLimited: true, pageSize: DAILY_PAGE_SIZE };
   // Bounded queries; no unfiltered audit/history table scans or client-side permission filtering.
-  const limit = Math.min(SOURCE_CAP, (page + 1) * PAGE_SIZE);
+  const limit = sourceLimit;
   const auditEnabled = true;
   const policyEnabled = type === "all" || type === "policy";
   const intakeEnabled = type === "all" || type === "intake";
@@ -140,13 +138,13 @@ export async function loadDailyActivityReport(viewer: Viewer, query: DailyActivi
         .in("actor_id", actorIds).gte("created_at", startIso).lt("created_at", endIso)
         .order("created_at", {ascending:false}).limit(limit);
       if (type !== "all") {
-        if (type === "policy") q = q.eq("table_name", "policies");
+        if (type === "policy") q = q.or("table_name.eq.policies,table_name.like.policy_%");
         else if (type === "intake") q = q.eq("table_name", "policy_intake_requests");
         else if (type === "case") q = q.eq("table_name", "life_health_cases");
         else if (type === "customer") q = q.eq("table_name", "customers");
         else if (type === "vehicle") q = q.eq("table_name", "vehicles");
         else if (type === "claim") q = q.ilike("table_name", "claim%");
-        else q = q.not("table_name", "in", "(policies,policy_intake_requests,life_health_cases,customers,vehicles,claims)");
+        else q = q.not("table_name", "in", "(policies,policy_intake_requests,life_health_cases,customers,vehicles)").not("table_name", "like", "policy_%").not("table_name", "ilike", "claim%");
       }
       const {data,error} = await q.returns<Audit[]>();
       if(error) throw new Error(`Daily audit query failed: ${error.message}`);
@@ -232,8 +230,7 @@ export async function loadDailyActivityReport(viewer: Viewer, query: DailyActivi
     occurredAt:c.converted_at,status:"Completed",source:"Record history",
   });
   events.sort((a,b)=>b.occurredAt.localeCompare(a.occurredAt) || a.id.localeCompare(b.id));
-  const start = (page - 1) * PAGE_SIZE;
-  const visible = events.slice(start,start + PAGE_SIZE);
+  const visible = events.slice(start,start + DAILY_PAGE_SIZE);
   // Resolve human-facing reference numbers only for the visible page, not entire tables.
   const refs = new Map<string,string>();
   const referenceSources: {table:string; column:string}[] = [
@@ -259,6 +256,6 @@ export async function loadDailyActivityReport(viewer: Viewer, query: DailyActivi
       reference:refs.get(`${e.table}:${e.recordId}`) || e.reference,
       occurredAt:e.occurredAt,status:e.status,source:e.source};
   });
-  return {rows,hasNext:events.length > start + PAGE_SIZE && page < MAX_PAGE,
-    filters,coverageLimited:true,pageSize:PAGE_SIZE};
+  return {rows,...dailyHasMore(events.length, start, page),
+    filters,coverageLimited:true,pageSize:DAILY_PAGE_SIZE};
 }
