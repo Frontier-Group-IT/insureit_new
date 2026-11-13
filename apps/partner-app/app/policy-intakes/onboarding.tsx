@@ -10,18 +10,20 @@ import { prepareNativePolicyOnboarding, saveNativePolicyOnboarding, bookNativePo
 type FieldKey = keyof NativePolicyDraft;
 type Field = { key:FieldKey; label:string; required?:boolean; options?:string[] };
 const policy = [
-  {key:'issuanceDate',label:'Policy issuance date (YYYY-MM-DD)',required:true},
+  {key:'issuanceDate',label:'Policy issuance date',required:true},
   {key:'businessLine',label:'Policy type',required:true,options:['Motor']},
   {key:'intermediaryType',label:'Intermediary type',required:true,options:['POSP','MISP','SIBL / Partner']},
   {key:'leadSource',label:'Lead source',required:true},
   {key:'intermediaryCode',label:'Lead source code'},
   {key:'rmName',label:'Relationship manager'},
 ] satisfies Field[];
+const proposer = [
+  {key:'insuredName',label:'Client / proposer name',required:true},
+  {key:'phoneNo',label:'Client mobile number',required:true},
+] satisfies Field[];
 const vehicle = [
   {key:'registrationMode',label:'Registration status',required:true,options:['registered','unregistered']},
   {key:'registrationNo',label:'Registration number'},
-  {key:'insuredName',label:'Insured name',required:true},
-  {key:'phoneNo',label:'Mobile number',required:true},
   {key:'vehicleClass',label:'Vehicle class',required:true,options:['PCP','TWP','PCV','GCV','CPM','MISD']},
   {key:'make',label:'Manufacturer',required:true},
   {key:'model',label:'Model / variant',required:true},
@@ -46,6 +48,21 @@ const product = [
   {key:'validFrom',label:'Validity from (YYYY-MM-DD)',required:true},
   {key:'validUpto',label:'Validity up to (YYYY-MM-DD)',required:true},
 ] satisfies Field[];
+const premiumFields:Field[] = [
+  {key:'idv',label:'Insured declared value (₹)',required:true},
+  {key:'od',label:'OD premium (₹)',required:true},
+  {key:'tp',label:'TP premium (₹)',required:true},
+  {key:'addOnPremium',label:'Add-on premium (₹)'},
+  {key:'cpa',label:'CPA amount (₹)'},
+  {key:'cpaOpted',label:'CPA opted',options:['Yes','No']},
+];
+const productCaseFields:Field[] = [
+  {key:'insurerId',label:'Insurance company',required:true},
+  {key:'policyProduct',label:'Policy product',required:true,options:['Comprehensive','Third Party','SAOD','Bundled']},
+  {key:'policyNo',label:'Policy number',required:true},
+  {key:'validFrom',label:'Validity from (YYYY-MM-DD)',required:true},
+  {key:'validUpto',label:'Validity up to (YYYY-MM-DD)',required:true},
+];
 const commercial = [
   {key:'payoutBasis',label:'Pay-in / payout basis',options:['NET','FLAT']},
   {key:'projectedOdPercent',label:'Insurer OD pay-in (%)'},
@@ -77,6 +94,7 @@ export default function NativePolicyOnboarding(){
   const [approvalCode,setApprovalCode]=useState("");
   const [picker,setPicker]=useState<{key:FieldKey;items:{value:string;label:string}[]}|null>(null);
   const [dirty,setDirty]=useState(false);
+  const [commercialExpanded,setCommercialExpanded]=useState(false);
   const load=useCallback(async()=>{
     if(!id)return;
     setLoading(true);setError('');
@@ -237,7 +255,7 @@ export default function NativePolicyOnboarding(){
   const net=useMemo(()=>draft?amount(draft.od)+amount(draft.tp)+amount(draft.cpa)+amount(draft.addOnPremium||'0'):0,[draft]);
   const filled=useMemo(()=>{
     if(!draft)return 0;
-    const required=[...policy,...vehicle,...product].filter(field=>field.required);
+    const required=[...policy,...proposer,...vehicle,...productCaseFields,...premiumFields].filter(field=>field.required);
     return Math.round(100*required.filter(f=>String(draft[f.key]??'').trim()).length/required.length);
   },[draft]);
   const field=(f:Field)=>{
@@ -272,18 +290,53 @@ export default function NativePolicyOnboarding(){
     {draft?<>
       <View style={styles.status}><View><Text style={styles.intake}>{data?.intake_number||'Policy Intake'}</Text><Text style={styles.muted}>Existing draft · {dirty?'Unsaved changes':'Saved revision '+data?.revision}</Text></View><View style={styles.progress}><Text style={styles.progressText}>{filled}% complete</Text></View></View>
       {section('01','Policy source & ownership',policy)}
-      {section('02','Insured & vehicle identification',vehicle)}
+      {section('02','Customer / Proposer',proposer)}
+      {section('','Vehicle identification — Motor',vehicle)}
       {draft.registrationMode==='registered'?<Pressable accessibilityRole="button" disabled={lookingUpRc} style={[styles.secondary,{marginBottom:11}]} onPress={()=>void fetchRc()}><Text style={styles.secondaryText}>{lookingUpRc?'Fetching RC…':'Fetch RC Details'}</Text></Pressable>:null}
-      {section('03','Policy product, premium & validity',draft.policyProduct==='Bundled'&&['PCP','TWP'].includes(draft.vehicleClass)?[
-        ...product,{key:'tpValidUpto',label:'TP validity up to (YYYY-MM-DD)',required:true},{key:'cpaValidUpto',label:'CPA validity up to (YYYY-MM-DD)',required:true}
-      ]:product)}
-      {data?.commercialAccess?section('04','Insurer pay-in & partner payout',commercial):null}
+      {section('03','Policy product & case details',draft.policyProduct==='Bundled'&&['PCP','TWP'].includes(draft.vehicleClass)?[
+        ...productCaseFields,{key:'tpValidUpto',label:'TP validity up to (YYYY-MM-DD)',required:true},{key:'cpaValidUpto',label:'CPA validity up to (YYYY-MM-DD)',required:true}
+      ]:productCaseFields)}
+      {section('04','Premium & payment',premiumFields)}
       <View style={styles.section}>
-        <View style={styles.sectionHead}><Ionicons name="calculator-outline" size={18} color="#254C83"/><Text style={styles.sectionTitle}>Onboarding summary</Text></View>
-        <View style={styles.summary}><Text style={styles.muted}>OD + TP + Add-on + CPA (before applicable taxes)</Text><Text style={styles.total}>₹{net.toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})}</Text></View>
-        <Text style={styles.notice}>This is a draft summary, not the final policy premium calculation. Final taxes, premiums, validation and booking must use the website&apos;s authoritative booking engine.</Text>
+        <View style={styles.sectionHead}>
+          <Ionicons name="pie-chart-outline" size={18} color="#254C83"/>
+          <Text style={styles.sectionTitle}>Onboarding summary</Text>
+          <View style={styles.summaryProgress}><Text style={styles.progressText}>{filled}%</Text></View>
+        </View>
+        <View style={styles.summary}>
+          <Text style={styles.summaryCaption}>POLICY STATUS  ·  In progress</Text>
+          <Text style={styles.muted}>PREMIUM</Text>
+          <Text style={styles.total}>₹{net.toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})}</Text>
+          <Text style={styles.muted}>Estimated Motor premium · Final amount confirmed on booking</Text>
+        </View>
+        {data?.commercialAccess?<>
+          <Pressable accessibilityRole="button" accessibilityLabel="Payin–Payout" accessibilityState={{expanded:commercialExpanded}}
+            onPress={()=>setCommercialExpanded(open=>!open)} style={styles.commercialToggle}>
+            <Ionicons name="cash-outline" size={17} color="#254C83"/>
+            <Text style={styles.commercialToggleTitle}>Payin–Payout</Text>
+            <Ionicons name={commercialExpanded?'chevron-up':'chevron-down'} size={16} color="#63758D"/>
+          </Pressable>
+          {commercialExpanded?<View style={styles.commercialBody}>
+            {section('','Insurer pay-in & partner payout',commercial)}
+          </View>:null}
+        </>:null}
+        <View style={styles.summaryDocuments}>
+          <Text style={styles.commercialToggleTitle}>Documents</Text>
+          <Text style={styles.muted}>Submitted policy copy</Text>
+        </View>
+        <Text style={styles.notice}>This draft summary is not the final policy premium calculation. Taxes, premiums, validation and booking remain with the Operations booking engine.</Text>
       </View>
-      <Pressable accessibilityRole="button" disabled={viewingCopy} style={[styles.secondary,{marginBottom:11}]} onPress={()=>void openCopy()}><Text style={styles.secondaryText}>{viewingCopy?'Opening document…':'View Policy Copy'}</Text></Pressable>
+      <View style={styles.section}>
+        <View style={styles.sectionHead}>
+          <Ionicons name="cloud-upload-outline" size={18} color="#254C83"/>
+          <Text style={styles.sectionTitle}>Upload Forms</Text>
+        </View>
+        <Text style={styles.notice}>Proposal Form, Illustration Form, Payment Receipt and Other Form uploads are managed on the Operations website. The native Motor booking API does not currently accept these uploads.</Text>
+        <Pressable accessibilityRole="button" disabled={viewingCopy} style={[styles.secondary,styles.documentAction]} onPress={()=>void openCopy()}>
+          <Ionicons name="document-text-outline" size={17} color="#25466E"/>
+          <Text style={styles.secondaryText}>{viewingCopy?'Opening document…':'View submitted policy copy'}</Text>
+        </Pressable>
+      </View>
       <View style={styles.actions}>
         <Pressable accessibilityRole="button" disabled={saving} style={styles.secondary} onPress={()=>void save(true)}><Text style={styles.secondaryText}>{saving?'Saving…':'Save & return to Intake'}</Text></Pressable>
         <Pressable accessibilityRole="button" disabled={saving||!dirty} style={[styles.primary,(saving||!dirty)&&styles.disabled]} onPress={()=>void save()}><Text style={styles.primaryText}>{saving?'Saving…':'Save draft'}</Text></Pressable>
@@ -325,11 +378,11 @@ const styles=StyleSheet.create({
   section:{backgroundColor:'#FFFFFF',borderWidth:1,borderColor:'#DFE6F0',borderRadius:13,marginBottom:11,overflow:'hidden'},
   sectionHead:{flexDirection:'row',gap:9,alignItems:'center',paddingHorizontal:13,paddingVertical:12,backgroundColor:'#EAF1FA'},
   number:{fontSize:11,color:'#355EA0',fontWeight:'800'},sectionTitle:{fontSize:13,color:'#1B385B',fontWeight:'800'},
-  fields:{padding:12,gap:10},field:{gap:5},label:{fontSize:10,color:'#65758E',fontWeight:'700'},star:{color:'#B93333'},
+  fields:{padding:12,flexDirection:'row',flexWrap:'wrap',columnGap:10,rowGap:11},field:{width:'48%',minWidth:0,gap:5},label:{fontSize:10,color:'#65758E',fontWeight:'700'},star:{color:'#B93333'},
   input:{minHeight:42,borderWidth:1,borderColor:'#D8E1EC',backgroundColor:'#FFFFFF',borderRadius:9,paddingHorizontal:11,fontSize:12,color:'#183653'},
   inputRow:{minHeight:42,borderWidth:1,borderColor:'#D8E1EC',borderRadius:9,paddingHorizontal:11,flexDirection:'row',alignItems:'center',justifyContent:'space-between'},
   value:{color:'#183653',fontSize:12,flex:1},placeholder:{color:'#97A5B7'},
-  summary:{padding:14,gap:7},total:{fontSize:20,color:'#1B385B',fontWeight:'800'},notice:{fontSize:10,lineHeight:16,color:'#65758E',paddingHorizontal:14,paddingBottom:13},
+  summary:{padding:14,gap:7},summaryCaption:{fontSize:10,fontWeight:'700',color:'#426188'},summaryProgress:{marginLeft:'auto',backgroundColor:'#E1EAF8',borderRadius:18,paddingHorizontal:9,paddingVertical:5},commercialToggle:{marginHorizontal:12,marginBottom:9,flexDirection:'row',alignItems:'center',gap:8,padding:11,borderWidth:1,borderColor:'#DDE6F0',borderRadius:10,backgroundColor:'#F8FAFD'},commercialToggleTitle:{flex:1,color:'#26436B',fontSize:11,fontWeight:'700'},commercialBody:{paddingHorizontal:12},summaryDocuments:{marginHorizontal:12,marginBottom:11,padding:12,flexDirection:'row',alignItems:'center',gap:10,borderColor:'#E1E9F3',borderWidth:1,borderRadius:10},documentAction:{marginHorizontal:12,marginBottom:12,flexDirection:'row',gap:8},total:{fontSize:20,color:'#1B385B',fontWeight:'800'},notice:{fontSize:10,lineHeight:16,color:'#65758E',paddingHorizontal:14,paddingBottom:13},
   actions:{flexDirection:'row',gap:8,marginBottom:11},secondary:{flex:1,borderWidth:1,borderColor:'#CDD9EB',borderRadius:10,padding:13,alignItems:'center'},secondaryText:{fontWeight:'700',fontSize:11,color:'#25466E'},
   primary:{flex:1,backgroundColor:'#243F9E',borderRadius:10,padding:13,alignItems:'center'},primaryText:{fontSize:11,fontWeight:'800',color:'white'},disabled:{opacity:.48},
   bookButton:{marginBottom:11,flexDirection:'row',justifyContent:'center',gap:8},
