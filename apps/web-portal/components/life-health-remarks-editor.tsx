@@ -55,6 +55,7 @@ export function LifeHealthRemarksEditor({ value, onChange, disabled = false }: P
           <MessageSquareText className="h-3.5 w-3.5" />Add Remark
         </button>
       </div>
+      {value.trim() ? <div className="mt-2 rounded-xl border border-[#E0E7F0] bg-[#F8FAFD] px-3 py-2.5" aria-label="Added remarks"><p className="mb-1.5 text-[9px] font-bold uppercase tracking-[0.055em] text-[#667085]">Added remarks · Read only</p><p className="whitespace-pre-wrap break-words text-[11px] leading-5 text-[#344054]">{value}</p></div> : null}
     </div>
     {mounted && open ? createPortal(
       <div className="fixed inset-0 z-[1100] flex items-center justify-center bg-[#101828]/60 p-4" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setOpen(false); }}>
