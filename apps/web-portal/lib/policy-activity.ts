@@ -119,7 +119,7 @@ const POLICY_EDIT_FIELDS = {
     lead_source: "Lead source", rm_name: "Relationship manager", remarks: "Remarks",
   },
   premium: { od_premium: "OD premium", tp_premium: "TP premium", add_on_premium: "Add-on premium",
-    net_premium: "Net premium", gst_amount: "GST", gross_premium: "Gross premium" },
+    cpa_amount: "CPA amount", cpa_opted: "CPA opted", net_premium: "Net premium", gst_amount: "GST", gross_premium: "Gross premium" },
   payin: { commercial_basis: "Pay-in basis", projected_commission_percent: "Pay-in rate",
     projected_commission_amount: "Projected insurer pay-in", insurer_scheme_amount: "Insurer incentive",
     total_projected_payin: "Total projected pay-in", commercial_status: "Pay-in entry status" },
@@ -210,6 +210,46 @@ export function changedPolicyEditFields(before: PolicyEditSnapshot | null, after
   return [...new Set(names)];
 }
 
+// Only these explicitly approved policy-facing fields may have historical
+// values written into audit logs. Do not log raw customers, identifiers,
+// insurer pay-in/payout commissions, remarks, or arbitrary form JSON.
+const DISPLAYABLE_PREMIUM_VALUES = new Set([
+  "premium.od_premium", "premium.tp_premium",
+  "premium.cpa_amount", "premium.cpa_opted", "premium.add_on_premium",
+]);
+const DERIVED_PREMIUM_FIELDS = new Set([
+  "premium.net_premium", "premium.gst_amount", "premium.gross_premium",
+  "policy.premium_amount",
+]);
+function formatAuditedPremiumValue(key: string, raw: string | null): string {
+  if (raw === null || raw === "") return "Not set";
+  if (key === "premium.cpa_opted") return raw === "true" ? "Yes" : raw === "false" ? "No" : "Not set";
+  const amount = Number(raw);
+  return Number.isFinite(amount) && amount >= 0 && amount <= 1000000000
+    ? `₹${amount.toLocaleString("en-IN", {minimumFractionDigits: 2, maximumFractionDigits: 2})}`
+    : "Changed";
+}
+
+/** Actual editable differences; exclude auto-recalculated totals from the
+ * activity headline when a source premium was edited. Existing older audit
+ * entries remain truthful about the limited historical data recorded. */
+export function describePolicyEditChanges(before: PolicyEditSnapshot | null, after: PolicyEditSnapshot | null): string[] | null {
+  if (!before || !after) return null;
+  const groups = POLICY_EDIT_FIELDS as Record<string, Record<string, string>>;
+  const entries: Array<{key:string;label:string}> = [];
+  for (const [prefix, fields] of Object.entries(groups))
+    for (const [key, label] of Object.entries(fields)) {
+      const fullKey = `${prefix}.${key}`;
+      if (before[fullKey] !== after[fullKey]) entries.push({key:fullKey,label});
+    }
+  const sourceChanged = entries.some(entry => DISPLAYABLE_PREMIUM_VALUES.has(entry.key));
+  return entries.filter(entry => !DERIVED_PREMIUM_FIELDS.has(entry.key) || !sourceChanged)
+    .filter(entry => !DERIVED_PREMIUM_FIELDS.has(entry.key))
+    .map(entry => DISPLAYABLE_PREMIUM_VALUES.has(entry.key)
+      ? `${entry.label}: ${formatAuditedPremiumValue(entry.key,before[entry.key])} → ${formatAuditedPremiumValue(entry.key,after[entry.key])}`
+      : `${entry.label} changed (values hidden)`).slice(0,30);
+}
+
 function policyEditTitle(changed: string[] | null): string {
   if (!changed) return "Policy updated — change details unavailable";
   if (changed.length === 0) return "Policy saved — no tracked field changes";
@@ -217,7 +257,7 @@ function policyEditTitle(changed: string[] | null): string {
     const remaining = changed.length - 2;
     return `${changed[0]}, ${changed[1]}${remaining ? ` + ${remaining} more` : ""} updated`;
   }
-  const single = changed[0];
+  const single = changed[0].split(":")[0].replace(/ changed \\(values hidden\\)$/, "");
   if (single === "Policy number") return "Policy number changed";
   if (single === "Policy status") return "Policy status changed";
   if (single === "Insurer") return "Insurer changed";
@@ -387,7 +427,7 @@ export async function loadPolicyActivityHistory({
         : ACTION_LABELS[candidate.action],
       actorName: candidate.actorName?.trim() || (candidate.actorId ? actorNames.get(candidate.actorId) : null) || "Not recorded",
       changes: candidate.action === POLICY_ACTIVITY_ACTIONS.POLICY_EDITED
-        ? candidate.changedFields?.map(field => `${field} changed (previous/new values not stored)`) ?? null
+        ? candidate.changedFields?.map(field => field.includes(" → ") || field.includes(" changed (") ? field : `${field} changed (previous/new values not stored)`) ?? null
         : null,
       meta: candidate.action === POLICY_ACTIVITY_ACTIONS.POLICY_EDITED
         ? candidate.changedFields === null || candidate.changedFields === undefined
