@@ -9,10 +9,12 @@ function base64(bytes: Uint8Array): string {
   for (const byte of bytes) binary += String.fromCharCode(byte);
   return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
 }
-function unbase64(value: string): Uint8Array {
+function unbase64(value: string): Uint8Array<ArrayBuffer> {
   const standard = value.replace(/-/g, "+").replace(/_/g, "/");
   const binary = atob(standard.padEnd(Math.ceil(standard.length / 4) * 4, "="));
-  return Uint8Array.from(binary, ch => ch.charCodeAt(0));
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes;
 }
 async function key(): Promise<CryptoKey> {
   const secret = process.env.PARTNER_INTAKE_BRIDGE_KEY;
