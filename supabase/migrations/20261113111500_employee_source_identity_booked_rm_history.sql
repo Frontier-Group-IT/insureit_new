@@ -105,6 +105,31 @@ UNION ALL SELECT 'intermediary_onboarding_documents',id,md5(to_jsonb(t)::text) F
 UNION ALL SELECT 'pan_verification_jobs',id,md5(to_jsonb(t)::text) FROM public.pan_verification_jobs t
 UNION ALL SELECT 'intermediary_group_memberships',id,md5(to_jsonb(t)::text) FROM public.intermediary_group_memberships t;
 
+-- Do not run Motor cover-validity recalculation when only identity labels
+-- or source UUID metadata change. Existing cover/business edit behavior remains.
+DO $scope_policy_cover_trigger$
+DECLARE v_cols text; v_definition text; v_updated text;
+BEGIN
+  SELECT string_agg(quote_ident(column_name),', ' ORDER BY ordinal_position)
+    INTO v_cols FROM information_schema.columns
+  WHERE table_schema='public' AND table_name='policies'
+    AND column_name NOT IN ('rm_name','intermediary_code','lead_source',
+      'source_intermediary_id','source_partner_id','updated_at');
+
+  SELECT pg_get_triggerdef(t.oid) INTO v_definition FROM pg_trigger t
+  WHERE t.tgrelid='public.policies'::regclass
+    AND t.tgname='trg_sync_motor_policy_cover_validities'
+    AND NOT t.tgisinternal;
+  IF v_definition IS NULL OR POSITION('BEFORE INSERT OR UPDATE ON' IN v_definition)=0 THEN
+    RAISE EXCEPTION 'Unexpected Motor cover trigger scope; reviewed migration required';
+  END IF;
+  v_updated:=REPLACE(v_definition,'BEFORE INSERT OR UPDATE ON',
+     'BEFORE INSERT OR UPDATE OF '||v_cols||' ON');
+  DROP TRIGGER trg_sync_motor_policy_cover_validities ON public.policies;
+  EXECUTE v_updated;
+END;
+$scope_policy_cover_trigger$;
+
 -- A name/code correction is NOT a source transfer. Even changing a policy's
 -- source code must never infer a new booked RM from today's partner owner.
 CREATE OR REPLACE FUNCTION public.sync_policy_rm_employee_id()
