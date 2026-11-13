@@ -1,7 +1,7 @@
 Partner production OTA trigger
-release=partner-insurer-compact-pr-4394
+release=partner-business-product-label-pr-4401
 source=verified-merged-main
-reason=user-approved-compact-insurer-table
+reason=user-approved-business-product-label-ellipsis
 channel=production
 runtime=0.2.0
 requested=2026-11-13
