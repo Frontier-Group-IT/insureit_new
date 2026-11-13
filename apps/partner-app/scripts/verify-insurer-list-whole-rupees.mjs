@@ -15,7 +15,7 @@ for (const field of ['premium', 'payin', 'retention', 'payout']) {
 }
 assert.ok(screen.includes("const exactAmount = amount == null ? '—' : formatInsurerRupees(amount)"), 'Missing amounts render unavailable, not zero');
 assert.ok(screen.includes("amount == null ? '—' : formatInsurerCompactRupees(amount)"), 'Compact display must preserve missing-value fallback');
-assert.ok(screen.includes("column.key === 'policies' ? insurer.policies"), 'Policies remains a separate always-visible column');
+assert.ok(screen.includes('>{insurer.policies}</Text>'), 'Policies remains a separate always-visible numeric cell');
 assert.ok(screen.includes('adjustsFontSizeToFit minimumFontScale={0.7}'), 'Compact amount cells must fit on narrow devices');
 assert.ok(screen.includes('onPress={() => Alert.alert('), 'Tapping a compact amount must show the original full rupee value');
 assert.ok(screen.includes('accessibilityLabel={`${insurer.name}, ${column.label}, ${exactAmount}. Tap for full amount`}'), 'Exact rupees must remain available to accessibility users');
