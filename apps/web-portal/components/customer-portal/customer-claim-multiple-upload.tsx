@@ -31,6 +31,7 @@ export function CustomerClaimMultipleUpload({claimId,accountId,stage,documents,a
     if (!allowUpload || running.current || !files.length) return;
     // Validate the entire selection before submitting any file.
     if (files.length > 10) {setErrorNotice("Select up to 10 files at a time.");return;}
+    if (reuploadRequestId && files.length !== 1) {setErrorNotice("Select one replacement file for this request.");return;}
     for (const file of files) {
       if (!file.size || !allowedExtensions.test(file.name)) {setErrorNotice("Unsupported or empty document: "+file.name);return;}
       const limit = videoExtensions.test(file.name) ? 50 : 5;
