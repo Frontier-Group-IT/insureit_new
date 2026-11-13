@@ -37,7 +37,6 @@ export function LifeHealthIssuedPolicyEditForm({ initial, insurers, sources, act
   const [remarkPending,startRemarkTransition] = useTransition();
   const endDateMode: DateCalculationMode = "minusOne";
   const pptEndDateMode: DateCalculationMode = "minusOne";
-  const [policyNumberUnlocked,setPolicyNumberUnlocked] = useState(false);
   const [dateApproval,setDateApproval] = useState<{id:string;key:string}|null>(null);
   const [dateApprovalOpen,setDateApprovalOpen] = useState(false);
   const initialSource = sources.find((source)=>source.id === initial.sourceId);
@@ -128,7 +127,6 @@ export function LifeHealthIssuedPolicyEditForm({ initial, insurers, sources, act
     if(["invalid","future"].includes(policyDateDecision(form.sourcingDate))){setError("Choose a valid policy issuance date in the current or an earlier month.");return;}
     if(required.some(value=>!String(value??"").trim())){setError("Complete all required policy fields before requesting approval.");return;}
     if(policyNumberChanged&&dateApprovalRequired){setError("Save the policy-number change first, then request separate OTP approval for the issuance-date change.");return;}
-    if(policyNumberChanged&&!policyNumberUnlocked){setError("Unlock the policy number to make a change.");return;}
     if(policyNumberChanged&&!window.confirm("Change the issued policy number from "+initial.policyNumber+" to "+form.policyNumber.trim().toUpperCase()+"? This will update the Policy Register and must be unique."))return;
     if(!form.policyNumber.trim()){setError("Policy number is required.");return;}
     if(dateApprovalRequired){if(!approvalConfirmed){setDateApprovalOpen(true);return;}if(!dateApprovalId){setDateApprovalOpen(true);return;}setDateApprovalOpen(false);}
@@ -210,7 +208,7 @@ export function LifeHealthIssuedPolicyEditForm({ initial, insurers, sources, act
         <Section number="04" title="Issued policy details">
                   <div>
             <label className={labelClass}>Policy number <Req/></label>
-            <div className="flex gap-2"><input aria-label="Policy number" className={inputClass} value={form.policyNumber} readOnly={!policyNumberUnlocked} onChange={event=>set("policyNumber",event.target.value.toUpperCase())}/><button type="button" className="shrink-0 rounded-lg border border-[#BFD3F5] px-3 text-[10px] font-bold text-[#1859B7]" onClick={()=>{setPolicyNumberUnlocked(value=>!value);if(policyNumberUnlocked)set("policyNumber",initial.policyNumber)}}>{policyNumberUnlocked?"Lock":"Change"}</button></div>
+            <input aria-label="Policy number" className={inputClass} value={form.policyNumber} onChange={event=>set("policyNumber",event.target.value.toUpperCase())}/>
           </div>
           <Field label="Policy start date" type="date" value={form.startDate} onChange={(v)=>set("startDate",v)} required/>
           <Field label="Policy end / maturity date" type="date" value={form.endDate} onChange={(v)=>set("endDate",v)}/>
