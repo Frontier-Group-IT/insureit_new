@@ -183,7 +183,7 @@ if (detailScreen.includes('Fetched policy details (OCR)')) throw new Error('Remo
 const nativeOnboarding = fs.readFileSync(path.join(root, 'app/policy-intakes/onboarding.tsx'), 'utf8');
 const nativeApi = fs.readFileSync(path.resolve(root, '../web-portal/app/api/partner/policy-intakes/native-onboarding/route.ts'), 'utf8');
 for (const expected of [
-  "section('01','Policy source & ownership',policy)",
+  "const sourceSection=()=> <View style={styles.section}>",
   "section('02','Customer / Proposer',proposer)",
   "section('','Vehicle identification — Motor',vehicle)",
   "section('03','Policy product & case details'",
@@ -196,6 +196,25 @@ for (const expected of [
 }
 requireText(nativeOnboarding, "fields:{padding:12,flexDirection:'row',flexWrap:'wrap'", 'Native onboarding uses responsive two-column fields.');
 requireText(nativeOnboarding, "field:{width:'48%'", 'Each native form field fits its column.');
+for (const value of [
+  'sourceCell:{width:\'48%\'', 'sourcePrimary:{width:\'100%\'',
+  "sourceMeta('rmName','RM')", "sourceMeta('intermediaryCode','ID')",
+  "field(item,true)", "key:'leadSource',label:'Lead source'",
+  "key:'issuanceDate',label:'Proposal date'",
+  "key:'ppt',label:'PPT - Premium paying term'",
+  "key:'pd',label:'PD - Policy duration / term'",
+  'onboardingPlaceholder(f.key,f.label)', "'Name on proposal'",
+  "'Product / plan name'", "'Proposal number'",
+  "['Proposal Form','Benefit Illustration','Premium Receipt','Other Document']",
+  "dirty?'Unsaved changes':'Draft'",
+]) requireText(nativeOnboarding, value, 'Operations mobile parity regressed: '+value);
+const dateField = fs.readFileSync(path.join(root, 'components/policy-intakes/partner-policy-date-field.tsx'), 'utf8');
+requireText(dateField, 'fullWidth=false', 'Source date must support full-width input within a half-width mobile cell.');
+requireText(nativeOnboarding, 'fullWidth={fullWidth}', 'Source date must use the requested width override.');
+if (nativeOnboarding.includes("Existing draft ·") || nativeOnboarding.includes("Saved revision ")) throw new Error('No redundant draft revision subtitle on Policy Onboarding.');
+if (nativeOnboarding.includes("{section('01','Policy source & ownership',policy)}")) throw new Error('Do not restore separate full-size RM and source code fields.');
+requireText(nativeOnboarding, "key:'rmName'|'intermediaryCode'", 'Retain editable source identity values until native master options exist.');
+
 requireText(nativeOnboarding, 'useState(false)', 'Commercial section initializes collapsed.');
 requireText(nativeOnboarding, 'accessibilityState={{expanded:commercialExpanded}}', 'Commercial collapse is accessible and controlled.');
 if (nativeOnboarding.includes('OD + TP + Add-on + CPA')) throw new Error('Hide old OD + TP summary breakdown.');
