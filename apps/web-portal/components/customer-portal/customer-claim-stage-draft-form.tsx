@@ -40,6 +40,11 @@ export function restoreCustomerClaimDraft(form: HTMLFormElement, key: string): v
         choice?.click(); // Updates the controlled Yes/No choice through React.
       } else if (!(control instanceof HTMLInputElement && ["file", "checkbox", "radio"].includes(control.type))) {
         control.value = value;
+        // The shared date display is React-controlled; notify it after a draft restore
+        // while preserving the original YYYY-MM-DD native input and server payload.
+        if (control instanceof HTMLInputElement && control.type === "date") {
+          control.dispatchEvent(new CustomEvent("customer-spot-draft-restore", { detail: value }));
+        }
       }
     }
   } catch { /* Malformed or blocked storage must not prevent entry. */ }

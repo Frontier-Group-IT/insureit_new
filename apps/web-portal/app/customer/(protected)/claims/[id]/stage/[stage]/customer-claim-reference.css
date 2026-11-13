@@ -96,3 +96,20 @@
 @keyframes customerClaimStepGlow { 0%,100% {box-shadow:0 0 0 2px rgba(23,94,239,.13),0 6px 18px rgba(17,75,150,.18);} 50% {box-shadow:0 0 0 4px rgba(23,94,239,.22),0 9px 24px rgba(17,75,150,.26);} }
 .customer-claim-ref-page .customer-claim-ref-journey .customer-claim-motion-active { animation:customerClaimStepGlow 3s ease-in-out infinite; }
 @media (prefers-reduced-motion:reduce) { .customer-claim-ref-page .customer-claim-ref-journey .customer-claim-motion-active {animation:none;} }
+
+/* Customer claim stages 2 and 4–9 fill the available desktop viewport.
+   Spot Intimation (1) and Claim Intimation (3) remain content-height.
+   On narrow/mobile viewports, grow naturally without trapping scrolling. */
+@media (min-width: 768px) {
+  .customer-claim-ref-page .customer-claim-stage-viewport,
+  .customer-claim-ref-page .customer-claim-stage-viewport-form {
+    min-height: max(420px, calc(100dvh - 365px));
+  }
+  .customer-claim-ref-page .customer-claim-stage-viewport-form {
+    display: flex;
+    flex-direction: column;
+  }
+  .customer-claim-ref-page .customer-claim-stage-viewport-form > div:last-child {
+    margin-top: auto;
+  }
+}
