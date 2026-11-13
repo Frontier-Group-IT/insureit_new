@@ -251,18 +251,22 @@ export default function PolicyIntakeDetailScreen() {
                 <Ionicons name="document-text-outline" size={27} color="#17365D" />
               </View>
               <View style={styles.statusBody}>
-                <Text numberOfLines={1} style={styles.intakeNumber}>{row.intake_number}</Text>
+                <Text numberOfLines={2} style={styles.intakeNumber}>{fields.get('policy_number')?.value?.trim() || 'Policy pending'}</Text>
                 <View style={styles.intakeSummaryCompact}>
-                  <Text numberOfLines={1} style={styles.summaryLine}>{[row.customer_mobile, row.lead_source_name].filter(Boolean).join(' · ')}</Text>
-                  <Text numberOfLines={1} style={styles.summaryLine}>
-                    {[fields.get('policy_number')?.value?.trim() || 'Policy pending',
-                      fields.get('vehicle_registration_number')?.value?.trim()
-                        || (row.policy_type === 'motor' ? 'Vehicle pending' : 'Policy details pending')].join(' · ')}
+                  <Text numberOfLines={2} style={styles.summaryLine}>
+                    {[row.customer_mobile, fields.get('insured_name')?.value?.trim()
+                      || fields.get('customer_name')?.value?.trim()
+                      || fields.get('name_of_insured')?.value?.trim()
+                      || 'Customer name pending'].filter(Boolean).join(' · ')}
+                  </Text>
+                  <Text numberOfLines={2} style={styles.summaryLine}>
+                    {`${row.lead_source_name || 'Lead source unavailable'} (${row.submitted_by_name?.trim() || 'Submitter unavailable'})`}
                   </Text>
                   {row.status !== 'duplicate' && row.status !== 'ready_for_review' && row.status !== 'in_review' && row.status !== 'rejected'
                     ? <Text style={styles.statusHelp}>{statusHelp(row)}</Text> : null}
                 </View>
               </View>
+            </View>
               <View style={[styles.statusMeta, row.status === 'duplicate' && styles.statusMetaDuplicate]}>
                 {row.status === 'duplicate' ? (
                   <Text numberOfLines={2} style={styles.submittedByName}>{row.submitted_by_name?.trim() || 'Submitter unavailable'}</Text>
@@ -273,7 +277,6 @@ export default function PolicyIntakeDetailScreen() {
                 )}
                 <Text style={styles.statusDate}>{formatDate(row.updated_at)}</Text>
               </View>
-            </View>
             {row.status !== 'duplicate' ? <IntakeProgress row={row} /> : null}
           </View>
 
@@ -939,7 +942,7 @@ const styles = StyleSheet.create({
   intakeSummaryCompact: { marginTop: 2, marginBottom: 0 },
   summaryLine: { marginTop: 1, color: '#64748B', fontSize: 11, lineHeight: 16 },
   statusHelp: { marginTop: 4, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
-  statusMeta: { maxWidth: '42%', alignItems: 'flex-end', gap: 5 },
+  statusMeta: { alignSelf: 'flex-end', flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 5 },
   statusMetaDuplicate: { paddingTop: 9 },
   statusBadge: { maxWidth: '100%', borderRadius: 999, paddingHorizontal: 9, paddingVertical: 5 },
   statusBadgeCompleted: { backgroundColor: '#E8F7EE' },
