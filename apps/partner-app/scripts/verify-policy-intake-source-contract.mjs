@@ -146,4 +146,33 @@ requireText(api, 'ocr_fields,ocr_warnings,attention_reason', 'Detail API must in
 requireText(api, 'resolveIntakeSubmitterNames(admin, [intake])', 'Detail API must resolve the actual authorized submitter rather than guessing lead source.');
 if (detailScreen.includes('Fetched policy details (OCR)')) throw new Error('Remove duplicate unstructured OCR review dump.');
 
+// Native policy onboarding layout: preserve actual Motor booking capability and
+// all persisted draft inputs while adopting compact reference-style sections.
+const nativeOnboarding = fs.readFileSync(path.join(root, 'app/policy-intakes/onboarding.tsx'), 'utf8');
+const nativeApi = fs.readFileSync(path.resolve(root, '../web-portal/app/api/partner/policy-intakes/native-onboarding/route.ts'), 'utf8');
+for (const expected of [
+  "section('01','Policy source & ownership',policy)",
+  "section('02','Customer / Proposer',proposer)",
+  "section('','Vehicle identification — Motor',vehicle)",
+  "section('03','Policy product & case details'",
+  "section('04','Premium & payment',premiumFields)",
+  "Onboarding summary",
+  "Upload Forms",
+  "View submitted policy copy",
+]) {
+  requireText(nativeOnboarding, expected, 'Native onboarding missing approved section: ' + expected);
+}
+requireText(nativeOnboarding, "fields:{padding:12,flexDirection:'row',flexWrap:'wrap'", 'Native onboarding uses responsive two-column fields.');
+requireText(nativeOnboarding, "field:{width:'48%'", 'Each native form field fits its column.');
+requireText(nativeOnboarding, 'useState(false)', 'Commercial section initializes collapsed.');
+requireText(nativeOnboarding, 'accessibilityState={{expanded:commercialExpanded}}', 'Commercial collapse is accessible and controlled.');
+if (nativeOnboarding.includes('OD + TP + Add-on + CPA')) throw new Error('Hide old OD + TP summary breakdown.');
+for (const key of ['insuredName','phoneNo','registrationNo','vehicleClass','make','model','policyProduct','policyNo','insurerId','idv','od','tp','cpa','validFrom','validUpto']) {
+  if (!nativeOnboarding.includes("key:'" + key + "'")) throw new Error('A persisted Motor field was removed from the form: ' + key);
+}
+for (const safeguard of ['saveNativePolicyOnboarding(id,data.revision,draft)', 'bookNativePolicyOnboarding(id,revision,resolution,verifiedApprovalId)', 'lookupNativePolicyRc(id,draft.registrationNo)', 'getPartnerPolicyIntakeDocumentUrl(id)']) {
+  requireText(nativeOnboarding, safeguard, 'Preserve existing save, booking, RC lookup and document access: ' + safeguard);
+}
+requireText(nativeApi, 'if(d.businessLine!=="Motor")', 'Do not misrepresent Motor-only native booking as Life/Health parity.');
+requireText(nativeOnboarding, 'does not currently accept these uploads', 'Disclose that website-only uploads are not wired to native Motor onboarding.');
 console.log('Partner Policy Intake source, policy-type and detail presentation contracts verified.');
