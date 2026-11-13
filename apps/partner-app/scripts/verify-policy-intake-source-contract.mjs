@@ -90,6 +90,19 @@ for (const required of [
   'statusLabel(row)',
   'row.review_access.can_finalize',
 ]) requireText(detailScreen, required, 'Preserve intake information and actions: ' + required);
+// Keep status and timestamp together in the top-right stack without losing summary data.
+requireText(detailScreen, '<View style={styles.statusTitleRow}>', 'Policy Intake header must place status beside the title.');
+requireText(detailScreen, "statusMeta: { flexShrink: 0, maxWidth: '58%', alignItems: 'flex-end', gap: 4 }", 'Status/date should stack and align right.');
+requireText(detailScreen, '<Text style={styles.statusDate}>{formatDate(row.updated_at)}</Text>', 'Preserve the updated date and time.');
+const summaryHeaderStart = detailScreen.indexOf('<View style={styles.statusTitleRow}>');
+const summaryDetailsStart = detailScreen.indexOf('<View style={styles.intakeSummaryCompact}>', summaryHeaderStart);
+const headerStatusPosition = detailScreen.indexOf('<View style={[styles.statusMeta,', summaryHeaderStart);
+if (!(summaryHeaderStart >= 0 && headerStatusPosition > summaryHeaderStart && headerStatusPosition < summaryDetailsStart)) {
+  throw new Error('Policy Intake status and time must appear within the top-right title row.');
+}
+if ((detailScreen.match(/<View style=\{\[styles.statusMeta,/g) || []).length !== 1) {
+  throw new Error('Policy Intake summary must render status/date only once.');
+}
 requireText(manufacturerLogo, 'getPartnerManufacturerLogoSource(name)', 'Partner manufacturer logo must reuse the catalog mapping.');
 requireText(manufacturerLogo, 'fallback ?? null', 'Partner manufacturer logo must preserve fallback artwork.');
 

@@ -192,7 +192,7 @@ requireText(policyIntakeDetail, 'bottomNavigation={<PolicyIntakeDetailNavigation
 for (const tab of ["Home", "Business", "Policies", "Claims", "More"]) requireText(policyIntakeDetail, "label: '" + tab + "'", 'Policy Intake footer must include ' + tab + '.');
 requireText(policyIntakeDetail, "navDisabled: { opacity: 0.35 }", 'Restricted tabs must not expose unauthorized navigation.');
 requireText(policyIntakeDetail, "submittedByName: { fontSize: 10, fontWeight: '500'", 'Submitter name must no longer be bold.');
-requireText(policyIntakeDetail, 'statusMetaDuplicate: { paddingTop: 9 }', 'Duplicate submitter name must be slightly lower.');
+requireText(policyIntakeDetail, 'statusMetaDuplicate: { paddingTop: 0 }', 'Duplicate submitter name must align with the top-right status stack.');
 
 requireText(policyIntakeDetail, 'submitPartnerPolicyIntakeReplacement({', 'Policy Intake detail must preserve the replacement upload service path.');
 if (policyIntakeDetail.includes('git-network-outline')) throw new Error('Policy Intake must not reintroduce obsolete generic network icons.');

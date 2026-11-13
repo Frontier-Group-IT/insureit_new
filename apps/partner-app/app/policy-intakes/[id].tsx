@@ -250,7 +250,19 @@ export default function PolicyIntakeDetailScreen() {
                 <Image source={PartnerAssets.actions.policyChecklist} style={styles.statusArtwork} resizeMode="contain" accessibilityLabel="Policy document" />
               </View>
               <View style={styles.statusBody}>
-                <Text numberOfLines={2} style={styles.intakeNumber}>{fields.get('policy_number')?.value?.trim() || 'Policy pending'}</Text>
+                <View style={styles.statusTitleRow}>
+                  <Text numberOfLines={2} style={styles.intakeNumber}>{fields.get('policy_number')?.value?.trim() || 'Policy pending'}</Text>
+                  <View style={[styles.statusMeta, row.status === 'duplicate' && styles.statusMetaDuplicate]}>
+                    {row.status === 'duplicate' ? (
+                      <Text numberOfLines={2} style={styles.submittedByName}>{row.submitted_by_name?.trim() || 'Submitter unavailable'}</Text>
+                    ) : (
+                      <View style={[styles.statusBadge, statusBadgeStyle(row)]}>
+                        <Text style={[styles.statusBadgeText, statusBadgeTextStyle(row)]}>{statusLabel(row)}</Text>
+                      </View>
+                    )}
+                    <Text style={styles.statusDate}>{formatDate(row.updated_at)}</Text>
+                  </View>
+                </View>
                 <View style={styles.intakeSummaryCompact}>
                   <Text numberOfLines={2} style={styles.summaryLine}>
                     {[row.customer_mobile, fields.get('insured_name')?.value?.trim()
@@ -266,16 +278,6 @@ export default function PolicyIntakeDetailScreen() {
                 </View>
               </View>
             </View>
-              <View style={[styles.statusMeta, row.status === 'duplicate' && styles.statusMetaDuplicate]}>
-                {row.status === 'duplicate' ? (
-                  <Text numberOfLines={2} style={styles.submittedByName}>{row.submitted_by_name?.trim() || 'Submitter unavailable'}</Text>
-                ) : (
-                  <View style={[styles.statusBadge, statusBadgeStyle(row)]}>
-                    <Text style={[styles.statusBadgeText, statusBadgeTextStyle(row)]}>{statusLabel(row)}</Text>
-                  </View>
-                )}
-                <Text style={styles.statusDate}>{formatDate(row.updated_at)}</Text>
-              </View>
             {row.status !== 'duplicate' ? <IntakeProgress row={row} /> : null}
           </View>
 
@@ -935,12 +937,13 @@ const styles = StyleSheet.create({
   statusArtwork: { width: 34, height: 36 },
   statusLogo: { width: 38, height: 38 },
   statusBody: { flex: 1, minWidth: 0, paddingTop: 2 },
-  intakeNumber: { color: partnerTheme.colors.ink, ...partnerTheme.typography.sectionTitle },
+  statusTitleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  intakeNumber: { flex: 1, minWidth: 0, color: partnerTheme.colors.ink, ...partnerTheme.typography.sectionTitle },
   intakeSummaryCompact: { marginTop: 2, marginBottom: 0 },
   summaryLine: { marginTop: 1, color: '#64748B', fontSize: 11, lineHeight: 16 },
   statusHelp: { marginTop: 4, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
-  statusMeta: { alignSelf: 'flex-end', flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 5 },
-  statusMetaDuplicate: { paddingTop: 9 },
+  statusMeta: { flexShrink: 0, maxWidth: '58%', alignItems: 'flex-end', gap: 4 },
+  statusMetaDuplicate: { paddingTop: 0 },
   statusBadge: { maxWidth: '100%', borderRadius: 999, paddingHorizontal: 9, paddingVertical: 5 },
   statusBadgeCompleted: { backgroundColor: '#E8F7EE' },
   statusBadgeRejected: { backgroundColor: '#FDECEC' },
