@@ -441,7 +441,7 @@ const styles = StyleSheet.create({
   tableRow: { height: ROW_HEIGHT, flexDirection: 'row', alignItems: 'center', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E2EBF4', paddingHorizontal: 4, gap: 4 },
   logo: { width: 21, height: 21 },
   insurerName: { flex: 1, minWidth: 0, color: '#28466D', fontSize: 9.2, fontWeight: '700', lineHeight: 12 },
-  financialRow: { flexDirection: 'row', alignItems: 'center', height: ROW_HEIGHT, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E2EBF4' },
+  financialRow: { flexDirection: 'row', alignItems: 'center', height: ROW_HEIGHT, paddingHorizontal: 3, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E2EBF4' },
   metricCell: { minWidth: 0, paddingHorizontal: 1, textAlign: 'right', color: '#163C7A', fontSize: 9.5, fontWeight: '700', fontVariant: ['tabular-nums'] },
   metricPressable: { minWidth: 0, height: ROW_HEIGHT, justifyContent: 'center', paddingHorizontal: 1 },
   metricAmountText: { color: '#163C7A', textAlign: 'right', fontSize: 9.5, fontWeight: '700', fontVariant: ['tabular-nums'] },
