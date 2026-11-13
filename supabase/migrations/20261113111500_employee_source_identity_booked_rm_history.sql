@@ -454,6 +454,9 @@ DECLARE
   v_definition text;
   v_updated text;
 BEGIN
+  -- Only three triggers react to associate-name-only updates. Keep each
+  -- column-specific trigger's original event list except associate_name;
+  -- do not broaden PAN/compliance/application triggers to every column.
   SELECT string_agg(quote_ident(column_name),', ' ORDER BY ordinal_position)
     INTO v_cols
   FROM information_schema.columns
@@ -462,30 +465,30 @@ BEGIN
 
   FOREACH v_name IN ARRAY ARRAY[
     'intermediary_profile_sync_shared_identity',
-    'queue_intermediary_pan_after_profile_save',
-    'queue_intermediary_pan_verification_on_document_stage',
-    'trg_sync_intermediary_application_link',
-    'trg_sync_intermediary_application_status',
     'trg_sync_partner_details_to_linked_accounts',
-    'trg_sync_partner_intermediary',
     'trg_sync_posp_misp_profile_to_intermediary'
   ] LOOP
-    SELECT pg_get_triggerdef(t.oid) INTO v_definition FROM pg_trigger t
+    SELECT pg_get_triggerdef(t.oid) INTO v_definition
+    FROM pg_trigger t
     WHERE t.tgrelid='public.posp_misp_onboarding_profiles'::regclass
       AND t.tgname=v_name AND NOT t.tgisinternal;
 
     IF v_definition IS NULL THEN
-      RAISE EXCEPTION 'Missing onboarding trigger %, migration must be reviewed against current schema',v_name;
+      RAISE EXCEPTION 'Missing onboarding trigger %; inspect before migration',v_name;
     END IF;
 
-    IF POSITION('AFTER INSERT OR UPDATE ON' IN v_definition)>0 THEN
+    IF v_name='trg_sync_posp_misp_profile_to_intermediary' THEN
+      IF POSITION('AFTER INSERT OR UPDATE ON' IN v_definition)=0 THEN
+        RAISE EXCEPTION 'Unexpected generic onboarding trigger scope %: %',v_name,v_definition;
+      END IF;
       v_updated:=REPLACE(v_definition,'AFTER INSERT OR UPDATE ON',
         'AFTER INSERT OR UPDATE OF '||v_cols||' ON');
-    ELSIF POSITION('AFTER UPDATE ON' IN v_definition)>0 THEN
-      v_updated:=REPLACE(v_definition,'AFTER UPDATE ON',
-        'AFTER UPDATE OF '||v_cols||' ON');
     ELSE
-      RAISE EXCEPTION 'Unexpected event scope of onboarding trigger %: %',v_name,v_definition;
+      IF POSITION(' UPDATE OF ' IN v_definition)=0
+         OR POSITION('associate_name, ' IN v_definition)=0 THEN
+        RAISE EXCEPTION 'Unexpected column-specific onboarding trigger scope %: %',v_name,v_definition;
+      END IF;
+      v_updated:=REPLACE(v_definition,'associate_name, ','');
     END IF;
     EXECUTE format('DROP TRIGGER %I ON public.posp_misp_onboarding_profiles',v_name);
     EXECUTE v_updated;
