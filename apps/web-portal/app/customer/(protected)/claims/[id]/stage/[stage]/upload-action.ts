@@ -24,7 +24,6 @@ export async function uploadCustomerClaimDocument(_previous:CustomerClaimUploadS
   const accountId=String(form.get("account")||"");
   const claimId=String(form.get("claim")||"");
   const type=String(form.get("type")||"");
-  if(!documentTypes.includes(type))return {error:"Unsupported claim document category."};
   const files=form.getAll("file").filter((value):value is File=>value instanceof File&&value.size>0);
   if(!files.length)return {error:"Select at least one file to upload."};
   if(files.length>10)return {error:"Select up to 10 files at a time."};
@@ -42,6 +41,7 @@ export async function uploadCustomerClaimDocument(_previous:CustomerClaimUploadS
     request.id === requestId && request.status === "action_required"
     && request.stage === String(form.get("stage") || "")
     && sameClaimDocumentType(request.documentType, type)));
+  if (!documentTypes.includes(type) && !authorizedReplacement) return {error:"Unsupported claim document category."};
   if (type==="Final Workshop Bill") {
     if (String(form.get("stage") || "") !== "billing" || !isExternalCustomerClaim(claim)) {
       return {error:"Final workshop bills can only be uploaded in External Claim Billing."};
@@ -52,7 +52,7 @@ export async function uploadCustomerClaimDocument(_previous:CustomerClaimUploadS
     if (current!=="billing" && !billing?.completed) {
       return {error:"Billing is not available for this claim yet."};
     }
-    if (["Settled","Closed","Claim Complete"].includes(claim.current_status)) {
+    if (["Settled","Closed","Claim Complete"].includes(claim.current_status) && !authorizedReplacement) {
       return {error:"Completed claims cannot accept new workshop bills."};
     }
   }
