@@ -190,6 +190,50 @@ export default function NativePolicyOnboarding(){
     }catch(e){setError(e instanceof Error?e.message:'Approval could not be verified.');}
     finally{setApprovalBusy(false);}
   }
+
+  async function fetchRc(){
+    if(!draft||lookingUpRc||draft.registrationMode!=='registered')return;
+    if(!draft.registrationNo.trim()){setError('Enter a registration number first.');return;}
+    setLookingUpRc(true);setError('');
+    try{
+      const {review}=await lookupNativePolicyRc(id,draft.registrationNo);
+      const vc=(review.vehicleClass||'').toLowerCase();
+      const category=/two.?wheel|motor.?cycle|scooter/.test(vc)?'TWP':/goods|truck|cargo/.test(vc)?'GCV':/passenger|bus|taxi/.test(vc)?'PCV':/plant|machinery/.test(vc)?'CPM':/car|private|lmv/.test(vc)?'PCP':'MISD';
+      const make=(data?.manufacturers??[]).find(m=>m.toLowerCase()===(review.make||'').toLowerCase());
+      Alert.alert('RC details found','Apply fetched details to this draft?',[
+        {text:'Cancel',style:'cancel'},
+        {text:'Apply',onPress:()=>{
+          setDraft(current=>current?{
+            ...current,
+            registrationNo:review.registrationNumber||current.registrationNo,
+            insuredName:current.insuredName||review.ownerName||'',
+            phoneNo:current.phoneNo||review.mobileNumber||'',
+            vehicleClass:current.vehicleClass||category,
+            make:current.make||make||'',
+            model:current.model||review.model||'',
+            fuelType:current.fuelType||review.fuelType||'',
+            manufacturingYear:current.manufacturingYear||review.manufacturingYear||'',
+            capacity:current.capacity||(category==='PCV'?review.seatingCapacity:(category==='GCV'||category==='CPM')?review.grossWeight:review.engineCapacity)||'',
+            chassisNo:current.chassisNo||review.chassisNumber||'',
+            engineNo:current.engineNo||review.engineNumber||'',
+            rtoState:current.rtoState||review.rtoState||'',
+            rtoName:current.rtoName||review.rtoName||'',
+          }:current);
+          setDirty(true);setVerifiedApprovalId(null);
+        }},
+      ]);
+    }catch(e){setError(e instanceof Error?e.message:'RC lookup failed.');}
+    finally{setLookingUpRc(false);}
+  }
+  async function openCopy(){
+    if(viewingCopy)return;
+    setViewingCopy(true);setError('');
+    try{
+      const url=await getPartnerPolicyIntakeDocumentUrl(id);
+      await Linking.openURL(url);
+    }catch(e){setError(e instanceof Error?e.message:'Could not open policy copy.');}
+    finally{setViewingCopy(false);}
+  }
   const net=useMemo(()=>draft?amount(draft.od)+amount(draft.tp)+amount(draft.cpa)+amount(draft.addOnPremium||'0'):0,[draft]);
   const filled=useMemo(()=>{
     if(!draft)return 0;
