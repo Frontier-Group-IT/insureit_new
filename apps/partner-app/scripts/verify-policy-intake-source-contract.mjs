@@ -203,14 +203,19 @@ for (const value of [
   "key:'issuanceDate',label:'Proposal date'",
   "key:'ppt',label:'PPT - Premium paying term'",
   "key:'pd',label:'PD - Policy duration / term'",
-  'onboardingPlaceholder(f.key,f.label)', "'Name on proposal'",
-  "'Product / plan name'", "'Proposal number'",
+  "style={styles.value}>{displayed}</Text>",
+  "options.find(o=>o.value===current)?.label||''",
   "['Proposal Form','Benefit Illustration','Premium Receipt','Other Document']",
   "dirty?'Unsaved changes':'Draft'",
 ]) requireText(nativeOnboarding, value, 'Operations mobile parity regressed: '+value);
 const dateField = fs.readFileSync(path.join(root, 'components/policy-intakes/partner-policy-date-field.tsx'), 'utf8');
 requireText(dateField, 'fullWidth=false', 'Source date must support full-width input within a half-width mobile cell.');
 requireText(nativeOnboarding, 'fullWidth={fullWidth}', 'Source date must use the requested width override.');
+if (/\\bplaceholder\\s*=/.test(nativeOnboarding)) throw new Error('Onboarding must not show hint text in any empty input or dropdown.');
+if (/\\bplaceholder\\s*=/.test(dateField)) throw new Error('Date picker must not show placeholder text in the empty date field.');
+requireText(dateField, "{value?displayIndianDate(value):''}", 'Empty date picker must display no placeholder.');
+requireText(nativeOnboarding, "accessibilityLabel={f.label}", 'All blank fields must retain accessible labels.');
+
 if (nativeOnboarding.includes("Existing draft ·") || nativeOnboarding.includes("Saved revision ")) throw new Error('No redundant draft revision subtitle on Policy Onboarding.');
 if (nativeOnboarding.includes("{section('01','Policy source & ownership',policy)}")) throw new Error('Do not restore separate full-size RM and source code fields.');
 requireText(nativeOnboarding, "key:'rmName'|'intermediaryCode'", 'Retain editable source identity values until native master options exist.');
