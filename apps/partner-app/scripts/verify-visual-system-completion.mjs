@@ -157,7 +157,10 @@ requireText(renewals, '<Modal visible={sortOpen}', 'Renewal sort menu must use a
 requireText(renewals, 'sortAnchorRef.current?.measureInWindow', 'Renewal sort popup must anchor to its Due Date button.');
 requireText(renewals, 'styles.emptyCard', 'Renewal empty and loading states must remain within the opportunity card.');
 if (renewals.includes('<Metric ') || renewals.includes('styles.metricRow')) throw new Error('Renewal 0-7/8-15/16-30/overdue mini summary cards must not return.');
-requireText(policyIntakes, 'PartnerAssets.emptyStates.policyUpload', 'Empty Policy Intake history must use the prepared upload artwork.');
+requireText(policyIntakes, 'styles.emptyIllustration', 'Empty Policy Intake history must show the compact illustrated placeholder.');
+requireText(policyIntakes, 'EMPTY_SUBMISSION_COPY[filter].title', 'Empty Policy Intake history must explain the selected status.');
+requireText(policyIntakes, 'No policy submissions yet', 'All filter must describe a truly empty intake register.');
+if (policyIntakes.includes('state="empty"')) throw new Error('Policy Intake filtered empty state must not restore the oversized shared white card.');
 requireText(policyIntakes, 'PartnerInsurerLogo', 'Policy Intake records must prefer insurer artwork through PartnerInsurerLogo.');
 requireText(policyIntakes, 'getPartnerManufacturerLogoSource', 'Policy Intake records must fall back to manufacturer artwork when insurer artwork is unavailable.');
 requireText(policyIntakes, 'document-text-outline', 'Policy Intake records must keep a neutral default icon when insurer/manufacturer artwork is unavailable.');
