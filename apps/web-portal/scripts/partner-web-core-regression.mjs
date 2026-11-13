@@ -149,7 +149,7 @@ const policyOnboardingForm = read("components/policy-unified-form.tsx");
 assert(policyOnboardingForm.includes('onBlur={()=>normalizePremiumField("addOnPremium")}'), "Add-on Premium must display normalized currency precision");
 const sharedClaimHeader = read("components/spot-survey/spot-survey-workspace-v2.tsx");
 assert(sharedClaimHeader.includes('from "@/lib/vehicle-brand-logo"'), "Shared Claim Detail header must use the shared vehicle brand logo resolver");
-assert(sharedClaimHeader.includes('label="Vehicle No." title={vehicleNumber}') && sharedClaimHeader.includes('label="Model" title={model} logo={<ManufacturerLogo name={make} />}'), "Claim Detail must separate Vehicle No. and Model while retaining manufacturer logo");
+assert(sharedClaimHeader.includes('label="Vehicle No." title={vehicleNumber}') && sharedClaimHeader.includes('label="Model" title={model} singleLine logo={<ManufacturerLogo name={make} />}'), "Claim Detail must separate Vehicle No. and Model while retaining manufacturer logo");
 assert(!sharedClaimHeader.includes('<Info label="Make & Model"'), "Remove the redundant Make & Model column");
 assert(!sharedClaimHeader.includes('<Info label="Insurer"'), "Remove the Insurer column from the compact header");
 assert(!sharedClaimHeader.includes('<Info label="Claim Status"'), "Remove the Claim Status column from the compact header");
@@ -159,7 +159,7 @@ assert(!sharedClaimHeader.includes("const insurerBrandLogos:"), "Shared Claim De
 assert(sharedClaimHeader.includes('Claim Journey'), "Shared Claim Detail must show the Claim Journey reference title");
 assert(sharedClaimHeader.includes('claim-journey-header.module.css'), "Shared Claim Detail must use the scoped navy gradient header");
 assert(sharedClaimHeader.includes('href="/claims"'), "Claim Journey header must retain Back navigation");
-assert(sharedClaimHeader.includes('label="Vehicle No." title={vehicleNumber}') && sharedClaimHeader.includes('label="Model" title={model} logo={<ManufacturerLogo name={make} />}'), "Claim Journey must show separate Vehicle No. and Model with manufacturer logo");
+assert(sharedClaimHeader.includes('label="Vehicle No." title={vehicleNumber}') && sharedClaimHeader.includes('label="Model" title={model} singleLine logo={<ManufacturerLogo name={make} />}'), "Claim Journey must show separate Vehicle No. and Model with manufacturer logo");
 assert(sharedClaimHeader.includes('PolicyMeta label="Policy source"'), "Claim Journey must retain the policy metadata strip");
 const claimHeaderStyles = read("components/spot-survey/claim-journey-header.module.css");
 assert(claimHeaderStyles.includes("linear-gradient(112deg, #052658"), "Claim Journey header must use the navy-blue gradient treatment");
