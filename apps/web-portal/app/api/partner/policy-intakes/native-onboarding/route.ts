@@ -4,12 +4,14 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { hasEffectiveCapability } from "@/lib/effective-permissions";
 import { getPartnerEmployeeIntakeReadScope } from "@/lib/partner-policy-intake-read-access";
 import { loadPolicyIntakeDuplicateMatches } from "@/lib/policy-intake-duplicate";
+import { canAccessPolicyCommercials } from "@/lib/policy-commercial-access";
 import { buildPolicyOcrOnboardingUpdate } from "@/lib/policy-ocr-onboarding-apply";
 import type { PolicyIntakeDraft } from "@/app/policy-intakes/handoff-actions";
 
 export const dynamic = "force-dynamic";
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const fields = ["registrationMode","issuanceDate","rmName","intermediaryType","leadSource","intermediaryCode","businessLine","registrationNo","insuredName","phoneNo","vehicleClass","make","model","fuelType","capacity","manufacturingYear","chassisNo","engineNo","rtoState","rtoName","policyProduct","idv","od","tp","cpaOpted","cpa","policyNo","insurerId","validFrom","validUpto","payoutBasis","projectedOdPercent","projectedTpPercent","insurerScheme","payinBillNo","payinBilledAmount","payinBillDate","payinStatus","retention","payoutOdPercent","payoutTpPercent","flatPayoutAmount","payoutStatus","payoutDate","payoutVoucherNo","remarks"] as const;
+const commercialFields = ["payoutBasis","projectedOdPercent","projectedTpPercent","insurerScheme","payinBillNo","payinBilledAmount","payinBillDate","payinStatus","retention","payoutOdPercent","payoutTpPercent","flatPayoutAmount","payoutStatus","payoutDate","payoutVoucherNo"] as const;
 type Input = { action?: "prepare" | "save"; intake_id?: string; take_over?: boolean; expected_reviewer_id?: string | null; revision?: number; draft?: PolicyIntakeDraft };
 type Intake = { id:string; intake_number:string; lead_source_type:"posp"|"misp"|"partner"; lead_source_name:string; lead_source_code:string|null; customer_mobile:string; ocr_fields:Array<{key:string;label:string;value:string}>; status:string; assigned_to_profile_id:string|null; created_at:string; matched_customer_id:string|null };
 function reply(error:string,status:number){return NextResponse.json({ok:false,error},{status,headers:{"Cache-Control":"no-store"}});}
@@ -33,6 +35,7 @@ export async function POST(request:Request){
     head?Promise.resolve(true):hasEffectiveCapability(profile,"finalize_policy_intakes","approve")
   ]);
   if(!review||!finalize)return reply("Operations finalization permission is required.",403);
+  const commercialAccess=canAccessPolicyCommercials(profile,head);
   const scope=await getPartnerEmployeeIntakeReadScope({actor_kind:"employee",profile_id:user.id});
   if(scope.mode==="none")return reply("This intake is outside your permitted scope.",403);
   let query=admin.from("policy_intake_requests").select("id,intake_number,lead_source_type,lead_source_name,lead_source_code,customer_mobile,ocr_fields,status,created_at,assigned_to_profile_id,matched_customer_id").eq("id",body.intake_id as string);
@@ -51,8 +54,16 @@ export async function POST(request:Request){
     if(keys.length!==fields.length||keys.some(key=>!fields.includes(key as typeof fields[number]))||
        fields.some(key=>typeof body.draft?.[key]!=="string"||body.draft[key].length>4000))return reply("Invalid onboarding draft fields.",400);
     if(!["registered","unregistered"].includes(body.draft.registrationMode)||!["Yes","No"].includes(body.draft.cpaOpted))return reply("Invalid onboarding draft options.",400);
+    let saveDraft = body.draft;
+    if(!commercialAccess){
+      const {data:stored,error:storedError}=await admin.from("policy_intake_onboarding_drafts")
+        .select("draft_payload,revision").eq("intake_id",intake.id).maybeSingle<{draft_payload:PolicyIntakeDraft;revision:number}>();
+      if(storedError||!stored||stored.revision!==body.revision)return reply("Draft changed. Reload the latest version.",409);
+      saveDraft={...body.draft};
+      for(const key of commercialFields) saveDraft[key]=stored.draft_payload[key];
+    }
     const {data,error}=await admin.from("policy_intake_onboarding_drafts")
-      .update({draft_payload:body.draft,revision:(body.revision as number)+1,updated_by_profile_id:user.id,updated_at:new Date().toISOString()})
+      .update({draft_payload:saveDraft,revision:(body.revision as number)+1,updated_by_profile_id:user.id,updated_at:new Date().toISOString()})
       .eq("intake_id",intake.id).eq("revision",body.revision as number).select("revision").maybeSingle<{revision:number}>();
     if(error)return reply("Policy Onboarding draft could not be saved.",503);
     if(!data)return reply("The draft was edited elsewhere. Reload before saving.",409);
@@ -101,5 +112,8 @@ export async function POST(request:Request){
     if(insertError||!inserted)return reply("Policy Onboarding draft could not be prepared.",503);
     revision=inserted.revision;
   }
-  return good({draft,revision,intake_number:intake.intake_number,insurers,manufacturers});
+  // Never return restricted insurance pay-in, retention or partner payout values to non-commercial reviewers.
+  const visibleDraft={...draft};
+  if(!commercialAccess)for(const key of commercialFields)visibleDraft[key]="";
+  return good({draft:visibleDraft,revision,intake_number:intake.intake_number,insurers,manufacturers});
 }
