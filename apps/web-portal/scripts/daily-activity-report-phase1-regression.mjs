@@ -10,8 +10,8 @@ assert.match(nav, /href:"\/reports",label:"Reporting Workspace"[^\n]+href:"\/rep
 assert.match(page, /await requireCapability\("view_reports"\)/, "Daily Report uses server-side report permission");
 assert.match(page, /loadDailyActivityReport\(profile, query\)/, "Daily Report uses server-side scoped loader");
 assert.match(source, /getEmployeeAccessScope\(viewer\.id, viewer\.role, "view_reports"\)/, "All tab resolves report-specific hierarchy");
-assert.match(source, /scope === "self" \? \[viewer\.id\]/, "Self tab only authorizes current profile");
-assert.match(source, /scope === "all" && access\.mode === "organization"/, "Organization read scope is explicit");
+assert.match(source, /resolveDailyReportActorIds\(viewer\.id, scope, access\)/, "Self/All actor scoping is centralized and tested");
+assert.match(source, /import \{ resolveDailyReportActorIds \}/, "Report reader imports fail-closed scoped actor resolver");
 assert.match(source, /\.in\("actor_id", actorIds\)/, "Audit fetch filters actors on server");
 assert.match(source, /\.in\("submitted_by_profile_id",actorIds\)/, "Intake fetch scopes submitter");
 assert.match(source, /\.in\("created_by",actorIds\)/, "Created rows are employee scoped");
