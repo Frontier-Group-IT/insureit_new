@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { onboardPolicyForVerifiedActor, type PolicyOnboardingPayload } from "@/lib/policy-onboarding-engine";
 import { requestPolicyDateApprovalForVerifiedActor, verifyPolicyDateApprovalForVerifiedActor } from "@/lib/policy-date-approval-engine";
 import { POLICY_DATE_APPROVERS } from "@/lib/policy-date-rule";
+import { lookupPolicyRegistrationRcForVerifiedActor } from "@/lib/policy-rc-lookup-engine";
 import { getEffectivePermission } from "@/lib/permission-management";
 import { getOperationsHeadDownlinePolicyScope } from "@/lib/policy-access-scope";
 import { createSupabaseWithAccessToken } from "@/lib/auth";
@@ -19,7 +20,7 @@ const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-
 const fields = ["registrationMode","issuanceDate","rmName","intermediaryType","leadSource","intermediaryCode","businessLine","registrationNo","insuredName","phoneNo","vehicleClass","make","model","fuelType","capacity","manufacturingYear","chassisNo","engineNo","rtoState","rtoName","policyProduct","idv","od","tp","cpaOpted","cpa","policyNo","insurerId","validFrom","validUpto","payoutBasis","projectedOdPercent","projectedTpPercent","insurerScheme","payinBillNo","payinBilledAmount","payinBillDate","payinStatus","retention","payoutOdPercent","payoutTpPercent","flatPayoutAmount","payoutStatus","payoutDate","payoutVoucherNo","remarks"] as const;
 const nativeOptionalFields = ["addOnPremium","tpValidUpto","cpaValidUpto"] as const;
 const commercialFields = ["payoutBasis","projectedOdPercent","projectedTpPercent","insurerScheme","payinBillNo","payinBilledAmount","payinBillDate","payinStatus","retention","payoutOdPercent","payoutTpPercent","flatPayoutAmount","payoutStatus","payoutDate","payoutVoucherNo"] as const;
-type Input = { action?: "prepare" | "save" | "book" | "approval_request" | "approval_verify"; intake_id?: string; take_over?: boolean; expected_reviewer_id?: string | null; revision?: number; draft?: PolicyIntakeDraft; resolution?: PolicyOnboardingPayload["resolution"]; date_approval_id?: string | null; approver_key?: string; approval_id?: string; otp?: string };
+type Input = { action?: "prepare" | "save" | "book" | "approval_request" | "approval_verify" | "rc_lookup"; intake_id?: string; take_over?: boolean; expected_reviewer_id?: string | null; revision?: number; draft?: PolicyIntakeDraft; resolution?: PolicyOnboardingPayload["resolution"]; date_approval_id?: string | null; approver_key?: string; approval_id?: string; otp?: string; registration_no?: string };
 type Intake = { id:string; intake_number:string; lead_source_type:"posp"|"misp"|"partner"; lead_source_name:string; lead_source_code:string|null; customer_mobile:string; ocr_fields:PolicyIntakeOcrField[]; status:string; assigned_to_profile_id:string|null; created_at:string; matched_customer_id:string|null };
 function reply(error:string,status:number){return NextResponse.json({ok:false,error},{status,headers:{"Cache-Control":"no-store"}});}
 function good(data:Record<string,unknown>){return NextResponse.json({ok:true,...data},{headers:{"Cache-Control":"no-store"}});}
@@ -29,7 +30,7 @@ export async function POST(request:Request){
   if(!token)return reply("Partner authentication required.",401);
   let body:Input;
   try{body=await request.json() as Input;}catch{return reply("Invalid onboarding request.",400);}
-  if(!uuid.test(body.intake_id??"")||!["prepare","save","book","approval_request","approval_verify"].includes(body.action??""))return reply("Invalid onboarding request.",400);
+  if(!uuid.test(body.intake_id??"")||!["prepare","save","book","approval_request","approval_verify","rc_lookup"].includes(body.action??""))return reply("Invalid onboarding request.",400);
   const scoped=createSupabaseWithAccessToken(token);
   const {data:{user},error:authError}=await scoped.auth.getUser(token);
   if(authError||!user)return reply("Your session has expired. Sign in again.",401);
@@ -53,6 +54,15 @@ export async function POST(request:Request){
   const dup=await loadPolicyIntakeDuplicateMatches(admin,[intake]);
   if(!dup.ok)return reply("Duplicate verification is unavailable.",503);
   if(dup.matches.has(intake.id))return reply("Duplicate intakes cannot be onboarded.",409);
+  if(body.action==="rc_lookup"){
+    if(intake.status!=="in_review"||intake.assigned_to_profile_id!==user.id)return reply("You are no longer the assigned reviewer.",409);
+    const creator=await hasEffectiveCapability(profile,"create_policies","edit");
+    const allowedPolicy=await getEffectivePermission(profile.id,profile.role,"view_policies");
+    if(!head&&!creator&&!["edit","approve"].includes(allowedPolicy.access))return reply("Policy creation permission is required for RC lookup.",403);
+    const result=await lookupPolicyRegistrationRcForVerifiedActor(body.registration_no??"");
+    if(!result.ok)return reply(result.error,400);
+    return good({review:result.review});
+  }
   if(body.action==="approval_request"||body.action==="approval_verify"){
     if(intake.status!=="in_review"||intake.assigned_to_profile_id!==user.id)return reply("You are no longer the assigned reviewer.",409);
     const createAllowed=await hasEffectiveCapability(profile,"create_policies","edit");
