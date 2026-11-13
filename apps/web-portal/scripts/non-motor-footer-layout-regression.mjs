@@ -21,4 +21,11 @@ assert.match(picker, /<button type="button" onClick=\{\(\) => inputRef\.current\
 assert.match(picker, /aria-label=\{\`Replace \$\{label\}\`\}/, "Replace icon is accessible");
 assert.match(picker, /onClick=\{viewSavedDocument\} aria-label=\{\`View \$\{label\}\`\}/, "Existing view button stays available");
 assert.match(picker, /onDeleteExisting \?/, "Existing delete control stays available");
+const issued = readFileSync(new URL("../components/life-health-issued-policy-edit-form.tsx", import.meta.url), "utf8");
+assert.match(issued, /documentLabels\.map\(\(\[type,label\]\)/, "Life/Health applies the same document controls across all issued document categories");
+assert.match(issued, /aria-label=\{\`Open \$\{doc\.fileName\}\`\}/, "Life/Health saved filename opens its document");
+assert.match(issued, /\{doc\.fileName\}<\/span>/, "Life/Health displays the actual saved filename");
+assert.match(issued, /aria-label=\{\`Replace \$\{label\}\`\}/, "Life/Health retains a dedicated replace icon");
+assert.match(issued, /aria-label=\{\`View \$\{label\}\`\}/, "Life/Health retains a separate view icon");
+assert.match(issued, /aria-label=\{\`Delete \$\{label\}\`\}/, "Life/Health retains delete action");
 console.log("Non-Motor document and action footer layout regression passed");
