@@ -4,6 +4,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { getCustomerWebSession } from "@/lib/customer-web";
 import { resolveCustomerWebScope } from "@/lib/customer-web-data";
 import { loadCustomerClaimDetail, isExternalCustomerClaim, buildExternalClaimProjection } from "@/lib/customer-web-phase2-data";
+import { sameClaimDocumentType } from "@/lib/customer-claim-reupload";
 
 const documentTypes=[
   "RC Copy","Insurance Copy","Driver Licence","GR / Load Bill",
@@ -34,7 +35,13 @@ export async function uploadCustomerClaimDocument(_previous:CustomerClaimUploadS
     if(file.size>(file.type.startsWith("video/")?50:5)*1024*1024)return {error:"Claim document exceeds allowed file size: "+file.name};
   }
   const {account}=await resolveCustomerWebScope(accountId);
-  const {claim,milestones,internal_projection}=await loadCustomerClaimDetail(account.id,claimId);
+  const {claim,milestones,internal_projection,reuploadRequests}=await loadCustomerClaimDetail(account.id,claimId);
+  const requestId = String(form.get("reupload_request") || "");
+  // The bypass is claim/account/document/stage scoped, not a general completed-claim unlock.
+  const authorizedReplacement = Boolean(requestId && reuploadRequests.some(request =>
+    request.id === requestId && request.status === "action_required"
+    && request.stage === String(form.get("stage") || "")
+    && sameClaimDocumentType(request.documentType, type)));
   if (type==="Final Workshop Bill") {
     if (String(form.get("stage") || "") !== "billing" || !isExternalCustomerClaim(claim)) {
       return {error:"Final workshop bills can only be uploaded in External Claim Billing."};
@@ -54,10 +61,10 @@ export async function uploadCustomerClaimDocument(_previous:CustomerClaimUploadS
     claim.claim_service_mode === "broker_managed" && !claim.external_policy_id &&
     ((internal_projection?.completedStageCount ?? 0) >= 2 ||
       milestones.some(item => item.milestone_key === "claim_intimation" &&
-        ["completed", "not_applicable"].includes(item.milestone_status)))) {
+        ["completed", "not_applicable"].includes(item.milestone_status)))) && !authorizedReplacement) {
     return {error:"Claim Intimation (Stage 2) is complete. Stage 1 documents are locked."};
   }
-  if(claim.claim_service_mode==="broker_managed" && ["Settled","Closed","Claim Complete"].includes(claim.current_status))
+  if(claim.claim_service_mode==="broker_managed" && ["Settled","Closed","Claim Complete"].includes(claim.current_status)) && !authorizedReplacement
     return {error:"Completed managed claims cannot accept new customer documents."};
   const session=await getCustomerWebSession();
   // Customer account and claim ownership have been checked by the server above.
