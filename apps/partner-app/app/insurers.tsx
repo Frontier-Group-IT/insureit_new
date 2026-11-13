@@ -351,7 +351,7 @@ export default function InsurerListScreen() {
                         <Pressable key={column.key} accessibilityRole="button"
                           accessibilityLabel={`${insurer.name}, ${column.label}, ${exactAmount}. Tap for full amount`}
                           onPress={() => Alert.alert(`${displayInsurerName(insurer.name)} · ${column.label}`, exactAmount)}
-                          style={[styles.metricPressable, column.key === 'policies' ? styles.policyColumn : styles.amountColumn]}>
+                          style={[styles.metricPressable, styles.amountColumn]}>
                           <Text style={styles.metricAmountText} numberOfLines={1}
                             adjustsFontSizeToFit minimumFontScale={0.7}>
                             {amount == null ? '—' : formatInsurerCompactRupees(amount)}
