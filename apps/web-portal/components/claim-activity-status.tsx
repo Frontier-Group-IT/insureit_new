@@ -14,6 +14,7 @@ const LABELS: Record<string,string> = {
   satisfaction_voucher_submitted:"Satisfaction voucher submitted",
 };
 const AMOUNT_FIELDS = new Set(["estimate_amount","bill_amount","do_amount","payment_received_amount"]);
+const TRACKED_STAGE_KEYS=new Set(["spot_status","claim_intimation","work_approval","repair_ri","billing","delivery_order","vehicle_delivery","payment_encashment"]);
 const format=(key:string,v:unknown)=>{
   if(v===null||v===undefined||v==="")return "Not set";
   if(typeof v==="boolean")return v?"Yes":"No";
@@ -22,7 +23,8 @@ const format=(key:string,v:unknown)=>{
     return Number.isFinite(n)&&n>=0&&n<=1e10?`₹${n.toLocaleString("en-IN",{minimumFractionDigits:2,maximumFractionDigits:2})}`:"Changed";
   }
   if(typeof v!=="string" && typeof v!=="number")return "Changed";
-  return String(v).slice(0,40);
+  const text=String(v).trim();
+  return /^(?:\\d{4}-\\d{2}-\\d{2}(?:T[0-9:.Z+-]+)?|Yes|No|true|false)$/.test(text)?text:"Changed";
 };
 const date=(value:string)=>Number.isNaN(Date.parse(value))?0:Date.parse(value);
 
@@ -61,7 +63,8 @@ export async function ClaimActivityStatus({claimId}:{claimId:string}){
   const lastStage=new Map<string,Record<string,unknown>>();
   for(const row of stages){
     const values=row.details&&typeof row.details==="object"&&!Array.isArray(row.details)?row.details:{};
-    const group=typeof values.milestone_key==="string"?values.milestone_key:row.stage;
+    const group=typeof values.milestone_key==="string"&&TRACKED_STAGE_KEYS.has(values.milestone_key)
+      ?values.milestone_key:"other";
     const before=lastStage.get(group)??{};
     const changes=Object.entries(LABELS)
       .filter(([key])=>key in values && format(key,before[key])!==format(key,values[key]))
