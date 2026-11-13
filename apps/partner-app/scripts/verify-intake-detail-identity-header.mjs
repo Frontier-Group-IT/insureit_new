@@ -1,0 +1,24 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+
+const detail = readFileSync(new URL('../app/policy-intakes/[id].tsx', import.meta.url), 'utf8');
+const listing = readFileSync(new URL('../app/policy-intakes.tsx', import.meta.url), 'utf8');
+const api = readFileSync(new URL('../../web-portal/app/api/partner/policy-intakes/route.ts', import.meta.url), 'utf8');
+const header = detail.slice(detail.indexOf('<View style={styles.statusCard}>'), detail.indexOf("{row.final_policy_id ? ("));
+
+assert.match(header, /style=\{styles\.intakeNumber\}>\{fields\.get\('policy_number'\)\?\.value\?\.trim\(\) \|\| 'Policy pending'\}/, 'Use policy number as header title with honest fallback');
+assert.doesNotMatch(header, /style=\{styles\.intakeNumber\}>\{row\.intake_number\}/, 'Do not show old PIR identifier as title');
+assert.match(header, /row\.customer_mobile, fields\.get\('insured_name'\)/, 'Second line includes mobile and insured name');
+assert.match(header, /fields\.get\('customer_name'\)/, 'Fallback to customer name when insured name absent');
+assert.match(header, /fields\.get\('name_of_insured'\)/, 'Fallback to name of insured when needed');
+assert.match(header, /row\.lead_source_name \|\| 'Lead source unavailable'/, 'Third line includes actual lead source');
+assert.match(header, /row\.submitted_by_name\?\.trim\(\) \|\| 'Submitter unavailable'/, 'Third line includes actual submitter');
+assert.doesNotMatch(header, /vehicle_registration_number/, 'Remove old vehicle registration / pending header');
+assert.match(header, /numberOfLines=\{2\}/, 'Long policy numbers and names should be readable');
+assert.match(header, /statusBadgeStyle\(row\)/, 'Preserve status badge');
+assert.match(header, /formatDate\(row.updated_at\)/, 'Preserve update timestamp');
+assert.match(header, /<IntakeProgress row=\{row\}/, 'Preserve status timeline');
+assert.match(listing, /field\(row, 'insured_name'\) \|\| field\(row, 'customer_name'\) \|\| field\(row, 'name_of_insured'\)/, 'Detail follows list identity hierarchy');
+assert.match(api, /resolveIntakeSubmitterNames\(admin, \[intake\]\)/, 'Detail API resolves submitter only after authorized scoped lookup');
+assert.match(api, /intake: match \? \{ \.\.\.namedIntake, status: "duplicate" \} : namedIntake/, 'Submitter name is returned for duplicate and ordinary statuses');
+console.log('Partner Policy Intake detail identity header parity passed.');

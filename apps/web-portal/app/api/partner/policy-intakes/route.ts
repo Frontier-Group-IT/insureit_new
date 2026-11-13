@@ -254,9 +254,17 @@ export async function GET(request: Request) {
       if (assignedError) return json({ ok: false, error: "Could not check the current reviewer. Please retry." }, 503);
       reviewerConflictName = assignedProfile?.full_name?.trim() || "another Operations user";
     }
+    // The detail view must resolve the actual submitter the same way as the
+    // authorized list, never infer a person from the lead-source company.
+    let namedIntake: (typeof intake) & { submitted_by_name: string };
+    try {
+      [namedIntake] = await resolveIntakeSubmitterNames(admin, [intake]);
+    } catch {
+      return json({ ok: false, error: "Could not resolve the Policy Intake submitter." }, 503);
+    }
     return json({
       ok: true,
-      intake: match ? { ...intake, status: "duplicate" } : intake,
+      intake: match ? { ...namedIntake, status: "duplicate" } : namedIntake,
       review_access: match ? { can_review: false, can_finalize: false } : access,
       reviewer_conflict_name: reviewerConflictName,
       reviewer_conflict_id: reviewerConflictName ? intake.assigned_to_profile_id : null,

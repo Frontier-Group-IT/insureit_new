@@ -129,7 +129,7 @@ assert.match(route, /loadPolicyIntakeDuplicateMatches\(admin, \[intake\]\)/, 'Du
 assert.match(route, /in\("status", \["processing", "ready_for_review", "in_review", "needs_attention"\]\)/, 'Closed intakes must not be mutated');
 // Duplicate details must agree with the canonical Operations website, not raw stored status.
 assert.match(route, /const duplicateCheck = await loadPolicyIntakeDuplicateMatches\(admin, \[intake\]\)/, 'Detail must check the same canonical policy number matcher');
-assert.match(route, /intake: match \? \{ \.\.\.intake, status: "duplicate" \} : intake/, 'Detail must return effective duplicate state');
+assert.match(route, /intake: match \? \{ \.\.\.namedIntake, status: "duplicate" \} : namedIntake/, 'Detail must retain effective duplicate state and authorized submitter name');
 assert.match(route, /duplicate_match/, 'Detail must return the matching record details');
 assert.match(route, /target_path: access.can_review \|\| access.can_finalize/, 'Link is only exposed to authorized Operations reviewers');
 assert.match(route, /review_access: match \? \{ can_review: false, can_finalize: false \}/, 'Duplicate must not offer review or finalization actions');
