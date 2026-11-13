@@ -134,6 +134,12 @@ export async function appendLifeHealthCaseRemark(formData: FormData): Promise<{o
   update = caseRow.remarks === null ? update.is("remarks",null) : update.eq("remarks",caseRow.remarks);
   const {data:saved,error:saveError} = await update.select("id").maybeSingle<{id:string}>();
   if (saveError || !saved) return {ok:false,error:"Remarks changed in another session. Reload and try again."};
+  const {error:auditError}=await admin.from("audit_logs").insert({
+    actor_id:requester?.id??null,action:"life_health_case_remark_added",
+    table_name:"life_health_cases",record_id:caseId,
+    new_data:{changed_fields:["Remarks changed (values hidden)"]},
+  });
+  if(auditError) console.error("Case remarks activity audit could not be recorded",{caseId,code:auditError.code});
   revalidatePath(`/policies/life-health-cases/${caseId}`);
   revalidatePath("/policies/life-health-cases");
   return {ok:true,remarks};
