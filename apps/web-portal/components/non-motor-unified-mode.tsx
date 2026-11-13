@@ -374,19 +374,21 @@ export function NonMotorUnifiedMode({ mode = "create", policyId, initialValues, 
     {commercialAccess && commercialModal === "payout" ? <PartnerPayoutModal form={form} update={update} calculations={commercialCalculations} onBasisChange={(basis) => changeCommercialBasis("payout", basis)} onClose={() => setCommercialModal(null)} /> : null}
     {error ? <ValidationErrorDialog message={error} onClose={() => setError(null)} /> : null}
     <section aria-label="Non-Motor policy documents and save actions" className="mt-4 overflow-hidden rounded-xl border border-[#D9E2F0] bg-white shadow-sm">
-      <div className="min-w-0 border-b border-[#E7ECF3] px-4 py-3">
-        <NonMotorDocumentPicker
-          files={documents}
-          existingDocuments={savedDocuments}
-          deletingType={deletingDocumentType}
-          onChange={setDocuments}
-          onDeleteExisting={isEdit ? deleteSavedDocument : undefined}
-          onError={setError}
-        />
-      </div>
-      <div className="flex flex-wrap items-center justify-end gap-2 px-4 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+        <div className="min-w-0 flex-1">
+          <NonMotorDocumentPicker
+            files={documents}
+            existingDocuments={savedDocuments}
+            deletingType={deletingDocumentType}
+            onChange={setDocuments}
+            onDeleteExisting={isEdit ? deleteSavedDocument : undefined}
+            onError={setError}
+          />
+        </div>
+        <div className="flex shrink-0 items-center justify-end gap-2">
         <Link href="/policies" className="rounded-xl border border-[#CBD5E1] px-4 py-2.5 text-[10px] font-semibold">Cancel</Link>
         <button type="button" onClick={()=>submit()} disabled={isPending} className="rounded-xl bg-[#17365D] px-5 py-2.5 text-[10px] font-bold text-white disabled:opacity-60">{isPending ? "Saving policy…" : savedPolicyCode ? "Open Policy Register" : isEdit ? "Save Policy Changes" : "Create Policy"}</button>
+        </div>
       </div>
     </section>
     {dateApprovalOpen&&dateApprovalRequired?<PolicyDateApprovalDialog issuanceDate={source.issuanceDate} policyNumber={form.policyNumber} operation={isEdit?"edit":"create"} existingPolicyId={isEdit?policyId:null} intermediaryCode={source.intermediaryCode} verifiedApprovalId={dateApprovalId} onApproved={id=>setDateApproval(id?{id,key:approvalKey}:null)} onClose={()=>setDateApprovalOpen(false)} onConfirm={()=>submit(true)} submitting={isPending}/>:null}
