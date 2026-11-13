@@ -59,3 +59,10 @@ Use the existing `ParsedPolicyField` shape when writing authorized `ocr_fields` 
 5. Build branch-only regression/CI covering retries, stale documents, race conditions, redacted logs, identical policy-number duplicates, customer-name/mobile conflicts and non-3005 rejection.
 6. For eventual automation: separate verified field extraction from privileged customer/vehicle/policy commits; use idempotent server-side transactions and explicit business authorization/approval policy. Never infer a match from mobile alone, never auto-book without an approved role/feature rollout.
 7. Obtain explicit approval for merge, deployment, n8n publication, production credentials, and any production write or auto-onboarding. No production environment is available for destructive test execution.
+
+## Progress: guarded integration (2026-11-13)
+- Both Operations and Partner Policy Intake now call the same opt-in router on the PR branch. It is **off** without explicit environment configuration, with an intake-ID allowlist; unchanged default Google path.
+- The router reads current document identity before n8n call, filters for digitally readable ICICI Product 3005 PDFs, and checks identity again after n8n response. Shadow mode compares fields but still returns Google. Prefer mode uses validated n8n extraction, otherwise Google fallback.
+- New n8n response contains a numeric premium breakdown. Website independently reconciles Basic OD + add-ons, TP + CPA, OD + liability, net + rounded tax, exact IGST round-off and proposed OD/TP/CPA fields. Failing or malformed responses fall back to Google.
+- Configure only after credential and synthetic/negative tests. Env: `INSUREIT_N8N_OCR_MODE=off|shadow|prefer`, `INSUREIT_N8N_OCR_ALLOWED_INTAKE_IDS=<approved UUIDs>`, `INSUREIT_N8N_OCR_WEBHOOK_URL`, `INSUREIT_N8N_OCR_HEADER_SECRET`. Do not enable on production yet.
+- No auto-finalize, customer or vehicle creation, or policy booking; existing authorized review still required.

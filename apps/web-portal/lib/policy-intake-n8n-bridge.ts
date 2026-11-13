@@ -40,6 +40,7 @@ export function validateN8nPolicyIntakeResponse(
       || value.request_id !== ids.requestId) throw new Error("n8n_request_identity_mismatch");
   if (value.ok !== true || value.review_required !== true || value.auto_finalize_allowed !== false
       || value.parser_id !== "icici_3005_n8n_native_pdf"
+      || value.parser_version !== "bridge-v1"
       || value.extraction_method !== "native_pdf_text") throw new Error("n8n_review_required");
   if (!plainObject(value.checks) || Object.keys(value.checks).length < 8
       || Object.values(value.checks).some((check) => check !== true)) throw new Error("n8n_financial_validation_failed");
@@ -67,6 +68,52 @@ export function validateN8nPolicyIntakeResponse(
   }
   const policyNumber = fields.find((field) => field.key === "policy_number")?.value ?? "";
   if (!/^3005\/\d{7,12}\/\d{2}\/\d{3}$/.test(policyNumber)) throw new Error("n8n_wrong_policy_product");
+
+  // Never accept a remote boolean as proof that the policy's money adds up.
+  // All components below are parsed from PDF text by the n8n workflow.
+  if (!plainObject(value.premium_components)) throw new Error("n8n_premium_breakdown_missing");
+  const premium = value.premium_components;
+  function exactMoney(v: unknown): number {
+    if (typeof v !== "number" || !Number.isFinite(v) || v < 0 || v > 1_000_000_000
+        || Math.abs(v * 100 - Math.round(v * 100)) > 0.00001) {
+      throw new Error("n8n_premium_amount_invalid");
+    }
+    return v;
+  }
+  const basicOd = exactMoney(premium.basic_od_premium);
+  const od = exactMoney(premium.total_od_premium);
+  const tp = exactMoney(premium.basic_tp_premium);
+  const cpa = exactMoney(premium.owner_driver_cpa);
+  const liability = exactMoney(premium.total_liability_premium);
+  const net = exactMoney(premium.net_premium);
+  const igst = exactMoney(premium.igst_exact);
+  const tax = exactMoney(premium.printed_total_tax);
+  const gross = exactMoney(premium.gross_premium);
+  if (!Array.isArray(premium.od_addons) || premium.od_addons.length > 12) {
+    throw new Error("n8n_premium_addons_invalid");
+  }
+  const addOns = premium.od_addons.reduce((total: number, addon: unknown) => {
+    if (!plainObject(addon) || typeof addon.name !== "string"
+        || addon.name.trim().length < 2 || addon.name.length > 90) {
+      throw new Error("n8n_premium_addon_invalid");
+    }
+    return total + exactMoney(addon.amount);
+  }, 0);
+  const cents = (number: number) => Math.round(number * 100);
+  if (cents(basicOd + addOns) !== cents(od)
+      || cents(tp + cpa) !== cents(liability)
+      || cents(od + liability) !== cents(net)
+      || cents(net + tax) !== cents(gross)
+      || Math.round(igst) !== tax) {
+    throw new Error("n8n_premium_reconciliation_failed");
+  }
+  const fieldByKey = new Map(fields.map((field) => [field.key, field.value]));
+  const equalsField = (key: string, amount: number) =>
+    Number((fieldByKey.get(key) ?? "").replace(/,/g, "")) === amount;
+  if (!equalsField("od_premium", od) || !equalsField("tp_premium", tp)
+      || !equalsField("cpa_premium", cpa)) {
+    throw new Error("n8n_premium_field_mismatch");
+  }
 
   const warnings = value.warnings.map((warning: unknown) => {
     if (typeof warning !== "string" || warning.length > 240) throw new Error("n8n_warning_invalid");
