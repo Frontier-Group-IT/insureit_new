@@ -215,6 +215,7 @@ if (/\\bplaceholder\\s*=/.test(nativeOnboarding)) throw new Error('Onboarding mu
 if (/\\bplaceholder\\s*=/.test(dateField)) throw new Error('Date picker must not show placeholder text in the empty date field.');
 requireText(dateField, "{value?displayIndianDate(value):''}", 'Empty date picker must display no placeholder.');
 requireText(nativeOnboarding, "accessibilityLabel={f.label}", 'All blank fields must retain accessible labels.');
+if (nativeOnboarding.includes("current||'0.00'")) throw new Error('Unentered calculated gross premium must stay blank, not show a fake zero.');
 
 if (nativeOnboarding.includes("Existing draft ·") || nativeOnboarding.includes("Saved revision ")) throw new Error('No redundant draft revision subtitle on Policy Onboarding.');
 if (nativeOnboarding.includes("{section('01','Policy source & ownership',policy)}")) throw new Error('Do not restore separate full-size RM and source code fields.');
