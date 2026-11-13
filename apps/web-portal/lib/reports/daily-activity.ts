@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getEmployeeAccessScope } from "@/lib/employee-access-scope";
+import { resolveDailyReportActorIds } from "@/lib/reports/daily-activity-actor-scope";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 export type DailyActivityGroup = "all" | "policy" | "intake" | "case" | "customer" | "vehicle" | "claim" | "other";
@@ -104,11 +105,7 @@ export async function loadDailyActivityReport(viewer: Viewer, query: DailyActivi
   const startIso = from.toISOString(), endIso = to.toISOString();
   const admin = createSupabaseAdminClient();
   const access = await getEmployeeAccessScope(viewer.id, viewer.role, "view_reports");
-  const broadScope = scope === "all" && access.mode === "organization";
-  const allowedIds = scope === "self" ? [viewer.id]
-    : broadScope ? null
-    : access.mode === "none" ? [viewer.id]
-    : Array.from(new Set([viewer.id, ...access.profileIds]));
+  const allowedIds = resolveDailyReportActorIds(viewer.id, scope, access);
   let profileQuery = admin.from("profiles")
     .select("id,full_name,employee_code").order("full_name", { ascending: true }).limit(1000);
   if (allowedIds !== null) profileQuery = profileQuery.in("id", allowedIds);
