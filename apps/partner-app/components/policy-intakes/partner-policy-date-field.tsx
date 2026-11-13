@@ -38,12 +38,12 @@ export function PartnerPolicyDateField({label,value,onChange,required=false,full
     <Text style={styles.label}>{label}{required?<Text style={styles.star}> *</Text>:null}</Text>
     {Platform.OS==='web' ? (
       <View style={styles.row}>
-        <TextInput accessibilityLabel={label} value={webInput|| (value?displayIndianDate(value):'')} onChangeText={v=>{setWebInput(v);const iso=fromIndianDate(v);if(iso){onChange(iso);setWebInput('');}}} onBlur={()=>setWebInput('')} placeholder="DD/MM/YYYY" style={styles.webInput}/>
+        <TextInput accessibilityLabel={label} value={webInput|| (value?displayIndianDate(value):'')} onChangeText={v=>{setWebInput(v);const iso=fromIndianDate(v);if(iso){onChange(iso);setWebInput('');}}} onBlur={()=>setWebInput('')} style={styles.webInput}/>
         <Ionicons name="calendar-outline" size={17} color="#315B9A"/>
       </View>
     ) : (
       <Pressable accessibilityRole="button" accessibilityLabel={label+' calendar picker'} onPress={()=>setPickerOpen(true)} style={styles.row}>
-        <Text style={[styles.value,!value&&styles.placeholder]}>{value?displayIndianDate(value):'DD/MM/YYYY'}</Text>
+        <Text style={styles.value}>{value?displayIndianDate(value):''}</Text>
         <Ionicons name="calendar-outline" size={17} color="#315B9A"/>
       </Pressable>
     )}
@@ -54,6 +54,6 @@ export function PartnerPolicyDateField({label,value,onChange,required=false,full
 const styles=StyleSheet.create({
   field:{width:'48%',minWidth:0,gap:5},fullWidth:{width:'100%'},label:{fontSize:10,color:'#65758E',fontWeight:'700'},star:{color:'#B93333'},
   row:{minHeight:42,borderWidth:1,borderColor:'#D8E1EC',borderRadius:9,paddingHorizontal:10,flexDirection:'row',alignItems:'center',justifyContent:'space-between',backgroundColor:'#FFFFFF',gap:5},
-  value:{fontSize:12,color:'#183653',flex:1},placeholder:{color:'#97A5B7'},webInput:{flex:1,fontSize:12,color:'#183653',minHeight:38},
+  value:{fontSize:12,color:'#183653',flex:1},webInput:{flex:1,fontSize:12,color:'#183653',minHeight:38},
   done:{alignSelf:'flex-end',padding:10},doneText:{fontSize:12,fontWeight:'700',color:'#315B9A'}
 });
