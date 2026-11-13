@@ -16,6 +16,8 @@ import { formatIndianDate } from "@/lib/indian-date";
 import { Check, Circle, LockKeyhole, CalendarDays, Clock3, ClipboardList } from "lucide-react";
 import { CustomerInsurerClaimNumberPopup } from "@/components/customer-portal/customer-insurer-claim-number-popup";
 import { CustomerClaimStageStrip } from "@/components/customer-portal/customer-claim-stage-strip";
+import { CustomerClaimReuploadNotice } from "@/components/customer-portal/customer-claim-reupload-notice";
+import { CustomerClaimReuploadFocus } from "@/components/customer-portal/customer-claim-reupload-focus";
 import { CustomerInternalCompletedJourney } from "@/components/customer-portal/customer-internal-completed-journey";
 import { resolveCustomerWebScope } from "@/lib/customer-web-data";
 import { loadCustomerClaimDetail, isExternalCustomerClaim, buildExternalClaimProjection } from "@/lib/customer-web-phase2-data";
@@ -25,12 +27,13 @@ import { findExistingLinkedClaimCopy, findLinkedClaimPolicyCopy } from "@/lib/li
 export const dynamic="force-dynamic";
 export const revalidate=0;
 
-export default async function CustomerClaimStage({params,searchParams}:{params:Promise<{id:string;stage:string}>;searchParams?:Promise<{account?:string;mode?:string;saved?:string}>}) {
+export default async function CustomerClaimStage({params,searchParams}:{params:Promise<{id:string;stage:string}>;searchParams?:Promise<{account?:string;mode?:string;saved?:string;request?:string}>}) {
   const p=await params;const q=searchParams?await searchParams:{};
   const {account}=await resolveCustomerWebScope(q.account);
-  const {claim,milestones,documents,internal_projection}=await loadCustomerClaimDetail(account.id,p.id);
+  const {claim,milestones,documents,internal_projection,reuploadRequests}=await loadCustomerClaimDetail(account.id,p.id);
   const selected=INTERNAL_JOURNEY_STAGES.find(s=>s.key===p.stage);
   if(!selected) notFound();
+  const selectedRequest = reuploadRequests.find(request => request.id === q.request && request.stage === selected.key && request.status === "action_required");
   // Stages 1 (Spot Intimation) and 3 (Claim Intimation) remain naturally compact.
   const fullHeightStage = !["spot_intimation", "claim_intimation"].includes(selected.key);
   const external=isExternalCustomerClaim(claim);
@@ -62,6 +65,8 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
   const completedInternalStages = !external ? (internal_projection?.completedStageCount ?? 0) : 0;
   if (!external && completedInternalStages > 0) {
     return <div className="customer-claim-ref-page space-y-3">
+      <CustomerClaimReuploadNotice requests={reuploadRequests} accountId={account.id} claimId={claim.id}/>
+      <CustomerClaimReuploadFocus requestId={selectedRequest?.id ?? null}/>
       <CustomerClaimStageStrip
         claimId={claim.id}
         accountId={account.id}
@@ -86,6 +91,9 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
         completedCount={completedInternalStages}
         milestones={milestones}
         documents={documents}
+        reuploadDocumentType={selectedRequest?.documentType}
+        reuploadRequestId={selectedRequest?.id}
+        reuploadStage={selectedRequest?.stage}
         spot={{
           accidentAt:claim.accident_at,
           spotAt:claim.spot_intimation_at,
@@ -108,6 +116,8 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
     ? !(await findExistingLinkedClaimCopy(copyAdmin, claim.id, account.id, availablePolicyCopy).catch(() => true))
     : false;
   return <div className="customer-claim-ref-page space-y-3">
+    <CustomerClaimReuploadNotice requests={reuploadRequests} accountId={account.id} claimId={claim.id}/>
+    <CustomerClaimReuploadFocus requestId={selectedRequest?.id ?? null}/>
     {q.saved==="claim_intimation" && selected.key==="work_approval" && external && milestones.some(item => item.milestone_key === "claim_intimation" && item.milestone_status === "completed") && !claim.insurer_claim_no?.trim()
       ? <CustomerInsurerClaimNumberPopup
           accountId={account.id}
@@ -200,7 +210,7 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
       </CustomerClaimStageDraftForm>
     ):null}
     {selected.key==="billing" && external && !canEditStage && documents.some(doc=>doc.document_type==="Final Workshop Bill") ? <section className="rounded-xl border border-[#DCE3EC] bg-white p-4"><ExternalClaimBillUpload mode="customer" claimId={claim.id} accountId={account.id} readonly documents={documents.filter(doc=>doc.document_type==="Final Workshop Bill")} /></section> : null}
-    {selected.key==="spot_intimation" ? <CustomerClaimEvidenceWorkspace documents={documents} claimId={claim.id} accountId={account.id} stage={selected.key} allowUpload={editMode} canReusePolicyCopy={canReusePolicyCopy}/> : null}
+    {selected.key==="spot_intimation" ? <CustomerClaimEvidenceWorkspace documents={documents} claimId={claim.id} accountId={account.id} stage={selected.key} allowUpload={editMode} reuploadDocumentType={selectedRequest?.documentType} reuploadRequestId={selectedRequest?.id} canReusePolicyCopy={canReusePolicyCopy}/> : null}
     {selected.key==="spot_intimation" ? <CustomerClaimVoiceRecorder claimId={claim.id} accountId={account.id} documents={documents}/> : null}
     {selected.key==="spot_intimation" && completed ? (
       <div className="flex flex-wrap items-center justify-end gap-2 rounded-xl border border-[#D9E6F7] bg-white px-4 py-3">
@@ -208,7 +218,7 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
         <form action={confirmCustomerSpotIntimationSaved}><input type="hidden" name="account" value={account.id}/><input type="hidden" name="claim" value={claim.id}/><button type="submit" className="inline-flex min-h-10 items-center justify-center rounded-lg bg-[#1253A7] px-6 text-[12px] font-bold text-white hover:bg-[#0B3884]">Save Details</button></form>
       </div>
     ) : null}
-    {selected.key==="claim_intimation" ? <CustomerClaimDocumentGroups documents={documents} claimId={claim.id} accountId={account.id} stage={selected.key} showSaveDetails={false} allowUpload={editMode && external && canEditStage} canReusePolicyCopy={canReusePolicyCopy} /> : null}
+    {selected.key==="claim_intimation" ? <CustomerClaimDocumentGroups documents={documents} claimId={claim.id} accountId={account.id} stage={selected.key} showSaveDetails={false} allowUpload={editMode && external && canEditStage} reuploadDocumentType={selectedRequest?.documentType} reuploadRequestId={selectedRequest?.id} canReusePolicyCopy={canReusePolicyCopy} /> : null}
     {selected.key==="claim_intimation" && editMode && canEditStage ? (
       <div className="flex flex-wrap items-center justify-end gap-3 rounded-xl border border-[#D9E6F7] bg-white px-5 py-4">
         <Link href={{pathname:"/customer/claims",query:{account:account.id}}} className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#B9CBE2] px-5 text-[12px] font-semibold text-[#174A87]">Cancel</Link>
