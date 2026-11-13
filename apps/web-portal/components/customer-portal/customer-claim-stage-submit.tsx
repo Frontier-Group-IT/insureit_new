@@ -10,13 +10,11 @@ import { saveCustomerClaimStageWithFeedback } from "@/app/customer/(protected)/c
 export function CustomerClaimStageSubmit({ formId, variant = "intimation" }: { formId: string; variant?: "intimation" | "continue" }) {
   const router = useRouter();
   const [saving, setSaving] = useState<"draft" | "details" | null>(null);
-  const [feedback, setFeedback] = useState("");
   const [errorPopup, setErrorPopup] = useState("");
 
   async function submit(mode: "draft" | "details") {
     const form = document.getElementById(formId);
     if (!(form instanceof HTMLFormElement) || saving) return;
-    setFeedback("");
     setErrorPopup("");
     // Drafts deliberately allow empty required fields; final saves do not.
     if (mode === "details" && !form.reportValidity()) return;
@@ -24,21 +22,28 @@ export function CustomerClaimStageSubmit({ formId, variant = "intimation" }: { f
     const key = customerClaimStageDraftKey(String(data.get("account") || ""), String(data.get("claim") || ""), String(data.get("stage") || ""));
     saveCustomerClaimDraft(form, key);
     setSaving(mode);
+    let navigating = false;
     try {
       const result = await saveCustomerClaimStageWithFeedback(mode, data);
       if (result.error) {
         setErrorPopup(result.error);
         return;
       }
+      if (!result.destination) {
+        setErrorPopup("The save completed, but the next page could not be determined. Please refresh and try again.");
+        return;
+      }
       clearCustomerClaimDraft(key);
-      setFeedback(mode === "draft" ? "Draft saved." : "Details saved.");
-      if (result.destination) router.push(result.destination);
+      // Keep the button in its Saving state until the next page mounts.
+      navigating = mode === "details";
+      router.push(result.destination);
     } catch (error) {
+      navigating = false;
       setErrorPopup(error instanceof Error && error.message && !error.message.includes("NEXT_REDIRECT")
         ? error.message
         : "The save could not be completed. Your entries remain on this page. Please try again.");
     } finally {
-      setSaving(null);
+      if (!navigating) setSaving(null);
     }
   }
 
@@ -54,7 +59,6 @@ export function CustomerClaimStageSubmit({ formId, variant = "intimation" }: { f
         {saving === "details" ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
         {saving === "details" ? "Saving..." : variant === "continue" ? "Save & Continue" : "Save Details"}
       </button>
-      {feedback ? <p role="status" aria-live="polite" className="pointer-events-none absolute right-0 top-full mt-1 whitespace-nowrap text-right text-[12px] font-semibold text-emerald-700">{feedback}</p> : null}
       <ClaimStageErrorDialog message={errorPopup} onClose={() => setErrorPopup("")} />
     </div>
   );

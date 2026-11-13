@@ -13,9 +13,11 @@ assert.match(src, /setErrorPopup\(result.error\)/);
 assert.match(src, /setErrorPopup\(error instanceof Error/);
 assert.ok(src.includes('onClose={() => setErrorPopup("")}'), "OK dismisses claim-stage error dialog");
 assert.match(src, /className="relative flex flex-wrap items-center justify-end gap-2"/, "Footer buttons need a stable positioning context.");
-assert.match(src, /role="status" aria-live="polite" className="pointer-events-none absolute right-0 top-full/, "Draft saved feedback must not participate in footer button layout.");
+assert.doesNotMatch(src, /role="status" aria-live="polite"/, "Do not show saved success status below the save controls.");
 assert.doesNotMatch(src, /role="status" aria-live="polite" className="w-full/, "Full-width feedback must not shift Cancel vertically.");
-assert.match(src, /mode === "draft" \? "Draft saved\." : "Details saved\."/);
+assert.doesNotMatch(src, /Draft saved\.|Details saved\./, "Success messages must not be shown.");
+assert.match(src, /saving === "details" \? "Saving\.\.\."/, "Save button shows Saving... until navigation.");
+assert.match(src, /if \(!navigating\) setSaving\(null\)/, "Keep the spinner mounted during successful stage navigation.");
 
 assert.doesNotMatch(src, /bg-\[#FFF3F3\]/);
 const { readFileSync: read } = await import("node:fs");
@@ -39,15 +41,23 @@ assert.match(src, /if \(result\.error\)/, "Do not discard local data after serve
 assert.match(actions, /await saveCustomerExternalStage\(form, false\)/, "Server validation must report success without RSC form reset");
 assert.match(actions, /return \{error:null, destination\}/, "Return a safe success destination");
 assert.match(actions, /const destination = key === "payment_encashment"\s*\? "\/customer\/claims\?account="\+encodeURIComponent\(account\.id\)/, "Successful Stage 9 saves, including completed-stage edits, must return to the scoped Claims Register.");
-assert.match(actions, /: editingCompleted && key !== "work_approval"\s*\? "\/customer\/claims\/"\+encodeURIComponent\(claim\.id\)\+"\/stage\/"/, "Other earlier completed stages must retain their edit destination; Stage 4 is the explicit continue-to-Stage-5 exception.");
+assert.doesNotMatch(actions, /saved=updated/, "Completed-stage edits must not redirect to the same stage.");
+assert.match(actions, /: next\s*\? "\/customer\/claims\/"/, "All successful nonfinal saves must advance to the next ordered stage.");
+assert.match(actions, /key==="claim_intimation" && !editingCompleted/, "Claim number popup marker is added only on initial Stage 3 completion.");
 assert.match(actions, /if \(navigate\) redirect\(destination\)/, "Preserve existing server action navigation.");
-assert.match(src, /if \(result\.destination\) router\.push\(result\.destination\)/, "Final navigation remains conditional on successful save.");
+assert.match(src, /if \(!result\.destination\)/, "A destination is required to navigate.");
+assert.match(src, /router\.push\(result\.destination\)/, "Navigate only after confirmed save.");
+assert.match(spot, /router\.push\(result\.destination\)/, "Spot Intimation navigates directly after confirmed save.");
+assert.doesNotMatch(spot, /CustomerSuccessDialog|successNotice|savedDestination/, "Spot Intimation no longer delays navigation for a success popup.");
+assert.match(spot, /if \(!navigating\) setPending\(false\)/, "Spot Intimation keeps Saving... until navigation.");
 
 assert.doesNotMatch(spot, /useActionState\(/, "Spot Intimation errors must not reset uncontrolled form inputs");
 assert.match(spot, /event\.preventDefault\(\)/, "Spot Intimation must preserve inputs on failed submit");
 assert.match(spot, /if \(result\.error\)/, "Spot Intimation server errors must retain entered fields");
 assert.match(spot, /if \(result\.destination\)/, "Spot Intimation drafts clear only after successful save");
-assert.match(spotPage, /return \{error:null,destination:/, "Spot Intimation success should navigate after client-side draft cleanup");
+assert.match(spotPage, /return \{error:null,destination:/, "Spot Intimation success navigates after draft cleanup");
+assert.doesNotMatch(spotPage, /updated=1/, "Spot corrections must not add obsolete success markers.");
+assert.doesNotMatch(page, /CustomerClaimStageSuccessToast|CustomerSpotSaveSuccess|saved=updated/, "Claim-stage page must not render success toasts or updated markers.");
 
 const customerPdfRoute = read(new URL("../app/customer/(protected)/claims/[id]/download/route.ts", import.meta.url), "utf8");
 const operationsPdfRoute = read(new URL("../app/claims/[id]/download/route.ts", import.meta.url), "utf8");

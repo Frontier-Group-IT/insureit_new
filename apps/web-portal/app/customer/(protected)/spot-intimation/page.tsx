@@ -64,7 +64,7 @@ export default async function CustomerSpotIntimation({searchParams}:{searchParam
     for(const key of ["driver","phone","location"])update.set(key,String(form.get(key)??""));
     const result=await saveCustomerInternalSpotCorrection({error:null,saved:false},update);
     if(!result.saved)return {error:result.error??"Changes could not be saved."};
-    return {error:null,destination:"/customer/claims/"+encodeURIComponent(String(form.get("claim")??""))+"/stage/spot_intimation?account="+encodeURIComponent(String(form.get("account")??""))+"&updated=1"};
+    return {error:null,destination:"/customer/claims/"+encodeURIComponent(String(form.get("claim")??""))+"/stage/spot_intimation?account="+encodeURIComponent(String(form.get("account")??""))};
   }
   const external=Boolean(claim.external_policy_id);
   async function submit(_state: SpotSaveState, form:FormData): Promise<SpotSaveState> {

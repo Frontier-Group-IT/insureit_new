@@ -45,14 +45,16 @@ assert.ok(submit.includes('variant === "continue" ? "min-w-[148px]"'));
 assert.ok(operations.includes('selected.key === "work_approval" ? "Save & Continue"'));
 assert.ok(operations.includes('nextStageKey: nextStageKeyFor(milestoneKey)'));
 
-// Completed Stage 4 edits must advance to Stage 5, while all other completed
-// stage edit rules and server-side validation remain intact.
-assert.ok(actions.includes('editingCompleted && key !== "work_approval"'));
+// All successful self-managed stage edits now advance; Stage 4 still continues to Stage 5.
+// Server-side sequencing and validation remain intact.
+assert.doesNotMatch(actions, /editingCompleted && key !== "work_approval"/);
+assert.ok(actions.includes('key==="claim_intimation" && !editingCompleted'));
 assert.ok(actions.includes('const next=INTERNAL_JOURNEY_STAGES[index+1]'));
 assert.match(actions, /if\s*\(!previous\s*\|\|\s*!\["completed",\s*"not_applicable"\]\.includes\(previous\.milestone_status\)\)/);
 assert.ok(actions.includes('if (error)'));
 assert.ok(submit.includes('if (result.error)'));
-assert.ok(submit.includes('if (result.destination) router.push(result.destination)'));
+assert.ok(submit.includes('if (!result.destination)'));
+assert.ok(submit.includes('router.push(result.destination)'));
 
 console.log("Stage 4 compact Work Approval layout and guarded next-stage navigation regression passed.");
 
