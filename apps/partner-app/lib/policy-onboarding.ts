@@ -35,3 +35,21 @@ export async function prepareNativePolicyOnboarding(intakeId: string, takeOver =
 export async function saveNativePolicyOnboarding(intakeId: string, revision: number, draft: NativePolicyDraft) {
   return request<{revision:number}>({ action: 'save', intake_id: intakeId, revision, draft });
 }
+
+export type NativePolicyBookingResult =
+  | {ok:true;policyId:string;policyCode:string;customerId:string;vehicleId:string;status:'active'}
+  | {ok:false;kind:'validation'|'database'|'permission';error:string}
+  | {ok:false;kind:'customer_match';candidates:{id:string;name:string;phone:string;phoneMatch:boolean;nameMatch:boolean}[]}
+  | {ok:false;kind:'ownership_conflict';conflict:{customerName:string;registrationNumber:string;customerId:string;canTransfer:boolean}}
+  | {ok:false;kind:'business_conflict';conflict:{type:string;message?:string;existingPolicyNo?:string;existingVehicleNo?:string;enteredMake?:string;gapDays?:number;existingVehicleId?:string}};
+
+export async function bookNativePolicyOnboarding(
+  intakeId:string,
+  revision:number,
+  resolution?:Record<string,unknown>,
+  dateApprovalId?:string|null,
+){
+  return request<{booking:NativePolicyBookingResult}>({
+    action:'book',intake_id:intakeId,revision,resolution,date_approval_id:dateApprovalId??null,
+  });
+}
