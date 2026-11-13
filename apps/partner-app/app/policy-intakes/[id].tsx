@@ -251,7 +251,22 @@ export default function PolicyIntakeDetailScreen() {
               </View>
               <View style={styles.statusBody}>
                 <View style={styles.statusTitleRow}>
-                  <Text numberOfLines={2} style={styles.intakeNumber}>{fields.get('policy_number')?.value?.trim() || 'Policy pending'}</Text>
+                  <View style={styles.statusIdentity}>
+                    <Text numberOfLines={2} style={styles.intakeNumber}>{fields.get('policy_number')?.value?.trim() || 'Policy pending'}</Text>
+                  <View style={styles.intakeSummaryCompact}>
+                    <Text numberOfLines={2} style={styles.summaryLine}>
+                      {[row.customer_mobile, fields.get('insured_name')?.value?.trim()
+                        || fields.get('customer_name')?.value?.trim()
+                        || fields.get('name_of_insured')?.value?.trim()
+                        || 'Customer name pending'].filter(Boolean).join(' · ')}
+                    </Text>
+                    <Text numberOfLines={2} style={styles.summaryLine}>
+                      {`${row.lead_source_name || 'Lead source unavailable'} (${row.submitted_by_name?.trim() || 'Submitter unavailable'})`}
+                    </Text>
+                    {row.status !== 'duplicate' && row.status !== 'ready_for_review' && row.status !== 'in_review' && row.status !== 'rejected'
+                      ? <Text style={styles.statusHelp}>{statusHelp(row)}</Text> : null}
+                  </View>
+                  </View>
                   <View style={[styles.statusMeta, row.status === 'duplicate' && styles.statusMetaDuplicate]}>
                     {row.status === 'duplicate' ? (
                       <Text numberOfLines={2} style={styles.submittedByName}>{row.submitted_by_name?.trim() || 'Submitter unavailable'}</Text>
@@ -262,19 +277,6 @@ export default function PolicyIntakeDetailScreen() {
                     )}
                     <Text style={styles.statusDate}>{formatDate(row.updated_at)}</Text>
                   </View>
-                </View>
-                <View style={styles.intakeSummaryCompact}>
-                  <Text numberOfLines={2} style={styles.summaryLine}>
-                    {[row.customer_mobile, fields.get('insured_name')?.value?.trim()
-                      || fields.get('customer_name')?.value?.trim()
-                      || fields.get('name_of_insured')?.value?.trim()
-                      || 'Customer name pending'].filter(Boolean).join(' · ')}
-                  </Text>
-                  <Text numberOfLines={2} style={styles.summaryLine}>
-                    {`${row.lead_source_name || 'Lead source unavailable'} (${row.submitted_by_name?.trim() || 'Submitter unavailable'})`}
-                  </Text>
-                  {row.status !== 'duplicate' && row.status !== 'ready_for_review' && row.status !== 'in_review' && row.status !== 'rejected'
-                    ? <Text style={styles.statusHelp}>{statusHelp(row)}</Text> : null}
                 </View>
               </View>
             </View>
@@ -682,33 +684,33 @@ function ReviewPair({label,value,confidence,singleLine=false}:{label:string;valu
   </View>;
 }
 const reviewStyles=StyleSheet.create({
-  sheet:{marginHorizontal:8,marginTop:9,marginBottom:8,borderWidth:1,borderColor:'#DCE5EF',borderRadius:10,backgroundColor:'#FFFFFF',padding:10,gap:8},
-  sheetTitle:{fontSize:14,fontWeight:'800',color:'#17365D'},
+  sheet:{marginHorizontal:8,marginTop:7,marginBottom:8,borderWidth:1,borderColor:'#DCE5EF',borderRadius:10,backgroundColor:'#FFFFFF',padding:9,gap:7},
+  sheetTitle:{fontSize:13,fontWeight:'500',color:'#17365D'},
   sheetCaption:{fontSize:10,color:'#65768D'},
   emptyVehicle:{fontSize:10,color:'#68758A',paddingVertical:10},
   block:{borderRadius:10,borderWidth:1,borderColor:'#E2E9F3',overflow:'hidden'},
-  blockHeader:{flexDirection:'row',alignItems:'center',gap:8,paddingHorizontal:10,paddingVertical:8,backgroundColor:'#EDF3FC'},
-  blockTitle:{fontSize:12,color:'#17365D',fontWeight:'800'},
+  blockHeader:{flexDirection:'row',alignItems:'center',gap:7,paddingHorizontal:9,paddingVertical:7,backgroundColor:'#EDF3FC'},
+  blockTitle:{fontSize:11,color:'#17365D',fontWeight:'500'},
   blockHeading:{flex:1,gap:2},
   blockDescription:{fontSize:9,lineHeight:13,color:'#71829A'},
-  rows:{paddingHorizontal:9,paddingVertical:3},
-  pair:{flexDirection:'row',alignItems:'flex-start',gap:8,paddingVertical:6,borderBottomWidth:StyleSheet.hairlineWidth,borderBottomColor:'#E5EAF2'},
+  rows:{paddingHorizontal:9,paddingVertical:2},
+  pair:{flexDirection:'row',alignItems:'flex-start',gap:8,paddingVertical:5,borderBottomWidth:StyleSheet.hairlineWidth,borderBottomColor:'#E5EAF2'},
   pairLabelRow:{flex:1,flexDirection:'row',flexWrap:'wrap',gap:4,alignItems:'center'},
   pairLabel:{fontSize:10,color:'#62758E',lineHeight:15},
-  pairValue:{flex:1.4,textAlign:'right',fontSize:11,lineHeight:16,color:'#193659',fontWeight:'600'},
+  pairValue:{flex:1.4,textAlign:'right',fontSize:10.5,lineHeight:15,color:'#193659',fontWeight:'400'},
   lowConfidence:{color:'#A46B14'},
   warningBox:{padding:9,backgroundColor:'#FFF8EA',borderRadius:8,gap:3},
   warningHeading:{fontSize:10,fontWeight:'800',color:'#995E20'},
   warningText:{fontSize:10,lineHeight:16,color:'#946320'},
   documentBox:{padding:10,borderRadius:10,backgroundColor:'#F4F7FC',gap:6},
-  documentName:{fontSize:10,fontWeight:'600',color:'#344B69'},
+  documentName:{fontSize:10,fontWeight:'400',color:'#344B69'},
   documentButton:{minHeight:42,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:8,backgroundColor:'#FFFFFF',borderWidth:1,borderColor:'#D6E1EF',borderRadius:9},
-  documentButtonText:{fontSize:11,fontWeight:'700',color:'#17365D'},
-  sectionLabel:{fontSize:10,fontWeight:'800',color:'#526680'},
+  documentButtonText:{fontSize:10.5,fontWeight:'500',color:'#17365D'},
+  sectionLabel:{fontSize:10,fontWeight:'500',color:'#526680'},
   reviewStatus:{padding:9,borderRadius:10,backgroundColor:'#F8FAFD'},
   reviewActions:{gap:12},
   operationsNoteCard:{padding:12,borderWidth:1,borderColor:'#DFE7F2',borderRadius:14,backgroundColor:'#FFFFFF',gap:10},
-  operationsNoteHeading:{fontSize:10,fontWeight:'800',color:'#5C7190',textTransform:'uppercase',letterSpacing:.7},
+  operationsNoteHeading:{fontSize:10,fontWeight:'500',color:'#5C7190',textTransform:'uppercase',letterSpacing:.7},
   noteInput:{minHeight:66,maxHeight:120,paddingHorizontal:12,paddingVertical:10,textAlignVertical:'top',borderWidth:1,borderColor:'#D4C9FF',borderRadius:11,color:'#17365D',fontSize:12},
   actionRow:{flexDirection:'row',gap:8},
   actionButton:{flex:1,minHeight:42,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:7,borderRadius:12},
@@ -926,34 +928,35 @@ const styles = StyleSheet.create({
   submittedByName: { fontSize: 10, fontWeight: '500', color: '#17365D', textAlign: 'right', lineHeight: 15 },
   duplicatePanel: { marginHorizontal: 8, marginTop: 12, padding: 12, borderRadius: 10, backgroundColor: '#FFF1F2', borderWidth: 1, borderColor: '#FECACA', gap: 7 },
   duplicateHeader: { flexDirection: 'row', alignItems: 'center', gap: 7 },
-  duplicateTitle: { color: '#A91F3B', fontSize: 11, fontWeight: '800', letterSpacing: 0.3 },
+  duplicateTitle: { color: '#A91F3B', fontSize: 11, fontWeight: '500', letterSpacing: 0.3 },
   duplicateText: { color: '#9F2436', fontSize: 11, lineHeight: 17 },
   duplicateLink: { alignSelf: 'flex-start', minHeight: 34, flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 12, borderRadius: 8, borderWidth: 1, borderColor: '#FECACA', backgroundColor: '#FFFFFF' },
   duplicateLinkText: { color: '#9F2436', fontSize: 11, fontWeight: '700' },
   banner: { marginBottom: 10 },
-  statusCard: { marginHorizontal: 0, paddingHorizontal: 12, paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: partnerTheme.colors.line, backgroundColor: partnerTheme.colors.surface },
-  statusTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  statusCard: { marginHorizontal: 0, paddingHorizontal: 12, paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: partnerTheme.colors.line, backgroundColor: partnerTheme.colors.surface },
+  statusTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
   statusLogoWrap: { width: 34, height: 37, alignItems: 'center', justifyContent: 'center' },
   statusArtwork: { width: 34, height: 36 },
   statusLogo: { width: 38, height: 38 },
-  statusBody: { flex: 1, minWidth: 0, paddingTop: 2 },
-  statusTitleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
-  intakeNumber: { flex: 1, minWidth: 0, color: partnerTheme.colors.ink, ...partnerTheme.typography.sectionTitle },
-  intakeSummaryCompact: { marginTop: 2, marginBottom: 0 },
-  summaryLine: { marginTop: 1, color: '#64748B', fontSize: 11, lineHeight: 16 },
+  statusBody: { flex: 1, minWidth: 0, paddingTop: 1 },
+  statusTitleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 6 },
+  statusIdentity: { flex: 1, minWidth: 0, gap: 1 },
+  intakeNumber: { color: partnerTheme.colors.ink, fontSize: 14, lineHeight: 19, fontWeight: '500' },
+  intakeSummaryCompact: { marginTop: 0, marginBottom: 0 },
+  summaryLine: { marginTop: 0, color: '#64748B', fontSize: 10.5, lineHeight: 15 },
   statusHelp: { marginTop: 4, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
-  statusMeta: { flexShrink: 0, maxWidth: '58%', alignItems: 'flex-end', gap: 4 },
+  statusMeta: { flexShrink: 0, maxWidth: '47%', alignItems: 'flex-end', gap: 3 },
   statusMetaDuplicate: { paddingTop: 0 },
-  statusBadge: { maxWidth: '100%', borderRadius: 999, paddingHorizontal: 9, paddingVertical: 5 },
+  statusBadge: { maxWidth: '100%', borderRadius: 999, paddingHorizontal: 8, paddingVertical: 4 },
   statusBadgeCompleted: { backgroundColor: '#E8F7EE' },
   statusBadgeRejected: { backgroundColor: '#FDECEC' },
   statusBadgeProcessing: { backgroundColor: '#FFF3DF' },
-  statusBadgeText: { textAlign: 'right', ...partnerTheme.typography.meta },
+  statusBadgeText: { textAlign: 'right', fontSize: 9, lineHeight: 12, fontWeight: '500' },
   statusBadgeTextCompleted: { color: '#19713C' },
   statusBadgeTextRejected: { color: '#B42318' },
   statusBadgeTextProcessing: { color: '#9A5B13' },
-  statusDate: { color: partnerTheme.colors.inkSubtle, textAlign: 'right', ...partnerTheme.typography.meta },
-  progressWrap: { marginTop: 9, paddingTop: 8, flexDirection: 'row', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: partnerTheme.colors.line },
+  statusDate: { color: partnerTheme.colors.inkSubtle, textAlign: 'right', fontSize: 9, lineHeight: 12, fontWeight: '400' },
+  progressWrap: { marginTop: 7, paddingTop: 7, flexDirection: 'row', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: partnerTheme.colors.line },
   progressStep: { flex: 1, alignItems: 'center' },
   progressLineWrap: { width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
   progressDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: partnerTheme.colors.lineStrong },
@@ -962,14 +965,14 @@ const styles = StyleSheet.create({
   progressDotRejected: { backgroundColor: '#EF8C83' },
   progressLine: { position: 'absolute', left: '58%', width: '84%', height: 1, backgroundColor: partnerTheme.colors.line },
   progressLineComplete: { backgroundColor: partnerTheme.colors.brand },
-  progressLabel: { marginTop: 5, color: partnerTheme.colors.inkSubtle, ...partnerTheme.typography.meta },
+  progressLabel: { marginTop: 4, color: partnerTheme.colors.inkSubtle, fontSize: 9, lineHeight: 12, fontWeight: '400' },
   progressLabelActive: { color: partnerTheme.colors.ink },
   finalPolicy: { marginTop: 10 },
   attention: { marginTop: 10, paddingHorizontal: 16, paddingVertical: 12, borderTopWidth: StyleSheet.hairlineWidth, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: '#F0D7AE', backgroundColor: '#FFF7E8' },
   attentionTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   attentionArtworkWrap: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center' },
   attentionArtwork: { width: 36, height: 36 },
-  attentionTitle: { flex: 1, color: '#80511A', ...partnerTheme.typography.bodyStrong },
+  attentionTitle: { flex: 1, color: '#80511A', fontSize: 11.5, lineHeight: 17, fontWeight: '500' },
   attentionText: { marginTop: 7, color: '#80511A', fontSize: 12, lineHeight: 19, flexShrink: 1 },
   replacementProgress: { marginTop: 9 },
   replacementProgressTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
