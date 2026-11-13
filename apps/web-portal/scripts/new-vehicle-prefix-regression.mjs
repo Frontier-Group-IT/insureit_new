@@ -35,7 +35,7 @@ assert.match(partnerVehicleRegister, /alt=\{vehicle\.make \? `\$\{vehicle\.make\
 assert.doesNotMatch(partnerVehicleRegister, /pending \? "Registration pending" : vehicle\.vehicle_no/);
 assert.match(partnerVehicleDetail, /displayVehicleRegistrationNumber/);
 const fleetSummary = readFileSync("app/customers/[id]/fleet/fleet-summary-client.tsx", "utf8");
-const onboardingActions = readFileSync("app/policies/policy-onboarding-actions.ts", "utf8");
+const onboardingActions = readFileSync("lib/policy-onboarding-engine.ts", "utf8");
 const misExport = readFileSync("lib/reports/policy-business-mis-export.ts", "utf8");
 for (const source of [vehicleWorkspace, fleetSummary, onboardingActions, misExport]) {
   assert.match(source, /NEW/);
