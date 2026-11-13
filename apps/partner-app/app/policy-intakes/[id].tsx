@@ -254,13 +254,13 @@ export default function PolicyIntakeDetailScreen() {
                   <View style={styles.statusIdentity}>
                     <Text numberOfLines={2} style={styles.intakeNumber}>{fields.get('policy_number')?.value?.trim() || 'Policy pending'}</Text>
                   <View style={styles.intakeSummaryCompact}>
-                    <Text numberOfLines={2} style={styles.summaryLine}>
+                    <Text numberOfLines={3} style={styles.summaryLine}>
                       {[row.customer_mobile, fields.get('insured_name')?.value?.trim()
                         || fields.get('customer_name')?.value?.trim()
                         || fields.get('name_of_insured')?.value?.trim()
                         || 'Customer name pending'].filter(Boolean).join(' · ')}
                     </Text>
-                    <Text numberOfLines={2} style={styles.summaryLine}>
+                    <Text numberOfLines={3} style={styles.summaryLine}>
                       {`${row.lead_source_name || 'Lead source unavailable'} (${row.submitted_by_name?.trim() || 'Submitter unavailable'})`}
                     </Text>
                     {row.status !== 'duplicate' && row.status !== 'ready_for_review' && row.status !== 'in_review' && row.status !== 'rejected'
@@ -700,7 +700,7 @@ const reviewStyles=StyleSheet.create({
   pairValue:{flex:1.4,textAlign:'right',fontSize:10.5,lineHeight:15,color:'#193659',fontWeight:'400'},
   lowConfidence:{color:'#A46B14'},
   warningBox:{padding:9,backgroundColor:'#FFF8EA',borderRadius:8,gap:3},
-  warningHeading:{fontSize:10,fontWeight:'800',color:'#995E20'},
+  warningHeading:{fontSize:10,fontWeight:'500',color:'#995E20'},
   warningText:{fontSize:10,lineHeight:16,color:'#946320'},
   documentBox:{padding:10,borderRadius:10,backgroundColor:'#F4F7FC',gap:6},
   documentName:{fontSize:10,fontWeight:'400',color:'#344B69'},
@@ -715,9 +715,9 @@ const reviewStyles=StyleSheet.create({
   actionRow:{flexDirection:'row',gap:8},
   actionButton:{flex:1,minHeight:42,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:7,borderRadius:12},
   requestInfoButton:{backgroundColor:'#FFF9EC'},
-  requestInfoText:{color:'#A65C18',fontSize:11,fontWeight:'700'},
+  requestInfoText:{color:'#A65C18',fontSize:10.5,fontWeight:'500'},
   rejectButton:{backgroundColor:'#FFF0F0'},
-  rejectText:{color:'#B42318',fontSize:11,fontWeight:'700'},
+  rejectText:{color:'#B42318',fontSize:10.5,fontWeight:'500'},
   actionDisabled:{opacity:.6},
   caption:{fontSize:10,color:'#65768D',lineHeight:15,textAlign:'center'},
 });
@@ -896,16 +896,16 @@ const reviewerStyles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   warningIcon: { height: 36, width: 36, borderRadius: 18, backgroundColor: '#FFF7E8', alignItems: 'center', justifyContent: 'center' },
   headerText: { flex: 1 },
-  title: { fontSize: 15, lineHeight: 20, fontWeight: '700', color: '#17365D' },
+  title: { fontSize: 14, lineHeight: 19, fontWeight: '500', color: '#17365D' },
   message: { fontSize: 11, lineHeight: 18, marginTop: 7, color: '#64748B' },
-  bold: { fontWeight: '700', color: '#334155' },
+  bold: { fontWeight: '500', color: '#334155' },
   close: { padding: 4 },
   actions: { flexDirection: 'row', gap: 9, marginTop: 20 },
   action: { flex: 1, minHeight: 44, borderRadius: 11, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 6 },
   cancel: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D8E0EA' },
   continue: { backgroundColor: '#17365D' },
-  cancelText: { color: '#475569', fontSize: 10, fontWeight: '700', textAlign: 'center' },
-  continueText: { color: '#FFFFFF', fontSize: 10, fontWeight: '700', textAlign: 'center' },
+  cancelText: { color: '#475569', fontSize: 10, fontWeight: '500', textAlign: 'center' },
+  continueText: { color: '#FFFFFF', fontSize: 10, fontWeight: '500', textAlign: 'center' },
 });
 
 
@@ -913,15 +913,15 @@ const styles = StyleSheet.create({
   rejectModalOverlay: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 24, backgroundColor: 'rgba(10,25,50,0.50)' },
   rejectModalCard: { width: '100%', maxWidth: 330, borderRadius: 16, backgroundColor: '#FFFFFF', padding: 18, alignItems: 'center', gap: 9, elevation: 8 },
   rejectModalIcon: { width: 42, height: 42, borderRadius: 21, backgroundColor: '#FFF0EE', alignItems: 'center', justifyContent: 'center' },
-  rejectModalTitle: { fontSize: 16, fontWeight: '800', color: '#17365D', textAlign: 'center' },
+  rejectModalTitle: { fontSize: 14, fontWeight: '500', color: '#17365D', textAlign: 'center' },
   rejectModalMessage: { fontSize: 12, lineHeight: 18, color: '#64748B', textAlign: 'center' },
   rejectModalNote: { alignSelf: 'stretch', borderRadius: 8, backgroundColor: '#F5F7FB', paddingHorizontal: 10, paddingVertical: 8, fontSize: 11, color: '#344B69', lineHeight: 16 },
   rejectModalActions: { flexDirection: 'row', alignSelf: 'stretch', gap: 8, marginTop: 6 },
   rejectModalButton: { flex: 1, minHeight: 40, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
   rejectModalCancel: { borderWidth: 1, borderColor: '#D5E0EF', backgroundColor: '#FFFFFF' },
-  rejectModalCancelText: { fontSize: 12, fontWeight: '700', color: '#344B69' },
+  rejectModalCancelText: { fontSize: 11, fontWeight: '500', color: '#344B69' },
   rejectModalConfirm: { backgroundColor: '#B42318' },
-  rejectModalConfirmText: { fontSize: 12, fontWeight: '800', color: '#FFFFFF' },
+  rejectModalConfirmText: { fontSize: 11, fontWeight: '500', color: '#FFFFFF' },
   rejectModalDisabled: { opacity: 0.5 },
   policyCopyCard: { marginHorizontal: 8, marginTop: 12, padding: 12, borderRadius: 10, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE5EF', gap: 7 },
   policyCopyHeading: { flexDirection: 'row', alignItems: 'center', gap: 7 },
@@ -931,7 +931,7 @@ const styles = StyleSheet.create({
   duplicateTitle: { color: '#A91F3B', fontSize: 11, fontWeight: '500', letterSpacing: 0.3 },
   duplicateText: { color: '#9F2436', fontSize: 11, lineHeight: 17 },
   duplicateLink: { alignSelf: 'flex-start', minHeight: 34, flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 12, borderRadius: 8, borderWidth: 1, borderColor: '#FECACA', backgroundColor: '#FFFFFF' },
-  duplicateLinkText: { color: '#9F2436', fontSize: 11, fontWeight: '700' },
+  duplicateLinkText: { color: '#9F2436', fontSize: 10.5, fontWeight: '500' },
   banner: { marginBottom: 10 },
   statusCard: { marginHorizontal: 0, paddingHorizontal: 12, paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: partnerTheme.colors.line, backgroundColor: partnerTheme.colors.surface },
   statusTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
@@ -1002,7 +1002,7 @@ const styles = StyleSheet.create({
   navDisabled: { opacity: 0.35 },
   navIconWrap: { minWidth: 36, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   navIconWrapActive: { backgroundColor: '#EEE9FF' },
-  navLabel: { marginTop: 1, color: '#60738F', fontSize: 7.5, lineHeight: 10, fontWeight: '600' },
-  navLabelActive: { color: '#633DF1', fontWeight: '800' },
+  navLabel: { marginTop: 1, color: '#60738F', fontSize: 7.5, lineHeight: 10, fontWeight: '400' },
+  navLabelActive: { color: '#633DF1', fontWeight: '500' },
   pressed: { backgroundColor: partnerTheme.colors.pressed },
 });
