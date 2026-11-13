@@ -26,7 +26,7 @@ export function displayIndianDate(iso: string) {
   return day+'/'+month+'/'+year;
 }
 
-export function PartnerPolicyDateField({label,value,onChange,required=false}:{label:string;value:string;onChange:(iso:string)=>void;required?:boolean}) {
+export function PartnerPolicyDateField({label,value,onChange,required=false,fullWidth=false}:{label:string;value:string;onChange:(iso:string)=>void;required?:boolean;fullWidth?:boolean}) {
   const [pickerOpen,setPickerOpen] = useState(false);
   const [webInput,setWebInput] = useState('');
   const selected=parseIso(value);
@@ -34,7 +34,7 @@ export function PartnerPolicyDateField({label,value,onChange,required=false}:{la
     if (Platform.OS==='android') setPickerOpen(false);
     if(event.type==='set'&&date) onChange(toIso(date));
   };
-  return <View style={styles.field}>
+  return <View style={[styles.field, fullWidth && styles.fullWidth]}>
     <Text style={styles.label}>{label}{required?<Text style={styles.star}> *</Text>:null}</Text>
     {Platform.OS==='web' ? (
       <View style={styles.row}>
@@ -52,7 +52,7 @@ export function PartnerPolicyDateField({label,value,onChange,required=false}:{la
   </View>;
 }
 const styles=StyleSheet.create({
-  field:{width:'48%',minWidth:0,gap:5},label:{fontSize:10,color:'#65758E',fontWeight:'700'},star:{color:'#B93333'},
+  field:{width:'48%',minWidth:0,gap:5},fullWidth:{width:'100%'},label:{fontSize:10,color:'#65758E',fontWeight:'700'},star:{color:'#B93333'},
   row:{minHeight:42,borderWidth:1,borderColor:'#D8E1EC',borderRadius:9,paddingHorizontal:10,flexDirection:'row',alignItems:'center',justifyContent:'space-between',backgroundColor:'#FFFFFF',gap:5},
   value:{fontSize:12,color:'#183653',flex:1},placeholder:{color:'#97A5B7'},webInput:{flex:1,fontSize:12,color:'#183653',minHeight:38},
   done:{alignSelf:'flex-end',padding:10},doneText:{fontSize:12,fontWeight:'700',color:'#315B9A'}
