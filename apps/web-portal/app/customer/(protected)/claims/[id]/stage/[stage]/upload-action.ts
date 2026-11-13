@@ -127,7 +127,7 @@ export async function prepareCustomerClaimBulkVideo(accountId:string,claimId:str
   } catch(error) {return {ok:false,error:error instanceof Error?error.message:"Unable to prepare video upload."};}
 }
 
-export async function finalizeCustomerClaimBulkVideo(accountId:string,claimId:string,stage:string,path:string,file:{name:string;size:number;type:string}) {
+export async function finalizeCustomerClaimBulkVideo(accountId:string,claimId:string,stage:string,path:string,file:{name:string;size:number;type:string},reuploadRequestId?:string|null) {
   try {
     if(stage!=="spot_intimation")throw new Error("Invalid upload stage.");
     const {account}=await resolveCustomerWebScope(accountId);
