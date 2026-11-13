@@ -65,7 +65,8 @@ expect(policyAccess.includes("requirePolicyCreator"), "Managed policy creation m
 expect(policyAccess.includes("requireExternalPolicyCreator"), "External policy creation must have a dedicated create guard.");
 expect(policyAccess.includes('getEffectivePermission(profile.id, profile.role, "view_policies")'), "Existing policy editing must continue to use the established edit permission.");
 
-const onboardingActions = source("app/policies/policy-onboarding-actions.ts");
+const onboardingActions = source("lib/policy-onboarding-engine.ts");
+expect(source("app/policies/policy-onboarding-actions.ts").includes("onboardPolicyForVerifiedActor"), "Website action must delegate to the same secured policy booking engine.");
 expect(onboardingActions.includes("operationalEntryPayload(payload, profile.role)"), "Policy onboarding must sanitize Backoffice financial fields before validation and persistence.");
 for (const marker of ['payin: { basis: "NET", odPercent: "0", tpPercent: "0", scheme: "0", provided: false }','billing: { billNumber: "", billedAmount: "0", billDate: "", status: "Unbilled" }','payout: { retention: "0", odPercent: "0", tpPercent: "0", flatAmount: "0", status: "Pending", date: "", voucherNumber: "", provided: false }']) expect(onboardingActions.includes(marker), `Backoffice policy sanitizer is missing ${marker}.`);
 expect(onboardingActions.includes('onboard_motor_policy_commercial_status_v2'), "Motor onboarding must use the commercial-status wrapper so explicit zero can be distinguished from untouched defaults.");
