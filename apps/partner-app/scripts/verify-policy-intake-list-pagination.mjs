@@ -104,7 +104,7 @@ assert.match(detail, /row.review_access.can_review/, 'Do not show reviewer actio
 assert.match(detail, /row.review_access.can_finalize/, 'Finalization must require separate approve permission');
 assert.match(detail, /Review & Finalize/, 'Keep the existing Operations handoff action');
 assert.match(detail, /Resume Policy Onboarding/, 'Keep the resume action for in-review intakes');
-assert.match(detail, /prepareNativePolicyOnboarding\\(latest.id, confirmedConflict, latest.reviewer_conflict_id\\)/, 'Native reviewer confirmation prepares app onboarding draft');
+assert.ok(detail.includes('await prepareNativePolicyOnboarding(latest.id, confirmedConflict, latest.reviewer_conflict_id)'), 'Native reviewer confirmation prepares app onboarding draft');
 assert.match(detail, /updatePartnerPolicyIntakeReview\(row.id, status, reviewNote.trim\(\)\)/, 'Keep reviewer request and reject actions on the server');
 assert.doesNotMatch(detail, /access_token.*Linking|Linking.*access_token/, 'Never transmit authentication tokens in browser links');
 assert.match(route, /identity.actor_kind !== "employee"/, 'Nonemployee Partners must never receive Operations review grants');
