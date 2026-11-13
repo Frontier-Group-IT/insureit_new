@@ -267,8 +267,8 @@ export function describePolicyEditChanges(before: PolicyEditSnapshot | null, aft
 
 function readPolicyAuditFieldChanges(raw:unknown):string[]|null {
   if(!Array.isArray(raw)) return null;
-  const fieldLabels = new Set(Object.values(POLICY_EDIT_FIELDS).flatMap(fields=>Object.values(fields)));
-  const withValues=new Set([...DISPLAYABLE_PREMIUM_VALUES,...DISPLAYABLE_PUBLIC_VALUES]
+  const fieldLabels = new Set<string>(Object.values(POLICY_EDIT_FIELDS).flatMap(fields=>Object.values(fields)));
+  const withValues=new Set<string>([...DISPLAYABLE_PREMIUM_VALUES,...DISPLAYABLE_PUBLIC_VALUES]
     .map(path=>{const [group,key]=path.split(".");return (POLICY_EDIT_FIELDS as Record<string,Record<string,string>>)[group]?.[key];})
     .filter((label):label is string=>Boolean(label)));
   const accepted:string[]=[];
