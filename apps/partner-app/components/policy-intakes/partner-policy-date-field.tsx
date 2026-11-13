@@ -10,6 +10,13 @@ function parseIso(value: string) {
   const parsed = new Date(year, month - 1, day);
   return parsed.getFullYear()===year && parsed.getMonth()===month-1 && parsed.getDate()===day ? parsed : new Date();
 }
+function fromIndianDate(value: string) {
+  const match=/^(\d{2})\/(\d{2})\/(\d{4})$/.exec(value);
+  if(!match)return null;
+  const [,day,month,year]=match;
+  const parsed=parseIso(year+'-'+month+'-'+day);
+  return parsed.getDate()===Number(day)&&parsed.getMonth()+1===Number(month)&&parsed.getFullYear()===Number(year)?year+'-'+month+'-'+day:null;
+}
 function toIso(value: Date) {
   return [String(value.getFullYear()).padStart(4,'0'),String(value.getMonth()+1).padStart(2,'0'),String(value.getDate()).padStart(2,'0')].join('-');
 }
@@ -31,7 +38,7 @@ export function PartnerPolicyDateField({label,value,onChange,required=false}:{la
     <Text style={styles.label}>{label}{required?<Text style={styles.star}> *</Text>:null}</Text>
     {Platform.OS==='web' ? (
       <View style={styles.row}>
-        <TextInput accessibilityLabel={label} value={webInput||value} onChangeText={v=>{setWebInput(v);if(ISO.test(v)){onChange(v);setWebInput('');}}} placeholder="YYYY-MM-DD" style={styles.webInput}/>
+        <TextInput accessibilityLabel={label} value={webInput|| (value?displayIndianDate(value):'')} onChangeText={v=>{setWebInput(v);const iso=fromIndianDate(v);if(iso){onChange(iso);setWebInput('');}}} onBlur={()=>setWebInput('')} placeholder="DD/MM/YYYY" style={styles.webInput}/>
         <Ionicons name="calendar-outline" size={17} color="#315B9A"/>
       </View>
     ) : (
