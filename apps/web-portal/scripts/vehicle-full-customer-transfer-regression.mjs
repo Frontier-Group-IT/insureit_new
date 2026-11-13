@@ -16,7 +16,7 @@ const form = read("app/vehicles/[id]/transfer/transfer-vehicle-form.tsx");
 const detail = read("app/vehicles/[id]/page.tsx");
 const editPage = read("app/vehicles/[id]/edit/page.tsx");
 const vehicleForms = read("components/forms.tsx");
-const onboardingAction = read("app/policies/policy-onboarding-actions.ts");
+const onboardingAction = read("lib/policy-onboarding-engine.ts");
 const onboardingForm = read("components/policy-unified-form.tsx");
 
 for (const expected of [
