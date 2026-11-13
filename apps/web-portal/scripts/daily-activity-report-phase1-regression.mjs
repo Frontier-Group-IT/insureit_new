@@ -1,0 +1,32 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+
+const read = (path) => readFileSync(new URL(path, import.meta.url), "utf8");
+const nav = read("../components/claim-manager/app-navigation.tsx");
+const page = read("../app/reports/(workspace)/daily/page.tsx");
+const source = read("../lib/reports/daily-activity.ts");
+
+assert.match(nav, /href:"\/reports",label:"Reporting Workspace"[^\n]+href:"\/reports\/daily",label:"Daily Report"/, "Daily Report is located under Reporting Workspace");
+assert.match(page, /await requireCapability\("view_reports"\)/, "Daily Report uses server-side report permission");
+assert.match(page, /loadDailyActivityReport\(profile, query\)/, "Daily Report uses server-side scoped loader");
+assert.match(source, /getEmployeeAccessScope\(viewer\.id, viewer\.role, "view_reports"\)/, "All tab resolves report-specific hierarchy");
+assert.match(source, /scope === "self" \? \[viewer\.id\]/, "Self tab only authorizes current profile");
+assert.match(source, /scope === "all" && access\.mode === "organization"/, "Organization read scope is explicit");
+assert.match(source, /\.in\("actor_id", actorIds\)/, "Audit fetch filters actors on server");
+assert.match(source, /\.in\("submitted_by_profile_id",actorIds\)/, "Intake fetch scopes submitter");
+assert.match(source, /\.in\("created_by",actorIds\)/, "Created rows are employee scoped");
+assert.match(source, /\.in\("finalized_by_profile_id",actorIds\)/, "Finalization scope uses actual actor");
+assert.match(source, /\.in\("converted_by",actorIds\)/, "Case conversions use actual actor");
+assert.match(source, /\.gte\("created_at",startIso\)\.lt\("created_at",endIso\)/, "Date filter is applied by the database");
+assert.match(source, /SOURCE_CAP = 480/, "Per-source fetch is bounded");
+assert.match(source, /PAGE_SIZE = 30/, "Client never downloads entire activity table");
+assert.match(source, /source:"Record history"/, "Reconstructed history source is labeled");
+assert.match(page, /Phase 1 shows existing recorded events/, "Incomplete historical coverage is disclosed");
+assert.match(page, /type="date"/, "Date filter is present");
+assert.match(page, /name="employee"/, "Employee search is present");
+assert.match(page, /name="type"/, "Activity type filtering is present");
+assert.match(page, /href=\{linkFor\(\{scope:"self"/, "Self tab has separate link");
+assert.match(page, /href=\{linkFor\(\{scope:"all"/, "All tab has separate link");
+assert.doesNotMatch(source, /\.insert\(|\.update\(|\.delete\(|\.upsert\(|\.rpc\(/, "Phase 1 is strictly read-only");
+assert.doesNotMatch(page, /"use client"/, "Page remains server rendered");
+console.log("Daily Report Phase 1 navigation, read scope, filters, bounded reads and no-write contracts passed.");
