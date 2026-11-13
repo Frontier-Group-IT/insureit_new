@@ -12,7 +12,7 @@ import { createSupabaseBrowserClient } from "@/lib/auth";
 const allowedExtensions = /\.(pdf|jpe?g|png|webp|heic|mp4|mov|webm|m4a|ogg)$/i;
 const videoExtensions = /\.(mp4|mov|webm)$/i;
 
-export function CustomerClaimMultipleUpload({claimId,accountId,stage,documents,allowUpload=true,returnToSpotIntimation=false}:{claimId:string;accountId:string;stage:string;documents:CustomerClaimFile[];allowUpload?:boolean;returnToSpotIntimation?:boolean}) {
+export function CustomerClaimMultipleUpload({claimId,accountId,stage,documents,allowUpload=true,returnToSpotIntimation=false,reuploadRequestId}:{claimId:string;accountId:string;stage:string;documents:CustomerClaimFile[];allowUpload?:boolean;returnToSpotIntimation?:boolean;reuploadRequestId?:string|null}) {
   const router=useRouter();
   const documentListId=useId();
   const picker=useRef<HTMLInputElement>(null);
@@ -51,16 +51,17 @@ export function CustomerClaimMultipleUpload({claimId,accountId,stage,documents,a
         data.set("claim",claimId);
         data.set("stage",stage);
         data.set("type","Other Document");
+        if(reuploadRequestId)data.set("reupload_request",reuploadRequestId);
         data.set("returnToSpotIntimation",returnToSpotIntimation?"1":"0");
         data.append("file",file);
         try {
           if(videoExtensions.test(file.name) && file.size > 20 * 1024 * 1024) {
             // Large videos bypass the server-action body limit via a claim-scoped signed URL.
-            const prepared = await prepareCustomerClaimBulkVideo(accountId,claimId,stage,{name:file.name,size:file.size,type:file.type});
+            const prepared = await prepareCustomerClaimBulkVideo(accountId,claimId,stage,{name:file.name,size:file.size,type:file.type},reuploadRequestId);
             if(!prepared.ok || !prepared.path || !prepared.token) throw new Error(prepared.error || "Unable to prepare video upload.");
             const uploaded = await createSupabaseBrowserClient().storage.from("claim-documents").uploadToSignedUrl(prepared.path,prepared.token,file,{contentType:file.type,upsert:false});
             if(uploaded.error) throw new Error(uploaded.error.message);
-            const saved = await finalizeCustomerClaimBulkVideo(accountId,claimId,stage,prepared.path,{name:file.name,size:file.size,type:file.type});
+            const saved = await finalizeCustomerClaimBulkVideo(accountId,claimId,stage,prepared.path,{name:file.name,size:file.size,type:file.type},reuploadRequestId);
             if(!saved.ok || !saved.uploaded) throw new Error(saved.error || "Unable to register video.");
             confirmed.push(saved.uploaded);
           } else {
