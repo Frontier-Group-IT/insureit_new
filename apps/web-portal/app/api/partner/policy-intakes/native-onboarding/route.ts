@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { onboardPolicyForVerifiedActor, type PolicyOnboardingPayload } from "@/lib/policy-onboarding-engine";
+import { requestPolicyDateApprovalForVerifiedActor, verifyPolicyDateApprovalForVerifiedActor } from "@/lib/policy-date-approval-engine";
+import { POLICY_DATE_APPROVERS } from "@/lib/policy-date-rule";
 import { getEffectivePermission } from "@/lib/permission-management";
 import { getOperationsHeadDownlinePolicyScope } from "@/lib/policy-access-scope";
 import { createSupabaseWithAccessToken } from "@/lib/auth";
@@ -16,7 +18,7 @@ export const dynamic = "force-dynamic";
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const fields = ["registrationMode","issuanceDate","rmName","intermediaryType","leadSource","intermediaryCode","businessLine","registrationNo","insuredName","phoneNo","vehicleClass","make","model","fuelType","capacity","manufacturingYear","chassisNo","engineNo","rtoState","rtoName","policyProduct","idv","od","tp","cpaOpted","cpa","policyNo","insurerId","validFrom","validUpto","payoutBasis","projectedOdPercent","projectedTpPercent","insurerScheme","payinBillNo","payinBilledAmount","payinBillDate","payinStatus","retention","payoutOdPercent","payoutTpPercent","flatPayoutAmount","payoutStatus","payoutDate","payoutVoucherNo","remarks"] as const;
 const commercialFields = ["payoutBasis","projectedOdPercent","projectedTpPercent","insurerScheme","payinBillNo","payinBilledAmount","payinBillDate","payinStatus","retention","payoutOdPercent","payoutTpPercent","flatPayoutAmount","payoutStatus","payoutDate","payoutVoucherNo"] as const;
-type Input = { action?: "prepare" | "save" | "book"; intake_id?: string; take_over?: boolean; expected_reviewer_id?: string | null; revision?: number; draft?: PolicyIntakeDraft; resolution?: PolicyOnboardingPayload["resolution"]; date_approval_id?: string | null };
+type Input = { action?: "prepare" | "save" | "book" | "approval_request" | "approval_verify"; intake_id?: string; take_over?: boolean; expected_reviewer_id?: string | null; revision?: number; draft?: PolicyIntakeDraft; resolution?: PolicyOnboardingPayload["resolution"]; date_approval_id?: string | null; approver_key?: string; approval_id?: string; otp?: string };
 type Intake = { id:string; intake_number:string; lead_source_type:"posp"|"misp"|"partner"; lead_source_name:string; lead_source_code:string|null; customer_mobile:string; ocr_fields:PolicyIntakeOcrField[]; status:string; assigned_to_profile_id:string|null; created_at:string; matched_customer_id:string|null };
 function reply(error:string,status:number){return NextResponse.json({ok:false,error},{status,headers:{"Cache-Control":"no-store"}});}
 function good(data:Record<string,unknown>){return NextResponse.json({ok:true,...data},{headers:{"Cache-Control":"no-store"}});}
@@ -26,12 +28,12 @@ export async function POST(request:Request){
   if(!token)return reply("Partner authentication required.",401);
   let body:Input;
   try{body=await request.json() as Input;}catch{return reply("Invalid onboarding request.",400);}
-  if(!uuid.test(body.intake_id??"")||!["prepare","save","book"].includes(body.action??""))return reply("Invalid onboarding request.",400);
+  if(!uuid.test(body.intake_id??"")||!["prepare","save","book","approval_request","approval_verify"].includes(body.action??""))return reply("Invalid onboarding request.",400);
   const scoped=createSupabaseWithAccessToken(token);
   const {data:{user},error:authError}=await scoped.auth.getUser(token);
   if(authError||!user)return reply("Your session has expired. Sign in again.",401);
   const admin=createSupabaseAdminClient();
-  const {data:profile}=await admin.from("profiles").select("id,role,is_active").eq("id",user.id).maybeSingle<{id:string;role:string;is_active:boolean}>();
+  const {data:profile}=await admin.from("profiles").select("id,role,is_active,full_name").eq("id",user.id).maybeSingle<{id:string;role:string;is_active:boolean;full_name:string|null}>();
   if(!profile?.is_active)return reply("Operations access is unavailable.",403);
   const head=profile.role==="operations_head_life";
   const [review,finalize]=await Promise.all([
@@ -50,6 +52,30 @@ export async function POST(request:Request){
   const dup=await loadPolicyIntakeDuplicateMatches(admin,[intake]);
   if(!dup.ok)return reply("Duplicate verification is unavailable.",503);
   if(dup.matches.has(intake.id))return reply("Duplicate intakes cannot be onboarded.",409);
+  if(body.action==="approval_request"||body.action==="approval_verify"){
+    if(intake.status!=="in_review"||intake.assigned_to_profile_id!==user.id)return reply("You are no longer the assigned reviewer.",409);
+    const createAllowed=await hasEffectiveCapability(profile,"create_policies","edit");
+    const editPermission=await getEffectivePermission(profile.id,profile.role,"view_policies");
+    if(!head&&!createAllowed&&!["edit","approve"].includes(editPermission.access))return reply("Policy booking permission is required.",403);
+    if(head){
+      const downline=await getOperationsHeadDownlinePolicyScope(profile.id);
+      if(!intake.lead_source_code||!downline.intermediaryCodes.includes(intake.lead_source_code))return reply("Lead source is outside your downline.",403);
+    }
+    const {data:stored,error:storedError}=await admin.from("policy_intake_onboarding_drafts")
+      .select("draft_payload,revision").eq("intake_id",intake.id).maybeSingle<{draft_payload:PolicyIntakeDraft;revision:number}>();
+    if(storedError||!stored||stored.revision!==body.revision)return reply("Save the current draft before requesting approval.",409);
+    const approvalInput={issuanceDate:stored.draft_payload.issuanceDate,policyNumber:stored.draft_payload.policyNo,operation:"create" as const,intermediaryCode:stored.draft_payload.intermediaryCode};
+    if(body.action==="approval_request"){
+      if(!POLICY_DATE_APPROVERS.some(a=>a.key===body.approver_key))return reply("Choose a valid approver.",400);
+      const result=await requestPolicyDateApprovalForVerifiedActor({...approvalInput,approverKey:body.approver_key as string},profile);
+      if(!result.ok)return reply(result.error,400);
+      return good({approval_id:result.approvalId,expires_at:result.expiresAt});
+    }
+    if(!body.approval_id||!body.otp)return reply("Approval code is missing.",400);
+    const result=await verifyPolicyDateApprovalForVerifiedActor(body.approval_id,body.otp,approvalInput,profile);
+    if(!result.ok)return reply(result.error,400);
+    return good({verified:true});
+  }
   if(body.action==="book"){
     if(intake.status!=="in_review"||intake.assigned_to_profile_id!==user.id)return reply("You are no longer the assigned reviewer.",409);
     if(!Number.isSafeInteger(body.revision)||(body.revision??0)<1)return reply("Save your latest draft before booking.",400);
@@ -167,5 +193,5 @@ export async function POST(request:Request){
   // Never return restricted insurance pay-in, retention or partner payout values to non-commercial reviewers.
   const visibleDraft={...draft};
   if(!commercialAccess)for(const key of commercialFields)visibleDraft[key]="";
-  return good({draft:visibleDraft,revision,intake_number:intake.intake_number,insurers,manufacturers});
+  return good({draft:visibleDraft,revision,intake_number:intake.intake_number,insurers,manufacturers,approvers:POLICY_DATE_APPROVERS.map(a=>({key:a.key,name:a.name}))});
 }
