@@ -219,8 +219,21 @@ const DISPLAYABLE_PREMIUM_VALUES = new Set([
 ]);
 const DERIVED_PREMIUM_FIELDS = new Set([
   "premium.net_premium", "premium.gst_amount", "premium.gross_premium",
-  "policy.premium_amount",
+  "policy.premium_amount", "payin.projected_commission_amount",
+  "payin.total_projected_payin", "payout.partner_payout_amount",
 ]);
+const AUTO_REVIEW_STATUS_FIELDS = new Set(["payin.commercial_status","payout.commercial_status"]);
+const DISPLAYABLE_PUBLIC_VALUES = new Set([
+  "policy.status","policy.business_line","policy.policy_type","policy.policy_product",
+  "policy.issuance_date","policy.start_date","policy.end_date","policy.policy_term",
+  "case.product_name","case.premium_paying_term","case.policy_duration",
+  "case.payment_frequency","case.payment_mode",
+]);
+function formatPublicAuditValue(raw:string|null):string {
+  if(!raw)return "Not set";
+  return /^[a-zA-Z0-9 ._\/-]{1,70}$/.test(raw)?raw:"Changed";
+}
+const activityLabel=(value:string)=>value.split(":")[0].replace(/ changed \(values hidden\)$/, "");
 function formatAuditedPremiumValue(key: string, raw: string | null): string {
   if (raw === null || raw === "") return "Not set";
   if (key === "premium.cpa_opted") return raw === "true" ? "Yes" : raw === "false" ? "No" : "Not set";
@@ -242,10 +255,14 @@ export function describePolicyEditChanges(before: PolicyEditSnapshot | null, aft
       const fullKey = `${prefix}.${key}`;
       if (before[fullKey] !== after[fullKey]) entries.push({key:fullKey,label});
     }
-  return entries.filter(entry => !DERIVED_PREMIUM_FIELDS.has(entry.key))
+  const premiumSourceChanged = entries.some(entry=>DISPLAYABLE_PREMIUM_VALUES.has(entry.key));
+  return entries.filter(entry => !DERIVED_PREMIUM_FIELDS.has(entry.key)
+      && !(premiumSourceChanged && AUTO_REVIEW_STATUS_FIELDS.has(entry.key)))
     .map(entry => DISPLAYABLE_PREMIUM_VALUES.has(entry.key)
       ? `${entry.label}: ${formatAuditedPremiumValue(entry.key,before[entry.key])} → ${formatAuditedPremiumValue(entry.key,after[entry.key])}`
-      : `${entry.label} changed (values hidden)`).slice(0,30);
+      : DISPLAYABLE_PUBLIC_VALUES.has(entry.key)
+        ? `${entry.label}: ${formatPublicAuditValue(before[entry.key])} → ${formatPublicAuditValue(after[entry.key])}`
+        : `${entry.label} changed (values hidden)`).slice(0,30);
 }
 
 function policyEditTitle(changed: string[] | null): string {
@@ -253,9 +270,9 @@ function policyEditTitle(changed: string[] | null): string {
   if (changed.length === 0) return "Policy saved — no tracked field changes";
   if (changed.length > 1) {
     const remaining = changed.length - 2;
-    return `${changed[0]}, ${changed[1]}${remaining ? ` + ${remaining} more` : ""} updated`;
+    return `${activityLabel(changed[0])}, ${activityLabel(changed[1])}${remaining ? ` + ${remaining} more` : ""} updated`;
   }
-  const single = changed[0].split(":")[0].replace(/ changed \(values hidden\)$/, "");
+  const single = activityLabel(changed[0]);
   if (single === "Policy number") return "Policy number changed";
   if (single === "Policy status") return "Policy status changed";
   if (single === "Insurer") return "Insurer changed";
