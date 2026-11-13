@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 import { PartnerScreen } from '@/components/partner-screen';
-import { prepareNativePolicyOnboarding, saveNativePolicyOnboarding, type NativePolicyDraft, type NativeOnboardingData } from '@/lib/policy-onboarding';
+import { prepareNativePolicyOnboarding, saveNativePolicyOnboarding, bookNativePolicyOnboarding, type NativePolicyDraft, type NativeOnboardingData } from '@/lib/policy-onboarding';
 
 type FieldKey = keyof NativePolicyDraft;
 type Field = { key:FieldKey; label:string; required?:boolean; options?:string[] };
@@ -54,6 +54,7 @@ export default function NativePolicyOnboarding(){
   const [error,setError]=useState('');
   const [loading,setLoading]=useState(true);
   const [saving,setSaving]=useState(false);
+  const [booking,setBooking]=useState(false);
   const [picker,setPicker]=useState<{key:FieldKey;items:{value:string;label:string}[]}|null>(null);
   const [dirty,setDirty]=useState(false);
   const load=useCallback(async()=>{
@@ -81,6 +82,58 @@ export default function NativePolicyOnboarding(){
     }catch(e){setError(e instanceof Error?e.message:'Draft could not be saved.');}
     finally{setSaving(false);}
   };
+
+  async function completeBooking(resolution?:Record<string,unknown>){
+    if(!draft||!data||booking||saving)return;
+    setBooking(true);setError('');
+    let revision=data.revision;
+    try{
+      if(dirty){
+        const saved=await saveNativePolicyOnboarding(id,revision,draft);
+        revision=saved.revision;
+        setData(current=>current?{...current,revision}:current);
+        setDirty(false);
+      }
+      const {booking:result}=await bookNativePolicyOnboarding(id,revision,resolution);
+      if(result.ok){
+        Alert.alert('Policy booked','Policy '+result.policyCode+' was booked successfully.',[
+          {text:'OK',onPress:()=>router.replace('/policy-intakes')},
+        ]);
+        return;
+      }
+      if(result.kind==='customer_match'){
+        const choices=result.candidates.slice(0,2).map(candidate=>({
+          text:'Use '+candidate.name,
+          onPress:()=>void completeBooking({selectedCustomerId:candidate.id}),
+        }));
+        Alert.alert('Confirm customer','Select an existing matching customer, or create a new customer.',[
+          ...choices,{text:'Create new',onPress:()=>void completeBooking({createNewCustomer:true})},{text:'Cancel',style:'cancel'},
+        ]);
+        return;
+      }
+      if(result.kind==='ownership_conflict'){
+        Alert.alert('Vehicle ownership', 'The existing vehicle belongs to '+result.conflict.customerName+'. Reuse this owner?',[
+          {text:'Cancel',style:'cancel'},
+          {text:'Keep existing owner',onPress:()=>void completeBooking({ownershipDecision:'keep_existing',selectedCustomerId:result.conflict.customerId})},
+        ]);
+        return;
+      }
+      if(result.kind==='business_conflict'){
+        const conflict=result.conflict;
+        const message=conflict.message||'Review the policy conflict for '+(conflict.existingPolicyNo||conflict.existingVehicleNo||conflict.type)+'.';
+        const choices:{text:string;onPress?:()=>void;style?:'cancel'}[]=[{text:'Review',style:'cancel'}];
+        if(conflict.type==='coverage_gap')choices.unshift({text:'Accept coverage gap',onPress:()=>void completeBooking({acceptCoverageGap:true})});
+        if(conflict.type==='active_policy_notice')choices.unshift({text:'Continue',onPress:()=>void completeBooking({acceptActivePolicyNotice:true})});
+        if(conflict.type==='expired_policy_history')choices.unshift({text:'Continue',onPress:()=>void completeBooking({acceptExpiredPolicyHistory:true})});
+        if(conflict.type==='vehicle_identity_conflict'&&conflict.existingVehicleId)choices.unshift({text:'Use existing vehicle',onPress:()=>void completeBooking({selectedExistingVehicleId:conflict.existingVehicleId})});
+        Alert.alert('Policy verification',message,choices);
+        return;
+      }
+      setError(result.error);
+    }catch(e){
+      setError('The booking response could not be confirmed. Check Policy Register before retrying to avoid duplicates. '+(e instanceof Error?e.message:''));
+    }finally{setBooking(false);}
+  }
   const net=useMemo(()=>draft?amount(draft.od)+amount(draft.tp)+amount(draft.cpa):0,[draft]);
   const filled=useMemo(()=>{
     if(!draft)return 0;
@@ -129,7 +182,11 @@ export default function NativePolicyOnboarding(){
         <Pressable accessibilityRole="button" disabled={saving} style={styles.secondary} onPress={()=>void save(true)}><Text style={styles.secondaryText}>{saving?'Saving…':'Save & return to Intake'}</Text></Pressable>
         <Pressable accessibilityRole="button" disabled={saving||!dirty} style={[styles.primary,(saving||!dirty)&&styles.disabled]} onPress={()=>void save()}><Text style={styles.primaryText}>{saving?'Saving…':'Save draft'}</Text></Pressable>
       </View>
-      <View style={styles.bookingNotice}><Ionicons name="lock-closed-outline" size={17} color="#8A5A17"/><Text style={styles.bookingText}>Book Policy remains locked until the native workflow is connected to the existing verified booking, conflict and commercial validation system. Saving here does not create a policy.</Text></View>
+      <Pressable accessibilityRole="button" disabled={booking||saving||!data} style={[styles.primary,(booking||saving)&&styles.disabled,styles.bookButton]} onPress={()=>void completeBooking()}>
+        {booking?<ActivityIndicator size="small" color="white"/>:<Ionicons name="checkmark-circle-outline" size={18} color="white"/>}
+        <Text style={styles.primaryText}>{booking?'Checking & booking…':'Book Active Policy'}</Text>
+      </Pressable>
+      <View style={styles.bookingNotice}><Ionicons name="shield-checkmark-outline" size={17} color="#8A5A17"/><Text style={styles.bookingText}>Booking uses Operations validation. Earlier-month policies require date approval. If the response is uncertain, first check Policy Register before retrying.</Text></View>
     </>:null}
     <Modal transparent visible={Boolean(picker)} animationType="fade" onRequestClose={()=>setPicker(null)}>
       <View style={styles.scrim}><View style={styles.sheet}>
@@ -155,6 +212,7 @@ const styles=StyleSheet.create({
   summary:{padding:14,gap:7},total:{fontSize:20,color:'#1B385B',fontWeight:'800'},notice:{fontSize:10,lineHeight:16,color:'#65758E',paddingHorizontal:14,paddingBottom:13},
   actions:{flexDirection:'row',gap:8,marginBottom:11},secondary:{flex:1,borderWidth:1,borderColor:'#CDD9EB',borderRadius:10,padding:13,alignItems:'center'},secondaryText:{fontWeight:'700',fontSize:11,color:'#25466E'},
   primary:{flex:1,backgroundColor:'#243F9E',borderRadius:10,padding:13,alignItems:'center'},primaryText:{fontSize:11,fontWeight:'800',color:'white'},disabled:{opacity:.48},
+  bookButton:{marginBottom:11,flexDirection:'row',justifyContent:'center',gap:8},
   bookingNotice:{flexDirection:'row',gap:9,padding:12,backgroundColor:'#FFF7E9',borderRadius:10,marginBottom:14},bookingText:{flex:1,fontSize:10,lineHeight:16,color:'#75531C'},
   scrim:{flex:1,justifyContent:'flex-end',backgroundColor:'rgba(5,18,40,.5)'},sheet:{backgroundColor:'white',borderTopLeftRadius:20,borderTopRightRadius:20,padding:17,maxHeight:'70%'},
   sheetTitle:{flexDirection:'row',justifyContent:'space-between',paddingBottom:12},choiceScroll:{maxHeight:420},
