@@ -121,7 +121,7 @@ export default async function DailyReportPage({ searchParams }: Props) {
         )}
         {!error && payload?.truncated ? (
           <p role="status" className="border-t border-amber-200 bg-amber-50 px-4 py-2 text-[10px] font-semibold text-amber-900">
-            This day exceeds the report's safe pagination limit. Earlier activities may not be shown. Use a narrower employee or activity filter to see additional entries.
+            This day exceeds the safe report pagination limit. Earlier activities may not be shown. Use a narrower employee or activity filter to see additional entries.
           </p>
         ) : null}
         {!error && payload ? (
