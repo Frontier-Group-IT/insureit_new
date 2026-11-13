@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Linking, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 import { PartnerScreen } from '@/components/partner-screen';
-import { prepareNativePolicyOnboarding, saveNativePolicyOnboarding, bookNativePolicyOnboarding, requestNativePolicyDateApproval, verifyNativePolicyDateApproval, type NativePolicyDraft, type NativeOnboardingData } from '@/lib/policy-onboarding';
+import { getPartnerPolicyIntakeDocumentUrl } from '@/lib/policy-intakes';
+import { prepareNativePolicyOnboarding, saveNativePolicyOnboarding, bookNativePolicyOnboarding, requestNativePolicyDateApproval, verifyNativePolicyDateApproval, lookupNativePolicyRc, type NativePolicyDraft, type NativeOnboardingData } from '@/lib/policy-onboarding';
 
 type FieldKey = keyof NativePolicyDraft;
 type Field = { key:FieldKey; label:string; required?:boolean; options?:string[] };
@@ -66,6 +67,8 @@ export default function NativePolicyOnboarding(){
   const [loading,setLoading]=useState(true);
   const [saving,setSaving]=useState(false);
   const [booking,setBooking]=useState(false);
+  const [lookingUpRc,setLookingUpRc]=useState(false);
+  const [viewingCopy,setViewingCopy]=useState(false);
   const [dateApprovalOpen,setDateApprovalOpen]=useState(false);
   const [approvalBusy,setApprovalBusy]=useState(false);
   const [approverKey,setApproverKey]=useState("");
