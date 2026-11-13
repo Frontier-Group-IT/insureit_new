@@ -146,6 +146,27 @@ export default function NativePolicyOnboarding(){
       setError('The booking response could not be confirmed. Check Policy Register before retrying to avoid duplicates. '+(e instanceof Error?e.message:''));
     }finally{setBooking(false);}
   }
+
+  async function requestApproval(){
+    if(!data||!draft||dirty){setError('Save the draft before requesting date approval.');return;}
+    if(!approverKey){setError('Choose an approving officer.');return;}
+    setApprovalBusy(true);setError('');
+    try{
+      const result=await requestNativePolicyDateApproval(id,data.revision,approverKey);
+      setApprovalRequestId(result.approval_id);setApprovalCode('');
+    }catch(e){setError(e instanceof Error?e.message:'Could not request approval.');}
+    finally{setApprovalBusy(false);}
+  }
+  async function verifyApproval(){
+    if(!data||!approvalRequestId||!/^\d{6}$/.test(approvalCode)){setError('Enter the six-digit approval code.');return;}
+    setApprovalBusy(true);setError('');
+    try{
+      await verifyNativePolicyDateApproval(id,data.revision,approvalRequestId,approvalCode);
+      setVerifiedApprovalId(approvalRequestId);setDateApprovalOpen(false);
+      Alert.alert('Date approved','The approved policy can now be booked.');
+    }catch(e){setError(e instanceof Error?e.message:'Approval could not be verified.');}
+    finally{setApprovalBusy(false);}
+  }
   const net=useMemo(()=>draft?amount(draft.od)+amount(draft.tp)+amount(draft.cpa):0,[draft]);
   const filled=useMemo(()=>{
     if(!draft)return 0;
