@@ -1,10 +1,11 @@
 Partner production OTA trigger
-release=partner-intake-secure-onboarding-4346
-source=verified-merged-main-758f2c030e32b773309575248bf5dbcd4edc9678
-reason=user-approved-merge-and-publish-secure-reviewer-handoff
+release=partner-native-policy-onboarding-pr-4355
+source=verified-merged-main
+reason=user-approved-native-policy-onboarding
 channel=production
 runtime=0.2.0
 requested=2026-11-13
 no_native_build=true
-database_migration=partner_policy_intake_web_handoff_tickets_applied
-web_deployment=must_be_verified_before_release
+no_apk=true
+no_aab=true
+backend=required_before_ota
