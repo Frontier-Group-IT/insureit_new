@@ -8,4 +8,8 @@ assert.match(body,/canAccessPolicy\(profile.id, profile.role, policyId, "view_po
 assert.match(action,/if \(existingRows\?\.length && requester\?\.role !== "operations_head_life"\)/);
 assert.match(action,/await requirePolicyEditor\(policyId\)/);
 assert.match(action,/await requirePolicyCreator\(\)/);
+const signer = readFileSync(new URL("../app/policies/policy-document-actions.ts",import.meta.url),"utf8");
+const view = signer.slice(signer.indexOf("export async function openPolicyCopy"),signer.indexOf("export type PolicyCopyFileMetadata"));
+assert.match(view, /canAccessPolicy\(profile\.id, profile\.role, documentRow\.policy_id, "view_policies"\)/);
+assert.doesNotMatch(view, /canAccessCustomer/, "Customer visibility alone must not sign an unrelated policy copy.");
 console.log("SEC-PR-04 scoped editor and create-vs-replace contracts passed (static only).");
