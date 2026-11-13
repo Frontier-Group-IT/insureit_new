@@ -2,7 +2,12 @@ import { getCurrentSession } from '@/lib/partner-session';
 
 const portal = (process.env.EXPO_PUBLIC_PORTAL_URL || 'https://portal.insureit.in').replace(/\/$/, '');
 
+export type NativeProductType = 'Motor' | 'Life' | 'Health' | 'Non Motor';
+export type NativeProductDrafts = Partial<Record<Exclude<NativeProductType, 'Motor'>, Record<string, string>>>;
+
 export type NativePolicyDraft = {
+  /** Isolated non-Motor drafts: never copy Life/Health/Risk values into Motor booking. */
+  productDrafts?: NativeProductDrafts;
   registrationMode: 'registered' | 'unregistered';
   issuanceDate: string; rmName: string; intermediaryType: string; leadSource: string; intermediaryCode: string; businessLine: string;
   registrationNo: string; insuredName: string; phoneNo: string; vehicleClass: string; make: string; model: string; fuelType: string;
