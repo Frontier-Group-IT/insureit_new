@@ -88,8 +88,8 @@ jobs:
           python scripts/backup/managed_recovery_preflight.py --compare "$root/private-toc.txt"
           python scripts/backup/prepare_managed_sql_restore_list.py \
             "$root/private-toc.txt" "$root/approved-restore-list.txt"
-          echo "R4 plan: app SQL + Auth table rows + custom Auth trigger / Storage policies"
-          echo "Remaining managed Storage/Realtime/Vault ownership/ACL work is DEFERRED"
+          echo "R4 plan: application SQL + compatible managed Auth table rows ONLY"
+          echo "Managed Auth trigger, Storage RLS, Realtime/Vault and owner/ACL parity DEFERRED"
       - name: Prove target plan without writes
         env:
           INSUREIT_RECOVERY_DATABASE_URL: ${{ secrets.INSUREIT_RECOVERY_DATABASE_URL }}
