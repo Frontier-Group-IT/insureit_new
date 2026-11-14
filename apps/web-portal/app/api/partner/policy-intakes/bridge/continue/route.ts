@@ -54,7 +54,12 @@ export async function POST(request: Request) {
     // explicitly approved takeover in the Partner App when take_over=true.
     const result = await preparePolicyIntakeHandoff(intent.intake_id, intent.take_over);
     if (!result.ok) return reply({ ok: false, error: result.error }, result.conflict ? 409 : 403);
-    return reply({ ok: true, path: `/policies/new?intake_id=${encodeURIComponent(intent.intake_id)}` }, 200);
+    const {data:draft}=await admin.from("policy_intake_onboarding_drafts")
+      .select("draft_payload").eq("intake_id",intent.intake_id)
+      .maybeSingle<{draft_payload:{businessLine?:string}}>();
+    const route=draft?.draft_payload?.businessLine==="Non Motor"
+      ?"/policies/new/non-motor":"/policies/new";
+    return reply({ ok:true,path:`${route}?intake_id=${encodeURIComponent(intent.intake_id)}` }, 200);
   } catch {
     return reply({ ok: false, error: "Operations authorization failed. Please reopen the intake." }, 403);
   }
