@@ -2,6 +2,7 @@ import "server-only";
 
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { readDailyHistoryPages } from "@/lib/reports/daily-history-source-pages";
+import { isValidDailyProfileId, isValidDailyRecordId, selfDateWindow } from "@/lib/reports/daily-history-validation";
 
 export type SelfActivity = {
   id: string; category: string; activity: string; reference: string;
@@ -15,19 +16,6 @@ type IntakeFinal = { id:string; finalized_at:string|null; intake_number:string|n
 type Case = { id:string; created_at:string; case_number:string|null; converted_at:string|null };
 type CaseFinal = { id:string; converted_at:string|null; case_number:string|null };
 const MAX_PAGE = 400;
-const ISO_DATE = /^\\d{4}-\\d{2}-\\d{2}$/;
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-export function selfDateWindow(day?: string) {
-  if (!day || !ISO_DATE.test(day)) return null;
-  const start = new Date(`${day}T00:00:00+05:30`);
-  if (!Number.isFinite(start.getTime())) return null;
-  const p = new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Kolkata",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(start);
-  const val = (part:string) => p.find(x => x.type === part)?.value ?? "";
-  if (`${val("year")}-${val("month")}-${val("day")}` !== day) return null;
-  return {from:start.toISOString(),to:new Date(start.getTime()+86_400_000).toISOString()};
-}
-
 function actionCategory(action:string, table:string|null) {
   const name = (table??"").toLowerCase();
   if(name==="policy_intake_requests") return "Policy Intake";
@@ -68,7 +56,7 @@ const sourceLabel = (id:string|null) => id || "—";
 export async function loadSelfActivityHistory(
   viewerId:string, options:{day?:string;category?:string;page?:string},
 ) {
-  if(!UUID.test(viewerId)) throw new Error("Invalid authenticated employee");
+  if(!isValidDailyProfileId(viewerId)) throw new Error("Invalid authenticated employee");
   const admin = createSupabaseAdminClient();
   // A temporary name lookup failure must not suppress attributable history.
   const {data:selfProfile,error:selfProfileError} = await admin.from("profiles")
@@ -166,7 +154,7 @@ export async function loadSelfActivityHistory(
     {table:"life_health_cases",column:"case_number"},
   ];
   for(const {table,column} of refColumns) {
-    const ids=[...new Set(visible.filter(x=>x.table===table&&UUID.test(x.recordId??"")).map(x=>x.recordId as string))];
+    const ids=[...new Set(visible.filter(x=>x.table===table&&isValidDailyRecordId(x.recordId??"")).map(x=>x.recordId as string))];
     if(!ids.length) continue;
     const {data,error}=await admin.from(table).select(`id,${column}`).in("id",ids);
     if(error) continue;
