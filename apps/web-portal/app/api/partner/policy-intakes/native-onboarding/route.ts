@@ -73,7 +73,7 @@ export async function POST(request:Request){
     // for the selected intake. Mirror the Operations Portal customer scope.
     if(intake.status!=="in_review"||intake.assigned_to_profile_id!==user.id)
       return reply("You are no longer the assigned reviewer.",409);
-    const queryText=(body.search??"").trim();
+    const queryText=typeof body.search==="string"?body.search.trim():"";
     if(queryText.length<2||queryText.length>80)return good({customers:[]});
     const {data:allCustomers,error:customersError}=await admin.from("customers")
       .select("id,contact_name,company_name,phone,email")
