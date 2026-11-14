@@ -197,7 +197,7 @@ requireText(nativeOnboarding, "field:{width:'48%'", 'Each native form field fits
 for (const fragment of ["sourceCell:{width:'48%'", "sourcePrimary:{width:'100%'",
   "policy.slice(0,4).map(item", "field(item,true)", "sourceMeta('rmName','RM')", "sourceMeta('intermediaryCode','ID')",
   "key:'ppt',label:'PPT - Premium paying term'", "key:'pd',label:'PD - Policy duration / term'",
-  "dirty?'Unsaved changes':'Draft'", "{current}", "items.map(item=>field(item))"]) {
+  "sourceLeadRow", "sourceOwnerRow", "{current}", "items.map(item=>field(item))"]) {
   requireText(nativeOnboarding, fragment, 'Compact onboarding parity missing: '+fragment);
 }
 requireText(nativeOnboarding, "placeholder={productType==='Non Motor'?'':hint}", 'Non-Motor fields are blank by default while Motor retains contextual hints.');
@@ -227,8 +227,8 @@ for(const fragment of [
   "(f.key==='capacity'&&!draft.vehicleClass)",
   "(f.key==='policyProduct'&&!draft.vehicleClass)",
   "draft.policyProduct==='Third Party'",
-  "matchedSource?.rmCode",
-  "matchedSource?.mobile",
+  "verifiedSource?.rmCode",
+  "verifiedSource?.mobile",
   "payinSummaryExpanded",
   "Actual receipt history is not provided for this intake draft.",
   "TOTAL AGREED PAYOUT",

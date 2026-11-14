@@ -10,7 +10,7 @@ for(const t of ['Motor','Life','Health','Non Motor']){
   assert.ok(screen.includes("'"+t+"'"), 'Missing type '+t);
 }
 assert.match(screen,/label:'Proposal date'/,'Use Proposal date rather than Motor-only issuance wording');
-assert.doesNotMatch(screen,/label:'Policy issuance date'/);
+assert.match(screen,/label=\{f.key==='issuanceDate'\?'Policy issuance date'/, 'Date must use Operations issuance wording for every product.');
 assert.match(screen,/options:\['Motor','Life','Health','Non Motor'\]/);
 assert.match(screen,/productType==='Non Motor'\?nonMotorCustomerPolicySection/, 'Non-Motor Customer & policy must use the Operations-specific layout.');
 assert.match(screen,/productType==='Non Motor'\?nonMotorRiskSection/, 'Non-Motor risk section must be category-aware.');
@@ -31,7 +31,7 @@ assert.match(api,/if\(d.businessLine!=="Motor"\)return reply/,'NonMotor cannot b
 assert.doesNotMatch(screen,/Final booking is completed in the Operations Portal|Draft saving is available for|Final case creation, documents, risk validation/, 'Remove redundant non-Motor booking and draft notices.');
 assert.doesNotMatch(screen,/>In progress<\/Text>/, 'Remove In progress badge from onboarding summary.');
 assert.match(screen,/\{saving\?'Saving…':'Save draft'\}/, 'Keep non-Motor Save Draft button.');
-assert.match(screen,/\{dirty\?'Unsaved changes':'Draft'\}/, 'Keep meaningful unsaved changes indication.');
+assert.doesNotMatch(screen,/<View style=\{styles.status\}>/, 'Remove top PIR and unsaved status card only; draft saving remains.');
 assert.match(screen,/selected&&styles.choiceSelected/, 'Selected highlight applies to all shared picker options.');
 assert.match(screen,/picker\.product\?updateProduct\(picker.key,item.value\):update\(picker.key as FieldKey,item.value\)/, 'Preserve non-business-line dropdown selection handlers.');
 assert.match(screen,/setPicker\(null\);/, 'Picker can close after selection.');
@@ -39,9 +39,9 @@ assert.match(screen,/data\?\.commercialAccess\?<View style=\{styles.referenceCom
 assert.match(screen,/saveNativePolicyOnboarding\(id,data.revision,draft\)/,'Draft save remains functional');
 // Motor follows Operations structure; other product types retain draft-only screens.
 assert.match(screen,/policy\.slice\(0,4\)\.map\(item/, 'Motor and non-Motor source sections use only four primary rows.');
-assert.match(screen,/f.key==='intermediaryType'&&\(draft.rmName\|\|matchedSource\?\.rmName\)/, 'Show matching-source RM beneath intermediary type.');
-assert.match(screen,/f.key==='leadSource'\?<View style=\{styles.sourceOwnerDetails\}/, 'Show matched source and RM details beneath lead source.');
-assert.match(screen,/isMotor&&f.key==='issuanceDate'\?'Policy issuance date'/, 'Motor uses policy issuance label.');
+assert.match(screen,/sourceMeta\('rmName','RM'\)/, 'Show RM beneath intermediary type in the matching source row.');
+assert.match(screen,/item.key==='leadSource'\?<View style=\{styles.sourceLeadRow\}/, 'Align source ID and callable mobile below lead source.');
+assert.match(screen,/f.key==='issuanceDate'\?'Policy issuance date'/, 'All policy types use issuance date label.');
 assert.match(screen,/motorVehicleSection/, 'Motor requires a combined insured-and-vehicle card.');
 assert.match(screen,/styles.registrationToggle/, 'Registration mode buttons belong in the heading.');
 assert.match(screen,/accessibilityState=\{\{selected:draft\?\.registrationMode===mode\}\}/, 'Registration mode state must be accessible.');
@@ -121,18 +121,18 @@ assert.match(screen,/label:'Policy expiry',value:productValues.endDate/, 'Summar
 assert.match(screen,/data\?\.insurers.find/, 'Summary must derive insurer label from master data.');
 assert.match(screen,/productType==='Non Motor'\?''/, 'Empty Non-Motor text inputs must have no placeholder.');
 assert.match(api,/if\(d.businessLine!=="Motor"\)return reply/, 'No native booking bypass for Non-Motor.');
-assert.match(screen,/pendingBusinessLine/, 'Switching policy type requires an explicit confirmation.');
-assert.match(screen,/if\(picker.key==='businessLine'\)/, 'Route policy type selections through confirmation.');
-assert.match(screen,/setPicker\(null\);\s*if\(item.value!==draft\?\.businessLine\)setPendingBusinessLine/, 'Close choice list and skip confirmation when already selected.');
-assert.match(screen,/accessibilityLabel="Cancel Policy Type switch"/, 'Cancel must preserve existing policy type.');
-assert.match(screen,/accessibilityLabel="Confirm Policy Type switch"/, 'Switch must be explicit.');
-assert.match(screen,/update\('businessLine',pendingBusinessLine\)/, 'Confirmed selection updates only the business line.');
-assert.match(screen,/selected&&styles.choiceSelected/, 'Selected option must be highlighted.');
-assert.match(screen,/choiceSelected:\{backgroundColor:'#17365D'\}/, 'Selected option uses navy blue.');
-assert.match(screen,/choiceTextSelected:\{color:'#FFFFFF'/, 'Selected option uses white text.');
-assert.match(screen,/matchedSource\?\.rmCode/, 'Show authenticated RM ID.');
-assert.match(screen,/matchedSource\?\.rmMobile/, 'Show assigned RM phone, not lead-source phone.');
-assert.match(api,/\.select\("phone"\)\.eq\("id",owner\.id\)/, 'Read only the matched assigned RM phone.');
-assert.match(api,/rmMobile/, 'Expose RM phone only from scoped source metadata.');
-assert.match(types,/rmMobile:string/, 'Client type includes scoped RM phone.');
-console.log('Product-type layouts, policy type switch confirmation, selected option highlight and assigned RM metadata verified.');
+assert.doesNotMatch(screen,/pendingBusinessLine/, 'Policy type changes immediately without confirmation state.');
+assert.match(screen,/if\(picker.key==='businessLine'\)/, 'Policy type dropdown retains direct selection handling.');
+assert.match(screen,/if\(item.value!==draft\?\.businessLine\)update\('businessLine',item.value\)/, 'Policy type changes directly and preserves product draft objects.');
+assert.doesNotMatch(screen,/pendingBusinessLine|Switch Policy Type\?/, 'No confirmation state or popup.');
+assert.doesNotMatch(screen,/<View style=\{styles.status\}>/, 'Top PIR identity/status/progress card is removed.');
+assert.match(screen,/styles.summaryProgressStack/, 'Onboarding summary progress remains visible.');
+assert.match(screen,/item.key==='intermediaryType'\?<View style=\{styles.sourceOwnerRow\}/, 'RM name and RM ID share the intermediary metadata row.');
+assert.match(screen,/verifiedSource\?\.rmCode/, 'RM ID comes from the matched source master.');
+assert.match(screen,/verifiedSource\?\.mobile/, 'Lead source phone comes from the matched source master.');
+assert.match(screen,/name="call-outline"/, 'Use a call icon instead of a text telephone glyph.');
+assert.doesNotMatch(screen,/Source Mobile ·|RM Mobile ·|RM ID ·/, 'No duplicate verbose metadata labels.');
+assert.match(screen,/sourceMonth=useMemo/, 'Source issuance month is displayed beneath the date.');
+assert.match(api,/\.select\("phone"\)\.eq\("id",owner\.id\)/, 'Existing scoped owner metadata backend remains.');
+assert.match(types,/rmMobile:string/, 'Existing partner source metadata shape remains unchanged.');
+console.log('Product-type layouts, direct policy type selection, portal source ownership alignment and PIR-card removal verified.');
