@@ -97,7 +97,7 @@ export function LifeHealthCaseRegister({
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[1120px] text-left text-[10px]">
+        <table className="w-full min-w-[1120px] text-center text-[10px]">
           <thead className="border-b bg-[#F8FAFC] text-[8px] uppercase tracking-[.05em] text-[#64748B]">
             <tr>
               <th className="px-4 py-3">Case</th>
@@ -106,9 +106,9 @@ export function LifeHealthCaseRegister({
               <th className="px-3 py-3">Proposal</th>
               <th className="px-3 py-3">Sourcing</th>
               <th className="px-3 py-3">RM / Source</th>
-              <th className="px-3 py-3 text-right">Premium</th>
+              <th className="px-3 py-3 text-center">Premium</th>
               <th className="px-3 py-3">Status</th>
-              <th className="px-4 py-3 text-right">Action</th>
+              <th className="px-4 py-3 text-center">Action</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[#E8EDF3]">
@@ -123,7 +123,7 @@ export function LifeHealthCaseRegister({
                   <p className="mt-0.5 text-[8px] text-[#667085]">{row.customerPhone || "—"}</p>
                 </td>
                 <td className="px-3 py-3">
-                  <div title={row.insurerName} className="flex h-6 items-center" aria-label={"Insurer: " + row.insurerName}>{getInsurerLogo(row.insurerName) ? <img src={getInsurerLogo(row.insurerName)!} alt={row.insurerName + " logo"} className="max-h-6 max-w-[52px] object-contain" /> : <ShieldCheck aria-hidden="true" className="h-5 w-5 text-[#315B9A]" />}</div>
+                  <div title={row.insurerName} className="flex h-6 items-center justify-center" aria-label={"Insurer: " + row.insurerName}>{getInsurerLogo(row.insurerName) ? <img src={getInsurerLogo(row.insurerName)!} alt={row.insurerName + " logo"} className="max-h-6 max-w-[52px] object-contain" /> : <ShieldCheck aria-hidden="true" className="h-5 w-5 text-[#315B9A]" />}</div>
                   <p className="mt-0.5 max-w-[210px] truncate text-[8px] text-[#667085]">{row.productName}</p>
                 </td>
                 <td className="px-3 py-3 font-medium">{row.proposalNumber}</td>
@@ -132,13 +132,13 @@ export function LifeHealthCaseRegister({
                   <p className="font-medium">{row.rmName || "—"}</p>
                   <p className="mt-0.5 max-w-[180px] truncate text-[8px] text-[#667085]">{row.leadSource || "—"}</p>
                 </td>
-                <td className="px-3 py-3 text-right font-semibold">₹{Number(row.premiumAmount || 0).toLocaleString("en-IN")}</td>
+                <td className="px-3 py-3 text-center font-semibold">₹{Number(row.premiumAmount || 0).toLocaleString("en-IN")}</td>
                 <td className="whitespace-nowrap px-3 py-3">
                   <span className={`inline-flex items-center whitespace-nowrap rounded-full px-2 py-1 text-[8px] font-bold ${row.finalPolicyId ? "bg-[#EAF7F2] text-[#18794E]" : row.status === "rejected" ? "bg-red-50 text-red-700" : "bg-[#FFF3CD] text-[#A96A00]"}`}>
                     {row.finalPolicyId ? "Issued" : row.status === "rejected" ? "Rejected" : "Awaiting policy"}
                   </span>
                 </td>
-                <td className="whitespace-nowrap px-4 py-3 text-right">
+                <td className="whitespace-nowrap px-4 py-3 text-center">
                   {row.finalPolicyId ? (
                     <LifeHealthIssuedPolicyButton policyId={row.finalPolicyId} />
                   ) : (
