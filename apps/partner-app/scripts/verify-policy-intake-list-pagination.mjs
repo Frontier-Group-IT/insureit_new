@@ -20,7 +20,9 @@ assert.match(app, /<PartnerStateView state="error"/, 'Errors retain their own st
 assert.match(app, /visibleRows\.map\(\(row, index\) =>/, 'Available records remain visible with stagger index');
 assert.match(app, /<View style=\{styles\.bottomNav\}>/, 'Bottom navigation remains outside the scroll body');
 
-assert.match(app, /\{filter === 'all' && row\.status !== 'completed' \? <IntakeProgress row=\{row\} reduceMotion=\{reduceMotion\} \/> : null\}/, 'Progress timeline omits Completed records even under All');
+assert.match(app, /\{filter === 'all' \? <IntakeProgress row=\{row\} reduceMotion=\{reduceMotion\} \/> : null\}/, 'All shows the progress timeline for Completed and every other intake status');
+assert.match(app, /const activeStep = row\.status === 'completed' \? 4 :/, 'Completed intake retains all four finished timeline stages');
+assert.doesNotMatch(app, /filter === 'all' && row\.status !== 'completed'/, 'Do not hide Completed progress in All');
 assert.doesNotMatch(app, /Customer name pending/, 'Missing names must not show placeholder');
 assert.doesNotMatch(app, /<IntakeProgress row=\{row\} reduceMotion=\{reduceMotion\} \/>(?!\s*: null)/, 'Do not render an unconditional timeline in each status filter');
 assert.match(app, /function IntakeProgress\(\{ row, reduceMotion \}: \{ row: PartnerPolicyIntake; reduceMotion: boolean \}\) \{/, 'Retain the existing per-record progress component with accessibility motion preference');
