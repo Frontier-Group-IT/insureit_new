@@ -92,6 +92,7 @@ export async function loadSelfActivityHistory(
   const selfName = selfProfile?.full_name || "Current employee";
   const employeeCode = selfProfile?.employee_code || "";
   const window = selfDateWindow(options.day);
+  if(options.day && !window) throw new Error("Invalid requested employee activity date");
   const pageRaw = Number(options.page);
   const page = options.page && /^[1-9]\d{0,2}$/.test(options.page) ?
     Math.min(MAX_PAGE,pageRaw):1;
