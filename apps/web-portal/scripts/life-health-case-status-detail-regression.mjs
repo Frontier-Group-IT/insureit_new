@@ -17,7 +17,11 @@ assert.match(detail, /\{!isClosed\?<section className="flex flex-wrap items-cent
 assert.match(detail, /\{isClosed\?<div className="w-full col-span-full">/, "Closed cases must show saved documents without upload/delete actions.");
 assert.match(detail, /href=\{`\/policies\/life-health-case-documents\/\$\{encodeURIComponent\(doc.id\)\}\/view`\}/, "Closed cases must preserve authorized links to view existing documents.");
 assert.match(detail, /disabled=\{isClosed\|\|saving\|\|converting\|\|remarkPending\}/, "Closed cases cannot add new remarks.");
-assert.match(detail, /caseData\.rejectionReason\|\|"No recorded rejection reason available\."/, "Show an actual recorded rejection reason or an explicit missing-value message.");
+assert.doesNotMatch(detail, /Case Rejected — View Only|This case cannot be edited or issued\.|Rejection reason:/, "Rejected cases must not display the removed notice.");
+assert.doesNotMatch(detail, /Back to cases/, "Remove the footer Back to cases button.");
+assert.match(detail, /\{isIssued\?<div role="status"/, "Issued-case policy link remains accessible.");
+assert.match(detail, /View issued policy/, "Preserve issued policy navigation.");
+assert.match(detail, /<fieldset disabled=\{isClosed\}/, "Rejected cases remain read-only even without the notice.");
 assert.match(detail, /<Section number="01" title="Policy source & ownership"/);
 assert.match(detail, /<Section number="02" title="Customer \/ proposer"/);
 assert.match(detail, /<Section number="03" title="Policy product & case details"/);
