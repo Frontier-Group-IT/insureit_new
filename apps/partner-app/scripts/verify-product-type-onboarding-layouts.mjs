@@ -28,7 +28,13 @@ assert.match(types,/productDrafts\?: NativeProductDrafts/,'Product forms isolate
 assert.match(api,/const productDraftKeys = new Set/,'Server must whitelist product draft fields');
 assert.match(api,/saveDraft.productDrafts=proposedProductDrafts/,'Drafts persist in scoped existing intake record');
 assert.match(api,/if\(d.businessLine!=="Motor"\)return reply/,'NonMotor cannot book through Motor endpoint');
-assert.match(screen,/Final case creation, documents, risk validation and permission-controlled commercials must be completed in the Operations Portal/);
+assert.doesNotMatch(screen,/Final booking is completed in the Operations Portal|Draft saving is available for|Final case creation, documents, risk validation/, 'Remove redundant non-Motor booking and draft notices.');
+assert.doesNotMatch(screen,/>In progress<\/Text>/, 'Remove In progress badge from onboarding summary.');
+assert.match(screen,/\{saving\?'Saving…':'Save draft'\}/, 'Keep non-Motor Save Draft button.');
+assert.match(screen,/\{dirty\?'Unsaved changes':'Draft'\}/, 'Keep meaningful unsaved changes indication.');
+assert.match(screen,/selected&&styles.choiceSelected/, 'Selected highlight applies to all shared picker options.');
+assert.match(screen,/picker\.product\?updateProduct\(picker.key,item.value\):update\(picker.key as FieldKey,item.value\)/, 'Preserve non-business-line dropdown selection handlers.');
+assert.match(screen,/setPicker\(null\);/, 'Picker can close after selection.');
 assert.match(screen,/isMotor&&data\?\.commercialAccess/,'Motor financial entry still permission-gated');
 assert.match(screen,/saveNativePolicyOnboarding\(id,data.revision,draft\)/,'Draft save remains functional');
 // Motor follows Operations structure; other product types retain draft-only screens.
