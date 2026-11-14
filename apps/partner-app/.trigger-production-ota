@@ -1,11 +1,11 @@
 Partner production OTA trigger
-release=partner-onboarding-commercial-reference-pr-4461
+release=partner-motor-operations-year-commercial-cards-pr-4486
 source=verified-merged-main
-reason=user-approved-partner-commercial-onboarding-publish
+reason=user-approved-operations-motor-onboarding-parity
 channel=production
 runtime=0.2.0
 requested=2026-11-14
 no_native_build=true
 no_apk=true
 no_aab=true
-backend=authorized-product-draft-api-already-merged
+backend=no_changes
