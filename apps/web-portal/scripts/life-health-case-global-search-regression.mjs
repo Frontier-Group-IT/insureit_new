@@ -8,4 +8,11 @@ assert.match(page,/<LifeHealthCaseRegister rows=\{registerRows\} statusFilter=\{
 assert.match(register,/if \(!normalizedQuery\) return rows\.filter\(\(row\) => statusFilter === "all"/,"Only empty search should apply tab filter");
 assert.match(register,/return rows\.filter\(\(row\) => \{/,"Typed search must search all authorized rows");
 assert.match(register,/across all statuses/,"Search scope should be shown to users");
+assert.match(register, /getInsurerLogo\(row\.insurerName\)/, "Case register must reuse master insurer-logo resolution");
+assert.match(register, /alt=\{row\.insurerName \+ " logo"\}/, "Insurer logo must remain accessible by name");
+assert.match(register, /\{row\.productName\}/, "Product name must remain below insurer logo");
+assert.match(register, /className="whitespace-nowrap px-3 py-3"/, "Status cell must not wrap");
+assert.match(register, /inline-flex items-center whitespace-nowrap rounded-full/, "Status badge must stay on one line");
+assert.match(register, /className="whitespace-nowrap px-4 py-3 text-right"/, "Action cell must not wrap");
+assert.match(register, /inline-flex items-center justify-center whitespace-nowrap rounded-lg/, "Open and Issue actions must stay on one line");
 console.log("Life/Health global search independent of status tabs regression passed.");
