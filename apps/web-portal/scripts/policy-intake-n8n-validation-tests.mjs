@@ -12,6 +12,7 @@ const checks = Object.fromEntries([
 const values = {
  policy_number:"3005/123456789/00/000",insurer_name:"ICICI Lombard General Insurance",
  policy_product:"Bundled",policy_start_date:"2026-11-06",policy_end_date:"2027-11-05",
+ third_party_start_date:"2026-11-06",third_party_end_date:"2031-11-05",
  insured_name:"TEST CUSTOMER",vehicle_make:"CHETAK",vehicle_model:"C3001",
  vehicle_registration_status:"unregistered",vehicle_registration_number:"NEW",
  vehicle_engine_number:"EXAMPLE123456",vehicle_chassis_number:"MD2EXAMPLECHASSIS123",
@@ -35,7 +36,7 @@ function fresh(){
 }
 test("accepts all consistent ICICI Product 3005 premiums",()=>{
  const result=validateN8nPolicyIntakeResponse(fresh(),ids);
- assert.equal(result.ok,true);assert.equal(result.fields.length,18);
+ assert.equal(result.ok,true);assert.equal(result.fields.length,20);
  assert.equal(result.fields.find(f=>f.key==="insured_name")?.value,"TEST CUSTOMER");
 });
 test("accepts 683 zero-depreciation add-on with correct independent accounting",()=>{
@@ -79,6 +80,18 @@ test("rejects invalid, non-ISO, or reversed coverage dates",()=>{
   assert.throws(()=>validateN8nPolicyIntakeResponse(nonIso,ids),/n8n_coverage_dates_invalid/);
   const reversed=fresh();reversed.fields.find(f=>f.key==="policy_end_date").value="2025-11-05";
   assert.throws(()=>validateN8nPolicyIntakeResponse(reversed,ids),/n8n_coverage_dates_invalid/);
+});
+test("requires distinct Third Party dates and rejects OD-end substitution",()=>{
+ const baseline=validateN8nPolicyIntakeResponse(fresh(),ids);
+ assert.equal(baseline.fields.find(f=>f.key==="third_party_end_date")?.value,"2031-11-05");
+ const missing=fresh();missing.fields=missing.fields.filter(f=>f.key!=="third_party_end_date");
+ assert.throws(()=>validateN8nPolicyIntakeResponse(missing,ids),/n8n_required_field_missing/);
+ const badTp=fresh();badTp.fields.find(f=>f.key==="third_party_end_date").value="2026-02-30";
+ assert.throws(()=>validateN8nPolicyIntakeResponse(badTp,ids),/n8n_coverage_dates_invalid/);
+ const mismatch=fresh();mismatch.fields.find(f=>f.key==="third_party_start_date").value="2026-10-06";
+ assert.throws(()=>validateN8nPolicyIntakeResponse(mismatch,ids),/n8n_coverage_dates_invalid/);
+ const premature=fresh();premature.fields.find(f=>f.key==="third_party_end_date").value="2027-10-01";
+ assert.throws(()=>validateN8nPolicyIntakeResponse(premature,ids),/n8n_coverage_dates_invalid/);
 });
 test("rejects auto finalization and unsupported parser version",()=>{
  const x=fresh();x.auto_finalize_allowed=true;
