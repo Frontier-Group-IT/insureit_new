@@ -13,8 +13,8 @@ assert.match(page, /day: query\.period === "day" \? query\.date : undefined/, "S
 assert.match(page, /<DailySelfActivityPanel data=\{selfHistory\}/, "Self renders the category summary");
 assert.match(page, /employeeDirectory = await loadDailyReportEmployeeDirectory\(profile\)/, "All tab now lists only authorized employees");
 assert.match(page, /assertDailyReportEmployeeAllowed\(chosenPerson, employeeDirectory\)/, "All selected profile is checked before loading history");
-assert.match(page, /date=\{query\.period === "day" \? filters\.date : ""\}/, "All history is the default when no date is selected");
-assert.match(quickFilters, /params\.set\("period","day"\)/, "Choosing a date enables day filtering automatically");
+assert.match(page, /resolveDailyReportPeriod\(query\)/, "Header period drives report history");
+assert.match(page, /from: periodRange\.from, to: periodRange\.to/, "Period range filters actual event sources");
 
 assert.match(source, /\.eq\("actor_id",viewerId\)/, "Audit records are scoped to the authenticated actor before reading");
 assert.match(source, /\.eq\("created_by",viewerId\)/, "Policy and case creations use the employee's actual ID");
