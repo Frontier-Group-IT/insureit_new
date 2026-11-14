@@ -90,3 +90,10 @@ Use the existing `ParsedPolicyField` shape when writing authorized `ocr_fields` 
 - Re-ran original synthetic vertical-text fixture offline against updated parser: **13/13**, gross ₹6,615. Neither result proves byte-for-byte n8n PDF extraction of the original real PDF; this remains a separate review gate.
 - **Coverage gap:** TP coverage start/end are extracted internally but not emitted as proposed fields to the website. Mobile/address information is masked or not included in the current proposal. Never infer an actual mobile number from a masked PDF, and never substitute OD expiry for TP expiry.
 - **Current release gate:** Site adapter remains off and PR remains draft; the n8n workflow remains unpublished. Require green GitHub CI, sanitized or consented real-byte PDF test, authorized field-by-field review, negative tests, and explicit deployment approval before any shadow rollout.
+
+## 2026-11-14 distinct third-party coverage validation
+
+- n8n DRAFT parser and response serializer now expose `third_party_start_date` and `third_party_end_date` as separate evidence-backed proposed fields, alongside the existing Own Damage `policy_start_date` / `policy_end_date`. The synthetic bundled fixture independently returned TP expiry 2031-11-05 versus OD expiry 2027-11-05.
+- Website draft PR validator now requires both TP fields, validates strict ISO calendar dates and chronological ranges, and fails closed when TP start disagrees with the bundled policy's OD start or TP ends before OD. Other products or non-aligned coverage must use the existing Google/manual path pending specific insurer layout review.
+- Regression tests cover omitted TP expiry, impossible TP date, mismatched TP start, and prematurely expiring TP. No proof of full real PDF binary-to-n8n processing from the earlier offline text fixture; reviewer comparison and authenticated multipart byte test remain release gates.
+- No n8n publication, PR merge, website deploy, environment activation, production data modification, policy creation or auto-finalization occurred.
