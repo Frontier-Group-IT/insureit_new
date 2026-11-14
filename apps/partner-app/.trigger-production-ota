@@ -1,7 +1,7 @@
 Partner production OTA trigger
-release=partner-motor-operations-year-commercial-cards-pr-4486
+release=partner-motor-operations-year-commercial-cards-pr-4486-retry
 source=verified-merged-main
-reason=user-approved-operations-motor-onboarding-parity
+reason=user-requested-publish-retry-unverified-expo-result
 channel=production
 runtime=0.2.0
 requested=2026-11-14
