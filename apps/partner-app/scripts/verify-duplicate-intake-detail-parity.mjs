@@ -7,7 +7,7 @@ const links = readFileSync('lib/policy-intakes.ts', 'utf8');
 assert.ok(detail.includes('navyTopBar'), 'Policy Intake header uses the shared navy variant');
 assert.ok(detail.includes('row.submitted_by_name?.trim()'), 'Duplicate header displays actual submitter name');
 assert.ok(!detail.includes("row.status === 'duplicate' ? <Text style={styles.statusHelp}"), 'Duplicate does not show the status explanation in header');
-assert.ok(detail.includes("row.status !== 'duplicate' && row.status !== 'ready_for_review' && row.status !== 'in_review'"), 'No duplicate, Ready for Review or in-review helper text');
+assert.ok(detail.includes("row.status !== 'duplicate' && row.status !== 'completed' && row.status !== 'ready_for_review' && row.status !== 'in_review'"), 'No duplicate, Ready for Review or in-review helper text');
 assert.ok(!detail.includes('An Operations user is reviewing this intake.'), 'Remove redundant in-review sentence completely');
 assert.ok(detail.includes("row.status === 'duplicate' ? ("), 'Duplicate UI is scoped');
 assert.ok(!detail.includes('Same submitted and fetched details as the Operations website.'), 'Remove redundant review subtitle');
@@ -38,7 +38,7 @@ assert.ok(detail.includes("key === 'insurer_name' ? shortInsurerName(fields.get(
 assert.ok(detail.includes("[/\\bicici\\s*lombard\\b/i, 'ICICI Lombard']"), 'Recognize ICICI Lombard legal name');
 assert.ok(detail.includes("return aliases.find("), 'Unknown insurer names fall back to a display-safe name');
 assert.ok(!detail.includes("row.status !== 'duplicate' ? <View style={styles.intakeSummary}>"), 'All statuses use the same compact header and do not render a delayed lower summary');
-assert.ok(detail.includes("{row.status !== 'duplicate' ? <IntakeProgress row={row} /> : null}"), 'Duplicate pages must not display the Uploaded/Read/Review/Done tracker');
+assert.ok(detail.includes("{row.status !== 'duplicate' && row.status !== 'completed' ? <IntakeProgress row={row} /> : null}"), 'Duplicate pages must not display the Uploaded/Read/Review/Done tracker');
 assert.ok(!detail.includes('Review and Policy Onboarding actions are disabled for this intake.'), 'No redundant duplicate disabled-actions message');
 assert.ok(detail.includes("row.duplicate_match.kind === 'registered_policy' ? 'View Existing Policy' : 'View Earlier Intake'"), 'Duplicate policy action keeps the existing policy destination');
 assert.ok(detail.includes('onPress={() => void openDuplicateMatch()}'), 'View Existing Policy remains actionable');
