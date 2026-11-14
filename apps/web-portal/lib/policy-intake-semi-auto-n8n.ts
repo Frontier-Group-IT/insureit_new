@@ -70,9 +70,9 @@ async function currentSnapshot(id: string): Promise<SourceSnapshot | null> {
   return { intake, document };
 }
 
-function fingerprint(id: string, documentId: string, fields: N8nOcrField[]): string {
+function fingerprint(id: string, documentId: string, fields: N8nOcrField[], warnings: string[]): string {
   return createHash("sha256")
-    .update(JSON.stringify({ intakeId: id, documentId, fields }))
+    .update(JSON.stringify({ intakeId: id, documentId, fields, warnings }))
     .digest("hex");
 }
 
@@ -127,7 +127,7 @@ export async function previewSemiAutoN8nExtraction(id: string): Promise<SemiAuto
     && (current.intake.ocr_fields ?? []).length === 0;
   return { ok: true, preview: {
     documentId: current.document.id,
-    fingerprint: fingerprint(id, current.document.id, extraction.fields),
+    fingerprint: fingerprint(id, current.document.id, extraction.fields, extraction.warnings),
     fields: extraction.fields,
     changedFieldCount,
     warnings: extraction.warnings,
@@ -183,6 +183,14 @@ export async function applySemiAutoN8nExtraction(
       || finalSource.intake.status !== "processing" || finalSource.intake.ocr_status !== "failed"
       || (finalSource.intake.ocr_fields ?? []).length > 0) {
     return { ok: false, error: "The source document or Intake changed. No recovered fields were saved." };
+  }
+
+  // Handoff/draft creation may race with the remote PDF extraction. Never
+  // replace OCR under a draft created after the initial preflight.
+  const lastDraft = await admin.from("policy_intake_onboarding_drafts")
+    .select("intake_id").eq("intake_id", id).limit(1);
+  if (lastDraft.error || (lastDraft.data?.length ?? 0) > 0) {
+    return { ok: false, error: "An onboarding draft was created while extraction was running. Open and correct the existing draft instead." };
   }
 
   const { data, error } = await admin.from("policy_intake_requests")
