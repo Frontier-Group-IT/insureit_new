@@ -224,8 +224,10 @@ assert.match(app, /cardStatusBorder\(row\)/, 'Status-specific card accents do no
 assert.match(app, /useNativeDriver: true/, 'Card and search animations use native-driver transforms');
 assert.match(app, /scaleX: progressEntrance/, 'Only completed progress segments animate');
 assert.match(app, /const visibleRows = rows;/, 'Motion does not re-filter authorized records');
-// Completed, In Review and Ready alone receive the gentle status-pill zoom.
-assert.match(app, /<StatusZoomPulse enabled=\{row\.status === 'completed' \|\| row\.status === 'ready_for_review' \|\| row\.status === 'in_review'\} reduceMotion=\{reduceMotion\}>/, 'Only Completed, Ready and In Review badges pulse');
+// Action Required (needs_attention or failed processing/OCR) joins Ready, In Review and Completed.
+assert.match(app, /<StatusZoomPulse enabled=\{row\.status === 'completed' \|\| row\.status === 'ready_for_review' \|\| row\.status === 'in_review' \|\| row\.status === 'needs_attention' \|\| \(row\.status === 'processing' && row\.ocr_status === 'failed'\)\} reduceMotion=\{reduceMotion\}>/, 'Action Required badges, including OCR failure, pulse with Ready, In Review and Completed');
+assert.match(app, /if \(row\.status === 'processing' && row\.ocr_status === 'failed'\) return 'Action Required';/, 'OCR failed processing records remain Action Required');
+assert.match(app, /needs_attention: 'Action Required'/, 'Needs-attention records remain Action Required');
 assert.match(app, /function StatusZoomPulse\(/, 'Keep zoom scoped to the status pill');
 assert.match(app, /toValue: 1\.045, duration: 550/, 'Limit pulse to a restrained 4.5 percent scale');
 assert.match(app, /toValue: 1, duration: 550/, 'Return zoomed badge to its original scale');
