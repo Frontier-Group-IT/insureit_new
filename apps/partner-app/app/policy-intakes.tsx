@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Image, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
+import { AccessibilityInfo, ActivityIndicator, Animated, Easing, Image, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -40,6 +40,34 @@ export default function PolicyIntakesScreen() {
   const router = useRouter();
   const { context } = usePartnerSession();
   const mainScrollRef = useRef<ScrollView>(null);
+  const [reduceMotion, setReduceMotion] = useState(true);
+  const [searchFocused, setSearchFocused] = useState(false);
+  const searchEntrance = useRef(new Animated.Value(1)).current;
+  const searchRise = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    let mounted = true;
+    void AccessibilityInfo.isReduceMotionEnabled().then((enabled) => {
+      if (mounted) setReduceMotion(enabled);
+    }).catch(() => { if (mounted) setReduceMotion(true); });
+    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
+    return () => { mounted = false; subscription.remove(); };
+  }, []);
+  useFocusEffect(useCallback(() => {
+    searchEntrance.stopAnimation();
+    searchRise.stopAnimation();
+    if (reduceMotion) {
+      searchEntrance.setValue(1);
+      searchRise.setValue(0);
+    } else {
+      searchEntrance.setValue(0);
+      searchRise.setValue(20);
+      Animated.parallel([
+        Animated.timing(searchEntrance, { toValue: 1, duration: 320, delay: 70, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+        Animated.timing(searchRise, { toValue: 0, duration: 320, delay: 70, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+      ]).start();
+    }
+    return () => { searchEntrance.stopAnimation(); searchRise.stopAnimation(); };
+  }, [reduceMotion, searchEntrance, searchRise]));
   useFocusEffect(useCallback(() => {
     const reset = () => mainScrollRef.current?.scrollTo({ y: 0, animated: false });
     reset();
@@ -151,12 +179,14 @@ export default function PolicyIntakesScreen() {
         ) : null}
       </View>
 
-      <View style={styles.searchBand}>
-        <View style={styles.searchBox}>
+      <Animated.View style={[styles.searchBand, { opacity: searchEntrance, transform: [{ translateY: searchRise }] }]}>
+        <View style={[styles.searchBox, searchFocused && styles.searchBoxFocused]}>
           <Ionicons name="search-outline" size={17} color="#8A98AC" />
           <TextInput
             value={query}
             onChangeText={setQuery}
+            onFocus={() => setSearchFocused(true)}
+            onBlur={() => setSearchFocused(false)}
             placeholder="Search by PIR number, customer, insurer or source"
             placeholderTextColor="#9AA5B5"
             style={styles.searchInput}
@@ -165,17 +195,14 @@ export default function PolicyIntakesScreen() {
           />
           {query ? <Pressable onPress={() => setQuery('')} hitSlop={8}><Ionicons name="close-circle" size={17} color="#A3ADBB" /></Pressable> : null}
         </View>
-      </View>
+      </Animated.View>
 
       <View style={styles.filtersWrap}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll} contentContainerStyle={styles.filtersContent}>
           {FILTERS.map((item) => {
             const active = filter === item.key;
             return (
-              <Pressable key={item.key} onPress={() => setFilter(item.key)} style={({ pressed }) => [styles.filterChip, active && styles.filterChipActive, pressed && styles.pressed]}>
-                <Text style={[styles.filterLabel, active && styles.filterLabelActive]}>{item.label}</Text>
-                <Text style={[styles.filterCount, active && styles.filterCountActive]}>({counts[item.key]})</Text>
-              </Pressable>
+              <MotionFilterChip key={item.key} active={active} reduceMotion={reduceMotion} onPress={() => setFilter(item.key)} label={item.label} count={counts[item.key]} />
             );
           })}
         </ScrollView>
@@ -255,13 +282,14 @@ export default function PolicyIntakesScreen() {
         ) : visibleRows.length ? (
           <>
             {error ? <Text style={styles.inlineError}>{error}</Text> : null}
-            {visibleRows.map((row) => (
+            {visibleRows.map((row, index) => (
+              <MotionCard key={row.id} index={index} reduceMotion={reduceMotion}>
               <Pressable
                 key={row.id}
                 accessibilityRole="button"
                 accessibilityLabel={`Open Policy Intake ${row.intake_number}. ${statusLabel(row)}`}
                 onPress={() => router.push({ pathname: '/policy-intakes/[id]', params: { id: row.id } })}
-                style={({ pressed }) => [styles.card, pressed && styles.pressedCard]}
+                style={({ pressed }) => [styles.card, cardStatusBorder(row), pressed && styles.pressedCard, pressed && styles.cardPressScale]}
               >
                 <View style={styles.rowTop}>
                   <IntakeRecordLogo row={row} />
@@ -303,7 +331,7 @@ export default function PolicyIntakesScreen() {
                   </View>
                 </View>
 
-                {filter === 'all' && row.status !== 'completed' ? <IntakeProgress row={row} /> : null}
+                {filter === 'all' && row.status !== 'completed' ? <IntakeProgress row={row} reduceMotion={reduceMotion} /> : null}
 
                 {row.attention_reason ? (
                   <View style={styles.attention}>
@@ -313,6 +341,7 @@ export default function PolicyIntakesScreen() {
                 ) : null}
 
               </Pressable>
+              </MotionCard>
             ))}
           </>
         ) : (
@@ -384,6 +413,52 @@ export default function PolicyIntakesScreen() {
   );
 }
 
+function MotionFilterChip({ active, reduceMotion, onPress, label, count }: { active: boolean; reduceMotion: boolean; onPress: () => void; label: string; count: number }) {
+  const selection = useRef(new Animated.Value(active ? 1 : 0)).current;
+  useEffect(() => {
+    selection.stopAnimation();
+    if (reduceMotion) selection.setValue(active ? 1 : 0);
+    else Animated.timing(selection, { toValue: active ? 1 : 0, duration: 190, easing: Easing.out(Easing.cubic), useNativeDriver: false }).start();
+    return () => selection.stopAnimation();
+  }, [active, reduceMotion, selection]);
+  return (
+    <Animated.View style={[styles.filterChip, {
+      backgroundColor: selection.interpolate({ inputRange: [0, 1], outputRange: ['#F7F8FB', '#183864'] }),
+      borderColor: selection.interpolate({ inputRange: [0, 1], outputRange: ['#E0E5ED', '#183864'] }),
+    }]}>
+      <Pressable accessibilityRole="button" accessibilityState={{ selected: active }} onPress={onPress} style={({ pressed }) => [styles.filterChipPress, pressed && styles.pressed]}>
+        <Text style={[styles.filterLabel, active && styles.filterLabelActive]}>{label}</Text>
+        <Text style={[styles.filterCount, active && styles.filterCountActive]}>({count})</Text>
+      </Pressable>
+    </Animated.View>
+  );
+}
+
+function MotionCard({ index, reduceMotion, children }: { index: number; reduceMotion: boolean; children: ReactNode }) {
+  const entrance = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
+  const rise = useRef(new Animated.Value(reduceMotion ? 0 : 9)).current;
+  useEffect(() => {
+    entrance.stopAnimation(); rise.stopAnimation();
+    if (reduceMotion) { entrance.setValue(1); rise.setValue(0); return; }
+    entrance.setValue(0); rise.setValue(9);
+    Animated.parallel([
+      Animated.timing(entrance, { toValue: 1, duration: 260, delay: Math.min(index, 7) * 42, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+      Animated.timing(rise, { toValue: 0, duration: 260, delay: Math.min(index, 7) * 42, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+    ]).start();
+    return () => { entrance.stopAnimation(); rise.stopAnimation(); };
+  }, [entrance, rise, reduceMotion, index]);
+  return <Animated.View style={{ opacity: entrance, transform: [{ translateY: rise }] }}>{children}</Animated.View>;
+}
+
+function cardStatusBorder(row: PartnerPolicyIntake) {
+  if (row.status === 'needs_attention' || (row.status === 'processing' && row.ocr_status === 'failed')) return styles.cardNeedsAttention;
+  if (row.status === 'rejected') return styles.cardRejected;
+  if (row.status === 'duplicate') return styles.cardDuplicate;
+  if (row.status === 'completed') return styles.cardCompleted;
+  if (row.status === 'in_review') return styles.cardInReview;
+  return null;
+}
+
 function IntakeRecordLogo({ row }: { row: PartnerPolicyIntake }) {
   const insurerName = field(row, 'insurer_name');
   const manufacturerName = field(row, 'vehicle_make');
@@ -409,10 +484,17 @@ function IntakeRecordLogo({ row }: { row: PartnerPolicyIntake }) {
   );
 }
 
-function IntakeProgress({ row }: { row: PartnerPolicyIntake }) {
+function IntakeProgress({ row, reduceMotion }: { row: PartnerPolicyIntake; reduceMotion: boolean }) {
   const manual = row.status === 'processing' && row.ocr_status === 'failed';
   const activeStep = row.status === 'completed' ? 4 : row.status === 'in_review' ? 3 : row.status === 'ready_for_review' || row.status === 'needs_attention' || manual ? 2 : 1;
   const rejected = row.status === 'rejected' || row.status === 'duplicate';
+  const progressEntrance = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
+  useEffect(() => {
+    progressEntrance.stopAnimation();
+    if (reduceMotion) progressEntrance.setValue(1);
+    else { progressEntrance.setValue(0); Animated.timing(progressEntrance, { toValue: 1, duration: 420, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start(); }
+    return () => progressEntrance.stopAnimation();
+  }, [progressEntrance, reduceMotion]);
   return (
     <View style={styles.progressWrap}>
       {['Uploaded', 'RTO', 'Review', 'Done'].map((label, index) => {
@@ -424,7 +506,7 @@ function IntakeProgress({ row }: { row: PartnerPolicyIntake }) {
               <View style={[styles.progressDot, complete && styles.progressDotComplete, rejected && step === activeStep && styles.progressDotRejected]}>
                 {complete && step < activeStep ? <Ionicons name="checkmark" size={9} color="#FFFFFF" /> : null}
               </View>
-              {index < 3 ? <View style={[styles.progressLine, step < activeStep && !rejected && styles.progressLineComplete]} /> : null}
+              {index < 3 ? <Animated.View style={[styles.progressLine, step < activeStep && !rejected && styles.progressLineComplete, step < activeStep && !rejected && { opacity: progressEntrance, transform: [{ scaleX: progressEntrance }] }]} /> : null}
             </View>
             <Text style={[styles.progressLabel, complete && styles.progressLabelActive]}>{label}</Text>
           </View>
@@ -463,8 +545,8 @@ const styles = StyleSheet.create({
   titleIcon: { width: 31, height: 31, borderRadius: 7, alignItems: 'center', justifyContent: 'center', marginRight: 8, backgroundColor: 'rgba(255,255,255,0.16)' },
   titleCopy: { flex: 1 }, eyebrow: { color: '#D5E9FF', fontSize: 7.5, lineHeight: 9, letterSpacing: 0.85, fontWeight: '800' }, title: { marginTop: 1, color: '#FFFFFF', fontSize: 14, lineHeight: 17, fontWeight: '800' },
   newButton: { minWidth: 65, height: 34, borderRadius: 10, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, backgroundColor: '#183864' }, newButtonText: { color: '#FFFFFF', fontSize: 10, lineHeight: 13, fontWeight: '700' },
-  searchBand: { paddingHorizontal: 11, paddingTop: 8, paddingBottom: 8, flexDirection: 'row', backgroundColor: '#0860C8' }, searchBox: { flex: 1, minHeight: 38, borderRadius: 9, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: '#FFFFFF' }, searchInput: { flex: 1, paddingVertical: 0, color: '#1F314C', fontSize: 10.5, lineHeight: 14 },
-  filtersWrap: { flexDirection: 'row', alignItems: 'center', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#DDE4EF', backgroundColor: '#FFFFFF' }, filterScroll: { flex: 1 }, seeAllButton: { minHeight: 35, flexDirection: 'row', alignItems: 'center', gap: 6, justifyContent: 'center', paddingHorizontal: 12, marginRight: 9, borderRadius: 18, borderWidth: StyleSheet.hairlineWidth, borderColor: '#E4EBF5', backgroundColor: '#FFFFFF', shadowColor: '#1B416C', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 5, elevation: 2 }, seeAllText: { color: '#0860C8', fontSize: 12, fontWeight: '700' }, filtersContent: { paddingHorizontal: 10, paddingVertical: 7, gap: 7 }, filterChip: { minHeight: 31, borderRadius: 8, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#F7F8FB', borderWidth: StyleSheet.hairlineWidth, borderColor: '#E0E5ED' }, filterChipActive: { backgroundColor: '#183864', borderColor: '#183864' }, filterLabel: { color: '#4D5D75', fontSize: 9.2, lineHeight: 12, fontWeight: '700' }, filterLabelActive: { color: '#FFFFFF' }, filterCount: { color: '#728099', fontSize: 8.5, lineHeight: 11, fontWeight: '700' }, filterCountActive: { color: '#DDEAFF' },
+  searchBand: { paddingHorizontal: 11, paddingTop: 8, paddingBottom: 8, flexDirection: 'row', backgroundColor: '#0860C8' }, searchBox: { flex: 1, minHeight: 38, borderRadius: 9, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: '#FFFFFF', borderWidth: 1.5, borderColor: 'transparent' }, searchBoxFocused: { borderColor: '#B7D8FF', shadowColor: '#FFFFFF', shadowOpacity: 0.28, shadowRadius: 5, elevation: 2 }, searchInput: { flex: 1, paddingVertical: 0, color: '#1F314C', fontSize: 10.5, lineHeight: 14 },
+  filtersWrap: { flexDirection: 'row', alignItems: 'center', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#DDE4EF', backgroundColor: '#FFFFFF' }, filterScroll: { flex: 1 }, seeAllButton: { minHeight: 35, flexDirection: 'row', alignItems: 'center', gap: 6, justifyContent: 'center', paddingHorizontal: 12, marginRight: 9, borderRadius: 18, borderWidth: StyleSheet.hairlineWidth, borderColor: '#E4EBF5', backgroundColor: '#FFFFFF', shadowColor: '#1B416C', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 5, elevation: 2 }, seeAllText: { color: '#0860C8', fontSize: 12, fontWeight: '700' }, filtersContent: { paddingHorizontal: 10, paddingVertical: 7, gap: 7 }, filterChip: { minHeight: 31, borderRadius: 8, flexDirection: 'row', alignItems: 'center', backgroundColor: '#F7F8FB', borderWidth: StyleSheet.hairlineWidth, borderColor: '#E0E5ED' }, filterChipActive: { backgroundColor: '#183864', borderColor: '#183864' }, filterChipPress: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, minHeight: 31 }, filterLabel: { color: '#4D5D75', fontSize: 9.2, lineHeight: 12, fontWeight: '700' }, filterLabelActive: { color: '#FFFFFF' }, filterCount: { color: '#728099', fontSize: 8.5, lineHeight: 11, fontWeight: '700' }, filterCountActive: { color: '#DDEAFF' },
   sheetRoot: { flex: 1, justifyContent: 'flex-end' }, sheetBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(8,23,45,0.46)' }, sheet: { paddingHorizontal: 16, paddingTop: 10, paddingBottom: 32, borderTopLeftRadius: 20, borderTopRightRadius: 20, backgroundColor: '#FFFFFF' }, sheetHeader: { minHeight: 46, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }, sheetTitle: { color: '#172B49', fontSize: 15, fontWeight: '800' }, sheetClose: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' }, sheetOption: { minHeight: 45, flexDirection: 'row', alignItems: 'center', gap: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E3E9F2', paddingHorizontal: 6 }, sheetOptionSelected: { backgroundColor: '#F1F6FF' }, sheetRadio: { width: 18, height: 18, borderRadius: 9, borderWidth: 1.5, borderColor: '#A7B5C8', alignItems: 'center', justifyContent: 'center' }, sheetRadioSelected: { borderColor: '#3156B8' }, sheetRadioDot: { width: 9, height: 9, borderRadius: 5, backgroundColor: '#3156B8' }, sheetOptionText: { flex: 1, color: '#34465E', fontSize: 12, fontWeight: '600' }, sheetOptionTextSelected: { color: '#193C79', fontWeight: '800' }, sheetOptionCount: { color: '#6C7B90', fontSize: 11, fontWeight: '700' },
   emptyContent: { flexGrow: 1 },
   compactEmpty: { flex: 1, minHeight: 250, marginHorizontal: 8, paddingHorizontal: 18, paddingVertical: 24, alignItems: 'center', justifyContent: 'center', gap: 8 },
@@ -481,7 +563,7 @@ const styles = StyleSheet.create({
   loadMoreText: { color: '#3156B8', fontSize: 8, lineHeight: 11, fontWeight: '800' },
   loadMoreTextLoading: { color: '#FFFFFF', fontSize: 8.5, lineHeight: 12, fontWeight: '800' },
   inlineError: { marginBottom: 5, color: partnerTheme.colors.danger, textAlign: 'center', fontSize: 10 },
-  card: { borderRadius: 11, paddingHorizontal: 10, paddingVertical: 10, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#E1E7F0', shadowColor: '#0B2447', shadowOpacity: 0.05, shadowRadius: 5, shadowOffset: { width: 0, height: 2 }, elevation: 1 }, pressedCard: { opacity: 0.75 }, rowTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 }, rowArtwork: { width: 38, height: 38, borderRadius: 9, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F3F7FC' }, rowArtworkImage: { width: 31, height: 31 }, identity: { flex: 1, minWidth: 0 }, intakeNumberRow: { flexDirection: 'row', alignItems: 'center', gap: 4 }, ocrWarning: { flexDirection: 'row', alignItems: 'center', gap: 2 }, ocrWarningText: { color: '#B66B0B', fontSize: 7.5, fontWeight: '700' }, statusStack: { maxWidth: 92, alignItems: 'flex-end', gap: 4 }, openStatusButton: { minHeight: 25, alignSelf: 'flex-end', paddingHorizontal: 7, borderRadius: 7, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 2 }, openStatusReady: { backgroundColor: '#1763C5' }, openStatusInReview: { backgroundColor: '#6746D8' }, openStatusText: { color: '#FFFFFF', fontSize: 9, fontWeight: '800', lineHeight: 12 }, updatedDate: { color: '#7B8799', fontSize: 7, lineHeight: 9, textAlign: 'right' }, number: { color: '#1D2C45', fontSize: 11, lineHeight: 14, fontWeight: '800' }, customer: { marginTop: 2, color: '#687A92', fontSize: 8.5, lineHeight: 11 }, metaLine: { marginTop: 4, color: '#8290A3', fontSize: 8, lineHeight: 10.5 },
+  card: { borderRadius: 11, paddingHorizontal: 10, paddingVertical: 10, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#E1E7F0', shadowColor: '#0B2447', shadowOpacity: 0.05, shadowRadius: 5, shadowOffset: { width: 0, height: 2 }, elevation: 1 }, pressedCard: { opacity: 0.85 }, cardPressScale: { transform: [{ scale: 0.985 }] }, cardNeedsAttention: { borderColor: '#EBCB83' }, cardRejected: { borderColor: '#F0C5C5' }, cardDuplicate: { borderColor: '#CCD3DD' }, cardCompleted: { borderColor: '#B9DDCE' }, cardInReview: { borderColor: '#D2C7F9' }, rowTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 }, rowArtwork: { width: 38, height: 38, borderRadius: 9, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F3F7FC' }, rowArtworkImage: { width: 31, height: 31 }, identity: { flex: 1, minWidth: 0 }, intakeNumberRow: { flexDirection: 'row', alignItems: 'center', gap: 4 }, ocrWarning: { flexDirection: 'row', alignItems: 'center', gap: 2 }, ocrWarningText: { color: '#B66B0B', fontSize: 7.5, fontWeight: '700' }, statusStack: { maxWidth: 92, alignItems: 'flex-end', gap: 4 }, openStatusButton: { minHeight: 25, alignSelf: 'flex-end', paddingHorizontal: 7, borderRadius: 7, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 2 }, openStatusReady: { backgroundColor: '#1763C5' }, openStatusInReview: { backgroundColor: '#6746D8' }, openStatusText: { color: '#FFFFFF', fontSize: 9, fontWeight: '800', lineHeight: 12 }, updatedDate: { color: '#7B8799', fontSize: 7, lineHeight: 9, textAlign: 'right' }, number: { color: '#1D2C45', fontSize: 11, lineHeight: 14, fontWeight: '800' }, customer: { marginTop: 2, color: '#687A92', fontSize: 8.5, lineHeight: 11 }, metaLine: { marginTop: 4, color: '#8290A3', fontSize: 8, lineHeight: 10.5 },
   progressWrap: { marginTop: 10, flexDirection: 'row', alignItems: 'flex-start' }, progressStep: { flex: 1, alignItems: 'center' }, progressLineWrap: { width: '100%', minHeight: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }, progressDot: { width: 10, height: 10, borderRadius: 5, alignItems: 'center', justifyContent: 'center', backgroundColor: '#DCE2EC' }, progressDotComplete: { backgroundColor: '#6541F4' }, progressDotRejected: { backgroundColor: '#EA625C' }, progressLine: { position: 'absolute', left: '57%', width: '86%', height: 1.5, backgroundColor: '#DCE2EC' }, progressLineComplete: { backgroundColor: '#6541F4' }, progressLabel: { marginTop: 3, color: '#7D899B', fontSize: 7.5, lineHeight: 10, fontWeight: '500' }, progressLabelActive: { color: '#23344E', fontWeight: '600' },
   attention: { marginTop: 8, minHeight: 28, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 6, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#FFF3DF' }, attentionText: { flex: 1, color: '#9B5C10', fontSize: 8.5, lineHeight: 11, fontWeight: '700' },
   bottomNav: { height: 58, flexDirection: 'row', alignItems: 'center', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#DDE3EC', backgroundColor: '#FFFFFF' }, navItem: { flex: 1, alignItems: 'center', justifyContent: 'center' }, navIconWrap: { minWidth: 36, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center' }, navIconWrapActive: { backgroundColor: '#EEE9FF' }, navLabel: { marginTop: 1, color: '#60738F', fontSize: 7.5, lineHeight: 10, fontWeight: '600' }, navLabelActive: { color: '#633DF1', fontWeight: '800' }, pressed: { opacity: 0.7 },
