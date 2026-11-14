@@ -29,7 +29,7 @@ assert.match(api,/const productDraftKeys = new Set/,'Server must whitelist produ
 assert.match(api,/saveDraft.productDrafts=proposedProductDrafts/,'Drafts persist in scoped existing intake record');
 assert.match(api,/if\(d.businessLine!=="Motor"\)return reply/,'NonMotor cannot book through Motor endpoint');
 assert.match(screen,/Final case creation, documents, risk validation and permission-controlled commercials must be completed in the Operations Portal/);
-assert.match(screen,/isMotor&&data\?\.commercialAccess/,'Motor financial entry still permission-gated');
+assert.match(screen,/data\?\.commercialAccess\?<View style=\{styles.referenceCommercial\}/, 'All commercial summaries must require commercial access.');
 assert.match(screen,/saveNativePolicyOnboarding\(id,data.revision,draft\)/,'Draft save remains functional');
 // Motor follows Operations structure; other product types retain draft-only screens.
 assert.match(screen,/policy\.slice\(0,4\)\.map\(item/, 'Motor and non-Motor source sections use only four primary rows.');
@@ -46,15 +46,22 @@ assert.match(screen,/motorVehicleFields\.slice\(0,7\)\.map\(item=>field\(item\)\
 assert.match(screen,/motorProductSection=section\('03','Policy product, premium & validity'/, 'Combine Motor policy and premium details into Operations section 03.');
 assert.match(screen,/label:'GST',value:gst/, 'Motor summary includes GST.');
 assert.match(screen,/label:'Gross premium',value:gross/, 'Motor summary includes gross.');
-assert.match(screen,/isMotor&&data\?\.commercialAccess/, 'Commercial information stays permission-gated.');
+assert.match(screen,/data\?\.commercialAccess\?<View style=\{styles.referenceCommercial\}/, 'All commercial summaries must require commercial access.');
 assert.match(screen,/const \[commercialModal,setCommercialModal\]=useState<'payin'\|'payout'\|null>\(null\)/, 'Separate commercial popup state required.');
 assert.match(screen,/accessibilityLabel="Insurer Pay-In popup"/, 'Insurer Pay-In entry must open its own popup.');
+assert.match(screen,/productValues.payinBasis==='FLAT'/, 'Non-Motor pay-in supports fixed and net premium basis.');
+assert.match(screen,/productValues.partnerPayoutBasis==='FLAT'/, 'Non-Motor payout supports fixed and net premium basis.');
+assert.match(screen,/summaryPayin\*\.9-summaryPayout/, 'Projected retention deducts TDS.');
+assert.match(screen,/premiumIcon/, 'Non-Motor premium label shows a rupee icon.');
+assert.match(api,/productCommercialKeys/, 'Non-Motor commercial values must be controlled server-side.');
+assert.match(api,/Commercial terms require financial access/, 'Unauthorized commercial writes must be rejected.');
+assert.match(api,/Never disclose isolated Life\/Health\/Non Motor commercial terms/, 'Restricted commercial values must not be returned.');
 assert.match(screen,/accessibilityLabel="Partner Payout popup"/, 'Partner Payout entry must open its own popup.');
 assert.match(screen,/commercialModal==='payin'\?'Projected Insurer Pay-in':'Partner Payout'/, 'Each modal needs the correct heading.');
 assert.match(screen,/insurerPayinFields\.map\(/, 'Pay-in popup must use scoped insurer fields.');
 assert.match(screen,/partnerPayoutFields\.filter\(/, 'Payout popup must use scoped payout fields.');
 assert.match(screen,/accessibilityLabel="Save and close commercial popup"/, 'Commercial popup needs a Save & Close action.');
-assert.match(screen,/Boolean\(commercialModal\)&&isMotor&&Boolean\(data\?\.commercialAccess\)/, 'Commercial modals must be strictly Motor and permission gated.');
+assert.match(screen,/Boolean\(commercialModal\)&&Boolean\(data\?\.commercialAccess\)/, 'Commercial modals stay permission gated.');
 assert.match(screen,/placeholder=\{hint\}/, 'Onboarding text inputs have concise context-sensitive placeholders.');
 assert.match(screen,/f.key==='model'\?'Model \/ variant'/, 'Keep the reference Model placeholder.');
 assert.match(screen,/displayed\|\|\('Select '\+f.label.toLowerCase\(\)\)/, 'Empty dropdowns display a Select prompt.');
