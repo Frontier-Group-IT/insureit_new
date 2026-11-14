@@ -5,7 +5,7 @@ import { requirePolicyCreator, requirePolicyEditor } from "@/lib/policy-access-s
 import { canAccessPolicyCommercials } from "@/lib/policy-commercial-access";
 import { resolvePolicyIntermediarySource } from "@/lib/policy-intermediary-source";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
-import { recordPolicyActivity, capturePolicyEditSnapshot, changedPolicyEditFields, POLICY_ACTIVITY_ACTIONS } from "@/lib/policy-activity";
+import { recordPolicyActivity, capturePolicyEditSnapshot, describePolicyEditChanges, POLICY_ACTIVITY_ACTIONS } from "@/lib/policy-activity";
 import { consumePolicyDateApproval, recordPreviousMonthPolicyUpload, linkConsumedPolicyDateApproval } from "@/lib/policy-date-approval-server";
 
 export type NonMotorCommercialBasis = "NET_PREMIUM_PERCENT" | "FIXED_AMOUNT";
@@ -268,7 +268,7 @@ export async function updateNonMotorPolicy(policyId: string, payload: NonMotorPo
   revalidatePath(`/policies/${id}`);
   const activityAfter = await capturePolicyEditSnapshot(admin, id).catch(() => null);
   await recordPolicyActivity(admin, id, profile.id, POLICY_ACTIVITY_ACTIONS.POLICY_EDITED,
-    changedPolicyEditFields(activityBefore, activityAfter));
+    describePolicyEditChanges(activityBefore, activityAfter));
   if (dateGuard.previousMonth) await recordPreviousMonthPolicyUpload(admin, id, profile.id, issuanceDate, dateGuard.approverName);
   if (dateGuard.approverName) await linkConsumedPolicyDateApproval(admin, payload.dateApprovalId, id, profile.id);
   revalidatePath(`/policies/${id}/edit`);

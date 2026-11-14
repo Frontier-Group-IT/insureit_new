@@ -8,7 +8,7 @@ import { canAccessPolicyCommercials } from "@/lib/policy-commercial-access";
 import { requirePolicyEditor } from "@/lib/policy-access-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { resolvePolicyIntermediarySource } from "@/lib/policy-intermediary-source";
-import { POLICY_ACTIVITY_ACTIONS, recordPolicyActivity, capturePolicyEditSnapshot, changedPolicyEditFields } from "@/lib/policy-activity";
+import { POLICY_ACTIVITY_ACTIONS, recordPolicyActivity, capturePolicyEditSnapshot, describePolicyEditChanges } from "@/lib/policy-activity";
 
 export type PolicyEditPayload = {
   vehicleClass: string;
@@ -183,7 +183,7 @@ export async function updatePolicyOnboarding(policyId: string, payload: PolicyEd
 
     const activityAfter = await capturePolicyEditSnapshot(admin, result.policyId).catch(() => null);
     await recordPolicyActivity(admin, result.policyId, profile.id, POLICY_ACTIVITY_ACTIONS.POLICY_EDITED,
-      changedPolicyEditFields(activityBefore, activityAfter));
+      describePolicyEditChanges(activityBefore, activityAfter));
     revalidatePath("/policies");
     revalidatePath(`/policies/${policyId}/edit`);
     return { ok: true, policyId: result.policyId, policyCode: result.policyCode ?? "" };

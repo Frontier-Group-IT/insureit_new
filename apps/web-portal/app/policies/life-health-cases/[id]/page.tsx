@@ -16,7 +16,8 @@ type InsurerRow = { id:string; name:string };
 type DocumentRow = { id:string; document_type:string; file_name:string; created_at:string; uploaded_by:string|null };
 type PolicyRow = { id:string; policy_no:string; policy_code:string|null };
 type ProfileRow = { id:string; full_name:string|null };
-type ActivityRow = { id:string; action:string; createdAt:string; createdBy:string };
+type CaseAuditRow = {id:string;actor_id:string|null;created_at:string;action:string;new_data:{changed_fields?:unknown}|null};
+type ActivityRow = { id:string; action:string; createdAt:string; createdBy:string;changes?:string[] };
 
 const documentAction=(type:string)=>type==="policy_copy"?"Policy Doc. Uploaded":type==="proposal_form"?"Proposal Form Uploaded":type==="kyc"?"KYC Uploaded":"Document Uploaded";
 
@@ -43,13 +44,38 @@ export default async function LifeHealthCasePage({ params }: { params: Promise<{
     caseRow.final_policy_id ? admin.from("policies").select("id,policy_no,policy_code").eq("id", caseRow.final_policy_id).maybeSingle<PolicyRow>() : Promise.resolve({ data: null, error: null }),
   ]);
 
+  const {data:caseEditAudits}=await admin.from("audit_logs")
+    .select("id,actor_id,created_at,action,new_data")
+    .eq("table_name","life_health_cases").eq("record_id",id)
+    .in("action",["life_health_case_edited","life_health_case_remark_added"]).order("created_at",{ascending:false})
+    .limit(100).returns<CaseAuditRow[]>();
   const documents=documentsResult.data??[];
-  const actorIds=Array.from(new Set([caseRow.created_by,caseRow.converted_by,...documents.map(document=>document.uploaded_by)].filter((value):value is string=>Boolean(value))));
+  const actorIds=Array.from(new Set([caseRow.created_by,caseRow.converted_by,...documents.map(document=>document.uploaded_by),...(caseEditAudits??[]).map(audit=>audit.actor_id)].filter((value):value is string=>Boolean(value))));
   const profilesResult=actorIds.length?await admin.from("profiles").select("id,full_name").in("id",actorIds).returns<ProfileRow[]>():{data:[] as ProfileRow[],error:null};
   const actorNames=new Map((profilesResult.data??[]).map(profile=>[profile.id,profile.full_name?.trim()||"User"]));
   const activities:ActivityRow[]=[
     {id:`case-${caseRow.id}`,action:"Case Created",createdAt:caseRow.created_at,createdBy:caseRow.created_by?actorNames.get(caseRow.created_by)||"User":"User"},
     ...documents.map(document=>({id:`document-${document.id}`,action:documentAction(document.document_type),createdAt:document.created_at,createdBy:document.uploaded_by?actorNames.get(document.uploaded_by)||"User":"User"})),
+    ...(caseEditAudits??[]).map(audit=>{
+      const raw=audit.new_data?.changed_fields;
+      // Only accept the labelled changes written by our trusted case editor.
+      const safeText=(value:string)=>/^(?:[a-zA-Z0-9 ._\/-]{1,70}|Not set|Changed)$/.test(value);
+      const safeChange=(change:unknown):change is string=>{
+        if(typeof change!=="string"||change.length>180)return false;
+        if(/^(Insurer|Proposal number|Customer name|Address) changed \(values hidden\)$/.test(change))return true;
+        const mobile=change.match(/^Mobile number: (••••••[0-9]{4}|Not set) → (••••••[0-9]{4}|Not set)$/);
+        if(mobile)return true;
+        const match=change.match(/^(Product|Premium|Premium paying term|Policy duration|Payment frequency|Payment mode|Sourcing date): (.*?) → (.*?)$/);
+        if(!match)return false;
+        if(match[1]==="Premium")return /^(?:₹[0-9,]+[.][0-9]{2}|Not set)$/.test(match[2])
+          &&/^(?:₹[0-9,]+[.][0-9]{2}|Not set)$/.test(match[3]);
+        return safeText(match[2])&&safeText(match[3]);
+      };
+      const changes=audit.action==="life_health_case_remark_added"?["Remarks changed (values hidden)"]:
+        Array.isArray(raw)?raw.filter(safeChange).slice(0,20):[];
+      return {id:`case-audit-${audit.id}`,action:audit.action==="life_health_case_remark_added"?"Remark Added":changes.length===1?changes[0].split(":")[0].replace(/ changed \(values hidden\)$/,"")+" Updated":"Case Details Updated",
+        createdAt:audit.created_at,createdBy:audit.actor_id?actorNames.get(audit.actor_id)||"User":"User",changes};
+    }),
     ...(caseRow.converted_at?[{id:`converted-${caseRow.id}`,action:"Policy Created & Case Closed",createdAt:caseRow.converted_at,createdBy:caseRow.converted_by?actorNames.get(caseRow.converted_by)||"User":"User"}]:[]),
   ].sort((a,b)=>new Date(b.createdAt).getTime()-new Date(a.createdAt).getTime());
 

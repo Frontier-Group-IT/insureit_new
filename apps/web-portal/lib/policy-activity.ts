@@ -119,7 +119,7 @@ const POLICY_EDIT_FIELDS = {
     lead_source: "Lead source", rm_name: "Relationship manager", remarks: "Remarks",
   },
   premium: { od_premium: "OD premium", tp_premium: "TP premium", add_on_premium: "Add-on premium",
-    net_premium: "Net premium", gst_amount: "GST", gross_premium: "Gross premium" },
+    cpa_amount: "CPA amount", cpa_opted: "CPA opted", net_premium: "Net premium", gst_amount: "GST", gross_premium: "Gross premium" },
   payin: { commercial_basis: "Pay-in basis", projected_commission_percent: "Pay-in rate",
     projected_commission_amount: "Projected insurer pay-in", insurer_scheme_amount: "Insurer incentive",
     total_projected_payin: "Total projected pay-in", commercial_status: "Pay-in entry status" },
@@ -210,14 +210,102 @@ export function changedPolicyEditFields(before: PolicyEditSnapshot | null, after
   return [...new Set(names)];
 }
 
+// Only these explicitly approved policy-facing fields may have historical
+// values written into audit logs. Do not log raw customers, identifiers,
+// insurer pay-in/payout commissions, remarks, or arbitrary form JSON.
+const DISPLAYABLE_PREMIUM_VALUES = new Set([
+  "premium.od_premium", "premium.tp_premium",
+  "premium.cpa_amount", "premium.cpa_opted", "premium.add_on_premium",
+]);
+const DERIVED_PREMIUM_FIELDS = new Set([
+  "premium.net_premium", "premium.gst_amount", "premium.gross_premium",
+  "policy.premium_amount", "payin.projected_commission_amount",
+  "payin.total_projected_payin", "payout.partner_payout_amount",
+]);
+const AUTO_REVIEW_STATUS_FIELDS = new Set(["payin.commercial_status","payout.commercial_status"]);
+const DISPLAYABLE_PUBLIC_VALUES = new Set([
+  "policy.status","policy.business_line","policy.policy_type","policy.policy_product",
+  "policy.issuance_date","policy.start_date","policy.end_date","policy.policy_term",
+  "case.product_name","case.premium_paying_term","case.policy_duration",
+  "case.payment_frequency","case.payment_mode",
+]);
+function formatPublicAuditValue(raw:string|null):string {
+  if(!raw)return "Not set";
+  return /^[a-zA-Z0-9 ._\/-]{1,70}$/.test(raw)?raw:"Changed";
+}
+const activityLabel=(value:string)=>value.split(":")[0].replace(/ changed \(values hidden\)$/, "");
+function formatAuditedPremiumValue(key: string, raw: string | null): string {
+  if (raw === null || raw === "") return "Not set";
+  if (key === "premium.cpa_opted") return raw === "true" ? "Yes" : raw === "false" ? "No" : "Not set";
+  const amount = Number(raw);
+  return Number.isFinite(amount) && amount >= 0 && amount <= 1000000000
+    ? `₹${amount.toLocaleString("en-IN", {minimumFractionDigits: 2, maximumFractionDigits: 2})}`
+    : "Changed";
+}
+
+/** Actual editable differences; exclude auto-recalculated totals from the
+ * activity headline when a source premium was edited. Existing older audit
+ * entries remain truthful about the limited historical data recorded. */
+export function describePolicyEditChanges(before: PolicyEditSnapshot | null, after: PolicyEditSnapshot | null): string[] | null {
+  if (!before || !after) return null;
+  const groups = POLICY_EDIT_FIELDS as Record<string, Record<string, string>>;
+  const entries: Array<{key:string;label:string}> = [];
+  for (const [prefix, fields] of Object.entries(groups))
+    for (const [key, label] of Object.entries(fields)) {
+      const fullKey = `${prefix}.${key}`;
+      if (before[fullKey] !== after[fullKey]) entries.push({key:fullKey,label});
+    }
+  const premiumSourceChanged = entries.some(entry=>DISPLAYABLE_PREMIUM_VALUES.has(entry.key));
+  const cpaAmountChanged=entries.some(entry=>entry.key==="premium.cpa_amount");
+  return entries.filter(entry => !DERIVED_PREMIUM_FIELDS.has(entry.key)
+      && !(cpaAmountChanged && entry.key==="premium.cpa_opted")
+      && !(premiumSourceChanged && AUTO_REVIEW_STATUS_FIELDS.has(entry.key)))
+    .map(entry => DISPLAYABLE_PREMIUM_VALUES.has(entry.key)
+      ? `${entry.label}: ${formatAuditedPremiumValue(entry.key,before[entry.key])} → ${formatAuditedPremiumValue(entry.key,after[entry.key])}`
+      : DISPLAYABLE_PUBLIC_VALUES.has(entry.key)
+        ? `${entry.label}: ${formatPublicAuditValue(before[entry.key])} → ${formatPublicAuditValue(after[entry.key])}`
+        : `${entry.label} changed (values hidden)`).slice(0,30);
+}
+
+function readPolicyAuditFieldChanges(raw:unknown):string[]|null {
+  if(!Array.isArray(raw)) return null;
+  const fieldLabels = new Set<string>(Object.values(POLICY_EDIT_FIELDS).flatMap(fields=>Object.values(fields)));
+  const withValues=new Set<string>([...DISPLAYABLE_PREMIUM_VALUES,...DISPLAYABLE_PUBLIC_VALUES]
+    .map(path=>{const [group,key]=path.split(".");return (POLICY_EDIT_FIELDS as Record<string,Record<string,string>>)[group]?.[key];})
+    .filter((label):label is string=>Boolean(label)));
+  const accepted:string[]=[];
+  for(const item of raw.slice(0,30)){
+    if(typeof item!=="string"||item.length>180)continue;
+    if(fieldLabels.has(item)){
+      // Old records only knew that calculated totals changed. Do not make
+      // them look like manual edits, or invent the prior CPA amount.
+      if(!["Net premium","GST","Gross premium","Premium","Projected insurer pay-in",
+        "Total projected pay-in","Partner payout amount"].includes(item))accepted.push(item);
+      continue;
+    }
+    const hidden=item.match(/^(.*?) changed \(values hidden\)$/);
+    if(hidden&&fieldLabels.has(hidden[1])){accepted.push(item);continue;}
+    const parsed=item.match(/^(.*?): (.*?) → (.*?)$/);
+    if(parsed&&withValues.has(parsed[1])){
+      const isAmount=["OD premium","TP premium","CPA amount","Add-on premium"].includes(parsed[1]);
+      const isBoolean=parsed[1]==="CPA opted";
+      const safe=(value:string)=>isBoolean?/^(Yes|No|Not set)$/.test(value)
+        :isAmount?/^(₹[0-9,]+[.][0-9]{2}|Not set|Changed)$/.test(value)
+        :/^(?:[a-zA-Z0-9 ._\/-]{1,70}|Not set|Changed)$/.test(value);
+      if(safe(parsed[2])&&safe(parsed[3]))accepted.push(item);
+    }
+  }
+  return accepted.length?accepted:raw.length?null:[];
+}
+
 function policyEditTitle(changed: string[] | null): string {
   if (!changed) return "Policy updated — change details unavailable";
   if (changed.length === 0) return "Policy saved — no tracked field changes";
   if (changed.length > 1) {
     const remaining = changed.length - 2;
-    return `${changed[0]}, ${changed[1]}${remaining ? ` + ${remaining} more` : ""} updated`;
+    return `${activityLabel(changed[0])}, ${activityLabel(changed[1])}${remaining ? ` + ${remaining} more` : ""} updated`;
   }
-  const single = changed[0];
+  const single = activityLabel(changed[0]);
   if (single === "Policy number") return "Policy number changed";
   if (single === "Policy status") return "Policy status changed";
   if (single === "Insurer") return "Insurer changed";
@@ -300,7 +388,7 @@ export async function loadPolicyActivityHistory({
       policyDate: action === POLICY_ACTIVITY_ACTIONS.PREVIOUS_MONTH_POLICY_UPLOADED ? row.new_data?.issuance_date : null,
       changedFields: action === POLICY_ACTIVITY_ACTIONS.POLICY_EDITED
         && Array.isArray(row.new_data?.changed_fields)
-        ? row.new_data.changed_fields.filter((item): item is string => typeof item === "string").slice(0, 30)
+        ? readPolicyAuditFieldChanges(row.new_data.changed_fields)
         : null,
       at: row.created_at,
     });
@@ -387,11 +475,11 @@ export async function loadPolicyActivityHistory({
         : ACTION_LABELS[candidate.action],
       actorName: candidate.actorName?.trim() || (candidate.actorId ? actorNames.get(candidate.actorId) : null) || "Not recorded",
       changes: candidate.action === POLICY_ACTIVITY_ACTIONS.POLICY_EDITED
-        ? candidate.changedFields?.map(field => `${field} changed (previous/new values not stored)`) ?? null
+        ? candidate.changedFields?.map(field => field.includes(" → ") || field.includes(" changed (") ? field : `${field} changed (previous/new values not stored)`) ?? null
         : null,
       meta: candidate.action === POLICY_ACTIVITY_ACTIONS.POLICY_EDITED
         ? candidate.changedFields === null || candidate.changedFields === undefined
-          ? "Fields changed were not recorded for this edit"
+          ? "The original edited field and previous/new values were not recorded"
           : candidate.changedFields.length
             ? undefined
             : "No tracked field values changed"

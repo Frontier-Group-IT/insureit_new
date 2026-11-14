@@ -21,15 +21,16 @@ const activityCard = read("../components/standard-activity-status-card.tsx");
 for (const [name, edit] of [["Motor", motorEdit], ["Non-Motor", nonMotorEdit], ["Life/Health", lifeHealthEdit]]) {
   assert.match(edit, /capturePolicyEditSnapshot\(admin, (?:policyId|id)\)/, name + " editor captures pre-save state");
   assert.match(edit, /const activityAfter = await capturePolicyEditSnapshot/, name + " editor captures post-save state");
-  assert.match(edit, /changedPolicyEditFields\(activityBefore, activityAfter\)/, name + " activity records actual changes");
+  assert.match(edit, /describePolicyEditChanges\(activityBefore, activityAfter\)/, name + " activity records actual changes");
 }
 for (const field of ["policy_no", "status", "premium_amount", "start_date", "end_date", "net_premium", "gross_premium", "policy_product", "insurance_company_id", "proposal_number", "next_installment_date", "deductible"]) {
   assert.ok(activity.includes(field), field + " is part of reviewed policy activity coverage");
 }
-assert.match(activity, /new_data: \{ changed_fields: changedFields \?\? null \}/, "Save only audited field names, not financial or customer data");
+assert.match(activity, /new_data: \{ changed_fields: changedFields \?\? null \}/, "Save only approved changed-field summaries, never full customer or form snapshots");
+assert.match(activity, /DISPLAYABLE_PREMIUM_VALUES/, "Only specifically approved policy premium fields may show old/new values");
 assert.match(activity, /changedFields: action === POLICY_ACTIVITY_ACTIONS.POLICY_EDITED/, "Activity reader must decode field names from immutable audit");
 assert.match(activity, /"Policy updated — change details unavailable"/, "Historical edits without change data cannot pretend to know what changed");
-assert.match(activity, /candidate\.changedFields\?\.map\(field =>/, "Show individual recorded field changes without exposing old/new financial values");
+assert.match(activity, /candidate\.changedFields\?\.map\(field =>/, "Show only individually approved recorded field changes");
 assert.match(activityCard, /item\.changes\?\.length/, "Shared activity UI renders each recorded field change");
 assert.match(activity, /"Policy saved — no tracked field changes"/, "A save without tracked changes must not claim a business change");
 assert.match(activityCard, /item\.meta/, "Activity UI continues to display actual field details and timestamp");
