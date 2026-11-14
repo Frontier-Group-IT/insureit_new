@@ -10,7 +10,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-type CaseRow = { id:string; case_number:string; business_line:"Life"|"Health"; status:string; sourcing_date:string; customer_id:string; insurance_company_id:string; product_name:string; proposal_number:string; premium_paying_term:string|null; policy_duration:string|null; payment_frequency:string; payment_mode:string; premium_amount:number; intermediary_type:string|null; intermediary_code:string|null; lead_source:string|null; intermediary_mobile:string|null; rm_name:string|null; rm_code:string|null; remarks:string|null; final_policy_id:string|null; converted_at:string|null; created_at:string; created_by:string|null; converted_by:string|null };
+type CaseRow = { id:string; case_number:string; business_line:"Life"|"Health"; status:string; sourcing_date:string; customer_id:string; insurance_company_id:string; product_name:string; proposal_number:string; premium_paying_term:string|null; policy_duration:string|null; payment_frequency:string; payment_mode:string; premium_amount:number; intermediary_type:string|null; intermediary_code:string|null; lead_source:string|null; intermediary_mobile:string|null; rm_name:string|null; rm_code:string|null; remarks:string|null; final_policy_id:string|null; converted_at:string|null; created_at:string; created_by:string|null; converted_by:string|null; details:unknown };
 type CustomerRow = { id:string; contact_name:string; company_name:string|null; phone:string; email:string|null; address:string|null; address_street:string|null };
 type InsurerRow = { id:string; name:string };
 type DocumentRow = { id:string; document_type:string; file_name:string; created_at:string; uploaded_by:string|null };
@@ -27,7 +27,7 @@ export default async function LifeHealthCasePage({ params }: { params: Promise<{
   const admin = createSupabaseAdminClient();
   const { id } = await params;
   let request = admin.from("life_health_cases")
-    .select("id,case_number,business_line,status,sourcing_date,customer_id,insurance_company_id,product_name,proposal_number,premium_paying_term,policy_duration,payment_frequency,payment_mode,premium_amount,intermediary_type,intermediary_code,lead_source,intermediary_mobile,rm_name,rm_code,remarks,final_policy_id,converted_at,created_at,created_by,converted_by")
+    .select("id,case_number,business_line,status,sourcing_date,customer_id,insurance_company_id,product_name,proposal_number,premium_paying_term,policy_duration,payment_frequency,payment_mode,premium_amount,intermediary_type,intermediary_code,lead_source,intermediary_mobile,rm_name,rm_code,remarks,final_policy_id,converted_at,created_at,created_by,converted_by,details")
     .eq("id", id);
   if (profile.role === "operations_head_life") {
     const downlineFilter = operationsHeadVisiblePolicyFilter(await getOperationsHeadDownlinePolicyScope(profile.id));
@@ -79,13 +79,17 @@ export default async function LifeHealthCasePage({ params }: { params: Promise<{
     ...(caseRow.converted_at?[{id:`converted-${caseRow.id}`,action:"Policy Created & Case Closed",createdAt:caseRow.converted_at,createdBy:caseRow.converted_by?actorNames.get(caseRow.converted_by)||"User":"User"}]:[]),
   ].sort((a,b)=>new Date(b.createdAt).getTime()-new Date(a.createdAt).getTime());
 
+  const caseDetails = caseRow.details && typeof caseRow.details === "object" && !Array.isArray(caseRow.details) ? caseRow.details as Record<string, unknown> : {};
+  const rawRejection = caseDetails.rejection;
+  const rejection = rawRejection && typeof rawRejection === "object" && !Array.isArray(rawRejection) ? rawRejection as Record<string, unknown> : {};
+  const rejectionReason = typeof rejection.reason === "string" ? rejection.reason.trim().slice(0, 2000) : "";
   const customer = customerResult.data;
   const insurer = insurerResult.data;
   return <AppShell title="Life / Health Case">
     <LifeHealthCaseErrorPopupGuard />
     <LifeHealthCaseDetail
       caseData={{
-        id:caseRow.id, caseNumber:caseRow.case_number, businessLine:caseRow.business_line, status:caseRow.status, sourcingDate:caseRow.sourcing_date,
+        id:caseRow.id, caseNumber:caseRow.case_number, businessLine:caseRow.business_line, status:caseRow.status, rejectionReason, sourcingDate:caseRow.sourcing_date,
         customerId:caseRow.customer_id, customerName:customer?.company_name?.trim()||customer?.contact_name||"Customer", customerPhone:customer?.phone||"", customerAddress:customer?.address_street?.trim()||customer?.address?.trim()||"",
         insurerId:caseRow.insurance_company_id, insurerName:insurer?.name||"Insurer", productName:caseRow.product_name, proposalNumber:caseRow.proposal_number,
         ppt:caseRow.premium_paying_term||"", pd:caseRow.policy_duration||"", paymentFrequency:caseRow.payment_frequency, paymentMode:caseRow.payment_mode, premiumAmount:Number(caseRow.premium_amount||0),
