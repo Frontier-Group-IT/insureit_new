@@ -57,11 +57,13 @@ class PlanTests(unittest.TestCase):
         self.assertEqual(counts[("public", "TABLE")], 151)
         self.assertEqual(counts[("public", "TABLE DATA")], 151)
         self.assertEqual(counts[("auth", "TABLE DATA")], 22)
-        self.assertEqual(counts[("auth", "TRIGGER")], 1)
-        self.assertEqual(counts[("storage", "POLICY")], 2)
+        self.assertEqual(counts[("auth", "TRIGGER")], 0)
+        self.assertEqual(counts[("storage", "POLICY")], 0)
         self.assertIn("SCHEMA - identity_maintenance", text)
         self.assertIn("SEQUENCE OWNED BY public", text)
         self.assertIn("INDEX ATTACH public", text)
+        self.assertNotIn("TRIGGER auth users", text)
+        self.assertNotIn("POLICY storage", text)
         self.assertNotIn("TABLE DATA storage objects", text)
         self.assertNotIn("TABLE DATA storage buckets", text)
         self.assertNotIn("SCHEMA - supabase_migrations", text)
@@ -86,14 +88,12 @@ class PlanTests(unittest.TestCase):
                 "3002; 0 1 TABLE DATA auth table_2 supabase_auth_admin\n", ""
             ))
 
-    def test_fails_on_missing_policy(self):
-        content = fixture().replace(
-            "16; 3256 1 POLICY storage objects policy_access postgres\n", ""
-        ).replace(
-            "17; 3256 1 POLICY storage buckets policy_bucket postgres\n", ""
-        )
-        with self.assertRaises(ValueError):
-            chosen_entries(content)
+    def test_owner_only_managed_policy_is_not_imported(self):
+        selected, counts = chosen_entries(fixture())
+        self.assertEqual(counts[("storage", "POLICY")], 0)
+        self.assertEqual(counts[("auth", "TRIGGER")], 0)
+        self.assertFalse(any("POLICY storage" in line for line in selected))
+        self.assertFalse(any("TRIGGER auth" in line for line in selected))
 
     def test_fails_on_unrecognized_archive_entry(self):
         with self.assertRaises(ValueError):
