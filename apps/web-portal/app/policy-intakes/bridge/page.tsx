@@ -39,7 +39,7 @@ export default function PartnerPolicyIntakeBridgePage() {
         });
         const result = await handoff.json() as { ok?: boolean; path?: string; error?: string };
         if (!handoff.ok || !result.ok || !result.path ||
-            !/^\/policies\/new\?intake_id=[0-9a-f-]{36}$/i.test(result.path)) {
+            !/^\/policies\/new(?:\/non-motor)?\?intake_id=[0-9a-f-]{36}$/i.test(result.path)) {
           throw new Error(result.error || "Policy Onboarding could not be prepared.");
         }
         window.location.replace(result.path);
