@@ -147,6 +147,8 @@ export default function NativePolicyOnboarding(){
   const [dirty,setDirty]=useState(false);
   const [commercialExpanded,setCommercialExpanded]=useState(false);
   const [commercialModal,setCommercialModal]=useState<'payin'|'payout'|null>(null);
+  const [remarkOpen,setRemarkOpen]=useState(false);
+  const [remarkText,setRemarkText]=useState('');
   const [payinSummaryExpanded,setPayinSummaryExpanded]=useState(false);
   const [payoutBasisExpanded,setPayoutBasisExpanded]=useState(false);
   const load=useCallback(async()=>{
@@ -526,8 +528,19 @@ export default function NativePolicyOnboarding(){
       {isMotor?motorVehicleSection:productSection('02',productType==='Non Motor'?'Customer & policy':'Customer / Proposer',productType==='Non Motor'?[...commonPerson,...otherPolicy]:commonPerson)}
       {isMotor?motorProductSection:productType==='Non Motor'?productSection('03','Risk details',riskFields[productValues.category]??riskFields.Other):productSection('03','Policy product & case details',lifeProduct)}
       {!isMotor?productSection('04',productType==='Non Motor'?'Cover, premium & validity':'Premium & payment',productType==='Non Motor'?otherPremium:lifePremium):null}
-      {!isMotor&&productType==='Non Motor'?productSection('05','Additional policy details',productExtras):null}
-      {!isMotor&&productType!=='Non Motor'?productSection('05','Remarks',[{key:'remarks',label:'Remarks',wide:true}]):null}
+      {!isMotor&&productType==='Non Motor'?productSection('05','Additional policy details',productExtras.filter(item=>item.key!=='remarks')):null}
+      <View style={styles.section}>
+        <View style={styles.sectionHead}><Ionicons name="chatbox-ellipses-outline" size={17} color="#254C83"/><Text style={styles.sectionTitle}>Remarks</Text></View>
+        <View style={styles.remarkBody}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Add Remark" style={styles.remarkButton}
+            onPress={()=>{setRemarkText(isMotor?draft.remarks:productValues.remarks||'');setRemarkOpen(true);}}>
+            <Ionicons name="add-circle-outline" size={17} color="#254C83"/>
+            <Text style={styles.remarkButtonText}>Add Remark</Text>
+          </Pressable>
+          {(isMotor?draft.remarks:productValues.remarks)?.trim()?
+            <Text style={styles.remarkPreview} numberOfLines={3}>{isMotor?draft.remarks:productValues.remarks}</Text>:null}
+        </View>
+      </View>
       <View style={styles.section}>
         <View style={styles.sectionHead}>
           <View style={styles.summaryHeading}><Text style={styles.summaryCaption}>POLICY STATUS</Text>
@@ -625,6 +638,31 @@ export default function NativePolicyOnboarding(){
           : policyCopyImageUrl
             ? <Image source={{uri:policyCopyImageUrl}} resizeMode="contain" style={styles.policyCopyPreviewImage} onError={()=>setPolicyCopyImageFailed(true)}/>
             : null}
+      </View>
+    </Modal>
+    <Modal transparent visible={remarkOpen} animationType="fade" onRequestClose={()=>setRemarkOpen(false)}>
+      <View style={styles.remarkOverlay}>
+        <View style={styles.remarkSheet}>
+          <View style={styles.remarkHeader}>
+            <View style={styles.remarkTitle}><Ionicons name="chatbox-text-outline" size={18} color="#254C83"/><Text style={styles.sectionTitle}>Add Remark</Text></View>
+            <Pressable accessibilityRole="button" accessibilityLabel="Close remark popup" onPress={()=>setRemarkOpen(false)}><Ionicons name="close" size={21} color="#64748B"/></Pressable>
+          </View>
+          <Text style={styles.label}>New remark</Text>
+          <TextInput accessibilityLabel="New remark" multiline textAlignVertical="top"
+            value={remarkText} onChangeText={setRemarkText} maxLength={4000}
+            placeholder="Enter a new remark" placeholderTextColor="#98A6B8" style={styles.remarkInput}/>
+          <View style={styles.remarkActions}>
+            <Pressable accessibilityRole="button" style={styles.remarkCancel} onPress={()=>setRemarkOpen(false)}><Text style={styles.remarkCancelText}>Cancel</Text></Pressable>
+            <Pressable accessibilityRole="button" style={[styles.remarkConfirm,!remarkText.trim()&&styles.disabled]}
+              disabled={!remarkText.trim()} onPress={()=>{
+                if(!remarkText.trim())return;
+                if(isMotor)update('remarks',remarkText.trim());
+                else updateProduct('remarks',remarkText.trim());
+                setRemarkOpen(false);
+              }}><Text style={styles.primaryText}>Add Remark</Text></Pressable>
+          </View>
+          <Text style={styles.remarkNote}>Remark changes are saved with the onboarding draft.</Text>
+        </View>
       </View>
     </Modal>
     <Modal transparent visible={Boolean(commercialModal)&&isMotor&&Boolean(data?.commercialAccess)}
@@ -798,6 +836,7 @@ const styles=StyleSheet.create({
   readonlyInput:{backgroundColor:'#F3F6FA',color:'#738196'},
   commercialSave:{backgroundColor:'#17365D',borderRadius:10,paddingHorizontal:17,paddingVertical:12,alignItems:'center'},
   summary:{padding:14,gap:7},summaryStatusRow:{flexDirection:'row',alignItems:'center',justifyContent:'space-between'},summaryStatusValue:{fontSize:10,fontWeight:'700',color:'#A96A00'},summaryCaption:{fontSize:10,fontWeight:'700',color:'#426188'},summaryHeading:{flex:1,gap:3},premiumHeading:{flexDirection:'row',gap:6,alignItems:'center',paddingVertical:7},progressStatus:{backgroundColor:'#FFF3D4',borderRadius:12,paddingHorizontal:8,paddingVertical:6},summaryProgress:{width:44,height:44,borderRadius:22,borderWidth:5,borderTopColor:'#17365D',borderRightColor:'#17365D',borderBottomColor:'#DFE7F0',borderLeftColor:'#DFE7F0',alignItems:'center',justifyContent:'center'},commercialToggle:{marginHorizontal:12,marginBottom:9,flexDirection:'row',alignItems:'center',gap:8,padding:11,borderWidth:1,borderColor:'#DDE6F0',borderRadius:10,backgroundColor:'#F8FAFD'},commercialToggleTitle:{flex:1,color:'#26436B',fontSize:11,fontWeight:'700'},commercialBody:{paddingHorizontal:12},summaryDocuments:{marginHorizontal:12,marginBottom:11,padding:12,flexDirection:'row',alignItems:'center',gap:10,borderColor:'#E1E9F3',borderWidth:1,borderRadius:10},documentAction:{marginHorizontal:12,marginBottom:12,flexDirection:'row',gap:8},total:{fontSize:20,color:'#1B385B',fontWeight:'800'},notice:{fontSize:10,lineHeight:16,color:'#65758E',paddingHorizontal:14,paddingBottom:13},
+  remarkBody:{padding:12,gap:8},remarkButton:{minHeight:38,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:7,borderWidth:1,borderColor:'#CDD9EB',borderRadius:9,backgroundColor:'#F8FAFD'},remarkButtonText:{fontSize:11,fontWeight:'700',color:'#254C83'},remarkPreview:{fontSize:11,lineHeight:17,color:'#53657D'},remarkOverlay:{flex:1,alignItems:'center',justifyContent:'center',padding:20,backgroundColor:'rgba(5,18,40,.55)'},remarkSheet:{width:'100%',maxWidth:520,borderRadius:16,backgroundColor:'#FFFFFF',padding:16,gap:12},remarkHeader:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',paddingBottom:10,borderBottomWidth:1,borderColor:'#E6EDF5'},remarkTitle:{flexDirection:'row',alignItems:'center',gap:8},remarkInput:{borderWidth:1,borderColor:'#9BB2D7',borderRadius:9,minHeight:128,padding:11,fontSize:12,color:'#17365D'},remarkActions:{flexDirection:'row',gap:9,justifyContent:'flex-end'},remarkCancel:{paddingHorizontal:14,paddingVertical:11,borderWidth:1,borderColor:'#CDD9EB',borderRadius:8},remarkCancelText:{fontSize:11,fontWeight:'700',color:'#254C83'},remarkConfirm:{paddingHorizontal:14,paddingVertical:11,borderRadius:8,backgroundColor:'#17365D'},remarkNote:{fontSize:10,color:'#75859B'},
   actions:{flexDirection:'row',gap:8,marginBottom:11},secondary:{flex:1,borderWidth:1,borderColor:'#CDD9EB',borderRadius:10,padding:13,alignItems:'center'},secondaryText:{fontWeight:'700',fontSize:11,color:'#25466E'},
   primary:{flex:1,backgroundColor:'#243F9E',borderRadius:10,padding:13,alignItems:'center'},primaryText:{fontSize:11,fontWeight:'800',color:'white'},disabled:{opacity:.48},
   bookButton:{marginBottom:11,flexDirection:'row',justifyContent:'center',gap:8},
