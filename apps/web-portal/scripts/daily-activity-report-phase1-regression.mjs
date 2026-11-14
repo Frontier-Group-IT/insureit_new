@@ -27,8 +27,8 @@ assert.match(read("../components/reports/daily-self-activity-panel.tsx"), /Count
 assert.match(quickFilters, /type="date"/, "Date filter is present");
 assert.match(quickFilters, /type="search"/, "Employee search is present");
 assert.match(page, /<DailySelfActivityPanel data=\{selfHistory\}/, "Activity category drilldown is available");
-assert.match(page, /href=\{linkFor\(\{scope:"self"/, "Self tab has separate link");
-assert.match(page, /href=\{linkFor\(\{scope:"all"/, "All tab has separate link");
+assert.match(read("../components/reports/daily-report-header-controls.tsx"), /aria-current=\{scope===item\?"page":undefined\}/, "Self and All are independent header links");
+assert.match(read("../components/reports/daily-report-header-controls.tsx"), /item==="self"\?"Self":"All"/, "Self and All labels remain beside Reports");
 assert.doesNotMatch(source, /\.insert\(|\.update\(|\.delete\(|\.upsert\(|\.rpc\(/, "Phase 1 is strictly read-only");
 assert.doesNotMatch(page, /"use client"/, "Page remains server rendered");
 console.log("Daily Report Phase 1 navigation, read scope, filters, bounded reads and no-write contracts passed.");

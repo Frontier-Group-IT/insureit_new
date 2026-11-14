@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { DailyReportQuickFilters } from "@/components/reports/daily-report-quick-filters";
 import type { DailyActivityQuery } from "@/lib/reports/daily-activity";
 import type { ReportEmployee } from "@/lib/reports/daily-employee-directory";
 
@@ -19,13 +20,16 @@ export function DailyEmployeeDirectory({people,search,linkFor}:Props) {
           <h3 className="text-[12px] font-bold text-[#17365D]">Employee Activity Reports</h3>
           <p className="mt-1 text-[10px] text-[#718096]">Select an authorized employee to view their activity summary and history</p>
         </div>
-        <span className="text-[10px] font-semibold text-[#506483]">{filtered.length} employees</span>
+        <div className="flex items-center gap-3">
+          <DailyReportQuickFilters mode="directory" date="" employeeSearch={search}/>
+          <span className="whitespace-nowrap text-[10px] font-semibold text-[#506483]">{filtered.length} employees</span>
+        </div>
       </div>
       {filtered.length ? (
         <div className="divide-y divide-[#edf1f6]">
           {filtered.map(p=>(
             <Link key={p.id} prefetch={false}
-              href={linkFor({scope:"all",person:p.id,employee:"",activity:"",page:"1",period:"all"})}
+              href={linkFor({scope:"all",person:p.id,employee:"",activity:"",page:"1"})}
               className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-[#f6f9fd]">
               <div className="min-w-0">
                 <p className="truncate text-[11px] font-bold text-[#2f4360]">{p.full_name||"Unnamed employee"}</p>
