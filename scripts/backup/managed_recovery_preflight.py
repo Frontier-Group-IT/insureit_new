@@ -148,6 +148,25 @@ def query_target(connection_kwargs):
                 buckets = cur.fetchone()[0]
                 cur.execute("SELECT count(*) FROM storage.objects")
                 objects = cur.fetchone()[0]
+                # Read-only managed-schema policy and application-trigger counts.
+                # Avoid any row data, policy expressions, function bodies or names.
+                cur.execute(
+                    "SELECT n.nspname,count(*) FROM pg_catalog.pg_policy pol"
+                    " JOIN pg_catalog.pg_class c ON c.oid=pol.polrelid"
+                    " JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace"
+                    " WHERE n.nspname IN ('auth','storage','realtime','vault')"
+                    " GROUP BY n.nspname"
+                )
+                managed_policies = dict(cur.fetchall())
+                cur.execute(
+                    "SELECT n.nspname,count(*) FROM pg_catalog.pg_trigger t"
+                    " JOIN pg_catalog.pg_class c ON c.oid=t.tgrelid"
+                    " JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace"
+                    " WHERE n.nspname IN ('auth','storage','realtime','vault')"
+                    " AND NOT t.tgisinternal AND t.tgenabled <> 'D'"
+                    " GROUP BY n.nspname"
+                )
+                managed_triggers = dict(cur.fetchall())
                 cur.execute(
                     "SELECT count(*) FROM pg_catalog.pg_proc WHERE prosecdef"
                 )
@@ -166,7 +185,8 @@ def query_target(connection_kwargs):
                 memberships=membership_count, auth_users=auth_users,
                 identities=identities, buckets=buckets, objects=objects,
                 security_definers=definers,
-                exposed_public_definers=exposed_definers)
+                exposed_public_definers=exposed_definers,
+                managed_policies=managed_policies, managed_triggers=managed_triggers)
 
 
 def compare_archive(toc_path, target_url):
@@ -198,7 +218,9 @@ def compare_archive(toc_path, target_url):
           f" target_role_memberships={target['memberships']}"
           f" target_security_definers={target['security_definers']}"
           f" target_ext_installed={len(target['extensions'])}"
-          f" public_executable_definers={target['exposed_public_definers']}")
+          f" public_executable_definers={target['exposed_public_definers']}"
+          f" target_storage_rls_policies={target['managed_policies'].get('storage',0)}"
+          f" target_auth_user_triggers={target['managed_triggers'].get('auth',0)}")
     print("MANAGED PREFLIGHT: status=REVIEW_ONLY"
           " no_import=1 no_privilege_change=1 no_production_connection=1")
     # A green read-only inspection is NOT permission to import.
