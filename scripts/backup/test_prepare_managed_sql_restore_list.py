@@ -22,6 +22,7 @@ def fixture():
              "19; 0 1 TABLE DATA storage buckets supabase_storage_admin\n",
              "20; 2615 1 SCHEMA - supabase_migrations postgres\n",
              "21; 0 1 TABLE DATA supabase_migrations schema_migrations postgres\n",
+        "21; 0 2 TABLE DATA auth schema_migrations supabase_auth_admin\n",
              "22; 1259 1 TABLE identity_maintenance backup postgres\n",
              "23; 0 1 TABLE DATA identity_maintenance backup postgres\n",
              "24; 1259 1 TABLE insureit_recovery backup postgres\n",
@@ -66,6 +67,7 @@ class PlanTests(unittest.TestCase):
         self.assertNotIn("POLICY storage", text)
         self.assertNotIn("TABLE DATA storage objects", text)
         self.assertNotIn("TABLE DATA storage buckets", text)
+        self.assertNotIn("TABLE DATA auth schema_migrations", text)
         self.assertNotIn("SCHEMA - supabase_migrations", text)
         self.assertNotIn("rls_auto_enable()", text)
         self.assertNotIn("DEFAULT ACL", text)
