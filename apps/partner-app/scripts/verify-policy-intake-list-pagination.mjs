@@ -15,7 +15,8 @@ assert.match(app, /<PartnerStateView state="error"/, 'Errors retain their own st
 assert.match(app, /visibleRows\.map\(\(row\) =>/, 'Available records remain visible');
 assert.match(app, /<View style=\{styles\.bottomNav\}>/, 'Bottom navigation remains outside the scroll body');
 
-assert.match(app, /\{filter === 'all' \? <IntakeProgress row=\{row\} \/> : null\}/, 'Progress timeline renders only when the All status filter is selected');
+assert.match(app, /\{filter === 'all' && row\.status !== 'completed' \? <IntakeProgress row=\{row\} \/> : null\}/, 'Progress timeline omits Completed records even under All');
+assert.doesNotMatch(app, /Customer name pending/, 'Missing names must not show placeholder');
 assert.doesNotMatch(app, /<IntakeProgress row=\{row\} \/>(?!\s*: null)/, 'Do not render an unconditional timeline in each status filter');
 assert.match(app, /function IntakeProgress\(\{ row \}: \{ row: PartnerPolicyIntake \}\) \{/, 'Retain the existing per-record progress component');
 assert.doesNotMatch(app, /if \(row\.status === 'duplicate' \|\| row\.status === 'rejected'\) return null;/, 'All must show the timeline even for Duplicate and Rejected submissions');
