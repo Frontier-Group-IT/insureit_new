@@ -325,8 +325,11 @@ export async function updateIssuedLifeHealthPolicy(formData: FormData): Promise<
   }
 
   const activityAfter = await capturePolicyEditSnapshot(admin, policyId).catch(() => null);
-  await recordPolicyActivity(admin, policyId, profile.id, POLICY_ACTIVITY_ACTIONS.POLICY_EDITED,
-    describePolicyEditChanges(activityBefore, activityAfter));
+  const activityChanges = describePolicyEditChanges(activityBefore, activityAfter);
+  // Do not create an edit event when both snapshots confirm no tracked changes.
+  // Null means a snapshot was unavailable, so retain an honest unknown-change audit.
+  if (activityChanges === null || activityChanges.length > 0)
+    await recordPolicyActivity(admin, policyId, profile.id, POLICY_ACTIVITY_ACTIONS.POLICY_EDITED, activityChanges);
   if (changingPolicyNumber) await admin.from("audit_logs").insert({ actor_id: profile.id, table_name: "policies", record_id: policyId, action: "policy_number_changed", old_data: { policy_no: policy.policy_no }, new_data: { policy_no: requestedPolicyNumber } });
   if(dateGuard.previousMonth)await recordPreviousMonthPolicyUpload(admin,policyId,profile.id,sourcingDate,dateGuard.approverName);
   if(dateGuard.approverName)await linkConsumedPolicyDateApproval(admin,clean(formData.get("dateApprovalId")),policyId,profile.id);
