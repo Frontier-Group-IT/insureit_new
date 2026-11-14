@@ -62,11 +62,10 @@ export function PolicyStatusSlidingFilter({
     >
       <span
         aria-hidden="true"
-        className="pointer-events-none absolute bottom-1 left-1 top-1 rounded-md bg-[#0D756D] shadow-[0_2px_7px_rgba(13,117,109,.14)] motion-reduce:transition-none"
+        className="policy-status-sliding-indicator pointer-events-none absolute bottom-1 left-1 top-1 rounded-md bg-[#0D756D] shadow-[0_2px_7px_rgba(13,117,109,.14)]"
         style={{
           width: "calc((100% - 8px) / 4)",
           transform: `translateX(${currentIndex * 100}%)`,
-          transition: `transform ${SLIDE_MS}ms cubic-bezier(0.42, 0, 0.20, 1)`,
         }}
       />
       {statuses.map((value, index) => (
