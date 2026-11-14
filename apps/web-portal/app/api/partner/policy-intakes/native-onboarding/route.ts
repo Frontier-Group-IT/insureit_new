@@ -166,7 +166,7 @@ export async function POST(request:Request){
     const required:[string,string][]=[
       ["Proposal date",d.issuanceDate],["Lead source",d.leadSource],
       ["Client / proposer name",d.insuredName],["Client mobile number",d.phoneNo],
-      ["Insurance company",d.insurerId],["Product name",values.productName],
+      ["Insurance company",values.insurerId],["Product name",values.productName],
       ["Case / proposal number",values.proposalNumber],["Payment frequency",values.paymentFrequency],
       ["Premium amount",values.premiumAmount],["Payment mode",values.paymentMode],
     ];
@@ -190,7 +190,7 @@ export async function POST(request:Request){
       businessLine:d.businessLine,sourcingDate:d.issuanceDate,intermediaryType:d.intermediaryType,
       intermediaryCode:d.intermediaryCode,sourceId:matching[0].id,leadSource:d.leadSource,rmName:d.rmName,
       insuredName:d.insuredName,phone:d.phoneNo,address:values.address??"",
-      insurerId:d.insurerId,productName:values.productName??"",proposalNumber:values.proposalNumber??"",
+      insurerId:values.insurerId,productName:values.productName??"",proposalNumber:values.proposalNumber??"",
       ppt:values.ppt??"",pd:values.pd??"",paymentFrequency:values.paymentFrequency??"",
       paymentMode:values.paymentMode??"",premiumAmount:values.premiumAmount??"",
       remarks:values.remarks??d.remarks??"",
