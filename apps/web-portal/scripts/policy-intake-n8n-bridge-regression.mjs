@@ -14,6 +14,8 @@ assert.match(validation,/value.auto_finalize_allowed !== false/);
 assert.match(validation,/REQUIRED_CHECKS/);
 assert.match(validation,/Object.values\(checks\).some/);
 assert.match(validation,/n8n_coverage_dates_invalid/);
+assert.match(validation,/"third_party_start_date", "third_party_end_date"/);
+assert.match(validation,/tpEndDate < endDate/);
 assert.match(validation,/seen.has\(field.key\)/);
 assert.match(validation,/n8n_required_field_missing/);
 assert.match(validation,/n8n_premium_reconciliation_failed/);
