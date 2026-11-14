@@ -809,7 +809,7 @@ export default function NativePolicyOnboarding(){
     </View>
   </View>;
   const motorProductSection=section('03','Policy product, premium & validity',motorProductFields);
-  return <PartnerScreen title="Policy Onboarding" eyebrow="POLICY INTAKE" onBack={()=>router.back()} navyTopBar navyStatusBar topBarIcon="document-text-outline">
+  return <PartnerScreen title="Policy Onboarding" onBack={()=>router.back()} navyTopBar navyStatusBar topBarIcon="document-text-outline">
     {loading?<PartnerStateView state="loading" title="Loading saved Policy Onboarding" />:null}
     {error?<View style={styles.error}><Ionicons name="alert-circle-outline" size={16} color="#B42318"/><Text style={styles.errorText}>{error}</Text></View>:null}
     {!loading&&!draft?<Pressable style={styles.retry} onPress={()=>void load()}><Text style={styles.retryText}>Retry loading</Text></Pressable>:null}
