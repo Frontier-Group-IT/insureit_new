@@ -5,6 +5,7 @@ import { requirePolicyCreator } from "@/lib/policy-access-server";
 import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
 import { requireOperationsHeadRecordOwnership } from "@/lib/operations-head-record-authorization";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { recordDailyWorkflowActivity } from "@/lib/daily-workflow-audit";
 
 const PAYMENT_FREQUENCIES = new Set(["Monthly", "Quarterly", "Half Yearly", "Annually", "One Time"]);
 const PAYMENT_MODES = new Set(["Cash", "Cheque", "NEFT/RTGS", "UPI", "Credit/Debit Card", "Net Banking"]);
@@ -18,8 +19,9 @@ const numberValue = (value: string) => { const parsed = Number(value.replace(/,/
 export async function updateLifeHealthCaseDetails(formData: FormData) {
   const caseId = clean(formData.get("caseId"));
   const { profile: requester } = await getAuthenticatedProfile(await getServerAccessToken());
-  if (requester?.role === "operations_head_life") await requireOperationsHeadRecordOwnership("life_health_case", caseId);
-  else await requirePolicyCreator();
+  const profile = requester?.role === "operations_head_life"
+    ? await requireOperationsHeadRecordOwnership("life_health_case", caseId)
+    : await requirePolicyCreator();
   const admin = createSupabaseAdminClient();
   const insurerId = clean(formData.get("insurerId"));
   const customerName = clean(formData.get("customerName"));
@@ -49,7 +51,7 @@ export async function updateLifeHealthCaseDetails(formData: FormData) {
   const { error: customerError } = await admin.from("customers").update({ contact_name: customerName, phone: customerPhone, address: customerAddress || null, address_street: customerAddress || null, updated_at: new Date().toISOString() }).eq("id", row.customer_id);
   if (customerError) return { ok: false as const, error: "Customer details could not be updated." };
 
-  const { error: caseError } = await admin.from("life_health_cases").update({
+  const { data: savedCase, error: caseError } = await admin.from("life_health_cases").update({
     insurance_company_id: insurerId,
     product_name: clean(formData.get("productName")),
     proposal_number: clean(formData.get("proposalNumber")).toUpperCase(),
@@ -60,9 +62,9 @@ export async function updateLifeHealthCaseDetails(formData: FormData) {
     premium_amount: premium,
     sourcing_date: sourcingDate,
     updated_at: new Date().toISOString(),
-  }).eq("id", caseId).neq("status", "rejected").is("final_policy_id", null);
-  if (caseError) return { ok: false as const, error: "Case details could not be updated." };
-
+  }).eq("id", caseId).neq("status", "rejected").is("final_policy_id", null).select("id").maybeSingle<{id:string}>();
+  if (caseError || !savedCase) return { ok: false as const, error: "Case details could not be updated." };
+  await recordDailyWorkflowActivity(admin,{actorId:profile.id,table:"life_health_cases",recordId:caseId,action:"life_health_case_edited"});
   // Record only approved, user-editable case fields. Never store the
   // customer's name/mobile/address, raw proposal number or remarks.
   const changes: string[] = [];
@@ -96,6 +98,8 @@ export async function updateLifeHealthCaseDetails(formData: FormData) {
     if(auditError) console.error("Life/Health case activity audit could not be recorded",{caseId,code:auditError.code});
   }
 
+
+
   revalidatePath(`/policies/life-health-cases/${caseId}`);
   revalidatePath("/policies/life-health-cases");
   return { ok: true as const };
@@ -111,8 +115,9 @@ export async function appendLifeHealthCaseRemark(formData: FormData): Promise<{o
   const newRemark = clean(formData.get("newRemark"));
   if (!caseId) return {ok:false,error:"Case reference is missing."};
   const {profile:requester} = await getAuthenticatedProfile(await getServerAccessToken());
-  if (requester?.role === "operations_head_life") await requireOperationsHeadRecordOwnership("life_health_case",caseId);
-  else await requirePolicyCreator();
+  const profile = requester?.role === "operations_head_life"
+    ? await requireOperationsHeadRecordOwnership("life_health_case",caseId)
+    : await requirePolicyCreator();
   if (!newRemark || newRemark.length > 2000) return {ok:false,error:"Enter a remark of up to 2000 characters."};
   const admin = createSupabaseAdminClient();
   const {data:caseRow,error:loadError} = await admin.from("life_health_cases")
@@ -134,12 +139,14 @@ export async function appendLifeHealthCaseRemark(formData: FormData): Promise<{o
   update = caseRow.remarks === null ? update.is("remarks",null) : update.eq("remarks",caseRow.remarks);
   const {data:saved,error:saveError} = await update.select("id").maybeSingle<{id:string}>();
   if (saveError || !saved) return {ok:false,error:"Remarks changed in another session. Reload and try again."};
+  await recordDailyWorkflowActivity(admin,{actorId:profile.id,table:"life_health_cases",recordId:caseId,action:"life_health_case_remark_added"});
   const {error:auditError}=await admin.from("audit_logs").insert({
     actor_id:requester?.id??null,action:"life_health_case_remark_added",
     table_name:"life_health_cases",record_id:caseId,
     new_data:{changed_fields:["Remarks changed (values hidden)"]},
   });
   if(auditError) console.error("Case remarks activity audit could not be recorded",{caseId,code:auditError.code});
+
   revalidatePath(`/policies/life-health-cases/${caseId}`);
   revalidatePath("/policies/life-health-cases");
   return {ok:true,remarks};
