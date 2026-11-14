@@ -1,0 +1,105 @@
+name: INSUREIT isolated managed recovery R0-R1 preflight (manual read-only)
+
+on:
+  workflow_dispatch:
+    inputs:
+      expected_db_snapshot:
+        description: 'Optional exact authenticated R2 v2 UTC snapshot YYYYMMDDTHHMMSSZ (abort if latest pointer changed)'
+        required: false
+        type: string
+        default: ''
+      plan_storage_sample:
+        description: 'Plan <=500 MB Storage subset using authenticated R2 manifest (no file bytes)'
+        required: false
+        type: boolean
+        default: false
+      verify_storage_sample_bytes:
+        description: 'Also SHA256 verify up to 500 MB of encrypted R2 Storage file bytes (read-only)'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: insureit-isolated-managed-recovery-preflight
+  cancel-in-progress: false
+
+jobs:
+  preflight:
+    if: github.repository == 'Frontier-Group-IT/insureit_new' && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    # Configure main-only required reviewers BEFORE dispatch.
+    # Never put a production database connection secret in this environment.
+    environment: insureit-recovery-isolated
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install pinned read-only dependencies
+        run: python -m pip install boto3==1.35.99 cryptography==44.0.2 'psycopg[binary]==3.2.9'
+      - name: Reject production or unknown database connections before R2 access
+        env:
+          INSUREIT_RECOVERY_DATABASE_URL: ${{ secrets.INSUREIT_RECOVERY_DATABASE_URL }}
+        run: |
+          set -euo pipefail
+          python scripts/backup/managed_recovery_preflight.py --check-target
+      - name: Authenticated R2 v2 retrieval with GET-only dedicated identity
+        env:
+          R2_ACCOUNT_ID: ${{ secrets.RECOVERY_R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.RECOVERY_R2_READONLY_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.RECOVERY_R2_READONLY_SECRET_ACCESS_KEY }}
+          DB_BACKUP_ENCRYPTION_KEY: ${{ secrets.RECOVERY_DB_BACKUP_ENCRYPTION_KEY }}
+          RECOVERY_EXPECTED_DB_SNAPSHOT: ${{ inputs.expected_db_snapshot }}
+          R2_BUCKET: insureit-production-backups
+          RESTORE_DIR: ${{ runner.temp }}/insureit-managed-r0-r1
+        run: |
+          set -euo pipefail
+          python scripts/backup/verify_postgres_v2_r2.py
+      - name: Read private TOC using network-disabled PostgreSQL tool
+        run: |
+          set -euo pipefail
+          if ! docker run --rm --network none \
+              --user "$(id -u):$(id -g)" \
+              --mount "type=bind,source=$RUNNER_TEMP/insureit-managed-r0-r1,target=/archive,readonly" \
+              --entrypoint pg_restore supabase/postgres:17.6.1.136 \
+              --list /archive/database.dump \
+              > "$RUNNER_TEMP/insureit-managed-r0-r1/private-toc.txt" \
+              2> "$RUNNER_TEMP/insureit-managed-r0-r1/private-errors.log"; then
+            echo "MANAGED PREFLIGHT FAILED: private custom dump TOC could not be read"
+            exit 1
+          fi
+          python scripts/backup/audit_postgres_v2_toc.py \
+            "$RUNNER_TEMP/insureit-managed-r0-r1/private-toc.txt"
+      - name: Compare private TOC to target catalogs in a READ ONLY transaction
+        env:
+          INSUREIT_RECOVERY_DATABASE_URL: ${{ secrets.INSUREIT_RECOVERY_DATABASE_URL }}
+        run: |
+          set -euo pipefail
+          python scripts/backup/managed_recovery_preflight.py --compare \
+            "$RUNNER_TEMP/insureit-managed-r0-r1/private-toc.txt"
+          echo "NO RESTORATION PERFORMED; R4 requires a separately approved procedure"
+      - name: Plan or R2-byte-verify bounded 500 MB Storage sample (NO target upload)
+        if: ${{ inputs.plan_storage_sample || inputs.verify_storage_sample_bytes }}
+        env:
+          R2_ACCOUNT_ID: ${{ secrets.RECOVERY_R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.RECOVERY_R2_READONLY_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.RECOVERY_R2_READONLY_SECRET_ACCESS_KEY }}
+          BACKUP_ENCRYPTION_KEY: ${{ secrets.RECOVERY_STORAGE_BACKUP_ENCRYPTION_KEY }}
+          R2_BUCKET: insureit-production-backups
+          VERIFY_STORAGE_SAMPLE_BYTES: ${{ inputs.verify_storage_sample_bytes }}
+        run: |
+          set -euo pipefail
+          mode=--plan
+          if [ "$VERIFY_STORAGE_SAMPLE_BYTES" = true ]; then mode=--verify; fi
+          python scripts/backup/plan_recovery_storage_sample.py "$mode"
+      - name: Destroy decrypted files and private diagnostics
+        if: always()
+        run: |
+          rm -rf "$RUNNER_TEMP/insureit-managed-r0-r1"
+          echo "MANAGED PREFLIGHT PRIVATE RUNNER CLEANUP ATTEMPTED"
