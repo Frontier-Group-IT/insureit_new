@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
-import { Eraser, FileUp } from "lucide-react";
+import { Eraser, FileText, FileUp, RefreshCw, Trash2 } from "lucide-react";
 import { extractAndStagePolicyDocument } from "@/app/policies/policy-ocr-import-actions";
 import { type PolicyOcrField } from "@/app/policies/policy-ocr-actions";
 import { filterPolicyOcrUserWarnings } from "@/lib/policy-ocr-user-warnings";
@@ -110,11 +110,16 @@ export function PolicyOcrImportPanel({ variant = "header", context, onApply, onC
   const [fields, setFields] = useState<PolicyOcrField[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [documentName, setDocumentName] = useState("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [parserInfo, setParserInfo] = useState<string | null>(null);
   const [warnings, setWarnings] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const formRef = useRef<HTMLFormElement>(null);
+
+  useEffect(()=>{if(!selectedFile){setPreviewUrl(null);return;}const url=URL.createObjectURL(selectedFile);setPreviewUrl(url);return ()=>URL.revokeObjectURL(url);},[selectedFile]);
 
   const protectedKeys = useMemo(() => new Set(context.protectedKeys ?? []), [context.protectedKeys]);
   const reviewedFields = useMemo(() => fields
@@ -166,6 +171,7 @@ export function PolicyOcrImportPanel({ variant = "header", context, onApply, onC
     setOpen(false);
     resetReview();
     setDocumentName("");
+    setSelectedFile(null);
     formRef.current?.reset();
   }
 
@@ -263,7 +269,14 @@ export function PolicyOcrImportPanel({ variant = "header", context, onApply, onC
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 sm:px-7 sm:py-6">
           <form ref={formRef} action={submit} className="border-b border-[#E7ECF2] pb-6">
             <div className="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-end">
-              <label className="block"><span className="mb-2 block text-[9px] font-bold uppercase tracking-[.08em] text-[#475467]">Policy document</span><input name="policy_document" type="file" accept="application/pdf,image/jpeg,image/png,image/webp" required disabled={pending} className="block h-[48px] w-full rounded-xl border border-[#D7DFE9] bg-white text-[10px] text-[#536174] shadow-sm outline-none transition file:mr-4 file:h-full file:border-0 file:border-r file:border-[#D7DFE9] file:bg-[#F2F6FB] file:px-5 file:text-[10px] file:font-semibold file:text-[#173B67] hover:border-[#AEBAC9] focus:border-[#315B9A] disabled:opacity-60"/></label>
+              <div className="min-w-0"><span className="mb-2 block text-[9px] font-bold uppercase tracking-[.08em] text-[#475467]">Policy document</span>
+                <input ref={fileInputRef} name="policy_document" type="file" accept="application/pdf,image/jpeg,image/png,image/webp" required disabled={pending} className="sr-only" onChange={event=>{const file=event.currentTarget.files?.[0]??null;setSelectedFile(file);setDocumentName(file?.name??"");}} />
+                {selectedFile ? <div role="group" aria-label="Selected policy document actions" className="flex h-[48px] min-w-0 max-w-full items-stretch overflow-hidden rounded-xl border border-[#A9DCC2] bg-[#F0FBF5] text-[#168653]">
+                  <button type="button" disabled={pending||!previewUrl} onClick={()=>previewUrl&&window.open(previewUrl,"_blank","noopener,noreferrer")} aria-label={`Open ${selectedFile.name}`} title={selectedFile.name} className="flex min-w-0 flex-1 items-center gap-2 px-3 text-[10px] font-semibold hover:bg-emerald-100/60 disabled:opacity-60"><FileText className="h-4 w-4 shrink-0"/><span className="truncate">{selectedFile.name}</span></button>
+                  <button type="button" disabled={pending} onClick={()=>{if(fileInputRef.current)fileInputRef.current.value="";setSelectedFile(null);setDocumentName("");resetReview();}} aria-label="Delete selected document" title="Delete" className="grid w-10 shrink-0 place-items-center border-l border-emerald-200 text-red-600 hover:bg-red-50 disabled:opacity-60"><Trash2 className="h-4 w-4"/></button>
+                  <button type="button" disabled={pending} onClick={()=>fileInputRef.current?.click()} aria-label="Replace selected document" title="Replace" className="grid w-10 shrink-0 place-items-center border-l border-emerald-200 hover:bg-emerald-100/60 disabled:opacity-60"><RefreshCw className="h-4 w-4"/></button>
+                </div>:<button type="button" disabled={pending} onClick={()=>fileInputRef.current?.click()} className="flex h-[48px] w-full items-center justify-center gap-2 rounded-xl border border-dashed border-[#A9C3DA] bg-white text-[10px] font-semibold text-[#173B67] disabled:opacity-60"><FileUp className="h-4 w-4"/>Choose policy copy</button>}
+              </div>
               <button disabled={pending} className="h-[48px] rounded-xl bg-[#173B67] px-7 text-[10px] font-bold text-white shadow-sm transition hover:bg-[#102E52] disabled:cursor-wait disabled:opacity-60">{pending ? "Reading document…" : hasResult ? "Read another document" : "Read document"}</button>
             </div>
             <p className="mt-2.5 text-[9px] leading-4 text-[#7C899A]">Insured name is proposed when clearly printed. Phone is proposed only when a complete unmasked mobile number is present; masked numbers remain blank. Existing values that disagree with OCR are marked as conflicts. Identity fields require explicit review before application.</p>

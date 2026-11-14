@@ -22,7 +22,7 @@ assert.match(documents, /<h2[^>]*>Documents<\/h2>/, "Documents section has a vis
 assert.match(documents, /role="group" aria-label="Case documents"/, "Existing case document action group remains inside Documents");
 assert.match(documents, /grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5/, "All five document actions should span the row on wide screens and wrap responsively");
 assert.match(detail, /if\(!existing\)return <label title=\{buttonLabel\} className=\{\`flex h-10 w-full min-w-0/, "Empty document slots stretch to full column width");
-assert.match(detail, /return <div className=\{\`flex h-10 w-full min-w-0/, "Existing document slots stretch to full column width");
+assert.match(detail, /return <div role="group" aria-label=\{.*?\} className=\{\`flex h-10 w-full min-w-0/, "Existing document slots stretch to full column width");
 assert.match(detail, /infoTab==="activity"\?"bg-\[#17365D\] text-white shadow-sm"/, "Selected Activity Status button uses navy background");
 assert.match(detail, /infoTab==="remarks"\?"bg-\[#17365D\] text-white shadow-sm"/, "Selected Remarks button uses navy background");
 assert.match(detail, /hover:bg-\[#E8EFF9\] hover:shadow-sm/, "Inactive activity/remarks buttons have a rounded hover treatment");

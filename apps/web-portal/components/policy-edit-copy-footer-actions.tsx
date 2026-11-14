@@ -1,6 +1,6 @@
 "use client";
 
-import { Files, FileText, LoaderCircle, RefreshCw, Trash2, Upload } from "lucide-react";
+import { FileText, LoaderCircle, RefreshCw, Trash2, Upload } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -191,18 +191,28 @@ export function PolicyEditCopyFooterActions() {
               <div
                 role="group"
                 aria-label="Policy copy actions"
-                className="inline-flex h-9 items-stretch overflow-hidden rounded-xl border border-[#BFD3F7] bg-[#F7FAFF] text-[#174EA6]"
+                className="inline-flex h-10 items-stretch overflow-hidden rounded-xl border border-[#A9DCC2] bg-[#F0FBF5] text-[#168653]"
               >
                 <button
                   type="button"
                   onClick={viewPolicy}
                   disabled={isOpening || isUploading || isRemoving}
-                  aria-label="View policy copy"
-                  title={policyCopy.fileName ? `View policy: ${policyCopy.fileName}` : "View policy copy"}
-                  className="inline-flex min-w-0 items-center gap-2 px-3 text-[10px] font-semibold transition hover:bg-[#EEF5FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#9CB9E6] disabled:cursor-wait disabled:opacity-60"
+                  aria-label={`Open ${policyCopy.fileName || "policy copy"}`}
+                  title={policyCopy.fileName || "Policy Copy"}
+                  className="inline-flex max-w-[240px] min-w-0 items-center gap-2 px-3 text-[10px] font-semibold transition hover:bg-[#E7F8EF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#9CB9E6] disabled:cursor-wait disabled:opacity-60"
                 >
-                  <Files className="h-3.5 w-3.5 shrink-0" />
-                  {isOpening ? "Opening…" : "View Policy"}
+                  <FileText className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate">{isOpening ? "Opening…" : policyCopy.fileName || "Policy Copy"}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRemoveConfirmOpen(true)}
+                  disabled={isUploading || isOpening || isRemoving}
+                  aria-label="Delete policy copy"
+                  title="Delete policy copy"
+                  className="inline-flex w-9 items-center justify-center border-l border-[#F2D5D1] bg-[#FFF5F3] text-[#B5534F] transition hover:bg-[#FDE9E6] disabled:cursor-wait disabled:opacity-60"
+                >
+                  {isRemoving ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
                 </button>
                 <button
                   type="button"
@@ -210,27 +220,12 @@ export function PolicyEditCopyFooterActions() {
                   disabled={isUploading || isOpening || isRemoving}
                   aria-label="Replace policy copy"
                   title="Replace policy copy"
-                  className="inline-flex w-9 items-center justify-center bg-[#DBEAFE] text-[#2563EB] transition hover:bg-[#BFDBFE] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#93C5FD] disabled:cursor-wait disabled:opacity-60"
+                  className="inline-flex w-9 items-center justify-center border-l border-[#BFD3F7] text-[#2563EB] transition hover:bg-[#EEF5FF] disabled:cursor-wait disabled:opacity-60"
                 >
                   <RefreshCw className={`h-3.5 w-3.5 ${isUploading ? "animate-spin" : ""}`} />
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setRemoveConfirmOpen(true)}
-                  disabled={isUploading || isOpening || isRemoving}
-                  aria-label="Remove policy copy"
-                  title="Remove policy copy"
-                  className="inline-flex w-9 items-center justify-center border-l border-[#F2D5D1] bg-[#FFF5F3] text-[#B5534F] transition hover:bg-[#FDE9E6] hover:text-[#9E403C] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#E9AAA3] disabled:cursor-wait disabled:opacity-60"
-                >
-                  {isRemoving ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
-                </button>
               </div>
-              <span
-                title={policyCopy.fileName}
-                className="max-w-[190px] truncate pl-1 text-[8px] font-medium leading-3 text-[#6B7A90]"
-              >
-                {policyCopy.fileName}
-              </span>
+
             </div>
           ) : (
             <button

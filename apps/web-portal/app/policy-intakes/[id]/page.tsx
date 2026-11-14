@@ -158,7 +158,7 @@ export default async function PolicyIntakeDetail({ params }: { params: Promise<{
       <aside className="space-y-3 xl:sticky xl:top-[88px] xl:self-start">
         <section className="rounded-2xl border border-[#DCE5EF] bg-white p-3 shadow-sm">
           <div className="flex items-start gap-2"><FileText className="mt-0.5 h-4 w-4 text-[#315B9A]" /><div className="min-w-0"><p className="text-[8px] font-bold uppercase tracking-[.08em] text-[#64748B]">Policy copy</p><p className="mt-1 truncate text-[9px] font-semibold text-[#334155]">{data.file_name}</p></div></div>
-          <div className="mt-2.5"><PolicyIntakeDocumentButton id={data.id} /></div>
+          <div className="mt-2.5"><PolicyIntakeDocumentButton id={data.id} fileName={data.file_name} /></div>
         </section>
         <section className="rounded-2xl border border-[#DCE5EF] bg-white p-3 shadow-sm">
           <p className="text-[8px] font-bold uppercase tracking-[.08em] text-[#64748B]">Review status</p>
