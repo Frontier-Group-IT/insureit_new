@@ -644,7 +644,7 @@ export default function NativePolicyOnboarding(){
       <View style={styles.remarkOverlay}>
         <View style={styles.remarkSheet}>
           <View style={styles.remarkHeader}>
-            <View style={styles.remarkTitle}><Ionicons name="chatbox-text-outline" size={18} color="#254C83"/><Text style={styles.sectionTitle}>Add Remark</Text></View>
+            <View style={styles.remarkTitle}><Ionicons name="chatbox-outline" size={18} color="#254C83"/><Text style={styles.sectionTitle}>Add Remark</Text></View>
             <Pressable accessibilityRole="button" accessibilityLabel="Close remark popup" onPress={()=>setRemarkOpen(false)}><Ionicons name="close" size={21} color="#64748B"/></Pressable>
           </View>
           <Text style={styles.label}>New remark</Text>
