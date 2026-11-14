@@ -27,12 +27,11 @@ export function DailyEmployeeDirectory({people,search,linkFor}:Props) {
           {filtered.map(p=>(
             <Link key={p.id} prefetch={false}
               href={linkFor({scope:"all",person:p.id,employee:"",activity:"",page:"1"})}
-              className="flex min-w-0 flex-col justify-between gap-2 rounded-lg border border-[#e4e9f1] bg-white px-3 py-3 hover:border-[#b6cbe5] hover:bg-[#f6f9fd] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5275AA]">
+              className="group flex min-h-[54px] min-w-0 flex-col justify-center gap-1 rounded-xl border border-[#dce5f1] bg-gradient-to-br from-white to-[#f7faff] px-3 py-2.5 shadow-[0_1px_3px_rgba(23,54,93,0.05)] transition-[transform,background-color,border-color,box-shadow] duration-200 ease-out hover:-translate-y-0.5 hover:border-[#7ba7dc] hover:from-[#f5f9ff] hover:to-[#e9f2ff] hover:shadow-[0_5px_14px_rgba(23,54,93,0.13)] active:translate-y-0 active:shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315b9a] motion-reduce:transform-none motion-reduce:transition-none">
               <div className="min-w-0">
-                <p className="truncate text-[11px] font-bold text-[#2f4360]" title={p.full_name||"Unnamed employee"}>{p.full_name||"Unnamed employee"}</p>
+                <p className="truncate text-[11px] font-bold text-[#234368] transition-colors duration-200 group-hover:text-[#123c70]" title={p.full_name||"Unnamed employee"}>{p.full_name||"Unnamed employee"}</p>
                 {p.employee_code?<p className="mt-0.5 text-[9px] text-[#8794a6]">{p.employee_code}</p>:null}
               </div>
-              <span className="flex items-center justify-between text-[10px] font-semibold text-[#35618e]">View history <span aria-hidden="true">›</span></span>
             </Link>
           ))}
         </div>
