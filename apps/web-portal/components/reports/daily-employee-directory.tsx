@@ -20,7 +20,10 @@ export function DailyEmployeeDirectory({people,search,linkFor}:Props) {
           <h3 className="text-[12px] font-bold text-[#17365D]">Employee Activity Reports</h3>
           <p className="mt-1 text-[10px] text-[#718096]">Select an authorized employee to view their activity summary and history</p>
         </div>
-        <span className="text-[10px] font-semibold text-[#506483]">{filtered.length} employees</span>
+        <div className="flex items-center gap-3">
+          <DailyReportQuickFilters mode="directory" date="" employeeSearch={search}/>
+          <span className="whitespace-nowrap text-[10px] font-semibold text-[#506483]">{filtered.length} employees</span>
+        </div>
       </div>
       {filtered.length ? (
         <div className="divide-y divide-[#edf1f6]">
