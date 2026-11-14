@@ -42,6 +42,10 @@ assert.match(screen,/saveNativePolicyOnboarding\(id,data.revision,draft\)/,'Draf
 assert.match(screen,/policy\.slice\(0,4\)\.map\(item/, 'Motor and non-Motor source sections use only four primary rows.');
 assert.match(screen,/sourceMeta\('rmName','RM'\)/, 'Show RM beneath intermediary type in the matching source row.');
 assert.match(screen,/item.key==='leadSource'\?<View style=\{styles.sourceLeadRow\}/, 'Align source ID and callable mobile below lead source.');
+assert.match(screen,/sourceLeadRow:\{flexDirection:'row',alignItems:'center',justifyContent:'flex-start',gap:8/, 'Render source ID, call icon and phone in one left-aligned compact row.');
+assert.match(screen,/key==='intermediaryCode'&&verifiedSource/, 'Render matched source ID as compact text, not full-width input.');
+assert.match(screen,/name="call-outline"/, 'Keep call-outline icon directly beside the verified source mobile.');
+assert.match(screen,/sourcePhone:\{flexDirection:'row',alignItems:'center',gap:3/, 'Do not right-align the phone group away from the source ID.');
 assert.match(screen,/f.key==='issuanceDate'\?'Policy issuance date'/, 'All policy types use issuance date label.');
 assert.match(screen,/motorVehicleSection/, 'Motor requires a combined insured-and-vehicle card.');
 assert.match(screen,/styles.registrationToggle/, 'Registration mode buttons belong in the heading.');
@@ -69,7 +73,7 @@ assert.match(screen,/Add projected insurer terms/, 'Motor pay-in card matches po
 assert.match(screen,/Add agreed partner payout/, 'Motor payout card matches portal helper wording.');
 assert.match(screen,/payinEntered\?rupees\(summaryPayin\):'Not entered'/, 'Pay-in card retains true persisted status.');
 assert.match(screen,/payoutEntered\?rupees\(summaryPayout\):'Not entered'/, 'Payout card retains true persisted status.');
-assert.match(screen,/styles\.progressStatus/, 'Live status badge appears beneath the completion ring.');
+assert.doesNotMatch(screen,/styles\.progressStatus|summaryStatusValue|filled>=100\?'Complete':'In progress'/, 'Summary status badge is removed while retaining actual progress.');
 
 assert.match(screen,/premiumIcon/, 'Non-Motor premium label shows a rupee icon.');
 assert.match(api,/productCommercialKeys/, 'Non-Motor commercial values must be controlled server-side.');
@@ -92,7 +96,7 @@ assert.doesNotMatch(screen,/summaryDocuments|Upload Forms|View submitted policy 
 assert.doesNotMatch(screen,/Form uploads are available in Operations Portal/, 'Remove redundant upload helper.');
 assert.match(screen,/styles\.wideField,styles\.registrationBlock/, 'Registration number spans both columns.');
 assert.match(screen,/\[styles\.field,styles\.wideField\]/, 'RTO spans both columns.');
-assert.match(screen,/styles\.summaryProgressStack/, 'Progress indicator stacks over in-progress badge.');
+assert.match(screen,/styles\.summaryProgressStack/, 'Onboarding summary retains its percentage ring.');
 assert.match(screen,/accessibilityLabel="Create Active Policy"/, 'Shared create action is labelled as requested.');
 assert.match(screen,/createPartnerPolicyIntakeBridgeUrl\(id,false,null\)/, 'Non-Motor active creation uses authorised web handoff.');
 assert.match(screen,/disabled=\{booking\|\|saving\|\|!data\}/, 'Booking remains gated by loading and saving.');
