@@ -30,7 +30,11 @@ assert.match(api,/saveDraft.productDrafts=Object.fromEntries/,'Scoped product dr
 assert.match(api,/if\(d.businessLine!=="Motor"\)return reply/,'NonMotor cannot book through Motor endpoint');
 assert.doesNotMatch(screen,/Final booking is completed in the Operations Portal|Draft saving is available for|Final case creation, documents, risk validation/, 'Remove redundant non-Motor booking and draft notices.');
 assert.doesNotMatch(screen,/>In progress<\/Text>/, 'Remove In progress badge from onboarding summary.');
-assert.match(screen,/\{saving\?'Saving…':'Save draft'\}/, 'Keep non-Motor Save Draft button.');
+assert.match(screen,/productType==='Life'\|\|productType==='Health'/, 'Life and Health use dedicated creation actions.');
+assert.match(screen,/accessibilityLabel="Create Policy"/, 'Life/Health offer Create Policy.');
+assert.match(screen,/const cancelLifeHealth=\(\)=>/, 'Life/Health Cancel confirmation preserves unsaved work.');
+assert.match(screen,/createNativeLifeHealthCase\(id,revision\)/, 'Life/Health creation calls the authenticated case API.');
+assert.match(screen,/\{saving\?'Saving…':'Save draft'\}/, 'Non Motor retains Save Draft.');
 assert.doesNotMatch(screen,/<View style=\{styles.status\}>/, 'Remove top PIR and unsaved status card only; draft saving remains.');
 assert.match(screen,/selected&&styles.choiceSelected/, 'Selected highlight applies to all shared picker options.');
 assert.match(screen,/picker\.product\?updateProduct\(picker.key,item.value\):update\(picker.key as FieldKey,item.value\)/, 'Preserve non-business-line dropdown selection handlers.');
@@ -94,7 +98,12 @@ assert.match(screen,/styles\.wideField,styles\.registrationBlock/, 'Registration
 assert.match(screen,/\[styles\.field,styles\.wideField\]/, 'RTO spans both columns.');
 assert.match(screen,/styles\.summaryProgressStack/, 'Progress indicator stacks over in-progress badge.');
 assert.match(screen,/\{isMotor\?<Pressable accessibilityRole="button" accessibilityLabel="Book Active Policy"/, 'Book replaces Motor Save Draft in the action row.');
-assert.match(screen,/<\/Pressable>:<Pressable accessibilityRole="button" disabled=\{saving\|\|!dirty\}/, 'Non-Motor Save Draft stays available.');
+assert.match(screen,/<\/Pressable>:<Pressable accessibilityRole="button" disabled=\{saving\|\|!dirty\}/, 'Non Motor Save Draft stays available after Motor booking.');
+assert.match(api,/body.action==="create_life_health"/, 'Dedicated Life/Health create action is available.');
+assert.match(api,/createLifeHealthCaseForVerifiedActor\(form,profile,intake.id\)/, 'Create action reuses the verified Life/Health case engine.');
+assert.match(api,/\.eq\("status","in_review"\)\.eq\("assigned_to_profile_id",user.id\)/, 'Create action atomically claims the correct reviewer-owned intake.');
+assert.match(api,/if\(d.businessLine!=="Life"&&d.businessLine!=="Health"\)/, 'Only Life and Health can use the new create action.');
+assert.match(api,/status:"completed"/, 'Completed Life/Health case updates intake status after creation.');
 assert.match(screen,/disabled=\{booking\|\|saving\|\|!data\}/, 'Booking remains gated by loading and saving.');
 
 // Remarks must be reachable from header, saved through the revision-checked API,
