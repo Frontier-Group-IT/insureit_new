@@ -32,9 +32,10 @@ APP_OBJECTS = frozenset({
 # We do NOT grant/alter login roles, execute trusted extensions or copy Vault
 # root keys. All such items require separate managed-service verification.
 ALLOWED_MANAGED = frozenset({
+    # Supabase managed table owners are NOT members of the target postgres
+    # role. Do not attempt CREATE TRIGGER auth.users or CREATE POLICY storage.*
+    # under unapproved elevated managed service credentials.
     ("TABLE DATA", "auth"),
-    ("TRIGGER", "auth"),
-    ("POLICY", "storage"),
 })
 TOC_KINDS = sorted(APP_OBJECTS | {
     "ACL", "DEFAULT ACL", "COMMENT", "SECURITY LABEL", "EXTENSION",
@@ -103,13 +104,15 @@ def chosen_entries(raw_toc):
             if rest.startswith("rls_auto_enable("):
                 include = False
                 counts["excluded_preseeded_rls_helper"] += 1
-        if (kind, ns) == ("TRIGGER", "auth"):
-            # Require matching known source custom trigger on auth.users.
-            include = rest.startswith("users on_auth_user_created ")
+        if ns == "auth" and kind == "TRIGGER":
+            # Managed auth.users is owned by supabase_auth_admin; postgres is
+            # not a member. Defer trigger DDL to a separately supported path.
+            include = False
         if ns == "storage" and kind == "POLICY":
-            # Only restore Storage RLS customizations; bucket/data rows are
-            # intentionally deferred to the 500 MB Storage API test.
-            include = True
+            # Managed storage.objects/buckets are owned by
+            # supabase_storage_admin. Importing policies as postgres would
+            # fail owner checks; never escalate privileges opportunistically.
+            include = False
         # Source ACLs and privileges, event triggers, managed extension DDL,
         # role statements and non-application tables are NOT applied here.
         if include:
@@ -127,10 +130,8 @@ def chosen_entries(raw_toc):
         raise ValueError("Archive missing public application data destinations")
     if counts[("auth", "TABLE DATA")] < MIN_AUTH_DATA:
         raise ValueError("Archive missing required Auth tables")
-    if counts[("storage", "POLICY")] == 0:
-        raise ValueError("Archive missing Storage RLS policies")
-    if counts[("auth", "TRIGGER")] != 1:
-        raise ValueError("Archive missing expected auth.users trigger")
+    if counts[("storage", "POLICY")] or counts[("auth", "TRIGGER")]:
+        raise ValueError("Unapproved managed Auth/Storage DDL in selection")
     # All app table COPY entries selected; no unintended managed data.
     for ns in APP_SCHEMAS:
         if ns == "public":
@@ -157,10 +158,10 @@ def build_list(source, destination):
           f" public_tables={counts[('public','TABLE')]}"
           f" public_data_targets={counts[('public','TABLE DATA')]}"
           f" auth_data_targets={counts[('auth','TABLE DATA')]}"
-          f" storage_rls_policies={counts[('storage','POLICY')]}"
-          f" auth_custom_triggers={counts[('auth','TRIGGER')]}"
+          f" managed_storage_policies_deferred=1"
+          f" managed_auth_trigger_deferred=1"
           f" other_private_entries={sum(v for k,v in counts.items() if isinstance(k,tuple) and k[0] in APP_SCHEMAS - {'public'})}")
-    print("DEFERRED: Storage file/metadata full sync, Vault keys, managed Realtime, platform role recreation, original ownership/ACL")
+    print("DEFERRED: Auth owner-only trigger, Storage owner-only policies and all Storage file/metadata; Vault, Realtime, source owner/ACL")
 
 
 if __name__ == "__main__":
