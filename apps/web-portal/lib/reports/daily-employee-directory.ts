@@ -50,15 +50,13 @@ export async function loadDailyReportEmployeeDirectory(viewer:Viewer) {
   });
   if(result.error) throw new Error("Could not load authorized employee directory");
   const people=result.data??[];
-  if(!people.some(p=>p.id===viewer.id)) {
-    const {data:self,error}=await admin.from("profiles").select("id,full_name,employee_code,employee_id")
-      .eq("id",viewer.id).maybeSingle<ReportEmployee>();
-    if(error) throw new Error("Could not verify current employee");
-    if(self) people.push(self);
-  }
-  // The existing access-scope resolver defines the authorized tree. Do not derive
-  // access from names, manually supplied employee codes, or browser parameters.
-  const visible = people.filter(p=>allowedIds===null || allowedIds.includes(p.id));
+  // Self already provides the viewer's own activity history. All is for other
+  // authorized employees only; apply this exclusion before building the
+  // directory AND before validating a selected person= URL parameter.
+  // Keep the hierarchy/organization authorization scope unchanged.
+  const visible = people.filter(p =>
+    p.id !== viewer.id && (allowedIds===null || allowedIds.includes(p.id))
+  );
   visible.sort((a,b)=>(a.full_name??"").localeCompare(b.full_name??"") || a.id.localeCompare(b.id));
   return {people:visible,allowedIds};
 }
