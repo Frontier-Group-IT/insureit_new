@@ -1,7 +1,7 @@
 Partner production OTA trigger
-release=partner-policy-products-calendar-pr-4516-retry-1
+release=partner-intake-action-required-pr-4517
 source=verified-merged-main
-reason=explicit-user-request-production-ota-retry
+reason=user-approved-publish-pr-4517
 channel=production
 runtime=0.2.0
 requested=2026-11-14
