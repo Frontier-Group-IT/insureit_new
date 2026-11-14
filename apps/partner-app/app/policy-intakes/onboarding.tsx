@@ -513,13 +513,14 @@ export default function NativePolicyOnboarding(){
       {!isMotor&&productType!=='Non Motor'?productSection('05','Remarks',[{key:'remarks',label:'Remarks',wide:true}]):null}
       <View style={styles.section}>
         <View style={styles.sectionHead}>
-          <Ionicons name="pie-chart-outline" size={18} color="#254C83"/>
-          <Text style={styles.sectionTitle}>Onboarding summary</Text>
+          <View style={styles.summaryHeading}><Text style={styles.summaryCaption}>POLICY STATUS</Text>
+            <Text style={styles.sectionTitle}>Onboarding summary</Text></View>
           <View style={styles.summaryProgress}><Text style={styles.progressText}>{filled}%</Text></View>
+          <View style={styles.progressStatus}><Text style={styles.summaryStatusValue}>In progress</Text></View>
         </View>
         <View style={styles.summary}>
-          <View style={styles.summaryStatusRow}><Text style={styles.summaryCaption}>Policy status</Text><Text style={styles.summaryStatusValue}>In progress</Text></View>
           {isMotor?<View style={styles.premiumRows}>
+            <View style={styles.premiumHeading}><Ionicons name="cash-outline" size={17} color="#315B9A"/><Text style={styles.summaryCaption}>PREMIUM</Text></View>
             {[{label:'Net premium',value:net},{label:'GST',value:gst},{label:'Gross premium',value:gross}].map(row=><View key={row.label} style={styles.premiumRow}>
               <Text style={styles.premiumLabel}>{row.label}</Text><Text style={styles.premiumValue}>{rupees(row.value)}</Text>
             </View>)}
@@ -541,15 +542,17 @@ export default function NativePolicyOnboarding(){
           <Pressable accessibilityRole="button" accessibilityLabel="Insurer Pay-In popup"
             onPress={()=>setCommercialModal('payin')} style={styles.commercialAction}>
             <Ionicons name="arrow-down-circle-outline" size={19} color="#147D73"/>
-            <Text style={styles.commercialActionTitle}>Insurer Pay-In</Text>
-            <Text style={styles.commercialActionValue}>{draft.projectedOdPercent||draft.projectedTpPercent||draft.insurerScheme?rupees(payinTotal):'Not entered'}</Text>
+            <View style={styles.commercialActionBody}><Text style={styles.commercialActionTitle}>Insurer Pay-In</Text>
+              <Text style={styles.actionSubtitle}>Add projected insurer terms</Text></View>
+            <Text style={styles.commercialActionValue}>{draft.projectedOdPercent||draft.projectedTpPercent||draft.insurerScheme?'Entered':'Not entered'}</Text>
             <Ionicons name="chevron-forward" size={15} color="#63758D"/>
           </Pressable>
           <Pressable accessibilityRole="button" accessibilityLabel="Partner Payout popup"
             onPress={()=>setCommercialModal('payout')} style={styles.commercialAction}>
             <Ionicons name="wallet-outline" size={19} color="#7452BA"/>
-            <Text style={styles.commercialActionTitle}>Partner Payout</Text>
-            <Text style={styles.commercialActionValue}>{draft.payoutOdPercent||draft.payoutTpPercent||draft.flatPayoutAmount?rupees(payoutTotal):'Not entered'}</Text>
+            <View style={styles.commercialActionBody}><Text style={styles.commercialActionTitle}>Partner Payout</Text>
+              <Text style={styles.actionSubtitle}>Add agreed partner payout</Text></View>
+            <Text style={styles.commercialActionValue}>{draft.payoutOdPercent||draft.payoutTpPercent||draft.flatPayoutAmount?'Entered':'Not entered'}</Text>
             <Ionicons name="chevron-forward" size={15} color="#63758D"/>
           </Pressable>
         </View>:null}
@@ -722,7 +725,7 @@ const styles=StyleSheet.create({
   commercialCards:{marginHorizontal:12,marginBottom:12,gap:8},
   commercialHeading:{fontSize:11,color:'#26436B',fontWeight:'800'},
   commercialAction:{minHeight:48,flexDirection:'row',gap:9,alignItems:'center',paddingHorizontal:11,borderWidth:1,borderColor:'#DDE6F0',borderRadius:10,backgroundColor:'#F8FAFD'},
-  commercialActionTitle:{flex:1,fontSize:11,fontWeight:'700',color:'#17365D'},
+  commercialActionBody:{flex:1,minWidth:0,gap:2},commercialActionTitle:{fontSize:11,fontWeight:'700',color:'#17365D'},actionSubtitle:{fontSize:9,color:'#738196'},
   commercialActionValue:{fontSize:10,color:'#53657D',fontWeight:'600'},
   commercialSheet:{backgroundColor:'#FFFFFF',borderRadius:18,padding:0,maxHeight:'85%',width:'96%',alignSelf:'center',overflow:'hidden'},
   commercialTitleGroup:{flex:1,minWidth:0,gap:5},modalDescription:{color:'#738196',fontSize:9,lineHeight:14},
@@ -738,7 +741,7 @@ const styles=StyleSheet.create({
   calculatedRow:{flexDirection:'row',justifyContent:'space-between',padding:12,borderTopWidth:1,borderColor:'#E1E9F3'},
   readonlyInput:{backgroundColor:'#F3F6FA',color:'#738196'},
   commercialSave:{backgroundColor:'#17365D',borderRadius:10,paddingHorizontal:17,paddingVertical:12,alignItems:'center'},
-  summary:{padding:14,gap:7},summaryStatusRow:{flexDirection:'row',alignItems:'center',justifyContent:'space-between'},summaryStatusValue:{fontSize:10,fontWeight:'700',color:'#A96A00'},summaryCaption:{fontSize:10,fontWeight:'700',color:'#426188'},summaryProgress:{marginLeft:'auto',backgroundColor:'#E1EAF8',borderRadius:18,paddingHorizontal:9,paddingVertical:5},commercialToggle:{marginHorizontal:12,marginBottom:9,flexDirection:'row',alignItems:'center',gap:8,padding:11,borderWidth:1,borderColor:'#DDE6F0',borderRadius:10,backgroundColor:'#F8FAFD'},commercialToggleTitle:{flex:1,color:'#26436B',fontSize:11,fontWeight:'700'},commercialBody:{paddingHorizontal:12},summaryDocuments:{marginHorizontal:12,marginBottom:11,padding:12,flexDirection:'row',alignItems:'center',gap:10,borderColor:'#E1E9F3',borderWidth:1,borderRadius:10},documentAction:{marginHorizontal:12,marginBottom:12,flexDirection:'row',gap:8},total:{fontSize:20,color:'#1B385B',fontWeight:'800'},notice:{fontSize:10,lineHeight:16,color:'#65758E',paddingHorizontal:14,paddingBottom:13},
+  summary:{padding:14,gap:7},summaryStatusRow:{flexDirection:'row',alignItems:'center',justifyContent:'space-between'},summaryStatusValue:{fontSize:10,fontWeight:'700',color:'#A96A00'},summaryCaption:{fontSize:10,fontWeight:'700',color:'#426188'},summaryHeading:{flex:1,gap:3},premiumHeading:{flexDirection:'row',gap:6,alignItems:'center',paddingVertical:7},progressStatus:{backgroundColor:'#FFF3D4',borderRadius:12,paddingHorizontal:8,paddingVertical:6},summaryProgress:{width:44,height:44,borderRadius:22,borderWidth:5,borderTopColor:'#17365D',borderRightColor:'#17365D',borderBottomColor:'#DFE7F0',borderLeftColor:'#DFE7F0',alignItems:'center',justifyContent:'center'},commercialToggle:{marginHorizontal:12,marginBottom:9,flexDirection:'row',alignItems:'center',gap:8,padding:11,borderWidth:1,borderColor:'#DDE6F0',borderRadius:10,backgroundColor:'#F8FAFD'},commercialToggleTitle:{flex:1,color:'#26436B',fontSize:11,fontWeight:'700'},commercialBody:{paddingHorizontal:12},summaryDocuments:{marginHorizontal:12,marginBottom:11,padding:12,flexDirection:'row',alignItems:'center',gap:10,borderColor:'#E1E9F3',borderWidth:1,borderRadius:10},documentAction:{marginHorizontal:12,marginBottom:12,flexDirection:'row',gap:8},total:{fontSize:20,color:'#1B385B',fontWeight:'800'},notice:{fontSize:10,lineHeight:16,color:'#65758E',paddingHorizontal:14,paddingBottom:13},
   actions:{flexDirection:'row',gap:8,marginBottom:11},secondary:{flex:1,borderWidth:1,borderColor:'#CDD9EB',borderRadius:10,padding:13,alignItems:'center'},secondaryText:{fontWeight:'700',fontSize:11,color:'#25466E'},
   primary:{flex:1,backgroundColor:'#243F9E',borderRadius:10,padding:13,alignItems:'center'},primaryText:{fontSize:11,fontWeight:'800',color:'white'},disabled:{opacity:.48},
   bookButton:{marginBottom:11,flexDirection:'row',justifyContent:'center',gap:8},
