@@ -140,6 +140,7 @@ export default function NativePolicyOnboarding(){
   const [verifiedApprovalId,setVerifiedApprovalId]=useState<string|null>(null);
   const [approvalCode,setApprovalCode]=useState("");
   const [picker,setPicker]=useState<{key:string;items:{value:string;label:string}[];product?:boolean}|null>(null);
+  const [pendingBusinessLine,setPendingBusinessLine]=useState<string|null>(null);
   const [dirty,setDirty]=useState(false);
   const [commercialExpanded,setCommercialExpanded]=useState(false);
   const [commercialModal,setCommercialModal]=useState<'payin'|'payout'|null>(null);
@@ -401,9 +402,11 @@ export default function NativePolicyOnboarding(){
           style={[styles.input,restricted&&styles.readonlyInput]} />
       )}
       {isMotor&&f.key==='intermediaryType'&&(draft.rmName||matchedSource?.rmName)?<Text style={styles.fieldMeta}>RM · {draft.rmName||matchedSource?.rmName}{matchedSource?.rmCode&&(!draft.rmName||matchedSource.rmName.trim().toLowerCase()===draft.rmName.trim().toLowerCase())?'   ID · '+matchedSource.rmCode:''}</Text>:null}
-      {isMotor&&f.key==='leadSource'?<View style={styles.sourceDetails}>
-        {draft.intermediaryCode?<Text style={styles.fieldMeta}>ID · {draft.intermediaryCode}</Text>:null}
-        {matchedSource?.mobile?<Text style={styles.fieldMeta}>☎ {matchedSource.mobile}</Text>:null}
+      {f.key==='leadSource'?<View style={styles.sourceOwnerDetails}>
+        {matchedSource?.rmCode?<Text style={styles.fieldMeta}>RM ID · {matchedSource.rmCode}</Text>:null}
+        {matchedSource?.rmMobile?<Text style={styles.fieldMeta}>RM Mobile · {matchedSource.rmMobile}</Text>:null}
+        {isMotor&&draft.intermediaryCode?<Text style={styles.fieldMeta}>Source ID · {draft.intermediaryCode}</Text>:null}
+        {matchedSource?.mobile?<Text style={styles.fieldMeta}>Source Mobile · {matchedSource.mobile}</Text>:null}
       </View>:null}
     </View>;
   };
@@ -768,10 +771,46 @@ export default function NativePolicyOnboarding(){
         </>}
       </View></View>
     </Modal>
+    <Modal transparent visible={Boolean(pendingBusinessLine)} animationType="fade"
+      onRequestClose={()=>setPendingBusinessLine(null)}>
+      <View style={styles.scrim}><View style={styles.switchSheet}>
+        <Text style={styles.switchTitle}>Switch Policy Type?</Text>
+        <Text style={styles.switchDescription}>Switch to {pendingBusinessLine}? Your entered details will be preserved.</Text>
+        <View style={styles.switchActions}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Cancel Policy Type switch"
+            onPress={()=>setPendingBusinessLine(null)} style={styles.switchCancel}>
+            <Text style={styles.switchCancelText}>Cancel</Text>
+          </Pressable>
+          <Pressable accessibilityRole="button" accessibilityLabel="Confirm Policy Type switch"
+            onPress={()=>{
+              if(pendingBusinessLine)update('businessLine',pendingBusinessLine);
+              setPendingBusinessLine(null);
+            }} style={styles.switchConfirm}>
+            <Text style={styles.switchConfirmText}>Switch</Text>
+          </Pressable>
+        </View>
+      </View></View>
+    </Modal>
     <Modal transparent visible={Boolean(picker)} animationType="fade" onRequestClose={()=>setPicker(null)}>
       <View style={styles.scrim}><View style={styles.sheet}>
-        <View style={styles.sheetTitle}><Text style={styles.sectionTitle}>Select {picker?.key}</Text><Pressable onPress={()=>setPicker(null)} accessibilityLabel="Close options"><Ionicons name="close" size={21} color="#4C5970"/></Pressable></View>
-        <ScrollView style={styles.choiceScroll}>{picker?.items.map(item=><Pressable key={item.value} style={styles.choice} onPress={()=>{picker?.product?updateProduct(picker.key,item.value):update(picker!.key as FieldKey,item.value);setPicker(null);}}><Text style={styles.choiceText}>{item.label}</Text></Pressable>)}</ScrollView>
+        <View style={styles.sheetTitle}><Text style={styles.sectionTitle}>{picker?.key==='businessLine'?'Select Policy Type':`Select ${picker?.key}`}</Text><Pressable onPress={()=>setPicker(null)} accessibilityLabel="Close options"><Ionicons name="close" size={21} color="#4C5970"/></Pressable></View>
+        <ScrollView style={styles.choiceScroll}>{picker?.items.map(item=>{
+          const selected=(picker.product?String(productValues[picker.key]??''):String(draft?.[picker.key as FieldKey]??''))===item.value;
+          return <Pressable key={item.value} accessibilityRole="button" accessibilityState={{selected}}
+            style={[styles.choice,selected&&styles.choiceSelected]}
+            onPress={()=>{
+              if(picker.key==='businessLine'){
+                setPicker(null);
+                if(item.value!==draft?.businessLine)setPendingBusinessLine(item.value);
+                return;
+              }
+              picker.product?updateProduct(picker.key,item.value):update(picker.key as FieldKey,item.value);
+              setPicker(null);
+            }}>
+            <Text style={[styles.choiceText,selected&&styles.choiceTextSelected]}>{item.label}</Text>
+            {selected?<Ionicons name="checkmark" size={17} color="#FFFFFF"/>:null}
+          </Pressable>;
+        })}</ScrollView>
       </View></View>
     </Modal>
   </PartnerScreen>;
@@ -795,7 +834,8 @@ const styles=StyleSheet.create({
   rcButton:{width:48,backgroundColor:'#17365D',alignItems:'center',justifyContent:'center'},
   rcButtonDisabled:{backgroundColor:'#A8B4C3'},
   rtoRow:{flexDirection:'row',gap:5},rtoInput:{flex:1,minWidth:0,paddingHorizontal:6},
-  fieldMeta:{fontSize:9,color:'#315B85',fontWeight:'600'},sourceDetails:{flexDirection:'row',flexWrap:'wrap',gap:6},premiumRows:{gap:0},
+  fieldMeta:{fontSize:9,color:'#315B85',fontWeight:'600'},sourceDetails:{flexDirection:'row',flexWrap:'wrap',gap:6},
+  sourceOwnerDetails:{flexDirection:'row',flexWrap:'wrap',columnGap:8,rowGap:4},premiumRows:{gap:0},
   premiumRow:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',paddingVertical:9,borderBottomWidth:1,borderColor:'#E9EFF6'},
   premiumLabel:{fontSize:11,color:'#65758E'},premiumValue:{fontSize:12,color:'#183653',fontWeight:'800'},
   fields:{padding:12,flexDirection:'row',flexWrap:'wrap',columnGap:10,rowGap:11},field:{width:'48%',minWidth:0,gap:5},sourceCell:{width:'48%',minWidth:0,gap:3},sourcePrimary:{width:'100%'},sourceMeta:{minHeight:23,flexDirection:'row',alignItems:'center',gap:5},sourceMetaLabel:{fontSize:9,fontWeight:'700',color:'#72839C'},sourceMetaInput:{flex:1,minWidth:0,fontSize:10,color:'#25466E',fontWeight:'600',paddingVertical:2,paddingHorizontal:1},wideField:{width:'100%'},label:{fontSize:10,color:'#65758E',fontWeight:'700'},star:{color:'#B93333'},
@@ -830,5 +870,14 @@ const styles=StyleSheet.create({
   bookingNotice:{flexDirection:'row',gap:9,padding:12,backgroundColor:'#FFF7E9',borderRadius:10,marginBottom:14},bookingText:{flex:1,fontSize:10,lineHeight:16,color:'#75531C'},
   scrim:{flex:1,justifyContent:'center',backgroundColor:'rgba(5,18,40,.5)'},sheet:{backgroundColor:'white',borderTopLeftRadius:20,borderTopRightRadius:20,padding:17,maxHeight:'70%'},
   sheetTitle:{flexDirection:'row',justifyContent:'space-between',alignItems:'flex-start',gap:12,padding:14,backgroundColor:'#F4F7FB',borderBottomWidth:1,borderColor:'#E2E9F2'},choiceScroll:{maxHeight:420},
-  choice:{minHeight:44,justifyContent:'center',borderTopWidth:1,borderColor:'#EEF1F7'},choiceText:{fontSize:12,color:'#284064'},
+  choice:{minHeight:44,justifyContent:'space-between',alignItems:'center',flexDirection:'row',paddingHorizontal:12,borderTopWidth:1,borderColor:'#EEF1F7'},
+  choiceText:{fontSize:12,color:'#284064'},choiceSelected:{backgroundColor:'#17365D'},choiceTextSelected:{color:'#FFFFFF',fontWeight:'800'},
+  switchSheet:{marginHorizontal:20,padding:18,borderRadius:14,backgroundColor:'#FFFFFF',gap:12},
+  switchTitle:{fontSize:16,fontWeight:'800',color:'#17365D'},
+  switchDescription:{fontSize:12,lineHeight:19,color:'#53657D'},
+  switchActions:{flexDirection:'row',gap:10,justifyContent:'flex-end'},
+  switchCancel:{minWidth:95,alignItems:'center',padding:12,borderWidth:1,borderColor:'#CDD9EB',borderRadius:9},
+  switchCancelText:{fontSize:12,fontWeight:'700',color:'#17365D'},
+  switchConfirm:{minWidth:95,alignItems:'center',padding:12,backgroundColor:'#17365D',borderRadius:9},
+  switchConfirmText:{fontSize:12,fontWeight:'800',color:'#FFFFFF'},
 });
