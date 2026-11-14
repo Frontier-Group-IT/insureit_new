@@ -1,0 +1,131 @@
+name: INSUREIT isolated MANAGED SQL import R4 (manual protected, target only)
+
+on:
+  workflow_dispatch:
+    inputs:
+      expected_db_snapshot:
+        description: 'REQUIRED authenticated R1 v2 UTC stamp YYYYMMDDTHHMMSSZ'
+        required: true
+        type: string
+      confirm_target_ref:
+        description: 'Type klnodxnmlqbofolxxrsr (isolated project ONLY)'
+        required: true
+        type: string
+      confirm_isolation:
+        description: 'Verified restricted access, no live app clients/outbound notifications'
+        required: true
+        type: boolean
+        default: false
+      execute_target_import:
+        description: 'Actually write to isolated target (FALSE = dry-run only)'
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: insureit-isolated-managed-sql-import-r4
+  cancel-in-progress: false
+
+jobs:
+  managed_r4:
+    if: >-
+      github.repository == 'Frontier-Group-IT/insureit_new' &&
+      github.ref == 'refs/heads/main' &&
+      github.event_name == 'workflow_dispatch' &&
+      inputs.confirm_target_ref == 'klnodxnmlqbofolxxrsr' &&
+      inputs.confirm_isolation
+    runs-on: ubuntu-latest
+    timeout-minutes: 65
+    environment: insureit-recovery-isolated
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install pinned R2 and database client (no source DB credentials)
+        run: python -m pip install boto3==1.35.99 cryptography==44.0.2 'psycopg[binary]==3.2.9'
+      - name: Reject unknown/production target BEFORE opening R2
+        env:
+          INSUREIT_RECOVERY_DATABASE_URL: ${{ secrets.INSUREIT_RECOVERY_DATABASE_URL }}
+        run: |
+          set -euo pipefail
+          python scripts/backup/managed_recovery_preflight.py --check-target
+      - name: Fetch authenticated v2 snapshot using read-only R2 identity
+        env:
+          R2_ACCOUNT_ID: ${{ secrets.RECOVERY_R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.RECOVERY_R2_READONLY_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.RECOVERY_R2_READONLY_SECRET_ACCESS_KEY }}
+          DB_BACKUP_ENCRYPTION_KEY: ${{ secrets.RECOVERY_DB_BACKUP_ENCRYPTION_KEY }}
+          R2_BUCKET: insureit-production-backups
+          RESTORE_DIR: ${{ runner.temp }}/insureit-r4-private
+          RECOVERY_EXPECTED_DB_SNAPSHOT: ${{ inputs.expected_db_snapshot }}
+        run: |
+          set -euo pipefail
+          python scripts/backup/verify_postgres_v2_r2.py
+      - name: Inspect custom archive privately in offline container
+        run: |
+          set -euo pipefail
+          root="$RUNNER_TEMP/insureit-r4-private"
+          if ! docker run --rm --network none --user "$(id -u):$(id -g)" \
+            --mount "type=bind,source=$root,target=/archive,readonly" \
+            --entrypoint pg_restore postgres:17-bookworm --list /archive/database.dump \
+            > "$root/private-toc.txt" 2> "$root/private-errors.log"; then
+            echo "R4 TOC READ FAILED (private details withheld)"
+            exit 1
+          fi
+          python scripts/backup/audit_postgres_v2_toc.py "$root/private-toc.txt"
+      - name: Preflight pristine target and build strict managed TOC allowlist
+        env:
+          INSUREIT_RECOVERY_DATABASE_URL: ${{ secrets.INSUREIT_RECOVERY_DATABASE_URL }}
+        run: |
+          set -euo pipefail
+          root="$RUNNER_TEMP/insureit-r4-private"
+          python scripts/backup/managed_recovery_preflight.py --compare "$root/private-toc.txt"
+          python scripts/backup/prepare_managed_sql_restore_list.py \
+            "$root/private-toc.txt" "$root/approved-restore-list.txt"
+          echo "R4 plan: app SQL + Auth table rows + custom Auth trigger / Storage policies"
+          echo "Remaining managed Storage/Realtime/Vault ownership/ACL work is DEFERRED"
+      - name: Prove target plan without writes
+        env:
+          INSUREIT_RECOVERY_DATABASE_URL: ${{ secrets.INSUREIT_RECOVERY_DATABASE_URL }}
+        run: |
+          set -euo pipefail
+          python scripts/backup/execute_managed_sql_restore.py \
+            --dry-run "$RUNNER_TEMP/insureit-r4-private"
+      - name: ATOMIC SQL RESTORE — isolated managed target only
+        if: ${{ inputs.execute_target_import }}
+        env:
+          INSUREIT_RECOVERY_DATABASE_URL: ${{ secrets.INSUREIT_RECOVERY_DATABASE_URL }}
+          RECOVERY_APPROVED_TARGET_REF: ${{ inputs.confirm_target_ref }}
+          RECOVERY_EXPECTED_DB_SNAPSHOT: ${{ inputs.expected_db_snapshot }}
+          RECOVERY_OPERATOR_CONFIRMED: ISOLATED_ONLY
+        run: |
+          set -euo pipefail
+          python scripts/backup/execute_managed_sql_restore.py \
+            --apply "$RUNNER_TEMP/insureit-r4-private"
+      - name: Audit actual selected row counts and RLS / triggers
+        if: ${{ inputs.execute_target_import }}
+        env:
+          INSUREIT_RECOVERY_DATABASE_URL: ${{ secrets.INSUREIT_RECOVERY_DATABASE_URL }}
+        run: |
+          set -euo pipefail
+          root="$RUNNER_TEMP/insureit-r4-private"
+          if ! docker run --rm --network none --user "$(id -u):$(id -g)" \
+            --mount "type=bind,source=$root,target=/archive" \
+            --entrypoint pg_restore postgres:17-bookworm \
+            --data-only --file=/archive/data-only.sql /archive/database.dump \
+            > "$root/private-extract.log" 2>&1; then
+            echo "R4 PRIVATE ROW AUDIT EXTRACTION FAILED"
+            exit 1
+          fi
+          python scripts/backup/verify_managed_sql_rows.py "$root/data-only.sql"
+      - name: Destroy decrypted files and private diagnostics
+        if: always()
+        run: |
+          rm -rf "$RUNNER_TEMP/insureit-r4-private"
+          echo "R4 PRIVATE RUNNER DATA CLEANUP ATTEMPTED"
