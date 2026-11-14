@@ -12,7 +12,7 @@ for (const label of labels) {
   previous = position;
 }
 // The final three fields are an explicitly requested Premium / Payment Mode / Remarks row.
-const finalRow = section.match(/<div className="grid gap-3 md:col-span-2 md:grid-cols-3 xl:col-span-4 xl:grid-cols-3">([\s\S]*?)<\/div>\s*<\/Section>/);
+const finalRow = section.match(/<div className="grid gap-3 md:col-span-2 md:grid-cols-3 xl:col-span-4 xl:grid-cols-3">([\s\S]*?)<\/div>\s*$/);
 assert.ok(finalRow, "Only the final Premium / Payment Mode / Remarks group should span the section grid.");
 for (const label of ["Case premium amount", "Payment mode", "Remarks"]) {
   assert.ok(finalRow[1].includes(label), `Final grouped row must contain ${label}.`);
