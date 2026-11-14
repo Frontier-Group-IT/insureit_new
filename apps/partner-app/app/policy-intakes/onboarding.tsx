@@ -484,14 +484,7 @@ export default function NativePolicyOnboarding(){
     data.sourceMeta.name.trim().toLowerCase()===draft.leadSource.trim().toLowerCase()&&
     data.sourceMeta.code===draft.intermediaryCode);
   const verifiedSource=sourceIsVerified?data?.sourceMeta:null;
-  const sourceMonth=useMemo(()=>{
-    const value=draft?.issuanceDate||'';
-    if(!/^\d{4}-\d{2}-\d{2}$/.test(value))return '';
-    const month=Number(value.slice(5,7));
-    return month>=1&&month<=12
-      ? ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][month-1]+' '+value.slice(2,4)
-      : '';
-  },[draft?.issuanceDate]);
+
   const sourceMeta=(key:'rmName'|'intermediaryCode',label:string)=><View style={styles.sourceMeta}>
     <Text style={styles.sourceMetaLabel}>{label} ·</Text>
     {key==='rmName'&&isMotor
@@ -499,13 +492,10 @@ export default function NativePolicyOnboarding(){
       : <TextInput accessibilityLabel={label} value={draft?.[key]??''} onChangeText={value=>update(key,value)}
           placeholder="" style={styles.sourceMetaInput}/>}
   </View>;
-  const sourceSection=()=> <View style={styles.section}>
+  const sourceSection=()=> <View style={[styles.section,styles.firstSection]}>
     <View style={styles.sectionHead}><Text style={styles.number}>01</Text><Text style={styles.sectionTitle}>Policy source & ownership</Text></View>
     <View style={styles.fields}>{policy.slice(0,4).map(item=><View key={item.key} style={styles.sourceCell}>
       {field(item,true)}
-      {item.key==='issuanceDate'&&sourceMonth?<View style={styles.sourceMeta}>
-        <Text style={styles.sourceMetaLabel}>Month ·</Text><Text style={styles.sourceMetaValue}>{sourceMonth}</Text>
-      </View>:null}
       {item.key==='intermediaryType'?<View style={styles.sourceOwnerRow}>
         {sourceMeta('rmName','RM')}
         {verifiedSource?.rmCode?<View style={styles.sourceMeta}>
@@ -985,6 +975,7 @@ const styles=StyleSheet.create({
   retry:{padding:14,backgroundColor:'#DFE8FF',borderRadius:10,alignItems:'center'},retryText:{color:'#1B397A',fontWeight:'700'},
   status:{backgroundColor:'#FFFFFF',borderRadius:13,borderWidth:1,borderColor:'#DFE6F1',padding:12,flexDirection:'row',justifyContent:'space-between',alignItems:'center',marginBottom:9},draftStatus:{fontSize:10,color:'#738196',marginTop:2},
   intake:{color:'#1C375D',fontWeight:'800',fontSize:14},progress:{borderRadius:20,backgroundColor:'#EAEFFA',paddingVertical:6,paddingHorizontal:10},progressText:{color:'#324D9E',fontWeight:'700',fontSize:9},
+  firstSection:{marginTop:14},
   section:{backgroundColor:'#FFFFFF',borderWidth:1,borderColor:'#DFE6F0',borderRadius:13,marginBottom:11,overflow:'hidden'},
   sectionHead:{flexDirection:'row',gap:9,alignItems:'center',paddingHorizontal:13,paddingVertical:12,backgroundColor:'#EAF1FA'},
   number:{fontSize:11,color:'#355EA0',fontWeight:'800'},sectionTitle:{fontSize:13,color:'#1B385B',fontWeight:'800'},

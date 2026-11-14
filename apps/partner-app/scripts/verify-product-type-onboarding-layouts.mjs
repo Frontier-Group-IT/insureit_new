@@ -132,7 +132,9 @@ assert.match(screen,/verifiedSource\?\.rmCode/, 'RM ID comes from the matched so
 assert.match(screen,/verifiedSource\?\.mobile/, 'Lead source phone comes from the matched source master.');
 assert.match(screen,/name="call-outline"/, 'Use a call icon instead of a text telephone glyph.');
 assert.doesNotMatch(screen,/Source Mobile ·|RM Mobile ·|RM ID ·/, 'No duplicate verbose metadata labels.');
-assert.match(screen,/sourceMonth=useMemo/, 'Source issuance month is displayed beneath the date.');
+assert.match(screen,/const sourceSection=\(\)=> <View style=\{\[styles.section,styles.firstSection\]\}>/, 'First onboarding section uses its own header clearance.');
+assert.match(screen,/firstSection:\{marginTop:14\}/, 'Keep a 14px gap between the navy header and Section 01.');
+assert.doesNotMatch(screen,/sourceMonth|Month ·/, 'Do not display a derived Month row beneath the issuance date.');
 assert.match(api,/\.select\("phone"\)\.eq\("id",owner\.id\)/, 'Existing scoped owner metadata backend remains.');
 assert.match(types,/rmMobile:string/, 'Existing partner source metadata shape remains unchanged.');
 console.log('Product-type layouts, direct policy type selection, portal source ownership alignment and PIR-card removal verified.');

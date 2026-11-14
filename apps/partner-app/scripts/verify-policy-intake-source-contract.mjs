@@ -183,7 +183,7 @@ if (detailScreen.includes('Fetched policy details (OCR)')) throw new Error('Remo
 const nativeOnboarding = fs.readFileSync(path.join(root, 'app/policy-intakes/onboarding.tsx'), 'utf8');
 const nativeApi = fs.readFileSync(path.resolve(root, '../web-portal/app/api/partner/policy-intakes/native-onboarding/route.ts'), 'utf8');
 for (const expected of [
-  "const sourceSection=()=> <View style={styles.section}>",
+  "const sourceSection=()=> <View style={[styles.section,styles.firstSection]}>",
   "isMotor?motorVehicleSection",
   "motorProductSection=section('03','Policy product, premium & validity',motorProductFields)",
   "styles.registrationToggle",
