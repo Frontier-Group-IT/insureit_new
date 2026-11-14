@@ -88,6 +88,17 @@ expectAll('app/policy-intake-new.tsx', [
   [/\/policy-intakes\/\[id\]/, 'Policy Intake submission must route to tracked status'],
 ]);
 
+// Action Required cards use the existing clean 3D warning icon and compact, single-line badge.
+expectAll('app/policy-intakes.tsx', [
+  [/source=\{PartnerAssets\.status\.warning\}/, 'Action Required must reuse the existing 3D warning asset'],
+  [/row\.status === 'needs_attention' \|\| \(row\.status === 'processing' && row\.ocr_status === 'failed'\)/, 'Attention icon must apply only to actual action-required rows'],
+  [/statusTone\(row\) === 'warning' \? \(/, 'Only warning rows use the compact Action Required badge'],
+  [/numberOfLines=\{1\}[\s\S]*?ellipsizeMode="tail"[\s\S]*?style=\{styles\.actionRequiredBadge\}/, 'Action Required label must fit one row and ellipsize on narrow devices'],
+  [/actionRequiredBadge: \{ maxWidth: 92,[^\n]*fontSize: 8,/, 'Action Required badge must use compact typography and fixed maximum width'],
+  [/<PartnerStatusBadge label=\{statusLabel\(row\)\} tone=\{statusTone\(row\)\} \/>/, 'Other statuses must retain the shared badge'],
+  [/row\.ocr_status === 'failed' && \(row\.status === 'processing' \|\| row\.status === 'needs_attention'\)/, 'OCR failed message must remain visible'],
+]);
+
 // Keep the three Claims status filters visible together on narrow phones while
 // leaving Add Claim available without consuming their row width.
 expectAll('app/(tabs)/claims.tsx', [
