@@ -14,7 +14,7 @@ const timeFormat=new Intl.DateTimeFormat("en-IN",{timeZone:"Asia/Kolkata",hour:"
 
 export function DailySelfActivityPanel({data,linkFor,reportMode="self"}:Props) {
   return (
-    <section className="overflow-hidden rounded-xl border border-[#dce4ef] bg-white shadow-sm" aria-label="Self activity summary and register">
+    <section className="min-h-[calc(100dvh-300px)] overflow-hidden rounded-xl border border-[#dce4ef] bg-white shadow-sm" aria-label="Self activity summary and register">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#e4e9f1] px-4 py-3">
         <div>
           <h3 className="text-[12px] font-bold text-[#17365D]">
