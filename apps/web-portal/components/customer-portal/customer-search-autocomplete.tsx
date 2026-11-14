@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
 import { createPortal } from "react-dom";
-import { X } from "lucide-react";
 import { CustomerAnimatedSearchInput } from "./customer-animated-search-input";
 
 /** Search only records already authorized for the current Customer account. */
@@ -91,14 +90,6 @@ export function CustomerSearchAutocomplete({
         hints={hints} aria-label={label} aria-autocomplete="list"
         aria-expanded={visible} autoComplete="off" className={className}
       />
-      {value ? (
-        <button type="button" aria-label="Clear search" title="Clear search"
-          className="ml-1 grid h-6 w-6 shrink-0 place-items-center rounded-full text-[#71829A] hover:bg-[#EAF1FA] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1769DC]"
-          onMouseDown={event => event.preventDefault()}
-          onClick={() => { onChange(""); setOpen(false); setActiveIndex(0); }}>
-          <X className="h-3.5 w-3.5" aria-hidden="true" />
-        </button>
-      ) : null}
       {visible ? createPortal(
         <div role="listbox" aria-label={label + " suggestions"} style={position}
           className="overflow-y-auto rounded-xl border border-[#D7E1EE] bg-white p-1 shadow-[0_14px_35px_rgba(15,23,42,.16)]">
