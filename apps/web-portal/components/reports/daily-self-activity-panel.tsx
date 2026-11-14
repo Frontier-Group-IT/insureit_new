@@ -6,23 +6,24 @@ type Data = {
   selfName:string;employeeCode:string;categories:{name:string;count:number}[];category:string;rows:SelfActivity[];
   page:number;hasNext:boolean;total:number;selectedCount:number;partial:boolean;day:string;
 };
-type Props = {data:Data;linkFor:(updates:Partial<DailyActivityQuery>)=>string};
+type Props = {data:Data;linkFor:(updates:Partial<DailyActivityQuery>)=>string; reportMode?:"self"|"employee";backToEmployees?:string};
 
 const dateFormat=new Intl.DateTimeFormat("en-IN",{timeZone:"Asia/Kolkata",day:"2-digit",month:"short",year:"numeric"});
 const timeFormat=new Intl.DateTimeFormat("en-IN",{timeZone:"Asia/Kolkata",hour:"2-digit",minute:"2-digit",hour12:true});
 
-export function DailySelfActivityPanel({data,linkFor}:Props) {
+export function DailySelfActivityPanel({data,linkFor,reportMode="self",backToEmployees}:Props) {
   return (
     <section className="overflow-hidden rounded-xl border border-[#dce4ef] bg-white shadow-sm" aria-label="Self activity summary and register">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#e4e9f1] px-4 py-3">
         <div>
           <h3 className="text-[12px] font-bold text-[#17365D]">
-            {data.category || "My Activity Summary"}
+            {data.category || (reportMode==="self" ? "My Activity Summary" : `${data.selfName} — Activity Summary`)}
           </h3>
           <p className="mt-1 text-[10px] text-[#718096]">
             {data.day?"Selected day":"All recorded history"} · {data.selfName}{data.employeeCode ? ` (${data.employeeCode})` : ""}
           </p>
         </div>
+        {backToEmployees && !data.category ? <Link prefetch={false} href={backToEmployees} className="rounded-lg border border-[#d8e1ec] bg-white px-3 py-2 text-[10px] font-bold text-[#174b80]">Back to employees</Link> : null}
         {data.category ? <Link prefetch={false} href={linkFor({activity:"",page:"1"})}
           className="rounded-lg border border-[#d8e1ec] bg-white px-3 py-2 text-[10px] font-bold text-[#174b80]">
           Back to summary
@@ -52,7 +53,7 @@ export function DailySelfActivityPanel({data,linkFor}:Props) {
         <>
           <div className="flex items-center justify-between border-b border-[#edf1f6] px-4 py-2 text-[10px] text-[#718096]">
             <span>{data.selectedCount.toLocaleString("en-IN")} {data.category} activities</span>
-            <span>Only your records</span>
+            <span>{reportMode==="self" ? "Only your records" : `Only ${data.selfName} records`}</span>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[850px] text-left">

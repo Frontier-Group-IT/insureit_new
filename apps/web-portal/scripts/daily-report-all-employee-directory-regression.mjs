@@ -1,0 +1,31 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { resolveDailyReportActorIds } from "../lib/reports/daily-activity-actor-scope.ts";
+
+const read = p => readFileSync(new URL(p,import.meta.url),"utf8");
+const directory=read("../lib/reports/daily-employee-directory.ts");
+const page=read("../app/reports/(workspace)/daily/page.tsx");
+const listing=read("../components/reports/daily-employee-directory.tsx");
+const panel=read("../components/reports/daily-self-activity-panel.tsx");
+const history=read("../lib/reports/daily-self-activity.ts");
+
+assert.deepEqual(resolveDailyReportActorIds("manager","all",{mode:"hierarchy",profileIds:["team1","team2"]}),["manager","team1","team2"]);
+assert.deepEqual(resolveDailyReportActorIds("employee","all",{mode:"self",profileIds:["other"]}),["employee"]);
+assert.equal(resolveDailyReportActorIds("superuser","all",{mode:"organization",profileIds:[]}),null);
+assert.match(directory, /getEmployeeAccessScope\(viewer\.id, viewer\.role, "view_reports"\)/, "All reuses report-specific hierarchy");
+assert.match(directory, /resolveDailyReportActorIds\(viewer\.id, "all", access\)/, "All respects authorized profile scope");
+assert.match(directory, /\.eq\("is_active",true\)/, "Only active employee accounts are listed");
+assert.match(directory, /if\(!authorized\) throw/, "Unpermitted selected employee ID fails closed");
+assert.match(page, /assertDailyReportEmployeeAllowed\(chosenPerson, employeeDirectory\);[\s\S]*?loadSelfActivityHistory\(chosenPerson/, "Validate employee before admin history reader");
+assert.match(page, /loadSelfActivityHistory\(profile\.id/, "Self remains actor-specific");
+assert.match(page, /<DailyEmployeeDirectory people=\{employeeDirectory\.people\}/, "All begins with employee directory");
+assert.match(listing, /person:p\.id/, "Employee links use verified IDs, not names");
+assert.match(listing, /href=\{linkFor\(\{scope:"all",person:p\.id/, "All links to person without broadening scope");
+assert.match(panel, /reportMode==="self" \? "My Activity Summary"/, "Self and selected employee use identical category panel");
+assert.match(panel, /Back to employees/, "Selected employee has return navigation");
+assert.match(history, /\.eq\("actor_id",viewerId\)/, "Selected employee's audit is always server-filtered");
+assert.match(directory, /JATIN_EMPLOYEE_ID/, "Jatin report scope exception stays explicit");
+assert.match(directory, /descendants\.has\(employee\.reporting_manager_id\)/, "Jatin's team is resolved by actual employee links");
+assert.match(directory, /access\.mode==="organization"/, "Specific manager exception never broadens a narrower override");
+assert.doesNotMatch(directory+page+listing+panel+history, /\.insert\(|\.update\(|\.upsert\(|\.delete\(/, "New report remains read-only");
+console.log("All employee directory, report hierarchy and selected-person isolation checks passed.");
