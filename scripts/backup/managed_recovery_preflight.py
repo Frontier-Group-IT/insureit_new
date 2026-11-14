@@ -16,10 +16,20 @@ SOURCE_REF = "ilzhsfqqjyppzzvfscmh"
 TARGET_REF = "klnodxnmlqbofolxxrsr"
 TARGET_DIRECT = f"db.{TARGET_REF}.supabase.co"
 POOLER_DOMAIN = ".pooler.supabase.com"
+# Match longer PostgreSQL TOC object kinds first. Object names never leave
+# this process; only family-count aggregates are printed.
+TOC_KINDS = (
+    "TABLE DATA", "TABLE", "VIEW", "MATERIALIZED VIEW", "INDEX",
+    "CONSTRAINT", "FK CONSTRAINT", "SEQUENCE", "SEQUENCE SET",
+    "FUNCTION", "PROCEDURE", "TRIGGER", "POLICY", "ROW SECURITY",
+    "ACL", "DEFAULT ACL", "EXTENSION", "SCHEMA", "TYPE", "DOMAIN",
+    "EVENT TRIGGER", "TABLE ATTACH", "RULE", "PUBLICATION",
+)
 RECORD = re.compile(
-    r"^\s*\d+;\s+\d+\s+\d+\s+"
-    r"(TABLE DATA|TABLE|POLICY|SEQUENCE SET|FUNCTION|EXTENSION|SCHEMA)"
-    r"\s+(\S+)\s+(\S+)(?:\s|$)"
+    r"^\s*\d+;\s+\d+\s+\d+\s+("
+    + "|".join(re.escape(kind) for kind in
+               sorted(TOC_KINDS, key=len, reverse=True))
+    + r")\s+(\S+)\s+(\S+)(?:\s|$)"
 )
 MANAGED = frozenset(("auth", "storage", "realtime", "vault",
                      "supabase_migrations"))
@@ -168,7 +178,10 @@ def compare_archive(toc_path, target_url):
     public_tables = sum(s == "public" for s, _ in target["tables"])
     if public_tables:
         raise RuntimeError("Recovery target contains application tables")
-    for kind in ("TABLE", "TABLE DATA"):
+    for kind in TOC_KINDS:
+        if sum(counts[(kind, family)] for family in
+               ("application", "managed", "dependency")) == 0:
+            continue
         print("MANAGED PREFLIGHT TOC:"
               f" kind={kind.lower().replace(' ', '_')}"
               f" public={counts[(kind,'application')]}"
