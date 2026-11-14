@@ -2,12 +2,13 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Linking, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import * as DocumentPicker from 'expo-document-picker';
 
 import { PartnerScreen } from '@/components/partner-screen';
 import { createPartnerPolicyIntakeBridgeUrl } from '@/lib/policy-intakes';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { PartnerPolicyDateField } from '@/components/policy-intakes/partner-policy-date-field';
-import { prepareNativePolicyOnboarding, saveNativePolicyOnboarding, bookNativePolicyOnboarding, createNativeLifeHealthCase, requestNativePolicyDateApproval, verifyNativePolicyDateApproval, lookupNativePolicyRc, searchNativeNonMotorCustomers, type NativeNonMotorCustomer, type NativePolicyDraft, type NativeOnboardingData, type NativeProductType } from '@/lib/policy-onboarding';
+import { prepareNativePolicyOnboarding, saveNativePolicyOnboarding, bookNativePolicyOnboarding, createNativeLifeHealthCase, requestNativePolicyDateApproval, verifyNativePolicyDateApproval, lookupNativePolicyRc, searchNativeNonMotorCustomers, type NativeNonMotorCustomer, type NativePolicyDraft, type NativeOnboardingData, type NativeProductType, listNativeOnboardingDocuments, uploadNativeOnboardingDocument, deleteNativeOnboardingDocument, type NativeOnboardingDocument, type NativeOnboardingDocumentType } from '@/lib/policy-onboarding';
 
 type FieldKey = keyof NativePolicyDraft;
 type Field = { key:FieldKey; label:string; required?:boolean; options?:string[] };
@@ -167,6 +168,9 @@ export default function NativePolicyOnboarding(){
   const [remarkError,setRemarkError]=useState('');
   const [payinSummaryExpanded,setPayinSummaryExpanded]=useState(false);
   const [payoutBasisExpanded,setPayoutBasisExpanded]=useState(false);
+  const [onboardingDocuments,setOnboardingDocuments]=useState<NativeOnboardingDocument[]>([]);
+  const [documentBusy,setDocumentBusy]=useState<NativeOnboardingDocumentType|null>(null);
+  const [documentError,setDocumentError]=useState('');
   const load=useCallback(async()=>{
     if(!id)return;
     setLoading(true);setError('');
@@ -180,6 +184,54 @@ export default function NativePolicyOnboarding(){
   const productType:NativeProductType=(draft?.businessLine==='Life'||draft?.businessLine==='Health'||draft?.businessLine==='Non Motor')?draft.businessLine:'Motor';
   const isMotor=productType==='Motor';
   const productValues=(productType==='Motor'?{}:draft?.productDrafts?.[productType])??{};
+  useEffect(()=>{
+    if(!id||loading||productType==='Motor')return;
+    let live=true;
+    setOnboardingDocuments([]);setDocumentError('');
+    void listNativeOnboardingDocuments(id,productType)
+      .then(result=>{if(live)setOnboardingDocuments(result.documents);})
+      .catch(cause=>{if(live)setDocumentError(cause instanceof Error?cause.message:'Documents unavailable.');});
+    return()=>{live=false;};
+  },[id,loading,productType]);
+  const pickOnboardingDocument=async(type:NativeOnboardingDocumentType)=>{
+    if(documentBusy||saving||booking||creatingLifeHealth||!data||!draft||productType==='Motor')return;
+    setDocumentError('');
+    try{
+      const picked=await DocumentPicker.getDocumentAsync({
+        type:['application/pdf','image/jpeg','image/png','image/webp'],copyToCacheDirectory:true,
+      });
+      if(picked.canceled||!picked.assets[0])return;
+      const file=picked.assets[0];
+      if(!file.size||file.size>4*1024*1024){
+        setDocumentError('Choose a PDF or image up to 4 MB.');return;
+      }
+      setDocumentBusy(type);
+      if(dirty){
+        const saved=await saveNativePolicyOnboarding(id,data.revision,draft);
+        setData(current=>current?{...current,revision:saved.revision}:current);
+        setDirty(false);
+      }
+      const result=await uploadNativeOnboardingDocument(id,productType,type,{
+        uri:file.uri,name:file.name,mimeType:file.mimeType||undefined,
+      });
+      setOnboardingDocuments(rows=>[...rows.filter(item=>item.type!==type),result.document]);
+    }catch(cause){
+      setDocumentError(cause instanceof Error?cause.message:'Document could not be uploaded.');
+    }finally{setDocumentBusy(null);}
+  };
+  const removeOnboardingDocument=(type:NativeOnboardingDocumentType)=>{
+    if(documentBusy||saving||booking||creatingLifeHealth||productType==='Motor')return;
+    Alert.alert('Remove document?','Remove this attachment from the onboarding draft?',[
+      {text:'Cancel',style:'cancel'},
+      {text:'Remove',style:'destructive',onPress:()=>{
+        setDocumentBusy(type);setDocumentError('');
+        void deleteNativeOnboardingDocument(id,productType,type)
+          .then(()=>setOnboardingDocuments(rows=>rows.filter(row=>row.type!==type)))
+          .catch(cause=>setDocumentError(cause instanceof Error?cause.message:'Could not remove document.'))
+          .finally(()=>setDocumentBusy(null));
+      }},
+    ]);
+  };
   const nonMotorCustomerMode=productValues.customerMode==='new'?'new':'existing';
   const setNonMotorCustomerMode=(mode:'existing'|'new')=>{
     setDraft(current=>current?{...current,productDrafts:{...current.productDrafts,
@@ -637,14 +689,36 @@ export default function NativePolicyOnboarding(){
       </View>
     </View>:null}
   </View>;
-  const nonMotorDocumentsSection=<View style={styles.section}>
-    <View style={styles.sectionHead}><Text style={styles.number}>06</Text><Text style={styles.sectionTitle}>Documents</Text></View>
+  const onboardingDocumentsSection=(number:string)=><View style={styles.section}>
+    <View style={styles.sectionHead}><Text style={styles.number}>{number}</Text><Text style={styles.sectionTitle}>Documents</Text></View>
     <View style={styles.nonMotorDocuments}>
-      {['Policy Copy','Proposal Form','KYC','Other Document'].map(label=><View key={label} style={styles.nonMotorDocumentRow}>
-        <Ionicons name="document-text-outline" size={16} color="#315B85"/>
-        <Text style={styles.nonMotorDocumentName}>{label}</Text>
-        <Text style={styles.fieldMeta}>Policy Register</Text>
-      </View>)}
+      {([
+        ['policy_copy','Policy Copy'],['proposal_form','Proposal Form'],
+        ['kyc','KYC'],['other_document','Other Document'],
+      ] as const).map(([type,label])=>{
+        const saved=onboardingDocuments.find(row=>row.type===type);
+        const busy=documentBusy===type;
+        return <View key={type} style={styles.nonMotorDocumentRow}>
+          <Ionicons name="document-text-outline" size={16} color="#315B85"/>
+          <View style={styles.documentNameGroup}>
+            <Text style={styles.nonMotorDocumentName}>{label}</Text>
+            {saved?<Text style={styles.documentSavedName} numberOfLines={1}>{saved.fileName}</Text>:null}
+          </View>
+          <Pressable accessibilityRole="button" accessibilityLabel={(saved?'Replace ':'Add ')+label}
+            disabled={Boolean(documentBusy)||saving||booking||creatingLifeHealth}
+            onPress={()=>void pickOnboardingDocument(type)} style={styles.documentAction}>
+            {busy?<ActivityIndicator size="small" color="#315B85"/>:<Ionicons name="cloud-upload-outline" size={15} color="#315B85"/>}
+            <Text style={styles.documentActionText}>{saved?'Replace':'Add'}</Text>
+          </Pressable>
+          {saved?<Pressable accessibilityRole="button" accessibilityLabel={'Remove '+label}
+            disabled={Boolean(documentBusy)||saving||booking||creatingLifeHealth}
+            onPress={()=>removeOnboardingDocument(type)} style={styles.documentRemove}>
+            <Ionicons name="close-circle-outline" size={17} color="#A33A45"/>
+          </Pressable>:null}
+        </View>;
+      })}
+      {documentError?<Text style={styles.documentError}>{documentError}</Text>:null}
+      <Text style={styles.documentHint}>PDF, JPG, PNG or WebP · Max 4 MB each</Text>
     </View>
   </View>;
   const motorVehicleFields:Field[]=[
@@ -734,7 +808,8 @@ export default function NativePolicyOnboarding(){
       {isMotor?motorVehicleSection:productType==='Non Motor'?nonMotorCustomerPolicySection:productSection('02','Customer / Proposer',commonPerson)}
       {isMotor?motorProductSection:productType==='Non Motor'?nonMotorRiskSection:productSection('03','Policy product & case details',lifeProduct)}
       {!isMotor?productSection('04',productType==='Non Motor'?'Cover, premium & validity':'Premium & payment',productType==='Non Motor'?otherPremium:lifePremium):null}
-      {!isMotor&&productType==='Non Motor'?<>{nonMotorAdditionalSection}{nonMotorDocumentsSection}</>:null}
+      {!isMotor&&productType==='Non Motor'?<>{nonMotorAdditionalSection}{onboardingDocumentsSection('06')}</>:null}
+      {(productType==='Life'||productType==='Health')?onboardingDocumentsSection('05'):null}
       {productType!=='Non Motor'?<View style={styles.section}>
         <View style={styles.sectionHead}>
           <Ionicons name="chatbox-ellipses-outline" size={17} color="#254C83"/>
@@ -1145,7 +1220,14 @@ const styles=StyleSheet.create({
   nonMotorCustomerChoiceName:{fontSize:11,color:'#17365D',fontWeight:'600'},
   nonMotorDocuments:{paddingHorizontal:12,paddingVertical:8,gap:5},
   nonMotorDocumentRow:{flexDirection:'row',alignItems:'center',minHeight:39,gap:9,paddingHorizontal:9,borderRadius:8,borderWidth:1,borderColor:'#E1E9F3'},
-  nonMotorDocumentName:{fontSize:11,color:'#17365D',flex:1},
+  nonMotorDocumentName:{fontSize:11,color:'#17365D',fontWeight:'700'},
+  documentNameGroup:{flex:1,minWidth:0,gap:3},
+  documentSavedName:{fontSize:9,color:'#61738D'},
+  documentAction:{flexDirection:'row',alignItems:'center',gap:4,paddingHorizontal:8,paddingVertical:8,borderRadius:7,borderWidth:1,borderColor:'#C8D8EC'},
+  documentActionText:{fontSize:10,color:'#315B85',fontWeight:'700'},
+  documentRemove:{padding:5},
+  documentHint:{fontSize:9,color:'#71819A',paddingHorizontal:4},
+  documentError:{fontSize:10,color:'#B42318',paddingHorizontal:4},
   nonMotorSummaryValue:{fontSize:11,color:'#17365D',fontWeight:'600',maxWidth:'58%',textAlign:'right'},
   inlineRemarksInput:{minHeight:76,paddingVertical:11},
   actions:{flexDirection:'row',gap:8,marginBottom:11,alignItems:'stretch'},secondary:{flex:1,borderWidth:1,borderColor:'#CDD9EB',borderRadius:10,paddingHorizontal:7,paddingVertical:12,minHeight:45,alignItems:'center',justifyContent:'center'},secondaryText:{fontWeight:'700',fontSize:11,color:'#25466E'},
