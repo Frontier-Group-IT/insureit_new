@@ -3,6 +3,11 @@ name: INSUREIT isolated managed recovery R0-R1 preflight (manual read-only)
 on:
   workflow_dispatch:
     inputs:
+      plan_storage_sample:
+        description: 'Plan <=500 MB Storage subset using authenticated R2 manifest (no file bytes)'
+        required: false
+        type: boolean
+        default: false
       verify_storage_sample_bytes:
         description: 'Also SHA256 verify up to 500 MB of encrypted R2 Storage file bytes (read-only)'
         required: false
@@ -20,7 +25,7 @@ jobs:
   preflight:
     if: github.repository == 'Frontier-Group-IT/insureit_new' && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     # Configure main-only required reviewers BEFORE dispatch.
     # Never put a production database connection secret in this environment.
     environment: insureit-recovery-isolated
@@ -74,6 +79,7 @@ jobs:
             "$RUNNER_TEMP/insureit-managed-r0-r1/private-toc.txt"
           echo "NO RESTORATION PERFORMED; R4 requires a separately approved procedure"
       - name: Plan or R2-byte-verify bounded 500 MB Storage sample (NO target upload)
+        if: ${{ inputs.plan_storage_sample || inputs.verify_storage_sample_bytes }}
         env:
           R2_ACCOUNT_ID: ${{ secrets.RECOVERY_R2_ACCOUNT_ID }}
           R2_ACCESS_KEY_ID: ${{ secrets.RECOVERY_R2_READONLY_ACCESS_KEY_ID }}
