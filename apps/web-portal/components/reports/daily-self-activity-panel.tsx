@@ -3,7 +3,7 @@ import type { SelfActivity } from "@/lib/reports/daily-self-activity";
 import type { DailyActivityQuery } from "@/lib/reports/daily-activity";
 
 type Data = {
-  categories:{name:string;count:number}[];category:string;rows:SelfActivity[];
+  selfName:string;employeeCode:string;categories:{name:string;count:number}[];category:string;rows:SelfActivity[];
   page:number;hasNext:boolean;total:number;selectedCount:number;partial:boolean;day:string;
 };
 type Props = {data:Data;linkFor:(updates:Partial<DailyActivityQuery>)=>string};
@@ -20,7 +20,7 @@ export function DailySelfActivityPanel({data,linkFor}:Props) {
             {data.category || "My Activity Summary"}
           </h3>
           <p className="mt-1 text-[10px] text-[#718096]">
-            {data.day?"Selected day":"All recorded history"} · Only your own activities
+            {data.day?"Selected day":"All recorded history"} · {data.selfName}{data.employeeCode ? ` (${data.employeeCode})` : ""}
           </p>
         </div>
         {data.category ? <Link prefetch={false} href={linkFor({activity:"",page:"1"})}
@@ -57,14 +57,15 @@ export function DailySelfActivityPanel({data,linkFor}:Props) {
           <div className="overflow-x-auto">
             <table className="w-full min-w-[850px] text-left">
               <thead className="bg-[#f7f9fc] text-[9px] font-bold uppercase tracking-wide text-[#64748b]">
-                <tr><th className="px-4 py-3">Activity Type</th><th className="px-3 py-3">Reference Number</th>
+                <tr><th className="px-4 py-3">Employee Name</th><th className="px-3 py-3">Activity Type</th><th className="px-3 py-3">Reference Number</th>
                 <th className="px-3 py-3">Date</th><th className="px-3 py-3">Time</th>
                 <th className="px-3 py-3">Status</th><th className="px-3 py-3">Source</th></tr>
               </thead>
               <tbody className="divide-y divide-[#edf1f6]">
                 {data.rows.map(row=>(
                   <tr key={row.id} className="text-[11px] text-[#30435d] hover:bg-[#f9fbff]">
-                    <td className="px-4 py-3 font-semibold">{row.activity}</td>
+                    <td className="px-4 py-3 font-semibold">{data.selfName}</td>
+                    <td className="px-3 py-3 font-semibold">{row.activity}</td>
                     <td className="max-w-[260px] break-all px-3 py-3">{row.reference}</td>
                     <td className="whitespace-nowrap px-3 py-3">{dateFormat.format(new Date(row.occurredAt))}</td>
                     <td className="whitespace-nowrap px-3 py-3">{timeFormat.format(new Date(row.occurredAt))}</td>
