@@ -363,6 +363,15 @@ jobs:
           elif grep -qx 'supabase/migrations/20261029113000_partner_insurer_claim_number_after_intimation.sql' <<<"$changed_migrations"; then
             schema_workflow="apply-partner-insurer-claim-number.yml"
             echo "Partner insurer claim number schema migration detected. Waiting for its schema workflow..."
+          elif grep -qx 'supabase/migrations/20261114170000_partner_onboarding_document_staging.sql' <<<"$changed_migrations"; then
+            unexpected_migrations=$(grep -vx 'supabase/migrations/20261114170000_partner_onboarding_document_staging.sql' <<<"$changed_migrations" || true)
+            if [[ -n "$unexpected_migrations" ]]; then
+              echo "::error::Partner onboarding document release includes unrelated migration(s):"
+              echo "$unexpected_migrations"
+              exit 1
+            fi
+            schema_workflow="apply-partner-onboarding-document-staging.yml"
+            echo "Partner onboarding document staging migration detected. Waiting for verified schema workflow..."
           else
             echo "::error::Supabase migration changed without a matching automated schema deployment gate:"
             echo "$changed_migrations"

@@ -16,10 +16,12 @@ type Props = {
   customers: NonMotorCustomerOption[];
   rms: PolicyRmOption[];
   sources: PolicySourceOption[];
+  sourceIntakeId?: string|null;
+  initialValues?: Partial<NonMotorFormState>;
 };
 
 type CustomerMode = "existing" | "new";
-type FormState = {
+export type NonMotorFormState = {
   issuanceDate: string;
   intermediaryType: "" | "POSP" | "MISP" | "SIBL / Partner";
   sourceId: string;
@@ -74,13 +76,15 @@ type FormState = {
   remarks: string;
 };
 
+type FormState = NonMotorFormState;
+
 const CATEGORIES = ["Fire & Property", "Marine", "Engineering", "Liability", "Burglary", "Employee Compensation", "Cyber", "Travel", "Personal Accident", "Package Policy", "Other"];
 const inputClass = "h-10 w-full rounded-xl border border-[#D8DEE9] bg-white px-3 text-[11px] font-medium text-[#17203A] outline-none transition placeholder:text-[#98A2B3] hover:border-[#B8C2D1] focus:border-[#315B9A] focus:ring-2 focus:ring-[#DCE8FA] disabled:cursor-not-allowed disabled:bg-[#F8FAFC] disabled:text-[#64748B]";
 const labelClass = "mb-1.5 flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.055em] text-[#475467]";
 const money = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 });
 const today = () => new Date().toISOString().slice(0, 10);
 
-const emptyForm: FormState = {
+const emptyForm: NonMotorFormState = {
   issuanceDate: today(), intermediaryType: "", sourceId: "", leadSource: "", intermediaryCode: "", rmName: "",
   customerMode: "existing", customerId: "", customerType: "Organisation", insuredName: "", contactName: "", phone: "", email: "", address: "",
   policyNumber: "", insurerId: "", productName: "", category: "", status: "Active",
@@ -89,13 +93,13 @@ const emptyForm: FormState = {
   proposalNumber: "", previousInsurer: "", previousPolicyNumber: "", previousClaims: "", addOns: "", warranties: "", specialConditions: "", endorsements: "", remarks: "",
 };
 
-export function NonMotorPolicyForm({ insurers, customers, rms, sources }: Props) {
+export function NonMotorPolicyForm({ insurers, customers, rms, sources, sourceIntakeId, initialValues }: Props) {
   const router = useRouter();
-  const [form, setForm] = useState<FormState>(emptyForm);
+  const [form, setForm] = useState<NonMotorFormState>({...emptyForm,...initialValues});
   const [additionalOpen, setAdditionalOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  const update = <K extends keyof FormState>(key: K, value: FormState[K]) => setForm((current) => ({ ...current, [key]: value }));
+  const update = <K extends keyof NonMotorFormState>(key: K, value: NonMotorFormState[K]) => setForm((current) => ({ ...current, [key]: value }));
 
   const availableSources = useMemo(() => sources.filter((item) => item.type === form.intermediaryType), [sources, form.intermediaryType]);
   const selectedSourceMobile = availableSources.find((item) => item.value === form.sourceId)?.mobile;
@@ -111,7 +115,7 @@ export function NonMotorPolicyForm({ insurers, customers, rms, sources }: Props)
   const completed = requiredValues.filter((value) => String(value ?? "").trim()).length;
   const completion = requiredValues.length ? Math.round((completed / requiredValues.length) * 100) : 0;
 
-  function changeIntermediaryType(value: FormState["intermediaryType"]) {
+  function changeIntermediaryType(value: NonMotorFormState["intermediaryType"]) {
     setForm((current) => ({ ...current, intermediaryType: value, sourceId: "", leadSource: "", intermediaryCode: "", rmName: "" }));
   }
 
@@ -130,6 +134,7 @@ export function NonMotorPolicyForm({ insurers, customers, rms, sources }: Props)
   function submit() {
     setError(null);
     const payload: NonMotorPolicyPayload = {
+      sourceIntakeId:sourceIntakeId??undefined,
       source: { issuanceDate: form.issuanceDate, intermediaryType: form.intermediaryType, intermediaryCode: form.intermediaryCode, leadSource: form.leadSource, rmName: form.rmName },
       customerId: form.customerMode === "existing" ? form.customerId : undefined,
       customer: { customerType: form.customerType, insuredName: form.insuredName, contactName: form.contactName, phone: form.phone, email: form.email, address: form.address },

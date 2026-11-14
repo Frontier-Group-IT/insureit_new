@@ -21,6 +21,7 @@ type NonMotorCommercialPayload = {
 };
 
 export type NonMotorPolicyPayload = {
+  sourceIntakeId?:string|null;
   dateApprovalId?: string | null;
   source: { issuanceDate: string; intermediaryType: string; intermediaryCode: string; leadSource: string; rmName: string };
   customerId?: string;
@@ -278,6 +279,31 @@ export async function updateNonMotorPolicy(policyId: string, payload: NonMotorPo
 export async function createNonMotorPolicy(payload: NonMotorPolicyPayload): Promise<NonMotorPolicyResult> {
   const profile = await requirePolicyCreator(payload.source.intermediaryCode);
   const admin = createSupabaseAdminClient();
+  // Intake document links are accepted only for this reviewer, this policy
+  // type and its saved source. A client-supplied intake ID is never sufficient.
+  const sourceIntakeId=clean(payload.sourceIntakeId);
+  type Staged = {document_type:string;file_name:string;storage_bucket:string;storage_path:string;mime_type:string;file_size:number};
+  let stagedDocuments:Staged[]=[];
+  if(sourceIntakeId){
+    if(!/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(sourceIntakeId))
+      return {ok:false,error:"Invalid Policy Intake reference."};
+    const {data:intake,error:intakeError}=await admin.from("policy_intake_requests")
+      .select("id").eq("id",sourceIntakeId).eq("assigned_to_profile_id",profile.id)
+      .eq("status","in_review").maybeSingle<{id:string}>();
+    if(intakeError||!intake)return {ok:false,error:"This intake is not assigned to your Operations account."};
+    const {data:draft,error:draftError}=await admin.from("policy_intake_onboarding_drafts")
+      .select("draft_payload").eq("intake_id",sourceIntakeId)
+      .maybeSingle<{draft_payload:{businessLine?:string;intermediaryCode?:string;leadSource?:string}}>();
+    if(draftError||draft?.draft_payload?.businessLine!=="Non Motor"||
+       draft.draft_payload.intermediaryCode!==payload.source.intermediaryCode||
+       draft.draft_payload.leadSource?.trim().toLowerCase()!==payload.source.leadSource.trim().toLowerCase())
+      return {ok:false,error:"The Non Motor source no longer matches the authorized intake."};
+    const {data:documents,error:documentsError}=await admin.from("policy_intake_onboarding_documents")
+      .select("document_type,file_name,storage_bucket,storage_path,mime_type,file_size")
+      .eq("intake_id",sourceIntakeId).eq("business_line","Non Motor").returns<Staged[]>();
+    if(documentsError)return {ok:false,error:"Could not verify intake documents. Retry before creating the policy."};
+    stagedDocuments=documents??[];
+  }
   // Keep the server as the source of truth for the same restricted commercial access used by Motor onboarding.
   const commercial = canAccessPolicyCommercials(profile, profile.role === "operations_head_life") ? (payload.commercial ?? EMPTY_COMMERCIAL) : EMPTY_COMMERCIAL;
 
@@ -340,6 +366,7 @@ export async function createNonMotorPolicy(payload: NonMotorPolicyPayload): Prom
   let customerId = clean(payload.customerId);
   let createdCustomerId: string | null = null;
   let createdPolicyId: string | null = null;
+  let intakeClaimed=false;
 
   try {
     if (customerId) {
@@ -382,6 +409,17 @@ export async function createNonMotorPolicy(payload: NonMotorPolicyPayload): Prom
 
     const dateGuard = await consumePolicyDateApproval(admin, { requesterId: profile.id, issuanceDate, policyNumber, operation: "create", approvalId: payload.dateApprovalId });
     if (!dateGuard.ok) { if (createdCustomerId) await admin.from("customers").delete().eq("id", createdCustomerId); return { ok:false, error:dateGuard.error }; }
+    if(sourceIntakeId){
+      const {data:claimed,error:claimError}=await admin.from("policy_intake_requests")
+        .update({status:"processing"}).eq("id",sourceIntakeId)
+        .eq("assigned_to_profile_id",profile.id).eq("status","in_review")
+        .select("id").maybeSingle<{id:string}>();
+      if(claimError||!claimed){
+        if(createdCustomerId)await admin.from("customers").delete().eq("id",createdCustomerId);
+        return {ok:false,error:"This intake is already being finalized. Refresh before retrying."};
+      }
+      intakeClaimed=true;
+    }
     const generatedPolicyCode = policyCode();
     const { data: policy, error: policyError } = await admin.from("policies").insert({
       customer_id:customerId, vehicle_id:null, insurance_company_id:insurerId, policy_no:policyNumber, policy_no_normalized:normalizedPolicy,
@@ -391,7 +429,7 @@ export async function createNonMotorPolicy(payload: NonMotorPolicyPayload): Prom
       intermediary_code:sourceResolution.source.intermediaryCode, lead_source:sourceResolution.source.leadSource, rm_name:clean(payload.source.rmName)||null,
       remarks:clean(payload.additional.remarks)||null, calculation_version:"non_motor_commercial_v1", created_by:profile.id,
     }).select("id").single<{id:string}>();
-    if (policyError || !policy) { if (createdCustomerId) await admin.from("customers").delete().eq("id",createdCustomerId); return { ok:false, error:"We couldn't create the Non-Motor policy. Your form is still intact; review the details and try again." }; }
+    if(policyError||!policy)throw new Error("non_motor_policy_insert_failed");
     createdPolicyId = policy.id;
 
     const risk = payload.risk ?? {}, additional = payload.additional ?? {};
@@ -439,11 +477,33 @@ export async function createNonMotorPolicy(payload: NonMotorPolicyPayload): Prom
     });
     if (payoutError) throw new Error(payoutError.message);
 
+    if(sourceIntakeId){
+      if(stagedDocuments.length){
+        const {error:attachmentError}=await admin.from("policy_documents").insert(
+          stagedDocuments.map(doc=>({
+            policy_id:policy.id,document_type:doc.document_type,file_name:doc.file_name,
+            storage_bucket:doc.storage_bucket,storage_path:doc.storage_path,
+            mime_type:doc.mime_type,file_size:doc.file_size,uploaded_by:profile.id,
+            source_intake_id:sourceIntakeId,
+          }))
+        );
+        if(attachmentError)throw new Error("non_motor_document_link_failed");
+      }
+      const {data:completed,error:completeError}=await admin.from("policy_intake_requests")
+        .update({status:"completed",attention_reason:null}).eq("id",sourceIntakeId)
+        .eq("assigned_to_profile_id",profile.id).eq("status","processing")
+        .select("id").maybeSingle<{id:string}>();
+      if(completeError||!completed)throw new Error("non_motor_intake_completion_failed");
+      intakeClaimed=false;
+    }
     if (dateGuard.previousMonth) await recordPreviousMonthPolicyUpload(admin, policy.id, profile.id, issuanceDate, dateGuard.approverName);
     if (dateGuard.approverName) await linkConsumedPolicyDateApproval(admin, payload.dateApprovalId, policy.id, profile.id);
     revalidatePath("/policies"); revalidatePath("/customers");
     return { ok:true, policyId:policy.id, policyCode:generatedPolicyCode };
   } catch {
+    if(intakeClaimed&&sourceIntakeId)await admin.from("policy_intake_requests")
+      .update({status:"in_review"}).eq("id",sourceIntakeId)
+      .eq("assigned_to_profile_id",profile.id).eq("status","processing");
     if (createdPolicyId) await admin.from("policies").delete().eq("id",createdPolicyId);
     if (createdCustomerId) await admin.from("customers").delete().eq("id",createdCustomerId);
     return { ok:false, error:"We couldn't complete the Non-Motor policy onboarding. Your form is still intact; please try again." };
