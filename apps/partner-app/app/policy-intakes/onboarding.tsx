@@ -524,7 +524,7 @@ export default function NativePolicyOnboarding(){
           <View style={styles.summaryProgress}><Text style={styles.progressText}>{filled}%</Text></View>
         </View>
         <View style={styles.summary}>
-          <View style={styles.summaryStatusRow}><View><Text style={styles.summaryCaption}>POLICY STATUS</Text><Text style={styles.summaryTitle}>Onboarding summary</Text></View><Text style={styles.summaryStatusValue}>In progress</Text></View>
+          <View style={styles.summaryStatusRow}><Text style={styles.summaryCaption}>POLICY STATUS</Text><Text style={styles.summaryStatusValue}>In progress</Text></View>
           {isMotor?<View style={styles.premiumRows}>
             {[{label:'Net premium',value:net},{label:'GST',value:gst},{label:'Gross premium',value:gross}].map(row=><View key={row.label} style={styles.premiumRow}>
               <Text style={styles.premiumLabel}>{row.label}</Text><Text style={styles.premiumValue}>{rupees(row.value)}</Text>
@@ -589,8 +589,8 @@ export default function NativePolicyOnboarding(){
     </>:null}
 
     <Modal transparent visible={Boolean(commercialModal)&&isMotor&&Boolean(data?.commercialAccess)}
-      animationType="slide" onRequestClose={()=>setCommercialModal(null)}>
-      <View style={styles.scrim}>
+      animationType="fade" onRequestClose={()=>setCommercialModal(null)}>
+      <View style={styles.commercialScrim}>
         <View style={styles.commercialSheet}>
           <View style={styles.sheetTitle}>
             <Text style={styles.sectionTitle}>{commercialModal==='payin'?'Projected Insurer Pay-in':'Partner Payout'}</Text>
@@ -598,6 +598,7 @@ export default function NativePolicyOnboarding(){
               <Ionicons name="close" size={22} color="#4C5970"/>
             </Pressable>
           </View>
+          <Text style={styles.commercialIntro}>{commercialModal==='payin'?'Expected insurer income for this policy. This does not create billing or confirm recognized pay-in.':'Agreed payout for the selected Lead Source. Approval, voucher and settlement remain in the partner-payment workflow.'}</Text>
           <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.commercialModalContent}>
             {commercialModal==='payin'?<>
               <View style={styles.fields}>{insurerPayinFields.map(f=><View key={f.key} style={styles.field}>
@@ -708,7 +709,7 @@ const styles=StyleSheet.create({
   commercialAction:{minHeight:48,flexDirection:'row',gap:9,alignItems:'center',paddingHorizontal:11,borderWidth:1,borderColor:'#DDE6F0',borderRadius:10,backgroundColor:'#F8FAFD'},
   commercialActionTitle:{flex:1,fontSize:11,fontWeight:'700',color:'#17365D'},
   commercialActionValue:{fontSize:10,color:'#53657D',fontWeight:'600'},
-  commercialSheet:{backgroundColor:'#FFFFFF',borderTopLeftRadius:20,borderTopRightRadius:20,padding:16,maxHeight:'85%',gap:8},
+  commercialScrim:{flex:1,alignItems:'center',justifyContent:'center',backgroundColor:'rgba(5,18,40,.55)',padding:18},commercialSheet:{width:'100%',maxWidth:560,backgroundColor:'#FFFFFF',borderRadius:18,padding:16,maxHeight:'85%',gap:8},commercialIntro:{fontSize:10,lineHeight:16,color:'#65758E',paddingBottom:10,borderBottomWidth:1,borderColor:'#E6EDF5'},
   commercialModalContent:{paddingBottom:12},modalHelp:{fontSize:10,lineHeight:16,color:'#718097',paddingHorizontal:12,paddingVertical:10},
   calculatedRow:{flexDirection:'row',justifyContent:'space-between',padding:12,borderTopWidth:1,borderColor:'#E1E9F3'},
   readonlyInput:{backgroundColor:'#F3F6FA',color:'#738196'},
