@@ -16,7 +16,7 @@ assert.match(detail, /\{!isClosed\?<Section number="05" title="Mark Policy Issue
 assert.match(detail, /\{!isClosed\?<section className="flex flex-wrap items-center justify-end/, "Closed cases must not expose Save, Reject or Issue actions.");
 assert.match(detail, /\{isClosed\?<div className="w-full col-span-full">/, "Closed cases must show saved documents without upload/delete actions.");
 assert.match(detail, /href=\{`\/policies\/life-health-case-documents\/\$\{encodeURIComponent\(doc.id\)\}\/view`\}/, "Closed cases must preserve authorized links to view existing documents.");
-assert.match(detail, /disabled=\{isClosed\|\|saving\|\|converting\}/, "Closed cases cannot add new remarks.");
+assert.match(detail, /disabled=\{isClosed\|\|saving\|\|converting\|\|remarkPending\}/, "Closed cases cannot add new remarks.");
 assert.match(detail, /caseData\.rejectionReason\|\|"No recorded rejection reason available\."/, "Show an actual recorded rejection reason or an explicit missing-value message.");
 assert.match(detail, /<Section number="01" title="Policy source & ownership"/);
 assert.match(detail, /<Section number="02" title="Customer \/ proposer"/);
