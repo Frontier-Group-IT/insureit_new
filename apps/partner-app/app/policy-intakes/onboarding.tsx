@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Linking, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Linking, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -135,6 +135,8 @@ export default function NativePolicyOnboarding(){
   const [booking,setBooking]=useState(false);
   const [lookingUpRc,setLookingUpRc]=useState(false);
   const [viewingCopy,setViewingCopy]=useState(false);
+  const [policyCopyImageUrl,setPolicyCopyImageUrl]=useState<string|null>(null);
+  const [policyCopyImageFailed,setPolicyCopyImageFailed]=useState(false);
   const [dateApprovalOpen,setDateApprovalOpen]=useState(false);
   const [approvalBusy,setApprovalBusy]=useState(false);
   const [approverKey,setApproverKey]=useState("");
@@ -314,10 +316,20 @@ export default function NativePolicyOnboarding(){
     if(viewingCopy)return;
     setViewingCopy(true);setError('');
     try{
+      // Supabase's signed URLs can be long; preview image policy copies natively
+      // rather than passing a token-bearing URL through iOS Linking.openURL.
       const url=await getPartnerPolicyIntakeDocumentUrl(id);
-      await Linking.openURL(url);
-    }catch(e){setError(e instanceof Error?e.message:'Could not open policy copy.');}
-    finally{setViewingCopy(false);}
+      if (/\\.(?:jpe?g|png|webp|gif)$/i.test(new URL(url).pathname)) {
+        setPolicyCopyImageFailed(false);
+        setPolicyCopyImageUrl(url);
+      } else {
+        // PDFs and other documents retain the system viewer without new native dependencies.
+        await Linking.openURL(url);
+      }
+    }catch{
+      // Never render the native error: it may contain the signed Storage URL/token.
+      setError('Unable to open policy copy. Please try again.');
+    }finally{setViewingCopy(false);}
   }
   const net=useMemo(()=>draft?amount(draft.od)+amount(draft.tp)+(draft.vehicleClass==='CPM'?0:amount(draft.cpa))+amount(draft.addOnPremium||'0'):0,[draft]);
   const gst=useMemo(()=>draft?(draft.vehicleClass==='GCV'
@@ -559,6 +571,27 @@ export default function NativePolicyOnboarding(){
 
     </>:null}
 
+    <Modal visible={Boolean(policyCopyImageUrl)} animationType="slide"
+      onRequestClose={()=>setPolicyCopyImageUrl(null)}>
+      <View style={styles.policyCopyPreview}>
+        <View style={styles.policyCopyPreviewHeader}>
+          <Text style={styles.policyCopyPreviewTitle}>Policy copy</Text>
+          <Pressable accessibilityRole="button" accessibilityLabel="Close policy copy" onPress={()=>setPolicyCopyImageUrl(null)} style={styles.policyCopyPreviewClose}>
+            <Ionicons name="close" size={22} color="#17365D"/>
+          </Pressable>
+        </View>
+        {policyCopyImageFailed
+          ? <View style={styles.policyCopyPreviewError}>
+              <Text style={styles.errorText}>Unable to display policy copy. Please try again.</Text>
+              <Pressable accessibilityRole="button" onPress={()=>{setPolicyCopyImageUrl(null);void openCopy();}} style={styles.policyCopyPreviewRetry}>
+                <Text style={styles.secondaryText}>Retry</Text>
+              </Pressable>
+            </View>
+          : policyCopyImageUrl
+            ? <Image source={{uri:policyCopyImageUrl}} resizeMode="contain" style={styles.policyCopyPreviewImage} onError={()=>setPolicyCopyImageFailed(true)}/>
+            : null}
+      </View>
+    </Modal>
     <Modal transparent visible={Boolean(commercialModal)&&isMotor&&Boolean(data?.commercialAccess)}
       animationType="slide" onRequestClose={()=>setCommercialModal(null)}>
       <View style={styles.scrim}>
@@ -665,6 +698,13 @@ const styles=StyleSheet.create({
   primary:{flex:1,backgroundColor:'#243F9E',borderRadius:10,padding:13,alignItems:'center'},primaryText:{fontSize:11,fontWeight:'800',color:'white'},disabled:{opacity:.48},
   bookButton:{marginBottom:11,flexDirection:'row',justifyContent:'center',gap:8},
   bookingNotice:{flexDirection:'row',gap:9,padding:12,backgroundColor:'#FFF7E9',borderRadius:10,marginBottom:14},bookingText:{flex:1,fontSize:10,lineHeight:16,color:'#75531C'},
+  policyCopyPreview:{flex:1,backgroundColor:'#FFFFFF',paddingTop:48,paddingHorizontal:12,paddingBottom:16},
+  policyCopyPreviewHeader:{minHeight:46,flexDirection:'row',justifyContent:'space-between',alignItems:'center',borderBottomWidth:1,borderColor:'#E1E9F3',marginBottom:8},
+  policyCopyPreviewTitle:{fontSize:15,fontWeight:'600',color:'#17365D'},
+  policyCopyPreviewClose:{padding:10},
+  policyCopyPreviewImage:{flex:1,width:'100%',backgroundColor:'#F7F9FC'},
+  policyCopyPreviewError:{flex:1,alignItems:'center',justifyContent:'center',gap:12,padding:20},
+  policyCopyPreviewRetry:{paddingHorizontal:18,paddingVertical:12,borderRadius:9,borderWidth:1,borderColor:'#CDD9EB'},
   scrim:{flex:1,justifyContent:'flex-end',backgroundColor:'rgba(5,18,40,.5)'},sheet:{backgroundColor:'white',borderTopLeftRadius:20,borderTopRightRadius:20,padding:17,maxHeight:'70%'},
   sheetTitle:{flexDirection:'row',justifyContent:'space-between',paddingBottom:12},choiceScroll:{maxHeight:420},
   choice:{minHeight:44,justifyContent:'center',borderTopWidth:1,borderColor:'#EEF1F7'},choiceText:{fontSize:12,color:'#284064'},
