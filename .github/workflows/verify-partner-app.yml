@@ -107,6 +107,9 @@ jobs:
           console.log(`Verified Business header banner: ${width}x${height}, ${bytes.length} bytes, PNG.`);
           NODE
 
+      - name: Verify native Motor validity date parity with web portal
+        run: node --experimental-strip-types apps/partner-app/scripts/verify-native-motor-validity-defaults.mjs
+
       - name: Verify product-specific native Policy Onboarding layouts
         run: node apps/partner-app/scripts/verify-product-type-onboarding-layouts.mjs
 

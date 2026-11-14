@@ -35,6 +35,14 @@ const claimActivity = read("../components/claim-activity-status.tsx");
 const claimPage = read("../app/claims/[id]/page.tsx");
 
 assert.match(policyActivity, /cpa_amount: "CPA amount"/, "CPA amount must be tracked independently");
+
+assert.match(policyActivity, /entry\.key==="premium\.cpa_amount"/, "CPA source field must be detected independently from derived premium totals");
+assert.match(policyActivity, /"premium\.cpa_amount"/, "Actual CPA amount remains on the approved before-after audit value allowlist");
+assert.match(policyActivity, /\x60\$\{entry\.label\}: \$\{formatAuditedPremiumValue\(entry\.key,before\[entry\.key\]\)\} → \$\{formatAuditedPremiumValue\(entry\.key,after\[entry\.key\]\)\}\x60/, "CPA amount records its true previous and new values on future edits");
+assert.match(policyActivity, /cpaChanges = changed\.filter\(field => activityLabel\(field\) === "CPA amount"\)/, "Only an explicitly audited CPA edit may receive the CPA headline");
+assert.match(policyActivity, /return otherChanges \? \x60CPA amount changed \+ \$\{otherChanges\} more\x60 : "CPA amount changed"/, "CPA edits receive an explicit CPA amount changed headline");
+assert.match(policyActivity, /if \(changed\.length === 1 && changed\[0\] === DERIVED_PREMIUM_AUDIT_LABEL\) return "Premium totals recalculated"/, "Legacy derived-only audit records must retain truthful historical headings");
+
 assert.match(policyActivity, /describePolicyEditChanges/, "Policy edits must store actual changed source fields");
 assert.match(policyEdit, /describePolicyEditChanges\(activityBefore, activityAfter\)/, "Policy edit action must use safe old/new details");
 assert.match(policyActivity, /premiumSourceChanged/, "Derived pay-in review resets must not replace manual CPA edits");

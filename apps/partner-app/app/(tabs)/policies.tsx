@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   FlatList,
   Image,
+  Modal,
   Platform,
   Pressable,
   RefreshControl,
@@ -317,53 +318,16 @@ export default function PoliciesScreen() {
             );
           })}
         </ScrollView>
-        <PartnerAnchoredDropdown
-          visible={seeAllOpen}
-          onDismiss={() => setSeeAllOpen(false)}
-          align="right"
-          menuWidth={218}
-          menu={(
-            <View style={styles.summarySeeAllMenu}>
-              <Text style={styles.summarySeeAllMenuTitle}>Policy status</Text>
-              {([
-                { label: 'Total Policies', filter: 'all' as const, value: summary.data?.total_policies },
-                { label: 'Active Policies', filter: 'in_force' as const, value: summary.data?.in_force_policies },
-                { label: 'Expiring Soon', filter: 'expiring' as const, value: summary.data?.expiring_30_days },
-                { label: 'Lapsed Policies', filter: 'expired' as const, value: summary.data?.expired_policies },
-                { label: 'Upcoming', filter: 'upcoming' as const, value: summary.data?.upcoming_policies },
-              ]).map((option) => {
-                const active = lifecycle === option.filter && !query.trim();
-                return (
-                  <Pressable
-                    key={option.filter}
-                    accessibilityRole="button"
-                    accessibilityLabel={`${option.label}, ${option.value === undefined ? 'count unavailable' : option.value.toLocaleString('en-IN')}`}
-                    accessibilityState={{ selected: active }}
-                    onPress={() => selectSummary(option.filter)}
-                    style={({ pressed }) => [styles.summarySeeAllOption, active && styles.filterOptionActive, pressed && styles.pressed]}
-                  >
-                    <Text style={[styles.filterOptionText, active && styles.filterOptionTextActive]}>{option.label}</Text>
-                    <View style={styles.summarySeeAllOptionEnd}>
-                      <Text style={styles.summarySeeAllOptionCount}>{option.value === undefined ? '—' : option.value.toLocaleString('en-IN')}</Text>
-                      {active ? <Ionicons name="checkmark" size={14} color="#3156B8" /> : null}
-                    </View>
-                  </Pressable>
-                );
-              })}
-            </View>
-          )}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="See all policy status filters"
+          accessibilityState={{ expanded: seeAllOpen }}
+          onPress={() => { setFilterMenuOpen(false); setSeeAllOpen(true); }}
+          style={({ pressed }) => [styles.summarySeeAll, seeAllOpen && styles.summarySeeAllActive, pressed && styles.summaryChipPressed]}
         >
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="See all policy status filters"
-            accessibilityState={{ expanded: seeAllOpen }}
-            onPress={() => { setFilterMenuOpen(false); setSeeAllOpen(open => !open); }}
-            style={({ pressed }) => [styles.summarySeeAll, seeAllOpen && styles.summarySeeAllActive, pressed && styles.summaryChipPressed]}
-          >
-            <Ionicons name="list" size={17} color="#0860C8" />
-            <Text style={styles.summarySeeAllText}>See all</Text>
-          </Pressable>
-        </PartnerAnchoredDropdown>
+          <Ionicons name="list" size={17} color="#0860C8" />
+          <Text style={styles.summarySeeAllText}>See all</Text>
+        </Pressable>
       </View>
 
       {canPartnerAccess(context, 'view_policy_intakes') ? (
@@ -498,6 +462,49 @@ export default function PoliciesScreen() {
       {isFocused ? <StatusBar style={searchSticky ? 'light' : 'dark'} /> : null}
       {searchSticky && safeAreaInsets.top > 0 ? <View pointerEvents="none" style={[styles.stickyStatusBarShield, { height: safeAreaInsets.top }]} /> : null}
       {searchSticky ? <View style={[styles.stickySearchOverlay, { top: safeAreaInsets.top }]} pointerEvents="box-none"><Text style={styles.stickyClaimsHeading}>Policies</Text>{searchControls}</View> : null}
+      <Modal
+        visible={seeAllOpen}
+        transparent
+        animationType="slide"
+        statusBarTranslucent
+        onRequestClose={() => setSeeAllOpen(false)}
+      >
+        <View style={styles.statusSheetOverlay}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Close policy status selector"
+            style={styles.statusSheetBackdrop}
+            onPress={() => setSeeAllOpen(false)}
+          />
+          <View style={[styles.statusSheet, { paddingBottom: Math.max(safeAreaInsets.bottom, 18) }]}>
+            <View style={styles.statusSheetHeader}>
+              <Text style={styles.statusSheetTitle}>Select status</Text>
+              <Pressable accessibilityRole="button" accessibilityLabel="Close status selector"
+                onPress={() => setSeeAllOpen(false)} style={styles.statusSheetClose}>
+                <Ionicons name="close" size={23} color="#64748B" />
+              </Pressable>
+            </View>
+            {([
+              { label: 'Total Policies', filter: 'all' as const, value: summary.data?.total_policies },
+              { label: 'Active Policies', filter: 'in_force' as const, value: summary.data?.in_force_policies },
+              { label: 'Expiring Soon', filter: 'expiring' as const, value: summary.data?.expiring_30_days },
+              { label: 'Lapsed Policies', filter: 'expired' as const, value: summary.data?.expired_policies },
+              { label: 'Upcoming', filter: 'upcoming' as const, value: summary.data?.upcoming_policies },
+            ]).map(option => {
+              const selected = lifecycle === option.filter && !query.trim();
+              return <Pressable key={option.filter} accessibilityRole="button"
+                accessibilityLabel={`${option.label}, ${option.value === undefined ? 'count unavailable' : option.value.toLocaleString('en-IN')}`}
+                accessibilityState={{ selected }}
+                onPress={() => selectSummary(option.filter)}
+                style={[styles.statusSheetOption, selected && styles.statusSheetOptionSelected]}>
+                <Ionicons name={selected ? 'radio-button-on' : 'radio-button-off'} size={21} color={selected ? '#3156B8' : '#A4B3C5'} />
+                <Text style={[styles.statusSheetOptionLabel, selected && styles.statusSheetOptionLabelSelected]}>{option.label}</Text>
+                <Text style={styles.statusSheetCount}>{option.value === undefined ? '—' : option.value.toLocaleString('en-IN')}</Text>
+              </Pressable>;
+            })}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -763,6 +770,17 @@ const styles = StyleSheet.create({
   summarySeeAll: { minHeight: 40, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, paddingHorizontal: 12, borderRadius: 22, borderWidth: 1, borderColor: '#E0E7F1', backgroundColor: '#FFFFFF', shadowColor: '#173B6C', shadowOpacity: 0.08, shadowRadius: 4, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
   summarySeeAllText: { color: '#0860C8', fontSize: 11, fontWeight: '800' },
   summarySeeAllActive: { borderColor: '#91B7E7', backgroundColor: '#F0F6FF' },
+  statusSheetOverlay: { flex: 1, justifyContent: 'flex-end' },
+  statusSheetBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(11,27,53,0.48)' },
+  statusSheet: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: 16, paddingTop: 16, maxHeight: '90%' },
+  statusSheetHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 2, paddingBottom: 14 },
+  statusSheetTitle: { color: '#17365D', fontSize: 20, lineHeight: 26, fontWeight: '800' },
+  statusSheetClose: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
+  statusSheetOption: { minHeight: 57, flexDirection: 'row', alignItems: 'center', gap: 13, paddingHorizontal: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E1E7F0' },
+  statusSheetOptionSelected: { backgroundColor: '#F0F5FF' },
+  statusSheetOptionLabel: { flex: 1, color: '#243B59', fontSize: 13, fontWeight: '600' },
+  statusSheetOptionLabelSelected: { color: '#17365D', fontWeight: '800' },
+  statusSheetCount: { fontSize: 12, color: '#64748B', fontWeight: '800', fontVariant: ['tabular-nums'] },
   summarySeeAllMenu: { borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: '#DDE6F1', backgroundColor: '#FFFFFF', paddingVertical: 5, shadowColor: '#102449', shadowOpacity: 0.15, shadowRadius: 12, shadowOffset: { width: 0, height: 5 }, elevation: 8 },
   summarySeeAllMenuTitle: { paddingHorizontal: 12, paddingVertical: 8, color: '#17365D', fontSize: 11, fontWeight: '800' },
   summarySeeAllOption: { minHeight: 41, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },

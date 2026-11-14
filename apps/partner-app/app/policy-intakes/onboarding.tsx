@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 
 import { PartnerScreen } from '@/components/partner-screen';
+import { motorValidityEnds } from '@/lib/motor-validity-dates';
 import { createPartnerPolicyIntakeBridgeUrl } from '@/lib/policy-intakes';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { PartnerPolicyDateField } from '@/components/policy-intakes/partner-policy-date-field';
@@ -279,6 +280,15 @@ export default function NativePolicyOnboarding(){
       // Keep the saved registration number in draft; Unregistered mode shows a disabled field.
       if(key==='vehicleClass'&&value!==current.vehicleClass)next.policyProduct='';
       if(key==='vehicleClass'&&value==='CPM'){next.tp='0';next.cpa='0';next.cpaOpted='No';}
+      // Mirror website date defaults, including Bundled PCP/TWP OD, TP and CPA periods.
+      // Calculate only on explicit edits; loading saved drafts never replaces saved end dates.
+      if(key==='validFrom'||key==='policyProduct'||(key==='vehicleClass'&&value!==current.vehicleClass)){
+        Object.assign(next,motorValidityEnds(
+          key==='validFrom'?value:current.validFrom,
+          key==='vehicleClass'?value:current.vehicleClass,
+          key==='policyProduct'?value:next.policyProduct,
+        ));
+      }
       if(key==='policyProduct'&&value==='Third Party'){next.idv='0';next.od='0';}
       if(key==='cpa')next.cpaOpted=amount(value)>0?'Yes':'No';
       return next;
@@ -743,7 +753,7 @@ export default function NativePolicyOnboarding(){
     {key:'tp',label:'TP premium',required:draft?.policyProduct!=='SAOD'&&draft?.vehicleClass!=='CPM'},
     {key:'cpa',label:'CPA amount',required:draft?.vehicleClass==='GCV'},
     {key:'validFrom',label:'Validity from',required:true},
-    {key:'validUpto',label:'Validity up to',required:true},
+    {key:'validUpto',label:draft?.policyProduct==='Bundled'?'OD Validity Upto':'Validity up to',required:true},
     ...(draft?.policyProduct==='Bundled'&&['PCP','TWP'].includes(draft?.vehicleClass??'')?[
       {key:'tpValidUpto' as FieldKey,label:'TP validity up to',required:true},
       {key:'cpaValidUpto' as FieldKey,label:'CPA validity up to',required:true},
