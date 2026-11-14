@@ -65,6 +65,8 @@ jobs:
         run: node --experimental-strip-types scripts/daily-report-uuid-validator-regression.mjs
       - name: Daily Report minimal header and automatic filter regression
         run: node scripts/daily-report-minimal-header-regression.mjs
+      - name: Daily Report concise employee view and no disclaimer regression
+        run: node scripts/daily-report-remove-extra-text-regression.mjs
       - name: Daily Report All employee directory hierarchy and history isolation regression
         run: node --experimental-strip-types scripts/daily-report-all-employee-directory-regression.mjs
       - name: OCR-only Layout Parser opt-in regression

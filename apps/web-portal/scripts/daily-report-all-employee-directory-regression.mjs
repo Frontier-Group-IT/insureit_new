@@ -22,7 +22,7 @@ assert.match(page, /<DailyEmployeeDirectory people=\{employeeDirectory\.people\}
 assert.match(listing, /person:p\.id/, "Employee links use verified IDs, not names");
 assert.match(listing, /href=\{linkFor\(\{scope:"all",person:p\.id/, "All links to person without broadening scope");
 assert.match(panel, /reportMode==="self" \? "My Activity Summary"/, "Self and selected employee use identical category panel");
-assert.match(panel, /Back to employees/, "Selected employee has return navigation");
+assert.doesNotMatch(panel, /Back to employees/, "Selected employee no longer shows a back button");
 assert.match(history, /\.eq\("actor_id",viewerId\)/, "Selected employee's audit is always server-filtered");
 assert.match(directory, /JATIN_EMPLOYEE_ID/, "Jatin report scope exception stays explicit");
 assert.match(directory, /descendants\.has\(employee\.reporting_manager_id\)/, "Jatin's team is resolved by actual employee links");
