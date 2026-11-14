@@ -1,5 +1,6 @@
 const KEYS = new Set([
   "policy_number", "insurer_name", "policy_product", "policy_start_date", "policy_end_date",
+  "third_party_start_date", "third_party_end_date",
   "insured_name", "vehicle_make", "vehicle_model", "vehicle_registration_status",
   "vehicle_registration_number", "vehicle_engine_number", "vehicle_chassis_number",
   "vehicle_manufacturing_year", "vehicle_rto_name", "idv", "od_premium", "tp_premium", "cpa_premium",
@@ -70,7 +71,8 @@ export function validateN8nPolicyIntakeResponse(
   });
 
   for (const key of ["policy_number", "insurer_name", "insured_name", "policy_start_date",
-    "policy_end_date", "vehicle_engine_number", "vehicle_chassis_number", "od_premium", "tp_premium"]) {
+    "policy_end_date", "third_party_start_date", "third_party_end_date",
+    "vehicle_engine_number", "vehicle_chassis_number", "od_premium", "tp_premium"]) {
     if (!seen.has(key)) throw new Error("n8n_required_field_missing");
   }
   const fieldValue = (key: string) => fields.find((field) => field.key === key)?.value ?? "";
@@ -81,7 +83,13 @@ export function validateN8nPolicyIntakeResponse(
   };
   const startDate = fieldValue("policy_start_date");
   const endDate = fieldValue("policy_end_date");
-  if (!isoDate(startDate) || !isoDate(endDate) || endDate < startDate) {
+  const tpStartDate = fieldValue("third_party_start_date");
+  const tpEndDate = fieldValue("third_party_end_date");
+  if (!isoDate(startDate) || !isoDate(endDate) || endDate < startDate
+      || !isoDate(tpStartDate) || !isoDate(tpEndDate) || tpEndDate < tpStartDate
+      || tpStartDate !== startDate || tpEndDate < endDate) {
+    // ICICI 3005 bundled coverage starts together; TP must not expire
+    // before OD, but its own printed date must be extracted separately.
     throw new Error("n8n_coverage_dates_invalid");
   }
   const policyNumber = fieldValue("policy_number");
