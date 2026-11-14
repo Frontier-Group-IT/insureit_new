@@ -145,6 +145,7 @@ export default function NativePolicyOnboarding(){
   const [commercialModal,setCommercialModal]=useState<'payin'|'payout'|null>(null);
   const [remarkOpen,setRemarkOpen]=useState(false);
   const [remarkText,setRemarkText]=useState('');
+  const [remarkError,setRemarkError]=useState('');
   const [payinSummaryExpanded,setPayinSummaryExpanded]=useState(false);
   const [payoutBasisExpanded,setPayoutBasisExpanded]=useState(false);
   const load=useCallback(async()=>{
@@ -201,6 +202,34 @@ export default function NativePolicyOnboarding(){
     }catch(e){setError(e instanceof Error?e.message:'Draft could not be saved.');return false;}
     finally{setSaving(false);}
   };
+
+  // The intake contract stores remarks as one string. Append instead of replacing
+  // existing remarks; save the complete revision-checked draft before closing.
+  async function addRemark(){
+    const note=remarkText.trim();
+    if(!note||!draft||!data||saving||booking)return;
+    setRemarkError('');setSaving(true);
+    const previous=(isMotor?draft.remarks:productValues.remarks||'').trim();
+    const remarks=previous?previous+'\n\n'+note:note;
+    const updated:NativePolicyDraft=isMotor
+      ?{...draft,remarks}
+      :{...draft,productDrafts:{
+        ...draft.productDrafts,
+        [productType]:{...draft.productDrafts?.[productType],remarks},
+      }};
+    try{
+      const result=await saveNativePolicyOnboarding(id,data.revision,updated);
+      setDraft(updated);
+      setData(current=>current?{...current,revision:result.revision}:current);
+      setDirty(false);
+      setVerifiedApprovalId(null);
+      setApprovalRequestId(null);
+      setRemarkOpen(false);
+      setRemarkText('');
+    }catch(e){
+      setRemarkError(e instanceof Error?e.message:'Remark could not be saved.');
+    }finally{setSaving(false);}
+  }
 
   async function completeBooking(resolution?:Record<string,unknown>){
     if(!draft||!data||booking||saving)return;
@@ -507,16 +536,19 @@ export default function NativePolicyOnboarding(){
       {!isMotor?productSection('04',productType==='Non Motor'?'Cover, premium & validity':'Premium & payment',productType==='Non Motor'?otherPremium:lifePremium):null}
       {!isMotor&&productType==='Non Motor'?productSection('05','Additional policy details',productExtras.filter(item=>item.key!=='remarks')):null}
       <View style={styles.section}>
-        <View style={styles.sectionHead}><Ionicons name="chatbox-ellipses-outline" size={17} color="#254C83"/><Text style={styles.sectionTitle}>Remarks</Text></View>
-        <View style={styles.remarkBody}>
+        <View style={styles.sectionHead}>
+          <Ionicons name="chatbox-ellipses-outline" size={17} color="#254C83"/>
+          <Text style={[styles.sectionTitle,styles.remarkHeading]}>Remarks</Text>
           <Pressable accessibilityRole="button" accessibilityLabel="Add Remark" style={styles.remarkButton}
-            onPress={()=>{setRemarkText(isMotor?draft.remarks:productValues.remarks||'');setRemarkOpen(true);}}>
-            <Ionicons name="add-circle-outline" size={17} color="#254C83"/>
+            onPress={()=>{setRemarkText('');setRemarkError('');setRemarkOpen(true);}}>
+            <Ionicons name="add-circle-outline" size={15} color="#254C83"/>
             <Text style={styles.remarkButtonText}>Add Remark</Text>
           </Pressable>
-          {(isMotor?draft.remarks:productValues.remarks)?.trim()?
-            <Text style={styles.remarkPreview} numberOfLines={3}>{isMotor?draft.remarks:productValues.remarks}</Text>:null}
         </View>
+        {(isMotor?draft.remarks:productValues.remarks||'').trim()?<View style={styles.remarkBody}>
+          {(isMotor?draft.remarks:productValues.remarks||'').split(/\n\s*\n/).filter(item=>item.trim()).map((item,index)=>
+            <View key={index} style={styles.remarkEntry}><Text style={styles.remarkPreview}>{item.trim()}</Text></View>)}
+        </View>:null}
       </View>
       <View style={styles.section}>
         <View style={styles.sectionHead}>
@@ -592,6 +624,34 @@ export default function NativePolicyOnboarding(){
 
     </>:null}
 
+    <Modal transparent visible={remarkOpen} animationType="fade"
+      onRequestClose={()=>{if(!saving)setRemarkOpen(false);}}>
+      <View style={styles.remarkOverlay}>
+        <View style={styles.remarkSheet}>
+          <View style={styles.remarkHeader}>
+            <View style={styles.remarkTitle}>
+              <Ionicons name="chatbox-ellipses-outline" size={18} color="#254C83"/>
+              <Text style={styles.sectionTitle}>Add Remark</Text>
+            </View>
+            <Pressable accessibilityRole="button" accessibilityLabel="Close remark" disabled={saving}
+              onPress={()=>setRemarkOpen(false)}><Ionicons name="close" size={21} color="#4C5970"/></Pressable>
+          </View>
+          <TextInput accessibilityLabel="New remark" multiline autoFocus
+            textAlignVertical="top" value={remarkText} onChangeText={setRemarkText}
+            maxLength={2000} placeholder="Write a remark" placeholderTextColor="#9AA7B9"
+            style={styles.remarkInput}/>
+          {remarkError?<Text style={styles.errorText}>{remarkError}</Text>:null}
+          <View style={styles.remarkActions}>
+            <Pressable accessibilityRole="button" disabled={saving} style={styles.remarkCancel}
+              onPress={()=>setRemarkOpen(false)}><Text style={styles.remarkCancelText}>Cancel</Text></Pressable>
+            <Pressable accessibilityRole="button" accessibilityLabel="Save Remark"
+              disabled={saving||booking||!remarkText.trim()}
+              style={[styles.remarkConfirm,(saving||booking||!remarkText.trim())&&styles.disabled]}
+              onPress={()=>void addRemark()}><Text style={styles.primaryText}>{saving?'Saving…':'Save Remark'}</Text></Pressable>
+          </View>
+        </View>
+      </View>
+    </Modal>
     <Modal transparent visible={Boolean(commercialModal)&&isMotor&&Boolean(data?.commercialAccess)}
       animationType="slide" onRequestClose={()=>setCommercialModal(null)}>
       <View style={styles.scrim}>
@@ -763,7 +823,7 @@ const styles=StyleSheet.create({
   readonlyInput:{backgroundColor:'#F3F6FA',color:'#738196'},
   commercialSave:{backgroundColor:'#17365D',borderRadius:10,paddingHorizontal:17,paddingVertical:12,alignItems:'center'},
   summary:{padding:14,gap:7},summaryStatusRow:{flexDirection:'row',alignItems:'center',justifyContent:'space-between'},summaryStatusValue:{fontSize:8,fontWeight:'700',color:'#A96A00'},summaryCaption:{fontSize:10,fontWeight:'700',color:'#426188'},summaryHeading:{flex:1,gap:3},premiumHeading:{flexDirection:'row',gap:6,alignItems:'center',paddingVertical:7},summaryProgressStack:{alignItems:'center',justifyContent:'center',gap:3},progressStatus:{backgroundColor:'#FFF3D4',borderRadius:10,paddingHorizontal:6,paddingVertical:3},summaryProgress:{width:35,height:35,borderRadius:18,borderWidth:4,borderTopColor:'#17365D',borderRightColor:'#17365D',borderBottomColor:'#DFE7F0',borderLeftColor:'#DFE7F0',alignItems:'center',justifyContent:'center'},commercialToggle:{marginHorizontal:12,marginBottom:9,flexDirection:'row',alignItems:'center',gap:8,padding:11,borderWidth:1,borderColor:'#DDE6F0',borderRadius:10,backgroundColor:'#F8FAFD'},commercialToggleTitle:{flex:1,color:'#26436B',fontSize:11,fontWeight:'700'},commercialBody:{paddingHorizontal:12},total:{fontSize:20,color:'#1B385B',fontWeight:'800'},notice:{fontSize:10,lineHeight:16,color:'#65758E',paddingHorizontal:14,paddingBottom:13},
-  remarkBody:{padding:12,gap:8},remarkButton:{minHeight:38,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:7,borderWidth:1,borderColor:'#CDD9EB',borderRadius:9,backgroundColor:'#F8FAFD'},remarkButtonText:{fontSize:11,fontWeight:'700',color:'#254C83'},remarkPreview:{fontSize:11,lineHeight:17,color:'#53657D'},remarkOverlay:{flex:1,alignItems:'center',justifyContent:'center',padding:20,backgroundColor:'rgba(5,18,40,.55)'},remarkSheet:{width:'100%',maxWidth:520,borderRadius:16,backgroundColor:'#FFFFFF',padding:16,gap:12},remarkHeader:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',paddingBottom:10,borderBottomWidth:1,borderColor:'#E6EDF5'},remarkTitle:{flexDirection:'row',alignItems:'center',gap:8},remarkInput:{borderWidth:1,borderColor:'#9BB2D7',borderRadius:9,minHeight:128,padding:11,fontSize:12,color:'#17365D'},remarkActions:{flexDirection:'row',gap:9,justifyContent:'flex-end'},remarkCancel:{paddingHorizontal:14,paddingVertical:11,borderWidth:1,borderColor:'#CDD9EB',borderRadius:8},remarkCancelText:{fontSize:11,fontWeight:'700',color:'#254C83'},remarkConfirm:{paddingHorizontal:14,paddingVertical:11,borderRadius:8,backgroundColor:'#17365D'},remarkNote:{fontSize:10,color:'#75859B'},
+  remarkHeading:{flex:1,minWidth:0},remarkBody:{padding:12,gap:8},remarkEntry:{borderWidth:1,borderColor:'#E0E8F2',borderRadius:8,padding:10,backgroundColor:'#FBFCFE'},remarkButton:{minHeight:30,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:5,paddingHorizontal:9,borderWidth:1,borderColor:'#CDD9EB',borderRadius:8,backgroundColor:'#F8FAFD'},remarkButtonText:{fontSize:10,fontWeight:'700',color:'#254C83'},remarkPreview:{fontSize:11,lineHeight:17,color:'#53657D'},remarkOverlay:{flex:1,alignItems:'center',justifyContent:'center',padding:20,backgroundColor:'rgba(5,18,40,.55)'},remarkSheet:{width:'100%',maxWidth:520,borderRadius:16,backgroundColor:'#FFFFFF',padding:16,gap:12},remarkHeader:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',paddingBottom:10,borderBottomWidth:1,borderColor:'#E6EDF5'},remarkTitle:{flexDirection:'row',alignItems:'center',gap:8},remarkInput:{borderWidth:1,borderColor:'#9BB2D7',borderRadius:9,minHeight:128,padding:11,fontSize:12,color:'#17365D'},remarkActions:{flexDirection:'row',gap:9,justifyContent:'flex-end'},remarkCancel:{paddingHorizontal:14,paddingVertical:11,borderWidth:1,borderColor:'#CDD9EB',borderRadius:8},remarkCancelText:{fontSize:11,fontWeight:'700',color:'#254C83'},remarkConfirm:{paddingHorizontal:14,paddingVertical:11,borderRadius:8,backgroundColor:'#17365D'},remarkNote:{fontSize:10,color:'#75859B'},
   actions:{flexDirection:'row',gap:8,marginBottom:11,alignItems:'stretch'},secondary:{flex:1,borderWidth:1,borderColor:'#CDD9EB',borderRadius:10,paddingHorizontal:7,paddingVertical:12,minHeight:45,alignItems:'center',justifyContent:'center'},secondaryText:{fontWeight:'700',fontSize:11,color:'#25466E'},
   primary:{flex:1,backgroundColor:'#243F9E',borderRadius:10,paddingHorizontal:7,paddingVertical:12,minHeight:45,flexDirection:'row',gap:5,justifyContent:'center',alignItems:'center'},primaryText:{fontSize:11,fontWeight:'800',color:'white'},disabled:{opacity:.48},
   bookButton:{marginBottom:11,flexDirection:'row',justifyContent:'center',gap:8},
