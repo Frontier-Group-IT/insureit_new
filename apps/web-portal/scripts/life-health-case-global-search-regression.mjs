@@ -11,6 +11,7 @@ assert.match(register,/across all statuses/,"Search scope should be shown to use
 assert.match(register, /getInsurerLogo\(row\.insurerName\)/, "Case register must reuse master insurer-logo resolution");
 assert.match(register, /alt=\{row\.insurerName \+ " logo"\}/, "Insurer logo must remain accessible by name");
 assert.match(register, /\{row\.productName\}/, "Product name must remain below insurer logo");
+assert.match(register, /className="max-h-6 max-w-\[52px\] object-contain"/, "Case register logos must use compact dimensions matching the insurer reference");
 assert.match(register, /className="whitespace-nowrap px-3 py-3"/, "Status cell must not wrap");
 assert.match(register, /inline-flex items-center whitespace-nowrap rounded-full/, "Status badge must stay on one line");
 assert.match(register, /className="whitespace-nowrap px-4 py-3 text-right"/, "Action cell must not wrap");

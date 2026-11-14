@@ -123,7 +123,7 @@ export function LifeHealthCaseRegister({
                   <p className="mt-0.5 text-[8px] text-[#667085]">{row.customerPhone || "—"}</p>
                 </td>
                 <td className="px-3 py-3">
-                  <div title={row.insurerName} className="flex h-7 items-center" aria-label={"Insurer: " + row.insurerName}>{getInsurerLogo(row.insurerName) ? <img src={getInsurerLogo(row.insurerName)!} alt={row.insurerName + " logo"} className="max-h-7 max-w-[110px] object-contain" /> : <ShieldCheck aria-hidden="true" className="h-5 w-5 text-[#315B9A]" />}</div>
+                  <div title={row.insurerName} className="flex h-6 items-center" aria-label={"Insurer: " + row.insurerName}>{getInsurerLogo(row.insurerName) ? <img src={getInsurerLogo(row.insurerName)!} alt={row.insurerName + " logo"} className="max-h-6 max-w-[52px] object-contain" /> : <ShieldCheck aria-hidden="true" className="h-5 w-5 text-[#315B9A]" />}</div>
                   <p className="mt-0.5 max-w-[210px] truncate text-[8px] text-[#667085]">{row.productName}</p>
                 </td>
                 <td className="px-3 py-3 font-medium">{row.proposalNumber}</td>
