@@ -64,4 +64,12 @@ assert.doesNotMatch(screen,/displayed\|\|'Select '/, 'Do not show synthetic sele
 assert.match(screen,/hidePlaceholder/, 'Onboarding dates must keep the existing opt-out compatibility prop.');
 assert.doesNotMatch(date,/\bplaceholder\s*=/, 'Native date field must not display placeholder hints.');
 assert.match(date,/hidePlaceholder\?:boolean/, 'Date placeholder removal must be opt-in to avoid other screens.');
+// Image policy copies must not be handed to iOS Linking with long signed Storage URLs.
+assert.match(screen,/new URL\(url\)\.pathname/, 'Detect the original document type without parsing signed query tokens.');
+assert.match(screen,/policyCopyImageUrl/, 'Open signed image policy copies in a native viewer.');
+assert.match(screen,/<Image source=\{\{uri:policyCopyImageUrl\}\}/, 'Preview images without launching external URL handlers.');
+assert.match(screen,/await Linking\.openURL\(url\)/, 'Keep existing system handling for PDF and other non-image documents.');
+assert.match(screen,/setError\('Unable to open policy copy\. Please try again\.'\)/, 'Sanitize signed URL opening errors.');
+assert.doesNotMatch(screen,/setError\(e instanceof Error\?e\.message:'Could not open policy copy\.'\)/, 'Never expose a signed document URL or token through raw native errors.');
+assert.match(screen,/onError=\{\(\)=>setPolicyCopyImageFailed\(true\)\}/, 'Provide non-sensitive image preview errors.');
 console.log('Product-type layouts, Motor Operations compact layout, separated financial popups, empty input placeholders and Motor-only booking guard verified.');
