@@ -207,8 +207,9 @@ assert.ok(detail.includes("router.push({ pathname: '/policy-intakes/onboarding'"
 // Motion must stay presentation-only and preserve search, status, pagination, and accessibility.
 assert.match(app, /AccessibilityInfo\.isReduceMotionEnabled\(\)/, 'Respect OS reduced-motion preferences');
 assert.match(app, /addEventListener\('reduceMotionChanged', setReduceMotion\)/, 'React to OS reduced-motion changes');
-assert.match(app, /<Animated\.View style=\{\[styles\.searchBand, \{ opacity: searchEntrance, transform: \[\{ translateY: searchRise \}\] \}\]\}>/, 'Search band slides from bottom to top on screen focus');
-assert.match(app, /searchRise\.setValue\(20\)/, 'Search begins below its final position');
+assert.match(app, /<View style=\{styles\.searchBand\}>/, 'Search band stays fixed without entrance motion');
+assert.doesNotMatch(app, /searchEntrance|searchRise/, 'Search slide and fade animation is fully removed');
+assert.match(app, /<View style=\{\[styles\.searchBox, searchFocused && styles\.searchBoxFocused\]\}>/, 'Keep the search focus highlight');
 assert.match(app, /onFocus=\{\(\) => setSearchFocused\(true\)\}/, 'Search focus shows a soft highlight');
 assert.match(app, /<MotionFilterChip key=\{item\.key\} active=\{active\} reduceMotion=\{reduceMotion\}/, 'Every status chip has smooth selection transition');
 assert.match(app, /<MotionCard key=\{row\.id\} index=\{index\} reduceMotion=\{reduceMotion\}>/, 'Each card has a capped staggered entrance');
