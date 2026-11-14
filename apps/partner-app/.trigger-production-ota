@@ -1,10 +1,11 @@
 Partner production OTA trigger
-release=partner-policy-onboarding-remark-popup-pr-4437
+release=partner-onboarding-fullwidth-registration-rto-book-pr-4443
 source=verified-merged-main
-reason=user-approved-publish-after-onboarding-reference-merge
+reason=user-approved-compact-onboarding-layout-booking-actions
 channel=production
 runtime=0.2.0
 requested=2026-11-14
 no_native_build=true
 no_apk=true
 no_aab=true
+backend=no_changes
