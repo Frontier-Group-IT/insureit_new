@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { readDailyHistoryPages } from "@/lib/reports/daily-history-source-pages";
 
 export type SelfActivity = {
   id: string; category: string; activity: string; reference: string;
@@ -13,11 +14,8 @@ type Intake = { id:string; created_at:string; intake_number:string|null; finaliz
 type IntakeFinal = { id:string; finalized_at:string|null; intake_number:string|null };
 type Case = { id:string; created_at:string; case_number:string|null; converted_at:string|null };
 type CaseFinal = { id:string; converted_at:string|null; case_number:string|null };
-type PageResult<T> = {data:T[]|null;error:{message:string}|null};
-const BATCH = 500;
-const MAX_ROWS_PER_SOURCE = 12000;
 const MAX_PAGE = 400;
-const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+const ISO_DATE = /^\\d{4}-\\d{2}-\\d{2}$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export function selfDateWindow(day?: string) {
@@ -28,33 +26,6 @@ export function selfDateWindow(day?: string) {
   const val = (part:string) => p.find(x => x.type === part)?.value ?? "";
   if (`${val("year")}-${val("month")}-${val("day")}` !== day) return null;
   return {from:start.toISOString(),to:new Date(start.getTime()+86_400_000).toISOString()};
-}
-
-type ActivitySource = "Audit logs" | "Policies" | "Intake submissions" |
-  "Intake finalizations" | "Case creation" | "Case conversions";
-export type SourceRead<T> = {rows:T[];partial:boolean;failed:boolean};
-
-/** A source failure must never hide successfully loaded activity from other sources. */
-async function pageAll<T>(source:ActivitySource,load:(from:number,to:number)=>PromiseLike<PageResult<T>>):Promise<SourceRead<T>> {
-  const rows:T[] = [];
-  try {
-    for(let offset=0;offset<MAX_ROWS_PER_SOURCE;offset+=BATCH) {
-      const {data,error} = await load(offset, offset+BATCH-1);
-      if(error) {
-        // Log the source and a structured, non-sensitive PostgREST error code only.
-        // Never include query data, user IDs or returned record content in logs.
-        const code = (error as {code?:string}).code || "request_error";
-        console.error("[daily-report] history source unavailable", {source,code});
-        return {rows,partial:true,failed:true};
-      }
-      rows.push(...(data??[]));
-      if((data??[]).length < BATCH) return {rows,partial:false,failed:false};
-    }
-    return {rows,partial:true,failed:false};
-  } catch {
-    console.error("[daily-report] history source request failed", {source});
-    return {rows,partial:true,failed:true};
-  }
 }
 
 function actionCategory(action:string, table:string|null) {
@@ -150,8 +121,8 @@ export async function loadSelfActivityHistory(
     return q.returns<CaseFinal[]>();
   };
   const [audits,policies,intakes,intakeFinals,cases,caseFinals] = await Promise.all([
-    pageAll("Audit logs",loadAudit),pageAll("Policies",loadPolicy),pageAll("Intake submissions",loadIntake),
-    pageAll("Intake finalizations",loadIntakeFinal),pageAll("Case creation",loadCase),pageAll("Case conversions",loadCaseFinal),
+    readDailyHistoryPages("Audit logs",loadAudit),readDailyHistoryPages("Policies",loadPolicy),readDailyHistoryPages("Intake submissions",loadIntake),
+    readDailyHistoryPages("Intake finalizations",loadIntakeFinal),readDailyHistoryPages("Case creation",loadCase),readDailyHistoryPages("Case conversions",loadCaseFinal),
   ]);
   const sources = [
     {name:"Audit logs",result:audits},
