@@ -206,7 +206,7 @@ requireText(nativeOnboarding, 'placeholder={hint}', 'Current requirement restore
 requireText(nativeOnboarding, "'Pending after RTO registration'", 'Unregistered registration number must show a pending hint.');
 const dateField = fs.readFileSync(path.join(root, 'components/policy-intakes/partner-policy-date-field.tsx'), 'utf8');
 requireText(dateField, 'fullWidth=false', 'Source date must fit its compact source cell.');
-requireText(dateField, "{value?displayIndianDate(value):''}", 'Empty date fields must be blank.');
+requireText(dateField, "{value?displayIndianDate(value):hidePlaceholder?'':'DD/MM/YYYY'}", 'Date hints must reappear unless expressly suppressed.');
 requireText(dateField, 'placeholder={hidePlaceholder?', 'The calendar input supports a DD/MM/YYYY placeholder.');
 
 requireText(nativeOnboarding, 'useState(false)', 'Commercial section initializes collapsed.');
