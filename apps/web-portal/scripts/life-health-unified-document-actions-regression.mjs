@@ -4,7 +4,7 @@ const detail=readFileSync("components/life-health-case-detail.tsx","utf8");
 const modal=readFileSync("components/document-delete-confirmation.tsx","utf8");
 const nonMotor=readFileSync("components/non-motor-document-picker.tsx","utf8");
 assert.match(form,/DocumentDeleteConfirmation/);
-assert.match(form,/Replace \\$\\{file.name\\}/);
+assert.ok(form.includes('Replace ${file.name}'), 'Life/Health new policy uses uploaded name for Replace label');
 assert.match(form,/Trash2/);
 assert.match(detail,/onDelete=\{deleteDocument\}/);
 assert.match(detail,/Delete document\?/);
