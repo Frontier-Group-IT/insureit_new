@@ -7,7 +7,7 @@ import { PartnerScreen } from '@/components/partner-screen';
 import { createPartnerPolicyIntakeBridgeUrl } from '@/lib/policy-intakes';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { PartnerPolicyDateField } from '@/components/policy-intakes/partner-policy-date-field';
-import { prepareNativePolicyOnboarding, saveNativePolicyOnboarding, bookNativePolicyOnboarding, requestNativePolicyDateApproval, verifyNativePolicyDateApproval, lookupNativePolicyRc, searchNativeNonMotorCustomers, type NativeNonMotorCustomer, type NativePolicyDraft, type NativeOnboardingData, type NativeProductType } from '@/lib/policy-onboarding';
+import { prepareNativePolicyOnboarding, saveNativePolicyOnboarding, bookNativePolicyOnboarding, createNativeLifeHealthCase, requestNativePolicyDateApproval, verifyNativePolicyDateApproval, lookupNativePolicyRc, searchNativeNonMotorCustomers, type NativeNonMotorCustomer, type NativePolicyDraft, type NativeOnboardingData, type NativeProductType } from '@/lib/policy-onboarding';
 
 type FieldKey = keyof NativePolicyDraft;
 type Field = { key:FieldKey; label:string; required?:boolean; options?:string[] };
@@ -146,6 +146,7 @@ export default function NativePolicyOnboarding(){
   const [loading,setLoading]=useState(true);
   const [saving,setSaving]=useState(false);
   const [booking,setBooking]=useState(false);
+  const [creatingLifeHealth,setCreatingLifeHealth]=useState(false);
   const [lookingUpRc,setLookingUpRc]=useState(false);
   const [dateApprovalOpen,setDateApprovalOpen]=useState(false);
   const [approvalBusy,setApprovalBusy]=useState(false);
@@ -276,7 +277,7 @@ export default function NativePolicyOnboarding(){
   }
 
   const cancelOnboarding=()=>{
-    if(saving||booking)return;
+    if(saving||booking||creatingLifeHealth)return;
     if(dirty){
       Alert.alert('Discard unsaved changes?', 'Your latest changes have not been saved.',[
         {text:'Keep editing',style:'cancel'},
@@ -284,7 +285,27 @@ export default function NativePolicyOnboarding(){
       ]);
     }else router.back();
   };
-  const createActivePolicy=async()=>{
+  const createLifeHealth=async()=>{
+    if(!draft||!data||saving||booking||creatingLifeHealth)return;
+    if(productType!=='Life'&&productType!=='Health')return;
+    setCreatingLifeHealth(true);setError('');
+    try{
+      let revision=data.revision;
+      if(dirty){
+        const saved=await saveNativePolicyOnboarding(id,revision,draft);
+        revision=saved.revision;
+        setData(current=>current?{...current,revision}:current);
+        setDirty(false);
+      }
+      const result=await createNativeLifeHealthCase(id,revision);
+      Alert.alert('Case created',`${productType} case ${result.case.number} created. Policy issuance remains pending in Operations.`,[
+        {text:'Return to Intake',onPress:()=>router.back()},
+      ]);
+    }catch(cause){
+      setError(cause instanceof Error?cause.message:'Could not create the Life/Health case. Check the case register before retrying.');
+    }finally{setCreatingLifeHealth(false);}
+  };
+    const createActivePolicy=async()=>{
     if(isMotor){await completeBooking();return;}
     if(!draft||!data||saving||booking)return;
     // Non-Motor/Life/Health final booking is performed by the authorized Operations flow.
@@ -806,11 +827,11 @@ export default function NativePolicyOnboarding(){
           </Pressable>
         </View>:!isMotor&&data?.commercialAccess?<View style={styles.referenceCommercial}>
           <View style={styles.referenceCommercialHeader}><Ionicons name="hand-left-outline" size={16} color="#315B9A"/><Text style={styles.summaryCaption}>PAYIN–PAYOUT</Text></View>
-          <View style={styles.referenceCommercialRow}>
+          <View style={[styles.referenceCommercialRow,(productType==='Life'||productType==='Health')&&styles.referenceLifeHealthPayinRow]}>
             <View style={styles.referenceCommercialContent}><Text style={styles.referenceLabel}>INSURER PAY-IN</Text><Text style={styles.referenceValue}>{payinEntered?rupees(summaryPayin):'Not entered'}</Text></View>
             <Pressable accessibilityRole="button" accessibilityLabel="Insurer Pay-In popup" onPress={()=>setCommercialModal('payin')} style={styles.referenceAdd}><Text style={styles.referenceAddText}>{payinEntered?'Edit':'Add'}</Text></Pressable>
           </View>
-          <View style={styles.referenceCommercialRow}>
+          <View style={[styles.referenceCommercialRow,(productType==='Life'||productType==='Health')&&styles.referenceLifeHealthPayoutRow]}>
             <View style={styles.referenceCommercialContent}><Text style={styles.referenceLabel}>PARTNER PAYOUT</Text><Text style={styles.referenceValue}>{payoutEntered?rupees(summaryPayout):'Not entered'}</Text></View>
             <Pressable accessibilityRole="button" accessibilityLabel="Partner Payout popup" onPress={()=>setCommercialModal('payout')} style={styles.referenceAdd}><Text style={styles.referenceAddText}>{payoutEntered?'Edit':'Add'}</Text></Pressable>
           </View>
@@ -819,15 +840,23 @@ export default function NativePolicyOnboarding(){
       </View>
       <View style={styles.actions}>
         <Pressable accessibilityRole="button" accessibilityLabel="Cancel Policy Onboarding"
-          disabled={saving||booking} style={styles.secondary} onPress={cancelOnboarding}>
+          disabled={saving||booking||creatingLifeHealth} style={styles.secondary} onPress={cancelOnboarding}>
           <Text style={styles.secondaryText}>Cancel</Text>
         </Pressable>
-        <Pressable accessibilityRole="button" accessibilityLabel="Create Active Policy"
-          disabled={booking||saving||!data} style={[styles.primary,(booking||saving||!data)&&styles.disabled]}
-          onPress={()=>void createActivePolicy()}>
-          {booking?<ActivityIndicator size="small" color="white"/>:<Ionicons name="checkmark-circle-outline" size={16} color="white"/>}
-          <Text style={styles.primaryText}>{booking?(isMotor?'Checking & booking…':'Opening Operations…'):'Create Active Policy'}</Text>
-        </Pressable>
+        {(productType==='Life'||productType==='Health')?
+          <Pressable accessibilityRole="button" accessibilityLabel="Create Policy"
+            disabled={booking||saving||creatingLifeHealth||!data}
+            style={[styles.primary,(booking||saving||creatingLifeHealth||!data)&&styles.disabled]}
+            onPress={()=>void createLifeHealth()}>
+            {creatingLifeHealth?<ActivityIndicator size="small" color="white"/>:<Ionicons name="checkmark-circle-outline" size={16} color="white"/>}
+            <Text style={styles.primaryText}>{creatingLifeHealth?'Creating case…':'Create Policy'}</Text>
+          </Pressable>:
+          <Pressable accessibilityRole="button" accessibilityLabel="Create Active Policy"
+            disabled={booking||saving||!data} style={[styles.primary,(booking||saving||!data)&&styles.disabled]}
+            onPress={()=>void createActivePolicy()}>
+            {booking?<ActivityIndicator size="small" color="white"/>:<Ionicons name="checkmark-circle-outline" size={16} color="white"/>}
+            <Text style={styles.primaryText}>{booking?(isMotor?'Checking & booking…':'Opening Operations…'):'Create Active Policy'}</Text>
+          </Pressable>}
       </View>
 
 
@@ -1070,7 +1099,7 @@ const styles=StyleSheet.create({
   input:{minHeight:42,borderWidth:1,borderColor:'#D8E1EC',backgroundColor:'#FFFFFF',borderRadius:9,paddingHorizontal:11,fontSize:12,color:'#183653'},
   inputRow:{minHeight:42,borderWidth:1,borderColor:'#D8E1EC',borderRadius:9,paddingHorizontal:11,flexDirection:'row',alignItems:'center',justifyContent:'space-between'},
   value:{color:'#183653',fontSize:12,flex:1},placeholder:{color:'#97A5B7'},
-  premiumIcon:{width:27,height:27,borderRadius:8,backgroundColor:'#EDF3FC',alignItems:'center',justifyContent:'center'},referenceCommercial:{marginHorizontal:12,marginBottom:12,borderWidth:1,borderColor:'#D7E3F3',borderRadius:11,overflow:'hidden',backgroundColor:'#F8FAFD'},referenceCommercialHeader:{flexDirection:'row',alignItems:'center',gap:9,padding:11,borderBottomWidth:1,borderColor:'#E0E7F0'},referenceCommercialRow:{minHeight:66,paddingHorizontal:12,paddingVertical:10,flexDirection:'row',alignItems:'center',justifyContent:'space-between'},referenceCommercialContent:{gap:5,flex:1},referenceLabel:{fontSize:9,fontWeight:'700',color:'#74829A'},referenceValue:{fontSize:12,fontWeight:'700',color:'#17365D'},referenceAdd:{minHeight:34,minWidth:45,alignItems:'center',justifyContent:'center'},referenceAddText:{fontSize:11,fontWeight:'700',color:'#315B9A'},referenceRetention:{paddingHorizontal:12,paddingVertical:11,borderTopWidth:1,borderColor:'#DCE5F1',flexDirection:'row',alignItems:'center',justifyContent:'space-between'},commercialNote:{fontSize:10,lineHeight:17,color:'#71819A',padding:8,width:'100%'},
+  premiumIcon:{width:27,height:27,borderRadius:8,backgroundColor:'#EDF3FC',alignItems:'center',justifyContent:'center'},referenceCommercial:{marginHorizontal:12,marginBottom:12,borderWidth:1,borderColor:'#D7E3F3',borderRadius:11,overflow:'hidden',backgroundColor:'#F8FAFD'},referenceCommercialHeader:{flexDirection:'row',alignItems:'center',gap:9,padding:11,borderBottomWidth:1,borderColor:'#E0E7F0'},referenceCommercialRow:{minHeight:66,paddingHorizontal:12,paddingVertical:10,flexDirection:'row',alignItems:'center',justifyContent:'space-between'},referenceLifeHealthPayinRow:{borderWidth:1,borderColor:'#DCE6F1',borderRadius:11,backgroundColor:'#FFFFFF',marginHorizontal:9,marginTop:9},referenceLifeHealthPayoutRow:{borderWidth:1,borderColor:'#E3DEF1',borderRadius:11,backgroundColor:'#FFFFFF',marginHorizontal:9,marginTop:9,marginBottom:9},referenceCommercialContent:{gap:5,flex:1},referenceLabel:{fontSize:9,fontWeight:'700',color:'#74829A'},referenceValue:{fontSize:12,fontWeight:'700',color:'#17365D'},referenceAdd:{minHeight:34,minWidth:45,alignItems:'center',justifyContent:'center'},referenceAddText:{fontSize:11,fontWeight:'700',color:'#315B9A'},referenceRetention:{paddingHorizontal:12,paddingVertical:11,borderTopWidth:1,borderColor:'#DCE5F1',flexDirection:'row',alignItems:'center',justifyContent:'space-between'},commercialNote:{fontSize:10,lineHeight:17,color:'#71819A',padding:8,width:'100%'},
   referenceCommercialTitle:{paddingHorizontal:12,paddingTop:11,paddingBottom:7,gap:3},referenceHelp:{fontSize:9,color:'#98A2B3'},
   referenceCard:{minHeight:59,marginHorizontal:9,marginBottom:9,paddingHorizontal:9,paddingVertical:9,flexDirection:'row',alignItems:'center',gap:8,borderWidth:1,borderRadius:11},
   referencePayinCard:{borderColor:'#DCE6F1',backgroundColor:'#F8FBFE'},referencePayoutCard:{borderColor:'#E3DEF1',backgroundColor:'#FBFAFE'},

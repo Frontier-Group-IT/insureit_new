@@ -143,8 +143,17 @@ assert.match(screen,/productType!=='Non Motor'\?<View style=\{styles.section\}>/
 assert.match(screen,/accessibilityLabel="Cancel Policy Onboarding"/, 'Cancel button is available.');
 assert.match(screen,/Discard unsaved changes\?/, 'Cancelling protects unsaved data.');
 assert.match(screen,/accessibilityLabel="Create Active Policy"/, 'Create Active Policy replaces booking and draft actions.');
+assert.match(screen,/accessibilityLabel="Create Policy"/, 'Life and Health use Create Policy.');
+assert.match(screen,/productType==='Life'\|\|productType==='Health'/, 'Life and Health use identical action and border rules.');
+assert.match(screen,/createNativeLifeHealthCase\(id,revision\)/, 'Life and Health perform authorized case creation.');
+assert.match(api,/body.action==="create_life_health"/, 'Native creation is limited to a separate authorized endpoint.');
+assert.match(api,/\["Insurance company",values.insurerId\]/, 'Life and Health selected insurer comes from product-specific draft.');
+assert.match(screen,/styles\.referenceLifeHealthPayinRow/, 'Life and Health Pay-in has an outlined card.');
+assert.match(screen,/styles\.referenceLifeHealthPayoutRow/, 'Life and Health Payout has an outlined card.');
+assert.match(screen,/referenceLifeHealthPayinRow:\{borderWidth:1,borderColor:'#DCE6F1'/, 'Pay-in border stays light blue.');
+assert.match(screen,/referenceLifeHealthPayoutRow:\{borderWidth:1,borderColor:'#E3DEF1'/, 'Payout border stays light violet.');
 assert.match(screen,/if\(isMotor\)\{await completeBooking\(\);return;\}/, 'Motor retains authorized native booking.');
-assert.match(screen,/createPartnerPolicyIntakeBridgeUrl\(id,false,null\)/, 'Non Motor, Life and Health use the secure Operations flow.');
+assert.match(screen,/createPartnerPolicyIntakeBridgeUrl\(id,false,null\)/, 'Non Motor retains secure Operations handoff for policy issuance.');
 assert.match(screen,/Linking.openURL\(url\)/, 'Handoff opens the existing website booking flow.');
 assert.doesNotMatch(screen,/pendingBusinessLine/, 'Policy type changes immediately without confirmation state.');
 assert.match(screen,/if\(picker.key==='businessLine'\)/, 'Policy type dropdown retains direct selection handling.');
