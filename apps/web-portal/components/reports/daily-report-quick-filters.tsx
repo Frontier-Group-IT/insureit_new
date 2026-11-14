@@ -39,8 +39,8 @@ export function DailyReportQuickFilters({mode,date,employeeSearch}: Props) {
 
   if (mode === "directory") {
     return (
-      <label className="block w-full max-w-sm space-y-1">
-        <span className="block text-[9px] font-bold uppercase tracking-wide text-[#60718A]">Employee Search</span>
+      <label className="block w-full">
+        <span className="sr-only">Employee Search</span>
         <input type="search" value={search} onChange={e=>{didEditSearch.current=true;setSearch(e.target.value)}}
           maxLength={80} placeholder="Employee name or code" className={inputClass}/>
       </label>
