@@ -12,6 +12,18 @@ const editAction = read("app/policies/life-health-case-edit-actions.ts");
 
 assert.match(create, /<LifeHealthRemarksEditor value=\{form\.remarks\}/, "Create Case uses remarks popup");
 assert.doesNotMatch(create, /<textarea value=\{form\.remarks\}/, "No inline remarks textarea in Create Case");
+// Case Details presents all existing document actions inside one section before activity/remarks.
+const docsStart = detail.indexOf('<section aria-label="Documents"');
+const docsEnd = detail.indexOf('</section>', docsStart);
+const activityStart = detail.indexOf('aria-label="Activity Status and Remarks"');
+assert.ok(docsStart >= 0 && docsEnd > docsStart && activityStart > docsEnd, "Documents section precedes Activity Status and Remarks");
+const documents = detail.slice(docsStart, docsEnd);
+assert.match(documents, /<h2[^>]*>Documents<\/h2>/, "Documents section has a visible title");
+assert.match(documents, /role="group" aria-label="Case documents"/, "Existing case document action group remains inside Documents");
+for (const type of ["policy_copy", "proposal_form", "benefit_illustration", "premium_receipt", "other_document"]) {
+  assert.ok(documents.includes('type="' + type + '"'), "Documents section keeps " + type + " upload/replace controls");
+}
+assert.ok(detail.indexOf('<section className="flex flex-wrap items-center justify-end', activityStart) > activityStart, "Case action footer remains after Activity Status and Remarks");
 assert.match(detail, /useState<"activity"\|"remarks"\|null>\(null\)/, "Case Details starts with Activity Status and Remarks collapsed");
 assert.match(detail, /role="group" aria-label="Activity Status and Remarks"/, "Case Details retains both activity and remarks controls");
 assert.match(detail, /onClick=\{\(\)=>setInfoTab\(current=>current==="activity"\?null:"activity"\)\}/, "Activity Status toggles open and closed");
