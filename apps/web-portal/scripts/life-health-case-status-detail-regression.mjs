@@ -1,0 +1,31 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+
+const read = path => readFileSync(new URL(path, import.meta.url), "utf8");
+const detail = read("../components/life-health-case-detail.tsx");
+const page = read("../app/policies/life-health-cases/[id]/page.tsx");
+const rejectAction = read("../app/policies/life-health-case-reject-actions.ts");
+const editAction = read("../app/policies/life-health-case-edit-actions.ts");
+
+assert.doesNotMatch(detail, /if\(caseData\.status==="rejected"\)return/, "Rejected cases must not be reduced to a separate message-only page.");
+assert.doesNotMatch(detail, /if\(isIssued\)return/, "Issued cases must retain the same detail layout.");
+assert.match(detail, /isRejected=caseData\.status==="rejected",isClosed=isIssued\|\|isRejected/, "Only closed status should produce read-only case view.");
+assert.match(detail, /headerTone=isRejected[\s\S]*?isIssued[\s\S]*?caseStatusLabel=/, "Rejected, issued and pending header colors must be distinct.");
+assert.match(detail, /<fieldset disabled=\{isClosed\}/, "Closed cases must disable editing of every form field.");
+assert.match(detail, /\{!isClosed\?<Section number="05" title="Mark Policy Issued"/, "Closed cases must not expose the issue form.");
+assert.match(detail, /\{!isClosed\?<section className="flex flex-wrap items-center justify-end/, "Closed cases must not expose Save, Reject or Issue actions.");
+assert.match(detail, /\{isClosed\?<div className="w-full col-span-full">/, "Closed cases must show saved documents without upload/delete actions.");
+assert.match(detail, /href=\{`\/policies\/life-health-case-documents\/\$\{encodeURIComponent\(doc.id\)\}\/view`\}/, "Closed cases must preserve authorized links to view existing documents.");
+assert.match(detail, /disabled=\{isClosed\|\|saving\|\|converting\|\|remarkPending\}/, "Closed cases cannot add new remarks.");
+assert.match(detail, /caseData\.rejectionReason\|\|"No recorded rejection reason available\."/, "Show an actual recorded rejection reason or an explicit missing-value message.");
+assert.match(detail, /<Section number="01" title="Policy source & ownership"/);
+assert.match(detail, /<Section number="02" title="Customer \/ proposer"/);
+assert.match(detail, /<Section number="03" title="Policy product & case details"/);
+assert.match(detail, /<Section number="04" title="Premium & payment"/);
+assert.match(detail, /Activity Status and Remarks/, "Read-only cases retain activity and remarks history.");
+assert.match(detail, /caseStatusLabel=isRejected\?"Rejected":isIssued\?"Issued":"Pending"/, "Closed and pending cases must display the appropriate status label.");
+assert.match(page, /final_policy_id,converted_at,created_at,created_by,converted_by,details/, "Case page reads stored rejection metadata.");
+assert.match(page, /typeof rejection\.reason === "string"/, "Rejection reason must come from saved metadata, not a fabricated label.");
+assert.match(rejectAction, /rejection: \{ reason, rejected_at: now, rejected_by: profile\.id \}/, "Existing rejection provenance remains authoritative.");
+assert.match(editAction, /row\.final_policy_id \|\| row\.status === "rejected"/, "Backend still denies edits to closed cases.");
+console.log("Life/Health case status colors and read-only full-detail regression passed.");

@@ -269,7 +269,7 @@ export default function PolicyIntakesScreen() {
                     <View style={styles.intakeNumberRow}>
                       <Text numberOfLines={1} style={styles.number}>{field(row, 'policy_number') || 'Policy pending'}</Text>
                     </View>
-                    <Text numberOfLines={1} style={styles.customer}>{[row.customer_mobile, field(row, 'insured_name') || field(row, 'customer_name') || field(row, 'name_of_insured') || 'Customer name pending'].filter(Boolean).join(' · ')}</Text>
+                    <Text numberOfLines={1} style={styles.customer}>{[row.customer_mobile, field(row, 'insured_name') || field(row, 'customer_name') || field(row, 'name_of_insured')].filter(Boolean).join(' · ')}</Text>
                     <Text numberOfLines={1} style={styles.metaLine}>{`${row.lead_source_name || 'Lead source unavailable'} (${row.submitted_by_name?.trim() || 'Submitter unavailable'})`}</Text>
                   </View>
                   <View style={styles.statusStack}>
@@ -303,7 +303,7 @@ export default function PolicyIntakesScreen() {
                   </View>
                 </View>
 
-                {filter === 'all' ? <IntakeProgress row={row} /> : null}
+                {filter === 'all' && row.status !== 'completed' ? <IntakeProgress row={row} /> : null}
 
                 {row.attention_reason ? (
                   <View style={styles.attention}>
