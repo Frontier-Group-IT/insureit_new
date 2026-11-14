@@ -7,6 +7,7 @@ import { PartnerScreen } from '@/components/partner-screen';
 import { createPartnerPolicyIntakeBridgeUrl } from '@/lib/policy-intakes';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { PartnerPolicyDateField } from '@/components/policy-intakes/partner-policy-date-field';
+import { motorValidityEnds } from '@/lib/motor-validity-dates';
 import { prepareNativePolicyOnboarding, saveNativePolicyOnboarding, bookNativePolicyOnboarding, createNativeLifeHealthCase, requestNativePolicyDateApproval, verifyNativePolicyDateApproval, lookupNativePolicyRc, searchNativeNonMotorCustomers, type NativeNonMotorCustomer, type NativePolicyDraft, type NativeOnboardingData, type NativeProductType } from '@/lib/policy-onboarding';
 
 type FieldKey = keyof NativePolicyDraft;
@@ -226,6 +227,15 @@ export default function NativePolicyOnboarding(){
       const next={...current,[key]:value};
       // Keep the saved registration number in draft; Unregistered mode shows a disabled field.
       if(key==='vehicleClass'&&value!==current.vehicleClass)next.policyProduct='';
+      // Mirror website date defaults, including Bundled PCP/TWP OD, TP and CPA periods.
+      // Calculate only on explicit edits; loading saved drafts never replaces saved end dates.
+      if(key==='validFrom'||key==='policyProduct'||(key==='vehicleClass'&&value!==current.vehicleClass)){
+        Object.assign(next,motorValidityEnds(
+          key==='validFrom'?value:current.validFrom,
+          key==='vehicleClass'?value:current.vehicleClass,
+          key==='policyProduct'?value:next.policyProduct,
+        ));
+      }
       if(key==='vehicleClass'&&value==='CPM'){next.tp='0';next.cpa='0';next.cpaOpted='No';}
       if(key==='policyProduct'&&value==='Third Party'){next.idv='0';next.od='0';}
       if(key==='cpa')next.cpaOpted=amount(value)>0?'Yes':'No';
