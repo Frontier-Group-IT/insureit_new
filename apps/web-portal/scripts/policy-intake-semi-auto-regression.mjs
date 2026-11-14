@@ -84,4 +84,36 @@ assert(client.includes('role="alertdialog"') && client.includes("Take over &amp;
 assert(client.includes("editSemiAutoIntake(intakeId, true)"),
   "Only the separate confirmation action can request reviewer takeover");
 assert(client.includes("No policy will be booked."), "Takeover must clearly distinguish correction from booking");
+
+// n8n is integrated into the existing workbench, never an alternate booking path.
+const n8nServer = text("lib/policy-intake-semi-auto-n8n.ts");
+assert(server.includes("previewSemiAutoN8nIntake"), "Development action must expose an authorized n8n preview");
+assert(server.includes("await requireDevelopmentPolicyOperator(id)"), "Every n8n action must retain Development operator authorization");
+assert(server.includes("applySemiAutoN8nIntake"), "Save must be a distinct explicit action");
+assert(server.includes("confirmed !== true"), "No OCR recovery without explicit operator confirmation");
+assert(client.includes("previewSemiAutoN8nIntake(selectedId)"), "The existing AI Booking Check panel must host n8n preview");
+assert(client.includes("Apply reviewed fields to failed OCR"), "OCR recovery requires an explicit second button");
+assert(client.includes("The recovered PDF fields changed after preview") || n8nServer.includes("The recovered PDF fields changed after preview"),
+  "Fail closed when the recovered proposal differs from the reviewed hash");
+assert(page.includes("semiAutoN8nEnabledForIntake(row.id)"), "Only allowlisted Intake rows may expose n8n preview");
+assert(n8nServer.includes("INSUREIT_N8N_OCR_ALLOWED_INTAKE_IDS"), "n8n calls require an explicit Intake allowlist");
+assert(n8nServer.includes("INSUREIT_N8N_OCR_ALLOW_REVIEW_APPLY"), "Live OCR apply must use a separate opt-in flag");
+assert(n8nServer.includes('process.env.INSUREIT_N8N_OCR_MODE === "prefer"'),
+  "Shadow mode must never apply n8n fields as authoritative OCR");
+assert(n8nServer.includes('current.intake.ocr_status === "failed"') &&
+  n8nServer.includes('.eq("status", "processing").eq("ocr_status", "failed")'),
+  "Only failed processing OCR may be recovered through CAS");
+assert(n8nServer.includes('loadPolicyIntakeDuplicateMatches(admin, [{'),
+  "Apply must consult the canonical duplicate helper using proposed OCR");
+assert(n8nServer.includes('policy_intake_onboarding_drafts'),
+  "Existing saved drafts must not be overwritten by n8n");
+assert(n8nServer.includes('requestN8nPolicyIntakeExtraction('),
+  "n8n preview must use the validated server-side bridge, not client fetch");
+assert(!n8nServer.includes('.from("policies").insert(') &&
+  !n8nServer.includes('.from("customers").insert(') &&
+  !n8nServer.includes('.from("vehicles").insert('),
+  "n8n preview/apply must not create business entities");
+assert(client.includes("bookSemiAutoIntake(selectedId, true)"),
+  "Canonical booking path must remain untouched");
+
 console.log("Semi-auto Motor onboarding regression checks passed.");
