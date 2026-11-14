@@ -121,7 +121,7 @@ export async function previewSemiAutoN8nExtraction(id: string): Promise<SemiAuto
   }
   const existing = new Map((snapshot.intake.ocr_fields ?? []).map(field => [field.key, field.value]));
   const changedFieldCount = extraction.fields.filter(field => existing.get(field.key) !== field.value).length;
-  let canApply = semiAutoN8nApplyEnabled()
+  let canApply = extraction.warnings.length === 0 && semiAutoN8nApplyEnabled()
     && current.intake.status === "processing"
     && current.intake.ocr_status === "failed"
     && (current.intake.ocr_fields ?? []).length === 0;
@@ -167,6 +167,9 @@ export async function applySemiAutoN8nExtraction(
   }
   const parsed = await previewSemiAutoN8nExtraction(id);
   if (!parsed.ok) return { ok: false, error: parsed.error };
+  if (parsed.preview.warnings.length > 0) {
+    return { ok: false, error: "n8n reported extraction warnings. Verify and correct this policy through the existing onboarding workflow." };
+  }
   if (parsed.preview.documentId !== expectedDocumentId
       || parsed.preview.fingerprint !== expectedFingerprint || !parsed.preview.canApply) {
     return { ok: false, error: "The recovered PDF fields changed after preview. Recheck them before applying." };
