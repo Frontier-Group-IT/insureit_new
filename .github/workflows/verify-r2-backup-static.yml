@@ -334,10 +334,13 @@ jobs:
           assert '"--clean"' not in sql_runner and '--if-exists' not in sql_runner
           toc_selector = pathlib.Path('scripts/backup/prepare_managed_sql_restore_list.py').read_text()
           assert 'TABLE DATA", "storage"' not in toc_selector
-          assert '"POLICY", "storage"' in toc_selector
+          assert '"POLICY", "storage"' not in toc_selector
+          assert '"TRIGGER", "auth"' not in toc_selector
           assert '"TABLE DATA", "auth"' in toc_selector
+          assert 'Managed auth.users is owned by supabase_auth_admin' in toc_selector
+          assert 'Unapproved managed Auth/Storage DDL' in toc_selector
           assert 'MIN_PUBLIC_TABLES' in toc_selector and 'MIN_AUTH_DATA' in toc_selector
-          print('R4 managed SQL import is manual, target-locked, atomic and omits orphaned Storage metadata')
+          print('R4 managed SQL import is manual, target-locked, and excludes owner-only managed DDL and orphaned Storage metadata')
           print('Managed recovery R0/R1 preflight isolated, manual-only and read-only')
           print('Daily encrypted V2 backup and protected manual restore workflow guards verified')
           print('Manual offline database recovery rehearsal guards verified')
