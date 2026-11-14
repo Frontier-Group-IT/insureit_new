@@ -88,6 +88,7 @@ jobs:
             const approved = file === 'apps/partner-app/.trigger-production-ota'
               || file === 'apps/partner-app/scripts/verify-policy-intake-list-pagination.mjs'
               || file === 'apps/partner-app/scripts/verify-four-tab-white-sticky-header.mjs'
+              || file === 'apps/partner-app/scripts/verify-pre-apk-uat.mjs'
               || file === 'apps/partner-app/scripts/verify-shared-loading-skeletons.mjs'
               || file === 'apps/partner-app/scripts/verify-product-type-onboarding-layouts.mjs'
               || file === 'apps/partner-app/scripts/verify-claim-journey-deduplication.mjs'
