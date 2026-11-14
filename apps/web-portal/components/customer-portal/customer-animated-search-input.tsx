@@ -37,13 +37,15 @@ export function CustomerAnimatedSearchInput({ hints, value, defaultValue, onChan
     <span className="relative flex h-5 min-w-0 flex-1 items-center">
       <input
         {...props}
-        type="search"
+        type="text"
+        inputMode="search"
+        enterKeyHint="search"
         value={text}
         onChange={event => {
           if (value === undefined) setLocalValue(event.target.value);
           onChange?.(event);
         }}
-        className={`relative z-10 h-5 w-full min-w-0 appearance-none border-0 bg-transparent p-0 align-middle leading-5 outline-none ring-0 focus:border-0 focus:outline-none focus:ring-0 focus-visible:outline-none ${className}`}
+        className={`relative z-10 h-5 w-full min-w-0 appearance-none border-0 bg-transparent p-0 align-middle leading-5 outline-none ring-0 focus:border-0 focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 ${className}`}
       />
       {!text && active && (
         <span aria-hidden="true" className="pointer-events-none absolute inset-0 z-0 flex items-center overflow-hidden text-[11px] font-normal text-[#9BA9C0]">
@@ -54,6 +56,8 @@ export function CustomerAnimatedSearchInput({ hints, value, defaultValue, onChan
         </span>
       )}
       <style jsx>{`
+        input { border: 0 !important; outline: none !important; box-shadow: none !important; -webkit-appearance: none; appearance: none; }
+        input:focus, input:focus-visible { border: 0 !important; outline: none !important; box-shadow: none !important; }
         @keyframes customer-search-enter { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
         @keyframes customer-search-exit { from { transform: translateY(0); opacity: 1; } to { transform: translateY(-100%); opacity: 0; } }
         .customer-search-slide-in { animation: customer-search-enter 400ms ease-in-out both; }
