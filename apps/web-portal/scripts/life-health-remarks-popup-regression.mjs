@@ -10,7 +10,13 @@ const registerPage = read("app/policies/life-health-cases/page.tsx");
 const newAction = read("app/policies/life-health-policy-actions.ts");
 const editAction = read("app/policies/life-health-case-edit-actions.ts");
 
-assert.match(create, /<LifeHealthRemarksEditor value=\{form\.remarks\}/, "Create Case uses remarks popup");
+assert.match(create, /<Section number="04" title="Premium & payment" contentClassName="md:grid-cols-3">/, "Premium & payment uses a three-column layout");
+assert.match(create, /<LifeHealthRemarksEditor mode="button" value=\{form\.remarks\}/, "Add Remark button appears next to Payment Mode");
+assert.match(create, /\{form\.remarks\.trim\(\) \? \(/, "Remarks section is hidden until remarks are added");
+assert.match(create, /<LifeHealthRemarksEditor mode="display" value=\{form\.remarks\}/, "Saved remarks appear in their read-only section");
+assert.match(editor, /mode === "display"/, "Remarks display is separate from the Add Remark control");
+assert.match(editor, /mode === "button"/, "Inline button uses the existing Add Remark popup");
+assert.match(editor, /const addition = \x60\[\$\{timestamp\}\] \$\{next\}\x60/, "Remark additions retain timestamps");
 assert.doesNotMatch(create, /<textarea value=\{form\.remarks\}/, "No inline remarks textarea in Create Case");
 assert.match(detail, /useState<"activity"\|"remarks"\|null>\(null\)/, "Case Details starts with Activity Status and Remarks collapsed");
 assert.match(detail, /role="group" aria-label="Activity Status and Remarks"/, "Case Details retains both activity and remarks controls");
