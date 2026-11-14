@@ -39,18 +39,19 @@ for (const lifecycle of ["all", "in_force", "expiring", "expired", "upcoming"]) 
   assert.ok(policies.includes(`filter: '${lifecycle}' as const`), `All status options include ${lifecycle}`);
 }
 assert.doesNotMatch(policies, /styles\.summaryCard|styles\.summaryIcon|styles\.summaryPercent|formatPortfolioShare/, 'Remove the large metric tiles, icons and redundant percentages');
-// Claims uses the Policies-style compact status/count strip; Add Claim takes the fixed See-all position.
-assert.match(claims, /<ScrollView\s+horizontal\s+showsHorizontalScrollIndicator=\{false\}\s+style=\{styles\.summaryScroll\}/, 'Claims metrics scroll horizontally as compact status chips');
+// Claims keeps all three compact status/count chips visible; Add Claim uses a separate permission-gated row.
+assert.match(claims, /<View style=\{styles\.summaryChips\} accessibilityLabel="Claim status filters">/, 'All Claims status chips remain visible in a single row');
+assert.match(claims, /summaryChip: \{ flex: 1, minWidth: 0/, 'Claims chips divide available width rather than scroll');
 for (const label of ['All Claims', 'Settled Claims', 'In Progress']) {
   assert.ok(claims.includes(`label: '${label}'`), `Preserve ${label} filter and summary count`);
 }
 assert.match(claims, /onPress=\{\(\) => selectSummary\(metric\.filter\)\}/, 'Status chip preserves existing claims filtering');
 assert.match(claims, /metric\.value\.toLocaleString\('en-IN'\)/, 'Claim counts keep authorized backend summary values');
 assert.match(claims, /summaryChipSelected: \{ backgroundColor: '#17365D'/, 'Selected status chip uses navy fill');
-assert.match(claims, /\{canPartnerStartClaim\(context\) \? \(\s*<Pressable/, 'Add Claim pill remains permission-gated');
+assert.match(claims, /\{canPartnerStartClaim\(context\) \? \(\s*<View style=\{styles\.summaryAddClaimRow\}>\s*<Pressable/, 'Add Claim remains permission-gated in its own row');
 assert.match(claims, /accessibilityLabel="Add Claim"/, 'Compact Add Claim remains accessible');
 assert.match(claims, /onPress=\{\(\) => router\.push\('\/claim\/select-vehicle' as never\)\}/, 'Add Claim opens the existing vehicle-selection flow');
-assert.match(claims, /styles\.summaryAddClaim/, 'Add Claim replaces See all at the right of claims status strip');
-assert.match(claims, /summaryAddClaim: \{ minHeight: 40,[^\n]+borderRadius: 22/, 'Add Claim uses the same pill dimensions as Policies See all');
+assert.match(claims, /styles\.summaryAddClaimRow/, 'Add Claim remains accessible below the three visible status filters');
+assert.match(claims, /summaryAddClaim: \{ minHeight: 36,[^\n]+borderRadius: 22/, 'Add Claim keeps the compact rounded pill styling');
 assert.doesNotMatch(claims, /styles\.summaryCard|styles\.summaryIcon|styles\.summaryChange|styles\.addClaimButton/, 'Remove large Claims metric tiles and old Add Claim banner');
 console.log('Primary tab navy sticky heading/search contracts passed');
