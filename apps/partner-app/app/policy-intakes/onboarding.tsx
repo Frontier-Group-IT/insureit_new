@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 import { PartnerScreen } from '@/components/partner-screen';
+import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { PartnerPolicyDateField } from '@/components/policy-intakes/partner-policy-date-field';
 import { prepareNativePolicyOnboarding, saveNativePolicyOnboarding, bookNativePolicyOnboarding, requestNativePolicyDateApproval, verifyNativePolicyDateApproval, lookupNativePolicyRc, type NativePolicyDraft, type NativeOnboardingData, type NativeProductType } from '@/lib/policy-onboarding';
 
@@ -533,7 +534,7 @@ export default function NativePolicyOnboarding(){
   </View>;
   const motorProductSection=section('03','Policy product, premium & validity',motorProductFields);
   return <PartnerScreen title="Policy Onboarding" eyebrow="POLICY INTAKE" onBack={()=>router.back()} navyTopBar navyStatusBar topBarIcon="document-text-outline">
-    {loading?<View style={styles.wait}><ActivityIndicator color="#2843A9"/><Text style={styles.muted}>Loading saved Policy Onboarding…</Text></View>:null}
+    {loading?<PartnerStateView state="loading" title="Loading saved Policy Onboarding" />:null}
     {error?<View style={styles.error}><Ionicons name="alert-circle-outline" size={16} color="#B42318"/><Text style={styles.errorText}>{error}</Text></View>:null}
     {!loading&&!draft?<Pressable style={styles.retry} onPress={()=>void load()}><Text style={styles.retryText}>Retry loading</Text></Pressable>:null}
     {draft?<>
