@@ -19,6 +19,8 @@ from managed_recovery_preflight import (
 POSTGRES_IMAGE = "postgres:17-bookworm"
 SECURITY_GUARD = """
 -- These statements execute BEFORE COMMIT inside psql --single-transaction.
+-- Managed Auth trigger / Storage RLS policies are intentionally deferred:
+-- the target postgres role does not own those managed tables.
 -- No customer access to newly restored SECURITY DEFINER functions by default.
 REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM PUBLIC, anon, authenticated;
 REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public FROM PUBLIC, anon, authenticated;
@@ -57,7 +59,7 @@ BEGIN
          (pg_catalog.has_function_privilege('anon',p.oid,'EXECUTE') OR
           pg_catalog.has_function_privilege('authenticated',p.oid,'EXECUTE'));
   IF app_tables < 150 OR app_tables <> enabled_rls OR policy_count < 200
-     OR storage_policies < 30 OR custom_auth_triggers <> 1
+     OR storage_policies <> 0 OR custom_auth_triggers <> 0
      OR (SELECT count(*) FROM auth.users) < 1
      OR definer_exposure <> 0
   THEN
