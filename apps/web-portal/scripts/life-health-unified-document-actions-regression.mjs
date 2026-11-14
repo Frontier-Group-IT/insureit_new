@@ -27,3 +27,19 @@ assert.match(issued,/doc\\.fileName/, "Issued policy filename is clickable");
 assert.match(policyCopy,/policyCopy\\.fileName/, "Motor edit filename is clickable");
 assert.match(nonMotor,/viewSavedDocument/, "Non-Motor existing filename remains clickable");
 console.log("Unified document row: filename, Delete, Replace regression passed");
+
+const intakeNew=readFileSync("components/policy-intake-form.tsx","utf8");
+const intakeReplacement=readFileSync("components/policy-intake-response-upload.tsx","utf8");
+const intakeDocument=readFileSync("components/policy-intake-document-button.tsx","utf8");
+const intakePage=readFileSync("app/policy-intakes/[id]/page.tsx","utf8");
+const ocr=readFileSync("components/policy-ocr-import-panel.tsx","utf8");
+const customerVault=readFileSync("components/customer-portal/customer-document-vault.tsx","utf8");
+for(const [name,src] of [["New Policy Intake",intakeNew],["Policy Intake replacement",intakeReplacement],["Policy OCR import",ocr]]){
+  for(const action of ["Open ","Delete selected","Replace"]) assert.ok(src.includes(action),name+" should provide selected-document "+action);
+  assert.match(src,/previewUrl/,name+" should support previewing selected filename");
+}
+assert.match(intakeDocument,/fileName\|\|/, "Policy Intake saved copy must use the actual filename where available");
+assert.match(intakePage,/fileName=\{data\.file_name\}/, "Policy Intake detail passes its stored file name to document action");
+assert.doesNotMatch(customerVault,/>Open<\/a>/, "Customer vault should not duplicate filename and Open link");
+assert.match(customerVault,/title=\{doc\.file_name\}/, "Customer vault filename must be clickable");
+console.log("Policy and Intake document filenames replace duplicate view controls");
