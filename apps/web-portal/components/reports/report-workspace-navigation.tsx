@@ -13,6 +13,9 @@ const PRIMARY = [
 export function ReportWorkspaceNavigation() {
   const pathname = usePathname() || "/reports";
 
+  // Daily Report is a separate page, not one of the four Reporting Workspace tabs.
+  if (pathname === "/reports/daily" || pathname.startsWith("/reports/daily/")) return null;
+
   return (
     <nav className="reports-reference-tabs" aria-label="Report workspaces">
         {PRIMARY.map((item) => {
