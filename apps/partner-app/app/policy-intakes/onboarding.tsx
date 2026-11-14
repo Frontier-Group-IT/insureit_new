@@ -188,15 +188,16 @@ export default function NativePolicyOnboarding(){
     setVerifiedApprovalId(null);
     setApprovalRequestId(null);
   };
-  const save=async(goBack=false)=>{
-    if(!draft||!data||saving)return;
+  const save=async(goBack=false):Promise<boolean>=>{
+    if(!draft||!data||saving)return false;
     setSaving(true);setError('');
     try{
       const result=await saveNativePolicyOnboarding(id,data.revision,draft);
       setData(current=>current?{...current,revision:result.revision}:current);
       setDirty(false);
       if(goBack)router.back();
-    }catch(e){setError(e instanceof Error?e.message:'Draft could not be saved.');}
+      return true;
+    }catch(e){setError(e instanceof Error?e.message:'Draft could not be saved.');return false;}
     finally{setSaving(false);}
   };
 
@@ -351,6 +352,8 @@ export default function NativePolicyOnboarding(){
     const productOptions=f.key==='policyProduct'?(draft.vehicleClass==='CPM'?['Comprehensive','SAOD']:['Comprehensive','Third Party','SAOD',...(['PCP','TWP'].includes(draft.vehicleClass)?['Bundled']:[]) ]):f.options??[];
     const options=f.key==='insurerId'?data?.insurers??[]:f.key==='make'?(data?.manufacturers??[]).map(x=>({value:x,label:x})):productOptions.map(x=>({value:x,label:x}));
     const displayed=options.find(x=>x.value===current)?.label??current;
+    const masterSourceMatches=Boolean(data?.sourceMeta&&data.sourceMeta.code===draft.intermediaryCode&&data.sourceMeta.name.trim().toLowerCase()===draft.leadSource.trim().toLowerCase());
+    const matchedSource=masterSourceMatches?data?.sourceMeta:null;
     const restricted=isMotor&&(
       (f.key==='capacity'&&!draft.vehicleClass)||
       (f.key==='policyProduct'&&!draft.vehicleClass)||
@@ -376,10 +379,10 @@ export default function NativePolicyOnboarding(){
           keyboardType={['phoneNo','idv','od','tp','cpa','capacity','manufacturingYear'].includes(f.key)?'numeric':'default'}
           style={[styles.input,restricted&&styles.readonlyInput]} />
       )}
-      {isMotor&&f.key==='intermediaryType'&&(draft.rmName||data?.sourceMeta?.rmName)?<Text style={styles.fieldMeta}>RM · {draft.rmName||data?.sourceMeta?.rmName}{data?.sourceMeta?.rmCode&&(!draft.rmName||data.sourceMeta.rmName.trim().toLowerCase()===draft.rmName.trim().toLowerCase())?'   ID · '+data.sourceMeta.rmCode:''}</Text>:null}
+      {isMotor&&f.key==='intermediaryType'&&(draft.rmName||matchedSource?.rmName)?<Text style={styles.fieldMeta}>RM · {draft.rmName||matchedSource?.rmName}{matchedSource?.rmCode&&(!draft.rmName||matchedSource.rmName.trim().toLowerCase()===draft.rmName.trim().toLowerCase())?'   ID · '+matchedSource.rmCode:''}</Text>:null}
       {isMotor&&f.key==='leadSource'?<View style={styles.sourceDetails}>
         {draft.intermediaryCode?<Text style={styles.fieldMeta}>ID · {draft.intermediaryCode}</Text>:null}
-        {data?.sourceMeta?.mobile&&data.sourceMeta.code===draft.intermediaryCode&&data.sourceMeta.name.trim().toLowerCase()===draft.leadSource.trim().toLowerCase()?<Text style={styles.fieldMeta}>☎ {data.sourceMeta.mobile}</Text>:null}
+        {matchedSource?.mobile?<Text style={styles.fieldMeta}>☎ {matchedSource.mobile}</Text>:null}
       </View>:null}
     </View>;
   };
@@ -670,8 +673,10 @@ export default function NativePolicyOnboarding(){
             </>}
           </ScrollView>
           <View style={styles.modalFooter}>
-            <Pressable accessibilityRole="button" accessibilityLabel="Save and close commercial popup" onPress={()=>setCommercialModal(null)}
-              style={styles.commercialSave}><Text style={styles.primaryText}>Save & Close</Text></Pressable>
+            <Pressable accessibilityRole="button" accessibilityLabel="Save and close commercial popup"
+              disabled={saving} accessibilityState={{disabled:saving}}
+              onPress={()=>{void save().then(success=>{if(success)setCommercialModal(null);});}}
+              style={styles.commercialSave}><Text style={styles.primaryText}>{saving?'Saving…':'Save & Close'}</Text></Pressable>
           </View>
         </View>
       </View>
