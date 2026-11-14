@@ -76,7 +76,7 @@ assert.match(registerPage, /lead_source,remarks,final_policy_id/, "Register load
 assert.match(registerPage, /remarks: row\.remarks \|\| ""/, "Register mapping retains remarks");
 assert.doesNotMatch(register, /<th[^>]*>Remarks<\/th>/, "Life & Health Case Register has no Remarks column");
 assert.doesNotMatch(register, /setRemarksToView|remarksToView|MessageSquareText|register-remarks-title/, "Life & Health Case Register removes the remarks popup and actions");
-assert.match(register, /<th className="px-4 py-3 text-right">Action<\/th>/, "Action column is preserved");
+assert.match(register, /<th className="px-4 py-3 text-center">Action<\/th>/, "Action column is preserved and centered");
 assert.match(register, /<LifeHealthIssuedPolicyButton policyId=\{row\.finalPolicyId\}/, "Issued policy navigation is preserved");
 assert.match(register, /href=\{\`\/policies\/life-health-cases\/\$\{row\.id\}\`\}/, "Pending case navigation is preserved");
 console.log("Life/Health remarks preservation and Remarks-free Case Register regression passed");
