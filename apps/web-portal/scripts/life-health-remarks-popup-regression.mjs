@@ -31,7 +31,15 @@ assert.match(detail, /onClick=\{\(\)=>setInfoTab\(current=>current==="remarks"\?
 assert.match(detail, /\{infoTab!==null\?<div id="life-health-case-info-panel"/, "Collapsed case activity and remarks render no content panel");
 assert.match(detail, /aria-expanded=\{infoTab==="activity"\}/, "Activity Status exposes its expanded state");
 assert.match(detail, /aria-expanded=\{infoTab==="remarks"\}/, "Remarks exposes its expanded state");
-assert.match(detail, /Saved remarks · Read only/, "Saved Case Details remarks are read-only");
+assert.doesNotMatch(detail, /Saved remarks · Read only/, "Remove redundant Saved remarks / Read only heading from case Remarks tab");
+const premiumSection = detail.slice(detail.indexOf('<Section number="04" title="Premium & payment"'), detail.indexOf('<Section number="05"'));
+assert.match(premiumSection, /title="Premium amount"/, "Premium amount remains in section 04");
+assert.match(premiumSection, /title="Payment mode"/, "Payment mode remains in section 04");
+assert.match(premiumSection, /<FieldWrap title="Remarks"><button/, "Remarks has its own third field beside Payment Mode");
+assert.match(premiumSection, /<MessageSquareText className="h-4 w-4"\/>Add Remark/, "Third field has the Add Remark button");
+const remarksTab = detail.slice(detail.indexOf('{infoTab==="activity"?'),detail.indexOf('{remarkOpen?<div'));
+assert.doesNotMatch(remarksTab, /setRemarkOpen\(true\)/, "Remarks tab must only display history, not another Add Remark button");
+assert.match(remarksTab, /savedRemarks\.trim\(\)\|\|"No remarks added yet\."/,"Remarks tab displays saved content or an empty state");
 assert.match(detail, /role="dialog" aria-modal="true" aria-label="Add case remark"/, "Case Details new remark opens an accessible popup");
 assert.match(detail, /appendLifeHealthCaseRemark\(data\)/, "New Case Details remark uses append-only server action");
 assert.doesNotMatch(detail, /<LifeHealthRemarksEditor/, "Do not retain editable remarks popup on Case Details");
