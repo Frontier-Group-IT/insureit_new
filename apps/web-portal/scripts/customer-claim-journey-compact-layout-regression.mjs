@@ -31,6 +31,12 @@ for (const forbidden of ['bg-[#FFF0F3]', 'bg-[#FFF3F5]', 'bg-[#FFEDF1]', 'bg-[#F
 }
 assert.ok(renewals.includes('cat.due > 0 ? <span'), "Due badge must remain visible");
 assert.ok(renewals.includes('cat.expired > 0 ? <span'), "Expired badge must remain visible");
+assert.match(renewals,/categories\.reduce<\{key:string\|null;total:number\}>/, "Renewals choose the maximum-count category on first render");
+assert.match(renewals,/const total=cat\.due\+cat\.expired;/, "Default category counts both due and expired renewals");
+assert.match(renewals,/total>best\.total\?\{key:cat\.key,total\}:best/, "Highest count wins while ties preserve displayed category order");
+assert.match(renewals,/\{key:null,total:0\}\)\.key/, "No renewal categories remain open when all counts are zero");
+assert.ok(renewals.includes('onClick={() => setActiveCategory(selected ? null : cat.key)}'), "Manual expansion and collapse remains user controlled");
+
 const customerJourneyCss = readFileSync("app/customer/(protected)/claims/[id]/stage/[stage]/customer-claim-reference.css", "utf8");
 assert.ok(customerJourneyCss.includes(".customer-claim-ref-journey .customer-claim-motion-completed { border-color:#dce6f3; background:#fff; }"), "Completed customer journey stages use white cards with neutral borders");
 assert.ok(!customerJourneyCss.includes("background:#f4fffa"), "Completed customer journey must not use a green-tinted background");
