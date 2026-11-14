@@ -35,7 +35,8 @@ assert.doesNotMatch(screen,/<View style=\{styles.status\}>/, 'Remove top PIR and
 assert.match(screen,/selected&&styles.choiceSelected/, 'Selected highlight applies to all shared picker options.');
 assert.match(screen,/picker\.product\?updateProduct\(picker.key,item.value\):update\(picker.key as FieldKey,item.value\)/, 'Preserve non-business-line dropdown selection handlers.');
 assert.match(screen,/setPicker\(null\);/, 'Picker can close after selection.');
-assert.match(screen,/data\?\.commercialAccess\?<View style=\{styles.referenceCommercial\}/, 'All commercial summaries must require commercial access.');
+assert.match(screen,/isMotor&&data\?\.commercialAccess\?<View style=\{styles.referenceCommercial\}/, 'Motor commercial cards must require authorised access.');
+assert.match(screen,/!isMotor&&data\?\.commercialAccess\?<View style=\{styles.referenceCommercial\}/, 'Other policy types retain the permission gate.');
 assert.match(screen,/saveNativePolicyOnboarding\(id,data.revision,draft\)/,'Draft save remains functional');
 // Motor follows Operations structure; other product types retain draft-only screens.
 assert.match(screen,/policy\.slice\(0,4\)\.map\(item/, 'Motor and non-Motor source sections use only four primary rows.');
@@ -52,12 +53,24 @@ assert.match(screen,/motorVehicleFields\.slice\(0,7\)\.map\(item=>field\(item\)\
 assert.match(screen,/motorProductSection=section\('03','Policy product, premium & validity'/, 'Combine Motor policy and premium details into Operations section 03.');
 assert.match(screen,/label:'GST',value:gst/, 'Motor summary includes GST.');
 assert.match(screen,/label:'Gross premium',value:gross/, 'Motor summary includes gross.');
-assert.match(screen,/data\?\.commercialAccess\?<View style=\{styles.referenceCommercial\}/, 'All commercial summaries must require commercial access.');
+assert.match(screen,/isMotor&&data\?\.commercialAccess\?<View style=\{styles.referenceCommercial\}/, 'Motor commercial cards must require authorised access.');
+assert.match(screen,/!isMotor&&data\?\.commercialAccess\?<View style=\{styles.referenceCommercial\}/, 'Other policy types retain the permission gate.');
 assert.match(screen,/const \[commercialModal,setCommercialModal\]=useState<'payin'\|'payout'\|null>\(null\)/, 'Separate commercial popup state required.');
 assert.match(screen,/accessibilityLabel="Insurer Pay-In popup"/, 'Insurer Pay-In entry must open its own popup.');
 assert.match(screen,/productValues.payinBasis==='FLAT'/, 'Non-Motor pay-in supports fixed and net premium basis.');
 assert.match(screen,/productValues.partnerPayoutBasis==='FLAT'/, 'Non-Motor payout supports fixed and net premium basis.');
 assert.match(screen,/summaryPayin\*\.9-summaryPayout/, 'Projected retention deducts TDS.');
+assert.match(screen,/manufacturingYearOptions=Array\.from\(\{length:new Date\(\)\.getFullYear\(\)-1900\+1\}/, 'Motor year dropdown must match the Operations Portal 1900-to-current range.');
+assert.match(screen,/f.key==='manufacturingYear'\?manufacturingYearOptions\.map/, 'Motor year uses a controlled dropdown, not a free text input.');
+assert.match(screen,/f.key==='manufacturingYear'\?'Select year'/, 'Motor year uses the portal select-year hint.');
+assert.match(screen,/referencePayinCard/, 'Motor insurer pay-in card must have its full clickable surface.');
+assert.match(screen,/referencePayoutCard/, 'Motor partner payout card must have its full clickable surface.');
+assert.match(screen,/Add projected insurer terms/, 'Motor pay-in card matches portal helper wording.');
+assert.match(screen,/Add agreed partner payout/, 'Motor payout card matches portal helper wording.');
+assert.match(screen,/payinEntered\?rupees\(summaryPayin\):'Not entered'/, 'Pay-in card retains true persisted status.');
+assert.match(screen,/payoutEntered\?rupees\(summaryPayout\):'Not entered'/, 'Payout card retains true persisted status.');
+assert.match(screen,/styles\.progressStatus/, 'Live status badge appears beneath the completion ring.');
+
 assert.match(screen,/premiumIcon/, 'Non-Motor premium label shows a rupee icon.');
 assert.match(api,/productCommercialKeys/, 'Non-Motor commercial values must be controlled server-side.');
 assert.match(api,/Commercial terms require financial access/, 'Unauthorized commercial writes must be rejected.');
@@ -70,7 +83,7 @@ assert.match(screen,/accessibilityLabel="Save and close commercial popup"/, 'Com
 assert.match(screen,/Boolean\(commercialModal\)&&Boolean\(data\?\.commercialAccess\)/, 'Commercial modals stay permission gated.');
 assert.match(screen,/placeholder=\{productType==='Non Motor'\?'':hint\}/, 'Only Non-Motor blank fields opt out of Motor input placeholders.');
 assert.match(screen,/f.key==='model'\?'Model \/ variant'/, 'Keep the reference Model placeholder.');
-assert.match(screen,/displayed\|\|\(productType==='Non Motor'\?'':'Select '\+f.label.toLowerCase\(\)\)/, 'Non-Motor dropdowns remain blank while Motor retains prompts.');
+assert.match(screen,/displayed\|\|\(productType==='Non Motor'\?'':f.key==='manufacturingYear'\?'Select year':'Select '\+f.label.toLowerCase\(\)\)/, 'Non-Motor dropdowns stay blank; Motor year uses the exact portal hint.');
 assert.match(screen,/hidePlaceholder=\{productType==='Non Motor'\}/, 'Non-Motor date fields hide placeholder text only.');
 assert.match(date,/placeholder=\{hidePlaceholder/, 'Date input retains opt-in placeholder behavior for other pages.');
 assert.match(date,/hidePlaceholder\?:boolean/, 'Date placeholder removal must be opt-in to avoid other screens.');
