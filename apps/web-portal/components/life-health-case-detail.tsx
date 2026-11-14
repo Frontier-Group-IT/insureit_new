@@ -12,7 +12,7 @@ import { isPensionLifePolicy } from "@/lib/life-health-pension-maturity";
 import { PolicyDateApprovalDialog } from "@/components/policy-date-approval-dialog";
 import { policyDateDecision } from "@/lib/policy-date-rule";
 
-type CaseData={id:string;caseNumber:string;businessLine:"Life"|"Health";status:string;sourcingDate:string;customerId:string;customerName:string;customerPhone:string;customerAddress:string;insurerId:string;insurerName:string;productName:string;proposalNumber:string;ppt:string;pd:string;paymentFrequency:string;paymentMode:string;premiumAmount:number;intermediaryType:string;intermediaryCode:string;leadSource:string;intermediaryMobile:string;rmName:string;rmCode:string;remarks:string;finalPolicyId:string|null;finalPolicyNo:string|null;finalPolicyCode:string|null;convertedAt:string|null};
+type CaseData={id:string;caseNumber:string;businessLine:"Life"|"Health";status:string;rejectionReason:string;sourcingDate:string;customerId:string;customerName:string;customerPhone:string;customerAddress:string;insurerId:string;insurerName:string;productName:string;proposalNumber:string;ppt:string;pd:string;paymentFrequency:string;paymentMode:string;premiumAmount:number;intermediaryType:string;intermediaryCode:string;leadSource:string;intermediaryMobile:string;rmName:string;rmCode:string;remarks:string;finalPolicyId:string|null;finalPolicyNo:string|null;finalPolicyCode:string|null;convertedAt:string|null};
 type DocumentRow={id:string;document_type:string;file_name:string;created_at:string};
 type ActivityRow={id:string;action:string;createdAt:string;createdBy:string;changes?:string[]};
 type Props={caseData:CaseData;insurers:Array<{id:string;name:string}>;documents:DocumentRow[];activities:ActivityRow[]};
@@ -81,7 +81,7 @@ function nextInstallmentFrom(start:string,frequency:string){
 }
 
 export function LifeHealthCaseDetail({caseData,insurers,documents,activities}:Props){
-  const router=useRouter(),isIssued=Boolean(caseData.finalPolicyId),docMap=useMemo(()=>new Map(documents.map(d=>[d.document_type,d])),[documents]);
+  const router=useRouter(),isIssued=Boolean(caseData.finalPolicyId),isRejected=caseData.status==="rejected",isClosed=isIssued||isRejected,docMap=useMemo(()=>new Map(documents.map(d=>[d.document_type,d])),[documents]);
   const[uploading,startUpload]=useTransition(),[converting,startConvert]=useTransition(),[saving,startSave]=useTransition(),[deleting,startDelete]=useTransition();
   const[documentToDelete,setDocumentToDelete]=useState<DocumentRow|null>(null),[deleteError,setDeleteError]=useState<string|null>(null),[deletingDocumentId,setDeletingDocumentId]=useState<string|null>(null),[error,setError]=useState<string|null>(null),[saveSuccess,setSaveSuccess]=useState(false),[copy,setCopy]=useState<File|null>(null),[uploadingType,setUploadingType]=useState<string|null>(null);
   const[form,setForm]=useState({customerName:caseData.customerName,customerPhone:caseData.customerPhone,customerAddress:caseData.customerAddress,insurerId:caseData.insurerId,productName:caseData.productName,proposalNumber:caseData.proposalNumber,ppt:caseData.ppt,pd:caseData.pd,paymentFrequency:canonicalPaymentFrequency(caseData.paymentFrequency),paymentMode:normalizeCasePaymentMode(caseData.paymentMode),premiumAmount:String(caseData.premiumAmount||""),sourcingDate:caseData.sourcingDate});
@@ -157,10 +157,16 @@ export function LifeHealthCaseDetail({caseData,insurers,documents,activities}:Pr
     });
   };
 
-  if(caseData.status==="rejected")return <div className="mx-auto max-w-[1480px] rounded-2xl border border-red-200 bg-white p-5 text-[11px] text-[#17365D]"><h2 className="text-[15px] font-bold text-red-700">Case Rejected</h2><p className="mt-2">This case is rejected and cannot be issued.</p><p className="mt-3 whitespace-pre-wrap rounded-xl bg-red-50 p-3 text-[11px] text-[#475467]">{caseData.remarks||"No rejection remarks available."}</p><Link className="mt-4 inline-block font-bold underline" href="/policies/life-health-cases?status=rejected">Back to Rejected cases</Link></div>;
-  if(isIssued)return <div className="mx-auto max-w-[1480px] rounded-2xl border border-[#D9E2F0] bg-white p-5 text-[11px] text-[#17365D]">This case is issued and closed. <Link className="font-bold underline" href={`/policies/${encodeURIComponent(caseData.finalPolicyId!)}/edit`}>View Policy {caseData.finalPolicyNo}</Link></div>;
 
   const legacyCash=form.paymentMode==="Cash";
+  // The same detail form is shown for every case status. Closed cases are
+  // read-only: their write actions stay inaccessible and server-side guards remain authoritative.
+  const headerTone=isRejected
+    ?"bg-[linear-gradient(110deg,#991B1B_0%,#C43D42_100%)]"
+    :isIssued
+      ?"bg-[linear-gradient(110deg,#116149_0%,#19876A_100%)]"
+      :"bg-[linear-gradient(110deg,#805514_0%,#BD8428_100%)]";
+  const caseStatusLabel=isRejected?"Rejected":isIssued?"Issued":"Pending";
   return <div className="mx-auto w-full max-w-[1480px] space-y-3 pb-10">
     {rejectOpen?<div className="fixed inset-0 z-[1200] grid h-[100dvh] w-screen place-items-center bg-[#101828]/60 p-4" role="presentation">
       <div role="dialog" aria-modal="true" aria-labelledby="reject-case-title" className="w-full max-w-[480px] rounded-2xl bg-white shadow-2xl">
@@ -182,11 +188,13 @@ export function LifeHealthCaseDetail({caseData,insurers,documents,activities}:Pr
       </div>
     </div>:null}
     <div className="overflow-hidden rounded-t-xl border border-b-0 border-[#D9E2F0] bg-white shadow-[0_8px_22px_rgba(15,23,42,.05)]">
-      <div className="flex min-h-[52px] items-center bg-[linear-gradient(135deg,#071D49_0%,#123B75_60%,#315B9A_100%)] px-4 py-2 text-white sm:px-5">
-        <div className="flex w-full items-center justify-between gap-3"><div><h1 className="text-[15px] font-semibold tracking-[-0.01em]">Life / Health Case</h1><p className="mt-0.5 text-[9px] text-white/75">{caseData.customerName} · {caseData.proposalNumber}</p></div><Link href="/policies/life-health-cases" className="flex h-8 items-center justify-center rounded-lg border border-white/25 px-4 text-[9px] font-semibold hover:bg-white/10">Back</Link></div>
+      <div className={`flex min-h-[52px] items-center px-4 py-2 text-white sm:px-5 ${headerTone}`}>
+        <div className="flex w-full items-center justify-between gap-3"><div><h1 className="text-[15px] font-semibold tracking-[-0.01em]">Life / Health Case <span className="ml-2 rounded-md border border-white/30 bg-white/15 px-2 py-0.5 text-[10px] font-bold">{caseStatusLabel}</span></h1><p className="mt-0.5 text-[9px] text-white/75">{caseData.customerName} · {caseData.proposalNumber}</p></div><Link href="/policies/life-health-cases" className="flex h-8 items-center justify-center rounded-lg border border-white/25 px-4 text-[9px] font-semibold hover:bg-white/10">Back</Link></div>
       </div>
     </div>
 
+    {isClosed?<div role="status" className={`rounded-xl border px-4 py-3 text-[11px] ${isRejected?"border-red-200 bg-red-50 text-red-900":"border-emerald-200 bg-emerald-50 text-emerald-900"}`}><p className="font-bold">{isRejected?"Case Rejected — View Only":"Case Issued — View Only"}</p><p className="mt-1">{isRejected?"This case cannot be edited or issued.":"This case has been issued and closed."}</p>{isRejected?<p className="mt-2 whitespace-pre-wrap break-words"><span className="font-semibold">Rejection reason:</span> {caseData.rejectionReason||"No recorded rejection reason available."}</p>:caseData.finalPolicyId?<Link className="mt-2 inline-block font-bold underline" href={`/policies/${encodeURIComponent(caseData.finalPolicyId)}/edit`}>View issued policy {caseData.finalPolicyNo||""}</Link>:null}</div>:null}
+    <fieldset disabled={isClosed} className="min-w-0 space-y-3">
     <Section number="01" title="Policy source & ownership" contentClassName="md:grid-cols-2 xl:grid-cols-4">
       <FieldWrap title="Proposal date"><DateInput value={form.sourcingDate} onChange={value=>set("sourcingDate",value)}/></FieldWrap>
       <FieldWrap title="Policy type"><input className={readOnlyField} value={caseData.businessLine} readOnly/></FieldWrap>
@@ -214,7 +222,7 @@ export function LifeHealthCaseDetail({caseData,insurers,documents,activities}:Pr
       <FieldWrap title="Payment mode" required><select className={field} value={form.paymentMode} onChange={e=>set("paymentMode",e.target.value)}><option value="" disabled>Select payment mode</option>{legacyCash?<option value="Cash" disabled>Cash (legacy case)</option>:null}{modes.map(v=><option key={v} value={v}>{v}</option>)}</select></FieldWrap>
     </Section>
 
-    <Section number="05" title="Mark Policy Issued" highlight contentClassName="md:grid-cols-2 xl:grid-cols-4">
+    {!isClosed?<Section number="05" title="Mark Policy Issued" highlight contentClassName="md:grid-cols-2 xl:grid-cols-4">
       <FieldWrap title="Policy number" required><input className={field} value={issue.policyNumber} onChange={e=>setI("policyNumber",e.target.value.toUpperCase())}/></FieldWrap>
       <FieldWrap title="Issuance date"><DateInput value={issue.issuanceDate} onChange={value=>setI("issuanceDate",value)}/></FieldWrap>
       <FieldWrap title="Policy start date"><DateInput value={issue.startDate} onChange={value=>{setOverrides({endDate:false,pptEndDate:false,nextInstallmentDate:false});setI("startDate",value)}}/></FieldWrap>
@@ -223,7 +231,8 @@ export function LifeHealthCaseDetail({caseData,insurers,documents,activities}:Pr
       {oneTimePayment?<ReadOnlyTextField title="Next installment date" value="Not applicable · One Time"/>:<CalculatedDateField title="Next installment date" value={issue.nextInstallmentDate} expected={expectedNext} overridden={overrides.nextInstallmentDate} onChange={value=>{setOverrides(x=>({...x,nextInstallmentDate:true}));setI("nextInstallmentDate",value)}}/>}
       <FieldWrap title="Final premium"><input className={field} value={issue.finalPremium} onChange={e=>setI("finalPremium",e.target.value.replace(/[^0-9.]/g,""))}/></FieldWrap>
       <FieldWrap title="Sum assured / insured"><input className={field} value={issue.sumInsured} onChange={e=>setI("sumInsured",e.target.value.replace(/[^0-9.]/g,""))}/></FieldWrap>
-    </Section>
+    </Section>:null}
+    </fieldset>
 
     <section className="overflow-hidden rounded-2xl border border-[#DFE8F4] bg-white shadow-[0_8px_20px_rgba(36,79,145,.06)]">
       <div role="group" aria-label="Activity Status and Remarks" className="flex border-b border-[#E6EBF1] px-3 pt-2">
@@ -233,7 +242,7 @@ export function LifeHealthCaseDetail({caseData,insurers,documents,activities}:Pr
       {infoTab!==null?<div id="life-health-case-info-panel" role="region" aria-label={infoTab==="activity"?"Activity Status":"Remarks"} className="p-3">
         {infoTab==="activity"?<div className="overflow-hidden rounded-xl border border-[#D9E2F0] bg-[#FBFCFE]">{activities.length?activities.map((activity,index)=><div key={activity.id} className={`grid gap-2 px-4 py-3 md:grid-cols-[minmax(0,1fr)_260px_190px] md:items-center ${index?"border-t border-[#D9E2F0]":""}`}><div><p className="text-[8px] font-bold uppercase tracking-[.06em] text-[#8090A5]">{index===0?"Latest Action":"Previous Action"}</p><p className="mt-1 text-[12px] font-semibold text-[#17365D]">{activity.action}</p>{activity.changes?.length?<ul className="mt-2 space-y-1">{activity.changes.map((change,i)=><li key={i} className="break-words text-[10px] text-[#52657E]">• {change}</li>)}</ul>:null}</div><p className="text-[9px] text-[#7A8AA0] md:text-right">Details: {activity.action==="Case Created"?"Created By:":"By:"} <span className="font-medium text-[#53657D]">{activity.createdBy}</span></p><p className="text-[9px] text-[#7A8AA0] md:text-right">At: {activityDate(activity.createdAt)}</p></div>):<p className="p-4 text-[10px] text-[#7A8AA0]">Activity not recorded.</p>}</div>:
         <div className="rounded-xl border border-[#D9E2F0] bg-[#FBFCFE] p-4">
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-3"><p className="text-[9px] font-bold uppercase tracking-[.07em] text-[#667085]">Saved remarks · Read only</p><button type="button" onClick={()=>{setRemarkError(null);setRemarkOpen(true);}} disabled={saving||converting} className="inline-flex h-9 items-center gap-2 rounded-xl border border-[#BFD3F5] bg-white px-3 text-[10px] font-bold text-[#17365D] hover:bg-[#EEF5FF] disabled:opacity-50"><MessageSquareText className="h-4 w-4"/>Add Remark</button></div>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3"><p className="text-[9px] font-bold uppercase tracking-[.07em] text-[#667085]">Saved remarks · Read only</p><button type="button" onClick={()=>{setRemarkError(null);setRemarkOpen(true);}} disabled={isClosed||saving||converting} className="inline-flex h-9 items-center gap-2 rounded-xl border border-[#BFD3F5] bg-white px-3 text-[10px] font-bold text-[#17365D] hover:bg-[#EEF5FF] disabled:opacity-50"><MessageSquareText className="h-4 w-4"/>Add Remark</button></div>
           <p className="whitespace-pre-wrap break-words text-[11px] leading-5 text-[#17365D]">{savedRemarks.trim()||"No remarks added yet."}</p>
         </div>}
       </div>:null}
@@ -244,15 +253,16 @@ export function LifeHealthCaseDetail({caseData,insurers,documents,activities}:Pr
     {saveSuccess?<div role="status" aria-live="polite" className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-[11px] font-semibold text-emerald-800">Case details saved successfully.</div>:null}
 
     <div role="group" aria-label="Case documents" className="flex flex-wrap items-center gap-2 px-1 py-1.5">
-      <UploadAction label="Add Policy Copy" type="policy_copy" existing={docMap.get("policy_copy")} disabled={uploading||deleting} deleting={deletingDocumentId===docMap.get("policy_copy")?.id} onDelete={deleteDocument} loading={uploadingType==="policy_copy"} onUpload={(type,file)=>{setCopy(file);upload(type,file)}}/><UploadAction label="Add Proposal Form" type="proposal_form" existing={docMap.get("proposal_form")} disabled={uploading||deleting} deleting={deletingDocumentId===docMap.get("proposal_form")?.id} onDelete={deleteDocument} loading={uploadingType==="proposal_form"} onUpload={upload}/><UploadAction label="Add Illustration Form" type="benefit_illustration" existing={docMap.get("benefit_illustration")} disabled={uploading||deleting} deleting={deletingDocumentId===docMap.get("benefit_illustration")?.id} onDelete={deleteDocument} loading={uploadingType==="benefit_illustration"} onUpload={upload}/><UploadAction label="Add Payment Receipt" type="premium_receipt" existing={docMap.get("premium_receipt")} disabled={uploading||deleting} deleting={deletingDocumentId===docMap.get("premium_receipt")?.id} onDelete={deleteDocument} loading={uploadingType==="premium_receipt"} onUpload={upload}/><UploadAction label="Add Other Form" type="other_document" existing={docMap.get("other_document")} disabled={uploading||deleting} deleting={deletingDocumentId===docMap.get("other_document")?.id} onDelete={deleteDocument} loading={uploadingType==="other_document"} onUpload={upload}/>
+      {isClosed?<div className="w-full"><p className="mb-2 text-[10px] font-bold text-[#475467]">Case documents · Read only</p>{documents.length?<div className="flex flex-wrap gap-2">{documents.map(doc=><span key={doc.id} className="max-w-full break-all rounded-lg border border-[#D9E2F0] bg-white px-3 py-2 text-[10px] text-[#17365D]">{doc.file_name}</span>)}</div>:<p className="text-[10px] text-[#667085]">No documents recorded.</p>}</div>:<>
+      <UploadAction label="Add Policy Copy" type="policy_copy" existing={docMap.get("policy_copy")} disabled={uploading||deleting} deleting={deletingDocumentId===docMap.get("policy_copy")?.id} onDelete={deleteDocument} loading={uploadingType==="policy_copy"} onUpload={(type,file)=>{setCopy(file);upload(type,file)}}/><UploadAction label="Add Proposal Form" type="proposal_form" existing={docMap.get("proposal_form")} disabled={uploading||deleting} deleting={deletingDocumentId===docMap.get("proposal_form")?.id} onDelete={deleteDocument} loading={uploadingType==="proposal_form"} onUpload={upload}/><UploadAction label="Add Illustration Form" type="benefit_illustration" existing={docMap.get("benefit_illustration")} disabled={uploading||deleting} deleting={deletingDocumentId===docMap.get("benefit_illustration")?.id} onDelete={deleteDocument} loading={uploadingType==="benefit_illustration"} onUpload={upload}/><UploadAction label="Add Payment Receipt" type="premium_receipt" existing={docMap.get("premium_receipt")} disabled={uploading||deleting} deleting={deletingDocumentId===docMap.get("premium_receipt")?.id} onDelete={deleteDocument} loading={uploadingType==="premium_receipt"} onUpload={upload}/><UploadAction label="Add Other Form" type="other_document" existing={docMap.get("other_document")} disabled={uploading||deleting} deleting={deletingDocumentId===docMap.get("other_document")?.id} onDelete={deleteDocument} loading={uploadingType==="other_document"} onUpload={upload}/></>}
     </div>
-    <section className="flex flex-wrap items-center justify-end gap-2 rounded-2xl border border-[#D9E5F4] bg-white px-4 py-3 shadow-[0_8px_24px_rgba(23,54,93,.06)]">
+    {!isClosed?<section className="flex flex-wrap items-center justify-end gap-2 rounded-2xl border border-[#D9E5F4] bg-white px-4 py-3 shadow-[0_8px_24px_rgba(23,54,93,.06)]">
       <Link href="/policies/life-health-cases" className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border border-[#CAD7E7] bg-white px-4 text-[10px] font-semibold text-[#17365D] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#F2F6FC]"><X className="h-3.5 w-3.5" />Cancel</Link>
       <button type="button" onClick={()=>{setRejectError(null);setRejectOpen(true)}} disabled={saving||converting||uploading||deleting} className="inline-flex h-10 items-center justify-center rounded-xl border border-red-200 bg-red-50 px-4 text-[10px] font-bold text-red-700 hover:bg-red-100 disabled:opacity-60">Reject</button>
       <button type="button" onClick={saveDetails} disabled={saving||converting||rejectPending} className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border border-[#BFD3EE] bg-[#EFF5FF] px-4 text-[10px] font-bold text-[#17365D] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#E0EDFF] disabled:opacity-60"><Save className="h-3.5 w-3.5"/>{saving?"Saving…":"Save Case Details"}</button>
       <button type="button" onClick={()=>convert()} disabled={converting||rejectPending} className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[linear-gradient(100deg,#133766,#2064AD)] px-5 text-[10px] font-bold text-white shadow-[0_8px_18px_rgba(25,78,147,.18)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_10px_24px_rgba(25,78,147,.3)] disabled:opacity-60"><ShieldCheck className="h-4 w-4"/>{converting?"Creating…":"Create Policy & Close Case"}<ArrowRight className="h-3.5 w-3.5"/></button>
-    </section>
-    {dateApprovalOpen&&issueApprovalRequired?<PolicyDateApprovalDialog issuanceDate={issue.issuanceDate} policyNumber={issue.policyNumber} operation="create" intermediaryCode={caseData.intermediaryCode} verifiedApprovalId={dateApprovalId} onApproved={id=>setIssuedApproval(id?{id,key:issueApprovalKey}:null)} onClose={()=>setDateApprovalOpen(false)} onConfirm={()=>convert(true)} submitting={converting}/>:null}
+    </section>:<div className="flex justify-end"><Link href="/policies/life-health-cases" className="inline-flex h-10 items-center justify-center rounded-xl border border-[#CAD7E7] bg-white px-4 text-[10px] font-semibold text-[#17365D]">Back to cases</Link></div>}
+    {dateApprovalOpen&&!isClosed&&issueApprovalRequired?<PolicyDateApprovalDialog issuanceDate={issue.issuanceDate} policyNumber={issue.policyNumber} operation="create" intermediaryCode={caseData.intermediaryCode} verifiedApprovalId={dateApprovalId} onApproved={id=>setIssuedApproval(id?{id,key:issueApprovalKey}:null)} onClose={()=>setDateApprovalOpen(false)} onConfirm={()=>convert(true)} submitting={converting}/>:null}
   </div>
 }
 
