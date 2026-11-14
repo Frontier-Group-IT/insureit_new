@@ -26,7 +26,7 @@ def fixture():
              "23; 0 1 TABLE DATA identity_maintenance backup postgres\n",
              "24; 1259 1 TABLE insureit_recovery backup postgres\n",
              "25; 0 1 TABLE DATA insureit_recovery backup postgres\n",
-             "26; 1259 1 TABLE public dummy postgres\n"]
+             "26; 1259 1 TABLE public synthetic_150 postgres\n"]
     lines += [
         f"{1000+i}; 1259 1 TABLE public synthetic_{i} postgres\n"
         for i in range(150)
@@ -68,6 +68,13 @@ class PlanTests(unittest.TestCase):
         self.assertNotIn("rls_auto_enable()", text)
         self.assertNotIn("DEFAULT ACL", text)
         self.assertNotIn("EVENT TRIGGER", text)
+
+    def test_fails_when_app_data_destination_not_defined(self):
+        content = fixture().replace(
+            "26; 1259 1 TABLE public synthetic_150 postgres\\n", ""
+        )
+        with self.assertRaises(ValueError):
+            chosen_entries(content)
 
     def test_fails_on_missing_auth(self):
         with self.assertRaises(ValueError):
