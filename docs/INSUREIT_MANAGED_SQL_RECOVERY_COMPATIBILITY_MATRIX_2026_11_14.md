@@ -43,7 +43,16 @@ Total global \`pg_auth_members\` edges were previously **22 source vs 24 target*
 
 Source has **182** public tables, **4** views, **18** sequences, **667** indexes, **252** RLS policies (182/182 public tables RLS enabled), **446** functions (**392** SECURITY DEFINER), **166** enabled noninternal triggers, **426** foreign keys and **356** check constraints. The target's application-owned public tables/constraints/views/policies are empty; the one target public function is a preinstalled RLS event-trigger helper. These are **live metadata numbers**, not a snapshot result. No production business row or function source code was shared.
 
-## R2/R3 exact v2 archive verification (not yet run for latest snapshot)
+### 14 November 2026 — ACTUAL R3 full offline SQL restore PASS, run #43567559473
+
+- Operator manually dispatched existing **main** workflow [INSUREIT PostgreSQL R2 v2 isolated restore verification #43567559473](https://github.com/Frontier-Group-IT/insureit_new/actions/runs/43567559473); job `restore_v2` completed **SUCCESS** on 14 Nov 2026 at approximately **06:41 UTC / 12:11 IST**. This evidence comes from decoded real GitHub Actions job logs, not just the screenshot status.
+- R2 v2 archive was successfully authenticated/decrypted: **2 required components** (`database.dump` and `roles.sql`), **12,325,643 unpacked bytes** reported. Actual private `pg_restore --list` TOC validator: **233 table definitions, 232 COPY data targets, 287 policies, 20 sequences, 0 missing required managed data targets**.
+- The `--network none` disposable Supabase PG17 image restored **schema, data and archive privileges** with strict restore success, **no `--no-acl` fallback**. **232/232 archived COPY tables reconciled; 0 row-count mismatches**.
+- The offline workflow required **2 NOLOGIN source role-name placeholders**, used `--no-owner`, and printed `ROLE SEMANTICS NOT VERIFIED`. Archive ACL mechanical replay is proven, **NOT actual source role memberships/login capabilities/owner semantics**. It also does not prove compatibility with managed target PG17.11, Auth/Storage service readiness or private document serving.
+- **Snapshot timestamp limitation:** this manual run executed the older **main** workflow and its log displays no authenticated `snapshot=...` value. It therefore certifies only **the actual latest encrypted v2 archive read at the time of run** with TOC counts above. **Do not assert its exact immutable manifest ID or treat it as same-snapshot R1 evidence**. PR #4433's newer timestamp-lock code remains unmerged; its tests/CI must pass before any main run can use it.
+- **Status:** `R3_FULL_ARCHIVE_OFFLINE_REPLAY=PASS_FOR_RUN_43567559473`; `R3_SOURCE_ROLE_AND_OWNER_PARITY=OPEN`; `R3_MANAGED_17_11_COMPATIBILITY=OPEN`; `R1_MANAGED_TARGET_PRIVATE_TOC=NOT_RUN`; `R4_TARGET_IMPORT=NOT_STARTED`. The **full SQL schema/data archive is mechanically restorable offline**; managed Supabase recovery and full service DR are still **NOT CERTIFIED**. No production or managed target DB writes were made by this workflow.
+
+## R2/R3 exact v2 archive verification (latest inspected manual R3 PASS; managed target pending)
 
 An earlier offline verified archive had **230/230** COPY targets. A newer successful scheduled v2 backup #43542747014 reported **233 table definitions / 232 COPY data targets**. This latest or a newer encrypted v2 manifest must be authenticated, decrypted privately and audited by \`pg_restore --list\` **for that actual snapshot**; never hardcode either historical count as the current restore truth.
 
