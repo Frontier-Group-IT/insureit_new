@@ -30,8 +30,11 @@ const productDraftKeys = new Set([
   "projectValue","natureOfBusiness","liabilityType","employeeCount","annualWages","businessName",
   "annualTurnover","sumInsured","deductible","netPremium","gstAmount","grossPremium",
   "startDate","endDate","previousInsurer","previousPolicyNumber","previousClaims",
-  "addOns","warranties","specialConditions","endorsements","remarks"
+  "addOns","warranties","specialConditions","endorsements","remarks",
+  "payinBasis","payinValue","payinScheme","partnerPayoutBasis","partnerPayoutValue"
 ]);
+// Product-specific projected commercial terms are draft-only and never mapped into Motor booking.
+const productCommercialKeys = new Set(["payinBasis","payinValue","payinScheme","partnerPayoutBasis","partnerPayoutValue"]);
 const nonMotorTypes = ["Life","Health","Non Motor"] as const;
 const commercialFields = ["payoutBasis","projectedOdPercent","projectedTpPercent","insurerScheme","payinBillNo","payinBilledAmount","payinBillDate","payinStatus","retention","payoutOdPercent","payoutTpPercent","flatPayoutAmount","payoutStatus","payoutDate","payoutVoucherNo"] as const;
 type Input = { action?: "prepare" | "save" | "book" | "approval_request" | "approval_verify" | "rc_lookup"; intake_id?: string; take_over?: boolean; expected_reviewer_id?: string | null; revision?: number; draft?: PolicyIntakeDraft; resolution?: PolicyOnboardingPayload["resolution"]; date_approval_id?: string | null; approver_key?: string; approval_id?: string; otp?: string; registration_no?: string };
@@ -170,6 +173,21 @@ export async function POST(request:Request){
         Object.entries(values).some(([key,value])=>!productDraftKeys.has(key)||typeof value!=="string"||value.length>2000)
       ))return reply("Unsupported product draft fields.",400);
     }
+    if(proposedProductDrafts!==undefined){
+      for(const [,values] of Object.entries(proposedProductDrafts as Record<string,Record<string,string>>)){
+        if(!commercialAccess && Object.keys(values).some(key=>productCommercialKeys.has(key)))
+          return reply("Commercial terms require financial access.",403);
+        for(const key of productCommercialKeys){
+          const value=values[key];
+          if(value===undefined||value==="")continue;
+          if(key==="payinBasis"||key==="partnerPayoutBasis"){
+            if(!["NET","FLAT"].includes(value))return reply("Invalid commercial basis.",400);
+          }else if(!/^\d+(?:\.\d{1,2})?$/.test(value)||!Number.isFinite(Number(value))||Number(value)>(key.endsWith("Value")&&values[key.replace("Value","Basis")]==="NET"?100:100000000000)){
+            return reply("Invalid projected commercial value.",400);
+          }
+        }
+      }
+    }
     const {data:stored,error:storedError}=await admin.from("policy_intake_onboarding_drafts")
       .select("draft_payload,revision").eq("intake_id",intake.id).maybeSingle<{draft_payload:PolicyIntakeDraft;revision:number}>();
     if(storedError||!stored||stored.revision!==body.revision)return reply("Draft changed. Reload the latest version.",409);
@@ -181,7 +199,12 @@ export async function POST(request:Request){
     for(const key of nativeOptionalFields)if(extraValues[key]!=null)saveDraft[key]=extraValues[key];
     if(proposedProductDrafts!==undefined){
       // Keep each product's form separate from Motor and from restricted commercials.
-      saveDraft.productDrafts=proposedProductDrafts;
+      const previous=(stored.draft_payload as PolicyIntakeDraft & {productDrafts?:Record<string,Record<string,string>>}).productDrafts??{};
+      saveDraft.productDrafts=Object.fromEntries(
+        Object.entries(proposedProductDrafts as Record<string,Record<string,string>>).map(([type,values])=>[
+          type,{...previous[type],...values}
+        ])
+      );
     }
     const {data,error}=await admin.from("policy_intake_onboarding_drafts")
       .update({draft_payload:saveDraft,revision:(body.revision as number)+1,updated_by_profile_id:user.id,updated_at:new Date().toISOString()})
@@ -235,7 +258,17 @@ export async function POST(request:Request){
   }
   // Never return restricted insurance pay-in, retention or partner payout values to non-commercial reviewers.
   const visibleDraft={...draft};
-  if(!commercialAccess)for(const key of commercialFields)visibleDraft[key]="";
+  if(!commercialAccess){
+    for(const key of commercialFields)visibleDraft[key]="";
+    // Never disclose isolated Life/Health/Non Motor commercial terms to non-financial reviewers.
+    const isolated=(draft as PolicyIntakeDraft & {productDrafts?:Record<string,Record<string,string>>}).productDrafts;
+    if(isolated){
+      (visibleDraft as typeof visibleDraft & {productDrafts?:Record<string,Record<string,string>>}).productDrafts=
+        Object.fromEntries(Object.entries(isolated).map(([type,values])=>[
+          type,Object.fromEntries(Object.entries(values).filter(([key])=>!productCommercialKeys.has(key)))
+        ]));
+    }
+  }
   // Mirror the Operations Portal's authoritative source-owner resolution.
   // Return only metadata for this already-authorized intake and selected source,
   // never a complete source directory or another employee's downline.
