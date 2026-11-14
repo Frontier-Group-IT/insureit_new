@@ -394,7 +394,7 @@ EXECUTE FUNCTION public.canonicalize_onboarding_employee_identity();
 -- Canonicalize new case displays from the booked employee and selected source UUID.
 -- This does not assign/change any RM; the UUID stored at booking remains immutable.
 CREATE OR REPLACE FUNCTION public.canonicalize_case_identity_labels()
-RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public' AS $
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public' AS $$
 DECLARE v_rm_name text; v_rm_code text; v_source_name text; v_source_code text;
 BEGIN
   IF NEW.rm_employee_id IS NOT NULL THEN
@@ -414,7 +414,7 @@ BEGIN
   END IF;
   RETURN NEW;
 END;
-$;
+$$;
 DROP TRIGGER IF EXISTS a_canonicalize_case_identity_labels ON public.life_health_cases;
 CREATE TRIGGER a_canonicalize_case_identity_labels
 BEFORE INSERT OR UPDATE OF rm_employee_id,rm_name,rm_code,intermediary_id,intermediary_code,lead_source
@@ -423,7 +423,7 @@ EXECUTE FUNCTION public.canonicalize_case_identity_labels();
 
 -- Intake source ID is stable even if its display name or external code changes.
 CREATE OR REPLACE FUNCTION public.canonicalize_intake_source_identity()
-RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public' AS $
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public' AS $$
 DECLARE v_name text; v_code text;
 BEGIN
   IF NEW.lead_source_id IS NOT NULL THEN
@@ -435,7 +435,7 @@ BEGIN
   END IF;
   RETURN NEW;
 END;
-$;
+$$;
 DROP TRIGGER IF EXISTS a_canonicalize_intake_source_identity ON public.policy_intake_requests;
 CREATE TRIGGER a_canonicalize_intake_source_identity
 BEFORE INSERT OR UPDATE OF lead_source_id,lead_source_name,lead_source_code
@@ -454,6 +454,9 @@ DECLARE
   v_definition text;
   v_updated text;
 BEGIN
+  -- Only three triggers react to associate-name-only updates. Keep each
+  -- column-specific trigger's original event list except associate_name;
+  -- do not broaden PAN/compliance/application triggers to every column.
   SELECT string_agg(quote_ident(column_name),', ' ORDER BY ordinal_position)
     INTO v_cols
   FROM information_schema.columns
@@ -462,30 +465,30 @@ BEGIN
 
   FOREACH v_name IN ARRAY ARRAY[
     'intermediary_profile_sync_shared_identity',
-    'queue_intermediary_pan_after_profile_save',
-    'queue_intermediary_pan_verification_on_document_stage',
-    'trg_sync_intermediary_application_link',
-    'trg_sync_intermediary_application_status',
     'trg_sync_partner_details_to_linked_accounts',
-    'trg_sync_partner_intermediary',
     'trg_sync_posp_misp_profile_to_intermediary'
   ] LOOP
-    SELECT pg_get_triggerdef(t.oid) INTO v_definition FROM pg_trigger t
+    SELECT pg_get_triggerdef(t.oid) INTO v_definition
+    FROM pg_trigger t
     WHERE t.tgrelid='public.posp_misp_onboarding_profiles'::regclass
       AND t.tgname=v_name AND NOT t.tgisinternal;
 
     IF v_definition IS NULL THEN
-      RAISE EXCEPTION 'Missing onboarding trigger %, migration must be reviewed against current schema',v_name;
+      RAISE EXCEPTION 'Missing onboarding trigger %; inspect before migration',v_name;
     END IF;
 
-    IF POSITION('AFTER INSERT OR UPDATE ON' IN v_definition)>0 THEN
+    IF v_name='trg_sync_posp_misp_profile_to_intermediary' THEN
+      IF POSITION('AFTER INSERT OR UPDATE ON' IN v_definition)=0 THEN
+        RAISE EXCEPTION 'Unexpected generic onboarding trigger scope %: %',v_name,v_definition;
+      END IF;
       v_updated:=REPLACE(v_definition,'AFTER INSERT OR UPDATE ON',
         'AFTER INSERT OR UPDATE OF '||v_cols||' ON');
-    ELSIF POSITION('AFTER UPDATE ON' IN v_definition)>0 THEN
-      v_updated:=REPLACE(v_definition,'AFTER UPDATE ON',
-        'AFTER UPDATE OF '||v_cols||' ON');
     ELSE
-      RAISE EXCEPTION 'Unexpected event scope of onboarding trigger %: %',v_name,v_definition;
+      IF POSITION(' UPDATE OF ' IN v_definition)=0
+         OR POSITION('associate_name, ' IN v_definition)=0 THEN
+        RAISE EXCEPTION 'Unexpected column-specific onboarding trigger scope %: %',v_name,v_definition;
+      END IF;
+      v_updated:=REPLACE(v_definition,'associate_name, ','');
     END IF;
     EXECUTE format('DROP TRIGGER %I ON public.posp_misp_onboarding_profiles',v_name);
     EXECUTE v_updated;
@@ -605,7 +608,7 @@ $assert$;
 -- Validate *all* non-identity columns, including rows indirectly touched by
 -- onboarding synchronization triggers. FULL JOIN also catches adds/deletes.
 CREATE TEMP TABLE identity_sync_after_guard ON COMMIT DROP AS
-SELECT 'policies'::text dataset,id,md5((to_jsonb(t)-ARRAY['source_intermediary_id','rm_name','intermediary_code','lead_source','updated_at'])::text) fingerprint FROM public.policies t
+SELECT 'policies'::text dataset,id,md5((to_jsonb(t)-ARRAY['source_intermediary_id','source_partner_id','rm_name','intermediary_code','lead_source','updated_at'])::text) fingerprint FROM public.policies t
 UNION ALL SELECT 'life_health_cases',id,md5((to_jsonb(t)-ARRAY['rm_name','rm_code','intermediary_code','lead_source','updated_at'])::text) FROM public.life_health_cases t
 UNION ALL SELECT 'posp_misp_onboarding_profiles',id,md5((to_jsonb(t)-ARRAY['associate_name','associate_employee_code','updated_at','updated_by'])::text) FROM public.posp_misp_onboarding_profiles t
 UNION ALL SELECT 'intermediary_onboarding_applications',id,md5(((to_jsonb(t)-ARRAY['draft_data','updated_at']) ||

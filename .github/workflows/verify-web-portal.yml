@@ -43,6 +43,16 @@ jobs:
         run: node scripts/life-health-issued-policy-continuous-grid-regression.mjs
       - name: Activity Status field-change and privacy regression
         run: node --experimental-strip-types scripts/activity-change-details-regression.mjs
+      - name: Daily Report Phase 1 read-only hierarchy and activity regression
+        run: node scripts/daily-activity-report-phase1-regression.mjs
+      - name: Daily Report Phase 2 audit event and privacy regression
+        run: node scripts/daily-activity-phase2-audit-regression.mjs
+      - name: Daily Report Phase 3 authorization and read-only release matrix
+        run: node --experimental-strip-types scripts/daily-report-phase3-scope-regression.mjs
+      - name: Daily Report Phase 4 busy-day pagination and category accuracy regression
+        run: node --experimental-strip-types scripts/daily-report-phase4-completeness-regression.mjs
+      - name: Daily Report Phase 5 source and timestamp accuracy regression
+        run: node scripts/daily-report-phase5-accuracy-regression.mjs
       - name: OCR-only Layout Parser opt-in regression
         run: node scripts/policy-ocr-layout-off-regression.mjs
       - name: ICICI 3005 OCR-only field regression

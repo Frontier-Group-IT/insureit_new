@@ -26,7 +26,7 @@ export function displayIndianDate(iso: string) {
   return day+'/'+month+'/'+year;
 }
 
-export function PartnerPolicyDateField({label,value,onChange,required=false}:{label:string;value:string;onChange:(iso:string)=>void;required?:boolean}) {
+export function PartnerPolicyDateField({label,value,onChange,required=false,hidePlaceholder=false}:{label:string;value:string;onChange:(iso:string)=>void;required?:boolean;hidePlaceholder?:boolean}) {
   const [pickerOpen,setPickerOpen] = useState(false);
   const [webInput,setWebInput] = useState('');
   const selected=parseIso(value);
@@ -38,12 +38,12 @@ export function PartnerPolicyDateField({label,value,onChange,required=false}:{la
     <Text style={styles.label}>{label}{required?<Text style={styles.star}> *</Text>:null}</Text>
     {Platform.OS==='web' ? (
       <View style={styles.row}>
-        <TextInput accessibilityLabel={label} value={webInput|| (value?displayIndianDate(value):'')} onChangeText={v=>{setWebInput(v);const iso=fromIndianDate(v);if(iso){onChange(iso);setWebInput('');}}} onBlur={()=>setWebInput('')} placeholder="DD/MM/YYYY" style={styles.webInput}/>
+        <TextInput accessibilityLabel={label} value={webInput|| (value?displayIndianDate(value):'')} onChangeText={v=>{setWebInput(v);const iso=fromIndianDate(v);if(iso){onChange(iso);setWebInput('');}}} onBlur={()=>setWebInput('')} placeholder={hidePlaceholder?"":"DD/MM/YYYY"} style={styles.webInput}/>
         <Ionicons name="calendar-outline" size={17} color="#315B9A"/>
       </View>
     ) : (
       <Pressable accessibilityRole="button" accessibilityLabel={label+' calendar picker'} onPress={()=>setPickerOpen(true)} style={styles.row}>
-        <Text style={[styles.value,!value&&styles.placeholder]}>{value?displayIndianDate(value):'DD/MM/YYYY'}</Text>
+        <Text style={[styles.value,!value&&styles.placeholder]}>{value?displayIndianDate(value):hidePlaceholder?'':'DD/MM/YYYY'}</Text>
         <Ionicons name="calendar-outline" size={17} color="#315B9A"/>
       </Pressable>
     )}
