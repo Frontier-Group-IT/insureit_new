@@ -36,7 +36,7 @@ assert.match(screen,/isMotor&&data\?\.commercialAccess/,'Motor financial entry s
 assert.match(screen,/saveNativePolicyOnboarding\(id,data.revision,draft\)/,'Draft save remains functional');
 // Motor follows Operations structure; other product types retain draft-only screens.
 assert.match(screen,/policy\.slice\(0,4\)\.map\(item/, 'Motor and non-Motor source sections use only four primary rows.');
-assert.match(screen,/f.key==='intermediaryType'&&\(draft.rmName\|\|data\?\.sourceMeta\?\.rmName\)/, 'Show authoritative RM beneath intermediary type.');
+assert.match(screen,/f.key==='intermediaryType'&&\(draft.rmName\|\|matchedSource\?\.rmName\)/, 'Show matching-source RM beneath intermediary type.');
 assert.match(screen,/f.key==='leadSource'\?<View style=\{styles.sourceDetails\}/, 'Show source code and master phone beneath lead source.');
 assert.match(screen,/isMotor&&f.key==='issuanceDate'\?'Policy issuance date'/, 'Motor uses policy issuance label.');
 assert.match(screen,/motorVehicleSection/, 'Motor requires a combined insured-and-vehicle card.');
