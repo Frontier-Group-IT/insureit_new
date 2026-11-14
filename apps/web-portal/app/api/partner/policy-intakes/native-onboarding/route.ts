@@ -280,7 +280,7 @@ export async function POST(request:Request){
           }
         }
         sourceMeta={name:selected.display_name.trim(),code:selected.intermediary_code??"",
-          mobile:selected.mobile?.replace(/\\D/g,"").slice(-10)??"",rmName,rmCode};
+          mobile:selected.mobile?.replace(/\D/g,"").slice(-10)??"",rmName,rmCode};
       }
     }
   }
