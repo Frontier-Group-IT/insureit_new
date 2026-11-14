@@ -2,6 +2,7 @@ import "../customer-register-motion.css";
 import { PolicySourceFilter } from "./policy-source-filter";
 import { ManufacturerMark } from "../vehicles/customer-vehicles-register";
 import { CustomerPolicyAnimatedSearch } from "./customer-policy-animated-search";
+import { PolicyStatusSlidingFilter } from "./policy-status-sliding-filter";
 import Link from "next/link";
 import { FileText, ShieldCheck, Clock3, Plus } from "lucide-react";
 import { getStaticInsurerLogo } from "@/lib/insurer-logo";
@@ -108,14 +109,7 @@ export default async function CustomerPoliciesPage({
         <div className="flex flex-wrap items-center gap-2 border-b border-[#E4EAF2] px-3 py-3 sm:px-4 xl:flex-nowrap">
           <h2 className="flex shrink-0 items-center gap-2 text-[17px] font-bold text-[#102B54]"><img src="/assets/Custom-Icons/optimized-128/documents.png" alt="" aria-hidden="true" width={34} height={34} className="h-[34px] w-[34px] object-contain" />Policy Register</h2>
           <CustomerPolicyAnimatedSearch accountId={account.id} query={currentQuery} status={statusFilter ?? "all"} source={sourceFilter ?? "all"} suggestions={policies.filter(policy => (statusFilter === "all" || customerPolicyTone(policy.end_date).tone === statusFilter) && (sourceFilter === "all" || (sourceFilter === "external" ? policy.source === "external" : policy.source !== "external"))).flatMap(policy => [policy.policy_no, policy.policy_type, policy.policy_product, policy.insurer_name, policy.vehicle_no, policy.vehicle_make, policy.vehicle_model].filter((v): v is string => Boolean(v)))} />
-          <div aria-label="Policy status filter" className="ml-auto flex flex-wrap items-center gap-1 rounded-lg border border-[#D8E2F0] bg-[#F8FAFD] p-1">
-            {[
-              ["all", "All", policies.length],
-              ["active", "Active", counts.active],
-              ["due", "Due", counts.due],
-              ["expired", "Expired", counts.expired],
-            ].map(([value,label,count])=><Link key={String(value)} href={makeHref({status:String(value)})} className={`customer-register-filter whitespace-nowrap rounded-md px-3 py-2 text-[12px] font-semibold ${statusFilter===value?"bg-[#0D756D] text-white":"text-[#60728D] hover:bg-white"}`}>{label} {count}</Link>)}
-          </div>
+          <PolicyStatusSlidingFilter accountId={account.id} query={currentQuery} source={sourceFilter ?? "all"} status={statusFilter ?? "all"} counts={{ all: policies.length, active: counts.active, due: counts.due, expired: counts.expired }} />
           <PolicySourceFilter accountId={account.id} query={currentQuery} status={statusFilter ?? "all"} source={sourceFilter ?? "all"} />
           <Link href={{ pathname: "/customer/add-policy", query: { account: account.id } }} className="customer-register-action inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-[#1253A7] px-3 py-2.5 text-[12px] font-bold text-white shadow-sm transition hover:bg-[#0A3E87] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1253A7]"><Plus className="h-4 w-4" />Add Policy</Link>
         </div>
