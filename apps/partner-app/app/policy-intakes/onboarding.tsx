@@ -376,7 +376,7 @@ export default function NativePolicyOnboarding(){
           keyboardType={['phoneNo','idv','od','tp','cpa','capacity','manufacturingYear'].includes(f.key)?'numeric':'default'}
           style={[styles.input,restricted&&styles.readonlyInput]} />
       )}
-      {isMotor&&f.key==='intermediaryType'&&draft.rmName?<Text style={styles.fieldMeta}>RM · {draft.rmName}{data?.sourceMeta?.rmCode&&data.sourceMeta.rmName.trim().toLowerCase()===draft.rmName.trim().toLowerCase()?'   ID · '+data.sourceMeta.rmCode:''}</Text>:null}
+      {isMotor&&f.key==='intermediaryType'&&(draft.rmName||data?.sourceMeta?.rmName)?<Text style={styles.fieldMeta}>RM · {draft.rmName||data?.sourceMeta?.rmName}{data?.sourceMeta?.rmCode&&(!draft.rmName||data.sourceMeta.rmName.trim().toLowerCase()===draft.rmName.trim().toLowerCase())?'   ID · '+data.sourceMeta.rmCode:''}</Text>:null}
       {isMotor&&f.key==='leadSource'?<View style={styles.sourceDetails}>
         {draft.intermediaryCode?<Text style={styles.fieldMeta}>ID · {draft.intermediaryCode}</Text>:null}
         {data?.sourceMeta?.mobile&&data.sourceMeta.code===draft.intermediaryCode&&data.sourceMeta.name.trim().toLowerCase()===draft.leadSource.trim().toLowerCase()?<Text style={styles.fieldMeta}>☎ {data.sourceMeta.mobile}</Text>:null}
