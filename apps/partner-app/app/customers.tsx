@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -96,7 +96,7 @@ export default function CustomersScreen() {
 
       <View style={styles.kpiOuter}>
         {summary.loading && !summary.data ? (
-          <View style={styles.kpiLoading}><ActivityIndicator size="small" color="#123E75" /></View>
+          <View style={styles.kpiLoading} accessibilityRole="progressbar" accessibilityLabel="Loading customer totals"><View style={styles.kpiSkeletonBlock} /><View style={styles.kpiSkeletonBlock} /><View style={styles.kpiSkeletonBlock} /></View>
         ) : (
           <View style={styles.kpiStrip}>
             <KpiCell
@@ -314,7 +314,8 @@ const styles = StyleSheet.create({
   title: { marginTop: 1, color: '#FFFFFF', fontSize: 14, lineHeight: 17, fontWeight: '800' },
 
   kpiOuter: { paddingHorizontal: 10, paddingTop: 8, backgroundColor: '#F5F7FB' },
-  kpiLoading: { height: 48, alignItems: 'center', justifyContent: 'center', borderRadius: 10, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#DEE7F2' },
+  kpiLoading: { height: 48, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 10, borderRadius: 10, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#DEE7F2' },
+  kpiSkeletonBlock: { flex: 1, height: 35, borderRadius: 8, backgroundColor: '#EDEFF3' },
   kpiStrip: { height: 48, flexDirection: 'row', borderRadius: 10, overflow: 'hidden', backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#DCE5F0' },
   kpiCell: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderLeftWidth: StyleSheet.hairlineWidth, borderLeftColor: '#E1E7F0', backgroundColor: '#FFFFFF' },
   kpiCellActive: { backgroundColor: '#0B2E63', borderLeftColor: '#0B2E63' },

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
@@ -95,7 +95,7 @@ export default function StoriesScreen() {
       </View>
 
       {loading ? (
-        <View style={styles.center}><ActivityIndicator color="#FFFFFF" /></View>
+        <View style={styles.storySkeleton} accessibilityRole="progressbar" accessibilityLabel="Loading INSUREIT Stories"><View style={styles.storySkeletonIcon}/><View style={styles.storySkeletonEyebrow}/><View style={styles.storySkeletonTitle}/><View style={styles.storySkeletonLine}/><View style={styles.storySkeletonLineShort}/></View>
       ) : error || !story ? (
         <View style={styles.center}>
           <Text style={styles.errorText}>{error || 'No Story is available.'}</Text>
@@ -201,6 +201,12 @@ const styles = StyleSheet.create({
   brandMeta: { marginTop: 1, color: '#B8C5DB', fontSize: 7.5 },
   close: { width: 31, height: 31, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(24,42,74,0.88)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', zIndex: 5 },
+  storySkeleton: { zIndex: 5, position: 'absolute', left: 23, right: 23, top: '19%', gap: 13 },
+  storySkeletonIcon: { height: 42, width: 42, borderRadius: 12, backgroundColor: '#29446F' },
+  storySkeletonEyebrow: { marginTop: 8, height: 10, width: '35%', borderRadius: 5, backgroundColor: '#29446F' },
+  storySkeletonTitle: { height: 24, width: '78%', borderRadius: 7, backgroundColor: '#38547F' },
+  storySkeletonLine: { height: 12, width: '92%', borderRadius: 6, backgroundColor: '#29446F' },
+  storySkeletonLineShort: { height: 12, width: '65%', borderRadius: 6, backgroundColor: '#29446F' },
   errorText: { color: '#CDD4E0', fontSize: 13, textAlign: 'center' },
   retry: { marginTop: 12, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, backgroundColor: '#4F46C8' },
   retryText: { color: '#FFFFFF', fontSize: 11, fontWeight: '800' },
