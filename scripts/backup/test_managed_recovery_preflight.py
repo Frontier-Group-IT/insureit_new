@@ -20,7 +20,13 @@ def make_toc(directory):
         "104; 0 5 TABLE DATA auth users supabase_auth_admin\n"
         "105; 0 5 TABLE DATA storage buckets supabase_storage_admin\n"
         "106; 0 5 TABLE DATA storage objects supabase_storage_admin\n"
-        "107; 0 5 TABLE DATA supabase_migrations schema_migrations postgres\n",
+        "107; 0 5 TABLE DATA supabase_migrations schema_migrations postgres\n"
+        "108; 1255 5 FUNCTION public sample_fn() postgres\n"
+        "109; 2620 5 TRIGGER auth users postgres\n"
+        "110; 3256 5 POLICY storage objects postgres\n"
+        "111; 1259 5 INDEX public policy_idx postgres\n"
+        "112; 2606 5 FK CONSTRAINT public orders synthetic_fk postgres\n"
+        "113; 826 5 DEFAULT ACL public DEFAULT PRIVILEGES FOR TABLES postgres\n",
         encoding="utf-8"
     )
     return toc
@@ -76,6 +82,13 @@ class TocReview(unittest.TestCase):
             self.assertEqual(counts[("TABLE", "application")], 1)
             self.assertEqual(len(data), 5)
             self.assertIn(("auth", "users"), data)
+            self.assertEqual(counts[("FUNCTION", "application")], 1)
+            self.assertEqual(counts[("TRIGGER", "managed")], 1)
+            self.assertEqual(counts[("POLICY", "managed")], 1)
+            self.assertEqual(counts[("INDEX", "application")], 1)
+            self.assertEqual(counts[("FK CONSTRAINT", "application")], 1)
+            self.assertEqual(counts[("DEFAULT ACL", "application")], 1)
+
 
     def test_missing_critical_fails_closed(self):
         with tempfile.TemporaryDirectory() as d:
