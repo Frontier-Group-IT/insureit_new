@@ -89,21 +89,6 @@ export async function POST(request:Request){
       const downline=await getOperationsHeadDownlinePolicyScope(profile.id);
       if(!intake.lead_source_code||!downline.intermediaryCodes.includes(intake.lead_source_code))return reply("Lead source is outside your downline.",403);
     }
-    if(proposedProductDrafts!==undefined){
-      for(const [,values] of Object.entries(proposedProductDrafts as Record<string,Record<string,string>>)){
-        if(!commercialAccess && Object.keys(values).some(key=>productCommercialKeys.has(key)))
-          return reply("Commercial terms require financial access.",403);
-        for(const key of productCommercialKeys){
-          const value=values[key];
-          if(value===undefined||value==="")continue;
-          if(key==="payinBasis"||key==="partnerPayoutBasis"){
-            if(!["NET","FLAT"].includes(value))return reply("Invalid commercial basis.",400);
-          }else if(!/^\d+(?:\.\d{1,2})?$/.test(value)||!Number.isFinite(Number(value))||Number(value)>(key.endsWith("Value")&&values[key.replace("Value","Basis")]==="NET"?100:100000000000)){
-            return reply("Invalid projected commercial value.",400);
-          }
-        }
-      }
-    }
     const {data:stored,error:storedError}=await admin.from("policy_intake_onboarding_drafts")
       .select("draft_payload,revision").eq("intake_id",intake.id).maybeSingle<{draft_payload:PolicyIntakeDraft;revision:number}>();
     if(storedError||!stored||stored.revision!==body.revision)return reply("Save the current draft before requesting approval.",409);
@@ -187,6 +172,21 @@ export async function POST(request:Request){
         !values||typeof values!=="object"||Array.isArray(values)||
         Object.entries(values).some(([key,value])=>!productDraftKeys.has(key)||typeof value!=="string"||value.length>2000)
       ))return reply("Unsupported product draft fields.",400);
+    }
+    if(proposedProductDrafts!==undefined){
+      for(const [,values] of Object.entries(proposedProductDrafts as Record<string,Record<string,string>>)){
+        if(!commercialAccess && Object.keys(values).some(key=>productCommercialKeys.has(key)))
+          return reply("Commercial terms require financial access.",403);
+        for(const key of productCommercialKeys){
+          const value=values[key];
+          if(value===undefined||value==="")continue;
+          if(key==="payinBasis"||key==="partnerPayoutBasis"){
+            if(!["NET","FLAT"].includes(value))return reply("Invalid commercial basis.",400);
+          }else if(!/^\d+(?:\.\d{1,2})?$/.test(value)||!Number.isFinite(Number(value))||Number(value)>(key.endsWith("Value")&&values[key.replace("Value","Basis")]==="NET"?100:100000000000)){
+            return reply("Invalid projected commercial value.",400);
+          }
+        }
+      }
     }
     const {data:stored,error:storedError}=await admin.from("policy_intake_onboarding_drafts")
       .select("draft_payload,revision").eq("intake_id",intake.id).maybeSingle<{draft_payload:PolicyIntakeDraft;revision:number}>();
