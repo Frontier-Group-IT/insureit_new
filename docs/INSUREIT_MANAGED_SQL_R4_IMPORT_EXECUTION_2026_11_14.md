@@ -25,6 +25,8 @@ A fresh SELECT-only target privilege audit found **postgres is NOT superuser**, 
 
 This means the first actual target import is necessarily **PARTIAL managed service SQL restore**, even when application tables/rows are complete. A **separate Supabase-supported managed-owner migration or privileged platform procedure** is needed to reconstruct one source Auth trigger and 35 source Storage policies. Never grant superuser/BYPASSRLS or impersonate managed roles to force completion. Do not connect live clients to this unfinished service.
 
+**Additional Auth DML ownership check:** `postgres` has INSERT permission on **26 of 27 target auth tables**; the sole exception is `auth.schema_migrations` (platform-managed version history). R4's private TOC filter now excludes `auth.schema_migrations` from target imports and from selected COPY parity checks. Original Auth version history is **DEFERRED** to a Supabase-supported managed migration process, not silently described as restored. This restriction is separate from the source `supabase_migrations.schema_migrations` history, which is also deferred.
+
 ## Dependencies and mandatory human-operated trust boundary
 
 - Review/merge [R0/R1 preflight PR #4433](https://github.com/Frontier-Group-IT/insureit_new/pull/4433) after its required checks, preserving no app/deployment changes. This makes \`insureit-managed-recovery-preflight.yml\` available on main.
