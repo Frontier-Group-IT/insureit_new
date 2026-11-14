@@ -142,12 +142,21 @@ def query_target(connection_kwargs):
                     "SELECT count(*) FROM pg_catalog.pg_proc WHERE prosecdef"
                 )
                 definers = cur.fetchone()[0]
+                cur.execute(
+                    "SELECT count(*) FROM pg_catalog.pg_proc p"
+                    " JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace"
+                    " WHERE n.nspname='public' AND p.prosecdef AND"
+                    " (pg_catalog.has_function_privilege('anon',p.oid,'EXECUTE') OR"
+                    " pg_catalog.has_function_privilege('authenticated',p.oid,'EXECUTE'))"
+                )
+                exposed_definers = cur.fetchone()[0]
             finally:
                 cur.execute("ROLLBACK")
     return dict(tables=table_set, extensions=extensions, roles=roles,
                 memberships=membership_count, auth_users=auth_users,
                 identities=identities, buckets=buckets, objects=objects,
-                security_definers=definers)
+                security_definers=definers,
+                exposed_public_definers=exposed_definers)
 
 
 def compare_archive(toc_path, target_url):
@@ -175,7 +184,8 @@ def compare_archive(toc_path, target_url):
           f" target_roles={len(target['roles'])}"
           f" target_role_memberships={target['memberships']}"
           f" target_security_definers={target['security_definers']}"
-          f" target_ext_installed={len(target['extensions'])}")
+          f" target_ext_installed={len(target['extensions'])}"
+          f" public_executable_definers={target['exposed_public_definers']}")
     print("MANAGED PREFLIGHT: status=REVIEW_ONLY"
           " no_import=1 no_privilege_change=1 no_production_connection=1")
     # A green read-only inspection is NOT permission to import.
