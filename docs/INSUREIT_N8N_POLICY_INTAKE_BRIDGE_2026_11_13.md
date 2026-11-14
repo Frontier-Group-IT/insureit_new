@@ -97,3 +97,12 @@ Use the existing `ParsedPolicyField` shape when writing authorized `ocr_fields` 
 - Website draft PR validator now requires both TP fields, validates strict ISO calendar dates and chronological ranges, and fails closed when TP start disagrees with the bundled policy's OD start or TP ends before OD. Other products or non-aligned coverage must use the existing Google/manual path pending specific insurer layout review.
 - Regression tests cover omitted TP expiry, impossible TP date, mismatched TP start, and prematurely expiring TP. No proof of full real PDF binary-to-n8n processing from the earlier offline text fixture; reviewer comparison and authenticated multipart byte test remain release gates.
 - No n8n publication, PR merge, website deploy, environment activation, production data modification, policy creation or auto-finalization occurred.
+
+## 2026-11-14 two-column synthetic PDF authenticated end-to-end result
+
+- Operator ran a real authenticated multipart `POST /webhook-test/insureit-policy-intake-icici-v1` with the new fully fictional two-column ICICI 3005 PDF fixture. Captured response returned `ok:true`, **19 fields**, **13/13 checks true**, `warnings:[]`, `review_required:true`, `auto_finalize_allowed:false`.
+- Policy financials exactly reconcile: Basic OD ₹1,583 + Zero Depreciation ₹683 = OD ₹2,266; Third Party ₹3,273 + CPA ₹575 = liability ₹3,848; net ₹6,114; IGST exact ₹1,100.52, rounded tax ₹1,101; **gross ₹7,215**. Vehicle IDV was ₹1,24,113 in this fixture.
+- OD was extracted as 2026-10-28 through 2027-10-27, while TP was independently extracted as 2026-10-28 through 2031-10-27. Response parser version `bridge-v1`, method `native_pdf_text`, secret never recorded in response.
+- This is the **second synthetic document's authenticated binary-to-JSON test**, not a real customer policy validation. The previously uploaded real policy was examined offline only. No real customer PDF was transmitted to n8n by this test.
+- Latest PR head before documenting this test `056d4aa0bf2fc364c871f884976ee19fdcb6323f` had successful **Verify web portal** and **INSUREIT dependency assurance evidence** checks. Documentation-only commit requires its own checks before treating the new head as green.
+- Remaining release gates: verify negative auth and malformed file handling; review separately authorized real-PDF evidence and masked contact gaps; select real authorized intake IDs; establish shadow-only config and confirm Google remains authoritative; do not deploy/merge/publish/auto-finalize without specific subsequent approval.
