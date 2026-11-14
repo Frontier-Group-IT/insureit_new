@@ -204,8 +204,9 @@ export default function NativePolicyOnboarding(){
     if(productType==='Motor')return;
     setDraft(current=>current?{...current,productDrafts:{
       ...current.productDrafts,[productType]:{
-        ...current.productDrafts?.[productType],[key]:value,
-        ...(productType==='Non Motor'&&['netPremium','gstAmount'].includes(key)?{
+        ...current.productDrafts?.[productType],...(productType==='Non Motor'&&!current.productDrafts?.[productType]?.status?{status:'Active'}:{}),[key]:value,
+        ...(productType==='Non Motor'&&['netPremium','gstAmount'].includes(key)&&
+          (value.trim()||current.productDrafts?.[productType]?.[key==='netPremium'?'gstAmount':'netPremium']?.trim())?{
           grossPremium:String(Number(key==='netPremium'?value:current.productDrafts?.[productType]?.netPremium||'0')+
             Number(key==='gstAmount'?value:current.productDrafts?.[productType]?.gstAmount||'0'))
         }:{})
@@ -439,11 +440,11 @@ export default function NativePolicyOnboarding(){
         <Pressable accessibilityRole="button" accessibilityLabel={f.label} accessibilityState={{disabled:restricted}}
           disabled={restricted} onPress={()=>setPicker({key:f.key,items:options})}
           style={[styles.inputRow,restricted&&styles.readonlyInput]}>
-          <Text numberOfLines={1} style={[styles.value,!displayed&&styles.placeholder]}>{displayed||('Select '+f.label.toLowerCase())}</Text>
+          <Text numberOfLines={1} style={[styles.value,!displayed&&styles.placeholder]}>{displayed||(productType==='Non Motor'?'':'Select '+f.label.toLowerCase())}</Text>
           <Ionicons name="chevron-down" size={15} color="#63758D"/>
         </Pressable>
       ):(
-        <TextInput accessibilityLabel={f.label} value={current} editable={!restricted} placeholder={hint}
+        <TextInput accessibilityLabel={f.label} value={current} editable={!restricted} placeholder={productType==='Non Motor'?'':hint}
           placeholderTextColor="#98A6B8" onChangeText={v=>update(f.key,v)}
           autoCapitalize={['registrationNo','chassisNo','engineNo','policyNo'].includes(f.key)?'characters':'sentences'}
           keyboardType={['phoneNo','idv','od','tp','cpa','capacity','manufacturingYear'].includes(f.key)?'numeric':'default'}
@@ -459,8 +460,8 @@ export default function NativePolicyOnboarding(){
   const detailField=(f:ProductField)=>{
     if(!draft)return null;
     if(productType!=='Non Motor'&&(f.key==='insuredName'||f.key==='phoneNo'))return field({key:f.key as FieldKey,label:f.label,required:f.required});
-    const current=String(productValues[f.key]??'');
-    if(f.key==='grossPremium')return <View key={f.key} style={styles.field}><Text style={styles.label}>{f.label}{f.required?<Text style={styles.star}> *</Text>:null}</Text><View style={styles.inputRow}><Text style={styles.value}>{current}</Text></View></View>;
+    const current=String(productValues[f.key]??(productType==='Non Motor'&&f.key==='status'?'Active':''));
+    // Gross premium is editable in Operations; net+GST may prefill it without locking the field.
     if(f.date)return <PartnerPolicyDateField key={f.key} hidePlaceholder={productType==='Non Motor'} label={f.label} value={current} required={f.required} onChange={v=>updateProduct(f.key,v)}/>;
     const options=f.key==='insurerId'?data?.insurers??[]:(f.options??[]).map(value=>({value,label:value}));
     return <View key={f.key} style={[styles.field,f.wide&&styles.wideField]}>
@@ -468,7 +469,7 @@ export default function NativePolicyOnboarding(){
       {options.length?<Pressable accessibilityRole="button" accessibilityLabel={f.label} style={styles.inputRow} onPress={()=>setPicker({key:f.key,items:options,product:true})}>
         <Text style={[styles.value,!current&&styles.placeholder]} numberOfLines={1}>{options.find(o=>o.value===current)?.label||(productType==='Non Motor'?'':'Select '+f.label.toLowerCase())}</Text>
         <Ionicons name="chevron-down" size={15} color="#63758D"/>
-      </Pressable>:<TextInput accessibilityLabel={f.label} value={current} placeholder={productType==='Non Motor'?'':'Enter '+f.label.toLowerCase()} placeholderTextColor="#98A6B8" onChangeText={v=>updateProduct(f.key,f.key==='phone'?v.replace(/\\D/g,'').slice(0,10):f.key==='policyNumber'?v.toUpperCase():v)}
+      </Pressable>:<TextInput accessibilityLabel={f.label} value={current} placeholder={productType==='Non Motor'?'':'Enter '+f.label.toLowerCase()} placeholderTextColor="#98A6B8" onChangeText={v=>updateProduct(f.key,f.key==='phone'?v.replace(/\D/g,'').slice(0,10):f.key==='policyNumber'?v.toUpperCase():v)}
         keyboardType={['premiumAmount','sumInsured','deductible','netPremium','gstAmount','grossPremium','employeeCount','annualWages','annualTurnover','projectValue'].includes(f.key)?'numeric':'default'}
         style={styles.input}/>}
     </View>;
@@ -476,8 +477,11 @@ export default function NativePolicyOnboarding(){
   // Preserve Motor's newer source ownership rendering; compact the other policy types.
   const sourceMeta=(key:'rmName'|'intermediaryCode',label:string)=><View style={styles.sourceMeta}>
     <Text style={styles.sourceMetaLabel}>{label}</Text>
-    <TextInput accessibilityLabel={label} value={draft?.[key]??''} onChangeText={value=>update(key,value)}
-      placeholder={label==='RM'?'Assigned RM':'Source code'} placeholderTextColor="#98A6B8" style={styles.sourceMetaInput}/>
+    {productType==='Non Motor'&&data?.sourceMeta
+      ? <Text style={styles.sourceMetaInput}>{key==='rmName'?draft?.rmName||data.sourceMeta.rmName:draft?.intermediaryCode||data.sourceMeta.code}</Text>
+      : <TextInput accessibilityLabel={label} value={draft?.[key]??''} onChangeText={value=>update(key,value)}
+          placeholder={productType==='Non Motor'?'':label==='RM'?'Assigned RM':'Source code'}
+          placeholderTextColor="#98A6B8" style={styles.sourceMetaInput}/>}
   </View>;
   const sourceSection=()=> <View style={styles.section}>
     <View style={styles.sectionHead}><Text style={styles.number}>01</Text><Text style={styles.sectionTitle}>Policy source & ownership</Text></View>
