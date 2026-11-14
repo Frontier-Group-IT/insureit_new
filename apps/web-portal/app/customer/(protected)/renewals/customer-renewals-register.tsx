@@ -31,10 +31,11 @@ export function CustomerRenewalsRegister({accountId,items,categories}:{
   accountId:string;items:RenewalRegisterItem[];categories:RenewalCategory[];
 }) {
   const [query,setQuery]=useState("");
-  const [status,setStatus]=useState("due");
-  // Open the pending Insurance Policy register on first visit.
+  const [status,setStatus]=useState("all");
+  // Start with the first category that has due renewals, regardless of the All Status filter.
+  // Expired-only categories stay collapsed until the customer selects one.
   const [activeCategory,setActiveCategory]=useState<string | null>(
-    () => categories.find(cat => cat.key === "insurance_policy")?.key ?? categories[0]?.key ?? (items.length ? "__other__" : null),
+    () => categories.find(cat => cat.due > 0)?.key ?? null,
   );
   const groups=useMemo(()=>{
     const filtered=items.filter(item=>{
