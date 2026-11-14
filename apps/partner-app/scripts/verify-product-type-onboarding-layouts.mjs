@@ -34,7 +34,7 @@ assert.match(screen,/saveNativePolicyOnboarding\(id,data.revision,draft\)/,'Draf
 // Motor follows Operations structure; other product types retain draft-only screens.
 assert.match(screen,/policy\.slice\(0,4\)\.map\(item/, 'Motor and non-Motor source sections use only four primary rows.');
 assert.match(screen,/f.key==='intermediaryType'&&\(draft.rmName\|\|matchedSource\?\.rmName\)/, 'Show matching-source RM beneath intermediary type.');
-assert.match(screen,/f.key==='leadSource'\?<View style=\{styles.sourceDetails\}/, 'Show source code and master phone beneath lead source.');
+assert.match(screen,/f.key==='leadSource'\?<View style=\{styles.sourceOwnerDetails\}/, 'Show matched source and RM details beneath lead source.');
 assert.match(screen,/isMotor&&f.key==='issuanceDate'\?'Policy issuance date'/, 'Motor uses policy issuance label.');
 assert.match(screen,/motorVehicleSection/, 'Motor requires a combined insured-and-vehicle card.');
 assert.match(screen,/styles.registrationToggle/, 'Registration mode buttons belong in the heading.');
@@ -85,4 +85,18 @@ assert.match(screen,/\.split\(\/\\n\\s\*\\n\/\)/, 'Previously added remarks are 
 assert.doesNotMatch(screen,/numberOfLines=\{3\}/, 'Do not truncate remarks to three lines.');
 assert.match(screen,/disabled=\{saving\|\|booking\|\|!remarkText.trim\(\)\}/, 'Prevent duplicate or blank remarks while saving.');
 
-console.log('Product-type layouts, Operations Motor controls, referenced financial popups, placeholders and Motor-only booking guard verified.');
+assert.match(screen,/pendingBusinessLine/, 'Switching policy type requires an explicit confirmation.');
+assert.match(screen,/if\(picker.key==='businessLine'\)/, 'Route policy type selections through confirmation.');
+assert.match(screen,/setPicker\(null\);\s*if\(item.value!==draft\?\.businessLine\)setPendingBusinessLine/, 'Close choice list and skip confirmation when already selected.');
+assert.match(screen,/accessibilityLabel="Cancel Policy Type switch"/, 'Cancel must preserve existing policy type.');
+assert.match(screen,/accessibilityLabel="Confirm Policy Type switch"/, 'Switch must be explicit.');
+assert.match(screen,/update\('businessLine',pendingBusinessLine\)/, 'Confirmed selection updates only the business line.');
+assert.match(screen,/selected&&styles.choiceSelected/, 'Selected option must be highlighted.');
+assert.match(screen,/choiceSelected:\{backgroundColor:'#17365D'\}/, 'Selected option uses navy blue.');
+assert.match(screen,/choiceTextSelected:\{color:'#FFFFFF'/, 'Selected option uses white text.');
+assert.match(screen,/matchedSource\?\.rmCode/, 'Show authenticated RM ID.');
+assert.match(screen,/matchedSource\?\.rmMobile/, 'Show assigned RM phone, not lead-source phone.');
+assert.match(api,/\.select\("phone"\)\.eq\("id",owner\.id\)/, 'Read only the matched assigned RM phone.');
+assert.match(api,/rmMobile/, 'Expose RM phone only from scoped source metadata.');
+assert.match(types,/rmMobile:string/, 'Client type includes scoped RM phone.');
+console.log('Product-type layouts, policy type switch confirmation, selected option highlight and assigned RM metadata verified.');
