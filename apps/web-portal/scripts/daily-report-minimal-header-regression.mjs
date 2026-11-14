@@ -22,5 +22,6 @@ assert.match(quick, /type="search"/, "Keep employee search in All directory");
 assert.match(quick, /window\.setTimeout/, "Employee search updates automatically without button");
 assert.match(quick, /router\.replace/, "Auto filters update route query rather than mutate data");
 assert.match(panel, /My Activity Summary/, "Activity counts remain");
-assert.doesNotMatch(page+quick, /\.insert\(|\.upsert\(|\.delete\(|\.update\(/, "No operational writes");
+assert.doesNotMatch(page, /\.insert\(|\.upsert\(|\.delete\(|\.update\(/, "Server report remains read-only");
+assert.doesNotMatch(quick, /\.from\(|\.rpc\(|\.insert\(|\.upsert\(|\.update\(/, "Client only updates URL filters");
 console.log("Daily Report minimalist header and automatic filters regression passed.");
