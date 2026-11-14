@@ -312,6 +312,13 @@ function policyEditTitle(changed: string[] | null): string {
   if (!changed) return "Policy updated — change details unavailable";
   if (changed.length === 0) return "Policy saved — no tracked field changes";
   if (changed.length === 1 && changed[0] === DERIVED_PREMIUM_AUDIT_LABEL) return "Premium totals recalculated";
+  // State the actual source-field edit, not the derived totals it recalculated.
+  // Only use this heading when CPA amount was explicitly captured in the audit.
+  const cpaChanges = changed.filter(field => activityLabel(field) === "CPA amount");
+  if (cpaChanges.length) {
+    const otherChanges = changed.length - cpaChanges.length;
+    return otherChanges ? `CPA amount changed + ${otherChanges} more` : "CPA amount changed";
+  }
   if (changed.length > 1) {
     const remaining = changed.length - 2;
     return `${activityLabel(changed[0])}, ${activityLabel(changed[1])}${remaining ? ` + ${remaining} more` : ""} updated`;
