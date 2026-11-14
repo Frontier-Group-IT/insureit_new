@@ -14,6 +14,11 @@ assert.match(register, /\{row\.productName\}/, "Product name must remain below i
 assert.match(register, /className="max-h-6 max-w-\[52px\] object-contain"/, "Case register logos must use compact dimensions matching the insurer reference");
 assert.match(register, /className="whitespace-nowrap px-3 py-3"/, "Status cell must not wrap");
 assert.match(register, /inline-flex items-center whitespace-nowrap rounded-full/, "Status badge must stay on one line");
-assert.match(register, /className="whitespace-nowrap px-4 py-3 text-right"/, "Action cell must not wrap");
+assert.match(register, /className="whitespace-nowrap px-4 py-3 text-center"/, "Action cell stays single-line and centered");
 assert.match(register, /inline-flex items-center justify-center whitespace-nowrap rounded-lg/, "Open and Issue actions must stay on one line");
+assert.match(register, /<table className="w-full min-w-\[1120px\] text-center text-\[10px\]">/, "Every heading and data cell inherits centered alignment");
+assert.match(register, /<th className="px-3 py-3 text-center">Premium<\/th>/, "Premium header is centered");
+assert.match(register, /<th className="px-4 py-3 text-center">Action<\/th>/, "Action header is centered");
+assert.match(register, /<td className="px-3 py-3 text-center font-semibold">/, "Premium value is centered under its heading");
+assert.match(register, /className="flex h-6 items-center justify-center"/, "Insurer logo is horizontally centered under its heading");
 console.log("Life/Health global search independent of status tabs regression passed.");
