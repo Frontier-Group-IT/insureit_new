@@ -16,7 +16,7 @@ assert.match(screen,/productType==='Non Motor'\?'Customer & policy':'Customer \/
 assert.match(screen,/productType==='Non Motor'\?productSection\('03','Risk details'/);
 assert.match(screen,/productSection\('03','Policy product & case details',lifeProduct\)/);
 assert.match(screen,/productSection\('04',productType==='Non Motor'\?'Cover, premium & validity':'Premium & payment'/);
-for(const label of ['PPT · Premium paying term','PD · Policy duration','Payment frequency','Premium amount (₹)','Payment mode','Case / proposal number','Address','Risk location','Sum insured / limit (₹)','Policy category']){
+for(const label of ['PPT - Premium paying term','PD - Policy duration / term','Payment frequency','Premium amount (₹)','Payment mode','Case / proposal number','Address','Risk location','Sum insured / limit (₹)','Policy category']){
   assert.ok(screen.includes(label), 'Missing Operations field '+label);
 }
 assert.match(screen,/Form uploads are available in Operations Portal/, 'Keep an accurate short Motor document limitation.');
@@ -35,7 +35,7 @@ assert.match(screen,/Final case creation, documents, risk validation and permiss
 assert.match(screen,/isMotor&&data\?\.commercialAccess/,'Motor financial entry still permission-gated');
 assert.match(screen,/saveNativePolicyOnboarding\(id,data.revision,draft\)/,'Draft save remains functional');
 // Motor follows Operations structure; other product types retain draft-only screens.
-assert.match(screen,/isMotor\?policy.slice\(0,4\):policy/, 'Do not add duplicate source-code and RM form rows in Motor.');
+assert.match(screen,/policy\.slice\(0,4\)\.map\(item/, 'Motor and non-Motor source sections use only four primary rows.');
 assert.match(screen,/isMotor&&f.key==='intermediaryType'&&draft.rmName/, 'Show RM beneath intermediary type.');
 assert.match(screen,/isMotor&&f.key==='leadSource'&&draft.intermediaryCode/, 'Show source code beneath lead source.');
 assert.match(screen,/isMotor&&f.key==='issuanceDate'\?'Policy issuance date'/, 'Motor uses policy issuance label.');
@@ -45,7 +45,7 @@ assert.match(screen,/accessibilityState=\{\{selected:draft\?\.registrationMode==
 assert.match(screen,/styles.registrationRow/, 'Registration number is full width with an inline RC action.');
 assert.match(screen,/accessibilityLabel="Fetch RC details"/, 'Keep authorized RC lookup.');
 assert.match(screen,/disabled=\{lookingUpRc\|\|!registrationValid\}/, 'Do not fetch an empty or invalid registration.');
-assert.match(screen,/motorVehicleFields.slice\(0,7\)\.map\(field\)/, 'Keep Motor fields in paired columns.');
+assert.match(screen,/motorVehicleFields\.slice\(0,7\)\.map\(item=>field\(item\)\)/, 'Keep Motor fields in paired columns without accidental width overrides.');
 assert.match(screen,/motorProductSection=section\('03','Policy product, premium & validity'/, 'Combine Motor policy and premium details into Operations section 03.');
 assert.match(screen,/label:'GST',value:gst/, 'Motor summary includes GST.');
 assert.match(screen,/label:'Gross premium',value:gross/, 'Motor summary includes gross.');
@@ -58,9 +58,10 @@ assert.match(screen,/insurerPayinFields\.map\(/, 'Pay-in popup must use scoped i
 assert.match(screen,/partnerPayoutFields\.filter\(/, 'Payout popup must use scoped payout fields.');
 assert.match(screen,/accessibilityLabel="Save and close commercial popup"/, 'Commercial popup needs a Save & Close action.');
 assert.match(screen,/Boolean\(commercialModal\)&&isMotor&&Boolean\(data\?\.commercialAccess\)/, 'Commercial modals must be strictly Motor and permission gated.');
-assert.match(screen,/placeholder=""/, 'Onboarding text inputs must have empty placeholders.');
+assert.doesNotMatch(screen,/\bplaceholder\s*=/, 'Onboarding text inputs and dropdowns must have no placeholder props.');
 assert.doesNotMatch(screen,/placeholder=\{'Enter '\+f\.label\.toLowerCase\(\)\}/, 'Remove all generated input placeholder copy.');
 assert.doesNotMatch(screen,/displayed\|\|'Select '/, 'Do not show synthetic select placeholders.');
-assert.match(screen,/hidePlaceholder/, 'Onboarding dates must opt out of placeholder copy.');
+assert.match(screen,/hidePlaceholder/, 'Onboarding dates must keep the existing opt-out compatibility prop.');
+assert.doesNotMatch(date,/\bplaceholder\s*=/, 'Native date field must not display placeholder hints.');
 assert.match(date,/hidePlaceholder\?:boolean/, 'Date placeholder removal must be opt-in to avoid other screens.');
 console.log('Product-type layouts, Motor Operations compact layout, separated financial popups, empty input placeholders and Motor-only booking guard verified.');

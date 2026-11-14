@@ -183,7 +183,7 @@ if (detailScreen.includes('Fetched policy details (OCR)')) throw new Error('Remo
 const nativeOnboarding = fs.readFileSync(path.join(root, 'app/policy-intakes/onboarding.tsx'), 'utf8');
 const nativeApi = fs.readFileSync(path.resolve(root, '../web-portal/app/api/partner/policy-intakes/native-onboarding/route.ts'), 'utf8');
 for (const expected of [
-  "section('01','Policy source & ownership',isMotor?policy.slice(0,4):policy)",
+  "const sourceSection=()=> <View style={styles.section}>",
   "isMotor?motorVehicleSection",
   "motorProductSection=section('03','Policy product, premium & validity',motorProductFields)",
   "styles.registrationToggle",
@@ -196,6 +196,18 @@ for (const expected of [
 }
 requireText(nativeOnboarding, "fields:{padding:12,flexDirection:'row',flexWrap:'wrap'", 'Native onboarding uses responsive two-column fields.');
 requireText(nativeOnboarding, "field:{width:'48%'", 'Each native form field fits its column.');
+for (const fragment of ["sourceCell:{width:'48%'", "sourcePrimary:{width:'100%'",
+  "policy.slice(0,4).map(item", "field(item,true)", "sourceMeta('rmName','RM')", "sourceMeta('intermediaryCode','ID')",
+  "key:'ppt',label:'PPT - Premium paying term'", "key:'pd',label:'PD - Policy duration / term'",
+  "dirty?'Unsaved changes':'Draft'", "{current}", "items.map(item=>field(item))"]) {
+  requireText(nativeOnboarding, fragment, 'Compact onboarding parity missing: '+fragment);
+}
+if (/\\bplaceholder\\s*=/.test(nativeOnboarding)) throw new Error('Blank onboarding inputs must never render placeholder text.');
+const dateField = fs.readFileSync(path.join(root, 'components/policy-intakes/partner-policy-date-field.tsx'), 'utf8');
+requireText(dateField, 'fullWidth=false', 'Source date must fit its compact source cell.');
+requireText(dateField, "{value?displayIndianDate(value):''}", 'Empty date fields must be blank.');
+if (/\\bplaceholder\\s*=/.test(dateField)) throw new Error('Date inputs must never render placeholder text.');
+
 requireText(nativeOnboarding, 'useState(false)', 'Commercial section initializes collapsed.');
 requireText(nativeOnboarding, 'accessibilityState={{expanded:commercialExpanded}}', 'Commercial collapse is accessible and controlled.');
 if (nativeOnboarding.includes('OD + TP + Add-on + CPA')) throw new Error('Hide old OD + TP summary breakdown.');
