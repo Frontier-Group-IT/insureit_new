@@ -31,13 +31,16 @@ for (const type of ["policy_copy", "proposal_form", "benefit_illustration", "pre
   assert.ok(documents.includes('type="' + type + '"'), "Documents section keeps " + type + " upload/replace controls");
 }
 assert.ok(detail.indexOf('<section className="flex flex-wrap items-center justify-end', activityStart) > activityStart, "Case action footer remains after Activity Status and Remarks");
-assert.match(detail, /useState<"activity"\|"remarks"\|null>\(null\)/, "Case Details starts with Activity Status and Remarks collapsed");
+assert.match(detail, /useState<"activity"\|"remarks">\("activity"\)/, "Activity Status is the selected default tab");
+assert.match(detail, /\[infoExpanded,setInfoExpanded\]=useState\(false\)/, "Activity Status content starts collapsed");
 assert.match(detail, /role="group" aria-label="Activity Status and Remarks"/, "Case Details retains both activity and remarks controls");
-assert.match(detail, /onClick=\{\(\)=>setInfoTab\(current=>current==="activity"\?null:"activity"\)\}/, "Activity Status toggles open and closed");
-assert.match(detail, /onClick=\{\(\)=>setInfoTab\(current=>current==="remarks"\?null:"remarks"\)\}/, "Remarks toggles open and closed");
-assert.match(detail, /\{infoTab!==null\?<div id="life-health-case-info-panel"/, "Collapsed case activity and remarks render no content panel");
-assert.match(detail, /aria-expanded=\{infoTab==="activity"\}/, "Activity Status exposes its expanded state");
-assert.match(detail, /aria-expanded=\{infoTab==="remarks"\}/, "Remarks exposes its expanded state");
+assert.match(detail, /onClick=\{\(\)=>toggleInfoTab\("activity"\)\}/, "Activity Status toggles open and closed");
+assert.match(detail, /onClick=\{\(\)=>toggleInfoTab\("remarks"\)\}/, "Remarks toggles open and closed");
+assert.match(detail, /\{infoExpanded\?<div id="life-health-case-info-panel"/, "Selected tab can remain highlighted with no content panel");
+assert.match(detail, /if\(infoTab===tab\)setInfoExpanded\(open=>!open\)/, "Clicking the selected tab toggles its panel");
+assert.match(detail, /else\{setInfoTab\(tab\);setInfoExpanded\(true\);\}/, "Switching tabs opens selected content");
+assert.match(detail, /aria-expanded=\{infoExpanded&&infoTab==="activity"\}/, "Activity Status exposes its actual expanded state");
+assert.match(detail, /aria-expanded=\{infoExpanded&&infoTab==="remarks"\}/, "Remarks exposes its actual expanded state");
 assert.doesNotMatch(detail, /Saved remarks · Read only/, "Remove redundant Saved remarks / Read only heading from case Remarks tab");
 const premiumSection = detail.slice(detail.indexOf('<Section number="04" title="Premium & payment"'), detail.indexOf('<Section number="05"'));
 assert.match(premiumSection, /title="Premium amount"/, "Premium amount remains in section 04");

@@ -85,7 +85,12 @@ export function LifeHealthCaseDetail({caseData,insurers,documents,activities}:Pr
   const[uploading,startUpload]=useTransition(),[converting,startConvert]=useTransition(),[saving,startSave]=useTransition(),[deleting,startDelete]=useTransition();
   const[documentToDelete,setDocumentToDelete]=useState<DocumentRow|null>(null),[deleteError,setDeleteError]=useState<string|null>(null),[deletingDocumentId,setDeletingDocumentId]=useState<string|null>(null),[error,setError]=useState<string|null>(null),[saveSuccess,setSaveSuccess]=useState(false),[copy,setCopy]=useState<File|null>(null),[uploadingType,setUploadingType]=useState<string|null>(null);
   const[form,setForm]=useState({customerName:caseData.customerName,customerPhone:caseData.customerPhone,customerAddress:caseData.customerAddress,insurerId:caseData.insurerId,productName:caseData.productName,proposalNumber:caseData.proposalNumber,ppt:caseData.ppt,pd:caseData.pd,paymentFrequency:canonicalPaymentFrequency(caseData.paymentFrequency),paymentMode:normalizeCasePaymentMode(caseData.paymentMode),premiumAmount:String(caseData.premiumAmount||""),sourcingDate:caseData.sourcingDate});
-  const[infoTab,setInfoTab]=useState<"activity"|"remarks"|null>(null);
+  const[infoTab,setInfoTab]=useState<"activity"|"remarks">("activity");
+  const[infoExpanded,setInfoExpanded]=useState(false);
+  const toggleInfoTab=(tab:"activity"|"remarks")=>{
+    if(infoTab===tab)setInfoExpanded(open=>!open);
+    else{setInfoTab(tab);setInfoExpanded(true);}
+  };
   const[savedRemarks,setSavedRemarks]=useState(caseData.remarks);
   const[remarkOpen,setRemarkOpen]=useState(false);
   const[remarkDraft,setRemarkDraft]=useState("");
@@ -242,10 +247,10 @@ export function LifeHealthCaseDetail({caseData,insurers,documents,activities}:Pr
 
     <section className="overflow-hidden rounded-2xl border border-[#DFE8F4] bg-white shadow-[0_8px_20px_rgba(36,79,145,.06)]">
       <div role="group" aria-label="Activity Status and Remarks" className="flex flex-wrap items-center gap-2 border-b border-[#E6EBF1] p-3">
-        <button type="button" aria-expanded={infoTab==="activity"} aria-controls="life-health-case-info-panel" onClick={()=>setInfoTab(current=>current==="activity"?null:"activity")} className={`rounded-xl px-4 py-2.5 text-[11px] font-semibold transition-colors duration-150 ${infoTab==="activity"?"bg-[#17365D] text-white shadow-sm":"text-[#17365D] hover:bg-[#E8EFF9] hover:shadow-sm"}`}>Activity Status</button>
-        <button type="button" aria-expanded={infoTab==="remarks"} aria-controls="life-health-case-info-panel" onClick={()=>setInfoTab(current=>current==="remarks"?null:"remarks")} className={`rounded-xl px-4 py-2.5 text-[11px] font-semibold transition-colors duration-150 ${infoTab==="remarks"?"bg-[#17365D] text-white shadow-sm":"text-[#17365D] hover:bg-[#E8EFF9] hover:shadow-sm"}`}>Remarks</button>
+        <button type="button" aria-expanded={infoExpanded&&infoTab==="activity"} aria-controls="life-health-case-info-panel" onClick={()=>toggleInfoTab("activity")} className={`rounded-xl px-4 py-2.5 text-[11px] font-semibold transition-colors duration-150 ${infoTab==="activity"?"bg-[#17365D] text-white shadow-sm":"text-[#17365D] hover:bg-[#E8EFF9] hover:shadow-sm"}`}>Activity Status</button>
+        <button type="button" aria-expanded={infoExpanded&&infoTab==="remarks"} aria-controls="life-health-case-info-panel" onClick={()=>toggleInfoTab("remarks")} className={`rounded-xl px-4 py-2.5 text-[11px] font-semibold transition-colors duration-150 ${infoTab==="remarks"?"bg-[#17365D] text-white shadow-sm":"text-[#17365D] hover:bg-[#E8EFF9] hover:shadow-sm"}`}>Remarks</button>
       </div>
-      {infoTab!==null?<div id="life-health-case-info-panel" role="region" aria-label={infoTab==="activity"?"Activity Status":"Remarks"} className="p-3">
+      {infoExpanded?<div id="life-health-case-info-panel" role="region" aria-label={infoTab==="activity"?"Activity Status":"Remarks"} className="p-3">
         {infoTab==="activity"?<div className="overflow-hidden rounded-xl border border-[#D9E2F0] bg-[#FBFCFE]">{activities.length?activities.map((activity,index)=><div key={activity.id} className={`grid gap-2 px-4 py-3 md:grid-cols-[minmax(0,1fr)_260px_190px] md:items-center ${index?"border-t border-[#D9E2F0]":""}`}><div><p className="text-[8px] font-bold uppercase tracking-[.06em] text-[#8090A5]">{index===0?"Latest Action":"Previous Action"}</p><p className="mt-1 text-[12px] font-semibold text-[#17365D]">{activity.action}</p>{activity.changes?.length?<ul className="mt-2 space-y-1">{activity.changes.map((change,i)=><li key={i} className="break-words text-[10px] text-[#52657E]">• {change}</li>)}</ul>:null}</div><p className="text-[9px] text-[#7A8AA0] md:text-right">Details: {activity.action==="Case Created"?"Created By:":"By:"} <span className="font-medium text-[#53657D]">{activity.createdBy}</span></p><p className="text-[9px] text-[#7A8AA0] md:text-right">At: {activityDate(activity.createdAt)}</p></div>):<p className="p-4 text-[10px] text-[#7A8AA0]">Activity not recorded.</p>}</div>:
         <div className="rounded-xl border border-[#D9E2F0] bg-[#FBFCFE] p-4">
           
