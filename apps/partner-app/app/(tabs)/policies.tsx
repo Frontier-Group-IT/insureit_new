@@ -73,6 +73,7 @@ export default function PoliciesScreen() {
   const [query, setQuery] = useState(savedPolicyQuery);
   const [visibleLimit, setVisibleLimit] = useState(PAGE_SIZE);
   const [filterMenuOpen, setFilterMenuOpen] = useState(false);
+  const [seeAllOpen, setSeeAllOpen] = useState(false);
   const [unreadActivityCount, setUnreadActivityCount] = useState(0);
   const [loadMoreFeedback, setLoadMoreFeedback] = useState(false);
   const [requestedLimit, setRequestedLimit] = useState(PAGE_SIZE);
@@ -159,6 +160,7 @@ export default function PoliciesScreen() {
   }, [collection, summary]);
 
   const selectSummary = (filter: PartnerPolicyLifecycle) => {
+    setSeeAllOpen(false);
     setQuery('');
     setVisibleLimit(PAGE_SIZE);
     setLifecycle(filter);
@@ -315,16 +317,53 @@ export default function PoliciesScreen() {
             );
           })}
         </ScrollView>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="See all policies"
-          accessibilityState={{ selected: lifecycle === 'all' && query.length === 0 }}
-          onPress={() => selectSummary('all')}
-          style={({ pressed }) => [styles.summarySeeAll, pressed && styles.summaryChipPressed]}
+        <PartnerAnchoredDropdown
+          visible={seeAllOpen}
+          onDismiss={() => setSeeAllOpen(false)}
+          align="right"
+          menuWidth={218}
+          menu={(
+            <View style={styles.summarySeeAllMenu}>
+              <Text style={styles.summarySeeAllMenuTitle}>Policy status</Text>
+              {([
+                { label: 'Total Policies', filter: 'all' as const, value: summary.data?.total_policies },
+                { label: 'Active Policies', filter: 'in_force' as const, value: summary.data?.in_force_policies },
+                { label: 'Expiring Soon', filter: 'expiring' as const, value: summary.data?.expiring_30_days },
+                { label: 'Lapsed Policies', filter: 'expired' as const, value: summary.data?.expired_policies },
+                { label: 'Upcoming', filter: 'upcoming' as const, value: summary.data?.upcoming_policies },
+              ]).map((option) => {
+                const active = lifecycle === option.filter && !query.trim();
+                return (
+                  <Pressable
+                    key={option.filter}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${option.label}, ${option.value === undefined ? 'count unavailable' : option.value.toLocaleString('en-IN')}`}
+                    accessibilityState={{ selected: active }}
+                    onPress={() => selectSummary(option.filter)}
+                    style={({ pressed }) => [styles.summarySeeAllOption, active && styles.filterOptionActive, pressed && styles.pressed]}
+                  >
+                    <Text style={[styles.filterOptionText, active && styles.filterOptionTextActive]}>{option.label}</Text>
+                    <View style={styles.summarySeeAllOptionEnd}>
+                      <Text style={styles.summarySeeAllOptionCount}>{option.value === undefined ? '—' : option.value.toLocaleString('en-IN')}</Text>
+                      {active ? <Ionicons name="checkmark" size={14} color="#3156B8" /> : null}
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </View>
+          )}
         >
-          <Ionicons name="list" size={17} color="#0860C8" />
-          <Text style={styles.summarySeeAllText}>See all</Text>
-        </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="See all policy status filters"
+            accessibilityState={{ expanded: seeAllOpen }}
+            onPress={() => { setFilterMenuOpen(false); setSeeAllOpen(open => !open); }}
+            style={({ pressed }) => [styles.summarySeeAll, seeAllOpen && styles.summarySeeAllActive, pressed && styles.summaryChipPressed]}
+          >
+            <Ionicons name="list" size={17} color="#0860C8" />
+            <Text style={styles.summarySeeAllText}>See all</Text>
+          </Pressable>
+        </PartnerAnchoredDropdown>
       </View>
 
       {canPartnerAccess(context, 'view_policy_intakes') ? (
@@ -723,6 +762,12 @@ const styles = StyleSheet.create({
   summaryChipCountSelected: { color: '#E2EEFF' },
   summarySeeAll: { minHeight: 40, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, paddingHorizontal: 12, borderRadius: 22, borderWidth: 1, borderColor: '#E0E7F1', backgroundColor: '#FFFFFF', shadowColor: '#173B6C', shadowOpacity: 0.08, shadowRadius: 4, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
   summarySeeAllText: { color: '#0860C8', fontSize: 11, fontWeight: '800' },
+  summarySeeAllActive: { borderColor: '#91B7E7', backgroundColor: '#F0F6FF' },
+  summarySeeAllMenu: { borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: '#DDE6F1', backgroundColor: '#FFFFFF', paddingVertical: 5, shadowColor: '#102449', shadowOpacity: 0.15, shadowRadius: 12, shadowOffset: { width: 0, height: 5 }, elevation: 8 },
+  summarySeeAllMenuTitle: { paddingHorizontal: 12, paddingVertical: 8, color: '#17365D', fontSize: 11, fontWeight: '800' },
+  summarySeeAllOption: { minHeight: 41, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
+  summarySeeAllOptionEnd: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  summarySeeAllOptionCount: { fontSize: 10, fontWeight: '700', color: '#526786' },
   intakeBanner: { marginHorizontal: 12, marginTop: 8, minHeight: 53, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 12, borderRadius: 9, backgroundColor: '#082D70', borderWidth: 1, borderColor: '#0C4794' },
   intakeBannerIcon: { width: 32, height: 32, borderRadius: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: '#174F9C' },
   intakeBannerCopy: { flex: 1 },
