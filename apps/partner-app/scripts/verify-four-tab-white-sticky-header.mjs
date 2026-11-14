@@ -29,12 +29,12 @@ assert.match(policies, /onPress=\{\(\) => selectSummary\(metric\.filter\)\}/, 'S
 assert.match(policies, /accessibilityState=\{\{ selected \}\}/, 'Selected lifecycle chip remains accessible');
 assert.match(policies, /summaryChipSelected: \{ backgroundColor: '#17365D'/, 'Selected lifecycle uses navy contrast');
 assert.match(policies, /accessibilityLabel="See all policy status filters"/, 'See all remains visible outside the horizontal chip scroll');
-assert.match(policies, /visible=\{seeAllOpen\}/, 'See all now opens a visible anchored filter menu');
-assert.match(policies, /onPress=\{\(\) => \{ setFilterMenuOpen\(false\); setSeeAllOpen\(open => !open\); \}\}/, 'See all toggles the menu even when Total Policies is already selected');
+assert.match(policies, /<Modal[\s\S]*?visible=\{seeAllOpen\}[\s\S]*?animationType="slide"/, 'See all uses a visible bottom modal sheet');
+assert.match(policies, /onPress=\{\(\) => \{ setFilterMenuOpen\(false\); setSeeAllOpen\(true\); \}\}/, 'See all opens the bottom sheet even when Total Policies is selected');
 assert.match(policies, /onPress=\{\(\) => selectSummary\(option\.filter\)\}/, 'Each visible menu option selects its existing lifecycle filter');
 assert.match(policies, /setSeeAllOpen\(false\);\s*setQuery\(''\)/, 'Selecting an option closes the menu and resets search');
 assert.match(policies, /accessibilityState=\{\{ expanded: seeAllOpen \}\}/, 'See all exposes the expanded state to assistive technology');
-assert.match(policies, /summarySeeAllOptionCount/, 'Full filter menu includes policy counts');
+assert.match(policies, /styles\.statusSheetCount/, 'Bottom status sheet includes source portfolio counts');
 for (const lifecycle of ["all", "in_force", "expiring", "expired", "upcoming"]) {
   assert.ok(policies.includes(`filter: '${lifecycle}' as const`), `All status options include ${lifecycle}`);
 }
