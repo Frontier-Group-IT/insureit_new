@@ -68,7 +68,7 @@ assert.match(screen,/styles\.wideField,styles\.registrationBlock/, 'Registration
 assert.match(screen,/\[styles\.field,styles\.wideField\]/, 'RTO spans both columns.');
 assert.match(screen,/styles\.summaryProgressStack/, 'Progress indicator stacks over in-progress badge.');
 assert.match(screen,/\{isMotor\?<Pressable accessibilityRole="button" accessibilityLabel="Book Active Policy"/, 'Book replaces Motor Save Draft in the action row.');
-assert.match(screen,/\}:<Pressable accessibilityRole="button" disabled=\{saving\|\|!dirty\}/, 'Non-Motor Save Draft stays available.');
+assert.match(screen,/<\/Pressable>:<Pressable accessibilityRole="button" disabled=\{saving\|\|!dirty\}/, 'Non-Motor Save Draft stays available.');
 assert.match(screen,/disabled=\{booking\|\|saving\|\|!data\}/, 'Booking remains gated by loading and saving.');
 
 console.log('Product-type layouts, Operations Motor controls, referenced financial popups, placeholders and Motor-only booking guard verified.');
