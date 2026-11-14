@@ -564,7 +564,7 @@ export default function NativePolicyOnboarding(){
             borderBottomColor:filled>=62.5?'#17365D':'#DFE7F0',
             borderLeftColor:filled>=87.5?'#17365D':'#DFE7F0',
           }]}><Text style={styles.progressText}>{filled}%</Text></View>
-            <View style={styles.progressStatus}><Text style={styles.summaryStatusValue}>In progress</Text></View>
+
           </View>
         </View>
         <View style={styles.summary}>
@@ -605,7 +605,7 @@ export default function NativePolicyOnboarding(){
             <Ionicons name="chevron-forward" size={15} color="#63758D"/>
           </Pressable>
         </View>:null}
-        {!isMotor?<Text style={styles.notice}>Final booking is completed in the Operations Portal.</Text>:null}
+
       </View>
       <View style={styles.actions}>
         <Pressable accessibilityRole="button" disabled={saving||booking} style={styles.secondary}
@@ -621,9 +621,7 @@ export default function NativePolicyOnboarding(){
           <Text style={styles.primaryText}>{saving?'Saving…':'Save draft'}</Text>
         </Pressable>}
       </View>
-      {!isMotor?<View style={styles.bookingNotice}><Ionicons name="information-circle-outline" size={17} color="#8A5A17"/>
-        <Text style={styles.bookingText}>Draft saving is available for {productType}. Final case creation, documents, risk validation and permission-controlled commercials must be completed in the Operations Portal.</Text>
-      </View>:null}
+
 
     </>:null}
 
