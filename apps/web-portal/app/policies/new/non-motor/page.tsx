@@ -1,4 +1,4 @@
-import { NonMotorPolicyForm, type NonMotorCustomerOption, type NonMotorInsurerOption } from "@/components/non-motor-policy-form";
+import { NonMotorPolicyForm, type NonMotorFormState, type NonMotorCustomerOption, type NonMotorInsurerOption } from "@/components/non-motor-policy-form";
 import { type PolicyRmOption, type PolicySourceOption } from "@/components/policy-unified-form";
 import { AppShell } from "@/components/shell";
 import { loadPospMispAssociates } from "@/lib/posp-misp-associates";
@@ -22,7 +22,7 @@ type IntermediaryRow = {
   mobile: string | null;
 };
 
-export default async function NewNonMotorPolicyPage() {
+export default async function NewNonMotorPolicyPage({ searchParams }: { searchParams: Promise<{intake_id?:string}> }) {
   const { profile: requester } = await getAuthenticatedProfile(await getServerAccessToken());
   const profile = requester?.role === "operations_head_life" ? await requireCapability("view_policies") : await requirePolicyCreator();
   const admin = createSupabaseAdminClient();
@@ -73,9 +73,50 @@ export default async function NewNonMotorPolicyPage() {
       };
     });
 
+  const params=await searchParams;
+  let sourceIntakeId:string|null=null;
+  let initialValues:Partial<NonMotorFormState>={};
+  if(params.intake_id){
+    if(!/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(params.intake_id))return <SetupError />;
+    // Only the authorized assigned reviewer can restore the intake draft here.
+    const {data:intake}=await admin.from("policy_intake_requests")
+      .select("id,status,assigned_to_profile_id").eq("id",params.intake_id)
+      .eq("assigned_to_profile_id",profile.id).eq("status","in_review")
+      .maybeSingle<{id:string;status:string;assigned_to_profile_id:string}>();
+    if(!intake)return <SetupError />;
+    const {data:saved}=await admin.from("policy_intake_onboarding_drafts")
+      .select("draft_payload").eq("intake_id",intake.id)
+      .maybeSingle<{draft_payload:{businessLine:string;issuanceDate:string;intermediaryType:string;intermediaryCode:string;leadSource:string;rmName:string;productDrafts?:Record<string,Record<string,string>>}}>();
+    const draft=saved?.draft_payload;
+    if(!draft||draft.businessLine!=="Non Motor")return <SetupError />;
+    const v=draft.productDrafts?.["Non Motor"]??{};
+    const source=sources.find(item=>item.code===draft.intermediaryCode&&item.label.toLowerCase()===draft.leadSource.toLowerCase());
+    if(!source)return <SetupError />;
+    sourceIntakeId=intake.id;
+    initialValues={
+      issuanceDate:draft.issuanceDate,intermediaryType:draft.intermediaryType as NonMotorFormState["intermediaryType"],
+      intermediaryCode:draft.intermediaryCode,leadSource:draft.leadSource,sourceId:source.value,rmName:draft.rmName,
+      customerMode:v.customerMode==="new"?"new":"existing",customerId:v.customerId??"",
+      customerType:v.customerType==="Individual"?"Individual":"Organisation",
+      insuredName:v.insuredName??"",contactName:v.contactName??"",phone:v.phone??"",email:v.email??"",address:v.address??"",
+      policyNumber:v.policyNumber??"",insurerId:v.insurerId??"",productName:v.productName??"",
+      category:v.category??"",status:v.status??"Active",riskTitle:v.riskTitle??"",riskLocation:v.riskLocation??"",
+      occupancyType:v.occupancyType??"",cargoDescription:v.cargoDescription??"",transitFrom:v.transitFrom??"",
+      transitTo:v.transitTo??"",transitMode:v.transitMode??"",projectName:v.projectName??"",
+      projectValue:v.projectValue??"",natureOfBusiness:v.natureOfBusiness??"",liabilityType:v.liabilityType??"",
+      employeeCount:v.employeeCount??"",annualWages:v.annualWages??"",businessName:v.businessName??"",
+      annualTurnover:v.annualTurnover??"",sumInsured:v.sumInsured??"",deductible:v.deductible??"",
+      netPremium:v.netPremium??"",gstAmount:v.gstAmount??"",grossPremium:v.grossPremium??"",
+      startDate:v.startDate??"",endDate:v.endDate??"",proposalNumber:v.proposalNumber??"",
+      previousInsurer:v.previousInsurer??"",previousPolicyNumber:v.previousPolicyNumber??"",
+      previousClaims:v.previousClaims??"",addOns:v.addOns??"",warranties:v.warranties??"",
+      specialConditions:v.specialConditions??"",endorsements:v.endorsements??"",remarks:v.remarks??"",
+    };
+  }
   return (
     <AppShell title="Add Policy">
-      <NonMotorPolicyForm insurers={insurers} customers={customers} rms={rms} sources={sources} />
+      <NonMotorPolicyForm insurers={insurers} customers={customers} rms={rms} sources={sources}
+        sourceIntakeId={sourceIntakeId} initialValues={initialValues}/>
     </AppShell>
   );
 }
