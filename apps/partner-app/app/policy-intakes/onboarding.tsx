@@ -53,6 +53,8 @@ const productCaseFields:Field[] = [
 ];
 type ProductField = {key:string;label:string;required?:boolean;options?:string[];date?:boolean;wide?:boolean};
 const yearOptions=Array.from({length:100},(_,i)=>i===0?'1 Year':(i+1)+' Years');
+// Use the same descending year range as Operations Portal Motor onboarding.
+const manufacturingYearOptions=Array.from({length:new Date().getFullYear()-1900+1},(_,i)=>String(new Date().getFullYear()-i));
 const paymentFrequencies=['Monthly','Quarterly','Half Yearly','Annually','One Time'];
 const paymentModes=['Cheque','NEFT/RTGS','UPI','Credit/Debit Card','Net Banking'];
 const commonPerson:ProductField[]=[
@@ -431,7 +433,7 @@ export default function NativePolicyOnboarding(){
     const current=typeof raw==='string'?raw:'';
     if(['issuanceDate','validFrom','validUpto','tpValidUpto','cpaValidUpto'].includes(f.key))return <PartnerPolicyDateField key={f.key} fullWidth={fullWidth} label={f.key==='issuanceDate'?'Policy issuance date':f.label.replace(' (YYYY-MM-DD)','')} value={current} required={f.required} onChange={v=>update(f.key,v)}/>;
     const productOptions=f.key==='policyProduct'?(draft.vehicleClass==='CPM'?['Comprehensive','SAOD']:['Comprehensive','Third Party','SAOD',...(['PCP','TWP'].includes(draft.vehicleClass)?['Bundled']:[]) ]):f.options??[];
-    const options=f.key==='insurerId'?data?.insurers??[]:f.key==='make'?(data?.manufacturers??[]).map(x=>({value:x,label:x})):productOptions.map(x=>({value:x,label:x}));
+    const options=f.key==='insurerId'?data?.insurers??[]:f.key==='make'?(data?.manufacturers??[]).map(x=>({value:x,label:x})):f.key==='manufacturingYear'?manufacturingYearOptions.map(value=>({value,label:value})):productOptions.map(x=>({value:x,label:x}));
     const displayed=options.find(x=>x.value===current)?.label??current;
     const masterSourceMatches=Boolean(data?.sourceMeta&&data.sourceMeta.code===draft.intermediaryCode&&data.sourceMeta.name.trim().toLowerCase()===draft.leadSource.trim().toLowerCase());
     const matchedSource=masterSourceMatches?data?.sourceMeta:null;
@@ -442,7 +444,7 @@ export default function NativePolicyOnboarding(){
       (['rtoState','rtoName'].includes(f.key)&&draft.vehicleClass==='CPM'));
     const hint=['idv','od','tp','cpa','addOnPremium'].includes(f.key)?'₹ 0.00':
       ['projectedOdPercent','projectedTpPercent','payoutOdPercent','payoutTpPercent'].includes(f.key)?'0.00':
-      f.key==='capacity'&&!draft.vehicleClass?'Select class first':f.key==='model'?'Model / variant':f.key==='insuredName'?'Customer / insured name':
+      f.key==='capacity'&&!draft.vehicleClass?'Select class first':f.key==='manufacturingYear'?'Select year':f.key==='model'?'Model / variant':f.key==='insuredName'?'Customer / insured name':
       f.key==='phoneNo'?'10 digit mobile':'Enter '+f.label.toLowerCase();
     return <View key={f.key} style={[styles.field,fullWidth&&styles.sourcePrimary]}>
       <Text style={styles.label}>{f.label}{f.required?<Text style={styles.star}> *</Text>:null}</Text>
@@ -450,7 +452,7 @@ export default function NativePolicyOnboarding(){
         <Pressable accessibilityRole="button" accessibilityLabel={f.label} accessibilityState={{disabled:restricted}}
           disabled={restricted} onPress={()=>setPicker({key:f.key,items:options})}
           style={[styles.inputRow,restricted&&styles.readonlyInput]}>
-          <Text numberOfLines={1} style={[styles.value,!displayed&&styles.placeholder]}>{displayed||(productType==='Non Motor'?'':'Select '+f.label.toLowerCase())}</Text>
+          <Text numberOfLines={1} style={[styles.value,!displayed&&styles.placeholder]}>{displayed||(productType==='Non Motor'?'':f.key==='manufacturingYear'?'Select year':'Select '+f.label.toLowerCase())}</Text>
           <Ionicons name="chevron-down" size={15} color="#63758D"/>
         </Pressable>
       ):(
@@ -700,7 +702,7 @@ export default function NativePolicyOnboarding(){
             borderBottomColor:filled>=62.5?'#17365D':'#DFE7F0',
             borderLeftColor:filled>=87.5?'#17365D':'#DFE7F0',
           }]}><Text style={styles.progressText}>{filled}%</Text></View>
-
+            <View style={styles.progressStatus}><Text style={styles.summaryStatusValue}>{filled>=100?'Complete':'In progress'}</Text></View>
           </View>
         </View>
         <View style={styles.summary}>
@@ -727,23 +729,55 @@ export default function NativePolicyOnboarding(){
             <Text style={styles.muted}>{productValues.paymentFrequency||'Frequency pending'} · {productValues.paymentMode||'Mode pending'}</Text>
           </View>}
         </View>
-        {data?.commercialAccess?<View style={styles.referenceCommercial}>
+        {isMotor&&data?.commercialAccess?<View style={styles.referenceCommercial}>
+          <View style={styles.referenceCommercialTitle}>
+            <Text style={styles.summaryCaption}>PAYIN–PAYOUT</Text>
+            <Text style={styles.referenceHelp}>Sensitive terms · popup entry</Text>
+          </View>
+          <Pressable accessibilityRole="button" accessibilityLabel="Insurer Pay-In popup"
+            onPress={()=>setCommercialModal('payin')} style={[styles.referenceCard,styles.referencePayinCard]}>
+            <View style={[styles.referenceIcon,styles.referencePayinIcon]}>
+              <Ionicons name="arrow-down-outline" size={18} color="#11857E"/>
+            </View>
+            <View style={styles.referenceCardBody}>
+              <View style={styles.referenceCardNameRow}>
+                <Text style={styles.referenceCardName}>Insurer Pay-in</Text>
+                {payinEntered?<Ionicons name="checkmark-circle" size={13} color="#159566"/>:null}
+              </View>
+              <Text style={styles.referenceCardSubtitle} numberOfLines={1}>{payinEntered?`OD ${draft?.projectedOdPercent||'0'}% · TP/CPA ${draft?.projectedTpPercent||'0'}%`:'Add projected insurer terms'}</Text>
+            </View>
+            <View style={[styles.referencePill,payinEntered&&styles.referenceEnteredPill]}>
+              <Text style={[styles.referencePillText,payinEntered&&styles.referenceEnteredText]} numberOfLines={1}>{payinEntered?rupees(summaryPayin):'Not entered'}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color="#8A98AA"/>
+          </Pressable>
+          <Pressable accessibilityRole="button" accessibilityLabel="Partner Payout popup"
+            onPress={()=>setCommercialModal('payout')} style={[styles.referenceCard,styles.referencePayoutCard]}>
+            <View style={[styles.referenceIcon,styles.referencePayoutIcon]}>
+              <Ionicons name="hand-left-outline" size={18} color="#6B54B6"/>
+            </View>
+            <View style={styles.referenceCardBody}>
+              <View style={styles.referenceCardNameRow}>
+                <Text style={styles.referenceCardName}>Partner Payout</Text>
+                {payoutEntered?<Ionicons name="checkmark-circle" size={13} color="#159566"/>:null}
+              </View>
+              <Text style={styles.referenceCardSubtitle} numberOfLines={1}>{payoutEntered?`OD ${draft?.payoutOdPercent||'0'}% · TP/CPA ${draft?.payoutTpPercent||'0'}%`:'Add agreed partner payout'}</Text>
+            </View>
+            <View style={[styles.referencePill,payoutEntered&&styles.referenceEnteredPill]}>
+              <Text style={[styles.referencePillText,payoutEntered&&styles.referenceEnteredText]} numberOfLines={1}>{payoutEntered?rupees(summaryPayout):'Not entered'}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color="#8A98AA"/>
+          </Pressable>
+        </View>:!isMotor&&data?.commercialAccess?<View style={styles.referenceCommercial}>
           <View style={styles.referenceCommercialHeader}><Ionicons name="hand-left-outline" size={16} color="#315B9A"/><Text style={styles.summaryCaption}>PAYIN–PAYOUT</Text></View>
           <View style={styles.referenceCommercialRow}>
-            <View style={styles.referenceCommercialContent}>
-              <Text style={styles.referenceLabel}>INSURER PAY-IN</Text>
-              <Text style={styles.referenceValue}>{payinEntered?rupees(summaryPayin):'Not entered'}</Text>
-            </View>
+            <View style={styles.referenceCommercialContent}><Text style={styles.referenceLabel}>INSURER PAY-IN</Text><Text style={styles.referenceValue}>{payinEntered?rupees(summaryPayin):'Not entered'}</Text></View>
             <Pressable accessibilityRole="button" accessibilityLabel="Insurer Pay-In popup" onPress={()=>setCommercialModal('payin')} style={styles.referenceAdd}><Text style={styles.referenceAddText}>{payinEntered?'Edit':'Add'}</Text></Pressable>
           </View>
           <View style={styles.referenceCommercialRow}>
-            <View style={styles.referenceCommercialContent}>
-              <Text style={styles.referenceLabel}>PARTNER PAYOUT</Text>
-              <Text style={styles.referenceValue}>{payoutEntered?rupees(summaryPayout):'Not entered'}</Text>
-            </View>
+            <View style={styles.referenceCommercialContent}><Text style={styles.referenceLabel}>PARTNER PAYOUT</Text><Text style={styles.referenceValue}>{payoutEntered?rupees(summaryPayout):'Not entered'}</Text></View>
             <Pressable accessibilityRole="button" accessibilityLabel="Partner Payout popup" onPress={()=>setCommercialModal('payout')} style={styles.referenceAdd}><Text style={styles.referenceAddText}>{payoutEntered?'Edit':'Add'}</Text></Pressable>
           </View>
-          <View style={styles.referenceRetention}><View><Text style={styles.referenceLabel}>PROJECTED RETENTION</Text><Text style={styles.referenceValue}>{payinEntered||payoutEntered?rupees(projectedRetention):'₹0.00'}</Text></View><Text style={styles.muted}>After 10% TDS</Text></View>
         </View>:null}
 
       </View>
@@ -1003,6 +1037,16 @@ const styles=StyleSheet.create({
   inputRow:{minHeight:42,borderWidth:1,borderColor:'#D8E1EC',borderRadius:9,paddingHorizontal:11,flexDirection:'row',alignItems:'center',justifyContent:'space-between'},
   value:{color:'#183653',fontSize:12,flex:1},placeholder:{color:'#97A5B7'},
   premiumIcon:{width:27,height:27,borderRadius:8,backgroundColor:'#EDF3FC',alignItems:'center',justifyContent:'center'},referenceCommercial:{marginHorizontal:12,marginBottom:12,borderWidth:1,borderColor:'#D7E3F3',borderRadius:11,overflow:'hidden',backgroundColor:'#F8FAFD'},referenceCommercialHeader:{flexDirection:'row',alignItems:'center',gap:9,padding:11,borderBottomWidth:1,borderColor:'#E0E7F0'},referenceCommercialRow:{minHeight:66,paddingHorizontal:12,paddingVertical:10,flexDirection:'row',alignItems:'center',justifyContent:'space-between'},referenceCommercialContent:{gap:5,flex:1},referenceLabel:{fontSize:9,fontWeight:'700',color:'#74829A'},referenceValue:{fontSize:12,fontWeight:'700',color:'#17365D'},referenceAdd:{minHeight:34,minWidth:45,alignItems:'center',justifyContent:'center'},referenceAddText:{fontSize:11,fontWeight:'700',color:'#315B9A'},referenceRetention:{paddingHorizontal:12,paddingVertical:11,borderTopWidth:1,borderColor:'#DCE5F1',flexDirection:'row',alignItems:'center',justifyContent:'space-between'},commercialNote:{fontSize:10,lineHeight:17,color:'#71819A',padding:8,width:'100%'},
+  referenceCommercialTitle:{paddingHorizontal:12,paddingTop:11,paddingBottom:7,gap:3},referenceHelp:{fontSize:9,color:'#98A2B3'},
+  referenceCard:{minHeight:59,marginHorizontal:9,marginBottom:9,paddingHorizontal:9,paddingVertical:9,flexDirection:'row',alignItems:'center',gap:8,borderWidth:1,borderRadius:11},
+  referencePayinCard:{borderColor:'#DCE6F1',backgroundColor:'#F8FBFE'},referencePayoutCard:{borderColor:'#E3DEF1',backgroundColor:'#FBFAFE'},
+  referenceIcon:{width:32,height:32,borderRadius:9,alignItems:'center',justifyContent:'center'},
+  referencePayinIcon:{backgroundColor:'#E4F7F5'},referencePayoutIcon:{backgroundColor:'#F0EAFE'},
+  referenceCardBody:{flex:1,minWidth:0,gap:3},referenceCardNameRow:{flexDirection:'row',alignItems:'center',gap:4},
+  referenceCardName:{color:'#17365D',fontSize:11,fontWeight:'700'},referenceCardSubtitle:{fontSize:9,color:'#667085'},
+  referencePill:{maxWidth:90,backgroundColor:'#F1F4F8',paddingHorizontal:6,paddingVertical:5,borderRadius:15},
+  referenceEnteredPill:{backgroundColor:'#EAF7F2'},referencePillText:{fontSize:8,color:'#7A8798',fontWeight:'700'},
+  referenceEnteredText:{color:'#18794E'},
   commercialCards:{marginHorizontal:12,marginBottom:12,gap:8},
   commercialHeading:{fontSize:11,color:'#26436B',fontWeight:'800'},
   commercialAction:{minHeight:48,flexDirection:'row',gap:9,alignItems:'center',paddingHorizontal:11,borderWidth:1,borderColor:'#DDE6F0',borderRadius:10,backgroundColor:'#F8FAFD'},
