@@ -79,6 +79,8 @@ jobs:
 
       - name: Daily Report All employee directory hierarchy and history isolation regression
         run: node --experimental-strip-types scripts/daily-report-all-employee-directory-regression.mjs
+      - name: Daily Report All excludes current employee regression
+        run: node scripts/daily-report-all-exclude-self-regression.mjs
       - name: OCR-only Layout Parser opt-in regression
         run: node scripts/policy-ocr-layout-off-regression.mjs
       - name: ICICI 3005 OCR-only field regression
