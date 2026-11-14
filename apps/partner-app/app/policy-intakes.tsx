@@ -302,7 +302,19 @@ export default function PolicyIntakesScreen() {
                         <Ionicons name="chevron-forward" size={11} color="#FFFFFF" />
                       </Pressable>
                     ) : (
-                      <PartnerStatusBadge label={statusLabel(row)} tone={statusTone(row)} />
+                      statusTone(row) === 'warning' ? (
+                        <Text
+                          accessibilityRole="text"
+                          accessibilityLabel={statusLabel(row)}
+                          numberOfLines={1}
+                          ellipsizeMode="tail"
+                          style={styles.actionRequiredBadge}
+                        >
+                          {statusLabel(row)}
+                        </Text>
+                      ) : (
+                        <PartnerStatusBadge label={statusLabel(row)} tone={statusTone(row)} />
+                      )
                     )}
                     </StatusZoomPulse>
                     {row.ocr_status === 'failed' && (row.status === 'processing' || row.status === 'needs_attention') ? (
@@ -469,8 +481,8 @@ function IntakeRecordLogo({ row }: { row: PartnerPolicyIntake }) {
     return (
       <View style={[styles.rowArtwork, styles.rowArtworkAttention]}>
         <Image
-          source={require('../assets/partner/status/policy-attention.png')}
-          accessibilityLabel="Action required attention icon"
+          source={PartnerAssets.status.warning}
+          accessibilityLabel="Action required warning icon"
           resizeMode="contain"
           style={styles.rowAttentionImage}
         />
@@ -607,7 +619,7 @@ const styles = StyleSheet.create({
   loadMoreText: { color: '#3156B8', fontSize: 8, lineHeight: 11, fontWeight: '800' },
   loadMoreTextLoading: { color: '#FFFFFF', fontSize: 8.5, lineHeight: 12, fontWeight: '800' },
   inlineError: { marginBottom: 5, color: partnerTheme.colors.danger, textAlign: 'center', fontSize: 10 },
-  card: { borderRadius: 11, paddingHorizontal: 10, paddingVertical: 10, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#E1E7F0', shadowColor: '#0B2447', shadowOpacity: 0.05, shadowRadius: 5, shadowOffset: { width: 0, height: 2 }, elevation: 1 }, pressedCard: { opacity: 0.85 }, cardPressScale: { transform: [{ scale: 0.985 }] }, cardNeedsAttention: { borderColor: '#EBCB83' }, cardRejected: { borderColor: '#F0C5C5' }, cardDuplicate: { borderColor: '#CCD3DD' }, cardCompleted: { borderColor: '#B9DDCE' }, cardInReview: { borderColor: '#D2C7F9' }, rowTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 }, rowArtwork: { width: 38, height: 38, borderRadius: 9, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F3F7FC' }, rowArtworkImage: { width: 31, height: 31 }, rowArtworkAttention: { backgroundColor: '#FFF7E8' }, rowAttentionImage: { width: 34, height: 34 }, identity: { flex: 1, minWidth: 0 }, intakeNumberRow: { flexDirection: 'row', alignItems: 'center', gap: 4 }, ocrWarning: { flexDirection: 'row', alignItems: 'center', gap: 2 }, ocrWarningText: { color: '#B66B0B', fontSize: 7.5, fontWeight: '700' }, statusStack: { maxWidth: 92, alignItems: 'flex-end', gap: 4 }, openStatusButton: { minHeight: 25, alignSelf: 'flex-end', paddingHorizontal: 7, borderRadius: 7, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 2 }, openStatusReady: { backgroundColor: '#1763C5' }, openStatusInReview: { backgroundColor: '#6746D8' }, openStatusText: { color: '#FFFFFF', fontSize: 9, fontWeight: '800', lineHeight: 12 }, updatedDate: { color: '#7B8799', fontSize: 7, lineHeight: 9, textAlign: 'right' }, number: { color: '#1D2C45', fontSize: 11, lineHeight: 14, fontWeight: '800' }, customer: { marginTop: 2, color: '#687A92', fontSize: 8.5, lineHeight: 11 }, metaLine: { marginTop: 4, color: '#8290A3', fontSize: 8, lineHeight: 10.5 },
+  card: { borderRadius: 11, paddingHorizontal: 10, paddingVertical: 10, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#E1E7F0', shadowColor: '#0B2447', shadowOpacity: 0.05, shadowRadius: 5, shadowOffset: { width: 0, height: 2 }, elevation: 1 }, pressedCard: { opacity: 0.85 }, cardPressScale: { transform: [{ scale: 0.985 }] }, cardNeedsAttention: { borderColor: '#EBCB83' }, cardRejected: { borderColor: '#F0C5C5' }, cardDuplicate: { borderColor: '#CCD3DD' }, cardCompleted: { borderColor: '#B9DDCE' }, cardInReview: { borderColor: '#D2C7F9' }, rowTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 }, rowArtwork: { width: 38, height: 38, borderRadius: 9, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F3F7FC' }, rowArtworkImage: { width: 31, height: 31 }, rowArtworkAttention: { backgroundColor: '#FFF7E8' }, rowAttentionImage: { width: 31, height: 31 }, actionRequiredBadge: { maxWidth: 92, alignSelf: 'flex-end', overflow: 'hidden', borderRadius: 14, paddingHorizontal: 6, paddingVertical: 4, backgroundColor: partnerTheme.colors.warningSoft, color: '#9A5B12', fontSize: 8, lineHeight: 11, fontWeight: '800', textAlign: 'center' }, identity: { flex: 1, minWidth: 0 }, intakeNumberRow: { flexDirection: 'row', alignItems: 'center', gap: 4 }, ocrWarning: { flexDirection: 'row', alignItems: 'center', gap: 2 }, ocrWarningText: { color: '#B66B0B', fontSize: 7.5, fontWeight: '700' }, statusStack: { maxWidth: 92, alignItems: 'flex-end', gap: 4 }, openStatusButton: { minHeight: 25, alignSelf: 'flex-end', paddingHorizontal: 7, borderRadius: 7, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 2 }, openStatusReady: { backgroundColor: '#1763C5' }, openStatusInReview: { backgroundColor: '#6746D8' }, openStatusText: { color: '#FFFFFF', fontSize: 9, fontWeight: '800', lineHeight: 12 }, updatedDate: { color: '#7B8799', fontSize: 7, lineHeight: 9, textAlign: 'right' }, number: { color: '#1D2C45', fontSize: 11, lineHeight: 14, fontWeight: '800' }, customer: { marginTop: 2, color: '#687A92', fontSize: 8.5, lineHeight: 11 }, metaLine: { marginTop: 4, color: '#8290A3', fontSize: 8, lineHeight: 10.5 },
   progressWrap: { marginTop: 10, flexDirection: 'row', alignItems: 'flex-start' }, progressStep: { flex: 1, alignItems: 'center' }, progressLineWrap: { width: '100%', minHeight: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }, progressDot: { width: 10, height: 10, borderRadius: 5, alignItems: 'center', justifyContent: 'center', backgroundColor: '#DCE2EC' }, progressDotComplete: { backgroundColor: '#6541F4' }, progressDotRejected: { backgroundColor: '#EA625C' }, progressLine: { position: 'absolute', left: '57%', width: '86%', height: 1.5, backgroundColor: '#DCE2EC' }, progressLineComplete: { backgroundColor: '#6541F4' }, progressLabel: { marginTop: 3, color: '#7D899B', fontSize: 7.5, lineHeight: 10, fontWeight: '500' }, progressLabelActive: { color: '#23344E', fontWeight: '600' },
   attention: { marginTop: 8, minHeight: 28, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 6, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#FFF3DF' }, attentionText: { flex: 1, color: '#9B5C10', fontSize: 8.5, lineHeight: 11, fontWeight: '700' },
   bottomNav: { height: 58, flexDirection: 'row', alignItems: 'center', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#DDE3EC', backgroundColor: '#FFFFFF' }, navItem: { flex: 1, alignItems: 'center', justifyContent: 'center' }, navIconWrap: { minWidth: 36, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center' }, navIconWrapActive: { backgroundColor: '#EEE9FF' }, navLabel: { marginTop: 1, color: '#60738F', fontSize: 7.5, lineHeight: 10, fontWeight: '600' }, navLabelActive: { color: '#633DF1', fontWeight: '800' }, pressed: { opacity: 0.7 },
