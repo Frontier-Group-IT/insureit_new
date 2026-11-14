@@ -38,12 +38,12 @@ export function PartnerPolicyDateField({label,value,onChange,required=false,hide
     <Text style={styles.label}>{label}{required?<Text style={styles.star}> *</Text>:null}</Text>
     {Platform.OS==='web' ? (
       <View style={styles.row}>
-        <TextInput accessibilityLabel={label} value={webInput|| (value?displayIndianDate(value):'')} onChangeText={v=>{setWebInput(v);const iso=fromIndianDate(v);if(iso){onChange(iso);setWebInput('');}}} onBlur={()=>setWebInput('')} style={styles.webInput}/>
+        <TextInput accessibilityLabel={label} value={webInput|| (value?displayIndianDate(value):'')} onChangeText={v=>{setWebInput(v);const iso=fromIndianDate(v);if(iso){onChange(iso);setWebInput('');}}} onBlur={()=>setWebInput('')} placeholder={hidePlaceholder?"":"DD/MM/YYYY"} placeholderTextColor="#9AA7B9" style={styles.webInput}/>
         <Ionicons name="calendar-outline" size={17} color="#315B9A"/>
       </View>
     ) : (
       <Pressable accessibilityRole="button" accessibilityLabel={label+' calendar picker'} onPress={()=>setPickerOpen(true)} style={styles.row}>
-        <Text style={styles.value}>{value?displayIndianDate(value):''}</Text>
+        <Text style={[styles.value,!value&&styles.placeholder]}>{value?displayIndianDate(value):hidePlaceholder?'':'DD/MM/YYYY'}</Text>
         <Ionicons name="calendar-outline" size={17} color="#315B9A"/>
       </Pressable>
     )}
