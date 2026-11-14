@@ -26,7 +26,7 @@ assert.match(screen,/if\(\['issuanceDate','validFrom','validUpto','tpValidUpto',
 assert.match(screen,/if\(f.date\)return <PartnerPolicyDateField/,'NonMotor validity dates use calendar');
 assert.match(types,/productDrafts\?: NativeProductDrafts/,'Product forms isolated by type');
 assert.match(api,/const productDraftKeys = new Set/,'Server must whitelist product draft fields');
-assert.match(api,/saveDraft.productDrafts=proposedProductDrafts/,'Drafts persist in scoped existing intake record');
+assert.match(api,/saveDraft.productDrafts=Object.fromEntries/,'Scoped product drafts preserve pre-existing fields through server-side merging');
 assert.match(api,/if\(d.businessLine!=="Motor"\)return reply/,'NonMotor cannot book through Motor endpoint');
 assert.match(screen,/Final case creation, documents, risk validation and permission-controlled commercials must be completed in the Operations Portal/);
 assert.match(screen,/data\?\.commercialAccess\?<View style=\{styles.referenceCommercial\}/, 'All commercial summaries must require commercial access.');
