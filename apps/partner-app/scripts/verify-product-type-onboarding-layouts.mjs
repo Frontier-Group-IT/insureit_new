@@ -203,3 +203,19 @@ assert.doesNotMatch(screen,/sourceMonth|Month ·/, 'Do not display a derived Mon
 assert.match(api,/\.select\("phone"\)\.eq\("id",owner\.id\)/, 'Existing scoped owner metadata backend remains.');
 assert.match(types,/rmMobile:string/, 'Existing partner source metadata shape remains unchanged.');
 console.log('Product-type layouts, direct policy type selection, portal source ownership alignment and PIR-card removal verified.');
+
+
+const calendarDialog = read('apps/partner-app/components/policy-intakes/partner-policy-calendar-dialog.tsx');
+for (const label of ['Long Term Package','Long Term Third Party','Bundled','SAOD']) {
+  assert.ok(screen.includes(label), 'Motor product selector must retain reference choice: ' + label);
+}
+assert.match(screen, /label:f.key==='policyProduct'&&x==='Comprehensive'\?'Package':x/, 'Display Package label while storing the existing Comprehensive value.');
+assert.match(screen, /draft.vehicleClass==='CPM'\?\['Comprehensive','SAOD'\]/, 'Preserve existing CPM eligibility.');
+assert.ok(screen.includes("value==='Long Term Third Party'"), 'Long Term Third Party must follow third-party IDV and OD rules.');
+assert.match(screen, /picker\?\.key==='policyProduct'\?'Select product'/, 'Policy selector uses the reference header.');
+assert.match(date, /PartnerPolicyCalendarDialog/, 'Android date fields open the themed policy calendar.');
+assert.match(date, /Platform.OS==='ios'\?<DateTimePicker/, 'iOS retains the existing native picker.');
+for (const label of ['Previous month','Next month','Choose calendar year','CANCEL','OK']) {
+  assert.ok(calendarDialog.includes(label), 'Reference calendar must provide ' + label);
+}
+assert.match(calendarDialog, /onConfirm\(draft\)/, 'Date is committed only on confirmation.');
