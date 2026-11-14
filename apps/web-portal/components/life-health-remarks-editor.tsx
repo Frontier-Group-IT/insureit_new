@@ -8,13 +8,14 @@ type Props = {
   value: string;
   onChange: (value: string) => void;
   disabled?: boolean;
+  compact?: boolean;
 };
 
 /**
  * Add-only remarks for Create Case. Entries remain read-only after being added
  * to the draft and are persisted with the case when Create Case succeeds.
  */
-export function LifeHealthRemarksEditor({ value, onChange, disabled = false }: Props) {
+export function LifeHealthRemarksEditor({ value, onChange, disabled = false, compact = false }: Props) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState("");
   const [mounted, setMounted] = useState(false);
@@ -49,13 +50,21 @@ export function LifeHealthRemarksEditor({ value, onChange, disabled = false }: P
   return <>
     <div className="min-w-0">
       <div className="mb-1.5 text-[9px] font-bold uppercase tracking-[0.055em] text-[#475467]">Remarks</div>
-      <div className="flex h-10 items-center justify-between gap-2 rounded-xl border border-[#D8DEE9] bg-white px-2.5">
-        <span className="min-w-0 truncate text-[10px] text-[#667085]" aria-label="Remarks status">{value.trim() ? "Remarks added · Read only" : "No remarks added"}</span>
-        <button type="button" disabled={disabled} onClick={show} aria-label="Add Remark" className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-[#BFD3EE] bg-[#EFF5FF] px-2.5 py-1.5 text-[10px] font-bold text-[#17365D] hover:bg-[#E0EDFF] disabled:opacity-50">
-          <MessageSquareText className="h-3.5 w-3.5" />Add Remark
+      {compact ? (
+        <button type="button" disabled={disabled} onClick={show} aria-label="Add Remark" className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-[#BFD3EE] bg-[#EFF5FF] px-3 text-[11px] font-semibold text-[#17365D] hover:bg-[#E0EDFF] disabled:opacity-50">
+          <MessageSquareText className="h-4 w-4" />Add Remark
         </button>
-      </div>
-      {value.trim() ? <div className="mt-2 rounded-xl border border-[#E0E7F0] bg-[#F8FAFD] px-3 py-2.5" aria-label="Added remarks"><p className="mb-1.5 text-[9px] font-bold uppercase tracking-[0.055em] text-[#667085]">Added remarks · Read only</p><p className="whitespace-pre-wrap break-words text-[11px] leading-5 text-[#344054]">{value}</p></div> : null}
+      ) : (
+        <>
+          <div className="flex h-10 items-center justify-between gap-2 rounded-xl border border-[#D8DEE9] bg-white px-2.5">
+            <span className="min-w-0 truncate text-[10px] text-[#667085]" aria-label="Remarks status">{value.trim() ? "Remarks added · Read only" : "No remarks added"}</span>
+            <button type="button" disabled={disabled} onClick={show} aria-label="Add Remark" className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-[#BFD3EE] bg-[#EFF5FF] px-2.5 py-1.5 text-[10px] font-bold text-[#17365D] hover:bg-[#E0EDFF] disabled:opacity-50">
+              <MessageSquareText className="h-3.5 w-3.5" />Add Remark
+            </button>
+          </div>
+          {value.trim() ? <div className="mt-2 rounded-xl border border-[#E0E7F0] bg-[#F8FAFD] px-3 py-2.5" aria-label="Added remarks"><p className="mb-1.5 text-[9px] font-bold uppercase tracking-[0.055em] text-[#667085]">Added remarks · Read only</p><p className="whitespace-pre-wrap break-words text-[11px] leading-5 text-[#344054]">{value}</p></div> : null}
+        </>
+      )}
     </div>
     {mounted && open ? createPortal(
       <div className="fixed inset-0 z-[1100] flex items-center justify-center bg-[#101828]/60 p-4" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setOpen(false); }}>
