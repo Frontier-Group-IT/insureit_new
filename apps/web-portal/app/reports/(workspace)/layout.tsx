@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { AppShell } from "@/components/shell";
 import { ReportWorkspaceNavigation } from "@/components/reports/report-workspace-navigation";
+import { DailyReportHeaderScopes, DailyReportHeaderPeriod } from "@/components/reports/daily-report-header-controls";
 import {
   ReportsNavigationPendingProvider,
   ReportsPendingContent,
@@ -18,11 +19,12 @@ export default function ReportsWorkspaceLayout({ children }: { children: ReactNo
                   <h1>Reports</h1>
                 </div>
                 <ReportWorkspaceNavigation />
+                <DailyReportHeaderScopes />
               </div>
-              <div
-                id="reports-workspace-toolbar"
-                className="reports-reference-toolbar reports-overview-reference"
-              />
+              <div className="flex items-center gap-2">
+                <DailyReportHeaderPeriod />
+                <div id="reports-workspace-toolbar" className="reports-reference-toolbar reports-overview-reference" />
+              </div>
             </div>
           </header>
           <ReportsPendingContent>{children}</ReportsPendingContent>
