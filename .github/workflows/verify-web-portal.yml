@@ -69,6 +69,8 @@ jobs:
         run: node scripts/daily-report-remove-extra-text-regression.mjs
       - name: Daily Report responsive five-activity summary grid regression
         run: node scripts/daily-report-five-per-row-regression.mjs
+      - name: Daily Report header scope and period range regression
+        run: node scripts/daily-report-heading-period-regression.mjs
       - name: Daily Report All employee directory hierarchy and history isolation regression
         run: node --experimental-strip-types scripts/daily-report-all-employee-directory-regression.mjs
       - name: OCR-only Layout Parser opt-in regression
