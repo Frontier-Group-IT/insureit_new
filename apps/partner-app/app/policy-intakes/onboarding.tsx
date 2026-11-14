@@ -319,7 +319,7 @@ export default function NativePolicyOnboarding(){
       // Supabase's signed URLs can be long; preview image policy copies natively
       // rather than passing a token-bearing URL through iOS Linking.openURL.
       const url=await getPartnerPolicyIntakeDocumentUrl(id);
-      if (/\\.(?:jpe?g|png|webp|gif)$/i.test(new URL(url).pathname)) {
+      if (/\.(?:jpe?g|png|webp|gif)$/i.test(new URL(url).pathname)) {
         setPolicyCopyImageFailed(false);
         setPolicyCopyImageUrl(url);
       } else {
