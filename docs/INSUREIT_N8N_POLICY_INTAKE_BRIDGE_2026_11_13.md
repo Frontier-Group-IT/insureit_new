@@ -106,3 +106,9 @@ Use the existing `ParsedPolicyField` shape when writing authorized `ocr_fields` 
 - This is the **second synthetic document's authenticated binary-to-JSON test**, not a real customer policy validation. The previously uploaded real policy was examined offline only. No real customer PDF was transmitted to n8n by this test.
 - Latest PR head before documenting this test `056d4aa0bf2fc364c871f884976ee19fdcb6323f` had successful **Verify web portal** and **INSUREIT dependency assurance evidence** checks. Documentation-only commit requires its own checks before treating the new head as green.
 - Remaining release gates: verify negative auth and malformed file handling; review separately authorized real-PDF evidence and masked contact gaps; select real authorized intake IDs; establish shadow-only config and confirm Google remains authoritative; do not deploy/merge/publish/auto-finalize without specific subsequent approval.
+
+## 2026-11-14 negative authentication test — completed
+
+- The operator called the n8n **Test URL** `POST /webhook-test/insureit-policy-intake-icici-v1` without `x-insureit-policy-intake-secret`. The webhook returned **HTTP 403 Forbidden** and `Authorization data is wrong!` at **2026-11-14 10:14:02 UTC**, denying the request before PDF extraction. This is a successful **missing-secret rejection** test; the test correctly returned 403 rather than the previously anticipated 401.
+- The two authenticated synthetic PDF tests independently succeeded; neither response authorized auto-finalization. The authenticated **wrong-secret**, **invalid PDF/mismatched MIME**, and user-authorized real-PDF tests remain pending. The user did not disclose the credential.
+- This does not authorize publication, production website integration, production intake writes, or policy booking. Maintain draft/off/shadow-only release gate.
