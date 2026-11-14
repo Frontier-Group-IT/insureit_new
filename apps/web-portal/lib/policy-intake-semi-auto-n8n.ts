@@ -121,10 +121,15 @@ export async function previewSemiAutoN8nExtraction(id: string): Promise<SemiAuto
   }
   const existing = new Map((snapshot.intake.ocr_fields ?? []).map(field => [field.key, field.value]));
   const changedFieldCount = extraction.fields.filter(field => existing.get(field.key) !== field.value).length;
-  const canApply = semiAutoN8nApplyEnabled()
+  let canApply = semiAutoN8nApplyEnabled()
     && current.intake.status === "processing"
     && current.intake.ocr_status === "failed"
     && (current.intake.ocr_fields ?? []).length === 0;
+  if (canApply) {
+    const savedDraft = await admin.from("policy_intake_onboarding_drafts")
+      .select("intake_id").eq("intake_id", id).limit(1);
+    canApply = !savedDraft.error && (savedDraft.data?.length ?? 0) === 0;
+  }
   return { ok: true, preview: {
     documentId: current.document.id,
     fingerprint: fingerprint(id, current.document.id, extraction.fields, extraction.warnings),
