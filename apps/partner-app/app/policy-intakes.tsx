@@ -413,6 +413,51 @@ export default function PolicyIntakesScreen() {
   );
 }
 
+function MotionFilterChip({ active, reduceMotion, onPress, label, count }: { active: boolean; reduceMotion: boolean; onPress: () => void; label: string; count: number }) {
+  const selection = useRef(new Animated.Value(active ? 1 : 0)).current;
+  useEffect(() => {
+    selection.stopAnimation();
+    if (reduceMotion) selection.setValue(active ? 1 : 0);
+    else Animated.timing(selection, { toValue: active ? 1 : 0, duration: 190, easing: Easing.out(Easing.cubic), useNativeDriver: false }).start();
+    return () => selection.stopAnimation();
+  }, [active, reduceMotion, selection]);
+  return (
+    <Animated.View style={[styles.filterChip, {
+      backgroundColor: selection.interpolate({ inputRange: [0, 1], outputRange: ['#F7F8FB', '#183864'] }),
+      borderColor: selection.interpolate({ inputRange: [0, 1], outputRange: ['#E0E5ED', '#183864'] }),
+    }]}>
+      <Pressable accessibilityRole="button" accessibilityState={{ selected: active }} onPress={onPress} style={({ pressed }) => [styles.filterChipPress, pressed && styles.pressed]}>
+        <Text style={[styles.filterLabel, active && styles.filterLabelActive]}>{label}</Text>
+        <Text style={[styles.filterCount, active && styles.filterCountActive]}>({count})</Text>
+      </Pressable>
+    </Animated.View>
+  );
+}
+
+function MotionCard({ index, reduceMotion, children }: { index: number; reduceMotion: boolean; children: ReactNode }) {
+  const entrance = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
+  const rise = useRef(new Animated.Value(reduceMotion ? 0 : 9)).current;
+  useEffect(() => {
+    entrance.stopAnimation(); rise.stopAnimation();
+    if (reduceMotion) { entrance.setValue(1); rise.setValue(0); return; }
+    Animated.parallel([
+      Animated.timing(entrance, { toValue: 1, duration: 260, delay: Math.min(index, 7) * 42, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+      Animated.timing(rise, { toValue: 0, duration: 260, delay: Math.min(index, 7) * 42, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+    ]).start();
+    return () => { entrance.stopAnimation(); rise.stopAnimation(); };
+  }, [entrance, rise, reduceMotion, index]);
+  return <Animated.View style={{ opacity: entrance, transform: [{ translateY: rise }] }}>{children}</Animated.View>;
+}
+
+function cardStatusBorder(row: PartnerPolicyIntake) {
+  if (row.status === 'needs_attention' || (row.status === 'processing' && row.ocr_status === 'failed')) return styles.cardNeedsAttention;
+  if (row.status === 'rejected') return styles.cardRejected;
+  if (row.status === 'duplicate') return styles.cardDuplicate;
+  if (row.status === 'completed') return styles.cardCompleted;
+  if (row.status === 'in_review') return styles.cardInReview;
+  return null;
+}
+
 function IntakeRecordLogo({ row }: { row: PartnerPolicyIntake }) {
   const insurerName = field(row, 'insurer_name');
   const manufacturerName = field(row, 'vehicle_make');
