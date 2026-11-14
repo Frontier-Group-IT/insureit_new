@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { createLifeHealthCaseForVerifiedActor } from "@/lib/life-health-case-creation-engine";
 import { onboardPolicyForVerifiedActor, type PolicyOnboardingPayload } from "@/lib/policy-onboarding-engine";
 import { requestPolicyDateApprovalForVerifiedActor, verifyPolicyDateApprovalForVerifiedActor } from "@/lib/policy-date-approval-engine";
 import { POLICY_DATE_APPROVERS } from "@/lib/policy-date-rule";
@@ -37,7 +38,7 @@ const productDraftKeys = new Set([
 const productCommercialKeys = new Set(["payinBasis","payinValue","payinScheme","partnerPayoutBasis","partnerPayoutValue"]);
 const nonMotorTypes = ["Life","Health","Non Motor"] as const;
 const commercialFields = ["payoutBasis","projectedOdPercent","projectedTpPercent","insurerScheme","payinBillNo","payinBilledAmount","payinBillDate","payinStatus","retention","payoutOdPercent","payoutTpPercent","flatPayoutAmount","payoutStatus","payoutDate","payoutVoucherNo"] as const;
-type Input = { action?: "prepare" | "save" | "book" | "approval_request" | "approval_verify" | "rc_lookup" | "customer_search"; search?: string; intake_id?: string; take_over?: boolean; expected_reviewer_id?: string | null; revision?: number; draft?: PolicyIntakeDraft; resolution?: PolicyOnboardingPayload["resolution"]; date_approval_id?: string | null; approver_key?: string; approval_id?: string; otp?: string; registration_no?: string };
+type Input = { action?: "prepare" | "save" | "book" | "create_life_health" | "approval_request" | "approval_verify" | "rc_lookup" | "customer_search"; search?: string; intake_id?: string; take_over?: boolean; expected_reviewer_id?: string | null; revision?: number; draft?: PolicyIntakeDraft; resolution?: PolicyOnboardingPayload["resolution"]; date_approval_id?: string | null; approver_key?: string; approval_id?: string; otp?: string; registration_no?: string };
 type Intake = { id:string; intake_number:string; lead_source_type:"posp"|"misp"|"partner"; lead_source_name:string; lead_source_code:string|null; customer_mobile:string; ocr_fields:PolicyIntakeOcrField[]; status:string; assigned_to_profile_id:string|null; created_at:string; matched_customer_id:string|null };
 function reply(error:string,status:number){return NextResponse.json({ok:false,error},{status,headers:{"Cache-Control":"no-store"}});}
 function good(data:Record<string,unknown>){return NextResponse.json({ok:true,...data},{headers:{"Cache-Control":"no-store"}});}
@@ -47,7 +48,7 @@ export async function POST(request:Request){
   if(!token)return reply("Partner authentication required.",401);
   let body:Input;
   try{body=await request.json() as Input;}catch{return reply("Invalid onboarding request.",400);}
-  if(!uuid.test(body.intake_id??"")||!["prepare","save","book","approval_request","approval_verify","rc_lookup","customer_search"].includes(body.action??""))return reply("Invalid onboarding request.",400);
+  if(!uuid.test(body.intake_id??"")||!["prepare","save","book","create_life_health","approval_request","approval_verify","rc_lookup","customer_search"].includes(body.action??""))return reply("Invalid onboarding request.",400);
   const scoped=createSupabaseWithAccessToken(token);
   const {data:{user},error:authError}=await scoped.auth.getUser(token);
   if(authError||!user)return reply("Your session has expired. Sign in again.",401);
@@ -136,6 +137,102 @@ export async function POST(request:Request){
     const result=await verifyPolicyDateApprovalForVerifiedActor(body.approval_id,body.otp,approvalInput,profile);
     if(!result.ok)return reply(result.error,400);
     return good({verified:true});
+  }
+  if(body.action==="create_life_health"){
+    // The verified intake owns the submission. Never accept case/source fields
+    // directly from an untrusted mobile body.
+    if(intake.status!=="in_review"||intake.assigned_to_profile_id!==user.id)
+      return reply("You are no longer the assigned reviewer.",409);
+    if(!Number.isSafeInteger(body.revision)||(body.revision??0)<1)
+      return reply("Save your latest draft before creating a case.",400);
+    const canCreate=await hasEffectiveCapability(profile,"create_policies","edit");
+    const legacy=await getEffectivePermission(profile.id,profile.role,"view_policies");
+    if(!head&&!canCreate&&!["edit","approve"].includes(legacy.access))
+      return reply("Policy creation permission is required.",403);
+    const {data:stored,error:storedError}=await admin.from("policy_intake_onboarding_drafts")
+      .select("draft_payload,revision").eq("intake_id",intake.id)
+      .maybeSingle<{draft_payload:PolicyIntakeDraft & {productDrafts?:Record<string,Record<string,string>>};revision:number}>();
+    if(storedError||!stored||stored.revision!==body.revision)
+      return reply("Your draft changed. Reload and save before creating a case.",409);
+    const d=stored.draft_payload;
+    if(d.businessLine!=="Life"&&d.businessLine!=="Health")
+      return reply("Create Policy is available only for Life and Health here.",400);
+    if(head){
+      const downline=await getOperationsHeadDownlinePolicyScope(profile.id);
+      if(!d.intermediaryCode||!downline.intermediaryCodes.includes(d.intermediaryCode))
+        return reply("This source is outside your approved downline.",403);
+    }
+    const values=d.productDrafts?.[d.businessLine]??{};
+    const required:[string,string][]=[
+      ["Proposal date",d.issuanceDate],["Lead source",d.leadSource],
+      ["Client / proposer name",d.insuredName],["Client mobile number",d.phoneNo],
+      ["Insurance company",d.insurerId],["Product name",values.productName],
+      ["Case / proposal number",values.proposalNumber],["Payment frequency",values.paymentFrequency],
+      ["Premium amount",values.premiumAmount],["Payment mode",values.paymentMode],
+    ];
+    const missing=required.find(([,value])=>!String(value??"").trim());
+    if(missing)return reply(`${missing[0]} is required.`,400);
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(d.issuanceDate))
+      return reply("Proposal date must be YYYY-MM-DD.",400);
+    if(!/^[6-9]\d{9}$/.test(d.phoneNo))
+      return reply("Enter a valid 10 digit Indian mobile number.",400);
+    if(!d.intermediaryCode)return reply("Lead source ID is required.",400);
+    const {data:sourceCandidates,error:sourceError}=await admin.from("intermediaries")
+      .select("id,display_name,intermediary_code")
+      .eq("intermediary_code",d.intermediaryCode).limit(10)
+      .returns<Array<{id:string;display_name:string;intermediary_code:string|null}>>();
+    if(sourceError)return reply("Lead source lookup is temporarily unavailable.",503);
+    const matching=(sourceCandidates??[]).filter(row=>
+      row.display_name.trim().toLowerCase()===d.leadSource.trim().toLowerCase());
+    if(matching.length!==1)return reply("Lead source identity could not be uniquely verified. Refresh and select the source again.",409);
+    const form=new FormData();
+    const fields:Record<string,string>={
+      businessLine:d.businessLine,sourcingDate:d.issuanceDate,intermediaryType:d.intermediaryType,
+      intermediaryCode:d.intermediaryCode,sourceId:matching[0].id,leadSource:d.leadSource,rmName:d.rmName,
+      insuredName:d.insuredName,phone:d.phoneNo,address:values.address??"",
+      insurerId:d.insurerId,productName:values.productName??"",proposalNumber:values.proposalNumber??"",
+      ppt:values.ppt??"",pd:values.pd??"",paymentFrequency:values.paymentFrequency??"",
+      paymentMode:values.paymentMode??"",premiumAmount:values.premiumAmount??"",
+      remarks:values.remarks??d.remarks??"",
+    };
+    if(commercialAccess){
+      const payinFlat=values.payinBasis==="FLAT",payoutFlat=values.partnerPayoutBasis==="FLAT";
+      fields.payinBasis=payinFlat?"FIXED_AMOUNT":"NET_PREMIUM_PERCENT";
+      fields.payoutBasis=payoutFlat?"FIXED_AMOUNT":"NET_PREMIUM_PERCENT";
+      fields[payinFlat?"payinFixedAmount":"payinPercent"]=values.payinValue??"";
+      fields.insurerSchemeAmount=values.payinScheme??"";
+      fields[payoutFlat?"payoutFixedAmount":"payoutPercent"]=values.partnerPayoutValue??"";
+    }
+    for(const [key,value] of Object.entries(fields))form.set(key,value);
+    // Claim the intake atomically before any customer/case write: simultaneous
+    // taps cannot create multiple Life/Health cases from the same intake.
+    const {data:claimed,error:claimError}=await admin.from("policy_intake_requests")
+      .update({status:"processing"})
+      .eq("id",intake.id).eq("status","in_review").eq("assigned_to_profile_id",user.id)
+      .select("id").maybeSingle<{id:string}>();
+    if(claimError||!claimed)return reply("This intake is already being processed. Refresh before retrying.",409);
+    let created=false;
+    try{
+      const result=await createLifeHealthCaseForVerifiedActor(form,profile,intake.id);
+      if(!result.ok)return reply(result.error,400);
+      created=true;
+      const {error:completeError}=await admin.from("policy_intake_requests")
+        .update({status:"completed",attention_reason:null})
+        .eq("id",intake.id).eq("status","processing").eq("assigned_to_profile_id",user.id);
+      if(completeError){
+        console.error("Life/Health case was created but intake could not be finalized",{intakeId:intake.id,caseId:result.caseId,message:completeError.message});
+        return reply(`Case ${result.caseNumber} was created, but Intake finalization needs review. Do not retry Create Policy.`,503);
+      }
+      return good({case:{id:result.caseId,number:result.caseNumber,status:"awaiting_policy"}});
+    }catch(error){
+      console.error("Life/Health case creation encountered an error",{intakeId:intake.id,message:error instanceof Error?error.message:"unknown"});
+      return reply("Could not confirm the case creation. Check the Case Register before retrying.",503);
+    }finally{
+      if(!created){
+        await admin.from("policy_intake_requests").update({status:"in_review"})
+          .eq("id",intake.id).eq("status","processing").eq("assigned_to_profile_id",user.id);
+      }
+    }
   }
   if(body.action==="book"){
     if(intake.status!=="in_review"||intake.assigned_to_profile_id!==user.id)return reply("You are no longer the assigned reviewer.",409);
