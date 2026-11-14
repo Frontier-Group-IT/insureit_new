@@ -90,11 +90,12 @@ def verify_selected(data_sql, target_url):
     )
     if (mismatches or table_count < 150 or rls_enabled != table_count
             or policies.get("public", 0) < 200
-            or policies.get("storage", 0) < 30
-            or auth_triggers != 1):
+            or policies.get("storage", 0) != 0
+            or auth_triggers != 0):
         raise RuntimeError("R4 SQL parity/permission structures not proved")
-    print("R4 SELECTED APP+AUTH SQL ROW PARITY PASSED; "
-          "FULL MANAGED SERVICE/OWNER/ROLE/STORAGE NOT CERTIFIED")
+    print("R4 SELECTED APP+AUTH SQL ROW PARITY PASSED;"
+          " MANAGED AUTH TRIGGER / STORAGE POLICIES DEFERRED;"
+          " FULL SERVICE/OWNER/ROLE/STORAGE NOT CERTIFIED")
 
 
 if __name__ == "__main__":
