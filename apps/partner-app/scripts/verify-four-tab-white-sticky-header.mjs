@@ -28,7 +28,15 @@ assert.match(policies, /metric\.value\.toLocaleString\('en-IN'\)/, 'Status chip 
 assert.match(policies, /onPress=\{\(\) => selectSummary\(metric\.filter\)\}/, 'Selecting a chip preserves existing policy lifecycle filtering');
 assert.match(policies, /accessibilityState=\{\{ selected \}\}/, 'Selected lifecycle chip remains accessible');
 assert.match(policies, /summaryChipSelected: \{ backgroundColor: '#17365D'/, 'Selected lifecycle uses navy contrast');
-assert.match(policies, /accessibilityLabel="See all policies"/, 'See all remains visible outside the horizontal chip scroll');
-assert.match(policies, /onPress=\{\(\) => selectSummary\('all'\)\}/, 'See all resets to the unfiltered policy list');
+assert.match(policies, /accessibilityLabel="See all policy status filters"/, 'See all remains visible outside the horizontal chip scroll');
+assert.match(policies, /visible=\{seeAllOpen\}/, 'See all now opens a visible anchored filter menu');
+assert.match(policies, /onPress=\{\(\) => \{ setFilterMenuOpen\(false\); setSeeAllOpen\(open => !open\); \}\}/, 'See all toggles the menu even when Total Policies is already selected');
+assert.match(policies, /onPress=\{\(\) => selectSummary\(option\.filter\)\}/, 'Each visible menu option selects its existing lifecycle filter');
+assert.match(policies, /setSeeAllOpen\(false\);\s*setQuery\(''\)/, 'Selecting an option closes the menu and resets search');
+assert.match(policies, /accessibilityState=\{\{ expanded: seeAllOpen \}\}/, 'See all exposes the expanded state to assistive technology');
+assert.match(policies, /summarySeeAllOptionCount/, 'Full filter menu includes policy counts');
+for (const lifecycle of ["all", "in_force", "expiring", "expired", "upcoming"]) {
+  assert.ok(policies.includes(`filter: '${lifecycle}' as const`), `All status options include ${lifecycle}`);
+}
 assert.doesNotMatch(policies, /styles\.summaryCard|styles\.summaryIcon|styles\.summaryPercent|formatPortfolioShare/, 'Remove the large metric tiles, icons and redundant percentages');
 console.log('Primary tab navy sticky heading/search contracts passed');
