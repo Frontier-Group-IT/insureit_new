@@ -258,8 +258,12 @@ jobs:
           assert not any(token in managed_script for token in (
               'CREATE ROLE', 'DROP TABLE', 'TRUNCATE', 'ALTER ROLE', 'pg_restore --clean'
           ))
+          assert 'plan_storage_sample' in str(isolated_triggers['workflow_dispatch'])
+          assert isolated_triggers['workflow_dispatch']['inputs']['plan_storage_sample']['default'] is False
           assert 'verify_storage_sample_bytes' in str(isolated_triggers['workflow_dispatch'])
           assert isolated_triggers['workflow_dispatch']['inputs']['verify_storage_sample_bytes']['default'] is False
+          plan_step = next(step for step in gated['steps'] if 'plan_recovery_storage_sample.py' in str(step))
+          assert 'inputs.plan_storage_sample || inputs.verify_storage_sample_bytes' in plan_step['if']
           assert 'plan_recovery_storage_sample.py' in guarded_steps
           assert 'RECOVERY_STORAGE_BACKUP_ENCRYPTION_KEY' in guarded_steps
           assert 'VERIFY_STORAGE_SAMPLE_BYTES' in guarded_steps
