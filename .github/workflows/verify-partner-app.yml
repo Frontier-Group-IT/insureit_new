@@ -78,6 +78,9 @@ jobs:
       - name: Verify Phase 5 resilience and accessibility contracts
         run: npm --workspace apps/partner-app run verify:phase5
 
+      - name: Verify reusable Partner loading skeletons
+        run: node apps/partner-app/scripts/verify-shared-loading-skeletons.mjs
+
       - name: Verify Partner visual-system completion contracts
         run: npm --workspace apps/partner-app run verify:visual
 
