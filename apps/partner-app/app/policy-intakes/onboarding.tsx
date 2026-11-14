@@ -520,7 +520,12 @@ export default function NativePolicyOnboarding(){
         <View style={styles.sectionHead}>
           <View style={styles.summaryHeading}><Text style={styles.summaryCaption}>POLICY STATUS</Text>
             <Text style={styles.sectionTitle}>Onboarding summary</Text></View>
-          <View style={styles.summaryProgress}><Text style={styles.progressText}>{filled}%</Text></View>
+          <View style={[styles.summaryProgress,{
+            borderTopColor:filled>=12.5?'#17365D':'#DFE7F0',
+            borderRightColor:filled>=37.5?'#17365D':'#DFE7F0',
+            borderBottomColor:filled>=62.5?'#17365D':'#DFE7F0',
+            borderLeftColor:filled>=87.5?'#17365D':'#DFE7F0',
+          }]}><Text style={styles.progressText}>{filled}%</Text></View>
           <View style={styles.progressStatus}><Text style={styles.summaryStatusValue}>In progress</Text></View>
         </View>
         <View style={styles.summary}>
