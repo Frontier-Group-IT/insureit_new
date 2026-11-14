@@ -109,6 +109,32 @@ class TocReview(unittest.TestCase):
                 with self.assertRaises(RuntimeError):
                     compare_archive(path, f"postgresql://postgres:pw@db.{TARGET_REF}.supabase.co/postgres")
 
+    def test_empty_target_reports_managed_security_counts_safely(self):
+        import contextlib
+        import io
+        with tempfile.TemporaryDirectory() as d:
+            path = make_toc(d)
+            target = dict(tables={("auth", "users"), ("storage", "objects")},
+                          extensions={"pgcrypto": "1.3"},
+                          roles={"postgres", "anon"}, memberships=2,
+                          auth_users=0, identities=0, buckets=0, objects=0,
+                          security_definers=1, exposed_public_definers=1,
+                          managed_policies={"storage": 0},
+                          managed_triggers={"auth": 0})
+            with patch("managed_recovery_preflight.query_target", return_value=target):
+                output = io.StringIO()
+                with contextlib.redirect_stdout(output):
+                    compare_archive(
+                        path,
+                        f"postgresql://postgres:synthetic@db.{TARGET_REF}.supabase.co/postgres",
+                    )
+                report = output.getvalue()
+                self.assertIn("target_storage_rls_policies=0", report)
+                self.assertIn("target_auth_user_triggers=0", report)
+                self.assertIn("no_import=1", report)
+                self.assertNotIn("synthetic", report)
+                self.assertNotIn("auth.users", report)
+
     def test_no_database_calls_for_toc(self):
         with tempfile.TemporaryDirectory() as d:
             path = make_toc(d)
