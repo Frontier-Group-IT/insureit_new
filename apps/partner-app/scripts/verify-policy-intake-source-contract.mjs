@@ -208,7 +208,7 @@ requireText(dateField, "{value?displayIndianDate(value):hidePlaceholder?'':'DD/M
 requireText(dateField, 'placeholder={hidePlaceholder?', 'The calendar input supports a DD/MM/YYYY placeholder.');
 
 requireText(nativeOnboarding, 'useState(false)', 'Commercial section initializes collapsed.');
-requireText(nativeOnboarding, 'accessibilityState={{expanded:commercialExpanded}}', 'Commercial collapse is accessible and controlled.');
+requireText(nativeOnboarding, 'styles.referenceCommercial', 'Commercial summary uses the requested reference layout.');
 if (nativeOnboarding.includes('OD + TP + Add-on + CPA')) throw new Error('Hide old OD + TP summary breakdown.');
 for (const key of ['insuredName','phoneNo','registrationNo','vehicleClass','make','model','policyProduct','policyNo','insurerId','idv','od','tp','cpa','validFrom','validUpto']) {
   if (!nativeOnboarding.includes("key:'" + key + "'")) throw new Error('A persisted Motor field was removed from the form: ' + key);
