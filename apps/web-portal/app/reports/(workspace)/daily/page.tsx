@@ -68,13 +68,15 @@ export default async function DailyReportPage({ searchParams }: Props) {
           <Link prefetch={false} href={linkFor({scope:"all",page:"1",activity:"",employee:"",person:"",period:"all"})} aria-current={filters.scope === "all" ? "page" : undefined}
             className={`min-w-[90px] rounded-lg px-4 py-2 text-center text-[11px] font-bold ${filters.scope === "all" ? "bg-[#17365D] text-white" : "text-[#52627B] hover:bg-white"}`}>All</Link>
         </nav>
-        <div className="mt-3">
-          <DailyReportQuickFilters
-            mode={isSelf ? "self" : chosenPerson ? "employee" : "directory"}
-            date={query.period === "day" ? filters.date : ""}
-            employeeSearch={filters.employee}
-          />
-        </div>
+        {(isSelf || chosenPerson) ? (
+          <div className="mt-3">
+            <DailyReportQuickFilters
+              mode={isSelf ? "self" : "employee"}
+              date={query.period === "day" ? filters.date : ""}
+              employeeSearch={filters.employee}
+            />
+          </div>
+        ) : null}
       </section>
       {(isSelf || chosenPerson) && selfHistory && !error ? (
         <DailySelfActivityPanel data={selfHistory} linkFor={linkFor}
