@@ -452,11 +452,11 @@ export default function NativePolicyOnboarding(){
         <Pressable accessibilityRole="button" accessibilityLabel={f.label} accessibilityState={{disabled:restricted}}
           disabled={restricted} onPress={()=>setPicker({key:f.key,items:options})}
           style={[styles.inputRow,restricted&&styles.readonlyInput]}>
-          <Text numberOfLines={1} style={[styles.value,!displayed&&styles.placeholder]}>{displayed||(productType==='Non Motor'?'':f.key==='manufacturingYear'?'Select year':'Select '+f.label.toLowerCase())}</Text>
+          <Text numberOfLines={1} style={[styles.value,!displayed&&styles.placeholder]}>{displayed||(f.key==='manufacturingYear'?'Select year':'Select '+f.label.toLowerCase())}</Text>
           <Ionicons name="chevron-down" size={15} color="#63758D"/>
         </Pressable>
       ):(
-        <TextInput accessibilityLabel={f.label} value={current} editable={!restricted} placeholder={productType==='Non Motor'?'':hint}
+        <TextInput accessibilityLabel={f.label} value={current} editable={!restricted} placeholder={hint}
           placeholderTextColor="#98A6B8" onChangeText={v=>update(f.key,v)}
           autoCapitalize={['registrationNo','chassisNo','engineNo','policyNo'].includes(f.key)?'characters':'sentences'}
           keyboardType={['phoneNo','idv','od','tp','cpa','capacity','manufacturingYear'].includes(f.key)?'numeric':'default'}
@@ -469,14 +469,14 @@ export default function NativePolicyOnboarding(){
     if(productType!=='Non Motor'&&(f.key==='insuredName'||f.key==='phoneNo'))return field({key:f.key as FieldKey,label:f.label,required:f.required});
     const current=String(productValues[f.key]??(productType==='Non Motor'&&f.key==='status'?'Active':''));
     // Gross premium is editable in Operations; net+GST may prefill it without locking the field.
-    if(f.date)return <PartnerPolicyDateField key={f.key} hidePlaceholder={productType==='Non Motor'} label={f.label} value={current} required={f.required} onChange={v=>updateProduct(f.key,v)}/>;
+    if(f.date)return <PartnerPolicyDateField key={f.key} label={f.label} value={current} required={f.required} onChange={v=>updateProduct(f.key,v)}/>;
     const options=f.key==='insurerId'?data?.insurers??[]:(f.options??[]).map(value=>({value,label:value}));
     return <View key={f.key} style={[styles.field,f.wide&&styles.wideField]}>
       <Text style={styles.label}>{f.label}{f.required?<Text style={styles.star}> *</Text>:null}</Text>
       {options.length?<Pressable accessibilityRole="button" accessibilityLabel={f.label} style={styles.inputRow} onPress={()=>setPicker({key:f.key,items:options,product:true})}>
-        <Text style={[styles.value,!current&&styles.placeholder]} numberOfLines={1}>{options.find(o=>o.value===current)?.label||(productType==='Non Motor'?'':'Select '+f.label.toLowerCase())}</Text>
+        <Text style={[styles.value,!current&&styles.placeholder]} numberOfLines={1}>{options.find(o=>o.value===current)?.label||('Select '+f.label.toLowerCase())}</Text>
         <Ionicons name="chevron-down" size={15} color="#63758D"/>
-      </Pressable>:<TextInput accessibilityLabel={f.label} value={current} placeholder={productType==='Non Motor'?'':'Enter '+f.label.toLowerCase()} placeholderTextColor="#98A6B8" onChangeText={v=>updateProduct(f.key,f.key==='phone'?v.replace(/\D/g,'').slice(0,10):f.key==='policyNumber'?v.toUpperCase():v)}
+      </Pressable>:<TextInput accessibilityLabel={f.label} value={current} placeholder={['sumInsured','netPremium','gstAmount','grossPremium'].includes(f.key)?'₹ 0.00':f.key==='previousInsurer'||f.key==='deductible'?'Optional':'Enter '+f.label.toLowerCase()} placeholderTextColor="#98A6B8" onChangeText={v=>updateProduct(f.key,f.key==='phone'?v.replace(/\D/g,'').slice(0,10):f.key==='policyNumber'?v.toUpperCase():v)}
         keyboardType={['phone','premiumAmount','sumInsured','deductible','netPremium','gstAmount','grossPremium','employeeCount','annualWages','annualTurnover','projectValue'].includes(f.key)?'numeric':'default'}
         style={styles.input}/>}
     </View>;
@@ -576,7 +576,16 @@ export default function NativePolicyOnboarding(){
       <Text style={[styles.sectionTitle,styles.headingFlex]}>Additional policy details</Text>
       <Ionicons name={nonMotorAdditionalOpen?'chevron-up':'chevron-down'} size={16} color="#315B85"/>
     </Pressable>
-    {nonMotorAdditionalOpen?<View style={styles.fields}>{productExtras.filter(item=>item.key!=='remarks').map(detailField)}</View>:null}
+    {nonMotorAdditionalOpen?<View style={styles.fields}>
+      {productExtras.filter(item=>item.key!=='remarks').map(detailField)}
+      <View style={styles.wideField}>
+        <Text style={styles.label}>Remarks</Text>
+        <TextInput accessibilityLabel="Remarks" multiline textAlignVertical="top"
+          value={productValues.remarks||''} onChangeText={value=>updateProduct('remarks',value)}
+          maxLength={4000} placeholder="Any servicing note for future reference"
+          placeholderTextColor="#98A6B8" style={[styles.input,styles.inlineRemarksInput]}/>
+      </View>
+    </View>:null}
   </View>;
   const nonMotorDocumentsSection=<View style={styles.section}>
     <View style={styles.sectionHead}><Text style={styles.number}>06</Text><Text style={styles.sectionTitle}>Documents</Text></View>
@@ -676,7 +685,7 @@ export default function NativePolicyOnboarding(){
       {isMotor?motorProductSection:productType==='Non Motor'?nonMotorRiskSection:productSection('03','Policy product & case details',lifeProduct)}
       {!isMotor?productSection('04',productType==='Non Motor'?'Cover, premium & validity':'Premium & payment',productType==='Non Motor'?otherPremium:lifePremium):null}
       {!isMotor&&productType==='Non Motor'?<>{nonMotorAdditionalSection}{nonMotorDocumentsSection}</>:null}
-      <View style={styles.section}>
+      {productType!=='Non Motor'?<View style={styles.section}>
         <View style={styles.sectionHead}>
           <Ionicons name="chatbox-ellipses-outline" size={17} color="#254C83"/>
           <Text style={[styles.sectionTitle,styles.remarkHeading]}>Remarks</Text>
@@ -690,7 +699,7 @@ export default function NativePolicyOnboarding(){
           {(isMotor?draft.remarks:productValues.remarks||'').split(/\n\s*\n/).filter(item=>item.trim()).map((item,index)=>
             <View key={index} style={styles.remarkEntry}><Text style={styles.remarkPreview}>{item.trim()}</Text></View>)}
         </View>:null}
-      </View>
+      </View>:null}
       <View style={styles.section}>
         <View style={styles.sectionHead}>
           <View style={styles.summaryHeading}><Text style={styles.summaryCaption}>POLICY STATUS</Text>
@@ -1083,6 +1092,7 @@ const styles=StyleSheet.create({
   nonMotorDocumentRow:{flexDirection:'row',alignItems:'center',minHeight:39,gap:9,paddingHorizontal:9,borderRadius:8,borderWidth:1,borderColor:'#E1E9F3'},
   nonMotorDocumentName:{fontSize:11,color:'#17365D',flex:1},
   nonMotorSummaryValue:{fontSize:11,color:'#17365D',fontWeight:'600',maxWidth:'58%',textAlign:'right'},
+  inlineRemarksInput:{minHeight:76,paddingVertical:11},
   actions:{flexDirection:'row',gap:8,marginBottom:11,alignItems:'stretch'},secondary:{flex:1,borderWidth:1,borderColor:'#CDD9EB',borderRadius:10,paddingHorizontal:7,paddingVertical:12,minHeight:45,alignItems:'center',justifyContent:'center'},secondaryText:{fontWeight:'700',fontSize:11,color:'#25466E'},
   primary:{flex:1,backgroundColor:'#243F9E',borderRadius:10,paddingHorizontal:7,paddingVertical:12,minHeight:45,flexDirection:'row',gap:5,justifyContent:'center',alignItems:'center'},primaryText:{fontSize:11,fontWeight:'800',color:'white'},disabled:{opacity:.48},
   bookButton:{marginBottom:11,flexDirection:'row',justifyContent:'center',gap:8},
