@@ -107,6 +107,11 @@ assert(n8nServer.includes('loadPolicyIntakeDuplicateMatches(admin, [{'),
   "Apply must consult the canonical duplicate helper using proposed OCR");
 assert(n8nServer.includes('policy_intake_onboarding_drafts'),
   "Existing saved drafts must not be overwritten by n8n");
+assert(n8nServer.includes("extraction.warnings.length === 0"), "Warnings must prevent automatic failed-OCR recovery");
+assert(n8nServer.includes("fingerprint(id, current.document.id, extraction.fields, extraction.warnings)"),
+  "Reviewed preview fingerprint must bind both fields and warnings");
+assert(n8nServer.includes("An onboarding draft was created while extraction was running"),
+  "Apply must recheck draft creation immediately before the final OCR update");
 assert(n8nServer.includes('requestN8nPolicyIntakeExtraction('),
   "n8n preview must use the validated server-side bridge, not client fetch");
 assert(!n8nServer.includes('.from("policies").insert(') &&
