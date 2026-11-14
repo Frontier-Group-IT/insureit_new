@@ -279,6 +279,17 @@ jobs:
           assert 'put_object' not in sampler and 'delete_object' not in sampler
           assert 'supabase.co' not in sampler
           print('Protected R2 Storage 500MB sample is read-only and Free per-file capped')
+          assert 'expected_db_snapshot' in isolated_triggers['workflow_dispatch']['inputs']
+          assert isolated_triggers['workflow_dispatch']['inputs']['expected_db_snapshot']['default'] == ''
+          assert 'RECOVERY_EXPECTED_DB_SNAPSHOT' in guarded_steps
+          assert 'expected_db_snapshot' in v2restore_triggers['workflow_dispatch']['inputs']
+          assert v2restore_triggers['workflow_dispatch']['inputs']['expected_db_snapshot']['default'] == ''
+          assert 'RECOVERY_EXPECTED_DB_SNAPSHOT' in restore_steps
+          db_v2_reader = pathlib.Path('scripts/backup/verify_postgres_v2_r2.py').read_text()
+          assert 'require_expected_snapshot(' in db_v2_reader
+          assert 'SNAPSHOT_STAMP' in db_v2_reader
+          assert 'snapshot={snapshot}' in db_v2_reader
+          print('Both read-only R1/R3 jobs can reject R2 latest-pointer snapshot drift')
           print('Managed recovery R0/R1 preflight isolated, manual-only and read-only')
           print('Daily encrypted V2 backup and protected manual restore workflow guards verified')
           print('Manual offline database recovery rehearsal guards verified')
