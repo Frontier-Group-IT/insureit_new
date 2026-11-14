@@ -86,6 +86,7 @@ export default async function DailyReportPage({ searchParams }: Props) {
         <form action="/reports/daily" method="get" className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(160px,180px)_minmax(175px,200px)_minmax(180px,1fr)_auto_auto] xl:items-end">
           <input type="hidden" name="scope" value={filters.scope}/>
           {chosenPerson ? <input type="hidden" name="person" value={chosenPerson}/> : null}
+          {chosenPerson && query.activity ? <input type="hidden" name="activity" value={query.activity}/> : null}
           {(isSelf || chosenPerson) ? (
             <div className="space-y-1">
               <label htmlFor="self-history-period" className="block text-[9px] font-bold uppercase tracking-wide text-[#60718A]">History Period</label>
@@ -95,9 +96,9 @@ export default async function DailyReportPage({ searchParams }: Props) {
               </select>
             </div>
           ) : null}
-          <label className="block space-y-1 text-[9px] font-bold uppercase tracking-wide text-[#60718A]">Date
-            <input className={inputClass} name="date" type="date" defaultValue={(isSelf || chosenPerson) && query.period !== "day" ? "" : filters.date} required={(!isSelf && !chosenPerson) || query.period === "day"}/>
-          </label>
+          {(isSelf || chosenPerson) ? <label className="block space-y-1 text-[9px] font-bold uppercase tracking-wide text-[#60718A]">Date
+            <input className={inputClass} name="date" type="date" defaultValue={query.period !== "day" ? "" : filters.date} required={query.period === "day"}/>
+          </label> : null}
           {!isSelf && !chosenPerson ? <label className="block space-y-1 text-[9px] font-bold uppercase tracking-wide text-[#60718A]">Activity Type
             <select name="type" defaultValue={filters.type} className={inputClass}>
               {DAILY_ACTIVITY_GROUPS.map(item=><option key={item.value} value={item.value}>{item.label}</option>)}
