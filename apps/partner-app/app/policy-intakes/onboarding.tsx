@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { PartnerScreen } from '@/components/partner-screen';
 import { PartnerPolicyDateField } from '@/components/policy-intakes/partner-policy-date-field';
-import { prepareNativePolicyOnboarding, saveNativePolicyOnboarding, bookNativePolicyOnboarding, requestNativePolicyDateApproval, verifyNativePolicyDateApproval, lookupNativePolicyRc, type NativePolicyDraft, type NativeOnboardingData, type NativeProductType } from '@/lib/policy-onboarding';
+import { prepareNativePolicyOnboarding, saveNativePolicyOnboarding, bookNativePolicyOnboarding, requestNativePolicyDateApproval, verifyNativePolicyDateApproval, lookupNativePolicyRc, searchNativeNonMotorCustomers, type NativeNonMotorCustomer, type NativePolicyDraft, type NativeOnboardingData, type NativeProductType } from '@/lib/policy-onboarding';
 
 type FieldKey = keyof NativePolicyDraft;
 type Field = { key:FieldKey; label:string; required?:boolean; options?:string[] };
@@ -86,11 +86,19 @@ const riskFields:Record<string,ProductField[]>={
   'Other':[{key:'riskTitle',label:'Risk description',required:true}],
 };
 const otherPolicy:ProductField[]=[
-  {key:'category',label:'Policy category',required:true,options:nonMotorCategories},
-  {key:'customerType',label:'Customer type',options:['Individual','Organisation']},
-  {key:'productName',label:'Product / policy name',required:true},
   {key:'policyNumber',label:'Policy number',required:true},
   {key:'insurerId',label:'Insurance company',required:true},
+  {key:'productName',label:'Product / policy name',required:true},
+  {key:'category',label:'Non-Motor category',required:true,options:nonMotorCategories},
+  {key:'status',label:'Policy status',options:['Active','Pending','Expired','Cancelled']},
+];
+const nonMotorNewCustomerFields:ProductField[]=[
+  {key:'customerType',label:'Customer type',options:['Organisation','Individual']},
+  {key:'insuredName',label:'Insured / organisation name',required:true},
+  {key:'contactName',label:'Contact person'},
+  {key:'phone',label:'Mobile number',required:true},
+  {key:'email',label:'Email'},
+  {key:'address',label:'Address'},
 ];
 const otherPremium:ProductField[]=[
   {key:'sumInsured',label:'Sum insured / limit (₹)',required:true},
@@ -107,7 +115,9 @@ const productExtras:ProductField[]=[
   {key:'previousPolicyNumber',label:'Previous policy number'},
   {key:'previousClaims',label:'Previous claims'},
   {key:'addOns',label:'Add-ons',wide:true},
+  {key:'warranties',label:'Warranties',wide:true},
   {key:'specialConditions',label:'Special conditions',wide:true},
+  {key:'endorsements',label:'Endorsements',wide:true},
   {key:'remarks',label:'Remarks',wide:true},
 ];
 const insurerPayinFields:Field[]=[
@@ -141,6 +151,11 @@ export default function NativePolicyOnboarding(){
   const [approvalCode,setApprovalCode]=useState("");
   const [picker,setPicker]=useState<{key:string;items:{value:string;label:string}[];product?:boolean}|null>(null);
   const [dirty,setDirty]=useState(false);
+  const [nonMotorAdditionalOpen,setNonMotorAdditionalOpen]=useState(false);
+  const [customerSearch,setCustomerSearch]=useState('');
+  const [customerChoices,setCustomerChoices]=useState<NativeNonMotorCustomer[]>([]);
+  const [customerSearchBusy,setCustomerSearchBusy]=useState(false);
+  const [customerSearchError,setCustomerSearchError]=useState('');
   const [commercialModal,setCommercialModal]=useState<'payin'|'payout'|null>(null);
   const [remarkOpen,setRemarkOpen]=useState(false);
   const [remarkText,setRemarkText]=useState('');
@@ -160,12 +175,38 @@ export default function NativePolicyOnboarding(){
   const productType:NativeProductType=(draft?.businessLine==='Life'||draft?.businessLine==='Health'||draft?.businessLine==='Non Motor')?draft.businessLine:'Motor';
   const isMotor=productType==='Motor';
   const productValues=(productType==='Motor'?{}:draft?.productDrafts?.[productType])??{};
+  const nonMotorCustomerMode=productValues.customerMode==='new'?'new':'existing';
+  const setNonMotorCustomerMode=(mode:'existing'|'new')=>{
+    setDraft(current=>current?{...current,productDrafts:{...current.productDrafts,
+      'Non Motor':{...current.productDrafts?.['Non Motor'],customerMode:mode,customerId:'',
+        ...(mode==='new'&&!current.productDrafts?.['Non Motor']?.customerType?{customerType:'Organisation'}:{}),
+        ...(mode==='new'?{insuredName:'',contactName:'',phone:'',email:'',address:''}:{})}
+    }}:current);
+    setCustomerChoices([]);setCustomerSearch('');setCustomerSearchError('');setDirty(true);
+  };
+  async function findNonMotorCustomers(){
+    if(!id||customerSearch.trim().length<2)return;
+    setCustomerSearchBusy(true);setCustomerSearchError('');setCustomerChoices([]);
+    try{
+      const result=await searchNativeNonMotorCustomers(id,customerSearch.trim());
+      setCustomerChoices(result.customers);
+    }catch{setCustomerSearchError('Customer search is unavailable. Please try again.');}
+    finally{setCustomerSearchBusy(false);}
+  }
+  const selectNonMotorCustomer=(customer:NativeNonMotorCustomer)=>{
+    setDraft(current=>current?{...current,productDrafts:{...current.productDrafts,
+      'Non Motor':{...current.productDrafts?.['Non Motor'],customerMode:'existing',customerId:customer.id,
+        insuredName:customer.name,contactName:customer.contactName,phone:customer.phone,email:customer.email}
+    }}:current);
+    setCustomerSearch(customer.name);setCustomerChoices([]);setDirty(true);
+  };
   const updateProduct=(key:string,value:string)=>{
     if(productType==='Motor')return;
     setDraft(current=>current?{...current,productDrafts:{
       ...current.productDrafts,[productType]:{
-        ...current.productDrafts?.[productType],[key]:value,
-        ...(productType==='Non Motor'&&['netPremium','gstAmount'].includes(key)?{
+        ...current.productDrafts?.[productType],...(productType==='Non Motor'&&!current.productDrafts?.[productType]?.status?{status:'Active'}:{}),[key]:value,
+        ...(productType==='Non Motor'&&['netPremium','gstAmount'].includes(key)&&
+          (value.trim()||current.productDrafts?.[productType]?.[key==='netPremium'?'gstAmount':'netPremium']?.trim())?{
           grossPremium:String(Number(key==='netPremium'?value:current.productDrafts?.[productType]?.netPremium||'0')+
             Number(key==='gstAmount'?value:current.productDrafts?.[productType]?.gstAmount||'0'))
         }:{})
@@ -367,7 +408,17 @@ export default function NativePolicyOnboarding(){
     if(!draft)return 0;
     const required=isMotor?[...policy,...proposer,...vehicle,...productCaseFields,...premiumFields].filter(field=>field.required):[...policy.filter(f=>f.required),...proposer.filter(f=>f.required)];
     if(!isMotor){
-      const details=productType==='Non Motor'?[...otherPolicy,...(riskFields[productValues.category]??riskFields.Other),...otherPremium]:[...lifeProduct,...lifePremium];
+      if(productType==='Non Motor'){
+        const sourceRequired=policy.filter(f=>f.required).map(f=>draft[f.key]??'');
+        const customerRequired=nonMotorCustomerMode==='existing'
+          ? [productValues.customerId??'']
+          : [productValues.insuredName??'',productValues.phone??''];
+        const otherRequired=[...otherPolicy,...(productValues.category?riskFields[productValues.category]??riskFields.Other:[]),...otherPremium]
+          .filter(f=>f.required).map(f=>productValues[f.key]??'');
+        const values=[...sourceRequired,...customerRequired,...otherRequired];
+        return Math.round(100*values.filter(value=>String(value).trim()).length/Math.max(1,values.length));
+      }
+      const details=[...lifeProduct,...lifePremium];
       const count=required.filter(f=>String(draft[f.key]??'').trim()).length+details.filter(f=>f.required&&String(productValues[f.key]??'').trim()).length;
       return Math.round(100*count/(required.length+details.filter(f=>f.required).length));
     }
@@ -398,11 +449,11 @@ export default function NativePolicyOnboarding(){
         <Pressable accessibilityRole="button" accessibilityLabel={f.label} accessibilityState={{disabled:restricted}}
           disabled={restricted} onPress={()=>setPicker({key:f.key,items:options})}
           style={[styles.inputRow,restricted&&styles.readonlyInput]}>
-          <Text numberOfLines={1} style={[styles.value,!displayed&&styles.placeholder]}>{displayed||('Select '+f.label.toLowerCase())}</Text>
+          <Text numberOfLines={1} style={[styles.value,!displayed&&styles.placeholder]}>{displayed||(productType==='Non Motor'?'':'Select '+f.label.toLowerCase())}</Text>
           <Ionicons name="chevron-down" size={15} color="#63758D"/>
         </Pressable>
       ):(
-        <TextInput accessibilityLabel={f.label} value={current} editable={!restricted} placeholder={hint}
+        <TextInput accessibilityLabel={f.label} value={current} editable={!restricted} placeholder={productType==='Non Motor'?'':hint}
           placeholderTextColor="#98A6B8" onChangeText={v=>update(f.key,v)}
           autoCapitalize={['registrationNo','chassisNo','engineNo','policyNo'].includes(f.key)?'characters':'sentences'}
           keyboardType={['phoneNo','idv','od','tp','cpa','capacity','manufacturingYear'].includes(f.key)?'numeric':'default'}
@@ -417,26 +468,36 @@ export default function NativePolicyOnboarding(){
   };
   const detailField=(f:ProductField)=>{
     if(!draft)return null;
-    if(f.key==='insuredName'||f.key==='phoneNo')return field({key:f.key as FieldKey,label:f.label,required:f.required});
-    const current=String(productValues[f.key]??'');
-    if(f.key==='grossPremium')return <View key={f.key} style={styles.field}><Text style={styles.label}>{f.label}</Text><View style={styles.inputRow}><Text style={styles.value}>{current}</Text></View></View>;
-    if(f.date)return <PartnerPolicyDateField key={f.key} label={f.label} value={current} required={f.required} onChange={v=>updateProduct(f.key,v)}/>;
+    if(productType!=='Non Motor'&&(f.key==='insuredName'||f.key==='phoneNo'))return field({key:f.key as FieldKey,label:f.label,required:f.required});
+    const current=String(productValues[f.key]??(productType==='Non Motor'&&f.key==='status'?'Active':''));
+    // Gross premium is editable in Operations; net+GST may prefill it without locking the field.
+    if(f.date)return <PartnerPolicyDateField key={f.key} hidePlaceholder={productType==='Non Motor'} label={f.label} value={current} required={f.required} onChange={v=>updateProduct(f.key,v)}/>;
     const options=f.key==='insurerId'?data?.insurers??[]:(f.options??[]).map(value=>({value,label:value}));
     return <View key={f.key} style={[styles.field,f.wide&&styles.wideField]}>
       <Text style={styles.label}>{f.label}{f.required?<Text style={styles.star}> *</Text>:null}</Text>
       {options.length?<Pressable accessibilityRole="button" accessibilityLabel={f.label} style={styles.inputRow} onPress={()=>setPicker({key:f.key,items:options,product:true})}>
-        <Text style={[styles.value,!current&&styles.placeholder]} numberOfLines={1}>{options.find(o=>o.value===current)?.label||('Select '+f.label.toLowerCase())}</Text>
+        <Text style={[styles.value,!current&&styles.placeholder]} numberOfLines={1}>{options.find(o=>o.value===current)?.label||(productType==='Non Motor'?'':'Select '+f.label.toLowerCase())}</Text>
         <Ionicons name="chevron-down" size={15} color="#63758D"/>
-      </Pressable>:<TextInput accessibilityLabel={f.label} value={current} placeholder={'Enter '+f.label.toLowerCase()} placeholderTextColor="#98A6B8" onChangeText={v=>updateProduct(f.key,v)}
-        keyboardType={['premiumAmount','sumInsured','deductible','netPremium','gstAmount','grossPremium','employeeCount','annualWages','annualTurnover','projectValue'].includes(f.key)?'numeric':'default'}
+      </Pressable>:<TextInput accessibilityLabel={f.label} value={current} placeholder={productType==='Non Motor'?'':'Enter '+f.label.toLowerCase()} placeholderTextColor="#98A6B8" onChangeText={v=>updateProduct(f.key,f.key==='phone'?v.replace(/\D/g,'').slice(0,10):f.key==='policyNumber'?v.toUpperCase():v)}
+        keyboardType={['phone','premiumAmount','sumInsured','deductible','netPremium','gstAmount','grossPremium','employeeCount','annualWages','annualTurnover','projectValue'].includes(f.key)?'numeric':'default'}
         style={styles.input}/>}
     </View>;
   };
   // Preserve Motor's newer source ownership rendering; compact the other policy types.
+  const sourceIsVerified=Boolean(productType==='Non Motor'&&data?.sourceMeta&&draft&&
+    data.sourceMeta.name.trim().toLowerCase()===draft.leadSource.trim().toLowerCase()&&
+    data.sourceMeta.code===draft.intermediaryCode);
   const sourceMeta=(key:'rmName'|'intermediaryCode',label:string)=><View style={styles.sourceMeta}>
     <Text style={styles.sourceMetaLabel}>{label}</Text>
-    <TextInput accessibilityLabel={label} value={draft?.[key]??''} onChangeText={value=>update(key,value)}
-      placeholder={label==='RM'?'Assigned RM':'Source code'} placeholderTextColor="#98A6B8" style={styles.sourceMetaInput}/>
+    {sourceIsVerified&&data?.sourceMeta
+      ? <Text style={styles.sourceMetaInput}>{key==='rmName'?data.sourceMeta.rmName||draft?.rmName:data.sourceMeta.code}</Text>
+      : <TextInput accessibilityLabel={label} value={draft?.[key]??''} onChangeText={value=>update(key,value)}
+          placeholder={productType==='Non Motor'?'':label==='RM'?'Assigned RM':'Source code'}
+          placeholderTextColor="#98A6B8" style={styles.sourceMetaInput}/>}
+    {sourceIsVerified&&data?.sourceMeta&&key==='rmName'&&data.sourceMeta.rmCode
+      ?<Text style={styles.fieldMeta}>ID · {data.sourceMeta.rmCode}</Text>:null}
+    {sourceIsVerified&&data?.sourceMeta&&key==='intermediaryCode'&&data.sourceMeta.mobile
+      ?<Text style={styles.fieldMeta}>☎ {data.sourceMeta.mobile}</Text>:null}
   </View>;
   const sourceSection=()=> <View style={styles.section}>
     <View style={styles.sectionHead}><Text style={styles.number}>01</Text><Text style={styles.sectionTitle}>Policy source & ownership</Text></View>
@@ -453,6 +514,73 @@ export default function NativePolicyOnboarding(){
   const section=(number:string,title:string,items:Field[])=><View style={styles.section} key={number}>
     <View style={styles.sectionHead}>{number?<Text style={styles.number}>{number}</Text>:null}<Text style={styles.sectionTitle}>{title}</Text></View>
     <View style={styles.fields}>{items.map(item=>field(item))}</View>
+  </View>;
+  const nonMotorCustomerPolicySection=<View style={styles.section}>
+    <View style={styles.sectionHead}><Text style={styles.number}>02</Text><Text style={styles.sectionTitle}>Customer & policy</Text></View>
+    <View style={styles.nonMotorCustomerArea}>
+      <Text style={styles.label}>Customer record</Text>
+      <View style={styles.nonMotorModeRow}>
+        {(['existing','new'] as const).map(mode=><Pressable key={mode} accessibilityRole="button"
+          accessibilityLabel={mode==='existing'?'Existing customer':'New customer'}
+          accessibilityState={{selected:nonMotorCustomerMode===mode}}
+          onPress={()=>setNonMotorCustomerMode(mode)}
+          style={[styles.nonMotorModeButton,nonMotorCustomerMode===mode&&styles.nonMotorModeActive]}>
+          <Text style={[styles.nonMotorModeText,nonMotorCustomerMode===mode&&styles.nonMotorModeTextActive]}>{mode==='existing'?'Existing':'New'}</Text>
+        </Pressable>)}
+      </View>
+    </View>
+    {nonMotorCustomerMode==='existing'?<View style={styles.nonMotorCustomerArea}>
+      <Text style={styles.label}>Customer / organisation <Text style={styles.star}>*</Text></Text>
+      <View style={styles.nonMotorSearchRow}>
+        <TextInput accessibilityLabel="Search existing customer" value={customerSearch}
+          onChangeText={value=>{
+            setCustomerSearch(value);setCustomerChoices([]);
+            if(productValues.customerId){
+              updateProduct('customerId','');
+            }
+          }}
+          style={[styles.input,styles.nonMotorSearchInput]}/>
+        <Pressable accessibilityRole="button" accessibilityLabel="Search customers"
+          disabled={customerSearchBusy||customerSearch.trim().length<2}
+          style={styles.nonMotorSearchButton} onPress={()=>void findNonMotorCustomers()}>
+          {customerSearchBusy?<ActivityIndicator color="#FFFFFF" size="small"/>:<Ionicons name="search" size={19} color="#FFFFFF"/>}
+        </Pressable>
+      </View>
+      {productValues.customerId?<Text style={styles.fieldMeta}>Selected: {productValues.insuredName||'Customer'}</Text>:null}
+      {customerSearchError?<Text style={styles.errorText}>{customerSearchError}</Text>:null}
+      {customerChoices.map(customer=><Pressable key={customer.id} accessibilityRole="button"
+        accessibilityLabel={'Select '+customer.name} style={styles.nonMotorCustomerChoice} onPress={()=>selectNonMotorCustomer(customer)}>
+        <Text style={styles.nonMotorCustomerChoiceName}>{customer.name}</Text>
+        <Text style={styles.fieldMeta}>{customer.phone}</Text>
+      </Pressable>)}
+    </View>:<View style={styles.fields}>
+      {nonMotorNewCustomerFields.map(detailField)}
+    </View>}
+    <View style={styles.fields}>{otherPolicy.map(detailField)}</View>
+  </View>;
+  const nonMotorRiskSection=<View style={styles.section}>
+    <View style={styles.sectionHead}><Text style={styles.number}>03</Text><Text style={styles.sectionTitle}>Risk details</Text></View>
+    {productValues.category?<View style={styles.fields}>{(riskFields[productValues.category]??riskFields.Other).map(detailField)}</View>:null}
+  </View>;
+  const nonMotorAdditionalSection=<View style={styles.section}>
+    <Pressable accessibilityRole="button" accessibilityLabel="Additional policy details"
+      accessibilityState={{expanded:nonMotorAdditionalOpen}}
+      style={styles.sectionHead} onPress={()=>setNonMotorAdditionalOpen(v=>!v)}>
+      <Text style={styles.number}>05</Text>
+      <Text style={[styles.sectionTitle,styles.headingFlex]}>Additional policy details</Text>
+      <Ionicons name={nonMotorAdditionalOpen?'chevron-up':'chevron-down'} size={16} color="#315B85"/>
+    </Pressable>
+    {nonMotorAdditionalOpen?<View style={styles.fields}>{productExtras.filter(item=>item.key!=='remarks').map(detailField)}</View>:null}
+  </View>;
+  const nonMotorDocumentsSection=<View style={styles.section}>
+    <View style={styles.sectionHead}><Text style={styles.number}>06</Text><Text style={styles.sectionTitle}>Documents</Text></View>
+    <View style={styles.nonMotorDocuments}>
+      {['Policy Copy','Proposal Form','KYC','Other Document'].map(label=><View key={label} style={styles.nonMotorDocumentRow}>
+        <Ionicons name="document-text-outline" size={16} color="#315B85"/>
+        <Text style={styles.nonMotorDocumentName}>{label}</Text>
+        <Text style={styles.fieldMeta}>Policy Register</Text>
+      </View>)}
+    </View>
   </View>;
   const motorVehicleFields:Field[]=[
     {key:'insuredName',label:'Insured name',required:true},
@@ -539,10 +667,10 @@ export default function NativePolicyOnboarding(){
     {draft?<>
       <View style={styles.status}><View><Text style={styles.intake}>{data?.intake_number||'Policy Intake'}</Text><Text style={styles.draftStatus}>{dirty?'Unsaved changes':'Draft'}</Text></View><View style={styles.progress}><Text style={styles.progressText}>{filled}%</Text></View></View>
       {sourceSection()}
-      {isMotor?motorVehicleSection:productSection('02',productType==='Non Motor'?'Customer & policy':'Customer / Proposer',productType==='Non Motor'?[...commonPerson,...otherPolicy]:commonPerson)}
-      {isMotor?motorProductSection:productType==='Non Motor'?productSection('03','Risk details',riskFields[productValues.category]??riskFields.Other):productSection('03','Policy product & case details',lifeProduct)}
+      {isMotor?motorVehicleSection:productType==='Non Motor'?nonMotorCustomerPolicySection:productSection('02','Customer / Proposer',commonPerson)}
+      {isMotor?motorProductSection:productType==='Non Motor'?nonMotorRiskSection:productSection('03','Policy product & case details',lifeProduct)}
       {!isMotor?productSection('04',productType==='Non Motor'?'Cover, premium & validity':'Premium & payment',productType==='Non Motor'?otherPremium:lifePremium):null}
-      {!isMotor&&productType==='Non Motor'?productSection('05','Additional policy details',productExtras.filter(item=>item.key!=='remarks')):null}
+      {!isMotor&&productType==='Non Motor'?<>{nonMotorAdditionalSection}{nonMotorDocumentsSection}</>:null}
       <View style={styles.section}>
         <View style={styles.sectionHead}>
           <Ionicons name="chatbox-ellipses-outline" size={17} color="#254C83"/>
@@ -578,10 +706,22 @@ export default function NativePolicyOnboarding(){
             {[{label:'Net premium',value:net},{label:'GST',value:gst},{label:'Gross premium',value:gross}].map(row=><View key={row.label} style={styles.premiumRow}>
               <Text style={styles.premiumLabel}>{row.label}</Text><Text style={styles.premiumValue}>{rupees(row.value)}</Text>
             </View>)}
+          </View>:productType==='Non Motor'?<View style={styles.premiumRows}>
+            {[
+              {label:'Category',value:productValues.category||'Non Motor'},
+              {label:'Sum insured / limit',value:rupees(amount(productValues.sumInsured||'0'))},
+              {label:'Gross premium',value:rupees(amount(productValues.grossPremium||'0'))},
+              {label:'Risk reference',value:productValues.riskLocation||productValues.transitFrom||productValues.projectName||'Not entered'},
+              {label:'Insurer',value:data?.insurers.find(x=>x.value===productValues.insurerId)?.label||'Not selected'},
+              {label:'Policy expiry',value:productValues.endDate||'Not entered'},
+            ].map(item=><View key={item.label} style={styles.premiumRow}>
+              <Text style={styles.premiumLabel}>{item.label}</Text>
+              <Text style={styles.nonMotorSummaryValue}>{item.value}</Text>
+            </View>)}
           </View>:<View style={styles.premiumRows}>
             <View style={styles.premiumHeading}><View style={styles.premiumIcon}><Ionicons name="cash-outline" size={16} color="#315B9A"/></View><Text style={styles.summaryCaption}>PREMIUM</Text></View>
-            <Text style={styles.total}>{rupees(amount(productValues[productType==='Non Motor'?'grossPremium':'premiumAmount']||'0'))}</Text>
-            {productType!=='Non Motor'?<Text style={styles.muted}>{productValues.paymentFrequency||'Frequency pending'} · {productValues.paymentMode||'Mode pending'}</Text>:null}
+            <Text style={styles.total}>{rupees(amount(productValues.premiumAmount||'0'))}</Text>
+            <Text style={styles.muted}>{productValues.paymentFrequency||'Frequency pending'} · {productValues.paymentMode||'Mode pending'}</Text>
           </View>}
         </View>
         {data?.commercialAccess?<View style={styles.referenceCommercial}>
@@ -861,6 +1001,20 @@ const styles=StyleSheet.create({
   commercialSave:{backgroundColor:'#17365D',borderRadius:10,paddingHorizontal:17,paddingVertical:12,alignItems:'center'},
   summary:{padding:14,gap:7},summaryStatusRow:{flexDirection:'row',alignItems:'center',justifyContent:'space-between'},summaryStatusValue:{fontSize:8,fontWeight:'700',color:'#A96A00'},summaryCaption:{fontSize:10,fontWeight:'700',color:'#426188'},summaryHeading:{flex:1,gap:3},premiumHeading:{flexDirection:'row',gap:6,alignItems:'center',paddingVertical:7},summaryProgressStack:{alignItems:'center',justifyContent:'center',gap:3},progressStatus:{backgroundColor:'#FFF3D4',borderRadius:10,paddingHorizontal:6,paddingVertical:3},summaryProgress:{width:35,height:35,borderRadius:18,borderWidth:4,borderTopColor:'#17365D',borderRightColor:'#17365D',borderBottomColor:'#DFE7F0',borderLeftColor:'#DFE7F0',alignItems:'center',justifyContent:'center'},commercialToggle:{marginHorizontal:12,marginBottom:9,flexDirection:'row',alignItems:'center',gap:8,padding:11,borderWidth:1,borderColor:'#DDE6F0',borderRadius:10,backgroundColor:'#F8FAFD'},commercialToggleTitle:{flex:1,color:'#26436B',fontSize:11,fontWeight:'700'},commercialBody:{paddingHorizontal:12},total:{fontSize:20,color:'#1B385B',fontWeight:'800'},notice:{fontSize:10,lineHeight:16,color:'#65758E',paddingHorizontal:14,paddingBottom:13},
   remarkHeading:{flex:1,minWidth:0},remarkBody:{padding:12,gap:8},remarkEntry:{borderWidth:1,borderColor:'#E0E8F2',borderRadius:8,padding:10,backgroundColor:'#FBFCFE'},remarkButton:{minHeight:30,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:5,paddingHorizontal:9,borderWidth:1,borderColor:'#CDD9EB',borderRadius:8,backgroundColor:'#F8FAFD'},remarkButtonText:{fontSize:10,fontWeight:'700',color:'#254C83'},remarkPreview:{fontSize:11,lineHeight:17,color:'#53657D'},remarkOverlay:{flex:1,alignItems:'center',justifyContent:'center',padding:20,backgroundColor:'rgba(5,18,40,.55)'},remarkSheet:{width:'100%',maxWidth:520,borderRadius:16,backgroundColor:'#FFFFFF',padding:16,gap:12},remarkHeader:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',paddingBottom:10,borderBottomWidth:1,borderColor:'#E6EDF5'},remarkTitle:{flexDirection:'row',alignItems:'center',gap:8},remarkInput:{borderWidth:1,borderColor:'#9BB2D7',borderRadius:9,minHeight:128,padding:11,fontSize:12,color:'#17365D'},remarkActions:{flexDirection:'row',gap:9,justifyContent:'flex-end'},remarkCancel:{paddingHorizontal:14,paddingVertical:11,borderWidth:1,borderColor:'#CDD9EB',borderRadius:8},remarkCancelText:{fontSize:11,fontWeight:'700',color:'#254C83'},remarkConfirm:{paddingHorizontal:14,paddingVertical:11,borderRadius:8,backgroundColor:'#17365D'},remarkNote:{fontSize:10,color:'#75859B'},
+  nonMotorCustomerArea:{paddingHorizontal:12,paddingTop:12,gap:7},
+  nonMotorModeRow:{flexDirection:'row',borderWidth:1,borderColor:'#D8E1EC',borderRadius:9,overflow:'hidden'},
+  nonMotorModeButton:{flex:1,alignItems:'center',paddingVertical:11,backgroundColor:'#FFFFFF'},
+  nonMotorModeActive:{backgroundColor:'#EAF1FA'},
+  nonMotorModeText:{fontSize:11,color:'#65758E'},nonMotorModeTextActive:{color:'#17365D',fontWeight:'600'},
+  nonMotorSearchRow:{flexDirection:'row',alignItems:'center',gap:6},
+  nonMotorSearchInput:{flex:1,minWidth:0},
+  nonMotorSearchButton:{width:44,height:42,backgroundColor:'#17365D',borderRadius:9,justifyContent:'center',alignItems:'center'},
+  nonMotorCustomerChoice:{paddingVertical:10,paddingHorizontal:9,borderRadius:8,borderWidth:1,borderColor:'#DDE6F0',gap:3},
+  nonMotorCustomerChoiceName:{fontSize:11,color:'#17365D',fontWeight:'600'},
+  nonMotorDocuments:{paddingHorizontal:12,paddingVertical:8,gap:5},
+  nonMotorDocumentRow:{flexDirection:'row',alignItems:'center',minHeight:39,gap:9,paddingHorizontal:9,borderRadius:8,borderWidth:1,borderColor:'#E1E9F3'},
+  nonMotorDocumentName:{fontSize:11,color:'#17365D',flex:1},
+  nonMotorSummaryValue:{fontSize:11,color:'#17365D',fontWeight:'600',maxWidth:'58%',textAlign:'right'},
   actions:{flexDirection:'row',gap:8,marginBottom:11,alignItems:'stretch'},secondary:{flex:1,borderWidth:1,borderColor:'#CDD9EB',borderRadius:10,paddingHorizontal:7,paddingVertical:12,minHeight:45,alignItems:'center',justifyContent:'center'},secondaryText:{fontWeight:'700',fontSize:11,color:'#25466E'},
   primary:{flex:1,backgroundColor:'#243F9E',borderRadius:10,paddingHorizontal:7,paddingVertical:12,minHeight:45,flexDirection:'row',gap:5,justifyContent:'center',alignItems:'center'},primaryText:{fontSize:11,fontWeight:'800',color:'white'},disabled:{opacity:.48},
   bookButton:{marginBottom:11,flexDirection:'row',justifyContent:'center',gap:8},
