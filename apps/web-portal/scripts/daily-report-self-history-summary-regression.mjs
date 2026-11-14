@@ -10,7 +10,8 @@ assert.match(page, /const isSelf = query\.scope !== "all"/, "Self is its own rep
 assert.match(page, /loadSelfActivityHistory\(profile\.id/, "The Self report reads only the authenticated profile");
 assert.match(page, /day: query\.period === "day" \? query\.date : undefined/, "Self defaults to all history, with opt-in date filter");
 assert.match(page, /<DailySelfActivityPanel data=\{selfHistory\}/, "Self renders the category summary");
-assert.match(page, /payload = await loadDailyActivityReport\(profile, query\)/, "All tab preserves existing hierarchy report");
+assert.match(page, /employeeDirectory = await loadDailyReportEmployeeDirectory\(profile\)/, "All tab now lists only authorized employees");
+assert.match(page, /assertDailyReportEmployeeAllowed\(chosenPerson, employeeDirectory\)/, "All selected profile is checked before loading history");
 assert.match(page, /<option value="all">All History<\/option>/, "All history selection is clear");
 assert.match(page, /<option value="day">Selected Date<\/option>/, "Daily selection remains available");
 
