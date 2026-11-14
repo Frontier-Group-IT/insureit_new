@@ -83,7 +83,7 @@ export default async function DailyReportPage({ searchParams }: Props) {
             </div>
           ) : null}
           <label className="block space-y-1 text-[9px] font-bold uppercase tracking-wide text-[#60718A]">Date
-            <input className={inputClass} name="date" type="date" defaultValue={filters.date} required={!isSelf || query.period === "day"}/>
+            <input className={inputClass} name="date" type="date" defaultValue={isSelf && query.period !== "day" ? "" : filters.date} required={!isSelf || query.period === "day"}/>
           </label>
           {!isSelf ? <label className="block space-y-1 text-[9px] font-bold uppercase tracking-wide text-[#60718A]">Activity Type
             <select name="type" defaultValue={filters.type} className={inputClass}>
