@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { listPartnerClaimVehicleChoices, type PartnerClaimVehicleChoice } from '@/lib/claim-vehicle-choices';
 import { PartnerInsurerLogo } from '@/components/ui/partner-insurer-logo';
+import { PartnerSkeletonList } from '@/components/ui/partner-state-view';
 import { getPartnerManufacturerLogoSource } from '@/lib/catalog-logos';
 import { PartnerAssets } from '@/lib/partner-assets';
 import { createPartnerClaim } from '@/lib/claims';
@@ -100,7 +101,7 @@ export default function PartnerClaimVehicleSelector() {
                 <Ionicons name="chevron-up" size={22} color="#24528C"/>
               </Pressable>
             </View>
-            {busy ? <Text style={styles.hint}>Loading authorized vehicles...</Text> : error ? <Text style={styles.error}>{error}</Text> : !shown.length ? <Text style={styles.hint}>No matching vehicles found.</Text> :
+            {busy ? <PartnerSkeletonList title="Loading authorized vehicles" rows={4} /> : error ? <Text style={styles.error}>{error}</Text> : !shown.length ? <Text style={styles.hint}>No matching vehicles found.</Text> :
               <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="always" style={styles.options}>
                 {shown.map(row => {
                   const isSelected = choice?.customer_id === row.customer_id && choice?.vehicle_id === row.vehicle_id;
