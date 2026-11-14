@@ -182,7 +182,7 @@ assert.match(app, /styles\.emptyIllustration/, 'Use a subtle blue/purple illustr
 assert.doesNotMatch(app, /state="empty"/, 'Do not use the large shared empty-state card for filtered submissions');
 assert.match(app, /!debouncedQuery && filter === 'all' && canPartnerAccess\(context, 'create_policy_intakes', 'edit'\)/, 'Only authorized users in an unfiltered All view see the Create first intake action');
 assert.match(app, /onPress=\{\(\) => router\.push\('\/policy-intake-new'\)\}/, 'Create first intake keeps existing navigation');
-assert.match(app, /<PartnerStateView state="loading"/, 'Keep existing loading feedback');
+assert.match(app, /<PolicyIntakeSkeletonList \/>/, 'Keep initial loading feedback via the skeleton list');
 assert.match(app, /<PartnerStateView state="error"/, 'Keep existing error feedback');
 
 const nativeForm = readFileSync('app/policy-intakes/onboarding.tsx', 'utf8');
