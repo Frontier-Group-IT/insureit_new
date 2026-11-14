@@ -539,8 +539,10 @@ export default function NativePolicyOnboarding(){
     <Text style={styles.sourceMetaLabel}>{label} ·</Text>
     {key==='rmName'&&isMotor
       ? <Text numberOfLines={1} style={styles.sourceMetaValue}>{draft?.rmName||verifiedSource?.rmName||''}</Text>
-      : <TextInput accessibilityLabel={label} value={draft?.[key]??''} onChangeText={value=>update(key,value)}
-          placeholder="" style={styles.sourceMetaInput}/>}
+      : key==='intermediaryCode'&&verifiedSource
+        ? <Text numberOfLines={1} style={styles.sourceMetaValue}>{draft?.intermediaryCode}</Text>
+        : <TextInput accessibilityLabel={label} value={draft?.[key]??''} onChangeText={value=>update(key,value)}
+            placeholder="" style={styles.sourceMetaInput}/>}
   </View>;
   const sourceSection=()=> <View style={[styles.section,styles.firstSection]}>
     <View style={styles.sectionHead}><Text style={styles.number}>01</Text><Text style={styles.sectionTitle}>Policy source & ownership</Text></View>
@@ -759,7 +761,6 @@ export default function NativePolicyOnboarding(){
             borderBottomColor:filled>=62.5?'#17365D':'#DFE7F0',
             borderLeftColor:filled>=87.5?'#17365D':'#DFE7F0',
           }]}><Text style={styles.progressText}>{filled}%</Text></View>
-            <View style={styles.progressStatus}><Text style={styles.summaryStatusValue}>{filled>=100?'Complete':'In progress'}</Text></View>
           </View>
         </View>
         <View style={styles.summary}>
@@ -1088,8 +1089,8 @@ const styles=StyleSheet.create({
   rtoRow:{flexDirection:'row',gap:5},rtoInput:{flex:1,minWidth:0,paddingHorizontal:6},
   fieldMeta:{fontSize:9,color:'#315B85',fontWeight:'600'},sourceDetails:{flexDirection:'row',flexWrap:'wrap',gap:6},
   sourceOwnerRow:{flexDirection:'row',alignItems:'center',flexWrap:'wrap',columnGap:7,rowGap:2,minHeight:19},
-  sourceLeadRow:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:3,minHeight:19},
-  sourcePhone:{flexDirection:'row',alignItems:'center',justifyContent:'flex-end',gap:3,flexShrink:0},
+  sourceLeadRow:{flexDirection:'row',alignItems:'center',justifyContent:'flex-start',gap:8,minHeight:19},
+  sourcePhone:{flexDirection:'row',alignItems:'center',gap:3,flexShrink:0},
   sourcePhoneNumber:{fontSize:9,color:'#315B91',fontWeight:'600'},
   sourceMetaValue:{fontSize:9,color:'#315B91',fontWeight:'600'},
   premiumRows:{gap:0},
@@ -1130,7 +1131,7 @@ const styles=StyleSheet.create({
   calculatedRow:{flexDirection:'row',justifyContent:'space-between',padding:12,borderTopWidth:1,borderColor:'#E1E9F3'},
   readonlyInput:{backgroundColor:'#F3F6FA',color:'#738196'},
   commercialSave:{backgroundColor:'#17365D',borderRadius:10,paddingHorizontal:17,paddingVertical:12,alignItems:'center'},
-  summary:{padding:14,gap:7},summaryStatusRow:{flexDirection:'row',alignItems:'center',justifyContent:'space-between'},summaryStatusValue:{fontSize:8,fontWeight:'700',color:'#A96A00'},summaryCaption:{fontSize:10,fontWeight:'700',color:'#426188'},summaryHeading:{flex:1,gap:3},premiumHeading:{flexDirection:'row',gap:6,alignItems:'center',paddingVertical:7},summaryProgressStack:{alignItems:'center',justifyContent:'center',gap:3},progressStatus:{backgroundColor:'#FFF3D4',borderRadius:10,paddingHorizontal:6,paddingVertical:3},summaryProgress:{width:35,height:35,borderRadius:18,borderWidth:4,borderTopColor:'#17365D',borderRightColor:'#17365D',borderBottomColor:'#DFE7F0',borderLeftColor:'#DFE7F0',alignItems:'center',justifyContent:'center'},commercialToggle:{marginHorizontal:12,marginBottom:9,flexDirection:'row',alignItems:'center',gap:8,padding:11,borderWidth:1,borderColor:'#DDE6F0',borderRadius:10,backgroundColor:'#F8FAFD'},commercialToggleTitle:{flex:1,color:'#26436B',fontSize:11,fontWeight:'700'},commercialBody:{paddingHorizontal:12},total:{fontSize:20,color:'#1B385B',fontWeight:'800'},notice:{fontSize:10,lineHeight:16,color:'#65758E',paddingHorizontal:14,paddingBottom:13},
+  summary:{padding:14,gap:7},summaryStatusRow:{flexDirection:'row',alignItems:'center',justifyContent:'space-between'},summaryCaption:{fontSize:10,fontWeight:'700',color:'#426188'},summaryHeading:{flex:1,gap:3},premiumHeading:{flexDirection:'row',gap:6,alignItems:'center',paddingVertical:7},summaryProgressStack:{alignItems:'center',justifyContent:'center',gap:3},summaryProgress:{width:35,height:35,borderRadius:18,borderWidth:4,borderTopColor:'#17365D',borderRightColor:'#17365D',borderBottomColor:'#DFE7F0',borderLeftColor:'#DFE7F0',alignItems:'center',justifyContent:'center'},commercialToggle:{marginHorizontal:12,marginBottom:9,flexDirection:'row',alignItems:'center',gap:8,padding:11,borderWidth:1,borderColor:'#DDE6F0',borderRadius:10,backgroundColor:'#F8FAFD'},commercialToggleTitle:{flex:1,color:'#26436B',fontSize:11,fontWeight:'700'},commercialBody:{paddingHorizontal:12},total:{fontSize:20,color:'#1B385B',fontWeight:'800'},notice:{fontSize:10,lineHeight:16,color:'#65758E',paddingHorizontal:14,paddingBottom:13},
   remarkHeading:{flex:1,minWidth:0},remarkBody:{padding:12,gap:8},remarkEntry:{borderWidth:1,borderColor:'#E0E8F2',borderRadius:8,padding:10,backgroundColor:'#FBFCFE'},remarkButton:{minHeight:30,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:5,paddingHorizontal:9,borderWidth:1,borderColor:'#CDD9EB',borderRadius:8,backgroundColor:'#F8FAFD'},remarkButtonText:{fontSize:10,fontWeight:'700',color:'#254C83'},remarkPreview:{fontSize:11,lineHeight:17,color:'#53657D'},remarkOverlay:{flex:1,alignItems:'center',justifyContent:'center',padding:20,backgroundColor:'rgba(5,18,40,.55)'},remarkSheet:{width:'100%',maxWidth:520,borderRadius:16,backgroundColor:'#FFFFFF',padding:16,gap:12},remarkHeader:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',paddingBottom:10,borderBottomWidth:1,borderColor:'#E6EDF5'},remarkTitle:{flexDirection:'row',alignItems:'center',gap:8},remarkInput:{borderWidth:1,borderColor:'#9BB2D7',borderRadius:9,minHeight:128,padding:11,fontSize:12,color:'#17365D'},remarkActions:{flexDirection:'row',gap:9,justifyContent:'flex-end'},remarkCancel:{paddingHorizontal:14,paddingVertical:11,borderWidth:1,borderColor:'#CDD9EB',borderRadius:8},remarkCancelText:{fontSize:11,fontWeight:'700',color:'#254C83'},remarkConfirm:{paddingHorizontal:14,paddingVertical:11,borderRadius:8,backgroundColor:'#17365D'},remarkNote:{fontSize:10,color:'#75859B'},
   nonMotorCustomerArea:{paddingHorizontal:12,paddingTop:12,gap:7},
   nonMotorModeRow:{flexDirection:'row',borderWidth:1,borderColor:'#D8E1EC',borderRadius:9,overflow:'hidden'},
