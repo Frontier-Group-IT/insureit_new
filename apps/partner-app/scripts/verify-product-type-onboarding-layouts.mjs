@@ -132,7 +132,34 @@ for(const key of ['"customerMode"','"customerId"','"insuredName"','"phone"','"wa
 }
 assert.match(screen,/productValues.category\?<View style=\{styles.fields\}>/, 'Risk inputs must be absent until category selection.');
 assert.match(screen,/nonMotorAdditionalOpen/, 'Optional details must be collapsible.');
-assert.match(screen,/nonMotorDocumentsSection/, 'Preserve all four Operations document references without fake uploads.');
+const documentApi=read('apps/web-portal/app/api/partner/policy-intakes/native-onboarding/documents/route.ts');
+const intakeDocMigration=read('supabase/migrations/20261114170000_partner_onboarding_document_staging.sql');
+const bridgeContinue=read('apps/web-portal/app/api/partner/policy-intakes/bridge/continue/route.ts');
+const nonMotorPage=read('apps/web-portal/app/policies/new/non-motor/page.tsx');
+const nonMotorAction=read('apps/web-portal/app/policies/non-motor-policy-actions.ts');
+assert.match(screen,/onboardingDocumentsSection\('06'\)/,'Non Motor retains Section 06 documents.');
+assert.match(screen,/onboardingDocumentsSection\('05'\)/,'Life and Health get Section 05 documents.');
+for(const name of ['Policy Copy','Proposal Form','KYC','Other Document']){
+  assert.ok(screen.includes(name),'Missing native document type '+name);
+}
+assert.match(screen,/DocumentPicker.getDocumentAsync/, 'Document rows open the installed native picker.');
+assert.match(screen,/uploadNativeOnboardingDocument/, 'Attachments upload to authenticated intake storage.');
+assert.match(screen,/deleteNativeOnboardingDocument/, 'Attachments may be removed.');
+assert.match(screen,/listNativeOnboardingDocuments/, 'Saved attachments restore when reopening the intake.');
+assert.match(screen,/Replace':'Add'/, 'Uploaded document may be replaced.');
+assert.match(documentApi,/await context\(request,intakeId,line\)/, 'Uploads are reviewer scoped.');
+assert.match(documentApi,/intake.assigned_to_profile_id!==user.id/, 'Only assigned reviewer can manage uploads.');
+assert.match(documentApi,/file.size>MAX_BYTES/, 'Upload size enforced server-side.');
+assert.match(documentApi,/MIMES.has\(file.type\)/, 'Upload MIME allowlist enforced.');
+assert.match(documentApi,/export async function DELETE/, 'Documents support authorized removal.');
+assert.match(intakeDocMigration,/enable row level security/, 'Document table requires RLS.');
+assert.match(intakeDocMigration,/revoke all on public.policy_intake_onboarding_documents from public, anon, authenticated/, 'Client cannot bypass scoped endpoint.');
+assert.match(api,/form.set\(field,new File\(\[bytes\]/, 'Life and Health staged files join existing case attachment workflow.');
+assert.match(bridgeContinue,/draft\?\.draft_payload\?\.businessLine==="Non Motor"/, 'Non Motor handoff selects the matching web policy form.');
+assert.match(nonMotorPage,/assigned_to_profile_id",profile.id/, 'Web draft restoration remains reviewer scoped.');
+assert.match(nonMotorAction,/source_intake_id:sourceIntakeId/, 'Non Motor staged files attach to issued policy records.');
+assert.match(nonMotorAction,/stagedDocuments.map\(doc=>/, 'Non Motor document linkage is explicit.');
+
 assert.match(screen,/label:'Policy status',options:\['Active','Pending','Expired','Cancelled'\]/, 'Policy status choices match Operations.');
 assert.match(screen,/label:'Policy expiry',value:productValues.endDate/, 'Summary must show saved expiry.');
 assert.match(screen,/data\?\.insurers.find/, 'Summary must derive insurer label from master data.');
