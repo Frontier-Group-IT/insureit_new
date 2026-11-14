@@ -75,6 +75,8 @@ def chosen_entries(raw_toc):
         raise ValueError("Oversized private archive TOC")
     counts = Counter()
     all_app = Counter()
+    app_definitions = set()
+    app_data_targets = set()
     chosen = []
     for line in raw_toc.splitlines(keepends=True):
         parsed = parse_entry(line)
@@ -83,6 +85,9 @@ def chosen_entries(raw_toc):
         kind, ns, rest = parsed
         if kind == "TABLE" and ns in APP_SCHEMAS:
             all_app[ns] += 1
+            app_definitions.add((ns, rest.split()[0]))
+        if kind == "TABLE DATA" and ns in APP_SCHEMAS:
+            app_data_targets.add((ns, rest.split()[0]))
 
         # The app custom schema itself does not exist in a fresh Supabase
         # project. Default managed/public/extensions schemas already do.
@@ -112,6 +117,8 @@ def chosen_entries(raw_toc):
             counts[(ns, kind)] += 1
         if kind == "TABLE DATA" and ns == "storage" and include:
             raise AssertionError("Never import stale Storage metadata")
+    if not app_data_targets.issubset(app_definitions):
+        raise ValueError("Archived app COPY target missing table definition")
     if all_app["public"] < MIN_PUBLIC_TABLES:
         raise ValueError("Archive missing application table definitions")
     if counts[("public", "TABLE")] != all_app["public"]:
