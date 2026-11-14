@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Linking, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 import { PartnerScreen } from '@/components/partner-screen';
+import { createPartnerPolicyIntakeBridgeUrl } from '@/lib/policy-intakes';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { PartnerPolicyDateField } from '@/components/policy-intakes/partner-policy-date-field';
 import { prepareNativePolicyOnboarding, saveNativePolicyOnboarding, bookNativePolicyOnboarding, requestNativePolicyDateApproval, verifyNativePolicyDateApproval, lookupNativePolicyRc, searchNativeNonMotorCustomers, type NativeNonMotorCustomer, type NativePolicyDraft, type NativeOnboardingData, type NativeProductType } from '@/lib/policy-onboarding';
@@ -274,6 +275,32 @@ export default function NativePolicyOnboarding(){
     }finally{setSaving(false);}
   }
 
+  const cancelOnboarding=()=>{
+    if(saving||booking)return;
+    if(dirty){
+      Alert.alert('Discard unsaved changes?', 'Your latest changes have not been saved.',[
+        {text:'Keep editing',style:'cancel'},
+        {text:'Discard and leave',style:'destructive',onPress:()=>router.back()},
+      ]);
+    }else router.back();
+  };
+  const createActivePolicy=async()=>{
+    if(isMotor){await completeBooking();return;}
+    if(!draft||!data||saving||booking)return;
+    // Non-Motor/Life/Health final booking is performed by the authorized Operations flow.
+    // Saving a revision-checked draft first prevents silently discarding entered details.
+    setBooking(true);setError('');
+    try{
+      if(dirty){
+        const saved=await saveNativePolicyOnboarding(id,data.revision,draft);
+        setData(current=>current?{...current,revision:saved.revision}:current);
+        setDirty(false);
+      }
+      const url=await createPartnerPolicyIntakeBridgeUrl(id,false,null);
+      await Linking.openURL(url);
+    }catch(e){setError(e instanceof Error?e.message:'Could not open the authorized policy creation flow.');}
+    finally{setBooking(false);}
+  };
   async function completeBooking(resolution?:Record<string,unknown>){
     if(!draft||!data||booking||saving)return;
     setBooking(true);setError('');
@@ -791,18 +818,16 @@ export default function NativePolicyOnboarding(){
 
       </View>
       <View style={styles.actions}>
-        <Pressable accessibilityRole="button" disabled={saving||booking} style={styles.secondary}
-          onPress={()=>void save(true)}><Text style={styles.secondaryText}>{saving?'Saving…':'Save & return to Intake'}</Text></Pressable>
-        {isMotor?<Pressable accessibilityRole="button" accessibilityLabel="Book Active Policy"
-          disabled={booking||saving||!data}
-          style={[styles.primary,(booking||saving||!data)&&styles.disabled]}
-          onPress={()=>void completeBooking()}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Cancel Policy Onboarding"
+          disabled={saving||booking} style={styles.secondary} onPress={cancelOnboarding}>
+          <Text style={styles.secondaryText}>Cancel</Text>
+        </Pressable>
+        <Pressable accessibilityRole="button" accessibilityLabel="Create Active Policy"
+          disabled={booking||saving||!data} style={[styles.primary,(booking||saving||!data)&&styles.disabled]}
+          onPress={()=>void createActivePolicy()}>
           {booking?<ActivityIndicator size="small" color="white"/>:<Ionicons name="checkmark-circle-outline" size={16} color="white"/>}
-          <Text style={styles.primaryText}>{booking?'Checking & booking…':'Book Active Policy'}</Text>
-        </Pressable>:<Pressable accessibilityRole="button" disabled={saving||!dirty}
-          style={[styles.primary,(saving||!dirty)&&styles.disabled]} onPress={()=>void save()}>
-          <Text style={styles.primaryText}>{saving?'Saving…':'Save draft'}</Text>
-        </Pressable>}
+          <Text style={styles.primaryText}>{booking?(isMotor?'Checking & booking…':'Opening Operations…'):'Create Active Policy'}</Text>
+        </Pressable>
       </View>
 
 
