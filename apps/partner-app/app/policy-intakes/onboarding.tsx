@@ -47,7 +47,7 @@ const premiumFields:Field[] = [
 ];
 const productCaseFields:Field[] = [
   {key:'insurerId',label:'Insurance company',required:true},
-  {key:'policyProduct',label:'Policy product',required:true,options:['Comprehensive','Third Party','SAOD','Bundled']},
+  {key:'policyProduct',label:'Policy product',required:true,options:['Comprehensive','Third Party','SAOD','Bundled','Long Term Package','Long Term Third Party']},
   {key:'policyNo',label:'Policy number',required:true},
   {key:'validFrom',label:'Validity from (YYYY-MM-DD)',required:true},
   {key:'validUpto',label:'Validity up to (YYYY-MM-DD)',required:true},
@@ -227,7 +227,7 @@ export default function NativePolicyOnboarding(){
       // Keep the saved registration number in draft; Unregistered mode shows a disabled field.
       if(key==='vehicleClass'&&value!==current.vehicleClass)next.policyProduct='';
       if(key==='vehicleClass'&&value==='CPM'){next.tp='0';next.cpa='0';next.cpaOpted='No';}
-      if(key==='policyProduct'&&value==='Third Party'){next.idv='0';next.od='0';}
+      if(key==='policyProduct'&&(value==='Third Party'||value==='Long Term Third Party')){next.idv='0';next.od='0';}
       if(key==='cpa')next.cpaOpted=amount(value)>0?'Yes':'No';
       return next;
     });
@@ -480,15 +480,15 @@ export default function NativePolicyOnboarding(){
     const raw=draft[f.key];
     const current=typeof raw==='string'?raw:'';
     if(['issuanceDate','validFrom','validUpto','tpValidUpto','cpaValidUpto'].includes(f.key))return <PartnerPolicyDateField key={f.key} fullWidth={fullWidth} label={f.key==='issuanceDate'?'Policy issuance date':f.label.replace(' (YYYY-MM-DD)','')} value={current} required={f.required} onChange={v=>update(f.key,v)}/>;
-    const productOptions=f.key==='policyProduct'?(draft.vehicleClass==='CPM'?['Comprehensive','SAOD']:['Comprehensive','Third Party','SAOD',...(['PCP','TWP'].includes(draft.vehicleClass)?['Bundled']:[]) ]):f.options??[];
-    const options=f.key==='insurerId'?data?.insurers??[]:f.key==='make'?(data?.manufacturers??[]).map(x=>({value:x,label:x})):f.key==='manufacturingYear'?manufacturingYearOptions.map(value=>({value,label:value})):productOptions.map(x=>({value:x,label:x}));
+    const productOptions=f.key==='policyProduct'?(draft.vehicleClass==='CPM'?['Comprehensive','SAOD']:['Comprehensive','Third Party','SAOD',...(['PCP','TWP'].includes(draft.vehicleClass)?['Bundled']:[]),'Long Term Package','Long Term Third Party']):f.options??[];
+    const options=f.key==='insurerId'?data?.insurers??[]:f.key==='make'?(data?.manufacturers??[]).map(x=>({value:x,label:x})):f.key==='manufacturingYear'?manufacturingYearOptions.map(value=>({value,label:value})):productOptions.map(x=>({value:x,label:f.key==='policyProduct'&&x==='Comprehensive'?'Package':x}));
     const displayed=options.find(x=>x.value===current)?.label??current;
     const masterSourceMatches=Boolean(data?.sourceMeta&&data.sourceMeta.code===draft.intermediaryCode&&data.sourceMeta.name.trim().toLowerCase()===draft.leadSource.trim().toLowerCase());
     const matchedSource=masterSourceMatches?data?.sourceMeta:null;
     const restricted=isMotor&&(
       (f.key==='capacity'&&!draft.vehicleClass)||
       (f.key==='policyProduct'&&!draft.vehicleClass)||
-      (['idv','od'].includes(f.key)&&draft.policyProduct==='Third Party')||
+      (['idv','od'].includes(f.key)&&['Third Party','Long Term Third Party'].includes(draft.policyProduct))||
       (['rtoState','rtoName'].includes(f.key)&&draft.vehicleClass==='CPM'));
     const hint=['idv','od','tp','cpa','addOnPremium'].includes(f.key)?'₹ 0.00':
       ['projectedOdPercent','projectedTpPercent','payoutOdPercent','payoutTpPercent'].includes(f.key)?'0.00':
@@ -1044,8 +1044,8 @@ export default function NativePolicyOnboarding(){
       </View></View>
     </Modal>
     <Modal transparent visible={Boolean(picker)} animationType="fade" onRequestClose={()=>setPicker(null)}>
-      <View style={styles.scrim}><View style={styles.sheet}>
-        <View style={styles.sheetTitle}><Text style={styles.sectionTitle}>{picker?.key==='businessLine'?'Select Policy Type':`Select ${picker?.key}`}</Text><Pressable onPress={()=>setPicker(null)} accessibilityLabel="Close options"><Ionicons name="close" size={21} color="#4C5970"/></Pressable></View>
+      <View style={[styles.scrim,picker?.key==='policyProduct'&&styles.productPickerScrim]}><View style={[styles.sheet,picker?.key==='policyProduct'&&styles.productPickerSheet]}>
+        <View style={styles.sheetTitle}><Text style={styles.sectionTitle}>{picker?.key==='policyProduct'?'Select product':picker?.key==='businessLine'?'Select Policy Type':`Select ${picker?.key}`}</Text><Pressable onPress={()=>setPicker(null)} accessibilityLabel="Close options"><Ionicons name="close" size={21} color="#4C5970"/></Pressable></View>
         <ScrollView style={styles.choiceScroll}>{picker?.items.map(item=>{
           const selected=(picker.product?String(productValues[picker.key]??''):String(draft?.[picker.key as FieldKey]??''))===item.value;
           return <Pressable key={item.value} accessibilityRole="button" accessibilityState={{selected}}
@@ -1153,7 +1153,7 @@ const styles=StyleSheet.create({
   bookButton:{marginBottom:11,flexDirection:'row',justifyContent:'center',gap:8},
   bookingNotice:{flexDirection:'row',gap:9,padding:12,backgroundColor:'#FFF7E9',borderRadius:10,marginBottom:14},bookingText:{flex:1,fontSize:10,lineHeight:16,color:'#75531C'},
   scrim:{flex:1,justifyContent:'center',backgroundColor:'rgba(5,18,40,.5)'},sheet:{backgroundColor:'white',borderTopLeftRadius:20,borderTopRightRadius:20,padding:17,maxHeight:'70%'},
-  sheetTitle:{flexDirection:'row',justifyContent:'space-between',alignItems:'flex-start',gap:12,padding:14,backgroundColor:'#F4F7FB',borderBottomWidth:1,borderColor:'#E2E9F2'},choiceScroll:{maxHeight:420},
+  sheetTitle:{flexDirection:'row',justifyContent:'space-between',alignItems:'flex-start',gap:12,padding:14,backgroundColor:'#F4F7FB',borderBottomWidth:1,borderColor:'#E2E9F2'},choiceScroll:{maxHeight:420},productPickerScrim:{alignItems:'center',justifyContent:'center',paddingHorizontal:18},productPickerSheet:{width:'100%',maxWidth:430,borderRadius:12,maxHeight:'76%',padding:0,overflow:'hidden'},
   choice:{minHeight:44,justifyContent:'space-between',alignItems:'center',flexDirection:'row',paddingHorizontal:12,borderTopWidth:1,borderColor:'#EEF1F7'},
   choiceText:{fontSize:12,color:'#284064'},choiceSelected:{backgroundColor:'#17365D'},choiceTextSelected:{color:'#FFFFFF',fontWeight:'800'},
   switchSheet:{marginHorizontal:20,padding:18,borderRadius:14,backgroundColor:'#FFFFFF',gap:12},
