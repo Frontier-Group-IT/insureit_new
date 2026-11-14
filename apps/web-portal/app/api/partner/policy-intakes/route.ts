@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { createSupabaseWithAccessToken } from "@/lib/auth";
 import { getServerAccessToken } from "@/lib/auth-server";
 import { extractPolicyIntakeDocumentTrusted } from "@/lib/policy-intake-ocr-service";
+import { extractPolicyIntakeWithN8nFallback } from "@/lib/policy-intake-n8n-router";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { getPartnerEmployeeIntakeReadScope } from "@/lib/partner-policy-intake-read-access";
 import { hasEffectiveCapability } from "@/lib/effective-permissions";
@@ -1004,7 +1005,7 @@ async function processStoredOcr(id: string) {
   );
   const formData = new FormData();
   formData.set("policy_document", file);
-  const ocr = await extractPolicyIntakeDocumentTrusted(formData);
+  const ocr = await extractPolicyIntakeWithN8nFallback(id, intake.storage_path, file, () => extractPolicyIntakeDocumentTrusted(formData));
 
   if (!ocr.ok) {
     await markOcrFailure(id, intake.storage_path, ocr.error);

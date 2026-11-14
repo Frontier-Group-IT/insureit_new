@@ -7,6 +7,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { fetchAllPages } from "@/lib/fetch-all-pages";
 import { loadPolicyIntakeDuplicateMatches } from "@/lib/policy-intake-duplicate";
 import { policyIntakeBucket } from "@/lib/policy-intake-status-buckets";
+import { semiAutoN8nEnabledForIntake } from "@/lib/policy-intake-semi-auto-n8n";
 import type { PolicyIntakeOcrField } from "@/lib/policy-intake-ocr-service";
 
 export const dynamic = "force-dynamic";
@@ -57,6 +58,7 @@ export default async function SemiAutoPolicyOnboardingPage({ searchParams }: { s
       ocr_status: row.ocr_status,
       created_at: row.created_at,
       assigned_to_profile_id: row.assigned_to_profile_id,
+      n8n_enabled: semiAutoN8nEnabledForIntake(row.id),
     }));
   return (
     <AppShell title="AI Policy Onboarding">
