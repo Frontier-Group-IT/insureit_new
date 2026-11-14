@@ -61,6 +61,8 @@ jobs:
         run: node scripts/daily-report-self-history-summary-regression.mjs
       - name: Daily Report failed-source isolation and partial counts regression
         run: node --experimental-strip-types scripts/daily-report-source-failure-regression.mjs
+      - name: Daily Report authentic UUID and IST date validation regression
+        run: node --experimental-strip-types scripts/daily-report-uuid-validator-regression.mjs
       - name: Daily Report All employee directory hierarchy and history isolation regression
         run: node --experimental-strip-types scripts/daily-report-all-employee-directory-regression.mjs
       - name: OCR-only Layout Parser opt-in regression
