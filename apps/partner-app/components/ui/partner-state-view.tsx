@@ -1,5 +1,5 @@
 import type { ComponentProps } from 'react';
-import { ActivityIndicator, Image, type ImageSourcePropType, StyleSheet, Text, View } from 'react-native';
+import { Image, type ImageSourcePropType, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { PartnerButton } from '@/components/ui/partner-button';
@@ -26,13 +26,7 @@ export function PartnerStateView({
   onAction?: () => void;
 }) {
   if (state === 'loading') {
-    return (
-      <View style={styles.base} accessibilityRole="progressbar" accessibilityLabel={title || 'Loading'}>
-        <ActivityIndicator color={partnerTheme.colors.brand} />
-        {title ? <Text style={styles.title}>{title}</Text> : null}
-        {message ? <Text style={styles.message}>{message}</Text> : null}
-      </View>
-    );
+    return <PartnerSkeletonList title={title || 'Loading'} />;
   }
 
   const resolvedAsset = asset ?? defaultAsset(state);
@@ -72,6 +66,25 @@ export function PartnerStateView({
   );
 }
 
+/** Reusable skeleton for full-page and list loading. Status/error/empty states stay unchanged. */
+export function PartnerSkeletonList({ title = 'Loading', rows = 6 }: { title?: string; rows?: number }) {
+  return (
+    <View style={styles.skeletonList} accessibilityRole="progressbar" accessibilityLabel={title}>
+      {Array.from({ length: Math.max(1, Math.min(10, rows)) }, (_, index) => (
+        <View key={index} style={styles.skeletonCard} importantForAccessibility="no-hide-descendants">
+          <View style={styles.skeletonLogo} />
+          <View style={styles.skeletonText}>
+            <View style={styles.skeletonTitleLine} />
+            <View style={styles.skeletonSubtitleLine} />
+            <View style={styles.skeletonDetailLine} />
+          </View>
+          <View style={styles.skeletonBadge} />
+        </View>
+      ))}
+    </View>
+  );
+}
+
 function defaultAsset(state: Exclude<Parameters<typeof PartnerStateView>[0]['state'], 'loading'>) {
   if (state === 'offline') return PartnerAssets.emptyStates.offline;
   if (state === 'error') return PartnerAssets.emptyStates.validationError;
@@ -87,6 +100,14 @@ function defaultTitle(state: Exclude<Parameters<typeof PartnerStateView>[0]['sta
 }
 
 const styles = StyleSheet.create({
+  skeletonList: { width: '100%', gap: 8, paddingVertical: 8, paddingHorizontal: 3 },
+  skeletonCard: { minHeight: 66, paddingHorizontal: 11, paddingVertical: 10, borderRadius: 12, borderWidth: 1, borderColor: '#E2E9F3', backgroundColor: '#FFFFFF', flexDirection: 'row', alignItems: 'center', gap: 11 },
+  skeletonLogo: { width: 40, height: 40, borderRadius: 8, backgroundColor: '#EDEFF3' },
+  skeletonText: { flex: 1, gap: 6 },
+  skeletonTitleLine: { width: '64%', height: 8, borderRadius: 4, backgroundColor: '#EDEFF3' },
+  skeletonSubtitleLine: { width: '83%', height: 7, borderRadius: 4, backgroundColor: '#F0F2F5' },
+  skeletonDetailLine: { width: '53%', height: 7, borderRadius: 4, backgroundColor: '#F0F2F5' },
+  skeletonBadge: { width: 48, height: 25, borderRadius: 8, backgroundColor: '#EDEFF3' },
   base: {
     minHeight: 190,
     alignItems: 'center',
