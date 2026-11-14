@@ -46,7 +46,7 @@ jobs:
       - name: Activity Status field-change and privacy regression
         run: node --experimental-strip-types scripts/activity-change-details-regression.mjs
       - name: Daily Report employee search and five-column directory regression
-        run: node apps/web-portal/scripts/daily-report-employee-header-five-column-regression.mjs
+        run: node scripts/daily-report-employee-header-five-column-regression.mjs
 
       - name: Daily Report Phase 1 read-only hierarchy and activity regression
         run: node scripts/daily-activity-report-phase1-regression.mjs
