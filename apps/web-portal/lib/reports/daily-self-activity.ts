@@ -3,6 +3,7 @@ import "server-only";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { readDailyHistoryPages } from "@/lib/reports/daily-history-source-pages";
 import { isValidDailyProfileId, isValidDailyRecordId, selfDateWindow } from "@/lib/reports/daily-history-validation";
+import { dailyReportRangeWindow } from "@/lib/reports/daily-report-period";
 
 export type SelfActivity = {
   id: string; category: string; activity: string; reference: string;
@@ -54,7 +55,7 @@ function status(action:string) {
 const sourceLabel = (id:string|null) => id || "—";
 
 export async function loadSelfActivityHistory(
-  viewerId:string, options:{day?:string;category?:string;page?:string},
+  viewerId:string, options:{day?:string;from?:string;to?:string;category?:string;page?:string},
 ) {
   if(!isValidDailyProfileId(viewerId)) throw new Error("Invalid authenticated employee");
   const admin = createSupabaseAdminClient();
@@ -65,7 +66,9 @@ export async function loadSelfActivityHistory(
   if(selfProfileError) console.error("[daily-report] employee label unavailable", {code:selfProfileError.code || "request_error"});
   const selfName = selfProfile?.full_name || "Current employee";
   const employeeCode = selfProfile?.employee_code || "";
-  const window = selfDateWindow(options.day);
+  const window = options.from || options.to
+    ? dailyReportRangeWindow(options.from,options.to)
+    : selfDateWindow(options.day);
   if(options.day && !window) throw new Error("Invalid requested employee activity date");
   const pageRaw = Number(options.page);
   const page = options.page && /^[1-9]\d{0,2}$/.test(options.page) ?
