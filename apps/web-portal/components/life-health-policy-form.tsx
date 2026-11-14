@@ -4,7 +4,7 @@ import { DocumentDeleteConfirmation } from "@/components/document-delete-confirm
 import { useEffect, useMemo, useRef, useState, useTransition, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, Eye, Trash2, HandCoins, IndianRupee, Upload } from "lucide-react";
+import { FileText, RefreshCw, Trash2, HandCoins, IndianRupee, Upload } from "lucide-react";
 import { createLifeHealthCase } from "@/app/policies/life-health-policy-actions";
 import { LifeHealthRemarksEditor } from "@/components/life-health-remarks-editor";
 import { usePolicyCommercialAccess } from "@/components/policy-commercial-access-context";
@@ -196,13 +196,11 @@ function CompactDocumentUpload({ label, file, onChange }: { label: string; file:
 
   return <>
     <div className={`inline-flex h-10 items-stretch overflow-hidden rounded-xl border ${file ? "border-[#A7DCC3] bg-[#EFFAF4] text-[#18794E]" : "border-[#8BB8F5] bg-white text-[#0A43A3]"}`}>
-      <label htmlFor={id} className="inline-flex cursor-pointer items-center gap-2 px-4 text-[10px] font-semibold hover:bg-emerald-100/50" title={file?.name || label}>
-        {file ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Upload className="h-3.5 w-3.5" />}
-        <span className="whitespace-nowrap">{file ? `Replace ${documentName}` : label}</span>
-        <input id={id} type="file" accept="application/pdf,image/jpeg,image/png,image/webp" className="hidden" onChange={(event) => onChange(event.target.files?.[0] ?? null)} />
-      </label>
-      {file ? <button type="button" aria-label={`Delete ${documentName}`} title={`Delete ${file.name}`} onClick={()=>setConfirmDelete(true)} className="grid w-10 place-items-center border-l border-emerald-200 text-red-600 hover:bg-red-50"><Trash2 className="h-4 w-4"/></button>:null}
-      {file && previewUrl ? <button type="button" aria-label={`Preview ${documentName}`} title={`Preview ${file.name}`} onClick={() => window.open(previewUrl, "_blank", "noopener,noreferrer")} className="grid w-10 place-items-center border-l border-emerald-200 hover:bg-emerald-100/60"><Eye className="h-4 w-4"/></button> : null}
+      {file ? <>
+        <button type="button" onClick={()=>previewUrl&&window.open(previewUrl,"_blank","noopener,noreferrer")} aria-label={`Open ${file.name}`} title={file.name} className="inline-flex max-w-[240px] min-w-0 items-center gap-2 px-3 text-[10px] font-semibold hover:bg-emerald-100/50"><FileText className="h-3.5 w-3.5 shrink-0"/><span className="truncate">{file.name}</span></button>
+        <button type="button" aria-label={`Delete ${file.name}`} title="Delete document" onClick={()=>setConfirmDelete(true)} className="grid w-10 place-items-center border-l border-emerald-200 text-red-600 hover:bg-red-50"><Trash2 className="h-4 w-4"/></button>
+        <label htmlFor={id} aria-label={`Replace ${file.name}`} title="Replace document" className="grid w-10 cursor-pointer place-items-center border-l border-emerald-200 hover:bg-emerald-100/60"><RefreshCw className="h-4 w-4"/><input id={id} type="file" accept="application/pdf,image/jpeg,image/png,image/webp" className="hidden" onChange={event=>onChange(event.target.files?.[0]??null)}/></label>
+      </> : <label htmlFor={id} className="inline-flex cursor-pointer items-center gap-2 px-4 text-[10px] font-semibold hover:bg-emerald-100/50"><Upload className="h-3.5 w-3.5"/><span>{label}</span><input id={id} type="file" accept="application/pdf,image/jpeg,image/png,image/webp" className="hidden" onChange={event=>onChange(event.target.files?.[0]??null)}/></label>}
     </div>
     {file && confirmDelete ? <DocumentDeleteConfirmation fileName={file.name} onCancel={()=>setConfirmDelete(false)} onConfirm={()=>{onChange(null);setConfirmDelete(false)}}/> : null}
   </>;
