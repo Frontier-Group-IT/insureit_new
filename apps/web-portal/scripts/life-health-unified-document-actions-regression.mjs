@@ -4,7 +4,7 @@ const detail=readFileSync("components/life-health-case-detail.tsx","utf8");
 const modal=readFileSync("components/document-delete-confirmation.tsx","utf8");
 const nonMotor=readFileSync("components/non-motor-document-picker.tsx","utf8");
 assert.match(form,/DocumentDeleteConfirmation/);
-assert.match(form,/Replace \$\{documentName\}/);
+assert.match(form,/Replace \\$\\{file.name\\}/);
 assert.match(form,/Trash2/);
 assert.match(detail,/onDelete=\{deleteDocument\}/);
 assert.match(detail,/Delete document\?/);
