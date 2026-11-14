@@ -19,8 +19,6 @@ assert.match(screen,/productSection\('04',productType==='Non Motor'\?'Cover, pre
 for(const label of ['PPT - Premium paying term','PD - Policy duration / term','Payment frequency','Premium amount (₹)','Payment mode','Case / proposal number','Address','Risk location','Sum insured / limit (₹)','Policy category']){
   assert.ok(screen.includes(label), 'Missing Operations field '+label);
 }
-assert.match(screen,/Form uploads are available in Operations Portal/, 'Keep an accurate short Motor document limitation.');
-assert.match(screen,/Form uploads and final booking require Operations Portal/, 'Keep an accurate non-Motor document limitation.');
 assert.match(date,/import DateTimePicker/,'Native date control must use installed calendar picker');
 assert.match(date,/DD\/MM\/YYYY/,'Display Indian date format');
 assert.match(date,/onChange\(toIso\(date\)\)/,'Persist ISO value');
@@ -30,7 +28,6 @@ assert.match(types,/productDrafts\?: NativeProductDrafts/,'Product forms isolate
 assert.match(api,/const productDraftKeys = new Set/,'Server must whitelist product draft fields');
 assert.match(api,/saveDraft.productDrafts=proposedProductDrafts/,'Drafts persist in scoped existing intake record');
 assert.match(api,/if\(d.businessLine!=="Motor"\)return reply/,'NonMotor cannot book through Motor endpoint');
-assert.match(screen,/isMotor\?<Pressable accessibilityRole="button" disabled=\{booking/,'Booking button only for Motor');
 assert.match(screen,/Final case creation, documents, risk validation and permission-controlled commercials must be completed in the Operations Portal/);
 assert.match(screen,/isMotor&&data\?\.commercialAccess/,'Motor financial entry still permission-gated');
 assert.match(screen,/saveNativePolicyOnboarding\(id,data.revision,draft\)/,'Draft save remains functional');
@@ -64,12 +61,14 @@ assert.match(screen,/displayed\|\|\('Select '\+f.label.toLowerCase\(\)\)/, 'Empt
 assert.doesNotMatch(screen,/<PartnerPolicyDateField[^>]*hidePlaceholder/, 'Onboarding dates show a DD/MM/YYYY placeholder.');
 assert.match(date,/placeholder=\{hidePlaceholder/, 'Date input retains opt-in placeholder behavior for other pages.');
 assert.match(date,/hidePlaceholder\?:boolean/, 'Date placeholder removal must be opt-in to avoid other screens.');
-// Image policy copies must not be handed to iOS Linking with long signed Storage URLs.
-assert.match(screen,/new URL\(url\)\.pathname/, 'Detect the original document type without parsing signed query tokens.');
-assert.match(screen,/policyCopyImageUrl/, 'Open signed image policy copies in a native viewer.');
-assert.match(screen,/<Image source=\{\{uri:policyCopyImageUrl\}\}/, 'Preview images without launching external URL handlers.');
-assert.match(screen,/await Linking\.openURL\(url\)/, 'Keep existing system handling for PDF and other non-image documents.');
-assert.match(screen,/setError\('Unable to open policy copy\. Please try again\.'\)/, 'Sanitize signed URL opening errors.');
-assert.doesNotMatch(screen,/setError\(e instanceof Error\?e\.message:'Could not open policy copy\.'\)/, 'Never expose a signed document URL or token through raw native errors.');
-assert.match(screen,/onError=\{\(\)=>setPolicyCopyImageFailed\(true\)\}/, 'Provide non-sensitive image preview errors.');
+// Motor form layout and buttons must match the approved compact visual spec.
+assert.doesNotMatch(screen,/summaryDocuments|Upload Forms|View submitted policy copy/, 'Remove document sections from onboarding only.');
+assert.doesNotMatch(screen,/Form uploads are available in Operations Portal/, 'Remove redundant upload helper.');
+assert.match(screen,/styles\.wideField,styles\.registrationBlock/, 'Registration number spans both columns.');
+assert.match(screen,/\[styles\.field,styles\.wideField\]/, 'RTO spans both columns.');
+assert.match(screen,/styles\.summaryProgressStack/, 'Progress indicator stacks over in-progress badge.');
+assert.match(screen,/\{isMotor\?<Pressable accessibilityRole="button" accessibilityLabel="Book Active Policy"/, 'Book replaces Motor Save Draft in the action row.');
+assert.match(screen,/\}:<Pressable accessibilityRole="button" disabled=\{saving\|\|!dirty\}/, 'Non-Motor Save Draft stays available.');
+assert.match(screen,/disabled=\{booking\|\|saving\|\|!data\}/, 'Booking remains gated by loading and saving.');
+
 console.log('Product-type layouts, Operations Motor controls, referenced financial popups, placeholders and Motor-only booking guard verified.');
