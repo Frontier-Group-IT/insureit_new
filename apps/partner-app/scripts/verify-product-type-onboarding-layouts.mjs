@@ -31,7 +31,7 @@ assert.match(api,/if\(d.businessLine!=="Motor"\)return reply/,'NonMotor cannot b
 assert.doesNotMatch(screen,/Final booking is completed in the Operations Portal|Draft saving is available for|Final case creation, documents, risk validation/, 'Remove redundant non-Motor booking and draft notices.');
 assert.doesNotMatch(screen,/>In progress<\/Text>/, 'Remove In progress badge from onboarding summary.');
 assert.match(screen,/\{saving\?'Saving…':'Save draft'\}/, 'Keep non-Motor Save Draft button.');
-assert.match(screen,/\{dirty\?'Unsaved changes':'Draft'\}/, 'Keep meaningful unsaved changes indication.');
+assert.doesNotMatch(screen,/<View style=\{styles.status\}>/, 'Remove top PIR and unsaved status card only; draft saving remains.');
 assert.match(screen,/selected&&styles.choiceSelected/, 'Selected highlight applies to all shared picker options.');
 assert.match(screen,/picker\.product\?updateProduct\(picker.key,item.value\):update\(picker.key as FieldKey,item.value\)/, 'Preserve non-business-line dropdown selection handlers.');
 assert.match(screen,/setPicker\(null\);/, 'Picker can close after selection.');
@@ -39,7 +39,7 @@ assert.match(screen,/data\?\.commercialAccess\?<View style=\{styles.referenceCom
 assert.match(screen,/saveNativePolicyOnboarding\(id,data.revision,draft\)/,'Draft save remains functional');
 // Motor follows Operations structure; other product types retain draft-only screens.
 assert.match(screen,/policy\.slice\(0,4\)\.map\(item/, 'Motor and non-Motor source sections use only four primary rows.');
-assert.match(screen,/f.key==='intermediaryType'&&\(draft.rmName\|\|matchedSource\?\.rmName\)/, 'Show matching-source RM beneath intermediary type.');
+assert.match(screen,/sourceMeta\('rmName','RM'\)/, 'Show RM beneath intermediary type in the matching source row.');
 assert.match(screen,/item.key==='leadSource'\?<View style=\{styles.sourceLeadRow\}/, 'Align source ID and callable mobile below lead source.');
 assert.match(screen,/f.key==='issuanceDate'\?'Policy issuance date'/, 'All policy types use issuance date label.');
 assert.match(screen,/motorVehicleSection/, 'Motor requires a combined insured-and-vehicle card.');
@@ -121,7 +121,7 @@ assert.match(screen,/label:'Policy expiry',value:productValues.endDate/, 'Summar
 assert.match(screen,/data\?\.insurers.find/, 'Summary must derive insurer label from master data.');
 assert.match(screen,/productType==='Non Motor'\?''/, 'Empty Non-Motor text inputs must have no placeholder.');
 assert.match(api,/if\(d.businessLine!=="Motor"\)return reply/, 'No native booking bypass for Non-Motor.');
-assert.match(screen,/pendingBusinessLine/, 'Switching policy type requires an explicit confirmation.');
+assert.doesNotMatch(screen,/pendingBusinessLine/, 'Policy type changes immediately without confirmation state.');
 assert.match(screen,/if\(picker.key==='businessLine'\)/, 'Policy type dropdown retains direct selection handling.');
 assert.match(screen,/if\(item.value!==draft\?\.businessLine\)update\('businessLine',item.value\)/, 'Policy type changes directly and preserves product draft objects.');
 assert.doesNotMatch(screen,/pendingBusinessLine|Switch Policy Type\?/, 'No confirmation state or popup.');
