@@ -43,14 +43,14 @@ jobs:
       - name: Link production Supabase project
         run: supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
       - name: Apply idempotent staging table and permissions
-        run: supabase db query --linked --file supabase/migrations/20261114170000_partner_onboarding_document_staging.sql
+        run: supabase db query --remote --yes --file supabase/migrations/20261114170000_partner_onboarding_document_staging.sql
       - name: Record migration file version
         run: supabase migration repair --linked --status applied 20261114170000
       - name: Verify staging table, row-level security and scope
         shell: bash
         run: |
           set -euo pipefail
-          result=$(supabase db query --linked --output-format json "
+          result=$(supabase db query --remote --read-only --output-format json "
             select
               to_regclass('public.policy_intake_onboarding_documents') is not null as table_ready,
               (select relrowsecurity from pg_class where oid = 'public.policy_intake_onboarding_documents'::regclass) as rls_enabled,
