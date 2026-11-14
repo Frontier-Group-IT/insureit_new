@@ -87,3 +87,41 @@ export type NativeRcReview={
 export async function lookupNativePolicyRc(intakeId:string,registrationNumber:string){
   return request<{review:NativeRcReview}>({action:'rc_lookup',intake_id:intakeId,registration_no:registrationNumber});
 }
+
+export type NativeOnboardingDocumentType = 'policy_copy'|'proposal_form'|'kyc'|'other_document';
+export type NativeOnboardingDocument = {type:NativeOnboardingDocumentType;fileName:string};
+async function documentRequest<T>(intakeId:string,line:NativeProductType,method:'GET'|'POST'|'DELETE',type?:NativeOnboardingDocumentType,file?:{uri:string;name:string;mimeType?:string}):Promise<T>{
+  const session=await getCurrentSession();
+  if(!session?.access_token)throw new Error('Partner session expired. Sign in again.');
+  const endpoint=`${portal}/api/partner/policy-intakes/native-onboarding/documents`;
+  const query=`?intake_id=${encodeURIComponent(intakeId)}&business_line=${encodeURIComponent(line)}`;
+  const headers:Record<string,string>={Authorization:`Bearer ${session.access_token}`};
+  let body:FormData|string|undefined;
+  if(method==='POST'&&type&&file){
+    const multipart=new FormData();
+    multipart.append('intake_id',intakeId);
+    multipart.append('business_line',line);
+    multipart.append('document_type',type);
+    // React Native FormData accepts file URIs; the browser/OS supplies the binary body.
+    multipart.append('file',{uri:file.uri,name:file.name,type:file.mimeType||'application/octet-stream'} as unknown as Blob);
+    body=multipart;
+  }else if(method==='DELETE'){
+    headers['Content-Type']='application/json';
+    body=JSON.stringify({intake_id:intakeId,business_line:line,document_type:type});
+  }
+  let response:Response;
+  try{response=await fetch(endpoint+(method==='GET'?query:''),{method,headers,body,cache:'no-store'});}
+  catch{throw new Error('Document service is unavailable. Check your connection.');}
+  const value=await response.json().catch(()=>null) as ({ok?:boolean;error?:string}&Partial<T>)|null;
+  if(!response.ok||!value?.ok)throw new Error(value?.error||'Document could not be saved.');
+  return value as T;
+}
+export async function listNativeOnboardingDocuments(intakeId:string,line:NativeProductType){
+  return documentRequest<{documents:NativeOnboardingDocument[]}>(intakeId,line,'GET');
+}
+export async function uploadNativeOnboardingDocument(intakeId:string,line:NativeProductType,type:NativeOnboardingDocumentType,file:{uri:string;name:string;mimeType?:string}){
+  return documentRequest<{document:NativeOnboardingDocument}>(intakeId,line,'POST',type,file);
+}
+export async function deleteNativeOnboardingDocument(intakeId:string,line:NativeProductType,type:NativeOnboardingDocumentType){
+  return documentRequest<{ok:true}>(intakeId,line,'DELETE',type);
+}
