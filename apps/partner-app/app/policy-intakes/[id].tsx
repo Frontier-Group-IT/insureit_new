@@ -263,7 +263,7 @@ export default function PolicyIntakeDetailScreen() {
                     <Text numberOfLines={3} style={styles.summaryLine}>
                       {`${row.lead_source_name || 'Lead source unavailable'} (${row.submitted_by_name?.trim() || 'Submitter unavailable'})`}
                     </Text>
-                    {row.status !== 'duplicate' && row.status !== 'ready_for_review' && row.status !== 'in_review' && row.status !== 'rejected' && row.status !== 'needs_attention'
+                    {row.status !== 'duplicate' && row.status !== 'ready_for_review' && row.status !== 'in_review' && row.status !== 'rejected' && row.status !== 'needs_attention' && !(row.status === 'processing' && row.ocr_status !== 'failed')
                       ? <Text style={styles.statusHelp}>{statusHelp(row)}</Text> : null}
                   </View>
                   </View>
@@ -863,7 +863,6 @@ function statusLabel(row: PartnerPolicyIntake) {
 
 function statusHelp(row: PartnerPolicyIntake) {
   if (row.status === 'processing' && row.ocr_status === 'failed') return 'Automatic extraction was unavailable. Operations can continue from the saved policy copy.';
-  if (row.status === 'processing') return 'The uploaded policy copy is being read automatically.';
   if (row.status === 'ready_for_review') return 'The extracted details are ready for an Operations reviewer.';
   if (row.status === 'completed') return 'The final policy was linked and this intake is closed.';
   if (row.status === 'duplicate') return 'The policy was found in an existing record. Review and onboarding are disabled.';
