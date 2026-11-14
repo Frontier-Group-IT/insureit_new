@@ -180,6 +180,7 @@ export default function NativePolicyOnboarding(){
   const setNonMotorCustomerMode=(mode:'existing'|'new')=>{
     setDraft(current=>current?{...current,productDrafts:{...current.productDrafts,
       'Non Motor':{...current.productDrafts?.['Non Motor'],customerMode:mode,customerId:'',
+        ...(mode==='new'&&!current.productDrafts?.['Non Motor']?.customerType?{customerType:'Organisation'}:{}),
         ...(mode==='new'?{insuredName:'',contactName:'',phone:'',email:'',address:''}:{})}
     }}:current);
     setCustomerChoices([]);setCustomerSearch('');setCustomerSearchError('');setDirty(true);
@@ -470,7 +471,7 @@ export default function NativePolicyOnboarding(){
         <Text style={[styles.value,!current&&styles.placeholder]} numberOfLines={1}>{options.find(o=>o.value===current)?.label||(productType==='Non Motor'?'':'Select '+f.label.toLowerCase())}</Text>
         <Ionicons name="chevron-down" size={15} color="#63758D"/>
       </Pressable>:<TextInput accessibilityLabel={f.label} value={current} placeholder={productType==='Non Motor'?'':'Enter '+f.label.toLowerCase()} placeholderTextColor="#98A6B8" onChangeText={v=>updateProduct(f.key,f.key==='phone'?v.replace(/\D/g,'').slice(0,10):f.key==='policyNumber'?v.toUpperCase():v)}
-        keyboardType={['premiumAmount','sumInsured','deductible','netPremium','gstAmount','grossPremium','employeeCount','annualWages','annualTurnover','projectValue'].includes(f.key)?'numeric':'default'}
+        keyboardType={['phone','premiumAmount','sumInsured','deductible','netPremium','gstAmount','grossPremium','employeeCount','annualWages','annualTurnover','projectValue'].includes(f.key)?'numeric':'default'}
         style={styles.input}/>}
     </View>;
   };
@@ -517,7 +518,12 @@ export default function NativePolicyOnboarding(){
       <Text style={styles.label}>Customer / organisation <Text style={styles.star}>*</Text></Text>
       <View style={styles.nonMotorSearchRow}>
         <TextInput accessibilityLabel="Search existing customer" value={customerSearch}
-          onChangeText={value=>{setCustomerSearch(value);setCustomerChoices([]);}}
+          onChangeText={value=>{
+            setCustomerSearch(value);setCustomerChoices([]);
+            if(productValues.customerId){
+              updateProduct('customerId','');
+            }
+          }}
           style={[styles.input,styles.nonMotorSearchInput]}/>
         <Pressable accessibilityRole="button" accessibilityLabel="Search customers"
           disabled={customerSearchBusy||customerSearch.trim().length<2}
