@@ -178,7 +178,7 @@ assert.match(types,/rmMobile:string/, 'Existing partner source metadata shape re
 console.log('Product-type layouts, direct policy type selection, portal source ownership alignment and PIR-card removal verified.');
 
 
-const calendarDialog = fs.readFileSync(path.join(root, 'components/policy-intakes/partner-policy-calendar-dialog.tsx'), 'utf8');
+const calendarDialog = read('apps/partner-app/components/policy-intakes/partner-policy-calendar-dialog.tsx');
 for (const label of ['Long Term Package','Long Term Third Party','Bundled','SAOD']) {
   assert.ok(screen.includes(label), 'Motor product selector must retain reference choice: ' + label);
 }
