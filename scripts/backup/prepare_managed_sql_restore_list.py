@@ -90,6 +90,11 @@ def chosen_entries(raw_toc):
         if kind == "TABLE DATA" and ns in APP_SCHEMAS:
             app_data_targets.add((ns, rest.split()[0]))
 
+        if ns == "auth" and kind == "TABLE DATA" and rest.startswith("schema_migrations "):
+            # Managed Auth schema_migrations belongs to supabase_auth_admin
+            # and postgres has NO INSERT. Never spoof Auth version history.
+            counts["deferred_auth_schema_migrations"] += 1
+
         # The app custom schema itself does not exist in a fresh Supabase
         # project. Default managed/public/extensions schemas already do.
         include = (
@@ -100,6 +105,8 @@ def chosen_entries(raw_toc):
         )
         # A Supabase target may already have the default RLS event-trigger
         # helper; do not overwrite it by replaying its source function.
+        if ns == "auth" and kind == "TABLE DATA" and rest.startswith("schema_migrations "):
+            include = False
         if ns == "public" and kind in ("FUNCTION", "PROCEDURE"):
             if rest.startswith("rls_auto_enable("):
                 include = False
