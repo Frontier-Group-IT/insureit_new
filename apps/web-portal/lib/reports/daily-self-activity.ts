@@ -14,7 +14,6 @@ type IntakeFinal = { id:string; finalized_at:string|null; intake_number:string|n
 type Case = { id:string; created_at:string; case_number:string|null; converted_at:string|null };
 type CaseFinal = { id:string; converted_at:string|null; case_number:string|null };
 type PageResult<T> = {data:T[]|null;error:{message:string}|null};
-type Db = ReturnType<typeof createSupabaseAdminClient>;
 const BATCH = 500;
 const MAX_ROWS_PER_SOURCE = 12000;
 const MAX_PAGE = 400;
@@ -31,16 +30,31 @@ export function selfDateWindow(day?: string) {
   return {from:start.toISOString(),to:new Date(start.getTime()+86_400_000).toISOString()};
 }
 
-async function pageAll<T>(load:(from:number,to:number)=>PromiseLike<PageResult<T>>) {
+type ActivitySource = "Audit logs" | "Policies" | "Intake submissions" |
+  "Intake finalizations" | "Case creation" | "Case conversions";
+export type SourceRead<T> = {rows:T[];partial:boolean;failed:boolean};
+
+/** A source failure must never hide successfully loaded activity from other sources. */
+async function pageAll<T>(source:ActivitySource,load:(from:number,to:number)=>PromiseLike<PageResult<T>>):Promise<SourceRead<T>> {
   const rows:T[] = [];
-  // Explicit limit; never silently claim the result is complete if a cap is reached.
-  for(let offset=0;offset<MAX_ROWS_PER_SOURCE;offset+=BATCH) {
-    const {data,error} = await load(offset, offset+BATCH-1);
-    if(error) throw new Error("Could not retrieve employee activity history");
-    rows.push(...data??[]);
-    if((data??[]).length < BATCH) return {rows,partial:false};
+  try {
+    for(let offset=0;offset<MAX_ROWS_PER_SOURCE;offset+=BATCH) {
+      const {data,error} = await load(offset, offset+BATCH-1);
+      if(error) {
+        // Log the source and a structured, non-sensitive PostgREST error code only.
+        // Never include query data, user IDs or returned record content in logs.
+        const code = (error as {code?:string}).code || "request_error";
+        console.error("[daily-report] history source unavailable", {source,code});
+        return {rows,partial:true,failed:true};
+      }
+      rows.push(...(data??[]));
+      if((data??[]).length < BATCH) return {rows,partial:false,failed:false};
+    }
+    return {rows,partial:true,failed:false};
+  } catch {
+    console.error("[daily-report] history source request failed", {source});
+    return {rows,partial:true,failed:true};
   }
-  return {rows,partial:true};
 }
 
 function actionCategory(action:string, table:string|null) {
@@ -85,10 +99,11 @@ export async function loadSelfActivityHistory(
 ) {
   if(!UUID.test(viewerId)) throw new Error("Invalid authenticated employee");
   const admin = createSupabaseAdminClient();
-  const {data: selfProfile,error: selfProfileError} = await admin.from("profiles")
+  // A temporary name lookup failure must not suppress attributable history.
+  const {data:selfProfile,error:selfProfileError} = await admin.from("profiles")
     .select("full_name,employee_code").eq("id",viewerId)
     .maybeSingle<{full_name:string|null;employee_code:string|null}>();
-  if(selfProfileError) throw new Error("Could not load employee name");
+  if(selfProfileError) console.error("[daily-report] employee label unavailable", {code:selfProfileError.code || "request_error"});
   const selfName = selfProfile?.full_name || "Current employee";
   const employeeCode = selfProfile?.employee_code || "";
   const window = selfDateWindow(options.day);
@@ -135,10 +150,20 @@ export async function loadSelfActivityHistory(
     return q.returns<CaseFinal[]>();
   };
   const [audits,policies,intakes,intakeFinals,cases,caseFinals] = await Promise.all([
-    pageAll(loadAudit),pageAll(loadPolicy),pageAll(loadIntake),
-    pageAll(loadIntakeFinal),pageAll(loadCase),pageAll(loadCaseFinal),
+    pageAll("Audit logs",loadAudit),pageAll("Policies",loadPolicy),pageAll("Intake submissions",loadIntake),
+    pageAll("Intake finalizations",loadIntakeFinal),pageAll("Case creation",loadCase),pageAll("Case conversions",loadCaseFinal),
   ]);
-  const partial = [audits,policies,intakes,intakeFinals,cases,caseFinals].some(x=>x.partial);
+  const sources = [
+    {name:"Audit logs",result:audits},
+    {name:"Policies",result:policies},
+    {name:"Intake submissions",result:intakes},
+    {name:"Intake finalizations",result:intakeFinals},
+    {name:"Case creation",result:cases},
+    {name:"Case conversions",result:caseFinals},
+  ];
+  const unavailableSources = sources.filter(s=>s.result.failed).map(s=>s.name);
+  const allSourcesUnavailable = unavailableSources.length === sources.length;
+  const partial = sources.some(s=>s.result.partial) || Boolean(selfProfileError);
   const all:SelfActivity[] = [];
   for(const a of audits.rows) {
     if(!a.actor_id||a.action==="policy_created"||a.action==="life_health_case_created"||a.action==="life_health_case_closed") continue;
@@ -181,5 +206,6 @@ export async function loadSelfActivityHistory(
     for(const row of visible) if(row.table===table && row.recordId && lookup.has(row.recordId)) row.reference=lookup.get(row.recordId)!;
   }
   return {selfName,employeeCode,categories,category,rows:visible,page,hasNext:filtered.length>start+30,
-    total:all.length,selectedCount:filtered.length,partial,day:window?options.day??"":""};
+    total:all.length,selectedCount:filtered.length,partial,unavailableSources,allSourcesUnavailable,
+    day:window?options.day??"":""};
 }
