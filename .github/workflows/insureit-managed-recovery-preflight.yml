@@ -3,6 +3,11 @@ name: INSUREIT isolated managed recovery R0-R1 preflight (manual read-only)
 on:
   workflow_dispatch:
     inputs:
+      expected_db_snapshot:
+        description: 'Optional exact authenticated R2 v2 UTC snapshot YYYYMMDDTHHMMSSZ (abort if latest pointer changed)'
+        required: false
+        type: string
+        default: ''
       plan_storage_sample:
         description: 'Plan <=500 MB Storage subset using authenticated R2 manifest (no file bytes)'
         required: false
@@ -50,6 +55,7 @@ jobs:
           R2_ACCESS_KEY_ID: ${{ secrets.RECOVERY_R2_READONLY_ACCESS_KEY_ID }}
           R2_SECRET_ACCESS_KEY: ${{ secrets.RECOVERY_R2_READONLY_SECRET_ACCESS_KEY }}
           DB_BACKUP_ENCRYPTION_KEY: ${{ secrets.RECOVERY_DB_BACKUP_ENCRYPTION_KEY }}
+          RECOVERY_EXPECTED_DB_SNAPSHOT: ${{ inputs.expected_db_snapshot }}
           R2_BUCKET: insureit-production-backups
           RESTORE_DIR: ${{ runner.temp }}/insureit-managed-r0-r1
         run: |
