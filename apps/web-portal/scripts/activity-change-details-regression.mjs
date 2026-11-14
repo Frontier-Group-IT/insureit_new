@@ -36,16 +36,15 @@ const claimPage = read("../app/claims/[id]/page.tsx");
 
 assert.match(policyActivity, /cpa_amount: "CPA amount"/, "CPA amount must be tracked independently");
 
-assert.match(policyActivity, /insured_declared_value: "Sum insured \\/ IDV"/, "IDV must be an explicitly tracked policy field");
+assert.ok(policyActivity.includes('insured_declared_value: "Sum insured / IDV"'), "IDV must be an explicitly tracked policy field");
 const approvedValues = policyActivity.slice(policyActivity.indexOf("const DISPLAYABLE_PREMIUM_VALUES"), policyActivity.indexOf("const DERIVED_PREMIUM_AUDIT_LABEL"));
-assert.match(approvedValues, /"policy\\.insured_declared_value"/, "IDV old/new amounts must be explicitly allowlisted for audit storage");
-assert.match(policyActivity, /"Sum insured \\/ IDV"\\]\\.includes\\(parsed\\[1\\]\\)/, "Audit reader must accept safely formatted historical IDV before/after values");
-assert.match(policyActivity, /DISPLAYABLE_PREMIUM_VALUES\\.has\\(entry\\.key\\)/, "Approved IDV values must be formatted during change capture");
-assert.match(policyActivity, /formatAuditedPremiumValue\\(entry\\.key,before\\[entry\\.key\\]\\)/, "Record previous IDV using numeric formatter");
-assert.match(policyActivity, /formatAuditedPremiumValue\\(entry\\.key,after\\[entry\\.key\\]\\)/, "Record new IDV using numeric formatter");
-assert.match(policyActivity, /Number\\.isFinite\\(amount\\) && amount >= 0 && amount <= 1000000000/, "IDV amounts must be bounded finite numbers");
-assert.match(policyActivity, /const hidden=item\\.match\\(/, "Older IDV entries with hidden values remain readable without invented amounts");
-
+assert.ok(approvedValues.includes('"policy.insured_declared_value"'), "IDV old/new amounts must be explicitly allowlisted for audit storage");
+assert.ok(policyActivity.includes('"Sum insured / IDV"].includes(parsed[1])'), "Audit reader must accept safely formatted IDV before/after values");
+assert.ok(policyActivity.includes('DISPLAYABLE_PREMIUM_VALUES.has(entry.key)'), "Approved IDV values must be formatted during change capture");
+assert.ok(policyActivity.includes('formatAuditedPremiumValue(entry.key,before[entry.key])'), "Record previous IDV using numeric formatter");
+assert.ok(policyActivity.includes('formatAuditedPremiumValue(entry.key,after[entry.key])'), "Record new IDV using numeric formatter");
+assert.ok(policyActivity.includes('Number.isFinite(amount) && amount >= 0 && amount <= 1000000000'), "IDV amounts must be bounded finite numbers");
+assert.ok(policyActivity.includes('const hidden=item.match('), "Older IDV entries with hidden values remain readable without invented amounts");
 
 assert.match(policyActivity, /entry\.key==="premium\.cpa_amount"/, "CPA source field must be detected independently from derived premium totals");
 assert.match(policyActivity, /"premium\.cpa_amount"/, "Actual CPA amount remains on the approved before-after audit value allowlist");
