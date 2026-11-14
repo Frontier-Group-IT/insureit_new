@@ -61,3 +61,12 @@ An earlier offline verified archive had **230/230** COPY targets. A newer succes
 - \`FULL_INSUREIT_DR_CERTIFIED=NO\`: the intentional partial document scope does not close full Storage recovery requirements.
 
 Never mutate production database \`ilzhsfqqjyppzzvfscmh\`, live Cloudflare app, R2 backups, or mobile application configuration as part of this rehearsal.
+
+## Exact R1-to-R3 authenticated snapshot lock (R2 latest pointer drift guard)
+
+The existing encrypted PostgreSQL v2 reader now validates the authenticated manifest timestamp as a strict `YYYYMMDDTHHMMSSZ` UTC value and prints the verified snapshot timestamp (not raw private TOC/SQL/file names) in its aggregate success marker. Both `insureit-managed-recovery-preflight.yml` (R1) and the existing `insureit-postgres-r2-v2-restore-verify.yml` (R3) accept optional manual input `expected_db_snapshot`.
+
+- First approved R1 run may leave `expected_db_snapshot` blank to read authenticated R2 latest; record its displayed verified timestamp from the real run.
+- In the separate R3 disposable full-SQL restore, supply **the same exact timestamp**. If the latest pointer has advanced, the verifier must STOP before archive extraction/restoration and report an expected-snapshot mismatch, rather than silently treating a new SQL snapshot as the old one.
+- This guard only pins the current **latest pointer** when it still matches; it **does not implement historical immutable manifest selection**. If latest has moved, schedule a coordinated fresh R1/R3 pair or separately design a vetted immutable-manifest-key reader; do not spoof timestamps or modify R2 pointers.
+- Snapshot locking does NOT create the protected GitHub environment, dispatch a workflow, reconstruct owners/roles, or authorize R4 managed target SQL writes.
