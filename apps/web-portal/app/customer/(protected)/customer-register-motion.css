@@ -54,3 +54,13 @@
     transition: none !important; animation: none !important; transform: none !important;
   }
 }
+
+/* Customer Policies only: one highlight travels between the four status tabs. */
+.customer-policies-page .policy-status-sliding-indicator {
+  transition: transform 1050ms cubic-bezier(.42, 0, .20, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .customer-policies-page .policy-status-sliding-indicator {
+    transition: none !important;
+  }
+}
