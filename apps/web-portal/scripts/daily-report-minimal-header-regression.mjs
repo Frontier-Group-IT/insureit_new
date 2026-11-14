@@ -10,8 +10,8 @@ assert.doesNotMatch(page, />Daily Report<\/h2>/, "Remove duplicate Daily Report 
 assert.doesNotMatch(page, /Recorded employee activities · India Standard Time/, "Remove subtitle");
 assert.doesNotMatch(page, />Read-only<\/span>/, "Remove read-only badge");
 assert.doesNotMatch(page, /History Period|<form|>Apply<|>Reset</, "Remove History Period and Apply/Reset controls");
-assert.match(page, /Daily Report visibility/, "Self/All selector remains");
-assert.match(page, /<DailyReportQuickFilters/, "Keep useful quick filters");
+assert.match(read("../components/reports/daily-report-header-controls.tsx"), /Daily Report visibility/, "Self/All selector is in Reports heading");
+assert.doesNotMatch(page, /<DailyReportQuickFilters|type="date"/, "Standalone date section is removed");
 assert.match(page, /<DailySelfActivityPanel/, "Retain employee activity summary and drilldown");
 assert.match(page, /<DailyEmployeeDirectory/, "Retain authorized employee directory");
 assert.match(quick, /type="date"/, "Keep date filter");
