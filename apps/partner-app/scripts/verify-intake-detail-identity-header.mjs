@@ -26,4 +26,6 @@ assert.doesNotMatch(detail, /Read the Operations note below and upload a replace
 assert.match(detail, /'Upload a replacement policy copy'/, 'Attention panel displays requested replacement-copy title');
 assert.match(detail, /'Operations rejection note'/, 'Rejected submissions retain the rejection note title');
 assert.match(detail, /Upload replacement \$\{proposalForm \? 'proposal form' : 'policy copy'\}/, 'Replacement upload action is unchanged');
+assert.doesNotMatch(detail, /The uploaded policy copy is being read automatically\./, 'Do not display redundant automatic reading message');
+assert.match(header, /row\.status === 'processing' && row\.ocr_status !== 'failed'/, 'Hide routine processing caption while retaining failure guidance');
 console.log('Partner Policy Intake detail identity header parity passed.');
