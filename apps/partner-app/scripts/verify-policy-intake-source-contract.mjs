@@ -200,7 +200,7 @@ for (const fragment of ["sourceCell:{width:'48%'", "sourcePrimary:{width:'100%'"
   "dirty?'Unsaved changes':'Draft'", "{current}", "items.map(item=>field(item))"]) {
   requireText(nativeOnboarding, fragment, 'Compact onboarding parity missing: '+fragment);
 }
-requireText(nativeOnboarding, 'placeholder={hint}', 'Current requirement restores visible hints on empty inputs.');
+requireText(nativeOnboarding, "placeholder={productType==='Non Motor'?'':hint}", 'Non-Motor fields are blank by default while Motor retains contextual hints.');
 requireText(nativeOnboarding, "'Pending after RTO registration'", 'Unregistered registration number must show a pending hint.');
 const dateField = fs.readFileSync(path.join(root, 'components/policy-intakes/partner-policy-date-field.tsx'), 'utf8');
 requireText(dateField, 'fullWidth=false', 'Source date must fit its compact source cell.');

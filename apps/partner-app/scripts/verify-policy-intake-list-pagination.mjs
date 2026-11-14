@@ -145,6 +145,10 @@ assert.match(detail, /row.status === 'duplicate' && row.duplicate_match/, 'Mobil
 assert.match(detail, /View Existing Policy/, 'Registered policy duplicates must link to the existing policy');
 assert.match(detail, /View Earlier Intake/, 'Earlier intake duplicates must link to that intake');
 assert.match(detail, /row\.attention_reason\?\.trim\(\) && row\.status !== 'duplicate'/, 'Duplicate must not offer replacement actions and empty Operations notes must not show a banner');
+assert.match(detail, /row\.status === 'rejected' \? 'Operations rejection note'/, 'Rejected intake continues showing the Operations rejection note');
+assert.match(detail, /row\.status !== 'rejected' \? \(/, 'Rejected intake must not render upload replacement policy copy button or progress');
+assert.match(detail, /row\.status === 'rejected' \|\| row\.status === 'duplicate' \|\| row\.status === 'completed' \|\| replacementLockRef\.current/, 'Closed intakes cannot invoke the replacement document picker');
+assert.match(detail, /Upload replacement \$\{proposalForm \? 'proposal form' : 'policy copy'\}/, 'Replacement action remains available to eligible open intakes');
 assert.match(detail, /!\['completed', 'rejected', 'duplicate'\]\.includes\(row.status\)/, 'Duplicate must not offer review actions');
 assert.match(api, /export function partnerPolicyIntakeMatchUrl\(path: string\)/, 'Match destination must use trusted portal URL validation');
 assert.ok(api.includes(String.raw`/^\/policies\/`), 'Registered policy URL must use the existing policy details view route');

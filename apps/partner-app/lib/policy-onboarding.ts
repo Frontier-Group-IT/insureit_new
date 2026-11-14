@@ -37,6 +37,12 @@ async function request<T>(body: Record<string, unknown>): Promise<T> {
 export async function prepareNativePolicyOnboarding(intakeId: string, takeOver = false, expectedReviewerId: string | null = null) {
   return request<NativeOnboardingData>({ action: 'prepare', intake_id: intakeId, take_over: takeOver, expected_reviewer_id: expectedReviewerId });
 }
+export type NativeNonMotorCustomer = {id:string;name:string;contactName:string;phone:string;email:string};
+export async function searchNativeNonMotorCustomers(intakeId:string,search:string){
+  return request<{customers:NativeNonMotorCustomer[]}>({
+    action:'customer_search',intake_id:intakeId,search,
+  });
+}
 export async function saveNativePolicyOnboarding(intakeId: string, revision: number, draft: NativePolicyDraft) {
   return request<{revision:number}>({ action: 'save', intake_id: intakeId, revision, draft });
 }

@@ -5,7 +5,7 @@ import { POLICY_DATE_APPROVERS } from "@/lib/policy-date-rule";
 import { lookupPolicyRegistrationRcForVerifiedActor } from "@/lib/policy-rc-lookup-engine";
 import { getEffectivePermission } from "@/lib/permission-management";
 import { isAppRole } from "@/lib/roles";
-import { getOperationsHeadDownlinePolicyScope } from "@/lib/policy-access-scope";
+import { getOperationsHeadDownlinePolicyScope, operationsHeadPolicyFilter } from "@/lib/policy-access-scope";
 import { createSupabaseWithAccessToken } from "@/lib/auth";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { hasEffectiveCapability } from "@/lib/effective-permissions";
@@ -25,7 +25,7 @@ const nativeOptionalFields = ["addOnPremium","tpValidUpto","cpaValidUpto"] as co
 // Booking remains Motor-only; these fields are not passed into Motor booking payloads.
 const productDraftKeys = new Set([
   "address","productName","proposalNumber","ppt","pd","paymentFrequency","premiumAmount","paymentMode",
-  "customerType","contactName","email","policyNumber","category","status","riskTitle","riskLocation",
+  "customerMode","customerId","customerType","insuredName","phone","contactName","email","policyNumber","category","status","riskTitle","riskLocation",
   "occupancyType","cargoDescription","transitFrom","transitTo","transitMode","projectName",
   "projectValue","natureOfBusiness","liabilityType","employeeCount","annualWages","businessName",
   "annualTurnover","sumInsured","deductible","netPremium","gstAmount","grossPremium",
@@ -37,7 +37,7 @@ const productDraftKeys = new Set([
 const productCommercialKeys = new Set(["payinBasis","payinValue","payinScheme","partnerPayoutBasis","partnerPayoutValue"]);
 const nonMotorTypes = ["Life","Health","Non Motor"] as const;
 const commercialFields = ["payoutBasis","projectedOdPercent","projectedTpPercent","insurerScheme","payinBillNo","payinBilledAmount","payinBillDate","payinStatus","retention","payoutOdPercent","payoutTpPercent","flatPayoutAmount","payoutStatus","payoutDate","payoutVoucherNo"] as const;
-type Input = { action?: "prepare" | "save" | "book" | "approval_request" | "approval_verify" | "rc_lookup"; intake_id?: string; take_over?: boolean; expected_reviewer_id?: string | null; revision?: number; draft?: PolicyIntakeDraft; resolution?: PolicyOnboardingPayload["resolution"]; date_approval_id?: string | null; approver_key?: string; approval_id?: string; otp?: string; registration_no?: string };
+type Input = { action?: "prepare" | "save" | "book" | "approval_request" | "approval_verify" | "rc_lookup" | "customer_search"; search?: string; intake_id?: string; take_over?: boolean; expected_reviewer_id?: string | null; revision?: number; draft?: PolicyIntakeDraft; resolution?: PolicyOnboardingPayload["resolution"]; date_approval_id?: string | null; approver_key?: string; approval_id?: string; otp?: string; registration_no?: string };
 type Intake = { id:string; intake_number:string; lead_source_type:"posp"|"misp"|"partner"; lead_source_name:string; lead_source_code:string|null; customer_mobile:string; ocr_fields:PolicyIntakeOcrField[]; status:string; assigned_to_profile_id:string|null; created_at:string; matched_customer_id:string|null };
 function reply(error:string,status:number){return NextResponse.json({ok:false,error},{status,headers:{"Cache-Control":"no-store"}});}
 function good(data:Record<string,unknown>){return NextResponse.json({ok:true,...data},{headers:{"Cache-Control":"no-store"}});}
@@ -47,7 +47,7 @@ export async function POST(request:Request){
   if(!token)return reply("Partner authentication required.",401);
   let body:Input;
   try{body=await request.json() as Input;}catch{return reply("Invalid onboarding request.",400);}
-  if(!uuid.test(body.intake_id??"")||!["prepare","save","book","approval_request","approval_verify","rc_lookup"].includes(body.action??""))return reply("Invalid onboarding request.",400);
+  if(!uuid.test(body.intake_id??"")||!["prepare","save","book","approval_request","approval_verify","rc_lookup","customer_search"].includes(body.action??""))return reply("Invalid onboarding request.",400);
   const scoped=createSupabaseWithAccessToken(token);
   const {data:{user},error:authError}=await scoped.auth.getUser(token);
   if(authError||!user)return reply("Your session has expired. Sign in again.",401);
@@ -71,6 +71,39 @@ export async function POST(request:Request){
   const dup=await loadPolicyIntakeDuplicateMatches(admin,[intake]);
   if(!dup.ok)return reply("Duplicate verification is unavailable.",503);
   if(dup.matches.has(intake.id))return reply("Duplicate intakes cannot be onboarded.",409);
+  if(body.action==="customer_search"){
+    // Only the currently assigned authorised reviewer can search customer records
+    // for the selected intake. Mirror the Operations Portal customer scope.
+    if(intake.status!=="in_review"||intake.assigned_to_profile_id!==user.id)
+      return reply("You are no longer the assigned reviewer.",409);
+    const queryText=typeof body.search==="string"?body.search.trim():"";
+    if(queryText.length<2||queryText.length>80)return good({customers:[]});
+    const {data:allCustomers,error:customersError}=await admin.from("customers")
+      .select("id,contact_name,company_name,phone,email")
+      .order("contact_name",{ascending:true}).limit(750)
+      .returns<Array<{id:string;contact_name:string;company_name:string|null;phone:string;email:string|null}>>();
+    if(customersError)return reply("Customer search is unavailable.",503);
+    let allowedCustomerIds:Set<string>|null=null;
+    if(head){
+      const downline=await getOperationsHeadDownlinePolicyScope(profile.id);
+      if(!downline.intermediaryCodes.length)return good({customers:[]});
+      const filter=operationsHeadPolicyFilter(downline);
+      const [policies,cases]=await Promise.all([
+        admin.from("policies").select("customer_id").or(filter).returns<Array<{customer_id:string}>>(),
+        admin.from("life_health_cases").select("customer_id").or(filter).returns<Array<{customer_id:string}>>(),
+      ]);
+      if(policies.error||cases.error)return reply("Customer scope is unavailable.",503);
+      allowedCustomerIds=new Set([...(policies.data??[]),...(cases.data??[])].map(row=>row.customer_id));
+    }
+    const needle=queryText.toLowerCase();
+    const customers=(allCustomers??[])
+      .filter(row=>(!allowedCustomerIds||allowedCustomerIds.has(row.id))&&
+        [row.contact_name,row.company_name??"",row.phone].some(value=>value.toLowerCase().includes(needle)))
+      .slice(0,8)
+      .map(row=>({id:row.id,name:row.company_name?.trim()||row.contact_name,
+        contactName:row.contact_name,phone:row.phone,email:row.email??""}));
+    return good({customers});
+  }
   if(body.action==="rc_lookup"){
     if(intake.status!=="in_review"||intake.assigned_to_profile_id!==user.id)return reply("You are no longer the assigned reviewer.",409);
     const creator=await hasEffectiveCapability(profile,"create_policies","edit");
