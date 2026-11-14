@@ -204,6 +204,26 @@ export async function POST(request:Request){
       fields[payoutFlat?"payoutFixedAmount":"payoutPercent"]=values.partnerPayoutValue??"";
     }
     for(const [key,value] of Object.entries(fields))form.set(key,value);
+    // Reuse the authorized Operations case creation engine: staged files are
+    // forwarded into its existing validated document attachment pipeline.
+    const {data:staged,error:stagedError}=await admin.from("policy_intake_onboarding_documents")
+      .select("document_type,storage_bucket,storage_path,file_name,mime_type,file_size")
+      .eq("intake_id",intake.id).eq("business_line",d.businessLine)
+      .returns<Array<{document_type:string;storage_bucket:string;storage_path:string;file_name:string;mime_type:string;file_size:number}>>();
+    if(stagedError)return reply("Onboarding documents are unavailable. Retry before creating the case.",503);
+    const docFields:Record<string,string>={
+      policy_copy:"policyCopy",proposal_form:"proposalForm",kyc:"kyc",other_document:"otherDocument",
+    };
+    for(const row of staged??[]){
+      const field=docFields[row.document_type];
+      if(!field||row.file_size<=0||row.file_size>4*1024*1024)
+        return reply("An onboarding document has an invalid type or size.",400);
+      const {data:blob,error:downloadError}=await admin.storage.from(row.storage_bucket).download(row.storage_path);
+      if(downloadError||!blob)return reply("Could not load an onboarding document. Retry before creating the case.",503);
+      const bytes=await blob.arrayBuffer();
+      if(bytes.byteLength!==row.file_size)return reply("Onboarding document changed during preparation.",409);
+      form.set(field,new File([bytes],row.file_name,{type:row.mime_type}));
+    }
     // Claim the intake atomically before any customer/case write: simultaneous
     // taps cannot create multiple Life/Health cases from the same intake.
     const {data:claimed,error:claimError}=await admin.from("policy_intake_requests")
