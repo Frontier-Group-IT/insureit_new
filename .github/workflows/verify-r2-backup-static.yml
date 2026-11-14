@@ -15,6 +15,7 @@ on:
       - '.github/workflows/insureit-postgres-r2-v2-manual.yml'
       - '.github/workflows/insureit-postgres-r2-v2-restore-verify.yml'
       - '.github/workflows/insureit-managed-recovery-preflight.yml'
+      - '.github/workflows/insureit-managed-recovery-import-r4.yml'
   workflow_dispatch:
 
 permissions:
@@ -30,7 +31,7 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m pip install boto3==1.35.99 cryptography==44.0.2 pyyaml==6.0.2 'psycopg[binary]==3.2.9'
-      - run: python -m py_compile scripts/backup/supabase_storage_to_r2.py scripts/backup/verify_r2_restore.py scripts/backup/monitor_github_backup.py scripts/backup/monitor_postgres_backup.py scripts/backup/postgres_to_r2.py scripts/backup/verify_postgres_r2_restore.py scripts/backup/classify_pg_restore_error.py scripts/backup/audit_postgres_archive_coverage.py scripts/backup/verify_postgres_offline_row_counts.py scripts/backup/summarize_pg_restore_errors.py scripts/backup/diagnose_pg_restore_data.py scripts/backup/audit_postgres_copy_targets.py scripts/backup/postgres_v2_to_r2.py scripts/backup/verify_postgres_v2_r2.py scripts/backup/verify_postgres_v2_rows.py scripts/backup/audit_postgres_v2_toc.py scripts/backup/prepare_pg_dump_connection.py scripts/backup/allow_no_acl_restore_fallback.py scripts/backup/audit_storage_source_manifest.py scripts/backup/managed_recovery_preflight.py scripts/backup/plan_recovery_storage_sample.py
+      - run: python -m py_compile scripts/backup/supabase_storage_to_r2.py scripts/backup/verify_r2_restore.py scripts/backup/monitor_github_backup.py scripts/backup/monitor_postgres_backup.py scripts/backup/postgres_to_r2.py scripts/backup/verify_postgres_r2_restore.py scripts/backup/classify_pg_restore_error.py scripts/backup/audit_postgres_archive_coverage.py scripts/backup/verify_postgres_offline_row_counts.py scripts/backup/summarize_pg_restore_errors.py scripts/backup/diagnose_pg_restore_data.py scripts/backup/audit_postgres_copy_targets.py scripts/backup/postgres_v2_to_r2.py scripts/backup/verify_postgres_v2_r2.py scripts/backup/verify_postgres_v2_rows.py scripts/backup/audit_postgres_v2_toc.py scripts/backup/prepare_pg_dump_connection.py scripts/backup/allow_no_acl_restore_fallback.py scripts/backup/audit_storage_source_manifest.py scripts/backup/managed_recovery_preflight.py scripts/backup/plan_recovery_storage_sample.py scripts/backup/prepare_managed_sql_restore_list.py scripts/backup/execute_managed_sql_restore.py scripts/backup/verify_managed_sql_rows.py
       - run: python -m unittest discover -s scripts/backup -p 'test_*.py' -v
       - name: Validate workflow safety guard
         run: |
@@ -290,6 +291,49 @@ jobs:
           assert 'SNAPSHOT_STAMP' in db_v2_reader
           assert 'snapshot={snapshot}' in db_v2_reader
           print('Both read-only R1/R3 jobs can reject R2 latest-pointer snapshot drift')
+          managed_r4 = yaml.safe_load(pathlib.Path('.github/workflows/insureit-managed-recovery-import-r4.yml').read_text())
+          r4triggers = managed_r4.get('on', managed_r4.get(True, {}))
+          assert 'workflow_dispatch' in r4triggers
+          assert 'push' not in r4triggers and 'pull_request' not in r4triggers and 'schedule' not in r4triggers
+          inputs = r4triggers['workflow_dispatch']['inputs']
+          assert inputs['execute_target_import']['default'] is False
+          assert inputs['confirm_isolation']['default'] is False
+          assert inputs['expected_db_snapshot']['required'] is True
+          assert managed_r4['permissions'] == {'contents':'read'}
+          job4 = managed_r4['jobs']['managed_r4']
+          assert job4['environment'] == 'insureit-recovery-isolated'
+          assert 'refs/heads/main' in job4['if'] and 'workflow_dispatch' in job4['if']
+          assert "inputs.confirm_target_ref == 'klnodxnmlqbofolxxrsr'" in job4['if']
+          assert 'inputs.confirm_isolation' in job4['if']
+          r4steps = str(job4['steps'])
+          assert 'RECOVERY_R2_READONLY_ACCESS_KEY_ID' in r4steps
+          assert 'RECOVERY_R2_READONLY_SECRET_ACCESS_KEY' in r4steps
+          assert 'RECOVERY_DB_BACKUP_ENCRYPTION_KEY' in r4steps
+          assert 'INSUREIT_RECOVERY_DATABASE_URL' in r4steps
+          assert 'execute_managed_sql_restore.py' in r4steps
+          assert '--dry-run' in r4steps and '--apply' in r4steps
+          assert 'verify_managed_sql_rows.py' in r4steps
+          assert 'prepare_managed_sql_restore_list.py' in r4steps
+          assert 'SUPABASE_SERVICE_ROLE_KEY' not in r4steps
+          assert 'pg_restore --clean' not in r4steps
+          assert 'delete_object' not in r4steps and 'put_object' not in r4steps
+          assert 'rm -rf "$RUNNER_TEMP/insureit-r4-private"' in r4steps
+          sql_runner = pathlib.Path('scripts/backup/execute_managed_sql_restore.py').read_text()
+          assert '"--single-transaction"' in sql_runner
+          assert '"--exit-on-error"' in sql_runner
+          assert '"--no-owner"' in sql_runner and '"--no-acl"' in sql_runner
+          assert '"--network", "host"' in sql_runner
+          assert 'validate_target(url)' in sql_runner
+          assert 'RECOVERY_OPERATOR_CONFIRMED' in sql_runner
+          assert 'RECOVERY_EXPECTED_DB_SNAPSHOT' in sql_runner
+          assert 'PGSSLMODE' in sql_runner and 'verify-full' in sql_runner
+          assert '"--clean"' not in sql_runner and '--if-exists' not in sql_runner
+          toc_selector = pathlib.Path('scripts/backup/prepare_managed_sql_restore_list.py').read_text()
+          assert 'TABLE DATA", "storage"' not in toc_selector
+          assert '"POLICY", "storage"' in toc_selector
+          assert '"TABLE DATA", "auth"' in toc_selector
+          assert 'MIN_PUBLIC_TABLES' in toc_selector and 'MIN_AUTH_DATA' in toc_selector
+          print('R4 managed SQL import is manual, target-locked, atomic and omits orphaned Storage metadata')
           print('Managed recovery R0/R1 preflight isolated, manual-only and read-only')
           print('Daily encrypted V2 backup and protected manual restore workflow guards verified')
           print('Manual offline database recovery rehearsal guards verified')
