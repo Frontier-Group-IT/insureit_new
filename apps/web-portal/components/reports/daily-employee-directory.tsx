@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { DailyReportQuickFilters } from "@/components/reports/daily-report-quick-filters";
 import type { DailyActivityQuery } from "@/lib/reports/daily-activity";
 import type { ReportEmployee } from "@/lib/reports/daily-employee-directory";
 
