@@ -78,8 +78,7 @@ export default async function DailyReportPage({ searchParams }: Props) {
       </section>
       {(isSelf || chosenPerson) && selfHistory && !error ? (
         <DailySelfActivityPanel data={selfHistory} linkFor={linkFor}
-          reportMode={isSelf ? "self" : "employee"}
-          backToEmployees={isSelf ? undefined : linkFor({scope:"all",person:"",activity:"",period:"all",page:"1"})}/>
+          reportMode={isSelf ? "self" : "employee"}/>
       ) : !isSelf && !chosenPerson && employeeDirectory && !error ? (
         <DailyEmployeeDirectory people={employeeDirectory.people} search={query.employee??""} linkFor={linkFor}/>
       ) : error ? (
@@ -87,9 +86,6 @@ export default async function DailyReportPage({ searchParams }: Props) {
           The authorized employee report could not be loaded. No records were changed.
         </section>
       ) : null}
-      <p className="px-1 text-[10px] leading-5 text-[#7B8799]">
-        Reports show existing recorded events and attributable creation/finalization history. Some older events, unlogged workflow changes, and actions with no verified employee identity may be absent. System records are never attributed to an employee by guesswork.
-      </p>
     </div>
   );
 }
