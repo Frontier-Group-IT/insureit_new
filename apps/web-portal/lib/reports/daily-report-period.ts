@@ -27,9 +27,7 @@ export function resolveDailyReportPeriod(query:DailyReportPeriodQuery, now=new D
   } else {
     const todayStart=selfDateWindow(today);
     if(!todayStart) throw new Error("Unable to resolve IST reporting date");
-    from=new Date(new Date(todayStart.from).getTime()-89*86400000)
-      .toLocaleDateString("en-CA",{timeZone:"Asia/Kolkata",year:"numeric",month:"2-digit",day:"2-digit"});
-    // en-CA formatting can vary by runtime; derive the local calendar date via parts.
+    // Calculate 90 calendar days in the portal's Asia/Kolkata time zone.
     const earlier=new Date(new Date(todayStart.from).getTime()-89*86400000);
     const earlierParts=new Intl.DateTimeFormat("en-GB",{
       timeZone:"Asia/Kolkata",year:"numeric",month:"2-digit",day:"2-digit",
@@ -44,6 +42,6 @@ export function dailyReportRangeWindow(from?:string,to?:string) {
   if(!from && !to) return null;
   const start=from?selfDateWindow(from):null;
   const end=to?selfDateWindow(to):null;
-  if(!start || !end || from!>to!) throw new Error("Invalid Daily Report date range");
+  if(!start || !end || from! > to!) throw new Error("Invalid Daily Report date range");
   return {from:start.from,to:end.to};
 }
