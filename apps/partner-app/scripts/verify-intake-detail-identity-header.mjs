@@ -11,13 +11,15 @@ assert.doesNotMatch(header, /style=\{styles\.intakeNumber\}>\{row\.intake_number
 assert.match(header, /row\.customer_mobile, fields\.get\('insured_name'\)/, 'Second line includes mobile and insured name');
 assert.match(header, /fields\.get\('customer_name'\)/, 'Fallback to customer name when insured name absent');
 assert.match(header, /fields\.get\('name_of_insured'\)/, 'Fallback to name of insured when needed');
+assert.doesNotMatch(header, /Customer name pending/, 'Absent customer name shows only mobile');
+assert.doesNotMatch(detail, /The final policy was linked and this intake is closed/, 'Completed closed-copy removed');
 assert.match(header, /row\.lead_source_name \|\| 'Lead source unavailable'/, 'Third line includes actual lead source');
 assert.match(header, /row\.submitted_by_name\?\.trim\(\) \|\| 'Submitter unavailable'/, 'Third line includes actual submitter');
 assert.doesNotMatch(header, /vehicle_registration_number/, 'Remove old vehicle registration / pending header');
 assert.match(header, /numberOfLines=\{2\}/, 'Long policy numbers and names should be readable');
 assert.match(header, /statusBadgeStyle\(row\)/, 'Preserve status badge');
 assert.match(header, /formatDate\(row.updated_at\)/, 'Preserve update timestamp');
-assert.match(header, /<IntakeProgress row=\{row\}/, 'Preserve status timeline');
+assert.match(header, /row\.status !== 'duplicate' && row\.status !== 'completed' \? <IntakeProgress row=\{row\}/, 'Completed and duplicate pages do not show progress');
 assert.match(listing, /field\(row, 'insured_name'\) \|\| field\(row, 'customer_name'\) \|\| field\(row, 'name_of_insured'\)/, 'Detail follows list identity hierarchy');
 assert.match(api, /resolveIntakeSubmitterNames\(admin, \[intake\]\)/, 'Detail API resolves submitter only after authorized scoped lookup');
 assert.match(api, /intake: match \? \{ \.\.\.namedIntake, status: "duplicate" \} : namedIntake/, 'Submitter name is returned for duplicate and ordinary statuses');
