@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
+import { PartnerPolicyCalendarDialog } from './partner-policy-calendar-dialog';
 
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
 function parseIso(value: string) {
@@ -47,7 +48,8 @@ export function PartnerPolicyDateField({label,value,onChange,required=false,hide
         <Ionicons name="calendar-outline" size={17} color="#315B9A"/>
       </Pressable>
     )}
-    {pickerOpen&&Platform.OS!=='web'?<DateTimePicker value={selected} mode="date" display={Platform.OS==='ios'?'spinner':'default'} onChange={select}/>:null}
+    {Platform.OS==='android'?<PartnerPolicyCalendarDialog visible={pickerOpen} value={selected} onCancel={()=>setPickerOpen(false)} onConfirm={date=>{onChange(toIso(date));setPickerOpen(false);}}/>:null}
+    {pickerOpen&&Platform.OS==='ios'?<DateTimePicker value={selected} mode="date" display="spinner" onChange={select}/>:null}
     {pickerOpen&&Platform.OS==='ios'?<Pressable accessibilityRole="button" onPress={()=>setPickerOpen(false)} style={styles.done}><Text style={styles.doneText}>Done</Text></Pressable>:null}
   </View>;
 }
