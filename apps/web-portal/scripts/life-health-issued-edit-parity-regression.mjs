@@ -64,11 +64,15 @@ assert.ok(form.includes('bg-[#17365D] text-white') && form.includes('rounded-xl 
 assert.ok(form.includes('hover:bg-[#EEF4FC]') && form.includes('aria-expanded={infoExpanded}'), "Hover styling and full section expansion state must remain accessible");
 assert.ok(form.includes('<StandardActivityStatusCard items={activityItems} emptyText="Activity not recorded" embedded/>'), "Embedded Activity Status must not render a duplicated accordion heading");
 assert.ok(!form.includes('emptyText="Activity not recorded" open'), "Activity Status must not be forced open");
-assert.ok(form.includes('md:grid-cols-3 xl:col-span-4 xl:grid-cols-3'), "Case premium, Payment mode and Remarks must occupy one three-column row");
+const issuedSection = form.slice(form.indexOf('<Section number="04" title="Issued policy details">'), form.indexOf('</Section>',form.indexOf('<Section number="04" title="Issued policy details">')));
+const issuedLabels = [...issuedSection.matchAll(/(?:<Field|<Select) label="([^"]+)"|<label className=\{labelClass\}>Remarks<\/label>/g)].map(match=>match[1]||"Remarks");
+assert.deepEqual(issuedLabels.slice(-5), ["Final premium","Sum assured / insured","Case premium amount","Payment mode","Remarks"], "Case premium follows sum insured in row two, with payment mode and remarks on row three");
+assert.ok(!issuedSection.includes('md:grid-cols-3 xl:col-span-4 xl:grid-cols-3'), "Remove the former nested three-column premium/payment row");
 assert.ok(form.includes('label="Case premium amount"') && form.includes('label="Payment mode"') && form.includes('>Remarks</label>'), "The row retains Premium Amount, Payment Mode and Remarks labels");
 assert.ok(form.includes('>Add Remark</button>') && !form.includes('>Open</span></button>'), "Remarks field uses a single Add Remark button without redundant Open text");
 assert.ok(form.includes('setRemarksModalOpen(false);\n        setInfoTab("remarks");\n        setInfoExpanded(true);'), "Saving an added remark must display the expanded Remarks history immediately");
-assert.ok(form.includes('Saved remarks · Read only') && !form.includes('set("remarks",e.target.value)'), "Previously saved remarks must not be editable");
+assert.ok(!form.includes('Saved remarks · Read only') && form.includes('{savedRemarks.trim()||"No remarks added yet."}'), "Remove redundant saved remarks caption but retain saved history");
+assert.ok(!form.includes('set("remarks",e.target.value)'), "Previously saved remarks must not be editable");
 assert.ok(form.includes('appendIssuedLifeHealthRemark(data)') && form.includes('role="dialog" aria-modal="true" aria-label="Add policy remark"'), "New remarks use the authorized add-only popup");
 assert.ok(action.includes('export async function appendIssuedLifeHealthRemark'), "Remark append must be authorized on the server");
 assert.ok(action.includes('await requirePolicyEditor(policyId)') && action.includes('validatePolicyCase(policyId,caseId)'), "Remark append checks policy permissions and case linkage");
