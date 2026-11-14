@@ -174,8 +174,11 @@ export async function loadSelfActivityHistory(
     if(!ids.length) continue;
     const {data,error}=await admin.from(table).select(`id,${column}`).in("id",ids);
     if(error) continue;
-    const lookup=new Map((data??[] as Record<string,unknown>[]).map(x=>[x.id,x[column]]));
-    for(const row of visible) if(row.table===table && typeof lookup.get(row.recordId)==="string") row.reference=lookup.get(row.recordId) as string;
+    const lookup = new Map<string,string>();
+    for(const item of (data??[]) as unknown as Record<string,unknown>[]) {
+      if(typeof item.id==="string" && typeof item[column]==="string") lookup.set(item.id,item[column] as string);
+    }
+    for(const row of visible) if(row.table===table && row.recordId && lookup.has(row.recordId)) row.reference=lookup.get(row.recordId)!;
   }
   return {selfName,employeeCode,categories,category,rows:visible,page,hasNext:filtered.length>start+30,
     total:all.length,selectedCount:filtered.length,partial,day:window?options.day??"":""};
