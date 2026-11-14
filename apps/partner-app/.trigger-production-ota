@@ -1,11 +1,11 @@
 Partner production OTA trigger
-release=partner-motor-operations-year-commercial-cards-pr-4486
+release=partner-life-health-create-policy-pr-4503
 source=verified-merged-main
-reason=user-approved-operations-motor-onboarding-parity
+reason=user-requested-publish-pr-4503
 channel=production
 runtime=0.2.0
 requested=2026-11-14
 no_native_build=true
 no_apk=true
 no_aab=true
-backend=no_changes
+backend=separate-deployment-required
