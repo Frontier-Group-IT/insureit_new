@@ -42,14 +42,14 @@ export function DailySelfActivityPanel({data,linkFor,reportMode="self"}:Props) {
       ) : null}
       {!data.category ? (
         data.categories.length ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+          <div className="grid grid-cols-1 gap-2 p-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
             {data.categories.map(item=>(
               <Link key={item.name} prefetch={false} href={linkFor({activity:item.name,page:"1"})}
-                className="flex min-w-0 items-center justify-between gap-2 border-b border-r border-[#edf1f6] px-3 py-3 hover:bg-[#f6f9fd] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#5275AA]">
-                <span className="min-w-0 text-[11px] font-semibold leading-4 text-[#2f4360]">{item.name}</span>
+                className="group flex min-h-[54px] min-w-0 items-center justify-between gap-2 rounded-xl border border-[#dce5f1] bg-gradient-to-br from-white to-[#f7faff] px-3 py-2.5 shadow-[0_1px_3px_rgba(23,54,93,0.05)] transition-[transform,background-color,border-color,box-shadow] duration-200 ease-out hover:-translate-y-0.5 hover:border-[#7ba7dc] hover:from-[#f5f9ff] hover:to-[#e9f2ff] hover:shadow-[0_5px_14px_rgba(23,54,93,0.13)] active:translate-y-0 active:shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315b9a] motion-reduce:transform-none motion-reduce:transition-none">
+                <span className="min-w-0 text-[11px] font-semibold leading-4 text-[#234368] transition-colors duration-200 group-hover:text-[#123c70]">{item.name}</span>
                 <span className="flex shrink-0 items-center gap-1.5">
-                  <span className="min-w-[32px] rounded-lg bg-[#edf3fa] px-2 py-1 text-center text-[12px] font-bold tabular-nums text-[#17365d]">{item.count.toLocaleString("en-IN")}</span>
-                  <span aria-hidden="true" className="text-[13px] text-[#50719d]">›</span>
+                  <span className="min-w-[32px] rounded-lg border border-[#dce6f3] bg-[#edf3fa] px-2 py-1 text-center text-[12px] font-bold tabular-nums text-[#17365d] transition-colors duration-200 group-hover:border-[#abc9ec] group-hover:bg-[#dcecff]">{item.count.toLocaleString("en-IN")}</span>
+                  <span aria-hidden="true" className="text-[14px] font-bold text-[#50719d] transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-[#174b80] motion-reduce:transform-none">›</span>
                 </span>
               </Link>
             ))}
