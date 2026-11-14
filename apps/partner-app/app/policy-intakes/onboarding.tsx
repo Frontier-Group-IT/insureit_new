@@ -476,13 +476,20 @@ export default function NativePolicyOnboarding(){
     </View>;
   };
   // Preserve Motor's newer source ownership rendering; compact the other policy types.
+  const sourceIsVerified=Boolean(productType==='Non Motor'&&data?.sourceMeta&&draft&&
+    data.sourceMeta.name.trim().toLowerCase()===draft.leadSource.trim().toLowerCase()&&
+    data.sourceMeta.code===draft.intermediaryCode);
   const sourceMeta=(key:'rmName'|'intermediaryCode',label:string)=><View style={styles.sourceMeta}>
     <Text style={styles.sourceMetaLabel}>{label}</Text>
-    {productType==='Non Motor'&&data?.sourceMeta
-      ? <Text style={styles.sourceMetaInput}>{key==='rmName'?draft?.rmName||data.sourceMeta.rmName:draft?.intermediaryCode||data.sourceMeta.code}</Text>
+    {sourceIsVerified&&data?.sourceMeta
+      ? <Text style={styles.sourceMetaInput}>{key==='rmName'?data.sourceMeta.rmName||draft?.rmName:data.sourceMeta.code}</Text>
       : <TextInput accessibilityLabel={label} value={draft?.[key]??''} onChangeText={value=>update(key,value)}
           placeholder={productType==='Non Motor'?'':label==='RM'?'Assigned RM':'Source code'}
           placeholderTextColor="#98A6B8" style={styles.sourceMetaInput}/>}
+    {sourceIsVerified&&data?.sourceMeta&&key==='rmName'&&data.sourceMeta.rmCode
+      ?<Text style={styles.fieldMeta}>ID · {data.sourceMeta.rmCode}</Text>:null}
+    {sourceIsVerified&&data?.sourceMeta&&key==='intermediaryCode'&&data.sourceMeta.mobile
+      ?<Text style={styles.fieldMeta}>☎ {data.sourceMeta.mobile}</Text>:null}
   </View>;
   const sourceSection=()=> <View style={styles.section}>
     <View style={styles.sectionHead}><Text style={styles.number}>01</Text><Text style={styles.sectionTitle}>Policy source & ownership</Text></View>
