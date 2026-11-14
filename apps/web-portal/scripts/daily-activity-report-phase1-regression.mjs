@@ -8,7 +8,8 @@ const source = read("../lib/reports/daily-activity.ts");
 
 assert.match(nav, /href:"\/reports",label:"Reporting Workspace"[^\n]+href:"\/reports\/daily",label:"Daily Report"/, "Daily Report is located under Reporting Workspace");
 assert.match(page, /await requireCapability\("view_reports"\)/, "Daily Report uses server-side report permission");
-assert.match(page, /loadDailyActivityReport\(profile, query\)/, "Daily Report uses server-side scoped loader");
+assert.match(page, /loadDailyReportEmployeeDirectory\(profile\)/, "All mode loads a server-scoped employee directory");
+assert.match(page, /assertDailyReportEmployeeAllowed\(chosenPerson, employeeDirectory\)/, "All mode authorizes the chosen employee");
 assert.match(source, /getEmployeeAccessScope\(viewer\.id, viewer\.role, "view_reports"\)/, "All tab resolves report-specific hierarchy");
 assert.match(source, /resolveDailyReportActorIds\(viewer\.id, scope, access\)/, "Self/All actor scoping is centralized and tested");
 assert.match(source, /import \{ resolveDailyReportActorIds \}/, "Report reader imports fail-closed scoped actor resolver");
@@ -24,7 +25,7 @@ assert.match(source, /source:"Record history"/, "Reconstructed history source is
 assert.match(page, /Reports show existing recorded events and attributable creation\/finalization history/, "Incomplete historical coverage is disclosed");
 assert.match(page, /type="date"/, "Date filter is present");
 assert.match(page, /name="employee"/, "Employee search is present");
-assert.match(page, /name="type"/, "Activity type filtering is present");
+assert.match(page, /name="activity"/, "Activity category drilldown is available");
 assert.match(page, /href=\{linkFor\(\{scope:"self"/, "Self tab has separate link");
 assert.match(page, /href=\{linkFor\(\{scope:"all"/, "All tab has separate link");
 assert.doesNotMatch(source, /\.insert\(|\.update\(|\.delete\(|\.upsert\(|\.rpc\(/, "Phase 1 is strictly read-only");
