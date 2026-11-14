@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState } from "react";
-import { AlertCircle, ArrowUpRight, CheckCircle2, ClipboardCheck, Loader2, PencilLine, RefreshCw, Search, ShieldAlert, Sparkles } from "lucide-react";
-import { bookSemiAutoIntake, checkSemiAutoIntake, editSemiAutoIntake, type SemiAutoActionResult } from "@/app/development/ai-policy-onboarding/actions";
+import { AlertCircle, ArrowUpRight, CheckCircle2, ClipboardCheck, FileSearch, Loader2, PencilLine, RefreshCw, Search, ShieldAlert, Sparkles } from "lucide-react";
+import { applySemiAutoN8nIntake, bookSemiAutoIntake, checkSemiAutoIntake, editSemiAutoIntake, previewSemiAutoN8nIntake, type SemiAutoActionResult, type SemiAutoN8nResult } from "@/app/development/ai-policy-onboarding/actions";
 
 export type SemiAutoIntakeRow = {
   id: string;
@@ -16,6 +16,7 @@ export type SemiAutoIntakeRow = {
   ocr_status: string;
   created_at: string;
   assigned_to_profile_id: string | null;
+  n8n_enabled?: boolean;
 };
 
 const humanStatus: Record<string, string> = {
@@ -34,7 +35,9 @@ export function SemiAutoPolicyWorkspace({ rows, profileId }: { rows: SemiAutoInt
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [result, setResult] = useState<SemiAutoActionResult | null>(null);
-  const [busy, setBusy] = useState<"checking" | "booking" | "editing" | null>(null);
+  const [busy, setBusy] = useState<"checking" | "booking" | "editing" | "extracting" | "applying" | null>(null);
+  const [n8nResult, setN8nResult] = useState<SemiAutoN8nResult | null>(null);
+  const [n8nNotice, setN8nNotice] = useState<string | null>(null);
   const [done, setDone] = useState<{ policyCode: string; policyId: string } | null>(null);
   const [takeover, setTakeover] = useState<{ intakeId: string; reviewerName: string } | null>(null);
   const selected = rows.find(row => row.id === selectedId);
@@ -44,14 +47,15 @@ export function SemiAutoPolicyWorkspace({ rows, profileId }: { rows: SemiAutoInt
     return rows.filter(row => [row.intake_number, row.lead_source_name, row.customer_mobile, row.status, row.ocr_status].join(" ").toLowerCase().includes(query));
   }, [rows, search]);
   const available = result?.ready === true && result.issues.length === 0;
+  const n8nEnabled = selected?.n8n_enabled === true;
   const isWaiting = busy !== null;
 
   async function selectRow(id: string) {
     const next = ++requestId.current;
     if (selectedId === id) {
-      setSelectedId(null); setResult(null); setDone(null); setBusy(null); setTakeover(null); return;
+      setSelectedId(null); setResult(null); setDone(null); setBusy(null); setTakeover(null); setN8nResult(null); setN8nNotice(null); return;
     }
-    setSelectedId(id); setResult(null); setDone(null); setTakeover(null); setBusy("checking");
+    setSelectedId(id); setResult(null); setDone(null); setTakeover(null); setN8nResult(null); setN8nNotice(null); setBusy("checking");
     try {
       const assessment = await checkSemiAutoIntake(id);
       if (requestId.current === next) setResult(assessment);
@@ -71,6 +75,54 @@ export function SemiAutoPolicyWorkspace({ rows, profileId }: { rows: SemiAutoInt
       if (requestId.current === next) setResult(assessment);
     } catch {
       if (requestId.current === next) setResult({ ok: false, ready: false, issues: [{ section: "Intake", field: "Readiness check", message: "Could not verify the Intake. Please retry." }] });
+    } finally {
+      if (requestId.current === next) setBusy(null);
+    }
+  }
+
+  async function previewN8n() {
+    if (!selectedId || !n8nEnabled || isWaiting) return;
+    const next = ++requestId.current;
+    setBusy("extracting"); setN8nResult(null); setN8nNotice(null);
+    try {
+      const response = await previewSemiAutoN8nIntake(selectedId);
+      if (requestId.current === next) setN8nResult(response);
+    } catch {
+      if (requestId.current === next) setN8nResult({
+        ok: false, error: "The secured n8n preview could not be completed. Existing OCR and onboarding were not changed.",
+      });
+    } finally {
+      if (requestId.current === next) setBusy(null);
+    }
+  }
+
+  async function applyN8n() {
+    if (!selectedId || !n8nResult?.ok || !n8nResult.preview.canApply || isWaiting) return;
+    const confirmed = window.confirm(
+      "Apply the reviewed n8n extraction to this failed OCR Intake? Confirm all proposed fields against the original PDF. This will replace only empty failed OCR data, change the Intake to Ready for Review, and will NOT create a customer, vehicle or policy. Normal draft correction and explicit booking approval remain mandatory.",
+    );
+    if (!confirmed) return;
+    const next = ++requestId.current;
+    setBusy("applying"); setN8nNotice(null);
+    try {
+      const response = await applySemiAutoN8nIntake(
+        selectedId, n8nResult.preview.documentId, n8nResult.preview.fingerprint, true,
+      );
+      if (requestId.current !== next) return;
+      if (response.ok) {
+        setN8nResult(null);
+        setN8nNotice("Validated OCR fields saved to this Intake. Review/correct the canonical draft and run Recheck. No policy has been booked.");
+        setResult(await checkSemiAutoIntake(selectedId));
+        router.refresh();
+      } else {
+        setN8nNotice(response.error ?? "The Intake has changed. Recheck before attempting to apply.");
+        setN8nResult(null);
+      }
+    } catch {
+      if (requestId.current === next) {
+        setN8nResult(null);
+        setN8nNotice("The save response was interrupted. Recheck the Intake and its original copy before attempting again.");
+      }
     } finally {
       if (requestId.current === next) setBusy(null);
     }
@@ -199,9 +251,48 @@ export function SemiAutoPolicyWorkspace({ rows, profileId }: { rows: SemiAutoInt
                 <p className="text-[9px] font-bold uppercase tracking-wide text-[#75859a]">Selected Intake</p>
                 <p className="mt-1 text-[13px] font-bold text-[#183b68]">{selected?.intake_number ?? "Intake selected"}</p>
               </div>
-              <button type="button" onClick={() => { void retry(); }} disabled={isWaiting} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#d0deef] bg-white px-2.5 text-[10px] font-semibold text-[#29558d] disabled:opacity-50"><RefreshCw className="h-3.5 w-3.5"/>Recheck</button>
+              <div className="flex flex-wrap items-center gap-2">
+                {n8nEnabled ? <button type="button" onClick={() => { void previewN8n(); }} disabled={isWaiting || Boolean(done)}
+                  className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#cbd9eb] bg-white px-2.5 text-[10px] font-semibold text-[#24518a] disabled:opacity-50">
+                  {busy === "extracting" ? <Loader2 className="h-3.5 w-3.5 animate-spin"/> : <FileSearch className="h-3.5 w-3.5"/>}Preview n8n PDF
+                </button> : null}
+                <button type="button" onClick={() => { void retry(); }} disabled={isWaiting} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#d0deef] bg-white px-2.5 text-[10px] font-semibold text-[#29558d] disabled:opacity-50"><RefreshCw className="h-3.5 w-3.5"/>Recheck</button>
+              </div>
             </div>
             {busy === "checking" ? <div className="mt-4 flex items-center gap-2 rounded-lg bg-blue-50 p-3 text-[11px] text-blue-800"><Loader2 className="h-4 w-4 animate-spin"/>Checking document, draft, duplicates, source and booking rules...</div> : null}
+            {busy === "extracting" ? <div className="mt-3 flex items-center gap-2 rounded-lg bg-blue-50 p-3 text-[11px] text-blue-800"><Loader2 className="h-4 w-4 animate-spin"/>Reading current private PDF through the n8n review-only bridge...</div> : null}
+            {busy === "applying" ? <div className="mt-3 flex items-center gap-2 rounded-lg bg-blue-50 p-3 text-[11px] text-blue-800"><Loader2 className="h-4 w-4 animate-spin"/>Revalidating and saving the confirmed failed OCR recovery...</div> : null}
+            {n8nNotice ? <p role="status" className="mt-3 rounded-lg border border-[#c8d8eb] bg-[#f5f9ff] p-3 text-[11px] leading-5 text-[#284d77]">{n8nNotice}</p> : null}
+            {n8nResult && !done ? (n8nResult.ok ? (
+              <section aria-label="n8n extraction review" className="mt-3 rounded-xl border border-[#c8d8eb] bg-[#f8fbff] p-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-[11px] font-bold text-[#214f82]">n8n PDF extraction · Review only</p>
+                  <span className="text-[10px] font-semibold text-[#3e648e]">{n8nResult.preview.fields.length} fields · {n8nResult.preview.changedFieldCount} new/different</span>
+                </div>
+                <p className="mt-1 text-[10px] leading-4 text-[#5e7188]">
+                  Compare each value with the original policy copy. Confidence scores are not available. This preview does not change the Intake, draft or booking state.
+                </p>
+                <div className="mt-2 max-h-[320px] overflow-auto rounded-lg border border-[#d9e5f1] bg-white">
+                  <table className="w-full min-w-[320px] text-left text-[10px]">
+                    <thead className="sticky top-0 bg-[#eaf2fc] text-[#2d5076]"><tr><th className="p-2">Field</th><th className="p-2">Extracted value</th><th className="p-2">Evidence</th></tr></thead>
+                    <tbody className="divide-y divide-[#e7edf5]">{n8nResult.preview.fields.map(field => (
+                      <tr key={field.key}>
+                        <td className="p-2 font-semibold text-[#314864]">{field.label}</td>
+                        <td className="break-words p-2 text-[#152b49]">{field.value}</td>
+                        <td className="p-2 text-[#64748b]">p.{field.page ?? "?"} · {field.evidence}</td>
+                      </tr>
+                    ))}</tbody>
+                  </table>
+                </div>
+                {n8nResult.preview.warnings.length ? <p className="mt-2 text-[10px] text-amber-800">Warnings: {n8nResult.preview.warnings.join("; ")}</p> : null}
+                {n8nResult.preview.canApply ? (
+                  <button type="button" onClick={() => { void applyN8n(); }} disabled={isWaiting}
+                    className="mt-3 inline-flex min-h-9 w-full items-center justify-center gap-2 rounded-lg border border-[#acc8e2] bg-[#edf5ff] px-3 text-[10.5px] font-bold text-[#245489] disabled:opacity-50">
+                    <CheckCircle2 className="h-3.5 w-3.5"/>Apply reviewed fields to failed OCR
+                  </button>
+                ) : <p className="mt-2 text-[10px] leading-4 text-[#60738b]">Read-only proposal. Applying n8n fields requires a separate enabled recovery gate and is limited to failed Intakes with no saved OCR or draft. Use Open &amp; correct fields for other cases.</p>}
+              </section>
+            ) : <p role="alert" className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-[11px] leading-5 text-amber-900">{n8nResult.error}</p>) : null}
             {result && !done && (
               <>
                 {available ? <div className="mt-3 flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-[11px] text-emerald-900"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0"/>Pre-booking readiness checks passed. This is not a guarantee: the canonical booking transaction will perform its own live conflict and authorization checks.</div>
