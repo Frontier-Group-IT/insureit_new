@@ -16,6 +16,9 @@ assert.match(header, /row\.submitted_by_name\?\.trim\(\) \|\| 'Submitter unavail
 assert.doesNotMatch(header, /vehicle_registration_number/, 'Remove old vehicle registration / pending header');
 assert.match(header, /numberOfLines=\{2\}/, 'Long policy numbers and names should be readable');
 assert.match(header, /statusBadgeStyle\(row\)/, 'Preserve status badge');
+assert.doesNotMatch(detail, /The uploaded policy copy is being read automatically\./, 'Remove redundant automatic-reading message from Partner Policy Intake detail');
+assert.match(header, /row\.status === 'processing' && row\.ocr_status !== 'failed'/, 'Hide only routine processing help, preserving extraction-failure guidance');
+
 assert.match(header, /formatDate\(row.updated_at\)/, 'Preserve update timestamp');
 assert.match(header, /<IntakeProgress row=\{row\}/, 'Preserve status timeline');
 assert.match(listing, /field\(row, 'insured_name'\) \|\| field\(row, 'customer_name'\) \|\| field\(row, 'name_of_insured'\)/, 'Detail follows list identity hierarchy');
