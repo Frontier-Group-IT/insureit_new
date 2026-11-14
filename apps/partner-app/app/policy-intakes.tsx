@@ -301,6 +301,7 @@ export default function PolicyIntakesScreen() {
                     <Text numberOfLines={1} style={styles.metaLine}>{`${row.lead_source_name || 'Lead source unavailable'} (${row.submitted_by_name?.trim() || 'Submitter unavailable'})`}</Text>
                   </View>
                   <View style={styles.statusStack}>
+                    <StatusZoomPulse enabled={row.status === 'completed' || row.status === 'ready_for_review' || row.status === 'in_review'} reduceMotion={reduceMotion}>
                     {row.status === 'ready_for_review' || row.status === 'in_review' ? (
                       <Pressable
                         accessibilityRole="button"
@@ -321,6 +322,7 @@ export default function PolicyIntakesScreen() {
                     ) : (
                       <PartnerStatusBadge label={statusLabel(row)} tone={statusTone(row)} />
                     )}
+                    </StatusZoomPulse>
                     {row.ocr_status === 'failed' && (row.status === 'processing' || row.status === 'needs_attention') ? (
                       <View style={styles.ocrWarning} accessibilityLabel="OCR extraction failed">
                         <Ionicons name="alert-circle-outline" size={11} color="#B66B0B" />
@@ -432,6 +434,25 @@ function MotionFilterChip({ active, reduceMotion, onPress, label, count }: { act
       </Pressable>
     </Animated.View>
   );
+}
+
+// Keep the status pill compact. Only the three actionable/success states receive a
+// gentle zoom; other status badges and the timestamp never move.
+function StatusZoomPulse({ enabled, reduceMotion, children }: { enabled: boolean; reduceMotion: boolean; children: ReactNode }) {
+  const scale = useRef(new Animated.Value(1)).current;
+  useFocusEffect(useCallback(() => {
+    scale.stopAnimation();
+    scale.setValue(1);
+    if (!enabled || reduceMotion) return () => scale.setValue(1);
+    const pulse = Animated.loop(Animated.sequence([
+      Animated.delay(1350),
+      Animated.timing(scale, { toValue: 1.045, duration: 550, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+      Animated.timing(scale, { toValue: 1, duration: 550, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+    ]));
+    pulse.start();
+    return () => { pulse.stop(); scale.stopAnimation(); scale.setValue(1); };
+  }, [enabled, reduceMotion, scale]));
+  return <Animated.View style={{ transform: [{ scale }] }}>{children}</Animated.View>;
 }
 
 function MotionCard({ index, reduceMotion, children }: { index: number; reduceMotion: boolean; children: ReactNode }) {
