@@ -85,6 +85,12 @@ export async function loadSelfActivityHistory(
 ) {
   if(!UUID.test(viewerId)) throw new Error("Invalid authenticated employee");
   const admin = createSupabaseAdminClient();
+  const {data: selfProfile,error: selfProfileError} = await admin.from("profiles")
+    .select("full_name,employee_code").eq("id",viewerId)
+    .maybeSingle<{full_name:string|null;employee_code:string|null}>();
+  if(selfProfileError) throw new Error("Could not load employee name");
+  const selfName = selfProfile?.full_name || "Current employee";
+  const employeeCode = selfProfile?.employee_code || "";
   const window = selfDateWindow(options.day);
   const pageRaw = Number(options.page);
   const page = options.page && /^[1-9]\d{0,2}$/.test(options.page) ?
@@ -170,6 +176,6 @@ export async function loadSelfActivityHistory(
     const lookup=new Map((data??[] as Record<string,unknown>[]).map(x=>[x.id,x[column]]));
     for(const row of visible) if(row.table===table && typeof lookup.get(row.recordId)==="string") row.reference=lookup.get(row.recordId) as string;
   }
-  return {categories,category,rows:visible,page,hasNext:filtered.length>start+30,
+  return {selfName,employeeCode,categories,category,rows:visible,page,hasNext:filtered.length>start+30,
     total:all.length,selectedCount:filtered.length,partial,day:window?options.day??"":""};
 }
