@@ -23,6 +23,7 @@ assert.match(detail, /<Section number="02" title="Customer \/ proposer"/);
 assert.match(detail, /<Section number="03" title="Policy product & case details"/);
 assert.match(detail, /<Section number="04" title="Premium & payment"/);
 assert.match(detail, /Activity Status and Remarks/, "Read-only cases retain activity and remarks history.");
+assert.match(detail, /caseStatusLabel=isRejected\?"Rejected":isIssued\?"Issued":"Pending"/, "Closed and pending cases must display the appropriate status label.");
 assert.match(page, /final_policy_id,converted_at,created_at,created_by,converted_by,details/, "Case page reads stored rejection metadata.");
 assert.match(page, /typeof rejection\.reason === "string"/, "Rejection reason must come from saved metadata, not a fabricated label.");
 assert.match(rejectAction, /rejection: \{ reason, rejected_at: now, rejected_by: profile\.id \}/, "Existing rejection provenance remains authoritative.");
