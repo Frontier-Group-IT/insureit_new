@@ -19,9 +19,15 @@ Successful encrypted R2 v2 [network-disabled manual R3 job #43567559473](https:/
 
 No business data, auth users or actual document file contents have been imported as of this checkpoint.
 
+## Supported SQL execution path probe — target only (14 Nov 2026)
+
+The owner/membership catalog alone did **not** settle managed custom DDL capability. On the *empty isolated target*, two rollback-safe ephemeral tests run through the connected Supabase SQL execution path as `postgres` **SUCCEEDED**: (1) create, verify and drop a temporary restrictive SELECT policy on `storage.objects`; (2) create a no-op trigger function, create/verify/drop a temporary trigger on `auth.users`, then drop its function. Independent SELECT confirmed **zero probe objects persisted**. No source DB SQL write or customer data import occurred.
+
+**Corrected interpretation:** Supported Supabase SQL execution can create these owner-managed customizations even though the catalog shows `postgres` is not a member of the managed owner roles. The separately hosted **GitHub Actions direct psql connection has NOT yet been privilege-probed**, and the actual source policy SQL/function behavior has NOT been imported/tested. The first R4 workflow safely defers these items until a separate approved SQL-editor/supported-path restoration stage following application SQL import; they are **NOT permanently impossible**. Do not escalate, `SET ROLE`, rewrite owners or modify the live project to bypass checks.
+
 ## Ownership discovery at target — verified and binding
 
-A fresh SELECT-only target privilege audit found **postgres is NOT superuser**, is **not a member** of `supabase_auth_admin` or `supabase_storage_admin`, and cannot `SET ROLE` to either managed owner. It **does have INSERT privilege** on `auth.users` and `auth.identities`. Consequently, the first R4 workflow can import compatible Auth **data** but **MUST NOT** execute source `CREATE TRIGGER` on `auth.users` or `CREATE POLICY` on `storage.objects`/`storage.buckets`: these require managed table ownership. It now fails closed on attempts to include those entries.
+A fresh SELECT-only target privilege audit found **postgres is NOT superuser**, is **not a member** of `supabase_auth_admin` or `supabase_storage_admin`, and cannot `SET ROLE` to either managed owner. It **does have INSERT privilege** on `auth.users` and `auth.identities`. Consequently, the first R4 workflow can import compatible Auth **data** but **MUST NOT** execute source `CREATE TRIGGER` on `auth.users` or `CREATE POLICY` on `storage.objects`/`storage.buckets`: these need an independently verified supported managed-Supabase SQL execution route. It now fails closed on attempts to include those entries.
 
 This means the first actual target import is necessarily **PARTIAL managed service SQL restore**, even when application tables/rows are complete. A **separate Supabase-supported managed-owner migration or privileged platform procedure** is needed to reconstruct one source Auth trigger and 35 source Storage policies. Never grant superuser/BYPASSRLS or impersonate managed roles to force completion. Do not connect live clients to this unfinished service.
 
