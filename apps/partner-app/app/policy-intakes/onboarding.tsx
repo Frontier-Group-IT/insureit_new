@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Image, Linking, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 import { PartnerScreen } from '@/components/partner-screen';
 import { PartnerPolicyDateField } from '@/components/policy-intakes/partner-policy-date-field';
-import { getPartnerPolicyIntakeDocumentUrl } from '@/lib/policy-intakes';
 import { prepareNativePolicyOnboarding, saveNativePolicyOnboarding, bookNativePolicyOnboarding, requestNativePolicyDateApproval, verifyNativePolicyDateApproval, lookupNativePolicyRc, type NativePolicyDraft, type NativeOnboardingData, type NativeProductType } from '@/lib/policy-onboarding';
 
 type FieldKey = keyof NativePolicyDraft;
@@ -134,9 +133,6 @@ export default function NativePolicyOnboarding(){
   const [saving,setSaving]=useState(false);
   const [booking,setBooking]=useState(false);
   const [lookingUpRc,setLookingUpRc]=useState(false);
-  const [viewingCopy,setViewingCopy]=useState(false);
-  const [policyCopyImageUrl,setPolicyCopyImageUrl]=useState<string|null>(null);
-  const [policyCopyImageFailed,setPolicyCopyImageFailed]=useState(false);
   const [dateApprovalOpen,setDateApprovalOpen]=useState(false);
   const [approvalBusy,setApprovalBusy]=useState(false);
   const [approverKey,setApproverKey]=useState("");
@@ -317,25 +313,6 @@ export default function NativePolicyOnboarding(){
     }catch(e){setError(e instanceof Error?e.message:'RC lookup failed.');}
     finally{setLookingUpRc(false);}
   }
-  async function openCopy(){
-    if(viewingCopy)return;
-    setViewingCopy(true);setError('');
-    try{
-      // Supabase's signed URLs can be long; preview image policy copies natively
-      // rather than passing a token-bearing URL through iOS Linking.openURL.
-      const url=await getPartnerPolicyIntakeDocumentUrl(id);
-      if (/\.(?:jpe?g|png|webp|gif)$/i.test(new URL(url).pathname)) {
-        setPolicyCopyImageFailed(false);
-        setPolicyCopyImageUrl(url);
-      } else {
-        // PDFs and other documents retain the system viewer without new native dependencies.
-        await Linking.openURL(url);
-      }
-    }catch{
-      // Never render the native error: it may contain the signed Storage URL/token.
-      setError('Unable to open policy copy. Please try again.');
-    }finally{setViewingCopy(false);}
-  }
   const net=useMemo(()=>draft?amount(draft.od)+amount(draft.tp)+(draft.vehicleClass==='CPM'?0:amount(draft.cpa))+amount(draft.addOnPremium||'0'):0,[draft]);
   const gst=useMemo(()=>draft?(draft.vehicleClass==='GCV'
     ?(amount(draft.od)+amount(draft.cpa)+amount(draft.addOnPremium||'0'))*.18+amount(draft.tp)*.05
@@ -484,7 +461,7 @@ export default function NativePolicyOnboarding(){
       </View>
     </View>
     <View style={styles.fields}>
-      <View style={[styles.field,styles.registrationBlock]}>
+      <View style={[styles.field,styles.wideField,styles.registrationBlock]}>
       <Text style={styles.label}>Registration No. {draft?.registrationMode==='registered'?<Text style={styles.star}>*</Text>:null}</Text>
       <View style={styles.registrationRow}>
         <TextInput accessibilityLabel="Registration number" value={draft?.registrationMode==='registered'?draft.registrationNo:''}
@@ -503,7 +480,7 @@ export default function NativePolicyOnboarding(){
       {motorVehicleFields.slice(0,7).map(item=>field(item))}
        {field(motorVehicleFields[9])}
       {motorVehicleFields.slice(7,9).map(item=>field(item))}
-      <View style={styles.field}>
+      <View style={[styles.field,styles.wideField]}>
         <Text style={styles.label}>RTO {draft?.vehicleClass==='CPM'?null:<Text style={styles.star}>*</Text>}</Text>
         <View style={styles.rtoRow}>
           <TextInput accessibilityLabel="RTO state" value={draft?.rtoState??''} editable={draft?.vehicleClass!=='CPM'}
@@ -545,13 +522,15 @@ export default function NativePolicyOnboarding(){
         <View style={styles.sectionHead}>
           <View style={styles.summaryHeading}><Text style={styles.summaryCaption}>POLICY STATUS</Text>
             <Text style={styles.sectionTitle}>Onboarding summary</Text></View>
-          <View style={[styles.summaryProgress,{
+          <View style={styles.summaryProgressStack}>
+            <View style={[styles.summaryProgress,{
             borderTopColor:filled>=12.5?'#17365D':'#DFE7F0',
             borderRightColor:filled>=37.5?'#17365D':'#DFE7F0',
             borderBottomColor:filled>=62.5?'#17365D':'#DFE7F0',
             borderLeftColor:filled>=87.5?'#17365D':'#DFE7F0',
           }]}><Text style={styles.progressText}>{filled}%</Text></View>
-          <View style={styles.progressStatus}><Text style={styles.summaryStatusValue}>In progress</Text></View>
+            <View style={styles.progressStatus}><Text style={styles.summaryStatusValue}>In progress</Text></View>
+          </View>
         </View>
         <View style={styles.summary}>
           {isMotor?<View style={styles.premiumRows}>
@@ -591,80 +570,28 @@ export default function NativePolicyOnboarding(){
             <Ionicons name="chevron-forward" size={15} color="#63758D"/>
           </Pressable>
         </View>:null}
-        <View style={styles.summaryDocuments}>
-          <Text style={styles.commercialToggleTitle}>Documents</Text>
-          <Text style={styles.muted}>Submitted policy copy</Text>
-        </View>
-        {!isMotor?<Text style={styles.notice}>Final booking and documents are completed in the Operations Portal.</Text>:null}
-      </View>
-      <View style={styles.section}>
-        <View style={styles.sectionHead}>
-          <Ionicons name="cloud-upload-outline" size={18} color="#254C83"/>
-          <Text style={styles.sectionTitle}>Upload Forms</Text>
-        </View>
-        <Text style={styles.notice}>{isMotor?'Form uploads are available in Operations Portal.':'Form uploads and final booking require Operations Portal.'}</Text>
-        <Pressable accessibilityRole="button" disabled={viewingCopy} style={[styles.secondary,styles.documentAction]} onPress={()=>void openCopy()}>
-          <Ionicons name="document-text-outline" size={17} color="#25466E"/>
-          <Text style={styles.secondaryText}>{viewingCopy?'Opening document…':'View submitted policy copy'}</Text>
-        </Pressable>
+        {!isMotor?<Text style={styles.notice}>Final booking is completed in the Operations Portal.</Text>:null}
       </View>
       <View style={styles.actions}>
-        <Pressable accessibilityRole="button" disabled={saving} style={styles.secondary} onPress={()=>void save(true)}><Text style={styles.secondaryText}>{saving?'Saving…':'Save & return to Intake'}</Text></Pressable>
-        <Pressable accessibilityRole="button" disabled={saving||!dirty} style={[styles.primary,(saving||!dirty)&&styles.disabled]} onPress={()=>void save()}><Text style={styles.primaryText}>{saving?'Saving…':'Save draft'}</Text></Pressable>
+        <Pressable accessibilityRole="button" disabled={saving||booking} style={styles.secondary}
+          onPress={()=>void save(true)}><Text style={styles.secondaryText}>{saving?'Saving…':'Save & return to Intake'}</Text></Pressable>
+        {isMotor?<Pressable accessibilityRole="button" accessibilityLabel="Book Active Policy"
+          disabled={booking||saving||!data}
+          style={[styles.primary,(booking||saving||!data)&&styles.disabled]}
+          onPress={()=>void completeBooking()}>
+          {booking?<ActivityIndicator size="small" color="white"/>:<Ionicons name="checkmark-circle-outline" size={16} color="white"/>}
+          <Text style={styles.primaryText}>{booking?'Checking & booking…':'Book Active Policy'}</Text>
+        </Pressable>:<Pressable accessibilityRole="button" disabled={saving||!dirty}
+          style={[styles.primary,(saving||!dirty)&&styles.disabled]} onPress={()=>void save()}>
+          <Text style={styles.primaryText}>{saving?'Saving…':'Save draft'}</Text>
+        </Pressable>}
       </View>
-      {isMotor?<Pressable accessibilityRole="button" disabled={booking||saving||!data} style={[styles.primary,(booking||saving)&&styles.disabled,styles.bookButton]} onPress={()=>void completeBooking()}>
-        {booking?<ActivityIndicator size="small" color="white"/>:<Ionicons name="checkmark-circle-outline" size={18} color="white"/>}
-        <Text style={styles.primaryText}>{booking?'Checking & booking…':'Book Active Policy'}</Text>
-      </Pressable>:<View style={styles.bookingNotice}><Ionicons name="information-circle-outline" size={17} color="#8A5A17"/><Text style={styles.bookingText}>Draft saving is available for {productType}. Final case creation, documents, risk validation and permission-controlled commercials must be completed in the Operations Portal.</Text></View>}
+      {!isMotor?<View style={styles.bookingNotice}><Ionicons name="information-circle-outline" size={17} color="#8A5A17"/>
+        <Text style={styles.bookingText}>Draft saving is available for {productType}. Final case creation, documents, risk validation and permission-controlled commercials must be completed in the Operations Portal.</Text>
+      </View>:null}
 
     </>:null}
 
-    <Modal visible={Boolean(policyCopyImageUrl)} animationType="slide"
-      onRequestClose={()=>setPolicyCopyImageUrl(null)}>
-      <View style={styles.policyCopyPreview}>
-        <View style={styles.policyCopyPreviewHeader}>
-          <Text style={styles.policyCopyPreviewTitle}>Policy copy</Text>
-          <Pressable accessibilityRole="button" accessibilityLabel="Close policy copy" onPress={()=>setPolicyCopyImageUrl(null)} style={styles.policyCopyPreviewClose}>
-            <Ionicons name="close" size={22} color="#17365D"/>
-          </Pressable>
-        </View>
-        {policyCopyImageFailed
-          ? <View style={styles.policyCopyPreviewError}>
-              <Text style={styles.errorText}>Unable to display policy copy. Please try again.</Text>
-              <Pressable accessibilityRole="button" onPress={()=>{setPolicyCopyImageUrl(null);void openCopy();}} style={styles.policyCopyPreviewRetry}>
-                <Text style={styles.secondaryText}>Retry</Text>
-              </Pressable>
-            </View>
-          : policyCopyImageUrl
-            ? <Image source={{uri:policyCopyImageUrl}} resizeMode="contain" style={styles.policyCopyPreviewImage} onError={()=>setPolicyCopyImageFailed(true)}/>
-            : null}
-      </View>
-    </Modal>
-    <Modal transparent visible={remarkOpen} animationType="fade" onRequestClose={()=>setRemarkOpen(false)}>
-      <View style={styles.remarkOverlay}>
-        <View style={styles.remarkSheet}>
-          <View style={styles.remarkHeader}>
-            <View style={styles.remarkTitle}><Ionicons name="chatbox-outline" size={18} color="#254C83"/><Text style={styles.sectionTitle}>Add Remark</Text></View>
-            <Pressable accessibilityRole="button" accessibilityLabel="Close remark popup" onPress={()=>setRemarkOpen(false)}><Ionicons name="close" size={21} color="#64748B"/></Pressable>
-          </View>
-          <Text style={styles.label}>New remark</Text>
-          <TextInput accessibilityLabel="New remark" multiline textAlignVertical="top"
-            value={remarkText} onChangeText={setRemarkText} maxLength={4000}
-            placeholder="Enter a new remark" placeholderTextColor="#98A6B8" style={styles.remarkInput}/>
-          <View style={styles.remarkActions}>
-            <Pressable accessibilityRole="button" style={styles.remarkCancel} onPress={()=>setRemarkOpen(false)}><Text style={styles.remarkCancelText}>Cancel</Text></Pressable>
-            <Pressable accessibilityRole="button" style={[styles.remarkConfirm,!remarkText.trim()&&styles.disabled]}
-              disabled={!remarkText.trim()} onPress={()=>{
-                if(!remarkText.trim())return;
-                if(isMotor)update('remarks',remarkText.trim());
-                else updateProduct('remarks',remarkText.trim());
-                setRemarkOpen(false);
-              }}><Text style={styles.primaryText}>Add Remark</Text></Pressable>
-          </View>
-          <Text style={styles.remarkNote}>Remark changes are saved with the onboarding draft.</Text>
-        </View>
-      </View>
-    </Modal>
     <Modal transparent visible={Boolean(commercialModal)&&isMotor&&Boolean(data?.commercialAccess)}
       animationType="slide" onRequestClose={()=>setCommercialModal(null)}>
       <View style={styles.scrim}>
@@ -794,7 +721,7 @@ const styles=StyleSheet.create({
   error:{flexDirection:'row',gap:8,backgroundColor:'#FFF0EF',padding:12,borderRadius:11,marginBottom:10},errorText:{flex:1,color:'#A32924',fontSize:12},
   retry:{padding:14,backgroundColor:'#DFE8FF',borderRadius:10,alignItems:'center'},retryText:{color:'#1B397A',fontWeight:'700'},
   status:{backgroundColor:'#FFFFFF',borderRadius:13,borderWidth:1,borderColor:'#DFE6F1',padding:12,flexDirection:'row',justifyContent:'space-between',alignItems:'center',marginBottom:9},draftStatus:{fontSize:10,color:'#738196',marginTop:2},
-  intake:{color:'#1C375D',fontWeight:'800',fontSize:14},progress:{borderRadius:20,backgroundColor:'#EAEFFA',paddingVertical:6,paddingHorizontal:10},progressText:{color:'#324D9E',fontWeight:'700',fontSize:11},
+  intake:{color:'#1C375D',fontWeight:'800',fontSize:14},progress:{borderRadius:20,backgroundColor:'#EAEFFA',paddingVertical:6,paddingHorizontal:10},progressText:{color:'#324D9E',fontWeight:'700',fontSize:9},
   section:{backgroundColor:'#FFFFFF',borderWidth:1,borderColor:'#DFE6F0',borderRadius:13,marginBottom:11,overflow:'hidden'},
   sectionHead:{flexDirection:'row',gap:9,alignItems:'center',paddingHorizontal:13,paddingVertical:12,backgroundColor:'#EAF1FA'},
   number:{fontSize:11,color:'#355EA0',fontWeight:'800'},sectionTitle:{fontSize:13,color:'#1B385B',fontWeight:'800'},
@@ -835,19 +762,12 @@ const styles=StyleSheet.create({
   calculatedRow:{flexDirection:'row',justifyContent:'space-between',padding:12,borderTopWidth:1,borderColor:'#E1E9F3'},
   readonlyInput:{backgroundColor:'#F3F6FA',color:'#738196'},
   commercialSave:{backgroundColor:'#17365D',borderRadius:10,paddingHorizontal:17,paddingVertical:12,alignItems:'center'},
-  summary:{padding:14,gap:7},summaryStatusRow:{flexDirection:'row',alignItems:'center',justifyContent:'space-between'},summaryStatusValue:{fontSize:10,fontWeight:'700',color:'#A96A00'},summaryCaption:{fontSize:10,fontWeight:'700',color:'#426188'},summaryHeading:{flex:1,gap:3},premiumHeading:{flexDirection:'row',gap:6,alignItems:'center',paddingVertical:7},progressStatus:{backgroundColor:'#FFF3D4',borderRadius:12,paddingHorizontal:8,paddingVertical:6},summaryProgress:{width:44,height:44,borderRadius:22,borderWidth:5,borderTopColor:'#17365D',borderRightColor:'#17365D',borderBottomColor:'#DFE7F0',borderLeftColor:'#DFE7F0',alignItems:'center',justifyContent:'center'},commercialToggle:{marginHorizontal:12,marginBottom:9,flexDirection:'row',alignItems:'center',gap:8,padding:11,borderWidth:1,borderColor:'#DDE6F0',borderRadius:10,backgroundColor:'#F8FAFD'},commercialToggleTitle:{flex:1,color:'#26436B',fontSize:11,fontWeight:'700'},commercialBody:{paddingHorizontal:12},summaryDocuments:{marginHorizontal:12,marginBottom:11,padding:12,flexDirection:'row',alignItems:'center',gap:10,borderColor:'#E1E9F3',borderWidth:1,borderRadius:10},documentAction:{marginHorizontal:12,marginBottom:12,flexDirection:'row',gap:8},total:{fontSize:20,color:'#1B385B',fontWeight:'800'},notice:{fontSize:10,lineHeight:16,color:'#65758E',paddingHorizontal:14,paddingBottom:13},
+  summary:{padding:14,gap:7},summaryStatusRow:{flexDirection:'row',alignItems:'center',justifyContent:'space-between'},summaryStatusValue:{fontSize:8,fontWeight:'700',color:'#A96A00'},summaryCaption:{fontSize:10,fontWeight:'700',color:'#426188'},summaryHeading:{flex:1,gap:3},premiumHeading:{flexDirection:'row',gap:6,alignItems:'center',paddingVertical:7},summaryProgressStack:{alignItems:'center',justifyContent:'center',gap:3},progressStatus:{backgroundColor:'#FFF3D4',borderRadius:10,paddingHorizontal:6,paddingVertical:3},summaryProgress:{width:35,height:35,borderRadius:18,borderWidth:4,borderTopColor:'#17365D',borderRightColor:'#17365D',borderBottomColor:'#DFE7F0',borderLeftColor:'#DFE7F0',alignItems:'center',justifyContent:'center'},commercialToggle:{marginHorizontal:12,marginBottom:9,flexDirection:'row',alignItems:'center',gap:8,padding:11,borderWidth:1,borderColor:'#DDE6F0',borderRadius:10,backgroundColor:'#F8FAFD'},commercialToggleTitle:{flex:1,color:'#26436B',fontSize:11,fontWeight:'700'},commercialBody:{paddingHorizontal:12},total:{fontSize:20,color:'#1B385B',fontWeight:'800'},notice:{fontSize:10,lineHeight:16,color:'#65758E',paddingHorizontal:14,paddingBottom:13},
   remarkBody:{padding:12,gap:8},remarkButton:{minHeight:38,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:7,borderWidth:1,borderColor:'#CDD9EB',borderRadius:9,backgroundColor:'#F8FAFD'},remarkButtonText:{fontSize:11,fontWeight:'700',color:'#254C83'},remarkPreview:{fontSize:11,lineHeight:17,color:'#53657D'},remarkOverlay:{flex:1,alignItems:'center',justifyContent:'center',padding:20,backgroundColor:'rgba(5,18,40,.55)'},remarkSheet:{width:'100%',maxWidth:520,borderRadius:16,backgroundColor:'#FFFFFF',padding:16,gap:12},remarkHeader:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',paddingBottom:10,borderBottomWidth:1,borderColor:'#E6EDF5'},remarkTitle:{flexDirection:'row',alignItems:'center',gap:8},remarkInput:{borderWidth:1,borderColor:'#9BB2D7',borderRadius:9,minHeight:128,padding:11,fontSize:12,color:'#17365D'},remarkActions:{flexDirection:'row',gap:9,justifyContent:'flex-end'},remarkCancel:{paddingHorizontal:14,paddingVertical:11,borderWidth:1,borderColor:'#CDD9EB',borderRadius:8},remarkCancelText:{fontSize:11,fontWeight:'700',color:'#254C83'},remarkConfirm:{paddingHorizontal:14,paddingVertical:11,borderRadius:8,backgroundColor:'#17365D'},remarkNote:{fontSize:10,color:'#75859B'},
-  actions:{flexDirection:'row',gap:8,marginBottom:11},secondary:{flex:1,borderWidth:1,borderColor:'#CDD9EB',borderRadius:10,padding:13,alignItems:'center'},secondaryText:{fontWeight:'700',fontSize:11,color:'#25466E'},
-  primary:{flex:1,backgroundColor:'#243F9E',borderRadius:10,padding:13,alignItems:'center'},primaryText:{fontSize:11,fontWeight:'800',color:'white'},disabled:{opacity:.48},
+  actions:{flexDirection:'row',gap:8,marginBottom:11,alignItems:'stretch'},secondary:{flex:1,borderWidth:1,borderColor:'#CDD9EB',borderRadius:10,paddingHorizontal:7,paddingVertical:12,minHeight:45,alignItems:'center',justifyContent:'center'},secondaryText:{fontWeight:'700',fontSize:11,color:'#25466E'},
+  primary:{flex:1,backgroundColor:'#243F9E',borderRadius:10,paddingHorizontal:7,paddingVertical:12,minHeight:45,flexDirection:'row',gap:5,justifyContent:'center',alignItems:'center'},primaryText:{fontSize:11,fontWeight:'800',color:'white'},disabled:{opacity:.48},
   bookButton:{marginBottom:11,flexDirection:'row',justifyContent:'center',gap:8},
   bookingNotice:{flexDirection:'row',gap:9,padding:12,backgroundColor:'#FFF7E9',borderRadius:10,marginBottom:14},bookingText:{flex:1,fontSize:10,lineHeight:16,color:'#75531C'},
-  policyCopyPreview:{flex:1,backgroundColor:'#FFFFFF',paddingTop:48,paddingHorizontal:12,paddingBottom:16},
-  policyCopyPreviewHeader:{minHeight:46,flexDirection:'row',justifyContent:'space-between',alignItems:'center',borderBottomWidth:1,borderColor:'#E1E9F3',marginBottom:8},
-  policyCopyPreviewTitle:{fontSize:15,fontWeight:'600',color:'#17365D'},
-  policyCopyPreviewClose:{padding:10},
-  policyCopyPreviewImage:{flex:1,width:'100%',backgroundColor:'#F7F9FC'},
-  policyCopyPreviewError:{flex:1,alignItems:'center',justifyContent:'center',gap:12,padding:20},
-  policyCopyPreviewRetry:{paddingHorizontal:18,paddingVertical:12,borderRadius:9,borderWidth:1,borderColor:'#CDD9EB'},
   scrim:{flex:1,justifyContent:'center',backgroundColor:'rgba(5,18,40,.5)'},sheet:{backgroundColor:'white',borderTopLeftRadius:20,borderTopRightRadius:20,padding:17,maxHeight:'70%'},
   sheetTitle:{flexDirection:'row',justifyContent:'space-between',alignItems:'flex-start',gap:12,padding:14,backgroundColor:'#F4F7FB',borderBottomWidth:1,borderColor:'#E2E9F2'},choiceScroll:{maxHeight:420},
   choice:{minHeight:44,justifyContent:'center',borderTopWidth:1,borderColor:'#EEF1F7'},choiceText:{fontSize:12,color:'#284064'},

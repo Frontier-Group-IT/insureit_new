@@ -189,8 +189,6 @@ for (const expected of [
   "styles.registrationToggle",
   "styles.registrationRow",
   "Onboarding summary",
-  "Upload Forms",
-  "View submitted policy copy",
 ]) {
   requireText(nativeOnboarding, expected, 'Native onboarding missing approved section: ' + expected);
 }
@@ -215,7 +213,7 @@ if (nativeOnboarding.includes('OD + TP + Add-on + CPA')) throw new Error('Hide o
 for (const key of ['insuredName','phoneNo','registrationNo','vehicleClass','make','model','policyProduct','policyNo','insurerId','idv','od','tp','cpa','validFrom','validUpto']) {
   if (!nativeOnboarding.includes("key:'" + key + "'")) throw new Error('A persisted Motor field was removed from the form: ' + key);
 }
-for (const safeguard of ['saveNativePolicyOnboarding(id,data.revision,draft)', 'bookNativePolicyOnboarding(id,revision,resolution,verifiedApprovalId)', 'lookupNativePolicyRc(id,draft.registrationNo)', 'getPartnerPolicyIntakeDocumentUrl(id)']) {
+for (const safeguard of ['saveNativePolicyOnboarding(id,data.revision,draft)', 'bookNativePolicyOnboarding(id,revision,resolution,verifiedApprovalId)', 'lookupNativePolicyRc(id,draft.registrationNo)']) {
   requireText(nativeOnboarding, safeguard, 'Preserve existing save, booking, RC lookup and document access: ' + safeguard);
 }
 requireText(nativeApi, 'if(d.businessLine!=="Motor")', 'Do not misrepresent Motor-only native booking as Life/Health parity.');
@@ -242,5 +240,10 @@ for(const fragment of [
   'item.intermediary_type===intake.lead_source_type',
   'sourceMeta={name:selected.display_name.trim()',
 ]) requireText(nativeApi,fragment,'Scoped source metadata regression: '+fragment);
-requireText(nativeOnboarding, 'Form uploads are available in Operations Portal.', 'Disclose web-only uploads without redundant descriptions.');
+requireText(nativeOnboarding, '[styles.field,styles.wideField,styles.registrationBlock]', 'Registration field must fill the whole mobile row.');
+requireText(nativeOnboarding, '[styles.field,styles.wideField]', 'RTO must occupy a full-width row.');
+requireText(nativeOnboarding, 'summaryProgressStack', 'Stack reduced progress circle above In progress badge.');
+requireText(nativeOnboarding, 'accessibilityLabel="Book Active Policy"', 'Preserve Motor booking beside Save and return.');
+if(nativeOnboarding.includes('summaryDocuments')||nativeOnboarding.includes('Upload Forms')||nativeOnboarding.includes('Form uploads are available in Operations Portal.')) throw new Error('Remove onboarding document blocks and redundant upload helper copy.');
+if(nativeOnboarding.includes('View submitted policy copy')) throw new Error('Remove document action from onboarding; register/details flows remain separate.');
 console.log('Partner Policy Intake source, policy-type and detail presentation contracts verified.');
