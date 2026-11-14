@@ -263,7 +263,7 @@ export default function PolicyIntakeDetailScreen() {
                     <Text numberOfLines={3} style={styles.summaryLine}>
                       {`${row.lead_source_name || 'Lead source unavailable'} (${row.submitted_by_name?.trim() || 'Submitter unavailable'})`}
                     </Text>
-                    {row.status !== 'duplicate' && row.status !== 'ready_for_review' && row.status !== 'in_review' && row.status !== 'rejected'
+                    {row.status !== 'duplicate' && row.status !== 'ready_for_review' && row.status !== 'in_review' && row.status !== 'rejected' && row.status !== 'needs_attention'
                       ? <Text style={styles.statusHelp}>{statusHelp(row)}</Text> : null}
                   </View>
                   </View>
@@ -297,7 +297,7 @@ export default function PolicyIntakeDetailScreen() {
             <View style={styles.attention}>
               <View style={styles.attentionTop}>
                 <View style={styles.attentionArtworkWrap}><Image source={PartnerAssets.status.policyAttention} style={styles.attentionArtwork} resizeMode="contain" /></View>
-                <Text style={styles.attentionTitle}>{row.status === 'rejected' ? 'Operations rejection note' : 'Operations needs your response'}</Text>
+                <Text style={styles.attentionTitle}>{row.status === 'rejected' ? 'Operations rejection note' : 'Upload a replacement policy copy'}</Text>
               </View>
               <Text selectable style={styles.attentionText}>{row.attention_reason}</Text>
 
@@ -865,7 +865,6 @@ function statusHelp(row: PartnerPolicyIntake) {
   if (row.status === 'processing' && row.ocr_status === 'failed') return 'Automatic extraction was unavailable. Operations can continue from the saved policy copy.';
   if (row.status === 'processing') return 'The uploaded policy copy is being read automatically.';
   if (row.status === 'ready_for_review') return 'The extracted details are ready for an Operations reviewer.';
-  if (row.status === 'needs_attention') return 'Read the Operations note below and upload a replacement policy copy.';
   if (row.status === 'completed') return 'The final policy was linked and this intake is closed.';
   if (row.status === 'duplicate') return 'The policy was found in an existing record. Review and onboarding are disabled.';
   return 'Track this submission here.';

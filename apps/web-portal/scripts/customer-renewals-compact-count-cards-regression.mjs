@@ -22,7 +22,7 @@ assert.doesNotMatch(register, />Due \{cat\.due\}</, "Badge text should be count 
 assert.doesNotMatch(register, />Expired \{cat\.expired\}</, "Badge text should be count only");
 assert.match(register, /aria-label=\{`Due \$\{cat\.due\}, expired \$\{cat\.expired\}`\}/, "Color-only badges remain accessible");
 assert.match(register, /onClick=\{\(\) => setActiveCategory\(selected \? null : cat\.key\)\}/, "Category toggling preserved");
-assert.match(register, /const \[status,setStatus\]=useState\("due"\)/, "Due default preserved");
+assert.match(register, /const \[status,setStatus\]=useState\("all"\)/, "All Status default preserved");
 assert.match(css, /\.countPulseDue \{ animation: countGlowDue 1\.65s/, "Strong due badge pulse present");
 assert.match(css, /\.countPulseExpired \{ animation: countGlowExpired 1\.65s/, "Strong expired badge pulse present");
 assert.match(css, /\.countPulseDue, \.countPulseExpired \{ animation: none !important; \}/, "Reduced-motion disables badge animation");

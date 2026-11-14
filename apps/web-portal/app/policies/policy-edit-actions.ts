@@ -182,8 +182,11 @@ export async function updatePolicyOnboarding(policyId: string, payload: PolicyEd
     if (!result?.ok || !result.policyId) return { ok: false, error: "We couldn't complete the policy update. Please try again." };
 
     const activityAfter = await capturePolicyEditSnapshot(admin, result.policyId).catch(() => null);
-    await recordPolicyActivity(admin, result.policyId, profile.id, POLICY_ACTIVITY_ACTIONS.POLICY_EDITED,
-      describePolicyEditChanges(activityBefore, activityAfter));
+    const activityChanges = describePolicyEditChanges(activityBefore, activityAfter);
+    // Skip a misleading edit event only when both snapshots confirm no tracked change.
+    // Unknown snapshots still retain the audit event, without inventing field values.
+    if (activityChanges === null || activityChanges.length > 0)
+      await recordPolicyActivity(admin, result.policyId, profile.id, POLICY_ACTIVITY_ACTIONS.POLICY_EDITED, activityChanges);
     revalidatePath("/policies");
     revalidatePath(`/policies/${policyId}/edit`);
     return { ok: true, policyId: result.policyId, policyCode: result.policyCode ?? "" };
