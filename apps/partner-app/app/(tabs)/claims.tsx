@@ -224,9 +224,9 @@ export default function ClaimsScreen() {
         <View style={styles.summaryRow}>
           <View style={styles.summaryChips} accessibilityLabel="Claim status filters">
             {([
-              { label: 'All Claims', filter: 'all' as const, value: summary.data?.total_claims },
-              { label: 'Settled Claims', filter: 'completed' as const, value: summary.data?.completed_claims },
-              { label: 'In Progress', filter: 'active' as const, value: summary.data?.active_claims },
+              { label: 'All Claims', shortLabel: 'All', filter: 'all' as const, value: summary.data?.total_claims },
+              { label: 'Settled Claims', shortLabel: 'Settled', filter: 'completed' as const, value: summary.data?.completed_claims },
+              { label: 'In Progress', shortLabel: 'Progress', filter: 'active' as const, value: summary.data?.active_claims },
             ]).map((metric) => {
               const selected = state === metric.filter && !query.trim();
               return (
@@ -238,26 +238,24 @@ export default function ClaimsScreen() {
                   onPress={() => selectSummary(metric.filter)}
                   style={({ pressed }) => [styles.summaryChip, selected && styles.summaryChipSelected, pressed && styles.summaryChipPressed]}
                 >
-                  <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85} style={[styles.summaryChipLabel, selected && styles.summaryChipLabelSelected]}>{metric.label}</Text>
+                  <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} style={[styles.summaryChipLabel, selected && styles.summaryChipLabelSelected]}>{metric.shortLabel}</Text>
                   <Text style={[styles.summaryChipCount, selected && styles.summaryChipCountSelected]}>({metric.value == null ? '—' : metric.value.toLocaleString('en-IN')})</Text>
                 </Pressable>
               );
             })}
           </View>
-        </View>
-        {canPartnerStartClaim(context) ? (
-          <View style={styles.summaryAddClaimRow}>
+          {canPartnerStartClaim(context) ? (
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Add Claim"
               onPress={() => router.push('/claim/select-vehicle' as never)}
               style={({ pressed }) => [styles.summaryAddClaim, pressed && styles.summaryChipPressed]}
             >
-              <Ionicons name="add-circle-outline" size={17} color="#0860C8" />
-              <Text style={styles.summaryAddClaimText}>Add Claim</Text>
+              <Ionicons name="add-circle-outline" size={15} color="#0860C8" />
+              <Text numberOfLines={1} style={styles.summaryAddClaimText}>Add</Text>
             </Pressable>
-          </View>
-        ) : null}
+          ) : null}
+        </View>
 
         {(collection.stale || summary.stale) ? (
           <View style={styles.banner}>
@@ -584,18 +582,17 @@ const styles = StyleSheet.create({
   filterOptionText: { color: '#506079', fontSize: 10, lineHeight: 13, fontWeight: Platform.OS === 'ios' ? '400' : '600' },
   filterOptionTextActive: { color: '#3156B8', fontWeight: Platform.OS === 'ios' ? '400' : '800' },
   banner: { marginTop: 8 },
-  summaryRow: { marginTop: 8, paddingHorizontal: 12 },
-  summaryChips: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 3 },
-  summaryChip: { flex: 1, minWidth: 0, minHeight: 38, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 3, paddingHorizontal: 4, borderRadius: 12, backgroundColor: '#F6F8FC', borderWidth: 1, borderColor: '#DEE6F0' },
+  summaryRow: { marginTop: 8, marginBottom: 4, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 5 },
+  summaryChips: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 3 },
+  summaryChip: { flex: 1, minWidth: 0, minHeight: 38, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 2, paddingHorizontal: 2, borderRadius: 10, backgroundColor: '#F6F8FC', borderWidth: 1, borderColor: '#DEE6F0' },
   summaryChipSelected: { backgroundColor: '#17365D', borderColor: '#17365D' },
   summaryChipPressed: { opacity: 0.78 },
-  summaryChipLabel: { color: '#52627B', fontSize: 9, lineHeight: 13, fontWeight: '700', flexShrink: 1 },
+  summaryChipLabel: { color: '#52627B', fontSize: 8, lineHeight: 12, fontWeight: '700', flexShrink: 1 },
   summaryChipLabelSelected: { color: '#FFFFFF' },
-  summaryChipCount: { color: '#7A889C', fontSize: 9, lineHeight: 12, fontWeight: '700', flexShrink: 0 },
+  summaryChipCount: { color: '#7A889C', fontSize: 8, lineHeight: 11, fontWeight: '700', flexShrink: 0 },
   summaryChipCountSelected: { color: '#E2EEFF' },
-  summaryAddClaimRow: { flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: 12, marginTop: 2, marginBottom: 4 },
-  summaryAddClaim: { minHeight: 36, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, paddingHorizontal: 12, borderRadius: 22, borderWidth: 1, borderColor: '#E0E7F1', backgroundColor: '#FFFFFF', shadowColor: '#173B6C', shadowOpacity: 0.08, shadowRadius: 4, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
-  summaryAddClaimText: { color: '#0860C8', fontSize: 11, fontWeight: '800' },
+  summaryAddClaim: { width: 62, minHeight: 38, flexShrink: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 3, paddingHorizontal: 4, borderRadius: 12, borderWidth: 1, borderColor: '#E0E7F1', backgroundColor: '#FFFFFF', shadowColor: '#173B6C', shadowOpacity: 0.08, shadowRadius: 4, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
+  summaryAddClaimText: { color: '#0860C8', fontSize: 9, fontWeight: '800' },
   controls: {
     marginTop: 8,
     minHeight: 46,

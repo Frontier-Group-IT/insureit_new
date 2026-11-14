@@ -99,13 +99,18 @@ expectAll('app/policy-intakes.tsx', [
   [/row\.ocr_status === 'failed' && \(row\.status === 'processing' \|\| row\.status === 'needs_attention'\)/, 'OCR failed message must remain visible'],
 ]);
 
-// Keep the three Claims status filters visible together on narrow phones while
-// leaving Add Claim available without consuming their row width.
+// Claims filters and the permission-gated Add action share one compact row without overlap.
 expectAll('app/(tabs)/claims.tsx', [
-  [/summaryChips: \{ flexDirection: 'row'/, 'Claims status filters must share one horizontal row'],
-  [/summaryChip: \{ flex: 1, minWidth: 0/, 'Claims status filters must have equal flexible widths'],
-  [/summaryChipLabel: \{[^\n]*fontSize: 9/, 'Claims labels must use compact typography'],
-  [/summaryAddClaimRow/, 'Add Claim must remain accessible separately'],
+  [/summaryRow: \{[^\n]*flexDirection: 'row'/, 'Claims status filters and Add Claim must share one row'],
+  [/summaryChips: \{ flex: 1, minWidth: 0, flexDirection: 'row'/, 'Claims filters must shrink within the shared row'],
+  [/summaryChip: \{ flex: 1, minWidth: 0/, 'Claims status chips must have equal flexible widths'],
+  [/summaryChipLabel: \{[^\n]*fontSize: 8/, 'Claims labels must use compact typography'],
+  [/summaryAddClaim: \{ width: 62,[^\n]*flexShrink: 0/, 'Add Claim must stay visible without overlapping filter chips'],
+  [/\{canPartnerStartClaim\(context\) \? \([\s\S]*?accessibilityLabel="Add Claim"/, 'Add Claim must retain permission gating and accessibility'],
+  [/onPress=\{\(\) => router\.push\('\/claim\/select-vehicle' as never\)\}/, 'Add Claim must preserve vehicle selection navigation'],
+  [/shortLabel: 'All'/, 'Show compact All filter label'],
+  [/shortLabel: 'Settled'/, 'Show compact Settled filter label'],
+  [/shortLabel: 'Progress'/, 'Show compact Progress filter label'],
   [/label: 'All Claims'/, 'Preserve All Claims status'],
   [/label: 'Settled Claims'/, 'Preserve Settled Claims status'],
   [/label: 'In Progress'/, 'Preserve In Progress status'],
