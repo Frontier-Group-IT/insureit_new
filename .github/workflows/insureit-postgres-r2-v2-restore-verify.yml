@@ -2,6 +2,12 @@ name: INSUREIT PostgreSQL R2 v2 isolated restore verification (manual only)
 
 on:
   workflow_dispatch:
+    inputs:
+      expected_db_snapshot:
+        description: 'Optional exact authenticated R2 v2 UTC snapshot YYYYMMDDTHHMMSSZ (abort if latest pointer changed)'
+        required: false
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -31,6 +37,7 @@ jobs:
           R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
           DB_BACKUP_ENCRYPTION_KEY: ${{ secrets.DB_BACKUP_ENCRYPTION_KEY }}
+          RECOVERY_EXPECTED_DB_SNAPSHOT: ${{ inputs.expected_db_snapshot }}
           R2_BUCKET: insureit-production-backups
           RESTORE_DIR: ${{ runner.temp }}/insureit-db-v2-restore
         run: python -u scripts/backup/verify_postgres_v2_r2.py
