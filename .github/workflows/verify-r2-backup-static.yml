@@ -320,7 +320,11 @@ jobs:
           assert 'rm -rf "$RUNNER_TEMP/insureit-r4-private"' in r4steps
           sql_runner = pathlib.Path('scripts/backup/execute_managed_sql_restore.py').read_text()
           assert '"--single-transaction"' in sql_runner
-          assert '"--exit-on-error"' in sql_runner
+          assert '"ON_ERROR_STOP=1"' in sql_runner
+          assert '"--network", "none"' in sql_runner
+          assert 'private-security-guard.sql' in sql_runner
+          assert 'REVOKE EXECUTE ON ALL FUNCTIONS IN SCHEMA public' in sql_runner
+          assert 'definer_exposure <> 0' in sql_runner
           assert '"--no-owner"' in sql_runner and '"--no-acl"' in sql_runner
           assert '"--network", "host"' in sql_runner
           assert 'validate_target(url)' in sql_runner
