@@ -1,7 +1,7 @@
 Partner production OTA trigger
-release=partner-onboarding-remarks-popup-pr-4451
+release=partner-onboarding-remarks-popup-pr-4451-retry
 source=verified-merged-main
-reason=user-approved-remarks-popup-header-and-saved-history
+reason=user-requested-publish-retry-unconfirmed-previous-ota
 channel=production
 runtime=0.2.0
 requested=2026-11-14
