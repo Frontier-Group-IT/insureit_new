@@ -90,6 +90,7 @@ jobs:
               || file === 'apps/partner-app/scripts/verify-four-tab-white-sticky-header.mjs'
               || file === 'apps/partner-app/scripts/verify-shared-loading-skeletons.mjs'
               || file === 'apps/partner-app/scripts/verify-product-type-onboarding-layouts.mjs'
+              || file === 'apps/partner-app/scripts/verify-native-motor-validity-defaults.mjs'
               || file === 'apps/partner-app/scripts/verify-claim-journey-deduplication.mjs'
               || file === 'apps/partner-app/scripts/verify-duplicate-intake-detail-parity.mjs'
               || file === 'apps/partner-app/scripts/verify-intake-detail-identity-header.mjs'
