@@ -146,6 +146,7 @@ export default function NativePolicyOnboarding(){
   const [commercialExpanded,setCommercialExpanded]=useState(false);
   const [commercialModal,setCommercialModal]=useState<'payin'|'payout'|null>(null);
   const [payinSummaryExpanded,setPayinSummaryExpanded]=useState(false);
+  const [payoutBasisExpanded,setPayoutBasisExpanded]=useState(false);
   const load=useCallback(async()=>{
     if(!id)return;
     setLoading(true);setError('');
@@ -648,9 +649,19 @@ export default function NativePolicyOnboarding(){
                   f.key==='payoutBasis'?<View key={f.key} style={styles.field}>
                     <Text style={styles.label}>PAYOUT BASIS</Text>
                     <Pressable accessibilityRole="button" accessibilityLabel="Payout basis"
-                      onPress={()=>setPicker({key:f.key,items:['NET','OD','FLAT'].map(value=>({value,label:value}))})} style={styles.inputRow}>
-                      <Text style={styles.value}>{draft?.payoutBasis||'NET'}</Text><Ionicons name="chevron-down" size={15} color="#63758D"/>
+                      accessibilityState={{expanded:payoutBasisExpanded}}
+                      onPress={()=>setPayoutBasisExpanded(value=>!value)} style={styles.inputRow}>
+                      <Text style={styles.value}>{draft?.payoutBasis||'NET'}</Text>
+                      <Ionicons name={payoutBasisExpanded?'chevron-up':'chevron-down'} size={15} color="#63758D"/>
                     </Pressable>
+                    {payoutBasisExpanded?<View style={styles.basisOptions}>
+                      {(['NET','OD','FLAT'] as const).map(value=><Pressable key={value} accessibilityRole="button"
+                        accessibilityLabel={`Payout basis ${value}`} accessibilityState={{selected:draft?.payoutBasis===value}}
+                        onPress={()=>{update('payoutBasis',value);setPayoutBasisExpanded(false);}} style={styles.basisChoice}>
+                        <Text style={styles.basisText}>{value}</Text>
+                        {draft?.payoutBasis===value?<Ionicons name="checkmark" size={14} color="#17365D"/>:null}
+                      </Pressable>)}
+                    </View>:null}
                   </View>:<View key={f.key} style={styles.field}>
                     <Text style={styles.label}>{f.label.toUpperCase()}</Text>
                     <TextInput accessibilityLabel={f.label} value={String(draft?.[f.key]??'')}
@@ -738,6 +749,7 @@ const styles=StyleSheet.create({
   modalClose:{width:32,height:32,alignItems:'center',justifyContent:'center',borderWidth:1,borderColor:'#DDE6F0',borderRadius:20},
   modalFooter:{padding:12,alignItems:'flex-end',backgroundColor:'#F7F9FC',borderTopWidth:1,borderColor:'#E1E9F3'},
   autoText:{fontSize:9,color:'#98A6B8',fontWeight:'700'},
+  basisOptions:{marginTop:4,borderWidth:1,borderColor:'#DDE6F0',borderRadius:10,overflow:'hidden'},basisChoice:{minHeight:31,paddingHorizontal:10,flexDirection:'row',alignItems:'center',justifyContent:'space-between',borderBottomWidth:1,borderColor:'#EEF1F7'},basisText:{color:'#17365D',fontSize:10,fontWeight:'700'},
   payinSummary:{marginHorizontal:12,marginBottom:12,padding:12,backgroundColor:'#FAF8FF',borderWidth:1,borderColor:'#E4DFF2',borderRadius:12,gap:9},
   summaryToggleRow:{flexDirection:'row',justifyContent:'space-between',alignItems:'center'},summaryLink:{fontSize:10,color:'#315B9A',fontWeight:'700'},
   summaryStats:{flexDirection:'row',gap:8},summaryStat:{flex:1,minWidth:0,gap:3},statLabel:{fontSize:9,color:'#72819A'},statValue:{fontSize:11,fontWeight:'800',color:'#17365D'},
