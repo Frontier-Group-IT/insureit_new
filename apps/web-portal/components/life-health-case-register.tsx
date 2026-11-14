@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { Search, X } from "lucide-react";
+import { Search, ShieldCheck, X } from "lucide-react";
+import { getInsurerLogo } from "@/lib/insurer-logo";
 import { LifeHealthIssuedPolicyButton } from "@/components/life-health-issued-policy-button";
 
 export type LifeHealthCaseRegisterRow = {
@@ -122,7 +123,7 @@ export function LifeHealthCaseRegister({
                   <p className="mt-0.5 text-[8px] text-[#667085]">{row.customerPhone || "—"}</p>
                 </td>
                 <td className="px-3 py-3">
-                  <p className="font-semibold text-[#17203A]">{row.insurerName}</p>
+                  <div title={row.insurerName} className="flex h-7 items-center" aria-label={"Insurer: " + row.insurerName}>{getInsurerLogo(row.insurerName) ? <img src={getInsurerLogo(row.insurerName)!} alt={row.insurerName + " logo"} className="max-h-7 max-w-[110px] object-contain" /> : <ShieldCheck aria-hidden="true" className="h-5 w-5 text-[#315B9A]" />}</div>
                   <p className="mt-0.5 max-w-[210px] truncate text-[8px] text-[#667085]">{row.productName}</p>
                 </td>
                 <td className="px-3 py-3 font-medium">{row.proposalNumber}</td>
@@ -132,16 +133,16 @@ export function LifeHealthCaseRegister({
                   <p className="mt-0.5 max-w-[180px] truncate text-[8px] text-[#667085]">{row.leadSource || "—"}</p>
                 </td>
                 <td className="px-3 py-3 text-right font-semibold">₹{Number(row.premiumAmount || 0).toLocaleString("en-IN")}</td>
-                <td className="px-3 py-3">
-                  <span className={`rounded-full px-2 py-1 text-[8px] font-bold ${row.finalPolicyId ? "bg-[#EAF7F2] text-[#18794E]" : row.status === "rejected" ? "bg-red-50 text-red-700" : "bg-[#FFF3CD] text-[#A96A00]"}`}>
+                <td className="whitespace-nowrap px-3 py-3">
+                  <span className={`inline-flex items-center whitespace-nowrap rounded-full px-2 py-1 text-[8px] font-bold ${row.finalPolicyId ? "bg-[#EAF7F2] text-[#18794E]" : row.status === "rejected" ? "bg-red-50 text-red-700" : "bg-[#FFF3CD] text-[#A96A00]"}`}>
                     {row.finalPolicyId ? "Issued" : row.status === "rejected" ? "Rejected" : "Awaiting policy"}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-right">
+                <td className="whitespace-nowrap px-4 py-3 text-right">
                   {row.finalPolicyId ? (
                     <LifeHealthIssuedPolicyButton policyId={row.finalPolicyId} />
                   ) : (
-                    <Link href={`/policies/life-health-cases/${row.id}`} className="rounded-lg border border-[#CAD7E7] bg-white px-2.5 py-1.5 text-[8.5px] font-bold text-[#315B9A]">
+                    <Link href={`/policies/life-health-cases/${row.id}`} className="inline-flex items-center justify-center whitespace-nowrap rounded-lg border border-[#CAD7E7] bg-white px-2.5 py-1.5 text-[8.5px] font-bold text-[#315B9A]">
                       {row.status === "rejected" ? "View Rejection" : "Open / Issue"}
                     </Link>
                   )}
