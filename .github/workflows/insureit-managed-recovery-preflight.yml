@@ -2,6 +2,12 @@ name: INSUREIT isolated managed recovery R0-R1 preflight (manual read-only)
 
 on:
   workflow_dispatch:
+    inputs:
+      verify_storage_sample_bytes:
+        description: 'Also SHA256 verify up to 500 MB of encrypted R2 Storage file bytes (read-only)'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -67,6 +73,19 @@ jobs:
           python scripts/backup/managed_recovery_preflight.py --compare \
             "$RUNNER_TEMP/insureit-managed-r0-r1/private-toc.txt"
           echo "NO RESTORATION PERFORMED; R4 requires a separately approved procedure"
+      - name: Plan or R2-byte-verify bounded 500 MB Storage sample (NO target upload)
+        env:
+          R2_ACCOUNT_ID: ${{ secrets.RECOVERY_R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.RECOVERY_R2_READONLY_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.RECOVERY_R2_READONLY_SECRET_ACCESS_KEY }}
+          BACKUP_ENCRYPTION_KEY: ${{ secrets.RECOVERY_STORAGE_BACKUP_ENCRYPTION_KEY }}
+          R2_BUCKET: insureit-production-backups
+          VERIFY_STORAGE_SAMPLE_BYTES: ${{ inputs.verify_storage_sample_bytes }}
+        run: |
+          set -euo pipefail
+          mode=--plan
+          if [ "$VERIFY_STORAGE_SAMPLE_BYTES" = true ]; then mode=--verify; fi
+          python scripts/backup/plan_recovery_storage_sample.py "$mode"
       - name: Destroy decrypted files and private diagnostics
         if: always()
         run: |
