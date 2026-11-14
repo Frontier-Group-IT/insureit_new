@@ -45,7 +45,7 @@ jobs:
       - name: Apply idempotent staging table and permissions
         run: supabase db query --remote --yes --file supabase/migrations/20261114170000_partner_onboarding_document_staging.sql
       - name: Record migration file version
-        run: supabase migration repair --linked --status applied 20261114170000
+        run: supabase migration repair --remote --yes --status applied 20261114170000
       - name: Verify staging table, row-level security and scope
         shell: bash
         run: |
