@@ -1,6 +1,6 @@
 "use client";
 
-import { Files, FileText, LoaderCircle, RefreshCw, Trash2, Upload } from "lucide-react";
+import { FileText, LoaderCircle, RefreshCw, Trash2, Upload } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -191,7 +191,7 @@ export function PolicyEditCopyFooterActions() {
               <div
                 role="group"
                 aria-label="Policy copy actions"
-                className="inline-flex h-9 items-stretch overflow-hidden rounded-xl border border-[#BFD3F7] bg-[#F7FAFF] text-[#174EA6]"
+                className="inline-flex h-10 items-stretch overflow-hidden rounded-xl border border-[#A9DCC2] bg-[#F0FBF5] text-[#168653]"
               >
                 <button
                   type="button"
@@ -199,7 +199,7 @@ export function PolicyEditCopyFooterActions() {
                   disabled={isOpening || isUploading || isRemoving}
                   aria-label={`Open ${policyCopy.fileName || "policy copy"}`}
                   title={policyCopy.fileName || "Policy Copy"}
-                  className="inline-flex max-w-[240px] min-w-0 items-center gap-2 px-3 text-[10px] font-semibold transition hover:bg-[#EEF5FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#9CB9E6] disabled:cursor-wait disabled:opacity-60"
+                  className="inline-flex max-w-[240px] min-w-0 items-center gap-2 px-3 text-[10px] font-semibold transition hover:bg-[#E7F8EF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#9CB9E6] disabled:cursor-wait disabled:opacity-60"
                 >
                   <FileText className="h-3.5 w-3.5 shrink-0" />
                   <span className="truncate">{isOpening ? "Opening…" : policyCopy.fileName || "Policy Copy"}</span>
