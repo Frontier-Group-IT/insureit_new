@@ -32,10 +32,14 @@ export function CustomerRenewalsRegister({accountId,items,categories}:{
 }) {
   const [query,setQuery]=useState("");
   const [status,setStatus]=useState("all");
-  // Start with the first category that has due renewals, regardless of the All Status filter.
-  // Expired-only categories stay collapsed until the customer selects one.
-  const [activeCategory,setActiveCategory]=useState<string | null>(
-    () => categories.find(cat => cat.due > 0)?.key ?? null,
+  // Expand the category with the most due + expired renewals on initial load.
+  // Preserve display order for ties, leave zero-count lists collapsed, and do not
+  // override the customer's later category selection or status/search filters.
+  const [activeCategory,setActiveCategory]=useState<string | null>(() =>
+    categories.reduce<{key:string|null;total:number}>((best,cat)=>{
+      const total=cat.due+cat.expired;
+      return total>best.total?{key:cat.key,total}:best;
+    },{key:null,total:0}).key,
   );
   const groups=useMemo(()=>{
     const filtered=items.filter(item=>{
