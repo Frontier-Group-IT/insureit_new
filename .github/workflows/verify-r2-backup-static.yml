@@ -30,7 +30,7 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m pip install boto3==1.35.99 cryptography==44.0.2 pyyaml==6.0.2 'psycopg[binary]==3.2.9'
-      - run: python -m py_compile scripts/backup/supabase_storage_to_r2.py scripts/backup/verify_r2_restore.py scripts/backup/monitor_github_backup.py scripts/backup/monitor_postgres_backup.py scripts/backup/postgres_to_r2.py scripts/backup/verify_postgres_r2_restore.py scripts/backup/classify_pg_restore_error.py scripts/backup/audit_postgres_archive_coverage.py scripts/backup/verify_postgres_offline_row_counts.py scripts/backup/summarize_pg_restore_errors.py scripts/backup/diagnose_pg_restore_data.py scripts/backup/audit_postgres_copy_targets.py scripts/backup/postgres_v2_to_r2.py scripts/backup/verify_postgres_v2_r2.py scripts/backup/verify_postgres_v2_rows.py scripts/backup/audit_postgres_v2_toc.py scripts/backup/prepare_pg_dump_connection.py scripts/backup/allow_no_acl_restore_fallback.py scripts/backup/audit_storage_source_manifest.py
+      - run: python -m py_compile scripts/backup/supabase_storage_to_r2.py scripts/backup/verify_r2_restore.py scripts/backup/monitor_github_backup.py scripts/backup/monitor_postgres_backup.py scripts/backup/postgres_to_r2.py scripts/backup/verify_postgres_r2_restore.py scripts/backup/classify_pg_restore_error.py scripts/backup/audit_postgres_archive_coverage.py scripts/backup/verify_postgres_offline_row_counts.py scripts/backup/summarize_pg_restore_errors.py scripts/backup/diagnose_pg_restore_data.py scripts/backup/audit_postgres_copy_targets.py scripts/backup/postgres_v2_to_r2.py scripts/backup/verify_postgres_v2_r2.py scripts/backup/verify_postgres_v2_rows.py scripts/backup/audit_postgres_v2_toc.py scripts/backup/prepare_pg_dump_connection.py scripts/backup/allow_no_acl_restore_fallback.py scripts/backup/audit_storage_source_manifest.py scripts/backup/managed_recovery_preflight.py scripts/backup/plan_recovery_storage_sample.py
       - run: python -m unittest discover -s scripts/backup -p 'test_*.py' -v
       - name: Validate workflow safety guard
         run: |
@@ -258,6 +258,23 @@ jobs:
           assert not any(token in managed_script for token in (
               'CREATE ROLE', 'DROP TABLE', 'TRUNCATE', 'ALTER ROLE', 'pg_restore --clean'
           ))
+          assert 'verify_storage_sample_bytes' in str(isolated_triggers['workflow_dispatch'])
+          assert isolated_triggers['workflow_dispatch']['inputs']['verify_storage_sample_bytes']['default'] is False
+          assert 'plan_recovery_storage_sample.py' in guarded_steps
+          assert 'RECOVERY_STORAGE_BACKUP_ENCRYPTION_KEY' in guarded_steps
+          assert 'VERIFY_STORAGE_SAMPLE_BYTES' in guarded_steps
+          assert 'BACKUP_ENCRYPTION_KEY' in guarded_steps
+          assert 'SUPABASE_SERVICE_ROLE_KEY' not in guarded_steps
+          assert 'storage/v1/object/' not in guarded_steps
+          sampler = pathlib.Path('scripts/backup/plan_recovery_storage_sample.py').read_text()
+          assert 'MAX_TOTAL_BYTES = 500_000_000' in sampler
+          assert 'MAX_FILE_BYTES = 50_000_000' in sampler
+          assert 'verify_selected(' in sampler
+          assert 'validate_manifest(' in sampler
+          assert 'upload_fileobj' not in sampler
+          assert 'put_object' not in sampler and 'delete_object' not in sampler
+          assert 'supabase.co' not in sampler
+          print('Protected R2 Storage 500MB sample is read-only and Free per-file capped')
           print('Managed recovery R0/R1 preflight isolated, manual-only and read-only')
           print('Daily encrypted V2 backup and protected manual restore workflow guards verified')
           print('Manual offline database recovery rehearsal guards verified')
