@@ -213,11 +213,12 @@ export function changedPolicyEditFields(before: PolicyEditSnapshot | null, after
 }
 
 // Only these explicitly approved policy-facing fields may have historical
-// values written into audit logs. Do not log raw customers, identifiers,
-// insurer pay-in/payout commissions, remarks, or arbitrary form JSON.
+// values written into audit logs. IDV and premium amounts are permitted;
+// never log raw customers, identifiers, insurer commissions, or remarks.
 const DISPLAYABLE_PREMIUM_VALUES = new Set([
   "premium.od_premium", "premium.tp_premium",
   "premium.cpa_amount", "premium.cpa_opted", "premium.add_on_premium",
+  "policy.insured_declared_value",
 ]);
 const DERIVED_PREMIUM_AUDIT_LABEL = "Premium totals recalculated (source edit not recorded)";
 const LEGACY_DERIVED_PREMIUM_LABELS = new Set([
@@ -297,7 +298,7 @@ function readPolicyAuditFieldChanges(raw:unknown):string[]|null {
     if(hidden&&fieldLabels.has(hidden[1])){accepted.push(item);continue;}
     const parsed=item.match(/^(.*?): (.*?) → (.*?)$/);
     if(parsed&&withValues.has(parsed[1])){
-      const isAmount=["OD premium","TP premium","CPA amount","Add-on premium"].includes(parsed[1]);
+      const isAmount=["OD premium","TP premium","CPA amount","Add-on premium","Sum insured / IDV"].includes(parsed[1]);
       const isBoolean=parsed[1]==="CPA opted";
       const safe=(value:string)=>isBoolean?/^(Yes|No|Not set)$/.test(value)
         :isAmount?/^(₹[0-9,]+[.][0-9]{2}|Not set|Changed)$/.test(value)
