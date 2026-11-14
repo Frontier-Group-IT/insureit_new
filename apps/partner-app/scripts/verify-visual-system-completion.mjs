@@ -180,7 +180,7 @@ const actionRequiredArtwork = path.join(root, 'assets/partner/status/warning.png
 if (!fs.existsSync(actionRequiredArtwork)) throw new Error('Action Required 3D artwork must be present in the Partner app bundle.');
 requireText(policyIntakes, "row.status === 'needs_attention' || (row.status === 'processing' && row.ocr_status === 'failed')", 'Action Required and OCR-failed records must select warning artwork.');
 requireText(policyIntakes, 'source={PartnerAssets.status.warning}', 'Use the bundled 3D warning artwork for Action Required instead of the former shield icon.');
-requireText(policyIntakes, 'styles.rowArtworkAttention', 'Action Required artwork must use its small amber icon background.');
+requireText(policyIntakes, "rowArtworkAttention: { backgroundColor: 'transparent' }", 'Action Required warning artwork must not have a colored background box.');
 requireText(policyIntakes, 'styles.rowAttentionImage', 'Action Required artwork stays inside the existing compact record icon area.');
 if (policyIntakes.indexOf('source={PartnerAssets.status.warning}') > policyIntakes.indexOf("const insurerName = field(row, 'insurer_name')")) throw new Error('Warning artwork must take priority over insurer logos for Action Required records.');
 requireText(policyIntakes, 'PartnerInsurerLogo', 'Policy Intake records must prefer insurer artwork through PartnerInsurerLogo.');
