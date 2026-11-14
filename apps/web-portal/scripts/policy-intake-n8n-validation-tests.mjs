@@ -63,6 +63,23 @@ test("rejects policy mismatch, unknown field, duplicate field, missing critical 
  const missing=fresh();missing.fields=missing.fields.filter(f=>f.key!=="insured_name");
  assert.throws(()=>validateN8nPolicyIntakeResponse(missing,ids),/n8n_required_field_missing/);
 });
+test("rejects missing, renamed, or substituted n8n safety checks",()=>{
+  const missing=fresh();delete missing.checks.exact_igst_rounds_to_tax;
+  assert.throws(()=>validateN8nPolicyIntakeResponse(missing,ids),/n8n_financial_validation_failed/);
+  const substituted=fresh();delete substituted.checks.is_icici_3005;
+  substituted.checks.unrecognized_check=true;
+  assert.throws(()=>validateN8nPolicyIntakeResponse(substituted,ids),/n8n_financial_validation_failed/);
+  const extra=fresh();extra.checks.unrecognized_check=true;
+  assert.throws(()=>validateN8nPolicyIntakeResponse(extra,ids),/n8n_financial_validation_failed/);
+});
+test("rejects invalid, non-ISO, or reversed coverage dates",()=>{
+  const invalid=fresh();invalid.fields.find(f=>f.key==="policy_start_date").value="2026-02-30";
+  assert.throws(()=>validateN8nPolicyIntakeResponse(invalid,ids),/n8n_coverage_dates_invalid/);
+  const nonIso=fresh();nonIso.fields.find(f=>f.key==="policy_end_date").value="05/11/2027";
+  assert.throws(()=>validateN8nPolicyIntakeResponse(nonIso,ids),/n8n_coverage_dates_invalid/);
+  const reversed=fresh();reversed.fields.find(f=>f.key==="policy_end_date").value="2025-11-05";
+  assert.throws(()=>validateN8nPolicyIntakeResponse(reversed,ids),/n8n_coverage_dates_invalid/);
+});
 test("rejects auto finalization and unsupported parser version",()=>{
  const x=fresh();x.auto_finalize_allowed=true;
  assert.throws(()=>validateN8nPolicyIntakeResponse(x,ids),/n8n_review_required/);
