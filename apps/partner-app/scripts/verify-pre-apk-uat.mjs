@@ -88,6 +88,30 @@ expectAll('app/policy-intake-new.tsx', [
   [/\/policy-intakes\/\[id\]/, 'Policy Intake submission must route to tracked status'],
 ]);
 
+// Keep the three Claims status filters visible together on narrow phones while
+// leaving Add Claim available without consuming their row width.
+expectAll('app/(tabs)/claims.tsx', [
+  [/summaryChips: \{ flexDirection: 'row'/, 'Claims status filters must share one horizontal row'],
+  [/summaryChip: \{ flex: 1, minWidth: 0/, 'Claims status filters must have equal flexible widths'],
+  [/summaryChipLabel: \{[^\n]*fontSize: 9/, 'Claims labels must use compact typography'],
+  [/summaryAddClaimRow/, 'Add Claim must remain accessible separately'],
+  [/label: 'All Claims'/, 'Preserve All Claims status'],
+  [/label: 'Settled Claims'/, 'Preserve Settled Claims status'],
+  [/label: 'In Progress'/, 'Preserve In Progress status'],
+]);
+// The Policies See all selector mirrors Policy Intake's bottom-sheet UX;
+// keep the search Filter dropdown separate and preserve server-count selections.
+expectAll('app/(tabs)/policies.tsx', [
+  [/visible=\{seeAllOpen\}[\s\S]*?animationType="slide"/, 'See all must open as a modal bottom sheet'],
+  [/statusSheetBackdrop/, 'Bottom sheet backdrop must dismiss'],
+  [/onRequestClose=\{\(\) => setSeeAllOpen\(false\)\}/, 'Android back must dismiss the sheet'],
+  [/Select status/, 'Bottom sheet needs Select status title'],
+  [/radio-button-on/, 'Selected status needs radio indicator'],
+  [/option\.value\.toLocaleString\('en-IN'\)/, 'Policy statuses retain real summary counts'],
+  [/onPress=\{\(\) => selectSummary\(option\.filter\)\}/, 'Choosing status must update the policy list'],
+  [/visible=\{filterMenuOpen\}/, 'Search Filter keeps its anchored dropdown'],
+]);
+
 if (failures.length) {
   console.error('Partner pre-APK UAT/security contract verification failed:');
   for (const failure of failures) console.error(`- ${failure}`);
