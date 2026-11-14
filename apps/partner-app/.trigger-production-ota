@@ -1,10 +1,10 @@
 Partner production OTA trigger
-release=partner-business-product-label-pr-4401
+release=partner-policy-onboarding-blank-inputs-pr-4413
 source=verified-merged-main
-reason=user-approved-business-product-label-ellipsis
+reason=user-approved-operations-parity-no-placeholder-fields
 channel=production
 runtime=0.2.0
-requested=2026-11-13
+requested=2026-11-14
 no_native_build=true
 no_apk=true
 no_aab=true
