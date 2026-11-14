@@ -226,7 +226,7 @@ for(const fragment of [
   "editable={draft?.vehicleClass!=='CPM'}",
   "(f.key==='capacity'&&!draft.vehicleClass)",
   "(f.key==='policyProduct'&&!draft.vehicleClass)",
-  "draft.policyProduct==='Third Party'",
+  "['Third Party','Long Term Third Party'].includes(draft.policyProduct)",
   "verifiedSource?.rmCode",
   "verifiedSource?.mobile",
   "payinSummaryExpanded",
