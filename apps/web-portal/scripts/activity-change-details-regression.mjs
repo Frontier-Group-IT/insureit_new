@@ -38,6 +38,21 @@ assert.match(policyActivity, /cpa_amount: "CPA amount"/, "CPA amount must be tra
 assert.match(policyActivity, /describePolicyEditChanges/, "Policy edits must store actual changed source fields");
 assert.match(policyEdit, /describePolicyEditChanges\(activityBefore, activityAfter\)/, "Policy edit action must use safe old/new details");
 assert.match(policyActivity, /premiumSourceChanged/, "Derived pay-in review resets must not replace manual CPA edits");
+
+for (const field of ["projected_od_percent: \"Pay-in OD rate\"", "projected_tp_percent: \"Pay-in TP rate\"", "od_payout_percent: \"Partner payout OD rate\"", "tp_payout_percent: \"Partner payout TP rate\""]) {
+  assert.ok(policyActivity.includes(field), field + " must be tracked as an editable commercial source, without values");
+}
+assert.match(policyActivity, /sourceEntries\.length === 0 && entries\.some\(entry => DERIVED_PREMIUM_FIELDS\.has\(entry\.key\)\)/, "Derived-only snapshots must not be misreported as missing audit data");
+assert.match(policyActivity, /LEGACY_DERIVED_PREMIUM_LABELS\.has\(item\)/, "Old derived-only audit rows must be identified without inventing source changes");
+assert.match(policyActivity, /Premium totals recalculated/, "Derived-only audit events need an accurate summary");
+assert.match(policyActivity, /Only calculated totals were recorded; the edited source and historical values are unavailable/, "Legacy derived-only audit must explain unavailable source values");
+assert.doesNotMatch(policyActivity, /old_data: .*before|new_data: .*after/, "Raw policy snapshots must not be stored in audit logs");
+const lifeIssuedEdit = read("../app/policies/life-health-issued-policy-edit-actions.ts");
+for (const actionSource of [policyEdit, lifeIssuedEdit]) {
+  assert.match(actionSource, /const activityChanges = describePolicyEditChanges\(activityBefore, activityAfter\)/, "Save should compute actual tracked changes");
+  assert.match(actionSource, /activityChanges === null \|\| activityChanges\.length > 0/, "Confirmed no-op save must not create misleading policy edit event");
+}
+
 assert.match(policyActivity, /cpaAmountChanged && entry.key==="premium.cpa_opted"/, "CPA-only editing must not create a second automatic CPA toggle event");
 for(const column of ["premium.net_premium","premium.gst_amount","premium.gross_premium","policy.premium_amount","payin.total_projected_payin"]){
   assert.ok(policyActivity.includes('"'+column+'"'), column+" must be treated as a calculated value");
