@@ -1,5 +1,7 @@
 # INSUREIT — Backup and restore disaster-recovery drill: authoritative handoff (updated 2026-11-14)
 
+**Additional Auth DML ownership check:** `postgres` has INSERT permission on **26 of 27 target auth tables**; the sole exception is `auth.schema_migrations` (platform-managed version history). R4's private TOC filter now excludes `auth.schema_migrations` from target imports and from selected COPY parity checks. Original Auth version history is **DEFERRED** to a Supabase-supported managed migration process, not silently described as restored. This restriction is separate from the source `supabase_migrations.schema_migrations` history, which is also deferred.
+
 ## 14 NOV 2026 — Target postgres ownership boundary discovery
 
 - Real SELECT-only R4 target permission probe: `postgres` is **NOT superuser**, **not a member** of `supabase_auth_admin`/`supabase_storage_admin`, and cannot `SET ROLE` into them, even though it has INSERT privilege for existing Auth tables. Therefore owner-only Auth trigger and Storage RLS policies CANNOT safely be created by the first PostgreSQL connection. R4 PR #4487 has been amended to **exclude** these DDL entries, retain them as explicit separate managed-service restoration blockers, and import only application SQL and compatible Auth table data. The first R4 remains **PARTIAL managed SQL**, not a complete recovered Supabase service.
