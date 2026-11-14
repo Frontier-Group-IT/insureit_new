@@ -69,6 +69,11 @@ assert.match(screen,/f.key==='manufacturingYear'\?manufacturingYearOptions\.map/
 assert.match(screen,/f.key==='manufacturingYear'\?'Select year'/, 'Motor year uses the portal select-year hint.');
 assert.match(screen,/referencePayinCard/, 'Motor insurer pay-in card must have its full clickable surface.');
 assert.match(screen,/referencePayoutCard/, 'Motor partner payout card must have its full clickable surface.');
+assert.match(screen,/productType==='Life'\|\|productType==='Health'/, 'Life and Health share the same card layout rule.');
+assert.match(screen,/styles\.referenceLifeHealthPayinRow/, 'Life and Health pay-in gets its own outline.');
+assert.match(screen,/styles\.referenceLifeHealthPayoutRow/, 'Life and Health payout gets its own outline.');
+assert.match(screen,/referenceLifeHealthPayinRow:\{borderWidth:1,borderColor:'#DCE6F1'/, 'Pay-in uses the approved light blue border.');
+assert.match(screen,/referenceLifeHealthPayoutRow:\{borderWidth:1,borderColor:'#E3DEF1'/, 'Payout uses the approved light violet border.');
 assert.match(screen,/Add projected insurer terms/, 'Motor pay-in card matches portal helper wording.');
 assert.match(screen,/Add agreed partner payout/, 'Motor payout card matches portal helper wording.');
 assert.match(screen,/payinEntered\?rupees\(summaryPayin\):'Not entered'/, 'Pay-in card retains true persisted status.');
