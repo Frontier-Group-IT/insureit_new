@@ -142,7 +142,6 @@ export default function NativePolicyOnboarding(){
   const [picker,setPicker]=useState<{key:string;items:{value:string;label:string}[];product?:boolean}|null>(null);
   const [pendingBusinessLine,setPendingBusinessLine]=useState<string|null>(null);
   const [dirty,setDirty]=useState(false);
-  const [commercialExpanded,setCommercialExpanded]=useState(false);
   const [commercialModal,setCommercialModal]=useState<'payin'|'payout'|null>(null);
   const [remarkOpen,setRemarkOpen]=useState(false);
   const [remarkText,setRemarkText]=useState('');
@@ -356,6 +355,15 @@ export default function NativePolicyOnboarding(){
     (amount(draft.od)+amount(draft.addOnPremium||'0'))*amount(draft.payoutOdPercent)/100
     +(draft.payoutBasis==='OD'?0:(amount(draft.tp)+(draft.vehicleClass==='CPM'?0:amount(draft.cpa)))*amount(draft.payoutTpPercent)/100):0;
   const rupees=(value:number)=>'₹'+value.toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const productPremium=productType==='Non Motor'?amount(productValues.netPremium||productValues.grossPremium||'0'):amount(productValues.premiumAmount||'0');
+  const productPayinBase=productValues.payinBasis==='FLAT'?amount(productValues.payinValue||'0'):productPremium*amount(productValues.payinValue||'0')/100;
+  const productPayin=productPayinBase+amount(productValues.payinScheme||'0');
+  const productPayout=productValues.partnerPayoutBasis==='FLAT'?amount(productValues.partnerPayoutValue||'0'):productPremium*amount(productValues.partnerPayoutValue||'0')/100;
+  const summaryPayin=isMotor?payinTotal:productPayin;
+  const summaryPayout=isMotor?payoutTotal:productPayout;
+  const payinEntered=isMotor?Boolean(draft?.projectedOdPercent||draft?.projectedTpPercent||draft?.insurerScheme):Boolean(productValues.payinValue!==undefined&&productValues.payinValue!==''||productValues.payinScheme!==undefined&&productValues.payinScheme!=='');
+  const payoutEntered=isMotor?Boolean(draft?.payoutOdPercent||draft?.payoutTpPercent||draft?.flatPayoutAmount):Boolean(productValues.partnerPayoutValue!==undefined&&productValues.partnerPayoutValue!=='');
+  const projectedRetention=summaryPayin*.9-summaryPayout;
   const filled=useMemo(()=>{
     if(!draft)return 0;
     const required=isMotor?[...policy,...proposer,...vehicle,...productCaseFields,...premiumFields].filter(field=>field.required):[...policy.filter(f=>f.required),...proposer.filter(f=>f.required)];
@@ -569,41 +577,33 @@ export default function NativePolicyOnboarding(){
         </View>
         <View style={styles.summary}>
           {isMotor?<View style={styles.premiumRows}>
-            <View style={styles.premiumHeading}><Ionicons name="cash-outline" size={17} color="#315B9A"/><Text style={styles.summaryCaption}>PREMIUM</Text></View>
+            <View style={styles.premiumHeading}><View style={styles.premiumIcon}><Ionicons name="cash-outline" size={16} color="#315B9A"/></View><Text style={styles.summaryCaption}>PREMIUM</Text></View>
             {[{label:'Net premium',value:net},{label:'GST',value:gst},{label:'Gross premium',value:gross}].map(row=><View key={row.label} style={styles.premiumRow}>
               <Text style={styles.premiumLabel}>{row.label}</Text><Text style={styles.premiumValue}>{rupees(row.value)}</Text>
             </View>)}
-          </View>:<>
-            <Text style={styles.muted}>{productType==='Non Motor'?'Gross premium':'Premium'}</Text>
-            <Text style={styles.total}>₹{amount(productValues[productType==='Non Motor'?'grossPremium':'premiumAmount']||'0').toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})}</Text>
-          </>}
+          </View>:<View style={styles.premiumRows}>
+            <View style={styles.premiumHeading}><View style={styles.premiumIcon}><Ionicons name="cash-outline" size={16} color="#315B9A"/></View><Text style={styles.summaryCaption}>PREMIUM</Text></View>
+            <Text style={styles.total}>{rupees(amount(productValues[productType==='Non Motor'?'grossPremium':'premiumAmount']||'0'))}</Text>
+            {productType!=='Non Motor'?<Text style={styles.muted}>{productValues.paymentFrequency||'Frequency pending'} · {productValues.paymentMode||'Mode pending'}</Text>:null}
+          </View>}
         </View>
-        {!isMotor&&data?.commercialAccess?<View style={styles.commercialBody}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Payin–Payout" accessibilityState={{expanded:commercialExpanded}}
-            onPress={()=>setCommercialExpanded(open=>!open)} style={styles.commercialToggle}>
-            <Ionicons name="cash-outline" size={17} color="#254C83"/><Text style={styles.commercialToggleTitle}>Payin–Payout</Text>
-            <Ionicons name={commercialExpanded?'chevron-up':'chevron-down'} size={16} color="#63758D"/>
-          </Pressable>
-          {commercialExpanded?<Text style={styles.notice}>Life, Health and Non Motor commercial calculations must be completed and approved in the Operations Portal. The native form does not submit these figures.</Text>:null}
-        </View>:null}
-        {isMotor&&data?.commercialAccess?<View style={styles.commercialCards}>
-          <Text style={styles.commercialHeading}>Payin–Payout</Text>
-          <Pressable accessibilityRole="button" accessibilityLabel="Insurer Pay-In popup"
-            onPress={()=>setCommercialModal('payin')} style={styles.commercialAction}>
-            <Ionicons name="arrow-down-circle-outline" size={19} color="#147D73"/>
-            <View style={styles.commercialActionBody}><Text style={styles.commercialActionTitle}>Insurer Pay-In</Text>
-              <Text style={styles.actionSubtitle}>Add projected insurer terms</Text></View>
-            <Text style={styles.commercialActionValue}>{draft.projectedOdPercent||draft.projectedTpPercent||draft.insurerScheme?'Entered':'Not entered'}</Text>
-            <Ionicons name="chevron-forward" size={15} color="#63758D"/>
-          </Pressable>
-          <Pressable accessibilityRole="button" accessibilityLabel="Partner Payout popup"
-            onPress={()=>setCommercialModal('payout')} style={styles.commercialAction}>
-            <Ionicons name="wallet-outline" size={19} color="#7452BA"/>
-            <View style={styles.commercialActionBody}><Text style={styles.commercialActionTitle}>Partner Payout</Text>
-              <Text style={styles.actionSubtitle}>Add agreed partner payout</Text></View>
-            <Text style={styles.commercialActionValue}>{draft.payoutOdPercent||draft.payoutTpPercent||draft.flatPayoutAmount?'Entered':'Not entered'}</Text>
-            <Ionicons name="chevron-forward" size={15} color="#63758D"/>
-          </Pressable>
+        {data?.commercialAccess?<View style={styles.referenceCommercial}>
+          <View style={styles.referenceCommercialHeader}><Ionicons name="hand-left-outline" size={16} color="#315B9A"/><Text style={styles.summaryCaption}>PAYIN–PAYOUT</Text></View>
+          <View style={styles.referenceCommercialRow}>
+            <View style={styles.referenceCommercialContent}>
+              <Text style={styles.referenceLabel}>INSURER PAY-IN</Text>
+              <Text style={styles.referenceValue}>{payinEntered?rupees(summaryPayin):'Not entered'}</Text>
+            </View>
+            <Pressable accessibilityRole="button" accessibilityLabel="Insurer Pay-In popup" onPress={()=>setCommercialModal('payin')} style={styles.referenceAdd}><Text style={styles.referenceAddText}>{payinEntered?'Edit':'Add'}</Text></Pressable>
+          </View>
+          <View style={styles.referenceCommercialRow}>
+            <View style={styles.referenceCommercialContent}>
+              <Text style={styles.referenceLabel}>PARTNER PAYOUT</Text>
+              <Text style={styles.referenceValue}>{payoutEntered?rupees(summaryPayout):'Not entered'}</Text>
+            </View>
+            <Pressable accessibilityRole="button" accessibilityLabel="Partner Payout popup" onPress={()=>setCommercialModal('payout')} style={styles.referenceAdd}><Text style={styles.referenceAddText}>{payoutEntered?'Edit':'Add'}</Text></Pressable>
+          </View>
+          <View style={styles.referenceRetention}><View><Text style={styles.referenceLabel}>PROJECTED RETENTION</Text><Text style={styles.referenceValue}>{payinEntered||payoutEntered?rupees(projectedRetention):'₹0.00'}</Text></View><Text style={styles.muted}>After 10% TDS</Text></View>
         </View>:null}
 
       </View>
@@ -653,7 +653,7 @@ export default function NativePolicyOnboarding(){
         </View>
       </View>
     </Modal>
-    <Modal transparent visible={Boolean(commercialModal)&&isMotor&&Boolean(data?.commercialAccess)}
+    <Modal transparent visible={Boolean(commercialModal)&&Boolean(data?.commercialAccess)}
       animationType="slide" onRequestClose={()=>setCommercialModal(null)}>
       <View style={styles.scrim}>
         <View style={styles.commercialSheet}>
@@ -669,7 +669,38 @@ export default function NativePolicyOnboarding(){
             </Pressable>
           </View>
           <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.commercialModalContent}>
-            {commercialModal==='payin'?<>
+            {!isMotor?<View style={styles.fields}>
+              {commercialModal==='payin'?<>
+                <View style={styles.field}><Text style={styles.label}>PAY-IN BASIS</Text>
+                  <Pressable accessibilityRole="button" accessibilityLabel="Pay-in basis" style={styles.inputRow}
+                    onPress={()=>setPicker({key:'payinBasis',product:true,items:[{value:'NET',label:'Net Premium %'},{value:'FLAT',label:'Fixed Amount'}]})}>
+                    <Text style={styles.value}>{productValues.payinBasis==='FLAT'?'Fixed Amount':'Net Premium %'}</Text><Ionicons name="chevron-down" size={15} color="#63758D"/>
+                  </Pressable></View>
+                <View style={styles.field}><Text style={styles.label}>{productValues.payinBasis==='FLAT'?'PAY-IN AMOUNT':'PAY-IN %'}</Text>
+                  <TextInput accessibilityLabel="Pay-in value" style={styles.input} keyboardType="decimal-pad" placeholder="0.00" value={productValues.payinValue||''}
+                    onChangeText={v=>updateProduct('payinValue',v)}/></View>
+                <View style={styles.field}><Text style={styles.label}>INSURER SCHEME / INCENTIVE</Text>
+                  <TextInput accessibilityLabel="Insurer scheme incentive" style={styles.input} keyboardType="decimal-pad" placeholder="₹ 0.00"
+                    value={productValues.payinScheme||''} onChangeText={v=>updateProduct('payinScheme',v)}/></View>
+                {[
+                  ['BASE PROJECTED PAY-IN',productPayinBase],['PROJECTED TOTAL PAY-IN',productPayin],
+                  ['TDS @ 10%',productPayin*.1],['PAY-IN AFTER TDS',productPayin*.9]
+                ].map(([label,value])=><View key={String(label)} style={styles.field}><Text style={styles.label}>{label}</Text><View style={[styles.inputRow,styles.readonlyInput]}><Text style={styles.premiumValue}>{rupees(Number(value))}</Text></View></View>)}
+                <Text style={styles.commercialNote}>Blank means projected pay-in has not been entered. Entering 0 explicitly is valid and preserved.</Text>
+              </>:<>
+                <View style={styles.field}><Text style={styles.label}>PAYOUT BASIS</Text>
+                  <Pressable accessibilityRole="button" accessibilityLabel="Partner payout basis" style={styles.inputRow}
+                    onPress={()=>setPicker({key:'partnerPayoutBasis',product:true,items:[{value:'NET',label:'Net Premium %'},{value:'FLAT',label:'Fixed Amount'}]})}>
+                    <Text style={styles.value}>{productValues.partnerPayoutBasis==='FLAT'?'Fixed Amount':'Net Premium %'}</Text><Ionicons name="chevron-down" size={15} color="#63758D"/>
+                  </Pressable></View>
+                <View style={styles.field}><Text style={styles.label}>{productValues.partnerPayoutBasis==='FLAT'?'PAYOUT AMOUNT':'PAYOUT %'}</Text>
+                  <TextInput accessibilityLabel="Payout value" style={styles.input} keyboardType="decimal-pad" placeholder="0.00"
+                    value={productValues.partnerPayoutValue||''} onChangeText={v=>updateProduct('partnerPayoutValue',v)}/></View>
+                <View style={styles.field}><Text style={styles.label}>TOTAL AGREED PAYOUT</Text><View style={[styles.inputRow,styles.readonlyInput]}><Text style={styles.premiumValue}>{rupees(productPayout)}</Text></View></View>
+                <View style={styles.field}><Text style={styles.label}>PROJECTED RETENTION</Text><View style={[styles.inputRow,styles.readonlyInput]}><Text style={styles.premiumValue}>{rupees(projectedRetention)}</Text></View></View>
+                <Text style={styles.commercialNote}>The payout is tagged to the selected Section 01 Lead Source. Negative retention is allowed and remains for finance review.</Text>
+              </>}
+            </View>:commercialModal==='payin'?<>
               <View style={styles.fields}>{insurerPayinFields.map(f=><View key={f.key} style={styles.field}>
                 <Text style={styles.label}>{f.label.toUpperCase()}</Text>
                 <TextInput accessibilityLabel={f.label} value={String(draft?.[f.key]??'')}
@@ -682,6 +713,10 @@ export default function NativePolicyOnboarding(){
                   <Text style={styles.premiumValue}>{rupees(payinTotal)}</Text><Text style={styles.autoText}>AUTO</Text>
                 </View>
               </View></View>
+              <View style={styles.fields}>
+                <View style={styles.field}><Text style={styles.label}>TDS @ 10%</Text><View style={[styles.inputRow,styles.readonlyInput]}><Text style={styles.premiumValue}>{rupees(payinTotal*.1)}</Text></View></View>
+                <View style={styles.field}><Text style={styles.label}>PAY-IN AFTER TDS</Text><View style={[styles.inputRow,styles.readonlyInput]}><Text style={styles.premiumValue}>{rupees(payinTotal*.9)}</Text></View></View>
+              </View>
               <View style={styles.payinSummary}>
                 <Pressable accessibilityRole="button" accessibilityLabel="Toggle pay-in summary"
                   accessibilityState={{expanded:payinSummaryExpanded}}
@@ -744,6 +779,7 @@ export default function NativePolicyOnboarding(){
                     <Text style={styles.premiumValue}>{rupees(payoutTotal)}</Text><Text style={styles.autoText}>AUTO</Text>
                   </View>}
                 </View>
+                <View style={styles.fields}><View style={styles.field}><Text style={styles.label}>PROJECTED RETENTION</Text><View style={[styles.inputRow,styles.readonlyInput]}><Text style={styles.premiumValue}>{rupees(projectedRetention)}</Text></View></View></View>
               </View>
             </>}
           </ScrollView>
@@ -840,6 +876,7 @@ const styles=StyleSheet.create({
   input:{minHeight:42,borderWidth:1,borderColor:'#D8E1EC',backgroundColor:'#FFFFFF',borderRadius:9,paddingHorizontal:11,fontSize:12,color:'#183653'},
   inputRow:{minHeight:42,borderWidth:1,borderColor:'#D8E1EC',borderRadius:9,paddingHorizontal:11,flexDirection:'row',alignItems:'center',justifyContent:'space-between'},
   value:{color:'#183653',fontSize:12,flex:1},placeholder:{color:'#97A5B7'},
+  premiumIcon:{width:27,height:27,borderRadius:8,backgroundColor:'#EDF3FC',alignItems:'center',justifyContent:'center'},referenceCommercial:{marginHorizontal:12,marginBottom:12,borderWidth:1,borderColor:'#D7E3F3',borderRadius:11,overflow:'hidden',backgroundColor:'#F8FAFD'},referenceCommercialHeader:{flexDirection:'row',alignItems:'center',gap:9,padding:11,borderBottomWidth:1,borderColor:'#E0E7F0'},referenceCommercialRow:{minHeight:66,paddingHorizontal:12,paddingVertical:10,flexDirection:'row',alignItems:'center',justifyContent:'space-between'},referenceCommercialContent:{gap:5,flex:1},referenceLabel:{fontSize:9,fontWeight:'700',color:'#74829A'},referenceValue:{fontSize:12,fontWeight:'700',color:'#17365D'},referenceAdd:{minHeight:34,minWidth:45,alignItems:'center',justifyContent:'center'},referenceAddText:{fontSize:11,fontWeight:'700',color:'#315B9A'},referenceRetention:{paddingHorizontal:12,paddingVertical:11,borderTopWidth:1,borderColor:'#DCE5F1',flexDirection:'row',alignItems:'center',justifyContent:'space-between'},commercialNote:{fontSize:10,lineHeight:17,color:'#71819A',padding:8,width:'100%'},
   commercialCards:{marginHorizontal:12,marginBottom:12,gap:8},
   commercialHeading:{fontSize:11,color:'#26436B',fontWeight:'800'},
   commercialAction:{minHeight:48,flexDirection:'row',gap:9,alignItems:'center',paddingHorizontal:11,borderWidth:1,borderColor:'#DDE6F0',borderRadius:10,backgroundColor:'#F8FAFD'},

@@ -20,7 +20,9 @@ assert.match(app, /<PartnerStateView state="error"/, 'Errors retain their own st
 assert.match(app, /visibleRows\.map\(\(row, index\) =>/, 'Available records remain visible with stagger index');
 assert.match(app, /<View style=\{styles\.bottomNav\}>/, 'Bottom navigation remains outside the scroll body');
 
-assert.match(app, /\{filter === 'all' && row\.status !== 'completed' \? <IntakeProgress row=\{row\} reduceMotion=\{reduceMotion\} \/> : null\}/, 'Progress timeline omits Completed records even under All');
+assert.match(app, /\{filter === 'all' \? <IntakeProgress row=\{row\} reduceMotion=\{reduceMotion\} \/> : null\}/, 'All shows the progress timeline for Completed and every other intake status');
+assert.match(app, /const activeStep = row\.status === 'completed' \? 4 :/, 'Completed intake retains all four finished timeline stages');
+assert.doesNotMatch(app, /filter === 'all' && row\.status !== 'completed'/, 'Do not hide Completed progress in All');
 assert.doesNotMatch(app, /Customer name pending/, 'Missing names must not show placeholder');
 assert.doesNotMatch(app, /<IntakeProgress row=\{row\} reduceMotion=\{reduceMotion\} \/>(?!\s*: null)/, 'Do not render an unconditional timeline in each status filter');
 assert.match(app, /function IntakeProgress\(\{ row, reduceMotion \}: \{ row: PartnerPolicyIntake; reduceMotion: boolean \}\) \{/, 'Retain the existing per-record progress component with accessibility motion preference');
@@ -207,8 +209,9 @@ assert.ok(detail.includes("router.push({ pathname: '/policy-intakes/onboarding'"
 // Motion must stay presentation-only and preserve search, status, pagination, and accessibility.
 assert.match(app, /AccessibilityInfo\.isReduceMotionEnabled\(\)/, 'Respect OS reduced-motion preferences');
 assert.match(app, /addEventListener\('reduceMotionChanged', setReduceMotion\)/, 'React to OS reduced-motion changes');
-assert.match(app, /<Animated\.View style=\{\[styles\.searchBand, \{ opacity: searchEntrance, transform: \[\{ translateY: searchRise \}\] \}\]\}>/, 'Search band slides from bottom to top on screen focus');
-assert.match(app, /searchRise\.setValue\(20\)/, 'Search begins below its final position');
+assert.match(app, /<View style=\{styles\.searchBand\}>/, 'Search band stays fixed without entrance motion');
+assert.doesNotMatch(app, /searchEntrance|searchRise/, 'Search slide and fade animation is fully removed');
+assert.match(app, /<View style=\{\[styles\.searchBox, searchFocused && styles\.searchBoxFocused\]\}>/, 'Keep the search focus highlight');
 assert.match(app, /onFocus=\{\(\) => setSearchFocused\(true\)\}/, 'Search focus shows a soft highlight');
 assert.match(app, /<MotionFilterChip key=\{item\.key\} active=\{active\} reduceMotion=\{reduceMotion\}/, 'Every status chip has smooth selection transition');
 assert.match(app, /<MotionCard key=\{row\.id\} index=\{index\} reduceMotion=\{reduceMotion\}>/, 'Each card has a capped staggered entrance');

@@ -42,8 +42,6 @@ export default function PolicyIntakesScreen() {
   const mainScrollRef = useRef<ScrollView>(null);
   const [reduceMotion, setReduceMotion] = useState(true);
   const [searchFocused, setSearchFocused] = useState(false);
-  const searchEntrance = useRef(new Animated.Value(1)).current;
-  const searchRise = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     let mounted = true;
     void AccessibilityInfo.isReduceMotionEnabled().then((enabled) => {
@@ -52,22 +50,6 @@ export default function PolicyIntakesScreen() {
     const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
     return () => { mounted = false; subscription.remove(); };
   }, []);
-  useFocusEffect(useCallback(() => {
-    searchEntrance.stopAnimation();
-    searchRise.stopAnimation();
-    if (reduceMotion) {
-      searchEntrance.setValue(1);
-      searchRise.setValue(0);
-    } else {
-      searchEntrance.setValue(0);
-      searchRise.setValue(20);
-      Animated.parallel([
-        Animated.timing(searchEntrance, { toValue: 1, duration: 320, delay: 70, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
-        Animated.timing(searchRise, { toValue: 0, duration: 320, delay: 70, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
-      ]).start();
-    }
-    return () => { searchEntrance.stopAnimation(); searchRise.stopAnimation(); };
-  }, [reduceMotion, searchEntrance, searchRise]));
   useFocusEffect(useCallback(() => {
     const reset = () => mainScrollRef.current?.scrollTo({ y: 0, animated: false });
     reset();
@@ -179,7 +161,7 @@ export default function PolicyIntakesScreen() {
         ) : null}
       </View>
 
-      <Animated.View style={[styles.searchBand, { opacity: searchEntrance, transform: [{ translateY: searchRise }] }]}>
+      <View style={styles.searchBand}>
         <View style={[styles.searchBox, searchFocused && styles.searchBoxFocused]}>
           <Ionicons name="search-outline" size={17} color="#8A98AC" />
           <TextInput
@@ -195,7 +177,7 @@ export default function PolicyIntakesScreen() {
           />
           {query ? <Pressable onPress={() => setQuery('')} hitSlop={8}><Ionicons name="close-circle" size={17} color="#A3ADBB" /></Pressable> : null}
         </View>
-      </Animated.View>
+      </View>
 
       <View style={styles.filtersWrap}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll} contentContainerStyle={styles.filtersContent}>
@@ -333,7 +315,7 @@ export default function PolicyIntakesScreen() {
                   </View>
                 </View>
 
-                {filter === 'all' && row.status !== 'completed' ? <IntakeProgress row={row} reduceMotion={reduceMotion} /> : null}
+                {filter === 'all' ? <IntakeProgress row={row} reduceMotion={reduceMotion} /> : null}
 
                 {row.attention_reason ? (
                   <View style={styles.attention}>

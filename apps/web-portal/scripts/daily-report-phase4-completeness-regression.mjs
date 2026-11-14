@@ -7,7 +7,7 @@ import {
 
 const read = (path) => readFileSync(new URL(path, import.meta.url), "utf8");
 const source = read("../lib/reports/daily-activity.ts");
-const page = read("../app/reports/(workspace)/daily/page.tsx");
+const panel = read("../components/reports/daily-self-activity-panel.tsx");
 
 assert.equal(DAILY_PAGE_SIZE, 30);
 assert.equal(DAILY_MAX_PAGE, 40);
@@ -30,7 +30,7 @@ assert.match(source, /dailyHasMore\(events.length, start, page\)/);
 assert.match(source, /table_name\.eq\.policies,and\(table_name\.like\.policy_%,table_name\.neq\.policy_intake_requests\)/, "Policy filter includes related policy tables but excludes intake before pagination");
 assert.match(source, /\.not\("table_name", "like", "policy_%"\)/, "Other activity filter excludes policy sub-types");
 assert.match(source, /\.not\("table_name", "ilike", "claim%"\)/, "Other activity filter excludes claim sub-types");
-assert.match(page, /payload\?\.truncated/, "The UI discloses safe pagination truncation");
-assert.match(page, /Earlier activities may not be shown/, "Truncation messaging does not claim complete coverage");
+assert.match(panel, /data\.partial/, "The employee history UI discloses incomplete safe-limit reads");
+assert.match(panel, /These counts may be incomplete/, "Truncation messaging does not claim complete coverage");
 assert.doesNotMatch(source, /\.update\(|\.insert\(|\.delete\(|\.upsert\(/, "Reader stays strictly read-only");
 console.log("Daily Report Phase 4 busy-day paging and category precision regression passed.");

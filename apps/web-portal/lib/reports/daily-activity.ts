@@ -7,7 +7,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 export type DailyActivityGroup = "all" | "policy" | "intake" | "case" | "customer" | "vehicle" | "claim" | "other";
 export type DailyActivityScope = "self" | "all";
-export type DailyActivityQuery = { date?: string; scope?: string; employee?: string; type?: string; page?: string; period?: string; activity?: string };
+export type DailyActivityQuery = { date?: string; scope?: string; employee?: string; type?: string; page?: string; period?: string; activity?: string; person?: string };
 export type DailyActivityRow = {
   id: string; actorId: string; employeeName: string; employeeCode: string;
   type: string; group: Exclude<DailyActivityGroup, "all">;
