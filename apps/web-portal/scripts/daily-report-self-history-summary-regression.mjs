@@ -23,7 +23,7 @@ assert.match(source, /\.eq\("converted_by",viewerId\)/, "Case conversion is scop
 assert.match(source, /const counts=new Map<string,number>\(\)/, "Summary count is computed from all fetched recorded actions");
 assert.match(source, /for\(const a of all\) counts\.set/, "Count is computed before selecting a category/page");
 assert.match(source, /const filtered=category\?all\.filter/, "Drilldown includes only the selected category");
-assert.match(source, /partial:true/, "Hard read caps are disclosed, not silently misreported");
+assert.match(source, /const partial = sources\.some\(s=>s\.result\.partial\)/, "Hard read caps and source failures mark incomplete counts");
 assert.match(source, /if\(options\.day && !window\) throw/, "Malformed dates must not silently fetch all history");
 assert.doesNotMatch(source, /\.insert\(|\.update\(|\.upsert\(|\.delete\(|\.rpc\(/, "Self summary is strictly read-only");
 

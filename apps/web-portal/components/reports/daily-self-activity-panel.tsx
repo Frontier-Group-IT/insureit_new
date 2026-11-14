@@ -5,6 +5,7 @@ import type { DailyActivityQuery } from "@/lib/reports/daily-activity";
 type Data = {
   selfName:string;employeeCode:string;categories:{name:string;count:number}[];category:string;rows:SelfActivity[];
   page:number;hasNext:boolean;total:number;selectedCount:number;partial:boolean;day:string;
+  unavailableSources:string[];allSourcesUnavailable:boolean;
 };
 type Props = {data:Data;linkFor:(updates:Partial<DailyActivityQuery>)=>string; reportMode?:"self"|"employee";backToEmployees?:string};
 
@@ -31,7 +32,16 @@ export function DailySelfActivityPanel({data,linkFor,reportMode="self",backToEmp
       </div>
       {data.partial ? (
         <div role="status" className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-[10px] text-amber-900">
-          Historical activity exceeds the safe read limit. These counts may be incomplete; use the selected-day filter to narrow the report.
+          {data.unavailableSources.length ? (
+            <>
+              {data.allSourcesUnavailable
+                ? "Activity history is temporarily unavailable. Please retry. No records were changed."
+                : "Some activity sources are temporarily unavailable."}
+              {" "}Unavailable: {data.unavailableSources.join(", ")}. Counts may be incomplete.
+            </>
+          ) : (
+            <>Historical activity exceeds the safe read limit. These counts may be incomplete; use the selected-day filter to narrow the report.</>
+          )}
         </div>
       ) : null}
       {!data.category ? (
