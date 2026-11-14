@@ -239,7 +239,7 @@ for(const fragment of [
 for(const fragment of [
   "import { loadPospMispAssociates }",
   '.eq("intermediary_code",intake.lead_source_code)',
-  'selected.intermediary_type===intake.lead_source_type',
+  'item.intermediary_type===intake.lead_source_type',
   'sourceMeta={name:selected.display_name.trim()',
 ]) requireText(nativeApi,fragment,'Scoped source metadata regression: '+fragment);
 requireText(nativeOnboarding, 'Form uploads are available in Operations Portal.', 'Disclose web-only uploads without redundant descriptions.');
