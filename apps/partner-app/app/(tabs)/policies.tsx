@@ -11,6 +11,7 @@ import {
   Platform,
   Pressable,
   RefreshControl,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -284,29 +285,46 @@ export default function PoliciesScreen() {
       </View>
 
       <View style={styles.summaryRow}>
-        {([
-          { label: 'Total Policies', filter: 'all' as const, value: summary.data?.total_policies, icon: 'document-text' as const, tint: '#2559AD' },
-          { label: 'Active Policies', filter: 'in_force' as const, value: summary.data?.in_force_policies, icon: 'shield-checkmark' as const, tint: '#123B83' },
-          { label: 'Expiring Soon', filter: 'expiring' as const, value: summary.data?.expiring_30_days, icon: 'hourglass' as const, tint: '#2347A2' },
-          { label: 'Lapsed Policies', filter: 'expired' as const, value: summary.data?.expired_policies, icon: 'close-circle' as const, tint: '#163B82' },
-          { label: 'Upcoming', filter: 'upcoming' as const, value: summary.data?.upcoming_policies, icon: 'calendar' as const, tint: '#3156B8' },
-        ]).map((metric) => (
-          <Pressable
-            key={metric.label}
-            accessibilityRole="button"
-            accessibilityLabel={`Show ${metric.label}`}
-            accessibilityState={{ selected: lifecycle === metric.filter && query.length === 0 }}
-            onPress={() => selectSummary(metric.filter)}
-            style={({ pressed }) => [styles.summaryCard, (lifecycle === metric.filter && query.length === 0) && styles.summaryCardSelected, pressed && styles.summaryCardPressed]}
-          >
-            <View style={styles.summaryIcon}>
-              <Ionicons name={metric.icon} size={19} color={metric.tint} />
-            </View>
-            <Text style={styles.summaryValue}>{metric.value === undefined ? '—' : metric.value.toLocaleString('en-IN')}</Text>
-            <Text numberOfLines={2} style={styles.summaryLabel}>{metric.label}</Text>
-            <Text style={styles.summaryPercent}>{formatPortfolioShare(metric.value, summary.data?.total_policies)}</Text>
-          </Pressable>
-        ))}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.summaryScroll}
+          contentContainerStyle={styles.summaryChips}
+          accessibilityLabel="Policy status filters"
+        >
+          {([
+            { label: 'Total Policies', filter: 'all' as const, value: summary.data?.total_policies },
+            { label: 'Active Policies', filter: 'in_force' as const, value: summary.data?.in_force_policies },
+            { label: 'Expiring Soon', filter: 'expiring' as const, value: summary.data?.expiring_30_days },
+            { label: 'Lapsed Policies', filter: 'expired' as const, value: summary.data?.expired_policies },
+            { label: 'Upcoming', filter: 'upcoming' as const, value: summary.data?.upcoming_policies },
+          ]).map((metric) => {
+            const selected = lifecycle === metric.filter && query.length === 0;
+            return (
+              <Pressable
+                key={metric.filter}
+                accessibilityRole="button"
+                accessibilityLabel={`${metric.label}, ${metric.value === undefined ? 'count unavailable' : metric.value.toLocaleString('en-IN')}`}
+                accessibilityState={{ selected }}
+                onPress={() => selectSummary(metric.filter)}
+                style={({ pressed }) => [styles.summaryChip, selected && styles.summaryChipSelected, pressed && styles.summaryChipPressed]}
+              >
+                <Text style={[styles.summaryChipLabel, selected && styles.summaryChipLabelSelected]}>{metric.label}</Text>
+                <Text style={[styles.summaryChipCount, selected && styles.summaryChipCountSelected]}>({metric.value === undefined ? '—' : metric.value.toLocaleString('en-IN')})</Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="See all policies"
+          accessibilityState={{ selected: lifecycle === 'all' && query.length === 0 }}
+          onPress={() => selectSummary('all')}
+          style={({ pressed }) => [styles.summarySeeAll, pressed && styles.summaryChipPressed]}
+        >
+          <Ionicons name="list" size={17} color="#0860C8" />
+          <Text style={styles.summarySeeAllText}>See all</Text>
+        </Pressable>
       </View>
 
       {canPartnerAccess(context, 'view_policy_intakes') ? (
@@ -487,15 +505,6 @@ function PolicyCard({ row, onPress }: { row: PartnerPolicyRow; onPress: () => vo
       </View>
     </Pressable>
   );
-}
-
-/** Portfolio composition, not month-over-month growth. No percentage when summary is unavailable. */
-function formatPortfolioShare(count: number | undefined, total: number | undefined) {
-  if (count == null || total == null || !Number.isFinite(count) || !Number.isFinite(total) || total < 0) return '—';
-  if (total === 0) return '0% of total';
-  const percentage = (count / total) * 100;
-  const formatted = Number.isInteger(percentage) ? percentage.toFixed(0) : percentage.toFixed(1);
-  return `${formatted}% of total`;
 }
 
 function policyStatus(value: PartnerPolicyRow['lifecycle_status']) {
@@ -702,14 +711,18 @@ const styles = StyleSheet.create({
   filterOptionActive: { backgroundColor: '#F0F5FF' },
   filterOptionText: { color: '#506079', fontSize: 10, lineHeight: 13, fontWeight: Platform.OS === 'ios' ? '400' : '600' },
   filterOptionTextActive: { color: '#3156B8', fontWeight: Platform.OS === 'ios' ? '400' : '800' },
-  summaryRow: { flexDirection: 'row', marginHorizontal: 12, marginTop: 9, gap: 3 },
-  summaryCard: { flex: 1, minWidth: 0, minHeight: 86, alignItems: 'center', paddingVertical: 7, paddingHorizontal: 2, borderRadius: 9, backgroundColor: '#F6F9FF', borderWidth: 1, borderColor: '#E8EFFB', shadowColor: '#17448C', shadowOpacity: 0.06, shadowRadius: 4, elevation: 1 },
-  summaryCardSelected: { backgroundColor: '#E8F1FF', borderColor: '#2458C5', borderBottomWidth: 3 },
-  summaryCardPressed: { backgroundColor: '#E8F1FF' },
-  summaryIcon: { width: 27, height: 27, borderRadius: 8, backgroundColor: '#EAF2FF', alignItems: 'center', justifyContent: 'center' },
-  summaryValue: { marginTop: 3, color: '#153C89', fontSize: 17, lineHeight: 19, fontWeight: Platform.OS === 'ios' ? '400' : '900' },
-  summaryLabel: { marginTop: 2, color: '#6077A0', fontSize: 7.5, lineHeight: 10, textAlign: 'center', fontWeight: Platform.OS === 'ios' ? '400' : '700' },
-  summaryPercent: { marginTop: 2, color: '#3156B8', fontSize: 7, lineHeight: 9, textAlign: 'center', fontWeight: Platform.OS === 'ios' ? '400' : '800' },
+  summaryRow: { flexDirection: 'row', alignItems: 'center', marginHorizontal: 12, marginTop: 9, gap: 7 },
+  summaryScroll: { flex: 1, minWidth: 0 },
+  summaryChips: { alignItems: 'center', gap: 7, paddingVertical: 3, paddingRight: 3 },
+  summaryChip: { minHeight: 38, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, paddingHorizontal: 13, borderRadius: 12, backgroundColor: '#F6F8FC', borderWidth: 1, borderColor: '#DEE6F0' },
+  summaryChipSelected: { backgroundColor: '#17365D', borderColor: '#17365D' },
+  summaryChipPressed: { opacity: 0.78 },
+  summaryChipLabel: { color: '#52627B', fontSize: 11, lineHeight: 15, fontWeight: '700' },
+  summaryChipLabelSelected: { color: '#FFFFFF' },
+  summaryChipCount: { color: '#7A889C', fontSize: 10, lineHeight: 14, fontWeight: '700' },
+  summaryChipCountSelected: { color: '#E2EEFF' },
+  summarySeeAll: { minHeight: 40, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, paddingHorizontal: 12, borderRadius: 22, borderWidth: 1, borderColor: '#E0E7F1', backgroundColor: '#FFFFFF', shadowColor: '#173B6C', shadowOpacity: 0.08, shadowRadius: 4, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
+  summarySeeAllText: { color: '#0860C8', fontSize: 11, fontWeight: '800' },
   intakeBanner: { marginHorizontal: 12, marginTop: 8, minHeight: 53, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 12, borderRadius: 9, backgroundColor: '#082D70', borderWidth: 1, borderColor: '#0C4794' },
   intakeBannerIcon: { width: 32, height: 32, borderRadius: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: '#174F9C' },
   intakeBannerCopy: { flex: 1 },
