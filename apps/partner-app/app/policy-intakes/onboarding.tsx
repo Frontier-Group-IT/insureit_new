@@ -503,7 +503,7 @@ export default function NativePolicyOnboarding(){
       {options.length?<Pressable accessibilityRole="button" accessibilityLabel={f.label} style={styles.inputRow} onPress={()=>setPicker({key:f.key,items:options,product:true})}>
         <Text style={[styles.value,!current&&styles.placeholder]} numberOfLines={1}>{options.find(o=>o.value===current)?.label||('Select '+f.label.toLowerCase())}</Text>
         <Ionicons name="chevron-down" size={15} color="#63758D"/>
-      </Pressable>:<TextInput accessibilityLabel={f.label} value={current} placeholder={['sumInsured','netPremium','gstAmount','grossPremium'].includes(f.key)?'₹ 0.00':f.key==='previousInsurer'||f.key==='deductible'?'Optional':'Enter '+f.label.toLowerCase()} placeholderTextColor="#98A6B8" onChangeText={v=>updateProduct(f.key,f.key==='phone'?v.replace(/\D/g,'').slice(0,10):f.key==='policyNumber'?v.toUpperCase():v)}
+      </Pressable>:<TextInput accessibilityLabel={f.label} value={current} placeholder={['sumInsured','netPremium','gstAmount','grossPremium'].includes(f.key)?'₹ 0.00':f.key==='previousClaims'?'Brief reference':f.key==='deductible'||productExtras.some(item=>item.key===f.key)?'Optional':'Enter '+f.label.toLowerCase()} placeholderTextColor="#98A6B8" onChangeText={v=>updateProduct(f.key,f.key==='phone'?v.replace(/\D/g,'').slice(0,10):f.key==='policyNumber'?v.toUpperCase():v)}
         keyboardType={['phone','premiumAmount','sumInsured','deductible','netPremium','gstAmount','grossPremium','employeeCount','annualWages','annualTurnover','projectValue'].includes(f.key)?'numeric':'default'}
         style={styles.input}/>}
     </View>;
