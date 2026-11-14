@@ -158,6 +158,7 @@ export default function NativePolicyOnboarding(){
   useEffect(()=>{void load();},[load]);
   const productType:NativeProductType=(draft?.businessLine==='Life'||draft?.businessLine==='Health'||draft?.businessLine==='Non Motor')?draft.businessLine:'Motor';
   const isMotor=productType==='Motor';
+  const sourceInfo=data?.sourceMeta && draft && draft.leadSource.trim().toLowerCase()===data.sourceMeta.name.trim().toLowerCase() && draft.intermediaryCode===data.sourceMeta.code?data.sourceMeta:null;
   const productValues=(productType==='Motor'?{}:draft?.productDrafts?.[productType])??{};
   const updateProduct=(key:string,value:string)=>{
     if(productType==='Motor')return;
@@ -366,8 +367,8 @@ export default function NativePolicyOnboarding(){
           placeholder={placeholderFor(f.label)} placeholderTextColor="#97A5B7"
           style={styles.input} />
       )}
-      {isMotor&&f.key==='intermediaryType'&&draft.rmName?<Text style={styles.fieldMeta}>RM · {draft.rmName}</Text>:null}
-      {isMotor&&f.key==='leadSource'&&draft.intermediaryCode?<Text style={styles.fieldMeta}>ID · {draft.intermediaryCode}</Text>:null}
+      {isMotor&&!sourceInfo&&f.key==='intermediaryType'&&draft.rmName?<Text style={styles.fieldMeta}>RM · {draft.rmName}</Text>:null}
+      {isMotor&&!sourceInfo&&f.key==='leadSource'&&draft.intermediaryCode?<Text style={styles.fieldMeta}>ID · {draft.intermediaryCode}</Text>:null}
     </View>;
   };
   const detailField=(f:ProductField)=>{
@@ -399,9 +400,15 @@ export default function NativePolicyOnboarding(){
     <View style={styles.sectionHead}><Text style={styles.number}>01</Text><Text style={styles.sectionTitle}>Policy source & ownership</Text></View>
     <View style={styles.fields}>{policy.slice(0,4).map(item=><View key={item.key} style={styles.sourceCell}>
       {field(item,true)}
-      {!isMotor&&item.key==='intermediaryType'?sourceMeta('rmName','RM'):null}
-      {!isMotor&&item.key==='leadSource'?sourceMeta('intermediaryCode','Lead source ID'):null}
+      {!isMotor&&!sourceInfo&&item.key==='intermediaryType'?sourceMeta('rmName','RM'):null}
+      {!isMotor&&!sourceInfo&&item.key==='leadSource'?sourceMeta('intermediaryCode','Lead source ID'):null}
     </View>)}</View>
+    {sourceInfo?<View style={styles.sourceIdentity}>
+      <Text style={styles.sourceIdentityText}><Text style={styles.sourceIdentityLabel}>RM  </Text>{sourceInfo.rmName||'Not assigned'}</Text>
+      <Text style={styles.sourceIdentityText}><Text style={styles.sourceIdentityLabel}>RM ID  </Text>{sourceInfo.rmCode||'—'}</Text>
+      <Text style={styles.sourceIdentityText}><Text style={styles.sourceIdentityLabel}>Source ID  </Text>{sourceInfo.code||'—'}</Text>
+      {sourceInfo.mobile?<Text style={styles.sourceIdentityText}><Text style={styles.sourceIdentityLabel}>Source No.  </Text>{sourceInfo.mobile}</Text>:null}
+    </View>:null}
   </View>;
   const productSection=(number:string,title:string,items:ProductField[])=><View style={styles.section} key={number+'-'+title}>
     <View style={styles.sectionHead}><Text style={styles.number}>{number}</Text><Text style={styles.sectionTitle}>{title}</Text></View>
@@ -691,6 +698,7 @@ const styles=StyleSheet.create({
   fieldMeta:{fontSize:9,color:'#315B85',fontWeight:'600'},premiumRows:{gap:0},
   premiumRow:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',paddingVertical:9,borderBottomWidth:1,borderColor:'#E9EFF6'},
   premiumLabel:{fontSize:11,color:'#65758E'},premiumValue:{fontSize:12,color:'#183653',fontWeight:'800'},
+  sourceIdentity:{marginHorizontal:12,marginBottom:12,padding:9,backgroundColor:'#EDF4FC',borderRadius:9,flexDirection:'row',flexWrap:'wrap',gap:10},sourceIdentityText:{fontSize:10,fontWeight:'700',color:'#17365D'},sourceIdentityLabel:{fontSize:9,fontWeight:'600',color:'#687C99'},
   fields:{padding:12,flexDirection:'row',flexWrap:'wrap',columnGap:10,rowGap:11},field:{width:'48%',minWidth:0,gap:5},sourceCell:{width:'48%',minWidth:0,gap:3},sourcePrimary:{width:'100%'},sourceMeta:{minHeight:23,flexDirection:'row',alignItems:'center',gap:5},sourceMetaLabel:{fontSize:9,fontWeight:'700',color:'#72839C'},sourceMetaInput:{flex:1,minWidth:0,fontSize:10,color:'#25466E',fontWeight:'600',paddingVertical:2,paddingHorizontal:1},wideField:{width:'100%'},label:{fontSize:10,color:'#65758E',fontWeight:'700'},star:{color:'#B93333'},
   input:{minHeight:42,borderWidth:1,borderColor:'#D8E1EC',backgroundColor:'#FFFFFF',borderRadius:9,paddingHorizontal:11,fontSize:12,color:'#183653'},
   inputRow:{minHeight:42,borderWidth:1,borderColor:'#D8E1EC',borderRadius:9,paddingHorizontal:11,flexDirection:'row',alignItems:'center',justifyContent:'space-between'},
