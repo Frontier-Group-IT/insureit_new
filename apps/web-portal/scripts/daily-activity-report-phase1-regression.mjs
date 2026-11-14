@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 const read = (path) => readFileSync(new URL(path, import.meta.url), "utf8");
 const nav = read("../components/claim-manager/app-navigation.tsx");
 const page = read("../app/reports/(workspace)/daily/page.tsx");
+const quickFilters = read("../components/reports/daily-report-quick-filters.tsx");
 const source = read("../lib/reports/daily-activity.ts");
 
 assert.match(nav, /href:"\/reports",label:"Reporting Workspace"[^\n]+href:"\/reports\/daily",label:"Daily Report"/, "Daily Report is located under Reporting Workspace");
@@ -23,9 +24,9 @@ assert.match(source, /const limit = sourceLimit/, "Per-source fetch remains boun
 assert.match(source, /dailyPageWindow\(query.page\)/, "All pages use tested server-side page bounds");
 assert.match(source, /source:"Record history"/, "Reconstructed history source is labeled");
 assert.match(page, /Reports show existing recorded events and attributable creation\/finalization history/, "Incomplete historical coverage is disclosed");
-assert.match(page, /type="date"/, "Date filter is present");
-assert.match(page, /name="employee"/, "Employee search is present");
-assert.match(page, /name="activity"/, "Activity category drilldown is available");
+assert.match(quickFilters, /type="date"/, "Date filter is present");
+assert.match(quickFilters, /type="search"/, "Employee search is present");
+assert.match(page, /<DailySelfActivityPanel data=\{selfHistory\}/, "Activity category drilldown is available");
 assert.match(page, /href=\{linkFor\(\{scope:"self"/, "Self tab has separate link");
 assert.match(page, /href=\{linkFor\(\{scope:"all"/, "All tab has separate link");
 assert.doesNotMatch(source, /\.insert\(|\.update\(|\.delete\(|\.upsert\(|\.rpc\(/, "Phase 1 is strictly read-only");

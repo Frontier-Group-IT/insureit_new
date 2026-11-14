@@ -5,6 +5,7 @@ const read = p => readFileSync(new URL(p, import.meta.url), "utf8");
 const page = read("../app/reports/(workspace)/daily/page.tsx");
 const source = read("../lib/reports/daily-self-activity.ts");
 const ui = read("../components/reports/daily-self-activity-panel.tsx");
+const quickFilters = read("../components/reports/daily-report-quick-filters.tsx");
 
 assert.match(page, /const isSelf = query\.scope !== "all"/, "Self is its own reporting mode");
 assert.match(page, /loadSelfActivityHistory\(profile\.id/, "The Self report reads only the authenticated profile");
@@ -12,8 +13,8 @@ assert.match(page, /day: query\.period === "day" \? query\.date : undefined/, "S
 assert.match(page, /<DailySelfActivityPanel data=\{selfHistory\}/, "Self renders the category summary");
 assert.match(page, /employeeDirectory = await loadDailyReportEmployeeDirectory\(profile\)/, "All tab now lists only authorized employees");
 assert.match(page, /assertDailyReportEmployeeAllowed\(chosenPerson, employeeDirectory\)/, "All selected profile is checked before loading history");
-assert.match(page, /<option value="all">All History<\/option>/, "All history selection is clear");
-assert.match(page, /<option value="day">Selected Date<\/option>/, "Daily selection remains available");
+assert.match(page, /date=\{query\.period === "day" \? filters\.date : ""\}/, "All history is the default when no date is selected");
+assert.match(quickFilters, /params\.set\("period","day"\)/, "Choosing a date enables day filtering automatically");
 
 assert.match(source, /\.eq\("actor_id",viewerId\)/, "Audit records are scoped to the authenticated actor before reading");
 assert.match(source, /\.eq\("created_by",viewerId\)/, "Policy and case creations use the employee's actual ID");
