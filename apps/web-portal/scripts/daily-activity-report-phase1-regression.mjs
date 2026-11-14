@@ -21,7 +21,7 @@ assert.match(source, /\.gte\("created_at",startIso\)\.lt\("created_at",endIso\)/
 assert.match(source, /const limit = sourceLimit/, "Per-source fetch remains bounded");
 assert.match(source, /dailyPageWindow\(query.page\)/, "All pages use tested server-side page bounds");
 assert.match(source, /source:"Record history"/, "Reconstructed history source is labeled");
-assert.match(page, /Phase 1 shows existing recorded events/, "Incomplete historical coverage is disclosed");
+assert.match(page, /Reports show existing recorded events and attributable creation\/finalization history/, "Incomplete historical coverage is disclosed");
 assert.match(page, /type="date"/, "Date filter is present");
 assert.match(page, /name="employee"/, "Employee search is present");
 assert.match(page, /name="type"/, "Activity type filtering is present");
