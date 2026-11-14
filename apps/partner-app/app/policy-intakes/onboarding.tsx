@@ -151,7 +151,6 @@ export default function NativePolicyOnboarding(){
   const [verifiedApprovalId,setVerifiedApprovalId]=useState<string|null>(null);
   const [approvalCode,setApprovalCode]=useState("");
   const [picker,setPicker]=useState<{key:string;items:{value:string;label:string}[];product?:boolean}|null>(null);
-  const [pendingBusinessLine,setPendingBusinessLine]=useState<string|null>(null);
   const [dirty,setDirty]=useState(false);
   const [nonMotorAdditionalOpen,setNonMotorAdditionalOpen]=useState(false);
   const [customerSearch,setCustomerSearch]=useState('');
@@ -430,7 +429,7 @@ export default function NativePolicyOnboarding(){
     if(!draft)return null;
     const raw=draft[f.key];
     const current=typeof raw==='string'?raw:'';
-    if(['issuanceDate','validFrom','validUpto','tpValidUpto','cpaValidUpto'].includes(f.key))return <PartnerPolicyDateField key={f.key} fullWidth={fullWidth} label={isMotor&&f.key==='issuanceDate'?'Policy issuance date':f.label.replace(' (YYYY-MM-DD)','')} value={current} required={f.required} onChange={v=>update(f.key,v)}/>;
+    if(['issuanceDate','validFrom','validUpto','tpValidUpto','cpaValidUpto'].includes(f.key))return <PartnerPolicyDateField key={f.key} fullWidth={fullWidth} label={f.key==='issuanceDate'?'Policy issuance date':f.label.replace(' (YYYY-MM-DD)','')} value={current} required={f.required} onChange={v=>update(f.key,v)}/>;
     const productOptions=f.key==='policyProduct'?(draft.vehicleClass==='CPM'?['Comprehensive','SAOD']:['Comprehensive','Third Party','SAOD',...(['PCP','TWP'].includes(draft.vehicleClass)?['Bundled']:[]) ]):f.options??[];
     const options=f.key==='insurerId'?data?.insurers??[]:f.key==='make'?(data?.manufacturers??[]).map(x=>({value:x,label:x})):productOptions.map(x=>({value:x,label:x}));
     const displayed=options.find(x=>x.value===current)?.label??current;
@@ -461,13 +460,6 @@ export default function NativePolicyOnboarding(){
           keyboardType={['phoneNo','idv','od','tp','cpa','capacity','manufacturingYear'].includes(f.key)?'numeric':'default'}
           style={[styles.input,restricted&&styles.readonlyInput]} />
       )}
-      {isMotor&&f.key==='intermediaryType'&&(draft.rmName||matchedSource?.rmName)?<Text style={styles.fieldMeta}>RM · {draft.rmName||matchedSource?.rmName}{matchedSource?.rmCode&&(!draft.rmName||matchedSource.rmName.trim().toLowerCase()===draft.rmName.trim().toLowerCase())?'   ID · '+matchedSource.rmCode:''}</Text>:null}
-      {f.key==='leadSource'?<View style={styles.sourceOwnerDetails}>
-        {matchedSource?.rmCode?<Text style={styles.fieldMeta}>RM ID · {matchedSource.rmCode}</Text>:null}
-        {matchedSource?.rmMobile?<Text style={styles.fieldMeta}>RM Mobile · {matchedSource.rmMobile}</Text>:null}
-        {isMotor&&draft.intermediaryCode?<Text style={styles.fieldMeta}>Source ID · {draft.intermediaryCode}</Text>:null}
-        {matchedSource?.mobile?<Text style={styles.fieldMeta}>Source Mobile · {matchedSource.mobile}</Text>:null}
-      </View>:null}
     </View>;
   };
   const detailField=(f:ProductField)=>{
@@ -488,27 +480,45 @@ export default function NativePolicyOnboarding(){
     </View>;
   };
   // Preserve Motor's newer source ownership rendering; compact the other policy types.
-  const sourceIsVerified=Boolean(productType==='Non Motor'&&data?.sourceMeta&&draft&&
+  const sourceIsVerified=Boolean(data?.sourceMeta&&draft&&
     data.sourceMeta.name.trim().toLowerCase()===draft.leadSource.trim().toLowerCase()&&
     data.sourceMeta.code===draft.intermediaryCode);
+  const verifiedSource=sourceIsVerified?data?.sourceMeta:null;
+  const sourceMonth=useMemo(()=>{
+    const value=draft?.issuanceDate||'';
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(value))return '';
+    const month=Number(value.slice(5,7));
+    return month>=1&&month<=12
+      ? ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][month-1]+' '+value.slice(2,4)
+      : '';
+  },[draft?.issuanceDate]);
   const sourceMeta=(key:'rmName'|'intermediaryCode',label:string)=><View style={styles.sourceMeta}>
-    <Text style={styles.sourceMetaLabel}>{label}</Text>
-    {sourceIsVerified&&data?.sourceMeta
-      ? <Text style={styles.sourceMetaInput}>{key==='rmName'?data.sourceMeta.rmName||draft?.rmName:data.sourceMeta.code}</Text>
+    <Text style={styles.sourceMetaLabel}>{label} ·</Text>
+    {key==='rmName'&&isMotor
+      ? <Text numberOfLines={1} style={styles.sourceMetaValue}>{draft?.rmName||verifiedSource?.rmName||''}</Text>
       : <TextInput accessibilityLabel={label} value={draft?.[key]??''} onChangeText={value=>update(key,value)}
-          placeholder={productType==='Non Motor'?'':label==='RM'?'Assigned RM':'Source code'}
-          placeholderTextColor="#98A6B8" style={styles.sourceMetaInput}/>}
-    {sourceIsVerified&&data?.sourceMeta&&key==='rmName'&&data.sourceMeta.rmCode
-      ?<Text style={styles.fieldMeta}>ID · {data.sourceMeta.rmCode}</Text>:null}
-    {sourceIsVerified&&data?.sourceMeta&&key==='intermediaryCode'&&data.sourceMeta.mobile
-      ?<Text style={styles.fieldMeta}>☎ {data.sourceMeta.mobile}</Text>:null}
+          placeholder="" style={styles.sourceMetaInput}/>}
   </View>;
   const sourceSection=()=> <View style={styles.section}>
     <View style={styles.sectionHead}><Text style={styles.number}>01</Text><Text style={styles.sectionTitle}>Policy source & ownership</Text></View>
     <View style={styles.fields}>{policy.slice(0,4).map(item=><View key={item.key} style={styles.sourceCell}>
       {field(item,true)}
-      {!isMotor&&item.key==='intermediaryType'?sourceMeta('rmName','RM'):null}
-      {!isMotor&&item.key==='leadSource'?sourceMeta('intermediaryCode','ID'):null}
+      {item.key==='issuanceDate'&&sourceMonth?<View style={styles.sourceMeta}>
+        <Text style={styles.sourceMetaLabel}>Month ·</Text><Text style={styles.sourceMetaValue}>{sourceMonth}</Text>
+      </View>:null}
+      {item.key==='intermediaryType'?<View style={styles.sourceOwnerRow}>
+        {sourceMeta('rmName','RM')}
+        {verifiedSource?.rmCode?<View style={styles.sourceMeta}>
+          <Text style={styles.sourceMetaLabel}>ID ·</Text><Text style={styles.sourceMetaValue}>{verifiedSource.rmCode}</Text>
+        </View>:null}
+      </View>:null}
+      {item.key==='leadSource'?<View style={styles.sourceLeadRow}>
+        {sourceMeta('intermediaryCode','ID')}
+        {verifiedSource?.mobile?<View style={styles.sourcePhone}>
+          <Ionicons name="call-outline" size={13} color="#315B91"/>
+          <Text numberOfLines={1} style={styles.sourcePhoneNumber}>{verifiedSource.mobile}</Text>
+        </View>:null}
+      </View>:null}
     </View>)}</View>
   </View>;
   const productSection=(number:string,title:string,items:ProductField[])=><View style={styles.section} key={number+'-'+title}>
@@ -669,7 +679,6 @@ export default function NativePolicyOnboarding(){
     {error?<View style={styles.error}><Ionicons name="alert-circle-outline" size={16} color="#B42318"/><Text style={styles.errorText}>{error}</Text></View>:null}
     {!loading&&!draft?<Pressable style={styles.retry} onPress={()=>void load()}><Text style={styles.retryText}>Retry loading</Text></Pressable>:null}
     {draft?<>
-      <View style={styles.status}><View><Text style={styles.intake}>{data?.intake_number||'Policy Intake'}</Text><Text style={styles.draftStatus}>{dirty?'Unsaved changes':'Draft'}</Text></View><View style={styles.progress}><Text style={styles.progressText}>{filled}%</Text></View></View>
       {sourceSection()}
       {isMotor?motorVehicleSection:productType==='Non Motor'?nonMotorCustomerPolicySection:productSection('02','Customer / Proposer',commonPerson)}
       {isMotor?motorProductSection:productType==='Non Motor'?nonMotorRiskSection:productSection('03','Policy product & case details',lifeProduct)}
@@ -946,26 +955,6 @@ export default function NativePolicyOnboarding(){
         </>}
       </View></View>
     </Modal>
-    <Modal transparent visible={Boolean(pendingBusinessLine)} animationType="fade"
-      onRequestClose={()=>setPendingBusinessLine(null)}>
-      <View style={styles.scrim}><View style={styles.switchSheet}>
-        <Text style={styles.switchTitle}>Switch Policy Type?</Text>
-        <Text style={styles.switchDescription}>Switch to {pendingBusinessLine}? Your entered details will be preserved.</Text>
-        <View style={styles.switchActions}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Cancel Policy Type switch"
-            onPress={()=>setPendingBusinessLine(null)} style={styles.switchCancel}>
-            <Text style={styles.switchCancelText}>Cancel</Text>
-          </Pressable>
-          <Pressable accessibilityRole="button" accessibilityLabel="Confirm Policy Type switch"
-            onPress={()=>{
-              if(pendingBusinessLine)update('businessLine',pendingBusinessLine);
-              setPendingBusinessLine(null);
-            }} style={styles.switchConfirm}>
-            <Text style={styles.switchConfirmText}>Switch</Text>
-          </Pressable>
-        </View>
-      </View></View>
-    </Modal>
     <Modal transparent visible={Boolean(picker)} animationType="fade" onRequestClose={()=>setPicker(null)}>
       <View style={styles.scrim}><View style={styles.sheet}>
         <View style={styles.sheetTitle}><Text style={styles.sectionTitle}>{picker?.key==='businessLine'?'Select Policy Type':`Select ${picker?.key}`}</Text><Pressable onPress={()=>setPicker(null)} accessibilityLabel="Close options"><Ionicons name="close" size={21} color="#4C5970"/></Pressable></View>
@@ -976,7 +965,7 @@ export default function NativePolicyOnboarding(){
             onPress={()=>{
               if(picker.key==='businessLine'){
                 setPicker(null);
-                if(item.value!==draft?.businessLine)setPendingBusinessLine(item.value);
+                if(item.value!==draft?.businessLine)update('businessLine',item.value);
                 return;
               }
               picker.product?updateProduct(picker.key,item.value):update(picker.key as FieldKey,item.value);
@@ -1010,10 +999,15 @@ const styles=StyleSheet.create({
   rcButtonDisabled:{backgroundColor:'#A8B4C3'},
   rtoRow:{flexDirection:'row',gap:5},rtoInput:{flex:1,minWidth:0,paddingHorizontal:6},
   fieldMeta:{fontSize:9,color:'#315B85',fontWeight:'600'},sourceDetails:{flexDirection:'row',flexWrap:'wrap',gap:6},
-  sourceOwnerDetails:{flexDirection:'row',flexWrap:'wrap',columnGap:8,rowGap:4},premiumRows:{gap:0},
+  sourceOwnerRow:{flexDirection:'row',alignItems:'center',flexWrap:'wrap',columnGap:7,rowGap:2,minHeight:19},
+  sourceLeadRow:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:3,minHeight:19},
+  sourcePhone:{flexDirection:'row',alignItems:'center',justifyContent:'flex-end',gap:3,flexShrink:0},
+  sourcePhoneNumber:{fontSize:9,color:'#315B91',fontWeight:'600'},
+  sourceMetaValue:{fontSize:9,color:'#315B91',fontWeight:'600'},
+  premiumRows:{gap:0},
   premiumRow:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',paddingVertical:9,borderBottomWidth:1,borderColor:'#E9EFF6'},
   premiumLabel:{fontSize:11,color:'#65758E'},premiumValue:{fontSize:12,color:'#183653',fontWeight:'800'},
-  fields:{padding:12,flexDirection:'row',flexWrap:'wrap',columnGap:10,rowGap:11},field:{width:'48%',minWidth:0,gap:5},sourceCell:{width:'48%',minWidth:0,gap:3},sourcePrimary:{width:'100%'},sourceMeta:{minHeight:23,flexDirection:'row',alignItems:'center',gap:5},sourceMetaLabel:{fontSize:9,fontWeight:'700',color:'#72839C'},sourceMetaInput:{flex:1,minWidth:0,fontSize:10,color:'#25466E',fontWeight:'600',paddingVertical:2,paddingHorizontal:1},wideField:{width:'100%'},label:{fontSize:10,color:'#65758E',fontWeight:'700'},star:{color:'#B93333'},
+  fields:{padding:12,flexDirection:'row',flexWrap:'wrap',columnGap:10,rowGap:11},field:{width:'48%',minWidth:0,gap:5},sourceCell:{width:'48%',minWidth:0,gap:3},sourcePrimary:{width:'100%'},sourceMeta:{minHeight:19,flexDirection:'row',alignItems:'center',gap:3,flexShrink:1},sourceMetaLabel:{fontSize:9,fontWeight:'700',color:'#72839C'},sourceMetaInput:{minWidth:0,maxWidth:76,fontSize:9,color:'#315B91',fontWeight:'600',paddingVertical:0,paddingHorizontal:0,padding:0},wideField:{width:'100%'},label:{fontSize:10,color:'#65758E',fontWeight:'700'},star:{color:'#B93333'},
   input:{minHeight:42,borderWidth:1,borderColor:'#D8E1EC',backgroundColor:'#FFFFFF',borderRadius:9,paddingHorizontal:11,fontSize:12,color:'#183653'},
   inputRow:{minHeight:42,borderWidth:1,borderColor:'#D8E1EC',borderRadius:9,paddingHorizontal:11,flexDirection:'row',alignItems:'center',justifyContent:'space-between'},
   value:{color:'#183653',fontSize:12,flex:1},placeholder:{color:'#97A5B7'},
