@@ -331,7 +331,7 @@ export default function PolicyIntakesScreen() {
                   </View>
                 </View>
 
-                {filter === 'all' && row.status !== 'completed' ? <IntakeProgress row={row} reduceMotion={reduceMotion} /> : null}
+                {filter === 'all' ? <IntakeProgress row={row} reduceMotion={reduceMotion} /> : null}
 
                 {row.attention_reason ? (
                   <View style={styles.attention}>
