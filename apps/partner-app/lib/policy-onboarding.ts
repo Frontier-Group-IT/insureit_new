@@ -16,7 +16,7 @@ export type NativePolicyDraft = {
   policyNo: string; insurerId: string; validFrom: string; validUpto: string; addOnPremium?: string; tpValidUpto?: string; cpaValidUpto?: string;
   payoutBasis: string; projectedOdPercent: string; projectedTpPercent: string; insurerScheme: string; payinBillNo: string; payinBilledAmount: string; payinBillDate: string; payinStatus: string; retention: string; payoutOdPercent: string; payoutTpPercent: string; flatPayoutAmount: string; payoutStatus: string; payoutDate: string; payoutVoucherNo: string; remarks: string;
 };
-export type NativeOnboardingData = { draft: NativePolicyDraft; revision: number; intake_number: string; insurers: {value:string;label:string}[]; manufacturers: string[]; commercialAccess:boolean; approvers:{key:string;name:string}[] };
+export type NativeOnboardingData = { draft: NativePolicyDraft; revision: number; intake_number: string; insurers: {value:string;label:string}[]; manufacturers: string[]; sourceMeta?: {name:string;code:string;mobile:string;rmName:string;rmCode:string}|null; commercialAccess:boolean; approvers:{key:string;name:string}[] };
 async function request<T>(body: Record<string, unknown>): Promise<T> {
   const session = await getCurrentSession();
   if (!session?.access_token) throw new Error('Your Partner session has expired. Sign in again.');
