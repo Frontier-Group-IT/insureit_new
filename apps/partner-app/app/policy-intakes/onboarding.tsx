@@ -586,42 +586,89 @@ export default function NativePolicyOnboarding(){
       <View style={styles.scrim}>
         <View style={styles.commercialSheet}>
           <View style={styles.sheetTitle}>
-            <Text style={styles.sectionTitle}>{commercialModal==='payin'?'Projected Insurer Pay-in':'Partner Payout'}</Text>
-            <Pressable accessibilityRole="button" accessibilityLabel="Close commercial popup" onPress={()=>setCommercialModal(null)}>
-              <Ionicons name="close" size={22} color="#4C5970"/>
+            <View style={styles.commercialTitleGroup}>
+              <Text style={styles.sectionTitle}>{commercialModal==='payin'?'Projected Insurer Pay-in':'Partner Payout'}</Text>
+              <Text style={styles.modalDescription}>{commercialModal==='payin'?
+                'Projected pay-in only. This does not confirm actual insurer receipts.':
+                'Agreed partner payout; independent from insurer receipts.'}</Text>
+            </View>
+            <Pressable accessibilityRole="button" accessibilityLabel="Close commercial popup" onPress={()=>setCommercialModal(null)} style={styles.modalClose}>
+              <Ionicons name="close" size={19} color="#4C5970"/>
             </Pressable>
           </View>
           <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.commercialModalContent}>
             {commercialModal==='payin'?<>
               <View style={styles.fields}>{insurerPayinFields.map(f=><View key={f.key} style={styles.field}>
-                <Text style={styles.label}>{f.label}</Text>
-                <TextInput accessibilityLabel={f.label} value={String(draft?.[f.key]??'')} onChangeText={v=>update(f.key,v)}
-                  keyboardType="decimal-pad" style={styles.input}/>
-              </View>)}</View>
-              <View style={styles.calculatedRow}>
-                <Text style={styles.premiumLabel}>Projected total pay-in</Text>
-                <Text style={styles.premiumValue}>{rupees(payinTotal)}</Text>
+                <Text style={styles.label}>{f.label.toUpperCase()}</Text>
+                <TextInput accessibilityLabel={f.label} value={String(draft?.[f.key]??'')}
+                  onChangeText={v=>update(f.key,v)} placeholder={f.key==='insurerScheme'?'₹ 0.00':'0.00'}
+                  placeholderTextColor="#9AA7B9" keyboardType="decimal-pad" style={styles.input}/>
+              </View>)}
+              <View style={styles.field}>
+                <Text style={styles.label}>PROJECTED TOTAL PAY-IN</Text>
+                <View style={[styles.inputRow,styles.readonlyInput]}>
+                  <Text style={styles.premiumValue}>{rupees(payinTotal)}</Text><Text style={styles.autoText}>AUTO</Text>
+                </View>
+              </View></View>
+              <View style={styles.payinSummary}>
+                <Pressable accessibilityRole="button" accessibilityLabel="Toggle pay-in summary"
+                  accessibilityState={{expanded:payinSummaryExpanded}}
+                  onPress={()=>setPayinSummaryExpanded(value=>!value)} style={styles.summaryToggleRow}>
+                  <Text style={styles.commercialHeading}>Pay-in summary</Text>
+                  <Text style={styles.summaryLink}>{payinSummaryExpanded?'Show Less':'Show More'}</Text>
+                </Pressable>
+                <View style={styles.summaryStats}>
+                  <View style={styles.summaryStat}><Text style={styles.statLabel}>Total projected</Text><Text style={styles.statValue}>{rupees(payinTotal)}</Text></View>
+                  <View style={styles.summaryStat}><Text style={styles.statLabel}>Total received</Text><Text style={styles.statValue}>—</Text></View>
+                  <View style={styles.summaryStat}><Text style={styles.statLabel}>Pending</Text><Text style={styles.statValue}>—</Text></View>
+                </View>
+                {payinSummaryExpanded?<View style={styles.summarySchedule}>
+                  <View style={styles.scheduleRow}>
+                    {['Date','Projected','Received','Pending'].map(col=><Text key={col} style={styles.scheduleHeader}>{col}</Text>)}
+                  </View>
+                  <View style={styles.scheduleRow}>
+                    <Text style={styles.scheduleCell}>{draft?.validFrom||draft?.issuanceDate||'—'}</Text>
+                    <Text style={styles.scheduleCell}>{rupees(payinTotal)}</Text>
+                    <Text style={styles.scheduleCell}>—</Text>
+                    <Text style={styles.scheduleCell}>—</Text>
+                  </View>
+                  <Text style={styles.scheduleNote}>Projected values are estimates. Actual receipt history is not provided for this intake draft.</Text>
+                </View>:null}
               </View>
             </>:<>
               <View style={styles.fields}>
-                {partnerPayoutFields.filter(f=>f.key!=='flatPayoutAmount'||draft?.payoutBasis==='FLAT').map(f=>
-                  f.key==='payoutBasis'?field(f):<View key={f.key} style={styles.field}>
-                    <Text style={styles.label}>{f.label}</Text>
+                {partnerPayoutFields.filter(f=>f.key!=='flatPayoutAmount').map(f=>
+                  f.key==='payoutBasis'?<View key={f.key} style={styles.field}>
+                    <Text style={styles.label}>PAYOUT BASIS</Text>
+                    <Pressable accessibilityRole="button" accessibilityLabel="Payout basis"
+                      onPress={()=>setPicker({key:f.key,items:['NET','OD','FLAT'].map(value=>({value,label:value}))})} style={styles.inputRow}>
+                      <Text style={styles.value}>{draft?.payoutBasis||'NET'}</Text><Ionicons name="chevron-down" size={15} color="#63758D"/>
+                    </Pressable>
+                  </View>:<View key={f.key} style={styles.field}>
+                    <Text style={styles.label}>{f.label.toUpperCase()}</Text>
                     <TextInput accessibilityLabel={f.label} value={String(draft?.[f.key]??'')}
-                      editable={f.key==='flatPayoutAmount'||(draft?.payoutBasis!=='FLAT'&&(f.key!=='payoutTpPercent'||draft?.payoutBasis==='NET'))}
+                      editable={draft?.payoutBasis!=='FLAT'&&(f.key!=='payoutTpPercent'||draft?.payoutBasis==='NET')}
                       onChangeText={v=>update(f.key,v)} keyboardType="decimal-pad"
-                      style={[styles.input,(f.key!=='flatPayoutAmount'&&(draft?.payoutBasis==='FLAT'||f.key==='payoutTpPercent'&&draft?.payoutBasis!=='NET'))&&styles.readonlyInput]}/>
+                      placeholder="0.00" placeholderTextColor="#9AA7B9"
+                      style={[styles.input,(draft?.payoutBasis==='FLAT'||(f.key==='payoutTpPercent'&&draft?.payoutBasis!=='NET'))&&styles.readonlyInput]}/>
                   </View>
                 )}
-              </View>
-              <View style={styles.calculatedRow}>
-                <Text style={styles.premiumLabel}>Total agreed payout</Text>
-                <Text style={styles.premiumValue}>{rupees(payoutTotal)}</Text>
+                <View style={styles.field}>
+                  <Text style={styles.label}>TOTAL AGREED PAYOUT</Text>
+                  {draft?.payoutBasis==='FLAT'?<TextInput accessibilityLabel="Total agreed payout" value={String(draft?.flatPayoutAmount??'')}
+                    placeholder="₹ 0.00" placeholderTextColor="#9AA7B9" keyboardType="decimal-pad"
+                    onChangeText={value=>update('flatPayoutAmount',value)} style={styles.input}/>:
+                  <View style={[styles.inputRow,styles.readonlyInput]}>
+                    <Text style={styles.premiumValue}>{rupees(payoutTotal)}</Text><Text style={styles.autoText}>AUTO</Text>
+                  </View>}
+                </View>
               </View>
             </>}
           </ScrollView>
-          <Pressable accessibilityRole="button" accessibilityLabel="Save and close commercial popup" onPress={()=>setCommercialModal(null)}
-            style={styles.commercialSave}><Text style={styles.primaryText}>Save & Close</Text></Pressable>
+          <View style={styles.modalFooter}>
+            <Pressable accessibilityRole="button" accessibilityLabel="Save and close commercial popup" onPress={()=>setCommercialModal(null)}
+              style={styles.commercialSave}><Text style={styles.primaryText}>Save & Close</Text></Pressable>
+          </View>
         </View>
       </View>
     </Modal>
@@ -677,17 +724,26 @@ const styles=StyleSheet.create({
   commercialAction:{minHeight:48,flexDirection:'row',gap:9,alignItems:'center',paddingHorizontal:11,borderWidth:1,borderColor:'#DDE6F0',borderRadius:10,backgroundColor:'#F8FAFD'},
   commercialActionTitle:{flex:1,fontSize:11,fontWeight:'700',color:'#17365D'},
   commercialActionValue:{fontSize:10,color:'#53657D',fontWeight:'600'},
-  commercialSheet:{backgroundColor:'#FFFFFF',borderTopLeftRadius:20,borderTopRightRadius:20,padding:16,maxHeight:'85%',gap:8},
-  commercialModalContent:{paddingBottom:12},
+  commercialSheet:{backgroundColor:'#FFFFFF',borderRadius:18,padding:0,maxHeight:'85%',width:'96%',alignSelf:'center',overflow:'hidden'},
+  commercialTitleGroup:{flex:1,minWidth:0,gap:5},modalDescription:{color:'#738196',fontSize:9,lineHeight:14},
+  modalClose:{width:32,height:32,alignItems:'center',justifyContent:'center',borderWidth:1,borderColor:'#DDE6F0',borderRadius:20},
+  modalFooter:{padding:12,alignItems:'flex-end',backgroundColor:'#F7F9FC',borderTopWidth:1,borderColor:'#E1E9F3'},
+  autoText:{fontSize:9,color:'#98A6B8',fontWeight:'700'},
+  payinSummary:{marginHorizontal:12,marginBottom:12,padding:12,backgroundColor:'#FAF8FF',borderWidth:1,borderColor:'#E4DFF2',borderRadius:12,gap:9},
+  summaryToggleRow:{flexDirection:'row',justifyContent:'space-between',alignItems:'center'},summaryLink:{fontSize:10,color:'#315B9A',fontWeight:'700'},
+  summaryStats:{flexDirection:'row',gap:8},summaryStat:{flex:1,minWidth:0,gap:3},statLabel:{fontSize:9,color:'#72819A'},statValue:{fontSize:11,fontWeight:'800',color:'#17365D'},
+  summarySchedule:{gap:6,marginTop:5},scheduleRow:{flexDirection:'row',justifyContent:'space-between',paddingVertical:6,borderBottomWidth:1,borderColor:'#EBE6F3'},
+  scheduleHeader:{fontSize:8,color:'#405375',fontWeight:'700',width:'24%'},scheduleCell:{fontSize:8,color:'#17365D',width:'24%'},scheduleNote:{fontSize:9,lineHeight:14,color:'#738196'},
+  commercialModalContent:{paddingBottom:8},
   calculatedRow:{flexDirection:'row',justifyContent:'space-between',padding:12,borderTopWidth:1,borderColor:'#E1E9F3'},
   readonlyInput:{backgroundColor:'#F3F6FA',color:'#738196'},
-  commercialSave:{backgroundColor:'#17365D',borderRadius:10,padding:13,alignItems:'center'},
+  commercialSave:{backgroundColor:'#17365D',borderRadius:10,paddingHorizontal:17,paddingVertical:12,alignItems:'center'},
   summary:{padding:14,gap:7},summaryStatusRow:{flexDirection:'row',alignItems:'center',justifyContent:'space-between'},summaryStatusValue:{fontSize:10,fontWeight:'700',color:'#A96A00'},summaryCaption:{fontSize:10,fontWeight:'700',color:'#426188'},summaryProgress:{marginLeft:'auto',backgroundColor:'#E1EAF8',borderRadius:18,paddingHorizontal:9,paddingVertical:5},commercialToggle:{marginHorizontal:12,marginBottom:9,flexDirection:'row',alignItems:'center',gap:8,padding:11,borderWidth:1,borderColor:'#DDE6F0',borderRadius:10,backgroundColor:'#F8FAFD'},commercialToggleTitle:{flex:1,color:'#26436B',fontSize:11,fontWeight:'700'},commercialBody:{paddingHorizontal:12},summaryDocuments:{marginHorizontal:12,marginBottom:11,padding:12,flexDirection:'row',alignItems:'center',gap:10,borderColor:'#E1E9F3',borderWidth:1,borderRadius:10},documentAction:{marginHorizontal:12,marginBottom:12,flexDirection:'row',gap:8},total:{fontSize:20,color:'#1B385B',fontWeight:'800'},notice:{fontSize:10,lineHeight:16,color:'#65758E',paddingHorizontal:14,paddingBottom:13},
   actions:{flexDirection:'row',gap:8,marginBottom:11},secondary:{flex:1,borderWidth:1,borderColor:'#CDD9EB',borderRadius:10,padding:13,alignItems:'center'},secondaryText:{fontWeight:'700',fontSize:11,color:'#25466E'},
   primary:{flex:1,backgroundColor:'#243F9E',borderRadius:10,padding:13,alignItems:'center'},primaryText:{fontSize:11,fontWeight:'800',color:'white'},disabled:{opacity:.48},
   bookButton:{marginBottom:11,flexDirection:'row',justifyContent:'center',gap:8},
   bookingNotice:{flexDirection:'row',gap:9,padding:12,backgroundColor:'#FFF7E9',borderRadius:10,marginBottom:14},bookingText:{flex:1,fontSize:10,lineHeight:16,color:'#75531C'},
-  scrim:{flex:1,justifyContent:'flex-end',backgroundColor:'rgba(5,18,40,.5)'},sheet:{backgroundColor:'white',borderTopLeftRadius:20,borderTopRightRadius:20,padding:17,maxHeight:'70%'},
-  sheetTitle:{flexDirection:'row',justifyContent:'space-between',paddingBottom:12},choiceScroll:{maxHeight:420},
+  scrim:{flex:1,justifyContent:'center',backgroundColor:'rgba(5,18,40,.5)'},sheet:{backgroundColor:'white',borderTopLeftRadius:20,borderTopRightRadius:20,padding:17,maxHeight:'70%'},
+  sheetTitle:{flexDirection:'row',justifyContent:'space-between',alignItems:'flex-start',gap:12,padding:14,backgroundColor:'#F4F7FB',borderBottomWidth:1,borderColor:'#E2E9F2'},choiceScroll:{maxHeight:420},
   choice:{minHeight:44,justifyContent:'center',borderTopWidth:1,borderColor:'#EEF1F7'},choiceText:{fontSize:12,color:'#284064'},
 });
