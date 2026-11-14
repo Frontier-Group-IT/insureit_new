@@ -63,6 +63,36 @@ This PR deliberately provides **no restore implementation or authorization**. Th
 
 **CI:** scripts/backup/test_managed_recovery_preflight.py exercises valid direct/session URLs and rejects production project ref, unknown hosts, transaction-pooler ports, unsafe TLS, unknown query options and missing password. Verify R2 backup code static workflow checks the new workflow is only manual, env-isolated, R2 GET-based and read-only. Existing web checks remain required. Running PR CI uses **synthetic values only**.
 
+## R1 extended PostgreSQL catalog inventory — read-only, 14 November 2026
+
+A second live metadata-only SQL comparison (separate authorized Supabase account for each project) expanded the earlier column-only work. These are **live-catalog observations, not the selected encrypted archive's TOC**:
+
+| Object family | Source `public` | Target `public` | Compatibility follow-up |
+|---|---:|---:|---|
+| Tables | 182 | 0 | Restore every archived application table (exact archive snapshot) |
+| Views | 4 | 0 | Recreate underlying dependencies/security_invoker behavior |
+| Indexes | 667 | 0 | Restore complete definitions/constraints |
+| Sequences | 18 | 0 | Preserve start/current values and ownership |
+| RLS-enabled tables | 182 | 0 | Preserve RLS after import |
+| RLS policies | 252 | 0 | Owner/role predicate parity and negative tests |
+| Functions | 446 | 1 | 392 application source SECURITY DEFINER functions; owner/execute ACL audit required |
+| Enabled non-internal triggers | 166 | 0 | Restore and verify trigger effects |
+| Foreign keys | 426 | 0 | Strict FK validation, no blanket disable |
+| Check constraints | 356 | 0 | Strict constraint validation |
+
+| Managed object family | Source | Target | Required reviewed action |
+|---|---:|---:|---|
+| `auth` tables | 27 | 27 | Same seeded table count, but not complete semantic parity |
+| `auth` enabled non-internal triggers | **1** | **0** | Source has `on_auth_user_created` on `auth.users` calling `handle_new_user()`; ensure approved function/trigger semantics after restore; do not automatically run real-user side effects |
+| `storage` tables | 10 | 10 | Pre-seeded table shape matches; do not overwrite/destroy it |
+| `storage` RLS policies | **35** | **0** | Source policy operations: SELECT 13, INSERT 10, UPDATE 3, DELETE 7, ALL 2. Target policy restoration must be reviewed separately and tested; zero target policies does not itself prove public access |
+| `storage` enabled non-internal triggers | 11 | 11 | Compare definitions, owner and behavior; same counts alone insufficient |
+| `realtime` tables | **11** | **3** | Dated partition count drifted since earlier observation; never blindly replay managed partitions |
+| `vault` tables and views | 1 + 1 | 1 + 1 | Key/extension compatibility and encrypted payload ownership need review |
+| `supabase_migrations` tables | 1 | 0 | SQL migration history requires special handling |
+
+The preflight TOC reader now emits only **aggregate** counts for relevant schema families: tables/data, views, indexes, constraints, FKs, functions, triggers, sequences, policies, grants/default ACLs, extensions and others. It does NOT issue a write or print object identifiers. The exact V2 archive TOC is the authority when that protected R1 workflow is executed. In particular, the `auth.users` trigger and Storage's 35 policies cannot be dismissed simply because the seeded target has the same table columns.
+
 ## Approved scope refinement — 14 November 2026
 
 The user clarified the **primary drill objective is FULL PostgreSQL schema and SQL/database restoration**, not full production document migration. Recovery Storage file content will be tested with a **strictly bounded 500 MB decimal sample**, not the original ~1.73 GB corpus. This changes the exercise's file scope, **not** the database completeness requirement or privacy/security prerequisites.
