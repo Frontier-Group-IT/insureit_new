@@ -36,15 +36,15 @@ assert.match(screen,/isMotor&&data\?\.commercialAccess/,'Motor financial entry s
 assert.match(screen,/saveNativePolicyOnboarding\(id,data.revision,draft\)/,'Draft save remains functional');
 // Motor follows Operations structure; other product types retain draft-only screens.
 assert.match(screen,/policy\.slice\(0,4\)\.map\(item/, 'Motor and non-Motor source sections use only four primary rows.');
-assert.match(screen,/isMotor&&f.key==='intermediaryType'&&draft.rmName/, 'Show RM beneath intermediary type.');
-assert.match(screen,/isMotor&&f.key==='leadSource'&&draft.intermediaryCode/, 'Show source code beneath lead source.');
+assert.match(screen,/f.key==='intermediaryType'&&\(draft.rmName\|\|matchedSource\?\.rmName\)/, 'Show matching-source RM beneath intermediary type.');
+assert.match(screen,/f.key==='leadSource'\?<View style=\{styles.sourceDetails\}/, 'Show source code and master phone beneath lead source.');
 assert.match(screen,/isMotor&&f.key==='issuanceDate'\?'Policy issuance date'/, 'Motor uses policy issuance label.');
 assert.match(screen,/motorVehicleSection/, 'Motor requires a combined insured-and-vehicle card.');
 assert.match(screen,/styles.registrationToggle/, 'Registration mode buttons belong in the heading.');
 assert.match(screen,/accessibilityState=\{\{selected:draft\?\.registrationMode===mode\}\}/, 'Registration mode state must be accessible.');
 assert.match(screen,/styles.registrationRow/, 'Registration number is full width with an inline RC action.');
 assert.match(screen,/accessibilityLabel="Fetch RC details"/, 'Keep authorized RC lookup.');
-assert.match(screen,/disabled=\{lookingUpRc\|\|!registrationValid\}/, 'Do not fetch an empty or invalid registration.');
+assert.match(screen,/disabled=\{draft\?\.registrationMode!=='registered'\|\|lookingUpRc\|\|!registrationValid\}/, 'Disable RC for unregistered, invalid or busy states.');
 assert.match(screen,/motorVehicleFields\.slice\(0,7\)\.map\(item=>field\(item\)\)/, 'Keep Motor fields in paired columns without accidental width overrides.');
 assert.match(screen,/motorProductSection=section\('03','Policy product, premium & validity'/, 'Combine Motor policy and premium details into Operations section 03.');
 assert.match(screen,/label:'GST',value:gst/, 'Motor summary includes GST.');
@@ -58,10 +58,10 @@ assert.match(screen,/insurerPayinFields\.map\(/, 'Pay-in popup must use scoped i
 assert.match(screen,/partnerPayoutFields\.filter\(/, 'Payout popup must use scoped payout fields.');
 assert.match(screen,/accessibilityLabel="Save and close commercial popup"/, 'Commercial popup needs a Save & Close action.');
 assert.match(screen,/Boolean\(commercialModal\)&&isMotor&&Boolean\(data\?\.commercialAccess\)/, 'Commercial modals must be strictly Motor and permission gated.');
-assert.doesNotMatch(screen,/\bplaceholder\s*=/, 'Onboarding text inputs and dropdowns must have no placeholder props.');
-assert.doesNotMatch(screen,/placeholder=\{'Enter '\+f\.label\.toLowerCase\(\)\}/, 'Remove all generated input placeholder copy.');
-assert.doesNotMatch(screen,/displayed\|\|'Select '/, 'Do not show synthetic select placeholders.');
-assert.match(screen,/hidePlaceholder/, 'Onboarding dates must keep the existing opt-out compatibility prop.');
-assert.doesNotMatch(date,/\bplaceholder\s*=/, 'Native date field must not display placeholder hints.');
+assert.match(screen,/placeholder=\{hint\}/, 'Onboarding text inputs have concise context-sensitive placeholders.');
+assert.match(screen,/f.key==='model'\?'Model \/ variant'/, 'Keep the reference Model placeholder.');
+assert.match(screen,/displayed\|\|\('Select '\+f.label.toLowerCase\(\)\)/, 'Empty dropdowns display a Select prompt.');
+assert.doesNotMatch(screen,/<PartnerPolicyDateField[^>]*hidePlaceholder/, 'Onboarding dates show a DD/MM/YYYY placeholder.');
+assert.match(date,/placeholder=\{hidePlaceholder/, 'Date input retains opt-in placeholder behavior for other pages.');
 assert.match(date,/hidePlaceholder\?:boolean/, 'Date placeholder removal must be opt-in to avoid other screens.');
-console.log('Product-type layouts, Motor Operations compact layout, separated financial popups, empty input placeholders and Motor-only booking guard verified.');
+console.log('Product-type layouts, Operations Motor controls, referenced financial popups, placeholders and Motor-only booking guard verified.');

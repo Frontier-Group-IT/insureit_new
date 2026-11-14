@@ -202,11 +202,12 @@ for (const fragment of ["sourceCell:{width:'48%'", "sourcePrimary:{width:'100%'"
   "dirty?'Unsaved changes':'Draft'", "{current}", "items.map(item=>field(item))"]) {
   requireText(nativeOnboarding, fragment, 'Compact onboarding parity missing: '+fragment);
 }
-if (/\\bplaceholder\\s*=/.test(nativeOnboarding)) throw new Error('Blank onboarding inputs must never render placeholder text.');
+requireText(nativeOnboarding, 'placeholder={hint}', 'Current requirement restores visible hints on empty inputs.');
+requireText(nativeOnboarding, "'Pending after RTO registration'", 'Unregistered registration number must show a pending hint.');
 const dateField = fs.readFileSync(path.join(root, 'components/policy-intakes/partner-policy-date-field.tsx'), 'utf8');
 requireText(dateField, 'fullWidth=false', 'Source date must fit its compact source cell.');
-requireText(dateField, "{value?displayIndianDate(value):''}", 'Empty date fields must be blank.');
-if (/\\bplaceholder\\s*=/.test(dateField)) throw new Error('Date inputs must never render placeholder text.');
+requireText(dateField, "{value?displayIndianDate(value):hidePlaceholder?'':'DD/MM/YYYY'}", 'Date hints must reappear unless expressly suppressed.');
+requireText(dateField, 'placeholder={hidePlaceholder?', 'The calendar input supports a DD/MM/YYYY placeholder.');
 
 requireText(nativeOnboarding, 'useState(false)', 'Commercial section initializes collapsed.');
 requireText(nativeOnboarding, 'accessibilityState={{expanded:commercialExpanded}}', 'Commercial collapse is accessible and controlled.');
@@ -218,5 +219,28 @@ for (const safeguard of ['saveNativePolicyOnboarding(id,data.revision,draft)', '
   requireText(nativeOnboarding, safeguard, 'Preserve existing save, booking, RC lookup and document access: ' + safeguard);
 }
 requireText(nativeApi, 'if(d.businessLine!=="Motor")', 'Do not misrepresent Motor-only native booking as Life/Health parity.');
+
+for(const fragment of [
+  "editable={draft?.registrationMode==='registered'}",
+  "disabled={draft?.registrationMode!=='registered'||lookingUpRc||!registrationValid}",
+  "field(motorVehicleFields[9])",
+  "motorVehicleFields.slice(7,9).map(item=>field(item))",
+  "editable={draft?.vehicleClass!=='CPM'}",
+  "(f.key==='capacity'&&!draft.vehicleClass)",
+  "(f.key==='policyProduct'&&!draft.vehicleClass)",
+  "draft.policyProduct==='Third Party'",
+  "matchedSource?.rmCode",
+  "matchedSource?.mobile",
+  "payinSummaryExpanded",
+  "Actual receipt history is not provided for this intake draft.",
+  "TOTAL AGREED PAYOUT",
+  "PROJECTED TOTAL PAY-IN",
+]) requireText(nativeOnboarding, fragment, 'Motor Operations parity regression: '+fragment);
+for(const fragment of [
+  "import { loadPospMispAssociates }",
+  '.eq("intermediary_code",intake.lead_source_code)',
+  'item.intermediary_type===intake.lead_source_type',
+  'sourceMeta={name:selected.display_name.trim()',
+]) requireText(nativeApi,fragment,'Scoped source metadata regression: '+fragment);
 requireText(nativeOnboarding, 'Form uploads are available in Operations Portal.', 'Disclose web-only uploads without redundant descriptions.');
 console.log('Partner Policy Intake source, policy-type and detail presentation contracts verified.');

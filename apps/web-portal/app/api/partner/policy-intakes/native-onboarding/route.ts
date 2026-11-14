@@ -13,6 +13,7 @@ import { getPartnerEmployeeIntakeReadScope } from "@/lib/partner-policy-intake-r
 import { loadPolicyIntakeDuplicateMatches } from "@/lib/policy-intake-duplicate";
 import { canAccessPolicyCommercials } from "@/lib/policy-commercial-access";
 import { buildPolicyOcrOnboardingUpdate } from "@/lib/policy-ocr-onboarding-apply";
+import { loadPospMispAssociates } from "@/lib/posp-misp-associates";
 import type { PolicyIntakeDraft } from "@/app/policy-intakes/handoff-actions";
 import type { PolicyIntakeOcrField } from "@/app/policy-intakes/ocr-actions";
 
@@ -235,5 +236,53 @@ export async function POST(request:Request){
   // Never return restricted insurance pay-in, retention or partner payout values to non-commercial reviewers.
   const visibleDraft={...draft};
   if(!commercialAccess)for(const key of commercialFields)visibleDraft[key]="";
-  return good({draft:visibleDraft,revision,intake_number:intake.intake_number,insurers,manufacturers,commercialAccess,approvers:POLICY_DATE_APPROVERS.map(a=>({key:a.key,name:a.name}))});
+  // Mirror the Operations Portal's authoritative source-owner resolution.
+  // Return only metadata for this already-authorized intake and selected source,
+  // never a complete source directory or another employee's downline.
+  let sourceMeta: {name:string;code:string;mobile:string;rmName:string;rmCode:string}|null=null;
+  if(intake.lead_source_code && draft.intermediaryCode===intake.lead_source_code &&
+     String(draft.leadSource).trim().toLowerCase()===intake.lead_source_name.trim().toLowerCase()){
+    const {data:source,error:sourceError}=await admin.from("intermediaries")
+      .select("id,intermediary_type,display_name,intermediary_code,mobile,associate_employee_id,application_id")
+      .eq("intermediary_code",intake.lead_source_code).eq("account_status","active")
+      .limit(10).returns<Array<{id:string;intermediary_type:string;display_name:string;intermediary_code:string|null;mobile:string|null;associate_employee_id:string|null;application_id:string|null}>>();
+    if(!sourceError){
+      const selected=(source??[]).find(item=>item.display_name.trim().toLowerCase()===intake.lead_source_name.trim().toLowerCase()&&item.intermediary_type===intake.lead_source_type);
+      if(selected){
+        let ownerId=selected.associate_employee_id;
+        if(selected.application_id){
+          const {data:owner}=await admin.from("posp_misp_onboarding_profiles")
+            .select("associate_employee_id").eq("application_id",selected.application_id)
+            .maybeSingle<{associate_employee_id:string|null}>();
+          if(owner)ownerId=owner.associate_employee_id;
+          else if(selected.intermediary_type==="partner"&&!ownerId){
+            const {data:application}=await admin.from("intermediary_onboarding_applications")
+              .select("partner_record_id").eq("id",selected.application_id)
+              .maybeSingle<{partner_record_id:string|null}>();
+            if(application?.partner_record_id){
+              const {data:partnerOwner}=await admin.from("posp_misp_onboarding_profiles")
+                .select("associate_employee_id").eq("partner_record_id",application.partner_record_id)
+                .not("associate_employee_id","is",null).order("created_at",{ascending:false}).limit(1)
+                .maybeSingle<{associate_employee_id:string|null}>();
+              ownerId=partnerOwner?.associate_employee_id??null;
+            }
+          }
+        }
+        let rmName="",rmCode="";
+        if(ownerId){
+          try{
+            const associates=await loadPospMispAssociates(admin);
+            const owner=associates.find(item=>item.id===ownerId);
+            rmName=owner?.full_name?.trim()??"";
+            rmCode=owner?.employee_code?.trim()??"";
+          }catch{
+            // Do not substitute guessed codes if the master is unavailable.
+          }
+        }
+        sourceMeta={name:selected.display_name.trim(),code:selected.intermediary_code??"",
+          mobile:selected.mobile?.replace(/\D/g,"").slice(-10)??"",rmName,rmCode};
+      }
+    }
+  }
+  return good({draft:visibleDraft,revision,intake_number:intake.intake_number,insurers,manufacturers,sourceMeta,commercialAccess,approvers:POLICY_DATE_APPROVERS.map(a=>({key:a.key,name:a.name}))});
 }
