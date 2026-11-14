@@ -71,4 +71,18 @@ assert.match(screen,/\{isMotor\?<Pressable accessibilityRole="button" accessibil
 assert.match(screen,/<\/Pressable>:<Pressable accessibilityRole="button" disabled=\{saving\|\|!dirty\}/, 'Non-Motor Save Draft stays available.');
 assert.match(screen,/disabled=\{booking\|\|saving\|\|!data\}/, 'Booking remains gated by loading and saving.');
 
+// Remarks must be reachable from header, saved through the revision-checked API,
+// and shown without replacing/truncating earlier remarks.
+assert.match(screen,/visible=\{remarkOpen\}/, 'Add Remark must open a native popup.');
+assert.match(screen,/accessibilityLabel="Save Remark"/, 'Remark popup has its own save action.');
+assert.match(screen,/async function addRemark\(\)/, 'Remark save handler is present.');
+assert.match(screen,/previous\?previous\+'\\n\\n'\+note:note/, 'New remarks append instead of replacing history.');
+assert.match(screen,/saveNativePolicyOnboarding\(id,data.revision,updated\)/, 'Remark save persists via the revision-checked API.');
+assert.match(screen,/setRemarkOpen\(false\)/, 'Successful save closes the remark popup.');
+assert.match(screen,/setRemarkError\(/, 'Remark save failures are reported inside the popup.');
+assert.match(screen,/styles.remarkHeading/, 'Remarks heading reserves width for a top-right Add button.');
+assert.match(screen,/\.split\(\/\\n\\s\*\\n\/\)/, 'Previously added remarks are visible as separate entries.');
+assert.doesNotMatch(screen,/numberOfLines=\{3\}/, 'Do not truncate remarks to three lines.');
+assert.match(screen,/disabled=\{saving\|\|booking\|\|!remarkText.trim\(\)\}/, 'Prevent duplicate or blank remarks while saving.');
+
 console.log('Product-type layouts, Operations Motor controls, referenced financial popups, placeholders and Motor-only booking guard verified.');
