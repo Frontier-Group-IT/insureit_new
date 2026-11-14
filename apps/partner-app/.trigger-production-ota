@@ -1,11 +1,11 @@
 Partner production OTA trigger
-release=partner-onboarding-remarks-popup-pr-4451
+release=partner-onboarding-commercial-reference-pr-4461
 source=verified-merged-main
-reason=user-approved-remarks-popup-header-and-saved-history
+reason=user-approved-partner-commercial-onboarding-publish
 channel=production
 runtime=0.2.0
 requested=2026-11-14
 no_native_build=true
 no_apk=true
 no_aab=true
-backend=no_changes
+backend=authorized-product-draft-api-already-merged
