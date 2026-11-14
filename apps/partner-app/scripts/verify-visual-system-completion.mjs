@@ -176,6 +176,13 @@ requireText(policyIntakes, 'styles.emptyIllustration', 'Empty Policy Intake hist
 requireText(policyIntakes, 'EMPTY_SUBMISSION_COPY[filter].title', 'Empty Policy Intake history must explain the selected status.');
 requireText(policyIntakes, 'No policy submissions yet', 'All filter must describe a truly empty intake register.');
 if (policyIntakes.includes('state="empty"')) throw new Error('Policy Intake filtered empty state must not restore the oversized shared white card.');
+const actionRequiredArtwork = path.join(root, 'assets/partner/status/policy-attention.png');
+if (!fs.existsSync(actionRequiredArtwork)) throw new Error('Action Required 3D artwork must be present in the Partner app bundle.');
+requireText(policyIntakes, "row.status === 'needs_attention' || (row.status === 'processing' && row.ocr_status === 'failed')", 'Action Required and OCR-failed records must select attention artwork.');
+requireText(policyIntakes, "source={require('../assets/partner/status/policy-attention.png')}", 'Use the bundled policy attention artwork instead of a generic document icon.');
+requireText(policyIntakes, 'styles.rowArtworkAttention', 'Action Required artwork must use its small amber icon background.');
+requireText(policyIntakes, 'styles.rowAttentionImage', 'Action Required artwork stays inside the existing compact record icon area.');
+if (policyIntakes.indexOf("source={require('../assets/partner/status/policy-attention.png')}") > policyIntakes.indexOf("const insurerName = field(row, 'insurer_name')")) throw new Error('Attention artwork must take priority over insurer logos for Action Required records.');
 requireText(policyIntakes, 'PartnerInsurerLogo', 'Policy Intake records must prefer insurer artwork through PartnerInsurerLogo.');
 requireText(policyIntakes, 'getPartnerManufacturerLogoSource', 'Policy Intake records must fall back to manufacturer artwork when insurer artwork is unavailable.');
 requireText(policyIntakes, 'document-text-outline', 'Policy Intake records must keep a neutral default icon when insurer/manufacturer artwork is unavailable.');
