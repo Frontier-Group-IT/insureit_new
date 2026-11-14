@@ -67,7 +67,7 @@ export default function PolicyIntakeDetailScreen() {
   const proposalForm = row?.policy_type === 'life' || row?.policy_type === 'health';
 
   async function replaceDocument() {
-    if (!row || replacementLockRef.current) return;
+    if (!row || row.status === 'rejected' || row.status === 'duplicate' || row.status === 'completed' || replacementLockRef.current) return;
     setError('');
     const result = await DocumentPicker.getDocumentAsync({ type: ALLOWED_TYPES, copyToCacheDirectory: true, multiple: false });
     if (result.canceled || !result.assets[0]) return;
@@ -300,17 +300,20 @@ export default function PolicyIntakeDetailScreen() {
               </View>
               <Text selectable style={styles.attentionText}>{row.attention_reason}</Text>
 
-              {replacementProgress ? <ReplacementProgress progress={replacementProgress} /> : null}
-
-              <View style={styles.replaceButton}>
-                <PartnerButton
-                  label={replacing ? replacementLabel(replacementProgress) : `Upload replacement ${proposalForm ? 'proposal form' : 'policy copy'}`}
-                  icon="cloud-upload-outline"
-                  loading={replacing}
-                  disabled={replacing}
-                  onPress={() => void replaceDocument()}
-                />
-              </View>
+              {row.status !== 'rejected' ? (
+                <>
+                  {replacementProgress ? <ReplacementProgress progress={replacementProgress} /> : null}
+                  <View style={styles.replaceButton}>
+                    <PartnerButton
+                      label={replacing ? replacementLabel(replacementProgress) : `Upload replacement ${proposalForm ? 'proposal form' : 'policy copy'}`}
+                      icon="cloud-upload-outline"
+                      loading={replacing}
+                      disabled={replacing}
+                      onPress={() => void replaceDocument()}
+                    />
+                  </View>
+                </>
+              ) : null}
             </View>
           ) : null}
 
