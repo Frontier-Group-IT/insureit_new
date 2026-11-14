@@ -465,7 +465,8 @@ export default function NativePolicyOnboarding(){
         </Pressable>)}
       </View>
     </View>
-    <View style={styles.registrationBlock}>
+    <View style={styles.fields}>
+      <View style={[styles.field,styles.registrationBlock]}>
       <Text style={styles.label}>Registration No. {draft?.registrationMode==='registered'?<Text style={styles.star}>*</Text>:null}</Text>
       <View style={styles.registrationRow}>
         <TextInput accessibilityLabel="Registration number" value={draft?.registrationMode==='registered'?draft.registrationNo:''}
@@ -480,10 +481,10 @@ export default function NativePolicyOnboarding(){
           {lookingUpRc?<ActivityIndicator color="#FFFFFF" size="small"/>:<Ionicons name="scan-outline" size={19} color="#FFFFFF"/>}
         </Pressable>
       </View>
-    </View>
-    <View style={styles.fields}>
+      </View>
       {motorVehicleFields.slice(0,7).map(item=>field(item))}
        {field(motorVehicleFields[9])}
+      {motorVehicleFields.slice(7,9).map(item=>field(item))}
       <View style={styles.field}>
         <Text style={styles.label}>RTO {draft?.vehicleClass==='CPM'?null:<Text style={styles.star}>*</Text>}</Text>
         <View style={styles.rtoRow}>
@@ -495,7 +496,7 @@ export default function NativePolicyOnboarding(){
              onChangeText={value=>update('rtoName',value)} style={[styles.input,styles.rtoInput,draft?.vehicleClass==='CPM'&&styles.readonlyInput]}/>
         </View>
       </View>
-      {motorVehicleFields.slice(7,9).map(item=>field(item))}
+
     </View>
   </View>;
   const motorProductSection=section('03','Policy product, premium & validity',motorProductFields);
@@ -709,7 +710,7 @@ const styles=StyleSheet.create({
   registrationToggle:{flexDirection:'row',borderWidth:1,borderColor:'#C6D4E6',borderRadius:8,overflow:'hidden',backgroundColor:'#FFFFFF'},
   toggleButton:{paddingHorizontal:7,paddingVertical:8},toggleActive:{backgroundColor:'#17365D'},
   toggleText:{fontSize:9,fontWeight:'700',color:'#17365D'},toggleActiveText:{color:'#FFFFFF'},
-  registrationBlock:{paddingHorizontal:12,paddingTop:12,gap:5},
+  registrationBlock:{gap:5},
   registrationRow:{height:42,flexDirection:'row',borderWidth:1,borderColor:'#D8E1EC',borderRadius:9,overflow:'hidden'},
   registrationInput:{flex:1,minWidth:0,paddingHorizontal:11,fontSize:12,color:'#183653'},
   rcButton:{width:48,backgroundColor:'#17365D',alignItems:'center',justifyContent:'center'},
