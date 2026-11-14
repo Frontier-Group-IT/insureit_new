@@ -30,7 +30,7 @@ assert.match(api,/saveDraft.productDrafts=Object.fromEntries/,'Scoped product dr
 assert.match(api,/if\(d.businessLine!=="Motor"\)return reply/,'NonMotor cannot book through Motor endpoint');
 assert.doesNotMatch(screen,/Final booking is completed in the Operations Portal|Draft saving is available for|Final case creation, documents, risk validation/, 'Remove redundant non-Motor booking and draft notices.');
 assert.doesNotMatch(screen,/>In progress<\/Text>/, 'Remove In progress badge from onboarding summary.');
-assert.match(screen,/\{saving\?'Saving…':'Save draft'\}/, 'Keep non-Motor Save Draft button.');
+assert.match(screen,/saveNativePolicyOnboarding\(id,data.revision,draft\)/, 'Retain revision-checked draft saving.');
 assert.doesNotMatch(screen,/<View style=\{styles.status\}>/, 'Remove top PIR and unsaved status card only; draft saving remains.');
 assert.match(screen,/selected&&styles.choiceSelected/, 'Selected highlight applies to all shared picker options.');
 assert.match(screen,/picker\.product\?updateProduct\(picker.key,item.value\):update\(picker.key as FieldKey,item.value\)/, 'Preserve non-business-line dropdown selection handlers.');
@@ -81,10 +81,10 @@ assert.match(screen,/insurerPayinFields\.map\(/, 'Pay-in popup must use scoped i
 assert.match(screen,/partnerPayoutFields\.filter\(/, 'Payout popup must use scoped payout fields.');
 assert.match(screen,/accessibilityLabel="Save and close commercial popup"/, 'Commercial popup needs a Save & Close action.');
 assert.match(screen,/Boolean\(commercialModal\)&&Boolean\(data\?\.commercialAccess\)/, 'Commercial modals stay permission gated.');
-assert.match(screen,/placeholder=\{productType==='Non Motor'\?'':hint\}/, 'Only Non-Motor blank fields opt out of Motor input placeholders.');
+assert.match(screen,/placeholder=\{hint\}/, 'All policy types display meaningful empty field placeholders.');
 assert.match(screen,/f.key==='model'\?'Model \/ variant'/, 'Keep the reference Model placeholder.');
-assert.match(screen,/displayed\|\|\(productType==='Non Motor'\?'':f.key==='manufacturingYear'\?'Select year':'Select '\+f.label.toLowerCase\(\)\)/, 'Non-Motor dropdowns stay blank; Motor year uses the exact portal hint.');
-assert.match(screen,/hidePlaceholder=\{productType==='Non Motor'\}/, 'Non-Motor date fields hide placeholder text only.');
+assert.match(screen,/displayed\|\|\(f.key==='manufacturingYear'\?'Select year':'Select '\+f.label.toLowerCase\(\)\)/, 'Dropdowns show a Select hint when empty.');
+assert.doesNotMatch(screen,/hidePlaceholder=\{productType==='Non Motor'\}/, 'Date placeholders are visible for Non-Motor too.');
 assert.match(date,/placeholder=\{hidePlaceholder/, 'Date input retains opt-in placeholder behavior for other pages.');
 assert.match(date,/hidePlaceholder\?:boolean/, 'Date placeholder removal must be opt-in to avoid other screens.');
 // Motor form layout and buttons must match the approved compact visual spec.
@@ -93,8 +93,8 @@ assert.doesNotMatch(screen,/Form uploads are available in Operations Portal/, 'R
 assert.match(screen,/styles\.wideField,styles\.registrationBlock/, 'Registration number spans both columns.');
 assert.match(screen,/\[styles\.field,styles\.wideField\]/, 'RTO spans both columns.');
 assert.match(screen,/styles\.summaryProgressStack/, 'Progress indicator stacks over in-progress badge.');
-assert.match(screen,/\{isMotor\?<Pressable accessibilityRole="button" accessibilityLabel="Book Active Policy"/, 'Book replaces Motor Save Draft in the action row.');
-assert.match(screen,/<\/Pressable>:<Pressable accessibilityRole="button" disabled=\{saving\|\|!dirty\}/, 'Non-Motor Save Draft stays available.');
+assert.match(screen,/accessibilityLabel="Create Active Policy"/, 'Shared create action is labelled as requested.');
+assert.match(screen,/createPartnerPolicyIntakeBridgeUrl\(id,false,null\)/, 'Non-Motor active creation uses authorised web handoff.');
 assert.match(screen,/disabled=\{booking\|\|saving\|\|!data\}/, 'Booking remains gated by loading and saving.');
 
 // Remarks must be reachable from header, saved through the revision-checked API,
@@ -132,8 +132,20 @@ assert.match(screen,/nonMotorDocumentsSection/, 'Preserve all four Operations do
 assert.match(screen,/label:'Policy status',options:\['Active','Pending','Expired','Cancelled'\]/, 'Policy status choices match Operations.');
 assert.match(screen,/label:'Policy expiry',value:productValues.endDate/, 'Summary must show saved expiry.');
 assert.match(screen,/data\?\.insurers.find/, 'Summary must derive insurer label from master data.');
-assert.match(screen,/productType==='Non Motor'\?''/, 'Empty Non-Motor text inputs must have no placeholder.');
+assert.doesNotMatch(screen,/productType==='Non Motor'\?''/, 'Non-Motor fields must no longer hide empty hints.');
 assert.match(api,/if\(d.businessLine!=="Motor"\)return reply/, 'No native booking bypass for Non-Motor.');
+assert.match(screen,/nonMotorAdditionalOpen\?<View style=\{styles.fields\}>/, 'Remarks appears in expanded Additional policy details.');
+assert.match(screen,/accessibilityLabel="Remarks" multiline/, 'Inline full-width multiline Remarks input is available.');
+assert.match(screen,/productExtras\.some\(item=>item\.key===f\.key\)\?'Optional'/, 'Optional additional policy details use portal-style hints.');
+assert.match(screen,/f.key==='previousClaims'\?'Brief reference'/, 'Previous claims uses the portal brief-reference hint.');
+assert.match(screen,/updateProduct\('remarks',value\)/, 'Inline remarks persist in the existing product draft.');
+assert.match(screen,/productType!=='Non Motor'\?<View style=\{styles.section\}>/, 'Separate Remarks card is not shown for Non Motor.');
+assert.match(screen,/accessibilityLabel="Cancel Policy Onboarding"/, 'Cancel button is available.');
+assert.match(screen,/Discard unsaved changes\?/, 'Cancelling protects unsaved data.');
+assert.match(screen,/accessibilityLabel="Create Active Policy"/, 'Create Active Policy replaces booking and draft actions.');
+assert.match(screen,/if\(isMotor\)\{await completeBooking\(\);return;\}/, 'Motor retains authorized native booking.');
+assert.match(screen,/createPartnerPolicyIntakeBridgeUrl\(id,false,null\)/, 'Non Motor, Life and Health use the secure Operations flow.');
+assert.match(screen,/Linking.openURL\(url\)/, 'Handoff opens the existing website booking flow.');
 assert.doesNotMatch(screen,/pendingBusinessLine/, 'Policy type changes immediately without confirmation state.');
 assert.match(screen,/if\(picker.key==='businessLine'\)/, 'Policy type dropdown retains direct selection handling.');
 assert.match(screen,/if\(item.value!==draft\?\.businessLine\)update\('businessLine',item.value\)/, 'Policy type changes directly and preserves product draft objects.');

@@ -200,7 +200,7 @@ for (const fragment of ["sourceCell:{width:'48%'", "sourcePrimary:{width:'100%'"
   "sourceLeadRow", "sourceOwnerRow", "{current}", "items.map(item=>field(item))"]) {
   requireText(nativeOnboarding, fragment, 'Compact onboarding parity missing: '+fragment);
 }
-requireText(nativeOnboarding, "placeholder={productType==='Non Motor'?'':hint}", 'Non-Motor fields are blank by default while Motor retains contextual hints.');
+requireText(nativeOnboarding, "placeholder={hint}", 'All product types retain contextual field hints.');
 requireText(nativeOnboarding, "'Pending after RTO registration'", 'Unregistered registration number must show a pending hint.');
 const dateField = fs.readFileSync(path.join(root, 'components/policy-intakes/partner-policy-date-field.tsx'), 'utf8');
 requireText(dateField, 'fullWidth=false', 'Source date must fit its compact source cell.');
@@ -243,10 +243,12 @@ for(const fragment of [
 requireText(nativeOnboarding, '[styles.field,styles.wideField,styles.registrationBlock]', 'Registration field must fill the whole mobile row.');
 requireText(nativeOnboarding, '[styles.field,styles.wideField]', 'RTO must occupy a full-width row.');
 requireText(nativeOnboarding, 'summaryProgressStack', 'Preserve compact progress circle in summary.');
+requireText(nativeOnboarding, 'accessibilityLabel="Cancel Policy Onboarding"', 'Cancel warns of unsaved changes.');
+requireText(nativeOnboarding, 'accessibilityLabel="Remarks" multiline', 'Non-Motor remarks are a multiline field inside Additional Policy Details.');
 if(nativeOnboarding.includes('>In progress</Text>')) throw new Error('Remove In progress badge from onboarding summary.');
 if(nativeOnboarding.includes('Final booking is completed in the Operations Portal.') || nativeOnboarding.includes('Draft saving is available for')) throw new Error('Remove redundant bottom draft/booking notices.');
-requireText(nativeOnboarding, "'Save draft'", 'Preserve the actual non-Motor Save Draft action.');
-requireText(nativeOnboarding, 'accessibilityLabel="Book Active Policy"', 'Preserve Motor booking beside Save and return.');
+requireText(nativeOnboarding, "createPartnerPolicyIntakeBridgeUrl(id,false,null)", 'Non-Motor finalization must use secure Operations handoff.');
+requireText(nativeOnboarding, 'accessibilityLabel="Create Active Policy"', 'Show the requested Create Active Policy action.');
 if(nativeOnboarding.includes('summaryDocuments')||nativeOnboarding.includes('Upload Forms')||nativeOnboarding.includes('Form uploads are available in Operations Portal.')) throw new Error('Remove onboarding document blocks and redundant upload helper copy.');
 if(nativeOnboarding.includes('View submitted policy copy')) throw new Error('Remove document action from onboarding; register/details flows remain separate.');
 console.log('Partner Policy Intake source, policy-type and detail presentation contracts verified.');
