@@ -1,11 +1,10 @@
 Partner production OTA trigger
-release=partner-life-health-create-policy-pr-4503
+release=partner-policy-products-calendar-pr-4516
 source=verified-merged-main
-reason=user-requested-publish-pr-4503
+reason=user-requested-publish-pr-4516
 channel=production
 runtime=0.2.0
 requested=2026-11-14
 no_native_build=true
 no_apk=true
 no_aab=true
-backend=separate-deployment-required
