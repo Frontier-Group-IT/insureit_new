@@ -42,13 +42,13 @@ export function DailySelfActivityPanel({data,linkFor,reportMode="self"}:Props) {
       ) : null}
       {!data.category ? (
         data.categories.length ? (
-          <div className="divide-y divide-[#edf1f6]">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
             {data.categories.map(item=>(
               <Link key={item.name} prefetch={false} href={linkFor({activity:item.name,page:"1"})}
-                className="flex items-center justify-between gap-4 px-4 py-3 hover:bg-[#f6f9fd]">
-                <span className="text-[11px] font-semibold text-[#2f4360]">{item.name}</span>
-                <span className="flex items-center gap-3">
-                  <span className="min-w-[36px] rounded-lg bg-[#edf3fa] px-2 py-1 text-center text-[12px] font-bold tabular-nums text-[#17365d]">{item.count.toLocaleString("en-IN")}</span>
+                className="flex min-w-0 items-center justify-between gap-2 border-b border-r border-[#edf1f6] px-3 py-3 hover:bg-[#f6f9fd] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#5275AA]">
+                <span className="min-w-0 text-[11px] font-semibold leading-4 text-[#2f4360]">{item.name}</span>
+                <span className="flex shrink-0 items-center gap-1.5">
+                  <span className="min-w-[32px] rounded-lg bg-[#edf3fa] px-2 py-1 text-center text-[12px] font-bold tabular-nums text-[#17365d]">{item.count.toLocaleString("en-IN")}</span>
                   <span aria-hidden="true" className="text-[13px] text-[#50719d]">›</span>
                 </span>
               </Link>
