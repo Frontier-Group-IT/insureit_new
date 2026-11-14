@@ -12,11 +12,11 @@ for(const t of ['Motor','Life','Health','Non Motor']){
 assert.match(screen,/label:'Proposal date'/,'Use Proposal date rather than Motor-only issuance wording');
 assert.doesNotMatch(screen,/label:'Policy issuance date'/);
 assert.match(screen,/options:\['Motor','Life','Health','Non Motor'\]/);
-assert.match(screen,/productType==='Non Motor'\?'Customer & policy':'Customer \/ Proposer'/);
-assert.match(screen,/productType==='Non Motor'\?productSection\('03','Risk details'/);
+assert.match(screen,/productType==='Non Motor'\?nonMotorCustomerPolicySection/, 'Non-Motor Customer & policy must use the Operations-specific layout.');
+assert.match(screen,/productType==='Non Motor'\?nonMotorRiskSection/, 'Non-Motor risk section must be category-aware.');
 assert.match(screen,/productSection\('03','Policy product & case details',lifeProduct\)/);
 assert.match(screen,/productSection\('04',productType==='Non Motor'\?'Cover, premium & validity':'Premium & payment'/);
-for(const label of ['PPT - Premium paying term','PD - Policy duration / term','Payment frequency','Premium amount (₹)','Payment mode','Case / proposal number','Address','Risk location','Sum insured / limit (₹)','Policy category']){
+for(const label of ['PPT - Premium paying term','PD - Policy duration / term','Payment frequency','Premium amount (₹)','Payment mode','Case / proposal number','Address','Risk location','Sum insured / limit (₹)','Non-Motor category']){
   assert.ok(screen.includes(label), 'Missing Operations field '+label);
 }
 assert.match(date,/import DateTimePicker/,'Native date control must use installed calendar picker');
@@ -62,10 +62,10 @@ assert.match(screen,/insurerPayinFields\.map\(/, 'Pay-in popup must use scoped i
 assert.match(screen,/partnerPayoutFields\.filter\(/, 'Payout popup must use scoped payout fields.');
 assert.match(screen,/accessibilityLabel="Save and close commercial popup"/, 'Commercial popup needs a Save & Close action.');
 assert.match(screen,/Boolean\(commercialModal\)&&Boolean\(data\?\.commercialAccess\)/, 'Commercial modals stay permission gated.');
-assert.match(screen,/placeholder=\{hint\}/, 'Onboarding text inputs have concise context-sensitive placeholders.');
+assert.match(screen,/placeholder=\{productType==='Non Motor'\?'':hint\}/, 'Only Non-Motor blank fields opt out of Motor input placeholders.');
 assert.match(screen,/f.key==='model'\?'Model \/ variant'/, 'Keep the reference Model placeholder.');
-assert.match(screen,/displayed\|\|\('Select '\+f.label.toLowerCase\(\)\)/, 'Empty dropdowns display a Select prompt.');
-assert.doesNotMatch(screen,/<PartnerPolicyDateField[^>]*hidePlaceholder/, 'Onboarding dates show a DD/MM/YYYY placeholder.');
+assert.match(screen,/displayed\|\|\(productType==='Non Motor'\?'':'Select '\+f.label.toLowerCase\(\)\)/, 'Non-Motor dropdowns remain blank while Motor retains prompts.');
+assert.match(screen,/hidePlaceholder=\{productType==='Non Motor'\}/, 'Non-Motor date fields hide placeholder text only.');
 assert.match(date,/placeholder=\{hidePlaceholder/, 'Date input retains opt-in placeholder behavior for other pages.');
 assert.match(date,/hidePlaceholder\?:boolean/, 'Date placeholder removal must be opt-in to avoid other screens.');
 // Motor form layout and buttons must match the approved compact visual spec.
@@ -92,4 +92,27 @@ assert.match(screen,/\.split\(\/\\n\\s\*\\n\/\)/, 'Previously added remarks are 
 assert.doesNotMatch(screen,/numberOfLines=\{3\}/, 'Do not truncate remarks to three lines.');
 assert.match(screen,/disabled=\{saving\|\|booking\|\|!remarkText.trim\(\)\}/, 'Prevent duplicate or blank remarks while saving.');
 
+
+// Non-Motor Operations Portal parity, without enabling native Non-Motor booking.
+for(const label of ['Customer record','Customer / organisation','Customer type','Insured / organisation name','Contact person','Mobile number','Email','Address','Policy number','Insurance company','Product / policy name','Non-Motor category','Policy status']){
+  assert.ok(screen.includes(label), 'Missing Non-Motor customer / policy field '+label);
+}
+assert.match(screen,/nonMotorCustomerMode==='existing'/, 'Customer mode must control conditional fields.');
+assert.match(screen,/setNonMotorCustomerMode/, 'Existing / New customer toggle is required.');
+assert.match(screen,/searchNativeNonMotorCustomers\(id,customerSearch.trim\(\)\)/, 'Existing customer must use authorised intake lookup.');
+assert.match(screen,/customerId:customer.id/, 'Existing selection must persist the real customer identifier.');
+assert.match(api,/action==="customer_search"/, 'Customer lookup must be handled by the scoped native API.');
+assert.match(api,/intake.assigned_to_profile_id!==user.id/, 'Customer lookup requires the assigned reviewer.');
+assert.match(api,/operationsHeadPolicyFilter\(downline\)/, 'Head customer results must respect downline scope.');
+for(const key of ['"customerMode"','"customerId"','"insuredName"','"phone"','"warranties"','"endorsements"']){
+  assert.ok(api.includes(key), 'Non-Motor server must allow draft field '+key);
+}
+assert.match(screen,/productValues.category\?<View style=\{styles.fields\}>/, 'Risk inputs must be absent until category selection.');
+assert.match(screen,/nonMotorAdditionalOpen/, 'Optional details must be collapsible.');
+assert.match(screen,/nonMotorDocumentsSection/, 'Preserve all four Operations document references without fake uploads.');
+assert.match(screen,/label:'Policy status',options:\['Active','Pending','Expired','Cancelled'\]/, 'Policy status choices match Operations.');
+assert.match(screen,/label:'Policy expiry',value:productValues.endDate/, 'Summary must show saved expiry.');
+assert.match(screen,/data\?\.insurers.find/, 'Summary must derive insurer label from master data.');
+assert.match(screen,/productType==='Non Motor'\?''/, 'Empty Non-Motor text inputs must have no placeholder.');
+assert.match(api,/if\(d.businessLine!=="Motor"\)return reply/, 'No native booking bypass for Non-Motor.');
 console.log('Product-type layouts, Operations Motor controls, referenced financial popups, placeholders and Motor-only booking guard verified.');
