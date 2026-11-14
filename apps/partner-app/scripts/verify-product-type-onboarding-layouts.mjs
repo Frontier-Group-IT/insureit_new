@@ -184,7 +184,7 @@ for (const label of ['Long Term Package','Long Term Third Party','Bundled','SAOD
 }
 assert.match(screen, /label:f.key==='policyProduct'&&x==='Comprehensive'\?'Package':x/, 'Display Package label while storing the existing Comprehensive value.');
 assert.match(screen, /draft.vehicleClass==='CPM'\?\['Comprehensive','SAOD'\]/, 'Preserve existing CPM eligibility.');
-assert.match(screen, /'Long Term Third Party'\]\)\)/, 'Long Term Third Party must follow third-party IDV and OD rules.');
+assert.ok(screen.includes("value==='Long Term Third Party'"), 'Long Term Third Party must follow third-party IDV and OD rules.');
 assert.match(screen, /picker\?\.key==='policyProduct'\?'Select product'/, 'Policy selector uses the reference header.');
 assert.match(date, /PartnerPolicyCalendarDialog/, 'Android date fields open the themed policy calendar.');
 assert.match(date, /Platform.OS==='ios'\?<DateTimePicker/, 'iOS retains the existing native picker.');
