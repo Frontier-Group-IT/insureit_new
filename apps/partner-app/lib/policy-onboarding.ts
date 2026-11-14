@@ -65,6 +65,12 @@ export async function bookNativePolicyOnboarding(
   });
 }
 
+export async function createNativeLifeHealthCase(intakeId:string,revision:number){
+  return request<{case:{id:string;number:string;status:'awaiting_policy'}}>({
+    action:'create_life_health',intake_id:intakeId,revision,
+  });
+}
+
 export async function requestNativePolicyDateApproval(intakeId:string,revision:number,approverKey:string){
   return request<{approval_id:string;expires_at:string}>({action:'approval_request',intake_id:intakeId,revision,approver_key:approverKey});
 }
