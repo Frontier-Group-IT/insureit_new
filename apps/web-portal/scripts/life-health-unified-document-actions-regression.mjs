@@ -15,3 +15,15 @@ assert.match(nonMotor,/onClick=\{\(\) => setShowDeleteConfirmation\(true\)\}/);
 assert.match(modal,/role="alertdialog"/);
 assert.match(modal,/Are you sure you want to delete/);
 console.log("Unified Life/Health document actions regression passed");
+
+const issued=readFileSync("components/life-health-issued-policy-edit-form.tsx","utf8");
+const policyCopy=readFileSync("components/policy-edit-copy-footer-actions.tsx","utf8");
+for (const [name,source] of [["Life/Health Policy Add",form],["Life/Health Case",detail],["Life/Health Issued Edit",issued],["Non-Motor Add/Edit",nonMotor],["Motor Policy Edit",policyCopy]]) {
+  assert.doesNotMatch(source, /<Eye(?:\\s|>)/, name+" must not show redundant eye icon for uploaded file");
+}
+assert.match(detail,/existing\\.file_name/, "Case document shows actual uploaded filename");
+assert.match(detail,/RefreshCw/, "Case documents offer Replace after Delete");
+assert.match(issued,/doc\\.fileName/, "Issued policy filename is clickable");
+assert.match(policyCopy,/policyCopy\\.fileName/, "Motor edit filename is clickable");
+assert.match(nonMotor,/viewSavedDocument/, "Non-Motor existing filename remains clickable");
+console.log("Unified document row: filename, Delete, Replace regression passed");
