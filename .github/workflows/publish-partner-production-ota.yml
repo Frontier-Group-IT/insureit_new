@@ -93,6 +93,7 @@ jobs:
               || file === 'apps/partner-app/scripts/verify-duplicate-intake-detail-parity.mjs'
               || file === 'apps/partner-app/scripts/verify-intake-detail-identity-header.mjs'
               || file === 'apps/partner-app/scripts/verify-policy-intake-source-contract.mjs'
+              || file === 'apps/web-portal/app/api/partner/policy-intakes/native-onboarding/route.ts'
               || file === 'apps/partner-app/scripts/verify-sticky-safe-area.mjs'
               || file === 'apps/partner-app/scripts/verify-visual-system-completion.mjs'
               || file === 'apps/partner-app/scripts/verify-website-permission-parity.mjs'

@@ -305,7 +305,7 @@ export async function POST(request:Request){
   // Mirror the Operations Portal's authoritative source-owner resolution.
   // Return only metadata for this already-authorized intake and selected source,
   // never a complete source directory or another employee's downline.
-  let sourceMeta: {name:string;code:string;mobile:string;rmName:string;rmCode:string}|null=null;
+  let sourceMeta: {name:string;code:string;mobile:string;rmName:string;rmCode:string;rmMobile:string}|null=null;
   if(intake.lead_source_code && draft.intermediaryCode===intake.lead_source_code &&
      String(draft.leadSource).trim().toLowerCase()===intake.lead_source_name.trim().toLowerCase()){
     const {data:source,error:sourceError}=await admin.from("intermediaries")
@@ -334,19 +334,26 @@ export async function POST(request:Request){
             }
           }
         }
-        let rmName="",rmCode="";
+        let rmName="",rmCode="",rmMobile="";
         if(ownerId){
           try{
             const associates=await loadPospMispAssociates(admin);
             const owner=associates.find(item=>item.id===ownerId);
             rmName=owner?.full_name?.trim()??"";
             rmCode=owner?.employee_code?.trim()??"";
+            if(owner){
+              // Resolve only this intake's verified assigned RM; never expose the employee directory.
+              const {data:rm}=await admin.from("employees")
+                .select("phone").eq("id",owner.id).eq("employment_status","active")
+                .ilike("department","sales").maybeSingle<{phone:string|null}>();
+              rmMobile=rm?.phone?.replace(/\D/g,"").slice(-10)??"";
+            }
           }catch{
             // Do not substitute guessed codes if the master is unavailable.
           }
         }
         sourceMeta={name:selected.display_name.trim(),code:selected.intermediary_code??"",
-          mobile:selected.mobile?.replace(/\D/g,"").slice(-10)??"",rmName,rmCode};
+          mobile:selected.mobile?.replace(/\D/g,"").slice(-10)??"",rmName,rmCode,rmMobile};
       }
     }
   }
