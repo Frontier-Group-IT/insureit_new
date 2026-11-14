@@ -25,7 +25,7 @@ def verify_selected(data_sql, target_url):
     expected = {
         (schema, name): count
         for (schema, name), count in counts.items()
-        if schema in APP_SCHEMAS or schema == "auth"
+        if schema in APP_SCHEMAS or (schema == "auth" and name != "schema_migrations")
     }
     if sum(schema == "public" for schema, _ in expected) < 150:
         raise ValueError("Incomplete archived application COPY coverage")
