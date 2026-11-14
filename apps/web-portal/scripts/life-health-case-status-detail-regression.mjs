@@ -11,6 +11,7 @@ assert.doesNotMatch(detail, /if\(caseData\.status==="rejected"\)return/, "Reject
 assert.doesNotMatch(detail, /if\(isIssued\)return/, "Issued cases must retain the same detail layout.");
 assert.match(detail, /isRejected=caseData\.status==="rejected",isClosed=isIssued\|\|isRejected/, "Only closed status should produce read-only case view.");
 assert.match(detail, /headerTone=isRejected[\s\S]*?isIssued[\s\S]*?caseStatusLabel=/, "Rejected, issued and pending header colors must be distinct.");
+assert.match(detail, /const caseStatusLabel=isRejected\?"Rejected":isIssued\?"Issued":"Pending"/, "Header status text must match the persisted rejected/issued/pending state.");
 assert.match(detail, /<fieldset disabled=\{isClosed\}/, "Closed cases must disable editing of every form field.");
 assert.match(detail, /\{!isClosed\?<Section number="05" title="Mark Policy Issued"/, "Closed cases must not expose the issue form.");
 assert.match(detail, /\{!isClosed\?<section className="flex flex-wrap items-center justify-end/, "Closed cases must not expose Save, Reject or Issue actions.");
