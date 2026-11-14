@@ -71,7 +71,7 @@ class PlanTests(unittest.TestCase):
 
     def test_fails_when_app_data_destination_not_defined(self):
         content = fixture().replace(
-            "26; 1259 1 TABLE public synthetic_150 postgres\\n", ""
+            "26; 1259 1 TABLE public synthetic_150 postgres\n", ""
         )
         with self.assertRaises(ValueError):
             chosen_entries(content)
