@@ -1,11 +1,11 @@
 Partner production OTA trigger
-release=partner-policy-onboarding-blank-inputs-pr-4413
+release=partner-motor-onboarding-full-parity-pr-4423
 source=verified-merged-main
-reason=user-approved-operations-parity-no-placeholder-fields
+reason=user-approved-motor-onboarding-operations-parity
 channel=production
 runtime=0.2.0
 requested=2026-11-14
 no_native_build=true
 no_apk=true
 no_aab=true
-backend=no_changes
+backend=source-metadata-api-change
