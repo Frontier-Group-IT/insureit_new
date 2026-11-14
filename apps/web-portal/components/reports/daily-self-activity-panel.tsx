@@ -1,11 +1,12 @@
 import Link from "next/link";
 import type { SelfActivity } from "@/lib/reports/daily-self-activity";
+import type { DailyActivityQuery } from "@/lib/reports/daily-activity";
 
 type Data = {
   categories:{name:string;count:number}[];category:string;rows:SelfActivity[];
   page:number;hasNext:boolean;total:number;selectedCount:number;partial:boolean;day:string;
 };
-type Props = {data:Data;linkFor:(updates:Record<string,string>)=>string};
+type Props = {data:Data;linkFor:(updates:Partial<DailyActivityQuery>)=>string};
 
 const dateFormat=new Intl.DateTimeFormat("en-IN",{timeZone:"Asia/Kolkata",day:"2-digit",month:"short",year:"numeric"});
 const timeFormat=new Intl.DateTimeFormat("en-IN",{timeZone:"Asia/Kolkata",hour:"2-digit",minute:"2-digit",hour12:true});
