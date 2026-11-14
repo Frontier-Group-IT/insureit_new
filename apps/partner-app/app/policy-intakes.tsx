@@ -440,6 +440,7 @@ function MotionCard({ index, reduceMotion, children }: { index: number; reduceMo
   useEffect(() => {
     entrance.stopAnimation(); rise.stopAnimation();
     if (reduceMotion) { entrance.setValue(1); rise.setValue(0); return; }
+    entrance.setValue(0); rise.setValue(9);
     Animated.parallel([
       Animated.timing(entrance, { toValue: 1, duration: 260, delay: Math.min(index, 7) * 42, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
       Animated.timing(rise, { toValue: 0, duration: 260, delay: Math.min(index, 7) * 42, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
@@ -491,7 +492,7 @@ function IntakeProgress({ row, reduceMotion }: { row: PartnerPolicyIntake; reduc
   useEffect(() => {
     progressEntrance.stopAnimation();
     if (reduceMotion) progressEntrance.setValue(1);
-    else Animated.timing(progressEntrance, { toValue: 1, duration: 420, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
+    else { progressEntrance.setValue(0); Animated.timing(progressEntrance, { toValue: 1, duration: 420, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start(); }
     return () => progressEntrance.stopAnimation();
   }, [progressEntrance, reduceMotion]);
   return (
