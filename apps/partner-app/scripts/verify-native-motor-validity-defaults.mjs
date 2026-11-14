@@ -24,7 +24,7 @@ assert.match(web,/coverExpiry\(value,current\.vehicleClass==="TWP"\?5:3\)/,'Webs
 assert.match(app,/key==='validFrom'\|\|key==='policyProduct'\|\|\(key==='vehicleClass'/,'Recompute only on explicit start/product/class edits');
 assert.match(app,/Object\.assign\(next,motorValidityEnds\(/,'Keep three end dates in native draft on input change');
 assert.match(app,/onChange=\{v=>update\(f\.key,v\)\}/,'Date picker commits through the shared update path');
-assert.match(app,/\{key:'validUpto',label:'Validity up to'/,'Regular validity up-to field stays editable');
+assert.match(app,/\{key:'validUpto',label:draft\?\.policyProduct==='Bundled'\?'OD Validity Upto':'Validity up to'/,'Bundled validity end is labeled OD Validity Upto; other products keep the original label');
 assert.match(app,/key:'tpValidUpto' as FieldKey/,'Bundled TP validity up-to field stays editable');
 assert.match(app,/key:'cpaValidUpto' as FieldKey/,'Bundled CPA validity up-to field stays editable');
 assert.match(app,/const next=\{\.\.\.current,\[key\]:value\}/,'Existing draft fields remain intact');
