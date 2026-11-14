@@ -141,7 +141,6 @@ export default function NativePolicyOnboarding(){
   const [approvalCode,setApprovalCode]=useState("");
   const [picker,setPicker]=useState<{key:string;items:{value:string;label:string}[];product?:boolean}|null>(null);
   const [dirty,setDirty]=useState(false);
-  const [commercialExpanded,setCommercialExpanded]=useState(false);
   const [commercialModal,setCommercialModal]=useState<'payin'|'payout'|null>(null);
   const [remarkOpen,setRemarkOpen]=useState(false);
   const [remarkText,setRemarkText]=useState('');
@@ -543,7 +542,7 @@ export default function NativePolicyOnboarding(){
         </View>
         <View style={styles.summary}>
           {isMotor?<View style={styles.premiumRows}>
-            <View style={styles.premiumHeading}><Ionicons name="cash-outline" size={17} color="#315B9A"/><Text style={styles.summaryCaption}>PREMIUM</Text></View>
+            <View style={styles.premiumHeading}><View style={styles.premiumIcon}><Ionicons name="cash-outline" size={16} color="#315B9A"/></View><Text style={styles.summaryCaption}>PREMIUM</Text></View>
             {[{label:'Net premium',value:net},{label:'GST',value:gst},{label:'Gross premium',value:gross}].map(row=><View key={row.label} style={styles.premiumRow}>
               <Text style={styles.premiumLabel}>{row.label}</Text><Text style={styles.premiumValue}>{rupees(row.value)}</Text>
             </View>)}
