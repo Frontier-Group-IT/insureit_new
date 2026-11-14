@@ -29,7 +29,7 @@ export function DailyEmployeeDirectory({people,search,linkFor}:Props) {
         <div className="divide-y divide-[#edf1f6]">
           {filtered.map(p=>(
             <Link key={p.id} prefetch={false}
-              href={linkFor({scope:"all",person:p.id,employee:"",activity:"",page:"1",period:"all"})}
+              href={linkFor({scope:"all",person:p.id,employee:"",activity:"",page:"1"})}
               className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-[#f6f9fd]">
               <div className="min-w-0">
                 <p className="truncate text-[11px] font-bold text-[#2f4360]">{p.full_name||"Unnamed employee"}</p>
