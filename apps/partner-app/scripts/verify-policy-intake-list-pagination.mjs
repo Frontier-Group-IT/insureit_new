@@ -10,7 +10,12 @@ assert.match(app, /<Image[\s\S]*?style=\{styles\.emptyIllustrationImage\}[\s\S]*
 assert.match(app, /contentContainerStyle=\{\[styles\.content, !loading && !error && visibleRows\.length === 0 && styles\.emptyContent\]\}/, 'Only the successful empty state grows to fill available scroll area');
 assert.match(app, /compactEmpty: \{ flex: 1, minHeight: 250,[^}]*justifyContent: 'center'/, 'Center illustration, title and message vertically');
 assert.doesNotMatch(app, /styles\.emptyIllustrationAccent|styles\.emptyIllustration\}/, 'Remove the tiny legacy empty-state icon');
-assert.match(app, /<PartnerStateView state="loading"/, 'Loading retains its own state');
+assert.match(app, /\{loading && !rows\.length \? \([\s\S]*?<PolicyIntakeSkeletonList \/>/, 'First-page loading uses compact skeleton cards');
+assert.match(app, /function PolicyIntakeSkeletonList\(\)/, 'Loading skeleton is a dedicated component');
+assert.match(app, /Array\.from\(\{ length: 7 \}/, 'Show seven reference-matching placeholders');
+assert.match(app, /accessibilityLabel="Loading Policy Intakes" accessibilityRole="progressbar"/, 'Preserve an accessible loading description');
+assert.match(app, /skeletonCard:|skeletonLogo:|skeletonStatus:/, 'Skeleton mirrors the logo, description and status card layout');
+assert.doesNotMatch(app, /<PartnerStateView state="loading"/, 'Remove oversized loading card');
 assert.match(app, /<PartnerStateView state="error"/, 'Errors retain their own state and retry');
 assert.match(app, /visibleRows\.map\(\(row, index\) =>/, 'Available records remain visible with stagger index');
 assert.match(app, /<View style=\{styles\.bottomNav\}>/, 'Bottom navigation remains outside the scroll body');
@@ -176,7 +181,7 @@ assert.match(app, /styles\.emptyIllustration/, 'Use a subtle blue/purple illustr
 assert.doesNotMatch(app, /state="empty"/, 'Do not use the large shared empty-state card for filtered submissions');
 assert.match(app, /!debouncedQuery && filter === 'all' && canPartnerAccess\(context, 'create_policy_intakes', 'edit'\)/, 'Only authorized users in an unfiltered All view see the Create first intake action');
 assert.match(app, /onPress=\{\(\) => router\.push\('\/policy-intake-new'\)\}/, 'Create first intake keeps existing navigation');
-assert.match(app, /<PartnerStateView state="loading"/, 'Keep existing loading feedback');
+assert.match(app, /<PolicyIntakeSkeletonList \/>/, 'Keep existing loading feedback with the skeleton list');
 assert.match(app, /<PartnerStateView state="error"/, 'Keep existing error feedback');
 
 const nativeForm = readFileSync('app/policy-intakes/onboarding.tsx', 'utf8');

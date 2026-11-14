@@ -276,7 +276,7 @@ export default function PolicyIntakesScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void load(true)} tintColor={partnerTheme.colors.brand} colors={[partnerTheme.colors.brand]} />}
       >
         {loading && !rows.length ? (
-          <PartnerStateView state="loading" title="Loading Policy Intakes" />
+          <PolicyIntakeSkeletonList />
         ) : error && !rows.length ? (
           <PartnerStateView state="error" title="Policy Intakes unavailable" message={error} actionLabel="Try again" onAction={() => void load(true)} />
         ) : visibleRows.length ? (
@@ -484,6 +484,25 @@ function IntakeRecordLogo({ row }: { row: PartnerPolicyIntake }) {
   );
 }
 
+/** Compact loading placeholders matching My Submissions cards. */
+function PolicyIntakeSkeletonList() {
+  return (
+    <View style={styles.skeletonList} accessibilityLabel="Loading Policy Intakes" accessibilityRole="progressbar">
+      {Array.from({ length: 7 }, (_, index) => (
+        <View key={index} style={styles.skeletonCard} importantForAccessibility="no-hide-descendants">
+          <View style={styles.skeletonLogo} />
+          <View style={styles.skeletonDetails}>
+            <View style={styles.skeletonTitleLine} />
+            <View style={styles.skeletonCustomerLine} />
+            <View style={styles.skeletonSourceLine} />
+          </View>
+          <View style={styles.skeletonStatus} />
+        </View>
+      ))}
+    </View>
+  );
+}
+
 function IntakeProgress({ row, reduceMotion }: { row: PartnerPolicyIntake; reduceMotion: boolean }) {
   const manual = row.status === 'processing' && row.ocr_status === 'failed';
   const activeStep = row.status === 'completed' ? 4 : row.status === 'in_review' ? 3 : row.status === 'ready_for_review' || row.status === 'needs_attention' || manual ? 2 : 1;
@@ -548,6 +567,14 @@ const styles = StyleSheet.create({
   searchBand: { paddingHorizontal: 11, paddingTop: 8, paddingBottom: 8, flexDirection: 'row', backgroundColor: '#0860C8' }, searchBox: { flex: 1, minHeight: 38, borderRadius: 9, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: '#FFFFFF', borderWidth: 1.5, borderColor: 'transparent' }, searchBoxFocused: { borderColor: '#B7D8FF', shadowColor: '#FFFFFF', shadowOpacity: 0.28, shadowRadius: 5, elevation: 2 }, searchInput: { flex: 1, paddingVertical: 0, color: '#1F314C', fontSize: 10.5, lineHeight: 14 },
   filtersWrap: { flexDirection: 'row', alignItems: 'center', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#DDE4EF', backgroundColor: '#FFFFFF' }, filterScroll: { flex: 1 }, seeAllButton: { minHeight: 35, flexDirection: 'row', alignItems: 'center', gap: 6, justifyContent: 'center', paddingHorizontal: 12, marginRight: 9, borderRadius: 18, borderWidth: StyleSheet.hairlineWidth, borderColor: '#E4EBF5', backgroundColor: '#FFFFFF', shadowColor: '#1B416C', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 5, elevation: 2 }, seeAllText: { color: '#0860C8', fontSize: 12, fontWeight: '700' }, filtersContent: { paddingHorizontal: 10, paddingVertical: 7, gap: 7 }, filterChip: { minHeight: 31, borderRadius: 8, flexDirection: 'row', alignItems: 'center', backgroundColor: '#F7F8FB', borderWidth: StyleSheet.hairlineWidth, borderColor: '#E0E5ED' }, filterChipActive: { backgroundColor: '#183864', borderColor: '#183864' }, filterChipPress: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, minHeight: 31 }, filterLabel: { color: '#4D5D75', fontSize: 9.2, lineHeight: 12, fontWeight: '700' }, filterLabelActive: { color: '#FFFFFF' }, filterCount: { color: '#728099', fontSize: 8.5, lineHeight: 11, fontWeight: '700' }, filterCountActive: { color: '#DDEAFF' },
   sheetRoot: { flex: 1, justifyContent: 'flex-end' }, sheetBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(8,23,45,0.46)' }, sheet: { paddingHorizontal: 16, paddingTop: 10, paddingBottom: 32, borderTopLeftRadius: 20, borderTopRightRadius: 20, backgroundColor: '#FFFFFF' }, sheetHeader: { minHeight: 46, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }, sheetTitle: { color: '#172B49', fontSize: 15, fontWeight: '800' }, sheetClose: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' }, sheetOption: { minHeight: 45, flexDirection: 'row', alignItems: 'center', gap: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E3E9F2', paddingHorizontal: 6 }, sheetOptionSelected: { backgroundColor: '#F1F6FF' }, sheetRadio: { width: 18, height: 18, borderRadius: 9, borderWidth: 1.5, borderColor: '#A7B5C8', alignItems: 'center', justifyContent: 'center' }, sheetRadioSelected: { borderColor: '#3156B8' }, sheetRadioDot: { width: 9, height: 9, borderRadius: 5, backgroundColor: '#3156B8' }, sheetOptionText: { flex: 1, color: '#34465E', fontSize: 12, fontWeight: '600' }, sheetOptionTextSelected: { color: '#193C79', fontWeight: '800' }, sheetOptionCount: { color: '#6C7B90', fontSize: 11, fontWeight: '700' },
+  skeletonList: { gap: 8, paddingHorizontal: 3, paddingTop: 5, paddingBottom: 14 },
+  skeletonCard: { height: 67, borderRadius: 12, borderWidth: 1, borderColor: '#E3EAF3', backgroundColor: '#FFFFFF', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 11, gap: 11 },
+  skeletonLogo: { height: 40, width: 40, borderRadius: 8, backgroundColor: '#EDEFF3' },
+  skeletonDetails: { flex: 1, justifyContent: 'center', gap: 6 },
+  skeletonTitleLine: { width: '62%', height: 8, borderRadius: 4, backgroundColor: '#EDEFF3' },
+  skeletonCustomerLine: { width: '82%', height: 7, borderRadius: 4, backgroundColor: '#F0F2F5' },
+  skeletonSourceLine: { width: '68%', height: 7, borderRadius: 4, backgroundColor: '#F0F2F5' },
+  skeletonStatus: { height: 24, width: 54, borderRadius: 7, backgroundColor: '#EDEFF3' },
   emptyContent: { flexGrow: 1 },
   compactEmpty: { flex: 1, minHeight: 250, marginHorizontal: 8, paddingHorizontal: 18, paddingVertical: 24, alignItems: 'center', justifyContent: 'center', gap: 8 },
   emptyIllustrationImage: { width: 180, height: 180, maxWidth: '100%', marginBottom: 2 },
