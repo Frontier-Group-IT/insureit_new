@@ -199,8 +199,8 @@ assert.match(nativeForm, /Insured & vehicle/, 'Use the Operations vehicle sectio
 assert.match(nativeForm, /Policy product, premium & validity/, 'Motor policy and premium share section 03');
 assert.match(nativeForm, /styles.registrationRow/, 'Keep the registration field and RC button in one row');
 assert.match(nativeForm, /styles.registrationToggle/, 'Keep registration mode buttons in section heading');
-assert.match(nativeForm, /Save & return to Intake/, 'Draft can be saved and reopened');
-assert.match(nativeForm, /Book Active Policy/, 'Native Book Policy button uses shared server engine');
+assert.match(nativeForm, /saveNativePolicyOnboarding\(id,data.revision,draft\)/, 'Draft can be saved and reopened with revision control');
+assert.match(nativeForm, /accessibilityLabel="Create Active Policy"/, 'Native Motor booking remains available through Create Active Policy');
 assert.ok(nativeForm.includes('bookNativePolicyOnboarding(id,revision,resolution,verifiedApprovalId)'), 'Booking uses revision-checked authenticated endpoint');
 assert.match(nativeClient, /saveNativePolicyOnboarding/, 'Native draft uses authenticated API');
 assert.match(nativeApi, /loadPolicyIntakeDuplicateMatches/, 'Native backend blocks duplicates');
