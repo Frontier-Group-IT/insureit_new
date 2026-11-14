@@ -109,6 +109,7 @@ export function LifeHealthIssuedPolicyEditForm({ initial, insurers, sources, act
         setRemarkDraft("");
         setRemarksModalOpen(false);
         setInfoTab("remarks");
+        setInfoExpanded(true);
         router.refresh();
       } catch { setRemarkError("Could not add the remark. Reload to check whether it was saved before retrying."); }
     });
@@ -217,9 +218,11 @@ export function LifeHealthIssuedPolicyEditForm({ initial, insurers, sources, act
           {oneTimePayment?<div><label className={labelClass}>Next installment date</label><input className={inputClass} value="Not applicable · One Time" readOnly/></div>:<Field label="Next installment date" type="date" value={form.nextInstallmentDate} onChange={v=>set("nextInstallmentDate",v)}/>}
           <Field label="Final premium" value={form.finalPremium} onChange={(v)=>set("finalPremium",v.replace(/[^0-9.]/g,""))} required/>
             <Field label="Sum assured / insured" value={form.sumInsured} onChange={(v)=>set("sumInsured",v.replace(/[^0-9.]/g,""))}/>
-            <Field label="Case premium amount" value={form.premiumAmount} onChange={(v)=>set("premiumAmount",v.replace(/[^0-9.]/g,""))}/>
-            <Select label="Payment mode" value={form.paymentMode} onChange={(v)=>set("paymentMode",v)} options={modes}/>
-            <div><label className={labelClass}>Remarks</label><button type="button" onClick={()=>{setRemarkError(null);setRemarksModalOpen(true);}} className="flex h-10 w-full items-center justify-between rounded-xl border border-[#BFD3F5] bg-[#F8FBFF] px-3 text-[11px] font-semibold text-[#17365D] hover:bg-[#EEF5FF]"><span className="inline-flex items-center gap-2"><MessageSquareText className="h-4 w-4"/>Add Remark</span><span className="text-[10px] text-[#315B9A]">Open</span></button></div>
+            <div className="grid gap-3 md:col-span-2 md:grid-cols-3 xl:col-span-4 xl:grid-cols-3">
+              <Field label="Case premium amount" value={form.premiumAmount} onChange={(v)=>set("premiumAmount",v.replace(/[^0-9.]/g,""))}/>
+              <Select label="Payment mode" value={form.paymentMode} onChange={(v)=>set("paymentMode",v)} options={modes}/>
+              <div><label className={labelClass}>Remarks</label><button type="button" onClick={()=>{setRemarkError(null);setRemarkDraft("");setRemarksModalOpen(true);}} className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-[#BFD3F5] bg-[#F8FBFF] px-3 text-[11px] font-semibold text-[#17365D] transition-colors hover:border-[#94B7E6] hover:bg-[#EAF3FF] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#17365D]"><MessageSquareText className="h-4 w-4"/>Add Remark</button></div>
+            </div>
         </Section>
       </div>
       <aside className="self-start rounded-2xl border border-[#D9E2F0] bg-white shadow-sm xl:sticky xl:top-4">

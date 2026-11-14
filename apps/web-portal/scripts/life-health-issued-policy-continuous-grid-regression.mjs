@@ -11,8 +11,15 @@ for (const label of labels) {
   assert.ok(position > previous, `${label} must follow the preceding field without reordering`);
   previous = position;
 }
-assert.doesNotMatch(section, /xl:col-span-4|md:col-span-2/, "Issued policy fields must not be forced to a new full-width grid row.");
-assert.doesNotMatch(section, /xl:grid-cols-4/, "The inner four-column grid must not wrap remaining fields.");
+// The final three fields are an explicitly requested Premium / Payment Mode / Remarks row.
+const finalRow = section.match(/<div className="grid gap-3 md:col-span-2 md:grid-cols-3 xl:col-span-4 xl:grid-cols-3">([\s\S]*?)<\/div>\s*$/);
+assert.ok(finalRow, "Only the final Premium / Payment Mode / Remarks group should span the section grid.");
+for (const label of ["Case premium amount", "Payment mode", "Remarks"]) {
+  assert.ok(finalRow[1].includes(label), `Final grouped row must contain ${label}.`);
+}
+const precedingFields = section.slice(0, section.indexOf('<div className="grid gap-3 md:col-span-2'));
+assert.doesNotMatch(precedingFields, /xl:col-span-4|md:col-span-2/, "Earlier issued policy fields must retain the continuous four-column grid.");
+assert.doesNotMatch(precedingFields, /xl:grid-cols-4/, "Do not add an extra grid around earlier issued policy fields.");
 assert.match(source, /function Section\(/, "Use the existing shared responsive Section grid.");
 assert.match(source, /md:grid-cols-2 xl:grid-cols-4/, "Existing Section layout stays responsive.");
 console.log("Life/Health issued policy continuous field grid regression passed.");
