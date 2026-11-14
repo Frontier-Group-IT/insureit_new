@@ -4,6 +4,12 @@
 **Document status:** Working certification plan. **INSUREIT full application/service disaster recovery is NOT certified.**
 **Source of truth for the drill history:** [Existing R2 backup and restore handoff](./INSUREIT_SUPABASE_R2_STORAGE_BACKUP_HANDOFF_2026_10_31.md). Do not replace or duplicate its complete chronological investigation.
 
+## 14 November 2026 — scoped rehearsal requested by operator (does not reduce certification standard)
+
+The immediate drill is now **full PostgreSQL schema, SQL and row-data restoration** with exact-v2-snapshot parity, complete reviewed role/owner/RLS/managed-service compatibility, and **up to 500,000,000 bytes of selected representative Storage file content** tested via the isolated project's Storage service. Any individual sampled file is limited to 50,000,000 bytes under the published Free file-size ceiling. The SQL backup may include the entire `storage.objects` metadata set: it is NOT proof that non-selected actual file bytes exist. Never directly mutate managed Storage metadata to simulate recovered objects.
+
+This is a **bounded recovery drill**, and the narrower Storage exercise deliberately **does not meet Gate B full Storage service/file-set restoration** or permit the label `FULL INSUREIT DR CERTIFIED`. The unchanged Gate A–F acceptance criteria below remain the future full-service standard; record `DATABASE_FULL_SQL_PARITY` and `STORAGE_500MB_SAMPLE_PASS` **separately**, only when their actual restore and functional/API tests complete. Continue the staged stop-on-error R0–R8 path in [the authoritative handoff](./INSUREIT_SUPABASE_R2_STORAGE_BACKUP_HANDOFF_2026_10_31.md). The sample selection/planning code is in draft PR #4433; **no managed target writes authorized by the planning PR**.
+
 ## 1. Defined recovery objective and evidence boundaries
 
 The plan certifies an independently restorable **INSUREIT operational service**, not merely successful SQL imports or stored ciphertext. Scope includes the production PostgreSQL database, Supabase Auth user identities and configuration, Storage metadata AND binary files, original PostgreSQL roles/owners/RLS/SECURITY DEFINER, Realtime, Edge Functions, required secrets and integrations, and production-equivalent app/API smoke tests on a safely isolated target.
