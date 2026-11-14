@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { PartnerScreen } from '@/components/partner-screen';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { PartnerPolicyDateField } from '@/components/policy-intakes/partner-policy-date-field';
-import { prepareNativePolicyOnboarding, saveNativePolicyOnboarding, bookNativePolicyOnboarding, requestNativePolicyDateApproval, verifyNativePolicyDateApproval, lookupNativePolicyRc, searchNativeNonMotorCustomers, type NativeNonMotorCustomer, type NativePolicyDraft, type NativeOnboardingData, type NativeProductType } from '@/lib/policy-onboarding';
+import { prepareNativePolicyOnboarding, saveNativePolicyOnboarding, bookNativePolicyOnboarding, createNativeLifeHealthCase, requestNativePolicyDateApproval, verifyNativePolicyDateApproval, lookupNativePolicyRc, searchNativeNonMotorCustomers, type NativeNonMotorCustomer, type NativePolicyDraft, type NativeOnboardingData, type NativeProductType } from '@/lib/policy-onboarding';
 
 type FieldKey = keyof NativePolicyDraft;
 type Field = { key:FieldKey; label:string; required?:boolean; options?:string[] };
@@ -145,6 +145,7 @@ export default function NativePolicyOnboarding(){
   const [loading,setLoading]=useState(true);
   const [saving,setSaving]=useState(false);
   const [booking,setBooking]=useState(false);
+  const [creatingLifeHealth,setCreatingLifeHealth]=useState(false);
   const [lookingUpRc,setLookingUpRc]=useState(false);
   const [dateApprovalOpen,setDateApprovalOpen]=useState(false);
   const [approvalBusy,setApprovalBusy]=useState(false);
@@ -272,6 +273,35 @@ export default function NativePolicyOnboarding(){
     }catch(e){
       setRemarkError(e instanceof Error?e.message:'Remark could not be saved.');
     }finally{setSaving(false);}
+  }
+
+  const cancelLifeHealth=()=>{
+    if(saving||booking||creatingLifeHealth)return;
+    if(!dirty){router.back();return;}
+    Alert.alert('Discard unsaved changes?','Changes since your last save will be lost.',[
+      {text:'Keep editing',style:'cancel'},
+      {text:'Discard & return',style:'destructive',onPress:()=>router.back()},
+    ]);
+  };
+  async function createLifeHealth(){
+    if(!draft||!data||saving||booking||creatingLifeHealth)return;
+    if(productType!=='Life'&&productType!=='Health')return;
+    setCreatingLifeHealth(true);setError('');
+    try{
+      let revision=data.revision;
+      if(dirty){
+        const saved=await saveNativePolicyOnboarding(id,revision,draft);
+        revision=saved.revision;
+        setData(current=>current?{...current,revision}:current);
+        setDirty(false);
+      }
+      const {case:created}=await createNativeLifeHealthCase(id,revision);
+      Alert.alert('Case created',`${productType} case ${created.number} has been created. Policy issuance remains pending in Operations.`,[
+        {text:'Return to Intake',onPress:()=>router.back()},
+      ]);
+    }catch(cause){
+      setError(cause instanceof Error?cause.message:'Could not create the Life/Health case. Review the Case Register before retrying.');
+    }finally{setCreatingLifeHealth(false);}
   }
 
   async function completeBooking(resolution?:Record<string,unknown>){
@@ -782,18 +812,34 @@ export default function NativePolicyOnboarding(){
 
       </View>
       <View style={styles.actions}>
-        <Pressable accessibilityRole="button" disabled={saving||booking} style={styles.secondary}
-          onPress={()=>void save(true)}><Text style={styles.secondaryText}>{saving?'Saving…':'Save & return to Intake'}</Text></Pressable>
-        {isMotor?<Pressable accessibilityRole="button" accessibilityLabel="Book Active Policy"
-          disabled={booking||saving||!data}
-          style={[styles.primary,(booking||saving||!data)&&styles.disabled]}
-          onPress={()=>void completeBooking()}>
-          {booking?<ActivityIndicator size="small" color="white"/>:<Ionicons name="checkmark-circle-outline" size={16} color="white"/>}
-          <Text style={styles.primaryText}>{booking?'Checking & booking…':'Book Active Policy'}</Text>
-        </Pressable>:<Pressable accessibilityRole="button" disabled={saving||!dirty}
-          style={[styles.primary,(saving||!dirty)&&styles.disabled]} onPress={()=>void save()}>
-          <Text style={styles.primaryText}>{saving?'Saving…':'Save draft'}</Text>
-        </Pressable>}
+        {(productType==='Life'||productType==='Health')?
+          <>
+            <Pressable accessibilityRole="button" accessibilityLabel="Cancel Life or Health case creation"
+              disabled={saving||booking||creatingLifeHealth} style={styles.secondary}
+              onPress={cancelLifeHealth}><Text style={styles.secondaryText}>Cancel</Text></Pressable>
+            <Pressable accessibilityRole="button" accessibilityLabel="Create Policy"
+              disabled={saving||booking||creatingLifeHealth||!data}
+              style={[styles.primary,(saving||booking||creatingLifeHealth||!data)&&styles.disabled]}
+              onPress={()=>void createLifeHealth()}>
+              {creatingLifeHealth?<ActivityIndicator size="small" color="white"/>:<Ionicons name="checkmark-circle-outline" size={16} color="white"/>}
+              <Text style={styles.primaryText}>{creatingLifeHealth?'Creating case…':'Create Policy'}</Text>
+            </Pressable>
+          </>:
+          <>
+            <Pressable accessibilityRole="button" disabled={saving||booking} style={styles.secondary}
+              onPress={()=>void save(true)}><Text style={styles.secondaryText}>{saving?'Saving…':'Save & return to Intake'}</Text></Pressable>
+            {isMotor?<Pressable accessibilityRole="button" accessibilityLabel="Book Active Policy"
+              disabled={booking||saving||!data}
+              style={[styles.primary,(booking||saving||!data)&&styles.disabled]}
+              onPress={()=>void completeBooking()}>
+              {booking?<ActivityIndicator size="small" color="white"/>:<Ionicons name="checkmark-circle-outline" size={16} color="white"/>}
+              <Text style={styles.primaryText}>{booking?'Checking & booking…':'Book Active Policy'}</Text>
+            </Pressable>:<Pressable accessibilityRole="button" disabled={saving||!dirty}
+              style={[styles.primary,(saving||!dirty)&&styles.disabled]} onPress={()=>void save()}>
+              <Text style={styles.primaryText}>{saving?'Saving…':'Save draft'}</Text>
+            </Pressable>}
+          </>
+        }
       </View>
 
 
