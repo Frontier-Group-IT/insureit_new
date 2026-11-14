@@ -23,7 +23,7 @@ assert.match(source, /\.gte\("created_at",startIso\)\.lt\("created_at",endIso\)/
 assert.match(source, /const limit = sourceLimit/, "Per-source fetch remains bounded");
 assert.match(source, /dailyPageWindow\(query.page\)/, "All pages use tested server-side page bounds");
 assert.match(source, /source:"Record history"/, "Reconstructed history source is labeled");
-assert.match(page, /Reports show existing recorded events and attributable creation\/finalization history/, "Incomplete historical coverage is disclosed");
+assert.match(read("../components/reports/daily-self-activity-panel.tsx"), /Counts may be incomplete/, "Incomplete source-history warnings remain available");
 assert.match(quickFilters, /type="date"/, "Date filter is present");
 assert.match(quickFilters, /type="search"/, "Employee search is present");
 assert.match(page, /<DailySelfActivityPanel data=\{selfHistory\}/, "Activity category drilldown is available");
