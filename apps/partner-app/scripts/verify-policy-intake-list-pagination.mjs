@@ -10,7 +10,13 @@ assert.match(app, /<Image[\s\S]*?style=\{styles\.emptyIllustrationImage\}[\s\S]*
 assert.match(app, /contentContainerStyle=\{\[styles\.content, !loading && !error && visibleRows\.length === 0 && styles\.emptyContent\]\}/, 'Only the successful empty state grows to fill available scroll area');
 assert.match(app, /compactEmpty: \{ flex: 1, minHeight: 250,[^}]*justifyContent: 'center'/, 'Center illustration, title and message vertically');
 assert.doesNotMatch(app, /styles\.emptyIllustrationAccent|styles\.emptyIllustration\}/, 'Remove the tiny legacy empty-state icon');
-assert.match(app, /<PartnerStateView state="loading"/, 'Loading retains its own state');
+assert.match(app, /\{loading && !rows\.length \? \([\s\S]*?<PolicyIntakeSkeletonList \/>/, 'The first-page loading state shows skeleton cards, not the full-page spinner.');
+assert.match(app, /function PolicyIntakeSkeletonList\(\)/, 'Use a dedicated compact skeleton list.');
+assert.match(app, /Array\.from\(\{ length: 7 \}/, 'Match the reference with seven skeleton rows.');
+assert.match(app, /accessibilityLabel="Loading Policy Intakes" accessibilityRole="progressbar"/, 'Loading skeleton retains an accessible busy label.');
+assert.doesNotMatch(app, /<PartnerStateView state="loading"/, 'Do not render the old large loading box.');
+assert.match(app, /skeletonLogo:|skeletonCard:|skeletonStatus:/, 'Skeleton mirrors an intake card with logo, detail lines and status placeholder.');
+assert.match(app, /!manual && !background\) setRows\(\[\]\)/, 'Keep existing first-page reset without clearing rows during background refresh.');
 assert.match(app, /<PartnerStateView state="error"/, 'Errors retain their own state and retry');
 assert.match(app, /visibleRows\.map\(\(row\) =>/, 'Available records remain visible');
 assert.match(app, /<View style=\{styles\.bottomNav\}>/, 'Bottom navigation remains outside the scroll body');
