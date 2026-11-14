@@ -5,6 +5,15 @@ const KEYS = new Set([
   "vehicle_manufacturing_year", "vehicle_rto_name", "idv", "od_premium", "tp_premium", "cpa_premium",
 ]);
 
+// Fail closed if n8n omits or renames any safety check in this parser contract.
+const REQUIRED_CHECKS = new Set([
+  "is_icici_3005", "insured_name_present", "policy_number_present",
+  "vehicle_details_present", "dates_present", "od_liability_equal_net",
+  "tp_cpa_equal_liability", "net_tax_equal_gross", "idv_present",
+  "manufacturing_year_present", "basic_od_plus_addons_equals_printed_total",
+  "basic_tp_equals_derived_tp", "exact_igst_rounds_to_tax",
+]);
+
 export type N8nOcrField = {
   key: string; label: string; value: string; confidence: number | null;
   page: number | null; evidence: string;
@@ -36,8 +45,12 @@ export function validateN8nPolicyIntakeResponse(
       || value.parser_id !== "icici_3005_n8n_native_pdf"
       || value.parser_version !== "bridge-v1"
       || value.extraction_method !== "native_pdf_text") throw new Error("n8n_review_required");
-  if (!plainObject(value.checks) || Object.keys(value.checks).length < 8
-      || Object.values(value.checks).some((check) => check !== true)) throw new Error("n8n_financial_validation_failed");
+  const checks = value.checks;
+  if (!plainObject(checks) || Object.keys(checks).length !== REQUIRED_CHECKS.size
+      || [...REQUIRED_CHECKS].some((key) => checks[key] !== true)
+      || Object.values(checks).some((check) => check !== true)) {
+    throw new Error("n8n_financial_validation_failed");
+  }
   if (!Array.isArray(value.fields) || value.fields.length < 12 || value.fields.length > KEYS.size
       || !Array.isArray(value.warnings) || value.warnings.length > 30) throw new Error("n8n_fields_invalid");
 
@@ -60,7 +73,18 @@ export function validateN8nPolicyIntakeResponse(
     "policy_end_date", "vehicle_engine_number", "vehicle_chassis_number", "od_premium", "tp_premium"]) {
     if (!seen.has(key)) throw new Error("n8n_required_field_missing");
   }
-  const policyNumber = fields.find((field) => field.key === "policy_number")?.value ?? "";
+  const fieldValue = (key: string) => fields.find((field) => field.key === key)?.value ?? "";
+  const isoDate = (date: string) => {
+    if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(date)) return false;
+    const parsed = new Date(date + "T00:00:00Z");
+    return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === date;
+  };
+  const startDate = fieldValue("policy_start_date");
+  const endDate = fieldValue("policy_end_date");
+  if (!isoDate(startDate) || !isoDate(endDate) || endDate < startDate) {
+    throw new Error("n8n_coverage_dates_invalid");
+  }
+  const policyNumber = fieldValue("policy_number");
   if (!/^3005\/\d{7,12}\/\d{2}\/\d{3}$/.test(policyNumber)) throw new Error("n8n_wrong_policy_product");
 
   // Never accept a remote boolean as proof that the policy's money adds up.
