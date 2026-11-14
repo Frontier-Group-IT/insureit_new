@@ -3,7 +3,7 @@
 ## Scope and current state
 - n8n Cloud draft workflow: `Iu6WUQiHeGwfDol9` (`INSUREIT - n8n Policy Intake OCR Bridge (DRAFT)`).
 - Existing learning workflow `2niTiMr514gUKhR6` remains untouched.
-- The n8n draft has a Header Auth webhook node, but **no credential has been assigned and the workflow has not been published**. No live intake or database calls have occurred.
+- The n8n draft now has a dedicated Header Auth credential assigned, and the synthetic PDF successfully passed a real authenticated multipart **Test URL** call on 2026-11-14. The workflow remains **unpublished**. No live intake or database calls have occurred.
 - This PR adds only an unreferenced server-side adapter and response validator. No feature flag is enabled and there are **no production behavior changes**. This does not claim full automation.
 
 ## Existing website pipeline to preserve
@@ -69,6 +69,15 @@ Use the existing `ParsedPolicyField` shape when writing authorized `ocr_fields` 
 
 ## Current validation and publication state
 - **2026-11-13:** New n8n draft now contains a separate manual synthetic fixture, routed through the real ICICI parser and response formatter. A synthetic example completed successfully in n8n execution 8: 17 proposed fields, all 13 checks true; Basic OD ₹1,758 + TP ₹3,273 + CPA ₹575 + rounded tax ₹1,009 = gross ₹6,615. Data-retention settings restored to none after inspection.
-- The workflow is **not published** and there is **no assigned Header Auth credential**. No real website-to-n8n request or write has been performed.
+- The workflow is **not published**. The Header Auth credential is assigned. The real multipart webhook test on 2026-11-14 returned HTTP 200 with `ok:true`, 17 extracted proposal fields, 13/13 checks, zero warnings and ₹6,615 gross premium from the independent fictional PDF fixture. This proves the authenticated PDF endpoint and extraction pipeline run together; it does **not** establish accuracy for real insurer-issued PDFs. No website-to-n8n production call or write has been performed.
 - Browser/production integration cannot be tested without separately configured secure n8n credential and explicitly approved test intake. Keep `INSUREIT_N8N_OCR_MODE` unset/off and allowlist empty until approval.
 - The PR's router handles both Operations and Partner upload/replacement flows, with per-intake opt-in, document identity checks, native-PDF ICICI 3005 gating, shadow/prefer modes, and Google fallback. The existing finalization permissions and draft-revision controls stay intact; **full automated onboarding is not yet implemented**.
+
+## 2026-11-14 validation hardening and next test gate
+
+- Added strict server-side enforcement of **all 13 named** parser checks; missing, renamed, extra or false checks fail closed instead of relying on a minimum check count.
+- Reject invalid, non-ISO or reversed Own Damage policy dates before accepting an n8n proposal.
+- Added branch-only regression cases for missing/substituted checks, impossible calendar dates, non-ISO dates and reversed coverage ranges. GitHub Actions checks must pass before review/merge.
+- The current response includes Own Damage start/end dates but does **not** propose the distinct Third Party start/end date pair, mobile number or address. These must be explicitly compared to real sample PDFs and handled separately; do not infer a TP coverage period from OD or invent customer details.
+- Real-PDF benchmark (not yet executed): use a consented/redacted ICICI Lombard Product 3005 native PDF, verify printed insurer/policy number, exact `Name of Insured`, OD and TP coverage periods separately, vehicle identifiers, make/model/year, registration, RTO, IDV, Basic OD + all add-ons, TP, CPA, net, GST and gross. Treat missing phone/address and inconsistent fields as reviewer-action items, not inferred truths.
+- Do not send unredacted customer data into issues, screenshots, CI artifacts or execution logs. Keep production integrations off; no merge, deployment, publication or auto-finalization without explicit approval.
