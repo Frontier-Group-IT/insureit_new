@@ -83,7 +83,7 @@ assert.match(screen,/accessibilityLabel="Save and close commercial popup"/, 'Com
 assert.match(screen,/Boolean\(commercialModal\)&&Boolean\(data\?\.commercialAccess\)/, 'Commercial modals stay permission gated.');
 assert.match(screen,/placeholder=\{productType==='Non Motor'\?'':hint\}/, 'Only Non-Motor blank fields opt out of Motor input placeholders.');
 assert.match(screen,/f.key==='model'\?'Model \/ variant'/, 'Keep the reference Model placeholder.');
-assert.match(screen,/displayed\|\|\(productType==='Non Motor'\?'':'Select '\+f.label.toLowerCase\(\)\)/, 'Non-Motor dropdowns remain blank while Motor retains prompts.');
+assert.match(screen,/displayed\|\|\(productType==='Non Motor'\?'':f.key==='manufacturingYear'\?'Select year':'Select '\+f.label.toLowerCase\(\)\)/, 'Non-Motor dropdowns stay blank; Motor year uses the exact portal hint.');
 assert.match(screen,/hidePlaceholder=\{productType==='Non Motor'\}/, 'Non-Motor date fields hide placeholder text only.');
 assert.match(date,/placeholder=\{hidePlaceholder/, 'Date input retains opt-in placeholder behavior for other pages.');
 assert.match(date,/hidePlaceholder\?:boolean/, 'Date placeholder removal must be opt-in to avoid other screens.');
