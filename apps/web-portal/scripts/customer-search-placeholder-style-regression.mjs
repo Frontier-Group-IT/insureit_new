@@ -17,8 +17,8 @@ assert.match(animated, /inputMode="search"/, "Keep the search keyboard on mobile
 assert.match(animated, /input:focus, input:focus-visible/, "Inner field focus styling remains suppressed");
 assert.doesNotMatch(animated, /type="search"/, "Browser-native search clear icon must not render");
 const autocomplete = read("components/customer-portal/customer-search-autocomplete.tsx");
-assert.doesNotMatch(autocomplete, /aria-label="Clear search"|<X\\b|import \\{ X \\}/, "No manual clear button in shared Customer autocomplete");
-assert.match(autocomplete, /onChange=\\{event => \\{ onChange\\(event.target.value\\)/, "Typed search and filtering remain connected");
+assert.ok(!autocomplete.includes('aria-label="Clear search"') && !autocomplete.includes('<X ') && !autocomplete.includes('import { X }'), "No manual clear button in shared Customer autocomplete");
+assert.ok(autocomplete.includes("onChange(event.target.value)"), "Typed search and filtering remain connected");
 
 const renewals = read("app/customer/(protected)/renewals/customer-renewals-register.tsx");
 assert.match(renewals, /placeholder:text-\[11px\] placeholder:font-normal placeholder:text-\[#9BA9C0\]/, "Native Renewals input must match the reference exactly");
