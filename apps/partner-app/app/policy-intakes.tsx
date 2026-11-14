@@ -283,7 +283,7 @@ export default function PolicyIntakesScreen() {
                     <Text numberOfLines={1} style={styles.metaLine}>{`${row.lead_source_name || 'Lead source unavailable'} (${row.submitted_by_name?.trim() || 'Submitter unavailable'})`}</Text>
                   </View>
                   <View style={styles.statusStack}>
-                    <StatusZoomPulse enabled={row.status === 'completed' || row.status === 'ready_for_review' || row.status === 'in_review'} reduceMotion={reduceMotion}>
+                    <StatusZoomPulse enabled={row.status === 'completed' || row.status === 'ready_for_review' || row.status === 'in_review' || row.status === 'needs_attention' || (row.status === 'processing' && row.ocr_status === 'failed')} reduceMotion={reduceMotion}>
                     {row.status === 'ready_for_review' || row.status === 'in_review' ? (
                       <Pressable
                         accessibilityRole="button"
@@ -419,7 +419,7 @@ function MotionFilterChip({ active, reduceMotion, onPress, label, count }: { act
 }
 
 // Keep the status pill compact. Only the three actionable/success states receive a
-// gentle zoom; other status badges and the timestamp never move.
+// gentle zoom for Ready, In Review, Completed and Action Required (including OCR failure); other badges and the timestamp never move.
 function StatusZoomPulse({ enabled, reduceMotion, children }: { enabled: boolean; reduceMotion: boolean; children: ReactNode }) {
   const scale = useRef(new Animated.Value(1)).current;
   useFocusEffect(useCallback(() => {
