@@ -15,6 +15,14 @@ export function canPartnerAccess(
   return Boolean(context?.permissions && rank[context.permissions[capability] ?? 'none'] >= rank[minimum]);
 }
 
+/** Match the Operations Life/Health Case Register page guard, not general policy visibility. */
+export function canPartnerAccessCaseRegister(context: PartnerSessionContext | null | undefined) {
+  if (context?.identity.actor_kind !== 'employee' || !canPartnerAccess(context, 'view_policies')) return false;
+  if (context.identity.role === 'operations_head_life') return true;
+  return canPartnerAccess(context, 'view_policies', 'edit')
+    || canPartnerAccess(context, 'create_policies', 'edit');
+}
+
 /** Partner submitter operations are distinct from internal claim-processing authority. */
 export function canPartnerSearch(context: PartnerSessionContext | null | undefined) {
   return canPartnerAccess(context, 'view_customers')
@@ -38,6 +46,7 @@ export function requiredPartnerRoutePermission(pathname: string): {
   if (/^\/policy-intake-new(?:\/|$)/.test(pathnameNormalized)) return { capability: 'create_policy_intakes', minimum: 'edit' };
   if (/^\/customer-new(?:\/|$)/.test(pathnameNormalized)) return { capability: 'create_customers', minimum: 'edit' };
   if (/^\/claim\/(?:new|select-vehicle)(?:\/|$)/.test(pathnameNormalized)) return { capability: 'manage_claims', minimum: 'edit' };
+  if (/^\/life-health-cases(?:\/|$)/.test(pathnameNormalized)) return { capability: 'view_policies', minimum: 'view' };
   if (/^\/policy-intakes(?:\/|$)/.test(pathnameNormalized)) return { capability: 'view_policy_intakes', minimum: 'view' };
   if (/^\/customers?(?:\/|$)/.test(pathnameNormalized)) return { capability: 'view_customers', minimum: 'view' };
   if (/^\/policies(?:\/|$)|^\/policy(?:\/|$)|^\/renewals(?:\/|$)/.test(pathnameNormalized)) return { capability: 'view_policies', minimum: 'view' };
