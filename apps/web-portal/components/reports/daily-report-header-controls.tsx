@@ -7,6 +7,7 @@ import { CalendarDays, ChevronDown } from "lucide-react";
 import { ReportDateRangePicker } from "@/components/reports/report-date-range-picker";
 
 const OPTIONS = [
+  {value:"today",label:"Today"},
   {value:"90d",label:"90D"},
   {value:"mtd",label:"MTD"},
   {value:"ytd",label:"YTD"},
@@ -88,7 +89,7 @@ export function DailyReportHeaderPeriod() {
   const [open,setOpen]=useState(false);
   const [customOpen,setCustomOpen]=useState(false);
   const value=searchParams.get("period");
-  const active:Period=OPTIONS.some(o=>o.value===value)?value as Period:"all";
+  const active:Period=OPTIONS.some(o=>o.value===value)?value as Period:"today";
   const from=searchParams.get("from")||"";
   const to=searchParams.get("to")||"";
   useEffect(()=>{

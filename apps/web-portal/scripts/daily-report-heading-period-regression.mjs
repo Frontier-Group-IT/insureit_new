@@ -23,7 +23,7 @@ assert.match(header, /params.delete\("employee"\)/, "Scope transitions clear emp
 assert.match(header, /params.set\("page","1"\)/, "Scope selection resets pagination");
 assert.match(header, /event.key==="Escape"/, "Escape dismisses the scope dropdown");
 assert.doesNotMatch(header, /<nav aria-label="Daily Report visibility"/, "Old segmented Self/All control must be removed");
-for(const label of ["90D","MTD","YTD","All time","Custom"]){
+for(const label of ["Today","90D","MTD","YTD","All time","Custom"]){
   assert.ok(header.includes(`label:"${label}"`),`Period menu missing ${label}`);
 }
 assert.match(header, /<ReportDateRangePicker/, "Use existing exact-style shared calendar");
@@ -33,6 +33,9 @@ assert.match(header, /params\.delete\("person"\)/, "Self All changes don't retai
 assert.doesNotMatch(page, /DailyReportQuickFilters|<nav|type="date"/, "Remove entire white date and scope section");
 assert.match(page, /resolveDailyReportPeriod\(query\)/);
 assert.match(page, /from: periodRange\.from, to: periodRange\.to/, "Apply period range to Self and selected employee events");
+assert.match(period, /period==="today"/, "Today filters the report to the current IST calendar date");
+assert.match(period, /query\.period : "today"/, "Missing period defaults to Today on the server");
+assert.match(header, /value as Period:"today"/, "Missing period displays Today in the client filter");
 assert.match(period, /period==="mtd"/);
 assert.match(period, /period==="ytd"/);
 assert.match(period, /period==="custom"/);
@@ -44,4 +47,4 @@ assert.match(loader, /if\(window\) q=q\.gte\("finalized_at",window\.from\)\.lt\(
 assert.match(loader, /if\(window\) q=q\.gte\("converted_at",window\.from\)\.lt\("converted_at",window\.to\)/);
 assert.match(directory, /DailyReportQuickFilters mode="directory"/, "Directory employee search remains available inside list");
 assert.doesNotMatch(loader, /\.insert\(|\.update\(|\.delete\(|\.upsert\(/, "No changes to business records");
-console.log("Daily Report header layout, 90D MTD YTD All time Custom, and IST range source filtering verified.");
+console.log("Daily Report header layout, Today 90D MTD YTD All time Custom, and IST range source filtering verified.");

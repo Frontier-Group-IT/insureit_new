@@ -1,12 +1,12 @@
 import { selfDateWindow } from "@/lib/reports/daily-history-validation";
 
-export type DailyReportPeriod = "90d" | "mtd" | "ytd" | "all" | "custom";
+export type DailyReportPeriod = "today" | "90d" | "mtd" | "ytd" | "all" | "custom";
 export type DailyReportPeriodQuery = {period?:string;from?:string;to?:string};
 
 export function resolveDailyReportPeriod(query:DailyReportPeriodQuery, now=new Date()) {
   const period:DailyReportPeriod = query.period === "90d" || query.period === "mtd" ||
-    query.period === "ytd" || query.period === "custom" || query.period === "all"
-      ? query.period : "all";
+    query.period === "ytd" || query.period === "custom" || query.period === "all" || query.period === "today"
+      ? query.period : "today";
   if(period==="all") return {period,from:undefined,to:undefined,valid:true};
   const parts=new Intl.DateTimeFormat("en-CA",{
     timeZone:"Asia/Kolkata",year:"numeric",month:"2-digit",day:"2-digit",
@@ -14,7 +14,9 @@ export function resolveDailyReportPeriod(query:DailyReportPeriodQuery, now=new D
   const part=(type:string)=>parts.find(p=>p.type===type)?.value??"";
   const today=`${part("year")}-${part("month")}-${part("day")}`;
   let from:string, to:string=today;
-  if(period==="custom"){
+  if(period==="today") {
+    from=today;
+  } else if(period==="custom"){
     if(!query.from || !query.to || !selfDateWindow(query.from) || !selfDateWindow(query.to) ||
        query.from>query.to || query.to>today) {
       return {period,from:undefined,to:undefined,valid:false};
