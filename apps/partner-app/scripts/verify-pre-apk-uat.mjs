@@ -115,27 +115,26 @@ expectAll('app/(tabs)/claims.tsx', [
   [/label: 'Settled Claims'/, 'Preserve Settled Claims status'],
   [/label: 'In Progress'/, 'Preserve In Progress status'],
 ]);
-// Policies retain the disabled visual Filter button and expose all five
-// lifecycle selections in the scrollable chip row; the See all sheet is gone.
+// Policies have one accessible five-status dropdown, replacing the legacy
+// disabled Filter control and horizontal lifecycle chip row.
 expectAll('app/(tabs)/policies.tsx', [
-  [/horizontal[\s\S]*?accessibilityLabel="Policy status filters"/, 'Lifecycle status chips remain horizontally scrollable'],
-  [/onPress=\{\(\) => selectSummary\(metric\.filter\)\}/, 'Choosing a status chip updates the policy list'],
-  [/\{metric\.value === undefined \? '—' : metric\.value\.toLocaleString\('en-IN'\)\}/, 'Lifecycle chip counts use real summary data'],
-  [/summaryChip: \{[^\n]*backgroundColor: '#FFFFFF'/, 'Unselected lifecycle chip background is white'],
-  [/summaryChipSelected: \{ backgroundColor: '#17365D'/, 'Selected lifecycle chip retains navy background'],
-  [/accessibilityLabel="Filter policies"[\s\S]*?accessibilityState=\{\{ disabled: true \}\}[\s\S]*?disabled[\s\S]*?style=\{styles\.filterButton\}/, 'Keep original Filter button visible but non-opening'],
-  [/name="filter-outline" size=\{18\} color="#3156B8"/, 'Preserve Filter icon styling'],
-  [/\{metric\.label\}/, 'Preserve tappable policy status summary chips'],
+  [/label: 'Total Policies', filter: 'all'/, 'Total Policies option is available'],
+  [/label: 'Active Policies', filter: 'in_force'/, 'Active Policies option is available'],
+  [/label: 'Expiring Soon', filter: 'expiring'/, 'Expiring Soon option is available'],
+  [/label: 'Lapsed Policies', filter: 'expired'/, 'Lapsed Policies option is available'],
+  [/label: 'Upcoming', filter: 'upcoming'/, 'Upcoming option is available'],
+  [/count: summary\.data\?\.total_policies/, 'Dropdown total count uses real summary data'],
+  [/selectedStatus\.label/, 'Search dropdown displays the selected lifecycle'],
+  [/formatStatusCount\(selectedStatus\.count\)/, 'Search dropdown displays the selected live count'],
+  [/onPress=\{openStatusMenu\}/, 'Dropdown opens from search row'],
+  [/onPress=\{\(\) => selectSummary\(option\.filter\)\}/, 'Dropdown selection filters policies'],
+  [/setQuery\(''\);[\s\S]*?setVisibleLimit\(PAGE_SIZE\);[\s\S]*?setLifecycle\(filter\)/, 'Selecting a lifecycle resets query and pagination'],
+  [/onRequestClose=\{\(\) => setStatusMenuOpen\(false\)\}/, 'Dropdown closes with Android back'],
+  [/accessibilityState=\{\{ selected \}\}/, 'Dropdown options announce current selection'],
 ]);
-for(const obsolete of ['seeAllOpen', 'summarySeeAll:', 'statusSheetOverlay:', 'See all policy status filters']) {
+for (const obsolete of ['seeAllOpen', 'summarySeeAll:', 'statusSheetOverlay:', 'See all policy status filters', 'styles.summaryRow', 'accessibilityLabel="Filter policies"']) {
   checks += 1;
-  if (read('app/(tabs)/policies.tsx').includes(obsolete)) failures.push('Policies must not retain See all modal UI: ' + obsolete);
-}
-
-// Policies no longer mount a floating filter menu.
-checks += 1;
-if (/PartnerAnchoredDropdown|filterMenuOpen|POLICY_FILTER_OPTIONS/.test(read('app/(tabs)/policies.tsx'))) {
-  failures.push('app/(tabs)/policies.tsx: Policies Filter must never mount an anchored dropdown');
+  if (read('app/(tabs)/policies.tsx').includes(obsolete)) failures.push('Policies must not retain obsolete chip/disabled Filter UI: ' + obsolete);
 }
 
 // Claims Filter mirrors Policies: keep the visual button but never mount a dropdown.
