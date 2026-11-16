@@ -27,7 +27,7 @@ assert.match(loader, /row\.href=dailyActivityRecordHref\(table,row\.recordId\)/,
 for(const table of ["policies","policy_intake_requests","life_health_cases"]) {
   assert.ok(loader.includes(`table:"${table}",recordId:a.id`),`Keep immutable record ID for ${table} history`);
 }
-assert.match(panel, /<DailyActivityHistoryRows rows=\{data\.rows\} isCustomerActivity=\{isCustomerActivity\} isClaimActivity=\{isClaimActivity\} \/>/, "All employee and Self reports use interactive rows with customer-specific context");
+assert.ok(panel.includes("<DailyActivityHistoryRows rows={data.rows} isCustomerActivity={isCustomerActivity} isClaimActivity={isClaimActivity} vehicleMode={vehicleMode} />"), "Shared activity renderer preserves Customer, Claims and Vehicle modes");
 assert.match(rows, /role="button" tabIndex=\{0\}/, "Rows support keyboard focus");
 assert.match(rows, /event\.key==="Enter"\|\|event\.key===" "/, "Enter and Space activate rows");
 assert.match(rows, /row\.detail \? <span/, "Preserve latest audit field-level change details");
@@ -74,3 +74,10 @@ for(const header of ["Control No.","Claim No.","Vehicle No."]) assert.ok(panel.i
 assert.match(rows, /isClaimActivity \? \(/, "Claim rows and popup switch to claim-specific fields");
 assert.match(loader, /row\.claimControlNo \|\|=label\(previous\.claim_no\)/, "Deleted claims only use audit-preserved control number");
 assert.match(loader, /row\.claimInsurerNo \|\|=label\(previous\.insurer_claim_no\)/, "Deleted claims only use audit-preserved claim number");
+
+assert.ok(panel.includes('const vehicleMode=data.category.startsWith("Vehicle ")'),"Vehicle category uses Vehicle Register presentation");
+for(const label of ["Vehicle","Customer","Make / model","Registration"]) assert.ok(panel.includes('>'+label+'</th>'),"Vehicle column "+label);
+assert.ok(rows.includes('vehicleMode ? ('),"Vehicle rows have conditional fields");
+assert.ok(rows.includes('selected.vehicleNumber'),"Vehicle details popup uses Vehicle fields");
+assert.ok(loader.includes('.in("id",activityVehicleIds)'),"Vehicle records are read only within visible activity scope");
+assert.ok(panel.includes('isClaimActivity={isClaimActivity} vehicleMode={vehicleMode}'),"Claims mode remains intact");
