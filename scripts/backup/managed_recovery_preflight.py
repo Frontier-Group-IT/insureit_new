@@ -5,11 +5,13 @@ Never imports rows, applies DDL, changes privileges, or reads customer data.
 Logs only aggregate metadata, never SQL, role names, paths or credentials.
 """
 from collections import Counter
+from contextlib import contextmanager
 import os
 from pathlib import Path
 import re
 import ssl
 import sys
+import tempfile
 from urllib.parse import parse_qsl, unquote, urlsplit
 
 SOURCE_REF = "ilzhsfqqjyppzzvfscmh"
@@ -155,26 +157,55 @@ def classify_connection_error(error):
     return "CONNECTION_OTHER"
 
 
+@contextmanager
+def isolated_ssl_root_cert():
+    """Temporarily trust ONLY the CA pasted from isolated Supabase settings.
+
+    PEM is supplied exclusively by protected GitHub environment secret.
+    Never fall back to SSL 'require', disabled verification or production CA.
+    """
+    pem = os.environ.get("RECOVERY_DB_SSL_ROOT_CERT_PEM", "")
+    if not pem:
+        raise RuntimeError("Isolated Supabase CA certificate secret is missing")
+    if (len(pem) > 65536 or
+        "-----BEGIN CERTIFICATE-----" not in pem or
+        "-----END CERTIFICATE-----" not in pem or
+        "PRIVATE KEY" in pem or
+        "\\n" in pem):
+        raise ValueError("Invalid isolated Supabase CA certificate format")
+    try:
+        # Validate PEM via OpenSSL, without logging certificate contents.
+        context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        context.load_verify_locations(cadata=pem)
+    except (ssl.SSLError, ValueError):
+        raise ValueError("Invalid isolated Supabase CA certificate") from None
+    with tempfile.TemporaryDirectory(prefix="insureit-recovery-ca-") as folder:
+        cert_path = Path(folder) / "isolated-supabase-root-ca.crt"
+        try:
+            cert_path.write_text(pem, encoding="ascii")
+        except UnicodeError:
+            raise ValueError("Invalid non-ASCII CA certificate") from None
+        cert_path.chmod(0o600)
+        yield str(cert_path)
+
+
 def query_target(connection_kwargs):
     # Imported only on a protected manual run. No database access in PR CI.
     import psycopg
-    ca_bundle = ssl.get_default_verify_paths().cafile
-    if not ca_bundle or not Path(ca_bundle).is_file():
-        raise RuntimeError("System CA bundle unavailable")
-    # TLS verifies endpoint hostname and CA, not merely encryption.
-    # Do not send session GUC startup options through Supavisor. The explicit
-    # PostgreSQL BEGIN ... READ ONLY below protects the whole catalog query.
-    # Connection errors are logged only as a fixed category, never raw libpq.
-    try:
-        connection = psycopg.connect(
-            **connection_kwargs, sslmode="verify-full", sslrootcert=ca_bundle,
-            connect_timeout=12, autocommit=True,
-        )
-    except psycopg.OperationalError as error:
-        print("MANAGED PREFLIGHT TARGET CONNECT:"
-              f" failure_class={classify_connection_error(error)}"
-              " sensitive_details=withheld", file=sys.stderr)
-        raise
+    # Full CA chain and hostname verification is mandatory. The GitHub
+    # runner's generic system roots do not trust this Supabase target CA.
+    # Never print libpq's original exception or connection parameters.
+    with isolated_ssl_root_cert() as ca_bundle:
+        try:
+            connection = psycopg.connect(
+                **connection_kwargs, sslmode="verify-full", sslrootcert=ca_bundle,
+                connect_timeout=12, autocommit=True,
+            )
+        except psycopg.OperationalError as error:
+            print("MANAGED PREFLIGHT TARGET CONNECT:"
+                  f" failure_class={classify_connection_error(error)}"
+                  " sensitive_details=withheld", file=sys.stderr)
+            raise
     with connection as conn:
         with conn.cursor() as cur:
             cur.execute("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY")
