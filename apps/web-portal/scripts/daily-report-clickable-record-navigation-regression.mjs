@@ -78,6 +78,6 @@ assert.match(loader, /row\.claimInsurerNo \|\|=label\(previous\.insurer_claim_no
 assert.ok(panel.includes('const vehicleMode=data.category.startsWith("Vehicle ")'),"Vehicle category uses Vehicle Register presentation");
 for(const label of ["Vehicle","Customer","Make / model","Registration"]) assert.ok(panel.includes('>'+label+'</th>'),"Vehicle column "+label);
 assert.ok(rows.includes('vehicleMode ? ('),"Vehicle rows have conditional fields");
-assert.ok(rows.includes('selected.vehicleNumber'),"Vehicle details popup uses Vehicle fields");
+assert.ok(rows.includes('row.vehicleNumber'),"Vehicle columns preserve vehicle number");
 assert.ok(loader.includes('.in("id",activityVehicleIds)'),"Vehicle records are read only within visible activity scope");
 assert.ok(panel.includes('isClaimActivity={isClaimActivity} vehicleMode={vehicleMode}'),"Claims mode remains intact");
