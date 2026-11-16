@@ -2,7 +2,7 @@ import { DailySelfActivityPanel } from "@/components/reports/daily-self-activity
 import { DailyEmployeeDirectory } from "@/components/reports/daily-employee-directory";
 import { loadDailyReportEmployeeDirectory, assertDailyReportEmployeeAllowed } from "@/lib/reports/daily-employee-directory";
 import { loadSelfActivityHistory } from "@/lib/reports/daily-self-activity";
-import { requireCapability } from "@/lib/master-data-server";
+import { canViewDailyReportAll, requireDailyReportEmployee } from "@/lib/reports/daily-report-access";
 import { resolveDailyReportPeriod } from "@/lib/reports/daily-report-period";
 import {
   type DailyActivityQuery,
@@ -14,9 +14,11 @@ export const revalidate = 0;
 type Props = { searchParams: Promise<DailyActivityQuery> };
 
 export default async function DailyReportPage({ searchParams }: Props) {
-  const profile = await requireCapability("view_reports");
+  const profile = await requireDailyReportEmployee();
   const query = await searchParams;
-  const isSelf = query.scope !== "all";
+  const canViewAll = await canViewDailyReportAll(profile);
+  // Self-only employees cannot load another person's history or directory.
+  const isSelf = query.scope !== "all" || !canViewAll;
   const periodRange = resolveDailyReportPeriod(query);
   let selfHistory: Awaited<ReturnType<typeof loadSelfActivityHistory>> | null = null;
   let employeeDirectory: Awaited<ReturnType<typeof loadDailyReportEmployeeDirectory>> | null = null;
@@ -46,7 +48,7 @@ export default async function DailyReportPage({ searchParams }: Props) {
     error = true;
   }
   const filters = {
-    scope: query.scope === "all" ? "all" : "self" as const,
+    scope: !isSelf ? "all" : "self" as const,
     type: "all",
     date: query.date ?? "",
     employee: query.employee ?? "",
