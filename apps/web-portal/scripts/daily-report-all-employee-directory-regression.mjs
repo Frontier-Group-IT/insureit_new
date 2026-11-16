@@ -25,6 +25,16 @@ assert.match(endpoint,/loadDailyReportEmployeeDirectory\(profile\)/);
 assert.match(endpoint,/"Cache-Control":"private, no-store"/);
 assert.match(header,/fetch\("\/api\/reports\/daily\/employees"/);
 assert.match(header,/matching\.map\(person=>\(/);
+assert.match(header,/if\(!isDaily \|\| !canViewAll\)return;/,
+  "Employee directory is loaded automatically only for authorized Daily Report viewers");
+assert.match(header,/const hasOtherEmployees=people\.length>0/,
+  "Employee dropdown depends on real authorized employees, not role or permission alone");
+assert.match(header,/const showDropdown=canViewAll && \(hasOtherEmployees \|\| loadError\)/,
+  "Zero reportees get fixed Self; lookup errors remain distinguishable and retryable");
+assert.match(header,/if\(!showDropdown\)/, "Self-only view never opens the search dropdown");
+assert.match(header,/aria-label="Daily Report scope: Self"/,
+  "Self-only employee sees an accessible non-interactive scope label");
+
 assert.match(header,/selectPerson\(person\.id\)/);
 assert.doesNotMatch(header,/value:"all",label:"All"/);
 assert.doesNotMatch(page,/<DailyEmployeeDirectory/);
