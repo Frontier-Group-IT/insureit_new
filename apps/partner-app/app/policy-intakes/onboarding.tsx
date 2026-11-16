@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 
 import { PartnerScreen } from '@/components/partner-screen';
+import { PartnerStackBottomNavigation, type PartnerTabDestination } from '@/components/partner-stack-bottom-navigation';
 import { motorValidityEnds } from '@/lib/motor-validity-dates';
 import { createPartnerPolicyIntakeBridgeUrl, getPartnerPolicyIntakeDocumentUrl } from '@/lib/policy-intakes';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
@@ -191,6 +192,7 @@ export default function NativePolicyOnboarding(){
   const [documentError,setDocumentError]=useState('');
   const [openingPolicyCopy,setOpeningPolicyCopy]=useState(false);
   const [dialog,setDialog]=useState<'discard'|'error'|null>(null);
+  const [pendingTab,setPendingTab]=useState<PartnerTabDestination|null>(null);
   const [dialogMessage,setDialogMessage]=useState('');
   useEffect(()=>{
     if(error&&draft){setDialogMessage(error);setDialog('error');}
@@ -414,11 +416,18 @@ export default function NativePolicyOnboarding(){
     }finally{setSaving(false);}
   }
 
+  const hasUnsavedChanges = dirty || Object.keys(standaloneLifeDocuments).length > 0;
   const cancelOnboarding=()=>{
     if(saving||booking||creatingLifeHealth||documentBusy)return;
-    if(dirty){
+    setPendingTab(null);
+    if(hasUnsavedChanges){
       setDialog('discard');
     }else router.back();
+  };
+  const navigateFromOnboarding=(destination:PartnerTabDestination)=>{
+    if(saving||booking||creatingLifeHealth||documentBusy)return;
+    if(hasUnsavedChanges){setPendingTab(destination);setDialog('discard');}
+    else router.navigate(destination as never);
   };
   const openPolicyCopy=async()=>{
     if(!id||openingPolicyCopy||saving||booking||creatingLifeHealth)return;
@@ -936,7 +945,8 @@ export default function NativePolicyOnboarding(){
     </View>
   </View>;
   const motorProductSection=section('03','Policy product, premium & validity',motorProductFields);
-  return <PartnerScreen title="Policy Onboarding" onBack={()=>router.back()} navyTopBar navyStatusBar topBarIcon="document-text-outline">
+  return <PartnerScreen title="Policy Onboarding" onBack={cancelOnboarding} navyTopBar navyStatusBar topBarIcon="document-text-outline" bottomNavigationNavy
+    bottomNavigation={<PartnerStackBottomNavigation activeTab="policies" onNavigate={navigateFromOnboarding} />}>
     {loading?<PartnerStateView state="loading" title={isNew?'Preparing new Policy Onboarding':'Loading saved Policy Onboarding'} />:null}
     {error&&!draft?<View style={styles.error}><Ionicons name="alert-circle-outline" size={16} color="#B42318"/><Text style={styles.errorText}>{error}</Text></View>:null}
     {!loading&&!draft?<Pressable style={styles.retry} onPress={()=>void load()}><Text style={styles.retryText}>Retry loading</Text></Pressable>:null}
@@ -1112,7 +1122,7 @@ export default function NativePolicyOnboarding(){
                 <Text style={styles.feedbackSecondaryText}>Keep Editing</Text>
               </Pressable>
               <Pressable accessibilityRole="button" style={styles.feedbackPrimary}
-                onPress={()=>{setDialog(null);router.back();}}>
+                onPress={()=>{const destination=pendingTab;setPendingTab(null);setDialog(null);if(destination)router.navigate(destination as never);else router.back();}}>
                 <Text style={styles.feedbackPrimaryText}>Discard &amp; Leave</Text>
               </Pressable>
             </View>

@@ -5,6 +5,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { canPartnerAccess } from '@/lib/partner-permissions';
+import { PartnerStackBottomNavigation, type PartnerTabDestination } from '@/components/partner-stack-bottom-navigation';
 import { supabase } from '@/lib/supabase';
 import { usePartnerSession } from '@/providers/partner-session-provider';
 
@@ -74,6 +75,16 @@ export default function AddPartnerScreen() {
   const [saving, setSaving] = useState(false);
   const [dateField, setDateField] = useState<'date_of_birth' | 'document_received_at' | null>(null);
   const set = (key: Field, value: string) => setForm(old => ({ ...old, [key]: value }));
+  const hasUnsavedDetails = (Object.keys(initial) as Field[]).some(key => form[key] !== initial[key]);
+  const leavePartnerForm = (destination?: PartnerTabDestination) => {
+    if (saving) return;
+    const leave = () => destination ? router.navigate(destination as never) : router.back();
+    if (!hasUnsavedDetails) { leave(); return; }
+    Alert.alert('Discard Partner details?', 'Your entered details have not been submitted.', [
+      { text: 'Keep Editing', style: 'cancel' },
+      { text: 'Discard & Leave', style: 'destructive', onPress: leave },
+    ]);
+  };
   useEffect(() => {
     if (!allowed) return;
     let active = true;
@@ -141,10 +152,10 @@ export default function AddPartnerScreen() {
   };
   if (!allowed) return <SafeAreaView style={styles.screen}><View style={styles.content}><Text style={styles.heading}>Add Partner</Text><Text>Employee Partner-onboarding permission required.</Text></View></SafeAreaView>;
   return (
-    <SafeAreaView style={styles.screen}>
+    <SafeAreaView style={styles.screen} edges={['top']}>
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={styles.header}>
-          <Pressable accessibilityLabel="Back" onPress={() => router.back()} hitSlop={10}><Ionicons name="arrow-back" size={21} color="#17365D" /></Pressable>
+          <Pressable accessibilityLabel="Back" onPress={() => leavePartnerForm()} hitSlop={10}><Ionicons name="arrow-back" size={21} color="#17365D" /></Pressable>
           <Text style={styles.heading}>Add Partner</Text><View style={{ width: 21 }} />
         </View>
         <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
@@ -214,6 +225,7 @@ export default function AddPartnerScreen() {
           </View></View>
         </Modal>
       </KeyboardAvoidingView>
+      <PartnerStackBottomNavigation activeTab="more" includeBottomInset onNavigate={leavePartnerForm} />
     </SafeAreaView>
   );
 }

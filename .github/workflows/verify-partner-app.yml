@@ -141,6 +141,9 @@ jobs:
 
       - name: Verify Partner Life/Health Case Details column layout
         run: node apps/partner-app/scripts/verify-life-health-case-column-layout.mjs
+
+      - name: Verify shared bottom navigation on Policy Onboarding and Add Partner
+        run: node apps/partner-app/scripts/verify-stack-bottom-navigation.mjs
       - name: Verify incremental Policy Intake pagination
         run: (cd apps/partner-app && node scripts/verify-policy-intake-list-pagination.mjs)
 
