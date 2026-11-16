@@ -125,10 +125,16 @@ expectAll('app/(tabs)/policies.tsx', [
   [/radio-button-on/, 'Selected status needs radio indicator'],
   [/option\.value\.toLocaleString\('en-IN'\)/, 'Policy statuses retain real summary counts'],
   [/onPress=\{\(\) => selectSummary\(option\.filter\)\}/, 'Choosing status must update the policy list'],
-  [/accessibilityLabel="Filter policies"[\\s\\S]*?accessibilityState=\\{\\{ disabled: true \\}\\}[\\s\\S]*?disabled[\\s\\S]*?style=\\{styles.filterButton\\}/, 'Keep the original Policies Filter button visible but non-opening'],
-  [/name="filter-outline" size=\\{18\\} color="#3156B8"/, 'Preserve Filter icon styling'],
-  [/\\{metric.label\\}/, 'Preserve tappable policy status summary chips'],
+  [/accessibilityLabel="Filter policies"[\s\S]*?accessibilityState=\{\{ disabled: true \}\}[\s\S]*?disabled[\s\S]*?style=\{styles.filterButton\}/, 'Keep the original Policies Filter button visible but non-opening'],
+  [/name="filter-outline" size=\{18\} color="#3156B8"/, 'Preserve Filter icon styling'],
+  [/\{metric.label\}/, 'Preserve tappable policy status summary chips'],
 ]);
+
+// Policies no longer mount a floating filter menu.
+checks += 1;
+if (/PartnerAnchoredDropdown|filterMenuOpen|POLICY_FILTER_OPTIONS/.test(read('app/(tabs)/policies.tsx'))) {
+  failures.push('app/(tabs)/policies.tsx: Policies Filter must never mount an anchored dropdown');
+}
 
 if (failures.length) {
   console.error('Partner pre-APK UAT/security contract verification failed:');
@@ -140,5 +146,3 @@ if (failures.length) {
 console.log(`Partner pre-APK UAT/security contracts OK: ${checks} checks passed.`);
 console.log('Covered: scoped Customers/Policies/Claims, paging, Support recovery, sign-out, OTA/privacy controls, safe destinations, critical navigation and Policy Intake tracking.');
 
-// Policies no longer mounts a floating filter menu; existing status chips and See all handle selection.
-assert.doesNotMatch(read('app/(tabs)/policies.tsx'), /PartnerAnchoredDropdown|filterMenuOpen|POLICY_FILTER_OPTIONS/, 'No dropdown opens from Policies Filter.');
