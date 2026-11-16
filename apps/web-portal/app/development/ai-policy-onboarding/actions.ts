@@ -9,6 +9,8 @@ import { loadPolicyIntakeDuplicateMatches } from "@/lib/policy-intake-duplicate"
 import { buildPolicyOcrOnboardingUpdate } from "@/lib/policy-ocr-onboarding-apply";
 import { policyDateDecision } from "@/lib/policy-date-rule";
 import { checkSemiAutoReadiness, type SemiAutoIssue } from "@/lib/policy-intake-semi-auto";
+import { previewSemiAutoN8nExtraction, applySemiAutoN8nExtraction, type SemiAutoN8nResult } from "@/lib/policy-intake-semi-auto-n8n";
+export type { SemiAutoN8nResult } from "@/lib/policy-intake-semi-auto-n8n";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import type { PolicyIntakeOcrField } from "@/lib/policy-intake-ocr-service";
 import { revalidatePath } from "next/cache";
@@ -266,4 +268,28 @@ export async function editSemiAutoIntake(id: string, takeOver = false): Promise<
     return { ok: false, ready: false, issues: [issue("Intake handoff", handoff.error)] };
   }
   return { ok: true, ready: false, issues: [], editUrl: "/policies/new?intake_id=" + encodeURIComponent(id) };
+}
+
+/**
+ * The existing Development workbench uses the n8n bridge only after a
+ * deliberate button click and the same reviewer + finalizer permissions.
+ * Preview is read-only and never marks the Intake as bookable.
+ */
+export async function previewSemiAutoN8nIntake(id: string): Promise<SemiAutoN8nResult> {
+  await requireDevelopmentPolicyOperator(id);
+  return previewSemiAutoN8nExtraction(id);
+}
+
+export async function applySemiAutoN8nIntake(
+  id: string, documentId: string, fingerprint: string, confirmed: boolean,
+): Promise<{ ok: boolean; error?: string }> {
+  await requireDevelopmentPolicyOperator(id);
+  if (confirmed !== true) return { ok: false, error: "Explicit confirmation is required to apply the reviewed OCR result." };
+  const result = await applySemiAutoN8nExtraction(id, documentId, fingerprint);
+  if (result.ok) {
+    revalidatePath("/development/ai-policy-onboarding");
+    revalidatePath("/policy-intakes");
+    revalidatePath("/policy-intakes/" + encodeURIComponent(id));
+  }
+  return result;
 }

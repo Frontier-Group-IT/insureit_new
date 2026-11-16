@@ -1,0 +1,120 @@
+import "server-only";
+import { validateN8nPolicyIntakeResponse, type N8nOcrBridgeInput, type N8nOcrBridgeResponse } from "@/lib/policy-intake-n8n-validation";
+export { validateN8nPolicyIntakeResponse } from "@/lib/policy-intake-n8n-validation";
+export type { N8nOcrField, N8nOcrBridgeInput, N8nOcrBridgeResponse } from "@/lib/policy-intake-n8n-validation";
+
+const EXPECTED_N8N_ORIGIN = "https://insureit.app.n8n.cloud";
+const EXPECTED_WEBHOOK_PATH = "/webhook/insureit-policy-intake-icici-v1";
+const MAX_FILE_BYTES = 15 * 1024 * 1024;
+const TRUSTED_STORAGE_ORIGIN = "https://ilzhsfqqjyppzzvfscmh.supabase.co";
+const SIGNED_OBJECT_PREFIX = "/storage/v1/object/sign/policy-documents/intakes/";
+
+/** Signed source is issued only by our server after checking the current private document. */
+export type N8nSignedSourceInput = Pick<N8nOcrBridgeInput, "intakeId" | "documentId" | "requestId"> & {
+  signedUrl: string;
+};
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+/**
+ * The site mints a one-object short-lived Supabase Storage link; n8n itself
+ * retrieves the PDF. Never accept arbitrary user-supplied fetch destinations.
+ * A signed URL is a temporary bearer secret: do not log or show it in UI.
+ */
+export async function requestN8nPolicyIntakeBySignedSource(
+  input: N8nSignedSourceInput, signal?: AbortSignal,
+): Promise<N8nOcrBridgeResponse> {
+  if (![input.intakeId, input.documentId, input.requestId].every(id => UUID.test(id))) {
+    throw new Error("n8n_request_identifier_invalid");
+  }
+  let signed: URL;
+  try { signed = new URL(input.signedUrl); }
+  catch { throw new Error("n8n_signed_source_invalid"); }
+  if (signed.origin !== TRUSTED_STORAGE_ORIGIN
+      || !signed.pathname.startsWith(SIGNED_OBJECT_PREFIX + input.intakeId + "/")
+      || signed.pathname.includes("..") || signed.username || signed.password || signed.hash
+      || !signed.searchParams.get("token")) {
+    throw new Error("n8n_signed_source_invalid");
+  }
+  const { url, secret } = n8nConfiguration();
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 60_000);
+  const onAbort = () => controller.abort();
+  signal?.addEventListener("abort", onAbort, { once: true });
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-insureit-policy-intake-secret": secret,
+      },
+      body: JSON.stringify({
+        intake_id: input.intakeId,
+        document_id: input.documentId,
+        request_id: input.requestId,
+        signed_pdf_url: signed.toString(),
+      }),
+      cache: "no-store",
+      signal: controller.signal,
+      redirect: "error",
+    });
+    if (!response.ok) throw new Error("n8n_bridge_http_failure");
+    const payload: unknown = await response.json();
+    return validateN8nPolicyIntakeResponse(payload, input);
+  } finally {
+    clearTimeout(timer);
+    signal?.removeEventListener("abort", onAbort);
+  }
+}
+
+function n8nConfiguration(): { url: URL; secret: string } {
+  const configuredUrl = process.env.INSUREIT_N8N_OCR_WEBHOOK_URL;
+  const secret = process.env.INSUREIT_N8N_OCR_HEADER_SECRET;
+  if (!configuredUrl || !secret || secret.length < 32) throw new Error("n8n_bridge_not_configured");
+  const url = new URL(configuredUrl);
+  if (url.origin !== EXPECTED_N8N_ORIGIN || url.pathname !== EXPECTED_WEBHOOK_PATH
+      || url.search || url.hash || url.username || url.password) {
+    throw new Error("n8n_webhook_url_not_allowed");
+  }
+  return { url, secret };
+}
+
+/**
+ * Opt-in server-only adapter. Not called by the current Policy Intake pipeline.
+ * Enable only after per-intake authorization, original document revision checks,
+ * a configured n8n Header Auth credential, and approved feature-flag rollout.
+ */
+export async function requestN8nPolicyIntakeExtraction(
+  input: N8nOcrBridgeInput, signal?: AbortSignal,
+): Promise<N8nOcrBridgeResponse> {
+  if (![input.intakeId, input.documentId, input.requestId].every((id) => UUID.test(id)))
+    throw new Error("n8n_request_identifier_invalid");
+  if (!(input.file instanceof File) || input.file.type !== "application/pdf"
+      || !input.file.size || input.file.size > MAX_FILE_BYTES) throw new Error("n8n_file_invalid");
+  const { url, secret } = n8nConfiguration();
+
+  const form = new FormData();
+  form.set("intake_id", input.intakeId);
+  form.set("document_id", input.documentId);
+  form.set("request_id", input.requestId);
+  form.set("data", input.file, input.file.name);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 60_000);
+  const onAbort = () => controller.abort();
+  signal?.addEventListener("abort", onAbort, { once: true });
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "x-insureit-policy-intake-secret": secret },
+      body: form,
+      cache: "no-store",
+      signal: controller.signal,
+      redirect: "error",
+    });
+    if (!response.ok) throw new Error("n8n_bridge_http_failure");
+    const payload: unknown = await response.json();
+    return validateN8nPolicyIntakeResponse(payload, input);
+  } finally {
+    clearTimeout(timeout);
+    signal?.removeEventListener("abort", onAbort);
+  }
+}
