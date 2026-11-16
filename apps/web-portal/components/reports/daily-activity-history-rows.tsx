@@ -12,7 +12,7 @@ type Props={rows:SelfActivity[];employeeName:string};
 
 export function DailyActivityHistoryRows({rows,employeeName}:Props) {
   const router=useRouter();
-  const [unavailable,setUnavailable]=useState<"deleted"|"missing"|null>(null);
+  const [unavailable,setUnavailable]=useState<"deleted"|"missing"|"unsupported"|null>(null);
   const okRef=useRef<HTMLButtonElement>(null);
   const rowRef=useRef<HTMLTableRowElement|null>(null);
   useEffect(()=>{
@@ -31,7 +31,7 @@ export function DailyActivityHistoryRows({rows,employeeName}:Props) {
       return;
     }
     rowRef.current=element;
-    setUnavailable(row.status==="Deleted"?"deleted":"missing");
+    setUnavailable(row.status==="Deleted"?"deleted":!row.table||!(["policies","policy_intake_requests","life_health_cases","customers","vehicles","claims"].includes(row.table))?"unsupported":"missing");
   };
   const onRowKeyDown=(event:KeyboardEvent<HTMLTableRowElement>,row:SelfActivity)=>{
     if(event.key==="Enter"||event.key===" "){
@@ -66,7 +66,7 @@ export function DailyActivityHistoryRows({rows,employeeName}:Props) {
             className="w-full max-w-[350px] rounded-2xl border border-[#dce4ef] bg-white p-5 shadow-2xl">
             <h3 id="daily-activity-unavailable-title" className="text-[14px] font-bold text-[#17365D]">Record unavailable</h3>
             <p id="daily-activity-unavailable-message" className="mt-2 text-[12px] text-[#52627b]">
-              {unavailable==="deleted"?"This record has been deleted.":"This record is no longer available."}
+              {unavailable==="deleted"?"This record has been deleted.":unavailable==="unsupported"?"Details are unavailable for this activity.":"This record is no longer available."}
             </p>
             <div className="mt-5 flex justify-end">
               <button type="button" ref={okRef} onClick={()=>setUnavailable(null)}
