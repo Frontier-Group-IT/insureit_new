@@ -142,3 +142,29 @@ export async function requestNewNativePolicyDateApproval(draft:NativePolicyDraft
 export async function verifyNewNativePolicyDateApproval(draft:NativePolicyDraft,approvalId:string,otp:string){
   return request<{verified:boolean}>({action:'new_approval_verify',draft,approval_id:approvalId,otp});
 }
+
+/** Create an independent Life case. Files are held locally and submitted together with the form.
+ * No Policy Intake ID, persisted staging row or intake permissions are required.
+ */
+export async function createNewNativeLifeCase(
+  draft:NativePolicyDraft,
+  documents:Partial<Record<NativeOnboardingDocumentType,{uri:string;name:string;mimeType?:string}>>,
+){
+  const session=await getCurrentSession();
+  if(!session?.access_token)throw new Error('Your Partner session has expired. Sign in again.');
+  const body=new FormData();
+  body.append('draft',JSON.stringify(draft));
+  const names:Record<NativeOnboardingDocumentType,string>={
+    policy_copy:'policyCopy',proposal_form:'proposalForm',kyc:'kyc',other_document:'otherDocument',
+  };
+  for(const [type,file] of Object.entries(documents) as [NativeOnboardingDocumentType,{uri:string;name:string;mimeType?:string}][]){
+    if(file?.uri)body.append(names[type],{uri:file.uri,name:file.name,type:file.mimeType||'application/octet-stream'} as unknown as Blob);
+  }
+  let response:Response;
+  try{response=await fetch(`${portal}/api/partner/policy-intakes/native-onboarding/standalone-life`,{
+    method:'POST',cache:'no-store',headers:{Authorization:`Bearer ${session.access_token}`},body,
+  });}catch{throw new Error('Cannot reach Life Policy Onboarding. Check your connection.');}
+  const result=await response.json().catch(()=>null) as {ok?:boolean;error?:string;case?:{id:string;number:string;status:'awaiting_policy'}}|null;
+  if(!response.ok||!result?.ok||!result.case)throw new Error(result?.error||'Could not create Life case. Check Case Register before retrying.');
+  return {case:result.case};
+}
