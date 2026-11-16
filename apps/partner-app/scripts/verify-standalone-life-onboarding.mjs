@@ -5,7 +5,7 @@ const app=read('apps/partner-app/app/policy-intakes/onboarding.tsx');
 const client=read('apps/partner-app/lib/policy-onboarding.ts');
 const api=read('apps/web-portal/app/api/partner/policy-intakes/native-onboarding/standalone-life/route.ts');
 const engine=read('apps/web-portal/lib/life-health-case-creation-engine.ts');
-assert.match(app,/isNew&&f.key==='businessLine'?\['Motor','Life'\]/,'Only supported standalone product types are offered');
+assert.match(app,/isNew&&f\.key==='businessLine'\?\['Motor','Life'\]/,'Only supported standalone product types are offered');
 assert.match(app,/productSection\('02','Customer \/ Proposer',commonPerson\)/,'Life shares Intake customer layout');
 assert.match(app,/productSection\('03','Policy product & case details',lifeProduct\)/,'Life shares Intake policy fields');
 assert.match(app,/productType==='Life'\|\|productType==='Health'\)\?onboardingDocumentsSection\('05'\)/,'Life keeps same documents section');
