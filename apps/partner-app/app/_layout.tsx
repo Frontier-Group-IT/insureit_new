@@ -2,7 +2,7 @@ import { Redirect, Stack, usePathname } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { canPartnerAccess, canPartnerSearch, canPartnerStartClaim, requiredPartnerRoutePermission } from '@/lib/partner-permissions';
+import { canPartnerAccess, canPartnerAccessCaseRegister, canPartnerSearch, canPartnerStartClaim, requiredPartnerRoutePermission } from '@/lib/partner-permissions';
 import { usePartnerSession } from '@/providers/partner-session-provider';
 import { PartnerErrorBoundary } from '@/components/partner-error-boundary';
 import { PartnerBiometricLockProvider } from '@/providers/partner-biometric-lock-provider';
@@ -50,6 +50,8 @@ export default function RootLayout() {
                     <Stack.Screen name="claim/[id]" />
                     <Stack.Screen name="claim/stage" />
                     <Stack.Screen name="claim/new" />
+                    <Stack.Screen name="life-health-cases/index" />
+                    <Stack.Screen name="life-health-cases/[id]" />
                     <Stack.Screen name="policy-intakes" />
                     <Stack.Screen name="policy-intake-new" />
                     <Stack.Screen name="policy-new" />
@@ -73,6 +75,9 @@ function PartnerPermissionBoundary({ children }: { children: React.ReactNode }) 
   const pathname = usePathname();
   const { context, status } = usePartnerSession();
   const required = requiredPartnerRoutePermission(pathname);
+  if (status === 'ready' && /^\/life-health-cases(?:\/|$)/.test(pathname) && !canPartnerAccessCaseRegister(context)) {
+    return <Redirect href="/access-denied" />;
+  }
   if (status === 'ready' && pathname === '/search' && !canPartnerSearch(context)) {
     return <Redirect href="/access-denied" />;
   }

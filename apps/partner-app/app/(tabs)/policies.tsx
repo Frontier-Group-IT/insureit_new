@@ -34,7 +34,7 @@ import {
   type PartnerPolicySummary,
 } from '@/lib/policies';
 import { PartnerAssets } from '@/lib/partner-assets';
-import { canPartnerAccess } from '@/lib/partner-permissions';
+import { canPartnerAccess, canPartnerAccessCaseRegister } from '@/lib/partner-permissions';
 import { partnerTheme } from '@/lib/theme';
 import { getPartnerUnreadActivityCount } from '@/lib/engagement';
 import { useDebouncedValue } from '@/lib/use-debounced-value';
@@ -344,6 +344,22 @@ export default function PoliciesScreen() {
         </View>
         <Feather name="chevron-right" size={20} color="#FFFFFF" />
       </Pressable>
+      ) : null}
+
+      {canPartnerAccessCaseRegister(context) ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Open Case Register for Life and Health cases"
+          onPress={() => router.push('/life-health-cases')}
+          style={({ pressed }) => [styles.intakeBanner, { marginTop: 8, backgroundColor: '#17365D' }, pressed && styles.pressed]}
+        >
+          <View style={styles.intakeBannerIcon}><Ionicons name="folder-open-outline" size={23} color="#FFFFFF" /></View>
+          <View style={styles.intakeBannerCopy}>
+            <Text style={styles.intakeBannerTitle}>Case Register</Text>
+            <Text style={styles.intakeBannerSubtitle}>Life & Health cases</Text>
+          </View>
+          <Feather name="chevron-right" size={20} color="#FFFFFF" />
+        </Pressable>
       ) : null}
 
       {canPartnerAccess(context, 'create_policies', 'edit') ? (
