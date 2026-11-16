@@ -40,6 +40,7 @@ export type PartnerPolicyIntake = {
   attention_reason: string | null;
   created_at: string;
   updated_at: string;
+  finalized_at?: string | null;
   final_policy_id: string | null;
 };
 
