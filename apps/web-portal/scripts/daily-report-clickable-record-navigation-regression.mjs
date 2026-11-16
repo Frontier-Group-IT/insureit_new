@@ -89,3 +89,13 @@ assert.ok(rows.includes('row.status==="Deleted"'),"Deleted Claims open popup ins
 assert.ok(rows.includes("if(event.key===\"Escape\")"),"Deleted claim popup can close with Escape");
 assert.ok(rows.includes("deletedClaim.claimControlNo"),"Deleted claim popup shows recorded claim metadata only");
 assert.ok(!loader.includes('selfProfile?.full_name?.trim()||"Employee unavailable"'),"Actor is never mislabelled as deleted claim owner");
+
+assert.match(loader, /const missingIds=error\?\[\]:ids\.filter/, "Failed customer lookup never marks surviving customers deleted");
+assert.match(loader, /\.eq\("table_name","customers"\)\.eq\("action","delete_customer"\)/, "Deletion identity comes only from deleted customer audit");
+assert.match(loader, /row\.customerName=deletion\.name/, "Deleted customer name is recovered from deletion snapshot");
+assert.ok(loader.includes("profile?.full_name?.trim().toLocaleLowerCase()===deletion.name.toLocaleLowerCase()"), "Retained phone must match deleted customer name");
+assert.match(loader, /row\.customerMobile=phone\?maskPhone\(phone\):undefined/, "Only masked historical phones are displayed");
+assert.match(loader, /if\(row\.activity==="Customer Created"\)row\.activity="Customer Deleted"/, "Deleted customer rows directly display Customer Deleted");
+assert.match(loader, /row\.status="Deleted"/, "Current deleted state is distinguished from creation event");
+assert.match(loader, /creation_channel==="direct_customer_onboarding"/, "Only audited direct onboarding qualifies for Internal customer type");
+assert.match(loader, /if\(directOnboardingIds\.has\(row\.recordId\)\)row\.customerType="Internal"/, "Historical Internal type comes from verified origin");
