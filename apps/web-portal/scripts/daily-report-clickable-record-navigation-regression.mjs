@@ -57,7 +57,7 @@ assert.doesNotMatch(loader+routes+panel+rows,/\.insert\(|\.update\(|\.upsert\(|\
 console.log("Daily Report activity detail dialog and six-column context regression passed.");
 
 assert.match(panel, /const isCustomerActivity=data\.category\.startsWith\("Customer "\)/, "Customer category switches to register-aligned columns");
-for(const column of ["Customer", "Customer Type", "Mobile", "Fleet Size", "Total Policies"]) {
+for(const column of ["Customer", "Customer Type", "Mobile"]) {
   assert.ok(panel.includes(`>${column}</th>`), `Customer-specific column is visible: ${column}`);
   assert.ok(rows.includes(`["${column}",customerField(selected.`), `Customer detail popup includes ${column}`);
 }
@@ -65,3 +65,6 @@ assert.match(rows, /isCustomerActivity \? \(/, "Customer row data is conditional
 assert.match(loader, /row\.customerName=customer\.contact_name/, "Customer name comes from its master record");
 assert.match(loader, /visible\.filter\(row=>row\.table==="customers"/, "Customer lookups are bounded to visible records");
 assert.match(loader, /customer\.phone\?\.replace/, "Customer mobiles are masked rather than exposing full phone numbers");
+
+assert.doesNotMatch(panel, /<th[^>]*>Fleet Size<\/th>|<th[^>]*>Total Policies<\/th>/, "Customer drilldown hides fleet size and total policies headers");
+assert.doesNotMatch(rows, /customerField\(row\.customerFleetSize\)|customerField\(row\.customerPolicyCount\)|\["Fleet Size",customerField|\["Total Policies",customerField/, "Customer rows and detail dialog hide fleet size and total policies");
