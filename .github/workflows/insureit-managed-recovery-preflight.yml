@@ -52,6 +52,7 @@ jobs:
       - name: Test isolated target connection and READ ONLY transaction before R2 retrieval
         env:
           INSUREIT_RECOVERY_DATABASE_URL: ${{ secrets.INSUREIT_RECOVERY_DATABASE_URL }}
+          RECOVERY_DB_SSL_ROOT_CERT_PEM: ${{ secrets.RECOVERY_DB_SSL_ROOT_CERT_PEM }}
         run: |
           set -euo pipefail
           python scripts/backup/managed_recovery_preflight.py --probe-target
@@ -85,6 +86,7 @@ jobs:
       - name: Compare private TOC to target catalogs in a READ ONLY transaction
         env:
           INSUREIT_RECOVERY_DATABASE_URL: ${{ secrets.INSUREIT_RECOVERY_DATABASE_URL }}
+          RECOVERY_DB_SSL_ROOT_CERT_PEM: ${{ secrets.RECOVERY_DB_SSL_ROOT_CERT_PEM }}
         run: |
           set -euo pipefail
           python scripts/backup/managed_recovery_preflight.py --compare \
