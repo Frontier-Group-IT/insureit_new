@@ -116,3 +116,24 @@
 The case-editing PR #4599 is merged but the website production deploy fails the schema-parity gate. Its production OTA also failed a separate release-review gate for a changed Partner test script; no confirmed live native editing.
 
 **Do not execute blanket `supabase migration repair` or insert all missing versions into `supabase_migrations.schema_migrations`.**
+
+## Read-only production schema spot-check (2026-11-16)
+
+The following **exact objects** were queried in `Insureit_Web`, without modifying database state:
+
+| Expected object | Found? | Corresponding repository migration |
+|---|---|---|
+| enum `app_role.it_user` | Yes | `20261020230500_add_it_user_role.sql` |
+| enum `app_role.operations_head_life` | Yes | `20261023101500_operations_head_life_role.sql` |
+| function `partner_app_save_claim_stage(uuid,text,jsonb,boolean)` | Yes | `20261022162000_partner_claim_operations_parity.sql` |
+| function `partner_app_claim_detail(uuid)` | Yes | `20261022162500_partner_claim_detail_editable_values.sql` |
+| function `partner_app_claim_in_scope(uuid)` | Yes | `20261030231500_partner_branch_central_scope_cutover.sql` |
+| function `partner_app_policy_in_scope(uuid)` | Yes | `20261030110000_partner_branch_policy_detail_scope.sql` |
+| function `partner_register_mtd_net_premium(uuid[])` | **No** | `20261104101500_partner_register_mtd_net_premium.sql` |
+| table `claim_spot_intimation_drafts` | **No** | `20261104165000_customer_spot_draft_sync.sql` |
+| policy `claims.customer_policyless_claim_draft_insert` | **No** | `20261022163000_customer_policyless_claim_draft_insert_rls.sql` |
+| index `service_enquiries_assigned_to_created_idx` | **No** | `20261020131500_rm_service_enquiry_ownership.sql` |
+
+The scan for alternative similarly named tables/functions/policies/indexes returned no matches for those four absent objects. **An existing function/enum alone is not evidence that its full migration (including grants/RLS/triggers) was applied.** Conversely, absent objects provide evidence that a blanket migration-ledger repair would be unsafe. The actual schema effects of every migration must be verified before any marking applied.
+
+Production application is blocked until those missing schema effects are handled through separately reviewed, idempotent, schema-first migrations, and the complete ledger reconciliation is proven. Do **not** insert version-only records for these four absent objects.
