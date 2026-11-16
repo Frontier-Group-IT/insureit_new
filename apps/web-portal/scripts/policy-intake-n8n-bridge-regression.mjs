@@ -37,6 +37,15 @@ assert.doesNotMatch(workbench,/\.download\(/);
 assert.match(router,/export async function extractPolicyIntakeWithN8nOnly/);
 assert.match(router,/process\.env\.INSUREIT_N8N_OCR_MODE !== "required"/);
 assert.match(router,/process\.env\.INSUREIT_N8N_OCR_ALL_MOTOR === "true"/);
+assert.match(router,/INSUREIT_N8N_OCR_AUTO_ICICI_3005/);
+assert.match(router,/autoIcici3005 && candidate/);
+assert.match(router,/extractPolicyIntakeWithN8nOnly\(intakeId, storagePath, true\)/);
+assert.match(router,/if \(mode === "required"\)/);
+assert.match(router,/if \(forced\)/);
+assert.match(router,/return extractWithExistingGoogle\(\);/);
+assert.match(router,/verifiedAutoIcici3005 &&/);
+assert.match(router,/process\.env\.INSUREIT_N8N_OCR_MODE === "required"/);
+
 assert.match(ocr,/intake\.policy_type === "motor" && requiresN8nForIntake\(id\)/);
 assert.match(partner,/intake\.policy_type === "motor" && requiresN8nForIntake\(id\)/);
 assert.match(router,/requestN8nPolicyIntakeBySignedSource/);
