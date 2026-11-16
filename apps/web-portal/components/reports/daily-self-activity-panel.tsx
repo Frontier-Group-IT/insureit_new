@@ -106,7 +106,9 @@ export function DailySelfActivityPanel({data,linkFor,reportMode="self"}:Props) {
                       <th className="px-3 py-3">Customer</th>
                       <th className="px-3 py-3">Vehicle No.</th>
                     </>
-                  ) : isOtherActivity ? null : (
+                  ) : isOtherActivity ? (
+                    <th className="px-3 py-3">Employee Name</th>
+                  ) : (
                     <>
                       <th className="px-3 py-3">Policy / Case No.</th>
                       <th className="px-3 py-3">Customer / Vehicle</th>
