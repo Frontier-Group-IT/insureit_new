@@ -172,7 +172,7 @@ export default function NativePolicyOnboarding(){
   const [documentBusy,setDocumentBusy]=useState<NativeOnboardingDocumentType|null>(null);
   const [documentError,setDocumentError]=useState('');
   const [openingPolicyCopy,setOpeningPolicyCopy]=useState(false);
-  const [dialog,setDialog]=useState<'discard'|'confirm-save'|'saved'|'error'|null>(null);
+  const [dialog,setDialog]=useState<'discard'|'error'|null>(null);
   const [dialogMessage,setDialogMessage]=useState('');
   useEffect(()=>{
     if(error&&draft){setDialogMessage(error);setDialog('error');}
@@ -370,13 +370,6 @@ export default function NativePolicyOnboarding(){
       setDialogMessage(cause instanceof Error?cause.message:'Policy copy is unavailable.');
       setDialog('error');
     }finally{setOpeningPolicyCopy(false);}
-  };
-  const confirmSaveDraft=async()=>{
-    setDialog(null);
-    const succeeded=await save(false);
-    if(succeeded){
-      setDialog('saved');
-    }
   };
   const dismissDialog=()=>{
     setDialog(null);
@@ -973,13 +966,6 @@ export default function NativePolicyOnboarding(){
           <Text style={styles.viewPolicyText}>{openingPolicyCopy?'Opening…':'View policy copy'}</Text>
           <Ionicons name="open-outline" size={13} color="#315B9A"/>
         </Pressable>
-        <Pressable accessibilityRole="button" accessibilityLabel="Save Draft"
-          disabled={saving||booking||creatingLifeHealth||Boolean(documentBusy)||!data}
-          style={[styles.saveDraftButton,(saving||booking||creatingLifeHealth||Boolean(documentBusy)||!data)&&styles.disabled]}
-          onPress={()=>setDialog('confirm-save')}>
-          <Ionicons name="save-outline" size={16} color="#0B55B7"/>
-          <Text style={styles.saveDraftText}>Save Draft</Text>
-        </Pressable>
       </View>:null}
       <View style={styles.actions}>
         <Pressable accessibilityRole="button" accessibilityLabel="Cancel Policy Onboarding"
@@ -1014,23 +1000,17 @@ export default function NativePolicyOnboarding(){
           </Pressable>
           <View style={[styles.feedbackIcon,
             dialog==='discard'?styles.feedbackIconWarning:
-            dialog==='saved'?styles.feedbackIconSuccess:
-            dialog==='error'?styles.feedbackIconError:styles.feedbackIconSave]}>
-            <Ionicons name={dialog==='discard'?'alert-circle-outline':
-              dialog==='saved'?'checkmark-circle-outline':
-              dialog==='error'?'alert-circle-outline':'save-outline'}
-              size={30} color={dialog==='discard'?'#DF920C':dialog==='saved'?'#168744':dialog==='error'?'#D33535':'#0D56BB'}/>
+            styles.feedbackIconError]}>
+            <Ionicons name="alert-circle-outline"
+              size={30} color={dialog==='discard'?'#DF920C':'#D33535'}/>
           </View>
           <Text style={styles.feedbackTitle}>
             {dialog==='discard'?'Discard Changes?':
-             dialog==='saved'?'Draft Saved':
-             dialog==='error'?'Unable to Complete':'Save Changes?'}
+             'Unable to Complete'}
           </Text>
           <Text style={styles.feedbackMessage}>
             {dialog==='discard'?'Your latest changes have not been saved.':
-             dialog==='saved'?'Your policy onboarding draft has been saved successfully. This does not book a policy.':
-             dialog==='error'?dialogMessage:
-             'Do you want to save your changes to this policy onboarding draft?'}
+             dialogMessage}
           </Text>
           {dialog==='discard'?(
             <View style={styles.feedbackActions}>
@@ -1040,16 +1020,6 @@ export default function NativePolicyOnboarding(){
               <Pressable accessibilityRole="button" style={styles.feedbackPrimary}
                 onPress={()=>{setDialog(null);router.back();}}>
                 <Text style={styles.feedbackPrimaryText}>Discard &amp; Leave</Text>
-              </Pressable>
-            </View>
-          ):dialog==='confirm-save'?(
-            <View style={styles.feedbackActions}>
-              <Pressable accessibilityRole="button" style={styles.feedbackSecondary} onPress={dismissDialog}>
-                <Text style={styles.feedbackSecondaryText}>Cancel</Text>
-              </Pressable>
-              <Pressable accessibilityRole="button" style={styles.feedbackPrimary}
-                onPress={()=>void confirmSaveDraft()}>
-                <Text style={styles.feedbackPrimaryText}>Save</Text>
               </Pressable>
             </View>
           ):(
@@ -1356,14 +1326,11 @@ const styles=StyleSheet.create({
   documentAndSaveActions:{marginBottom:9,alignItems:'stretch'},
   viewPolicyButton:{width:'100%',minHeight:42,borderRadius:9,borderWidth:1,borderColor:'#D6E1EF',backgroundColor:'#FFFFFF',flexDirection:'row',gap:8,alignItems:'center',justifyContent:'center'},
   viewPolicyText:{fontSize:10.5,fontWeight:'500',color:'#17365D'},
-  saveDraftButton:{flex:1,minHeight:43,borderRadius:10,borderWidth:1,borderColor:'#B6CCEA',backgroundColor:'#EFF5FF',flexDirection:'row',gap:7,alignItems:'center',justifyContent:'center'},
-  saveDraftText:{fontSize:12,fontWeight:'700',color:'#0B55B7'},
   feedbackOverlay:{flex:1,backgroundColor:'rgba(9,23,45,0.42)',justifyContent:'center',paddingHorizontal:22},
   feedbackCard:{backgroundColor:'#FFFFFF',borderRadius:20,paddingTop:28,paddingHorizontal:18,paddingBottom:20,alignItems:'center',shadowColor:'#071E43',shadowOpacity:0.2,shadowRadius:16,elevation:8},
   feedbackClose:{position:'absolute',top:12,right:12,zIndex:1,padding:5},
   feedbackIcon:{width:60,height:60,borderRadius:30,alignItems:'center',justifyContent:'center',marginBottom:13},
-  feedbackIconWarning:{backgroundColor:'#FFF3DD'},feedbackIconSuccess:{backgroundColor:'#E4F7EA'},
-  feedbackIconError:{backgroundColor:'#FDEBEC'},feedbackIconSave:{backgroundColor:'#E6EFFF'},
+  feedbackIconWarning:{backgroundColor:'#FFF3DD'},feedbackIconError:{backgroundColor:'#FDEBEC'},
   feedbackTitle:{fontSize:18,fontWeight:'800',color:'#0C2345',textAlign:'center',marginBottom:9},
   feedbackMessage:{fontSize:13,lineHeight:19,color:'#354A68',textAlign:'center',marginBottom:22},
   feedbackActions:{width:'100%',flexDirection:'row',gap:9},
