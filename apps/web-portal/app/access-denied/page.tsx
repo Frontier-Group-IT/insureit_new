@@ -57,19 +57,35 @@ export default async function AccessDeniedPage({
   const homeLabel = "homeLabel" in message ? message.homeLabel : undefined;
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#F3F6FB] px-4 py-8">
-      <section className="w-full max-w-[490px] rounded-2xl border border-[#E0E8F2] bg-white px-6 py-7 text-center shadow-[0_14px_45px_rgba(23,54,93,.08)] sm:px-9">
-        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-[#EBF3FD] text-[#285A93]">
-          <ShieldCheck className="h-6 w-6" aria-hidden="true" />
+    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#F5F7FB] px-4 py-10">
+      <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-[#17365D]" />
+      <section
+        aria-labelledby="access-denied-title"
+        className="relative w-full max-w-[460px] overflow-hidden rounded-2xl border border-[#E2E8F0] bg-white shadow-[0_18px_60px_rgba(15,35,66,0.08)]"
+      >
+        <div className="px-6 pb-5 pt-7 sm:px-8 sm:pt-8">
+          <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl border border-[#DCE9F7] bg-[#EDF5FE] text-[#235B97]">
+            <ShieldCheck className="h-6 w-6" aria-hidden="true" />
+          </div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#56779B]">Access information</p>
+          <h1 id="access-denied-title" className="mt-2 text-[23px] font-bold leading-[1.3] tracking-[-0.025em] text-[#132D4F] sm:text-[25px]">
+            {message.title}
+          </h1>
+          <p className="mt-3 text-[13px] leading-[1.8] text-[#586B83]">{message.description}</p>
         </div>
-        <p className="mt-4 text-[10px] font-bold uppercase tracking-[.15em] text-[#6982A2]">Access information</p>
-        <h1 className="mt-2 text-[22px] font-bold leading-snug text-[#102A50]">{message.title}</h1>
-        <p className="mt-3 text-[13px] leading-6 text-[#5D718D]">{message.description}</p>
-        <div className="mt-5 flex items-start gap-2 rounded-lg border border-[#E3ECF6] bg-[#F8FAFD] px-3 py-2.5 text-left">
-          <Info className="mt-0.5 h-4 w-4 shrink-0 text-[#5B7CA3]" aria-hidden="true" />
-          <span className="text-[11px] leading-5 text-[#506A8A]"><strong className="font-semibold">Reason:</strong> {message.detail}</span>
+        <div className="mx-6 flex items-start gap-3 rounded-xl border border-[#E4EBF4] bg-[#F7F9FC] px-4 py-3 sm:mx-8">
+          <Info className="mt-0.5 h-4 w-4 shrink-0 text-[#55789F]" aria-hidden="true" />
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold text-[#405C7C]">Why am I seeing this?</p>
+            <p className="mt-1 break-words text-[12px] leading-5 text-[#61758C]">{message.detail}</p>
+          </div>
         </div>
-        <AccessDeniedActions homeHref={home} homeLabel={homeLabel} />
+        <div className="px-6 pb-6 pt-1 sm:px-8 sm:pb-7">
+          <AccessDeniedActions homeHref={home} homeLabel={homeLabel} />
+        </div>
+        <div className="border-t border-[#EDF1F6] bg-[#FBFCFE] px-6 py-3 text-center text-[11px] text-[#8290A2] sm:px-8">
+          INSUREIT · Secure account access
+        </div>
       </section>
     </main>
   );
