@@ -21,7 +21,7 @@ const register=read("app/policies/page.tsx");
 assert.match(register,/profile\.role === "operations_head_life"/);
 assert.match(register,/query = query\.or\(operationsHeadFilter\)/);
 const middleware=read("middleware.ts");
-assert.match(middleware,/check\.role === "operations_head_life" && !isOperationsHeadLifePath\(pathname\)/);
+assert.match(middleware,/check\.role === "operations_head_life" && pathname !== "\/reports\/daily" && !isOperationsHeadLifePath\(pathname\)/, "Life Head retains restricted routing except own Daily Report");
 const nav=read("components/claim-manager/app-navigation.tsx");
 assert.match(nav,/role==="operations_head_life"/);
 const permission=read("lib/permission-management.ts");
