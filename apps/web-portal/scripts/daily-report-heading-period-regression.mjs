@@ -57,7 +57,7 @@ assert.ok(panel.includes("<DailyReportHeaderPeriod />"), "Date period dropdown l
 assert.ok(panel.includes('} RECORDS</span>'), "Activity count reads N RECORDS");
 assert.ok(panel.includes('text-white'), "Record count uses white foreground");
 assert.ok(page.includes('canViewAll={canViewAll}'), "Employee access permission is passed to summary toolbar");
-assert.ok(css.includes("> .reports-reference-header {\\n  display: none;"), "Redundant Reports heading is hidden on Daily Report only");
-assert.ok(css.includes(".daily-report-reference .daily-report-panel {\\n  overflow: visible;"), "Summary menus are not clipped by the activity panel");
-assert.ok(css.includes(".daily-report-panel-title .daily-report-total-badge {\\n  color: #fff !important;"), "Record total remains visible in white");
+assert.ok(css.includes("> .reports-reference-header {") && css.includes("display: none;"), "Redundant Reports heading is hidden on Daily Report only");
+assert.ok(css.includes(".daily-report-reference .daily-report-panel {") && css.includes("overflow: visible;"), "Summary menus are not clipped by the activity panel");
+assert.ok(css.includes(".daily-report-panel-title .daily-report-total-badge {") && css.includes("color: #fff !important;"), "Record total remains visible in white");
 console.log("Daily Report header layout, Today 90D MTD YTD All time Custom, and IST range source filtering verified.");
