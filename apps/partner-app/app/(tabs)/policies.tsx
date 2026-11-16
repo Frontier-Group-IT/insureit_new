@@ -223,10 +223,12 @@ export default function PoliciesScreen() {
           onPress={openStatusMenu}
           style={({ pressed }) => [styles.filterButton, pressed && styles.summaryChipPressed]}
         >
-          <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={styles.filterText}>
-            {selectedStatus.label} ({formatStatusCount(selectedStatus.count)})
-          </Text>
-          <Ionicons name="chevron-down" size={14} color="#FFFFFF" />
+          <View style={styles.filterNameBadge}>
+            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={styles.filterText}>
+              {selectedStatus.label} ({formatStatusCount(selectedStatus.count)})
+            </Text>
+          </View>
+          <Ionicons name="chevron-down" size={14} color="#17365D" />
         </Pressable>
       </View>
 
@@ -682,7 +684,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
+    gap: 5,
+    paddingHorizontal: 7,
+    backgroundColor: '#FFFFFF',
+  },
+  filterNameBadge: {
+    flexShrink: 1,
+    maxWidth: '100%',
+    borderRadius: 9,
+    paddingVertical: 7,
     paddingHorizontal: 8,
     backgroundColor: '#17365D',
   },

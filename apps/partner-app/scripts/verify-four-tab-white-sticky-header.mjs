@@ -21,6 +21,11 @@ assert.match(claims, /stickyOverlay: \{[^\n]+backgroundColor: "#082657"/);
 assert.match(claims, /<Text style=\{styles.stickyTitle\}>Claims<\/Text>/);
 // Policies use one search-row dropdown with all five live lifecycle counts.
 assert.match(policies, /onPress=\{openStatusMenu\}/, 'Policies lifecycle dropdown opens from the search row');
+assert.ok(policies.includes("filterButton: {") && policies.includes("backgroundColor: '#FFFFFF'"), 'Policy filter outer area stays white');
+assert.ok(policies.includes("filterNameBadge: {") && policies.includes("backgroundColor: '#17365D'"), 'Only the selected filter name uses a navy badge');
+assert.ok(policies.includes('<View style={styles.filterNameBadge}>'), 'Selected name sits in its own navy badge');
+assert.ok(policies.includes('name="chevron-down" size={14} color="#17365D"'), 'Dropdown chevron stays navy on white, outside the badge');
+
 for (const label of ['Total Policies', 'Active Policies', 'Expiring Soon', 'Lapsed Policies', 'Upcoming']) {
   assert.ok(policies.includes("label: '" + label + "'"), 'Preserve Policies status ' + label);
 }
