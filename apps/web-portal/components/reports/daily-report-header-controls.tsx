@@ -72,7 +72,7 @@ export function DailyReportHeaderScopes({canViewAll=false}:{canViewAll?:boolean}
   const hasOtherEmployees=people.length>0;
   const showDropdown=canViewAll && (hasOtherEmployees || loadError);
   if(!showDropdown) {
-    return <span aria-label="Daily Report scope: Self" className="inline-flex h-9 min-w-[145px] items-center rounded-lg border border-[#cbd7e6] bg-white px-3 text-[11px] font-semibold text-[#17365D]">Self</span>;
+    return <span aria-label="Daily Report scope: Self" className="daily-report-header-select inline-flex h-9 min-w-[145px] items-center rounded-lg border border-[#cbd7e6] bg-white px-3 text-[11px] font-semibold text-[#17365D]">Self</span>;
   }
   function selectPerson(personId:string|null) {
     const params=new URLSearchParams(searchParams.toString());
@@ -90,7 +90,7 @@ export function DailyReportHeaderScopes({canViewAll=false}:{canViewAll?:boolean}
     <div ref={container} className="relative" aria-label="Daily Report employee selector">
       <button type="button" aria-haspopup="listbox" aria-expanded={open} aria-controls="daily-report-employee-options"
         onClick={()=>{setOpen(value=>!value);setSearch("");}}
-        className="inline-flex h-9 min-w-[145px] max-w-[235px] items-center justify-between gap-3 rounded-lg border border-[#cbd7e6] bg-white px-3 text-[11px] font-semibold text-[#17365D] hover:bg-[#f5f8fc] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#315b9a]">
+        className="daily-report-header-select inline-flex h-9 min-w-[145px] max-w-[235px] items-center justify-between gap-3 rounded-lg border border-[#cbd7e6] bg-white px-3 text-[11px] font-semibold text-[#17365D] hover:bg-[#f5f8fc] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#315b9a]">
         <span className="truncate">{!selectedPerson?"Self":selected?.full_name||"Selected employee"}</span><ChevronDown className="h-3.5 w-3.5 shrink-0"/>
       </button>
       {open ? (
@@ -158,7 +158,7 @@ export function DailyReportHeaderPeriod() {
       <div ref={ref} className="relative">
         <button type="button" aria-haspopup="menu" aria-expanded={open}
           onClick={()=>setOpen(v=>!v)}
-          className="inline-flex h-9 min-w-[145px] items-center justify-between gap-2 rounded-lg border border-[#cbd7e6] bg-white px-3 text-[11px] font-semibold text-[#233b5d]">
+          className="daily-report-header-select inline-flex h-9 min-w-[145px] items-center justify-between gap-2 rounded-lg border border-[#cbd7e6] bg-white px-3 text-[11px] font-semibold text-[#233b5d]">
           <CalendarDays className="h-4 w-4"/>{OPTIONS.find(o=>o.value===active)?.label}<ChevronDown className="h-3.5 w-3.5"/>
         </button>
         {open&&<div role="menu" className="absolute right-0 top-[calc(100%+4px)] z-50 min-w-[145px] overflow-hidden rounded-lg border border-[#d8e0eb] bg-white p-1 shadow-lg">
@@ -174,7 +174,7 @@ export function DailyReportHeaderPeriod() {
       {(active==="custom"||customOpen)&&(
         <ReportDateRangePicker from={from} to={to}
           open={customOpen} onOpenChange={setCustomOpen}
-          buttonClassName="inline-flex h-9 min-w-[190px] items-center justify-between gap-3 rounded-lg border border-[#cbd7e6] bg-white px-3 text-left text-[11px] font-semibold text-[#233b5d]"
+          buttonClassName="daily-report-header-select inline-flex h-9 min-w-[190px] items-center justify-between gap-3 rounded-lg border border-[#cbd7e6] bg-white px-3 text-left text-[11px] font-semibold text-[#233b5d]"
           onRangeComplete={(start,end)=>{setCustomOpen(false);setPeriod("custom",start,end);}}
         />
       )}
