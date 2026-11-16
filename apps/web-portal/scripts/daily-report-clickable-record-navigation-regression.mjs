@@ -44,7 +44,9 @@ assert.match(deleteAction, /\.from\("profiles"\)[\s\S]*?\.select\("full_name"\)/
 assert.match(deleteAction, /claim_created_by_name: deletedClaimIdentity\?\.claim_created_by_name/, "Save creator name into deletion audit");
 assert.ok(deleteAction.indexOf('deletedClaimIdentity = {claim_no:') < deleteAction.indexOf('.from("audit_logs").insert'), "Audit uses captured pre-delete identity");
 
-assert.ok(rows.includes('onClick={()=>openRecord(row)}'), "A single row click navigates directly");
+assert.ok(rows.includes('onClick={row.href?()=>openRecord(row):undefined}'), "Click handler covers the entire navigable row");
+assert.match(rows,/\[&_td\]:cursor-pointer/,"All cells visibly indicate whole-row click behavior");
+assert.match(rows,/onKeyDown=\{row\.href\?event=>onRowKeyDown\(event,row\):undefined\}/,"Keyboard activation is available only on navigable rows");
 assert.ok(rows.includes('if(row.href) router.push(row.href)'), "Only surviving records navigate");
 assert.ok(!rows.includes('selected.detail||"Not recorded"'), "No intermediate audit dialog");
 assert.ok(panel.includes('Policy / Case No.'), "Register shows policy or case reference");
