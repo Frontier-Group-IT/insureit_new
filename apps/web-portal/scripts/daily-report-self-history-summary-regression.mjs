@@ -32,6 +32,7 @@ assert.match(ui, /My Activity Summary/, "Self default is activity summary, not f
 assert.match(ui, /item\.count\.toLocaleString/, "Clickable category rows expose real computed totals");
 assert.match(ui, /href=\{linkFor\(\{activity:item\.name,page:"1"\}\)\}/, "Clicking a category selects it");
 assert.match(ui, /Back to summary/, "Drilldown returns to category totals");
-assert.match(ui, /Employee Name/, "Detail table retains employee identity column");
+assert.match(ui, /\$\{data\.category\} \(\$\{data\.selfName\}\)/, "Detail heading identifies the selected employee without a redundant table column");
+assert.doesNotMatch(ui, /<th[^>]*>Employee Name<\/th>/, "Employee Name column is removed from the compact register");
 assert.match(ui, /Historical activity exceeds the safe read limit/, "Caps disclose incomplete counts");
 console.log("Self history category totals, click-through details, source attribution and read-only regression passed.");

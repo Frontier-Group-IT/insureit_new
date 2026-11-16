@@ -7,7 +7,7 @@ import { dailyReportRangeWindow } from "@/lib/reports/daily-report-period";
 
 export type SelfActivity = {
   id: string; category: string; activity: string; reference: string;
-  occurredAt: string; status: string; source: "Audit" | "Record history";
+  occurredAt: string; status: string; source: "Audit" | "Record history"; detail?: string;
   table?: string; recordId?: string;
 };
 type Audit = { id:string; actor_id:string|null; action:string; table_name:string|null; record_id:string|null; created_at:string };
@@ -32,8 +32,8 @@ function actionCategory(action:string, table:string|null) {
   return "Other Activities";
 }
 const displayAction=(s:string)=>({
-  policy_created:"Policy Add",policy_edited:"Policy Edit",vehicle_created:"Vehicle Add",
-  vehicle_edited:"Vehicle Edit",customer_created:"Customer Add",customer_edited:"Customer Edit",
+  policy_created:"Policy Created",policy_edited:"Policy Updated",vehicle_created:"Vehicle Created",
+  vehicle_edited:"Vehicle Updated",customer_created:"Customer Created",customer_edited:"Customer Updated",
   policy_intake_review_started:"Policy Intake Review Started",
   policy_intake_attention_requested:"Policy Intake Attention Requested",
   policy_intake_rejected:"Policy Intake Rejected",
@@ -53,6 +53,46 @@ function status(action:string) {
   return "Recorded";
 }
 const sourceLabel = (id:string|null) => id || "—";
+// Display only recognized business-field changes, never an entire audit JSON snapshot.
+const CHANGE_FIELDS:Record<string,{label:string;money?:boolean}>={
+  addon_premium:{label:"Add-on premium",money:true},
+  add_on_premium:{label:"Add-on premium",money:true},
+  addon_premium_amount:{label:"Add-on premium",money:true},
+  od_premium:{label:"OD premium",money:true},
+  tp_premium:{label:"TP premium",money:true},
+  net_premium:{label:"Net premium",money:true},
+  gross_premium:{label:"Gross premium",money:true},
+  premium_amount:{label:"Premium",money:true},
+  idv:{label:"IDV",money:true},
+  policy_no:{label:"Policy number"},
+  policy_number:{label:"Policy number"},
+  insurer_name:{label:"Insurer"},
+  status:{label:"Status"},
+  policy_status:{label:"Policy status"},
+};
+function auditChangeDetail(oldValue:unknown,newValue:unknown):string|undefined {
+  if(!oldValue || !newValue || typeof oldValue!=="object" || typeof newValue!=="object" ||
+    Array.isArray(oldValue) || Array.isArray(newValue)) return undefined;
+  const before=oldValue as Record<string,unknown>,after=newValue as Record<string,unknown>;
+  const changes:string[]=[];
+  for(const [key,field] of Object.entries(CHANGE_FIELDS)) {
+    if(!(key in before) || !(key in after) || before[key]===after[key]) continue;
+    const valid=(v:unknown)=>typeof v==="string" || typeof v==="number" || v===null;
+    if(!valid(before[key]) || !valid(after[key])) continue;
+    const display=(v:unknown)=>{
+      if(v===null || v==="") return "—";
+      if(field.money) {
+        const n=typeof v==="number"?v:Number(v);
+        if(Number.isFinite(n)) return `₹${n.toLocaleString("en-IN",{minimumFractionDigits:2,maximumFractionDigits:2})}`;
+      }
+      return String(v).slice(0,80);
+    };
+    changes.push(`${field.label}: ${display(before[key])} → ${display(after[key])}`);
+    if(changes.length===3) break;
+  }
+  return changes.length?changes.join(" · "):undefined;
+}
+
 
 export async function loadSelfActivityHistory(
   viewerId:string, options:{day?:string;from?:string;to?:string;category?:string;page?:string},
@@ -133,7 +173,7 @@ export async function loadSelfActivityHistory(
       activity:displayAction(a.action),reference:sourceLabel(a.record_id),
       occurredAt:a.created_at,status:status(a.action),source:"Audit",table:a.table_name??undefined,recordId:a.record_id??undefined});
   }
-  for(const a of policies.rows) all.push({id:`policy:${a.id}`,category:"Policy Add",activity:"Policy Add",reference:a.policy_no||a.id,occurredAt:a.created_at,status:"Created",source:"Record history"});
+  for(const a of policies.rows) all.push({id:`policy:${a.id}`,category:"Policy Add",activity:"Policy Created",reference:a.policy_no||a.id,occurredAt:a.created_at,status:"Created",source:"Record history"});
   for(const a of intakes.rows) all.push({id:`intake:${a.id}`,category:"Policy Intake",activity:"Policy Intake Submitted",reference:a.intake_number||a.id,occurredAt:a.created_at,status:"Submitted",source:"Record history"});
   for(const a of intakeFinals.rows) if(a.finalized_at) all.push({id:`intake-final:${a.id}`,category:"Policy Intake",activity:"Policy Intake Finalized",reference:a.intake_number||a.id,occurredAt:a.finalized_at,status:"Completed",source:"Record history"});
   for(const a of cases.rows) all.push({id:`case:${a.id}`,category:"Policy Edit Case Register",activity:"Case Created",reference:a.case_number||a.id,occurredAt:a.created_at,status:"Created",source:"Record history"});
@@ -166,6 +206,21 @@ export async function loadSelfActivityHistory(
       if(typeof item.id==="string" && typeof item[column]==="string") lookup.set(item.id,item[column] as string);
     }
     for(const row of visible) if(row.table===table && row.recordId && lookup.has(row.recordId)) row.reference=lookup.get(row.recordId)!;
+  }
+  // Only the already-visible, scoped audit rows may receive field-level details.
+  // No audit payload is serialized to the client.
+  const visibleAuditIds=visible.filter(row=>row.id.startsWith("audit:"))
+    .map(row=>row.id.slice("audit:".length)).filter(isValidDailyRecordId);
+  if(visibleAuditIds.length) {
+    const {data:changes,error:changesError}=await admin.from("audit_logs")
+      .select("id,old_data,new_data").eq("actor_id",viewerId).in("id",visibleAuditIds)
+      .returns<{id:string;old_data:unknown;new_data:unknown}[]>();
+    if(changesError) console.error("[daily-report] audit change details unavailable",{code:changesError.code || "request_error"});
+    else {
+      const detailMap=new Map((changes??[]).map(item=>[item.id,auditChangeDetail(item.old_data,item.new_data)]));
+      for(const row of visible) if(row.id.startsWith("audit:"))
+        row.detail=detailMap.get(row.id.slice("audit:".length));
+    }
   }
   return {selfName,employeeCode,categories,category,rows:visible,page,hasNext:filtered.length>start+30,
     total:all.length,selectedCount:filtered.length,partial,unavailableSources,allSourcesUnavailable,

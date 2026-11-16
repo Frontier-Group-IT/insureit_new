@@ -11,6 +11,7 @@ type Props = {data:Data;linkFor:(updates:Partial<DailyActivityQuery>)=>string; r
 
 const dateFormat=new Intl.DateTimeFormat("en-IN",{timeZone:"Asia/Kolkata",day:"2-digit",month:"short",year:"numeric"});
 const timeFormat=new Intl.DateTimeFormat("en-IN",{timeZone:"Asia/Kolkata",hour:"2-digit",minute:"2-digit",hour12:true});
+const dateTimeLabel=(value:string)=>{ const d=new Date(value);return `${dateFormat.format(d)}, ${timeFormat.format(d)}`; };
 
 export function DailySelfActivityPanel({data,linkFor,reportMode="self"}:Props) {
   // Keep each activity family together instead of mixing Customer, Vehicle,
@@ -27,7 +28,7 @@ export function DailySelfActivityPanel({data,linkFor,reportMode="self"}:Props) {
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#e4e9f1] px-4 py-3">
         <div>
           <h3 className="text-[12px] font-bold text-[#17365D]">
-            {data.category || (reportMode==="self" ? "My Activity Summary" : `${data.selfName} — Activity Summary`)}
+            {data.category ? `${data.category} (${data.selfName})` : (reportMode==="self" ? "My Activity Summary" : `${data.selfName} — Activity Summary`)}
           </h3>
         </div>
         {data.category ? <Link prefetch={false} href={linkFor({activity:"",page:"1"})}
@@ -73,27 +74,22 @@ export function DailySelfActivityPanel({data,linkFor,reportMode="self"}:Props) {
         ) : <p className="px-5 py-10 text-center text-[11px] text-[#718096]">No attributable recorded activity for the selected period.</p>
       ) : (
         <>
-          <div className="flex items-center justify-between border-b border-[#edf1f6] px-4 py-2 text-[10px] text-[#718096]">
-            <span>{data.selectedCount.toLocaleString("en-IN")} {data.category} activities</span>
-            <span>{reportMode==="self" ? "Only your records" : `Only ${data.selfName} records`}</span>
-          </div>
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[850px] text-left">
+            <table className="w-full text-left">
               <thead className="bg-[#f7f9fc] text-[9px] font-bold uppercase tracking-wide text-[#64748b]">
-                <tr><th className="px-4 py-3">Employee Name</th><th className="px-3 py-3">Activity Type</th><th className="px-3 py-3">Reference Number</th>
-                <th className="px-3 py-3">Date</th><th className="px-3 py-3">Time</th>
-                <th className="px-3 py-3">Status</th><th className="px-3 py-3">Source</th></tr>
+                <tr><th className="px-4 py-3">Activity Type</th>
+                  <th className="whitespace-nowrap px-3 py-3">Date &amp; Time</th>
+                  <th className="px-3 py-3">Status</th></tr>
               </thead>
               <tbody className="divide-y divide-[#edf1f6]">
                 {data.rows.map(row=>(
                   <tr key={row.id} className="text-[11px] text-[#30435d] hover:bg-[#f9fbff]">
-                    <td className="px-4 py-3 font-semibold">{data.selfName}</td>
-                    <td className="px-3 py-3 font-semibold">{row.activity}</td>
-                    <td className="max-w-[260px] break-all px-3 py-3">{row.reference}</td>
-                    <td className="whitespace-nowrap px-3 py-3">{dateFormat.format(new Date(row.occurredAt))}</td>
-                    <td className="whitespace-nowrap px-3 py-3">{timeFormat.format(new Date(row.occurredAt))}</td>
+                    <td className="px-4 py-3 font-semibold">
+                      <span className="block">{row.activity}</span>
+                      {row.detail ? <span className="mt-1 block font-normal text-[#506483]">{row.detail}</span> : null}
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-3">{dateTimeLabel(row.occurredAt)}</td>
                     <td className="px-3 py-3"><span className="rounded-md bg-[#edf3fa] px-2 py-1 text-[9px] font-bold text-[#35587e]">{row.status}</span></td>
-                    <td className="whitespace-nowrap px-3 py-3 text-[10px] text-[#718096]">{row.source}</td>
                   </tr>
                 ))}
               </tbody>
