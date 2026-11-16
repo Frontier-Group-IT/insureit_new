@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 const read = file => readFileSync(new URL(file, import.meta.url), "utf8");
 const directory = read("../lib/reports/daily-employee-directory.ts");
 const page = read("../app/reports/(workspace)/daily/page.tsx");
-const listing = read("../components/reports/daily-employee-directory.tsx");
+const selector = read("../components/reports/daily-report-header-controls.tsx");
 
 assert.match(directory, /p\.id !== viewer\.id && \(allowedIds===null \|\| allowedIds\.includes\(p\.id\)\)/,
   "All excludes the current profile by immutable ID while preserving the authorized hierarchy");
@@ -18,9 +18,9 @@ assert.match(page, /loadSelfActivityHistory\(profile\.id/,
   "Self continues to show the signed-in employee");
 assert.match(page, /assertDailyReportEmployeeAllowed\(chosenPerson, employeeDirectory\);[\s\S]*?loadSelfActivityHistory\(chosenPerson/,
   "All validates selected employee before loading admin-scoped history");
-assert.match(listing, /people\.filter\(p=>!term/,
+assert.match(selector, /people\.filter\(person=>/,
   "Search still filters the authorized list");
-assert.doesNotMatch(directory+page+listing, /\.insert\(|\.update\(|\.upsert\(|\.delete\(/,
+assert.doesNotMatch(directory+page, /\.insert\(|\.update\(|\.upsert\(|\.delete\(/,
   "Report fix does not write to production data");
 
 // Check the intended set behavior for an organization-wide user and a manager.

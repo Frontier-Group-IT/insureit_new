@@ -1,5 +1,5 @@
+import { redirect } from "next/navigation";
 import { DailySelfActivityPanel } from "@/components/reports/daily-self-activity-panel";
-import { DailyEmployeeDirectory } from "@/components/reports/daily-employee-directory";
 import { loadDailyReportEmployeeDirectory, assertDailyReportEmployeeAllowed } from "@/lib/reports/daily-employee-directory";
 import { loadSelfActivityHistory } from "@/lib/reports/daily-self-activity";
 import { requireCapability } from "@/lib/master-data-server";
@@ -16,6 +16,16 @@ type Props = { searchParams: Promise<DailyActivityQuery> };
 export default async function DailyReportPage({ searchParams }: Props) {
   const profile = await requireCapability("view_reports");
   const query = await searchParams;
+  // Legacy scope=all without a selected employee is no longer a directory.
+  // Preserve the requested report period when returning to the Self view.
+  if (query.scope === "all" && !query.person) {
+    const params = new URLSearchParams({scope:"self",page:"1"});
+    if (query.period) params.set("period",query.period);
+    if (query.date) params.set("date",query.date);
+    if (query.from) params.set("from",query.from);
+    if (query.to) params.set("to",query.to);
+    redirect(`/reports/daily?${params.toString()}`);
+  }
   const isSelf = query.scope !== "all";
   const periodRange = resolveDailyReportPeriod(query);
   let selfHistory: Awaited<ReturnType<typeof loadSelfActivityHistory>> | null = null;
@@ -69,8 +79,6 @@ export default async function DailyReportPage({ searchParams }: Props) {
       {(isSelf || chosenPerson) && selfHistory && !error ? (
         <DailySelfActivityPanel data={selfHistory} linkFor={linkFor}
           reportMode={isSelf ? "self" : "employee"}/>
-      ) : !isSelf && !chosenPerson && employeeDirectory && !error ? (
-        <DailyEmployeeDirectory people={employeeDirectory.people} search={query.employee??""} linkFor={linkFor}/>
       ) : error ? (
         <section role="alert" className="rounded-xl border border-red-200 bg-white px-5 py-8 text-center text-[11px] font-semibold text-red-700">
           The authorized employee report could not be loaded. No records were changed.
