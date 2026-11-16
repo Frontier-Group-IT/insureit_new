@@ -13,10 +13,10 @@ assert.match(screen,/label:'Proposal date'/,'Use Proposal date rather than Motor
 assert.match(screen,/label=\{f.key==='issuanceDate'\?'Policy issuance date'/, 'Date must use Operations issuance wording for every product.');
 assert.match(screen,/options:\['Motor','Life','Health','Non Motor'\]/);
 assert.match(screen,/productType==='Non Motor'\?nonMotorCustomerPolicySection/, 'Non-Motor Customer & policy must use the Operations-specific layout.');
-assert.match(screen,/productType==='Non Motor'\?nonMotorRiskSection/, 'Non-Motor risk section must be category-aware.');
+assert.match(screen,/productType==='Non Motor'\?nonMotorRiskSection/, 'Non-Motor risk section retains existing classified risk fields.');
 assert.match(screen,/productSection\('03','Policy product & case details',lifeProduct\)/);
 assert.match(screen,/productSection\('04',productType==='Non Motor'\?'Cover, premium & validity':'Premium & payment'/);
-for(const label of ['PPT - Premium paying term','PD - Policy duration / term','Payment frequency','Premium amount (₹)','Payment mode','Case / proposal number','Address','Risk location','Sum insured / limit (₹)','Non-Motor category']){
+for(const label of ['PPT - Premium paying term','PD - Policy duration / term','Payment frequency','Premium amount (₹)','Payment mode','Case / proposal number','Address','Risk location','Sum insured / limit (₹)']){
   assert.ok(screen.includes(label), 'Missing Operations field '+label);
 }
 assert.match(date,/import DateTimePicker/,'Native date control must use installed calendar picker');
@@ -117,7 +117,7 @@ assert.match(screen,/disabled=\{saving\|\|booking\|\|!remarkText.trim\(\)\}/, 'P
 
 
 // Non-Motor Operations Portal parity, without enabling native Non-Motor booking.
-for(const label of ['Customer record','Customer / organisation','Customer type','Insured / organisation name','Contact person','Mobile number','Email','Address','Policy number','Insurance company','Product / policy name','Non-Motor category','Policy status']){
+for(const label of ['Customer record','Customer / organisation','Customer type','Insured / organisation name','Contact person','Mobile number','Email','Address','Policy number','Insurance company','Product / policy name','Policy status']){
   assert.ok(screen.includes(label), 'Missing Non-Motor customer / policy field '+label);
 }
 assert.match(screen,/nonMotorCustomerMode==='existing'/, 'Customer mode must control conditional fields.');
@@ -130,7 +130,10 @@ assert.match(api,/operationsHeadPolicyFilter\(downline\)/, 'Head customer result
 for(const key of ['"customerMode"','"customerId"','"insuredName"','"phone"','"warranties"','"endorsements"']){
   assert.ok(api.includes(key), 'Non-Motor server must allow draft field '+key);
 }
-assert.match(screen,/productValues.category\?<View style=\{styles.fields\}>/, 'Risk inputs must be absent until category selection.');
+assert.match(screen,/\(riskFields\[productValues.category\]\?\?riskFields.Other\)\.map\(detailField\)/, 'Generic risk fields display without category selection; saved categories remain supported.');
+assert.doesNotMatch(screen,/key:'category',label:'Non-Motor category'/, 'No category selection in Non Motor.');
+assert.doesNotMatch(screen,/label:'Category',value:productValues.category/, 'No category summary row.');
+assert.match(screen,/category:'Other'/, 'Generic new Non Motor drafts keep a default risk classification.');
 assert.match(screen,/nonMotorAdditionalOpen/, 'Optional details must be collapsible.');
 const documentApi=read('apps/web-portal/app/api/partner/policy-intakes/native-onboarding/documents/route.ts');
 const intakeDocMigration=read('supabase/migrations/20261114170000_partner_onboarding_document_staging.sql');
@@ -238,3 +241,10 @@ for (const label of ['Previous month','Next month','Choose calendar year','CANCE
   assert.ok(calendarDialog.includes(label), 'Reference calendar must provide ' + label);
 }
 assert.match(calendarDialog, /onConfirm\(draft\)/, 'Date is committed only on confirmation.');
+
+// Review reference button and Premium icon.
+assert.match(screen,/name="document-attach-outline" size=\{15\}/,'Use the Policy Intake Review document icon.');
+assert.match(screen,/View policy copy<\/Text>/,'Use the Policy Intake Review label.');
+assert.match(screen,/name="open-outline" size=\{13\}/,'Use the reference open icon.');
+assert.match(screen,/viewPolicyButton:\{width:'100%',minHeight:42,borderRadius:9/,'Use full-width reference button geometry.');
+assert.match(screen,/premiumRupee:\{color:'#315B9A'/,'Premium has the blue rupee icon.');
