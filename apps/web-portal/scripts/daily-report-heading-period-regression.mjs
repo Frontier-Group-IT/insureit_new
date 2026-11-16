@@ -33,7 +33,10 @@ assert.match(header, /params\.delete\("person"\)/, "Self All changes don't retai
 assert.doesNotMatch(page, /DailyReportQuickFilters|<nav|type="date"/, "Remove entire white date and scope section");
 assert.match(page, /resolveDailyReportPeriod\(query\)/);
 assert.match(page, /from: periodRange\.from, to: periodRange\.to/, "Apply period range to Self and selected employee events");
-assert.match(period, /period==="today"/, "Today filters the report to the current IST calendar date");\nassert.match(period, /\\? query\\.period : "today"/, "Missing period defaults to Today on the server");\nassert.match(header, /value as Period:"today"/, "Missing period displays Today in the client filter");\nassert.match(period, /period==="mtd"/);
+assert.match(period, /period==="today"/, "Today filters the report to the current IST calendar date");
+assert.match(period, /query\.period : "today"/, "Missing period defaults to Today on the server");
+assert.match(header, /value as Period:"today"/, "Missing period displays Today in the client filter");
+assert.match(period, /period==="mtd"/);
 assert.match(period, /period==="ytd"/);
 assert.match(period, /period==="custom"/);
 assert.match(period, /89\*86400000/, "90D includes current and 89 previous calendar days");
