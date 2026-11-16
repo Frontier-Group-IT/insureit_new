@@ -6,6 +6,7 @@ const routes=read("../lib/reports/daily-activity-record-routes.ts");
 const loader=read("../lib/reports/daily-self-activity.ts");
 const panel=read("../components/reports/daily-self-activity-panel.tsx");
 const rows=read("../components/reports/daily-activity-history-rows.tsx");
+const deleteAction=read("../app/master-record-delete-actions.ts");
 const uuid="d939d183-6e23-47ce-8484-76cd4c1f0555";
 
 for(const [table,base] of Object.entries({
@@ -30,6 +31,16 @@ assert.match(panel, /<DailyActivityHistoryRows rows=\{data\.rows\} \/>/, "All em
 assert.match(rows, /role="button" tabIndex=\{0\}/, "Rows support keyboard focus");
 assert.match(rows, /event\.key==="Enter"\|\|event\.key===" "/, "Enter and Space activate rows");
 assert.match(rows, /row\.detail \? <span/, "Preserve latest audit field-level change details");
+assert.doesNotMatch(rows, /\{row\.source\}/, "Never render Audit or Record history source text in any row");
+assert.match(loader, /delete_claim:"Claim deleted \(creator unavailable\)"/, "Deleted claims never display the generic Delete Claim title");
+assert.match(loader, /deletedClaimActivity\(change\.old_data\)/, "Creator comes from preserved claim audit metadata");
+assert.match(loader, /claim_created_by_name/, "Creator field must be read from audited claim metadata");
+assert.match(loader, /creator unavailable/, "Older deleted claims cannot be assigned guessed names");
+assert.match(deleteAction, /\.from\("claims"\)[\s\S]*?\.select\("id,claim_no,created_by"\)/, "Read claim identity before permanently deleting it");
+assert.match(deleteAction, /\.from\("profiles"\)[\s\S]*?\.select\("full_name"\)/, "Resolve the original claim creator, not the person deleting it");
+assert.match(deleteAction, /claim_created_by_name: deletedClaimIdentity\?\.claim_created_by_name/, "Save creator name into deletion audit");
+assert.ok(deleteAction.indexOf('deletedClaimIdentity = {claim_no:') < deleteAction.indexOf('.from("audit_logs").insert'), "Audit uses captured pre-delete identity");
+
 assert.match(rows, /router\.push\(row\.href\)/, "Existing record navigates to its own page");
 assert.match(rows, /role="alertdialog" aria-modal="true"/, "Unavailable record opens accessible popup");
 assert.match(rows, /This record has been deleted\./, "Deleted record message is short");
