@@ -28,24 +28,24 @@ for(const table of ["policies","policy_intake_requests","life_health_cases"]) {
   assert.ok(loader.includes(`table:"${table}",recordId:a.id`),`Keep immutable record ID for ${table} history`);
 }
 assert.ok(panel.includes("<DailyActivityHistoryRows rows={data.rows} isCustomerActivity={isCustomerActivity} isClaimActivity={isClaimActivity} vehicleMode={vehicleMode} isOtherActivity={isOtherActivity} />"), "Shared activity renderer preserves Customer, Claims and Vehicle modes");
-assert.match(rows,/role=\{row\.href\?"button":undefined\}/,"Only verified destinations clickable");
-assert.match(rows,/tabIndex=\{row\.href\?0:undefined\}/,"Only navigable records receive keyboard focus");
+assert.ok(rows.includes('role={canOpen(row)?"button":undefined}'), "Verified destinations and deleted claims are clickable");
+assert.ok(rows.includes('tabIndex={canOpen(row)?0:undefined}'), "Deleted claims remain keyboard accessible");
 assert.match(rows,/event\.key==="Enter"\|\|event\.key===" "/,"Enter and Space navigate");
 assert.match(rows,/\[&_td\]:cursor-pointer/,"Every cell indicates whole-row clickability");
 assert.match(rows,/if\(row\.href\) router\.push\(row\.href\)/,"Navigate directly to verified record");
 assert.match(rows, /row\.detail \? <span/, "Preserve latest audit field-level change details");
 assert.doesNotMatch(rows, /\{row\.source\}/, "Never render Audit or Record history source text in any row");
-assert.match(loader, /delete_claim:"Claim deleted \(creator unavailable\)"/, "Deleted claims never display the generic Delete Claim title");
-assert.match(loader, /deletedClaimActivity\(change\.old_data\)/, "Creator comes from preserved claim audit metadata");
-assert.match(loader, /claim_created_by_name/, "Creator field must be read from audited claim metadata");
-assert.match(loader, /creator unavailable/, "Older deleted claims cannot be assigned guessed names");
+assert.ok(loader.includes('delete_claim:"Claim Deleted"'), "Claim deletion starts with neutral action label");
+assert.ok(loader.includes("claim_created_by_name"), "Original claim creator sourced from audit snapshot");
+assert.ok(loader.includes("ownerName?"), "Original creator is only used when explicitly recorded");
+assert.ok(loader.includes("Claim Deleted — Name Unavailable"), "Missing original creator never replaced by deleting actor");
 assert.match(deleteAction, /\.from\("claims"\)[\s\S]*?\.select\("id,claim_no,created_by"\)/, "Read claim identity before permanently deleting it");
 assert.match(deleteAction, /\.from\("profiles"\)[\s\S]*?\.select\("full_name"\)/, "Resolve the original claim creator, not the person deleting it");
 assert.match(deleteAction, /claim_created_by_name: deletedClaimIdentity\?\.claim_created_by_name/, "Save creator name into deletion audit");
 assert.ok(deleteAction.indexOf('deletedClaimIdentity = {claim_no:') < deleteAction.indexOf('.from("audit_logs").insert'), "Audit uses captured pre-delete identity");
 
-assert.ok(rows.includes('onClick={row.href?()=>openRecord(row):undefined}'),"Click on any cell navigates directly");
-assert.doesNotMatch(rows,/createPortal|Activity details|Open record<|setSelected/,"No activity popup");
+assert.ok(rows.includes("onClick={canOpen(row)?event=>openRecord(row,event.currentTarget):undefined}"), "Clicking any claim row opens correct target");
+assert.ok(rows.includes('role="dialog" aria-modal="true"'), "Deleted claim details open an accessible popup");
 assert.ok(panel.includes('Policy / Case No.'), "Register shows policy or case reference");
 assert.ok(panel.includes('Customer / Vehicle'), "Register shows customer and vehicle context");
 assert.ok(panel.includes('Insurance Company'), "Register shows insurer");
@@ -84,3 +84,8 @@ assert.ok(panel.includes('isClaimActivity={isClaimActivity} vehicleMode={vehicle
 
 assert.ok(rows.includes('customerField(row.subjectEmployeeName)'),"Other Activities renders affected employee name");
 assert.ok(loader.includes('if(category==="Other Activities")'),"Other Activities identity enrichment is scoped to the selected category");
+
+assert.ok(rows.includes('row.status==="Deleted"'),"Deleted Claims open popup instead of unavailable record page");
+assert.ok(rows.includes("if(event.key===\"Escape\")"),"Deleted claim popup can close with Escape");
+assert.ok(rows.includes("deletedClaim.claimControlNo"),"Deleted claim popup shows recorded claim metadata only");
+assert.ok(!loader.includes('selfProfile?.full_name?.trim()||"Employee unavailable"'),"Actor is never mislabelled as deleted claim owner");
