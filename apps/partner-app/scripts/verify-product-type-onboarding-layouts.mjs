@@ -251,3 +251,23 @@ assert.match(screen,/premiumRupee:\{color:'#315B9A'/,'Premium has the blue rupee
 
 assert.doesNotMatch(screen,/accessibilityLabel="Save Draft"/,'Do not reintroduce the removed Save Draft action.');
 assert.doesNotMatch(screen,/setDialog\('confirm-save'\)/,'No orphaned save-confirmation popup.');
+
+// Selected class description must match Operations Portal names and preserve backend codes.
+for (const [code, description] of Object.entries({
+  PCP: 'Private Car', TWP: 'Two Wheeler', GCV: 'Goods Carrying Vehicle',
+  PCV: 'Passenger Carrying Vehicle', MISD: 'Miscellaneous Vehicle',
+  CPM: 'Contractor Plant & Machinery',
+})) {
+  assert.ok(screen.includes(`${code}: '${description}'`), `Missing Operations description for ${code}`);
+}
+assert.match(screen,/f\.key==='vehicleClass'\?\(/,'Only the vehicle-class label uses a description row.');
+assert.match(screen,/current&&vehicleClassDescriptions\[current\]/,'Hide description when class is unset.');
+assert.match(screen,/numberOfLines=\{1\} ellipsizeMode="tail" style=\{styles\.vehicleClassDescription\}/,'Truncate long class names.');
+assert.match(screen,/vehicleClassDescription:\{flexShrink:1/,'Keep label and selected name compact.');
+assert.match(screen,/\{key:'vehicleClass',label:'Vehicle class',required:true,options:\['PCP','TWP','PCV','GCV','CPM','MISD'\]\}/,'Preserve stored vehicle class codes.');
+
+// Date heading spelling only: keep original words and capitalization except "up to" → "Upto".
+for(const label of ['Validity Upto','OD Validity Upto','TP validity Upto','CPA validity Upto']) {
+  assert.ok(screen.includes(label), 'Missing correctly formatted date heading: '+label);
+}
+assert.doesNotMatch(screen,/Validity up to|TP validity up to|CPA validity up to/,'Do not use split up to in date headings.');

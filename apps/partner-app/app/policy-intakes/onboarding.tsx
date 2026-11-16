@@ -25,6 +25,15 @@ const proposer = [
   {key:'insuredName',label:'Client / proposer name',required:true},
   {key:'phoneNo',label:'Client mobile number',required:true},
 ] satisfies Field[];
+// Vehicle-class descriptions match the Operations Portal's vehicleClassMap.
+const vehicleClassDescriptions: Record<string,string> = {
+  PCP: 'Private Car',
+  TWP: 'Two Wheeler',
+  GCV: 'Goods Carrying Vehicle',
+  PCV: 'Passenger Carrying Vehicle',
+  MISD: 'Miscellaneous Vehicle',
+  CPM: 'Contractor Plant & Machinery',
+};
 const vehicle = [
   {key:'registrationMode',label:'Registration status',required:true,options:['registered','unregistered']},
   {key:'registrationNo',label:'Registration number'},
@@ -52,7 +61,7 @@ const productCaseFields:Field[] = [
   {key:'policyProduct',label:'Policy product',required:true,options:['Comprehensive','Third Party','SAOD','Bundled','Long Term Package','Long Term Third Party']},
   {key:'policyNo',label:'Policy number',required:true},
   {key:'validFrom',label:'Validity from (YYYY-MM-DD)',required:true},
-  {key:'validUpto',label:'Validity up to (YYYY-MM-DD)',required:true},
+  {key:'validUpto',label:'Validity Upto (YYYY-MM-DD)',required:true},
 ];
 type ProductField = {key:string;label:string;required?:boolean;options?:string[];date?:boolean;wide?:boolean};
 const yearOptions=Array.from({length:100},(_,i)=>i===0?'1 Year':(i+1)+' Years');
@@ -604,7 +613,16 @@ export default function NativePolicyOnboarding(){
       f.key==='capacity'&&!draft.vehicleClass?'Select class first':f.key==='manufacturingYear'?'Select year':f.key==='model'?'Model / variant':f.key==='insuredName'?'Customer / insured name':
       f.key==='phoneNo'?'10 digit mobile':'Enter '+f.label.toLowerCase();
     return <View key={f.key} style={[styles.field,fullWidth&&styles.sourcePrimary]}>
-      <Text style={styles.label}>{f.label}{f.required?<Text style={styles.star}> *</Text>:null}</Text>
+      {f.key==='vehicleClass'?(
+        <View style={styles.vehicleClassLabelRow}>
+          <Text style={styles.label}>{f.label}{f.required?<Text style={styles.star}> *</Text>:null}</Text>
+          {current&&vehicleClassDescriptions[current]?(
+            <Text numberOfLines={1} ellipsizeMode="tail" style={styles.vehicleClassDescription}>
+              {vehicleClassDescriptions[current]}
+            </Text>
+          ):null}
+        </View>
+      ):<Text style={styles.label}>{f.label}{f.required?<Text style={styles.star}> *</Text>:null}</Text>}
       {options.length?(
         <Pressable accessibilityRole="button" accessibilityLabel={f.label} accessibilityState={{disabled:restricted}}
           disabled={restricted} onPress={()=>setPicker({key:f.key,items:options})}
@@ -799,10 +817,10 @@ export default function NativePolicyOnboarding(){
     {key:'tp',label:'TP premium',required:draft?.policyProduct!=='SAOD'&&draft?.vehicleClass!=='CPM'},
     {key:'cpa',label:'CPA amount',required:draft?.vehicleClass==='GCV'},
     {key:'validFrom',label:'Validity from',required:true},
-    {key:'validUpto',label:draft?.policyProduct==='Bundled'?'OD Validity Upto':'Validity up to',required:true},
+    {key:'validUpto',label:draft?.policyProduct==='Bundled'?'OD Validity Upto':'Validity Upto',required:true},
     ...(draft?.policyProduct==='Bundled'&&['PCP','TWP'].includes(draft?.vehicleClass??'')?[
-      {key:'tpValidUpto' as FieldKey,label:'TP validity up to',required:true},
-      {key:'cpaValidUpto' as FieldKey,label:'CPA validity up to',required:true},
+      {key:'tpValidUpto' as FieldKey,label:'TP validity Upto',required:true},
+      {key:'cpaValidUpto' as FieldKey,label:'CPA validity Upto',required:true},
     ]:[]),
   ];
   const registrationValid=Boolean(draft?.registrationNo.trim()&&/^[A-Z]{2}\d{1,2}[A-Z]{1,3}\d{1,4}$/i.test(draft.registrationNo.replace(/[ -]/g,'')));
@@ -1277,6 +1295,8 @@ const styles=StyleSheet.create({
   premiumRow:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',paddingVertical:9,borderBottomWidth:1,borderColor:'#E9EFF6'},
   premiumLabel:{fontSize:11,color:'#65758E'},premiumValue:{fontSize:12,color:'#183653',fontWeight:'800'},
   fields:{padding:12,flexDirection:'row',flexWrap:'wrap',columnGap:10,rowGap:11},field:{width:'48%',minWidth:0,gap:5},sourceCell:{width:'48%',minWidth:0,gap:3},sourcePrimary:{width:'100%'},sourceMeta:{minHeight:19,flexDirection:'row',alignItems:'center',gap:3,flexShrink:1},sourceMetaLabel:{fontSize:9,fontWeight:'700',color:'#72839C'},sourceMetaInput:{minWidth:0,maxWidth:76,fontSize:9,color:'#315B91',fontWeight:'600',paddingVertical:0,paddingHorizontal:0,padding:0},wideField:{width:'100%'},label:{fontSize:10,color:'#65758E',fontWeight:'700'},star:{color:'#B93333'},
+  vehicleClassLabelRow:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:5,minWidth:0},
+  vehicleClassDescription:{flexShrink:1,minWidth:0,maxWidth:'72%',textAlign:'right',color:'#315B9A',fontSize:9,fontWeight:'600'},
   input:{minHeight:42,borderWidth:1,borderColor:'#D8E1EC',backgroundColor:'#FFFFFF',borderRadius:9,paddingHorizontal:11,fontSize:12,color:'#183653'},
   inputRow:{minHeight:42,borderWidth:1,borderColor:'#D8E1EC',borderRadius:9,paddingHorizontal:11,flexDirection:'row',alignItems:'center',justifyContent:'space-between'},
   value:{color:'#183653',fontSize:12,flex:1},placeholder:{color:'#97A5B7'},
