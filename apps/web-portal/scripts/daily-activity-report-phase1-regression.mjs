@@ -8,7 +8,10 @@ const quickFilters = read("../components/reports/daily-report-quick-filters.tsx"
 const source = read("../lib/reports/daily-activity.ts");
 
 assert.match(nav, /href:"\/reports",label:"Reporting Workspace"[^\n]+href:"\/reports\/daily",label:"Daily Report"/, "Daily Report is located under Reporting Workspace");
-assert.match(page, /await requireCapability\("view_reports"\)/, "Daily Report uses server-side report permission");
+const employeeAccess = read("../lib/reports/daily-report-access.ts");
+assert.match(page, /await requireDailyReportEmployee\\(\\)/, "Daily Report Self verifies the active linked employee on the server");
+assert.match(page, /await canViewDailyReportAll\\(profile\\)/, "All retains its independent reporting permission gate");
+assert.match(employeeAccess, /hasEffectiveCapability\\(profile,"view_reports","view"\\)/, "All still requires effective reporting permission");
 assert.match(page, /loadDailyReportEmployeeDirectory\(profile\)/, "All mode loads a server-scoped employee directory");
 assert.match(page, /assertDailyReportEmployeeAllowed\(chosenPerson, employeeDirectory\)/, "All mode authorizes the chosen employee");
 assert.match(source, /getEmployeeAccessScope\(viewer\.id, viewer\.role, "view_reports"\)/, "All tab resolves report-specific hierarchy");
