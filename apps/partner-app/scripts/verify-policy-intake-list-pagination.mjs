@@ -90,6 +90,16 @@ assert.match(app, /<Text style={styles\.updatedDate}>{formatDate\(row\.updated_a
 assert.doesNotMatch(app, /Updated \{formatDate/, 'Remove redundant Updated text from timestamp');
 
 assert.match(app, /setTimeout\(\(\) => setDebouncedQuery\(query\.trim\(\)\), 300\)/, 'Debounce server searches');
+
+// Search retains the original PIR/customer/insurer/source terms and adds
+// explicit policy, lead-source and vehicle-number discovery.
+assert.match(app, /Search by PIR No\., customer, insurer, source, policy No\., lead source or vehicle No\./, 'Policy Intake placeholder lists existing and requested search fields');
+assert.match(route, /\.ilike\("policy_intake_search_text", `%\$\{escaped\}%`\)/, 'Preserve the original database search across all OCR and customer fields');
+assert.match(route, /lead_source_name,lead_source_code,created_at/, 'Fetch lead-source names and codes only for authorized Intake candidates');
+assert.match(route, /key === "policy_number" \|\| key === "vehicle_registration_number"/, 'Normalize both OCR policy and vehicle identifiers');
+assert.match(route, /normalizedSearch\.length >= 4/, 'Avoid short-term normalized matches');
+assert.match(route, /for \(const candidate of candidates\)/, 'Normalized matching stays inside the authorized candidate set');
+
 assert.doesNotMatch(app, /rows\.filter\(\(row\) => row\.status/, 'Never derive status counts from loaded rows');
 assert.match(route, /includeCounts[\s\S]*url\.searchParams\.get\("include_counts"\)/, 'Counts controlled independently of pagination');
 
