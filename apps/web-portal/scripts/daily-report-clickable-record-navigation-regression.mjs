@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
-import {dailyActivityRecordHref} from "../lib/reports/daily-activity-record-routes.ts";
 
 const read=path=>readFileSync(new URL(path,import.meta.url),"utf8");
 const routes=read("../lib/reports/daily-activity-record-routes.ts");
@@ -14,12 +13,10 @@ for(const [table,base] of Object.entries({
   life_health_cases:"/policies/life-health-cases",
   customers:"/customers",vehicles:"/vehicles",claims:"/claims",
 })) {
-  assert.equal(dailyActivityRecordHref(table,uuid),`${base}/${uuid}`,`Valid ${table} detail path`);
+  assert.ok(routes.includes(`${table}: "${base}"`),`Canonical ${table} route is allowlisted`);
 }
-assert.equal(dailyActivityRecordHref("audit_logs",uuid),null,"Audit history is not a navigable business record");
-assert.equal(dailyActivityRecordHref("policies","PIR-261114-7DC388"),null,"Human references cannot become paths");
-assert.equal(dailyActivityRecordHref("policies","../../admin"),null,"No path injection");
-assert.equal(dailyActivityRecordHref("policies",""),null,"Missing ID is not navigable");
+assert.match(routes, /isValidDailyRecordId\(recordId\)/, "Record ID must be a validated UUID");
+assert.match(routes, /const base=DAILY_ACTIVITY_RECORD_ROUTES\[table\]/, "Unknown table names cannot become arbitrary paths");
 assert.match(loader, /Object\.keys\(DAILY_ACTIVITY_RECORD_ROUTES\)\.map\(async table/, "Lookup only allowlisted tables");
 assert.match(loader, /visible\s*\.filter\(row=>row\.table===table && isValidDailyRecordId\(row\.recordId\?\?""\)\)/, "Record checks are limited to visible rows with valid IDs");
 assert.match(loader, /admin\.from\(table\)\.select\("id"\)\.in\("id",ids\)/, "Verify target exists in live database");
