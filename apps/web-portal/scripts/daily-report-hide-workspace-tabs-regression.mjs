@@ -14,10 +14,10 @@ for (const label of ["Overview", "Business", "Portfolio", "Operations"]) {
 }
 assert.match(layout, /<ReportWorkspaceNavigation \/>/,
   "Workspace navigation is still rendered by the shared layout for non-Daily Report pages");
-assert.match(header, /Daily Report visibility/,
+assert.match(header, /Daily Report employee selector/,
   "Daily Report keeps its independent Self / All selector");
-assert.match(header, /const SCOPE_OPTIONS = \[/, "Scope choices Self/All are defined");
+assert.match(header, /matching\.map\(person=>\(/, "Scoped employees are listed inside dropdown");
 assert.match(header, /aria-haspopup="listbox"/, "Scope choices appear in a dropdown");
-assert.match(header, /type="search" aria-label="Search Self or All"/, "Scope options are searchable");
-assert.match(layout, /<DailyReportHeaderScopes canViewAll=\{canViewAll\} \/>/, "Scope selector receives effective All permission");
+assert.match(header, /type="search" aria-label="Search employee name or code"/, "Employee options are searchable");
+assert.match(layout, /<DailyReportHeaderScopes canViewAll=\{canViewAll\} \/>/);
 console.log("Daily Report hides all 4 workspace tabs without changing Reporting Workspace or Self/All.");
