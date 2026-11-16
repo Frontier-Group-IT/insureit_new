@@ -1,9 +1,9 @@
 Partner production OTA trigger
-release=partner-standalone-life-add-policy-pr-4551-retry3
+release=partner-policies-quick-actions-pr-4577
 source=verified-merged-main
-source_pr=4551
-source_merge=faa5702ff11d787558bc746e06f5fc54bbb6930b
-reason=user-approved-publish-merge-retry
+source_pr=4577
+source_merge=942b1d8a7388bfa232cd8a8d470ae065ac4210cf
+reason=user-approved-merge-and-publish
 channel=production
 runtime=0.2.0
 requested=2026-11-16
