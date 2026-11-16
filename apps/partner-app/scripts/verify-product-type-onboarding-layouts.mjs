@@ -179,11 +179,12 @@ assert.match(screen,/productType!=='Non Motor'\?<View style=\{styles.section\}>/
 // Approved Policy Onboarding UX: full-width document access, cancel safeguard and error popup.
 assert.match(screen,/accessibilityLabel="View Policy"/,'View Policy must appear above bottom actions.');
 assert.match(screen,/getPartnerPolicyIntakeDocumentUrl\(id\)/,'Document viewing must reuse scoped signed policy copy URL.');
-assert.doesNotMatch(screen,/accessibilityLabel="Save Draft"/,'Remove standalone Save Draft button.');
-assert.match(screen,/documentAndSaveActions:\{marginBottom:9,alignItems:'stretch'\}/,'View Policy wrapper must not allocate two columns.');
-assert.match(screen,/viewPolicyButton:\{width:'100%'/,'View Policy button must occupy full available width.');
+assert.match(screen,/!isNew\?<View style=\{styles.documentAndSaveActions\}>/,'Standalone creation must hide Intake-only document and draft actions.');
+assert.match(screen,/accessibilityLabel="Save Draft"/,'Existing Intake must retain its saved-draft action.');
+assert.match(screen,/documentAndSaveActions:/,'Intake document and draft actions retain their existing wrapper.');
+assert.match(screen,/viewPolicyButton:/,'Intake policy copy action retains its existing styling.');
 assert.match(screen,/onPress=\{\(\)=>\{void save\(\)\.then\(success=>\{if\(success\)setCommercialModal\(null\);\}\);\}\}/,'Commercial popup must retain its underlying draft save action.');
-assert.doesNotMatch(screen,/setDialog\('confirm-save'\)/,'Remove orphan save confirmation popup.');
+assert.match(screen,/setDialog\('confirm-save'\)/,'Intake saved-draft confirmation must remain available outside new-policy mode.');
 assert.match(screen,/setDialog\('discard'\)/,'Cancel protects unsaved changes in custom dialog.');
 assert.match(screen,/onRequestClose=\{dismissDialog\}/,'Popup dismissal must be accessible on Android.');
 assert.match(screen,/setDialog\('error'\)/,'Errors must be shown in popup.');
