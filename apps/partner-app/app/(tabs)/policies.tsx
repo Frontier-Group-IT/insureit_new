@@ -157,6 +157,25 @@ export default function PoliciesScreen() {
     setLifecycle(filter);
   };
   const name = context?.identity.display_name || 'Partner';
+  const quickActions = [
+    ...(canPartnerAccess(context, 'view_policy_intakes') ? [{
+      label: 'Policy Intake', icon: 'document-text-outline' as const,
+      accessibilityLabel: 'Open Policy Intake', route: '/policy-intakes' as const,
+    }] : []),
+    ...(canPartnerAccess(context, 'create_policies', 'edit') ? [{
+      label: 'Add Policy', icon: 'add-circle-outline' as const,
+      accessibilityLabel: 'Add Policy, start a new blank policy', route: '/policy-new' as const,
+    }] : []),
+    ...(canPartnerAccessCaseRegister(context) ? [{
+      label: 'Case Register', icon: 'folder-open-outline' as const,
+      accessibilityLabel: 'Open Case Register for Life and Health cases', route: '/life-health-cases' as const,
+    }] : []),
+    ...(context?.identity.actor_kind === 'employee' && canPartnerAccess(context, 'create_intermediary_application', 'edit') ? [{
+      label: 'Add Partner', icon: 'person-add-outline' as const,
+      accessibilityLabel: 'Add Partner, submit Partner-only application', route: '/partner-new' as const,
+    }] : []),
+  ];
+
 
   // Keep the search/filter row visible once the list scrolls past the hero.
   // A same-size spacer preserves scroll position when the search docks.
@@ -250,6 +269,28 @@ export default function PoliciesScreen() {
         {searchSticky ? <View style={styles.searchSpacer} /> : searchControls}
       </View>
 
+      {quickActions.length > 0 ? (
+        <View style={styles.quickActionsSection}>
+          <Text style={styles.quickActionsHeading}>Quick Actions</Text>
+          <View style={styles.quickActionsRow}>
+            {quickActions.map((action) => (
+              <Pressable
+                key={action.route}
+                accessibilityRole="button"
+                accessibilityLabel={action.accessibilityLabel}
+                onPress={() => router.push(action.route)}
+                style={({ pressed }) => [styles.quickAction, pressed && styles.quickActionPressed]}
+              >
+                <View style={styles.quickActionIconBox}>
+                  <Ionicons name={action.icon} size={23} color="#184A84" />
+                </View>
+                <Text numberOfLines={2} style={styles.quickActionLabel}>{action.label}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      ) : null}
+
       <View style={styles.summaryRow}>
         <ScrollView
           horizontal
@@ -292,67 +333,6 @@ export default function PoliciesScreen() {
           <Text style={styles.summarySeeAllText}>See all</Text>
         </Pressable>
       </View>
-
-      {canPartnerAccess(context, 'view_policy_intakes') ? (
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Open Policy Intake"
-        onPress={() => router.push('/policy-intakes')}
-        style={({ pressed }) => [styles.intakeBanner, pressed && styles.pressed]}
-      >
-        <View style={styles.intakeBannerIcon}><Ionicons name="document-text" size={23} color="#FFFFFF" /></View>
-        <View style={styles.intakeBannerCopy}>
-          <Text style={styles.intakeBannerTitle}>Policy Intake</Text>
-          <Text style={styles.intakeBannerSubtitle}>Create new policy for your customer</Text>
-        </View>
-        <Feather name="chevron-right" size={20} color="#FFFFFF" />
-      </Pressable>
-      ) : null}
-
-      {canPartnerAccessCaseRegister(context) ? (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Open Case Register for Life and Health cases"
-          onPress={() => router.push('/life-health-cases')}
-          style={({ pressed }) => [styles.intakeBanner, { marginTop: 8, backgroundColor: '#17365D' }, pressed && styles.pressed]}
-        >
-          <View style={styles.intakeBannerIcon}><Ionicons name="folder-open-outline" size={23} color="#FFFFFF" /></View>
-          <View style={styles.intakeBannerCopy}>
-            <Text style={styles.intakeBannerTitle}>Case Register</Text>
-            <Text style={styles.intakeBannerSubtitle}>Life & Health cases</Text>
-          </View>
-          <Feather name="chevron-right" size={20} color="#FFFFFF" />
-        </Pressable>
-      ) : null}
-
-      {canPartnerAccess(context, 'create_policies', 'edit') ? (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Add Policy, start a new blank policy"
-          onPress={() => router.push('/policy-new')}
-          style={({ pressed }) => [styles.intakeBanner, { marginTop: 8, backgroundColor: '#17365D' }, pressed && styles.pressed]}
-        >
-          <View style={styles.intakeBannerIcon}><Ionicons name="add-circle-outline" size={23} color="#FFFFFF" /></View>
-          <View style={styles.intakeBannerCopy}>
-            <Text style={styles.intakeBannerTitle}>Add Policy</Text>
-            <Text style={styles.intakeBannerSubtitle}>Create a new policy from a blank form</Text>
-          </View>
-          <Feather name="chevron-right" size={20} color="#FFFFFF" />
-        </Pressable>
-      ) : null}
-
-      {context?.identity.actor_kind === 'employee' && canPartnerAccess(context, 'create_intermediary_application', 'edit') ? (
-        <Pressable accessibilityRole="button" accessibilityLabel="Add Partner, submit Partner-only application"
-          onPress={() => router.push('/partner-new')}
-          style={({ pressed }) => [styles.intakeBanner, { marginTop: 8, backgroundColor: '#17365D' }, pressed && styles.pressed]}>
-          <View style={styles.intakeBannerIcon}><Ionicons name="person-add-outline" size={23} color="#FFFFFF" /></View>
-          <View style={styles.intakeBannerCopy}>
-            <Text style={styles.intakeBannerTitle}>Add Partner</Text>
-            <Text style={styles.intakeBannerSubtitle}>Create Partner application for Operations review</Text>
-          </View>
-          <Feather name="chevron-right" size={20} color="#FFFFFF" />
-        </Pressable>
-      ) : null}
 
       {isOffline || collection.stale || summary.stale ? (
         <View style={styles.feedback}>
@@ -771,11 +751,19 @@ const styles = StyleSheet.create({
   summarySeeAllOption: { minHeight: 41, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   summarySeeAllOptionEnd: { flexDirection: 'row', alignItems: 'center', gap: 7 },
   summarySeeAllOptionCount: { fontSize: 10, fontWeight: '700', color: '#526786' },
-  intakeBanner: { marginHorizontal: 12, marginTop: 8, minHeight: 53, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 12, borderRadius: 9, backgroundColor: '#082D70', borderWidth: 1, borderColor: '#0C4794' },
-  intakeBannerIcon: { width: 32, height: 32, borderRadius: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: '#174F9C' },
-  intakeBannerCopy: { flex: 1 },
-  intakeBannerTitle: { color: '#FFFFFF', fontSize: 12, lineHeight: 15, fontWeight: Platform.OS === 'ios' ? '400' : '800' },
-  intakeBannerSubtitle: { marginTop: 2, color: '#D6E6FF', fontSize: 8.5, lineHeight: 11 },
+  quickActionsSection: { marginHorizontal: 12, marginTop: 13, marginBottom: 2 },
+  quickActionsHeading: { marginHorizontal: 3, marginBottom: 8, color: '#17365D', fontSize: 12, lineHeight: 16, fontWeight: '800' },
+  quickActionsRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 7 },
+  quickAction: { flex: 1, minWidth: 0, alignItems: 'center', borderRadius: 12, paddingVertical: 2 },
+  quickActionPressed: { backgroundColor: '#EFF5FD', opacity: 0.84 },
+  quickActionIconBox: {
+    width: '100%', height: 51, alignItems: 'center', justifyContent: 'center',
+    borderRadius: 12, backgroundColor: '#F9FBFE', borderWidth: 1, borderColor: '#DCE5F0',
+  },
+  quickActionLabel: {
+    marginTop: 5, color: '#17365D', fontSize: 10, lineHeight: 13,
+    fontWeight: '700', textAlign: 'center',
+  },
   feedback: { marginHorizontal: 12, marginTop: 7 },
   tabsRow: {
     minHeight: 48,
