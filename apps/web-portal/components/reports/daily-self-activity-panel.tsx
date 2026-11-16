@@ -30,6 +30,7 @@ function activityIcon(name:string) {
 export function DailySelfActivityPanel({data,linkFor,reportMode="self"}:Props) {
   // Keep each activity family together instead of mixing Customer, Vehicle,
   // Policy and Claims cards within a single five-column row.
+  const isCustomerActivity=data.category.startsWith("Customer ");
   const categoryGroups=[
     {name:"Customer", items:data.categories.filter(item=>item.name.startsWith("Customer "))},
     {name:"Vehicle", items:data.categories.filter(item=>item.name.startsWith("Vehicle "))},
@@ -90,13 +91,25 @@ export function DailySelfActivityPanel({data,linkFor,reportMode="self"}:Props) {
             <table className="w-full text-left">
               <thead className="bg-[#f7f9fc] text-[9px] font-bold uppercase tracking-wide text-[#64748b]">
                 <tr><th className="px-4 py-3">Activity</th>
-                  <th className="px-3 py-3">Policy / Case No.</th>
-                  <th className="px-3 py-3">Customer / Vehicle</th>
-                  <th className="px-3 py-3">Insurance Company</th>
+                  {isCustomerActivity ? (
+                    <>
+                      <th className="px-3 py-3">Customer</th>
+                      <th className="px-3 py-3">Customer Type</th>
+                      <th className="px-3 py-3">Mobile</th>
+                      <th className="px-3 py-3">Fleet Size</th>
+                      <th className="px-3 py-3">Total Policies</th>
+                    </>
+                  ) : (
+                    <>
+                      <th className="px-3 py-3">Policy / Case No.</th>
+                      <th className="px-3 py-3">Customer / Vehicle</th>
+                      <th className="px-3 py-3">Insurance Company</th>
+                    </>
+                  )}
                   <th className="whitespace-nowrap px-3 py-3">Date &amp; Time</th>
                   <th className="px-3 py-3">Status</th></tr>
               </thead>
-              <DailyActivityHistoryRows rows={data.rows} />
+              <DailyActivityHistoryRows rows={data.rows} isCustomerActivity={isCustomerActivity} />
             </table>
           </div>
           <div className="flex items-center justify-between border-t border-[#e4e9f1] px-4 py-3 text-[10px] text-[#66758b]">
