@@ -350,7 +350,7 @@ export default function PoliciesScreen() {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Add Policy, start a new blank policy"
-          onPress={() => router.push({ pathname: '/policy-intakes/onboarding', params: { id: 'new' } })}
+          onPress={() => router.push('/policy-new')}
           style={({ pressed }) => [styles.intakeBanner, { marginTop: 8, backgroundColor: '#17365D' }, pressed && styles.pressed]}
         >
           <View style={styles.intakeBannerIcon}><Ionicons name="add-circle-outline" size={23} color="#FFFFFF" /></View>
