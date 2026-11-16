@@ -490,6 +490,8 @@ form:has(input[name="fitness_valid_upto"]) > div:last-child button {
 }
 .reports-reference-shell:has(.daily-report-reference) .reports-reference-header {
   position: relative;
+  /* Keep the employee picker above the following activity summary. */
+  z-index: 40;
   isolation: isolate;
   overflow: visible;
   margin-bottom: 12px;
@@ -641,4 +643,17 @@ form:has(input[name="fitness_valid_upto"]) > div:last-child button {
   .reports-reference-shell:has(.daily-report-reference) .daily-report-heading-icon {width:37px;height:37px;}
   .daily-report-reference .daily-report-panel-title {padding:9px 11px;}
   .daily-report-reference .daily-report-groups {padding:12px 10px 20px;}
+}
+
+/* Dropdown belongs to the report header, not the activity panel underneath. */
+.reports-reference-shell:has(.daily-report-reference) .reports-reference-left,
+.reports-reference-shell:has(.daily-report-reference) .reports-reference-topbar {
+  overflow: visible;
+}
+.reports-reference-shell:has(.daily-report-reference) [aria-label="Daily Report employee selector"] {
+  position: relative;
+  z-index: 50;
+}
+.reports-reference-shell:has(.daily-report-reference) [id="daily-report-employee-options"] {
+  max-height: min(300px, 55vh);
 }
