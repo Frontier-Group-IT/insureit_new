@@ -1,0 +1,310 @@
+import "server-only";
+
+import { revalidatePath } from "next/cache";
+import { canAccessPolicyCommercials } from "@/lib/policy-commercial-access";
+import { resolvePolicyIntermediarySource } from "@/lib/policy-intermediary-source";
+import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { consumePolicyDateApproval, recordPreviousMonthPolicyUpload, linkConsumedPolicyDateApproval } from "@/lib/policy-date-approval-server";
+
+export type NonMotorCommercialBasis = "NET_PREMIUM_PERCENT" | "FIXED_AMOUNT";
+
+type NonMotorCommercialPayload = {
+  payinBasis: NonMotorCommercialBasis;
+  payinPercent: string;
+  payinFixedAmount: string;
+  insurerSchemeAmount: string;
+  payoutBasis: NonMotorCommercialBasis;
+  payoutPercent: string;
+  payoutFixedAmount: string;
+};
+
+export type NonMotorPolicyPayload = {
+  sourceIntakeId?:string|null;
+  dateApprovalId?: string | null;
+  source: { issuanceDate: string; intermediaryType: string; intermediaryCode: string; leadSource: string; rmName: string };
+  customerId?: string;
+  customer: { customerType: "Individual" | "Organisation"; insuredName: string; contactName?: string; phone: string; email?: string; address?: string };
+  policy: { policyNumber: string; insurerId: string; productName: string; category: string; status: string; startDate: string; endDate: string; sumInsured: string; odPremium: string; tpPremium: string; netPremium: string; gstAmount: string; grossPremium: string; deductible?: string };
+  commercial?: NonMotorCommercialPayload;
+  risk: Record<string, string>;
+  additional: Record<string, string>;
+};
+
+export type NonMotorPolicyResult = { ok: true; policyId: string; policyCode: string } | { ok: false; error: string };
+
+type CustomerIdentityRow = { id: string; contact_name: string; company_name: string | null };
+
+const EMPTY_COMMERCIAL: NonMotorCommercialPayload = {
+  payinBasis: "NET_PREMIUM_PERCENT", payinPercent: "", payinFixedAmount: "", insurerSchemeAmount: "",
+  payoutBasis: "NET_PREMIUM_PERCENT", payoutPercent: "", payoutFixedAmount: "",
+};
+
+const clean = (value: unknown) => String(value ?? "").trim();
+function cleanCustomerName(value: unknown) { return clean(value).replace(/\s+/g, " "); }
+function numberOrNull(value: unknown) { const normalized = clean(value).replace(/,/g, ""); if (!normalized) return null; const parsed = Number(normalized); return Number.isFinite(parsed) ? parsed : null; }
+const moneyOrZero = (value: unknown) => numberOrNull(value) ?? 0;
+const validDate = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value);
+const normalizePhone = (value: string) => value.replace(/\D/g, "").slice(-10);
+const normalizePolicyNumber = (value: string) => value.trim().toUpperCase().replace(/\s+/g, "");
+function policyCode() { const now = new Date(); return `POL-${[now.getUTCFullYear(),String(now.getUTCMonth()+1).padStart(2,"0"),String(now.getUTCDate()).padStart(2,"0"),String(now.getUTCHours()).padStart(2,"0"),String(now.getUTCMinutes()).padStart(2,"0"),String(now.getUTCSeconds()).padStart(2,"0"),String(now.getUTCMilliseconds()).padStart(3,"0")].join("")}`; }
+const customerCode = () => `CUS-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2,6).toUpperCase()}`;
+function customerIdentityName(row: CustomerIdentityRow) { return cleanCustomerName(row.company_name || row.contact_name).toLowerCase(); }
+
+
+
+export type VerifiedNonMotorCreator={id:string;role:string};
+export type StandaloneNonMotorDocument={type:"policy_copy"|"proposal_form"|"kyc"|"other_document";file:File};
+export async function createNonMotorPolicyForVerifiedActor(payload: NonMotorPolicyPayload, profile: VerifiedNonMotorCreator, documents:StandaloneNonMotorDocument[]=[]): Promise<NonMotorPolicyResult> {
+  const admin = createSupabaseAdminClient();
+  // Intake document links are accepted only for this reviewer, this policy
+  // type and its saved source. A client-supplied intake ID is never sufficient.
+  const sourceIntakeId=clean(payload.sourceIntakeId);
+  type Staged = {document_type:string;file_name:string;storage_bucket:string;storage_path:string;mime_type:string;file_size:number};
+  let stagedDocuments:Staged[]=[];
+  if(sourceIntakeId){
+    if(!/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(sourceIntakeId))
+      return {ok:false,error:"Invalid Policy Intake reference."};
+    const {data:intake,error:intakeError}=await admin.from("policy_intake_requests")
+      .select("id").eq("id",sourceIntakeId).eq("assigned_to_profile_id",profile.id)
+      .eq("status","in_review").maybeSingle<{id:string}>();
+    if(intakeError||!intake)return {ok:false,error:"This intake is not assigned to your Operations account."};
+    const {data:draft,error:draftError}=await admin.from("policy_intake_onboarding_drafts")
+      .select("draft_payload").eq("intake_id",sourceIntakeId)
+      .maybeSingle<{draft_payload:{businessLine?:string;intermediaryCode?:string;leadSource?:string}}>();
+    if(draftError||draft?.draft_payload?.businessLine!=="Non Motor"||
+       draft.draft_payload.intermediaryCode!==payload.source.intermediaryCode||
+       draft.draft_payload.leadSource?.trim().toLowerCase()!==payload.source.leadSource.trim().toLowerCase())
+      return {ok:false,error:"The Non Motor source no longer matches the authorized intake."};
+    const {data:documents,error:documentsError}=await admin.from("policy_intake_onboarding_documents")
+      .select("document_type,file_name,storage_bucket,storage_path,mime_type,file_size")
+      .eq("intake_id",sourceIntakeId).eq("business_line","Non Motor").returns<Staged[]>();
+    if(documentsError)return {ok:false,error:"Could not verify intake documents. Retry before creating the policy."};
+    stagedDocuments=documents??[];
+  }
+  // Keep the server as the source of truth for the same restricted commercial access used by Motor onboarding.
+  const commercial = canAccessPolicyCommercials(profile, profile.role === "operations_head_life") ? (payload.commercial ?? EMPTY_COMMERCIAL) : EMPTY_COMMERCIAL;
+
+  const policyNumber = clean(payload.policy.policyNumber).toUpperCase();
+  const normalizedPolicy = normalizePolicyNumber(policyNumber);
+  const insurerId = clean(payload.policy.insurerId);
+  const productName = clean(payload.policy.productName);
+  const category = clean(payload.policy.category);
+  const startDate = clean(payload.policy.startDate);
+  const endDate = clean(payload.policy.endDate);
+  const issuanceDate = clean(payload.source.issuanceDate);
+  const sumInsured = numberOrNull(payload.policy.sumInsured);
+  const grossPremium = numberOrNull(payload.policy.grossPremium);
+  const odPremium = 0;
+  const tpPremium = 0;
+  const netPremium = moneyOrZero(payload.policy.netPremium);
+  const enteredGst = numberOrNull(payload.policy.gstAmount);
+  const gstAmount = enteredGst ?? Math.max(0, (grossPremium ?? 0) - netPremium);
+
+  const payinPercentEntered = clean(commercial.payinPercent) !== "";
+  const payinFixedEntered = clean(commercial.payinFixedAmount) !== "";
+  const schemeEntered = clean(commercial.insurerSchemeAmount) !== "";
+  const payoutPercentEntered = clean(commercial.payoutPercent) !== "";
+  const payoutFixedEntered = clean(commercial.payoutFixedAmount) !== "";
+  const payinEntered = payinPercentEntered || payinFixedEntered || schemeEntered;
+  const payoutEntered = payoutPercentEntered || payoutFixedEntered;
+  const payinPercent = moneyOrZero(commercial.payinPercent);
+  const payinFixedAmount = moneyOrZero(commercial.payinFixedAmount);
+  const schemeAmount = moneyOrZero(commercial.insurerSchemeAmount);
+  const payoutPercent = moneyOrZero(commercial.payoutPercent);
+  const payoutFixedAmount = moneyOrZero(commercial.payoutFixedAmount);
+
+  if (!policyNumber) return { ok:false, error:"Enter the policy number." };
+  if (!insurerId) return { ok:false, error:"Select an insurance company." };
+  if (!productName) return { ok:false, error:"Enter the product or policy name." };
+  if (!category) return { ok:false, error:"Select the Non-Motor category." };
+  if (!validDate(issuanceDate) || !validDate(startDate) || !validDate(endDate)) return { ok:false, error:"Enter valid issuance and policy validity dates." };
+  if (endDate < startDate) return { ok:false, error:"Policy expiry cannot be before the start date." };
+  if (sumInsured === null || sumInsured <= 0) return { ok:false, error:"Enter a valid sum insured or liability limit." };
+  if (grossPremium === null || grossPremium < 0) return { ok:false, error:"Enter a valid gross premium." };
+  if (netPremium < 0 || gstAmount < 0) return { ok:false, error:"Premium values cannot be negative." };
+  if (payinPercent < 0 || payinPercent > 100 || payoutPercent < 0 || payoutPercent > 100) return { ok:false, error:"Pay-in and payout percentages must be between 0 and 100." };
+  if (payinFixedAmount < 0 || schemeAmount < 0 || payoutFixedAmount < 0) return { ok:false, error:"Commercial amounts cannot be negative." };
+
+  const payinBaseAmount = commercial.payinBasis === "FIXED_AMOUNT" ? payinFixedAmount : netPremium * payinPercent / 100;
+  const totalProjectedPayin = payinBaseAmount + schemeAmount;
+  const tdsPercent = 10;
+  const tdsAmount = totalProjectedPayin * tdsPercent / 100;
+  const payinAfterTds = totalProjectedPayin - tdsAmount;
+  const partnerPayoutAmount = commercial.payoutBasis === "FIXED_AMOUNT" ? payoutFixedAmount : netPremium * payoutPercent / 100;
+  const retentionAmount = payinAfterTds - partnerPayoutAmount;
+
+  const sourceResolution = await resolvePolicyIntermediarySource(payload.source);
+  if (!sourceResolution.ok) return { ok:false, error:sourceResolution.error };
+
+  const duplicate = await admin.from("policies").select("id").eq("policy_no_normalized", normalizedPolicy).limit(1).maybeSingle<{id:string}>();
+  if (duplicate.error) return { ok:false, error:"Policy validation is temporarily unavailable. Please try again." };
+  if (duplicate.data) return { ok:false, error:"This policy number already exists in the Policy Register." };
+
+  let customerId = clean(payload.customerId);
+  let createdCustomerId: string | null = null;
+  let createdPolicyId: string | null = null;
+  let intakeClaimed=false;
+  const uploadedStandalonePaths:string[]=[];
+
+  try {
+    if (customerId) {
+      const { data: existingCustomer, error } = await admin.from("customers").select("id").eq("id", customerId).maybeSingle<{id:string}>();
+      if (error || !existingCustomer) return { ok:false, error:"The selected customer is no longer available. Refresh and try again." };
+    } else {
+      const insuredName = cleanCustomerName(payload.customer.insuredName);
+      const normalizedName = insuredName.toLowerCase();
+      const phone = normalizePhone(payload.customer.phone);
+      if (!insuredName) return { ok:false, error:"Enter the insured/customer name." };
+      if (!/^[6-9][0-9]{9}$/.test(phone)) return { ok:false, error:"Enter a valid 10 digit Indian mobile number." };
+
+      // Mirror Motor onboarding identity semantics: a mobile number is a contact point, not a unique customer key.
+      // If the same mobile belongs to a differently named customer (for example an intermediary's shared number),
+      // create a distinct customer. Only name + mobile together identify a likely existing customer.
+      const { data: phoneMatches, error: phoneError } = await admin
+        .from("customers")
+        .select("id,contact_name,company_name")
+        .eq("phone", phone)
+        .limit(10)
+        .returns<CustomerIdentityRow[]>();
+      if (phoneError) return { ok:false, error:"Customer validation is temporarily unavailable. Please try again." };
+
+      const exactIdentityMatches = (phoneMatches ?? []).filter((row) => customerIdentityName(row) === normalizedName);
+      if (exactIdentityMatches.length === 1) {
+        customerId = exactIdentityMatches[0].id;
+      } else if (exactIdentityMatches.length > 1) {
+        return { ok:false, error:"More than one existing customer has the same name and mobile number. Select the correct existing customer from Customer / Organisation." };
+      } else {
+        const isOrganisation = payload.customer.customerType === "Organisation";
+        const { data: createdCustomer, error } = await admin.from("customers").insert({
+          customer_code:customerCode(), company_name:isOrganisation?insuredName:null, contact_name:clean(payload.customer.contactName)||insuredName,
+          phone, email:clean(payload.customer.email)||null, address:clean(payload.customer.address)||null, customer_type:isOrganisation?"corporate":"individual",
+          source:sourceResolution.source.leadSource, creation_channel:"policy_onboarding", created_by:profile.id,
+        }).select("id").single<{id:string}>();
+        if (error || !createdCustomer) return { ok:false, error:"We couldn't create the customer record. Review the customer details and try again." };
+        customerId = createdCustomer.id; createdCustomerId = createdCustomer.id;
+      }
+    }
+
+    const dateGuard = await consumePolicyDateApproval(admin, { requesterId: profile.id, issuanceDate, policyNumber, operation: "create", approvalId: payload.dateApprovalId });
+    if (!dateGuard.ok) { if (createdCustomerId) await admin.from("customers").delete().eq("id", createdCustomerId); return { ok:false, error:dateGuard.error }; }
+    if(sourceIntakeId){
+      const {data:claimed,error:claimError}=await admin.from("policy_intake_requests")
+        .update({status:"processing"}).eq("id",sourceIntakeId)
+        .eq("assigned_to_profile_id",profile.id).eq("status","in_review")
+        .select("id").maybeSingle<{id:string}>();
+      if(claimError||!claimed){
+        if(createdCustomerId)await admin.from("customers").delete().eq("id",createdCustomerId);
+        return {ok:false,error:"This intake is already being finalized. Refresh before retrying."};
+      }
+      intakeClaimed=true;
+    }
+    const generatedPolicyCode = policyCode();
+    const { data: policy, error: policyError } = await admin.from("policies").insert({
+      customer_id:customerId, vehicle_id:null, insurance_company_id:insurerId, policy_no:policyNumber, policy_no_normalized:normalizedPolicy,
+      policy_code:generatedPolicyCode, policy_type:category, policy_product:productName, business_line:"Non Motor", issuance_date:issuanceDate,
+      start_date:startDate, end_date:endDate, premium_amount:grossPremium, insured_declared_value:sumInsured,
+      status:clean(payload.policy.status).toLowerCase()||"active", intermediary_type:sourceResolution.source.intermediaryType,
+      intermediary_code:sourceResolution.source.intermediaryCode, lead_source:sourceResolution.source.leadSource, rm_name:clean(payload.source.rmName)||null,
+      remarks:clean(payload.additional.remarks)||null, calculation_version:"non_motor_commercial_v1", created_by:profile.id,
+    }).select("id").single<{id:string}>();
+    if(policyError||!policy)throw new Error("non_motor_policy_insert_failed");
+    createdPolicyId = policy.id;
+
+    const risk = payload.risk ?? {}, additional = payload.additional ?? {};
+    const { error: detailsError } = await admin.from("non_motor_policy_details").insert({
+      policy_id:policy.id, category,
+      risk_title:clean(risk.riskTitle)||clean(risk.cargoDescription)||clean(risk.projectName)||clean(risk.businessName)||null,
+      risk_location:clean(risk.riskLocation)||null, occupancy_type:clean(risk.occupancyType)||null, transit_from:clean(risk.transitFrom)||null,
+      transit_to:clean(risk.transitTo)||null, transit_mode:clean(risk.transitMode)||null, nature_of_business:clean(risk.natureOfBusiness)||null,
+      liability_type:clean(risk.liabilityType)||null, employee_count:numberOrNull(risk.employeeCount), annual_wages:numberOrNull(risk.annualWages),
+      annual_turnover:numberOrNull(risk.annualTurnover), sum_insured:sumInsured, deductible:numberOrNull(payload.policy.deductible),
+      proposal_number:clean(additional.proposalNumber)||null, previous_insurer:clean(additional.previousInsurer)||null,
+      previous_policy_number:clean(additional.previousPolicyNumber)||null, previous_claims:clean(additional.previousClaims)||null,
+      add_ons:clean(additional.addOns)||null, warranties:clean(additional.warranties)||null, special_conditions:clean(additional.specialConditions)||null,
+      endorsements:clean(additional.endorsements)||null, remarks:clean(additional.remarks)||null, risk_details:risk, additional_details:additional,
+    });
+    if (detailsError) throw new Error(detailsError.message);
+
+    const { error: premiumError } = await admin.from("policy_premium_details").insert({
+      policy_id:policy.id, od_premium:odPremium, tp_premium:tpPremium, cpa_opted:false, cpa_amount:0, net_premium:netPremium, gst_amount:gstAmount,
+      gross_premium:grossPremium, gst_rule:"Manual Non-Motor entry", calculation_version:"non_motor_commercial_v1", calculation_overridden:false,
+    });
+    if (premiumError) throw new Error(premiumError.message);
+
+    const { error: payinError } = await admin.from("policy_payin_details").insert({
+      policy_id:policy.id, payout_basis:null, projected_od_percent:0, projected_od_amount:0, projected_tp_percent:0, projected_tp_amount:0,
+      commercial_basis:payinEntered?commercial.payinBasis:null,
+      projected_commission_percent:payinEntered&&commercial.payinBasis==="NET_PREMIUM_PERCENT"?payinPercent:null,
+      projected_commission_amount:payinEntered?payinBaseAmount:null, insurer_scheme_amount:schemeAmount, total_projected_payin:totalProjectedPayin,
+      tds_percent:tdsPercent, tds_amount:tdsAmount, payin_after_tds:payinAfterTds, calculation_version:"non_motor_commercial_v1",
+      commercial_status:payinEntered?"entered":"needs_review",
+    });
+    if (payinError) throw new Error(payinError.message);
+
+    const { error: billError } = await admin.from("policy_payin_bills").insert({ policy_id:policy.id, bill_number:null, billed_amount:0, bill_date:null, status:"Unbilled", short_payout_amount:totalProjectedPayin });
+    if (billError) throw new Error(billError.message);
+
+    const { error: payoutError } = await admin.from("policy_intermediary_payouts").insert({
+      policy_id:policy.id, intermediary_type:sourceResolution.source.intermediaryType, intermediary_code:sourceResolution.source.intermediaryCode,
+      payout_basis:payoutEntered?commercial.payoutBasis:null,
+      partner_payout_percent:payoutEntered&&commercial.payoutBasis==="NET_PREMIUM_PERCENT"?payoutPercent:null,
+      partner_payout_amount:payoutEntered?partnerPayoutAmount:null, retention_amount:retentionAmount,
+      od_payout_percent:0, od_payout_amount:0, tp_payout_percent:0, tp_payout_amount:0, gross_payout:partnerPayoutAmount,
+      status:"Pending", payout_date:null, voucher_number:null, remarks:clean(payload.additional.remarks)||null,
+      calculation_version:"non_motor_commercial_v1", commercial_status:payoutEntered?"entered":"needs_review",
+    });
+    if (payoutError) throw new Error(payoutError.message);
+
+    if(sourceIntakeId){
+      if(stagedDocuments.length){
+        const {error:attachmentError}=await admin.from("policy_documents").insert(
+          stagedDocuments.map(doc=>({
+            policy_id:policy.id,document_type:doc.document_type,file_name:doc.file_name,
+            storage_bucket:doc.storage_bucket,storage_path:doc.storage_path,
+            mime_type:doc.mime_type,file_size:doc.file_size,uploaded_by:profile.id,
+            source_intake_id:sourceIntakeId,
+          }))
+        );
+        if(attachmentError)throw new Error("non_motor_document_link_failed");
+      }
+      const {data:completed,error:completeError}=await admin.from("policy_intake_requests")
+        .update({status:"completed",attention_reason:null}).eq("id",sourceIntakeId)
+        .eq("assigned_to_profile_id",profile.id).eq("status","processing")
+        .select("id").maybeSingle<{id:string}>();
+      if(completeError||!completed)throw new Error("non_motor_intake_completion_failed");
+      intakeClaimed=false;
+    }
+    // Standalone documents are attached only to the newly booked policy, never to Policy Intake.
+    // Failures roll back the created policy and newly uploaded objects.
+    for(const document of documents){
+      const type=document.type;
+      const file=document.file;
+      const allowedTypes=["policy_copy","proposal_form","kyc","other_document"];
+      if(!allowedTypes.includes(type)||file.size<1||file.size>4*1024*1024||
+        !["application/pdf","image/jpeg","image/png","image/webp"].includes(file.type))
+        throw new Error("Invalid standalone Non-Motor document.");
+      const safeName=file.name.replace(/[^a-zA-Z0-9._-]/g,"-").slice(0,120);
+      const storagePath=`non-motor-policies/${policy.id}/${type}/${crypto.randomUUID()}-${safeName}`;
+      const {error:uploadError}=await admin.storage.from("policy-documents").upload(storagePath,Buffer.from(await file.arrayBuffer()),{contentType:file.type,upsert:false});
+      if(uploadError)throw new Error("Non-Motor document upload failed.");
+      uploadedStandalonePaths.push(storagePath);
+      const {error:documentError}=await admin.from("policy_documents").insert({
+        policy_id:policy.id,document_type:type,file_name:file.name,
+        storage_bucket:"policy-documents",storage_path:storagePath,
+        mime_type:file.type,file_size:file.size,uploaded_by:profile.id,
+      });
+      if(documentError)throw new Error("Non-Motor document link failed.");
+    }
+    if (dateGuard.previousMonth) await recordPreviousMonthPolicyUpload(admin, policy.id, profile.id, issuanceDate, dateGuard.approverName);
+    if (dateGuard.approverName) await linkConsumedPolicyDateApproval(admin, payload.dateApprovalId, policy.id, profile.id);
+    revalidatePath("/policies"); revalidatePath("/customers");
+    return { ok:true, policyId:policy.id, policyCode:generatedPolicyCode };
+  } catch {
+    if(intakeClaimed&&sourceIntakeId)await admin.from("policy_intake_requests")
+      .update({status:"in_review"}).eq("id",sourceIntakeId)
+      .eq("assigned_to_profile_id",profile.id).eq("status","processing");
+    if (createdPolicyId) await admin.from("policies").delete().eq("id",createdPolicyId);
+    if (createdCustomerId) await admin.from("customers").delete().eq("id",createdCustomerId);
+    return { ok:false, error:"We couldn't complete the Non-Motor policy onboarding. Your form is still intact; please try again." };
+  }
+}
