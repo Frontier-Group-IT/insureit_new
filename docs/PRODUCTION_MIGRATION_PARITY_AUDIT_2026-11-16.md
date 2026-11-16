@@ -137,3 +137,17 @@ The following **exact objects** were queried in `Insureit_Web`, without modifyin
 The scan for alternative similarly named tables/functions/policies/indexes returned no matches for those four absent objects. **An existing function/enum alone is not evidence that its full migration (including grants/RLS/triggers) was applied.** Conversely, absent objects provide evidence that a blanket migration-ledger repair would be unsafe. The actual schema effects of every migration must be verified before any marking applied.
 
 Production application is blocked until those missing schema effects are handled through separately reviewed, idempotent, schema-first migrations, and the complete ledger reconciliation is proven. Do **not** insert version-only records for these four absent objects.
+
+## Applied SQL vs repository SQL comparison — completed
+
+The production migration ledger stores original SQL in `supabase_migrations.schema_migrations.statements`. The SQL text of each of the **72 same-name alias candidates** was compared directly against the matching repository file, without mutating the database.
+
+- **68 matched exactly** after trimming outer whitespace. These are high-confidence migration timestamp aliases, eligible for separately reviewed ledger-only reconciliation with a reversible backup/restore plan.
+- **4 were not byte-for-byte identical**, and must not be silently treated as applied:
+  - `20261009130000_partner_customer_external_claim_links.sql` vs production `20261009073849`: leading comments and SQL text length differ; review functional equivalence.
+  - `20261019173000_partner_claim_detail_internal_policy_precedence.sql` vs production `20261019125612`: semicolon difference at the close of a PL/pgSQL body; verify syntax/signature.
+  - `20261024165000_partner_claim_scoped_document_delete.sql` vs production `20261026045332`: leading comments / length differ; review executable SQL equivalence.
+  - `20261105170000_self_managed_claim_operations_stage_parity.sql` vs production `20261105120737`: substantive trigger-function arity guard difference; **do not alias automatically**.
+- **11 have no same-name migration entry**. An additional read-only exact-SQL search across the production ledger found **no identical statement text** for those 11. Some expected schema elements are present, but at least four exact objects are absent (see the preceding spot-check).
+
+This corrects the earlier name-only assessment. **No `migration repair`, database DDL, ledger insert/update/delete, CI bypass, or production deploy has been executed as part of this audit.**
