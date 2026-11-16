@@ -7,6 +7,7 @@ import { CalendarDays, ChevronDown } from "lucide-react";
 import { ReportDateRangePicker } from "@/components/reports/report-date-range-picker";
 
 const OPTIONS = [
+  {value:"today",label:"Today"},
   {value:"90d",label:"90D"},
   {value:"mtd",label:"MTD"},
   {value:"ytd",label:"YTD"},
