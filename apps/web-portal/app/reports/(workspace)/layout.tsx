@@ -2,12 +2,16 @@ import type { ReactNode } from "react";
 import { AppShell } from "@/components/shell";
 import { ReportWorkspaceNavigation } from "@/components/reports/report-workspace-navigation";
 import { DailyReportHeaderScopes, DailyReportHeaderPeriod } from "@/components/reports/daily-report-header-controls";
+import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
+import { canViewDailyReportAll } from "@/lib/reports/daily-report-access";
 import {
   ReportsNavigationPendingProvider,
   ReportsPendingContent,
 } from "@/components/reports/reports-navigation-pending";
 
-export default function ReportsWorkspaceLayout({ children }: { children: ReactNode }) {
+export default async function ReportsWorkspaceLayout({ children }: { children: ReactNode }) {
+  const {profile}=await getAuthenticatedProfile(await getServerAccessToken());
+  const canViewAll=profile?.is_active ? await canViewDailyReportAll(profile) : false;
   return (
     <AppShell title="Reports">
       <ReportsNavigationPendingProvider>
@@ -19,7 +23,7 @@ export default function ReportsWorkspaceLayout({ children }: { children: ReactNo
                   <h1>Reports</h1>
                 </div>
                 <ReportWorkspaceNavigation />
-                <DailyReportHeaderScopes />
+                <DailyReportHeaderScopes canViewAll={canViewAll} />
               </div>
               <div className="flex items-center gap-2">
                 <DailyReportHeaderPeriod />

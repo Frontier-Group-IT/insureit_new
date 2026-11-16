@@ -9,13 +9,13 @@ const loader=read("../lib/reports/daily-self-activity.ts");
 const directory=read("../components/reports/daily-employee-directory.tsx");
 
 assert.match(layout, /<h1>Reports<\/h1>/);
-assert.match(layout, /<DailyReportHeaderScopes\s*\/>/, "Self All beside Reports heading");
+assert.match(layout, /<DailyReportHeaderScopes canViewAll=\{canViewAll\} \/>/, "Self/All beside Reports heading only when authorized");
 assert.match(layout, /<DailyReportHeaderPeriod\s*\/>/, "Period dropdown at right of Reports header");
 assert.match(header, /if\(!isDaily\) return null/, "Daily header controls are hidden on other reporting pages");
 assert.match(header, /aria-label="Daily Report visibility"/);
 assert.match(header, /aria-haspopup="listbox"/, "Self and All must use a dropdown instead of segmented navigation");
 assert.match(header, /type="search" aria-label="Search Self or All"/, "Scope dropdown must be searchable");
-assert.match(header, /const scope=searchParams.get\("scope"\)==="all"\?"all":"self"/, "Self remains selected by default");
+assert.match(header, /const scope=canViewAll && searchParams\.get\("scope"\)==="all"\?"all":"self"/, "Self remains selected unless All access is authorized");
 assert.match(header, /const SCOPE_OPTIONS = \[/, "Scope dropdown maintains explicit Self and All options");
 assert.match(header, /params.set\("scope",target\)/, "Selecting All navigates to the existing Daily Report route");
 assert.match(header, /params.delete\("person"\)/, "Scope transitions reset a previously selected employee");

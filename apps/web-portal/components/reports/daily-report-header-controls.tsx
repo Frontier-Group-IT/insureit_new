@@ -27,13 +27,13 @@ const SCOPE_OPTIONS = [
   {value:"all",label:"All"},
 ] as const;
 
-export function DailyReportHeaderScopes() {
+export function DailyReportHeaderScopes({canViewAll=false}:{canViewAll?:boolean}) {
   const {isDaily,searchParams}=useDailyReportLocation();
-  const scope=searchParams.get("scope")==="all"?"all":"self";
+  const scope=canViewAll && searchParams.get("scope")==="all"?"all":"self";
   const [open,setOpen]=useState(false);
   const [search,setSearch]=useState("");
   const container=useRef<HTMLDivElement>(null);
-  const options=SCOPE_OPTIONS.filter(option=>option.label.toLowerCase().includes(search.trim().toLowerCase()));
+  const options=SCOPE_OPTIONS.filter(option=>(canViewAll||option.value==="self") && option.label.toLowerCase().includes(search.trim().toLowerCase()));
   useEffect(()=>{
     if(!open)return;
     const outside=(event:MouseEvent)=>{if(container.current&&!container.current.contains(event.target as Node))setOpen(false);};

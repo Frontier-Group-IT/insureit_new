@@ -23,6 +23,8 @@ assert.match(source, /resolveDailyReportActorIds\(viewer\.id, scope, access\)/, 
 assert.match(source, /\.in\("actor_id", actorIds\)/, "Audits are filtered server-side");
 assert.match(source, /\.in\("finalized_by_profile_id",actorIds\)/, "Intake finalization is actor-scoped");
 assert.match(source, /\.in\("converted_by",actorIds\)/, "Case conversions are actor-scoped");
-assert.match(page, /await requireCapability\("view_reports"\)/, "Page requires report capability");
+assert.match(page, /await requireDailyReportEmployee\(\)/, "Self requires an active employee-linked portal identity");
+assert.match(page, /const isSelf = query\.scope !== "all" \|\| !canViewAll/, "Requested All cannot bypass reporting permission");
+assert.match(read("../lib/reports/daily-report-access.ts"), /hasEffectiveCapability\(profile,"view_reports","view"\)/, "All still requires its existing reporting capability");
 assert.doesNotMatch(source, /\.update\(|\.insert\(|\.upsert\(|\.delete\(/, "Report reader remains read-only");
 console.log("Daily Report Phase 3 Self/All authorization matrix and source isolation passed.");
