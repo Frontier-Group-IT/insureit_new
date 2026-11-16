@@ -16,11 +16,14 @@ const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{12}$/i;
 export async function POST(request:Request){
   const token=/^Bearer (\S+)$/i.exec(request.headers.get("authorization")??"")?.[1];
   if(!token)return fail("Partner authentication required.",401);
-  let input:{intermediary_type?:string;search?:string;intake_id?:string};
+  let input:{intermediary_type?:string;search?:string;intake_id?:string;offset?:number};
   try{input=await request.json();}catch{return fail("Invalid source search.",400);}
   const type=types[input.intermediary_type??""];
   if(!type)return fail("Choose an intermediary type first.",400);
   const search=String(input.search??"").trim();
+  const offset=Number(input.offset??0);
+  if(!Number.isSafeInteger(offset)||offset<0||offset>10000)return fail("Invalid source page.",400);
+  const pageSize=40;
   if(search.length>80)return fail("Search is too long.",400);
   const scoped=createSupabaseWithAccessToken(token);
   const {data:{user},error:authError}=await scoped.auth.getUser(token);
@@ -52,20 +55,25 @@ export async function POST(request:Request){
   if(head){
     const scope=await getOperationsHeadDownlinePolicyScope(profile.id);
     allowedCodes=scope.intermediaryCodes;
-    if(!allowedCodes.length)return NextResponse.json({ok:true,sources:[]},{headers:{"Cache-Control":"no-store"}});
+    if(!allowedCodes.length)return NextResponse.json({ok:true,sources:[],hasMore:false},{headers:{"Cache-Control":"no-store"}});
     if(fixedCode&&!allowedCodes.includes(fixedCode))return fail("Lead source is outside your approved downline.",403);
   }
   let query=admin.from("intermediaries").select("id,intermediary_type,display_name,intermediary_code,mobile,associate_employee_id,application_id")
     .eq("account_status","active").eq("intermediary_type",type)
-    .not("intermediary_code","is",null).order("display_name").limit(30);
+    .not("intermediary_code","is",null).order("display_name").order("id").range(offset,offset+pageSize);
   if(fixedCode)query=query.eq("intermediary_code",fixedCode);
   else if(allowedCodes)query=query.in("intermediary_code",allowedCodes);
-  // Match only text characters; no user-supplied query syntax.
-  const term=search.replace(/[%_,()]/g,"").trim();
-  if(term)query=query.ilike("display_name",`%${term}%`);
+  // Search the same active intermediary master as the Operations Portal, by name or code.
+  // Escape PostgREST filter delimiters and SQL wildcard characters before building OR.
+  const term=search.replace(/[^\p{L}\p{N} .\/-]/gu,"").trim().slice(0,80);
+  if(term){
+    const pattern=`%${term}%`;
+    query=query.or(`display_name.ilike.${pattern},intermediary_code.ilike.${pattern}`);
+  }
   const {data,error}=await query.returns<Source[]>();
   if(error)return fail("Source directory is temporarily unavailable.",503);
-  const found=data??[];
+  const found=(data??[]).slice(0,pageSize);
+  const hasMore=(data??[]).length>pageSize;
   let associates:Awaited<ReturnType<typeof loadPospMispAssociates>>=[];
   try{associates=await loadPospMispAssociates(admin);}catch{return fail("RM assignment lookup is unavailable.",503);}
   const sources=[];
@@ -94,5 +102,5 @@ export async function POST(request:Request){
       mobile:row.mobile?.replace(/\D/g,"").slice(-10)??"",
       rmName:owner?.full_name?.trim()??"",rmCode:owner?.employee_code?.trim()??""});
   }
-  return NextResponse.json({ok:true,sources},{headers:{"Cache-Control":"no-store"}});
+  return NextResponse.json({ok:true,sources,hasMore},{headers:{"Cache-Control":"no-store"}});
 }
