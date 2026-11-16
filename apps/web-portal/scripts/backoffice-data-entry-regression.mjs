@@ -50,6 +50,14 @@ for (const [name, text, capability] of [["customer",customerDetail,"view_custome
 }
 expect(policyDetail.includes("pay-in, billing, partner payout, retention, margin"), "Policy read-only detail must explicitly exclude sensitive finance controls.");
 
+expect(customerDetail.includes("if (await getCustomerManager(id)) redirect(`/customers/${id}/edit`)"), "Authorized customer editors should open the existing full profile");
+expect(policyDetail.includes("if (policyEditAuthorized) redirect(`/policies/${id}/edit`)"), "Authorized policy editors should open the existing full policy view/edit page");
+expect(policyDetail.includes('getEffectivePermission(profile.id, profile.role, "view_policies")'), "Policy redirects must check effective edit permissions");
+expect(policyDetail.includes('canAccessPolicy(profile.id, profile.role, id, "view_policies", true)'), "Policy edit redirect must also verify record scope");
+expect(customerDetail.includes('getAccessibleCustomerIds(profile.id, profile.role, "view_customers")'), "Customer read-only views must remain individually scoped");
+expect(customerDetail.includes("View only") && policyDetail.includes("View only"), "Backoffice and view-only screens retain restricted details");
+
+
 const customerRegister = source("components/backoffice-customer-register.tsx");
 const vehicleRegister = source("components/backoffice-vehicle-register.tsx");
 const policyRegister = source("components/backoffice-policy-register.tsx");
