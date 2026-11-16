@@ -8,6 +8,7 @@ import { fetchAllPages } from "@/lib/fetch-all-pages";
 type Viewer = { id:string; role:string|null };
 export type ReportEmployee = { id:string; full_name:string|null; employee_code:string|null; employee_id:string|null };
 type EmployeeLink = {id:string; reporting_manager_id:string|null};
+type ActiveEmployee = {id:string};
 // This employee is an organizational reporting manager whose login currently has
 // super_admin for unrelated operational functions. Report visibility must stay
 // within his employee subtree; it must not inherit organization-wide access.
@@ -44,11 +45,20 @@ export async function loadDailyReportEmployeeDirectory(viewer:Viewer) {
   if (allowedIds !== null && !allowedIds.length) return {people:[] as ReportEmployee[], allowedIds:[] as string[]};
   const result = await fetchAllPages<ReportEmployee,unknown>((from,to)=>{
     let q=admin.from("profiles").select("id,full_name,employee_code,employee_id")
-      .eq("is_active",true).order("id",{ascending:true}).range(from,to);
+      .eq("is_active",true).not("employee_id","is",null)
+      .order("id",{ascending:true}).range(from,to);
     if(allowedIds!==null) q=q.in("id",allowedIds);
     return q.returns<ReportEmployee[]>();
   });
   if(result.error) throw new Error("Could not load authorized employee directory");
+  // An active portal login alone is not evidence of employment. Customer App
+  // and intermediary-only profiles share this table, so validate the employee
+  // link against the active employees directory before exposing person= links.
+  const {data:activeEmployees,error:employeeStatusError}=await fetchAllPages<ActiveEmployee,unknown>((from,to)=>admin
+    .from("employees").select("id").eq("employment_status","active")
+    .order("id",{ascending:true}).range(from,to).returns<ActiveEmployee[]>());
+  if(employeeStatusError) throw new Error("Could not verify active employee directory");
+  const activeEmployeeIds=new Set((activeEmployees??[]).map(employee=>employee.id));
   const people=result.data??[];
   // Self already provides the viewer's own activity history. All is for other
   // authorized employees only; apply this exclusion before building the
@@ -56,6 +66,7 @@ export async function loadDailyReportEmployeeDirectory(viewer:Viewer) {
   // Keep the hierarchy/organization authorization scope unchanged.
   const visible = people.filter(p =>
     p.id !== viewer.id && (allowedIds===null || allowedIds.includes(p.id))
+    && p.employee_id !== null && activeEmployeeIds.has(p.employee_id)
   );
   visible.sort((a,b)=>(a.full_name??"").localeCompare(b.full_name??"") || a.id.localeCompare(b.id));
   return {people:visible,allowedIds};
