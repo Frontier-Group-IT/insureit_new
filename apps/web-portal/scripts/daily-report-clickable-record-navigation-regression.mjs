@@ -28,8 +28,11 @@ for(const table of ["policies","policy_intake_requests","life_health_cases"]) {
   assert.ok(loader.includes(`table:"${table}",recordId:a.id`),`Keep immutable record ID for ${table} history`);
 }
 assert.match(panel, /<DailyActivityHistoryRows rows=\{data\.rows\} isCustomerActivity=\{isCustomerActivity\} \/>/, "All employee and Self reports use interactive rows with customer-specific context");
-assert.match(rows, /role="button" tabIndex=\{0\}/, "Rows support keyboard focus");
-assert.match(rows, /event\.key==="Enter"\|\|event\.key===" "/, "Enter and Space activate rows");
+assert.match(rows, /role=\{row\.href\?"button":undefined\}/, "Only valid destinations have interactive rows");
+assert.match(rows, /tabIndex=\{row\.href\?0:undefined\}/, "Only navigable rows receive keyboard focus");
+assert.match(rows, /event\.key==="Enter"\|\|event\.key===" "/, "Enter and Space activate links");
+assert.match(rows, /if\(row\.href\) router\.push\(row\.href\)/, "Click navigates directly to verified canonical record");
+assert.doesNotMatch(rows, /createPortal|Activity details|Open record<|setSelected/, "No intermediate details popup");
 assert.match(rows, /row\.detail \? <span/, "Preserve latest audit field-level change details");
 assert.doesNotMatch(rows, /\{row\.source\}/, "Never render Audit or Record history source text in any row");
 assert.match(loader, /delete_claim:"Claim deleted \(creator unavailable\)"/, "Deleted claims never display the generic Delete Claim title");
@@ -41,11 +44,9 @@ assert.match(deleteAction, /\.from\("profiles"\)[\s\S]*?\.select\("full_name"\)/
 assert.match(deleteAction, /claim_created_by_name: deletedClaimIdentity\?\.claim_created_by_name/, "Save creator name into deletion audit");
 assert.ok(deleteAction.indexOf('deletedClaimIdentity = {claim_no:') < deleteAction.indexOf('.from("audit_logs").insert'), "Audit uses captured pre-delete identity");
 
-assert.ok(rows.includes('role="dialog" aria-modal="true"'), "Entire row opens accessible activity details dialog");
-assert.ok(rows.includes('onClick={event=>openRecord(row,event.currentTarget)}'), "Clicking row opens details");
-assert.ok(rows.includes('router.push(selected.href!)'), "Optional Open record action navigates to canonical page");
-assert.ok(rows.includes('event.key==="Escape"'), "Dialog allows Escape dismissal");
-assert.ok(rows.includes('selected.detail||"Not recorded"'), "Only recorded audit details shown");
+assert.ok(rows.includes('onClick={()=>openRecord(row)}'), "A single row click navigates directly");
+assert.ok(rows.includes('if(row.href) router.push(row.href)'), "Only surviving records navigate");
+assert.ok(!rows.includes('selected.detail||"Not recorded"'), "No intermediate audit dialog");
 assert.ok(panel.includes('Policy / Case No.'), "Register shows policy or case reference");
 assert.ok(panel.includes('Customer / Vehicle'), "Register shows customer and vehicle context");
 assert.ok(panel.includes('Insurance Company'), "Register shows insurer");
@@ -54,12 +55,12 @@ assert.ok(loader.includes('admin.from("insurance_companies")'), "Insurer linked 
 assert.ok(loader.includes('admin.from("customers")'), "Customer linked to actual customer");
 assert.ok(loader.includes('admin.from("vehicles")'), "Vehicle linked to actual vehicle");
 assert.doesNotMatch(loader+routes+panel+rows,/\.insert\(|\.update\(|\.upsert\(|\.delete\(/, "Navigation is read-only");
-console.log("Daily Report activity detail dialog and six-column context regression passed.");
+console.log("Daily Report direct record navigation and six-column context regression passed.");
 
 assert.match(panel, /const isCustomerActivity=data\.category\.startsWith\("Customer "\)/, "Customer category switches to register-aligned columns");
 for(const column of ["Customer", "Customer Type", "Mobile"]) {
   assert.ok(panel.includes(`>${column}</th>`), `Customer-specific column is visible: ${column}`);
-  assert.ok(rows.includes(`["${column}",customerField(selected.`), `Customer detail popup includes ${column}`);
+  assert.ok(rows.includes(`customerField(row.${column==="Customer"?"customerName":column==="Customer Type"?"customerType":"customerMobile"})`), `Customer row retains ${column}`);
 }
 assert.match(rows, /isCustomerActivity \? \(/, "Customer row data is conditional");
 assert.match(loader, /row\.customerName=customer\.contact_name/, "Customer name comes from its master record");
@@ -67,4 +68,4 @@ assert.match(loader, /visible\.filter\(row=>row\.table==="customers"/, "Customer
 assert.match(loader, /customer\.phone\?\.replace/, "Customer mobiles are masked rather than exposing full phone numbers");
 
 assert.doesNotMatch(panel, /<th[^>]*>Fleet Size<\/th>|<th[^>]*>Total Policies<\/th>/, "Customer drilldown hides fleet size and total policies headers");
-assert.doesNotMatch(rows, /customerField\(row\.customerFleetSize\)|customerField\(row\.customerPolicyCount\)|\["Fleet Size",customerField|\["Total Policies",customerField/, "Customer rows and detail dialog hide fleet size and total policies");
+assert.doesNotMatch(rows, /customerField\(row\.customerFleetSize\)|customerField\(row\.customerPolicyCount\)|\["Fleet Size",customerField|\["Total Policies",customerField/, "Customer rows hide fleet size and total policies");
