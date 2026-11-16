@@ -281,7 +281,7 @@ export default function PoliciesScreen() {
                 onPress={() => router.push(action.route)}
                 style={({ pressed }) => [styles.quickAction, pressed && styles.quickActionPressed]}
               >
-                <View style={styles.quickActionImageShell}><Image source={action.image} style={styles.quickActionImage} resizeMode="contain" /></View>
+                <Image source={action.image} style={styles.quickActionImage} resizeMode="contain" />
                 <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={styles.quickActionLabel}>{action.label}</Text>
               </Pressable>
             ))}
@@ -753,17 +753,13 @@ const styles = StyleSheet.create({
   quickActionsHeading: { marginHorizontal: 3, marginBottom: 8, color: '#17365D', fontSize: 12, lineHeight: 16, fontWeight: '800' },
   quickActionsRow: { flexDirection: 'row', alignItems: 'stretch', gap: 7 },
   quickAction: {
-    flex: 1, minWidth: 0, height: 94, borderRadius: 17,
+    flex: 1, minWidth: 0, minHeight: 74,
     alignItems: 'center', justifyContent: 'center',
-    backgroundColor: '#F5F8FC', paddingHorizontal: 3, paddingVertical: 9, gap: 5,
+    paddingHorizontal: 2, paddingVertical: 6, gap: 4,
+    backgroundColor: 'transparent',
   },
-  quickActionPressed: { backgroundColor: '#ECF3FD', opacity: 0.88 },
-  quickActionImageShell: {
-    width: 52, height: 52, borderRadius: 20,
-    alignItems: 'center', justifyContent: 'center',
-    backgroundColor: '#EAF1FC',
-  },
-  quickActionImage: { width: 45, height: 45 },
+  quickActionPressed: { opacity: 0.78 },
+  quickActionImage: { width: 48, height: 48 },
   quickActionLabel: {
     color: '#102D55', fontSize: 9.25, lineHeight: 12,
     fontWeight: '800', textAlign: 'center', width: '100%',
