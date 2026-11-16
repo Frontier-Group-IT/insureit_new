@@ -61,7 +61,7 @@ const productCaseFields:Field[] = [
   {key:'policyProduct',label:'Policy product',required:true,options:['Comprehensive','Third Party','SAOD','Bundled','Long Term Package','Long Term Third Party']},
   {key:'policyNo',label:'Policy number',required:true},
   {key:'validFrom',label:'Validity from (YYYY-MM-DD)',required:true},
-  {key:'validUpto',label:'Validity up to (YYYY-MM-DD)',required:true},
+  {key:'validUpto',label:'Validity Upto (YYYY-MM-DD)',required:true},
 ];
 type ProductField = {key:string;label:string;required?:boolean;options?:string[];date?:boolean;wide?:boolean};
 const yearOptions=Array.from({length:100},(_,i)=>i===0?'1 Year':(i+1)+' Years');
@@ -803,10 +803,10 @@ export default function NativePolicyOnboarding(){
     {key:'tp',label:'TP premium',required:draft?.policyProduct!=='SAOD'&&draft?.vehicleClass!=='CPM'},
     {key:'cpa',label:'CPA amount',required:draft?.vehicleClass==='GCV'},
     {key:'validFrom',label:'Validity from',required:true},
-    {key:'validUpto',label:draft?.policyProduct==='Bundled'?'OD Validity Upto':'Validity up to',required:true},
+    {key:'validUpto',label:draft?.policyProduct==='Bundled'?'OD Validity Upto':'Validity Upto',required:true},
     ...(draft?.policyProduct==='Bundled'&&['PCP','TWP'].includes(draft?.vehicleClass??'')?[
-      {key:'tpValidUpto' as FieldKey,label:'TP validity up to',required:true},
-      {key:'cpaValidUpto' as FieldKey,label:'CPA validity up to',required:true},
+      {key:'tpValidUpto' as FieldKey,label:'TP validity Upto',required:true},
+      {key:'cpaValidUpto' as FieldKey,label:'CPA validity Upto',required:true},
     ]:[]),
   ];
   const registrationValid=Boolean(draft?.registrationNo.trim()&&/^[A-Z]{2}\d{1,2}[A-Z]{1,3}\d{1,4}$/i.test(draft.registrationNo.replace(/[ -]/g,'')));
