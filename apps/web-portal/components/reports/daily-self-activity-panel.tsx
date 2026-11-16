@@ -80,7 +80,7 @@ export function DailySelfActivityPanel({data,linkFor,reportMode="self"}:Props) {
                   <th className="whitespace-nowrap px-3 py-3">Date &amp; Time</th>
                   <th className="px-3 py-3">Status</th></tr>
               </thead>
-              <DailyActivityHistoryRows rows={data.rows} employeeName={data.selfName} />
+              <DailyActivityHistoryRows rows={data.rows} />
             </table>
           </div>
           <div className="flex items-center justify-between border-t border-[#e4e9f1] px-4 py-3 text-[10px] text-[#66758b]">
