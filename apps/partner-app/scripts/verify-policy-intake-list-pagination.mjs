@@ -215,7 +215,13 @@ assert.match(app, /AccessibilityInfo\.isReduceMotionEnabled\(\)/, 'Respect OS re
 assert.match(app, /addEventListener\('reduceMotionChanged', setReduceMotion\)/, 'React to OS reduced-motion changes');
 assert.match(app, /<View style=\{styles\.searchBand\}>/, 'Search band stays fixed without entrance motion');
 assert.doesNotMatch(app, /searchEntrance|searchRise/, 'Search slide and fade animation is fully removed');
-assert.match(app, /<View style=\{\[styles\.searchBox, searchFocused && styles\.searchBoxFocused\]\}>/, 'Keep the search focus highlight');
+assert.match(app, /style=\{\[styles\.searchBox, searchFocused && styles\.searchBoxFocused\]\}/, 'Keep the search focus highlight');
+assert.match(app, /const searchInputRef = useRef<TextInput>\(null\)/, 'Search input has a stable native focus ref');
+assert.match(app, /onPress=\{\(\) => searchInputRef\.current\?\.focus\(\)\}/, 'Tapping any part of the search container opens the native keyboard');
+assert.match(app, /ref=\{searchInputRef\}/, 'Controlled native input receives the focus ref');
+assert.match(app, /searchInput: \{ flex: 1, alignSelf: 'stretch', minHeight: 44,/, 'Native input fills a 44pt iOS tap target');
+assert.match(app, /onChangeText=\{setQuery\}/, 'Preserve controlled search typing');
+assert.match(app, /setDebouncedQuery\(query\.trim\(\)\)/, 'Preserve server-side search debounce');
 assert.match(app, /onFocus=\{\(\) => setSearchFocused\(true\)\}/, 'Search focus shows a soft highlight');
 assert.match(app, /<MotionFilterChip key=\{item\.key\} active=\{active\} reduceMotion=\{reduceMotion\}/, 'Every status chip has smooth selection transition');
 assert.match(app, /<MotionCard key=\{row\.id\} index=\{index\} reduceMotion=\{reduceMotion\}>/, 'Each card has a capped staggered entrance');
