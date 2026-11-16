@@ -12,9 +12,9 @@ for(const phrase of [
   "Recorded employee activities · India Standard Time",
 ]) assert.ok(!(page+panel).includes(phrase),`Removed Daily Report phrase still present: ${phrase}`);
 assert.doesNotMatch(page,/backToEmployees/, "Unused back-to-directory prop is removed");
-assert.match(read("../components/reports/daily-report-header-controls.tsx"),/Daily Report visibility/, "Self and All switch moved beside Reports heading");
+assert.match(read("../components/reports/daily-report-header-controls.tsx"),/Daily Report employee selector/, "Employee selection is beside Reports heading");
 assert.match(page,/<DailySelfActivityPanel/, "Activity summary and detail remain");
-assert.match(page,/<DailyEmployeeDirectory/, "Authorized employee directory remains");
+assert.doesNotMatch(page,/<DailyEmployeeDirectory/, "Standalone All directory removed");
 assert.match(panel,/Back to summary/, "Category detail can return to summary");
 assert.match(panel,/data\.unavailableSources/, "Operational partial-source warning is retained");
 assert.match(panel,/categoryGroups\.map/, "Grouped category summaries remain");
