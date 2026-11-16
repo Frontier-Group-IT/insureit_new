@@ -24,7 +24,7 @@ const read = name=>fs.readFileSync(new URL(name,import.meta.url),"utf8");
 const motor = read("../lib/policy-onboarding-engine.ts");
 const edit = read("../app/policies/policy-edit-actions.ts");
 const nonmotor = read("../app/policies/non-motor-policy-actions.ts");
-const life = read("../app/policies/life-health-policy-actions.ts");
+const life = read("../lib/life-health-case-issuance-engine.ts");
 const lifeEdit = read("../app/policies/life-health-issued-policy-edit-actions.ts");
 const lifeEditUi = read("../components/life-health-issued-policy-edit-form.tsx");
 const otp = read("../lib/policy-date-approval-engine.ts");

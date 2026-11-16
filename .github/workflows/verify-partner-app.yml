@@ -141,6 +141,9 @@ jobs:
 
       - name: Verify Partner Life/Health Case Details column layout
         run: node apps/partner-app/scripts/verify-life-health-case-column-layout.mjs
+
+      - name: Verify inline Life/Health case editing and issuance
+        run: node apps/partner-app/scripts/verify-life-health-inline-case-issuance.mjs
       - name: Verify incremental Policy Intake pagination
         run: (cd apps/partner-app && node scripts/verify-policy-intake-list-pagination.mjs)
 

@@ -35,6 +35,7 @@ export type LifeHealthCaseDetail = LifeHealthCaseSummary & {
   converted_at: string | null;
   customer_address: string;
   policy_no: string | null;
+  insurance_company_id: string;
   rejection_reason: string;
 };
 export type LifeHealthDocument = { id: string; document_type: string; file_name: string; created_at: string };
@@ -76,7 +77,7 @@ export async function listLifeHealthCases(args: {
 
 export async function getLifeHealthCase(id: string) {
   if (!/^[0-9a-f-]{36}$/i.test(id)) throw new Error('Invalid case reference.');
-  return request<{ok:true;case:LifeHealthCaseDetail;documents:LifeHealthDocument[];activities:LifeHealthActivity[]}>(
+  return request<{ok:true;case:LifeHealthCaseDetail;documents:LifeHealthDocument[];activities:LifeHealthActivity[];insurers:{id:string;name:string}[]}>(
     new URLSearchParams({ id }),
   );
 }
@@ -106,6 +107,8 @@ export type LifeHealthCaseEdit = {
   paymentFrequency?: string;
   paymentMode?: string;
   premiumAmount?: number;
+  sourcingDate?: string;
+  insurerId?: string;
 };
 
 /** Saves only fields permitted for the current case state and signed-in actor. */
@@ -128,4 +131,40 @@ export async function saveLifeHealthCaseEdit(payload: LifeHealthCaseEdit): Promi
     if (response.status === 404 || response.status === 405) throw new Error('Native editing is not available on the production portal yet.');
     throw new Error(body?.error || 'Unable to save case changes.');
   }
+}
+
+
+async function postCaseAction<T extends {ok:boolean;error?:string}>(path:string,payload:Record<string,unknown>):Promise<T>{
+  const session=await getCurrentSession();
+  if(!session?.access_token)throw new Error('Your session expired. Sign in again.');
+  let response:Response;
+  try{
+    response=await fetch(portal+path,{method:'POST',cache:'no-store',
+      headers:{Authorization:'Bearer '+session.access_token,'Content-Type':'application/json'},
+      body:JSON.stringify(payload)});
+  }catch{throw new Error('Cannot contact Operations. Check your internet connection.');}
+  const result=await response.json().catch(()=>null) as T|null;
+  if(response.status===404||response.status===405)
+    throw new Error('The required case service has not been deployed to the website yet.');
+  if(!response.ok||!result?.ok)throw new Error(result?.error||'Could not complete this action. Reload the case before trying again.');
+  return result;
+}
+
+export async function appendNativeLifeHealthRemark(caseId:string,newRemark:string){
+  return postCaseAction<{ok:true;remarks:string}>('/api/partner/life-health-cases',{
+    id:caseId,action:'append_remark',newRemark,
+  });
+}
+
+export type LifeHealthIssueForm={
+  caseId:string;policyNumber:string;issuanceDate:string;startDate:string;endDate:string;
+  pptEndDate:string;nextInstallmentDate:string;finalPremium:string;sumInsured:string;approvalId:string;
+};
+export async function lifeHealthIssuanceAction(action:'approvers'|'request_approval'|'verify_approval'|'issue',
+  input:Partial<LifeHealthIssueForm>&{caseId:string;policyNumber:string;issuanceDate:string;approverKey?:string;otp?:string},
+){
+  return postCaseAction<{ok:true;approvalRequired?:boolean;approvers?:{key:string;name:string}[];
+    approvalId?:string;expiresAt?:string;policyId?:string;policyCode?:string}>(
+    '/api/partner/life-health-cases/issue',{action,...input},
+  );
 }

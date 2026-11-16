@@ -1,0 +1,48 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+const read=p=>readFileSync(p,'utf8');
+const screen=read('apps/partner-app/app/life-health-cases/[id].tsx');
+const api=read('apps/web-portal/app/api/partner/life-health-cases/route.ts');
+const issue=read('apps/web-portal/app/api/partner/life-health-cases/issue/route.ts');
+const engine=read('apps/web-portal/lib/life-health-case-issuance-engine.ts');
+const operations=read('apps/web-portal/app/policies/life-health-policy-actions.ts');
+const client=read('apps/partner-app/lib/life-health-cases.ts');
+assert.match(screen,/navyTopBar navyStatusBar/);
+assert.match(screen,/bottomNavigation=\{<CaseBottomNav/);
+assert.match(screen,/#071E49/);
+assert.match(screen,/heroTop:/);
+assert.doesNotMatch(screen,/>Edit Case</);
+assert.doesNotMatch(screen,/Open Issuance Form/);
+assert.match(screen,/label="Client \/ proposer name" value=\{form.customerName\}/);
+assert.match(screen,/label="Insurance company" value=\{insurers.find/);
+assert.match(screen,/label="Proposal date" value=\{dateLabel\(form.sourcingDate\)\}/);
+assert.match(screen,/styles.remarkButtonFull/);
+assert.match(screen,/styles.remarkRow/);
+assert.match(screen,/appendNativeLifeHealthRemark/);
+for(const label of ['Policy number','Issuance date','Policy start date','Policy end / maturity date',
+  'PPT end date','Next installment date','Final premium','Sum assured / insured']){
+  assert.ok(screen.includes('label="'+label+'"'),'Missing issuance field '+label);
+}
+assert.match(screen,/Create Policy & Close Case/);
+assert.match(screen,/lifeHealthIssuanceAction\('request_approval'/);
+assert.match(screen,/lifeHealthIssuanceAction\('verify_approval'/);
+assert.match(screen,/if\(result.approvalRequired&&!issue.approvalId\)/);
+assert.match(screen,/lifeHealthIssuanceAction\('issue'/);
+assert.match(screen,/nextInstallment\(issue.startDate,form.paymentFrequency\)/);
+assert.match(api,/remarkMode=input\?\.action==="append_remark"/);
+assert.match(api,/mutation=row.remarks===null\?mutation.is/);
+assert.match(api,/getEffectivePermission\(profile.id/);
+assert.match(api,/\.eq\("updated_at",expected\)/);
+assert.match(issue,/partner_app_current_identity/);
+assert.match(issue,/hasEffectiveCapability\(profile,"create_policies","edit"\)/);
+assert.match(issue,/canAccessOperationsHeadCase/);
+assert.match(issue,/requestPolicyDateApprovalForVerifiedActor/);
+assert.match(issue,/verifyPolicyDateApprovalForVerifiedActor/);
+assert.match(issue,/convertLifeHealthCaseForVerifiedActor/);
+assert.match(engine,/consumePolicyDateApproval/);
+assert.match(engine,/policy_no_normalized/);
+assert.match(engine,/\.is\("final_policy_id",null\)/);
+assert.match(operations,/return convertLifeHealthCaseForVerifiedActor\(formData,profile\)/);
+assert.match(client,/export async function appendNativeLifeHealthRemark/);
+assert.match(client,/export async function lifeHealthIssuanceAction/);
+console.log('Partner inline Case Details and verified Operations issuance contracts passed.');

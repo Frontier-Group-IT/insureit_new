@@ -7,6 +7,7 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 const sql = readFileSync(resolve(root, "supabase/migrations/20261113111500_employee_source_identity_booked_rm_history.sql"), "utf8");
 const employeeAction = readFileSync(resolve(root, "apps/web-portal/app/employees/actions.ts"), "utf8");
 const life = readFileSync(resolve(root, "apps/web-portal/app/policies/life-health-policy-actions.ts"), "utf8");
+const lifeIssue = readFileSync(resolve(root, "apps/web-portal/lib/life-health-case-issuance-engine.ts"), "utf8");
 const policyNew = readFileSync(resolve(root, "apps/web-portal/app/policies/new/page.tsx"), "utf8");
 
 function section(name, next) {
@@ -64,8 +65,8 @@ assert.match(sql, /historical policy ownership\/group changed/);
 assert.match(sql, /historical case owner changed/);
 assert.doesNotMatch(employeeAction, /\.from\("profiles"\)\s*\.update\(/, "Employee Edit must not perform a separate profile write");
 assert.match(employeeAction, /identity synchronization could not be verified/);
-assert.match(life, /source_intermediary_id:caseRow\.intermediary_id/);
-assert.match(life, /rm_employee_id:caseRow\.rm_employee_id/, "Issued policy retains the case's booked RM");
+assert.match(lifeIssue, /source_intermediary_id:caseRow\.intermediary_id/);
+assert.match(lifeIssue, /rm_employee_id:caseRow\.rm_employee_id/, "Issued policy retains the case's booked RM");
 
 assert.match(sql, /CASE WHEN o\.application_id IS NOT NULL THEN o\.associate_employee_id ELSE i\.associate_employee_id END/, "New booking uses live onboarding assignment; do not fall back when explicitly unassigned");
 assert.match(life, /currentOwner \? currentOwner\.associate_employee_id : intermediary\.associate_employee_id/, "Case booking must not fall back to stale RM when onboarding is unassigned");

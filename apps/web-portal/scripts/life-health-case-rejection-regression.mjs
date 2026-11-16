@@ -8,7 +8,7 @@ const registerPage = read("../app/policies/life-health-cases/page.tsx");
 const summary = read("../lib/life-health-case-summary.ts");
 const reject = read("../app/policies/life-health-case-reject-actions.ts");
 const edit = read("../app/policies/life-health-case-edit-actions.ts");
-const policy = read("../app/policies/life-health-policy-actions.ts");
+const policy = read("../lib/life-health-case-issuance-engine.ts");
 
 assert.match(detail, /Confirm Reject/, "Confirmation button exists");
 assert.match(detail, /Reason for rejection/, "Reason is required in popup");
