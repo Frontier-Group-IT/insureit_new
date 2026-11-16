@@ -76,7 +76,15 @@ assert.match(loader, /row\.claimControlNo \|\|=label\(previous\.claim_no\)/, "De
 assert.match(loader, /row\.claimInsurerNo \|\|=label\(previous\.insurer_claim_no\)/, "Deleted claims only use audit-preserved claim number");
 
 assert.match(panel, /const isOtherActivity=data\.category==="Other Activities"/, "Other Activities uses its own minimal columns");
-assert.match(panel, /isOtherActivity \? null : \(/, "Other Activities omits policy, customer and insurer headers");
-assert.match(rows, /isOtherActivity \? null : \(/, "Other Activities omits policy, customer and insurer row values");
-assert.match(rows, /isOtherActivity \? \[\] : \[/, "Other Activities detail dialog excludes unrelated fields");
+assert.match(panel, /isOtherActivity \? \(/, "Other Activities uses an employee-specific column");
+assert.match(rows, /customerField\(row\.subjectEmployeeName\)/, "Other Activities renders affected employee name");
+assert.match(rows, /\["Employee Name",customerField\(selected\.subjectEmployeeName\)\]/, "Other Activities detail shows employee name");
 assert.match(rows, /\["Recorded changes",selected\.detail\|\|"Not recorded"\]/, "Detail popup retains recorded audit changes");
+
+assert.match(panel, /<th className="px-3 py-3">Employee Name<\/th>/, "Other Activities heading is Employee Name");
+assert.match(loader, /if\(category==="Other Activities"\)/, "Subject lookup is limited to Other Activities");
+assert.match(loader, /row\.table==="employees"/, "Employee lifecycle audit IDs resolve via employee master");
+assert.match(loader, /\["profiles","auth.users"\]/, "IT identity audit IDs resolve via profile master");
+assert.match(loader, /\.select\("id,full_name,employee_id"\)/, "Profiles connect to employee records");
+assert.match(loader, /row\.subjectEmployeeName=employeeNames\.get/, "Subject employee is not the current actor");
+assert.doesNotMatch(loader, /\.insert\(|\.update\(|\.upsert\(|\.delete\(/, "Other Activities report remains read-only");
