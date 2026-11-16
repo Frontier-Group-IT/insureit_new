@@ -248,3 +248,6 @@ assert.match(screen,/View policy copy<\/Text>/,'Use the Policy Intake Review lab
 assert.match(screen,/name="open-outline" size=\{13\}/,'Use the reference open icon.');
 assert.match(screen,/viewPolicyButton:\{width:'100%',minHeight:42,borderRadius:9/,'Use full-width reference button geometry.');
 assert.match(screen,/premiumRupee:\{color:'#315B9A'/,'Premium has the blue rupee icon.');
+
+assert.doesNotMatch(screen,/accessibilityLabel="Save Draft"/,'Do not reintroduce the removed Save Draft action.');
+assert.doesNotMatch(screen,/setDialog\('confirm-save'\)/,'No orphaned save-confirmation popup.');
