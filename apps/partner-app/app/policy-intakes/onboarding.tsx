@@ -220,7 +220,7 @@ export default function NativePolicyOnboarding(){
       setDocumentBusy(type);
       if(dirty){
         const saved=await saveNativePolicyOnboarding(id,data.revision,draft);
-        setData(current=>current?{...current,revision:saved.revision}:current);
+        setData(current=>current?{...current,revision:saved.revision,draft}:current);
         setDirty(false);
       }
       const result=await uploadNativeOnboardingDocument(id,productType,type,{
@@ -412,7 +412,7 @@ export default function NativePolicyOnboarding(){
     try{
       if(dirty){
         const saved=await saveNativePolicyOnboarding(id,data.revision,draft);
-        setData(current=>current?{...current,revision:saved.revision}:current);
+        setData(current=>current?{...current,revision:saved.revision,draft}:current);
         setDirty(false);
       }
       const url=await createPartnerPolicyIntakeBridgeUrl(id,false,null);
