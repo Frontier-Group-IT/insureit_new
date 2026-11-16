@@ -8,12 +8,11 @@ No production URL, R2 write, public customer data artifact, or --clean allowed.
 """
 import os
 from pathlib import Path
-import ssl
 import subprocess
 import sys
 
 from managed_recovery_preflight import (
-    checked_target_connection, query_target, TARGET_REF,
+    checked_target_connection, query_target, TARGET_REF, isolated_ssl_root_cert,
 )
 
 POSTGRES_IMAGE = "postgres:17-bookworm"
@@ -101,10 +100,6 @@ def run_restore(directory, url, dry_run=False):
         raise RuntimeError("Isolation acknowledgement missing")
     if not os.getenv("RECOVERY_EXPECTED_DB_SNAPSHOT", ""):
         raise RuntimeError("Mandatory authenticated archive snapshot lock absent")
-    ca = ssl.get_default_verify_paths().cafile
-    if not ca or not Path(ca).is_file():
-        raise RuntimeError("Host CA bundle unavailable")
-
     sqlfile = directory / "private-restore.sql"
     securityfile = directory / "private-security-guard.sql"
     if sqlfile.exists() or securityfile.exists():
@@ -140,34 +135,42 @@ def run_restore(directory, url, dry_run=False):
         "PGDATABASE": params["dbname"], "PGUSER": params["user"],
         "PGPASSWORD": params["password"],
         "PGSSLMODE": "verify-full",
-        "PGSSLROOTCERT": "/etc/ssl/certs/ca-certificates.crt",
+        "PGSSLROOTCERT": "/etc/ssl/insureit-isolated-supabase-ca.crt",
     })
     pg_vars = ("PGHOST", "PGPORT", "PGDATABASE", "PGUSER", "PGPASSWORD",
                "PGSSLMODE", "PGSSLROOTCERT")
     # -1 wraps BOTH SQL restore and privilege/RLS guard in ONE transaction.
     # Any error rolls back app rows, Auth rows, policies and functions.
-    apply_cmd = [
-        "docker", "run", "--rm", "--network", "host", "--read-only",
-        "--tmpfs", "/tmp:rw,nosuid,nodev,size=32m",
-        "--mount", f"type=bind,source={directory},target=/archive,readonly",
-    ]
-    for name in pg_vars:
-        apply_cmd += ["--env", name]
-    apply_cmd += [
-        "--entrypoint", "psql", POSTGRES_IMAGE,
-        "--no-psqlrc", "--single-transaction",
-        "--variable", "ON_ERROR_STOP=1", "--quiet",
-        "--dbname=postgres",
-        "--file=/archive/private-restore.sql",
-        "--file=/archive/private-security-guard.sql",
-    ]
-    with (directory / "managed-restore-private.log").open("xb") as log:
-        proc = subprocess.run(
-            apply_cmd, stdout=log, stderr=subprocess.STDOUT,
-            timeout=1800, env=environment, check=False,
-        )
-    if proc.returncode:
-        raise RuntimeError("Atomic managed SQL import/security check FAILED and rolled back")
+    # The CA PEM is downloaded from the isolated Supabase project into
+    # protected GitHub environment secret only. Use a private, ephemeral file
+    # with an explicit read-only mount for psql. Never downgrade verify-full.
+    with isolated_ssl_root_cert() as ca_path:
+        apply_cmd = [
+            "docker", "run", "--rm", "--network", "host", "--read-only",
+            "--tmpfs", "/tmp:rw,nosuid,nodev,size=32m",
+            "--mount", f"type=bind,source={directory},target=/archive,readonly",
+            "--mount", (
+                f"type=bind,source={ca_path},"
+                "target=/etc/ssl/insureit-isolated-supabase-ca.crt,readonly"
+            ),
+        ]
+        for name in pg_vars:
+            apply_cmd += ["--env", name]
+        apply_cmd += [
+            "--entrypoint", "psql", POSTGRES_IMAGE,
+            "--no-psqlrc", "--single-transaction",
+            "--variable", "ON_ERROR_STOP=1", "--quiet",
+            "--dbname=postgres",
+            "--file=/archive/private-restore.sql",
+            "--file=/archive/private-security-guard.sql",
+        ]
+        with (directory / "managed-restore-private.log").open("xb") as log:
+            proc = subprocess.run(
+                apply_cmd, stdout=log, stderr=subprocess.STDOUT,
+                timeout=1800, env=environment, check=False,
+            )
+        if proc.returncode:
+            raise RuntimeError("Atomic managed SQL import/security check FAILED and rolled back")
     print("TARGET MANAGED SQL R4 ATOMIC RESTORE + RESTRICTIVE SECURITY GUARDS PASSED;"
           " independent snapshot/permission parity audit follows")
 
