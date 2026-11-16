@@ -59,7 +59,7 @@ assert(nav.includes("/development/ai-policy-onboarding"), "Development menu must
 assert(page.includes('requireCapability("manage_system", "approve")'), "Route requires Development authority");
 assert(page.includes("fetchAllPages<CandidateIntake"), "Candidate list must load all relevant rows before pagination");
 assert(page.includes("loadPolicyIntakeDuplicateMatches(admin, list.data ?? [])"), "Shared authoritative duplicate detection must run for every candidate");
-assert(page.includes("policyIntakeBucket(row, duplicates.matches.has(row.id))"), "Effective status must match the Policy Intake register");
+assert(page.includes('policyIntakeBucket(row, duplicateIds.has(row.id))'), "Effective status must match the Policy Intake register");
 assert(page.includes('const workspaceRows = !unavailable && duplicates?.ok ? candidates : []'),
   "All open Motor Intakes, including duplicates and incomplete OCR, must remain in the n8n preview list");
 assert(page.includes('is_duplicate: policyIntakeBucket(row, duplicateIds.has(row.id)) === "duplicate"'),
