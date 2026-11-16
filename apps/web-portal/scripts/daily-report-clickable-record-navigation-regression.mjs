@@ -27,7 +27,7 @@ assert.match(loader, /row\.href=dailyActivityRecordHref\(table,row\.recordId\)/,
 for(const table of ["policies","policy_intake_requests","life_health_cases"]) {
   assert.ok(loader.includes(`table:"${table}",recordId:a.id`),`Keep immutable record ID for ${table} history`);
 }
-assert.match(panel, /<DailyActivityHistoryRows rows=\{data\.rows\} \/>/, "All employee and Self reports use interactive rows");
+assert.ok(panel.includes("<DailyActivityHistoryRows rows={data.rows} vehicleMode={vehicleMode} />"), "All employee and Self reports use interactive rows with vehicle-specific presentation");
 assert.match(rows, /role="button" tabIndex=\{0\}/, "Rows support keyboard focus");
 assert.match(rows, /event\.key==="Enter"\|\|event\.key===" "/, "Enter and Space activate rows");
 assert.match(rows, /row\.detail \? <span/, "Preserve latest audit field-level change details");
@@ -54,4 +54,12 @@ assert.ok(loader.includes('admin.from("insurance_companies")'), "Insurer linked 
 assert.ok(loader.includes('admin.from("customers")'), "Customer linked to actual customer");
 assert.ok(loader.includes('admin.from("vehicles")'), "Vehicle linked to actual vehicle");
 assert.doesNotMatch(loader+routes+panel+rows,/\.insert\(|\.update\(|\.upsert\(|\.delete\(/, "Navigation is read-only");
-console.log("Daily Report activity detail dialog and six-column context regression passed.");
+assert.ok(panel.includes('const vehicleMode=data.category.startsWith("Vehicle ")'), "Only Vehicle activities use Vehicle Register headings");
+for(const label of ["Vehicle","Customer","Make / model","Registration"]){
+  assert.ok(panel.includes('>'+label+'</th>'), "Missing vehicle column "+label);
+}
+assert.ok(rows.includes('vehicleMode ? <>'), "Vehicle rows use their own cell layout");
+assert.ok(rows.includes('selected.vehicleNumber'), "Vehicle activity detail uses real vehicle number");
+assert.ok(loader.includes('admin.from("vehicles")'), "Vehicle context comes from existing records");
+assert.ok(loader.includes('.in("id",activityVehicleIds)'), "Vehicle lookups are limited to visible activity rows");
+console.log("Daily Report activity detail and vehicle-specific register columns regression passed.");
