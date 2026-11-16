@@ -860,7 +860,6 @@ export default function NativePolicyOnboarding(){
     {error&&!draft?<View style={styles.error}><Ionicons name="alert-circle-outline" size={16} color="#B42318"/><Text style={styles.errorText}>{error}</Text></View>:null}
     {!loading&&!draft?<Pressable style={styles.retry} onPress={()=>void load()}><Text style={styles.retryText}>Retry loading</Text></Pressable>:null}
     {draft?<>
-      {isNew?<View style={styles.section}><Text style={styles.muted}>{isMotor?'New Motor Policy · Complete the blank form and select Create Active Policy.':'New Life Policy · Complete the blank form and select Create Policy. Issuance remains pending in Operations.'} No Policy Intake will be created. This form is not saved until submission.</Text></View>:null}
       {sourceSection()}
       {isMotor?motorVehicleSection:productType==='Non Motor'?nonMotorCustomerPolicySection:productSection('02','Customer / Proposer',commonPerson)}
       {isMotor?motorProductSection:productType==='Non Motor'?nonMotorRiskSection:productSection('03','Policy product & case details',lifeProduct)}
