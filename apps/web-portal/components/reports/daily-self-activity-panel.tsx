@@ -32,6 +32,7 @@ export function DailySelfActivityPanel({data,linkFor,reportMode="self"}:Props) {
   // Policy and Claims cards within a single five-column row.
   const isCustomerActivity=data.category.startsWith("Customer ");
   const isClaimActivity=data.category==="Claims"||data.category.startsWith("Claim ");
+  const isOtherActivity=data.category==="Other Activities";
   const categoryGroups=[
     {name:"Customer", items:data.categories.filter(item=>item.name.startsWith("Customer "))},
     {name:"Vehicle", items:data.categories.filter(item=>item.name.startsWith("Vehicle "))},
@@ -105,7 +106,7 @@ export function DailySelfActivityPanel({data,linkFor,reportMode="self"}:Props) {
                       <th className="px-3 py-3">Customer</th>
                       <th className="px-3 py-3">Vehicle No.</th>
                     </>
-                  ) : (
+                  ) : isOtherActivity ? null : (
                     <>
                       <th className="px-3 py-3">Policy / Case No.</th>
                       <th className="px-3 py-3">Customer / Vehicle</th>
@@ -115,7 +116,7 @@ export function DailySelfActivityPanel({data,linkFor,reportMode="self"}:Props) {
                   <th className="whitespace-nowrap px-3 py-3">Date &amp; Time</th>
                   <th className="px-3 py-3">Status</th></tr>
               </thead>
-              <DailyActivityHistoryRows rows={data.rows} isCustomerActivity={isCustomerActivity} isClaimActivity={isClaimActivity} />
+              <DailyActivityHistoryRows rows={data.rows} isCustomerActivity={isCustomerActivity} isClaimActivity={isClaimActivity} isOtherActivity={isOtherActivity} />
             </table>
           </div>
           <div className="flex items-center justify-between border-t border-[#e4e9f1] px-4 py-3 text-[10px] text-[#66758b]">
