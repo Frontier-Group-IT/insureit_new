@@ -20,7 +20,7 @@ assert.match(client,/body\.append\('draft',JSON\.stringify\(draft\)\)/,'Draft an
 assert.match(api,/scoped\.auth\.getUser\(token\)/,'Backend verifies authenticated user');
 assert.match(api,/hasEffectiveCapability\(profile,"create_policies","edit"\)/,'Backend enforces create permission');
 assert.match(api,/getOperationsHeadDownlinePolicyScope/,'Operations Head downline remains enforced');
-assert.match(api,/draft\.businessLine!=="Life"/,'Standalone never exposes unsupported product creation');
+assert.match(api,/!\["Life","Health"\]\.includes\(String\(draft.businessLine\)\)/,'Standalone only exposes verified Life/Health case creation');
 assert.match(api,/life_health_cases/,'Duplicate proposals are rejected');
 assert.match(api,/validMimes/,'Document MIME is validated');
 assert.match(api,/value\.size>4\*1024\*1024/,'Each document is bounded to 4MB');
