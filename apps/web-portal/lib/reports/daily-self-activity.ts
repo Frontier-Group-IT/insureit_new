@@ -177,9 +177,7 @@ export async function loadSelfActivityHistory(
   for(const a of audits.rows) {
     if(!a.actor_id||a.action==="policy_created"||a.action==="life_health_case_created"||a.action==="life_health_case_closed") continue;
     all.push({id:`audit:${a.id}`,category:actionCategory(a.action,a.table_name),
-      activity:actionCategory(a.action,a.table_name)==="Claims"
-        ? `${selfProfile?.full_name?.trim()||"Employee unavailable"} ${status(a.action)==="Deleted"?"Claim Deleted":displayAction(a.action)}`
-        : displayAction(a.action),reference:sourceLabel(a.record_id),
+      activity:displayAction(a.action),reference:sourceLabel(a.record_id),
       occurredAt:a.created_at,status:status(a.action),source:"Audit",table:a.table_name??undefined,recordId:a.record_id??undefined});
   }
   for(const a of policies.rows) all.push({id:`policy:${a.id}`,category:"Policy Add",activity:"Policy Created",reference:a.policy_no||a.id,occurredAt:a.created_at,status:"Created",source:"Record history",table:"policies",recordId:a.id});
@@ -400,6 +398,13 @@ export async function loadSelfActivityHistory(
         if(!change) continue;
         row.detail=auditChangeDetail(change.old_data,change.new_data);
         if(row.table==="claims" && row.status==="Deleted") {
+          // Name belongs to the ORIGINAL claim creator, not the deleting actor.
+          // Historic audits without captured creator metadata cannot be attributed.
+          const snapshot=change.old_data;
+          const owner=(snapshot && typeof snapshot==="object" && !Array.isArray(snapshot))
+            ? (snapshot as Record<string,unknown>).claim_created_by_name : undefined;
+          const ownerName=typeof owner==="string"?owner.trim().slice(0,100):"";
+          row.activity=ownerName?`${ownerName} Claim Deleted`:"Claim Deleted — Name Unavailable";
           // Deleted claims no longer exist in the master table. Only reuse
           // explicitly saved, non-empty claim identifiers from this actor's audit.
           const old=change.old_data;
