@@ -36,7 +36,7 @@ export type SemiAutoN8nApplyResult = { ok: boolean; error?: string };
 
 export function semiAutoN8nEnabledForIntake(intakeId: string): boolean {
   const mode = process.env.INSUREIT_N8N_OCR_MODE;
-  if (mode !== "shadow" && mode !== "prefer") return false;
+  if (mode !== "shadow" && mode !== "prefer" && mode !== "required") return false;
   if (!UUID.test(intakeId)) return false;
   const allowlist = (process.env.INSUREIT_N8N_OCR_ALLOWED_INTAKE_IDS ?? "")
     .split(",").map(value => value.trim()).filter(UUID.test.bind(UUID));
