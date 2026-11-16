@@ -1,12 +1,13 @@
 Partner production OTA trigger
-release=partner-policy-onboarding-pr-4542
+release=partner-standalone-life-add-policy-pr-4551
 source=verified-merged-main
-source_pr=4542
-source_merge=ba34a175927ef467a971c7f7f01e0bb2909eee8c
+source_pr=4551
+source_merge=faa5702ff11d787558bc746e06f5fc54bbb6930b
 reason=user-approved-publish
 channel=production
 runtime=0.2.0
 requested=2026-11-16
+requires=website-backend-pr-4551-deployed-and-verified
 no_native_build=true
 no_apk=true
 no_aab=true
