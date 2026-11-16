@@ -27,8 +27,9 @@ assert.match(read("../components/reports/daily-self-activity-panel.tsx"), /Count
 assert.match(quickFilters, /type="date"/, "Date filter is present");
 assert.match(quickFilters, /type="search"/, "Employee search is present");
 assert.match(page, /<DailySelfActivityPanel data=\{selfHistory\}/, "Activity category drilldown is available");
-assert.match(read("../components/reports/daily-report-header-controls.tsx"), /aria-current=\{scope===item\?"page":undefined\}/, "Self and All are independent header links");
-assert.match(read("../components/reports/daily-report-header-controls.tsx"), /item==="self"\?"Self":"All"/, "Self and All labels remain beside Reports");
+assert.match(read("../components/reports/daily-report-header-controls.tsx"), /aria-haspopup="listbox"/, "Self and All use a dropdown beside Reports");
+assert.match(read("../components/reports/daily-report-header-controls.tsx"), /type="search" aria-label="Search Self or All"/, "Scope dropdown is searchable");
+assert.match(read("../components/reports/daily-report-header-controls.tsx"), /params.set\("scope",target\)/, "Self and All navigate through the existing scoped Daily Report route");
 assert.doesNotMatch(source, /\.insert\(|\.update\(|\.delete\(|\.upsert\(|\.rpc\(/, "Phase 1 is strictly read-only");
 assert.doesNotMatch(page, /"use client"/, "Page remains server rendered");
 console.log("Daily Report Phase 1 navigation, read scope, filters, bounded reads and no-write contracts passed.");

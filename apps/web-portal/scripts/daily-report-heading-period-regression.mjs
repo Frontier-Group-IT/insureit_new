@@ -13,6 +13,16 @@ assert.match(layout, /<DailyReportHeaderScopes\s*\/>/, "Self All beside Reports 
 assert.match(layout, /<DailyReportHeaderPeriod\s*\/>/, "Period dropdown at right of Reports header");
 assert.match(header, /if\(!isDaily\) return null/, "Daily header controls are hidden on other reporting pages");
 assert.match(header, /aria-label="Daily Report visibility"/);
+assert.match(header, /aria-haspopup="listbox"/, "Self and All must use a dropdown instead of segmented navigation");
+assert.match(header, /type="search" aria-label="Search Self or All"/, "Scope dropdown must be searchable");
+assert.match(header, /const scope=searchParams.get\("scope"\)==="all"\?"all":"self"/, "Self remains selected by default");
+assert.match(header, /const SCOPE_OPTIONS = \[/, "Scope dropdown maintains explicit Self and All options");
+assert.match(header, /params.set\("scope",target\)/, "Selecting All navigates to the existing Daily Report route");
+assert.match(header, /params.delete\("person"\)/, "Scope transitions reset a previously selected employee");
+assert.match(header, /params.delete\("employee"\)/, "Scope transitions clear employee search");
+assert.match(header, /params.set\("page","1"\)/, "Scope selection resets pagination");
+assert.match(header, /event.key==="Escape"/, "Escape dismisses the scope dropdown");
+assert.doesNotMatch(header, /<nav aria-label="Daily Report visibility"/, "Old segmented Self/All control must be removed");
 for(const label of ["90D","MTD","YTD","All time","Custom"]){
   assert.ok(header.includes(`label:"${label}"`),`Period menu missing ${label}`);
 }
