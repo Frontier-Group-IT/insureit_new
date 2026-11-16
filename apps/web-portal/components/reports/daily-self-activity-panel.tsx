@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { SelfActivity } from "@/lib/reports/daily-self-activity";
+import { DailyActivityHistoryRows } from "@/components/reports/daily-activity-history-rows";
 import type { DailyActivityQuery } from "@/lib/reports/daily-activity";
 
 type Data = {
@@ -9,8 +10,6 @@ type Data = {
 };
 type Props = {data:Data;linkFor:(updates:Partial<DailyActivityQuery>)=>string; reportMode?:"self"|"employee"};
 
-const dateFormat=new Intl.DateTimeFormat("en-IN",{timeZone:"Asia/Kolkata",day:"2-digit",month:"short",year:"numeric"});
-const timeFormat=new Intl.DateTimeFormat("en-IN",{timeZone:"Asia/Kolkata",hour:"2-digit",minute:"2-digit",hour12:true});
 const dateTimeLabel=(value:string)=>{ const d=new Date(value);return `${dateFormat.format(d)}, ${timeFormat.format(d)}`; };
 
 export function DailySelfActivityPanel({data,linkFor,reportMode="self"}:Props) {
@@ -81,18 +80,7 @@ export function DailySelfActivityPanel({data,linkFor,reportMode="self"}:Props) {
                   <th className="whitespace-nowrap px-3 py-3">Date &amp; Time</th>
                   <th className="px-3 py-3">Status</th></tr>
               </thead>
-              <tbody className="divide-y divide-[#edf1f6]">
-                {data.rows.map(row=>(
-                  <tr key={row.id} className="text-[11px] text-[#30435d] hover:bg-[#f9fbff]">
-                    <td className="px-4 py-3 font-semibold">
-                      <span className="block">{row.activity}</span>
-                      {row.detail ? <span className="mt-1 block font-normal text-[#506483]">{row.detail}</span> : null}
-                    </td>
-                    <td className="whitespace-nowrap px-3 py-3">{dateTimeLabel(row.occurredAt)}</td>
-                    <td className="px-3 py-3"><span className="rounded-md bg-[#edf3fa] px-2 py-1 text-[9px] font-bold text-[#35587e]">{row.status}</span></td>
-                  </tr>
-                ))}
-              </tbody>
+              <DailyActivityHistoryRows rows={data.rows} employeeName={data.selfName} />
             </table>
           </div>
           <div className="flex items-center justify-between border-t border-[#e4e9f1] px-4 py-3 text-[10px] text-[#66758b]">
