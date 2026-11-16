@@ -9,7 +9,7 @@ assert.match(screen,/vehicleClassLabelRow:\{flexDirection:'row',alignItems:'cent
 assert.match(screen,/vehicleClassDescription:\{flexShrink:1,minWidth:0,maxWidth:'65%',textAlign:'left'/,'Vehicle category should align immediately after the label.');
 assert.match(screen,/f.key==='leadSource'\?\(/,'Lead Source uses select control, never free-text input.');
 assert.match(screen,/accessibilityLabel="Select lead source"/,'Select Lead Source control is present.');
-assert.match(screen,/searchNativeLeadSources\(draft.intermediaryType,query,isNew\?undefined:id\)/,'Intake ID scopes searches while Add Policy is independent.');
+assert.match(screen,/searchNativeLeadSources\(draft.intermediaryType,query,isNew\?undefined:id,offset\)/,'Intake ID scopes searches while Add Policy is independent.');
 assert.match(screen,/selectSource=\(source:NativeLeadSource\)=>/,'Source selection should store metadata.');
 assert.match(screen,/leadSource:source.name,intermediaryCode:source.code,rmName:source.rmName/,'Source selection fills exact master fields.');
 assert.match(screen,/key==='intermediaryType'&&value!==current.intermediaryType/,'Changing intermediary clears stale source identity.');
