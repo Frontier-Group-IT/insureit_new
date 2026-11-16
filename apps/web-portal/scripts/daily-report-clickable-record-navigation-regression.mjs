@@ -41,15 +41,17 @@ assert.match(deleteAction, /\.from\("profiles"\)[\s\S]*?\.select\("full_name"\)/
 assert.match(deleteAction, /claim_created_by_name: deletedClaimIdentity\?\.claim_created_by_name/, "Save creator name into deletion audit");
 assert.ok(deleteAction.indexOf('deletedClaimIdentity = {claim_no:') < deleteAction.indexOf('.from("audit_logs").insert'), "Audit uses captured pre-delete identity");
 
-assert.match(rows, /router\.push\(row\.href\)/, "Existing record navigates to its own page");
-assert.match(rows, /role="alertdialog" aria-modal="true"/, "Unavailable record opens accessible popup");
-assert.match(rows, /This record has been deleted\./, "Deleted record message is short");
-assert.match(rows, /This record is no longer available\./, "Unavailable record message is short");
-assert.match(rows, />OK<\/button>/, "Popup has OK dismissal");
-assert.match(rows, /className="mt-3 flex items-center justify-between gap-3"/, "Message and OK button share a compact horizontal row");
-assert.match(rows, /className="min-w-0 flex-1 text-\[12px\]/, "Message takes the remaining row width");
-assert.match(rows, /className="shrink-0 min-w-\[64px\]/, "OK button stays beside the message");
-assert.doesNotMatch(rows, /className="mt-5 flex justify-end"/, "Do not move OK to a separate footer row");
-assert.match(rows, /event\.key==="Escape"/, "Dialog allows Escape dismissal");
+assert.match(rows, /role="dialog" aria-modal="true"/, "Entire row opens an accessible activity details dialog");
+assert.match(rows, /onClick=\\{event=>openRecord\\(row,event.currentTarget\\)\\}/, "Clicking a row opens its details");
+assert.match(rows, /router\\.push\\(selected\\.href!\\)/, "Optional Open record action navigates to canonical page");
+assert.match(rows, /event\\.key==="Escape"/, "Dialog allows Escape dismissal");
+assert.match(rows, /selected\\.detail\\|\\|"Not recorded"/, "Only recorded audit details are shown");
+assert.match(panel, /Policy \\/ Case No\\./, "Register shows policy or case reference");
+assert.match(panel, /Customer \\/ Vehicle/, "Register shows customer and vehicle context");
+assert.match(panel, /Insurance Company/, "Register shows insurer");
+assert.doesNotMatch(panel, /Performed By|View Details/, "No employee or details-action column");
+assert.match(loader, /admin\\.from\\("insurance_companies"\\)/, "Insurer comes from linked company");
+assert.match(loader, /admin\\.from\\("customers"\\)/, "Customer comes from linked customer");
+assert.match(loader, /admin\\.from\\("vehicles"\\)/, "Vehicle comes from linked vehicle");
 assert.doesNotMatch(loader+routes+panel+rows,/\.insert\(|\.update\(|\.upsert\(|\.delete\(/, "Navigation is read-only");
-console.log("Daily Report clickable record navigation and unavailable-popup regression passed.");
+console.log("Daily Report activity detail dialog and six-column context regression passed.");
