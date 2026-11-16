@@ -110,6 +110,99 @@ export default function LifeHealthCaseDetailScreen(){
    try {await Linking.openURL(operationsCaseUrl(id));}
    catch {setError('Could not open Operations Portal. Sign in there and open the case from Case Register.');}
  };
+
+ const choices=(key:keyof CaseEditForm):{value:string;label:string}[]=>key==='insurerId'
+   ?insurers.map(item=>({value:item.id,label:item.name}))
+   :key==='paymentFrequency'?FREQUENCIES.map(value=>({value,label:value}))
+   :key==='paymentMode'?PAYMENT_MODES.map(value=>({value,label:value}))
+   :key==='premiumPayingTerm'||key==='policyDuration'
+     ?[...(key==='premiumPayingTerm'?['Single Pay']:[]),...Array.from({length:100},(_,i)=>(i+1)+' Year'+(i?'s':''))].map(value=>({value,label:value}))
+     :[];
+ const inline=(key:keyof CaseEditForm,label:string,fallback:string,required=false,wide=false,multiline=false,keyboardType?:'phone-pad'|'decimal-pad')=>{
+   const editable=record?.status_group==='pending'||(record?.status_group==='issued'&&['customerName','customerPhone','customerAddress'].includes(key));
+   if(!editable||!form)return <Field label={label} value={fallback} required={required} wide={wide} multiline={multiline}/>;
+   const items=choices(key);
+   return <View style={[styles.field,wide&&styles.fieldWide]}>
+     <Text style={styles.fieldLabel}>{label.toUpperCase()}{required?<Text style={styles.asterisk}> *</Text>:null}</Text>
+     {items.length?<Pressable accessibilityRole="button" accessibilityLabel={'Select '+label}
+       style={[styles.fieldBox,styles.inlineSelector]} onPress={()=>setPicker(key)}>
+       <Text style={styles.fieldValue}>{key==='insurerId'?insurers.find(x=>x.id===form.insurerId)?.name||record?.insurer_name:form[key]||'Select'}</Text>
+       <Ionicons name="chevron-down" size={15} color={navy}/>
+     </Pressable>:
+     <TextInput accessibilityLabel={label} value={form[key]} onChangeText={v=>setField(key,v)}
+       multiline={multiline} keyboardType={keyboardType} placeholder={label}
+       style={[styles.fieldBox,styles.inlineInput,multiline&&styles.fieldBoxMultiline]}/>}
+   </View>;
+ };
+ const toISO=(value:string):string=>{
+   const raw=value.trim(),parts=/^(\\d{2})\\/(\\d{2})\\/(\\d{4})$/.exec(raw);
+   const iso=parts?parts[3]+'-'+parts[2]+'-'+parts[1]:raw;
+   if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(iso))return '';
+   const date=new Date(iso+'T00:00:00Z');
+   return !Number.isNaN(date.getTime())&&date.toISOString().slice(0,10)===iso?iso:'';
+ };
+ const issuedForm=():LifeHealthIssue=>({
+   ...issue,issuanceDate:toISO(issue.issuanceDate),startDate:toISO(issue.startDate),
+   endDate:issue.endDate?toISO(issue.endDate):'',pptEndDate:issue.pptEndDate?toISO(issue.pptEndDate):'',
+   nextInstallmentDate:issue.nextInstallmentDate?toISO(issue.nextInstallmentDate):'',
+   dateApprovalId:approvalVerified?approvalId:'',
+ });
+ const setIssued=(key:keyof LifeHealthIssue,value:string)=>{
+   setIssue(current=>({...current,[key]:value}));
+   if(key==='issuanceDate'||key==='policyNumber'){setApprovalId('');setApprovalVerified(false);}
+ };
+ const requiresApproval=()=>{
+   const value=toISO(issue.issuanceDate);
+   if(!value)return false;
+   const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Kolkata',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
+   const current=(key:string)=>Number(parts.find(part=>part.type===key)?.value||'0');
+   const [y,m]=value.split('-').map(Number),delta=(current('year')-y)*12+current('month')-m;
+   return delta>1||(delta===1&&current('day')>15);
+ };
+ const submitIssue=async()=>{
+   if(!record||record.status_group!=='pending'||issuing||!form)return;
+   setIssueError('');
+   const data=issuedForm();
+   if(!data.policyNumber.trim()||!data.issuanceDate||!data.startDate||
+      !data.finalPremium.trim()||!Number.isFinite(Number(data.finalPremium))){
+     setIssueError('Enter a valid policy number, issuance date, start date and final premium.');return;
+   }
+   if(JSON.stringify(form)!==JSON.stringify(initialForm(record))){
+     setIssueError('Save your case edits before issuing the policy.');return;
+   }
+   if(requiresApproval()&&!approvalVerified){setApprovalOpen(true);return;}
+   setIssuing(true);
+   try{await issueLifeHealthPolicy(record.id,data);await load();}
+   catch(e){setIssueError(e instanceof Error?e.message:'Issuance outcome unclear. Check Policy Register before retrying.');}
+   finally{setIssuing(false);}
+ };
+ const requestApproval=async()=>{
+   if(!record||!approverKey||approvalLoading)return;
+   setApprovalLoading(true);setIssueError('');
+   try{const result=await requestLifeHealthIssueApproval(record.id,issuedForm(),approverKey);setApprovalId(result.approvalId);setApprovalVerified(false);}
+   catch(e){setIssueError(e instanceof Error?e.message:'Approval request failed.');}
+   finally{setApprovalLoading(false);}
+ };
+ const verifyApproval=async()=>{
+   if(!record||!approvalId||!otp||approvalLoading)return;
+   setApprovalLoading(true);setIssueError('');
+   try{await verifyLifeHealthIssueApproval(record.id,issuedForm(),approvalId,otp);setApprovalVerified(true);setApprovalOpen(false);}
+   catch(e){setIssueError(e instanceof Error?e.message:'OTP verification failed.');}
+   finally{setApprovalLoading(false);}
+ };
+ const issueField=(key:keyof LifeHealthIssue,label:string,required=false,date=false)=>{
+   const value=issue[key]||'';
+   return <View style={styles.field}>
+     <Text style={styles.fieldLabel}>{label.toUpperCase()}{required?<Text style={styles.asterisk}> *</Text>:null}</Text>
+     <View style={[styles.fieldBox,styles.issueFieldRow]}>
+       <TextInput accessibilityLabel={label} style={styles.issueTextInput} value={value}
+         placeholder={date?'DD/MM/YYYY':label} placeholderTextColor="#90A0B7"
+         keyboardType={date?'numbers-and-punctuation':key==='finalPremium'||key==='sumInsured'?'decimal-pad':'default'}
+         onChangeText={v=>setIssued(key,v)}/>
+       {date?<Ionicons name="calendar-outline" size={15} color="#7D8FA8"/>:null}
+     </View>
+   </View>;
+ };
   if(!canPartnerAccessCaseRegister(context))return <PartnerScreen title="Case Register" navyTopBar navyStatusBar bottomNavigationNavy bottomNavigation={<PartnerCaseBottomNavigation/>} onBack={()=>router.back()}>
     <Text style={styles.errorText}>You do not have Case Register permission.</Text>
   </PartnerScreen>;
