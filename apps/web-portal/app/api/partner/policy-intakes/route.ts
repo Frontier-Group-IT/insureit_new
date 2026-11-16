@@ -974,11 +974,12 @@ async function processStoredOcr(id: string) {
   const admin = createSupabaseAdminClient();
   const { data: intake } = await admin
     .from("policy_intake_requests")
-    .select("id,status,storage_bucket,storage_path,file_name,mime_type")
+    .select("id,status,policy_type,storage_bucket,storage_path,file_name,mime_type")
     .eq("id", id)
     .maybeSingle<{
       id: string;
       status: string;
+      policy_type: string | null;
       storage_bucket: string;
       storage_path: string;
       file_name: string;
@@ -994,7 +995,7 @@ async function processStoredOcr(id: string) {
 
   // Controlled n8n-required route: n8n fetches the private PDF itself via
   // short-lived signed Storage URL. Google OCR is never called for this Intake.
-  const ocr = requiresN8nForIntake(id)
+  const ocr = intake.policy_type === "motor" && requiresN8nForIntake(id)
     ? await extractPolicyIntakeWithN8nOnly(id, intake.storage_path)
     : await (async () => {
         const { data: blob, error } = await admin.storage.from(intake.storage_bucket).download(intake.storage_path);
