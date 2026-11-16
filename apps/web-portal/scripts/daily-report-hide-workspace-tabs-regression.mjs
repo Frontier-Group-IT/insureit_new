@@ -14,7 +14,7 @@ for (const label of ["Overview", "Business", "Portfolio", "Operations"]) {
 }
 assert.match(layout, /<ReportWorkspaceNavigation \/>/,
   "Workspace navigation is still rendered by the shared layout for non-Daily Report pages");
-assert.match(header, /Daily Report visibility/,
+assert.match(header, /Daily Report employee selector/,
   "Daily Report keeps its independent Self / All selector");
 assert.match(header, /matching\.map\(person=>\(/, "Scoped employees are listed inside dropdown");
 assert.match(header, /aria-haspopup="listbox"/, "Scope choices appear in a dropdown");
