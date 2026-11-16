@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Linking, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
 import { PartnerInsurerLogo } from '@/components/ui/partner-insurer-logo';
-import { listLifeHealthCases, type LifeHealthCaseSummary, type LifeHealthStatus, type CaseCounts } from '@/lib/life-health-cases';
+import { listLifeHealthCases, operationsIssuedPolicyUrl, type LifeHealthCaseSummary, type LifeHealthStatus, type CaseCounts } from '@/lib/life-health-cases';
 import { canPartnerAccessCaseRegister } from '@/lib/partner-permissions';
 import { usePartnerSession } from '@/providers/partner-session-provider';
 
@@ -27,6 +27,7 @@ export default function LifeHealthCaseRegisterScreen() {
  const [loading,setLoading]=useState(true);
  const [more,setMore]=useState(false);
  const [error,setError]=useState('');
+ const [issuedCase,setIssuedCase]=useState<LifeHealthCaseSummary|null>(null);
  const generation=useRef(0);
  useEffect(()=>{ const timeout=setTimeout(()=>setSearch(query.trim()),300);return ()=>clearTimeout(timeout);},[query]);
  const load=useCallback(async(offset=0)=>{
@@ -81,7 +82,7 @@ export default function LifeHealthCaseRegisterScreen() {
              key={row.id}
              accessibilityRole="button"
              accessibilityLabel={`Open ${row.business_line} case ${row.case_number} for ${row.customer_name || 'customer'}`}
-             onPress={()=>router.push(`/life-health-cases/${row.id}` as never)}
+             onPress={()=>row.status_group==='issued' && row.final_policy_id ? setIssuedCase(row) : router.push(`/life-health-cases/${row.id}` as never)}
              style={({pressed})=>[styles.caseRow,pressed&&styles.caseRowPressed]}
            >
              <View style={styles.logoShell}>
@@ -110,10 +111,49 @@ export default function LifeHealthCaseRegisterScreen() {
            {more?<ActivityIndicator color={navy}/>:<Text style={styles.moreText}>Load More ({rows.length} of {total})</Text>}
          </Pressable>:null}
        </View>}
+     <Modal visible={Boolean(issuedCase)} transparent animationType="fade" onRequestClose={()=>setIssuedCase(null)}>
+       <View style={styles.modalBackdrop}>
+         <Pressable accessibilityLabel="Close issued policy popup" style={StyleSheet.absoluteFill} onPress={()=>setIssuedCase(null)}/>
+         <View style={styles.modalCard} accessibilityRole="alert">
+           <View style={styles.modalIntro}>
+             <View style={styles.modalCheck}><Ionicons name="checkmark-circle-outline" size={22} color="#18794E"/></View>
+             <View style={styles.modalCopy}>
+               <Text style={styles.modalTitle}>Policy already issued</Text>
+               <Text style={styles.modalDescription}>This case has already been issued as a policy. Open the issued policy to view and edit its details.</Text>
+             </View>
+           </View>
+           <View style={styles.modalActions}>
+             <Pressable accessibilityRole="button" onPress={()=>setIssuedCase(null)} style={styles.modalClose}><Text style={styles.modalCloseText}>Close</Text></Pressable>
+             <Pressable accessibilityRole="button" accessibilityLabel="View issued policy in Operations Portal" onPress={async()=>{
+               if(!issuedCase?.final_policy_id)return;
+               try {
+                 const url=operationsIssuedPolicyUrl(issuedCase.final_policy_id);
+                 await Linking.openURL(url);
+                 setIssuedCase(null);
+               } catch {
+                 Alert.alert('Unable to open policy', 'The issued policy could not be opened in Operations Portal. Please try again.');
+               }
+             }} style={styles.modalView}><Text style={styles.modalViewText}>View Policy</Text></Pressable>
+           </View>
+         </View>
+       </View>
+     </Modal>
    </PartnerScreen>
  );
 }
 const styles=StyleSheet.create({
+ modalBackdrop:{flex:1,justifyContent:'center',alignItems:'center',backgroundColor:'rgba(15,23,42,0.28)',padding:20},
+ modalCard:{width:'100%',maxWidth:390,backgroundColor:'#FFFFFF',borderRadius:18,borderWidth:1,borderColor:'#D9E2F0',padding:20},
+ modalIntro:{flexDirection:'row',alignItems:'flex-start',gap:12},
+ modalCheck:{width:40,height:40,borderRadius:20,backgroundColor:'#EAF7F2',alignItems:'center',justifyContent:'center'},
+ modalCopy:{flex:1},
+ modalTitle:{fontSize:15,fontWeight:'700',color:'#17365D'},
+ modalDescription:{marginTop:7,fontSize:11,lineHeight:19,color:'#667085'},
+ modalActions:{marginTop:20,borderTopWidth:1,borderColor:'#E8EDF3',paddingTop:14,flexDirection:'row',justifyContent:'flex-end',gap:9},
+ modalClose:{borderWidth:1,borderColor:'#CAD7E7',borderRadius:9,paddingHorizontal:16,paddingVertical:11,justifyContent:'center'},
+ modalCloseText:{fontSize:11,fontWeight:'700',color:'#475467'},
+ modalView:{backgroundColor:'#17365D',borderRadius:9,paddingHorizontal:16,paddingVertical:11,justifyContent:'center'},
+ modalViewText:{fontSize:11,fontWeight:'700',color:'#FFFFFF'},
  searchWrap:{flexDirection:'row',alignItems:'center',borderRadius:12,borderWidth:1,borderColor:'#CBD8E7',backgroundColor:'#FFF',paddingHorizontal:12,height:44,gap:8,marginTop:4,marginBottom:8},
  search:{flex:1,color:'#172B4D',fontSize:12},
  filters:{marginTop:12,marginBottom:8,flexGrow:0},
