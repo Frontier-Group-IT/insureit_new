@@ -8,9 +8,10 @@ import type { SelfActivity } from "@/lib/reports/daily-self-activity";
 const dateFormat=new Intl.DateTimeFormat("en-IN",{timeZone:"Asia/Kolkata",day:"2-digit",month:"short",year:"numeric"});
 const timeFormat=new Intl.DateTimeFormat("en-IN",{timeZone:"Asia/Kolkata",hour:"2-digit",minute:"2-digit",hour12:true});
 
-type Props={rows:SelfActivity[]};
+type Props={rows:SelfActivity[];isCustomerActivity?:boolean};
+const customerField=(value:string|number|undefined|null)=>value===undefined||value===null||value===""?"—":String(value);
 
-export function DailyActivityHistoryRows({rows}:Props) {
+export function DailyActivityHistoryRows({rows,isCustomerActivity=false}:Props) {
   const router=useRouter();
   const [selected,setSelected]=useState<SelfActivity|null>(null);
   const closeRef=useRef<HTMLButtonElement>(null);
@@ -48,9 +49,21 @@ export function DailyActivityHistoryRows({rows}:Props) {
               <span className="block">{row.activity}</span>
               {row.detail ? <span className="mt-1 block font-normal text-[#506483]">{row.detail}</span> : null}
             </td>
-            <td className="px-3 py-3 font-medium">{row.reference||"—"}</td>
-            <td className="px-3 py-3">{row.customerVehicle||"—"}</td>
-            <td className="px-3 py-3">{row.insurer||"—"}</td>
+            {isCustomerActivity ? (
+              <>
+                <td className="px-3 py-3 font-medium">{customerField(row.customerName)}</td>
+                <td className="px-3 py-3">{customerField(row.customerType)}</td>
+                <td className="px-3 py-3 tabular-nums">{customerField(row.customerMobile)}</td>
+                <td className="px-3 py-3">{customerField(row.customerFleetSize)}</td>
+                <td className="px-3 py-3 tabular-nums">{customerField(row.customerPolicyCount)}</td>
+              </>
+            ) : (
+              <>
+                <td className="px-3 py-3 font-medium">{row.reference||"—"}</td>
+                <td className="px-3 py-3">{row.customerVehicle||"—"}</td>
+                <td className="px-3 py-3">{row.insurer||"—"}</td>
+              </>
+            )}
             <td className="whitespace-nowrap px-3 py-3">{dateFormat.format(new Date(row.occurredAt))}, {timeFormat.format(new Date(row.occurredAt))}</td>
             <td className="px-3 py-3"><span className="rounded-md bg-[#edf3fa] px-2 py-1 text-[9px] font-bold text-[#35587e]">{row.status}</span></td>
           </tr>
@@ -65,9 +78,17 @@ export function DailyActivityHistoryRows({rows}:Props) {
             <dl className="mt-4 grid grid-cols-[120px_minmax(0,1fr)] gap-x-3 gap-y-3 text-[12px] text-[#30435d]">
               {([
                 ["Activity",selected.activity],
-                ["Policy / Case No.",selected.reference||"—"],
-                ["Customer / Vehicle",selected.customerVehicle||"—"],
-                ["Insurance Company",selected.insurer||"—"],
+                ...(isCustomerActivity ? [
+                  ["Customer",customerField(selected.customerName)],
+                  ["Customer Type",customerField(selected.customerType)],
+                  ["Mobile",customerField(selected.customerMobile)],
+                  ["Fleet Size",customerField(selected.customerFleetSize)],
+                  ["Total Policies",customerField(selected.customerPolicyCount)],
+                ] : [
+                  ["Policy / Case No.",selected.reference||"—"],
+                  ["Customer / Vehicle",selected.customerVehicle||"—"],
+                  ["Insurance Company",selected.insurer||"—"],
+                ]),
                 ["Date & Time",`${dateFormat.format(new Date(selected.occurredAt))}, ${timeFormat.format(new Date(selected.occurredAt))}`],
                 ["Status",selected.status],
                 ["Recorded changes",selected.detail||"Not recorded"],
