@@ -11,6 +11,7 @@ export type SelfActivity = {
   occurredAt: string; status: string; source: "Audit" | "Record history"; detail?: string;
   table?: string; recordId?: string; href?: string|null;
   customerVehicle?: string; insurer?: string;
+  vehicleNumber?: string; vehicleCustomer?: string; vehicleMakeModel?: string; vehicleRegistration?: string;
   customerName?: string; customerType?: string; customerMobile?: string;
   customerFleetSize?: string; customerPolicyCount?: number;
 };
@@ -300,6 +301,39 @@ export async function loadSelfActivityHistory(
       (ctx.customerId&&customerNames.get(ctx.customerId))||"",
       (ctx.vehicleId&&vehicleNumbers.get(ctx.vehicleId))||ctx.product||"",
     ].filter(Boolean).join(" · ")||undefined;
+  }
+  // Vehicle activity columns mirror the Vehicle Register, but are read-only.
+  // Enrich only visible actor-scoped history rows, never a general vehicle list.
+  const activityVehicleIds=[...new Set(visible
+    .filter(row=>row.category.startsWith("Vehicle ") && row.table==="vehicles" && isValidDailyRecordId(row.recordId??""))
+    .map(row=>row.recordId as string))];
+  if(activityVehicleIds.length) {
+    const {data:vehicleDetails,error:vehicleError}=await admin.from("vehicles")
+      .select("id,vehicle_no,vehicle_type,make,model,registration_status,customer_id")
+      .in("id",activityVehicleIds);
+    if(vehicleError) console.error("[daily-report] vehicle activity labels unavailable",{code:vehicleError.code||"request_error"});
+    else {
+      const linkedVehicleCustomers=[...new Set((vehicleDetails??[])
+        .map(vehicle=>vehicle.customer_id)
+        .filter((id):id is string=>typeof id==="string"&&isValidDailyRecordId(id)))];
+      const {data:vehicleCustomers,error:customerError}=linkedVehicleCustomers.length
+        ? await admin.from("customers").select("id,contact_name").in("id",linkedVehicleCustomers)
+        : {data:[],error:null};
+      if(customerError) console.error("[daily-report] vehicle customer labels unavailable",{code:customerError.code||"request_error"});
+      const names=new Map((vehicleCustomers??[]).map(customer=>[customer.id,customer.contact_name||""]));
+      const vehiclesById=new Map((vehicleDetails??[]).map(vehicle=>[vehicle.id,vehicle]));
+      for(const row of visible) {
+        if(!row.category.startsWith("Vehicle ") || row.table!=="vehicles" || !row.recordId) continue;
+        const vehicle=vehiclesById.get(row.recordId);
+        if(!vehicle) continue; // Deleted vehicle: do not substitute the UUID.
+        row.vehicleNumber=vehicle.vehicle_no||undefined;
+        row.vehicleCustomer=names.get(vehicle.customer_id)||undefined;
+        row.vehicleMakeModel=[vehicle.make,vehicle.model].filter(Boolean).join(" ")||undefined;
+        const number=(vehicle.vehicle_no||"").toUpperCase();
+        row.vehicleRegistration=(vehicle.registration_status==="registration_pending"
+          ||number.startsWith("NEW-")||number.startsWith("PENDING-"))?"RC pending":"Registered";
+      }
+    }
   }
   // Only the already-visible, scoped audit rows may receive field-level details.
   // No audit payload is serialized to the client.

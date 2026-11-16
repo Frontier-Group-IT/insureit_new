@@ -31,6 +31,7 @@ export function DailySelfActivityPanel({data,linkFor,reportMode="self"}:Props) {
   // Keep each activity family together instead of mixing Customer, Vehicle,
   // Policy and Claims cards within a single five-column row.
   const isCustomerActivity=data.category.startsWith("Customer ");
+  const vehicleMode=data.category.startsWith("Vehicle ");
   const categoryGroups=[
     {name:"Customer", items:data.categories.filter(item=>item.name.startsWith("Customer "))},
     {name:"Vehicle", items:data.categories.filter(item=>item.name.startsWith("Vehicle "))},
@@ -97,6 +98,13 @@ export function DailySelfActivityPanel({data,linkFor,reportMode="self"}:Props) {
                       <th className="px-3 py-3">Customer Type</th>
                       <th className="px-3 py-3">Mobile</th>
                     </>
+                  ) : vehicleMode ? (
+                    <>
+                      <th className="px-3 py-3">Vehicle</th>
+                      <th className="px-3 py-3">Customer</th>
+                      <th className="px-3 py-3">Make / model</th>
+                      <th className="px-3 py-3">Registration</th>
+                    </>
                   ) : (
                     <>
                       <th className="px-3 py-3">Policy / Case No.</th>
@@ -107,7 +115,7 @@ export function DailySelfActivityPanel({data,linkFor,reportMode="self"}:Props) {
                   <th className="whitespace-nowrap px-3 py-3">Date &amp; Time</th>
                   <th className="px-3 py-3">Status</th></tr>
               </thead>
-              <DailyActivityHistoryRows rows={data.rows} isCustomerActivity={isCustomerActivity} />
+              <DailyActivityHistoryRows rows={data.rows} isCustomerActivity={isCustomerActivity} vehicleMode={vehicleMode} />
             </table>
           </div>
           <div className="flex items-center justify-between border-t border-[#e4e9f1] px-4 py-3 text-[10px] text-[#66758b]">
