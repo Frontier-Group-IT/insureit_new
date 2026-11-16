@@ -19,5 +19,5 @@ assert.match(header, /Daily Report visibility/,
 assert.match(header, /const SCOPE_OPTIONS = \[/, "Scope choices Self/All are defined");
 assert.match(header, /aria-haspopup="listbox"/, "Scope choices appear in a dropdown");
 assert.match(header, /type="search" aria-label="Search Self or All"/, "Scope options are searchable");
-assert.match(layout, /<DailyReportHeaderScopes \/>/);
+assert.match(layout, /<DailyReportHeaderScopes canViewAll=\{canViewAll\} \/>/, "Scope selector receives effective All permission");
 console.log("Daily Report hides all 4 workspace tabs without changing Reporting Workspace or Self/All.");
