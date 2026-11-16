@@ -22,6 +22,7 @@ export type LifeHealthCaseSummary = {
 };
 export type LifeHealthCaseDetail = LifeHealthCaseSummary & {
   status: string;
+  updated_at: string;
   premium_paying_term: string | null;
   policy_duration: string | null;
   payment_frequency: string;
@@ -90,4 +91,41 @@ export function operationsCaseUrl(id: string) {
 export function operationsIssuedPolicyUrl(policyId: string) {
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(policyId)) throw new Error('Invalid issued policy reference.');
   return `${portal}/policies/${encodeURIComponent(policyId)}/edit`;
+}
+
+export type LifeHealthCaseEdit = {
+  id: string;
+  updatedAt?: string;
+  customerName?: string;
+  customerPhone?: string;
+  customerAddress?: string;
+  productName?: string;
+  proposalNumber?: string;
+  premiumPayingTerm?: string;
+  policyDuration?: string;
+  paymentFrequency?: string;
+  paymentMode?: string;
+  premiumAmount?: number;
+};
+
+/** Saves only fields permitted for the current case state and signed-in actor. */
+export async function saveLifeHealthCaseEdit(payload: LifeHealthCaseEdit): Promise<void> {
+  const session = await getCurrentSession();
+  if (!session?.access_token) throw new Error('Your session expired. Sign in again.');
+  let response: Response;
+  try {
+    response = await fetch(`${portal}/api/partner/life-health-cases`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+  } catch {
+    throw new Error('Unable to connect to Case Register. Check your internet connection.');
+  }
+  const body = await response.json().catch(() => null) as { ok?: boolean; error?: string } | null;
+  if (!response.ok || !body?.ok) {
+    if (response.status === 401 || response.status === 403) throw new Error(body?.error || 'Your edit permission is unavailable.');
+    if (response.status === 404 || response.status === 405) throw new Error('Native editing is not available on the production portal yet.');
+    throw new Error(body?.error || 'Unable to save case changes.');
+  }
 }
