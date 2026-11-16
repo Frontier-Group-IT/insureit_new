@@ -62,7 +62,7 @@ assert(page.includes("loadPolicyIntakeDuplicateMatches(admin, list.data ?? [])")
 assert(page.includes("policyIntakeBucket(row, duplicates.matches.has(row.id))"), "Effective status must match the Policy Intake register");
 assert(page.includes('const workspaceRows = !unavailable && duplicates?.ok ? candidates : []'),
   "All open Motor Intakes, including duplicates and incomplete OCR, must remain in the n8n preview list");
-assert(page.includes('is_duplicate: policyIntakeBucket(row, duplicates!.matches.has(row.id)) === "duplicate"'),
+assert(page.includes('is_duplicate: policyIntakeBucket(row, duplicateIds.has(row.id)) === "duplicate"'),
   "Derived duplicate status must be visible without modifying Intake status");
 assert(page.includes('initialIntakeId={requestedId && pageRows.some(row => row.id === requestedId)'),
   "Direct Intake links must select only Intake IDs present in the authorized paginated server list");
