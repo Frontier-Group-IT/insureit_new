@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 const read = (path) => readFileSync(fileURLToPath(new URL(path, import.meta.url)), "utf8");
 const classifier = read("../lib/life-health-pension-maturity.ts");
 const casePage = read("../components/life-health-case-detail.tsx");
-const conversion = read("../app/policies/life-health-policy-actions.ts");
+const conversion = read("../lib/life-health-case-issuance-engine.ts");
 const editPage = read("../components/life-health-issued-policy-edit-form.tsx");
 const editAction = read("../app/policies/life-health-issued-policy-edit-actions.ts");
 const previousMigration = read("../../../supabase/migrations/20261103110000_life_pension_optional_policy_maturity.sql");
