@@ -26,6 +26,6 @@ assert.doesNotMatch(api, /sortPolicyIntakesByActivity/, "Partner pagination rema
 // Verified reference case: created 14 Nov, finalized 16 Nov (IST).
 const submitted = "2026-11-14T06:13:20.668736Z";
 const finalized = "2026-11-16T05:59:41.832434Z";
-assert.equal(new Date(finalized).toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" }), "11/16/2026");
+assert.equal(new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(finalized)), "16/11/2026");
 assert.ok(Date.parse(finalized) > Date.parse(submitted));
 console.log("Operations Completed-tab date display, filter and order regression passed");
