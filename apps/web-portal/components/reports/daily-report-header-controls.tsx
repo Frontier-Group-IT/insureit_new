@@ -65,7 +65,7 @@ export function DailyReportHeaderScopes() {
     return ()=>{document.removeEventListener("mousedown",outside);document.removeEventListener("keydown",escape);};
   },[open]);
   useEffect(()=>{setOpen(false);setSearch("");},[selectedPerson]);
-  if(!isDaily)return null;
+  if(!isDaily) return null;
   function selectPerson(personId:string|null) {
     const params=new URLSearchParams(searchParams.toString());
     params.set("scope",personId?"all":"self");
