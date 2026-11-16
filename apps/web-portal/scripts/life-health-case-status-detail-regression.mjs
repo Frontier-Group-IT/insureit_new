@@ -32,4 +32,26 @@ assert.match(page, /final_policy_id,converted_at,created_at,created_by,converted
 assert.match(page, /typeof rejection\.reason === "string"/, "Rejection reason must come from saved metadata, not a fabricated label.");
 assert.match(rejectAction, /rejection: \{ reason, rejected_at: now, rejected_by: profile\.id \}/, "Existing rejection provenance remains authoritative.");
 assert.match(editAction, /row\.final_policy_id \|\| row\.status === "rejected"/, "Backend still denies edits to closed cases.");
+// Screenshot parity: rejected cases retain the same structured Operations case page,
+// not the separate issued-policy editor redesign or a message-only rejection screen.
+const referenceSections = [
+  ['01', 'Policy source & ownership', 'md:grid-cols-2 xl:grid-cols-4'],
+  ['02', 'Customer / proposer', 'md:grid-cols-2 xl:grid-cols-4'],
+  ['03', 'Policy product & case details', 'md:grid-cols-2 xl:grid-cols-3'],
+  ['04', 'Premium & payment', 'md:grid-cols-2 xl:grid-cols-3'],
+];
+let previousSection = -1;
+for (const [number, title, columns] of referenceSections) {
+  const section = `<Section number="${number}" title="${title}" contentClassName="${columns}"`;
+  const position = detail.indexOf(section);
+  assert.ok(position > previousSection, `Reference section ${number} (${title}) must retain its original order and desktop columns`);
+  previousSection = position;
+}
+assert.match(detail, /headerTone=isRejected\?"bg-\[linear-gradient\(110deg,#991B1B_0%,#C43D42_100%\)\]"/, "Rejected case retains the screenshot's red header");
+assert.match(detail, /caseStatusLabel=isRejected\?"Rejected"/, "Rejected badge is shown in the header");
+assert.match(detail, /<section aria-label="Documents"/, "Documents remain below the case form");
+assert.match(detail, /role="group" aria-label="Activity Status and Remarks"/, "Activity and Remarks remain below documents");
+assert.match(detail, /const\[infoExpanded,setInfoExpanded\]=useState\(false\)/, "Activity/Remarks stay collapsed by default");
+assert.ok(detail.indexOf('aria-label="Documents"') < detail.indexOf('aria-label="Activity Status and Remarks"'), "Document section precedes Activity/Remarks");
+assert.doesNotMatch(detail, /isRejected\?\s*<LifeHealthIssuedPolicyEditForm/, "Rejected cases must never be replaced with the issued policy editor");
 console.log("Life/Health case status colors and read-only full-detail regression passed.");
