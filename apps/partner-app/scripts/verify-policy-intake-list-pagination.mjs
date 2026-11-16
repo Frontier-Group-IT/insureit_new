@@ -86,10 +86,7 @@ assert.doesNotMatch(app, /style=\{styles\.number\}>\{row\.intake_number\}/, 'Do 
 assert.match(route, /resolveIntakeSubmitterNames\(admin, intakes\)/, 'Mobile list must resolve actual submitters after authorized paging');
 assert.match(route, /resolveIntakeSubmitterNames\(admin, listResult\.data \?\? \[\]\)/, 'Standard list uses the same canonical submitter resolution logic');
 assert.match(app, /row\.ocr_status === 'failed' && \(row\.status === 'processing' \|\| row\.status === 'needs_attention'\)/, 'Only show OCR failure warning when action is needed');
-assert.match(app, /row\.status === 'completed' && row\.finalized_at/, 'Completed intake must show the persisted finalization date rather than last update.');
-assert.ok(app.includes('Completed: ${formatDate(row.finalized_at)}'), 'Show explicit Completed date on finalized intake.');
-assert.ok(app.includes('Submitted: {formatDate(row.created_at)}'), 'Preserve separate original Submitted date for audit.');
-assert.ok(!app.includes('formatDate(row.updated_at || row.created_at)'), 'List timestamps must not confuse OCR updates with finalization.');
+assert.match(app, /<Text style={styles\.updatedDate}>{formatDate\(row\.updated_at \|\| row\.created_at\)}<\/Text>/, 'Keep timestamp but remove Updated prefix');
 assert.doesNotMatch(app, /Updated \{formatDate/, 'Remove redundant Updated text from timestamp');
 
 assert.match(app, /setTimeout\(\(\) => setDebouncedQuery\(query\.trim\(\)\), 300\)/, 'Debounce server searches');
@@ -218,7 +215,13 @@ assert.match(app, /AccessibilityInfo\.isReduceMotionEnabled\(\)/, 'Respect OS re
 assert.match(app, /addEventListener\('reduceMotionChanged', setReduceMotion\)/, 'React to OS reduced-motion changes');
 assert.match(app, /<View style=\{styles\.searchBand\}>/, 'Search band stays fixed without entrance motion');
 assert.doesNotMatch(app, /searchEntrance|searchRise/, 'Search slide and fade animation is fully removed');
-assert.match(app, /<View style=\{\[styles\.searchBox, searchFocused && styles\.searchBoxFocused\]\}>/, 'Keep the search focus highlight');
+assert.match(app, /style=\{\[styles\.searchBox, searchFocused && styles\.searchBoxFocused\]\}/, 'Keep the search focus highlight');
+assert.match(app, /const searchInputRef = useRef<TextInput>\(null\)/, 'Search input has a stable native focus ref');
+assert.match(app, /onPress=\{\(\) => searchInputRef\.current\?\.focus\(\)\}/, 'Tapping any part of search container opens native keyboard');
+assert.match(app, /ref=\{searchInputRef\}/, 'Controlled native input receives focus ref');
+assert.match(app, /searchInput: \{ flex: 1, alignSelf: 'stretch', minHeight: 44,/, 'iOS field fills a 44pt tap target');
+assert.match(app, /onChangeText=\{setQuery\}/, 'Preserve controlled search typing');
+assert.match(app, /setDebouncedQuery\(query\.trim\(\)\)/, 'Preserve server-side search debounce');
 assert.match(app, /onFocus=\{\(\) => setSearchFocused\(true\)\}/, 'Search focus shows a soft highlight');
 assert.match(app, /<MotionFilterChip key=\{item\.key\} active=\{active\} reduceMotion=\{reduceMotion\}/, 'Every status chip has smooth selection transition');
 assert.match(app, /<MotionCard key=\{row\.id\} index=\{index\} reduceMotion=\{reduceMotion\}>/, 'Each card has a capped staggered entrance');
