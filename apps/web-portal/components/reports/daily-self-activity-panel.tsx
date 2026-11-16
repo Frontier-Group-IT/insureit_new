@@ -10,7 +10,6 @@ type Data = {
 };
 type Props = {data:Data;linkFor:(updates:Partial<DailyActivityQuery>)=>string; reportMode?:"self"|"employee"};
 
-const dateTimeLabel=(value:string)=>{ const d=new Date(value);return `${dateFormat.format(d)}, ${timeFormat.format(d)}`; };
 
 export function DailySelfActivityPanel({data,linkFor,reportMode="self"}:Props) {
   // Keep each activity family together instead of mixing Customer, Vehicle,
