@@ -209,17 +209,24 @@ export async function bookNewNativeNonMotorPolicy(
 
 /** Active intermediary options, scoped to creation permissions and the Intake's fixed source. */
 export type NativeLeadSource={id:string;name:string;code:string;mobile:string;rmName:string;rmCode:string};
-export async function searchNativeLeadSources(intermediaryType:string,search:string,intakeId?:string){
+export async function searchNativeLeadSources(intermediaryType:string,search:string,intakeId?:string,offset=0){
   const session=await getCurrentSession();
   if(!session?.access_token)throw new Error('Partner session expired. Sign in again.');
   let response:Response;
   try{
     response=await fetch(`${portal}/api/partner/policy-intakes/native-onboarding/sources`,{
       method:'POST',cache:'no-store',headers:{Authorization:`Bearer ${session.access_token}`,'Content-Type':'application/json'},
-      body:JSON.stringify({intermediary_type:intermediaryType,search,intake_id:intakeId||undefined}),
+      body:JSON.stringify({intermediary_type:intermediaryType,search,intake_id:intakeId||undefined,offset}),
     });
   }catch{throw new Error('Lead source lookup is unavailable. Check your connection.');}
-  const value=await response.json().catch(()=>null) as {ok?:boolean;error?:string;sources?:NativeLeadSource[]}|null;
-  if(!response.ok||!value?.ok)throw new Error(value?.error||'Could not load Lead Source options.');
-  return {sources:value.sources??[]};
+  const contentType=response.headers.get('content-type')??'';
+  const value=contentType.includes('application/json')?
+    await response.json().catch(()=>null) as {ok?:boolean;error?:string;sources?:NativeLeadSource[];hasMore?:boolean}|null:null;
+  if(response.status===404||response.status===405){
+    throw new Error('Lead Source service is not deployed on the website yet. Ask Operations to publish the website backend before using this dropdown.');
+  }
+  if(response.status===401)throw new Error('Your Partner session expired. Sign in again.');
+  if(response.status===403)throw new Error(value?.error||'Your account cannot access these Lead Sources.');
+  if(!response.ok||!value?.ok)throw new Error(value?.error||`Could not load Lead Sources (HTTP ${response.status}). Try again or contact Operations.`);
+  return {sources:value.sources??[],hasMore:Boolean(value.hasMore)};
 }
