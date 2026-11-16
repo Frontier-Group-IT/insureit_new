@@ -183,11 +183,11 @@ assert.match(screen,/productType!=='Non Motor'\?<View style=\{styles.section\}>/
 assert.match(screen,/accessibilityLabel="View Policy"/,'View Policy must appear above bottom actions.');
 assert.match(screen,/getPartnerPolicyIntakeDocumentUrl\(id\)/,'Document viewing must reuse scoped signed policy copy URL.');
 assert.match(screen,/!isNew\?<View style=\{styles.documentAndSaveActions\}>/,'Standalone creation must hide Intake-only document and draft actions.');
-assert.match(screen,/accessibilityLabel="Save Draft"/,'Existing Intake must retain its saved-draft action.');
-assert.match(screen,/documentAndSaveActions:/,'Intake document and draft actions retain their existing wrapper.');
+assert.doesNotMatch(screen,/accessibilityLabel="Save Draft"/,'Intake must not show the removed Save Draft action.');
+assert.match(screen,/documentAndSaveActions:/,'Existing Intake retains its policy-document action wrapper.');
 assert.match(screen,/viewPolicyButton:/,'Intake policy copy action retains its existing styling.');
 assert.match(screen,/onPress=\{\(\)=>\{void save\(\)\.then\(success=>\{if\(success\)setCommercialModal\(null\);\}\);\}\}/,'Commercial popup must retain its underlying draft save action.');
-assert.match(screen,/setDialog\('confirm-save'\)/,'Intake saved-draft confirmation must remain available outside new-policy mode.');
+assert.doesNotMatch(screen,/setDialog\('confirm-save'\)/,'Removed Save Draft confirmation must not be reachable.');
 assert.match(screen,/setDialog\('discard'\)/,'Cancel protects unsaved changes in custom dialog.');
 assert.match(screen,/onRequestClose=\{dismissDialog\}/,'Popup dismissal must be accessible on Android.');
 assert.match(screen,/setDialog\('error'\)/,'Errors must be shown in popup.');
