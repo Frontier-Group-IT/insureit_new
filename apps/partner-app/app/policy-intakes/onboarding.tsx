@@ -945,7 +945,7 @@ export default function NativePolicyOnboarding(){
     </View>
   </View>;
   const motorProductSection=section('03','Policy product, premium & validity',motorProductFields);
-  return <PartnerScreen title="Policy Onboarding" onBack={cancelOnboarding} navyTopBar navyStatusBar topBarIcon="document-text-outline"
+  return <PartnerScreen title="Policy Onboarding" onBack={cancelOnboarding} navyTopBar navyStatusBar topBarIcon="document-text-outline" navyBottomNavigation
     bottomNavigation={<PartnerStackBottomNavigation activeTab="policies" onNavigate={navigateFromOnboarding} />}>
     {loading?<PartnerStateView state="loading" title={isNew?'Preparing new Policy Onboarding':'Loading saved Policy Onboarding'} />:null}
     {error&&!draft?<View style={styles.error}><Ionicons name="alert-circle-outline" size={16} color="#B42318"/><Text style={styles.errorText}>{error}</Text></View>:null}
