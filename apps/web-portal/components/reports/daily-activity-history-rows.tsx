@@ -13,25 +13,23 @@ type Props={rows:SelfActivity[]};
 export function DailyActivityHistoryRows({rows}:Props) {
   const router=useRouter();
   const [unavailable,setUnavailable]=useState<"deleted"|"missing"|"unsupported"|null>(null);
+  const [selected,setSelected]=useState<SelfActivity|null>(null);
   const okRef=useRef<HTMLButtonElement>(null);
   const rowRef=useRef<HTMLTableRowElement|null>(null);
   useEffect(()=>{
-    if(!unavailable)return;
+    if(!unavailable&&!selected)return;
     okRef.current?.focus();
     const onEscape=(event:globalThis.KeyboardEvent)=>{
-      if(event.key==="Escape")setUnavailable(null);
+      if(event.key==="Escape"){setUnavailable(null);setSelected(null);}
     };
     document.addEventListener("keydown",onEscape);
     return ()=>{document.removeEventListener("keydown",onEscape);rowRef.current?.focus();};
-  },[unavailable]);
+  },[unavailable,selected]);
 
   const openRecord=(row:SelfActivity,element:HTMLTableRowElement)=>{
-    if(row.href) {
-      router.push(row.href);
-      return;
-    }
     rowRef.current=element;
-    setUnavailable(row.status==="Deleted"?"deleted":!row.table||!(["policies","policy_intake_requests","life_health_cases","customers","vehicles","claims"].includes(row.table))?"unsupported":"missing");
+    setSelected(row);
+    setUnavailable(null);
   };
   const onRowKeyDown=(event:KeyboardEvent<HTMLTableRowElement>,row:SelfActivity)=>{
     if(event.key==="Enter"||event.key===" "){
@@ -52,11 +50,40 @@ export function DailyActivityHistoryRows({rows}:Props) {
               <span className="block">{row.activity}</span>
               {row.detail ? <span className="mt-1 block font-normal text-[#506483]">{row.detail}</span> : null}
             </td>
+            <td className="px-3 py-3 font-medium">{row.reference||"—"}</td>
+            <td className="px-3 py-3">{row.customerVehicle||"—"}</td>
+            <td className="px-3 py-3">{row.insurer||"—"}</td>
             <td className="whitespace-nowrap px-3 py-3">{dateFormat.format(new Date(row.occurredAt))}, {timeFormat.format(new Date(row.occurredAt))}</td>
             <td className="px-3 py-3"><span className="rounded-md bg-[#edf3fa] px-2 py-1 text-[9px] font-bold text-[#35587e]">{row.status}</span></td>
           </tr>
         ))}
       </tbody>
+      {selected && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#0b2140]/40 px-4"
+          role="presentation" onMouseDown={event=>{if(event.target===event.currentTarget)setSelected(null);}}>
+          <div role="dialog" aria-modal="true" aria-labelledby="daily-activity-detail-title"
+            className="w-full max-w-[520px] rounded-2xl border border-[#dce4ef] bg-white p-5 shadow-2xl">
+            <h3 id="daily-activity-detail-title" className="text-[15px] font-bold text-[#17365D]">Activity details</h3>
+            <dl className="mt-4 grid grid-cols-[120px_minmax(0,1fr)] gap-x-3 gap-y-3 text-[12px] text-[#30435d]">
+              {([
+                ["Activity",selected.activity],
+                ["Policy / Case No.",selected.reference||"—"],
+                ["Customer / Vehicle",selected.customerVehicle||"—"],
+                ["Insurance Company",selected.insurer||"—"],
+                ["Date & Time",`${dateFormat.format(new Date(selected.occurredAt))}, ${timeFormat.format(new Date(selected.occurredAt))}`],
+                ["Status",selected.status],
+                ["Recorded changes",selected.detail||"Not recorded"],
+              ] as const).map(([label,value])=><div key={label} className="contents"><dt className="font-semibold text-[#60718c]">{label}</dt><dd className="min-w-0 break-words">{value}</dd></div>)}
+            </dl>
+            <div className="mt-5 flex justify-end gap-2">
+              <button type="button" ref={okRef} onClick={()=>setSelected(null)}
+                className="rounded-lg border border-[#dce4ef] px-4 py-2 text-[12px] font-bold text-[#17365D]">Close</button>
+              {selected.href && <button type="button" onClick={()=>{router.push(selected.href!);setSelected(null);}}
+                className="rounded-lg bg-[#17365D] px-4 py-2 text-[12px] font-bold text-white">Open record</button>}
+            </div>
+          </div>
+        </div>,document.body
+      )}
       {unavailable && createPortal(
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#0b2140]/40 px-4"
           role="presentation" onMouseDown={event=>{if(event.target===event.currentTarget)setUnavailable(null);}}>
