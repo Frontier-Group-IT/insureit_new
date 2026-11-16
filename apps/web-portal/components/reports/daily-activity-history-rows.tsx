@@ -54,7 +54,6 @@ export function DailyActivityHistoryRows({rows}:Props) {
             </td>
             <td className="whitespace-nowrap px-3 py-3">{dateFormat.format(new Date(row.occurredAt))}, {timeFormat.format(new Date(row.occurredAt))}</td>
             <td className="px-3 py-3"><span className="rounded-md bg-[#edf3fa] px-2 py-1 text-[9px] font-bold text-[#35587e]">{row.status}</span></td>
-            <td className="whitespace-nowrap px-3 py-3 text-[10px] text-[#718096]">{row.source}</td>
           </tr>
         ))}
       </tbody>
