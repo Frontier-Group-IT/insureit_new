@@ -65,12 +65,12 @@ export function DailyActivityHistoryRows({rows,employeeName}:Props) {
             aria-describedby="daily-activity-unavailable-message"
             className="w-full max-w-[350px] rounded-2xl border border-[#dce4ef] bg-white p-5 shadow-2xl">
             <h3 id="daily-activity-unavailable-title" className="text-[14px] font-bold text-[#17365D]">Record unavailable</h3>
-            <p id="daily-activity-unavailable-message" className="mt-2 text-[12px] text-[#52627b]">
-              {unavailable==="deleted"?"This record has been deleted.":unavailable==="unsupported"?"Details are unavailable for this activity.":"This record is no longer available."}
-            </p>
-            <div className="mt-5 flex justify-end">
+            <div className="mt-3 flex items-center justify-between gap-3">
+              <p id="daily-activity-unavailable-message" className="min-w-0 flex-1 text-[12px] leading-5 text-[#52627b]">
+                {unavailable==="deleted"?"This record has been deleted.":unavailable==="unsupported"?"Details are unavailable for this activity.":"This record is no longer available."}
+              </p>
               <button type="button" ref={okRef} onClick={()=>setUnavailable(null)}
-                className="min-w-[76px] rounded-lg bg-[#17365D] px-4 py-2 text-[12px] font-bold text-white hover:bg-[#235185] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315b9a]">OK</button>
+                className="shrink-0 min-w-[64px] rounded-lg bg-[#17365D] px-3 py-2 text-[12px] font-bold text-white hover:bg-[#235185] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315b9a]">OK</button>
             </div>
           </div>
         </div>,document.body
