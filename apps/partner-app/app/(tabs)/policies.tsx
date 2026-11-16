@@ -159,19 +159,19 @@ export default function PoliciesScreen() {
   const name = context?.identity.display_name || 'Partner';
   const quickActions = [
     ...(canPartnerAccess(context, 'view_policy_intakes') ? [{
-      label: 'Policy Intake', icon: 'document-text' as const, color: '#4563D8',
+      label: 'Policy Intake', image: require('../../assets/partner/quick-actions/policy-intake.png'),
       accessibilityLabel: 'Open Policy Intake', route: '/policy-intakes' as const,
     }] : []),
     ...(canPartnerAccess(context, 'create_policies', 'edit') ? [{
-      label: 'Add Policy', icon: 'shield-checkmark' as const, color: '#0CA5A4',
+      label: 'Add Policy', image: require('../../assets/partner/quick-actions/add-policy.png'),
       accessibilityLabel: 'Add Policy, start a new blank policy', route: '/policy-new' as const,
     }] : []),
     ...(canPartnerAccessCaseRegister(context) ? [{
-      label: 'Case Register', icon: 'folder-open' as const, color: '#5259CE',
+      label: 'Case Register', image: require('../../assets/partner/quick-actions/case-register.png'),
       accessibilityLabel: 'Open Case Register for Life and Health cases', route: '/life-health-cases' as const,
     }] : []),
     ...(context?.identity.actor_kind === 'employee' && canPartnerAccess(context, 'create_intermediary_application', 'edit') ? [{
-      label: 'Add Partner', icon: 'person-add' as const, color: '#7755E8',
+      label: 'Add Partner', image: require('../../assets/partner/quick-actions/add-partner.png'),
       accessibilityLabel: 'Add Partner, submit Partner-only application', route: '/partner-new' as const,
     }] : []),
   ];
@@ -281,10 +281,8 @@ export default function PoliciesScreen() {
                 onPress={() => router.push(action.route)}
                 style={({ pressed }) => [styles.quickAction, pressed && styles.quickActionPressed]}
               >
-                <View style={[styles.quickActionIconBox, { backgroundColor: action.color }]}>
-                  <Ionicons name={action.icon} size={24} color="#FFFFFF" />
-                </View>
-                <Text numberOfLines={2} style={styles.quickActionLabel}>{action.label}</Text>
+                <View style={styles.quickActionImageShell}><Image source={action.image} style={styles.quickActionImage} resizeMode="contain" /></View>
+                <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={styles.quickActionLabel}>{action.label}</Text>
               </Pressable>
             ))}
           </View>
@@ -753,16 +751,23 @@ const styles = StyleSheet.create({
   summarySeeAllOptionCount: { fontSize: 10, fontWeight: '700', color: '#526786' },
   quickActionsSection: { marginHorizontal: 12, marginTop: 13, marginBottom: 2 },
   quickActionsHeading: { marginHorizontal: 3, marginBottom: 8, color: '#17365D', fontSize: 12, lineHeight: 16, fontWeight: '800' },
-  quickActionsRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 7 },
-  quickAction: { flex: 1, minWidth: 0, alignItems: 'center', borderRadius: 12, paddingVertical: 2 },
-  quickActionPressed: { backgroundColor: '#EFF5FD', opacity: 0.84 },
-  quickActionIconBox: {
-    width: '100%', height: 52, alignItems: 'center', justifyContent: 'center',
-    borderRadius: 12,
+  quickActionsRow: { flexDirection: 'row', alignItems: 'stretch', gap: 7 },
+  quickAction: {
+    flex: 1, minWidth: 0, height: 94, borderRadius: 17,
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: '#F5F8FC', paddingHorizontal: 3, paddingVertical: 9, gap: 5,
   },
+  quickActionPressed: { backgroundColor: '#ECF3FD', opacity: 0.88 },
+  quickActionImageShell: {
+    width: 52, height: 52, borderRadius: 20,
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: '#EAF1FC',
+  },
+  quickActionImage: { width: 45, height: 45 },
   quickActionLabel: {
-    marginTop: 6, color: '#17365D', fontSize: 10, lineHeight: 13,
-    fontWeight: '700', textAlign: 'center',
+    color: '#102D55', fontSize: 9.25, lineHeight: 12,
+    fontWeight: '800', textAlign: 'center', width: '100%',
+    includeFontPadding: false,
   },
   feedback: { marginHorizontal: 12, marginTop: 7 },
   tabsRow: {
