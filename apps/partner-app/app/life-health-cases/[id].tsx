@@ -4,11 +4,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
-import { getLifeHealthCase, saveLifeHealthCaseEdit, operationsCaseUrl, type LifeHealthCaseDetail, type LifeHealthDocument, type LifeHealthActivity } from '@/lib/life-health-cases';
+import { PartnerCaseBottomNavigation } from '@/components/partner-case-bottom-navigation';
+import { getLifeHealthCase, saveLifeHealthCaseEdit, appendLifeHealthCaseRemark, operationsCaseUrl, type LifeHealthCaseDetail, type LifeHealthDocument, type LifeHealthActivity } from '@/lib/life-health-cases';
 import { canPartnerAccessCaseRegister } from '@/lib/partner-permissions';
 import { usePartnerSession } from '@/providers/partner-session-provider';
 
-const navy='#17365D';
+const navy='#071E49';
 const dateLabel=(value:string|null|undefined)=>{
   const date=value?.trim()??'';
   if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return date;
@@ -43,6 +44,10 @@ export default function LifeHealthCaseDetailScreen(){
  const [documents,setDocuments]=useState<LifeHealthDocument[]>([]);
  const [activities,setActivities]=useState<LifeHealthActivity[]>([]);
  const [infoTab,setInfoTab]=useState<'activity'|'remarks'>('activity');
+ const [remarkOpen,setRemarkOpen]=useState(false);
+ const [remarkDraft,setRemarkDraft]=useState('');
+ const [remarkSaving,setRemarkSaving]=useState(false);
+ const [remarkError,setRemarkError]=useState('');
  const [loading,setLoading]=useState(true);
  const [error,setError]=useState('');
  const [editing,setEditing]=useState(false);
@@ -50,6 +55,16 @@ export default function LifeHealthCaseDetailScreen(){
  const [saveError,setSaveError]=useState('');
  const [form,setForm]=useState<CaseEditForm|null>(null);
  const setField=(key:keyof CaseEditForm,value:string)=>setForm(prev=>prev?{...prev,[key]:value}:prev);
+ const submitRemark=async()=>{
+  if(!record||remarkSaving||!remarkDraft.trim())return;
+  setRemarkError('');setRemarkSaving(true);
+  try{
+   await appendLifeHealthCaseRemark(record.id,remarkDraft);
+   setRemarkOpen(false);setRemarkDraft('');setInfoTab('remarks');
+   await load();
+  }catch(cause){setRemarkError(cause instanceof Error?cause.message:'Unable to save remark.');}
+  finally{setRemarkSaving(false);}
+ };
  const beginEdit=()=>{
   if(!record||record.status_group==='rejected')return;
   setForm(initialForm(record));setSaveError('');setEditing(true);
@@ -92,11 +107,11 @@ export default function LifeHealthCaseDetailScreen(){
    try {await Linking.openURL(operationsCaseUrl(id));}
    catch {setError('Could not open Operations Portal. Sign in there and open the case from Case Register.');}
  };
-  if(!canPartnerAccessCaseRegister(context))return <PartnerScreen title="Case Register" onBack={()=>router.back()}>
+  if(!canPartnerAccessCaseRegister(context))return <PartnerScreen title="Case Register" navyTopBar navyStatusBar bottomNavigationNavy bottomNavigation={<PartnerCaseBottomNavigation/>} onBack={()=>router.back()}>
     <Text style={styles.errorText}>You do not have Case Register permission.</Text>
   </PartnerScreen>;
 
-  return <PartnerScreen title="Case Details" onBack={()=>router.back()}>
+  return <PartnerScreen title="Case Details" navyTopBar navyStatusBar bottomNavigationNavy bottomNavigation={<PartnerCaseBottomNavigation/>} onBack={()=>router.back()}>
     {loading?<ActivityIndicator color={navy} style={{marginTop:24}}/>:null}
     {error?<View style={styles.alert}>
       <Text style={styles.errorText}>{error}</Text>
@@ -170,10 +185,6 @@ export default function LifeHealthCaseDetailScreen(){
       {record.policy_no?<Section number="05" title="Issued policy">
         <View style={styles.grid}><Field label="Policy number" value={record.policy_no} wide/></View>
       </Section>:null}
-      {record.rejection_reason?.trim()?<Section title="Rejection reason">
-        <Text style={styles.paragraph} selectable>{record.rejection_reason}</Text>
-      </Section>:null}
-
       {documents.length>0?<Section number="06" title="Documents">
         <View style={styles.documentList}>
           {documents.map(doc=><View key={doc.id} style={styles.document}>
@@ -183,7 +194,7 @@ export default function LifeHealthCaseDetailScreen(){
         </View>
       </Section>:null}
 
-      {(activities.length>0||Boolean(record.remarks?.trim()))?<Section number="07" title="Activity status & remarks">
+      <Section number="07" title="Activity status & remarks">
         <View style={styles.tabs}>
           <Pressable accessibilityRole="tab" accessibilityState={{selected:infoTab==='activity'}} style={[styles.tab,infoTab==='activity'&&styles.tabActive]} onPress={()=>setInfoTab('activity')}>
             <Text style={[styles.tabText,infoTab==='activity'&&styles.tabTextActive]}>Activity Status</Text>
@@ -192,20 +203,40 @@ export default function LifeHealthCaseDetailScreen(){
             <Text style={[styles.tabText,infoTab==='remarks'&&styles.tabTextActive]}>Remarks</Text>
           </Pressable>
         </View>
-        {infoTab==='activity'?activities.map(activity=><View key={activity.id} style={styles.activity}>
+        {infoTab==='activity'?(activities.length?activities.map(activity=><View key={activity.id} style={styles.activity}>
           <Text style={styles.activityTitle}>{activity.action.replace(/_/g,' ')}</Text>
           <Text style={styles.activityDate}>{activityDate(activity.created_at)}</Text>
-        </View>):
-          record.remarks?.trim()?<Text style={styles.paragraph} selectable>{record.remarks}</Text>:null}
-      </Section>:null}
+        </View>):<Text style={styles.paragraph}>No recorded case activity available.</Text>):
+         <View style={{gap:10}}>
+          <Text style={styles.paragraph} selectable>{record.remarks?.trim()||'No remarks added yet.'}</Text>
+          {record.status_group!=='issued'?<Pressable accessibilityRole="button" accessibilityLabel="Add case remark" onPress={()=>{setRemarkError('');setRemarkOpen(true);}} style={styles.remarkButton}>
+           <Ionicons name="add-circle-outline" size={17} color="#FFFFFF"/>
+           <Text style={styles.remarkButtonText}>Add Remark</Text>
+          </Pressable>:null}
+         </View>}
+      </Section>
 
-      {record.status_group!=='pending'?<Pressable accessibilityRole="button"
-        accessibilityLabel="Open case in Operations Portal" onPress={()=>void openOperations()} style={styles.portalButton}>
-        <Ionicons name="open-outline" size={18} color="#FFFFFF"/>
-        <Text style={styles.portalButtonText}>Open in Operations Portal</Text>
-        <Ionicons name="chevron-forward" size={17} color="#FFFFFF"/>
-      </Pressable>:null}
     </View>:null}
+   <Modal visible={remarkOpen} transparent animationType="fade" onRequestClose={()=>{if(!remarkSaving)setRemarkOpen(false);}}>
+    <View style={styles.editorBackdrop}>
+     <View style={styles.remarkEditor}>
+      <Text style={styles.editorTitle}>Add Remark</Text>
+      <Text style={styles.editorHint}>The remark is appended to the case history. Existing remarks cannot be overwritten.</Text>
+      <TextInput accessibilityLabel="New case remark" multiline value={remarkDraft} onChangeText={setRemarkDraft}
+       placeholder="Enter remark..." placeholderTextColor="#91A0B2" maxLength={2000} style={[styles.editInput,{minHeight:110,textAlignVertical:'top'}]}/>
+      {remarkError?<Text style={styles.saveError}>{remarkError}</Text>:null}
+      <View style={styles.editorActions}>
+       <Pressable accessibilityRole="button" disabled={remarkSaving} onPress={()=>setRemarkOpen(false)} style={styles.cancelButton}>
+        <Text style={styles.cancelText}>Cancel</Text>
+       </Pressable>
+       <Pressable accessibilityRole="button" disabled={remarkSaving||!remarkDraft.trim()} onPress={()=>void submitRemark()} style={[styles.saveButton,(remarkSaving||!remarkDraft.trim())&&{opacity:0.5}]}>
+        {remarkSaving?<ActivityIndicator color="#FFFFFF" size="small"/>:<Ionicons name="checkmark" size={17} color="#FFFFFF"/>}
+        <Text style={styles.saveText}>{remarkSaving?'Saving…':'Save Remark'}</Text>
+       </Pressable>
+      </View>
+     </View>
+    </View>
+   </Modal>
    <Modal visible={editing&&!!form} transparent animationType="slide" onRequestClose={()=>{if(!saving)setEditing(false);}}>
     <View style={styles.editorBackdrop}>
      <View style={styles.editor}>
@@ -291,6 +322,9 @@ function Field({label,value,meta,secondaryMeta,required=false,wide=false,multili
 }
 
 const styles=StyleSheet.create({
+ remarkEditor:{backgroundColor:'#FFFFFF',padding:18,gap:12,borderTopLeftRadius:18,borderTopRightRadius:18},
+ remarkButton:{alignSelf:'flex-start',flexDirection:'row',gap:7,alignItems:'center',backgroundColor:'#071E49',borderRadius:10,paddingHorizontal:14,paddingVertical:11},
+ remarkButtonText:{fontWeight:'800',color:'#FFFFFF',fontSize:12},
  editorBackdrop:{flex:1,justifyContent:'flex-end',backgroundColor:'rgba(9,24,48,0.48)'},
  editor:{backgroundColor:'#F7F9FD',borderTopLeftRadius:22,borderTopRightRadius:22,maxHeight:'94%',minHeight:'55%'},
  editorHeader:{flexDirection:'row',alignItems:'center',padding:17,borderBottomWidth:1,borderBottomColor:'#DFE7F1'},
