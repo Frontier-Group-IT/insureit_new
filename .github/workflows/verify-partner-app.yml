@@ -125,6 +125,9 @@ jobs:
       - name: Verify Motor source picker and identity requirements
         run: node apps/partner-app/scripts/verify-motor-source-picker-identity.mjs
 
+      - name: Verify Lead Source parity and API diagnostics
+        run: node apps/partner-app/scripts/verify-lead-source-portal-parity.mjs
+
       - name: Verify Partner-only mobile onboarding
         run: node apps/partner-app/scripts/verify-add-partner-only.mjs
 

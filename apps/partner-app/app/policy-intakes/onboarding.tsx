@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Linking, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useLocalSearchParams, usePathname, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -168,6 +168,8 @@ export default function NativePolicyOnboarding(){
   const [sourcePickerOpen,setSourcePickerOpen]=useState(false);
   const [sourceQuery,setSourceQuery]=useState('');
   const [sourceItems,setSourceItems]=useState<NativeLeadSource[]>([]);
+  const [sourceHasMore,setSourceHasMore]=useState(false);
+  const sourceRequestId=useRef(0);
   const [sourceBusy,setSourceBusy]=useState(false);
   const [sourcePickerError,setSourcePickerError]=useState('');
   const [pickedSource,setPickedSource]=useState<NativeLeadSource|null>(null);
@@ -311,27 +313,34 @@ export default function NativePolicyOnboarding(){
     setDirty(true);
     setVerifiedApprovalId(null);
   };
-  const lookupSources=async(query:string)=>{
+  const lookupSources=async(query:string,offset=0)=>{
     if(!draft?.intermediaryType)return;
-    setSourceBusy(true);setSourcePickerError('');setSourceItems([]);
+    const requestId=++sourceRequestId.current;
+    setSourceBusy(true);setSourcePickerError('');
+    if(offset===0){setSourceItems([]);setSourceHasMore(false);}
     try{
-      const result=await searchNativeLeadSources(draft.intermediaryType,query,isNew?undefined:id);
-      setSourceItems(result.sources);
-    }catch(e){setSourcePickerError(e instanceof Error?e.message:'Lead sources are unavailable.');}
-    finally{setSourceBusy(false);}
+      const result=await searchNativeLeadSources(draft.intermediaryType,query,isNew?undefined:id,offset);
+      if(requestId!==sourceRequestId.current)return;
+      setSourceItems(current=>offset===0?result.sources:[
+        ...current,...result.sources.filter(row=>!current.some(existing=>existing.id===row.id)),
+      ]);
+      setSourceHasMore(result.hasMore);
+    }catch(e){
+      if(requestId===sourceRequestId.current)setSourcePickerError(e instanceof Error?e.message:'Lead sources are unavailable.');
+    }finally{if(requestId===sourceRequestId.current)setSourceBusy(false);}
   };
   const openSources=()=>{
     if(!draft?.intermediaryType){
       Alert.alert('Select intermediary type','Choose POSP, MISP or SIBL / Partner first.');
       return;
     }
-    setSourceQuery('');setSourcePickerOpen(true);
+    setSourceQuery('');setSourcePickerOpen(true);setSourceItems([]);setSourceHasMore(false);
     void lookupSources('');
   };
   const selectSource=(source:NativeLeadSource)=>{
     setDraft(current=>current?{...current,leadSource:source.name,intermediaryCode:source.code,rmName:source.rmName}:current);
     setPickedSource(source);setDirty(true);setVerifiedApprovalId(null);setApprovalRequestId(null);
-    setSourcePickerOpen(false);
+    sourceRequestId.current+=1;setSourcePickerOpen(false);
   };
   const update=(key:FieldKey,value:string)=>{
     if(key==='intermediaryType'){setPickedSource(null);}
@@ -1295,16 +1304,16 @@ export default function NativePolicyOnboarding(){
         </>}
       </View></View>
     </Modal>
-    <Modal transparent visible={sourcePickerOpen} animationType="fade" onRequestClose={()=>setSourcePickerOpen(false)}>
+    <Modal transparent visible={sourcePickerOpen} animationType="fade" onRequestClose={()=>{sourceRequestId.current+=1;setSourcePickerOpen(false);}}>
       <View style={styles.scrim}><View style={styles.sheet}>
         <View style={styles.sheetTitle}>
           <Text style={styles.sectionTitle}>Select Lead Source</Text>
-          <Pressable accessibilityLabel="Close source list" onPress={()=>setSourcePickerOpen(false)}><Ionicons name="close" size={21} color="#4C5970"/></Pressable>
+          <Pressable accessibilityLabel="Close source list" onPress={()=>{sourceRequestId.current+=1;setSourcePickerOpen(false);}}><Ionicons name="close" size={21} color="#4C5970"/></Pressable>
         </View>
         <View style={styles.sourceSearchArea}>
           <TextInput accessibilityLabel="Search lead source by name" value={sourceQuery} onChangeText={setSourceQuery}
             onSubmitEditing={()=>void lookupSources(sourceQuery)} returnKeyType="search"
-            placeholder="Search active intermediary name" style={[styles.input,styles.sourceSearchInput]}/>
+            placeholder="Search name or intermediary code" style={[styles.input,styles.sourceSearchInput]}/>
           <Pressable accessibilityRole="button" accessibilityLabel="Search lead sources" disabled={sourceBusy}
             onPress={()=>void lookupSources(sourceQuery)} style={styles.sourceSearchButton}>
             {sourceBusy?<ActivityIndicator color="#FFFFFF" size="small"/>:<Ionicons name="search" color="#FFFFFF" size={18}/>}
@@ -1316,10 +1325,14 @@ export default function NativePolicyOnboarding(){
           {sourceItems.map(item=><Pressable key={item.id} accessibilityRole="button"
             accessibilityLabel={'Select '+item.name} onPress={()=>selectSource(item)} style={styles.choice}>
             <View style={styles.sourceChoiceText}>
-              <Text numberOfLines={1} style={styles.choiceText}>{item.name}</Text>
-              <Text style={styles.sourceChoiceDetail}>{item.code}{item.rmName?' · RM: '+item.rmName:''}</Text>
+              <Text numberOfLines={1} style={styles.choiceText}>{item.name} · {item.code}</Text>
+              {item.rmName?<Text style={styles.sourceChoiceDetail}>RM: {item.rmName}</Text>:null}
             </View>
           </Pressable>)}
+          {sourceHasMore?<Pressable accessibilityRole="button" accessibilityLabel="Load more Lead Sources"
+            disabled={sourceBusy} style={styles.choice} onPress={()=>void lookupSources(sourceQuery,sourceItems.length)}>
+            <Text style={styles.choiceText}>{sourceBusy?'Loading…':'Load More Sources'}</Text>
+          </Pressable>:null}
         </ScrollView>
       </View></View>
     </Modal>
