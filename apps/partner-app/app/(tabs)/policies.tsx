@@ -226,7 +226,7 @@ export default function PoliciesScreen() {
           <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={styles.filterText}>
             {selectedStatus.label} ({formatStatusCount(selectedStatus.count)})
           </Text>
-          <Ionicons name="chevron-down" size={14} color="#3156B8" />
+          <Ionicons name="chevron-down" size={14} color="#FFFFFF" />
         </Pressable>
       </View>
 
@@ -678,17 +678,15 @@ const styles = StyleSheet.create({
   },
   filterButton: {
     height: 44,
-    width: 172,
+    width: 158,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 3,
-    paddingHorizontal: 7,
-    backgroundColor: '#FFFFFF',
-    borderLeftWidth: StyleSheet.hairlineWidth,
-    borderLeftColor: '#D9DFEA',
+    gap: 4,
+    paddingHorizontal: 8,
+    backgroundColor: '#17365D',
   },
-  filterText: { flexShrink: 1, color: '#3156B8', fontSize: 10, lineHeight: 14, fontWeight: '700' },
+  filterText: { flexShrink: 1, color: '#FFFFFF', fontSize: 10, lineHeight: 14, fontWeight: '700' },
   statusMenuOverlay: { flex: 1 },
   statusMenu: {
     position: 'absolute', right: 16, width: 228, padding: 5,
