@@ -112,7 +112,7 @@ assert(n8nServer.includes("fingerprint(id, current.document.id, extraction.field
   "Reviewed preview fingerprint must bind both fields and warnings");
 assert(n8nServer.includes("An onboarding draft was created while extraction was running"),
   "Apply must recheck draft creation immediately before the final OCR update");
-assert(n8nServer.includes('requestN8nPolicyIntakeExtraction('),
+assert(n8nServer.includes('requestN8nPolicyIntakeBySignedSource('),
   "n8n preview must use the validated server-side bridge, not client fetch");
 assert(!n8nServer.includes('.from("policies").insert(') &&
   !n8nServer.includes('.from("customers").insert(') &&
