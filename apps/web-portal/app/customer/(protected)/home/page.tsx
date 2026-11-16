@@ -52,8 +52,6 @@ export default async function CustomerHomePage({ searchParams }: { searchParams?
         .customer-home-breathe .customer-home-icon-breathe { transition: transform 220ms ease; transform-origin: center; }
         @media (hover: hover) { .customer-home-breathe:hover { z-index: 3; transform: translateY(-3px); box-shadow: 0 12px 26px rgba(20,58,100,.13); } }
         .customer-home-breathe:focus-visible { z-index: 3; transform: scale(1.08); outline: 2px solid #1769DC; outline-offset: -2px; }
-        @keyframes customerHeroZoom { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.025); } }
-        .customer-home-hero-image { animation: customerHeroZoom 12s ease-in-out 1 both; transform-origin: 75% center; }
         .customer-home-quick-action { position: relative; transform-origin: center; transition: transform 300ms ease, box-shadow 300ms ease, background-color 300ms ease; animation: customerCardEnter 360ms cubic-bezier(.22,.72,.25,1) backwards; }
         .customer-home-quick-action:nth-child(1) { animation-delay: 90ms; }
         .customer-home-quick-action:nth-child(2) { animation-delay: 140ms; }
@@ -64,7 +62,7 @@ export default async function CustomerHomePage({ searchParams }: { searchParams?
         @media (hover: hover) { .customer-home-quick-action:hover { z-index: 2; transform: translateY(-3px); box-shadow: 0 12px 26px rgba(20,58,100,.14); } }
         .customer-home-quick-action:focus-visible { z-index: 2; transform: translateY(-3px); box-shadow: 0 12px 26px rgba(20,58,100,.14); outline: 2px solid #1769DC; outline-offset: 2px; }
         @media (prefers-reduced-motion: reduce) {
-          .customer-home-enter, .customer-home-breathe, .customer-home-breathe .customer-home-icon-breathe, .customer-home-hero-image, .customer-home-quick-action { animation: none !important; }
+          .customer-home-enter, .customer-home-breathe, .customer-home-breathe .customer-home-icon-breathe, .customer-home-quick-action { animation: none !important; }
           .customer-home-breathe, .customer-home-breathe:hover, .customer-home-breathe:focus-visible, .customer-home-quick-action, .customer-home-quick-action:focus-visible, .customer-home-quick-action:hover { transition: none; transform: none; }
         }
         .customer-home-motion-ready [data-home-reveal] { transition: opacity 400ms cubic-bezier(.22,.72,.25,1), transform 400ms cubic-bezier(.22,.72,.25,1), box-shadow 300ms ease, border-color 300ms ease; }
@@ -79,18 +77,9 @@ export default async function CustomerHomePage({ searchParams }: { searchParams?
       `}</style>
       <CustomerHomeScrollMotion />
       <CustomerAccountTabs accounts={accounts} selectedId={account.id} pathname="/customer/home" />
-      <section className="customer-modern-hero customer-home-enter relative isolate overflow-hidden rounded-[28px] border border-[#DCD3FF] p-5 text-[#102B54] shadow-[0_14px_36px_rgba(63,42,145,.12)] sm:p-7 lg:p-9">
-        <div className="customer-home-hero-image pointer-events-none absolute inset-0 bg-[url('/assets/home.jpeg')] bg-cover bg-[center_55%] opacity-90" />
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#F3F0FF] via-[#F1EEFF]/95 via-50% to-[#E8F5FF]/25" />
-        <div className="customer-modern-hero-orb pointer-events-none absolute -left-20 -top-28 h-60 w-60 rounded-full bg-[#A18BFF]/25 blur-3xl" />
-        <div className="relative flex min-h-[230px] max-w-[650px] flex-col justify-center gap-3 py-3 sm:min-h-[260px] sm:gap-4">
-          <div className="space-y-2">
-            <h1 className="max-w-[530px] text-[clamp(26px,3.1vw,43px)] font-black leading-[1.12] tracking-[-.035em] text-[#182E60]">Good morning, <span className="customer-modern-gradient-text">{account.contact_name?.split(" ")[0] || "Customer"}!</span></h1>
-            <p className="max-w-[390px] text-[12px] font-medium leading-relaxed text-[#526481] sm:text-[14px]">Every vehicle. Every policy. Every journey — confidently protected with INSUREIT.</p>
-          </div>
-
-        </div>
-      </section>
+      <h1 className="customer-home-enter text-[clamp(22px,2.4vw,30px)] font-bold leading-tight tracking-tight text-[#182E60]">
+        Good morning, {account.contact_name?.split(" ")[0] || "Customer"}!
+      </h1>
       <section aria-label="Quick actions" className="rounded-2xl border border-[#E0E8F3] bg-white px-3 py-3 shadow-[0_3px_12px_rgba(20,58,100,.04)] sm:px-4">
         <div className="mb-2 flex items-center justify-between">
           <h2 className="text-[14px] font-black text-[#10284A]">Quick actions</h2>
