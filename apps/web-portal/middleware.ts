@@ -278,16 +278,16 @@ export async function middleware(request: NextRequest) {
       return clearSessionCookies(NextResponse.redirect(loginUrl), scope);
     }
     if (check.status === "forbidden") return redirect(request, denialPath(check.denialReason ?? "role_not_enabled"), refreshedSession, check.role);
-    if (check.role === "accounts" && !isAccountsRolePortalPath(pathname)) {
+    if (check.role === "accounts" && pathname !== "/reports/daily" && !isAccountsRolePortalPath(pathname)) {
       return redirect(request, accountsHome, refreshedSession, check.role);
     }
-    if (check.role === "operations_head_life" && !isOperationsHeadLifePath(pathname)) {
+    if (check.role === "operations_head_life" && pathname !== "/reports/daily" && !isOperationsHeadLifePath(pathname)) {
       return redirect(request, operationsHeadLifeHome, refreshedSession, check.role);
     }
-    if (check.role === "sales_executive" && !isSalesExecutivePortalPath(pathname)) {
+    if (check.role === "sales_executive" && pathname !== "/reports/daily" && !isSalesExecutivePortalPath(pathname)) {
       return redirect(request, salesExecutiveHome, refreshedSession, check.role);
     }
-    if (check.role === "claims_head" && !isClaimsHeadPortalPath(pathname)) {
+    if (check.role === "claims_head" && pathname !== "/reports/daily" && !isClaimsHeadPortalPath(pathname)) {
       return redirect(request, claimsHeadHome, refreshedSession, check.role);
     }
     if (check.role === "intermediary" && !pathname.startsWith("/partner") && !pathname.startsWith("/intermediary-portal")) {
