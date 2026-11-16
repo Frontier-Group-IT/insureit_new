@@ -27,3 +27,17 @@ export function policyIntakeStatusCounts<T extends { status: string; ocr_status:
   for (const row of rows) counts[policyIntakeBucket(row, duplicateIds.has(row.id))]++;
   return counts;
 }
+
+/** Completed intakes use their persisted finalization time. Other rows keep their original submission order.
+ * Never substitute updated_at: OCR/review activity is not a policy completion event.
+ */
+export function policyIntakeActivityTimestamp(row: {status:string;created_at:string;finalized_at?:string|null}) {
+  return row.status === "completed" && row.finalized_at ? row.finalized_at : row.created_at;
+}
+
+export function sortPolicyIntakesByActivity<T extends {id:string;status:string;created_at:string;finalized_at?:string|null}>(rows: T[]): T[] {
+  return [...rows].sort((a,b) =>
+    Date.parse(policyIntakeActivityTimestamp(b)) - Date.parse(policyIntakeActivityTimestamp(a))
+    || Date.parse(b.created_at) - Date.parse(a.created_at)
+    || b.id.localeCompare(a.id));
+}
