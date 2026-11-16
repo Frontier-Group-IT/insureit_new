@@ -8,11 +8,11 @@ const page=read("../app/reports/(workspace)/daily/page.tsx");
 
 assert.match(panel,/min-h-\[calc\(100dvh-300px\)\]/,"Shared Self / employee activity panel fills remaining visible viewport");
 assert.match(panel,/aria-label="Self activity summary and register"/,"Full-height sizing applies to both modes through the shared component");
-assert.match(panel,/className="grid grid-cols-1 gap-2 p-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5"/,"Activity cards stay content-sized and top aligned");
+assert.match(panel,/className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5"/,"Activity cards stay content-sized and top aligned");
 assert.doesNotMatch(panel,/h-screen|h-\[100dvh\]|overflow-y-hidden/,"Panel remains naturally scrollable when activity tables exceed the viewport");
-assert.match(panel,/className="grid grid-cols-1 gap-2 p-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5"/,
+assert.match(panel,/className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5"/,
   "Activity summary uses five columns on desktop with responsive smaller breakpoints");
-assert.match(panel,/data\.categories\.map\(item=>\(/, "Every activity category appears in grid");
+assert.match(panel,/group\.items\.map\(item=>\(/, "Every activity category appears in grid");
 assert.match(panel,/href=\{linkFor\(\{activity:item\.name,page:"1"\}\)\}/,
   "Clicking a category still opens its filtered details");
 assert.match(panel,/item\.name/, "Category labels remain visible");
