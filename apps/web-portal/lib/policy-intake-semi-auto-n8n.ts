@@ -38,6 +38,10 @@ export function semiAutoN8nEnabledForIntake(intakeId: string): boolean {
   const mode = process.env.INSUREIT_N8N_OCR_MODE;
   if (mode !== "shadow" && mode !== "prefer" && mode !== "required") return false;
   if (!UUID.test(intakeId)) return false;
+  // Deliberate read-only workbench scope: every open Motor Intake may be
+  // previewed in shadow mode. The parser must still verify the actual PDF.
+  // This does not enable authoritative OCR or any failed-OCR apply action.
+  if (mode === "shadow" && process.env.INSUREIT_N8N_OCR_PREVIEW_ALL_MOTOR === "true") return true;
   if (mode === "required" && process.env.INSUREIT_N8N_OCR_ALL_MOTOR === "true") return true;
   const allowlist = (process.env.INSUREIT_N8N_OCR_ALLOWED_INTAKE_IDS ?? "")
     .split(",").map(value => value.trim()).filter(UUID.test.bind(UUID));
