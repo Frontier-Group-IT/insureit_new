@@ -11,6 +11,8 @@ export type SelfActivity = {
   occurredAt: string; status: string; source: "Audit" | "Record history"; detail?: string;
   table?: string; recordId?: string; href?: string|null;
   customerVehicle?: string; insurer?: string;
+  customerName?: string; customerType?: string; customerMobile?: string;
+  customerFleetSize?: string; customerPolicyCount?: number;
 };
 type Audit = { id:string; actor_id:string|null; action:string; table_name:string|null; record_id:string|null; created_at:string };
 type Policy = { id:string; created_at:string; policy_no:string|null };
@@ -218,6 +220,34 @@ export async function loadSelfActivityHistory(
       if(typeof item.id==="string" && typeof item[column]==="string") lookup.set(item.id,item[column] as string);
     }
     for(const row of visible) if(row.table===table && row.recordId && lookup.has(row.recordId)) row.reference=lookup.get(row.recordId)!;
+  }
+  // Customer drilldowns use the Customer Register's fields instead of policy context.
+  // Resolve only the visible actor-scoped customer records, without changing
+  // report counts, filters, or access scope. Mask mobile numbers in the report.
+  if(category.startsWith("Customer ")) {
+    const ids=[...new Set(visible.filter(row=>row.table==="customers"&&isValidDailyRecordId(row.recordId??"")).map(row=>row.recordId as string))];
+    if(ids.length) {
+      const {data,error}=await admin.from("customers")
+        .select("id,contact_name,phone,fleet_size_band,policies(count),external_policies:external_policies!external_policies_customer_id_fkey(count)")
+        .in("id",ids);
+      if(error) console.error("[daily-report] customer detail labels unavailable",{code:error.code||"request_error"});
+      else {
+        const customerMap=new Map((data??[]).map(row=>[row.id,row]));
+        const fleetLabels:Record<string,string>={less_than_5:"< 5", "5_to_20":"5-20", "20_to_50":"20-50", more_than_50:"> 50"};
+        for(const row of visible) {
+          if(row.table!=="customers"||!row.recordId) continue;
+          const customer=customerMap.get(row.recordId);
+          if(!customer) continue;
+          const internalCount=customer.policies?.[0]?.count??0;
+          const externalCount=customer.external_policies?.[0]?.count??0;
+          row.customerName=customer.contact_name||undefined;
+          row.customerType=externalCount>0&&internalCount===0?"External":"Internal";
+          row.customerMobile=customer.phone?.replace(/\d(?=\d{4,})/g,"•")||undefined;
+          row.customerFleetSize=customer.fleet_size_band?(fleetLabels[customer.fleet_size_band]||customer.fleet_size_band):undefined;
+          row.customerPolicyCount=row.customerType==="External"?externalCount:internalCount;
+        }
+      }
+    }
   }
   // Enrich only the currently visible employee-scoped activities. Do not expose
   // entire customer, policy or audit records, and never widen history access.
