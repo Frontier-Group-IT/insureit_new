@@ -30,7 +30,7 @@ export function DailyReportHeaderScopes({canViewAll=false}:{canViewAll?:boolean}
   const [open,setOpen]=useState(false);
   const [search,setSearch]=useState("");
   const [people,setPeople]=useState<ReportPerson[]>([]);
-  const [loading,setLoading]=useState(false);
+  const [loading,setLoading]=useState(canViewAll);
   const [loadError,setLoadError]=useState(false);
   const container=useRef<HTMLDivElement>(null);
   const matching=people.filter(person=>
@@ -38,7 +38,7 @@ export function DailyReportHeaderScopes({canViewAll=false}:{canViewAll?:boolean}
     || (person.employee_code??"").toLocaleLowerCase("en-IN").includes(search.trim().toLocaleLowerCase("en-IN")));
   const selected=people.find(person=>person.id===selectedPerson);
   useEffect(()=>{
-    if((!open && !selectedPerson) || !isDaily || !canViewAll)return;
+    if(!isDaily || !canViewAll)return;
     const controller=new AbortController();
     const load=async()=>{
       setLoading(true);setLoadError(false);
@@ -66,6 +66,14 @@ export function DailyReportHeaderScopes({canViewAll=false}:{canViewAll?:boolean}
   },[open]);
   useEffect(()=>{setOpen(false);setSearch("");},[selectedPerson]);
   if(!isDaily) return null;
+  // A reporting permission alone does not imply any other employee is in scope.
+  // Use the authorized endpoint's filtered directory, never the job role, to
+  // determine whether a selectable employee actually exists.
+  const hasOtherEmployees=people.length>0;
+  const showDropdown=canViewAll && (hasOtherEmployees || loadError);
+  if(!showDropdown) {
+    return <span aria-label="Daily Report scope: Self" className="inline-flex h-9 min-w-[145px] items-center rounded-lg border border-[#cbd7e6] bg-white px-3 text-[11px] font-semibold text-[#17365D]">Self</span>;
+  }
   function selectPerson(personId:string|null) {
     const params=new URLSearchParams(searchParams.toString());
     params.set("scope",personId && canViewAll?"all":"self");
