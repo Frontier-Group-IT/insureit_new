@@ -177,6 +177,8 @@ export async function POST(request: Request) {
    if(issued ? !["edit","approve"].includes(permission.access) : !["edit","approve"].includes(permission.access)&&!creator)
     return respond({ok:false,error:"Editing permission is required."},403);
   }
+  if(issued && !(await canAccessPolicy(profile.id,profile.role,row.final_policy_id!,"view_policies",true)))
+   return respond({ok:false,error:"This issued policy is outside your authorized edit scope."},403);
   const clean=(key:string,max=180)=>typeof input?.[key]==="string"?(input[key] as string).trim().slice(0,max):"";
   if(issued){
    // Issued case is immutable; only the customer information is editable here.
