@@ -304,6 +304,102 @@ export async function loadSelfActivityHistory(
           row.customerPolicyCount=row.customerType==="External"?externalCount:internalCount;
         }
       }
+      // Historical creation rows must survive customer hard-deletion. The
+      // original audit remains "customer_created"; label later deletion
+      // explicitly rather than silently treating the record as still active.
+      const missingIds=error?[]:ids.filter(id=>!(data??[]).some(customer=>customer.id===id));
+      if(missingIds.length) {
+        const {data:deletions,error:deletionError}=await admin.from("audit_logs")
+          .select("record_id,old_data,created_at")
+          .eq("table_name","customers").eq("action","delete_customer")
+          .in("record_id",missingIds)
+          .order("created_at",{ascending:false})
+          .limit(300);
+        if(deletionError) console.error("[daily-report] deleted customer history unavailable",{code:deletionError.code||"request_error"});
+        else {
+          const deletionById=new Map<string,{name:string;profileId?:string;phone?:string}>();
+          const value=(v:unknown)=>typeof v==="string"&&v.trim()?v.trim():undefined;
+          for(const deletion of deletions??[]) {
+            if(!deletion.record_id||deletionById.has(deletion.record_id))continue;
+            const historical=deletion.old_data;
+            if(!historical||typeof historical!=="object"||Array.isArray(historical))continue;
+            const old=historical as Record<string,unknown>;
+            const name=value(old.contact_name);
+            if(!name)continue;
+            deletionById.set(deletion.record_id,{name,profileId:value(old.profile_id),phone:value(old.phone)});
+          }
+          // A retained profile is usable only when its name exactly matches
+          // the deletion audit's affected customer. Never use the actor profile.
+          const profileIds=[...new Set([...deletionById.values()].map(item=>item.profileId).filter((id):id is string=>typeof id==="string"&&isValidDailyRecordId(id)))];
+          const {data:profiles,error:profileError}=profileIds.length
+            ? await admin.from("profiles").select("id,full_name,phone").in("id",profileIds)
+            : {data:[],error:null};
+          if(profileError)console.error("[daily-report] deleted customer profile contact unavailable",{code:profileError.code||"request_error"});
+          const profilesById=new Map((profiles??[]).map(item=>[item.id,item]));
+          // Some historic edit audits retained a customer phone, but only use
+          // it if the audited snapshot identifies the same deleted customer.
+          const remainingIds=[...deletionById.entries()].filter(([,item])=>{
+            const profile=item.profileId?profilesById.get(item.profileId):undefined;
+            return !item.phone&&!(profile?.phone&&profile.full_name?.trim().toLocaleLowerCase()===item.name.toLocaleLowerCase());
+          }).map(([id])=>id);
+          const {data:edits,error:editError}=remainingIds.length
+            ? await admin.from("audit_logs").select("record_id,old_data,new_data,created_at")
+              .eq("table_name","customers").eq("action","customer_edited")
+              .in("record_id",remainingIds).order("created_at",{ascending:false}).limit(300)
+            : {data:[],error:null};
+          if(editError)console.error("[daily-report] deleted customer historical edits unavailable",{code:editError.code||"request_error"});
+          const editedPhone=new Map<string,string>();
+          for(const edit of edits??[]) {
+            if(!edit.record_id||editedPhone.has(edit.record_id))continue;
+            const snapshot=edit.new_data&&typeof edit.new_data==="object"&&!Array.isArray(edit.new_data)?edit.new_data as Record<string,unknown>:null;
+            const previous=edit.old_data&&typeof edit.old_data==="object"&&!Array.isArray(edit.old_data)?edit.old_data as Record<string,unknown>:null;
+            const deletion=deletionById.get(edit.record_id);
+            if(!deletion)continue;
+            for(const obj of [snapshot,previous]) {
+              if(!obj)continue;
+              const auditName=value(obj.contact_name);
+              const phone=value(obj.phone);
+              if(auditName?.toLocaleLowerCase()===deletion.name.toLocaleLowerCase()&&phone){
+                editedPhone.set(edit.record_id,phone);break;
+              }
+            }
+          }
+          // The Customer Register defaults records with no external policy
+          // relationship to Internal. For hard-deleted rows, only apply the
+          // classification when the original audited creation channel proves
+          // direct customer onboarding. Otherwise leave Type unavailable.
+          const {data:creations,error:creationError}=await admin.from("audit_logs")
+            .select("record_id,new_data,created_at")
+            .eq("table_name","customers").eq("action","customer_created")
+            .in("record_id",[...deletionById.keys()])
+            .order("created_at",{ascending:true}).limit(300);
+          if(creationError)console.error("[daily-report] deleted customer origin unavailable",{code:creationError.code||"request_error"});
+          const directOnboardingIds=new Set<string>();
+          for(const creation of creations??[]) {
+            if(!creation.record_id)continue;
+            const snapshot=creation.new_data;
+            if(snapshot&&typeof snapshot==="object"&&!Array.isArray(snapshot)
+              &&(snapshot as Record<string,unknown>).creation_channel==="direct_customer_onboarding")
+              directOnboardingIds.add(creation.record_id);
+          }
+          const maskPhone=(phone:string)=>phone.replace(/\d(?=\d{4,})/g,"•");
+          for(const row of visible) {
+            if(row.table!=="customers"||!row.recordId)continue;
+            const deletion=deletionById.get(row.recordId);
+            if(!deletion)continue;
+            const profile=deletion.profileId?profilesById.get(deletion.profileId):undefined;
+            const profilePhone=profile?.full_name?.trim().toLocaleLowerCase()===deletion.name.toLocaleLowerCase()?value(profile.phone):undefined;
+            row.customerName=deletion.name;
+            if(directOnboardingIds.has(row.recordId))row.customerType="Internal";
+            const phone=deletion.phone||profilePhone||editedPhone.get(row.recordId);
+            row.customerMobile=phone?maskPhone(phone):undefined;
+            // All other historical category values remain unavailable unless
+            // a reliable record-origin classification has been verified.
+            if(row.activity==="Customer Created")row.activity="Customer Deleted";
+            row.status="Deleted";
+          }
+        }
+      }
     }
   }
   // Enrich only the currently visible employee-scoped activities. Do not expose

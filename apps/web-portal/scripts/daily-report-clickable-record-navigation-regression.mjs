@@ -84,3 +84,13 @@ assert.ok(panel.includes('isClaimActivity={isClaimActivity} vehicleMode={vehicle
 
 assert.ok(rows.includes('customerField(row.subjectEmployeeName)'),"Other Activities renders affected employee name");
 assert.ok(loader.includes('if(category==="Other Activities")'),"Other Activities identity enrichment is scoped to the selected category");
+
+assert.match(loader, /const missingIds=error\?\[\]:ids\.filter/, "Failed customer lookup never marks surviving customers deleted");
+assert.match(loader, /\.eq\("table_name","customers"\)\.eq\("action","delete_customer"\)/, "Deletion identity comes only from deleted customer audit");
+assert.match(loader, /row\.customerName=deletion\.name/, "Deleted customer name is recovered from deletion snapshot");
+assert.ok(loader.includes("profile?.full_name?.trim().toLocaleLowerCase()===deletion.name.toLocaleLowerCase()"), "Retained phone must match deleted customer name");
+assert.match(loader, /row\.customerMobile=phone\?maskPhone\(phone\):undefined/, "Only masked historical phones are displayed");
+assert.match(loader, /if\(row\.activity==="Customer Created"\)row\.activity="Customer Deleted"/, "Deleted customer rows directly display Customer Deleted");
+assert.match(loader, /row\.status="Deleted"/, "Current deleted state is distinguished from creation event");
+assert.match(loader, /creation_channel==="direct_customer_onboarding"/, "Only audited direct onboarding qualifies for Internal customer type");
+assert.match(loader, /if\(directOnboardingIds\.has\(row\.recordId\)\)row\.customerType="Internal"/, "Historical Internal type comes from verified origin");
