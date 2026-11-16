@@ -495,19 +495,8 @@ form:has(input[name="fitness_valid_upto"]) > div:last-child button {
   margin-bottom: 12px;
   border: 1px solid rgba(183,170,246,.36);
   border-radius: 18px;
-  background: linear-gradient(108deg,#f7f5ff 0%,#eeedff 34%,#dedcfc 63%,#bbb0f9 100%);
+  background: #fff;
   box-shadow: 0 4px 17px rgba(77,43,166,.09);
-}
-.reports-reference-shell:has(.daily-report-reference) .reports-reference-header::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  border-radius: inherit;
-  pointer-events: none;
-  background:
-    radial-gradient(ellipse 58% 220% at 93% -98%,transparent 62%,rgba(255,255,255,.75) 62.5%,rgba(255,255,255,.75) 68%,transparent 68.5%),
-    radial-gradient(ellipse 51% 235% at 101% -92%,transparent 62%,rgba(255,255,255,.36) 62.5%,rgba(255,255,255,.36) 78%,transparent 78.5%);
 }
 .reports-reference-shell:has(.daily-report-reference) .reports-reference-topbar {
   position: relative;
@@ -590,12 +579,12 @@ form:has(input[name="fitness_valid_upto"]) > div:last-child button {
   border-color:rgba(255,255,255,.6);
 }
 .daily-report-reference .daily-report-total-badge {
-  border:1px solid rgba(255,255,255,.25);
-  border-radius:999px;
-  padding:7px 13px;
-  color:#fff;
-  background:linear-gradient(120deg,#3513a5,#4f12a8);
-  box-shadow:0 2px 7px rgba(21,10,103,.2);
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  color: #233b5d;
+  background: transparent;
+  box-shadow: none;
 }
 .daily-report-reference .daily-report-groups {padding: 14px 16px 24px;}
 .daily-report-reference .daily-report-category {--category:#6a1fdb;--badge:#e6d2ff;--badge-text:#2b137c;--soft:#faf7ff;}
@@ -610,7 +599,6 @@ form:has(input[name="fitness_valid_upto"]) > div:last-child button {
   font-weight: 850;
   letter-spacing: .01em;
 }
-.daily-report-reference .daily-report-category-heading svg {color:var(--category);fill:var(--category);fill-opacity:.12;}
 .daily-report-reference .daily-report-activity-card {
   min-height: 55px;
   gap: 11px;
@@ -629,11 +617,13 @@ form:has(input[name="fitness_valid_upto"]) > div:last-child button {
 .daily-report-reference .daily-report-activity-card > span:nth-child(2) {color:#1a2058;font-size:11px;font-weight:750;}
 .daily-report-reference .daily-report-activity-icon {color:var(--category);filter:drop-shadow(0 2px 2px rgba(0,0,0,.1));}
 .daily-report-reference .daily-report-count-badge {
-  min-width: 44px;
-  color:var(--badge-text);
-  background:var(--badge);
-  box-shadow:0 2px 4px rgba(48,27,101,.08);
-  font-size:12px;
+  min-width: 30px;
+  border: 0;
+  border-radius: 0;
+  color: var(--badge-text);
+  background: transparent;
+  box-shadow: none;
+  font-size: 12px;
 }
 @media (max-width:640px) {
   .reports-reference-shell:has(.daily-report-reference) .reports-reference-topbar {padding:10px 12px;gap:10px;}
