@@ -27,7 +27,7 @@ assert.match(loader, /row\.href=dailyActivityRecordHref\(table,row\.recordId\)/,
 for(const table of ["policies","policy_intake_requests","life_health_cases"]) {
   assert.ok(loader.includes(`table:"${table}",recordId:a.id`),`Keep immutable record ID for ${table} history`);
 }
-assert.match(panel, /<DailyActivityHistoryRows rows=\{data\.rows\} isCustomerActivity=\{isCustomerActivity\} \/>/, "All employee and Self reports use interactive rows with customer-specific context");
+assert.ok(panel.includes("<DailyActivityHistoryRows rows={data.rows} isCustomerActivity={isCustomerActivity} vehicleMode={vehicleMode} />"), "Shared activity renderer preserves customer and vehicle modes");
 assert.match(rows, /role="button" tabIndex=\{0\}/, "Rows support keyboard focus");
 assert.match(rows, /event\.key==="Enter"\|\|event\.key===" "/, "Enter and Space activate rows");
 assert.match(rows, /row\.detail \? <span/, "Preserve latest audit field-level change details");
@@ -68,3 +68,12 @@ assert.match(loader, /customer\.phone\?\.replace/, "Customer mobiles are masked 
 
 assert.doesNotMatch(panel, /<th[^>]*>Fleet Size<\/th>|<th[^>]*>Total Policies<\/th>/, "Customer drilldown hides fleet size and total policies headers");
 assert.doesNotMatch(rows, /customerField\(row\.customerFleetSize\)|customerField\(row\.customerPolicyCount\)|\["Fleet Size",customerField|\["Total Policies",customerField/, "Customer rows and detail dialog hide fleet size and total policies");
+
+assert.ok(panel.includes('const vehicleMode=data.category.startsWith("Vehicle ")'),"Vehicle category uses Vehicle Register presentation");
+for(const label of ["Vehicle","Customer","Make / model","Registration"]) {
+  assert.ok(panel.includes('>'+label+'</th>'),"Vehicle column "+label);
+}
+assert.ok(rows.includes('vehicleMode ? ('),"Vehicle cells are conditionally displayed");
+assert.ok(rows.includes('selected.vehicleNumber'),"Vehicle dialog includes vehicle number");
+assert.ok(loader.includes('.in("id",activityVehicleIds)'),"Vehicle data lookup limited to visible scoped rows");
+assert.ok(panel.includes('isCustomerActivity={isCustomerActivity} vehicleMode={vehicleMode}'),"Customer mode retained");
