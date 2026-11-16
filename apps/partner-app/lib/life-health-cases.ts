@@ -150,10 +150,29 @@ async function postCaseAction<T extends {ok:boolean;error?:string}>(path:string,
   return result;
 }
 
-export async function appendNativeLifeHealthRemark(caseId:string,newRemark:string){
-  return postCaseAction<{ok:true;remarks:string}>('/api/partner/life-health-cases',{
-    id:caseId,action:'append_remark',newRemark,
-  });
+/** Append a case remark under the same bearer identity and server-side scope as Case Register. */
+export async function appendLifeHealthCaseRemark(id: string, remark: string): Promise<string> {
+  if (!/^[0-9a-f-]{36}$/i.test(id)) throw new Error('Invalid case reference.');
+  const value = remark.trim();
+  if (!value || value.length > 2000) throw new Error('Enter a remark of up to 2000 characters.');
+  const session = await getCurrentSession();
+  if (!session?.access_token) throw new Error('Your session expired. Sign in again.');
+  let response: Response;
+  try {
+    response = await fetch(`${portal}/api/partner/life-health-cases`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, operation: 'append_remark', remark: value }),
+    });
+  } catch {
+    throw new Error('Unable to connect. Check your internet connection.');
+  }
+  const body = await response.json().catch(() => null) as { ok?: boolean; error?: string; remarks?: string } | null;
+  if (!response.ok || !body?.ok) {
+    if (response.status === 404 || response.status === 405) throw new Error('Adding remarks requires the updated website API.');
+    throw new Error(body?.error || 'Unable to add remark. Reload and retry.');
+  }
+  return body.remarks ?? '';
 }
 
 export type LifeHealthIssueForm={
