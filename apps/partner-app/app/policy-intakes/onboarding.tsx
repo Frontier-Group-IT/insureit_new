@@ -1295,6 +1295,34 @@ export default function NativePolicyOnboarding(){
         </>}
       </View></View>
     </Modal>
+    <Modal transparent visible={sourcePickerOpen} animationType="fade" onRequestClose={()=>setSourcePickerOpen(false)}>
+      <View style={styles.scrim}><View style={styles.sheet}>
+        <View style={styles.sheetTitle}>
+          <Text style={styles.sectionTitle}>Select Lead Source</Text>
+          <Pressable accessibilityLabel="Close source list" onPress={()=>setSourcePickerOpen(false)}><Ionicons name="close" size={21} color="#4C5970"/></Pressable>
+        </View>
+        <View style={styles.sourceSearchArea}>
+          <TextInput accessibilityLabel="Search lead source by name" value={sourceQuery} onChangeText={setSourceQuery}
+            onSubmitEditing={()=>void lookupSources(sourceQuery)} returnKeyType="search"
+            placeholder="Search active intermediary name" style={[styles.input,styles.sourceSearchInput]}/>
+          <Pressable accessibilityRole="button" accessibilityLabel="Search lead sources" disabled={sourceBusy}
+            onPress={()=>void lookupSources(sourceQuery)} style={styles.sourceSearchButton}>
+            {sourceBusy?<ActivityIndicator color="#FFFFFF" size="small"/>:<Ionicons name="search" color="#FFFFFF" size={18}/>}
+          </Pressable>
+        </View>
+        {sourcePickerError?<Text style={styles.sourceSearchError}>{sourcePickerError}</Text>:null}
+        <ScrollView style={styles.choiceScroll}>
+          {!sourceBusy&&!sourceItems.length&&!sourcePickerError?<Text style={styles.sourceEmpty}>No matching active lead sources.</Text>:null}
+          {sourceItems.map(item=><Pressable key={item.id} accessibilityRole="button"
+            accessibilityLabel={'Select '+item.name} onPress={()=>selectSource(item)} style={styles.choice}>
+            <View style={styles.sourceChoiceText}>
+              <Text numberOfLines={1} style={styles.choiceText}>{item.name}</Text>
+              <Text style={styles.sourceChoiceDetail}>{item.code}{item.rmName?' · RM: '+item.rmName:''}</Text>
+            </View>
+          </Pressable>)}
+        </ScrollView>
+      </View></View>
+    </Modal>
     <Modal transparent visible={Boolean(picker)} animationType="fade" onRequestClose={()=>setPicker(null)}>
       <View style={[styles.scrim,picker?.key==='policyProduct'&&styles.productPickerScrim]}><View style={[styles.sheet,picker?.key==='policyProduct'&&styles.productPickerSheet]}>
         <View style={styles.sheetTitle}><Text style={styles.sectionTitle}>{picker?.key==='policyProduct'?'Select product':picker?.key==='businessLine'?'Select Policy Type':`Select ${picker?.key}`}</Text><Pressable onPress={()=>setPicker(null)} accessibilityLabel="Close options"><Ionicons name="close" size={21} color="#4C5970"/></Pressable></View>
