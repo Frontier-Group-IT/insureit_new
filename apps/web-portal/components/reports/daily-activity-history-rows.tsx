@@ -7,13 +7,12 @@ import type { SelfActivity } from "@/lib/reports/daily-self-activity";
 const dateFormat=new Intl.DateTimeFormat("en-IN",{timeZone:"Asia/Kolkata",day:"2-digit",month:"short",year:"numeric"});
 const timeFormat=new Intl.DateTimeFormat("en-IN",{timeZone:"Asia/Kolkata",hour:"2-digit",minute:"2-digit",hour12:true});
 
-type Props={rows:SelfActivity[];isCustomerActivity?:boolean};
+type Props={rows:SelfActivity[];isCustomerActivity?:boolean;isClaimActivity?:boolean;vehicleMode?:boolean};
 const customerField=(value:string|number|undefined|null)=>value===undefined||value===null||value===""?"—":String(value);
 
-export function DailyActivityHistoryRows({rows,isCustomerActivity=false}:Props) {
+export function DailyActivityHistoryRows({rows,isCustomerActivity=false,isClaimActivity=false,vehicleMode=false}:Props) {
   const router=useRouter();
-  // Navigate immediately to existing, server-validated canonical records.
-  // Missing and permanently deleted records have no verified destination.
+  // Only verified surviving records provide a destination.
   const openRecord=(row:SelfActivity)=>{
     if(row.href) router.push(row.href);
   };
@@ -28,10 +27,9 @@ export function DailyActivityHistoryRows({rows,isCustomerActivity=false}:Props) 
       <tbody className="divide-y divide-[#edf1f6]">
         {rows.map(row=>(
           <tr key={row.id} role={row.href?"button":undefined} tabIndex={row.href?0:undefined}
-            aria-label={row.href?`Open record: ${row.activity}, ${row.reference}`:undefined}
+            aria-label={`View activity details: ${row.activity}, ${vehicleMode ? row.vehicleNumber||"vehicle record" : isClaimActivity ? row.claimControlNo||row.claimInsurerNo||"claim record" : row.reference}`}
             onClick={row.href?()=>openRecord(row):undefined}
             onKeyDown={row.href?event=>onRowKeyDown(event,row):undefined}
-            title={row.href?"Open record":undefined}
             className={`${row.href?"cursor-pointer [&_td]:cursor-pointer hover:bg-[#edf5ff] focus-visible:bg-[#edf5ff] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#315b9a]":"cursor-default"} text-[11px] text-[#30435d] transition-colors`}>
             <td className="px-4 py-3 font-semibold">
               <span className="block">{row.activity}</span>
@@ -42,6 +40,20 @@ export function DailyActivityHistoryRows({rows,isCustomerActivity=false}:Props) 
                 <td className="px-3 py-3 font-medium">{customerField(row.customerName)}</td>
                 <td className="px-3 py-3">{customerField(row.customerType)}</td>
                 <td className="px-3 py-3 tabular-nums">{customerField(row.customerMobile)}</td>
+              </>
+            ) : vehicleMode ? (
+              <>
+                <td className="px-3 py-3 font-medium">{row.vehicleNumber||"—"}</td>
+                <td className="px-3 py-3">{row.vehicleCustomer||"—"}</td>
+                <td className="px-3 py-3">{row.vehicleMakeModel||"—"}</td>
+                <td className="px-3 py-3">{row.vehicleRegistration||"—"}</td>
+              </>
+            ) : isClaimActivity ? (
+              <>
+                <td className="px-3 py-3 font-medium">{customerField(row.claimControlNo)}</td>
+                <td className="px-3 py-3">{customerField(row.claimInsurerNo)}</td>
+                <td className="px-3 py-3">{customerField(row.claimCustomerName)}</td>
+                <td className="px-3 py-3">{customerField(row.claimVehicleNo)}</td>
               </>
             ) : (
               <>
