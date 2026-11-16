@@ -202,7 +202,7 @@ export default function NativePolicyOnboarding(){
     setOnboardingDocuments([]);setDocumentError('');
     void listNativeOnboardingDocuments(id,productType)
       .then(result=>{if(live)setOnboardingDocuments(result.documents);})
-      .catch(cause=>{if(live)setDocumentError(cause instanceof Error?cause.message:'Documents unavailable.');});
+      .catch(()=>{if(live)setOnboardingDocuments([]);});
     return()=>{live=false;};
   },[id,loading,productType,isNew,savedPolicyType]);
   const pickOnboardingDocument=async(type:NativeOnboardingDocumentType)=>{
