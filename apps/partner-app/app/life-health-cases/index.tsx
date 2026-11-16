@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
+import { PartnerInsurerLogo } from '@/components/ui/partner-insurer-logo';
 import { listLifeHealthCases, type LifeHealthCaseSummary, type LifeHealthStatus, type CaseCounts } from '@/lib/life-health-cases';
 import { canPartnerAccessCaseRegister } from '@/lib/partner-permissions';
 import { usePartnerSession } from '@/providers/partner-session-provider';
@@ -76,37 +77,36 @@ export default function LifeHealthCaseRegisterScreen() {
            <Text style={styles.listTitle}>{status==='all'?'All Cases':`${filters.find(item=>item.key===status)?.label} Cases`} ({total})</Text>
            <Text style={styles.listCount}>{total} {total===1?'record':'records'}</Text>
          </View>
-         <ScrollView horizontal showsHorizontalScrollIndicator contentContainerStyle={styles.tableScroll}>
-           <View style={styles.table}>
-             <View style={styles.tableHeader}>
-               <Text style={[styles.tableHeaderCell,styles.caseColumn]}>Case ID</Text>
-               <Text style={[styles.tableHeaderCell,styles.customerColumn]}>Customer</Text>
-               <Text style={[styles.tableHeaderCell,styles.typeColumn]}>Type</Text>
-               <Text style={[styles.tableHeaderCell,styles.proposalColumn]}>Proposal</Text>
-               <Text style={[styles.tableHeaderCell,styles.premiumColumn]}>Premium</Text>
-               <Text style={[styles.tableHeaderCell,styles.statusColumn]}>Status</Text>
+         <View style={styles.caseRows}>
+           {rows.map(row=><Pressable
+             key={row.id}
+             accessibilityRole="button"
+             accessibilityLabel={`Open ${row.business_line} case ${row.case_number} for ${row.customer_name || 'customer'}`}
+             onPress={()=>router.push(`/life-health-cases/${row.id}` as never)}
+             style={({pressed})=>[styles.caseRow,pressed&&styles.caseRowPressed]}
+           >
+             <View style={styles.logoShell}>
+               <Ionicons name="document-text-outline" size={21} color="#3156B8"/>
+               {row.insurer_name?<PartnerInsurerLogo
+                 name={row.insurer_name}
+                 style={styles.insurerLogo}
+                 accessibilityLabel={row.insurer_name}
+               />:null}
              </View>
-             {rows.map(row=><Pressable key={row.id} accessibilityRole="button" accessibilityLabel={`Open case ${row.case_number}`}
-               onPress={()=>router.push(`/life-health-cases/${row.id}` as never)} style={styles.tableRow}>
-               <View style={[styles.tableCell,styles.caseColumn]}><Text style={styles.caseNo}>{row.case_number}</Text></View>
-               <View style={[styles.tableCell,styles.customerColumn]}>
-                 <Text style={styles.customer}>{row.customer_name||'—'}</Text>
-                 <Text style={styles.secondaryText} numberOfLines={2}>{row.insurer_name||'—'}{row.product_name?` · ${row.product_name}`:''}</Text>
+             <View style={styles.caseMain}>
+               <Text style={styles.customerName} numberOfLines={1}>{row.customer_name||'Customer pending'}</Text>
+               <Text style={styles.caseNumber} numberOfLines={1}>{row.case_number}</Text>
+               <Text style={styles.caseMeta} numberOfLines={1}>{row.business_line||'Life & Health'} · {row.proposal_number||'Proposal pending'}</Text>
+             </View>
+             <View style={styles.caseRight}>
+               <View style={[styles.statusPill,row.status_group==='issued'?styles.issued:row.status_group==='rejected'?styles.rejected:styles.pending]}>
+                 <View style={[styles.statusDot,row.status_group==='issued'?styles.issuedDot:row.status_group==='rejected'?styles.rejectedDot:styles.pendingDot]}/>
+                 <Text style={[styles.statusText,row.status_group==='issued'?styles.issuedText:row.status_group==='rejected'?styles.rejectedText:styles.pendingText]}>{row.status_group==='issued'?'Issued':row.status_group==='rejected'?'Rejected':'Pending'}</Text>
                </View>
-               <View style={[styles.tableCell,styles.typeColumn]}><Text style={styles.cellText}>{row.business_line||'—'}</Text></View>
-               <View style={[styles.tableCell,styles.proposalColumn]}>
-                 <Text style={styles.cellText}>{row.proposal_number||'—'}</Text>
-                 <Text style={styles.secondaryText} numberOfLines={2}>RM: {row.rm_name||'—'}</Text>
-               </View>
-               <View style={[styles.tableCell,styles.premiumColumn]}>
-                 <Text style={styles.amount}>₹{row.premium_amount.toLocaleString('en-IN',{maximumFractionDigits:2})}</Text>
-               </View>
-               <View style={[styles.tableCell,styles.statusColumn]}>
-                 <Text style={[styles.chip,row.status_group==='issued'?styles.issued:row.status_group==='rejected'?styles.rejected:styles.pending]}>{row.status_group.toUpperCase()}</Text>
-               </View>
-             </Pressable>)}
-           </View>
-         </ScrollView>
+               <Text style={styles.amount} numberOfLines={1}>₹{row.premium_amount.toLocaleString('en-IN',{maximumFractionDigits:2})}</Text>
+             </View>
+           </Pressable>)}
+         </View>
          {rows.length<total?<Pressable disabled={more} style={styles.more} onPress={()=>void load(rows.length)}>
            {more?<ActivityIndicator color={navy}/>:<Text style={styles.moreText}>Load More ({rows.length} of {total})</Text>}
          </Pressable>:null}
@@ -123,33 +123,35 @@ const styles=StyleSheet.create({
  filterSelected:{backgroundColor:navy,borderColor:navy},
  filterText:{fontSize:11,color:'#49617D',fontWeight:'700'},
  filterTextSelected:{color:'#FFF'},
- list:{gap:10,paddingBottom:20},
- listHeading:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginTop:10},
- listTitle:{fontSize:14,fontWeight:'800',color:'#142B4E'},
- listCount:{fontSize:11,color:'#64748B'},
- tableScroll:{paddingBottom:4},
- table:{backgroundColor:'#FFF',borderColor:'#D6E0EE',borderWidth:1,borderRadius:12,overflow:'hidden'},
- tableHeader:{flexDirection:'row',backgroundColor:navy},
- tableHeaderCell:{fontWeight:'800',fontSize:11,color:'#FFF',paddingHorizontal:10,paddingVertical:12,borderRightColor:'#48617F',borderRightWidth:1},
- tableRow:{flexDirection:'row',alignItems:'stretch',borderTopColor:'#D6E0EE',borderTopWidth:1,minHeight:80},
- tableCell:{paddingHorizontal:10,paddingVertical:12,justifyContent:'center',borderRightColor:'#E2E8F0',borderRightWidth:1,gap:4},
- caseColumn:{width:170},
- customerColumn:{width:175},
- typeColumn:{width:80},
- proposalColumn:{width:155},
- premiumColumn:{width:105},
- statusColumn:{width:95,borderRightWidth:0},
- caseNo:{fontWeight:'800',fontSize:12,color:navy},
- customer:{fontWeight:'700',fontSize:12,color:'#233A5A'},
- cellText:{fontSize:11,color:'#233A5A'},
- secondaryText:{fontSize:10,color:'#64748B'},
- chip:{overflow:'hidden',alignSelf:'flex-start',fontSize:9,fontWeight:'800',paddingHorizontal:7,paddingVertical:5,borderRadius:8},
- issued:{backgroundColor:'#E6F6EE',color:'#16684A'},
- rejected:{backgroundColor:'#FEECEC',color:'#A22D36'},
- pending:{backgroundColor:'#FFF2D8',color:'#956516'},
- amount:{fontSize:12,fontWeight:'800',color:navy},
- more:{alignSelf:'center',padding:12},
- moreText:{color:navy,fontWeight:'800',fontSize:12},
+ list:{gap:7,paddingBottom:20},
+ listHeading:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginTop:8,marginBottom:3},
+ listTitle:{fontSize:12,fontWeight:'800',color:'#142B4E'},
+ listCount:{fontSize:10,color:'#64748B'},
+ caseRows:{gap:3},
+ caseRow:{minHeight:60,flexDirection:'row',alignItems:'center',gap:7,backgroundColor:'#FFF',borderColor:'#E2E9F3',borderWidth:1,borderRadius:8,paddingHorizontal:8,paddingVertical:6},
+ caseRowPressed:{backgroundColor:'#F6F9FF'},
+ logoShell:{width:36,height:36,borderRadius:8,alignItems:'center',justifyContent:'center',backgroundColor:'#F5F8FC',borderColor:'#E2E9F3',borderWidth:1,overflow:'hidden'},
+ insurerLogo:{width:31,height:31,position:'absolute'},
+ caseMain:{flex:1,minWidth:0,gap:2},
+ customerName:{fontSize:12,lineHeight:16,fontWeight:'800',color:'#173A7D'},
+ caseNumber:{fontSize:10,lineHeight:13,color:'#5C6C84',fontWeight:'600'},
+ caseMeta:{fontSize:9,lineHeight:12,color:'#7D8CA1',fontWeight:'600'},
+ caseRight:{width:108,alignItems:'flex-end',justifyContent:'center',gap:5},
+ statusPill:{flexDirection:'row',alignItems:'center',gap:4,borderRadius:99,paddingHorizontal:8,paddingVertical:4},
+ statusDot:{width:5,height:5,borderRadius:3},
+ statusText:{fontSize:9,fontWeight:'700'},
+ issued:{backgroundColor:'#EAF8F2'},
+ rejected:{backgroundColor:'#FDECEC'},
+ pending:{backgroundColor:'#FFF5E5'},
+ issuedDot:{backgroundColor:'#1D9A68'},
+ rejectedDot:{backgroundColor:'#D04C4C'},
+ pendingDot:{backgroundColor:'#C47B12'},
+ issuedText:{color:'#1D9A68'},
+ rejectedText:{color:'#D04C4C'},
+ pendingText:{color:'#956516'},
+ amount:{fontSize:10,fontWeight:'800',color:navy,textAlign:'right'},
+ more:{minHeight:36,flexDirection:'row',alignItems:'center',justifyContent:'center',backgroundColor:'#F1F5FD',borderRadius:8,marginTop:5},
+ moreText:{color:'#3156B8',fontWeight:'800',fontSize:10},
  error:{padding:12,backgroundColor:'#FEF0EF',borderRadius:10,marginVertical:8},
  errorText:{color:'#A22D36',fontSize:12},
  retry:{color:'#174A96',fontWeight:'800',marginTop:8},
