@@ -80,7 +80,7 @@ export async function GET(request:Request) {
        admin.from("insurance_companies").select("id,name").eq("id",found.insurance_company_id).maybeSingle(),
        admin.from("life_health_case_documents").select("id,document_type,file_name,created_at,uploaded_by").eq("case_id",id).order("created_at",{ascending:false}),
        found.final_policy_id ? admin.from("policies").select("id,policy_no,policy_code").eq("id",found.final_policy_id).maybeSingle() : Promise.resolve({data:null,error:null}),
-       admin.from("audit_logs").select("id,created_at,action").eq("table_name","life_health_cases").eq("record_id",id).in("action",["life_health_case_edited","life_health_case_remark_added"]).order("created_at",{ascending:false}).limit(100),
+       admin.from("audit_logs").select("id,created_at,action").eq("table_name","life_health_cases").eq("record_id",id).in("action",["life_health_case_edited","life_health_case_remark_added","life_health_issued_customer_edited"]).order("created_at",{ascending:false}).limit(100),
        admin.from("insurance_companies").select("id,name").order("name").limit(500),
      ]);
      if ([customer,insurer,documents,linkedPolicy,activity,insurers].some(result => result.error))
@@ -98,7 +98,13 @@ export async function GET(request:Request) {
        insurer_name:insurer.data?.name || "Insurer",
        policy_no:linkedPolicy.data?.policy_no || null,
        rejection_reason:typeof rejection.reason === "string" ? rejection.reason.slice(0,2000) : "",
-     },documents:documents.data??[],activities:activity.data??[],insurers:insurers.data??[]});
+     },documents:documents.data??[],insurers:insurers.data??[],activities:[
+       {id:`case-${found.id}`,action:"Case Created",created_at:found.created_at},
+       ...(documents.data??[]).map(doc=>({id:`document-${doc.id}`,action:doc.document_type==="proposal_form"?"Proposal Form Uploaded":doc.document_type==="kyc"?"KYC Uploaded":doc.document_type==="policy_copy"?"Policy Document Uploaded":"Document Uploaded",created_at:doc.created_at})),
+       ...(activity.data??[]).map(entry=>({id:`audit-${entry.id}`,action:entry.action==="life_health_case_remark_added"?"Remark Added":entry.action==="life_health_issued_customer_edited"?"Customer Details Updated":"Case Details Updated",created_at:entry.created_at})),
+       ...(found.converted_at?[{id:`converted-${found.id}`,action:"Policy Created & Case Closed",created_at:found.converted_at}]:[]),
+       ...(typeof rejection.rejected_at==="string" && !Number.isNaN(Date.parse(rejection.rejected_at))?[{id:`rejected-${found.id}`,action:"Case Rejected",created_at:rejection.rejected_at}]:[]),
+     ].sort((a,b)=>Date.parse(b.created_at)-Date.parse(a.created_at))});
    }
    const status = url.searchParams.get("status") || "pending";
    if (!["pending","rejected","issued","all"].includes(status)) return respond({ok:false,error:"Invalid status."},400);
@@ -160,13 +166,40 @@ export async function POST(request: Request) {
   const id=typeof input?.id==="string"?input.id:"";
   if(!uuid.test(id))return respond({ok:false,error:"Invalid case reference."},400);
   const {data:row,error:loadError}=await admin.from("life_health_cases")
-   .select("id,status,final_policy_id,customer_id,product_name,proposal_number,premium_paying_term,policy_duration,payment_frequency,payment_mode,premium_amount,sourcing_date,insurance_company_id,remarks,updated_at")
+   .select("id,status,final_policy_id,customer_id,remarks,product_name,proposal_number,premium_paying_term,policy_duration,payment_frequency,payment_mode,premium_amount,sourcing_date,insurance_company_id,updated_at")
    .eq("id",id).maybeSingle();
   if(loadError||!row)return respond({ok:false,error:"Case not found."},404);
+  // A remark is an audited append-only note, not an edit to the rejected case's policy fields.
+  if(input?.operation==="append_remark"){
+   if(row.final_policy_id)return respond({ok:false,error:"Issued cases cannot accept remarks here."},409);
+   if(profile.role==="operations_head_life"){
+    if(!(await canAccessOperationsHeadCase(profile.id,id)))return respond({ok:false,error:"Case is outside your scope."},403);
+   }else{
+    const permission=await getEffectivePermission(profile.id,profile.role as Parameters<typeof getEffectivePermission>[1],"view_policies");
+    const creator=await hasEffectiveCapability(profile,"create_policies","edit");
+    if(!["edit","approve"].includes(permission.access)&&!creator)return respond({ok:false,error:"Remarks permission is required."},403);
+   }
+   const remark=typeof input.remark==="string"?input.remark.trim():"";
+   if(!remark||remark.length>2000)return respond({ok:false,error:"Enter a remark of up to 2000 characters."},400);
+   const old=typeof row.remarks==="string"?row.remarks.trim():"";
+   const stamp=new Intl.DateTimeFormat("en-IN",{timeZone:"Asia/Kolkata",day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit",hour12:true}).format(new Date());
+   const remarks=old?`${old}\n\n[${stamp}] ${remark}`:`[${stamp}] ${remark}`;
+   if(remarks.length>50000)return respond({ok:false,error:"Remarks history is full."},409);
+   let update=admin.from("life_health_cases").update({remarks,updated_at:new Date().toISOString()})
+    .eq("id",id).is("final_policy_id",null).eq("updated_at",row.updated_at);
+   update=row.remarks===null?update.is("remarks",null):update.eq("remarks",row.remarks);
+   const {data:saved,error:saveError}=await update.select("id").maybeSingle();
+   if(saveError||!saved)return respond({ok:false,error:"Remarks changed in another session. Reload and retry."},409);
+   await recordDailyWorkflowActivity(admin,{actorId:profile.id,table:"life_health_cases",recordId:id,action:"life_health_case_remark_added"});
+   const {error:auditError}=await admin.from("audit_logs").insert({
+    actor_id:profile.id,table_name:"life_health_cases",record_id:id,
+    action:"life_health_case_remark_added",new_data:{changed_fields:["Remarks changed (values hidden)"]},
+   });
+   if(auditError)console.error("Case remark audit failed",{id,code:auditError.code});
+   return respond({ok:true,remarks});
+  }
   if(row.status==="rejected")return respond({ok:false,error:"Rejected cases cannot be edited."},409);
   const issued=Boolean(row.final_policy_id);
-  const remarkMode=input?.action==="append_remark";
-  if(remarkMode&&issued)return respond({ok:false,error:"Issued cases cannot be edited."},409);
   if(profile.role==="operations_head_life"){
    if(issued){
     if(!(await canAccessPolicy(profile.id,profile.role,row.final_policy_id!,"view_policies",true)))
@@ -183,26 +216,6 @@ export async function POST(request: Request) {
   if(issued && !(await canAccessPolicy(profile.id,profile.role,row.final_policy_id!,"view_policies",true)))
    return respond({ok:false,error:"This issued policy is outside your authorized edit scope."},403);
   const clean=(key:string,max=180)=>typeof input?.[key]==="string"?(input[key] as string).trim().slice(0,max):"";
-  if(remarkMode){
-    const newRemark=clean("newRemark",2001);
-    if(!newRemark||newRemark.length>2000)return respond({ok:false,error:"Enter a remark of up to 2000 characters."},400);
-    const previous=row.remarks?.trim()??"";
-    const timestamp=new Intl.DateTimeFormat("en-IN",{
-      timeZone:"Asia/Kolkata",day:"2-digit",month:"short",year:"numeric",
-      hour:"2-digit",minute:"2-digit",hour12:true,
-    }).format(new Date());
-    const updated=previous?`${previous}\n\n[${timestamp}] ${newRemark}`:`[${timestamp}] ${newRemark}`;
-    if(updated.length>50000)return respond({ok:false,error:"The remarks history is full."},400);
-    let mutation=admin.from("life_health_cases").update({remarks:updated,updated_at:new Date().toISOString()})
-      .eq("id",id).is("final_policy_id",null).neq("status","rejected");
-    mutation=row.remarks===null?mutation.is("remarks",null):mutation.eq("remarks",row.remarks);
-    const {data:saved,error:saveError}=await mutation.select("id").maybeSingle();
-    if(saveError||!saved)return respond({ok:false,error:"Remarks changed in another session. Reload and retry."},409);
-    await recordDailyWorkflowActivity(admin,{actorId:profile.id,table:"life_health_cases",recordId:id,action:"life_health_case_remark_added"});
-    await admin.from("audit_logs").insert({actor_id:profile.id,action:"life_health_case_remark_added",
-      table_name:"life_health_cases",record_id:id,new_data:{changed_fields:["Remarks changed (values hidden)"]}});
-    return respond({ok:true,remarks:updated});
-  }
   if(issued){
    // Issued case is immutable; only the customer information is editable here.
    // Validate case-to-policy link and avoid touching policy issuance or commercials.
@@ -220,16 +233,15 @@ export async function POST(request: Request) {
    await admin.from("audit_logs").insert({actor_id:profile.id,table_name:"life_health_cases",record_id:id,action:"life_health_issued_customer_edited",new_data:{fields:["customer_name","customer_phone","customer_address"],policy_id:row.final_policy_id}});
    return respond({ok:true,scope:"issued_customer"});
   }
-  const customerName=clean("customerName",160);
-  const customerPhone=clean("customerPhone",25).replace(/\D/g,"");
+  const customerName=clean("customerName",160),customerPhone=clean("customerPhone",25).replace(/\D/g,"");
   const customerAddress=clean("customerAddress",1000);
-  if(!customerName||!/^[6-9]\d{9}$/.test(customerPhone))return respond({ok:false,error:"Enter a customer name and valid 10-digit mobile."},400);
+  if(!customerName||!/^[6-9]\d{9}$/.test(customerPhone))
+    return respond({ok:false,error:"Enter a customer name and valid 10-digit mobile."},400);
   const product=clean("productName",180),proposal=clean("proposalNumber",120).toUpperCase();
   const ppt=clean("premiumPayingTerm",80),pd=clean("policyDuration",80);
   const frequency=clean("paymentFrequency",50),mode=clean("paymentMode",50);
   const premium=Number(input?.premiumAmount);
-  const sourcingDate=clean("sourcingDate",10);
-  const insurerId=clean("insurerId",40);
+  const sourcingDate=clean("sourcingDate",10),insurerId=clean("insurerId",40);
   if(!/^\d{4}-\d{2}-\d{2}$/.test(sourcingDate)||!Number.isFinite(Date.parse(sourcingDate)))
     return respond({ok:false,error:"Choose a valid proposal date."},400);
   if(!uuid.test(insurerId))return respond({ok:false,error:"Choose a valid insurer."},400);
