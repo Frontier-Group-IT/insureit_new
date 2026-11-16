@@ -288,12 +288,12 @@ export async function GET(request: Request) {
 
   if (view === "mobile_list") {
     try {
-      type Candidate = PolicyIntakeDuplicateCandidate & { ocr_status: string };
+      type Candidate = PolicyIntakeDuplicateCandidate & { ocr_status: string; lead_source_name: string | null; lead_source_code: string | null };
       // Duplicate is a computed Operations classification, not necessarily a
       // stored status. Resolve ALL visible candidates before counting/paging.
       const candidatesResult = await fetchAllPages<Candidate, unknown>((from, to) => {
         let scoped = admin.from("policy_intake_requests")
-          .select("id,intake_number,status,ocr_status,ocr_fields,created_at")
+          .select("id,intake_number,status,ocr_status,ocr_fields,lead_source_name,lead_source_code,created_at")
           .order("created_at", { ascending: false }).order("id", { ascending: false })
           .range(from, to);
         if (employeeRead?.mode === "or") scoped = scoped.or(employeeRead.predicates);
@@ -324,6 +324,34 @@ export async function GET(request: Request) {
         });
         if (searched.error) throw searched.error;
         searchableIds = new Set((searched.data ?? []).map((row) => row.id));
+        // The computed DB search already covers PIR, customer, insurer, source,
+        // policy number and registration number. Also compare normalized OCR
+        // identifiers so spaces and hyphens do not block policy/vehicle matches.
+        // Only inspect the candidates already authorized by intakeReadScope.
+        const normalizedSearch = search.replace(/[^a-z0-9]/gi, "").toLowerCase();
+        if (normalizedSearch.length >= 4) {
+          for (const candidate of candidates) {
+            if (searchableIds.has(candidate.id)) continue;
+            const ocrIdentifiers = Array.isArray(candidate.ocr_fields)
+              ? candidate.ocr_fields
+                  .filter((field: unknown) => {
+                    if (!field || typeof field !== "object") return false;
+                    const key = String((field as { key?: unknown }).key ?? "");
+                    return key === "policy_number" || key === "vehicle_registration_number";
+                  })
+                  .map((field: { value?: unknown }) => String(field.value ?? ""))
+              : [];
+            const identifiers = [
+              candidate.intake_number,
+              candidate.lead_source_name,
+              candidate.lead_source_code,
+              ...ocrIdentifiers,
+            ];
+            if (identifiers.some((value) => String(value ?? "").replace(/[^a-z0-9]/gi, "").toLowerCase().includes(normalizedSearch))) {
+              searchableIds.add(candidate.id);
+            }
+          }
+        }
       }
       const eligible = searchableIds ? candidates.filter((row) => searchableIds!.has(row.id)) : candidates;
       const counts = includeCounts ? policyIntakeStatusCounts(eligible, duplicateIds) : undefined;
