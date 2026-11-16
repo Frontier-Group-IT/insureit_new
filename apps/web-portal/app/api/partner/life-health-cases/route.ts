@@ -80,7 +80,7 @@ export async function GET(request:Request) {
        admin.from("insurance_companies").select("id,name").eq("id",found.insurance_company_id).maybeSingle(),
        admin.from("life_health_case_documents").select("id,document_type,file_name,created_at,uploaded_by").eq("case_id",id).order("created_at",{ascending:false}),
        found.final_policy_id ? admin.from("policies").select("id,policy_no,policy_code").eq("id",found.final_policy_id).maybeSingle() : Promise.resolve({data:null,error:null}),
-       admin.from("audit_logs").select("id,created_at,action").eq("table_name","life_health_cases").eq("record_id",id).in("action",["life_health_case_edited","life_health_case_remark_added"]).order("created_at",{ascending:false}).limit(100),
+       admin.from("audit_logs").select("id,created_at,action").eq("table_name","life_health_cases").eq("record_id",id).in("action",["life_health_case_edited","life_health_case_remark_added","life_health_issued_customer_edited"]).order("created_at",{ascending:false}).limit(100),
      ]);
      if ([customer,insurer,documents,linkedPolicy,activity].some(result => result.error))
        return respond({ok:false,error:"Case details are temporarily unavailable."},500);
@@ -97,7 +97,13 @@ export async function GET(request:Request) {
        insurer_name:insurer.data?.name || "Insurer",
        policy_no:linkedPolicy.data?.policy_no || null,
        rejection_reason:typeof rejection.reason === "string" ? rejection.reason.slice(0,2000) : "",
-     },documents:documents.data??[],activities:activity.data??[]});
+     },documents:documents.data??[],activities:[
+       {id:`case-${found.id}`,action:"Case Created",created_at:found.created_at},
+       ...(documents.data??[]).map(doc=>({id:`document-${doc.id}`,action:doc.document_type==="proposal_form"?"Proposal Form Uploaded":doc.document_type==="kyc"?"KYC Uploaded":doc.document_type==="policy_copy"?"Policy Document Uploaded":"Document Uploaded",created_at:doc.created_at})),
+       ...(activity.data??[]).map(entry=>({id:`audit-${entry.id}`,action:entry.action==="life_health_case_remark_added"?"Remark Added":entry.action==="life_health_issued_customer_edited"?"Customer Details Updated":"Case Details Updated",created_at:entry.created_at})),
+       ...(found.converted_at?[{id:`converted-${found.id}`,action:"Policy Created & Case Closed",created_at:found.converted_at}]:[]),
+       ...(typeof rejection.rejected_at==="string" && !Number.isNaN(Date.parse(rejection.rejected_at))?[{id:`rejected-${found.id}`,action:"Case Rejected",created_at:rejection.rejected_at}]:[]),
+     ].sort((a,b)=>Date.parse(b.created_at)-Date.parse(a.created_at))});
    }
    const status = url.searchParams.get("status") || "pending";
    if (!["pending","rejected","issued","all"].includes(status)) return respond({ok:false,error:"Invalid status."},400);
@@ -159,9 +165,38 @@ export async function POST(request: Request) {
   const id=typeof input?.id==="string"?input.id:"";
   if(!uuid.test(id))return respond({ok:false,error:"Invalid case reference."},400);
   const {data:row,error:loadError}=await admin.from("life_health_cases")
-   .select("id,status,final_policy_id,customer_id,product_name,proposal_number,premium_paying_term,policy_duration,payment_frequency,payment_mode,premium_amount,updated_at")
+   .select("id,status,final_policy_id,customer_id,remarks,product_name,proposal_number,premium_paying_term,policy_duration,payment_frequency,payment_mode,premium_amount,updated_at")
    .eq("id",id).maybeSingle();
   if(loadError||!row)return respond({ok:false,error:"Case not found."},404);
+  // A remark is an audited append-only note, not an edit to the rejected case's policy fields.
+  if(input?.operation==="append_remark"){
+   if(row.final_policy_id)return respond({ok:false,error:"Issued cases cannot accept remarks here."},409);
+   if(profile.role==="operations_head_life"){
+    if(!(await canAccessOperationsHeadCase(profile.id,id)))return respond({ok:false,error:"Case is outside your scope."},403);
+   }else{
+    const permission=await getEffectivePermission(profile.id,profile.role as Parameters<typeof getEffectivePermission>[1],"view_policies");
+    const creator=await hasEffectiveCapability(profile,"create_policies","edit");
+    if(!["edit","approve"].includes(permission.access)&&!creator)return respond({ok:false,error:"Remarks permission is required."},403);
+   }
+   const remark=typeof input.remark==="string"?input.remark.trim():"";
+   if(!remark||remark.length>2000)return respond({ok:false,error:"Enter a remark of up to 2000 characters."},400);
+   const old=typeof row.remarks==="string"?row.remarks.trim():"";
+   const stamp=new Intl.DateTimeFormat("en-IN",{timeZone:"Asia/Kolkata",day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit",hour12:true}).format(new Date());
+   const remarks=old?`${old}\n\n[${stamp}] ${remark}`:`[${stamp}] ${remark}`;
+   if(remarks.length>50000)return respond({ok:false,error:"Remarks history is full."},409);
+   let update=admin.from("life_health_cases").update({remarks,updated_at:new Date().toISOString()})
+    .eq("id",id).is("final_policy_id",null).eq("updated_at",row.updated_at);
+   update=row.remarks===null?update.is("remarks",null):update.eq("remarks",row.remarks);
+   const {data:saved,error:saveError}=await update.select("id").maybeSingle();
+   if(saveError||!saved)return respond({ok:false,error:"Remarks changed in another session. Reload and retry."},409);
+   await recordDailyWorkflowActivity(admin,{actorId:profile.id,table:"life_health_cases",recordId:id,action:"life_health_case_remark_added"});
+   const {error:auditError}=await admin.from("audit_logs").insert({
+    actor_id:profile.id,table_name:"life_health_cases",record_id:id,
+    action:"life_health_case_remark_added",new_data:{changed_fields:["Remarks changed (values hidden)"]},
+   });
+   if(auditError)console.error("Case remark audit failed",{id,code:auditError.code});
+   return respond({ok:true,remarks});
+  }
   if(row.status==="rejected")return respond({ok:false,error:"Rejected cases cannot be edited."},409);
   const issued=Boolean(row.final_policy_id);
   if(profile.role==="operations_head_life"){
