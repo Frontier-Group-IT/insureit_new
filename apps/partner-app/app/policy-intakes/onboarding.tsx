@@ -9,7 +9,7 @@ import { motorValidityEnds } from '@/lib/motor-validity-dates';
 import { createPartnerPolicyIntakeBridgeUrl, getPartnerPolicyIntakeDocumentUrl } from '@/lib/policy-intakes';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { PartnerPolicyDateField } from '@/components/policy-intakes/partner-policy-date-field';
-import { prepareNativePolicyOnboarding, saveNativePolicyOnboarding, bookNativePolicyOnboarding, createNativeLifeHealthCase, requestNativePolicyDateApproval, verifyNativePolicyDateApproval, lookupNativePolicyRc, prepareNewNativePolicyOnboarding, bookNewNativePolicyOnboarding, lookupNewNativePolicyRc, createNewNativeLifeHealthCase, bookNewNativeNonMotorPolicy, searchNewNativeNonMotorCustomers, requestNewNativePolicyDateApproval, verifyNewNativePolicyDateApproval, searchNativeNonMotorCustomers, type NativeNonMotorCustomer, type NativePolicyDraft, type NativeOnboardingData, type NativeProductType, listNativeOnboardingDocuments, uploadNativeOnboardingDocument, deleteNativeOnboardingDocument, type NativeOnboardingDocument, type NativeOnboardingDocumentType } from '@/lib/policy-onboarding';
+import { prepareNativePolicyOnboarding, saveNativePolicyOnboarding, bookNativePolicyOnboarding, createNativeLifeHealthCase, requestNativePolicyDateApproval, verifyNativePolicyDateApproval, lookupNativePolicyRc, prepareNewNativePolicyOnboarding, bookNewNativePolicyOnboarding, lookupNewNativePolicyRc, createNewNativeLifeHealthCase, bookNewNativeNonMotorPolicy, searchNewNativeNonMotorCustomers, requestNewNativePolicyDateApproval, verifyNewNativePolicyDateApproval, searchNativeNonMotorCustomers, searchNativeLeadSources, type NativeLeadSource, type NativeNonMotorCustomer, type NativePolicyDraft, type NativeOnboardingData, type NativeProductType, listNativeOnboardingDocuments, uploadNativeOnboardingDocument, deleteNativeOnboardingDocument, type NativeOnboardingDocument, type NativeOnboardingDocumentType } from '@/lib/policy-onboarding';
 
 type FieldKey = keyof NativePolicyDraft;
 type Field = { key:FieldKey; label:string; required?:boolean; options?:string[] };
@@ -165,6 +165,12 @@ export default function NativePolicyOnboarding(){
   const [verifiedApprovalId,setVerifiedApprovalId]=useState<string|null>(null);
   const [approvalCode,setApprovalCode]=useState("");
   const [picker,setPicker]=useState<{key:string;items:{value:string;label:string}[];product?:boolean}|null>(null);
+  const [sourcePickerOpen,setSourcePickerOpen]=useState(false);
+  const [sourceQuery,setSourceQuery]=useState('');
+  const [sourceItems,setSourceItems]=useState<NativeLeadSource[]>([]);
+  const [sourceBusy,setSourceBusy]=useState(false);
+  const [sourcePickerError,setSourcePickerError]=useState('');
+  const [pickedSource,setPickedSource]=useState<NativeLeadSource|null>(null);
   const [dirty,setDirty]=useState(false);
   const [nonMotorAdditionalOpen,setNonMotorAdditionalOpen]=useState(false);
   const [customerSearch,setCustomerSearch]=useState('');
@@ -195,7 +201,7 @@ export default function NativePolicyOnboarding(){
     setLoading(true);setError('');
     try{
       const loaded=isNew?await prepareNewNativePolicyOnboarding():await prepareNativePolicyOnboarding(id);
-      setData(loaded);setDraft(loaded.draft);setDirty(false);setOnboardingDocuments([]);setStandaloneLifeDocuments({});
+      setData(loaded);setDraft(loaded.draft);setDirty(false);setOnboardingDocuments([]);setStandaloneLifeDocuments({});setPickedSource(null);
     }catch(e){setError(e instanceof Error?e.message:'Onboarding could not be opened.');}
     finally{setLoading(false);}
   },[id,isNew]);
@@ -305,7 +311,30 @@ export default function NativePolicyOnboarding(){
     setDirty(true);
     setVerifiedApprovalId(null);
   };
+  const lookupSources=async(query:string)=>{
+    if(!draft?.intermediaryType)return;
+    setSourceBusy(true);setSourcePickerError('');setSourceItems([]);
+    try{
+      const result=await searchNativeLeadSources(draft.intermediaryType,query,isNew?undefined:id);
+      setSourceItems(result.sources);
+    }catch(e){setSourcePickerError(e instanceof Error?e.message:'Lead sources are unavailable.');}
+    finally{setSourceBusy(false);}
+  };
+  const openSources=()=>{
+    if(!draft?.intermediaryType){
+      Alert.alert('Select intermediary type','Choose POSP, MISP or SIBL / Partner first.');
+      return;
+    }
+    setSourceQuery('');setSourcePickerOpen(true);
+    void lookupSources('');
+  };
+  const selectSource=(source:NativeLeadSource)=>{
+    setDraft(current=>current?{...current,leadSource:source.name,intermediaryCode:source.code,rmName:source.rmName}:current);
+    setPickedSource(source);setDirty(true);setVerifiedApprovalId(null);setApprovalRequestId(null);
+    setSourcePickerOpen(false);
+  };
   const update=(key:FieldKey,value:string)=>{
+    if(key==='intermediaryType'){setPickedSource(null);}
     if(isNew&&key==='businessLine'){
       setStandaloneLifeDocuments({});
       setOnboardingDocuments([]);
@@ -314,6 +343,7 @@ export default function NativePolicyOnboarding(){
     setDraft(current=>{
       if(!current)return current;
       const next={...current,[key]:value};
+      if(key==='intermediaryType'&&value!==current.intermediaryType){next.leadSource='';next.intermediaryCode='';next.rmName='';}
       // Keep the saved registration number in draft; Unregistered mode shows a disabled field.
       if(key==='vehicleClass'&&value!==current.vehicleClass)next.policyProduct='';
       if(key==='vehicleClass'&&value==='CPM'){next.tp='0';next.cpa='0';next.cpaOpted='No';}
@@ -451,6 +481,9 @@ export default function NativePolicyOnboarding(){
   };
   async function completeBooking(resolution?:Record<string,unknown>){
     if(!draft||!data||booking||saving)return;
+    if(!draft.chassisNo.trim()||!draft.engineNo.trim()){
+      setError('Enter both chassis number and engine number before booking.');return;
+    }
     setBooking(true);setError('');
     let revision=data.revision;
     try{
@@ -636,7 +669,14 @@ export default function NativePolicyOnboarding(){
           ):null}
         </View>
       ):<Text style={styles.label}>{f.label}{f.required?<Text style={styles.star}> *</Text>:null}</Text>}
-      {options.length?(
+      {f.key==='leadSource'?(
+        <Pressable accessibilityRole="button" accessibilityLabel="Select lead source"
+          accessibilityState={{disabled:!draft.intermediaryType}}
+          disabled={!draft.intermediaryType} onPress={openSources} style={[styles.inputRow,!draft.intermediaryType&&styles.readonlyInput]}>
+          <Text numberOfLines={1} style={[styles.value,!current&&styles.placeholder]}>{current||'Select lead source'}</Text>
+          <Ionicons name="chevron-down" size={15} color="#63758D"/>
+        </Pressable>
+      ):options.length?(
         <Pressable accessibilityRole="button" accessibilityLabel={f.label} accessibilityState={{disabled:restricted}}
           disabled={restricted} onPress={()=>setPicker({key:f.key,items:options})}
           style={[styles.inputRow,restricted&&styles.readonlyInput]}>
@@ -673,11 +713,12 @@ export default function NativePolicyOnboarding(){
   const sourceIsVerified=Boolean(data?.sourceMeta&&draft&&
     data.sourceMeta.name.trim().toLowerCase()===draft.leadSource.trim().toLowerCase()&&
     data.sourceMeta.code===draft.intermediaryCode);
-  const verifiedSource=sourceIsVerified?data?.sourceMeta:null;
+  const verifiedSource=pickedSource&&draft&&pickedSource.code===draft.intermediaryCode&&pickedSource.name===draft.leadSource
+    ?pickedSource:sourceIsVerified?data?.sourceMeta:null;
 
   const sourceMeta=(key:'rmName'|'intermediaryCode',label:string)=><View style={styles.sourceMeta}>
     <Text style={styles.sourceMetaLabel}>{label} ·</Text>
-    {key==='rmName'&&isMotor&&!isNew
+    {key==='rmName'&&isMotor&&(!isNew||Boolean(pickedSource))
       ? <Text numberOfLines={1} style={styles.sourceMetaValue}>{draft?.rmName||verifiedSource?.rmName||''}</Text>
       : key==='intermediaryCode'&&verifiedSource
         ? <Text numberOfLines={1} style={styles.sourceMetaValue}>{draft?.intermediaryCode}</Text>
@@ -817,8 +858,8 @@ export default function NativePolicyOnboarding(){
     {key:'fuelType',label:'Fuel type',options:['Petrol','Diesel','CNG','Electric','Hybrid','Bi-Fuel','Other']},
     {key:'manufacturingYear',label:'Year of manufacturing'},
     {key:'capacity',label:draft?.vehicleClass==='PCV'?'Capacity (seats)':draft?.vehicleClass==='GCV'||draft?.vehicleClass==='CPM'?'Capacity (GVW)':draft?.fuelType==='Electric'?'Capacity (kW)':'Capacity (CC)'},
-    {key:'chassisNo',label:'Chassis number',required:draft?.registrationMode==='unregistered'},
-    {key:'engineNo',label:'Engine number',required:draft?.registrationMode==='unregistered'},
+    {key:'chassisNo',label:'Chassis number',required:true},
+    {key:'engineNo',label:'Engine number',required:true},
   ];
   const motorProductFields:Field[]=[
     {key:'policyProduct',label:'Policy product',required:true},
@@ -1254,6 +1295,34 @@ export default function NativePolicyOnboarding(){
         </>}
       </View></View>
     </Modal>
+    <Modal transparent visible={sourcePickerOpen} animationType="fade" onRequestClose={()=>setSourcePickerOpen(false)}>
+      <View style={styles.scrim}><View style={styles.sheet}>
+        <View style={styles.sheetTitle}>
+          <Text style={styles.sectionTitle}>Select Lead Source</Text>
+          <Pressable accessibilityLabel="Close source list" onPress={()=>setSourcePickerOpen(false)}><Ionicons name="close" size={21} color="#4C5970"/></Pressable>
+        </View>
+        <View style={styles.sourceSearchArea}>
+          <TextInput accessibilityLabel="Search lead source by name" value={sourceQuery} onChangeText={setSourceQuery}
+            onSubmitEditing={()=>void lookupSources(sourceQuery)} returnKeyType="search"
+            placeholder="Search active intermediary name" style={[styles.input,styles.sourceSearchInput]}/>
+          <Pressable accessibilityRole="button" accessibilityLabel="Search lead sources" disabled={sourceBusy}
+            onPress={()=>void lookupSources(sourceQuery)} style={styles.sourceSearchButton}>
+            {sourceBusy?<ActivityIndicator color="#FFFFFF" size="small"/>:<Ionicons name="search" color="#FFFFFF" size={18}/>}
+          </Pressable>
+        </View>
+        {sourcePickerError?<Text style={styles.sourceSearchError}>{sourcePickerError}</Text>:null}
+        <ScrollView style={styles.choiceScroll}>
+          {!sourceBusy&&!sourceItems.length&&!sourcePickerError?<Text style={styles.sourceEmpty}>No matching active lead sources.</Text>:null}
+          {sourceItems.map(item=><Pressable key={item.id} accessibilityRole="button"
+            accessibilityLabel={'Select '+item.name} onPress={()=>selectSource(item)} style={styles.choice}>
+            <View style={styles.sourceChoiceText}>
+              <Text numberOfLines={1} style={styles.choiceText}>{item.name}</Text>
+              <Text style={styles.sourceChoiceDetail}>{item.code}{item.rmName?' · RM: '+item.rmName:''}</Text>
+            </View>
+          </Pressable>)}
+        </ScrollView>
+      </View></View>
+    </Modal>
     <Modal transparent visible={Boolean(picker)} animationType="fade" onRequestClose={()=>setPicker(null)}>
       <View style={[styles.scrim,picker?.key==='policyProduct'&&styles.productPickerScrim]}><View style={[styles.sheet,picker?.key==='policyProduct'&&styles.productPickerSheet]}>
         <View style={styles.sheetTitle}><Text style={styles.sectionTitle}>{picker?.key==='policyProduct'?'Select product':picker?.key==='businessLine'?'Select Policy Type':`Select ${picker?.key}`}</Text><Pressable onPress={()=>setPicker(null)} accessibilityLabel="Close options"><Ionicons name="close" size={21} color="#4C5970"/></Pressable></View>
@@ -1303,13 +1372,14 @@ const styles=StyleSheet.create({
   sourceLeadRow:{flexDirection:'row',alignItems:'center',justifyContent:'flex-start',gap:8,minHeight:19},
   sourcePhone:{flexDirection:'row',alignItems:'center',gap:3,flexShrink:0},
   sourcePhoneNumber:{fontSize:9,color:'#315B91',fontWeight:'600'},
+  sourceSearchArea:{flexDirection:'row',gap:8,padding:12},sourceSearchInput:{flex:1,minWidth:0},sourceSearchButton:{width:44,borderRadius:9,alignItems:'center',justifyContent:'center',backgroundColor:'#17365D'},sourceSearchError:{fontSize:11,color:'#A32924',paddingHorizontal:12},sourceEmpty:{fontSize:11,color:'#71819A',padding:15},sourceChoiceText:{flex:1,gap:3},sourceChoiceDetail:{fontSize:10,color:'#71819A'},
   sourceMetaValue:{fontSize:9,color:'#315B91',fontWeight:'600'},
   premiumRows:{gap:0},
   premiumRow:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',paddingVertical:9,borderBottomWidth:1,borderColor:'#E9EFF6'},
   premiumLabel:{fontSize:11,color:'#65758E'},premiumValue:{fontSize:12,color:'#183653',fontWeight:'800'},
   fields:{padding:12,flexDirection:'row',flexWrap:'wrap',columnGap:10,rowGap:11},field:{width:'48%',minWidth:0,gap:5},sourceCell:{width:'48%',minWidth:0,gap:3},sourcePrimary:{width:'100%'},sourceMeta:{minHeight:19,flexDirection:'row',alignItems:'center',gap:3,flexShrink:1},sourceMetaLabel:{fontSize:9,fontWeight:'700',color:'#72839C'},sourceMetaInput:{minWidth:0,maxWidth:76,fontSize:9,color:'#315B91',fontWeight:'600',paddingVertical:0,paddingHorizontal:0,padding:0},wideField:{width:'100%'},label:{fontSize:10,color:'#65758E',fontWeight:'700'},star:{color:'#B93333'},
-  vehicleClassLabelRow:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:5,minWidth:0},
-  vehicleClassDescription:{flexShrink:1,minWidth:0,maxWidth:'72%',textAlign:'right',color:'#315B9A',fontSize:9,fontWeight:'600'},
+  vehicleClassLabelRow:{flexDirection:'row',alignItems:'center',justifyContent:'flex-start',gap:7,minWidth:0},
+  vehicleClassDescription:{flexShrink:1,minWidth:0,maxWidth:'65%',textAlign:'left',color:'#315B9A',fontSize:9,fontWeight:'600'},
   input:{minHeight:42,borderWidth:1,borderColor:'#D8E1EC',backgroundColor:'#FFFFFF',borderRadius:9,paddingHorizontal:11,fontSize:12,color:'#183653'},
   inputRow:{minHeight:42,borderWidth:1,borderColor:'#D8E1EC',borderRadius:9,paddingHorizontal:11,flexDirection:'row',alignItems:'center',justifyContent:'space-between'},
   value:{color:'#183653',fontSize:12,flex:1},placeholder:{color:'#97A5B7'},

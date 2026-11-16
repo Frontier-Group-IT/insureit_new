@@ -206,3 +206,20 @@ export async function bookNewNativeNonMotorPolicy(
   if(!response.ok||!result?.ok||!result.policy)throw new Error(result?.error||'Booking outcome unknown. Check the Policy Register before retrying.');
   return {policy:result.policy};
 }
+
+/** Active intermediary options, scoped to creation permissions and the Intake's fixed source. */
+export type NativeLeadSource={id:string;name:string;code:string;mobile:string;rmName:string;rmCode:string};
+export async function searchNativeLeadSources(intermediaryType:string,search:string,intakeId?:string){
+  const session=await getCurrentSession();
+  if(!session?.access_token)throw new Error('Partner session expired. Sign in again.');
+  let response:Response;
+  try{
+    response=await fetch(`${portal}/api/partner/policy-intakes/native-onboarding/sources`,{
+      method:'POST',cache:'no-store',headers:{Authorization:`Bearer ${session.access_token}`,'Content-Type':'application/json'},
+      body:JSON.stringify({intermediary_type:intermediaryType,search,intake_id:intakeId||undefined}),
+    });
+  }catch{throw new Error('Lead source lookup is unavailable. Check your connection.');}
+  const value=await response.json().catch(()=>null) as {ok?:boolean;error?:string;sources?:NativeLeadSource[]}|null;
+  if(!response.ok||!value?.ok)throw new Error(value?.error||'Could not load Lead Source options.');
+  return {sources:value.sources??[]};
+}
