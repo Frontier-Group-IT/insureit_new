@@ -105,7 +105,7 @@ expectAll('app/(tabs)/claims.tsx', [
   [/summaryChips: \{ flex: 1, minWidth: 0, flexDirection: 'row'/, 'Claims filters must shrink within the shared row'],
   [/summaryChip: \{ flex: 1, minWidth: 0/, 'Claims status chips must have equal flexible widths'],
   [/summaryChipLabel: \{[^\n]*fontSize: 8/, 'Claims labels must use compact typography'],
-  [/summaryAddClaim: \{ width: 62,[^\n]*flexShrink: 0/, 'Add Claim must stay visible without overlapping filter chips'],
+  [/summaryAddClaim: \{ width: 88,[^\n]*flexShrink: 0/, 'Full Add Claim button keeps a fixed compact width without overlapping shrinking filters'],
   [/\{canPartnerStartClaim\(context\) \? \([\s\S]*?accessibilityLabel="Add Claim"/, 'Add Claim must retain permission gating and accessibility'],
   [/onPress=\{\(\) => router\.push\('\/claim\/select-vehicle' as never\)\}/, 'Add Claim must preserve vehicle selection navigation'],
   [/shortLabel: 'All'/, 'Show compact All filter label'],
