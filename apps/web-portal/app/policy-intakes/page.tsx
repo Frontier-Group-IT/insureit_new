@@ -50,7 +50,7 @@ export default async function PolicyIntakesPage({ searchParams }: { searchParams
   // Fetch the entire authorized result set, not only the first 500/1000 records.
   const { data, error } = await fetchAllPages<PolicyIntakeListRow, unknown>((from, to) => {
     let page = admin.from("policy_intake_requests")
-      .select("id,intake_number,status,policy_type,lead_source_name,lead_source_type,lead_source_code,customer_mobile,created_at,ocr_status,ocr_fields,file_name,assigned_to_profile_id,submitted_by_profile_id,submitted_by_portal_account_id")
+      .select("id,intake_number,status,policy_type,lead_source_name,lead_source_type,lead_source_code,customer_mobile,created_at,finalized_at,ocr_status,ocr_fields,file_name,assigned_to_profile_id,submitted_by_profile_id,submitted_by_portal_account_id")
       .order("created_at", { ascending: false })
       .order("id", { ascending: false })
       .range(from, to);
