@@ -76,6 +76,18 @@ export async function POST(request:Request){
         .select("associate_employee_id").eq("application_id",row.application_id)
         .maybeSingle<{associate_employee_id:string|null}>();
       if(owner)employeeId=owner.associate_employee_id;
+      else if(row.intermediary_type==="partner"&&!employeeId){
+        const {data:application}=await admin.from("intermediary_onboarding_applications")
+          .select("partner_record_id").eq("id",row.application_id)
+          .maybeSingle<{partner_record_id:string|null}>();
+        if(application?.partner_record_id){
+          const {data:partnerOwner}=await admin.from("posp_misp_onboarding_profiles")
+            .select("associate_employee_id").eq("partner_record_id",application.partner_record_id)
+            .not("associate_employee_id","is",null).order("created_at",{ascending:false}).limit(1)
+            .maybeSingle<{associate_employee_id:string|null}>();
+          employeeId=partnerOwner?.associate_employee_id??null;
+        }
+      }
     }
     const owner=associates.find(item=>item.id===employeeId);
     sources.push({id:row.id,name:row.display_name,code:row.intermediary_code??"",
