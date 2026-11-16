@@ -76,7 +76,7 @@ export default async function DailyReportPage({ searchParams }: Props) {
     return `/reports/daily?${params.toString()}`;
   };
   return (
-    <div className="space-y-3">
+    <div className="daily-report-reference space-y-3">
       {(isSelf || chosenPerson) && selfHistory && !error ? (
         <DailySelfActivityPanel data={selfHistory} linkFor={linkFor}
           reportMode={isSelf ? "self" : "employee"}/>
