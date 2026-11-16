@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   FlatList,
   Image,
+  Modal,
   Platform,
   Pressable,
   RefreshControl,
@@ -15,6 +16,7 @@ import {
   StyleSheet,
   Text,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -49,6 +51,7 @@ export default function PoliciesScreen() {
   const router = useRouter();
   const isFocused = useIsFocused();
   const safeAreaInsets = useSafeAreaInsets();
+  const { height: windowHeight } = useWindowDimensions();
   // SafeAreaView already offsets overlays when iOS reports a top inset.
   // Only fall back when older OTA runtimes report zero, avoiding double spacing.
   const verticalListRef = useRef<FlatList>(null);
@@ -61,6 +64,9 @@ export default function PoliciesScreen() {
   const { cacheScopeKey, context, avatarUri } = usePartnerSession();
   const { isOffline } = usePartnerNetwork();
   const [lifecycle, setLifecycle] = useState<PartnerPolicyLifecycle>(savedPolicyLifecycle);
+  const [statusMenuOpen, setStatusMenuOpen] = useState(false);
+  const [statusMenuTop, setStatusMenuTop] = useState(180);
+  const statusButtonRef = useRef<View>(null);
   const [query, setQuery] = useState(savedPolicyQuery);
   const [visibleLimit, setVisibleLimit] = useState(PAGE_SIZE);
   const [unreadActivityCount, setUnreadActivityCount] = useState(0);
@@ -149,10 +155,30 @@ export default function PoliciesScreen() {
   }, [collection, summary]);
 
   const selectSummary = (filter: PartnerPolicyLifecycle) => {
+    setStatusMenuOpen(false);
     setQuery('');
     setVisibleLimit(PAGE_SIZE);
     setLifecycle(filter);
   };
+  const statusOptions: { label: string; filter: PartnerPolicyLifecycle; count: number | undefined }[] = [
+    { label: 'Total Policies', filter: 'all', count: summary.data?.total_policies },
+    { label: 'Active Policies', filter: 'in_force', count: summary.data?.in_force_policies },
+    { label: 'Expiring Soon', filter: 'expiring', count: summary.data?.expiring_30_days },
+    { label: 'Lapsed Policies', filter: 'expired', count: summary.data?.expired_policies },
+    { label: 'Upcoming', filter: 'upcoming', count: summary.data?.upcoming_policies },
+  ];
+  const selectedStatus = statusOptions.find((option) => option.filter === lifecycle) ?? statusOptions[0];
+  const formatStatusCount = (count: number | undefined) => count === undefined ? '—' : count.toLocaleString('en-IN');
+  const openStatusMenu = () => {
+    statusButtonRef.current?.measureInWindow((_x, y, _width, height) => {
+      setStatusMenuTop(Math.max(8, Math.min(y + height + 5, windowHeight - 280)));
+      setStatusMenuOpen(true);
+    });
+  };
+  useEffect(() => {
+    if (!isFocused) setStatusMenuOpen(false);
+  }, [isFocused]);
+
   const name = context?.identity.display_name || 'Partner';
   const quickActions = [
     ...(canPartnerAccess(context, 'view_policy_intakes') ? [{
@@ -189,17 +215,18 @@ export default function PoliciesScreen() {
           placeholders={['Search customer...', 'Search vehicle number...', 'Search policy number...']}
           containerStyle={styles.searchField}
         />
-        {/* Keep the existing Filter visual without opening any menu.
-            Lifecycle choices remain available through the horizontally scrollable status chips. */}
         <Pressable
+          ref={statusButtonRef}
           accessibilityRole="button"
-          accessibilityLabel="Filter policies"
-          accessibilityState={{ disabled: true }}
-          disabled
-          style={styles.filterButton}
+          accessibilityLabel={`Choose policy status, ${selectedStatus.label}, ${formatStatusCount(selectedStatus.count)}`}
+          accessibilityState={{ expanded: statusMenuOpen }}
+          onPress={openStatusMenu}
+          style={({ pressed }) => [styles.filterButton, pressed && styles.summaryChipPressed]}
         >
-          <Ionicons name="filter-outline" size={18} color="#3156B8" />
-          <Text style={styles.filterText}>Filter</Text>
+          <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={styles.filterText}>
+            {selectedStatus.label} ({formatStatusCount(selectedStatus.count)})
+          </Text>
+          <Ionicons name="chevron-down" size={14} color="#3156B8" />
         </Pressable>
       </View>
 
@@ -285,39 +312,6 @@ export default function PoliciesScreen() {
           </View>
         </View>
       ) : null}
-
-      <View style={styles.summaryRow}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.summaryScroll}
-          contentContainerStyle={styles.summaryChips}
-          accessibilityLabel="Policy status filters"
-        >
-          {([
-            { label: 'Total Policies', filter: 'all' as const, value: summary.data?.total_policies },
-            { label: 'Active Policies', filter: 'in_force' as const, value: summary.data?.in_force_policies },
-            { label: 'Expiring Soon', filter: 'expiring' as const, value: summary.data?.expiring_30_days },
-            { label: 'Lapsed Policies', filter: 'expired' as const, value: summary.data?.expired_policies },
-            { label: 'Upcoming', filter: 'upcoming' as const, value: summary.data?.upcoming_policies },
-          ]).map((metric) => {
-            const selected = lifecycle === metric.filter && query.length === 0;
-            return (
-              <Pressable
-                key={metric.filter}
-                accessibilityRole="button"
-                accessibilityLabel={`${metric.label}, ${metric.value === undefined ? 'count unavailable' : metric.value.toLocaleString('en-IN')}`}
-                accessibilityState={{ selected }}
-                onPress={() => selectSummary(metric.filter)}
-                style={({ pressed }) => [styles.summaryChip, selected && styles.summaryChipSelected, pressed && styles.summaryChipPressed]}
-              >
-                <Text style={[styles.summaryChipLabel, selected && styles.summaryChipLabelSelected]}>{metric.label}</Text>
-                <Text style={[styles.summaryChipCount, selected && styles.summaryChipCountSelected]}>({metric.value === undefined ? '—' : metric.value.toLocaleString('en-IN')})</Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-      </View>
 
       {isOffline || collection.stale || summary.stale ? (
         <View style={styles.feedback}>
@@ -435,6 +429,37 @@ export default function PoliciesScreen() {
       {isFocused ? <StatusBar style={searchSticky ? 'light' : 'dark'} /> : null}
       {searchSticky && safeAreaInsets.top > 0 ? <View pointerEvents="none" style={[styles.stickyStatusBarShield, { height: safeAreaInsets.top }]} /> : null}
       {searchSticky ? <View style={[styles.stickySearchOverlay, { top: safeAreaInsets.top }]} pointerEvents="box-none"><Text style={styles.stickyClaimsHeading}>Policies</Text>{searchControls}</View> : null}
+      <Modal visible={statusMenuOpen} transparent animationType="fade" onRequestClose={() => setStatusMenuOpen(false)}>
+        <View style={styles.statusMenuOverlay}>
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            accessibilityRole="button"
+            accessibilityLabel="Close policy status menu"
+            onPress={() => setStatusMenuOpen(false)}
+          />
+          <View style={[styles.statusMenu, { top: statusMenuTop }]}>
+            {statusOptions.map((option) => {
+              const selected = lifecycle === option.filter;
+              return (
+                <Pressable
+                  key={option.filter}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${option.label}, ${formatStatusCount(option.count)}`}
+                  accessibilityState={{ selected }}
+                  onPress={() => selectSummary(option.filter)}
+                  style={({ pressed }) => [styles.statusMenuOption, selected && styles.statusMenuOptionSelected, pressed && styles.summaryChipPressed]}
+                >
+                  <Text style={[styles.statusMenuLabel, selected && styles.statusMenuSelectedText]} numberOfLines={1}>{option.label}</Text>
+                  <Text style={[styles.statusMenuCount, selected && styles.statusMenuSelectedText]}>
+                    {formatStatusCount(option.count)}
+                  </Text>
+                  {selected ? <Ionicons name="checkmark-circle" color="#3156B8" size={17} /> : null}
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -653,27 +678,33 @@ const styles = StyleSheet.create({
   },
   filterButton: {
     height: 44,
-    minWidth: 68,
+    width: 172,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 5,
-    paddingHorizontal: 12,
+    gap: 3,
+    paddingHorizontal: 7,
     backgroundColor: '#FFFFFF',
     borderLeftWidth: StyleSheet.hairlineWidth,
     borderLeftColor: '#D9DFEA',
   },
-  filterText: { color: '#3156B8', ...partnerTheme.typography.caption, fontWeight: Platform.OS === 'ios' ? '400' : '700' },
-  summaryRow: { flexDirection: 'row', alignItems: 'center', marginHorizontal: 12, marginTop: 9, gap: 7 },
-  summaryScroll: { flex: 1, minWidth: 0 },
-  summaryChips: { alignItems: 'center', gap: 7, paddingVertical: 3, paddingRight: 3 },
-  summaryChip: { minHeight: 38, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, paddingHorizontal: 13, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DEE6F0' },
-  summaryChipSelected: { backgroundColor: '#17365D', borderColor: '#17365D' },
+  filterText: { flexShrink: 1, color: '#3156B8', fontSize: 10, lineHeight: 14, fontWeight: '700' },
+  statusMenuOverlay: { flex: 1 },
+  statusMenu: {
+    position: 'absolute', right: 16, width: 228, padding: 5,
+    borderRadius: 13, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DFE7F1',
+    shadowColor: '#001B42', shadowOpacity: 0.15, shadowRadius: 12,
+    shadowOffset: { width: 0, height: 5 }, elevation: 10,
+  },
+  statusMenuOption: {
+    minHeight: 44, borderRadius: 9, paddingHorizontal: 10,
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+  },
+  statusMenuOptionSelected: { backgroundColor: '#EEF4FF' },
+  statusMenuLabel: { flex: 1, color: '#17365D', fontSize: 12, fontWeight: '700' },
+  statusMenuCount: { color: '#657995', fontSize: 11, fontWeight: '700' },
+  statusMenuSelectedText: { color: '#234F9F' },
   summaryChipPressed: { opacity: 0.78 },
-  summaryChipLabel: { color: '#52627B', fontSize: 11, lineHeight: 15, fontWeight: '700' },
-  summaryChipLabelSelected: { color: '#FFFFFF' },
-  summaryChipCount: { color: '#7A889C', fontSize: 10, lineHeight: 14, fontWeight: '700' },
-  summaryChipCountSelected: { color: '#E2EEFF' },
   quickActionsSection: { marginHorizontal: 12, marginTop: 13, marginBottom: 2 },
   quickActionsHeading: { marginHorizontal: 3, marginBottom: 8, color: '#17365D', fontSize: 12, lineHeight: 16, fontWeight: '800' },
   quickActionsRow: { flexDirection: 'row', alignItems: 'stretch', gap: 7 },
