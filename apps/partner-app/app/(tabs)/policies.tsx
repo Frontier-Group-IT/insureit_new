@@ -227,8 +227,8 @@ export default function PoliciesScreen() {
             <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={styles.filterText}>
               {selectedStatus.label} ({formatStatusCount(selectedStatus.count)})
             </Text>
+            <Ionicons name="chevron-down" size={14} color="#FFFFFF" />
           </View>
-          <Ionicons name="chevron-down" size={14} color="#17365D" />
         </Pressable>
       </View>
 
@@ -691,6 +691,9 @@ const styles = StyleSheet.create({
   filterNameBadge: {
     flexShrink: 1,
     maxWidth: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     borderRadius: 9,
     paddingVertical: 7,
     paddingHorizontal: 8,
