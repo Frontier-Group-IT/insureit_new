@@ -330,7 +330,7 @@ export async function loadSelfActivityHistory(
           }
           // A retained profile is usable only when its name exactly matches
           // the deletion audit's affected customer. Never use the actor profile.
-          const profileIds=[...new Set([...deletionById.values()].map(item=>item.profileId).filter((id):id is string=>Boolean(id)&&isValidDailyRecordId(id)))];
+          const profileIds=[...new Set([...deletionById.values()].map(item=>item.profileId).filter((id):id is string=>typeof id==="string"&&isValidDailyRecordId(id)))];
           const {data:profiles,error:profileError}=profileIds.length
             ? await admin.from("profiles").select("id,full_name,phone").in("id",profileIds)
             : {data:[],error:null};
