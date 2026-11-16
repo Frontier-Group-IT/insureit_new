@@ -327,8 +327,8 @@ jobs:
           assert rsteps.count('RECOVERY_DB_SSL_ROOT_CERT_PEM') >= 10
           assert 'managed_recovery_preflight.py --probe-target' in rsteps
           assert '--dry-run' in rsteps and '--apply' in rsteps
-          assert 'if' in str(next(x for x in rjob['steps'] if 'ATOMIC SQL RESTORE' in x['name']))
-          assert 'if' in str(next(x for x in rjob['steps'] if 'Audit actual selected row counts' in x['name']))
+          assert 'if' in str(next(x for x in rjob['steps'] if 'ATOMIC SQL RESTORE' in x.get('name', '')))
+          assert 'if' in str(next(x for x in rjob['steps'] if 'Audit actual selected row counts' in x.get('name', '')))
           assert 'verify_managed_sql_rows.py' in rsteps
           assert 'SUPABASE_SERVICE_ROLE_KEY' not in rsteps and 'R2_SECRET_ACCESS_KEY' not in rsteps
           assert 'delete_object' not in rsteps and 'put_object' not in rsteps
