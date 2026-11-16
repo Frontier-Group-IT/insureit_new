@@ -14,7 +14,9 @@ export function resolveDailyReportPeriod(query:DailyReportPeriodQuery, now=new D
   const part=(type:string)=>parts.find(p=>p.type===type)?.value??"";
   const today=`${part("year")}-${part("month")}-${part("day")}`;
   let from:string, to:string=today;
-  if(period==="today") {\n    from=today;\n  } else if(period==="custom"){
+  if(period==="today") {
+    from=today;
+  } else if(period==="custom"){
     if(!query.from || !query.to || !selfDateWindow(query.from) || !selfDateWindow(query.to) ||
        query.from>query.to || query.to>today) {
       return {period,from:undefined,to:undefined,valid:false};
