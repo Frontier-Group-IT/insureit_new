@@ -79,7 +79,7 @@ export default async function DailyReportPage({ searchParams }: Props) {
     <div className="daily-report-reference space-y-3">
       {(isSelf || chosenPerson) && selfHistory && !error ? (
         <DailySelfActivityPanel data={selfHistory} linkFor={linkFor}
-          reportMode={isSelf ? "self" : "employee"}/>
+          reportMode={isSelf ? "self" : "employee"} canViewAll={canViewAll}/>
       ) : error ? (
         <section role="alert" className="rounded-xl border border-red-200 bg-white px-5 py-8 text-center text-[11px] font-semibold text-red-700">
           The authorized employee report could not be loaded. No records were changed.
