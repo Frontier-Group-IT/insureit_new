@@ -183,7 +183,7 @@ assert.match(screen,/setDialog\('saved'\)/,'Successful draft save shows confirma
 assert.doesNotMatch(screen,/<Text style=\{styles.documentHint\}>/,'Upload hint must not render below Documents.');
 assert.doesNotMatch(screen, /\{documentError\?<Text style=\{styles.documentError\}>/,'Document errors must not be inline.');
 assert.match(screen,/accessibilityLabel="Cancel Policy Onboarding"/, 'Cancel button is available.');
-assert.match(screen,/Discard unsaved changes\?/, 'Cancelling protects unsaved data.');
+assert.match(screen,/Discard Changes\?/, 'Cancelling protects unsaved data with the new branded popup.');
 assert.match(screen,/accessibilityLabel="Create Active Policy"/, 'Create Active Policy replaces booking and draft actions.');
 assert.match(screen,/accessibilityLabel="Create Policy"/, 'Life and Health use Create Policy.');
 assert.match(screen,/productType==='Life'\|\|productType==='Health'/, 'Life and Health use identical action and border rules.');
