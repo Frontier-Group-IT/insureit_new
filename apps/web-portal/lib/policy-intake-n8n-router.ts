@@ -3,6 +3,8 @@ import "server-only";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { extractNativePdfTextPages } from "@/lib/policy-ocr-native-pdf";
 import { requestN8nPolicyIntakeExtraction } from "@/lib/policy-intake-n8n-bridge";
+import { requestN8nPolicyIntakeBySignedSource } from "@/lib/policy-intake-n8n-bridge";
+import { createCurrentIntakePdfSignedSource } from "@/lib/policy-intake-n8n-signed-source";
 import type { PolicyIntakeOcrResult } from "@/lib/policy-intake-ocr-service";
 
 export type PolicyIntakeLegacyExtractor = () => Promise<PolicyIntakeOcrResult>;
@@ -97,4 +99,68 @@ export async function extractPolicyIntakeWithN8nFallback(
     });
   }
   return original;
+}
+
+/**
+ * Strict, per-Intake n8n-only migration mode. No Google call is made for an
+ * allowlisted Intake. Non-3005 or unreadable PDFs fail closed for human review
+ * until their insurer-specific n8n extraction module is implemented.
+ * Never enable for all Motor intakes until representative insurer coverage is
+ * verified; the default mode stays off.
+ */
+export function requiresN8nForIntake(intakeId: string): boolean {
+  if (process.env.INSUREIT_N8N_OCR_MODE !== "required") return false;
+  const listed = (process.env.INSUREIT_N8N_OCR_ALLOWED_INTAKE_IDS ?? "")
+    .split(",").map(value => value.trim()).filter(Boolean);
+  return listed.includes(intakeId);
+}
+
+export async function extractPolicyIntakeWithN8nOnly(
+  intakeId: string, storagePath: string,
+): Promise<PolicyIntakeOcrResult> {
+  if (!requiresN8nForIntake(intakeId)) {
+    return { ok: false, error: "n8n-only processing is not authorized for this Intake." };
+  }
+  const admin = createSupabaseAdminClient();
+  const unchanged = async () => {
+    const [r, d] = await Promise.all([
+      admin.from("policy_intake_requests")
+        .select("status,policy_type,storage_bucket,storage_path")
+        .eq("id", intakeId).maybeSingle<{
+          status: string; policy_type: string | null; storage_bucket: string; storage_path: string;
+        }>(),
+      admin.from("policy_intake_documents").select("id,storage_bucket,storage_path")
+        .eq("intake_id", intakeId).eq("is_current", true)
+        .maybeSingle<{ id: string; storage_bucket: string; storage_path: string }>(),
+    ]);
+    if (r.error || d.error || !r.data || !d.data
+        || r.data.status !== "processing" || r.data.policy_type !== "motor"
+        || r.data.storage_bucket !== "policy-documents"
+        || r.data.storage_path !== storagePath
+        || d.data.storage_bucket !== "policy-documents" || d.data.storage_path !== storagePath) {
+      return null;
+    }
+    return d.data.id;
+  };
+  const documentId = await unchanged();
+  if (!documentId) {
+    return { ok: false, error: "The current Intake PDF changed; no extraction was saved." };
+  }
+  try {
+    const source = await createCurrentIntakePdfSignedSource(intakeId, documentId, storagePath);
+    const result = await requestN8nPolicyIntakeBySignedSource({
+      intakeId, documentId, requestId: crypto.randomUUID(), signedUrl: source.signedUrl,
+    });
+    if (await unchanged() !== documentId) {
+      return { ok: false, error: "The current Intake PDF changed during n8n processing." };
+    }
+    return {
+      ok: true, fields: result.fields, warnings: result.warnings,
+      parserId: result.parserId, parserVersion: result.parserVersion,
+    };
+  } catch {
+    // Do not fall back to Google, expose signed URLs, or mark a failed parse
+    // as a successful policy. Existing Intake UI shows failed OCR for review.
+    return { ok: false, error: "n8n could not verify this policy PDF. Use the existing review workflow." };
+  }
 }
