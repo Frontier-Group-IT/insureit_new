@@ -143,7 +143,7 @@ export async function completePolicyIntakeUpload(input:{id:string;number:string;
 
 async function processStoredOcr(id:string){const admin=createSupabaseAdminClient();const{data:intake}=await admin.from("policy_intake_requests").select("id,status,policy_type,storage_bucket,storage_path,file_name,mime_type,customer_mobile").eq("id",id).maybeSingle<{id:string;status:string;policy_type:string|null;storage_bucket:string;storage_path:string;file_name:string;mime_type:string|null;customer_mobile:string}>();if(!intake)return;if(isProposalType(intake.policy_type)){await admin.from("policy_intake_requests").update({status:"ready_for_review",ocr_status:"completed",ocr_fields:[],ocr_warnings:[],ocr_parser_id:null,ocr_parser_version:null}).eq("id",id).neq("status","completed");return;}if(intake.status!=="processing")return;await admin.from("policy_intake_requests").update({ocr_status:"processing"}).eq("id",id).eq("storage_path",intake.storage_path);// In opt-in required mode n8n downloads directly from private Storage;
  // do not download the PDF through the web server or invoke Google OCR.
- const ocr = requiresN8nForIntake(id)
+ const ocr = intake.policy_type === "motor" && requiresN8nForIntake(id)
    ? await extractPolicyIntakeWithN8nOnly(id, intake.storage_path)
    : await (async () => {
        const { data: blob, error } = await admin.storage.from(intake.storage_bucket).download(intake.storage_path);
