@@ -352,3 +352,11 @@ if (business.includes("!performance || !network")) {
 }
 
 console.log('Partner visual-system completion contracts verified.');
+
+
+requireText(policies, "backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DEE6F0'", 'Unselected Policies lifecycle chips must use white backgrounds.');
+requireText(policies, "summaryChipSelected: { backgroundColor: '#17365D'", 'Selected Policies lifecycle chip keeps its navy highlight.');
+requireText(policies, "horizontal", 'All status chips remain reachable by horizontal scrolling.');
+for (const forbidden of ['See all policy status filters', '>See all</Text>', 'visible={seeAllOpen}', 'summarySeeAll:', 'statusSheetOverlay:']) {
+  if (policies.includes(forbidden)) throw new Error('Policies screen must not render the See all button or modal: ' + forbidden);
+}

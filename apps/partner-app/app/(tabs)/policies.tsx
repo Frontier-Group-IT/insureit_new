@@ -8,7 +8,6 @@ import {
   ActivityIndicator,
   FlatList,
   Image,
-  Modal,
   Platform,
   Pressable,
   RefreshControl,
@@ -64,7 +63,6 @@ export default function PoliciesScreen() {
   const [lifecycle, setLifecycle] = useState<PartnerPolicyLifecycle>(savedPolicyLifecycle);
   const [query, setQuery] = useState(savedPolicyQuery);
   const [visibleLimit, setVisibleLimit] = useState(PAGE_SIZE);
-  const [seeAllOpen, setSeeAllOpen] = useState(false);
   const [unreadActivityCount, setUnreadActivityCount] = useState(0);
   const [loadMoreFeedback, setLoadMoreFeedback] = useState(false);
   const [requestedLimit, setRequestedLimit] = useState(PAGE_SIZE);
@@ -151,7 +149,6 @@ export default function PoliciesScreen() {
   }, [collection, summary]);
 
   const selectSummary = (filter: PartnerPolicyLifecycle) => {
-    setSeeAllOpen(false);
     setQuery('');
     setVisibleLimit(PAGE_SIZE);
     setLifecycle(filter);
@@ -193,7 +190,7 @@ export default function PoliciesScreen() {
           containerStyle={styles.searchField}
         />
         {/* Keep the existing Filter visual without opening any menu.
-            Lifecycle choices remain available through the status chips and See all. */}
+            Lifecycle choices remain available through the horizontally scrollable status chips. */}
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Filter policies"
@@ -320,16 +317,6 @@ export default function PoliciesScreen() {
             );
           })}
         </ScrollView>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="See all policy status filters"
-          accessibilityState={{ expanded: seeAllOpen }}
-          onPress={() => setSeeAllOpen(true)}
-          style={({ pressed }) => [styles.summarySeeAll, seeAllOpen && styles.summarySeeAllActive, pressed && styles.summaryChipPressed]}
-        >
-          <Ionicons name="list" size={17} color="#0860C8" />
-          <Text style={styles.summarySeeAllText}>See all</Text>
-        </Pressable>
       </View>
 
       {isOffline || collection.stale || summary.stale ? (
@@ -448,49 +435,6 @@ export default function PoliciesScreen() {
       {isFocused ? <StatusBar style={searchSticky ? 'light' : 'dark'} /> : null}
       {searchSticky && safeAreaInsets.top > 0 ? <View pointerEvents="none" style={[styles.stickyStatusBarShield, { height: safeAreaInsets.top }]} /> : null}
       {searchSticky ? <View style={[styles.stickySearchOverlay, { top: safeAreaInsets.top }]} pointerEvents="box-none"><Text style={styles.stickyClaimsHeading}>Policies</Text>{searchControls}</View> : null}
-      <Modal
-        visible={seeAllOpen}
-        transparent
-        animationType="slide"
-        statusBarTranslucent
-        onRequestClose={() => setSeeAllOpen(false)}
-      >
-        <View style={styles.statusSheetOverlay}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Close policy status selector"
-            style={styles.statusSheetBackdrop}
-            onPress={() => setSeeAllOpen(false)}
-          />
-          <View style={[styles.statusSheet, { paddingBottom: Math.max(safeAreaInsets.bottom, 18) }]}>
-            <View style={styles.statusSheetHeader}>
-              <Text style={styles.statusSheetTitle}>Select status</Text>
-              <Pressable accessibilityRole="button" accessibilityLabel="Close status selector"
-                onPress={() => setSeeAllOpen(false)} style={styles.statusSheetClose}>
-                <Ionicons name="close" size={23} color="#64748B" />
-              </Pressable>
-            </View>
-            {([
-              { label: 'Total Policies', filter: 'all' as const, value: summary.data?.total_policies },
-              { label: 'Active Policies', filter: 'in_force' as const, value: summary.data?.in_force_policies },
-              { label: 'Expiring Soon', filter: 'expiring' as const, value: summary.data?.expiring_30_days },
-              { label: 'Lapsed Policies', filter: 'expired' as const, value: summary.data?.expired_policies },
-              { label: 'Upcoming', filter: 'upcoming' as const, value: summary.data?.upcoming_policies },
-            ]).map(option => {
-              const selected = lifecycle === option.filter && !query.trim();
-              return <Pressable key={option.filter} accessibilityRole="button"
-                accessibilityLabel={`${option.label}, ${option.value === undefined ? 'count unavailable' : option.value.toLocaleString('en-IN')}`}
-                accessibilityState={{ selected }}
-                onPress={() => selectSummary(option.filter)}
-                style={[styles.statusSheetOption, selected && styles.statusSheetOptionSelected]}>
-                <Ionicons name={selected ? 'radio-button-on' : 'radio-button-off'} size={21} color={selected ? '#3156B8' : '#A4B3C5'} />
-                <Text style={[styles.statusSheetOptionLabel, selected && styles.statusSheetOptionLabelSelected]}>{option.label}</Text>
-                <Text style={styles.statusSheetCount}>{option.value === undefined ? '—' : option.value.toLocaleString('en-IN')}</Text>
-              </Pressable>;
-            })}
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
@@ -723,32 +667,13 @@ const styles = StyleSheet.create({
   summaryRow: { flexDirection: 'row', alignItems: 'center', marginHorizontal: 12, marginTop: 9, gap: 7 },
   summaryScroll: { flex: 1, minWidth: 0 },
   summaryChips: { alignItems: 'center', gap: 7, paddingVertical: 3, paddingRight: 3 },
-  summaryChip: { minHeight: 38, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, paddingHorizontal: 13, borderRadius: 12, backgroundColor: '#F6F8FC', borderWidth: 1, borderColor: '#DEE6F0' },
+  summaryChip: { minHeight: 38, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, paddingHorizontal: 13, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DEE6F0' },
   summaryChipSelected: { backgroundColor: '#17365D', borderColor: '#17365D' },
   summaryChipPressed: { opacity: 0.78 },
   summaryChipLabel: { color: '#52627B', fontSize: 11, lineHeight: 15, fontWeight: '700' },
   summaryChipLabelSelected: { color: '#FFFFFF' },
   summaryChipCount: { color: '#7A889C', fontSize: 10, lineHeight: 14, fontWeight: '700' },
   summaryChipCountSelected: { color: '#E2EEFF' },
-  summarySeeAll: { minHeight: 40, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, paddingHorizontal: 12, borderRadius: 22, borderWidth: 1, borderColor: '#E0E7F1', backgroundColor: '#FFFFFF', shadowColor: '#173B6C', shadowOpacity: 0.08, shadowRadius: 4, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
-  summarySeeAllText: { color: '#0860C8', fontSize: 11, fontWeight: '800' },
-  summarySeeAllActive: { borderColor: '#91B7E7', backgroundColor: '#F0F6FF' },
-  statusSheetOverlay: { flex: 1, justifyContent: 'flex-end' },
-  statusSheetBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(11,27,53,0.48)' },
-  statusSheet: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: 16, paddingTop: 16, maxHeight: '90%' },
-  statusSheetHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 2, paddingBottom: 14 },
-  statusSheetTitle: { color: '#17365D', fontSize: 20, lineHeight: 26, fontWeight: '800' },
-  statusSheetClose: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
-  statusSheetOption: { minHeight: 57, flexDirection: 'row', alignItems: 'center', gap: 13, paddingHorizontal: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E1E7F0' },
-  statusSheetOptionSelected: { backgroundColor: '#F0F5FF' },
-  statusSheetOptionLabel: { flex: 1, color: '#243B59', fontSize: 13, fontWeight: '600' },
-  statusSheetOptionLabelSelected: { color: '#17365D', fontWeight: '800' },
-  statusSheetCount: { fontSize: 12, color: '#64748B', fontWeight: '800', fontVariant: ['tabular-nums'] },
-  summarySeeAllMenu: { borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: '#DDE6F1', backgroundColor: '#FFFFFF', paddingVertical: 5, shadowColor: '#102449', shadowOpacity: 0.15, shadowRadius: 12, shadowOffset: { width: 0, height: 5 }, elevation: 8 },
-  summarySeeAllMenuTitle: { paddingHorizontal: 12, paddingVertical: 8, color: '#17365D', fontSize: 11, fontWeight: '800' },
-  summarySeeAllOption: { minHeight: 41, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
-  summarySeeAllOptionEnd: { flexDirection: 'row', alignItems: 'center', gap: 7 },
-  summarySeeAllOptionCount: { fontSize: 10, fontWeight: '700', color: '#526786' },
   quickActionsSection: { marginHorizontal: 12, marginTop: 13, marginBottom: 2 },
   quickActionsHeading: { marginHorizontal: 3, marginBottom: 8, color: '#17365D', fontSize: 12, lineHeight: 16, fontWeight: '800' },
   quickActionsRow: { flexDirection: 'row', alignItems: 'stretch', gap: 7 },

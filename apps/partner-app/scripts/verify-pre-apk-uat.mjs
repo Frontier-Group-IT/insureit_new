@@ -115,20 +115,22 @@ expectAll('app/(tabs)/claims.tsx', [
   [/label: 'Settled Claims'/, 'Preserve Settled Claims status'],
   [/label: 'In Progress'/, 'Preserve In Progress status'],
 ]);
-// Keep the Policies Filter button's position and styling without any dropdown;
-// the existing status chips and See all bottom sheet remain the active filters.
+// Policies retain the disabled visual Filter button and expose all five
+// lifecycle selections in the scrollable chip row; the See all sheet is gone.
 expectAll('app/(tabs)/policies.tsx', [
-  [/visible=\{seeAllOpen\}[\s\S]*?animationType="slide"/, 'See all must open as a modal bottom sheet'],
-  [/statusSheetBackdrop/, 'Bottom sheet backdrop must dismiss'],
-  [/onRequestClose=\{\(\) => setSeeAllOpen\(false\)\}/, 'Android back must dismiss the sheet'],
-  [/Select status/, 'Bottom sheet needs Select status title'],
-  [/radio-button-on/, 'Selected status needs radio indicator'],
-  [/option\.value\.toLocaleString\('en-IN'\)/, 'Policy statuses retain real summary counts'],
-  [/onPress=\{\(\) => selectSummary\(option\.filter\)\}/, 'Choosing status must update the policy list'],
-  [/accessibilityLabel="Filter policies"[\s\S]*?accessibilityState=\{\{ disabled: true \}\}[\s\S]*?disabled[\s\S]*?style=\{styles.filterButton\}/, 'Keep the original Policies Filter button visible but non-opening'],
+  [/horizontal[\s\S]*?accessibilityLabel="Policy status filters"/, 'Lifecycle status chips remain horizontally scrollable'],
+  [/onPress=\{\(\) => selectSummary\(metric\.filter\)\}/, 'Choosing a status chip updates the policy list'],
+  [/\{metric\.value === undefined \? '—' : metric\.value\.toLocaleString\('en-IN'\)\}/, 'Lifecycle chip counts use real summary data'],
+  [/summaryChip: \{[^\n]*backgroundColor: '#FFFFFF'/, 'Unselected lifecycle chip background is white'],
+  [/summaryChipSelected: \{ backgroundColor: '#17365D'/, 'Selected lifecycle chip retains navy background'],
+  [/accessibilityLabel="Filter policies"[\s\S]*?accessibilityState=\{\{ disabled: true \}\}[\s\S]*?disabled[\s\S]*?style=\{styles\.filterButton\}/, 'Keep original Filter button visible but non-opening'],
   [/name="filter-outline" size=\{18\} color="#3156B8"/, 'Preserve Filter icon styling'],
-  [/\{metric.label\}/, 'Preserve tappable policy status summary chips'],
+  [/\{metric\.label\}/, 'Preserve tappable policy status summary chips'],
 ]);
+for(const obsolete of ['seeAllOpen', 'summarySeeAll:', 'statusSheetOverlay:', 'See all policy status filters']) {
+  checks += 1;
+  if (read('app/(tabs)/policies.tsx').includes(obsolete)) failures.push('Policies must not retain See all modal UI: ' + obsolete);
+}
 
 // Policies no longer mount a floating filter menu.
 checks += 1;
