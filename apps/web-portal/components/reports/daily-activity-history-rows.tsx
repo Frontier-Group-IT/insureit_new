@@ -62,7 +62,9 @@ export function DailyActivityHistoryRows({rows,isCustomerActivity=false,isClaimA
                 <td className="px-3 py-3">{customerField(row.claimCustomerName)}</td>
                 <td className="px-3 py-3">{customerField(row.claimVehicleNo)}</td>
               </>
-            ) : isOtherActivity ? null : (
+            ) : isOtherActivity ? (
+              <td className="px-3 py-3 font-medium">{customerField(row.subjectEmployeeName)}</td>
+            ) : (
               <>
                 <td className="px-3 py-3 font-medium">{row.reference||"—"}</td>
                 <td className="px-3 py-3">{row.customerVehicle||"—"}</td>
@@ -92,7 +94,9 @@ export function DailyActivityHistoryRows({rows,isCustomerActivity=false,isClaimA
                   ["Claim No.",customerField(selected.claimInsurerNo)],
                   ["Customer",customerField(selected.claimCustomerName)],
                   ["Vehicle No.",customerField(selected.claimVehicleNo)],
-                ] : isOtherActivity ? [] : [
+                ] : isOtherActivity ? [
+                  ["Employee Name",customerField(selected.subjectEmployeeName)],
+                ] : [
                   ["Policy / Case No.",selected.reference||"—"],
                   ["Customer / Vehicle",selected.customerVehicle||"—"],
                   ["Insurance Company",selected.insurer||"—"],
