@@ -14,7 +14,7 @@ import {
 import { PolicyIntakeOcrRetryButton } from "@/components/policy-intake-ocr-retry-button";
 import type { PolicyIntakeOcrField } from "@/app/policy-intakes/ocr-actions";
 import { getInsurerLogo } from "@/lib/insurer-logo";
-import { policyIntakeBucket, policyIntakeStatusCounts, policyIntakeActivityTimestamp } from "@/lib/policy-intake-status-buckets";
+import { policyIntakeBucket, policyIntakeStatusCounts } from "@/lib/policy-intake-status-buckets";
 
 export type PolicyIntakeWorkspaceRow = {
   id: string;
@@ -111,6 +111,11 @@ function formatDateTime(value: string) {
 function dateValue(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
+  return date.toISOString().slice(0, 10);
+}
+function completionDateValue(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit" }).format(date);
 }
 function shortFilterDate(value: string) {
@@ -181,10 +186,11 @@ export function PolicyIntakeWorkspace({ rows, reviewer, creator, currentProfileI
   const baseFiltered = useMemo(() => rows.filter((row) => {
     const haystack = [row.intake_number, row.customer_mobile, row.policy_type, row.lead_source_name, row.lead_source_type, row.lead_source_code, row.file_name, row.submitted_by_name, field(row, "vehicle_registration_number"), field(row, "vehicle_make"), field(row, "vehicle_model"), field(row, "policy_number"), field(row, "insurer_name")].filter(Boolean).join(" ").toLowerCase();
     const sourceKey = `${row.lead_source_type}:${row.lead_source_name}`;
-    const created = dateValue(policyIntakeActivityTimestamp(row));
+    const created = view === "completed" && row.status === "completed" && row.finalized_at
+      ? completionDateValue(row.finalized_at) : dateValue(row.created_at);
     const detailStatus = isProposal(row) ? "stored" : row.ocr_status;
     return (!query.trim() || haystack.includes(query.trim().toLowerCase())) && (source === "all" || sourceKey === source) && (ocr === "all" || detailStatus === ocr) && (!fromDate || created >= fromDate) && (!toDate || created <= toDate);
-  }), [rows, query, source, ocr, fromDate, toDate]);
+  }), [rows, query, source, ocr, fromDate, toDate, view]);
 
   const stats = useMemo(() => {
     const bucketCounts = policyIntakeStatusCounts(baseFiltered, new Set(
@@ -198,12 +204,19 @@ export function PolicyIntakeWorkspace({ rows, reviewer, creator, currentProfileI
         row.assigned_to_profile_id === currentProfileId).length };
   }, [baseFiltered, currentProfileId]);
 
-  const filtered = useMemo(() => baseFiltered.filter((row) => {
+  const filtered = useMemo(() => {
+    const statusRows = baseFiltered.filter((row) => {
     if (view === "all") return true;
     if (view === "mine") return policyIntakeBucket(row, false) === "in_review" &&
       row.assigned_to_profile_id === currentProfileId;
     return policyIntakeBucket(row, false) === (view === "action" ? "action_required" : view);
-  }), [baseFiltered, view, currentProfileId]);
+    });
+    // Only the Completed tab uses finalization chronology; other views retain submission order.
+    return view === "completed" ? [...statusRows].sort((a, b) =>
+      Date.parse(b.finalized_at || b.created_at) - Date.parse(a.finalized_at || a.created_at)
+      || Date.parse(b.created_at) - Date.parse(a.created_at)
+      || b.id.localeCompare(a.id)) : statusRows;
+  }, [baseFiltered, view, currentProfileId]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
@@ -241,7 +254,7 @@ export function PolicyIntakeWorkspace({ rows, reviewer, creator, currentProfileI
       </div>
     </div>
 
-    <div className="p-3 md:hidden">{pageRows.map((row) => <div key={row.id} className={`mb-2 rounded-xl border border-[#E2E8F0] p-3 ${rowTones[row.status] ?? "bg-white"}`}><Link href={`/policy-intakes/${row.id}`} className="block"><div className="flex items-start justify-between gap-2"><div><div className="flex items-center gap-1.5">{getInsurerLogo(field(row, "insurer_name")) ? <img src={getInsurerLogo(field(row, "insurer_name"))!} alt="" aria-hidden="true" className="h-4 w-4 shrink-0 object-contain" /> : null}<p className="text-[10px] font-bold text-[#17365D]">{row.intake_number}</p></div><p className="mt-1 text-[9px] text-[#475569]">{field(row, "vehicle_registration_number") || row.customer_mobile}</p></div><RegisterStatusPill tone={statusTone(row)}>{statusLabel(row)}</RegisterStatusPill></div><div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[8.5px] text-[#64748B]"><p><span className="font-semibold text-[#334155]">Source:</span> {row.lead_source_name}</p><p><span className="font-semibold text-[#334155]">Policy type:</span> {policyTypeLabel(row.policy_type)}</p><p><span className="font-semibold text-[#334155]">Details:</span> {detailLabel(row)}</p><p><span className="font-semibold text-[#334155]">Document:</span> {isProposal(row)?"Proposal form":"Policy copy"}</p><p className="col-span-2"><span className="font-semibold text-[#334155]">Submitted by:</span> <span className="font-semibold text-[#334155]">{row.submitted_by_name}</span> · {formatDateTime(row.created_at)}{row.status === "completed" && row.finalized_at ? <> · <span className="font-semibold text-emerald-700">Completed on: {formatDateTime(row.finalized_at)}</span></> : null}</p></div></Link>{reviewer && canRetryOcr(row) ? <PolicyIntakeOcrRetryButton id={row.id} compact className="mt-2" /> : null}</div>)}{!pageRows.length ? <RegisterEmpty title="No matching policy intakes" description="Adjust the filters or status view." /> : null}</div>
+    <div className="p-3 md:hidden">{pageRows.map((row) => <div key={row.id} className={`mb-2 rounded-xl border border-[#E2E8F0] p-3 ${rowTones[row.status] ?? "bg-white"}`}><Link href={`/policy-intakes/${row.id}`} className="block"><div className="flex items-start justify-between gap-2"><div><div className="flex items-center gap-1.5">{getInsurerLogo(field(row, "insurer_name")) ? <img src={getInsurerLogo(field(row, "insurer_name"))!} alt="" aria-hidden="true" className="h-4 w-4 shrink-0 object-contain" /> : null}<p className="text-[10px] font-bold text-[#17365D]">{row.intake_number}</p></div><p className="mt-1 text-[9px] text-[#475569]">{field(row, "vehicle_registration_number") || row.customer_mobile}</p></div><RegisterStatusPill tone={statusTone(row)}>{statusLabel(row)}</RegisterStatusPill></div><div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[8.5px] text-[#64748B]"><p><span className="font-semibold text-[#334155]">Source:</span> {row.lead_source_name}</p><p><span className="font-semibold text-[#334155]">Policy type:</span> {policyTypeLabel(row.policy_type)}</p><p><span className="font-semibold text-[#334155]">Details:</span> {detailLabel(row)}</p><p><span className="font-semibold text-[#334155]">Document:</span> {isProposal(row)?"Proposal form":"Policy copy"}</p><p className="col-span-2"><span className="font-semibold text-[#334155]">Submitted by:</span> <span className="font-semibold text-[#334155]">{row.submitted_by_name}</span> · {formatDateTime(view === "completed" && row.finalized_at ? row.finalized_at : row.created_at)}</p></div></Link>{reviewer && canRetryOcr(row) ? <PolicyIntakeOcrRetryButton id={row.id} compact className="mt-2" /> : null}</div>)}{!pageRows.length ? <RegisterEmpty title="No matching policy intakes" description="Adjust the filters or status view." /> : null}</div>
 
     <div className="hidden overflow-x-auto md:block">
       <table className="w-full min-w-[1180px] table-fixed text-left text-[10px] text-[#334155]">
@@ -253,7 +266,7 @@ export function PolicyIntakeWorkspace({ rows, reviewer, creator, currentProfileI
           <td className="px-2.5"><p className="font-semibold text-[#17365D]">{policyTypeLabel(row.policy_type)}</p>{isProposal(row) ? <p className="mt-0.5 text-[8px] text-[#7A8798]">Proposal form</p> : !row.policy_type ? <p className="mt-0.5 text-[8px] text-[#7A8798]">Historical</p> : null}</td>
           <td className="px-2.5"><p className="font-mono font-semibold">{isProposal(row)?"—":field(row, "vehicle_registration_number") || (row.ocr_status === "completed" ? "Unregistered" : "Fetching…")}</p><p className="mt-0.5 truncate text-[8px] text-[#7A8798]">{isProposal(row)?"No vehicle OCR":[field(row, "vehicle_make"), field(row, "vehicle_model")].filter(Boolean).join(" · ") || field(row, "vehicle_class") || ""}</p></td>
           
-          <td className="px-2.5"><p className="font-semibold leading-4 text-[#334155]">{row.submitted_by_name}</p><p className="mt-0.5 text-[8px] text-[#7A8798]">{formatDateTime(row.created_at)}</p>{row.status === "completed" && row.finalized_at ? <p className="mt-0.5 text-[8px] font-semibold text-emerald-700">Completed: {formatDateTime(row.finalized_at)}</p> : null}</td>
+          <td className="px-2.5"><p className="font-semibold leading-4 text-[#334155]">{row.submitted_by_name}</p><p className="mt-0.5 text-[8px] text-[#7A8798]">{formatDateTime(view === "completed" && row.finalized_at ? row.finalized_at : row.created_at)}</p></td>
           <td className="px-2.5"><div className="flex items-center gap-1.5"><RegisterStatusPill tone={detailTone(row)}>{detailLabel(row)}</RegisterStatusPill>{reviewer && canRetryOcr(row) ? <PolicyIntakeOcrRetryButton id={row.id} compact /> : null}</div></td>
           <td className="px-2.5"><RegisterStatusPill tone={statusTone(row)}>{statusLabel(row)}</RegisterStatusPill></td>
         </tr>)}</tbody>
