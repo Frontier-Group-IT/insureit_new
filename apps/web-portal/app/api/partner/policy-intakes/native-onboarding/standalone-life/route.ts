@@ -18,7 +18,7 @@ const allowedExtras=new Set([
 const fail=(error:string,status:number)=>NextResponse.json({ok:false,error},{status,headers:{"Cache-Control":"no-store"}});
 
 export async function POST(request:Request){
-  const token=/^Bearer (\\S+)$/i.exec(request.headers.get("authorization")??"")?.[1];
+  const token=/^Bearer (\S+)$/i.exec(request.headers.get("authorization")??"")?.[1];
   if(!token)return fail("Partner authentication required.",401);
   // Do not parse arbitrary oversized request bodies.
   const length=Number(request.headers.get("content-length")??0);
@@ -43,13 +43,13 @@ export async function POST(request:Request){
   if(typeof raw!=="string"||raw.length>80000)return fail("Invalid Life policy draft.",400);
   let draft:Record<string,unknown>;
   try{draft=JSON.parse(raw) as Record<string,unknown>;}catch{return fail("Invalid Life policy draft.",400);}
-  if(!draft||typeof draft!=="object"||Array.isArray(draft)||draft.businessLine!=="Life")
-    return fail("Standalone creation is available for Life policies only.",400);
+  if(!draft||typeof draft!=="object"||Array.isArray(draft)||!["Life","Health"].includes(String(draft.businessLine)))
+    return fail("Standalone creation is available for Life and Health only.",400);
   const get=(key:string)=>typeof draft[key]==="string"?(draft[key] as string).trim():"";
   const product=draft.productDrafts;
   const values=product&&typeof product==="object"&&!Array.isArray(product)
-    ?(product as Record<string,unknown>).Life:null;
-  if(!values||typeof values!=="object"||Array.isArray(values))return fail("Life policy details are missing.",400);
+    ?(product as Record<string,unknown>)[String(draft.businessLine)]:null;
+  if(!values||typeof values!=="object"||Array.isArray(values))return fail("Life/Health policy details are missing.",400);
   const details=values as Record<string,unknown>;
   if(Object.entries(details).some(([key,value])=>!allowedExtras.has(key)||typeof value!=="string"||value.length>4000))
     return fail("Invalid Life policy details.",400);
@@ -64,9 +64,9 @@ export async function POST(request:Request){
   ];
   const missing=required.find(([,value])=>!value);
   if(missing)return fail(`${missing[0]} is required.`,400);
-  if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(get("issuanceDate"))||!Number.isFinite(Date.parse(get("issuanceDate"))))
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(get("issuanceDate"))||!Number.isFinite(Date.parse(get("issuanceDate"))))
     return fail("Proposal date must be a valid YYYY-MM-DD date.",400);
-  if(!/^[6-9]\\d{9}$/.test(get("phoneNo")))return fail("Enter a valid 10 digit Indian mobile number.",400);
+  if(!/^[6-9]\d{9}$/.test(get("phoneNo")))return fail("Enter a valid 10 digit Indian mobile number.",400);
   if(Object.values(draft).some(value=>typeof value==="string"&&value.length>4000))
     return fail("Life policy field is too long.",400);
   if(head){
@@ -85,7 +85,7 @@ export async function POST(request:Request){
   // The case remains awaiting_policy; it does not directly issue a policy.
   const payload=new FormData();
   const fields:Record<string,string>={
-    businessLine:"Life",sourcingDate:get("issuanceDate"),
+    businessLine:String(draft.businessLine),sourcingDate:get("issuanceDate"),
     intermediaryType:get("intermediaryType"),intermediaryCode:get("intermediaryCode"),
     sourceId:matches[0].id,leadSource:get("leadSource"),rmName:get("rmName"),
     insuredName:get("insuredName"),phone:get("phoneNo"),address:v("address"),
@@ -118,9 +118,9 @@ export async function POST(request:Request){
     return fail("Unexpected Life policy attachment.",400);
   // A duplicate proposal number should not be submitted twice on a retry.
   const {data:existing,error:duplicateError}=await admin.from("life_health_cases")
-    .select("id").eq("business_line","Life").eq("proposal_number",v("proposalNumber").toUpperCase()).limit(1);
+    .select("id").eq("business_line",String(draft.businessLine)).eq("proposal_number",v("proposalNumber").toUpperCase()).limit(1);
   if(duplicateError)return fail("Could not verify existing Life cases.",503);
-  if((existing??[]).length)return fail("This Life proposal number already exists. Check the Case Register before retrying.",409);
+  if((existing??[]).length)return fail("This Life/Health proposal number already exists. Check the Case Register before retrying.",409);
   try{
     const result=await createLifeHealthCaseForVerifiedActor(payload,profile);
     if(!result.ok)return fail(result.error,400);
