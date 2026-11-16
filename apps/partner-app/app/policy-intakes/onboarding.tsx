@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Linking, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, usePathname, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 
@@ -142,7 +142,7 @@ function amount(value:string){const n=Number(value);return Number.isFinite(n)&&n
 export default function NativePolicyOnboarding(){
   const { id }=useLocalSearchParams<{id:string}>();
   const router=useRouter();
-  const isNew=id==='new';
+  const isNew=usePathname()==='/policy-new';
   const [data,setData]=useState<NativeOnboardingData|null>(null);
   const [draft,setDraft]=useState<NativePolicyDraft|null>(null);
   const [error,setError]=useState('');
@@ -183,7 +183,7 @@ export default function NativePolicyOnboarding(){
     if(documentError){setDialogMessage(documentError);setDialog('error');}
   },[documentError]);
   const load=useCallback(async()=>{
-    if(!id)return;
+    if(!id&&!isNew)return;
     setLoading(true);setError('');
     try{
       const loaded=isNew?await prepareNewNativePolicyOnboarding():await prepareNativePolicyOnboarding(id);
