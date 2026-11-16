@@ -86,5 +86,5 @@ assert.match(loader, /if\(category==="Other Activities"\)/, "Subject lookup is l
 assert.match(loader, /row\.table==="employees"/, "Employee lifecycle audit IDs resolve via employee master");
 assert.match(loader, /\["profiles","auth.users"\]/, "IT identity audit IDs resolve via profile master");
 assert.match(loader, /\.select\("id,full_name,employee_id"\)/, "Profiles connect to employee records");
-assert.match(loader, /row\.subjectEmployeeName=employeeNames\.get/, "Subject employee is not the current actor");
+assert.match(loader, /row\.subjectEmployeeName=employeeNames\.get/, "Subject employee resolves from the linked Employee Directory record, not the acting profile");
 assert.doesNotMatch(loader, /\.insert\(|\.update\(|\.upsert\(|\.delete\(/, "Other Activities report remains read-only");
