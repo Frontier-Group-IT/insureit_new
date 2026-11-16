@@ -6,6 +6,9 @@ import { getEffectivePermission } from "@/lib/permission-management";
 import { isAppRole } from "@/lib/roles";
 import { canAccessPolicy } from "@/lib/policy-access-scope";
 import { recordDailyWorkflowActivity } from "@/lib/daily-workflow-audit";
+import { convertLifeHealthCaseForVerifiedActor } from "@/lib/life-health-case-conversion-engine";
+import { requestPolicyDateApprovalForVerifiedActor, verifyPolicyDateApprovalForVerifiedActor } from "@/lib/policy-date-approval-engine";
+import { policyDateDecision, POLICY_DATE_APPROVERS } from "@/lib/policy-date-rule";
 import { getOperationsHeadDownlinePolicyScope, operationsHeadVisiblePolicyFilter, canAccessOperationsHeadCase } from "@/lib/policy-access-scope";
 
 // Read-only counterpart of the Operations Life/Health Case Register.
@@ -14,7 +17,7 @@ import { getOperationsHeadDownlinePolicyScope, operationsHeadVisiblePolicyFilter
 export const dynamic = "force-dynamic";
 const headers = { "Cache-Control": "private, no-store" };
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-type Profile = { id: string; role: string; employee_id: string | null; is_active: boolean };
+type Profile = { id: string; role: string; full_name: string | null; employee_id: string | null; is_active: boolean };
 type CaseRow = {
  id:string;case_number:string;business_line:string;status:string;sourcing_date:string;
  customer_id:string;insurance_company_id:string;product_name:string;proposal_number:string;
@@ -39,7 +42,7 @@ async function authorizedEmployee(request: Request) {
  if (identityError || !identity || identity.actor_kind !== "employee" ||
      identity.profile_id !== auth.user.id || identity.auth_user_id !== auth.user.id) return null;
  const admin = createSupabaseAdminClient();
- const {data:profile,error} = await admin.from("profiles").select("id,role,employee_id,is_active")
+ const {data:profile,error} = await admin.from("profiles").select("id,role,employee_id,is_active,full_name")
    .eq("id",auth.user.id).maybeSingle<Profile>();
  if (error || !profile?.is_active || !profile.employee_id || !isAppRole(profile.role) ||
      profile.role !== identity.role) return null;
@@ -165,9 +168,49 @@ export async function POST(request: Request) {
   const id=typeof input?.id==="string"?input.id:"";
   if(!uuid.test(id))return respond({ok:false,error:"Invalid case reference."},400);
   const {data:row,error:loadError}=await admin.from("life_health_cases")
-   .select("id,status,final_policy_id,customer_id,remarks,product_name,proposal_number,premium_paying_term,policy_duration,payment_frequency,payment_mode,premium_amount,updated_at")
+   .select("id,status,final_policy_id,customer_id,insurance_company_id,sourcing_date,remarks,product_name,proposal_number,premium_paying_term,policy_duration,payment_frequency,payment_mode,premium_amount,updated_at,intermediary_code")
    .eq("id",id).maybeSingle();
   if(loadError||!row)return respond({ok:false,error:"Case not found."},404);
+  // Strict actor-and-case-scoped issuance using the canonical Operations engine.
+  const issueAction=["issue_case","issue_approval_request","issue_approval_verify"].includes(String(input?.operation??""));
+  if(issueAction){
+    if(row.status==="rejected"||row.status==="issued"||row.final_policy_id)
+      return respond({ok:false,error:"Only pending cases can be issued."},409);
+    if(profile.role==="operations_head_life"){
+      if(!(await canAccessOperationsHeadCase(profile.id,id)))return respond({ok:false,error:"Case outside your scope."},403);
+    }else if(!(await hasEffectiveCapability(profile,"create_policies","edit"))){
+      return respond({ok:false,error:"Policy creation permission is required."},403);
+    }
+    const policyNumber=typeof input?.policyNumber==="string"?input.policyNumber.trim().toUpperCase():"";
+    const issuanceDate=typeof input?.issuanceDate==="string"?input.issuanceDate.trim():"";
+    if(!policyNumber||policyNumber.length>120||!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(issuanceDate))
+      return respond({ok:false,error:"Enter a valid policy number and issuance date."},400);
+    const policyDate=policyDateDecision(issuanceDate);
+    if(policyDate==="future"||policyDate==="invalid")return respond({ok:false,error:"Choose a valid issuance date in the current or earlier month."},400);
+    if(input?.operation==="issue_approval_request"||input?.operation==="issue_approval_verify"){
+      if(policyDate!=="otp_required")return respond({ok:false,error:"This date does not require OTP approval."},400);
+      const data={issuanceDate,policyNumber,operation:"create" as const,intermediaryCode:row.intermediary_code??""};
+      if(input.operation==="issue_approval_request"){
+        const approverKey=typeof input.approverKey==="string"?input.approverKey:"";
+        if(!POLICY_DATE_APPROVERS.some(item=>item.key===approverKey))return respond({ok:false,error:"Select a valid approver."},400);
+        const approval=await requestPolicyDateApprovalForVerifiedActor({...data,approverKey},profile);
+        return approval.ok?respond({ok:true,approvalId:approval.approvalId,expiresAt:approval.expiresAt}):respond({ok:false,error:approval.error},400);
+      }
+      const approval=await verifyPolicyDateApprovalForVerifiedActor(String(input?.approvalId??""),String(input?.otp??""),data,profile);
+      return approval.ok?respond({ok:true,verified:true}):respond({ok:false,error:approval.error},400);
+    }
+    const form=new FormData();
+    const fields=["policyNumber","issuanceDate","startDate","endDate","pptEndDate","nextInstallmentDate","finalPremium","sumInsured","dateApprovalId"] as const;
+    for(const field of fields){
+      const value=input?.[field];
+      if(value!=null&&(typeof value!=="string"||value.length>200))return respond({ok:false,error:"Invalid issuance field."},400);
+      form.set(field,typeof value==="string"?value.trim():"");
+    }
+    form.set("caseId",id);
+    if(policyDate==="otp_required"&&!form.get("dateApprovalId"))return respond({ok:false,error:"An approved date OTP is required."},403);
+    const result=await convertLifeHealthCaseForVerifiedActor(form,profile);
+    return result.ok?respond({ok:true,policyId:result.policyId,policyCode:result.policyCode}):respond({ok:false,error:result.error},409);
+  }
   // A remark is an audited append-only note, not an edit to the rejected case's policy fields.
   if(input?.operation==="append_remark"){
    if(row.final_policy_id)return respond({ok:false,error:"Issued cases cannot accept remarks here."},409);
