@@ -1,8 +1,8 @@
 Partner production OTA trigger
-release=partner-policies-quick-actions-pr-4577
+release=partner-quick-actions-icons-pr-4583
 source=verified-merged-main
-source_pr=4577
-source_merge=942b1d8a7388bfa232cd8a8d470ae065ac4210cf
+source_pr=4583
+source_merge=dbb0408c7164f696ef0385744ecc587b9a65ba5c
 reason=user-approved-merge-and-publish
 channel=production
 runtime=0.2.0
