@@ -195,15 +195,16 @@ export default function NativePolicyOnboarding(){
   const productType:NativeProductType=(draft?.businessLine==='Life'||draft?.businessLine==='Health'||draft?.businessLine==='Non Motor')?draft.businessLine:'Motor';
   const isMotor=productType==='Motor';
   const productValues=(productType==='Motor'?{}:draft?.productDrafts?.[productType])??{};
+  const savedPolicyType=data?.draft.businessLine;
   useEffect(()=>{
-    if(isNew||!id||loading||productType==='Motor')return;
+    if(isNew||!id||loading||productType==='Motor'||productType!==savedPolicyType)return;
     let live=true;
     setOnboardingDocuments([]);setDocumentError('');
     void listNativeOnboardingDocuments(id,productType)
       .then(result=>{if(live)setOnboardingDocuments(result.documents);})
       .catch(cause=>{if(live)setDocumentError(cause instanceof Error?cause.message:'Documents unavailable.');});
     return()=>{live=false;};
-  },[id,loading,productType]);
+  },[id,loading,productType,isNew,savedPolicyType]);
   const pickOnboardingDocument=async(type:NativeOnboardingDocumentType)=>{
     if(documentBusy||saving||booking||creatingLifeHealth||!data||!draft||productType==='Motor')return;
     setDocumentError('');
