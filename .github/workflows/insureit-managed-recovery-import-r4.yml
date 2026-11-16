@@ -55,6 +55,13 @@ jobs:
         run: |
           set -euo pipefail
           python scripts/backup/managed_recovery_preflight.py --check-target
+      - name: Fail closed on isolated CA and READ ONLY target probe before R2
+        env:
+          INSUREIT_RECOVERY_DATABASE_URL: ${{ secrets.INSUREIT_RECOVERY_DATABASE_URL }}
+          RECOVERY_DB_SSL_ROOT_CERT_PEM: ${{ secrets.RECOVERY_DB_SSL_ROOT_CERT_PEM }}
+        run: |
+          set -euo pipefail
+          python scripts/backup/managed_recovery_preflight.py --probe-target
       - name: Fetch authenticated v2 snapshot using read-only R2 identity
         env:
           R2_ACCOUNT_ID: ${{ secrets.RECOVERY_R2_ACCOUNT_ID }}
@@ -82,6 +89,7 @@ jobs:
       - name: Preflight pristine target and build strict managed TOC allowlist
         env:
           INSUREIT_RECOVERY_DATABASE_URL: ${{ secrets.INSUREIT_RECOVERY_DATABASE_URL }}
+          RECOVERY_DB_SSL_ROOT_CERT_PEM: ${{ secrets.RECOVERY_DB_SSL_ROOT_CERT_PEM }}
         run: |
           set -euo pipefail
           root="$RUNNER_TEMP/insureit-r4-private"
@@ -93,6 +101,7 @@ jobs:
       - name: Prove target plan without writes
         env:
           INSUREIT_RECOVERY_DATABASE_URL: ${{ secrets.INSUREIT_RECOVERY_DATABASE_URL }}
+          RECOVERY_DB_SSL_ROOT_CERT_PEM: ${{ secrets.RECOVERY_DB_SSL_ROOT_CERT_PEM }}
         run: |
           set -euo pipefail
           python scripts/backup/execute_managed_sql_restore.py \
@@ -101,6 +110,7 @@ jobs:
         if: ${{ inputs.execute_target_import }}
         env:
           INSUREIT_RECOVERY_DATABASE_URL: ${{ secrets.INSUREIT_RECOVERY_DATABASE_URL }}
+          RECOVERY_DB_SSL_ROOT_CERT_PEM: ${{ secrets.RECOVERY_DB_SSL_ROOT_CERT_PEM }}
           RECOVERY_APPROVED_TARGET_REF: ${{ inputs.confirm_target_ref }}
           RECOVERY_EXPECTED_DB_SNAPSHOT: ${{ inputs.expected_db_snapshot }}
           RECOVERY_OPERATOR_CONFIRMED: ISOLATED_ONLY
@@ -112,6 +122,7 @@ jobs:
         if: ${{ inputs.execute_target_import }}
         env:
           INSUREIT_RECOVERY_DATABASE_URL: ${{ secrets.INSUREIT_RECOVERY_DATABASE_URL }}
+          RECOVERY_DB_SSL_ROOT_CERT_PEM: ${{ secrets.RECOVERY_DB_SSL_ROOT_CERT_PEM }}
         run: |
           set -euo pipefail
           root="$RUNNER_TEMP/insureit-r4-private"
