@@ -23,6 +23,7 @@ type CaseRow = {
  created_by:string|null;converted_by:string|null;details:Record<string,unknown>|null;
 };
 const columns = "id,case_number,business_line,status,sourcing_date,customer_id,insurance_company_id,product_name,proposal_number,premium_paying_term,policy_duration,payment_frequency,payment_mode,premium_amount,intermediary_type,intermediary_code,lead_source,intermediary_mobile,rm_name,rm_code,remarks,final_policy_id,converted_at,created_at,created_by,converted_by,details";
+const listColumns = "id,case_number,business_line,status,sourcing_date,customer_id,insurance_company_id,product_name,proposal_number,rm_name,lead_source,premium_amount,created_at,final_policy_id";
 const respond = (data:Record<string,unknown>,status=200) => NextResponse.json(data,{status,headers});
 const caseStatus = (row:CaseRow) => row.final_policy_id ? "issued" : row.status === "rejected" ? "rejected" : "pending";
 
@@ -104,7 +105,7 @@ export async function GET(request:Request) {
    if (!Number.isSafeInteger(offset) || offset < 0) return respond({ok:false,error:"Invalid page."},400);
    // Mirror the Operations register's current 500-record window, including
    // cross-status search; paginate only after server-side filtering.
-   let query = admin.from("life_health_cases").select(columns).order("created_at",{ascending:false}).limit(500);
+   let query = admin.from("life_health_cases").select(listColumns).order("created_at",{ascending:false}).limit(500);
    if (downline !== null) {
      if (!downline) return respond({ok:true,cases:[],counts:{pending:0,rejected:0,issued:0,all:0},total:0});
      query = query.or(downline);
