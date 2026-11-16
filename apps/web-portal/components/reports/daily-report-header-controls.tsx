@@ -88,7 +88,7 @@ export function DailyReportHeaderPeriod() {
   const [open,setOpen]=useState(false);
   const [customOpen,setCustomOpen]=useState(false);
   const value=searchParams.get("period");
-  const active:Period=OPTIONS.some(o=>o.value===value)?value as Period:"all";
+  const active:Period=OPTIONS.some(o=>o.value===value)?value as Period:"today";
   const from=searchParams.get("from")||"";
   const to=searchParams.get("to")||"";
   useEffect(()=>{
