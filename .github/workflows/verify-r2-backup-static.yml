@@ -260,6 +260,15 @@ jobs:
           assert 'sensitive_details=withheld' in managed_script
           assert 'managed_recovery_preflight.py --probe-target' in guarded_steps
           assert 'Test isolated target connection and READ ONLY transaction' in guarded_steps
+          assert 'RECOVERY_DB_SSL_ROOT_CERT_PEM' in guarded_steps
+          assert 'def isolated_ssl_root_cert()' in managed_script
+          assert 'tempfile.TemporaryDirectory' in managed_script
+          assert 'context.load_verify_locations(cadata=pem)' in managed_script
+          assert 'cert_path.chmod(0o600)' in managed_script
+          assert 'with isolated_ssl_root_cert() as ca_bundle' in managed_script
+          assert 'sslmode="verify-full"' in managed_script
+          assert 'sslmode="require"' not in managed_script
+          assert 'sslmode="disable"' not in managed_script
           assert 'sslmode="verify-full"' in managed_script
           assert not any(token in managed_script for token in (
               'CREATE ROLE', 'DROP TABLE', 'TRUNCATE', 'ALTER ROLE', 'pg_restore --clean'

@@ -10,6 +10,7 @@ from unittest.mock import patch
 from managed_recovery_preflight import (
     SOURCE_REF, TARGET_REF, checked_target_connection,
     compare_archive, toc_inventory, classify_connection_error, main,
+    isolated_ssl_root_cert,
 )
 
 
@@ -124,6 +125,49 @@ class SafeTargetConnectionDiagnostics(unittest.TestCase):
              patch("managed_recovery_preflight.query_target", return_value=target):
             with self.assertRaises(RuntimeError):
                 main(["preflight.py", "--probe-target"])
+
+
+class IsolatedTLSCertificate(unittest.TestCase):
+    def test_missing_and_invalid_cert_fail_closed(self):
+        for value in ("", "not a PEM certificate",
+                      "-----BEGIN PRIVATE KEY-----\nsecret\n-----END PRIVATE KEY-----",
+                      "-----BEGIN CERTIFICATE-----\ninvalid\n-----END CERTIFICATE-----"):
+            with self.subTest(input_length=len(value)):
+                with patch.dict(os.environ, {"RECOVERY_DB_SSL_ROOT_CERT_PEM": value}):
+                    with self.assertRaises((ValueError, RuntimeError)):
+                        with isolated_ssl_root_cert():
+                            pass
+
+    def test_valid_pem_stays_private_and_is_deleted(self):
+        # Mock OpenSSL parse only: synthetic placeholder is never trusted by
+        # libpq. Real GitHub secret must contain a valid isolated-project CA.
+        pem = ("-----BEGIN CERTIFICATE-----\n"
+               "synthetic-not-a-real-certificate\n"
+               "-----END CERTIFICATE-----\n")
+        with patch.dict(os.environ, {"RECOVERY_DB_SSL_ROOT_CERT_PEM": pem}):
+            with patch("managed_recovery_preflight.ssl.SSLContext") as cert_context:
+                with isolated_ssl_root_cert() as ca_path:
+                    path = Path(ca_path)
+                    self.assertTrue(path.exists())
+                    self.assertEqual(path.read_text(), pem)
+                    self.assertEqual(path.stat().st_mode & 0o777, 0o600)
+                self.assertFalse(path.exists())
+                cert_context.return_value.load_verify_locations.assert_called_once_with(
+                    cadata=pem
+                )
+
+    def test_open_ssl_rejection_aborts_without_fallback(self):
+        import ssl
+        pem = ("-----BEGIN CERTIFICATE-----\n"
+               "bad-synthetic\n-----END CERTIFICATE-----\n")
+        with patch.dict(os.environ, {"RECOVERY_DB_SSL_ROOT_CERT_PEM": pem}):
+            with patch("managed_recovery_preflight.ssl.SSLContext") as ctx:
+                ctx.return_value.load_verify_locations.side_effect = ssl.SSLError(
+                    "certificate verify failed"
+                )
+                with self.assertRaises(ValueError):
+                    with isolated_ssl_root_cert():
+                        pass
 
 
 class TocReview(unittest.TestCase):
