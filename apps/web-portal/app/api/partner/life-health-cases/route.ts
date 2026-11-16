@@ -225,7 +225,7 @@ export async function POST(request: Request) {
   const premium=Number(input?.premiumAmount);
   const sourcingDate=clean("sourcingDate",10);
   const insurerId=clean("insurerId",40);
-  if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(sourcingDate)||!Number.isFinite(Date.parse(sourcingDate)))
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(sourcingDate)||!Number.isFinite(Date.parse(sourcingDate)))
     return respond({ok:false,error:"Choose a valid proposal date."},400);
   if(!uuid.test(insurerId))return respond({ok:false,error:"Choose a valid insurer."},400);
   const {data:insurer,error:insurerError}=await admin.from("insurance_companies").select("id").eq("id",insurerId).maybeSingle();
