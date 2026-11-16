@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
+import { PartnerStackBottomNavigation } from '@/components/partner-stack-bottom-navigation';
 import { PartnerInsurerLogo } from '@/components/ui/partner-insurer-logo';
 import { listLifeHealthCases, type LifeHealthCaseSummary, type LifeHealthStatus, type CaseCounts } from '@/lib/life-health-cases';
 import { canPartnerAccessCaseRegister } from '@/lib/partner-permissions';
@@ -56,7 +57,8 @@ export default function LifeHealthCaseRegisterScreen() {
    </PartnerScreen>
  );
  return (
-   <PartnerScreen title="Case Register" navyTopBar navyStatusBar onBack={()=>router.back()}>
+   <PartnerScreen title="Case Register" navyTopBar navyStatusBar onBack={()=>router.back()} navyBottomNavigation
+     bottomNavigation={<PartnerStackBottomNavigation activeTab="policies" />}>
      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filters} contentContainerStyle={styles.filtersContent}>
        {filters.map(item=><Pressable key={item.key} accessibilityRole="button" accessibilityState={{selected:status===item.key}}
            onPress={()=>setStatus(item.key)} style={[styles.filter,status===item.key&&styles.filterSelected]}>
