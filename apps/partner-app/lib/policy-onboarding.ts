@@ -146,7 +146,7 @@ export async function verifyNewNativePolicyDateApproval(draft:NativePolicyDraft,
 /** Create an independent Life case. Files are held locally and submitted together with the form.
  * No Policy Intake ID, persisted staging row or intake permissions are required.
  */
-export async function createNewNativeLifeCase(
+export async function createNewNativeLifeHealthCase(
   draft:NativePolicyDraft,
   documents:Partial<Record<NativeOnboardingDocumentType,{uri:string;name:string;mimeType?:string}>>,
 ){
@@ -163,8 +163,46 @@ export async function createNewNativeLifeCase(
   let response:Response;
   try{response=await fetch(`${portal}/api/partner/policy-intakes/native-onboarding/standalone-life`,{
     method:'POST',cache:'no-store',headers:{Authorization:`Bearer ${session.access_token}`},body,
-  });}catch{throw new Error('Cannot reach Life Policy Onboarding. Check your connection.');}
+  });}catch{throw new Error('Cannot reach Life/Health Policy Onboarding. Check your connection.');}
   const result=await response.json().catch(()=>null) as {ok?:boolean;error?:string;case?:{id:string;number:string;status:'awaiting_policy'}}|null;
-  if(!response.ok||!result?.ok||!result.case)throw new Error(result?.error||'Could not create Life case. Check Case Register before retrying.');
+  if(!response.ok||!result?.ok||!result.case)throw new Error(result?.error||'Could not create Life/Health case. Check Case Register before retrying.');
   return {case:result.case};
+}
+
+/** Standalone Non-Motor customer lookup is permission-scoped by the backend. */
+export async function searchNewNativeNonMotorCustomers(search:string){
+  const session=await getCurrentSession();
+  if(!session?.access_token)throw new Error('Partner session expired. Sign in again.');
+  let response:Response;
+  try{
+    response=await fetch(`${portal}/api/partner/policy-intakes/native-onboarding/standalone-non-motor?search=${encodeURIComponent(search)}`,{
+      cache:'no-store',headers:{Authorization:`Bearer ${session.access_token}`},
+    });
+  }catch{throw new Error('Customer search is unavailable. Check your connection.');}
+  const result=await response.json().catch(()=>null) as {ok?:boolean;error?:string;customers?:NativeNonMotorCustomer[]}|null;
+  if(!response.ok||!result?.ok)throw new Error(result?.error||'Customer lookup is unavailable.');
+  return {customers:result.customers??[]};
+}
+/** Direct standalone Non-Motor policy booking using the verified Operations engine. */
+export async function bookNewNativeNonMotorPolicy(
+  draft:NativePolicyDraft,
+  documents:Partial<Record<NativeOnboardingDocumentType,{uri:string;name:string;mimeType?:string}>>,
+){
+  const session=await getCurrentSession();
+  if(!session?.access_token)throw new Error('Partner session expired. Sign in again.');
+  const body=new FormData();
+  body.append('draft',JSON.stringify(draft));
+  const names:Record<NativeOnboardingDocumentType,string>={
+    policy_copy:'policyCopy',proposal_form:'proposalForm',kyc:'kyc',other_document:'otherDocument',
+  };
+  for(const [type,file] of Object.entries(documents) as [NativeOnboardingDocumentType,{uri:string;name:string;mimeType?:string}][]){
+    if(file?.uri)body.append(names[type],{uri:file.uri,name:file.name,type:file.mimeType||'application/octet-stream'} as unknown as Blob);
+  }
+  let response:Response;
+  try{response=await fetch(`${portal}/api/partner/policy-intakes/native-onboarding/standalone-non-motor`,{
+    method:'POST',cache:'no-store',headers:{Authorization:`Bearer ${session.access_token}`},body,
+  });}catch{throw new Error('Cannot reach Non-Motor onboarding. Check your connection.');}
+  const result=await response.json().catch(()=>null) as {ok?:boolean;error?:string;policy?:{id:string;number:string}}|null;
+  if(!response.ok||!result?.ok||!result.policy)throw new Error(result?.error||'Booking outcome unknown. Check the Policy Register before retrying.');
+  return {policy:result.policy};
 }
