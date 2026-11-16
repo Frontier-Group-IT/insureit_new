@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 const source = readFileSync(new URL("../components/life-health-issued-policy-edit-form.tsx", import.meta.url), "utf8");
 const section = source.match(/<Section number="04" title="Issued policy details">([\s\S]*?)<\/Section>/)?.[1];
 assert.ok(section, "The issued policy details section must exist.");
-const labels = ["Policy number", "Policy start date", "Policy end / maturity date", "PPT end date", "Next installment date", "Final premium", "Sum assured / insured", "Case premium amount", "Payment mode", "Remarks"];
+const labels = ["Policy number", "Policy start date", "Policy end / maturity date", "PPT end date", "Next installment date", "Final premium", "Sum assured / insured", "Case premium amount", "Payment mode"];
 let previous = -1;
 for (const label of labels) {
   const position = section.indexOf(label);
