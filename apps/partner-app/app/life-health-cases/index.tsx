@@ -124,16 +124,13 @@ export default function LifeHealthCaseRegisterScreen() {
            </View>
            <View style={styles.modalActions}>
              <Pressable accessibilityRole="button" onPress={()=>setIssuedCase(null)} style={styles.modalClose}><Text style={styles.modalCloseText}>Close</Text></Pressable>
-             <Pressable accessibilityRole="button" accessibilityLabel="View issued policy in Operations Portal" onPress={async()=>{
-               if(!issuedCase?.final_policy_id)return;
-               try {
-                 const url=operationsIssuedPolicyUrl(issuedCase.final_policy_id);
-                 await Linking.openURL(url);
+             <Pressable accessibilityRole="button" accessibilityLabel="View issued case details in Partner App"
+               onPress={()=>{
+                 if(!issuedCase)return;
+                 const caseId=issuedCase.id;
                  setIssuedCase(null);
-               } catch {
-                 Alert.alert('Unable to open policy', 'The issued policy could not be opened in Operations Portal. Please try again.');
-               }
-             }} style={styles.modalView}><Text style={styles.modalViewText}>View Policy</Text></Pressable>
+                 router.push(`/life-health-cases/${caseId}` as never);
+               }} style={styles.modalView}><Text style={styles.modalViewText}>View Policy</Text></Pressable>
            </View>
          </View>
        </View>
