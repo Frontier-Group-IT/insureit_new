@@ -38,5 +38,6 @@ assert.match(partner, /if \(saving\) return/, 'Do not navigate during Partner su
 assert.match(cases, /bottomNavigation=\{<PartnerCaseBottomNavigation\/>\}/, 'Existing Case Register navigation preserved');
 assert.match(detail, /bottomNavigation=\{<PartnerCaseBottomNavigation\/>\}/, 'Existing Case Details navigation preserved');
 assert.match(cases, /status_group==='issued' && row\.final_policy_id/, 'Issued popup remains functional');
-assert.match(detail, /visible=\{editing&&!!form\}/, 'Detail editing modal remains available');
+assert.match(detail, /inline\("customerName","Client \/ proposer name"/, 'Direct inline Case editing remains available with stack navigation');
+assert.doesNotMatch(detail, /visible=\{editing&&!!form\}/, 'Old edit modal must not return');
 console.log('Partner Stack bottom navigation coverage passed');
