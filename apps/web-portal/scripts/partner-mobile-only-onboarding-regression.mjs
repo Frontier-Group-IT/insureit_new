@@ -6,6 +6,12 @@ assert.match(api, /getEffectivePermissionAccessMap\(profile\)/, 'Check current e
 assert.match(api, /permissions\.create_intermediary_application/, 'No broad new intermediary permission');
 assert.match(api, /isEmployeeWithinAccessScope/, 'Scope employee assignment');
 assert.match(api, /account_context: "partner"/, 'Create Partner-only context');
+assert.doesNotMatch(api, /input.partner_kind/, 'No category selector');
+assert.match(api, /encryptSensitiveValue\(aadhaar\)/, 'Encrypt Aadhaar');
+assert.match(api, /aadhaar_hash: aadhaarHash/, 'Hash Aadhaar');
+assert.match(api, /bank_account_number: bankAccount/, 'Secure profile bank number');
+assert.match(api, /isEmployeeWithinAccessScope\(profile.id, profile.role, rmId\)/, 'RM scope');
+assert.match(api, /export async function GET/, 'Master data endpoint');
 assert.match(api, /final_type: null/, 'Do not convert into POSP or MISP');
 assert.match(api, /partner_status: "draft"/, 'New application is pending, not active');
 assert.doesNotMatch(api, /\.rpc\("issue_partner_identity"|\.rpc\("next_registration_code"/, 'Do not activate accounts');
