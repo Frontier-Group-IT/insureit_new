@@ -136,6 +136,17 @@ if (/PartnerAnchoredDropdown|filterMenuOpen|POLICY_FILTER_OPTIONS/.test(read('ap
   failures.push('app/(tabs)/policies.tsx: Policies Filter must never mount an anchored dropdown');
 }
 
+// Claims Filter mirrors Policies: keep the visual button but never mount a dropdown.
+expectAll('app/(tabs)/claims.tsx', [
+  [/accessibilityLabel="Filter claims"[\s\S]*?accessibilityState=\{\{ disabled: true \}\}[\s\S]*?disabled[\s\S]*?style=\{styles.filterButton\}/, 'Claims Filter stays visible without opening a menu'],
+  [/name="filter-outline" size=\{18\} color="#3156B8"/, 'Preserve Claims filter icon and styling'],
+  [/onPress=\{\(\) => selectSummary\(metric.filter\)\}/, 'Claim status chips remain usable'],
+]);
+checks += 1;
+if (/PartnerAnchoredDropdown|filterMenuOpen|CLAIM_FILTER_OPTIONS/.test(read('app/(tabs)/claims.tsx'))) {
+  failures.push('app/(tabs)/claims.tsx: Claims Filter must never mount an anchored dropdown');
+}
+
 if (failures.length) {
   console.error('Partner pre-APK UAT/security contract verification failed:');
   for (const failure of failures) console.error(`- ${failure}`);
