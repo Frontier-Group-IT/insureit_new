@@ -17,4 +17,12 @@ assert.match(panel,/grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid
 assert.match(panel,/href=\{linkFor\(\{activity:item\.name,page:"1"\}\)\}/,"Keep original category drilldown");
 assert.match(panel,/item\.count\.toLocaleString\("en-IN"\)/,"Keep unmodified activity totals");
 assert.match(panel,/data\.categories\.length/,"Keep original empty-state handling");
+for (const family of ["Customer","Vehicle","Policies","Claims","Other"]) {
+  assert.ok(panel.includes(`${family}:{`), `Missing distinct card palette for ${family}`);
+}
+assert.match(panel,/familyStyles\[group\.name\]\.card/,"Cards use a family-specific accent and soft background");
+assert.match(panel,/familyStyles\[group\.name\]\.count/,"Number badges match their family palette");
+assert.match(panel,/familyStyles\[group\.name\]\.heading/,"Group headings match card accents");
+assert.doesNotMatch(panel,/>›<\/span>/,"No chevron arrows appear on activity buttons");
+
 console.log("Daily Report activity cards remain grouped by Customer, Vehicle, Policies, Claims and Other.");
