@@ -17,7 +17,7 @@ assert.match(header, /aria-haspopup="listbox"/, "Self and All must use a dropdow
 assert.match(header, /type="search" aria-label="Search employee name or code"/, "Employee dropdown must be searchable");
 assert.match(header, /const selectedPerson=searchParams.get\("scope"\)==="all" \? searchParams.get\("person"\) : null/, "Self remains selected by default");
 assert.match(header, /matching\.map\(person=>\(/, "Authorized employee names appear in dropdown");
-assert.match(header, /params.set\("scope",personId\?"all":"self"\)/, "Employee selection navigates directly to the report");
+assert.match(header, /params.set\("scope",personId && canViewAll\?"all":"self"\)/, "Employee selection navigates directly to the report");
 assert.match(header, /else params.delete\("person"\)/, "Self clears selected employee");
 assert.match(header, /params.delete\("employee"\)/, "Scope transitions clear employee search");
 assert.match(header, /params.set\("page","1"\)/, "Scope selection resets pagination");
