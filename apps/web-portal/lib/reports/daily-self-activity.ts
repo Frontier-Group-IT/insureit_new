@@ -10,6 +10,7 @@ export type SelfActivity = {
   id: string; category: string; activity: string; reference: string;
   occurredAt: string; status: string; source: "Audit" | "Record history"; detail?: string;
   table?: string; recordId?: string; href?: string|null;
+  customerVehicle?: string; insurer?: string;
 };
 type Audit = { id:string; actor_id:string|null; action:string; table_name:string|null; record_id:string|null; created_at:string };
 type Policy = { id:string; created_at:string; policy_no:string|null };
@@ -217,6 +218,58 @@ export async function loadSelfActivityHistory(
       if(typeof item.id==="string" && typeof item[column]==="string") lookup.set(item.id,item[column] as string);
     }
     for(const row of visible) if(row.table===table && row.recordId && lookup.has(row.recordId)) row.reference=lookup.get(row.recordId)!;
+  }
+  // Enrich only the currently visible employee-scoped activities. Do not expose
+  // entire customer, policy or audit records, and never widen history access.
+  const policyIds=[...new Set(visible.filter(row=>row.table==="policies"&&isValidDailyRecordId(row.recordId??"")).map(row=>row.recordId as string))];
+  const caseIds=[...new Set(visible.filter(row=>row.table==="life_health_cases"&&isValidDailyRecordId(row.recordId??"")).map(row=>row.recordId as string))];
+  const intakeIds=[...new Set(visible.filter(row=>row.table==="policy_intake_requests"&&isValidDailyRecordId(row.recordId??"")).map(row=>row.recordId as string))];
+  type Context={customerId?:string|null;vehicleId?:string|null;insurerId?:string|null;product?:string|null;linkedPolicyId?:string|null};
+  const contextByRecord=new Map<string,Context>();
+  const [policyContext,caseContext,intakeContext]=await Promise.all([
+    policyIds.length?admin.from("policies").select("id,customer_id,vehicle_id,insurance_company_id,policy_product,policy_type").in("id",policyIds):Promise.resolve({data:[],error:null}),
+    caseIds.length?admin.from("life_health_cases").select("id,customer_id,insurance_company_id,product_name,final_policy_id").in("id",caseIds):Promise.resolve({data:[],error:null}),
+    intakeIds.length?admin.from("policy_intake_requests").select("id,matched_customer_id,final_policy_id,policy_type").in("id",intakeIds):Promise.resolve({data:[],error:null}),
+  ]);
+  if(policyContext.error||caseContext.error||intakeContext.error)
+    console.error("[daily-report] activity context partially unavailable");
+  for(const item of policyContext.data??[]) contextByRecord.set(`policies:${item.id}`,{customerId:item.customer_id,vehicleId:item.vehicle_id,insurerId:item.insurance_company_id,product:item.policy_product||item.policy_type});
+  for(const item of caseContext.data??[]) contextByRecord.set(`life_health_cases:${item.id}`,{customerId:item.customer_id,insurerId:item.insurance_company_id,product:item.product_name,linkedPolicyId:item.final_policy_id});
+  for(const item of intakeContext.data??[]) contextByRecord.set(`policy_intake_requests:${item.id}`,{customerId:item.matched_customer_id,product:item.policy_type,linkedPolicyId:item.final_policy_id});
+  // Finalized intakes/cases can resolve their insurer and vehicle from their linked policy.
+  const linkedIds=[...new Set([...contextByRecord.values()].map(x=>x.linkedPolicyId).filter((x):x is string=>typeof x==="string"&&isValidDailyRecordId(x)))];
+  if(linkedIds.length) {
+    const {data,error}=await admin.from("policies").select("id,customer_id,vehicle_id,insurance_company_id,policy_product").in("id",linkedIds);
+    if(!error) {
+      const links=new Map((data??[]).map(x=>[x.id,x]));
+      for(const ctx of contextByRecord.values()) {
+        const policy=ctx.linkedPolicyId?links.get(ctx.linkedPolicyId):undefined;
+        if(policy) {ctx.customerId ||=policy.customer_id;ctx.vehicleId ||=policy.vehicle_id;ctx.insurerId ||=policy.insurance_company_id;ctx.product ||=policy.policy_product;}
+      }
+    }
+  }
+  const contextValues=[...contextByRecord.values()];
+  const customerIds=[...new Set(contextValues.map(x=>x.customerId).filter((x):x is string=>typeof x==="string"&&isValidDailyRecordId(x)))];
+  const vehicleIds=[...new Set(contextValues.map(x=>x.vehicleId).filter((x):x is string=>typeof x==="string"&&isValidDailyRecordId(x)))];
+  const insurerIds=[...new Set(contextValues.map(x=>x.insurerId).filter((x):x is string=>typeof x==="string"&&isValidDailyRecordId(x)))];
+  const [customers,vehicles,insurers]=await Promise.all([
+    customerIds.length?admin.from("customers").select("id,contact_name,company_name,legal_trade_name").in("id",customerIds):Promise.resolve({data:[],error:null}),
+    vehicleIds.length?admin.from("vehicles").select("id,vehicle_no").in("id",vehicleIds):Promise.resolve({data:[],error:null}),
+    insurerIds.length?admin.from("insurance_companies").select("id,name").in("id",insurerIds):Promise.resolve({data:[],error:null}),
+  ]);
+  if(customers.error||vehicles.error||insurers.error)
+    console.error("[daily-report] linked activity labels partially unavailable");
+  const customerNames=new Map((customers.data??[]).map(x=>[x.id,x.company_name||x.contact_name||x.legal_trade_name||""]));
+  const vehicleNumbers=new Map((vehicles.data??[]).map(x=>[x.id,x.vehicle_no||""]));
+  const insurerNames=new Map((insurers.data??[]).map(x=>[x.id,x.name||""]));
+  for(const row of visible) {
+    const ctx=row.table&&row.recordId?contextByRecord.get(`${row.table}:${row.recordId}`):undefined;
+    if(!ctx) continue;
+    row.insurer=(ctx.insurerId&&insurerNames.get(ctx.insurerId))||undefined;
+    row.customerVehicle=[
+      (ctx.customerId&&customerNames.get(ctx.customerId))||"",
+      (ctx.vehicleId&&vehicleNumbers.get(ctx.vehicleId))||ctx.product||"",
+    ].filter(Boolean).join(" · ")||undefined;
   }
   // Only the already-visible, scoped audit rows may receive field-level details.
   // No audit payload is serialized to the client.
