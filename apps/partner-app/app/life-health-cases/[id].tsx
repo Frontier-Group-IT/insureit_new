@@ -1,4 +1,4 @@
-import { useCallback, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { ActivityIndicator, Linking, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
@@ -30,8 +30,32 @@ type CaseEditForm = {
 };
 const FREQUENCIES=['Monthly','Quarterly','Half Yearly','Annually','One Time'] as const;
 const PAYMENT_MODES=['Cash','Cheque','NEFT/RTGS','UPI','Credit/Debit Card','Net Banking'] as const;
-const TERM_OPTIONS=['','Single Pay',...Array.from({length:50},(_,i)=>`${i+1} Year${i?'s':''}`)];
+const TERM_OPTIONS=['','Single Pay',...Array.from({length:100},(_,i)=>`${i+1} Year${i?'s':''}`)];
 const toIsoDate=(v:string)=>{const x=v.trim();const m=/^(\d{2})\/(\d{2})\/(\d{4})$/.exec(x);return m?`${m[3]}-${m[2]}-${m[1]}`:x;};
+
+const validIso=(s:string)=>/^\d{4}-\d{2}-\d{2}$/.test(s)&&Number.isFinite(Date.parse(s));
+function addYears(start:string,term:string){
+  if(!validIso(start))return '';
+  const match=term.trim().match(/^(\d+)\s+year/i);
+  if(!match)return '';
+  const years=Number(match[1]);
+  const date=new Date(start+'T00:00:00Z');
+  date.setUTCFullYear(date.getUTCFullYear()+years);
+  date.setUTCDate(date.getUTCDate()-1);
+  return date.toISOString().slice(0,10);
+}
+function addMonthsClamped(start:string,months:number){
+  if(!validIso(start))return '';
+  const [y,m,d]=start.split('-').map(Number);
+  const index=m-1+months,year=y+Math.floor(index/12);
+  const month=((index%12)+12)%12;
+  const last=new Date(Date.UTC(year,month+1,0)).getUTCDate();
+  return new Date(Date.UTC(year,month,Math.min(d,last))).toISOString().slice(0,10);
+}
+function nextInstallment(start:string,frequency:string){
+  const intervals:Record<string,number>={Monthly:1,Quarterly:3,'Half Yearly':6,Annually:12};
+  return intervals[frequency]?addMonthsClamped(start,intervals[frequency]):'';
+}
 function initialForm(value:LifeHealthCaseDetail):CaseEditForm {
  return {sourcingDate:value.sourcing_date,insurerId:value.insurance_company_id,customerName:value.customer_name,customerPhone:value.customer_phone,
   customerAddress:value.customer_address,productName:value.product_name,proposalNumber:value.proposal_number,
@@ -60,7 +84,7 @@ export default function LifeHealthCaseDetailScreen(){
  const [approverKey,setApproverKey]=useState('');
  const [approvalId,setApprovalId]=useState('');
  const [otp,setOtp]=useState('');
- const [approvalRequired,setApprovalRequired]=useState(false);
+ const [dateOverrides,setDateOverrides]=useState({endDate:false,pptEndDate:false,nextInstallmentDate:false});
  const [issuing,setIssuing]=useState(false);
  const [issueError,setIssueError]=useState('');
  const [saving,setSaving]=useState(false);
@@ -107,7 +131,26 @@ export default function LifeHealthCaseDetailScreen(){
  const setIssueField=(key:keyof LifeHealthIssueForm,value:string)=>{
    setIssue(prev=>({...prev,[key]:value,...(key==='issuanceDate'||key==='policyNumber'?{approvalId:''}:{})}));
    if(key==='issuanceDate'||key==='policyNumber'){setApprovalId('');setIssueError('');}
+   if(key==='startDate')setDateOverrides({endDate:false,pptEndDate:false,nextInstallmentDate:false});
+   if(key==='endDate'||key==='pptEndDate'||key==='nextInstallmentDate')
+     setDateOverrides(prev=>({...prev,[key]:true}));
  };
+ useEffect(()=>{
+   if(!validIso(issue.startDate)||!form)return;
+   const endDate=form.productName.toLowerCase().includes('pension')?'':addYears(issue.startDate,form.policyDuration);
+   const pptEndDate=form.premiumPayingTerm.toLowerCase().includes('single')?'':addYears(issue.startDate,form.premiumPayingTerm);
+   const nextDate=nextInstallment(issue.startDate,form.paymentFrequency);
+   setIssue(prev=>{
+     const calculated={
+       endDate:dateOverrides.endDate?prev.endDate:endDate,
+       pptEndDate:dateOverrides.pptEndDate?prev.pptEndDate:pptEndDate,
+       nextInstallmentDate:dateOverrides.nextInstallmentDate?prev.nextInstallmentDate:nextDate,
+     };
+     if(Object.entries(calculated).every(([key,v])=>prev[key as keyof typeof calculated]===v))return prev;
+     return {...prev,...calculated};
+   });
+ },[issue.startDate,form?.productName,form?.policyDuration,form?.premiumPayingTerm,
+    form?.paymentFrequency,dateOverrides.endDate,dateOverrides.pptEndDate,dateOverrides.nextInstallmentDate]);
  const addRemark=async()=>{
    if(!record||!remarkDraft.trim()||remarkBusy)return;
    setRemarkBusy(true);setRemarkError('');
@@ -122,8 +165,8 @@ export default function LifeHealthCaseDetailScreen(){
    setIssueError('');setIssuing(true);
    try{
      const result=await lifeHealthIssuanceAction('approvers',{caseId:record.id,policyNumber:issue.policyNumber,issuanceDate:issue.issuanceDate});
-     if(result.approvalRequired&&!approvalId){
-       setApprovalRequired(true);setApprovers(result.approvers??[]);setApprovalOpen(true);return;
+     if(result.approvalRequired&&!issue.approvalId){
+       setApprovers(result.approvers??[]);setApprovalOpen(true);return;
      }
      await createIssuedPolicy();
    }catch(e){setIssueError(e instanceof Error?e.message:'Unable to verify policy issuance.');}
@@ -143,7 +186,7 @@ export default function LifeHealthCaseDetailScreen(){
          paymentFrequency:form.paymentFrequency,paymentMode:form.paymentMode,
          premiumAmount:Number(form.premiumAmount)});
      }
-     const result=await lifeHealthIssuanceAction('issue',{...issue,caseId:record.id,approvalId});
+     const result=await lifeHealthIssuanceAction('issue',{...issue,caseId:record.id,approvalId:issue.approvalId});
      setApprovalOpen(false);
      await load();
      setIssueError(result.policyCode?'Policy created: '+result.policyCode:'Policy created.');
@@ -198,8 +241,7 @@ export default function LifeHealthCaseDetailScreen(){
             <Text style={styles.statusText}>{record.status_group==='issued'?'Issued':record.status_group==='rejected'?'Rejected':'Pending'}</Text>
           </View>
         </View>
-        <Text style={styles.heroSubtitle} numberOfLines={1}>{record.customer_name} · {record.proposal_number}</Text>
-        <Text style={styles.heroCaseNumber} numberOfLines={1} selectable>{record.case_number}</Text>
+        <Text style={styles.heroSubtitle} numberOfLines={2} selectable>{record.customer_name} · {record.proposal_number} · {record.case_number}</Text>
       </View>
       <Section number="01" title="Policy source & ownership">
         <View style={styles.grid}>
