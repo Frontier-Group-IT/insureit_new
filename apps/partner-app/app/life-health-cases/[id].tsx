@@ -29,7 +29,7 @@ type CaseEditForm = {
  paymentFrequency:string;paymentMode:string;premiumAmount:string;
 };
 const FREQUENCIES=['Monthly','Quarterly','Half Yearly','Annually','One Time'] as const;
-const PAYMENT_MODES=['Cash','Cheque','NEFT/RTGS','UPI','Credit/Debit Card','Net Banking'] as const;
+const PAYMENT_MODES=['Cheque','NEFT/RTGS','UPI','Credit/Debit Card','Net Banking'] as const;
 const TERM_OPTIONS=['','Single Pay',...Array.from({length:100},(_,i)=>`${i+1} Year${i?'s':''}`)];
 const toIsoDate=(v:string)=>{const x=v.trim();const m=/^(\d{2})\/(\d{2})\/(\d{4})$/.exec(x);return m?`${m[3]}-${m[2]}-${m[1]}`:x;};
 
@@ -137,7 +137,7 @@ export default function LifeHealthCaseDetailScreen(){
  };
  useEffect(()=>{
    if(!validIso(issue.startDate)||!form)return;
-   const endDate=form.productName.toLowerCase().includes('pension')?'':addYears(issue.startDate,form.policyDuration);
+   const endDate=record?.business_line==='Life'&&/\bpension\b/i.test(form.productName)?'':addYears(issue.startDate,form.policyDuration);
    const pptEndDate=form.premiumPayingTerm.toLowerCase().includes('single')?'':addYears(issue.startDate,form.premiumPayingTerm);
    const nextDate=nextInstallment(issue.startDate,form.paymentFrequency);
    setIssue(prev=>{
