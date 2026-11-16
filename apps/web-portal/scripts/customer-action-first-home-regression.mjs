@@ -18,7 +18,7 @@ for(const snippet of [
   "/customer/vehicles/",
   "/customer/policies/",
 ]) assert.ok(home.includes(snippet), `Customer Home regression: missing ${snippet}`);
-assert.match(home, /Good morning, \{account\.contact_name\?\.split\(" "\)\[0\] \|\| "Customer"\}!</, "Personalized greeting remains at the top of Customer Home");
+assert.ok(home.includes('Good morning, {account.contact_name?.split(" ")[0] || "Customer"}!'), "Personalized greeting remains at the top of Customer Home");
 assert.match(home, /<h1 className="customer-home-enter text-\[clamp\(22px,2\.4vw,30px\)\] font-bold/, "Greeting is presented as simple compact text");
 assert.doesNotMatch(home, /customer-modern-hero|customer-home-hero-image|customer-modern-hero-orb/, "Customer Home must not render the old banner, picture, or gradient overlays");
 assert.doesNotMatch(home, /Every vehicle\. Every policy\. Every journey/, "Remove the redundant hero subtitle");
