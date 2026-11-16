@@ -131,8 +131,11 @@ for (const root of requiredAccountsRoots) {
 if (accountsRoleRoots.has("/dashboard") || accountsRoleRoots.has("/reports") || accountsRoleRoots.has("/policies")) {
   failures.push("Accounts role route allowlist must not broaden to Dashboard, all Reports, or all Policies");
 }
-if (!middlewareSource.includes('check.role === "accounts" && !isAccountsRolePortalPath(pathname)')) {
-  failures.push("middleware must redirect Accounts users away from non-accounting protected routes");
+if (!middlewareSource.includes('check.role === "accounts" && pathname !== "/reports/daily" && !isAccountsRolePortalPath(pathname)')) {
+  failures.push("Accounts users may access only accounting routes and the exact Daily Report Self page");
+}
+if (!middlewareSource.includes('pathname !== "/reports/daily" && !isAccountsRolePortalPath(pathname)')) {
+  failures.push("Daily Report Self exception must not authorize unrelated Reports pages");
 }
 if (!middlewareSource.includes('check.status === "authorized" && check.role === "accounts"')) {
   failures.push("Accounts sessions must bootstrap to /accounts instead of the general portal home");
