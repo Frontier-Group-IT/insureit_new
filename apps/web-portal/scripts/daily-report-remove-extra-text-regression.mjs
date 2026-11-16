@@ -17,6 +17,6 @@ assert.match(page,/<DailySelfActivityPanel/, "Activity summary and detail remain
 assert.match(page,/<DailyEmployeeDirectory/, "Authorized employee directory remains");
 assert.match(panel,/Back to summary/, "Category detail can return to summary");
 assert.match(panel,/data\.unavailableSources/, "Operational partial-source warning is retained");
-assert.match(panel,/data\.categories\.map/, "Category summaries remain");
+assert.match(panel,/categoryGroups\.map/, "Grouped category summaries remain");
 assert.match(panel,/data\.rows\.map/, "Detail table remains");
 console.log("Daily Report extra labels and disclaimers removed without changing report controls.");

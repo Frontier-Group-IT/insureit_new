@@ -13,6 +13,15 @@ const dateFormat=new Intl.DateTimeFormat("en-IN",{timeZone:"Asia/Kolkata",day:"2
 const timeFormat=new Intl.DateTimeFormat("en-IN",{timeZone:"Asia/Kolkata",hour:"2-digit",minute:"2-digit",hour12:true});
 
 export function DailySelfActivityPanel({data,linkFor,reportMode="self"}:Props) {
+  // Keep each activity family together instead of mixing Customer, Vehicle,
+  // Policy and Claims cards within a single five-column row.
+  const categoryGroups=[
+    {name:"Customer", items:data.categories.filter(item=>item.name.startsWith("Customer "))},
+    {name:"Vehicle", items:data.categories.filter(item=>item.name.startsWith("Vehicle "))},
+    {name:"Policies", items:data.categories.filter(item=>item.name.startsWith("Policy "))},
+    {name:"Claims", items:data.categories.filter(item=>item.name==="Claims"||item.name.startsWith("Claim "))},
+    {name:"Other", items:data.categories.filter(item=>!item.name.startsWith("Customer ")&&!item.name.startsWith("Vehicle ")&&!item.name.startsWith("Policy ")&&item.name!=="Claims"&&!item.name.startsWith("Claim "))},
+  ].filter(group=>group.items.length>0);
   return (
     <section className="min-h-[calc(100dvh-300px)] overflow-hidden rounded-xl border border-[#dce4ef] bg-white shadow-sm" aria-label="Self activity summary and register">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#e4e9f1] px-4 py-3">
@@ -42,8 +51,12 @@ export function DailySelfActivityPanel({data,linkFor,reportMode="self"}:Props) {
       ) : null}
       {!data.category ? (
         data.categories.length ? (
-          <div className="grid grid-cols-1 gap-2 p-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-            {data.categories.map(item=>(
+          <div className="space-y-4 p-3">
+            {categoryGroups.map(group=>(
+              <section key={group.name} aria-label={`${group.name} activities`}>
+                <h4 className="mb-2 px-1 text-[10px] font-bold uppercase tracking-wide text-[#61748E]">{group.name}</h4>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+                  {group.items.map(item=>(
               <Link key={item.name} prefetch={false} href={linkFor({activity:item.name,page:"1"})}
                 className="group flex min-h-[54px] min-w-0 items-center justify-between gap-2 rounded-xl border border-[#dce5f1] bg-gradient-to-br from-white to-[#f7faff] px-3 py-2.5 shadow-[0_1px_3px_rgba(23,54,93,0.05)] transition-[transform,background-color,border-color,box-shadow] duration-200 ease-out hover:-translate-y-0.5 hover:border-[#7ba7dc] hover:from-[#f5f9ff] hover:to-[#e9f2ff] hover:shadow-[0_5px_14px_rgba(23,54,93,0.13)] active:translate-y-0 active:shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315b9a] motion-reduce:transform-none motion-reduce:transition-none">
                 <span className="min-w-0 text-[11px] font-semibold leading-4 text-[#234368] transition-colors duration-200 group-hover:text-[#123c70]">{item.name}</span>
@@ -52,6 +65,9 @@ export function DailySelfActivityPanel({data,linkFor,reportMode="self"}:Props) {
                   <span aria-hidden="true" className="text-[14px] font-bold text-[#50719d] transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-[#174b80] motion-reduce:transform-none">›</span>
                 </span>
               </Link>
+                  ))}
+                </div>
+              </section>
             ))}
           </div>
         ) : <p className="px-5 py-10 text-center text-[11px] text-[#718096]">No attributable recorded activity for the selected period.</p>
