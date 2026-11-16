@@ -175,7 +175,7 @@ export default function PolicyIntakesScreen() {
             onChangeText={setQuery}
             onFocus={() => setSearchFocused(true)}
             onBlur={() => setSearchFocused(false)}
-            placeholder="Search by PIR number, customer, insurer or source"
+            placeholder="Search by PIR No., customer, insurer, source, policy No., lead source or vehicle No."
             placeholderTextColor="#9AA5B5"
             style={styles.searchInput}
             autoCapitalize="none"
