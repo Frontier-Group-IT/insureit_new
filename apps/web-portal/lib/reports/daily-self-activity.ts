@@ -4,11 +4,12 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { readDailyHistoryPages } from "@/lib/reports/daily-history-source-pages";
 import { isValidDailyProfileId, isValidDailyRecordId, selfDateWindow } from "@/lib/reports/daily-history-validation";
 import { dailyReportRangeWindow } from "@/lib/reports/daily-report-period";
+import { DAILY_ACTIVITY_RECORD_ROUTES, dailyActivityRecordHref } from "@/lib/reports/daily-activity-record-routes";
 
 export type SelfActivity = {
   id: string; category: string; activity: string; reference: string;
   occurredAt: string; status: string; source: "Audit" | "Record history"; detail?: string;
-  table?: string; recordId?: string;
+  table?: string; recordId?: string; href?: string|null;
 };
 type Audit = { id:string; actor_id:string|null; action:string; table_name:string|null; record_id:string|null; created_at:string };
 type Policy = { id:string; created_at:string; policy_no:string|null };
@@ -173,11 +174,11 @@ export async function loadSelfActivityHistory(
       activity:displayAction(a.action),reference:sourceLabel(a.record_id),
       occurredAt:a.created_at,status:status(a.action),source:"Audit",table:a.table_name??undefined,recordId:a.record_id??undefined});
   }
-  for(const a of policies.rows) all.push({id:`policy:${a.id}`,category:"Policy Add",activity:"Policy Created",reference:a.policy_no||a.id,occurredAt:a.created_at,status:"Created",source:"Record history"});
-  for(const a of intakes.rows) all.push({id:`intake:${a.id}`,category:"Policy Intake",activity:"Policy Intake Submitted",reference:a.intake_number||a.id,occurredAt:a.created_at,status:"Submitted",source:"Record history"});
-  for(const a of intakeFinals.rows) if(a.finalized_at) all.push({id:`intake-final:${a.id}`,category:"Policy Intake",activity:"Policy Intake Finalized",reference:a.intake_number||a.id,occurredAt:a.finalized_at,status:"Completed",source:"Record history"});
-  for(const a of cases.rows) all.push({id:`case:${a.id}`,category:"Policy Edit Case Register",activity:"Case Created",reference:a.case_number||a.id,occurredAt:a.created_at,status:"Created",source:"Record history"});
-  for(const a of caseFinals.rows) if(a.converted_at) all.push({id:`case-final:${a.id}`,category:"Policy Edit Case Register",activity:"Case Converted",reference:a.case_number||a.id,occurredAt:a.converted_at,status:"Completed",source:"Record history"});
+  for(const a of policies.rows) all.push({id:`policy:${a.id}`,category:"Policy Add",activity:"Policy Created",reference:a.policy_no||a.id,occurredAt:a.created_at,status:"Created",source:"Record history",table:"policies",recordId:a.id});
+  for(const a of intakes.rows) all.push({id:`intake:${a.id}`,category:"Policy Intake",activity:"Policy Intake Submitted",reference:a.intake_number||a.id,occurredAt:a.created_at,status:"Submitted",source:"Record history",table:"policy_intake_requests",recordId:a.id});
+  for(const a of intakeFinals.rows) if(a.finalized_at) all.push({id:`intake-final:${a.id}`,category:"Policy Intake",activity:"Policy Intake Finalized",reference:a.intake_number||a.id,occurredAt:a.finalized_at,status:"Completed",source:"Record history",table:"policy_intake_requests",recordId:a.id});
+  for(const a of cases.rows) all.push({id:`case:${a.id}`,category:"Policy Edit Case Register",activity:"Case Created",reference:a.case_number||a.id,occurredAt:a.created_at,status:"Created",source:"Record history",table:"life_health_cases",recordId:a.id});
+  for(const a of caseFinals.rows) if(a.converted_at) all.push({id:`case-final:${a.id}`,category:"Policy Edit Case Register",activity:"Case Converted",reference:a.case_number||a.id,occurredAt:a.converted_at,status:"Completed",source:"Record history",table:"life_health_cases",recordId:a.id});
   all.sort((a,b)=>b.occurredAt.localeCompare(a.occurredAt)||a.id.localeCompare(b.id));
   const counts=new Map<string,number>();
   for(const a of all) counts.set(a.category,(counts.get(a.category)??0)+1);
@@ -222,6 +223,21 @@ export async function loadSelfActivityHistory(
         row.detail=detailMap.get(row.id.slice("audit:".length));
     }
   }
+  // Validate the currently visible records before creating any detail-page links.
+  // Displayed references and audit table names must never become URL paths.
+  await Promise.all(Object.keys(DAILY_ACTIVITY_RECORD_ROUTES).map(async table=>{
+    const ids=[...new Set(visible
+      .filter(row=>row.table===table && isValidDailyRecordId(row.recordId??""))
+      .map(row=>row.recordId as string))];
+    if(!ids.length) return;
+    const {data,error}=await admin.from(table).select("id").in("id",ids);
+    if(error) return;
+    const existing=new Set((data??[]).map(record=>record.id));
+    for(const row of visible) {
+      if(row.table===table && row.recordId && existing.has(row.recordId))
+        row.href=dailyActivityRecordHref(table,row.recordId);
+    }
+  }));
   return {selfName,employeeCode,categories,category,rows:visible,page,hasNext:filtered.length>start+30,
     total:all.length,selectedCount:filtered.length,partial,unavailableSources,allSourcesUnavailable,
     day:window?options.day??"":""};

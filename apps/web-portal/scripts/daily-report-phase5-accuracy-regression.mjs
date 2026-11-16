@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 const read = (file) => readFileSync(new URL(file, import.meta.url), "utf8");
 const source = read("../lib/reports/daily-activity.ts");
 const panel = read("../components/reports/daily-self-activity-panel.tsx");
+const rows = read("../components/reports/daily-activity-history-rows.tsx");
 
 assert.match(source,
   /if \(type === "policy"\) q = q\.or\("table_name\.eq\.policies,and\(table_name\.like\.policy_%,table_name\.neq\.policy_intake_requests\)"\)/,
@@ -16,19 +17,19 @@ assert.match(source, /else if \(type === "intake"\) q = q\.eq\("table_name", "po
   "Intake filter must include intake activity");
 assert.match(source, /if \(\/upload\/i\.test\(action\)\) return "Uploaded"/,
   "Successful upload events are correctly labeled Uploaded");
-assert.match(panel, /const dateFormat=new Intl\.DateTimeFormat\("en-IN"/,
+assert.match(rows, /const dateFormat=new Intl\.DateTimeFormat\("en-IN"/,
   "Date formatter uses localized date");
-assert.match(panel, /const timeFormat=new Intl\.DateTimeFormat\("en-IN"/,
+assert.match(rows, /const timeFormat=new Intl\.DateTimeFormat\("en-IN"/,
   "Time formatter uses localized time");
-assert.match(panel, /timeZone:"Asia\/Kolkata",hour:"2-digit",minute:"2-digit",hour12:true/,
+assert.match(rows, /timeZone:"Asia\/Kolkata",hour:"2-digit",minute:"2-digit",hour12:true/,
   "Time formatter uses IST and minutes");
-assert.match(panel, /dateTimeLabel\(row\.occurredAt\)/,
+assert.match(rows, /dateFormat\.format\(new Date\(row\.occurredAt\)\)/,
   "Actual table uses the combined IST date and time");
-assert.match(panel, /timeFormat\.format\(d\)/,
+assert.match(rows, /timeFormat\.format\(new Date\(row\.occurredAt\)\)/,
   "Combined formatter retains localized time with colon");
 assert.match(panel, /Date &amp; Time/,
   "Activity register renders one combined timestamp column");
-assert.doesNotMatch(panel, /format\.formatToParts/,
+assert.doesNotMatch(panel+rows, /format\.formatToParts/,
   "Do not generate malformed HH MM AM/PM values by joining date parts with spaces");
 assert.doesNotMatch(source, /\.insert\(|\.update\(|\.delete\(|\.upsert\(/,
   "Daily Report reads remain non-mutating");

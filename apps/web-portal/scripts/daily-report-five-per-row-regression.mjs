@@ -18,7 +18,8 @@ assert.match(panel,/href=\{linkFor\(\{activity:item\.name,page:"1"\}\)\}/,
 assert.match(panel,/item\.name/, "Category labels remain visible");
 assert.match(panel,/item\.count\.toLocaleString\("en-IN"\)/,
   "Each category shows its true recorded count");
-assert.match(panel,/data\.rows\.map\(row=>\(/, "Detail table is preserved");
+assert.match(panel,/<DailyActivityHistoryRows rows=\{data\.rows\}/, "Detail table passes rows to interactive renderer");
+assert.match(read("../components/reports/daily-activity-history-rows.tsx"),/rows\.map\(row=>\(/, "Detail table is preserved");
 assert.match(panel,/data\.category \?/,"Selected category still uses existing detail mode with employee in the heading");
 assert.match(source,/for\(const a of all\) counts\.set\(a\.category/,
   "Backend counts remain unmodified and use complete recorded source set");
