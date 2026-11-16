@@ -22,7 +22,7 @@ assert.match(directory,/access\.mode==="organization"/);
 assert.match(endpoint,/await requireDailyReportEmployee\(\)/);
 assert.match(endpoint,/await canViewDailyReportAll\(profile\)/,"Self-only users cannot list colleagues");
 assert.match(endpoint,/loadDailyReportEmployeeDirectory\(profile\)/);
-assert.match(endpoint,/Cache-Control": "private, no-store"/);
+assert.match(endpoint,/"Cache-Control":"private, no-store"/);
 assert.match(header,/fetch\("\/api\/reports\/daily\/employees"/);
 assert.match(header,/matching\.map\(person=>\(/);
 assert.match(header,/selectPerson\(person\.id\)/);
