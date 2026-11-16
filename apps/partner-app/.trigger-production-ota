@@ -1,9 +1,9 @@
 Partner production OTA trigger
-release=partner-quick-actions-icons-pr-4583
+release=partner-life-health-issued-popup-pr-4581
 source=verified-merged-main
-source_pr=4583
-source_merge=dbb0408c7164f696ef0385744ecc587b9a65ba5c
-reason=user-approved-merge-and-publish
+source_pr=4581
+source_merge=8676cfa9cade7c43a629b50b12f08c9cf0edc610
+reason=user-approved-publish
 channel=production
 runtime=0.2.0
 requested=2026-11-16
