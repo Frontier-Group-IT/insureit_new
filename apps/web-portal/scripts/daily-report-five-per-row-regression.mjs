@@ -40,8 +40,14 @@ assert.ok(css.includes("linear-gradient(100deg,#24119b"),"Purple summary bar mat
 for (const group of ["vehicle","policies","claims","other"]) {
   assert.ok(css.includes('data-activity-group="'+group+'"'),group+" section keeps distinct reference color");
 }
-assert.match(panel,/daily-report-category-heading/,"Category headings with icons retained");
-assert.match(panel,/daily-report-count-badge/,"Colored count pills retained");
+assert.match(panel,/daily-report-category-heading/,"Text-only category headings retained");
+assert.doesNotMatch(panel,/groupIcon\[|const groupIcon=/,"No category heading icons");
+assert.match(panel,/group\.name==="Claims"\?"Claim":group\.name/,"Claims family heading is singular Claim");
+assert.match(panel,/daily-report-count-badge/,"Numeric category counts retained without a colored pill");
+assert.match(css,/\.daily-report-reference \.daily-report-count-badge \{[^}]*background: transparent/s,"Category counts have no background fill");
+assert.match(css,/\.daily-report-reference \.daily-report-total-badge \{[^}]*background: transparent/s,"Summary total has no colored pill");
+assert.match(css,/\.reports-reference-shell:has\(\.daily-report-reference\) \.reports-reference-header \{[^}]*background: #fff/s,"Reports heading has white background");
+assert.doesNotMatch(css,/\.reports-reference-shell:has\(\.daily-report-reference\) \.reports-reference-header::before/,"No decorative gradient is layered over the white header");
 assert.match(panel,/daily-report-activity-icon/,"Activity icons retained");
 assert.match(header,/daily-report-header-select/,"Pill-shaped period and scope filters retained");
 console.log("Daily Report reference palette and five-column responsive category grid verified.");
