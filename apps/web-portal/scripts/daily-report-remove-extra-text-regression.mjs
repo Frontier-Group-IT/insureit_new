@@ -18,5 +18,6 @@ assert.match(page,/<DailyEmployeeDirectory/, "Authorized employee directory rema
 assert.match(panel,/Back to summary/, "Category detail can return to summary");
 assert.match(panel,/data\.unavailableSources/, "Operational partial-source warning is retained");
 assert.match(panel,/categoryGroups\.map/, "Grouped category summaries remain");
-assert.match(panel,/data\.rows\.map/, "Detail table remains");
+assert.match(panel,/<DailyActivityHistoryRows rows=\{data\.rows\}/, "Detail table passes current report rows to interactive renderer");
+assert.match(read("../components/reports/daily-activity-history-rows.tsx"),/rows\.map/, "Detail table still renders all current-page records");
 console.log("Daily Report extra labels and disclaimers removed without changing report controls.");
