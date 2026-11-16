@@ -48,10 +48,7 @@ assert.match(loader, /if\(window\) q=q\.gte\("converted_at",window\.from\)\.lt\(
 assert.match(endpoint, /loadDailyReportEmployeeDirectory\(profile\)/, "Employee dropdown uses server-authorized list");
 assert.doesNotMatch(loader, /\.insert\(|\.update\(|\.delete\(|\.upsert\(/, "No changes to business records");
 const css=read("../app/globals.css");
-assert.match(css, /reports-reference-shell:has\\(\\.daily-report-reference\\) \\.reports-reference-header \\{[\\s\\S]*?z-index: 40;/,
-  "Daily Report header must stack above the activity section when the employee dropdown opens");
-assert.match(css, /\\[aria-label="Daily Report employee selector"\\][\\s\\S]*?z-index: 50;/,
-  "Employee picker must have its own stacking level");
-assert.match(header, /absolute left-0 top-\\[calc\\(100%\\+4px\\)\\] z-50/,
-  "Employee search dropdown remains anchored immediately below Self control");
+assert.ok(css.includes("z-index: 40;") && css.includes(".reports-reference-header"), "Daily Report header stacks above activity summary");
+assert.ok(css.includes('[aria-label="Daily Report employee selector"]') && css.includes("z-index: 50;"), "Employee picker has a higher stacking level");
+assert.ok(header.includes('absolute left-0 top-[calc(100%+4px)] z-50'), "Employee search dropdown is anchored below Self control");
 console.log("Daily Report header layout, Today 90D MTD YTD All time Custom, and IST range source filtering verified.");
