@@ -364,6 +364,24 @@ export async function loadSelfActivityHistory(
               }
             }
           }
+          // The Customer Register defaults records with no external policy
+          // relationship to Internal. For hard-deleted rows, only apply the
+          // classification when the original audited creation channel proves
+          // direct customer onboarding. Otherwise leave Type unavailable.
+          const {data:creations,error:creationError}=await admin.from("audit_logs")
+            .select("record_id,new_data,created_at")
+            .eq("table_name","customers").eq("action","customer_created")
+            .in("record_id",[...deletionById.keys()])
+            .order("created_at",{ascending:true}).limit(300);
+          if(creationError)console.error("[daily-report] deleted customer origin unavailable",{code:creationError.code||"request_error"});
+          const directOnboardingIds=new Set<string>();
+          for(const creation of creations??[]) {
+            if(!creation.record_id)continue;
+            const snapshot=creation.new_data;
+            if(snapshot&&typeof snapshot==="object"&&!Array.isArray(snapshot)
+              &&(snapshot as Record<string,unknown>).creation_channel==="direct_customer_onboarding")
+              directOnboardingIds.add(creation.record_id);
+          }
           const maskPhone=(phone:string)=>phone.replace(/\d(?=\d{4,})/g,"•");
           for(const row of visible) {
             if(row.table!=="customers"||!row.recordId)continue;
@@ -372,11 +390,12 @@ export async function loadSelfActivityHistory(
             const profile=deletion.profileId?profilesById.get(deletion.profileId):undefined;
             const profilePhone=profile?.full_name?.trim().toLocaleLowerCase()===deletion.name.toLocaleLowerCase()?value(profile.phone):undefined;
             row.customerName=deletion.name;
+            if(directOnboardingIds.has(row.recordId))row.customerType="Internal";
             const phone=deletion.phone||profilePhone||editedPhone.get(row.recordId);
             row.customerMobile=phone?maskPhone(phone):undefined;
-            // "Internal"/"External" is derived from current policy counts,
-            // which cannot reliably be reconstructed after hard deletion.
-            if(row.activity==="Customer Created")row.activity="Customer Created (later deleted)";
+            // All other historical category values remain unavailable unless
+            // a reliable record-origin classification has been verified.
+            if(row.activity==="Customer Created")row.activity="Customer Deleted";
             row.status="Deleted";
           }
         }
