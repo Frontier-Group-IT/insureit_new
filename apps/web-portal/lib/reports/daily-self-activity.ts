@@ -40,7 +40,7 @@ const displayAction=(s:string)=>({
   policy_intake_rejected:"Policy Intake Rejected",
   policy_intake_response_uploaded:"Policy Intake Response Uploaded",
   life_health_case_edited:"Case Edited",life_health_case_remark_added:"Case Remark Added",
-  life_health_case_rejected:"Case Rejected",
+  life_health_case_rejected:"Case Rejected",delete_claim:"Claim deleted (creator unavailable)",
 } as Record<string,string>)[s]??s.replaceAll("_"," ").replace(/\b\w/g,c=>c.toUpperCase());
 function status(action:string) {
   if(/reject/i.test(action)) return "Rejected";
@@ -71,6 +71,16 @@ const CHANGE_FIELDS:Record<string,{label:string;money?:boolean}>={
   status:{label:"Status"},
   policy_status:{label:"Policy status"},
 };
+// Claim deletion logs preserve the creator identity only if the deletion action
+// captured it before removing the claim. Never infer a name from the actor.
+function deletedClaimActivity(oldValue:unknown):string {
+  if (!oldValue || typeof oldValue!=="object" || Array.isArray(oldValue)) return "Claim deleted (creator unavailable)";
+  const data=oldValue as Record<string,unknown>;
+  const creator=typeof data.claim_created_by_name==="string" ? data.claim_created_by_name.trim().slice(0,100) : "";
+  if (creator) return `${creator} claim deleted`;
+  const claimNo=typeof data.claim_no==="string" ? data.claim_no.trim().slice(0,60) : "";
+  return claimNo ? `Claim ${claimNo} deleted (creator unavailable)` : "Claim deleted (creator unavailable)";
+}
 function auditChangeDetail(oldValue:unknown,newValue:unknown):string|undefined {
   if(!oldValue || !newValue || typeof oldValue!=="object" || typeof newValue!=="object" ||
     Array.isArray(oldValue) || Array.isArray(newValue)) return undefined;
@@ -218,9 +228,15 @@ export async function loadSelfActivityHistory(
       .returns<{id:string;old_data:unknown;new_data:unknown}[]>();
     if(changesError) console.error("[daily-report] audit change details unavailable",{code:changesError.code || "request_error"});
     else {
-      const detailMap=new Map((changes??[]).map(item=>[item.id,auditChangeDetail(item.old_data,item.new_data)]));
-      for(const row of visible) if(row.id.startsWith("audit:"))
-        row.detail=detailMap.get(row.id.slice("audit:".length));
+      const changeMap=new Map((changes??[]).map(item=>[item.id,item]));
+      for(const row of visible) {
+        if(!row.id.startsWith("audit:")) continue;
+        const change=changeMap.get(row.id.slice("audit:".length));
+        if(!change) continue;
+        row.detail=auditChangeDetail(change.old_data,change.new_data);
+        if(row.table==="claims" && row.status==="Deleted" && row.activity==="Claim deleted (creator unavailable)")
+          row.activity=deletedClaimActivity(change.old_data);
+      }
     }
   }
   // Validate the currently visible records before creating any detail-page links.
