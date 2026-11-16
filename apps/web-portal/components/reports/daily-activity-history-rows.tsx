@@ -7,10 +7,10 @@ import type { SelfActivity } from "@/lib/reports/daily-self-activity";
 const dateFormat=new Intl.DateTimeFormat("en-IN",{timeZone:"Asia/Kolkata",day:"2-digit",month:"short",year:"numeric"});
 const timeFormat=new Intl.DateTimeFormat("en-IN",{timeZone:"Asia/Kolkata",hour:"2-digit",minute:"2-digit",hour12:true});
 
-type Props={rows:SelfActivity[];isCustomerActivity?:boolean;isClaimActivity?:boolean;vehicleMode?:boolean};
+type Props={rows:SelfActivity[];isCustomerActivity?:boolean;isClaimActivity?:boolean;vehicleMode?:boolean;isOtherActivity?:boolean};
 const customerField=(value:string|number|undefined|null)=>value===undefined||value===null||value===""?"—":String(value);
 
-export function DailyActivityHistoryRows({rows,isCustomerActivity=false,isClaimActivity=false,vehicleMode=false}:Props) {
+export function DailyActivityHistoryRows({rows,isCustomerActivity=false,isClaimActivity=false,vehicleMode=false,isOtherActivity=false}:Props) {
   const router=useRouter();
   const openRecord=(row:SelfActivity)=>{
     if(row.href) router.push(row.href);
@@ -26,7 +26,7 @@ export function DailyActivityHistoryRows({rows,isCustomerActivity=false,isClaimA
       <tbody className="divide-y divide-[#edf1f6]">
         {rows.map(row=>(
           <tr key={row.id} role={row.href?"button":undefined} tabIndex={row.href?0:undefined}
-            aria-label={row.href?`Open record: ${row.activity}, ${vehicleMode ? row.vehicleNumber||"vehicle record" : isClaimActivity ? row.claimControlNo||row.claimInsurerNo||"claim record" : row.reference}`:undefined}
+            aria-label={row.href?`Open record: ${row.activity}, ${vehicleMode ? row.vehicleNumber||"vehicle record" : isClaimActivity ? row.claimControlNo||row.claimInsurerNo||"claim record" : isOtherActivity ? row.subjectEmployeeName||"employee action" : row.reference}`:undefined}
             onClick={row.href?()=>openRecord(row):undefined}
             onKeyDown={row.href?event=>onRowKeyDown(event,row):undefined}
             className={`${row.href?"cursor-pointer [&_td]:cursor-pointer hover:bg-[#edf5ff] focus-visible:bg-[#edf5ff] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#315b9a]":"cursor-default"} text-[11px] text-[#30435d] transition-colors`}>
@@ -54,6 +54,8 @@ export function DailyActivityHistoryRows({rows,isCustomerActivity=false,isClaimA
                 <td className="px-3 py-3">{customerField(row.claimCustomerName)}</td>
                 <td className="px-3 py-3">{customerField(row.claimVehicleNo)}</td>
               </>
+            ) : isOtherActivity ? (
+              <td className="px-3 py-3 font-medium">{customerField(row.subjectEmployeeName)}</td>
             ) : (
               <>
                 <td className="px-3 py-3 font-medium">{row.reference||"—"}</td>
