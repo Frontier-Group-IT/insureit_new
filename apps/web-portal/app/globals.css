@@ -647,3 +647,53 @@ form:has(input[name="fitness_valid_upto"]) > div:last-child button {
 .reports-reference-shell:has(.daily-report-reference) [id="daily-report-employee-options"] {
   max-height: min(300px, 55vh);
 }
+
+
+/* Standalone Daily Report: controls live on the activity bar, not in a second Reports header. */
+.reports-reference-shell:has(.daily-report-reference) > .reports-reference-header {
+  display: none;
+}
+.daily-report-reference .daily-report-panel {
+  overflow: visible; /* keep scope menu and calendar above the activity table */
+}
+.daily-report-reference .daily-report-panel-title {
+  z-index: 5;
+  overflow: visible;
+  border-radius: 15px 15px 0 0;
+}
+.daily-report-reference .daily-report-panel-title [aria-label="Daily Report employee selector"] {
+  z-index: 60;
+}
+.daily-report-reference .daily-report-panel-title .daily-report-header-select {
+  min-width: 124px;
+  min-height: 34px;
+  border: 1px solid rgba(255,255,255,.72);
+  border-radius: 999px;
+  color: #20115c;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(21,9,105,.15);
+  font-weight: 750;
+}
+.daily-report-reference .daily-report-panel-title .daily-report-total-badge {
+  color: #fff !important;
+  background: transparent;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .025em;
+  white-space: nowrap;
+}
+.daily-report-reference .daily-report-panel-title .daily-report-total-badge svg {
+  color: #fff;
+}
+.daily-report-reference .daily-report-panel-title .daily-report-total-badge + div {
+  position: relative;
+  z-index: 10;
+}
+@media (max-width: 640px) {
+  .daily-report-reference .daily-report-panel-title {
+    gap: 10px;
+  }
+  .daily-report-reference .daily-report-panel-title .daily-report-header-select {
+    min-width: 105px;
+  }
+}
