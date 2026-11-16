@@ -21,10 +21,28 @@ function useDailyReportLocation() {
   return {isDaily:pathname==="/reports/daily"||pathname.startsWith("/reports/daily/"),pathname,searchParams};
 }
 
+const SCOPE_OPTIONS = [
+  {value:"self",label:"Self"},
+  {value:"all",label:"All"},
+] as const;
+
 export function DailyReportHeaderScopes() {
   const {isDaily,searchParams}=useDailyReportLocation();
-  if(!isDaily) return null;
   const scope=searchParams.get("scope")==="all"?"all":"self";
+  const [open,setOpen]=useState(false);
+  const [search,setSearch]=useState("");
+  const container=useRef<HTMLDivElement>(null);
+  const options=SCOPE_OPTIONS.filter(option=>option.label.toLowerCase().includes(search.trim().toLowerCase()));
+  useEffect(()=>{
+    if(!open)return;
+    const outside=(event:MouseEvent)=>{if(container.current&&!container.current.contains(event.target as Node))setOpen(false);};
+    const escape=(event:KeyboardEvent)=>{if(event.key==="Escape")setOpen(false);};
+    document.addEventListener("mousedown",outside);
+    document.addEventListener("keydown",escape);
+    return ()=>{document.removeEventListener("mousedown",outside);document.removeEventListener("keydown",escape);};
+  },[open]);
+  useEffect(()=>{setOpen(false);setSearch("");},[scope]);
+  if(!isDaily) return null;
   function linkFor(target:"self"|"all") {
     const params=new URLSearchParams(searchParams.toString());
     params.set("scope",target);
@@ -35,15 +53,31 @@ export function DailyReportHeaderScopes() {
     return `/reports/daily?${params.toString()}`;
   }
   return (
-    <nav aria-label="Daily Report visibility" className="flex items-center gap-1 rounded-lg border border-[#dbe3ed] bg-[#f4f7fb] p-1">
-      {(["self","all"] as const).map(item=>(
-        <Link key={item} prefetch={false} href={linkFor(item)}
-          aria-current={scope===item?"page":undefined}
-          className={`min-w-[62px] rounded-md px-3 py-1.5 text-center text-[11px] font-bold ${scope===item?"bg-[#17365D] text-white":"text-[#52627B] hover:bg-white"}`}>
-          {item==="self"?"Self":"All"}
-        </Link>
-      ))}
-    </nav>
+    <div ref={container} className="relative" aria-label="Daily Report visibility">
+      <button type="button" aria-haspopup="listbox" aria-expanded={open} aria-controls="daily-report-scope-options"
+        onClick={()=>{setOpen(value=>!value);setSearch("");}}
+        className="inline-flex h-9 min-w-[124px] items-center justify-between gap-3 rounded-lg border border-[#cbd7e6] bg-white px-3 text-[11px] font-semibold text-[#17365D] hover:bg-[#f5f8fc] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#315b9a]">
+        {scope==="self"?"Self":"All"}<ChevronDown className="h-3.5 w-3.5"/>
+      </button>
+      {open ? (
+        <div className="absolute left-0 top-[calc(100%+4px)] z-50 w-[180px] rounded-lg border border-[#d8e0eb] bg-white p-2 shadow-lg">
+          <input type="search" aria-label="Search Self or All" placeholder="Search options..."
+            autoFocus value={search} onChange={event=>setSearch(event.target.value)}
+            className="mb-1.5 h-8 w-full rounded-md border border-[#d8e0eb] px-2 text-[11px] text-[#17365D] outline-none focus:border-[#315b9a]"/>
+          <div id="daily-report-scope-options" role="listbox" aria-label="Report scope">
+            {options.map(option=>(
+              <Link key={option.value} href={linkFor(option.value)} prefetch={false}
+                role="option" aria-selected={scope===option.value}
+                onClick={()=>{setOpen(false);setSearch("");}}
+                className={`block rounded-md px-3 py-2 text-[11px] font-semibold hover:bg-[#eef3fa] ${scope===option.value?"bg-[#edf3fa] text-[#17365D]":"text-[#52627B]"}`}>
+                {option.label}
+              </Link>
+            ))}
+            {!options.length?<p className="px-2 py-2 text-[11px] text-[#667085]">No matching options</p>:null}
+          </div>
+        </div>
+      ):null}
+    </div>
   );
 }
 
