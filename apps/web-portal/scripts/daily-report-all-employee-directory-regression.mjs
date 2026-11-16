@@ -15,6 +15,14 @@ assert.equal(resolveDailyReportActorIds("superuser","all",{mode:"organization",p
 assert.match(directory, /getEmployeeAccessScope\(viewer\.id, viewer\.role, "view_reports"\)/, "All reuses report-specific hierarchy");
 assert.match(directory, /resolveDailyReportActorIds\(viewer\.id, "all", access\)/, "All respects authorized profile scope");
 assert.match(directory, /\.eq\("is_active",true\)/, "Only active employee accounts are listed");
+
+assert.match(directory, /\.not\("employee_id","is",null\)/, "Customer and intermediary-only logins without employee links are excluded at query time");
+assert.match(directory, /\.from\("employees"\)\.select\("id"\)\.eq\("employment_status","active"\)/, "Directory validates linked employees against active employment records");
+assert.match(directory, /if\(employeeStatusError\) throw/, "Employee verification failure stops the report rather than widening access");
+assert.match(directory, /activeEmployeeIds\.has\(p\.employee_id\)/, "Only employees with a validated active employee relationship can appear");
+assert.match(directory, /const authorized=directory\.people\.find\(person=>person\.id===targetId\)/, "Direct person ID is authorized against that same employee-filtered directory");
+assert.doesNotMatch(directory, /full_name.*(?:Suraj Gupta|Aman Sharma)/, "Employee visibility is decided by links, not name-specific exclusions");
+
 assert.match(directory, /if\(!authorized\) throw/, "Unpermitted selected employee ID fails closed");
 assert.match(page, /assertDailyReportEmployeeAllowed\(chosenPerson, employeeDirectory\);[\s\S]*?loadSelfActivityHistory\(chosenPerson/, "Validate employee before admin history reader");
 assert.match(page, /loadSelfActivityHistory\(profile\.id/, "Self remains actor-specific");
