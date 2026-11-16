@@ -27,7 +27,7 @@ assert.match(loader, /row\.href=dailyActivityRecordHref\(table,row\.recordId\)/,
 for(const table of ["policies","policy_intake_requests","life_health_cases"]) {
   assert.ok(loader.includes(`table:"${table}",recordId:a.id`),`Keep immutable record ID for ${table} history`);
 }
-assert.ok(panel.includes("<DailyActivityHistoryRows rows={data.rows} isCustomerActivity={isCustomerActivity} isClaimActivity={isClaimActivity} vehicleMode={vehicleMode} />"), "Shared activity renderer preserves Customer, Claims and Vehicle modes");
+assert.ok(panel.includes("<DailyActivityHistoryRows rows={data.rows} isCustomerActivity={isCustomerActivity} isClaimActivity={isClaimActivity} vehicleMode={vehicleMode} isOtherActivity={isOtherActivity} />"), "Shared activity renderer preserves Customer, Claims and Vehicle modes");
 assert.match(rows, /role="button" tabIndex=\{0\}/, "Rows support keyboard focus");
 assert.match(rows, /event\.key==="Enter"\|\|event\.key===" "/, "Enter and Space activate rows");
 assert.match(rows, /row\.detail \? <span/, "Preserve latest audit field-level change details");
@@ -81,3 +81,11 @@ assert.ok(rows.includes('vehicleMode ? ('),"Vehicle rows have conditional fields
 assert.ok(rows.includes('selected.vehicleNumber'),"Vehicle details popup uses Vehicle fields");
 assert.ok(loader.includes('.in("id",activityVehicleIds)'),"Vehicle records are read only within visible activity scope");
 assert.ok(panel.includes('isClaimActivity={isClaimActivity} vehicleMode={vehicleMode}'),"Claims mode remains intact");
+
+assert.ok(panel.includes('const isOtherActivity=data.category==="Other Activities"'),"Other activity mode is distinct");
+assert.ok(panel.includes('isOtherActivity ? ('),"Other Activities has employee-only columns");
+assert.ok(rows.includes('customerField(row.subjectEmployeeName)'),"Affected employee renders from resolved name");
+assert.ok(rows.includes('["Employee Name",customerField(selected.subjectEmployeeName)]'),"Dialog displays affected employee");
+assert.ok(loader.includes('if(category==="Other Activities")'),"Lookups only occur for Other Activities");
+assert.ok(loader.includes('row.table==="employees"'),"Employee lifecycle IDs resolve through employees");
+assert.ok(loader.includes('["profiles","auth.users"]'),"IT identity records resolve through profiles");
