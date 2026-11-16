@@ -54,8 +54,6 @@ export function DailyActivityHistoryRows({rows,isCustomerActivity=false}:Props) 
                 <td className="px-3 py-3 font-medium">{customerField(row.customerName)}</td>
                 <td className="px-3 py-3">{customerField(row.customerType)}</td>
                 <td className="px-3 py-3 tabular-nums">{customerField(row.customerMobile)}</td>
-                <td className="px-3 py-3">{customerField(row.customerFleetSize)}</td>
-                <td className="px-3 py-3 tabular-nums">{customerField(row.customerPolicyCount)}</td>
               </>
             ) : (
               <>
@@ -82,8 +80,6 @@ export function DailyActivityHistoryRows({rows,isCustomerActivity=false}:Props) 
                   ["Customer",customerField(selected.customerName)],
                   ["Customer Type",customerField(selected.customerType)],
                   ["Mobile",customerField(selected.customerMobile)],
-                  ["Fleet Size",customerField(selected.customerFleetSize)],
-                  ["Total Policies",customerField(selected.customerPolicyCount)],
                 ] : [
                   ["Policy / Case No.",selected.reference||"—"],
                   ["Customer / Vehicle",selected.customerVehicle||"—"],
