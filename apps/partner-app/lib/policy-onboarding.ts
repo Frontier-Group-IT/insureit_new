@@ -125,3 +125,20 @@ export async function uploadNativeOnboardingDocument(intakeId:string,line:Native
 export async function deleteNativeOnboardingDocument(intakeId:string,line:NativeProductType,type:NativeOnboardingDocumentType){
   return documentRequest<{ok:true}>(intakeId,line,'DELETE',type);
 }
+
+/** Standalone policy creation never reads, claims, or writes a Policy Intake. */
+export async function prepareNewNativePolicyOnboarding(){
+  return request<NativeOnboardingData>({action:'new_prepare'});
+}
+export async function bookNewNativePolicyOnboarding(draft:NativePolicyDraft,resolution?:Record<string,unknown>,dateApprovalId?:string|null){
+  return request<{booking:NativePolicyBookingResult}>({action:'new_book',draft,resolution,date_approval_id:dateApprovalId??null});
+}
+export async function lookupNewNativePolicyRc(registrationNumber:string){
+  return request<{review:NativeRcReview}>({action:'new_rc_lookup',registration_no:registrationNumber});
+}
+export async function requestNewNativePolicyDateApproval(draft:NativePolicyDraft,approverKey:string){
+  return request<{approval_id:string;expires_at:string}>({action:'new_approval_request',draft,approver_key:approverKey});
+}
+export async function verifyNewNativePolicyDateApproval(draft:NativePolicyDraft,approvalId:string,otp:string){
+  return request<{verified:boolean}>({action:'new_approval_verify',draft,approval_id:approvalId,otp});
+}
