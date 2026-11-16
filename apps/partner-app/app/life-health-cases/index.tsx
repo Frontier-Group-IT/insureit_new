@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
+import { PartnerCaseBottomNavigation } from '@/components/partner-case-bottom-navigation';
 import { PartnerInsurerLogo } from '@/components/ui/partner-insurer-logo';
 import { listLifeHealthCases, type LifeHealthCaseSummary, type LifeHealthStatus, type CaseCounts } from '@/lib/life-health-cases';
 import { canPartnerAccessCaseRegister } from '@/lib/partner-permissions';
@@ -14,7 +15,7 @@ const filters: Array<{key:LifeHealthStatus;label:string}> = [
   {key:'issued',label:'Issued'},{key:'all',label:'All'},
 ];
 const EMPTY: CaseCounts = {pending:0,rejected:0,issued:0,all:0};
-const navy='#17365D';
+const navy='#071E49';
 export default function LifeHealthCaseRegisterScreen() {
  const router=useRouter();
  const {context}=usePartnerSession();
@@ -51,12 +52,12 @@ export default function LifeHealthCaseRegisterScreen() {
    return ()=>{generation.current++;};
  },[load]));
  if(!canPartnerAccessCaseRegister(context))return (
-   <PartnerScreen title="Case Register" onBack={()=>router.back()}>
+   <PartnerScreen title="Case Register" navyTopBar navyStatusBar bottomNavigationNavy bottomNavigation={<PartnerCaseBottomNavigation/>} onBack={()=>router.back()}>
      <Text style={styles.message}>Your Operations Portal permissions do not allow Case Register access.</Text>
    </PartnerScreen>
  );
  return (
-   <PartnerScreen title="Case Register" navyTopBar navyStatusBar onBack={()=>router.back()}>
+   <PartnerScreen title="Case Register" navyTopBar navyStatusBar bottomNavigationNavy bottomNavigation={<PartnerCaseBottomNavigation/>} onBack={()=>router.back()}>
      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filters} contentContainerStyle={styles.filtersContent}>
        {filters.map(item=><Pressable key={item.key} accessibilityRole="button" accessibilityState={{selected:status===item.key}}
            onPress={()=>setStatus(item.key)} style={[styles.filter,status===item.key&&styles.filterSelected]}>
