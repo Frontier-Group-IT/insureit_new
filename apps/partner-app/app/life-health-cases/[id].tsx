@@ -30,6 +30,8 @@ type CaseEditForm = {
 };
 const FREQUENCIES=['Monthly','Quarterly','Half Yearly','Annually','One Time'] as const;
 const PAYMENT_MODES=['Cash','Cheque','NEFT/RTGS','UPI','Credit/Debit Card','Net Banking'] as const;
+const TERM_OPTIONS=['','Single Pay',...Array.from({length:50},(_,i)=>`${i+1} Year${i?'s':''}`)];
+const toIsoDate=(v:string)=>{const x=v.trim();const m=/^(\d{2})\/(\d{2})\/(\d{4})$/.exec(x);return m?`${m[3]}-${m[2]}-${m[1]}`:x;};
 function initialForm(value:LifeHealthCaseDetail):CaseEditForm {
  return {sourcingDate:value.sourcing_date,insurerId:value.insurance_company_id,customerName:value.customer_name,customerPhone:value.customer_phone,
   customerAddress:value.customer_address,productName:value.product_name,proposalNumber:value.proposal_number,
@@ -201,9 +203,12 @@ export default function LifeHealthCaseDetailScreen(){
       </View>
       <Section number="01" title="Policy source & ownership">
         <View style={styles.grid}>
-          <Field label="Proposal date" value={dateLabel(record.sourcing_date)}/>
+          {form&&record.status_group==='pending'?<InlineInput label="Proposal date" value={dateLabel(form.sourcingDate)}
+            onChange={v=>setField('sourcingDate',toIsoDate(v))} placeholder="DD/MM/YYYY"/>:
+            <Field label="Proposal date" value={dateLabel(record.sourcing_date)}/>}
           <Field label="Policy type" value={record.business_line}/>
-          <Field label="Intermediary type" value={record.intermediary_type} meta={`RM · ${record.rm_name?.trim()||'—'}`} secondaryMeta={record.rm_code?`ID · ${record.rm_code}`:undefined}/>
+          <Field label="Intermediary type" value={record.intermediary_type}
+            meta={`RM · ${record.rm_name?.trim()||'—'}`} secondaryMeta={record.rm_code?`ID · ${record.rm_code}`:undefined}/>
           <Field label="Lead source" value={record.lead_source}
             meta={record.intermediary_code?`ID · ${record.intermediary_code}`:undefined}
             secondaryMeta={record.intermediary_mobile||undefined}/>
@@ -212,36 +217,101 @@ export default function LifeHealthCaseDetailScreen(){
 
       <Section number="02" title="Customer / proposer">
         <View style={styles.grid}>
-          <Field label="Client / proposer name" value={record.customer_name} required/>
-          <Field label="Client mobile number" value={record.customer_phone} required/>
-          <Field label="Address" value={record.customer_address} wide multiline/>
+          {form&&record.status_group!=='rejected'?<>
+            <InlineInput label="Client / proposer name" value={form.customerName} onChange={v=>setField('customerName',v)} required/>
+            <InlineInput label="Client mobile number" value={form.customerPhone} onChange={v=>setField('customerPhone',v.replace(/\D/g,'').slice(0,10))} required keyboardType="phone-pad"/>
+            <InlineInput label="Address" value={form.customerAddress} onChange={v=>setField('customerAddress',v)} wide multiline/>
+          </>:<>
+            <Field label="Client / proposer name" value={record.customer_name} required/>
+            <Field label="Client mobile number" value={record.customer_phone} required/>
+            <Field label="Address" value={record.customer_address} wide multiline/>
+          </>}
         </View>
+        {record.status_group==='issued'?<Pressable accessibilityRole="button" disabled={saving}
+          onPress={()=>void saveEdit()} style={styles.saveButton}>
+          <Text style={styles.saveText}>{saving?'Saving…':'Save Changes'}</Text>
+        </Pressable>:null}
       </Section>
 
       <Section number="03" title="Policy product & case details">
         <View style={styles.grid}>
-          <Field label="Insurance company" value={record.insurer_name} required wide multiline/>
-          <Field label="Product name" value={record.product_name} required wide/>
-          <Field label="Case / proposal number" value={record.proposal_number} required wide/>
-          <Field label="PPT · Premium Paying Term" value={record.premium_paying_term}/>
-          <Field label="PD · Policy Duration / Term" value={record.policy_duration}/>
-          <Field label="Payment frequency" value={record.payment_frequency} required/>
+          {form&&record.status_group==='pending'?<>
+            <InlineChoice label="Insurance company" value={insurers.find(i=>i.id===form.insurerId)?.name||record.insurer_name}
+              onPress={()=>setChoice({key:'insurerId',values:insurers})} required wide/>
+            <InlineInput label="Product name" value={form.productName} onChange={v=>setField('productName',v)} required wide/>
+            <InlineInput label="Case / proposal number" value={form.proposalNumber} onChange={v=>setField('proposalNumber',v.toUpperCase())} required wide/>
+            <InlineChoice label="PPT · Premium Paying Term" value={form.premiumPayingTerm}
+              onPress={()=>setChoice({key:'premiumPayingTerm',values:TERM_OPTIONS.map(name=>({id:name,name}))})}/>
+            <InlineChoice label="PD · Policy Duration / Term" value={form.policyDuration}
+              onPress={()=>setChoice({key:'policyDuration',values:TERM_OPTIONS.map(name=>({id:name,name}))})}/>
+            <InlineChoice label="Payment frequency" value={form.paymentFrequency}
+              onPress={()=>setChoice({key:'paymentFrequency',values:FREQUENCIES.map(name=>({id:name,name}))})} required/>
+          </>:<>
+            <Field label="Insurance company" value={record.insurer_name} required wide multiline/>
+            <Field label="Product name" value={record.product_name} required wide/>
+            <Field label="Case / proposal number" value={record.proposal_number} required wide/>
+            <Field label="PPT · Premium Paying Term" value={record.premium_paying_term}/>
+            <Field label="PD · Policy Duration / Term" value={record.policy_duration}/>
+            <Field label="Payment frequency" value={record.payment_frequency} required/>
+          </>}
         </View>
       </Section>
 
       <Section number="04" title="Premium & payment">
         <View style={styles.grid}>
-          <Field label="Premium amount" value={amount(record.premium_amount)} required/>
-          <Field label="Payment mode" value={record.payment_mode} required/>
+          {form&&record.status_group==='pending'?<>
+            <InlineInput label="Premium amount" value={form.premiumAmount} onChange={v=>setField('premiumAmount',v.replace(/[^\d.]/g,''))}
+              keyboardType="decimal-pad" required/>
+            <InlineChoice label="Payment mode" value={form.paymentMode}
+              onPress={()=>setChoice({key:'paymentMode',values:PAYMENT_MODES.map(name=>({id:name,name}))})} required/>
+          </>:<>
+            <Field label="Premium amount" value={amount(record.premium_amount)} required/>
+            <Field label="Payment mode" value={record.payment_mode} required/>
+          </>}
         </View>
+        <View style={styles.remarkArea}>
+          <Text style={styles.fieldLabel}>REMARKS</Text>
+          {record.remarks?.trim()?<View style={styles.remarkRow}>
+            <Text style={styles.remarkHistory} selectable>{record.remarks}</Text>
+            {record.status_group==='pending'?<Pressable accessibilityRole="button" style={styles.remarkButtonCompact}
+              onPress={()=>setRemarkOpen(true)}><Ionicons name="add" size={15} color={navy}/><Text style={styles.remarkButtonLabel}>Add Remark</Text></Pressable>:null}
+          </View>:record.status_group==='pending'?<Pressable accessibilityRole="button" accessibilityLabel="Add Remark" style={styles.remarkButtonFull}
+            onPress={()=>setRemarkOpen(true)}>
+            <Ionicons name="chatbox-ellipses-outline" size={17} color={navy}/>
+            <Text style={styles.remarkButtonLabel}>Add Remark</Text>
+          </Pressable>:null}
+        </View>
+        {record.status_group==='pending'?<Pressable accessibilityRole="button" disabled={saving}
+          onPress={()=>void saveEdit()} style={styles.saveButton}>
+          <Ionicons name="save-outline" color="#FFFFFF" size={17}/>
+          <Text style={styles.saveText}>{saving?'Saving…':'Save Changes'}</Text>
+        </Pressable>:null}
+        {saveError?<Text style={styles.saveError}>{saveError}</Text>:null}
       </Section>
 
       {record.status_group==='pending'?<Section number="05" title="Mark Policy Issued">
-        <Pressable accessibilityRole="button" accessibilityLabel="Open the case issuance form in Operations Portal"
-          onPress={()=>void openOperations()} style={styles.portalButton}>
-          <Ionicons name="shield-checkmark-outline" size={18} color="#FFFFFF"/>
-          <Text style={styles.portalButtonText}>Open Issuance Form</Text>
-          <Ionicons name="open-outline" size={16} color="#FFFFFF"/>
+        <View style={styles.grid}>
+          <InlineInput label="Policy number" value={issue.policyNumber} onChange={v=>setIssueField('policyNumber',v.toUpperCase())} required/>
+          <InlineInput label="Issuance date" value={dateLabel(issue.issuanceDate)}
+            onChange={v=>setIssueField('issuanceDate',toIsoDate(v))} placeholder="DD/MM/YYYY"/>
+          <InlineInput label="Policy start date" value={dateLabel(issue.startDate)}
+            onChange={v=>setIssueField('startDate',toIsoDate(v))} placeholder="DD/MM/YYYY"/>
+          <InlineInput label="Policy end / maturity date" value={dateLabel(issue.endDate)}
+            onChange={v=>setIssueField('endDate',toIsoDate(v))} placeholder="DD/MM/YYYY"/>
+          <InlineInput label="PPT end date" value={dateLabel(issue.pptEndDate)}
+            onChange={v=>setIssueField('pptEndDate',toIsoDate(v))} placeholder="DD/MM/YYYY"/>
+          <InlineInput label="Next installment date" value={dateLabel(issue.nextInstallmentDate)}
+            onChange={v=>setIssueField('nextInstallmentDate',toIsoDate(v))} placeholder="DD/MM/YYYY"/>
+          <InlineInput label="Final premium" value={issue.finalPremium}
+            onChange={v=>setIssueField('finalPremium',v.replace(/[^\d.]/g,''))} keyboardType="decimal-pad"/>
+          <InlineInput label="Sum assured / insured" value={issue.sumInsured}
+            onChange={v=>setIssueField('sumInsured',v.replace(/[^\d.]/g,''))} keyboardType="decimal-pad"/>
+        </View>
+        {issueError?<Text style={styles.saveError}>{issueError}</Text>:null}
+        <Pressable accessibilityRole="button" accessibilityLabel="Create Policy and Close Case"
+          disabled={issuing} onPress={()=>void requestIssue()} style={styles.saveButton}>
+          <Ionicons name="shield-checkmark-outline" color="#FFFFFF" size={18}/>
+          <Text style={styles.saveText}>{issuing?'Processing…':'Create Policy & Close Case'}</Text>
         </Pressable>
       </Section>:null}
       {record.policy_no?<Section number="05" title="Issued policy">
