@@ -110,6 +110,9 @@ export async function extractPolicyIntakeWithN8nFallback(
  */
 export function requiresN8nForIntake(intakeId: string): boolean {
   if (process.env.INSUREIT_N8N_OCR_MODE !== "required") return false;
+  // Explicit and separately reviewed global Motor cutover switch. Never
+  // enable until all relevant insurer and scanned-document parsers exist.
+  if (process.env.INSUREIT_N8N_OCR_ALL_MOTOR === "true") return true;
   const listed = (process.env.INSUREIT_N8N_OCR_ALLOWED_INTAKE_IDS ?? "")
     .split(",").map(value => value.trim()).filter(Boolean);
   return listed.includes(intakeId);
