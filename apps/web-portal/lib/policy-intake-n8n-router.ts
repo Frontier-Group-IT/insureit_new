@@ -22,13 +22,17 @@ export async function extractPolicyIntakeWithN8nFallback(
   extractWithExistingGoogle: PolicyIntakeLegacyExtractor,
 ): Promise<PolicyIntakeOcrResult> {
   const rawMode = process.env.INSUREIT_N8N_OCR_MODE;
-  const mode = rawMode === "shadow" || rawMode === "prefer" ? rawMode : "off";
-  // Never route any record unless its UUID was explicitly approved.
+  const mode = rawMode === "shadow" || rawMode === "prefer" || rawMode === "required" ? rawMode : "off";
+  const autoIcici3005 = mode === "required" && process.env.INSUREIT_N8N_OCR_AUTO_ICICI_3005 === "true";
+  const forced = requiresN8nForIntake(intakeId);
+  // Explicit UUIDs cover the controlled manual pilot; recognition is a separate opt-in.
   const allowed = new Set((process.env.INSUREIT_N8N_OCR_ALLOWED_INTAKE_IDS ?? "")
     .split(",").map((v) => v.trim()).filter(Boolean));
-  if (mode === "off" || !allowed.has(intakeId) ||
-      file.type !== "application/pdf" || !file.size || file.size > 15 * 1024 * 1024) {
-    return extractWithExistingGoogle();
+  if (mode === "off" || (!allowed.has(intakeId) && !autoIcici3005 && !forced)
+      || file.type !== "application/pdf" || !file.size || file.size > 15 * 1024 * 1024) {
+    return forced
+      ? { ok: false, error: "The n8n-only route requires a supported PDF up to 15 MB. Review this Intake manually." }
+      : extractWithExistingGoogle();
   }
 
   // Native text detection costs no external API fee. Scanned/non-3005 formats
@@ -40,6 +44,20 @@ export async function extractPolicyIntakeWithN8nFallback(
     candidate = /ICICI\s+LOMBARD/i.test(head) && /Product\s+Code\s*:?\s*3005\b/i.test(head);
   } catch {
     // Unreadable/native-text-free documents must keep the existing OCR fallback.
+  }
+  if (mode === "required") {
+    if (forced) {
+      // Exact UUID pilot or explicitly enabled all-Motor cutover: no Google fallback.
+      return extractPolicyIntakeWithN8nOnly(intakeId, storagePath);
+    }
+    if (autoIcici3005 && candidate) {
+      // Recognized native ICICI Product 3005: n8n is authoritative.
+      // It fetches the current private PDF itself via a 120-second Storage URL.
+      return extractPolicyIntakeWithN8nOnly(intakeId, storagePath, true);
+    }
+    // Non-ICICI documents preserve the existing business process until
+    // their n8n parser is trained. Google is NOT used for recognized 3005.
+    return extractWithExistingGoogle();
   }
   if (!candidate) return extractWithExistingGoogle();
 
@@ -119,9 +137,12 @@ export function requiresN8nForIntake(intakeId: string): boolean {
 }
 
 export async function extractPolicyIntakeWithN8nOnly(
-  intakeId: string, storagePath: string,
+  intakeId: string, storagePath: string, verifiedAutoIcici3005 = false,
 ): Promise<PolicyIntakeOcrResult> {
-  if (!requiresN8nForIntake(intakeId)) {
+  const autoAuthorized = verifiedAutoIcici3005
+    && process.env.INSUREIT_N8N_OCR_MODE === "required"
+    && process.env.INSUREIT_N8N_OCR_AUTO_ICICI_3005 === "true";
+  if (!requiresN8nForIntake(intakeId) && !autoAuthorized) {
     return { ok: false, error: "n8n-only processing is not authorized for this Intake." };
   }
   const admin = createSupabaseAdminClient();
