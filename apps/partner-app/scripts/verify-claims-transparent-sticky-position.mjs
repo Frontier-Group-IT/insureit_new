@@ -16,4 +16,12 @@ assert.match(source, /<View style=\{styles\.stickySearchBody\}>\{searchControls\
 assert.match(source, /ListHeaderComponent=\{header\}/);
 assert.match(source, /<View style=\{styles\.summaryRow\}>/);
 assert.match(source, /accessibilityLabel="Add Claim"/);
+// Claims typography should stay compact without hiding the Add Claim label or changing its route.
+assert.match(source, /<Text numberOfLines=\{1\} adjustsFontSizeToFit minimumFontScale=\{0\.85\} style=\{styles\.summaryAddClaimText\}>Add Claim<\/Text>/);
+assert.match(source, /summaryAddClaim: \{ width: 88, minHeight: 38/, 'Allow full Add Claim label inside one row.');
+assert.match(source, /onPress=\{\(\) => router\.push\('\/claim\/select-vehicle' as never\)\}/, 'Preserve authorized Add Claim navigation.');
+assert.match(source, /summaryChipLabel: \{[^\n]*fontWeight: '600'/, 'Keep count filter labels medium-weight.');
+assert.match(source, /summaryChipCount: \{[^\n]*fontWeight: '500'/, 'Use regular/medium count labels.');
+assert.match(source, /statusText: \{[^\n]*fontSize: 8, lineHeight: 10, fontWeight: '600'/, 'Keep status labels legible.');
+assert.match(source, /claimNo: \{[^\n]*fontSize: 11\.5, lineHeight: 15, fontWeight: '500'/, 'Keep claim number readable and moderately emphasized.');
 console.log('Partner Claims navy sticky positioning regression passed');
