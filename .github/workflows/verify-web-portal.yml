@@ -67,6 +67,9 @@ jobs:
         run: node scripts/daily-report-minimal-header-regression.mjs
       - name: Daily Report concise employee view and no disclaimer regression
         run: node scripts/daily-report-remove-extra-text-regression.mjs
+      - name: Daily Report activity summary family grouping regression
+        run: node scripts/daily-report-group-activity-summary-regression.mjs
+
       - name: Daily Report responsive five-activity summary grid regression
         run: node scripts/daily-report-five-per-row-regression.mjs
       - name: Daily Report header scope and period range regression
