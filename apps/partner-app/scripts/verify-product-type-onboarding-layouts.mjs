@@ -146,6 +146,11 @@ assert.match(screen,/DocumentPicker.getDocumentAsync/, 'Document rows open the i
 assert.match(screen,/uploadNativeOnboardingDocument/, 'Attachments upload to authenticated intake storage.');
 assert.match(screen,/deleteNativeOnboardingDocument/, 'Attachments may be removed.');
 assert.match(screen,/listNativeOnboardingDocuments/, 'Saved attachments restore when reopening the intake.');
+assert.match(screen,/const savedPolicyType=data\?\.draft\.businessLine/, 'Document loading must use the persisted policy type.');
+assert.match(screen,/productType!==savedPolicyType\)return/, 'Unsaved policy-type changes must not request another type document list.');
+assert.match(screen,/\.catch\(\(\)=>\{if\(live\)setOnboardingDocuments\(\[\]\);\}\)/, 'Background document reads must not trigger visible error popups.');
+assert.match(screen,/setDocumentError\(cause instanceof Error\?cause\.message:'Document could not be uploaded\.'/,'Explicit upload failures must still show error feedback.');
+assert.match(screen,/setData\(current=>current\?\{\.\.\.current,revision:saved\.revision,draft\}:current\)/,'After saving a type, refresh the persisted draft identity.');
 assert.match(screen,/Replace':'Add'/, 'Uploaded document may be replaced.');
 assert.match(documentApi,/await context\(request,intakeId,line\)/, 'Uploads are reviewer scoped.');
 assert.match(documentApi,/intake.assigned_to_profile_id!==user.id/, 'Only assigned reviewer can manage uploads.');
@@ -171,15 +176,17 @@ assert.match(screen,/productExtras\.some\(item=>item\.key===f\.key\)\?'Optional'
 assert.match(screen,/f.key==='previousClaims'\?'Brief reference'/, 'Previous claims uses the portal brief-reference hint.');
 assert.match(screen,/updateProduct\('remarks',value\)/, 'Inline remarks persist in the existing product draft.');
 assert.match(screen,/productType!=='Non Motor'\?<View style=\{styles.section\}>/, 'Separate Remarks card is not shown for Non Motor.');
-// Approved Policy Onboarding UX: document access, save confirmation and consistent popups.
+// Approved Policy Onboarding UX: full-width document access, cancel safeguard and error popup.
 assert.match(screen,/accessibilityLabel="View Policy"/,'View Policy must appear above bottom actions.');
 assert.match(screen,/getPartnerPolicyIntakeDocumentUrl\(id\)/,'Document viewing must reuse scoped signed policy copy URL.');
-assert.match(screen,/accessibilityLabel="Save Draft"/,'Draft save action remains available without booking.');
-assert.match(screen,/setDialog\('confirm-save'\)/,'Saving requests explicit confirmation.');
+assert.doesNotMatch(screen,/accessibilityLabel="Save Draft"/,'Remove standalone Save Draft button.');
+assert.match(screen,/documentAndSaveActions:\{marginBottom:9,alignItems:'stretch'\}/,'View Policy wrapper must not allocate two columns.');
+assert.match(screen,/viewPolicyButton:\{width:'100%'/,'View Policy button must occupy full available width.');
+assert.match(screen,/onPress=\{\(\)=>\{void save\(\)\.then\(success=>\{if\(success\)setCommercialModal\(null\);\}\);\}\}/,'Commercial popup must retain its underlying draft save action.');
+assert.doesNotMatch(screen,/setDialog\('confirm-save'\)/,'Remove orphan save confirmation popup.');
 assert.match(screen,/setDialog\('discard'\)/,'Cancel protects unsaved changes in custom dialog.');
 assert.match(screen,/onRequestClose=\{dismissDialog\}/,'Popup dismissal must be accessible on Android.');
 assert.match(screen,/setDialog\('error'\)/,'Errors must be shown in popup.');
-assert.match(screen,/setDialog\('saved'\)/,'Successful draft save shows confirmation.');
 assert.doesNotMatch(screen,/<Text style=\{styles.documentHint\}>/,'Upload hint must not render below Documents.');
 assert.doesNotMatch(screen, /\{documentError\?<Text style=\{styles.documentError\}>/,'Document errors must not be inline.');
 assert.match(screen,/accessibilityLabel="Cancel Policy Onboarding"/, 'Cancel button is available.');

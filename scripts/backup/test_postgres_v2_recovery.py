@@ -13,7 +13,7 @@ from postgres_v2_to_r2 import (
     AAD, EXPECTED, FORMAT, PREFIX, PROJECT_REF,
     make_v2_archive, commit_v2,
 )
-from verify_postgres_v2_r2 import get_v2_manifest, extract_v2
+from verify_postgres_v2_r2 import get_v2_manifest, extract_v2, require_expected_snapshot, require_snapshot_stamp
 from verify_postgres_v2_rows import archive_counts, quote, verify
 
 
@@ -72,6 +72,25 @@ class V2BackupTests(TestCase):
             r2.objects[location] = bytes(raw_manifest)
             with self.assertRaises(Exception):
                 get_v2_manifest(r2, "private", key)
+
+    def test_snapshot_lock_and_timestamp_rejected_on_drift(self):
+        snapshot = "20261114T033000Z"
+        self.assertEqual(
+            require_expected_snapshot({"created_at": snapshot}, snapshot),
+            snapshot,
+        )
+        self.assertEqual(
+            require_expected_snapshot({"created_at": snapshot}, ""),
+            snapshot,
+        )
+        with self.assertRaises(ValueError):
+            require_expected_snapshot(
+                {"created_at": snapshot}, "20261113T033000Z",
+            )
+        for unsafe in ("20261114T033000Z\\n", "../20261114T033000Z", "", "latest"):
+            with self.subTest(unsafe=unsafe):
+                with self.assertRaises(ValueError):
+                    require_snapshot_stamp(unsafe)
 
     def test_rejects_traversal_tar_member(self):
         import tarfile
