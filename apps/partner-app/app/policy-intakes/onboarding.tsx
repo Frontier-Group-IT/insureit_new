@@ -9,7 +9,7 @@ import { motorValidityEnds } from '@/lib/motor-validity-dates';
 import { createPartnerPolicyIntakeBridgeUrl, getPartnerPolicyIntakeDocumentUrl } from '@/lib/policy-intakes';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { PartnerPolicyDateField } from '@/components/policy-intakes/partner-policy-date-field';
-import { prepareNativePolicyOnboarding, saveNativePolicyOnboarding, bookNativePolicyOnboarding, createNativeLifeHealthCase, requestNativePolicyDateApproval, verifyNativePolicyDateApproval, lookupNativePolicyRc, prepareNewNativePolicyOnboarding, bookNewNativePolicyOnboarding, lookupNewNativePolicyRc, requestNewNativePolicyDateApproval, verifyNewNativePolicyDateApproval, searchNativeNonMotorCustomers, type NativeNonMotorCustomer, type NativePolicyDraft, type NativeOnboardingData, type NativeProductType, listNativeOnboardingDocuments, uploadNativeOnboardingDocument, deleteNativeOnboardingDocument, type NativeOnboardingDocument, type NativeOnboardingDocumentType } from '@/lib/policy-onboarding';
+import { prepareNativePolicyOnboarding, saveNativePolicyOnboarding, bookNativePolicyOnboarding, createNativeLifeHealthCase, requestNativePolicyDateApproval, verifyNativePolicyDateApproval, lookupNativePolicyRc, prepareNewNativePolicyOnboarding, bookNewNativePolicyOnboarding, lookupNewNativePolicyRc, createNewNativeLifeCase, requestNewNativePolicyDateApproval, verifyNewNativePolicyDateApproval, searchNativeNonMotorCustomers, type NativeNonMotorCustomer, type NativePolicyDraft, type NativeOnboardingData, type NativeProductType, listNativeOnboardingDocuments, uploadNativeOnboardingDocument, deleteNativeOnboardingDocument, type NativeOnboardingDocument, type NativeOnboardingDocumentType } from '@/lib/policy-onboarding';
 
 type FieldKey = keyof NativePolicyDraft;
 type Field = { key:FieldKey; label:string; required?:boolean; options?:string[] };
@@ -169,6 +169,7 @@ export default function NativePolicyOnboarding(){
   const [payinSummaryExpanded,setPayinSummaryExpanded]=useState(false);
   const [payoutBasisExpanded,setPayoutBasisExpanded]=useState(false);
   const [onboardingDocuments,setOnboardingDocuments]=useState<NativeOnboardingDocument[]>([]);
+  const [standaloneLifeDocuments,setStandaloneLifeDocuments]=useState<Partial<Record<NativeOnboardingDocumentType,{uri:string;name:string;mimeType?:string}>>>({});
   const [documentBusy,setDocumentBusy]=useState<NativeOnboardingDocumentType|null>(null);
   const [documentError,setDocumentError]=useState('');
   const [openingPolicyCopy,setOpeningPolicyCopy]=useState(false);
@@ -185,7 +186,7 @@ export default function NativePolicyOnboarding(){
     setLoading(true);setError('');
     try{
       const loaded=isNew?await prepareNewNativePolicyOnboarding():await prepareNativePolicyOnboarding(id);
-      setData(loaded);setDraft(loaded.draft);setDirty(false);
+      setData(loaded);setDraft(loaded.draft);setDirty(false);setOnboardingDocuments([]);setStandaloneLifeDocuments({});
     }catch(e){setError(e instanceof Error?e.message:'Onboarding could not be opened.');}
     finally{setLoading(false);}
   },[id,isNew]);
@@ -216,15 +217,20 @@ export default function NativePolicyOnboarding(){
         setDocumentError('Choose a PDF or image up to 4 MB.');return;
       }
       setDocumentBusy(type);
-      if(dirty){
+      if(dirty&&!isNew){
         const saved=await saveNativePolicyOnboarding(id,data.revision,draft);
         setData(current=>current?{...current,revision:saved.revision,draft}:current);
         setDirty(false);
       }
-      const result=await uploadNativeOnboardingDocument(id,productType,type,{
-        uri:file.uri,name:file.name,mimeType:file.mimeType||undefined,
-      });
-      setOnboardingDocuments(rows=>[...rows.filter(item=>item.type!==type),result.document]);
+      if(isNew){
+        setStandaloneLifeDocuments(current=>({...current,[type]:{uri:file.uri,name:file.name,mimeType:file.mimeType||undefined}}));
+        setOnboardingDocuments(rows=>[...rows.filter(item=>item.type!==type),{type,fileName:file.name}]);
+      }else{
+        const result=await uploadNativeOnboardingDocument(id,productType,type,{
+          uri:file.uri,name:file.name,mimeType:file.mimeType||undefined,
+        });
+        setOnboardingDocuments(rows=>[...rows.filter(item=>item.type!==type),result.document]);
+      }
     }catch(cause){
       setDocumentError(cause instanceof Error?cause.message:'Document could not be uploaded.');
     }finally{setDocumentBusy(null);}
@@ -235,10 +241,16 @@ export default function NativePolicyOnboarding(){
       {text:'Cancel',style:'cancel'},
       {text:'Remove',style:'destructive',onPress:()=>{
         setDocumentBusy(type);setDocumentError('');
-        void deleteNativeOnboardingDocument(id,productType,type)
-          .then(()=>setOnboardingDocuments(rows=>rows.filter(row=>row.type!==type)))
-          .catch(cause=>setDocumentError(cause instanceof Error?cause.message:'Could not remove document.'))
-          .finally(()=>setDocumentBusy(null));
+        if(isNew){
+          setStandaloneLifeDocuments(current=>{const updated={...current};delete updated[type];return updated;});
+          setOnboardingDocuments(rows=>rows.filter(row=>row.type!==type));
+          setDocumentBusy(null);
+        }else{
+          void deleteNativeOnboardingDocument(id,productType,type)
+            .then(()=>setOnboardingDocuments(rows=>rows.filter(row=>row.type!==type)))
+            .catch(cause=>setDocumentError(cause instanceof Error?cause.message:'Could not remove document.'))
+            .finally(()=>setDocumentBusy(null));
+        }
       }},
     ]);
   };
@@ -285,8 +297,8 @@ export default function NativePolicyOnboarding(){
     setVerifiedApprovalId(null);
   };
   const update=(key:FieldKey,value:string)=>{
-    if(isNew&&key==='businessLine'&&value!=='Motor'){
-      Alert.alert('Motor policy onboarding','Standalone onboarding currently supports Motor. Use Policy Intake and Operations for other policy types.');
+    if(isNew&&key==='businessLine'&&value!=='Motor'&&value!=='Life'){
+      Alert.alert('Standalone onboarding','Add Policy currently supports Motor and Life. Use Policy Intake and Operations for other policy types.');
       return;
     }
     setDraft(current=>{
@@ -388,9 +400,11 @@ export default function NativePolicyOnboarding(){
         setData(current=>current?{...current,revision}:current);
         setDirty(false);
       }
-      const result=await createNativeLifeHealthCase(id,revision);
+      const result=isNew?
+        await createNewNativeLifeCase(draft,standaloneLifeDocuments):
+        await createNativeLifeHealthCase(id,revision);
       Alert.alert('Case created',`${productType} case ${result.case.number} created. Policy issuance remains pending in Operations.`,[
-        {text:'Return to Intake',onPress:()=>router.back()},
+        {text:isNew?'Return to Policies':'Return to Intake',onPress:()=>isNew?router.replace('/(tabs)/policies'):router.back()},
       ]);
     }catch(cause){
       setError(cause instanceof Error?cause.message:'Could not create the Life/Health case. Check the case register before retrying.');
@@ -575,7 +589,7 @@ export default function NativePolicyOnboarding(){
     const raw=draft[f.key];
     const current=typeof raw==='string'?raw:'';
     if(['issuanceDate','validFrom','validUpto','tpValidUpto','cpaValidUpto'].includes(f.key))return <PartnerPolicyDateField key={f.key} fullWidth={fullWidth} label={f.key==='issuanceDate'?'Policy issuance date':f.label.replace(' (YYYY-MM-DD)','')} value={current} required={f.required} onChange={v=>update(f.key,v)}/>;
-    const productOptions=isNew&&f.key==='businessLine'?['Motor']:f.key==='policyProduct'?(draft.vehicleClass==='CPM'?['Comprehensive','SAOD']:['Comprehensive','Third Party','SAOD',...(['PCP','TWP'].includes(draft.vehicleClass)?['Bundled']:[]),'Long Term Package','Long Term Third Party']):f.options??[];
+    const productOptions=isNew&&f.key==='businessLine'?['Motor','Life']:f.key==='policyProduct'?(draft.vehicleClass==='CPM'?['Comprehensive','SAOD']:['Comprehensive','Third Party','SAOD',...(['PCP','TWP'].includes(draft.vehicleClass)?['Bundled']:[]),'Long Term Package','Long Term Third Party']):f.options??[];
     const options=f.key==='insurerId'?data?.insurers??[]:f.key==='make'?(data?.manufacturers??[]).map(x=>({value:x,label:x})):f.key==='manufacturingYear'?manufacturingYearOptions.map(value=>({value,label:value})):productOptions.map(x=>({value:x,label:f.key==='policyProduct'&&x==='Comprehensive'?'Package':x}));
     const displayed=options.find(x=>x.value===current)?.label??current;
     const masterSourceMatches=Boolean(data?.sourceMeta&&data.sourceMeta.code===draft.intermediaryCode&&data.sourceMeta.name.trim().toLowerCase()===draft.leadSource.trim().toLowerCase());
@@ -846,7 +860,7 @@ export default function NativePolicyOnboarding(){
     {error&&!draft?<View style={styles.error}><Ionicons name="alert-circle-outline" size={16} color="#B42318"/><Text style={styles.errorText}>{error}</Text></View>:null}
     {!loading&&!draft?<Pressable style={styles.retry} onPress={()=>void load()}><Text style={styles.retryText}>Retry loading</Text></Pressable>:null}
     {draft?<>
-      {isNew?<View style={styles.section}><Text style={styles.muted}>New Motor Policy · Complete the blank form and select Create Active Policy. No Policy Intake will be created. This form is not saved until the policy is booked.</Text></View>:null}
+      {isNew?<View style={styles.section}><Text style={styles.muted}>{isMotor?'New Motor Policy · Complete the blank form and select Create Active Policy.':'New Life Policy · Complete the blank form and select Create Policy. Issuance remains pending in Operations.'} No Policy Intake will be created. This form is not saved until submission.</Text></View>:null}
       {sourceSection()}
       {isMotor?motorVehicleSection:productType==='Non Motor'?nonMotorCustomerPolicySection:productSection('02','Customer / Proposer',commonPerson)}
       {isMotor?motorProductSection:productType==='Non Motor'?nonMotorRiskSection:productSection('03','Policy product & case details',lifeProduct)}
