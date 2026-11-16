@@ -86,12 +86,12 @@ export default function LifeHealthCaseRegisterScreen() {
              style={({pressed})=>[styles.caseRow,pressed&&styles.caseRowPressed]}
            >
              <View style={styles.logoShell}>
-               <Ionicons name="document-text-outline" size={21} color="#3156B8"/>
-               {row.insurer_name?<PartnerInsurerLogo
+               <PartnerInsurerLogo
                  name={row.insurer_name}
                  style={styles.insurerLogo}
-                 accessibilityLabel={row.insurer_name}
-               />:null}
+                 accessibilityLabel={row.insurer_name || 'Insurer logo unavailable'}
+                 fallbackContent={<Ionicons name="document-text-outline" size={23} color="#3156B8"/>}
+               />
              </View>
              <View style={styles.caseMain}>
                <Text style={styles.customerName} numberOfLines={1}>{row.customer_name||'Customer pending'}</Text>
@@ -168,8 +168,8 @@ const styles=StyleSheet.create({
  caseRows:{gap:3},
  caseRow:{minHeight:60,flexDirection:'row',alignItems:'center',gap:7,backgroundColor:'#FFF',borderColor:'#E2E9F3',borderWidth:1,borderRadius:8,paddingHorizontal:8,paddingVertical:6},
  caseRowPressed:{backgroundColor:'#F6F9FF'},
- logoShell:{width:36,height:36,borderRadius:8,alignItems:'center',justifyContent:'center',backgroundColor:'#F5F8FC',borderColor:'#E2E9F3',borderWidth:1,overflow:'hidden'},
- insurerLogo:{width:31,height:31,position:'absolute'},
+ logoShell:{width:40,height:40,alignItems:'center',justifyContent:'center'},
+ insurerLogo:{width:40,height:40},
  caseMain:{flex:1,minWidth:0,gap:2},
  customerName:{fontSize:12,lineHeight:16,fontWeight:'800',color:'#173A7D'},
  caseNumber:{fontSize:10,lineHeight:13,color:'#5C6C84',fontWeight:'600'},
