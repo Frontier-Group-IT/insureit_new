@@ -110,7 +110,7 @@ export async function POST(request:Request){
         if(!result.ok)return reply(result.error,400);
         return good({approval_id:result.approvalId,expires_at:result.expiresAt});
       }
-      const result=await verifyPolicyDateApprovalForVerifiedActor({...approvalInput,approvalId:body.approval_id??"",otp:body.otp??""},profile);
+      const result=await verifyPolicyDateApprovalForVerifiedActor(body.approval_id??"",body.otp??"",approvalInput,profile);
       if(!result.ok)return reply(result.error,400);
       return good({verified:true});
     }
