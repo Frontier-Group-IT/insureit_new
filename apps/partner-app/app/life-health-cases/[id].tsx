@@ -229,7 +229,7 @@ export default function LifeHealthCaseDetailScreen(){
 
       <Section number="01" title="Policy source & ownership">
         <View style={styles.grid}>
-          <Field label="Proposal date" value={dateLabel(record.sourcing_date)}/>
+          {inline("sourcingDate","Proposal date",dateLabel(record.sourcing_date))}
           <Field label="Policy type" value={record.business_line}/>
           <Field label="Intermediary type" value={record.intermediary_type} meta={`RM · ${record.rm_name?.trim()||'—'}`} secondaryMeta={record.rm_code?`ID · ${record.rm_code}`:undefined}/>
           <Field label="Lead source" value={record.lead_source}
@@ -240,36 +240,66 @@ export default function LifeHealthCaseDetailScreen(){
 
       <Section number="02" title="Customer / proposer">
         <View style={styles.grid}>
-          <Field label="Client / proposer name" value={record.customer_name} required/>
-          <Field label="Client mobile number" value={record.customer_phone} required/>
-          <Field label="Address" value={record.customer_address} wide multiline/>
+          {inline("customerName","Client / proposer name",record.customer_name,true)}
+          {inline("customerPhone","Client mobile number",record.customer_phone,true,false,false,"phone-pad")}
+          {inline("customerAddress","Address",record.customer_address,false,true,true)}
         </View>
       </Section>
 
       <Section number="03" title="Policy product & case details">
         <View style={styles.grid}>
-          <Field label="Insurance company" value={record.insurer_name} required wide multiline/>
-          <Field label="Product name" value={record.product_name} required wide/>
-          <Field label="Case / proposal number" value={record.proposal_number} required wide/>
-          <Field label="PPT · Premium Paying Term" value={record.premium_paying_term}/>
-          <Field label="PD · Policy Duration / Term" value={record.policy_duration}/>
-          <Field label="Payment frequency" value={record.payment_frequency} required/>
+          {inline("insurerId","Insurance company",record.insurer_name,true,true)}
+          {inline("productName","Product name",record.product_name,true,true)}
+          {inline("proposalNumber","Case / proposal number",record.proposal_number,true,true)}
+          {inline("premiumPayingTerm","PPT · Premium Paying Term",record.premium_paying_term||"")}
+          {inline("policyDuration","PD · Policy Duration / Term",record.policy_duration||"")}
+          {inline("paymentFrequency","Payment frequency",record.payment_frequency,true)}
         </View>
       </Section>
 
       <Section number="04" title="Premium & payment">
         <View style={styles.grid}>
-          <Field label="Premium amount" value={amount(record.premium_amount)} required/>
-          <Field label="Payment mode" value={record.payment_mode} required/>
+          {inline("premiumAmount","Premium amount",amount(record.premium_amount),true,false,false,"decimal-pad")}
+          {inline("paymentMode","Payment mode",record.payment_mode,true)}
         </View>
+        <Text style={styles.fieldLabel}>REMARKS</Text>
+        {record.remarks?.trim()?<View style={styles.remarkInlineRow}>
+          <Text style={styles.remarkExisting} selectable numberOfLines={4}>{record.remarks}</Text>
+          {record.status_group!=='issued'?<Pressable accessibilityRole="button" accessibilityLabel="Add Remark"
+            onPress={()=>{setRemarkError('');setRemarkOpen(true);}} style={styles.remarkInlineAction}>
+            <Ionicons name="add" size={15} color="#FFFFFF"/><Text style={styles.remarkButtonText}>Add Remark</Text>
+          </Pressable>:null}
+        </View>:record.status_group!=='issued'?<Pressable accessibilityRole="button" accessibilityLabel="Add Remark"
+          onPress={()=>{setRemarkError('');setRemarkOpen(true);}} style={styles.remarkFullWidth}>
+          <Ionicons name="chatbubble-ellipses-outline" size={17} color="#FFFFFF"/><Text style={styles.remarkButtonText}>Add Remark</Text>
+        </Pressable>:null}
+        {form&&record.status_group!=='rejected'&&JSON.stringify(form)!==JSON.stringify(initialForm(record))?
+          <View style={styles.saveInline}>
+            {saveError?<Text style={styles.saveError}>{saveError}</Text>:null}
+            <Pressable accessibilityRole="button" accessibilityLabel="Save case changes" disabled={saving}
+              onPress={()=>void saveEdit()} style={styles.portalButton}>
+              {saving?<ActivityIndicator color="#FFFFFF"/>:<Ionicons name="save-outline" size={17} color="#FFFFFF"/>}
+              <Text style={styles.portalButtonText}>{saving?'Saving…':'Save Changes'}</Text>
+            </Pressable>
+          </View>:saveError?<Text style={styles.saveError}>{saveError}</Text>:null}
       </Section>
 
       {record.status_group==='pending'?<Section number="05" title="Mark Policy Issued">
-        <Pressable accessibilityRole="button" accessibilityLabel="Open the case issuance form in Operations Portal"
-          onPress={()=>void openOperations()} style={styles.portalButton}>
-          <Ionicons name="shield-checkmark-outline" size={18} color="#FFFFFF"/>
-          <Text style={styles.portalButtonText}>Open Issuance Form</Text>
-          <Ionicons name="open-outline" size={16} color="#FFFFFF"/>
+        <View style={styles.grid}>
+          {issueField("policyNumber","Policy number",true)}
+          {issueField("issuanceDate","Issuance date",false,true)}
+          {issueField("startDate","Policy start date",true,true)}
+          {issueField("endDate","Policy end / maturity date",false,true)}
+          {issueField("pptEndDate","PPT end date",false,true)}
+          {issueField("nextInstallmentDate","Next installment date",false,true)}
+          {issueField("finalPremium","Final premium",true)}
+          {issueField("sumInsured","Sum assured / insured")}
+        </View>
+        {issueError?<Text style={styles.saveError}>{issueError}</Text>:null}
+        <Pressable accessibilityRole="button" accessibilityLabel="Create Policy and Close Case"
+          onPress={()=>void submitIssue()} disabled={issuing} style={[styles.portalButton,issuing&&{opacity:0.6}]}>
+          {issuing?<ActivityIndicator color="#FFFFFF"/>:<Ionicons name="shield-checkmark-outline" size={18} color="#FFFFFF"/>}
+          <Text style={styles.portalButtonText}>{issuing?'Creating policy…':'Create Policy & Close Case'}</Text>
         </Pressable>
       </Section>:null}
       {record.policy_no?<Section number="05" title="Issued policy">
@@ -299,10 +329,7 @@ export default function LifeHealthCaseDetailScreen(){
         </View>):<Text style={styles.paragraph}>No recorded case activity available.</Text>):
          <View style={{gap:10}}>
           <Text style={styles.paragraph} selectable>{record.remarks?.trim()||'No remarks added yet.'}</Text>
-          {record.status_group!=='issued'?<Pressable accessibilityRole="button" accessibilityLabel="Add case remark" onPress={()=>{setRemarkError('');setRemarkOpen(true);}} style={styles.remarkButton}>
-           <Ionicons name="add-circle-outline" size={17} color="#FFFFFF"/>
-           <Text style={styles.remarkButtonText}>Add Remark</Text>
-          </Pressable>:null}
+
          </View>}
       </Section>
 
@@ -368,6 +395,16 @@ function Field({label,value,meta,secondaryMeta,required=false,wide=false,multili
 }
 
 const styles=StyleSheet.create({
+  inlineInput:{color:navy,fontSize:12,fontWeight:'600'},
+  inlineSelector:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:5},
+  remarkInlineRow:{flexDirection:'row',alignItems:'center',gap:8},
+  remarkExisting:{flex:1,color:navy,fontSize:11,lineHeight:16,backgroundColor:'#F5F8FD',borderRadius:9,padding:10},
+  remarkInlineAction:{flexDirection:'row',alignItems:'center',gap:3,backgroundColor:navy,paddingHorizontal:10,paddingVertical:12,borderRadius:9},
+  remarkFullWidth:{flexDirection:'row',alignItems:'center',justifyContent:'center',gap:8,minHeight:44,backgroundColor:navy,borderRadius:9},
+  saveInline:{gap:6},
+  issueFieldRow:{flexDirection:'row',alignItems:'center',gap:3},
+  issueTextInput:{flex:1,minWidth:0,fontSize:11,color:navy,fontWeight:'600',padding:0},
+
  remarkEditor:{backgroundColor:'#FFFFFF',padding:18,gap:12,borderTopLeftRadius:18,borderTopRightRadius:18},
  remarkButton:{alignSelf:'flex-start',flexDirection:'row',gap:7,alignItems:'center',backgroundColor:'#071E49',borderRadius:10,paddingHorizontal:14,paddingVertical:11},
  remarkButtonText:{fontWeight:'800',color:'#FFFFFF',fontSize:12},
