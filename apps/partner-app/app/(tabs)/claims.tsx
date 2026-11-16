@@ -217,7 +217,7 @@ export default function ClaimsScreen() {
               style={({ pressed }) => [styles.summaryAddClaim, pressed && styles.summaryChipPressed]}
             >
               <Ionicons name="add-circle-outline" size={15} color="#0860C8" />
-              <Text numberOfLines={1} style={styles.summaryAddClaimText}>Add</Text>
+              <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85} style={styles.summaryAddClaimText}>Add Claim</Text>
             </Pressable>
           ) : null}
         </View>
@@ -482,7 +482,7 @@ const styles = StyleSheet.create({
   },
   heroAvatarText: { color: partnerTheme.colors.brandStrong, fontSize: 11.5, lineHeight: 15, fontWeight: Platform.OS === 'ios' ? '400' : '800' },
   heroCopy: { zIndex: 3, position: 'absolute', left: 18, bottom: 12 },
-  heroTitle: { color: '#FFFFFF', fontSize: 15, lineHeight: 18, fontWeight: Platform.OS === 'ios' ? '400' : '800', letterSpacing: -0.2 },
+  heroTitle: { color: '#FFFFFF', fontSize: 15, lineHeight: 18, fontWeight: '700', letterSpacing: -0.2 },
 
   body: { paddingHorizontal: 10, zIndex: 5, backgroundColor: '#FFFFFF' },
   searchRow: {
@@ -521,19 +521,19 @@ const styles = StyleSheet.create({
     borderLeftWidth: StyleSheet.hairlineWidth,
     borderLeftColor: '#D9DFEA',
   },
-  filterText: { color: '#3156B8', ...partnerTheme.typography.caption, fontWeight: Platform.OS === 'ios' ? '400' : '700' },
+  filterText: { color: '#3156B8', ...partnerTheme.typography.caption, fontWeight: '500' },
   banner: { marginTop: 8 },
-  summaryRow: { marginTop: 8, marginBottom: 4, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 5 },
-  summaryChips: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 3 },
+  summaryRow: { marginTop: 8, marginBottom: 4, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 4 },
+  summaryChips: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 3, paddingVertical: 3 },
   summaryChip: { flex: 1, minWidth: 0, minHeight: 38, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 2, paddingHorizontal: 2, borderRadius: 10, backgroundColor: '#F6F8FC', borderWidth: 1, borderColor: '#DEE6F0' },
   summaryChipSelected: { backgroundColor: '#17365D', borderColor: '#17365D' },
   summaryChipPressed: { opacity: 0.78 },
-  summaryChipLabel: { color: '#52627B', fontSize: 8, lineHeight: 12, fontWeight: '700', flexShrink: 1 },
+  summaryChipLabel: { color: '#52627B', fontSize: 8, lineHeight: 12, fontWeight: '600', flexShrink: 1 },
   summaryChipLabelSelected: { color: '#FFFFFF' },
-  summaryChipCount: { color: '#7A889C', fontSize: 8, lineHeight: 11, fontWeight: '700', flexShrink: 0 },
+  summaryChipCount: { color: '#7A889C', fontSize: 8, lineHeight: 11, fontWeight: '500', flexShrink: 0 },
   summaryChipCountSelected: { color: '#E2EEFF' },
-  summaryAddClaim: { width: 62, minHeight: 38, flexShrink: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 3, paddingHorizontal: 4, borderRadius: 12, borderWidth: 1, borderColor: '#E0E7F1', backgroundColor: '#FFFFFF', shadowColor: '#173B6C', shadowOpacity: 0.08, shadowRadius: 4, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
-  summaryAddClaimText: { color: '#0860C8', fontSize: 9, fontWeight: '800' },
+  summaryAddClaim: { width: 88, minHeight: 38, flexShrink: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 3, paddingHorizontal: 5, borderRadius: 12, borderWidth: 1, borderColor: '#E0E7F1', backgroundColor: '#FFFFFF', shadowColor: '#173B6C', shadowOpacity: 0.08, shadowRadius: 4, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
+  summaryAddClaimText: { color: '#0860C8', fontSize: 9, fontWeight: '600', flexShrink: 1 },
   controls: {
     marginTop: 8,
     minHeight: 46,
@@ -596,7 +596,7 @@ const styles = StyleSheet.create({
   claimIcon: { width: 28, height: 28 },
   claimCopy: { flex: 1, minWidth: 0 },
   claimHeadingRow: { minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 5 },
-  claimNo: { flexShrink: 1, color: '#071D49', fontSize: 11.5, lineHeight: 15, fontWeight: Platform.OS === 'ios' ? '400' : '500' },
+  claimNo: { flexShrink: 1, color: '#071D49', fontSize: 11.5, lineHeight: 15, fontWeight: '500' },
   modeBadge: { paddingHorizontal: 5, paddingVertical: 2, borderRadius: 6, backgroundColor: '#E8F1FF' },
   modeBadgeExternal: { backgroundColor: '#F0EAFE' },
   modeBadgeText: { color: '#2355A7', fontSize: 7.2, lineHeight: 9.5, fontWeight: Platform.OS === 'ios' ? '400' : '800' },
@@ -626,7 +626,7 @@ const styles = StyleSheet.create({
   statusDotSuccess: { backgroundColor: '#19A56F' },
   statusDotRejected: { backgroundColor: '#E04F5F' },
   statusDotNew: { backgroundColor: '#FFFFFF' },
-  statusText: { flexShrink: 1, fontSize: 7.4, lineHeight: 9.5, fontWeight: Platform.OS === 'ios' ? '400' : '700', textAlign: 'center' },
+  statusText: { flexShrink: 1, fontSize: 8, lineHeight: 10, fontWeight: '600', textAlign: 'center' },
   statusTextWarning: { color: '#B66A14' },
   statusTextSuccess: { color: '#178157' },
   statusTextRejected: { color: '#C43F50' },
