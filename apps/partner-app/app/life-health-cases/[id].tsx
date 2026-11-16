@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState, type ReactNode } from 'react';
 import { ActivityIndicator, Linking, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
@@ -9,6 +9,19 @@ import { canPartnerAccessCaseRegister } from '@/lib/partner-permissions';
 import { usePartnerSession } from '@/providers/partner-session-provider';
 
 const navy='#17365D';
+const dateLabel=(value:string|null|undefined)=>{
+  const date=value?.trim()??'';
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return date;
+  const [year,month,day]=date.split('-');
+  return `${day}/${month}/${year}`;
+};
+const amount=(value:number)=>`₹${Number(value||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})}`;
+const activityDate=(value:string)=>{
+  const date=new Date(value);
+  return Number.isNaN(date.getTime())?'':date.toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+};
+
+
 type CaseEditForm = {
  customerName:string;customerPhone:string;customerAddress:string;
  productName:string;proposalNumber:string;premiumPayingTerm:string;policyDuration:string;
@@ -29,6 +42,7 @@ export default function LifeHealthCaseDetailScreen(){
  const [record,setRecord]=useState<LifeHealthCaseDetail|null>(null);
  const [documents,setDocuments]=useState<LifeHealthDocument[]>([]);
  const [activities,setActivities]=useState<LifeHealthActivity[]>([]);
+ const [infoTab,setInfoTab]=useState<'activity'|'remarks'>('activity');
  const [loading,setLoading]=useState(true);
  const [error,setError]=useState('');
  const [editing,setEditing]=useState(false);
@@ -78,70 +92,120 @@ export default function LifeHealthCaseDetailScreen(){
    try {await Linking.openURL(operationsCaseUrl(id));}
    catch {setError('Could not open Operations Portal. Sign in there and open the case from Case Register.');}
  };
- if(!canPartnerAccessCaseRegister(context))return <PartnerScreen title="Case Register" onBack={()=>router.back()}>
-   <Text style={styles.note}>You do not have Case Register permission.</Text>
- </PartnerScreen>;
- return <PartnerScreen title="Case Details" onBack={()=>router.back()}>
-   {loading?<ActivityIndicator color={navy} style={{marginTop:24}}/>:null}
-   {error?<View style={styles.alert}><Text style={styles.alertText}>{error}</Text>
-     <Pressable onPress={()=>void load()}><Text style={styles.actionText}>Retry</Text></Pressable></View>:null}
-   {record&&!loading?<View style={styles.wrap}>
-     <View style={styles.hero}>
-       <Text style={styles.caseNo}>{record.case_number}</Text>
-       <Text style={styles.heroText}>{record.business_line} · {record.status_group.toUpperCase()}</Text>
-       <Text style={styles.heroText}>{record.customer_name}</Text>
+  if(!canPartnerAccessCaseRegister(context))return <PartnerScreen title="Case Register" onBack={()=>router.back()}>
+    <Text style={styles.errorText}>You do not have Case Register permission.</Text>
+  </PartnerScreen>;
+
+  return <PartnerScreen title="Case Details" onBack={()=>router.back()}>
+    {loading?<ActivityIndicator color={navy} style={{marginTop:24}}/>:null}
+    {error?<View style={styles.alert}>
+      <Text style={styles.errorText}>{error}</Text>
+      <Pressable accessibilityRole="button" accessibilityLabel="Retry loading case" onPress={()=>void load()}>
+        <Text style={styles.retry}>Retry</Text>
+      </Pressable>
+    </View>:null}
+    {record&&!loading?<View style={styles.wrap}>
+      <View style={[styles.hero,record.status_group==='issued'?styles.heroIssued:record.status_group==='rejected'?styles.heroRejected:null]}>
+        <View style={styles.heroTop}>
+          <Text style={styles.heroTitle}>Life / Health Case</Text>
+          <View style={styles.statusPill}>
+            <Text style={styles.statusText}>{record.status_group==='issued'?'Issued':record.status_group==='rejected'?'Rejected':'Pending'}</Text>
+          </View>
+        </View>
+        <Text style={styles.heroSubtitle} numberOfLines={2}>{record.customer_name} · {record.proposal_number}</Text>
+        <Text style={styles.heroCaseNumber} selectable>{record.case_number}</Text>
        {record.status_group!=='rejected'?<Pressable accessibilityRole="button"
         accessibilityLabel={record.status_group==='issued'?'Edit issued policy customer in app':'Edit case in app'}
         onPress={beginEdit} style={styles.editButton}>
         <Ionicons name="create-outline" size={17} color={navy}/>
         <Text style={styles.editButtonText}>{record.status_group==='issued'?'Edit Proposer':'Edit Case'}</Text>
        </Pressable>:null}
-     </View>
-     <Section title="Policy source & ownership">
-       <Item label="Lead source" value={record.lead_source}/>
-       <Item label="Source code" value={record.intermediary_code}/>
-       <Item label="Relationship Manager" value={record.rm_name}/>
-       <Item label="RM code" value={record.rm_code}/>
-       <Item label="Sourcing date" value={record.sourcing_date}/>
-     </Section>
-     <Section title="Customer & insurer">
-       <Item label="Customer" value={record.customer_name}/>
-       <Item label="Mobile" value={record.customer_phone}/>
-       <Item label="Address" value={record.customer_address}/>
-       <Item label="Insurer" value={record.insurer_name}/>
-     </Section>
-     <Section title="Proposal & premium">
-       <Item label="Product" value={record.product_name}/>
-       <Item label="Proposal number" value={record.proposal_number}/>
-       <Item label="Premium paying term" value={record.premium_paying_term}/>
-       <Item label="Policy duration" value={record.policy_duration}/>
-       <Item label="Payment frequency" value={record.payment_frequency}/>
-       <Item label="Payment mode" value={record.payment_mode}/>
-       <Item label="Premium" value={`₹${Number(record.premium_amount).toLocaleString('en-IN',{maximumFractionDigits:2})}`}/>
-       {record.policy_no?<Item label="Issued policy" value={record.policy_no}/>:null}
-     </Section>
-     {record.rejection_reason?<Section title="Rejection reason"><Text style={styles.paragraph}>{record.rejection_reason}</Text></Section>:null}
-     <Section title={`Documents (${documents.length})`}>
-       {documents.length?documents.map(doc=><View key={doc.id} style={styles.document}>
-         <Ionicons name="document-attach-outline" size={18} color={navy}/>
-         <View style={{flex:1}}><Text style={styles.value}>{doc.file_name}</Text><Text style={styles.small}>{doc.document_type.replace(/_/g,' ')}</Text></View>
-       </View>):<Text style={styles.note}>No documents recorded.</Text>}
-       <Text style={styles.small}>Document viewing, uploads and deletion use the secure Operations Portal workflow.</Text>
-     </Section>
-     <Section title="Remarks"><Text style={styles.paragraph}>{record.remarks?.trim()||'No remarks recorded.'}</Text></Section>
-     <Section title="Activity history">
-       {activities.length?activities.map(activity=><View key={activity.id} style={styles.activity}>
-         <Text style={styles.value}>{activity.action.replace(/_/g,' ')}</Text>
-         <Text style={styles.small}>{new Date(activity.created_at).toLocaleString('en-IN')}</Text>
-       </View>):<Text style={styles.note}>No additional changes recorded.</Text>}
-     </Section>
-     <Pressable accessibilityRole="button" onPress={()=>void openOperations()} style={styles.open}>
-       <Ionicons name="open-outline" size={19} color="#FFF"/>
-       <Text style={styles.openText}>Open in Operations Portal</Text>
-       <Ionicons name="chevron-forward" size={19} color="#FFF"/>
-     </Pressable>
-     <Text style={styles.note}>Native editing is available for pending case proposal details and issued-case customer details. Issued policy number, dates, premium, commercial terms, document changes and issuance actions remain in the authorized Operations workflow.</Text>
-   </View>:null}
+      </View>
+
+      <Section number="01" title="Policy source & ownership">
+        <View style={styles.grid}>
+          <Field label="Proposal date" value={dateLabel(record.sourcing_date)}/>
+          <Field label="Policy type" value={record.business_line}/>
+          <Field label="Intermediary type" value={record.intermediary_type} meta={`RM · ${record.rm_name?.trim()||'—'}`} secondaryMeta={record.rm_code?`ID · ${record.rm_code}`:undefined}/>
+          <Field label="Lead source" value={record.lead_source}
+            meta={record.intermediary_code?`ID · ${record.intermediary_code}`:undefined}
+            secondaryMeta={record.intermediary_mobile||undefined}/>
+        </View>
+      </Section>
+
+      <Section number="02" title="Customer / proposer">
+        <View style={styles.grid}>
+          <Field label="Client / proposer name" value={record.customer_name} required/>
+          <Field label="Client mobile number" value={record.customer_phone} required/>
+          <Field label="Address" value={record.customer_address} wide multiline/>
+        </View>
+      </Section>
+
+      <Section number="03" title="Policy product & case details">
+        <View style={styles.grid}>
+          <Field label="Insurance company" value={record.insurer_name} required wide multiline/>
+          <Field label="Product name" value={record.product_name} required wide/>
+          <Field label="Case / proposal number" value={record.proposal_number} required wide/>
+          <Field label="PPT · Premium Paying Term" value={record.premium_paying_term}/>
+          <Field label="PD · Policy Duration / Term" value={record.policy_duration}/>
+          <Field label="Payment frequency" value={record.payment_frequency} required/>
+        </View>
+      </Section>
+
+      <Section number="04" title="Premium & payment">
+        <View style={styles.grid}>
+          <Field label="Premium amount" value={amount(record.premium_amount)} required/>
+          <Field label="Payment mode" value={record.payment_mode} required/>
+        </View>
+      </Section>
+
+      {record.status_group==='pending'?<Section number="05" title="Mark Policy Issued">
+        <Pressable accessibilityRole="button" accessibilityLabel="Open the case issuance form in Operations Portal"
+          onPress={()=>void openOperations()} style={styles.portalButton}>
+          <Ionicons name="shield-checkmark-outline" size={18} color="#FFFFFF"/>
+          <Text style={styles.portalButtonText}>Open Issuance Form</Text>
+          <Ionicons name="open-outline" size={16} color="#FFFFFF"/>
+        </Pressable>
+      </Section>:null}
+      {record.policy_no?<Section number="05" title="Issued policy">
+        <View style={styles.grid}><Field label="Policy number" value={record.policy_no} wide/></View>
+      </Section>:null}
+      {record.rejection_reason?.trim()?<Section title="Rejection reason">
+        <Text style={styles.paragraph} selectable>{record.rejection_reason}</Text>
+      </Section>:null}
+
+      {documents.length>0?<Section number="06" title="Documents">
+        <View style={styles.documentList}>
+          {documents.map(doc=><View key={doc.id} style={styles.document}>
+            <Ionicons name="document-attach-outline" size={18} color={navy}/>
+            <Text style={styles.documentName} selectable>{doc.file_name}</Text>
+          </View>)}
+        </View>
+      </Section>:null}
+
+      {(activities.length>0||Boolean(record.remarks?.trim()))?<Section number="07" title="Activity status & remarks">
+        <View style={styles.tabs}>
+          <Pressable accessibilityRole="tab" accessibilityState={{selected:infoTab==='activity'}} style={[styles.tab,infoTab==='activity'&&styles.tabActive]} onPress={()=>setInfoTab('activity')}>
+            <Text style={[styles.tabText,infoTab==='activity'&&styles.tabTextActive]}>Activity Status</Text>
+          </Pressable>
+          <Pressable accessibilityRole="tab" accessibilityState={{selected:infoTab==='remarks'}} style={[styles.tab,infoTab==='remarks'&&styles.tabActive]} onPress={()=>setInfoTab('remarks')}>
+            <Text style={[styles.tabText,infoTab==='remarks'&&styles.tabTextActive]}>Remarks</Text>
+          </Pressable>
+        </View>
+        {infoTab==='activity'?activities.map(activity=><View key={activity.id} style={styles.activity}>
+          <Text style={styles.activityTitle}>{activity.action.replace(/_/g,' ')}</Text>
+          <Text style={styles.activityDate}>{activityDate(activity.created_at)}</Text>
+        </View>):
+          record.remarks?.trim()?<Text style={styles.paragraph} selectable>{record.remarks}</Text>:null}
+      </Section>:null}
+
+      {record.status_group!=='pending'?<Pressable accessibilityRole="button"
+        accessibilityLabel="Open case in Operations Portal" onPress={()=>void openOperations()} style={styles.portalButton}>
+        <Ionicons name="open-outline" size={18} color="#FFFFFF"/>
+        <Text style={styles.portalButtonText}>Open in Operations Portal</Text>
+        <Ionicons name="chevron-forward" size={17} color="#FFFFFF"/>
+      </Pressable>:null}
+    </View>:null}
    <Modal visible={editing&&!!form} transparent animationType="slide" onRequestClose={()=>{if(!saving)setEditing(false);}}>
     <View style={styles.editorBackdrop}>
      <View style={styles.editor}>
@@ -201,12 +265,31 @@ function ChoiceField({title,value,values,onChange}:{title:string;value:string;va
     <Text style={[styles.choiceText,item===value&&styles.choiceTextActive]}>{item}</Text>
   </Pressable>)}</View></View>;
 }
-function Section({title,children}:{title:string;children:React.ReactNode}){
- return <View style={styles.section}><Text style={styles.sectionTitle}>{title}</Text>{children}</View>;
+function Section({number,title,children}:{number?:string;title:string;children:ReactNode}){
+  return <View style={styles.section}>
+    <View style={styles.sectionHeader}>
+      {number?<View style={styles.sectionNumber}><Text style={styles.sectionNumberText}>{number}</Text></View>:null}
+      <Text style={styles.sectionTitle}>{title}</Text>
+    </View>
+    <View style={styles.sectionContent}>{children}</View>
+  </View>;
 }
-function Item({label,value}:{label:string;value:string|null|undefined}){
- return <View style={styles.item}><Text style={styles.label}>{label}</Text><Text style={styles.value}>{value?.trim()||'—'}</Text></View>;
+
+function Field({label,value,meta,secondaryMeta,required=false,wide=false,multiline=false}:{
+  label:string;value:string|null|undefined;meta?:string;secondaryMeta?:string;required?:boolean;wide?:boolean;multiline?:boolean;
+}){
+  return <View style={[styles.field,wide&&styles.fieldWide]}>
+    <Text style={styles.fieldLabel}>{label.toUpperCase()}{required?<Text style={styles.asterisk}> *</Text>:null}</Text>
+    <View style={[styles.fieldBox,multiline&&styles.fieldBoxMultiline]}>
+      <Text style={styles.fieldValue} selectable>{value?.trim()||'—'}</Text>
+    </View>
+    {meta||secondaryMeta?<View style={styles.metaRow}>
+      {meta?<Text style={styles.metaText}>{meta}</Text>:null}
+      {secondaryMeta?<Text style={styles.metaText}>{secondaryMeta}</Text>:null}
+    </View>:null}
+  </View>;
 }
+
 const styles=StyleSheet.create({
  editorBackdrop:{flex:1,justifyContent:'flex-end',backgroundColor:'rgba(9,24,48,0.48)'},
  editor:{backgroundColor:'#F7F9FD',borderTopLeftRadius:22,borderTopRightRadius:22,maxHeight:'94%',minHeight:'55%'},
@@ -232,23 +315,48 @@ const styles=StyleSheet.create({
  saveError:{color:'#A5272D',fontSize:12,fontWeight:'700'},
  editButton:{backgroundColor:'#FFF',alignSelf:'flex-start',flexDirection:'row',alignItems:'center',gap:6,borderRadius:9,paddingHorizontal:12,paddingVertical:9,marginTop:5},
  editButtonText:{fontWeight:'800',color:navy,fontSize:12},
- wrap:{gap:11,paddingBottom:28,marginTop:5},
- hero:{backgroundColor:navy,borderRadius:14,padding:15,gap:6},
- caseNo:{fontSize:16,color:'#FFF',fontWeight:'800'},
- heroText:{color:'#E5EFFD',fontSize:12,fontWeight:'600'},
- section:{backgroundColor:'#FFF',borderRadius:13,borderWidth:1,borderColor:'#DFE7F1',padding:13,gap:9},
- sectionTitle:{color:navy,fontSize:13,fontWeight:'800',paddingBottom:4,borderBottomWidth:1,borderBottomColor:'#E7EDF6'},
- item:{flexDirection:'row',justifyContent:'space-between',gap:12},
- label:{flex:1,fontSize:11,color:'#687A93'},
- value:{flex:1.5,fontSize:11,color:'#233852',fontWeight:'700',textAlign:'right'},
- document:{flexDirection:'row',alignItems:'center',gap:9,paddingVertical:6,borderBottomWidth:1,borderBottomColor:'#F0F3F8'},
- paragraph:{fontSize:11,lineHeight:18,color:'#34465E'},
- note:{fontSize:11,lineHeight:17,color:'#697A92'},
- small:{fontSize:10,color:'#71829A',marginTop:3},
- activity:{paddingVertical:5,borderBottomWidth:1,borderBottomColor:'#F0F3F8'},
- open:{minHeight:48,borderRadius:12,backgroundColor:navy,alignItems:'center',justifyContent:'center',flexDirection:'row',gap:9,paddingHorizontal:12},
- openText:{color:'#FFF',fontSize:12,fontWeight:'800',flex:1,textAlign:'center'},
- alert:{backgroundColor:'#FFF0F0',padding:12,borderRadius:10,marginTop:8},
- alertText:{fontSize:11,color:'#B52E37'},
- actionText:{fontSize:12,fontWeight:'800',color:navy,marginTop:8},
+
+  wrap:{gap:11,paddingBottom:26,marginTop:4},
+  hero:{backgroundColor:'#95651F',borderRadius:12,padding:13,gap:6},
+  heroIssued:{backgroundColor:'#1E694F'},
+  heroRejected:{backgroundColor:'#913D3D'},
+  heroTop:{flexDirection:'row',alignItems:'center',gap:9,flexWrap:'wrap'},
+  heroTitle:{color:'#FFFFFF',fontSize:15,fontWeight:'800'},
+  statusPill:{borderRadius:6,backgroundColor:'rgba(255,255,255,0.16)',borderWidth:1,borderColor:'rgba(255,255,255,0.36)',paddingHorizontal:9,paddingVertical:3},
+  statusText:{fontSize:10,fontWeight:'700',color:'#FFFFFF'},
+  heroSubtitle:{color:'#FFFFFF',fontWeight:'600',fontSize:11},
+  heroCaseNumber:{color:'#F8F0E4',fontSize:10,fontWeight:'600'},
+  section:{backgroundColor:'#FFFFFF',borderRadius:14,borderWidth:1,borderColor:'#D9E2F0',overflow:'hidden'},
+  sectionHeader:{flexDirection:'row',alignItems:'center',gap:10,minHeight:49,paddingHorizontal:12,paddingVertical:8,borderBottomWidth:1,borderBottomColor:'#D9E2F0',backgroundColor:'#EAF1FA'},
+  sectionNumber:{width:30,height:30,borderRadius:9,backgroundColor:navy,alignItems:'center',justifyContent:'center'},
+  sectionNumberText:{color:'#FFFFFF',fontSize:11,fontWeight:'800'},
+  sectionTitle:{color:navy,fontSize:13,fontWeight:'800',flexShrink:1},
+  sectionContent:{padding:12,gap:10},
+  grid:{flexDirection:'row',flexWrap:'wrap',columnGap:9,rowGap:12,justifyContent:'space-between'},
+  field:{width:'48%',minWidth:0,flexShrink:0},
+  fieldWide:{width:'100%'},
+  fieldLabel:{fontSize:9,color:'#66758B',fontWeight:'800',marginBottom:6,letterSpacing:0.2},
+  asterisk:{color:'#B82F3B'},
+  fieldBox:{borderWidth:1,borderColor:'#D8E0ED',borderRadius:10,paddingHorizontal:10,paddingVertical:10,minHeight:43,justifyContent:'center',backgroundColor:'#FBFCFE'},
+  fieldBoxMultiline:{minHeight:52,justifyContent:'flex-start'},
+  fieldValue:{fontSize:11,color:'#213653',fontWeight:'600',lineHeight:16,flexShrink:1},
+  metaRow:{flexDirection:'row',flexWrap:'wrap',columnGap:7,rowGap:3,marginTop:6},
+  metaText:{fontSize:9,fontWeight:'600',color:'#4C637F',flexShrink:1},
+  documentList:{gap:0},
+  document:{flexDirection:'row',alignItems:'center',gap:9,paddingVertical:10,borderBottomWidth:1,borderBottomColor:'#ECF0F6'},
+  documentName:{flex:1,fontSize:11,fontWeight:'600',color:navy},
+  tabs:{flexDirection:'row',alignItems:'center',gap:6},
+  tab:{paddingHorizontal:12,paddingVertical:9,borderRadius:9,backgroundColor:'#EDF3FB'},
+  tabActive:{backgroundColor:navy},
+  tabText:{fontSize:11,fontWeight:'700',color:navy},
+  tabTextActive:{color:'#FFFFFF'},
+  activity:{borderTopWidth:1,borderTopColor:'#ECF0F6',paddingTop:10,gap:4},
+  activityTitle:{fontSize:11,fontWeight:'700',color:navy},
+  activityDate:{fontSize:10,color:'#64748B'},
+  paragraph:{fontSize:11,lineHeight:17,color:'#30445D'},
+  portalButton:{minHeight:45,backgroundColor:navy,borderRadius:10,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:9,paddingHorizontal:12},
+  portalButtonText:{fontSize:12,fontWeight:'800',color:'#FFFFFF',textAlign:'center',flexShrink:1},
+  alert:{backgroundColor:'#FFF1F1',borderRadius:10,padding:12,gap:8,marginTop:8},
+  errorText:{fontSize:11,color:'#A32636'},
+  retry:{fontSize:12,fontWeight:'800',color:navy},
 });

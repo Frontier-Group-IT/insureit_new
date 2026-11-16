@@ -138,6 +138,9 @@ jobs:
 
       - name: Verify Life/Health issued-policy popup navigation
         run: node apps/partner-app/scripts/verify-life-health-issued-popup.mjs
+
+      - name: Verify Partner Life/Health Case Details column layout
+        run: node apps/partner-app/scripts/verify-life-health-case-column-layout.mjs
       - name: Verify incremental Policy Intake pagination
         run: (cd apps/partner-app && node scripts/verify-policy-intake-list-pagination.mjs)
 
