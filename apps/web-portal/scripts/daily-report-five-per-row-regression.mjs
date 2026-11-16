@@ -25,11 +25,23 @@ assert.match(source,/for\(const a of all\) counts\.set\(a\.category/,
   "Backend counts remain unmodified and use complete recorded source set");
 assert.match(page,/reportMode=\{isSelf \? "self" : "employee"\}/,
   "Both Self and selected All employee share the same responsive summary");
-assert.match(panel,/rounded-xl border border-\[#dce5f1\]/,"Activity links use distinct, rounded button-like card surfaces");
+assert.match(panel,/daily-report-activity-card group flex/,"Activity links use distinct, reference-style card surfaces");
 assert.match(panel,/hover:-translate-y-0\.5/,"Activity cards rise subtly on hover");
 assert.match(panel,/hover:shadow-\[0_5px_14px_rgba\(23,54,93,0\.13\)\]/,"Activity cards gain a restrained shadow on hover");
 assert.match(panel,/hover:border-\[#7ba7dc\]/,"Professional blue border hover feedback remains visible");
 assert.match(panel,/focus-visible:outline/,"Keyboard focus state remains visible");
 assert.match(panel,/motion-reduce:transform-none motion-reduce:transition-none/,"Reduced-motion users receive static hover feedback");
 assert.match(panel,/active:translate-y-0/,"Pressed state provides immediate feedback");
-console.log("Daily Report activity summary uses five responsive desktop columns with intact drilldowns.");
+const css=read("../app/globals.css");
+const header=read("../components/reports/daily-report-header-controls.tsx");
+assert.match(page,/daily-report-reference/,"Daily Report styling scoped to the page");
+assert.match(css,/reports-reference-shell:has/,"Reference header styling limited to Daily Report");
+assert.ok(css.includes("linear-gradient(100deg,#24119b"),"Purple summary bar matches reference palette");
+for (const group of ["vehicle","policies","claims","other"]) {
+  assert.ok(css.includes('data-activity-group="'+group+'"'),group+" section keeps distinct reference color");
+}
+assert.match(panel,/daily-report-category-heading/,"Category headings with icons retained");
+assert.match(panel,/daily-report-count-badge/,"Colored count pills retained");
+assert.match(panel,/daily-report-activity-icon/,"Activity icons retained");
+assert.match(header,/daily-report-header-select/,"Pill-shaped period and scope filters retained");
+console.log("Daily Report reference palette and five-column responsive category grid verified.");
