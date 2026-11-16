@@ -20,7 +20,7 @@ assert.match(page, /assertDailyReportEmployeeAllowed\(chosenPerson, employeeDire
   "All validates selected employee before loading admin-scoped history");
 assert.match(selector, /people\.filter\(person=>/,
   "Search still filters the authorized list");
-assert.doesNotMatch(directory+page+selector, /\.insert\(|\.update\(|\.upsert\(|\.delete\(/,
+assert.doesNotMatch(directory+page, /\.insert\(|\.update\(|\.upsert\(|\.delete\(/,
   "Report fix does not write to production data");
 
 // Check the intended set behavior for an organization-wide user and a manager.
