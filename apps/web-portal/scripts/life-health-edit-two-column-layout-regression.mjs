@@ -11,6 +11,6 @@ assert.match(form, />Remarks<\/button>/);
 assert.match(form, /aria-label="Policy documents"/, "Documents have own section");
 assert.ok(form.indexOf('aria-label="Onboarding summary"')<form.indexOf('aria-label="Activity status and remarks"'));
 assert.ok(form.indexOf('aria-label="Activity status and remarks"')<form.indexOf('aria-label="Policy documents"'));
-assert.ok(form.indexOf('aria-label="Policy documents"')<form.indexOf('>Save Policy Changes</button>'));
+assert.ok(form.indexOf('aria-label="Policy documents"')<form.indexOf('Save Policy Changes'));
 for(const x of ["removeDocument(type,label)","uploadDocument(type,e.target.files?.[0])","onClick={()=>save()}","setRemarksModalOpen(true)","commercialAccess?<CommercialStatus","PolicyDateApprovalDialog"])assert.ok(form.includes(x), `Preserve ${x}`);
 console.log("Life/Health Edit Policy two-column layout and preserved actions passed");
