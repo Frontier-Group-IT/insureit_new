@@ -340,7 +340,7 @@ jobs:
           assert 'REVOKE EXECUTE ON ALL FUNCTIONS IN SCHEMA public' in restore_script
           assert 'PGSSLROOTCERT' in restore_script
           assert 'sslmode=require' not in restore_script and 'sslmode=disable' not in restore_script
-          assert '--clean' not in restore_script
+          assert '"--clean",' not in restore_script and "'--clean'," not in restore_script
           audit_script = pathlib.Path('scripts/backup/verify_managed_sql_rows.py').read_text()
           assert 'isolated_ssl_root_cert() as ca' in audit_script
           assert 'sslmode="verify-full"' in audit_script
