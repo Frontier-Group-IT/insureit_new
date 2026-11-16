@@ -8,10 +8,10 @@ import type { SelfActivity } from "@/lib/reports/daily-self-activity";
 const dateFormat=new Intl.DateTimeFormat("en-IN",{timeZone:"Asia/Kolkata",day:"2-digit",month:"short",year:"numeric"});
 const timeFormat=new Intl.DateTimeFormat("en-IN",{timeZone:"Asia/Kolkata",hour:"2-digit",minute:"2-digit",hour12:true});
 
-type Props={rows:SelfActivity[];isCustomerActivity?:boolean};
+type Props={rows:SelfActivity[];isCustomerActivity?:boolean;isClaimActivity?:boolean};
 const customerField=(value:string|number|undefined|null)=>value===undefined||value===null||value===""?"—":String(value);
 
-export function DailyActivityHistoryRows({rows,isCustomerActivity=false}:Props) {
+export function DailyActivityHistoryRows({rows,isCustomerActivity=false,isClaimActivity=false}:Props) {
   const router=useRouter();
   const [selected,setSelected]=useState<SelfActivity|null>(null);
   const closeRef=useRef<HTMLButtonElement>(null);
@@ -41,7 +41,7 @@ export function DailyActivityHistoryRows({rows,isCustomerActivity=false}:Props) 
       <tbody className="divide-y divide-[#edf1f6]">
         {rows.map(row=>(
           <tr key={row.id} role="button" tabIndex={0}
-            aria-label={`View activity details: ${row.activity}, ${row.reference}`}
+            aria-label={`View activity details: ${row.activity}, ${isClaimActivity ? row.claimControlNo||row.claimInsurerNo||"claim record" : row.reference}`}
             onClick={event=>openRecord(row,event.currentTarget)}
             onKeyDown={event=>onRowKeyDown(event,row)}
             className="cursor-pointer text-[11px] text-[#30435d] transition-colors hover:bg-[#edf5ff] focus-visible:bg-[#edf5ff] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#315b9a]">
@@ -54,6 +54,13 @@ export function DailyActivityHistoryRows({rows,isCustomerActivity=false}:Props) 
                 <td className="px-3 py-3 font-medium">{customerField(row.customerName)}</td>
                 <td className="px-3 py-3">{customerField(row.customerType)}</td>
                 <td className="px-3 py-3 tabular-nums">{customerField(row.customerMobile)}</td>
+              </>
+            ) : isClaimActivity ? (
+              <>
+                <td className="px-3 py-3 font-medium">{customerField(row.claimControlNo)}</td>
+                <td className="px-3 py-3">{customerField(row.claimInsurerNo)}</td>
+                <td className="px-3 py-3">{customerField(row.claimCustomerName)}</td>
+                <td className="px-3 py-3">{customerField(row.claimVehicleNo)}</td>
               </>
             ) : (
               <>
@@ -80,6 +87,11 @@ export function DailyActivityHistoryRows({rows,isCustomerActivity=false}:Props) 
                   ["Customer",customerField(selected.customerName)],
                   ["Customer Type",customerField(selected.customerType)],
                   ["Mobile",customerField(selected.customerMobile)],
+                ] : isClaimActivity ? [
+                  ["Control No.",customerField(selected.claimControlNo)],
+                  ["Claim No.",customerField(selected.claimInsurerNo)],
+                  ["Customer",customerField(selected.claimCustomerName)],
+                  ["Vehicle No.",customerField(selected.claimVehicleNo)],
                 ] : [
                   ["Policy / Case No.",selected.reference||"—"],
                   ["Customer / Vehicle",selected.customerVehicle||"—"],

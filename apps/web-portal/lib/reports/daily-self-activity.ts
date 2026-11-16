@@ -13,6 +13,7 @@ export type SelfActivity = {
   customerVehicle?: string; insurer?: string;
   customerName?: string; customerType?: string; customerMobile?: string;
   customerFleetSize?: string; customerPolicyCount?: number;
+  claimControlNo?: string; claimInsurerNo?: string; claimCustomerName?: string; claimVehicleNo?: string;
 };
 type Audit = { id:string; actor_id:string|null; action:string; table_name:string|null; record_id:string|null; created_at:string };
 type Policy = { id:string; created_at:string; policy_no:string|null };
@@ -221,6 +222,29 @@ export async function loadSelfActivityHistory(
     }
     for(const row of visible) if(row.table===table && row.recordId && lookup.has(row.recordId)) row.reference=lookup.get(row.recordId)!;
   }
+  // Claims drilldowns display only claim-specific register columns.
+  // Lookups remain restricted to already authorized, visible audit records.
+  if(category==="Claims"||category.startsWith("Claim ")) {
+    const ids=[...new Set(visible.filter(row=>row.table==="claims"&&isValidDailyRecordId(row.recordId??"")).map(row=>row.recordId as string))];
+    if(ids.length) {
+      const {data,error}=await admin.from("claims")
+        .select("id,claim_no,insurer_claim_no,customers(company_name,contact_name),vehicles(vehicle_no)")
+        .in("id",ids);
+      if(error) console.error("[daily-report] claim detail labels unavailable",{code:error.code||"request_error"});
+      else {
+        const claimsById=new Map((data??[]).map(claim=>[claim.id,claim]));
+        for(const row of visible) {
+          if(row.table!=="claims"||!row.recordId) continue;
+          const claim=claimsById.get(row.recordId);
+          if(!claim) continue;
+          row.claimControlNo=claim.claim_no||undefined;
+          row.claimInsurerNo=claim.insurer_claim_no||undefined;
+          row.claimCustomerName=claim.customers?.[0]?.contact_name||claim.customers?.[0]?.company_name||undefined;
+          row.claimVehicleNo=claim.vehicles?.[0]?.vehicle_no||undefined;
+        }
+      }
+    }
+  }
   // Customer drilldowns use the Customer Register's fields instead of policy context.
   // Resolve only the visible actor-scoped customer records, without changing
   // report counts, filters, or access scope. Mask mobile numbers in the report.
@@ -317,8 +341,19 @@ export async function loadSelfActivityHistory(
         const change=changeMap.get(row.id.slice("audit:".length));
         if(!change) continue;
         row.detail=auditChangeDetail(change.old_data,change.new_data);
-        if(row.table==="claims" && row.status==="Deleted" && row.activity==="Claim deleted (creator unavailable)")
-          row.activity=deletedClaimActivity(change.old_data);
+        if(row.table==="claims" && row.status==="Deleted") {
+          if(row.activity==="Claim deleted (creator unavailable)")
+            row.activity=deletedClaimActivity(change.old_data);
+          // Deleted claims no longer exist in the master table. Only reuse
+          // explicitly saved, non-empty claim identifiers from this actor's audit.
+          const old=change.old_data;
+          if(old && typeof old==="object" && !Array.isArray(old)) {
+            const previous=old as Record<string,unknown>;
+            const label=(value:unknown)=>typeof value==="string"&&value.trim()?value.trim().slice(0,100):undefined;
+            row.claimControlNo ||=label(previous.claim_no);
+            row.claimInsurerNo ||=label(previous.insurer_claim_no);
+          }
+        }
       }
     }
   }
