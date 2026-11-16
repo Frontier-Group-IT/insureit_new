@@ -307,7 +307,7 @@ export async function loadSelfActivityHistory(
       // Historical creation rows must survive customer hard-deletion. The
       // original audit remains "customer_created"; label later deletion
       // explicitly rather than silently treating the record as still active.
-      const missingIds=ids.filter(id=>!(data??[]).some(customer=>customer.id===id));
+      const missingIds=error?[]:ids.filter(id=>!(data??[]).some(customer=>customer.id===id));
       if(missingIds.length) {
         const {data:deletions,error:deletionError}=await admin.from("audit_logs")
           .select("record_id,old_data,created_at")
