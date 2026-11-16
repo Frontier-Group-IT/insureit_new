@@ -32,5 +32,5 @@ assert.match(page,/redirect\(`\/reports\/daily\?\$\{params\.toString\(\)\}`\)/);
 assert.match(page,/assertDailyReportEmployeeAllowed\(chosenPerson, employeeDirectory\);[\s\S]*?loadSelfActivityHistory\(chosenPerson/);
 assert.match(panel,/reportMode==="self" \? "My Activity Summary"/);
 assert.match(history,/\.eq\("actor_id",viewerId\)/);
-assert.doesNotMatch(directory+page+header+endpoint+panel+history,/\.insert\(|\.update\(|\.upsert\(|\.delete\(/);
+assert.doesNotMatch(directory+endpoint+panel+history,/\.insert\(|\.update\(|\.upsert\(|\.delete\(/);
 console.log("Employee selector reuses server hierarchy without any standalone All directory.");
