@@ -116,6 +116,9 @@ jobs:
       - name: Verify standalone blank Add Policy creation path
         run: node apps/partner-app/scripts/verify-standalone-add-policy.mjs
 
+      - name: Verify Partner-only mobile onboarding
+        run: node apps/partner-app/scripts/verify-add-partner-only.mjs
+
       - name: Verify Policy Intake source API contract
         run: node apps/partner-app/scripts/verify-policy-intake-source-contract.mjs
       - name: Verify Policy Intake detail header identity parity
