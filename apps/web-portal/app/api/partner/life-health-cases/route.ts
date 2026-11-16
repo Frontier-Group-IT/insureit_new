@@ -4,6 +4,8 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { hasEffectiveCapability } from "@/lib/effective-permissions";
 import { getEffectivePermission } from "@/lib/permission-management";
 import { isAppRole } from "@/lib/roles";
+import { canAccessPolicy } from "@/lib/policy-access-scope";
+import { recordDailyWorkflowActivity } from "@/lib/daily-workflow-audit";
 import { getOperationsHeadDownlinePolicyScope, operationsHeadVisiblePolicyFilter, canAccessOperationsHeadCase } from "@/lib/policy-access-scope";
 
 // Read-only counterpart of the Operations Life/Health Case Register.
@@ -22,7 +24,7 @@ type CaseRow = {
  remarks:string|null;final_policy_id:string|null;converted_at:string|null;created_at:string;
  created_by:string|null;converted_by:string|null;details:Record<string,unknown>|null;
 };
-const columns = "id,case_number,business_line,status,sourcing_date,customer_id,insurance_company_id,product_name,proposal_number,premium_paying_term,policy_duration,payment_frequency,payment_mode,premium_amount,intermediary_type,intermediary_code,lead_source,intermediary_mobile,rm_name,rm_code,remarks,final_policy_id,converted_at,created_at,created_by,converted_by,details";
+const columns = "updated_at,id,case_number,business_line,status,sourcing_date,customer_id,insurance_company_id,product_name,proposal_number,premium_paying_term,policy_duration,payment_frequency,payment_mode,premium_amount,intermediary_type,intermediary_code,lead_source,intermediary_mobile,rm_name,rm_code,remarks,final_policy_id,converted_at,created_at,created_by,converted_by,details";
 const listColumns = "id,case_number,business_line,status,sourcing_date,customer_id,insurance_company_id,product_name,proposal_number,rm_name,lead_source,premium_amount,created_at,final_policy_id";
 const respond = (data:Record<string,unknown>,status=200) => NextResponse.json(data,{status,headers});
 const caseStatus = (row:CaseRow) => row.final_policy_id ? "issued" : row.status === "rejected" ? "rejected" : "pending";
@@ -141,5 +143,81 @@ export async function GET(request:Request) {
    return respond({ok:true,cases:visible.slice(offset,offset+limit),counts,total:visible.length});
  } catch {
    return respond({ok:false,error:"Case Register is temporarily unavailable."},500);
+ }
+}
+
+// Authenticated native Case Register editing. No unchecked service-role writes:
+// only approved pending-case fields, or an issued policy's linked customer details.
+// Policy number, dates, insurer, premiums and commercial terms of issued policies
+// remain under the existing Operations issued-policy editor/OTP workflow.
+export async function POST(request: Request) {
+ try {
+  const actor=await authorizedEmployee(request);
+  if(!actor)return respond({ok:false,error:"Case Register editing is unavailable for this account."},403);
+  const {profile,admin}=actor;
+  const input=await request.json().catch(()=>null) as Record<string,unknown>|null;
+  const id=typeof input?.id==="string"?input.id:"";
+  if(!uuid.test(id))return respond({ok:false,error:"Invalid case reference."},400);
+  const {data:row,error:loadError}=await admin.from("life_health_cases")
+   .select("id,status,final_policy_id,customer_id,product_name,proposal_number,premium_paying_term,policy_duration,payment_frequency,payment_mode,premium_amount,updated_at")
+   .eq("id",id).maybeSingle();
+  if(loadError||!row)return respond({ok:false,error:"Case not found."},404);
+  if(row.status==="rejected")return respond({ok:false,error:"Rejected cases cannot be edited."},409);
+  const issued=Boolean(row.final_policy_id);
+  if(profile.role==="operations_head_life"){
+   if(issued){
+    if(!(await canAccessPolicy(profile.id,profile.role,row.final_policy_id!,"view_policies",true)))
+     return respond({ok:false,error:"You cannot edit this issued policy."},403);
+   } else if(!(await canAccessOperationsHeadCase(profile.id,id))){
+    return respond({ok:false,error:"This case is outside your authorized scope."},403);
+   }
+  }else{
+   const permission=await getEffectivePermission(profile.id,profile.role as Parameters<typeof getEffectivePermission>[1],"view_policies");
+   const creator=await hasEffectiveCapability(profile,"create_policies","edit");
+   if(issued ? !["edit","approve"].includes(permission.access) : !["edit","approve"].includes(permission.access)&&!creator)
+    return respond({ok:false,error:"Editing permission is required."},403);
+  }
+  if(issued && !(await canAccessPolicy(profile.id,profile.role,row.final_policy_id!,"view_policies",true)))
+   return respond({ok:false,error:"This issued policy is outside your authorized edit scope."},403);
+  const clean=(key:string,max=180)=>typeof input?.[key]==="string"?(input[key] as string).trim().slice(0,max):"";
+  if(issued){
+   // Issued case is immutable; only the customer information is editable here.
+   // Validate case-to-policy link and avoid touching policy issuance or commercials.
+   const customerName=clean("customerName",160);
+   const phone=clean("customerPhone",25).replace(/\D/g,"");
+   const address=clean("customerAddress",1000);
+   if(!customerName||!/^[6-9]\d{9}$/.test(phone))return respond({ok:false,error:"Enter a customer name and valid 10-digit mobile."},400);
+   const {data:linked}=await admin.from("life_health_cases").select("customer_id")
+    .eq("id",id).eq("final_policy_id",row.final_policy_id!).maybeSingle();
+   if(!linked?.customer_id)return respond({ok:false,error:"Issued policy link changed. Reload the case."},409);
+   const {error}=await admin.from("customers").update({
+     contact_name:customerName,phone,address:address||null,address_street:address||null,updated_at:new Date().toISOString(),
+   }).eq("id",linked.customer_id);
+   if(error)return respond({ok:false,error:"Customer changes could not be saved."},500);
+   await admin.from("audit_logs").insert({actor_id:profile.id,table_name:"life_health_cases",record_id:id,action:"life_health_issued_customer_edited",new_data:{fields:["customer_name","customer_phone","customer_address"],policy_id:row.final_policy_id}});
+   return respond({ok:true,scope:"issued_customer"});
+  }
+  const product=clean("productName",180),proposal=clean("proposalNumber",120).toUpperCase();
+  const ppt=clean("premiumPayingTerm",80),pd=clean("policyDuration",80);
+  const frequency=clean("paymentFrequency",50),mode=clean("paymentMode",50);
+  const premium=Number(input?.premiumAmount);
+  if(!product||!proposal||!["Monthly","Quarterly","Half Yearly","Annually","One Time"].includes(frequency)||
+    !["Cash","Cheque","NEFT/RTGS","UPI","Credit/Debit Card","Net Banking"].includes(mode)||
+    !Number.isFinite(premium)||premium<0||premium>100000000000)
+    return respond({ok:false,error:"Complete the required proposal, payment and premium fields."},400);
+  // Optimistic concurrency: reject stale native edits, rejected/issued transitions.
+  const expected=clean("updatedAt",80);
+  if(!expected||expected!==row.updated_at)return respond({ok:false,error:"The case changed. Reload before saving."},409);
+  const {data:saved,error:saveError}=await admin.from("life_health_cases").update({
+    product_name:product,proposal_number:proposal,premium_paying_term:ppt||null,
+    policy_duration:pd||null,payment_frequency:frequency,payment_mode:mode,
+    premium_amount:premium,updated_at:new Date().toISOString(),
+  }).eq("id",id).eq("updated_at",expected).is("final_policy_id",null).neq("status","rejected")
+   .select("id").maybeSingle();
+  if(saveError||!saved)return respond({ok:false,error:"Case changed or could not be saved. Reload and retry."},409);
+  await recordDailyWorkflowActivity(admin,{actorId:profile.id,table:"life_health_cases",recordId:id,action:"life_health_case_edited"});
+  return respond({ok:true,scope:"pending_case"});
+ }catch{
+  return respond({ok:false,error:"Unable to save changes. Please retry."},500);
  }
 }
