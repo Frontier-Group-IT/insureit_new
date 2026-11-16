@@ -157,3 +157,41 @@ The clean decommissioning criterion for Google is: adequate n8n layout/insurer c
 
 ### 2026-11-16 pilot Intake lifecycle recheck
 The previously approved example Intake became **Completed** with `final_policy_id` present by the last read-only query (record updated at 2026-11-16 04:56:52 UTC). It was **not** processed by n8n or modified through this implementation. Do not send it for a new pilot or replay an already-booked policy. The current signed-source helper excludes Completed Intakes, and required OCR processing checks status=processing. Choose a newly authorized pending Intake after deployment.
+
+## 2026-11-16: ICICI 3005 automatic n8n routing and manual Cloudflare release
+
+The user confirmed that ICICI Lombard **Product Code 3005** is the first trained document layout. Do not pretend that other insurers are trained, or turn on automatic policy booking.
+
+### Deployment intent (manual release by account owner)
+**Prepare now but DO NOT merge or deploy the Web Portal on the user's behalf.** The n8n workflow can be published independently because the webhook is already Header Auth and only the deployed website knows the shared secret.
+
+**Safe first release settings for the Cloudflare Worker `insureit-new`:**
+
+| Runtime setting | Value / instruction |
+|---|---|
+| `INSUREIT_N8N_OCR_WEBHOOK_URL` | `https://insureit.app.n8n.cloud/webhook/insureit-policy-intake-icici-v1` |
+| `INSUREIT_N8N_OCR_HEADER_SECRET` | **Cloudflare Secret**; manually paste the existing n8n Header Auth account value (minimum 32 characters), never disclose in PR/chat/source |
+| `INSUREIT_N8N_OCR_MODE` | `off` for the first website release, then `shadow` + one approved open Intake UUID, then `required` after the PDF comparison succeeds |
+| `INSUREIT_N8N_OCR_ALLOWED_INTAKE_IDS` | One separately authorized **non-completed** Intake UUID for shadow tests; remove when auto-routing mode has been validated |
+| `INSUREIT_N8N_OCR_AUTO_ICICI_3005` | `true` only with `MODE=required` after review of an actual supported original PDF |
+| `INSUREIT_N8N_OCR_ALL_MOTOR` | `false` until **all** Motor policy layouts are covered, or business expressly accepts manual OCR failures for every unsupported Motor PDF |
+| `INSUREIT_N8N_OCR_ALLOW_REVIEW_APPLY` | `false`; never automatically overwrite a draft or create/book a policy |
+
+**Automatic recognition (additional opt-in mode):** with `MODE=required`, `AUTO_ICICI_3005=true` and `ALL_MOTOR=false`, Operations and Partner Motor uploads use the existing native-PDF header classifier to recognize **ICICI LOMBARD + Product Code 3005** (first three pages). For recognized PDFs, the backend calls n8n via an expiring signed download link and does **not** call Google, even when n8n fails. Unrecognized/scanned/other insurer layouts continue the existing OCR path until n8n modules exist. The classifier is a gate, not proof that the ICICI parser will succeed; the strict 13 financial/document checks still apply. Wrong 3005 formats fail to the standard manual reviewer queue without becoming bookable.
+
+**Full n8n-only Motor cutover:** `MODE=required` plus `ALL_MOTOR=true` routes all Motor uploads to n8n for direct download. The current parser will reject untrained insurer/products and scanned-only copies, so they require manual correction. Do **not** enable this flag during the ICICI-only rollout without explicit operational approval.
+
+**Cloudflare secret instructions:** navigate Workers & Pages → `insureit-new` → Settings → Variables and Secrets; add `INSUREIT_N8N_OCR_HEADER_SECRET` with Type=Secret, and other values as plain runtime variables. Cloudflare's dashboard **Deploy** applies a new Worker version; schedule this with the owner's manual deployment. `wrangler secret put` also deploys immediately; use a versioned secret or dashboard-controlled release if the website must not change beforehand. `apps/web-portal/wrangler.jsonc` contains `keep_vars:true` to retain existing runtime bindings on subsequent deploys. Do not put the secret in `wrangler.jsonc`, GitHub, `NEXT_PUBLIC_*` env vars or logs.
+
+### Mandatory smoke tests after manual website deployment
+1. Verify n8n production Webhook is active, authenticated; missing/wrong secret returns 403. Reject malformed identifiers, invalid host/path/expiry and invalid PDF. Do not print signed URLs or customer data.
+2. Select a **newly approved open Motor Intake** with an original ICICI 3005 readable PDF and confirm current document id, size and policy type. A previous user-approved example has already become **Completed** with a linked policy, and cannot be reused.
+3. Set `MODE=shadow` and that exact UUID on the Worker; use Development → AI Policy Onboarding → Preview n8n PDF and compare policy number/name, OD dates, TP dates, vehicle, IDV, base OD/add-ons, TP/CPA, tax and gross against the original document. Verify n8n fetches directly using its `Download Current Private PDF` node, without manual download/upload.
+4. Confirm the original Intake, assigned reviewer, saved draft and policy register are unchanged by preview. Verify the failed/mismatched result cannot auto-save or book.
+5. After acceptance, set `MODE=required` with `AUTO_ICICI_3005=true` and `ALL_MOTOR=false`. Submit an authorized newly uploaded sample; verify `ocr_parser_id=icici_3005_n8n_native_pdf` and review state. Confirm unrecognized documents keep their legacy path. No automatic booking.
+6. Check usage, signed URL expiry, no token leaks, and manual reviewer exception flow. Roll back with `MODE=off` immediately on errors.
+
+### Responsibilities
+- **GitHub PR/CI and n8n publication**: release preparation in code/app connectors.
+- **Cloudflare secret and runtime variables**: account owner must input the already-saved header secret privately in Cloudflare, because the connected tools have no Cloudflare secret-write capability or plaintext n8n credential.
+- **Manual Cloudflare deploy + real PDF smoke**: account owner after merging/choosing the release; these checks cannot be truthfully marked completed before the website is deployed and a new approved open Intake is selected.
