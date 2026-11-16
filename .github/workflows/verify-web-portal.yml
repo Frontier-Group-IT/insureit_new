@@ -178,6 +178,8 @@ jobs:
         run: npm run access-control:backoffice-data-entry-regression
       - name: Service Enquiries unification regression
         run: node scripts/service-enquiry-unification-regression.mjs
+      - name: Partner-only mobile onboarding API authorization regression
+        run: node scripts/partner-mobile-only-onboarding-regression.mjs
       - name: Sidebar state stability regression
         run: node scripts/sidebar-state-stability-regression.mjs
       - name: Collapsed sidebar direct-link regression

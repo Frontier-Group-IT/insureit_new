@@ -119,6 +119,9 @@ jobs:
       - name: Verify standalone Life Policy Onboarding parity
         run: node apps/partner-app/scripts/verify-standalone-life-onboarding.mjs
 
+      - name: Verify Partner-only mobile onboarding
+        run: node apps/partner-app/scripts/verify-add-partner-only.mjs
+
       - name: Verify Policy Intake source API contract
         run: node apps/partner-app/scripts/verify-policy-intake-source-contract.mjs
       - name: Verify Policy Intake detail header identity parity

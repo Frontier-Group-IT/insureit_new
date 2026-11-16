@@ -55,6 +55,7 @@ export default function RootLayout() {
                     <Stack.Screen name="policy-intakes" />
                     <Stack.Screen name="policy-intake-new" />
                     <Stack.Screen name="policy-new" />
+                    <Stack.Screen name="partner-new" />
                     <Stack.Screen name="policy-intakes/[id]" />
                     <Stack.Screen name="policy-intakes/onboarding" />
                     <Stack.Screen name="access-denied" />

@@ -378,6 +378,19 @@ export default function PoliciesScreen() {
         </Pressable>
       ) : null}
 
+      {context?.identity.actor_kind === 'employee' && canPartnerAccess(context, 'create_intermediary_application', 'edit') ? (
+        <Pressable accessibilityRole="button" accessibilityLabel="Add Partner, submit Partner-only application"
+          onPress={() => router.push('/partner-new')}
+          style={({ pressed }) => [styles.intakeBanner, { marginTop: 8, backgroundColor: '#17365D' }, pressed && styles.pressed]}>
+          <View style={styles.intakeBannerIcon}><Ionicons name="person-add-outline" size={23} color="#FFFFFF" /></View>
+          <View style={styles.intakeBannerCopy}>
+            <Text style={styles.intakeBannerTitle}>Add Partner</Text>
+            <Text style={styles.intakeBannerSubtitle}>Create Partner application for Operations review</Text>
+          </View>
+          <Feather name="chevron-right" size={20} color="#FFFFFF" />
+        </Pressable>
+      ) : null}
+
       {isOffline || collection.stale || summary.stale ? (
         <View style={styles.feedback}>
           <PartnerBanner
