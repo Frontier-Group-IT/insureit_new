@@ -19,21 +19,19 @@ assert.match(policies, /stickyClaimsHeading/);
 assert.match(policies, /stickySearchOverlay: \{[^\n]+backgroundColor: '#082657'/);
 assert.match(claims, /stickyOverlay: \{[^\n]+backgroundColor: "#082657"/);
 assert.match(claims, /<Text style=\{styles.stickyTitle\}>Claims<\/Text>/);
-// Policies portfolio summary is a single horizontal row of name/count chips, not five KPI cards.
-assert.match(policies, /<ScrollView\s+horizontal\s+showsHorizontalScrollIndicator=\{false\}\s+style=\{styles\.summaryScroll\}/, 'Policy status chips scroll horizontally on mobile');
+// Policies use one search-row dropdown with all five live lifecycle counts.
+assert.match(policies, /onPress=\{openStatusMenu\}/, 'Policies lifecycle dropdown opens from the search row');
 for (const label of ['Total Policies', 'Active Policies', 'Expiring Soon', 'Lapsed Policies', 'Upcoming']) {
-  assert.ok(policies.includes(`label: '${label}'`), `Preserve the ${label} metric and count`);
+  assert.ok(policies.includes("label: '" + label + "'"), 'Preserve Policies status ' + label);
 }
-assert.match(policies, /metric\.value\.toLocaleString\('en-IN'\)/, 'Status chip counts use the source portfolio summary');
-assert.match(policies, /onPress=\{\(\) => selectSummary\(metric\.filter\)\}/, 'Selecting a chip preserves existing policy lifecycle filtering');
-assert.match(policies, /accessibilityState=\{\{ selected \}\}/, 'Selected lifecycle chip remains accessible');
-assert.match(policies, /summaryChipSelected: \{ backgroundColor: '#17365D'/, 'Selected lifecycle uses navy contrast');
-assert.match(policies, /summaryChip: \{[^\n]*backgroundColor: '#FFFFFF'/, 'Unselected lifecycle chips use white backgrounds');
-assert.doesNotMatch(policies, /See all policy status filters|seeAllOpen|statusSheetOverlay/, 'See all and bottom modal sheet are removed');
-for (const lifecycle of ["all", "in_force", "expiring", "expired", "upcoming"]) {
-  assert.ok(policies.includes(`filter: '${lifecycle}' as const`), `All status options include ${lifecycle}`);
+for (const lifecycle of ['all', 'in_force', 'expiring', 'expired', 'upcoming']) {
+  assert.ok(policies.includes("filter: '" + lifecycle + "'"), 'Preserve lifecycle ' + lifecycle);
 }
-assert.doesNotMatch(policies, /styles\.summaryCard|styles\.summaryIcon|styles\.summaryPercent|formatPortfolioShare/, 'Remove the large metric tiles, icons and redundant percentages');
+assert.match(policies, /count: summary\.data\?\.total_policies/, 'Dropdown counts use portfolio summary');
+assert.match(policies, /onPress=\{\(\) => selectSummary\(option\.filter\)\}/, 'Dropdown selection filters policies');
+assert.match(policies, /accessibilityState=\{\{ selected \}\}/, 'Dropdown selection announced accessibly');
+assert.match(policies, /visible=\{statusMenuOpen\}/, 'Dropdown displays all options on demand');
+assert.doesNotMatch(policies, /styles\.summaryRow|styles\.summaryScroll|styles\.summaryChip|seeAllOpen|statusSheetOverlay/, 'Obsolete horizontal policy chips and See all removed');
 // Claims keeps three compact filters and the permission-gated Add action together in one row.
 assert.match(claims, /<View style=\{styles\.summaryChips\} accessibilityLabel="Claim status filters">/, 'All Claims status chips remain visible in a single row');
 assert.match(claims, /summaryChip: \{ flex: 1, minWidth: 0/, 'Claims chips divide available width rather than scroll');
