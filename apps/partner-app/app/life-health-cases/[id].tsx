@@ -103,6 +103,7 @@ export default function LifeHealthCaseDetailScreen(){
    let active=true;
    // Guard against stale detail data after switching accounts or navigating away.
    void load();
+   void listLifeHealthInsurers().then(setInsurers).catch(()=>setInsurers([]));
    return ()=>{active=false;void active;setRecord(null);};
  },[load]));
  const openOperations=async()=>{
@@ -135,9 +136,9 @@ export default function LifeHealthCaseDetailScreen(){
    </View>;
  };
  const toISO=(value:string):string=>{
-   const raw=value.trim(),parts=/^(\\d{2})\\/(\\d{2})\\/(\\d{4})$/.exec(raw);
+   const raw=value.trim(),parts=/^(\d{2})\/(\d{2})\/(\d{4})$/.exec(raw);
    const iso=parts?parts[3]+'-'+parts[2]+'-'+parts[1]:raw;
-   if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(iso))return '';
+   if(!/^\d{4}-\d{2}-\d{2}$/.test(iso))return '';
    const date=new Date(iso+'T00:00:00Z');
    return !Number.isNaN(date.getTime())&&date.toISOString().slice(0,10)===iso?iso:'';
  };
@@ -148,7 +149,32 @@ export default function LifeHealthCaseDetailScreen(){
    dateApprovalId:approvalVerified?approvalId:'',
  });
  const setIssued=(key:keyof LifeHealthIssue,value:string)=>{
-   setIssue(current=>({...current,[key]:value}));
+   setIssue(current=>{
+     const next={...current,[key]:value};
+     if(key==='startDate'){
+       const start=toISO(value);
+       const plusYears=(term:string)=>{
+         const years=Number(term.match(/[0-9]+/)?.[0]??0);
+         if(!start||!years||!Number.isInteger(years))return '';
+         const date=new Date(start+'T00:00:00Z');
+         date.setUTCFullYear(date.getUTCFullYear()+years);date.setUTCDate(date.getUTCDate()-1);
+         return dateLabel(date.toISOString().slice(0,10));
+       };
+       const installment=()=>{
+         if(!start||!form)return '';
+         const months=({Monthly:1,Quarterly:3,'Half Yearly':6,Annually:12} as Record<string,number>)[form.paymentFrequency];
+         if(!months)return '';
+         const [y,m,d]=start.split('-').map(Number);
+         const date=new Date(Date.UTC(y,m-1+months,1));
+         const max=new Date(Date.UTC(date.getUTCFullYear(),date.getUTCMonth()+1,0)).getUTCDate();
+         date.setUTCDate(Math.min(d,max));return dateLabel(date.toISOString().slice(0,10));
+       };
+       next.endDate=plusYears(form?.policyDuration||'');
+       next.pptEndDate=plusYears(form?.premiumPayingTerm||'');
+       next.nextInstallmentDate=installment();
+     }
+     return next;
+   });
    if(key==='issuanceDate'||key==='policyNumber'){setApprovalId('');setApprovalVerified(false);}
  };
  const requiresApproval=()=>{
@@ -334,6 +360,45 @@ export default function LifeHealthCaseDetailScreen(){
       </Section>
 
     </View>:null}
+   <Modal visible={Boolean(picker)} transparent animationType="fade" onRequestClose={()=>setPicker(null)}>
+     <View style={styles.editorBackdrop}><View style={styles.remarkEditor}>
+       <View style={styles.editorHeader}>
+         <Text style={styles.editorTitle}>Select {picker==='insurerId'?'Insurance Company':picker||'Option'}</Text>
+         <Pressable accessibilityRole="button" accessibilityLabel="Close selector" onPress={()=>setPicker(null)}>
+           <Ionicons name="close" size={22} color={navy}/>
+         </Pressable>
+       </View>
+       <ScrollView style={{maxHeight:380}}>
+         {picker?choices(picker).map(item=><Pressable key={item.value} accessibilityRole="button"
+           onPress={()=>{setField(picker,item.value);setPicker(null);}} style={styles.modalOption}>
+           <Text style={styles.fieldValue}>{item.label}</Text>
+         </Pressable>):null}
+       </ScrollView>
+     </View></View>
+   </Modal>
+   <Modal visible={approvalOpen} transparent animationType="fade" onRequestClose={()=>{if(!approvalLoading)setApprovalOpen(false);}}>
+     <View style={styles.editorBackdrop}><View style={styles.remarkEditor}>
+       <Text style={styles.editorTitle}>Earlier-month issuance approval</Text>
+       <Text style={styles.fieldLabel}>APPROVER</Text>
+       <View style={styles.choices}>
+         {['jatin','vishal','varun','gagan'].map(value=><Pressable key={value} accessibilityRole="button"
+           onPress={()=>setApproverKey(value)} style={[styles.choice,approverKey===value&&styles.choiceActive]}>
+           <Text style={[styles.choiceText,approverKey===value&&styles.choiceTextActive]}>{value.toUpperCase()}</Text>
+         </Pressable>)}
+       </View>
+       {approvalId?<TextInput accessibilityLabel="Approval OTP" placeholder="Enter 6-digit OTP" value={otp}
+         onChangeText={setOtp} keyboardType="number-pad" maxLength={6} style={styles.editInput}/>:null}
+       {issueError?<Text style={styles.saveError}>{issueError}</Text>:null}
+       <View style={styles.editorActions}>
+         <Pressable accessibilityRole="button" disabled={approvalLoading} onPress={()=>setApprovalOpen(false)}
+           style={styles.cancelButton}><Text style={styles.cancelText}>Cancel</Text></Pressable>
+         <Pressable accessibilityRole="button" disabled={approvalLoading||(!approvalId&&!approverKey)}
+           onPress={()=>void (approvalId?verifyApproval():requestApproval())} style={styles.saveButton}>
+           <Text style={styles.saveText}>{approvalLoading?'Please wait…':approvalId?'Verify OTP':'Request OTP'}</Text>
+         </Pressable>
+       </View>
+     </View></View>
+   </Modal>
    <Modal visible={remarkOpen} transparent animationType="fade" onRequestClose={()=>{if(!remarkSaving)setRemarkOpen(false);}}>
     <View style={styles.editorBackdrop}>
      <View style={styles.remarkEditor}>
@@ -395,6 +460,7 @@ function Field({label,value,meta,secondaryMeta,required=false,wide=false,multili
 }
 
 const styles=StyleSheet.create({
+  modalOption:{padding:12,borderBottomWidth:1,borderBottomColor:'#E6ECF5'},
   inlineInput:{color:navy,fontSize:12,fontWeight:'600'},
   inlineSelector:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:5},
   remarkInlineRow:{flexDirection:'row',alignItems:'center',gap:8},
