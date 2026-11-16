@@ -140,6 +140,27 @@ export async function deleteMasterRecord(entity: DeletableMasterEntity, id: stri
   const config = entityConfig[entity];
   const admin = createSupabaseAdminClient();
 
+  // Preserve a human-readable claim origin before the permanent delete cascades
+  // its claim record. The existing audit writer runs only after deletion.
+  let deletedClaimIdentity: { claim_no: string | null; claim_created_by_name: string | null } | null = null;
+  if (entity === "claim") {
+    const { data: claim, error: claimError } = await admin.from("claims")
+      .select("id,claim_no,created_by")
+      .eq("id",id)
+      .maybeSingle<{id:string;claim_no:string|null;created_by:string|null}>();
+    if (claimError) return { ok:false, error:"Unable to verify the claim identity before deletion." };
+    if (!claim) return { ok:false, error:"This claim no longer exists." };
+    let creatorName:string|null = null;
+    if (claim.created_by && isUuid(claim.created_by)) {
+      const { data: creator, error: creatorError } = await admin.from("profiles")
+        .select("full_name").eq("id",claim.created_by)
+        .maybeSingle<{full_name:string|null}>();
+      if (creatorError) return { ok:false, error:"Unable to verify the claim creator before deletion." };
+      creatorName = creator?.full_name?.trim() || null;
+    }
+    deletedClaimIdentity = {claim_no:claim.claim_no,claim_created_by_name:creatorName};
+  }
+
   let linkedCustomerId: string | null = null;
   let linkedFinalPolicyId: string | null = null;
   let policyIntakeSourceFile: StorageFile | null = null;
@@ -359,7 +380,7 @@ export async function deleteMasterRecord(entity: DeletableMasterEntity, id: stri
       old_data: {
         id,
         deletion_source: "it_super_user_master_data_control",
-        ...(entity === "claim" ? { cascaded_claim_records: true, storage_files_cleanup_attempted: storageFiles.length } : {}),
+        ...(entity === "claim" ? { cascaded_claim_records: true, storage_files_cleanup_attempted: storageFiles.length, claim_no: deletedClaimIdentity?.claim_no ?? null, claim_created_by_name: deletedClaimIdentity?.claim_created_by_name ?? null } : {}),
         ...(entity === "policy" ? { rejected_policy_intake_links_cleared: unlinkedRejectedPolicyIntakeIds.length } : {}),
         ...(entity === "policy_intake" ? {
           cascaded_policy_intake_records: true,
