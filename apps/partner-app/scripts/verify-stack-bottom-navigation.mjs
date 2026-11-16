@@ -21,6 +21,7 @@ for (const route of ['/(tabs)', '/(tabs)/business', '/(tabs)/policies', '/(tabs)
 assert.match(bar, /canPartnerAccess\(context, 'view_claims'\)/, 'Claims tab permission retained');
 assert.match(bar, /canPartnerAccess\(context, 'view_policies'\)/, 'Policies tab permission retained');
 assert.match(bar, /canPartnerAccess\(context, 'view_dashboard'\)/, 'Home and Business permissions retained');
+assert.match(bar, /if \(!permitted\) return null/, 'Unauthorized tabs are hidden without blank placeholders');
 assert.match(bar, /keyboardWillShow/, 'Hide nav during iOS keyboard display');
 assert.match(bar, /keyboardDidShow/, 'Hide nav during Android keyboard display');
 assert.match(bar, /if \(keyboardOpen\) return null/, 'Do not obscure the active text field');
