@@ -342,7 +342,7 @@ export default function NativePolicyOnboarding(){
       const result=isNew?{revision:data.revision}:await saveNativePolicyOnboarding(id,data.revision,updated);
       setDraft(updated);
       setData(current=>current?{...current,revision:result.revision}:current);
-      setDirty(false);
+      setDirty(isNew);
       setVerifiedApprovalId(null);
       setApprovalRequestId(null);
       setRemarkOpen(false);
@@ -581,7 +581,7 @@ export default function NativePolicyOnboarding(){
     const raw=draft[f.key];
     const current=typeof raw==='string'?raw:'';
     if(['issuanceDate','validFrom','validUpto','tpValidUpto','cpaValidUpto'].includes(f.key))return <PartnerPolicyDateField key={f.key} fullWidth={fullWidth} label={f.key==='issuanceDate'?'Policy issuance date':f.label.replace(' (YYYY-MM-DD)','')} value={current} required={f.required} onChange={v=>update(f.key,v)}/>;
-    const productOptions=f.key==='policyProduct'?(draft.vehicleClass==='CPM'?['Comprehensive','SAOD']:['Comprehensive','Third Party','SAOD',...(['PCP','TWP'].includes(draft.vehicleClass)?['Bundled']:[]),'Long Term Package','Long Term Third Party']):f.options??[];
+    const productOptions=isNew&&f.key==='businessLine'?['Motor']:f.key==='policyProduct'?(draft.vehicleClass==='CPM'?['Comprehensive','SAOD']:['Comprehensive','Third Party','SAOD',...(['PCP','TWP'].includes(draft.vehicleClass)?['Bundled']:[]),'Long Term Package','Long Term Third Party']):f.options??[];
     const options=f.key==='insurerId'?data?.insurers??[]:f.key==='make'?(data?.manufacturers??[]).map(x=>({value:x,label:x})):f.key==='manufacturingYear'?manufacturingYearOptions.map(value=>({value,label:value})):productOptions.map(x=>({value:x,label:f.key==='policyProduct'&&x==='Comprehensive'?'Package':x}));
     const displayed=options.find(x=>x.value===current)?.label??current;
     const masterSourceMatches=Boolean(data?.sourceMeta&&data.sourceMeta.code===draft.intermediaryCode&&data.sourceMeta.name.trim().toLowerCase()===draft.leadSource.trim().toLowerCase());
@@ -638,7 +638,7 @@ export default function NativePolicyOnboarding(){
 
   const sourceMeta=(key:'rmName'|'intermediaryCode',label:string)=><View style={styles.sourceMeta}>
     <Text style={styles.sourceMetaLabel}>{label} ·</Text>
-    {key==='rmName'&&isMotor
+    {key==='rmName'&&isMotor&&!isNew
       ? <Text numberOfLines={1} style={styles.sourceMetaValue}>{draft?.rmName||verifiedSource?.rmName||''}</Text>
       : key==='intermediaryCode'&&verifiedSource
         ? <Text numberOfLines={1} style={styles.sourceMetaValue}>{draft?.intermediaryCode}</Text>
@@ -1081,7 +1081,7 @@ export default function NativePolicyOnboarding(){
             <Pressable accessibilityRole="button" accessibilityLabel="Save Remark"
               disabled={saving||booking||!remarkText.trim()}
               style={[styles.remarkConfirm,(saving||booking||!remarkText.trim())&&styles.disabled]}
-              onPress={()=>void addRemark()}><Text style={styles.primaryText}>{saving?'Saving…':'Save Remark'}</Text></Pressable>
+              onPress={()=>void addRemark()}><Text style={styles.primaryText}>{saving?'Saving…':isNew?'Add to form':'Save Remark'}</Text></Pressable>
           </View>
         </View>
       </View>
