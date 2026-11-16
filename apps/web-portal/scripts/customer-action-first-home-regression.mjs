@@ -18,6 +18,11 @@ for(const snippet of [
   "/customer/vehicles/",
   "/customer/policies/",
 ]) assert.ok(home.includes(snippet), `Customer Home regression: missing ${snippet}`);
+assert.ok(home.includes('Good morning, {account.contact_name?.split(" ")[0] || "Customer"}!'), "Personalized greeting remains at the top of Customer Home");
+assert.match(home, /<h1 className="customer-home-enter text-\[clamp\(22px,2\.4vw,30px\)\] font-bold/, "Greeting is presented as simple compact text");
+assert.doesNotMatch(home, /customer-modern-hero|customer-home-hero-image|customer-modern-hero-orb/, "Customer Home must not render the old banner, picture, or gradient overlays");
+assert.doesNotMatch(home, /Every vehicle\. Every policy\. Every journey/, "Remove the redundant hero subtitle");
+assert.ok(home.indexOf("Good morning,") < home.indexOf('aria-label="Quick actions"'), "Greeting stays directly above Quick Actions");
 assert.ok(!home.includes("Your next steps"), "Removed Customer Home shortcut card must stay absent: Your next steps");
 assert.ok(!home.includes("Everyday services"), "Removed Customer Home shortcut card must stay absent: Everyday services");
 assert.ok(!home.includes("Claims progress"), "Removed Customer Home shortcut card must stay absent: Claims progress");
