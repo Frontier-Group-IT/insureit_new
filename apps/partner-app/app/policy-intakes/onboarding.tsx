@@ -9,7 +9,7 @@ import { motorValidityEnds } from '@/lib/motor-validity-dates';
 import { createPartnerPolicyIntakeBridgeUrl, getPartnerPolicyIntakeDocumentUrl } from '@/lib/policy-intakes';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { PartnerPolicyDateField } from '@/components/policy-intakes/partner-policy-date-field';
-import { prepareNativePolicyOnboarding, saveNativePolicyOnboarding, bookNativePolicyOnboarding, createNativeLifeHealthCase, requestNativePolicyDateApproval, verifyNativePolicyDateApproval, lookupNativePolicyRc, prepareNewNativePolicyOnboarding, bookNewNativePolicyOnboarding, lookupNewNativePolicyRc, createNewNativeLifeCase, requestNewNativePolicyDateApproval, verifyNewNativePolicyDateApproval, searchNativeNonMotorCustomers, type NativeNonMotorCustomer, type NativePolicyDraft, type NativeOnboardingData, type NativeProductType, listNativeOnboardingDocuments, uploadNativeOnboardingDocument, deleteNativeOnboardingDocument, type NativeOnboardingDocument, type NativeOnboardingDocumentType } from '@/lib/policy-onboarding';
+import { prepareNativePolicyOnboarding, saveNativePolicyOnboarding, bookNativePolicyOnboarding, createNativeLifeHealthCase, requestNativePolicyDateApproval, verifyNativePolicyDateApproval, lookupNativePolicyRc, prepareNewNativePolicyOnboarding, bookNewNativePolicyOnboarding, lookupNewNativePolicyRc, createNewNativeLifeHealthCase, bookNewNativeNonMotorPolicy, searchNewNativeNonMotorCustomers, requestNewNativePolicyDateApproval, verifyNewNativePolicyDateApproval, searchNativeNonMotorCustomers, type NativeNonMotorCustomer, type NativePolicyDraft, type NativeOnboardingData, type NativeProductType, listNativeOnboardingDocuments, uploadNativeOnboardingDocument, deleteNativeOnboardingDocument, type NativeOnboardingDocument, type NativeOnboardingDocumentType } from '@/lib/policy-onboarding';
 
 type FieldKey = keyof NativePolicyDraft;
 type Field = { key:FieldKey; label:string; required?:boolean; options?:string[] };
@@ -273,10 +273,10 @@ export default function NativePolicyOnboarding(){
     setCustomerChoices([]);setCustomerSearch('');setCustomerSearchError('');setDirty(true);
   };
   async function findNonMotorCustomers(){
-    if(!id||customerSearch.trim().length<2)return;
+    if((!id&&!isNew)||customerSearch.trim().length<2)return;
     setCustomerSearchBusy(true);setCustomerSearchError('');setCustomerChoices([]);
     try{
-      const result=await searchNativeNonMotorCustomers(id,customerSearch.trim());
+      const result=isNew?await searchNewNativeNonMotorCustomers(customerSearch.trim()):await searchNativeNonMotorCustomers(id,customerSearch.trim());
       setCustomerChoices(result.customers);
     }catch{setCustomerSearchError('Customer search is unavailable. Please try again.');}
     finally{setCustomerSearchBusy(false);}
@@ -306,9 +306,10 @@ export default function NativePolicyOnboarding(){
     setVerifiedApprovalId(null);
   };
   const update=(key:FieldKey,value:string)=>{
-    if(isNew&&key==='businessLine'&&value!=='Motor'&&value!=='Life'){
-      Alert.alert('Standalone onboarding','Add Policy currently supports Motor and Life. Use Policy Intake and Operations for other policy types.');
-      return;
+    if(isNew&&key==='businessLine'){
+      setStandaloneLifeDocuments({});
+      setOnboardingDocuments([]);
+      setCustomerSearch('');setCustomerChoices([]);
     }
     setDraft(current=>{
       if(!current)return current;
@@ -397,6 +398,17 @@ export default function NativePolicyOnboarding(){
     setError('');
     setDocumentError('');
   };
+  const createNonMotorStandalone=async()=>{
+    if(!isNew||productType!=='Non Motor'||!draft||!data||booking||saving)return;
+    setBooking(true);setError('');
+    try{
+      const {policy}=await bookNewNativeNonMotorPolicy(draft,standaloneLifeDocuments);
+      Alert.alert('Policy created',`Non-Motor policy ${policy.number} was created successfully.`,[
+        {text:'Return to Policies',onPress:()=>router.replace('/(tabs)/policies')},
+      ]);
+    }catch(cause){setError(cause instanceof Error?cause.message:'Non-Motor booking could not be confirmed. Check Policy Register before retrying.');}
+    finally{setBooking(false);}
+  };
   const createLifeHealth=async()=>{
     if(!draft||!data||saving||booking||creatingLifeHealth)return;
     if(productType!=='Life'&&productType!=='Health')return;
@@ -410,7 +422,7 @@ export default function NativePolicyOnboarding(){
         setDirty(false);
       }
       const result=isNew?
-        await createNewNativeLifeCase(draft,standaloneLifeDocuments):
+        await createNewNativeLifeHealthCase(draft,standaloneLifeDocuments):
         await createNativeLifeHealthCase(id,revision);
       Alert.alert('Case created',`${productType} case ${result.case.number} created. Policy issuance remains pending in Operations.`,[
         {text:isNew?'Return to Policies':'Return to Intake',onPress:()=>isNew?router.replace('/(tabs)/policies'):router.back()},
@@ -421,6 +433,7 @@ export default function NativePolicyOnboarding(){
   };
     const createActivePolicy=async()=>{
     if(isMotor){await completeBooking();return;}
+    if(isNew&&productType==='Non Motor'){await createNonMotorStandalone();return;}
     if(!draft||!data||saving||booking)return;
     // Non-Motor/Life/Health final booking is performed by the authorized Operations flow.
     // Saving a revision-checked draft first prevents silently discarding entered details.
@@ -598,7 +611,7 @@ export default function NativePolicyOnboarding(){
     const raw=draft[f.key];
     const current=typeof raw==='string'?raw:'';
     if(['issuanceDate','validFrom','validUpto','tpValidUpto','cpaValidUpto'].includes(f.key))return <PartnerPolicyDateField key={f.key} fullWidth={fullWidth} label={f.key==='issuanceDate'?'Policy issuance date':f.label.replace(' (YYYY-MM-DD)','')} value={current} required={f.required} onChange={v=>update(f.key,v)}/>;
-    const productOptions=isNew&&f.key==='businessLine'?['Motor','Life']:f.key==='policyProduct'?(draft.vehicleClass==='CPM'?['Comprehensive','SAOD']:['Comprehensive','Third Party','SAOD',...(['PCP','TWP'].includes(draft.vehicleClass)?['Bundled']:[]),'Long Term Package','Long Term Third Party']):f.options??[];
+    const productOptions=isNew&&f.key==='businessLine'?['Motor','Life','Health','Non Motor']:f.key==='policyProduct'?(draft.vehicleClass==='CPM'?['Comprehensive','SAOD']:['Comprehensive','Third Party','SAOD',...(['PCP','TWP'].includes(draft.vehicleClass)?['Bundled']:[]),'Long Term Package','Long Term Third Party']):f.options??[];
     const options=f.key==='insurerId'?data?.insurers??[]:f.key==='make'?(data?.manufacturers??[]).map(x=>({value:x,label:x})):f.key==='manufacturingYear'?manufacturingYearOptions.map(value=>({value,label:value})):productOptions.map(x=>({value:x,label:f.key==='policyProduct'&&x==='Comprehensive'?'Package':x}));
     const displayed=options.find(x=>x.value===current)?.label??current;
     const masterSourceMatches=Boolean(data?.sourceMeta&&data.sourceMeta.code===draft.intermediaryCode&&data.sourceMeta.name.trim().toLowerCase()===draft.leadSource.trim().toLowerCase());
@@ -743,7 +756,10 @@ export default function NativePolicyOnboarding(){
   </View>;
   const nonMotorRiskSection=<View style={styles.section}>
     <View style={styles.sectionHead}><Text style={styles.number}>03</Text><Text style={styles.sectionTitle}>Risk details</Text></View>
-    <View style={styles.fields}>{(riskFields[productValues.category]??riskFields.Other).map(detailField)}</View>
+    <View style={styles.fields}>
+      {detailField({key:'category',label:'Non-Motor category',required:true,options:Object.keys(riskFields)})}
+      {(riskFields[productValues.category]??riskFields.Other).map(detailField)}
+    </View>
   </View>;
   const nonMotorAdditionalSection=<View style={styles.section}>
     <Pressable accessibilityRole="button" accessibilityLabel="Additional policy details"
@@ -1015,7 +1031,7 @@ export default function NativePolicyOnboarding(){
             disabled={booking||saving||!data} style={[styles.primary,(booking||saving||!data)&&styles.disabled]}
             onPress={()=>void createActivePolicy()}>
             {booking?<ActivityIndicator size="small" color="white"/>:<Ionicons name="checkmark-circle-outline" size={16} color="white"/>}
-            <Text style={styles.primaryText}>{booking?(isMotor?'Checking & booking…':'Opening Operations…'):'Create Active Policy'}</Text>
+            <Text style={styles.primaryText}>{booking?(isMotor?'Checking & booking…':isNew?'Creating policy…':'Opening Operations…'):'Create Active Policy'}</Text>
           </Pressable>}
       </View>
 
