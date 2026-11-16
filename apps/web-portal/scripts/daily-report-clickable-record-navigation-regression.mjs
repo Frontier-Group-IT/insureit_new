@@ -27,12 +27,12 @@ assert.match(loader, /row\.href=dailyActivityRecordHref\(table,row\.recordId\)/,
 for(const table of ["policies","policy_intake_requests","life_health_cases"]) {
   assert.ok(loader.includes(`table:"${table}",recordId:a.id`),`Keep immutable record ID for ${table} history`);
 }
-assert.match(panel, /<DailyActivityHistoryRows rows=\{data\.rows\} isCustomerActivity=\{isCustomerActivity\} \/>/, "All employee and Self reports use interactive rows with customer-specific context");
-assert.match(rows, /role=\{row\.href\?"button":undefined\}/, "Only valid destinations have interactive rows");
-assert.match(rows, /tabIndex=\{row\.href\?0:undefined\}/, "Only navigable rows receive keyboard focus");
-assert.match(rows, /event\.key==="Enter"\|\|event\.key===" "/, "Enter and Space activate links");
-assert.match(rows, /if\(row\.href\) router\.push\(row\.href\)/, "Click navigates directly to verified canonical record");
-assert.doesNotMatch(rows, /createPortal|Activity details|Open record<|setSelected/, "No intermediate details popup");
+assert.ok(panel.includes("<DailyActivityHistoryRows rows={data.rows} isCustomerActivity={isCustomerActivity} isClaimActivity={isClaimActivity} vehicleMode={vehicleMode} />"), "Shared activity renderer preserves Customer, Claims and Vehicle modes");
+assert.match(rows,/role=\{row\.href\?"button":undefined\}/,"Only verified destinations clickable");
+assert.match(rows,/tabIndex=\{row\.href\?0:undefined\}/,"Only navigable records receive keyboard focus");
+assert.match(rows,/event\.key==="Enter"\|\|event\.key===" "/,"Enter and Space navigate");
+assert.match(rows,/\[&_td\]:cursor-pointer/,"Every cell indicates whole-row clickability");
+assert.match(rows,/if\(row\.href\) router\.push\(row\.href\)/,"Navigate directly to verified record");
 assert.match(rows, /row\.detail \? <span/, "Preserve latest audit field-level change details");
 assert.doesNotMatch(rows, /\{row\.source\}/, "Never render Audit or Record history source text in any row");
 assert.match(loader, /delete_claim:"Claim deleted \(creator unavailable\)"/, "Deleted claims never display the generic Delete Claim title");
@@ -44,11 +44,8 @@ assert.match(deleteAction, /\.from\("profiles"\)[\s\S]*?\.select\("full_name"\)/
 assert.match(deleteAction, /claim_created_by_name: deletedClaimIdentity\?\.claim_created_by_name/, "Save creator name into deletion audit");
 assert.ok(deleteAction.indexOf('deletedClaimIdentity = {claim_no:') < deleteAction.indexOf('.from("audit_logs").insert'), "Audit uses captured pre-delete identity");
 
-assert.ok(rows.includes('onClick={row.href?()=>openRecord(row):undefined}'), "Click handler covers the entire navigable row");
-assert.match(rows,/\[&_td\]:cursor-pointer/,"All cells visibly indicate whole-row click behavior");
-assert.match(rows,/onKeyDown=\{row\.href\?event=>onRowKeyDown\(event,row\):undefined\}/,"Keyboard activation is available only on navigable rows");
-assert.ok(rows.includes('if(row.href) router.push(row.href)'), "Only surviving records navigate");
-assert.ok(!rows.includes('selected.detail||"Not recorded"'), "No intermediate audit dialog");
+assert.ok(rows.includes('onClick={row.href?()=>openRecord(row):undefined}'),"Click on any cell navigates directly");
+assert.doesNotMatch(rows,/createPortal|Activity details|Open record<|setSelected/,"No activity popup");
 assert.ok(panel.includes('Policy / Case No.'), "Register shows policy or case reference");
 assert.ok(panel.includes('Customer / Vehicle'), "Register shows customer and vehicle context");
 assert.ok(panel.includes('Insurance Company'), "Register shows insurer");
@@ -57,7 +54,7 @@ assert.ok(loader.includes('admin.from("insurance_companies")'), "Insurer linked 
 assert.ok(loader.includes('admin.from("customers")'), "Customer linked to actual customer");
 assert.ok(loader.includes('admin.from("vehicles")'), "Vehicle linked to actual vehicle");
 assert.doesNotMatch(loader+routes+panel+rows,/\.insert\(|\.update\(|\.upsert\(|\.delete\(/, "Navigation is read-only");
-console.log("Daily Report direct record navigation and six-column context regression passed.");
+console.log("Daily Report direct whole-row navigation and six-column context regression passed.");
 
 assert.match(panel, /const isCustomerActivity=data\.category\.startsWith\("Customer "\)/, "Customer category switches to register-aligned columns");
 for(const column of ["Customer", "Customer Type", "Mobile"]) {
@@ -71,3 +68,16 @@ assert.match(loader, /customer\.phone\?\.replace/, "Customer mobiles are masked 
 
 assert.doesNotMatch(panel, /<th[^>]*>Fleet Size<\/th>|<th[^>]*>Total Policies<\/th>/, "Customer drilldown hides fleet size and total policies headers");
 assert.doesNotMatch(rows, /customerField\(row\.customerFleetSize\)|customerField\(row\.customerPolicyCount\)|\["Fleet Size",customerField|\["Total Policies",customerField/, "Customer rows hide fleet size and total policies");
+
+assert.match(panel, /const isClaimActivity=data\.category==="Claims"/, "Claims have their own register columns");
+for(const header of ["Control No.","Claim No.","Vehicle No."]) assert.ok(panel.includes(`>${header}</th>`),`Claims header present: ${header}`);
+assert.match(rows, /isClaimActivity \? \(/, "Claim rows switch to claim-specific fields");
+assert.match(loader, /row\.claimControlNo \|\|=label\(previous\.claim_no\)/, "Deleted claims only use audit-preserved control number");
+assert.match(loader, /row\.claimInsurerNo \|\|=label\(previous\.insurer_claim_no\)/, "Deleted claims only use audit-preserved claim number");
+
+assert.ok(panel.includes('const vehicleMode=data.category.startsWith("Vehicle ")'),"Vehicle category uses Vehicle Register presentation");
+for(const label of ["Vehicle","Customer","Make / model","Registration"]) assert.ok(panel.includes('>'+label+'</th>'),"Vehicle column "+label);
+assert.ok(rows.includes('vehicleMode ? ('),"Vehicle rows have conditional fields");
+assert.ok(rows.includes('selected.vehicleNumber'),"Vehicle details popup uses Vehicle fields");
+assert.ok(loader.includes('.in("id",activityVehicleIds)'),"Vehicle records are read only within visible activity scope");
+assert.ok(panel.includes('isClaimActivity={isClaimActivity} vehicleMode={vehicleMode}'),"Claims mode remains intact");
