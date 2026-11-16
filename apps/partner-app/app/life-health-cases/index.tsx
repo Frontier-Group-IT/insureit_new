@@ -55,27 +55,26 @@ export default function LifeHealthCaseRegisterScreen() {
    </PartnerScreen>
  );
  return (
-   <PartnerScreen title="Case Register" subtitle="Life & Health cases" onBack={()=>router.back()}>
-     <View style={styles.searchWrap}>
-       <Ionicons name="search-outline" size={19} color="#63748A"/>
-       <TextInput value={query} onChangeText={setQuery} style={styles.search}
-         placeholder="Case, customer, mobile, insurer, proposal..." placeholderTextColor="#8390A5" autoCapitalize="none"/>
-       {query?<Pressable accessibilityLabel="Clear case search" onPress={()=>setQuery('')}><Ionicons name="close-circle" size={18} color="#70819A"/></Pressable>:null}
-     </View>
+   <PartnerScreen title="Case Register" navyTopBar navyStatusBar onBack={()=>router.back()}>
      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filters} contentContainerStyle={styles.filtersContent}>
        {filters.map(item=><Pressable key={item.key} accessibilityRole="button" accessibilityState={{selected:status===item.key}}
            onPress={()=>setStatus(item.key)} style={[styles.filter,status===item.key&&styles.filterSelected]}>
            <Text numberOfLines={1} style={[styles.filterText,status===item.key&&styles.filterTextSelected]}>{item.label} ({counts[item.key]})</Text>
        </Pressable>)}
      </ScrollView>
+     <View style={styles.searchWrap}>
+       <Ionicons name="search-outline" size={19} color="#63748A"/>
+       <TextInput value={query} onChangeText={setQuery} style={styles.search}
+         placeholder="Case, customer, mobile, insurer, proposal..." placeholderTextColor="#8390A5" autoCapitalize="none"/>
+       {query?<Pressable accessibilityLabel="Clear case search" onPress={()=>setQuery('')}><Ionicons name="close-circle" size={18} color="#70819A"/></Pressable>:null}
+     </View>
      {error?<View style={styles.error}><Text style={styles.errorText}>{error}</Text>
        <Pressable onPress={()=>void load()}><Text style={styles.retry}>Retry</Text></Pressable></View>:null}
      {loading?<ActivityIndicator color={navy} style={{marginTop:24}}/>:
        rows.length===0?<Text style={styles.message}>No matching cases found.</Text>:
        <View style={styles.list}>
          <View style={styles.listHeading}>
-           <Text style={styles.listTitle}>{status==='all'?'All Cases':`${filters.find(item=>item.key===status)?.label} Cases`} ({total})</Text>
-           <Text style={styles.listCount}>{total} {total===1?'record':'records'}</Text>
+           <Text style={styles.listTitle}>{status==='all'?'All Cases':`${filters.find(item=>item.key===status)?.label} Cases`}</Text>
          </View>
          <View style={styles.caseRows}>
            {rows.map(row=><Pressable
@@ -115,7 +114,7 @@ export default function LifeHealthCaseRegisterScreen() {
  );
 }
 const styles=StyleSheet.create({
- searchWrap:{flexDirection:'row',alignItems:'center',borderRadius:12,borderWidth:1,borderColor:'#CBD8E7',backgroundColor:'#FFF',paddingHorizontal:12,height:44,gap:8,marginTop:8},
+ searchWrap:{flexDirection:'row',alignItems:'center',borderRadius:12,borderWidth:1,borderColor:'#CBD8E7',backgroundColor:'#FFF',paddingHorizontal:12,height:44,gap:8,marginTop:4,marginBottom:8},
  search:{flex:1,color:'#172B4D',fontSize:12},
  filters:{marginTop:12,marginBottom:8,flexGrow:0},
  filtersContent:{flexDirection:'row',alignItems:'center',gap:6,paddingRight:4},
@@ -124,9 +123,8 @@ const styles=StyleSheet.create({
  filterText:{fontSize:11,color:'#49617D',fontWeight:'700'},
  filterTextSelected:{color:'#FFF'},
  list:{gap:7,paddingBottom:20},
- listHeading:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginTop:8,marginBottom:3},
+ listHeading:{marginTop:8,marginBottom:3},
  listTitle:{fontSize:12,fontWeight:'800',color:'#142B4E'},
- listCount:{fontSize:10,color:'#64748B'},
  caseRows:{gap:3},
  caseRow:{minHeight:60,flexDirection:'row',alignItems:'center',gap:7,backgroundColor:'#FFF',borderColor:'#E2E9F3',borderWidth:1,borderRadius:8,paddingHorizontal:8,paddingVertical:6},
  caseRowPressed:{backgroundColor:'#F6F9FF'},
