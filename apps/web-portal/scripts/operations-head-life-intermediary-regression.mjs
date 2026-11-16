@@ -34,6 +34,15 @@ assert.ok(!nav.includes('label:"Downline Operations"'),"Remove Downline Operatio
 assert.ok(!nav.includes('href:"/intermediaries",label:"Intermediary Register"'),"Do not point an Intermediary Register link at the retired overview redirect");
 assert.ok(nav.includes('href:"/intermediaries/partner",label:"Partners"'),"Partner link must go directly to its existing register");
 assert.ok(nav.includes('prominent/>' ),"Life Head direct links use full-size navigation treatment");
+assert.ok(nav.includes('href:"/dashboard",label:"Dashboard",icon:Gauge'),"Life Head Dashboard uses the Operations Portal gauge icon");
+for(const href of ["/dashboard","/policies","/policies/life-health-cases","/policy-intakes","/policy-intakes/new","/policies/new"]){
+  assert.ok(nav.includes(`"${href}":`),"Direct Life Head navigation has a colored icon tile: "+href);
+}
+assert.ok(nav.includes('prominent?<span className='),"Prominent direct links render the shared 32px rounded gradient icon tile");
+assert.ok(nav.includes('rounded-xl bg-gradient-to-br text-white'),"Icons match Operations Portal white-on-colored tiles");
+assert.ok(nav.includes('h-8 w-8 shrink-0 place-items-center'),"Icon tiles retain compact 32px dimensions");
+assert.ok(nav.includes('group-hover:scale-105'),"Keep subtle, reduced-motion-aware hover styling");
+
 
 assert.ok(nav.includes('href:"/intermediaries/misp/new"'));
 const mw=read("middleware.ts");
