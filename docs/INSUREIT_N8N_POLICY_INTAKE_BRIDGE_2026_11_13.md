@@ -123,7 +123,7 @@ Use the existing `ParsedPolicyField` shape when writing authorized `ocr_fields` 
 - Apply validates the unchanged current document and status before writing, checks the canonical duplicate helper against the **newly extracted policy number**, and performs a status/source-scoped compare-and-set update to **Ready for Review + completed OCR**. It **does not** set a matched customer, assign/take over reviewer, create a new draft, create a customer/vehicle/policy or book a policy. On conflicts, it fails closed and retains manual correction.
 - The existing canonical **Open & correct fields**, reviewer takeover confirmation, saved draft and **Confirm & book** transaction remain unchanged. The AI pilot's bundled/add-on coverage and other field/date/commercial-readiness blockers still apply. An n8n `ok:true` is **not** permission to book a bundled policy automatically.
 - The server-side upload-time n8n router from the same PR remains independently off by default with Google fallback; this workbench path reuses its shared request/validation adapter and does **not** replace Google Document AI.
-- **Release gates:** verify PR CI and branch code review, publish n8n only after separate deployment authorization, securely configure the exact production URL/secret in the active website runtime (Cloudflare as appropriate), start with a single authorized Intake in **shadow preview only**, verify real-document privacy, OCR fields, duplicate and reviewer safeguards, then separately approve any prefer/apply rollout. Do not enable broad allowlists. No production database, environment variables or live website were changed while implementing this PR.
+- **Release gates:** verify PR CI and branch code review, publish n8n only after separate deployment authorization, securely configure the exact production URL/secret in the Vercel Production runtime, start with a single authorized Intake in **shadow preview only**, verify real-document privacy, OCR fields, duplicate and reviewer safeguards, then separately approve any prefer/apply rollout. Do not enable broad allowlists. No production database, environment variables or live website were changed while implementing this PR.
 
 ## 2026-11-16 — Permanent n8n private-PDF source and strict OCR route
 
@@ -158,40 +158,38 @@ The clean decommissioning criterion for Google is: adequate n8n layout/insurer c
 ### 2026-11-16 pilot Intake lifecycle recheck
 The previously approved example Intake became **Completed** with `final_policy_id` present by the last read-only query (record updated at 2026-11-16 04:56:52 UTC). It was **not** processed by n8n or modified through this implementation. Do not send it for a new pilot or replay an already-booked policy. The current signed-source helper excludes Completed Intakes, and required OCR processing checks status=processing. Choose a newly authorized pending Intake after deployment.
 
-## 2026-11-16: ICICI 3005 automatic n8n routing and manual Cloudflare release
+## 2026-11-16 — ICICI 3005 n8n rollout on Production Vercel
 
-The user confirmed that ICICI Lombard **Product Code 3005** is the first trained document layout. Do not pretend that other insurers are trained, or turn on automatic policy booking.
+**Verified target (Vercel connector):** Team `antnish1s-projects`, project `insureit_new` (ID `prj_OLXA2UB1LwMd0UidP8MNa1O9MLuq`), GitHub source `Frontier-Group-IT/insureit_new`, domain `portal.insureit.in`, framework Next.js. User explicitly corrected the release environment: **test against the Production Vercel project, not Cloudflare**. The release stays manual.
 
-### Deployment intent (manual release by account owner)
-**Prepare now but DO NOT merge or deploy the Web Portal on the user's behalf.** The n8n workflow can be published independently because the webhook is already Header Auth and only the deployed website knows the shared secret.
+### Configuration verified in Vercel Production
 
-**Safe first release settings for the Cloudflare Worker `insureit-new`:**
+The following 5 encrypted Production variables were added through the connected Vercel account on 2026-11-16. They are safe for a disabled-first deploy; their values will be available to new production deployments, not retroactively to an already-running build.
 
-| Runtime setting | Value / instruction |
+| Variable | Verified value |
 |---|---|
 | `INSUREIT_N8N_OCR_WEBHOOK_URL` | `https://insureit.app.n8n.cloud/webhook/insureit-policy-intake-icici-v1` |
-| `INSUREIT_N8N_OCR_HEADER_SECRET` | **Cloudflare Secret**; manually paste the existing n8n Header Auth account value (minimum 32 characters), never disclose in PR/chat/source |
-| `INSUREIT_N8N_OCR_MODE` | `off` for the first website release, then `shadow` + one approved open Intake UUID, then `required` after the PDF comparison succeeds |
-| `INSUREIT_N8N_OCR_ALLOWED_INTAKE_IDS` | One separately authorized **non-completed** Intake UUID for shadow tests; remove when auto-routing mode has been validated |
-| `INSUREIT_N8N_OCR_AUTO_ICICI_3005` | `true` only with `MODE=required` after review of an actual supported original PDF |
-| `INSUREIT_N8N_OCR_ALL_MOTOR` | `false` until **all** Motor policy layouts are covered, or business expressly accepts manual OCR failures for every unsupported Motor PDF |
-| `INSUREIT_N8N_OCR_ALLOW_REVIEW_APPLY` | `false`; never automatically overwrite a draft or create/book a policy |
+| `INSUREIT_N8N_OCR_MODE` | `off` |
+| `INSUREIT_N8N_OCR_AUTO_ICICI_3005` | `false` |
+| `INSUREIT_N8N_OCR_ALL_MOTOR` | `false` |
+| `INSUREIT_N8N_OCR_ALLOW_REVIEW_APPLY` | `false` |
 
-**Automatic recognition (additional opt-in mode):** with `MODE=required`, `AUTO_ICICI_3005=true` and `ALL_MOTOR=false`, Operations and Partner Motor uploads use the existing native-PDF header classifier to recognize **ICICI LOMBARD + Product Code 3005** (first three pages). For recognized PDFs, the backend calls n8n via an expiring signed download link and does **not** call Google, even when n8n fails. Unrecognized/scanned/other insurer layouts continue the existing OCR path until n8n modules exist. The classifier is a gate, not proof that the ICICI parser will succeed; the strict 13 financial/document checks still apply. Wrong 3005 formats fail to the standard manual reviewer queue without becoming bookable.
+**Only remaining required credential:** `INSUREIT_N8N_OCR_HEADER_SECRET` is **NOT configured** in Vercel. The account owner must add it at Vercel → `antnish1s-projects` → `insureit_new` → Settings → Environment Variables, target **Production**, ideally type **Sensitive**; use the exact current n8n Webhook Header Auth credential value (minimum 32 characters). Never paste the secret into this repository, chat, screenshots, CI or `NEXT_PUBLIC_*`.
 
-**Full n8n-only Motor cutover:** `MODE=required` plus `ALL_MOTOR=true` routes all Motor uploads to n8n for direct download. The current parser will reject untrained insurer/products and scanned-only copies, so they require manual correction. Do **not** enable this flag during the ICICI-only rollout without explicit operational approval.
+`INSUREIT_N8N_OCR_ALLOWED_INTAKE_IDS` is intentionally unset until the user selects and authorizes a **new open** policy Intake UUID. The previous selected example is now Completed and linked to a finalized policy; it is ineligible and must not be reprocessed.
 
-**Cloudflare secret instructions:** navigate Workers & Pages → `insureit-new` → Settings → Variables and Secrets; add `INSUREIT_N8N_OCR_HEADER_SECRET` with Type=Secret, and other values as plain runtime variables. Cloudflare's dashboard **Deploy** applies a new Worker version; schedule this with the owner's manual deployment. `wrangler secret put` also deploys immediately; use a versioned secret or dashboard-controlled release if the website must not change beforehand. `apps/web-portal/wrangler.jsonc` contains `keep_vars:true` to retain existing runtime bindings on subsequent deploys. Do not put the secret in `wrangler.jsonc`, GitHub, `NEXT_PUBLIC_*` env vars or logs.
+### Safe manual Production Vercel deployment sequence
 
-### Mandatory smoke tests after manual website deployment
-1. Verify n8n production Webhook is active, authenticated; missing/wrong secret returns 403. Reject malformed identifiers, invalid host/path/expiry and invalid PDF. Do not print signed URLs or customer data.
-2. Select a **newly approved open Motor Intake** with an original ICICI 3005 readable PDF and confirm current document id, size and policy type. A previous user-approved example has already become **Completed** with a linked policy, and cannot be reused.
-3. Set `MODE=shadow` and that exact UUID on the Worker; use Development → AI Policy Onboarding → Preview n8n PDF and compare policy number/name, OD dates, TP dates, vehicle, IDV, base OD/add-ons, TP/CPA, tax and gross against the original document. Verify n8n fetches directly using its `Download Current Private PDF` node, without manual download/upload.
-4. Confirm the original Intake, assigned reviewer, saved draft and policy register are unchanged by preview. Verify the failed/mismatched result cannot auto-save or book.
-5. After acceptance, set `MODE=required` with `AUTO_ICICI_3005=true` and `ALL_MOTOR=false`. Submit an authorized newly uploaded sample; verify `ocr_parser_id=icici_3005_n8n_native_pdf` and review state. Confirm unrecognized documents keep their legacy path. No automatic booking.
-6. Check usage, signed URL expiry, no token leaks, and manual reviewer exception flow. Roll back with `MODE=off` immediately on errors.
+1. Ensure GitHub PR #4397 is green and reviewed. **User will manually merge and deploy**; do not auto-deploy as part of this PR preparation. Confirm the production Vercel project, Git commit SHA, branch and build status before live traffic changes.
+2. Privately configure `INSUREIT_N8N_OCR_HEADER_SECRET` in **Vercel Production**, not Cloudflare. Keep `MODE=off`, `AUTO_ICICI_3005=false`, `ALL_MOTOR=false` and `ALLOW_REVIEW_APPLY=false` for the first code deploy.
+3. Manually deploy the reviewed merge commit to Vercel **Production**. The main source is `apps/web-portal`. Validate `portal.insureit.in` is serving that exact deployment. Current n8n Webhook is already published and protected by Header Auth.
+4. For the first real-PDF evidence run, explicitly authorize one open current ICICI Lombard Product 3005 Motor Intake. Set `INSUREIT_N8N_OCR_ALLOWED_INTAKE_IDS` to that UUID and `MODE=shadow` in Vercel **Production**; redeploy manually so the change is effective. Open **Development → AI Policy Onboarding**, choose the Intake, and click **Preview n8n PDF**. The site generates a scoped 120-second Supabase Storage signed URL and n8n's `Download Current Private PDF` node retrieves the original PDF directly; operators never download/upload it again.
+5. Compare n8n against the original policy: insured name from `Name of Insured`, policy number, insurer/product, OD dates, separate TP dates, registration/engine/chassis, make/model/year, IDV, Basic OD and add-ons, TP/CPA, IGST and gross. Check unchanged draft, account scope and no accidental policy booking. Missing/incorrect fields require reviewer attention. Verify missing/wrong auth, invalid signed URLs, unsupported PDFs and expiry rejection separately, without exposing customer details or signed URLs.
+6. After successful authorized real-PDF comparison, update Vercel Production variables to `MODE=required`, `AUTO_ICICI_3005=true`, `ALL_MOTOR=false`, `ALLOW_REVIEW_APPLY=false`; manually redeploy. Recognized **native-readable ICICI Lombard Product 3005** documents will use n8n as the sole extractor, **without Google OCR fallback**. Unsupported insurer layouts continue their existing OCR path until separate n8n parsers are trained.
+7. Monitor failures and reviewer outcomes, and revert quickly with `MODE=off` plus manual Vercel redeployment if needed. Never turn on `ALL_MOTOR=true` until all required insurer/scanned formats have been validated or the business explicitly accepts manual-review-only processing.
 
-### Responsibilities
-- **GitHub PR/CI and n8n publication**: release preparation in code/app connectors.
-- **Cloudflare secret and runtime variables**: account owner must input the already-saved header secret privately in Cloudflare, because the connected tools have no Cloudflare secret-write capability or plaintext n8n credential.
-- **Manual Cloudflare deploy + real PDF smoke**: account owner after merging/choosing the release; these checks cannot be truthfully marked completed before the website is deployed and a new approved open Intake is selected.
+**Current release state as of this update:** n8n is **published** with Header Auth; the GitHub branch is **not merged** and the website code is **not deployed to Vercel Production**. The five Vercel Production variables are stored but disabled; the Header Auth secret is missing. No actual signed-URL download of a live customer PDF has been verified via the new deployment, and no production Intake, customer, vehicle or policy record was modified by this integration work.
+
+### Excluding Google later
+
+The user wants n8n to be the main policy parser with ICICI 3005 supported first. Our explicit `required` + `AUTO_ICICI_3005=true` + `ALL_MOTOR=false` selection routes recognized supported PDFs through n8n only, while unrecognized insurers retain their current extraction until their n8n modules are trained. Do **not** globally remove Google or enable `ALL_MOTOR` before the latter layouts are ready. All onboarding and booking safeguards remain in force.
