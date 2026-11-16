@@ -15,6 +15,7 @@ export type SelfActivity = {
   customerName?: string; customerType?: string; customerMobile?: string;
   customerFleetSize?: string; customerPolicyCount?: number;
   claimControlNo?: string; claimInsurerNo?: string; claimCustomerName?: string; claimVehicleNo?: string;
+  subjectEmployeeName?: string;
 };
 type Audit = { id:string; actor_id:string|null; action:string; table_name:string|null; record_id:string|null; created_at:string };
 type Policy = { id:string; created_at:string; policy_no:string|null };
@@ -222,6 +223,37 @@ export async function loadSelfActivityHistory(
       if(typeof item.id==="string" && typeof item[column]==="string") lookup.set(item.id,item[column] as string);
     }
     for(const row of visible) if(row.table===table && row.recordId && lookup.has(row.recordId)) row.reference=lookup.get(row.recordId)!;
+  }
+  // Resolve the affected employee rather than the person performing the action.
+  // These are only the already-authorized, visible audit rows.
+  if(category==="Other Activities") {
+    const employeeIds=[...new Set(visible.filter(row=>row.table==="employees"&&isValidDailyRecordId(row.recordId??"")).map(row=>row.recordId as string))];
+    const profileIds=[...new Set(visible.filter(row=>["profiles","auth.users"].includes(row.table??"")&&isValidDailyRecordId(row.recordId??"")).map(row=>row.recordId as string))];
+    const [employeeResult,profileResult]=await Promise.all([
+      employeeIds.length?admin.from("employees").select("id,full_name").in("id",employeeIds):Promise.resolve({data:[],error:null}),
+      profileIds.length?admin.from("profiles").select("id,full_name,employee_id").in("id",profileIds):Promise.resolve({data:[],error:null}),
+    ]);
+    if(employeeResult.error||profileResult.error)
+      console.error("[daily-report] Other Activities employee lookup unavailable");
+    const employeeNames=new Map((employeeResult.data??[]).map(employee=>[employee.id,employee.full_name?.trim()||""]));
+    const profileNames=new Map((profileResult.data??[]).map(profile=>[profile.id,profile.full_name?.trim()||""]));
+    const linkedEmployeeIds=[...new Set((profileResult.data??[]).map(profile=>profile.employee_id).filter((id):id is string=>typeof id==="string"&&isValidDailyRecordId(id)))];
+    if(linkedEmployeeIds.length) {
+      const {data:linkedEmployees,error}=await admin.from("employees").select("id,full_name").in("id",linkedEmployeeIds);
+      if(error) console.error("[daily-report] linked employee names unavailable");
+      else {
+        const linkedNames=new Map((linkedEmployees??[]).map(employee=>[employee.id,employee.full_name?.trim()||""]));
+        for(const profile of profileResult.data??[])
+          if(profile.employee_id&&linkedNames.get(profile.employee_id))
+            profileNames.set(profile.id,linkedNames.get(profile.employee_id)!);
+      }
+    }
+    for(const row of visible) {
+      if(!row.recordId) continue;
+      if(row.table==="employees")row.subjectEmployeeName=employeeNames.get(row.recordId)||undefined;
+      else if(row.table==="profiles"||row.table==="auth.users")
+        row.subjectEmployeeName=profileNames.get(row.recordId)||undefined;
+    }
   }
   // Claims drilldowns display only claim-specific register columns.
   // Lookups remain restricted to already authorized, visible audit records.

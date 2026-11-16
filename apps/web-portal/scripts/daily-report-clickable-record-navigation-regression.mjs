@@ -27,7 +27,7 @@ assert.match(loader, /row\.href=dailyActivityRecordHref\(table,row\.recordId\)/,
 for(const table of ["policies","policy_intake_requests","life_health_cases"]) {
   assert.ok(loader.includes(`table:"${table}",recordId:a.id`),`Keep immutable record ID for ${table} history`);
 }
-assert.ok(panel.includes("<DailyActivityHistoryRows rows={data.rows} isCustomerActivity={isCustomerActivity} isClaimActivity={isClaimActivity} vehicleMode={vehicleMode} />"), "Shared activity renderer preserves Customer, Claims and Vehicle modes");
+assert.ok(panel.includes("<DailyActivityHistoryRows rows={data.rows} isCustomerActivity={isCustomerActivity} isClaimActivity={isClaimActivity} vehicleMode={vehicleMode} isOtherActivity={isOtherActivity} />"), "Shared activity renderer preserves Customer, Claims and Vehicle modes");
 assert.match(rows,/role=\{row\.href\?"button":undefined\}/,"Only verified destinations clickable");
 assert.match(rows,/tabIndex=\{row\.href\?0:undefined\}/,"Only navigable records receive keyboard focus");
 assert.match(rows,/event\.key==="Enter"\|\|event\.key===" "/,"Enter and Space navigate");
@@ -81,3 +81,6 @@ assert.ok(rows.includes('vehicleMode ? ('),"Vehicle rows have conditional fields
 assert.ok(rows.includes('row.vehicleNumber'),"Vehicle columns preserve vehicle number");
 assert.ok(loader.includes('.in("id",activityVehicleIds)'),"Vehicle records are read only within visible activity scope");
 assert.ok(panel.includes('isClaimActivity={isClaimActivity} vehicleMode={vehicleMode}'),"Claims mode remains intact");
+
+assert.ok(rows.includes('customerField(row.subjectEmployeeName)'),"Other Activities renders affected employee name");
+assert.ok(loader.includes('if(category==="Other Activities")'),"Other Activities identity enrichment is scoped to the selected category");
