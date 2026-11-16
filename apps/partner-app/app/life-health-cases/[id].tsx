@@ -490,7 +490,7 @@ function InlineChoice({label,value,onPress,wide=false,required=false}:{
 }
 function CaseBottomNav({context,onGo}:{context:Parameters<typeof canPartnerAccess>[0];onGo:(route:string)=>void}){
   const tabs=[
-    {label:'Home',route:'/(tabs)/index',icon:'home-outline' as const,access:'view_dashboard' as const},
+    {label:'Home',route:'/(tabs)',icon:'home-outline' as const,access:'view_dashboard' as const},
     {label:'Business',route:'/(tabs)/business',icon:'briefcase-outline' as const,access:'view_dashboard' as const},
     {label:'Policies',route:'/(tabs)/policies',icon:'document-text-outline' as const,access:'view_policies' as const},
     {label:'Claims',route:'/(tabs)/claims',icon:'shield-outline' as const,access:'view_claims' as const},
@@ -498,7 +498,8 @@ function CaseBottomNav({context,onGo}:{context:Parameters<typeof canPartnerAcces
   ];
   return <View style={styles.bottomTabs}>
     {tabs.filter(t=>!t.access||canPartnerAccess(context,t.access)).map(t=><Pressable key={t.label}
-      accessibilityRole="button" accessibilityLabel={t.label} onPress={()=>onGo(t.route)} style={styles.bottomTab}>
+      accessibilityRole="button" accessibilityLabel={t.label} onPress={()=>onGo(t.route)}
+      style={[styles.bottomTab,t.label==='Policies'&&styles.bottomTabActive]}>
       <Ionicons name={t.icon} color="#FFFFFF" size={20}/>
       <Text style={styles.bottomTabText}>{t.label}</Text>
     </Pressable>)}
@@ -549,6 +550,7 @@ const styles=StyleSheet.create({
   optionText:{fontSize:12,color:navy,fontWeight:'600'},
   bottomTabs:{backgroundColor:'#071E49',flexDirection:'row',justifyContent:'space-around',paddingTop:7,minHeight:58},
   bottomTab:{alignItems:'center',justifyContent:'center',gap:4,minWidth:43,flex:1},
+  bottomTabActive:{backgroundColor:'#203F79',borderRadius:13},
   bottomTabText:{color:'#FFFFFF',fontSize:9,fontWeight:'600'},
 
  editorBackdrop:{flex:1,justifyContent:'flex-end',backgroundColor:'rgba(9,24,48,0.48)'},
