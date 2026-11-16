@@ -756,10 +756,7 @@ export default function NativePolicyOnboarding(){
   </View>;
   const nonMotorRiskSection=<View style={styles.section}>
     <View style={styles.sectionHead}><Text style={styles.number}>03</Text><Text style={styles.sectionTitle}>Risk details</Text></View>
-    <View style={styles.fields}>
-      {detailField({key:'category',label:'Non-Motor category',required:true,options:Object.keys(riskFields)})}
-      {(riskFields[productValues.category]??riskFields.Other).map(detailField)}
-    </View>
+    <View style={styles.fields}>{(riskFields[productValues.category]??riskFields.Other).map(detailField)}</View>
   </View>;
   const nonMotorAdditionalSection=<View style={styles.section}>
     <Pressable accessibilityRole="button" accessibilityLabel="Additional policy details"
