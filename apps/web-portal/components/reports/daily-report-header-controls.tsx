@@ -38,7 +38,7 @@ export function DailyReportHeaderScopes() {
     || (person.employee_code??"").toLocaleLowerCase("en-IN").includes(search.trim().toLocaleLowerCase("en-IN")));
   const selected=people.find(person=>person.id===selectedPerson);
   useEffect(()=>{
-    if(!open || !isDaily)return;
+    if((!open && !selectedPerson) || !isDaily)return;
     const controller=new AbortController();
     const load=async()=>{
       setLoading(true);setLoadError(false);
@@ -55,7 +55,7 @@ export function DailyReportHeaderScopes() {
     };
     void load();
     return ()=>controller.abort();
-  },[open,isDaily]);
+  },[open,isDaily,selectedPerson]);
   useEffect(()=>{
     if(!open)return;
     const outside=(event:MouseEvent)=>{if(container.current&&!container.current.contains(event.target as Node))setOpen(false);};
