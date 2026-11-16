@@ -122,6 +122,9 @@ jobs:
       - name: Verify standalone Health and Non-Motor Onboarding
         run: node apps/partner-app/scripts/verify-standalone-health-nonmotor.mjs
 
+      - name: Verify Motor source picker and identity requirements
+        run: node apps/partner-app/scripts/verify-motor-source-picker-identity.mjs
+
       - name: Verify Partner-only mobile onboarding
         run: node apps/partner-app/scripts/verify-add-partner-only.mjs
 
