@@ -50,7 +50,7 @@ export function PartnerStackBottomNavigation({
           || (tab.key === 'claims' ? canPartnerAccess(context, 'view_claims')
             : tab.key === 'policies' ? canPartnerAccess(context, 'view_policies')
               : canPartnerAccess(context, 'view_dashboard'));
-        if (!permitted) return <View key={tab.key} style={styles.item} />;
+        if (!permitted) return null;
         const selected = tab.key === activeTab;
         return (
           <Pressable
