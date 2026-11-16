@@ -34,7 +34,7 @@ export async function requireDailyReportEmployee():Promise<DailyReportProfile> {
 export function dailyReportAllRoleAllowed(role:string|null|undefined) {
   // These roles were restricted from /reports/daily by middleware before
   // the employee Self-access change. Keep that separation of duties.
-  return role!=="accounts" && role!=="claims_head";
+  return role!=="accounts" && role!=="claims_head" && role!=="sales_executive" && role!=="operations_head_life";
 }
 
 export async function canViewDailyReportAll(profile:DailyReportProfile) {
