@@ -26,6 +26,15 @@ for (const path of ["app/intermediaries/overview-register.tsx","app/intermediari
 const nav=read("components/claim-manager/app-navigation.tsx");
 assert.ok(nav.includes('label:"Intermediaries"'));
 assert.ok(nav.includes('href:"/intermediaries/posp/new"'));
+assert.ok(nav.includes('role==="operations_head_life"&&section.key==="fleet"'),"Life Head policy links render directly instead of inside Downline Operations accordion");
+for(const label of ["Dashboard","Policy Register","Case Register","Policy Intake","New Policy Intake","Add Policy"]){
+  assert.ok(nav.includes(`label:"${label}"`),"Expected direct policy navigation label: "+label);
+}
+assert.ok(!nav.includes('label:"Downline Operations"'),"Remove Downline Operations heading");
+assert.ok(!nav.includes('href:"/intermediaries",label:"Intermediary Register"'),"Do not point an Intermediary Register link at the retired overview redirect");
+assert.ok(nav.includes('href:"/intermediaries/partner",label:"Partners"'),"Partner link must go directly to its existing register");
+assert.ok(nav.includes('prominent/>' ),"Life Head direct links use full-size navigation treatment");
+
 assert.ok(nav.includes('href:"/intermediaries/misp/new"'));
 const mw=read("middleware.ts");
 assert.ok(mw.includes('pathname === "/intermediaries"'));
