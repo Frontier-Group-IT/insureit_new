@@ -11,7 +11,6 @@ type Data = {
 };
 type Props = {data:Data;linkFor:(updates:Partial<DailyActivityQuery>)=>string; reportMode?:"self"|"employee"};
 
-const groupIcon={Customer:UsersRound,Vehicle:CarFront,Policies:ShieldCheck,Claims:ShieldCheck,Other:LayoutGrid};
 function activityIcon(name:string) {
   if(name==="Customer Add")return UserRoundPlus;
   if(name==="Customer Edit")return UserRoundPen;
@@ -70,14 +69,14 @@ export function DailySelfActivityPanel({data,linkFor,reportMode="self"}:Props) {
           <div className="daily-report-groups space-y-4 p-3">
             {categoryGroups.map(group=>(
               <section key={group.name} data-activity-group={group.name.toLowerCase()} className="daily-report-category" aria-label={`${group.name} activities`}>
-                <h4 className="daily-report-category-heading mb-2 flex items-center gap-2 px-1 text-[10px] font-bold uppercase tracking-wide text-[#61748E]">{(() => {const Icon=groupIcon[group.name as keyof typeof groupIcon];return <Icon size={19} strokeWidth={2.6} aria-hidden="true"/>;})()}{group.name}</h4>
+                <h4 className="daily-report-category-heading mb-2 px-1 text-[10px] font-bold uppercase tracking-wide text-[#61748E]">{group.name==="Claims"?"Claim":group.name}</h4>
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
                   {group.items.map(item=>(
               <Link key={item.name} prefetch={false} href={linkFor({activity:item.name,page:"1"})}
                 className="daily-report-activity-card group flex min-h-[54px] min-w-0 items-center justify-between gap-2 rounded-xl border border-[#dce5f1] bg-gradient-to-br from-white to-[#f7faff] px-3 py-2.5 shadow-[0_1px_3px_rgba(23,54,93,0.05)] transition-[transform,background-color,border-color,box-shadow] duration-200 ease-out hover:-translate-y-0.5 hover:border-[#7ba7dc] hover:from-[#f5f9ff] hover:to-[#e9f2ff] hover:shadow-[0_5px_14px_rgba(23,54,93,0.13)] active:translate-y-0 active:shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315b9a] motion-reduce:transform-none motion-reduce:transition-none">
                 {(() => {const Icon=activityIcon(item.name);return <Icon className="daily-report-activity-icon shrink-0" size={24} strokeWidth={2.4} aria-hidden="true"/>;})()}
                 <span className="min-w-0 flex-1 text-[11px] font-semibold leading-4 text-[#234368] transition-colors duration-200 group-hover:text-[#123c70]">{item.name}</span>
-                <span className="daily-report-count-badge shrink-0 rounded-full px-2.5 py-1 text-center text-[12px] font-extrabold tabular-nums">{item.count.toLocaleString("en-IN")}</span>
+                <span className="daily-report-count-badge shrink-0 px-1 text-center text-[12px] font-extrabold tabular-nums">{item.count.toLocaleString("en-IN")}</span>
               </Link>
                   ))}
                 </div>
