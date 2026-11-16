@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BarChart3, CarFront, ClipboardCheck, FileCheck2, FilePenLine, FilePlus2, FileText, LayoutGrid2, PencilLine, ShieldCheck, UserRoundPen, UserRoundPlus, UsersRound } from "lucide-react";
+import { BarChart3, CarFront, ClipboardCheck, FileCheck2, FilePenLine, FilePlus2, FileText, LayoutGrid, PencilLine, ShieldCheck, UserRoundPen, UserRoundPlus, UsersRound } from "lucide-react";
 import type { SelfActivity } from "@/lib/reports/daily-self-activity";
 import { DailyActivityHistoryRows } from "@/components/reports/daily-activity-history-rows";
 import type { DailyActivityQuery } from "@/lib/reports/daily-activity";
@@ -11,7 +11,7 @@ type Data = {
 };
 type Props = {data:Data;linkFor:(updates:Partial<DailyActivityQuery>)=>string; reportMode?:"self"|"employee"};
 
-const groupIcon={Customer:UsersRound,Vehicle:CarFront,Policies:ShieldCheck,Claims:ShieldCheck,Other:LayoutGrid2};
+const groupIcon={Customer:UsersRound,Vehicle:CarFront,Policies:ShieldCheck,Claims:ShieldCheck,Other:LayoutGrid};
 function activityIcon(name:string) {
   if(name==="Customer Add")return UserRoundPlus;
   if(name==="Customer Edit")return UserRoundPen;
@@ -24,7 +24,7 @@ function activityIcon(name:string) {
   if(name==="Policy Edit")return FilePenLine;
   if(name.startsWith("Policy"))return FileCheck2;
   if(name.startsWith("Claim"))return ClipboardCheck;
-  return LayoutGrid2;
+  return LayoutGrid;
 }
 
 
