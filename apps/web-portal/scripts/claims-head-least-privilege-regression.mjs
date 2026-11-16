@@ -16,7 +16,7 @@ const scope = read("lib/employee-access-scope.ts");
 assert.match(scope, /role === "claims_head" && \(capability === "view_claims" \|\| capability === "manage_claims"\)/);
 assert.doesNotMatch(scope.match(/const organizationWideRoles[\s\S]*?\];/)?.[0] ?? "", /"claims_head"/);
 const middleware = read("middleware.ts");
-assert.match(middleware, /check\.role === "claims_head" && !isClaimsHeadPortalPath\(pathname\)/);
+assert.match(middleware, /check\.role === "claims_head" && pathname !== "\/reports\/daily" && !isClaimsHeadPortalPath\(pathname\)/, "Claims Head can open Self Daily Report without access to other Reports routes");
 const allowed = middleware.match(/function isClaimsHeadPortalPath\([\s\S]*?\n\}/)?.[0] ?? "";
 for (const path of ['"/claims"','"/claim-documents"','"/reports/claims"','"/reports/export/claims"','"/notifications"','"/policy-intakes"']) assert.ok(allowed.includes(path), path);
 for (const path of ['"/accounts"','"/policies"','"/customers"','"/reports"','"/dashboard"','"/tasks"']) assert.ok(!allowed.includes(path) || path === '"/reports"', "Claims Head allowlist must not enable " + path);
