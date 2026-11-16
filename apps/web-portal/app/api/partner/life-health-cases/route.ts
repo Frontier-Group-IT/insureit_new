@@ -64,6 +64,10 @@ export async function GET(request:Request) {
    const {profile,admin} = actor;
    const url = new URL(request.url);
    const id = url.searchParams.get("id");
+   if(url.searchParams.get("catalog")==="insurers"){
+     const {data,error}=await admin.from("insurance_companies").select("id,name").order("name").limit(1000);
+     return error?respond({ok:false,error:"Insurer list unavailable."},503):respond({ok:true,insurers:data??[]});
+   }
    const downline = profile.role === "operations_head_life"
       ? operationsHeadVisiblePolicyFilter(await getOperationsHeadDownlinePolicyScope(profile.id)) : null;
    if (id !== null) {
@@ -275,6 +279,27 @@ export async function POST(request: Request) {
    await admin.from("audit_logs").insert({actor_id:profile.id,table_name:"life_health_cases",record_id:id,action:"life_health_issued_customer_edited",new_data:{fields:["customer_name","customer_phone","customer_address"],policy_id:row.final_policy_id}});
    return respond({ok:true,scope:"issued_customer"});
   }
+  const requestedDate=typeof input?.sourcingDate==="string"?clean("sourcingDate",10):null;
+  if(requestedDate){
+    const date=new Date(requestedDate+"T00:00:00.000Z");
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(requestedDate)||Number.isNaN(date.getTime())||
+      date.toISOString().slice(0,10)!==requestedDate)
+      return respond({ok:false,error:"Enter a valid proposal date."},400);
+  }
+  const insurerId=typeof input?.insurerId==="string"?clean("insurerId",60):null;
+  if(insurerId){
+    if(!uuid.test(insurerId))return respond({ok:false,error:"Invalid insurance company."},400);
+    const {data:insurer,error:insurerError}=await admin.from("insurance_companies").select("id").eq("id",insurerId).maybeSingle();
+    if(insurerError||!insurer)return respond({ok:false,error:"Select a registered insurer."},400);
+  }
+  const hasCustomer=["customerName","customerPhone","customerAddress"].some(key=>input?.[key]!==undefined);
+  let customerUpdate:{contact_name:string;phone:string;address:string|null;address_street:string|null;updated_at:string}|null=null;
+  if(hasCustomer){
+    const name=clean("customerName",160),phone=clean("customerPhone",25).replace(/\D/g,""),
+      address=clean("customerAddress",1000);
+    if(!name||!/^[6-9]\d{9}$/.test(phone))return respond({ok:false,error:"Enter a customer name and valid 10-digit mobile."},400);
+    customerUpdate={contact_name:name,phone,address:address||null,address_street:address||null,updated_at:new Date().toISOString()};
+  }
   const product=clean("productName",180),proposal=clean("proposalNumber",120).toUpperCase();
   const ppt=clean("premiumPayingTerm",80),pd=clean("policyDuration",80);
   const frequency=clean("paymentFrequency",50),mode=clean("paymentMode",50);
@@ -289,10 +314,20 @@ export async function POST(request: Request) {
   const {data:saved,error:saveError}=await admin.from("life_health_cases").update({
     product_name:product,proposal_number:proposal,premium_paying_term:ppt||null,
     policy_duration:pd||null,payment_frequency:frequency,payment_mode:mode,
+    ...(requestedDate?{sourcing_date:requestedDate}:{}),
+    ...(insurerId?{insurance_company_id:insurerId}:{}),
     premium_amount:premium,updated_at:new Date().toISOString(),
   }).eq("id",id).eq("updated_at",expected).is("final_policy_id",null).neq("status","rejected")
    .select("id").maybeSingle();
   if(saveError||!saved)return respond({ok:false,error:"Case changed or could not be saved. Reload and retry."},409);
+  if(customerUpdate){
+    const {error:customerError}=await admin.from("customers").update(customerUpdate).eq("id",row.customer_id);
+    if(customerError){
+      console.error("Pending Case customer update failed after case save",{caseId:id,code:customerError.code});
+      return respond({ok:false,error:"Case details saved, but customer update failed. Reload before retrying."},503);
+    }
+  }
+  await admin.from("audit_logs").insert({actor_id:profile.id,table_name:"life_health_cases",record_id:id,action:"life_health_case_edited",new_data:{fields:["proposal","product","premium",...(requestedDate?["sourcing_date"]:[]),...(insurerId?["insurance_company_id"]:[]),...(customerUpdate?["customer_identity"]:[])]}});
   await recordDailyWorkflowActivity(admin,{actorId:profile.id,table:"life_health_cases",recordId:id,action:"life_health_case_edited"});
   return respond({ok:true,scope:"pending_case"});
  }catch{
