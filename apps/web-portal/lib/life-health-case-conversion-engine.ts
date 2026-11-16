@@ -5,6 +5,12 @@ import { consumePolicyDateApproval, recordPreviousMonthPolicyUpload, linkConsume
 import { policyDateDecision } from "@/lib/policy-date-rule";
 
 export type LifeHealthConversionResult = | { ok: true; policyId: string; policyCode: string } | { ok: false; error: string };
+type CustomerIdentityRow = { id: string; contact_name: string; company_name: string | null };
+type CaseDocumentRow = { id:string; document_type:string; file_name:string; storage_bucket:string; storage_path:string; mime_type:string|null; file_size:number|null; uploaded_by:string|null };
+type CaseRow = { id:string; case_number:string; business_line:"Life"|"Health"; status:string; sourcing_date:string; customer_id:string; insurance_company_id:string; product_name:string; proposal_number:string; premium_paying_term:string|null; policy_duration:string|null; payment_frequency:string; payment_mode:string; premium_amount:number; intermediary_id:string|null; intermediary_type:string|null; intermediary_code:string|null; lead_source:string|null; rm_employee_id:string|null; rm_name:string|null; rm_code:string|null; remarks:string|null; details:Record<string,unknown>|null; final_policy_id:string|null };
+type LifeHealthCommercial = { payinBasis:"NET_PREMIUM_PERCENT"|"FIXED_AMOUNT"; payinPercent:number; payinFixedAmount:number; insurerSchemeAmount:number; payoutBasis:"NET_PREMIUM_PERCENT"|"FIXED_AMOUNT"; payoutPercent:number; payoutFixedAmount:number; payinEntered:boolean; payoutEntered:boolean; payinBase:number; totalPayin:number; tdsPercent:number; tdsAmount:number; payinAfterTds:number; totalPayout:number; retention:number };
+
+
 const DOCUMENT_BUCKET = "policy-documents";
 // Leave headroom under the 25 MB Next.js server-action request limit.
 const MAX_FILE_SIZE = 4 * 1024 * 1024;
