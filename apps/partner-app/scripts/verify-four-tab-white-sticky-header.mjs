@@ -47,6 +47,6 @@ assert.match(claims, /<\/View>\s*\{canPartnerStartClaim\(context\) \? \(\s*<Pres
 assert.match(claims, /accessibilityLabel="Add Claim"/, 'Compact Add Claim remains accessible');
 assert.match(claims, /onPress=\{\(\) => router\.push\('\/claim\/select-vehicle' as never\)\}/, 'Add Claim opens the existing vehicle-selection flow');
 assert.match(claims, /summaryRow: \{[^\n]*flexDirection: 'row'/, 'Claims filters and Add Claim use a single horizontal row');
-assert.match(claims, /summaryAddClaim: \{ width: 62,[^\n]+flexShrink: 0/, 'Add Claim has reserved width and does not overlap filters');
+assert.match(claims, /summaryAddClaim: \{ width: 88,[^\n]+flexShrink: 0/, 'Add Claim has reserved width and does not overlap filters');
 assert.doesNotMatch(claims, /styles\.summaryCard|styles\.summaryIcon|styles\.summaryChange|styles\.addClaimButton/, 'Remove large Claims metric tiles and old Add Claim banner');
 console.log('Primary tab navy sticky heading/search contracts passed');
