@@ -146,6 +146,11 @@ assert.match(screen,/DocumentPicker.getDocumentAsync/, 'Document rows open the i
 assert.match(screen,/uploadNativeOnboardingDocument/, 'Attachments upload to authenticated intake storage.');
 assert.match(screen,/deleteNativeOnboardingDocument/, 'Attachments may be removed.');
 assert.match(screen,/listNativeOnboardingDocuments/, 'Saved attachments restore when reopening the intake.');
+assert.match(screen,/const savedPolicyType=data\?\.draft\.businessLine/, 'Document loading must use the persisted policy type.');
+assert.match(screen,/productType!==savedPolicyType\)return/, 'Unsaved policy-type changes must not request another type document list.');
+assert.match(screen,/\.catch\(\(\)=>\{if\(live\)setOnboardingDocuments\(\[\]\);\}\)/, 'Background document reads must not trigger visible error popups.');
+assert.match(screen,/setDocumentError\(cause instanceof Error\?cause\.message:'Document could not be uploaded\.'/,'Explicit upload failures must still show error feedback.');
+assert.match(screen,/setData\(current=>current\?\{\.\.\.current,revision:saved\.revision,draft\}:current\)/,'After saving a type, refresh the persisted draft identity.');
 assert.match(screen,/Replace':'Add'/, 'Uploaded document may be replaced.');
 assert.match(documentApi,/await context\(request,intakeId,line\)/, 'Uploads are reviewer scoped.');
 assert.match(documentApi,/intake.assigned_to_profile_id!==user.id/, 'Only assigned reviewer can manage uploads.');
