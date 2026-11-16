@@ -2,6 +2,16 @@
 
 ## START HERE — 14 NOVEMBER 2026: NEW-CHAT RESTORATION HANDOFF
 
+### 16 NOVEMBER 2026 — TLS_CA_UNTRUSTED on protected R0/R1 preflight (fix prepared, not merged)
+
+**Latest live evidence supersedes the historical 14 Nov notes below:** the operator successfully configured protected R2 GET-only/AES and target URL credentials, merged R0/R1 PR #4433 and a diagnostic pooler compatibility fix PR #4543, and manually triggered the read-only preflight. The first run failed strict target URL parsing (corrected); the next run authenticated the encrypted R2 v2 dump and privately audited its PostgreSQL TOC, but failed in the target connection. On the following run, the new credential-safe diagnosis definitively returned `MANAGED PREFLIGHT TARGET CONNECT: failure_class=TLS_CA_UNTRUSTED` after the target URL passed validation. No source or target database records were changed by these preflight jobs. Full managed-target SQL import remains NOT PERFORMED; R3 disposable 232/232 restore still remains valid for its tested backup.
+
+**Prepared isolated target TLS fix:** from the **isolated** Supabase project's Database Settings → SSL Configuration, download the root CA certificate (`.crt`/`.cer`, PEM format), and paste the full CA PEM block into new protected GitHub environment secret `RECOVERY_DB_SSL_ROOT_CERT_PEM` in environment `insureit-recovery-isolated`. The read-only preflight now validates this PEM, uses a temporary owner-readable CA file on the GitHub Actions runner, and connects with **`sslmode=verify-full` plus hostname verification**. No downgrade to `sslmode=require` or disabled verification, no logging passwords/cert contents, no production CA substitution. Current official Supabase SSL docs: https://supabase.com/docs/guides/database/psql and https://supabase.com/docs/guides/platform/ssl-enforcement.
+
+After independent code review/required CI and separately approved PR merge, rerun R0/R1 from `main`, snapshot blank, both Storage options false. A successful TLS probe must precede R2 fetch and authenticated exact TOC comparison. The **separately unmerged R4 import PR #4487 also requires this CA-handling design** before any live managed-target SQL write. The 500 MB representative Storage file limit, production isolation, and incomplete managed Auth/Storage/role parity remain unchanged.
+
+
+
 > **THIS IS THE CURRENT, AUTHORITATIVE STATUS.** Read this section before interpreting earlier dates, “not merged,” “failed,” or “draft” notes in this same file. They are preserved because they explain the long investigation. The user wants to SWITCH TO A NEW CHAT after this updated original Markdown file is ready. **Current task: plan the FIRST live isolated Supabase managed-project restore. NOT DONE: any actual import into the new project, Auth/Storage service rebuild, application cutover or full disaster recovery certification.** All changes in this handoff are documentation-only. **As of 14 Nov 2026 IST.**
 
 ### 14 November 2026 — ACTUAL R3 full offline SQL restore PASS, run #43567559473
