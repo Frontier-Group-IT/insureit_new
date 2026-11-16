@@ -97,7 +97,7 @@ export default function LifeHealthCaseDetailScreen(){
     <Text style={styles.errorText}>You do not have Case Register permission.</Text>
   </PartnerScreen>;
 
-  return <PartnerScreen title="Case Details" onBack={()=>router.back()}
+  return <PartnerScreen title="Case Details" onBack={()=>router.back()} navyBottomNavigation
    bottomNavigation={<PartnerStackBottomNavigation activeTab="policies" />}>
     {loading?<ActivityIndicator color={navy} style={{marginTop:24}}/>:null}
     {error?<View style={styles.alert}>
