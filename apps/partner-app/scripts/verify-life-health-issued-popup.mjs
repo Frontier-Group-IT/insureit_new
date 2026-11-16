@@ -1,0 +1,16 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+const screen=readFileSync(new URL("../app/life-health-cases/index.tsx", import.meta.url),"utf8");
+const api=readFileSync(new URL("../lib/life-health-cases.ts", import.meta.url),"utf8");
+const route=readFileSync(new URL("../../web-portal/app/api/partner/life-health-cases/route.ts", import.meta.url),"utf8");
+assert.match(screen, /row\.status_group==='issued' && row\.final_policy_id \? setIssuedCase\(row\) : router\.push/, "Only issued cases show popup, pending/rejected remain unchanged");
+assert.match(screen,/Policy already issued/);
+assert.match(screen,/This case has already been issued as a policy\./);
+assert.match(screen,/onRequestClose=\{\(\)=>setIssuedCase\(null\)\}/);
+assert.match(screen,/onPress=\{\(\)=>setIssuedCase\(null\)\}/);
+assert.match(screen,/operationsIssuedPolicyUrl\(issuedCase\.final_policy_id\)/, "View Policy uses actual linked policy ID");
+assert.match(screen,/await Linking\.openURL\(url\)/);
+assert.match(api,/export function operationsIssuedPolicyUrl\(policyId: string\)/);
+assert.match(api,/encodeURIComponent\(policyId\)\}\/edit/, "Link goes to existing Operations editor");
+assert.match(route,/final_policy_id/, "Scoped list returns final policy ID");
+console.log("Partner issued policy popup and linked policy navigation passed");

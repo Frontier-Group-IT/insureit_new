@@ -85,3 +85,9 @@ export function operationsCaseUrl(id: string) {
   if (!/^[0-9a-f-]{36}$/i.test(id)) throw new Error('Invalid case reference.');
   return `${portal}/policies/life-health-cases/${encodeURIComponent(id)}`;
 }
+
+/** Open the existing authenticated Operations policy editor, not an unscoped native policy record. */
+export function operationsIssuedPolicyUrl(policyId: string) {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(policyId)) throw new Error('Invalid issued policy reference.');
+  return `${portal}/policies/${encodeURIComponent(policyId)}/edit`;
+}

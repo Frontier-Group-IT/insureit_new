@@ -1,0 +1,16 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+const form=readFileSync("components/life-health-issued-policy-edit-form.tsx","utf8");
+assert.match(form, /function Section\([\s\S]*?className="grid gap-3 p-4 md:grid-cols-2"/, "Every Operations form section keeps two columns on desktop");
+assert.doesNotMatch(form, /xl:grid-cols-4|xl:grid-cols-5|xl:grid-cols-\[minmax\(0,1fr\)_336px\]/, "No four/five-column form or sticky sidebar");
+for(const title of ["Policy source & ownership","Customer / proposer","Policy product & case details","Issued policy details"])assert.ok(form.includes(`title="${title}"`),`Missing section ${title}`);
+assert.match(form, /aria-label="Onboarding summary"/, "Keep full-width summary");
+assert.match(form, /const \[infoExpanded,setInfoExpanded\] = useState\(false\)/, "Activity/Remarks default collapsed");
+assert.match(form, />Activity Status<\/button>/);
+assert.match(form, />Remarks<\/button>/);
+assert.match(form, /aria-label="Policy documents"/, "Documents have own section");
+assert.ok(form.indexOf('aria-label="Onboarding summary"')<form.indexOf('aria-label="Activity status and remarks"'));
+assert.ok(form.indexOf('aria-label="Activity status and remarks"')<form.indexOf('aria-label="Policy documents"'));
+assert.ok(form.indexOf('aria-label="Policy documents"')<form.indexOf('Save Policy Changes'));
+for(const x of ["removeDocument(type,label)","uploadDocument(type,e.target.files?.[0])","onClick={()=>save()}","setRemarksModalOpen(true)","commercialAccess?<CommercialStatus","PolicyDateApprovalDialog"])assert.ok(form.includes(x), `Preserve ${x}`);
+console.log("Life/Health Edit Policy two-column layout and preserved actions passed");
