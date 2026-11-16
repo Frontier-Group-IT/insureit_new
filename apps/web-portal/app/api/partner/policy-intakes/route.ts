@@ -10,7 +10,7 @@ import { getPartnerEmployeeIntakeReadScope } from "@/lib/partner-policy-intake-r
 import { hasEffectiveCapability } from "@/lib/effective-permissions";
 import { loadPolicyIntakeDuplicateMatches } from "@/lib/policy-intake-duplicate";
 import type { PolicyIntakeDuplicateCandidate } from "@/lib/policy-intake-duplicate";
-import { policyIntakeBucket, policyIntakeStatusCounts } from "@/lib/policy-intake-status-buckets";
+import { policyIntakeBucket, policyIntakeStatusCounts, sortPolicyIntakesByActivity } from "@/lib/policy-intake-status-buckets";
 import { fetchAllPages } from "@/lib/fetch-all-pages";
 
 const BUCKET = "policy-documents";
@@ -146,7 +146,7 @@ export async function GET(request: Request) {
   const identity = auth.identity;
   const scope = auth.scope;
   const admin = createSupabaseAdminClient();
-  const intakeSelect = "id,intake_number,status,policy_type,lead_source_name,lead_source_type,lead_source_code,customer_mobile,file_name,ocr_status,ocr_fields,ocr_warnings,attention_reason,created_at,updated_at,final_policy_id,submitted_by_profile_id,submitted_by_portal_account_id";
+  const intakeSelect = "id,intake_number,status,policy_type,lead_source_name,lead_source_type,lead_source_code,customer_mobile,file_name,ocr_status,ocr_fields,ocr_warnings,attention_reason,created_at,updated_at,finalized_at,final_policy_id,submitted_by_profile_id,submitted_by_portal_account_id";
   const url = new URL(request.url);
   const requestedId = url.searchParams.get("id")?.trim();
   const view = url.searchParams.get("view")?.trim().toLowerCase();
@@ -288,12 +288,12 @@ export async function GET(request: Request) {
 
   if (view === "mobile_list") {
     try {
-      type Candidate = PolicyIntakeDuplicateCandidate & { ocr_status: string };
+      type Candidate = PolicyIntakeDuplicateCandidate & { ocr_status: string; finalized_at: string | null };
       // Duplicate is a computed Operations classification, not necessarily a
       // stored status. Resolve ALL visible candidates before counting/paging.
       const candidatesResult = await fetchAllPages<Candidate, unknown>((from, to) => {
         let scoped = admin.from("policy_intake_requests")
-          .select("id,intake_number,status,ocr_status,ocr_fields,created_at")
+          .select("id,intake_number,status,ocr_status,ocr_fields,created_at,finalized_at")
           .order("created_at", { ascending: false }).order("id", { ascending: false })
           .range(from, to);
         if (employeeRead?.mode === "or") scoped = scoped.or(employeeRead.predicates);
@@ -327,8 +327,8 @@ export async function GET(request: Request) {
       }
       const eligible = searchableIds ? candidates.filter((row) => searchableIds!.has(row.id)) : candidates;
       const counts = includeCounts ? policyIntakeStatusCounts(eligible, duplicateIds) : undefined;
-      const filtered = filter === "all" ? eligible
-        : eligible.filter((row) => policyIntakeBucket(row, duplicateIds.has(row.id)) === filter);
+      const filtered = sortPolicyIntakesByActivity(filter === "all" ? eligible
+        : eligible.filter((row) => policyIntakeBucket(row, duplicateIds.has(row.id)) === filter));
       const pageIds = filtered.slice(offset, offset + limit).map((row) => row.id);
       if (!pageIds.length) return json({ ok: true, intakes: [], total: filtered.length, ...(counts ? { counts } : {}) });
       let pageQuery = admin.from("policy_intake_requests").select(intakeSelect).in("id", pageIds);
