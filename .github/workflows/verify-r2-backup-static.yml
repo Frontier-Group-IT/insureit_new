@@ -253,7 +253,13 @@ jobs:
           assert 'ilzhsfqqjyppzzvfscmh' in managed_script
           assert 'klnodxnmlqbofolxxrsr' in managed_script
           assert 'BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY' in managed_script
-          assert 'default_transaction_read_only=on' in managed_script
+          assert "current_setting('transaction_read_only')" in managed_script
+          assert 'options="-c default_transaction_read_only=on"' not in managed_script
+          assert 'classify_connection_error(error)' in managed_script
+          assert 'MANAGED PREFLIGHT TARGET CONNECT:' in managed_script
+          assert 'sensitive_details=withheld' in managed_script
+          assert 'managed_recovery_preflight.py --probe-target' in guarded_steps
+          assert 'Test isolated target connection and READ ONLY transaction' in guarded_steps
           assert 'sslmode="verify-full"' in managed_script
           assert not any(token in managed_script for token in (
               'CREATE ROLE', 'DROP TABLE', 'TRUNCATE', 'ALTER ROLE', 'pg_restore --clean'

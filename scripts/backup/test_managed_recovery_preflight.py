@@ -1,12 +1,15 @@
 """Secret-free managed recovery R0/R1 guard regression tests."""
 from pathlib import Path
+import contextlib
+import io
+import os
 import tempfile
 import unittest
 from unittest.mock import patch
 
 from managed_recovery_preflight import (
     SOURCE_REF, TARGET_REF, checked_target_connection,
-    compare_archive, toc_inventory,
+    compare_archive, toc_inventory, classify_connection_error, main,
 )
 
 
@@ -71,6 +74,56 @@ class TargetGuard(unittest.TestCase):
     def test_missing_password_rejected(self):
         with self.assertRaises(ValueError):
             checked_target_connection(f"postgresql://postgres@db.{TARGET_REF}.supabase.co/postgres")
+
+
+class SafeTargetConnectionDiagnostics(unittest.TestCase):
+    def test_error_classes_are_fixed_and_never_contain_raw_secrets(self):
+        cases = [
+            ("SSL error: certificate verify failed: unable to get local issuer certificate", "TLS_CA_UNTRUSTED"),
+            ("SSL error: hostname mismatch", "TLS_HOSTNAME_MISMATCH"),
+            ("FATAL: password authentication failed for user postgres.example", "DATABASE_PASSWORD_REJECTED"),
+            ("FATAL: Tenant or user not found", "POOLER_TENANT_OR_USER"),
+            ("unsupported startup parameter options", "POOLER_STARTUP_OPTIONS"),
+            ("could not translate host name", "HOST_DNS_RESOLUTION"),
+            ("connection timed out", "NETWORK_TIMEOUT"),
+            ("Network is unreachable", "NETWORK_UNREACHABLE"),
+            ("server closed the connection unexpectedly", "SERVER_CLOSED_CONNECTION"),
+            ("SSL error: connection interrupted", "TLS_OTHER"),
+            ("password=hidden-should-never-log", "CONNECTION_OTHER"),
+        ]
+        for error, expected in cases:
+            with self.subTest(expected=expected):
+                result = classify_connection_error(RuntimeError(error))
+                self.assertEqual(result, expected)
+                self.assertNotIn("hidden-should-never-log", result)
+                self.assertNotIn("postgres.example", result)
+
+    def test_probe_is_target_only_read_only_and_prints_no_credentials(self):
+        target = dict(
+            tables={("auth", "users"), ("storage", "objects")},
+            auth_users=0, identities=0, buckets=0, objects=0,
+        )
+        url = (f"postgresql://postgres.{TARGET_REF}:secret%40encoded@"
+               "aws-0-ap-northeast-2.pooler.supabase.com:5432/postgres")
+        output = io.StringIO()
+        with patch.dict(os.environ, {"INSUREIT_RECOVERY_DATABASE_URL": url}), \
+             patch("managed_recovery_preflight.query_target", return_value=target) as query, \
+             contextlib.redirect_stdout(output):
+            main(["preflight.py", "--probe-target"])
+        self.assertEqual(query.call_count, 1)
+        self.assertIn("empty_target=1", output.getvalue())
+        self.assertNotIn("secret", output.getvalue())
+
+    def test_probe_rejects_nonempty_target(self):
+        target = dict(
+            tables={("public", "customers")},
+            auth_users=0, identities=0, buckets=0, objects=0,
+        )
+        url = f"postgresql://postgres:synthetic@db.{TARGET_REF}.supabase.co/postgres"
+        with patch.dict(os.environ, {"INSUREIT_RECOVERY_DATABASE_URL": url}), \
+             patch("managed_recovery_preflight.query_target", return_value=target):
+            with self.assertRaises(RuntimeError):
+                main(["preflight.py", "--probe-target"])
 
 
 class TocReview(unittest.TestCase):

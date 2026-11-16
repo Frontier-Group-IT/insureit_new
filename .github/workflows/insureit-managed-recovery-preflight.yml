@@ -49,6 +49,12 @@ jobs:
         run: |
           set -euo pipefail
           python scripts/backup/managed_recovery_preflight.py --check-target
+      - name: Test isolated target connection and READ ONLY transaction before R2 retrieval
+        env:
+          INSUREIT_RECOVERY_DATABASE_URL: ${{ secrets.INSUREIT_RECOVERY_DATABASE_URL }}
+        run: |
+          set -euo pipefail
+          python scripts/backup/managed_recovery_preflight.py --probe-target
       - name: Authenticated R2 v2 retrieval with GET-only dedicated identity
         env:
           R2_ACCOUNT_ID: ${{ secrets.RECOVERY_R2_ACCOUNT_ID }}

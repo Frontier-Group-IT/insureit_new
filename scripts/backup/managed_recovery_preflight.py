@@ -99,6 +99,62 @@ def toc_inventory(path):
     return counts, archive_definitions, archive_data
 
 
+def classify_connection_error(error):
+    """Return only a fixed category: NEVER log libpq's raw error message.
+
+    libpq errors can echo hosts, tenant identifiers, or credential fragments.
+    Preserve fail-closed TLS verification and report a coarse remediation type.
+    """
+    message = str(error).lower()
+    if any(marker in message for marker in (
+        "hostname mismatch", "does not match the host", "hostname does not match",
+        "certificate does not match", "name mismatch",
+    )):
+        return "TLS_HOSTNAME_MISMATCH"
+    if any(marker in message for marker in (
+        "certificate verify failed", "self-signed certificate",
+        "unable to get local issuer", "unknown ca", "certificate chain",
+        "certificate issuer", "certificate authority",
+    )):
+        return "TLS_CA_UNTRUSTED"
+    if any(marker in message for marker in (
+        "password authentication failed", "invalid password",
+        "authentication failed for user",
+    )):
+        return "DATABASE_PASSWORD_REJECTED"
+    if any(marker in message for marker in (
+        "tenant or user not found", "tenant not found",
+        "invalid tenant", "invalid project", "user not found",
+    )):
+        return "POOLER_TENANT_OR_USER"
+    if any(marker in message for marker in (
+        "unsupported startup parameter", "unsupported options",
+        "invalid startup option", "unsupported configuration parameter",
+    )):
+        return "POOLER_STARTUP_OPTIONS"
+    if any(marker in message for marker in (
+        "could not translate host name", "name or service not known",
+        "temporary failure in name resolution", "nodename nor servname provided",
+    )):
+        return "HOST_DNS_RESOLUTION"
+    if any(marker in message for marker in (
+        "connection timed out", "timeout expired", "operation timed out",
+    )):
+        return "NETWORK_TIMEOUT"
+    if any(marker in message for marker in (
+        "network is unreachable", "no route to host", "connection refused",
+    )):
+        return "NETWORK_UNREACHABLE"
+    if any(marker in message for marker in (
+        "server closed the connection unexpectedly", "connection reset",
+        "connection unexpectedly closed", "server closed connection",
+    )):
+        return "SERVER_CLOSED_CONNECTION"
+    if "ssl" in message or "tls" in message:
+        return "TLS_OTHER"
+    return "CONNECTION_OTHER"
+
+
 def query_target(connection_kwargs):
     # Imported only on a protected manual run. No database access in PR CI.
     import psycopg
@@ -106,17 +162,26 @@ def query_target(connection_kwargs):
     if not ca_bundle or not Path(ca_bundle).is_file():
         raise RuntimeError("System CA bundle unavailable")
     # TLS verifies endpoint hostname and CA, not merely encryption.
-    with psycopg.connect(
-        **connection_kwargs, sslmode="verify-full", sslrootcert=ca_bundle,
-        options="-c default_transaction_read_only=on",
-        connect_timeout=12, autocommit=True,
-    ) as conn:
+    # Do not send session GUC startup options through Supavisor. The explicit
+    # PostgreSQL BEGIN ... READ ONLY below protects the whole catalog query.
+    # Connection errors are logged only as a fixed category, never raw libpq.
+    try:
+        connection = psycopg.connect(
+            **connection_kwargs, sslmode="verify-full", sslrootcert=ca_bundle,
+            connect_timeout=12, autocommit=True,
+        )
+    except psycopg.OperationalError as error:
+        print("MANAGED PREFLIGHT TARGET CONNECT:"
+              f" failure_class={classify_connection_error(error)}"
+              " sensitive_details=withheld", file=sys.stderr)
+        raise
+    with connection as conn:
         with conn.cursor() as cur:
             cur.execute("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY")
             try:
                 cur.execute(
                     "SELECT current_database(), current_setting('server_version_num'),"
-                    " current_setting('default_transaction_read_only')"
+                    " current_setting('transaction_read_only')"
                 )
                 db, version, read_only = cur.fetchone()
                 if db != "postgres" or not version.startswith("17") or read_only != "on":
@@ -232,10 +297,21 @@ def main(argv):
         checked_target_connection(os.environ["INSUREIT_RECOVERY_DATABASE_URL"])
         print("MANAGED PREFLIGHT TARGET ALLOWLIST PASSED")
         return
+    if len(argv) == 2 and argv[1] == "--probe-target":
+        target = query_target(
+            checked_target_connection(os.environ["INSUREIT_RECOVERY_DATABASE_URL"])
+        )
+        if any(target[k] for k in ("auth_users", "identities", "buckets", "objects")):
+            raise RuntimeError("Target contains existing service data")
+        if any(schema == "public" for schema, _ in target["tables"]):
+            raise RuntimeError("Target contains application tables")
+        print("MANAGED PREFLIGHT TARGET PROBE: connected=1 tls_verify_full=1"
+              " transaction_read_only=1 empty_target=1")
+        return
     if len(argv) == 3 and argv[1] == "--compare":
         compare_archive(argv[2], os.environ["INSUREIT_RECOVERY_DATABASE_URL"])
         return
-    raise ValueError("Usage: managed_recovery_preflight.py --check-target | --compare PRIVATE_TOC")
+    raise ValueError("Usage: managed_recovery_preflight.py --check-target | --probe-target | --compare PRIVATE_TOC")
 
 
 if __name__ == "__main__":
