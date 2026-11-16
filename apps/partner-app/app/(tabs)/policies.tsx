@@ -285,7 +285,7 @@ export default function PoliciesScreen() {
           accessibilityRole="button"
           accessibilityLabel="See all policy status filters"
           accessibilityState={{ expanded: seeAllOpen }}
-          onPress={() => { setFilterMenuOpen(false); setSeeAllOpen(true); }}
+          onPress={() => setSeeAllOpen(true)}
           style={({ pressed }) => [styles.summarySeeAll, seeAllOpen && styles.summarySeeAllActive, pressed && styles.summaryChipPressed]}
         >
           <Ionicons name="list" size={17} color="#0860C8" />
