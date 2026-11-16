@@ -8,9 +8,9 @@ import type { SelfActivity } from "@/lib/reports/daily-self-activity";
 const dateFormat=new Intl.DateTimeFormat("en-IN",{timeZone:"Asia/Kolkata",day:"2-digit",month:"short",year:"numeric"});
 const timeFormat=new Intl.DateTimeFormat("en-IN",{timeZone:"Asia/Kolkata",hour:"2-digit",minute:"2-digit",hour12:true});
 
-type Props={rows:SelfActivity[]};
+type Props={rows:SelfActivity[];vehicleMode?:boolean};
 
-export function DailyActivityHistoryRows({rows}:Props) {
+export function DailyActivityHistoryRows({rows,vehicleMode=false}:Props) {
   const router=useRouter();
   const [selected,setSelected]=useState<SelfActivity|null>(null);
   const closeRef=useRef<HTMLButtonElement>(null);
@@ -40,7 +40,7 @@ export function DailyActivityHistoryRows({rows}:Props) {
       <tbody className="divide-y divide-[#edf1f6]">
         {rows.map(row=>(
           <tr key={row.id} role="button" tabIndex={0}
-            aria-label={`View activity details: ${row.activity}, ${row.reference}`}
+            aria-label={`View activity details: ${row.activity}, ${vehicleMode ? row.vehicleNumber||'vehicle record' : row.reference}`}
             onClick={event=>openRecord(row,event.currentTarget)}
             onKeyDown={event=>onRowKeyDown(event,row)}
             className="cursor-pointer text-[11px] text-[#30435d] transition-colors hover:bg-[#edf5ff] focus-visible:bg-[#edf5ff] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#315b9a]">
@@ -48,9 +48,16 @@ export function DailyActivityHistoryRows({rows}:Props) {
               <span className="block">{row.activity}</span>
               {row.detail ? <span className="mt-1 block font-normal text-[#506483]">{row.detail}</span> : null}
             </td>
-            <td className="px-3 py-3 font-medium">{row.reference||"—"}</td>
-            <td className="px-3 py-3">{row.customerVehicle||"—"}</td>
-            <td className="px-3 py-3">{row.insurer||"—"}</td>
+            {vehicleMode ? <>
+              <td className="px-3 py-3 font-medium">{row.vehicleNumber||"—"}</td>
+              <td className="px-3 py-3">{row.vehicleCustomer||"—"}</td>
+              <td className="px-3 py-3">{row.vehicleMakeModel||"—"}</td>
+              <td className="px-3 py-3">{row.vehicleRegistration||"—"}</td>
+            </> : <>
+              <td className="px-3 py-3 font-medium">{row.reference||"—"}</td>
+              <td className="px-3 py-3">{row.customerVehicle||"—"}</td>
+              <td className="px-3 py-3">{row.insurer||"—"}</td>
+            </>}
             <td className="whitespace-nowrap px-3 py-3">{dateFormat.format(new Date(row.occurredAt))}, {timeFormat.format(new Date(row.occurredAt))}</td>
             <td className="px-3 py-3"><span className="rounded-md bg-[#edf3fa] px-2 py-1 text-[9px] font-bold text-[#35587e]">{row.status}</span></td>
           </tr>
@@ -65,9 +72,16 @@ export function DailyActivityHistoryRows({rows}:Props) {
             <dl className="mt-4 grid grid-cols-[120px_minmax(0,1fr)] gap-x-3 gap-y-3 text-[12px] text-[#30435d]">
               {([
                 ["Activity",selected.activity],
-                ["Policy / Case No.",selected.reference||"—"],
-                ["Customer / Vehicle",selected.customerVehicle||"—"],
-                ["Insurance Company",selected.insurer||"—"],
+                ...(vehicleMode ? [
+                  ["Vehicle",selected.vehicleNumber||"—"],
+                  ["Customer",selected.vehicleCustomer||"—"],
+                  ["Make / model",selected.vehicleMakeModel||"—"],
+                  ["Registration",selected.vehicleRegistration||"—"],
+                ] as const : [
+                  ["Policy / Case No.",selected.reference||"—"],
+                  ["Customer / Vehicle",selected.customerVehicle||"—"],
+                  ["Insurance Company",selected.insurer||"—"],
+                ] as const),
                 ["Date & Time",`${dateFormat.format(new Date(selected.occurredAt))}, ${timeFormat.format(new Date(selected.occurredAt))}`],
                 ["Status",selected.status],
                 ["Recorded changes",selected.detail||"Not recorded"],
