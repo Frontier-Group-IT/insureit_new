@@ -29,7 +29,7 @@ assert.match(quickFilters, /type="search"/, "Employee search is present");
 assert.match(page, /<DailySelfActivityPanel data=\{selfHistory\}/, "Activity category drilldown is available");
 assert.match(read("../components/reports/daily-report-header-controls.tsx"), /aria-haspopup="listbox"/, "Self and All use a dropdown beside Reports");
 assert.match(read("../components/reports/daily-report-header-controls.tsx"), /type="search" aria-label="Search employee name or code"/, "Employee dropdown is searchable");
-assert.match(read("../components/reports/daily-report-header-controls.tsx"), /params.set\("scope",personId\?"all":"self"\)/, "Self and selected employees use scoped report routes");
+assert.match(read("../components/reports/daily-report-header-controls.tsx"), /params.set\("scope",personId && canViewAll\?"all":"self"\)/, "Self and selected employees use scoped report routes");
 assert.doesNotMatch(source, /\.insert\(|\.update\(|\.delete\(|\.upsert\(|\.rpc\(/, "Phase 1 is strictly read-only");
 assert.doesNotMatch(page, /"use client"/, "Page remains server rendered");
 console.log("Daily Report Phase 1 navigation, read scope, filters, bounded reads and no-write contracts passed.");
