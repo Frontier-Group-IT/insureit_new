@@ -113,6 +113,9 @@ jobs:
       - name: Verify product-specific native Policy Onboarding layouts
         run: node apps/partner-app/scripts/verify-product-type-onboarding-layouts.mjs
 
+      - name: Verify standalone blank Add Policy creation path
+        run: node apps/partner-app/scripts/verify-standalone-add-policy.mjs
+
       - name: Verify Policy Intake source API contract
         run: node apps/partner-app/scripts/verify-policy-intake-source-contract.mjs
       - name: Verify Policy Intake detail header identity parity

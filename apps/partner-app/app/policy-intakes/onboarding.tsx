@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Linking, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, usePathname, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 
@@ -9,7 +9,7 @@ import { motorValidityEnds } from '@/lib/motor-validity-dates';
 import { createPartnerPolicyIntakeBridgeUrl, getPartnerPolicyIntakeDocumentUrl } from '@/lib/policy-intakes';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { PartnerPolicyDateField } from '@/components/policy-intakes/partner-policy-date-field';
-import { prepareNativePolicyOnboarding, saveNativePolicyOnboarding, bookNativePolicyOnboarding, createNativeLifeHealthCase, requestNativePolicyDateApproval, verifyNativePolicyDateApproval, lookupNativePolicyRc, searchNativeNonMotorCustomers, type NativeNonMotorCustomer, type NativePolicyDraft, type NativeOnboardingData, type NativeProductType, listNativeOnboardingDocuments, uploadNativeOnboardingDocument, deleteNativeOnboardingDocument, type NativeOnboardingDocument, type NativeOnboardingDocumentType } from '@/lib/policy-onboarding';
+import { prepareNativePolicyOnboarding, saveNativePolicyOnboarding, bookNativePolicyOnboarding, createNativeLifeHealthCase, requestNativePolicyDateApproval, verifyNativePolicyDateApproval, lookupNativePolicyRc, prepareNewNativePolicyOnboarding, bookNewNativePolicyOnboarding, lookupNewNativePolicyRc, requestNewNativePolicyDateApproval, verifyNewNativePolicyDateApproval, searchNativeNonMotorCustomers, type NativeNonMotorCustomer, type NativePolicyDraft, type NativeOnboardingData, type NativeProductType, listNativeOnboardingDocuments, uploadNativeOnboardingDocument, deleteNativeOnboardingDocument, type NativeOnboardingDocument, type NativeOnboardingDocumentType } from '@/lib/policy-onboarding';
 
 type FieldKey = keyof NativePolicyDraft;
 type Field = { key:FieldKey; label:string; required?:boolean; options?:string[] };
@@ -142,6 +142,7 @@ function amount(value:string){const n=Number(value);return Number.isFinite(n)&&n
 export default function NativePolicyOnboarding(){
   const { id }=useLocalSearchParams<{id:string}>();
   const router=useRouter();
+  const isNew=usePathname()==='/policy-new';
   const [data,setData]=useState<NativeOnboardingData|null>(null);
   const [draft,setDraft]=useState<NativePolicyDraft|null>(null);
   const [error,setError]=useState('');
@@ -173,7 +174,7 @@ export default function NativePolicyOnboarding(){
   const [documentBusy,setDocumentBusy]=useState<NativeOnboardingDocumentType|null>(null);
   const [documentError,setDocumentError]=useState('');
   const [openingPolicyCopy,setOpeningPolicyCopy]=useState(false);
-  const [dialog,setDialog]=useState<'discard'|'error'|null>(null);
+  const [dialog,setDialog]=useState<'discard'|'confirm-save'|'saved'|'error'|null>(null);
   const [dialogMessage,setDialogMessage]=useState('');
   useEffect(()=>{
     if(error&&draft){setDialogMessage(error);setDialog('error');}
@@ -182,33 +183,28 @@ export default function NativePolicyOnboarding(){
     if(documentError){setDialogMessage(documentError);setDialog('error');}
   },[documentError]);
   const load=useCallback(async()=>{
-    if(!id)return;
+    if(!id&&!isNew)return;
     setLoading(true);setError('');
     try{
-      const loaded=await prepareNativePolicyOnboarding(id);
+      const loaded=isNew?await prepareNewNativePolicyOnboarding():await prepareNativePolicyOnboarding(id);
       setData(loaded);setDraft(loaded.draft);setDirty(false);
     }catch(e){setError(e instanceof Error?e.message:'Onboarding could not be opened.');}
     finally{setLoading(false);}
-  },[id]);
+  },[id,isNew]);
   useEffect(()=>{void load();},[load]);
   const productType:NativeProductType=(draft?.businessLine==='Life'||draft?.businessLine==='Health'||draft?.businessLine==='Non Motor')?draft.businessLine:'Motor';
   const isMotor=productType==='Motor';
   const productValues=(productType==='Motor'?{}:draft?.productDrafts?.[productType])??{};
-  // Policy Type is editable locally before save. The documents endpoint permits only
-  // the persisted business line, so never fetch on an unsaved type switch.
   const savedPolicyType=data?.draft.businessLine;
   useEffect(()=>{
-    setOnboardingDocuments([]);
-    setDocumentError('');
-    if(!id||loading||productType==='Motor'||productType!==savedPolicyType)return;
+    if(isNew||!id||loading||productType==='Motor'||productType!==savedPolicyType)return;
     let live=true;
+    setOnboardingDocuments([]);setDocumentError('');
     void listNativeOnboardingDocuments(id,productType)
       .then(result=>{if(live)setOnboardingDocuments(result.documents);})
-      // Background list refreshes must not interrupt policy-type selection with a popup.
-      // Explicit upload/removal errors still use the documentError popup.
       .catch(()=>{if(live)setOnboardingDocuments([]);});
     return()=>{live=false;};
-  },[id,loading,productType,savedPolicyType]);
+  },[id,loading,productType,isNew,savedPolicyType]);
   const pickOnboardingDocument=async(type:NativeOnboardingDocumentType)=>{
     if(documentBusy||saving||booking||creatingLifeHealth||!data||!draft||productType==='Motor')return;
     setDocumentError('');
@@ -289,6 +285,10 @@ export default function NativePolicyOnboarding(){
     setVerifiedApprovalId(null);
   };
   const update=(key:FieldKey,value:string)=>{
+    if(isNew&&key==='businessLine'&&value!=='Motor'){
+      Alert.alert('Motor policy onboarding','Standalone onboarding currently supports Motor. Use Policy Intake and Operations for other policy types.');
+      return;
+    }
     setDraft(current=>{
       if(!current)return current;
       const next={...current,[key]:value};
@@ -313,11 +313,11 @@ export default function NativePolicyOnboarding(){
     setApprovalRequestId(null);
   };
   const save=async(goBack=false):Promise<boolean>=>{
-    if(!draft||!data||saving)return false;
+    if(!draft||!data||saving||isNew)return false;
     setSaving(true);setError('');
     try{
       const result=await saveNativePolicyOnboarding(id,data.revision,draft);
-      setData(current=>current?{...current,revision:result.revision,draft}:current);
+      setData(current=>current?{...current,revision:result.revision}:current);
       setDirty(false);
       if(goBack)router.back();
       return true;
@@ -340,10 +340,10 @@ export default function NativePolicyOnboarding(){
         [productType]:{...draft.productDrafts?.[productType],remarks},
       }};
     try{
-      const result=await saveNativePolicyOnboarding(id,data.revision,updated);
+      const result=isNew?{revision:data.revision}:await saveNativePolicyOnboarding(id,data.revision,updated);
       setDraft(updated);
       setData(current=>current?{...current,revision:result.revision}:current);
-      setDirty(false);
+      setDirty(isNew);
       setVerifiedApprovalId(null);
       setApprovalRequestId(null);
       setRemarkOpen(false);
@@ -371,6 +371,13 @@ export default function NativePolicyOnboarding(){
       setDialog('error');
     }finally{setOpeningPolicyCopy(false);}
   };
+  const confirmSaveDraft=async()=>{
+    setDialog(null);
+    const succeeded=await save(false);
+    if(succeeded){
+      setDialog('saved');
+    }
+  };
   const dismissDialog=()=>{
     setDialog(null);
     setError('');
@@ -382,7 +389,7 @@ export default function NativePolicyOnboarding(){
     setCreatingLifeHealth(true);setError('');
     try{
       let revision=data.revision;
-      if(dirty){
+      if(dirty&&!isNew){
         const saved=await saveNativePolicyOnboarding(id,revision,draft);
         revision=saved.revision;
         setData(current=>current?{...current,revision}:current);
@@ -405,7 +412,7 @@ export default function NativePolicyOnboarding(){
     try{
       if(dirty){
         const saved=await saveNativePolicyOnboarding(id,data.revision,draft);
-        setData(current=>current?{...current,revision:saved.revision}:current);
+        setData(current=>current?{...current,revision:saved.revision,draft}:current);
         setDirty(false);
       }
       const url=await createPartnerPolicyIntakeBridgeUrl(id,false,null);
@@ -424,10 +431,12 @@ export default function NativePolicyOnboarding(){
         setData(current=>current?{...current,revision}:current);
         setDirty(false);
       }
-      const {booking:result}=await bookNativePolicyOnboarding(id,revision,resolution,verifiedApprovalId);
+      const {booking:result}=isNew
+        ?await bookNewNativePolicyOnboarding(draft,resolution,verifiedApprovalId)
+        :await bookNativePolicyOnboarding(id,revision,resolution,verifiedApprovalId);
       if(result.ok){
         Alert.alert('Policy booked','Policy '+result.policyCode+' was booked successfully.',[
-          {text:'OK',onPress:()=>router.replace('/policy-intakes')},
+          {text:'OK',onPress:()=>router.replace(isNew?'/(tabs)/policies':'/policy-intakes')},
         ]);
         return;
       }
@@ -470,11 +479,11 @@ export default function NativePolicyOnboarding(){
   }
 
   async function requestApproval(){
-    if(!data||!draft||dirty){setError('Save the draft before requesting date approval.');return;}
+    if(!data||!draft||(!isNew&&dirty)){setError('Save the draft before requesting date approval.');return;}
     if(!approverKey){setError('Choose an approving officer.');return;}
     setApprovalBusy(true);setError('');
     try{
-      const result=await requestNativePolicyDateApproval(id,data.revision,approverKey);
+      const result=isNew?await requestNewNativePolicyDateApproval(draft,approverKey):await requestNativePolicyDateApproval(id,data.revision,approverKey);
       setApprovalRequestId(result.approval_id);setApprovalCode('');
     }catch(e){setError(e instanceof Error?e.message:'Could not request approval.');}
     finally{setApprovalBusy(false);}
@@ -483,7 +492,9 @@ export default function NativePolicyOnboarding(){
     if(!data||!approvalRequestId||!/^\d{6}$/.test(approvalCode)){setError('Enter the six-digit approval code.');return;}
     setApprovalBusy(true);setError('');
     try{
-      await verifyNativePolicyDateApproval(id,data.revision,approvalRequestId,approvalCode);
+      if(isNew&&!draft){setError('Complete the policy draft first.');return;}
+      if(isNew&&draft)await verifyNewNativePolicyDateApproval(draft,approvalRequestId,approvalCode);
+      else await verifyNativePolicyDateApproval(id,data.revision,approvalRequestId,approvalCode);
       setVerifiedApprovalId(approvalRequestId);setDateApprovalOpen(false);
       Alert.alert('Date approved','The approved policy can now be booked.');
     }catch(e){setError(e instanceof Error?e.message:'Approval could not be verified.');}
@@ -495,7 +506,7 @@ export default function NativePolicyOnboarding(){
     if(!draft.registrationNo.trim()){setError('Enter a registration number first.');return;}
     setLookingUpRc(true);setError('');
     try{
-      const {review}=await lookupNativePolicyRc(id,draft.registrationNo);
+      const {review}=isNew?await lookupNewNativePolicyRc(draft.registrationNo):await lookupNativePolicyRc(id,draft.registrationNo);
       const vc=(review.vehicleClass||'').toLowerCase();
       const category=/two.?wheel|motor.?cycle|scooter/.test(vc)?'TWP':/goods|truck|cargo/.test(vc)?'GCV':/passenger|bus|taxi/.test(vc)?'PCV':/plant|machinery/.test(vc)?'CPM':/car|private|lmv/.test(vc)?'PCP':'MISD';
       const make=(data?.manufacturers??[]).find(m=>m.toLowerCase()===(review.make||'').toLowerCase());
@@ -571,7 +582,7 @@ export default function NativePolicyOnboarding(){
     const raw=draft[f.key];
     const current=typeof raw==='string'?raw:'';
     if(['issuanceDate','validFrom','validUpto','tpValidUpto','cpaValidUpto'].includes(f.key))return <PartnerPolicyDateField key={f.key} fullWidth={fullWidth} label={f.key==='issuanceDate'?'Policy issuance date':f.label.replace(' (YYYY-MM-DD)','')} value={current} required={f.required} onChange={v=>update(f.key,v)}/>;
-    const productOptions=f.key==='policyProduct'?(draft.vehicleClass==='CPM'?['Comprehensive','SAOD']:['Comprehensive','Third Party','SAOD',...(['PCP','TWP'].includes(draft.vehicleClass)?['Bundled']:[]),'Long Term Package','Long Term Third Party']):f.options??[];
+    const productOptions=isNew&&f.key==='businessLine'?['Motor']:f.key==='policyProduct'?(draft.vehicleClass==='CPM'?['Comprehensive','SAOD']:['Comprehensive','Third Party','SAOD',...(['PCP','TWP'].includes(draft.vehicleClass)?['Bundled']:[]),'Long Term Package','Long Term Third Party']):f.options??[];
     const options=f.key==='insurerId'?data?.insurers??[]:f.key==='make'?(data?.manufacturers??[]).map(x=>({value:x,label:x})):f.key==='manufacturingYear'?manufacturingYearOptions.map(value=>({value,label:value})):productOptions.map(x=>({value:x,label:f.key==='policyProduct'&&x==='Comprehensive'?'Package':x}));
     const displayed=options.find(x=>x.value===current)?.label??current;
     const masterSourceMatches=Boolean(data?.sourceMeta&&data.sourceMeta.code===draft.intermediaryCode&&data.sourceMeta.name.trim().toLowerCase()===draft.leadSource.trim().toLowerCase());
@@ -628,7 +639,7 @@ export default function NativePolicyOnboarding(){
 
   const sourceMeta=(key:'rmName'|'intermediaryCode',label:string)=><View style={styles.sourceMeta}>
     <Text style={styles.sourceMetaLabel}>{label} ·</Text>
-    {key==='rmName'&&isMotor
+    {key==='rmName'&&isMotor&&!isNew
       ? <Text numberOfLines={1} style={styles.sourceMetaValue}>{draft?.rmName||verifiedSource?.rmName||''}</Text>
       : key==='intermediaryCode'&&verifiedSource
         ? <Text numberOfLines={1} style={styles.sourceMetaValue}>{draft?.intermediaryCode}</Text>
@@ -838,10 +849,11 @@ export default function NativePolicyOnboarding(){
   </View>;
   const motorProductSection=section('03','Policy product, premium & validity',motorProductFields);
   return <PartnerScreen title="Policy Onboarding" onBack={()=>router.back()} navyTopBar navyStatusBar topBarIcon="document-text-outline">
-    {loading?<PartnerStateView state="loading" title="Loading saved Policy Onboarding" />:null}
+    {loading?<PartnerStateView state="loading" title={isNew?'Preparing new Policy Onboarding':'Loading saved Policy Onboarding'} />:null}
     {error&&!draft?<View style={styles.error}><Ionicons name="alert-circle-outline" size={16} color="#B42318"/><Text style={styles.errorText}>{error}</Text></View>:null}
     {!loading&&!draft?<Pressable style={styles.retry} onPress={()=>void load()}><Text style={styles.retryText}>Retry loading</Text></Pressable>:null}
     {draft?<>
+      {isNew?<View style={styles.section}><Text style={styles.muted}>New Motor Policy · Complete the blank form and select Create Active Policy. No Policy Intake will be created. This form is not saved until the policy is booked.</Text></View>:null}
       {sourceSection()}
       {isMotor?motorVehicleSection:productType==='Non Motor'?nonMotorCustomerPolicySection:productSection('02','Customer / Proposer',commonPerson)}
       {isMotor?motorProductSection:productType==='Non Motor'?nonMotorRiskSection:productSection('03','Policy product & case details',lifeProduct)}
@@ -952,7 +964,7 @@ export default function NativePolicyOnboarding(){
         </View>:null}
 
       </View>
-      <View style={styles.documentAndSaveActions}>
+      {!isNew?<View style={styles.documentAndSaveActions}>
         <Pressable accessibilityRole="button" accessibilityLabel="View Policy"
           disabled={openingPolicyCopy||saving||booking||creatingLifeHealth}
           style={[styles.viewPolicyButton,openingPolicyCopy&&styles.disabled]}
@@ -960,7 +972,14 @@ export default function NativePolicyOnboarding(){
           {openingPolicyCopy?<ActivityIndicator size="small" color="#17365D"/>:<Ionicons name="document-text-outline" size={17} color="#17365D"/>}
           <Text style={styles.viewPolicyText}>{openingPolicyCopy?'Opening…':'View Policy'}</Text>
         </Pressable>
-      </View>
+        <Pressable accessibilityRole="button" accessibilityLabel="Save Draft"
+          disabled={saving||booking||creatingLifeHealth||Boolean(documentBusy)||!data}
+          style={[styles.saveDraftButton,(saving||booking||creatingLifeHealth||Boolean(documentBusy)||!data)&&styles.disabled]}
+          onPress={()=>setDialog('confirm-save')}>
+          <Ionicons name="save-outline" size={16} color="#0B55B7"/>
+          <Text style={styles.saveDraftText}>Save Draft</Text>
+        </Pressable>
+      </View>:null}
       <View style={styles.actions}>
         <Pressable accessibilityRole="button" accessibilityLabel="Cancel Policy Onboarding"
           disabled={saving||booking||creatingLifeHealth} style={styles.secondary} onPress={cancelOnboarding}>
@@ -994,17 +1013,23 @@ export default function NativePolicyOnboarding(){
           </Pressable>
           <View style={[styles.feedbackIcon,
             dialog==='discard'?styles.feedbackIconWarning:
-            styles.feedbackIconError]}>
-            <Ionicons name="alert-circle-outline"
-              size={30} color={dialog==='discard'?'#DF920C':'#D33535'}/>
+            dialog==='saved'?styles.feedbackIconSuccess:
+            dialog==='error'?styles.feedbackIconError:styles.feedbackIconSave]}>
+            <Ionicons name={dialog==='discard'?'alert-circle-outline':
+              dialog==='saved'?'checkmark-circle-outline':
+              dialog==='error'?'alert-circle-outline':'save-outline'}
+              size={30} color={dialog==='discard'?'#DF920C':dialog==='saved'?'#168744':dialog==='error'?'#D33535':'#0D56BB'}/>
           </View>
           <Text style={styles.feedbackTitle}>
             {dialog==='discard'?'Discard Changes?':
-              'Unable to Complete'}
+             dialog==='saved'?'Draft Saved':
+             dialog==='error'?'Unable to Complete':'Save Changes?'}
           </Text>
           <Text style={styles.feedbackMessage}>
             {dialog==='discard'?'Your latest changes have not been saved.':
-              dialogMessage}
+             dialog==='saved'?'Your policy onboarding draft has been saved successfully. This does not book a policy.':
+             dialog==='error'?dialogMessage:
+             'Do you want to save your changes to this policy onboarding draft?'}
           </Text>
           {dialog==='discard'?(
             <View style={styles.feedbackActions}>
@@ -1014,6 +1039,16 @@ export default function NativePolicyOnboarding(){
               <Pressable accessibilityRole="button" style={styles.feedbackPrimary}
                 onPress={()=>{setDialog(null);router.back();}}>
                 <Text style={styles.feedbackPrimaryText}>Discard &amp; Leave</Text>
+              </Pressable>
+            </View>
+          ):dialog==='confirm-save'?(
+            <View style={styles.feedbackActions}>
+              <Pressable accessibilityRole="button" style={styles.feedbackSecondary} onPress={dismissDialog}>
+                <Text style={styles.feedbackSecondaryText}>Cancel</Text>
+              </Pressable>
+              <Pressable accessibilityRole="button" style={styles.feedbackPrimary}
+                onPress={()=>void confirmSaveDraft()}>
+                <Text style={styles.feedbackPrimaryText}>Save</Text>
               </Pressable>
             </View>
           ):(
@@ -1047,7 +1082,7 @@ export default function NativePolicyOnboarding(){
             <Pressable accessibilityRole="button" accessibilityLabel="Save Remark"
               disabled={saving||booking||!remarkText.trim()}
               style={[styles.remarkConfirm,(saving||booking||!remarkText.trim())&&styles.disabled]}
-              onPress={()=>void addRemark()}><Text style={styles.primaryText}>{saving?'Saving…':'Save Remark'}</Text></Pressable>
+              onPress={()=>void addRemark()}><Text style={styles.primaryText}>{saving?'Saving…':isNew?'Add to form':'Save Remark'}</Text></Pressable>
           </View>
         </View>
       </View>
@@ -1316,14 +1351,17 @@ const styles=StyleSheet.create({
   documentError:{fontSize:10,color:'#B42318',paddingHorizontal:4},
   nonMotorSummaryValue:{fontSize:11,color:'#17365D',fontWeight:'600',maxWidth:'58%',textAlign:'right'},
   inlineRemarksInput:{minHeight:76,paddingVertical:11},
-  documentAndSaveActions:{marginBottom:9,alignItems:'stretch'},
-  viewPolicyButton:{width:'100%',minHeight:43,borderRadius:10,borderWidth:1,borderColor:'#CAD7E9',backgroundColor:'#FFFFFF',flexDirection:'row',gap:7,alignItems:'center',justifyContent:'center'},
+  documentAndSaveActions:{flexDirection:'row',gap:8,marginBottom:9,alignItems:'stretch'},
+  viewPolicyButton:{flex:1,minHeight:43,borderRadius:10,borderWidth:1,borderColor:'#CAD7E9',backgroundColor:'#FFFFFF',flexDirection:'row',gap:7,alignItems:'center',justifyContent:'center'},
   viewPolicyText:{fontSize:12,fontWeight:'700',color:'#17365D'},
+  saveDraftButton:{flex:1,minHeight:43,borderRadius:10,borderWidth:1,borderColor:'#B6CCEA',backgroundColor:'#EFF5FF',flexDirection:'row',gap:7,alignItems:'center',justifyContent:'center'},
+  saveDraftText:{fontSize:12,fontWeight:'700',color:'#0B55B7'},
   feedbackOverlay:{flex:1,backgroundColor:'rgba(9,23,45,0.42)',justifyContent:'center',paddingHorizontal:22},
   feedbackCard:{backgroundColor:'#FFFFFF',borderRadius:20,paddingTop:28,paddingHorizontal:18,paddingBottom:20,alignItems:'center',shadowColor:'#071E43',shadowOpacity:0.2,shadowRadius:16,elevation:8},
   feedbackClose:{position:'absolute',top:12,right:12,zIndex:1,padding:5},
   feedbackIcon:{width:60,height:60,borderRadius:30,alignItems:'center',justifyContent:'center',marginBottom:13},
-  feedbackIconWarning:{backgroundColor:'#FFF3DD'},feedbackIconError:{backgroundColor:'#FDEBEC'},
+  feedbackIconWarning:{backgroundColor:'#FFF3DD'},feedbackIconSuccess:{backgroundColor:'#E4F7EA'},
+  feedbackIconError:{backgroundColor:'#FDEBEC'},feedbackIconSave:{backgroundColor:'#E6EFFF'},
   feedbackTitle:{fontSize:18,fontWeight:'800',color:'#0C2345',textAlign:'center',marginBottom:9},
   feedbackMessage:{fontSize:13,lineHeight:19,color:'#354A68',textAlign:'center',marginBottom:22},
   feedbackActions:{width:'100%',flexDirection:'row',gap:9},

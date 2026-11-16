@@ -17,7 +17,7 @@ const source = read('app/policy-intake-new.tsx');
 assert.match(source, /<PartnerStateView state="loading" title="Loading lead sources" \/>/, 'Lead Source list uses shared loading skeleton');
 assert.match(source, /error && sources\.length === 0/, 'Lead Source error feedback must remain separate from loading');
 assert.match(source, /data=\{filteredSources\}/, 'Lead Source list still displays its actual authorized records');
-assert.match(read('app/policy-intakes/onboarding.tsx'), /<PartnerStateView state="loading" title="Loading saved Policy Onboarding" \/>/, 'Policy Onboarding uses shared skeleton');
+assert.match(read('app/policy-intakes/onboarding.tsx'), /<PartnerStateView state="loading" title=\{isNew\?'Preparing new Policy Onboarding':'Loading saved Policy Onboarding'\} \/>/, 'Policy Onboarding uses shared skeleton');
 assert.doesNotMatch(read('app/policy-intakes/onboarding.tsx'), /Loading saved Policy Onboarding…/, 'Remove onboarding loading spinner and text');
 assert.match(read('app/claim/select-vehicle.tsx'), /<PartnerSkeletonList title="Loading authorized vehicles" rows=\{4\} \/>/, 'Claim vehicle chooser has card skeleton');
 const customers = read('app/customers.tsx');
