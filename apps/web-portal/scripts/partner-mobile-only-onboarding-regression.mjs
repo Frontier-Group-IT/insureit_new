@@ -1,0 +1,15 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+const api = readFileSync(new URL('../app/api/partner/onboarding/partner-only/route.ts', import.meta.url),'utf8');
+assert.match(api, /identity\.actor_kind !== "employee"/, 'Intermediary actors cannot submit applications');
+assert.match(api, /getEffectivePermissionAccessMap\(profile\)/, 'Check current effective role grants');
+assert.match(api, /permissions\.create_intermediary_application/, 'No broad new intermediary permission');
+assert.match(api, /isEmployeeWithinAccessScope/, 'Scope employee assignment');
+assert.match(api, /account_context: "partner"/, 'Create Partner-only context');
+assert.match(api, /final_type: null/, 'Do not convert into POSP or MISP');
+assert.match(api, /partner_status: "draft"/, 'New application is pending, not active');
+assert.doesNotMatch(api, /\.rpc\("issue_partner_identity"|\.rpc\("next_registration_code"/, 'Do not activate accounts');
+assert.doesNotMatch(api, /from\("intermediary_registrations"\)\.insert/, 'Do not create POSP or MISP registration');
+assert.match(api, /\.from\("posp_misp_onboarding_profiles"\)\.select\("application_id"\)/, 'Check duplicate PAN before write');
+assert.match(api, /await admin\.from\("intermediary_onboarding_applications"\)\.delete/, 'Roll back incomplete application');
+console.log('Partner-only server onboarding authorization and no-registration contract verified.');
