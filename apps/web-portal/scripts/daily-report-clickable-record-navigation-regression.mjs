@@ -26,9 +26,10 @@ assert.match(loader, /row\.href=dailyActivityRecordHref\(table,row\.recordId\)/,
 for(const table of ["policies","policy_intake_requests","life_health_cases"]) {
   assert.ok(loader.includes(`table:"${table}",recordId:a.id`),`Keep immutable record ID for ${table} history`);
 }
-assert.match(panel, /<DailyActivityHistoryRows rows=\{data\.rows\} employeeName=\{data\.selfName\} \/>/, "All employee and Self reports use interactive rows");
+assert.match(panel, /<DailyActivityHistoryRows rows=\{data\.rows\} \/>/, "All employee and Self reports use interactive rows");
 assert.match(rows, /role="button" tabIndex=\{0\}/, "Rows support keyboard focus");
 assert.match(rows, /event\.key==="Enter"\|\|event\.key===" "/, "Enter and Space activate rows");
+assert.match(rows, /row\.detail \? <span/, "Preserve latest audit field-level change details");
 assert.match(rows, /router\.push\(row\.href\)/, "Existing record navigates to its own page");
 assert.match(rows, /role="alertdialog" aria-modal="true"/, "Unavailable record opens accessible popup");
 assert.match(rows, /This record has been deleted\./, "Deleted record message is short");
