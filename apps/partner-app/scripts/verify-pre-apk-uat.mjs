@@ -129,7 +129,7 @@ expectAll('app/(tabs)/policies.tsx', [
 ]);
 for(const obsolete of ['seeAllOpen', 'summarySeeAll:', 'statusSheetOverlay:', 'See all policy status filters']) {
   checks += 1;
-  if (files['app/(tabs)/policies.tsx'].includes(obsolete)) errors.push('Policies must not retain See all modal UI: ' + obsolete);
+  if (read('app/(tabs)/policies.tsx').includes(obsolete)) failures.push('Policies must not retain See all modal UI: ' + obsolete);
 }
 
 // Policies no longer mount a floating filter menu.
