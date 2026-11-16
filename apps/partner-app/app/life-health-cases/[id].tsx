@@ -169,7 +169,8 @@ export default function LifeHealthCaseDetailScreen(){
          const max=new Date(Date.UTC(date.getUTCFullYear(),date.getUTCMonth()+1,0)).getUTCDate();
          date.setUTCDate(Math.min(d,max));return dateLabel(date.toISOString().slice(0,10));
        };
-       next.endDate=plusYears(form?.policyDuration||'');
+       const pension=record?.business_line==='Life'&&/\bpension\b/i.test(form?.productName||'');
+       next.endDate=pension?'':plusYears(form?.policyDuration||'');
        next.pptEndDate=plusYears(form?.premiumPayingTerm||'');
        next.nextInstallmentDate=installment();
      }
@@ -192,6 +193,11 @@ export default function LifeHealthCaseDetailScreen(){
    if(!data.policyNumber.trim()||!data.issuanceDate||!data.startDate||
       !data.finalPremium.trim()||!Number.isFinite(Number(data.finalPremium))){
      setIssueError('Enter a valid policy number, issuance date, start date and final premium.');return;
+   }
+   for(const key of ['endDate','pptEndDate','nextInstallmentDate'] as const){
+     if(issue[key].trim()&&!data[key]){
+       setIssueError('Enter a valid DD/MM/YYYY date for '+key+'.');return;
+     }
    }
    if(JSON.stringify(form)!==JSON.stringify(initialForm(record))){
      setIssueError('Save your case edits before issuing the policy.');return;
