@@ -9,7 +9,7 @@ const loader=read("../lib/reports/daily-self-activity.ts");
 const directory=read("../components/reports/daily-employee-directory.tsx");
 
 assert.match(layout, /<h1>Reports<\/h1>/);
-assert.match(layout, /<DailyReportHeaderScopes\s*\/>/, "Self All beside Reports heading");
+assert.match(layout, /<DailyReportHeaderScopes canViewAll=\{canViewAll\} \/>/, "Self/All beside Reports heading only when authorized");
 assert.match(layout, /<DailyReportHeaderPeriod\s*\/>/, "Period dropdown at right of Reports header");
 assert.match(header, /if\(!isDaily\) return null/, "Daily header controls are hidden on other reporting pages");
 assert.match(header, /aria-label="Daily Report visibility"/);
