@@ -130,8 +130,8 @@ class SafeTargetConnectionDiagnostics(unittest.TestCase):
 class IsolatedTLSCertificate(unittest.TestCase):
     def test_missing_and_invalid_cert_fail_closed(self):
         for value in ("", "not a PEM certificate",
-                      "-----BEGIN PRIVATE KEY-----\\nsecret\\n-----END PRIVATE KEY-----",
-                      "-----BEGIN CERTIFICATE-----\\ninvalid\\n-----END CERTIFICATE-----"):
+                      "-----BEGIN PRIVATE KEY-----\nsecret\n-----END PRIVATE KEY-----",
+                      "-----BEGIN CERTIFICATE-----\ninvalid\n-----END CERTIFICATE-----"):
             with self.subTest(input_length=len(value)):
                 with patch.dict(os.environ, {"RECOVERY_DB_SSL_ROOT_CERT_PEM": value}):
                     with self.assertRaises((ValueError, RuntimeError)):
@@ -141,9 +141,9 @@ class IsolatedTLSCertificate(unittest.TestCase):
     def test_valid_pem_stays_private_and_is_deleted(self):
         # Mock OpenSSL parse only: synthetic placeholder is never trusted by
         # libpq. Real GitHub secret must contain a valid isolated-project CA.
-        pem = ("-----BEGIN CERTIFICATE-----\\n"
-               "synthetic-not-a-real-certificate\\n"
-               "-----END CERTIFICATE-----\\n")
+        pem = ("-----BEGIN CERTIFICATE-----\n"
+               "synthetic-not-a-real-certificate\n"
+               "-----END CERTIFICATE-----\n")
         with patch.dict(os.environ, {"RECOVERY_DB_SSL_ROOT_CERT_PEM": pem}):
             with patch("managed_recovery_preflight.ssl.SSLContext") as cert_context:
                 with isolated_ssl_root_cert() as ca_path:
@@ -158,8 +158,8 @@ class IsolatedTLSCertificate(unittest.TestCase):
 
     def test_open_ssl_rejection_aborts_without_fallback(self):
         import ssl
-        pem = ("-----BEGIN CERTIFICATE-----\\n"
-               "bad-synthetic\\n-----END CERTIFICATE-----\\n")
+        pem = ("-----BEGIN CERTIFICATE-----\n"
+               "bad-synthetic\n-----END CERTIFICATE-----\n")
         with patch.dict(os.environ, {"RECOVERY_DB_SSL_ROOT_CERT_PEM": pem}):
             with patch("managed_recovery_preflight.ssl.SSLContext") as ctx:
                 ctx.return_value.load_verify_locations.side_effect = ssl.SSLError(
