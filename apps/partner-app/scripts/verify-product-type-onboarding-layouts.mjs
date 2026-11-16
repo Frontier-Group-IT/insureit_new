@@ -244,7 +244,7 @@ assert.match(calendarDialog, /onConfirm\(draft\)/, 'Date is committed only on co
 
 // Review reference button and Premium icon.
 assert.match(screen,/name="document-attach-outline" size=\{15\}/,'Use the Policy Intake Review document icon.');
-assert.match(screen,/View policy copy<\/Text>/,'Use the Policy Intake Review label.');
+assert.match(screen,/openingPolicyCopy\?'Opening…':'View policy copy'/,'Use the Policy Intake Review label with loading state.');
 assert.match(screen,/name="open-outline" size=\{13\}/,'Use the reference open icon.');
 assert.match(screen,/viewPolicyButton:\{width:'100%',minHeight:42,borderRadius:9/,'Use full-width reference button geometry.');
 assert.match(screen,/premiumRupee:\{color:'#315B9A'/,'Premium has the blue rupee icon.');
