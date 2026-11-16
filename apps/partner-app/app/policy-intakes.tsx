@@ -323,7 +323,12 @@ export default function PolicyIntakesScreen() {
                         <Text style={styles.ocrWarningText}>OCR failed</Text>
                       </View>
                     ) : null}
-                    <Text style={styles.updatedDate}>{formatDate(row.updated_at || row.created_at)}</Text>
+                    <Text style={styles.updatedDate}>{row.status === 'completed' && row.finalized_at
+                      ? `Completed: ${formatDate(row.finalized_at)}`
+                      : formatDate(row.created_at)}</Text>
+                    {row.status === 'completed' && row.finalized_at
+                      ? <Text style={styles.updatedDate}>Submitted: {formatDate(row.created_at)}</Text>
+                      : null}
                   </View>
                 </View>
 
