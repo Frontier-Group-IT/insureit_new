@@ -43,6 +43,7 @@ export function requiredPartnerRoutePermission(pathname: string): {
   if (pathnameNormalized === '/' || /^\/home(?:\/|$)/.test(pathnameNormalized)) return { capability: 'view_dashboard', minimum: 'view' };
   if (/^\/activity(?:\/|$)/.test(pathnameNormalized)) return { capability: 'view_notifications', minimum: 'view' };
   if (/^\/policy-new(?:\/|$)/.test(pathnameNormalized)) return { capability: 'create_policies', minimum: 'edit' };
+  if (/^\/partner-new(?:\/|$)/.test(pathnameNormalized)) return { capability: 'create_intermediary_application', minimum: 'edit' };
   if (/^\/policy-intake-new(?:\/|$)/.test(pathnameNormalized)) return { capability: 'create_policy_intakes', minimum: 'edit' };
   if (/^\/customer-new(?:\/|$)/.test(pathnameNormalized)) return { capability: 'create_customers', minimum: 'edit' };
   if (/^\/claim\/(?:new|select-vehicle)(?:\/|$)/.test(pathnameNormalized)) return { capability: 'manage_claims', minimum: 'edit' };
