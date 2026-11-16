@@ -116,7 +116,9 @@ function dateValue(value: string) {
 function completionDateValue(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
-  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit" }).format(date);
+  const parts = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(date);
+  const get = (part: "year" | "month" | "day") => parts.find((value) => value.type === part)?.value ?? "";
+  return `${get("year")}-${get("month")}-${get("day")}`;
 }
 function shortFilterDate(value: string) {
   const date = new Date(`${value}T00:00:00`);
