@@ -171,8 +171,19 @@ assert.match(screen,/productExtras\.some\(item=>item\.key===f\.key\)\?'Optional'
 assert.match(screen,/f.key==='previousClaims'\?'Brief reference'/, 'Previous claims uses the portal brief-reference hint.');
 assert.match(screen,/updateProduct\('remarks',value\)/, 'Inline remarks persist in the existing product draft.');
 assert.match(screen,/productType!=='Non Motor'\?<View style=\{styles.section\}>/, 'Separate Remarks card is not shown for Non Motor.');
+// Approved Policy Onboarding UX: document access, save confirmation and consistent popups.
+assert.match(screen,/accessibilityLabel="View Policy"/,'View Policy must appear above bottom actions.');
+assert.match(screen,/getPartnerPolicyIntakeDocumentUrl\(id\)/,'Document viewing must reuse scoped signed policy copy URL.');
+assert.match(screen,/accessibilityLabel="Save Draft"/,'Draft save action remains available without booking.');
+assert.match(screen,/setDialog\('confirm-save'\)/,'Saving requests explicit confirmation.');
+assert.match(screen,/setDialog\('discard'\)/,'Cancel protects unsaved changes in custom dialog.');
+assert.match(screen,/onRequestClose=\{dismissDialog\}/,'Popup dismissal must be accessible on Android.');
+assert.match(screen,/setDialog\('error'\)/,'Errors must be shown in popup.');
+assert.match(screen,/setDialog\('saved'\)/,'Successful draft save shows confirmation.');
+assert.doesNotMatch(screen,/<Text style=\{styles.documentHint\}>/,'Upload hint must not render below Documents.');
+assert.doesNotMatch(screen, /\{documentError\?<Text style=\{styles.documentError\}>/,'Document errors must not be inline.');
 assert.match(screen,/accessibilityLabel="Cancel Policy Onboarding"/, 'Cancel button is available.');
-assert.match(screen,/Discard unsaved changes\?/, 'Cancelling protects unsaved data.');
+assert.match(screen,/Discard Changes\?/, 'Cancelling protects unsaved data with the new branded popup.');
 assert.match(screen,/accessibilityLabel="Create Active Policy"/, 'Create Active Policy replaces booking and draft actions.');
 assert.match(screen,/accessibilityLabel="Create Policy"/, 'Life and Health use Create Policy.');
 assert.match(screen,/productType==='Life'\|\|productType==='Health'/, 'Life and Health use identical action and border rules.');
