@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { CalendarDays, ChevronDown } from "lucide-react";
@@ -22,18 +21,41 @@ function useDailyReportLocation() {
   return {isDaily:pathname==="/reports/daily"||pathname.startsWith("/reports/daily/"),pathname,searchParams};
 }
 
-const SCOPE_OPTIONS = [
-  {value:"self",label:"Self"},
-  {value:"all",label:"All"},
-] as const;
+type ReportPerson = { id: string; full_name: string | null; employee_code: string | null };
 
 export function DailyReportHeaderScopes() {
   const {isDaily,searchParams}=useDailyReportLocation();
-  const scope=searchParams.get("scope")==="all"?"all":"self";
+  const router=useRouter();
+  const selectedPerson=searchParams.get("scope")==="all" ? searchParams.get("person") : null;
   const [open,setOpen]=useState(false);
   const [search,setSearch]=useState("");
+  const [people,setPeople]=useState<ReportPerson[]>([]);
+  const [loading,setLoading]=useState(false);
+  const [loadError,setLoadError]=useState(false);
   const container=useRef<HTMLDivElement>(null);
-  const options=SCOPE_OPTIONS.filter(option=>option.label.toLowerCase().includes(search.trim().toLowerCase()));
+  const matching=people.filter(person=>
+    (person.full_name??"").toLocaleLowerCase("en-IN").includes(search.trim().toLocaleLowerCase("en-IN"))
+    || (person.employee_code??"").toLocaleLowerCase("en-IN").includes(search.trim().toLocaleLowerCase("en-IN")));
+  const selected=people.find(person=>person.id===selectedPerson);
+  useEffect(()=>{
+    if(!open || !isDaily)return;
+    const controller=new AbortController();
+    const load=async()=>{
+      setLoading(true);setLoadError(false);
+      try {
+        const response=await fetch("/api/reports/daily/employees",{credentials:"same-origin",cache:"no-store",signal:controller.signal});
+        if(!response.ok)throw new Error("Could not load authorized employees");
+        const payload: {people?:ReportPerson[]} = await response.json();
+        if(!controller.signal.aborted)setPeople(Array.isArray(payload.people)?payload.people:[]);
+      }catch{
+        if(!controller.signal.aborted){setPeople([]);setLoadError(true);}
+      }finally{
+        if(!controller.signal.aborted)setLoading(false);
+      }
+    };
+    void load();
+    return ()=>controller.abort();
+  },[open,isDaily]);
   useEffect(()=>{
     if(!open)return;
     const outside=(event:MouseEvent)=>{if(container.current&&!container.current.contains(event.target as Node))setOpen(false);};
@@ -42,39 +64,47 @@ export function DailyReportHeaderScopes() {
     document.addEventListener("keydown",escape);
     return ()=>{document.removeEventListener("mousedown",outside);document.removeEventListener("keydown",escape);};
   },[open]);
-  useEffect(()=>{setOpen(false);setSearch("");},[scope]);
-  if(!isDaily) return null;
-  function linkFor(target:"self"|"all") {
+  useEffect(()=>{setOpen(false);setSearch("");},[selectedPerson]);
+  if(!isDaily)return null;
+  function selectPerson(personId:string|null) {
     const params=new URLSearchParams(searchParams.toString());
-    params.set("scope",target);
-    params.delete("person");
+    params.set("scope",personId?"all":"self");
+    if(personId)params.set("person",personId);
+    else params.delete("person");
     params.delete("employee");
     params.delete("activity");
     params.set("page","1");
-    return `/reports/daily?${params.toString()}`;
+    setOpen(false);
+    setSearch("");
+    router.push(`/reports/daily?${params.toString()}`,{scroll:false});
   }
   return (
-    <div ref={container} className="relative" aria-label="Daily Report visibility">
-      <button type="button" aria-haspopup="listbox" aria-expanded={open} aria-controls="daily-report-scope-options"
+    <div ref={container} className="relative" aria-label="Daily Report employee selector">
+      <button type="button" aria-haspopup="listbox" aria-expanded={open} aria-controls="daily-report-employee-options"
         onClick={()=>{setOpen(value=>!value);setSearch("");}}
-        className="inline-flex h-9 min-w-[124px] items-center justify-between gap-3 rounded-lg border border-[#cbd7e6] bg-white px-3 text-[11px] font-semibold text-[#17365D] hover:bg-[#f5f8fc] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#315b9a]">
-        {scope==="self"?"Self":"All"}<ChevronDown className="h-3.5 w-3.5"/>
+        className="inline-flex h-9 min-w-[145px] max-w-[235px] items-center justify-between gap-3 rounded-lg border border-[#cbd7e6] bg-white px-3 text-[11px] font-semibold text-[#17365D] hover:bg-[#f5f8fc] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#315b9a]">
+        <span className="truncate">{!selectedPerson?"Self":selected?.full_name||"Selected employee"}</span><ChevronDown className="h-3.5 w-3.5 shrink-0"/>
       </button>
       {open ? (
-        <div className="absolute left-0 top-[calc(100%+4px)] z-50 w-[180px] rounded-lg border border-[#d8e0eb] bg-white p-2 shadow-lg">
-          <input type="search" aria-label="Search Self or All" placeholder="Search options..."
+        <div className="absolute left-0 top-[calc(100%+4px)] z-50 w-[270px] max-w-[calc(100vw-32px)] rounded-lg border border-[#d8e0eb] bg-white p-2 shadow-lg">
+          <input type="search" aria-label="Search employee name or code" placeholder="Search employee name or code..."
             autoFocus value={search} onChange={event=>setSearch(event.target.value)}
-            className="mb-1.5 h-8 w-full rounded-md border border-[#d8e0eb] px-2 text-[11px] text-[#17365D] outline-none focus:border-[#315b9a]"/>
-          <div id="daily-report-scope-options" role="listbox" aria-label="Report scope">
-            {options.map(option=>(
-              <Link key={option.value} href={linkFor(option.value)} prefetch={false}
-                role="option" aria-selected={scope===option.value}
-                onClick={()=>{setOpen(false);setSearch("");}}
-                className={`block rounded-md px-3 py-2 text-[11px] font-semibold hover:bg-[#eef3fa] ${scope===option.value?"bg-[#edf3fa] text-[#17365D]":"text-[#52627B]"}`}>
-                {option.label}
-              </Link>
+            className="mb-1.5 h-9 w-full rounded-md border border-[#d8e0eb] px-2 text-[11px] text-[#17365D] outline-none focus:border-[#315b9a]"/>
+          <div id="daily-report-employee-options" role="listbox" aria-label="Authorized employee" className="max-h-[300px] overflow-y-auto">
+            {"self".includes(search.trim().toLowerCase())?<button type="button" role="option" aria-selected={!selectedPerson}
+              onClick={()=>selectPerson(null)}
+              className={`block w-full rounded-md px-3 py-2 text-left text-[11px] font-semibold hover:bg-[#eef3fa] ${!selectedPerson?"bg-[#edf3fa] text-[#17365D]":"text-[#52627B]"}`}>Self</button>:null}
+            {matching.map(person=>(
+              <button key={person.id} type="button" role="option" aria-selected={selectedPerson===person.id}
+                onClick={()=>selectPerson(person.id)}
+                className={`block w-full rounded-md px-3 py-2 text-left hover:bg-[#eef3fa] ${selectedPerson===person.id?"bg-[#edf3fa]":"text-[#52627B]"}`}>
+                <span className="block truncate text-[11px] font-semibold">{person.full_name||"Unnamed employee"}</span>
+                {person.employee_code?<span className="block truncate text-[9px] text-[#8794a6]">{person.employee_code}</span>:null}
+              </button>
             ))}
-            {!options.length?<p className="px-2 py-2 text-[11px] text-[#667085]">No matching options</p>:null}
+            {loading?<p className="px-3 py-2 text-[11px] text-[#667085]">Loading employees...</p>:null}
+            {loadError?<p role="alert" className="px-3 py-2 text-[11px] text-red-700">Could not load authorized employees. Close and reopen to retry.</p>:null}
+            {!loading&&!loadError&&!matching.length&&!("self".includes(search.trim().toLowerCase()))?<p className="px-3 py-2 text-[11px] text-[#667085]">No matching employees</p>:null}
           </div>
         </div>
       ):null}
