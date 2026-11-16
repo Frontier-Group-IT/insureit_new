@@ -2,12 +2,11 @@ import "server-only";
 
 import { createHash, randomUUID } from "node:crypto";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
-import { extractNativePdfTextPages } from "@/lib/policy-ocr-native-pdf";
-import { requestN8nPolicyIntakeExtraction, type N8nOcrField } from "@/lib/policy-intake-n8n-bridge";
+import { createCurrentIntakePdfSignedSource } from "@/lib/policy-intake-n8n-signed-source";
+import { requestN8nPolicyIntakeBySignedSource, type N8nOcrField } from "@/lib/policy-intake-n8n-bridge";
 import { loadPolicyIntakeDuplicateMatches } from "@/lib/policy-intake-duplicate";
 
 const BUCKET = "policy-documents";
-const MAX_BYTES = 15 * 1024 * 1024;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const ALLOWED_STATUSES = new Set(["processing", "ready_for_review", "in_review", "needs_attention"]);
 
@@ -82,34 +81,21 @@ export async function previewSemiAutoN8nExtraction(id: string): Promise<SemiAuto
   }
   const snapshot = await currentSnapshot(id);
   if (!snapshot) return { ok: false, error: "The current Motor Intake PDF is unavailable, changed or no longer eligible." };
+  // The portal validates the current version and grants a short-lived link,
+  // but never downloads or forwards the PDF bytes to n8n. n8n fetches it.
   const admin = createSupabaseAdminClient();
-  const { data: blob, error } = await admin.storage.from(BUCKET).download(snapshot.document.storage_path);
-  if (error || !blob || !blob.size || blob.size > MAX_BYTES) {
-    return { ok: false, error: "The current PDF cannot be loaded or exceeds the 15 MB limit." };
-  }
-  const bytes = new Uint8Array(await blob.arrayBuffer());
-  if (bytes.length < 5 || new TextDecoder().decode(bytes.slice(0, 5)) !== "%PDF-") {
-    return { ok: false, error: "The current document is not a valid PDF." };
-  }
-  try {
-    const pages = await extractNativePdfTextPages(bytes);
-    const text = pages.slice(0, 3).map(page => page.text).join("\n");
-    if (!/ICICI\s+LOMBARD/i.test(text) || !/Product\s+Code\s*:?\s*3005\b/i.test(text)) {
-      return { ok: false, error: "Only digitally readable ICICI Lombard Product 3005 PDFs are supported by this n8n pilot. Use the existing OCR workflow." };
-    }
-  } catch {
-    return { ok: false, error: "This PDF has no supported native text. Use the existing Google OCR/manual review workflow." };
-  }
-
-  const file = new File([bytes], snapshot.document.file_name || snapshot.intake.file_name, { type: "application/pdf" });
   let extraction;
   try {
-    extraction = await requestN8nPolicyIntakeExtraction({
-      intakeId: id, documentId: snapshot.document.id, requestId: randomUUID(), file,
+    const source = await createCurrentIntakePdfSignedSource(
+      id, snapshot.document.id, snapshot.document.storage_path,
+    );
+    extraction = await requestN8nPolicyIntakeBySignedSource({
+      intakeId: id, documentId: source.documentId,
+      requestId: randomUUID(), signedUrl: source.signedUrl,
     });
   } catch {
-    // Never return credentials, document text, or raw downstream error bodies.
-    return { ok: false, error: "n8n extraction is unavailable or could not be validated. No Intake data was changed." };
+    // Never return signed URL, credentials, document text or remote errors.
+    return { ok: false, error: "n8n could not download or validate the current private PDF. No Intake data was changed." };
   }
   const current = await currentSnapshot(id);
   if (!current || current.document.id !== snapshot.document.id
