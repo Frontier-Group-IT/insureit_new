@@ -87,7 +87,7 @@ export async function POST(request: Request) {
 
   // Do not expose any matching existing Partner details to the applicant.
   const [{ data: existingProfiles, error: profilesError }, { data: existingPartners, error: partnersError }] = await Promise.all([
-    admin.from("posp_misp_onboarding_profiles").select("application_id").eq("pan_number", pan).limit(1),
+    admin.from("posp_misp_onboarding_profiles").select("application_id").ilike("pan_number", pan).limit(1),
     admin.from("partners").select("id").ilike("pan_number", pan).limit(1),
   ]);
   if (profilesError || partnersError) return reply({ ok: false, error: "Unable to check for existing Partner accounts." }, 503);
@@ -136,7 +136,7 @@ export async function POST(request: Request) {
       application_id: app.id,
       contact_role: schemaFamily === "misp" ? "misp_dp" : "posp",
       full_name: name, phone: mobile, email,
-      is_designated_person: false, login_required: false, membership_status: "pending",
+      is_designated_person: schemaFamily === "misp", login_required: false, membership_status: "pending",
     });
     if (contactError) throw new Error("Contact insert failed");
     return reply({ ok: true, application_id: app.id, status: "submitted" }, 201);
