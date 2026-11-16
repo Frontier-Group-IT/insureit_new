@@ -8,9 +8,9 @@ import type { SelfActivity } from "@/lib/reports/daily-self-activity";
 const dateFormat=new Intl.DateTimeFormat("en-IN",{timeZone:"Asia/Kolkata",day:"2-digit",month:"short",year:"numeric"});
 const timeFormat=new Intl.DateTimeFormat("en-IN",{timeZone:"Asia/Kolkata",hour:"2-digit",minute:"2-digit",hour12:true});
 
-type Props={rows:SelfActivity[];employeeName:string};
+type Props={rows:SelfActivity[]};
 
-export function DailyActivityHistoryRows({rows,employeeName}:Props) {
+export function DailyActivityHistoryRows({rows}:Props) {
   const router=useRouter();
   const [unavailable,setUnavailable]=useState<"deleted"|"missing"|"unsupported"|null>(null);
   const okRef=useRef<HTMLButtonElement>(null);
@@ -48,11 +48,11 @@ export function DailyActivityHistoryRows({rows,employeeName}:Props) {
             onClick={event=>openRecord(row,event.currentTarget)}
             onKeyDown={event=>onRowKeyDown(event,row)}
             className="cursor-pointer text-[11px] text-[#30435d] transition-colors hover:bg-[#edf5ff] focus-visible:bg-[#edf5ff] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#315b9a]">
-            <td className="px-4 py-3 font-semibold">{employeeName}</td>
-            <td className="px-3 py-3 font-semibold">{row.activity}</td>
-            <td className="max-w-[260px] break-all px-3 py-3">{row.reference}</td>
-            <td className="whitespace-nowrap px-3 py-3">{dateFormat.format(new Date(row.occurredAt))}</td>
-            <td className="whitespace-nowrap px-3 py-3">{timeFormat.format(new Date(row.occurredAt))}</td>
+            <td className="px-4 py-3 font-semibold">
+              <span className="block">{row.activity}</span>
+              {row.detail ? <span className="mt-1 block font-normal text-[#506483]">{row.detail}</span> : null}
+            </td>
+            <td className="whitespace-nowrap px-3 py-3">{dateFormat.format(new Date(row.occurredAt))}, {timeFormat.format(new Date(row.occurredAt))}</td>
             <td className="px-3 py-3"><span className="rounded-md bg-[#edf3fa] px-2 py-1 text-[9px] font-bold text-[#35587e]">{row.status}</span></td>
             <td className="whitespace-nowrap px-3 py-3 text-[10px] text-[#718096]">{row.source}</td>
           </tr>
