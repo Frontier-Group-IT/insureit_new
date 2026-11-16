@@ -353,6 +353,61 @@ export default function LifeHealthCaseDetailScreen(){
         <Ionicons name="chevron-forward" size={17} color="#FFFFFF"/>
       </Pressable>:null}
     </View>:null}
+
+   <Modal transparent visible={Boolean(choice)} animationType="fade" onRequestClose={()=>setChoice(null)}>
+     <View style={styles.dialogBackdrop}><View style={styles.dialogCard}>
+       <View style={styles.dialogHeader}><Text style={styles.dialogTitle}>Select {choice?.key==='insurerId'?'Insurance Company':'Option'}</Text>
+         <Pressable accessibilityLabel="Close options" onPress={()=>setChoice(null)}><Ionicons name="close" size={22} color={navy}/></Pressable>
+       </View>
+       <ScrollView style={styles.optionsScroll} keyboardShouldPersistTaps="handled">
+         {choice?.values.map(item=><Pressable key={item.id} accessibilityRole="button" style={styles.optionItem}
+           onPress={()=>{setField(choice.key as keyof CaseEditForm,item.id);setChoice(null)}}>
+           <Text style={styles.optionText}>{item.name||'Not selected'}</Text>
+         </Pressable>)}
+       </ScrollView>
+     </View></View>
+   </Modal>
+   <Modal transparent visible={remarkOpen} animationType="fade" onRequestClose={()=>{if(!remarkBusy)setRemarkOpen(false)}}>
+     <View style={styles.dialogBackdrop}><View style={styles.dialogCard}>
+       <View style={styles.dialogHeader}><Text style={styles.dialogTitle}>Add Remark</Text>
+         <Pressable accessibilityLabel="Close remark" disabled={remarkBusy} onPress={()=>setRemarkOpen(false)}><Ionicons name="close" size={22} color={navy}/></Pressable>
+       </View>
+       {record?.remarks?.trim()?<ScrollView style={{maxHeight:140}}>
+         <Text style={styles.remarkHistory}>{record.remarks}</Text>
+       </ScrollView>:null}
+       <TextInput accessibilityLabel="New remark" value={remarkDraft} multiline maxLength={2000}
+         onChangeText={setRemarkDraft} placeholder="Enter new remark" placeholderTextColor="#8091A7"
+         style={[styles.editInput,{minHeight:105,textAlignVertical:'top'}]}/>
+       {remarkError?<Text style={styles.saveError}>{remarkError}</Text>:null}
+       <Pressable accessibilityRole="button" disabled={remarkBusy||!remarkDraft.trim()}
+         onPress={()=>void addRemark()} style={styles.saveButton}>
+         <Text style={styles.saveText}>{remarkBusy?'Saving…':'Add Remark'}</Text>
+       </Pressable>
+     </View></View>
+   </Modal>
+   <Modal transparent visible={approvalOpen} animationType="fade" onRequestClose={()=>{if(!issuing)setApprovalOpen(false)}}>
+     <View style={styles.dialogBackdrop}><View style={styles.dialogCard}>
+       <View style={styles.dialogHeader}><Text style={styles.dialogTitle}>Earlier-Month Date Approval</Text>
+         <Pressable accessibilityLabel="Close approval" disabled={issuing} onPress={()=>setApprovalOpen(false)}><Ionicons name="close" size={22} color={navy}/></Pressable>
+       </View>
+       {!approvalId?<><Text style={styles.editLabel}>Select approver</Text>
+         {approvers.map(item=><Pressable key={item.key} accessibilityRole="button"
+           accessibilityState={{selected:approverKey===item.key}}
+           style={[styles.optionItem,approverKey===item.key&&styles.optionActive]} onPress={()=>setApproverKey(item.key)}>
+           <Text style={styles.optionText}>{item.name}</Text>
+         </Pressable>)}
+         <Pressable disabled={!approverKey||issuing} onPress={()=>void sendApproval()} style={styles.saveButton}>
+           <Text style={styles.saveText}>{issuing?'Requesting…':'Request Email OTP'}</Text>
+         </Pressable>
+       </>:<>
+         <InlineInput label="Six-digit approver OTP" value={otp} onChange={v=>setOtp(v.replace(/\D/g,'').slice(0,6))} wide keyboardType="phone-pad"/>
+         <Pressable disabled={otp.length!==6||issuing} onPress={()=>void verifyApproval()} style={styles.saveButton}>
+           <Text style={styles.saveText}>{issuing?'Verifying…':'Verify Approval'}</Text>
+         </Pressable>
+       </>}
+       {issueError?<Text style={styles.saveError}>{issueError}</Text>:null}
+     </View></View>
+   </Modal>
  </PartnerScreen>;
 }
 function EditInput({title,value,onChange,keyboardType,multiline}:{title:string;value:string;onChange:(v:string)=>void;keyboardType?:'phone-pad'|'decimal-pad';multiline?:boolean}){
@@ -367,6 +422,45 @@ function ChoiceField({title,value,values,onChange}:{title:string;value:string;va
    onPress={()=>onChange(item)} style={[styles.choice,item===value&&styles.choiceActive]}>
     <Text style={[styles.choiceText,item===value&&styles.choiceTextActive]}>{item}</Text>
   </Pressable>)}</View></View>;
+}
+
+function InlineInput({label,value,onChange,required=false,wide=false,multiline=false,keyboardType,placeholder}:{
+  label:string;value:string;onChange:(next:string)=>void;required?:boolean;wide?:boolean;multiline?:boolean;
+  keyboardType?:'phone-pad'|'decimal-pad';placeholder?:string;
+}){
+  return <View style={[styles.field,wide&&styles.fieldWide]}>
+    <Text style={styles.fieldLabel}>{label.toUpperCase()}{required?<Text style={styles.asterisk}> *</Text>:null}</Text>
+    <TextInput accessibilityLabel={label} value={value} onChangeText={onChange} placeholder={placeholder||label}
+      placeholderTextColor="#92A0B5" keyboardType={keyboardType} multiline={multiline}
+      style={[styles.fieldBox,styles.inlineValue,multiline&&{minHeight:72,textAlignVertical:'top'}]}/>
+  </View>;
+}
+function InlineChoice({label,value,onPress,wide=false,required=false}:{
+  label:string;value:string;onPress:()=>void;wide?:boolean;required?:boolean;
+}){
+  return <View style={[styles.field,wide&&styles.fieldWide]}>
+    <Text style={styles.fieldLabel}>{label.toUpperCase()}{required?<Text style={styles.asterisk}> *</Text>:null}</Text>
+    <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={[styles.fieldBox,styles.choiceRow]}>
+      <Text style={styles.fieldValue} numberOfLines={2}>{value||'Select'}</Text>
+      <Ionicons name="chevron-down" size={15} color="#63758D"/>
+    </Pressable>
+  </View>;
+}
+function CaseBottomNav({context,onGo}:{context:Parameters<typeof canPartnerAccess>[0];onGo:(route:string)=>void}){
+  const tabs=[
+    {label:'Home',route:'/(tabs)/index',icon:'home-outline' as const,access:'view_dashboard' as const},
+    {label:'Business',route:'/(tabs)/business',icon:'briefcase-outline' as const,access:'view_dashboard' as const},
+    {label:'Policies',route:'/(tabs)/policies',icon:'document-text-outline' as const,access:'view_policies' as const},
+    {label:'Claims',route:'/(tabs)/claims',icon:'shield-outline' as const,access:'view_claims' as const},
+    {label:'More',route:'/(tabs)/more',icon:'grid-outline' as const,access:null},
+  ];
+  return <View style={styles.bottomTabs}>
+    {tabs.filter(t=>!t.access||canPartnerAccess(context,t.access)).map(t=><Pressable key={t.label}
+      accessibilityRole="button" accessibilityLabel={t.label} onPress={()=>onGo(t.route)} style={styles.bottomTab}>
+      <Ionicons name={t.icon} color="#FFFFFF" size={20}/>
+      <Text style={styles.bottomTabText}>{t.label}</Text>
+    </Pressable>)}
+  </View>;
 }
 function Section({number,title,children}:{number?:string;title:string;children:ReactNode}){
   return <View style={styles.section}>
@@ -394,6 +488,27 @@ function Field({label,value,meta,secondaryMeta,required=false,wide=false,multili
 }
 
 const styles=StyleSheet.create({
+  inlineValue:{fontSize:11,fontWeight:'600',color:'#213653',minHeight:43},
+  choiceRow:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:5},
+  remarkArea:{gap:8,marginTop:5},
+  remarkRow:{flexDirection:'row',alignItems:'flex-start',gap:8},
+  remarkHistory:{flex:1,backgroundColor:'#F8FAFD',borderRadius:9,padding:10,color:navy,fontSize:11,lineHeight:17},
+  remarkButtonCompact:{flexDirection:'row',alignItems:'center',gap:4,padding:9,borderRadius:8,borderWidth:1,borderColor:'#BFD3EE',backgroundColor:'#EFF5FF'},
+  remarkButtonFull:{flexDirection:'row',alignItems:'center',justifyContent:'center',gap:9,minHeight:42,
+    backgroundColor:'#EFF5FF',borderWidth:1,borderColor:'#BFD3EE',borderRadius:9},
+  remarkButtonLabel:{fontSize:11,fontWeight:'700',color:navy},
+  dialogBackdrop:{flex:1,justifyContent:'center',backgroundColor:'rgba(15,23,42,0.5)',padding:18},
+  dialogCard:{backgroundColor:'#FFFFFF',borderRadius:18,padding:17,gap:11,maxHeight:'80%'},
+  dialogHeader:{flexDirection:'row',justifyContent:'space-between',alignItems:'center'},
+  dialogTitle:{color:navy,fontSize:15,fontWeight:'800'},
+  optionsScroll:{maxHeight:350},
+  optionItem:{paddingVertical:11,paddingHorizontal:9,borderBottomWidth:1,borderBottomColor:'#EDF1F6'},
+  optionActive:{backgroundColor:'#EAF1FA'},
+  optionText:{fontSize:12,color:navy,fontWeight:'600'},
+  bottomTabs:{backgroundColor:'#071E49',flexDirection:'row',justifyContent:'space-around',paddingTop:7,minHeight:58},
+  bottomTab:{alignItems:'center',justifyContent:'center',gap:4,minWidth:43,flex:1},
+  bottomTabText:{color:'#FFFFFF',fontSize:9,fontWeight:'600'},
+
  editorBackdrop:{flex:1,justifyContent:'flex-end',backgroundColor:'rgba(9,24,48,0.48)'},
  editor:{backgroundColor:'#F7F9FD',borderTopLeftRadius:22,borderTopRightRadius:22,maxHeight:'94%',minHeight:'55%'},
  editorHeader:{flexDirection:'row',alignItems:'center',padding:17,borderBottomWidth:1,borderBottomColor:'#DFE7F1'},
@@ -420,10 +535,10 @@ const styles=StyleSheet.create({
  editButtonText:{fontWeight:'800',color:navy,fontSize:12},
 
   wrap:{gap:11,paddingBottom:26,marginTop:4},
-  hero:{backgroundColor:'#95651F',borderRadius:12,padding:13,gap:6},
+  hero:{backgroundColor:'#95651F',borderRadius:12,padding:10,gap:3},
   heroIssued:{backgroundColor:'#1E694F'},
   heroRejected:{backgroundColor:'#913D3D'},
-  heroTop:{flexDirection:'row',alignItems:'center',gap:9,flexWrap:'wrap'},
+  heroTop:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:9},
   heroTitle:{color:'#FFFFFF',fontSize:15,fontWeight:'800'},
   statusPill:{borderRadius:6,backgroundColor:'rgba(255,255,255,0.16)',borderWidth:1,borderColor:'rgba(255,255,255,0.36)',paddingHorizontal:9,paddingVertical:3},
   statusText:{fontSize:10,fontWeight:'700',color:'#FFFFFF'},
