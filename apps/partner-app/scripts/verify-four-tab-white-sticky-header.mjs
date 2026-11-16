@@ -31,7 +31,7 @@ assert.match(policies, /count: summary\.data\?\.total_policies/, 'Dropdown count
 assert.match(policies, /onPress=\{\(\) => selectSummary\(option\.filter\)\}/, 'Dropdown selection filters policies');
 assert.match(policies, /accessibilityState=\{\{ selected \}\}/, 'Dropdown selection announced accessibly');
 assert.match(policies, /visible=\{statusMenuOpen\}/, 'Dropdown displays all options on demand');
-assert.doesNotMatch(policies, /styles\.summaryRow|styles\.summaryScroll|styles\.summaryChip|seeAllOpen|statusSheetOverlay/, 'Obsolete horizontal policy chips and See all removed');
+assert.doesNotMatch(policies, /styles\.summaryRow|styles\.summaryScroll|styles\.summaryChipSelected|seeAllOpen|statusSheetOverlay/, 'Obsolete horizontal policy chips and See all removed');
 // Claims keeps three compact filters and the permission-gated Add action together in one row.
 assert.match(claims, /<View style=\{styles\.summaryChips\} accessibilityLabel="Claim status filters">/, 'All Claims status chips remain visible in a single row');
 assert.match(claims, /summaryChip: \{ flex: 1, minWidth: 0/, 'Claims chips divide available width rather than scroll');
