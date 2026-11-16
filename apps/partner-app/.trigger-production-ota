@@ -1,9 +1,9 @@
 Partner production OTA trigger
-release=partner-policy-onboarding-pr-4542
+release=partner-policy-intake-search-focus-pr-4559
 source=verified-merged-main
-source_pr=4542
-source_merge=ba34a175927ef467a971c7f7f01e0bb2909eee8c
-reason=user-approved-publish
+source_pr=4559
+source_merge=d719ffb1b633cb3b2036b8b6ae7bbb003af82b5c
+reason=user-approved-publish-search-focus
 channel=production
 runtime=0.2.0
 requested=2026-11-16
