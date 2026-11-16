@@ -9,7 +9,6 @@ import { requireCapability } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { fetchAllPages } from "@/lib/fetch-all-pages";
 import { getPartnerEmployeeIntakeReadScope } from "@/lib/partner-policy-intake-read-access";
-import { sortPolicyIntakesByActivity } from "@/lib/policy-intake-status-buckets";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -66,7 +65,7 @@ export default async function PolicyIntakesPage({ searchParams }: { searchParams
     code: (error as { code?: string }).code ?? "unknown",
     scope: intakeOrFilter ? "hierarchy" : submitterFilter ? "submitter" : "organization",
   });
-  const rows = sortPolicyIntakesByActivity(data ?? []);
+  const rows = data ?? [];
   // A privileged viewer with no rows must not be told the organization has no intakes
   // without checking the underlying table independently. This is only a diagnostic
   // consistency guard; it does not change authorization or widen any user's scope.
