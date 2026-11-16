@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { canPartnerAccess } from '@/lib/partner-permissions';
@@ -71,6 +72,7 @@ export default function AddPartnerScreen() {
   const [loading, setLoading] = useState(true);
   const [selector, setSelector] = useState<'rm' | 'bank' | null>(null);
   const [saving, setSaving] = useState(false);
+  const [dateField, setDateField] = useState<'date_of_birth' | 'document_received_at' | null>(null);
   const set = (key: Field, value: string) => setForm(old => ({ ...old, [key]: value }));
   useEffect(() => {
     if (!allowed) return;
@@ -87,6 +89,14 @@ export default function AddPartnerScreen() {
     })();
     return () => { active = false; };
   }, [allowed]);
+  const setSelectedDate = (date: Date | undefined) => {
+    if (dateField && date) {
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      set(dateField, `${day}/${month}/${date.getFullYear()}`);
+    }
+    setDateField(null);
+  };
   const selectOptions = selector === 'rm' ? rms : banks;
   const selectedValue = selector === 'rm' ? form.associate_employee_id : form.bank_id;
   const submit = async () => {
@@ -145,25 +155,37 @@ export default function AddPartnerScreen() {
                 <Text style={styles.sectionTitle}>{section.heading}</Text>
               </View>
               <View style={styles.sectionBody}>
-                {index === 0 ? <View style={styles.field}><Text style={styles.label}>RM *</Text>
-                  <Pressable disabled={loading} accessibilityRole="button" onPress={() => setSelector('rm')} style={styles.select}>
-                    <Text style={styles.selectText}>{rms.find(x => x.id === form.associate_employee_id)?.name || (loading ? 'Loading RMs…' : 'Select RM')}</Text>
-                    <Ionicons name="chevron-down" size={17} color="#17365D" />
-                  </Pressable></View> : null}
                 {index === 2 ? <View style={styles.field}><Text style={styles.label}>Bank *</Text>
                   <Pressable disabled={loading} accessibilityRole="button" onPress={() => setSelector('bank')} style={styles.select}>
                     <Text style={styles.selectText}>{banks.find(x => x.id === form.bank_id)?.name || (loading ? 'Loading banks…' : 'Select bank')}</Text>
                     <Ionicons name="chevron-down" size={17} color="#17365D" />
                   </Pressable></View> : null}
                 {section.inputs.map(field => (
-                  <View key={field.key} style={styles.field}>
-                    <Text style={styles.label}>{field.label}{field.optional ? '' : ' *'}</Text>
-                    <TextInput value={form[field.key]} onChangeText={text => set(field.key, text)}
-                      placeholder={field.hint} placeholderTextColor="#8997A8"
-                      keyboardType={field.keyboard || 'default'} secureTextEntry={Boolean(field.secret)}
-                      autoCapitalize={field.key === 'email' ? 'none' : field.key === 'pan_number' || field.key === 'bank_ifsc_code' || field.key === 'gst_number' ? 'characters' : 'sentences'}
-                      autoCorrect={false} maxLength={field.key === 'address' ? 300 : field.key === 'aadhaar_number' ? 12 : 150}
-                      style={styles.input} />
+                  <View key={field.key}>
+                    <View style={styles.field}>
+                      <Text style={styles.label}>{field.label}{field.optional ? '' : ' *'}</Text>
+                      {field.key === 'document_received_at' || field.key === 'date_of_birth' ? (
+                        <Pressable accessibilityRole="button" accessibilityLabel={`Select ${field.label}`}
+                          onPress={() => setDateField(field.key as 'date_of_birth' | 'document_received_at')} style={styles.select}>
+                          <Text style={styles.selectText}>{form[field.key] || 'DD/MM/YYYY'}</Text>
+                          <Ionicons name="calendar-outline" size={18} color="#17365D" />
+                        </Pressable>
+                      ) : (
+                        <TextInput value={form[field.key]} onChangeText={text => set(field.key, text)}
+                          placeholder={field.hint} placeholderTextColor="#8997A8"
+                          keyboardType={field.keyboard || 'default'} secureTextEntry={Boolean(field.secret)}
+                          autoCapitalize={field.key === 'email' ? 'none' : field.key === 'pan_number' || field.key === 'bank_ifsc_code' || field.key === 'gst_number' ? 'characters' : 'sentences'}
+                          autoCorrect={false} maxLength={field.key === 'address' ? 300 : field.key === 'aadhaar_number' ? 12 : 150}
+                          style={styles.input} />
+                      )}
+                    </View>
+                    {field.key === 'document_received_at' ? <View style={[styles.field, { marginTop: 11 }]}>
+                      <Text style={styles.label}>RM *</Text>
+                      <Pressable disabled={loading} accessibilityRole="button" onPress={() => setSelector('rm')} style={styles.select}>
+                        <Text style={styles.selectText}>{rms.find(x => x.id === form.associate_employee_id)?.name || (loading ? 'Loading RMs…' : 'Select RM')}</Text>
+                        <Ionicons name="chevron-down" size={17} color="#17365D" />
+                      </Pressable>
+                    </View> : null}
                   </View>
                 ))}
               </View>
@@ -173,6 +195,11 @@ export default function AddPartnerScreen() {
             <Text style={styles.submitText}>{saving ? 'Submitting…' : 'Submit Partner application'}</Text>
           </Pressable>
         </ScrollView>
+        {dateField ? <DateTimePicker
+          value={isoDate(form[dateField]) ? new Date(`${isoDate(form[dateField])}T12:00:00`) : new Date()}
+          mode="date" display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          maximumDate={new Date()} onChange={(_event, selectedDate) => setSelectedDate(selectedDate)}
+        /> : null}
         <Modal visible={selector !== null} transparent animationType="slide" onRequestClose={() => setSelector(null)}>
           <View style={styles.modalBackdrop}><View style={styles.modal}>
             <Text style={styles.sectionTitle}>{selector === 'rm' ? 'Select RM' : 'Select Bank'}</Text>
