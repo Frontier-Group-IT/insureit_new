@@ -37,12 +37,13 @@ export default async function SemiAutoPolicyOnboardingPage({ searchParams }: { s
   const duplicates = list.error ? null : await loadPolicyIntakeDuplicateMatches(admin, list.data ?? []);
   const unavailable = Boolean(list.error || !duplicates?.ok);
   const candidates = list.data ?? [];
+  const duplicateIds = duplicates?.ok ? new Set(duplicates.matches.keys()) : new Set<string>();
   // Every open Motor Intake appears, including duplicates and unfinished OCR.
   // Duplicate status is display-only: normal edit/booking still uses independent
   // canonical authorization, duplicate detection and readiness checks.
   const workspaceRows = !unavailable && duplicates?.ok ? candidates : [];
   const duplicateCount = duplicates?.ok ? candidates.filter(row =>
-    policyIntakeBucket(row, duplicates.matches.has(row.id)) === "duplicate").length : 0;
+    policyIntakeBucket(row, duplicateIds.has(row.id)) === "duplicate").length : 0;
   const total = workspaceRows.length;
   const requestedId = typeof params.intake_id === "string"
     && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(params.intake_id)
@@ -62,7 +63,7 @@ export default async function SemiAutoPolicyOnboardingPage({ searchParams }: { s
       ocr_status: row.ocr_status,
       created_at: row.created_at,
       assigned_to_profile_id: row.assigned_to_profile_id,
-      is_duplicate: policyIntakeBucket(row, duplicates!.matches.has(row.id)) === "duplicate",
+      is_duplicate: policyIntakeBucket(row, duplicateIds.has(row.id)) === "duplicate",
       n8n_enabled: semiAutoN8nEnabledForIntake(row.id),
     }));
   return (
