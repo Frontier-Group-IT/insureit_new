@@ -41,6 +41,8 @@ jobs:
         run: node scripts/employee-source-identity-history-regression.mjs
       - name: Policy Intake completed date and Partner parity regression
         run: node --experimental-strip-types scripts/policy-intake-completion-date-parity-regression.mjs
+      - name: Life/Health Edit Policy two-column reference layout regression
+        run: node scripts/life-health-edit-two-column-layout-regression.mjs
       - name: Life/Health issued policy continuous field grid regression
         run: node scripts/life-health-issued-policy-continuous-grid-regression.mjs
       - name: Life Health case status and rejected read-only detail regression
