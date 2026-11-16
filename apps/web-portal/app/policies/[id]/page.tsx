@@ -4,6 +4,8 @@ import { Eye, FileText, ShieldCheck } from "lucide-react";
 import { AppShell } from "@/components/shell";
 import { canAccessPolicy } from "@/lib/policy-access-scope";
 import { requireCapability } from "@/lib/master-data-server";
+import { getEffectivePermission } from "@/lib/permission-management";
+import { isAppRole } from "@/lib/roles";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 type PolicyDetail = {
@@ -37,11 +39,15 @@ export const revalidate = 0;
 
 export default async function PolicyReadOnlyPage({ params }: { params: Promise<{ id: string }> }) {
   const profile = await requireCapability("view_policies");
-  if (!profile?.id) redirect("/access-denied");
+  if (!profile?.id || !isAppRole(profile.role)) redirect("/access-denied");
   const { id } = await params;
   if (!(await canAccessPolicy(profile.id, profile.role, id, "view_policies"))) redirect("/access-denied");
 
-  const mayEdit = profile.role === "operations_head_life" && await canAccessPolicy(profile.id, profile.role, id, "view_policies", true);
+  const permission = await getEffectivePermission(profile.id, profile.role, "view_policies");
+  const policyEditAuthorized = profile.role === "operations_head_life"
+    ? await canAccessPolicy(profile.id, profile.role, id, "view_policies", true)
+    : (permission.access === "edit" || permission.access === "approve")
+      && await canAccessPolicy(profile.id, profile.role, id, "view_policies", true);
   const admin = createSupabaseAdminClient();
   const { data, error } = await admin
     .from("policies")
@@ -49,6 +55,9 @@ export default async function PolicyReadOnlyPage({ params }: { params: Promise<{
     .eq("id", id)
     .maybeSingle<PolicyDetail>();
   if (error || !data) notFound();
+
+  // Reuse the existing full view/edit page only for an authorized editor.
+  if (policyEditAuthorized) redirect(`/policies/${id}/edit`);
 
   const { data: sourceIntake } = await admin
     .from("policy_intake_requests")
@@ -71,7 +80,7 @@ export default async function PolicyReadOnlyPage({ params }: { params: Promise<{
       <section className="mx-auto max-w-[1100px] overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-sm">
         <div className="flex flex-col gap-3 border-b border-[#E5ECF5] bg-[#F8FAFC] px-5 py-5 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3"><span className="grid h-11 w-11 place-items-center rounded-xl bg-[#17365D] text-white"><ShieldCheck className="h-5 w-5" /></span><div><p className="text-[9px] font-bold uppercase tracking-[.1em] text-[#64748B]">Read-only policy record</p><h1 className="mt-1 text-[18px] font-semibold text-[#0F172A]">{data.policy_no}</h1><p className="mt-1 text-[10px] text-[#64748B]">{data.insurance_companies?.name ?? "Insurance company"}</p></div></div>
-          {mayEdit ? <Link href={`/policies/${id}/edit`} className="inline-flex items-center gap-1.5 self-start rounded-full border border-[#BFD4F5] bg-[#EFF6FF] px-3 py-1.5 text-[9px] font-bold text-[#174EA6]">Edit Policy</Link> : <span className="inline-flex items-center gap-1.5 self-start rounded-full border border-[#CFE0F2] bg-[#EFF6FF] px-3 py-1.5 text-[9px] font-bold text-[#315B9A]"><Eye className="h-3.5 w-3.5" />View only</span>}
+          {policyEditAuthorized ? <Link href={`/policies/${id}/edit`} className="inline-flex items-center gap-1.5 self-start rounded-full border border-[#BFD4F5] bg-[#EFF6FF] px-3 py-1.5 text-[9px] font-bold text-[#174EA6]">Edit Policy</Link> : <span className="inline-flex items-center gap-1.5 self-start rounded-full border border-[#CFE0F2] bg-[#EFF6FF] px-3 py-1.5 text-[9px] font-bold text-[#315B9A]"><Eye className="h-3.5 w-3.5" />View only</span>}
         </div>
         <div className="grid gap-4 p-5 md:grid-cols-2">
           <Info label="Policy number" value={data.policy_no} />
