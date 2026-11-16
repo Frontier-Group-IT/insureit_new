@@ -9,6 +9,7 @@ import { requireCapability } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { fetchAllPages } from "@/lib/fetch-all-pages";
 import { getPartnerEmployeeIntakeReadScope } from "@/lib/partner-policy-intake-read-access";
+import { sortPolicyIntakesByActivity } from "@/lib/policy-intake-status-buckets";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -50,7 +51,7 @@ export default async function PolicyIntakesPage({ searchParams }: { searchParams
   // Fetch the entire authorized result set, not only the first 500/1000 records.
   const { data, error } = await fetchAllPages<PolicyIntakeListRow, unknown>((from, to) => {
     let page = admin.from("policy_intake_requests")
-      .select("id,intake_number,status,policy_type,lead_source_name,lead_source_type,lead_source_code,customer_mobile,created_at,ocr_status,ocr_fields,file_name,assigned_to_profile_id,submitted_by_profile_id,submitted_by_portal_account_id")
+      .select("id,intake_number,status,policy_type,lead_source_name,lead_source_type,lead_source_code,customer_mobile,created_at,finalized_at,ocr_status,ocr_fields,file_name,assigned_to_profile_id,submitted_by_profile_id,submitted_by_portal_account_id")
       .order("created_at", { ascending: false })
       .order("id", { ascending: false })
       .range(from, to);
@@ -65,7 +66,7 @@ export default async function PolicyIntakesPage({ searchParams }: { searchParams
     code: (error as { code?: string }).code ?? "unknown",
     scope: intakeOrFilter ? "hierarchy" : submitterFilter ? "submitter" : "organization",
   });
-  const rows = data ?? [];
+  const rows = sortPolicyIntakesByActivity(data ?? []);
   // A privileged viewer with no rows must not be told the organization has no intakes
   // without checking the underlying table independently. This is only a diagnostic
   // consistency guard; it does not change authorization or widen any user's scope.
