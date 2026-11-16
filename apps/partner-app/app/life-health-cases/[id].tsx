@@ -314,7 +314,7 @@ export default function LifeHealthCaseDetailScreen(){
         <View style={styles.remarkArea}>
           <Text style={styles.fieldLabel}>REMARKS</Text>
           {record.remarks?.trim()?<View style={styles.remarkRow}>
-            <Text style={styles.remarkHistory} selectable>{record.remarks}</Text>
+            <Text style={styles.remarkHistory} numberOfLines={3} selectable>{record.remarks.trim().split(/\n\n/).slice(-1)[0]}</Text>
             {record.status_group==='pending'?<Pressable accessibilityRole="button" style={styles.remarkButtonCompact}
               onPress={()=>setRemarkOpen(true)}><Ionicons name="add" size={15} color={navy}/><Text style={styles.remarkButtonLabel}>Add Remark</Text></Pressable>:null}
           </View>:record.status_group==='pending'?<Pressable accessibilityRole="button" accessibilityLabel="Add Remark" style={styles.remarkButtonFull}
