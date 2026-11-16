@@ -14,6 +14,7 @@ on:
       - '.github/workflows/insureit-postgres-r2-restore-verify.yml'
       - '.github/workflows/insureit-postgres-r2-v2-manual.yml'
       - '.github/workflows/insureit-postgres-r2-v2-restore-verify.yml'
+      - '.github/workflows/insureit-managed-recovery-preflight.yml'
   workflow_dispatch:
 
 permissions:
@@ -29,7 +30,7 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m pip install boto3==1.35.99 cryptography==44.0.2 pyyaml==6.0.2 'psycopg[binary]==3.2.9'
-      - run: python -m py_compile scripts/backup/supabase_storage_to_r2.py scripts/backup/verify_r2_restore.py scripts/backup/monitor_github_backup.py scripts/backup/monitor_postgres_backup.py scripts/backup/postgres_to_r2.py scripts/backup/verify_postgres_r2_restore.py scripts/backup/classify_pg_restore_error.py scripts/backup/audit_postgres_archive_coverage.py scripts/backup/verify_postgres_offline_row_counts.py scripts/backup/summarize_pg_restore_errors.py scripts/backup/diagnose_pg_restore_data.py scripts/backup/audit_postgres_copy_targets.py scripts/backup/postgres_v2_to_r2.py scripts/backup/verify_postgres_v2_r2.py scripts/backup/verify_postgres_v2_rows.py scripts/backup/audit_postgres_v2_toc.py scripts/backup/prepare_pg_dump_connection.py scripts/backup/allow_no_acl_restore_fallback.py scripts/backup/audit_storage_source_manifest.py
+      - run: python -m py_compile scripts/backup/supabase_storage_to_r2.py scripts/backup/verify_r2_restore.py scripts/backup/monitor_github_backup.py scripts/backup/monitor_postgres_backup.py scripts/backup/postgres_to_r2.py scripts/backup/verify_postgres_r2_restore.py scripts/backup/classify_pg_restore_error.py scripts/backup/audit_postgres_archive_coverage.py scripts/backup/verify_postgres_offline_row_counts.py scripts/backup/summarize_pg_restore_errors.py scripts/backup/diagnose_pg_restore_data.py scripts/backup/audit_postgres_copy_targets.py scripts/backup/postgres_v2_to_r2.py scripts/backup/verify_postgres_v2_r2.py scripts/backup/verify_postgres_v2_rows.py scripts/backup/audit_postgres_v2_toc.py scripts/backup/prepare_pg_dump_connection.py scripts/backup/allow_no_acl_restore_fallback.py scripts/backup/audit_storage_source_manifest.py scripts/backup/managed_recovery_preflight.py scripts/backup/plan_recovery_storage_sample.py
       - run: python -m unittest discover -s scripts/backup -p 'test_*.py' -v
       - name: Validate workflow safety guard
         run: |
@@ -224,6 +225,72 @@ jobs:
           assert 'docker rm -f -v insureit-v2-restore-check' in restore_steps
           assert 'DATABASE_URL' not in restore_steps and 'SUPABASE_SERVICE_ROLE_KEY' not in restore_steps
           assert 's3.delete_object' not in pathlib.Path('scripts/backup/postgres_v2_to_r2.py').read_text()
+          isolated = yaml.safe_load(pathlib.Path('.github/workflows/insureit-managed-recovery-preflight.yml').read_text())
+          isolated_triggers = isolated.get('on', isolated.get(True, {}))
+          assert 'workflow_dispatch' in isolated_triggers and 'schedule' not in isolated_triggers
+          assert 'pull_request' not in isolated_triggers and 'push' not in isolated_triggers
+          assert isolated['permissions'] == {'contents':'read'}
+          gated = isolated['jobs']['preflight']
+          assert gated['environment'] == 'insureit-recovery-isolated'
+          assert 'refs/heads/main' in gated['if'] and 'workflow_dispatch' in gated['if']
+          guarded_steps = str(gated['steps'])
+          assert 'managed_recovery_preflight.py --check-target' in guarded_steps
+          assert 'managed_recovery_preflight.py --compare' in guarded_steps
+          assert 'verify_postgres_v2_r2.py' in guarded_steps
+          assert '--network none' in guarded_steps and 'pg_restore' in guarded_steps
+          assert 'INSUREIT_RECOVERY_DATABASE_URL' in guarded_steps
+          assert 'RECOVERY_R2_READONLY_ACCESS_KEY_ID' in guarded_steps
+          assert 'RECOVERY_R2_READONLY_SECRET_ACCESS_KEY' in guarded_steps
+          assert 'RECOVERY_DB_BACKUP_ENCRYPTION_KEY' in guarded_steps
+          assert 'DATABASE_URL:' not in guarded_steps
+          assert 'supabase db' not in guarded_steps
+          assert 'SUPABASE_SERVICE_ROLE_KEY' not in guarded_steps
+          assert 'pg_restore --clean' not in guarded_steps
+          assert 'pg_restore --dbname' not in guarded_steps
+          assert 'delete_object' not in guarded_steps and 'put_object' not in guarded_steps
+          assert 'rm -rf "$RUNNER_TEMP/insureit-managed-r0-r1"' in guarded_steps
+          managed_script = pathlib.Path('scripts/backup/managed_recovery_preflight.py').read_text()
+          assert 'ilzhsfqqjyppzzvfscmh' in managed_script
+          assert 'klnodxnmlqbofolxxrsr' in managed_script
+          assert 'BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY' in managed_script
+          assert 'default_transaction_read_only=on' in managed_script
+          assert 'sslmode="verify-full"' in managed_script
+          assert not any(token in managed_script for token in (
+              'CREATE ROLE', 'DROP TABLE', 'TRUNCATE', 'ALTER ROLE', 'pg_restore --clean'
+          ))
+          assert 'plan_storage_sample' in str(isolated_triggers['workflow_dispatch'])
+          assert isolated_triggers['workflow_dispatch']['inputs']['plan_storage_sample']['default'] is False
+          assert 'verify_storage_sample_bytes' in str(isolated_triggers['workflow_dispatch'])
+          assert isolated_triggers['workflow_dispatch']['inputs']['verify_storage_sample_bytes']['default'] is False
+          plan_step = next(step for step in gated['steps'] if 'plan_recovery_storage_sample.py' in str(step))
+          assert 'inputs.plan_storage_sample || inputs.verify_storage_sample_bytes' in plan_step['if']
+          assert 'plan_recovery_storage_sample.py' in guarded_steps
+          assert 'RECOVERY_STORAGE_BACKUP_ENCRYPTION_KEY' in guarded_steps
+          assert 'VERIFY_STORAGE_SAMPLE_BYTES' in guarded_steps
+          assert 'BACKUP_ENCRYPTION_KEY' in guarded_steps
+          assert 'SUPABASE_SERVICE_ROLE_KEY' not in guarded_steps
+          assert 'storage/v1/object/' not in guarded_steps
+          sampler = pathlib.Path('scripts/backup/plan_recovery_storage_sample.py').read_text()
+          assert 'MAX_TOTAL_BYTES = 500_000_000' in sampler
+          assert 'MAX_FILE_BYTES = 50_000_000' in sampler
+          assert 'verify_selected(' in sampler
+          assert 'validate_manifest(' in sampler
+          assert 'upload_fileobj' not in sampler
+          assert 'put_object' not in sampler and 'delete_object' not in sampler
+          assert 'supabase.co' not in sampler
+          print('Protected R2 Storage 500MB sample is read-only and Free per-file capped')
+          assert 'expected_db_snapshot' in isolated_triggers['workflow_dispatch']['inputs']
+          assert isolated_triggers['workflow_dispatch']['inputs']['expected_db_snapshot']['default'] == ''
+          assert 'RECOVERY_EXPECTED_DB_SNAPSHOT' in guarded_steps
+          assert 'expected_db_snapshot' in v2restore_triggers['workflow_dispatch']['inputs']
+          assert v2restore_triggers['workflow_dispatch']['inputs']['expected_db_snapshot']['default'] == ''
+          assert 'RECOVERY_EXPECTED_DB_SNAPSHOT' in restore_steps
+          db_v2_reader = pathlib.Path('scripts/backup/verify_postgres_v2_r2.py').read_text()
+          assert 'require_expected_snapshot(' in db_v2_reader
+          assert 'SNAPSHOT_STAMP' in db_v2_reader
+          assert 'snapshot={snapshot}' in db_v2_reader
+          print('Both read-only R1/R3 jobs can reject R2 latest-pointer snapshot drift')
+          print('Managed recovery R0/R1 preflight isolated, manual-only and read-only')
           print('Daily encrypted V2 backup and protected manual restore workflow guards verified')
           print('Manual offline database recovery rehearsal guards verified')
           PY

@@ -2,6 +2,7 @@
 """Read-only R2 v2 decrypt/extract; no SQL or customer data in output."""
 import base64
 import json
+import re
 import os
 from pathlib import Path
 import tarfile
@@ -15,10 +16,28 @@ from verify_postgres_r2_restore import (
 )
 
 
+SNAPSHOT_STAMP = re.compile(r"^[0-9]{8}T[0-9]{6}Z$")
+
+
+def require_snapshot_stamp(value):
+    if not isinstance(value, str) or not SNAPSHOT_STAMP.fullmatch(value):
+        raise ValueError("Invalid encrypted snapshot timestamp")
+    return value
+
+
+def require_expected_snapshot(manifest, expected):
+    selected = require_snapshot_stamp(manifest["created_at"])
+    if expected:
+        if require_snapshot_stamp(expected) != selected:
+            raise ValueError("Authenticated R2 latest snapshot differs from selected snapshot")
+    return selected
+
+
 def get_v2_manifest(s3, bucket, key):
     pointer = json.loads(read_capped(s3, bucket, f"{PREFIX}/latest.json", 4096))
     if pointer.get("version") != 2:
         raise RuntimeError("Incompatible R2 backup pointer version")
+    require_snapshot_stamp(pointer.get("created_at"))
     path = pointer.get("manifest_key")
     if (not isinstance(path, str) or
             not path.startswith(f"{PREFIX}/manifests/") or
@@ -83,6 +102,9 @@ def main():
     bucket = os.environ["R2_BUCKET"]
     s3 = s3_client()
     manifest = get_v2_manifest(s3, bucket, key)
+    snapshot = require_expected_snapshot(
+        manifest, os.environ.get("RECOVERY_EXPECTED_DB_SNAPSHOT", "").strip()
+    )
     restore = Path(os.environ["RESTORE_DIR"])
     restore.mkdir(mode=0o700, parents=True, exist_ok=False)
     with tempfile.TemporaryDirectory(prefix="insureit-v2-verify-") as temp:
@@ -94,7 +116,7 @@ def main():
         decrypt_archive(encrypted, tarball, key, manifest)
         size = extract_v2(tarball, restore)
     # Never print object identifiers, row data, SQL, paths or credentials.
-    print(f"V2 R2 ARCHIVE VERIFIED: components={len(EXPECTED)} unpacked_bytes={size}")
+    print(f"V2 R2 ARCHIVE VERIFIED: components={len(EXPECTED)} unpacked_bytes={size} snapshot={snapshot}")
 
 
 if __name__ == "__main__":
