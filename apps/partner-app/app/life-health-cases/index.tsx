@@ -57,7 +57,7 @@ export default function LifeHealthCaseRegisterScreen() {
    </PartnerScreen>
  );
  return (
-   <PartnerScreen title="Case Register" navyTopBar navyStatusBar onBack={()=>router.back()}
+   <PartnerScreen title="Case Register" navyTopBar navyStatusBar onBack={()=>router.back()} navyBottomNavigation
      bottomNavigation={<PartnerStackBottomNavigation activeTab="policies" />}>
      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filters} contentContainerStyle={styles.filtersContent}>
        {filters.map(item=><Pressable key={item.key} accessibilityRole="button" accessibilityState={{selected:status===item.key}}
