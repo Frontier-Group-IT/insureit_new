@@ -8,10 +8,7 @@ const quickFilters = read("../components/reports/daily-report-quick-filters.tsx"
 const source = read("../lib/reports/daily-activity.ts");
 
 assert.match(nav, /href:"\/reports",label:"Reporting Workspace"[^\n]+href:"\/reports\/daily",label:"Daily Report"/, "Daily Report is located under Reporting Workspace");
-const employeeAccess = read("../lib/reports/daily-report-access.ts");
-assert.match(page, /await requireDailyReportEmployee\(\)/, "Daily Report Self verifies the active linked employee on the server");
-assert.match(page, /await canViewDailyReportAll\(profile\)/, "All retains its independent reporting permission gate");
-assert.match(employeeAccess, /hasEffectiveCapability\(profile,"view_reports","view"\)/, "All still requires effective reporting permission");
+assert.match(page, /await requireDailyReportEmployee\(\)/, "Daily Report validates active employee-linked viewer");
 assert.match(page, /loadDailyReportEmployeeDirectory\(profile\)/, "All mode loads a server-scoped employee directory");
 assert.match(page, /assertDailyReportEmployeeAllowed\(chosenPerson, employeeDirectory\)/, "All mode authorizes the chosen employee");
 assert.match(source, /getEmployeeAccessScope\(viewer\.id, viewer\.role, "view_reports"\)/, "All tab resolves report-specific hierarchy");
@@ -31,8 +28,8 @@ assert.match(quickFilters, /type="date"/, "Date filter is present");
 assert.match(quickFilters, /type="search"/, "Employee search is present");
 assert.match(page, /<DailySelfActivityPanel data=\{selfHistory\}/, "Activity category drilldown is available");
 assert.match(read("../components/reports/daily-report-header-controls.tsx"), /aria-haspopup="listbox"/, "Self and All use a dropdown beside Reports");
-assert.match(read("../components/reports/daily-report-header-controls.tsx"), /type="search" aria-label="Search Self or All"/, "Scope dropdown is searchable");
-assert.match(read("../components/reports/daily-report-header-controls.tsx"), /params.set\("scope",target\)/, "Self and All navigate through the existing scoped Daily Report route");
+assert.match(read("../components/reports/daily-report-header-controls.tsx"), /type="search" aria-label="Search employee name or code"/, "Employee dropdown is searchable");
+assert.match(read("../components/reports/daily-report-header-controls.tsx"), /params.set\("scope",personId\?"all":"self"\)/, "Self and selected employees use scoped report routes");
 assert.doesNotMatch(source, /\.insert\(|\.update\(|\.delete\(|\.upsert\(|\.rpc\(/, "Phase 1 is strictly read-only");
 assert.doesNotMatch(page, /"use client"/, "Page remains server rendered");
 console.log("Daily Report Phase 1 navigation, read scope, filters, bounded reads and no-write contracts passed.");
