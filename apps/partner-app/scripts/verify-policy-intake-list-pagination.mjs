@@ -86,7 +86,10 @@ assert.doesNotMatch(app, /style=\{styles\.number\}>\{row\.intake_number\}/, 'Do 
 assert.match(route, /resolveIntakeSubmitterNames\(admin, intakes\)/, 'Mobile list must resolve actual submitters after authorized paging');
 assert.match(route, /resolveIntakeSubmitterNames\(admin, listResult\.data \?\? \[\]\)/, 'Standard list uses the same canonical submitter resolution logic');
 assert.match(app, /row\.ocr_status === 'failed' && \(row\.status === 'processing' \|\| row\.status === 'needs_attention'\)/, 'Only show OCR failure warning when action is needed');
-assert.match(app, /<Text style={styles\.updatedDate}>{formatDate\(row\.updated_at \|\| row\.created_at\)}<\/Text>/, 'Keep timestamp but remove Updated prefix');
+assert.match(app, /row\.status === 'completed' && row\.finalized_at/, 'Completed intake must show the persisted finalization date rather than last update.');
+assert.match(app, /Completed: \\$\\{formatDate\\(row\\.finalized_at\\)\\}/, 'Show explicit Completed date on finalized intake.');
+assert.match(app, /Submitted: \{formatDate\\(row\\.created_at\\)\\}/, 'Preserve separate original Submitted date for audit.');
+assert.doesNotMatch(app, /formatDate\\(row\\.updated_at \\|\\| row\\.created_at\\)/, 'List timestamps must not confuse OCR updates with finalization.');
 assert.doesNotMatch(app, /Updated \{formatDate/, 'Remove redundant Updated text from timestamp');
 
 assert.match(app, /setTimeout\(\(\) => setDebouncedQuery\(query\.trim\(\)\), 300\)/, 'Debounce server searches');
