@@ -38,7 +38,7 @@ const productDraftKeys = new Set([
 const productCommercialKeys = new Set(["payinBasis","payinValue","payinScheme","partnerPayoutBasis","partnerPayoutValue"]);
 const nonMotorTypes = ["Life","Health","Non Motor"] as const;
 const commercialFields = ["payoutBasis","projectedOdPercent","projectedTpPercent","insurerScheme","payinBillNo","payinBilledAmount","payinBillDate","payinStatus","retention","payoutOdPercent","payoutTpPercent","flatPayoutAmount","payoutStatus","payoutDate","payoutVoucherNo"] as const;
-type Input = { action?: "prepare" | "save" | "book" | "create_life_health" | "approval_request" | "approval_verify" | "rc_lookup" | "customer_search"; search?: string; intake_id?: string; take_over?: boolean; expected_reviewer_id?: string | null; revision?: number; draft?: PolicyIntakeDraft; resolution?: PolicyOnboardingPayload["resolution"]; date_approval_id?: string | null; approver_key?: string; approval_id?: string; otp?: string; registration_no?: string };
+type Input = { action?: "prepare" | "save" | "book" | "create_life_health" | "approval_request" | "approval_verify" | "rc_lookup" | "customer_search" | "new_prepare" | "new_book" | "new_rc_lookup" | "new_approval_request" | "new_approval_verify"; search?: string; intake_id?: string; take_over?: boolean; expected_reviewer_id?: string | null; revision?: number; draft?: PolicyIntakeDraft; resolution?: PolicyOnboardingPayload["resolution"]; date_approval_id?: string | null; approver_key?: string; approval_id?: string; otp?: string; registration_no?: string };
 type Intake = { id:string; intake_number:string; lead_source_type:"posp"|"misp"|"partner"; lead_source_name:string; lead_source_code:string|null; customer_mobile:string; ocr_fields:PolicyIntakeOcrField[]; status:string; assigned_to_profile_id:string|null; created_at:string; matched_customer_id:string|null };
 function reply(error:string,status:number){return NextResponse.json({ok:false,error},{status,headers:{"Cache-Control":"no-store"}});}
 function good(data:Record<string,unknown>){return NextResponse.json({ok:true,...data},{headers:{"Cache-Control":"no-store"}});}
@@ -48,13 +48,105 @@ export async function POST(request:Request){
   if(!token)return reply("Partner authentication required.",401);
   let body:Input;
   try{body=await request.json() as Input;}catch{return reply("Invalid onboarding request.",400);}
-  if(!uuid.test(body.intake_id??"")||!["prepare","save","book","create_life_health","approval_request","approval_verify","rc_lookup","customer_search"].includes(body.action??""))return reply("Invalid onboarding request.",400);
+  const standalone=["new_prepare","new_book","new_rc_lookup","new_approval_request","new_approval_verify"].includes(body.action??"");
+  if(!standalone&&(!uuid.test(body.intake_id??"")||!["prepare","save","book","create_life_health","approval_request","approval_verify","rc_lookup","customer_search"].includes(body.action??"")))return reply("Invalid onboarding request.",400);
   const scoped=createSupabaseWithAccessToken(token);
   const {data:{user},error:authError}=await scoped.auth.getUser(token);
   if(authError||!user)return reply("Your session has expired. Sign in again.",401);
   const admin=createSupabaseAdminClient();
   const {data:profile}=await admin.from("profiles").select("id,role,is_active,full_name").eq("id",user.id).maybeSingle<{id:string;role:string;is_active:boolean;full_name:string|null}>();
   if(!profile?.is_active||!isAppRole(profile.role))return reply("Operations access is unavailable.",403);
+
+  if(standalone){
+    // New Policy is never linked to, or granted access through, an Intake.
+    const head=profile.role==="operations_head_life";
+    const [creator,legacy]=await Promise.all([
+      hasEffectiveCapability(profile,"create_policies","edit"),
+      getEffectivePermission(profile.id,profile.role,"view_policies"),
+    ]);
+    if(!head&&!creator&&!["edit","approve"].includes(legacy.access))return reply("Policy creation permission is required.",403);
+    const commercialAccess=canAccessPolicyCommercials(profile,head);
+    if(body.action==="new_prepare"){
+      const [companies,makes,brands]=await Promise.all([
+        admin.from("insurance_companies").select("id,name").eq("is_active",true).order("name"),
+        admin.from("vehicle_manufacturers").select("id").eq("is_active",true),
+        admin.from("vehicle_manufacturer_brands").select("manufacturer_id,brand_name").eq("is_active",true).order("brand_name"),
+      ]);
+      if(companies.error||makes.error||brands.error)return reply("Policy master data is unavailable.",503);
+      const active=new Set((makes.data??[]).map(x=>x.id));
+      const draft=Object.fromEntries(fields.map(key=>[key,""])) as Record<string,string>;
+      draft.registrationMode="registered";
+      draft.issuanceDate=new Date().toISOString().slice(0,10);
+      draft.businessLine="Motor";
+      draft.cpaOpted="No";
+      draft.payoutBasis="NET";
+      draft.payinStatus="Unbilled";
+      draft.payoutStatus="Pending";
+      return good({draft,revision:0,intake_number:"",insurers:(companies.data??[]).map(x=>({value:x.id,label:x.name})),
+        manufacturers:Array.from(new Set((brands.data??[]).filter(x=>active.has(x.manufacturer_id)).map(x=>x.brand_name))).sort(),
+        sourceMeta:null,commercialAccess,approvers:POLICY_DATE_APPROVERS.map(a=>({key:a.key,name:a.name}))});
+    }
+    if(body.action==="new_rc_lookup"){
+      const result=await lookupPolicyRegistrationRcForVerifiedActor(body.registration_no??"");
+      if(!result.ok)return reply(result.error,400);
+      return good({review:result.review});
+    }
+    const d=body.draft;
+    if(!d||typeof d!=="object"||Array.isArray(d)||fields.some(key=>typeof d[key]!=="string"||d[key].length>4000)||
+      !["registered","unregistered"].includes(d.registrationMode)||!["Yes","No"].includes(d.cpaOpted)||
+      d.businessLine!=="Motor")return reply("Invalid standalone Motor policy fields.",400);
+    const extras=d as PolicyIntakeDraft & Record<string,unknown>;
+    if(nativeOptionalFields.some(key=>extras[key]!=null&&(typeof extras[key]!=="string"||(extras[key] as string).length>4000)))
+      return reply("Invalid optional policy fields.",400);
+    if(head){
+      const downline=await getOperationsHeadDownlinePolicyScope(profile.id);
+      if(!d.intermediaryCode||!downline.intermediaryCodes.includes(d.intermediaryCode))return reply("Lead source is outside your approved downline.",403);
+    }
+    if(body.action==="new_approval_request"||body.action==="new_approval_verify"){
+      const approvalInput={issuanceDate:d.issuanceDate,policyNumber:d.policyNo,operation:"create" as const,intermediaryCode:d.intermediaryCode};
+      if(body.action==="new_approval_request"){
+        if(!POLICY_DATE_APPROVERS.some(a=>a.key===body.approver_key))return reply("Choose a valid approver.",400);
+        const result=await requestPolicyDateApprovalForVerifiedActor({...approvalInput,approverKey:body.approver_key as string},profile);
+        if(!result.ok)return reply(result.error,400);
+        return good({approval_id:result.approvalId,expires_at:result.expiresAt});
+      }
+      const result=await verifyPolicyDateApprovalForVerifiedActor({...approvalInput,approvalId:body.approval_id??"",otp:body.otp??""},profile);
+      if(!result.ok)return reply(result.error,400);
+      return good({verified:true});
+    }
+    if(body.action!=="new_book")return reply("Unsupported policy action.",400);
+    if(body.resolution&&(typeof body.resolution!=="object"||Array.isArray(body.resolution)))return reply("Invalid booking resolution.",400);
+    const isCpm=d.vehicleClass==="CPM";
+    const thirdParty=d.policyProduct==="Third Party"||d.policyProduct==="Long Term Third Party";
+    const payload:PolicyOnboardingPayload={
+      dateApprovalId:body.date_approval_id??null,
+      customer:{name:d.insuredName,phone:d.phoneNo,type:"individual",source:d.leadSource},
+      vehicle:{registrationMode:d.registrationMode,registrationNumber:d.registrationMode==="registered"?d.registrationNo:"",
+        classCode:d.vehicleClass,make:d.make,model:d.model,fuelType:d.fuelType,manufacturingYear:d.manufacturingYear,
+        capacity:d.capacity,chassisNumber:d.chassisNo,engineNumber:d.engineNo,rtoName:d.rtoName,rtoState:d.rtoState,
+        registrationStatus:d.registrationMode==="unregistered"?"registration_pending":""},
+      policy:{issuanceDate:d.issuanceDate,rmName:d.rmName,intermediaryType:d.intermediaryType,
+        leadSource:d.leadSource,intermediaryCode:d.intermediaryCode,businessLine:"Motor",
+        policyType:d.policyProduct,idv:thirdParty?"0":d.idv,policyNumber:d.policyNo,insuranceCompanyId:d.insurerId,
+        validFrom:d.validFrom,validUpto:d.validUpto,odValidUpto:d.validUpto,
+        tpValidUpto:String(extras.tpValidUpto??""),cpaValidUpto:String(extras.cpaValidUpto??""),remarks:d.remarks},
+      premium:{od:thirdParty?"0":d.od,tp:isCpm?"0":d.tp,addOnPremium:String(extras.addOnPremium??"0"),
+        cpaOpted:!isCpm&&d.cpaOpted==="Yes",cpa:isCpm?"0":d.cpa},
+      payin:{basis:d.payoutBasis||"NET",odPercent:commercialAccess?d.projectedOdPercent:"",
+        tpPercent:commercialAccess?d.projectedTpPercent:"",scheme:commercialAccess?d.insurerScheme:"",
+        provided:commercialAccess&&Boolean(d.projectedOdPercent.trim()||d.projectedTpPercent.trim()||d.insurerScheme.trim())},
+      billing:{billNumber:"",billedAmount:"0",billDate:"",status:"Unbilled"},
+      payout:{retention:commercialAccess?d.retention:"",odPercent:commercialAccess?d.payoutOdPercent:"",
+        tpPercent:commercialAccess?d.payoutTpPercent:"",flatAmount:commercialAccess?d.flatPayoutAmount:"",
+        status:"Pending",date:"",voucherNumber:"",
+        provided:commercialAccess&&Boolean(d.payoutOdPercent.trim()||d.payoutTpPercent.trim()||d.flatPayoutAmount.trim())},
+      authbridge:{applied:false,transactionId:"",providerTransactionId:"",lookedUpAt:""},
+      resolution:body.resolution,
+    };
+    const result=await onboardPolicyForVerifiedActor(payload,profile);
+    return good({booking:result});
+  }
+
   const head=profile.role==="operations_head_life";
   const [review,finalize]=await Promise.all([
     head?Promise.resolve(true):hasEffectiveCapability(profile,"review_policy_intakes","edit"),
