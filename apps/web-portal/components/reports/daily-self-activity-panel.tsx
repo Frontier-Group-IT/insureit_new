@@ -2,6 +2,7 @@ import Link from "next/link";
 import { BarChart3, CarFront, ClipboardCheck, FileCheck2, FilePenLine, FilePlus2, FileText, LayoutGrid, PencilLine, ShieldCheck, UserRoundPen, UserRoundPlus, UsersRound } from "lucide-react";
 import type { SelfActivity } from "@/lib/reports/daily-self-activity";
 import { DailyActivityHistoryRows } from "@/components/reports/daily-activity-history-rows";
+import { DailyReportHeaderScopes, DailyReportHeaderPeriod } from "@/components/reports/daily-report-header-controls";
 import type { DailyActivityQuery } from "@/lib/reports/daily-activity";
 
 type Data = {
@@ -9,7 +10,7 @@ type Data = {
   page:number;hasNext:boolean;total:number;selectedCount:number;partial:boolean;day:string;
   unavailableSources:string[];allSourcesUnavailable:boolean;
 };
-type Props = {data:Data;linkFor:(updates:Partial<DailyActivityQuery>)=>string; reportMode?:"self"|"employee"};
+type Props = {data:Data;linkFor:(updates:Partial<DailyActivityQuery>)=>string; reportMode?:"self"|"employee"; canViewAll?:boolean};
 
 function activityIcon(name:string) {
   if(name==="Customer Add")return UserRoundPlus;
@@ -27,7 +28,7 @@ function activityIcon(name:string) {
 }
 
 
-export function DailySelfActivityPanel({data,linkFor,reportMode="self"}:Props) {
+export function DailySelfActivityPanel({data,linkFor,reportMode="self",canViewAll=false}:Props) {
   // Keep each activity family together instead of mixing Customer, Vehicle,
   // Policy and Claims cards within a single five-column row.
   const isCustomerActivity=data.category.startsWith("Customer ");
@@ -43,16 +44,20 @@ export function DailySelfActivityPanel({data,linkFor,reportMode="self"}:Props) {
   ].filter(group=>group.items.length>0);
   return (
     <section className="daily-report-panel min-h-[calc(100dvh-300px)] overflow-hidden rounded-xl border border-[#dce4ef] bg-white shadow-sm" aria-label="Self activity summary and register">
-      <div className="daily-report-panel-title flex flex-wrap items-center justify-between gap-2 border-b border-[#e4e9f1] px-4 py-3">
-        <div>
+      <div className="daily-report-panel-title flex flex-wrap items-center justify-between gap-3 border-b border-[#e4e9f1] px-4 py-3">
+        <div className="flex min-w-0 flex-wrap items-center gap-3">
           <h3 className="flex items-center gap-2 text-[12px] font-bold text-[#17365D]"><BarChart3 size={19} strokeWidth={2.1} aria-hidden="true"/>
             {data.category ? `${data.category} (${data.selfName})` : (reportMode==="self" ? "My Activity Summary" : `${data.selfName} — Activity Summary`)}
           </h3>
+          <DailyReportHeaderScopes canViewAll={canViewAll} />
         </div>
-        {data.category ? <Link prefetch={false} href={linkFor({activity:"",page:"1"})}
-          className="rounded-lg border border-[#d8e1ec] bg-white px-3 py-2 text-[10px] font-bold text-[#174b80]">
-          Back to summary
-        </Link> : <span className="daily-report-total-badge inline-flex items-center gap-2 text-[10px] font-semibold text-[#506483]"><FileText size={16} strokeWidth={2.4} aria-hidden="true"/>{data.total.toLocaleString("en-IN")} recorded activities</span>}
+        <div className="flex flex-wrap items-center gap-3">
+          {data.category ? <Link prefetch={false} href={linkFor({activity:"",page:"1"})}
+            className="rounded-lg border border-[#d8e1ec] bg-white px-3 py-2 text-[10px] font-bold text-[#174b80]">
+            Back to summary
+          </Link> : <span className="daily-report-total-badge inline-flex shrink-0 items-center gap-2 text-[11px] font-extrabold tracking-wide text-white"><FileText size={16} strokeWidth={2.4} aria-hidden="true"/>{data.total.toLocaleString("en-IN")} RECORDS</span>}
+          <DailyReportHeaderPeriod />
+        </div>
       </div>
       {data.partial ? (
         <div role="status" className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-[10px] text-amber-900">
