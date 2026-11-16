@@ -346,6 +346,22 @@ export default function PoliciesScreen() {
       </Pressable>
       ) : null}
 
+      {canPartnerAccess(context, 'create_policies', 'edit') ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Add Policy, start a new blank policy"
+          onPress={() => router.push({ pathname: '/policy-intakes/onboarding', params: { id: 'new' } })}
+          style={({ pressed }) => [styles.intakeBanner, { marginTop: 8, backgroundColor: '#17365D' }, pressed && styles.pressed]}
+        >
+          <View style={styles.intakeBannerIcon}><Ionicons name="add-circle-outline" size={23} color="#FFFFFF" /></View>
+          <View style={styles.intakeBannerCopy}>
+            <Text style={styles.intakeBannerTitle}>Add Policy</Text>
+            <Text style={styles.intakeBannerSubtitle}>Create a new policy from a blank form</Text>
+          </View>
+          <Feather name="chevron-right" size={20} color="#FFFFFF" />
+        </Pressable>
+      ) : null}
+
       {isOffline || collection.stale || summary.stale ? (
         <View style={styles.feedback}>
           <PartnerBanner
