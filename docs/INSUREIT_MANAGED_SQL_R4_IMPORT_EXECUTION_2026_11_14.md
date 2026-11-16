@@ -2,6 +2,21 @@
 
 **Updated 14 Nov 2026 IST. Status: PREPARED, NOT EXECUTED.** Primary operator request: actually restore the SQL schema and data from encrypted R2 v2 into **only** the isolated managed Supabase project. File-byte trial limited to 500,000,000 bytes total, maximum 50,000,000 bytes per file. Never switch production apps or mutate production.
 
+## 16 Nov 2026 update — exact matched snapshot R1 + R3 passed; R4 remains DRY-RUN FIRST
+
+**Evidence observed in authenticated GitHub Actions logs, not inferred from screenshots:**
+
+- [R0/R1 managed read-only preflight #43821883370](https://github.com/Frontier-Group-IT/insureit_new/actions/runs/43821883370): passed destination allowlist, isolated project CA `verify-full` TLS, truly READ ONLY transaction and pristine target. Authenticated encrypted archive `snapshot=20261116T012747Z`, 234 TOC TABLE entries, 233 COPY destinations, 287 policies, 20 sequences. Target had 0 application tables, 0 Auth users, 0 Storage objects.
+- [R3 full offline SQL restore #43822495428](https://github.com/Frontier-Group-IT/insureit_new/actions/runs/43822495428): **same exact snapshot** `20261116T012747Z`. Network-disabled disposable PostgreSQL replay: 233/233 archived COPY targets verified, 0 data mismatches; strict application+managed DDL, data and ACL replay passed with 2 offline NOLOGIN source-role-name placeholders; original role owner/membership/login semantics NOT verified. Offline database was destroyed.
+- The recovered archive contains 183 public application table definitions and 48 managed table definitions (plus 2 dependency TABLE records); 35 managed Storage RLS policies and an Auth trigger are still absent from the clean managed destination. Different 14 Nov archive counts in older notes below refer to earlier snapshot and must not be treated as matching evidence.
+
+**Main branch reconciliation:** this updated R4 PR branch is built directly on current main rather than the earlier stacked R0/R1 branch. It inherits the proven protected `RECOVERY_DB_SSL_ROOT_CERT_PEM` implementation. An early R4 read-only target TLS probe now runs BEFORE any R2 retrieval; all later target read-only catalog checks, selected-row auditing and Docker `psql --single-transaction` apply path use only the isolated project's downloaded CA under `verify-full`, never unauthenticated TLS or production credentials.
+
+**First run remains non-mutating:** on `main`, after separately approved merge of this branch and verification of GitHub protected environment reviewers/branch restrictions, trigger the R4 workflow with:
+`expected_db_snapshot=20261116T012747Z`, `confirm_target_ref=klnodxnmlqbofolxxrsr`, `confirm_isolation=true` only after reviewing isolation, and **`execute_target_import=false`**. A changed R2 latest-pointer stops this workflow until a new R1/R3 pair is run; never relax timestamp pinning. This R4 dry-run does NOT restore customer rows.
+
+**Actual target write is a separate go/no-go.** R4's selected TOC includes all application-schema data and compatible managed Auth table data, but excludes managed Storage file/metadata, Auth schema migration history, source Storage policies (35), Auth custom trigger, Realtime/Vault system state, and original role owners/ACL. Even after selected R4 import, full SQL semantic parity, functional Supabase Auth/Storage, network isolation, privacy retention, and complete DR certification remain OPEN. Do not connect live production applications to this target or describe selected import as a complete restoration.
+
 ## Locked identities and evidence
 
 | | Source backup origin / PRODUCTION (READ-ONLY) | Managed destination (TARGET WRITES ONLY) |
