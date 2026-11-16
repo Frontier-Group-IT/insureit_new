@@ -1,10 +1,12 @@
 Partner production OTA trigger
-release=partner-intake-action-required-pr-4517
+release=partner-policy-onboarding-pr-4542
 source=verified-merged-main
-reason=user-approved-publish-pr-4517
+source_pr=4542
+source_merge=ba34a175927ef467a971c7f7f01e0bb2909eee8c
+reason=user-approved-publish
 channel=production
 runtime=0.2.0
-requested=2026-11-14
+requested=2026-11-16
 no_native_build=true
 no_apk=true
 no_aab=true
