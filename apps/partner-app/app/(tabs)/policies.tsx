@@ -159,19 +159,19 @@ export default function PoliciesScreen() {
   const name = context?.identity.display_name || 'Partner';
   const quickActions = [
     ...(canPartnerAccess(context, 'view_policy_intakes') ? [{
-      label: 'Policy Intake', icon: 'document-text-outline' as const,
+      label: 'Policy Intake', icon: 'document-text' as const, color: '#4563D8',
       accessibilityLabel: 'Open Policy Intake', route: '/policy-intakes' as const,
     }] : []),
     ...(canPartnerAccess(context, 'create_policies', 'edit') ? [{
-      label: 'Add Policy', icon: 'add-circle-outline' as const,
+      label: 'Add Policy', icon: 'shield-checkmark' as const, color: '#0CA5A4',
       accessibilityLabel: 'Add Policy, start a new blank policy', route: '/policy-new' as const,
     }] : []),
     ...(canPartnerAccessCaseRegister(context) ? [{
-      label: 'Case Register', icon: 'folder-open-outline' as const,
+      label: 'Case Register', icon: 'folder-open' as const, color: '#5259CE',
       accessibilityLabel: 'Open Case Register for Life and Health cases', route: '/life-health-cases' as const,
     }] : []),
     ...(context?.identity.actor_kind === 'employee' && canPartnerAccess(context, 'create_intermediary_application', 'edit') ? [{
-      label: 'Add Partner', icon: 'person-add-outline' as const,
+      label: 'Add Partner', icon: 'person-add' as const, color: '#7755E8',
       accessibilityLabel: 'Add Partner, submit Partner-only application', route: '/partner-new' as const,
     }] : []),
   ];
@@ -281,8 +281,8 @@ export default function PoliciesScreen() {
                 onPress={() => router.push(action.route)}
                 style={({ pressed }) => [styles.quickAction, pressed && styles.quickActionPressed]}
               >
-                <View style={styles.quickActionIconBox}>
-                  <Ionicons name={action.icon} size={23} color="#184A84" />
+                <View style={[styles.quickActionIconBox, { backgroundColor: action.color }]}>
+                  <Ionicons name={action.icon} size={24} color="#FFFFFF" />
                 </View>
                 <Text numberOfLines={2} style={styles.quickActionLabel}>{action.label}</Text>
               </Pressable>
@@ -757,11 +757,11 @@ const styles = StyleSheet.create({
   quickAction: { flex: 1, minWidth: 0, alignItems: 'center', borderRadius: 12, paddingVertical: 2 },
   quickActionPressed: { backgroundColor: '#EFF5FD', opacity: 0.84 },
   quickActionIconBox: {
-    width: '100%', height: 51, alignItems: 'center', justifyContent: 'center',
-    borderRadius: 12, backgroundColor: '#F9FBFE', borderWidth: 1, borderColor: '#DCE5F0',
+    width: '100%', height: 52, alignItems: 'center', justifyContent: 'center',
+    borderRadius: 12,
   },
   quickActionLabel: {
-    marginTop: 5, color: '#17365D', fontSize: 10, lineHeight: 13,
+    marginTop: 6, color: '#17365D', fontSize: 10, lineHeight: 13,
     fontWeight: '700', textAlign: 'center',
   },
   feedback: { marginHorizontal: 12, marginTop: 7 },
