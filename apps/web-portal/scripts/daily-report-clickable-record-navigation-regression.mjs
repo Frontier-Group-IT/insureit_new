@@ -27,7 +27,7 @@ assert.match(loader, /row\.href=dailyActivityRecordHref\(table,row\.recordId\)/,
 for(const table of ["policies","policy_intake_requests","life_health_cases"]) {
   assert.ok(loader.includes(`table:"${table}",recordId:a.id`),`Keep immutable record ID for ${table} history`);
 }
-assert.match(panel, /<DailyActivityHistoryRows rows=\{data\.rows\} \/>/, "All employee and Self reports use interactive rows");
+assert.match(panel, /<DailyActivityHistoryRows rows=\{data\.rows\} isCustomerActivity=\{isCustomerActivity\} \/>/, "All employee and Self reports use interactive rows with customer-specific context");
 assert.match(rows, /role="button" tabIndex=\{0\}/, "Rows support keyboard focus");
 assert.match(rows, /event\.key==="Enter"\|\|event\.key===" "/, "Enter and Space activate rows");
 assert.match(rows, /row\.detail \? <span/, "Preserve latest audit field-level change details");
@@ -55,3 +55,13 @@ assert.ok(loader.includes('admin.from("customers")'), "Customer linked to actual
 assert.ok(loader.includes('admin.from("vehicles")'), "Vehicle linked to actual vehicle");
 assert.doesNotMatch(loader+routes+panel+rows,/\.insert\(|\.update\(|\.upsert\(|\.delete\(/, "Navigation is read-only");
 console.log("Daily Report activity detail dialog and six-column context regression passed.");
+
+assert.match(panel, /const isCustomerActivity=data\.category\.startsWith\("Customer "\)/, "Customer category switches to register-aligned columns");
+for(const column of ["Customer", "Customer Type", "Mobile", "Fleet Size", "Total Policies"]) {
+  assert.ok(panel.includes(`>${column}</th>`), `Customer-specific column is visible: ${column}`);
+  assert.ok(rows.includes(`["${column}",customerField(selected.`), `Customer detail popup includes ${column}`);
+}
+assert.match(rows, /isCustomerActivity \? \(/, "Customer row data is conditional");
+assert.match(loader, /row\.customerName=customer\.contact_name/, "Customer name comes from its master record");
+assert.match(loader, /visible\.filter\(row=>row\.table==="customers"/, "Customer lookups are bounded to visible records");
+assert.match(loader, /customer\.phone\?\.replace/, "Customer mobiles are masked rather than exposing full phone numbers");
