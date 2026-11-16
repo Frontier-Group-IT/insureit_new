@@ -17,6 +17,7 @@ export type SemiAutoIntakeRow = {
   created_at: string;
   assigned_to_profile_id: string | null;
   n8n_enabled?: boolean;
+  is_duplicate?: boolean;
 };
 
 const humanStatus: Record<string, string> = {
@@ -29,11 +30,15 @@ function compactDate(date: string) {
   return Number.isNaN(parsed.getTime()) ? "-" : new Intl.DateTimeFormat("en-IN", { day: "2-digit", month: "short", year: "numeric" }).format(parsed);
 }
 
-export function SemiAutoPolicyWorkspace({ rows, profileId }: { rows: SemiAutoIntakeRow[]; profileId: string }) {
+export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId }: {
+  rows: SemiAutoIntakeRow[]; profileId: string; initialIntakeId?: string | null;
+}) {
   const router = useRouter();
   const requestId = useRef(0);
   const [search, setSearch] = useState("");
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  // Direct ?intake_id= links are resolved against the authorized server list.
+  // Selection itself never sends the PDF or creates a policy.
+  const [selectedId, setSelectedId] = useState<string | null>(initialIntakeId ?? null);
   const [result, setResult] = useState<SemiAutoActionResult | null>(null);
   const [busy, setBusy] = useState<"checking" | "booking" | "editing" | "extracting" | "applying" | null>(null);
   const [n8nResult, setN8nResult] = useState<SemiAutoN8nResult | null>(null);
@@ -46,7 +51,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId }: { rows: SemiAutoInt
     if (!query) return rows;
     return rows.filter(row => [row.intake_number, row.lead_source_name, row.customer_mobile, row.status, row.ocr_status].join(" ").toLowerCase().includes(query));
   }, [rows, search]);
-  const available = result?.ready === true && result.issues.length === 0;
+  const available = result?.ready === true && result.issues.length === 0 && !selected?.is_duplicate;
   const n8nEnabled = selected?.n8n_enabled === true;
   const isWaiting = busy !== null;
 
@@ -204,7 +209,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId }: { rows: SemiAutoInt
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#e7eef5] px-4 py-3">
           <div>
             <div className="flex items-center gap-2"><ClipboardCheck className="h-4 w-4 text-[#2861a0]"/><h2 className="text-[13px] font-bold text-[#142e4c]">Existing Motor Policy Intakes</h2></div>
-            <p className="mt-1 text-[10px] text-[#61738a]">Select one checkbox to assess its complete onboarding readiness. No booking happens on selection.</p>
+            <p className="mt-1 text-[10px] text-[#61738a]">Select any open Motor Intake to preview its current PDF with n8n. Duplicates remain read-only; nothing is booked on selection.</p>
           </div>
           <div className="relative w-full sm:w-[220px]">
             <Search className="pointer-events-none absolute left-3 top-2.5 h-3.5 w-3.5 text-[#8090a6]"/>
@@ -230,7 +235,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId }: { rows: SemiAutoInt
                   </td>
                   <td className="max-w-[210px] truncate px-3 py-3 text-[#344761]" title={row.lead_source_name}>{row.lead_source_name || "-"}</td>
                   <td className="whitespace-nowrap px-3 py-3 tabular-nums text-[#334763]">{row.customer_mobile}</td>
-                  <td className="whitespace-nowrap px-3 py-3"><span className="rounded-md bg-[#edf2fa] px-2 py-1 font-semibold text-[#3f5c82]">{humanStatus[row.status] || row.status}</span></td>
+                  <td className="whitespace-nowrap px-3 py-3"><span className="rounded-md bg-[#edf2fa] px-2 py-1 font-semibold text-[#3f5c82]">{row.is_duplicate ? "Duplicate · Preview only" : humanStatus[row.status] || row.status}</span></td>
                   <td className="whitespace-nowrap px-3 py-3"><span className={row.ocr_status === "completed" ? "font-semibold text-emerald-700" : "font-semibold text-amber-700"}>{row.ocr_status === "completed" ? "Extracted" : row.ocr_status.replaceAll("_", " ")}</span></td>
                   <td className="whitespace-nowrap px-3 py-3 text-[#62748e]">{compactDate(row.created_at)}</td>
                 </tr>
@@ -259,6 +264,9 @@ export function SemiAutoPolicyWorkspace({ rows, profileId }: { rows: SemiAutoInt
                 <button type="button" onClick={() => { void retry(); }} disabled={isWaiting} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#d0deef] bg-white px-2.5 text-[10px] font-semibold text-[#29558d] disabled:opacity-50"><RefreshCw className="h-3.5 w-3.5"/>Recheck</button>
               </div>
             </div>
+            {selected?.is_duplicate ? <p role="status" className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-[10.5px] leading-5 text-amber-900">
+              Duplicate policy number detected. This Intake remains available for read-only n8n PDF comparison only; normal corrections and policy booking are blocked.
+            </p> : null}
             {busy === "checking" ? <div className="mt-4 flex items-center gap-2 rounded-lg bg-blue-50 p-3 text-[11px] text-blue-800"><Loader2 className="h-4 w-4 animate-spin"/>Checking document, draft, duplicates, source and booking rules...</div> : null}
             {busy === "extracting" ? <div className="mt-3 flex items-center gap-2 rounded-lg bg-blue-50 p-3 text-[11px] text-blue-800"><Loader2 className="h-4 w-4 animate-spin"/>Reading current private PDF through the n8n review-only bridge...</div> : null}
             {busy === "applying" ? <div className="mt-3 flex items-center gap-2 rounded-lg bg-blue-50 p-3 text-[11px] text-blue-800"><Loader2 className="h-4 w-4 animate-spin"/>Revalidating and saving the confirmed failed OCR recovery...</div> : null}
@@ -311,7 +319,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId }: { rows: SemiAutoInt
               <Link href={"/policies/" + done.policyId} className="mt-2 inline-flex items-center gap-1 text-[11px] font-bold text-emerald-800 underline">View registered policy <ArrowUpRight className="h-3.5 w-3.5"/></Link>
             </div> : null}
             <div className="mt-4 flex flex-wrap gap-2">
-              <button type="button" onClick={() => { void correct(); }} disabled={isWaiting || Boolean(done)}
+              <button type="button" onClick={() => { void correct(); }} disabled={isWaiting || Boolean(done) || Boolean(selected?.is_duplicate)}
                 className="inline-flex min-h-9 flex-1 items-center justify-center gap-1.5 rounded-lg border border-[#cbd9e9] bg-white px-3 text-[11px] font-semibold text-[#254f82] disabled:opacity-50">
                 {busy === "editing" ? <Loader2 className="h-3.5 w-3.5 animate-spin"/> : <PencilLine className="h-3.5 w-3.5"/>}Open & correct fields
               </button>
