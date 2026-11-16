@@ -315,6 +315,10 @@ export default function PoliciesScreen() {
         </View>
       ) : null}
 
+      <View style={styles.policyListHeadingSection}>
+        <Text style={styles.quickActionsHeading}>Policies</Text>
+      </View>
+
       {isOffline || collection.stale || summary.stale ? (
         <View style={styles.feedback}>
           <PartnerBanner
@@ -714,6 +718,7 @@ const styles = StyleSheet.create({
   statusMenuSelectedText: { color: '#234F9F' },
   summaryChipPressed: { opacity: 0.78 },
   quickActionsSection: { marginHorizontal: 12, marginTop: 13, marginBottom: 2 },
+  policyListHeadingSection: { marginHorizontal: 12, marginTop: 9, marginBottom: 5 },
   quickActionsHeading: { marginHorizontal: 3, marginBottom: 8, color: '#17365D', fontSize: 12, lineHeight: 16, fontWeight: '800' },
   quickActionsRow: { flexDirection: 'row', alignItems: 'stretch', gap: 7 },
   quickAction: {
