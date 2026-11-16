@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { Eye, UserRound } from "lucide-react";
 import { AppShell } from "@/components/shell";
 import { getAccessibleCustomerIds } from "@/lib/employee-access-scope";
-import { requireCapability } from "@/lib/master-data-server";
+import { getCustomerManager, requireCapability } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 type CustomerDetail = {
@@ -38,6 +38,9 @@ export default async function CustomerReadOnlyPage({ params }: { params: Promise
     .eq("id", id)
     .maybeSingle<CustomerDetail>();
   if (error || !data) notFound();
+
+  // The full profile is only accessible with record-specific edit authority.
+  if (await getCustomerManager(id)) redirect(`/customers/${id}/edit`);
 
   return (
     <AppShell title="Customer details" backHref="/customers">
