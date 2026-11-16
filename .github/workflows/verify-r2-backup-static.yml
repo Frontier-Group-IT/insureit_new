@@ -330,7 +330,9 @@ jobs:
           assert 'if' in str(next(x for x in rjob['steps'] if 'ATOMIC SQL RESTORE' in x.get('name', '')))
           assert 'if' in str(next(x for x in rjob['steps'] if 'Audit actual selected row counts' in x.get('name', '')))
           assert 'verify_managed_sql_rows.py' in rsteps
-          assert 'SUPABASE_SERVICE_ROLE_KEY' not in rsteps and 'R2_SECRET_ACCESS_KEY' not in rsteps
+          assert 'SUPABASE_SERVICE_ROLE_KEY' not in rsteps
+          assert 'secrets.R2_SECRET_ACCESS_KEY' not in rsteps
+          assert 'secrets.INSUREIT_PRODUCTION_DATABASE_URL' not in rsteps
           assert 'delete_object' not in rsteps and 'put_object' not in rsteps
           restore_script = pathlib.Path('scripts/backup/execute_managed_sql_restore.py').read_text()
           assert 'isolated_ssl_root_cert() as ca_path' in restore_script
