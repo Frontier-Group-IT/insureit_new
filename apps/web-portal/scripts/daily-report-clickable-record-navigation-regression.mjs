@@ -27,7 +27,7 @@ assert.match(loader, /row\.href=dailyActivityRecordHref\(table,row\.recordId\)/,
 for(const table of ["policies","policy_intake_requests","life_health_cases"]) {
   assert.ok(loader.includes(`table:"${table}",recordId:a.id`),`Keep immutable record ID for ${table} history`);
 }
-assert.match(panel, /<DailyActivityHistoryRows rows=\{data\.rows\} isCustomerActivity=\{isCustomerActivity\} isClaimActivity=\{isClaimActivity\} \/>/, "All employee and Self reports use interactive rows with customer-specific context");
+assert.match(panel, /<DailyActivityHistoryRows rows=\{data\.rows\} isCustomerActivity=\{isCustomerActivity\} isClaimActivity=\{isClaimActivity\} isOtherActivity=\{isOtherActivity\} \/>/, "All employee and Self reports use interactive rows with customer-specific context");
 assert.match(rows, /role="button" tabIndex=\{0\}/, "Rows support keyboard focus");
 assert.match(rows, /event\.key==="Enter"\|\|event\.key===" "/, "Enter and Space activate rows");
 assert.match(rows, /row\.detail \? <span/, "Preserve latest audit field-level change details");
@@ -74,3 +74,9 @@ for(const header of ["Control No.","Claim No.","Vehicle No."]) assert.ok(panel.i
 assert.match(rows, /isClaimActivity \? \(/, "Claim rows and popup switch to claim-specific fields");
 assert.match(loader, /row\.claimControlNo \|\|=label\(previous\.claim_no\)/, "Deleted claims only use audit-preserved control number");
 assert.match(loader, /row\.claimInsurerNo \|\|=label\(previous\.insurer_claim_no\)/, "Deleted claims only use audit-preserved claim number");
+
+assert.match(panel, /const isOtherActivity=data\.category==="Other Activities"/, "Other Activities uses its own minimal columns");
+assert.match(panel, /isOtherActivity \? null : \(/, "Other Activities omits policy, customer and insurer headers");
+assert.match(rows, /isOtherActivity \? null : \(/, "Other Activities omits policy, customer and insurer row values");
+assert.match(rows, /isOtherActivity \? \[\] : \[/, "Other Activities detail dialog excludes unrelated fields");
+assert.match(rows, /\["Recorded changes",selected\.detail\|\|"Not recorded"\]/, "Detail popup retains recorded audit changes");
