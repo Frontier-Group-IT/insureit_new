@@ -11,7 +11,7 @@ import { createLifeHealthCaseForVerifiedActor } from "@/lib/life-health-case-cre
 export const dynamic="force-dynamic";
 const allowedDocuments=["policyCopy","proposalForm","kyc","otherDocument"] as const;
 const allowedExtras=new Set([
-  "address","productName","proposalNumber","ppt","pd","paymentFrequency",
+  "address","insurerId","productName","proposalNumber","ppt","pd","paymentFrequency",
   "premiumAmount","paymentMode","remarks","payinBasis","payinValue",
   "payinScheme","partnerPayoutBasis","partnerPayoutValue",
 ]);
