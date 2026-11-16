@@ -194,15 +194,21 @@ export default function NativePolicyOnboarding(){
   const productType:NativeProductType=(draft?.businessLine==='Life'||draft?.businessLine==='Health'||draft?.businessLine==='Non Motor')?draft.businessLine:'Motor';
   const isMotor=productType==='Motor';
   const productValues=(productType==='Motor'?{}:draft?.productDrafts?.[productType])??{};
+  // Policy Type is editable locally before save. The documents endpoint permits only
+  // the persisted business line, so never fetch on an unsaved type switch.
+  const savedPolicyType=data?.draft.businessLine;
   useEffect(()=>{
-    if(!id||loading||productType==='Motor')return;
+    setOnboardingDocuments([]);
+    setDocumentError('');
+    if(!id||loading||productType==='Motor'||productType!==savedPolicyType)return;
     let live=true;
-    setOnboardingDocuments([]);setDocumentError('');
     void listNativeOnboardingDocuments(id,productType)
       .then(result=>{if(live)setOnboardingDocuments(result.documents);})
-      .catch(cause=>{if(live)setDocumentError(cause instanceof Error?cause.message:'Documents unavailable.');});
+      // Background list refreshes must not interrupt policy-type selection with a popup.
+      // Explicit upload/removal errors still use the documentError popup.
+      .catch(()=>{if(live)setOnboardingDocuments([]);});
     return()=>{live=false;};
-  },[id,loading,productType]);
+  },[id,loading,productType,savedPolicyType]);
   const pickOnboardingDocument=async(type:NativeOnboardingDocumentType)=>{
     if(documentBusy||saving||booking||creatingLifeHealth||!data||!draft||productType==='Motor')return;
     setDocumentError('');
@@ -218,7 +224,7 @@ export default function NativePolicyOnboarding(){
       setDocumentBusy(type);
       if(dirty){
         const saved=await saveNativePolicyOnboarding(id,data.revision,draft);
-        setData(current=>current?{...current,revision:saved.revision}:current);
+        setData(current=>current?{...current,revision:saved.revision,draft}:current);
         setDirty(false);
       }
       const result=await uploadNativeOnboardingDocument(id,productType,type,{
@@ -311,7 +317,7 @@ export default function NativePolicyOnboarding(){
     setSaving(true);setError('');
     try{
       const result=await saveNativePolicyOnboarding(id,data.revision,draft);
-      setData(current=>current?{...current,revision:result.revision}:current);
+      setData(current=>current?{...current,revision:result.revision,draft}:current);
       setDirty(false);
       if(goBack)router.back();
       return true;
