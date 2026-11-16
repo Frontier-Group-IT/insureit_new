@@ -46,7 +46,7 @@ const displayAction=(s:string)=>({
   policy_intake_rejected:"Policy Intake Rejected",
   policy_intake_response_uploaded:"Policy Intake Response Uploaded",
   life_health_case_edited:"Case Edited",life_health_case_remark_added:"Case Remark Added",
-  life_health_case_rejected:"Case Rejected",delete_claim:"Claim deleted (creator unavailable)",
+  life_health_case_rejected:"Case Rejected",delete_claim:"Claim Deleted",
 } as Record<string,string>)[s]??s.replaceAll("_"," ").replace(/\b\w/g,c=>c.toUpperCase());
 function status(action:string) {
   if(/reject/i.test(action)) return "Rejected";
@@ -77,16 +77,6 @@ const CHANGE_FIELDS:Record<string,{label:string;money?:boolean}>={
   status:{label:"Status"},
   policy_status:{label:"Policy status"},
 };
-// Claim deletion logs preserve the creator identity only if the deletion action
-// captured it before removing the claim. Never infer a name from the actor.
-function deletedClaimActivity(oldValue:unknown):string {
-  if (!oldValue || typeof oldValue!=="object" || Array.isArray(oldValue)) return "Claim deleted (creator unavailable)";
-  const data=oldValue as Record<string,unknown>;
-  const creator=typeof data.claim_created_by_name==="string" ? data.claim_created_by_name.trim().slice(0,100) : "";
-  if (creator) return `${creator} claim deleted`;
-  const claimNo=typeof data.claim_no==="string" ? data.claim_no.trim().slice(0,60) : "";
-  return claimNo ? `Claim ${claimNo} deleted (creator unavailable)` : "Claim deleted (creator unavailable)";
-}
 function auditChangeDetail(oldValue:unknown,newValue:unknown):string|undefined {
   if(!oldValue || !newValue || typeof oldValue!=="object" || typeof newValue!=="object" ||
     Array.isArray(oldValue) || Array.isArray(newValue)) return undefined;
@@ -408,8 +398,13 @@ export async function loadSelfActivityHistory(
         if(!change) continue;
         row.detail=auditChangeDetail(change.old_data,change.new_data);
         if(row.table==="claims" && row.status==="Deleted") {
-          if(row.activity==="Claim deleted (creator unavailable)")
-            row.activity=deletedClaimActivity(change.old_data);
+          // Name belongs to the ORIGINAL claim creator, not the deleting actor.
+          // Historic audits without captured creator metadata cannot be attributed.
+          const snapshot=change.old_data;
+          const owner=(snapshot && typeof snapshot==="object" && !Array.isArray(snapshot))
+            ? (snapshot as Record<string,unknown>).claim_created_by_name : undefined;
+          const ownerName=typeof owner==="string"?owner.trim().slice(0,100):"";
+          row.activity=ownerName?`${ownerName} Claim Deleted`:"Claim Deleted — Name Unavailable";
           // Deleted claims no longer exist in the master table. Only reuse
           // explicitly saved, non-empty claim identifiers from this actor's audit.
           const old=change.old_data;
