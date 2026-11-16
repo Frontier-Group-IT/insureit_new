@@ -5,6 +5,7 @@ import { AppShell } from "@/components/shell";
 import { canAccessPolicy } from "@/lib/policy-access-scope";
 import { requireCapability } from "@/lib/master-data-server";
 import { getEffectivePermission } from "@/lib/permission-management";
+import { isAppRole } from "@/lib/roles";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 type PolicyDetail = {
@@ -38,7 +39,7 @@ export const revalidate = 0;
 
 export default async function PolicyReadOnlyPage({ params }: { params: Promise<{ id: string }> }) {
   const profile = await requireCapability("view_policies");
-  if (!profile?.id) redirect("/access-denied");
+  if (!profile?.id || !isAppRole(profile.role)) redirect("/access-denied");
   const { id } = await params;
   if (!(await canAccessPolicy(profile.id, profile.role, id, "view_policies"))) redirect("/access-denied");
 
