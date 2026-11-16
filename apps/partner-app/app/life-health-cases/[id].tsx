@@ -4,8 +4,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
-import { getLifeHealthCase, saveLifeHealthCaseEdit, operationsCaseUrl, type LifeHealthCaseDetail, type LifeHealthDocument, type LifeHealthActivity } from '@/lib/life-health-cases';
-import { canPartnerAccessCaseRegister } from '@/lib/partner-permissions';
+import { getLifeHealthCase, saveLifeHealthCaseEdit, appendNativeLifeHealthRemark, lifeHealthIssuanceAction, operationsCaseUrl, type LifeHealthIssueForm, type LifeHealthCaseDetail, type LifeHealthDocument, type LifeHealthActivity } from '@/lib/life-health-cases';
+import { canPartnerAccessCaseRegister, canPartnerAccess } from '@/lib/partner-permissions';
 import { usePartnerSession } from '@/providers/partner-session-provider';
 
 const navy='#17365D';
@@ -23,6 +23,7 @@ const activityDate=(value:string)=>{
 
 
 type CaseEditForm = {
+ sourcingDate:string;insurerId:string;
  customerName:string;customerPhone:string;customerAddress:string;
  productName:string;proposalNumber:string;premiumPayingTerm:string;policyDuration:string;
  paymentFrequency:string;paymentMode:string;premiumAmount:string;
@@ -30,7 +31,7 @@ type CaseEditForm = {
 const FREQUENCIES=['Monthly','Quarterly','Half Yearly','Annually','One Time'] as const;
 const PAYMENT_MODES=['Cash','Cheque','NEFT/RTGS','UPI','Credit/Debit Card','Net Banking'] as const;
 function initialForm(value:LifeHealthCaseDetail):CaseEditForm {
- return {customerName:value.customer_name,customerPhone:value.customer_phone,
+ return {sourcingDate:value.sourcing_date,insurerId:value.insurance_company_id,customerName:value.customer_name,customerPhone:value.customer_phone,
   customerAddress:value.customer_address,productName:value.product_name,proposalNumber:value.proposal_number,
   premiumPayingTerm:value.premium_paying_term||'',policyDuration:value.policy_duration||'',
   paymentFrequency:value.payment_frequency,paymentMode:value.payment_mode,premiumAmount:String(value.premium_amount)};
@@ -45,15 +46,25 @@ export default function LifeHealthCaseDetailScreen(){
  const [infoTab,setInfoTab]=useState<'activity'|'remarks'>('activity');
  const [loading,setLoading]=useState(true);
  const [error,setError]=useState('');
- const [editing,setEditing]=useState(false);
+ const [remarkOpen,setRemarkOpen]=useState(false);
+ const [remarkDraft,setRemarkDraft]=useState('');
+ const [remarkBusy,setRemarkBusy]=useState(false);
+ const [remarkError,setRemarkError]=useState('');
+ const [insurers,setInsurers]=useState<{id:string;name:string}[]>([]);
+ const [choice,setChoice]=useState<{key:string;values:{id:string;name:string}[]}|null>(null);
+ const [issue,setIssue]=useState<LifeHealthIssueForm>({caseId:'',policyNumber:'',issuanceDate:'',startDate:'',endDate:'',pptEndDate:'',nextInstallmentDate:'',finalPremium:'',sumInsured:'',approvalId:''});
+ const [approvalOpen,setApprovalOpen]=useState(false);
+ const [approvers,setApprovers]=useState<{key:string;name:string}[]>([]);
+ const [approverKey,setApproverKey]=useState('');
+ const [approvalId,setApprovalId]=useState('');
+ const [otp,setOtp]=useState('');
+ const [approvalRequired,setApprovalRequired]=useState(false);
+ const [issuing,setIssuing]=useState(false);
+ const [issueError,setIssueError]=useState('');
  const [saving,setSaving]=useState(false);
  const [saveError,setSaveError]=useState('');
  const [form,setForm]=useState<CaseEditForm|null>(null);
  const setField=(key:keyof CaseEditForm,value:string)=>setForm(prev=>prev?{...prev,[key]:value}:prev);
- const beginEdit=()=>{
-  if(!record||record.status_group==='rejected')return;
-  setForm(initialForm(record));setSaveError('');setEditing(true);
- };
  const saveEdit=async()=>{
   if(!record||!form||saving)return;
   setSaveError('');setSaving(true);
@@ -63,12 +74,14 @@ export default function LifeHealthCaseDetailScreen(){
      customerPhone:form.customerPhone,customerAddress:form.customerAddress});
    }else{
     await saveLifeHealthCaseEdit({id:record.id,updatedAt:record.updated_at,
+     customerName:form.customerName,customerPhone:form.customerPhone,customerAddress:form.customerAddress,
+     sourcingDate:form.sourcingDate,insurerId:form.insurerId,
      productName:form.productName,proposalNumber:form.proposalNumber,
      premiumPayingTerm:form.premiumPayingTerm,policyDuration:form.policyDuration,
      paymentFrequency:form.paymentFrequency,paymentMode:form.paymentMode,
      premiumAmount:Number(form.premiumAmount.replace(/,/g,''))});
    }
-   setEditing(false);setForm(null);await load();
+   await load();
   }catch(cause){setSaveError(cause instanceof Error?cause.message:'Unable to save changes.');}
   finally{setSaving(false);}
  };
@@ -78,6 +91,8 @@ export default function LifeHealthCaseDetailScreen(){
    try{
      const result=await getLifeHealthCase(id);
      setRecord(result.case);setDocuments(result.documents);setActivities(result.activities);
+     setForm(initialForm(result.case));setInsurers(result.insurers??[]);
+     setIssue({caseId:result.case.id,policyNumber:'',issuanceDate:'',startDate:'',endDate:'',pptEndDate:'',nextInstallmentDate:'',finalPremium:String(result.case.premium_amount||''),sumInsured:'',approvalId:''});
    }catch(cause){setError(cause instanceof Error?cause.message:'Unable to load case.');}
    finally{setLoading(false);}
  },[id]);
@@ -87,6 +102,75 @@ export default function LifeHealthCaseDetailScreen(){
    void load();
    return ()=>{active=false;void active;setRecord(null);};
  },[load]));
+ const setIssueField=(key:keyof LifeHealthIssueForm,value:string)=>{
+   setIssue(prev=>({...prev,[key]:value,...(key==='issuanceDate'||key==='policyNumber'?{approvalId:''}:{})}));
+   if(key==='issuanceDate'||key==='policyNumber'){setApprovalId('');setIssueError('');}
+ };
+ const addRemark=async()=>{
+   if(!record||!remarkDraft.trim()||remarkBusy)return;
+   setRemarkBusy(true);setRemarkError('');
+   try{
+     await appendNativeLifeHealthRemark(record.id,remarkDraft.trim());
+     setRemarkDraft('');setRemarkOpen(false);await load();
+   }catch(e){setRemarkError(e instanceof Error?e.message:'Could not save remark.');}
+   finally{setRemarkBusy(false);}
+ };
+ const requestIssue=async()=>{
+   if(!record||!issue.policyNumber.trim()||!issue.issuanceDate||!issue.startDate||!issue.finalPremium)return setIssueError('Complete policy number, issuance date, start date and final premium.');
+   setIssueError('');setIssuing(true);
+   try{
+     const result=await lifeHealthIssuanceAction('approvers',{caseId:record.id,policyNumber:issue.policyNumber,issuanceDate:issue.issuanceDate});
+     if(result.approvalRequired&&!approvalId){
+       setApprovalRequired(true);setApprovers(result.approvers??[]);setApprovalOpen(true);return;
+     }
+     await createIssuedPolicy();
+   }catch(e){setIssueError(e instanceof Error?e.message:'Unable to verify policy issuance.');}
+   finally{setIssuing(false);}
+ };
+ const createIssuedPolicy=async()=>{
+   if(!record)return;
+   setIssuing(true);setIssueError('');
+   try{
+     // Save pending case edits before conversion, using the same verified Case Register API.
+     if(form){
+       await saveLifeHealthCaseEdit({id:record.id,updatedAt:record.updated_at,
+         sourcingDate:form.sourcingDate,insurerId:form.insurerId,
+         customerName:form.customerName,customerPhone:form.customerPhone,customerAddress:form.customerAddress,
+         productName:form.productName,proposalNumber:form.proposalNumber,
+         premiumPayingTerm:form.premiumPayingTerm,policyDuration:form.policyDuration,
+         paymentFrequency:form.paymentFrequency,paymentMode:form.paymentMode,
+         premiumAmount:Number(form.premiumAmount)});
+     }
+     const result=await lifeHealthIssuanceAction('issue',{...issue,caseId:record.id,approvalId});
+     setApprovalOpen(false);
+     await load();
+     setIssueError(result.policyCode?'Policy created: '+result.policyCode:'Policy created.');
+   }catch(e){setIssueError(e instanceof Error?e.message:'Issuance outcome uncertain. Check Policy Register before retrying.');}
+   finally{setIssuing(false);}
+ };
+ const sendApproval=async()=>{
+   if(!record||!approverKey||issuing)return;
+   setIssuing(true);setIssueError('');
+   try{
+     const result=await lifeHealthIssuanceAction('request_approval',{
+       caseId:record.id,policyNumber:issue.policyNumber,issuanceDate:issue.issuanceDate,approverKey,
+     });
+     setApprovalId(result.approvalId??'');setOtp('');
+   }catch(e){setIssueError(e instanceof Error?e.message:'Approval request failed.');}
+   finally{setIssuing(false);}
+ };
+ const verifyApproval=async()=>{
+   if(!record||!approvalId||otp.length!==6||issuing)return;
+   setIssuing(true);setIssueError('');
+   try{
+     await lifeHealthIssuanceAction('verify_approval',{
+       caseId:record.id,policyNumber:issue.policyNumber,issuanceDate:issue.issuanceDate,approvalId,otp,
+     });
+     setIssue(prev=>({...prev,approvalId}));
+     setApprovalOpen(false);
+   }catch(e){setIssueError(e instanceof Error?e.message:'Approval verification failed.');}
+   finally{setIssuing(false);}
+ };
  const openOperations=async()=>{
    if(!id)return;
    try {await Linking.openURL(operationsCaseUrl(id));}
@@ -96,7 +180,7 @@ export default function LifeHealthCaseDetailScreen(){
     <Text style={styles.errorText}>You do not have Case Register permission.</Text>
   </PartnerScreen>;
 
-  return <PartnerScreen title="Case Details" onBack={()=>router.back()}>
+  return <PartnerScreen title="Case Details" navyTopBar navyStatusBar onBack={()=>router.back()} bottomNavigation={<CaseBottomNav context={context} onGo={route=>router.replace(route as never)}/>}>
     {loading?<ActivityIndicator color={navy} style={{marginTop:24}}/>:null}
     {error?<View style={styles.alert}>
       <Text style={styles.errorText}>{error}</Text>
@@ -112,16 +196,9 @@ export default function LifeHealthCaseDetailScreen(){
             <Text style={styles.statusText}>{record.status_group==='issued'?'Issued':record.status_group==='rejected'?'Rejected':'Pending'}</Text>
           </View>
         </View>
-        <Text style={styles.heroSubtitle} numberOfLines={2}>{record.customer_name} · {record.proposal_number}</Text>
-        <Text style={styles.heroCaseNumber} selectable>{record.case_number}</Text>
-       {record.status_group!=='rejected'?<Pressable accessibilityRole="button"
-        accessibilityLabel={record.status_group==='issued'?'Edit issued policy customer in app':'Edit case in app'}
-        onPress={beginEdit} style={styles.editButton}>
-        <Ionicons name="create-outline" size={17} color={navy}/>
-        <Text style={styles.editButtonText}>{record.status_group==='issued'?'Edit Proposer':'Edit Case'}</Text>
-       </Pressable>:null}
+        <Text style={styles.heroSubtitle} numberOfLines={1}>{record.customer_name} · {record.proposal_number}</Text>
+        <Text style={styles.heroCaseNumber} numberOfLines={1} selectable>{record.case_number}</Text>
       </View>
-
       <Section number="01" title="Policy source & ownership">
         <View style={styles.grid}>
           <Field label="Proposal date" value={dateLabel(record.sourcing_date)}/>
@@ -206,50 +283,6 @@ export default function LifeHealthCaseDetailScreen(){
         <Ionicons name="chevron-forward" size={17} color="#FFFFFF"/>
       </Pressable>:null}
     </View>:null}
-   <Modal visible={editing&&!!form} transparent animationType="slide" onRequestClose={()=>{if(!saving)setEditing(false);}}>
-    <View style={styles.editorBackdrop}>
-     <View style={styles.editor}>
-      <View style={styles.editorHeader}>
-       <View style={{flex:1}}>
-        <Text style={styles.editorTitle}>{record?.status_group==='issued'?'Edit Proposer':'Edit Case Details'}</Text>
-        <Text style={styles.editorCaption}>{record?.case_number} · {record?.business_line}</Text>
-       </View>
-       <Pressable accessibilityRole="button" accessibilityLabel="Close edit" disabled={saving} onPress={()=>setEditing(false)}>
-        <Ionicons name="close-circle-outline" size={26} color="#526780"/>
-       </Pressable>
-      </View>
-      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.editorContent}>
-       {form?(record?.status_group==='issued'?<>
-        <Text style={styles.editorSection}>Customer & insurer</Text>
-        <EditInput title="Customer / proposer name" value={form.customerName} onChange={v=>setField('customerName',v)}/>
-        <EditInput title="Mobile number" value={form.customerPhone} onChange={v=>setField('customerPhone',v)} keyboardType="phone-pad"/>
-        <EditInput title="Customer address" value={form.customerAddress} onChange={v=>setField('customerAddress',v)} multiline/>
-        <Text style={styles.editorHint}>Only customer details can be updated here for an issued policy. Policy schedule, commercial values and number remain protected.</Text>
-       </>:<>
-        <Text style={styles.editorSection}>Proposal & premium</Text>
-        <EditInput title="Product name" value={form.productName} onChange={v=>setField('productName',v)}/>
-        <EditInput title="Proposal number" value={form.proposalNumber} onChange={v=>setField('proposalNumber',v)}/>
-        <EditInput title="Premium paying term" value={form.premiumPayingTerm} onChange={v=>setField('premiumPayingTerm',v)}/>
-        <EditInput title="Policy duration" value={form.policyDuration} onChange={v=>setField('policyDuration',v)}/>
-        <ChoiceField title="Payment frequency" value={form.paymentFrequency} values={FREQUENCIES} onChange={v=>setField('paymentFrequency',v)}/>
-        <ChoiceField title="Payment mode" value={form.paymentMode} values={PAYMENT_MODES} onChange={v=>setField('paymentMode',v)}/>
-        <EditInput title="Premium (₹)" value={form.premiumAmount} onChange={v=>setField('premiumAmount',v)} keyboardType="decimal-pad"/>
-        <Text style={styles.editorHint}>Case source, ownership, insurer, documents and issuance remain under the existing Operations approval and verification rules.</Text>
-       </>):null}
-       {saveError?<Text style={styles.saveError}>{saveError}</Text>:null}
-      </ScrollView>
-      <View style={styles.editorActions}>
-       <Pressable accessibilityRole="button" disabled={saving} onPress={()=>setEditing(false)} style={styles.cancelButton}>
-        <Text style={styles.cancelText}>Cancel</Text>
-       </Pressable>
-       <Pressable accessibilityRole="button" accessibilityLabel="Save case changes" disabled={saving} onPress={()=>void saveEdit()} style={styles.saveButton}>
-        {saving?<ActivityIndicator color="#FFF" size="small"/>:<Ionicons name="checkmark" color="#FFF" size={17}/>}
-        <Text style={styles.saveText}>{saving?'Saving…':'Save Changes'}</Text>
-       </Pressable>
-      </View>
-     </View>
-    </View>
-   </Modal>
  </PartnerScreen>;
 }
 function EditInput({title,value,onChange,keyboardType,multiline}:{title:string;value:string;onChange:(v:string)=>void;keyboardType?:'phone-pad'|'decimal-pad';multiline?:boolean}){
