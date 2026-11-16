@@ -82,6 +82,8 @@ jobs:
       - name: Daily Report inline employee search and five-column grid regression
         run: node scripts/daily-report-employee-header-five-column-regression.mjs
 
+      - name: Daily Report active employee Self and secure All access regression
+        run: node scripts/daily-report-all-employee-self-access-regression.mjs
       - name: Daily Report All employee directory hierarchy and history isolation regression
         run: node --experimental-strip-types scripts/daily-report-all-employee-directory-regression.mjs
       - name: Daily Report All excludes current employee regression
