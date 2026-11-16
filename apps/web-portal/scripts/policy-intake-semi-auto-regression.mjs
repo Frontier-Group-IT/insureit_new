@@ -59,11 +59,19 @@ assert(nav.includes("/development/ai-policy-onboarding"), "Development menu must
 assert(page.includes('requireCapability("manage_system", "approve")'), "Route requires Development authority");
 assert(page.includes("fetchAllPages<CandidateIntake"), "Candidate list must load all relevant rows before pagination");
 assert(page.includes("loadPolicyIntakeDuplicateMatches(admin, list.data ?? [])"), "Shared authoritative duplicate detection must run for every candidate");
-assert(page.includes("policyIntakeBucket(row, duplicates.matches.has(row.id))"), "Effective status must match the Policy Intake register");
-assert(page.includes('bucket === "action_required" || bucket === "in_review"'), "Only the same actionable and in-review buckets should be offered");
+assert(page.includes('policyIntakeBucket(row, duplicateIds.has(row.id))'), "Effective status must match the Policy Intake register");
+assert(page.includes('const workspaceRows = !unavailable && duplicates?.ok ? candidates : []'),
+  "All open Motor Intakes, including duplicates and incomplete OCR, must remain in the n8n preview list");
+assert(page.includes('is_duplicate: policyIntakeBucket(row, duplicateIds.has(row.id)) === "duplicate"'),
+  "Derived duplicate status must be visible without modifying Intake status");
+assert(page.includes('initialIntakeId={requestedId && pageRows.some(row => row.id === requestedId)'),
+  "Direct Intake links must select only Intake IDs present in the authorized paginated server list");
+assert(page.includes('const targetIndex = requestedId ? workspaceRows.findIndex'),
+  "Direct Intake links must locate rows across pagination");
 assert(page.indexOf("const duplicates =") < page.indexOf(".slice((safePage - 1) * PAGE_SIZE"),
   "Pagination must take place only AFTER duplicate classification and queue filtering");
-assert(page.includes("excludedDuplicateCount"), "Excluded duplicate count should be visible to the operator");
+assert(page.includes("duplicateCount"), "Visible duplicate count should be clear to the operator");
+assert(!page.includes("excludedDuplicateCount"), "Duplicate Intakes must not be hidden from the n8n preview workspace");
 assert(page.includes("const safePage ="), "Pagination must not strand users on a now-empty page after duplicate removal");
 assert(!page.includes('.range((page - 1) * PAGE_SIZE'), "Never page raw status rows before resolving duplicates");
 assert(server.includes('requirePolicyIntakeFinalizer(id)') && server.includes('requirePolicyIntakeReviewer(id)'), "Each selected Intake requires reviewer and finalizer rights");
@@ -95,8 +103,21 @@ assert(client.includes("previewSemiAutoN8nIntake(selectedId)"), "The existing AI
 assert(client.includes("Apply reviewed fields to failed OCR"), "OCR recovery requires an explicit second button");
 assert(client.includes("The recovered PDF fields changed after preview") || n8nServer.includes("The recovered PDF fields changed after preview"),
   "Fail closed when the recovered proposal differs from the reviewed hash");
-assert(page.includes("semiAutoN8nEnabledForIntake(row.id)"), "Only allowlisted Intake rows may expose n8n preview");
-assert(n8nServer.includes("INSUREIT_N8N_OCR_ALLOWED_INTAKE_IDS"), "n8n calls require an explicit Intake allowlist");
+assert(page.includes("semiAutoN8nEnabledForIntake(row.id)"), "Preview eligibility must come from the server, not the browser");
+assert(n8nServer.includes('mode === "shadow" && process.env.INSUREIT_N8N_OCR_PREVIEW_ALL_MOTOR === "true"'),
+  "Broad preview access must require the explicit read-only shadow-mode flag");
+assert(n8nServer.includes("if (!UUID.test(intakeId)) return false"),
+  "Broad preview must still validate the Intake identifier");
+assert(client.includes('initialIntakeId ?? null'),
+  "Direct links may initially select only the Intake authorized by server pagination");
+assert(client.includes('row.is_duplicate ? "Duplicate · Preview only"'),
+  "Duplicate preview rows must be visibly separated from bookable Intakes");
+assert(client.includes('Boolean(selected?.is_duplicate)'),
+  "Duplicate Intakes must have correction disabled in the UI");
+assert(client.includes('&& !selected?.is_duplicate'),
+  "Duplicate Intakes must never be eligible for client-side booking");
+assert(n8nServer.includes("INSUREIT_N8N_OCR_ALLOWED_INTAKE_IDS"),
+  "Original single-Intake allowlist must remain supported for staged pilots and apply mode");
 assert(n8nServer.includes("INSUREIT_N8N_OCR_ALLOW_REVIEW_APPLY"), "Live OCR apply must use a separate opt-in flag");
 assert(n8nServer.includes('process.env.INSUREIT_N8N_OCR_MODE === "prefer"'),
   "Shadow mode must never apply n8n fields as authoritative OCR");
