@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { ChartNoAxesColumnIncreasing } from "lucide-react";
 import { AppShell } from "@/components/shell";
 import { ReportWorkspaceNavigation } from "@/components/reports/report-workspace-navigation";
 import { DailyReportHeaderScopes, DailyReportHeaderPeriod } from "@/components/reports/daily-report-header-controls";
@@ -20,6 +21,7 @@ export default async function ReportsWorkspaceLayout({ children }: { children: R
             <div className="reports-reference-topbar">
               <div className="reports-reference-left">
                 <div className="reports-reference-heading">
+                  <span className="daily-report-heading-icon" aria-hidden="true"><ChartNoAxesColumnIncreasing size={23} strokeWidth={2.8}/></span>
                   <h1>Reports</h1>
                 </div>
                 <ReportWorkspaceNavigation />
