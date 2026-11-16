@@ -265,3 +265,9 @@ assert.match(screen,/current&&vehicleClassDescriptions\[current\]/,'Hide descrip
 assert.match(screen,/numberOfLines=\{1\} ellipsizeMode="tail" style=\{styles\.vehicleClassDescription\}/,'Truncate long class names.');
 assert.match(screen,/vehicleClassDescription:\{flexShrink:1/,'Keep label and selected name compact.');
 assert.match(screen,/\{key:'vehicleClass',label:'Vehicle class',required:true,options:\['PCP','TWP','PCV','GCV','CPM','MISD'\]\}/,'Preserve stored vehicle class codes.');
+
+// Date heading spelling only: keep original words and capitalization except "up to" → "Upto".
+for(const label of ['Validity Upto','OD Validity Upto','TP validity Upto','CPA validity Upto']) {
+  assert.ok(screen.includes(label), 'Missing correctly formatted date heading: '+label);
+}
+assert.doesNotMatch(screen,/Validity up to|TP validity up to|CPA validity up to/,'Do not use split up to in date headings.');
