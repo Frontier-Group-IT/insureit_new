@@ -23,6 +23,7 @@ export type LifeHealthCaseSummary = {
 export type LifeHealthCaseDetail = LifeHealthCaseSummary & {
   status: string;
   updated_at: string;
+  insurance_company_id: string;
   premium_paying_term: string | null;
   policy_duration: string | null;
   payment_frequency: string;
@@ -99,6 +100,8 @@ export type LifeHealthCaseEdit = {
   customerName?: string;
   customerPhone?: string;
   customerAddress?: string;
+  sourcingDate?: string;
+  insurerId?: string;
   productName?: string;
   proposalNumber?: string;
   premiumPayingTerm?: string;
@@ -153,4 +156,40 @@ export async function appendLifeHealthCaseRemark(id: string, remark: string): Pr
     throw new Error(body?.error || 'Unable to add remark. Reload and retry.');
   }
   return body.remarks ?? '';
+}
+
+export type LifeHealthInsurer={id:string;name:string};
+export async function listLifeHealthInsurers():Promise<LifeHealthInsurer[]>{
+  const result=await request<{insurers:LifeHealthInsurer[]}>(new URLSearchParams({catalog:'insurers'}));
+  return result.insurers??[];
+}
+export type LifeHealthIssue={
+  policyNumber:string;issuanceDate:string;startDate:string;endDate:string;
+  pptEndDate:string;nextInstallmentDate:string;finalPremium:string;sumInsured:string;dateApprovalId?:string;
+};
+async function caseMutation<T>(payload:Record<string,unknown>):Promise<T>{
+  const session=await getCurrentSession();
+  if(!session?.access_token)throw new Error('Partner session expired. Sign in again.');
+  let response:Response;
+  try{response=await fetch(`${portal}/api/partner/life-health-cases`,{
+    method:'POST',cache:'no-store',headers:{Authorization:`Bearer ${session.access_token}`,'Content-Type':'application/json'},
+    body:JSON.stringify(payload),
+  });}catch{throw new Error('Unable to reach Case Register. Check your connection.');}
+  const result=await response.json().catch(()=>null) as ({ok?:boolean;error?:string}&Partial<T>)|null;
+  if(!response.ok||!result?.ok){
+    if(response.status===404||response.status===405)throw new Error('The updated Case Register backend is not deployed yet.');
+    throw new Error(result?.error||'Case operation failed. Reload and check the Case Register before retrying.');
+  }
+  return result as T;
+}
+export async function requestLifeHealthIssueApproval(id:string,issue:LifeHealthIssue,approverKey:string){
+  return caseMutation<{approvalId:string;expiresAt:string}>({id,operation:'issue_approval_request',
+    policyNumber:issue.policyNumber,issuanceDate:issue.issuanceDate,approverKey});
+}
+export async function verifyLifeHealthIssueApproval(id:string,issue:LifeHealthIssue,approvalId:string,otp:string){
+  return caseMutation<{verified:boolean}>({id,operation:'issue_approval_verify',
+    policyNumber:issue.policyNumber,issuanceDate:issue.issuanceDate,approvalId,otp});
+}
+export async function issueLifeHealthPolicy(id:string,issue:LifeHealthIssue){
+  return caseMutation<{policyId:string;policyCode:string}>({id,operation:'issue_case',...issue});
 }
