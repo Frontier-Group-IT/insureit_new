@@ -139,7 +139,7 @@ const documentApi=read('apps/web-portal/app/api/partner/policy-intakes/native-on
 const intakeDocMigration=read('supabase/migrations/20261114170000_partner_onboarding_document_staging.sql');
 const bridgeContinue=read('apps/web-portal/app/api/partner/policy-intakes/bridge/continue/route.ts');
 const nonMotorPage=read('apps/web-portal/app/policies/new/non-motor/page.tsx');
-const nonMotorAction=read('apps/web-portal/app/policies/non-motor-policy-actions.ts');
+const nonMotorAction=read('apps/web-portal/lib/non-motor-policy-creation-engine.ts');
 assert.match(screen,/onboardingDocumentsSection\('06'\)/,'Non Motor retains Section 06 documents.');
 assert.match(screen,/onboardingDocumentsSection\('05'\)/,'Life and Health get Section 05 documents.');
 for(const name of ['Policy Copy','Proposal Form','KYC','Other Document']){
