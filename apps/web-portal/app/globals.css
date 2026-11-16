@@ -480,3 +480,165 @@ form:has(input[name="fitness_valid_upto"]) > div:last-child button {
     animation: none !important;
   }
 }
+
+
+/* Daily Report reference styling — scoped so other Reports/workspace pages are unchanged. */
+.daily-report-heading-icon { display: none; }
+.reports-reference-shell:has(.daily-report-reference) {
+  --daily-navy: #17165c;
+  font-family: var(--font-manrope), ui-sans-serif, sans-serif;
+}
+.reports-reference-shell:has(.daily-report-reference) .reports-reference-header {
+  position: relative;
+  isolation: isolate;
+  overflow: visible;
+  margin-bottom: 12px;
+  border: 1px solid rgba(183,170,246,.36);
+  border-radius: 18px;
+  background: linear-gradient(108deg,#f7f5ff 0%,#eeedff 34%,#dedcfc 63%,#bbb0f9 100%);
+  box-shadow: 0 4px 17px rgba(77,43,166,.09);
+}
+.reports-reference-shell:has(.daily-report-reference) .reports-reference-header::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 58% 220% at 93% -98%,transparent 62%,rgba(255,255,255,.75) 62.5%,rgba(255,255,255,.75) 68%,transparent 68.5%),
+    radial-gradient(ellipse 51% 235% at 101% -92%,transparent 62%,rgba(255,255,255,.36) 62.5%,rgba(255,255,255,.36) 78%,transparent 78.5%);
+}
+.reports-reference-shell:has(.daily-report-reference) .reports-reference-topbar {
+  position: relative;
+  min-height: 72px;
+  padding: 10px 16px;
+}
+.reports-reference-shell:has(.daily-report-reference) .reports-reference-left {gap: 16px;}
+.reports-reference-shell:has(.daily-report-reference) .reports-reference-heading {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.reports-reference-shell:has(.daily-report-reference) .reports-reference-heading h1 {
+  color: #111451;
+  font-family: var(--font-manrope), sans-serif;
+  font-size: clamp(22px,2vw,28px);
+  font-weight: 800;
+  letter-spacing: -.045em;
+}
+.reports-reference-shell:has(.daily-report-reference) .daily-report-heading-icon {
+  display: inline-flex;
+  width: 47px;
+  height: 45px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 13px;
+  color: white;
+  background: linear-gradient(150deg,#802bfb,#4c0bb6);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.4),0 4px 9px rgba(71,23,162,.2);
+}
+.reports-reference-shell:has(.daily-report-reference) .daily-report-header-select {
+  min-height: 39px;
+  border: 1px solid #dad3fc;
+  border-radius: 999px;
+  color: #101452;
+  background: rgba(255,255,255,.95);
+  box-shadow: 0 3px 7px rgba(68,45,132,.12);
+  font-size: 11px;
+  font-weight: 750;
+}
+.reports-reference-shell:has(.daily-report-reference) .daily-report-header-select:hover {
+  border-color: #ab9cef;
+  background: white;
+}
+.daily-report-reference .daily-report-panel {
+  position: relative;
+  isolation: isolate;
+  border-color: #dcd4ff;
+  border-radius: 16px;
+  box-shadow: 0 3px 15px rgba(76,38,149,.11);
+}
+.daily-report-reference .daily-report-panel::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  z-index: -1;
+  width: 48%;
+  height: 105px;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 95% 110% at 99% 122%,rgba(127,95,251,.3) 39%,transparent 40%),
+    radial-gradient(ellipse 100% 110% at 60% 135%,rgba(115,88,245,.15) 45%,transparent 46%),
+    radial-gradient(ellipse 85% 120% at 94% 145%,rgba(176,151,255,.3) 48%,transparent 49%);
+}
+.daily-report-reference .daily-report-panel-title {
+  position: relative;
+  isolation: isolate;
+  min-height: 50px;
+  padding: 9px 16px;
+  border-bottom: 0;
+  color: #fff;
+  background: linear-gradient(100deg,#24119b 0%,#4720c6 42%,#7640e6 78%,#9b57f6 100%);
+}
+.daily-report-reference .daily-report-panel-title h3 {color:#fff;font-size:14px;letter-spacing:-.015em;font-weight:800;}
+.daily-report-reference .daily-report-panel-title a {
+  color:#2f169c;
+  background:#fff;
+  border-color:rgba(255,255,255,.6);
+}
+.daily-report-reference .daily-report-total-badge {
+  border:1px solid rgba(255,255,255,.25);
+  border-radius:999px;
+  padding:7px 13px;
+  color:#fff;
+  background:linear-gradient(120deg,#3513a5,#4f12a8);
+  box-shadow:0 2px 7px rgba(21,10,103,.2);
+}
+.daily-report-reference .daily-report-groups {padding: 14px 16px 24px;}
+.daily-report-reference .daily-report-category {--category:#6a1fdb;--badge:#e6d2ff;--badge-text:#2b137c;--soft:#faf7ff;}
+.daily-report-reference .daily-report-category[data-activity-group="vehicle"] {--category:#06b969;--badge:#c8f9df;--badge-text:#075a34;--soft:#f6fffa;}
+.daily-report-reference .daily-report-category[data-activity-group="policies"] {--category:#ff731c;--badge:#ffe0bb;--badge-text:#8c2e0a;--soft:#fffaf6;}
+.daily-report-reference .daily-report-category[data-activity-group="claims"] {--category:#1585ef;--badge:#d6eaff;--badge-text:#1254a5;--soft:#f7fbff;}
+.daily-report-reference .daily-report-category[data-activity-group="other"] {--category:#06bdb6;--badge:#c8faf0;--badge-text:#067b77;--soft:#f6fffe;}
+.daily-report-reference .daily-report-category-heading {
+  margin-bottom: 6px;
+  color: #131b55;
+  font-size: 13px;
+  font-weight: 850;
+  letter-spacing: .01em;
+}
+.daily-report-reference .daily-report-category-heading svg {color:var(--category);fill:var(--category);fill-opacity:.12;}
+.daily-report-reference .daily-report-activity-card {
+  min-height: 55px;
+  gap: 11px;
+  padding: 8px 12px;
+  border: 1px solid #e8e6f0;
+  border-radius: 14px;
+  color: #1a1d59;
+  background:linear-gradient(125deg,#fff 0%,var(--soft) 100%);
+  box-shadow:0 2px 6px rgba(27,19,75,.1),inset 0 1px 0 rgba(255,255,255,.95);
+}
+.daily-report-reference .daily-report-activity-card:hover {
+  border-color:var(--category);
+  background:linear-gradient(125deg,#fff,var(--soft));
+  box-shadow:0 6px 14px rgba(49,24,105,.14);
+}
+.daily-report-reference .daily-report-activity-card > span:nth-child(2) {color:#1a2058;font-size:11px;font-weight:750;}
+.daily-report-reference .daily-report-activity-icon {color:var(--category);filter:drop-shadow(0 2px 2px rgba(0,0,0,.1));}
+.daily-report-reference .daily-report-count-badge {
+  min-width: 44px;
+  color:var(--badge-text);
+  background:var(--badge);
+  box-shadow:0 2px 4px rgba(48,27,101,.08);
+  font-size:12px;
+}
+@media (max-width:640px) {
+  .reports-reference-shell:has(.daily-report-reference) .reports-reference-topbar {padding:10px 12px;gap:10px;}
+  .reports-reference-shell:has(.daily-report-reference) .reports-reference-heading {gap:8px;}
+  .reports-reference-shell:has(.daily-report-reference) .daily-report-heading-icon {width:37px;height:37px;}
+  .daily-report-reference .daily-report-panel-title {padding:9px 11px;}
+  .daily-report-reference .daily-report-groups {padding:12px 10px 20px;}
+}
