@@ -53,6 +53,7 @@ export function PartnerScreen({
   navyStatusBar = false,
   statusBarColor,
   bottomNavigation,
+  bottomNavigationNavy = false,
   topBarIcon,
   stickyStartY = 100,
 }: PropsWithChildren<{
@@ -82,6 +83,8 @@ export function PartnerScreen({
   statusBarColor?: string;
   /** Fixed navigation beneath the scroll content. */
   bottomNavigation?: ReactNode;
+  /** Render the footer safe area in the existing navy tab-bar color. */
+  bottomNavigationNavy?: boolean;
   /** Optional plain icon in place of header artwork, with no icon tile background. */
   topBarIcon?: ComponentProps<typeof Ionicons>['name'];
   stickyStartY?: number;
@@ -347,7 +350,7 @@ export function PartnerScreen({
       </Animated.ScrollView>
       </SafeAreaView>
       {bottomNavigation ? (
-        <View style={[styles.bottomNavigation, { paddingBottom: safeAreaInsets.bottom }]}>
+        <View style={[styles.bottomNavigation, bottomNavigationNavy && styles.bottomNavigationNavy, { paddingBottom: safeAreaInsets.bottom }]}>
           {bottomNavigation}
         </View>
       ) : null}
@@ -368,6 +371,7 @@ const styles = StyleSheet.create({
   navyStatusArea: { backgroundColor: '#071E49' },
   contentCanvas: { backgroundColor: '#F5F7FB' },
   bottomNavigation: { backgroundColor: '#FFFFFF' },
+  bottomNavigationNavy: { backgroundColor: '#071E49' },
   fullWidthContent: { paddingHorizontal: 0 },
   content: {
     flexGrow: 1,
