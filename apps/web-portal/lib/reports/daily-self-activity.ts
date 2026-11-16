@@ -239,8 +239,8 @@ export async function loadSelfActivityHistory(
           if(!claim) continue;
           row.claimControlNo=claim.claim_no||undefined;
           row.claimInsurerNo=claim.insurer_claim_no||undefined;
-          row.claimCustomerName=claim.customers?.contact_name||claim.customers?.company_name||undefined;
-          row.claimVehicleNo=claim.vehicles?.vehicle_no||undefined;
+          row.claimCustomerName=claim.customers?.[0]?.contact_name||claim.customers?.[0]?.company_name||undefined;
+          row.claimVehicleNo=claim.vehicles?.[0]?.vehicle_no||undefined;
         }
       }
     }
