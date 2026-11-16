@@ -37,6 +37,7 @@ assert.match(rows, />OK<\/button>/, "Popup has OK dismissal");
 assert.match(rows, /className="mt-3 flex items-center justify-between gap-3"/, "Message and OK button share a compact horizontal row");
 assert.match(rows, /className="min-w-0 flex-1 text-\[12px\]/, "Message takes the remaining row width");
 assert.match(rows, /className="shrink-0 min-w-\[64px\]/, "OK button stays beside the message");
+assert.doesNotMatch(rows, /className="mt-5 flex justify-end"/, "Do not move OK to a separate footer row");
 assert.match(rows, /event\.key==="Escape"/, "Dialog allows Escape dismissal");
 assert.doesNotMatch(loader+routes+panel+rows,/\.insert\(|\.update\(|\.upsert\(|\.delete\(/, "Navigation is read-only");
 console.log("Daily Report clickable record navigation and unavailable-popup regression passed.");
