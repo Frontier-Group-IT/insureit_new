@@ -12,7 +12,6 @@ const customerField=(value:string|number|undefined|null)=>value===undefined||val
 
 export function DailyActivityHistoryRows({rows,isCustomerActivity=false,isClaimActivity=false,vehicleMode=false}:Props) {
   const router=useRouter();
-  // Only verified surviving records provide a destination.
   const openRecord=(row:SelfActivity)=>{
     if(row.href) router.push(row.href);
   };
@@ -27,7 +26,7 @@ export function DailyActivityHistoryRows({rows,isCustomerActivity=false,isClaimA
       <tbody className="divide-y divide-[#edf1f6]">
         {rows.map(row=>(
           <tr key={row.id} role={row.href?"button":undefined} tabIndex={row.href?0:undefined}
-            aria-label={`View activity details: ${row.activity}, ${vehicleMode ? row.vehicleNumber||"vehicle record" : isClaimActivity ? row.claimControlNo||row.claimInsurerNo||"claim record" : row.reference}`}
+            aria-label={row.href?`Open record: ${row.activity}, ${vehicleMode ? row.vehicleNumber||"vehicle record" : isClaimActivity ? row.claimControlNo||row.claimInsurerNo||"claim record" : row.reference}`:undefined}
             onClick={row.href?()=>openRecord(row):undefined}
             onKeyDown={row.href?event=>onRowKeyDown(event,row):undefined}
             className={`${row.href?"cursor-pointer [&_td]:cursor-pointer hover:bg-[#edf5ff] focus-visible:bg-[#edf5ff] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#315b9a]":"cursor-default"} text-[11px] text-[#30435d] transition-colors`}>
