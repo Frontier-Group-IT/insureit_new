@@ -19,7 +19,6 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { PartnerAnchoredDropdown } from '@/components/ui/partner-anchored-dropdown';
 import { PartnerBanner } from '@/components/ui/partner-banner';
 import { PartnerProfileAvatar } from '@/components/ui/partner-profile-avatar';
 import { PartnerMotionBadge } from '@/components/ui/partner-motion-badge';
@@ -47,14 +46,6 @@ const PAGE_SIZE = 10;
 let savedPolicyQuery = '';
 let savedPolicyLifecycle: PartnerPolicyLifecycle = 'all';
 
-const POLICY_FILTER_OPTIONS: Array<{ value: PartnerPolicyLifecycle; label: string }> = [
-  { value: 'all', label: 'All Policies' },
-  { value: 'in_force', label: 'Active' },
-  { value: 'expiring', label: 'Expiring Soon' },
-  { value: 'expired', label: 'Lapsed' },
-  { value: 'upcoming', label: 'Upcoming' },
-];
-
 export default function PoliciesScreen() {
   const router = useRouter();
   const isFocused = useIsFocused();
@@ -73,7 +64,6 @@ export default function PoliciesScreen() {
   const [lifecycle, setLifecycle] = useState<PartnerPolicyLifecycle>(savedPolicyLifecycle);
   const [query, setQuery] = useState(savedPolicyQuery);
   const [visibleLimit, setVisibleLimit] = useState(PAGE_SIZE);
-  const [filterMenuOpen, setFilterMenuOpen] = useState(false);
   const [seeAllOpen, setSeeAllOpen] = useState(false);
   const [unreadActivityCount, setUnreadActivityCount] = useState(0);
   const [loadMoreFeedback, setLoadMoreFeedback] = useState(false);
@@ -183,45 +173,18 @@ export default function PoliciesScreen() {
           placeholders={['Search customer...', 'Search vehicle number...', 'Search policy number...']}
           containerStyle={styles.searchField}
         />
-        <PartnerAnchoredDropdown
-          visible={filterMenuOpen}
-          onDismiss={() => setFilterMenuOpen(false)}
-          align="right"
-          menuWidth={170}
-          menu={(
-            <View style={styles.filterMenu}>
-              {POLICY_FILTER_OPTIONS.map((option) => {
-                const active = lifecycle === option.value;
-                return (
-                  <Pressable
-                    key={option.value}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: active }}
-                    onPress={() => {
-                      setFilterMenuOpen(false);
-                      selectSummary(option.value);
-                    }}
-                    style={({ pressed }) => [styles.filterOption, active && styles.filterOptionActive, pressed && styles.pressed]}
-                  >
-                    <Text style={[styles.filterOptionText, active && styles.filterOptionTextActive]}>{option.label}</Text>
-                    {active ? <Ionicons name="checkmark" size={15} color="#3156B8" /> : null}
-                  </Pressable>
-                );
-              })}
-            </View>
-          )}
+        {/* Keep the existing Filter visual without opening any menu.
+            Lifecycle choices remain available through the status chips and See all. */}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Filter policies"
+          accessibilityState={{ disabled: true }}
+          disabled
+          style={styles.filterButton}
         >
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Filter policies"
-            accessibilityState={{ expanded: filterMenuOpen }}
-            onPress={() => setFilterMenuOpen((open) => !open)}
-            style={({ pressed }) => [styles.filterButton, pressed && styles.pressed]}
-          >
-            <Ionicons name="filter-outline" size={18} color="#3156B8" />
-            <Text style={styles.filterText}>Filter</Text>
-          </Pressable>
-        </PartnerAnchoredDropdown>
+          <Ionicons name="filter-outline" size={18} color="#3156B8" />
+          <Text style={styles.filterText}>Filter</Text>
+        </Pressable>
       </View>
 
   );
@@ -322,7 +285,7 @@ export default function PoliciesScreen() {
           accessibilityRole="button"
           accessibilityLabel="See all policy status filters"
           accessibilityState={{ expanded: seeAllOpen }}
-          onPress={() => { setFilterMenuOpen(false); setSeeAllOpen(true); }}
+          onPress={() => setSeeAllOpen(true)}
           style={({ pressed }) => [styles.summarySeeAll, seeAllOpen && styles.summarySeeAllActive, pressed && styles.summaryChipPressed]}
         >
           <Ionicons name="list" size={17} color="#0860C8" />
@@ -779,29 +742,6 @@ const styles = StyleSheet.create({
     borderLeftColor: '#D9DFEA',
   },
   filterText: { color: '#3156B8', ...partnerTheme.typography.caption, fontWeight: Platform.OS === 'ios' ? '400' : '700' },
-  filterMenu: {
-    overflow: 'hidden',
-    borderRadius: 12,
-    paddingVertical: 4,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#DDE6F1',
-    shadowColor: '#102449',
-    shadowOpacity: 0.14,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 5 },
-    elevation: 8,
-  },
-  filterOption: {
-    minHeight: 38,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 12,
-  },
-  filterOptionActive: { backgroundColor: '#F0F5FF' },
-  filterOptionText: { color: '#506079', fontSize: 10, lineHeight: 13, fontWeight: Platform.OS === 'ios' ? '400' : '600' },
-  filterOptionTextActive: { color: '#3156B8', fontWeight: Platform.OS === 'ios' ? '400' : '800' },
   summaryRow: { flexDirection: 'row', alignItems: 'center', marginHorizontal: 12, marginTop: 9, gap: 7 },
   summaryScroll: { flex: 1, minWidth: 0 },
   summaryChips: { alignItems: 'center', gap: 7, paddingVertical: 3, paddingRight: 3 },
