@@ -88,7 +88,9 @@ class TargetRestoreSafety(unittest.TestCase):
                  patch("execute_managed_sql_restore.query_target",
                        return_value=fake_target()), \
                  patch("execute_managed_sql_restore.subprocess.run",
-                       side_effect=invoke):
+                       side_effect=invoke), \
+                 patch("execute_managed_sql_restore.isolated_ssl_root_cert") as ca:
+                ca.return_value.__enter__.return_value = "/tmp/synthetic-isolated-ca.crt"
                 run_restore(folder, self.url)
             self.assertEqual(len(calls), 2)
             first = " ".join(calls[0][0])
@@ -105,6 +107,14 @@ class TargetRestoreSafety(unittest.TestCase):
             self.assertNotIn(SOURCE_REF, first + second)
             self.assertEqual(calls[1][1]["env"]["PGHOST"], f"db.{TARGET_REF}.supabase.co")
             self.assertEqual(calls[1][1]["env"]["PGSSLMODE"], "verify-full")
+            self.assertEqual(
+                calls[1][1]["env"]["PGSSLROOTCERT"],
+                "/etc/ssl/insureit-isolated-supabase-ca.crt"
+            )
+            self.assertIn("source=/tmp/synthetic-isolated-ca.crt", second)
+            self.assertIn("target=/etc/ssl/insureit-isolated-supabase-ca.crt,readonly", second)
+            self.assertNotIn("sslmode=require", first + second)
+            self.assertNotIn("/etc/ssl/certs/ca-certificates.crt", first + second)
             self.assertTrue((Path(folder) / "private-security-guard.sql").is_file())
             self.assertIn("REVOKE EXECUTE ON ALL FUNCTIONS", SECURITY_GUARD)
             self.assertIn("definer_exposure <> 0", SECURITY_GUARD)
@@ -117,7 +127,9 @@ class TargetRestoreSafety(unittest.TestCase):
                  patch("execute_managed_sql_restore.query_target",
                        return_value=fake_target()), \
                  patch("execute_managed_sql_restore.subprocess.run",
-                       side_effect=invoke):
+                       side_effect=invoke), \
+                 patch("execute_managed_sql_restore.isolated_ssl_root_cert") as ca:
+                ca.return_value.__enter__.return_value = "/tmp/synthetic-isolated-ca.crt"
                 with self.assertRaises(RuntimeError):
                     run_restore(folder, self.url)
             self.assertEqual(len(calls), 2)
