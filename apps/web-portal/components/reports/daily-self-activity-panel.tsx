@@ -96,8 +96,6 @@ export function DailySelfActivityPanel({data,linkFor,reportMode="self"}:Props) {
                       <th className="px-3 py-3">Customer</th>
                       <th className="px-3 py-3">Customer Type</th>
                       <th className="px-3 py-3">Mobile</th>
-                      <th className="px-3 py-3">Fleet Size</th>
-                      <th className="px-3 py-3">Total Policies</th>
                     </>
                   ) : (
                     <>
