@@ -5,7 +5,7 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
 import { PartnerCaseBottomNavigation } from '@/components/partner-case-bottom-navigation';
-import { getLifeHealthCase, saveLifeHealthCaseEdit, appendNativeLifeHealthRemark, lifeHealthIssuanceAction, operationsCaseUrl, type LifeHealthIssueForm, type LifeHealthCaseDetail, type LifeHealthDocument, type LifeHealthActivity } from '@/lib/life-health-cases';
+import { getLifeHealthCase, saveLifeHealthCaseEdit, appendLifeHealthCaseRemark, lifeHealthIssuanceAction, operationsCaseUrl, type LifeHealthIssueForm, type LifeHealthCaseDetail, type LifeHealthDocument, type LifeHealthActivity } from '@/lib/life-health-cases';
 import { canPartnerAccessCaseRegister } from '@/lib/partner-permissions';
 import { usePartnerSession } from '@/providers/partner-session-provider';
 
@@ -156,7 +156,7 @@ export default function LifeHealthCaseDetailScreen(){
    if(!record||!remarkDraft.trim()||remarkBusy)return;
    setRemarkBusy(true);setRemarkError('');
    try{
-     await appendNativeLifeHealthRemark(record.id,remarkDraft.trim());
+     await appendLifeHealthCaseRemark(record.id,remarkDraft.trim());
      setRemarkDraft('');setRemarkOpen(false);await load();
    }catch(e){setRemarkError(e instanceof Error?e.message:'Could not save remark.');}
    finally{setRemarkBusy(false);}
