@@ -279,12 +279,10 @@ export default function PoliciesScreen() {
                 accessibilityRole="button"
                 accessibilityLabel={action.accessibilityLabel}
                 onPress={() => router.push(action.route)}
-                style={({ pressed }) => [styles.quickAction, pressed && styles.quickActionPressed]}
+                style={({ pressed }) => [styles.quickAction, { backgroundColor: action.color }, pressed && styles.quickActionPressed]}
               >
-                <View style={[styles.quickActionIconBox, { backgroundColor: action.color }]}>
-                  <Ionicons name={action.icon} size={24} color="#FFFFFF" />
-                </View>
-                <Text numberOfLines={2} style={styles.quickActionLabel}>{action.label}</Text>
+                <Ionicons name={action.icon} size={24} color="#FFFFFF" />
+                <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={styles.quickActionLabel}>{action.label}</Text>
               </Pressable>
             ))}
           </View>
@@ -753,16 +751,17 @@ const styles = StyleSheet.create({
   summarySeeAllOptionCount: { fontSize: 10, fontWeight: '700', color: '#526786' },
   quickActionsSection: { marginHorizontal: 12, marginTop: 13, marginBottom: 2 },
   quickActionsHeading: { marginHorizontal: 3, marginBottom: 8, color: '#17365D', fontSize: 12, lineHeight: 16, fontWeight: '800' },
-  quickActionsRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 7 },
-  quickAction: { flex: 1, minWidth: 0, alignItems: 'center', borderRadius: 12, paddingVertical: 2 },
-  quickActionPressed: { backgroundColor: '#EFF5FD', opacity: 0.84 },
-  quickActionIconBox: {
-    width: '100%', height: 52, alignItems: 'center', justifyContent: 'center',
-    borderRadius: 12,
+  quickActionsRow: { flexDirection: 'row', alignItems: 'stretch', gap: 7 },
+  quickAction: {
+    flex: 1, minWidth: 0, height: 71, borderRadius: 12,
+    alignItems: 'center', justifyContent: 'center',
+    paddingHorizontal: 3, paddingVertical: 8, gap: 8,
   },
+  quickActionPressed: { opacity: 0.82 },
   quickActionLabel: {
-    marginTop: 6, color: '#17365D', fontSize: 10, lineHeight: 13,
-    fontWeight: '700', textAlign: 'center',
+    color: '#FFFFFF', fontSize: 9, lineHeight: 12,
+    fontWeight: '800', textAlign: 'center', width: '100%',
+    includeFontPadding: false,
   },
   feedback: { marginHorizontal: 12, marginTop: 7 },
   tabsRow: {
