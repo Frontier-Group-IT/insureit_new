@@ -9,7 +9,7 @@ import { PartnerButton } from '@/components/ui/partner-button';
 import { PartnerConfirmDialog } from '@/components/ui/partner-confirm-dialog';
 import { PartnerProfileAvatar } from '@/components/ui/partner-profile-avatar';
 import { PartnerProfileMenuIcon, type PartnerProfileMenuIconKind } from '@/components/ui/partner-profile-menu-icon';
-import { canPartnerAccess, canPartnerSearch } from '@/lib/partner-permissions';
+import { canPartnerAccess, canPartnerAccessCaseRegister, canPartnerSearch } from '@/lib/partner-permissions';
 import { partnerTheme } from '@/lib/theme';
 import { signedInPersonName, signedInPersonRole } from '@/lib/signed-in-person';
 import { usePartnerSession } from '@/providers/partner-session-provider';
@@ -124,6 +124,7 @@ export default function MoreScreen() {
       <MenuSection title="WORK">
         {canPartnerSearch(context) ? <MenuRow iconKind="search" title="Search all business" helper="Customers, policies and claims" onPress={() => router.push('/search')} /> : null}
         {canPartnerAccess(context, 'view_policy_intakes') ? <MenuRow iconKind="policy-intake" title="Policy Intake" onPress={() => router.push('/policy-intakes')} /> : null}
+        {canPartnerAccessCaseRegister(context) ? <MenuRow iconKind="policy-intake" title="Case Register" helper="Life & Health cases" onPress={() => router.push('/life-health-cases')} /> : null}
         {canPartnerAccess(context, 'view_policies') ? <MenuRow iconKind="renewals" title="Renewals" onPress={() => router.push('/renewals')} /> : null}
         {canPartnerAccess(context, 'view_customers') ? <MenuRow iconKind="customers" title="Customers" onPress={() => router.push('/customers')} last /> : null}
       </MenuSection>
