@@ -14,7 +14,7 @@ assert.doesNotMatch(app,/Open Issuance Form|Edit Case Details|beginEdit|setEditi
 for(const key of ['sourcingDate','customerName','customerPhone','customerAddress','insurerId','productName','proposalNumber','premiumPayingTerm','policyDuration','paymentFrequency','premiumAmount','paymentMode']){
   assert.ok(app.includes('inline("'+key+'"'),'Inline edit missing '+key);
 }
-assert.match(app,/record.status_group==='issued'&&\['customerName','customerPhone','customerAddress'\]/);
+assert.match(app,/record\?\.status_group==='issued'&&\['customerName','customerPhone','customerAddress'\]/);
 assert.match(app,/record.status_group==='pending'\?<Section number="05"/);
 for(const key of ['policyNumber','issuanceDate','startDate','endDate','pptEndDate','nextInstallmentDate','finalPremium','sumInsured']){
   assert.ok(app.includes('issueField("'+key+'"'),'Missing issuance field '+key);
