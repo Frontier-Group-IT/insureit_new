@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Linking, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
 import { PartnerInsurerLogo } from '@/components/ui/partner-insurer-logo';
-import { listLifeHealthCases, operationsIssuedPolicyUrl, type LifeHealthCaseSummary, type LifeHealthStatus, type CaseCounts } from '@/lib/life-health-cases';
+import { listLifeHealthCases, type LifeHealthCaseSummary, type LifeHealthStatus, type CaseCounts } from '@/lib/life-health-cases';
 import { canPartnerAccessCaseRegister } from '@/lib/partner-permissions';
 import { usePartnerSession } from '@/providers/partner-session-provider';
 
@@ -124,12 +124,12 @@ export default function LifeHealthCaseRegisterScreen() {
            </View>
            <View style={styles.modalActions}>
              <Pressable accessibilityRole="button" onPress={()=>setIssuedCase(null)} style={styles.modalClose}><Text style={styles.modalCloseText}>Close</Text></Pressable>
-             <Pressable accessibilityRole="button" accessibilityLabel="View issued case details in Partner App"
+             <Pressable accessibilityRole="button" accessibilityLabel="View issued policy details in Partner App"
                onPress={()=>{
-                 if(!issuedCase)return;
-                 const caseId=issuedCase.id;
+                 if(!issuedCase?.final_policy_id)return;
+                 const policyId=issuedCase.final_policy_id;
                  setIssuedCase(null);
-                 router.push(`/life-health-cases/${caseId}` as never);
+                 router.push(`/policy/${policyId}` as never);
                }} style={styles.modalView}><Text style={styles.modalViewText}>View Policy</Text></Pressable>
            </View>
          </View>
