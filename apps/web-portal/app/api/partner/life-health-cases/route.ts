@@ -172,7 +172,7 @@ export async function POST(request: Request) {
     return respond({ok:false,error:"This case is outside your authorized scope."},403);
    }
   }else{
-   const permission=await getEffectivePermission(profile.id,profile.role,"view_policies");
+   const permission=await getEffectivePermission(profile.id,profile.role as Parameters<typeof getEffectivePermission>[1],"view_policies");
    const creator=await hasEffectiveCapability(profile,"create_policies","edit");
    if(issued ? !["edit","approve"].includes(permission.access) : !["edit","approve"].includes(permission.access)&&!creator)
     return respond({ok:false,error:"Editing permission is required."},403);
