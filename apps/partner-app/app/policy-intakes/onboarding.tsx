@@ -989,8 +989,7 @@ export default function NativePolicyOnboarding(){
           <View style={[styles.feedbackIcon,
             dialog==='discard'?styles.feedbackIconWarning:
             styles.feedbackIconError]}>
-            <Ionicons name={dialog==='discard'?'alert-circle-outline':
-              'alert-circle-outline'}
+            <Ionicons name="alert-circle-outline"
               size={30} color={dialog==='discard'?'#DF920C':'#D33535'}/>
           </View>
           <Text style={styles.feedbackTitle}>
