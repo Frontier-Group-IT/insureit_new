@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { SelfActivity } from "@/lib/reports/daily-self-activity";
+import { DailyActivityHistoryRows } from "@/components/reports/daily-activity-history-rows";
 import type { DailyActivityQuery } from "@/lib/reports/daily-activity";
 
 type Data = {
@@ -9,8 +10,6 @@ type Data = {
 };
 type Props = {data:Data;linkFor:(updates:Partial<DailyActivityQuery>)=>string; reportMode?:"self"|"employee"};
 
-const dateFormat=new Intl.DateTimeFormat("en-IN",{timeZone:"Asia/Kolkata",day:"2-digit",month:"short",year:"numeric"});
-const timeFormat=new Intl.DateTimeFormat("en-IN",{timeZone:"Asia/Kolkata",hour:"2-digit",minute:"2-digit",hour12:true});
 
 export function DailySelfActivityPanel({data,linkFor,reportMode="self"}:Props) {
   // Keep each activity family together instead of mixing Customer, Vehicle,
@@ -84,19 +83,7 @@ export function DailySelfActivityPanel({data,linkFor,reportMode="self"}:Props) {
                 <th className="px-3 py-3">Date</th><th className="px-3 py-3">Time</th>
                 <th className="px-3 py-3">Status</th><th className="px-3 py-3">Source</th></tr>
               </thead>
-              <tbody className="divide-y divide-[#edf1f6]">
-                {data.rows.map(row=>(
-                  <tr key={row.id} className="text-[11px] text-[#30435d] hover:bg-[#f9fbff]">
-                    <td className="px-4 py-3 font-semibold">{data.selfName}</td>
-                    <td className="px-3 py-3 font-semibold">{row.activity}</td>
-                    <td className="max-w-[260px] break-all px-3 py-3">{row.reference}</td>
-                    <td className="whitespace-nowrap px-3 py-3">{dateFormat.format(new Date(row.occurredAt))}</td>
-                    <td className="whitespace-nowrap px-3 py-3">{timeFormat.format(new Date(row.occurredAt))}</td>
-                    <td className="px-3 py-3"><span className="rounded-md bg-[#edf3fa] px-2 py-1 text-[9px] font-bold text-[#35587e]">{row.status}</span></td>
-                    <td className="whitespace-nowrap px-3 py-3 text-[10px] text-[#718096]">{row.source}</td>
-                  </tr>
-                ))}
-              </tbody>
+              <DailyActivityHistoryRows rows={data.rows} employeeName={data.selfName} />
             </table>
           </div>
           <div className="flex items-center justify-between border-t border-[#e4e9f1] px-4 py-3 text-[10px] text-[#66758b]">
