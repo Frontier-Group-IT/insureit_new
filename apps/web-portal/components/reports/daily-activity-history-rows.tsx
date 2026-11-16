@@ -29,9 +29,10 @@ export function DailyActivityHistoryRows({rows,isCustomerActivity=false}:Props) 
         {rows.map(row=>(
           <tr key={row.id} role={row.href?"button":undefined} tabIndex={row.href?0:undefined}
             aria-label={row.href?`Open record: ${row.activity}, ${row.reference}`:undefined}
-            onClick={()=>openRecord(row)}
-            onKeyDown={event=>onRowKeyDown(event,row)}
-            className={`${row.href?"cursor-pointer hover:bg-[#edf5ff] focus-visible:bg-[#edf5ff] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#315b9a]":"cursor-default"} text-[11px] text-[#30435d] transition-colors`}>
+            onClick={row.href?()=>openRecord(row):undefined}
+            onKeyDown={row.href?event=>onRowKeyDown(event,row):undefined}
+            title={row.href?"Open record":undefined}
+            className={`${row.href?"cursor-pointer [&_td]:cursor-pointer hover:bg-[#edf5ff] focus-visible:bg-[#edf5ff] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#315b9a]":"cursor-default"} text-[11px] text-[#30435d] transition-colors`}>
             <td className="px-4 py-3 font-semibold">
               <span className="block">{row.activity}</span>
               {row.detail ? <span className="mt-1 block font-normal text-[#506483]">{row.detail}</span> : null}
