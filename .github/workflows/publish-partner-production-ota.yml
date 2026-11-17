@@ -105,6 +105,7 @@ jobs:
               || file === 'apps/web-portal/app/api/partner/policy-intakes/native-onboarding/route.ts'
               || file === 'apps/partner-app/scripts/verify-sticky-safe-area.mjs'
               || file === 'apps/partner-app/scripts/verify-visual-system-completion.mjs'
+              || file === 'apps/partner-app/scripts/verify-activity-unread-search.mjs'
               || file === 'apps/partner-app/scripts/verify-policy-detail-navy-summary.mjs'
               || file === 'apps/partner-app/scripts/verify-website-permission-parity.mjs'
               || file === 'apps/partner-app/providers/partner-session-provider.tsx'

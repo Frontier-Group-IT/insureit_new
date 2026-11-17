@@ -95,32 +95,35 @@ expect(activity.includes("onPress={() => setActivityFilter(key)}") &&
   activity.includes("activityFilter === 'unread' && isRead") &&
   activity.includes("activityFilter === 'read' && !isRead"), "Manual Unread and Read filters remain functional");
 const cardStart = activity.indexOf('<View style={styles.itemBody}>');
-const rowOneStart = activity.indexOf('<View style={styles.itemRow}>', cardStart);
-const rowTwoStart = activity.indexOf('<View style={styles.itemRow}>', rowOneStart + 1);
-const referencePos = activity.indexOf('{item.title}</Text>', rowOneStart);
-const badgePos = activity.indexOf('<View style={styles.kindPill}>', rowOneStart);
-const customerPos = activity.indexOf('{item.subtitle}</Text>', rowTwoStart);
-const datePos = activity.indexOf('<View style={styles.dateAndUnread}>', rowTwoStart);
-expect(cardStart >= 0 && rowOneStart > cardStart && rowTwoStart > rowOneStart &&
-  referencePos > rowOneStart && referencePos < badgePos && badgePos < rowTwoStart,
-  "Row one places the reference at left and the category badge at right");
-expect(customerPos > rowTwoStart && customerPos < datePos &&
-  datePos > rowTwoStart, "Row two places customer at left and timestamp/unread dot at right");
-const itemRowStyle = activity.split("  itemRow: {")[1]?.split("  },")[0] ?? "";
-expect(itemRowStyle.includes("flexDirection: 'row'") &&
-  itemRowStyle.includes("justifyContent: 'space-between'") &&
-  itemRowStyle.includes("alignItems: 'center'"), "Activity uses two horizontally balanced, vertically aligned compact rows");
-const kindPillStyle = activity.split("  kindPill: {")[1]?.split("  },")[0] ?? "";
-expect(kindPillStyle.includes('flexShrink: 0') && !kindPillStyle.includes("alignSelf: 'flex-start'"),
-  "Badge stays at right without shrinking or forcing left alignment");
-expect(activity.includes("  itemBody: { flex: 1, minWidth: 0, gap: 3 }") &&
-  activity.includes("    minHeight: 54,") && activity.includes("    paddingVertical: 4,"),
-  "Activity card removes excess blank height and retains two compact rows");
-expect(activity.includes("  title: {\\n    flexShrink: 1,") ||
-  (activity.includes("  title: {") && activity.includes("  subtitle: {") && activity.includes("    minWidth: 0,")),
-  "Long references and customer names shrink without displacing right-side metadata");
+const contentStart = activity.indexOf('<View style={styles.itemContent}>', cardStart);
+const rowStart = activity.indexOf('<View style={styles.itemRow}>', contentStart);
+const titlePos = activity.indexOf('{item.title}</Text>', rowStart);
+const badgePos = activity.indexOf('<View style={styles.kindPill}>', rowStart);
+const subtitlePos = activity.indexOf('{item.subtitle}</Text>', badgePos);
+const dateColumnPos = activity.indexOf('<View style={styles.dateColumn}>', subtitlePos);
+const timeRowPos = activity.indexOf('<View style={styles.timeRow}>', dateColumnPos);
+expect(cardStart >= 0 && contentStart > cardStart && rowStart > contentStart &&
+  titlePos > rowStart && badgePos > titlePos && subtitlePos > badgePos &&
+  dateColumnPos > subtitlePos && timeRowPos > dateColumnPos,
+  "Activity displays title/category and description at left, date and time at right");
+expect(activity.includes('formatActivityDate(item.event_at)') &&
+  activity.includes('formatActivityTime(item.event_at)') &&
+  activity.includes('styles.unreadDot'),
+  "Every activity date/time uses its original event timestamp and unread badge");
+const cardStyle = activity.split("  itemCard: {")[1]?.split("  },")[0] ?? "";
+expect(cardStyle.includes("minHeight: 54") && cardStyle.includes("paddingVertical: 4"),
+  "Activity cards remain compact without excess vertical space");
+const itemBodyStyle = activity.split("  itemBody: {")[1]?.split("},")[0] ?? "";
+const dateColumnStyle = activity.split("  dateColumn: {")[1]?.split("},")[0] ?? "";
+expect(itemBodyStyle.includes("flexDirection: 'row'") &&
+  dateColumnStyle.includes("alignItems: 'flex-end'") &&
+  dateColumnStyle.includes("maxWidth: 90"),
+  "Date/time stays in a bounded right-aligned column on narrow phones");
+expect(activity.includes('  title: {') && activity.includes('  subtitle: {') &&
+  activity.includes('    minWidth: 0,'),
+  "Long references and subtitles can shrink without displacing the date column");
 expect(activity.includes("styles.itemCardUnread") && activity.includes("styles.unreadDot") &&
-  activity.includes("styles.titleRead"), "Unread highlight, dot and muted read state remain intact");
+  activity.includes("styles.titleRead"), "Unread highlight, dot and read styling remain intact");
 
 // Activity-only layout refresh: title, iOS/Android safe-area color, compact width and reference overflow.
 expect(activity.includes('<PartnerScreen title="Activity" hideTopBar fullWidth statusBarColor="#0879DF">'), "Activity title, full-width screen and blue status-bar opt-in are configured");
@@ -129,8 +132,8 @@ expect(screen.includes('statusBarColor?: string;') && screen.includes('statusBar
 expect(screen.includes("backgroundColor={statusBarColor ?? (navyStatusBar ? '#071E49' : undefined)}") && screen.includes("style={statusBarColor || navyStatusBar"), "Status bar uses matching color and light system indicators");
 expect(activity.includes('  body: {') && activity.includes('    paddingHorizontal: 8,') && activity.includes("  hero: {") && !activity.includes('marginHorizontal: -partnerTheme.spacing.lg'), "Activity cards use compact 8px margins and a full-width header");
 expect(activity.includes('numberOfLines={1} ellipsizeMode="middle"') && activity.includes('{item.title}</Text>'), "Long policy/claim references truncate in the middle instead of clipping");
-expect(activity.includes("styles.itemRow") && activity.includes("styles.kindPill") && activity.includes("styles.dateAndUnread"), "Compact rows retain category and date metadata on the right");
-expect(activity.includes('styles.dateAndUnread') && activity.includes('styles.unreadDot') && activity.includes('styles.itemCardUnread'), "Date and unread styles are preserved");
+expect(activity.includes("styles.itemRow") && activity.includes("styles.kindPill") && activity.includes("styles.dateColumn"), "Compact cards retain category metadata and a right-side date column");
+expect(activity.includes('styles.timeRow') && activity.includes('styles.unreadDot') && activity.includes('styles.itemCardUnread'), "Time and unread indicators are preserved");
 
 expect(activity.includes('<Text style={styles.heroTitle}>Activity</Text>'), "Activity retains one clear main heading");
 expect(!activity.includes('<Text style={styles.heroEyebrow}>ACTIVITY</Text>'), "Redundant small ACTIVITY eyebrow is removed");
