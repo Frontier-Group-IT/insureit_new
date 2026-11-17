@@ -159,7 +159,7 @@ const operationsNotePosition = detailScreen.indexOf('<Text style={reviewStyles.o
 const requestPosition = detailScreen.indexOf('accessibilityLabel="Request information from submitter"');
 const rejectPosition = detailScreen.indexOf('accessibilityLabel="Reject policy intake"');
 const reviewNotesPosition = detailScreen.indexOf("{row.ocr_warnings?.length ? (");
-const sheetEndPosition = detailScreen.indexOf('      <Modal', reviewNotesPosition);
+const sheetEndPosition = detailScreen.indexOf('      <PartnerConfirmDialog', reviewNotesPosition);
 if (!(statusPosition >= 0 && operationsNotePosition > statusPosition &&
       requestPosition > operationsNotePosition && rejectPosition > requestPosition &&
       reviewNotesPosition > rejectPosition && sheetEndPosition > reviewNotesPosition)) {
