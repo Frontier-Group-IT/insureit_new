@@ -14,11 +14,26 @@ const MAX_ROWS_PER_SOURCE = 12000;
 export async function readDailyHistoryPages<T>(
   source:ActivitySource,
   load:(from:number,to:number)=>PromiseLike<PageResult<T>>,
+  options?: { retryFailedPage?: boolean },
 ):Promise<SourceRead<T>> {
   const rows:T[] = [];
   try {
     for(let offset=0;offset<MAX_ROWS_PER_SOURCE;offset+=BATCH) {
-      const {data,error} = await load(offset,offset+BATCH-1);
+      let response:PageResult<T>;
+      try {
+        response = await load(offset,offset+BATCH-1);
+        if(response.error && options?.retryFailedPage) {
+          // One bounded retry for transient read failures. Do not skip a failed
+          // page or return misleading complete totals.
+          response = await load(offset,offset+BATCH-1);
+        }
+      } catch {
+        if(!options?.retryFailedPage) throw new Error("history_page_request_failed");
+        // A temporary transport failure can occur even when the database query
+        // succeeds. Retry the same offset only, never advance past missing data.
+        response = await load(offset,offset+BATCH-1);
+      }
+      const {data,error} = response;
       if(error) {
         console.error("[daily-report] history source unavailable",{source,code:error.code||"request_error"});
         return {rows,partial:true,failed:true};
