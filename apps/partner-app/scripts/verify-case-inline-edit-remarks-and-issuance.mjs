@@ -49,7 +49,13 @@ assert.ok(section3.indexOf('inline("proposalNumber"')<section3.indexOf('inline("
 assert.ok(section3.includes('inline("proposalNumber","Case / proposal number",record.proposal_number,true)'), 'Case number uses half width');
 const premiumSection=app.slice(app.indexOf('<Section number="04" title="Premium & payment">'),app.indexOf('<Section number="05" title="Mark Policy Issued" highlight>'));
 assert.ok(premiumSection.includes('</Section>') && premiumSection.includes('styles.remarkSection'), 'Separate Remarks card follows premium section');
-assert.ok(app.includes("(record.status_group==='pending'||record.status_group==='rejected')?<View style={styles.remarkSection}>"), 'Pending and rejected cases can open Add Remark');
+assert.ok(app.includes("(record.status_group==='pending'||record.status_group==='rejected')?<View style={styles.remarkSection}>"), 'Remarks section remains visible for pending and rejected cases');
+assert.ok(app.includes("disabled={record.status_group==='rejected'}"), 'Rejected cases cannot activate Add Remark');
+assert.ok(app.includes("accessibilityState={{disabled:record.status_group==='rejected'}}"), 'Rejected Add Remark is accessibility-disabled');
+assert.ok(app.includes("if(record.status_group!=='pending')return;setRemarkError('');setRemarkOpen(true);"), 'Remark popup opens only on pending cases');
+assert.ok(app.includes("if(!record||record.status_group!=='pending'||remarkSaving||!remarkDraft.trim())return;"), 'Remark submit guard prevents rejected writes from the app');
+assert.ok(app.includes("remarkHeaderActionDisabled") && app.includes("remarkHeaderTextDisabled"), 'Rejected Add Remark appears visibly disabled');
+assert.ok(app.includes("record.status_group==='rejected'?'lock-closed-outline':'add-circle-outline'"), 'Rejected Add Remark shows lock status');
 assert.ok(app.includes('record.remarks?.trim()'), 'Remarks history remains visible in the record');
 assert.ok(app.includes("const [expandedCaseTab,setExpandedCaseTab]=useState<'activity'|'remarks'|null>(null)"), 'Both tabs start collapsed');
 assert.ok(app.includes('setExpandedCaseTab(previous=>previous===tab?null:tab)'), 'Tapping active tab collapses and switching opens only one');
