@@ -68,6 +68,14 @@ requireText(policyDetail, 'onPress={() => setShowPremiumDetails((value) => !valu
 requireText(policyDetail, 'onPress={() => setShowCommercialDetails((value) => !value)}', 'Sales ownership is still collapsible');
 requireText(policyDetail, 'quickSectionHeading: { marginLeft: -6, marginRight: 3, marginBottom: 8', 'Quick Actions heading moves slightly left without moving action icons');
 requireText(policyDetail, 'externalSectionHeading: { marginLeft: -6, paddingLeft: 0, paddingRight: 2 }', 'Customer & Vehicle heading moves slightly left without moving its card');
+requireText(policyDetail, 'contentWrap: { marginTop: 0, gap: 6, paddingBottom: 15 }', 'Inter-section vertical gap is compact');
+requireText(policyDetail, 'paddingHorizontal: 14, paddingTop: 10, paddingBottom: 9', 'Policy summary vertical padding is compact');
+requireText(policyDetail, 'quickSection: { marginHorizontal: 12, paddingVertical: 4 }', 'Quick Actions section vertical padding is compact');
+requireText(policyDetail, 'quickSectionHeading: { marginLeft: -6, marginRight: 3, marginBottom: 5', 'Quick Actions heading keeps the left alignment and reduces the gap below');
+requireText(policyDetail, "minHeight: 68, alignItems: 'center', justifyContent: 'center'", 'Quick Action rows use compact 68px minimum with intact tap surface');
+requireText(policyDetail, 'cardHeaderCompact: { minHeight: 30 }', 'Customer & Vehicle heading becomes 30px tall');
+requireText(policyDetail, '!iconKind && !actionLabel ? styles.cardHeaderCompact : null', 'Only plain section headings compact; Policy Overview header retains its original layout');
+
 
 const policyDetailIcon = read('components/ui/partner-policy-detail-icon.tsx');
 const claimDetail = read('app/claim/[id].tsx');
