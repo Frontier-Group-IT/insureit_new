@@ -276,6 +276,9 @@ const handoff = text("app/policy-intakes/handoff-actions.ts");
 const policyNew = text("app/policies/new/page.tsx");
 assert(handoff.includes("export async function prepareVerifiedN8nIntakeHandoff("),
   "Keep an explicit verified n8n handoff with a server-owned reviewed fingerprint");
+assert(handoff.includes('await requireCapability("manage_system","approve")')
+  && handoff.includes("await requirePolicyCreator()"),
+  "The directly callable n8n handoff server action must recheck Development and Policy Creator rights");
 assert(handoff.includes("const parsed=await previewSemiAutoN8nExtraction(id)"),
   "The handoff must re-extract the current private PDF server-side, not accept browser OCR fields");
 assert(handoff.includes("parsed.preview.fingerprint!==expectedFingerprint"),
