@@ -287,14 +287,33 @@ export async function loadSelfActivityHistory(
       table:"claims",recordId:verification.claim_id,
     });
   }
+  // A status transition may follow a verified document on the same claim.
+  // Only associate an unambiguous successful verification made by this viewer
+  // within the previous minute; never infer document names from status text.
+  const verificationByClaim=new Map<string,ClaimVerification[]>();
+  for(const verification of claimVerifications.rows) {
+    if(!verification.is_valid) continue;
+    const group=verificationByClaim.get(verification.claim_id)??[];
+    group.push(verification);
+    verificationByClaim.set(verification.claim_id,group);
+  }
+  for(const group of verificationByClaim.values()) group.sort((a,b)=>b.created_at.localeCompare(a.created_at));
   // Same-status history often describes the same verification/stage save.
   for(const event of claimStatuses.rows) {
     if(!event.from_status||!event.to_status||event.from_status===event.to_status) continue;
+    const time=Date.parse(event.created_at);
+    const recentVerified=(verificationByClaim.get(event.claim_id)??[]).filter(v=>{
+      const delta=time-Date.parse(v.created_at);
+      return delta>=0 && delta<=60_000;
+    });
+    const matchingDocument=event.to_status==="Initial Documents Submitted" && recentVerified.length===1
+      ? recentVerified[0].document_type.trim().slice(0,70) : "";
     all.push({
-      id:`claim-status:${event.id}`,category:"Claims",activity:"Claim Status Updated",
+      id:`claim-status:${event.id}`,category:"Claims",
+      activity:matchingDocument?`${matchingDocument} Verified`:"Claim Status Updated",
       reference:event.claim_id,occurredAt:event.created_at,status:"Updated",source:"Record history",
       table:"claims",recordId:event.claim_id,
-      detail:`Status: ${event.from_status.slice(0,80)} → ${event.to_status.slice(0,80)}`,
+      detail:matchingDocument?undefined:`Status: ${event.from_status.slice(0,80)} → ${event.to_status.slice(0,80)}`,
     });
   }
   all.sort((a,b)=>b.occurredAt.localeCompare(a.occurredAt)||a.id.localeCompare(b.id));
@@ -375,8 +394,12 @@ export async function loadSelfActivityHistory(
           row.reference=claim.claim_no||row.reference;
           row.claimControlNo=claim.claim_no||undefined;
           row.claimInsurerNo=claim.insurer_claim_no||undefined;
-          row.claimCustomerName=claim.customers?.[0]?.contact_name||claim.customers?.[0]?.company_name||undefined;
-          row.claimVehicleNo=claim.vehicles?.[0]?.vehicle_no||undefined;
+          // PostgREST many-to-one embeds are objects, not arrays. Normalize both
+          // shapes defensively for existing claim relations.
+          const customer=Array.isArray(claim.customers)?claim.customers[0]:claim.customers;
+          const vehicle=Array.isArray(claim.vehicles)?claim.vehicles[0]:claim.vehicles;
+          row.claimCustomerName=customer?.contact_name||customer?.company_name||undefined;
+          row.claimVehicleNo=vehicle?.vehicle_no||undefined;
         }
       }
     }
