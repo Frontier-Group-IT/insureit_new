@@ -65,18 +65,22 @@ export async function loadAiQueueDisplay(ids: readonly string[]): Promise<Map<st
   const result = new Map<string,AiQueueDisplay>();
   if (!aiQueueEnabled() || !ids.length) return result;
   const admin = createSupabaseAdminClient();
-  const {data,error} = await admin.from("policy_intake_ai_processing_queue")
-    .select("intake_id,document_id,state,exception_codes,processed_at")
-    .in("intake_id",ids.slice(0,100));
-  if (error) return result; // Migration not yet applied: remain visibly unprocessed.
-  for (const r of data??[]) {
-    if (!UUID.test(r.intake_id)) continue;
-    result.set(r.intake_id,{
-      state:r.state as AiQueueState,
-      exception_codes:safeCodes(Array.isArray(r.exception_codes)?r.exception_codes:[]),
-      processed_at:r.processed_at??null,
-      document_id:r.document_id,
-    });
+  // Fetch every authorized open Intake in bounded batches, not just the
+  // first 75/100 visible rows. Partial reads must not invent eligibility.
+  for(let offset=0;offset<ids.length;offset+=100){
+    const {data,error} = await admin.from("policy_intake_ai_processing_queue")
+      .select("intake_id,document_id,state,exception_codes,processed_at")
+      .in("intake_id",ids.slice(offset,offset+100));
+    if (error) return new Map<string,AiQueueDisplay>(); // Migration not applied.
+    for (const r of data??[]) {
+      if (!UUID.test(r.intake_id)) continue;
+      result.set(r.intake_id,{
+        state:r.state as AiQueueState,
+        exception_codes:safeCodes(Array.isArray(r.exception_codes)?r.exception_codes:[]),
+        processed_at:r.processed_at??null,
+        document_id:r.document_id,
+      });
+    }
   }
   return result;
 }
