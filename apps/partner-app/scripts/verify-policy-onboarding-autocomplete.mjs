@@ -17,7 +17,7 @@ assert.match(screen,/f\.key==='insurerId'\?openInsurerPicker\(options,true\)/,'L
 assert.match(screen,/picker\?\.key==='insurerId'&&normalizedPickerQuery/,'Only insurer choices are filtered');
 assert.match(screen,/item\.label\.toLowerCase\(\)\.includes\(normalizedPickerQuery\)/,'Insurer suggestions match name without case sensitivity');
 assert.match(screen,/accessibilityLabel="Search insurance company" value=\{pickerQuery\} onChangeText=\{setPickerQuery\}/,'Insurer search input updates matches while typing');
-assert.match(screen,/displayedPickerItems\.map\(item=>/,'Insurer selection list uses filtered suggestions');
+assert.match(screen,/picker\?displayedPickerItems\.map\(item=>/,'Insurer selection list uses filtered suggestions only when picker exists');
 assert.match(screen,/picker\.product\?updateProduct\(picker\.key,item\.value\):update\(picker\.key as FieldKey,item\.value\)/,'Insurer choice still saves canonical option ID to correct draft');
 assert.match(screen,/No matching insurance companies\./,'Filtered empty state is provided');
 assert.match(screen,/Search name or intermediary code/,'Existing Lead Source search hint retained');
