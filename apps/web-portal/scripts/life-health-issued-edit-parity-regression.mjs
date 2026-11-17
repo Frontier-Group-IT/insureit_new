@@ -53,7 +53,7 @@ assert.match(issuance,/function addYearsByMode/);
 // The fourth section is now Issued Policy; premium and payment stay editable there.
 assert.ok(!form.includes('title="Premium & payment"'), "Standalone Premium & payment section must be removed");
 assert.ok(form.includes('<Section number="04" title="Issued policy details">'), "Issued policy must be section four");
-assert.ok(form.includes('className="grid gap-3 p-4 md:grid-cols-2"') && form.includes('label="Sum assured / insured"') && form.includes('label="Case premium amount"') && form.includes('label="Payment mode"'), "All amounts and payment mode remain together in the issued policy section");
+assert.ok(form.includes('className="grid gap-2.5 p-3 md:grid-cols-2 xl:grid-cols-4"') && form.includes('label="Sum assured / insured"') && form.includes('label="Case premium amount"') && form.includes('label="Payment mode"'), "All amounts and payment mode remain together in the issued policy section");
 assert.ok(form.includes('useState<"activity"|"remarks">("activity")'), "Activity Status remains selected by default");
 assert.ok(form.includes('useState(false)') && form.includes('const [infoExpanded,setInfoExpanded]'), "Selected activity starts collapsed");
 assert.ok(form.includes('onClick={()=>setInfoExpanded(current=>!current)}'), "Dedicated expand/collapse button must work");

@@ -18,11 +18,11 @@ const columnOrder = ["Next installment date", "Final premium", "Sum assured / in
 let last = -1;
 for (const label of columnOrder) {
   const index = section.indexOf(label);
-  assert.ok(index > last, `${label} must appear in order in the shared two-column section grid.`);
+  assert.ok(index > last, `${label} must appear in order in the shared responsive section grid.`);
   last = index;
 }
 assert.match(source, /function Section\(/, "Use the existing shared responsive Section grid.");
-assert.match(source, /className="grid gap-3 p-4 md:grid-cols-2"/, "Section uses two columns on desktop and one on mobile.");
+assert.match(source, /className="grid gap-2\.5 p-3 md:grid-cols-2 xl:grid-cols-4"/, "Shared Section keeps a continuous grid with two medium and four wide-screen columns.");
 assert.doesNotMatch(section, /<label[^>]*>Remarks/, "Remark popup belongs in the separate Activity Status / Remarks section.");
 assert.match(source, /aria-label="Activity status and remarks"/, "Retain separate activity and remarks controls.");
 console.log("Life/Health issued policy continuous field grid regression passed.");
