@@ -7,6 +7,13 @@ const css=read("../app/globals.css");
 const source=read("../lib/reports/daily-self-activity.ts");
 const page=read("../app/reports/(workspace)/daily/page.tsx");
 
+assert.ok(css.includes('main:has(.daily-report-reference) {'),"Desktop Daily Report gets its own full-height shell");
+assert.match(css,/main:has\(\.daily-report-reference\)\s*\{[^}]*padding-bottom:\s*20px/s,"Daily Report bottom gutter matches the desktop workspace spacing");
+for(const wrapper of ['.ui-page-stage','.reports-reference-shell > .relative','.reports-reference-shell > .relative > .visible','.daily-report-reference']) {
+  assert.ok(css.includes('main:has(.daily-report-reference) '+wrapper),"All Daily Report wrappers stretch: "+wrapper);
+}
+assert.match(css,/main:has\(\.daily-report-reference\) \.daily-report-panel\s*\{[^}]*flex:\s*1 1 auto;[^}]*min-height:\s*0;/s,"Panel fills remaining height without an arbitrary minimum");
+assert.match(css,/@media \(min-width: 1024px\)/,"Desktop-only height override preserves mobile bottom navigation clearance");
 assert.ok(panel.includes('daily-report-panel flex min-h-[calc(100dvh-175px)]'),"All Daily Report views fill the available viewport");
 assert.ok(panel.includes('md:min-h-[calc(100dvh-135px)]'),"Desktop panel scales to available viewport");
 assert.ok(panel.includes('min-h-0 flex-1'),"Drilldown rows consume available body space");
