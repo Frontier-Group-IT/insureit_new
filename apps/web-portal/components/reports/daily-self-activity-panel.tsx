@@ -128,7 +128,7 @@ export function DailySelfActivityPanel({data,linkFor,reportMode="self",canViewAl
         <>
           <div className="overflow-x-auto">
             <table className="w-full text-left">
-              <thead className="bg-[#f7f9fc] text-[9px] font-bold uppercase tracking-wide text-[#64748b]">
+              <thead className="bg-[#f7f9fc] text-[10px] font-extrabold uppercase tracking-wide text-[#243752]">
                 <tr><th className="px-4 py-3">Activity</th>
                   {isCustomerActivity ? (
                     <>
