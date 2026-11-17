@@ -1,8 +1,8 @@
 Partner production OTA trigger
-release=partner-onboarding-source-insurer-autocomplete-pr-4640
+release=partner-life-health-documents-full-width-pr-4655
 source=verified-merged-main
-source_pr=4640
-source_merge=0694c56ca0b0a3d4d75dcb37b88806c0155fde15
+source_pr=4655
+source_merge=e1cf064ce7a56dc808a262c43715f543b2957a0f
 reason=user-approved-merge-and-publish
 channel=production
 runtime=0.2.0
