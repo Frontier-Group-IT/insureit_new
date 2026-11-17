@@ -248,8 +248,8 @@ expectAll('app/customer/[id].tsx', [
   [/vehicle\.permit_no/, 'Permit number is displayed'],
 ]);
 expectAll('components/ui/partner-contact-actions.tsx', [
-  [/customerDetailRow:.*justifyContent: 'space-between'.*flexWrap: 'nowrap'/, 'Contact buttons distribute over the available width'],
-  [/customerDetailAction:.*flex: 1.*borderWidth: 0.*backgroundColor: 'transparent'/, 'Customer-specific contact tiles have no background or border'],
+  [/customerDetailRow:.*justifyContent: 'flex-start'.*flexWrap: 'nowrap'/, 'Customer contact buttons align from the name start without stretching'],
+  [/customerDetailAction:.*flex: 0.*flexShrink: 0.*borderWidth: 0.*backgroundColor: 'transparent'/, 'Customer contact actions stay compact with transparent background and no border'],
 ]);
 expectAll('lib/customers.ts', [
   [/gvw_kg: number \| string \| null/, 'Vehicle data type includes GVW'],
