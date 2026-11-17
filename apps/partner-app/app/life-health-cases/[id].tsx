@@ -613,7 +613,7 @@ export default function LifeHealthCaseDetailScreen(){
            </Pressable>
            <Pressable accessibilityRole="button" disabled={rejectBusy||!rejectReason.trim()}
              onPress={()=>{Keyboard.dismiss();void submitRejection();}}
-             style={[styles.saveButton,styles.confirmRejectButton,(rejectBusy||!rejectReason.trim())&&{opacity:0.5}]}>
+             style={[styles.saveButton,rejectReason.trim()&& !rejectBusy?styles.confirmRejectButtonActive:styles.confirmRejectButton]}>
              <Text style={styles.saveText}>{rejectBusy?'Rejecting…':'Confirm Reject'}</Text>
            </Pressable>
          </View>
@@ -778,6 +778,7 @@ const styles=StyleSheet.create({
  centeredModalInput:{borderWidth:1,borderColor:'#CBD5E1',borderRadius:11,minHeight:110,maxHeight:180,padding:12,fontSize:13,color:navy,textAlignVertical:'top'},
  centeredModalActions:{flexDirection:'row',gap:9,justifyContent:'flex-end',paddingTop:12},
  confirmRejectButton:{backgroundColor:'#D98D93'},
+ confirmRejectButtonActive:{backgroundColor:'#B4232D'},
  remarkEditor:{backgroundColor:'#FFFFFF',padding:15,borderTopLeftRadius:20,borderTopRightRadius:20,maxHeight:'90%'},
  remarkModalHeader:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:10,paddingBottom:13,borderBottomWidth:1,borderBottomColor:'#DFE7F1'},
  remarkModalClose:{minWidth:36,minHeight:36,alignItems:'center',justifyContent:'center'},
