@@ -1,6 +1,7 @@
+import { partnerAlert } from '@/components/ui/partner-alert-provider';
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useMemo, useState } from 'react';
-import { Alert, Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
@@ -350,7 +351,7 @@ export default function InsurerListScreen() {
                       return (
                         <Pressable key={column.key} accessibilityRole="button"
                           accessibilityLabel={`${insurer.name}, ${column.label}, ${exactAmount}. Tap for full amount`}
-                          onPress={() => Alert.alert(`${displayInsurerName(insurer.name)} · ${column.label}`, exactAmount)}
+                          onPress={() => partnerAlert(`${displayInsurerName(insurer.name)} · ${column.label}`, exactAmount)}
                           style={[styles.metricPressable, styles.amountColumn]}>
                           <Text style={styles.metricAmountText} numberOfLines={1}
                             adjustsFontSizeToFit minimumFontScale={0.7}>
