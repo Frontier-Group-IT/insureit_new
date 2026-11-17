@@ -48,6 +48,12 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
   const [n8nNotice, setN8nNotice] = useState<string | null>(null);
   const [done, setDone] = useState<{ policyCode: string; policyId: string } | null>(null);
   const [takeover, setTakeover] = useState<{ intakeId: string; reviewerName: string } | null>(null);
+  const [fillEmptySavedFields, setFillEmptySavedFields] = useState(true);
+  const [handoffDialog, setHandoffDialog] = useState<
+    | { kind: "confirm" | "takeover"; intakeId: string; documentId: string; fingerprint: string; reviewerName?: string }
+    | { kind: "existing"; editUrl: string }
+    | null
+  >(null);
   const selected = rows.find(row => row.id === selectedId);
   const visible = useMemo(() => {
     const query = search.toLowerCase().trim();
@@ -62,9 +68,9 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
   async function selectRow(id: string) {
     const next = ++requestId.current;
     if (selectedId === id) {
-      setSelectedId(null); setResult(null); setDone(null); setBusy(null); setTakeover(null); setN8nResult(null); setN8nNotice(null); return;
+      setSelectedId(null); setResult(null); setDone(null); setBusy(null); setTakeover(null); setHandoffDialog(null); setN8nResult(null); setN8nNotice(null); return;
     }
-    setSelectedId(id); setResult(null); setDone(null); setTakeover(null); setN8nResult(null); setN8nNotice(null); setBusy(primaryN8n ? "extracting" : "checking");
+    setSelectedId(id); setResult(null); setDone(null); setTakeover(null); setHandoffDialog(null); setN8nResult(null); setN8nNotice(null); setBusy(primaryN8n ? "extracting" : "checking");
     try {
       if (primaryN8n) {
         // Selecting an Intake explicitly starts its n8n-only extraction.
@@ -147,40 +153,51 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
     }
   }
 
-  async function forwardN8nToOnboarding() {
+  function forwardN8nToOnboarding() {
     if (!primaryN8n || !selectedId || !selected || selected.policy_type !== "motor"
         || selected.is_duplicate || !["ready_for_review","in_review","processing"].includes(selected.status)
         || !n8nResult?.ok || n8nResult.preview.warnings.length || isWaiting) return;
-    const approved = window.confirm(
-      "Continue this verified n8n policy to the editable Policy Onboarding form? INSUREIT will re-check the current PDF and extracted values, then create or open its saved draft and assign the Intake for review. Existing drafts will not be overwritten. No policy is booked until you review the original PDF, correct missing fields and explicitly submit the canonical form."
-    );
-    if (!approved) return;
-    const id = selectedId;
-    const documentId = n8nResult.preview.documentId;
-    const fingerprint = n8nResult.preview.fingerprint;
+    // A local, accessible dialog replaces the browser-native confirmation.
+    setFillEmptySavedFields(true);
+    setHandoffDialog({
+      kind: "confirm", intakeId: selectedId,
+      documentId: n8nResult.preview.documentId, fingerprint: n8nResult.preview.fingerprint,
+    });
+  }
+
+  async function confirmN8nHandoff() {
+    const dialog = handoffDialog;
+    if (!dialog) return;
+    if (dialog.kind === "existing") {
+      setHandoffDialog(null);
+      router.push(dialog.editUrl);
+      return;
+    }
+    if (isWaiting || selectedId !== dialog.intakeId || !n8nResult?.ok
+        || n8nResult.preview.documentId !== dialog.documentId
+        || n8nResult.preview.fingerprint !== dialog.fingerprint) {
+      setHandoffDialog(null);
+      setN8nNotice("The selected Intake or extracted PDF changed. Run n8n again and review the latest result.");
+      return;
+    }
     const next = ++requestId.current;
     setBusy("forwarding");
+    setHandoffDialog(null);
     setN8nNotice(null);
     try {
-      let response = await continueVerifiedN8nIntakeToOnboarding(id,documentId,fingerprint,true);
+      const response = await continueVerifiedN8nIntakeToOnboarding(
+        dialog.intakeId, dialog.documentId, dialog.fingerprint, true,
+        dialog.kind === "takeover", fillEmptySavedFields,
+      );
       if (requestId.current !== next) return;
       if (response.assignmentConflict) {
-        const takeover = window.confirm(
-          "This Intake is assigned to " + response.assignmentConflict.reviewerName +
-          ". Take over the reviewer assignment and continue to Policy Onboarding? No policy will be booked."
-        );
-        if (!takeover) {
-          setN8nNotice("Handoff cancelled. The current reviewer assignment was preserved.");
-          return;
-        }
-        response = await continueVerifiedN8nIntakeToOnboarding(id,documentId,fingerprint,true,true);
-        if (requestId.current !== next) return;
-      }
-      if (response.ok && response.editUrl) {
+        setHandoffDialog({ ...dialog, kind: "takeover", reviewerName: response.assignmentConflict.reviewerName });
+      } else if (response.ok && response.editUrl) {
         if (response.existingDraft) {
-          window.alert("An existing Policy Onboarding draft was found and preserved. n8n did not overwrite any manually saved fields. Compare its values against the n8n preview and original PDF before final booking.");
+          setHandoffDialog({ kind: "existing", editUrl: response.editUrl });
+        } else {
+          router.push(response.editUrl);
         }
-        router.push(response.editUrl);
       } else {
         setN8nNotice(response.error ?? "The Intake could not be forwarded. Re-run n8n before trying again.");
       }
@@ -488,6 +505,49 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
           </>
         )}
       </section>
+      {handoffDialog ? (
+        <div className="fixed inset-0 z-[160] flex items-center justify-center bg-[#101d37]/65 px-4 py-6" role="presentation">
+          <div role="alertdialog" aria-modal="true" aria-labelledby="n8n-handoff-dialog-title" aria-describedby="n8n-handoff-dialog-description"
+            className="w-full max-w-[480px] rounded-2xl border border-[#d6e2f1] bg-white p-5 shadow-[0_24px_80px_rgba(12,28,52,.3)]">
+            <div className="mb-3 flex items-center gap-2 text-[#174b83]">
+              <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#e8f2fb]"><ClipboardCheck className="h-4.5 w-4.5"/></span>
+              <h3 id="n8n-handoff-dialog-title" className="text-[15px] font-bold text-[#193657]">
+                {handoffDialog.kind === "confirm" ? "Continue to Policy Onboarding?"
+                  : handoffDialog.kind === "takeover" ? "Confirm reviewer takeover"
+                    : "Existing onboarding draft"}
+              </h3>
+            </div>
+            <p id="n8n-handoff-dialog-description" className="text-[12px] leading-5 text-[#52647b]">
+              {handoffDialog.kind === "confirm"
+                ? "INSUREIT will recheck the current PDF and n8n extraction, then open the canonical editable Policy Onboarding draft. Review all mapped values and the original PDF before booking. No policy will be booked by this action."
+                : handoffDialog.kind === "takeover"
+                  ? `This Intake is assigned to ${handoffDialog.reviewerName || "another reviewer"}. Continuing will transfer the reviewer assignment to you. No policy will be booked.`
+                  : fillEmptySavedFields
+                    ? "The saved draft has been preserved. Only previously empty eligible fields were filled from the verified extraction or an approved customer master; existing manual values were not changed."
+                    : "The saved draft has been preserved without changes. Compare it with the latest n8n preview and the original PDF before booking."}
+            </p>
+            {handoffDialog.kind !== "existing" ? (
+              <label className="mt-4 flex cursor-pointer items-start gap-2 rounded-xl border border-[#dce5f0] bg-[#f6f9fd] px-3 py-3 text-[11px] leading-4 text-[#344b68]">
+                <input type="checkbox" checked={fillEmptySavedFields} onChange={event => setFillEmptySavedFields(event.target.checked)}
+                  className="mt-0.5 h-4 w-4 accent-[#174b83]"/>
+                <span><strong>Fill missing fields in a saved draft</strong> when available. Only empty fields can be filled, never an existing manual value. Customer identity comes only from an approved linked customer record.</span>
+              </label>
+            ) : null}
+            <div className="mt-5 flex justify-end gap-2">
+              <button type="button" autoFocus onClick={() => setHandoffDialog(null)} disabled={isWaiting}
+                className="min-h-10 rounded-lg border border-[#cbd6e5] bg-white px-4 text-[11px] font-semibold text-[#38516e] disabled:opacity-50">
+                {handoffDialog.kind === "existing" ? "Stay here" : "Cancel"}
+              </button>
+              <button type="button" onClick={() => { void confirmN8nHandoff(); }} disabled={isWaiting}
+                className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-[#174b83] px-4 text-[11px] font-bold text-white disabled:opacity-50">
+                {isWaiting ? <Loader2 className="h-3.5 w-3.5 animate-spin"/> : null}
+                {handoffDialog.kind === "confirm" ? "Continue to onboarding"
+                  : handoffDialog.kind === "takeover" ? "Take over & continue" : "Open saved draft"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
       {takeover ? (
         <div className="fixed inset-0 z-[150] flex items-center justify-center bg-[#101d37]/60 px-4 py-6" role="presentation">
           <div role="alertdialog" aria-modal="true" aria-labelledby="semi-auto-takeover-title" aria-describedby="semi-auto-takeover-description"

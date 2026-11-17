@@ -285,13 +285,20 @@ export function buildPolicyOcrOnboardingUpdate(input: OcrApplyInput): OcrApplyRe
   // Preserve the existing C3001 alias. C3503 requires independently
   // extracted electric and 4.2 kW evidence from the matching schedule.
   const isIciciChetakElectric = chetakIdentity && (
-    /^C3001$/i.test(byKey.get("vehicle_model")?.value.trim() ?? "")
-    || (/^C3503$/i.test(byKey.get("vehicle_model")?.value.trim() ?? "")
-      && byKey.get("vehicle_fuel_type")?.value.trim().toLowerCase() === "electric"
-      && byKey.get("vehicle_motor_power_kw")?.value.trim() === "4.2")
+    /^(?:C2501|C3001|C3501|C3502|C3503)$/i.test(byKey.get("vehicle_model")?.value.trim() ?? "")
+    && (byKey.get("vehicle_fuel_type")?.value.trim().toLowerCase() === "electric"
+      || /^C3001$/i.test(byKey.get("vehicle_model")?.value.trim() ?? ""))
   );
-  setText("vehicle_make", (value) => { next.make = value; }, (raw) =>
-    manufacturer(isIciciChetakElectric ? "Bajaj Auto" : raw, input.manufacturers));
+  setText("vehicle_make", (value) => { next.make = value; }, (raw) => {
+    if (isIciciChetakElectric) {
+      // Prefer the literal "Bajaj" master choice, not an invented CHETAK option.
+      const named = input.manufacturers.find(option => option.trim().toLowerCase() === "bajaj")
+        ?? input.manufacturers.find(option => option.trim().toLowerCase() === "bajaj auto")
+        ?? input.manufacturers.find(option => /^bajaj auto (?:limited|ltd\.?|ltd\.?)$/i.test(option.trim()));
+      return named ?? "";
+    }
+    return manufacturer(raw, input.manufacturers);
+  });
   setText("vehicle_model", (value) => { next.model = value; }, (raw) => {
     const value = raw.trim();
     return value.length >= 2 && value.length <= 100 && !/^(MODEL|DESCRIPTION|FUEL TYPE)$/i.test(value) ? value : "";
