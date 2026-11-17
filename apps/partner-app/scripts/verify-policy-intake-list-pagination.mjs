@@ -166,7 +166,7 @@ assert.ok(api.includes(String.raw`/^\/policy-intakes\/`), 'Earlier intake URL mu
 
 assert.match(detail, /const latest = await getPartnerPolicyIntake\(row\.id\)/, 'Resume must refresh authorized reviewer assignment before opening Operations');
 assert.match(detail, /latest\.reviewer_conflict_name && !confirmedConflict/, 'Show conflict modal before browser navigation');
-assert.match(detail, /<Modal transparent visible=\{Boolean\(reviewerConflictName\)\}/, 'Reviewer conflict uses compact in-app popup');
+assert.match(detail, /<PartnerFeedbackDialog[\s\S]*?visible=\{Boolean\(reviewerConflictName\)\}/, 'Reviewer conflict uses shared reference-style popup');
 assert.match(detail, /Keep current reviewer/, 'Cancel preserves the existing reviewer');
 assert.match(detail, /Change reviewer & continue/, 'Explicit confirmation is required before navigation');
 assert.ok(detail.includes("pathname: '/policy-intakes/onboarding'"), 'Continue navigates within Partner App');
