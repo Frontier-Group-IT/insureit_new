@@ -39,13 +39,24 @@ export type SemiAutoN8nPreview = {
 };
 export type SemiAutoN8nResult =
   | { ok: true; preview: SemiAutoN8nPreview }
-  | { ok: false; error: string };
+  | { ok: false; error: string; reason?: "untrained_or_unverified" | "unavailable" };
 export type SemiAutoN8nApplyResult = { ok: boolean; error?: string };
+
+/**
+ * Only the AI Policy Onboarding workbench switches to n8n-first review.
+ * The upstream Operations/Partner upload pipelines retain their own rollout
+ * flags; enabling this does not rewrite, book, or auto-extract other Intakes.
+ */
+export function isN8nWorkbenchPrimary(): boolean {
+  return process.env.INSUREIT_N8N_WORKBENCH_PRIMARY === "true"
+    && process.env.INSUREIT_N8N_OCR_MODE === "shadow";
+}
 
 export function semiAutoN8nEnabledForIntake(intakeId: string): boolean {
   const mode = process.env.INSUREIT_N8N_OCR_MODE;
   if (mode !== "shadow" && mode !== "prefer" && mode !== "required") return false;
   if (!UUID.test(intakeId)) return false;
+  if (isN8nWorkbenchPrimary()) return true;
   // Deliberate read-only workbench scope: every open Motor Intake may be
   // previewed in shadow mode. The parser must still verify the actual PDF.
   // This does not enable authoritative OCR or any failed-OCR apply action.
@@ -73,7 +84,9 @@ async function currentSnapshot(id: string): Promise<SourceSnapshot | null> {
   ]);
   if (record.error || copy.error || !record.data || !copy.data) return null;
   const intake = record.data, document = copy.data;
-  if (intake.policy_type !== "motor" || !ALLOWED_STATUSES.has(intake.status)
+  if ((intake.policy_type !== null
+      && !["motor", "non_motor", "life", "health"].includes(intake.policy_type))
+      || !ALLOWED_STATUSES.has(intake.status)
       || intake.storage_bucket !== BUCKET || document.storage_bucket !== BUCKET
       || !intake.storage_path || intake.storage_path !== document.storage_path
       || document.mime_type !== "application/pdf" || intake.mime_type !== "application/pdf") {
@@ -90,10 +103,10 @@ function fingerprint(id: string, documentId: string, fields: N8nOcrField[], warn
 
 export async function previewSemiAutoN8nExtraction(id: string): Promise<SemiAutoN8nResult> {
   if (!semiAutoN8nEnabledForIntake(id)) {
-    return { ok: false, error: "n8n preview is not enabled for this Intake. Existing OCR and manual onboarding remain available." };
+    return { ok: false, error: "n8n processing is not enabled for this Intake." };
   }
   const snapshot = await currentSnapshot(id);
-  if (!snapshot) return { ok: false, error: "The current Motor Intake PDF is unavailable, changed or no longer eligible." };
+  if (!snapshot) return { ok: false, error: "The current Intake PDF is unavailable, changed or not eligible for extraction." };
   // The portal validates the current version and grants a short-lived link,
   // but never downloads or forwards the PDF bytes to n8n. n8n fetches it.
   const admin = createSupabaseAdminClient();
@@ -106,9 +119,20 @@ export async function previewSemiAutoN8nExtraction(id: string): Promise<SemiAuto
       intakeId: id, documentId: source.documentId,
       requestId: randomUUID(), signedUrl: source.signedUrl,
     });
-  } catch {
-    // Never return signed URL, credentials, document text or remote errors.
-    return { ok: false, error: "n8n could not download or validate the current private PDF. No Intake data was changed." };
+  } catch (error) {
+    // A failed n8n validation is not a reason to invoke legacy Google OCR.
+    // Report the unsupported/unverified layout without leaking PDF text,
+    // signed URLs, customer data or raw remote errors.
+    const code = error instanceof Error ? error.message : "";
+    if (["n8n_review_required", "n8n_financial_validation_failed",
+         "n8n_wrong_policy_product", "n8n_required_field_missing",
+         "n8n_premium_breakdown_missing", "n8n_premium_reconciliation_failed",
+         "n8n_coverage_dates_invalid"].includes(code)) {
+      return { ok: false, reason: "untrained_or_unverified",
+        error: "n8n has not validated this policy layout. It needs parser training or manual document review; no old OCR fallback, Intake update or booking was performed." };
+    }
+    return { ok: false, reason: "unavailable",
+      error: "n8n could not securely download or validate this PDF. No old OCR fallback, Intake update or booking was performed." };
   }
   const current = await currentSnapshot(id);
   if (!current || current.document.id !== snapshot.document.id
@@ -133,7 +157,9 @@ export async function previewSemiAutoN8nExtraction(id: string): Promise<SemiAuto
     }];
   });
   const changedFieldCount = changedFields.length;
-  let canApply = extraction.warnings.length === 0 && semiAutoN8nApplyEnabled()
+  let canApply = current.intake.policy_type === "motor"
+    && !isN8nWorkbenchPrimary()
+    && extraction.warnings.length === 0 && semiAutoN8nApplyEnabled()
     && current.intake.status === "processing"
     && current.intake.ocr_status === "failed"
     && (current.intake.ocr_fields ?? []).length === 0;
@@ -170,6 +196,7 @@ export async function applySemiAutoN8nExtraction(
   }
   const snapshot = await currentSnapshot(id);
   if (!snapshot || snapshot.document.id !== expectedDocumentId
+      || snapshot.intake.policy_type !== "motor"
       || snapshot.intake.status !== "processing" || snapshot.intake.ocr_status !== "failed"
       || (snapshot.intake.ocr_fields ?? []).length > 0) {
     return { ok: false, error: "Only a failed, unchanged Motor OCR Intake with no existing extracted fields can be recovered here." };
