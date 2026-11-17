@@ -1,8 +1,8 @@
 Partner production OTA trigger
-release=partner-policy-details-navy-pr-4692
+release=partner-policy-detail-renew-claim-icons-pr-4699
 source=verified-merged-main
-source_pr=4692
-source_merge=6523abf74a721c31361e8679acc604acb72c1e0c
+source_pr=4699
+source_merge=9f3e9c92a52dfd8eec9c5f65a96df832ef7e597b
 reason=user-approved-merge-and-publish
 channel=production
 runtime=0.2.0
