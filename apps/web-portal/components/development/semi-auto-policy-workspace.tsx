@@ -52,7 +52,8 @@ const aiIssueTitles: Record<string,string> = {
 };
 const aiStateLabel: Record<string,string> = {
   pending:"Queued",processing:"Reading PDF",exception:"Needs action",
-  verified:"Verified",unsupported:"Not trained",failed:"Retry scheduled",
+  verified:"Extracted · booking preflight pending",unsupported:"Not trained",
+  failed:"Retry scheduled",duplicate:"Duplicate · skipped",
 };
 
 const humanStatus: Record<string, string> = {
@@ -72,7 +73,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
   rows: SemiAutoIntakeRow[]; profileId: string; initialIntakeId?: string | null;
   primaryN8n?: boolean;
   queueActive?: boolean;
-  queueCounts?: {eligible:number;queued:number;extracting:number;exceptions:number;unprocessed:number;unsupported:number;failed:number};
+  queueCounts?: {eligible:number;extracted:number;duplicates:number;queued:number;extracting:number;exceptions:number;unprocessed:number;unsupported:number;failed:number};
 }) {
   const router = useRouter();
   const requestId = useRef(0);
@@ -351,19 +352,21 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 className="text-[12px] font-bold text-[#16355a]">Automatic n8n processing queue</h2>
-              <p className="mt-1 text-[10px] text-[#61738a]">These are n8n extraction states, not Policy Intake workflow statuses. Each scheduled run processes at most two PDFs. No customer or policy is created by the worker.</p>
+              <p className="mt-1 text-[10px] text-[#61738a]">These are n8n extraction states, not Policy Intake workflow statuses. New uploads run immediately; the recovery worker processes up to six PDFs per minute. Verified extraction alone does not book a policy.</p>
             </div>
             <button type="button" disabled aria-label="Convert All Eligible is disabled until canonical preflight and booking rollout"
               className="min-h-9 rounded-lg bg-[#174b83] px-3 text-[11px] font-bold text-white opacity-45">
               Convert All Eligible · {queueCounts?.eligible??0}
             </button>
           </div>
-          <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-6">
+          <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-8">
             {[
               ["Not yet queued",queueCounts?.unprocessed??0],
               ["Queued for n8n",queueCounts?.queued??0],
               ["Reading PDF",queueCounts?.extracting??0],
-              ["Exceptions",queueCounts?.exceptions??0],
+              ["PDF extracted",queueCounts?.extracted??0],
+              ["Actual exceptions",queueCounts?.exceptions??0],
+              ["Duplicates skipped",queueCounts?.duplicates??0],
               ["Not trained",queueCounts?.unsupported??0],
               ["Retrying",queueCounts?.failed??0],
             ].map(([label,value])=>(
@@ -414,7 +417,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
                       : humanStatus[row.status] || row.status}</span></td>
                   <td className="whitespace-nowrap px-3 py-3"><span className={row.ocr_status === "completed" ? "font-semibold text-emerald-700" : "font-semibold text-amber-700"}>{row.ocr_status === "completed" ? "Extracted" : row.ocr_status.replaceAll("_", " ")}</span></td>
                   {primaryN8n && queueActive ? <td className="min-w-[170px] px-3 py-3">
-                    <div className="text-[10px] font-semibold text-[#32547d]">{row.ai_state ? aiStateLabel[row.ai_state] : "Waiting for queue"}</div>
+                    <div className="text-[10px] font-semibold text-[#32547d]">{row.is_duplicate ? "Duplicate · skipped" : row.ai_state ? aiStateLabel[row.ai_state] : "Waiting for queue"}</div>
                     {row.ai_exceptions?.length ? (
                       <button type="button" onClick={()=>{setExceptionRow(row);setCustomerReview(null);}}
                         className="mt-1 rounded-md border border-[#e4d4b2] bg-[#fff8e8] px-2 py-1 text-left text-[10px] font-semibold text-[#765013] hover:bg-[#fff0c8]">
