@@ -182,6 +182,7 @@ export default function NativePolicyOnboarding(){
   const [customerSearchBusy,setCustomerSearchBusy]=useState(false);
   const [customerSearchError,setCustomerSearchError]=useState('');
   const [commercialModal,setCommercialModal]=useState<'payin'|'payout'|null>(null);
+  const [commercialError,setCommercialError]=useState('');
   const [remarkOpen,setRemarkOpen]=useState(false);
   const [remarkText,setRemarkText]=useState('');
   const [remarkError,setRemarkError]=useState('');
@@ -400,6 +401,24 @@ export default function NativePolicyOnboarding(){
       return true;
     }catch(e){setError(e instanceof Error?e.message:'Draft could not be saved.');return false;}
     finally{setSaving(false);}
+  };
+
+  const saveCommercial=async()=>{
+    if(!draft||!data||saving||booking||creatingLifeHealth||!commercialModal)return;
+    setCommercialError('');
+    setSaving(true);
+    try{
+      if(!isNew){
+        const result=await saveNativePolicyOnboarding(id,data.revision,draft);
+        setData(current=>current?{...current,revision:result.revision,draft}:current);
+        setDirty(false);
+      }
+      // Standalone Add Policy has no draft-persistence endpoint: retain the
+      // values in the current form until the user creates the policy/case.
+      setCommercialModal(null);
+    }catch(cause){
+      setCommercialError(cause instanceof Error?cause.message:'Unable to save commercial details.');
+    }finally{setSaving(false);}
   };
 
   // The intake contract stores remarks as one string. Append instead of replacing
@@ -1177,7 +1196,7 @@ export default function NativePolicyOnboarding(){
       </View>
     </Modal>
     <Modal transparent visible={Boolean(commercialModal)&&Boolean(data?.commercialAccess)}
-      animationType="slide" onRequestClose={()=>setCommercialModal(null)}>
+      animationType="slide" onRequestClose={()=>{if(!saving)setCommercialModal(null);}}>
       <View style={styles.scrim}>
         <View style={styles.commercialSheet}>
           <View style={styles.sheetTitle}>
@@ -1187,7 +1206,7 @@ export default function NativePolicyOnboarding(){
                 'Projected pay-in only. This does not confirm actual insurer receipts.':
                 'Agreed partner payout; independent from insurer receipts.'}</Text>
             </View>
-            <Pressable accessibilityRole="button" accessibilityLabel="Close commercial popup" onPress={()=>setCommercialModal(null)} style={styles.modalClose}>
+            <Pressable accessibilityRole="button" accessibilityLabel="Close commercial popup" disabled={saving} onPress={()=>setCommercialModal(null)} style={styles.modalClose}>
               <Ionicons name="close" size={19} color="#4C5970"/>
             </Pressable>
           </View>
@@ -1306,11 +1325,16 @@ export default function NativePolicyOnboarding(){
               </View>
             </>}
           </ScrollView>
+          {commercialError?<Text accessibilityRole="alert" style={styles.commercialError}>{commercialError}</Text>:null}
+          {isNew?<Text style={styles.commercialDraftNote}>Details will remain in this form until the policy or case is created.</Text>:null}
           <View style={styles.modalFooter}>
             <Pressable accessibilityRole="button" accessibilityLabel="Save and close commercial popup"
-              disabled={saving} accessibilityState={{disabled:saving}}
-              onPress={()=>{void save().then(success=>{if(success)setCommercialModal(null);});}}
-              style={styles.commercialSave}><Text style={styles.primaryText}>{saving?'Saving…':'Save & Close'}</Text></Pressable>
+              disabled={saving||booking||creatingLifeHealth} accessibilityState={{disabled:saving||booking||creatingLifeHealth}}
+              onPress={()=>void saveCommercial()}
+              style={[styles.commercialSave,(saving||booking||creatingLifeHealth)&&styles.disabled]}>
+              {saving?<ActivityIndicator size="small" color="#FFFFFF"/>:null}
+              <Text style={styles.primaryText}>{saving?'Saving…':'Save & Close'}</Text>
+            </Pressable>
           </View>
         </View>
       </View>
@@ -1462,9 +1486,11 @@ const styles=StyleSheet.create({
   summarySchedule:{gap:6,marginTop:5},scheduleRow:{flexDirection:'row',justifyContent:'space-between',paddingVertical:6,borderBottomWidth:1,borderColor:'#EBE6F3'},
   scheduleHeader:{fontSize:8,color:'#405375',fontWeight:'700',width:'24%'},scheduleCell:{fontSize:8,color:'#17365D',width:'24%'},scheduleNote:{fontSize:9,lineHeight:14,color:'#738196'},
   commercialModalContent:{paddingBottom:8},
+  commercialError:{color:'#A5272D',fontSize:11,fontWeight:'700',paddingHorizontal:12,paddingTop:8},
+  commercialDraftNote:{color:'#64748B',fontSize:10,paddingHorizontal:12,paddingVertical:6},
   calculatedRow:{flexDirection:'row',justifyContent:'space-between',padding:12,borderTopWidth:1,borderColor:'#E1E9F3'},
   readonlyInput:{backgroundColor:'#F3F6FA',color:'#738196'},
-  commercialSave:{backgroundColor:'#17365D',borderRadius:10,paddingHorizontal:17,paddingVertical:12,alignItems:'center'},
+  commercialSave:{backgroundColor:'#17365D',borderRadius:10,paddingHorizontal:17,paddingVertical:12,alignItems:'center',flexDirection:'row',gap:8,minHeight:43},
   summary:{padding:14,gap:7},summaryStatusRow:{flexDirection:'row',alignItems:'center',justifyContent:'space-between'},summaryCaption:{fontSize:10,fontWeight:'700',color:'#426188'},summaryHeading:{flex:1,gap:3},premiumHeading:{flexDirection:'row',gap:6,alignItems:'center',paddingVertical:7},summaryProgressStack:{alignItems:'center',justifyContent:'center',gap:3},summaryProgress:{width:35,height:35,borderRadius:18,borderWidth:4,borderTopColor:'#17365D',borderRightColor:'#17365D',borderBottomColor:'#DFE7F0',borderLeftColor:'#DFE7F0',alignItems:'center',justifyContent:'center'},commercialToggle:{marginHorizontal:12,marginBottom:9,flexDirection:'row',alignItems:'center',gap:8,padding:11,borderWidth:1,borderColor:'#DDE6F0',borderRadius:10,backgroundColor:'#F8FAFD'},commercialToggleTitle:{flex:1,color:'#26436B',fontSize:11,fontWeight:'700'},commercialBody:{paddingHorizontal:12},total:{fontSize:20,color:'#1B385B',fontWeight:'800'},notice:{fontSize:10,lineHeight:16,color:'#65758E',paddingHorizontal:14,paddingBottom:13},
   remarkHeading:{flex:1,minWidth:0},remarkBody:{padding:12,gap:8},remarkEntry:{borderWidth:1,borderColor:'#E0E8F2',borderRadius:8,padding:10,backgroundColor:'#FBFCFE'},remarkButton:{minHeight:30,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:5,paddingHorizontal:9,borderWidth:1,borderColor:'#CDD9EB',borderRadius:8,backgroundColor:'#F8FAFD'},remarkButtonText:{fontSize:10,fontWeight:'700',color:'#254C83'},remarkPreview:{fontSize:11,lineHeight:17,color:'#53657D'},remarkOverlay:{flex:1,alignItems:'center',justifyContent:'center',padding:20,backgroundColor:'rgba(5,18,40,.55)'},remarkSheet:{width:'100%',maxWidth:520,borderRadius:16,backgroundColor:'#FFFFFF',padding:16,gap:12},remarkHeader:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',paddingBottom:10,borderBottomWidth:1,borderColor:'#E6EDF5'},remarkTitle:{flexDirection:'row',alignItems:'center',gap:8},remarkInput:{borderWidth:1,borderColor:'#9BB2D7',borderRadius:9,minHeight:128,padding:11,fontSize:12,color:'#17365D'},remarkActions:{flexDirection:'row',gap:9,justifyContent:'flex-end'},remarkCancel:{paddingHorizontal:14,paddingVertical:11,borderWidth:1,borderColor:'#CDD9EB',borderRadius:8},remarkCancelText:{fontSize:11,fontWeight:'700',color:'#254C83'},remarkConfirm:{paddingHorizontal:14,paddingVertical:11,borderRadius:8,backgroundColor:'#17365D'},remarkNote:{fontSize:10,color:'#75859B'},
   nonMotorCustomerArea:{paddingHorizontal:12,paddingTop:12,gap:7},
