@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { IntakeStatusBucket } from "@/lib/policy-intake-status-buckets";
 import { AlertCircle, ArrowUpRight, CheckCircle2, ClipboardCheck, FileSearch, Loader2, PencilLine, RefreshCw, Search, ShieldAlert, Sparkles } from "lucide-react";
 import { applySemiAutoN8nIntake, bookSemiAutoIntake, checkSemiAutoIntake, continueVerifiedN8nIntakeToOnboarding, editSemiAutoIntake, previewSemiAutoN8nIntake, reprocessAiPolicyIntake, reviewAiIntakeCustomerCandidates, type AiCustomerCandidateReview, type SemiAutoActionResult, type SemiAutoN8nResult } from "@/app/development/ai-policy-onboarding/actions";
 
@@ -18,7 +19,7 @@ export type SemiAutoIntakeRow = {
   assigned_to_profile_id: string | null;
   n8n_enabled?: boolean;
   is_duplicate?: boolean;
-  intake_bucket?: "action_required" | "in_review" | "processing" | "duplicate";
+  intake_bucket?: Exclude<IntakeStatusBucket, "all">;
   ai_state?: "pending" | "processing" | "exception" | "verified" | "unsupported" | "failed" | null;
   ai_exceptions?: string[];
   ai_processed_at?: string | null;
