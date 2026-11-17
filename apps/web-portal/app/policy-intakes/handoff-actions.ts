@@ -144,6 +144,17 @@ async function preparePolicyIntakeHandoffInternal(
   if(claimError||!claimed){
     return{ok:false,error:"The reviewer assignment changed while you were opening this intake. Refresh and try again."};
   }
+  if(verified){
+    // The PDF can be superseded while reviewer assignment is being claimed.
+    // Never create an n8n-origin draft against a stale document version.
+    const {data:lastDoc,error:lastDocError}=await admin.from("policy_intake_documents")
+      .select("id,storage_path,storage_bucket").eq("intake_id",id).eq("is_current",true)
+      .maybeSingle<{id:string;storage_path:string;storage_bucket:string}>();
+    if(lastDocError||!lastDoc||lastDoc.id!==verified.documentId
+        ||lastDoc.storage_path!==intake.storage_path ||lastDoc.storage_bucket!==intake.storage_bucket){
+      return{ok:false,error:"The current PDF changed during handoff. Re-run n8n before opening Policy Onboarding."};
+    }
+  }
 
   const {data:existingDraft}=await admin.from("policy_intake_onboarding_drafts").select("draft_payload,revision").eq("intake_id",id).maybeSingle<{draft_payload:PolicyIntakeDraft;revision:number}>();
   if(existingDraft?.draft_payload){
@@ -193,7 +204,10 @@ export async function loadPolicyIntakeOnboardingDraft(id:string):Promise<PolicyI
   if(duplicateCheck.matches.has(id))return{ok:false,error:"This policy intake is a duplicate and cannot continue in Policy Onboarding."};
   const {data,error}=await admin.from("policy_intake_onboarding_drafts").select("draft_payload,revision").eq("intake_id",id).maybeSingle<{draft_payload:PolicyIntakeDraft;revision:number}>();
   if(error||!data?.draft_payload)return{ok:false,error:"The saved Policy Onboarding draft is unavailable. Return to the intake and start review again."};
-  const identityName=ocrInsuredName(intake.ocr_fields??[])||data.draft_payload.insuredName;const matchedCustomerId=await resolveConfirmedIntakeCustomerId(admin,intake.customer_mobile,identityName);return{ok:true,draft:data.draft_payload,draftRevision:data.revision,matchedCustomerId};
+  const identityName=data.draft_payload.remarks?.includes("n8n validated ICICI 3005")
+  ? data.draft_payload.insuredName
+  : ocrInsuredName(intake.ocr_fields??[])||data.draft_payload.insuredName;
+  const matchedCustomerId=await resolveConfirmedIntakeCustomerId(admin,intake.customer_mobile,identityName);return{ok:true,draft:data.draft_payload,draftRevision:data.revision,matchedCustomerId};
 }
 
 export async function savePolicyIntakeOnboardingDraft(id:string,expectedRevision:number,draft:PolicyIntakeDraft):Promise<PolicyIntakeDraftSaveResult>{
