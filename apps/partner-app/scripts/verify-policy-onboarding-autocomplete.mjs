@@ -1,0 +1,24 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+const screen = readFileSync('apps/partner-app/app/policy-intakes/onboarding.tsx', 'utf8');
+
+assert.match(screen,/useEffect\(\(\)=>\{\s*if\(!sourcePickerOpen\|\|!draft\?\.intermediaryType\)return;/,'Autocomplete only runs while scoped Lead Source picker is open');
+assert.match(screen,/setTimeout\(\(\)=>\{void lookupSources\(sourceQuery\.trim\(\)\);\},300\)/,'Typing triggers scoped server search after 300ms');
+assert.match(screen,/return \(\)=>clearTimeout\(timer\)/,'Debounce cancels pending searches');
+assert.match(screen,/sourceRequestId\.current\+=1;setSourceQuery\(value\)/,'Typing invalidates prior lead source requests');
+assert.match(screen,/if\(requestId!==sourceRequestId\.current\)return/,'Late responses cannot overwrite current results');
+assert.match(screen,/searchNativeLeadSources\(draft\.intermediaryType,query,isNew\?undefined:id,offset\)/,'Search retains intermediary and intake authorization scope');
+assert.match(screen,/lookupSources\(sourceQuery,sourceItems\.length\)/,'Load More retains the current query');
+assert.match(screen,/leadSource:source\.name,intermediaryCode:source\.code,rmName:source\.rmName/,'Lead Source selection retains canonical name, code and RM');
+assert.match(screen,/const openInsurerPicker=\(items:\{value:string;label:string\}\[\],product=false\)/,'Both insurer field variants use the same searchable picker');
+assert.match(screen,/setPicker\(\{key:'insurerId',items,product\}\)/,'Insurer picker preserves canonical insurer ID and product flag');
+assert.match(screen,/f\.key==='insurerId'\?openInsurerPicker\(options\)/,'Motor/general insurer dropdown offers search');
+assert.match(screen,/f\.key==='insurerId'\?openInsurerPicker\(options,true\)/,'Life Health and Non-Motor insurer dropdown offers search');
+assert.match(screen,/picker\?\.key==='insurerId'&&normalizedPickerQuery/,'Only insurer choices are filtered');
+assert.match(screen,/item\.label\.toLowerCase\(\)\.includes\(normalizedPickerQuery\)/,'Insurer suggestions match name without case sensitivity');
+assert.match(screen,/accessibilityLabel="Search insurance company" value=\{pickerQuery\} onChangeText=\{setPickerQuery\}/,'Insurer search input updates matches while typing');
+assert.match(screen,/displayedPickerItems\.map\(item=>/,'Insurer selection list uses filtered suggestions');
+assert.match(screen,/picker\.product\?updateProduct\(picker\.key,item\.value\):update\(picker\.key as FieldKey,item\.value\)/,'Insurer choice still saves canonical option ID to correct draft');
+assert.match(screen,/No matching insurance companies\./,'Filtered empty state is provided');
+assert.match(screen,/Search name or intermediary code/,'Existing Lead Source search hint retained');
+console.log('Partner Policy Onboarding Lead Source and Insurance Company autocomplete verified.');
