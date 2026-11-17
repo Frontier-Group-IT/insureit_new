@@ -351,7 +351,7 @@ export default function NativePolicyOnboarding(){
       return;
     }
     sourceRequestId.current+=1;
-    setSourceQuery('');setSourcePickerOpen(true);setSourceItems([]);setSourceHasMore(false);setSourcePickerError('');
+    setSourceQuery('');setSourcePickerOpen(true);setSourceItems([]);setSourceHasMore(false);setSourcePickerError('');setSourceBusy(true);
   };
   const selectSource=(source:NativeLeadSource)=>{
     setDraft(current=>current?{...current,leadSource:source.name,intermediaryCode:source.code,rmName:source.rmName}:current);
@@ -1336,7 +1336,7 @@ export default function NativePolicyOnboarding(){
         </View>
         <View style={styles.sourceSearchArea}>
           <TextInput accessibilityLabel="Search lead source by name" value={sourceQuery} onChangeText={value=>{
-              sourceRequestId.current+=1;setSourceQuery(value);setSourceBusy(false);
+              sourceRequestId.current+=1;setSourceQuery(value);setSourceBusy(true);
               setSourcePickerError('');setSourceItems([]);setSourceHasMore(false);
             }}
             onSubmitEditing={()=>void lookupSources(sourceQuery)} returnKeyType="search"
@@ -1347,7 +1347,7 @@ export default function NativePolicyOnboarding(){
           </Pressable>
         </View>
         {sourcePickerError?<Text style={styles.sourceSearchError}>{sourcePickerError}</Text>:null}
-        <ScrollView style={styles.choiceScroll}>
+        <ScrollView keyboardShouldPersistTaps="handled" style={styles.choiceScroll}>
           {!sourceBusy&&!sourceItems.length&&!sourcePickerError?<Text style={styles.sourceEmpty}>No matching active lead sources.</Text>:null}
           {sourceItems.map(item=><Pressable key={item.id} accessibilityRole="button"
             accessibilityLabel={'Select '+item.name} onPress={()=>selectSource(item)} style={styles.choice}>
