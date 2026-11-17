@@ -121,7 +121,7 @@ export async function POST(request: Request) {
 
 /** Delete only a document belonging to the signed-in employee's editable Partner application. */
 export async function DELETE(request: Request) {
-  const match = /^Bearer\\s+([^\\s]+)$/i.exec(request.headers.get("authorization") ?? "");
+  const match = /^Bearer\s+([^\s]+)$/i.exec(request.headers.get("authorization") ?? "");
   if (!match) return response({ ok: false, error: "Sign in again to delete documents." }, 401);
 
   const scoped = createSupabaseWithAccessToken(match[1]);
