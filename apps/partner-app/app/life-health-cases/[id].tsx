@@ -358,15 +358,7 @@ export default function LifeHealthCaseDetailScreen(){
           onPress={()=>{setRemarkError('');setRemarkOpen(true);}} style={styles.remarkFullWidth}>
           <Ionicons name="chatbubble-ellipses-outline" size={17} color="#FFFFFF"/><Text style={styles.remarkButtonText}>Add Remark</Text>
         </Pressable>:null}
-        {form&&record.status_group!=='rejected'&&JSON.stringify(form)!==JSON.stringify(initialForm(record))?
-          <View style={styles.saveInline}>
-            {saveError?<Text style={styles.saveError}>{saveError}</Text>:null}
-            <Pressable accessibilityRole="button" accessibilityLabel="Save case changes" disabled={saving}
-              onPress={()=>void saveEdit()} style={styles.portalButton}>
-              {saving?<ActivityIndicator color="#FFFFFF"/>:<Ionicons name="save-outline" size={17} color="#FFFFFF"/>}
-              <Text style={styles.portalButtonText}>{saving?'Saving…':'Save Changes'}</Text>
-            </Pressable>
-          </View>:saveError?<Text style={styles.saveError}>{saveError}</Text>:null}
+
       </Section>
 
       {record.status_group==='pending'?<Section number="05" title="Mark Policy Issued">
@@ -381,25 +373,45 @@ export default function LifeHealthCaseDetailScreen(){
           {issueField("sumInsured","Sum assured / insured")}
         </View>
         {issueError?<Text style={styles.saveError}>{issueError}</Text>:null}
-        <Pressable accessibilityRole="button" accessibilityLabel="Create Policy and Close Case"
-          onPress={()=>void submitIssue()} disabled={issuing} style={[styles.portalButton,issuing&&{opacity:0.6}]}>
-          {issuing?<ActivityIndicator color="#FFFFFF"/>:<Ionicons name="shield-checkmark-outline" size={18} color="#FFFFFF"/>}
-          <Text style={styles.portalButtonText}>{issuing?'Creating policy…':'Create Policy & Close Case'}</Text>
-        </Pressable>
+
       </Section>:null}
       {record.policy_no?<Section number="05" title="Issued policy">
         <View style={styles.grid}><Field label="Policy number" value={record.policy_no} wide/></View>
       </Section>:null}
-      {documents.length>0?<Section number="06" title="Documents">
+      <Section number="06" title="Documents">
         <View style={styles.documentList}>
           {documents.map(doc=><View key={doc.id} style={styles.document}>
-            <Ionicons name="document-attach-outline" size={18} color={navy}/>
-            <Text style={styles.documentName} selectable>{doc.file_name}</Text>
+            <Pressable accessibilityRole="button" accessibilityLabel={'Open '+doc.file_name} onPress={()=>void openDocument(doc)} disabled={documentBusy} style={styles.documentOpen}>
+              <Ionicons name="document-text-outline" size={17} color="#11734B"/>
+              <Text style={styles.documentName} numberOfLines={1}>{doc.file_name}</Text>
+            </Pressable>
+            {record.status_group==='pending'?<>
+              <Pressable accessibilityRole="button" accessibilityLabel={'Delete '+doc.file_name} onPress={()=>deleteDocument(doc)} disabled={documentBusy} style={styles.documentIconButton}>
+                <Ionicons name="trash-outline" size={17} color="#CE3541"/>
+              </Pressable>
+              <Pressable accessibilityRole="button" accessibilityLabel={'Replace '+doc.file_name} onPress={()=>void pickDocument(doc.document_type)} disabled={documentBusy} style={styles.documentIconButton}>
+                <Ionicons name="refresh-outline" size={17} color={navy}/>
+              </Pressable>
+            </>:null}
           </View>)}
+          {record.status_group==='pending'?<View style={styles.documentUploadGrid}>
+            {([
+              ['policy_copy','Policy Copy'],['proposal_form','Proposal Form'],
+              ['benefit_illustration','Illustration Form'],['premium_receipt','Payment Receipt'],['other_document','Other Form']
+            ] as const).filter(([type])=>!documents.some(doc=>doc.document_type===type)).map(([type,label])=>
+              <Pressable key={type} accessibilityRole="button" accessibilityLabel={'Add '+label}
+                onPress={()=>void pickDocument(type)} disabled={documentBusy} style={styles.uploadButton}>
+                <Ionicons name="cloud-upload-outline" size={15} color="#24569A"/>
+                <Text style={styles.uploadText}>Add {label}</Text>
+              </Pressable>)}
+          </View>:null}
+          {documentBusy?<ActivityIndicator color={navy}/>:null}
+          {documentError?<Text style={styles.saveError}>{documentError}</Text>:null}
+          {!documents.length&&record.status_group!=='pending'?<Text style={styles.paragraph}>No documents recorded.</Text>:null}
         </View>
-      </Section>:null}
+      </Section>
 
-      <Section number="07" title="Activity status & remarks">
+      <View style={styles.activityCard}>
         <View style={styles.tabs}>
           <Pressable accessibilityRole="tab" accessibilityState={{selected:infoTab==='activity'}} style={[styles.tab,infoTab==='activity'&&styles.tabActive]} onPress={()=>setInfoTab('activity')}>
             <Text style={[styles.tabText,infoTab==='activity'&&styles.tabTextActive]}>Activity Status</Text>
@@ -416,7 +428,29 @@ export default function LifeHealthCaseDetailScreen(){
           <Text style={styles.paragraph} selectable>{record.remarks?.trim()||'No remarks added yet.'}</Text>
 
          </View>}
-      </Section>
+      </View>
+      {saveError?<Text style={styles.saveError}>{saveError}</Text>:null}
+      {saveSuccess?<Text style={styles.saveSuccess}>Case details saved successfully.</Text>:null}
+      {record.status_group==='pending'?<View style={styles.caseActions}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Cancel case edits" onPress={confirmCancel}
+          disabled={saving||issuing||documentBusy||rejectBusy} style={[styles.caseAction,styles.actionCancel]}>
+          <Ionicons name="close" size={15} color={navy}/><Text style={styles.cancelActionText}>Cancel</Text>
+        </Pressable>
+        <Pressable accessibilityRole="button" accessibilityLabel="Reject case" onPress={()=>{setRejectError('');setRejectOpen(true);}}
+          disabled={saving||issuing||documentBusy||rejectBusy} style={[styles.caseAction,styles.actionReject]}>
+          <Text style={styles.rejectActionText}>Reject</Text>
+        </Pressable>
+        <Pressable accessibilityRole="button" accessibilityLabel="Save Case Details" onPress={()=>void saveEdit()}
+          disabled={saving||issuing||documentBusy||rejectBusy||!caseDirty} style={[styles.caseAction,styles.actionSave,!caseDirty&&styles.disabledAction]}>
+          {saving?<ActivityIndicator size="small" color={navy}/>:<Ionicons name="save-outline" size={15} color={navy}/>}
+          <Text style={styles.saveActionText}>Save Case Details</Text>
+        </Pressable>
+        <Pressable accessibilityRole="button" accessibilityLabel="Create Policy and Close Case" onPress={()=>void submitIssue()}
+          disabled={saving||issuing||documentBusy||rejectBusy} style={[styles.caseAction,styles.actionIssue]}>
+          {issuing?<ActivityIndicator size="small" color="#FFFFFF"/>:<Ionicons name="shield-checkmark-outline" size={15} color="#FFFFFF"/>}
+          <Text style={styles.issueActionText}>Create Policy & Close Case</Text>
+        </Pressable>
+      </View>:null}
 
     </View>:null}
    <Modal visible={Boolean(picker)} transparent animationType="fade" onRequestClose={()=>setPicker(null)}>
