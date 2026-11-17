@@ -135,7 +135,7 @@ export default function PolicyDetailScreen() {
           </Card>
 
           <View style={styles.externalSection}>
-            <View style={styles.externalSectionHeading}><CardHeader iconKind="premium" title="Premium" /></View>
+            <View style={styles.externalSectionHeading}><CardHeader title="Premium" /></View>
             <Card>
             <Pressable accessibilityRole="button" accessibilityState={{ expanded: showPremiumDetails }} onPress={() => setShowPremiumDetails((value) => !value)} style={({ pressed }) => [styles.premiumDisclosure, pressed && styles.pressed]}>
               <PartnerPolicyDetailIcon kind="premium-breakup" size={25} />
@@ -155,7 +155,7 @@ export default function PolicyDetailScreen() {
           </View>
 
           <View style={styles.externalSection}>
-            <View style={styles.externalSectionHeading}><CardHeader iconKind="customer-vehicle" title="Customer Details" /></View>
+            <View style={styles.externalSectionHeading}><CardHeader title="Customer Details" /></View>
             <Card>
             <View style={styles.entityStack}>
               <EntityRow icon="person-outline" title={data.customer.name} subtitle={data.customer.customer_code || 'Customer'} onPress={data.customer.id ? () => router.push(`/customer/${data.customer.id}` as never) : undefined} />
@@ -163,7 +163,7 @@ export default function PolicyDetailScreen() {
             </Card>
           </View>
           <View style={styles.externalSection}>
-            <View style={styles.externalSectionHeading}><CardHeader iconKind="customer-vehicle" title={data.vehicle ? 'Vehicle Details' : 'Insured Risk Details'} /></View>
+            <View style={styles.externalSectionHeading}><CardHeader title={data.vehicle ? 'Vehicle Details' : 'Insured Risk Details'} /></View>
             <Card onPress={data.vehicle && data.customer.id ? () => router.push(`/customer/${data.customer.id}` as never) : undefined} accessibilityLabel="Open customer details for this vehicle">
             <View style={styles.entityStack}>
               {data.vehicle ? (
@@ -176,7 +176,7 @@ export default function PolicyDetailScreen() {
           </View>
 
           <View style={styles.externalSection}>
-            <View style={styles.externalSectionHeading}><CardHeader iconKind="commercial-attribution" title="Commercial Attribution" /></View>
+            <View style={styles.externalSectionHeading}><CardHeader title="Commercial Attribution" /></View>
             <Card>
             <Pressable accessibilityRole="button" accessibilityState={{ expanded: showCommercialDetails }} onPress={() => setShowCommercialDetails((value) => !value)} style={({ pressed }) => [styles.commercialRow, pressed && styles.pressed]}>
               <PartnerPolicyDetailIcon kind="sales-ownership" size={25} />
@@ -204,10 +204,10 @@ function Card({ children, onPress, accessibilityLabel }: { children: ReactNode; 
   return <View style={styles.card}>{children}</View>;
 }
 
-function CardHeader({ iconKind, title, actionLabel, onAction }: { iconKind: PartnerPolicyDetailIconKind; title: string; actionLabel?: string; onAction?: () => void }) {
+function CardHeader({ iconKind, title, actionLabel, onAction }: { iconKind?: PartnerPolicyDetailIconKind; title: string; actionLabel?: string; onAction?: () => void }) {
   return (
     <View style={styles.cardHeader}>
-      <View style={styles.cardHeaderLeft}><PartnerPolicyDetailIcon kind={iconKind} size={22} showBadge={false} /><Text style={styles.cardTitle}>{title}</Text></View>
+      <View style={styles.cardHeaderLeft}>{iconKind ? <PartnerPolicyDetailIcon kind={iconKind} size={22} showBadge={false} /> : null}<Text style={styles.cardTitle}>{title}</Text></View>
       {actionLabel ? (
         <Pressable accessibilityRole="button" disabled={!onAction} onPress={onAction} hitSlop={8} style={({ pressed }) => [styles.cardHeaderAction, pressed && onAction ? styles.pressed : null]}>
           <Text style={styles.cardHeaderActionText}>{actionLabel}</Text><Ionicons name="chevron-forward" size={13} color="#0969CF" />
