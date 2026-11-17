@@ -6,7 +6,7 @@ const panel=read("../components/reports/daily-self-activity-panel.tsx");
 const source=read("../lib/reports/daily-self-activity.ts");
 const page=read("../app/reports/(workspace)/daily/page.tsx");
 
-assert.match(panel,/data\.categories\.length \|\| data\.category \? "min-h-\[calc\(100dvh-300px\)\]" : ""/,"Populated reports keep viewport height while empty reports remain compact");
+assert.match(panel,/data\.category \? data\.rows\.length : data\.categories\.length/,"Only populated summary or drilldown reports use viewport height");
 assert.match(panel,/aria-label="Self activity summary and register"/,"Full-height sizing applies to both modes through the shared component");
 assert.match(panel,/gridColumnsFor\(group\.items\.length\)/,"Activity cards fill the width available to each group");
 assert.doesNotMatch(panel,/h-screen|h-\[100dvh\]|overflow-y-hidden/,"Panel remains naturally scrollable when activity tables exceed the viewport");
@@ -33,6 +33,7 @@ assert.match(panel,/motion-reduce:transform-none motion-reduce:transition-none/,
 assert.match(panel,/active:translate-y-0/,"Pressed state provides immediate feedback");
 const css=read("../app/globals.css");
 const header=read("../components/reports/daily-report-header-controls.tsx");
+assert.match(css,/width: 100%;\s*max-width: none;/,"Daily Report occupies full available workspace width");
 assert.match(page,/daily-report-reference/,"Daily Report styling scoped to the page");
 assert.match(css,/reports-reference-shell:has/,"Reference header styling limited to Daily Report");
 assert.ok(css.includes("linear-gradient(100deg,#24119b"),"Purple summary bar matches reference palette");
@@ -49,7 +50,8 @@ assert.match(css,/\.reports-reference-shell:has\(\.daily-report-reference\) \.re
 assert.doesNotMatch(css,/\.reports-reference-shell:has\(\.daily-report-reference\) \.reports-reference-header::before/,"No decorative gradient is layered over the white header");
 assert.match(panel,/daily-report-activity-icon/,"Activity icons retained");
 assert.match(header,/daily-report-header-select/,"Pill-shaped period and scope filters retained");
-assert.match(panel,/<DailyReportEmptyState \/>/,"Empty reports use illustrated empty state instead of blank report");
+assert.match(panel,/data\.category && data\.rows\.length===0 \? <DailyReportEmptyState \/>/,"Empty drilldowns show illustrated empty state");
+assert.match(panel,/<DailyReportEmptyState \/>/,"Empty summaries show illustrated empty state");
 assert.match(panel,/No activities yet/,"Empty-state title is visible");
 assert.match(panel,/Your activities will appear here once they are recorded/,"Empty-state explanation is visible");
 console.log("Daily Report adaptive full-width grids and illustrated empty state verified.");
