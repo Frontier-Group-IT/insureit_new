@@ -102,6 +102,7 @@ jobs:
               || file === 'apps/partner-app/scripts/verify-claim-journey-deduplication.mjs'
               || file === 'apps/partner-app/scripts/verify-duplicate-intake-detail-parity.mjs'
               || file === 'apps/partner-app/scripts/verify-phase5-contracts.mjs'
+              || file === 'apps/partner-app/scripts/verify-stack-bottom-navigation.mjs'
               || file === 'apps/partner-app/scripts/verify-intake-detail-identity-header.mjs'
               || file === 'apps/partner-app/scripts/verify-policy-intake-source-contract.mjs'
               || file === 'apps/web-portal/app/api/partner/policy-intakes/native-onboarding/route.ts'
