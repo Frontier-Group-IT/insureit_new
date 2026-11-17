@@ -79,7 +79,7 @@ export function PartnerConfirmDialog({
           onPress={dismiss}
           style={StyleSheet.absoluteFill}
         />
-        <View accessibilityViewIsModal style={styles.dialog}>
+        <View accessible accessibilityRole="alert" accessibilityViewIsModal accessibilityLabel={title} accessibilityHint={message} style={styles.dialog}>
           <View style={[styles.iconCircle, { backgroundColor: color + '12' }]}>
             <Ionicons name={KIND_ICON[kind]} color={color} size={32} accessibilityLabel={kind} />
           </View>
