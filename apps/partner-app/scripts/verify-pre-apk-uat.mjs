@@ -99,22 +99,21 @@ expectAll('app/policy-intakes.tsx', [
   [/row\.ocr_status === 'failed' && \(row\.status === 'processing' \|\| row\.status === 'needs_attention'\)/, 'OCR failed message must remain visible'],
 ]);
 
-// Claims hero contains the permission-gated primary action. Three status cards
-// occupy equal space; the separate filter icon opens a native modal.
+// Claims filters and the permission-gated Add action share one compact row without overlap.
 expectAll('app/(tabs)/claims.tsx', [
-  [/heroBottomRow: \{[^\n]*flexDirection: 'row'/, 'Claims header aligns title and Add Claim'],
-  [/heroAddClaim: \{[^\n]*borderRadius: 18/, 'Primary claim action is a rounded button'],
-  [/summaryChips: \{ flex: 1, minWidth: 0, flexDirection: 'row'/, 'Claim status filters share available width'],
-  [/summaryChip: \{ flex: 1, minWidth: 0/, 'Three status cards have equal flexible widths'],
-  [/summaryChipLabel: \{[^\n]*fontSize: 10/, 'Claim status labels remain legible'],
-  [/\{canPartnerStartClaim\(context\) \? \([\s\S]*?accessibilityLabel="Add Claim"/, 'Add Claim retains permission gate'],
-  [/onPress=\{\(\) => router\.push\('\/claim\/select-vehicle' as never\)\}/, 'Add Claim preserves vehicle selection route'],
-  [/shortLabel: 'All'/, 'All filter remains'],
-  [/shortLabel: 'Settled'/, 'Settled filter remains'],
-  [/shortLabel: 'In Progress'/, 'In Progress filter uses full label'],
-  [/label: 'All Claims'/, 'All claims lifecycle remains'],
-  [/label: 'Settled Claims'/, 'Settled lifecycle remains'],
-  [/label: 'In Progress'/, 'In Progress lifecycle remains'],
+  [/summaryRow: \{[^\n]*flexDirection: 'row'/, 'Claims status filters and Add Claim must share one row'],
+  [/summaryChips: \{ flex: 1, minWidth: 0, flexDirection: 'row'/, 'Claims filters must shrink within the shared row'],
+  [/summaryChip: \{ flex: 1, minWidth: 0/, 'Claims status chips must have equal flexible widths'],
+  [/summaryChipLabel: \{[^\n]*fontSize: 8/, 'Claims labels must use compact typography'],
+  [/summaryAddClaim: \{ width: 88,[^\n]*flexShrink: 0/, 'Full Add Claim button keeps a fixed compact width without overlapping shrinking filters'],
+  [/\{canPartnerStartClaim\(context\) \? \([\s\S]*?accessibilityLabel="Add Claim"/, 'Add Claim must retain permission gating and accessibility'],
+  [/onPress=\{\(\) => router\.push\('\/claim\/select-vehicle' as never\)\}/, 'Add Claim must preserve vehicle selection navigation'],
+  [/shortLabel: 'All'/, 'Show compact All filter label'],
+  [/shortLabel: 'Settled'/, 'Show compact Settled filter label'],
+  [/shortLabel: 'Progress'/, 'Show compact Progress filter label'],
+  [/label: 'All Claims'/, 'Preserve All Claims status'],
+  [/label: 'Settled Claims'/, 'Preserve Settled Claims status'],
+  [/label: 'In Progress'/, 'Preserve In Progress status'],
 ]);
 // Policies have one accessible five-status dropdown, replacing the legacy
 // disabled Filter control and horizontal lifecycle chip row.
@@ -138,15 +137,11 @@ for (const obsolete of ['seeAllOpen', 'summarySeeAll:', 'statusSheetOverlay:', '
   if (read('app/(tabs)/policies.tsx').includes(obsolete)) failures.push('Policies must not retain obsolete chip/disabled Filter UI: ' + obsolete);
 }
 
-// Filter button is active, with an accessible native bottom sheet and the
-// same existing claim-state selections, without changing API filters.
+// Claims Filter mirrors Policies: keep the visual button but never mount a dropdown.
 expectAll('app/(tabs)/claims.tsx', [
-  [/accessibilityLabel="Filter claims"[\s\S]*?onPress=\{\(\) => setFilterOpen\(true\)\}/, 'Filter button opens modal'],
-  [/name="options-outline" size=\{21\}/, 'Compact filter icon is rendered'],
-  [/<Modal transparent visible=\{filterOpen\}/, 'Filter sheet is mounted'],
-  [/onRequestClose=\{\(\) => setFilterOpen\(false\)\}/, 'Android back dismisses the filter'],
-  [/onPress=\{\(\) => selectSummary\(metric.filter\)\}/, 'Status cards filter claims'],
-  [/selectSummary\(option.filter\); setFilterOpen\(false\)/, 'Filter sheet selection uses existing claim state and closes'],
+  [/accessibilityLabel="Filter claims"[\s\S]*?accessibilityState=\{\{ disabled: true \}\}[\s\S]*?disabled[\s\S]*?style=\{styles.filterButton\}/, 'Claims Filter stays visible without opening a menu'],
+  [/name="filter-outline" size=\{18\} color="#3156B8"/, 'Preserve Claims filter icon and styling'],
+  [/onPress=\{\(\) => selectSummary\(metric.filter\)\}/, 'Claim status chips remain usable'],
 ]);
 checks += 1;
 if (/PartnerAnchoredDropdown|filterMenuOpen|CLAIM_FILTER_OPTIONS/.test(read('app/(tabs)/claims.tsx'))) {

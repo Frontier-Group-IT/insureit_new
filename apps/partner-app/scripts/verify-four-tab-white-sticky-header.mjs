@@ -53,10 +53,10 @@ for (const label of ['All Claims', 'Settled Claims', 'In Progress']) {
 assert.match(claims, /onPress=\{\(\) => selectSummary\(metric\.filter\)\}/, 'Status chip preserves existing claims filtering');
 assert.match(claims, /metric\.value\.toLocaleString\('en-IN'\)/, 'Claim counts keep authorized backend summary values');
 assert.match(claims, /summaryChipSelected: \{ backgroundColor: '#17365D'/, 'Selected status chip uses navy fill');
-assert.match(claims, /<View style=\{styles\.heroBottomRow\}>[\s\S]*?\{canPartnerStartClaim\(context\) \? \(/, 'Add Claim follows Claims title in permission-gated hero');
+assert.match(claims, /<\/View>\s*\{canPartnerStartClaim\(context\) \? \(\s*<Pressable/, 'Add Claim follows all three filters in the same permission-gated row');
 assert.match(claims, /accessibilityLabel="Add Claim"/, 'Compact Add Claim remains accessible');
 assert.match(claims, /onPress=\{\(\) => router\.push\('\/claim\/select-vehicle' as never\)\}/, 'Add Claim opens the existing vehicle-selection flow');
-assert.match(claims, /summaryRow: \{[^\n]*flexDirection: 'row'/, 'Three claims status cards share an equal-width row');
-assert.match(claims, /heroAddClaim: \{[^\n]*borderRadius: 18/, 'Add Claim is a compact rounded header action');
+assert.match(claims, /summaryRow: \{[^\n]*flexDirection: 'row'/, 'Claims filters and Add Claim use a single horizontal row');
+assert.match(claims, /summaryAddClaim: \{ width: 88,[^\n]+flexShrink: 0/, 'Add Claim has reserved width and does not overlap filters');
 assert.doesNotMatch(claims, /styles\.summaryCard|styles\.summaryIcon|styles\.summaryChange|styles\.addClaimButton/, 'Remove large Claims metric tiles and old Add Claim banner');
 console.log('Primary tab navy sticky heading/search contracts passed');
