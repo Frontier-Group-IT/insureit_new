@@ -4,7 +4,7 @@ const read=p=>readFileSync(new URL(p,import.meta.url),"utf8");
 const header=read("../components/reports/daily-report-header-controls.tsx");
 const page=read("../app/reports/(workspace)/daily/page.tsx");
 const self=read("../components/reports/daily-self-activity-panel.tsx");
-assert.match(header,/max-h-\[300px\] overflow-y-auto/,"Employee selector list scrolls");
+assert.match(header,/max-h-\[min\(300px,50dvh\)\] overscroll-contain overflow-y-auto/,"Employee selector list scrolls without leaving the viewport");
 assert.match(header,/hover:bg-\[#eef3fa\]/,"Employee selection has hover feedback");
 assert.match(header,/focus-visible:outline/,"Selector trigger is keyboard-focusable");
 assert.match(header,/type="search" aria-label="Search employee name or code"/);
