@@ -530,7 +530,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
               <label className="mt-4 flex cursor-pointer items-start gap-2 rounded-xl border border-[#dce5f0] bg-[#f6f9fd] px-3 py-3 text-[11px] leading-4 text-[#344b68]">
                 <input type="checkbox" checked={fillEmptySavedFields} onChange={event => setFillEmptySavedFields(event.target.checked)}
                   className="mt-0.5 h-4 w-4 accent-[#174b83]"/>
-                <span><strong>Fill missing fields in a saved draft</strong> when available. Only empty fields can be filled, never an existing manual value. Customer identity comes only from an approved linked customer record.</span>
+                <span><strong>Fill missing fields in a saved draft</strong> when available. Only empty fields can be filled, never an existing manual value. Insured Name may be proposed from the currently verified ICICI 3005 PDF for manual review; it never silently links or creates a customer.</span>
               </label>
             ) : null}
             <div className="mt-5 flex justify-end gap-2">
