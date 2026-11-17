@@ -6,6 +6,7 @@ import { assessAiPolicyIntake, type AiPolicyEvidence, type AiPolicyExceptionCode
 import { loadPolicyIntakeDuplicateMatches } from "@/lib/policy-intake-duplicate";
 import { policyDateDecision } from "@/lib/policy-date-rule";
 import type { PolicyIntakeOcrField } from "@/lib/policy-intake-ocr-service";
+import { fetchAllPages } from "@/lib/fetch-all-pages";
 
 export type AiQueueState =
   | "pending" | "processing" | "exception" | "verified" | "unsupported" | "failed" | "duplicate";
@@ -232,8 +233,9 @@ async function processClaim(item: Claimed) {
   // All matching is read-only. Never select or create a customer in the worker.
   const [{data:matches,error:customerError},{data:draft,error:draftError},
     {data:brands,error:brandsError},{data:related,error:relatedError}] = await Promise.all([
-    admin.from("customers").select("id,phone,contact_name,company_name")
-      .ilike("phone","%"+phone).limit(51).returns<Customer[]>(),
+    fetchAllPages<Customer,unknown>((from,to)=>admin.from("customers")
+      .select("id,phone,contact_name,company_name").ilike("phone","%"+phone)
+      .order("id",{ascending:true}).range(from,to).returns<Customer[]>(),200),
     admin.from("policy_intake_onboarding_drafts")
       .select("revision,draft_payload").eq("intake_id",intake.id).maybeSingle<Draft>(),
     admin.from("vehicle_manufacturer_brands")
@@ -246,7 +248,7 @@ async function processClaim(item: Claimed) {
   if(customerError||draftError||brandsError||relatedError)throw new Error("AI assessment master lookup failed");
   const phoneMatches=(matches??[]).filter(x=>normalizedPhone(x.phone)===phone);
   const exact=phoneMatches.filter(x=>[x.company_name,x.contact_name].some(n=>normalizedName(n??"")===customerName));
-  const customerMatch:AiPolicyEvidence["customerMatch"]=matches?.length===51 || exact.length>1?"multiple"
+  const customerMatch:AiPolicyEvidence["customerMatch"]=((matches?.length??0)>2000) || exact.length>1?"multiple"
     :exact.length===1?"unique_exact":phoneMatches.length?"name_conflict":"none";
   // Multiple distinct customers with the same phone are an exception even if
   // one exact record matches. Never assume a shared phone is unique identity.
