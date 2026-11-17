@@ -13,7 +13,8 @@ assert.match(panel,/name:"Other", items:data\.categories\.filter\(/,"Unclassifie
 assert.match(panel,/\]\.filter\(group=>group\.items\.length>0\)/,"Do not render empty family rows");
 assert.match(panel,/categoryGroups\.map\(group=>\(/,"Render one section per family");
 assert.match(panel,/group\.items\.map\(item=>\(/,"Render cards only within their own family grid");
-assert.match(panel,/grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5/,"Keep five activity cards per desktop row");
+assert.match(panel,/gridColumnsFor\(group\.items\.length\)/,"Each family uses its full available row width");
+assert.match(panel,/count>=5\?"xl:grid-cols-5"/,"At most five activity cards per desktop row");
 assert.match(panel,/href=\{linkFor\(\{activity:item\.name,page:"1"\}\)\}/,"Keep original category drilldown");
 assert.match(panel,/item\.count\.toLocaleString\("en-IN"\)/,"Keep unmodified activity totals");
 assert.match(panel,/data\.categories\.length/,"Keep original empty-state handling");
