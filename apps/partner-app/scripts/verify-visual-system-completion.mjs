@@ -62,6 +62,12 @@ if(unified.split('styles.unifiedSectionDivider').length !== 3)throw new Error('E
 if(unified.split('</Card>').length !== 2)throw new Error('Overview, Premium and Commercial must share one card');
 requireText(policyDetail, 'accessibilityState={{ expanded: showPremiumDetails }}', 'Premium expansion remains');
 requireText(policyDetail, 'accessibilityState={{ expanded: showCommercialDetails }}', 'Commercial expansion remains');
+requireText(policyDetail, 'const [showPremiumDetails, setShowPremiumDetails] = useState(true);', 'Premium breakup opens expanded by default');
+requireText(policyDetail, 'const [showCommercialDetails, setShowCommercialDetails] = useState(true);', 'Sales ownership opens expanded by default');
+requireText(policyDetail, 'onPress={() => setShowPremiumDetails((value) => !value)}', 'Premium breakup is still collapsible');
+requireText(policyDetail, 'onPress={() => setShowCommercialDetails((value) => !value)}', 'Sales ownership is still collapsible');
+requireText(policyDetail, 'quickSectionHeading: { marginLeft: -6, marginRight: 3, marginBottom: 8', 'Quick Actions heading moves slightly left without moving action icons');
+requireText(policyDetail, 'externalSectionHeading: { marginLeft: -6, paddingLeft: 0, paddingRight: 2 }', 'Customer & Vehicle heading moves slightly left without moving its card');
 
 const policyDetailIcon = read('components/ui/partner-policy-detail-icon.tsx');
 const claimDetail = read('app/claim/[id].tsx');
@@ -250,8 +256,14 @@ requireText(policyIntakeDetail, '<Ionicons name="alert-circle-outline"', 'Duplic
 
 for (const detailAsset of ['products.motorInsurance', 'products.healthInsurance', 'products.familyInsurance', 'products.commercialInsurance']) requireText(policyDetail, `PartnerAssets.${detailAsset}`, `Policy detail is missing ${detailAsset} artwork.`);
 requireText(policyDetail, 'source={data.vehicle ? (manufacturerLogo || PartnerAssets.products.motorInsurance) : PartnerAssets.products.commercialInsurance}', 'Combined customer vehicle row uses the manufacturer icon or insured-risk fallback.');
-requireText(policyDetail, 'insurerName={data.insurer.name}', 'Policy overview must pass insurer identity to logo renderer.');
-requireText(policyDetail, '<PartnerInsurerLogo name={insurerName}', 'Policy overview must render insurer brand artwork.');
+requireText(policyDetail, '<InsurerMiniInfo name={data.insurer.name} />', 'Policy overview must pass the actual insurer identity into the compact tile.');
+requireText(policyDetail, "<PartnerInsurerLogo name={name || ''}", 'Compact insurer tile must preserve insurer identity for logo artwork.');
+requireText(policyDetail, "return /^ICICI\\s+Lombard\\s+General\\b/i.test(fullName) ? 'ICICI LOMBARD GENERAL' : fullName;", 'Only ICICI Lombard insurer display label may be shortened.');
+requireText(policyDetail, 'styles.insurerMiniInfo', 'Insurer summary must use a compact tile.');
+requireText(policyDetail, 'styles.miniInfo, styles.insurerMiniInfo', 'Insurer tile must inherit the grey Policy Number background.');
+requireText(policyDetail, '<MiniInfo label="Policy status" value={humanize(data.policy.status || data.policy.lifecycle_status)} fullWidth />', 'Policy status must span the row so validity dates align together.');
+requireText(policyDetail, '<MiniInfo label="Start date" value={formatDate(data.policy.start_date)} />', 'Start date must retain its original stored value.');
+requireText(policyDetail, '<MiniInfo label="End date" value={formatDate(data.policy.end_date)} />', 'End date must retain its original stored value.');
 requireText(policyDetail, 'getPartnerPolicyDetail(id)', 'Policy detail must preserve the existing scoped data service.');
 // Policy Details keeps the navy title and a separate white summary, retaining all values.
 for (const required of [
