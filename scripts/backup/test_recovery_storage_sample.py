@@ -73,7 +73,7 @@ class SamplePlanner(unittest.TestCase):
             select_recovery_sample({"one": [item("one", "oversized.pdf", 65_000_000)]})
 
     def test_no_filename_in_output_and_no_blob_download_in_plan_mode(self):
-        manifest = {"entries": {"synthetic": {}}, "buckets": ["bucket-a", "bucket-b", "bucket-c"]}
+        manifest = {"entries": {"synthetic": {}}, "buckets": ["bucket-a", "bucket-b", "bucket-c"], "created_at": "20261117T070000Z"}
         fake_key = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
         with patch.dict(os.environ, {
             "BACKUP_ENCRYPTION_KEY": fake_key,
@@ -98,7 +98,7 @@ class SamplePlanner(unittest.TestCase):
                 self.assertNotIn("document-", output.getvalue())
 
     def test_verifier_checks_actual_hash_count(self):
-        manifest = {"entries": {"synthetic": {}}, "buckets": ["bucket-a", "bucket-b", "bucket-c"]}
+        manifest = {"entries": {"synthetic": {}}, "buckets": ["bucket-a", "bucket-b", "bucket-c"], "created_at": "20261117T070000Z"}
         with patch.dict(os.environ, {
             "BACKUP_ENCRYPTION_KEY": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
             "R2_ACCOUNT_ID": "fake", "R2_ACCESS_KEY_ID": "fake",
@@ -115,6 +115,40 @@ class SamplePlanner(unittest.TestCase):
                 with contextlib.redirect_stdout(io.StringIO()):
                     run("--verify")
                 checked.assert_called_once()
+
+    def test_storage_snapshot_lock_and_no_unpinned_byte_verification(self):
+        manifest = {
+            "entries": {"synthetic": {}}, "buckets": ["bucket-a", "bucket-b", "bucket-c"],
+            "created_at": "20261117T070000Z",
+        }
+        env = {
+            "BACKUP_ENCRYPTION_KEY": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+            "R2_ACCOUNT_ID": "fake", "R2_ACCESS_KEY_ID": "fake",
+            "R2_SECRET_ACCESS_KEY": "fake", "R2_BUCKET": "fake",
+        }
+        with patch("plan_recovery_storage_sample.boto3.client", return_value=object()), \
+             patch("plan_recovery_storage_sample.validate_manifest",
+                   return_value=(manifest, self.grouped)), \
+             patch("plan_recovery_storage_sample.validate_bucket_coverage",
+                   return_value=set()), \
+             patch("plan_recovery_storage_sample.verify_selected",
+                   side_effect=AssertionError("Must not download mismatched snapshot")):
+            with patch.dict(os.environ, dict(env, RECOVERY_EXPECTED_STORAGE_SNAPSHOT=
+                                          "20261117T070001Z"), clear=True):
+                with self.assertRaisesRegex(RuntimeError, "pointer changed"):
+                    run("--verify")
+            with patch.dict(os.environ, dict(env, RECOVERY_EXPECTED_STORAGE_SNAPSHOT=
+                                          "malformed"), clear=True):
+                with self.assertRaisesRegex(ValueError, "Malformed expected"):
+                    run("--plan")
+            with patch.dict(os.environ, dict(env, RECOVERY_EXPECTED_STORAGE_SNAPSHOT=
+                                          "20261117T070000Z"), clear=True):
+                output = io.StringIO()
+                with contextlib.redirect_stdout(output):
+                    run("--plan")
+                self.assertIn("storage_snapshot=20261117T070000Z", output.getvalue())
+                self.assertIn("storage_pointer_locked=1", output.getvalue())
+                self.assertNotIn("document-", output.getvalue())
 
     def test_private_classes_are_generalized(self):
         self.assertEqual(category(item("a", "secret-PDF.PDF", 1)[0]), "pdf")

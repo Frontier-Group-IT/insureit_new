@@ -1,0 +1,75 @@
+name: INSUREIT isolated Storage R5 sample preflight (manual read-only)
+
+on:
+  workflow_dispatch:
+    inputs:
+      expected_storage_snapshot:
+        description: 'Optional exact authenticated Storage v1 UTC timestamp (blank to discover)'
+        required: false
+        type: string
+        default: ''
+      verify_storage_sample_bytes:
+        description: 'GET/decrypt/SHA256 check selected <=500MB encrypted Storage files (default false = manifest-only plan)'
+        required: true
+        type: boolean
+        default: false
+      confirm_isolated_target:
+        description: 'Confirmed isolated restored target and no live apps/outbound notifications'
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: insureit-isolated-storage-r5-readonly
+  cancel-in-progress: false
+
+jobs:
+  storage_r5:
+    if: >-
+      github.repository == 'Frontier-Group-IT/insureit_new' &&
+      github.ref == 'refs/heads/main' &&
+      github.event_name == 'workflow_dispatch' &&
+      inputs.confirm_isolated_target
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    environment: insureit-recovery-isolated
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install pinned read-only backup and trusted target client
+        run: python -m pip install boto3==1.35.99 cryptography==44.0.2 'psycopg[binary]==3.2.9'
+      - name: Reject production or unknown target before R2
+        env:
+          INSUREIT_RECOVERY_DATABASE_URL: ${{ secrets.INSUREIT_RECOVERY_DATABASE_URL }}
+        run: |
+          set -euo pipefail
+          python scripts/backup/managed_recovery_preflight.py --check-target
+      - name: Read-only isolated SQL-restored target baseline (populated SQL, empty Storage)
+        env:
+          INSUREIT_RECOVERY_DATABASE_URL: ${{ secrets.INSUREIT_RECOVERY_DATABASE_URL }}
+          RECOVERY_DB_SSL_ROOT_CERT_PEM: ${{ secrets.RECOVERY_DB_SSL_ROOT_CERT_PEM }}
+        run: |
+          set -euo pipefail
+          python scripts/backup/check_restored_target_storage_preflight.py
+      - name: Authenticated R2 v1 Storage manifest sample plan / optional bounded GET verification
+        env:
+          R2_ACCOUNT_ID: ${{ secrets.RECOVERY_R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.RECOVERY_R2_READONLY_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.RECOVERY_R2_READONLY_SECRET_ACCESS_KEY }}
+          BACKUP_ENCRYPTION_KEY: ${{ secrets.RECOVERY_STORAGE_BACKUP_ENCRYPTION_KEY }}
+          RECOVERY_EXPECTED_STORAGE_SNAPSHOT: ${{ inputs.expected_storage_snapshot }}
+          VERIFY_STORAGE_SAMPLE_BYTES: ${{ inputs.verify_storage_sample_bytes }}
+          R2_BUCKET: insureit-production-backups
+        run: |
+          set -euo pipefail
+          mode=--plan
+          if [ "$VERIFY_STORAGE_SAMPLE_BYTES" = true ]; then mode=--verify; fi
+          python scripts/backup/plan_recovery_storage_sample.py "$mode"
+          echo "R5 COMPLETE: source_R2_GET_only=1 target_sql_read_only=1 no_bucket_create=1 no_object_upload=1 no_production_connection=1"
