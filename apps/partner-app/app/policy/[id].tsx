@@ -74,9 +74,9 @@ export default function PolicyDetailScreen() {
             hitSlop={8}
             style={({ pressed }) => [styles.headerBackButton, pressed && styles.pressed]}
           >
-            <Ionicons name="arrow-back" size={20} color="#17365D" />
+            <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
           </Pressable>
-          <Ionicons name="document-text" size={23} color="#17365D" />
+          <Ionicons name="document-text" size={23} color="#FFFFFF" />
           <Text style={styles.headerTitle}>Policy Details</Text>
         </View>
       </View>
@@ -93,21 +93,11 @@ export default function PolicyDetailScreen() {
                 <PartnerInsurerLogo name={data.insurer.name} fallback={policyArtwork(category)} style={styles.summaryArtwork} />
               </View>
               <View style={styles.summaryBody}>
-                <View style={styles.policyNoRow}><Text numberOfLines={1} style={styles.summaryPolicyNo}>{policyNumber}</Text>{isVerified ? <Ionicons name="checkmark-circle" color="#22B57C" size={19} /> : null}</View>
+                <View style={styles.policyNoRow}><Text numberOfLines={1} style={styles.summaryPolicyNo}>{policyNumber}</Text>{isVerified ? <Ionicons name="checkmark-circle" color="#38D99C" size={19} /> : null}</View>
+                <Text style={styles.summaryNetPremium}>Net Premium - {nullableMoney(data.premium.net_premium)}</Text>
               </View>
               <View style={styles.summaryBadges}>
                 <View style={styles.categoryPill}><Ionicons name={data.vehicle ? "car" : "shield-checkmark"} color="#12498D" size={15}/><Text style={styles.categoryLabel}>{category}</Text></View>
-              </View>
-            </View>
-            <View style={styles.summaryDivider} />
-            <View style={styles.premiumRow}>
-              <View style={styles.premiumBlock}>
-                <Text style={styles.premiumLabel}>Net Premium</Text>
-                <Text style={styles.premiumValue}>{nullableMoney(data.premium.net_premium)}</Text>
-              </View>
-              <View style={styles.periodDivider} />
-              <View style={styles.periodBlock}>
-                <View style={styles.periodTitleRow}><Text style={styles.periodLabel}>Policy Period</Text></View>
                 <Text style={styles.periodValue}>{formatDate(data.policy.start_date)} – {formatDate(data.policy.end_date)}</Text>
               </View>
             </View>
@@ -270,28 +260,29 @@ function formatDate(value: string | null) { return formatAppDate(value, '—'); 
 function nullableMoney(value: number | string | null) { return value == null ? 'Not recorded' : formatIndianCurrency(value); }
 
 const styles = StyleSheet.create({
-  pageHeader: { height: 52, marginHorizontal: -partnerTheme.spacing.lg, paddingHorizontal: 16, justifyContent: 'center', backgroundColor: '#FFFFFF', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E3E9F1' },
+  pageHeader: { height: 52, marginHorizontal: -partnerTheme.spacing.lg, paddingHorizontal: 16, justifyContent: 'center', backgroundColor: '#0A234A', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#244269' },
   headerTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   headerBackButton: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { color: '#17365D', fontSize: 16, lineHeight: 22, fontWeight: '700', letterSpacing: -0.12 },
+  headerTitle: { color: '#FFFFFF', fontSize: 16, lineHeight: 22, fontWeight: '700', letterSpacing: -0.12 },
   stateWrap: { marginTop: 14 },
   contentWrap: { marginTop: 0, gap: 9, paddingBottom: 15 },
   summaryCard: {
     paddingHorizontal: 14, paddingTop: 14, paddingBottom: 12,
     marginHorizontal: -partnerTheme.spacing.lg,
-    backgroundColor: '#FFFFFF', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E3E9F1',
+    backgroundColor: '#0A234A', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#244269',
   },
   summaryTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   summaryArtworkWrap: { width: 46, height: 46, alignItems: 'center', justifyContent: 'center' },
   summaryArtwork: { width: 34, height: 34 },
   summaryBody: { flex: 1, minWidth: 0 },
-  summaryPolicyNo: { color: '#1B2536', fontSize: 18, lineHeight: 23, fontWeight: '800', flexShrink: 1, minWidth: 0 },
-  policyNoRow: { flexDirection: 'row', alignItems: 'center', gap: 7, flex: 1, minWidth: 0 },
+  summaryPolicyNo: { color: '#FFFFFF', fontSize: 18, lineHeight: 23, fontWeight: '800', flexShrink: 1, minWidth: 0 },
+  policyNoRow: { flexDirection: 'row', alignItems: 'center', gap: 7, minWidth: 0 },
+  summaryNetPremium: { marginTop: 4, color: '#E1EDFF', fontSize: 12, lineHeight: 17, fontWeight: '700' },
   categoryPill: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#FFF2DE', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 6 },
   categoryLabel: { color: '#895519', fontSize: 10, fontWeight: '700' },
   periodIcon: { width: 30, height: 30, borderRadius: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: '#1375DC' },
   summaryInsurer: { color: '#75849A', fontSize: 9, lineHeight: 12, marginTop: 2 },
-  summaryBadges: { alignItems: 'flex-end', gap: 5 },
+  summaryBadges: { alignItems: 'flex-end', justifyContent: 'center', gap: 7, maxWidth: '45%' },
   summaryDivider: { height: StyleSheet.hairlineWidth, marginTop: 12, backgroundColor: '#E6EBF2' },
   premiumRow: { minHeight: 47, flexDirection: 'row', alignItems: 'center', paddingTop: 7 },
   premiumBlock: { flex: 1 }, premiumLabel: { color: '#718096', fontSize: 9, lineHeight: 11 },
@@ -299,7 +290,7 @@ const styles = StyleSheet.create({
   periodDivider: { width: StyleSheet.hairlineWidth, alignSelf: 'stretch', marginHorizontal: 12, backgroundColor: '#E6EBF2' },
   periodBlock: { flex: 1.03, minWidth: 0 }, periodTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   periodLabel: { color: '#718096', fontSize: 9, lineHeight: 11 },
-  periodValue: { marginTop: 2, color: '#34455D', fontSize: 9.5, lineHeight: 12, fontWeight: '700' },
+  periodValue: { color: '#E1EDFF', fontSize: 10, lineHeight: 14, fontWeight: '700', textAlign: 'right' },
   externalSection: { gap: 5 },
   externalSectionHeading: { paddingHorizontal: 2 },
   card: { overflow: 'hidden', borderRadius: 13, borderWidth: StyleSheet.hairlineWidth, borderColor: '#E2E8F1', backgroundColor: '#FFFFFF' },
