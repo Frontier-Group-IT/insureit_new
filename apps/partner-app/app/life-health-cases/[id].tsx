@@ -434,23 +434,29 @@ export default function LifeHealthCaseDetailScreen(){
       {saveError?<Text style={styles.saveError}>{saveError}</Text>:null}
       {saveSuccess?<Text style={styles.saveSuccess}>Case details saved successfully.</Text>:null}
       {record.status_group==='pending'?<View style={styles.caseActions}>
-        <Pressable accessibilityRole="button" accessibilityLabel="Cancel case edits" onPress={confirmCancel}
-          disabled={saving||issuing||documentBusy||rejectBusy} style={[styles.caseAction,styles.actionCancel]}>
-          <Ionicons name="close" size={15} color={navy}/><Text style={styles.cancelActionText}>Cancel</Text>
-        </Pressable>
-        <Pressable accessibilityRole="button" accessibilityLabel="Reject case" onPress={()=>{setRejectError('');setRejectOpen(true);}}
-          disabled={saving||issuing||documentBusy||rejectBusy} style={[styles.caseAction,styles.actionReject]}>
-          <Text style={styles.rejectActionText}>Reject</Text>
-        </Pressable>
         <Pressable accessibilityRole="button" accessibilityLabel="Save Case Details" onPress={()=>void saveEdit()}
-          disabled={saving||issuing||documentBusy||rejectBusy||!caseDirty} style={[styles.caseAction,styles.actionSave,!caseDirty&&styles.disabledAction]}>
-          {saving?<ActivityIndicator size="small" color={navy}/>:<Ionicons name="save-outline" size={15} color={navy}/>}
-          <Text style={styles.saveActionText}>Save Case Details</Text>
+          disabled={saving||issuing||documentBusy||rejectBusy||!caseDirty}
+          style={[styles.caseAction,styles.actionSave,!caseDirty&&styles.disabledAction]}>
+          {saving?<ActivityIndicator size="small" color={navy}/>:<Ionicons name="save-outline" size={17} color={navy}/>}
+          <Text style={styles.saveActionText}>{saving?'Saving…':'Save Case Details'}</Text>
         </Pressable>
+        <View style={styles.caseActionMiddle}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Cancel case edits" onPress={confirmCancel}
+            disabled={saving||issuing||documentBusy||rejectBusy} style={[styles.caseAction,styles.actionCancel]}>
+            <Ionicons name="close" size={16} color={navy}/><Text style={styles.cancelActionText}>Cancel</Text>
+          </Pressable>
+          <Pressable accessibilityRole="button" accessibilityLabel="Reject case" onPress={()=>{setRejectError('');setRejectOpen(true);}}
+            disabled={saving||issuing||documentBusy||rejectBusy} style={[styles.caseAction,styles.actionReject]}>
+            <Ionicons name="ban-outline" size={15} color="#C32B37"/><Text style={styles.rejectActionText}>Reject</Text>
+          </Pressable>
+        </View>
         <Pressable accessibilityRole="button" accessibilityLabel="Create Policy and Close Case" onPress={()=>void submitIssue()}
           disabled={saving||issuing||documentBusy||rejectBusy} style={[styles.caseAction,styles.actionIssue]}>
-          {issuing?<ActivityIndicator size="small" color="#FFFFFF"/>:<Ionicons name="shield-checkmark-outline" size={15} color="#FFFFFF"/>}
-          <Text style={styles.issueActionText}>Create Policy & Close Case</Text>
+          {issuing?<ActivityIndicator size="small" color="#FFFFFF"/>:<Ionicons name="shield-checkmark-outline" size={17} color="#FFFFFF"/>}
+          <View style={styles.issueActionCopy}>
+            <Text style={styles.issueActionText}>{issuing?'Creating policy…':'Create Policy & Close Case'}</Text>
+            <Text style={styles.issueActionSubtitle}>Complete the policy creation process</Text>
+          </View>
         </Pressable>
       </View>:null}
 
@@ -648,16 +654,19 @@ const styles=StyleSheet.create({
   uploadText:{fontSize:10,color:'#24569A',fontWeight:'700'},
   activityCard:{backgroundColor:'#FFFFFF',borderRadius:14,borderWidth:1,borderColor:'#D9E2F0',padding:12,gap:10},
   saveSuccess:{fontSize:11,color:'#166B4B',fontWeight:'700'},
-  caseActions:{flexDirection:'row',alignItems:'stretch',gap:5,backgroundColor:'#FFFFFF',padding:8,borderRadius:13,borderWidth:1,borderColor:'#D9E2F0'},
-  caseAction:{minHeight:48,borderRadius:10,alignItems:'center',justifyContent:'center',flexDirection:'row',gap:4,paddingHorizontal:3},
-  actionCancel:{flex:0.76,borderColor:'#C8D5E6',borderWidth:1,backgroundColor:'#FFFFFF'},
-  actionReject:{flex:0.65,borderColor:'#F9C8CA',borderWidth:1,backgroundColor:'#FFF3F3'},
-  actionSave:{flex:1.2,borderColor:'#BDD4F4',borderWidth:1,backgroundColor:'#EAF2FF'},
-  actionIssue:{flex:1.42,backgroundColor:'#103C74'},
-  cancelActionText:{fontSize:9,fontWeight:'800',color:'#071E49'},
-  rejectActionText:{fontSize:9,fontWeight:'800',color:'#C32B37'},
-  saveActionText:{fontSize:9,fontWeight:'800',color:'#17365D',flexShrink:1,textAlign:'center'},
-  issueActionText:{fontSize:9,fontWeight:'800',color:'#FFFFFF',flexShrink:1,textAlign:'center'},
+  caseActions:{gap:7,backgroundColor:'#FFFFFF',padding:10,borderRadius:13,borderWidth:1,borderColor:'#D9E2F0'},
+  caseAction:{minHeight:45,borderRadius:10,alignItems:'center',justifyContent:'center',flexDirection:'row',gap:7,paddingHorizontal:10},
+  caseActionMiddle:{flexDirection:'row',gap:7},
+  actionCancel:{flex:1,borderColor:'#C8D5E6',borderWidth:1,backgroundColor:'#FFFFFF'},
+  actionReject:{flex:1,borderColor:'#F9C8CA',borderWidth:1,backgroundColor:'#FFF3F3'},
+  actionSave:{width:'100%',borderColor:'#BDD4F4',borderWidth:1,backgroundColor:'#EAF2FF'},
+  actionIssue:{width:'100%',minHeight:65,backgroundColor:'#103C74'},
+  issueActionCopy:{alignItems:'center',gap:3,flexShrink:1},
+  cancelActionText:{fontSize:12,fontWeight:'800',color:'#071E49'},
+  rejectActionText:{fontSize:12,fontWeight:'800',color:'#C32B37'},
+  saveActionText:{fontSize:13,fontWeight:'800',color:'#17365D',textAlign:'center'},
+  issueActionText:{fontSize:13,fontWeight:'800',color:'#FFFFFF',textAlign:'center'},
+  issueActionSubtitle:{fontSize:10,color:'#EDF5FF',fontWeight:'500',textAlign:'center'},
   disabledAction:{opacity:0.56},
   document:{flexDirection:'row',alignItems:'center',gap:1,minHeight:42,backgroundColor:'#E9FAF0',borderWidth:1,borderColor:'#A6E1C5',borderRadius:9,overflow:'hidden'},
   documentName:{flex:1,fontSize:11,fontWeight:'600',color:navy},
