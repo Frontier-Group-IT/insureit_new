@@ -752,14 +752,30 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
                       </div>
                     ) : <p className="text-[10px] text-[#61748e]">No matching mobile number in the customer master. Review identity before creating a new customer.</p>}
                     <div className="flex flex-wrap gap-2">
-                      <button type="button" disabled={isWaiting || !customerReview.insuredName}
-                        onClick={()=>{
+                      <button type="button" disabled={isWaiting || queueRetrying || !customerReview.insuredName}
+                        onClick={async()=>{
                           const row=exceptionRow;
                           if(row.ai_state==="verified" && !row.is_duplicate && !(row.ai_exceptions??[]).length){
                             setExceptionRow(null);setAutoConvertRow(row);setCustomerReview(null);
                             return;
                           }
-                          setQueueRetryError("A separate customer will be created as part of the policy booking transaction, not in Customer Register. This Intake must first pass the current n8n PDF/issuance-date checks. Recheck in background, then select Convert to Policy.");
+                          if(row.is_duplicate){
+                            setQueueRetryError("Duplicate policy records cannot be converted into a new policy.");
+                            return;
+                          }
+                          setQueueRetrying(true);setQueueRetryError(null);
+                          try {
+                            const queued=await reprocessAiPolicyIntake(row.id);
+                            if(queued.ok){
+                              setExceptionRow(null);setCustomerReview(null);router.refresh();
+                              setAutoConvertMessage("The latest policy PDF is queued for n8n revalidation. When the Intake shows PDF extracted, Convert to Policy will create a separate customer within the canonical booking transaction if no exact insured-name match exists.");
+                            }else{
+                              setQueueRetryError(queued.error==="This Intake is already queued or being processed."
+                                ?"The current policy is already queued for n8n. It will be eligible for normal conversion once the verified PDF and required issuance date have been confirmed."
+                                :queued.error??"Could not revalidate this Intake.");
+                            }
+                          } catch {setQueueRetryError("Could not schedule the verified policy recheck. No customer or policy was created.");}
+                          finally {setQueueRetrying(false);}
                         }}
                         className="rounded-md border border-[#bed1e8] bg-white px-3 py-2 text-[10px] font-bold text-[#174b83] disabled:opacity-50">
                         Create New Customer with Policy
