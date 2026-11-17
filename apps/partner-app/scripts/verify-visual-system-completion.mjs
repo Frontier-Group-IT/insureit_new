@@ -35,13 +35,14 @@ const policyIntakeNew = read('app/policy-intake-new.tsx');
 const policyIntakeDetail = read('app/policy-intakes/[id].tsx');
 const customerDetail = read('app/customer/[id].tsx');
 const policyDetail = read('app/policy/[id].tsx');
+// These four section titles are intentionally text-only; their cards retain icons.
 for (const heading of [
-  'iconKind="premium" title="Premium"',
-  'iconKind="customer-vehicle" title="Customer Details"',
-  'iconKind="customer-vehicle" title={data.vehicle ? \'Vehicle Details\' : \'Insured Risk Details\'}',
-  'iconKind="commercial-attribution" title="Commercial Attribution"',
+  'title="Premium"',
+  'title="Customer Details"',
+  "title={data.vehicle ? 'Vehicle Details' : 'Insured Risk Details'}",
+  'title="Commercial Attribution"',
 ]) {
-  requireText(policyDetail, '<View style={styles.externalSectionHeading}><CardHeader ' + heading + ' /></View>', 'Detail section heading must be outside the white card: ' + heading);
+  requireText(policyDetail, '<View style={styles.externalSectionHeading}><CardHeader ' + heading + ' /></View>', 'Text-only heading must remain outside the white card: ' + heading);
 }
 requireText(policyDetail, 'externalSection: { gap: 5 }', 'Headings must sit closely above their cards');
 requireText(policyDetail, '<CardHeader iconKind="policy-overview" title="Policy Overview"', 'Policy Overview keeps original in-card heading');
