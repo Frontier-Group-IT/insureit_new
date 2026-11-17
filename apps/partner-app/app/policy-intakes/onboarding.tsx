@@ -831,15 +831,15 @@ export default function NativePolicyOnboarding(){
     </View>)}</View>
   </View>;
   const productSection=(number:string,title:string,items:ProductField[])=><View style={styles.section} key={number+'-'+title}>
-    <View style={styles.sectionHead}><Text style={styles.number}>{number}</Text><Text style={styles.sectionTitle}>{title}</Text></View>
+    <View style={styles.sectionHead}><Animated.Text style={[styles.number,{transform:[{scale:numberScale}]}]}>{number}</Animated.Text><Text style={styles.sectionTitle}>{title}</Text></View>
     <View style={styles.fields}>{items.map(detailField)}</View>
   </View>;
   const section=(number:string,title:string,items:Field[])=><View style={styles.section} key={number}>
-    <View style={styles.sectionHead}>{number?<Text style={styles.number}>{number}</Text>:null}<Text style={styles.sectionTitle}>{title}</Text></View>
+    <View style={styles.sectionHead}>{number?<Animated.Text style={[styles.number,{transform:[{scale:numberScale}]}]}>{number}</Animated.Text>:null}<Text style={styles.sectionTitle}>{title}</Text></View>
     <View style={styles.fields}>{items.map(item=>field(item))}</View>
   </View>;
   const nonMotorCustomerPolicySection=<View style={styles.section}>
-    <View style={styles.sectionHead}><Text style={styles.number}>02</Text><Text style={styles.sectionTitle}>Customer & policy</Text></View>
+    <View style={styles.sectionHead}><Animated.Text style={[styles.number,{transform:[{scale:numberScale}]}]}>02</Animated.Text><Text style={styles.sectionTitle}>Customer & policy</Text></View>
     <View style={styles.nonMotorCustomerArea}>
       <Text style={styles.label}>Customer record</Text>
       <View style={styles.nonMotorModeRow}>
@@ -882,14 +882,14 @@ export default function NativePolicyOnboarding(){
     <View style={styles.fields}>{otherPolicy.map(detailField)}</View>
   </View>;
   const nonMotorRiskSection=<View style={styles.section}>
-    <View style={styles.sectionHead}><Text style={styles.number}>03</Text><Text style={styles.sectionTitle}>Risk details</Text></View>
+    <View style={styles.sectionHead}><Animated.Text style={[styles.number,{transform:[{scale:numberScale}]}]}>03</Animated.Text><Text style={styles.sectionTitle}>Risk details</Text></View>
     <View style={styles.fields}>{(riskFields[productValues.category]??riskFields.Other).map(detailField)}</View>
   </View>;
   const nonMotorAdditionalSection=<View style={styles.section}>
     <Pressable accessibilityRole="button" accessibilityLabel="Additional policy details"
       accessibilityState={{expanded:nonMotorAdditionalOpen}}
       style={styles.sectionHead} onPress={()=>setNonMotorAdditionalOpen(v=>!v)}>
-      <Text style={styles.number}>05</Text>
+      <Animated.Text style={[styles.number,{transform:[{scale:numberScale}]}]}>05</Animated.Text>
       <Text style={[styles.sectionTitle,styles.headingFlex]}>Additional policy details</Text>
       <Ionicons name={nonMotorAdditionalOpen?'chevron-up':'chevron-down'} size={16} color="#315B85"/>
     </Pressable>
@@ -905,7 +905,7 @@ export default function NativePolicyOnboarding(){
     </View>:null}
   </View>;
   const onboardingDocumentsSection=(number:string)=><View style={styles.section}>
-    <View style={styles.sectionHead}><Text style={styles.number}>{number}</Text><Text style={styles.sectionTitle}>Documents</Text></View>
+    <View style={styles.sectionHead}><Animated.Text style={[styles.number,{transform:[{scale:numberScale}]}]}>{number}</Animated.Text><Text style={styles.sectionTitle}>Documents</Text></View>
     <View style={styles.nonMotorDocuments}>
       {([
         ['policy_copy','Policy Copy'],['proposal_form','Proposal Form'],
@@ -966,7 +966,7 @@ export default function NativePolicyOnboarding(){
   const registrationValid=Boolean(draft?.registrationNo.trim()&&/^[A-Z]{2}\d{1,2}[A-Z]{1,3}\d{1,4}$/i.test(draft.registrationNo.replace(/[ -]/g,'')));
   const motorVehicleSection=<View style={styles.section}>
     <View style={styles.sectionHead}>
-      <Text style={styles.number}>02</Text>
+      <Animated.Text style={[styles.number,{transform:[{scale:numberScale}]}]}>02</Animated.Text>
       <Text style={[styles.sectionTitle,styles.headingFlex]} numberOfLines={1}>Insured & vehicle</Text>
       <View style={styles.registrationToggle}>
         {(['registered','unregistered'] as const).map(mode=><Pressable key={mode}
@@ -1147,13 +1147,13 @@ export default function NativePolicyOnboarding(){
         {(productType==='Life'||productType==='Health')?
           <Pressable accessibilityRole="button" accessibilityLabel="Create Policy"
             disabled={booking||saving||creatingLifeHealth||!data}
-            style={[styles.primary,(booking||saving||creatingLifeHealth||!data)&&styles.disabled]}
+            style={({pressed})=>[styles.primary,pressed&&styles.buttonPressed,(booking||saving||creatingLifeHealth||!data)&&styles.disabled]}
             onPress={()=>void createLifeHealth()}>
             {creatingLifeHealth?<ActivityIndicator size="small" color="white"/>:<Ionicons name="checkmark-circle-outline" size={16} color="white"/>}
             <Text style={styles.primaryText}>{creatingLifeHealth?'Creating case…':'Create Policy'}</Text>
           </Pressable>:
           <Pressable accessibilityRole="button" accessibilityLabel="Create Active Policy"
-            disabled={booking||saving||!data} style={[styles.primary,(booking||saving||!data)&&styles.disabled]}
+            disabled={booking||saving||!data} style={({pressed})=>[styles.primary,pressed&&styles.buttonPressed,(booking||saving||!data)&&styles.disabled]}
             onPress={()=>void createActivePolicy()}>
             {booking?<ActivityIndicator size="small" color="white"/>:<Ionicons name="checkmark-circle-outline" size={16} color="white"/>}
             <Text style={styles.primaryText}>{booking?(isMotor?'Checking & booking…':isNew?'Creating policy…':'Opening Operations…'):'Create Active Policy'}</Text>
