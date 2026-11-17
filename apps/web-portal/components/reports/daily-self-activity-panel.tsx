@@ -146,7 +146,7 @@ export function DailySelfActivityPanel({data,linkFor,reportMode="self",canViewAl
                   ) : isClaimActivity ? (
                     <>
                       <th className="px-3 py-3">Control No.</th>
-                      <th className="px-3 py-3">Claim No.</th>
+                      
                       <th className="px-3 py-3">Customer</th>
                       <th className="px-3 py-3">Vehicle No.</th>
                     </>
@@ -169,9 +169,9 @@ export function DailySelfActivityPanel({data,linkFor,reportMode="self",canViewAl
             <span>Page {data.page} · 30 per page</span>
             <div className="flex gap-2">
               <Link prefetch={false} aria-disabled={data.page<=1} href={data.page<=1?"#":linkFor({page:String(data.page-1)})}
-                className={`rounded-lg border px-3 py-1.5 font-bold ${data.page<=1?"pointer-events-none opacity-40":"hover:bg-[#f5f8fc]"}`}>Previous</Link>
+                className={`rounded-lg border px-3 py-1.5 font-bold ${data.page<=1?"pointer-events-none border-[#dae1eb] bg-[#f0f3f8] text-[#263b57]":"border-[#9eaec3] bg-white text-[#102846] hover:bg-[#e9eff7]"}`}>Previous</Link>
               <Link prefetch={false} aria-disabled={!data.hasNext} href={!data.hasNext?"#":linkFor({page:String(data.page+1)})}
-                className={`rounded-lg border px-3 py-1.5 font-bold ${!data.hasNext?"pointer-events-none opacity-40":"hover:bg-[#f5f8fc]"}`}>Next</Link>
+                className={`rounded-lg border px-3 py-1.5 font-bold ${!data.hasNext?"pointer-events-none border-[#dae1eb] bg-[#f0f3f8] text-[#263b57]":"border-[#9eaec3] bg-white text-[#102846] hover:bg-[#e9eff7]"}`}>Next</Link>
             </div>
           </div>
         </>
