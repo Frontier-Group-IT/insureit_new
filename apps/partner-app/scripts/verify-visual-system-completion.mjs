@@ -346,6 +346,11 @@ requireText(policyDetail, 'marginHorizontal: 9, marginBottom: 8, paddingHorizont
 requireText(policyDetail, 'gap: 7, backgroundColor:', 'Disclosure icon-to-title gap matches Policy Overview.');
 requireText(policyDetail, '<Text style={styles.cardTitle}>Premium breakup</Text>', 'Premium title uses exact Overview heading typography.');
 requireText(policyDetail, '<Text style={styles.cardTitle}>Sales ownership</Text>', 'Sales ownership title uses exact Overview heading typography.');
+requireText(policyDetail, '<CardHeader iconKind="policy-overview" title="Policy Overview" tinted', 'Policy Overview header must use the source-and-ownership blue band.');
+requireText(policyDetail, "policySectionHeaderTint: { backgroundColor: '#E8F0FB' }", 'Policy Overview uses the light-blue reference background.');
+requireText(policyDetail, "premiumDisclosure: { minHeight: 47, marginHorizontal: 0, marginBottom: 8, paddingHorizontal: 11, borderRadius: 0, flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: '#E8F0FB' }", 'Premium breakup uses the same full-width light-blue header.');
+requireText(policyDetail, "commercialRow: { minHeight: 47, marginHorizontal: 0, marginBottom: 8, paddingHorizontal: 11, borderRadius: 0, flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: '#E8F0FB' }", 'Sales ownership uses the same full-width light-blue header.');
+
 requireText(policyDetail, "iconKind === 'renew-policy'", 'Renew Policy retains its own icon choice.');
 requireText(policyDetail, "iconKind === 'raise-claim'", 'Raise Claim retains its own icon choice.');
 requireText(policyDetail, 'PartnerAssets.actions.quickRenewals', 'Renew Policy uses the exact Home Renewals icon.');
