@@ -6,8 +6,8 @@ const route=readFileSync(new URL("../../web-portal/app/api/partner/life-health-c
 assert.match(screen, /row\.status_group==='issued' && row\.final_policy_id \? setIssuedCase\(row\) : router\.push/, "Only issued cases show popup, pending/rejected remain unchanged");
 assert.match(screen,/Policy already issued/);
 assert.match(screen,/This case has already been issued as a policy\./);
-assert.match(screen,/onRequestClose=\{\(\)=>setIssuedCase\(null\)\}/);
-assert.match(screen,/onPress=\{\(\)=>setIssuedCase\(null\)\}/);
+assert.match(screen,/onDismiss=\{\(\)=>setIssuedCase\(null\)\}/);
+assert.match(screen,/onPress:\(\)=>setIssuedCase\(null\)/);
 assert.match(screen,/router\.push\(\`\/policy\/\$\{policyId\}\` as never\)/, "Issued View Policy opens native Policy Details by final policy ID");
 assert.match(screen,/const policyId=issuedCase\.final_policy_id/, "Use the linked issued policy ID, not the case ID");
 assert.doesNotMatch(screen,/router\.push\(\`\/life-health-cases\/\$\{caseId\}\`/, "Issued popup must not route to Case Details");

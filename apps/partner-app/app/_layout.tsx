@@ -5,6 +5,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { canPartnerAccess, canPartnerAccessCaseRegister, canPartnerSearch, canPartnerStartClaim, requiredPartnerRoutePermission } from '@/lib/partner-permissions';
 import { usePartnerSession } from '@/providers/partner-session-provider';
 import { PartnerErrorBoundary } from '@/components/partner-error-boundary';
+import { PartnerAlertHost } from '@/components/ui/partner-feedback-dialog';
 import { PartnerBiometricLockProvider } from '@/providers/partner-biometric-lock-provider';
 import { PartnerNativeRuntimeProvider } from '@/providers/partner-native-runtime-provider';
 import { PartnerNetworkProvider } from '@/providers/partner-network-provider';
@@ -62,6 +63,7 @@ export default function RootLayout() {
                     <Stack.Screen name="access-denied" />
                   </Stack>
                   </PartnerPermissionBoundary>
+                  <PartnerAlertHost />
                 </PartnerSearchProvider>
               </PartnerSensitivePrivacyProvider>
             </PartnerNativeRuntimeProvider>

@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { ActivityIndicator, Alert, Linking, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Linking, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert } from '@/lib/partner-alert';
 import { Ionicons } from '@expo/vector-icons';
 import type { PartnerClaimDocument } from '@/lib/claims';
 import { supabase } from '@/lib/supabase';

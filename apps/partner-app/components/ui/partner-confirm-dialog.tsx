@@ -1,8 +1,8 @@
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { PartnerFeedbackDialog } from '@/components/ui/partner-feedback-dialog';
 
-import { PartnerButton } from '@/components/ui/partner-button';
-import { partnerTheme } from '@/lib/theme';
-
+/** Confirmation flows share the same reference popup as errors, success and alerts.
+ * Existing button callbacks and destructive/busy behavior remain unchanged.
+ */
 export function PartnerConfirmDialog({
   visible,
   title,
@@ -24,58 +24,16 @@ export function PartnerConfirmDialog({
   onCancel: () => void;
   onConfirm: () => void;
 }) {
-  return (
-    <Modal transparent visible={visible} animationType="fade" onRequestClose={onCancel}>
-      <View style={styles.backdrop}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Close dialog"
-          accessibilityHint="Dismisses this dialog without continuing"
-          disabled={busy}
-          onPress={onCancel}
-          style={StyleSheet.absoluteFill}
-        />
-        <View
-          accessible
-          accessibilityRole="alert"
-          accessibilityViewIsModal
-          accessibilityLabel={title}
-          accessibilityHint={message}
-          style={styles.dialog}
-        >
-          <Text accessibilityRole="header" style={styles.title}>{title}</Text>
-          <Text style={styles.message}>{message}</Text>
-          <View style={styles.actions}>
-            <View style={styles.action}>
-              <PartnerButton label={cancelLabel} onPress={onCancel} variant="secondary" disabled={busy} />
-            </View>
-            <View style={styles.action}>
-              <PartnerButton label={confirmLabel} onPress={onConfirm} variant={destructive ? 'danger' : 'primary'} loading={busy} />
-            </View>
-          </View>
-        </View>
-      </View>
-    </Modal>
-  );
+  return <PartnerFeedbackDialog
+    visible={visible}
+    type={destructive ? 'delete' : 'confirm'}
+    title={title}
+    message={message}
+    busy={busy}
+    onDismiss={onCancel}
+    actions={[
+      { label: cancelLabel, onPress: onCancel, kind: 'secondary' },
+      { label: confirmLabel, onPress: onConfirm, kind: destructive ? 'destructive' : 'primary' },
+    ]}
+  />;
 }
-
-const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
-    backgroundColor: 'rgba(17, 24, 39, 0.48)',
-  },
-  dialog: {
-    width: '100%',
-    maxWidth: 420,
-    borderRadius: partnerTheme.radius.xl,
-    padding: 20,
-    backgroundColor: partnerTheme.colors.surface,
-  },
-  title: { color: partnerTheme.colors.ink, ...partnerTheme.typography.sectionTitle },
-  message: { marginTop: 8, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.body },
-  actions: { marginTop: 20, flexDirection: 'row', gap: 10 },
-  action: { flex: 1 },
-});
