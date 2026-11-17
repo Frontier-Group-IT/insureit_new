@@ -535,6 +535,7 @@ const blockedBy=(code,overrides)=>assert(assessAi(overrides).exceptions.some(e=>
   code+" must block one-click and bulk booking");
 blockedBy("customer_identity",{sharedPhoneHasDistinctNames:true});
 blockedBy("customer_ambiguous",{customerMatch:"multiple"});
+blockedBy("customer_creation_required",{customerMatch:"none",existingCustomerSameIdentity:false});
 blockedBy("customer_identity",{customerMatch:"name_conflict"});
 assert.equal(assessAi({sharedPhoneHasDistinctNames:false}).state,"eligible",
   "One mobile on several same-person policies is not automatically a conflict");
