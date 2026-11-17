@@ -316,7 +316,7 @@ export default function AddPartnerScreen() {
               <View style={styles.sectionBody} onLayout={event => { bodyPositions.current[index] = event.nativeEvent.layout.y; }}>
                 {index === 2 ? (
                   <View style={[styles.field, cellStyle]} onLayout={event => { fieldPositions.current.bank_id = event.nativeEvent.layout.y; }}>
-                    <Text style={styles.label}>Bank *</Text>
+                    <Text style={styles.label}>Bank <Text style={styles.requiredStar}>*</Text></Text>
                     <Pressable disabled={loading || Boolean(applicationId)} accessibilityRole="button" onPress={() => openSelector('bank')} style={[styles.select, fieldErrors.bank_id && styles.invalidControl]}>
                       <Text style={styles.selectText} numberOfLines={1}>{banks.find(x => x.id === form.bank_id)?.name || (loading ? 'Loading banks…' : 'Select bank')}</Text>
                       <Ionicons name="chevron-down" size={17} color="#17365D" />
@@ -327,7 +327,7 @@ export default function AddPartnerScreen() {
                 {section.inputs.map(field => (
                   <Fragment key={field.key}>
                     <View style={[styles.field, cellStyle]} onLayout={event => { fieldPositions.current[field.key] = event.nativeEvent.layout.y; }}>
-                      <Text style={styles.label}>{field.label}{field.optional ? '' : ' *'}</Text>
+                      <Text style={styles.label}>{field.label}{!field.optional ? <Text style={styles.requiredStar}> *</Text> : null}</Text>
                       {field.key === 'document_received_at' || field.key === 'date_of_birth' ? (
                         <Pressable accessibilityRole="button" accessibilityLabel={`Select ${field.label}`}
                           disabled={Boolean(applicationId)} onPress={() => setDateField(field.key as 'date_of_birth' | 'document_received_at')} style={[styles.select, fieldErrors[field.key] && styles.invalidControl]}>
@@ -346,7 +346,7 @@ export default function AddPartnerScreen() {
                     </View>
                     {field.key === 'document_received_at' ? (
                       <View style={[styles.field, cellStyle]} onLayout={event => { fieldPositions.current.associate_employee_id = event.nativeEvent.layout.y; }}>
-                        <Text style={styles.label}>RM *</Text>
+                        <Text style={styles.label}>RM <Text style={styles.requiredStar}>*</Text></Text>
                         <Pressable disabled={loading || Boolean(applicationId)} accessibilityRole="button" onPress={() => openSelector('rm')} style={[styles.select, fieldErrors.associate_employee_id && styles.invalidControl]}>
                           <Text style={styles.selectText} numberOfLines={1}>{rms.find(x => x.id === form.associate_employee_id)?.name || (loading ? 'Loading RMs…' : 'Select RM')}</Text>
                           <Ionicons name="chevron-down" size={17} color="#17365D" />
@@ -478,15 +478,15 @@ const styles = StyleSheet.create({
   sectionTitle: { color: '#172846', fontSize: 13, fontWeight: '800' },
   sectionBody: { padding: 12, flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 11 },
   halfField: { width: '48.5%' }, fullField: { width: '100%' },
-  field: { gap: 5 }, label: { fontSize: 11, fontWeight: '700', color: '#33465D' },
+  field: { gap: 5 }, label: { fontSize: 11, fontWeight: '700', color: '#33465D' }, requiredStar: { color: '#DC2626' },
   invalidControl: { borderColor: '#DC2626', backgroundColor: '#FFF7F7' },
   fieldError: { fontSize: 10.5, lineHeight: 15, color: '#B91C1C', fontWeight: '600' },
   input: { minHeight: 44, backgroundColor: '#FFF', borderWidth: 1, borderColor: '#CED8E7', borderRadius: 10, paddingHorizontal: 12, fontSize: 13, color: '#152A49' },
   select: { minHeight: 44, borderWidth: 1, borderColor: '#CED8E7', borderRadius: 10, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   selectText: { color: '#17365D', fontSize: 13, fontWeight: '600', flexShrink: 1 },
-  actionFooter: { paddingVertical: 12, paddingHorizontal: 2 },
-  actionRow: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8 },
-  actionButton: { minHeight: 44, borderRadius: 10, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
+  actionFooter: { backgroundColor: '#E7EEFC', borderWidth: 1, borderColor: '#CBDCFB', borderRadius: 12, padding: 10, marginTop: 4 },
+  actionRow: { flexDirection: 'row', gap: 8 },
+  actionButton: { flex: 1, minWidth: 0, minHeight: 44, borderRadius: 10, paddingHorizontal: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
   saveExitButton: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE4F2' },
   saveExitText: { color: '#17365D', fontWeight: '700', fontSize: 12 },
   uploadButton: { backgroundColor: '#4379EF' },
