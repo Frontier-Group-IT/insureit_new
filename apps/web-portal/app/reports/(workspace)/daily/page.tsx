@@ -61,7 +61,7 @@ export default async function DailyReportPage({ searchParams }: Props) {
       scope: filters.scope, type: filters.type, date: filters.date,
       period: periodRange.period,
       ...(periodRange.period === "custom" ? {from:periodRange.from ?? "",to:periodRange.to ?? ""} : {}),
-      {activity:query.activity??""},
+      activity:query.activity??"",
       ...(chosenPerson ? {person:chosenPerson} : {}),
       ...(filters.scope === "all" && filters.employee ? {employee:filters.employee} : {}),
       ...updates,
