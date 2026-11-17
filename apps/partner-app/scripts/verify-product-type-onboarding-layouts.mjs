@@ -63,6 +63,15 @@ assert.match(screen,/const \[commercialModal,setCommercialModal\]=useState<'payi
 assert.match(screen,/accessibilityLabel="Insurer Pay-In popup"/, 'Insurer Pay-In entry must open its own popup.');
 assert.match(screen,/productValues.payinBasis==='FLAT'/, 'Non-Motor pay-in supports fixed and net premium basis.');
 assert.match(screen,/productValues.partnerPayoutBasis==='FLAT'/, 'Non-Motor payout supports fixed and net premium basis.');
+assert.ok(screen.includes("const [commercialBasisOpen,setCommercialBasisOpen]=useState<'payin'|'payout'|null>(null)"), 'Basis options open inline inside either commercial popup.');
+assert.ok(screen.includes("onPress={()=>setCommercialBasisOpen(current=>current==='payin'?null:'payin')}"), 'Pay-in basis field expands inline.');
+assert.ok(screen.includes("onPress={()=>setCommercialBasisOpen(current=>current==='payout'?null:'payout')}"), 'Payout basis field expands inline.');
+assert.ok(screen.includes("updateProduct('payinBasis',option.value)"), 'Pay-in basis choice updates product state.');
+assert.ok(screen.includes("updateProduct('partnerPayoutBasis',option.value)"), 'Payout basis choice updates product state.');
+assert.ok(!screen.includes("setPicker({key:'payinBasis'") && !screen.includes("setPicker({key:'partnerPayoutBasis'"), 'Commercial basis should not launch a second native Modal.');
+assert.doesNotMatch(screen,/Blank means projected pay-in has not been entered|The payout is tagged to the selected Section 01 Lead Source/, 'Commercial popup explanatory notes are removed.');
+assert.ok(screen.includes('onPress={()=>setCommercialBasisOpen(null)}'), 'Tapping the commercial backdrop closes basis options.');
+
 assert.match(screen,/summaryPayin\*\.9-summaryPayout/, 'Projected retention deducts TDS.');
 assert.match(screen,/manufacturingYearOptions=Array\.from\(\{length:new Date\(\)\.getFullYear\(\)-1900\+1\}/, 'Motor year dropdown must match the Operations Portal 1900-to-current range.');
 assert.match(screen,/f.key==='manufacturingYear'\?manufacturingYearOptions\.map/, 'Motor year uses a controlled dropdown, not a free text input.');
@@ -84,7 +93,7 @@ assert.match(screen,/commercialModal==='payin'\?'Projected Insurer Pay-in':'Part
 assert.match(screen,/insurerPayinFields\.map\(/, 'Pay-in popup must use scoped insurer fields.');
 assert.match(screen,/partnerPayoutFields\.filter\(/, 'Payout popup must use scoped payout fields.');
 assert.match(screen,/accessibilityLabel="Save and close commercial popup"/, 'Commercial popup needs a Save & Close action.');
-assert.ok(screen.includes('onPress={()=>void saveCommercial()}'), 'Both commercial popups share the responsive Save & Close handler.');
+assert.ok(screen.includes('void saveCommercial();'), 'Both commercial popups share the responsive Save & Close handler.');
 assert.ok(screen.includes('if(!isNew){'), 'Existing Intake commercial values persist through the revision-checked API.');
 assert.ok(screen.includes('const result=await saveNativePolicyOnboarding(id,data.revision,draft);'), 'Commercial Save & Close persists existing intake values.');
 assert.ok(screen.includes('setCommercialModal(null);'), 'Successful commercial save closes the modal.');
@@ -196,7 +205,7 @@ assert.match(screen,/!isNew\?<View style=\{styles.documentAndSaveActions\}>/,'St
 assert.doesNotMatch(screen,/accessibilityLabel="Save Draft"/,'Intake must not show the removed Save Draft action.');
 assert.match(screen,/documentAndSaveActions:/,'Existing Intake retains its policy-document action wrapper.');
 assert.match(screen,/viewPolicyButton:/,'Intake policy copy action retains its existing styling.');
-assert.ok(screen.includes('onPress={()=>void saveCommercial()}'), 'Commercial popup must use shared Save & Close handler.');
+assert.ok(screen.includes('void saveCommercial();'), 'Commercial popup must use shared Save & Close handler.');
 assert.doesNotMatch(screen,/setDialog\('confirm-save'\)/,'Removed Save Draft confirmation must not be reachable.');
 assert.match(screen,/setDialog\('discard'\)/,'Cancel protects unsaved changes in custom dialog.');
 assert.match(screen,/onRequestClose=\{dismissDialog\}/,'Popup dismissal must be accessible on Android.');
