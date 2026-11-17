@@ -41,7 +41,7 @@ const KNOWN_CHETAK_ELECTRIC_MODELS = new Set([
  * naming aliases for matching; retain the PDF's actual model in the form.
  */
 function knownChetakModelCode(raw: string): string {
-  const canonical = raw.trim().toUpperCase().replace(/\\s+/g, " ");
+  const canonical = raw.trim().toUpperCase().replace(/\s+/g, " ");
   const parts = canonical.match(/^(?:C|CHETAK[ -]+)(2501|3001|3501|3502|3503)$/);
   const code = parts ? `C${parts[1]}` : "";
   return KNOWN_CHETAK_ELECTRIC_MODELS.has(code) ? code : "";
