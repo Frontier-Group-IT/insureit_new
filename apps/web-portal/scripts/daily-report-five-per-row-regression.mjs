@@ -63,7 +63,7 @@ assert.match(css,/\.reports-reference-shell:has\(\.daily-report-reference\) \.re
 assert.doesNotMatch(css,/\.reports-reference-shell:has\(\.daily-report-reference\) \.reports-reference-header::before/,"No decorative gradient is layered over the white header");
 assert.match(panel,/daily-report-activity-icon/,"Activity icons retained");
 assert.match(header,/daily-report-header-select/,"Pill-shaped period and scope filters retained");
-assert.match(panel,/data\.category && data\.rows\.length===0 \? <DailyReportEmptyState \/>/,"Empty drilldowns show illustrated empty state");
+assert.ok(panel.includes('</table> : <DailyReportEmptyState />'),"Empty drilldowns show illustrated state and retain bottom pagination");
 assert.match(panel,/<DailyReportEmptyState \/>/,"Empty summaries show illustrated empty state");
 assert.match(panel,/No activities yet/,"Empty-state title is visible");
 assert.match(panel,/Your activities will appear here once they are recorded/,"Empty-state explanation is visible");
