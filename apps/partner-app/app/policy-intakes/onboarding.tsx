@@ -1,7 +1,7 @@
 import { partnerAlert } from '@/components/ui/partner-alert-provider';
 import { PartnerConfirmDialog } from '@/components/ui/partner-confirm-dialog';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Linking, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { AccessibilityInfo, ActivityIndicator, Animated, Linking, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useLocalSearchParams, usePathname, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
@@ -155,6 +155,30 @@ export default function NativePolicyOnboarding(){
   const isNew=usePathname()==='/policy-new';
   const [data,setData]=useState<NativeOnboardingData|null>(null);
   const [draft,setDraft]=useState<NativePolicyDraft|null>(null);
+  // Entrance occurs when data first loads, not every time the user types.
+  const formOpacity=useRef(new Animated.Value(0)).current;
+  const formShift=useRef(new Animated.Value(8)).current;
+  const numberScale=useRef(new Animated.Value(0.97)).current;
+  const [focusedInput,setFocusedInput]=useState<string|null>(null);
+  useEffect(()=>{
+    if(!draft)return;
+    let active=true;
+    void AccessibilityInfo.isReduceMotionEnabled().then(reduced=>{
+      if(!active)return;
+      if(reduced){
+        formOpacity.setValue(1);formShift.setValue(0);numberScale.setValue(1);
+        return;
+      }
+      Animated.parallel([
+        Animated.timing(formOpacity,{toValue:1,duration:280,useNativeDriver:true}),
+        Animated.timing(formShift,{toValue:0,duration:280,useNativeDriver:true}),
+        Animated.timing(numberScale,{toValue:1,duration:220,useNativeDriver:true}),
+      ]).start();
+    }).catch(()=>{
+      if(active){formOpacity.setValue(1);formShift.setValue(0);numberScale.setValue(1);}
+    });
+    return()=>{active=false;formOpacity.stopAnimation();formShift.stopAnimation();numberScale.stopAnimation();};
+  },[Boolean(draft),formOpacity,formShift,numberScale]);
   const [error,setError]=useState('');
   const [loading,setLoading]=useState(true);
   const [saving,setSaving]=useState(false);
@@ -743,9 +767,10 @@ export default function NativePolicyOnboarding(){
       ):(
         <TextInput accessibilityLabel={f.label} value={current} editable={!restricted} placeholder={hint}
           placeholderTextColor="#98A6B8" onChangeText={v=>update(f.key,v)}
+          onFocus={()=>setFocusedInput(String(f.key))} onBlur={()=>setFocusedInput(current=>current===String(f.key)?null:current)}
           autoCapitalize={['registrationNo','chassisNo','engineNo','policyNo'].includes(f.key)?'characters':'sentences'}
           keyboardType={['phoneNo','idv','od','tp','cpa','capacity','manufacturingYear'].includes(f.key)?'numeric':'default'}
-          style={[styles.input,restricted&&styles.readonlyInput]} />
+          style={[styles.input,focusedInput===String(f.key)&&styles.focusedInput,restricted&&styles.readonlyInput]} />
       )}
     </View>;
   };
@@ -763,7 +788,8 @@ export default function NativePolicyOnboarding(){
         <Ionicons name="chevron-down" size={15} color="#63758D"/>
       </Pressable>:<TextInput accessibilityLabel={f.label} value={current} placeholder={['sumInsured','netPremium','gstAmount','grossPremium'].includes(f.key)?'₹ 0.00':f.key==='previousClaims'?'Brief reference':f.required?'Enter '+f.label.toLowerCase():f.key==='deductible'||productExtras.some(item=>item.key===f.key)?'Optional':'Enter '+f.label.toLowerCase()} placeholderTextColor="#98A6B8" onChangeText={v=>updateProduct(f.key,f.key==='phone'?v.replace(/\D/g,'').slice(0,10):f.key==='policyNumber'?v.toUpperCase():v)}
         keyboardType={['phone','premiumAmount','sumInsured','deductible','netPremium','gstAmount','grossPremium','employeeCount','annualWages','annualTurnover','projectValue'].includes(f.key)?'numeric':'default'}
-        style={styles.input}/>}
+        onFocus={()=>setFocusedInput('product:'+f.key)} onBlur={()=>setFocusedInput(current=>current==='product:'+f.key?null:current)}
+        style={[styles.input,focusedInput==='product:'+f.key&&styles.focusedInput]}/>}
     </View>;
   };
   // Preserve Motor's newer source ownership rendering; compact the other policy types.
@@ -783,7 +809,10 @@ export default function NativePolicyOnboarding(){
             placeholder="" style={styles.sourceMetaInput}/>}
   </View>;
   const sourceSection=()=> <View style={[styles.section,styles.firstSection]}>
-    <View style={styles.sectionHead}><Text style={styles.number}>01</Text><Text style={styles.sectionTitle}>Policy source & ownership</Text></View>
+    <View style={styles.sectionHead}><Animated.Text style={[styles.number,{transform:[{scale:numberScale}]}]}>01</Animated.Text><Text style={styles.sectionTitle}>Policy source & ownership</Text>
+      {sourceIsVerified&&policy.filter(item=>item.required).every(item=>String(draft?.[item.key]??'').trim())?
+        <Ionicons name="checkmark-circle" size={16} color="#208052" accessibilityLabel="Source details completed"/>:null}
+    </View>
     <View style={styles.fields}>{policy.slice(0,4).map(item=><View key={item.key} style={styles.sourceCell}>
       {field(item,true)}
       {item.key==='intermediaryType'?<View style={styles.sourceOwnerRow}>
@@ -989,7 +1018,7 @@ export default function NativePolicyOnboarding(){
     {loading?<PartnerStateView state="loading" title={isNew?'Preparing new Policy Onboarding':'Loading saved Policy Onboarding'} />:null}
     {error&&!draft?<View style={styles.error}><Ionicons name="alert-circle-outline" size={16} color="#B42318"/><Text style={styles.errorText}>{error}</Text></View>:null}
     {!loading&&!draft?<Pressable style={styles.retry} onPress={()=>void load()}><Text style={styles.retryText}>Retry loading</Text></Pressable>:null}
-    {draft?<>
+    {draft?<Animated.View style={{opacity:formOpacity,transform:[{translateY:formShift}]}}>
       {sourceSection()}
       {isMotor?motorVehicleSection:productType==='Non Motor'?nonMotorCustomerPolicySection:productSection('02','Customer / Proposer',commonPerson)}
       {isMotor?motorProductSection:productType==='Non Motor'?nonMotorRiskSection:productSection('03','Policy product & case details',lifeProduct)}
@@ -1132,7 +1161,7 @@ export default function NativePolicyOnboarding(){
       </View>
 
 
-    </>:null}
+    </Animated.View>:null}
 
     <Modal transparent visible={Boolean(caseCreated)} animationType="fade"
       onRequestClose={()=>{ /* Case creation succeeded: require an explicit return action. */ }}>
@@ -1486,7 +1515,7 @@ const styles=StyleSheet.create({
   fields:{padding:12,flexDirection:'row',flexWrap:'wrap',columnGap:10,rowGap:11},field:{width:'48%',minWidth:0,gap:5},sourceCell:{width:'48%',minWidth:0,gap:3},sourcePrimary:{width:'100%'},sourceMeta:{minHeight:19,flexDirection:'row',alignItems:'center',gap:3,flexShrink:1},sourceMetaLabel:{fontSize:9,fontWeight:'700',color:'#000000'},sourceMetaInput:{minWidth:0,maxWidth:76,fontSize:9,color:'#315B91',fontWeight:'600',paddingVertical:0,paddingHorizontal:0,padding:0},wideField:{width:'100%'},label:{fontSize:10,color:'#000000',fontWeight:'700'},star:{color:'#B93333'},
   vehicleClassLabelRow:{flexDirection:'row',alignItems:'center',justifyContent:'flex-start',gap:7,minWidth:0},
   vehicleClassDescription:{flexShrink:1,minWidth:0,maxWidth:'65%',textAlign:'left',color:'#315B9A',fontSize:9,fontWeight:'600'},
-  input:{minHeight:42,borderWidth:1,borderColor:'#D8E1EC',backgroundColor:'#FFFFFF',borderRadius:9,paddingHorizontal:11,fontSize:12,color:'#183653'},
+  input:{minHeight:42,borderWidth:1,borderColor:'#D8E1EC',backgroundColor:'#FFFFFF',borderRadius:9,paddingHorizontal:11,fontSize:12,color:'#183653'},focusedInput:{borderColor:'#507EC5',backgroundColor:'#F8FBFF'},
   inputRow:{minHeight:42,borderWidth:1,borderColor:'#D8E1EC',borderRadius:9,paddingHorizontal:11,flexDirection:'row',alignItems:'center',justifyContent:'space-between'},
   value:{color:'#183653',fontSize:12,flex:1},placeholder:{color:'#97A5B7'},
   premiumIcon:{width:27,height:27,borderRadius:8,backgroundColor:'#EDF3FC',alignItems:'center',justifyContent:'center'},
@@ -1566,7 +1595,7 @@ const styles=StyleSheet.create({
   feedbackSecondaryText:{color:'#18436E',fontWeight:'800',fontSize:11,textAlign:'center'},
   feedbackFullButton:{width:'100%',minHeight:43,borderRadius:10,backgroundColor:'#0B55B7',alignItems:'center',justifyContent:'center'},
   actions:{flexDirection:'row',gap:8,marginBottom:11,alignItems:'stretch'},secondary:{flex:1,borderWidth:1,borderColor:'#CDD9EB',borderRadius:10,paddingHorizontal:7,paddingVertical:12,minHeight:45,alignItems:'center',justifyContent:'center'},secondaryText:{fontWeight:'700',fontSize:11,color:'#25466E'},
-  primary:{flex:1,backgroundColor:'#243F9E',borderRadius:10,paddingHorizontal:7,paddingVertical:12,minHeight:45,flexDirection:'row',gap:5,justifyContent:'center',alignItems:'center'},primaryText:{fontSize:11,fontWeight:'800',color:'white'},disabled:{opacity:.48},
+  primary:{flex:1,backgroundColor:'#243F9E',borderRadius:10,paddingHorizontal:7,paddingVertical:12,minHeight:45,flexDirection:'row',gap:5,justifyContent:'center',alignItems:'center'},buttonPressed:{opacity:0.92,transform:[{scale:0.985}]},primaryText:{fontSize:11,fontWeight:'800',color:'white'},disabled:{opacity:.48},
   bookButton:{marginBottom:11,flexDirection:'row',justifyContent:'center',gap:8},
   bookingNotice:{flexDirection:'row',gap:9,padding:12,backgroundColor:'#FFF7E9',borderRadius:10,marginBottom:14},bookingText:{flex:1,fontSize:10,lineHeight:16,color:'#75531C'},
   scrim:{flex:1,justifyContent:'center',backgroundColor:'rgba(5,18,40,.5)'},sheet:{backgroundColor:'white',borderTopLeftRadius:20,borderTopRightRadius:20,padding:17,maxHeight:'70%'},
