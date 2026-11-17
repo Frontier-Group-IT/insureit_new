@@ -56,6 +56,13 @@ assert.ok(rows.includes('role="dialog" aria-modal="true"'), "Deleted claim detai
 assert.ok(panel.includes('Policy / Case No.'), "Register shows policy or case reference");
 assert.ok(panel.includes('Customer / Vehicle'), "Register shows customer and vehicle context");
 assert.ok(panel.includes('Insurance Company'), "Register shows insurer");
+assert.ok(rows.includes('getInsurerLogo(row.insurer)'), "Insurer cell uses existing managed-first logo resolver");
+assert.ok(rows.includes('src={getInsurerLogo(row.insurer)!}'), "Insurer logo is the visible cell content");
+assert.ok(rows.includes('alt={row.insurer}') && rows.includes('title={row.insurer}'), "Insurer name remains accessible via alt and tooltip");
+assert.ok(rows.includes('object-contain object-left'), "Wide or narrow insurer logos fit the compact table cell");
+assert.ok(rows.includes('aria-label="Insurer unavailable"'), "Missing insurer identity uses a clear fallback");
+assert.ok(!rows.includes('{row.insurer||"—"}'), "Insurance company full name is no longer visible in rows");
+
 assert.ok(!panel.includes('Performed By')&&!panel.includes('View Details'), "No performer or details-action column");
 assert.ok(loader.includes('admin.from("insurance_companies")'), "Insurer linked to actual company");
 assert.ok(loader.includes('admin.from("customers")'), "Customer linked to actual customer");
