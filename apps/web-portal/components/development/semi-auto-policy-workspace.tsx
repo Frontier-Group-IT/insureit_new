@@ -274,7 +274,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
               <div className="flex flex-wrap items-center gap-2">
                 {n8nEnabled ? <button type="button" onClick={() => { void previewN8n(); }} disabled={isWaiting || Boolean(done)}
                   className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#cbd9eb] bg-white px-2.5 text-[10px] font-semibold text-[#24518a] disabled:opacity-50">
-                  {busy === "extracting" ? <Loader2 className="h-3.5 w-3.5 animate-spin"/> : <FileSearch className="h-3.5 w-3.5"/>}{primaryN8n ? "Run n8n again" : "Preview n8n PDF"}
+                  {busy === "extracting" ? <Loader2 className="h-3.5 w-3.5 animate-spin"/> : <FileSearch className="h-3.5 w-3.5"/>}{primaryN8n ? (n8nResult ? "Run n8n again" : "Process with n8n") : "Preview n8n PDF"}
                 </button> : null}
                 {!primaryN8n ? <button type="button" onClick={() => { void retry(); }} disabled={isWaiting} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#d0deef] bg-white px-2.5 text-[10px] font-semibold text-[#29558d] disabled:opacity-50"><RefreshCw className="h-3.5 w-3.5"/>Recheck</button> : null}
               </div>
@@ -289,7 +289,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
             {busy === "extracting" ? <div className="mt-3 flex items-center gap-2 rounded-lg bg-blue-50 p-3 text-[11px] text-blue-800"><Loader2 className="h-4 w-4 animate-spin"/>Reading current private PDF through the n8n review-only bridge...</div> : null}
             {busy === "applying" ? <div className="mt-3 flex items-center gap-2 rounded-lg bg-blue-50 p-3 text-[11px] text-blue-800"><Loader2 className="h-4 w-4 animate-spin"/>Revalidating and saving the confirmed failed OCR recovery...</div> : null}
             {n8nNotice ? <p role="status" className="mt-3 rounded-lg border border-[#c8d8eb] bg-[#f5f9ff] p-3 text-[11px] leading-5 text-[#284d77]">{n8nNotice}</p> : null}
-            {primaryN8n && selectedId && !n8nResult && busy === null ? <p className="mt-3 text-[10.5px] text-[#61738a]">Click Run n8n again to process this Intake's current PDF without the old OCR engine.</p> : null}
+            {primaryN8n && selectedId && !n8nResult && busy === null ? <p className="mt-3 text-[10.5px] text-[#61738a]">Click Process with n8n to extract this Intake's current PDF without the old OCR engine.</p> : null}
             {n8nResult && !done ? (n8nResult.ok ? (
               <section aria-label="n8n extraction review" className="mt-3 rounded-xl border border-[#c8d8eb] bg-[#f8fbff] p-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
