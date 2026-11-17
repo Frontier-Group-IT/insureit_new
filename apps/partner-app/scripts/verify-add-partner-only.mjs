@@ -42,10 +42,24 @@ const misp = read('../components/misp-partner-form.tsx');
 assert.match(misp, /requiredStar:\{color:'#DC2626'\}/, 'MISP required field markers should be red');
 assert.match(misp, /actions:\{flexDirection:'row',gap:8,padding:10,marginTop:4,backgroundColor:'#E7EEFC'/,
   'MISP action buttons should have matching dedicated background');
-assert.match(misp, /secondary:\{[^\n]*flex:1,minWidth:0\}/,
-  'MISP Save & Exit should occupy half the available row');
-assert.match(misp, /primary:\{[^\n]*flex:1,minWidth:0\}/,
-  'MISP Upload Documents should occupy half the available row');
+assert.match(misp, /secondary:\{[^\n]*flex:1,minWidth:0\}/,'MISP Cancel should occupy half the row');
+assert.match(misp, /primary:\{[^\n]*flex:1,minWidth:0\}/,'MISP Save Detail should occupy half the row');
+assert.match(misp, /Save Detail/,'MISP uses the same Save Detail label as POSP');
+assert.match(misp, /Would you like to upload documents now\?/,'MISP uses the same short confirmation message');
+assert.match(misp, /text:'Not Now'/,'MISP can save without uploading');
+assert.match(misp, /text:'Upload Documents'/,'MISP offers document popup after save');
+assert.match(misp, /visible=\{documentsOpen\}/,'MISP uses a category modal');
+assert.match(misp, /await authorizedDocs\('DELETE',applicationId/,'MISP deletion uses authorized endpoint');
+assert.match(misp, /await authorizedDocs\('POST',applicationId,payload\)/,'MISP upload uses authorized endpoint');
+assert.match(misp, /await refreshDocuments\(applicationId\)/,'MISP refreshed saved file records');
+assert.match(misp, /educationOptions/,'MISP retains education category variants');
+assert.match(misp, /customNames/,'MISP retains custom document labels');
+assert.doesNotMatch(misp, /submit\('documents'\)/,'MISP does not create duplicate application on upload');
+const mispRoute=read('../../web-portal/app/api/partner/onboarding/documents/route.ts');
+assert.match(mispRoute,/export async function DELETE\(request:Request\)/);
+assert.match(mispRoute,/const result=await authorize\(request,applicationId\)/,'MISP document delete reuses ownership and role checks');
+assert.match(mispRoute,/\.eq\("document_type",type\)/,'MISP document delete targets one category');
+assert.match(mispRoute,/\.eq\("storage_path",document.storage_path\)/,'MISP deletion matches stored object path');
 
 assert.doesNotMatch(form, /Submit Partner application/);
 assert.match(form, /onPress=\{\(\)=>void savePartner\(\)\}/);

@@ -132,3 +132,28 @@ export async function POST(request:Request) {
   }
   return reply({ok:true,type,name:file.name});
 }
+/** Remove one document from the caller's editable MISP application, preserving referenced files. */
+export async function DELETE(request:Request) {
+  const body=await request.json().catch(()=>null) as {application_id?:unknown;document_type?:unknown}|null;
+  const applicationId=body?.application_id;
+  const type=body?.document_type;
+  if(typeof applicationId!=="string"||typeof type!=="string"||!TYPES.has(type))
+    return reply({ok:false,error:"Invalid document request."},400);
+  const result=await authorize(request,applicationId);
+  if("error" in result)return result.error;
+  const {admin}=result;
+  const {data:document,error:readError}=await admin.from("intermediary_onboarding_documents")
+    .select("id,storage_bucket,storage_path").eq("application_id",applicationId).eq("document_type",type)
+    .maybeSingle<{id:string;storage_bucket:string;storage_path:string}>();
+  if(readError)return reply({ok:false,error:"Could not read selected document."},500);
+  if(!document)return reply({ok:false,error:"Document is no longer available."},404);
+  const {data:deleted,error:deleteError}=await admin.from("intermediary_onboarding_documents")
+    .delete().eq("id",document.id).eq("application_id",applicationId).eq("document_type",type)
+    .eq("storage_bucket",document.storage_bucket).eq("storage_path",document.storage_path).select("id");
+  if(deleteError||deleted?.length!==1)return reply({ok:false,error:"Document could not be deleted. Refresh and retry."},409);
+  const {count,error:countError}=await admin.from("intermediary_onboarding_documents")
+    .select("id",{count:"exact",head:true})
+    .eq("storage_bucket",document.storage_bucket).eq("storage_path",document.storage_path);
+  if(!countError&&count===0)await admin.storage.from(document.storage_bucket).remove([document.storage_path]);
+  return reply({ok:true,document_type:type});
+}
