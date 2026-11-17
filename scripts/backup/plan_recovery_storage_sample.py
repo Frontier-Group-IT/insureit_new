@@ -8,6 +8,7 @@ import base64
 import hashlib
 import json
 import os
+import re
 import sys
 from collections import Counter
 
@@ -167,6 +168,18 @@ def run(mode):
                       retries={"mode": "standard", "max_attempts": 4}),
     )
     manifest, grouped = validate_manifest(s3, required("R2_BUCKET"), key)
+    # Different backup streams: this Storage snapshot has its OWN timestamp,
+    # distinct from the R4 PostgreSQL v2 snapshot. Never silently treat a
+    # changed Storage latest pointer as the same selected-file plan.
+    snapshot = manifest.get("created_at")
+    expected = os.environ.get("RECOVERY_EXPECTED_STORAGE_SNAPSHOT", "").strip()
+    timestamp_pattern = r"\\d{8}T\\d{6}Z"
+    if not isinstance(snapshot, str) or not re.fullmatch(timestamp_pattern, snapshot):
+        raise ValueError("Authenticated Storage manifest timestamp invalid")
+    if expected and not re.fullmatch(timestamp_pattern, expected):
+        raise ValueError("Malformed expected Storage snapshot")
+    if expected and snapshot != expected:
+        raise RuntimeError("Latest authenticated Storage pointer changed")
     empty_buckets = validate_bucket_coverage(manifest, grouped)
     chosen, metrics = select_recovery_sample(grouped)
     if mode == "--verify":
@@ -182,6 +195,8 @@ def run(mode):
         "manifest_empty_buckets": len(empty_buckets),
         "max_total_bytes": MAX_TOTAL_BYTES,
         "max_file_bytes": MAX_FILE_BYTES,
+        "storage_snapshot": snapshot,
+        "storage_pointer_locked": int(bool(expected)),
     })
     # Exclude any private object identifiers and decrypted metadata/filenames.
     print("RECOVERY STORAGE SAMPLE "
