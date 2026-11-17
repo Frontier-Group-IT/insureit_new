@@ -72,9 +72,14 @@ expectAll('components/ui/partner-field.tsx', [
 ]);
 
 expectAll('components/ui/partner-confirm-dialog.tsx', [
-  [/accessibilityViewIsModal/, 'confirmation dialogs must use modal accessibility semantics'],
-  [/accessibilityRole="alert"/, 'confirmation dialogs must announce their purpose'],
-  [/disabled=\{busy\}/, 'dialog dismissal must be blocked while a destructive/confirm action is busy'],
+  [/<PartnerFeedbackDialog/, 'confirmations must use the shared reference popup'],
+  [/busy=\{busy\}/, 'busy state must reach the shared popup'],
+  [/onDismiss=\{onCancel\}/, 'existing cancellation behavior must be preserved'],
+]);
+expectAll('components/ui/partner-feedback-dialog.tsx', [
+  [/accessibilityViewIsModal/, 'shared popups must use modal accessibility semantics'],
+  [/accessibilityRole="alert"/, 'shared popups must announce their purpose'],
+  [/disabled=\{isBusy\}/, 'dialog dismissal and actions must be blocked while busy'],
 ]);
 
 expectAll('app/login.tsx', [
