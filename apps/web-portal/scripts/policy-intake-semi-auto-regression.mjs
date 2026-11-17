@@ -841,4 +841,15 @@ assert(workerText.includes('fill_verified_ai_draft_issuance_date_v1')
   && workerText.includes('if(completed && (state==="verified" || state==="exception")')
   && workerText.includes('issuanceDateVerified && pdfIssuanceDate'),
   "Only a completed, strictly verified n8n result may auto-fill an empty issue date");
+const aiIssueSchemaWorkflow=readFileSync(new URL("../../../.github/workflows/apply-ai-policy-issuance-backfill.yml",import.meta.url),"utf8");
+const productionDeployGate=readFileSync(new URL("../../../.github/workflows/deploy-production.yml",import.meta.url),"utf8");
+assert(aiIssueSchemaWorkflow.includes("20261117193000_verified_ai_draft_issuance_backfill.sql")
+  && aiIssueSchemaWorkflow.includes("workflow_dispatch:")
+  && aiIssueSchemaWorkflow.includes("supabase migration repair --linked --status applied 20261117193000")
+  && aiIssueSchemaWorkflow.includes("service_exec")
+  && aiIssueSchemaWorkflow.includes("auth_exec"),
+  "Issuance migration must have a gated Supabase schema workflow with service-role permission verification");
+assert(productionDeployGate.includes('schema_workflow="apply-ai-policy-issuance-backfill.yml"')
+  && productionDeployGate.includes("AI Policy issuance-date backfill migration detected"),
+  "Production deployment must wait on the exact issuance-date schema workflow instead of timing out");
 console.log("Semi-auto Motor onboarding regression checks passed.");
