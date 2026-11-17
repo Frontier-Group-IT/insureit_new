@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -55,7 +55,6 @@ export default function MispDocumentsScreen() {
   const [educationType,setEducationType]=useState<string>(EDUCATION[0].key);
   const [educationOpen,setEducationOpen]=useState(false);
   const [customLabels,setCustomLabels]=useState<Record<string,string>>({});
-  const [selectedCustom,setSelectedCustom]=useState<'custom_1'|'custom_2'|null>(null);
   useEffect(()=>{
     if(!allowed||!applicationId){setLoading(false);return;}
     let active=true;
@@ -73,8 +72,7 @@ export default function MispDocumentsScreen() {
     const label=key.startsWith('custom_')?customLabels[key]?.trim():undefined;
     if(key.startsWith('custom_')&&!label){
       // Custom documents are optional; a meaningful file label must be supplied.
-      setSelectedCustom(key as 'custom_1'|'custom_2');
-      Alert.alert('Other Document','Name this document before uploading.');
+      Alert.alert('Other Document','Enter a name before uploading this document.');
       return;
     }
     try {
@@ -154,12 +152,10 @@ export default function MispDocumentsScreen() {
             </View>
           }
           {slot.key.startsWith('custom_')&&
-            <View style={styles.education}>
-              <Pressable accessibilityRole="button" accessibilityLabel={'Name '+slot.label} onPress={()=>setSelectedCustom(slot.key as 'custom_1'|'custom_2')} style={styles.educationChoice}>
-                <Text style={styles.small}>{customLabels[slot.key]||current?.label||'Name other document'}</Text>
-                <Ionicons name="pencil-outline" size={16} color="#17365D"/>
-              </Pressable>
-            </View>
+            <TextInput accessibilityLabel={'Name '+slot.label} style={styles.customInput}
+              placeholder="Enter document name" placeholderTextColor="#8290A5"
+              value={customLabels[slot.key]??current?.label??''} maxLength={60}
+              onChangeText={value=>setCustomLabels(prev=>({...prev,[slot.key]:value}))}/>
           }
           <Pressable accessibilityRole="button" disabled={Boolean(busy)} onPress={()=>void upload(slot.key)} style={styles.upload}>
             <Ionicons name="cloud-upload-outline" size={17} color="#17365D"/>
@@ -175,15 +171,6 @@ export default function MispDocumentsScreen() {
         <Text style={styles.uploadText}>Save & Exit</Text>
       </Pressable>
     </ScrollView>
-    {selectedCustom&&
-      <View style={styles.customOverlay}>
-        <View style={styles.customDialog}>
-          <Text style={styles.heading}>Other Document name</Text>
-          <Text style={styles.helper}>For custom document uploads, enter a descriptive name in the Operations Portal or use a standard document slot.</Text>
-          <Pressable style={styles.exit} onPress={()=>setSelectedCustom(null)}><Text style={styles.uploadText}>Close</Text></Pressable>
-        </View>
-      </View>
-    }
     <PartnerStackBottomNavigation activeTab="more" includeBottomInset onNavigate={destination=>router.navigate(destination as never)}/>
   </SafeAreaView>;
 }
@@ -200,6 +187,5 @@ const styles=StyleSheet.create({
   uploadText:{color:'#17365D',fontSize:12,fontWeight:'800'},finish:{minHeight:46,borderRadius:10,alignItems:'center',justifyContent:'center',backgroundColor:'#17365D'},
   finishText:{color:'#FFF',fontWeight:'800',fontSize:13},exit:{minHeight:44,borderRadius:10,borderWidth:1,borderColor:'#CAD6E5',backgroundColor:'#FFF',alignItems:'center',justifyContent:'center'},
   disabled:{opacity:.55},education:{gap:5},educationChoice:{minHeight:37,paddingHorizontal:10,borderRadius:8,borderWidth:1,borderColor:'#DCE5EF',flexDirection:'row',alignItems:'center',justifyContent:'space-between'},small:{color:'#17365D',fontSize:12},
-  customOverlay:{...StyleSheet.absoluteFillObject,justifyContent:'center',padding:22,backgroundColor:'#07152DBB'},
-  customDialog:{padding:18,gap:12,backgroundColor:'#FFF',borderRadius:14},
+  customInput:{minHeight:42,borderWidth:1,borderColor:'#DCE5EF',borderRadius:8,paddingHorizontal:12,fontSize:12,color:'#17365D'},
 });
