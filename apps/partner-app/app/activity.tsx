@@ -268,16 +268,19 @@ export default function ActivityScreen() {
                     </View>
 
                     <View style={styles.itemBody}>
-                      <View style={styles.itemRow}>
-                        <Text numberOfLines={1} ellipsizeMode="middle" style={[styles.title, !isUnread && styles.titleRead]}>{item.title}</Text>
-                        <View style={styles.kindPill}>
-                          <Text style={[styles.kind, toneText(item.tone)]}>{labelFor(item.kind)}</Text>
+                      <View style={styles.itemContent}>
+                        <View style={styles.itemRow}>
+                          <Text numberOfLines={1} ellipsizeMode="middle" style={[styles.title, !isUnread && styles.titleRead]}>{item.title}</Text>
+                          <View style={styles.kindPill}>
+                            <Text style={[styles.kind, toneText(item.tone)]}>{labelFor(item.kind)}</Text>
+                          </View>
                         </View>
+                        <Text numberOfLines={2} style={[styles.subtitle, isUnread && styles.subtitleUnread]}>{item.subtitle}</Text>
                       </View>
-                      <View style={styles.itemRow}>
-                        <Text numberOfLines={1} style={[styles.subtitle, isUnread && styles.subtitleUnread]}>{item.subtitle}</Text>
-                        <View style={styles.dateAndUnread}>
-                          <Text style={styles.date}>{formatDate(item.event_at)}</Text>
+                      <View style={styles.dateColumn}>
+                        <Text style={styles.date} numberOfLines={1}>{formatActivityDate(item.event_at)}</Text>
+                        <View style={styles.timeRow}>
+                          <Text style={styles.date} numberOfLines={1}>{formatActivityTime(item.event_at)}</Text>
                           {isUnread ? <View style={styles.unreadDot} accessibilityLabel="Unread" /> : null}
                         </View>
                       </View>
@@ -330,15 +333,24 @@ function toneText(tone: PartnerActivityData['items'][number]['tone']) {
   return styles.textBusiness;
 }
 
-function formatDate(value: string) {
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return value;
+function formatActivityDate(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
   return new Intl.DateTimeFormat('en-IN', {
     day: '2-digit',
     month: 'short',
+    year: 'numeric',
+  }).format(date);
+}
+
+function formatActivityTime(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return new Intl.DateTimeFormat('en-IN', {
     hour: '2-digit',
     minute: '2-digit',
-  }).format(d);
+    hour12: true,
+  }).format(date);
 }
 
 const styles = StyleSheet.create({
@@ -570,7 +582,10 @@ const styles = StyleSheet.create({
   },
   insurerLogo: { width: 44, height: 30 },
   eventArtworkImage: { width: 32, height: 32 },
-  itemBody: { flex: 1, minWidth: 0, gap: 3 },
+  itemBody: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  itemContent: { flex: 1, minWidth: 0, gap: 3 },
+  dateColumn: { minWidth: 75, maxWidth: 90, alignItems: 'flex-end', justifyContent: 'center', gap: 3 },
+  timeRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 5 },
   itemRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -596,12 +611,12 @@ const styles = StyleSheet.create({
   textAttention: { color: '#9A6500' },
   textLearn: { color: '#A3630D' },
   textOps: { color: '#667085' },
-  dateAndUnread: { flexDirection: 'row', alignItems: 'center', gap: 5, flexShrink: 0 },
   unreadDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#2379D5' },
   date: {
     color: '#71809C',
     fontSize: 9.5,
     lineHeight: 11,
+    textAlign: 'right',
   },
   title: {
     flexShrink: 1,

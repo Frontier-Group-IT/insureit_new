@@ -12,6 +12,13 @@ assert.match(app,/productType==='Life'\|\|productType==='Health'\)\?onboardingDo
 assert.match(app,/productSection\('04'/,'Life keeps existing premium section');
 assert.match(app,/if\(isNew\)\{\s*setStandaloneLifeDocuments/,'Standalone documents stage on device, never in Intake storage');
 assert.match(app,/await createNewNativeLifeHealthCase\(draft,standaloneLifeDocuments\)/,'Standalone Life must use dedicated independent case endpoint');
+assert.doesNotMatch(app,/Alert\.alert\('Case created'/,'Life\/Health creation must not use native alert');
+assert.match(app,/setCaseCreated\(\{type:productType,number:result\.case\.number\}\)/,'Successful case creation opens custom confirmation');
+assert.match(app,/visible=\{Boolean\(caseCreated\)\}/,'Success confirmation uses in-app modal');
+assert.match(app,/style=\{styles\.feedbackOverlay\}/,'Success modal uses centered overlay');
+assert.match(app,/Policy issuance remains pending in Operations/,'Success message preserves operations handoff');
+assert.match(app,/isNew\?'Return to Policies':'Return to Intake'/,'Success navigation retains standalone vs intake destinations');
+
 assert.match(app,/if\(dirty&&!isNew\)/,'Standalone must not attempt to save Intake drafts');
 assert.doesNotMatch(app,/New Motor Policy ·/,'Standalone notice must not appear above form');
 assert.match(client,/standalone-life/,'Client sends independent creation request');

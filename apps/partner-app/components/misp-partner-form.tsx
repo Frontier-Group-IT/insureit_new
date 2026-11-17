@@ -124,7 +124,7 @@ export function MispPartnerForm({rms,banks,oems,pendingMisps,loading,onDirtyChan
               const options=field.pick==='rm'?rms:field.pick==='oem'?oems:banks;
               const optionName=options.find(x=>x.id===form[field.key])?.name;
               return <View key={field.key} style={styles.half}>
-                <Text style={styles.label}>{field.label}{field.optional?'':' *'}</Text>
+                <Text style={styles.label}>{field.label}{!field.optional?<Text style={styles.requiredStar}> *</Text>:null}</Text>
                 {field.pick||field.date?
                   <Pressable accessibilityRole="button" accessibilityLabel={'Select '+field.label} disabled={loading}
                     onPress={()=>{if(field.date)setDateField(field.key as 'document_received_at'|'date_of_birth');else{setSearch('');setPicker(field.pick!);}}}
@@ -184,14 +184,14 @@ const styles=StyleSheet.create({
   index:{width:33,height:33,borderRadius:7,backgroundColor:'#17365D',alignItems:'center',justifyContent:'center'},
   indexText:{color:'#FFF',fontSize:11,fontWeight:'800'},heading:{color:'#172846',fontSize:13,fontWeight:'800'},
   grid:{padding:12,flexDirection:'row',flexWrap:'wrap',justifyContent:'space-between',rowGap:12},
-  half:{width:'48.5%',gap:5},pendingItem:{width:"100%",minHeight:42,borderRadius:9,borderWidth:1,borderColor:"#DEE7F1",flexDirection:"row",justifyContent:"space-between",alignItems:"center",paddingHorizontal:12},label:{color:'#33465D',fontSize:11,fontWeight:'700'},
+  half:{width:'48.5%',gap:5},pendingItem:{width:"100%",minHeight:42,borderRadius:9,borderWidth:1,borderColor:"#DEE7F1",flexDirection:"row",justifyContent:"space-between",alignItems:"center",paddingHorizontal:12},label:{color:'#33465D',fontSize:11,fontWeight:'700'},requiredStar:{color:'#DC2626'},
   input:{minHeight:44,paddingHorizontal:10,backgroundColor:'#FFF',borderWidth:1,borderColor:'#CED8E7',borderRadius:10,fontSize:12,color:'#152A49'},
   inputPress:{minHeight:44,paddingHorizontal:10,flexDirection:'row',justifyContent:'space-between',alignItems:'center',gap:5,borderWidth:1,borderColor:'#CED8E7',borderRadius:10},
   inputText:{color:'#17365D',fontWeight:'600',fontSize:12,flexShrink:1},
-  actions:{flexDirection:'row',justifyContent:'flex-end',gap:8,paddingVertical:8},
-  primary:{minHeight:44,backgroundColor:'#17365D',borderRadius:10,alignItems:'center',justifyContent:'center',paddingHorizontal:16,flex:1},
+  actions:{flexDirection:'row',gap:8,padding:10,marginTop:4,backgroundColor:'#E7EEFC',borderWidth:1,borderColor:'#CBDCFB',borderRadius:12},
+  primary:{minHeight:44,backgroundColor:'#4379EF',borderRadius:10,alignItems:'center',justifyContent:'center',paddingHorizontal:8,flex:1,minWidth:0},
   primaryText:{fontSize:12,color:'#FFF',fontWeight:'800'},
-  secondary:{minHeight:44,borderRadius:10,alignItems:'center',justifyContent:'center',paddingHorizontal:12,borderColor:'#CED8E7',borderWidth:1,backgroundColor:'#FFF'},
+  secondary:{minHeight:44,borderRadius:10,alignItems:'center',justifyContent:'center',paddingHorizontal:8,borderColor:'#CED8E7',borderWidth:1,backgroundColor:'#FFF',flex:1,minWidth:0},
   secondaryText:{fontSize:12,color:'#17365D',fontWeight:'800'},disabled:{opacity:.5},
   backdrop:{flex:1,backgroundColor:'#14233B88',justifyContent:'flex-end'},
   modal:{padding:16,gap:12,maxHeight:'80%',backgroundColor:'#FFF',borderTopLeftRadius:18,borderTopRightRadius:18},

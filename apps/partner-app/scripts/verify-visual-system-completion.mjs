@@ -35,28 +35,29 @@ const policyIntakeNew = read('app/policy-intake-new.tsx');
 const policyIntakeDetail = read('app/policy-intakes/[id].tsx');
 const customerDetail = read('app/customer/[id].tsx');
 const policyDetail = read('app/policy/[id].tsx');
-// The overview, premium and commercial sections share one card.
-for (const heading of [
-  'title="Customer Details"',
-  "title={data.vehicle ? 'Vehicle Details' : 'Insured Risk Details'}",
-]) {
-  requireText(policyDetail, '<View style={styles.externalSectionHeading}><CardHeader ' + heading + ' /></View>', 'Customer/vehicle heading stays outside its separate card: ' + heading);
+// Policy Overview, Premium and Commercial remain a single white card.
+// Customer and vehicle identity now share one compact row and separate heading.
+requireText(policyDetail, '<CardHeader title="Customer & Vehicle Details" />', 'Combined customer and vehicle heading is present');
+for(const heading of ['<CardHeader title="Customer Details" />', "'Vehicle Details' : 'Insured Risk Details'"]) {
+  if(policyDetail.includes(heading))throw new Error('Separate customer/vehicle headings must not return');
 }
-requireText(policyDetail, '<CardHeader iconKind="policy-overview" title="Policy Overview"', 'Policy Overview keeps its heading');
-for (const heading of ['title="Premium"', 'title="Commercial Attribution"']) {
-  if (policyDetail.includes('<CardHeader ' + heading)) throw new Error('The combined card must not retain an external heading: ' + heading);
-}
+requireText(policyDetail, 'manufacturerLogo || PartnerAssets.products.motorInsurance', 'Manufacturer logo retains a safe motor fallback');
+requireText(policyDetail, 'styles.customerVehicleTitleRow', 'Customer and registration share the first line');
+requireText(policyDetail, 'data.customer.name || "Customer"', 'Customer name comes from the authorized policy detail');
+requireText(policyDetail, 'data.vehicle.vehicle_no', 'Registration comes from the same vehicle record');
+requireText(policyDetail, 'displayParts(data.vehicle.make, data.vehicle.model, data.vehicle.year)', 'Vehicle make, model and year share a second line');
+requireText(policyDetail, 'router.push(`/customer/${data.customer.id}` as never)', 'Customer detail navigation survives the combined row');
+requireText(policyDetail, 'PartnerAssets.products.commercialInsurance', 'Policies without vehicles retain a risk icon fallback');
 const overviewStart = policyDetail.indexOf('<CardHeader iconKind="policy-overview" title="Policy Overview"');
-const customerStart = policyDetail.indexOf('<CardHeader title="Customer Details"');
+const customerStart = policyDetail.indexOf('<CardHeader title="Customer & Vehicle Details"');
 const unified = policyDetail.slice(overviewStart, customerStart);
 requireText(unified, 'styles.overviewGrid', 'Existing overview fields remain visible');
-requireText(unified, 'styles.premiumDisclosure', 'Premium is inside combined overview');
-requireText(unified, 'styles.commercialRow', 'Commercial is inside combined overview');
-if (unified.split('styles.unifiedSectionDivider').length !== 3) throw new Error('Expected two internal separators');
-if (unified.split('</Card>').length !== 2) throw new Error('Overview, Premium and Commercial must share one card');
+requireText(unified, 'styles.premiumDisclosure', 'Premium remains inside the combined overview');
+requireText(unified, 'styles.commercialRow', 'Commercial remains inside the combined overview');
+if(unified.split('styles.unifiedSectionDivider').length !== 3)throw new Error('Expected two internal separators');
+if(unified.split('</Card>').length !== 2)throw new Error('Overview, Premium and Commercial must share one card');
 requireText(policyDetail, 'accessibilityState={{ expanded: showPremiumDetails }}', 'Premium expansion remains');
 requireText(policyDetail, 'accessibilityState={{ expanded: showCommercialDetails }}', 'Commercial expansion remains');
-requireText(policyDetail, 'accessibilityLabel="Open customer details for this vehicle"', 'Vehicle card navigation remains');
 
 const policyDetailIcon = read('components/ui/partner-policy-detail-icon.tsx');
 const claimDetail = read('app/claim/[id].tsx');
@@ -244,7 +245,7 @@ if (policyIntakeDetail.includes('git-network-outline')) throw new Error('Policy 
 requireText(policyIntakeDetail, '<Ionicons name="alert-circle-outline"', 'Duplicate policy warning must use a clear attention icon.');
 
 for (const detailAsset of ['products.motorInsurance', 'products.healthInsurance', 'products.familyInsurance', 'products.commercialInsurance']) requireText(policyDetail, `PartnerAssets.${detailAsset}`, `Policy detail is missing ${detailAsset} artwork.`);
-requireText(policyDetail, 'icon="person-outline"', 'Policy detail customer row must use a clear person profile icon.');
+requireText(policyDetail, 'source={data.vehicle ? (manufacturerLogo || PartnerAssets.products.motorInsurance) : PartnerAssets.products.commercialInsurance}', 'Combined customer vehicle row uses the manufacturer icon or insured-risk fallback.');
 requireText(policyDetail, 'insurerName={data.insurer.name}', 'Policy overview must pass insurer identity to logo renderer.');
 requireText(policyDetail, '<PartnerInsurerLogo name={insurerName}', 'Policy overview must render insurer brand artwork.');
 requireText(policyDetail, 'getPartnerPolicyDetail(id)', 'Policy detail must preserve the existing scoped data service.');

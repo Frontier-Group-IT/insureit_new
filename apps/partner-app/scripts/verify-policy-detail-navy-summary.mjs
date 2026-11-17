@@ -13,11 +13,11 @@ assert.doesNotMatch(source,/>Policy Period</,'Do not show Policy Period label');
 assert.doesNotMatch(source,/styles\.summaryDivider|styles\.premiumRow|styles\.periodDivider/,'Remove old split premium and period row from hero');
 assert.ok(!source.includes('<CardHeader title="Premium" />'), 'Premium is inside the combined overview');
 assert.ok(!source.includes('<CardHeader title="Commercial Attribution" />'), 'Commercial is inside the combined overview');
-assert.ok(source.includes('<CardHeader title="Customer Details" />'), 'Customer heading remains separate');
+assert.ok(source.includes('<CardHeader title="Customer & Vehicle Details" />'), 'Customer and Vehicle share one outside heading');
 assert.match(source,/styles\.premiumDisclosure/,'Premium disclosure remains expandable');
 assert.match(source,/styles\.commercialRow/,'Commercial disclosure remains expandable');
-assert.ok(source.includes("<CardHeader title={data.vehicle ? 'Vehicle Details' : 'Insured Risk Details'} />"),
-  'Vehicle/Risk section has no leading icon in either category');
+assert.ok(!source.includes("<CardHeader title={data.vehicle ? 'Vehicle Details' : 'Insured Risk Details'} />"),
+  'Vehicle/Risk no longer has a separate section');
 assert.match(source, /iconKind \? <PartnerPolicyDetailIcon kind=\{iconKind\}/,
   'Icon is optional; keep icons in Policy Overview and other unchanged contexts');
 assert.match(source, /<CardHeader iconKind="policy-overview" title="Policy Overview"/,
