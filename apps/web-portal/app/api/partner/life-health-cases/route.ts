@@ -102,12 +102,23 @@ export async function GET(request:Request) {
        admin.from("insurance_companies").select("id,name").eq("id",found.insurance_company_id).maybeSingle(),
        admin.from("life_health_case_documents").select("id,document_type,file_name,created_at,uploaded_by").eq("case_id",id).order("created_at",{ascending:false}),
        found.final_policy_id ? admin.from("policies").select("id,policy_no,policy_code").eq("id",found.final_policy_id).maybeSingle() : Promise.resolve({data:null,error:null}),
-       admin.from("audit_logs").select("id,created_at,action").eq("table_name","life_health_cases").eq("record_id",id).in("action",["life_health_case_edited","life_health_case_remark_added","life_health_issued_customer_edited"]).order("created_at",{ascending:false}).limit(100),
+       admin.from("audit_logs").select("id,created_at,action,actor_id,new_data").eq("table_name","life_health_cases").eq("record_id",id).in("action",["life_health_case_edited","life_health_case_remark_added","life_health_issued_customer_edited"]).order("created_at",{ascending:false}).limit(100),
      ]);
      if ([customer,insurer,documents,linkedPolicy,activity].some(result => result.error))
        return respond({ok:false,error:"Case details are temporarily unavailable."},500);
      const detail = found.details && typeof found.details === "object" && !Array.isArray(found.details) ? found.details : {};
      const rejection = detail.rejection && typeof detail.rejection === "object" && !Array.isArray(detail.rejection) ? detail.rejection as Record<string,unknown> : {};
+     const actorIds=[...new Set([
+       found.created_by,found.converted_by,
+       ...(documents.data??[]).map(doc=>doc.uploaded_by),
+       ...(activity.data??[]).map(entry=>entry.actor_id)
+     ].filter((value):value is string=>typeof value==="string"&&uuid.test(value)))];
+     const actorNames=new Map<string,string>();
+     if(actorIds.length){
+       const {data:actors,error:actorError}=await admin.from("profiles").select("id,full_name").in("id",actorIds);
+       if(!actorError)for(const actor of actors??[])actorNames.set(actor.id,actor.full_name?.trim()||"Authorized user");
+     }
+     const by=(id:string|null|undefined)=>id?actorNames.get(id)||"Authorized user":"Not recorded";
      // Do not send commercial terms, unrelated internal metadata, or raw audit payloads.
      const {details:ignoredDetails,...safeCase} = found;
      void ignoredDetails;
@@ -120,11 +131,12 @@ export async function GET(request:Request) {
        policy_no:linkedPolicy.data?.policy_no || null,
        rejection_reason:typeof rejection.reason === "string" ? rejection.reason.slice(0,2000) : "",
      },documents:documents.data??[],activities:[
-       {id:`case-${found.id}`,action:"Case Created",created_at:found.created_at},
-       ...(documents.data??[]).map(doc=>({id:`document-${doc.id}`,action:doc.document_type==="proposal_form"?"Proposal Form Uploaded":doc.document_type==="kyc"?"KYC Uploaded":doc.document_type==="policy_copy"?"Policy Document Uploaded":"Document Uploaded",created_at:doc.created_at})),
-       ...(activity.data??[]).map(entry=>({id:`audit-${entry.id}`,action:entry.action==="life_health_case_remark_added"?"Remark Added":entry.action==="life_health_issued_customer_edited"?"Customer Details Updated":"Case Details Updated",created_at:entry.created_at})),
-       ...(found.converted_at?[{id:`converted-${found.id}`,action:"Policy Created & Case Closed",created_at:found.converted_at}]:[]),
-       ...(typeof rejection.rejected_at==="string" && !Number.isNaN(Date.parse(rejection.rejected_at))?[{id:`rejected-${found.id}`,action:"Case Rejected",created_at:rejection.rejected_at}]:[]),
+       {id:`case-${found.id}`,action:"Case Created",created_at:found.created_at,createdBy:by(found.created_by),changes:[]},
+       ...(documents.data??[]).map(doc=>({id:`document-${doc.id}`,action:doc.document_type==="proposal_form"?"Proposal Form Uploaded":doc.document_type==="kyc"?"KYC Uploaded":doc.document_type==="policy_copy"?"Policy Document Uploaded":"Document Uploaded",created_at:doc.created_at,createdBy:by(doc.uploaded_by),changes:[]})),
+       ...(activity.data??[]).map(entry=>({id:`audit-${entry.id}`,action:entry.action==="life_health_case_remark_added"?"Remark Added":entry.action==="life_health_issued_customer_edited"?"Customer Details Updated":"Case Details Updated",created_at:entry.created_at,createdBy:by(entry.actor_id),changes:Array.isArray(entry.new_data?.changed_fields)
+         ?entry.new_data.changed_fields.filter((value:unknown):value is string=>typeof value==="string").slice(0,12).map((value:string)=>value.slice(0,160)):[]})),
+       ...(found.converted_at?[{id:`converted-${found.id}`,action:"Policy Created & Case Closed",created_at:found.converted_at,createdBy:by(found.converted_by),changes:[]}]:[]),
+       ...(typeof rejection.rejected_at==="string" && !Number.isNaN(Date.parse(rejection.rejected_at))?[{id:`rejected-${found.id}`,action:"Case Rejected",created_at:rejection.rejected_at,createdBy:by(typeof rejection.rejected_by==="string"?rejection.rejected_by:null),changes:[]}]:[]),
      ].sort((a,b)=>Date.parse(b.created_at)-Date.parse(a.created_at))});
    }
    const status = url.searchParams.get("status") || "pending";
