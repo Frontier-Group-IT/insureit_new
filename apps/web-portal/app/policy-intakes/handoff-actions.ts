@@ -19,7 +19,7 @@ export type PolicyIntakeDraft = {
 };
 
 export type PolicyIntakeHandoffResult =
-  | { ok:true; draft:PolicyIntakeDraft; draftRevision:number; matchedCustomerId:string|null }
+  | { ok:true; draft:PolicyIntakeDraft; draftRevision:number; matchedCustomerId:string|null; existingDraft?:boolean }
   | { ok:false; error:string; conflict?:false }
   | { ok:false; error:string; conflict:true; reviewerName:string };
 
@@ -166,7 +166,7 @@ async function preparePolicyIntakeHandoffInternal(
     // A pre-existing operator draft must NEVER be overwritten by n8n.
     const identityName=existingDraft.draft_payload.insuredName||ocrInsuredName(intake.ocr_fields??[]);
     const matchedCustomerId=await resolveConfirmedIntakeCustomerId(admin,intake.customer_mobile,identityName);
-    return{ok:true,draft:existingDraft.draft_payload,draftRevision:existingDraft.revision,matchedCustomerId};
+    return{ok:true,draft:existingDraft.draft_payload,draftRevision:existingDraft.revision,matchedCustomerId,existingDraft:true};
   }
 
   const [manufacturerResult,brandResult,insurerResult]=await Promise.all([
@@ -214,7 +214,7 @@ Third Party period: ${tpStart||"unavailable"} to ${tpExpiry||"unavailable"}. Ver
   };
   const {data:storedDraft,error:draftError}=await admin.from("policy_intake_onboarding_drafts").insert({intake_id:id,draft_payload:draft,revision:1,updated_by_profile_id:reviewer.id}).select("revision").single<{revision:number}>();
   if(draftError||!storedDraft)return{ok:false,error:"Policy Onboarding draft could not be prepared. Refresh and try again."};
-  return{ok:true,draft,draftRevision:storedDraft.revision,matchedCustomerId};
+  return{ok:true,draft,draftRevision:storedDraft.revision,matchedCustomerId,existingDraft:false};
 }
 
 export async function loadPolicyIntakeOnboardingDraft(id:string):Promise<PolicyIntakeHandoffResult>{
