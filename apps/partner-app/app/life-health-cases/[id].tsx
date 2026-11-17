@@ -510,7 +510,7 @@ export default function LifeHealthCaseDetailScreen(){
           <Pressable accessibilityRole="button" accessibilityLabel="Save Case Details" onPress={()=>void saveEdit()}
             disabled={saving||issuing||documentBusy||rejectBusy||!caseDirty}
             style={[styles.caseAction,styles.actionSave,!caseDirty&&styles.disabledAction]}>
-            {saving?<ActivityIndicator size="small" color={navy}/>:<Text style={styles.saveActionText} numberOfLines={1}>Save</Text>}
+            {saving?<ActivityIndicator size="small" color={navy}/>:<Text style={styles.saveActionText} numberOfLines={1}>Save Case</Text>}
           </Pressable>
           <Pressable accessibilityRole="button" accessibilityLabel="Create Policy" onPress={()=>void submitIssue()}
             disabled={saving||issuing||documentBusy||rejectBusy} style={[styles.caseAction,styles.actionIssue]}>
