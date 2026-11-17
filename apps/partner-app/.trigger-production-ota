@@ -1,12 +1,13 @@
 Partner production OTA trigger
-release=partner-stack-bottom-navigation-pr-4620
+release=partner-case-inline-issuance-pr-4627
 source=verified-merged-main
-source_pr=4620
-source_merge=1f84d560ca2bae4203d615ca04b0b6c4e0938d91
+source_pr=4627
+source_merge=6fa3ee2139c1c102d5940a2f4e4a0971568f6566
 reason=user-approved-merge-and-publish
+backend_deployment=dpl_B6HJMY3zKVqbJKy825MrjYDFuTsZ
 channel=production
 runtime=0.2.0
-requested=2026-11-16
+requested=2026-11-17
 no_native_build=true
 no_apk=true
 no_aab=true
