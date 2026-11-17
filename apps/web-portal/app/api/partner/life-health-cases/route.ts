@@ -16,6 +16,10 @@ import { getOperationsHeadDownlinePolicyScope, operationsHeadVisiblePolicyFilter
 // their server-action validation can be shared with bearer-token requests.
 export const dynamic = "force-dynamic";
 const headers = { "Cache-Control": "private, no-store" };
+const DOCUMENT_BUCKET="policy-documents";
+const DOC_TYPES=new Set(["proposal_form","benefit_illustration","premium_receipt","policy_copy","kyc","other_document"]);
+const DOC_MIMES=new Set(["application/pdf","image/jpeg","image/png","image/webp"]);
+const validDocPath=(caseId:string,bucket:string,path:string)=>bucket===DOCUMENT_BUCKET&&path.startsWith("life-health-cases/"+caseId+"/")&&!path.includes("..");
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 type Profile = { id: string; role: string; full_name: string | null; employee_id: string | null; is_active: boolean };
 type CaseRow = {
@@ -82,6 +86,17 @@ export async function GET(request:Request) {
      const {data:found,error} = await lookup.maybeSingle<CaseRow>();
      if (error) return respond({ok:false,error:"Unable to load case."},500);
      if (!found) return respond({ok:false,error:"Case not found."},404);
+     const documentId=url.searchParams.get("documentId");
+     if(documentId!==null){
+       if(!uuid.test(documentId))return respond({ok:false,error:"Invalid document reference."},400);
+       const {data:doc,error:docError}=await admin.from("life_health_case_documents")
+         .select("storage_bucket,storage_path").eq("case_id",id).eq("id",documentId).maybeSingle();
+       if(docError||!doc||!validDocPath(id,doc.storage_bucket,doc.storage_path))
+         return respond({ok:false,error:"Document not found."},404);
+       const {data:signed,error:signError}=await admin.storage.from(DOCUMENT_BUCKET).createSignedUrl(doc.storage_path,60);
+       if(signError||!signed?.signedUrl)return respond({ok:false,error:"Unable to open this document."},503);
+       return respond({ok:true,url:signed.signedUrl});
+     }
      const [customer,insurer,documents,linkedPolicy,activity] = await Promise.all([
        admin.from("customers").select("id,contact_name,company_name,phone,address,address_street").eq("id",found.customer_id).maybeSingle(),
        admin.from("insurance_companies").select("id,name").eq("id",found.insurance_company_id).maybeSingle(),
@@ -168,6 +183,39 @@ export async function POST(request: Request) {
   const actor=await authorizedEmployee(request);
   if(!actor)return respond({ok:false,error:"Case Register editing is unavailable for this account."},403);
   const {profile,admin}=actor;
+  if((request.headers.get("content-type")??"").startsWith("multipart/form-data")){
+    const form=await request.formData().catch(()=>null);
+    const id=String(form?.get("id")??""),type=String(form?.get("documentType")??"");
+    const file=form?.get("file");
+    if(!uuid.test(id)||!DOC_TYPES.has(type)||!(file instanceof File))return respond({ok:false,error:"Invalid document submission."},400);
+    if(file.size<=0||file.size>4*1024*1024||!DOC_MIMES.has(file.type))
+      return respond({ok:false,error:"Upload PDF, JPG, PNG or WebP, maximum 4 MB."},400);
+    const {data:caseRow,error:caseError}=await admin.from("life_health_cases").select("status,final_policy_id").eq("id",id).maybeSingle();
+    if(caseError||!caseRow)return respond({ok:false,error:"Case not found."},404);
+    if(caseRow.final_policy_id||caseRow.status==="rejected")return respond({ok:false,error:"Closed cases cannot accept uploads."},409);
+    if(profile.role==="operations_head_life"){
+      if(!(await canAccessOperationsHeadCase(profile.id,id)))return respond({ok:false,error:"Case outside your scope."},403);
+    }else if(!(await hasEffectiveCapability(profile,"create_policies","edit")))
+      return respond({ok:false,error:"Upload permission is required."},403);
+    const name=(file.name||"document").replace(/[^a-zA-Z0-9._-]/g,"-").slice(0,140)||"document";
+    const path="life-health-cases/"+id+"/"+type+"/"+crypto.randomUUID()+"-"+name;
+    const {error:storageError}=await admin.storage.from(DOCUMENT_BUCKET).upload(path,Buffer.from(await file.arrayBuffer()),{contentType:file.type,upsert:false});
+    if(storageError)return respond({ok:false,error:"Document upload failed."},503);
+    const {data:old,error:lookupError}=await admin.from("life_health_case_documents")
+      .select("id,storage_bucket,storage_path").eq("case_id",id).eq("document_type",type).maybeSingle();
+    if(lookupError){await admin.storage.from(DOCUMENT_BUCKET).remove([path]);return respond({ok:false,error:"Document lookup failed."},503);}
+    const values={file_name:file.name,storage_bucket:DOCUMENT_BUCKET,storage_path:path,mime_type:file.type,file_size:file.size,uploaded_by:profile.id,updated_at:new Date().toISOString()};
+    const write=old
+      ?await admin.from("life_health_case_documents").update(values).eq("case_id",id).eq("id",old.id)
+      :await admin.from("life_health_case_documents").insert({case_id:id,document_type:type,...values});
+    if(write.error){await admin.storage.from(DOCUMENT_BUCKET).remove([path]);return respond({ok:false,error:"Document record update failed."},503);}
+    if(old&&validDocPath(id,old.storage_bucket,old.storage_path)&&old.storage_path!==path){
+      const {error:cleanupError}=await admin.storage.from(DOCUMENT_BUCKET).remove([old.storage_path]);
+      if(cleanupError)console.error("Prior document cleanup failed",{caseId:id,type});
+    }
+    await recordDailyWorkflowActivity(admin,{actorId:profile.id,table:"life_health_cases",recordId:id,action:old?"life_health_case_document_replaced":"life_health_case_document_uploaded"});
+    return respond({ok:true});
+  }
   const input=await request.json().catch(()=>null) as Record<string,unknown>|null;
   const id=typeof input?.id==="string"?input.id:"";
   if(!uuid.test(id))return respond({ok:false,error:"Invalid case reference."},400);
