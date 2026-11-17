@@ -182,7 +182,10 @@ export default function NativePolicyOnboarding(){
   const [customerSearchBusy,setCustomerSearchBusy]=useState(false);
   const [customerSearchError,setCustomerSearchError]=useState('');
   const [commercialModal,setCommercialModal]=useState<'payin'|'payout'|null>(null);
+  const [commercialBasisOpen,setCommercialBasisOpen]=useState<'payin'|'payout'|null>(null);
   const [commercialError,setCommercialError]=useState('');
+  const openCommercial=(kind:'payin'|'payout')=>{setCommercialBasisOpen(null);setCommercialError('');setCommercialModal(kind);};
+  const closeCommercial=()=>{setCommercialBasisOpen(null);setCommercialModal(null);};
   const [remarkOpen,setRemarkOpen]=useState(false);
   const [remarkText,setRemarkText]=useState('');
   const [remarkError,setRemarkError]=useState('');
@@ -415,7 +418,7 @@ export default function NativePolicyOnboarding(){
       }
       // Standalone Add Policy has no draft-persistence endpoint: retain the
       // values in the current form until the user creates the policy/case.
-      setCommercialModal(null);
+      closeCommercial();
     }catch(cause){
       setCommercialError(cause instanceof Error?cause.message:'Unable to save commercial details.');
     }finally{setSaving(false);}
@@ -1050,7 +1053,7 @@ export default function NativePolicyOnboarding(){
             <Text style={styles.referenceHelp}>Sensitive terms · popup entry</Text>
           </View>
           <Pressable accessibilityRole="button" accessibilityLabel="Insurer Pay-In popup"
-            onPress={()=>setCommercialModal('payin')} style={[styles.referenceCard,styles.referencePayinCard]}>
+            onPress={()=>openCommercial('payin')} style={[styles.referenceCard,styles.referencePayinCard]}>
             <View style={[styles.referenceIcon,styles.referencePayinIcon]}>
               <Ionicons name="arrow-down-outline" size={18} color="#11857E"/>
             </View>
@@ -1067,7 +1070,7 @@ export default function NativePolicyOnboarding(){
             <Ionicons name="chevron-forward" size={16} color="#8A98AA"/>
           </Pressable>
           <Pressable accessibilityRole="button" accessibilityLabel="Partner Payout popup"
-            onPress={()=>setCommercialModal('payout')} style={[styles.referenceCard,styles.referencePayoutCard]}>
+            onPress={()=>openCommercial('payout')} style={[styles.referenceCard,styles.referencePayoutCard]}>
             <View style={[styles.referenceIcon,styles.referencePayoutIcon]}>
               <Ionicons name="hand-left-outline" size={18} color="#6B54B6"/>
             </View>
@@ -1087,11 +1090,11 @@ export default function NativePolicyOnboarding(){
           <View style={styles.referenceCommercialHeader}><Ionicons name="hand-left-outline" size={16} color="#315B9A"/><Text style={styles.summaryCaption}>PAYIN–PAYOUT</Text></View>
           <View style={[styles.referenceCommercialRow,(productType==='Life'||productType==='Health')&&styles.referenceLifeHealthPayinRow]}>
             <View style={styles.referenceCommercialContent}><Text style={styles.referenceLabel}>INSURER PAY-IN</Text><Text style={styles.referenceValue}>{payinEntered?rupees(summaryPayin):'Not entered'}</Text></View>
-            <Pressable accessibilityRole="button" accessibilityLabel="Insurer Pay-In popup" onPress={()=>setCommercialModal('payin')} style={styles.referenceAdd}><Text style={styles.referenceAddText}>{payinEntered?'Edit':'Add'}</Text></Pressable>
+            <Pressable accessibilityRole="button" accessibilityLabel="Insurer Pay-In popup" onPress={()=>openCommercial('payin')} style={styles.referenceAdd}><Text style={styles.referenceAddText}>{payinEntered?'Edit':'Add'}</Text></Pressable>
           </View>
           <View style={[styles.referenceCommercialRow,(productType==='Life'||productType==='Health')&&styles.referenceLifeHealthPayoutRow]}>
             <View style={styles.referenceCommercialContent}><Text style={styles.referenceLabel}>PARTNER PAYOUT</Text><Text style={styles.referenceValue}>{payoutEntered?rupees(summaryPayout):'Not entered'}</Text></View>
-            <Pressable accessibilityRole="button" accessibilityLabel="Partner Payout popup" onPress={()=>setCommercialModal('payout')} style={styles.referenceAdd}><Text style={styles.referenceAddText}>{payoutEntered?'Edit':'Add'}</Text></Pressable>
+            <Pressable accessibilityRole="button" accessibilityLabel="Partner Payout popup" onPress={()=>openCommercial('payout')} style={styles.referenceAdd}><Text style={styles.referenceAddText}>{payoutEntered?'Edit':'Add'}</Text></Pressable>
           </View>
         </View>:null}
 
@@ -1198,7 +1201,7 @@ export default function NativePolicyOnboarding(){
       </View>
     </Modal>
     <Modal transparent visible={Boolean(commercialModal)&&Boolean(data?.commercialAccess)}
-      animationType="slide" onRequestClose={()=>{if(!saving)setCommercialModal(null);}}>
+      animationType="slide" onRequestClose={()=>{if(!saving)closeCommercial();}}>
       <View style={styles.scrim}>
         <View style={styles.commercialSheet}>
           <View style={styles.sheetTitle}>
@@ -1208,18 +1211,34 @@ export default function NativePolicyOnboarding(){
                 'Projected pay-in only. This does not confirm actual insurer receipts.':
                 'Agreed partner payout; independent from insurer receipts.'}</Text>
             </View>
-            <Pressable accessibilityRole="button" accessibilityLabel="Close commercial popup" disabled={saving} onPress={()=>setCommercialModal(null)} style={styles.modalClose}>
+            <Pressable accessibilityRole="button" accessibilityLabel="Close commercial popup" disabled={saving} onPress={closeCommercial} style={styles.modalClose}>
               <Ionicons name="close" size={19} color="#4C5970"/>
             </Pressable>
           </View>
-          <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.commercialModalContent}>
+          <ScrollView keyboardShouldPersistTaps="handled" onScrollBeginDrag={()=>setCommercialBasisOpen(null)} contentContainerStyle={styles.commercialModalContent}>
             {!isMotor?<View style={styles.fields}>
               {commercialModal==='payin'?<>
-                <View style={styles.field}><Text style={styles.label}>PAY-IN BASIS</Text>
-                  <Pressable accessibilityRole="button" accessibilityLabel="Pay-in basis" style={styles.inputRow}
-                    onPress={()=>setPicker({key:'payinBasis',product:true,items:[{value:'NET',label:'Net Premium %'},{value:'FLAT',label:'Fixed Amount'}]})}>
-                    <Text style={styles.value}>{productValues.payinBasis==='FLAT'?'Fixed Amount':'Net Premium %'}</Text><Ionicons name="chevron-down" size={15} color="#63758D"/>
-                  </Pressable></View>
+                <View style={styles.field}>
+                  <Text style={styles.label}>PAY-IN BASIS</Text>
+                  <Pressable accessibilityRole="button" accessibilityLabel="Pay-in basis"
+                    accessibilityState={{expanded:commercialBasisOpen==='payin'}} style={styles.inputRow}
+                    onPress={()=>setCommercialBasisOpen(current=>current==='payin'?null:'payin')}>
+                    <Text style={styles.value}>{productValues.payinBasis==='FLAT'?'Fixed Amount':'Net Premium %'}</Text>
+                    <Ionicons name={commercialBasisOpen==='payin'?'chevron-up':'chevron-down'} size={15} color="#63758D"/>
+                  </Pressable>
+                  {commercialBasisOpen==='payin'?<View style={styles.basisOptions}>
+                    {([{value:'NET',label:'Net Premium %'},{value:'FLAT',label:'Fixed Amount'}] as const).map(option=>{
+                      const selected=(productValues.payinBasis||'NET')===option.value;
+                      return <Pressable key={option.value} accessibilityRole="button"
+                        accessibilityLabel={`Pay-in basis ${option.label}`}
+                        accessibilityState={{selected}} style={[styles.commercialBasisChoice,selected&&styles.commercialBasisChoiceSelected]}
+                        onPress={()=>{updateProduct('payinBasis',option.value);setCommercialBasisOpen(null);}}>
+                        <Text style={[styles.basisText,selected&&styles.commercialBasisSelectedText]}>{option.label}</Text>
+                        {selected?<Ionicons name="checkmark" size={15} color="#17365D"/>:null}
+                      </Pressable>;
+                    })}
+                  </View>:null}
+                </View>
                 <View style={styles.field}><Text style={styles.label}>{productValues.payinBasis==='FLAT'?'PAY-IN AMOUNT':'PAY-IN %'}</Text>
                   <TextInput accessibilityLabel="Pay-in value" style={styles.input} keyboardType="decimal-pad" placeholder="0.00" value={productValues.payinValue||''}
                     onChangeText={v=>updateProduct('payinValue',v)}/></View>
@@ -1230,18 +1249,32 @@ export default function NativePolicyOnboarding(){
                   ['BASE PROJECTED PAY-IN',productPayinBase],['PROJECTED TOTAL PAY-IN',productPayin],
                   ['TDS @ 10%',productPayin*.1],['PAY-IN AFTER TDS',productPayin*.9]
                 ].map(([label,value])=><View key={String(label)} style={styles.field}><Text style={styles.label}>{label}</Text><View style={[styles.inputRow,styles.readonlyInput]}><Text style={styles.premiumValue}>{rupees(Number(value))}</Text></View></View>)}
-                <Text style={styles.commercialNote}>Blank means projected pay-in has not been entered. Entering 0 explicitly is valid and preserved.</Text>
               </>:<>
-                <View style={styles.field}><Text style={styles.label}>PAYOUT BASIS</Text>
-                  <Pressable accessibilityRole="button" accessibilityLabel="Partner payout basis" style={styles.inputRow}
-                    onPress={()=>setPicker({key:'partnerPayoutBasis',product:true,items:[{value:'NET',label:'Net Premium %'},{value:'FLAT',label:'Fixed Amount'}]})}>
-                    <Text style={styles.value}>{productValues.partnerPayoutBasis==='FLAT'?'Fixed Amount':'Net Premium %'}</Text><Ionicons name="chevron-down" size={15} color="#63758D"/>
-                  </Pressable></View>
+                <View style={styles.field}>
+                  <Text style={styles.label}>PAYOUT BASIS</Text>
+                  <Pressable accessibilityRole="button" accessibilityLabel="Partner payout basis"
+                    accessibilityState={{expanded:commercialBasisOpen==='payout'}} style={styles.inputRow}
+                    onPress={()=>setCommercialBasisOpen(current=>current==='payout'?null:'payout')}>
+                    <Text style={styles.value}>{productValues.partnerPayoutBasis==='FLAT'?'Fixed Amount':'Net Premium %'}</Text>
+                    <Ionicons name={commercialBasisOpen==='payout'?'chevron-up':'chevron-down'} size={15} color="#63758D"/>
+                  </Pressable>
+                  {commercialBasisOpen==='payout'?<View style={styles.basisOptions}>
+                    {([{value:'NET',label:'Net Premium %'},{value:'FLAT',label:'Fixed Amount'}] as const).map(option=>{
+                      const selected=(productValues.partnerPayoutBasis||'NET')===option.value;
+                      return <Pressable key={option.value} accessibilityRole="button"
+                        accessibilityLabel={`Payout basis ${option.label}`}
+                        accessibilityState={{selected}} style={[styles.commercialBasisChoice,selected&&styles.commercialBasisChoiceSelected]}
+                        onPress={()=>{updateProduct('partnerPayoutBasis',option.value);setCommercialBasisOpen(null);}}>
+                        <Text style={[styles.basisText,selected&&styles.commercialBasisSelectedText]}>{option.label}</Text>
+                        {selected?<Ionicons name="checkmark" size={15} color="#17365D"/>:null}
+                      </Pressable>;
+                    })}
+                  </View>:null}
+                </View>
                 <View style={styles.field}><Text style={styles.label}>{productValues.partnerPayoutBasis==='FLAT'?'PAYOUT AMOUNT':'PAYOUT %'}</Text>
                   <TextInput accessibilityLabel="Payout value" style={styles.input} keyboardType="decimal-pad" placeholder="0.00"
                     value={productValues.partnerPayoutValue||''} onChangeText={v=>updateProduct('partnerPayoutValue',v)}/></View>
                 <View style={styles.field}><Text style={styles.label}>TOTAL AGREED PAYOUT</Text><View style={[styles.inputRow,styles.readonlyInput]}><Text style={styles.premiumValue}>{rupees(productPayout)}</Text></View></View>
-                <Text style={styles.commercialNote}>The payout is tagged to the selected Section 01 Lead Source. Negative retention is allowed and remains for finance review.</Text>
               </>}
             </View>:commercialModal==='payin'?<>
               <View style={styles.fields}>{insurerPayinFields.map(f=><View key={f.key} style={styles.field}>
@@ -1329,7 +1362,7 @@ export default function NativePolicyOnboarding(){
           <View style={styles.modalFooter}>
             <Pressable accessibilityRole="button" accessibilityLabel="Save and close commercial popup"
               disabled={saving||booking||creatingLifeHealth} accessibilityState={{disabled:saving||booking||creatingLifeHealth}}
-              onPress={()=>void saveCommercial()}
+              onPress={()=>{setCommercialBasisOpen(null);void saveCommercial();}}
               style={[styles.commercialSave,(saving||booking||creatingLifeHealth)&&styles.disabled]}>
               {saving?<ActivityIndicator size="small" color="#FFFFFF"/>:null}
               <Text style={styles.primaryText}>{saving?'Saving…':'Save & Close'}</Text>
@@ -1485,6 +1518,9 @@ const styles=StyleSheet.create({
   summarySchedule:{gap:6,marginTop:5},scheduleRow:{flexDirection:'row',justifyContent:'space-between',paddingVertical:6,borderBottomWidth:1,borderColor:'#EBE6F3'},
   scheduleHeader:{fontSize:8,color:'#405375',fontWeight:'700',width:'24%'},scheduleCell:{fontSize:8,color:'#17365D',width:'24%'},scheduleNote:{fontSize:9,lineHeight:14,color:'#738196'},
   commercialModalContent:{paddingBottom:8},
+  commercialBasisChoice:{minHeight:42,paddingHorizontal:12,flexDirection:'row',alignItems:'center',justifyContent:'space-between',borderBottomWidth:1,borderBottomColor:'#E9EEF6'},
+  commercialBasisChoiceSelected:{backgroundColor:'#EAF1FA'},
+  commercialBasisSelectedText:{color:'#17365D',fontWeight:'800'},
   commercialError:{color:'#A5272D',fontSize:11,fontWeight:'700',paddingHorizontal:12,paddingTop:8},
   calculatedRow:{flexDirection:'row',justifyContent:'space-between',padding:12,borderTopWidth:1,borderColor:'#E1E9F3'},
   readonlyInput:{backgroundColor:'#F3F6FA',color:'#738196'},
