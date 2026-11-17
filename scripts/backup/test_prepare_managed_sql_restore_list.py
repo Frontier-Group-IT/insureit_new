@@ -112,7 +112,7 @@ class PlanTests(unittest.TestCase):
             with self.subTest(fake_name=fake_name):
                 with self.assertRaises(SafeTocSelectionError) as caught:
                     chosen_entries(fixture() +
-                      f"5002; 1259 1 TABLE {fake_name} private_record postgres\\n")
+                      f"5002; 1259 1 TABLE {fake_name} private_record postgres\n")
                 self.assertEqual(caught.exception.reason, "UNKNOWN_ARCHIVE_NAMESPACE")
                 self.assertNotIn(fake_name, str(caught.exception))
 
