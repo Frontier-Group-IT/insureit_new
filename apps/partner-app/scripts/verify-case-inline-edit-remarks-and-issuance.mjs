@@ -20,12 +20,12 @@ for(const key of ['policyNumber','issuanceDate','startDate','endDate','pptEndDat
   assert.ok(app.includes('issueField("'+key+'"'),'Missing issuance field '+key);
 }
 assert.match(app,/Create Policy & Close Case/);
-assert.match(app,/remarkHeaderAction/, 'Pending and Rejected remarks have a separate compact action');
-assert.match(app,/record.status_group==='pending'\\|\\|record.status_group==='rejected'/, 'Both Pending and Rejected use the separate remarks layout');
-assert.match(app,/accessibilityState=\\{\\{expanded:activityExpanded\\}\\}/, 'Activity Status is expandable');
-assert.match(app,/const \\[activityExpanded,setActivityExpanded\\]=useState\\(false\\)/, 'Activity Status starts collapsed');
-assert.match(app,/activityExpanded\\?<View style=\\{styles.activityHistory\\}>/, 'History is visible only when expanded');
-assert.doesNotMatch(app,/numberOfLines=\\{4\\}>\\{record.remarks\\}/, 'Saved remarks must not be truncated');
+assert.ok(app.includes('remarkHeaderAction'), 'Pending and Rejected remarks have a separate compact action');
+assert.ok(app.includes("record.status_group==='pending'||record.status_group==='rejected'"), 'Both Pending and Rejected have the same remarks/activity layout');
+assert.ok(app.includes('accessibilityState={{expanded:activityExpanded}}'), 'Activity Status is expandable');
+assert.ok(app.includes('const [activityExpanded,setActivityExpanded]=useState(false)'), 'Activity Status starts collapsed');
+assert.ok(app.includes('activityExpanded?<View style={styles.activityHistory}>'), 'History appears only when expanded');
+assert.ok(!app.includes('numberOfLines={4}>{record.remarks}'), 'Saved remarks must not be truncated');
 assert.match(app,/appendLifeHealthCaseRemark/);
 assert.match(api,/input\?\.operation==="append_remark"/);
 assert.match(api,/input\?\.operation==="issue_approval_request"/);
