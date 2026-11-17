@@ -666,6 +666,8 @@ assert(customerPreviewCode.includes("requireDevelopmentPolicyOperator(id)")
   && customerPreviewCode.includes('extraction.preview.checksPassed===13')
   && customerPreviewCode.includes('extraction.preview.warnings.length===0')
   && customerPreviewCode.includes('normalizedPhone(row.phone)===phone')
+  && customerPreviewCode.includes('.eq("customer_mobile",intake.customer_mobile)')
+  && customerPreviewCode.includes('otherOpenIntakes=group.error')
   && customerPreviewCode.includes('truncated=(rows??[]).length>=51'),
   "AI customer candidate review must reverify the current PDF, filter exact normalized phone and fail closed on too many matches");
 assert(!customerPreviewCode.includes(".update(") && !customerPreviewCode.includes(".insert(")
@@ -674,6 +676,7 @@ assert(!customerPreviewCode.includes(".update(") && !customerPreviewCode.include
 assert(workbenchText.includes("Check customer matches")
   && workbenchText.includes("Create New Customer")
   && workbenchText.includes("/customers?choose_partner=1")
+  && workbenchText.includes("This mobile also appears on")
   && workbenchText.includes("reviewAiIntakeCustomerCandidates(exceptionRow.id)"),
   "Customer decision popup provides guided canonical review/create routes, not a silent automatic link");
 console.log("Semi-auto Motor onboarding regression checks passed.");
