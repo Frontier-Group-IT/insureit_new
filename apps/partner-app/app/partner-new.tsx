@@ -2,6 +2,7 @@ import { Fragment, useEffect, useState } from 'react';
 import { Alert, Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import * as DocumentPicker from 'expo-document-picker';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -15,6 +16,12 @@ type Field = 'document_received_at' | 'associate_employee_id' | 'pos_first_name'
   | 'address' | 'city' | 'state' | 'postal_code' | 'bank_id' | 'bank_account_number'
   | 'bank_ifsc_code' | 'gst_number';
 type Option = { id: string; name: string };
+type DocumentType = 'aadhaar_front' | 'aadhaar_back' | 'pan_copy' | 'cancelled_cheque' | 'photograph' | 'gst_copy';
+const uploadSlots: Array<{ type: DocumentType; label: string }> = [
+  { type: 'aadhaar_front', label: 'Aadhaar Front' }, { type: 'aadhaar_back', label: 'Aadhaar Back' },
+  { type: 'pan_copy', label: 'PAN Copy' }, { type: 'cancelled_cheque', label: 'Cancelled Cheque / Bank Proof' },
+  { type: 'photograph', label: 'Photograph' }, { type: 'gst_copy', label: 'GST Certificate' },
+];
 type MasterData = { ok?: boolean; error?: string; rms?: Option[]; banks?: Option[] };
 const initial: Record<Field, string> = {
   document_received_at: '', associate_employee_id: '', pos_first_name: '', pos_middle_name: '', pos_last_name: '',
@@ -78,11 +85,15 @@ export default function AddPartnerScreen() {
   const [selector, setSelector] = useState<'rm' | 'bank' | null>(null);
   const [selectorQuery, setSelectorQuery] = useState('');
   const [saving, setSaving] = useState(false);
+  const [applicationId, setApplicationId] = useState<string | null>(null);
+  const [uploadOpen, setUploadOpen] = useState(false);
+  const [uploadingType, setUploadingType] = useState<DocumentType | null>(null);
+  const [uploaded, setUploaded] = useState<Partial<Record<DocumentType, string>>>({});
   const [dateField, setDateField] = useState<'date_of_birth' | 'document_received_at' | null>(null);
   const set = (key: Field, value: string) => setForm(old => ({ ...old, [key]: value }));
-  const hasUnsavedDetails = (Object.keys(initial) as Field[]).some(key => form[key] !== initial[key]);
+  const hasUnsavedDetails = !applicationId && (Object.keys(initial) as Field[]).some(key => form[key] !== initial[key]);
   const leavePartnerForm = (destination?: PartnerTabDestination) => {
-    if (saving) return;
+    if (saving || uploadingType) return;
     const leave = () => destination ? router.navigate(destination as never) : router.back();
     if (!hasUnsavedDetails) { leave(); return; }
     Alert.alert('Discard Partner details?', 'Your entered details have not been submitted.', [
@@ -118,8 +129,8 @@ export default function AddPartnerScreen() {
   const filteredOptions = selectOptions.filter(option => option.name.toLocaleLowerCase().includes(selectorQuery.trim().toLocaleLowerCase()));
   const openSelector = (kind: 'rm' | 'bank') => { setSelectorQuery(''); setSelector(kind); };
   const closeSelector = () => { Keyboard.dismiss(); setSelector(null); setSelectorQuery(''); };
-  const submit = async () => {
-    if (saving || !allowed) return;
+  const savePartner = async () => {
+    if (saving || applicationId || !allowed) return;
     const dob = isoDate(form.date_of_birth);
     const received = form.document_received_at.trim() ? isoDate(form.document_received_at) : null;
     const normalized = {
@@ -151,12 +162,51 @@ export default function AddPartnerScreen() {
       const response = await authenticatedRequest('POST', normalized);
       const result = await response.json() as { ok?: boolean; error?: string; application_id?: string };
       if (!response.ok || !result.ok || !result.application_id) throw new Error(result.error || 'Partner application could not be submitted.');
-      Alert.alert('Partner application submitted', 'Submitted to Operations for review. No POSP or MISP registration was created.', [
-        { text: 'OK', onPress: () => router.replace('/(tabs)/policies') },
-      ]);
+      setApplicationId(result.application_id);
+      Alert.alert('Partner details saved', 'Primary details are saved. You can now upload Partner documents. The application is visible to Operations for review.');
     } catch (error) {
-      Alert.alert('Unable to submit Partner', error instanceof Error ? error.message : 'Please try again.');
+      Alert.alert('Unable to save Partner', error instanceof Error ? error.message : 'Please try again.');
     } finally { setSaving(false); }
+  };
+  const uploadDocument = async (type: DocumentType) => {
+    if (!applicationId || uploadingType) return;
+    if (type === 'gst_copy' && !form.gst_number.trim()) return;
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['application/pdf', 'image/jpeg', 'image/png'], copyToCacheDirectory: true, multiple: false,
+      });
+      if (result.canceled || !result.assets.length) return;
+      const file = result.assets[0];
+      if (!file.size || file.size > 10 * 1024 * 1024) {
+        Alert.alert('Unsupported document', 'Choose a PDF, JPG or PNG under 10 MB.');
+        return;
+      }
+      const mime = file.mimeType || (file.name.toLowerCase().endsWith('.pdf') ? 'application/pdf'
+        : file.name.toLowerCase().endsWith('.png') ? 'image/png' : 'image/jpeg');
+      if (!['application/pdf', 'image/jpeg', 'image/png'].includes(mime)) {
+        Alert.alert('Unsupported document', 'Choose a PDF, JPG or PNG file.');
+        return;
+      }
+      setUploadingType(type);
+      const session = (await supabase.auth.getSession()).data.session;
+      if (!session?.access_token) throw new Error('Sign in again to upload documents.');
+      const base = (process.env.EXPO_PUBLIC_PORTAL_URL || 'https://portal.insureit.in').replace(/\\/$/, '');
+      const body = new FormData();
+      body.append('application_id', applicationId);
+      body.append('document_type', type);
+      body.append('file', { uri: file.uri, name: file.name, type: mime } as unknown as Blob);
+      const response = await fetch(`${base}/api/partner/onboarding/partner-only/documents`, {
+        method: 'POST', headers: { Authorization: `Bearer ${session.access_token}` }, body,
+      });
+      const data = await response.json() as { ok?: boolean; error?: string };
+      if (!response.ok || !data.ok) throw new Error(data.error || 'Document upload failed.');
+      setUploaded(previous => ({ ...previous, [type]: file.name }));
+      Alert.alert('Uploaded', `${file.name} saved successfully.`);
+    } catch (error) {
+      Alert.alert('Upload failed', error instanceof Error ? error.message : 'Try again.');
+    } finally {
+      setUploadingType(null);
+    }
   };
   if (!allowed) return <SafeAreaView style={styles.screen}><View style={styles.content}><Text style={styles.heading}>Add Partner</Text><Text>Employee Partner-onboarding permission required.</Text></View></SafeAreaView>;
   return (
@@ -178,7 +228,7 @@ export default function AddPartnerScreen() {
                 {index === 2 ? (
                   <View style={[styles.field, cellStyle]}>
                     <Text style={styles.label}>Bank *</Text>
-                    <Pressable disabled={loading} accessibilityRole="button" onPress={() => openSelector('bank')} style={styles.select}>
+                    <Pressable disabled={loading || Boolean(applicationId)} accessibilityRole="button" onPress={() => openSelector('bank')} style={styles.select}>
                       <Text style={styles.selectText} numberOfLines={1}>{banks.find(x => x.id === form.bank_id)?.name || (loading ? 'Loading banks…' : 'Select bank')}</Text>
                       <Ionicons name="chevron-down" size={17} color="#17365D" />
                     </Pressable>
@@ -190,12 +240,12 @@ export default function AddPartnerScreen() {
                       <Text style={styles.label}>{field.label}{field.optional ? '' : ' *'}</Text>
                       {field.key === 'document_received_at' || field.key === 'date_of_birth' ? (
                         <Pressable accessibilityRole="button" accessibilityLabel={`Select ${field.label}`}
-                          onPress={() => setDateField(field.key as 'date_of_birth' | 'document_received_at')} style={styles.select}>
+                          disabled={Boolean(applicationId)} onPress={() => setDateField(field.key as 'date_of_birth' | 'document_received_at')} style={styles.select}>
                           <Text style={styles.selectText} numberOfLines={1}>{form[field.key] || 'DD/MM/YYYY'}</Text>
                           <Ionicons name="calendar-outline" size={18} color="#17365D" />
                         </Pressable>
                       ) : (
-                        <TextInput value={form[field.key]} onChangeText={text => set(field.key, text)}
+                        <TextInput editable={!applicationId} value={form[field.key]} onChangeText={text => set(field.key, text)}
                           placeholder={field.hint} placeholderTextColor="#8997A8"
                           keyboardType={field.keyboard || 'default'} secureTextEntry={Boolean(field.secret)}
                           autoCapitalize={field.key === 'email' ? 'none' : field.key === 'pan_number' || field.key === 'bank_ifsc_code' || field.key === 'gst_number' ? 'characters' : 'sentences'}
@@ -206,7 +256,7 @@ export default function AddPartnerScreen() {
                     {field.key === 'document_received_at' ? (
                       <View style={[styles.field, cellStyle]}>
                         <Text style={styles.label}>RM *</Text>
-                        <Pressable disabled={loading} accessibilityRole="button" onPress={() => openSelector('rm')} style={styles.select}>
+                        <Pressable disabled={loading || Boolean(applicationId)} accessibilityRole="button" onPress={() => openSelector('rm')} style={styles.select}>
                           <Text style={styles.selectText} numberOfLines={1}>{rms.find(x => x.id === form.associate_employee_id)?.name || (loading ? 'Loading RMs…' : 'Select RM')}</Text>
                           <Ionicons name="chevron-down" size={17} color="#17365D" />
                         </Pressable>
@@ -217,15 +267,55 @@ export default function AddPartnerScreen() {
               </View>
             </View>
           ))}
-          <Pressable accessibilityRole="button" disabled={saving || loading} onPress={() => void submit()} style={[styles.submit, (saving || loading) && styles.disabled]}>
-            <Text style={styles.submitText}>{saving ? 'Submitting…' : 'Submit Partner application'}</Text>
-          </Pressable>
+          <View style={styles.actionRow}>
+            <Pressable accessibilityRole="button" accessibilityLabel="Save Partner details"
+              disabled={saving || loading || Boolean(applicationId) || Boolean(uploadingType)}
+              onPress={() => void savePartner()}
+              style={[styles.actionButton, styles.submit, (saving || loading || applicationId || uploadingType) && styles.disabled]}>
+              <Ionicons name="save-outline" size={18} color="#FFF" />
+              <Text style={styles.submitText}>{saving ? 'Saving…' : applicationId ? 'Saved' : 'Save'}</Text>
+            </Pressable>
+            <Pressable accessibilityRole="button" accessibilityLabel="Upload Partner documents"
+              disabled={saving || Boolean(uploadingType)}
+              onPress={() => applicationId ? setUploadOpen(true) : Alert.alert('Save first', 'Save Partner details before uploading documents.')}
+              style={[styles.actionButton, styles.uploadButton, (saving || uploadingType) && styles.disabled]}>
+              <Ionicons name="cloud-upload-outline" size={18} color="#FFF" />
+              <Text style={styles.submitText}>{uploadingType ? 'Uploading…' : 'Upload'}</Text>
+            </Pressable>
+          </View>
         </ScrollView>
         {dateField ? <DateTimePicker
           value={isoDate(form[dateField]) ? new Date(`${isoDate(form[dateField])}T12:00:00`) : new Date()}
           mode="date" display={Platform.OS === 'ios' ? 'spinner' : 'default'}
           maximumDate={new Date()} onChange={(_event, selectedDate) => setSelectedDate(selectedDate)}
         /> : null}
+        <Modal visible={uploadOpen} transparent animationType="fade" onRequestClose={() => { if (!uploadingType) setUploadOpen(false); }}>
+          <View style={styles.modalBackdrop}>
+            <Pressable style={StyleSheet.absoluteFillObject} onPress={() => { if (!uploadingType) setUploadOpen(false); }} accessibilityLabel="Close upload options" />
+            <View style={styles.modalKeyboardArea} pointerEvents="box-none">
+              <View style={styles.modal}>
+                <View style={styles.modalTitleRow}>
+                  <Text style={styles.modalTitle}>Upload Partner Documents</Text>
+                  <Pressable accessibilityRole="button" accessibilityLabel="Close upload options" disabled={Boolean(uploadingType)}
+                    onPress={() => setUploadOpen(false)}><Ionicons name="close" size={22} color="#4C5970" /></Pressable>
+                </View>
+                <Text style={styles.uploadHint}>PDF, JPG or PNG, maximum 10 MB per document. Tap a category to select its file.</Text>
+                <ScrollView style={styles.modalOptionList}>
+                  {uploadSlots.filter(slot => slot.type !== 'gst_copy' || Boolean(form.gst_number.trim())).map(slot => (
+                    <Pressable key={slot.type} accessibilityRole="button" disabled={Boolean(uploadingType)}
+                      onPress={() => void uploadDocument(slot.type)} style={styles.option}>
+                      <View style={styles.uploadLabel}>
+                        <Text style={styles.selectText}>{slot.label}</Text>
+                        {uploaded[slot.type] ? <Text style={styles.uploadedName} numberOfLines={1}>{uploaded[slot.type]}</Text> : null}
+                      </View>
+                      <Ionicons name={uploaded[slot.type] ? 'checkmark-circle' : 'cloud-upload-outline'} size={21} color="#17365D" />
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              </View>
+            </View>
+          </View>
+        </Modal>
         <Modal visible={selector !== null} transparent animationType="fade" onRequestClose={closeSelector}>
           <View style={styles.modalBackdrop}>
             <Pressable style={StyleSheet.absoluteFillObject} accessibilityLabel="Close selection popup" onPress={closeSelector} />
@@ -293,7 +383,10 @@ const styles = StyleSheet.create({
   input: { minHeight: 44, backgroundColor: '#FFF', borderWidth: 1, borderColor: '#CED8E7', borderRadius: 10, paddingHorizontal: 12, fontSize: 13, color: '#152A49' },
   select: { minHeight: 44, borderWidth: 1, borderColor: '#CED8E7', borderRadius: 10, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   selectText: { color: '#17365D', fontSize: 13, fontWeight: '600', flexShrink: 1 },
-  submit: { backgroundColor: '#17365D', minHeight: 47, borderRadius: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
+  actionRow: { flexDirection: 'row', gap: 10 },
+  actionButton: { flex: 1, minHeight: 47, borderRadius: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7 },
+  submit: { backgroundColor: '#17365D' },
+  uploadButton: { backgroundColor: '#0A6C86' },
   submitText: { color: '#FFF', fontWeight: '800', fontSize: 13 }, disabled: { opacity: .55 },
   modalBackdrop: { flex: 1, backgroundColor: '#14233B88' },
   modalKeyboardArea: { flex: 1, justifyContent: 'flex-end' },
@@ -307,4 +400,7 @@ const styles = StyleSheet.create({
   option: { minHeight: 45, padding: 12, borderBottomWidth: 1, borderBottomColor: '#E7EDF5', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   selectedOption: { backgroundColor: '#EAF3FF' },
   emptyOptions: { color: '#71819A', fontSize: 12, padding: 16 },
+  uploadHint: { color: '#64748B', fontSize: 12, lineHeight: 18 },
+  uploadLabel: { flex: 1, gap: 3 },
+  uploadedName: { color: '#16805C', fontSize: 11 },
 });
