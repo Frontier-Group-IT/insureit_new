@@ -10,6 +10,7 @@ const standalone = read('app/policy-new.tsx');
 const partner = read('app/partner-new.tsx');
 const cases = read('app/life-health-cases/index.tsx');
 const detail = read('app/life-health-cases/[id].tsx');
+const customerDetail = read('app/customer/[id].tsx');
 
 for (const title of ['Home', 'Business', 'Policies', 'Claims', 'More']) {
   assert.match(tabs, new RegExp(`title: '${title}'`), `Existing Home navigator has ${title}`);
@@ -37,6 +38,11 @@ assert.match(partner, /hasUnsavedDetails/, 'Warn before abandoning Partner form'
 assert.match(partner, /if \(saving \|\| uploadingType\) return/, 'Do not navigate during Partner saves or document uploads');
 assert.match(cases, /bottomNavigation=\{<PartnerCaseBottomNavigation\/>\}/, 'Existing Case Register navigation preserved');
 assert.match(detail, /bottomNavigation=\{<PartnerCaseBottomNavigation\/>\}/, 'Existing Case Details navigation preserved');
+assert.match(customerDetail, /bottomNavigation=\{<PartnerStackBottomNavigation activeTab="business" \/>\}/, 'Customer Details has five shared Home tabs with Business active');
+assert.match(customerDetail, /bottomNavigationNavy/, 'Customer Details footer safe area remains navy on Android and iOS');
+assert.match(customerDetail, /\['overview', 'person-outline', 'Overview'\]/, 'Existing Overview detail tab is preserved');
+assert.match(customerDetail, /\['vehicles', 'car-sport-outline', 'Vehicles'\]/, 'Existing Vehicles detail tab is preserved');
+assert.match(customerDetail, /\['policies', 'shield-checkmark-outline', 'Policies'\]/, 'Existing Policies detail tab is preserved');
 assert.match(cases, /status_group==='issued' && row\.final_policy_id/, 'Issued popup remains functional');
 assert.match(detail, /inline\("customerName","Client \/ proposer name"/, 'Direct inline Case editing remains available with stack navigation');
 assert.doesNotMatch(detail, /visible=\{editing&&!!form\}/, 'Old edit modal must not return');
