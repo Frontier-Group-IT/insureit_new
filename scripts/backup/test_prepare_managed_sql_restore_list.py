@@ -6,6 +6,7 @@ import unittest
 from prepare_managed_sql_restore_list import (
     APP_SCHEMAS, DEFERRED_SYSTEM_SCHEMAS, PG17_DEFERRED_KINDS,
     SafeTocSelectionError, build_list, chosen_entries, parse_entry,
+    order_auth_copy_by_foreign_keys,
 )
 
 
@@ -64,6 +65,30 @@ def fixture():
         "4009; 0 0 BLOB METADATA - BLOBS postgres\n",
     ]
     return "".join(lines)
+
+
+def auth_fk_fixture():
+    # Deliberately archive child COPY entries BEFORE their parents.
+    raw = fixture()
+    replacements = {
+        "table_0": "identities",
+        "table_1": "users",
+        "table_2": "refresh_tokens",
+        "table_3": "sessions",
+    }
+    for old, new in replacements.items():
+        raw = raw.replace(f"TABLE DATA auth {old} ", f"TABLE DATA auth {new} ")
+    return raw
+
+
+def auth_fk_edges():
+    # Includes 18 synthetic Auth FK edges. Real target has 24, read through
+    # TLS-verified PostgreSQL read-only catalog on protected runner.
+    return {
+        ("identities", "users"),
+        ("sessions", "users"),
+        ("refresh_tokens", "sessions"),
+    } | {(f"table_{i}", "users") for i in range(4, 19)}
 
 
 class PlanTests(unittest.TestCase):
@@ -146,6 +171,72 @@ class PlanTests(unittest.TestCase):
                 self.assertEqual(caught.exception.reason, category)
                 self.assertNotIn("hidden_customer_tag", str(caught.exception))
                 self.assertNotIn("public", str(caught.exception))
+
+    def test_parent_first_auth_copy_reorder_preserves_all_archive_entries(self):
+        original, original_counts = chosen_entries(auth_fk_fixture())
+        reordered, fk_count = order_auth_copy_by_foreign_keys(
+            original, auth_fk_edges(),
+        )
+        self.assertEqual(fk_count, 18)
+        self.assertEqual(len(reordered), len(original))
+        self.assertEqual(sorted(reordered), sorted(original))
+        self.assertEqual(original_counts[("public", "TABLE DATA")], 151)
+        self.assertEqual(original_counts[("auth", "TABLE DATA")], 22)
+        self.assertLess(
+            next(i for i, line in enumerate(reordered)
+                 if "TABLE DATA auth users " in line),
+            next(i for i, line in enumerate(reordered)
+                 if "TABLE DATA auth identities " in line),
+        )
+        self.assertLess(
+            next(i for i, line in enumerate(reordered)
+                 if "TABLE DATA auth sessions " in line),
+            next(i for i, line in enumerate(reordered)
+                 if "TABLE DATA auth refresh_tokens " in line),
+        )
+        self.assertLess(
+            next(i for i, line in enumerate(reordered)
+                 if "TABLE DATA auth users " in line),
+            next(i for i, line in enumerate(reordered)
+                 if "TABLE DATA public synthetic_0 " in line),
+        )
+        self.assertEqual(
+            [line for line in original if " TABLE DATA auth " not in line],
+            [line for line in reordered if " TABLE DATA auth " not in line],
+        )
+        self.assertFalse(any("TABLE DATA storage" in line for line in reordered))
+
+    def test_auth_fk_selector_fails_closed_on_cycle_missing_parent_and_gap(self):
+        approved, _ = chosen_entries(auth_fk_fixture())
+        with self.assertRaisesRegex(ValueError, "dependency cycle"):
+            order_auth_copy_by_foreign_keys(
+                approved, auth_fk_edges() | {("users", "identities")},
+            )
+        with self.assertRaisesRegex(ValueError, "parent COPY entry missing"):
+            order_auth_copy_by_foreign_keys(
+                approved, auth_fk_edges() | {("identities", "missing_parent")},
+            )
+        with self.assertRaisesRegex(ValueError, "dependency evidence"):
+            order_auth_copy_by_foreign_keys(approved, set())
+        with self.assertRaisesRegex(ValueError, "dependency coverage"):
+            order_auth_copy_by_foreign_keys(approved, {("identities", "users")})
+        with self.assertRaisesRegex(ValueError, "Self-referential"):
+            order_auth_copy_by_foreign_keys(
+                approved, auth_fk_edges() | {("users", "users")},
+            )
+
+    def test_private_list_written_with_fk_corrected_order(self):
+        with tempfile.TemporaryDirectory() as folder:
+            source = Path(folder) / "private-toc.txt"
+            target = Path(folder) / "approved-restoration.txt"
+            source.write_text(auth_fk_fixture(), encoding="utf-8")
+            build_list(source, target, auth_fk_edges=auth_fk_edges())
+            data = target.read_text(encoding="utf-8")
+            self.assertLess(
+                data.index("TABLE DATA auth users"),
+                data.index("TABLE DATA auth identities"),
+            )
+            self.assertEqual(target.stat().st_mode & 0o777, 0o600)
 
     def test_select_only_safe_allowlisted_sql(self):
         entries, counts = chosen_entries(fixture())
