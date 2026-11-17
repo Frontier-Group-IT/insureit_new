@@ -69,7 +69,7 @@ export default function MispDocumentsScreen() {
   const upload=async (key:string)=>{
     if(!applicationId||busy)return;
     const documentType=key==='education_10th_marksheet'?educationType:key;
-    const label=key.startsWith('custom_')?customLabels[key]?.trim():undefined;
+    const label=key.startsWith('custom_')?(customLabels[key]??findSaved(key)?.label??'').trim():undefined;
     if(key.startsWith('custom_')&&!label){
       // Custom documents are optional; a meaningful file label must be supplied.
       Alert.alert('Other Document','Enter a name before uploading this document.');
