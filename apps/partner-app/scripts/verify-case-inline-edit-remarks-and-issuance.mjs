@@ -6,6 +6,23 @@ const client=read('apps/partner-app/lib/life-health-cases.ts');
 const api=read('apps/web-portal/app/api/partner/life-health-cases/route.ts');
 const action=read('apps/web-portal/app/policies/life-health-policy-actions.ts');
 const engine=read('apps/web-portal/lib/life-health-case-conversion-engine.ts');
+for(const [key,hint] of Object.entries({
+ customerName:'Enter name',customerPhone:'Enter mobile',customerAddress:'Enter address',
+ insurerId:'Select insurer',productName:'Enter product',proposalNumber:'Enter proposal no.',
+ premiumPayingTerm:'Select PPT',policyDuration:'Select PD',paymentFrequency:'Select frequency',
+ paymentMode:'Select mode',premiumAmount:'Enter amount'
+})){
+ assert.ok(app.includes(key+":'"+hint+"'"),'Missing compact case placeholder '+key);
+}
+for(const [key,hint] of Object.entries({
+ policyNumber:'Enter policy no.',finalPremium:'Enter premium',sumInsured:'Enter sum assured'
+})){
+ assert.ok(app.includes(key+":'"+hint+"'"),'Missing issuance placeholder '+key);
+}
+assert.match(app,/placeholder=\{CASE_FIELD_PLACEHOLDERS\[key\]\}/,'Inline text field uses mapped prompt');
+assert.match(app,/ISSUE_FIELD_PLACEHOLDERS\[key as keyof typeof ISSUE_FIELD_PLACEHOLDERS\]/,'Issuance field uses mapped prompt');
+assert.match(app,/numberOfLines=\{1\} ellipsizeMode="tail"/,'Selected long values stay within compact columns');
+assert.match(app,/!form\[key\]&&styles\.datePlaceholder/,'Unselected dropdown prompt uses muted placeholder styling');
 assert.match(app,/PartnerCaseBottomNavigation/);
 assert.match(app,/navyTopBar navyStatusBar bottomNavigationNavy/);
 assert.match(app,/heroSecond/);
