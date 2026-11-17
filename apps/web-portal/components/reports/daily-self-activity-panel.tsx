@@ -156,10 +156,11 @@ export function DailySelfActivityPanel({data,linkFor,reportMode="self",canViewAl
                       <th className="px-3 py-3">Insurance Company</th>
                     </>
                   )}
+                  {reportMode==="all" ? <th className="whitespace-nowrap px-3 py-3">Performed By</th> : null}
                   <th className="whitespace-nowrap px-3 py-3">Date &amp; Time</th>
                   <th className="px-3 py-3">Status</th></tr>
               </thead>
-              <DailyActivityHistoryRows rows={data.rows} isCustomerActivity={isCustomerActivity} isClaimActivity={isClaimActivity} vehicleMode={vehicleMode} isOtherActivity={isOtherActivity} />
+              <DailyActivityHistoryRows rows={data.rows} isCustomerActivity={isCustomerActivity} isClaimActivity={isClaimActivity} vehicleMode={vehicleMode} isOtherActivity={isOtherActivity} showPerformedBy={reportMode==="all"} />
             </table> : <DailyReportEmptyState />}
           </div>
           <nav aria-label="Daily Report activity pages" className="relative z-10 mt-auto flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-[#e4e9f1] bg-white px-4 py-3 text-[10px] text-[#66758b]">
