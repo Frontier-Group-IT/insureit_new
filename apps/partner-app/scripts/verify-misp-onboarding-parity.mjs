@@ -11,7 +11,7 @@ const docsApi=read('../../web-portal/app/api/partner/onboarding/documents/route.
 const web=read('../../web-portal/app/customers/posp-misp/new/misp-modern-onboarding-form.tsx');
 assert.match(app,/useState<"posp"\|"misp">\("posp"\)/,'POSP is selected by default');
 assert.match(app,/styles.typeOption/,'50/50 category controls are present');
-assert.match(app,/partnerType==='misp' \? \(/,'MISP has independent screen content');
+assert.match(app,/partnerType==="misp"\?<MispPartnerForm/,'MISP has independent screen content');
 assert.match(app,/onDirtyChange=\{setMispDirty\}/,'MISP form warns about unsaved details');
 for(const label of ['MISP details','Designated Person (DP)','Address','Bank & tax']){
   assert.ok(form.includes(label),'Missing native MISP section: '+label);
