@@ -35,20 +35,28 @@ const policyIntakeNew = read('app/policy-intake-new.tsx');
 const policyIntakeDetail = read('app/policy-intakes/[id].tsx');
 const customerDetail = read('app/customer/[id].tsx');
 const policyDetail = read('app/policy/[id].tsx');
-// These four section titles are intentionally text-only; their cards retain icons.
+// The overview, premium and commercial sections share one card.
 for (const heading of [
-  'title="Premium"',
   'title="Customer Details"',
   "title={data.vehicle ? 'Vehicle Details' : 'Insured Risk Details'}",
-  'title="Commercial Attribution"',
 ]) {
-  requireText(policyDetail, '<View style={styles.externalSectionHeading}><CardHeader ' + heading + ' /></View>', 'Text-only heading must remain outside the white card: ' + heading);
+  requireText(policyDetail, '<View style={styles.externalSectionHeading}><CardHeader ' + heading + ' /></View>', 'Customer/vehicle heading stays outside its separate card: ' + heading);
 }
-requireText(policyDetail, 'externalSection: { gap: 5 }', 'Headings must sit closely above their cards');
-requireText(policyDetail, '<CardHeader iconKind="policy-overview" title="Policy Overview"', 'Policy Overview keeps original in-card heading');
-requireText(policyDetail, 'accessibilityState={{ expanded: showPremiumDetails }}', 'Premium expansion remains active');
-requireText(policyDetail, 'accessibilityState={{ expanded: showCommercialDetails }}', 'Commercial expansion remains active');
-requireText(policyDetail, 'accessibilityLabel="Open customer details for this vehicle"', 'Vehicle card navigation remains active');
+requireText(policyDetail, '<CardHeader iconKind="policy-overview" title="Policy Overview"', 'Policy Overview keeps its heading');
+for (const heading of ['title="Premium"', 'title="Commercial Attribution"']) {
+  if (policyDetail.includes('<CardHeader ' + heading)) throw new Error('The combined card must not retain an external heading: ' + heading);
+}
+const overviewStart = policyDetail.indexOf('<CardHeader iconKind="policy-overview" title="Policy Overview"');
+const customerStart = policyDetail.indexOf('<CardHeader title="Customer Details"');
+const unified = policyDetail.slice(overviewStart, customerStart);
+requireText(unified, 'styles.overviewGrid', 'Existing overview fields remain visible');
+requireText(unified, 'styles.premiumDisclosure', 'Premium is inside combined overview');
+requireText(unified, 'styles.commercialRow', 'Commercial is inside combined overview');
+if (unified.split('styles.unifiedSectionDivider').length !== 3) throw new Error('Expected two internal separators');
+if (unified.split('</Card>').length !== 2) throw new Error('Overview, Premium and Commercial must share one card');
+requireText(policyDetail, 'accessibilityState={{ expanded: showPremiumDetails }}', 'Premium expansion remains');
+requireText(policyDetail, 'accessibilityState={{ expanded: showCommercialDetails }}', 'Commercial expansion remains');
+requireText(policyDetail, 'accessibilityLabel="Open customer details for this vehicle"', 'Vehicle card navigation remains');
 
 const policyDetailIcon = read('components/ui/partner-policy-detail-icon.tsx');
 const claimDetail = read('app/claim/[id].tsx');
