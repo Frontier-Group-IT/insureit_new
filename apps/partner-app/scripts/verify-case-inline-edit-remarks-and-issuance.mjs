@@ -99,4 +99,9 @@ assert.ok(app.includes('darkLabel={darkLabel}'), 'Read-only Case Details fields 
 assert.ok(app.includes('<Field label="PPT end date" value="Not applicable · Single Pay" darkLabel/>'), 'PPT fallback keeps black heading');
 assert.ok(app.includes('<Field label="Next installment date" value="Not applicable · One Time" darkLabel/>'), 'Next installment fallback keeps black heading');
 assert.ok(app.includes('name="calendar-outline" size={15} color="#000000"'), 'Issuance date picker icons are black');
+assert.ok(app.includes("disabled={rejectBusy||!rejectReason.trim()}"), 'Confirm Reject is disabled while busy or when reason is blank.');
+assert.ok(app.includes("rejectReason.trim()&& !rejectBusy?styles.confirmRejectButtonActive:styles.confirmRejectButton"), 'Confirm Reject becomes dark red with a nonblank reason.');
+assert.ok(app.includes("confirmRejectButton:{backgroundColor:'#D98D93'}"), 'Empty or busy rejection shows light pink.');
+assert.ok(app.includes("confirmRejectButtonActive:{backgroundColor:'#B4232D'}"), 'Entered rejection reason displays dark red.');
+assert.ok(app.includes("rejectBusy?'Rejecting…':'Confirm Reject'"), 'Submitting feedback remains in place.');
 console.log('Case inline edit, append-only remarks, secure issuance and native parity verified.');
