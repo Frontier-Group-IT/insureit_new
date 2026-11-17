@@ -16,7 +16,8 @@ assert.doesNotMatch(form, /Partner category|Individual Partner|Business Partner/
 for (const heading of ['Identity & contact','Address','Bank & tax']) assert.ok(form.includes(heading));
 for (const field of ['document_received_at','associate_employee_id','pos_first_name','pos_middle_name','pos_last_name','pan_number','aadhaar_number','date_of_birth','mobile','email','address','city','state','postal_code','bank_id','bank_account_number','bank_ifsc_code','gst_number']) assert.ok(form.includes(field), 'Missing field: '+field);
 assert.match(form, /authenticatedRequest\('GET'\)/);
-assert.match(form, /Submit Partner application/);
+assert.match(form, /Save & Exit/, "Current POSP save action remains intact");
+assert.match(form, /Upload Documents/, "Current POSP document action remains intact");
 assert.match(form,/setPartnerType/, 'POSP-MISP selector is present');
 assert.match(form,/useState<"posp"\|"misp">\("posp"\)/, 'POSP is the default');
 assert.match(form,/styles.typeOption/, 'Both tabs have equal-width interactive controls');
