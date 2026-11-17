@@ -118,3 +118,90 @@ export async function POST(request: Request) {
   }
   return response({ ok: true, document_type: documentType, file_name: file.name });
 }
+
+/** Delete only a document belonging to the signed-in employee's editable Partner application. */
+export async function DELETE(request: Request) {
+  const match = /^Bearer\\s+([^\\s]+)$/i.exec(request.headers.get("authorization") ?? "");
+  if (!match) return response({ ok: false, error: "Sign in again to delete documents." }, 401);
+
+  const scoped = createSupabaseWithAccessToken(match[1]);
+  const { data: auth, error: authError } = await scoped.auth.getUser(match[1]);
+  if (authError || !auth.user) return response({ ok: false, error: "Session expired." }, 401);
+  const { data: identity, error: identityError } = await scoped.rpc("partner_app_current_identity");
+  if (identityError || !identity || identity.actor_kind !== "employee"
+    || identity.auth_user_id !== auth.user.id || identity.profile_id !== auth.user.id) {
+    return response({ ok: false, error: "Only authorized employees may delete Partner documents." }, 403);
+  }
+
+  const admin = createSupabaseAdminClient();
+  const { data: profile, error: profileError } = await admin.from("profiles")
+    .select("id,role,is_active,employee_id").eq("id", auth.user.id).maybeSingle();
+  if (profileError || !profile?.is_active || !profile.employee_id || profile.role !== identity.role) {
+    return response({ ok: false, error: "Employee account is inactive." }, 403);
+  }
+  const { data: employee } = await admin.from("employees")
+    .select("id,employment_status").eq("id", profile.employee_id).maybeSingle();
+  if (employee?.employment_status !== "active") {
+    return response({ ok: false, error: "Employee account is inactive." }, 403);
+  }
+  const permission = await getEffectivePermissionAccessMap(profile);
+  if (!["edit", "approve"].includes(permission.create_intermediary_application ?? "none")
+    || !(await isEmployeeWithinAccessScope(profile.id, profile.role, profile.employee_id))) {
+    return response({ ok: false, error: "You do not have Add Partner permission." }, 403);
+  }
+
+  let body: unknown;
+  try { body = await request.json(); }
+  catch { return response({ ok: false, error: "Invalid delete request." }, 400); }
+  if (!body || typeof body !== "object") return response({ ok: false, error: "Invalid delete request." }, 400);
+  const { application_id: applicationId, document_type: documentType } = body as Record<string, unknown>;
+  if (typeof applicationId !== "string" || !/^[a-f0-9-]{36}$/i.test(applicationId)
+    || typeof documentType !== "string" || !DOCUMENT_TYPES.has(documentType)) {
+    return response({ ok: false, error: "Choose a valid Partner document." }, 400);
+  }
+
+  const [{ data: application }, { data: onboardingProfile }] = await Promise.all([
+    admin.from("intermediary_onboarding_applications")
+      .select("id,initiated_by,status,partner_status,draft_data")
+      .eq("id", applicationId).maybeSingle<{
+        id: string; initiated_by: string; status: string; partner_status: string | null;
+        draft_data: Record<string, unknown> | null;
+      }>(),
+    admin.from("posp_misp_onboarding_profiles")
+      .select("id,workflow_stage").eq("application_id", applicationId)
+      .maybeSingle<{ id: string; workflow_stage: string }>(),
+  ]);
+  if (!application || application.initiated_by !== profile.id
+    || application.draft_data?.mobile_partner_only !== true
+    || !onboardingProfile || onboardingProfile.workflow_stage !== "iib_processing"
+    || !["submitted", "under_review", "changes_requested"].includes(application.status)
+    || application.partner_status === "active_partner") {
+    return response({ ok: false, error: "This Partner application is not available for document deletion." }, 403);
+  }
+
+  // Remove precisely this category's row, never arbitrary paths supplied by a client.
+  const { data: document, error: documentError } = await admin.from("intermediary_onboarding_documents")
+    .select("id,storage_bucket,storage_path")
+    .eq("application_id", applicationId).eq("document_type", documentType)
+    .maybeSingle<{ id: string; storage_bucket: string; storage_path: string }>();
+  if (documentError) return response({ ok: false, error: "Could not read the selected document." }, 500);
+  if (!document) return response({ ok: false, error: "Document is no longer available." }, 404);
+  const { data: deleted, error: deleteError } = await admin.from("intermediary_onboarding_documents")
+    .delete().eq("id", document.id)
+    .eq("application_id", applicationId)
+    .eq("document_type", documentType)
+    .eq("storage_bucket", document.storage_bucket)
+    .eq("storage_path", document.storage_path)
+    .select("id");
+  if (deleteError || deleted?.length !== 1) return response({ ok: false, error: "Document could not be deleted. Refresh and retry." }, 409);
+
+  // Storage cleanup happens only after the DB delete is committed, and only
+  // for paths no longer referenced by another record.
+  const { count, error: countError } = await admin.from("intermediary_onboarding_documents")
+    .select("id", { count: "exact", head: true })
+    .eq("storage_bucket", document.storage_bucket).eq("storage_path", document.storage_path);
+  if (!countError && count === 0) {
+    await admin.storage.from(document.storage_bucket).remove([document.storage_path]);
+  }
+  return response({ ok: true, document_type: documentType });
+}
