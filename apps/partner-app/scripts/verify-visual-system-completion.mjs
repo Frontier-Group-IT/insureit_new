@@ -35,17 +35,27 @@ const policyIntakeNew = read('app/policy-intake-new.tsx');
 const policyIntakeDetail = read('app/policy-intakes/[id].tsx');
 const customerDetail = read('app/customer/[id].tsx');
 const policyDetail = read('app/policy/[id].tsx');
-// These four section titles are intentionally text-only; their cards retain icons.
+// Policy Overview, Premium and Commercial Attribution share one continuous card.
+// Customer and Vehicle/Insured Risk remain distinct sections underneath.
 for (const heading of [
-  'title="Premium"',
   'title="Customer Details"',
   "title={data.vehicle ? 'Vehicle Details' : 'Insured Risk Details'}",
-  'title="Commercial Attribution"',
 ]) {
-  requireText(policyDetail, '<View style={styles.externalSectionHeading}><CardHeader ' + heading + ' /></View>', 'Text-only heading must remain outside the white card: ' + heading);
+  requireText(policyDetail, '<View style={styles.externalSectionHeading}><CardHeader ' + heading + ' /></View>', 'Customer/Vehicle heading remains separate: ' + heading);
 }
-requireText(policyDetail, 'externalSection: { gap: 5 }', 'Headings must sit closely above their cards');
-requireText(policyDetail, '<CardHeader iconKind="policy-overview" title="Policy Overview"', 'Policy Overview keeps original in-card heading');
+requireText(policyDetail, 'externalSection: { gap: 5 }', 'Customer and Vehicle headings remain closely above their cards');
+requireText(policyDetail, '<CardHeader iconKind="policy-overview" title="Policy Overview"', 'Overview retains its in-card header');
+for (const removedHeading of ['title="Premium"', 'title="Commercial Attribution"']) {
+  if (policyDetail.includes('<CardHeader ' + removedHeading)) throw new Error('Combined overview must not render separate section header: ' + removedHeading);
+}
+const overviewStart = policyDetail.indexOf('<CardHeader iconKind="policy-overview" title="Policy Overview"');
+const customerStart = policyDetail.indexOf('<CardHeader title="Customer Details"');
+const mergedContent = policyDetail.slice(overviewStart, customerStart);
+requireText(mergedContent, 'styles.overviewGrid', 'Existing six-field policy summary remains in combined card');
+requireText(mergedContent, 'styles.premiumDisclosure', 'Premium disclosure stays inside combined overview card');
+requireText(mergedContent, 'styles.commercialRow', 'Sales ownership stays inside combined overview card');
+if (mergedContent.split('styles.unifiedSectionDivider').length !== 3) throw new Error('Overview must contain two internal section dividers');
+if (mergedContent.split('</Card>').length !== 2) throw new Error('Combined overview must use exactly one card');
 requireText(policyDetail, 'accessibilityState={{ expanded: showPremiumDetails }}', 'Premium expansion remains active');
 requireText(policyDetail, 'accessibilityState={{ expanded: showCommercialDetails }}', 'Commercial expansion remains active');
 requireText(policyDetail, 'accessibilityLabel="Open customer details for this vehicle"', 'Vehicle card navigation remains active');
