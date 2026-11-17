@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 
@@ -164,18 +164,19 @@ const styles=StyleSheet.create({
  listHeading:{marginTop:8,marginBottom:3},
  listTitle:{fontSize:12,fontWeight:'800',color:'#142B4E'},
  caseRows:{gap:3},
- caseRow:{minHeight:60,flexDirection:'row',alignItems:'center',gap:7,backgroundColor:'#FFF',borderColor:'#E2E9F3',borderWidth:1,borderRadius:8,paddingHorizontal:8,paddingVertical:6},
+ // Match the Policies tab's compact record geometry while preserving case-specific data.
+ caseRow:{minHeight:54,flexDirection:'row',alignItems:'center',gap:7,backgroundColor:'#FFF',borderColor:'#E2E9F3',borderWidth:1,borderRadius:8,paddingHorizontal:8,paddingVertical:4},
  caseRowPressed:{backgroundColor:'#F6F9FF'},
- logoShell:{width:40,height:40,alignItems:'center',justifyContent:'center'},
- insurerLogo:{width:40,height:40},
- caseMain:{flex:1,minWidth:0,gap:2},
- customerName:{fontSize:12,lineHeight:16,fontWeight:'800',color:'#173A7D'},
- caseNumber:{fontSize:10,lineHeight:13,color:'#5C6C84',fontWeight:'600'},
- caseMeta:{fontSize:9,lineHeight:12,color:'#7D8CA1',fontWeight:'600'},
- caseRight:{width:108,alignItems:'flex-end',justifyContent:'center',gap:5},
- statusPill:{flexDirection:'row',alignItems:'center',gap:4,borderRadius:99,paddingHorizontal:8,paddingVertical:4},
- statusDot:{width:5,height:5,borderRadius:3},
- statusText:{fontSize:9,fontWeight:'700'},
+ logoShell:{width:32,height:32,borderRadius:8,alignItems:'center',justifyContent:'center',backgroundColor:'#F5F8FC',borderWidth:StyleSheet.hairlineWidth,borderColor:'#E2E9F3',overflow:'hidden'},
+ insurerLogo:{width:27,height:27},
+ caseMain:{flex:1,minWidth:0},
+ customerName:{fontSize:12,lineHeight:15,fontWeight:Platform.OS==='ios'?'400':'800',color:'#173A7D'},
+ caseNumber:{marginTop:1,fontSize:8.2,lineHeight:11,color:'#5C6C84',fontWeight:Platform.OS==='ios'?'400':'600'},
+ caseMeta:{marginTop:1,fontSize:7.6,lineHeight:10,color:'#7D8CA1',fontWeight:Platform.OS==='ios'?'400':'600'},
+ caseRight:{width:104,alignItems:'flex-end'},
+ statusPill:{flexDirection:'row',alignItems:'center',gap:3,borderRadius:999,paddingHorizontal:7,paddingVertical:4},
+ statusDot:{width:4,height:4,borderRadius:2},
+ statusText:{fontSize:7.4,lineHeight:10,fontWeight:Platform.OS==='ios'?'400':'800'},
  issued:{backgroundColor:'#EAF8F2'},
  rejected:{backgroundColor:'#FDECEC'},
  pending:{backgroundColor:'#FFF5E5'},
@@ -185,7 +186,7 @@ const styles=StyleSheet.create({
  issuedText:{color:'#1D9A68'},
  rejectedText:{color:'#D04C4C'},
  pendingText:{color:'#956516'},
- amount:{fontSize:10,fontWeight:'800',color:navy,textAlign:'right'},
+ amount:{marginTop:2,fontSize:8.2,lineHeight:11,fontWeight:Platform.OS==='ios'?'400':'800',color:navy,textAlign:'right'},
  more:{minHeight:36,flexDirection:'row',alignItems:'center',justifyContent:'center',backgroundColor:'#F1F5FD',borderRadius:8,marginTop:5},
  moreText:{color:'#3156B8',fontWeight:'800',fontSize:10},
  error:{padding:12,backgroundColor:'#FEF0EF',borderRadius:10,marginVertical:8},
