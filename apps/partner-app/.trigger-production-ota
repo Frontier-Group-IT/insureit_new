@@ -1,8 +1,8 @@
 Partner production OTA trigger
-release=partner-direct-calendar-pr-4667
+release=partner-pending-case-compact-actions-pr-4670
 source=verified-merged-main
-source_pr=4667
-source_merge=b4dda99989f96c717312fd82daab462303d6dfc1
+source_pr=4670
+source_merge=c53f146ba774b040127d922fd6bd07a725b8c57b
 reason=user-approved-merge-and-publish
 channel=production
 runtime=0.2.0
