@@ -278,6 +278,9 @@ export default function AddPartnerScreen() {
               </View>
             </View>
           ))}
+
+        </ScrollView>
+        <View style={styles.actionFooter}>
           <View style={styles.actionRow}>
             <Pressable accessibilityRole="button" accessibilityLabel="Save and exit Partner form"
               disabled={saving || loading || Boolean(uploadingType)}
@@ -292,7 +295,7 @@ export default function AddPartnerScreen() {
               <Text style={styles.submitText}>{uploadingType ? 'Uploading…' : saving ? 'Saving…' : 'Upload Documents'}</Text>
             </Pressable>
           </View>
-        </ScrollView>
+        </View>
         {dateField ? <DateTimePicker
           value={isoDate(form[dateField]) ? new Date(`${isoDate(form[dateField])}T12:00:00`) : new Date()}
           mode="date" display={Platform.OS === 'ios' ? 'spinner' : 'default'}
@@ -392,6 +395,7 @@ const styles = StyleSheet.create({
   input: { minHeight: 44, backgroundColor: '#FFF', borderWidth: 1, borderColor: '#CED8E7', borderRadius: 10, paddingHorizontal: 12, fontSize: 13, color: '#152A49' },
   select: { minHeight: 44, borderWidth: 1, borderColor: '#CED8E7', borderRadius: 10, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   selectText: { color: '#17365D', fontSize: 13, fontWeight: '600', flexShrink: 1 },
+  actionFooter: { backgroundColor: '#FFFFFF', borderTopWidth: 1, borderTopColor: '#E0E6F0', paddingVertical: 9, paddingHorizontal: 12 },
   actionRow: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8 },
   actionButton: { minHeight: 44, borderRadius: 10, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
   saveExitButton: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE4F2' },
