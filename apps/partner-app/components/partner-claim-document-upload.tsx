@@ -1,6 +1,7 @@
+import { partnerAlert } from '@/components/ui/partner-alert-provider';
 import * as DocumentPicker from 'expo-document-picker';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { AccessibilityInfo, ActivityIndicator, Alert, Animated, Image, Linking, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type ImageSourcePropType } from 'react-native';
+import { AccessibilityInfo, ActivityIndicator, Animated, Image, Linking, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type ImageSourcePropType } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { attachPartnerClaimDocument, removePartnerClaimDocument, type PartnerClaimDetail } from '@/lib/claims';
 import { supabase } from '@/lib/supabase';
@@ -97,9 +98,9 @@ function VerificationReviewForm({ category, filenames, onBack }: { category: str
         <Pressable accessibilityRole="button" onPress={onBack} style={styles.cancelButton}><Text style={styles.cancelText}>Back</Text></Pressable>
         <Pressable accessibilityRole="button" style={styles.verifyConfirm} onPress={() => {
           if (fields.some(field => field.required && !answers[field.key]?.trim()) || (result === 'invalid' && !remarks.trim())) {
-            Alert.alert('Action required', 'Please complete all required verification fields.'); return;
+            partnerAlert('Action required', 'Please complete all required verification fields.'); return;
           }
-          Alert.alert('Claims Desk approval required', 'This Partner App form is for review only. No verification details or status have been saved. The Claims Desk must complete verification through the Operations Portal.');
+          partnerAlert('Claims Desk approval required', 'This Partner App form is for review only. No verification details or status have been saved. The Claims Desk must complete verification through the Operations Portal.');
         }}><Text style={styles.verifyConfirmText}>Submit Review</Text></Pressable>
       </View>
     </>
@@ -153,7 +154,7 @@ export function PartnerClaimDocumentUpload({ claimId, customerId, documentType, 
       if (!signed?.signedUrl) throw new Error('A secure preview link could not be generated.');
       await Linking.openURL(signed.signedUrl);
     } catch (error) {
-      Alert.alert('Unable to open document', error instanceof Error ? error.message : 'Please try again.');
+      partnerAlert('Unable to open document', error instanceof Error ? error.message : 'Please try again.');
     } finally {
       setOpeningFileId(null);
     }
@@ -166,7 +167,7 @@ export function PartnerClaimDocumentUpload({ claimId, customerId, documentType, 
       setRemovedIds(current => [...current, deleteTarget.id]);
       setDeleteTarget(null);
     } catch (error) {
-      Alert.alert('Unable to delete', error instanceof Error ? error.message : 'Please try again.');
+      partnerAlert('Unable to delete', error instanceof Error ? error.message : 'Please try again.');
     } finally { setBusy(false); }
   };
 
@@ -179,7 +180,7 @@ export function PartnerClaimDocumentUpload({ claimId, customerId, documentType, 
     });
     if (picked.canceled) return;
     if ((variant === 'billing' || variant === 'assessment') && picked.assets.some(asset => !/\.(pdf|jpe?g|png)$/i.test(asset.name ?? ''))) {
-      Alert.alert('Unsupported file', 'Choose a PDF, JPG, or PNG document.');
+      partnerAlert('Unsupported file', 'Choose a PDF, JPG, or PNG document.');
       return;
     }
     setBusy(true);
@@ -217,7 +218,7 @@ export function PartnerClaimDocumentUpload({ claimId, customerId, documentType, 
       }
       setUploadSuccess({ fileName: picked.assets[picked.assets.length - 1]?.name || documentType, count: picked.assets.length });
     } catch (error) {
-      Alert.alert('Unable to upload', error instanceof Error ? error.message : 'Please try again.');
+      partnerAlert('Unable to upload', error instanceof Error ? error.message : 'Please try again.');
     } finally {
       setUploadProgress(null);
       setBusy(false);
@@ -349,7 +350,7 @@ export function PartnerClaimDocumentUpload({ claimId, customerId, documentType, 
                 <Text style={styles.cancelText}>Cancel</Text>
               </Pressable>
               <Pressable accessibilityRole="button" onPress={() => {
-                if (!selectedForReview.length) { Alert.alert('Action required', 'Please select a file.'); return; }
+                if (!selectedForReview.length) { partnerAlert('Action required', 'Please select a file.'); return; }
                 setVerificationFormOpen(true);
               }} style={styles.verifyConfirm}>
                 <Text style={styles.verifyConfirmText}>Verify Selected</Text>
