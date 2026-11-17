@@ -4,6 +4,7 @@ import { checkSemiAutoReadiness } from "../lib/policy-intake-semi-auto.ts";
 import { policyIntakeBucket } from "../lib/policy-intake-status-buckets.ts";
 import { validateN8nPolicyIntakeResponse } from "../lib/policy-intake-n8n-validation.ts";
 import { mapVerifiedN8nMotorPremium } from "../lib/policy-n8n-onboarding-premium.ts";
+import { filterVerifiedN8nOnboardingFields } from "../lib/policy-n8n-onboarding-fields.ts";
 
 const text = path => readFileSync(new URL("../" + path, import.meta.url), "utf8");
 const draft = {
@@ -298,8 +299,12 @@ assert(handoff.includes('if(existingDraft?.draft_payload)'),
   "Existing saved drafts must never be overwritten by the n8n handoff");
 assert(handoff.includes("lastDoc.id!==verified.documentId"),
   "The exact current PDF must be rechecked after reviewer claim");
-assert(handoff.includes("fields:verified?.fields??intake.ocr_fields??[]"),
-  "New n8n origin drafts must derive their mapped values from the verified n8n response");
+assert(handoff.includes("filterVerifiedN8nOnboardingFields(verified.fields)"),
+  "New n8n drafts must allowlist approved policy and vehicle fields and exclude insured identity");
+assert(handoff.includes('const customerName=verified?"":'),
+  "n8n PDF-derived insured names must never prefill onboarding customer identity");
+assert(handoff.includes("const identityName=verified"),
+  "Existing drafts in n8n handoff must never fall back to old OCR customer identity");
 assert(handoff.includes("mapVerifiedN8nMotorPremium(verified.premium)"),
   "Handoff must derive basic OD / add-ons from the independently validated breakdown");
 assert(handoff.includes("tpValidUpto:tpExpiry"),
@@ -321,6 +326,22 @@ assert(client.includes('selected.policy_type !== "motor"')
   "The n8n handoff button must be disabled for untrained/duplicate policy Intakes");
 assert(policyNew.includes("n8n-verified Policy Intake · Manual onboarding review"),
   "Display a clear n8n prefill review warning on the canonical Policy Onboarding page");
+
+// OCR validation may require an insured-name check, but only approved
+// vehicle/policy fields may reach the onboarding draft, including in future
+// expanded n8n responses. Identity remains human/master-reviewed.
+const sanitizedN8nFields = filterVerifiedN8nOnboardingFields([
+  { key: "insured_name", value: "Fictional PDF Holder" },
+  { key: "insured_phone", value: "9999999999" },
+  { key: "customer_address", value: "Synthetic address" },
+  { key: "customer_pan", value: "AAAAA1111A" },
+  { key: "policy_number", value: "3005/123456789/26/001" },
+  { key: "vehicle_chassis_number", value: "SYNTHETIC123" },
+  { key: "idv", value: "80000" },
+]);
+assert.deepEqual(sanitizedN8nFields.map(field => field.key),
+  ["policy_number", "vehicle_chassis_number", "idv"],
+  "No insured/customer identity from PDF can enter the canonical draft");
 
 const n8nMoney = mapVerifiedN8nMotorPremium({
   basicOd: 1583, odAddons: [{name:"Test RSA",amount:240},{name:"Test accessory",amount:443}],
