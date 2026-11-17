@@ -134,8 +134,8 @@ export default function PolicyDetailScreen() {
             ) : null}
             <View style={styles.unifiedSectionDivider} />
             <Pressable accessibilityRole="button" accessibilityState={{ expanded: showPremiumDetails }} onPress={() => setShowPremiumDetails((value) => !value)} style={({ pressed }) => [styles.premiumDisclosure, pressed && styles.pressed]}>
-              <PartnerPolicyDetailIcon kind="premium-breakup" size={25} />
-              <View style={styles.disclosureText}><Text style={styles.disclosureTitle}>Premium breakup</Text><Text style={styles.disclosureSummary}>{formatIndianCurrency(data.premium.gross_premium)}</Text></View>
+              <PartnerPolicyDetailIcon kind="premium-breakup" size={22} showBadge={false} />
+              <View style={styles.disclosureText}><Text style={styles.cardTitle}>Premium breakup</Text><Text style={styles.disclosureSummary}>{formatIndianCurrency(data.premium.gross_premium)}</Text></View>
 
             </Pressable>
             {showPremiumDetails ? (
@@ -149,8 +149,8 @@ export default function PolicyDetailScreen() {
             ) : null}
             <View style={styles.unifiedSectionDivider} />
             <Pressable accessibilityRole="button" accessibilityState={{ expanded: showCommercialDetails }} onPress={() => setShowCommercialDetails((value) => !value)} style={({ pressed }) => [styles.commercialRow, pressed && styles.pressed]}>
-              <PartnerPolicyDetailIcon kind="sales-ownership" size={25} />
-              <View style={styles.disclosureText}><Text style={styles.disclosureTitle}>Sales ownership</Text><Text numberOfLines={1} style={styles.disclosureSummary}>{[data.commercial.rm_name, data.commercial.intermediary_code].filter(Boolean).join(' · ') || 'View details'}</Text></View>
+              <PartnerPolicyDetailIcon kind="sales-ownership" size={22} showBadge={false} />
+              <View style={styles.disclosureText}><Text style={styles.cardTitle}>Sales ownership</Text><Text numberOfLines={1} style={styles.disclosureSummary}>{[data.commercial.rm_name, data.commercial.intermediary_code].filter(Boolean).join(' · ') || 'View details'}</Text></View>
 
             </Pressable>
             {showCommercialDetails ? (
@@ -228,7 +228,7 @@ function QuickAction({ iconKind, label, onPress }: {
       style={({ pressed }) => [styles.quickAction, pressed && styles.pressed]}
     >
       <View style={styles.quickActionIcon}>
-        <Image source={illustration} style={styles.quickActionArtwork} resizeMode="contain" accessibilityIgnoresInvertColors />
+        <Image source={illustration} style={iconKind === 'renew-policy' || iconKind === 'raise-claim' ? styles.quickActionArtworkCompact : styles.quickActionArtwork} resizeMode="contain" accessibilityIgnoresInvertColors />
       </View>
       <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={styles.quickLabel}>{label}</Text>
     </Pressable>
@@ -298,6 +298,7 @@ const styles = StyleSheet.create({
   },
   quickActionIcon: { width: 54, height: 54, alignItems: 'center', justifyContent: 'center' },
   quickActionArtwork: { width: 54, height: 54 },
+  quickActionArtworkCompact: { width: 43, height: 43 },
   quickLabel: {
     color: '#102D55', textAlign: 'center', fontSize: 9.25, lineHeight: 12,
     fontWeight: '800', width: '100%', includeFontPadding: false,
@@ -306,8 +307,8 @@ const styles = StyleSheet.create({
   overviewItem: { width: '31%', flexGrow: 1, minWidth: 0, minHeight: 54, flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 6, paddingHorizontal: 4, borderWidth: StyleSheet.hairlineWidth, borderColor: '#DCE7F3', borderRadius: 9 },
   overviewLogoWrap: { width: 23, height: 23, borderRadius: 9, backgroundColor: '#F0F5FC', alignItems: 'center', justifyContent: 'center' }, overviewLogo: { width: 20, height: 20 }, overviewCopy: { flex: 1, minWidth: 0 }, overviewLabel: { color: '#8A95A6', fontSize: 8.5, lineHeight: 10 }, overviewValue: { marginTop: 2, color: '#192B46', fontSize: 10, lineHeight: 13, fontWeight: '700' },
   unifiedSectionDivider: { height: StyleSheet.hairlineWidth, backgroundColor: '#E3E9F1', marginHorizontal: 10, marginVertical: 2 },
-  premiumDisclosure: { minHeight: 47, marginHorizontal: 9, marginBottom: 8, paddingHorizontal: 9, borderRadius: 9, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#FFFFFF' },
-  commercialRow: { minHeight: 47, marginHorizontal: 9, marginBottom: 8, paddingHorizontal: 9, borderRadius: 9, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#FFFFFF' },
+  premiumDisclosure: { minHeight: 47, marginHorizontal: 9, marginBottom: 8, paddingHorizontal: 2, borderRadius: 9, flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: '#FFFFFF' },
+  commercialRow: { minHeight: 47, marginHorizontal: 9, marginBottom: 8, paddingHorizontal: 2, borderRadius: 9, flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: '#FFFFFF' },
   disclosureText: { flex: 1, minWidth: 0 }, disclosureTitle: { color: '#152945', fontSize: 10.5, lineHeight: 13, fontWeight: '700' }, disclosureSummary: { marginTop: 2, color: '#6F7F94', fontSize: 8.5, lineHeight: 11 },
   premiumDetailGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingHorizontal: 10, paddingBottom: 10 },
   detailGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 10, paddingBottom: 10 }, miniInfo: { width: '47%', minHeight: 38, padding: 7, borderRadius: 8, backgroundColor: '#F7F9FC' }, miniLabel: { color: '#8A95A6', fontSize: 8, lineHeight: 10, textTransform: 'uppercase' }, miniValue: { marginTop: 2, color: '#21334E', fontSize: 9.5, lineHeight: 12, fontWeight: '700' },

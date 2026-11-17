@@ -291,7 +291,16 @@ requireText(policyDetail, 'styles.quickActionIcon', 'Icons must render directly 
 for (const asset of ['policy-document', 'customer-details']) {
   requireText(policyDetail, `require('../../assets/partner/quick-actions/${asset}.png')`, `3D quick-action illustration missing: ${asset}`);
 }
-requireText(policyDetail, '<Image source={illustration} style={styles.quickActionArtwork} resizeMode="contain"', 'Document and Customer artwork remain bundled images.');
+requireText(policyDetail, "iconKind === 'renew-policy' || iconKind === 'raise-claim' ? styles.quickActionArtworkCompact : styles.quickActionArtwork", 'Only Renew and Claim use smaller artwork, preserving other illustrations.');
+requireText(policyDetail, 'quickActionArtworkCompact: { width: 43, height: 43 }', 'Renew and Claim icons are reduced within unchanged 54px tap artwork slots.');
+requireText(policyDetail, 'quickActionArtwork: { width: 54, height: 54 }', 'Document and Customer icons remain original size.');
+for (const kind of ['premium-breakup', 'sales-ownership']) {
+  requireText(policyDetail, `<PartnerPolicyDetailIcon kind="${kind}" size={22} showBadge={false} />`, `Disclosure icon ${kind} matches overview heading size.`);
+}
+requireText(policyDetail, 'marginHorizontal: 9, marginBottom: 8, paddingHorizontal: 2', 'Premium and Sales disclosure rows align to overview left inset.');
+requireText(policyDetail, 'gap: 7, backgroundColor:', 'Disclosure icon-to-title gap matches Policy Overview.');
+requireText(policyDetail, '<Text style={styles.cardTitle}>Premium breakup</Text>', 'Premium title uses exact Overview heading typography.');
+requireText(policyDetail, '<Text style={styles.cardTitle}>Sales ownership</Text>', 'Sales ownership title uses exact Overview heading typography.');
 requireText(policyDetail, "iconKind === 'renew-policy'", 'Renew Policy retains its own icon choice.');
 requireText(policyDetail, "iconKind === 'raise-claim'", 'Raise Claim retains its own icon choice.');
 requireText(policyDetail, 'PartnerAssets.actions.quickRenewals', 'Renew Policy uses the exact Home Renewals icon.');
