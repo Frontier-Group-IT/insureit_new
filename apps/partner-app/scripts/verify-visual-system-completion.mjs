@@ -261,9 +261,13 @@ requireText(policyDetail, "<PartnerInsurerLogo name={name || ''}", 'Compact insu
 requireText(policyDetail, "return /^ICICI\\s+Lombard\\s+General\\b/i.test(fullName) ? 'ICICI LOMBARD GENERAL' : fullName;", 'Only ICICI Lombard insurer display label may be shortened.');
 requireText(policyDetail, 'styles.insurerMiniInfo', 'Insurer summary must use a compact tile.');
 requireText(policyDetail, 'styles.miniInfo, styles.insurerMiniInfo', 'Insurer tile must inherit the grey Policy Number background.');
-requireText(policyDetail, '<MiniInfo label="Policy status" value={humanize(data.policy.status || data.policy.lifecycle_status)} fullWidth />', 'Policy status must span the row so validity dates align together.');
-requireText(policyDetail, '<MiniInfo label="Start date" value={formatDate(data.policy.start_date)} />', 'Start date must retain its original stored value.');
-requireText(policyDetail, '<MiniInfo label="End date" value={formatDate(data.policy.end_date)} />', 'End date must retain its original stored value.');
+requireText(policyDetail, '<MiniInfo label="Policy status" value={humanize(data.policy.status || data.policy.lifecycle_status)} threeColumn />', 'Policy status must share one row with the validity dates.');
+requireText(policyDetail, '<MiniInfo label="Start date" value={formatDate(data.policy.start_date)} threeColumn />', 'Start date must sit beside the status without changing the value.');
+requireText(policyDetail, '<MiniInfo label="End date" value={formatDate(data.policy.end_date)} threeColumn />', 'End date must sit beside the start date without changing the value.');
+requireText(policyDetail, "miniInfoThreeColumn: { width: '31%', flexGrow: 1, minWidth: 0 }", 'Status and validity dates must fit in three equal responsive tiles.');
+requireText(policyDetail, "motorCategoryPill: { backgroundColor: '#0A234A' }", 'Motor category pill must use navy background.');
+requireText(policyDetail, "motorCategoryLabel: { color: '#FFFFFF' }", 'Motor category pill must have contrasting white text.');
+requireText(policyDetail, "category === 'Motor' && styles.motorCategoryPill", 'Only Motor pill styling changes; other policy types preserve their appearance.');
 requireText(policyDetail, 'getPartnerPolicyDetail(id)', 'Policy detail must preserve the existing scoped data service.');
 // Policy Details keeps the navy title and a separate white summary, retaining all values.
 for (const required of [
