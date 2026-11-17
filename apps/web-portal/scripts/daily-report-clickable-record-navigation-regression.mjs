@@ -84,7 +84,8 @@ assert.doesNotMatch(panel, /<th[^>]*>Fleet Size<\/th>|<th[^>]*>Total Policies<\/
 assert.doesNotMatch(rows, /customerField\(row\.customerFleetSize\)|customerField\(row\.customerPolicyCount\)|\["Fleet Size",customerField|\["Total Policies",customerField/, "Customer rows hide fleet size and total policies");
 
 assert.match(panel, /const isClaimActivity=data\.category==="Claims"/, "Claims have their own register columns");
-for(const header of ["Control No.","Claim No.","Vehicle No."]) assert.ok(panel.includes(`>${header}</th>`),`Claims header present: ${header}`);
+for(const header of ["Control No.","Customer","Vehicle No."]) assert.ok(panel.includes(`>${header}</th>`),`Claims header present: ${header}`);
+assert.ok(!panel.includes(">Claim No.</th>"),"Claims drilldown intentionally excludes Claim No.");
 assert.match(rows, /isClaimActivity \? \(/, "Claim rows switch to claim-specific fields");
 assert.match(loader, /row\.claimControlNo \|\|=label\(previous\.claim_no\)/, "Deleted claims only use audit-preserved control number");
 assert.match(loader, /row\.claimInsurerNo \|\|=label\(previous\.insurer_claim_no\)/, "Deleted claims only use audit-preserved claim number");
