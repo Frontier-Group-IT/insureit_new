@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   FlatList,
   Image,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -58,6 +59,7 @@ export default function ClaimsScreen() {
   const [state, setState] = useState<PartnerClaimState>(savedClaimState);
   const [query, setQuery] = useState(savedClaimQuery);
   const [visibleLimit, setVisibleLimit] = useState(PAGE_SIZE);
+  const [filterOpen, setFilterOpen] = useState(false);
   const debouncedSearch = useDebouncedValue(query.trim(), 350);
   useEffect(() => { setVisibleLimit(PAGE_SIZE); }, [state, debouncedSearch]);
 
@@ -114,17 +116,10 @@ export default function ClaimsScreen() {
         placeholders={['Search customer...', 'Search claim number...', 'Search vehicle number...']}
         containerStyle={styles.searchField}
       />
-      {/* Match Policies: keep the Filter button visible without a dropdown.
-          Existing Claims status chips remain the active lifecycle filters. */}
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Filter claims"
-        accessibilityState={{ disabled: true }}
-        disabled
-        style={styles.filterButton}
-      >
-        <Ionicons name="filter-outline" size={18} color="#3156B8" />
-        <Text style={styles.filterText}>Filter</Text>
+      <Pressable accessibilityRole="button" accessibilityLabel="Filter claims"
+        accessibilityHint="Choose a claim status" onPress={() => setFilterOpen(true)}
+        style={({ pressed }) => [styles.filterButton, pressed && styles.pressed]}>
+        <Ionicons name="options-outline" size={21} color="#17365D" />
       </Pressable>
     </View>
 
@@ -178,48 +173,8 @@ export default function ClaimsScreen() {
             </Pressable>
           </View>
         </View>
-        <View style={styles.heroCopy}>
+        <View style={styles.heroBottomRow}>
           <Text style={styles.heroTitle}>Claims</Text>
-        </View>
-      </View>
-
-      <View style={styles.body}>
-        {showStickyControls ? <View style={{ height: searchHeight }} /> : searchControls}
-
-        <View style={styles.summaryRow}>
-          <View style={styles.summaryChips} accessibilityLabel="Claim status filters">
-            {([
-              { label: 'All Claims', shortLabel: 'All', filter: 'all' as const, value: summary.data?.total_claims },
-              { label: 'Settled Claims', shortLabel: 'Settled', filter: 'completed' as const, value: summary.data?.completed_claims },
-              { label: 'In Progress', shortLabel: 'Progress', filter: 'active' as const, value: summary.data?.active_claims },
-            ]).map((metric) => {
-              const selected = state === metric.filter && !query.trim();
-              return (
-                <Pressable
-                  key={metric.filter}
-                  accessibilityRole="button"
-                  accessibilityLabel={`${metric.label}, ${metric.value == null ? 'count unavailable' : metric.value.toLocaleString('en-IN')}`}
-                  accessibilityState={{ selected }}
-                  onPress={() => selectSummary(metric.filter)}
-                  style={({ pressed }) => [styles.summaryChip, selected && styles.summaryChipSelected, pressed && styles.summaryChipPressed]}
-                >
-                  <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} style={[styles.summaryChipLabel, selected && styles.summaryChipLabelSelected]}>{metric.shortLabel}</Text>
-                  <Text style={[styles.summaryChipCount, selected && styles.summaryChipCountSelected]}>({metric.value == null ? '—' : metric.value.toLocaleString('en-IN')})</Text>
-                </Pressable>
-              );
-            })}
-          </View>
-          {canPartnerStartClaim(context) ? (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Add Claim"
-              onPress={() => router.push('/claim/select-vehicle' as never)}
-              style={({ pressed }) => [styles.summaryAddClaim, pressed && styles.summaryChipPressed]}
-            >
-              <Ionicons name="add-circle-outline" size={15} color="#0860C8" />
-              <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85} style={styles.summaryAddClaimText}>Add Claim</Text>
-            </Pressable>
-          ) : null}
         </View>
 
         {(collection.stale || summary.stale) ? (
@@ -310,10 +265,48 @@ export default function ClaimsScreen() {
       {showStickyControls && safeAreaInsets.top > 0 ? <View pointerEvents="none" style={[styles.stickyStatusBarShield, { height: safeAreaInsets.top }]} /> : null}
       {showStickyControls ? (
         <View style={[styles.stickyOverlay, { top: safeAreaInsets.top }]} pointerEvents="box-none">
-          <Text style={styles.stickyTitle}>Claims</Text>
+          <View style={styles.stickyHeadingRow}>
+            <Text style={styles.stickyTitle}>Claims</Text>
+            {canPartnerStartClaim(context) ? (
+              <Pressable accessibilityRole="button" accessibilityLabel="Add Claim"
+                onPress={() => router.push('/claim/select-vehicle' as never)}
+                style={({ pressed }) => [styles.stickyAddClaim, pressed && styles.pressed]}>
+                <Ionicons name="add-circle-outline" size={15} color="#FFFFFF" />
+                <Text style={styles.stickyAddClaimText}>Add Claim</Text>
+              </Pressable>
+            ) : null}
+          </View>
           <View style={styles.stickySearchBody}>{searchControls}</View>
         </View>
       ) : null}
+      <Modal transparent visible={filterOpen} animationType="fade" onRequestClose={() => setFilterOpen(false)}>
+        <View style={styles.filterBackdrop}>
+          <Pressable style={StyleSheet.absoluteFillObject} accessibilityLabel="Close filters" onPress={() => setFilterOpen(false)} />
+          <View style={styles.filterSheet}>
+            <View style={styles.filterSheetHeading}>
+              <Text style={styles.filterSheetTitle}>Filter Claims</Text>
+              <Pressable accessibilityRole="button" accessibilityLabel="Close filters"
+                onPress={() => setFilterOpen(false)} style={styles.filterClose}>
+                <Ionicons name="close" size={21} color="#17365D" />
+              </Pressable>
+            </View>
+            {([
+              { label: 'All Claims', filter: 'all' as const, count: summary.data?.total_claims },
+              { label: 'Settled', filter: 'completed' as const, count: summary.data?.completed_claims },
+              { label: 'In Progress', filter: 'active' as const, count: summary.data?.active_claims },
+            ]).map(option => (
+              <Pressable key={option.filter} accessibilityRole="button"
+                accessibilityState={{ selected: state === option.filter }}
+                onPress={() => { selectSummary(option.filter); setFilterOpen(false); }}
+                style={({ pressed }) => [styles.filterChoice, pressed && styles.pressed]}>
+                <Text style={styles.filterChoiceLabel}>{option.label}</Text>
+                <Text style={styles.filterChoiceCount}>{option.count == null ? '—' : option.count.toLocaleString('en-IN')}</Text>
+                <Ionicons name={state === option.filter ? 'radio-button-on' : 'radio-button-off'} size={21} color="#17365D" />
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -438,7 +431,10 @@ const styles = StyleSheet.create({
   pressed: { opacity: 0.76 },
   stickyStatusBarShield: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 60, backgroundColor: '#082657' },
   stickyOverlay: { position: "absolute", top: 0, left: 0, right: 0, zIndex: 40, backgroundColor: "#082657" },
-  stickyTitle: { marginLeft: 18, marginTop: 12, marginBottom: 12, color: "#FFFFFF", fontSize: 15, lineHeight: 18, fontWeight: Platform.OS === 'ios' ? '400' : '400', letterSpacing: -0.2 },
+  stickyHeadingRow: { marginHorizontal: 16, marginTop: 8, marginBottom: 7, minHeight: 32, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  stickyTitle: { color: '#FFFFFF', fontSize: 16, lineHeight: 21, fontWeight: '700' },
+  stickyAddClaim: { minHeight: 32, flexDirection: 'row', alignItems: 'center', gap: 5, borderWidth: 1, borderColor: '#FFFFFF', borderRadius: 18, paddingHorizontal: 12 },
+  stickyAddClaimText: { color: '#FFFFFF', fontSize: 11, fontWeight: '700' },
   stickySearchBody: { paddingHorizontal: 10, paddingBottom: 10, backgroundColor: "#082657" },
 
   hero: { height: 98, overflow: 'hidden', backgroundColor: '#071E49' },
@@ -481,21 +477,21 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   heroAvatarText: { color: partnerTheme.colors.brandStrong, fontSize: 11.5, lineHeight: 15, fontWeight: Platform.OS === 'ios' ? '400' : '800' },
-  heroCopy: { zIndex: 3, position: 'absolute', left: 18, bottom: 12 },
-  heroTitle: { color: '#FFFFFF', fontSize: 15, lineHeight: 18, fontWeight: '700', letterSpacing: -0.2 },
+  heroBottomRow: { zIndex: 3, position: 'absolute', left: 18, right: 16, bottom: 9, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 35 },
+  heroTitle: { color: '#FFFFFF', fontSize: 17, lineHeight: 22, fontWeight: '700' },
+  heroAddClaim: { minHeight: 34, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 13, borderRadius: 18, borderColor: '#FFFFFF', borderWidth: 1.3, backgroundColor: 'rgba(4,33,78,0.70)' },
+  heroAddClaimText: { color: '#FFFFFF', fontSize: 11, fontWeight: '700' },
 
   body: { paddingHorizontal: 10, zIndex: 5, backgroundColor: '#FFFFFF' },
   searchRow: {
-    marginTop: -10,
+    marginTop: 10,
     marginHorizontal: 6,
     height: 44,
     flexDirection: 'row',
     alignItems: 'stretch',
-    borderRadius: 16,
+    borderRadius: 14,
     backgroundColor: '#FFFFFF',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#D9DFEA',
-    overflow: 'hidden',
+    overflow: 'visible',
     shadowColor: '#173B6C',
     shadowOpacity: 0.08,
     shadowRadius: 8,
@@ -505,35 +501,30 @@ const styles = StyleSheet.create({
   searchField: {
     flex: 1,
     minHeight: 44,
-    borderWidth: 0,
-    borderRadius: 0,
+    borderWidth: 1,
+    borderColor: '#D9DFEA',
+    borderRadius: 14,
     backgroundColor: '#FFFFFF',
   },
-  filterButton: {
-    height: 44,
-    minWidth: 68,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 5,
-    paddingHorizontal: 12,
-    backgroundColor: '#FFFFFF',
-    borderLeftWidth: StyleSheet.hairlineWidth,
-    borderLeftColor: '#D9DFEA',
-  },
-  filterText: { color: '#3156B8', ...partnerTheme.typography.caption, fontWeight: '500' },
+  filterButton: { height: 44, width: 44, marginLeft: 8, borderRadius: 14, borderWidth: 1, borderColor: '#D9DFEA', alignItems: 'center', justifyContent: 'center', backgroundColor: '#F7F9FC' },
+  filterBackdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(4,22,46,0.40)' },
+  filterSheet: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 22, borderTopRightRadius: 22, paddingHorizontal: 20, paddingTop: 14, paddingBottom: 32 },
+  filterSheetHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 9 },
+  filterSheetTitle: { color: '#17365D', fontWeight: '700', fontSize: 17 },
+  filterClose: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F2F5FB' },
+  filterChoice: { minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 12, borderBottomColor: '#E8EDF4', borderBottomWidth: StyleSheet.hairlineWidth },
+  filterChoiceLabel: { flex: 1, color: '#263E5D', fontWeight: '600', fontSize: 13 },
+  filterChoiceCount: { color: '#667893', fontSize: 12 },
   banner: { marginTop: 8 },
-  summaryRow: { marginTop: 8, marginBottom: 4, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 4 },
-  summaryChips: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 3, paddingVertical: 3 },
-  summaryChip: { flex: 1, minWidth: 0, minHeight: 38, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 2, paddingHorizontal: 2, borderRadius: 10, backgroundColor: '#F6F8FC', borderWidth: 1, borderColor: '#DEE6F0' },
+  summaryRow: { marginTop: 13, marginBottom: 10, paddingHorizontal: 6, flexDirection: 'row', alignItems: 'center' },
+  summaryChips: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 7 },
+  summaryChip: { flex: 1, minWidth: 0, minHeight: 62, flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, paddingHorizontal: 3, borderRadius: 13, backgroundColor: '#F5F7FB', borderWidth: 1, borderColor: '#EDF0F6' },
   summaryChipSelected: { backgroundColor: '#17365D', borderColor: '#17365D' },
   summaryChipPressed: { opacity: 0.78 },
-  summaryChipLabel: { color: '#52627B', fontSize: 8, lineHeight: 12, fontWeight: '600', flexShrink: 1 },
+  summaryChipLabel: { color: '#52627B', fontSize: 10, lineHeight: 13, fontWeight: '600', flexShrink: 1 },
   summaryChipLabelSelected: { color: '#FFFFFF' },
-  summaryChipCount: { color: '#7A889C', fontSize: 8, lineHeight: 11, fontWeight: '500', flexShrink: 0 },
+  summaryChipCount: { color: '#17365D', fontSize: 19, lineHeight: 23, fontWeight: '700', flexShrink: 0 },
   summaryChipCountSelected: { color: '#E2EEFF' },
-  summaryAddClaim: { width: 88, minHeight: 38, flexShrink: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 3, paddingHorizontal: 5, borderRadius: 12, borderWidth: 1, borderColor: '#E0E7F1', backgroundColor: '#FFFFFF', shadowColor: '#173B6C', shadowOpacity: 0.08, shadowRadius: 4, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
-  summaryAddClaimText: { color: '#0860C8', fontSize: 9, fontWeight: '600', flexShrink: 1 },
   controls: {
     marginTop: 8,
     minHeight: 46,
