@@ -194,7 +194,11 @@ assert.doesNotMatch(screen,/productType==='Non Motor'\?''/, 'Non-Motor fields mu
 assert.match(api,/if\(d.businessLine!=="Motor"\)return reply/, 'No native booking bypass for Non-Motor.');
 assert.match(screen,/nonMotorAdditionalOpen\?<View style=\{styles.fields\}>/, 'Remarks appears in expanded Additional policy details.');
 assert.match(screen,/accessibilityLabel="Remarks" multiline/, 'Inline full-width multiline Remarks input is available.');
-assert.match(screen,/productExtras\.some\(item=>item\.key===f\.key\)\?'Optional'/, 'Optional additional policy details use portal-style hints.');
+assert.ok(screen.includes("f.required?'Enter '+f.label.toLowerCase()"), 'Required fields, including case / proposal number, cannot show Optional placeholder.');
+assert.ok(screen.includes("productExtras.some(item=>item.key===f.key)?'Optional'"), 'Non-required extra fields keep Optional hints.');
+assert.ok(screen.includes("numberOfLines={f.key==='ppt'||f.key==='pd'?1:undefined}"), 'PPT and PD headings stay on one line with an ellipsis.');
+assert.ok(screen.includes('ellipsizeMode="tail"'), 'Long headings truncate with ellipsis.');
+assert.ok(screen.includes("{key:'proposalNumber',label:'Case / proposal number',required:true}"), 'Proposal number remains required.');
 assert.match(screen,/f.key==='previousClaims'\?'Brief reference'/, 'Previous claims uses the portal brief-reference hint.');
 assert.match(screen,/updateProduct\('remarks',value\)/, 'Inline remarks persist in the existing product draft.');
 assert.match(screen,/productType!=='Non Motor'\?<View style=\{styles.section\}>/, 'Separate Remarks card is not shown for Non Motor.');
