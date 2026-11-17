@@ -21,6 +21,11 @@ assert.match(claims, /stickyOverlay: \{[^\n]+backgroundColor: "#082657"/);
 assert.match(claims, /<Text style=\{styles.stickyTitle\}>Claims<\/Text>/);
 // Policies use one search-row dropdown with all five live lifecycle counts.
 assert.match(policies, /onPress=\{openStatusMenu\}/, 'Policies lifecycle dropdown opens from the search row');
+assert.match(policies, /<Text style=\{styles\.quickActionsHeading\}>Quick Actions<\/Text>/, 'Quick Actions heading keeps its styling');
+assert.match(policies, /<View style=\{styles\.policyListHeadingSection\}>\s*<Text style=\{styles\.quickActionsHeading\}>Policies<\/Text>/, 'Policies section heading reuses Quick Actions typography');
+assert.ok(policies.indexOf('<Text style={styles.quickActionsHeading}>Policies</Text>') > policies.indexOf('quickActions.map((action)'), 'Policies heading follows the four quick actions');
+assert.ok(policies.indexOf('<Text style={styles.quickActionsHeading}>Policies</Text>') < policies.indexOf('{isOffline || collection.stale || summary.stale'), 'Policies title precedes the list and feedback');
+
 assert.ok(policies.includes("filterButton: {") && policies.includes("backgroundColor: '#FFFFFF'"), 'Policy filter outer area stays white');
 assert.ok(policies.includes("filterNameBadge: {") && policies.includes("backgroundColor: '#17365D'"), 'Only the selected filter name uses a navy badge');
 assert.ok(policies.includes('<View style={styles.filterNameBadge}>'), 'Selected name sits in its own navy badge');
