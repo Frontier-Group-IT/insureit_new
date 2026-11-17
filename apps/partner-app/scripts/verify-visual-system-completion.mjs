@@ -342,7 +342,7 @@ requireText(policyDetail, 'quickActionArtwork: { width: 54, height: 54 }', 'Docu
 for (const kind of ['premium-breakup', 'sales-ownership']) {
   requireText(policyDetail, `<PartnerPolicyDetailIcon kind="${kind}" size={22} showBadge={false} />`, `Disclosure icon ${kind} matches overview heading size.`);
 }
-requireText(policyDetail, 'marginHorizontal: 9, marginBottom: 8, paddingHorizontal: 2', 'Premium and Sales disclosure rows align to overview left inset.');
+requireText(policyDetail, "marginHorizontal: 0, marginBottom: 8, paddingHorizontal: 11", 'Premium and Sales disclosure headers span the card and align their contents with Policy Overview.');
 requireText(policyDetail, 'gap: 7, backgroundColor:', 'Disclosure icon-to-title gap matches Policy Overview.');
 requireText(policyDetail, '<Text style={styles.cardTitle}>Premium breakup</Text>', 'Premium title uses exact Overview heading typography.');
 requireText(policyDetail, '<Text style={styles.cardTitle}>Sales ownership</Text>', 'Sales ownership title uses exact Overview heading typography.');
