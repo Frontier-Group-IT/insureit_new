@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import { PartnerPolicyCalendarDialog } from './partner-policy-calendar-dialog';
 
@@ -31,10 +30,6 @@ export function PartnerPolicyDateField({label,value,onChange,required=false,hide
   const [pickerOpen,setPickerOpen] = useState(false);
   const [webInput,setWebInput] = useState('');
   const selected=parseIso(value);
-  const select=(event:DateTimePickerEvent, date?:Date)=>{
-    if (Platform.OS==='android') setPickerOpen(false);
-    if(event.type==='set'&&date) onChange(toIso(date));
-  };
   return <View style={[styles.field,fullWidth&&styles.fullWidth]}>
     <Text style={styles.label}>{label}{required?<Text style={styles.star}> *</Text>:null}</Text>
     {Platform.OS==='web' ? (
@@ -48,14 +43,11 @@ export function PartnerPolicyDateField({label,value,onChange,required=false,hide
         <Ionicons name="calendar-outline" size={17} color="#315B9A"/>
       </Pressable>
     )}
-    {Platform.OS==='android'?<PartnerPolicyCalendarDialog visible={pickerOpen} value={selected} onCancel={()=>setPickerOpen(false)} onConfirm={date=>{onChange(toIso(date));setPickerOpen(false);}}/>:null}
-    {pickerOpen&&Platform.OS==='ios'?<DateTimePicker value={selected} mode="date" display="spinner" onChange={select}/>:null}
-    {pickerOpen&&Platform.OS==='ios'?<Pressable accessibilityRole="button" onPress={()=>setPickerOpen(false)} style={styles.done}><Text style={styles.doneText}>Done</Text></Pressable>:null}
+    {Platform.OS!=='web'?<PartnerPolicyCalendarDialog visible={pickerOpen} value={selected} onCancel={()=>setPickerOpen(false)} onConfirm={date=>{onChange(toIso(date));setPickerOpen(false);}}/>:null}
   </View>;
 }
 const styles=StyleSheet.create({
   field:{width:'48%',minWidth:0,gap:5},fullWidth:{width:'100%'},label:{fontSize:10,color:'#65758E',fontWeight:'700'},star:{color:'#B93333'},
   row:{minHeight:42,borderWidth:1,borderColor:'#D8E1EC',borderRadius:9,paddingHorizontal:10,flexDirection:'row',alignItems:'center',justifyContent:'space-between',backgroundColor:'#FFFFFF',gap:5},
   value:{fontSize:12,color:'#183653',flex:1},placeholder:{color:'#97A5B7'},webInput:{flex:1,fontSize:12,color:'#183653',minHeight:38},
-  done:{alignSelf:'flex-end',padding:10},doneText:{fontSize:12,fontWeight:'700',color:'#315B9A'}
 });
