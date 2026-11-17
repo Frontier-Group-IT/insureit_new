@@ -486,6 +486,8 @@ form:has(input[name="fitness_valid_upto"]) > div:last-child button {
 .daily-report-heading-icon { display: none; }
 .reports-reference-shell:has(.daily-report-reference) {
   --daily-navy: #17165c;
+  width: 100%;
+  max-width: none;
   font-family: var(--font-manrope), ui-sans-serif, sans-serif;
 }
 .reports-reference-shell:has(.daily-report-reference) .reports-reference-header {
