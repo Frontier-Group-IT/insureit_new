@@ -16,11 +16,11 @@ assert.match(page, /assertDailyReportEmployeeAllowed\(chosenPerson, employeeDire
 assert.match(page, /resolveDailyReportPeriod\(query\)/, "Header period drives report history");
 assert.match(page, /from: periodRange\.from, to: periodRange\.to/, "Period range filters actual event sources");
 
-assert.match(source, /\.eq\("actor_id",viewerId\)/, "Audit records are scoped to the authenticated actor before reading");
-assert.match(source, /\.eq\("created_by",viewerId\)/, "Policy and case creations use the employee's actual ID");
-assert.match(source, /\.eq\("submitted_by_profile_id",viewerId\)/, "Policy intake creation is scoped to the employee");
-assert.match(source, /\.eq\("finalized_by_profile_id",viewerId\)/, "Intake finalization is scoped to the finalizing employee");
-assert.match(source, /\.eq\("converted_by",viewerId\)/, "Case conversion is scoped to the converting employee");
+assert.match(source, /\.in\("actor_id",actorIds\)/, "Audit records are scoped to the authenticated actor before reading");
+assert.match(source, /\.in\("created_by",actorIds\)/, "Policy and case creations use the employee's actual ID");
+assert.match(source, /\.in\("submitted_by_profile_id",actorIds\)/, "Policy intake creation is scoped to the employee");
+assert.match(source, /\.in\("finalized_by_profile_id",actorIds\)/, "Intake finalization is scoped to the finalizing employee");
+assert.match(source, /\.in\("converted_by",actorIds\)/, "Case conversion is scoped to the converting employee");
 // Claims use their own existing actor-attributed records; do not invent audit
 // events or credit the claim creator for someone else's update.
 for (const [sourceName, actorColumn] of [
@@ -30,7 +30,7 @@ for (const [sourceName, actorColumn] of [
   ["Claim status history","changed_by"],
 ]) {
   assert.ok(source.includes('readDailyHistoryPages("'+sourceName+'"'), sourceName+" is included in source pagination");
-  assert.match(source, new RegExp('\\.eq\\("'+actorColumn+'",viewerId\\)'), sourceName+" uses exact employee attribution");
+  assert.match(source, new RegExp('\\.eq\\("'+actorColumn+'",viewerId\\)'), sourceName+" uses authorized employee attribution");
 }
 assert.match(source, /driver_name/, "Driver edits are read from stored stage details");
 assert.match(source, /previous!==driver/, "Changed driver names use stored before/after stage values");
