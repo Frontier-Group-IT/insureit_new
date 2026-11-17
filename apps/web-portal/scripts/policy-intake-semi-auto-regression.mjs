@@ -6,6 +6,7 @@ import { validateN8nPolicyIntakeResponse } from "../lib/policy-intake-n8n-valida
 import { mapVerifiedN8nMotorPremium } from "../lib/policy-n8n-onboarding-premium.ts";
 import { filterVerifiedN8nOnboardingFields } from "../lib/policy-n8n-onboarding-fields.ts";
 import { enrichVerifiedN8nOnboardingFields, splitN8nRtoStateAndCity } from "../lib/policy-n8n-onboarding-enrichment.ts";
+import { selectVerifiedN8nInsuredDraftIdentity, sameInsuredIdentity } from "../lib/policy-n8n-onboarding-insured.ts";
 import { buildPolicyOcrOnboardingUpdate } from "../lib/policy-ocr-onboarding-apply.ts";
 
 const text = path => readFileSync(new URL("../" + path, import.meta.url), "utf8");
@@ -302,14 +303,16 @@ assert(handoff.includes('if(existingDraft?.draft_payload)'),
 assert(handoff.includes("lastDoc.id!==verified.documentId"),
   "The exact current PDF must be rechecked after reviewer claim");
 assert(handoff.includes("enrichVerifiedN8nOnboardingFields(verified.fields)"),
-  "n8n drafts must enrich approved policy and vehicle fields without customer identity");
+  "n8n vehicle and policy draft fields remain strictly allowlisted");
 assert(handoff.includes("resolveMasterIntakeIdentity(admin,intake.matched_customer_id,intake.customer_mobile)"),
-  "Document-derived insured identity must never prefill the name; use only linked master identity");
+  "Approved linked master identity must still be checked against the intake mobile");
 assert(handoff.includes('if(existingDraft?.draft_payload && !(verified?.fillEmptyFields))')
   && handoff.includes('.eq("intake_id",id).eq("revision",existingDraft.revision)'),
   "Existing drafts must not be overwritten; explicit blank-only refresh requires revision CAS");
-assert(handoff.includes('const customerName=verified?(masterIdentity?.name??"")'),
-  "Only approved customer-master identity, never the n8n PDF name, may prefill an Insured Name");
+assert(handoff.includes("selectVerifiedN8nInsuredDraftIdentity(verified.fields,masterIdentity)")
+  && handoff.includes("const customerName=verifiedIdentity?.name")
+  && handoff.includes("verifiedIdentity?.matchedCustomerId??null"),
+  "Reviewable ICICI 3005 PDF insured name may prefill, but must not auto-link a customer");
 assert(handoff.includes("const identityName=verified"),
   "Existing drafts in n8n handoff must never fall back to old OCR customer identity");
 assert(handoff.includes("mapVerifiedN8nMotorPremium(verified.premium)"),
@@ -339,9 +342,9 @@ assert(client.includes('selected.policy_type !== "motor"')
 assert(policyNew.includes("n8n-verified Policy Intake · Manual onboarding review"),
   "Display a clear n8n prefill review warning on the canonical Policy Onboarding page");
 
-// OCR validation may require an insured-name check, but only approved
-// vehicle/policy fields may reach the onboarding draft, including in future
-// expanded n8n responses. Identity remains human/master-reviewed.
+// General vehicle/policy mapping never accepts personal identity; the separate
+// explicit ICICI 3005 handoff proposes only a reviewable Insured Name with no
+// automatic customer linking or final booking.
 const sanitizedN8nFields = filterVerifiedN8nOnboardingFields([
   { key: "insured_name", value: "Fictional PDF Holder" },
   { key: "insured_phone", value: "9999999999" },
@@ -353,9 +356,41 @@ const sanitizedN8nFields = filterVerifiedN8nOnboardingFields([
 ]);
 assert.deepEqual(sanitizedN8nFields.map(field => field.key),
   ["policy_number", "vehicle_chassis_number", "idv"],
-  "No insured/customer identity from PDF can enter the canonical draft");
+  "The generic field allowlist still rejects personal identity");
 
-// Exact ICICI 3005 Chetak mapping, field-order dependencies and no identity.
+// Synthetic personal data only: the PDF name is an editable proposal,
+// not a permission to link a customer or bypass human final booking.
+const syntheticIdentity=[{
+  key:"insured_name", value:"TEST POLICYHOLDER",
+  page:1, evidence:"Name of Insured",
+}];
+const pdfIdentity=selectVerifiedN8nInsuredDraftIdentity(syntheticIdentity,null);
+assert.deepEqual(pdfIdentity,{
+  name:"TEST POLICYHOLDER",matchedCustomerId:null,
+  needsManualReview:true,source:"verified_pdf",
+});
+assert.deepEqual(selectVerifiedN8nInsuredDraftIdentity(syntheticIdentity,{
+  id:"synthetic-customer-1",name:"test policyholder",
+}),{
+  name:"test policyholder",matchedCustomerId:"synthetic-customer-1",
+  needsManualReview:false,source:"linked_master",
+});
+assert.deepEqual(selectVerifiedN8nInsuredDraftIdentity(syntheticIdentity,{
+  id:"synthetic-customer-2",name:"OTHER SYNTHETIC HOLDER",
+}),{
+  name:"TEST POLICYHOLDER",matchedCustomerId:null,
+  needsManualReview:true,source:"conflict",
+},"Conflicting PDF identity must never auto-link an existing customer");
+assert.equal(selectVerifiedN8nInsuredDraftIdentity([
+  {key:"insured_name",value:"TEST POLICYHOLDER",page:2,evidence:"Nominee Name"},
+],null).name,"","Reject unlabeled or wrong-source PDF identities");
+assert.equal(selectVerifiedN8nInsuredDraftIdentity([
+  {key:"insured_name",value:"UNKNOWN",page:1,evidence:"Name of Insured"},
+],null).name,"","Reject invalid insured names");
+assert(sameInsuredIdentity(" TEST   POLICYHOLDER ","test policyholder"),
+  "Linked-master match must normalize whitespace and case");
+
+// Exact ICICI 3005 Chetak mapping, field-order dependencies and verified identity review.
 assert.deepEqual(splitN8nRtoStateAndCity("MADHYA PRADESH-JABALPUR"),{
   state:"Madhya Pradesh",city:"Jabalpur",
 });
