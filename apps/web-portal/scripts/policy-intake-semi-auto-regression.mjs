@@ -653,4 +653,26 @@ assert(workbenchText.includes("Queued for n8n")
 assert(aiPageText.includes("viewLink(selectedView,safePage + 1)")
   && aiPageText.includes("statusRows.length"),
   "Server-side Intake status filtering must paginate the whole chosen status group, not only the first 75 records");
+// Phase 2 customer exception lookup must stay privileged/read-only until
+// the canonical customer decision, duplicate and booking transactions exist.
+const customerPreviewStart=actionsText.indexOf("export async function reviewAiIntakeCustomerCandidates");
+const customerPreviewEnd=actionsText.indexOf("export async function reprocessAiPolicyIntake",customerPreviewStart);
+assert(customerPreviewStart>0 && customerPreviewEnd>customerPreviewStart,
+  "Customer identity candidate action must be available for exception review");
+const customerPreviewCode=actionsText.slice(customerPreviewStart,customerPreviewEnd);
+assert(customerPreviewCode.includes("requireDevelopmentPolicyOperator(id)")
+  && customerPreviewCode.includes("previewSemiAutoN8nExtraction(id)")
+  && customerPreviewCode.includes('extraction.preview.checksPassed===13')
+  && customerPreviewCode.includes('extraction.preview.warnings.length===0')
+  && customerPreviewCode.includes('normalizedPhone(row.phone)===phone')
+  && customerPreviewCode.includes('truncated=(rows??[]).length>=51'),
+  "AI customer candidate review must reverify the current PDF, filter exact normalized phone and fail closed on too many matches");
+assert(!customerPreviewCode.includes(".update(") && !customerPreviewCode.includes(".insert(")
+  && !customerPreviewCode.includes("onboardPolicy("),
+  "Customer exception review is strictly read-only and cannot create/link customers or book a policy");
+assert(workbenchText.includes("Check customer matches")
+  && workbenchText.includes("Create New Customer")
+  && workbenchText.includes("/customers?choose_partner=1")
+  && workbenchText.includes("reviewAiIntakeCustomerCandidates(exceptionRow.id)"),
+  "Customer decision popup provides guided canonical review/create routes, not a silent automatic link");
 console.log("Semi-auto Motor onboarding regression checks passed.");
