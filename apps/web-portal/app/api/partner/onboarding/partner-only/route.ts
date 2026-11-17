@@ -92,15 +92,15 @@ async function handle(request: Request, writing: boolean) {
   const name = [first, middle, last].filter(Boolean).join(" ");
   const mobile = clean(input.mobile, 20);
   const email = clean(input.email, 150).toLowerCase();
-  const pan = clean(input.pan_number, 20).toUpperCase().replace(/\\s+/g, "");
-  const aadhaar = clean(input.aadhaar_number, 18).replace(/\\s+/g, "");
+  const pan = clean(input.pan_number, 20).toUpperCase().replace(/\s+/g, "");
+  const aadhaar = clean(input.aadhaar_number, 18).replace(/\s+/g, "");
   const dob = clean(input.date_of_birth, 10);
   const receivedAt = clean(input.document_received_at, 10) || null;
   const rmId = clean(input.associate_employee_id, 40);
   const bankId = clean(input.bank_id, 40);
-  const bankAccount = clean(input.bank_account_number, 24).replace(/\\s/g, "");
+  const bankAccount = clean(input.bank_account_number, 24).replace(/\s/g, "");
   const ifsc = clean(input.bank_ifsc_code, 12).toUpperCase();
-  const gst = clean(input.gst_number, 20).toUpperCase().replace(/\\s+/g, "");
+  const gst = clean(input.gst_number, 20).toUpperCase().replace(/\s+/g, "");
   const address = clean(input.address, 300);
   const city = clean(input.city, 80);
   const state = clean(input.state, 80);
@@ -197,7 +197,7 @@ async function handle(request: Request, writing: boolean) {
 }
 
 function validDate(value: string): boolean {
-  if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(value)) return false;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
   const date = new Date(`${value}T00:00:00.000Z`);
   return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
 }
