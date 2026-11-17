@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { canPartnerAccess } from '@/lib/partner-permissions';
 import { PartnerStackBottomNavigation, type PartnerTabDestination } from '@/components/partner-stack-bottom-navigation';
 import { supabase } from '@/lib/supabase';
+import { MispPartnerForm } from '@/components/misp-partner-form';
 import { usePartnerSession } from '@/providers/partner-session-provider';
 
 type Field = 'document_received_at' | 'associate_employee_id' | 'pos_first_name' | 'pos_middle_name' | 'pos_last_name'
@@ -15,7 +16,7 @@ type Field = 'document_received_at' | 'associate_employee_id' | 'pos_first_name'
   | 'address' | 'city' | 'state' | 'postal_code' | 'bank_id' | 'bank_account_number'
   | 'bank_ifsc_code' | 'gst_number';
 type Option = { id: string; name: string };
-type MasterData = { ok?: boolean; error?: string; rms?: Option[]; banks?: Option[] };
+type MasterData = { ok?: boolean; error?: string; rms?: Option[]; banks?: Option[]; oems?: Option[] };
 const initial: Record<Field, string> = {
   document_received_at: '', associate_employee_id: '', pos_first_name: '', pos_middle_name: '', pos_last_name: '',
   pan_number: '', aadhaar_number: '', date_of_birth: '', mobile: '', email: '',
@@ -72,6 +73,9 @@ export default function AddPartnerScreen() {
   const allowed = context?.identity.actor_kind === 'employee'
     && canPartnerAccess(context, 'create_intermediary_application', 'edit');
   const [form, setForm] = useState(initial);
+  const [partnerType,setPartnerType]=useState<"posp"|"misp">("posp");
+  const [mispDirty,setMispDirty]=useState(false);
+  const [oems,setOems]=useState<Option[]>([]);
   const [rms, setRms] = useState<Option[]>([]);
   const [banks, setBanks] = useState<Option[]>([]);
   const [loading, setLoading] = useState(true);
@@ -80,7 +84,16 @@ export default function AddPartnerScreen() {
   const [saving, setSaving] = useState(false);
   const [dateField, setDateField] = useState<'date_of_birth' | 'document_received_at' | null>(null);
   const set = (key: Field, value: string) => setForm(old => ({ ...old, [key]: value }));
-  const hasUnsavedDetails = (Object.keys(initial) as Field[]).some(key => form[key] !== initial[key]);
+  const hasUnsavedDetails = mispDirty || (Object.keys(initial) as Field[]).some(key => form[key] !== initial[key]);
+  const changePartnerType=(next:'posp'|'misp')=>{
+    if(next===partnerType)return;
+    if(partnerType==='misp'&&mispDirty){
+      Alert.alert('Discard MISP details?','Switching to POSP will clear unsaved MISP fields.',[
+        {text:'Keep Editing',style:'cancel'},
+        {text:'Discard & Switch',style:'destructive',onPress:()=>{setMispDirty(false);setPartnerType(next);}},
+      ]);
+    }else setPartnerType(next);
+  };
   const leavePartnerForm = (destination?: PartnerTabDestination) => {
     if (saving) return;
     const leave = () => destination ? router.navigate(destination as never) : router.back();
@@ -98,7 +111,7 @@ export default function AddPartnerScreen() {
         const response = await authenticatedRequest('GET');
         const result = await response.json() as MasterData;
         if (!response.ok || !result.ok) throw new Error(result.error || 'Could not load RM and Bank lists.');
-        if (active) { setRms(result.rms || []); setBanks(result.banks || []); }
+        if (active) { setRms(result.rms || []); setBanks(result.banks || []); setOems(result.oems || []); }
       } catch (error) {
         if (active) Alert.alert('Master data unavailable', error instanceof Error ? error.message : 'Please retry.');
       } finally { if (active) setLoading(false); }
@@ -168,6 +181,18 @@ export default function AddPartnerScreen() {
           <Text style={styles.heading}>Add Partner</Text>
         </View>
         <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
+          <View style={styles.typeSwitch} accessibilityLabel="Partner onboarding type">
+            {(['posp','misp'] as const).map(type=>
+              <Pressable key={type} accessibilityRole="button" accessibilityLabel={type.toUpperCase()}
+                accessibilityState={{selected:partnerType===type}} onPress={()=>changePartnerType(type)}
+                style={[styles.typeOption,partnerType===type&&styles.typeSelected]}>
+                <Text style={[styles.typeText,partnerType===type&&styles.typeSelectedText]}>{type.toUpperCase()}</Text>
+              </Pressable>)}
+          </View>
+          {partnerType==='misp' ? (
+            <MispPartnerForm rms={rms} banks={banks} oems={oems} loading={loading} onDirtyChange={setMispDirty}/>
+          ) : (
+          <>
           {sections.map((section, index) => (
             <View key={section.heading} style={styles.section}>
               <View style={styles.sectionHeader}>
@@ -220,6 +245,8 @@ export default function AddPartnerScreen() {
           <Pressable accessibilityRole="button" disabled={saving || loading} onPress={() => void submit()} style={[styles.submit, (saving || loading) && styles.disabled]}>
             <Text style={styles.submitText}>{saving ? 'Submitting…' : 'Submit Partner application'}</Text>
           </Pressable>
+          </>
+          )}
         </ScrollView>
         {dateField ? <DateTimePicker
           value={isoDate(form[dateField]) ? new Date(`${isoDate(form[dateField])}T12:00:00`) : new Date()}
@@ -282,6 +309,9 @@ const styles = StyleSheet.create({
   header: { height: 54, backgroundColor: '#071E49', borderBottomWidth: 1, borderBottomColor: '#071E49', paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', gap: 14 },
   heading: { fontSize: 17, color: '#FFFFFF', fontWeight: '800' },
   content: { padding: 12, paddingBottom: 35, gap: 12 },
+  typeSwitch:{flexDirection:'row',width:'100%',gap:0,padding:4,backgroundColor:'#E4EAF5',borderRadius:12,borderWidth:1,borderColor:'#CED8E7'},
+  typeOption:{flex:1,minHeight:42,justifyContent:'center',alignItems:'center',borderRadius:9},
+  typeSelected:{backgroundColor:'#17365D'},typeText:{fontWeight:'800',fontSize:13,color:'#4D5F7B'},typeSelectedText:{color:'#FFFFFF'},
   section: { backgroundColor: '#FFF', borderWidth: 1, borderColor: '#E1E7F1', borderRadius: 14, overflow: 'hidden' },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12, backgroundColor: '#F9FBFD', borderBottomWidth: 1, borderBottomColor: '#E1E7F1' },
   index: { backgroundColor: '#17365D', borderRadius: 7, width: 33, height: 33, justifyContent: 'center', alignItems: 'center' },
