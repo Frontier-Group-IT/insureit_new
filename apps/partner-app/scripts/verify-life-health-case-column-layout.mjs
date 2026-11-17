@@ -7,7 +7,7 @@ const web=read('apps/web-portal/components/life-health-case-detail.tsx');
 for(const [number,title] of [
   ['01','Policy source & ownership'],['02','Customer / proposer'],
   ['03','Policy product & case details'],['04','Premium & payment'],
-  ['05','Mark Policy Issued'],['06','Documents'],['07','Activity status & remarks'],
+  ['05','Mark Policy Issued'],['06','Documents'],
 ]){
   assert.ok(screen.includes('number="'+number+'" title="'+title+'"'),title+' matches web section order');
   assert.ok(web.includes('number="'+number+'" title="'+title+'"')||['Documents','Activity status & remarks'].includes(title),title+' is sourced from Operations form');
@@ -28,10 +28,19 @@ assert.match(screen,/issueLifeHealthPolicy\(record.id,data\)/,'Native issuance u
 assert.match(screen,/canPartnerAccessCaseRegister\(context\)/,'Existing Case Register permission remains enforced');
 assert.match(screen,/getLifeHealthCase\(id\)/,'Scoped read-only case API is preserved');
 assert.match(api,/operationsCaseUrl\(id: string\)/,'Operations link is canonical');
-assert.match(screen,/documents\.length>0\?<Section number="06"/,'Documents section only renders real files');
+assert.match(screen,/<Section number="06" title="Documents">/,'Documents section includes upload actions for missing files');
 assert.match(screen,/documents\.map\(doc=>/,'Document entries come only from case API');
 assert.match(screen,/\{doc\.file_name\}/,'Only real file name is shown');
-assert.doesNotMatch(screen,/No documents recorded|Document viewing, uploads and deletion|For case editing, adding remarks|You may need to sign in/,'No footer explanations or empty document placeholders');
+assert.doesNotMatch(screen,/Document viewing, uploads and deletion|For case editing, adding remarks|You may need to sign in/,'No legacy footer explanations');
 assert.doesNotMatch(screen,/function Item\(/,'Old label-value stacking is removed');
-assert.doesNotMatch(screen,/uploadLifeHealthCaseDocument|convertLifeHealthCaseToPolicy|deleteLifeHealthCaseDocument|rejectLifeHealthCase/,'No unapproved native mutations');
-console.log('Partner Life/Health case details: numbered inline-editable columns and actual-only documents verified.');
+assert.doesNotMatch(screen,/uploadLifeHealthCaseDocument|convertLifeHealthCaseToPolicy|deleteLifeHealthCaseDocument\(/,'No direct unauthenticated web server-action calls');
+assert.doesNotMatch(screen,/<Section number="07" title="Activity status & remarks">/,'Activity Status heading is removed');
+assert.match(screen,/styles\.activityCard/,'Activity Status and Remarks retain tabs without numbered header');
+for(const title of ['Cancel case edits','Reject case','Save Case Details','Create Policy and Close Case']){
+  assert.ok(screen.includes('accessibilityLabel="'+title+'"'),'Missing action: '+title);
+}
+assert.match(screen,/getLifeHealthDocumentUrl/,'Documents can be opened through scoped URL');
+assert.match(screen,/mutateLifeHealthDocument/,'Documents have an authenticated delete action');
+assert.match(screen,/uploadLifeHealthDocument/,'Documents have an authenticated replace and upload action');
+assert.match(screen,/documentBusy/,'Document mutations block concurrent submissions');
+console.log('Partner Life/Health case details: compact columns, four actions, document controls and tab parity verified.');
