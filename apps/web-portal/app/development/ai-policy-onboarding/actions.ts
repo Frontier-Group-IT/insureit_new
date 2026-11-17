@@ -288,7 +288,7 @@ export async function editSemiAutoIntake(id: string, takeOver = false): Promise<
  */
 export async function continueVerifiedN8nIntakeToOnboarding(
   id: string, documentId: string, fingerprint: string, confirmed: boolean, takeOver = false,
-): Promise<{ ok: boolean; editUrl?: string; error?: string; assignmentConflict?: { reviewerName: string } }> {
+): Promise<{ ok: boolean; editUrl?: string; error?: string; existingDraft?:boolean; assignmentConflict?: { reviewerName: string } }> {
   await requireDevelopmentPolicyOperator(id);
   // Do not claim or create a draft for someone who cannot open /policies/new.
   await requirePolicyCreator();
@@ -303,7 +303,8 @@ export async function continueVerifiedN8nIntakeToOnboarding(
   revalidatePath("/development/ai-policy-onboarding");
   revalidatePath("/policy-intakes");
   revalidatePath("/policy-intakes/" + encodeURIComponent(id));
-  return { ok:true,editUrl:"/policies/new?intake_id=" + encodeURIComponent(id) };
+  return { ok:true,editUrl:"/policies/new?intake_id=" + encodeURIComponent(id),
+    existingDraft:handoff.existingDraft === true };
 }
 
 /**
