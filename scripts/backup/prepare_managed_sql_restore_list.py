@@ -16,6 +16,11 @@ APP_SCHEMAS = frozenset({
 MANAGED_SCHEMAS = frozenset({
     "auth", "storage", "vault", "realtime", "supabase_migrations",
 })
+# PostgreSQL's built-in namespaces can appear in custom archive TOCs for
+# catalogue-related objects/metadata. These are NOT application schemas and
+# must never be selected for restoration into a managed Supabase target.
+# Exact allowlist only: do not trust a prefix like pg_* or arbitrary schema.
+DEFERRED_SYSTEM_SCHEMAS = frozenset({"pg_catalog", "information_schema"})
 # Never replay pre-existing managed schema DDL, extensions or global role ACL.
 # Application-owned objects replay without source owner or ACL in initial drill.
 APP_OBJECTS = frozenset({
@@ -89,7 +94,7 @@ def parse_entry(line):
         # omitting application SQL or replaying an unreviewed global object.
         raise SafeTocSelectionError("UNRECOGNIZED_TOC_RECORD")
     number, kind, namespace, rest = m.groups()
-    if namespace not in APP_SCHEMAS | MANAGED_SCHEMAS | {
+    if namespace not in APP_SCHEMAS | MANAGED_SCHEMAS | DEFERRED_SYSTEM_SCHEMAS | {
         "-", "extensions", "graphql", "graphql_public", "pgbouncer",
     }:
         raise SafeTocSelectionError("UNKNOWN_ARCHIVE_NAMESPACE")
@@ -130,6 +135,11 @@ def chosen_entries(raw_toc):
             or (ns in APP_SCHEMAS and kind in APP_OBJECTS)
             or (kind, ns) in ALLOWED_MANAGED
         )
+        if ns in DEFERRED_SYSTEM_SCHEMAS:
+            # Redundant explicit denial: even if another selected kind gains
+            # broad permissions later, core pg_catalog objects are never
+            # replayed by this application-only recovery.
+            include = False
         # A Supabase target may already have the default RLS event-trigger
         # helper; do not overwrite it by replaying its source function.
         if ns == "auth" and kind == "TABLE DATA" and rest.startswith("schema_migrations "):
