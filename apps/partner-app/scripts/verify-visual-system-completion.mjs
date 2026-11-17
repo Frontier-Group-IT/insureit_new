@@ -225,6 +225,29 @@ requireText(policyDetail, 'icon="person-outline"', 'Policy detail customer row m
 requireText(policyDetail, 'insurerName={data.insurer.name}', 'Policy overview must pass insurer identity to logo renderer.');
 requireText(policyDetail, '<PartnerInsurerLogo name={insurerName}', 'Policy overview must render insurer brand artwork.');
 requireText(policyDetail, 'getPartnerPolicyDetail(id)', 'Policy detail must preserve the existing scoped data service.');
+
+// Policy Details Quick Actions intentionally match the permission-gated Policies
+// screen's four original, locally bundled 3D shortcuts and clear backdrop.
+for (const [label, asset, route] of [
+  ['Policy Intake', 'policy-intake.png', '/policy-intakes'],
+  ['Add Policy', 'add-policy.png', '/policy-new'],
+  ['Case Register', 'case-register.png', '/life-health-cases'],
+  ['Add Partner', 'add-partner.png', '/partner-new'],
+]) {
+  requireText(policyDetail, `label: '${label}'`, `Policy detail must show the ${label} action.`);
+  requireText(policyDetail, asset, `Policy detail must reuse original ${label} 3D artwork.`);
+  requireText(policyDetail, route, `Policy detail must preserve ${label} destination.`);
+}
+for (const permission of ['canPartnerAccess(context', 'canPartnerAccessCaseRegister(context)', 'context?.identity.actor_kind']) {
+  requireText(policyDetail, permission, 'Policy detail must retain permission-gated Quick Actions: ' + permission);
+}
+requireText(policyDetail, 'backgroundColor: \'transparent\'', 'Policy detail Quick Actions must have no colored backgrounds.');
+requireText(policyDetail, '<Image source={image} style={styles.quickActionImage} resizeMode="contain" />', '3D icons must be displayed directly without an inner icon box.');
+requireText(policyDetail, 'numberOfLines={1} adjustsFontSizeToFit', 'All action labels must stay on one line.');
+if (policyDetail.includes('styles.quickBlue') || policyDetail.includes('borderRightColor')) {
+  throw Error('Policy detail must not restore colored Quick Action tiles or dividers.');
+}
+
 requireText(policyDetail, '<PartnerPolicyDetailIcon kind={iconKind}', 'Policy detail reusable sections must render the professional policy icon component.');
 for (const kind of [
   'quick-actions', 'policy-document', 'renew-policy', 'raise-claim', 'customer-details',
