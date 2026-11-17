@@ -63,6 +63,12 @@ function status(action:string) {
   if(/finaliz|complet|clos/i.test(action)) return "Completed";
   return "Recorded";
 }
+// Group audit labels use an observed group name, never a guessed name from a member ID.
+function groupActivityWithName(activity:string,groupName:string):string {
+  const event=activity.replace(/^(?:Business )?Intermediary Group /,"").trim();
+  if(event===activity||!groupName.trim()) return activity;
+  return `${groupName.trim()} — ${event}`;
+}
 const sourceLabel = (id:string|null) => id || "—";
 // Display only recognized business-field changes, never an entire audit JSON snapshot.
 const CHANGE_FIELDS:Record<string,{label:string;money?:boolean}>={
@@ -369,11 +375,30 @@ export async function loadSelfActivityHistory(
             profileNames.set(profile.id,linkedNames.get(profile.employee_id)!);
       }
     }
+    // The Employee Name column identifies the affected employee for employee/profile
+    // events, but the actor for group/business operations with no employee target.
+    // These rows are already restricted to this actor's authorized report scope.
+    const actingEmployeeName=selfProfile?.full_name?.trim()||undefined;
     for(const row of visible) {
-      if(!row.recordId) continue;
-      if(row.table==="employees")row.subjectEmployeeName=employeeNames.get(row.recordId)||undefined;
-      else if(row.table==="profiles"||row.table==="auth.users")
+      if(row.recordId&&row.table==="employees")row.subjectEmployeeName=employeeNames.get(row.recordId)||undefined;
+      else if(row.recordId&&(row.table==="profiles"||row.table==="auth.users"))
         row.subjectEmployeeName=profileNames.get(row.recordId)||undefined;
+      else row.subjectEmployeeName=actingEmployeeName;
+    }
+    // Only query existing groups already referenced by visible, actor-scoped audits.
+    const groupIds=[...new Set(visible.filter(row=>row.table==="intermediary_groups"&&isValidDailyRecordId(row.recordId??"")).map(row=>row.recordId as string))];
+    if(groupIds.length) {
+      const {data:groups,error:groupError}=await admin.from("intermediary_groups")
+        .select("id,group_name").in("id",groupIds);
+      if(groupError) console.error("[daily-report] intermediary group labels unavailable",{code:groupError.code||"request_error"});
+      else {
+        const names=new Map((groups??[]).map(group=>[group.id,group.group_name?.trim()||""]));
+        for(const row of visible) {
+          if(row.table!=="intermediary_groups"||!row.recordId) continue;
+          const name=names.get(row.recordId);
+          if(name) row.activity=groupActivityWithName(row.activity,name);
+        }
+      }
     }
   }
   // Claims drilldowns display only claim-specific register columns.
@@ -629,6 +654,17 @@ export async function loadSelfActivityHistory(
         const change=changeMap.get(row.id.slice("audit:".length));
         if(!change) continue;
         row.detail=auditChangeDetail(change.old_data,change.new_data);
+        // A rename audit's captured name is more historically accurate than
+        // today's group name. For missing/deleted groups, never invent one.
+        if(row.category==="Other Activities"&&row.table==="intermediary_groups") {
+          const snapshot=change.new_data;
+          const capturedName=snapshot&&typeof snapshot==="object"&&!Array.isArray(snapshot)
+            ? (snapshot as Record<string,unknown>).group_name : undefined;
+          if(typeof capturedName==="string"&&capturedName.trim()) {
+            const original=audits.rows.find(a=>`audit:${a.id}`===row.id);
+            if(original) row.activity=groupActivityWithName(displayAction(original.action),capturedName);
+          }
+        }
         if(row.table==="policies" && row.category==="Policy Edit" && row.activity==="Policy Updated") {
           row.activity=policyEditFieldNames(change.new_data);
           // Do not repeat old/new business values when the user requested column names.
