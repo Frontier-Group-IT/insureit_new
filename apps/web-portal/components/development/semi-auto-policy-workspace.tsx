@@ -221,6 +221,36 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
     }
   }
 
+  // Show handoff on any extracted open Motor Intake. A click still fetches and
+  // validates the CURRENT PDF before enabling the existing confirmation dialog.
+  // Historical OCR or stale queue status is never a booking authorization.
+  async function beginDirectN8nHandoff() {
+    if (!primaryN8n || !selectedId || !selected || isWaiting || selected.is_duplicate
+        || selected.policy_type !== "motor"
+        || !["processing", "ready_for_review", "in_review"].includes(selected.status)
+        || selected.ocr_status !== "completed") return;
+    const id=selectedId, next=++requestId.current;
+    setBusy("extracting"); setN8nNotice(null); setN8nResult(null);
+    try {
+      const fresh=await previewSemiAutoN8nIntake(id);
+      if (requestId.current !== next) return;
+      setN8nResult(fresh);
+      if (!fresh.ok) {
+        setN8nNotice("Fresh verification failed; the historical OCR remains visible. No onboarding draft was changed.");
+      } else if (fresh.preview.warnings.length || fresh.preview.checksPassed !== 13) {
+        setN8nNotice("The PDF needs review before onboarding. Check the latest n8n results and resolve any warnings.");
+      } else {
+        setFillEmptySavedFields(true);
+        setHandoffDialog({kind:"confirm",intakeId:id,
+          documentId:fresh.preview.documentId,fingerprint:fresh.preview.fingerprint});
+      }
+    } catch {
+      if (requestId.current === next) setN8nNotice("The current PDF verification failed. Saved OCR remains unchanged; check n8n before retrying.");
+    } finally {
+      if (requestId.current === next) setBusy(null);
+    }
+  }
+
   function forwardN8nToOnboarding() {
     if (!primaryN8n || !selectedId || !selected || selected.policy_type !== "motor"
         || selected.is_duplicate || !["ready_for_review","in_review","processing"].includes(selected.status)
@@ -516,6 +546,20 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
             {busy === "applying" ? <div className="mt-3 flex items-center gap-2 rounded-lg bg-blue-50 p-3 text-[11px] text-blue-800"><Loader2 className="h-4 w-4 animate-spin"/>Revalidating and saving the confirmed failed OCR recovery...</div> : null}
             {n8nNotice ? <p role="status" className="mt-3 rounded-lg border border-[#c8d8eb] bg-[#f5f9ff] p-3 text-[11px] leading-5 text-[#284d77]">{n8nNotice}</p> : null}
             {primaryN8n && selectedId && !n8nResult && busy === null ? <p className="mt-3 text-[10.5px] text-[#61738a]">Previously saved details appear above. Re-extract the current PDF only when a new verified result is necessary.</p> : null}
+            {primaryN8n && selected && !done && !n8nResult
+              && selected.policy_type === "motor" && !selected.is_duplicate
+              && ["processing","ready_for_review","in_review"].includes(selected.status)
+              && selected.ocr_status === "completed" ? (
+              <div className="mt-3 rounded-lg border border-[#bcd9d0] bg-[#f5fbf8] p-3">
+                <p className="text-[10.5px] font-bold text-[#215b46]">Extracted policy · manual onboarding available</p>
+                <p className="mt-1 text-[10px] leading-4 text-[#47675b]">Continue directly from the saved Intake. For safety, the current PDF will be verified by n8n before opening the editable onboarding draft. Existing exceptions are not silently cleared.</p>
+                <button type="button" onClick={() => { void beginDirectN8nHandoff(); }} disabled={isWaiting}
+                  className="mt-2 inline-flex min-h-9 w-full items-center justify-center gap-2 rounded-lg bg-[#1c5e8c] px-3 text-[11px] font-bold text-white disabled:opacity-50">
+                  {busy === "extracting" ? <Loader2 className="h-3.5 w-3.5 animate-spin"/> : <ArrowUpRight className="h-3.5 w-3.5"/>}
+                  Continue to Policy Onboarding
+                </button>
+              </div>
+            ) : null}
             {n8nResult && !done ? (n8nResult.ok ? (
               <section aria-label="n8n extraction review" className="mt-3 rounded-xl border border-[#c8d8eb] bg-[#f8fbff] p-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
