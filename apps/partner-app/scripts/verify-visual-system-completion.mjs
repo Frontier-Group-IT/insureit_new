@@ -240,11 +240,13 @@ requireText(policyDetail, 'icon="person-outline"', 'Policy detail customer row m
 requireText(policyDetail, 'insurerName={data.insurer.name}', 'Policy overview must pass insurer identity to logo renderer.');
 requireText(policyDetail, '<PartnerInsurerLogo name={insurerName}', 'Policy overview must render insurer brand artwork.');
 requireText(policyDetail, 'getPartnerPolicyDetail(id)', 'Policy detail must preserve the existing scoped data service.');
-// Policy Details uses the requested navy title/summary, with compact premium and date rows.
+// Policy Details keeps the navy title and a separate white summary, retaining all values.
 for (const required of [
   "backgroundColor: '#0A234A', borderBottomWidth: StyleSheet.hairlineWidth",
   "headerTitle: { color: '#FFFFFF'",
-  "summaryPolicyNo: { color: '#FFFFFF'",
+  "summaryCard: {",
+  "backgroundColor: '#FFFFFF', borderBottomWidth: StyleSheet.hairlineWidth",
+  "summaryPolicyNo: { color: '#1B2536'",
   "backgroundColor: '#FFF2DE'",
   "{policyNumber}",
   "{category}",
