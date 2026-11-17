@@ -50,6 +50,7 @@ const aiIssueTitles: Record<string,string> = {
   coverage_conflict:"Policy coverage conflict",
   draft_conflict:"Saved field differs from PDF",
   preflight_pending:"Canonical booking preflight pending",
+  booking_review_required:"Bulk booking requires manual review",
   stale_document:"Source PDF changed",
 };
 const aiStateLabel: Record<string,string> = {
