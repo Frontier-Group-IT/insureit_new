@@ -223,6 +223,46 @@ export async function POST(request: Request) {
    .select("id,status,final_policy_id,customer_id,insurance_company_id,sourcing_date,remarks,product_name,proposal_number,premium_paying_term,policy_duration,payment_frequency,payment_mode,premium_amount,updated_at,intermediary_code")
    .eq("id",id).maybeSingle();
   if(loadError||!row)return respond({ok:false,error:"Case not found."},404);
+  if(input?.operation==="delete_document"||input?.operation==="reject_case"){
+    if(row.final_policy_id||row.status==="rejected")return respond({ok:false,error:"Only pending cases can be modified."},409);
+    if(profile.role==="operations_head_life"){
+      if(!(await canAccessOperationsHeadCase(profile.id,id)))return respond({ok:false,error:"Case outside your scope."},403);
+    }else if(!(await hasEffectiveCapability(profile,"create_policies","edit")))
+      return respond({ok:false,error:"Case modification permission is required."},403);
+    if(input.operation==="delete_document"){
+      const documentId=typeof input.documentId==="string"?input.documentId:"";
+      if(!uuid.test(documentId))return respond({ok:false,error:"Invalid document reference."},400);
+      const {data:doc,error:docError}=await admin.from("life_health_case_documents")
+        .select("id,storage_bucket,storage_path").eq("case_id",id).eq("id",documentId).maybeSingle();
+      if(docError||!doc||!validDocPath(id,doc.storage_bucket,doc.storage_path))
+        return respond({ok:false,error:"Document not found."},404);
+      const {error:storageError}=await admin.storage.from(DOCUMENT_BUCKET).remove([doc.storage_path]);
+      if(storageError)return respond({ok:false,error:"Document could not be deleted from storage."},503);
+      const {error:deleteError}=await admin.from("life_health_case_documents").delete().eq("case_id",id).eq("id",documentId);
+      if(deleteError)return respond({ok:false,error:"File removed but record cleanup failed. Contact support."},503);
+      await recordDailyWorkflowActivity(admin,{actorId:profile.id,table:"life_health_cases",recordId:id,action:"life_health_case_document_deleted"});
+      return respond({ok:true});
+    }
+    if(row.status!=="awaiting_policy"&&row.status!=="draft")return respond({ok:false,error:"Only pending cases can be rejected."},409);
+    const reason=typeof input.reason==="string"?input.reason.trim().replace(/\s+/g," "):"";
+    if(!reason||reason.length>2000)return respond({ok:false,error:"Enter a rejection reason up to 2,000 characters."},400);
+    const {data:current,error:currentError}=await admin.from("life_health_cases")
+      .select("status,final_policy_id,remarks,details,updated_at").eq("id",id).maybeSingle();
+    if(currentError||!current||current.final_policy_id||!["awaiting_policy","draft"].includes(current.status))
+      return respond({ok:false,error:"Case changed. Reload and retry."},409);
+    const now=new Date().toISOString();
+    const stamp=new Intl.DateTimeFormat("en-IN",{timeZone:"Asia/Kolkata",day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit",hour12:true}).format(new Date());
+    const remarks=[current.remarks?.trim(),"["+stamp+"] Case rejected: "+reason].filter(Boolean).join("\n\n");
+    if(remarks.length>50000)return respond({ok:false,error:"Remarks history is full."},409);
+    const details={...(current.details&&typeof current.details==="object"&&!Array.isArray(current.details)?current.details:{}),rejection:{reason,rejected_at:now,rejected_by:profile.id}};
+    let update=admin.from("life_health_cases").update({status:"rejected",remarks,details,updated_at:now})
+      .eq("id",id).eq("status",current.status).eq("updated_at",current.updated_at).is("final_policy_id",null);
+    update=current.remarks===null?update.is("remarks",null):update.eq("remarks",current.remarks);
+    const {data:saved,error:saveError}=await update.select("id").maybeSingle();
+    if(saveError||!saved)return respond({ok:false,error:"Case changed. Reload before rejecting."},409);
+    await recordDailyWorkflowActivity(admin,{actorId:profile.id,table:"life_health_cases",recordId:id,action:"life_health_case_rejected"});
+    return respond({ok:true});
+  }
   // Strict actor-and-case-scoped issuance using the canonical Operations engine.
   const issueAction=["issue_case","issue_approval_request","issue_approval_verify"].includes(String(input?.operation??""));
   if(issueAction){
