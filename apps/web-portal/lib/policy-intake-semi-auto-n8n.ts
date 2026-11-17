@@ -134,6 +134,14 @@ export async function previewSemiAutoN8nExtraction(id: string): Promise<SemiAuto
     return { ok: false, reason: "unavailable",
       error: "n8n could not securely download or validate this PDF. No old OCR fallback, Intake update or booking was performed." };
   }
+  // The only currently validated n8n parser is for Motor ICICI 3005.
+  // A mismatched, explicitly Non-Motor/Life/Health Intake must never be
+  // represented as a verified business-line extraction, even if its PDF
+  // coincidentally contains similar identifiers.
+  if (snapshot.intake.policy_type !== null && snapshot.intake.policy_type !== "motor") {
+    return { ok: false, reason: "untrained_or_unverified",
+      error: "This Intake belongs to an untrained policy category. n8n has retrieved the private PDF, but a policy-type-specific parser is required before its fields can be accepted. No Google OCR fallback or booking was performed." };
+  }
   const current = await currentSnapshot(id);
   if (!current || current.document.id !== snapshot.document.id
       || current.intake.storage_path !== snapshot.intake.storage_path
