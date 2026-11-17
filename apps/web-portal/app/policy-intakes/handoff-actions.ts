@@ -11,7 +11,7 @@ import { requirePolicyCreator } from "@/lib/policy-access-server";
 import { isN8nWorkbenchPrimary, previewSemiAutoN8nExtraction } from "@/lib/policy-intake-semi-auto-n8n";
 import type { N8nVerifiedPremiumBreakdown } from "@/lib/policy-intake-n8n-validation";
 import { mapVerifiedN8nMotorPremium } from "@/lib/policy-n8n-onboarding-premium";
-import { filterVerifiedN8nOnboardingFields } from "@/lib/policy-n8n-onboarding-fields";
+import { enrichVerifiedN8nOnboardingFields } from "@/lib/policy-n8n-onboarding-enrichment";
 
 export type PolicyIntakeDraft = {
   registrationMode:"registered"|"unregistered";
@@ -34,6 +34,13 @@ type ManufacturerId={id:string};
 type BrandOption={manufacturer_id:string;brand_name:string};
 type InsurerOption={id:string;name:string};
 type CustomerOption=PolicyIntakeCustomerIdentityCandidate;
+async function resolveMasterIntakeIdentity(admin:ReturnType<typeof createSupabaseAdminClient>,customerId:string|null,phone:string){
+  if(!customerId||!phone)return null;
+  const {data,error}=await admin.from("customers").select("id,phone,contact_name,company_name").eq("id",customerId).maybeSingle<{id:string;phone:string;contact_name:string;company_name:string|null}>();
+  if(error||!data||data.phone!==phone)return null;
+  const name=(data.company_name||data.contact_name||"").trim();
+  return name?{id:data.id,name}:null;
+}
 async function resolveConfirmedIntakeCustomerId(admin:ReturnType<typeof createSupabaseAdminClient>,phone:string,insuredName:string){
   if(!phone.trim()||!insuredName.trim())return null;
   const{data,error}=await admin.from("customers").select("id,contact_name,company_name").eq("phone",phone).limit(20).returns<CustomerOption[]>();
@@ -64,6 +71,7 @@ type IntakeForHandoff={
 type VerifiedN8nHandoff = {
   documentId:string; fields:PolicyIntakeOcrField[];
   premium:N8nVerifiedPremiumBreakdown;
+  fillEmptyFields?:boolean;
 };
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -73,7 +81,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-
  * No policy is booked; this is a deliberate, auditable reviewer handoff.
  */
 export async function prepareVerifiedN8nIntakeHandoff(
-  id:string, expectedDocumentId:string, expectedFingerprint:string, takeOver=false,
+  id:string, expectedDocumentId:string, expectedFingerprint:string, takeOver=false, fillEmptyFields=false,
 ):Promise<PolicyIntakeHandoffResult> {
   if (!isN8nWorkbenchPrimary() || !UUID.test(id) || !UUID.test(expectedDocumentId)
       || !/^[a-f0-9]{64}$/i.test(expectedFingerprint)) {
@@ -97,7 +105,7 @@ export async function prepareVerifiedN8nIntakeHandoff(
     return{ok:false,error:"n8n validation warnings must be resolved before creating an onboarding draft."};
   }
   return preparePolicyIntakeHandoffInternal(id,takeOver===true,{
-    documentId:expectedDocumentId,fields:parsed.preview.fields,premium:parsed.preview.premium,
+    documentId:expectedDocumentId,fields:parsed.preview.fields,premium:parsed.preview.premium,fillEmptyFields,
   });
 }
 
@@ -170,7 +178,7 @@ async function preparePolicyIntakeHandoffInternal(
   }
 
   const {data:existingDraft}=await admin.from("policy_intake_onboarding_drafts").select("draft_payload,revision").eq("intake_id",id).maybeSingle<{draft_payload:PolicyIntakeDraft;revision:number}>();
-  if(existingDraft?.draft_payload){
+  if(existingDraft?.draft_payload && !(verified?.fillEmptyFields)){
     // A pre-existing operator draft must NEVER be overwritten by n8n.
     const identityName=verified
       ? existingDraft.draft_payload.insuredName // Manual saved identity only; never fall back to OCR for n8n handoff.
@@ -193,12 +201,13 @@ async function preparePolicyIntakeHandoffInternal(
     mode:"create",
     registrationMode:"registered",
     current:{registrationNo:"",vehicleClass:"",make:"",model:"",fuelType:"",manufacturingYear:"",capacity:"",chassisNo:"",engineNo:"",rtoState:"",rtoName:"",policyProduct:"",idv:"",od:"",tp:"",cpa:"",policyNo:"",insurerId:"",validFrom:"",validUpto:""},
-    fields:verified?filterVerifiedN8nOnboardingFields(verified.fields):(intake.ocr_fields??[]),
+    fields:verified?enrichVerifiedN8nOnboardingFields(verified.fields,manufacturerOptions):(intake.ocr_fields??[]),
     manufacturers:manufacturerOptions,insurers,rcVerified:false,
   });
   // The document-derived insured_name is checked by n8n but may not be
   // proposed as onboarding identity. Request manual/approved master identity.
-  const customerName=verified?"":mapped.next.insuredName?.trim()||"";
+  const masterIdentity=verified?await resolveMasterIntakeIdentity(admin,intake.matched_customer_id,intake.customer_mobile):null;
+  const customerName=verified?(masterIdentity?.name??""):(mapped.next.insuredName?.trim()||"");
   // Canonical form computes net = Basic OD + add-ons + TP + CPA. The n8n
   // "od_premium" OCR field is *Total OD*, so never copy it directly into
   // the form's Basic OD field and then add add-ons again.
@@ -206,7 +215,7 @@ async function preparePolicyIntakeHandoffInternal(
   const addOnTotal=verifiedPremium?Number(verifiedPremium.addOnPremium):0;
   const tpStart=verified?.fields.find(field=>field.key==="third_party_start_date")?.value??"";
   const tpExpiry=verified?.fields.find(field=>field.key==="third_party_end_date")?.value??"";
-  const matchedCustomerId=await resolveConfirmedIntakeCustomerId(admin,intake.customer_mobile,customerName);
+  const matchedCustomerId=masterIdentity?.id??await resolveConfirmedIntakeCustomerId(admin,intake.customer_mobile,customerName);
   const intermediaryType=intake.lead_source_type==="posp"?"POSP":intake.lead_source_type==="misp"?"MISP":"SIBL / Partner";
   const draft:PolicyIntakeDraft={
     registrationMode:mapped.registrationMode,
@@ -228,6 +237,30 @@ Third Party period: ${tpStart||"unavailable"} to ${tpExpiry||"unavailable"}. Ver
   // Preserve the long-standing generic OCR default. A positive owner-driver
   // CPA is opted-in only for a separately validated n8n premium breakdown.
   if(verifiedPremium)draft.cpaOpted=verifiedPremium.cpaOpted;
+  if(existingDraft?.draft_payload){
+    // Operator explicitly requested reapplying only missing verified fields.
+    // Never replace a nonempty saved value; use optimistic revision control.
+    const original=existingDraft.draft_payload;
+    const supplemented={...original};
+    const fillable:(keyof PolicyIntakeDraft)[]=[
+      "insuredName","vehicleClass","make","model","fuelType","capacity",
+      "rtoState","rtoName","policyProduct","manufacturingYear",
+    ];
+    let changed=false;
+    for(const key of fillable){
+      if(!String(original[key]??"").trim()&&String(draft[key]??"").trim()){
+        (supplemented as unknown as Record<string,unknown>)[key]=draft[key];
+        changed=true;
+      }
+    }
+    if(!changed)return{ok:true,draft:original,draftRevision:existingDraft.revision,matchedCustomerId:await resolveConfirmedIntakeCustomerId(admin,intake.customer_mobile,original.insuredName)||matchedCustomerId,existingDraft:true};
+    const {data:updated,error:updateError}=await admin.from("policy_intake_onboarding_drafts")
+      .update({draft_payload:supplemented,revision:existingDraft.revision+1,updated_by_profile_id:reviewer.id,updated_at:new Date().toISOString()})
+      .eq("intake_id",id).eq("revision",existingDraft.revision)
+      .select("revision").maybeSingle<{revision:number}>();
+    if(updateError||!updated)return{ok:false,error:"The saved draft changed while you were applying verified blank fields. Reload and review before retrying."};
+    return{ok:true,draft:supplemented,draftRevision:updated.revision,matchedCustomerId:await resolveConfirmedIntakeCustomerId(admin,intake.customer_mobile,supplemented.insuredName)||matchedCustomerId,existingDraft:true};
+  }
   const {data:storedDraft,error:draftError}=await admin.from("policy_intake_onboarding_drafts").insert({intake_id:id,draft_payload:draft,revision:1,updated_by_profile_id:reviewer.id}).select("revision").single<{revision:number}>();
   if(draftError||!storedDraft)return{ok:false,error:"Policy Onboarding draft could not be prepared. Refresh and try again."};
   return{ok:true,draft,draftRevision:storedDraft.revision,matchedCustomerId,existingDraft:false};
