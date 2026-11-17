@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation";
 import { DailySelfActivityPanel } from "@/components/reports/daily-self-activity-panel";
 import { loadDailyReportEmployeeDirectory, assertDailyReportEmployeeAllowed } from "@/lib/reports/daily-employee-directory";
 import { loadSelfActivityHistory } from "@/lib/reports/daily-self-activity";
@@ -17,16 +16,9 @@ export default async function DailyReportPage({ searchParams }: Props) {
   const profile = await requireDailyReportEmployee();
   const query = await searchParams;
   const canViewAll = await canViewDailyReportAll(profile);
-  // The old unselected All directory no longer exists, including bookmarked URLs.
-  if (query.scope === "all" && !query.person) {
-    const params = new URLSearchParams({scope:"self",page:"1"});
-    if(query.period)params.set("period",query.period);
-    if(query.date)params.set("date",query.date);
-    if(query.from)params.set("from",query.from);
-    if(query.to)params.set("to",query.to);
-    redirect(`/reports/daily?${params.toString()}`);
-  }
-  // Self-only employees cannot load another person's history or directory.
+  // All is a permission-scoped combined activity view, not an unrestricted directory.
+  // Every eligible actor is validated against the same employee directory used by
+  // the individual-person picker; inactive / unrelated profiles are excluded.
   const isSelf = query.scope !== "all" || !canViewAll;
   const periodRange = resolveDailyReportPeriod(query);
   let selfHistory: Awaited<ReturnType<typeof loadSelfActivityHistory>> | null = null;
@@ -43,14 +35,15 @@ export default async function DailyReportPage({ searchParams }: Props) {
       });
     } else {
       employeeDirectory = await loadDailyReportEmployeeDirectory(profile);
-      if (chosenPerson) {
-        assertDailyReportEmployeeAllowed(chosenPerson, employeeDirectory);
-        selfHistory = await loadSelfActivityHistory(chosenPerson, {
-          day: query.period === "day" ? query.date : undefined,
-          from: periodRange.from, to: periodRange.to,
-          category: query.activity, page:query.page,
-        });
-      }
+      if (chosenPerson) assertDailyReportEmployeeAllowed(chosenPerson, employeeDirectory);
+      selfHistory = await loadSelfActivityHistory(chosenPerson || profile.id, {
+        day: query.period === "day" ? query.date : undefined,
+        from: periodRange.from, to: periodRange.to,
+        category: query.activity, page:query.page,
+        ...(chosenPerson ? {} : {
+          authorizedActorIds:[profile.id,...employeeDirectory.people.map(person=>person.id)],
+        }),
+      });
     }
   } catch (caught) {
     console.error("[daily-report] read-only report load failed", caught instanceof Error ? caught.message : "Unknown error");
@@ -68,7 +61,7 @@ export default async function DailyReportPage({ searchParams }: Props) {
       scope: filters.scope, type: filters.type, date: filters.date,
       period: periodRange.period,
       ...(periodRange.period === "custom" ? {from:periodRange.from ?? "",to:periodRange.to ?? ""} : {}),
-      ...(isSelf || chosenPerson ? {activity:query.activity??""} : {}),
+      {activity:query.activity??""},
       ...(chosenPerson ? {person:chosenPerson} : {}),
       ...(filters.scope === "all" && filters.employee ? {employee:filters.employee} : {}),
       ...updates,
@@ -77,9 +70,9 @@ export default async function DailyReportPage({ searchParams }: Props) {
   };
   return (
     <div className="daily-report-reference space-y-3">
-      {(isSelf || chosenPerson) && selfHistory && !error ? (
+      {selfHistory && !error ? (
         <DailySelfActivityPanel data={selfHistory} linkFor={linkFor}
-          reportMode={isSelf ? "self" : "employee"} canViewAll={canViewAll}/>
+          reportMode={isSelf ? "self" : chosenPerson ? "employee" : "all"} canViewAll={canViewAll}/>
       ) : error ? (
         <section role="alert" className="rounded-xl border border-red-200 bg-white px-5 py-8 text-center text-[11px] font-semibold text-red-700">
           The authorized employee report could not be loaded. No records were changed.
