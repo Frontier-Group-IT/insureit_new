@@ -10,7 +10,7 @@ export type AiPolicyExceptionCode =
   | "unsupported_layout" | "document_missing" | "extraction_pending"
   | "extraction_failed" | "unverified_parser" | "duplicate_policy"
   | "reviewer_conflict" | "customer_identity" | "customer_ambiguous"
-  | "customer_duplicate" | "customer_master_unverified"
+  | "customer_duplicate" | "customer_master_unverified" | "customer_creation_required"
   | "vehicle_ownership" | "missing_field" | "manufacturer_unmatched"
   | "financial_reconciliation" | "issuance_date_unverified" | "date_approval"
   | "bundled_validity" | "coverage_conflict" | "draft_conflict"
@@ -110,6 +110,7 @@ export function assessAiPolicyIntake(input: AiPolicyEvidence): AiAssessment {
     add("customer_identity", "Same mobile used for different insured names", "customer_decision");
   }
   if (input.customerMatch === "unverified") add("customer_master_unverified", "Customer master identity not yet checked", "customer_decision");
+  if (input.customerMatch === "none") add("customer_creation_required", "No matching customer: explicit create-new decision required", "customer_decision");
   if (input.customerMatch === "none" && input.existingCustomerSameIdentity) {
     add("customer_duplicate", "Existing same-identity customer needs confirmation", "customer_decision");
   }
