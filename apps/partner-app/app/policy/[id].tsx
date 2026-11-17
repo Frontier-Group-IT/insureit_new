@@ -115,7 +115,7 @@ export default function PolicyDetailScreen() {
 
           <View style={styles.externalSection}>
             <View style={styles.externalSectionHeading}><CardHeader title="Customer & Vehicle Details" /></View>
-            <Card>
+            <Card highlighted>
               <Pressable
                 accessibilityRole={data.customer.id ? "button" : undefined}
                 disabled={!data.customer.id}
@@ -203,9 +203,9 @@ export default function PolicyDetailScreen() {
   );
 }
 
-function Card({ children, onPress, accessibilityLabel }: { children: ReactNode; onPress?: () => void; accessibilityLabel?: string }) {
-  if (onPress) return <Pressable accessibilityRole="button" accessibilityLabel={accessibilityLabel} onPress={onPress} style={({ pressed }) => [styles.card, pressed && styles.pressed]}>{children}</Pressable>;
-  return <View style={styles.card}>{children}</View>;
+function Card({ children, onPress, accessibilityLabel, highlighted = false }: { children: ReactNode; onPress?: () => void; accessibilityLabel?: string; highlighted?: boolean }) {
+  if (onPress) return <Pressable accessibilityRole="button" accessibilityLabel={accessibilityLabel} onPress={onPress} style={({ pressed }) => [styles.card, highlighted && styles.customerVehicleBorder, pressed && styles.pressed]}>{children}</Pressable>;
+  return <View style={[styles.card, highlighted && styles.customerVehicleBorder]}>{children}</View>;
 }
 
 function CardHeader({ iconKind, title, actionLabel, onAction }: { iconKind?: PartnerPolicyDetailIconKind; title: string; actionLabel?: string; onAction?: () => void }) {
@@ -362,6 +362,7 @@ const styles = StyleSheet.create({
   externalSection: { gap: 5 },
   externalSectionHeading: { marginLeft: -6, paddingLeft: 0, paddingRight: 2 },
   card: { overflow: 'hidden', borderRadius: 13, borderWidth: StyleSheet.hairlineWidth, borderColor: '#E2E8F1', backgroundColor: '#FFFFFF' },
+  customerVehicleBorder: { borderColor: '#3993F5', borderWidth: 1 },
   cardHeader: { minHeight: 37, paddingHorizontal: 11, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   cardHeaderCompact: { minHeight: 30 },
   cardHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 7 }, cardTitle: { color: '#102A51', fontSize: 12.5, lineHeight: 16, fontWeight: '800' },
