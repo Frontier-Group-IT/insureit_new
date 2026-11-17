@@ -2,6 +2,13 @@
 
 **Updated 14 Nov 2026 IST. Status: PREPARED, NOT EXECUTED.** Primary operator request: actually restore the SQL schema and data from encrypted R2 v2 into **only** the isolated managed Supabase project. File-byte trial limited to 500,000,000 bytes total, maximum 50,000,000 bytes per file. Never switch production apps or mutate production.
 
+## 17 Nov 2026 — R4 strict TOC parser incompatibility, no import performed
+
+- **Authenticated current snapshot:** `20261117T041507Z`. [R0/R1 preflight #44022681111](https://github.com/Frontier-Group-IT/insureit_new/actions/runs/44022681111) and [R3 offline full replay #44023136022](https://github.com/Frontier-Group-IT/insureit_new/actions/runs/44023136022) both passed this same exact snapshot; R3 verified 233/233 archived COPY tables with zero row-count differences, strict data/ACL replay with two placeholder offline roles.
+- [Manual protected R4 dry-run #44023706486](https://github.com/Frontier-Group-IT/insureit_new/actions/runs/44023706486) fetched/authenticated the archive and successfully checked isolated project CA TLS, target URL and empty target. It stopped **before planning or any import** at `prepare_managed_sql_restore_list.py` with a redacted `ValueError`; no target SQL writes occurred.
+- Source inspection identified a definite PostgreSQL 17 TOC parser incompatibility: `pg_dump` always emits special `ENCODING`, `STDSTRINGS`, and `SEARCHPATH` records before other TOC objects; the old R4 selector rejects unrecognized record types. Public PostgreSQL source: https://doxygen.postgresql.org/pg__dump_8c.html and sample 17 `pg_restore --list` output. Private raw TOC was intentionally not exposed in logs. The new parser explicitly recognizes these known PostgreSQL metadata types (plus other documented, **deferred** PG17 descriptors), does not add them to selected application SQL, and continues to reject unknown types and schemas. Regression fixtures reproduce the PG17 header and prove no new managed objects are selected.
+- **Safety:** this is a parser-only workflow code PR; no bypass of the snapshot lock, target allowlist, CA verification, pristine destination requirement, partial Auth/Storage restrictions, `execute_target_import=false` default, or GitHub protected environment. The next review gate after PR CI/merge is **manual R4 DRY RUN again** against the same snapshot if still latest, or a new R1/R3 matched pair after pointer drift. Never check `execute_target_import` until a successful dry-run is reviewed and target changes separately approved.
+
 ## 16 Nov 2026 update — exact matched snapshot R1 + R3 passed; R4 remains DRY-RUN FIRST
 
 **Evidence observed in authenticated GitHub Actions logs, not inferred from screenshots:**
