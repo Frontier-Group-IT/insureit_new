@@ -11,6 +11,7 @@ const partner = read('app/partner-new.tsx');
 const cases = read('app/life-health-cases/index.tsx');
 const detail = read('app/life-health-cases/[id].tsx');
 const customerDetail = read('app/customer/[id].tsx');
+const contactActions = read('components/ui/partner-contact-actions.tsx');
 
 for (const title of ['Home', 'Business', 'Policies', 'Claims', 'More']) {
   assert.match(tabs, new RegExp(`title: '${title}'`), `Existing Home navigator has ${title}`);
@@ -40,6 +41,13 @@ assert.match(cases, /bottomNavigation=\{<PartnerCaseBottomNavigation\/>\}/, 'Exi
 assert.match(detail, /bottomNavigation=\{<PartnerCaseBottomNavigation\/>\}/, 'Existing Case Details navigation preserved');
 assert.match(customerDetail, /bottomNavigation=\{<PartnerStackBottomNavigation activeTab="business" \/>\}/, 'Customer Details has five shared Home tabs with Business active');
 assert.match(customerDetail, /bottomNavigationNavy/, 'Customer Details footer safe area remains navy on Android and iOS');
+assert.match(customerDetail, /avatar: \{ width: 64, height: 64, borderRadius: 32/, 'Customer avatar is enlarged to 64px while staying circular');
+assert.match(customerDetail, /avatarText: \{ color: '#6B28CE', fontSize: 24/, 'Customer initials scale with avatar');
+assert.match(customerDetail, /<PartnerContactActions[^>]*inlineLabeled customerDetailLayout/, 'Customer Details uses dedicated contact layout');
+assert.match(contactActions, /customerDetailRow: \{ width: '100%', justifyContent: 'flex-start'/, 'Call starts at customer name left edge');
+assert.match(contactActions, /customerDetailAction: \{ flex: 0, flexShrink: 0, width: 'auto'/, 'Customer contact controls do not fill or spread across profile');
+assert.match(contactActions, /customerDetailLayout && styles\.customerDetailAction/, 'Other contact action layouts remain unaffected');
+
 assert.match(customerDetail, /\['overview', 'person-outline', 'Overview'\]/, 'Existing Overview detail tab is preserved');
 assert.match(customerDetail, /\['vehicles', 'car-sport-outline', 'Vehicles'\]/, 'Existing Vehicles detail tab is preserved');
 assert.match(customerDetail, /\['policies', 'shield-checkmark-outline', 'Policies'\]/, 'Existing Policies detail tab is preserved');
