@@ -230,9 +230,14 @@ function CardHeader({ iconKind, title, actionLabel, onAction }: { iconKind: Part
 function QuickAction({ iconKind, label, onPress }: {
   iconKind: PartnerPolicyDetailIconKind; label: string; onPress: () => void;
 }) {
-  const iconName = iconKind === 'policy-document' ? 'document-text'
-    : iconKind === 'renew-policy' ? 'sync'
-    : iconKind === 'raise-claim' ? 'shield-checkmark' : 'people';
+  // Glossy 3D assets consistent with Policies quick actions.
+  const illustration = iconKind === 'policy-document'
+    ? require('../../assets/partner/quick-actions/policy-document.png')
+    : iconKind === 'renew-policy'
+      ? require('../../assets/partner/quick-actions/renew-policy.png')
+      : iconKind === 'raise-claim'
+        ? require('../../assets/partner/quick-actions/raise-claim.png')
+        : require('../../assets/partner/quick-actions/customer-details.png');
   return (
     <Pressable
       accessibilityRole="button"
@@ -241,7 +246,7 @@ function QuickAction({ iconKind, label, onPress }: {
       style={({ pressed }) => [styles.quickAction, pressed && styles.pressed]}
     >
       <View style={styles.quickActionIcon}>
-        <Ionicons name={iconName} size={32} color="#0879E9" />
+        <Image source={illustration} style={styles.quickActionArtwork} resizeMode="contain" accessibilityIgnoresInvertColors />
       </View>
       <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={styles.quickLabel}>{label}</Text>
     </Pressable>
@@ -308,7 +313,8 @@ const styles = StyleSheet.create({
     flex: 1, minWidth: 0, minHeight: 74, alignItems: 'center', justifyContent: 'center',
     paddingHorizontal: 2, paddingVertical: 6, gap: 4, backgroundColor: 'transparent',
   },
-  quickActionIcon: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center' },
+  quickActionIcon: { width: 54, height: 54, alignItems: 'center', justifyContent: 'center' },
+  quickActionArtwork: { width: 54, height: 54 },
   quickLabel: {
     color: '#102D55', textAlign: 'center', fontSize: 9.25, lineHeight: 12,
     fontWeight: '800', width: '100%', includeFontPadding: false,
