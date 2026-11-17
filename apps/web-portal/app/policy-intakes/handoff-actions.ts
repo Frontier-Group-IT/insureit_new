@@ -12,6 +12,7 @@ import { isN8nWorkbenchPrimary, previewSemiAutoN8nExtraction } from "@/lib/polic
 import type { N8nVerifiedPremiumBreakdown } from "@/lib/policy-intake-n8n-validation";
 import { mapVerifiedN8nMotorPremium } from "@/lib/policy-n8n-onboarding-premium";
 import { enrichVerifiedN8nOnboardingFields } from "@/lib/policy-n8n-onboarding-enrichment";
+import { sameInsuredIdentity, selectVerifiedN8nInsuredDraftIdentity } from "@/lib/policy-n8n-onboarding-insured";
 
 export type PolicyIntakeDraft = {
   registrationMode:"registered"|"unregistered";
@@ -181,9 +182,13 @@ async function preparePolicyIntakeHandoffInternal(
   if(existingDraft?.draft_payload && !(verified?.fillEmptyFields)){
     // A pre-existing operator draft must NEVER be overwritten by n8n.
     const identityName=verified
-      ? existingDraft.draft_payload.insuredName // Manual saved identity only; never fall back to OCR for n8n handoff.
+      ? existingDraft.draft_payload.insuredName
       : existingDraft.draft_payload.insuredName||ocrInsuredName(intake.ocr_fields??[]);
-    const matchedCustomerId=await resolveConfirmedIntakeCustomerId(admin,intake.customer_mobile,identityName);
+    const approvedMaster=verified
+      ? await resolveMasterIntakeIdentity(admin,intake.matched_customer_id,intake.customer_mobile) : null;
+    const matchedCustomerId=verified
+      ? approvedMaster&&sameInsuredIdentity(approvedMaster.name,identityName)?approvedMaster.id:null
+      : await resolveConfirmedIntakeCustomerId(admin,intake.customer_mobile,identityName);
     return{ok:true,draft:existingDraft.draft_payload,draftRevision:existingDraft.revision,matchedCustomerId,existingDraft:true};
   }
 
@@ -204,10 +209,11 @@ async function preparePolicyIntakeHandoffInternal(
     fields:verified?enrichVerifiedN8nOnboardingFields(verified.fields):(intake.ocr_fields??[]),
     manufacturers:manufacturerOptions,insurers,rcVerified:false,
   });
-  // The document-derived insured_name is checked by n8n but may not be
-  // proposed as onboarding identity. Request manual/approved master identity.
+  // Only the server-verified ICICI 3005 current-PDF name is offered as an
+  // editable, review-required draft value. It NEVER auto-links a customer.
   const masterIdentity=verified?await resolveMasterIntakeIdentity(admin,intake.matched_customer_id,intake.customer_mobile):null;
-  const customerName=verified?(masterIdentity?.name??""):(mapped.next.insuredName?.trim()||"");
+  const verifiedIdentity=verified?selectVerifiedN8nInsuredDraftIdentity(verified.fields,masterIdentity):null;
+  const customerName=verifiedIdentity?.name??(mapped.next.insuredName?.trim()||"");
   // Canonical form computes net = Basic OD + add-ons + TP + CPA. The n8n
   // "od_premium" OCR field is *Total OD*, so never copy it directly into
   // the form's Basic OD field and then add add-ons again.
@@ -215,7 +221,9 @@ async function preparePolicyIntakeHandoffInternal(
   const addOnTotal=verifiedPremium?Number(verifiedPremium.addOnPremium):0;
   const tpStart=verified?.fields.find(field=>field.key==="third_party_start_date")?.value??"";
   const tpExpiry=verified?.fields.find(field=>field.key==="third_party_end_date")?.value??"";
-  const matchedCustomerId=masterIdentity?.id??await resolveConfirmedIntakeCustomerId(admin,intake.customer_mobile,customerName);
+  const matchedCustomerId=verified
+    ? (verifiedIdentity?.matchedCustomerId??null)
+    : await resolveConfirmedIntakeCustomerId(admin,intake.customer_mobile,customerName);
   const intermediaryType=intake.lead_source_type==="posp"?"POSP":intake.lead_source_type==="misp"?"MISP":"SIBL / Partner";
   const draft:PolicyIntakeDraft={
     registrationMode:mapped.registrationMode,
@@ -253,13 +261,21 @@ Third Party period: ${tpStart||"unavailable"} to ${tpExpiry||"unavailable"}. Ver
         changed=true;
       }
     }
-    if(!changed)return{ok:true,draft:original,draftRevision:existingDraft.revision,matchedCustomerId:await resolveConfirmedIntakeCustomerId(admin,intake.customer_mobile,original.insuredName)||matchedCustomerId,existingDraft:true};
+    if(!changed)return{ok:true,draft:original,draftRevision:existingDraft.revision,
+      matchedCustomerId:verified
+        ? masterIdentity&&sameInsuredIdentity(masterIdentity.name,original.insuredName)?masterIdentity.id:null
+        : await resolveConfirmedIntakeCustomerId(admin,intake.customer_mobile,original.insuredName),
+      existingDraft:true};
     const {data:updated,error:updateError}=await admin.from("policy_intake_onboarding_drafts")
       .update({draft_payload:supplemented,revision:existingDraft.revision+1,updated_by_profile_id:reviewer.id,updated_at:new Date().toISOString()})
       .eq("intake_id",id).eq("revision",existingDraft.revision)
       .select("revision").maybeSingle<{revision:number}>();
     if(updateError||!updated)return{ok:false,error:"The saved draft changed while you were applying verified blank fields. Reload and review before retrying."};
-    return{ok:true,draft:supplemented,draftRevision:updated.revision,matchedCustomerId:await resolveConfirmedIntakeCustomerId(admin,intake.customer_mobile,supplemented.insuredName)||matchedCustomerId,existingDraft:true};
+    return{ok:true,draft:supplemented,draftRevision:updated.revision,
+      matchedCustomerId:verified
+        ? masterIdentity&&sameInsuredIdentity(masterIdentity.name,supplemented.insuredName)?masterIdentity.id:null
+        : await resolveConfirmedIntakeCustomerId(admin,intake.customer_mobile,supplemented.insuredName),
+      existingDraft:true};
   }
   const {data:storedDraft,error:draftError}=await admin.from("policy_intake_onboarding_drafts").insert({intake_id:id,draft_payload:draft,revision:1,updated_by_profile_id:reviewer.id}).select("revision").single<{revision:number}>();
   if(draftError||!storedDraft)return{ok:false,error:"Policy Onboarding draft could not be prepared. Refresh and try again."};
@@ -275,10 +291,16 @@ export async function loadPolicyIntakeOnboardingDraft(id:string):Promise<PolicyI
   if(duplicateCheck.matches.has(id))return{ok:false,error:"This policy intake is a duplicate and cannot continue in Policy Onboarding."};
   const {data,error}=await admin.from("policy_intake_onboarding_drafts").select("draft_payload,revision").eq("intake_id",id).maybeSingle<{draft_payload:PolicyIntakeDraft;revision:number}>();
   if(error||!data?.draft_payload)return{ok:false,error:"The saved Policy Onboarding draft is unavailable. Return to the intake and start review again."};
-  const identityName=data.draft_payload.remarks?.includes("n8n validated ICICI 3005")
-  ? data.draft_payload.insuredName
-  : ocrInsuredName(intake.ocr_fields??[])||data.draft_payload.insuredName;
-  const matchedCustomerId=await resolveConfirmedIntakeCustomerId(admin,intake.customer_mobile,identityName);return{ok:true,draft:data.draft_payload,draftRevision:data.revision,matchedCustomerId};
+  const verifiedDraft=data.draft_payload.remarks?.includes("n8n validated ICICI 3005")===true;
+  const identityName=verifiedDraft
+    ? data.draft_payload.insuredName
+    : ocrInsuredName(intake.ocr_fields??[])||data.draft_payload.insuredName;
+  const masterIdentity=verifiedDraft
+    ? await resolveMasterIntakeIdentity(admin,intake.matched_customer_id,intake.customer_mobile) : null;
+  const matchedCustomerId=verifiedDraft
+    ? masterIdentity&&sameInsuredIdentity(masterIdentity.name,identityName)?masterIdentity.id:null
+    : await resolveConfirmedIntakeCustomerId(admin,intake.customer_mobile,identityName);
+  return{ok:true,draft:data.draft_payload,draftRevision:data.revision,matchedCustomerId};
 }
 
 export async function savePolicyIntakeOnboardingDraft(id:string,expectedRevision:number,draft:PolicyIntakeDraft):Promise<PolicyIntakeDraftSaveResult>{
