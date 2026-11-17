@@ -199,6 +199,7 @@ export default function NativePolicyOnboarding(){
   const [dialog,setDialog]=useState<'discard'|'error'|null>(null);
   const [pendingTab,setPendingTab]=useState<PartnerTabDestination|null>(null);
   const [dialogMessage,setDialogMessage]=useState('');
+  const [caseCreated,setCaseCreated]=useState<{type:'Life'|'Health';number:string}|null>(null);
   useEffect(()=>{
     if(error&&draft){setDialogMessage(error);setDialog('error');}
   },[error,draft]);
@@ -508,9 +509,7 @@ export default function NativePolicyOnboarding(){
       const result=isNew?
         await createNewNativeLifeHealthCase(draft,standaloneLifeDocuments):
         await createNativeLifeHealthCase(id,revision);
-      Alert.alert('Case created',`${productType} case ${result.case.number} created. Policy issuance remains pending in Operations.`,[
-        {text:isNew?'Return to Policies':'Return to Intake',onPress:()=>isNew?router.replace('/(tabs)/policies'):router.back()},
-      ]);
+      setCaseCreated({type:productType,number:result.case.number});
     }catch(cause){
       setError(cause instanceof Error?cause.message:'Could not create the Life/Health case. Check the case register before retrying.');
     }finally{setCreatingLifeHealth(false);}
@@ -1133,6 +1132,27 @@ export default function NativePolicyOnboarding(){
 
     </>:null}
 
+    <Modal transparent visible={Boolean(caseCreated)} animationType="fade"
+      onRequestClose={()=>{ /* Case creation succeeded: require an explicit return action. */ }}>
+      <View style={styles.feedbackOverlay}>
+        <View style={styles.feedbackCard}>
+          <View style={[styles.feedbackIcon,styles.feedbackIconSuccess]}>
+            <Ionicons name="checkmark-circle-outline" size={30} color="#168552"/>
+          </View>
+          <Text style={styles.feedbackTitle}>Case Created</Text>
+          <Text style={styles.feedbackMessage} selectable>
+            {caseCreated? `${caseCreated.type} case ${caseCreated.number} created. Policy issuance remains pending in Operations.` : ''}
+          </Text>
+          <Pressable accessibilityRole="button"
+            accessibilityLabel={isNew?'Return to Policies':'Return to Intake'}
+            style={styles.feedbackFullButton}
+            onPress={()=>{setCaseCreated(null);if(isNew)router.replace('/(tabs)/policies');else router.back();}}>
+            <Text style={styles.feedbackPrimaryText}>{isNew?'Return to Policies':'Return to Intake'}</Text>
+          </Pressable>
+        </View>
+      </View>
+    </Modal>
+
     <Modal transparent visible={Boolean(dialog)} animationType="fade"
       onRequestClose={dismissDialog}>
       <View style={styles.feedbackOverlay}>
@@ -1558,7 +1578,7 @@ const styles=StyleSheet.create({
   feedbackCard:{backgroundColor:'#FFFFFF',borderRadius:20,paddingTop:28,paddingHorizontal:18,paddingBottom:20,alignItems:'center',shadowColor:'#071E43',shadowOpacity:0.2,shadowRadius:16,elevation:8},
   feedbackClose:{position:'absolute',top:12,right:12,zIndex:1,padding:5},
   feedbackIcon:{width:60,height:60,borderRadius:30,alignItems:'center',justifyContent:'center',marginBottom:13},
-  feedbackIconWarning:{backgroundColor:'#FFF3DD'},feedbackIconError:{backgroundColor:'#FDEBEC'},
+  feedbackIconWarning:{backgroundColor:'#FFF3DD'},feedbackIconError:{backgroundColor:'#FDEBEC'},feedbackIconSuccess:{backgroundColor:'#E5F8EF'},
   feedbackTitle:{fontSize:18,fontWeight:'800',color:'#0C2345',textAlign:'center',marginBottom:9},
   feedbackMessage:{fontSize:13,lineHeight:19,color:'#354A68',textAlign:'center',marginBottom:22},
   feedbackActions:{width:'100%',flexDirection:'row',gap:9},
