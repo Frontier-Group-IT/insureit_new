@@ -157,7 +157,7 @@ const styles=StyleSheet.create({
  modalIntro:{flexDirection:'row',alignItems:'flex-start',gap:12},
  modalCheck:{width:40,height:40,borderRadius:20,backgroundColor:'#EAF7F2',alignItems:'center',justifyContent:'center'},
  modalCopy:{flex:1},
- modalTitle:{fontSize:15,fontWeight:'700',color:'#17365D'},
+ modalTitle:{fontSize:15,fontWeight:'700',color:'#000000'},
  modalDescription:{marginTop:7,fontSize:11,lineHeight:19,color:'#667085'},
  modalActions:{marginTop:20,borderTopWidth:1,borderColor:'#E8EDF3',paddingTop:14,flexDirection:'row',justifyContent:'flex-end',gap:9},
  modalClose:{borderWidth:1,borderColor:'#CAD7E7',borderRadius:9,paddingHorizontal:16,paddingVertical:11,justifyContent:'center'},
@@ -174,7 +174,7 @@ const styles=StyleSheet.create({
  filterTextSelected:{color:'#FFF'},
  list:{gap:7,paddingBottom:20},
  listHeading:{marginTop:8,marginBottom:3},
- listTitle:{fontSize:12,fontWeight:'800',color:'#142B4E'},
+ listTitle:{fontSize:12,fontWeight:'800',color:'#000000'},
  caseRows:{gap:3},
  // Match the Policies tab's compact record geometry while preserving case-specific data.
  caseRow:{minHeight:54,flexDirection:'row',alignItems:'center',gap:7,backgroundColor:'#FFF',borderColor:'#E2E9F3',borderWidth:1,borderRadius:8,paddingHorizontal:8,paddingVertical:4},

@@ -103,7 +103,7 @@ assert.match(engine,/consumePolicyDateApproval/);
 assert.match(engine,/policy_no_normalized/);
 assert.match(engine,/final_policy_id",null/);
 assert.ok(app.includes("const darkLabel=['insurerId','productName','proposalNumber','paymentFrequency','premiumPayingTerm','policyDuration','premiumAmount','paymentMode'].includes(key)"), 'Section 03 and 04 labels use scoped high contrast');
-assert.ok(app.includes("fieldLabel:{fontSize:9,color:'#66758B'"), 'Other section field labels retain their styling');
+assert.ok(app.includes("fieldLabel:{fontSize:9,color:'#000000'"), 'All Case Register field headings use black text');
 assert.ok(app.includes("darkFieldLabel:{color:'#000000'}"), 'Scoped Life/Health headings use black text');
 assert.ok(app.includes('darkLabel={darkLabel}'), 'Read-only Case Details fields retain high contrast in Sections 03 and 04');
 assert.ok(app.includes('<Field label="PPT end date" value="Not applicable · Single Pay" darkLabel/>'), 'PPT fallback keeps black heading');

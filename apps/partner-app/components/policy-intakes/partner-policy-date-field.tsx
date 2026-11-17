@@ -47,7 +47,7 @@ export function PartnerPolicyDateField({label,value,onChange,required=false,hide
   </View>;
 }
 const styles=StyleSheet.create({
-  field:{width:'48%',minWidth:0,gap:5},fullWidth:{width:'100%'},label:{fontSize:10,color:'#65758E',fontWeight:'700'},star:{color:'#B93333'},
+  field:{width:'48%',minWidth:0,gap:5},fullWidth:{width:'100%'},label:{fontSize:10,color:'#000000',fontWeight:'700'},star:{color:'#B93333'},
   row:{minHeight:42,borderWidth:1,borderColor:'#D8E1EC',borderRadius:9,paddingHorizontal:10,flexDirection:'row',alignItems:'center',justifyContent:'space-between',backgroundColor:'#FFFFFF',gap:5},
   value:{fontSize:12,color:'#183653',flex:1},placeholder:{color:'#97A5B7'},webInput:{flex:1,fontSize:12,color:'#183653',minHeight:38},
 });
