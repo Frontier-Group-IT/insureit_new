@@ -353,6 +353,17 @@ jobs:
           assert 'Never import stale Storage metadata' in selector
           assert 'excluded_preseeded_rls_helper' in selector
           assert 'managed_auth_trigger_deferred=1' in selector
+          assert 'def read_target_auth_foreign_keys():' in selector
+          assert 'def order_auth_copy_by_foreign_keys(' in selector
+          assert 'BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY' in selector
+          assert 'sslmode="verify-full"' in selector
+          assert 'auth_fk_edges=read_target_auth_foreign_keys()' in selector
+          assert 'R4 AUTH FK COPY ORDER VERIFIED:' in selector
+          assert 'Self-referential Auth FK' in selector
+          assert 'Auth FK dependency cycle' in selector
+          assert 'users_before_identities=1 no_fk_disable=1' in selector
+          assert 'VERBOSITY=sqlstate' in restore_script
+          assert 'redacted_sqlstate(private_log)' in restore_script
           print('R4 isolated managed SQL importer is manual, CA-verified and safely disabled by default')
           print('Managed recovery R0/R1 preflight isolated, manual-only and read-only')
           print('Daily encrypted V2 backup and protected manual restore workflow guards verified')
