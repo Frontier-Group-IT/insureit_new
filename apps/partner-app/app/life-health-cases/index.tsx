@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Feather, Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
@@ -108,8 +108,20 @@ export default function LifeHealthCaseRegisterScreen() {
              </View>
            </Pressable>)}
          </View>
-         {rows.length<total?<Pressable disabled={more} style={styles.more} onPress={()=>void load(rows.length)}>
-           {more?<ActivityIndicator color={navy}/>:<Text style={styles.moreText}>Load More ({rows.length} of {total})</Text>}
+         {rows.length<total?<Pressable
+           accessibilityRole="button"
+           accessibilityLabel={more?'Loading more cases':'Load More Cases'}
+           accessibilityState={{disabled:more,busy:more}}
+           disabled={more}
+           style={({pressed})=>[styles.more,more&&styles.moreLoading,pressed&&!more&&styles.morePressed]}
+           onPress={()=>void load(rows.length)}>
+           {more?<>
+             <ActivityIndicator size="small" color="#FFFFFF"/>
+             <Text style={styles.moreTextLoading}>Loading more cases…</Text>
+           </>:<>
+             <Text style={styles.moreText}>Load More Cases</Text>
+             <Feather name="chevron-down" size={13} color="#3156B8"/>
+           </>}
          </Pressable>:null}
        </View>}
      <Modal visible={Boolean(issuedCase)} transparent animationType="fade" onRequestClose={()=>setIssuedCase(null)}>
@@ -187,8 +199,11 @@ const styles=StyleSheet.create({
  rejectedText:{color:'#D04C4C'},
  pendingText:{color:'#956516'},
  amount:{marginTop:2,fontSize:8.2,lineHeight:11,fontWeight:Platform.OS==='ios'?'400':'800',color:navy,textAlign:'right'},
- more:{minHeight:36,flexDirection:'row',alignItems:'center',justifyContent:'center',backgroundColor:'#F1F5FD',borderRadius:8,marginTop:5},
- moreText:{color:'#3156B8',fontWeight:'800',fontSize:10},
+ more:{marginHorizontal:12,marginTop:5,minHeight:36,alignSelf:'stretch',flexDirection:'row',alignItems:'center',justifyContent:'center',gap:4,borderRadius:8,backgroundColor:'#F1F5FD'},
+ moreLoading:{backgroundColor:'#3156B8'},
+ morePressed:{opacity:0.72},
+ moreText:{color:'#3156B8',fontSize:8,lineHeight:11,fontWeight:Platform.OS==='ios'?'400':'800'},
+ moreTextLoading:{color:'#FFFFFF',fontSize:8.5,lineHeight:12,fontWeight:Platform.OS==='ios'?'400':'800'},
  error:{padding:12,backgroundColor:'#FEF0EF',borderRadius:10,marginVertical:8},
  errorText:{color:'#A22D36',fontSize:12},
  retry:{color:'#174A96',fontWeight:'800',marginTop:8},
