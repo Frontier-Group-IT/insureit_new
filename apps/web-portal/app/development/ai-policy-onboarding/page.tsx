@@ -96,6 +96,14 @@ export default async function SemiAutoPolicyOnboardingPage({ searchParams }: { s
     return row.policy_type==="motor" && !duplicateIds.has(row.id)
       && q?.state==="verified" && q.exception_codes.length===0;
   }).map(row=>({id:row.id,intake_number:row.intake_number}));
+  // An explicit operator action can re-queue prior failed/exceptions for fresh
+  // n8n validation. This is not conversion eligibility or permission to book.
+  // Never include completed Intakes, canonical duplicates or untrained parsers.
+  const reprocessCandidates = workspaceRows.filter(row => {
+    const q = queue.get(row.id);
+    return row.policy_type === "motor" && !duplicateIds.has(row.id)
+      && (q?.state === "exception" || q?.state === "failed");
+  }).map(row => ({ id: row.id, intake_number: row.intake_number }));
   const requestedId = typeof params.intake_id === "string"
     && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(params.intake_id)
     ? params.intake_id : null;
@@ -172,7 +180,7 @@ export default async function SemiAutoPolicyOnboardingPage({ searchParams }: { s
               <span className="ml-auto text-[9px] text-[#6d7f98]">Same status rules as Policy Intake Register · duplicate items excluded from Action Required and In Review</span>
             </nav>
             <SemiAutoPolicyWorkspace rows={pageRows} profileId={profile.id} primaryN8n={primaryN8n}
-              queueActive={queueActive} queueCounts={queueCounts} bulkCandidates={bulkCandidates}
+              queueActive={queueActive} queueCounts={queueCounts} bulkCandidates={bulkCandidates} reprocessCandidates={reprocessCandidates}
               initialIntakeId={requestedId && pageRows.some(row => row.id === requestedId) ? requestedId : null} />
             <div className="flex items-center justify-between gap-3 rounded-xl border border-[#e0e6ed] bg-white px-4 py-3 text-[11px] text-[#52657f]">
               <span>{statusRows.length} in {OPEN_INTAKE_VIEWS.find(v=>v.view===selectedView)?.label} · {total} open {primaryN8n ? "Policy" : "Motor"} Intake(s) · {duplicateCount} open duplicate(s) · page {safePage} of {Math.max(1, Math.ceil(statusRows.length / PAGE_SIZE))}</span>
