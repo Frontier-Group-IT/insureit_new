@@ -1,8 +1,8 @@
 Partner production OTA trigger
-release=partner-pending-case-compact-actions-pr-4670
+release=partner-policy-details-navy-pr-4692
 source=verified-merged-main
-source_pr=4670
-source_merge=c53f146ba774b040127d922fd6bd07a725b8c57b
+source_pr=4692
+source_merge=6523abf74a721c31361e8679acc604acb72c1e0c
 reason=user-approved-merge-and-publish
 channel=production
 runtime=0.2.0
