@@ -9,6 +9,7 @@ import { requirePolicyIntakeFinalizer, requirePolicyIntakeReviewer } from "@/lib
 import { loadPolicyIntakeDuplicateMatches } from "@/lib/policy-intake-duplicate";
 import { buildPolicyOcrOnboardingUpdate } from "@/lib/policy-ocr-onboarding-apply";
 import { policyDateDecision } from "@/lib/policy-date-rule";
+import { mapVerifiedN8nMotorPremium } from "@/lib/policy-n8n-onboarding-premium";
 import { checkSemiAutoReadiness, type SemiAutoIssue } from "@/lib/policy-intake-semi-auto";
 import { isN8nWorkbenchPrimary, previewSemiAutoN8nExtraction, applySemiAutoN8nExtraction, type SemiAutoN8nResult } from "@/lib/policy-intake-semi-auto-n8n";
 export type { SemiAutoN8nResult } from "@/lib/policy-intake-semi-auto-n8n";
@@ -263,6 +264,28 @@ export async function convertVerifiedAiIntake(id:string,confirmed:boolean):Promi
   if(forwarded.draft.issuanceDate!==issuanceDate)
     return fail("Saved issuance date","The saved draft's issue date differs from the verified current PDF. Review it before booking; no existing manual value was overwritten.");
   if(forwarded.draftRevision<1)return fail("Draft revision","Canonical revision is unavailable.");
+  const pdfField=(key:string)=>extracted.preview.fields.find(f=>f.key===key)?.value?.trim()??"";
+  const normalizedIdentity=(value:string)=>value.normalize("NFKC").trim().replace(/\s+/g," ").toUpperCase();
+  if(!pdfField("insured_name")||
+     normalizedIdentity(pdfField("insured_name"))!==normalizedIdentity(forwarded.draft.insuredName)){
+    return fail("Insured name","The saved insured name differs from the current verified PDF. Review the canonical draft rather than registering the wrong identity.");
+  }
+  const sameMoney=(a:string,b:string)=>Number.isFinite(Number(a||"0"))
+    && Number.isFinite(Number(b||"0")) && Math.round(Number(a||"0")*100)===Math.round(Number(b||"0")*100);
+  let verifiedMoney:ReturnType<typeof mapVerifiedN8nMotorPremium>;
+  try{verifiedMoney=mapVerifiedN8nMotorPremium(extracted.preview.premium);}
+  catch{return fail("Premium","The extracted premium breakdown does not reconcile.");}
+  if(!sameMoney(forwarded.draft.od,verifiedMoney.od)
+    ||!sameMoney(forwarded.draft.addOnPremium??"0",verifiedMoney.addOnPremium)
+    ||!sameMoney(forwarded.draft.tp,verifiedMoney.tp)
+    ||!sameMoney(forwarded.draft.cpa,verifiedMoney.cpa)
+    ||forwarded.draft.validFrom!==pdfField("policy_start_date")
+    ||forwarded.draft.validUpto!==pdfField("policy_end_date")
+    ||forwarded.draft.tpValidUpto!==pdfField("third_party_end_date")
+    ||forwarded.draft.policyNo.replace(/[^A-Z0-9]/gi,"").toUpperCase()
+      !==pdfField("policy_number").replace(/[^A-Z0-9]/gi,"").toUpperCase()){
+    return fail("PDF reconciliation","Saved validity, policy number or premium differs from the current n8n-verified PDF. Review it before booking.");
+  }
 
   // Use the same verified insured name and phone as normal onboarding.
   // One exact unique matching customer -> use it; no exact matching master
