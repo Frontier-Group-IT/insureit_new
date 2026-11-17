@@ -69,8 +69,8 @@ begin
       and d.storage_bucket=i.storage_bucket
       and d.storage_path=i.storage_path
     where i.status in ('processing','ready_for_review','in_review','needs_attention')
-      and i.policy_type in ('motor','non_motor','life','health')
-  on conflict (intake_id) do update
+      and (i.policy_type is null or i.policy_type in ('motor','non_motor','life','health'))
+  on conflict on constraint policy_intake_ai_processing_queue_pkey do update
     set document_id=excluded.document_id,
         parser_revision=excluded.parser_revision,
         state='pending',exception_codes='{}'::text[],field_keys='{}'::text[],
