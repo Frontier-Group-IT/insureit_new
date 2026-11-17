@@ -20,5 +20,10 @@ assert.match(source, /iconKind \? <PartnerPolicyDetailIcon kind=\{iconKind\}/,
   'Icon is optional; keep icons in Policy Overview and other unchanged contexts');
 assert.match(source, /<CardHeader iconKind="policy-overview" title="Policy Overview"/,
   'Policy Overview icon is retained');
+assert.match(source, /iconKind === 'renew-policy'\s*\? PartnerAssets\.actions\.quickRenewals/, 'Renew Policy uses the exact Home Renewals asset');
+assert.match(source, /iconKind === 'raise-claim'\s*\? PartnerAssets\.actions\.quickClaims/, 'Raise Claim uses the exact Home Claims asset');
+assert.doesNotMatch(source, /sync-circle|shield-checkmark/, 'Do not substitute generic vectors for the Home icons');
+assert.match(source, /iconKind="renew-policy" label="Renew Policy" onPress=\{\(\) => router\.push\('\/renewals'/, 'Renewal route remains unchanged');
+assert.match(source, /iconKind="raise-claim" label="Raise Claim" onPress=\{\(\) => router\.push\('\/claims'/, 'Claims route remains unchanged');
 assert.match(source,/PartnerCaseBottomNavigation activeTab="Policies"/,'Bottom navigation unchanged');
 console.log('Navy Policy Details title and white policy summary verified.');
