@@ -3,7 +3,7 @@ import "server-only";
 import { createHash, randomUUID } from "node:crypto";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { createCurrentIntakePdfSignedSource } from "@/lib/policy-intake-n8n-signed-source";
-import { requestN8nPolicyIntakeBySignedSource, type N8nOcrField } from "@/lib/policy-intake-n8n-bridge";
+import { requestN8nPolicyIntakeBySignedSource, type N8nOcrField, type N8nVerifiedPremiumBreakdown } from "@/lib/policy-intake-n8n-bridge";
 import { loadPolicyIntakeDuplicateMatches } from "@/lib/policy-intake-duplicate";
 
 const BUCKET = "policy-documents";
@@ -21,11 +21,19 @@ type Document = {
 };
 type SourceSnapshot = { intake: Intake; document: Document };
 
+export type SemiAutoN8nChangedField = {
+  key: string; label: string; kind: "new" | "different";
+  previousValue: string | null; extractedValue: string;
+  evidence: string; page: number | null;
+};
 export type SemiAutoN8nPreview = {
   documentId: string;
   fingerprint: string;
   fields: N8nOcrField[];
   changedFieldCount: number;
+  changedFields: SemiAutoN8nChangedField[];
+  premium: N8nVerifiedPremiumBreakdown;
+  checksPassed: number;
   warnings: string[];
   canApply: boolean;
 };
@@ -111,7 +119,20 @@ export async function previewSemiAutoN8nExtraction(id: string): Promise<SemiAuto
     return { ok: false, error: "The Intake, OCR output or its current document changed during extraction. Refresh and retry." };
   }
   const existing = new Map((snapshot.intake.ocr_fields ?? []).map(field => [field.key, field.value]));
-  const changedFieldCount = extraction.fields.filter(field => existing.get(field.key) !== field.value).length;
+  // The previous UI reported only a number. Return the exact differences,
+  // including the old value, to the *same authorized* reviewer for comparison.
+  // This does not persist either extraction or modify canonical OCR fields.
+  const changedFields: SemiAutoN8nChangedField[] = extraction.fields.flatMap(field => {
+    const previous = existing.get(field.key);
+    if (previous === field.value) return [];
+    return [{
+      key: field.key, label: field.label,
+      kind: previous === undefined ? "new" as const : "different" as const,
+      previousValue: previous ?? null, extractedValue: field.value,
+      evidence: field.evidence, page: field.page,
+    }];
+  });
+  const changedFieldCount = changedFields.length;
   let canApply = extraction.warnings.length === 0 && semiAutoN8nApplyEnabled()
     && current.intake.status === "processing"
     && current.intake.ocr_status === "failed"
@@ -126,6 +147,9 @@ export async function previewSemiAutoN8nExtraction(id: string): Promise<SemiAuto
     fingerprint: fingerprint(id, current.document.id, extraction.fields, extraction.warnings),
     fields: extraction.fields,
     changedFieldCount,
+    changedFields,
+    premium: extraction.premium,
+    checksPassed: extraction.checksPassed,
     warnings: extraction.warnings,
     canApply,
   } };

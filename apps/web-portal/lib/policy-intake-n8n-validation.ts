@@ -19,9 +19,25 @@ export type N8nOcrField = {
   key: string; label: string; value: string; confidence: number | null;
   page: number | null; evidence: string;
 };
+/** Premium data is returned to the authorized reviewer only after server-side
+ * arithmetic checks, never persisted or used to book a policy by the preview. */
+export type N8nVerifiedPremiumBreakdown = {
+  basicOd: number;
+  odAddons: Array<{ name: string; amount: number }>;
+  totalOd: number;
+  basicTp: number;
+  cpa: number;
+  liability: number;
+  net: number;
+  exactIgst: number;
+  tax: number;
+  gross: number;
+};
 export type N8nOcrBridgeResponse = {
   ok: true; fields: N8nOcrField[]; warnings: string[];
   parserId: string; parserVersion: string;
+  premium: N8nVerifiedPremiumBreakdown;
+  checksPassed: number;
 };
 export type N8nOcrBridgeInput = {
   intakeId: string; documentId: string; requestId: string; file: File;
@@ -118,13 +134,14 @@ export function validateN8nPolicyIntakeResponse(
   if (!Array.isArray(premium.od_addons) || premium.od_addons.length > 12) {
     throw new Error("n8n_premium_addons_invalid");
   }
-  const addOns = premium.od_addons.reduce((total: number, addon: unknown) => {
+  const odAddons = premium.od_addons.map((addon: unknown): { name: string; amount: number } => {
     if (!plainObject(addon) || typeof addon.name !== "string"
         || addon.name.trim().length < 2 || addon.name.length > 90) {
       throw new Error("n8n_premium_addon_invalid");
     }
-    return total + exactMoney(addon.amount);
-  }, 0);
+    return { name: addon.name.trim(), amount: exactMoney(addon.amount) };
+  });
+  const addOns = odAddons.reduce((total, addon) => total + addon.amount, 0);
   const cents = (number: number) => Math.round(number * 100);
   if (cents(basicOd + addOns) !== cents(od)
       || cents(tp + cpa) !== cents(liability)
@@ -146,6 +163,9 @@ export function validateN8nPolicyIntakeResponse(
     return warning;
   });
   return { ok: true, fields, warnings, parserId: "icici_3005_n8n_native_pdf",
-    parserVersion: "bridge-v1" };
+    parserVersion: "bridge-v1",
+    checksPassed: REQUIRED_CHECKS.size,
+    premium: { basicOd, odAddons, totalOd: od, basicTp: tp, cpa, liability,
+      net, exactIgst: igst, tax, gross } };
 }
 

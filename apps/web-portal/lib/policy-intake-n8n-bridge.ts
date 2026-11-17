@@ -1,7 +1,7 @@
 import "server-only";
 import { validateN8nPolicyIntakeResponse, type N8nOcrBridgeInput, type N8nOcrBridgeResponse } from "@/lib/policy-intake-n8n-validation";
 export { validateN8nPolicyIntakeResponse } from "@/lib/policy-intake-n8n-validation";
-export type { N8nOcrField, N8nOcrBridgeInput, N8nOcrBridgeResponse } from "@/lib/policy-intake-n8n-validation";
+export type { N8nOcrField, N8nOcrBridgeInput, N8nOcrBridgeResponse, N8nVerifiedPremiumBreakdown } from "@/lib/policy-intake-n8n-validation";
 
 const EXPECTED_N8N_ORIGIN = "https://insureit.app.n8n.cloud";
 const EXPECTED_WEBHOOK_PATH = "/webhook/insureit-policy-intake-icici-v1";
