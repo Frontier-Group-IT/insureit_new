@@ -385,10 +385,10 @@ export default function LifeHealthCaseDetailScreen(){
         <View style={styles.grid}>
           {inline("insurerId","Insurance company",record.insurer_name,true,true)}
           {inline("productName","Product name",record.product_name,true,true)}
-          {inline("proposalNumber","Case / proposal number",record.proposal_number,true,true)}
+          {inline("proposalNumber","Case / proposal number",record.proposal_number,true)}
+          {inline("paymentFrequency","Payment frequency",record.payment_frequency,true)}
           {inline("premiumPayingTerm","PPT · Premium Paying Term",record.premium_paying_term||"")}
           {inline("policyDuration","PD · Policy Duration / Term",record.policy_duration||"")}
-          {inline("paymentFrequency","Payment frequency",record.payment_frequency,true)}
         </View>
       </Section>
 
@@ -411,7 +411,7 @@ export default function LifeHealthCaseDetailScreen(){
         </Pressable>
       </View>:null}
 
-      {record.status_group==='pending'?<Section number="05" title="Mark Policy Issued">
+      {record.status_group==='pending'?<Section number="05" title="Mark Policy Issued" highlight>
         <View style={styles.grid}>
           {issueField("policyNumber","Policy number",true)}
           {issueField("issuanceDate","Issuance date",false,true)}
@@ -643,11 +643,17 @@ function ChoiceField({title,value,values,onChange}:{title:string;value:string;va
     <Text style={[styles.choiceText,item===value&&styles.choiceTextActive]}>{item}</Text>
   </Pressable>)}</View></View>;
 }
-function Section({number,title,children}:{number?:string;title:string;children:ReactNode}){
-  return <View style={styles.section}>
-    <View style={styles.sectionHeader}>
-      {number?<View style={styles.sectionNumber}><Text style={styles.sectionNumberText}>{number}</Text></View>:null}
-      <Text style={styles.sectionTitle}>{title}</Text>
+function Section({number,title,children,highlight=false}:{number?:string;title:string;children:ReactNode;highlight?:boolean}){
+  return <View style={[styles.section,highlight&&styles.sectionHighlight]}>
+    <View style={[styles.sectionHeader,highlight&&styles.sectionHeaderHighlight]}>
+      {highlight?<View style={[styles.sectionNumber,styles.sectionNumberHighlight]}>
+        <Ionicons name="shield-checkmark-outline" size={18} color="#FFFFFF"/>
+      </View>:number?<View style={styles.sectionNumber}><Text style={styles.sectionNumberText}>{number}</Text></View>:null}
+      <View style={styles.sectionHeaderCopy}>
+        <Text style={styles.sectionTitle}>{title}</Text>
+        {highlight?<Text style={styles.sectionSubtitle}>Update policy status to issued</Text>:null}
+      </View>
+      {highlight?<Ionicons name="shield-checkmark-outline" size={22} color="#4784DD"/>:null}
     </View>
     <View style={styles.sectionContent}>{children}</View>
   </View>;
@@ -675,10 +681,10 @@ const styles=StyleSheet.create({
   remarkInlineRow:{flexDirection:'row',alignItems:'center',gap:8},
   remarkExisting:{color:navy,fontSize:11,lineHeight:17,backgroundColor:'#F5F8FD',borderRadius:9,padding:10},
   remarkHeaderSpacer:{flex:1},
-  remarkSection:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:10,backgroundColor:'#EAF1FA',borderRadius:13,borderWidth:1,borderColor:'#D9E2F0',padding:12},
+  remarkSection:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:8,backgroundColor:'#EAF1FA',borderRadius:11,borderWidth:1,borderColor:'#D9E2F0',paddingHorizontal:11,paddingVertical:7,minHeight:48},
   remarkSectionTitle:{flexDirection:'row',alignItems:'center',gap:9,flexShrink:1},
-  remarkSectionText:{fontSize:13,fontWeight:'800',color:navy},
-  remarkHeaderAction:{flexDirection:'row',alignItems:'center',gap:5,backgroundColor:'#FFFFFF',borderWidth:1,borderColor:'#C9D8EA',paddingHorizontal:10,paddingVertical:9,borderRadius:9},
+  remarkSectionText:{fontSize:12,fontWeight:'800',color:navy},
+  remarkHeaderAction:{flexDirection:'row',alignItems:'center',gap:5,backgroundColor:'#FFFFFF',borderWidth:1,borderColor:'#C9D8EA',paddingHorizontal:9,paddingVertical:7,borderRadius:8,minHeight:34},
   remarkHeaderText:{fontSize:11,fontWeight:'800',color:'#24517E'},
   remarkInlineAction:{flexDirection:'row',alignItems:'center',gap:3,backgroundColor:navy,paddingHorizontal:10,paddingVertical:12,borderRadius:9},
   remarkFullWidth:{flexDirection:'row',alignItems:'center',justifyContent:'center',gap:8,minHeight:44,backgroundColor:navy,borderRadius:9},
@@ -733,7 +739,12 @@ const styles=StyleSheet.create({
   heroSubtitle:{color:'#FFFFFF',fontWeight:'600',fontSize:10,flexShrink:1},
   heroCaseNumber:{color:'#F8F0E4',fontSize:9,fontWeight:'600',flexShrink:1},
   section:{backgroundColor:'#FFFFFF',borderRadius:14,borderWidth:1,borderColor:'#D9E2F0',overflow:'hidden'},
+  sectionHighlight:{backgroundColor:'#F7FAFF',borderColor:'#C9D9F5'},
   sectionHeader:{flexDirection:'row',alignItems:'center',gap:10,minHeight:49,paddingHorizontal:12,paddingVertical:8,borderBottomWidth:1,borderBottomColor:'#D9E2F0',backgroundColor:'#EAF1FA'},
+  sectionHeaderHighlight:{backgroundColor:'#E1EDFF',borderBottomColor:'#C9DAF4'},
+  sectionHeaderCopy:{flex:1,gap:2},
+  sectionSubtitle:{color:'#59749F',fontSize:9},
+  sectionNumberHighlight:{backgroundColor:'#5276CB'},
   sectionNumber:{width:30,height:30,borderRadius:9,backgroundColor:navy,alignItems:'center',justifyContent:'center'},
   sectionNumberText:{color:'#FFFFFF',fontSize:11,fontWeight:'800'},
   sectionTitle:{color:navy,fontSize:13,fontWeight:'800',flexShrink:1},
