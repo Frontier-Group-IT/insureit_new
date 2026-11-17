@@ -262,8 +262,6 @@ export default function PolicyIntakeDetailScreen() {
                     <Text numberOfLines={3} style={styles.summaryLine}>
                       {`${row.lead_source_name || 'Lead source unavailable'} (${row.submitted_by_name?.trim() || 'Submitter unavailable'})`}
                     </Text>
-                    {row.status !== 'duplicate' && row.status !== 'completed' && row.status !== 'ready_for_review' && row.status !== 'in_review' && row.status !== 'rejected' && row.status !== 'needs_attention' && !(row.status === 'processing' && row.ocr_status !== 'failed')
-                      ? <Text style={styles.statusHelp}>{statusHelp(row)}</Text> : null}
                   </View>
                   </View>
                   <View style={[styles.statusMeta, row.status === 'duplicate' && styles.statusMetaDuplicate]}>
@@ -279,7 +277,6 @@ export default function PolicyIntakeDetailScreen() {
                 </View>
               </View>
             </View>
-            {row.status !== 'duplicate' && row.status !== 'completed' ? <IntakeProgress row={row} /> : null}
           </View>
 
           {row.final_policy_id ? (
@@ -724,50 +721,6 @@ const reviewStyles=StyleSheet.create({
   caption:{fontSize:10,color:'#65768D',lineHeight:15,textAlign:'center'},
 });
 
-function IntakeProgress({ row }: { row: PartnerPolicyIntake }) {
-  const manual = row.status === 'processing' && row.ocr_status === 'failed';
-  const activeStep = row.status === 'completed'
-    ? 4
-    : row.status === 'in_review'
-      ? 3
-      : row.status === 'ready_for_review' || row.status === 'needs_attention' || manual
-        ? 2
-        : 1;
-
-  const rejected = row.status === 'rejected' || row.status === 'duplicate';
-
-  return (
-    <View
-      accessibilityLabel={rejected
-        ? `Policy Intake status: ${statusLabel(row)}`
-        : `Policy Intake progress: step ${activeStep} of 4, ${statusLabel(row)}`}
-      accessibilityRole="progressbar"
-      accessibilityValue={{
-        min: 1,
-        max: 4,
-        now: activeStep,
-        text: rejected ? `Closed: ${statusLabel(row)}` : `Step ${activeStep} of 4: ${statusLabel(row)}`,
-      }}
-      style={styles.progressWrap}
-    >
-      {['Uploaded', 'Read', 'Review', 'Done'].map((label, index) => {
-        const step = index + 1;
-        const complete = !rejected && step <= activeStep;
-        const current = !rejected && step === activeStep;
-        return (
-          <View key={label} style={styles.progressStep}>
-            <View style={styles.progressLineWrap}>
-              <View style={[styles.progressDot, complete && styles.progressDotComplete, current && styles.progressDotCurrent, rejected && step === activeStep && styles.progressDotRejected]} />
-              {index < 3 ? <View style={[styles.progressLine, step < activeStep && !rejected && styles.progressLineComplete]} /> : null}
-            </View>
-            <Text style={[styles.progressLabel, complete && styles.progressLabelActive]}>{label}</Text>
-          </View>
-        );
-      })}
-    </View>
-  );
-}
-
 function ReplacementProgress({ progress }: { progress: PartnerPolicyIntakeUploadProgress }) {
   const percent = progress.stage === 'preparing'
     ? 8
@@ -863,13 +816,6 @@ function statusLabel(row: PartnerPolicyIntake) {
   } as Record<string, string>)[row.status] || humanize(row.status);
 }
 
-function statusHelp(row: PartnerPolicyIntake) {
-  if (row.status === 'processing' && row.ocr_status === 'failed') return 'Automatic extraction was unavailable. Operations can continue from the saved policy copy.';
-  if (row.status === 'ready_for_review') return 'The extracted details are ready for an Operations reviewer.';
-  if (row.status === 'duplicate') return 'The policy was found in an existing record. Review and onboarding are disabled.';
-  return 'Track this submission here.';
-}
-
 function pendingLabel(row: PartnerPolicyIntake) {
   return row.ocr_status === 'failed' ? 'Manual review' : row.ocr_status === 'completed' ? 'Not found' : 'Fetching…';
 }
@@ -943,7 +889,6 @@ const styles = StyleSheet.create({
   intakeNumber: { color: partnerTheme.colors.ink, fontSize: 14, lineHeight: 19, fontWeight: '500' },
   intakeSummaryCompact: { marginTop: 0, marginBottom: 0 },
   summaryLine: { marginTop: 0, color: '#64748B', fontSize: 10.5, lineHeight: 15 },
-  statusHelp: { marginTop: 4, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
   statusMeta: { flexShrink: 0, maxWidth: '47%', alignItems: 'flex-end', gap: 3 },
   statusMetaDuplicate: { paddingTop: 0 },
   statusBadge: { maxWidth: '100%', borderRadius: 999, paddingHorizontal: 8, paddingVertical: 4 },
@@ -955,17 +900,6 @@ const styles = StyleSheet.create({
   statusBadgeTextRejected: { color: '#B42318' },
   statusBadgeTextProcessing: { color: '#9A5B13' },
   statusDate: { color: partnerTheme.colors.inkSubtle, textAlign: 'right', fontSize: 9, lineHeight: 12, fontWeight: '400' },
-  progressWrap: { marginTop: 7, paddingTop: 7, flexDirection: 'row', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: partnerTheme.colors.line },
-  progressStep: { flex: 1, alignItems: 'center' },
-  progressLineWrap: { width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
-  progressDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: partnerTheme.colors.lineStrong },
-  progressDotComplete: { backgroundColor: partnerTheme.colors.brand },
-  progressDotCurrent: { borderWidth: 2, borderColor: partnerTheme.colors.brandStrong },
-  progressDotRejected: { backgroundColor: '#EF8C83' },
-  progressLine: { position: 'absolute', left: '58%', width: '84%', height: 1, backgroundColor: partnerTheme.colors.line },
-  progressLineComplete: { backgroundColor: partnerTheme.colors.brand },
-  progressLabel: { marginTop: 4, color: partnerTheme.colors.inkSubtle, fontSize: 9, lineHeight: 12, fontWeight: '400' },
-  progressLabelActive: { color: partnerTheme.colors.ink },
   finalPolicy: { marginTop: 10 },
   attention: { marginTop: 10, paddingHorizontal: 16, paddingVertical: 12, borderTopWidth: StyleSheet.hairlineWidth, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: '#F0D7AE', backgroundColor: '#FFF7E8' },
   attentionTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
