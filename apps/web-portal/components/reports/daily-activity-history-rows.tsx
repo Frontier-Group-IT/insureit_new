@@ -67,7 +67,7 @@ export function DailyActivityHistoryRows({rows,isCustomerActivity=false,isClaimA
             ) : isClaimActivity ? (
               <>
                 <td className="px-3 py-3 font-medium">{customerField(row.claimControlNo)}</td>
-                <td className="px-3 py-3">{customerField(row.claimInsurerNo)}</td>
+                
                 <td className="px-3 py-3">{customerField(row.claimCustomerName)}</td>
                 <td className="px-3 py-3">{customerField(row.claimVehicleNo)}</td>
               </>
