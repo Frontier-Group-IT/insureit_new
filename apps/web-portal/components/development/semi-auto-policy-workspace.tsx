@@ -107,11 +107,18 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
     if (selectedId === id) {
       setSelectedId(null); setResult(null); setDone(null); setBusy(null); setTakeover(null); setHandoffDialog(null); setN8nResult(null); setN8nNotice(null); return;
     }
-    setSelectedId(id); setResult(null); setDone(null); setTakeover(null); setHandoffDialog(null); setN8nResult(null); setN8nNotice(null); setBusy(primaryN8n ? "extracting" : "checking");
+    setSelectedId(id); setResult(null); setDone(null); setTakeover(null); setHandoffDialog(null); setN8nResult(null); setN8nNotice(null); setBusy(primaryN8n && queueActive ? null : primaryN8n ? "extracting" : "checking");
     try {
       if (primaryN8n) {
-        // Selecting an Intake explicitly starts its n8n-only extraction.
-        // The older OCR readiness engine is not invoked in primary mode.
+        // Background queue performs the initial extraction without user input.
+        // Selecting a row is read-only; an explicit review may re-extract to
+        // verify the exact live PDF before continuing to canonical onboarding.
+        if (queueActive) {
+          if (requestId.current === next) setN8nNotice(
+            "The background queue processes this PDF automatically. Use Review current PDF to inspect its latest verified extraction and continue to onboarding."
+          );
+          return;
+        }
         const extracted = await previewSemiAutoN8nIntake(id);
         if (requestId.current === next) setN8nResult(extracted);
         return;
@@ -403,7 +410,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
       <section aria-live="polite" className="min-w-0 rounded-2xl border border-[#dce5f0] bg-white p-4">
         <div className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-[#4774c1]" /><h2 className="text-[13px] font-bold text-[#142e4c]">{primaryN8n ? "n8n Policy Processing" : "AI Booking Check"}</h2></div>
         {!selectedId ? <div className="mt-5 rounded-xl border border-dashed border-[#cddbea] p-5 text-center text-[11px] leading-5 text-[#63768e]">
-          {primaryN8n ? "Select an Intake to read its current private policy PDF using n8n. Untrained insurer layouts will be referred for manual review, not processed through Google OCR." : "Select a checkbox in the Intake table to see exactly which fields are ready and which require correction."}
+          {primaryN8n ? queueActive ? "The queue reads Intakes automatically. Select one to review its exceptions, or review the current private PDF again before onboarding." : "Select an Intake to read its current private policy PDF using n8n. Untrained insurer layouts will be referred for manual review, not processed through Google OCR." : "Select a checkbox in the Intake table to see exactly which fields are ready and which require correction."}
         </div> : (
           <>
             <div className="mt-3 flex items-start justify-between gap-3 rounded-xl bg-[#f4f7fc] px-3 py-3">
@@ -414,7 +421,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
               <div className="flex flex-wrap items-center gap-2">
                 {n8nEnabled ? <button type="button" onClick={() => { void previewN8n(); }} disabled={isWaiting || Boolean(done)}
                   className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#cbd9eb] bg-white px-2.5 text-[10px] font-semibold text-[#24518a] disabled:opacity-50">
-                  {busy === "extracting" ? <Loader2 className="h-3.5 w-3.5 animate-spin"/> : <FileSearch className="h-3.5 w-3.5"/>}{primaryN8n ? (n8nResult ? "Run n8n again" : "Process with n8n") : "Preview n8n PDF"}
+                  {busy === "extracting" ? <Loader2 className="h-3.5 w-3.5 animate-spin"/> : <FileSearch className="h-3.5 w-3.5"/>}{primaryN8n ? (queueActive ? "Review current PDF" : n8nResult ? "Run n8n again" : "Process with n8n") : "Preview n8n PDF"}
                 </button> : null}
                 {!primaryN8n ? <button type="button" onClick={() => { void retry(); }} disabled={isWaiting} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#d0deef] bg-white px-2.5 text-[10px] font-semibold text-[#29558d] disabled:opacity-50"><RefreshCw className="h-3.5 w-3.5"/>Recheck</button> : null}
               </div>
