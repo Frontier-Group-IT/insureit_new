@@ -300,6 +300,7 @@ function displayInsurerSummary(name: string | null | undefined): string {
     .replace(/\s+(?:company|co\.?)(?:\s+(?:private|pvt\.?))?\s+(?:limited|ltd\.?)$/i, '')
     .replace(/\s+(?:private|pvt\.?)?\s*(?:limited|ltd\.?)$/i, '')
     .replace(/\s+insurance\s+company$/i, '')
+    .replace(/\s+insurance$/i, '')
     .trim();
   return compact || fullName;
 }
