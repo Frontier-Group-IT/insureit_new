@@ -175,6 +175,46 @@ export default function ClaimsScreen() {
         </View>
         <View style={styles.heroBottomRow}>
           <Text style={styles.heroTitle}>Claims</Text>
+          {canPartnerStartClaim(context) ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Add Claim"
+              onPress={() => router.push('/claim/select-vehicle' as never)}
+              style={({ pressed }) => [styles.heroAddClaim, pressed && styles.pressed]}
+            >
+              <Ionicons name="add-circle-outline" size={17} color="#FFFFFF" />
+              <Text style={styles.heroAddClaimText}>Add Claim</Text>
+            </Pressable>
+          ) : null}
+        </View>
+      </View>
+
+      <View style={styles.body}>
+        {showStickyControls ? <View style={{ height: searchHeight }} /> : searchControls}
+
+        <View style={styles.summaryRow}>
+          <View style={styles.summaryChips} accessibilityLabel="Claim status filters">
+            {([
+              { label: 'All Claims', shortLabel: 'All', filter: 'all' as const, value: summary.data?.total_claims },
+              { label: 'Settled Claims', shortLabel: 'Settled', filter: 'completed' as const, value: summary.data?.completed_claims },
+              { label: 'In Progress', shortLabel: 'In Progress', filter: 'active' as const, value: summary.data?.active_claims },
+            ]).map(metric => {
+              const selected = state === metric.filter && !query.trim();
+              return (
+                <Pressable key={metric.filter} accessibilityRole="button"
+                  accessibilityLabel={`${metric.label}, ${metric.value == null ? 'count unavailable' : metric.value.toLocaleString('en-IN')}`}
+                  accessibilityState={{ selected }}
+                  onPress={() => selectSummary(metric.filter)}
+                  style={({ pressed }) => [styles.summaryChip, selected && styles.summaryChipSelected, pressed && styles.summaryChipPressed]}>
+                  <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.82}
+                    style={[styles.summaryChipLabel, selected && styles.summaryChipLabelSelected]}>{metric.shortLabel}</Text>
+                  <Text style={[styles.summaryChipCount, selected && styles.summaryChipCountSelected]}>
+                    {metric.value == null ? '—' : metric.value.toLocaleString('en-IN')}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
         </View>
 
         {(collection.stale || summary.stale) ? (
