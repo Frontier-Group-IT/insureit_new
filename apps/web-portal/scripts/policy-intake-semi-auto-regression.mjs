@@ -607,10 +607,11 @@ assert(schedulerYaml.includes("vars.INSUREIT_AI_QUEUE_SCHEDULE_ENABLED == 'true'
   && schedulerYaml.includes("secrets.INSUREIT_AI_QUEUE_WORKER_TOKEN"),
   "Automatic scheduler must remain disabled until separately approved and configured");
 assert(workbenchText.includes("Resolve policy exceptions")
-  && workbenchText.includes("Convert All Eligible")
-  && workbenchText.includes("disabled aria-label=")
+  && workbenchText.includes("Convert Verified Candidates")
+  && workbenchText.includes("Confirm bulk Policy registration")
+  && workbenchText.includes("convertVerifiedAiIntake(item.id,true)")
   && workbenchText.includes("queueActive)"),
-  "Queue UI must render exception actions but keep bulk conversion disabled until canonical preflight exists");
+  "Queue UI must show an operator-confirmed, bounded bulk conversion that reuses canonical per-Intake preflight");
 assert(actionsText.includes("reprocessAiPolicyIntake")
   && actionsText.includes("requireDevelopmentPolicyOperator(id)"),
   "Each manual background reprocess request must require the current authorized reviewer");
