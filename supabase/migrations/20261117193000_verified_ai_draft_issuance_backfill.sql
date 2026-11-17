@@ -30,7 +30,7 @@ begin
     and i.status='in_review'
     and doc.id=p_document_id and doc.is_current=true
     and doc.storage_bucket=i.storage_bucket and doc.storage_path=i.storage_path
-    and q.document_id=doc.id and q.state='verified'
+    and q.document_id=doc.id and q.state in ('verified','exception')
     and q.extraction_fingerprint=p_fingerprint
     and q.checks_passed=13
     and q.field_keys @> array['policy_issuance_date']::text[]
