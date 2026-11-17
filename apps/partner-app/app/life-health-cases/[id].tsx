@@ -503,9 +503,9 @@ export default function LifeHealthCaseDetailScreen(){
             {activity.changes?.map((change,index)=><Text key={index} style={styles.activityDate}>• {change}</Text>)}
             <Text style={styles.activityDate}>At: {activityDate(activity.created_at)}</Text>
           </View>):<Text style={styles.paragraph}>No recorded case activity available.</Text>):
-            {record.remarks?.trim()?record.remarks.trim().split(/\n\s*\n/).filter(Boolean).map((remark,index)=>
+            (record.remarks?.trim()?record.remarks.trim().split(/\n\s*\n/).filter(Boolean).map((remark,index)=>
               <View key={index} style={styles.activity}><Text style={styles.paragraph} selectable>{remark}</Text></View>
-            ):<Text style={styles.paragraph}>No remarks added yet.</Text>}}
+            ):<Text style={styles.paragraph}>No remarks added yet.</Text>)}
         </View>
       )}
       {saveError?<Text style={styles.saveError}>{saveError}</Text>:null}
