@@ -1,4 +1,31 @@
-import { filterVerifiedN8nOnboardingFields } from "./policy-n8n-onboarding-fields";
+// Self-contained for the native Node --experimental-strip-types regression runner.
+// Keep this strict allowed-key set aligned with policy-n8n-onboarding-fields.ts.
+const ALLOWED_N8N_ONBOARDING_KEYS = new Set([
+  "vehicle_class",
+  "vehicle_fuel_type",
+  "vehicle_motor_power_kw",
+  "vehicle_capacity",
+  "vehicle_registration_status",
+  "vehicle_registration_number",
+  "vehicle_make",
+  "vehicle_model",
+  "vehicle_manufacturing_year",
+  "vehicle_engine_number",
+  "vehicle_chassis_number",
+  "vehicle_rto_name",
+  "vehicle_rto_state",
+  "policy_number",
+  "insurer_name",
+  "policy_product",
+  "policy_start_date",
+  "policy_end_date",
+  "idv",
+  "od_premium",
+  "tp_premium",
+  "cpa_premium",
+]);
+
+
 
 export type N8nPrefillField = { key: string; label: string; value: string };
 
@@ -38,7 +65,7 @@ export function splitN8nRtoStateAndCity(raw: string) {
 export function enrichVerifiedN8nOnboardingFields<T extends N8nPrefillField>(
   rawFields: readonly T[],
 ): N8nPrefillField[] {
-  const fields: N8nPrefillField[] = filterVerifiedN8nOnboardingFields(rawFields).map(field => ({
+  const fields: N8nPrefillField[] = rawFields.filter(field => ALLOWED_N8N_ONBOARDING_KEYS.has(field.key)).map(field => ({
     key: field.key, label: field.label, value: field.value,
   }));
   const get = (key: string) => fields.find(field => field.key === key)?.value.trim() ?? "";
