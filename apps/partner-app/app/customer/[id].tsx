@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
+import { PartnerStackBottomNavigation } from '@/components/partner-stack-bottom-navigation';
 import { PartnerBanner } from '@/components/ui/partner-banner';
 import { PartnerContactActions } from '@/components/ui/partner-contact-actions';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
@@ -45,7 +46,7 @@ export default function CustomerDetailScreen() {
 
 
   return (
-    <PartnerScreen title="Customer" hideTopBar fullWidth navyStatusBar scrollProps={{ style: { backgroundColor: '#FFFFFF' } }}>
+    <PartnerScreen title="Customer" hideTopBar fullWidth navyStatusBar bottomNavigationNavy bottomNavigation={<PartnerStackBottomNavigation activeTab="business" />} scrollProps={{ style: { backgroundColor: '#FFFFFF' } }}>
       {loading ? (
         <PartnerStateView state="loading" title="Loading customer" />
       ) : error || !data ? (
@@ -232,8 +233,8 @@ const redesign = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 15, paddingHorizontal: 12, backgroundColor: '#071E49' },
   headerTitle: { fontSize: 18, fontWeight: '700', color: '#FFFFFF' },
   profile: { backgroundColor: '#E5F1FF', flexDirection: 'row', alignItems: 'center', gap: 9, padding: 12 },
-  avatar: { width: 56, height: 56, borderRadius: 28, backgroundColor: '#EEE1FF', alignItems: 'center', justifyContent: 'center' },
-  avatarText: { color: '#6B28CE', fontSize: 20, fontWeight: '700' },
+  avatar: { width: 64, height: 64, borderRadius: 32, backgroundColor: '#EEE1FF', alignItems: 'center', justifyContent: 'center' },
+  avatarText: { color: '#6B28CE', fontSize: 24, fontWeight: '700' },
   profileContent: { flex: 1, minWidth: 0, gap: 6 },
   profileNameWrap: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 5 },
   profileName: { color: '#111B37', fontSize: 13, fontWeight: '700', flexShrink: 1 },
