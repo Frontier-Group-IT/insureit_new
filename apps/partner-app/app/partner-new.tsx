@@ -340,7 +340,7 @@ export default function AddPartnerScreen() {
         </View>
         <ScrollView ref={scrollRef} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
           <View style={styles.typeSwitch} accessibilityLabel="Partner onboarding type">{(["posp","misp"] as const).map(type=><Pressable key={type} accessibilityRole="button" accessibilityLabel={type.toUpperCase()} accessibilityState={{selected:partnerType===type}} onPress={()=>changePartnerType(type)} style={[styles.typeOption,partnerType===type&&styles.typeSelected]}><Text style={[styles.typeText,partnerType===type&&styles.typeSelectedText]}>{type.toUpperCase()}</Text></Pressable>)}</View>
-          {partnerType==="misp"?<MispPartnerForm rms={rms} banks={banks} oems={oems} pendingMisps={pendingMisps} loading={loading} onDirtyChange={setMispDirty}/>:<>
+          {partnerType==="misp"?<MispPartnerForm rms={rms} banks={banks} oems={oems} pendingMisps={pendingMisps} loading={loading} onDirtyChange={setMispDirty} onCancel={() => leavePartnerForm()}/>:<>
           {sections.map((section, index) => (
             <View key={section.heading} style={styles.section} onLayout={event => { sectionPositions.current[index] = event.nativeEvent.layout.y; }}>
               <View style={styles.sectionHeader}>
