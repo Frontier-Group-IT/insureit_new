@@ -96,6 +96,15 @@ jobs:
           elif [[ -z "$changed_migrations" ]]; then
             echo "No Supabase migration or schema-repair workflow changed in this release; schema wait not required."
             exit 0
+          elif grep -qx 'supabase/migrations/20261117193000_verified_ai_draft_issuance_backfill.sql' <<<"$changed_migrations"; then
+            unexpected_migrations=$(grep -vx 'supabase/migrations/20261117193000_verified_ai_draft_issuance_backfill.sql' <<<"$changed_migrations" || true)
+            if [[ -n "$unexpected_migrations" ]]; then
+              echo "::error::AI Policy issuance backfill release includes unrelated migration(s):"
+              echo "$unexpected_migrations"
+              exit 1
+            fi
+            schema_workflow="apply-ai-policy-issuance-backfill.yml"
+            echo "AI Policy issuance-date backfill migration detected. Waiting for verified schema workflow..."
           elif grep -qx 'supabase/migrations/20260903151000_reviewed_claim_assistance_intake.sql' <<<"$changed_migrations" || grep -qx 'supabase/migrations/20260903160000_fix_initial_document_finalization.sql' <<<"$changed_migrations"; then
             unexpected_migrations=$(grep -vxE 'supabase/migrations/20260903151000_reviewed_claim_assistance_intake.sql|supabase/migrations/20260903160000_fix_initial_document_finalization.sql' <<<"$changed_migrations" || true)
             if [[ -n "$unexpected_migrations" ]]; then
