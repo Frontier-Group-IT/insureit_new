@@ -132,11 +132,7 @@ export default function PolicyDetailScreen() {
                 <MiniInfo label="End date" value={formatDate(data.policy.end_date)} />
               </View>
             ) : null}
-          </Card>
-
-          <View style={styles.externalSection}>
-            <View style={styles.externalSectionHeading}><CardHeader title="Premium" /></View>
-            <Card>
+            <View style={styles.unifiedSectionDivider} accessibilityRole="none" />
             <Pressable accessibilityRole="button" accessibilityState={{ expanded: showPremiumDetails }} onPress={() => setShowPremiumDetails((value) => !value)} style={({ pressed }) => [styles.premiumDisclosure, pressed && styles.pressed]}>
               <PartnerPolicyDetailIcon kind="premium-breakup" size={25} />
               <View style={styles.disclosureText}><Text style={styles.disclosureTitle}>Premium breakup</Text><Text style={styles.disclosureSummary}>{formatIndianCurrency(data.premium.gross_premium)}</Text></View>
@@ -151,8 +147,21 @@ export default function PolicyDetailScreen() {
                 <MiniInfo compact label="CPA" value={data.premium.cpa_opted ? nullableMoney(data.premium.cpa_amount) : 'Not opted / not recorded'} />
               </View>
             ) : null}
-            </Card>
-          </View>
+            <View style={styles.unifiedSectionDivider} accessibilityRole="none" />
+            <Pressable accessibilityRole="button" accessibilityState={{ expanded: showCommercialDetails }} onPress={() => setShowCommercialDetails((value) => !value)} style={({ pressed }) => [styles.commercialRow, pressed && styles.pressed]}>
+              <PartnerPolicyDetailIcon kind="sales-ownership" size={25} />
+              <View style={styles.disclosureText}><Text style={styles.disclosureTitle}>Sales ownership</Text><Text numberOfLines={1} style={styles.disclosureSummary}>{[data.commercial.rm_name, data.commercial.intermediary_code].filter(Boolean).join(' · ') || 'View details'}</Text></View>
+
+            </Pressable>
+            {showCommercialDetails ? (
+              <View style={styles.detailGrid}>
+                <MiniInfo label="Intermediary" value={intermediaryName || "Not recorded"} />
+                <MiniInfo label="RM" value={data.commercial.rm_name || 'Not recorded'} />
+                <MiniInfo label="Group" value={[data.commercial.group_name, data.commercial.group_code].filter(Boolean).join(' · ') || 'No policy snapshot'} />
+                <MiniInfo label="Policy lifecycle" value={humanize(data.policy.lifecycle_status)} />
+              </View>
+            ) : null}
+          </Card>
 
           <View style={styles.externalSection}>
             <View style={styles.externalSectionHeading}><CardHeader title="Customer Details" /></View>
@@ -175,24 +184,6 @@ export default function PolicyDetailScreen() {
             </Card>
           </View>
 
-          <View style={styles.externalSection}>
-            <View style={styles.externalSectionHeading}><CardHeader title="Commercial Attribution" /></View>
-            <Card>
-            <Pressable accessibilityRole="button" accessibilityState={{ expanded: showCommercialDetails }} onPress={() => setShowCommercialDetails((value) => !value)} style={({ pressed }) => [styles.commercialRow, pressed && styles.pressed]}>
-              <PartnerPolicyDetailIcon kind="sales-ownership" size={25} />
-              <View style={styles.disclosureText}><Text style={styles.disclosureTitle}>Sales ownership</Text><Text numberOfLines={1} style={styles.disclosureSummary}>{[data.commercial.rm_name, data.commercial.intermediary_code].filter(Boolean).join(' · ') || 'View details'}</Text></View>
-
-            </Pressable>
-            {showCommercialDetails ? (
-              <View style={styles.detailGrid}>
-                <MiniInfo label="Intermediary" value={intermediaryName || "Not recorded"} />
-                <MiniInfo label="RM" value={data.commercial.rm_name || 'Not recorded'} />
-                <MiniInfo label="Group" value={[data.commercial.group_name, data.commercial.group_code].filter(Boolean).join(' · ') || 'No policy snapshot'} />
-                <MiniInfo label="Policy lifecycle" value={humanize(data.policy.lifecycle_status)} />
-              </View>
-            ) : null}
-            </Card>
-          </View>
         </View>
       )}
     </PartnerScreen>
@@ -315,6 +306,7 @@ const styles = StyleSheet.create({
   overviewGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 5, paddingHorizontal: 9, paddingBottom: 9 },
   overviewItem: { width: '31%', flexGrow: 1, minWidth: 0, minHeight: 54, flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 6, paddingHorizontal: 4, borderWidth: StyleSheet.hairlineWidth, borderColor: '#DCE7F3', borderRadius: 9 },
   overviewLogoWrap: { width: 23, height: 23, borderRadius: 9, backgroundColor: '#F0F5FC', alignItems: 'center', justifyContent: 'center' }, overviewLogo: { width: 20, height: 20 }, overviewCopy: { flex: 1, minWidth: 0 }, overviewLabel: { color: '#8A95A6', fontSize: 8.5, lineHeight: 10 }, overviewValue: { marginTop: 2, color: '#192B46', fontSize: 10, lineHeight: 13, fontWeight: '700' },
+  unifiedSectionDivider: { height: StyleSheet.hairlineWidth, backgroundColor: '#E3E9F1', marginHorizontal: 10, marginVertical: 2 },
   premiumDisclosure: { minHeight: 47, marginHorizontal: 9, marginBottom: 8, paddingHorizontal: 9, borderRadius: 9, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#FFFFFF' },
   commercialRow: { minHeight: 47, marginHorizontal: 9, marginBottom: 8, paddingHorizontal: 9, borderRadius: 9, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#FFFFFF' },
   disclosureText: { flex: 1, minWidth: 0 }, disclosureTitle: { color: '#152945', fontSize: 10.5, lineHeight: 13, fontWeight: '700' }, disclosureSummary: { marginTop: 2, color: '#6F7F94', fontSize: 8.5, lineHeight: 11 },
