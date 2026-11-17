@@ -35,6 +35,7 @@ const aiIssueTitles: Record<string,string> = {
   customer_ambiguous:"Multiple customer matches",
   customer_duplicate:"Existing customer needs confirmation",
   customer_master_unverified:"Customer matching not verified",
+  customer_creation_required:"Create or select customer",
   vehicle_ownership:"Vehicle ownership conflict",
   missing_field:"Mandatory field missing",
   manufacturer_unmatched:"Vehicle make not matched",
