@@ -756,11 +756,11 @@ export default function NativePolicyOnboarding(){
     if(f.date)return <PartnerPolicyDateField key={f.key} label={f.label} value={current} required={f.required} onChange={v=>updateProduct(f.key,v)}/>;
     const options=f.key==='insurerId'?data?.insurers??[]:(f.options??[]).map(value=>({value,label:value}));
     return <View key={f.key} style={[styles.field,f.wide&&styles.wideField]}>
-      <Text style={styles.label}>{f.label}{f.required?<Text style={styles.star}> *</Text>:null}</Text>
+      <Text style={styles.label} numberOfLines={f.key==='ppt'||f.key==='pd'?1:undefined} ellipsizeMode="tail">{f.label}{f.required?<Text style={styles.star}> *</Text>:null}</Text>
       {options.length?<Pressable accessibilityRole="button" accessibilityLabel={f.label} style={styles.inputRow} onPress={()=>f.key==='insurerId'?openInsurerPicker(options,true):setPicker({key:f.key,items:options,product:true})}>
         <Text style={[styles.value,!current&&styles.placeholder]} numberOfLines={1}>{options.find(o=>o.value===current)?.label||('Select '+f.label.toLowerCase())}</Text>
         <Ionicons name="chevron-down" size={15} color="#63758D"/>
-      </Pressable>:<TextInput accessibilityLabel={f.label} value={current} placeholder={['sumInsured','netPremium','gstAmount','grossPremium'].includes(f.key)?'₹ 0.00':f.key==='previousClaims'?'Brief reference':f.key==='deductible'||productExtras.some(item=>item.key===f.key)?'Optional':'Enter '+f.label.toLowerCase()} placeholderTextColor="#98A6B8" onChangeText={v=>updateProduct(f.key,f.key==='phone'?v.replace(/\D/g,'').slice(0,10):f.key==='policyNumber'?v.toUpperCase():v)}
+      </Pressable>:<TextInput accessibilityLabel={f.label} value={current} placeholder={['sumInsured','netPremium','gstAmount','grossPremium'].includes(f.key)?'₹ 0.00':f.key==='previousClaims'?'Brief reference':f.required?'Enter '+f.label.toLowerCase():f.key==='deductible'||productExtras.some(item=>item.key===f.key)?'Optional':'Enter '+f.label.toLowerCase()} placeholderTextColor="#98A6B8" onChangeText={v=>updateProduct(f.key,f.key==='phone'?v.replace(/\D/g,'').slice(0,10):f.key==='policyNumber'?v.toUpperCase():v)}
         keyboardType={['phone','premiumAmount','sumInsured','deductible','netPremium','gstAmount','grossPremium','employeeCount','annualWages','annualTurnover','projectValue'].includes(f.key)?'numeric':'default'}
         style={styles.input}/>}
     </View>;
