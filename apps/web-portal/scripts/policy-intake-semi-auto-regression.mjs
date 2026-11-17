@@ -934,7 +934,7 @@ assert(workbenchText.includes("let stopForServiceFailure=false")
   "Systemic n8n error must stop confirmed batch after first failed Intake");
 // Self-hosted cutover must be explicit, HTTPS-only and pinned to the approved
 // INSUREIT hostname; Cloud remains the rollback default.
-assert(webhookBridgeText.includes('const CLOUD_N8N_ORIGIN = "https://insureit.app.n8n.cloud"')
+assert(webhookBridgeText.includes('const EXPECTED_N8N_ORIGIN = "https://insureit.app.n8n.cloud"')
   && webhookBridgeText.includes('const SELF_HOSTED_N8N_ORIGIN = "https://n8n.insureit.in"')
   && webhookBridgeText.includes('INSUREIT_N8N_OCR_ENDPOINT_MODE')
   && webhookBridgeText.includes('=== "self_hosted"')
