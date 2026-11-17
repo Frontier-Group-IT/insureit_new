@@ -692,7 +692,9 @@ assert(!customerPreviewCode.includes(".update(") && !customerPreviewCode.include
   "Customer exception review is strictly read-only and cannot create/link customers or book a policy");
 assert(workbenchText.includes("Check customer matches")
   && workbenchText.includes("Create New Customer")
-  && workbenchText.includes("/customers?choose_partner=1")
+  && workbenchText.includes("Create New Customer with Policy")
+  && !workbenchText.includes("/customers?choose_partner=1")
+  && workbenchText.includes("reprocessAiPolicyIntake(row.id)")
   && workbenchText.includes("This mobile also appears on")
   && workbenchText.includes("reviewAiIntakeCustomerCandidates(exceptionRow.id)"),
   "Customer decision popup provides guided canonical review/create routes, not a silent automatic link");
@@ -812,4 +814,14 @@ assert(workbenchText.includes("Convert to Policy")&&workbenchText.includes("Conf
   && workbenchText.includes("convertVerifiedAiIntake(row.id,true)")
   && workbenchText.includes('role="alertdialog"'),
   "Verified conversion must have a working custom confirmation, never a no-op redirect");
+// An older missing-issue-date n8n draft must never falsely show today.
+const onboardingPageText=text("app/policies/new/page.tsx");
+assert(onboardingPageText.includes("Policy issuance date is not verified in the current PDF extraction")
+  && onboardingPageText.includes("!workflowInitialValues.issuanceDate")
+  && onboardingPageText.includes("/development/ai-policy-onboarding?intake_id="),
+  "A missing n8n issue date needs a visible recheck path and cannot be silently replaced with today");
+assert(!workbenchText.includes('<Link href="/customers?choose_partner=1"')
+  && workbenchText.includes("A separate customer will be created as part of the policy booking transaction")
+  === false,
+  "The customer-resolution popup must not redirect to unrelated Customer Register onboarding");
 console.log("Semi-auto Motor onboarding regression checks passed.");
