@@ -57,6 +57,7 @@ type PayoutRow = {
 };
 type PolicyRow = {
   id: string;
+  created_at: string;
   issuance_date: string | null;
   rm_name: string | null;
   intermediary_type: string | null;
@@ -132,8 +133,10 @@ export type PolicyBusinessMisRow = {
 
 const PAGE_SIZE = 1000;
 const MAX_EXPORT_ROWS = 10_000;
+// Keep the scoped customer filter comfortably below gateway URL limits.
+const CUSTOMER_IDS_PER_REQUEST = 60;
 const SELECT = `
-  id,issuance_date,rm_name,intermediary_type,lead_source,intermediary_code,business_line,policy_type,insured_declared_value,policy_no,start_date,end_date,status,
+  id,created_at,issuance_date,rm_name,intermediary_type,lead_source,intermediary_code,business_line,policy_type,insured_declared_value,policy_no,start_date,end_date,status,
   customers!policies_customer_id_fkey(contact_name,phone,customer_code),
   vehicles!policies_vehicle_id_fkey(vehicle_no,vehicle_class_code,vehicle_class_description,make,model,fuel_type,gvw_kg,engine_capacity_cc,seating_capacity,year,chassis_no,engine_no,rto_state,rto_name),
   insurance_companies!policies_insurance_company_id_fkey(name),
@@ -149,32 +152,55 @@ export async function loadPolicyBusinessMisExport(profile: ViewerProfile, query:
 
   const admin = createSupabaseAdminClient();
   const rows: PolicyRow[] = [];
-  for (let offset = 0; offset <= MAX_EXPORT_ROWS; offset += PAGE_SIZE) {
-    let request = admin
-      .from("policies")
-      .select(SELECT)
-      .order("issuance_date", { ascending: true, nullsFirst: false })
-      .order("created_at", { ascending: true })
-      .range(offset, offset + PAGE_SIZE - 1);
+  // The previous .in("customer_id", customerIds) sent the entire accessible
+  // customer list through one GET URL (38 KB in the production failure).
+  // Batches preserve the exact authorized set and every business/date filter.
+  // A null scope still means unrestricted access, as before.
+  const scopes: (string[] | null)[] = customerIds === null
+    ? [null]
+    : Array.from(
+        { length: Math.ceil(customerIds.length / CUSTOMER_IDS_PER_REQUEST) },
+        (_, index) => customerIds.slice(index * CUSTOMER_IDS_PER_REQUEST, (index + 1) * CUSTOMER_IDS_PER_REQUEST),
+      );
 
-    if (customerIds !== null) request = request.in("customer_id", customerIds);
-    if (filters.fromDate) request = request.gte("issuance_date", filters.fromDate);
-    if (filters.toDate) request = request.lte("issuance_date", filters.toDate);
-    if (filters.insurerId) request = request.eq("insurance_company_id", filters.insurerId);
-    if (filters.rmEmployeeId) request = request.eq("rm_employee_id", filters.rmEmployeeId);
-    if (filters.intermediaryCode) request = request.eq("intermediary_code", filters.intermediaryCode);
-    if (filters.businessLine) request = request.eq("business_line", filters.businessLine);
-    if (filters.category) request = request.eq("policy_type", filters.category);
+  for (const scopedIds of scopes) {
+    for (let offset = 0; ; offset += PAGE_SIZE) {
+      let request = admin
+        .from("policies")
+        .select(SELECT)
+        .order("issuance_date", { ascending: true, nullsFirst: false })
+        .order("created_at", { ascending: true })
+        .order("id", { ascending: true })
+        .range(offset, offset + PAGE_SIZE - 1);
 
-    const { data, error } = await request.returns<PolicyRow[]>();
-    if (error) throw new Error(`Detailed policy MIS query failed: ${error.message}`);
-    const page = data ?? [];
-    rows.push(...page);
-    if (page.length < PAGE_SIZE || rows.length > MAX_EXPORT_ROWS) break;
+      if (scopedIds !== null) request = request.in("customer_id", scopedIds);
+      if (filters.fromDate) request = request.gte("issuance_date", filters.fromDate);
+      if (filters.toDate) request = request.lte("issuance_date", filters.toDate);
+      if (filters.insurerId) request = request.eq("insurance_company_id", filters.insurerId);
+      if (filters.rmEmployeeId) request = request.eq("rm_employee_id", filters.rmEmployeeId);
+      if (filters.intermediaryCode) request = request.eq("intermediary_code", filters.intermediaryCode);
+      if (filters.businessLine) request = request.eq("business_line", filters.businessLine);
+      if (filters.category) request = request.eq("policy_type", filters.category);
+
+      const { data, error } = await request.returns<PolicyRow[]>();
+      if (error) throw new Error(`Detailed policy MIS query failed: ${error.message}`);
+      const page = data ?? [];
+      rows.push(...page);
+      // Keep the existing safety rule: >10,000 matched policies must return
+      // 422, never an incomplete workbook. Exit early once this is proven.
+      if (rows.length > MAX_EXPORT_ROWS) return { rows: [] as PolicyBusinessMisRow[], truncated: true };
+      if (page.length < PAGE_SIZE) break;
+    }
   }
 
-  const truncated = rows.length > MAX_EXPORT_ROWS;
-  return { rows: rows.slice(0, MAX_EXPORT_ROWS).map(normalizeRow), truncated };
+  // Chunks are disjoint by customer ID. Restore the global ordering that the
+  // original single-query export used (with policy ID as stable tie-breaker).
+  rows.sort((a, b) =>
+    (a.issuance_date === null && b.issuance_date === null ? 0 : a.issuance_date === null ? 1 : b.issuance_date === null ? -1 : a.issuance_date.localeCompare(b.issuance_date))
+    || a.created_at.localeCompare(b.created_at)
+    || a.id.localeCompare(b.id),
+  );
+  return { rows: rows.map(normalizeRow), truncated: false };
 }
 
 function normalizeRow(row: PolicyRow): PolicyBusinessMisRow {

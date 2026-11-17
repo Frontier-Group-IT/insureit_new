@@ -22,4 +22,32 @@ assert.match(filter, /aria-label="Next month"/, "Calendar must allow next month 
 assert.match(filter, /event\.key === "Escape"/, "Calendar must close using Escape.");
 assert.match(filter, /closeOnOutside/, "Calendar must close after outside click.");
 assert.match(report, /const exportParams = new URLSearchParams/, "Report export must retain the selected period.");
+
+// Detailed Business MIS export must never place the full accessible customer
+// directory in one URL (production failure was a 38,223-character GET).
+const mis = read("../lib/reports/policy-business-mis-export.ts");
+const route = read("../app/reports/export/policy-business/route.ts");
+assert.match(mis, /const CUSTOMER_IDS_PER_REQUEST = 60/, "MIS customer scopes must be URL-safe batches.");
+assert.match(mis, /customerIds\.slice\(index \* CUSTOMER_IDS_PER_REQUEST, \(index \+ 1\) \* CUSTOMER_IDS_PER_REQUEST\)/, "Every accessible ID must be partitioned without omission.");
+assert.match(mis, /for \(const scopedIds of scopes\)/, "Export must load every authorized customer batch.");
+assert.match(mis, /if \(scopedIds !== null\) request = request\.in\("customer_id", scopedIds\)/, "Each query must use ONLY its authorized customer IDs.");
+assert.doesNotMatch(mis, /request\.in\("customer_id", customerIds\)/, "Do not send all accessible customers in one URL.");
+for (const condition of [
+  'fromDate', 'toDate', 'insurerId', 'rmEmployeeId',
+  'intermediaryCode', 'businessLine', 'category',
+]) assert.ok(mis.includes(`if (filters.${condition})`), `MIS must preserve the ${condition} filter`);
+assert.match(mis, /rows\.length > MAX_EXPORT_ROWS/, "MIS must reject rather than silently truncate records.");
+assert.match(mis, /rows\.sort\(/, "Combining customer batches must restore global issuance ordering.");
+assert.match(mis, /a\.id\.localeCompare\(b\.id\)/, "Equal date rows require a deterministic policy tie-breaker.");
+assert.match(route, /if \(truncated\)/, "Overflow must remain an HTTP 422, not a partial Excel file.");
+assert.match(route, /loadPolicyBusinessMisExport\(profile, query\)/, "Authenticated report scope must remain server-controlled.");
+const syntheticIds = Array.from({length: 1001}, (_, i) => `customer-${i}`);
+const groups = Array.from(
+  {length: Math.ceil(syntheticIds.length / 60)},
+  (_, index) => syntheticIds.slice(index * 60, (index + 1) * 60),
+);
+assert.ok(groups.every(group => group.length <= 60));
+assert.deepEqual(groups.flat(), syntheticIds, "Batch boundaries must not lose or duplicate authorized customers.");
+console.log("Detailed Business MIS large-customer-scope export regression passed.");
+
 console.log("Partner Business Report instant date filter regression passed.");
