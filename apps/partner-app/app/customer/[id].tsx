@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
+import { PartnerStackBottomNavigation } from '@/components/partner-stack-bottom-navigation';
 import { PartnerBanner } from '@/components/ui/partner-banner';
 import { PartnerContactActions } from '@/components/ui/partner-contact-actions';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
@@ -45,7 +46,7 @@ export default function CustomerDetailScreen() {
 
 
   return (
-    <PartnerScreen title="Customer" hideTopBar fullWidth navyStatusBar scrollProps={{ style: { backgroundColor: '#FFFFFF' } }}>
+    <PartnerScreen title="Customer" hideTopBar fullWidth navyStatusBar bottomNavigationNavy bottomNavigation={<PartnerStackBottomNavigation activeTab="business" />} scrollProps={{ style: { backgroundColor: '#FFFFFF' } }}>
       {loading ? (
         <PartnerStateView state="loading" title="Loading customer" />
       ) : error || !data ? (
