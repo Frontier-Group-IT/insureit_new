@@ -23,7 +23,7 @@ assert.doesNotMatch(detail, /<IntakeProgress|function IntakeProgress|progressWra
 assert.match(listing, /field\(row, 'insured_name'\) \|\| field\(row, 'customer_name'\) \|\| field\(row, 'name_of_insured'\)/, 'Detail follows list identity hierarchy');
 assert.match(api, /resolveIntakeSubmitterNames\(admin, \[intake\]\)/, 'Detail API resolves submitter only after authorized scoped lookup');
 assert.match(api, /intake: match \? \{ \.\.\.namedIntake, status: "duplicate" \} : namedIntake/, 'Submitter name is returned for duplicate and ordinary statuses');
-assert.match(header, /row\.status !== 'rejected' && row\.status !== 'needs_attention'/, 'Needs-attention submission has no redundant header instruction');
+assert.doesNotMatch(header, /statusHelp\(row\)/, 'No status-dependent explanatory header remains for any intake state');
 assert.doesNotMatch(detail, /Read the Operations note below and upload a replacement policy copy\./, 'Remove old instruction completely');
 assert.match(detail, /'Upload a replacement policy copy'/, 'Attention panel displays requested replacement-copy title');
 assert.match(detail, /'Operations rejection note'/, 'Rejected submissions retain the rejection note title');
