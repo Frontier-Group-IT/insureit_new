@@ -348,6 +348,10 @@ export default function LifeHealthCaseDetailScreen(){
           {inline("premiumAmount","Premium amount",amount(record.premium_amount),true,false,false,"decimal-pad")}
           {inline("paymentMode","Payment mode",record.payment_mode,true)}
         </View>
+        {record.status_group==='issued'&&record.remarks?.trim()?<>
+          <Text style={styles.fieldLabel}>REMARKS</Text>
+          <Text selectable style={styles.remarkExisting}>{record.remarks}</Text>
+        </>:null}
       </Section>
 
       {(record.status_group==='pending'||record.status_group==='rejected')?<View style={styles.section}>
