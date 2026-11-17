@@ -567,12 +567,15 @@ const routeText=text("app/api/internal/ai-policy-onboarding/process/route.ts");
 const actionsText=text("app/development/ai-policy-onboarding/actions.ts");
 const workbenchText=text("components/development/semi-auto-policy-workspace.tsx");
 const queueSql=readFileSync(new URL("../../../supabase/migrations/20261117154000_policy_intake_ai_processing_queue.sql",import.meta.url),"utf8");
+const queueV2Sql=readFileSync(new URL("../../../supabase/migrations/20261117170000_ai_policy_priority_batch_queue_v2.sql",import.meta.url),"utf8");
+const normalUploadActions=text("app/policy-intakes/actions.ts");
+const partnerUploadApi=text("app/api/partner/policy-intakes/route.ts");
 const schedulerYaml=readFileSync(new URL("../../../.github/workflows/ai-policy-intake-extraction.yml",import.meta.url),"utf8");
 assert(workerText.includes("offset<ids.length;offset+=100")
   && workerText.includes("ids.slice(offset,offset+100)"),
   "All authorized open Intakes must contribute to AI queue counts across pages");
 assert(workerText.includes("previewSemiAutoN8nExtraction(")
-  && workerText.includes("claim_policy_intake_ai_queue_v1")
+  && workerText.includes("claim_policy_intake_ai_queue_v2")
   && workerText.includes("canonicalPreflightPassed:false"),
   "Background extraction must use current signed n8n PDF, atomically claim and never mark booking-ready on parse success");
 assert(!workerText.includes("onboardPolicy(")
@@ -599,8 +602,8 @@ assert(actionsText.includes("reprocessAiPolicyIntake")
   "Each manual background reprocess request must require the current authorized reviewer");
 const vercelConfig=JSON.parse(text("vercel.json"));
 assert.deepEqual(vercelConfig.crons,[
-  {path:"/api/internal/ai-policy-onboarding/process",schedule:"*/5 * * * *"},
-], "Vercel Pro should schedule a bounded queue every five minutes");
+  {path:"/api/internal/ai-policy-onboarding/process",schedule:"* * * * *"},
+], "Vercel Pro should provide a one-minute durable fallback, separate from immediate Intake hooks");
 assert(routeText.includes("export async function GET(request: NextRequest)")
   && routeText.includes("authorized(request, process.env.CRON_SECRET??")
   && routeText.includes("secret.length < 32")
@@ -679,4 +682,40 @@ assert(workbenchText.includes("Check customer matches")
   && workbenchText.includes("This mobile also appears on")
   && workbenchText.includes("reviewAiIntakeCustomerCandidates(exceptionRow.id)"),
   "Customer decision popup provides guided canonical review/create routes, not a silent automatic link");
+// Event-driven n8n-first ingestion must cover both Operations and Partner
+// original uploads AND successful document replacements. No Google OCR should
+// be invoked when the verified n8n workbench/queue is enabled.
+assert(normalUploadActions.includes("processAiQueueBatch({preferredIntakeId:input.id})")
+  && normalUploadActions.split("processAiQueueBatch({preferredIntakeId:input.id})").length===3
+  && normalUploadActions.includes("if(aiQueueEnabled())"),
+  "Operations originals and replacements must dispatch immediate n8n independently of cron");
+assert(partnerUploadApi.includes("processAiQueueBatch({preferredIntakeId:input.id})")
+  && partnerUploadApi.split("processAiQueueBatch({preferredIntakeId:input.id})").length===3
+  && partnerUploadApi.includes("if (aiQueueEnabled())"),
+  "Partner and Branch originals and replacements must dispatch immediate n8n independently of cron");
+assert(workerText.includes("const MAX_BATCH = 6")
+  && workerText.includes("const MAX_CONCURRENT = 3")
+  && workerText.includes("Promise.all(wave.map(")
+  && workerText.includes("p_preferred_intake_id:preferredIntakeId??null"),
+  "Backlog uses bounded three-way concurrency; an immediate upload claims only its own Intake");
+assert(workerText.includes('sync_verified_ai_intake_ocr_v1')
+  && workerText.includes('loadPolicyIntakeDuplicateMatches(admin,[{')
+  && workerText.includes('isDuplicate, // Derived from the canonical'),
+  "Strict n8n PDF fields must feed the canonical duplicate status and OCR only through the guarded RPC");
+assert(queueV2Sql.includes("create or replace function public.claim_policy_intake_ai_queue_v2")
+  && queueV2Sql.includes("p_preferred_intake_id uuid default null")
+  && queueV2Sql.includes("p_max > 8")
+  && queueV2Sql.includes("for update of q skip locked")
+  && queueV2Sql.includes("revoke all on function public.claim_policy_intake_ai_queue_v2"),
+  "Priority/large queue claims must retain service-role gates and SKIP LOCKED leases");
+assert(queueV2Sql.includes("create or replace function public.sync_verified_ai_intake_ocr_v1")
+  && queueV2Sql.includes("current_user <> 'service_role'")
+  && queueV2Sql.includes("p_checks_passed <> 13")
+  && queueV2Sql.includes("coalesce(i.ocr_fields,'[]'::jsonb)='[]'::jsonb")
+  && queueV2Sql.includes("not exists(")
+  && queueV2Sql.includes("policy_intake_onboarding_drafts")
+  && queueV2Sql.includes("q.lease_id=p_lease_id")
+  && queueV2Sql.includes("d.is_current=true")
+  && !queueV2Sql.includes("insert into public.policies"),
+  "Canonical OCR synchronization requires strict checked current PDF/lease, empty fields and no saved draft; never books");
 console.log("Semi-auto Motor onboarding regression checks passed.");
