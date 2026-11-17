@@ -37,6 +37,16 @@ for(const key of ['policyNumber','issuanceDate','startDate','endDate','pptEndDat
   assert.ok(app.includes('issueField("'+key+'"'),'Missing issuance field '+key);
 }
 assert.ok(app.includes('>Create Policy</Text>'),'Pending case issuance button uses compact label');
+assert.match(app,/const showCreatePolicyError=\(message:string\)=>/, 'Create Policy failures must use shared feedback handling');
+assert.match(app,/visible=\{Boolean\(createPolicyError\)\}/, 'Create Policy failure renders a custom dialog');
+assert.match(app,/title="Unable to Create Policy"/, 'Error dialog identifies failed action');
+assert.match(app,/actions=\{\[\{label:'OK',onPress:\(\)=>setCreatePolicyError\(''\)\}\]\}/, 'Create Policy error dialog has an OK dismissal');
+for(const cause of ['Enter a valid policy number', 'Enter a valid DD/MM/YYYY date', 'Save your case edits before issuing the policy.']){
+ assert.ok(app.includes('showCreatePolicyError(\''+cause), 'Create Policy failure should be shown in popup: '+cause);
+}
+assert.match(app,/catch\(e\)\{showCreatePolicyError\(e instanceof Error\?e.message:/,'Backend issuance failures use the custom popup');
+assert.doesNotMatch(app,/\{issueError\?<Text style=\{styles.saveError\}>\{issueError\}<\/Text>:null\}\s*<\/Section>:null\}/,'No hidden inline error remains in Section 05');
+
 assert.match(app,/onPress=\{\(\)=>void submitIssue\(\)\}/,'Create Policy retains verified issuance handler');
 assert.ok(app.includes('remarkSection'), 'Remarks use a standalone section');
 assert.ok(app.includes('styles.sectionHighlight') && app.includes('styles.sectionHeaderHighlight'), 'Section 05 has its Operations-style highlight');
