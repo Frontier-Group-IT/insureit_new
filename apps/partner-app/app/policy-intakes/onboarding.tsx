@@ -160,8 +160,9 @@ export default function NativePolicyOnboarding(){
   const formShift=useRef(new Animated.Value(8)).current;
   const numberScale=useRef(new Animated.Value(0.97)).current;
   const [focusedInput,setFocusedInput]=useState<string|null>(null);
+  const hasDraft=Boolean(draft);
   useEffect(()=>{
-    if(!draft)return;
+    if(!hasDraft)return;
     let active=true;
     void AccessibilityInfo.isReduceMotionEnabled().then(reduced=>{
       if(!active)return;
@@ -178,7 +179,7 @@ export default function NativePolicyOnboarding(){
       if(active){formOpacity.setValue(1);formShift.setValue(0);numberScale.setValue(1);}
     });
     return()=>{active=false;formOpacity.stopAnimation();formShift.stopAnimation();numberScale.stopAnimation();};
-  },[Boolean(draft),formOpacity,formShift,numberScale]);
+  },[hasDraft,formOpacity,formShift,numberScale]);
   const [error,setError]=useState('');
   const [loading,setLoading]=useState(true);
   const [saving,setSaving]=useState(false);
