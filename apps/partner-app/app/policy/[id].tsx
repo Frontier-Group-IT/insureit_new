@@ -210,7 +210,7 @@ function Card({ children, onPress, accessibilityLabel }: { children: ReactNode; 
 
 function CardHeader({ iconKind, title, actionLabel, onAction }: { iconKind?: PartnerPolicyDetailIconKind; title: string; actionLabel?: string; onAction?: () => void }) {
   return (
-    <View style={styles.cardHeader}>
+    <View style={[styles.cardHeader, !iconKind && !actionLabel ? styles.cardHeaderCompact : null]}>
       <View style={styles.cardHeaderLeft}>{iconKind ? <PartnerPolicyDetailIcon kind={iconKind} size={22} showBadge={false} /> : null}<Text style={styles.cardTitle}>{title}</Text></View>
       {actionLabel ? (
         <Pressable accessibilityRole="button" disabled={!onAction} onPress={onAction} hitSlop={8} style={({ pressed }) => [styles.cardHeaderAction, pressed && onAction ? styles.pressed : null]}>
@@ -288,9 +288,9 @@ const styles = StyleSheet.create({
   headerBackButton: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   headerTitle: { color: '#FFFFFF', fontSize: 16, lineHeight: 22, fontWeight: '700', letterSpacing: -0.12 },
   stateWrap: { marginTop: 14 },
-  contentWrap: { marginTop: 0, gap: 9, paddingBottom: 15 },
+  contentWrap: { marginTop: 0, gap: 6, paddingBottom: 15 },
   summaryCard: {
-    paddingHorizontal: 14, paddingTop: 14, paddingBottom: 12,
+    paddingHorizontal: 14, paddingTop: 10, paddingBottom: 9,
     marginHorizontal: -partnerTheme.spacing.lg,
     backgroundColor: '#FFFFFF', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E3E9F1',
   },
@@ -320,13 +320,14 @@ const styles = StyleSheet.create({
   externalSectionHeading: { marginLeft: -6, paddingLeft: 0, paddingRight: 2 },
   card: { overflow: 'hidden', borderRadius: 13, borderWidth: StyleSheet.hairlineWidth, borderColor: '#E2E8F1', backgroundColor: '#FFFFFF' },
   cardHeader: { minHeight: 37, paddingHorizontal: 11, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  cardHeaderCompact: { minHeight: 30 },
   cardHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 7 }, cardTitle: { color: '#102A51', fontSize: 12.5, lineHeight: 16, fontWeight: '800' },
   cardHeaderAction: { flexDirection: 'row', alignItems: 'center', gap: 1, minHeight: 32, paddingLeft: 8 }, cardHeaderActionText: { color: '#0969CF', fontSize: 9, lineHeight: 12, fontWeight: '700' },
-  quickSection: { marginHorizontal: 12, paddingVertical: 8 },
-  quickSectionHeading: { marginLeft: -6, marginRight: 3, marginBottom: 8, color: '#17365D', fontSize: 12, lineHeight: 16, fontWeight: '800' },
+  quickSection: { marginHorizontal: 12, paddingVertical: 4 },
+  quickSectionHeading: { marginLeft: -6, marginRight: 3, marginBottom: 5, color: '#17365D', fontSize: 12, lineHeight: 16, fontWeight: '800' },
   quickGrid: { flexDirection: 'row', alignItems: 'stretch', gap: 7 },
   quickAction: {
-    flex: 1, minWidth: 0, minHeight: 74, alignItems: 'center', justifyContent: 'center',
+    flex: 1, minWidth: 0, minHeight: 68, alignItems: 'center', justifyContent: 'center',
     paddingHorizontal: 2, paddingVertical: 6, gap: 4, backgroundColor: 'transparent',
   },
   quickActionIcon: { width: 54, height: 54, alignItems: 'center', justifyContent: 'center' },
