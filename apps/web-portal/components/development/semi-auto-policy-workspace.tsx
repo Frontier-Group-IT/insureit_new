@@ -76,7 +76,10 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
       const assessment = await checkSemiAutoIntake(id);
       if (requestId.current === next) setResult(assessment);
     } catch {
-      if (requestId.current === next) setResult({ ok: false, ready: false, issues: [{ section: "Intake", field: "Eligibility check", message: "The readiness check failed to contact the server. Refresh and try again." }] });
+      if (requestId.current === next) {
+        if (primaryN8n) setN8nResult({ ok: false, error: "The n8n extraction request failed. No old OCR fallback or policy update was attempted." });
+        else setResult({ ok: false, ready: false, issues: [{ section: "Intake", field: "Eligibility check", message: "The readiness check failed to contact the server. Refresh and try again." }] });
+      }
     } finally {
       if (requestId.current === next) setBusy(null);
     }
@@ -113,7 +116,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
   }
 
   async function applyN8n() {
-    if (!selectedId || !n8nResult?.ok || !n8nResult.preview.canApply || isWaiting) return;
+    if (!selectedId || !n8nResult?.ok || !n8nResult.preview.canApply || isWaiting || primaryN8n) return;
     const confirmed = window.confirm(
       "Apply the reviewed n8n extraction to this failed OCR Intake? Confirm all proposed fields against the original PDF. This will replace only empty failed OCR data, change the Intake to Ready for Review, and will NOT create a customer, vehicle or policy. Normal draft correction and explicit booking approval remain mandatory.",
     );
@@ -145,7 +148,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
   }
 
   async function book() {
-    if (!selectedId || !available || isWaiting) return;
+    if (!selectedId || !available || isWaiting || primaryN8n) return;
     const accepted = window.confirm("Book this issued Motor Policy using the verified Intake and saved onboarding draft? Confirm that you checked the original PDF, particularly the Policy Issuance Date, insured identity, and premiums. This action creates a real policy; it cannot be undone from this page. Unverified pay-in and payout will remain for commercial review.");
     if (!accepted) return;
     const next = ++requestId.current;
@@ -166,7 +169,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
   }
 
   async function correct() {
-    if (!selectedId || isWaiting) return;
+    if (!selectedId || isWaiting || primaryN8n) return;
     const next = ++requestId.current;
     setBusy("editing");
     try {
@@ -231,7 +234,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
         <div className="overflow-x-auto">
           <table className="min-w-[760px] w-full border-collapse text-left text-[10.5px]">
             <thead className="bg-[#f5f8fc] text-[9px] font-bold uppercase tracking-[.07em] text-[#62748e]">
-              <tr><th className="w-10 px-3 py-3"><span className="sr-only">Select</span></th><th className="px-2 py-3">Intake</th><th className="px-3 py-3">Lead source</th><th className="px-3 py-3">Customer mobile</th><th className="px-3 py-3">Status</th><th className="px-3 py-3">OCR</th><th className="px-3 py-3">Submitted</th></tr>
+              <tr><th className="w-10 px-3 py-3"><span className="sr-only">Select</span></th><th className="px-2 py-3">Intake</th><th className="px-3 py-3">Lead source</th><th className="px-3 py-3">Customer mobile</th>{primaryN8n ? <th className="px-3 py-3">Policy type</th> : null}<th className="px-3 py-3">Status</th><th className="px-3 py-3">OCR</th><th className="px-3 py-3">Submitted</th></tr>
             </thead>
             <tbody className="divide-y divide-[#edf1f5]">
               {visible.map(row => (
@@ -246,6 +249,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
                   </td>
                   <td className="max-w-[210px] truncate px-3 py-3 text-[#344761]" title={row.lead_source_name}>{row.lead_source_name || "-"}</td>
                   <td className="whitespace-nowrap px-3 py-3 tabular-nums text-[#334763]">{row.customer_mobile}</td>
+                  {primaryN8n ? <td className="whitespace-nowrap px-3 py-3 text-[#445b75]">{row.policy_type === "non_motor" ? "Non-Motor" : row.policy_type === "motor" ? "Motor" : row.policy_type === "life" ? "Life" : row.policy_type === "health" ? "Health" : "Unclassified"}</td> : null}
                   <td className="whitespace-nowrap px-3 py-3"><span className="rounded-md bg-[#edf2fa] px-2 py-1 font-semibold text-[#3f5c82]">{row.is_duplicate ? "Duplicate · Preview only" : primaryN8n && row.policy_type !== "motor" ? "Review only" : humanStatus[row.status] || row.status}</span></td>
                   <td className="whitespace-nowrap px-3 py-3"><span className={row.ocr_status === "completed" ? "font-semibold text-emerald-700" : "font-semibold text-amber-700"}>{row.ocr_status === "completed" ? "Extracted" : row.ocr_status.replaceAll("_", " ")}</span></td>
                   <td className="whitespace-nowrap px-3 py-3 text-[#62748e]">{compactDate(row.created_at)}</td>
@@ -394,7 +398,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
               <p className="mt-2 text-[11px] text-emerald-900">Policy Code: <strong>{done.policyCode}</strong></p>
               <Link href={"/policies/" + done.policyId} className="mt-2 inline-flex items-center gap-1 text-[11px] font-bold text-emerald-800 underline">View registered policy <ArrowUpRight className="h-3.5 w-3.5"/></Link>
             </div> : null}
-            {!primaryN8n ? <div className="mt-4 flex flex-wrap gap-2">
+            {!primaryN8n ? <><div className="mt-4 flex flex-wrap gap-2">
               <button type="button" onClick={() => { void correct(); }} disabled={isWaiting || Boolean(done) || Boolean(selected?.is_duplicate)}
                 className="inline-flex min-h-9 flex-1 items-center justify-center gap-1.5 rounded-lg border border-[#cbd9e9] bg-white px-3 text-[11px] font-semibold text-[#254f82] disabled:opacity-50">
                 {busy === "editing" ? <Loader2 className="h-3.5 w-3.5 animate-spin"/> : <PencilLine className="h-3.5 w-3.5"/>}Open & correct fields
