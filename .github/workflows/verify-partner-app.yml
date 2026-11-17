@@ -137,6 +137,9 @@ jobs:
       - name: Verify Partner-only mobile onboarding
         run: node apps/partner-app/scripts/verify-add-partner-only.mjs
 
+      - name: Verify POSP/MISP picker, MISP form and document parity
+        run: node apps/partner-app/scripts/verify-misp-onboarding-parity.mjs
+
       - name: Verify Policy Intake source API contract
         run: node apps/partner-app/scripts/verify-policy-intake-source-contract.mjs
       - name: Verify Policy Intake detail header identity parity

@@ -10,7 +10,7 @@ assert.match(policies, /route: '\/partner-new' as const/);
 assert.match(policies, /onPress=\{\(\) => router\.push\(action\.route\)\}/);
 assert.match(policies, /Add Partner/);
 assert.match(stack, /name="partner-new"/);
-assert.match(permissions, /\/partner-new/);
+assert.match(permissions, /partner-new\|partner-documents/, "Both Partner forms are capability-gated");
 assert.match(permissions, /create_intermediary_application', minimum: 'edit'/);
 assert.doesNotMatch(form, /Partner category|Individual Partner|Business Partner/, 'No category selection');
 for (const heading of ['Identity & contact','Address','Bank & tax']) assert.ok(form.includes(heading));

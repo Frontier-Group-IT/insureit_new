@@ -9,6 +9,7 @@ import { canPartnerAccess } from '@/lib/partner-permissions';
 import { PartnerStackBottomNavigation, type PartnerTabDestination } from '@/components/partner-stack-bottom-navigation';
 import { PartnerPolicyCalendarDialog } from '@/components/policy-intakes/partner-policy-calendar-dialog';
 import { supabase } from '@/lib/supabase';
+import { MispPartnerForm } from '@/components/misp-partner-form';
 import { usePartnerSession } from '@/providers/partner-session-provider';
 
 type Field = 'document_received_at' | 'associate_employee_id' | 'pos_first_name' | 'pos_middle_name' | 'pos_last_name'
@@ -22,7 +23,7 @@ const uploadSlots: Array<{ type: DocumentType; label: string }> = [
   { type: 'pan_copy', label: 'PAN Copy' }, { type: 'cancelled_cheque', label: 'Cancelled Cheque / Bank Proof' },
   { type: 'photograph', label: 'Photograph' }, { type: 'gst_copy', label: 'GST Certificate' },
 ];
-type MasterData = { ok?: boolean; error?: string; rms?: Option[]; banks?: Option[] };
+type MasterData = { ok?: boolean; error?: string; rms?: Option[]; banks?: Option[]; oems?: Option[]; pendingMisps?:Option[] };
 const initial: Record<Field, string> = {
   document_received_at: '', associate_employee_id: '', pos_first_name: '', pos_middle_name: '', pos_last_name: '',
   pan_number: '', aadhaar_number: '', date_of_birth: '', mobile: '', email: '',
@@ -79,6 +80,10 @@ export default function AddPartnerScreen() {
   const allowed = context?.identity.actor_kind === 'employee'
     && canPartnerAccess(context, 'create_intermediary_application', 'edit');
   const [form, setForm] = useState(initial);
+  const [partnerType,setPartnerType]=useState<"posp"|"misp">("posp");
+  const [mispDirty,setMispDirty]=useState(false);
+  const [oems,setOems]=useState<Option[]>([]);
+  const [pendingMisps,setPendingMisps]=useState<Option[]>([]);
   const [rms, setRms] = useState<Option[]>([]);
   const [banks, setBanks] = useState<Option[]>([]);
   const [loading, setLoading] = useState(true);
@@ -91,7 +96,13 @@ export default function AddPartnerScreen() {
   const [uploaded, setUploaded] = useState<Partial<Record<DocumentType, string>>>({});
   const [dateField, setDateField] = useState<'date_of_birth' | 'document_received_at' | null>(null);
   const set = (key: Field, value: string) => setForm(old => ({ ...old, [key]: value }));
-  const hasUnsavedDetails = !applicationId && (Object.keys(initial) as Field[]).some(key => form[key] !== initial[key]);
+  const hasUnsavedDetails = mispDirty || (!applicationId && (Object.keys(initial) as Field[]).some(key => form[key] !== initial[key]));
+  const changePartnerType=(next:"posp"|"misp")=>{
+    if(next===partnerType)return;
+    if(partnerType==="misp"&&mispDirty){Alert.alert("Discard MISP details?","Switching to POSP will clear unsaved MISP details.",[{text:"Keep Editing",style:"cancel"},{text:"Discard & Switch",style:"destructive",onPress:()=>{setMispDirty(false);setPartnerType(next);}}]);return;}
+    if(partnerType==="posp"&&(applicationId||hasUnsavedDetails)){Alert.alert("Keep POSP details?","Changing type will hide the current POSP form.",[{text:"Keep Editing",style:"cancel"},{text:"Switch to MISP",onPress:()=>setPartnerType(next)}]);return;}
+    setPartnerType(next);
+  };
   const leavePartnerForm = (destination?: PartnerTabDestination) => {
     if (saving || uploadingType) return;
     const leave = () => destination ? router.navigate(destination as never) : router.back();
@@ -109,7 +120,7 @@ export default function AddPartnerScreen() {
         const response = await authenticatedRequest('GET');
         const result = await response.json() as MasterData;
         if (!response.ok || !result.ok) throw new Error(result.error || 'Could not load RM and Bank lists.');
-        if (active) { setRms(result.rms || []); setBanks(result.banks || []); }
+        if (active) { setRms(result.rms || []); setBanks(result.banks || []); setOems(result.oems || []);setPendingMisps(result.pendingMisps || []); }
       } catch (error) {
         if (active) Alert.alert('Master data unavailable', error instanceof Error ? error.message : 'Please retry.');
       } finally { if (active) setLoading(false); }
@@ -232,6 +243,8 @@ export default function AddPartnerScreen() {
           </View>
         </View>
         <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
+          <View style={styles.typeSwitch} accessibilityLabel="Partner onboarding type">{(["posp","misp"] as const).map(type=><Pressable key={type} accessibilityRole="button" accessibilityLabel={type.toUpperCase()} accessibilityState={{selected:partnerType===type}} onPress={()=>changePartnerType(type)} style={[styles.typeOption,partnerType===type&&styles.typeSelected]}><Text style={[styles.typeText,partnerType===type&&styles.typeSelectedText]}>{type.toUpperCase()}</Text></Pressable>)}</View>
+          {partnerType==="misp"?<MispPartnerForm rms={rms} banks={banks} oems={oems} pendingMisps={pendingMisps} loading={loading} onDirtyChange={setMispDirty}/>:<>
           {sections.map((section, index) => (
             <View key={section.heading} style={styles.section}>
               <View style={styles.sectionHeader}>
@@ -281,8 +294,9 @@ export default function AddPartnerScreen() {
               </View>
             </View>
           ))}
+          </>}
 
-          <View style={styles.actionFooter}>
+          {partnerType==="posp"&&<View style={styles.actionFooter}>
           <View style={styles.actionRow}>
             <Pressable accessibilityRole="button" accessibilityLabel="Save and exit Partner form"
               disabled={saving || loading || Boolean(uploadingType)}
@@ -297,7 +311,7 @@ export default function AddPartnerScreen() {
               <Text style={styles.submitText}>{uploadingType ? 'Uploading…' : saving ? 'Saving…' : 'Upload Documents'}</Text>
             </Pressable>
           </View>
-          </View>
+          </View>}
         </ScrollView>
         <PartnerPolicyCalendarDialog
           visible={Boolean(dateField)}
@@ -390,6 +404,8 @@ const styles = StyleSheet.create({
   heading: { fontSize: 17, color: '#FFFFFF', fontWeight: '800' },
   headerTitleGroup: { flexDirection: 'row', alignItems: 'center', gap: 9, flexShrink: 1 },
   content: { padding: 12, paddingBottom: 35, gap: 12 },
+  typeSwitch:{flexDirection:'row',width:'100%',padding:4,backgroundColor:'#E4EAF5',borderRadius:12,borderWidth:1,borderColor:'#CED8E7'},
+  typeOption:{flex:1,minHeight:42,alignItems:'center',justifyContent:'center',borderRadius:9},typeSelected:{backgroundColor:'#17365D'},typeText:{fontWeight:'800',fontSize:13,color:'#4D5F7B'},typeSelectedText:{color:'#FFFFFF'},
   section: { backgroundColor: '#FFF', borderWidth: 1, borderColor: '#E1E7F1', borderRadius: 14, overflow: 'hidden' },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12, backgroundColor: '#F9FBFD', borderBottomWidth: 1, borderBottomColor: '#E1E7F1' },
   index: { backgroundColor: '#17365D', borderRadius: 7, width: 33, height: 33, justifyContent: 'center', alignItems: 'center' },
