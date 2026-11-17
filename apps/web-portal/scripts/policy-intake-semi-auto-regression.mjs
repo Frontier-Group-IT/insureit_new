@@ -142,4 +142,29 @@ assert(!n8nServer.includes('.from("policies").insert(') &&
 assert(client.includes("bookSemiAutoIntake(selectedId, true)"),
   "Canonical booking path must remain untouched");
 
+
+// n8n preview is ephemeral: distinguish exact field changes and show verified
+// PDF premium components without enabling Intake writes or bookings.
+const n8nValidator = text("lib/policy-intake-n8n-validation.ts");
+assert(n8nValidator.includes("export type N8nVerifiedPremiumBreakdown"),
+  "Validated premium breakdown must have a typed, bounded response contract");
+assert(n8nValidator.includes("checksPassed: REQUIRED_CHECKS.size"),
+  "Display a check count derived from the strict validator, not an untrusted n8n claim");
+assert(n8nValidator.includes("const odAddons = premium.od_addons.map"),
+  "Each individual OD add-on must be validated before reaching the preview");
+assert(n8nServer.includes("const changedFields: SemiAutoN8nChangedField[]"),
+  "Actual differences must be computed against the saved Intake OCR on the server");
+assert(n8nServer.includes("previousValue: previous ?? null") && n8nServer.includes("extractedValue: field.value"),
+  "Each difference must include old and new OCR values for reviewer comparison");
+assert(n8nServer.includes("premium: extraction.premium"),
+  "Only the independently validated n8n premium breakdown may reach the review UI");
+assert(client.includes("Exact field differences from saved OCR"),
+  "Expose the precise changed field list instead of a count alone");
+assert(client.includes("PDF premium reconciliation") && client.includes("Individual OD add-ons"),
+  "Expose the complete, reconciled premium breakdown, including add-ons");
+assert(client.includes("This preview does not change the Intake, draft or booking state."),
+  "Preview remains explicitly read-only");
+assert(n8nServer.includes('semiAutoN8nApplyEnabled()'),
+  "Keep a separate recovery gate for OCR application");
+
 console.log("Semi-auto Motor onboarding regression checks passed.");
