@@ -11,9 +11,11 @@ assert.match(source,/styles\.categoryPill[\s\S]{0,300}styles\.periodValue/,'Date
 assert.match(source,/formatDate\(data\.policy\.start_date\)\} – \{formatDate\(data\.policy\.end_date\)/,'Keep real policy dates');
 assert.doesNotMatch(source,/>Policy Period</,'Do not show Policy Period label');
 assert.doesNotMatch(source,/styles\.summaryDivider|styles\.premiumRow|styles\.periodDivider/,'Remove old split premium and period row from hero');
-for (const title of ['Premium', 'Customer Details', 'Commercial Attribution']) {
-  assert.ok(source.includes('<CardHeader title="'+title+'" />'), 'Section '+title+' has no leading icon');
-}
+assert.ok(!source.includes('<CardHeader title="Premium" />'), 'Premium is inside the combined overview');
+assert.ok(!source.includes('<CardHeader title="Commercial Attribution" />'), 'Commercial is inside the combined overview');
+assert.ok(source.includes('<CardHeader title="Customer Details" />'), 'Customer heading remains separate');
+assert.match(source,/styles\.premiumDisclosure/,'Premium disclosure remains expandable');
+assert.match(source,/styles\.commercialRow/,'Commercial disclosure remains expandable');
 assert.ok(source.includes("<CardHeader title={data.vehicle ? 'Vehicle Details' : 'Insured Risk Details'} />"),
   'Vehicle/Risk section has no leading icon in either category');
 assert.match(source, /iconKind \? <PartnerPolicyDetailIcon kind=\{iconKind\}/,
