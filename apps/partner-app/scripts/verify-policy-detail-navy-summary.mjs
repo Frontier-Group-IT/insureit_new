@@ -1,0 +1,15 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+const source=readFileSync('apps/partner-app/app/policy/[id].tsx','utf8');
+assert.match(source,/pageHeader:\s*\{[^}]*backgroundColor: '#0A234A'/,'Policy Details top bar uses navy');
+assert.match(source,/summaryCard:\s*\{[^}]*backgroundColor: '#0A234A'/,'Policy hero uses navy');
+assert.match(source,/headerTitle:\s*\{ color: '#FFFFFF'/,'Header title has white contrast');
+assert.match(source,/summaryPolicyNo:\s*\{ color: '#FFFFFF'/,'Policy number has white contrast');
+assert.match(source,/summaryNetPremium/,'Net Premium has dedicated inline secondary styling');
+assert.match(source,/Net Premium - \{nullableMoney\(data\.premium\.net_premium\)\}/,'Net Premium is directly below policy number');
+assert.match(source,/styles\.categoryPill[\s\S]{0,300}styles\.periodValue/,'Date range follows category badge');
+assert.match(source,/formatDate\(data\.policy\.start_date\)\} – \{formatDate\(data\.policy\.end_date\)/,'Keep real policy dates');
+assert.doesNotMatch(source,/>Policy Period</,'Do not show Policy Period label');
+assert.doesNotMatch(source,/styles\.summaryDivider|styles\.premiumRow|styles\.periodDivider/,'Remove old split premium and period row from hero');
+assert.match(source,/PartnerCaseBottomNavigation activeTab="Policies"/,'Bottom navigation unchanged');
+console.log('Policy Details navy hero, net premium, dates, and navigation verified.');
