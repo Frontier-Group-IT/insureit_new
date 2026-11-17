@@ -15,6 +15,7 @@ on:
       - '.github/workflows/insureit-postgres-r2-v2-manual.yml'
       - '.github/workflows/insureit-postgres-r2-v2-restore-verify.yml'
       - '.github/workflows/insureit-managed-recovery-preflight.yml'
+      - '.github/workflows/insureit-managed-recovery-import-r4.yml'
   workflow_dispatch:
 
 permissions:
@@ -30,7 +31,7 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m pip install boto3==1.35.99 cryptography==44.0.2 pyyaml==6.0.2 'psycopg[binary]==3.2.9'
-      - run: python -m py_compile scripts/backup/supabase_storage_to_r2.py scripts/backup/verify_r2_restore.py scripts/backup/monitor_github_backup.py scripts/backup/monitor_postgres_backup.py scripts/backup/postgres_to_r2.py scripts/backup/verify_postgres_r2_restore.py scripts/backup/classify_pg_restore_error.py scripts/backup/audit_postgres_archive_coverage.py scripts/backup/verify_postgres_offline_row_counts.py scripts/backup/summarize_pg_restore_errors.py scripts/backup/diagnose_pg_restore_data.py scripts/backup/audit_postgres_copy_targets.py scripts/backup/postgres_v2_to_r2.py scripts/backup/verify_postgres_v2_r2.py scripts/backup/verify_postgres_v2_rows.py scripts/backup/audit_postgres_v2_toc.py scripts/backup/prepare_pg_dump_connection.py scripts/backup/allow_no_acl_restore_fallback.py scripts/backup/audit_storage_source_manifest.py scripts/backup/managed_recovery_preflight.py scripts/backup/plan_recovery_storage_sample.py
+      - run: python -m py_compile scripts/backup/supabase_storage_to_r2.py scripts/backup/verify_r2_restore.py scripts/backup/monitor_github_backup.py scripts/backup/monitor_postgres_backup.py scripts/backup/postgres_to_r2.py scripts/backup/verify_postgres_r2_restore.py scripts/backup/classify_pg_restore_error.py scripts/backup/audit_postgres_archive_coverage.py scripts/backup/verify_postgres_offline_row_counts.py scripts/backup/summarize_pg_restore_errors.py scripts/backup/diagnose_pg_restore_data.py scripts/backup/audit_postgres_copy_targets.py scripts/backup/postgres_v2_to_r2.py scripts/backup/verify_postgres_v2_r2.py scripts/backup/verify_postgres_v2_rows.py scripts/backup/audit_postgres_v2_toc.py scripts/backup/prepare_pg_dump_connection.py scripts/backup/allow_no_acl_restore_fallback.py scripts/backup/audit_storage_source_manifest.py scripts/backup/managed_recovery_preflight.py scripts/backup/plan_recovery_storage_sample.py scripts/backup/prepare_managed_sql_restore_list.py scripts/backup/execute_managed_sql_restore.py scripts/backup/verify_managed_sql_rows.py
       - run: python -m unittest discover -s scripts/backup -p 'test_*.py' -v
       - name: Validate workflow safety guard
         run: |
@@ -305,6 +306,54 @@ jobs:
           assert 'SNAPSHOT_STAMP' in db_v2_reader
           assert 'snapshot={snapshot}' in db_v2_reader
           print('Both read-only R1/R3 jobs can reject R2 latest-pointer snapshot drift')
+          r4 = yaml.safe_load(pathlib.Path('.github/workflows/insureit-managed-recovery-import-r4.yml').read_text())
+          rt = r4.get('on', r4.get(True, {}))
+          assert 'workflow_dispatch' in rt
+          assert not any(t in rt for t in ('push','pull_request','schedule'))
+          inputs = rt['workflow_dispatch']['inputs']
+          assert inputs['execute_target_import']['default'] is False
+          assert inputs['confirm_isolation']['default'] is False
+          assert inputs['expected_db_snapshot']['required'] is True
+          assert r4['permissions'] == {'contents': 'read'}
+          rjob = r4['jobs']['managed_r4']
+          assert rjob['environment'] == 'insureit-recovery-isolated'
+          assert 'refs/heads/main' in rjob['if'] and 'workflow_dispatch' in rjob['if']
+          assert "inputs.confirm_target_ref == 'klnodxnmlqbofolxxrsr'" in rjob['if']
+          assert 'inputs.confirm_isolation' in rjob['if']
+          rsteps = str(rjob['steps'])
+          assert 'RECOVERY_R2_READONLY_SECRET_ACCESS_KEY' in rsteps
+          assert 'RECOVERY_DB_BACKUP_ENCRYPTION_KEY' in rsteps
+          assert 'INSUREIT_RECOVERY_DATABASE_URL' in rsteps
+          assert rsteps.count('RECOVERY_DB_SSL_ROOT_CERT_PEM') >= 10
+          assert 'managed_recovery_preflight.py --probe-target' in rsteps
+          assert '--dry-run' in rsteps and '--apply' in rsteps
+          assert 'if' in str(next(x for x in rjob['steps'] if 'ATOMIC SQL RESTORE' in x.get('name', '')))
+          assert 'if' in str(next(x for x in rjob['steps'] if 'Audit actual selected row counts' in x.get('name', '')))
+          assert 'verify_managed_sql_rows.py' in rsteps
+          assert 'SUPABASE_SERVICE_ROLE_KEY' not in rsteps
+          assert 'secrets.R2_SECRET_ACCESS_KEY' not in rsteps
+          assert 'secrets.INSUREIT_PRODUCTION_DATABASE_URL' not in rsteps
+          assert 'delete_object' not in rsteps and 'put_object' not in rsteps
+          restore_script = pathlib.Path('scripts/backup/execute_managed_sql_restore.py').read_text()
+          assert 'isolated_ssl_root_cert() as ca_path' in restore_script
+          assert '"PGSSLMODE": "verify-full"' in restore_script
+          assert 'target=/etc/ssl/insureit-isolated-supabase-ca.crt,readonly' in restore_script
+          assert '--single-transaction' in restore_script
+          assert 'REVOKE EXECUTE ON ALL FUNCTIONS IN SCHEMA public' in restore_script
+          assert 'PGSSLROOTCERT' in restore_script
+          assert 'sslmode=require' not in restore_script and 'sslmode=disable' not in restore_script
+          assert '"--clean",' not in restore_script and "'--clean'," not in restore_script
+          audit_script = pathlib.Path('scripts/backup/verify_managed_sql_rows.py').read_text()
+          assert 'isolated_ssl_root_cert() as ca' in audit_script
+          assert 'sslmode="verify-full"' in audit_script
+          assert 'BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY' in audit_script
+          assert 'default_transaction_read_only=on' not in audit_script
+          selector = pathlib.Path('scripts/backup/prepare_managed_sql_restore_list.py').read_text()
+          assert '"TABLE DATA", "auth"' in selector
+          assert 'Never import stale Storage metadata' in selector
+          assert 'excluded_preseeded_rls_helper' in selector
+          assert 'managed_auth_trigger_deferred=1' in selector
+          print('R4 isolated managed SQL importer is manual, CA-verified and safely disabled by default')
           print('Managed recovery R0/R1 preflight isolated, manual-only and read-only')
           print('Daily encrypted V2 backup and protected manual restore workflow guards verified')
           print('Manual offline database recovery rehearsal guards verified')
