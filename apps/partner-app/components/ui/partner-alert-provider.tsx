@@ -32,11 +32,24 @@ export function partnerAlert(title: string, message?: string, buttons?: AlertCho
 function noticeKind(notice: Notice): PartnerDialogKind {
   const title = notice.title.toLowerCase();
   if (notice.buttons?.some(button => button.style === 'destructive')) return 'delete';
-  if (/delete|discard|remove|revoke/.test(title)) return 'delete';
-  if (/saved|created|uploaded|booked|success|approved|completed/.test(title)) return 'success';
   if (/unable|failed|error|invalid|unavailable|could not/.test(title)) return 'error';
+  if (/saved|created|uploaded|booked|success|approved|completed|updated|submitted|sent|added|verified|issued|deleted|removed/.test(title)) return 'success';
+  if (/delete|discard|remove|revoke/.test(title)) return 'delete';
   if (/warning|verify|check|missing|required|action required/.test(title)) return 'warning';
   return notice.buttons && notice.buttons.length > 1 ? 'confirm' : 'info';
+}
+
+/**
+ * Passive success notifications do not require an acknowledgement.
+ * Explicit navigation/continuation actions remain manual so a timer never skips a choice.
+ */
+function isPassiveSuccessNotice(notice: Notice): boolean {
+  if (noticeKind(notice) !== 'success') return false;
+  if (!notice.buttons?.length) return true;
+  return notice.buttons.length === 1 &&
+    !notice.buttons[0].onPress &&
+    !notice.buttons[0].style &&
+    (notice.buttons[0].text ?? 'OK').trim().toLowerCase() === 'ok';
 }
 
 /** One presenter at app root serves every Partner screen, including nested components. */
@@ -53,10 +66,20 @@ export function PartnerAlertProvider({ children }: { children: ReactNode }) {
     if (!notice && pending.length) notify?.();
     return () => { if (activeNotice === notice) activeNotice = null; };
   }, [notice]);
+  // Only passive successes auto-close; cleanup prevents stale timers from closing a newer alert.
+  useEffect(() => {
+    if (!notice || !isPassiveSuccessNotice(notice)) return;
+    const timeout = setTimeout(() => {
+      setNotice(current => current === notice ? null : current);
+      notice.options?.onDismiss?.();
+    }, 1000);
+    return () => clearTimeout(timeout);
+  }, [notice]);
   const close = () => {
     setNotice(null);
     notice?.options?.onDismiss?.();
   };
+  const autoDismissSuccess = Boolean(notice && isPassiveSuccessNotice(notice));
   const choices: PartnerDialogAction[] = (notice?.buttons?.length
     ? notice.buttons.map((choice, index) => ({
       label: choice.text ?? (index === 0 ? 'OK' : 'Confirm'),
@@ -76,7 +99,7 @@ export function PartnerAlertProvider({ children }: { children: ReactNode }) {
         title={notice?.title ?? ''}
         message={notice?.message ?? ''}
         kind={notice ? noticeKind(notice) : 'info'}
-        actions={choices}
+        actions={autoDismissSuccess ? [] : choices}
         onCancel={close}
         dismissible={notice?.options?.cancelable === true}
       />
