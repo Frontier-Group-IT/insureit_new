@@ -6,12 +6,11 @@ const panel=read("../components/reports/daily-self-activity-panel.tsx");
 const source=read("../lib/reports/daily-self-activity.ts");
 const page=read("../app/reports/(workspace)/daily/page.tsx");
 
-assert.match(panel,/min-h-\[calc\(100dvh-300px\)\]/,"Shared Self / employee activity panel fills remaining visible viewport");
+assert.match(panel,/data\.categories\.length \|\| data\.category \? "min-h-\[calc\(100dvh-300px\)\]" : ""/,"Populated reports keep viewport height while empty reports remain compact");
 assert.match(panel,/aria-label="Self activity summary and register"/,"Full-height sizing applies to both modes through the shared component");
-assert.match(panel,/className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5"/,"Activity cards stay content-sized and top aligned");
+assert.match(panel,/gridColumnsFor\(group\.items\.length\)/,"Activity cards fill the width available to each group");
 assert.doesNotMatch(panel,/h-screen|h-\[100dvh\]|overflow-y-hidden/,"Panel remains naturally scrollable when activity tables exceed the viewport");
-assert.match(panel,/className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5"/,
-  "Activity summary uses five columns on desktop with responsive smaller breakpoints");
+assert.match(panel,/count>=5\?"xl:grid-cols-5"/,"Five or more cards keep the five-column desktop layout");
 assert.match(panel,/group\.items\.map\(item=>\(/, "Every activity category appears in grid");
 assert.match(panel,/href=\{linkFor\(\{activity:item\.name,page:"1"\}\)\}/,
   "Clicking a category still opens its filtered details");
@@ -50,4 +49,7 @@ assert.match(css,/\.reports-reference-shell:has\(\.daily-report-reference\) \.re
 assert.doesNotMatch(css,/\.reports-reference-shell:has\(\.daily-report-reference\) \.reports-reference-header::before/,"No decorative gradient is layered over the white header");
 assert.match(panel,/daily-report-activity-icon/,"Activity icons retained");
 assert.match(header,/daily-report-header-select/,"Pill-shaped period and scope filters retained");
-console.log("Daily Report reference palette and five-column responsive category grid verified.");
+assert.match(panel,/<DailyReportEmptyState \/>/,"Empty reports use illustrated empty state instead of blank report");
+assert.match(panel,/No activities yet/,"Empty-state title is visible");
+assert.match(panel,/Your activities will appear here once they are recorded/,"Empty-state explanation is visible");
+console.log("Daily Report adaptive full-width grids and illustrated empty state verified.");
