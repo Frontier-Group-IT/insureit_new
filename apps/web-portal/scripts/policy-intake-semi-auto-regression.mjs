@@ -943,4 +943,21 @@ assert(webhookBridgeText.includes('const EXPECTED_N8N_ORIGIN = "https://insureit
   && webhookBridgeText.includes('url.pathname !== EXPECTED_WEBHOOK_PATH')
   && webhookBridgeText.includes('redirect: "error"'),
   "Production self-hosted cutover must enforce an exact HTTPS host and path with Cloud rollback");
+// Reprocessing is a separate, confirmed and bounded extraction-only action.
+assert(aiWorkbenchPageText.includes("const reprocessCandidates = workspaceRows.filter(row =>")
+  && aiWorkbenchPageText.includes('q?.state === "exception" || q?.state === "failed"')
+  && aiWorkbenchPageText.includes("reprocessCandidates={reprocessCandidates}")
+  && aiWorkbenchPageText.includes("!duplicateIds.has(row.id)"),
+  "Only authorized open exception/failed nonduplicate Motor Intakes can be offered for reprocessing");
+assert(workbenchText.includes("Reprocess Previous ·")
+  && workbenchText.includes("const reprocessBatch=reprocessRemaining.slice(0,10)")
+  && workbenchText.includes("Reprocess previously checked policies?")
+  && workbenchText.includes("await reprocessAiPolicyIntake(item.id)")
+  && workbenchText.includes("No customer, vehicle or policy will be created by this action"),
+  "Reprocessing must be separately confirmed, capped at 10 and never call the booking action");
+assert(actionsText.includes('Only an open, unregistered Motor Intake can be reprocessed.')
+  && actionsText.includes("duplicates.matches.has(id)")
+  && actionsText.includes('if(!["exception","failed"].includes(row.state))')
+  && actionsText.includes('.in("state",["exception","failed"])'),
+  "Reprocessing must reject completed, registered, duplicate, or non-exception queue rows");
 console.log("Semi-auto Motor onboarding regression checks passed.");
