@@ -2,7 +2,7 @@ import "server-only";
 
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { isN8nWorkbenchPrimary, previewSemiAutoN8nExtraction } from "@/lib/policy-intake-semi-auto-n8n";
-import { assessAiPolicyIntake, type AiPolicyExceptionCode } from "@/lib/ai-policy-onboarding-eligibility";
+import { assessAiPolicyIntake, type AiPolicyEvidence, type AiPolicyExceptionCode } from "@/lib/ai-policy-onboarding-eligibility";
 
 export type AiQueueState =
   | "pending" | "processing" | "exception" | "verified" | "unsupported" | "failed";
@@ -196,7 +196,7 @@ async function processClaim(item: Claimed) {
   if(customerError||draftError||brandsError)throw new Error("AI assessment master lookup failed");
   const phoneMatches=(matches??[]).filter(x=>normalizedPhone(x.phone)===phone);
   const exact=phoneMatches.filter(x=>[x.company_name,x.contact_name].some(n=>normalizedName(n??"")===customerName));
-  const customerMatch=matches?.length===50 || exact.length>1?"multiple"
+  const customerMatch:AiPolicyEvidence["customerMatch"]=matches?.length===50 || exact.length>1?"multiple"
     :exact.length===1?"unique_exact":phoneMatches.length?"name_conflict":"none";
   // Multiple distinct customers with the same phone are an exception even if
   // one exact record matches. Never assume a shared phone is unique identity.
@@ -221,7 +221,7 @@ async function processClaim(item: Claimed) {
   const issuanceDateVerified=Boolean(values.get("policy_issuance_date"));
   const bundled=normalizedName(values.get("policy_product")??"")==="BUNDLED";
   const bundledPeriodsVerified=!bundled; // CPA/TP expiry approval needs canonical preflight.
-  const evidence = {
+  const evidence:AiPolicyEvidence = {
     // The strict 3005 parser verifies the Motor business line even for
     // older Intakes lacking the upstream policy_type classification.
     policyType:intake.policy_type??"motor", intakeStatus:intake.status,
