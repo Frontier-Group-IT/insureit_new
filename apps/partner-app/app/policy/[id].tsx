@@ -164,23 +164,36 @@ export default function PolicyDetailScreen() {
           </Card>
 
           <View style={styles.externalSection}>
-            <View style={styles.externalSectionHeading}><CardHeader title="Customer Details" /></View>
+            <View style={styles.externalSectionHeading}><CardHeader title="Customer & Vehicle Details" /></View>
             <Card>
-            <View style={styles.entityStack}>
-              <EntityRow icon="person-outline" title={data.customer.name} subtitle={data.customer.customer_code || 'Customer'} onPress={data.customer.id ? () => router.push(`/customer/${data.customer.id}` as never) : undefined} />
-            </View>
-            </Card>
-          </View>
-          <View style={styles.externalSection}>
-            <View style={styles.externalSectionHeading}><CardHeader title={data.vehicle ? 'Vehicle Details' : 'Insured Risk Details'} /></View>
-            <Card onPress={data.vehicle && data.customer.id ? () => router.push(`/customer/${data.customer.id}` as never) : undefined} accessibilityLabel="Open customer details for this vehicle">
-            <View style={styles.entityStack}>
-              {data.vehicle ? (
-                <EntityRow image={manufacturerLogo || PartnerAssets.products.motorInsurance} title={data.vehicle.vehicle_no || 'Vehicle'} subtitle={displayParts(data.vehicle.make, data.vehicle.model, data.vehicle.year) || humanize(data.vehicle.vehicle_type || 'vehicle')} />
-              ) : (
-                <EntityRow image={PartnerAssets.products.commercialInsurance} title={data.policy.policy_product || data.policy.policy_type || data.policy.business_line || 'Non-motor insured risk'} subtitle="No vehicle is linked to this policy." />
-              )}
-            </View>
+              <Pressable
+                accessibilityRole={data.customer.id ? "button" : undefined}
+                disabled={!data.customer.id}
+                accessibilityLabel={data.vehicle ? `Open customer details: ${data.customer.name}, ${data.vehicle.vehicle_no || "vehicle"}` : `Open customer details: ${data.customer.name}`}
+                onPress={data.customer.id ? () => router.push(`/customer/${data.customer.id}` as never) : undefined}
+                style={({ pressed }) => [styles.customerVehicleRow, pressed && data.customer.id ? styles.pressed : null]}
+              >
+                <View style={styles.entityIcon}>
+                  <Image
+                    source={data.vehicle ? (manufacturerLogo || PartnerAssets.products.motorInsurance) : PartnerAssets.products.commercialInsurance}
+                    style={styles.entityArtwork}
+                    resizeMode="contain"
+                  />
+                </View>
+                <View style={styles.entityBody}>
+                  <View style={styles.customerVehicleTitleRow}>
+                    <Text numberOfLines={1} style={styles.entityTitle}>{data.customer.name || "Customer"}</Text>
+                    {data.vehicle?.vehicle_no ? (
+                      <Text numberOfLines={1} style={styles.customerVehicleRegistration}>|  {data.vehicle.vehicle_no}</Text>
+                    ) : null}
+                  </View>
+                  <Text numberOfLines={1} style={styles.entityMeta}>
+                    {data.vehicle
+                      ? displayParts(data.vehicle.make, data.vehicle.model, data.vehicle.year) || humanize(data.vehicle.vehicle_type || "vehicle")
+                      : data.policy.policy_product || data.policy.policy_type || data.policy.business_line || "Non-motor insured risk"}
+                  </Text>
+                </View>
+              </Pressable>
             </Card>
           </View>
 
@@ -313,6 +326,9 @@ const styles = StyleSheet.create({
   premiumDetailGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingHorizontal: 10, paddingBottom: 10 },
   detailGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 10, paddingBottom: 10 }, miniInfo: { width: '47%', minHeight: 38, padding: 7, borderRadius: 8, backgroundColor: '#F7F9FC' }, miniLabel: { color: '#8A95A6', fontSize: 8, lineHeight: 10, textTransform: 'uppercase' }, miniValue: { marginTop: 2, color: '#21334E', fontSize: 9.5, lineHeight: 12, fontWeight: '700' },
   miniInfoCompact: { width: '31%', flexGrow: 1, minWidth: 0, paddingHorizontal: 5 },
+  customerVehicleRow: { minHeight: 59, flexDirection: 'row', alignItems: 'center', gap: 9, paddingHorizontal: 18, paddingVertical: 9 },
+  customerVehicleTitleRow: { flexDirection: 'row', alignItems: 'center', minWidth: 0, gap: 5 },
+  customerVehicleRegistration: { color: '#142A49', fontSize: 10, lineHeight: 13, fontWeight: '800', flexShrink: 1 },
   entityStack: { paddingHorizontal: 10, paddingBottom: 8 }, entityRow: { minHeight: 45, flexDirection: 'row', alignItems: 'center', gap: 9, paddingHorizontal: 8, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#EDF1F6' }, entityIcon: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: '#EAF5FF' }, entityArtwork: { width: 27, height: 27 }, entityBody: { flex: 1, minWidth: 0 }, entityTitle: { color: '#142A49', fontSize: 10, lineHeight: 13, fontWeight: '800' }, entityMeta: { marginTop: 2, color: '#7C899B', fontSize: 8.5, lineHeight: 11 },
   pressed: { opacity: 0.68 },
 });
