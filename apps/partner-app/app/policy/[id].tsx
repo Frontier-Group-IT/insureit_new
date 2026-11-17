@@ -14,12 +14,10 @@ import { formatIndianCurrency } from '@/lib/format';
 import { PartnerAssets } from '@/lib/partner-assets';
 import { getPartnerManufacturerLogoSource } from '@/lib/catalog-logos';
 import { partnerTheme } from '@/lib/theme';
-import { usePartnerSession } from '@/providers/partner-session-provider';
-import { canPartnerAccess, canPartnerAccessCaseRegister } from '@/lib/partner-permissions';
+
 
 export default function PolicyDetailScreen() {
   const router = useRouter();
-  const { context } = usePartnerSession();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [data, setData] = useState<PartnerPolicyDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -63,24 +61,6 @@ export default function PolicyDetailScreen() {
   const category = data ? policyCategory(data) : 'Policy';
   const manufacturerLogo = data?.vehicle ? getPartnerManufacturerLogoSource(data.vehicle.make) : null;
   const policyNumber = data?.policy.policy_no || data?.policy.policy_code || 'Policy';
-  const quickActions = [
-    ...(canPartnerAccess(context, 'view_policy_intakes') ? [{
-      label: 'Policy Intake', image: require('../../assets/partner/quick-actions/policy-intake.png'),
-      accessibilityLabel: 'Open Policy Intake', route: '/policy-intakes' as const,
-    }] : []),
-    ...(canPartnerAccess(context, 'create_policies', 'edit') ? [{
-      label: 'Add Policy', image: require('../../assets/partner/quick-actions/add-policy.png'),
-      accessibilityLabel: 'Add Policy, start a new blank policy', route: '/policy-new' as const,
-    }] : []),
-    ...(canPartnerAccessCaseRegister(context) ? [{
-      label: 'Case Register', image: require('../../assets/partner/quick-actions/case-register.png'),
-      accessibilityLabel: 'Open Case Register for Life and Health cases', route: '/life-health-cases' as const,
-    }] : []),
-    ...(context?.identity.actor_kind === 'employee' && canPartnerAccess(context, 'create_intermediary_application', 'edit') ? [{
-      label: 'Add Partner', image: require('../../assets/partner/quick-actions/add-partner.png'),
-      accessibilityLabel: 'Add Partner, submit Partner-only application', route: '/partner-new' as const,
-    }] : []),
-  ];
   const isVerified = data ? ['active', 'issued', 'in_force', 'in force'].includes((data.policy.status || data.policy.lifecycle_status || '').toLowerCase().replaceAll('-', '_')) : false;
 
   return (
@@ -135,22 +115,15 @@ export default function PolicyDetailScreen() {
             </View>
           </View>
 
-          {quickActions.length > 0 ? (
-            <View style={styles.quickSection}>
-              <Text style={styles.quickSectionHeading}>Quick Actions</Text>
-              <View style={styles.quickGrid}>
-                {quickActions.map((action) => (
-                  <QuickAction
-                    key={action.route}
-                    image={action.image}
-                    label={action.label}
-                    accessibilityLabel={action.accessibilityLabel}
-                    onPress={() => router.push(action.route)}
-                  />
-                ))}
-              </View>
+          <View style={styles.quickSection}>
+            <Text style={styles.quickSectionHeading}>Quick Actions</Text>
+            <View style={styles.quickGrid}>
+              <QuickAction iconKind="policy-document" label="Policy Document" onPress={() => router.push('/policies' as never)} />
+              <QuickAction iconKind="renew-policy" label="Renew Policy" onPress={() => router.push('/renewals' as never)} />
+              <QuickAction iconKind="raise-claim" label="Raise Claim" onPress={() => router.push('/claims' as never)} />
+              <QuickAction iconKind="customer-details" label="Customer Details" onPress={() => data.customer.id ? router.push(`/customer/${data.customer.id}` as never) : undefined} />
             </View>
-          ) : null}
+          </View>
 
           <Card>
             <CardHeader iconKind="policy-overview" title="Policy Overview" actionLabel="View All" onAction={() => setShowOverviewDetails((value) => !value)} />
@@ -248,18 +221,23 @@ function CardHeader({ iconKind, title, actionLabel, onAction }: { iconKind: Part
   );
 }
 
-function QuickAction({ image, label, accessibilityLabel, onPress }: {
-  image: ImageSourcePropType; label: string; accessibilityLabel: string; onPress: () => void;
+function QuickAction({ iconKind, label, onPress }: {
+  iconKind: PartnerPolicyDetailIconKind; label: string; onPress: () => void;
 }) {
+  const iconName = iconKind === 'policy-document' ? 'document-text'
+    : iconKind === 'renew-policy' ? 'sync'
+    : iconKind === 'raise-claim' ? 'shield-checkmark' : 'people';
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel}
+      accessibilityLabel={label}
       onPress={onPress}
       style={({ pressed }) => [styles.quickAction, pressed && styles.pressed]}
     >
-      <Image source={image} style={styles.quickActionImage} resizeMode="contain" />
-      <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={styles.quickLabel}>{label}</Text>
+      <View style={styles.quickActionIcon}>
+        <Ionicons name={iconName} size={32} color="#0879E9" />
+      </View>
+      <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={styles.quickLabel}>{label}</Text>
     </Pressable>
   );
 }
@@ -317,7 +295,7 @@ const styles = StyleSheet.create({
     flex: 1, minWidth: 0, minHeight: 74, alignItems: 'center', justifyContent: 'center',
     paddingHorizontal: 2, paddingVertical: 6, gap: 4, backgroundColor: 'transparent',
   },
-  quickActionImage: { width: 48, height: 48 },
+  quickActionIcon: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center' },
   quickLabel: {
     color: '#102D55', textAlign: 'center', fontSize: 9.25, lineHeight: 12,
     fontWeight: '800', width: '100%', includeFontPadding: false,
