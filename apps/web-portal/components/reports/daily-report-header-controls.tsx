@@ -72,7 +72,7 @@ export function DailyReportHeaderScopes({canViewAll=false}:{canViewAll?:boolean}
   const hasOtherEmployees=people.length>0;
   const showDropdown=canViewAll && (hasOtherEmployees || loadError);
   if(!showDropdown) {
-    return <span aria-label="Daily Report scope: Self" className="daily-report-header-select inline-flex h-9 min-w-[145px] items-center rounded-lg border border-[#cbd7e6] bg-white px-3 text-[11px] font-semibold text-[#17365D]">Self</span>;
+    return <span aria-label="Daily Report scope: Self" className="daily-report-header-select inline-flex h-9 min-w-[145px] items-center justify-center rounded-lg border border-[#cbd7e6] bg-white px-3 text-center text-[11px] font-semibold text-[#17365D]">Self</span>;
   }
   function selectPerson(personId:string|null) {
     const params=new URLSearchParams(searchParams.toString());
@@ -90,8 +90,8 @@ export function DailyReportHeaderScopes({canViewAll=false}:{canViewAll?:boolean}
     <div ref={container} className="relative" aria-label="Daily Report employee selector">
       <button type="button" aria-haspopup="listbox" aria-expanded={open} aria-controls="daily-report-employee-options"
         onClick={()=>{setOpen(value=>!value);setSearch("");}}
-        className="daily-report-header-select inline-flex h-9 min-w-[145px] max-w-[235px] items-center justify-between gap-3 rounded-lg border border-[#cbd7e6] bg-white px-3 text-[11px] font-semibold text-[#17365D] hover:bg-[#f5f8fc] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#315b9a]">
-        <span className="truncate">{!selectedPerson?"Self":selected?.full_name||"Selected employee"}</span><ChevronDown className="h-3.5 w-3.5 shrink-0"/>
+        className="daily-report-header-select relative inline-flex h-9 min-w-[145px] max-w-[235px] items-center justify-center rounded-lg border border-[#cbd7e6] bg-white px-8 text-center text-[11px] font-semibold text-[#17365D] hover:bg-[#f5f8fc] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#315b9a]">
+        <span className="min-w-0 truncate text-center">{!selectedPerson?"Self":selected?.full_name||"Selected employee"}</span><ChevronDown className="absolute right-3 h-3.5 w-3.5 shrink-0"/>
       </button>
       {open ? (
         <div className="absolute left-0 top-[calc(100%+4px)] z-50 w-[270px] max-w-[calc(100vw-32px)] rounded-lg border border-[#d8e0eb] bg-white p-2 shadow-lg">
@@ -105,7 +105,7 @@ export function DailyReportHeaderScopes({canViewAll=false}:{canViewAll?:boolean}
             {canViewAll?matching.map(person=>(
               <button key={person.id} type="button" role="option" aria-selected={selectedPerson===person.id}
                 onClick={()=>selectPerson(person.id)}
-                className={`block w-full rounded-md px-3 py-2 text-left hover:bg-[#eef3fa] ${selectedPerson===person.id?"bg-[#edf3fa]":"text-[#52627B]"}`}>
+                className={`block w-full rounded-md px-3 py-2 text-left hover:bg-[#eef3fa] ${selectedPerson===person.id?"bg-[#edf3fa] text-[#111827]":"text-[#52627B]"}`}>
                 <span className="block truncate text-[11px] font-semibold">{person.full_name||"Unnamed employee"}</span>
                 {person.employee_code?<span className="block truncate text-[9px] text-[#8794a6]">{person.employee_code}</span>:null}
               </button>
