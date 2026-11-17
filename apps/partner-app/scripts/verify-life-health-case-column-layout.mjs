@@ -30,7 +30,7 @@ assert.match(screen,/getLifeHealthCase\(id\)/,'Scoped read-only case API is pres
 assert.match(api,/operationsCaseUrl\(id: string\)/,'Operations link is canonical');
 assert.match(screen,/<Section number="06" title="Documents">/,'Documents section includes upload actions for missing files');
 assert.match(screen,/documents\.map\(doc=>/,'Document entries come only from case API');
-assert.match(screen,/\{doc\.file_name\}/,'Only real file name is shown');
+assert.match(screen,/\{caseDocumentDisplayName\(doc\.file_name\)\}/,'Only real document filename is shown, with encoded characters decoded for display');
 assert.doesNotMatch(screen,/Document viewing, uploads and deletion|For case editing, adding remarks|You may need to sign in/,'No legacy footer explanations');
 assert.doesNotMatch(screen,/function Item\(/,'Old label-value stacking is removed');
 assert.doesNotMatch(screen,/uploadLifeHealthCaseDocument|convertLifeHealthCaseToPolicy|deleteLifeHealthCaseDocument\(/,'No direct unauthenticated web server-action calls');

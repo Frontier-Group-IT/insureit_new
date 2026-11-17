@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
+import { PartnerConfirmDialog } from '@/components/ui/partner-confirm-dialog';
 import { PartnerCaseBottomNavigation } from '@/components/partner-case-bottom-navigation';
 import { PartnerPolicyCalendarDialog } from '@/components/policy-intakes/partner-policy-calendar-dialog';
 import { getLifeHealthCase, saveLifeHealthCaseEdit, appendLifeHealthCaseRemark, listLifeHealthInsurers, issueLifeHealthPolicy, requestLifeHealthIssueApproval, verifyLifeHealthIssueApproval, operationsCaseUrl, getLifeHealthDocumentUrl, mutateLifeHealthDocument, uploadLifeHealthDocument, rejectLifeHealthCaseNative, type LifeHealthInsurer, type LifeHealthIssue, type LifeHealthCaseDetail, type LifeHealthDocument, type LifeHealthActivity } from '@/lib/life-health-cases';
@@ -18,6 +19,11 @@ const dateLabel=(value:string|null|undefined)=>{
   if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return date;
   const [year,month,day]=date.split('-');
   return `${day}/${month}/${year}`;
+};
+/** Backend filenames sometimes contain URL-encoded spaces; decode only for display. */
+const caseDocumentDisplayName=(fileName:string):string=>{
+ if(!/%[0-9a-fA-F]{2}/.test(fileName))return fileName;
+ try{return decodeURIComponent(fileName);}catch{return fileName;}
 };
 const amount=(value:number)=>`₹${Number(value||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})}`;
 const activityDate=(value:string)=>{
@@ -123,6 +129,7 @@ export default function LifeHealthCaseDetailScreen(){
  const [saveError,setSaveError]=useState('');
  const [saveSuccess,setSaveSuccess]=useState(false);
  const [documentBusy,setDocumentBusy]=useState(false);
+ const [deleteTarget,setDeleteTarget]=useState<LifeHealthDocument|null>(null);
  const [documentError,setDocumentError]=useState('');
  const [rejectOpen,setRejectOpen]=useState(false);
  const [rejectReason,setRejectReason]=useState('');
@@ -202,15 +209,18 @@ export default function LifeHealthCaseDetailScreen(){
  };
  const deleteDocument=(doc:LifeHealthDocument)=>{
   if(!record||record.status_group!=='pending'||documentBusy)return;
-  partnerAlert('Delete document?','Permanently delete '+doc.file_name+'?',[
-   {text:'Cancel',style:'cancel'},
-   {text:'Delete',style:'destructive',onPress:()=>{void (async()=>{
-    setDocumentError('');setDocumentBusy(true);
-    try{await mutateLifeHealthDocument(record.id,doc.id,'delete_document');await load();}
-    catch(cause){setDocumentError(cause instanceof Error?cause.message:'Document delete failed.');}
-    finally{setDocumentBusy(false);}
-   })();}}
-  ]);
+  setDeleteTarget(doc);
+ };
+ const confirmDeleteDocument=async()=>{
+  if(!record||!deleteTarget||documentBusy||record.status_group!=='pending')return;
+  const documentId=deleteTarget.id;
+  setDocumentError('');setDocumentBusy(true);
+  try{
+   await mutateLifeHealthDocument(record.id,documentId,'delete_document');
+   setDeleteTarget(null);
+   await load();
+  }catch(cause){setDocumentError(cause instanceof Error?cause.message:'Document delete failed.');}
+  finally{setDocumentBusy(false);}
  };
  const submitRejection=async()=>{
   if(!record||rejectBusy||!rejectReason.trim())return;
@@ -461,15 +471,15 @@ export default function LifeHealthCaseDetailScreen(){
       <Section number="06" title="Documents">
         <View style={styles.documentList}>
           {documents.map(doc=><View key={doc.id} style={styles.document}>
-            <Pressable accessibilityRole="button" accessibilityLabel={'Open '+doc.file_name} onPress={()=>void openDocument(doc)} disabled={documentBusy} style={styles.documentOpen}>
+            <Pressable accessibilityRole="button" accessibilityLabel={'Open '+caseDocumentDisplayName(doc.file_name)} onPress={()=>void openDocument(doc)} disabled={documentBusy} style={styles.documentOpen}>
               <Ionicons name="document-text-outline" size={17} color="#11734B"/>
-              <Text style={styles.documentName} numberOfLines={2} ellipsizeMode="middle">{doc.file_name}</Text>
+              <Text style={styles.documentName} numberOfLines={2} ellipsizeMode="middle">{caseDocumentDisplayName(doc.file_name)}</Text>
             </Pressable>
             {record.status_group==='pending'?<>
-              <Pressable accessibilityRole="button" accessibilityLabel={'Delete '+doc.file_name} onPress={()=>deleteDocument(doc)} disabled={documentBusy} style={styles.documentIconButton}>
+              <Pressable accessibilityRole="button" accessibilityLabel={'Delete '+caseDocumentDisplayName(doc.file_name)} onPress={()=>deleteDocument(doc)} disabled={documentBusy} style={styles.documentIconButton}>
                 <Ionicons name="trash-outline" size={17} color="#CE3541"/>
               </Pressable>
-              <Pressable accessibilityRole="button" accessibilityLabel={'Replace '+doc.file_name} onPress={()=>void pickDocument(doc.document_type)} disabled={documentBusy} style={styles.documentIconButton}>
+              <Pressable accessibilityRole="button" accessibilityLabel={'Replace '+caseDocumentDisplayName(doc.file_name)} onPress={()=>void pickDocument(doc.document_type)} disabled={documentBusy} style={styles.documentIconButton}>
                 <Ionicons name="refresh-outline" size={17} color={navy}/>
               </Pressable>
             </>:null}
@@ -571,6 +581,19 @@ export default function LifeHealthCaseDetailScreen(){
       </View>:null}
 
     </View>:null}
+   <PartnerConfirmDialog
+     visible={Boolean(deleteTarget)}
+     kind="delete"
+     title="Delete document?"
+     message={`Permanently delete ${caseDocumentDisplayName(deleteTarget?.file_name||'this document')}?`}
+     busy={documentBusy}
+     dismissible={!documentBusy}
+     onCancel={()=>{if(!documentBusy)setDeleteTarget(null);}}
+     actions={[
+       {label:'Cancel',secondary:true,onPress:()=>setDeleteTarget(null)},
+       {label:'Delete',destructive:true,onPress:()=>void confirmDeleteDocument()},
+     ]}
+   />
    <Modal visible={rejectOpen} transparent animationType="fade" onRequestClose={()=>{if(!rejectBusy){Keyboard.dismiss();setRejectOpen(false);}}}>
      <KeyboardAvoidingView style={styles.centeredModalKeyboardAvoid} behavior={Platform.OS==='ios'?'padding':'height'}>
        <View style={styles.centeredModalBackdrop}><View style={styles.centeredModalCard}>

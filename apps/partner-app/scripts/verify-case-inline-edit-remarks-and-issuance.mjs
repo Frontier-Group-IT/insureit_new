@@ -99,9 +99,18 @@ assert.ok(app.includes('darkLabel={darkLabel}'), 'Read-only Case Details fields 
 assert.ok(app.includes('<Field label="PPT end date" value="Not applicable · Single Pay" darkLabel/>'), 'PPT fallback keeps black heading');
 assert.ok(app.includes('<Field label="Next installment date" value="Not applicable · One Time" darkLabel/>'), 'Next installment fallback keeps black heading');
 assert.ok(app.includes('name="calendar-outline" size={15} color="#000000"'), 'Issuance date picker icons are black');
+
 assert.ok(app.includes("disabled={rejectBusy||!rejectReason.trim()}"), 'Confirm Reject is disabled while busy or when reason is blank.');
 assert.ok(app.includes("rejectReason.trim()&& !rejectBusy?styles.confirmRejectButtonActive:styles.confirmRejectButton"), 'Confirm Reject becomes dark red with a nonblank reason.');
 assert.ok(app.includes("confirmRejectButton:{backgroundColor:'#D98D93'}"), 'Empty or busy rejection shows light pink.');
 assert.ok(app.includes("confirmRejectButtonActive:{backgroundColor:'#B4232D'}"), 'Entered rejection reason displays dark red.');
 assert.ok(app.includes("rejectBusy?'Rejecting…':'Confirm Reject'"), 'Submitting feedback remains in place.');
+assert.match(app, /const caseDocumentDisplayName=/, 'Encoded document filename is decoded for display only');
+assert.match(app, /decodeURIComponent\(fileName\)/, 'Friendly filename uses safe URI decoding');
+assert.match(app, /caseDocumentDisplayName\(doc\.file_name\)/, 'Document list displays a readable filename');
+assert.match(app, /<PartnerConfirmDialog[\s\S]*?visible=\{Boolean\(deleteTarget\)\}/, 'Document removal uses shared Partner popup directly');
+assert.match(app, /kind="delete"/, 'Document confirmation uses destructive visual treatment');
+assert.match(app, /documentBusy[\s\S]*?setDeleteTarget\(null\)/, 'Document confirmation respects busy state');
+assert.match(app, /await mutateLifeHealthDocument\(record\.id,documentId,'delete_document'\)/, 'Document deletion keeps existing authorized backend operation');
+assert.doesNotMatch(app, /partnerAlert\('Delete document\?'/, 'Document delete must not fall back to a native/system alert bridge');
 console.log('Case inline edit, append-only remarks, secure issuance and native parity verified.');
