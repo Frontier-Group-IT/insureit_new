@@ -72,11 +72,12 @@ function compactDate(date: string) {
 const rupees = (amount: number) => "₹" + amount.toLocaleString("en-IN", { maximumFractionDigits: 2 });
 
 export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, primaryN8n = false,
-  queueActive = false, queueCounts, bulkCandidates = [] }: {
+  queueActive = false, queueCounts, bulkCandidates = [], reprocessCandidates = [] }: {
   rows: SemiAutoIntakeRow[]; profileId: string; initialIntakeId?: string | null;
   primaryN8n?: boolean;
   queueActive?: boolean;
   bulkCandidates?: Array<{id:string;intake_number:string}>;
+  reprocessCandidates?: Array<{id:string;intake_number:string}>;
   queueCounts?: {eligible:number;extracted:number;duplicates:number;queued:number;extracting:number;exceptions:number;unprocessed:number;unsupported:number;failed:number};
 }) {
   const router = useRouter();
@@ -112,6 +113,10 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
   const [bulkProgress,setBulkProgress]=useState<{done:number;total:number}|null>(null);
   const [bulkStoppedReason,setBulkStoppedReason]=useState<string|null>(null);
   const [bulkResults,setBulkResults]=useState<Array<{id:string;intake_number:string;ok:boolean;message:string}>>([]);
+  const [reprocessConfirmOpen,setReprocessConfirmOpen]=useState(false);
+  const [reprocessRunning,setReprocessRunning]=useState(false);
+  const [reprocessAttemptedIds,setReprocessAttemptedIds]=useState<string[]>([]);
+  const [reprocessResults,setReprocessResults]=useState<Array<{id:string;intake_number:string;ok:boolean;message:string}>>([]);
   const [customerReview,setCustomerReview]=useState<AiCustomerCandidateReview|null>(null);
   const [reviewingCustomer,setReviewingCustomer]=useState(false);
   const [queueRetrying,setQueueRetrying]=useState(false);
@@ -132,11 +137,13 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
   const available = !primaryN8n && selected?.policy_type === "motor"
     && result?.ready === true && result.issues.length === 0 && !selected?.is_duplicate;
   const n8nEnabled = selected?.n8n_enabled === true;
-  const isWaiting = busy !== null || bulkRunning;
+  const isWaiting = busy !== null || bulkRunning || reprocessRunning;
   // A bounded set of currently verified CANDIDATES. Server-side canonical
   // authorization and PDF reconciliation can still reject any candidate.
   const bulkRemaining=bulkCandidates.filter(row=>!bulkAttemptedIds.includes(row.id));
   const bulkBatch=bulkRemaining.slice(0,10);
+  const reprocessRemaining=reprocessCandidates.filter(row=>!reprocessAttemptedIds.includes(row.id));
+  const reprocessBatch=reprocessRemaining.slice(0,10);
 
   async function selectRow(id: string) {
     const next = ++requestId.current;
@@ -320,6 +327,31 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
     }
   }
 
+  async function runConfirmedReprocess() {
+    if (isWaiting || !primaryN8n || !queueActive || !reprocessConfirmOpen || !reprocessBatch.length) return;
+    const batch=[...reprocessBatch];
+    setReprocessConfirmOpen(false);
+    setReprocessRunning(true);
+    setReprocessResults([]);
+    // Each record is reauthorized and rechecked against current PDF, status
+    // and canonical duplicates by the server action. No booking occurs.
+    for (const item of batch) {
+      let ok=false;
+      let message="Reprocessing could not be scheduled.";
+      try {
+        const response=await reprocessAiPolicyIntake(item.id);
+        ok=response.ok;
+        message=ok?"Queued for fresh n8n verification.":response.error??message;
+      } catch {
+        message="Queue request failed; check this Intake before retrying.";
+      }
+      setReprocessAttemptedIds(previous=>previous.includes(item.id)?previous:[...previous,item.id]);
+      setReprocessResults(previous=>[...previous,{...item,ok,message}]);
+    }
+    setReprocessRunning(false);
+    router.refresh();
+  }
+
   async function runConfirmedBulkConversion() {
     if (isWaiting || !primaryN8n || !queueActive || !bulkConfirmOpen || !bulkBatch.length) return;
     const batch=[...bulkBatch];
@@ -470,10 +502,16 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
               <h2 className="text-[12px] font-bold text-[#16355a]">Automatic n8n processing queue</h2>
               <p className="mt-1 text-[10px] text-[#61738a]">These are n8n extraction states, not Policy Intake workflow statuses. New uploads run immediately; the recovery worker processes up to six PDFs per minute. Verified extraction alone does not book a policy.</p>
             </div>
-            <button type="button" onClick={()=>setBulkConfirmOpen(true)} disabled={isWaiting||bulkBatch.length===0}
-              className="min-h-9 rounded-lg bg-[#174b83] px-3 text-[11px] font-bold text-white disabled:opacity-45">
-              Convert Verified Candidates · {queueCounts?.eligible??0}
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              <button type="button" onClick={()=>setReprocessConfirmOpen(true)} disabled={isWaiting||reprocessBatch.length===0}
+                className="min-h-9 rounded-lg border border-[#adc5e0] bg-white px-3 text-[11px] font-bold text-[#174b83] disabled:opacity-45">
+                Reprocess Previous · {reprocessRemaining.length}
+              </button>
+              <button type="button" onClick={()=>setBulkConfirmOpen(true)} disabled={isWaiting||bulkBatch.length===0}
+                className="min-h-9 rounded-lg bg-[#174b83] px-3 text-[11px] font-bold text-white disabled:opacity-45">
+                Convert Verified Candidates · {queueCounts?.eligible??0}
+              </button>
+            </div>
           </div>
           <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-8">
             {[
@@ -502,6 +540,12 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
               ))}</div> : null}
             </div>
           ) : null}
+          {reprocessResults.length ? <div role="status" className="mt-2 rounded-lg border border-[#cbd9ea] bg-[#f5f9ff] p-3 text-[11px] text-[#285078]">
+            Reprocess requests: {reprocessResults.filter(item=>item.ok).length} queued / {reprocessResults.length} checked.
+            <div className="mt-2 max-h-40 overflow-y-auto">{reprocessResults.map(result=>(
+              <p key={result.id} className="py-1">{result.ok?"Queued":"Not queued"} · {result.intake_number} · {result.message}</p>
+            ))}</div>
+          </div> : null}
           {autoConvertMessage ? <p role="status" className="mt-2 rounded-lg border border-[#cbd9ea] bg-[#f5f9ff] p-3 text-[11px] text-[#285078]">{autoConvertMessage}</p> : null}
         </section>
       ) : null}
@@ -780,6 +824,26 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
           </>
         )}
       </section>
+      {reprocessConfirmOpen ? (
+        <div className="fixed inset-0 z-[180] flex items-center justify-center bg-[#101d37]/65 px-4 py-6" role="presentation">
+          <div role="alertdialog" aria-modal="true" aria-labelledby="bulk-reprocess-title"
+            className="w-full max-w-[510px] rounded-2xl border border-[#d6e2f1] bg-white p-5 shadow-[0_24px_80px_rgba(12,28,52,.3)]">
+            <h3 id="bulk-reprocess-title" className="text-[15px] font-bold text-[#17365d]">Reprocess previously checked policies?</h3>
+            <p className="mt-3 text-[11px] leading-5 text-[#4f627c]">
+              Queue up to {reprocessBatch.length} open Motor Intakes with exceptions or failed extraction for fresh n8n verification.
+              No customer, vehicle or policy will be created by this action. Completed policies, registered policies and duplicates are excluded.
+              Previous review holds are reconsidered only after new verification; booking still requires a separate confirmation.
+              Check ambiguous prior booking results in Policy Register before selecting this operation.
+            </p>
+            <div className="mt-5 flex justify-end gap-2">
+              <button type="button" onClick={()=>setReprocessConfirmOpen(false)}
+                className="min-h-9 rounded-lg border border-[#cbd6e5] px-4 text-[11px] font-semibold text-[#38516e]">Cancel</button>
+              <button type="button" onClick={()=>{void runConfirmedReprocess();}}
+                className="min-h-9 rounded-lg bg-[#174b83] px-4 text-[11px] font-bold text-white">Queue Reprocess Batch</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
       {bulkConfirmOpen ? (
         <div className="fixed inset-0 z-[180] flex items-center justify-center bg-[#101d37]/65 px-4 py-6" role="presentation">
           <div role="alertdialog" aria-modal="true" aria-labelledby="bulk-convert-title"
