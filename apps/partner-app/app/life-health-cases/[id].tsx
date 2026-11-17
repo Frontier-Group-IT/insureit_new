@@ -1,5 +1,6 @@
+import { partnerAlert } from '@/components/ui/partner-alert-provider';
 import { useCallback, useState, type ReactNode } from 'react';
-import { ActivityIndicator, Alert, Keyboard, KeyboardAvoidingView, Platform, Linking, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Keyboard, KeyboardAvoidingView, Platform, Linking, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
@@ -177,7 +178,7 @@ export default function LifeHealthCaseDetailScreen(){
  const confirmCancel=()=>{
   if(saving||issuing||documentBusy||rejectBusy)return;
   const leave=()=>router.replace('/life-health-cases');
-  if(caseDirty)Alert.alert('Discard changes?','Unsaved case edits will be lost.',[
+  if(caseDirty)partnerAlert('Discard changes?','Unsaved case edits will be lost.',[
    {text:'Keep Editing',style:'cancel'},{text:'Discard',style:'destructive',onPress:leave}
   ]);else leave();
  };
@@ -201,7 +202,7 @@ export default function LifeHealthCaseDetailScreen(){
  };
  const deleteDocument=(doc:LifeHealthDocument)=>{
   if(!record||record.status_group!=='pending'||documentBusy)return;
-  Alert.alert('Delete document?','Permanently delete '+doc.file_name+'?',[
+  partnerAlert('Delete document?','Permanently delete '+doc.file_name+'?',[
    {text:'Cancel',style:'cancel'},
    {text:'Delete',style:'destructive',onPress:()=>{void (async()=>{
     setDocumentError('');setDocumentBusy(true);
