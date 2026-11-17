@@ -91,7 +91,7 @@ create or replace function public.sync_verified_ai_intake_ocr_v1(
 )
 returns boolean
 language plpgsql security invoker set search_path = public, pg_catalog
-as $
+as $$
 declare
   v_updated uuid;
 begin
