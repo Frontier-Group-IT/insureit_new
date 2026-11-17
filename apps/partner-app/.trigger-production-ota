@@ -1,12 +1,13 @@
 Partner production OTA trigger
-release=partner-case-section-modal-parity-pr-4710
+release=partner-customer-vehicle-details-pr-4745
 source=verified-merged-main
-source_pr=4710
-source_merge=e874cba7eba2a1c1ebe784ed90e7c62663db8a87
+source_pr=4745
+source_merge=6f3557a8add0902a8581ea66d84a1434dc74bf99
 reason=user-approved-merge-and-publish
 channel=production
 runtime=0.2.0
 requested=2026-11-17
+database_migration=partner_customer_vehicle_reference_details_applied_and_verified
 no_native_build=true
 no_apk=true
 no_aab=true
