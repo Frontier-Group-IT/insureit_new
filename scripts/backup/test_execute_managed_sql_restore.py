@@ -124,9 +124,9 @@ class TargetRestoreSafety(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             log = Path(folder) / "private.log"
             log.write_text(
-                "psql:/archive/private.sql:601: ERROR:  23503\\n"
+                "psql:/archive/private.sql:601: ERROR:  23503\n"
                 "DETAIL: Key (user_id)=(private-id-must-not-be-logged)"
-                " is not present in table \\"users\\".\\n"
+                " is not present in table \"users\".\n"
             )
             self.assertEqual(redacted_sqlstate(log), "23503")
             self.assertEqual(redacted_sqlstate(log.with_name("missing.log")),
