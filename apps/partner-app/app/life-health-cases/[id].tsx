@@ -38,6 +38,41 @@ function initialForm(value:LifeHealthCaseDetail):CaseEditForm {
   premiumPayingTerm:value.premium_paying_term||'',policyDuration:value.policy_duration||'',
   paymentFrequency:value.payment_frequency,paymentMode:value.payment_mode,premiumAmount:String(value.premium_amount)};
 }
+
+/** Deterministic date calculations shared by native term and start-date edits. */
+const parseIssueDate=(value:string):string=>{
+ const raw=value.trim(),parts=/^(\d{2})\/(\d{2})\/(\d{4})$/.exec(raw);
+ const iso=parts?parts[3]+'-'+parts[2]+'-'+parts[1]:raw;
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(iso))return '';
+ const d=new Date(iso+'T00:00:00Z');
+ return !Number.isNaN(d.getTime())&&d.toISOString().slice(0,10)===iso?iso:'';
+};
+const issueSchedule=(startValue:string,form:CaseEditForm)=>{
+ const start=parseIssueDate(startValue);
+ const ends=(term:string)=>{
+  const match=/^\s*(\d+)\s+Years?\s*$/i.exec(term);
+  if(!start||!match)return '';
+  const date=new Date(start+'T00:00:00Z');
+  date.setUTCFullYear(date.getUTCFullYear()+Number(match[1]));
+  date.setUTCDate(date.getUTCDate()-1);
+  return dateLabel(date.toISOString().slice(0,10));
+ };
+ let nextInstallmentDate='';
+ const months=({Monthly:1,Quarterly:3,'Half Yearly':6,Annually:12} as Record<string,number>)[form.paymentFrequency];
+ if(start&&months&&form.premiumPayingTerm!=='Single Pay'){
+  const [year,month,day]=start.split('-').map(Number);
+  const date=new Date(Date.UTC(year,month-1+months,1));
+  const last=new Date(Date.UTC(date.getUTCFullYear(),date.getUTCMonth()+1,0)).getUTCDate();
+  date.setUTCDate(Math.min(day,last));
+  nextInstallmentDate=dateLabel(date.toISOString().slice(0,10));
+ }
+ return {
+  endDate:form.productName.match(/\bpension\b/i)?'':ends(form.policyDuration),
+  pptEndDate:form.premiumPayingTerm==='Single Pay'?'':ends(form.premiumPayingTerm),
+  nextInstallmentDate,
+ };
+};
+
 export default function LifeHealthCaseDetailScreen(){
  const {id}=useLocalSearchParams<{id:string}>();
  const router=useRouter();
@@ -69,7 +104,21 @@ export default function LifeHealthCaseDetailScreen(){
  const [rejectBusy,setRejectBusy]=useState(false);
  const [rejectError,setRejectError]=useState('');
  const [form,setForm]=useState<CaseEditForm|null>(null);
- const setField=(key:keyof CaseEditForm,value:string)=>{setSaveSuccess(false);setForm(prev=>prev?{...prev,[key]:value}:prev);};
+ const [dateOverrides,setDateOverrides]=useState({endDate:false,pptEndDate:false,nextInstallmentDate:false});
+ const setField=(key:keyof CaseEditForm,value:string)=>{
+  setSaveSuccess(false);
+  const nextForm=form?{...form,[key]:value}:null;
+  setForm(nextForm);
+  if(nextForm&&['policyDuration','premiumPayingTerm','paymentFrequency','productName'].includes(key)){
+   const schedule=issueSchedule(issue.startDate,nextForm);
+   setIssue(current=>({
+    ...current,
+    endDate:dateOverrides.endDate?current.endDate:schedule.endDate,
+    pptEndDate:nextForm.premiumPayingTerm==='Single Pay'?'':dateOverrides.pptEndDate?current.pptEndDate:schedule.pptEndDate,
+    nextInstallmentDate:nextForm.paymentFrequency==='One Time'||nextForm.premiumPayingTerm==='Single Pay'?'':dateOverrides.nextInstallmentDate?current.nextInstallmentDate:schedule.nextInstallmentDate,
+   }));
+  }
+ };
  const submitRemark=async()=>{
   if(!record||remarkSaving||!remarkDraft.trim())return;
   setRemarkError('');setRemarkSaving(true);
@@ -195,13 +244,7 @@ export default function LifeHealthCaseDetailScreen(){
        style={[styles.fieldBox,styles.inlineInput,multiline&&styles.fieldBoxMultiline]}/>}
    </View>;
  };
- const toISO=(value:string):string=>{
-   const raw=value.trim(),parts=/^(\d{2})\/(\d{2})\/(\d{4})$/.exec(raw);
-   const iso=parts?parts[3]+'-'+parts[2]+'-'+parts[1]:raw;
-   if(!/^\d{4}-\d{2}-\d{2}$/.test(iso))return '';
-   const date=new Date(iso+'T00:00:00Z');
-   return !Number.isNaN(date.getTime())&&date.toISOString().slice(0,10)===iso?iso:'';
- };
+ const toISO=parseIssueDate;
  const issuedForm=():LifeHealthIssue=>({
    ...issue,issuanceDate:toISO(issue.issuanceDate),startDate:toISO(issue.startDate),
    endDate:issue.endDate?toISO(issue.endDate):'',pptEndDate:issue.pptEndDate?toISO(issue.pptEndDate):'',
@@ -209,34 +252,15 @@ export default function LifeHealthCaseDetailScreen(){
    dateApprovalId:approvalVerified?approvalId:'',
  });
  const setIssued=(key:keyof LifeHealthIssue,value:string)=>{
-   setIssue(current=>{
-     const next={...current,[key]:value};
-     if(key==='startDate'){
-       const start=toISO(value);
-       const plusYears=(term:string)=>{
-         const years=Number(term.match(/[0-9]+/)?.[0]??0);
-         if(!start||!years||!Number.isInteger(years))return '';
-         const date=new Date(start+'T00:00:00Z');
-         date.setUTCFullYear(date.getUTCFullYear()+years);date.setUTCDate(date.getUTCDate()-1);
-         return dateLabel(date.toISOString().slice(0,10));
-       };
-       const installment=()=>{
-         if(!start||!form)return '';
-         const months=({Monthly:1,Quarterly:3,'Half Yearly':6,Annually:12} as Record<string,number>)[form.paymentFrequency];
-         if(!months)return '';
-         const [y,m,d]=start.split('-').map(Number);
-         const date=new Date(Date.UTC(y,m-1+months,1));
-         const max=new Date(Date.UTC(date.getUTCFullYear(),date.getUTCMonth()+1,0)).getUTCDate();
-         date.setUTCDate(Math.min(d,max));return dateLabel(date.toISOString().slice(0,10));
-       };
-       const pension=record?.business_line==='Life'&&/\bpension\b/i.test(form?.productName||'');
-       next.endDate=pension?'':plusYears(form?.policyDuration||'');
-       next.pptEndDate=plusYears(form?.premiumPayingTerm||'');
-       next.nextInstallmentDate=installment();
-     }
-     return next;
-   });
-   if(key==='issuanceDate'||key==='policyNumber'){setApprovalId('');setApprovalVerified(false);}
+  if(key==='startDate')setDateOverrides({endDate:false,pptEndDate:false,nextInstallmentDate:false});
+  if(key==='endDate'||key==='pptEndDate'||key==='nextInstallmentDate')
+   setDateOverrides(previous=>({...previous,[key]:true}));
+  setIssue(current=>{
+   const next={...current,[key]:value};
+   if(key==='startDate'&&form)Object.assign(next,issueSchedule(value,form));
+   return next;
+  });
+  if(key==='issuanceDate'||key==='policyNumber'){setApprovalId('');setApprovalVerified(false);}
  };
  const requiresApproval=()=>{
    const value=toISO(issue.issuanceDate);
@@ -372,27 +396,14 @@ export default function LifeHealthCaseDetailScreen(){
           {inline("premiumAmount","Premium amount",amount(record.premium_amount),true,false,false,"decimal-pad")}
           {inline("paymentMode","Payment mode",record.payment_mode,true)}
         </View>
-        {record.status_group==='issued'&&record.remarks?.trim()?<>
-          <Text style={styles.fieldLabel}>REMARKS</Text>
-          <Text selectable style={styles.remarkExisting}>{record.remarks}</Text>
-        </>:null}
+        <Text style={styles.fieldLabel}>REMARKS</Text>
+        {record.status_group==='pending'?<Pressable accessibilityRole="button" accessibilityLabel="Add Remark"
+          onPress={()=>{setRemarkError('');setRemarkOpen(true);}} style={styles.remarkHeaderAction}>
+          <Ionicons name="chatbubble-ellipses-outline" size={17} color="#FFFFFF"/>
+          <Text style={styles.remarkButtonText}>Add Remark</Text>
+        </Pressable>:null}
+        {record.remarks?.trim()?<Text selectable style={styles.remarkExisting}>{record.remarks}</Text>:null}
       </Section>
-
-      {(record.status_group==='pending'||record.status_group==='rejected')?<View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Ionicons name="chatbubble-ellipses-outline" size={18} color={navy}/>
-          <Text style={styles.sectionTitle}>Remarks</Text>
-          <View style={styles.remarkHeaderSpacer}/>
-          <Pressable accessibilityRole="button" accessibilityLabel="Add Remark"
-            onPress={()=>{setRemarkError('');setRemarkOpen(true);}} style={styles.remarkHeaderAction}>
-            <Ionicons name="add" size={15} color="#FFFFFF"/>
-            <Text style={styles.remarkButtonText}>Add Remark</Text>
-          </Pressable>
-        </View>
-        {record.remarks?.trim()?<View style={styles.sectionContent}>
-          <Text selectable style={styles.remarkExisting}>{record.remarks}</Text>
-        </View>:null}
-      </View>:null}
 
       {record.status_group==='pending'?<Section number="05" title="Mark Policy Issued">
         <View style={styles.grid}>
@@ -400,8 +411,8 @@ export default function LifeHealthCaseDetailScreen(){
           {issueField("issuanceDate","Issuance date",false,true)}
           {issueField("startDate","Policy start date",true,true)}
           {issueField("endDate","Policy end / maturity date",false,true)}
-          {issueField("pptEndDate","PPT end date",false,true)}
-          {issueField("nextInstallmentDate","Next installment date",false,true)}
+          {form?.premiumPayingTerm==='Single Pay'?<Field label="PPT end date" value="Not applicable · Single Pay"/>:issueField("pptEndDate","PPT end date",false,true)}
+          {form?.paymentFrequency==='One Time'||form?.premiumPayingTerm==='Single Pay'?<Field label="Next installment date" value="Not applicable · One Time"/>:issueField("nextInstallmentDate","Next installment date",false,true)}
           {issueField("finalPremium","Final premium",true)}
           {issueField("sumInsured","Sum assured / insured")}
         </View>
