@@ -144,7 +144,7 @@ export default function LifeHealthCaseDetailScreen(){
   }
  };
  const submitRemark=async()=>{
-  if(!record||remarkSaving||!remarkDraft.trim())return;
+  if(!record||record.status_group!=='pending'||remarkSaving||!remarkDraft.trim())return;
   setRemarkError('');setRemarkSaving(true);
   try{
    await appendLifeHealthCaseRemark(record.id,remarkDraft);
@@ -429,9 +429,13 @@ export default function LifeHealthCaseDetailScreen(){
           <Text style={styles.remarkSectionText}>Remarks</Text>
         </View>
         <Pressable accessibilityRole="button" accessibilityLabel="Add Remark"
-          onPress={()=>{setRemarkError('');setRemarkOpen(true);}} style={styles.remarkHeaderAction}>
-          <Ionicons name="add-circle-outline" size={17} color="#24517E"/>
-          <Text style={styles.remarkHeaderText}>Add Remark</Text>
+          accessibilityState={{disabled:record.status_group==='rejected'}}
+          disabled={record.status_group==='rejected'}
+          onPress={()=>{if(record.status_group!=='pending')return;setRemarkError('');setRemarkOpen(true);}}
+          style={[styles.remarkHeaderAction,record.status_group==='rejected'&&styles.remarkHeaderActionDisabled]}>
+          <Ionicons name={record.status_group==='rejected'?'lock-closed-outline':'add-circle-outline'}
+            size={17} color={record.status_group==='rejected'?'#7C8797':'#24517E'}/>
+          <Text style={[styles.remarkHeaderText,record.status_group==='rejected'&&styles.remarkHeaderTextDisabled]}>Add Remark</Text>
         </Pressable>
       </View>:null}
 
@@ -721,6 +725,8 @@ const styles=StyleSheet.create({
   remarkSectionText:{fontSize:12,fontWeight:'800',color:navy},
   remarkHeaderAction:{flexDirection:'row',alignItems:'center',gap:5,backgroundColor:'#FFFFFF',borderWidth:1,borderColor:'#C9D8EA',paddingHorizontal:9,paddingVertical:7,borderRadius:8,minHeight:34},
   remarkHeaderText:{fontSize:11,fontWeight:'800',color:'#24517E'},
+  remarkHeaderActionDisabled:{backgroundColor:'#E2E6EC',borderColor:'#D5DBE4'},
+  remarkHeaderTextDisabled:{color:'#7C8797'},
   remarkInlineAction:{flexDirection:'row',alignItems:'center',gap:3,backgroundColor:navy,paddingHorizontal:10,paddingVertical:12,borderRadius:9},
   remarkFullWidth:{flexDirection:'row',alignItems:'center',justifyContent:'center',gap:8,minHeight:44,backgroundColor:navy,borderRadius:9},
   saveInline:{gap:6},
