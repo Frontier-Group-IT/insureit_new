@@ -15,7 +15,7 @@ assert.ok(panel.includes('data.rows.length ? <table'),"Detail table is shown onl
 assert.ok(panel.includes('</table> : <DailyReportEmptyState />'),"Empty detail retains pagination with centered empty state");
 assert.ok(panel.includes('flex flex-1 items-center justify-center'),"Empty summary is vertically centered");
 assert.ok(panel.includes('data.categories.length ? ('),"Summary uses full-height panel");
-assert.doesNotMatch(panel,/min-h-\\[calc\\(100dvh-300px\\)\\]/,"Panel height must not depend on record count");
+assert.ok(!panel.includes('min-h-[calc(100dvh-300px)]'),"Panel height must not depend on record count");
 assert.match(panel,/aria-label="Self activity summary and register"/,"Full-height sizing applies to both modes through the shared component");
 assert.match(panel,/gridColumnsFor\(group\.items\.length\)/,"Activity cards fill the width available to each group");
 assert.doesNotMatch(panel,/h-screen|h-\[100dvh\]|overflow-y-hidden/,"Panel remains naturally scrollable when activity tables exceed the viewport");
