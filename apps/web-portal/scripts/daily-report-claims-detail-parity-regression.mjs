@@ -4,6 +4,27 @@ const read=path=>readFileSync(new URL(path,import.meta.url),"utf8");
 const source=read("../lib/reports/daily-self-activity.ts");
 const panel=read("../components/reports/daily-self-activity-panel.tsx");
 const rows=read("../components/reports/daily-activity-history-rows.tsx");
+const deletion=read("../app/master-record-delete-actions.ts");
+assert.match(deletion,/if \(entity === "policy"\) \{[\s\S]*?\.from\("policies"\)[\s\S]*?\.select\("policy_no,policy_code,customer_id,vehicle_id,insurance_company_id"\)/,
+  "Fetch source policy identity before permanent deletion");
+assert.match(deletion,/\.from\("customers"\)\.select\("company_name,contact_name,legal_trade_name"\)/,
+  "Capture customer name before permanent policy deletion");
+assert.match(deletion,/\.from\("vehicles"\)\.select\("vehicle_no"\)/,
+  "Capture vehicle registration before permanent policy deletion");
+assert.match(deletion,/\.from\("insurance_companies"\)\.select\("name"\)/,
+  "Capture insurance company name before permanent policy deletion");
+assert.match(deletion,/\.\.\.deletedPolicyIdentity, rejected_policy_intake_links_cleared:/,
+  "Store snapshot in the existing deletion audit, not a new master table");
+assert.match(deletion,/if \(customer.error \|\| vehicle.error \|\| insurer.error\)/,
+  "Abort policy deletion if audit-identity lookup fails");
+assert.match(source,/if\(row.table==="policies" && row.status==="Deleted"\)/,
+  "Only enrich deleted policies in scoped visible activity rows");
+for (const field of ["policy_no","customer_name","vehicle_no","insurance_company_name"]) {
+  assert.ok(source.includes("old."+field), "Read existing deletion snapshot field "+field);
+}
+assert.match(source,/Not retained \(deleted policy\)/,
+  "Historic missing policy numbers must not be misrepresented by UUIDs");
+
 assert.match(source,/select\("id,claim_no,insurer_claim_no,customers\(company_name,contact_name\),vehicles\(vehicle_no\)"\)/,"Lookup references only visible claims");
 assert.match(source,/Array\.isArray\(claim\.customers\)\?claim\.customers\[0\]:claim\.customers/,"Handle object and array customer relations");
 assert.match(source,/Array\.isArray\(claim\.vehicles\)\?claim\.vehicles\[0\]:claim\.vehicles/,"Handle object and array vehicle relations");
