@@ -66,7 +66,7 @@ requireText(policyDetail, 'const [showPremiumDetails, setShowPremiumDetails] = u
 requireText(policyDetail, 'const [showCommercialDetails, setShowCommercialDetails] = useState(true);', 'Sales ownership opens expanded by default');
 requireText(policyDetail, 'onPress={() => setShowPremiumDetails((value) => !value)}', 'Premium breakup is still collapsible');
 requireText(policyDetail, 'onPress={() => setShowCommercialDetails((value) => !value)}', 'Sales ownership is still collapsible');
-requireText(policyDetail, 'quickSectionHeading: { marginLeft: -6, marginRight: 3, marginBottom: 8', 'Quick Actions heading moves slightly left without moving action icons');
+requireText(policyDetail, 'quickSectionHeading: { marginLeft: -6, marginRight: 3, marginBottom: 5', 'Quick Actions heading moves slightly left without moving action icons');
 requireText(policyDetail, 'externalSectionHeading: { marginLeft: -6, paddingLeft: 0, paddingRight: 2 }', 'Customer & Vehicle heading moves slightly left without moving its card');
 requireText(policyDetail, 'contentWrap: { marginTop: 0, gap: 6, paddingBottom: 15 }', 'Inter-section vertical gap is compact');
 requireText(policyDetail, 'paddingHorizontal: 14, paddingTop: 10, paddingBottom: 9', 'Policy summary vertical padding is compact');
