@@ -15,14 +15,22 @@ for(const key of ['sourcingDate','customerName','customerPhone','customerAddress
   assert.ok(app.includes('inline("'+key+'"'),'Inline edit missing '+key);
 }
 assert.match(app,/record\?\.status_group==='issued'&&\['customerName','customerPhone','customerAddress'\]/);
-assert.match(app,/record.status_group==='pending'\?<Section number="05"/);
+assert.match(app,/record.status_group==='pending'\?<Section number="05" title="Mark Policy Issued" highlight/);
 for(const key of ['policyNumber','issuanceDate','startDate','endDate','pptEndDate','nextInstallmentDate','finalPremium','sumInsured']){
   assert.ok(app.includes('issueField("'+key+'"'),'Missing issuance field '+key);
 }
 assert.ok(app.includes('>Create Policy</Text>'),'Pending case issuance button uses compact label');
 assert.match(app,/onPress=\{\(\)=>void submitIssue\(\)\}/,'Create Policy retains verified issuance handler');
 assert.ok(app.includes('remarkSection'), 'Remarks use a standalone section');
-const premiumSection=app.slice(app.indexOf('<Section number="04" title="Premium & payment">'),app.indexOf('<Section number="05" title="Mark Policy Issued">'));
+assert.ok(app.includes('styles.sectionHighlight') && app.includes('styles.sectionHeaderHighlight'), 'Section 05 has its Operations-style highlight');
+assert.ok(app.includes('styles.centeredModalBackdrop') && app.includes("justifyContent:'center'"), 'Remarks and Reject use centered modal positioning');
+assert.ok(app.includes('styles.centeredModalKeyboardAvoid') && app.includes('style={styles.remarkKeyboardAvoid}'), 'Centered dialogs accommodate keyboard');
+assert.ok(app.includes("record.remarks.trim().split(/\\n\\s*\\n/)"), 'Separate saved remarks receive activity-style dividers');
+assert.ok(app.includes('style={styles.activity}><Text style={styles.paragraph} selectable>{remark}</Text>'), 'Each saved remark has a divider');
+const section3=app.slice(app.indexOf('<Section number="03"'),app.indexOf('<Section number="04"'));
+assert.ok(section3.indexOf('inline("proposalNumber"')<section3.indexOf('inline("paymentFrequency"'), 'Payment frequency follows case/proposal number');
+assert.ok(section3.includes('inline("proposalNumber","Case / proposal number",record.proposal_number,true)'), 'Case number uses half width');
+const premiumSection=app.slice(app.indexOf('<Section number="04" title="Premium & payment">'),app.indexOf('<Section number="05" title="Mark Policy Issued" highlight>'));
 assert.ok(premiumSection.includes('</Section>') && premiumSection.includes('styles.remarkSection'), 'Separate Remarks card follows premium section');
 assert.ok(app.includes("(record.status_group==='pending'||record.status_group==='rejected')?<View style={styles.remarkSection}>"), 'Pending and rejected cases can open Add Remark');
 assert.ok(app.includes('record.remarks?.trim()'), 'Remarks history remains visible in the record');

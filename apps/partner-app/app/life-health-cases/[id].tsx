@@ -385,10 +385,10 @@ export default function LifeHealthCaseDetailScreen(){
         <View style={styles.grid}>
           {inline("insurerId","Insurance company",record.insurer_name,true,true)}
           {inline("productName","Product name",record.product_name,true,true)}
-          {inline("proposalNumber","Case / proposal number",record.proposal_number,true,true)}
+          {inline("proposalNumber","Case / proposal number",record.proposal_number,true)}
+          {inline("paymentFrequency","Payment frequency",record.payment_frequency,true)}
           {inline("premiumPayingTerm","PPT · Premium Paying Term",record.premium_paying_term||"")}
           {inline("policyDuration","PD · Policy Duration / Term",record.policy_duration||"")}
-          {inline("paymentFrequency","Payment frequency",record.payment_frequency,true)}
         </View>
       </Section>
 
@@ -411,7 +411,7 @@ export default function LifeHealthCaseDetailScreen(){
         </Pressable>
       </View>:null}
 
-      {record.status_group==='pending'?<Section number="05" title="Mark Policy Issued">
+      {record.status_group==='pending'?<Section number="05" title="Mark Policy Issued" highlight>
         <View style={styles.grid}>
           {issueField("policyNumber","Policy number",true)}
           {issueField("issuanceDate","Issuance date",false,true)}
@@ -482,7 +482,9 @@ export default function LifeHealthCaseDetailScreen(){
               <Text style={styles.activityDate}>At: {activityDate(activity.created_at)}</Text>
             </View>):<Text style={styles.paragraph}>No recorded case activity available.</Text>}
           </View>:expandedCaseTab==='remarks'?<View style={styles.activityHistory}>
-            <Text style={styles.paragraph} selectable>{record.remarks?.trim()||'No remarks added yet.'}</Text>
+            {record.remarks?.trim()?record.remarks.trim().split(/\n\s*\n/).filter(Boolean).map((remark,index)=>
+              <View key={index} style={styles.activity}><Text style={styles.paragraph} selectable>{remark}</Text></View>
+            ):<Text style={styles.paragraph}>No remarks added yet.</Text>}
           </View>:null}
         </View>
       ):(
@@ -501,7 +503,9 @@ export default function LifeHealthCaseDetailScreen(){
             {activity.changes?.map((change,index)=><Text key={index} style={styles.activityDate}>• {change}</Text>)}
             <Text style={styles.activityDate}>At: {activityDate(activity.created_at)}</Text>
           </View>):<Text style={styles.paragraph}>No recorded case activity available.</Text>):
-            <Text style={styles.paragraph} selectable>{record.remarks?.trim()||'No remarks added yet.'}</Text>}
+            (record.remarks?.trim()?record.remarks.trim().split(/\n\s*\n/).filter(Boolean).map((remark,index)=>
+              <View key={index} style={styles.activity}><Text style={styles.paragraph} selectable>{remark}</Text></View>
+            ):<Text style={styles.paragraph}>No remarks added yet.</Text>)}
         </View>
       )}
       {saveError?<Text style={styles.saveError}>{saveError}</Text>:null}
@@ -529,24 +533,31 @@ export default function LifeHealthCaseDetailScreen(){
       </View>:null}
 
     </View>:null}
-   <Modal visible={rejectOpen} transparent animationType="fade" onRequestClose={()=>{if(!rejectBusy)setRejectOpen(false);}}>
-     <View style={styles.editorBackdrop}><View style={styles.remarkEditor}>
-       <Text style={styles.editorTitle}>Reject Life / Health Case</Text>
-       <Text style={styles.editorHint}>Enter a reason. Rejection closes this case without deleting its documents or customer.</Text>
-       <TextInput accessibilityLabel="Rejection reason" multiline maxLength={2000} value={rejectReason}
-         onChangeText={setRejectReason} placeholder="Reason for rejection"
-         style={[styles.editInput,{minHeight:110,textAlignVertical:'top'}]}/>
-       {rejectError?<Text style={styles.saveError}>{rejectError}</Text>:null}
-       <View style={styles.editorActions}>
-         <Pressable accessibilityRole="button" disabled={rejectBusy} onPress={()=>setRejectOpen(false)} style={styles.cancelButton}>
-           <Text style={styles.cancelText}>Cancel</Text>
-         </Pressable>
-         <Pressable accessibilityRole="button" disabled={rejectBusy||!rejectReason.trim()} onPress={()=>void submitRejection()}
-           style={[styles.saveButton,{backgroundColor:'#B02E3A'},(rejectBusy||!rejectReason.trim())&&{opacity:0.5}]}>
-           <Text style={styles.saveText}>{rejectBusy?'Rejecting…':'Confirm Reject'}</Text>
-         </Pressable>
-       </View>
-     </View></View>
+   <Modal visible={rejectOpen} transparent animationType="fade" onRequestClose={()=>{if(!rejectBusy){Keyboard.dismiss();setRejectOpen(false);}}}>
+     <KeyboardAvoidingView style={styles.centeredModalKeyboardAvoid} behavior={Platform.OS==='ios'?'padding':'height'}>
+       <View style={styles.centeredModalBackdrop}><View style={styles.centeredModalCard}>
+         <Text style={styles.editorTitle}>Reject Life / Health Case?</Text>
+         <Text style={styles.editorHint}>Case {record?.case_number||'—'} will move to Rejected. A reason is required.</Text>
+         <View style={styles.centeredModalDivider}/>
+         <Text style={styles.editLabel}>Reason for rejection <Text style={styles.asterisk}>*</Text></Text>
+         <TextInput accessibilityLabel="Rejection reason" multiline maxLength={2000} value={rejectReason}
+           onChangeText={setRejectReason} placeholder="Enter the reason for rejecting this case..."
+           placeholderTextColor="#91A0B2" style={styles.centeredModalInput}/>
+         {rejectError?<Text style={styles.saveError}>{rejectError}</Text>:null}
+         <View style={styles.centeredModalDivider}/>
+         <View style={styles.centeredModalActions}>
+           <Pressable accessibilityRole="button" disabled={rejectBusy}
+             onPress={()=>{Keyboard.dismiss();setRejectOpen(false);}} style={styles.cancelButton}>
+             <Text style={styles.cancelText}>Cancel</Text>
+           </Pressable>
+           <Pressable accessibilityRole="button" disabled={rejectBusy||!rejectReason.trim()}
+             onPress={()=>{Keyboard.dismiss();void submitRejection();}}
+             style={[styles.saveButton,styles.confirmRejectButton,(rejectBusy||!rejectReason.trim())&&{opacity:0.5}]}>
+             <Text style={styles.saveText}>{rejectBusy?'Rejecting…':'Confirm Reject'}</Text>
+           </Pressable>
+         </View>
+       </View></View>
+     </KeyboardAvoidingView>
    </Modal>
    <Modal visible={Boolean(picker)} transparent animationType="fade" onRequestClose={()=>setPicker(null)}>
      <View style={styles.editorBackdrop}><View style={styles.remarkEditor}>
@@ -591,8 +602,8 @@ export default function LifeHealthCaseDetailScreen(){
      onRequestClose={()=>{if(!remarkSaving){Keyboard.dismiss();setRemarkOpen(false);}}}>
      <KeyboardAvoidingView style={styles.remarkKeyboardAvoid}
        behavior={Platform.OS==='ios'?'padding':'height'} keyboardVerticalOffset={0}>
-       <View style={styles.editorBackdrop}>
-         <View style={styles.remarkEditor}>
+       <View style={styles.centeredModalBackdrop}>
+         <View style={[styles.centeredModalCard,styles.centeredRemarkCard]}>
            <View style={styles.remarkModalHeader}>
              <View style={styles.remarkSectionTitle}>
                <Ionicons name="chatbubble-ellipses-outline" size={19} color="#24517E"/>
@@ -604,13 +615,13 @@ export default function LifeHealthCaseDetailScreen(){
              </Pressable>
            </View>
            <ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="none"
-             contentContainerStyle={styles.remarkModalContent}>
+             style={styles.centeredRemarkScroll} contentContainerStyle={styles.remarkModalContent}>
              <TextInput accessibilityLabel="New case remark" multiline value={remarkDraft} onChangeText={setRemarkDraft}
                placeholder="Write a remark" placeholderTextColor="#91A0B2" maxLength={2000}
                scrollEnabled style={styles.remarkTextArea}/>
              {remarkError?<Text style={styles.saveError}>{remarkError}</Text>:null}
            </ScrollView>
-           <View style={styles.editorActions}>
+           <View style={styles.centeredModalActions}>
              <Pressable accessibilityRole="button" disabled={remarkSaving}
                onPress={()=>{Keyboard.dismiss();setRemarkOpen(false);}} style={styles.cancelButton}>
                <Text style={styles.cancelText}>Cancel</Text>
@@ -643,11 +654,17 @@ function ChoiceField({title,value,values,onChange}:{title:string;value:string;va
     <Text style={[styles.choiceText,item===value&&styles.choiceTextActive]}>{item}</Text>
   </Pressable>)}</View></View>;
 }
-function Section({number,title,children}:{number?:string;title:string;children:ReactNode}){
-  return <View style={styles.section}>
-    <View style={styles.sectionHeader}>
-      {number?<View style={styles.sectionNumber}><Text style={styles.sectionNumberText}>{number}</Text></View>:null}
-      <Text style={styles.sectionTitle}>{title}</Text>
+function Section({number,title,children,highlight=false}:{number?:string;title:string;children:ReactNode;highlight?:boolean}){
+  return <View style={[styles.section,highlight&&styles.sectionHighlight]}>
+    <View style={[styles.sectionHeader,highlight&&styles.sectionHeaderHighlight]}>
+      {highlight?<View style={[styles.sectionNumber,styles.sectionNumberHighlight]}>
+        <Ionicons name="shield-checkmark-outline" size={18} color="#FFFFFF"/>
+      </View>:number?<View style={styles.sectionNumber}><Text style={styles.sectionNumberText}>{number}</Text></View>:null}
+      <View style={styles.sectionHeaderCopy}>
+        <Text style={styles.sectionTitle}>{title}</Text>
+        {highlight?<Text style={styles.sectionSubtitle}>Update policy status to issued</Text>:null}
+      </View>
+      {highlight?<Ionicons name="shield-checkmark-outline" size={22} color="#4784DD"/>:null}
     </View>
     <View style={styles.sectionContent}>{children}</View>
   </View>;
@@ -675,10 +692,10 @@ const styles=StyleSheet.create({
   remarkInlineRow:{flexDirection:'row',alignItems:'center',gap:8},
   remarkExisting:{color:navy,fontSize:11,lineHeight:17,backgroundColor:'#F5F8FD',borderRadius:9,padding:10},
   remarkHeaderSpacer:{flex:1},
-  remarkSection:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:10,backgroundColor:'#EAF1FA',borderRadius:13,borderWidth:1,borderColor:'#D9E2F0',padding:12},
+  remarkSection:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:8,backgroundColor:'#EAF1FA',borderRadius:11,borderWidth:1,borderColor:'#D9E2F0',paddingHorizontal:11,paddingVertical:7,minHeight:48},
   remarkSectionTitle:{flexDirection:'row',alignItems:'center',gap:9,flexShrink:1},
-  remarkSectionText:{fontSize:13,fontWeight:'800',color:navy},
-  remarkHeaderAction:{flexDirection:'row',alignItems:'center',gap:5,backgroundColor:'#FFFFFF',borderWidth:1,borderColor:'#C9D8EA',paddingHorizontal:10,paddingVertical:9,borderRadius:9},
+  remarkSectionText:{fontSize:12,fontWeight:'800',color:navy},
+  remarkHeaderAction:{flexDirection:'row',alignItems:'center',gap:5,backgroundColor:'#FFFFFF',borderWidth:1,borderColor:'#C9D8EA',paddingHorizontal:9,paddingVertical:7,borderRadius:8,minHeight:34},
   remarkHeaderText:{fontSize:11,fontWeight:'800',color:'#24517E'},
   remarkInlineAction:{flexDirection:'row',alignItems:'center',gap:3,backgroundColor:navy,paddingHorizontal:10,paddingVertical:12,borderRadius:9},
   remarkFullWidth:{flexDirection:'row',alignItems:'center',justifyContent:'center',gap:8,minHeight:44,backgroundColor:navy,borderRadius:9},
@@ -689,6 +706,15 @@ const styles=StyleSheet.create({
   datePlaceholder:{color:'#90A0B7'},
 
  remarkKeyboardAvoid:{flex:1},
+ centeredModalKeyboardAvoid:{flex:1},
+ centeredModalBackdrop:{flex:1,justifyContent:'center',alignItems:'center',paddingHorizontal:16,paddingVertical:18,backgroundColor:'rgba(9,24,48,0.48)'},
+ centeredModalCard:{width:'100%',maxWidth:460,maxHeight:'94%',backgroundColor:'#FFFFFF',borderRadius:16,padding:16,gap:10},
+ centeredRemarkCard:{gap:0},
+ centeredRemarkScroll:{flexGrow:0},
+ centeredModalDivider:{height:1,backgroundColor:'#DFE7F1',marginVertical:7},
+ centeredModalInput:{borderWidth:1,borderColor:'#CBD5E1',borderRadius:11,minHeight:110,maxHeight:180,padding:12,fontSize:13,color:navy,textAlignVertical:'top'},
+ centeredModalActions:{flexDirection:'row',gap:9,justifyContent:'flex-end',paddingTop:12},
+ confirmRejectButton:{backgroundColor:'#D98D93'},
  remarkEditor:{backgroundColor:'#FFFFFF',padding:15,borderTopLeftRadius:20,borderTopRightRadius:20,maxHeight:'90%'},
  remarkModalHeader:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:10,paddingBottom:13,borderBottomWidth:1,borderBottomColor:'#DFE7F1'},
  remarkModalClose:{minWidth:36,minHeight:36,alignItems:'center',justifyContent:'center'},
@@ -733,7 +759,12 @@ const styles=StyleSheet.create({
   heroSubtitle:{color:'#FFFFFF',fontWeight:'600',fontSize:10,flexShrink:1},
   heroCaseNumber:{color:'#F8F0E4',fontSize:9,fontWeight:'600',flexShrink:1},
   section:{backgroundColor:'#FFFFFF',borderRadius:14,borderWidth:1,borderColor:'#D9E2F0',overflow:'hidden'},
+  sectionHighlight:{backgroundColor:'#F7FAFF',borderColor:'#C9D9F5'},
   sectionHeader:{flexDirection:'row',alignItems:'center',gap:10,minHeight:49,paddingHorizontal:12,paddingVertical:8,borderBottomWidth:1,borderBottomColor:'#D9E2F0',backgroundColor:'#EAF1FA'},
+  sectionHeaderHighlight:{backgroundColor:'#E1EDFF',borderBottomColor:'#C9DAF4'},
+  sectionHeaderCopy:{flex:1,gap:2},
+  sectionSubtitle:{color:'#59749F',fontSize:9},
+  sectionNumberHighlight:{backgroundColor:'#5276CB'},
   sectionNumber:{width:30,height:30,borderRadius:9,backgroundColor:navy,alignItems:'center',justifyContent:'center'},
   sectionNumberText:{color:'#FFFFFF',fontSize:11,fontWeight:'800'},
   sectionTitle:{color:navy,fontSize:13,fontWeight:'800',flexShrink:1},
