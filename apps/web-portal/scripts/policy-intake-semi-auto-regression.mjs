@@ -835,8 +835,8 @@ assert(issuanceBackfillSql.includes("current_user <> 'service_role'")
   && issuanceBackfillSql.includes("q.state in ('verified','exception')")
   && !issuanceBackfillSql.includes("insert into public.policies"),
   "Server-only issue date backfill must require current document/verified n8n fingerprint and modify only an empty draft date");
-assert.equal(issuanceBackfillSql.split("\n").filter(line=>line.trim()==="as $").length,1);
-assert.equal(issuanceBackfillSql.split("\n").filter(line=>line.trim()==="$;").length,1);
+assert.equal(issuanceBackfillSql.split("\n").filter(line=>line.trim()==="as $$").length,1);
+assert.equal(issuanceBackfillSql.split("\n").filter(line=>line.trim()==="$$;").length,1);
 assert(workerText.includes('fill_verified_ai_draft_issuance_date_v1')
   && workerText.includes('if(completed && (state==="verified" || state==="exception")')
   && workerText.includes('issuanceDateVerified && pdfIssuanceDate'),
