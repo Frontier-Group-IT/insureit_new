@@ -80,4 +80,23 @@ A mobile number repeated on several policies for **one verified customer** is no
 5. Only after successful single-item transactional tests, enable confirmed bulk conversion with strict per-item rechecks.
 6. Manual GitHub Actions deployment; confirm exact commit and full authenticated user journey rather than relying only on CI or a deployment status.
 
-**Current PR scope:** exception vocabulary + pure fail-closed test gate and this implementation specification. It deliberately does not schedule n8n, write an assessment table, enable conversion, or change current production behavior. This prevents accidentally automating policy creation before the canonical conflict/approval path has been integrated.
+## Integration implemented in this draft PR (phase 1)
+
+- `supabase/migrations/20261117154000_policy_intake_ai_processing_queue.sql`: **unapplied** additive private service-role-only queue (RLS, atomic `FOR UPDATE SKIP LOCKED` claims, document revision re-enqueue, capped worker leases and retries). Only technical job metadata, field **keys**, exception **codes** and an opaque verified hash are stored; no PDF text, PII, signed link, policy or customer records are written.
+- `lib/ai-policy-onboarding-queue-server.ts`: bounded, server-only n8n processor. It validates every current private PDF through the existing signed-source bridge and records untrained, failed or review-needed statuses. It checks read-only customer and manufacturer master data, but **never resolves a conflict or creates a policy**. It deliberately does not label a row Eligible without the future canonical booking preflight.
+- `app/api/internal/ai-policy-onboarding/process/route.ts`: POST-only, constant-time Bearer secret check and opt-in queue flag. No public/publishable key and no browser-supplied Intake/PDF.
+- `.github/workflows/ai-policy-intake-extraction.yml`: five-minute scheduler. It is **disabled until the operator sets repository variable** `INSUREIT_AI_QUEUE_SCHEDULE_ENABLED=true`, provides repository secret `INSUREIT_AI_QUEUE_WORKER_TOKEN` and configures the matching server-only site environment token. The worker additionally requires `INSUREIT_AI_QUEUE_ENABLED=true` and the existing `INSUREIT_N8N_WORKBENCH_PRIMARY=true` / `INSUREIT_N8N_OCR_MODE=shadow` settings. A new `INSUREIT_AI_QUEUE_PARSER_REVISION` (default `bridge-v1`) requeues a document when the verified parser contract changes.
+- `SemiAutoPolicyWorkspace`: full-authorized-queue counters, Intake AI Exceptions column, custom review dialog, safe Advanced options and an explicitly authorized **Recheck in background** action. Selecting a row in enabled queue mode no longer starts an unnecessary n8n job; the old explicit PDF review remains available.
+- The top `Convert All Eligible` control is visible but **intentionally disabled**. Neither row conversion nor bulk booking is enabled in phase 1.
+
+**Not yet implemented**: date-evidence extension to n8n, distinct TP/CPA/OD and add-on canonical preflight, customer-link/create resolution persistence, vehicle/coverage conflict approvals, genuine one-click policy conversion and idempotent confirmed bulk booking. These require additional reviewed integration with the existing `onboardPolicyForVerifiedActor` / `save_motor_policy_with_date_approval_v1` flow. The old `bookSemiAutoIntake` n8n-primary gate stays in place.
+
+### Exact opt-in sequence (NOT performed by this PR)
+1. Run and review CI. Merge only on approval.
+2. Review and separately apply the new queue migration to the live-only Supabase project (no database preview exists). Run read-only RLS/permission/lease checks before enabling a worker.
+3. Deploy the portal through the approved manual GitHub Actions workflow.
+4. Configure a server-only random token (minimum 32 bytes) named `INSUREIT_AI_QUEUE_WORKER_TOKEN`, set `INSUREIT_AI_QUEUE_ENABLED=true`, then set the identical GitHub Actions secret. This token is independent of the production n8n webhook secret.
+5. Enable the repo variable `INSUREIT_AI_QUEUE_SCHEDULE_ENABLED=true` only after the preceding steps and inspect the first bounded runs. If errors occur disable the variable and website flag before investigation.
+6. All booking remains through the existing manually confirmed canonical form until the next separately reviewed release.
+
+**Current status:** This PR supplies a working **flagged/unreleased read-only extraction queue and exception UI**, not the finished full automation. Its migrations and scheduler are intentionally inactive on production.
