@@ -1,7 +1,8 @@
 "use server";
 
-import { preparePolicyIntakeHandoff, type PolicyIntakeDraft } from "@/app/policy-intakes/handoff-actions";
+import { preparePolicyIntakeHandoff, prepareVerifiedN8nIntakeHandoff, type PolicyIntakeDraft } from "@/app/policy-intakes/handoff-actions";
 import { onboardPolicy, type PolicyOnboardingPayload } from "@/app/policies/policy-onboarding-actions";
+import { requirePolicyCreator } from "@/lib/policy-access-server";
 import { loadPospMispAssociates } from "@/lib/posp-misp-associates";
 import { requireCapability } from "@/lib/master-data-server";
 import { requirePolicyIntakeFinalizer, requirePolicyIntakeReviewer } from "@/lib/policy-intake-server";
@@ -277,6 +278,32 @@ export async function editSemiAutoIntake(id: string, takeOver = false): Promise<
     return { ok: false, ready: false, issues: [issue("Intake handoff", handoff.error)] };
   }
   return { ok: true, ready: false, issues: [], editUrl: "/policies/new?intake_id=" + encodeURIComponent(id) };
+}
+
+/**
+ * Explicit semi-automated handoff. Re-extract n8n server-side and verify the
+ * reviewed document + fingerprint before calling the canonical Intake draft
+ * preparation. The canonical Policy Onboarding page remains responsible for
+ * all editable fields, manual verification, approval, and final booking.
+ */
+export async function continueVerifiedN8nIntakeToOnboarding(
+  id: string, documentId: string, fingerprint: string, confirmed: boolean, takeOver = false,
+): Promise<{ ok: boolean; editUrl?: string; error?: string; assignmentConflict?: { reviewerName: string } }> {
+  await requireDevelopmentPolicyOperator(id);
+  // Do not claim or create a draft for someone who cannot open /policies/new.
+  await requirePolicyCreator();
+  if (!isN8nWorkbenchPrimary() || confirmed !== true) {
+    return { ok: false, error: "A confirmed n8n-primary review is required before forwarding to Policy Onboarding." };
+  }
+  const handoff = await prepareVerifiedN8nIntakeHandoff(id,documentId,fingerprint,takeOver===true);
+  if (!handoff.ok) {
+    if (handoff.conflict) return { ok:false,error:handoff.error,assignmentConflict:{reviewerName:handoff.reviewerName} };
+    return { ok:false,error:handoff.error };
+  }
+  revalidatePath("/development/ai-policy-onboarding");
+  revalidatePath("/policy-intakes");
+  revalidatePath("/policy-intakes/" + encodeURIComponent(id));
+  return { ok:true,editUrl:"/policies/new?intake_id=" + encodeURIComponent(id) };
 }
 
 /**
