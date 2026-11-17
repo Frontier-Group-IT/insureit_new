@@ -115,7 +115,7 @@ export default function PolicyDetailScreen() {
 
           <View style={styles.externalSection}>
             <View style={styles.externalSectionHeading}><CardHeader title="Customer & Vehicle Details" /></View>
-            <Card>
+            <Card highlighted>
               <Pressable
                 accessibilityRole={data.customer.id ? "button" : undefined}
                 disabled={!data.customer.id}
@@ -203,9 +203,9 @@ export default function PolicyDetailScreen() {
   );
 }
 
-function Card({ children, onPress, accessibilityLabel }: { children: ReactNode; onPress?: () => void; accessibilityLabel?: string }) {
-  if (onPress) return <Pressable accessibilityRole="button" accessibilityLabel={accessibilityLabel} onPress={onPress} style={({ pressed }) => [styles.card, pressed && styles.pressed]}>{children}</Pressable>;
-  return <View style={styles.card}>{children}</View>;
+function Card({ children, onPress, accessibilityLabel, highlighted = false }: { children: ReactNode; onPress?: () => void; accessibilityLabel?: string; highlighted?: boolean }) {
+  if (onPress) return <Pressable accessibilityRole="button" accessibilityLabel={accessibilityLabel} onPress={onPress} style={({ pressed }) => [styles.card, highlighted && styles.customerVehicleBorder, pressed && styles.pressed]}>{children}</Pressable>;
+  return <View style={[styles.card, highlighted && styles.customerVehicleBorder]}>{children}</View>;
 }
 
 function CardHeader({ iconKind, title, actionLabel, onAction }: { iconKind?: PartnerPolicyDetailIconKind; title: string; actionLabel?: string; onAction?: () => void }) {
@@ -256,10 +256,53 @@ function EntityRow({ image, icon, title, subtitle, onPress }: { image?: ImageSou
   return <Pressable accessibilityRole={onPress ? 'button' : undefined} disabled={!onPress} onPress={onPress} style={({ pressed }) => [styles.entityRow, pressed && onPress ? styles.pressed : null]}><View style={styles.entityIcon}>{icon ? <Ionicons name={icon} size={20} color="#2468D7" /> : image ? <Image source={image} style={styles.entityArtwork} resizeMode="contain" /> : null}</View><View style={styles.entityBody}><Text numberOfLines={1} style={styles.entityTitle}>{title}</Text><Text numberOfLines={1} style={styles.entityMeta}>{subtitle}</Text></View></Pressable>;
 }
 
+// Display-only insurer labels. Match known master-data variants first, keeping
+// the original insurer name unchanged for logo resolution, API calls and storage.
+const INSURER_SHORT_LABELS: ReadonlyArray<readonly [RegExp, string]> = [
+  [/^icici[\s.-]*lombard\b/i, 'ICICI Lombard'],
+  [/^iffco[\s.-]*tokio\b/i, 'IFFCO-TOKIO'],
+  [/^tata\s*aig\b/i, 'TATA AIG'],
+  [/^hdfc\s*ergo\b/i, 'HDFC ERGO'],
+  [/^bajaj\s*allianz\s*life\b/i, 'Bajaj Allianz Life'],
+  [/^bajaj\s*allianz\b/i, 'Bajaj Allianz'],
+  [/^sbi\s*life\b/i, 'SBI Life'],
+  [/^sbi\s*general\b/i, 'SBI General'],
+  [/^reliance\s*general\b/i, 'Reliance General'],
+  [/^future\s*generali\s*india\s*life\b/i, 'Future Generali Life'],
+  [/^future\s*generali\b/i, 'Future Generali'],
+  [/^liberty\s*general\b/i, 'Liberty General'],
+  [/^royal\s*sundaram\b/i, 'Royal Sundaram'],
+  [/^(?:cholamandalam\s*ms|chola\s*ms)\b/i, 'Chola MS'],
+  [/^(?:the\s+)?new\s+india\s+assurance\b/i, 'New India Assurance'],
+  [/^united\s+india\s+insurance\b/i, 'United India'],
+  [/^(?:the\s+)?oriental\s+insurance\b/i, 'Oriental Insurance'],
+  [/^national\s+insurance\b/i, 'National Insurance'],
+  [/^star\s+health\b/i, 'Star Health'],
+  [/^care\s+health\b/i, 'Care Health'],
+  [/^niva\s*bupa\b/i, 'Niva Bupa'],
+  [/^aditya\s+birla\s+health\b/i, 'Aditya Birla Health'],
+  [/^manipal\s*cigna\b/i, 'ManipalCigna'],
+  [/^max\s*life\b/i, 'Max Life'],
+  [/^hdfc\s*life\b/i, 'HDFC Life'],
+  [/^icici\s*prudential\b/i, 'ICICI Prudential'],
+  [/^tata\s*aia\b/i, 'TATA AIA'],
+  [/^lic\b/i, 'LIC'],
+];
+
 function displayInsurerSummary(name: string | null | undefined): string {
-  const fullName = name?.trim() || 'Not recorded';
-  // Presentation-only short label; preserve the full insurer identity for data and logo lookup.
-  return /^ICICI\s+Lombard\s+General\b/i.test(fullName) ? 'ICICI LOMBARD GENERAL' : fullName;
+  const fullName = name?.trim().replace(/\s+/g, ' ') || 'Not recorded';
+  if (fullName === 'Not recorded') return fullName;
+  const known = INSURER_SHORT_LABELS.find(([pattern]) => pattern.test(fullName));
+  if (known) return known[1];
+  // Unknown insurer: remove legal suffixes, but retain meaningful words such as
+  // Life, Health, India or General so unrelated brands do not collapse together.
+  const compact = fullName
+    .replace(/\s+(?:company|co\.?)(?:\s+(?:private|pvt\.?))?\s+(?:limited|ltd\.?)$/i, '')
+    .replace(/\s+(?:private|pvt\.?)?\s*(?:limited|ltd\.?)$/i, '')
+    .replace(/\s+insurance\s+company$/i, '')
+    .replace(/\s+insurance$/i, '')
+    .trim();
+  return compact || fullName;
 }
 function InsurerMiniInfo({ name }: { name: string | null | undefined }) {
   return (
@@ -319,6 +362,7 @@ const styles = StyleSheet.create({
   externalSection: { gap: 5 },
   externalSectionHeading: { marginLeft: -6, paddingLeft: 0, paddingRight: 2 },
   card: { overflow: 'hidden', borderRadius: 13, borderWidth: StyleSheet.hairlineWidth, borderColor: '#E2E8F1', backgroundColor: '#FFFFFF' },
+  customerVehicleBorder: { borderColor: '#3993F5', borderWidth: 1 },
   cardHeader: { minHeight: 37, paddingHorizontal: 11, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   cardHeaderCompact: { minHeight: 30 },
   cardHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 7 }, cardTitle: { color: '#102A51', fontSize: 12.5, lineHeight: 16, fontWeight: '800' },

@@ -38,6 +38,11 @@ const policyDetail = read('app/policy/[id].tsx');
 // Policy Overview, Premium and Commercial remain a single white card.
 // Customer and vehicle identity now share one compact row and separate heading.
 requireText(policyDetail, '<CardHeader title="Customer & Vehicle Details" />', 'Combined customer and vehicle heading is present');
+requireText(policyDetail, '<CardHeader title="Customer & Vehicle Details" /></View>\\n            <Card highlighted>'.replace('\\n','\n'), 'Only the Customer & Vehicle section requests the blue border');
+requireText(policyDetail, "customerVehicleBorder: { borderColor: '#3993F5', borderWidth: 1 }", 'Customer & Vehicle card has a visible 1px blue border');
+requireText(policyDetail, 'highlighted && styles.customerVehicleBorder', 'Blue border is applied only when highlighted is set');
+if ((policyDetail.match(/<Card highlighted>/g) || []).length !== 1) throw new Error('Only Customer & Vehicle Details may have a highlighted card border');
+
 for(const heading of ['<CardHeader title="Customer Details" />', "'Vehicle Details' : 'Insured Risk Details'"]) {
   if(policyDetail.includes(heading))throw new Error('Separate customer/vehicle headings must not return');
 }
@@ -266,7 +271,18 @@ for (const detailAsset of ['products.motorInsurance', 'products.healthInsurance'
 requireText(policyDetail, 'source={data.vehicle ? (manufacturerLogo || PartnerAssets.products.motorInsurance) : PartnerAssets.products.commercialInsurance}', 'Combined customer vehicle row uses the manufacturer icon or insured-risk fallback.');
 requireText(policyDetail, '<InsurerMiniInfo name={data.insurer.name} />', 'Policy overview must pass the actual insurer identity into the compact tile.');
 requireText(policyDetail, "<PartnerInsurerLogo name={name || ''}", 'Compact insurer tile must preserve insurer identity for logo artwork.');
-requireText(policyDetail, "return /^ICICI\\s+Lombard\\s+General\\b/i.test(fullName) ? 'ICICI LOMBARD GENERAL' : fullName;", 'Only ICICI Lombard insurer display label may be shortened.');
+requireText(policyDetail, 'INSURER_SHORT_LABELS.find(([pattern]) => pattern.test(fullName))', 'Known insurers are shortened through a shared display-only matcher.');
+for (const shortLabel of [
+  'ICICI Lombard', 'IFFCO-TOKIO', 'TATA AIG', 'HDFC ERGO', 'Bajaj Allianz',
+  'SBI General', 'Reliance General', 'Future Generali', 'Liberty General',
+  'Royal Sundaram', 'Chola MS', 'New India Assurance', 'United India',
+  'Oriental Insurance', 'National Insurance', 'Star Health', 'Care Health',
+  'Niva Bupa', 'Aditya Birla Health', 'ManipalCigna', 'HDFC Life',
+]) {
+  requireText(policyDetail, `'${shortLabel}'`, 'Common insurer must have concise display label: ' + shortLabel);
+}
+requireText(policyDetail, ".replace(/\\s+insurance$/i, '')", 'Unknown insurer names drop safe generic insurance suffix.');
+requireText(policyDetail, 'return compact || fullName;', 'Unknown insurer labels retain their original name if shortening would erase it.');
 requireText(policyDetail, 'styles.insurerMiniInfo', 'Insurer summary must use a compact tile.');
 requireText(policyDetail, 'styles.miniInfo, styles.insurerMiniInfo', 'Insurer tile must inherit the grey Policy Number background.');
 requireText(policyDetail, '<MiniInfo label="Policy status" value={humanize(data.policy.status || data.policy.lifecycle_status)} threeColumn />', 'Policy status must share one row with the validity dates.');
