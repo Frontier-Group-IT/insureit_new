@@ -372,27 +372,25 @@ export default function LifeHealthCaseDetailScreen(){
           {inline("premiumAmount","Premium amount",amount(record.premium_amount),true,false,false,"decimal-pad")}
           {inline("paymentMode","Payment mode",record.payment_mode,true)}
         </View>
-        {record.status_group==='issued'&&record.remarks?.trim()?<>
-          <Text style={styles.fieldLabel}>REMARKS</Text>
-          <Text selectable style={styles.remarkExisting}>{record.remarks}</Text>
-        </>:null}
       </Section>
 
-      {(record.status_group==='pending'||record.status_group==='rejected')?<View style={styles.section}>
+      {/* Remarks is always its own card, never a field in Premium & payment.
+          Issued cases show history read-only; pending/rejected keep append-only entry. */}
+      <View style={styles.section} testID="case-remarks-section">
         <View style={styles.sectionHeader}>
           <Ionicons name="chatbubble-ellipses-outline" size={18} color={navy}/>
           <Text style={styles.sectionTitle}>Remarks</Text>
-          <View style={styles.remarkHeaderSpacer}/>
-          <Pressable accessibilityRole="button" accessibilityLabel="Add Remark"
-            onPress={()=>{setRemarkError('');setRemarkOpen(true);}} style={styles.remarkHeaderAction}>
-            <Ionicons name="add" size={15} color="#FFFFFF"/>
-            <Text style={styles.remarkButtonText}>Add Remark</Text>
-          </Pressable>
         </View>
-        {record.remarks?.trim()?<View style={styles.sectionContent}>
-          <Text selectable style={styles.remarkExisting}>{record.remarks}</Text>
-        </View>:null}
-      </View>:null}
+        <View style={styles.sectionContent}>
+          {record.remarks?.trim()?<Text selectable style={styles.remarkExisting}>{record.remarks}</Text>:null}
+          {(record.status_group==='pending'||record.status_group==='rejected')?
+            <Pressable accessibilityRole="button" accessibilityLabel="Add Remark"
+              onPress={()=>{setRemarkError('');setRemarkOpen(true);}} style={styles.remarkFullWidth}>
+              <Ionicons name="chatbubble-ellipses-outline" size={17} color="#FFFFFF"/>
+              <Text style={styles.remarkButtonText}>Add Remark</Text>
+            </Pressable>:null}
+        </View>
+      </View>
 
       {record.status_group==='pending'?<Section number="05" title="Mark Policy Issued">
         <View style={styles.grid}>

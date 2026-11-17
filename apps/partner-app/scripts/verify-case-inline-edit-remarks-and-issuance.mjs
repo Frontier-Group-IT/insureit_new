@@ -21,7 +21,16 @@ for(const key of ['policyNumber','issuanceDate','startDate','endDate','pptEndDat
 }
 assert.ok(app.includes('>Create Policy</Text>'),'Pending case issuance button uses compact label');
 assert.match(app,/onPress=\{\(\)=>void submitIssue\(\)\}/,'Create Policy retains verified issuance handler');
-assert.ok(app.includes('remarkHeaderAction'), 'Pending and Rejected remarks have a separate compact action');
+const premiumSection=app.slice(app.indexOf('<Section number="04" title="Premium & payment">'),app.indexOf('testID="case-remarks-section"'));
+assert.ok(premiumSection.includes('inline("premiumAmount"'), 'Premium remains in Section 04');
+assert.doesNotMatch(premiumSection,/REMARKS|Add Remark|record\.remarks/, 'No remarks content or action inside Premium & payment');
+const remarksSection=app.slice(app.indexOf('testID="case-remarks-section"'),app.indexOf('<Section number="05" title="Mark Policy Issued">'));
+assert.ok(remarksSection.startsWith('testID="case-remarks-section"'), 'Remarks has a dedicated card');
+assert.match(remarksSection,/styles\.remarkFullWidth/, 'Add Remark is full-width in its own section');
+assert.match(remarksSection,/record\.remarks\?\.trim\(\)/, 'Existing remarks remain readable');
+assert.match(remarksSection,/record\.status_group==='pending'\|\|record\.status_group==='rejected'/, 'Add Remark remains restricted to pending and rejected');
+assert.match(remarksSection,/setRemarkOpen\(true\)/, 'Append-only remark popup remains wired');
+assert.match(app,/testID="case-remarks-section"/, 'Remarks card must be individually identifiable');
 assert.ok(app.includes("record.status_group==='pending'||record.status_group==='rejected'"), 'Both Pending and Rejected have the same remarks/activity layout');
 assert.ok(app.includes('accessibilityState={{expanded:activityExpanded}}'), 'Activity Status is expandable');
 assert.ok(app.includes('const [activityExpanded,setActivityExpanded]=useState(false)'), 'Activity Status starts collapsed');
