@@ -1,6 +1,7 @@
 import { partnerAlert } from '@/components/ui/partner-alert-provider';
 import { useEffect, useState } from 'react';
-import { Keyboard, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Keyboard, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import * as DocumentPicker from 'expo-document-picker';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useRouter } from 'expo-router';
@@ -42,6 +43,25 @@ const fields: Array<{title:string;items:FieldConfig[]}>= [
     {key:'gst_number',label:'GST Number',hint:'GSTIN'},
   ]},
 ];
+const documentSlots = [
+  {key:'aadhaar_front',label:'Aadhaar Front'},
+  {key:'aadhaar_back',label:'Aadhaar Back'},
+  {key:'pan_copy',label:'PAN Copy'},
+  {key:'cancelled_cheque',label:'Cancelled Cheque / Bank Proof'},
+  {key:'photograph',label:'Photograph'},
+  {key:'gst_copy',label:'GST Certificate'},
+  {key:'signed_registration_form',label:'Signed Registration Certificate'},
+  {key:'education_10th_marksheet',label:'Education Marksheet'},
+  {key:'custom_1',label:'Other Document 1'},
+  {key:'custom_2',label:'Other Document 2'},
+] as const;
+type SavedDocument={type:string;name:string;label?:string|null};
+const educationOptions=[
+  {key:'education_10th_marksheet',label:'10th Marksheet'},
+  {key:'education_12th_marksheet',label:'12th Marksheet'},
+  {key:'education_graduation_marksheet',label:'Graduation Marksheet'},
+  {key:'education_post_graduation_marksheet',label:'Post Graduation Marksheet'},
+];
 const empty=Object.fromEntries(fields.flatMap(section=>section.items.map(item=>[item.key,'']))) as Record<MispField,string>;
 const isoDate=(value:string)=>{
   const m=/^(\d{2})\/(\d{2})\/(\d{4})$/.exec(value.trim());
@@ -57,14 +77,44 @@ export function MispPartnerForm({rms,banks,oems,pendingMisps,loading,onDirtyChan
   const [search,setSearch]=useState('');
   const [dateField,setDateField]=useState<'document_received_at'|'date_of_birth'|null>(null);
   const [saving,setSaving]=useState(false);
+  const [applicationId,setApplicationId]=useState<string|null>(null);
+  const [documentsOpen,setDocumentsOpen]=useState(false);
+  const [documents,setDocuments]=useState<SavedDocument[]>([]);
+  const [busyDocument,setBusyDocument]=useState<string|null>(null);
+  const [educationType,setEducationType]=useState('education_10th_marksheet');
+  const [customNames,setCustomNames]=useState<Record<string,string>>({});
   const set=(key:MispField,value:string)=>{
     setForm(prev=>({...prev,[key]:value}));
     onDirtyChange(true);
   };
   const list=picker==='rm'?rms:picker==='oem'?oems:banks;
   const selected=picker==='rm'?form.associate_employee_id:picker==='oem'?form.oem_name:form.bank_id;
-  const submit=async (intent:'exit'|'documents')=>{
+  const portalBase=(process.env.EXPO_PUBLIC_PORTAL_URL||'https://portal.insureit.in').replace(/\/$/,'');
+  const authorizedDocs=async(method:'GET'|'POST'|'DELETE',id:string,body?:FormData|Record<string,string>)=>{
+    const {data}=await supabase.auth.getSession();
+    if(!data.session?.access_token)throw new Error('Sign in again to continue.');
+    const url=portalBase+'/api/partner/onboarding/documents'+(method==='GET'?'?applicationId='+encodeURIComponent(id):'');
+    const response=await fetch(url,{
+      method,headers:{Authorization:'Bearer '+data.session.access_token,...(method==='DELETE'?{'Content-Type':'application/json'}:{})},
+      ...(body?{body:body instanceof FormData?body:JSON.stringify(body)}:{}),
+    });
+    const result=await response.json() as {ok?:boolean;error?:string;documents?:SavedDocument[]};
+    if(!response.ok||!result.ok)throw new Error(result.error||'Document request failed.');
+    return result;
+  };
+  const refreshDocuments=async(id:string)=>{
+    const result=await authorizedDocs('GET',id);
+    setDocuments(result.documents||[]);
+  };
+  const showSavedChoice=()=>{
+    partnerAlert('MISP Details Saved','Would you like to upload documents now?',[
+      {text:'Not Now',style:'cancel',onPress:()=>router.replace('/(tabs)/policies')},
+      {text:'Upload Documents',onPress:()=>setDocumentsOpen(true)},
+    ]);
+  };
+  const submit=async ()=>{
     if(saving||loading)return;
+    if(applicationId){showSavedChoice();return;}
     const dob=isoDate(form.date_of_birth),received=form.document_received_at.trim()?isoDate(form.document_received_at):null;
     const normalized={
       ...form,partner_type:'misp',date_of_birth:dob,document_received_at:received,
@@ -100,16 +150,66 @@ export function MispPartnerForm({rms,banks,oems,pendingMisps,loading,onDirtyChan
       });
       const result=await response.json() as {ok?:boolean;application_id?:string;error?:string};
       if(!response.ok||!result.ok||!result.application_id)throw new Error(result.error||'MISP application could not be saved.');
+      setApplicationId(result.application_id);
       onDirtyChange(false);
-      if(intent==='documents')router.replace({pathname:'/partner-documents',params:{applicationId:result.application_id}} as never);
-      else {
-        partnerAlert('MISP details saved','Application saved. Continue document upload from the application record.',[
-          {text:'OK',onPress:()=>router.replace('/(tabs)/policies')},
-        ]);
-      }
+      showSavedChoice();
     } catch(error){partnerAlert('Unable to save MISP',error instanceof Error?error.message:'Please retry.');}
     finally{setSaving(false);}
   };
+
+  const findDocument=(key:string)=>key==='education_10th_marksheet'
+    ?documents.find(doc=>doc.type.startsWith('education_'))
+    :documents.find(doc=>doc.type===key);
+  const uploadDocument=async(key:string)=>{
+    if(!applicationId||busyDocument)return;
+    const type=key==='education_10th_marksheet'?educationType:key;
+    const name=key.startsWith('custom_')?(customNames[key]??findDocument(key)?.label??'').trim():undefined;
+    if(key.startsWith('custom_')&&!name){
+      partnerAlert('Document name required','Enter a name for this document.');return;
+    }
+    try{
+      const choice=await DocumentPicker.getDocumentAsync({
+        type:['application/pdf','image/jpeg','image/png'],copyToCacheDirectory:true,multiple:false,
+      });
+      if(choice.canceled||!choice.assets.length)return;
+      const file=choice.assets[0];
+      if(!file.size||file.size>10*1024*1024)throw new Error('Choose a PDF, JPG or PNG under 10 MB.');
+      const mime=file.mimeType||(file.name.toLowerCase().endsWith('.pdf')?'application/pdf':file.name.toLowerCase().endsWith('.png')?'image/png':'image/jpeg');
+      if(!['application/pdf','image/jpeg','image/png'].includes(mime))throw new Error('Choose a PDF, JPG or PNG.');
+      setBusyDocument(key);
+      const payload=new FormData();
+      payload.append('application_id',applicationId);
+      payload.append('intent','upload');
+      payload.append('document_type',type);
+      if(name)payload.append('document_label',name);
+      payload.append('file',{uri:file.uri,name:file.name,type:mime} as unknown as Blob);
+      await authorizedDocs('POST',applicationId,payload);
+      await refreshDocuments(applicationId);
+    }catch(error){
+      partnerAlert('Document upload failed',error instanceof Error?error.message:'Try again.');
+    }finally{setBusyDocument(null);}
+  };
+  const deleteDocument=(key:string)=>{
+    if(!applicationId||busyDocument)return;
+    const current=findDocument(key);
+    if(!current)return;
+    partnerAlert('Delete document?','Remove this document from the MISP application?',[
+      {text:'Cancel',style:'cancel'},
+      {text:'Delete',style:'destructive',onPress:()=>void (async()=>{
+        setBusyDocument(key);
+        try{
+          await authorizedDocs('DELETE',applicationId,{application_id:applicationId,document_type:current.type});
+          await refreshDocuments(applicationId);
+        }catch(error){partnerAlert('Delete failed',error instanceof Error?error.message:'Try again.');}
+        finally{setBusyDocument(null);}
+      })()},
+    ]);
+  };
+  useEffect(()=>{
+    if(!documentsOpen||!applicationId)return;
+    void refreshDocuments(applicationId).catch(error=>
+      partnerAlert('Documents unavailable',error instanceof Error?error.message:'Try again.'));
+  },[documentsOpen,applicationId]);
   return (
     <View style={styles.wrapper}>
       {pendingMisps.length>0&&<View style={styles.section}><View style={styles.sectionHeading}><Text style={styles.heading}>Continue saved MISP documents</Text></View><View style={styles.grid}>{pendingMisps.map(item=><Pressable key={item.id} accessibilityRole="button" onPress={()=>router.push({pathname:"/partner-documents",params:{applicationId:item.id}} as never)} style={styles.pendingItem}><Text style={styles.inputText} numberOfLines={1}>{item.name}</Text><Ionicons name="chevron-forward" color="#17365D" size={17}/></Pressable>)}</View></View>}
@@ -144,16 +244,72 @@ export function MispPartnerForm({rms,banks,oems,pendingMisps,loading,onDirtyChan
         </View>
       ))}
       <View style={styles.actions}>
-        <Pressable accessibilityRole="button" disabled={saving||loading} onPress={()=>void submit('exit')} style={[styles.secondary,saving&&styles.disabled]}>
-          <Text style={styles.secondaryText}>Save & Exit</Text>
+        <Pressable accessibilityRole="button" disabled={saving||loading||Boolean(busyDocument)} onPress={()=>router.back()} style={[styles.secondary,saving&&styles.disabled]}>
+          <Text style={styles.secondaryText}>Cancel</Text>
         </Pressable>
-        <Pressable accessibilityRole="button" disabled={saving||loading} onPress={()=>void submit('documents')} style={[styles.primary,saving&&styles.disabled]}>
-          <Text style={styles.primaryText}>{saving?'Saving…':'Upload Documents'}</Text>
+        <Pressable accessibilityRole="button" disabled={saving||loading||Boolean(busyDocument)} onPress={()=>void submit()} style={[styles.primary,saving&&styles.disabled]}>
+          <Text style={styles.primaryText}>{saving?'Saving…':'Save Detail'}</Text>
         </Pressable>
       </View>
       {dateField?<DateTimePicker value={isoDate(form[dateField])?new Date(isoDate(form[dateField])+'T12:00:00'):new Date()}
         mode="date" display={Platform.OS==='ios'?'spinner':'default'} maximumDate={new Date()}
         onChange={(_event,date)=>{if(date){set(dateField,String(date.getDate()).padStart(2,'0')+'/'+String(date.getMonth()+1).padStart(2,'0')+'/'+date.getFullYear());}setDateField(null);}}/>:null}
+
+      <Modal visible={documentsOpen} transparent animationType="fade" onRequestClose={()=>{if(!busyDocument)setDocumentsOpen(false);}}>
+        <View style={styles.documentBackdrop}>
+          <Pressable style={StyleSheet.absoluteFillObject} accessibilityLabel="Close MISP document popup"
+            disabled={Boolean(busyDocument)} onPress={()=>setDocumentsOpen(false)}/>
+          <View style={styles.documentModal}>
+            <View style={styles.documentHead}>
+              <Text style={styles.documentHeading}>Upload Documents</Text>
+              <Pressable accessibilityRole="button" accessibilityLabel="Close MISP document popup" disabled={Boolean(busyDocument)}
+                onPress={()=>setDocumentsOpen(false)}><Ionicons name="close" size={22} color="#4C5970"/></Pressable>
+            </View>
+            <ScrollView style={styles.documentScroll} keyboardShouldPersistTaps="handled">
+              {documentSlots.map(slot=>{
+                const current=findDocument(slot.key);
+                return <View key={slot.key} style={styles.documentRow}>
+                  <Ionicons name="document-text-outline" size={20} color="#315B85"/>
+                  <View style={styles.documentLabel}>
+                    <Text style={styles.documentName}>{slot.label}</Text>
+                    {current?<Text numberOfLines={1} style={styles.documentFilename}>{current.name}</Text>:null}
+                    {slot.key==='education_10th_marksheet'?
+                      <View style={styles.educationOptions}>{educationOptions.map(option=>
+                        <Pressable key={option.key} accessibilityRole="button" accessibilityLabel={option.label}
+                          onPress={()=>setEducationType(option.key)}
+                          style={[styles.educationPill,educationType===option.key&&styles.educationSelected]}>
+                          <Text style={styles.educationText}>{option.label}</Text>
+                        </Pressable>)}</View>:null}
+                    {slot.key.startsWith('custom_')?<TextInput
+                      placeholder="Document name" placeholderTextColor="#8290A5"
+                      value={customNames[slot.key]??current?.label??''}
+                      onChangeText={value=>setCustomNames(prev=>({...prev,[slot.key]:value}))}
+                      maxLength={60} style={styles.customDocumentName}/>:null}
+                  </View>
+                  {current?<>
+                    <Pressable accessibilityRole="button" accessibilityLabel={`Replace ${slot.label}`}
+                      disabled={Boolean(busyDocument)} onPress={()=>void uploadDocument(slot.key)} style={styles.docIconButton}>
+                      <Ionicons name="refresh-outline" size={18} color="#24517E"/>
+                    </Pressable>
+                    <Pressable accessibilityRole="button" accessibilityLabel={`Delete ${slot.label}`}
+                      disabled={Boolean(busyDocument)} onPress={()=>deleteDocument(slot.key)} style={styles.docIconButton}>
+                      <Ionicons name="trash-outline" size={18} color="#C02D3A"/>
+                    </Pressable>
+                  </>:<Pressable accessibilityRole="button" accessibilityLabel={`Upload ${slot.label}`}
+                    disabled={Boolean(busyDocument)} onPress={()=>void uploadDocument(slot.key)} style={styles.docUpload}>
+                    {busyDocument===slot.key?<ActivityIndicator size="small" color="#24517E"/>:<Ionicons name="cloud-upload-outline" size={16} color="#24517E"/>}
+                    <Text style={styles.docUploadText}>Upload</Text>
+                  </Pressable>}
+                </View>;
+              })}
+            </ScrollView>
+            <Pressable accessibilityRole="button" accessibilityLabel="Done uploading MISP documents" disabled={Boolean(busyDocument)}
+              onPress={()=>{setDocumentsOpen(false);router.replace('/(tabs)/policies');}} style={styles.docDone}>
+              <Text style={styles.primaryText}>Done</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
       <Modal visible={picker!==null} transparent animationType="fade" onRequestClose={()=>setPicker(null)}>
         <View style={styles.backdrop}>
           <Pressable style={StyleSheet.absoluteFillObject} accessibilityLabel="Close picker" onPress={()=>setPicker(null)}/>
@@ -197,4 +353,19 @@ const styles=StyleSheet.create({
   modal:{padding:16,gap:12,maxHeight:'80%',backgroundColor:'#FFF',borderTopLeftRadius:18,borderTopRightRadius:18},
   list:{maxHeight:320},option:{minHeight:45,padding:12,borderBottomColor:'#E6ECF4',borderBottomWidth:1,flexDirection:'row',justifyContent:'space-between'},
   close:{minHeight:44,alignItems:'center',justifyContent:'center',borderWidth:1,borderColor:'#DEE7F1',borderRadius:10},
+  documentBackdrop:{flex:1,justifyContent:'center',padding:16,backgroundColor:'#14233B88'},
+  documentModal:{backgroundColor:'#FFF',borderRadius:18,padding:16,maxHeight:'90%',gap:12},
+  documentHead:{flexDirection:'row',justifyContent:'space-between',alignItems:'center',paddingBottom:10,borderBottomWidth:1,borderBottomColor:'#E7EDF5'},
+  documentHeading:{color:'#17365D',fontSize:16,fontWeight:'800'},
+  documentScroll:{flexGrow:0},documentRow:{flexDirection:'row',alignItems:'center',gap:9,minHeight:53,paddingVertical:9,borderBottomWidth:1,borderBottomColor:'#E7EDF5'},
+  documentLabel:{flex:1,minWidth:0,gap:4},documentName:{fontSize:12,fontWeight:'700',color:'#000'},
+  documentFilename:{fontSize:11,color:'#16805C'},
+  docIconButton:{width:34,height:36,borderWidth:1,borderColor:'#D9E3F1',borderRadius:9,alignItems:'center',justifyContent:'center'},
+  docUpload:{minHeight:36,paddingHorizontal:9,borderWidth:1,borderColor:'#CBD8E8',borderRadius:9,flexDirection:'row',gap:4,alignItems:'center'},
+  docUploadText:{fontSize:11,color:'#24517E',fontWeight:'700'},
+  docDone:{minHeight:43,backgroundColor:'#155EBA',borderRadius:10,alignItems:'center',justifyContent:'center'},
+  customDocumentName:{minHeight:35,borderWidth:1,borderColor:'#DCE5EF',borderRadius:8,paddingHorizontal:8,fontSize:11,color:'#17365D'},
+  educationOptions:{flexDirection:'row',flexWrap:'wrap',gap:4},
+  educationPill:{borderWidth:1,borderColor:'#CBD8E8',borderRadius:8,padding:5},
+  educationSelected:{backgroundColor:'#E8F2FF'},educationText:{fontSize:10,color:'#17365D'},
 });
