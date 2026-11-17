@@ -233,6 +233,42 @@ expectAll('components/ui/partner-confirm-dialog.tsx', [
   [/displayedActions\.map/, 'confirmation buttons remain available where required'],
 ]);
 
+// Customer Details mobile reference: scoped vehicle data, collapsed detail cards and contact/status layout.
+expectAll('app/customer/[id].tsx', [
+  [/hideTopBar fullWidth navyStatusBar/, 'Customer Details uses the navy status bar with white system icons'],
+  [/expandedVehicleIds.*new Set/, 'Vehicle cards initialize collapsed'],
+  [/accessibilityState=\{\{ expanded \}\}/, 'Vehicle cards expose accessible expand/collapse state'],
+  [/toggleVehicle\(vehicle\.vehicle_id\)/, 'Each vehicle toggles individually'],
+  [/IDENTITY AND REGISTRATION/, 'Vehicle reference identity fields are grouped'],
+  [/COMPLIANCE AND PERMITS/, 'Vehicle reference permit fields are grouped'],
+  [/formatVehicleDate\(vehicle\.registration_date\)/, 'Registration date has Indian formatting'],
+  [/vehicle\.gvw_kg/, 'GVW is shown in kg'],
+  [/vehicle\.chassis_no/, 'Chassis number is displayed'],
+  [/vehicle\.engine_no/, 'Engine number is displayed'],
+  [/vehicle\.permit_no/, 'Permit number is displayed'],
+]);
+expectAll('components/ui/partner-contact-actions.tsx', [
+  [/customerDetailRow:.*justifyContent: 'space-between'.*flexWrap: 'nowrap'/, 'Contact buttons distribute over the available width'],
+  [/customerDetailAction:.*flex: 1.*borderWidth: 0.*backgroundColor: 'transparent'/, 'Customer-specific contact tiles have no background or border'],
+]);
+expectAll('lib/customers.ts', [
+  [/gvw_kg: number \| string \| null/, 'Vehicle data type includes GVW'],
+  [/registration_date: string \| null/, 'Vehicle data type includes registration date'],
+  [/chassis_no: string \| null/, 'Vehicle data type includes chassis number'],
+  [/engine_no: string \| null/, 'Vehicle data type includes engine number'],
+  [/permit_no: string \| null/, 'Vehicle data type includes permit number'],
+]);
+expectAll('../../supabase/migrations/20261117181500_partner_customer_vehicle_reference_details.sql', [
+  [/partner_app_customer_in_scope\(p_customer_id\)/, 'Existing Partner customer scope guard remains'],
+  [/partner_app_policy_in_scope\(p\.id\)/, 'Policy visibility stays scoped'],
+  [/partner_app_claim_in_scope\(cl\.id\)/, 'Claim visibility stays scoped'],
+  [/'gvw_kg',gvw_kg/, 'Scoped RPC returns GVW'],
+  [/'registration_date',registration_date/, 'Scoped RPC returns registration date'],
+  [/'chassis_no',chassis_no/, 'Scoped RPC returns chassis'],
+  [/'engine_no',engine_no/, 'Scoped RPC returns engine'],
+  [/'permit_no',permit_no/, 'Scoped RPC returns permit'],
+]);
+
 // Evaluate every contract only after all checks have run.
 if (failures.length) {
   console.error('Partner Phase 5 resilience/accessibility contract verification failed:');

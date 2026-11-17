@@ -21,12 +21,19 @@ export default function CustomerDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState<'overview' | 'vehicles' | 'policies'>('overview');
+  const [expandedVehicleIds, setExpandedVehicleIds] = useState<Set<string>>(() => new Set());
+  const toggleVehicle = (vehicleId: string) => setExpandedVehicleIds(current => {
+    const next = new Set(current);
+    if (next.has(vehicleId)) next.delete(vehicleId); else next.add(vehicleId);
+    return next;
+  });
   const load = useCallback(async () => {
     if (!id) return;
     setLoading(true);
     setError('');
     try {
       setData(await getPartnerCustomerDetail(id));
+      setExpandedVehicleIds(new Set());
     } catch {
       setError('This customer could not be loaded in your Partner scope.');
     } finally {
@@ -38,7 +45,7 @@ export default function CustomerDetailScreen() {
 
 
   return (
-    <PartnerScreen title="Customer" hideTopBar fullWidth scrollProps={{ style: { backgroundColor: '#FFFFFF' } }}>
+    <PartnerScreen title="Customer" hideTopBar fullWidth navyStatusBar scrollProps={{ style: { backgroundColor: '#FFFFFF' } }}>
       {loading ? (
         <PartnerStateView state="loading" title="Loading customer" />
       ) : error || !data ? (
@@ -100,15 +107,49 @@ export default function CustomerDetailScreen() {
             ) : activeTab === 'vehicles' ? (
               <>
                 <View style={redesign.sectionHeading}><Ionicons name="car-sport-outline" size={20} color="#0879F1" /><Text style={redesign.sectionTitle}>Vehicle Details</Text></View>
-                {data.vehicles.length ? data.vehicles.map((vehicle) => (
-                  <View key={vehicle.vehicle_id} style={redesign.recordCard}>
-                    <View style={redesign.vehicleIdentity}>
-                      <Logo source={getPartnerManufacturerLogoSource(vehicle.make)} fallback={PartnerAssets.products.motorInsurance} />
-                      <View style={{ flex: 1 }}><Text style={redesign.recordTitle}>{vehicle.vehicle_no || 'Vehicle number not recorded'}</Text><Text style={redesign.label}>{displayParts(vehicle.make, vehicle.model, vehicle.year) || 'Not recorded'}</Text></View>
+                {data.vehicles.length ? data.vehicles.map((vehicle) => {
+                  const expanded = expandedVehicleIds.has(vehicle.vehicle_id);
+                  return (
+                    <View key={vehicle.vehicle_id} style={redesign.recordCard}>
+                      <Pressable accessibilityRole="button"
+                        accessibilityLabel={`${vehicle.vehicle_no || 'Vehicle'} details`}
+                        accessibilityState={{ expanded }}
+                        onPress={() => toggleVehicle(vehicle.vehicle_id)}
+                        style={redesign.vehicleIdentity}>
+                        <Logo source={getPartnerManufacturerLogoSource(vehicle.make)} fallback={PartnerAssets.products.motorInsurance} />
+                        <View style={redesign.vehicleIdentityText}>
+                          <Text style={redesign.recordTitle}>{vehicle.vehicle_no || 'Vehicle number not recorded'}</Text>
+                          <Text style={redesign.label}>{displayParts(vehicle.make, vehicle.model, vehicle.year) || 'Not recorded'}</Text>
+                        </View>
+                        <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={20} color="#174E91" />
+                      </Pressable>
+                      {expanded ? (
+                        <View style={redesign.vehicleExpanded}>
+                          <Text style={redesign.vehicleGroupTitle}>IDENTITY AND REGISTRATION</Text>
+                          <View style={redesign.twoColumns}>
+                            <VehicleDetail icon="car-outline" label="Vehicle Type" value={vehicle.vehicle_type} />
+                            <VehicleDetail icon="business-outline" label="Make" value={vehicle.make} />
+                            <VehicleDetail icon="car-sport-outline" label="Model" value={vehicle.model} />
+                            <VehicleDetail icon="calendar-outline" label="Manufacturing Year" value={vehicle.year} />
+                            <VehicleDetail icon="speedometer-outline" label="GVW" value={vehicle.gvw_kg == null ? null : `${Number(vehicle.gvw_kg).toLocaleString('en-IN')} kg`} />
+                            <VehicleDetail icon="calendar-number-outline" label="Registration Date" value={formatVehicleDate(vehicle.registration_date)} />
+                            <VehicleDetail icon="barcode-outline" label="Chassis No." value={vehicle.chassis_no} />
+                            <VehicleDetail icon="construct-outline" label="Engine No." value={vehicle.engine_no} />
+                          </View>
+                          <Text style={redesign.vehicleGroupTitle}>COMPLIANCE AND PERMITS</Text>
+                          <View style={redesign.twoColumns}>
+                            <VehicleDetail icon="document-text-outline" label="Permit No." value={vehicle.permit_no} />
+                            <VehicleDetail icon="calendar-outline" label="Fitness Expiry" value={formatVehicleDate(vehicle.fitness_expiry_date)} />
+                            <VehicleDetail icon="cloud-outline" label="PUC Expiry" value={formatVehicleDate(vehicle.puc_expiry_date)} />
+                            <VehicleDetail icon="trail-sign-outline" label="Road Tax Expiry" value={formatVehicleDate(vehicle.road_tax_expiry_date)} />
+                            <VehicleDetail icon="map-outline" label="National Permit Expiry" value={formatVehicleDate(vehicle.national_permit_expiry_date)} />
+                            <VehicleDetail icon="location-outline" label="Local Permit Expiry" value={formatVehicleDate(vehicle.local_permit_expiry_date)} />
+                          </View>
+                        </View>
+                      ) : null}
                     </View>
-
-                  </View>
-                )) : <EmptyCard icon="car-sport-outline" title="No vehicles recorded." subtitle="Vehicles linked to this customer will appear here." />}
+                  );
+                }) : <EmptyCard icon="car-sport-outline" title="No vehicles recorded." subtitle="Vehicles linked to this customer will appear here." />}
               </>
             ) : (
               <>
@@ -160,12 +201,29 @@ function displayParts(...values: Array<string | number | null | undefined>) { re
 function initials(value: string) { return value.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'CU'; }
 function humanize(value: string) { return value.replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase()); }
 function formatDate(value: string | null) { if (!value) return '—'; const d = new Date(`${value}T00:00:00`); return Number.isNaN(d.getTime()) ? value : new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: '2-digit' }).format(d); }
+function formatVehicleDate(value: string | null | undefined) {
+  if (!value) return '—';
+  const parts = value.slice(0, 10).split('-');
+  if (parts.length !== 3 || parts.some(part => !/^\d+$/.test(part))) return value;
+  return `${parts[2]}/${parts[1]}/${parts[0]}`;
+}
 function formatMonthYear(value: string) { const d = new Date(value); return Number.isNaN(d.getTime()) ? 'recorded date' : new Intl.DateTimeFormat('en-IN', { month: 'short', year: 'numeric' }).format(d); }
 function daysUntil(value: string) { const end = new Date(`${value}T00:00:00`); const today = new Date(); today.setHours(0, 0, 0, 0); return Math.ceil((end.getTime() - today.getTime()) / 86400000); }
 
 
 function DetailLine({ icon, label, value }: { icon: keyof typeof Ionicons.glyphMap; label: string; value: string }) {
   return <View style={redesign.detailLine}><View style={redesign.iconCircle}><Ionicons name={icon} size={17} color="#66758B" /></View><Text style={redesign.lineLabel}>{label}</Text><Text style={redesign.lineValue}>{value}</Text></View>;
+}
+function VehicleDetail({ icon, label, value }: { icon: keyof typeof Ionicons.glyphMap; label: string; value: string | number | null | undefined }) {
+  return (
+    <View style={redesign.vehicleDetailCell}>
+      <Ionicons name={icon} size={16} color="#071E49" style={redesign.vehicleDetailIcon} />
+      <View style={redesign.vehicleDetailText}>
+        <Text style={redesign.vehicleDetailLabel}>{label.toUpperCase()}</Text>
+        <Text style={redesign.vehicleDetailValue}>{value === null || value === undefined || value === '' ? '—' : String(value)}</Text>
+      </View>
+    </View>
+  );
 }
 function DetailCell({ icon, label, value }: { icon: keyof typeof Ionicons.glyphMap; label: string; value: string | null | undefined }) {
   return <View style={redesign.detailCell}><View style={redesign.iconCircle}><Ionicons name={icon} size={16} color="#1477DE" /></View><View style={{ flex: 1 }}><Text style={redesign.label}>{label}</Text><Text style={redesign.value}>{value && value !== '—' ? value : 'Not recorded'}</Text></View></View>;
@@ -198,7 +256,15 @@ const redesign = StyleSheet.create({
   policyRight: { alignItems: 'flex-end', gap: 5, maxWidth: '43%' },
   policyTypeBadge: { overflow: 'hidden', borderRadius: 12, backgroundColor: '#EAF2FF', color: '#174EA6', fontSize: 10, fontWeight: '700', paddingHorizontal: 9, paddingVertical: 4 },
   policyExpiryText: { color: '#66758B', fontSize: 10, fontWeight: '600' },
-  vehicleIdentity: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 5 },
+  vehicleIdentity: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 5, minHeight: 58 },
+  vehicleIdentityText: { flex: 1, minWidth: 0 },
+  vehicleExpanded: { paddingTop: 10, borderTopWidth: 1, borderTopColor: '#E3EAF4', gap: 8 },
+  vehicleGroupTitle: { fontSize: 11, color: '#174E91', fontWeight: '800', marginTop: 5, marginBottom: 2 },
+  vehicleDetailCell: { width: '50%', minHeight: 65, flexDirection: 'row', gap: 6, paddingVertical: 9, paddingRight: 6, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E3EAF4' },
+  vehicleDetailIcon: { marginTop: 3 },
+  vehicleDetailText: { flex: 1, minWidth: 0, gap: 3 },
+  vehicleDetailLabel: { fontSize: 9, fontWeight: '700', color: '#69788D' },
+  vehicleDetailValue: { fontSize: 11, color: '#071E49', fontWeight: '600' },
   recordTitle: { fontSize: 12, fontWeight: '700', color: '#111B37' },
   label: { color: '#66758B', fontSize: 9.5, lineHeight: 13 },
   value: { color: '#111B37', fontSize: 10.5, fontWeight: '600', marginTop: 2 },

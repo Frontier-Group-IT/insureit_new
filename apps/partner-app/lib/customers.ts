@@ -100,6 +100,11 @@ export type PartnerCustomerDetail = {
     make: string | null;
     model: string | null;
     year: number | null;
+    gvw_kg: number | string | null;
+    registration_date: string | null;
+    chassis_no: string | null;
+    engine_no: string | null;
+    permit_no: string | null;
     fitness_expiry_date: string | null;
     puc_expiry_date: string | null;
     road_tax_expiry_date: string | null;
