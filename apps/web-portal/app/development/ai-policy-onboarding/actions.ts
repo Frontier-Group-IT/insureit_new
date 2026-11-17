@@ -320,7 +320,7 @@ export async function previewSemiAutoN8nIntake(id: string): Promise<SemiAutoN8nR
 
 export type AiCustomerCandidateReview =
   | {ok:false;error:string}
-  | {ok:true;insuredName:string|null;mobileLast4:string;
+  | {ok:true;insuredName:string|null;mobileLast4:string;otherOpenIntakes:number|null;
       candidates:Array<{id:string;customerCode:string;displayName:string;
         nameMatch:"verified_exact"|"different"|"unverified"}>;
       truncated:boolean;verificationNote:string};
@@ -358,6 +358,12 @@ export async function reviewAiIntakeCustomerCandidates(id:string):Promise<AiCust
       company_name:string|null;phone:string}>>();
   if(error)return {ok:false,error:"Customer master lookup is temporarily unavailable."};
   const candidates=(rows??[]).filter(row=>normalizedPhone(row.phone)===phone);
+  // Another Intake using the same mobile is a review signal, not evidence
+  // that the insured names are different or customers should be merged.
+  const group=await admin.from("policy_intake_requests")
+    .select("id",{count:"exact",head:true}).eq("customer_mobile",intake.customer_mobile)
+    .in("status",["processing","ready_for_review","in_review","needs_attention"]);
+  const otherOpenIntakes=group.error||group.count===null?null:Math.max(0,group.count-1);
   // A truncated result must NEVER be treated as a unique identity.
   const truncated=(rows??[]).length>=51;
   const extraction=await previewSemiAutoN8nExtraction(id);
@@ -368,7 +374,7 @@ export async function reviewAiIntakeCustomerCandidates(id:string):Promise<AiCust
   const trustedName=pdfName && extraction.ok && extraction.preview.checksPassed===13 && extraction.preview.warnings.length===0
     ? pdfName:null;
   return {
-    ok:true,insuredName:trustedName,mobileLast4:phone.slice(-4),truncated,
+    ok:true,insuredName:trustedName,mobileLast4:phone.slice(-4),otherOpenIntakes,truncated,
     candidates:candidates.slice(0,50).map(row=>({
       id:row.id,customerCode:row.customer_code,
       displayName:row.company_name?.trim()||row.contact_name,
