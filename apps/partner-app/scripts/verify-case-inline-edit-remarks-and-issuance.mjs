@@ -20,8 +20,12 @@ for(const key of ['policyNumber','issuanceDate','startDate','endDate','pptEndDat
   assert.ok(app.includes('issueField("'+key+'"'),'Missing issuance field '+key);
 }
 assert.match(app,/Create Policy & Close Case/);
-assert.match(app,/remarkFullWidth/);
-assert.match(app,/remarkInlineRow/);
+assert.match(app,/remarkHeaderAction/, 'Pending and Rejected remarks have a separate compact action');
+assert.match(app,/record.status_group==='pending'\\|\\|record.status_group==='rejected'/, 'Both Pending and Rejected use the separate remarks layout');
+assert.match(app,/accessibilityState=\\{\\{expanded:activityExpanded\\}\\}/, 'Activity Status is expandable');
+assert.match(app,/const \\[activityExpanded,setActivityExpanded\\]=useState\\(false\\)/, 'Activity Status starts collapsed');
+assert.match(app,/activityExpanded\\?<View style=\\{styles.activityHistory\\}>/, 'History is visible only when expanded');
+assert.doesNotMatch(app,/numberOfLines=\\{4\\}>\\{record.remarks\\}/, 'Saved remarks must not be truncated');
 assert.match(app,/appendLifeHealthCaseRemark/);
 assert.match(api,/input\?\.operation==="append_remark"/);
 assert.match(api,/input\?\.operation==="issue_approval_request"/);
