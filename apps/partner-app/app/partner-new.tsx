@@ -129,8 +129,13 @@ export default function AddPartnerScreen() {
   const filteredOptions = selectOptions.filter(option => option.name.toLocaleLowerCase().includes(selectorQuery.trim().toLocaleLowerCase()));
   const openSelector = (kind: 'rm' | 'bank') => { setSelectorQuery(''); setSelector(kind); };
   const closeSelector = () => { Keyboard.dismiss(); setSelector(null); setSelectorQuery(''); };
-  const savePartner = async () => {
-    if (saving || applicationId || !allowed) return;
+  const savePartner = async (nextStep: 'exit' | 'upload') => {
+    if (saving || uploadingType || !allowed) return;
+    if (applicationId) {
+      if (nextStep === 'exit') router.replace('/(tabs)/policies');
+      else setUploadOpen(true);
+      return;
+    }
     const dob = isoDate(form.date_of_birth);
     const received = form.document_received_at.trim() ? isoDate(form.document_received_at) : null;
     const normalized = {
@@ -163,7 +168,13 @@ export default function AddPartnerScreen() {
       const result = await response.json() as { ok?: boolean; error?: string; application_id?: string };
       if (!response.ok || !result.ok || !result.application_id) throw new Error(result.error || 'Partner application could not be submitted.');
       setApplicationId(result.application_id);
-      Alert.alert('Partner details saved', 'Primary details are saved. You can now upload Partner documents. The application is visible to Operations for review.');
+      if (nextStep === 'exit') {
+        Alert.alert('Partner details saved', 'Primary details saved and sent to Operations for review.', [
+          { text: 'OK', onPress: () => router.replace('/(tabs)/policies') },
+        ]);
+      } else {
+        setUploadOpen(true);
+      }
     } catch (error) {
       Alert.alert('Unable to save Partner', error instanceof Error ? error.message : 'Please try again.');
     } finally { setSaving(false); }
@@ -268,19 +279,17 @@ export default function AddPartnerScreen() {
             </View>
           ))}
           <View style={styles.actionRow}>
-            <Pressable accessibilityRole="button" accessibilityLabel="Save Partner details"
-              disabled={saving || loading || Boolean(applicationId) || Boolean(uploadingType)}
-              onPress={() => void savePartner()}
-              style={[styles.actionButton, styles.submit, (saving || loading || applicationId || uploadingType) && styles.disabled]}>
-              <Ionicons name="save-outline" size={18} color="#FFF" />
-              <Text style={styles.submitText}>{saving ? 'Saving…' : applicationId ? 'Saved' : 'Save'}</Text>
+            <Pressable accessibilityRole="button" accessibilityLabel="Save and exit Partner form"
+              disabled={saving || loading || Boolean(uploadingType)}
+              onPress={() => void savePartner('exit')}
+              style={[styles.actionButton, styles.saveExitButton, (saving || loading || uploadingType) && styles.disabled]}>
+              <Text style={styles.saveExitText}>{saving ? 'Saving…' : 'Save & Exit'}</Text>
             </Pressable>
             <Pressable accessibilityRole="button" accessibilityLabel="Upload Partner documents"
-              disabled={saving || Boolean(uploadingType)}
-              onPress={() => applicationId ? setUploadOpen(true) : Alert.alert('Save first', 'Save Partner details before uploading documents.')}
-              style={[styles.actionButton, styles.uploadButton, (saving || uploadingType) && styles.disabled]}>
-              <Ionicons name="cloud-upload-outline" size={18} color="#FFF" />
-              <Text style={styles.submitText}>{uploadingType ? 'Uploading…' : 'Upload'}</Text>
+              disabled={saving || loading || Boolean(uploadingType)}
+              onPress={() => void savePartner('upload')}
+              style={[styles.actionButton, styles.uploadButton, (saving || loading || uploadingType) && styles.disabled]}>
+              <Text style={styles.submitText}>{uploadingType ? 'Uploading…' : saving ? 'Saving…' : 'Upload Documents'}</Text>
             </Pressable>
           </View>
         </ScrollView>
@@ -383,11 +392,12 @@ const styles = StyleSheet.create({
   input: { minHeight: 44, backgroundColor: '#FFF', borderWidth: 1, borderColor: '#CED8E7', borderRadius: 10, paddingHorizontal: 12, fontSize: 13, color: '#152A49' },
   select: { minHeight: 44, borderWidth: 1, borderColor: '#CED8E7', borderRadius: 10, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   selectText: { color: '#17365D', fontSize: 13, fontWeight: '600', flexShrink: 1 },
-  actionRow: { flexDirection: 'row', gap: 10 },
-  actionButton: { flex: 1, minHeight: 47, borderRadius: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7 },
-  submit: { backgroundColor: '#17365D' },
-  uploadButton: { backgroundColor: '#0A6C86' },
-  submitText: { color: '#FFF', fontWeight: '800', fontSize: 13 }, disabled: { opacity: .55 },
+  actionRow: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8 },
+  actionButton: { minHeight: 44, borderRadius: 10, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
+  saveExitButton: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE4F2' },
+  saveExitText: { color: '#17365D', fontWeight: '700', fontSize: 12 },
+  uploadButton: { backgroundColor: '#4379EF' },
+  submitText: { color: '#FFF', fontWeight: '800', fontSize: 12 }, disabled: { opacity: .55 },
   modalBackdrop: { flex: 1, backgroundColor: '#14233B88' },
   modalKeyboardArea: { flex: 1, justifyContent: 'flex-end' },
   modal: { backgroundColor: '#FFF', borderTopLeftRadius: 18, borderTopRightRadius: 18, padding: 18, gap: 12, maxHeight: '80%' },
