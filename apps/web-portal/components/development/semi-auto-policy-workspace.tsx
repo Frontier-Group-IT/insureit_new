@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { IntakeStatusBucket } from "@/lib/policy-intake-status-buckets";
 import { AlertCircle, ArrowUpRight, CheckCircle2, ClipboardCheck, FileSearch, Loader2, PencilLine, RefreshCw, Search, ShieldAlert, Sparkles } from "lucide-react";
-import { applySemiAutoN8nIntake, bookSemiAutoIntake, checkSemiAutoIntake, continueVerifiedN8nIntakeToOnboarding, editSemiAutoIntake, previewSemiAutoN8nIntake, reprocessAiPolicyIntake, reviewAiIntakeCustomerCandidates, type AiCustomerCandidateReview, type SemiAutoActionResult, type SemiAutoN8nResult } from "@/app/development/ai-policy-onboarding/actions";
+import { applySemiAutoN8nIntake, bookSemiAutoIntake, convertVerifiedAiIntake, checkSemiAutoIntake, continueVerifiedN8nIntakeToOnboarding, editSemiAutoIntake, previewSemiAutoN8nIntake, reprocessAiPolicyIntake, reviewAiIntakeCustomerCandidates, type AiCustomerCandidateReview, type SemiAutoActionResult, type SemiAutoN8nResult } from "@/app/development/ai-policy-onboarding/actions";
 
 export type SemiAutoIntakeRow = {
   id: string;
@@ -100,6 +100,8 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
   const [n8nNotice, setN8nNotice] = useState<string | null>(null);
   const [done, setDone] = useState<{ policyCode: string; policyId: string } | null>(null);
   const [exceptionRow,setExceptionRow]=useState<SemiAutoIntakeRow|null>(null);
+  const [autoConvertRow,setAutoConvertRow]=useState<SemiAutoIntakeRow|null>(null);
+  const [autoConvertMessage,setAutoConvertMessage]=useState<string|null>(null);
   const [customerReview,setCustomerReview]=useState<AiCustomerCandidateReview|null>(null);
   const [reviewingCustomer,setReviewingCustomer]=useState(false);
   const [queueRetrying,setQueueRetrying]=useState(false);
@@ -274,6 +276,28 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
     }
   }
 
+  async function convertOneVerified() {
+    const row=autoConvertRow;
+    if(!row||isWaiting||row.is_duplicate||row.ai_state!=="verified"||row.ai_exceptions?.length)return;
+    setBusy("booking");setAutoConvertMessage(null);
+    try{
+      const result=await convertVerifiedAiIntake(row.id,true);
+      if(result.ok&&result.policyCode&&result.policyId){
+        setDone({policyCode:result.policyCode,policyId:result.policyId});
+        setAutoConvertMessage("Policy "+result.policyCode+" registered successfully through canonical onboarding.");
+        setAutoConvertRow(null);
+        router.refresh();
+      }else{
+        setAutoConvertMessage(result.issues.map(item=>item.message).join(" ")||"The canonical booking check needs review.");
+        setAutoConvertRow(null);
+        router.refresh();
+      }
+    }catch{
+      setAutoConvertMessage("The booking response was interrupted. Check Policy Register before retrying; the policy may already be registered.");
+      setAutoConvertRow(null);
+    }finally{setBusy(null);}
+  }
+
   async function book() {
     if (!selectedId || !available || isWaiting || primaryN8n) return;
     const accepted = window.confirm("Book this issued Motor Policy using the verified Intake and saved onboarding draft? Confirm that you checked the original PDF, particularly the Policy Issuance Date, insured identity, and premiums. This action creates a real policy; it cannot be undone from this page. Unverified pay-in and payout will remain for commercial review.");
@@ -376,7 +400,8 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
               </div>
             ))}
           </div>
-          <p className="mt-2 text-[10px] text-[#63758c]">Booking is intentionally locked until the current PDF, exact customer identity, policy dates and canonical transaction preflight are independently checked. These counts cover the full open queue.</p>
+          <p className="mt-2 text-[10px] text-[#63758c]">Only actual extraction or booking conflicts appear as exceptions. One-step conversion rechecks the current PDF and runs the existing customer, vehicle, date and policy transaction; older-month OTP is never bypassed.</p>
+          {autoConvertMessage ? <p role="status" className="mt-2 rounded-lg border border-[#cbd9ea] bg-[#f5f9ff] p-3 text-[11px] text-[#285078]">{autoConvertMessage}</p> : null}
         </section>
       ) : null}
       <section className="min-w-0 overflow-hidden rounded-2xl border border-[#dce5f0] bg-white">
@@ -418,6 +443,12 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
                   <td className="whitespace-nowrap px-3 py-3"><span className={row.ocr_status === "completed" ? "font-semibold text-emerald-700" : "font-semibold text-amber-700"}>{row.ocr_status === "completed" ? "Extracted" : row.ocr_status.replaceAll("_", " ")}</span></td>
                   {primaryN8n && queueActive ? <td className="min-w-[170px] px-3 py-3">
                     <div className="text-[10px] font-semibold text-[#32547d]">{row.is_duplicate ? "Duplicate · skipped" : row.ai_state ? aiStateLabel[row.ai_state] : "Waiting for queue"}</div>
+                    {!row.is_duplicate && row.ai_state==="verified" && !row.ai_exceptions?.length ? (
+                      <button type="button" disabled={isWaiting} onClick={()=>setAutoConvertRow(row)}
+                        className="mt-1 rounded-md bg-[#174b83] px-2.5 py-1.5 text-[10px] font-bold text-white disabled:opacity-50">
+                        Convert to Policy
+                      </button>
+                    ) : null}
                     {row.ai_exceptions?.length ? (
                       <button type="button" onClick={()=>{setExceptionRow(row);setCustomerReview(null);}}
                         className="mt-1 rounded-md border border-[#e4d4b2] bg-[#fff8e8] px-2 py-1 text-left text-[10px] font-semibold text-[#765013] hover:bg-[#fff0c8]">
@@ -616,6 +647,31 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
           </>
         )}
       </section>
+      {autoConvertRow ? (
+        <div className="fixed inset-0 z-[180] flex items-center justify-center bg-[#101d37]/65 px-4 py-6" role="presentation">
+          <div role="alertdialog" aria-modal="true" aria-labelledby="auto-convert-title"
+            className="w-full max-w-[450px] rounded-2xl border border-[#d6e2f1] bg-white p-5 shadow-[0_24px_80px_rgba(12,28,52,.3)]">
+            <h3 id="auto-convert-title" className="text-[15px] font-bold text-[#17365d]">Convert verified Intake to Policy?</h3>
+            <p className="mt-2 text-[11px] font-semibold text-[#315376]">{autoConvertRow.intake_number}</p>
+            <p className="mt-3 text-[11px] leading-5 text-[#4f627c]">
+              This registers a real policy using the current independently validated PDF.
+              If the mobile is already used by a different insured name, the existing
+              canonical transaction will create a separate customer with the verified
+              name and the same mobile. It will stop for duplicate policies, uncertain
+              ownership, coverage conflicts, missing PDF issuance dates or required date OTP.
+              Existing customer and policy records are not silently overwritten.
+            </p>
+            <div className="mt-5 flex justify-end gap-2">
+              <button type="button" autoFocus disabled={isWaiting} onClick={()=>setAutoConvertRow(null)}
+                className="min-h-9 rounded-lg border border-[#cbd6e5] px-4 text-[11px] font-semibold text-[#38516e] disabled:opacity-50">Cancel</button>
+              <button type="button" disabled={isWaiting} onClick={()=>{void convertOneVerified();}}
+                className="min-h-9 rounded-lg bg-[#174b83] px-4 text-[11px] font-bold text-white disabled:opacity-50">
+                {busy==="booking"?"Converting...":"Confirm & Convert"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
       {exceptionRow ? (
         <div className="fixed inset-0 z-[170] flex items-center justify-center bg-[#101d37]/65 px-4 py-6" role="presentation">
           <div role="alertdialog" aria-modal="true" aria-labelledby="ai-exception-title"
