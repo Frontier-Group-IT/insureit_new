@@ -7,7 +7,13 @@ const css=read("../app/globals.css");
 const source=read("../lib/reports/daily-self-activity.ts");
 const page=read("../app/reports/(workspace)/daily/page.tsx");
 
-assert.match(panel,/data\.category \? data\.rows\.length : data\.categories\.length/,"Only populated summary or drilldown reports use viewport height");
+assert.match(panel,/daily-report-panel flex min-h-\\[calc\\(100dvh-175px\\)\\]/,"Summary and drilldown panels always fill the available viewport, including zero records");
+assert.match(panel,/md:min-h-\\[calc\\(100dvh-135px\\)\\]/,"Desktop panels stretch vertically on taller screens");
+assert.match(panel,/className="min-h-0 flex-1 overflow-x-auto"/,"Drilldown table consumes available body space");
+assert.match(panel,/className="mt-auto flex shrink-0 items-center justify-between border-t/,"Drilldown pagination rests at the bottom regardless of row count");
+assert.match(panel,/data.category && data.rows.length===0 \\? <div className="flex flex-1 items-center justify-center"/,"Empty drilldown is centered in available height");
+assert.match(panel,/data.categories.length \\? \\(/,"Summary uses same full-height panel");
+assert.doesNotMatch(panel,/data.category \\? data.rows.length : data.categories.length/,"Height must not depend on record count");
 assert.match(panel,/aria-label="Self activity summary and register"/,"Full-height sizing applies to both modes through the shared component");
 assert.match(panel,/gridColumnsFor\(group\.items\.length\)/,"Activity cards fill the width available to each group");
 assert.doesNotMatch(panel,/h-screen|h-\[100dvh\]|overflow-y-hidden/,"Panel remains naturally scrollable when activity tables exceed the viewport");
