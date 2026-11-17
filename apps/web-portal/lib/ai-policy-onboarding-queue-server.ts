@@ -8,7 +8,7 @@ import { policyDateDecision } from "@/lib/policy-date-rule";
 import type { PolicyIntakeOcrField } from "@/lib/policy-intake-ocr-service";
 
 export type AiQueueState =
-  | "pending" | "processing" | "exception" | "verified" | "unsupported" | "failed";
+  | "pending" | "processing" | "exception" | "verified" | "unsupported" | "failed" | "duplicate";
 
 export type AiQueueDisplay = {
   state: AiQueueState;
@@ -167,6 +167,26 @@ async function processClaim(item: Claimed) {
       last_error_code:"intake_not_open",processed_at:null,retry_after:retryAfter(60),
     });
     return;
+  }
+
+  // A policy number already classified as a duplicate by the canonical
+  // Register must be retired from the extraction queue WITHOUT downloading
+  // or calling n8n. Never delete the original Intake or its policy copy.
+  if (intake.ocr_fields?.some(f=>f.key==="policy_number"&&f.value?.trim())) {
+    const existingDuplicate=await loadPolicyIntakeDuplicateMatches(admin,[{
+      id:intake.id,intake_number:intake.intake_number,status:intake.status,
+      created_at:intake.created_at,ocr_fields:intake.ocr_fields,
+    }]);
+    if(!existingDuplicate.ok)throw new Error("Canonical duplicate lookup unavailable");
+    if(existingDuplicate.matches.has(intake.id)){
+      await finishClaim(item,{
+        state:"duplicate",exception_codes:["duplicate_policy"],field_keys:[],
+        parser_id:null,checks_passed:0,extraction_fingerprint:null,
+        last_error_code:null,processed_at:new Date().toISOString(),
+        retry_after:retryAfter(1440),
+      });
+      return;
+    }
   }
 
   // Only a verified ICICI 3005 Motor PDF is trained. Never run an
