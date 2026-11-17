@@ -38,6 +38,11 @@ const policyDetail = read('app/policy/[id].tsx');
 // Policy Overview, Premium and Commercial remain a single white card.
 // Customer and vehicle identity now share one compact row and separate heading.
 requireText(policyDetail, '<CardHeader title="Customer & Vehicle Details" />', 'Combined customer and vehicle heading is present');
+requireText(policyDetail, '<CardHeader title="Customer & Vehicle Details" /></View>\\n            <Card highlighted>'.replace('\\n','\n'), 'Only the Customer & Vehicle section requests the blue border');
+requireText(policyDetail, "customerVehicleBorder: { borderColor: '#3993F5', borderWidth: 1 }", 'Customer & Vehicle card has a visible 1px blue border');
+requireText(policyDetail, 'highlighted && styles.customerVehicleBorder', 'Blue border is applied only when highlighted is set');
+if ((policyDetail.match(/<Card highlighted>/g) || []).length !== 1) throw new Error('Only Customer & Vehicle Details may have a highlighted card border');
+
 for(const heading of ['<CardHeader title="Customer Details" />', "'Vehicle Details' : 'Insured Risk Details'"]) {
   if(policyDetail.includes(heading))throw new Error('Separate customer/vehicle headings must not return');
 }
