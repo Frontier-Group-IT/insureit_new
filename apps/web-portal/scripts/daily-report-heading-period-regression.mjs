@@ -50,8 +50,16 @@ assert.doesNotMatch(loader, /\.insert\(|\.update\(|\.delete\(|\.upsert\(/, "No c
 const css=read("../app/globals.css");
 assert.ok(css.includes("z-index: 40;") && css.includes(".reports-reference-header"), "Daily Report header stacks above activity summary");
 assert.ok(css.includes('[aria-label="Daily Report employee selector"]') && css.includes("z-index: 50;"), "Employee picker has a higher stacking level");
-assert.ok(header.includes('absolute left-0 top-[calc(100%+4px)] z-50'), "Employee search dropdown is anchored below Self control");
+assert.ok(header.includes('absolute left-0 top-[calc(100%+4px)] z-[80]'), "Employee search dropdown remains above the report content");
 const panel=read("../components/reports/daily-self-activity-panel.tsx");
+assert.match(panel,/text-\[10px\] font-extrabold uppercase tracking-wide text-\[#243752\]/,"Column headings are darker than record values");
+assert.match(header,/document\.addEventListener\("pointerdown",outside\)/,"Outside-click handling supports touch and mouse pointers");
+assert.match(header,/max-h-\[min\(300px,50dvh\)\]/,"Employee menu remains usable on short viewports");
+assert.match(header,/min-h-10 w-full rounded-md px-3 py-2/,"Dropdown options provide accessible touch targets");
+assert.match(header,/z-\[80\] min-w-\[158px\]/,"Period menu opens above content on narrow screens");
+assert.match(header,/params\.set\("period",period\)/,"Period selections update the URL query");
+assert.match(header,/router\.push\(\`\$\{pathname\}\?\$\{params\.toString\(\)\}\`,\{scroll:false\}\)/,"Period selection navigates to filtered records");
+
 assert.ok(panel.includes("<DailyReportHeaderScopes canViewAll={canViewAll} />"), "Authorized Self/employee selector sits beside summary title");
 assert.ok(panel.includes("<DailyReportHeaderPeriod />"), "Date period dropdown lives in purple summary toolbar");
 assert.ok(panel.includes('} RECORDS</span>'), "Activity count reads N RECORDS");
