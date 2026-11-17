@@ -457,7 +457,7 @@ export default function AddPartnerScreen() {
                     style={styles.documentAddButton}>
                     {uploadingType===slot.type?<ActivityIndicator size="small" color="#24517E"/>:
                       <Ionicons name="cloud-upload-outline" size={17} color="#24517E"/>}
-                    <Text style={styles.documentAddText}>Add</Text>
+                    <Text style={styles.documentAddText}>Upload</Text>
                   </Pressable>}
                 </View>
               ))}
