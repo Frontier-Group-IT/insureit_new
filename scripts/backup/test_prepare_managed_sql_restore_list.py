@@ -58,6 +58,10 @@ def fixture():
         "4003; 0 1 INDEX ATTACH public idx_syn postgres\n",
         "4004; 0 1 DEFAULT ACL public DEFAULT PRIVILEGES FOR TABLES postgres\n",
         "4005; 0 1 EVENT TRIGGER - untrusted_event postgres\n",
+        "4006; 2606 1 CHECK CONSTRAINT public synthetic_1 check_nonnegative postgres\n",
+        "4007; 2606 1 CHECK CONSTRAINT auth users managed_auth_check supabase_auth_admin\n",
+        "4008; 2606 1 CHECK CONSTRAINT pg_catalog system_type internal_check postgres\n",
+        "4009; 0 0 BLOB METADATA - BLOBS postgres\n",
     ]
     return "".join(lines)
 
@@ -79,7 +83,7 @@ class PlanTests(unittest.TestCase):
         with self.assertRaises(SafeTocSelectionError) as failure:
             chosen_entries(fixture() +
                 "5001; 0 0 PRIVATE_NOTE public sensitive_customer_name postgres\n")
-        self.assertEqual(failure.exception.reason, "UNRECOGNIZED_TOC_RECORD")
+        self.assertEqual(failure.exception.reason, "UNKNOWN_TOC_DESCRIPTOR")
         self.assertNotIn("sensitive_customer_name", str(failure.exception))
 
     def test_unknown_archive_schema_still_fails_with_static_category(self):
@@ -115,6 +119,33 @@ class PlanTests(unittest.TestCase):
                       f"5002; 1259 1 TABLE {fake_name} private_record postgres\n")
                 self.assertEqual(caught.exception.reason, "UNKNOWN_ARCHIVE_NAMESPACE")
                 self.assertNotIn(fake_name, str(caught.exception))
+
+    def test_pg17_app_check_constraints_kept_managed_and_system_not_imported(self):
+        entries, counts = chosen_entries(fixture())
+        selected = "".join(entries)
+        self.assertEqual(counts[("public", "CHECK CONSTRAINT")], 1)
+        self.assertIn("CHECK CONSTRAINT public synthetic_1", selected)
+        self.assertNotIn("CHECK CONSTRAINT auth users", selected)
+        self.assertNotIn("CHECK CONSTRAINT pg_catalog", selected)
+        self.assertNotIn("BLOB METADATA", selected)
+        self.assertEqual(counts[("auth", "CHECK CONSTRAINT")], 0)
+        self.assertEqual(counts[("pg_catalog", "CHECK CONSTRAINT")], 0)
+        self.assertEqual(counts[("public", "TABLE DATA")], 151)
+
+    def test_private_toc_error_categories_do_not_echo_unknown_object_names(self):
+        examples = [
+            ("5050; 0 0 UNKNOWN_OBJECT public hidden_customer_tag postgres\n",
+             "UNKNOWN_TOC_DESCRIPTOR"),
+            ("5051; 0 0 TABLE public\n", "INVALID_TOC_FIELDS"),
+            ("not-an-archive-entry\n", "INVALID_TOC_SHAPE"),
+        ]
+        for private_line, category in examples:
+            with self.subTest(category=category):
+                with self.assertRaises(SafeTocSelectionError) as caught:
+                    chosen_entries(fixture() + private_line)
+                self.assertEqual(caught.exception.reason, category)
+                self.assertNotIn("hidden_customer_tag", str(caught.exception))
+                self.assertNotIn("public", str(caught.exception))
 
     def test_select_only_safe_allowlisted_sql(self):
         entries, counts = chosen_entries(fixture())
