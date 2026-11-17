@@ -226,4 +226,44 @@ assert.throws(() => validateN8nPolicyIntakeResponse({
   checks:{...auditChecks,exact_igst_rounds_to_tax:false},
 },auditIds),/n8n_financial_validation_failed/,"Do not trust incomplete premium checks");
 
+
+// All-Type n8n primary workbench is a separate opt-in review mode. It must
+// never call legacy Google OCR, auto-apply n8n fields or book a policy.
+const signedSource = text("lib/policy-intake-n8n-signed-source.ts");
+const actions = text("app/development/ai-policy-onboarding/actions.ts");
+assert(page.includes("const primaryN8n = isN8nWorkbenchPrimary()"),
+  "All policy-type routing is enabled only by the server-side n8n primary flag");
+assert(page.includes('const scoped = primaryN8n ? current : current.eq("policy_type", "motor")'),
+  "Primary workbench must show all open Intake types while retaining the legacy Motor-only path");
+assert(page.includes("primaryN8n={primaryN8n}"),
+  "The server must pass primary mode to the authenticated client, never trust a browser query param");
+assert(n8nServer.includes('INSUREIT_N8N_WORKBENCH_PRIMARY'),
+  "Primary workbench must be explicitly opt-in");
+assert(n8nServer.includes('process.env.INSUREIT_N8N_OCR_MODE === "shadow"'),
+  "Primary workbench must stay within review-only shadow mode");
+assert(n8nServer.includes('"non_motor", "life", "health"'),
+  "Current-document checks must permit supported Intake categories for n8n review");
+assert(signedSource.includes('const SUPPORTED_INTAKE_TYPES = new Set(["motor", "non_motor", "life", "health"])'),
+  "Non-Motor and other known types must use the same scoped private PDF download");
+assert(signedSource.includes("intake.policy_type !== null"),
+  "Unclassified legacy Intakes must be considered for review without inventing a type");
+assert(n8nServer.includes('reason: "untrained_or_unverified"'),
+  "Unsupported insurer layouts must have an explicit, non-successful review-needed result");
+assert(n8nServer.includes('No old OCR fallback, Intake update or booking'),
+  "Unsupported policies must fail closed rather than falling back to Google OCR");
+assert(client.includes("const extracted = await previewSemiAutoN8nIntake(id)"),
+  "Selection must start n8n extraction in primary mode");
+assert(client.includes('const available = !primaryN8n'),
+  "Primary n8n extraction must not make legacy booking appear ready");
+assert(client.includes('{!primaryN8n ? <><div'),
+  "Primary n8n UI must not show legacy correction or Confirm & Book actions");
+assert(actions.includes('if (isN8nWorkbenchPrimary()) return { ok: false, ready: false'),
+  "The legacy booking server action must fail closed while n8n is primary");
+assert(actions.includes('if (isN8nWorkbenchPrimary()) return { ok: false,'),
+  "OCR apply action must fail closed while n8n is primary");
+assert(n8nServer.includes('current.intake.policy_type === "motor"'),
+  "Legacy failed-OCR recovery must stay Motor-only");
+assert(page.includes('!unavailable && duplicates?.ok ? candidates'),
+  "Duplicates and untrained Intake types must remain selectable for n8n review");
+
 console.log("Semi-auto Motor onboarding regression checks passed.");
