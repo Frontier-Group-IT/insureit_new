@@ -519,7 +519,9 @@ export default function NativePolicyOnboarding(){
     setBooking(true);setError('');
     let revision=data.revision;
     try{
-      if(dirty){
+      // Standalone Add Policy has no Intake ID; its draft goes directly to new_book.
+      // Only Intake-linked onboarding can persist a revision before booking.
+      if(dirty&&!isNew){
         const saved=await saveNativePolicyOnboarding(id,revision,draft);
         revision=saved.revision;
         setData(current=>current?{...current,revision}:current);
