@@ -7,8 +7,8 @@ const css=read("../app/globals.css");
 const source=read("../lib/reports/daily-self-activity.ts");
 const page=read("../app/reports/(workspace)/daily/page.tsx");
 
-assert.ok(panel.includes('daily-report-panel flex min-h-[calc(100dvh-175px)]'),"All Daily Report views fill the available viewport");
-assert.ok(panel.includes('md:min-h-[calc(100dvh-135px)]'),"Desktop panel scales to available viewport");
+assert.ok(panel.includes('daily-report-panel flex min-h-[calc(100dvh-145px)]'),"All Daily Report views fill the available viewport");
+assert.ok(panel.includes('md:min-h-[calc(100dvh-80px)]'),"Desktop panel scales to available viewport");
 assert.ok(panel.includes('min-h-0 flex-1'),"Drilldown rows consume available body space");
 assert.ok(panel.includes('mt-auto flex shrink-0 items-center justify-between border-t'),"Pagination footer anchors at panel bottom");
 assert.ok(panel.includes('data.rows.length ? <table'),"Detail table is shown only with rows");
