@@ -551,6 +551,19 @@ export async function reprocessAiPolicyIntake(id: string): Promise<{ok:boolean;e
   await requireDevelopmentPolicyOperator(id);
   if(!aiQueueEnabled())return{ok:false,error:"The automatic extraction queue is not enabled."};
   const admin=createSupabaseAdminClient();
+  // A reprocess request cannot reopen a registered/completed policy or
+  // override the canonical Policy Intake duplicate exclusion.
+  const {data:intake,error:intakeError}=await admin.from("policy_intake_requests")
+    .select("id,intake_number,status,policy_type,final_policy_id,created_at,ocr_fields")
+    .eq("id",id).maybeSingle();
+  if(intakeError||!intake||intake.policy_type!=="motor"
+    ||!["processing","ready_for_review","in_review","needs_attention"].includes(intake.status)
+    ||intake.final_policy_id){
+    return{ok:false,error:"Only an open, unregistered Motor Intake can be reprocessed."};
+  }
+  const duplicates=await loadPolicyIntakeDuplicateMatches(admin,[intake]);
+  if(!duplicates.ok)return{ok:false,error:"Duplicate safety check is unavailable; no queue change was made."};
+  if(duplicates.matches.has(id))return{ok:false,error:"This Intake is a duplicate. Resolve it in Policy Intake before reprocessing."};
   const {data:copy,error:copyError}=await admin.from("policy_intake_documents")
     .select("id").eq("intake_id",id).eq("is_current",true)
     .maybeSingle<{id:string}>();
@@ -561,6 +574,8 @@ export async function reprocessAiPolicyIntake(id: string): Promise<{ok:boolean;e
   if(rowError||!row)return{ok:false,error:"The Intake has not entered the automatic queue yet."};
   if(row.document_id!==copy.id)return{ok:false,error:"The PDF changed; wait for the queue to register the new document version."};
   if(row.state==="processing"||row.state==="pending")return{ok:false,error:"This Intake is already queued or being processed."};
+  if(!["exception","failed"].includes(row.state))
+    return{ok:false,error:"Only previously checked Intakes with exceptions or failed extraction can be reprocessed from this action."};
   if(row.processed_at && Date.now()-new Date(row.processed_at).getTime()<60_000)
     return{ok:false,error:"This Intake was just processed. Recheck after the current result has been reviewed."};
   const {data:updated,error:updateError}=await admin.from("policy_intake_ai_processing_queue")
@@ -569,7 +584,7 @@ export async function reprocessAiPolicyIntake(id: string): Promise<{ok:boolean;e
       lease_id:null,leased_until:null,attempts:0,retry_after:new Date().toISOString(),
       processed_at:null,last_error_code:null,updated_at:new Date().toISOString()})
     .eq("intake_id",id).eq("document_id",copy.id)
-    .in("state",["exception","verified","unsupported","failed"])
+    .in("state",["exception","failed"])
     .select("intake_id").maybeSingle<{intake_id:string}>();
   if(updateError||!updated)return{ok:false,error:"The queue changed; refresh the Intake before trying again."};
   revalidatePath("/development/ai-policy-onboarding");
