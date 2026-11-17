@@ -94,7 +94,7 @@ export function PartnerAlertHost() {
     const done = currentRef.current;
     currentRef.current = null;
     setCurrent(null);
-    done.options?.onDismiss?.();
+    if (!button) done.options?.onDismiss?.();
     button?.onPress?.();
     // Defer the next queued alert until the existing modal has dismissed.
     // React's next event loop tick is enough for this state transition.
