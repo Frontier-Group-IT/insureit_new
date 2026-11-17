@@ -14,7 +14,7 @@ export type AiPolicyExceptionCode =
   | "vehicle_ownership" | "missing_field" | "manufacturer_unmatched"
   | "financial_reconciliation" | "issuance_date_unverified" | "date_approval"
   | "bundled_validity" | "coverage_conflict" | "draft_conflict"
-  | "preflight_pending" | "stale_document";
+  | "preflight_pending" | "stale_document" | "booking_review_required";
 
 export type AiResolutionRoute =
   | "reprocess" | "customer_decision" | "edit_draft"
