@@ -173,7 +173,7 @@ def run(mode):
     # changed Storage latest pointer as the same selected-file plan.
     snapshot = manifest.get("created_at")
     expected = os.environ.get("RECOVERY_EXPECTED_STORAGE_SNAPSHOT", "").strip()
-    timestamp_pattern = r"\\d{8}T\\d{6}Z"
+    timestamp_pattern = r"\d{8}T\d{6}Z"
     if not isinstance(snapshot, str) or not re.fullmatch(timestamp_pattern, snapshot):
         raise ValueError("Authenticated Storage manifest timestamp invalid")
     if expected and not re.fullmatch(timestamp_pattern, expected):
