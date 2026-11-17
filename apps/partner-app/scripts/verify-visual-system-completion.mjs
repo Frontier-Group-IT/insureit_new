@@ -62,6 +62,12 @@ if(unified.split('styles.unifiedSectionDivider').length !== 3)throw new Error('E
 if(unified.split('</Card>').length !== 2)throw new Error('Overview, Premium and Commercial must share one card');
 requireText(policyDetail, 'accessibilityState={{ expanded: showPremiumDetails }}', 'Premium expansion remains');
 requireText(policyDetail, 'accessibilityState={{ expanded: showCommercialDetails }}', 'Commercial expansion remains');
+requireText(policyDetail, 'const [showPremiumDetails, setShowPremiumDetails] = useState(true);', 'Premium breakup opens expanded by default');
+requireText(policyDetail, 'const [showCommercialDetails, setShowCommercialDetails] = useState(true);', 'Sales ownership opens expanded by default');
+requireText(policyDetail, 'onPress={() => setShowPremiumDetails((value) => !value)}', 'Premium breakup is still collapsible');
+requireText(policyDetail, 'onPress={() => setShowCommercialDetails((value) => !value)}', 'Sales ownership is still collapsible');
+requireText(policyDetail, 'quickSectionHeading: { marginLeft: 0, marginRight: 3, marginBottom: 8', 'Quick Actions heading moves slightly left without moving action icons');
+requireText(policyDetail, 'externalSectionHeading: { paddingLeft: 0, paddingRight: 2 }', 'Customer & Vehicle heading moves slightly left without moving its card');
 
 const policyDetailIcon = read('components/ui/partner-policy-detail-icon.tsx');
 const claimDetail = read('app/claim/[id].tsx');
