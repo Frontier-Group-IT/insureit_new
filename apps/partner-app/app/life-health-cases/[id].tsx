@@ -1,5 +1,5 @@
 import { useCallback, useState, type ReactNode } from 'react';
-import { ActivityIndicator, Alert, Linking, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Keyboard, KeyboardAvoidingView, Platform, Linking, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
@@ -81,7 +81,7 @@ export default function LifeHealthCaseDetailScreen(){
  const [documents,setDocuments]=useState<LifeHealthDocument[]>([]);
  const [activities,setActivities]=useState<LifeHealthActivity[]>([]);
  const [infoTab,setInfoTab]=useState<'activity'|'remarks'>('activity');
- const [activityExpanded,setActivityExpanded]=useState(false);
+ const [expandedCaseTab,setExpandedCaseTab]=useState<'activity'|'remarks'|null>(null);
  const [remarkOpen,setRemarkOpen]=useState(false);
  const [remarkDraft,setRemarkDraft]=useState('');
  const [remarkSaving,setRemarkSaving]=useState(false);
@@ -124,7 +124,7 @@ export default function LifeHealthCaseDetailScreen(){
   setRemarkError('');setRemarkSaving(true);
   try{
    await appendLifeHealthCaseRemark(record.id,remarkDraft);
-   setRemarkOpen(false);setRemarkDraft('');setInfoTab('remarks');
+   setRemarkOpen(false);setRemarkDraft('');setExpandedCaseTab('remarks');setInfoTab('remarks');
    await load();
   }catch(cause){setRemarkError(cause instanceof Error?cause.message:'Unable to save remark.');}
   finally{setRemarkSaving(false);}
@@ -206,6 +206,7 @@ export default function LifeHealthCaseDetailScreen(){
  },[id]);
  useFocusEffect(useCallback(()=>{
    let active=true;
+   setExpandedCaseTab(null);
    // Guard against stale detail data after switching accounts or navigating away.
    void load();
    void listLifeHealthInsurers().then(setInsurers).catch(()=>setInsurers([]));
@@ -396,14 +397,19 @@ export default function LifeHealthCaseDetailScreen(){
           {inline("premiumAmount","Premium amount",amount(record.premium_amount),true,false,false,"decimal-pad")}
           {inline("paymentMode","Payment mode",record.payment_mode,true)}
         </View>
-        <Text style={styles.fieldLabel}>REMARKS</Text>
-        {record.status_group==='pending'?<Pressable accessibilityRole="button" accessibilityLabel="Add Remark"
-          onPress={()=>{setRemarkError('');setRemarkOpen(true);}} style={styles.remarkHeaderAction}>
-          <Ionicons name="chatbubble-ellipses-outline" size={17} color="#FFFFFF"/>
-          <Text style={styles.remarkButtonText}>Add Remark</Text>
-        </Pressable>:null}
-        {record.remarks?.trim()?<Text selectable style={styles.remarkExisting}>{record.remarks}</Text>:null}
       </Section>
+
+      {(record.status_group==='pending'||record.status_group==='rejected')?<View style={styles.remarkSection}>
+        <View style={styles.remarkSectionTitle}>
+          <Ionicons name="chatbubble-ellipses-outline" size={19} color="#24517E"/>
+          <Text style={styles.remarkSectionText}>Remarks</Text>
+        </View>
+        <Pressable accessibilityRole="button" accessibilityLabel="Add Remark"
+          onPress={()=>{setRemarkError('');setRemarkOpen(true);}} style={styles.remarkHeaderAction}>
+          <Ionicons name="add-circle-outline" size={17} color="#24517E"/>
+          <Text style={styles.remarkHeaderText}>Add Remark</Text>
+        </Pressable>
+      </View>:null}
 
       {record.status_group==='pending'?<Section number="05" title="Mark Policy Issued">
         <View style={styles.grid}>
@@ -457,43 +463,46 @@ export default function LifeHealthCaseDetailScreen(){
 
       {(record.status_group==='pending'||record.status_group==='rejected')?(
         <View style={styles.activityCard}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Activity Status"
-            accessibilityState={{expanded:activityExpanded}}
-            onPress={()=>setActivityExpanded(previous=>!previous)}
-            style={styles.activityToggle}>
-            <Text style={styles.activityToggleTitle}>Activity Status</Text>
-            <Ionicons name={activityExpanded?'chevron-up':'chevron-down'} size={18} color={navy}/>
-          </Pressable>
-          {activityExpanded?<View style={styles.activityHistory}>
+          <View style={styles.tabs}>
+            {(['activity','remarks'] as const).map(tab=><Pressable key={tab} accessibilityRole="button"
+              accessibilityLabel={tab==='activity'?'Activity Status':'Remarks'}
+              accessibilityState={{expanded:expandedCaseTab===tab}}
+              onPress={()=>setExpandedCaseTab(previous=>previous===tab?null:tab)}
+              style={[styles.tab,expandedCaseTab===tab&&styles.tabActive]}>
+              <Text style={[styles.tabText,expandedCaseTab===tab&&styles.tabTextActive]}>
+                {tab==='activity'?'Activity Status':'Remarks'}
+              </Text>
+            </Pressable>)}
+          </View>
+          {expandedCaseTab==='activity'?<View style={styles.activityHistory}>
             {activities.length?activities.map(activity=><View key={activity.id} style={styles.activity}>
+              <Text style={styles.activityTitle}>{activity.action.replace(/_/g,' ')}</Text>
+              {activity.createdBy?<Text style={styles.activityDate}>By: {activity.createdBy}</Text>:null}
+              {activity.changes?.map((change,index)=><Text key={index} style={styles.activityDate}>• {change}</Text>)}
+              <Text style={styles.activityDate}>At: {activityDate(activity.created_at)}</Text>
+            </View>):<Text style={styles.paragraph}>No recorded case activity available.</Text>}
+          </View>:expandedCaseTab==='remarks'?<View style={styles.activityHistory}>
+            <Text style={styles.paragraph} selectable>{record.remarks?.trim()||'No remarks added yet.'}</Text>
+          </View>:null}
+        </View>
+      ):(
+        <View style={styles.activityCard}>
+          <View style={styles.tabs}>
+            <Pressable accessibilityRole="tab" accessibilityState={{selected:infoTab==='activity'}} style={[styles.tab,infoTab==='activity'&&styles.tabActive]} onPress={()=>setInfoTab('activity')}>
+              <Text style={[styles.tabText,infoTab==='activity'&&styles.tabTextActive]}>Activity Status</Text>
+            </Pressable>
+            <Pressable accessibilityRole="tab" accessibilityState={{selected:infoTab==='remarks'}} style={[styles.tab,infoTab==='remarks'&&styles.tabActive]} onPress={()=>setInfoTab('remarks')}>
+              <Text style={[styles.tabText,infoTab==='remarks'&&styles.tabTextActive]}>Remarks</Text>
+            </Pressable>
+          </View>
+          {infoTab==='activity'?(activities.length?activities.map(activity=><View key={activity.id} style={styles.activity}>
             <Text style={styles.activityTitle}>{activity.action.replace(/_/g,' ')}</Text>
             {activity.createdBy?<Text style={styles.activityDate}>By: {activity.createdBy}</Text>:null}
             {activity.changes?.map((change,index)=><Text key={index} style={styles.activityDate}>• {change}</Text>)}
             <Text style={styles.activityDate}>At: {activityDate(activity.created_at)}</Text>
-          </View>):<Text style={styles.paragraph}>No recorded case activity available.</Text>}
-          </View>:null}
+          </View>):<Text style={styles.paragraph}>No recorded case activity available.</Text>):
+            <Text style={styles.paragraph} selectable>{record.remarks?.trim()||'No remarks added yet.'}</Text>}
         </View>
-      ):(
-              <View style={styles.activityCard}>
-                <View style={styles.tabs}>
-                  <Pressable accessibilityRole="tab" accessibilityState={{selected:infoTab==='activity'}} style={[styles.tab,infoTab==='activity'&&styles.tabActive]} onPress={()=>setInfoTab('activity')}>
-                    <Text style={[styles.tabText,infoTab==='activity'&&styles.tabTextActive]}>Activity Status</Text>
-                  </Pressable>
-                  <Pressable accessibilityRole="tab" accessibilityState={{selected:infoTab==='remarks'}} style={[styles.tab,infoTab==='remarks'&&styles.tabActive]} onPress={()=>setInfoTab('remarks')}>
-                    <Text style={[styles.tabText,infoTab==='remarks'&&styles.tabTextActive]}>Remarks</Text>
-                  </Pressable>
-                </View>
-                {infoTab==='activity'?(activities.length?activities.map(activity=><View key={activity.id} style={styles.activity}>
-                  <Text style={styles.activityTitle}>{activity.action.replace(/_/g,' ')}</Text>
-                  {activity.createdBy?<Text style={styles.activityDate}>By: {activity.createdBy}</Text>:null}
-                  {activity.changes?.map((change,index)=><Text key={index} style={styles.activityDate}>• {change}</Text>)}
-                  <Text style={styles.activityDate}>At: {activityDate(activity.created_at)}</Text>
-                </View>):<Text style={styles.paragraph}>No recorded case activity available.</Text>):
-                 <View style={{gap:10}}>
-                  <Text style={styles.paragraph} selectable>{record.remarks?.trim()||'No remarks added yet.'}</Text>
-        
-                 </View>}
-              </View>
       )}
       {saveError?<Text style={styles.saveError}>{saveError}</Text>:null}
       {saveSuccess?<Text style={styles.saveSuccess}>Case details saved successfully.</Text>:null}
@@ -578,25 +587,44 @@ export default function LifeHealthCaseDetailScreen(){
        </View>
      </View></View>
    </Modal>
-   <Modal visible={remarkOpen} transparent animationType="fade" onRequestClose={()=>{if(!remarkSaving)setRemarkOpen(false);}}>
-    <View style={styles.editorBackdrop}>
-     <View style={styles.remarkEditor}>
-      <Text style={styles.editorTitle}>Add Remark</Text>
-      <Text style={styles.editorHint}>The remark is appended to the case history. Existing remarks cannot be overwritten.</Text>
-      <TextInput accessibilityLabel="New case remark" multiline value={remarkDraft} onChangeText={setRemarkDraft}
-       placeholder="Enter remark..." placeholderTextColor="#91A0B2" maxLength={2000} style={[styles.editInput,{minHeight:110,textAlignVertical:'top'}]}/>
-      {remarkError?<Text style={styles.saveError}>{remarkError}</Text>:null}
-      <View style={styles.editorActions}>
-       <Pressable accessibilityRole="button" disabled={remarkSaving} onPress={()=>setRemarkOpen(false)} style={styles.cancelButton}>
-        <Text style={styles.cancelText}>Cancel</Text>
-       </Pressable>
-       <Pressable accessibilityRole="button" disabled={remarkSaving||!remarkDraft.trim()} onPress={()=>void submitRemark()} style={[styles.saveButton,(remarkSaving||!remarkDraft.trim())&&{opacity:0.5}]}>
-        {remarkSaving?<ActivityIndicator color="#FFFFFF" size="small"/>:<Ionicons name="checkmark" size={17} color="#FFFFFF"/>}
-        <Text style={styles.saveText}>{remarkSaving?'Saving…':'Save Remark'}</Text>
-       </Pressable>
-      </View>
-     </View>
-    </View>
+   <Modal visible={remarkOpen} transparent animationType="fade"
+     onRequestClose={()=>{if(!remarkSaving){Keyboard.dismiss();setRemarkOpen(false);}}}>
+     <KeyboardAvoidingView style={styles.remarkKeyboardAvoid}
+       behavior={Platform.OS==='ios'?'padding':'height'} keyboardVerticalOffset={0}>
+       <View style={styles.editorBackdrop}>
+         <View style={styles.remarkEditor}>
+           <View style={styles.remarkModalHeader}>
+             <View style={styles.remarkSectionTitle}>
+               <Ionicons name="chatbubble-ellipses-outline" size={19} color="#24517E"/>
+               <Text style={styles.editorTitle}>Add Remark</Text>
+             </View>
+             <Pressable accessibilityRole="button" accessibilityLabel="Close remark popup"
+               disabled={remarkSaving} onPress={()=>{Keyboard.dismiss();setRemarkOpen(false);}} style={styles.remarkModalClose}>
+               <Ionicons name="close" size={23} color="#52627C"/>
+             </Pressable>
+           </View>
+           <ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="none"
+             contentContainerStyle={styles.remarkModalContent}>
+             <TextInput accessibilityLabel="New case remark" multiline value={remarkDraft} onChangeText={setRemarkDraft}
+               placeholder="Write a remark" placeholderTextColor="#91A0B2" maxLength={2000}
+               scrollEnabled style={styles.remarkTextArea}/>
+             {remarkError?<Text style={styles.saveError}>{remarkError}</Text>:null}
+           </ScrollView>
+           <View style={styles.editorActions}>
+             <Pressable accessibilityRole="button" disabled={remarkSaving}
+               onPress={()=>{Keyboard.dismiss();setRemarkOpen(false);}} style={styles.cancelButton}>
+               <Text style={styles.cancelText}>Cancel</Text>
+             </Pressable>
+             <Pressable accessibilityRole="button" disabled={remarkSaving||!remarkDraft.trim()}
+               onPress={()=>{Keyboard.dismiss();void submitRemark();}}
+               style={[styles.saveButton,(remarkSaving||!remarkDraft.trim())&&{opacity:0.5}]}>
+               {remarkSaving?<ActivityIndicator color="#FFFFFF" size="small"/>:<Ionicons name="checkmark" size={17} color="#FFFFFF"/>}
+               <Text style={styles.saveText}>{remarkSaving?'Saving…':'Save Remark'}</Text>
+             </Pressable>
+           </View>
+         </View>
+       </View>
+     </KeyboardAvoidingView>
    </Modal>
    <PartnerPolicyCalendarDialog visible={Boolean(calendarField)} value={selectedCalendarDate}
      onCancel={()=>setCalendarField(null)} onConfirm={chooseCalendarDay}/>
@@ -647,7 +675,11 @@ const styles=StyleSheet.create({
   remarkInlineRow:{flexDirection:'row',alignItems:'center',gap:8},
   remarkExisting:{color:navy,fontSize:11,lineHeight:17,backgroundColor:'#F5F8FD',borderRadius:9,padding:10},
   remarkHeaderSpacer:{flex:1},
-  remarkHeaderAction:{flexDirection:'row',alignItems:'center',gap:4,backgroundColor:navy,paddingHorizontal:11,paddingVertical:9,borderRadius:9},
+  remarkSection:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:10,backgroundColor:'#EAF1FA',borderRadius:13,borderWidth:1,borderColor:'#D9E2F0',padding:12},
+  remarkSectionTitle:{flexDirection:'row',alignItems:'center',gap:9,flexShrink:1},
+  remarkSectionText:{fontSize:13,fontWeight:'800',color:navy},
+  remarkHeaderAction:{flexDirection:'row',alignItems:'center',gap:5,backgroundColor:'#FFFFFF',borderWidth:1,borderColor:'#C9D8EA',paddingHorizontal:10,paddingVertical:9,borderRadius:9},
+  remarkHeaderText:{fontSize:11,fontWeight:'800',color:'#24517E'},
   remarkInlineAction:{flexDirection:'row',alignItems:'center',gap:3,backgroundColor:navy,paddingHorizontal:10,paddingVertical:12,borderRadius:9},
   remarkFullWidth:{flexDirection:'row',alignItems:'center',justifyContent:'center',gap:8,minHeight:44,backgroundColor:navy,borderRadius:9},
   saveInline:{gap:6},
@@ -656,7 +688,12 @@ const styles=StyleSheet.create({
   issueDateTap:{flex:1,minWidth:0,minHeight:25,flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:4},
   datePlaceholder:{color:'#90A0B7'},
 
- remarkEditor:{backgroundColor:'#FFFFFF',padding:18,gap:12,borderTopLeftRadius:18,borderTopRightRadius:18},
+ remarkKeyboardAvoid:{flex:1},
+ remarkEditor:{backgroundColor:'#FFFFFF',padding:15,borderTopLeftRadius:20,borderTopRightRadius:20,maxHeight:'90%'},
+ remarkModalHeader:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:10,paddingBottom:13,borderBottomWidth:1,borderBottomColor:'#DFE7F1'},
+ remarkModalClose:{minWidth:36,minHeight:36,alignItems:'center',justifyContent:'center'},
+ remarkModalContent:{paddingVertical:15},
+ remarkTextArea:{borderWidth:1,borderColor:'#A8BDDC',borderRadius:11,backgroundColor:'#FFFFFF',padding:12,minHeight:155,maxHeight:210,fontSize:13,color:navy,textAlignVertical:'top'},
  remarkButton:{alignSelf:'flex-start',flexDirection:'row',gap:7,alignItems:'center',backgroundColor:'#071E49',borderRadius:10,paddingHorizontal:14,paddingVertical:11},
  remarkButtonText:{fontWeight:'800',color:'#FFFFFF',fontSize:12},
  editorBackdrop:{flex:1,justifyContent:'flex-end',backgroundColor:'rgba(9,24,48,0.48)'},
