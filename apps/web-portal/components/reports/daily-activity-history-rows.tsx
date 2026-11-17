@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
+import { getInsurerLogo } from "@/lib/insurer-logo";
 import type { SelfActivity } from "@/lib/reports/daily-self-activity";
 
 const dateFormat=new Intl.DateTimeFormat("en-IN",{timeZone:"Asia/Kolkata",day:"2-digit",month:"short",year:"numeric"});
@@ -75,7 +77,19 @@ export function DailyActivityHistoryRows({rows,isCustomerActivity=false,isClaimA
               <>
                 <td className="px-3 py-3 font-medium">{row.reference||"—"}</td>
                 <td className="px-3 py-3">{row.customerVehicle||"—"}</td>
-                <td className="px-3 py-3">{row.insurer||"—"}</td>
+                <td className="px-3 py-3">
+                  {row.insurer ? (
+                    <Image
+                      src={getInsurerLogo(row.insurer)!}
+                      alt={row.insurer}
+                      title={row.insurer}
+                      width={98}
+                      height={36}
+                      unoptimized
+                      className="h-9 w-[98px] object-contain object-left"
+                    />
+                  ) : <span aria-label="Insurer unavailable">—</span>}
+                </td>
               </>
             )}
             <td className="whitespace-nowrap px-3 py-3">{dateFormat.format(new Date(row.occurredAt))}, {timeFormat.format(new Date(row.occurredAt))}</td>
