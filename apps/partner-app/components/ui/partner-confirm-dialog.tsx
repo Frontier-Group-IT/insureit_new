@@ -90,7 +90,7 @@ export function PartnerConfirmDialog({
           <View style={styles.divider} />
           <View style={[styles.actions, displayedActions.length > 2 && styles.stackedActions]}>
             {displayedActions.map((action, index) => (
-              <View style={styles.action} key={index}>
+              <View style={[styles.action, displayedActions.length > 2 && styles.stackedAction]} key={index}>
                 <PartnerButton
                   label={action.label}
                   onPress={action.onPress}
@@ -126,4 +126,5 @@ const styles = StyleSheet.create({
   actions: { flexDirection: 'row', gap: 10, alignSelf: 'stretch' },
   stackedActions: { flexDirection: 'column' },
   action: { flex: 1 },
+  stackedAction: { flex: 0, width: '100%' },
 });
