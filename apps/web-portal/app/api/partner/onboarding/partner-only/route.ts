@@ -77,11 +77,17 @@ async function handle(request: Request, writing: boolean) {
     const inScope = await Promise.all((rmRows.data ?? []).map(async rm =>
       (await isEmployeeWithinAccessScope(profile.id, profile.role, rm.id)) ? { id: rm.id, name: `${rm.full_name || "Unnamed RM"}${rm.employee_code ? ` - ${rm.employee_code}` : ""}` } : null
     ));
+    const {data:pendingMisp,error:pendingError}=await admin.from("intermediary_onboarding_applications")
+      .select("id,draft_data,updated_at").eq("initiated_by",profile.id).eq("requested_type","misp")
+      .in("status",["submitted","under_review","changes_requested"])
+      .eq("registration_status","documents_pending").order("updated_at",{ascending:false}).limit(10);
+    if(pendingError)console.error("[partner-onboarding] pending MISP list unavailable",{code:pendingError.code||"request_error"});
     const manufacturers=new Set((manufacturerRows.data??[]).map(item=>item.id));
     const oems=[...new Set((brandRows.data??[]).filter(item=>manufacturers.has(item.manufacturer_id)).map(item=>item.brand_name))];
     return reply({ ok: true, rms: inScope.filter((row): row is NonNullable<typeof row> => row !== null),
       banks: (bankRows.data ?? []).map(bank => ({ id: bank.id, name: bank.name })),
-      oems: oems.map(name=>({id:name,name})) });
+      oems: oems.map(name=>({id:name,name})),
+      pendingMisps:(pendingMisp??[]).map(item=>({id:item.id,name:typeof item.draft_data?.misp_name==="string"?item.draft_data.misp_name:"MISP application"})) });
   }
 
   let input: Payload;
