@@ -574,8 +574,6 @@ export async function reprocessAiPolicyIntake(id: string): Promise<{ok:boolean;e
   if(rowError||!row)return{ok:false,error:"The Intake has not entered the automatic queue yet."};
   if(row.document_id!==copy.id)return{ok:false,error:"The PDF changed; wait for the queue to register the new document version."};
   if(row.state==="processing"||row.state==="pending")return{ok:false,error:"This Intake is already queued or being processed."};
-  if(!["exception","failed"].includes(row.state))
-    return{ok:false,error:"Only previously checked Intakes with exceptions or failed extraction can be reprocessed from this action."};
   if(row.processed_at && Date.now()-new Date(row.processed_at).getTime()<60_000)
     return{ok:false,error:"This Intake was just processed. Recheck after the current result has been reviewed."};
   const {data:updated,error:updateError}=await admin.from("policy_intake_ai_processing_queue")
@@ -584,7 +582,7 @@ export async function reprocessAiPolicyIntake(id: string): Promise<{ok:boolean;e
       lease_id:null,leased_until:null,attempts:0,retry_after:new Date().toISOString(),
       processed_at:null,last_error_code:null,updated_at:new Date().toISOString()})
     .eq("intake_id",id).eq("document_id",copy.id)
-    .in("state",["exception","failed"])
+    .in("state",["exception","verified","unsupported","failed"])
     .select("intake_id").maybeSingle<{intake_id:string}>();
   if(updateError||!updated)return{ok:false,error:"The queue changed; refresh the Intake before trying again."};
   revalidatePath("/development/ai-policy-onboarding");
