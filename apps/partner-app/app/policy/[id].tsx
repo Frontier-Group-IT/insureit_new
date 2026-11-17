@@ -97,7 +97,7 @@ export default function PolicyDetailScreen() {
                 <Text style={styles.summaryNetPremium}>Net Premium - {nullableMoney(data.premium.net_premium)}</Text>
               </View>
               <View style={styles.summaryBadges}>
-                <View style={styles.categoryPill}><Ionicons name={data.vehicle ? "car" : "shield-checkmark"} color="#12498D" size={15}/><Text style={styles.categoryLabel}>{category}</Text></View>
+                <View style={[styles.categoryPill, category === 'Motor' && styles.motorCategoryPill]}><Ionicons name={data.vehicle ? "car" : "shield-checkmark"} color={category === 'Motor' ? '#FFFFFF' : '#12498D'} size={15}/><Text style={[styles.categoryLabel, category === 'Motor' && styles.motorCategoryLabel]}>{category}</Text></View>
                 <Text style={styles.periodValue}>{formatDate(data.policy.start_date)} – {formatDate(data.policy.end_date)}</Text>
               </View>
             </View>
@@ -161,9 +161,9 @@ export default function PolicyDetailScreen() {
               <View style={styles.detailGrid}>
                 <InsurerMiniInfo name={data.insurer.name} />
                 <MiniInfo label="Policy number" value={data.policy.policy_no || data.policy.policy_code || 'Not recorded'} />
-                <MiniInfo label="Policy status" value={humanize(data.policy.status || data.policy.lifecycle_status)} fullWidth />
-                <MiniInfo label="Start date" value={formatDate(data.policy.start_date)} />
-                <MiniInfo label="End date" value={formatDate(data.policy.end_date)} />
+                <MiniInfo label="Policy status" value={humanize(data.policy.status || data.policy.lifecycle_status)} threeColumn />
+                <MiniInfo label="Start date" value={formatDate(data.policy.start_date)} threeColumn />
+                <MiniInfo label="End date" value={formatDate(data.policy.end_date)} threeColumn />
               </View>
             ) : null}
             <View style={styles.unifiedSectionDivider} />
@@ -274,7 +274,7 @@ function InsurerMiniInfo({ name }: { name: string | null | undefined }) {
     </View>
   );
 }
-function MiniInfo({ label, value, compact = false, fullWidth = false }: { label: string; value: string; compact?: boolean; fullWidth?: boolean }) { return <View style={[styles.miniInfo, compact && styles.miniInfoCompact, fullWidth && styles.miniInfoFullWidth]}><Text style={styles.miniLabel}>{label}</Text><Text style={styles.miniValue}>{value}</Text></View>; }
+function MiniInfo({ label, value, compact = false, threeColumn = false }: { label: string; value: string; compact?: boolean; threeColumn?: boolean }) { return <View style={[styles.miniInfo, compact && styles.miniInfoCompact, threeColumn && styles.miniInfoThreeColumn]}><Text style={styles.miniLabel}>{label}</Text><Text style={styles.miniValue}>{value}</Text></View>; }
 function policyArtwork(category: string): ImageSourcePropType { if (category === 'Motor') return PartnerAssets.products.motorInsurance; if (category === 'Health') return PartnerAssets.products.healthInsurance; if (category === 'Life') return PartnerAssets.products.familyInsurance; return PartnerAssets.products.commercialInsurance; }
 function displayParts(...values: Array<string | number | null | undefined>) { return values.map((value) => value == null ? '' : String(value).trim()).filter((value) => value && value.toLowerCase() !== 'null' && value.toLowerCase() !== 'undefined').join(' · '); }
 function policyCategory(data: PartnerPolicyDetail) { const value = [data.policy.policy_type, data.policy.policy_product, data.policy.business_line].filter(Boolean).join(' ').toLowerCase(); if (value.includes('health')) return 'Health'; if (value.includes('life')) return 'Life'; if (value.includes('motor') || data.vehicle) return 'Motor'; return 'Non-Motor'; }
@@ -303,6 +303,8 @@ const styles = StyleSheet.create({
   summaryNetPremium: { marginTop: 4, color: '#53677F', fontSize: 12, lineHeight: 17, fontWeight: '700' },
   categoryPill: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#FFF2DE', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 6 },
   categoryLabel: { color: '#895519', fontSize: 10, fontWeight: '700' },
+  motorCategoryPill: { backgroundColor: '#0A234A' },
+  motorCategoryLabel: { color: '#FFFFFF' },
   periodIcon: { width: 30, height: 30, borderRadius: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: '#1375DC' },
   summaryInsurer: { color: '#75849A', fontSize: 9, lineHeight: 12, marginTop: 2 },
   summaryBadges: { alignItems: 'flex-end', justifyContent: 'center', gap: 7, maxWidth: '45%' },
@@ -344,7 +346,7 @@ const styles = StyleSheet.create({
   premiumDetailGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingHorizontal: 10, paddingBottom: 10 },
   detailGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 10, paddingBottom: 10 }, miniInfo: { width: '47%', minHeight: 38, padding: 7, borderRadius: 8, backgroundColor: '#F7F9FC' }, miniLabel: { color: '#8A95A6', fontSize: 8, lineHeight: 10, textTransform: 'uppercase' }, miniValue: { marginTop: 2, color: '#21334E', fontSize: 9.5, lineHeight: 12, fontWeight: '700' },
   miniInfoCompact: { width: '31%', flexGrow: 1, minWidth: 0, paddingHorizontal: 5 },
-  miniInfoFullWidth: { width: '100%' },
+  miniInfoThreeColumn: { width: '31%', flexGrow: 1, minWidth: 0 },
   insurerMiniInfo: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   insurerMiniLogo: { width: 25, height: 25, alignItems: 'center', justifyContent: 'center' },
   insurerMiniCopy: { flex: 1, minWidth: 0 },
