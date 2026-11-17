@@ -194,6 +194,7 @@ const auditFields = Object.entries({
   policy_number: "3005/123456789/00/000",
   insurer_name: "ICICI Lombard General Insurance Company Limited",
   insured_name: "TEST POLICYHOLDER",
+  policy_issuance_date: "2026-10-22", // Independently printed; not cover start or today.
   policy_start_date: "2026-10-24", policy_end_date: "2027-10-23",
   third_party_start_date: "2026-10-24", third_party_end_date: "2031-10-23",
   vehicle_make: "TEST MAKE", vehicle_model: "TEST MODEL",
@@ -218,6 +219,16 @@ const auditPayload = {
 };
 const audited = validateN8nPolicyIntakeResponse(auditPayload,auditIds);
 assert.equal(audited.checksPassed,13,"Validator must prove all thirteen checks");
+assert.equal(audited.fields.find(field=>field.key==="policy_issuance_date")?.value,"2026-10-22",
+  "Current verified PDF issue date must pass through the web bridge distinctly from cover start");
+assert.throws(()=>validateN8nPolicyIntakeResponse({
+  ...auditPayload,
+  fields:auditFields.map(field=>field.key==="policy_issuance_date"?{...field,value:"2026-02-30"}:field),
+},auditIds),/n8n_issuance_date_invalid/,"A fabricated or impossible issue date must never prefill onboarding");
+assert.doesNotThrow(()=>validateN8nPolicyIntakeResponse({
+  ...auditPayload,
+  fields:auditFields.filter(field=>field.key!=="policy_issuance_date"),
+},auditIds),"A PDF with no separately verified issue date remains reviewable, but no date may be guessed");
 assert.equal(audited.premium.basicOd,2026,"Do not confuse Basic OD with Total OD");
 assert.equal(audited.premium.odAddons[0].amount,240,"Preserve the exact PDF add-on");
 assert.equal(audited.premium.totalOd,2266,"Use printed Total OD, not Basic OD");
@@ -535,10 +546,11 @@ assert.equal(assessAi({canonicalPreflightPassed:false}).state,"preflight_pending
   "n8n success alone is not permission to book a policy");
 const blockedBy=(code,overrides)=>assert(assessAi(overrides).exceptions.some(e=>e.code===code&&e.blocking),
   code+" must block one-click and bulk booking");
-blockedBy("customer_identity",{sharedPhoneHasDistinctNames:true});
+assert.equal(assessAi({sharedPhoneHasDistinctNames:true,customerMatch:"name_conflict"}).state,"eligible",
+  "Same mobile but DIFFERENT verified insured requires canonical new-customer creation, not an exception");
+assert.equal(assessAi({customerMatch:"none",existingCustomerSameIdentity:false}).state,"eligible",
+  "No matching customer is a standard create-new flow, not a blocker");
 blockedBy("customer_ambiguous",{customerMatch:"multiple"});
-blockedBy("customer_creation_required",{customerMatch:"none",existingCustomerSameIdentity:false});
-blockedBy("customer_identity",{customerMatch:"name_conflict"});
 assert.equal(assessAi({sharedPhoneHasDistinctNames:false}).state,"eligible",
   "One mobile on several same-person policies is not automatically a conflict");
 blockedBy("duplicate_policy",{isDuplicate:true});
@@ -556,7 +568,8 @@ blockedBy("draft_conflict",{savedDraftConflictsWithPdf:true});
 blockedBy("missing_field",{fields:aiBase.fields.filter(f=>f.key!=="vehicle_motor_power_kw")});
 blockedBy("extraction_failed",{extractionState:"failed"});
 blockedBy("reviewer_conflict",{reviewerAssignedToAnother:true});
-blockedBy("reviewer_conflict",{intakeStatus:"processing"});
+assert.equal(assessAi({intakeStatus:"processing"}).state,"eligible",
+  "Normal Intake Processing status is not itself a reviewer conflict; booking separately claims in_review");
 assert.deepEqual(assessAi({policyType:"life"}).state,"unsupported",
   "Unsupported policy categories never enter the one-click bulk queue");
 
@@ -734,4 +747,69 @@ assert(prioritizedQueueSql.includes("case when i.policy_type='motor' and i.file_
   "Trained PDF filename can change only order; private priority claim must retain lease and authorization checks");
 assert.equal(prioritizedQueueSql.split("\n").filter(line=>line.trim()==="as $$").length,1);
 assert.equal(prioritizedQueueSql.split("\n").filter(line=>line.trim()==="$$;").length,1);
+// Corrected n8n date handoff, genuine exception taxonomy and duplicate skip.
+const duplicateQueueSql=readFileSync(new URL("../../../supabase/migrations/20261117190000_ai_policy_duplicate_queue_and_reassess.sql",import.meta.url),"utf8");
+assert(handoff.includes('const verifiedIssuanceDate=verified?.fields.find(field=>field.key==="policy_issuance_date")?.value??""')
+  && handoff.includes('issuanceDate:verified?verifiedIssuanceDate:new Date().toISOString().slice(0,10)')
+  && handoff.includes('"manufacturingYear","issuanceDate"'),
+  "Verified n8n handoff must use the PDF's own issuance date and fill only empty saved draft dates");
+assert(n8nValidator.includes('"policy_issuance_date"')
+  && n8nValidator.includes('if (issuanceDate && !isoDate(issuanceDate))'),
+  "Accept strict independent issue dates while rejecting invalid dates");
+assert(!workerText.includes("const bundledPeriodsVerified=!bundled;")
+  && workerText.includes('issuanceDecision==="otp_required"')
+  && workerText.includes('const bundledPeriodsVerified=!bundled||('),
+  "A validated bundled period is not an exception, but actual earlier-month OTP remains blocking");
+assert(workerText.includes('const state:AiQueueState=isDuplicate?"duplicate"')
+  && workerText.includes('filter(e=>e.code!=="preflight_pending")')
+  && workerText.includes('existingDuplicate.matches.has(intake.id)')
+  && workerText.indexOf('existingDuplicate.matches.has(intake.id)')<workerText.indexOf('const extraction=await previewSemiAutoN8nExtraction'),
+  "Recognized duplicate must bypass expensive n8n and preflight pending is not a document exception");
+assert(duplicateQueueSql.includes("policy_intake_ai_processing_queue_state_check")
+  && duplicateQueueSql.includes("'duplicate'")
+  && duplicateQueueSql.includes("q.state='exception'")
+  && duplicateQueueSql.includes("state='pending'")
+  && duplicateQueueSql.includes("q.state <> 'duplicate'")
+  && duplicateQueueSql.includes("for update of q skip locked")
+  && !duplicateQueueSql.includes("delete from public.policy_intake_requests")
+  && !duplicateQueueSql.includes("insert into public.policies"),
+  "Queue-only migration safely retires canonical duplicates and reschedules old false exceptions");
+assert.equal(duplicateQueueSql.split("\n").filter(x=>x.trim()==="as $$").length,1,
+  "Migration must open one PL/pgSQL body");
+assert.equal(duplicateQueueSql.split("\n").filter(x=>x.trim()==="$$;").length,1,
+  "Migration must close one PL/pgSQL body");
+assert(aiPageText.includes("queueCounts.extracted++") && aiPageText.includes("if(duplicate)continue;"),
+  "Verified extraction count cannot misstate automatic booking eligibility or include duplicate PDFs");
+assert(workbenchText.includes("Duplicates skipped") && workbenchText.includes("PDF extracted")
+  && workbenchText.includes("Duplicate · skipped"),
+  "Queue UI must show true extraction progress and skipped duplicates separately");
+// One-click conversion must use canonical transaction, and never trust
+// browser fields or silently reuse a different insured's mobile match.
+const convertStart=actionsText.indexOf("export async function convertVerifiedAiIntake(");
+const convertEnd=actionsText.indexOf("export async function bookSemiAutoIntake(",convertStart);
+assert(convertStart>0&&convertEnd>convertStart,
+  "A separate one-click verified n8n conversion action must be available");
+const convertCode=actionsText.slice(convertStart,convertEnd);
+assert(convertCode.includes("await requireDevelopmentPolicyOperator(id)")
+  && convertCode.includes('queued.state!=="verified"')
+  && convertCode.includes("extracted.preview.fingerprint!==queued.extraction_fingerprint")
+  && convertCode.includes('prepareVerifiedN8nIntakeHandoff(id,queued.document_id')
+  && convertCode.includes('decision==="otp_required"')
+  && convertCode.includes('forwarded.draft.issuanceDate!==issuanceDate')
+  && convertCode.includes('normalizedIdentity(pdfField("insured_name"))')
+  && convertCode.includes('mapVerifiedN8nMotorPremium(extracted.preview.premium)')
+  && convertCode.includes('forwarded.draft.addOnPremium')
+  && convertCode.includes('forwarded.draft.tpValidUpto')
+  && convertCode.includes('createNewCustomer:true')
+  && convertCode.includes('await onboardPolicy(payload)'),
+  "One-click conversion must independently reverify current PDF, name, premiums, policy number, issued date and OTP, then use the canonical policy/customer transaction");
+assert(!convertCode.includes('dateApprovalId:"') && !convertCode.includes('confirmPolicyReplacement:true'),
+  "Automatic customer creation must never manufacture an email OTP approval or override an active policy");
+assert(actionsText.includes('addOnPremium:d.addOnPremium||"0"')
+  && actionsText.includes("cpaValidUpto:d.cpaValidUpto||d.tpValidUpto"),
+  "Canonical payload must preserve independently verified OD add-ons and bundled cover periods");
+assert(workbenchText.includes("Convert to Policy")&&workbenchText.includes("Confirm & Convert")
+  && workbenchText.includes("convertVerifiedAiIntake(row.id,true)")
+  && workbenchText.includes('role="alertdialog"'),
+  "Verified conversion must have a working custom confirmation, never a no-op redirect");
 console.log("Semi-auto Motor onboarding regression checks passed.");

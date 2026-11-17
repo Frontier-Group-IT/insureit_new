@@ -9,6 +9,7 @@ import { requirePolicyIntakeFinalizer, requirePolicyIntakeReviewer } from "@/lib
 import { loadPolicyIntakeDuplicateMatches } from "@/lib/policy-intake-duplicate";
 import { buildPolicyOcrOnboardingUpdate } from "@/lib/policy-ocr-onboarding-apply";
 import { policyDateDecision } from "@/lib/policy-date-rule";
+import { mapVerifiedN8nMotorPremium } from "@/lib/policy-n8n-onboarding-premium";
 import { checkSemiAutoReadiness, type SemiAutoIssue } from "@/lib/policy-intake-semi-auto";
 import { isN8nWorkbenchPrimary, previewSemiAutoN8nExtraction, applySemiAutoN8nExtraction, type SemiAutoN8nResult } from "@/lib/policy-intake-semi-auto-n8n";
 export type { SemiAutoN8nResult } from "@/lib/policy-intake-semi-auto-n8n";
@@ -207,9 +208,13 @@ function payloadFromDraft(d: PolicyIntakeDraft, id: string, revision: number, ma
       issuanceDate: d.issuanceDate, rmName: d.rmName, intermediaryType: d.intermediaryType,
       leadSource: d.leadSource, intermediaryCode: d.intermediaryCode, businessLine: "Motor",
       policyType: d.policyProduct, policyNumber: d.policyNo, insuranceCompanyId: d.insurerId,
-      idv: d.idv, validFrom: d.validFrom, validUpto: d.validUpto, remarks: d.remarks,
+      idv: d.idv, validFrom: d.validFrom, validUpto: d.validUpto,
+      odValidUpto:d.validUpto,tpValidUpto:d.tpValidUpto||"",cpaValidUpto:d.cpaValidUpto||d.tpValidUpto||"",
+      remarks: d.remarks,
     },
-    premium: { od: d.od, tp: cpm ? "0" : d.tp, addOnPremium: "0", cpa: cpm ? "0" : d.cpa, cpaOpted: !cpm && d.cpaOpted === "Yes" },
+    premium: { od: d.od, tp: cpm ? "0" : d.tp,
+      addOnPremium:d.addOnPremium||"0",cpa: cpm ? "0" : d.cpa,
+      cpaOpted: !cpm && d.cpaOpted === "Yes" },
     // In this first iteration no unapproved commission or payout rate is manufactured.
     payin: { basis: "NET", odPercent: "0", tpPercent: "0", scheme: "0", provided: false },
     billing: { billNumber: "", billedAmount: "0", billDate: "", status: "Unbilled" },
@@ -218,6 +223,110 @@ function payloadFromDraft(d: PolicyIntakeDraft, id: string, revision: number, ma
     resolution: matchedCustomerId ? { selectedCustomerId: matchedCustomerId } : {},
     sourceIntakeId: id, draftRevision: revision,
   };
+}
+
+/**
+ * Explicit one-step conversion for a verified n8n Intake. The browser sends
+ * only the Intake ID and a confirmation boolean. The server re-extracts the
+ * signed current PDF, compares it with the durable queue fingerprint, claims
+ * the canonical draft and runs the SAME policy/customer/vehicle transaction
+ * as standard onboarding. No browser-submitted OCR, customer ID or date.
+ */
+export async function convertVerifiedAiIntake(id:string,confirmed:boolean):Promise<SemiAutoActionResult>{
+  await requireDevelopmentPolicyOperator(id);
+  const fail=(field:string,message:string)=>({ok:false,ready:false,issues:[issue(field,message)]});
+  if(!aiQueueEnabled()||!isN8nWorkbenchPrimary())return fail("Automation","Verified n8n onboarding is disabled.");
+  if(confirmed!==true)return fail("Confirmation","Confirm this policy's registration before continuing.");
+  const admin=createSupabaseAdminClient();
+  const {data:queued,error:queueError}=await admin.from("policy_intake_ai_processing_queue")
+    .select("state,document_id,extraction_fingerprint,exception_codes")
+    .eq("intake_id",id)
+    .maybeSingle<{state:string;document_id:string;extraction_fingerprint:string|null;exception_codes:string[]}>();
+  if(queueError||!queued||queued.state!=="verified"||queued.exception_codes.length||!queued.extraction_fingerprint)
+    return fail("Extraction","This Intake is not currently verified for conversion. Check its latest n8n exceptions.");
+  const extracted=await previewSemiAutoN8nExtraction(id);
+  if(!extracted.ok)return fail("Extraction",extracted.error);
+  if(extracted.preview.documentId!==queued.document_id||
+     extracted.preview.fingerprint!==queued.extraction_fingerprint||
+     extracted.preview.checksPassed!==13||extracted.preview.warnings.length)
+    return fail("Source PDF","The PDF/extraction changed. Recheck the current Intake before booking.");
+
+  const issuanceDate=extracted.preview.fields.find(f=>f.key==="policy_issuance_date")?.value??"";
+  const decision=policyDateDecision(issuanceDate);
+  if(decision==="invalid"||decision==="future")
+    return fail("Policy issuance date","The original PDF does not contain a valid separately verified Policy Issued On date. Correct it through canonical onboarding; today's date is not substituted.");
+  if(decision==="otp_required")
+    return fail("Date approval","The verified original policy issue date requires the existing email OTP approval. This cannot be bypassed automatically.");
+
+  const forwarded=await prepareVerifiedN8nIntakeHandoff(id,queued.document_id,
+    queued.extraction_fingerprint,false,false);
+  if(!forwarded.ok)return fail("Canonical Intake handoff",forwarded.error);
+  if(forwarded.draft.issuanceDate!==issuanceDate)
+    return fail("Saved issuance date","The saved draft's issue date differs from the verified current PDF. Review it before booking; no existing manual value was overwritten.");
+  if(forwarded.draftRevision<1)return fail("Draft revision","Canonical revision is unavailable.");
+  const pdfField=(key:string)=>extracted.preview.fields.find(f=>f.key===key)?.value?.trim()??"";
+  const normalizedIdentity=(value:string)=>value.normalize("NFKC").trim().replace(/\s+/g," ").toUpperCase();
+  if(!pdfField("insured_name")||
+     normalizedIdentity(pdfField("insured_name"))!==normalizedIdentity(forwarded.draft.insuredName)){
+    return fail("Insured name","The saved insured name differs from the current verified PDF. Review the canonical draft rather than registering the wrong identity.");
+  }
+  const sameMoney=(a:string,b:string)=>Number.isFinite(Number(a||"0"))
+    && Number.isFinite(Number(b||"0")) && Math.round(Number(a||"0")*100)===Math.round(Number(b||"0")*100);
+  let verifiedMoney:ReturnType<typeof mapVerifiedN8nMotorPremium>;
+  try{verifiedMoney=mapVerifiedN8nMotorPremium(extracted.preview.premium);}
+  catch{return fail("Premium","The extracted premium breakdown does not reconcile.");}
+  if(!sameMoney(forwarded.draft.od,verifiedMoney.od)
+    ||!sameMoney(forwarded.draft.addOnPremium??"0",verifiedMoney.addOnPremium)
+    ||!sameMoney(forwarded.draft.tp,verifiedMoney.tp)
+    ||!sameMoney(forwarded.draft.cpa,verifiedMoney.cpa)
+    ||forwarded.draft.validFrom!==pdfField("policy_start_date")
+    ||forwarded.draft.validUpto!==pdfField("policy_end_date")
+    ||forwarded.draft.tpValidUpto!==pdfField("third_party_end_date")
+    ||forwarded.draft.policyNo.replace(/[^A-Z0-9]/gi,"").toUpperCase()
+      !==pdfField("policy_number").replace(/[^A-Z0-9]/gi,"").toUpperCase()){
+    return fail("PDF reconciliation","Saved validity, policy number or premium differs from the current n8n-verified PDF. Review it before booking.");
+  }
+
+  // Use the same verified insured name and phone as normal onboarding.
+  // One exact unique matching customer -> use it; no exact matching master
+  // -> create a separate customer, EVEN if other names share the phone.
+  // More than one exact match remains ambiguous and cannot be silently linked.
+  const insured=forwarded.draft.insuredName.trim();
+  const phone=forwarded.draft.phoneNo.replace(/\D/g,"").slice(-10);
+  if(!insured||!/^\d{10}$/.test(phone))
+    return fail("Customer identity","Insured name or mobile is missing from the verified Intake.");
+  const {data:masters,error:masterError}=await admin.from("customers")
+    .select("id,phone,contact_name,company_name").ilike("phone","%"+phone).limit(51)
+    .returns<Array<{id:string;phone:string;contact_name:string;company_name:string|null}>>();
+  if(masterError||!masters||masters.length===51)
+    return fail("Customer identity","Customer master matching is unavailable or too many candidates were returned.");
+  const norm=(v:string)=>v.normalize("NFKC").trim().replace(/\s+/g," ").toUpperCase();
+  const exactMatches=masters.filter(c=>c.phone.replace(/\D/g,"").slice(-10)===phone
+    && [c.company_name,c.contact_name].some(v=>norm(v??"")===norm(insured)));
+  if(exactMatches.length>1)
+    return fail("Customer identity","Multiple exact insured customer records exist. Select the correct customer in standard onboarding.");
+  const payload=payloadFromDraft(forwarded.draft,id,forwarded.draftRevision,
+    exactMatches[0]?.id??null);
+  payload.resolution=exactMatches.length===1
+    ?{selectedCustomerId:exactMatches[0].id}
+    :{createNewCustomer:true};
+
+  // The canonical engine independently validates active/overlapping policies,
+  // actual vehicle ownership, intermediary scope, date OTP, Intake revision
+  // and duplicate booking. Never set replacement/coverage approval shortcuts.
+  const booked=await onboardPolicy(payload);
+  if(booked.ok){
+    revalidatePath("/development/ai-policy-onboarding");
+    revalidatePath("/policy-intakes");
+    return{ok:true,ready:true,issues:[],policyId:booked.policyId,policyCode:booked.policyCode};
+  }
+  if(booked.kind==="customer_match")return fail("Customer identity",
+    "A verified exact-name customer match now exists or multiple candidates need selection. No duplicate customer was created.");
+  if(booked.kind==="ownership_conflict")return fail("Vehicle ownership",
+    "An existing vehicle belongs to a different customer. Use the audited Transfer Vehicle workflow.");
+  if(booked.kind==="business_conflict")return fail("Policy history",
+    "The canonical coverage or policy-history check requires review; no booking was performed.");
+  return fail("Canonical booking",booked.error);
 }
 
 export async function bookSemiAutoIntake(id: string, confirmed: boolean): Promise<SemiAutoActionResult> {

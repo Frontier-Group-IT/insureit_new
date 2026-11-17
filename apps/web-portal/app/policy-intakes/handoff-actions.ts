@@ -219,6 +219,9 @@ async function preparePolicyIntakeHandoffInternal(
   // the form's Basic OD field and then add add-ons again.
   const verifiedPremium=verified?mapVerifiedN8nMotorPremium(verified.premium):null;
   const addOnTotal=verifiedPremium?Number(verifiedPremium.addOnPremium):0;
+  // Strict current-PDF n8n extraction is the only authority for an automated
+  // issuance date; the OD/TP start date and the server clock are not evidence.
+  const verifiedIssuanceDate=verified?.fields.find(field=>field.key==="policy_issuance_date")?.value??"";
   const tpStart=verified?.fields.find(field=>field.key==="third_party_start_date")?.value??"";
   const tpExpiry=verified?.fields.find(field=>field.key==="third_party_end_date")?.value??"";
   const matchedCustomerId=verified
@@ -227,7 +230,7 @@ async function preparePolicyIntakeHandoffInternal(
   const intermediaryType=intake.lead_source_type==="posp"?"POSP":intake.lead_source_type==="misp"?"MISP":"SIBL / Partner";
   const draft:PolicyIntakeDraft={
     registrationMode:mapped.registrationMode,
-    issuanceDate:new Date().toISOString().slice(0,10),rmName:"",intermediaryType,leadSource:intake.lead_source_name,intermediaryCode:intake.lead_source_code??"",businessLine:"Motor",
+    issuanceDate:verified?verifiedIssuanceDate:new Date().toISOString().slice(0,10),rmName:"",intermediaryType,leadSource:intake.lead_source_name,intermediaryCode:intake.lead_source_code??"",businessLine:"Motor",
     registrationNo:mapped.next.registrationNo,insuredName:customerName,phoneNo:intake.customer_mobile,vehicleClass:mapped.next.vehicleClass,make:mapped.next.make,model:mapped.next.model,fuelType:mapped.next.fuelType,capacity:mapped.next.capacity,manufacturingYear:mapped.next.manufacturingYear,chassisNo:mapped.next.chassisNo,engineNo:mapped.next.engineNo,rtoState:mapped.next.rtoState,rtoName:mapped.next.rtoName,
     policyProduct:mapped.next.policyProduct,idv:mapped.next.idv,
     od:verifiedPremium?.od??mapped.next.od,
@@ -252,7 +255,7 @@ Third Party period: ${tpStart||"unavailable"} to ${tpExpiry||"unavailable"}. Ver
     const supplemented={...original};
     const fillable:(keyof PolicyIntakeDraft)[]=[
       "insuredName","vehicleClass","make","model","fuelType","capacity",
-      "rtoState","rtoName","policyProduct","manufacturingYear",
+      "rtoState","rtoName","policyProduct","manufacturingYear","issuanceDate",
     ];
     let changed=false;
     for(const key of fillable){

@@ -72,17 +72,20 @@ export default async function SemiAutoPolicyOnboardingPage({ searchParams }: { s
   const total = intakeCounts.all;
   const queueActive = primaryN8n && aiQueueEnabled();
   const queue = queueActive ? await loadAiQueueDisplay(workspaceRows.map(row=>row.id)) : new Map();
-  const queueCounts = { eligible:0, queued:0, extracting:0, exceptions:0, unprocessed:0, unsupported:0, failed:0 };
+  const queueCounts = { eligible:0, extracted:0, duplicates:duplicateCount, queued:0, extracting:0,
+    exceptions:0, unprocessed:0, unsupported:0, failed:0 };
   for (const row of workspaceRows) {
-    const item=queue.get(row.id);
     const duplicate = policyIntakeBucket(row,duplicateIds.has(row.id)) === "duplicate";
+    // Canonically known duplicates never contribute to the extraction backlog.
+    if(duplicate)continue;
+    const item=queue.get(row.id);
     if(!item) {queueCounts.unprocessed++;continue;}
     if(item.state==="pending")queueCounts.queued++;
     else if(item.state==="processing")queueCounts.extracting++;
     else if(item.state==="unsupported")queueCounts.unsupported++;
     else if(item.state==="failed")queueCounts.failed++;
-    else if(item.state==="verified" && !item.exception_codes.length && !duplicate)queueCounts.eligible++;
-    else queueCounts.exceptions++;
+    else if(item.state==="verified" && !item.exception_codes.length)queueCounts.extracted++;
+    else if(item.state!=="duplicate")queueCounts.exceptions++;
   }
   const requestedId = typeof params.intake_id === "string"
     && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(params.intake_id)
