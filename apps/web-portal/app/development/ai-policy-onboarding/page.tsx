@@ -9,6 +9,7 @@ import { loadPolicyIntakeDuplicateMatches } from "@/lib/policy-intake-duplicate"
 import { policyIntakeBucket } from "@/lib/policy-intake-status-buckets";
 import { isN8nWorkbenchPrimary, semiAutoN8nEnabledForIntake } from "@/lib/policy-intake-semi-auto-n8n";
 import type { PolicyIntakeOcrField } from "@/lib/policy-intake-ocr-service";
+import { aiQueueEnabled, loadAiQueueDisplay } from "@/lib/ai-policy-onboarding-queue-server";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -49,6 +50,18 @@ export default async function SemiAutoPolicyOnboardingPage({ searchParams }: { s
   const duplicateCount = duplicates?.ok ? candidates.filter(row =>
     policyIntakeBucket(row, duplicateIds.has(row.id)) === "duplicate").length : 0;
   const total = workspaceRows.length;
+  const queueActive = primaryN8n && aiQueueEnabled();
+  const queue = queueActive ? await loadAiQueueDisplay(workspaceRows.map(row=>row.id)) : new Map();
+  const queueCounts = { eligible:0, processing:0, exceptions:0, unprocessed:0, unsupported:0, failed:0 };
+  for(const row of workspaceRows){
+    const item=queue.get(row.id);
+    if(!item) {queueCounts.unprocessed++;continue;}
+    if(item.state==="processing"||item.state==="pending")queueCounts.processing++;
+    else if(item.state==="unsupported")queueCounts.unsupported++;
+    else if(item.state==="failed")queueCounts.failed++;
+    else if(item.state==="verified" && !item.exception_codes.length && !row.is_duplicate)queueCounts.eligible++;
+    else queueCounts.exceptions++;
+  }
   const requestedId = typeof params.intake_id === "string"
     && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(params.intake_id)
     ? params.intake_id : null;
@@ -69,6 +82,11 @@ export default async function SemiAutoPolicyOnboardingPage({ searchParams }: { s
       assigned_to_profile_id: row.assigned_to_profile_id,
       is_duplicate: policyIntakeBucket(row, duplicateIds.has(row.id)) === "duplicate",
       n8n_enabled: semiAutoN8nEnabledForIntake(row.id),
+      ai_state: queue.get(row.id)?.state ?? null,
+      ai_exceptions: row.is_duplicate
+        ? ["duplicate_policy",...(queue.get(row.id)?.exception_codes??[])]
+        : queue.get(row.id)?.exception_codes??[],
+      ai_processed_at: queue.get(row.id)?.processed_at ?? null,
     }));
   return (
     <AppShell title="AI Policy Onboarding">
@@ -79,7 +97,9 @@ export default async function SemiAutoPolicyOnboardingPage({ searchParams }: { s
             <h1 className="mt-1 text-[19px] font-bold tracking-tight text-[#122b4a]">{primaryN8n ? "AI Policy Onboarding · n8n primary" : "Semi-Automated Policy Onboarding"}</h1>
             <p className="mt-1 max-w-3xl text-[11px] leading-5 text-[#54667e]">
               {primaryN8n
-                ? "All open policy Intakes now use n8n as the extraction engine in this workbench, without Google OCR fallback. The first verified parser is ICICI Lombard Product 3005; other insurers and policy types require training or manual review. This page does not automatically apply, overwrite or book policies."
+                ? queueActive
+                  ? "The server-only queue processes current PDF revisions with n8n automatically. Open each exception to review its next action. Booking remains locked until canonical preflight and exception resolution are verified."
+                  : "n8n is the primary extraction engine for this workbench. The unattended processing queue is not enabled yet; selecting an Intake still runs the current read-only n8n preview. No policies are booked automatically."
                 : "Select an existing Policy Intake to run a read-only eligibility check. Correct individual errors in its saved onboarding draft. Verified policies can then be booked through the existing transactional workflow with your explicit confirmation."}
             </p>
           </div>
@@ -92,6 +112,7 @@ export default async function SemiAutoPolicyOnboardingPage({ searchParams }: { s
         ) : (
           <>
             <SemiAutoPolicyWorkspace rows={pageRows} profileId={profile.id} primaryN8n={primaryN8n}
+              queueActive={queueActive} queueCounts={queueCounts}
               initialIntakeId={requestedId && pageRows.some(row => row.id === requestedId) ? requestedId : null} />
             <div className="flex items-center justify-between gap-3 rounded-xl border border-[#e0e6ed] bg-white px-4 py-3 text-[11px] text-[#52657f]">
               <span>{total} open {primaryN8n ? "Policy" : "Motor"} Intake(s) · {duplicateCount} duplicate(s) visible for review only · page {safePage} of {Math.max(1, Math.ceil(total / PAGE_SIZE))}</span>
