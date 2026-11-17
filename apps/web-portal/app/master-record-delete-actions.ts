@@ -161,6 +161,50 @@ export async function deleteMasterRecord(entity: DeletableMasterEntity, id: stri
     deletedClaimIdentity = {claim_no:claim.claim_no,claim_created_by_name:creatorName};
   }
 
+  // Preserve ONLY the labels needed by Daily Report while the policy and
+  // its references still exist. A permanently deleted policy cannot be joined.
+  let deletedPolicyIdentity: {
+    policy_no: string | null; customer_name: string | null;
+    vehicle_no: string | null; insurance_company_name: string | null;
+  } | null = null;
+  if (entity === "policy") {
+    const { data: policy, error: policyError } = await admin.from("policies")
+      .select("policy_no,policy_code,customer_id,vehicle_id,insurance_company_id")
+      .eq("id",id).maybeSingle<{
+        policy_no:string|null;policy_code:string|null;customer_id:string|null;
+        vehicle_id:string|null;insurance_company_id:string|null;
+      }>();
+    if (policyError || !policy) return {ok:false,error:"Unable to verify the policy details before deletion."};
+
+    const [customer, vehicle, insurer] = await Promise.all([
+      policy.customer_id
+        ? admin.from("customers").select("company_name,contact_name,legal_trade_name")
+            .eq("id",policy.customer_id).maybeSingle<{
+              company_name:string|null;contact_name:string|null;legal_trade_name:string|null;
+            }>()
+        : Promise.resolve({data:null,error:null}),
+      policy.vehicle_id
+        ? admin.from("vehicles").select("vehicle_no").eq("id",policy.vehicle_id)
+            .maybeSingle<{vehicle_no:string|null}>()
+        : Promise.resolve({data:null,error:null}),
+      policy.insurance_company_id
+        ? admin.from("insurance_companies").select("name").eq("id",policy.insurance_company_id)
+            .maybeSingle<{name:string|null}>()
+        : Promise.resolve({data:null,error:null}),
+    ]);
+    // Fail closed on lookup errors: do not destroy the source before preserving
+    // the labels which were actually available.
+    if (customer.error || vehicle.error || insurer.error)
+      return {ok:false,error:"Unable to preserve the policy's customer, vehicle or insurer details. Nothing was deleted."};
+    deletedPolicyIdentity = {
+      policy_no:policy.policy_no?.trim() || policy.policy_code?.trim() || null,
+      customer_name:customer.data?.company_name?.trim() || customer.data?.contact_name?.trim()
+        || customer.data?.legal_trade_name?.trim() || null,
+      vehicle_no:vehicle.data?.vehicle_no?.trim() || null,
+      insurance_company_name:insurer.data?.name?.trim() || null,
+    };
+  }
+
   let linkedCustomerId: string | null = null;
   let linkedFinalPolicyId: string | null = null;
   let policyIntakeSourceFile: StorageFile | null = null;
@@ -381,7 +425,7 @@ export async function deleteMasterRecord(entity: DeletableMasterEntity, id: stri
         id,
         deletion_source: "it_super_user_master_data_control",
         ...(entity === "claim" ? { cascaded_claim_records: true, storage_files_cleanup_attempted: storageFiles.length, claim_no: deletedClaimIdentity?.claim_no ?? null, claim_created_by_name: deletedClaimIdentity?.claim_created_by_name ?? null } : {}),
-        ...(entity === "policy" ? { rejected_policy_intake_links_cleared: unlinkedRejectedPolicyIntakeIds.length } : {}),
+        ...(entity === "policy" ? { ...deletedPolicyIdentity, rejected_policy_intake_links_cleared: unlinkedRejectedPolicyIntakeIds.length } : {}),
         ...(entity === "policy_intake" ? {
           cascaded_policy_intake_records: true,
           storage_files_cleanup_attempted: storageFiles.length,
