@@ -8,6 +8,7 @@ import { filterVerifiedN8nOnboardingFields } from "../lib/policy-n8n-onboarding-
 import { enrichVerifiedN8nOnboardingFields, splitN8nRtoStateAndCity } from "../lib/policy-n8n-onboarding-enrichment.ts";
 import { selectVerifiedN8nInsuredDraftIdentity, sameInsuredIdentity } from "../lib/policy-n8n-onboarding-insured.ts";
 import { buildPolicyOcrOnboardingUpdate } from "../lib/policy-ocr-onboarding-apply.ts";
+import { assessAiPolicyIntake } from "../lib/ai-policy-onboarding-eligibility.ts";
 
 const text = path => readFileSync(new URL("../" + path, import.meta.url), "utf8");
 const draft = {
@@ -501,5 +502,59 @@ assert.throws(()=>mapVerifiedN8nMotorPremium({
   cpa:575,liability:3848,net:6114,exactIgst:1100.52,tax:1101,gross:7215,
 }),/n8n_motor_premium_handoff_unreconciled/,
   "A one-rupee component mismatch must block forwarding");
+
+// Future AI conversion queue must fail closed before canonical preflight.
+// Synthetic fields only. No customer names, phones, vehicle IDs or live policies.
+const aiRequiredKeys = [
+  "insured_name","policy_number","insurer_name","vehicle_class","vehicle_make",
+  "vehicle_model","vehicle_fuel_type","vehicle_manufacturing_year",
+  "vehicle_chassis_number","vehicle_engine_number","vehicle_rto_name",
+  "policy_product","policy_start_date","policy_end_date",
+  "third_party_end_date","idv","od_premium","tp_premium","vehicle_motor_power_kw",
+];
+const aiBase = {
+  policyType:"motor", intakeStatus:"in_review", isDuplicate:false,
+  hasCurrentDocument:true, documentStillCurrent:true,
+  parserId:"icici_3005_n8n_native_pdf", parserChecksPassed:13,
+  extractionState:"success", extractionWarnings:[],
+  fields:aiRequiredKeys.map(key=>({key,value:key==="vehicle_motor_power_kw"?"4.2":"SYNTHETIC"})),
+  premiumReconciled:true, matchedManufacturer:true,
+  customerMatch:"unique_exact", sharedPhoneHasDistinctNames:false,
+  existingCustomerSameIdentity:true, reviewerAssignedToAnother:false,
+  vehicleOwnerConflict:false, coverageConflict:false,
+  savedDraftConflictsWithPdf:false, issuanceDateVerified:true,
+  needsDateApproval:false, bundledPeriodsVerified:true,
+  canonicalPreflightPassed:true,
+};
+const assessAi=overrides=>assessAiPolicyIntake({...aiBase,...overrides});
+assert.deepEqual(assessAi().state,"eligible",
+  "Only full validated extraction with explicit canonical preflight can be eligible");
+assert.equal(assessAi({canonicalPreflightPassed:false}).state,"preflight_pending",
+  "n8n success alone is not permission to book a policy");
+const blockedBy=(code,overrides)=>assert(assessAi(overrides).exceptions.some(e=>e.code===code&&e.blocking),
+  code+" must block one-click and bulk booking");
+blockedBy("customer_identity",{sharedPhoneHasDistinctNames:true});
+blockedBy("customer_ambiguous",{customerMatch:"multiple"});
+blockedBy("customer_identity",{customerMatch:"name_conflict"});
+assert.equal(assessAi({sharedPhoneHasDistinctNames:false}).state,"eligible",
+  "One mobile on several same-person policies is not automatically a conflict");
+blockedBy("duplicate_policy",{isDuplicate:true});
+blockedBy("unverified_parser",{parserChecksPassed:12});
+blockedBy("unsupported_layout",{policyType:"health"});
+blockedBy("stale_document",{documentStillCurrent:false});
+blockedBy("date_approval",{needsDateApproval:true});
+blockedBy("issuance_date_unverified",{issuanceDateVerified:false});
+blockedBy("bundled_validity",{bundledPeriodsVerified:false});
+blockedBy("financial_reconciliation",{premiumReconciled:false});
+blockedBy("manufacturer_unmatched",{matchedManufacturer:false});
+blockedBy("vehicle_ownership",{vehicleOwnerConflict:true});
+blockedBy("coverage_conflict",{coverageConflict:true});
+blockedBy("draft_conflict",{savedDraftConflictsWithPdf:true});
+blockedBy("missing_field",{fields:aiBase.fields.filter(f=>f.key!=="vehicle_motor_power_kw")});
+blockedBy("extraction_failed",{extractionState:"failed"});
+blockedBy("reviewer_conflict",{reviewerAssignedToAnother:true});
+blockedBy("reviewer_conflict",{intakeStatus:"processing"});
+assert.deepEqual(assessAi({policyType:"life"}).state,"unsupported",
+  "Unsupported policy categories never enter the one-click bulk queue");
 
 console.log("Semi-auto Motor onboarding regression checks passed.");
