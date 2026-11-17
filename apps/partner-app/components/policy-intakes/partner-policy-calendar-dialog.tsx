@@ -8,11 +8,12 @@ const TEAL = '#80CBC4';
 const dayOnly = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate());
 const sameDate = (a: Date, b: Date) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 
-export function PartnerPolicyCalendarDialog({ visible, value, onCancel, onConfirm }: {
+export function PartnerPolicyCalendarDialog({ visible, value, onCancel, onConfirm, maximumDate }: {
   visible: boolean;
   value: Date;
   onCancel: () => void;
   onConfirm: (date: Date) => void;
+  maximumDate?: Date;
 }) {
   const [draft, setDraft] = useState(() => dayOnly(value));
   const [month, setMonth] = useState(() => new Date(value.getFullYear(), value.getMonth(), 1));
@@ -45,6 +46,7 @@ export function PartnerPolicyCalendarDialog({ visible, value, onCancel, onConfir
         </View>
         {yearMode ? <ScrollView style={styles.years} contentContainerStyle={styles.yearGrid}>
           {yearChoices.map(year => <Pressable key={year} style={[styles.yearCell, year === draft.getFullYear() && styles.selectedYear]}
+            disabled={Boolean(maximumDate && year > maximumDate.getFullYear())}
             onPress={() => {
               const selected = new Date(year, draft.getMonth(), Math.min(draft.getDate(), new Date(year, draft.getMonth() + 1, 0).getDate()));
               setDraft(selected);
@@ -63,18 +65,17 @@ export function PartnerPolicyCalendarDialog({ visible, value, onCancel, onConfir
           <View style={styles.days}>{cells.map((day, index) => {
             const candidate = day ? new Date(month.getFullYear(), month.getMonth(), day) : null;
             const selected = candidate ? sameDate(candidate, draft) : false;
+            const disabled = Boolean(candidate && maximumDate && dayOnly(candidate).getTime() > dayOnly(maximumDate).getTime());
             return <View key={index} style={styles.dayCell}>{candidate ? <Pressable
               accessibilityRole="button" accessibilityLabel={candidate.toDateString()} accessibilityState={{ selected }}
-              onPress={() => setDraft(candidate)}
-              style={[styles.dayButton, selected && styles.selectedDay]}>
+              disabled={disabled}
+              onPress={() => onConfirm(candidate)}
+              style={[styles.dayButton, selected && styles.selectedDay, disabled && styles.disabledDay]}>
               <Text style={[styles.dayText, selected && styles.selectedDayText]}>{day}</Text>
             </Pressable> : null}</View>;
           })}</View>
         </>}
-        <View style={styles.actions}>
-          <Pressable accessibilityRole="button" onPress={onCancel} hitSlop={8}><Text style={styles.actionText}>CANCEL</Text></Pressable>
-          <Pressable accessibilityRole="button" onPress={() => onConfirm(draft)} hitSlop={8}><Text style={styles.actionText}>OK</Text></Pressable>
-        </View>
+
       </View>
     </View>
   </Modal>;
@@ -91,7 +92,7 @@ const styles = StyleSheet.create({
   weekday: { width: '14.2857%', textAlign: 'center', fontSize: 12, color: '#BDBDBD' },
   days: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 14, minHeight: 264 },
   dayCell: { width: '14.2857%', height: 44, alignItems: 'center', justifyContent: 'center' },
-  dayButton: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
+  dayButton: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },disabledDay:{opacity:0.25},
   selectedDay: { backgroundColor: TEAL },
   dayText: { fontSize: 13, color: '#FFFFFF' },
   selectedDayText: { color: '#173C3B', fontWeight: '700' },
@@ -101,6 +102,5 @@ const styles = StyleSheet.create({
   selectedYear: { backgroundColor: TEAL },
   yearText: { color: '#FFFFFF', fontSize: 13 },
   selectedText: { color: '#173C3B', fontWeight: '700' },
-  actions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 40, paddingHorizontal: 30, paddingTop: 18, paddingBottom: 22 },
-  actionText: { fontSize: 14, color: TEAL, fontWeight: '600' },
+
 });
