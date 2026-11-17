@@ -702,6 +702,8 @@ assert(workerText.includes('sync_verified_ai_intake_ocr_v1')
   && workerText.includes('loadPolicyIntakeDuplicateMatches(admin,[{')
   && workerText.includes('isDuplicate, // Derived from the canonical'),
   "Strict n8n PDF fields must feed the canonical duplicate status and OCR only through the guarded RPC");
+assert.equal(queueV2Sql.split("\n").filter(line=>line.trim()==="as $$").length,2, "Both private queue SQL functions need correctly paired PL/pgSQL dollar-quote openings");
+assert.equal(queueV2Sql.split("\n").filter(line=>line.trim()==="$$;").length,2, "Both private queue SQL functions need correctly paired PL/pgSQL dollar-quote closings");
 assert(queueV2Sql.includes("create or replace function public.claim_policy_intake_ai_queue_v2")
   && queueV2Sql.includes("p_preferred_intake_id uuid default null")
   && queueV2Sql.includes("p_max > 8")
