@@ -24,8 +24,8 @@ export default function PolicyDetailScreen() {
   const [error, setError] = useState('');
   const [intermediaryName, setIntermediaryName] = useState<string | null>(null);
   const [showOverviewDetails, setShowOverviewDetails] = useState(false);
-  const [showPremiumDetails, setShowPremiumDetails] = useState(false);
-  const [showCommercialDetails, setShowCommercialDetails] = useState(false);
+  const [showPremiumDetails, setShowPremiumDetails] = useState(true);
+  const [showCommercialDetails, setShowCommercialDetails] = useState(true);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -297,13 +297,13 @@ const styles = StyleSheet.create({
   periodLabel: { color: '#718096', fontSize: 9, lineHeight: 11 },
   periodValue: { color: '#53677F', fontSize: 10, lineHeight: 14, fontWeight: '700', textAlign: 'right' },
   externalSection: { gap: 5 },
-  externalSectionHeading: { paddingHorizontal: 2 },
+  externalSectionHeading: { paddingLeft: 0, paddingRight: 2 },
   card: { overflow: 'hidden', borderRadius: 13, borderWidth: StyleSheet.hairlineWidth, borderColor: '#E2E8F1', backgroundColor: '#FFFFFF' },
   cardHeader: { minHeight: 37, paddingHorizontal: 11, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   cardHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 7 }, cardTitle: { color: '#102A51', fontSize: 12.5, lineHeight: 16, fontWeight: '800' },
   cardHeaderAction: { flexDirection: 'row', alignItems: 'center', gap: 1, minHeight: 32, paddingLeft: 8 }, cardHeaderActionText: { color: '#0969CF', fontSize: 9, lineHeight: 12, fontWeight: '700' },
   quickSection: { marginHorizontal: 12, paddingVertical: 8 },
-  quickSectionHeading: { marginHorizontal: 3, marginBottom: 8, color: '#17365D', fontSize: 12, lineHeight: 16, fontWeight: '800' },
+  quickSectionHeading: { marginLeft: 0, marginRight: 3, marginBottom: 8, color: '#17365D', fontSize: 12, lineHeight: 16, fontWeight: '800' },
   quickGrid: { flexDirection: 'row', alignItems: 'stretch', gap: 7 },
   quickAction: {
     flex: 1, minWidth: 0, minHeight: 74, alignItems: 'center', justifyContent: 'center',
