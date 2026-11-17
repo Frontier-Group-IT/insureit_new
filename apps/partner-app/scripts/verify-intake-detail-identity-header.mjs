@@ -19,7 +19,7 @@ assert.doesNotMatch(header, /vehicle_registration_number/, 'Remove old vehicle r
 assert.match(header, /numberOfLines=\{2\}/, 'Long policy numbers and names should be readable');
 assert.match(header, /statusBadgeStyle\(row\)/, 'Preserve status badge');
 assert.match(header, /formatDate\(row.updated_at\)/, 'Preserve update timestamp');
-assert.match(header, /row\.status !== 'duplicate' && row\.status !== 'completed' \? <IntakeProgress row=\{row\}/, 'Completed and duplicate pages do not show progress');
+assert.doesNotMatch(detail, /<IntakeProgress|function IntakeProgress|progressWrap:/, 'Policy Intake detail does not show the four-step tracker');
 assert.match(listing, /field\(row, 'insured_name'\) \|\| field\(row, 'customer_name'\) \|\| field\(row, 'name_of_insured'\)/, 'Detail follows list identity hierarchy');
 assert.match(api, /resolveIntakeSubmitterNames\(admin, \[intake\]\)/, 'Detail API resolves submitter only after authorized scoped lookup');
 assert.match(api, /intake: match \? \{ \.\.\.namedIntake, status: "duplicate" \} : namedIntake/, 'Submitter name is returned for duplicate and ordinary statuses');
@@ -29,5 +29,5 @@ assert.match(detail, /'Upload a replacement policy copy'/, 'Attention panel disp
 assert.match(detail, /'Operations rejection note'/, 'Rejected submissions retain the rejection note title');
 assert.match(detail, /Upload replacement \$\{proposalForm \? 'proposal form' : 'policy copy'\}/, 'Replacement upload action is unchanged');
 assert.doesNotMatch(detail, /The uploaded policy copy is being read automatically\./, 'Do not display redundant automatic reading message');
-assert.match(header, /row\.status === 'processing' && row\.ocr_status !== 'failed'/, 'Hide routine processing caption while retaining failure guidance');
+assert.doesNotMatch(detail, /statusHelp\(row\)|function statusHelp|Automatic extraction was unavailable\. Operations can continue from the saved policy copy\./, 'Remove automatic extraction caption entirely');
 console.log('Partner Policy Intake detail identity header parity passed.');
