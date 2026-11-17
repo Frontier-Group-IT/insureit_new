@@ -34,7 +34,7 @@ assert.match(loader, /row\.href=dailyActivityRecordHref\(table,row\.recordId\)/,
 for(const table of ["policies","policy_intake_requests","life_health_cases"]) {
   assert.ok(loader.includes(`table:"${table}",recordId:a.id`),`Keep immutable record ID for ${table} history`);
 }
-assert.ok(panel.includes("<DailyActivityHistoryRows rows={data.rows} isCustomerActivity={isCustomerActivity} isClaimActivity={isClaimActivity} vehicleMode={vehicleMode} isOtherActivity={isOtherActivity} showPerformedBy={reportMode==="all"} />"), "Shared activity renderer preserves Customer, Claims and Vehicle modes while conditionally showing the performer");
+assert.ok(panel.includes(`<DailyActivityHistoryRows rows={data.rows} isCustomerActivity={isCustomerActivity} isClaimActivity={isClaimActivity} vehicleMode={vehicleMode} isOtherActivity={isOtherActivity} showPerformedBy={reportMode==="all"} />`), "Shared activity renderer preserves Customer, Claims and Vehicle modes while conditionally showing the performer");
 assert.ok(rows.includes('role={canOpen(row)?"button":undefined}'), "Verified destinations and deleted claims are clickable");
 assert.ok(rows.includes('tabIndex={canOpen(row)?0:undefined}'), "Deleted claims remain keyboard accessible");
 assert.match(rows,/event\.key==="Enter"\|\|event\.key===" "/,"Enter and Space navigate");
