@@ -190,7 +190,7 @@ export default function AddPartnerScreen() {
       setUploadingType(type);
       const session = (await supabase.auth.getSession()).data.session;
       if (!session?.access_token) throw new Error('Sign in again to upload documents.');
-      const base = (process.env.EXPO_PUBLIC_PORTAL_URL || 'https://portal.insureit.in').replace(/\\/$/, '');
+      const base = (process.env.EXPO_PUBLIC_PORTAL_URL || 'https://portal.insureit.in').replace(/\/$/, '');
       const body = new FormData();
       body.append('application_id', applicationId);
       body.append('document_type', type);
