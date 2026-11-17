@@ -37,12 +37,39 @@ ALLOWED_MANAGED = frozenset({
     # under unapproved elevated managed service credentials.
     ("TABLE DATA", "auth"),
 })
-TOC_KINDS = sorted(APP_OBJECTS | {
+# PostgreSQL 17 pg_dump always emits the first three session-setup entries
+# (ENCODING, STDSTRINGS, SEARCHPATH). These are neither application schema
+# nor customer rows. Recognize and DEFER them rather than rejecting the whole
+# verified custom archive. Other documented PG17 descriptors below are also
+# recognized but NEVER selected into this restricted target import.
+# All unrecognized descriptors still fail closed.
+PG17_DEFERRED_KINDS = frozenset({
+    "ENCODING", "STDSTRINGS", "SEARCHPATH",
+    "PROCEDURAL LANGUAGE", "FOREIGN DATA WRAPPER", "CONVERSION",
+    "PUBLICATION TABLES IN SCHEMA", "SUBSCRIPTION TABLE",
+    "BLOB DATA", "SHELL TYPE", "ACCESS METHOD", "TABLE ACCESS METHOD",
+    "STATISTICS DATA", "EXTENDED STATISTICS DATA",
+})
+
+
+class SafeTocSelectionError(ValueError):
+    """Only fixed error classes are safe to send to GitHub Actions logs."""
+
+    def __init__(self, reason):
+        if reason not in ("UNRECOGNIZED_TOC_RECORD",
+                          "UNKNOWN_ARCHIVE_NAMESPACE",
+                          "INVALID_TOC_IDENTIFIER"):
+            raise AssertionError("Unexpected private TOC failure category")
+        super().__init__("Private archive TOC denied")
+        self.reason = reason
+
+
+TOC_KINDS = sorted((APP_OBJECTS | PG17_DEFERRED_KINDS | {
     "ACL", "DEFAULT ACL", "COMMENT", "SECURITY LABEL", "EXTENSION",
     "SCHEMA", "EVENT TRIGGER", "PUBLICATION", "PUBLICATION TABLE",
     "SUBSCRIPTION", "BLOB", "BLOBS", "BLOB COMMENTS",
     "TABLESPACE", "DATABASE", "DATABASE PROPERTIES",
-}, key=len, reverse=True)
+}), key=len, reverse=True)
 RECORD = re.compile(
     r"^\s*(\d+);\s+\d+\s+\d+\s+("
     + "|".join(re.escape(x) for x in TOC_KINDS)
@@ -60,14 +87,14 @@ def parse_entry(line):
     if not m:
         # Failing on previously unrecognized archive types prevents silently
         # omitting application SQL or replaying an unreviewed global object.
-        raise ValueError("Unrecognized R2 archive TOC entry")
+        raise SafeTocSelectionError("UNRECOGNIZED_TOC_RECORD")
     number, kind, namespace, rest = m.groups()
     if namespace not in APP_SCHEMAS | MANAGED_SCHEMAS | {
         "-", "extensions", "graphql", "graphql_public", "pgbouncer",
     }:
-        raise ValueError("Unknown archive schema: review required")
+        raise SafeTocSelectionError("UNKNOWN_ARCHIVE_NAMESPACE")
     if not number.isascii() or not number.isdigit():
-        raise ValueError("Invalid archive TOC item")
+        raise SafeTocSelectionError("INVALID_TOC_IDENTIFIER")
     return kind, namespace, rest
 
 
@@ -176,7 +203,12 @@ if __name__ == "__main__":
         if len(sys.argv) != 3:
             raise ValueError("Usage: prepare_managed_sql_restore_list.py PRIVATE_TOC PRIVATE_LIST")
         build_list(sys.argv[1], sys.argv[2])
+    except SafeTocSelectionError as exc:
+        print("TARGET MANAGED SQL SELECTION FAILED:"
+              f" failure_code={exc.reason}; private TOC names withheld",
+              file=sys.stderr)
+        raise SystemExit(1) from None
     except Exception as exc:
         print(f"TARGET MANAGED SQL SELECTION FAILED: category={type(exc).__name__};"
               " private TOC names withheld", file=sys.stderr)
-        raise SystemExit(1)
+        raise SystemExit(1) from None
