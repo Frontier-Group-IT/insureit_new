@@ -6,6 +6,8 @@ import { buildPolicyOcrOnboardingUpdate } from "@/lib/policy-ocr-onboarding-appl
 import { selectPolicyIntakeCustomerMatch, type PolicyIntakeCustomerIdentityCandidate } from "@/lib/policy-intake-customer-match";
 import { requirePolicyIntakeFinalizer, requirePolicyIntakeReviewer } from "@/lib/policy-intake-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { requireCapability } from "@/lib/master-data-server";
+import { requirePolicyCreator } from "@/lib/policy-access-server";
 import { isN8nWorkbenchPrimary, previewSemiAutoN8nExtraction } from "@/lib/policy-intake-semi-auto-n8n";
 import type { N8nVerifiedPremiumBreakdown } from "@/lib/policy-intake-n8n-validation";
 import { mapVerifiedN8nMotorPremium } from "@/lib/policy-n8n-onboarding-premium";
@@ -76,7 +78,12 @@ export async function prepareVerifiedN8nIntakeHandoff(
       || !/^[a-f0-9]{64}$/i.test(expectedFingerprint)) {
     return {ok:false,error:"n8n handoff is not enabled or the reviewed PDF reference is invalid."};
   }
-  // Reject unauthorized calls before re-extracting a private customer PDF.
+  // Every exported server action enforces scope itself; do not rely on the
+  // Development caller to authorize this sensitive private-PDF handoff.
+  const operator=await requireCapability("manage_system","approve");
+  if(operator.role!=="it_super_user"&&operator.role!=="super_admin")
+    return{ok:false,error:"Development policy handoff requires authorized IT/Admin access."};
+  await requirePolicyCreator();
   await requirePolicyIntakeFinalizer(id);
   await requirePolicyIntakeReviewer(id);
   const parsed=await previewSemiAutoN8nExtraction(id);
