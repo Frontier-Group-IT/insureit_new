@@ -113,6 +113,40 @@ export default function PolicyDetailScreen() {
             </View>
           </View>
 
+          <View style={styles.externalSection}>
+            <View style={styles.externalSectionHeading}><CardHeader title="Customer & Vehicle Details" /></View>
+            <Card>
+              <Pressable
+                accessibilityRole={data.customer.id ? "button" : undefined}
+                disabled={!data.customer.id}
+                accessibilityLabel={data.vehicle ? `Open customer details: ${data.customer.name}, ${data.vehicle.vehicle_no || "vehicle"}` : `Open customer details: ${data.customer.name}`}
+                onPress={data.customer.id ? () => router.push(`/customer/${data.customer.id}` as never) : undefined}
+                style={({ pressed }) => [styles.customerVehicleRow, pressed && data.customer.id ? styles.pressed : null]}
+              >
+                <View style={styles.entityIcon}>
+                  <Image
+                    source={data.vehicle ? (manufacturerLogo || PartnerAssets.products.motorInsurance) : PartnerAssets.products.commercialInsurance}
+                    style={styles.entityArtwork}
+                    resizeMode="contain"
+                  />
+                </View>
+                <View style={styles.entityBody}>
+                  <View style={styles.customerVehicleTitleRow}>
+                    <Text numberOfLines={1} style={styles.entityTitle}>{data.customer.name || "Customer"}</Text>
+                    {data.vehicle?.vehicle_no ? (
+                      <Text numberOfLines={1} style={styles.customerVehicleRegistration}>|  {data.vehicle.vehicle_no}</Text>
+                    ) : null}
+                  </View>
+                  <Text numberOfLines={1} style={styles.entityMeta}>
+                    {data.vehicle
+                      ? displayParts(data.vehicle.make, data.vehicle.model, data.vehicle.year) || humanize(data.vehicle.vehicle_type || "vehicle")
+                      : data.policy.policy_product || data.policy.policy_type || data.policy.business_line || "Non-motor insured risk"}
+                  </Text>
+                </View>
+              </Pressable>
+            </Card>
+          </View>
+
           <Card>
             <CardHeader iconKind="policy-overview" title="Policy Overview" actionLabel="View All" onAction={() => setShowOverviewDetails((value) => !value)} />
             <View style={styles.overviewGrid}>
@@ -162,40 +196,6 @@ export default function PolicyDetailScreen() {
               </View>
             ) : null}
           </Card>
-
-          <View style={styles.externalSection}>
-            <View style={styles.externalSectionHeading}><CardHeader title="Customer & Vehicle Details" /></View>
-            <Card>
-              <Pressable
-                accessibilityRole={data.customer.id ? "button" : undefined}
-                disabled={!data.customer.id}
-                accessibilityLabel={data.vehicle ? `Open customer details: ${data.customer.name}, ${data.vehicle.vehicle_no || "vehicle"}` : `Open customer details: ${data.customer.name}`}
-                onPress={data.customer.id ? () => router.push(`/customer/${data.customer.id}` as never) : undefined}
-                style={({ pressed }) => [styles.customerVehicleRow, pressed && data.customer.id ? styles.pressed : null]}
-              >
-                <View style={styles.entityIcon}>
-                  <Image
-                    source={data.vehicle ? (manufacturerLogo || PartnerAssets.products.motorInsurance) : PartnerAssets.products.commercialInsurance}
-                    style={styles.entityArtwork}
-                    resizeMode="contain"
-                  />
-                </View>
-                <View style={styles.entityBody}>
-                  <View style={styles.customerVehicleTitleRow}>
-                    <Text numberOfLines={1} style={styles.entityTitle}>{data.customer.name || "Customer"}</Text>
-                    {data.vehicle?.vehicle_no ? (
-                      <Text numberOfLines={1} style={styles.customerVehicleRegistration}>|  {data.vehicle.vehicle_no}</Text>
-                    ) : null}
-                  </View>
-                  <Text numberOfLines={1} style={styles.entityMeta}>
-                    {data.vehicle
-                      ? displayParts(data.vehicle.make, data.vehicle.model, data.vehicle.year) || humanize(data.vehicle.vehicle_type || "vehicle")
-                      : data.policy.policy_product || data.policy.policy_type || data.policy.business_line || "Non-motor insured risk"}
-                  </Text>
-                </View>
-              </Pressable>
-            </Card>
-          </View>
 
         </View>
       )}

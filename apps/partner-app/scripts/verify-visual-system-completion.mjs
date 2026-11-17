@@ -48,9 +48,13 @@ requireText(policyDetail, 'data.vehicle.vehicle_no', 'Registration comes from th
 requireText(policyDetail, 'displayParts(data.vehicle.make, data.vehicle.model, data.vehicle.year)', 'Vehicle make, model and year share a second line');
 requireText(policyDetail, 'router.push(`/customer/${data.customer.id}` as never)', 'Customer detail navigation survives the combined row');
 requireText(policyDetail, 'PartnerAssets.products.commercialInsurance', 'Policies without vehicles retain a risk icon fallback');
-const overviewStart = policyDetail.indexOf('<CardHeader iconKind="policy-overview" title="Policy Overview"');
+const quickActionsStart = policyDetail.indexOf('<Text style={styles.quickSectionHeading}>Quick Actions</Text>');
 const customerStart = policyDetail.indexOf('<CardHeader title="Customer & Vehicle Details"');
-const unified = policyDetail.slice(overviewStart, customerStart);
+const overviewStart = policyDetail.indexOf('<CardHeader iconKind="policy-overview" title="Policy Overview"');
+if (!(quickActionsStart >= 0 && customerStart > quickActionsStart && overviewStart > customerStart)) {
+  throw new Error('Expected Quick Actions → Customer & Vehicle Details → Policy Overview');
+}
+const unified = policyDetail.slice(overviewStart, policyDetail.indexOf('</Card>', overviewStart) + '</Card>'.length);
 requireText(unified, 'styles.overviewGrid', 'Existing overview fields remain visible');
 requireText(unified, 'styles.premiumDisclosure', 'Premium remains inside the combined overview');
 requireText(unified, 'styles.commercialRow', 'Commercial remains inside the combined overview');
