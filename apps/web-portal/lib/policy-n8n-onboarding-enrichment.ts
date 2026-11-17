@@ -37,7 +37,6 @@ export function splitN8nRtoStateAndCity(raw: string) {
  */
 export function enrichVerifiedN8nOnboardingFields<T extends N8nPrefillField>(
   rawFields: readonly T[],
-  manufacturerOptions: readonly string[],
 ): N8nPrefillField[] {
   const fields: N8nPrefillField[] = filterVerifiedN8nOnboardingFields(rawFields).map(field => ({
     key: field.key, label: field.label, value: field.value,
