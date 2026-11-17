@@ -83,7 +83,7 @@ class PlanTests(unittest.TestCase):
         with self.assertRaises(SafeTocSelectionError) as failure:
             chosen_entries(fixture() +
                 "5001; 0 0 PRIVATE_NOTE public sensitive_customer_name postgres\n")
-        self.assertEqual(failure.exception.reason, "UNRECOGNIZED_TOC_RECORD")
+        self.assertEqual(failure.exception.reason, "UNKNOWN_TOC_DESCRIPTOR")
         self.assertNotIn("sensitive_customer_name", str(failure.exception))
 
     def test_unknown_archive_schema_still_fails_with_static_category(self):
