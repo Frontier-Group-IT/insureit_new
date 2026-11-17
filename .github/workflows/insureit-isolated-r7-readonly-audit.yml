@@ -1,0 +1,90 @@
+name: INSUREIT R7 source-to-isolated catalog audit (manual read-only)
+
+on:
+  workflow_dispatch:
+    inputs:
+      expected_sql_snapshot:
+        description: 'Reviewed R4 SQL snapshot (historical; not latest-pointer proof)'
+        required: true
+        type: string
+      expected_storage_snapshot:
+        description: 'Reviewed R6 Storage snapshot (historical; not latest-pointer proof)'
+        required: true
+        type: string
+      confirm_target_ref:
+        description: 'Type klnodxnmlqbofolxxrsr exactly'
+        required: true
+        type: string
+      confirm_isolated_target:
+        description: 'Confirm target is isolated and no live applications or outbound providers are connected'
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: insureit-r7-readonly-catalog
+  cancel-in-progress: false
+
+jobs:
+  source_metadata:
+    if: >-
+      github.repository == 'Frontier-Group-IT/insureit_new' &&
+      github.event_name == 'workflow_dispatch' &&
+      github.ref == 'refs/heads/main' &&
+      inputs.confirm_isolated_target &&
+      inputs.confirm_target_ref == 'klnodxnmlqbofolxxrsr' &&
+      inputs.expected_sql_snapshot == '20261117T041507Z' &&
+      inputs.expected_storage_snapshot == '20261116T225734Z'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    environment: insureit-production-backup
+    outputs:
+      summary: ${{ steps.source.outputs.summary }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install pinned SQL client only
+        run: python -m pip install 'psycopg[binary]==3.2.9'
+      - id: source
+        name: Read aggregate source catalog in scoped READ ONLY transaction
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          R7_EXPECTED_SQL_SNAPSHOT: ${{ inputs.expected_sql_snapshot }}
+          R7_EXPECTED_STORAGE_SNAPSHOT: ${{ inputs.expected_storage_snapshot }}
+        run: python scripts/backup/audit_r7_readonly.py --source
+
+  isolated_metadata:
+    needs: source_metadata
+    if: >-
+      github.repository == 'Frontier-Group-IT/insureit_new' &&
+      github.event_name == 'workflow_dispatch' &&
+      github.ref == 'refs/heads/main' &&
+      inputs.confirm_isolated_target &&
+      inputs.confirm_target_ref == 'klnodxnmlqbofolxxrsr'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    environment: insureit-recovery-isolated
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install pinned SQL client only
+        run: python -m pip install 'psycopg[binary]==3.2.9'
+      - name: Read isolated target with verified TLS and compare safe metadata
+        env:
+          INSUREIT_RECOVERY_DATABASE_URL: ${{ secrets.INSUREIT_RECOVERY_DATABASE_URL }}
+          RECOVERY_DB_SSL_ROOT_CERT_PEM: ${{ secrets.RECOVERY_DB_SSL_ROOT_CERT_PEM }}
+          R7_SOURCE_SUMMARY: ${{ needs.source_metadata.outputs.summary }}
+          R7_EXPECTED_SQL_SNAPSHOT: ${{ inputs.expected_sql_snapshot }}
+          R7_EXPECTED_STORAGE_SNAPSHOT: ${{ inputs.expected_storage_snapshot }}
+        run: python scripts/backup/audit_r7_readonly.py --target
