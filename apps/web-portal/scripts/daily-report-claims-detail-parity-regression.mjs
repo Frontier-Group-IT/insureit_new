@@ -5,6 +5,14 @@ const source=read("../lib/reports/daily-self-activity.ts");
 const panel=read("../components/reports/daily-self-activity-panel.tsx");
 const rows=read("../components/reports/daily-activity-history-rows.tsx");
 const deletion=read("../app/master-record-delete-actions.ts");
+assert.match(rows,/const canOpen=\(row:SelfActivity\)=>row\.status==="Deleted"\|\|Boolean\(row\.href\)/,"Deleted history rows are clickable even when permanent deletion removed their href");
+assert.match(rows,/if\(row\.status==="Deleted"\)/,"Deleted rows are handled before ordinary navigation");
+assert.match(rows,/else setDeletedRecord\(row\)/,"Deleted customers and other non-claim records open a custom popup");
+assert.match(rows,/role="dialog" aria-modal="true" aria-labelledby="daily-deleted-record-title"/,"Deleted-record popup uses accessible custom dialog");
+assert.match(rows,/>Record not exist<\/h3>/,"Missing-record dialog shows requested title");
+assert.match(rows,/>OK<\/button>/,"Missing-record dialog includes OK button");
+assert.match(rows,/if\(isClaimActivity\)setDeletedClaim\(row\)/,"Existing deleted-claim historical details remain available");
+
 assert.match(deletion,/if \(entity === "policy"\) \{[\s\S]*?\.from\("policies"\)[\s\S]*?\.select\("policy_no,policy_code,customer_id,vehicle_id,insurance_company_id"\)/,
   "Fetch source policy identity before permanent deletion");
 assert.match(deletion,/\.from\("customers"\)\.select\("company_name,contact_name,legal_trade_name"\)/,
