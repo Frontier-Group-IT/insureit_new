@@ -15,6 +15,7 @@ export type { SemiAutoN8nResult } from "@/lib/policy-intake-semi-auto-n8n";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import type { PolicyIntakeOcrField } from "@/lib/policy-intake-ocr-service";
 import { revalidatePath } from "next/cache";
+import { aiQueueEnabled } from "@/lib/ai-policy-onboarding-queue-server";
 import { redirect } from "next/navigation";
 
 type Intake = {
@@ -315,6 +316,40 @@ export async function continueVerifiedN8nIntakeToOnboarding(
 export async function previewSemiAutoN8nIntake(id: string): Promise<SemiAutoN8nResult> {
   await requireDevelopmentPolicyOperator(id);
   return previewSemiAutoN8nExtraction(id);
+}
+
+/**
+ * Explicit authorized reset of an already processed queue row. Never alters
+ * OCR, saved onboarding drafts, customers, vehicles or registered policies.
+ * The worker independently re-checks current PDF at the next scheduled run.
+ */
+export async function reprocessAiPolicyIntake(id: string): Promise<{ok:boolean;error?:string}> {
+  await requireDevelopmentPolicyOperator(id);
+  if(!aiQueueEnabled())return{ok:false,error:"The automatic extraction queue is not enabled."};
+  const admin=createSupabaseAdminClient();
+  const {data:copy,error:copyError}=await admin.from("policy_intake_documents")
+    .select("id").eq("intake_id",id).eq("is_current",true)
+    .maybeSingle<{id:string}>();
+  if(copyError||!copy)return{ok:false,error:"The current private policy PDF must be available before reprocessing."};
+  const {data:row,error:rowError}=await admin.from("policy_intake_ai_processing_queue")
+    .select("document_id,state,processed_at").eq("intake_id",id)
+    .maybeSingle<{document_id:string;state:string;processed_at:string|null}>();
+  if(rowError||!row)return{ok:false,error:"The Intake has not entered the automatic queue yet."};
+  if(row.document_id!==copy.id)return{ok:false,error:"The PDF changed; wait for the queue to register the new document version."};
+  if(row.state==="processing"||row.state==="pending")return{ok:false,error:"This Intake is already queued or being processed."};
+  if(row.processed_at && Date.now()-new Date(row.processed_at).getTime()<60_000)
+    return{ok:false,error:"This Intake was just processed. Recheck after the current result has been reviewed."};
+  const {data:updated,error:updateError}=await admin.from("policy_intake_ai_processing_queue")
+    .update({state:"pending",exception_codes:[],field_keys:[],parser_id:null,
+      extraction_fingerprint:null,checks_passed:0,
+      lease_id:null,leased_until:null,attempts:0,retry_after:new Date().toISOString(),
+      processed_at:null,last_error_code:null,updated_at:new Date().toISOString()})
+    .eq("intake_id",id).eq("document_id",copy.id)
+    .in("state",["exception","verified","unsupported","failed"])
+    .select("intake_id").maybeSingle<{intake_id:string}>();
+  if(updateError||!updated)return{ok:false,error:"The queue changed; refresh the Intake before trying again."};
+  revalidatePath("/development/ai-policy-onboarding");
+  return{ok:true};
 }
 
 export async function applySemiAutoN8nIntake(
