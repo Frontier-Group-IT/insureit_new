@@ -157,8 +157,10 @@ export default function LifeHealthCaseDetailScreen(){
   setRemarkError('');setRemarkSaving(true);
   try{
    await appendLifeHealthCaseRemark(record.id,remarkDraft);
-   setRemarkOpen(false);setRemarkDraft('');setExpandedCaseTab('remarks');setInfoTab('remarks');
-   await load();
+   setRemarkOpen(false);setRemarkDraft('');
+   // Keep existing scroll content mounted and do not auto-expand panels after saving.
+   const refreshed=await load(true);
+   if(!refreshed)partnerAlert('Remark saved','Your remark was saved, but the case could not refresh. Reopen this case to see the latest details.');
   }catch(cause){setRemarkError(cause instanceof Error?cause.message:'Unable to save remark.');}
   finally{setRemarkSaving(false);}
  };
@@ -230,19 +232,27 @@ export default function LifeHealthCaseDetailScreen(){
  const submitRejection=async()=>{
   if(!record||rejectBusy||!rejectReason.trim())return;
   setRejectError('');setRejectBusy(true);
-  try{await rejectLifeHealthCaseNative(record.id,rejectReason);setRejectOpen(false);setRejectReason('');await load();}
-  catch(cause){setRejectError(cause instanceof Error?cause.message:'Unable to reject case.');}
+  try{
+   await rejectLifeHealthCaseNative(record.id,rejectReason);
+   setRejectOpen(false);setRejectReason('');
+   const refreshed=await load(true);
+   if(!refreshed)partnerAlert('Case rejected','The case was rejected, but its details could not refresh. Reopen the case to see the updated status.');
+  }catch(cause){setRejectError(cause instanceof Error?cause.message:'Unable to reject case.');}
   finally{setRejectBusy(false);}
  };
- const load=useCallback(async()=>{
-   if(!id)return;
-   setLoading(true);setError('');
+ // Silent refresh keeps the existing case view mounted, avoiding scroll/keyboard jumps.
+ const load=useCallback(async(silent=false):Promise<boolean>=>{
+   if(!id)return false;
+   if(!silent){setLoading(true);setError('');}
    try{
      const result=await getLifeHealthCase(id);
      setRecord(result.case);setDocuments(result.documents);setActivities(result.activities);
      setForm(initialForm(result.case));setIssue(current=>({...current,finalPremium:current.finalPremium||String(result.case.premium_amount)}));
-   }catch(cause){setError(cause instanceof Error?cause.message:'Unable to load case.');}
-   finally{setLoading(false);}
+     return true;
+   }catch(cause){
+     if(!silent)setError(cause instanceof Error?cause.message:'Unable to load case.');
+     return false;
+   }finally{if(!silent)setLoading(false);}
  },[id]);
  useFocusEffect(useCallback(()=>{
    let active=true;
