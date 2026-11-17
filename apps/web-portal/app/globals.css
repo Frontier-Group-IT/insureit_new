@@ -610,12 +610,12 @@ form:has(input[name="fitness_valid_upto"]) > div:last-child button {
   border: 1px solid #e8e6f0;
   border-radius: 14px;
   color: #1a1d59;
-  background:linear-gradient(125deg,#fff 0%,var(--soft) 100%);
+  background: #fff;
   box-shadow:0 2px 6px rgba(27,19,75,.1),inset 0 1px 0 rgba(255,255,255,.95);
 }
 .daily-report-reference .daily-report-activity-card:hover {
   border-color:var(--category);
-  background:linear-gradient(125deg,#fff,var(--soft));
+  background: #fff;
   box-shadow:0 6px 14px rgba(49,24,105,.14);
 }
 .daily-report-reference .daily-report-activity-card > span:nth-child(2) {color:#1a2058;font-size:11px;font-weight:750;}
