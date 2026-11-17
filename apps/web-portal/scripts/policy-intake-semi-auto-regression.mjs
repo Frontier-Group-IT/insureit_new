@@ -118,8 +118,8 @@ assert(n8nServer.includes("if (!UUID.test(intakeId)) return false"),
   "Broad preview must still validate the Intake identifier");
 assert(client.includes('initialIntakeId ?? null'),
   "Direct links may initially select only the Intake authorized by server pagination");
-assert(client.includes('row.is_duplicate ? "Duplicate · Preview only"'),
-  "Duplicate preview rows must be visibly separated from bookable Intakes");
+assert(client.includes('row.is_duplicate ? "Duplicate · Review only"'),
+  "Derived duplicate rows must be visibly separated from eligible Intakes and remain review-only");
 assert(client.includes('Boolean(selected?.is_duplicate)'),
   "Duplicate Intakes must have correction disabled in the UI");
 assert(client.includes('&& !selected?.is_duplicate'),
