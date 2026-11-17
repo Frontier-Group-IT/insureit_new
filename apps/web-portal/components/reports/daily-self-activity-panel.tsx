@@ -74,7 +74,7 @@ export function DailySelfActivityPanel({data,linkFor,reportMode="self",canViewAl
     {name:"Other", items:data.categories.filter(item=>!item.name.startsWith("Customer ")&&!item.name.startsWith("Vehicle ")&&!item.name.startsWith("Policy ")&&item.name!=="Claims"&&!item.name.startsWith("Claim "))},
   ].filter(group=>group.items.length>0);
   return (
-    <section className="daily-report-panel flex min-h-[calc(100dvh-175px)] w-full flex-col overflow-hidden rounded-xl border border-[#dce4ef] bg-white shadow-sm md:min-h-[calc(100dvh-135px)]" aria-label="Self activity summary and register">
+    <section className="daily-report-panel flex min-h-[calc(100dvh-145px)] w-full flex-col overflow-hidden rounded-xl border border-[#dce4ef] bg-white shadow-sm md:min-h-[calc(100dvh-80px)]" aria-label="Self activity summary and register">
       <div className="daily-report-panel-title flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-[#e4e9f1] px-4 py-3">
         <div className="flex min-w-0 flex-wrap items-center gap-3">
           <h3 className="flex items-center gap-2 text-[12px] font-bold text-[#17365D]"><BarChart3 size={19} strokeWidth={2.1} aria-hidden="true"/>
