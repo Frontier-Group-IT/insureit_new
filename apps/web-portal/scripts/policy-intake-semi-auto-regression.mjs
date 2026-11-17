@@ -240,8 +240,9 @@ const signedSource = text("lib/policy-intake-n8n-signed-source.ts");
 const actions = text("app/development/ai-policy-onboarding/actions.ts");
 assert(page.includes("const primaryN8n = isN8nWorkbenchPrimary()"),
   "All policy-type routing is enabled only by the server-side n8n primary flag");
-assert(page.includes('const scoped = primaryN8n ? current : current.eq("policy_type", "motor")'),
-  "Primary workbench must show all open Intake types while retaining the legacy Motor-only path");
+assert(page.includes('let scoped = primaryN8n ? current : current.eq("policy_type", "motor")')
+  && page.includes("getPartnerEmployeeIntakeReadScope"),
+  "Primary workbench must show all authorized open Intake types, retain legacy Motor-only mode and preserve Register scope");
 assert(page.includes("primaryN8n={primaryN8n}"),
   "The server must pass primary mode to the authenticated client, never trust a browser query param");
 assert(n8nServer.includes('INSUREIT_N8N_WORKBENCH_PRIMARY'),
