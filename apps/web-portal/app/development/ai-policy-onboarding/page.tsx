@@ -84,9 +84,18 @@ export default async function SemiAutoPolicyOnboardingPage({ searchParams }: { s
     else if(item.state==="processing")queueCounts.extracting++;
     else if(item.state==="unsupported")queueCounts.unsupported++;
     else if(item.state==="failed")queueCounts.failed++;
-    else if(item.state==="verified" && !item.exception_codes.length)queueCounts.extracted++;
+    else if(item.state==="verified" && !item.exception_codes.length) { queueCounts.extracted++; if(row.policy_type==="motor")queueCounts.eligible++; }
     else if(item.state!=="duplicate")queueCounts.exceptions++;
   }
+  // Pre-filter only verified, non-duplicate, authorized Motor Intakes.
+  // This list is a set of CANDIDATES, not proof of booking eligibility:
+  // convertVerifiedAiIntake revalidates every policy against the original PDF
+  // and canonical booking engine. Includes all pages, not just current 75.
+  const bulkCandidates = workspaceRows.filter(row => {
+    const q=queue.get(row.id);
+    return row.policy_type==="motor" && !duplicateIds.has(row.id)
+      && q?.state==="verified" && q.exception_codes.length===0;
+  }).map(row=>({id:row.id,intake_number:row.intake_number}));
   const requestedId = typeof params.intake_id === "string"
     && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(params.intake_id)
     ? params.intake_id : null;
@@ -163,7 +172,7 @@ export default async function SemiAutoPolicyOnboardingPage({ searchParams }: { s
               <span className="ml-auto text-[9px] text-[#6d7f98]">Same status rules as Policy Intake Register · duplicate items excluded from Action Required and In Review</span>
             </nav>
             <SemiAutoPolicyWorkspace rows={pageRows} profileId={profile.id} primaryN8n={primaryN8n}
-              queueActive={queueActive} queueCounts={queueCounts}
+              queueActive={queueActive} queueCounts={queueCounts} bulkCandidates={bulkCandidates}
               initialIntakeId={requestedId && pageRows.some(row => row.id === requestedId) ? requestedId : null} />
             <div className="flex items-center justify-between gap-3 rounded-xl border border-[#e0e6ed] bg-white px-4 py-3 text-[11px] text-[#52657f]">
               <span>{statusRows.length} in {OPEN_INTAKE_VIEWS.find(v=>v.view===selectedView)?.label} · {total} open {primaryN8n ? "Policy" : "Motor"} Intake(s) · {duplicateCount} open duplicate(s) · page {safePage} of {Math.max(1, Math.ceil(statusRows.length / PAGE_SIZE))}</span>

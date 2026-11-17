@@ -71,10 +71,11 @@ function compactDate(date: string) {
 const rupees = (amount: number) => "₹" + amount.toLocaleString("en-IN", { maximumFractionDigits: 2 });
 
 export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, primaryN8n = false,
-  queueActive = false, queueCounts }: {
+  queueActive = false, queueCounts, bulkCandidates = [] }: {
   rows: SemiAutoIntakeRow[]; profileId: string; initialIntakeId?: string | null;
   primaryN8n?: boolean;
   queueActive?: boolean;
+  bulkCandidates?: Array<{id:string;intake_number:string}>;
   queueCounts?: {eligible:number;extracted:number;duplicates:number;queued:number;extracting:number;exceptions:number;unprocessed:number;unsupported:number;failed:number};
 }) {
   const router = useRouter();
@@ -104,6 +105,11 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
   const [exceptionRow,setExceptionRow]=useState<SemiAutoIntakeRow|null>(null);
   const [autoConvertRow,setAutoConvertRow]=useState<SemiAutoIntakeRow|null>(null);
   const [autoConvertMessage,setAutoConvertMessage]=useState<string|null>(null);
+  const [bulkConfirmOpen,setBulkConfirmOpen]=useState(false);
+  const [bulkRunning,setBulkRunning]=useState(false);
+  const [bulkAttemptedIds,setBulkAttemptedIds]=useState<string[]>([]);
+  const [bulkProgress,setBulkProgress]=useState<{done:number;total:number}|null>(null);
+  const [bulkResults,setBulkResults]=useState<Array<{id:string;intake_number:string;ok:boolean;message:string}>>([]);
   const [customerReview,setCustomerReview]=useState<AiCustomerCandidateReview|null>(null);
   const [reviewingCustomer,setReviewingCustomer]=useState(false);
   const [queueRetrying,setQueueRetrying]=useState(false);
@@ -124,7 +130,11 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
   const available = !primaryN8n && selected?.policy_type === "motor"
     && result?.ready === true && result.issues.length === 0 && !selected?.is_duplicate;
   const n8nEnabled = selected?.n8n_enabled === true;
-  const isWaiting = busy !== null;
+  const isWaiting = busy !== null || bulkRunning;
+  // A bounded set of currently verified CANDIDATES. Server-side canonical
+  // authorization and PDF reconciliation can still reject any candidate.
+  const bulkRemaining=bulkCandidates.filter(row=>!bulkAttemptedIds.includes(row.id));
+  const bulkBatch=bulkRemaining.slice(0,10);
 
   async function selectRow(id: string) {
     const next = ++requestId.current;
@@ -308,6 +318,41 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
     }
   }
 
+  async function runConfirmedBulkConversion() {
+    if (isWaiting || !primaryN8n || !queueActive || !bulkConfirmOpen || !bulkBatch.length) return;
+    const batch=[...bulkBatch];
+    setBulkConfirmOpen(false);
+    setBulkRunning(true);
+    setBusy("booking");
+    setBulkProgress({done:0,total:batch.length});
+    setBulkResults([]);
+    let completed=0;
+    // Deliberately sequential: one canonical registration transaction at a time.
+    // No optimistic booking or automatic retry following an ambiguous response.
+    for (const item of batch) {
+      let outcome:{id:string;intake_number:string;ok:boolean;message:string};
+      try {
+        const result=await convertVerifiedAiIntake(item.id,true);
+        outcome={id:item.id,intake_number:item.intake_number,ok:result.ok&&Boolean(result.policyId),
+          message:result.ok&&result.policyCode&&result.policyId
+            ? "Registered "+result.policyCode
+            : result.issues.map(issue=>issue.message).join(" ") || "Canonical verification stopped this policy."};
+      } catch {
+        outcome={id:item.id,intake_number:item.intake_number,ok:false,
+          message:"Booking response was interrupted. Verify this Intake in Policy Register before retrying."};
+      }
+      // An attempted Intake will not be automatically attempted again in this
+      // browser session, even when the network response is uncertain.
+      setBulkAttemptedIds(previous=>previous.includes(item.id)?previous:[...previous,item.id]);
+      setBulkResults(previous=>[...previous,outcome]);
+      completed++;
+      setBulkProgress({done:completed,total:batch.length});
+    }
+    setBulkRunning(false);
+    setBusy(null);
+    router.refresh();
+  }
+
   async function convertOneVerified() {
     const row=autoConvertRow;
     if(!row||isWaiting||row.is_duplicate||row.ai_state!=="verified"||row.ai_exceptions?.length)return;
@@ -410,9 +455,9 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
               <h2 className="text-[12px] font-bold text-[#16355a]">Automatic n8n processing queue</h2>
               <p className="mt-1 text-[10px] text-[#61738a]">These are n8n extraction states, not Policy Intake workflow statuses. New uploads run immediately; the recovery worker processes up to six PDFs per minute. Verified extraction alone does not book a policy.</p>
             </div>
-            <button type="button" disabled aria-label="Convert All Eligible is disabled until canonical preflight and booking rollout"
-              className="min-h-9 rounded-lg bg-[#174b83] px-3 text-[11px] font-bold text-white opacity-45">
-              Convert All Eligible · {queueCounts?.eligible??0}
+            <button type="button" onClick={()=>setBulkConfirmOpen(true)} disabled={isWaiting||bulkBatch.length===0}
+              className="min-h-9 rounded-lg bg-[#174b83] px-3 text-[11px] font-bold text-white disabled:opacity-45">
+              Convert Verified Candidates · {queueCounts?.eligible??0}
             </button>
           </div>
           <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-8">
@@ -432,7 +477,15 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
               </div>
             ))}
           </div>
-          <p className="mt-2 text-[10px] text-[#63758c]">Only actual extraction or booking conflicts appear as exceptions. One-step conversion rechecks the current PDF and runs the existing customer, vehicle, date and policy transaction; older-month OTP is never bypassed.</p>
+          <p className="mt-2 text-[10px] text-[#63758c]">Verified candidates are not guaranteed bookable. Each registration rechecks the current PDF, customer identity, duplicates, vehicle ownership, policy dates, OTP and canonical booking transaction. A confirmed bulk run processes up to 10 sequentially, stops individual failures without retrying and reports every result.</p>
+          {bulkProgress ? (
+            <div role="status" className="mt-2 rounded-lg border border-[#cbd9ea] bg-[#f5f9ff] p-3 text-[11px] text-[#285078]">
+              Bulk conversion: {bulkProgress.done} / {bulkProgress.total} attempts completed{bulkRunning?" · processing next policy":""}.
+              {bulkResults.length ? <div className="mt-2 max-h-40 overflow-y-auto">{bulkResults.map(result=>(
+                <p key={result.id} className="py-1">{result.ok?"✓":"Needs review"} · {result.intake_number} · {result.message}</p>
+              ))}</div> : null}
+            </div>
+          ) : null}
           {autoConvertMessage ? <p role="status" className="mt-2 rounded-lg border border-[#cbd9ea] bg-[#f5f9ff] p-3 text-[11px] text-[#285078]">{autoConvertMessage}</p> : null}
         </section>
       ) : null}
@@ -711,6 +764,26 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
           </>
         )}
       </section>
+      {bulkConfirmOpen ? (
+        <div className="fixed inset-0 z-[180] flex items-center justify-center bg-[#101d37]/65 px-4 py-6" role="presentation">
+          <div role="alertdialog" aria-modal="true" aria-labelledby="bulk-convert-title"
+            className="w-full max-w-[510px] rounded-2xl border border-[#d6e2f1] bg-white p-5 shadow-[0_24px_80px_rgba(12,28,52,.3)]">
+            <h3 id="bulk-convert-title" className="text-[15px] font-bold text-[#17365d]">Confirm bulk Policy registration</h3>
+            <p className="mt-3 text-[11px] leading-5 text-[#4f627c]">
+              This will attempt to register up to {bulkBatch.length} verified Motor Intakes as REAL policies, one at a time.
+              Each Intake must pass current-PDF re-extraction, issue-date approval, master customer checks,
+              vehicle ownership and the canonical policy transaction. Failures stay unbooked and appear in a results list.
+              An interrupted response is never retried automatically. Another batch requires a separate confirmation.
+            </p>
+            <div className="mt-5 flex justify-end gap-2">
+              <button type="button" onClick={()=>setBulkConfirmOpen(false)}
+                className="min-h-9 rounded-lg border border-[#cbd6e5] px-4 text-[11px] font-semibold text-[#38516e]">Cancel</button>
+              <button type="button" onClick={()=>{void runConfirmedBulkConversion();}}
+                className="min-h-9 rounded-lg bg-[#174b83] px-4 text-[11px] font-bold text-white">Confirm &amp; Register Batch</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
       {autoConvertRow ? (
         <div className="fixed inset-0 z-[180] flex items-center justify-center bg-[#101d37]/65 px-4 py-6" role="presentation">
           <div role="alertdialog" aria-modal="true" aria-labelledby="auto-convert-title"
