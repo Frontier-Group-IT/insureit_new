@@ -4,6 +4,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { isN8nWorkbenchPrimary, previewSemiAutoN8nExtraction } from "@/lib/policy-intake-semi-auto-n8n";
 import { assessAiPolicyIntake, type AiPolicyEvidence, type AiPolicyExceptionCode } from "@/lib/ai-policy-onboarding-eligibility";
 import { loadPolicyIntakeDuplicateMatches } from "@/lib/policy-intake-duplicate";
+import { policyDateDecision } from "@/lib/policy-date-rule";
 import type { PolicyIntakeOcrField } from "@/lib/policy-intake-ocr-service";
 
 export type AiQueueState =
@@ -267,9 +268,20 @@ async function processClaim(item: Claimed) {
   ));
   // An old default issue date is not authoritative PDF evidence. No auto
   // booking until a parser field explicitly verifies the policy issue date.
-  const issuanceDateVerified=Boolean(values.get("policy_issuance_date"));
+  const pdfIssuanceDate=values.get("policy_issuance_date")??"";
+  const issuanceDecision=pdfIssuanceDate?policyDateDecision(pdfIssuanceDate):"invalid";
+  const issuanceDateVerified=issuanceDecision!=="invalid"&&issuanceDecision!=="future";
   const bundled=normalizedName(values.get("policy_product")??"")==="BUNDLED";
-  const bundledPeriodsVerified=!bundled; // CPA/TP expiry approval needs canonical preflight.
+  // The strict 3005 bridge independently verifies both OD and Third Party
+  // dates. Bundled itself is not an exception once both periods were validated.
+  // Canonical form derives the associated CPA schedule from verified cover
+  // dates; final booking independently validates it through existing rules.
+  const bundledPeriodsVerified=!bundled||(
+    extraction.preview.checksPassed===13
+    && extraction.preview.warnings.length===0
+    && ["policy_start_date","policy_end_date","third_party_start_date","third_party_end_date"]
+      .every(key=>Boolean(values.get(key)))
+  );
   const evidence:AiPolicyEvidence = {
     // The strict 3005 parser verifies the Motor business line even for
     // older Intakes lacking the upstream policy_type classification.
@@ -289,14 +301,19 @@ async function processClaim(item: Claimed) {
     reviewerAssignedToAnother:false, // A user-specific reviewer check is still mandatory on conversion.
     vehicleOwnerConflict:false,coverageConflict:false, // Preflight must check these, not extraction worker.
     savedDraftConflictsWithPdf,
-    issuanceDateVerified,needsDateApproval:false, // Separately checked during preflight.
+    issuanceDateVerified,needsDateApproval:issuanceDecision==="otp_required",
     bundledPeriodsVerified,canonicalPreflightPassed:false,
   };
   const assessment=assessAiPolicyIntake(evidence);
-  const codes=assessment.exceptions.map(e=>e.code);
-  // Since no canonical policy/ownership/date preflight has run, "eligible"
-  // is never produced by this worker, including for parse-perfect PDFs.
-  const state=assessment.state==="unsupported"?"unsupported":"exception";
+  // "Canonical preflight pending" is a future booking step, NOT an error in
+  // an extracted PDF. Record correctly extracted Intakes as verified, while
+  // never labelling them eligible to book until the real transaction preflight
+  // has passed. True duplicate policy numbers remain non-bookable.
+  const codes=assessment.exceptions
+    .filter(e=>e.code!=="preflight_pending").map(e=>e.code);
+  const state:AiQueueState=isDuplicate?"duplicate"
+    :assessment.state==="unsupported"?"unsupported"
+    :codes.length?"exception":"verified";
   await finishClaim(item,{
     state, exception_codes:codes,field_keys:extraction.preview.fields.map(f=>f.key),
     parser_id:"icici_3005_n8n_native_pdf",
