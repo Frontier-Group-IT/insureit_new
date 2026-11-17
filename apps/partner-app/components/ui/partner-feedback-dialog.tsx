@@ -34,10 +34,10 @@ export function PartnerFeedbackDialog({
   const isBusy = busy || submitting;
   const icon: ComponentProps<typeof Ionicons>['name'] = type === 'success' ? 'checkmark-circle-outline' :
     type === 'delete' ? 'trash-outline' :
-    type === 'error' ? 'close-circle-outline' :
+    type === 'error' ? 'alert-circle-outline' :
     type === 'info' ? 'information-circle-outline' : 'alert-circle-outline';
-  const iconColor = type === 'success' ? '#16865C' : type === 'delete' || type === 'error' ? '#C83C45' : '#E68A41';
-  const iconBg = type === 'success' ? '#E7F6EF' : type === 'delete' || type === 'error' ? '#FCEAED' : '#FFF0E7';
+  const iconColor = type === 'success' ? '#16865C' : type === 'delete' ? '#C83C45' : '#E68A41';
+  const iconBg = type === 'success' ? '#E7F6EF' : type === 'delete' ? '#FCEAED' : '#FFF0E7';
   return <Modal transparent visible={visible} animationType="fade" onRequestClose={() => { if (!isBusy) onDismiss?.(); }}
     statusBarTranslucent>
     <View style={styles.backdrop}>
