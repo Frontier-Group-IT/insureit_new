@@ -116,6 +116,10 @@ assert.doesNotMatch(screen,/Form uploads are available in Operations Portal/, 'R
 assert.match(screen,/styles\.wideField,styles\.registrationBlock/, 'Registration number spans both columns.');
 assert.match(screen,/\[styles\.field,styles\.wideField\]/, 'RTO spans both columns.');
 assert.match(screen,/styles\.summaryProgressStack/, 'Onboarding summary retains its percentage ring.');
+assert.ok(screen.includes('numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85} allowFontScaling={false}>{filled}%'), 'Onboarding percentage stays one line and ignores system text scaling.');
+assert.ok(screen.includes("progressText:{color:'#324D9E',fontWeight:'700',fontSize:8"), 'Onboarding percentage has a compact 8pt font.');
+assert.ok(screen.includes('summaryProgress:{width:35,height:35,borderRadius:18,borderWidth:3,'), 'Progress ring stays compact with extra text space.');
+
 assert.match(screen,/accessibilityLabel="Create Active Policy"/, 'Shared create action is labelled as requested.');
 assert.match(screen,/createPartnerPolicyIntakeBridgeUrl\(id,false,null\)/, 'Non-Motor active creation uses authorised web handoff.');
 assert.match(screen,/disabled=\{booking\|\|saving\|\|!data\}/, 'Booking remains gated by loading and saving.');
