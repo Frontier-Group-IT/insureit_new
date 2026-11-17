@@ -35,13 +35,14 @@ const policyIntakeNew = read('app/policy-intake-new.tsx');
 const policyIntakeDetail = read('app/policy-intakes/[id].tsx');
 const customerDetail = read('app/customer/[id].tsx');
 const policyDetail = read('app/policy/[id].tsx');
+// These four section titles are intentionally text-only; their cards retain icons.
 for (const heading of [
-  'iconKind="premium" title="Premium"',
-  'iconKind="customer-vehicle" title="Customer Details"',
-  'iconKind="customer-vehicle" title={data.vehicle ? \'Vehicle Details\' : \'Insured Risk Details\'}',
-  'iconKind="commercial-attribution" title="Commercial Attribution"',
+  'title="Premium"',
+  'title="Customer Details"',
+  "title={data.vehicle ? 'Vehicle Details' : 'Insured Risk Details'}",
+  'title="Commercial Attribution"',
 ]) {
-  requireText(policyDetail, '<View style={styles.externalSectionHeading}><CardHeader ' + heading + ' /></View>', 'Detail section heading must be outside the white card: ' + heading);
+  requireText(policyDetail, '<View style={styles.externalSectionHeading}><CardHeader ' + heading + ' /></View>', 'Text-only heading must remain outside the white card: ' + heading);
 }
 requireText(policyDetail, 'externalSection: { gap: 5 }', 'Headings must sit closely above their cards');
 requireText(policyDetail, '<CardHeader iconKind="policy-overview" title="Policy Overview"', 'Policy Overview keeps original in-card heading');
@@ -239,23 +240,23 @@ requireText(policyDetail, 'icon="person-outline"', 'Policy detail customer row m
 requireText(policyDetail, 'insurerName={data.insurer.name}', 'Policy overview must pass insurer identity to logo renderer.');
 requireText(policyDetail, '<PartnerInsurerLogo name={insurerName}', 'Policy overview must render insurer brand artwork.');
 requireText(policyDetail, 'getPartnerPolicyDetail(id)', 'Policy detail must preserve the existing scoped data service.');
-// Policy Details reference: white, flat record header, same values and routes.
+// Policy Details uses the requested navy title/summary, with compact premium and date rows.
 for (const required of [
-  "backgroundColor: '#FFFFFF', borderBottomWidth: StyleSheet.hairlineWidth",
-  "color: '#17365D', fontSize: 16",
-  "color: '#1B2536', fontSize: 18",
+  "backgroundColor: '#0A234A', borderBottomWidth: StyleSheet.hairlineWidth",
+  "headerTitle: { color: '#FFFFFF'",
+  "summaryPolicyNo: { color: '#FFFFFF'",
   "backgroundColor: '#FFF2DE'",
   "{policyNumber}",
   "{category}",
-  "{nullableMoney(data.premium.net_premium)}",
+  "Net Premium - {nullableMoney(data.premium.net_premium)}",
   "{formatDate(data.policy.start_date)} – {formatDate(data.policy.end_date)}",
   "PartnerInsurerLogo name={data.insurer.name}",
   "accessibilityLabel=\"Back\"",
 ]) {
-  requireText(policyDetail, required, 'Policy Details white header must retain existing values and back navigation: ' + required);
+  requireText(policyDetail, required, 'Navy Policy Details must retain all required values and navigation: ' + required);
 }
-if (policyDetail.includes("backgroundColor: '#073472'") || policyDetail.includes("backgroundColor: '#081F4C'")) {
-  throw new Error('Policy Details should not retain the navy title/summary background.');
+if (policyDetail.includes(">Policy Period<")) {
+  throw new Error('The navy Policy Details summary must not show the Policy Period label.');
 }
 requireText(policyDetail, 'navyStatusBar bottomNavigationNavy', 'System status bar remains navy and navigation remains visible.');
 
