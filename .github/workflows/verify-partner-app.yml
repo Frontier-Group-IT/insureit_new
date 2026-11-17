@@ -113,6 +113,9 @@ jobs:
       - name: Verify product-specific native Policy Onboarding layouts
         run: node apps/partner-app/scripts/verify-product-type-onboarding-layouts.mjs
 
+      - name: Verify direct date selection across Partner App forms
+        run: node apps/partner-app/scripts/verify-direct-date-selection.mjs
+
       - name: Verify standalone blank Add Policy creation path
         run: node apps/partner-app/scripts/verify-standalone-add-policy.mjs
 
