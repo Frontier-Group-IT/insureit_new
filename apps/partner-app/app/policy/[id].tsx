@@ -220,14 +220,15 @@ function CardHeader({ iconKind, title, actionLabel, onAction }: { iconKind?: Par
 function QuickAction({ iconKind, label, onPress }: {
   iconKind: PartnerPolicyDetailIconKind; label: string; onPress: () => void;
 }) {
-  // The Renew and Claim PNG slots may render blank on installed Android.
-  // Use bundled vector glyphs for these two actions instead of empty artwork.
-  const illustration = iconKind === 'policy-document'
-    ? require('../../assets/partner/quick-actions/policy-document.png')
-    : require('../../assets/partner/quick-actions/customer-details.png');
-  const quickGlyph = iconKind === 'renew-policy'
-    ? 'sync-circle' as const
-    : iconKind === 'raise-claim' ? 'shield-checkmark' as const : null;
+  // Reuse the exact Home quick-action artwork for Renewals and Claims.
+  // Keep the existing Policy Document / Customer Details assets unchanged.
+  const illustration = iconKind === 'renew-policy'
+    ? PartnerAssets.actions.quickRenewals
+    : iconKind === 'raise-claim'
+      ? PartnerAssets.actions.quickClaims
+      : iconKind === 'policy-document'
+        ? require('../../assets/partner/quick-actions/policy-document.png')
+        : require('../../assets/partner/quick-actions/customer-details.png');
   return (
     <Pressable
       accessibilityRole="button"
@@ -236,9 +237,7 @@ function QuickAction({ iconKind, label, onPress }: {
       style={({ pressed }) => [styles.quickAction, pressed && styles.pressed]}
     >
       <View style={styles.quickActionIcon}>
-        {quickGlyph
-          ? <Ionicons name={quickGlyph} size={42} color="#1678D5" />
-          : <Image source={illustration} style={styles.quickActionArtwork} resizeMode="contain" accessibilityIgnoresInvertColors />}
+        <Image source={illustration} style={styles.quickActionArtwork} resizeMode="contain" accessibilityIgnoresInvertColors />
       </View>
       <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={styles.quickLabel}>{label}</Text>
     </Pressable>
