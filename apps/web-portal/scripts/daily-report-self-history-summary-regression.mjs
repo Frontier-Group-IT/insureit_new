@@ -30,7 +30,7 @@ for (const [sourceName, actorColumn] of [
   ["Claim status history","changed_by"],
 ]) {
   assert.ok(source.includes('readDailyHistoryPages("'+sourceName+'"'), sourceName+" is included in source pagination");
-  assert.match(source, new RegExp('\\.eq\\("'+actorColumn+'",viewerId\\)'), sourceName+" uses authorized employee attribution");
+  assert.match(source, new RegExp('\\.in\\("'+actorColumn+'",actorIds\\)'), sourceName+" uses authorized employee attribution");
 }
 assert.match(source, /driver_name/, "Driver edits are read from stored stage details");
 assert.match(source, /previous!==driver/, "Changed driver names use stored before/after stage values");
