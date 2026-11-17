@@ -195,7 +195,7 @@ assert.match(screen,/!isNew\?<View style=\{styles.documentAndSaveActions\}>/,'St
 assert.doesNotMatch(screen,/accessibilityLabel="Save Draft"/,'Intake must not show the removed Save Draft action.');
 assert.match(screen,/documentAndSaveActions:/,'Existing Intake retains its policy-document action wrapper.');
 assert.match(screen,/viewPolicyButton:/,'Intake policy copy action retains its existing styling.');
-assert.match(screen,/onPress=\{\(\)=>\{void save\(\)\.then\(success=>\{if\(success\)setCommercialModal\(null\);\}\);\}\}/,'Commercial popup must retain its underlying draft save action.');
+assert.ok(screen.includes('onPress={()=>void saveCommercial()}'), 'Commercial popup must use shared Save & Close handler.');
 assert.doesNotMatch(screen,/setDialog\('confirm-save'\)/,'Removed Save Draft confirmation must not be reachable.');
 assert.match(screen,/setDialog\('discard'\)/,'Cancel protects unsaved changes in custom dialog.');
 assert.match(screen,/onRequestClose=\{dismissDialog\}/,'Popup dismissal must be accessible on Android.');
