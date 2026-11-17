@@ -151,6 +151,7 @@ export default function AddPartnerScreen() {
   const [selectorQuery, setSelectorQuery] = useState('');
   const [saving, setSaving] = useState(false);
   const [applicationId, setApplicationId] = useState<string | null>(null);
+  const [uploadOpen, setUploadOpen] = useState(false);
   const [uploadingType, setUploadingType] = useState<DocumentType | null>(null);
   const [uploaded, setUploaded] = useState<Partial<Record<DocumentType, string>>>({});
   const [dateField, setDateField] = useState<'date_of_birth' | 'document_received_at' | null>(null);
@@ -209,10 +210,16 @@ export default function AddPartnerScreen() {
   const filteredOptions = selectOptions.filter(option => option.name.toLocaleLowerCase().includes(selectorQuery.trim().toLocaleLowerCase()));
   const openSelector = (kind: 'rm' | 'bank') => { setSelectorQuery(''); setSelector(kind); };
   const closeSelector = () => { Keyboard.dismiss(); setSelector(null); setSelectorQuery(''); };
-  const savePartner = async (nextStep: 'exit' | 'upload'):Promise<string|null> => {
+  const showSavedChoice = () => {
+    partnerAlert('Partner Details Saved', 'Would you like to upload documents now?', [
+      { text: 'Not Now', style: 'cancel', onPress: () => router.replace('/(tabs)/policies') },
+      { text: 'Upload Documents', onPress: () => setUploadOpen(true) },
+    ]);
+  };
+  const savePartner = async ():Promise<string|null> => {
     if (saving || uploadingType || !allowed) return null;
     if (applicationId) {
-      if (nextStep === 'exit') router.replace('/(tabs)/policies');
+      showSavedChoice();
       return applicationId;
     }
     const dob = isoDate(form.date_of_birth);
@@ -240,11 +247,7 @@ export default function AddPartnerScreen() {
       const result = await response.json() as { ok?: boolean; error?: string; application_id?: string };
       if (!response.ok || !result.ok || !result.application_id) throw new Error(result.error || 'Partner application could not be submitted.');
       setApplicationId(result.application_id);
-      if (nextStep === 'exit') {
-        partnerAlert('Partner details saved', 'Primary details saved and sent to Operations for review.', [
-          { text: 'OK', onPress: () => router.replace('/(tabs)/policies') },
-        ]);
-      }
+      showSavedChoice();
       return result.application_id;
     } catch (error) {
       partnerAlert('Unable to save Partner', error instanceof Error ? error.message : 'Please try again.');
@@ -270,10 +273,12 @@ export default function AddPartnerScreen() {
         partnerAlert('Unsupported document', 'Choose a PDF, JPG or PNG file.');
         return;
       }
-      // Save the required Partner application once before sending its first document.
-      // Selecting a file before validation avoids creating a record for a cancelled picker.
-      const savedId = applicationId || await savePartner('upload');
-      if (!savedId) return;
+      // Documents are optional and available only after Partner details have been saved.
+      const savedId = applicationId;
+      if (!savedId) {
+        partnerAlert('Save details first', 'Save Partner details before uploading documents.');
+        return;
+      }
       setUploadingType(type);
       const session = (await supabase.auth.getSession()).data.session;
       if (!session?.access_token) throw new Error('Sign in again to upload documents.');
@@ -390,12 +395,45 @@ export default function AddPartnerScreen() {
           ))}
           </>}
 
-          {partnerType==="posp"&&<View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <View style={styles.index}><Text style={styles.indexText}>04</Text></View>
-              <Text style={styles.sectionTitle}>Documents</Text>
+          {partnerType==="posp"&&<View style={styles.actionFooter}>
+            <View style={styles.actionRow}>
+              <Pressable accessibilityRole="button" accessibilityLabel="Cancel Add Partner"
+                disabled={saving||Boolean(uploadingType)}
+                onPress={()=>leavePartnerForm()} style={[styles.actionButton,styles.saveExitButton]}>
+                <Text style={styles.saveExitText}>Cancel</Text>
+              </Pressable>
+              <Pressable accessibilityRole="button" accessibilityLabel="Save Partner details"
+                disabled={saving||loading||Boolean(uploadingType)}
+                onPress={()=>void savePartner()}
+                style={[styles.actionButton,styles.uploadButton,(saving||loading||uploadingType)&&styles.disabled]}>
+                <Text style={styles.submitText}>{saving?'Saving…':'Save Detail'}</Text>
+              </Pressable>
             </View>
-            <View style={styles.documentList}>
+          </View>}
+        </ScrollView>
+        <PartnerPolicyCalendarDialog
+          visible={Boolean(dateField)}
+          value={dateField && isoDate(form[dateField]) ? new Date(`${isoDate(form[dateField])}T12:00:00`) : new Date()}
+          maximumDate={new Date()}
+          onCancel={() => setDateField(null)}
+          onConfirm={date => setSelectedDate(date)}
+        />
+        <Modal visible={uploadOpen} transparent animationType="fade" onRequestClose={() => { if (!uploadingType) setUploadOpen(false); }}>
+          <View style={styles.modalBackdrop}>
+            <Pressable style={StyleSheet.absoluteFillObject} accessibilityLabel="Close document popup"
+              onPress={() => { if (!uploadingType) setUploadOpen(false); }} />
+            <View style={styles.documentModalCenter} pointerEvents="box-none">
+              <View style={styles.documentModal}>
+                <View style={styles.modalTitleRow}>
+                  <Text style={styles.modalTitle}>Upload Documents</Text>
+                  <Pressable accessibilityRole="button" accessibilityLabel="Close document popup"
+                    disabled={Boolean(uploadingType)} onPress={() => setUploadOpen(false)}>
+                    <Ionicons name="close" size={22} color="#4C5970"/>
+                  </Pressable>
+                </View>
+                <ScrollView keyboardShouldPersistTaps="handled" style={styles.documentModalScroll}>
+          <View style={styles.documentModalBody}>
+             <View style={styles.documentList}>
               {uploadSlots.filter(slot => slot.type !== 'gst_copy' || Boolean(form.gst_number.trim())).map(slot => (
                 <View key={slot.type} style={styles.documentRow}>
                   <Ionicons name="document-text-outline" size={20} color="#315B85"/>
@@ -419,36 +457,22 @@ export default function AddPartnerScreen() {
                     style={styles.documentAddButton}>
                     {uploadingType===slot.type?<ActivityIndicator size="small" color="#24517E"/>:
                       <Ionicons name="cloud-upload-outline" size={17} color="#24517E"/>}
-                    <Text style={styles.documentAddText}>Add</Text>
+                    <Text style={styles.documentAddText}>Upload</Text>
                   </Pressable>}
                 </View>
               ))}
             </View>
-          </View>}
-
-          {partnerType==="posp"&&<View style={styles.actionFooter}>
-            <View style={styles.actionRow}>
-              <Pressable accessibilityRole="button" accessibilityLabel="Cancel Add Partner"
-                disabled={saving||Boolean(uploadingType)}
-                onPress={()=>leavePartnerForm()} style={[styles.actionButton,styles.saveExitButton]}>
-                <Text style={styles.saveExitText}>Cancel</Text>
-              </Pressable>
-              <Pressable accessibilityRole="button" accessibilityLabel="Save and exit Partner form"
-                disabled={saving||loading||Boolean(uploadingType)}
-                onPress={()=>void savePartner('exit')}
-                style={[styles.actionButton,styles.uploadButton,(saving||loading||uploadingType)&&styles.disabled]}>
-                <Text style={styles.submitText}>{saving?'Saving…':'Save & Exit'}</Text>
-              </Pressable>
+          </View>
+                </ScrollView>
+                <Pressable accessibilityRole="button" accessibilityLabel="Done uploading documents"
+                  disabled={Boolean(uploadingType)} onPress={() => { setUploadOpen(false); router.replace('/(tabs)/policies'); }}
+                  style={[styles.documentDoneButton, Boolean(uploadingType) && styles.disabled]}>
+                  <Text style={styles.submitText}>Done</Text>
+                </Pressable>
+              </View>
             </View>
-          </View>}
-        </ScrollView>
-        <PartnerPolicyCalendarDialog
-          visible={Boolean(dateField)}
-          value={dateField && isoDate(form[dateField]) ? new Date(`${isoDate(form[dateField])}T12:00:00`) : new Date()}
-          maximumDate={new Date()}
-          onCancel={() => setDateField(null)}
-          onConfirm={date => setSelectedDate(date)}
-        />
+          </View>
+        </Modal>
         <Modal visible={selector !== null} transparent animationType="fade" onRequestClose={closeSelector}>
           <View style={styles.modalBackdrop}>
             <Pressable style={StyleSheet.absoluteFillObject} accessibilityLabel="Close selection popup" onPress={closeSelector} />
@@ -521,7 +545,12 @@ const styles = StyleSheet.create({
   input: { minHeight: 44, backgroundColor: '#FFF', borderWidth: 1, borderColor: '#CED8E7', borderRadius: 10, paddingHorizontal: 12, fontSize: 13, color: '#152A49' },
   select: { minHeight: 44, borderWidth: 1, borderColor: '#CED8E7', borderRadius: 10, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   selectText: { color: '#17365D', fontSize: 13, fontWeight: '600', flexShrink: 1 },
-  documentList:{paddingHorizontal:12,paddingVertical:5},
+  documentList:{paddingHorizontal:4,paddingVertical:5},
+  documentModalCenter:{flex:1,justifyContent:'center',paddingHorizontal:16,paddingVertical:28},
+  documentModal:{backgroundColor:'#FFFFFF',borderRadius:18,padding:16,maxHeight:'90%',gap:12},
+  documentModalScroll:{flexGrow:0},
+  documentModalBody:{width:'100%'},
+  documentDoneButton:{backgroundColor:'#155EBA',borderRadius:10,minHeight:43,alignItems:'center',justifyContent:'center'},
   documentRow:{flexDirection:'row',alignItems:'center',minHeight:53,gap:9,paddingVertical:9,borderBottomWidth:1,borderBottomColor:'#E7EDF5'},
   documentLabel:{flex:1,minWidth:0,gap:3},
   documentName:{fontSize:12,fontWeight:'700',color:'#000000'},
