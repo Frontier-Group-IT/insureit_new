@@ -81,6 +81,43 @@ const CHANGE_FIELDS:Record<string,{label:string;money?:boolean}>={
   status:{label:"Status"},
   policy_status:{label:"Policy status"},
 };
+// Field labels only: audit changed_fields entries can contain premiums, private values,
+// or narrative notes. Never render these strings verbatim in the activity column.
+const POLICY_EDIT_FIELD_LABELS:Record<string,string>={
+  "sum insured / idv":"Sum insured / IDV",
+  "employee count":"Employee count",
+  "annual wages":"Annual wages",
+  "non-motor sum insured":"Non-Motor sum insured",
+  "add-on premium":"Add-on premium",
+  "od premium":"OD premium",
+  "tp premium":"TP premium",
+  "net premium":"Net premium",
+  "gross premium":"Gross premium",
+  "premium":"Premium",
+  "policy number":"Policy number",
+  "policy status":"Policy status",
+  "status":"Status",
+  "insurer":"Insurer",
+  "idv":"IDV",
+};
+function policyEditFieldNames(newValue:unknown):string {
+  const fallback="Changed fields not recorded";
+  if(!newValue || typeof newValue!=="object" || Array.isArray(newValue)) return fallback;
+  const changed=(newValue as Record<string,unknown>).changed_fields;
+  if(!Array.isArray(changed)) return fallback;
+  const labels:string[]=[];
+  for(const item of changed) {
+    if(typeof item!=="string") continue;
+    // Values and explanatory text follow the field name in these audit entries.
+    // Ignore narrative notes such as "Premium totals recalculated (source edit not recorded)".
+    const name=item.split(":")[0].replace(/ changed \\(values hidden\\).*$/i,"").trim().toLowerCase();
+    const label=POLICY_EDIT_FIELD_LABELS[name];
+    if(label && !labels.includes(label)) labels.push(label);
+    if(labels.length===5) break;
+  }
+  return labels.length ? labels.join(", ") : fallback;
+}
+
 function auditChangeDetail(oldValue:unknown,newValue:unknown):string|undefined {
   if(!oldValue || !newValue || typeof oldValue!=="object" || typeof newValue!=="object" ||
     Array.isArray(oldValue) || Array.isArray(newValue)) return undefined;
@@ -569,6 +606,11 @@ export async function loadSelfActivityHistory(
         const change=changeMap.get(row.id.slice("audit:".length));
         if(!change) continue;
         row.detail=auditChangeDetail(change.old_data,change.new_data);
+        if(row.table==="policies" && row.category==="Policy Edit" && row.activity==="Policy Updated") {
+          row.activity=policyEditFieldNames(change.new_data);
+          // Do not repeat old/new business values when the user requested column names.
+          row.detail=undefined;
+        }
         if(row.table==="claims" && row.status==="Deleted") {
           // Name belongs to the ORIGINAL claim creator, not the deleting actor.
           // Historic audits without captured creator metadata cannot be attributed.

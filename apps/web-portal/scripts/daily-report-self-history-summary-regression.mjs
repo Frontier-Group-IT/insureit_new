@@ -47,6 +47,11 @@ assert.match(source, /const partial = sources\.some\(s=>s\.result\.partial\)/, "
 assert.match(source, /if\(options\.day && !window\) throw/, "Malformed dates must not silently fetch all history");
 assert.doesNotMatch(source, /\.insert\(|\.update\(|\.upsert\(|\.delete\(|\.rpc\(/, "Self summary is strictly read-only");
 
+assert.match(source, /changed_fields/, "Policy Edit uses recorded changed field names");
+assert.match(source, /POLICY_EDIT_FIELD_LABELS/, "Policy Edit labels are allowlisted");
+assert.ok(source.includes('row.activity=policyEditFieldNames(change.new_data)'), "Policy Edit activity shows the actual recorded column names");
+assert.match(source, /Changed fields not recorded/, "Do not invent missing historical field names");
+assert.ok(source.includes('row.detail=undefined'), "Do not expose historical old/new policy values in the activity column");
 assert.match(ui, /My Activity Summary/, "Self default is activity summary, not flat table");
 assert.match(ui, /item\.count\.toLocaleString/, "Clickable category rows expose real computed totals");
 assert.match(ui, /href=\{linkFor\(\{activity:item\.name,page:"1"\}\)\}/, "Clicking a category selects it");
