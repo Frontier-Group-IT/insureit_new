@@ -8,6 +8,7 @@ import { requirePolicyIntakeFinalizer, requirePolicyIntakeReviewer } from "@/lib
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { isN8nWorkbenchPrimary, previewSemiAutoN8nExtraction } from "@/lib/policy-intake-semi-auto-n8n";
 import type { N8nVerifiedPremiumBreakdown } from "@/lib/policy-intake-n8n-validation";
+import { mapVerifiedN8nMotorPremium } from "@/lib/policy-n8n-onboarding-premium";
 
 export type PolicyIntakeDraft = {
   registrationMode:"registered"|"unregistered";
@@ -188,8 +189,8 @@ async function preparePolicyIntakeHandoffInternal(
   // Canonical form computes net = Basic OD + add-ons + TP + CPA. The n8n
   // "od_premium" OCR field is *Total OD*, so never copy it directly into
   // the form's Basic OD field and then add add-ons again.
-  const addOnTotal=verified
-    ? verified.premium.odAddons.reduce((sum,addon)=>sum+addon.amount,0) : 0;
+  const verifiedPremium=verified?mapVerifiedN8nMotorPremium(verified.premium):null;
+  const addOnTotal=verifiedPremium?Number(verifiedPremium.addOnPremium):0;
   const tpStart=verified?.fields.find(field=>field.key==="third_party_start_date")?.value??"";
   const tpExpiry=verified?.fields.find(field=>field.key==="third_party_end_date")?.value??"";
   const matchedCustomerId=await resolveConfirmedIntakeCustomerId(admin,intake.customer_mobile,customerName);
@@ -199,11 +200,11 @@ async function preparePolicyIntakeHandoffInternal(
     issuanceDate:new Date().toISOString().slice(0,10),rmName:"",intermediaryType,leadSource:intake.lead_source_name,intermediaryCode:intake.lead_source_code??"",businessLine:"Motor",
     registrationNo:mapped.next.registrationNo,insuredName:customerName,phoneNo:intake.customer_mobile,vehicleClass:mapped.next.vehicleClass,make:mapped.next.make,model:mapped.next.model,fuelType:mapped.next.fuelType,capacity:mapped.next.capacity,manufacturingYear:mapped.next.manufacturingYear,chassisNo:mapped.next.chassisNo,engineNo:mapped.next.engineNo,rtoState:mapped.next.rtoState,rtoName:mapped.next.rtoName,
     policyProduct:mapped.next.policyProduct,idv:mapped.next.idv,
-    od:verified?String(verified.premium.basicOd):mapped.next.od,
-    tp:verified?String(verified.premium.basicTp):mapped.next.tp,
-    ...(verified?{addOnPremium:String(addOnTotal),tpValidUpto:tpExpiry}:{}),
-    cpaOpted:verified&&verified.premium.cpa>0?"Yes":"No",
-    cpa:verified?String(verified.premium.cpa):mapped.next.cpa,
+    od:verifiedPremium?.od??mapped.next.od,
+    tp:verifiedPremium?.tp??mapped.next.tp,
+    ...(verifiedPremium?{addOnPremium:verifiedPremium.addOnPremium,tpValidUpto:tpExpiry}:{}),
+    cpaOpted:verifiedPremium?.cpaOpted??"No",
+    cpa:verifiedPremium?.cpa??mapped.next.cpa,
     policyNo:mapped.next.policyNo,insurerId:mapped.next.insurerId,validFrom:mapped.next.validFrom,validUpto:mapped.next.validUpto,
     payoutBasis:"NET",projectedOdPercent:"",projectedTpPercent:"",insurerScheme:"",payinBillNo:"",payinBilledAmount:"",payinBillDate:"",payinStatus:"Unbilled",retention:"",payoutOdPercent:"",payoutTpPercent:"",flatPayoutAmount:"",payoutStatus:"Pending",payoutDate:"",payoutVoucherNo:"",remarks:verified
       ? `Policy Intake ${id} — n8n validated ICICI 3005 PDF. Review every prefilled value before booking.
