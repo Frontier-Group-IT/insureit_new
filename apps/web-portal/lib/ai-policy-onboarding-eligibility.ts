@@ -106,20 +106,24 @@ export function assessAiPolicyIntake(input: AiPolicyEvidence): AiAssessment {
   if (!input.bundledPeriodsVerified) add("bundled_validity", "TP/CPA expiry periods require verification", "edit_draft");
 
   if (input.customerMatch === "multiple") add("customer_ambiguous", "Multiple matching customer records", "customer_decision");
-  if (input.customerMatch === "name_conflict" || input.sharedPhoneHasDistinctNames) {
-    add("customer_identity", "Same mobile used for different insured names", "customer_decision");
-  }
+  // Same mobile with a DIFFERENT PDF-verified insured name is not an
+  // exception. Canonical Policy Onboarding already supports creating a
+  // separate customer with that name and the existing mobile number.
+  // Reusing an unrelated master record is never inferred from the phone.
+  // Multiple EXACT matching customer records still need disambiguation.
   if (input.customerMatch === "unverified") add("customer_master_unverified", "Customer master identity not yet checked", "customer_decision");
-  if (input.customerMatch === "none") add("customer_creation_required", "No matching customer: explicit create-new decision required", "customer_decision");
+  // A verified insured with no exact master match is an ordinary
+  // create-new-customer path, not a parser or booking exception.
   if (input.customerMatch === "none" && input.existingCustomerSameIdentity) {
     add("customer_duplicate", "Existing same-identity customer needs confirmation", "customer_decision");
   }
   if (input.vehicleOwnerConflict) add("vehicle_ownership", "Vehicle belongs to another customer", "vehicle_transfer");
   if (input.coverageConflict) add("coverage_conflict", "Existing policy dates or coverage conflict", "coverage_review");
   if (input.savedDraftConflictsWithPdf) add("draft_conflict", "Saved manual value differs from current verified PDF", "edit_draft");
-  if (!["in_review"].includes(input.intakeStatus)) {
-    add("reviewer_conflict", "Intake must be in review for booking", "change_reviewer");
-  }
+  // Processing/Ready for Review are normal Intake lifecycle states.
+  // The canonical booking transaction must claim in_review and verify
+  // reviewer permissions immediately before committing. Extraction is not
+  // blocked merely because that transition has not happened yet.
 
   if (exceptions.length) return {
     state: exceptions.some(e => e.code === "unsupported_layout") ? "unsupported" : "needs_action",
