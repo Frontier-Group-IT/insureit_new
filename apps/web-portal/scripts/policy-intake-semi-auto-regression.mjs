@@ -73,8 +73,9 @@ assert(page.includes('is_duplicate: policyIntakeBucket(row, duplicateIds.has(row
   "Derived duplicate status must be visible without modifying Intake status");
 assert(page.includes('initialIntakeId={requestedId && pageRows.some(row => row.id === requestedId)'),
   "Direct Intake links must select only Intake IDs present in the authorized paginated server list");
-assert(page.includes('const targetIndex = requestedId ? workspaceRows.findIndex'),
-  "Direct Intake links must locate rows across pagination");
+assert(page.includes('const requestedRow = requestedId ? workspaceRows.find') &&
+  page.includes('const targetIndex = requestedId ? statusRows.findIndex'),
+  "Direct Intake links must choose their canonical status tab, then locate the authorized row across filtered pagination");
 assert(page.indexOf("const duplicates =") < page.indexOf(".slice((safePage - 1) * PAGE_SIZE"),
   "Pagination must take place only AFTER duplicate classification and queue filtering");
 assert(page.includes("duplicateCount"), "Visible duplicate count should be clear to the operator");
@@ -636,8 +637,7 @@ const aiPageText=text("app/development/ai-policy-onboarding/page.tsx");
 assert(aiPageText.includes("policyIntakeStatusCounts(workspaceRows,duplicateIds)")
   && aiPageText.includes("getPartnerEmployeeIntakeReadScope")
   && aiPageText.includes("policyIntakeBucket(row,duplicateIds.has(row.id)) === selectedView")
-  && aiPageText.includes("statusRows.slice")
-    === false,
+  && aiPageText.includes("const pageRows: SemiAutoIntakeRow[] = statusRows"),
  "AI Intake status tabs must use canonical register bucket and authorized scope before paging");
 assert(aiPageText.includes('if(item.state==="pending")queueCounts.queued++')
   && aiPageText.includes('else if(item.state==="processing")queueCounts.extracting++'),
