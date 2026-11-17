@@ -39,7 +39,7 @@ export type LifeHealthCaseDetail = LifeHealthCaseSummary & {
   rejection_reason: string;
 };
 export type LifeHealthDocument = { id: string; document_type: string; file_name: string; created_at: string };
-export type LifeHealthActivity = { id: string; action: string; created_at: string };
+export type LifeHealthActivity = { id: string; action: string; created_at: string; createdBy?: string; changes?: string[] };
 export type CaseCounts = Record<LifeHealthStatus,number>;
 
 async function request<T>(params: URLSearchParams): Promise<T> {
