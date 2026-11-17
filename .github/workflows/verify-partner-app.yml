@@ -107,6 +107,9 @@ jobs:
           console.log(`Verified Business header banner: ${width}x${height}, ${bytes.length} bytes, PNG.`);
           NODE
 
+      - name: Verify navy Policy Details hero and premium/date hierarchy
+        run: node apps/partner-app/scripts/verify-policy-detail-navy-summary.mjs
+
       - name: Verify native Motor validity date parity with web portal
         run: node --experimental-strip-types apps/partner-app/scripts/verify-native-motor-validity-defaults.mjs
 
