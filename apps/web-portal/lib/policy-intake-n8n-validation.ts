@@ -1,5 +1,5 @@
 const KEYS = new Set([
-  "policy_number", "insurer_name", "policy_product", "policy_start_date", "policy_end_date",
+  "policy_number", "insurer_name", "policy_product", "policy_issuance_date", "policy_start_date", "policy_end_date",
   "third_party_start_date", "third_party_end_date",
   "insured_name", "vehicle_make", "vehicle_model", "vehicle_class", "vehicle_fuel_type",
   "vehicle_motor_power_kw", "vehicle_capacity", "vehicle_rto_state", "vehicle_registration_status",
@@ -98,6 +98,11 @@ export function validateN8nPolicyIntakeResponse(
     const parsed = new Date(date + "T00:00:00Z");
     return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === date;
   };
+  // The current verified ICICI PDF workflow supplies an optional separately
+  // printed "Policy Issued On" field. Never substitute cover start or today's
+  // date. Validate it when present; missing evidence remains unverified.
+  const issuanceDate = fieldValue("policy_issuance_date");
+  if (issuanceDate && !isoDate(issuanceDate)) throw new Error("n8n_issuance_date_invalid");
   const startDate = fieldValue("policy_start_date");
   const endDate = fieldValue("policy_end_date");
   const tpStartDate = fieldValue("third_party_start_date");
