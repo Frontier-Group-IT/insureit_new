@@ -29,7 +29,7 @@ assert.match(screen, /policyColumn: \{ width: '17%' \}/, 'Policy count uses a na
 assert.match(screen, /amountColumn: \{ flex: 1, minWidth: 0 \}/, 'All authorized amount columns share remaining width');
 assert.match(screen, /styles\.financialRow/, 'All financial columns remain aligned row-by-row');
 assert.match(screen, /formatInsurerCompactRupees\(amount\)/, 'Compact values fit in portrait');
-assert.match(screen, /Alert\.alert\(/, 'Exact whole-rupee values remain accessible on tap');
+assert.match(screen, /partnerAlert\(/, 'Exact whole-rupee values remain accessible via shared popup on tap');
 for (const label of ["label: 'Policies'", "label: 'Net Premium'", "label: 'Pay-In'", "label: 'Retention'", "label: 'Payout'"])
   assert.ok(screen.includes(label), 'Missing register column ' + label);
 assert.doesNotMatch(screen, /label: 'Amount'|key: 'amounts'/, 'Duplicate Amount column must not return');

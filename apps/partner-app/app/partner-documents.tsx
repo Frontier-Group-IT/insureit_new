@@ -1,5 +1,6 @@
+import { partnerAlert } from '@/components/ui/partner-alert-provider';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -59,7 +60,7 @@ export default function MispDocumentsScreen() {
     if(!allowed||!applicationId){setLoading(false);return;}
     let active=true;
     void request(applicationId).then(result=>{if(active)setSaved(result.documents||[]);})
-      .catch(error=>{if(active)Alert.alert('MISP documents',error instanceof Error?error.message:'Unable to load documents.');})
+      .catch(error=>{if(active)partnerAlert('MISP documents',error instanceof Error?error.message:'Unable to load documents.');})
       .finally(()=>{if(active)setLoading(false);});
     return ()=>{active=false;};
   },[allowed,applicationId]);
@@ -72,7 +73,7 @@ export default function MispDocumentsScreen() {
     const label=key.startsWith('custom_')?(customLabels[key]??findSaved(key)?.label??'').trim():undefined;
     if(key.startsWith('custom_')&&!label){
       // Custom documents are optional; a meaningful file label must be supplied.
-      Alert.alert('Other Document','Enter a name before uploading this document.');
+      partnerAlert('Other Document','Enter a name before uploading this document.');
       return;
     }
     try {
@@ -92,14 +93,14 @@ export default function MispDocumentsScreen() {
       await request(applicationId,form);
       const fresh=await request(applicationId);
       setSaved(fresh.documents||[]);
-    } catch(error){Alert.alert('Document upload failed',error instanceof Error?error.message:'Please retry.');}
+    } catch(error){partnerAlert('Document upload failed',error instanceof Error?error.message:'Please retry.');}
     finally{setBusy(null);}
   };
   const finalize=async ()=>{
     if(!applicationId||busy)return;
     const missing=SLOTS.filter(s=>s.required&&!findSaved(s.key)).map(s=>s.label);
-    if(missing.length){Alert.alert('Required documents missing',missing.join(', '));return;}
-    Alert.alert('Complete MISP documents?','This will finish the required document stage and request Partner activation.',[
+    if(missing.length){partnerAlert('Required documents missing',missing.join(', '));return;}
+    partnerAlert('Complete MISP documents?','This will finish the required document stage and request Partner activation.',[
       {text:'Cancel',style:'cancel'},
       {text:'Complete',onPress:()=>void (async()=>{
         setBusy('finalize');
@@ -108,10 +109,10 @@ export default function MispDocumentsScreen() {
           form.append('application_id',applicationId);
           form.append('intent','finalize');
           const result=await request(applicationId,form);
-          Alert.alert('MISP documents completed',result.partner_id?'Partner ID: '+result.partner_id:'Documents completed.',[
+          partnerAlert('MISP documents completed',result.partner_id?'Partner ID: '+result.partner_id:'Documents completed.',[
             {text:'OK',onPress:()=>router.replace('/(tabs)/policies')},
           ]);
-        }catch(error){Alert.alert('Unable to complete documents',error instanceof Error?error.message:'Please retry.');}
+        }catch(error){partnerAlert('Unable to complete documents',error instanceof Error?error.message:'Please retry.');}
         finally{setBusy(null);}
       })()},
     ]);

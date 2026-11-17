@@ -1,4 +1,5 @@
-import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { partnerAlert } from '@/components/ui/partner-alert-provider';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -45,7 +46,7 @@ export function PartnerPaymentEncashment({ data }: { data: PartnerClaimDetail })
         <Text style={styles.readonly}>Settlement updates are unavailable in the Partner app. These fields are displayed for reference and cannot be submitted.</Text>
       </View>
       <View style={styles.actions}>
-        <Pressable accessibilityRole="button" accessibilityLabel="Get Assistance" onPress={() => Alert.alert('Get Assistance', 'Please contact your claims desk for settlement assistance.')} style={styles.assist}><MaterialCommunityIcons name="account-voice" size={17} color="#164A90"/><Text style={styles.assistText}>Get Assistance</Text></Pressable>
+        <Pressable accessibilityRole="button" accessibilityLabel="Get Assistance" onPress={() => partnerAlert('Get Assistance', 'Please contact your claims desk for settlement assistance.')} style={styles.assist}><MaterialCommunityIcons name="account-voice" size={17} color="#164A90"/><Text style={styles.assistText}>Get Assistance</Text></Pressable>
         <Pressable accessibilityRole="button" accessibilityLabel="Back to Claim" onPress={() => router.back()} style={styles.primary}><Text style={styles.primaryText}>Back to Claim</Text><Ionicons name="checkmark" color="#FFF" size={17}/></Pressable>
       </View>
     </ScrollView>

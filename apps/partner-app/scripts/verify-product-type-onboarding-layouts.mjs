@@ -212,7 +212,7 @@ assert.match(screen,/viewPolicyButton:/,'Intake policy copy action retains its e
 assert.ok(screen.includes('void saveCommercial();'), 'Commercial popup must use shared Save & Close handler.');
 assert.doesNotMatch(screen,/setDialog\('confirm-save'\)/,'Removed Save Draft confirmation must not be reachable.');
 assert.match(screen,/setDialog\('discard'\)/,'Cancel protects unsaved changes in custom dialog.');
-assert.match(screen,/onRequestClose=\{dismissDialog\}/,'Popup dismissal must be accessible on Android.');
+assert.match(screen,/onCancel=\{dismissDialog\}/,'Shared popup dismissal must be accessible on Android.');
 assert.match(screen,/setDialog\('error'\)/,'Errors must be shown in popup.');
 assert.doesNotMatch(screen,/<Text style=\{styles.documentHint\}>/,'Upload hint must not render below Documents.');
 assert.doesNotMatch(screen, /\{documentError\?<Text style=\{styles.documentError\}>/,'Document errors must not be inline.');

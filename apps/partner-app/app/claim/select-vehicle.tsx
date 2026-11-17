@@ -1,5 +1,6 @@
+import { partnerAlert } from '@/components/ui/partner-alert-provider';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Image, ImageBackground, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Image, ImageBackground, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -63,7 +64,7 @@ export default function PartnerClaimVehicleSelector() {
       const claimId = await createPartnerClaim(choice.customer_id, choice.vehicle_id, choice.policy_id);
       router.replace({ pathname: '/claim/stage', params: { id: claimId, key: 'spot_intimation' } } as never);
     } catch (reason) {
-      Alert.alert('Claim could not be started', reason instanceof Error ? reason.message : 'Please try again or contact the claims desk.');
+      partnerAlert('Claim could not be started', reason instanceof Error ? reason.message : 'Please try again or contact the claims desk.');
     } finally { setCreating(false); }
   };
   return <SafeAreaView style={styles.root} edges={['top','bottom']}>

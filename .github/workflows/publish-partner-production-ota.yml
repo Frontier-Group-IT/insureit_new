@@ -90,6 +90,7 @@ jobs:
               || file === 'apps/partner-app/scripts/verify-add-partner-only.mjs'
               || file === 'apps/partner-app/scripts/verify-misp-onboarding-parity.mjs'
               || file === 'apps/partner-app/scripts/verify-life-health-issued-popup.mjs'
+              || file === 'apps/partner-app/scripts/verify-unified-partner-dialogs.mjs'
               || file === 'apps/partner-app/scripts/verify-case-inline-edit-remarks-and-issuance.mjs'
               || file === 'apps/partner-app/scripts/verify-four-tab-white-sticky-header.mjs'
               || file === 'apps/partner-app/scripts/verify-claims-transparent-sticky-position.mjs'

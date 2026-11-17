@@ -157,6 +157,9 @@ jobs:
       - name: Verify Partner Case inline editing remarks and issuance
         run: node apps/partner-app/scripts/verify-case-inline-edit-remarks-and-issuance.mjs
 
+      - name: Verify unified Partner notifications and confirmations
+        run: node apps/partner-app/scripts/verify-unified-partner-dialogs.mjs
+
       - name: Verify shared bottom navigation on Policy Onboarding and Add Partner
         run: node apps/partner-app/scripts/verify-stack-bottom-navigation.mjs
       - name: Verify incremental Policy Intake pagination

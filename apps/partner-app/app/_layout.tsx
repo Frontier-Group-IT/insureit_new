@@ -1,5 +1,6 @@
 import { Redirect, Stack, usePathname } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { PartnerAlertProvider } from '@/components/ui/partner-alert-provider';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { canPartnerAccess, canPartnerAccessCaseRegister, canPartnerSearch, canPartnerStartClaim, requiredPartnerRoutePermission } from '@/lib/partner-permissions';
@@ -16,6 +17,7 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <PartnerErrorBoundary>
+        <PartnerAlertProvider>
         <PartnerNetworkProvider>
         <PartnerSessionProvider>
           <PartnerBiometricLockProvider>
@@ -68,6 +70,7 @@ export default function RootLayout() {
           </PartnerBiometricLockProvider>
         </PartnerSessionProvider>
         </PartnerNetworkProvider>
+        </PartnerAlertProvider>
       </PartnerErrorBoundary>
     </SafeAreaProvider>
   );

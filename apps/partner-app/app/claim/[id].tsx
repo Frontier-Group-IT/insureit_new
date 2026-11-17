@@ -1,6 +1,7 @@
+import { partnerAlert } from '@/components/ui/partner-alert-provider';
 import { formatAppDate } from '@/lib/indian-date';
 import { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -152,14 +153,14 @@ export default function ClaimTrackerScreen() {
   const saveClaimNumber = async () => {
     if (!mayEditClaim || !data || claimNumberSaving) return;
     const value = claimNumber.trim();
-    if (!value || value.length > 80) { Alert.alert('Action required', 'Enter a valid insurer claim number (up to 80 characters).'); return; }
+    if (!value || value.length > 80) { partnerAlert('Action required', 'Enter a valid insurer claim number (up to 80 characters).'); return; }
     setClaimNumberSaving(true);
     try {
       await savePartnerInsurerClaimNumber(data.claim.id, value);
       setData(await getPartnerClaimDetail(data.claim.id));
       setClaimNumberOpen(false);
-      Alert.alert('Saved', 'Insurer claim number updated successfully.');
-    } catch (error) { Alert.alert('Unable to save', error instanceof Error ? error.message : 'Please try again.'); }
+      partnerAlert('Saved', 'Insurer claim number updated successfully.');
+    } catch (error) { partnerAlert('Unable to save', error instanceof Error ? error.message : 'Please try again.'); }
     finally { setClaimNumberSaving(false); }
   };
   const openStage = (key: string) => router.push({ pathname: '/claim/stage', params: { id, key } } as never);

@@ -1,3 +1,4 @@
+import { PartnerConfirmDialog } from '@/components/ui/partner-confirm-dialog';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Image, Linking, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
@@ -490,74 +491,32 @@ export default function PolicyIntakeDetailScreen() {
           </View>
         </>
       )}
-      <Modal
+      <PartnerConfirmDialog
         visible={rejectConfirmationOpen}
-        transparent
-        animationType="fade"
-        onRequestClose={() => { if (!reviewBusy) setRejectConfirmationOpen(false); }}
-      >
-        <View style={styles.rejectModalOverlay}>
-          <Pressable
-            style={StyleSheet.absoluteFill}
-            accessibilityRole="button"
-            accessibilityLabel="Cancel policy intake rejection"
-            disabled={reviewBusy}
-            onPress={() => setRejectConfirmationOpen(false)}
-          />
-          <View style={styles.rejectModalCard} accessibilityViewIsModal>
-            <View style={styles.rejectModalIcon}>
-              <Ionicons name="alert-circle-outline" size={22} color="#B42318" />
-            </View>
-            <Text style={styles.rejectModalTitle}>Reject Policy Intake?</Text>
-            <Text style={styles.rejectModalMessage}>
-              This will reject the intake and notify the submitter with your Operations note.
-            </Text>
-            <Text numberOfLines={3} style={styles.rejectModalNote}>{reviewNote.trim()}</Text>
-            <View style={styles.rejectModalActions}>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Cancel rejection"
-                disabled={reviewBusy}
-                onPress={() => setRejectConfirmationOpen(false)}
-                style={[styles.rejectModalButton, styles.rejectModalCancel]}
-              >
-                <Text style={styles.rejectModalCancelText}>Cancel</Text>
-              </Pressable>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Confirm reject policy intake"
-                disabled={reviewBusy}
-                onPress={() => { setRejectConfirmationOpen(false); void submitReviewAction('rejected'); }}
-                style={[styles.rejectModalButton, styles.rejectModalConfirm, reviewBusy && styles.rejectModalDisabled]}
-              >
-                <Text style={styles.rejectModalConfirmText}>Reject Intake</Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
-      <Modal transparent visible={Boolean(reviewerConflictName)} animationType="fade" onRequestClose={() => setReviewerConflictName(null)}>
-        <View style={reviewerStyles.backdrop}>
-          <View style={reviewerStyles.dialog} accessibilityRole="alert">
-            <View style={reviewerStyles.header}>
-              <View style={reviewerStyles.warningIcon}><Ionicons name="warning-outline" size={20} color="#B66B0B" /></View>
-              <View style={reviewerStyles.headerText}>
-                <Text style={reviewerStyles.title}>Change reviewer?</Text>
-                <Text style={reviewerStyles.message}>This intake is currently being reviewed by <Text style={reviewerStyles.bold}>{reviewerConflictName}</Text>. If you continue, the reviewer will be changed to you and you can proceed with Policy Onboarding.</Text>
-              </View>
-              <Pressable accessibilityRole="button" accessibilityLabel="Close reviewer change dialog" onPress={() => setReviewerConflictName(null)} style={reviewerStyles.close}><Ionicons name="close" size={19} color="#7A8798" /></Pressable>
-            </View>
-            <View style={reviewerStyles.actions}>
-              <Pressable accessibilityRole="button" disabled={openingReview} onPress={() => setReviewerConflictName(null)} style={[reviewerStyles.action, reviewerStyles.cancel]}>
-                <Text style={reviewerStyles.cancelText}>Keep current reviewer</Text>
-              </Pressable>
-              <Pressable accessibilityRole="button" disabled={openingReview} onPress={() => void openOperationsReview(true)} style={[reviewerStyles.action, reviewerStyles.continue]}>
-                <Text style={reviewerStyles.continueText}>{openingReview ? 'Opening…' : 'Change reviewer & continue'}</Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
+        title="Reject Policy Intake?"
+        message={`This will reject the intake and notify the submitter with your Operations note.\n\n${reviewNote.trim()}`}
+        kind="delete"
+        busy={reviewBusy}
+        dismissible={!reviewBusy}
+        onCancel={()=>setRejectConfirmationOpen(false)}
+        actions={[
+          {label:'Cancel',secondary:true,onPress:()=>setRejectConfirmationOpen(false)},
+          {label:'Reject Intake',destructive:true,onPress:()=>{setRejectConfirmationOpen(false); void submitReviewAction('rejected');}},
+        ]}
+      />
+      <PartnerConfirmDialog
+        visible={Boolean(reviewerConflictName)}
+        title="Change reviewer?"
+        message={`This intake is currently being reviewed by ${reviewerConflictName||''}. If you continue, the reviewer will be changed to you and you can proceed with Policy Onboarding.`}
+        kind="warning"
+        busy={openingReview}
+        dismissible={!openingReview}
+        onCancel={()=>setReviewerConflictName(null)}
+        actions={[
+          {label:'Keep current reviewer',secondary:true,onPress:()=>setReviewerConflictName(null)},
+          {label:'Change reviewer & continue',onPress:()=>void openOperationsReview(true)},
+        ]}
+      />
     </PartnerScreen>
   );
 }

@@ -1,5 +1,6 @@
+import { partnerAlert } from '@/components/ui/partner-alert-provider';
 import { Fragment, useEffect, useRef, useState } from 'react';
-import { Alert, Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
+import { Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { StatusBar } from 'expo-status-bar';
@@ -168,15 +169,15 @@ export default function AddPartnerScreen() {
   const hasUnsavedDetails = mispDirty || (!applicationId && (Object.keys(initial) as Field[]).some(key => form[key] !== initial[key]));
   const changePartnerType=(next:"posp"|"misp")=>{
     if(next===partnerType)return;
-    if(partnerType==="misp"&&mispDirty){Alert.alert("Discard MISP details?","Switching to POSP will clear unsaved MISP details.",[{text:"Keep Editing",style:"cancel"},{text:"Discard & Switch",style:"destructive",onPress:()=>{setMispDirty(false);setPartnerType(next);}}]);return;}
-    if(partnerType==="posp"&&(applicationId||hasUnsavedDetails)){Alert.alert("Keep POSP details?","Changing type will hide the current POSP form.",[{text:"Keep Editing",style:"cancel"},{text:"Switch to MISP",onPress:()=>setPartnerType(next)}]);return;}
+    if(partnerType==="misp"&&mispDirty){partnerAlert("Discard MISP details?","Switching to POSP will clear unsaved MISP details.",[{text:"Keep Editing",style:"cancel"},{text:"Discard & Switch",style:"destructive",onPress:()=>{setMispDirty(false);setPartnerType(next);}}]);return;}
+    if(partnerType==="posp"&&(applicationId||hasUnsavedDetails)){partnerAlert("Keep POSP details?","Changing type will hide the current POSP form.",[{text:"Keep Editing",style:"cancel"},{text:"Switch to MISP",onPress:()=>setPartnerType(next)}]);return;}
     setPartnerType(next);
   };
   const leavePartnerForm = (destination?: PartnerTabDestination) => {
     if (saving || uploadingType) return;
     const leave = () => destination ? router.navigate(destination as never) : router.back();
     if (!hasUnsavedDetails) { leave(); return; }
-    Alert.alert('Discard Partner details?', 'Your entered details have not been submitted.', [
+    partnerAlert('Discard Partner details?', 'Your entered details have not been submitted.', [
       { text: 'Keep Editing', style: 'cancel' },
       { text: 'Discard & Leave', style: 'destructive', onPress: leave },
     ]);
@@ -191,7 +192,7 @@ export default function AddPartnerScreen() {
         if (!response.ok || !result.ok) throw new Error(result.error || 'Could not load RM and Bank lists.');
         if (active) { setRms(result.rms || []); setBanks(result.banks || []); setOems(result.oems || []);setPendingMisps(result.pendingMisps || []); }
       } catch (error) {
-        if (active) Alert.alert('Master data unavailable', error instanceof Error ? error.message : 'Please retry.');
+        if (active) partnerAlert('Master data unavailable', error instanceof Error ? error.message : 'Please retry.');
       } finally { if (active) setLoading(false); }
     })();
     return () => { active = false; };
@@ -242,14 +243,14 @@ export default function AddPartnerScreen() {
       if (!response.ok || !result.ok || !result.application_id) throw new Error(result.error || 'Partner application could not be submitted.');
       setApplicationId(result.application_id);
       if (nextStep === 'exit') {
-        Alert.alert('Partner details saved', 'Primary details saved and sent to Operations for review.', [
+        partnerAlert('Partner details saved', 'Primary details saved and sent to Operations for review.', [
           { text: 'OK', onPress: () => router.replace('/(tabs)/policies') },
         ]);
       } else {
         setUploadOpen(true);
       }
     } catch (error) {
-      Alert.alert('Unable to save Partner', error instanceof Error ? error.message : 'Please try again.');
+      partnerAlert('Unable to save Partner', error instanceof Error ? error.message : 'Please try again.');
     } finally { setSaving(false); }
   };
   const uploadDocument = async (type: DocumentType) => {
@@ -262,13 +263,13 @@ export default function AddPartnerScreen() {
       if (result.canceled || !result.assets.length) return;
       const file = result.assets[0];
       if (!file.size || file.size > 10 * 1024 * 1024) {
-        Alert.alert('Unsupported document', 'Choose a PDF, JPG or PNG under 10 MB.');
+        partnerAlert('Unsupported document', 'Choose a PDF, JPG or PNG under 10 MB.');
         return;
       }
       const mime = file.mimeType || (file.name.toLowerCase().endsWith('.pdf') ? 'application/pdf'
         : file.name.toLowerCase().endsWith('.png') ? 'image/png' : 'image/jpeg');
       if (!['application/pdf', 'image/jpeg', 'image/png'].includes(mime)) {
-        Alert.alert('Unsupported document', 'Choose a PDF, JPG or PNG file.');
+        partnerAlert('Unsupported document', 'Choose a PDF, JPG or PNG file.');
         return;
       }
       setUploadingType(type);
@@ -285,9 +286,9 @@ export default function AddPartnerScreen() {
       const data = await response.json() as { ok?: boolean; error?: string };
       if (!response.ok || !data.ok) throw new Error(data.error || 'Document upload failed.');
       setUploaded(previous => ({ ...previous, [type]: file.name }));
-      Alert.alert('Uploaded', `${file.name} saved successfully.`);
+      partnerAlert('Uploaded', `${file.name} saved successfully.`);
     } catch (error) {
-      Alert.alert('Upload failed', error instanceof Error ? error.message : 'Try again.');
+      partnerAlert('Upload failed', error instanceof Error ? error.message : 'Try again.');
     } finally {
       setUploadingType(null);
     }

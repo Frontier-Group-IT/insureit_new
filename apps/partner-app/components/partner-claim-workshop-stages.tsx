@@ -1,4 +1,5 @@
-import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View, type ImageStyle } from 'react-native';
+import { partnerAlert } from '@/components/ui/partner-alert-provider';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View, type ImageStyle } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -75,7 +76,7 @@ export function PartnerClaimWorkshopStage({ data, stage }: { data: PartnerClaimD
         <Text style={styles.readOnly}>These fields are view-only until authorized Partner claim-stage updates are available.</Text>
       </View>
       <View style={styles.actions}>
-        <Pressable accessibilityRole="button" onPress={() => Alert.alert('Get Assistance', 'Please contact your claims desk for help with this stage.')} style={styles.assistance}><MaterialCommunityIcons name="account-voice" color="#093876" size={20}/><Text style={styles.assistanceText}>Get Assistance</Text></Pressable>
+        <Pressable accessibilityRole="button" onPress={() => partnerAlert('Get Assistance', 'Please contact your claims desk for help with this stage.')} style={styles.assistance}><MaterialCommunityIcons name="account-voice" color="#093876" size={20}/><Text style={styles.assistanceText}>Get Assistance</Text></Pressable>
         <Pressable accessibilityRole="button" accessibilityLabel="Continue to Claim Tracker" onPress={() => router.back()} style={styles.continue}><Text style={styles.continueText}>Continue</Text><Ionicons name="arrow-forward" color="#FFF" size={21}/></Pressable>
       </View>
     </ScrollView>

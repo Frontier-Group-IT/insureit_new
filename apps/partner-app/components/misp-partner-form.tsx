@@ -1,5 +1,6 @@
+import { partnerAlert } from '@/components/ui/partner-alert-provider';
 import { useEffect, useState } from 'react';
-import { Alert, Keyboard, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Keyboard, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useRouter } from 'expo-router';
@@ -85,7 +86,7 @@ export function MispPartnerForm({rms,banks,oems,pendingMisps,loading,onDirtyChan
       ||!form.bank_id||!/^\d{6,20}$/.test(normalized.bank_account_number)
       ||!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(normalized.bank_ifsc_code)
       ||!/^\d{2}[A-Z]{5}\d{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/.test(normalized.gst_number)) {
-      Alert.alert('Check MISP details','Complete the required MISP, Designated Person, address and bank fields in the same format as the website.');
+      partnerAlert('Check MISP details','Complete the required MISP, Designated Person, address and bank fields in the same format as the website.');
       return;
     }
     setSaving(true);
@@ -102,11 +103,11 @@ export function MispPartnerForm({rms,banks,oems,pendingMisps,loading,onDirtyChan
       onDirtyChange(false);
       if(intent==='documents')router.replace({pathname:'/partner-documents',params:{applicationId:result.application_id}} as never);
       else {
-        Alert.alert('MISP details saved','Application saved. Continue document upload from the application record.',[
+        partnerAlert('MISP details saved','Application saved. Continue document upload from the application record.',[
           {text:'OK',onPress:()=>router.replace('/(tabs)/policies')},
         ]);
       }
-    } catch(error){Alert.alert('Unable to save MISP',error instanceof Error?error.message:'Please retry.');}
+    } catch(error){partnerAlert('Unable to save MISP',error instanceof Error?error.message:'Please retry.');}
     finally{setSaving(false);}
   };
   return (

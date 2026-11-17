@@ -1,5 +1,6 @@
+import { partnerAlert } from '@/components/ui/partner-alert-provider';
 import { useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Image, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Image, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useRouter } from 'expo-router';
@@ -111,7 +112,7 @@ export function PartnerClaimStageEditor({data,stage}:{data:PartnerClaimDetail;st
     if(locating||saving)return;
     setLocating(true);
     try {setValue('dealership_location',await getPartnerCurrentLocation());}
-    catch(error){Alert.alert('Location unavailable',error instanceof Error?error.message:'Please enter the location manually.');}
+    catch(error){partnerAlert('Location unavailable',error instanceof Error?error.message:'Please enter the location manually.');}
     finally{setLocating(false);}
   }
 
@@ -133,23 +134,23 @@ export function PartnerClaimStageEditor({data,stage}:{data:PartnerClaimDetail;st
   async function continueClaimNumber(){
     if(claimNumberSaving)return;
     const value=claimNumber.trim();
-    if(!value||value.length>80){Alert.alert('Action required','Enter a valid insurer claim number (up to 80 characters).');return;}
+    if(!value||value.length>80){partnerAlert('Action required','Enter a valid insurer claim number (up to 80 characters).');return;}
     setClaimNumberSaving(true);
     try{
       await savePartnerInsurerClaimNumber(data.claim.id,value);
       setClaimNumberOpen(false);
       advance();
     }catch(error){
-      Alert.alert('Unable to save',error instanceof Error?error.message:'Please try again.');
+      partnerAlert('Unable to save',error instanceof Error?error.message:'Please try again.');
     }finally{setClaimNumberSaving(false);}
   }
   async function save(){
     if(saving)return;
     for(const field of config.fields){
-      if(field.required&&!String(values[field.key]??'').trim()){Alert.alert('Complete required fields',`${field.label} is required.`);return;}
+      if(field.required&&!String(values[field.key]??'').trim()){partnerAlert('Complete required fields',`${field.label} is required.`);return;}
     }
     if(stage==='vehicle_delivery'&&['yes','true','1'].includes((values.vehicle_received||'').toLowerCase())&&!values.vehicle_received_date?.trim()){
-      Alert.alert('Complete required fields','Vehicle Received Date is required.');return;
+      partnerAlert('Complete required fields','Vehicle Received Date is required.');return;
     }
     setSaving(true);
     try{
@@ -163,7 +164,7 @@ export function PartnerClaimStageEditor({data,stage}:{data:PartnerClaimDetail;st
         setClaimNumber(data.claim.insurer_claim_no ?? '');
         setClaimNumberOpen(true);
       }else advance();
-    }catch(error){Alert.alert('Unable to save',error instanceof Error?error.message:'Please try again.');}
+    }catch(error){partnerAlert('Unable to save',error instanceof Error?error.message:'Please try again.');}
     finally{setSaving(false);}
   }
 
