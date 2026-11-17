@@ -286,7 +286,9 @@ for (const asset of ['policy-document', 'customer-details']) {
 requireText(policyDetail, '<Image source={illustration} style={styles.quickActionArtwork} resizeMode="contain"', 'Document and Customer artwork remain bundled images.');
 requireText(policyDetail, "iconKind === 'renew-policy'", 'Renew Policy retains its own icon choice.');
 requireText(policyDetail, "iconKind === 'raise-claim'", 'Raise Claim retains its own icon choice.');
-requireText(policyDetail, "<Ionicons name={quickGlyph} size={42} color=\"#1678D5\" />", 'Renew and Claim render visible vector icons instead of blank PNG slots.');
+requireText(policyDetail, 'PartnerAssets.actions.quickRenewals', 'Renew Policy uses the exact Home Renewals icon.');
+requireText(policyDetail, 'PartnerAssets.actions.quickClaims', 'Raise Claim uses the exact Home Claims icon.');
+if (policyDetail.includes('quickGlyph')) throw new Error('Generic vector icons must not replace the Home action artwork.');
 if (policyDetail.includes('Ionicons name={iconName} size={32}')) throw new Error('Flat quick-action glyph must not return.');
 
 for (const obsolete of ['label="Policy Intake"', 'label="Add Policy"', 'label="Case Register"', 'label="Add Partner"', 'styles.quickBlue', 'borderRightColor']) {
