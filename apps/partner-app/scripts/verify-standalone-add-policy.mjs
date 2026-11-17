@@ -17,6 +17,17 @@ assert.match(permissions, /policy-new[\s\S]{0,100}create_policies/);
 assert.match(screen, /usePathname\(\)==='\/policy-new'/);
 assert.match(screen, /prepareNewNativePolicyOnboarding\(\)/);
 assert.match(screen, /bookNewNativePolicyOnboarding\(draft,resolution,verifiedApprovalId\)/);
+const booking = screen.slice(screen.indexOf('async function completeBooking('), screen.indexOf('async function requestApproval('));
+assert.match(booking, /if\(dirty&&!isNew\)\{[\s\S]*saveNativePolicyOnboarding\(id,revision,draft\)/,
+  'Only Intake-linked Motor booking saves an Intake draft before booking');
+assert.match(booking, /isNew\s*\?await bookNewNativePolicyOnboarding\(draft,resolution,verifiedApprovalId\)/,
+  'New standalone Motor sends its current draft directly to the new_book endpoint');
+assert.match(booking, /:await bookNativePolicyOnboarding\(id,revision,resolution,verifiedApprovalId\)/,
+  'Existing Intake Motor booking retains revision-checked booking');
+assert.doesNotMatch(booking, /if\(dirty\)\{\s*const saved=await saveNativePolicyOnboarding/,
+  'Never send a standalone draft to the Intake save API');
+assert.match(api, /const standalone=\["new_prepare","new_book"/,
+  'Server keeps independent new-book path separate from Intake validation');
 assert.match(screen, /!isNew\?<View style=\{styles\.documentAndSaveActions\}>/);
 assert.match(api, /if\(standalone\)\{/);
 assert.match(api, /if\(body\.action==="new_prepare"\)/);
