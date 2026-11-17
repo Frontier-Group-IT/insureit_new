@@ -70,7 +70,7 @@ const isoDate=(value:string)=>{
   return date.getUTCFullYear()===Number(m[3])&&date.getUTCMonth()===Number(m[2])-1&&date.getUTCDate()===Number(m[1])
     ? m[3]+'-'+m[2]+'-'+m[1]:null;
 };
-export function MispPartnerForm({rms,banks,oems,pendingMisps,loading,onDirtyChange}:{rms:Option[];banks:Option[];oems:Option[];pendingMisps:Option[];loading:boolean;onDirtyChange:(dirty:boolean)=>void}) {
+export function MispPartnerForm({rms,banks,oems,pendingMisps,loading,onDirtyChange,onCancel}:{rms:Option[];banks:Option[];oems:Option[];pendingMisps:Option[];loading:boolean;onDirtyChange:(dirty:boolean)=>void;onCancel:()=>void}) {
   const router=useRouter();
   const [form,setForm]=useState(empty);
   const [picker,setPicker]=useState<'rm'|'oem'|'bank'|null>(null);
@@ -226,13 +226,13 @@ export function MispPartnerForm({rms,banks,oems,pendingMisps,loading,onDirtyChan
               return <View key={field.key} style={styles.half}>
                 <Text style={styles.label}>{field.label}{!field.optional?<Text style={styles.requiredStar}> *</Text>:null}</Text>
                 {field.pick||field.date?
-                  <Pressable accessibilityRole="button" accessibilityLabel={'Select '+field.label} disabled={loading}
+                  <Pressable accessibilityRole="button" accessibilityLabel={'Select '+field.label} disabled={loading||Boolean(applicationId)}
                     onPress={()=>{if(field.date)setDateField(field.key as 'document_received_at'|'date_of_birth');else{setSearch('');setPicker(field.pick!);}}}
                     style={styles.inputPress}>
                     <Text numberOfLines={1} style={styles.inputText}>{field.date?(form[field.key]||field.hint):(optionName||field.hint)}</Text>
                     <Ionicons name={field.date?'calendar-outline':'chevron-down'} size={18} color="#17365D"/>
                   </Pressable>
-                  :<TextInput value={form[field.key]} onChangeText={value=>set(field.key,value)}
+                  :<TextInput editable={!applicationId} value={form[field.key]} onChangeText={value=>set(field.key,value)}
                     keyboardType={field.keyboard||'default'} secureTextEntry={Boolean(field.secret)}
                     placeholder={field.hint} placeholderTextColor="#98A3B2"
                     autoCapitalize={['pan_number','dp_pan_number','bank_ifsc_code','gst_number'].includes(field.key)?'characters':field.key==='dp_email'?'none':'sentences'}
@@ -244,7 +244,7 @@ export function MispPartnerForm({rms,banks,oems,pendingMisps,loading,onDirtyChan
         </View>
       ))}
       <View style={styles.actions}>
-        <Pressable accessibilityRole="button" disabled={saving||loading||Boolean(busyDocument)} onPress={()=>router.back()} style={[styles.secondary,saving&&styles.disabled]}>
+        <Pressable accessibilityRole="button" disabled={saving||loading||Boolean(busyDocument)} onPress={onCancel} style={[styles.secondary,saving&&styles.disabled]}>
           <Text style={styles.secondaryText}>Cancel</Text>
         </Pressable>
         <Pressable accessibilityRole="button" disabled={saving||loading||Boolean(busyDocument)} onPress={()=>void submit()} style={[styles.primary,saving&&styles.disabled]}>
