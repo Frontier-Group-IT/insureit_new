@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ComponentProps } from 'react';
 import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { connectPartnerAlerts, nextPartnerAlert, type PartnerAlertRequest } from '@/lib/partner-alert';
@@ -32,7 +32,7 @@ export function PartnerFeedbackDialog({
   const [submitting, setSubmitting] = useState(false);
   useEffect(() => { if (!visible) setSubmitting(false); }, [visible]);
   const isBusy = busy || submitting;
-  const icon = type === 'success' ? 'checkmark-circle-outline' :
+  const icon: ComponentProps<typeof Ionicons>['name'] = type === 'success' ? 'checkmark-circle-outline' :
     type === 'delete' ? 'trash-outline' :
     type === 'error' ? 'close-circle-outline' :
     type === 'info' ? 'information-circle-outline' : 'alert-circle-outline';
