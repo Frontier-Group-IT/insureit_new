@@ -34,7 +34,7 @@ assert.match(loader, /row\.href=dailyActivityRecordHref\(table,row\.recordId\)/,
 for(const table of ["policies","policy_intake_requests","life_health_cases"]) {
   assert.ok(loader.includes(`table:"${table}",recordId:a.id`),`Keep immutable record ID for ${table} history`);
 }
-assert.ok(panel.includes("<DailyActivityHistoryRows rows={data.rows} isCustomerActivity={isCustomerActivity} isClaimActivity={isClaimActivity} vehicleMode={vehicleMode} isOtherActivity={isOtherActivity} />"), "Shared activity renderer preserves Customer, Claims and Vehicle modes");
+assert.ok(panel.includes(`<DailyActivityHistoryRows rows={data.rows} isCustomerActivity={isCustomerActivity} isClaimActivity={isClaimActivity} vehicleMode={vehicleMode} isOtherActivity={isOtherActivity} showPerformedBy={reportMode==="all"} />`), "Shared activity renderer preserves Customer, Claims and Vehicle modes while conditionally showing the performer");
 assert.ok(rows.includes('role={canOpen(row)?"button":undefined}'), "Verified destinations and deleted claims are clickable");
 assert.ok(rows.includes('tabIndex={canOpen(row)?0:undefined}'), "Deleted claims remain keyboard accessible");
 assert.match(rows,/event\.key==="Enter"\|\|event\.key===" "/,"Enter and Space navigate");
@@ -63,7 +63,7 @@ assert.ok(rows.includes('object-contain object-left'), "Wide or narrow insurer l
 assert.ok(rows.includes('aria-label="Insurer unavailable"'), "Missing insurer identity uses a clear fallback");
 assert.ok(!rows.includes('{row.insurer||"—"}'), "Insurance company full name is no longer visible in rows");
 
-assert.ok(!panel.includes('Performed By')&&!panel.includes('View Details'), "No performer or details-action column");
+assert.ok(panel.includes('{reportMode==="all" ? <th className="whitespace-nowrap px-3 py-3">Performed By</th> : null}')&&!panel.includes('>View Details</th>'), "Performed By appears only in combined All, with no separate details-action column");
 assert.ok(loader.includes('admin.from("insurance_companies")'), "Insurer linked to actual company");
 assert.ok(loader.includes('admin.from("customers")'), "Customer linked to actual customer");
 assert.ok(loader.includes('admin.from("vehicles")'), "Vehicle linked to actual vehicle");

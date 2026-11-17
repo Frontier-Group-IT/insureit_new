@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { checkSemiAutoReadiness } from "../lib/policy-intake-semi-auto.ts";
-import { policyIntakeBucket } from "../lib/policy-intake-status-buckets.ts";
+import { policyIntakeBucket, policyIntakeStatusCounts } from "../lib/policy-intake-status-buckets.ts";
 import { validateN8nPolicyIntakeResponse } from "../lib/policy-intake-n8n-validation.ts";
 import { mapVerifiedN8nMotorPremium } from "../lib/policy-n8n-onboarding-premium.ts";
 import { filterVerifiedN8nOnboardingFields } from "../lib/policy-n8n-onboarding-fields.ts";
@@ -73,8 +73,9 @@ assert(page.includes('is_duplicate: policyIntakeBucket(row, duplicateIds.has(row
   "Derived duplicate status must be visible without modifying Intake status");
 assert(page.includes('initialIntakeId={requestedId && pageRows.some(row => row.id === requestedId)'),
   "Direct Intake links must select only Intake IDs present in the authorized paginated server list");
-assert(page.includes('const targetIndex = requestedId ? workspaceRows.findIndex'),
-  "Direct Intake links must locate rows across pagination");
+assert(page.includes('const requestedRow = requestedId ? workspaceRows.find') &&
+  page.includes('const targetIndex = requestedId ? statusRows.findIndex'),
+  "Direct Intake links must choose their canonical status tab, then locate the authorized row across filtered pagination");
 assert(page.indexOf("const duplicates =") < page.indexOf(".slice((safePage - 1) * PAGE_SIZE"),
   "Pagination must take place only AFTER duplicate classification and queue filtering");
 assert(page.includes("duplicateCount"), "Visible duplicate count should be clear to the operator");
@@ -117,8 +118,8 @@ assert(n8nServer.includes("if (!UUID.test(intakeId)) return false"),
   "Broad preview must still validate the Intake identifier");
 assert(client.includes('initialIntakeId ?? null'),
   "Direct links may initially select only the Intake authorized by server pagination");
-assert(client.includes('row.is_duplicate ? "Duplicate · Preview only"'),
-  "Duplicate preview rows must be visibly separated from bookable Intakes");
+assert(client.includes('row.is_duplicate ? "Duplicate · Review only"'),
+  "Derived duplicate rows must be visibly separated from eligible Intakes and remain review-only");
 assert(client.includes('Boolean(selected?.is_duplicate)'),
   "Duplicate Intakes must have correction disabled in the UI");
 assert(client.includes('&& !selected?.is_duplicate'),
@@ -239,8 +240,9 @@ const signedSource = text("lib/policy-intake-n8n-signed-source.ts");
 const actions = text("app/development/ai-policy-onboarding/actions.ts");
 assert(page.includes("const primaryN8n = isN8nWorkbenchPrimary()"),
   "All policy-type routing is enabled only by the server-side n8n primary flag");
-assert(page.includes('const scoped = primaryN8n ? current : current.eq("policy_type", "motor")'),
-  "Primary workbench must show all open Intake types while retaining the legacy Motor-only path");
+assert(page.includes('let scoped = primaryN8n ? current : current.eq("policy_type", "motor")')
+  && page.includes("getPartnerEmployeeIntakeReadScope"),
+  "Primary workbench must show all authorized open Intake types, retain legacy Motor-only mode and preserve Register scope");
 assert(page.includes("primaryN8n={primaryN8n}"),
   "The server must pass primary mode to the authenticated client, never trust a browser query param");
 assert(n8nServer.includes('INSUREIT_N8N_WORKBENCH_PRIMARY'),
@@ -565,12 +567,15 @@ const routeText=text("app/api/internal/ai-policy-onboarding/process/route.ts");
 const actionsText=text("app/development/ai-policy-onboarding/actions.ts");
 const workbenchText=text("components/development/semi-auto-policy-workspace.tsx");
 const queueSql=readFileSync(new URL("../../../supabase/migrations/20261117154000_policy_intake_ai_processing_queue.sql",import.meta.url),"utf8");
+const queueV2Sql=readFileSync(new URL("../../../supabase/migrations/20261117170000_ai_policy_priority_batch_queue_v2.sql",import.meta.url),"utf8");
+const normalUploadActions=text("app/policy-intakes/actions.ts");
+const partnerUploadApi=text("app/api/partner/policy-intakes/route.ts");
 const schedulerYaml=readFileSync(new URL("../../../.github/workflows/ai-policy-intake-extraction.yml",import.meta.url),"utf8");
 assert(workerText.includes("offset<ids.length;offset+=100")
   && workerText.includes("ids.slice(offset,offset+100)"),
   "All authorized open Intakes must contribute to AI queue counts across pages");
 assert(workerText.includes("previewSemiAutoN8nExtraction(")
-  && workerText.includes("claim_policy_intake_ai_queue_v1")
+  && workerText.includes("claim_policy_intake_ai_queue_v2")
   && workerText.includes("canonicalPreflightPassed:false"),
   "Background extraction must use current signed n8n PDF, atomically claim and never mark booking-ready on parse success");
 assert(!workerText.includes("onboardPolicy(")
@@ -597,8 +602,8 @@ assert(actionsText.includes("reprocessAiPolicyIntake")
   "Each manual background reprocess request must require the current authorized reviewer");
 const vercelConfig=JSON.parse(text("vercel.json"));
 assert.deepEqual(vercelConfig.crons,[
-  {path:"/api/internal/ai-policy-onboarding/process",schedule:"*/5 * * * *"},
-], "Vercel Pro should schedule a bounded queue every five minutes");
+  {path:"/api/internal/ai-policy-onboarding/process",schedule:"* * * * *"},
+], "Vercel Pro should provide a one-minute durable fallback, separate from immediate Intake hooks");
 assert(routeText.includes("export async function GET(request: NextRequest)")
   && routeText.includes("authorized(request, process.env.CRON_SECRET??")
   && routeText.includes("secret.length < 32")
@@ -609,4 +614,108 @@ assert(routeText.includes("export async function GET(request: NextRequest)")
 assert(routeText.includes("export async function POST(request: NextRequest)")
   && routeText.includes("process.env.INSUREIT_AI_QUEUE_WORKER_TOKEN??"),
   "Existing opt-in GitHub Actions worker POST must remain independently protected");
+// Policy Intake Register counts must match the AI workbench using the same
+// authorized open set and derived duplicate buckets, not an OCR worker state.
+const parityRows=[
+  {id:"act",status:"processing",ocr_status:"failed"},
+  {id:"review",status:"in_review",ocr_status:"completed"},
+  {id:"duplicate-open",status:"ready_for_review",ocr_status:"completed"},
+  {id:"regular-processing",status:"processing",ocr_status:"pending"},
+  {id:"duplicate-rejected",status:"rejected",ocr_status:"completed"},
+  {id:"completed",status:"completed",ocr_status:"completed"},
+];
+const parityDuplicateIds=new Set(["duplicate-open","duplicate-rejected"]);
+const registerBucketCounts=policyIntakeStatusCounts(parityRows,parityDuplicateIds);
+assert.deepEqual({
+  action:registerBucketCounts.action_required,inReview:registerBucketCounts.in_review,
+  processing:registerBucketCounts.processing,duplicate:registerBucketCounts.duplicate,
+},{action:1,inReview:1,processing:1,duplicate:2});
+const openStatuses=new Set(["ready_for_review","in_review","needs_attention","processing"]);
+const aiOpenRows=parityRows.filter(x=>openStatuses.has(x.status));
+const aiBucketCounts=policyIntakeStatusCounts(aiOpenRows,parityDuplicateIds);
+assert.deepEqual({action:aiBucketCounts.action_required,review:aiBucketCounts.in_review,
+  processing:aiBucketCounts.processing,openDuplicates:aiBucketCounts.duplicate,all:aiBucketCounts.all},
+  {action:1,review:1,processing:1,openDuplicates:1,all:4},
+  "Open-only AI counts match the Register's same buckets while excluding rejected/completed duplicates");
+const aiPageText=text("app/development/ai-policy-onboarding/page.tsx");
+assert(aiPageText.includes("policyIntakeStatusCounts(workspaceRows,duplicateIds)")
+  && aiPageText.includes("getPartnerEmployeeIntakeReadScope")
+  && aiPageText.includes("policyIntakeBucket(row,duplicateIds.has(row.id)) === selectedView")
+  && aiPageText.includes("const pageRows: SemiAutoIntakeRow[] = statusRows"),
+ "AI Intake status tabs must use canonical register bucket and authorized scope before paging");
+assert(aiPageText.includes('if(item.state==="pending")queueCounts.queued++')
+  && aiPageText.includes('else if(item.state==="processing")queueCounts.extracting++'),
+  "n8n queue pending cannot be counted as Intake workflow Processing");
+assert(!aiPageText.includes("ai_exceptions: row.is_duplicate")
+  && aiPageText.includes('new Set(["duplicate_policy"'),
+  "Derived duplicate rows must show a blocking exception even before n8n extracts them");
+assert(workbenchText.includes("Queued for n8n")
+  && workbenchText.includes("Reading PDF")
+  && workbenchText.includes("Intake workflow")
+  && workbenchText.includes("router.refresh()"),
+  "Queue and Intake statuses must be separated and periodically refreshed");
+assert(aiPageText.includes("viewLink(selectedView,safePage + 1)")
+  && aiPageText.includes("statusRows.length"),
+  "Server-side Intake status filtering must paginate the whole chosen status group, not only the first 75 records");
+// Phase 2 customer exception lookup must stay privileged/read-only until
+// the canonical customer decision, duplicate and booking transactions exist.
+const customerPreviewStart=actionsText.indexOf("export async function reviewAiIntakeCustomerCandidates");
+const customerPreviewEnd=actionsText.indexOf("export async function reprocessAiPolicyIntake",customerPreviewStart);
+assert(customerPreviewStart>0 && customerPreviewEnd>customerPreviewStart,
+  "Customer identity candidate action must be available for exception review");
+const customerPreviewCode=actionsText.slice(customerPreviewStart,customerPreviewEnd);
+assert(customerPreviewCode.includes("requireDevelopmentPolicyOperator(id)")
+  && customerPreviewCode.includes("previewSemiAutoN8nExtraction(id)")
+  && customerPreviewCode.includes('extraction.preview.checksPassed===13')
+  && customerPreviewCode.includes('extraction.preview.warnings.length===0')
+  && customerPreviewCode.includes('normalizedPhone(row.phone)===phone')
+  && customerPreviewCode.includes('.eq("customer_mobile",intake.customer_mobile)')
+  && customerPreviewCode.includes('otherOpenIntakes=group.error')
+  && customerPreviewCode.includes('truncated=(rows??[]).length>=51'),
+  "AI customer candidate review must reverify the current PDF, filter exact normalized phone and fail closed on too many matches");
+assert(!customerPreviewCode.includes(".update(") && !customerPreviewCode.includes(".insert(")
+  && !customerPreviewCode.includes("onboardPolicy("),
+  "Customer exception review is strictly read-only and cannot create/link customers or book a policy");
+assert(workbenchText.includes("Check customer matches")
+  && workbenchText.includes("Create New Customer")
+  && workbenchText.includes("/customers?choose_partner=1")
+  && workbenchText.includes("This mobile also appears on")
+  && workbenchText.includes("reviewAiIntakeCustomerCandidates(exceptionRow.id)"),
+  "Customer decision popup provides guided canonical review/create routes, not a silent automatic link");
+// Event-driven n8n-first ingestion must cover both Operations and Partner
+// original uploads AND successful document replacements. No Google OCR should
+// be invoked when the verified n8n workbench/queue is enabled.
+assert(normalUploadActions.includes("processAiQueueBatch({preferredIntakeId:input.id})")
+  && normalUploadActions.split("processAiQueueBatch({preferredIntakeId:input.id})").length===3
+  && normalUploadActions.includes("if(aiQueueEnabled())"),
+  "Operations originals and replacements must dispatch immediate n8n independently of cron");
+assert(partnerUploadApi.includes("processAiQueueBatch({preferredIntakeId:input.id})")
+  && partnerUploadApi.split("processAiQueueBatch({preferredIntakeId:input.id})").length===3
+  && partnerUploadApi.includes("if (aiQueueEnabled())"),
+  "Partner and Branch originals and replacements must dispatch immediate n8n independently of cron");
+assert(workerText.includes("const MAX_BATCH = 6")
+  && workerText.includes("const MAX_CONCURRENT = 3")
+  && workerText.includes("Promise.all(wave.map(")
+  && workerText.includes("p_preferred_intake_id:preferredIntakeId??null"),
+  "Backlog uses bounded three-way concurrency; an immediate upload claims only its own Intake");
+assert(workerText.includes('sync_verified_ai_intake_ocr_v1')
+  && workerText.includes('loadPolicyIntakeDuplicateMatches(admin,[{')
+  && workerText.includes('isDuplicate, // Derived from the canonical'),
+  "Strict n8n PDF fields must feed the canonical duplicate status and OCR only through the guarded RPC");
+assert(queueV2Sql.includes("create or replace function public.claim_policy_intake_ai_queue_v2")
+  && queueV2Sql.includes("p_preferred_intake_id uuid default null")
+  && queueV2Sql.includes("p_max > 8")
+  && queueV2Sql.includes("for update of q skip locked")
+  && queueV2Sql.includes("revoke all on function public.claim_policy_intake_ai_queue_v2"),
+  "Priority/large queue claims must retain service-role gates and SKIP LOCKED leases");
+assert(queueV2Sql.includes("create or replace function public.sync_verified_ai_intake_ocr_v1")
+  && queueV2Sql.includes("current_user <> 'service_role'")
+  && queueV2Sql.includes("p_checks_passed <> 13")
+  && queueV2Sql.includes("coalesce(i.ocr_fields,'[]'::jsonb)='[]'::jsonb")
+  && queueV2Sql.includes("not exists(")
+  && queueV2Sql.includes("policy_intake_onboarding_drafts")
+  && queueV2Sql.includes("q.lease_id=p_lease_id")
+  && queueV2Sql.includes("d.is_current=true")
+  && !queueV2Sql.includes("insert into public.policies"),
+  "Canonical OCR synchronization requires strict checked current PDF/lease, empty fields and no saved draft; never books");
 console.log("Semi-auto Motor onboarding regression checks passed.");

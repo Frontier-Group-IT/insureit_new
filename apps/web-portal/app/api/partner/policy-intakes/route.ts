@@ -1,4 +1,5 @@
 import { after } from "next/server";
+import { aiQueueEnabled, processAiQueueBatch } from "@/lib/ai-policy-onboarding-queue-server";
 import { NextResponse } from "next/server";
 
 import { createSupabaseWithAccessToken } from "@/lib/auth";
@@ -689,10 +690,15 @@ async function completeUpload(
     return json({ ok: false, error: "Policy intake could not be created." }, 500);
   }
 
-  if (!proposalForm) {
+  if (aiQueueEnabled()) {
+    // Event-driven n8n extraction for Partner, POSP, MISP and Branch uploads.
+    // The durable one-minute worker remains the recovery path on shutdown.
     after(async () => {
-      await processStoredOcr(input.id);
+      try { await processAiQueueBatch({preferredIntakeId:input.id}); }
+      catch { console.error("[partner-policy-intake] immediate n8n queue unavailable",{intakeId:input.id}); }
     });
+  } else if (!proposalForm) {
+    after(async () => { await processStoredOcr(input.id); });
   }
 
   return json({
@@ -852,10 +858,15 @@ async function completeResponse(
   const { error: updateError } = await update;
   if (updateError) return json({ ok: false, error: "Could not attach the replacement policy copy." }, 500);
 
-  if (!proposalForm) {
+  if (aiQueueEnabled()) {
+    // Event-driven n8n extraction for Partner, POSP, MISP and Branch uploads.
+    // The durable one-minute worker remains the recovery path on shutdown.
     after(async () => {
-      await processStoredOcr(input.id);
+      try { await processAiQueueBatch({preferredIntakeId:input.id}); }
+      catch { console.error("[partner-policy-intake] immediate n8n queue unavailable",{intakeId:input.id}); }
     });
+  } else if (!proposalForm) {
+    after(async () => { await processStoredOcr(input.id); });
   }
 
   return json({

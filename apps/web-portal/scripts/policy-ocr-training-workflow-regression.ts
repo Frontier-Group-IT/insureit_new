@@ -231,7 +231,7 @@ assert.equal(existsSync("app/api/internal/policy-ocr-training/process/route.ts")
 assert.equal(existsSync("lib/policy-ocr-training-schedule.ts"), false);
 const vercelConfig = JSON.parse(readFileSync("vercel.json", "utf8"));
 assert.deepEqual(vercelConfig.crons ?? [],[
-  {path:"/api/internal/ai-policy-onboarding/process",schedule:"*/5 * * * *"},
+  {path:"/api/internal/ai-policy-onboarding/process",schedule:"* * * * *"},
 ],"The only allowed production cron is the newly approved, separate read-only n8n Intake extraction queue");
 assert(!vercelConfig.crons.some((job: {path:string})=>
   job.path.includes("policy-ocr-training") || job.path.includes("ocr-training")),

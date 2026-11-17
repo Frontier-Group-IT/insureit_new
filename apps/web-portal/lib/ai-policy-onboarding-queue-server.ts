@@ -3,6 +3,8 @@ import "server-only";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { isN8nWorkbenchPrimary, previewSemiAutoN8nExtraction } from "@/lib/policy-intake-semi-auto-n8n";
 import { assessAiPolicyIntake, type AiPolicyEvidence, type AiPolicyExceptionCode } from "@/lib/ai-policy-onboarding-eligibility";
+import { loadPolicyIntakeDuplicateMatches } from "@/lib/policy-intake-duplicate";
+import type { PolicyIntakeOcrField } from "@/lib/policy-intake-ocr-service";
 
 export type AiQueueState =
   | "pending" | "processing" | "exception" | "verified" | "unsupported" | "failed";
@@ -17,8 +19,12 @@ export type AiQueueDisplay = {
 type Claimed = { intake_id: string; document_id: string; lease_id: string };
 type QueueIntake = {
   id: string;
+  intake_number: string;
+  created_at: string;
   policy_type: string | null;
   status: string;
+  ocr_status: string;
+  ocr_fields: PolicyIntakeOcrField[] | null;
   customer_mobile: string;
   matched_customer_id: string | null;
   assigned_to_profile_id: string | null;
@@ -35,7 +41,8 @@ type QueueUpdate = {
   processed_at: string | null; retry_after: string;
 };
 
-const MAX_BATCH = 2;
+const MAX_BATCH = 6; // Drain a bounded backlog without overloading n8n Cloud.
+const MAX_CONCURRENT = 3; // Each n8n call can take up to 60 seconds.
 const UUID = /^[0-9a-f-]{36}$/i;
 
 function normalizedName(v: string) {
@@ -86,7 +93,7 @@ export async function loadAiQueueDisplay(ids: readonly string[]): Promise<Map<st
 }
 
 /** Claims are exclusively service-role RPC with FOR UPDATE SKIP LOCKED. */
-export async function processAiQueueBatch(): Promise<{
+export async function processAiQueueBatch(options?: {preferredIntakeId?:string;maxBatch?:number}): Promise<{
   enabled:boolean; claimed:number; processed:number; failed:number;
 }> {
   if (!aiQueueEnabled()) return {enabled:false,claimed:0,processed:0,failed:0};
@@ -95,25 +102,39 @@ export async function processAiQueueBatch(): Promise<{
   if (parserRevision.length < 1 || parserRevision.length > 80) {
     throw new Error("AI queue parser revision configuration invalid");
   }
-  const {data,error}=await admin.rpc("claim_policy_intake_ai_queue_v1",{
-    p_max:MAX_BATCH,p_parser_revision:parserRevision,
+  const preferredIntakeId=options?.preferredIntakeId;
+  if(preferredIntakeId && !UUID.test(preferredIntakeId)) {
+    throw new Error("Invalid immediate policy Intake reference");
+  }
+  const boundedMax=preferredIntakeId?1:Math.max(1,Math.min(MAX_BATCH,options?.maxBatch??MAX_BATCH));
+  const {data,error}=await admin.rpc("claim_policy_intake_ai_queue_v2",{
+    p_max:boundedMax,p_parser_revision:parserRevision,
+    p_preferred_intake_id:preferredIntakeId??null,
   });
   if (error) throw new Error("AI processing queue is not available; verify its reviewed migration");
   const claimed = (data??[]) as Claimed[];
   let processed=0, failed=0;
-  // Sequential and capped: no large bursts of private-PDF fetches.
-  for(const item of claimed) {
-    try {
-      await processClaim(item);
-      processed++;
-    } catch {
-      failed++;
-      await finishClaim(item,{
-        state:"failed",exception_codes:["extraction_failed"],field_keys:[],
-        parser_id:null,checks_passed:0,extraction_fingerprint:null,
-        last_error_code:"worker_retryable_failure",processed_at:null,retry_after:retryAfter(5),
-      });
-    }
+  // Bounded concurrency improves throughput while preserving the per-Intake
+  // lease and retry budgets. One failed parser cannot fail the whole batch.
+  for(let offset=0;offset<claimed.length;offset+=MAX_CONCURRENT){
+    const wave=claimed.slice(offset,offset+MAX_CONCURRENT);
+    await Promise.all(wave.map(async item=>{
+      try {
+        await processClaim(item);
+        processed++;
+      } catch {
+        failed++;
+        try {
+          await finishClaim(item,{
+            state:"failed",exception_codes:["extraction_failed"],field_keys:[],
+            parser_id:null,checks_passed:0,extraction_fingerprint:null,
+            last_error_code:"worker_retryable_failure",processed_at:null,retry_after:retryAfter(5),
+          });
+        } catch {
+          // Expired leases remain reclaimable; never forge a successful state.
+        }
+      }
+    }));
   }
   return {enabled:true,claimed:claimed.length,processed,failed};
 }
@@ -136,7 +157,7 @@ async function finishClaim(item: Claimed, update: QueueUpdate) {
 async function processClaim(item: Claimed) {
   const admin=createSupabaseAdminClient();
   const {data:intake,error}=await admin.from("policy_intake_requests")
-    .select("id,policy_type,status,customer_mobile,matched_customer_id,assigned_to_profile_id")
+    .select("id,intake_number,created_at,policy_type,status,ocr_status,ocr_fields,customer_mobile,matched_customer_id,assigned_to_profile_id")
     .eq("id",item.intake_id).maybeSingle<QueueIntake>();
   if(error || !intake || !["processing","ready_for_review","in_review","needs_attention"].includes(intake.status)){
     await finishClaim(item,{
@@ -185,23 +206,51 @@ async function processClaim(item: Claimed) {
   const phone=normalizedPhone(intake.customer_mobile);
   // All matching is read-only. Never select or create a customer in the worker.
   const [{data:matches,error:customerError},{data:draft,error:draftError},
-    {data:brands,error:brandsError}] = await Promise.all([
+    {data:brands,error:brandsError},{data:related,error:relatedError}] = await Promise.all([
     admin.from("customers").select("id,phone,contact_name,company_name")
-      .eq("phone",intake.customer_mobile).limit(50).returns<Customer[]>(),
+      .ilike("phone","%"+phone).limit(51).returns<Customer[]>(),
     admin.from("policy_intake_onboarding_drafts")
       .select("revision,draft_payload").eq("intake_id",intake.id).maybeSingle<Draft>(),
     admin.from("vehicle_manufacturer_brands")
       .select("brand_name").eq("is_active",true).limit(1000),
+    admin.from("policy_intake_requests").select("id,ocr_fields")
+      .eq("customer_mobile",intake.customer_mobile).neq("id",intake.id)
+      .in("status",["processing","ready_for_review","in_review","needs_attention"])
+      .limit(51).returns<Array<{id:string;ocr_fields:PolicyIntakeOcrField[]|null}>>(),
   ]);
-  if(customerError||draftError||brandsError)throw new Error("AI assessment master lookup failed");
+  if(customerError||draftError||brandsError||relatedError)throw new Error("AI assessment master lookup failed");
   const phoneMatches=(matches??[]).filter(x=>normalizedPhone(x.phone)===phone);
   const exact=phoneMatches.filter(x=>[x.company_name,x.contact_name].some(n=>normalizedName(n??"")===customerName));
-  const customerMatch:AiPolicyEvidence["customerMatch"]=matches?.length===50 || exact.length>1?"multiple"
+  const customerMatch:AiPolicyEvidence["customerMatch"]=matches?.length===51 || exact.length>1?"multiple"
     :exact.length===1?"unique_exact":phoneMatches.length?"name_conflict":"none";
   // Multiple distinct customers with the same phone are an exception even if
   // one exact record matches. Never assume a shared phone is unique identity.
+  const otherPolicyInsuredDiffers=(related??[]).some(other=>{
+    const previousName=normalizedName(other.ocr_fields?.find(f=>f.key==="insured_name")?.value??"");
+    return Boolean(previousName&&customerName&&previousName!==customerName);
+  });
   const sharedDifferentNames=phoneMatches.some(x=>
-    ![x.company_name,x.contact_name].some(n=>normalizedName(n??"")===customerName));
+    ![x.company_name,x.contact_name].some(n=>normalizedName(n??"")===customerName))
+    || otherPolicyInsuredDiffers;
+  // The normal register duplicate detector must also run on the NEW n8n
+  // policy number. Otherwise a failed Google OCR Intake remains undetectable.
+  const duplicate=await loadPolicyIntakeDuplicateMatches(admin,[{
+    id:intake.id,intake_number:intake.intake_number,status:intake.status,
+    created_at:intake.created_at,ocr_fields:extraction.preview.fields,
+  }]);
+  if(!duplicate.ok)throw new Error("Canonical duplicate protection unavailable");
+  const isDuplicate=duplicate.matches.has(intake.id);
+  // Copy ONLY strictly validated n8n OCR into an empty, unchanged Intake.
+  // An atomic SQL compare-and-set checks current document, lease, empty OCR,
+  // status, and absence of saved draft. This never books a policy.
+  if(extraction.preview.checksPassed===13 && extraction.preview.warnings.length===0){
+    const synced=await admin.rpc("sync_verified_ai_intake_ocr_v1",{
+      p_intake_id:intake.id,p_document_id:item.document_id,p_lease_id:item.lease_id,
+      p_parser_revision:(process.env.INSUREIT_AI_QUEUE_PARSER_REVISION||"bridge-v1").trim(),
+      p_verified_fields:extraction.preview.fields,p_checks_passed:13,
+    });
+    if(synced.error)throw new Error("Canonical verified OCR synchronization unavailable");
+  }
   const model=normalizedName(values.get("vehicle_model")??"");
   const rawMake=normalizedName(values.get("vehicle_make")??"");
   const recognizedChetak=/^(?:C|CHETAK[ -]+)(2501|3001|3501|3502|3503)$/.test(model)
@@ -225,7 +274,7 @@ async function processClaim(item: Claimed) {
     // The strict 3005 parser verifies the Motor business line even for
     // older Intakes lacking the upstream policy_type classification.
     policyType:intake.policy_type??"motor", intakeStatus:intake.status,
-    isDuplicate:false, // Canonical duplicate checks run separately, never assumed safe.
+    isDuplicate, // Derived from the canonical registered-policy / earlier-Intake detector.
     hasCurrentDocument:true,documentStillCurrent:true,
     parserId:"icici_3005_n8n_native_pdf",
     parserChecksPassed:extraction.preview.checksPassed,

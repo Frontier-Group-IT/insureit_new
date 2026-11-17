@@ -1,5 +1,5 @@
 import { partnerAlert } from '@/components/ui/partner-alert-provider';
-import { Fragment, useEffect, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
@@ -55,6 +55,53 @@ const sections: Array<{ heading: string; inputs: Array<{ key: Field; label: stri
     { key: 'gst_number', label: 'GST Number', hint: 'GSTIN', optional: true },
   ] },
 ];
+type FieldErrors = Partial<Record<Field, string>>;
+const validationOrder: Field[] = [
+  'document_received_at', 'associate_employee_id', 'pos_first_name', 'pan_number',
+  'aadhaar_number', 'date_of_birth', 'mobile', 'email', 'address',
+  'postal_code', 'city', 'state', 'bank_id', 'bank_account_number',
+  'bank_ifsc_code', 'gst_number',
+];
+const fieldSection: Partial<Record<Field, number>> = {
+  document_received_at: 0, associate_employee_id: 0, pos_first_name: 0,
+  pan_number: 0, aadhaar_number: 0, date_of_birth: 0, mobile: 0, email: 0,
+  address: 1, postal_code: 1, city: 1, state: 1,
+  bank_id: 2, bank_account_number: 2, bank_ifsc_code: 2, gst_number: 2,
+};
+function validatePartnerField(key: Field, form: Record<Field, string>): string | null {
+  const value = form[key].trim();
+  const required: Partial<Record<Field, string>> = {
+    associate_employee_id: 'RM', pos_first_name: 'First Name', pan_number: 'PAN',
+    aadhaar_number: 'Aadhaar', date_of_birth: 'Date of Birth', mobile: 'Mobile',
+    email: 'Email', address: 'Address', postal_code: 'PIN Code',
+    city: 'City', state: 'State', bank_id: 'Bank',
+    bank_account_number: 'Account Number', bank_ifsc_code: 'IFSC Code',
+  };
+  if (!value) return required[key] ? `${required[key]} is required.` : null;
+  const upper = value.toUpperCase();
+  if (key === 'pan_number' && !/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(upper)) return 'PAN must use PAN format ABCDE1234F.';
+  if (key === 'aadhaar_number' && !/^[0-9]{12}$/.test(value.replace(/\s/g, ''))) return 'Aadhaar must contain exactly 12 digits.';
+  if (key === 'mobile' && !/^[6-9][0-9]{9}$/.test(value)) return 'Mobile must be a valid Indian mobile number.';
+  if (key === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return 'Email must be a valid email address.';
+  if (key === 'postal_code' && !/^[0-9]{6}$/.test(value)) return 'PIN Code must contain exactly 6 digits.';
+  if (key === 'bank_account_number' && !/^[0-9]{6,20}$/.test(value)) return 'Account Number must contain 6 to 20 digits.';
+  if (key === 'bank_ifsc_code' && !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(upper)) return 'IFSC Code must use format ABCD0123456.';
+  if (key === 'gst_number' && !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/.test(upper)) return 'GST Number must be a valid 15-character GSTIN.';
+  if (key === 'date_of_birth' || key === 'document_received_at') {
+    const date = isoDate(value);
+    if (!date) return `${key === 'date_of_birth' ? 'Date of Birth' : 'Documents received'} must be a valid date.`;
+    if (key === 'date_of_birth' && date > new Date().toISOString().slice(0, 10)) return 'Date of Birth cannot be in the future.';
+  }
+  return null;
+}
+function validatePartner(form: Record<Field, string>): FieldErrors {
+  const errors: FieldErrors = {};
+  for (const key of validationOrder) {
+    const message = validatePartnerField(key, form);
+    if (message) errors[key] = message;
+  }
+  return errors;
+}
 function isoDate(display: string): string | null {
   const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(display.trim());
   if (!match) return null;
@@ -81,6 +128,18 @@ export default function AddPartnerScreen() {
   const allowed = context?.identity.actor_kind === 'employee'
     && canPartnerAccess(context, 'create_intermediary_application', 'edit');
   const [form, setForm] = useState(initial);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const scrollRef = useRef<ScrollView>(null);
+  const sectionPositions = useRef<Record<number, number>>({});
+  const bodyPositions = useRef<Record<number, number>>({});
+  const fieldPositions = useRef<Partial<Record<Field, number>>>({});
+  const revealFirstError = (key: Field) => {
+    const section = fieldSection[key];
+    if (section === undefined) return;
+    const y = (sectionPositions.current[section] || 0)
+      + (bodyPositions.current[section] || 0) + (fieldPositions.current[key] || 0);
+    scrollRef.current?.scrollTo({ y: Math.max(0, y - 65), animated: true });
+  };
   const [partnerType,setPartnerType]=useState<"posp"|"misp">("posp");
   const [mispDirty,setMispDirty]=useState(false);
   const [oems,setOems]=useState<Option[]>([]);
@@ -96,7 +155,17 @@ export default function AddPartnerScreen() {
   const [uploadingType, setUploadingType] = useState<DocumentType | null>(null);
   const [uploaded, setUploaded] = useState<Partial<Record<DocumentType, string>>>({});
   const [dateField, setDateField] = useState<'date_of_birth' | 'document_received_at' | null>(null);
-  const set = (key: Field, value: string) => setForm(old => ({ ...old, [key]: value }));
+  const set = (key: Field, value: string) => {
+    setForm(old => ({ ...old, [key]: value }));
+    setFieldErrors(old => {
+      if (!old[key]) return old;
+      const next = { ...old };
+      const message = validatePartnerField(key, { ...form, [key]: value });
+      if (message) next[key] = message;
+      else delete next[key];
+      return next;
+    });
+  };
   const hasUnsavedDetails = mispDirty || (!applicationId && (Object.keys(initial) as Field[]).some(key => form[key] !== initial[key]));
   const changePartnerType=(next:"posp"|"misp")=>{
     if(next===partnerType)return;
@@ -159,19 +228,12 @@ export default function AddPartnerScreen() {
       bank_ifsc_code: form.bank_ifsc_code.trim().toUpperCase(),
       postal_code: form.postal_code.trim(),
     };
-    if (!form.pos_first_name.trim() || !form.associate_employee_id || !form.bank_id
-      || !/^[6-9][0-9]{9}$/.test(normalized.mobile)
-      || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized.email)
-      || !/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(normalized.pan_number)
-      || !/^[0-9]{12}$/.test(normalized.aadhaar_number) || !dob
-      || (form.document_received_at.trim() && !received)
-      || dob > new Date().toISOString().slice(0, 10)
-      || !form.address.trim() || !form.city.trim() || !form.state.trim()
-      || !/^[0-9]{6}$/.test(normalized.postal_code)
-      || !/^[0-9]{6,20}$/.test(normalized.bank_account_number)
-      || !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(normalized.bank_ifsc_code)
-      || (normalized.gst_number && !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/.test(normalized.gst_number))) {
-      partnerAlert('Check Partner details', 'Complete all required fields with valid dates, PAN, Aadhaar, mobile, bank account and IFSC.');
+    const errors = validatePartner(form);
+    setFieldErrors(errors);
+    const firstInvalid = validationOrder.find(key => errors[key]);
+    if (firstInvalid) {
+      Keyboard.dismiss();
+      revealFirstError(firstInvalid);
       return;
     }
     setSaving(true);
@@ -243,32 +305,33 @@ export default function AddPartnerScreen() {
             <Text style={styles.heading}>Add Partner</Text>
           </View>
         </View>
-        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
+        <ScrollView ref={scrollRef} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
           <View style={styles.typeSwitch} accessibilityLabel="Partner onboarding type">{(["posp","misp"] as const).map(type=><Pressable key={type} accessibilityRole="button" accessibilityLabel={type.toUpperCase()} accessibilityState={{selected:partnerType===type}} onPress={()=>changePartnerType(type)} style={[styles.typeOption,partnerType===type&&styles.typeSelected]}><Text style={[styles.typeText,partnerType===type&&styles.typeSelectedText]}>{type.toUpperCase()}</Text></Pressable>)}</View>
           {partnerType==="misp"?<MispPartnerForm rms={rms} banks={banks} oems={oems} pendingMisps={pendingMisps} loading={loading} onDirtyChange={setMispDirty}/>:<>
           {sections.map((section, index) => (
-            <View key={section.heading} style={styles.section}>
+            <View key={section.heading} style={styles.section} onLayout={event => { sectionPositions.current[index] = event.nativeEvent.layout.y; }}>
               <View style={styles.sectionHeader}>
                 <View style={styles.index}><Text style={styles.indexText}>{String(index + 1).padStart(2, '0')}</Text></View>
                 <Text style={styles.sectionTitle}>{section.heading}</Text>
               </View>
-              <View style={styles.sectionBody}>
+              <View style={styles.sectionBody} onLayout={event => { bodyPositions.current[index] = event.nativeEvent.layout.y; }}>
                 {index === 2 ? (
-                  <View style={[styles.field, cellStyle]}>
-                    <Text style={styles.label}>Bank *</Text>
-                    <Pressable disabled={loading || Boolean(applicationId)} accessibilityRole="button" onPress={() => openSelector('bank')} style={styles.select}>
+                  <View style={[styles.field, cellStyle]} onLayout={event => { fieldPositions.current.bank_id = event.nativeEvent.layout.y; }}>
+                    <Text style={styles.label}>Bank <Text style={styles.requiredStar}>*</Text></Text>
+                    <Pressable disabled={loading || Boolean(applicationId)} accessibilityRole="button" onPress={() => openSelector('bank')} style={[styles.select, fieldErrors.bank_id && styles.invalidControl]}>
                       <Text style={styles.selectText} numberOfLines={1}>{banks.find(x => x.id === form.bank_id)?.name || (loading ? 'Loading banks…' : 'Select bank')}</Text>
                       <Ionicons name="chevron-down" size={17} color="#17365D" />
                     </Pressable>
+                    {fieldErrors.bank_id ? <Text style={styles.fieldError} accessibilityRole="alert">{fieldErrors.bank_id}</Text> : null}
                   </View>
                 ) : null}
                 {section.inputs.map(field => (
                   <Fragment key={field.key}>
-                    <View style={[styles.field, cellStyle]}>
-                      <Text style={styles.label}>{field.label}{field.optional ? '' : ' *'}</Text>
+                    <View style={[styles.field, cellStyle]} onLayout={event => { fieldPositions.current[field.key] = event.nativeEvent.layout.y; }}>
+                      <Text style={styles.label}>{field.label}{!field.optional ? <Text style={styles.requiredStar}> *</Text> : null}</Text>
                       {field.key === 'document_received_at' || field.key === 'date_of_birth' ? (
                         <Pressable accessibilityRole="button" accessibilityLabel={`Select ${field.label}`}
-                          disabled={Boolean(applicationId)} onPress={() => setDateField(field.key as 'date_of_birth' | 'document_received_at')} style={styles.select}>
+                          disabled={Boolean(applicationId)} onPress={() => setDateField(field.key as 'date_of_birth' | 'document_received_at')} style={[styles.select, fieldErrors[field.key] && styles.invalidControl]}>
                           <Text style={styles.selectText} numberOfLines={1}>{form[field.key] || 'DD/MM/YYYY'}</Text>
                           <Ionicons name="calendar-outline" size={18} color="#17365D" />
                         </Pressable>
@@ -278,16 +341,18 @@ export default function AddPartnerScreen() {
                           keyboardType={field.keyboard || 'default'} secureTextEntry={Boolean(field.secret)}
                           autoCapitalize={field.key === 'email' ? 'none' : field.key === 'pan_number' || field.key === 'bank_ifsc_code' || field.key === 'gst_number' ? 'characters' : 'sentences'}
                           autoCorrect={false} maxLength={field.key === 'address' ? 300 : field.key === 'aadhaar_number' ? 12 : 150}
-                          style={styles.input} />
+                          style={[styles.input, fieldErrors[field.key] && styles.invalidControl]} />
                       )}
+                      {fieldErrors[field.key] ? <Text style={styles.fieldError} accessibilityRole="alert">{fieldErrors[field.key]}</Text> : null}
                     </View>
                     {field.key === 'document_received_at' ? (
-                      <View style={[styles.field, cellStyle]}>
-                        <Text style={styles.label}>RM *</Text>
-                        <Pressable disabled={loading || Boolean(applicationId)} accessibilityRole="button" onPress={() => openSelector('rm')} style={styles.select}>
+                      <View style={[styles.field, cellStyle]} onLayout={event => { fieldPositions.current.associate_employee_id = event.nativeEvent.layout.y; }}>
+                        <Text style={styles.label}>RM <Text style={styles.requiredStar}>*</Text></Text>
+                        <Pressable disabled={loading || Boolean(applicationId)} accessibilityRole="button" onPress={() => openSelector('rm')} style={[styles.select, fieldErrors.associate_employee_id && styles.invalidControl]}>
                           <Text style={styles.selectText} numberOfLines={1}>{rms.find(x => x.id === form.associate_employee_id)?.name || (loading ? 'Loading RMs…' : 'Select RM')}</Text>
                           <Ionicons name="chevron-down" size={17} color="#17365D" />
                         </Pressable>
+                        {fieldErrors.associate_employee_id ? <Text style={styles.fieldError} accessibilityRole="alert">{fieldErrors.associate_employee_id}</Text> : null}
                       </View>
                     ) : null}
                   </Fragment>
@@ -414,13 +479,15 @@ const styles = StyleSheet.create({
   sectionTitle: { color: '#172846', fontSize: 13, fontWeight: '800' },
   sectionBody: { padding: 12, flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 11 },
   halfField: { width: '48.5%' }, fullField: { width: '100%' },
-  field: { gap: 5 }, label: { fontSize: 11, fontWeight: '700', color: '#33465D' },
+  field: { gap: 5 }, label: { fontSize: 11, fontWeight: '700', color: '#33465D' }, requiredStar: { color: '#DC2626' },
+  invalidControl: { borderColor: '#DC2626', backgroundColor: '#FFF7F7' },
+  fieldError: { fontSize: 10.5, lineHeight: 15, color: '#B91C1C', fontWeight: '600' },
   input: { minHeight: 44, backgroundColor: '#FFF', borderWidth: 1, borderColor: '#CED8E7', borderRadius: 10, paddingHorizontal: 12, fontSize: 13, color: '#152A49' },
   select: { minHeight: 44, borderWidth: 1, borderColor: '#CED8E7', borderRadius: 10, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   selectText: { color: '#17365D', fontSize: 13, fontWeight: '600', flexShrink: 1 },
-  actionFooter: { paddingVertical: 12, paddingHorizontal: 2 },
-  actionRow: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8 },
-  actionButton: { minHeight: 44, borderRadius: 10, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
+  actionFooter: { backgroundColor: '#E7EEFC', borderWidth: 1, borderColor: '#CBDCFB', borderRadius: 12, padding: 10, marginTop: 4 },
+  actionRow: { flexDirection: 'row', gap: 8 },
+  actionButton: { flex: 1, minWidth: 0, minHeight: 44, borderRadius: 10, paddingHorizontal: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
   saveExitButton: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE4F2' },
   saveExitText: { color: '#17365D', fontWeight: '700', fontSize: 12 },
   uploadButton: { backgroundColor: '#4379EF' },
