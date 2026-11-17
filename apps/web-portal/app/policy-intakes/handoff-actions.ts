@@ -7,12 +7,13 @@ import { selectPolicyIntakeCustomerMatch, type PolicyIntakeCustomerIdentityCandi
 import { requirePolicyIntakeFinalizer, requirePolicyIntakeReviewer } from "@/lib/policy-intake-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { isN8nWorkbenchPrimary, previewSemiAutoN8nExtraction } from "@/lib/policy-intake-semi-auto-n8n";
+import type { N8nVerifiedPremiumBreakdown } from "@/lib/policy-intake-n8n-validation";
 
 export type PolicyIntakeDraft = {
   registrationMode:"registered"|"unregistered";
   issuanceDate:string; rmName:string; intermediaryType:string; leadSource:string; intermediaryCode:string; businessLine:string;
   registrationNo:string; insuredName:string; phoneNo:string; vehicleClass:string; make:string; model:string; fuelType:string; capacity:string; manufacturingYear:string; chassisNo:string; engineNo:string; rtoState:string; rtoName:string;
-  policyProduct:string; idv:string; od:string; tp:string; cpaOpted:"Yes"|"No"; cpa:string; policyNo:string; insurerId:string; validFrom:string; validUpto:string;
+  policyProduct:string; idv:string; od:string; tp:string; addOnPremium?:string; cpaOpted:"Yes"|"No"; cpa:string; policyNo:string; insurerId:string; validFrom:string; validUpto:string; tpValidUpto?:string; cpaValidUpto?:string;
   payoutBasis:string; projectedOdPercent:string; projectedTpPercent:string; insurerScheme:string; payinBillNo:string; payinBilledAmount:string; payinBillDate:string; payinStatus:string; retention:string; payoutOdPercent:string; payoutTpPercent:string; flatPayoutAmount:string; payoutStatus:string; payoutDate:string; payoutVoucherNo:string; remarks:string;
 };
 
@@ -56,7 +57,10 @@ type IntakeForHandoff={
   storage_path:string|null;
 };
 
-type VerifiedN8nHandoff = { documentId:string; fields:PolicyIntakeOcrField[] };
+type VerifiedN8nHandoff = {
+  documentId:string; fields:PolicyIntakeOcrField[];
+  premium:N8nVerifiedPremiumBreakdown;
+};
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 /**
@@ -84,7 +88,7 @@ export async function prepareVerifiedN8nIntakeHandoff(
     return{ok:false,error:"n8n validation warnings must be resolved before creating an onboarding draft."};
   }
   return preparePolicyIntakeHandoffInternal(id,takeOver===true,{
-    documentId:expectedDocumentId,fields:parsed.preview.fields,
+    documentId:expectedDocumentId,fields:parsed.preview.fields,premium:parsed.preview.premium,
   });
 }
 
@@ -181,14 +185,31 @@ async function preparePolicyIntakeHandoffInternal(
     fields:verified?.fields??intake.ocr_fields??[],manufacturers:manufacturerOptions,insurers,rcVerified:false,
   });
   const customerName=mapped.next.insuredName?.trim()||"";
+  // Canonical form computes net = Basic OD + add-ons + TP + CPA. The n8n
+  // "od_premium" OCR field is *Total OD*, so never copy it directly into
+  // the form's Basic OD field and then add add-ons again.
+  const addOnTotal=verified
+    ? verified.premium.odAddons.reduce((sum,addon)=>sum+addon.amount,0) : 0;
+  const tpStart=verified?.fields.find(field=>field.key==="third_party_start_date")?.value??"";
+  const tpExpiry=verified?.fields.find(field=>field.key==="third_party_end_date")?.value??"";
   const matchedCustomerId=await resolveConfirmedIntakeCustomerId(admin,intake.customer_mobile,customerName);
   const intermediaryType=intake.lead_source_type==="posp"?"POSP":intake.lead_source_type==="misp"?"MISP":"SIBL / Partner";
   const draft:PolicyIntakeDraft={
     registrationMode:mapped.registrationMode,
     issuanceDate:new Date().toISOString().slice(0,10),rmName:"",intermediaryType,leadSource:intake.lead_source_name,intermediaryCode:intake.lead_source_code??"",businessLine:"Motor",
     registrationNo:mapped.next.registrationNo,insuredName:customerName,phoneNo:intake.customer_mobile,vehicleClass:mapped.next.vehicleClass,make:mapped.next.make,model:mapped.next.model,fuelType:mapped.next.fuelType,capacity:mapped.next.capacity,manufacturingYear:mapped.next.manufacturingYear,chassisNo:mapped.next.chassisNo,engineNo:mapped.next.engineNo,rtoState:mapped.next.rtoState,rtoName:mapped.next.rtoName,
-    policyProduct:mapped.next.policyProduct,idv:mapped.next.idv,od:mapped.next.od,tp:mapped.next.tp,cpaOpted:verified&&Number(mapped.next.cpa)>0?"Yes":"No",cpa:mapped.next.cpa,policyNo:mapped.next.policyNo,insurerId:mapped.next.insurerId,validFrom:mapped.next.validFrom,validUpto:mapped.next.validUpto,
-    payoutBasis:"NET",projectedOdPercent:"",projectedTpPercent:"",insurerScheme:"",payinBillNo:"",payinBilledAmount:"",payinBillDate:"",payinStatus:"Unbilled",retention:"",payoutOdPercent:"",payoutTpPercent:"",flatPayoutAmount:"",payoutStatus:"Pending",payoutDate:"",payoutVoucherNo:"",remarks:verified?`Policy Intake ${id} — n8n validated ICICI 3005 PDF. Review all prefilled values, including OD add-ons and TP dates, before booking.`:`Policy Intake ${id}`,
+    policyProduct:mapped.next.policyProduct,idv:mapped.next.idv,
+    od:verified?String(verified.premium.basicOd):mapped.next.od,
+    tp:verified?String(verified.premium.basicTp):mapped.next.tp,
+    ...(verified?{addOnPremium:String(addOnTotal),tpValidUpto:tpExpiry}:{}),
+    cpaOpted:verified&&verified.premium.cpa>0?"Yes":"No",
+    cpa:verified?String(verified.premium.cpa):mapped.next.cpa,
+    policyNo:mapped.next.policyNo,insurerId:mapped.next.insurerId,validFrom:mapped.next.validFrom,validUpto:mapped.next.validUpto,
+    payoutBasis:"NET",projectedOdPercent:"",projectedTpPercent:"",insurerScheme:"",payinBillNo:"",payinBilledAmount:"",payinBillDate:"",payinStatus:"Unbilled",retention:"",payoutOdPercent:"",payoutTpPercent:"",flatPayoutAmount:"",payoutStatus:"Pending",payoutDate:"",payoutVoucherNo:"",remarks:verified
+      ? `Policy Intake ${id} — n8n validated ICICI 3005 PDF. Review every prefilled value before booking.
+PDF premium reconciliation: Basic OD ${verified.premium.basicOd} + OD add-ons ${addOnTotal} = Total OD ${verified.premium.totalOd}; TP ${verified.premium.basicTp}, CPA ${verified.premium.cpa}, Net ${verified.premium.net}, GST ${verified.premium.tax}, Gross ${verified.premium.gross}.
+Third Party period: ${tpStart||"unavailable"} to ${tpExpiry||"unavailable"}. Verify separate TP/CPA dates, policy class/product, identity, commercial rates and unmatched PDF fields manually.`
+      : `Policy Intake ${id}`,
   };
   const {data:storedDraft,error:draftError}=await admin.from("policy_intake_onboarding_drafts").insert({intake_id:id,draft_payload:draft,revision:1,updated_by_profile_id:reviewer.id}).select("revision").single<{revision:number}>();
   if(draftError||!storedDraft)return{ok:false,error:"Policy Onboarding draft could not be prepared. Refresh and try again."};
