@@ -14,8 +14,8 @@ for(const wrapper of ['.ui-page-stage','.reports-reference-shell > .relative','.
 }
 assert.match(css,/main:has\(\.daily-report-reference\) \.daily-report-panel\s*\{[^}]*flex:\s*1 1 auto;[^}]*min-height:\s*0;/s,"Panel fills remaining height without an arbitrary minimum");
 assert.match(css,/@media \(min-width: 1024px\)/,"Desktop-only height override preserves mobile bottom navigation clearance");
-assert.ok(panel.includes('daily-report-panel flex min-h-[calc(100dvh-175px)]'),"All Daily Report views fill the available viewport");
-assert.ok(panel.includes('md:min-h-[calc(100dvh-135px)]'),"Desktop panel scales to available viewport");
+assert.ok(panel.includes('daily-report-panel flex min-h-[calc(100dvh-145px)]'),"All Daily Report views fill the available viewport");
+assert.ok(panel.includes('md:min-h-[calc(100dvh-80px)]'),"Desktop panel scales to available viewport");
 assert.ok(panel.includes('min-h-0 flex-1'),"Drilldown rows consume available body space");
 assert.ok(panel.includes('mt-auto flex shrink-0 items-center justify-between border-t'),"Pagination footer anchors at panel bottom");
 assert.ok(panel.includes('data.rows.length ? <table'),"Detail table is shown only with rows");
