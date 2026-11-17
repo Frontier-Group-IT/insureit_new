@@ -61,6 +61,11 @@ assert.ok(app.includes("const [expandedCaseTab,setExpandedCaseTab]=useState<'act
 assert.ok(app.includes('setExpandedCaseTab(previous=>previous===tab?null:tab)'), 'Tapping active tab collapses and switching opens only one');
 assert.ok(app.includes("expandedCaseTab==='remarks'"), 'Remarks history appears only when remarks tab expands');
 assert.ok(app.includes("expandedCaseTab==='activity'"), 'Activity history appears only when activity tab expands');
+assert.equal((app.match(/style=\{styles\.activityRow\}/g)||[]).length,2,'Pending/rejected and issued Activity tabs both show right-aligned timestamps');
+assert.equal((app.match(/style=\{styles\.activityTimestamp\}/g)||[]).length,2,'Every case activity timestamp uses the right-aligned style');
+assert.ok(app.includes("activityRow:{flexDirection:'row',alignItems:'flex-start',justifyContent:'space-between',gap:8}"),'Case activity uses a horizontal status and timestamp row');
+assert.ok(app.includes("activityDetails:{flex:1,minWidth:0,gap:4}") && app.includes("textAlign:'right',width:130"),'Activity actor and title remain on the left while date/time stays readable on the right');
+
 assert.ok(app.includes("setExpandedCaseTab(null)"), 'Tab state resets on screen focus');
 assert.ok(app.includes("KeyboardAvoidingView") && app.includes("Platform.OS==='ios'?'padding':'height'"), 'Remark modal avoids iOS and Android keyboards');
 assert.ok(app.includes('keyboardShouldPersistTaps="handled"'), 'Remark modal scrolling supports keyboard interaction');
