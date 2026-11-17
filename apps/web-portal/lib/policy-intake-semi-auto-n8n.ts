@@ -95,9 +95,12 @@ async function currentSnapshot(id: string): Promise<SourceSnapshot | null> {
   return { intake, document };
 }
 
-function fingerprint(id: string, documentId: string, fields: N8nOcrField[], warnings: string[]): string {
+function fingerprint(
+  id: string, documentId: string, fields: N8nOcrField[], warnings: string[],
+  premium: N8nVerifiedPremiumBreakdown,
+): string {
   return createHash("sha256")
-    .update(JSON.stringify({ intakeId: id, documentId, fields, warnings }))
+    .update(JSON.stringify({ intakeId: id, documentId, fields, warnings, premium }))
     .digest("hex");
 }
 
@@ -178,7 +181,7 @@ export async function previewSemiAutoN8nExtraction(id: string): Promise<SemiAuto
   }
   return { ok: true, preview: {
     documentId: current.document.id,
-    fingerprint: fingerprint(id, current.document.id, extraction.fields, extraction.warnings),
+    fingerprint: fingerprint(id, current.document.id, extraction.fields, extraction.warnings, extraction.premium),
     fields: extraction.fields,
     changedFieldCount,
     changedFields,
