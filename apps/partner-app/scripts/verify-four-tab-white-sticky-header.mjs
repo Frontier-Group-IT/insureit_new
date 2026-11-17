@@ -24,7 +24,9 @@ assert.match(policies, /onPress=\{openStatusMenu\}/, 'Policies lifecycle dropdow
 assert.ok(policies.includes("filterButton: {") && policies.includes("backgroundColor: '#FFFFFF'"), 'Policy filter outer area stays white');
 assert.ok(policies.includes("filterNameBadge: {") && policies.includes("backgroundColor: '#17365D'"), 'Only the selected filter name uses a navy badge');
 assert.ok(policies.includes('<View style={styles.filterNameBadge}>'), 'Selected name sits in its own navy badge');
-assert.ok(policies.includes('name="chevron-down" size={14} color="#17365D"'), 'Dropdown chevron stays navy on white, outside the badge');
+assert.ok(policies.includes('name="chevron-down" size={14} color="#FFFFFF"'), 'Dropdown chevron is white on navy inside the badge');
+assert.match(policies, /<View style=\{styles\.filterNameBadge\}>[\s\S]*?<Ionicons name="chevron-down" size=\{14\} color="#FFFFFF" \/>[\s\S]*?<\/View>/, 'Chevron and selected status label share the navy badge');
+assert.match(policies, /filterNameBadge: \{[\s\S]*?flexDirection: 'row',[\s\S]*?alignItems: 'center'/, 'Navy label and chevron align horizontally');
 
 for (const label of ['Total Policies', 'Active Policies', 'Expiring Soon', 'Lapsed Policies', 'Upcoming']) {
   assert.ok(policies.includes("label: '" + label + "'"), 'Preserve Policies status ' + label);
