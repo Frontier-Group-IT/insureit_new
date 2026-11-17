@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState } from "react";
 import { AlertCircle, ArrowUpRight, CheckCircle2, ClipboardCheck, FileSearch, Loader2, PencilLine, RefreshCw, Search, ShieldAlert, Sparkles } from "lucide-react";
-import { applySemiAutoN8nIntake, bookSemiAutoIntake, checkSemiAutoIntake, editSemiAutoIntake, previewSemiAutoN8nIntake, type SemiAutoActionResult, type SemiAutoN8nResult } from "@/app/development/ai-policy-onboarding/actions";
+import { applySemiAutoN8nIntake, bookSemiAutoIntake, checkSemiAutoIntake, continueVerifiedN8nIntakeToOnboarding, editSemiAutoIntake, previewSemiAutoN8nIntake, type SemiAutoActionResult, type SemiAutoN8nResult } from "@/app/development/ai-policy-onboarding/actions";
 
 export type SemiAutoIntakeRow = {
   id: string;
@@ -43,7 +43,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
   // Selection itself never sends the PDF or creates a policy.
   const [selectedId, setSelectedId] = useState<string | null>(initialIntakeId ?? null);
   const [result, setResult] = useState<SemiAutoActionResult | null>(null);
-  const [busy, setBusy] = useState<"checking" | "booking" | "editing" | "extracting" | "applying" | null>(null);
+  const [busy, setBusy] = useState<"checking" | "booking" | "editing" | "extracting" | "applying" | "forwarding" | null>(null);
   const [n8nResult, setN8nResult] = useState<SemiAutoN8nResult | null>(null);
   const [n8nNotice, setN8nNotice] = useState<string | null>(null);
   const [done, setDone] = useState<{ policyCode: string; policyId: string } | null>(null);
@@ -142,6 +142,52 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
         setN8nResult(null);
         setN8nNotice("The save response was interrupted. Recheck the Intake and its original copy before attempting again.");
       }
+    } finally {
+      if (requestId.current === next) setBusy(null);
+    }
+  }
+
+  async function forwardN8nToOnboarding() {
+    if (!primaryN8n || !selectedId || !selected || selected.policy_type !== "motor"
+        || selected.is_duplicate || !["ready_for_review","in_review","processing"].includes(selected.status)
+        || !n8nResult?.ok || n8nResult.preview.warnings.length || isWaiting) return;
+    const approved = window.confirm(
+      "Continue this verified n8n policy to the editable Policy Onboarding form? INSUREIT will re-check the current PDF and extracted values, then create or open its saved draft and assign the Intake for review. Existing drafts will not be overwritten. No policy is booked until you review the original PDF, correct missing fields and explicitly submit the canonical form."
+    );
+    if (!approved) return;
+    const id = selectedId;
+    const documentId = n8nResult.preview.documentId;
+    const fingerprint = n8nResult.preview.fingerprint;
+    const next = ++requestId.current;
+    setBusy("forwarding");
+    setN8nNotice(null);
+    try {
+      let response = await continueVerifiedN8nIntakeToOnboarding(id,documentId,fingerprint,true);
+      if (requestId.current !== next) return;
+      if (response.assignmentConflict) {
+        const takeover = window.confirm(
+          "This Intake is assigned to " + response.assignmentConflict.reviewerName +
+          ". Take over the reviewer assignment and continue to Policy Onboarding? No policy will be booked."
+        );
+        if (!takeover) {
+          setN8nNotice("Handoff cancelled. The current reviewer assignment was preserved.");
+          return;
+        }
+        response = await continueVerifiedN8nIntakeToOnboarding(id,documentId,fingerprint,true,true);
+        if (requestId.current !== next) return;
+      }
+      if (response.ok && response.editUrl) {
+        if (response.existingDraft) {
+          window.alert("An existing Policy Onboarding draft was found and preserved. n8n did not overwrite any manually saved fields. Compare its values against the n8n preview and original PDF before final booking.");
+        }
+        router.push(response.editUrl);
+      } else {
+        setN8nNotice(response.error ?? "The Intake could not be forwarded. Re-run n8n before trying again.");
+      }
+    } catch {
+      if (requestId.current === next) setN8nNotice(
+        "The handoff result could not be confirmed. Check the Intake and existing draft before retrying to avoid duplicate work."
+      );
     } finally {
       if (requestId.current === next) setBusy(null);
     }
@@ -374,6 +420,30 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
                   </table>
                 </div>
                 {n8nResult.preview.warnings.length ? <p className="mt-2 text-[10px] text-amber-800">Warnings: {n8nResult.preview.warnings.join("; ")}</p> : null}
+                {primaryN8n && selected?.policy_type === "motor"
+                  && !selected.is_duplicate
+                  && ["processing", "ready_for_review", "in_review"].includes(selected.status)
+                  && n8nResult.preview.warnings.length === 0 ? (
+                  <div className="mt-3 rounded-lg border border-[#bcd9d0] bg-[#f5fbf8] p-3">
+                    <p className="text-[10.5px] font-bold text-[#215b46]">Ready for manual Policy Onboarding review</p>
+                    <p className="mt-1 text-[10px] leading-4 text-[#47675b]">
+                      n8n values will be mapped into the canonical form where supported. Check vehicle class,
+                      registration, insured identity, manufacturer, policy product, Total OD, TP/CPA,
+                      separate Third Party dates and commercial rates against the original policy.
+                      Unsupported fields stay editable; the final booking is never automatic.
+                    </p>
+                    <button type="button" onClick={() => { void forwardN8nToOnboarding(); }} disabled={isWaiting}
+                      className="mt-2 inline-flex min-h-9 w-full items-center justify-center gap-2 rounded-lg bg-[#1c5e8c] px-3 text-[11px] font-bold text-white disabled:opacity-50">
+                      {busy === "forwarding" ? <Loader2 className="h-3.5 w-3.5 animate-spin"/> : <ArrowUpRight className="h-3.5 w-3.5"/>}
+                      Continue to Policy Onboarding
+                    </button>
+                  </div>
+                ) : primaryN8n ? (
+                  <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-2.5 text-[10px] text-amber-900">
+                    Policy Onboarding handoff requires a non-duplicate, open Motor Intake with validated, warning-free n8n fields.
+                    Other policy types and incomplete documents remain in manual review until trained.
+                  </p>
+                ) : null}
                 {n8nResult.preview.canApply ? (
                   <button type="button" onClick={() => { void applyN8n(); }} disabled={isWaiting}
                     className="mt-3 inline-flex min-h-9 w-full items-center justify-center gap-2 rounded-lg border border-[#acc8e2] bg-[#edf5ff] px-3 text-[10.5px] font-bold text-[#245489] disabled:opacity-50">

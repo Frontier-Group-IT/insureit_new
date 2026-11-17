@@ -113,6 +113,17 @@ export default async function NewPolicyPage({ searchParams }: { searchParams: Pr
 
   return (
     <AppShell title="Add Policy">
+      {sourceIntakeId && workflowInitialValues?.remarks?.includes("n8n validated ICICI 3005") ? (
+        <div role="status" className="mx-auto mb-3 max-w-[1450px] rounded-xl border border-[#b6d4c7] bg-[#f2fbf6] px-4 py-3">
+          <p className="text-[12px] font-bold text-[#1b5740]">n8n-verified Policy Intake · Manual onboarding review</p>
+          <p className="mt-1 text-[10.5px] leading-5 text-[#3d6a57]">
+            Verified fields have been mapped into the existing Policy Onboarding form where supported.
+            Basic OD and add-on premiums are separated to prevent double counting. Review any blank
+            fields, vehicle class, insured identity, TP/CPA expiry, insurer, product, original PDF,
+            and pay-in/payout information before saving or booking. No policy is automatically registered.
+          </p>
+        </div>
+      ) : null}
       <PolicyRemarksActionStyle />
       <PolicyOnboardingProductGuard insurers={insurerOptions} />
       <PolicyCommercialShell mode="create" insurers={insurerOptions} customers={customerOptions} rms={rmOptions} sources={sourceOptions} manufacturers={manufacturerOptions} commercialAccess={commercialAccess} initialValues={workflowInitialValues} initialRegistrationMode={workflowRegistrationMode} authoritativeInitialValues={vehicleHandoff} preselectedCustomerId={preselectedCustomerId} preselectedVehicleId={vehicleHandoff ? params.vehicle_id ?? null : null} sourceIntakeId={sourceIntakeId} initialDraftRevision={initialDraftRevision} />

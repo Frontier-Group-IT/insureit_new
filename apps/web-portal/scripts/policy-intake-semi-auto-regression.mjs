@@ -3,6 +3,8 @@ import { readFileSync } from "node:fs";
 import { checkSemiAutoReadiness } from "../lib/policy-intake-semi-auto.ts";
 import { policyIntakeBucket } from "../lib/policy-intake-status-buckets.ts";
 import { validateN8nPolicyIntakeResponse } from "../lib/policy-intake-n8n-validation.ts";
+import { mapVerifiedN8nMotorPremium } from "../lib/policy-n8n-onboarding-premium.ts";
+import { filterVerifiedN8nOnboardingFields } from "../lib/policy-n8n-onboarding-fields.ts";
 
 const text = path => readFileSync(new URL("../" + path, import.meta.url), "utf8");
 const draft = {
@@ -130,8 +132,8 @@ assert(n8nServer.includes('loadPolicyIntakeDuplicateMatches(admin, [{'),
 assert(n8nServer.includes('policy_intake_onboarding_drafts'),
   "Existing saved drafts must not be overwritten by n8n");
 assert(n8nServer.includes("extraction.warnings.length === 0"), "Warnings must prevent automatic failed-OCR recovery");
-assert(n8nServer.includes("fingerprint(id, current.document.id, extraction.fields, extraction.warnings)"),
-  "Reviewed preview fingerprint must bind both fields and warnings");
+assert(n8nServer.includes("fingerprint(id, current.document.id, extraction.fields, extraction.warnings, extraction.premium)"),
+  "Reviewed preview fingerprint must bind the document, fields, warnings and independently checked premium breakdown");
 assert(n8nServer.includes("An onboarding draft was created while extraction was running"),
   "Apply must recheck draft creation immediately before the final OCR update");
 assert(n8nServer.includes('requestN8nPolicyIntakeBySignedSource('),
@@ -267,5 +269,94 @@ assert(n8nServer.includes('current.intake.policy_type === "motor"'),
   "Legacy failed-OCR recovery must stay Motor-only");
 assert(page.includes('!unavailable && duplicates?.ok ? candidates'),
   "Duplicates and untrained Intake types must remain selectable for n8n review");
+
+
+// Verifiable n8n -> canonical Motor Policy Onboarding handoff. The client must
+// never supply its own extracted fields, and no booking happens on forwarding.
+const handoff = text("app/policy-intakes/handoff-actions.ts");
+const policyNew = text("app/policies/new/page.tsx");
+assert(handoff.includes("export async function prepareVerifiedN8nIntakeHandoff("),
+  "Keep an explicit verified n8n handoff with a server-owned reviewed fingerprint");
+assert(handoff.includes('await requireCapability("manage_system","approve")')
+  && handoff.includes("await requirePolicyCreator()"),
+  "The directly callable n8n handoff server action must recheck Development and Policy Creator rights");
+assert(handoff.includes("const parsed=await previewSemiAutoN8nExtraction(id)"),
+  "The handoff must re-extract the current private PDF server-side, not accept browser OCR fields");
+assert(handoff.includes("parsed.preview.fingerprint!==expectedFingerprint"),
+  "A changed extraction must block a previously reviewed handoff");
+assert(n8nServer.includes("JSON.stringify({ intakeId: id, documentId, fields, warnings, premium })")
+  && n8nServer.includes("extraction.warnings, extraction.premium"),
+  "The reviewed fingerprint must include verified financial components, not only OCR field text");
+assert(handoff.includes("parsed.preview.documentId!==expectedDocumentId"),
+  "A replaced PDF must not be forwarded under the prior review");
+assert(handoff.includes("parsed.preview.checksPassed!==13 || parsed.preview.warnings.length>0"),
+  "Only warning-free verified ICICI 3005 PDFs may create an onboarding draft");
+assert(handoff.includes('intake.policy_type!=="motor"'),
+  "The first n8n handoff must be Motor-only until other business lines are trained");
+assert(handoff.includes("loadPolicyIntakeDuplicateMatches(admin,[{...intake,ocr_fields:verified.fields}])"),
+  "The final n8n policy number must be duplicate checked, not only the legacy OCR");
+assert(handoff.includes('if(existingDraft?.draft_payload)'),
+  "Existing saved drafts must never be overwritten by the n8n handoff");
+assert(handoff.includes("lastDoc.id!==verified.documentId"),
+  "The exact current PDF must be rechecked after reviewer claim");
+assert(handoff.includes("filterVerifiedN8nOnboardingFields(verified.fields)"),
+  "New n8n drafts must allowlist approved policy and vehicle fields and exclude insured identity");
+assert(handoff.includes('const customerName=verified?"":'),
+  "n8n PDF-derived insured names must never prefill onboarding customer identity");
+assert(handoff.includes("const identityName=verified"),
+  "Existing drafts in n8n handoff must never fall back to old OCR customer identity");
+assert(handoff.includes("mapVerifiedN8nMotorPremium(verified.premium)"),
+  "Handoff must derive basic OD / add-ons from the independently validated breakdown");
+assert(handoff.includes("tpValidUpto:tpExpiry"),
+  "Carry the separately extracted TP expiry into the canonical form");
+assert(actions.includes("continueVerifiedN8nIntakeToOnboarding(")
+  && actions.includes("await requireDevelopmentPolicyOperator(id)")
+  && actions.includes("await requirePolicyCreator()"),
+  "Handoff must independently enforce Development and Policy Creator permissions");
+assert(actions.includes('editUrl:"/policies/new?intake_id="'),
+  "Continue must reuse canonical Intake linked Policy Onboarding rather than invent a booking endpoint");
+assert(client.includes("Continue to Policy Onboarding"),
+  "Expose the actual Next/Continue action after a successful n8n extraction");
+assert(client.includes("const approved = window.confirm(")
+  && client.includes("response.assignmentConflict")
+  && client.includes("takeover = window.confirm("),
+  "Require explicit confirmation before reviewer claim and takeover");
+assert(client.includes('selected.policy_type !== "motor"')
+  && client.includes("selected.is_duplicate"),
+  "The n8n handoff button must be disabled for untrained/duplicate policy Intakes");
+assert(policyNew.includes("n8n-verified Policy Intake · Manual onboarding review"),
+  "Display a clear n8n prefill review warning on the canonical Policy Onboarding page");
+
+// OCR validation may require an insured-name check, but only approved
+// vehicle/policy fields may reach the onboarding draft, including in future
+// expanded n8n responses. Identity remains human/master-reviewed.
+const sanitizedN8nFields = filterVerifiedN8nOnboardingFields([
+  { key: "insured_name", value: "Fictional PDF Holder" },
+  { key: "insured_phone", value: "9999999999" },
+  { key: "customer_address", value: "Synthetic address" },
+  { key: "customer_pan", value: "AAAAA1111A" },
+  { key: "policy_number", value: "3005/123456789/26/001" },
+  { key: "vehicle_chassis_number", value: "SYNTHETIC123" },
+  { key: "idv", value: "80000" },
+]);
+assert.deepEqual(sanitizedN8nFields.map(field => field.key),
+  ["policy_number", "vehicle_chassis_number", "idv"],
+  "No insured/customer identity from PDF can enter the canonical draft");
+
+const n8nMoney = mapVerifiedN8nMotorPremium({
+  basicOd: 1583, odAddons: [{name:"Test RSA",amount:240},{name:"Test accessory",amount:443}],
+  totalOd: 2266,basicTp:3273,cpa:575,liability:3848,net:6114,
+  exactIgst:1100.52,tax:1101,gross:7215,
+});
+assert.deepEqual(n8nMoney,{
+  od:"1583",addOnPremium:"683",tp:"3273",cpa:"575",cpaOpted:"Yes",
+},"Canonical Motor form must enter Basic OD and add-on separately, avoiding double counting");
+assert.equal(Number(n8nMoney.od)+Number(n8nMoney.addOnPremium)+Number(n8nMoney.tp)+Number(n8nMoney.cpa),
+  6114,"The bookable net amount must match printed n8n net premium");
+assert.throws(()=>mapVerifiedN8nMotorPremium({
+  basicOd:1583,odAddons:[{name:"Test",amount:684}],totalOd:2266,basicTp:3273,
+  cpa:575,liability:3848,net:6114,exactIgst:1100.52,tax:1101,gross:7215,
+}),/n8n_motor_premium_handoff_unreconciled/,
+  "A one-rupee component mismatch must block forwarding");
 
 console.log("Semi-auto Motor onboarding regression checks passed.");
