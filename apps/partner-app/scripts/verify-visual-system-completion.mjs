@@ -226,25 +226,24 @@ requireText(policyDetail, 'insurerName={data.insurer.name}', 'Policy overview mu
 requireText(policyDetail, '<PartnerInsurerLogo name={insurerName}', 'Policy overview must render insurer brand artwork.');
 requireText(policyDetail, 'getPartnerPolicyDetail(id)', 'Policy detail must preserve the existing scoped data service.');
 
-// Policy Details Quick Actions intentionally match the permission-gated Policies
-// screen's four original, locally bundled 3D shortcuts and clear backdrop.
-for (const [label, asset, route] of [
-  ['Policy Intake', 'policy-intake.png', '/policy-intakes'],
-  ['Add Policy', 'add-policy.png', '/policy-new'],
-  ['Case Register', 'case-register.png', '/life-health-cases'],
-  ['Add Partner', 'add-partner.png', '/partner-new'],
+// Policy Details keeps its own four original policy-specific actions;
+// only the visual layout matches the transparent Policies Quick Actions row.
+for (const [label, kind, route] of [
+  ['Policy Document', 'policy-document', '/policies'],
+  ['Renew Policy', 'renew-policy', '/renewals'],
+  ['Raise Claim', 'raise-claim', '/claims'],
+  ['Customer Details', 'customer-details', '/customer/'],
 ]) {
-  requireText(policyDetail, `label: '${label}'`, `Policy detail must show the ${label} action.`);
-  requireText(policyDetail, asset, `Policy detail must reuse original ${label} 3D artwork.`);
-  requireText(policyDetail, route, `Policy detail must preserve ${label} destination.`);
+  requireText(policyDetail, `label="${label}"`, `Policy Details must retain ${label}.`);
+  requireText(policyDetail, `iconKind="${kind}"`, `Policy Details must retain its ${label} icon.`);
+  requireText(policyDetail, route, `Policy Details must preserve the original ${label} route.`);
 }
-for (const permission of ['canPartnerAccess(context', 'canPartnerAccessCaseRegister(context)', 'context?.identity.actor_kind']) {
-  requireText(policyDetail, permission, 'Policy detail must retain permission-gated Quick Actions: ' + permission);
+requireText(policyDetail, "backgroundColor: 'transparent'", 'Quick Actions must remain background-free.');
+requireText(policyDetail, 'numberOfLines={1} adjustsFontSizeToFit', 'Action labels must use single-line auto fitting.');
+requireText(policyDetail, 'styles.quickActionIcon', 'Icons must render directly without tiles.');
+for (const obsolete of ['label="Policy Intake"', 'label="Add Policy"', 'label="Case Register"', 'label="Add Partner"', 'styles.quickBlue', 'borderRightColor']) {
+  if (policyDetail.includes(obsolete)) throw Error('Policy Details must not replace original actions or reintroduce backgrounds: ' + obsolete);
 }
-requireText(policyDetail, 'backgroundColor: \'transparent\'', 'Policy detail Quick Actions must have no colored backgrounds.');
-requireText(policyDetail, '<Image source={image} style={styles.quickActionImage} resizeMode="contain" />', '3D icons must be displayed directly without an inner icon box.');
-requireText(policyDetail, 'numberOfLines={1} adjustsFontSizeToFit', 'All action labels must stay on one line.');
-
 requireText(policyDetail, 'navyStatusBar bottomNavigationNavy', 'Policy Details must use a navy system status bar and footer safe area.');
 requireText(policyDetail, '<PartnerCaseBottomNavigation activeTab="Policies" />', 'Policy Details must use existing navigation with Policies selected.');
 const detailFooter = read('components/partner-case-bottom-navigation.tsx');
