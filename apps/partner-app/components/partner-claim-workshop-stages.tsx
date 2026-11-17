@@ -1,4 +1,5 @@
-import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View, type ImageStyle } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View, type ImageStyle } from 'react-native';
+import { Alert } from '@/lib/partner-alert';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
