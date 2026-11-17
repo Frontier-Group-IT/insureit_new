@@ -5,6 +5,8 @@ import { policyIntakeBucket } from "../lib/policy-intake-status-buckets.ts";
 import { validateN8nPolicyIntakeResponse } from "../lib/policy-intake-n8n-validation.ts";
 import { mapVerifiedN8nMotorPremium } from "../lib/policy-n8n-onboarding-premium.ts";
 import { filterVerifiedN8nOnboardingFields } from "../lib/policy-n8n-onboarding-fields.ts";
+import { enrichVerifiedN8nOnboardingFields, splitN8nRtoStateAndCity } from "../lib/policy-n8n-onboarding-enrichment.ts";
+import { buildPolicyOcrOnboardingUpdate } from "../lib/policy-ocr-onboarding-apply.ts";
 
 const text = path => readFileSync(new URL("../" + path, import.meta.url), "utf8");
 const draft = {
@@ -299,8 +301,13 @@ assert(handoff.includes('if(existingDraft?.draft_payload)'),
   "Existing saved drafts must never be overwritten by the n8n handoff");
 assert(handoff.includes("lastDoc.id!==verified.documentId"),
   "The exact current PDF must be rechecked after reviewer claim");
-assert(handoff.includes("filterVerifiedN8nOnboardingFields(verified.fields)"),
-  "New n8n drafts must allowlist approved policy and vehicle fields and exclude insured identity");
+assert(handoff.includes("enrichVerifiedN8nOnboardingFields(verified.fields)"),
+  "n8n drafts must enrich approved policy and vehicle fields without customer identity");
+assert(handoff.includes("resolveMasterIntakeIdentity(admin,intake.matched_customer_id,intake.customer_mobile)"),
+  "Document-derived insured identity must never prefill the name; use only linked master identity");
+assert(handoff.includes('if(existingDraft?.draft_payload && !(verified?.fillEmptyFields))')
+  && handoff.includes('.eq("intake_id",id).eq("revision",existingDraft.revision)'),
+  "Existing drafts must not be overwritten; explicit blank-only refresh requires revision CAS");
 assert(handoff.includes('const customerName=verified?"":'),
   "n8n PDF-derived insured names must never prefill onboarding customer identity");
 assert(handoff.includes("const identityName=verified"),
@@ -317,10 +324,15 @@ assert(actions.includes('editUrl:"/policies/new?intake_id="'),
   "Continue must reuse canonical Intake linked Policy Onboarding rather than invent a booking endpoint");
 assert(client.includes("Continue to Policy Onboarding"),
   "Expose the actual Next/Continue action after a successful n8n extraction");
-assert(client.includes("const approved = window.confirm(")
-  && client.includes("response.assignmentConflict")
-  && client.includes("takeover = window.confirm("),
-  "Require explicit confirmation before reviewer claim and takeover");
+assert(client.includes('setHandoffDialog({') && client.includes('role="alertdialog"')
+  && client.includes('kind: "takeover"') && client.includes("confirmN8nHandoff()"),
+  "n8n continuation and takeover must use the custom accessible confirmation dialog");
+const forwardStart=client.indexOf("function forwardN8nToOnboarding()");
+const forwardEnd=client.indexOf("async function book()",forwardStart);
+assert(forwardStart>=0&&forwardEnd>forwardStart
+  && !client.slice(forwardStart,forwardEnd).includes("window.confirm(")
+  && !client.slice(forwardStart,forwardEnd).includes("window.alert("),
+  "No native browser confirmation or alert in the n8n onboarding handoff");
 assert(client.includes('selected.policy_type !== "motor"')
   && client.includes("selected.is_duplicate"),
   "The n8n handoff button must be disabled for untrained/duplicate policy Intakes");
@@ -342,6 +354,45 @@ const sanitizedN8nFields = filterVerifiedN8nOnboardingFields([
 assert.deepEqual(sanitizedN8nFields.map(field => field.key),
   ["policy_number", "vehicle_chassis_number", "idv"],
   "No insured/customer identity from PDF can enter the canonical draft");
+
+// Exact ICICI 3005 Chetak mapping, field-order dependencies and no identity.
+assert.deepEqual(splitN8nRtoStateAndCity("MADHYA PRADESH-JABALPUR"),{
+  state:"Madhya Pradesh",city:"Jabalpur",
+});
+assert.equal(splitN8nRtoStateAndCity("UNKNOWN REGION-JABALPUR"),null,
+  "Unrecognised RTO states must remain manual, not guessed");
+const enriched = enrichVerifiedN8nOnboardingFields([
+  {key:"insured_name",label:"Insured",value:"SYNTHETIC CUSTOMER"},
+  {key:"policy_product",label:"Product",value:"Bundled"},
+  {key:"vehicle_make",label:"Make",value:"CHETAK"},
+  {key:"vehicle_model",label:"Model",value:"C2501"},
+  {key:"vehicle_rto_name",label:"RTO",value:"MADHYA PRADESH-JABALPUR"},
+  {key:"vehicle_motor_power_kw",label:"CC/KW",value:"2.2"},
+]);
+assert(!enriched.some(f=>f.key==="insured_name"),"No PDF insured name may enter draft");
+const baseState={
+  registrationNo:"",vehicleClass:"",make:"",model:"",fuelType:"",manufacturingYear:"",
+  capacity:"",chassisNo:"",engineNo:"",rtoState:"",rtoName:"",policyProduct:"",
+  idv:"",od:"",tp:"",cpa:"",policyNo:"",insurerId:"",validFrom:"",validUpto:"",
+};
+const mappedChetak = buildPolicyOcrOnboardingUpdate({
+  mode:"create",registrationMode:"unregistered",current:baseState,
+  fields:enriched,manufacturers:["Bajaj","Bajaj Auto"],insurers:[],rcVerified:false,
+});
+assert.equal(mappedChetak.next.vehicleClass,"TWP");
+assert.equal(mappedChetak.next.make,"Bajaj");
+assert.equal(mappedChetak.next.fuelType,"Electric");
+assert.equal(mappedChetak.next.rtoState,"Madhya Pradesh");
+assert.equal(mappedChetak.next.rtoName,"Jabalpur");
+assert.equal(mappedChetak.next.capacity,"2.2");
+assert.equal(mappedChetak.next.policyProduct,"Bundled");
+const unknownModel = enrichVerifiedN8nOnboardingFields([
+  {key:"policy_product",label:"Product",value:"Bundled"},
+  {key:"vehicle_make",label:"Make",value:"CHETAK"},
+  {key:"vehicle_model",label:"Model",value:"UNVERIFIED"},
+]);
+assert(!unknownModel.some(f=>f.key==="vehicle_class"||f.key==="vehicle_fuel_type"),
+  "Never infer model-specific fuel or class for an unverified vehicle variant");
 
 const n8nMoney = mapVerifiedN8nMotorPremium({
   basicOd: 1583, odAddons: [{name:"Test RSA",amount:240},{name:"Test accessory",amount:443}],
