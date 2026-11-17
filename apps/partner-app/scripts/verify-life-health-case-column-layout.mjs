@@ -39,6 +39,14 @@ assert.match(screen,/styles\.activityCard/,'Activity Status and Remarks retain t
 for(const title of ['Cancel case edits','Reject case','Save Case Details','Create Policy and Close Case']){
   assert.ok(screen.includes('accessibilityLabel="'+title+'"'),'Missing action: '+title);
 }
+const actionBar=screen.slice(screen.indexOf("record.status_group==='pending'?<View style={styles.caseActions}>"),screen.indexOf("</View>:null}",screen.indexOf("record.status_group==='pending'?<View style={styles.caseActions}>")));
+assert.ok(actionBar.indexOf('accessibilityLabel="Save Case Details"')<actionBar.indexOf('accessibilityLabel="Cancel case edits"'),'Save must appear above Cancel/Reject');
+assert.ok(actionBar.indexOf('accessibilityLabel="Cancel case edits"')<actionBar.indexOf('accessibilityLabel="Reject case"'),'Cancel and Reject retain order');
+assert.ok(actionBar.indexOf('accessibilityLabel="Reject case"')<actionBar.indexOf('accessibilityLabel="Create Policy and Close Case"'),'Issuance action stays last');
+assert.match(screen,/caseActionMiddle:\{flexDirection:'row'/,'Cancel and Reject share a row');
+assert.match(screen,/actionSave:\{width:'100%'/,'Save spans full width');
+assert.match(screen,/actionIssue:\{width:'100%'/,'Create Policy spans full width');
+assert.match(screen,/Complete the policy creation process/,'Issuance button retains reference subtitle');
 assert.match(screen,/getLifeHealthDocumentUrl/,'Documents can be opened through scoped URL');
 assert.match(screen,/mutateLifeHealthDocument/,'Documents have an authenticated delete action');
 assert.match(screen,/uploadLifeHealthDocument/,'Documents have an authenticated replace and upload action');
