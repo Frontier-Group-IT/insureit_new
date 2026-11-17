@@ -9,6 +9,7 @@ const summary = read("../lib/life-health-case-summary.ts");
 const reject = read("../app/policies/life-health-case-reject-actions.ts");
 const edit = read("../app/policies/life-health-case-edit-actions.ts");
 const policy = read("../app/policies/life-health-policy-actions.ts");
+const issuance = read("../lib/life-health-case-conversion-engine.ts");
 
 assert.match(detail, /Confirm Reject/, "Confirmation button exists");
 assert.match(detail, /Reason for rejection/, "Reason is required in popup");
@@ -27,6 +28,6 @@ assert.match(register, /row\.status === "rejected" \? "Rejected"/, "Rejected sta
 assert.match(summary, /\.neq\("status", "rejected"\)/, "Pending count excludes rejected");
 assert.match(summary, /\.eq\("status", "rejected"\)/, "Rejected count comes from database");
 assert.match(edit, /row\.status === "rejected"/, "Case detail updates block rejected");
-assert.match(policy, /caseRow\.status==="rejected"/, "Policy conversion refuses rejected");
-assert.match(policy, /if\(caseUpdateError\|\|!caseUpdated\)/, "Policy conversion verifies atomic case status update");
+assert.match(issuance, /caseRow\.status==="rejected"/, "Policy conversion refuses rejected");
+assert.match(issuance, /if\(caseUpdateError\|\|!caseUpdated\)/, "Policy conversion verifies atomic case status update");
 console.log("Life/Health case rejection contracts passed.");

@@ -16,7 +16,7 @@ for(const label of ['Proposal date','Policy type','Intermediary type','Lead sour
   'Client / proposer name','Client mobile number','Address','Insurance company','Product name',
   'Case / proposal number','PPT · Premium Paying Term','PD · Policy Duration / Term',
   'Payment frequency','Premium amount','Payment mode']){
-  assert.ok(screen.includes('label="'+label+'"'),'Missing field '+label);
+  assert.ok(screen.includes('label="'+label+'"')||screen.includes(',"'+label+'"'),'Missing field '+label);
 }
 assert.match(screen,/styles\.grid/,'Short fields use mobile columns');
 assert.match(screen,/fieldWide:\{width:'100%'\}/,'Long fields span full width');
@@ -24,7 +24,7 @@ assert.match(screen,/field:\{width:'48%'/,'Native two-column width is defined');
 assert.match(screen,/fieldLabel:/,'Field labels appear above boxed values');
 assert.match(screen,/dateLabel\(record\.sourcing_date\)/,'Dates show the Operations DD/MM/YYYY convention');
 assert.match(screen,/record\.status_group==='pending'\?<Section number="05"/,'Issuance section only for pending cases');
-assert.match(screen,/onPress=\{\(\)=>void openOperations\(\)\}/,'Issuance delegates to authorized Operations workflow');
+assert.match(screen,/issueLifeHealthPolicy\(record.id,data\)/,'Native issuance uses the verified Operations conversion endpoint');
 assert.match(screen,/canPartnerAccessCaseRegister\(context\)/,'Existing Case Register permission remains enforced');
 assert.match(screen,/getLifeHealthCase\(id\)/,'Scoped read-only case API is preserved');
 assert.match(api,/operationsCaseUrl\(id: string\)/,'Operations link is canonical');
@@ -34,4 +34,4 @@ assert.match(screen,/\{doc\.file_name\}/,'Only real file name is shown');
 assert.doesNotMatch(screen,/No documents recorded|Document viewing, uploads and deletion|For case editing, adding remarks|You may need to sign in/,'No footer explanations or empty document placeholders');
 assert.doesNotMatch(screen,/function Item\(/,'Old label-value stacking is removed');
 assert.doesNotMatch(screen,/uploadLifeHealthCaseDocument|convertLifeHealthCaseToPolicy|deleteLifeHealthCaseDocument|rejectLifeHealthCase/,'No unapproved native mutations');
-console.log('Partner Life/Health case details: numbered, read-only two-column layout and actual-only documents verified.');
+console.log('Partner Life/Health case details: numbered inline-editable columns and actual-only documents verified.');
