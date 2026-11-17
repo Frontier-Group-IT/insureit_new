@@ -1,13 +1,13 @@
 import { Fragment, useEffect, useState } from 'react';
 import { Alert, Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import * as DocumentPicker from 'expo-document-picker';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { canPartnerAccess } from '@/lib/partner-permissions';
 import { PartnerStackBottomNavigation, type PartnerTabDestination } from '@/components/partner-stack-bottom-navigation';
+import { PartnerPolicyCalendarDialog } from '@/components/policy-intakes/partner-policy-calendar-dialog';
 import { supabase } from '@/lib/supabase';
 import { usePartnerSession } from '@/providers/partner-session-provider';
 
@@ -299,11 +299,13 @@ export default function AddPartnerScreen() {
             </Pressable>
           </View>
         </View>
-        {dateField ? <DateTimePicker
-          value={isoDate(form[dateField]) ? new Date(`${isoDate(form[dateField])}T12:00:00`) : new Date()}
-          mode="date" display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-          maximumDate={new Date()} onChange={(_event, selectedDate) => setSelectedDate(selectedDate)}
-        /> : null}
+        <PartnerPolicyCalendarDialog
+          visible={Boolean(dateField)}
+          value={dateField && isoDate(form[dateField]) ? new Date(`${isoDate(form[dateField])}T12:00:00`) : new Date()}
+          maximumDate={new Date()}
+          onCancel={() => setDateField(null)}
+          onConfirm={date => setSelectedDate(date)}
+        />
         <Modal visible={uploadOpen} transparent animationType="fade" onRequestClose={() => { if (!uploadingType) setUploadOpen(false); }}>
           <View style={styles.modalBackdrop}>
             <Pressable style={StyleSheet.absoluteFillObject} onPress={() => { if (!uploadingType) setUploadOpen(false); }} accessibilityLabel="Close upload options" />

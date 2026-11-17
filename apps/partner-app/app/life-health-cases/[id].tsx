@@ -6,6 +6,7 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
 import { PartnerCaseBottomNavigation } from '@/components/partner-case-bottom-navigation';
+import { PartnerPolicyCalendarDialog } from '@/components/policy-intakes/partner-policy-calendar-dialog';
 import { getLifeHealthCase, saveLifeHealthCaseEdit, appendLifeHealthCaseRemark, listLifeHealthInsurers, issueLifeHealthPolicy, requestLifeHealthIssueApproval, verifyLifeHealthIssueApproval, operationsCaseUrl, getLifeHealthDocumentUrl, mutateLifeHealthDocument, uploadLifeHealthDocument, rejectLifeHealthCaseNative, type LifeHealthInsurer, type LifeHealthIssue, type LifeHealthCaseDetail, type LifeHealthDocument, type LifeHealthActivity } from '@/lib/life-health-cases';
 import { canPartnerAccessCaseRegister } from '@/lib/partner-permissions';
 import { usePartnerSession } from '@/providers/partner-session-provider';
@@ -54,6 +55,7 @@ export default function LifeHealthCaseDetailScreen(){
  const [error,setError]=useState('');
  const [insurers,setInsurers]=useState<LifeHealthInsurer[]>([]);
  const [picker,setPicker]=useState<keyof CaseEditForm|null>(null);
+ const [calendarField,setCalendarField]=useState<'sourcingDate'|'issuanceDate'|'startDate'|'endDate'|'pptEndDate'|'nextInstallmentDate'|null>(null);
  const [issue,setIssue]=useState<LifeHealthIssue>({policyNumber:'',issuanceDate:'',startDate:'',endDate:'',pptEndDate:'',nextInstallmentDate:'',finalPremium:'',sumInsured:''});
  const [issuing,setIssuing]=useState(false);const [issueError,setIssueError]=useState('');
  const [approvalOpen,setApprovalOpen]=useState(false);const [approvalId,setApprovalId]=useState('');const [approvalVerified,setApprovalVerified]=useState(false);const [approverKey,setApproverKey]=useState('');const [otp,setOtp]=useState('');const [approvalLoading,setApprovalLoading]=useState(false);
@@ -179,7 +181,11 @@ export default function LifeHealthCaseDetailScreen(){
    const items=choices(key);
    return <View style={[styles.field,wide&&styles.fieldWide]}>
      <Text style={styles.fieldLabel}>{label.toUpperCase()}{required?<Text style={styles.asterisk}> *</Text>:null}</Text>
-     {items.length?<Pressable accessibilityRole="button" accessibilityLabel={'Select '+label}
+     {key==='sourcingDate'?<Pressable accessibilityRole="button" accessibilityLabel={'Select '+label+' date'}
+       style={[styles.fieldBox,styles.inlineSelector]} onPress={()=>setCalendarField('sourcingDate')}>
+       <Text style={styles.fieldValue}>{dateLabel(form.sourcingDate)||'DD/MM/YYYY'}</Text>
+       <Ionicons name="calendar-outline" size={16} color={navy}/>
+     </Pressable>:items.length?<Pressable accessibilityRole="button" accessibilityLabel={'Select '+label}
        style={[styles.fieldBox,styles.inlineSelector]} onPress={()=>setPicker(key)}>
        <Text style={styles.fieldValue}>{key==='insurerId'?insurers.find(x=>x.id===form.insurerId)?.name||record?.insurer_name:form[key]||'Select'}</Text>
        <Ionicons name="chevron-down" size={15} color={navy}/>
@@ -280,14 +286,32 @@ export default function LifeHealthCaseDetailScreen(){
    const value=issue[key]||'';
    return <View style={styles.field}>
      <Text style={styles.fieldLabel}>{label.toUpperCase()}{required?<Text style={styles.asterisk}> *</Text>:null}</Text>
-     <View style={[styles.fieldBox,styles.issueFieldRow]}>
+     {date?<View style={[styles.fieldBox,styles.issueFieldRow]}>
+       <Pressable accessibilityRole="button" accessibilityLabel={'Select '+label+' date'} style={styles.issueDateTap}
+         onPress={()=>setCalendarField(key as 'issuanceDate'|'startDate'|'endDate'|'pptEndDate'|'nextInstallmentDate')}>
+         <Text style={[styles.fieldValue,!value&&styles.datePlaceholder]}>{value||'DD/MM/YYYY'}</Text>
+         <Ionicons name="calendar-outline" size={15} color="#7D8FA8"/>
+       </Pressable>
+       {!required&&value?<Pressable accessibilityRole="button" accessibilityLabel={'Clear '+label+' date'} hitSlop={8}
+         onPress={()=>setIssued(key,'')}><Ionicons name="close-circle-outline" size={17} color="#7D8FA8"/></Pressable>:null}
+     </View>:<View style={[styles.fieldBox,styles.issueFieldRow]}>
        <TextInput accessibilityLabel={label} style={styles.issueTextInput} value={value}
-         placeholder={date?'DD/MM/YYYY':label} placeholderTextColor="#90A0B7"
-         keyboardType={date?'numbers-and-punctuation':key==='finalPremium'||key==='sumInsured'?'decimal-pad':'default'}
+         placeholder={label} placeholderTextColor="#90A0B7"
+         keyboardType={key==='finalPremium'||key==='sumInsured'?'decimal-pad':'default'}
          onChangeText={v=>setIssued(key,v)}/>
-       {date?<Ionicons name="calendar-outline" size={15} color="#7D8FA8"/>:null}
-     </View>
+     </View>}
    </View>;
+ };
+ const calendarValue=calendarField==='sourcingDate'?form?.sourcingDate:calendarField?issue[calendarField]:'';
+ const validCalendarValue=toISO(calendarValue||'');
+ const selectedCalendarDate=validCalendarValue?new Date(validCalendarValue+'T12:00:00'):new Date();
+ const chooseCalendarDay=(date:Date)=>{
+   const day=String(date.getDate()).padStart(2,'0');
+   const month=String(date.getMonth()+1).padStart(2,'0');
+   const year=String(date.getFullYear());
+   if(calendarField==='sourcingDate')setField('sourcingDate',year+'-'+month+'-'+day);
+   else if(calendarField)setIssued(calendarField,day+'/'+month+'/'+year);
+   setCalendarField(null);
  };
   if(!canPartnerAccessCaseRegister(context))return <PartnerScreen title="Case Register" navyTopBar navyStatusBar bottomNavigationNavy bottomNavigation={<PartnerCaseBottomNavigation/>} onBack={()=>router.back()}>
     <Text style={styles.errorText}>You do not have Case Register permission.</Text>
@@ -568,6 +592,8 @@ export default function LifeHealthCaseDetailScreen(){
      </View>
     </View>
    </Modal>
+   <PartnerPolicyCalendarDialog visible={Boolean(calendarField)} value={selectedCalendarDate}
+     onCancel={()=>setCalendarField(null)} onConfirm={chooseCalendarDay}/>
  </PartnerScreen>;
 }
 function EditInput({title,value,onChange,keyboardType,multiline}:{title:string;value:string;onChange:(v:string)=>void;keyboardType?:'phone-pad'|'decimal-pad';multiline?:boolean}){
@@ -621,6 +647,8 @@ const styles=StyleSheet.create({
   saveInline:{gap:6},
   issueFieldRow:{flexDirection:'row',alignItems:'center',gap:3},
   issueTextInput:{flex:1,minWidth:0,fontSize:11,color:navy,fontWeight:'600',padding:0},
+  issueDateTap:{flex:1,minWidth:0,minHeight:25,flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:4},
+  datePlaceholder:{color:'#90A0B7'},
 
  remarkEditor:{backgroundColor:'#FFFFFF',padding:18,gap:12,borderTopLeftRadius:18,borderTopRightRadius:18},
  remarkButton:{alignSelf:'flex-start',flexDirection:'row',gap:7,alignItems:'center',backgroundColor:'#071E49',borderRadius:10,paddingHorizontal:14,paddingVertical:11},

@@ -19,7 +19,7 @@ assert.match(screen,/productSection\('04',productType==='Non Motor'\?'Cover, pre
 for(const label of ['PPT - Premium paying term','PD - Policy duration / term','Payment frequency','Premium amount (₹)','Payment mode','Case / proposal number','Address','Risk location','Sum insured / limit (₹)']){
   assert.ok(screen.includes(label), 'Missing Operations field '+label);
 }
-assert.match(date,/import DateTimePicker/,'Native date control must use installed calendar picker');
+assert.match(date,/PartnerPolicyCalendarDialog/,'All native dates use the themed direct-select calendar');
 assert.match(date,/DD\/MM\/YYYY/,'Display Indian date format');
 assert.match(date,/onChange\(toIso\(date\)\)/,'Persist ISO value');
 assert.match(screen,/if\(\['issuanceDate','validFrom','validUpto','tpValidUpto','cpaValidUpto'\].includes\(f.key\)\)/,'Motor dates use calendar');
@@ -235,12 +235,12 @@ assert.match(screen, /label:f.key==='policyProduct'&&x==='Comprehensive'\?'Packa
 assert.match(screen, /draft.vehicleClass==='CPM'\?\['Comprehensive','SAOD'\]/, 'Preserve existing CPM eligibility.');
 assert.ok(screen.includes("value==='Long Term Third Party'"), 'Long Term Third Party must follow third-party IDV and OD rules.');
 assert.match(screen, /picker\?\.key==='policyProduct'\?'Select product'/, 'Policy selector uses the reference header.');
-assert.match(date, /PartnerPolicyCalendarDialog/, 'Android date fields open the themed policy calendar.');
-assert.match(date, /Platform.OS==='ios'\?<DateTimePicker/, 'iOS retains the existing native picker.');
-for (const label of ['Previous month','Next month','Choose calendar year','CANCEL','OK']) {
-  assert.ok(calendarDialog.includes(label), 'Reference calendar must provide ' + label);
+assert.match(date, /Platform.OS!=='web'\?<PartnerPolicyCalendarDialog/, 'Android and iOS share direct selection.');
+for (const label of ['Previous month','Next month','Choose calendar year']) {
+  assert.ok(calendarDialog.includes(label), 'Calendar preserves month and year navigation: ' + label);
 }
-assert.match(calendarDialog, /onConfirm\(draft\)/, 'Date is committed only on confirmation.');
+assert.match(calendarDialog, /onPress=\{\(\) => onConfirm\(candidate\)\}/, 'Day tap commits immediately.');
+assert.doesNotMatch(calendarDialog, />CANCEL<|>OK<|onConfirm\(draft\)/, 'Calendar has no OK/Cancel confirmation controls.');
 
 // Review reference button and Premium icon.
 assert.match(screen,/name="document-attach-outline" size=\{15\}/,'Use the Policy Intake Review document icon.');
