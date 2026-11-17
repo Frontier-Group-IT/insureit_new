@@ -226,13 +226,13 @@ const testIssued = (source,expected)=>{
     ]),expected);
   }
 };
-testIssued("Policy Issued On : Nov 05, 2026\\nPeriod of Insurance - Own Damage: Nov 06, 2026 to Nov 05, 2027", "2026-11-05");
-testIssued("Policy Issuance Date\\n06/11/2026\\nOwn Damage starts 07/11/2026","2026-11-06");
+testIssued("Policy Issued On : Nov 05, 2026\nPeriod of Insurance - Own Damage: Nov 06, 2026 to Nov 05, 2027", "2026-11-05");
+testIssued("Policy Issuance Date\n06/11/2026\nOwn Damage starts 07/11/2026","2026-11-06");
 testIssued("Date of Issue: 2026-11-04 10:45 AM","2026-11-04");
 testIssued("Issue Date: 06-Nov-2026",""); // unsupported date shape must remain manual
-testIssued("Policy start date: 2026-11-06\\nThird Party valid from: 2026-11-06","");
+testIssued("Policy start date: 2026-11-06\nThird Party valid from: 2026-11-06","");
 testIssued("Policy Issued On: 31/02/2026","");
-testIssued("Policy Issued On: 05/11/2026\\nDate of Issue: 06/11/2026","");
+testIssued("Policy Issued On: 05/11/2026\nDate of Issue: 06/11/2026","");
 assert.equal(verifiedN8nPolicyIssuanceDate([
   {key:"policy_issuance_date",value:"2026-11-06",evidence:"OD coverage from"},
 ]),"","Coverage dates must never impersonate issuance evidence");
