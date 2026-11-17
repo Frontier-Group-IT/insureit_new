@@ -39,12 +39,12 @@ assert.match(header,/selectedPerson===person\.id\?"bg-\[#edf3fa\] text-\[#111827
 assert.match(header,/className="min-w-0 truncate text-center"/, "Selected scope text is centered");
 assert.match(header,/justify-center rounded-lg/, "Self-only scope text is centered");
 assert.match(header,/selectPerson\(person\.id\)/);
-assert.doesNotMatch(header,/value:"all",label:"All"/);
+assert.match(header,/selectPerson\("all"\)/,"Dropdown offers combined All view");
 assert.doesNotMatch(page,/<DailyEmployeeDirectory/);
-assert.match(page,/if \(query\.scope === "all" && !query\.person\)/);
-assert.match(page,/redirect\(`\/reports\/daily\?\$\{params\.toString\(\)\}`\)/);
-assert.match(page,/assertDailyReportEmployeeAllowed\(chosenPerson, employeeDirectory\);[\s\S]*?loadSelfActivityHistory\(chosenPerson/);
+assert.doesNotMatch(page,/if \(query\.scope === "all" && !query\.person\)/,"All no longer redirects to Self");
+assert.match(page,/authorizedActorIds:\[profile\.id,\.\.\.employeeDirectory\.people\.map\(person=>person\.id\)\]/,"All combines only authorized employee IDs and viewer");
+assert.match(page,/if \(chosenPerson\) assertDailyReportEmployeeAllowed\(chosenPerson, employeeDirectory\)/,"Individual employee selection remains authorized");
 assert.match(panel,/reportMode==="self" \? "My Activity Summary"/);
-assert.match(history,/\.eq\("actor_id",viewerId\)/);
+assert.match(history,/\.in\("actor_id",actorIds\)/,"History source uses authorized actor IDs inside database query");
 assert.doesNotMatch(directory+endpoint+panel+history,/\.insert\(|\.update\(|\.upsert\(|\.delete\(/);
 console.log("Employee selector reuses server hierarchy without any standalone All directory.");
