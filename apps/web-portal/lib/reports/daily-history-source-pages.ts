@@ -4,7 +4,8 @@
  * No user identifiers or record content are written to diagnostic logs.
  */
 export type ActivitySource = "Audit logs" | "Policies" | "Intake submissions" |
-  "Intake finalizations" | "Case creation" | "Case conversions";
+  "Intake finalizations" | "Case creation" | "Case conversions" |
+  "Claim creation" | "Claim stage edits" | "Claim verification" | "Claim status history";
 export type SourceRead<T> = {rows:T[];partial:boolean;failed:boolean};
 export type PageResult<T> = {data:T[]|null;error:{message:string;code?:string}|null};
 

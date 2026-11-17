@@ -21,6 +21,25 @@ assert.match(source, /\.eq\("created_by",viewerId\)/, "Policy and case creations
 assert.match(source, /\.eq\("submitted_by_profile_id",viewerId\)/, "Policy intake creation is scoped to the employee");
 assert.match(source, /\.eq\("finalized_by_profile_id",viewerId\)/, "Intake finalization is scoped to the finalizing employee");
 assert.match(source, /\.eq\("converted_by",viewerId\)/, "Case conversion is scoped to the converting employee");
+// Claims use their own existing actor-attributed records; do not invent audit
+// events or credit the claim creator for someone else's update.
+for (const [sourceName, actorColumn] of [
+  ["Claim creation","created_by"],
+  ["Claim stage edits","created_by"],
+  ["Claim verification","verified_by"],
+  ["Claim status history","changed_by"],
+]) {
+  assert.ok(source.includes('readDailyHistoryPages("'+sourceName+'"'), sourceName+" is included in source pagination");
+  assert.match(source, new RegExp('\\.eq\\("'+actorColumn+'",viewerId\\)'), sourceName+" uses exact employee attribution");
+}
+assert.match(source, /driver_name/, "Driver edits are read from stored stage details");
+assert.match(source, /previous!==driver/, "Changed driver names use stored before/after stage values");
+assert.match(source, /Driver name: /, "Changed driver names have a readable field-level audit detail");
+assert.match(source, /document_type,is_valid,created_at/, "Document verification reads retained verification outcome");
+assert.match(source, /claim-verify:/, "Insurance Copy verification gets a stable unique report row");
+assert.match(source, /event.from_status===event.to_status/, "Same-status notes are not duplicated as status changes");
+assert.match(source, /row.claimControlNo=claim.claim_no/, "Claim details enrich only visible scoped records");
+
 assert.match(source, /const counts=new Map<string,number>\(\)/, "Summary count is computed from all fetched recorded actions");
 assert.match(source, /for\(const a of all\) counts\.set/, "Count is computed before selecting a category/page");
 assert.match(source, /const filtered=category\?all\.filter/, "Drilldown includes only the selected category");
