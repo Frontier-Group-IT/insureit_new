@@ -35,6 +35,9 @@ assert.match(header,/if\(!showDropdown\)/, "Self-only view never opens the searc
 assert.match(header,/aria-label="Daily Report scope: Self"/,
   "Self-only employee sees an accessible non-interactive scope label");
 
+assert.match(header,/selectedPerson===person\.id\?"bg-\[#edf3fa\] text-\[#111827\]"/, "Selected employee keeps readable black text");
+assert.match(header,/className="min-w-0 truncate text-center"/, "Selected scope text is centered");
+assert.match(header,/justify-center rounded-lg/, "Self-only scope text is centered");
 assert.match(header,/selectPerson\(person\.id\)/);
 assert.doesNotMatch(header,/value:"all",label:"All"/);
 assert.doesNotMatch(page,/<DailyEmployeeDirectory/);

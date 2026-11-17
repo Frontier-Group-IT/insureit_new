@@ -3,15 +3,15 @@ import {readFileSync} from "node:fs";
 
 const read=p=>readFileSync(new URL(p,import.meta.url),"utf8");
 const panel=read("../components/reports/daily-self-activity-panel.tsx");
+const css=read("../app/globals.css");
 const source=read("../lib/reports/daily-self-activity.ts");
 const page=read("../app/reports/(workspace)/daily/page.tsx");
 
-assert.match(panel,/min-h-\[calc\(100dvh-300px\)\]/,"Shared Self / employee activity panel fills remaining visible viewport");
+assert.match(panel,/data\.category \? data\.rows\.length : data\.categories\.length/,"Only populated summary or drilldown reports use viewport height");
 assert.match(panel,/aria-label="Self activity summary and register"/,"Full-height sizing applies to both modes through the shared component");
-assert.match(panel,/className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5"/,"Activity cards stay content-sized and top aligned");
+assert.match(panel,/gridColumnsFor\(group\.items\.length\)/,"Activity cards fill the width available to each group");
 assert.doesNotMatch(panel,/h-screen|h-\[100dvh\]|overflow-y-hidden/,"Panel remains naturally scrollable when activity tables exceed the viewport");
-assert.match(panel,/className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5"/,
-  "Activity summary uses five columns on desktop with responsive smaller breakpoints");
+assert.match(panel,/count>=5\?"xl:grid-cols-5"/,"Five or more cards keep the five-column desktop layout");
 assert.match(panel,/group\.items\.map\(item=>\(/, "Every activity category appears in grid");
 assert.match(panel,/href=\{linkFor\(\{activity:item\.name,page:"1"\}\)\}/,
   "Clicking a category still opens its filtered details");
@@ -26,14 +26,19 @@ assert.match(source,/for\(const a of all\) counts\.set\(a\.category/,
 assert.match(page,/reportMode=\{isSelf \? "self" : "employee"\}/,
   "Both Self and selected All employee share the same responsive summary");
 assert.match(panel,/daily-report-activity-card group flex/,"Activity links use distinct, reference-style card surfaces");
+assert.match(panel,/daily-report-activity-card group flex[^"\n]*bg-white/,"All activity cards use white Tailwind backgrounds");
+assert.doesNotMatch(panel,/bg-gradient-to-br from-white to-\[#f7faff\]|hover:from-\[#f5f9ff\]|hover:to-\[#e9f2ff\]/,"Activity cards have no tinted utility gradients");
+assert.match(css,/\.daily-report-reference \.daily-report-activity-card \{[^}]*background: #fff;/s,"Scoped card background remains solid white");
+assert.match(css,/\.daily-report-reference \.daily-report-activity-card:hover \{[^}]*background: #fff;/s,"Hover background stays white");
+
 assert.match(panel,/hover:-translate-y-0\.5/,"Activity cards rise subtly on hover");
 assert.match(panel,/hover:shadow-\[0_5px_14px_rgba\(23,54,93,0\.13\)\]/,"Activity cards gain a restrained shadow on hover");
 assert.match(panel,/hover:border-\[#7ba7dc\]/,"Professional blue border hover feedback remains visible");
 assert.match(panel,/focus-visible:outline/,"Keyboard focus state remains visible");
 assert.match(panel,/motion-reduce:transform-none motion-reduce:transition-none/,"Reduced-motion users receive static hover feedback");
 assert.match(panel,/active:translate-y-0/,"Pressed state provides immediate feedback");
-const css=read("../app/globals.css");
 const header=read("../components/reports/daily-report-header-controls.tsx");
+assert.match(css,/width: 100%;\s*max-width: none;/,"Daily Report occupies full available workspace width");
 assert.match(page,/daily-report-reference/,"Daily Report styling scoped to the page");
 assert.match(css,/reports-reference-shell:has/,"Reference header styling limited to Daily Report");
 assert.ok(css.includes("linear-gradient(100deg,#24119b"),"Purple summary bar matches reference palette");
@@ -50,4 +55,8 @@ assert.match(css,/\.reports-reference-shell:has\(\.daily-report-reference\) \.re
 assert.doesNotMatch(css,/\.reports-reference-shell:has\(\.daily-report-reference\) \.reports-reference-header::before/,"No decorative gradient is layered over the white header");
 assert.match(panel,/daily-report-activity-icon/,"Activity icons retained");
 assert.match(header,/daily-report-header-select/,"Pill-shaped period and scope filters retained");
-console.log("Daily Report reference palette and five-column responsive category grid verified.");
+assert.match(panel,/data\.category && data\.rows\.length===0 \? <DailyReportEmptyState \/>/,"Empty drilldowns show illustrated empty state");
+assert.match(panel,/<DailyReportEmptyState \/>/,"Empty summaries show illustrated empty state");
+assert.match(panel,/No activities yet/,"Empty-state title is visible");
+assert.match(panel,/Your activities will appear here once they are recorded/,"Empty-state explanation is visible");
+console.log("Daily Report adaptive full-width grids and illustrated empty state verified.");
