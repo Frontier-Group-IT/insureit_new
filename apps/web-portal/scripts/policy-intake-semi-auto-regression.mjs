@@ -866,4 +866,15 @@ const n8nPreviewServerText=text("lib/policy-intake-semi-auto-n8n.ts");
 assert(n8nPreviewServerText.includes("n8n webhook returned an unsuccessful response".replace(/^n/, "The n"))
   || n8nPreviewServerText.includes("The n8n webhook returned an unsuccessful response"),
   "Fresh n8n failure must have an actionable and sanitized diagnostic");
+// A selected, previously extracted Motor Intake must expose a direct manual
+// handoff without requiring a separate user click on Re-extract current PDF.
+assert(workbenchText.includes("async function beginDirectN8nHandoff()")
+  && workbenchText.includes('selected.ocr_status === "completed"')
+  && workbenchText.includes("const fresh=await previewSemiAutoN8nIntake(id)")
+  && workbenchText.includes('setHandoffDialog({kind:"confirm",intakeId:id,')
+  && workbenchText.includes("n8nResult.preview.fingerprint"),
+  "Direct handoff must reverify current PDF and retain existing confirmed fingerprint checks");
+// Bulk booking is intentionally not silently enabled by clearing an extraction exception.
+assert(workbenchText.includes("Convert All Eligible is disabled until canonical preflight and booking rollout"),
+  "Automatic bulk booking must remain gated by full canonical preflight");
 console.log("Semi-auto Motor onboarding regression checks passed.");
