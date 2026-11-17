@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { checkSemiAutoReadiness } from "../lib/policy-intake-semi-auto.ts";
 import { policyIntakeBucket } from "../lib/policy-intake-status-buckets.ts";
+import { validateN8nPolicyIntakeResponse } from "../lib/policy-intake-n8n-validation.ts";
 
 const text = path => readFileSync(new URL("../" + path, import.meta.url), "utf8");
 const draft = {
@@ -166,5 +167,63 @@ assert(client.includes("This preview does not change the Intake, draft or bookin
   "Preview remains explicitly read-only");
 assert(n8nServer.includes('semiAutoN8nApplyEnabled()'),
   "Keep a separate recovery gate for OCR application");
+
+
+// Live source PDFs are private, so contract tests use fictional policy data.
+// Premium is intentionally a Basic OD + add-on combination (2026 + 240).
+const auditIds = {
+  intakeId: "00000000-0000-4000-8000-000000000001",
+  documentId: "00000000-0000-4000-8000-000000000002",
+  requestId: "00000000-0000-4000-8000-000000000003",
+};
+const auditChecks = Object.fromEntries([
+  "is_icici_3005", "insured_name_present", "policy_number_present",
+  "vehicle_details_present", "dates_present", "od_liability_equal_net",
+  "tp_cpa_equal_liability", "net_tax_equal_gross", "idv_present",
+  "manufacturing_year_present", "basic_od_plus_addons_equals_printed_total",
+  "basic_tp_equals_derived_tp", "exact_igst_rounds_to_tax",
+].map(key => [key, true]));
+const auditFields = Object.entries({
+  policy_number: "3005/123456789/00/000",
+  insurer_name: "ICICI Lombard General Insurance Company Limited",
+  insured_name: "TEST POLICYHOLDER",
+  policy_start_date: "2026-10-24", policy_end_date: "2027-10-23",
+  third_party_start_date: "2026-10-24", third_party_end_date: "2031-10-23",
+  vehicle_make: "TEST MAKE", vehicle_model: "TEST MODEL",
+  vehicle_registration_status: "registration_pending",
+  vehicle_engine_number: "TESTENG123", vehicle_chassis_number: "TESTCHASSIS1234567",
+  vehicle_manufacturing_year: "2026", idv: "124113",
+  od_premium: "2266", tp_premium: "3273", cpa_premium: "575",
+}).map(([key,value]) => ({key,value,label:key,confidence:null,page:1,evidence:"Fictional PDF test"}));
+const auditPayload = {
+  contract_version:"1", intake_id:auditIds.intakeId,
+  document_id:auditIds.documentId, request_id:auditIds.requestId,
+  ok:true, review_required:true, auto_finalize_allowed:false,
+  parser_id:"icici_3005_n8n_native_pdf", parser_version:"bridge-v1",
+  extraction_method:"native_pdf_text",
+  fields:auditFields,warnings:[],checks:auditChecks,
+  premium_components:{
+    basic_od_premium:2026, od_addons:[{name:"Fictional add-on",amount:240}],
+    total_od_premium:2266,basic_tp_premium:3273,owner_driver_cpa:575,
+    total_liability_premium:3848,net_premium:6114,
+    igst_exact:1100.52,printed_total_tax:1101,gross_premium:7215,
+  },
+};
+const audited = validateN8nPolicyIntakeResponse(auditPayload,auditIds);
+assert.equal(audited.checksPassed,13,"Validator must prove all thirteen checks");
+assert.equal(audited.premium.basicOd,2026,"Do not confuse Basic OD with Total OD");
+assert.equal(audited.premium.odAddons[0].amount,240,"Preserve the exact PDF add-on");
+assert.equal(audited.premium.totalOd,2266,"Use printed Total OD, not Basic OD");
+assert.equal(audited.premium.net,6114);
+assert.equal(audited.premium.tax,1101);
+assert.equal(audited.premium.gross,7215);
+assert.throws(() => validateN8nPolicyIntakeResponse({
+  ...auditPayload,
+  premium_components:{...auditPayload.premium_components,od_addons:[{name:"Fictional add-on",amount:241}]},
+},auditIds),/n8n_premium_reconciliation_failed/,"A one-rupee add-on mismatch must fail closed");
+assert.throws(() => validateN8nPolicyIntakeResponse({
+  ...auditPayload,
+  checks:{...auditChecks,exact_igst_rounds_to_tax:false},
+},auditIds),/n8n_financial_validation_failed/,"Do not trust incomplete premium checks");
 
 console.log("Semi-auto Motor onboarding regression checks passed.");
