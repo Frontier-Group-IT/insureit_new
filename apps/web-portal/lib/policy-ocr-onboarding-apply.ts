@@ -276,19 +276,20 @@ export function buildPolicyOcrOnboardingUpdate(input: OcrApplyInput): OcrApplyRe
     }
   }
 
-  // ICICI bundled Chetak C3001 identifies the model/brand as CHETAK;
-  // the portal manufacturer dropdown uses the verified OEM Bajaj Auto.
-  // Keep the raw OCR make unchanged for audit and restrict the alias to
-  // the exact model and two-wheeler classification.
+  // ICICI Product 3005 prints Chetak model names as both "C3503"
+  // and "CHETAK 3503". Match exact supported aliases for the Bajaj OEM
+  // dropdown and CC/KW mapping, but preserve the original PDF model text.
   const chetakIdentity = /^CHETAK$/i.test(byKey.get("vehicle_make")?.value.trim() ?? "")
     && next.vehicleClass === "TWP";
-  // Preserve the existing C3001 alias. C3503 requires independently
-  // extracted electric and 4.2 kW evidence from the matching schedule.
-  const isIciciChetakElectric = chetakIdentity && (
-    /^(?:C2501|C3001|C3501|C3502|C3503)$/i.test(byKey.get("vehicle_model")?.value.trim() ?? "")
+  const pdfChetakModel = (byKey.get("vehicle_model")?.value ?? "").trim()
+    .toUpperCase().replace(/\s+/g, " ");
+  const chetakModelMatch = pdfChetakModel.match(/^(?:C|CHETAK[ -]+)(2501|3001|3501|3502|3503)$/);
+  const chetakModelCode = chetakModelMatch ? `C${chetakModelMatch[1]}` : "";
+  // All 3503 variants require independent Electric evidence. Do not
+  // treat seating capacity as motor kW; only the CC/KW field may supply it.
+  const isIciciChetakElectric = chetakIdentity && Boolean(chetakModelCode)
     && (byKey.get("vehicle_fuel_type")?.value.trim().toLowerCase() === "electric"
-      || /^C3001$/i.test(byKey.get("vehicle_model")?.value.trim() ?? ""))
-  );
+      || chetakModelCode === "C3001");
   setText("vehicle_make", (value) => { next.make = value; }, (raw) => {
     if (isIciciChetakElectric) {
       // Prefer the literal "Bajaj" master choice, not an invented CHETAK option.

@@ -421,6 +421,63 @@ assert.equal(mappedChetak.next.rtoState,"Madhya Pradesh");
 assert.equal(mappedChetak.next.rtoName,"Jabalpur");
 assert.equal(mappedChetak.next.capacity,"2.2");
 assert.equal(mappedChetak.next.policyProduct,"Bundled");
+// ICICI 3005 sibling layout prints "CHETAK / CHETAK 3503" instead of
+// "CHETAK / C3503". Keep the printed model, and select the canonical
+// TWP/Bajaj/Electric/Bundled controls with motor power from CC/KW, not seats.
+const c3503Fields=[
+  {key:"policy_product",label:"Policy product",value:"Bundled"},
+  {key:"vehicle_make",label:"Make",value:"CHETAK"},
+  {key:"vehicle_model",label:"Model",value:"CHETAK 3503"},
+  {key:"vehicle_rto_name",label:"RTO",value:"MADHYA PRADESH-JABALPUR"},
+  {key:"vehicle_motor_power_kw",label:"Motor kW",value:"4.2"},
+];
+const c3503Enriched=enrichVerifiedN8nOnboardingFields(c3503Fields);
+assert.equal(c3503Enriched.find(f=>f.key==="vehicle_class")?.value,"TWP",
+  "CHETAK 3503 must be recognized as a two wheeler");
+assert.equal(c3503Enriched.find(f=>f.key==="vehicle_fuel_type")?.value,"Electric",
+  "CHETAK 3503 must be recognized as a verified electric Chetak");
+const mapped3503=buildPolicyOcrOnboardingUpdate({
+  mode:"create",registrationMode:"unregistered",current:baseState,
+  fields:c3503Enriched,manufacturers:["Bajaj","Bajaj Auto Limited"],insurers:[],rcVerified:false,
+});
+assert.equal(mapped3503.next.vehicleClass,"TWP");
+assert.equal(mapped3503.next.make,"Bajaj");
+assert.equal(mapped3503.next.model,"CHETAK 3503","Preserve the exact printed model");
+assert.equal(mapped3503.next.fuelType,"Electric");
+assert.equal(mapped3503.next.capacity,"4.2","Never read 2 seats as 2 kW");
+assert.equal(mapped3503.next.policyProduct,"Bundled");
+assert.equal(mapped3503.next.rtoState,"Madhya Pradesh");
+assert.equal(mapped3503.next.rtoName,"Jabalpur");
+
+// Until the fixed draft n8n workflow is published, its old response has
+// no CC/KW evidence: class/make/fuel/product can be filled, kW cannot.
+const withoutPower=buildPolicyOcrOnboardingUpdate({
+  mode:"create",registrationMode:"unregistered",current:baseState,
+  fields:enrichVerifiedN8nOnboardingFields(c3503Fields.filter(f=>f.key!=="vehicle_motor_power_kw")),
+  manufacturers:["Bajaj Auto Limited"],insurers:[],rcVerified:false,
+});
+assert.equal(withoutPower.next.vehicleClass,"TWP");
+assert.equal(withoutPower.next.make,"Bajaj Auto Limited");
+assert.equal(withoutPower.next.capacity,"","Never infer motor kW from model alone");
+
+// Exact-match guard: an untrained 3503 variant must remain manual.
+const unknown3503=enrichVerifiedN8nOnboardingFields(c3503Fields.map(f=>
+  f.key==="vehicle_model"?{...f,value:"CHETAK 3503 PLUS"}:f));
+assert(!unknown3503.some(f=>f.key==="vehicle_class"||f.key==="vehicle_fuel_type"),
+  "Unrecognized Chetak variant must not be automatically classified");
+const unmapped3503=buildPolicyOcrOnboardingUpdate({
+  mode:"create",registrationMode:"unregistered",current:baseState,
+  fields:unknown3503,manufacturers:["Bajaj"],insurers:[],rcVerified:false,
+});
+assert.equal(unmapped3503.next.vehicleClass,"");
+assert.equal(unmapped3503.next.make,"");
+assert.equal(unmapped3503.next.policyProduct,"");
+assert.equal(unmapped3503.next.capacity,"");
+const code3503=enrichVerifiedN8nOnboardingFields(c3503Fields.map(f=>
+  f.key==="vehicle_model"?{...f,value:"C3503"}:f));
+assert.equal(code3503.find(f=>f.key==="vehicle_class")?.value,"TWP",
+  "Existing C3503 alias must not regress");
+
 const unknownModel = enrichVerifiedN8nOnboardingFields([
   {key:"policy_product",label:"Product",value:"Bundled"},
   {key:"vehicle_make",label:"Make",value:"CHETAK"},

@@ -35,6 +35,18 @@ const KNOWN_CHETAK_ELECTRIC_MODELS = new Set([
   "C2501", "C3001", "C3501", "C3502", "C3503",
 ]);
 
+/**
+ * Product 3005 risk letters print both "CHETAK / C3503" and
+ * "CHETAK / CHETAK 3503". Normalize ONLY exact verified C-series
+ * naming aliases for matching; retain the PDF's actual model in the form.
+ */
+function knownChetakModelCode(raw: string): string {
+  const canonical = raw.trim().toUpperCase().replace(/\s+/g, " ");
+  const parts = canonical.match(/^(?:C|CHETAK[ -]+)(2501|3001|3501|3502|3503)$/);
+  const code = parts ? `C${parts[1]}` : "";
+  return KNOWN_CHETAK_ELECTRIC_MODELS.has(code) ? code : "";
+}
+
 const VERIFIED_STATE_NAMES = [
   "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh",
   "Goa", "Gujarat", "Haryana", "Himachal Pradesh", "Jharkhand", "Karnataka",
@@ -74,7 +86,7 @@ export function enrichVerifiedN8nOnboardingFields<T extends N8nPrefillField>(
   };
 
   const isKnownChetak = get("vehicle_make").toUpperCase() === "CHETAK"
-    && KNOWN_CHETAK_ELECTRIC_MODELS.has(get("vehicle_model").toUpperCase());
+    && Boolean(knownChetakModelCode(get("vehicle_model")));
   // Insurer Product Code 3005 is the verified bundled two-wheeler layout.
   if (isKnownChetak && get("policy_product").toLowerCase() === "bundled") {
     add("vehicle_class", "TWP", "Verified two-wheeler class");
