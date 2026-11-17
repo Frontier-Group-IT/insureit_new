@@ -18,7 +18,7 @@ for (const field of ['document_received_at','associate_employee_id','pos_first_n
 assert.match(form, /authenticatedRequest\('GET'\)/);
 assert.match(form, /Save & Exit/);
 assert.match(form, /Upload Documents/);
-const scrollStart=form.indexOf('<ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>');
+const scrollStart=form.search(/<ScrollView\b[^>]*keyboardShouldPersistTaps="handled"[^>]*contentContainerStyle=\{styles\.content\}[^>]*>/);
 const footer=form.indexOf('<View style={styles.actionFooter}>');
 const scrollEnd=form.indexOf('</ScrollView>',scrollStart);
 assert.ok(scrollStart>=0 && footer>scrollStart && footer<scrollEnd,
