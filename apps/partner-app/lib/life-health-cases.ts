@@ -158,6 +158,39 @@ export async function appendLifeHealthCaseRemark(id: string, remark: string): Pr
   return body.remarks ?? '';
 }
 
+
+/** Document actions use verified bearer identity and an authorization-scoped case ID. */
+export async function getLifeHealthDocumentUrl(caseId:string,documentId:string):Promise<string>{
+ const session=await getCurrentSession();
+ if(!session?.access_token)throw new Error('Sign in again to open the document.');
+ const response=await fetch(`${portal}/api/partner/life-health-cases?id=${encodeURIComponent(caseId)}&documentId=${encodeURIComponent(documentId)}`,{
+  headers:{Authorization:`Bearer ${session.access_token}`},cache:'no-store'
+ });
+ const body=await response.json().catch(()=>null) as {ok?:boolean;url?:string;error?:string}|null;
+ if(!response.ok||!body?.ok||!body.url)throw new Error(body?.error||'Unable to open document.');
+ return body.url;
+}
+export async function mutateLifeHealthDocument(caseId:string,documentId:string,operation:'delete_document'):Promise<void>{
+ await caseMutation<{ok:true}>({id:caseId,documentId,operation});
+}
+export async function uploadLifeHealthDocument(caseId:string,documentType:string,
+ file:{uri:string;name:string;mimeType?:string|null;size?:number|null}):Promise<void>{
+ const session=await getCurrentSession();
+ if(!session?.access_token)throw new Error('Sign in again to upload a document.');
+ if(!file.size||file.size>4*1024*1024)throw new Error('Choose a document up to 4 MB.');
+ const form=new FormData();
+ form.append('id',caseId);form.append('documentType',documentType);
+ form.append('file',{uri:file.uri,name:file.name,type:file.mimeType||'application/octet-stream'} as unknown as Blob);
+ const response=await fetch(`${portal}/api/partner/life-health-cases`,{
+  method:'POST',headers:{Authorization:`Bearer ${session.access_token}`},body:form
+ });
+ const body=await response.json().catch(()=>null) as {ok?:boolean;error?:string}|null;
+ if(!response.ok||!body?.ok)throw new Error(body?.error||'Document upload failed.');
+}
+export async function rejectLifeHealthCaseNative(id:string,reason:string):Promise<void>{
+ await caseMutation<{ok:true}>({id,operation:'reject_case',reason});
+}
+
 export type LifeHealthInsurer={id:string;name:string};
 export async function listLifeHealthInsurers():Promise<LifeHealthInsurer[]>{
   const result=await request<{insurers:LifeHealthInsurer[]}>(new URLSearchParams({catalog:'insurers'}));
