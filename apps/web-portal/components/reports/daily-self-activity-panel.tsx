@@ -162,15 +162,25 @@ export function DailySelfActivityPanel({data,linkFor,reportMode="self",canViewAl
               <DailyActivityHistoryRows rows={data.rows} isCustomerActivity={isCustomerActivity} isClaimActivity={isClaimActivity} vehicleMode={vehicleMode} isOtherActivity={isOtherActivity} />
             </table> : <DailyReportEmptyState />}
           </div>
-          <div className="mt-auto flex shrink-0 items-center justify-between border-t border-[#e4e9f1] px-4 py-3 text-[10px] text-[#66758b]">
-            <span>Page {data.page} · 30 per page</span>
+          <nav aria-label="Daily Report activity pages" className="relative z-10 mt-auto flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-[#e4e9f1] bg-white px-4 py-3 text-[10px] text-[#66758b]">
+            <span aria-live="polite">
+              Page {data.page} of {Math.max(1,Math.ceil(data.selectedCount/30))} · {data.selectedCount ? `Showing ${(data.page-1)*30+1}–${Math.min(data.page*30,data.selectedCount)} of ${data.selectedCount}` : "No matching records"}
+            </span>
             <div className="flex gap-2">
-              <Link prefetch={false} aria-disabled={data.page<=1} href={data.page<=1?"#":linkFor({page:String(data.page-1)})}
-                className={`rounded-lg border px-3 py-1.5 font-bold ${data.page<=1?"pointer-events-none border-[#dae1eb] bg-[#f0f3f8] text-[#263b57]":"border-[#9eaec3] bg-white text-[#102846] hover:bg-[#e9eff7]"}`}>Previous</Link>
-              <Link prefetch={false} aria-disabled={!data.hasNext} href={!data.hasNext?"#":linkFor({page:String(data.page+1)})}
-                className={`rounded-lg border px-3 py-1.5 font-bold ${!data.hasNext?"pointer-events-none border-[#dae1eb] bg-[#f0f3f8] text-[#263b57]":"border-[#9eaec3] bg-white text-[#102846] hover:bg-[#e9eff7]"}`}>Next</Link>
+              {data.page > 1 ? (
+                <a href={linkFor({page:String(data.page-1)})} rel="prev"
+                  className="rounded-lg border border-[#9eaec3] bg-white px-3 py-1.5 font-bold text-[#102846] hover:bg-[#e9eff7] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#315b9a]">Previous</a>
+              ) : (
+                <button type="button" disabled title="Already on the first page" className="cursor-not-allowed rounded-lg border border-[#dae1eb] bg-[#f0f3f8] px-3 py-1.5 font-bold text-[#7b8ba2]">Previous</button>
+              )}
+              {data.hasNext ? (
+                <a href={linkFor({page:String(data.page+1)})} rel="next"
+                  className="rounded-lg border border-[#9eaec3] bg-white px-3 py-1.5 font-bold text-[#102846] hover:bg-[#e9eff7] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#315b9a]">Next</a>
+              ) : (
+                <button type="button" disabled title="No more matching records" className="cursor-not-allowed rounded-lg border border-[#dae1eb] bg-[#f0f3f8] px-3 py-1.5 font-bold text-[#7b8ba2]">Next</button>
+              )}
             </div>
-          </div>
+          </nav>
         </>
       )}
     </section>

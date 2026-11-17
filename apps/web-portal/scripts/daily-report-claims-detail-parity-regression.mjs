@@ -17,9 +17,11 @@ assert.match(source,/matchingDocument\?\x60\$\{matchingDocument\} Verified\x60/,
 assert.doesNotMatch(panel,/>Claim No\.<\/th>/,"Remove Claim No. header in Claims details");
 assert.doesNotMatch(rows,/<td[^>]*>\{customerField\(row\.claimInsurerNo\)\}<\/td>/,"Remove Claim No. data cell");
 assert.match(panel,/text-\[#102846\]/,"Enabled pagination has readable dark text");
-assert.match(panel,/text-\[#263b57\]/,"Disabled pagination remains readable");
-assert.match(panel,/aria-disabled=\{data\.page<=1\}/,"Previous remains disabled on page one");
-assert.match(panel,/aria-disabled=\{!data\.hasNext\}/,"Next remains disabled on final page");
+assert.match(panel,/text-\[#7b8ba2\]/,"Disabled pagination remains readable and distinct from enabled links");
+assert.match(panel,/data\.page > 1 \? \(/,"Previous remains disabled on page one");
+assert.match(panel,/data\.hasNext \? \(/,"Next remains disabled on final page");
+assert.match(panel,/type="button" disabled title="Already on the first page"/,"First-page Previous uses native disabled semantics");
+assert.match(panel,/type="button" disabled title="No more matching records"/,"Last-page Next uses native disabled semantics");
 assert.match(rows,/claimControlNo/,"Keep control number");
 assert.match(rows,/claimCustomerName/,"Keep customer column");
 assert.match(rows,/claimVehicleNo/,"Keep vehicle column");

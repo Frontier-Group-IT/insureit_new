@@ -17,7 +17,16 @@ assert.match(css,/@media \(min-width: 1024px\)/,"Desktop-only height override pr
 assert.ok(panel.includes('daily-report-panel flex min-h-[calc(100dvh-145px)]'),"All Daily Report views fill the available viewport");
 assert.ok(panel.includes('md:min-h-[calc(100dvh-80px)]'),"Desktop panel scales to available viewport");
 assert.ok(panel.includes('min-h-0 flex-1'),"Drilldown rows consume available body space");
-assert.ok(panel.includes('mt-auto flex shrink-0 items-center justify-between border-t'),"Pagination footer anchors at panel bottom");
+assert.ok(panel.includes('relative z-10 mt-auto flex shrink-0 flex-wrap items-center justify-between'),"Interactive pagination stays above decorative overlays and remains anchored");
+assert.match(panel,/aria-label="Daily Report activity pages"/,"Pagination has a dedicated navigation landmark");
+assert.match(panel,/href=\{linkFor\(\{page:String\(data\.page-1\)\}\)\}/,"Previous navigates to the preceding server-rendered page");
+assert.match(panel,/href=\{linkFor\(\{page:String\(data\.page\+1\)\}\)\}/,"Next navigates to the following server-rendered page");
+assert.match(panel,/data\.hasNext \? \(/,"Next stays available only when more matching records exist");
+assert.match(panel,/data\.page > 1 \? \(/,"Previous stays available after page one");
+assert.match(panel,/type="button" disabled title="No more matching records"/,"Last-page Next is visibly and semantically disabled");
+assert.match(panel,/type="button" disabled title="Already on the first page"/,"First-page Previous is visibly and semantically disabled");
+assert.match(panel,/Math\.ceil\(data\.selectedCount\/30\)/,"Pager exposes total pages from authorized matching record count");
+assert.doesNotMatch(panel,/href=\{(?:data\.page<=1|!data\.hasNext)\?"#"/,"Disabled pagination must never navigate to a hash");
 assert.ok(panel.includes('data.rows.length ? <table'),"Detail table is shown only with rows");
 assert.ok(panel.includes('</table> : <DailyReportEmptyState />'),"Empty detail retains pagination with centered empty state");
 assert.ok(panel.includes('flex flex-1 items-center justify-center'),"Empty summary is vertically centered");

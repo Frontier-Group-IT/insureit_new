@@ -74,5 +74,5 @@ assert.ok(css.includes('[aria-label="Daily Report employee selector"] .daily-rep
 assert.ok(header.includes('min-w-[132px]'), "Date period filter retains its original width");
 assert.ok(panel.includes("md:min-h-[calc(100dvh-80px)]"), "Desktop Daily Report fills available screen height");
 assert.ok(panel.includes("min-h-[calc(100dvh-145px)]"), "Mobile Daily Report height tracks viewport");
-assert.ok(panel.includes("mt-auto flex shrink-0 items-center justify-between"), "Pagination remains anchored at bottom");
+assert.ok(panel.includes("relative z-10 mt-auto flex shrink-0 flex-wrap items-center justify-between"), "Pagination remains anchored at bottom");
 console.log("Daily Report header layout, Today 90D MTD YTD All time Custom, and IST range source filtering verified.");
