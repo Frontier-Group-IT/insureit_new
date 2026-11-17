@@ -50,5 +50,5 @@ assert.match(layout,/canViewAll=profile\?\.is_active \? await canViewDailyReport
 assert.match(layout,/<DailyReportHeaderScopes canViewAll=\{canViewAll\}/,"Header receives reporting access");
 assert.match(controls,/\|\| !canViewAll\)return/,"Self-only employees cannot fetch the colleague directory");
 assert.match(controls,/\{canViewAll\?matching\.map\(person=>\(/,"Employee list renders only when authorized");
-assert.match(controls,/const selectedPerson=canViewAll && searchParams\.get\("scope"\)==="all" \? searchParams\.get\("person"\) : null/,"Header defaults to Self without All permission");
+assert.match(controls,/const allSelected=canViewAll && searchParams\.get\("scope"\)==="all"/,"Header defaults to Self without All permission");
 console.log("Daily Report access for all active employees with Self/All isolation regression passed");
