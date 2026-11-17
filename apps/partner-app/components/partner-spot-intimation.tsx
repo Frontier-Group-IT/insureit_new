@@ -1,6 +1,7 @@
+import { partnerAlert } from '@/components/ui/partner-alert-provider';
 import { formatAppDate, parseAppDate } from '@/lib/indian-date';
 import { useState } from 'react';
-import { Alert, Image, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Image, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useRouter } from 'expo-router';
@@ -42,13 +43,13 @@ export function PartnerSpotIntimation({ data }: { data: PartnerClaimDetail }) {
     const accident = parseLocalDateTime(incidentDate, incidentTime);
     const spot = parseLocalDateTime(spotDate, spotTime);
     if (!accident || !spot || accident.getTime() > spot.getTime() || spot.getTime() > Date.now() || !driver.trim() || !phone.trim() || !location.trim()) {
-      Alert.alert('Complete all required details','Enter valid accident and spot-intimation date/time, driver details and location.'); return;
+      partnerAlert('Complete all required details','Enter valid accident and spot-intimation date/time, driver details and location.'); return;
     }
     setSaving(true);
     try {
       await savePartnerClaimSpot(data.claim.id, accident.toISOString(), spot.toISOString(), location, driver, phone);
       router.replace({ pathname: '/claim/stage', params: { id: data.claim.id, key: 'spot_status' } } as never);
-    } catch (e) { Alert.alert('Unable to save',e instanceof Error ? e.message : 'Please try again.'); }
+    } catch (e) { partnerAlert('Unable to save',e instanceof Error ? e.message : 'Please try again.'); }
     finally { setSaving(false); }
   };
   const editable = data.claim.current_status === 'Draft' || data.claim.current_status === 'Initial Documents Pending';
