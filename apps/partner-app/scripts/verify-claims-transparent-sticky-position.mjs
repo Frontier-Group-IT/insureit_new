@@ -16,12 +16,19 @@ assert.match(source, /<View style=\{styles\.stickySearchBody\}>\{searchControls\
 assert.match(source, /ListHeaderComponent=\{header\}/);
 assert.match(source, /<View style=\{styles\.summaryRow\}>/);
 assert.match(source, /accessibilityLabel="Add Claim"/);
-// Claims typography should stay compact without hiding the Add Claim label or changing its route.
-assert.match(source, /<Text numberOfLines=\{1\} adjustsFontSizeToFit minimumFontScale=\{0\.85\} style=\{styles\.summaryAddClaimText\}>Add Claim<\/Text>/);
-assert.match(source, /summaryAddClaim: \{ width: 88, minHeight: 38/, 'Allow full Add Claim label inside one row.');
-assert.match(source, /onPress=\{\(\) => router\.push\('\/claim\/select-vehicle' as never\)\}/, 'Preserve authorized Add Claim navigation.');
-assert.match(source, /summaryChipLabel: \{[^\n]*fontWeight: '600'/, 'Keep count filter labels medium-weight.');
-assert.match(source, /summaryChipCount: \{[^\n]*fontWeight: '500'/, 'Use regular/medium count labels.');
+// Primary action must be authorized, visible in the hero and sticky header, and keep its route.
+assert.match(source, /heroBottomRow/, 'Claims primary action belongs beside hero title.');
+assert.match(source, /canPartnerStartClaim\(context\)/, 'Add Claim remains permission-gated.');
+assert.match(source, /accessibilityLabel="Add Claim"/);
+assert.match(source, /onPress=\{\(\) => router\.push\('\/claim\/select-vehicle' as never\)\}/);
+assert.match(source, /style=\{styles\.heroAddClaimText\}>Add Claim<\/Text>/, 'Add Claim is in the hero, not status row.');
+assert.doesNotMatch(source, /summaryAddClaim/, 'Status tabs no longer contain a fourth action.');
+assert.match(source, /<Modal transparent visible=\{filterOpen\}/, 'Filter icon opens a working sheet.');
+assert.match(source, /onPress=\{\(\) => setFilterOpen\(true\)\}/, 'Filter is enabled.');
+assert.match(source, /shortLabel: 'In Progress'/, 'Full status label remains legible.');
+assert.match(source, /summaryChip: \{ flex: 1/, 'Three equally sized status chips.');
+assert.match(source, /summaryChipLabel: \{[^\n]*fontWeight: '600'/);
+assert.match(source, /summaryChipCount: \{[^\n]*fontWeight: '700'/);
 assert.match(source, /statusText: \{[^\n]*fontSize: 8, lineHeight: 10, fontWeight: '600'/, 'Keep status labels legible.');
 assert.match(source, /claimNo: \{[^\n]*fontSize: 11\.5, lineHeight: 15, fontWeight: '500'/, 'Keep claim number readable and moderately emphasized.');
 console.log('Partner Claims navy sticky positioning regression passed');
