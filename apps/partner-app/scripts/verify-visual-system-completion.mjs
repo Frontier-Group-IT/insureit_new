@@ -277,6 +277,12 @@ for (const [label, kind, route] of [
 requireText(policyDetail, "backgroundColor: 'transparent'", 'Quick Actions must remain background-free.');
 requireText(policyDetail, 'numberOfLines={1} adjustsFontSizeToFit', 'Action labels must use single-line auto fitting.');
 requireText(policyDetail, 'styles.quickActionIcon', 'Icons must render directly without tiles.');
+for (const asset of ['policy-document', 'renew-policy', 'raise-claim', 'customer-details']) {
+  requireText(policyDetail, `require('../../assets/partner/quick-actions/${asset}.png')`, `3D quick-action illustration missing: ${asset}`);
+}
+requireText(policyDetail, '<Image source={illustration} style={styles.quickActionArtwork} resizeMode="contain"', 'All four 3D quick-action illustrations must fit their transparent slots.');
+if (policyDetail.includes('Ionicons name={iconName} size={32}')) throw new Error('Flat quick-action glyph must not return.');
+
 for (const obsolete of ['label="Policy Intake"', 'label="Add Policy"', 'label="Case Register"', 'label="Add Partner"', 'styles.quickBlue', 'borderRightColor']) {
   if (policyDetail.includes(obsolete)) throw Error('Policy Details must not replace original actions or reintroduce backgrounds: ' + obsolete);
 }
