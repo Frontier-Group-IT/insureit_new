@@ -595,4 +595,18 @@ assert(workbenchText.includes("Resolve policy exceptions")
 assert(actionsText.includes("reprocessAiPolicyIntake")
   && actionsText.includes("requireDevelopmentPolicyOperator(id)"),
   "Each manual background reprocess request must require the current authorized reviewer");
+const vercelConfig=JSON.parse(text("vercel.json"));
+assert.deepEqual(vercelConfig.crons,[
+  {path:"/api/internal/ai-policy-onboarding/process",schedule:"*/5 * * * *"},
+], "Vercel Pro should schedule a bounded queue every five minutes");
+assert(routeText.includes("export async function GET(request: NextRequest)")
+  && routeText.includes("authorized(request, process.env.CRON_SECRET??")
+  && routeText.includes("secret.length < 32")
+  && routeText.includes("timingSafeEqual")
+  && !routeText.includes("vercel-cron") 
+  && routeText.includes("aiQueueEnabled()"),
+  "Vercel Cron must use a 32+ byte independent Bearer secret and queue flag; user-agent is never authority");
+assert(routeText.includes("export async function POST(request: NextRequest)")
+  && routeText.includes("process.env.INSUREIT_AI_QUEUE_WORKER_TOKEN??"),
+  "Existing opt-in GitHub Actions worker POST must remain independently protected");
 console.log("Semi-auto Motor onboarding regression checks passed.");
