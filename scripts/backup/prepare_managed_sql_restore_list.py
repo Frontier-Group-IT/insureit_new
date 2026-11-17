@@ -25,7 +25,7 @@ DEFERRED_SYSTEM_SCHEMAS = frozenset({"pg_catalog", "information_schema"})
 # Application-owned objects replay without source owner or ACL in initial drill.
 APP_OBJECTS = frozenset({
     "TABLE", "TABLE DATA", "VIEW", "MATERIALIZED VIEW",
-    "MATERIALIZED VIEW DATA", "INDEX", "CONSTRAINT", "FK CONSTRAINT",
+    "MATERIALIZED VIEW DATA", "INDEX", "CONSTRAINT", "CHECK CONSTRAINT", "FK CONSTRAINT",
     "SEQUENCE", "SEQUENCE OWNED BY", "SEQUENCE SET", "FUNCTION", "PROCEDURE", "TRIGGER",
     "POLICY", "ROW SECURITY", "TYPE", "DOMAIN", "DEFAULT", "RULE",
     "TABLE ATTACH", "INDEX ATTACH", "STATISTICS", "AGGREGATE", "COLLATION", "OPERATOR",
@@ -52,7 +52,7 @@ PG17_DEFERRED_KINDS = frozenset({
     "ENCODING", "STDSTRINGS", "SEARCHPATH",
     "PROCEDURAL LANGUAGE", "FOREIGN DATA WRAPPER", "CONVERSION",
     "PUBLICATION TABLES IN SCHEMA", "SUBSCRIPTION TABLE",
-    "BLOB DATA", "SHELL TYPE", "ACCESS METHOD", "TABLE ACCESS METHOD",
+    "BLOB DATA", "BLOB METADATA", "SHELL TYPE", "ACCESS METHOD", "TABLE ACCESS METHOD",
     "STATISTICS DATA", "EXTENDED STATISTICS DATA",
 })
 
@@ -62,6 +62,9 @@ class SafeTocSelectionError(ValueError):
 
     def __init__(self, reason):
         if reason not in ("UNRECOGNIZED_TOC_RECORD",
+                          "UNKNOWN_TOC_DESCRIPTOR",
+                          "INVALID_TOC_FIELDS",
+                          "INVALID_TOC_SHAPE",
                           "UNKNOWN_ARCHIVE_NAMESPACE",
                           "INVALID_TOC_IDENTIFIER"):
             raise AssertionError("Unexpected private TOC failure category")
@@ -90,9 +93,18 @@ def parse_entry(line):
         return None
     m = RECORD.match(line)
     if not m:
-        # Failing on previously unrecognized archive types prevents silently
-        # omitting application SQL or replaying an unreviewed global object.
-        raise SafeTocSelectionError("UNRECOGNIZED_TOC_RECORD")
+        # Classify only the STRUCTURE, never the source object's name/tag.
+        # PostgreSQL 17 emits CHECK CONSTRAINT (including on domains);
+        # unknown descriptors remain blocked, not implicitly deferred.
+        # This separates an unrecognized descriptor from a malformed line
+        # for the NEXT protected dry-run without leaking private identifiers.
+        header = re.match(r"^\s*\d+;\s+\d+\s+\d+\s+(.+)$", line)
+        if not header:
+            raise SafeTocSelectionError("INVALID_TOC_SHAPE")
+        payload = header.group(1)
+        if any(payload.startswith(kind + " ") for kind in TOC_KINDS):
+            raise SafeTocSelectionError("INVALID_TOC_FIELDS")
+        raise SafeTocSelectionError("UNKNOWN_TOC_DESCRIPTOR")
     number, kind, namespace, rest = m.groups()
     if namespace not in APP_SCHEMAS | MANAGED_SCHEMAS | DEFERRED_SYSTEM_SCHEMAS | {
         "-", "extensions", "graphql", "graphql_public", "pgbouncer",
