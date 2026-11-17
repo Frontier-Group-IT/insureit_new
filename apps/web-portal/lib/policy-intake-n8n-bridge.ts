@@ -3,7 +3,7 @@ import { validateN8nPolicyIntakeResponse, type N8nOcrBridgeInput, type N8nOcrBri
 export { validateN8nPolicyIntakeResponse } from "@/lib/policy-intake-n8n-validation";
 export type { N8nOcrField, N8nOcrBridgeInput, N8nOcrBridgeResponse, N8nVerifiedPremiumBreakdown } from "@/lib/policy-intake-n8n-validation";
 
-const CLOUD_N8N_ORIGIN = "https://insureit.app.n8n.cloud";
+const EXPECTED_N8N_ORIGIN = "https://insureit.app.n8n.cloud";
 // Approved prospective dedicated webhook hostname. A Cloudflare Tunnel,
 // working HTTPS and n8n Header Auth MUST be configured before opting in.
 // Never accept arbitrary n8n URLs from a request or environment variable.
@@ -89,7 +89,7 @@ function n8nConfiguration(): { url: URL; secret: string } {
   // be explicitly opted into after a successful end-to-end read-only test.
   const origin = process.env.INSUREIT_N8N_OCR_ENDPOINT_MODE === "self_hosted"
     ? SELF_HOSTED_N8N_ORIGIN
-    : CLOUD_N8N_ORIGIN;
+    : EXPECTED_N8N_ORIGIN;
   if (url.origin !== origin || url.protocol !== "https:" || url.pathname !== EXPECTED_WEBHOOK_PATH
       || url.search || url.hash || url.username || url.password) {
     throw new Error("n8n_webhook_url_not_allowed");
