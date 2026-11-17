@@ -5,6 +5,10 @@
  * entered/reviewed separately or sourced from a confirmed customer master.
  */
 const ALLOWED_N8N_ONBOARDING_KEYS = new Set([
+  "vehicle_class",
+  "vehicle_fuel_type",
+  "vehicle_motor_power_kw",
+  "vehicle_capacity",
   "vehicle_registration_status",
   "vehicle_registration_number",
   "vehicle_make",
@@ -13,6 +17,7 @@ const ALLOWED_N8N_ONBOARDING_KEYS = new Set([
   "vehicle_engine_number",
   "vehicle_chassis_number",
   "vehicle_rto_name",
+  "vehicle_rto_state",
   "policy_number",
   "insurer_name",
   "policy_product",
