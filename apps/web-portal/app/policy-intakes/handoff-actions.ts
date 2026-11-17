@@ -201,7 +201,7 @@ async function preparePolicyIntakeHandoffInternal(
     mode:"create",
     registrationMode:"registered",
     current:{registrationNo:"",vehicleClass:"",make:"",model:"",fuelType:"",manufacturingYear:"",capacity:"",chassisNo:"",engineNo:"",rtoState:"",rtoName:"",policyProduct:"",idv:"",od:"",tp:"",cpa:"",policyNo:"",insurerId:"",validFrom:"",validUpto:""},
-    fields:verified?enrichVerifiedN8nOnboardingFields(verified.fields,manufacturerOptions):(intake.ocr_fields??[]),
+    fields:verified?enrichVerifiedN8nOnboardingFields(verified.fields):(intake.ocr_fields??[]),
     manufacturers:manufacturerOptions,insurers,rcVerified:false,
   });
   // The document-derived insured_name is checked by n8n but may not be
