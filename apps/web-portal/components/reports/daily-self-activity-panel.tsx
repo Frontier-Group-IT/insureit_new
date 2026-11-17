@@ -104,7 +104,7 @@ export function DailySelfActivityPanel({data,linkFor,reportMode="self",canViewAl
           )}
         </div>
       ) : null}
-      {data.category && data.rows.length===0 ? <div className="flex flex-1 items-center justify-center"><DailyReportEmptyState /></div> : !data.category ? (
+      {!data.category ? (
         data.categories.length ? (
           <div className="daily-report-groups flex-1 space-y-4 p-3">
             {categoryGroups.map(group=>(
@@ -126,8 +126,8 @@ export function DailySelfActivityPanel({data,linkFor,reportMode="self",canViewAl
         ) : <div className="flex flex-1 items-center justify-center"><DailyReportEmptyState /></div>
       ) : (
         <>
-          <div className="min-h-0 flex-1 overflow-x-auto">
-            <table className="w-full text-left">
+          <div className={`min-h-0 flex-1 ${data.rows.length ? "overflow-x-auto" : "flex items-center justify-center"}`}>
+             {data.rows.length ? <table className="w-full text-left">
               <thead className="bg-[#f7f9fc] text-[9px] font-bold uppercase tracking-wide text-[#64748b]">
                 <tr><th className="px-4 py-3">Activity</th>
                   {isCustomerActivity ? (
@@ -163,7 +163,7 @@ export function DailySelfActivityPanel({data,linkFor,reportMode="self",canViewAl
                   <th className="px-3 py-3">Status</th></tr>
               </thead>
               <DailyActivityHistoryRows rows={data.rows} isCustomerActivity={isCustomerActivity} isClaimActivity={isClaimActivity} vehicleMode={vehicleMode} isOtherActivity={isOtherActivity} />
-            </table>
+            </table> : <DailyReportEmptyState />}
           </div>
           <div className="mt-auto flex shrink-0 items-center justify-between border-t border-[#e4e9f1] px-4 py-3 text-[10px] text-[#66758b]">
             <span>Page {data.page} · 30 per page</span>
