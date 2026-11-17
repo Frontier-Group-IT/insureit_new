@@ -151,7 +151,6 @@ export default function AddPartnerScreen() {
   const [selectorQuery, setSelectorQuery] = useState('');
   const [saving, setSaving] = useState(false);
   const [applicationId, setApplicationId] = useState<string | null>(null);
-  const [uploadOpen, setUploadOpen] = useState(false);
   const [uploadingType, setUploadingType] = useState<DocumentType | null>(null);
   const [uploaded, setUploaded] = useState<Partial<Record<DocumentType, string>>>({});
   const [dateField, setDateField] = useState<'date_of_birth' | 'document_received_at' | null>(null);
@@ -210,12 +209,11 @@ export default function AddPartnerScreen() {
   const filteredOptions = selectOptions.filter(option => option.name.toLocaleLowerCase().includes(selectorQuery.trim().toLocaleLowerCase()));
   const openSelector = (kind: 'rm' | 'bank') => { setSelectorQuery(''); setSelector(kind); };
   const closeSelector = () => { Keyboard.dismiss(); setSelector(null); setSelectorQuery(''); };
-  const savePartner = async (nextStep: 'exit' | 'upload') => {
-    if (saving || uploadingType || !allowed) return;
+  const savePartner = async (nextStep: 'exit' | 'upload'):Promise<string|null> => {
+    if (saving || uploadingType || !allowed) return null;
     if (applicationId) {
       if (nextStep === 'exit') router.replace('/(tabs)/policies');
-      else setUploadOpen(true);
-      return;
+      return applicationId;
     }
     const dob = isoDate(form.date_of_birth);
     const received = form.document_received_at.trim() ? isoDate(form.document_received_at) : null;
@@ -234,7 +232,7 @@ export default function AddPartnerScreen() {
     if (firstInvalid) {
       Keyboard.dismiss();
       revealFirstError(firstInvalid);
-      return;
+      return null;
     }
     setSaving(true);
     try {
@@ -246,15 +244,15 @@ export default function AddPartnerScreen() {
         partnerAlert('Partner details saved', 'Primary details saved and sent to Operations for review.', [
           { text: 'OK', onPress: () => router.replace('/(tabs)/policies') },
         ]);
-      } else {
-        setUploadOpen(true);
       }
+      return result.application_id;
     } catch (error) {
       partnerAlert('Unable to save Partner', error instanceof Error ? error.message : 'Please try again.');
+      return null;
     } finally { setSaving(false); }
   };
   const uploadDocument = async (type: DocumentType) => {
-    if (!applicationId || uploadingType) return;
+    if (saving || uploadingType || !allowed) return;
     if (type === 'gst_copy' && !form.gst_number.trim()) return;
     try {
       const result = await DocumentPicker.getDocumentAsync({
@@ -272,12 +270,16 @@ export default function AddPartnerScreen() {
         partnerAlert('Unsupported document', 'Choose a PDF, JPG or PNG file.');
         return;
       }
+      // Save the required Partner application once before sending its first document.
+      // Selecting a file before validation avoids creating a record for a cancelled picker.
+      const savedId = applicationId || await savePartner('upload');
+      if (!savedId) return;
       setUploadingType(type);
       const session = (await supabase.auth.getSession()).data.session;
       if (!session?.access_token) throw new Error('Sign in again to upload documents.');
       const base = (process.env.EXPO_PUBLIC_PORTAL_URL || 'https://portal.insureit.in').replace(/\/$/, '');
       const body = new FormData();
-      body.append('application_id', applicationId);
+      body.append('application_id', savedId);
       body.append('document_type', type);
       body.append('file', { uri: file.uri, name: file.name, type: mime } as unknown as Blob);
       const response = await fetch(`${base}/api/partner/onboarding/partner-only/documents`, {
@@ -292,6 +294,32 @@ export default function AddPartnerScreen() {
     } finally {
       setUploadingType(null);
     }
+  };
+  const deleteDocument = (type: DocumentType) => {
+    if (!applicationId || !uploaded[type] || saving || uploadingType) return;
+    partnerAlert('Delete document?', 'Remove this document from the Partner application?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: () => {
+        void (async () => {
+          setUploadingType(type);
+          try {
+            const session = (await supabase.auth.getSession()).data.session;
+            if (!session?.access_token) throw new Error('Sign in again to delete documents.');
+            const base = (process.env.EXPO_PUBLIC_PORTAL_URL || 'https://portal.insureit.in').replace(/\/$/, '');
+            const response = await fetch(`${base}/api/partner/onboarding/partner-only/documents`, {
+              method: 'DELETE',
+              headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify({ application_id: applicationId, document_type: type }),
+            });
+            const result = await response.json() as { ok?: boolean; error?: string };
+            if (!response.ok || !result.ok) throw new Error(result.error || 'Document could not be deleted.');
+            setUploaded(previous => { const next = { ...previous }; delete next[type]; return next; });
+          } catch (error) {
+            partnerAlert('Delete failed', error instanceof Error ? error.message : 'Try again.');
+          } finally { setUploadingType(null); }
+        })();
+      } },
+    ]);
   };
   if (!allowed) return <SafeAreaView style={styles.screen}><View style={styles.content}><Text style={styles.heading}>Add Partner</Text><Text>Employee Partner-onboarding permission required.</Text></View></SafeAreaView>;
   return (
@@ -362,21 +390,56 @@ export default function AddPartnerScreen() {
           ))}
           </>}
 
+          {partnerType==="posp"&&<View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.index}><Text style={styles.indexText}>04</Text></View>
+              <Text style={styles.sectionTitle}>Documents</Text>
+            </View>
+            <View style={styles.documentList}>
+              {uploadSlots.filter(slot => slot.type !== 'gst_copy' || Boolean(form.gst_number.trim())).map(slot => (
+                <View key={slot.type} style={styles.documentRow}>
+                  <Ionicons name="document-text-outline" size={20} color="#315B85"/>
+                  <View style={styles.documentLabel}>
+                    <Text style={styles.documentName}>{slot.label}</Text>
+                    {uploaded[slot.type]?<Text style={styles.uploadedName} numberOfLines={1}>{uploaded[slot.type]}</Text>:null}
+                  </View>
+                  {uploaded[slot.type]?<>
+                    <Pressable accessibilityRole="button" accessibilityLabel={`Replace ${slot.label}`}
+                      disabled={saving||Boolean(uploadingType)} onPress={()=>void uploadDocument(slot.type)}
+                      style={styles.documentIconButton}>
+                      <Ionicons name="refresh-outline" size={19} color="#24517E"/>
+                    </Pressable>
+                    <Pressable accessibilityRole="button" accessibilityLabel={`Delete ${slot.label}`}
+                      disabled={saving||Boolean(uploadingType)} onPress={()=>deleteDocument(slot.type)}
+                      style={styles.documentIconButton}>
+                      <Ionicons name="trash-outline" size={19} color="#C02D3A"/>
+                    </Pressable>
+                  </>:<Pressable accessibilityRole="button" accessibilityLabel={`Upload ${slot.label}`}
+                    disabled={saving||Boolean(uploadingType)} onPress={()=>void uploadDocument(slot.type)}
+                    style={styles.documentAddButton}>
+                    {uploadingType===slot.type?<ActivityIndicator size="small" color="#24517E"/>:
+                      <Ionicons name="cloud-upload-outline" size={17} color="#24517E"/>}
+                    <Text style={styles.documentAddText}>Add</Text>
+                  </Pressable>}
+                </View>
+              ))}
+            </View>
+          </View>}
+
           {partnerType==="posp"&&<View style={styles.actionFooter}>
-          <View style={styles.actionRow}>
-            <Pressable accessibilityRole="button" accessibilityLabel="Save and exit Partner form"
-              disabled={saving || loading || Boolean(uploadingType)}
-              onPress={() => void savePartner('exit')}
-              style={[styles.actionButton, styles.saveExitButton, (saving || loading || uploadingType) && styles.disabled]}>
-              <Text style={styles.saveExitText}>{saving ? 'Saving…' : 'Save & Exit'}</Text>
-            </Pressable>
-            <Pressable accessibilityRole="button" accessibilityLabel="Upload Partner documents"
-              disabled={saving || loading || Boolean(uploadingType)}
-              onPress={() => void savePartner('upload')}
-              style={[styles.actionButton, styles.uploadButton, (saving || loading || uploadingType) && styles.disabled]}>
-              <Text style={styles.submitText}>{uploadingType ? 'Uploading…' : saving ? 'Saving…' : 'Upload Documents'}</Text>
-            </Pressable>
-          </View>
+            <View style={styles.actionRow}>
+              <Pressable accessibilityRole="button" accessibilityLabel="Cancel Add Partner"
+                disabled={saving||Boolean(uploadingType)}
+                onPress={()=>leavePartnerForm()} style={[styles.actionButton,styles.saveExitButton]}>
+                <Text style={styles.saveExitText}>Cancel</Text>
+              </Pressable>
+              <Pressable accessibilityRole="button" accessibilityLabel="Save and exit Partner form"
+                disabled={saving||loading||Boolean(uploadingType)}
+                onPress={()=>void savePartner('exit')}
+                style={[styles.actionButton,styles.uploadButton,(saving||loading||uploadingType)&&styles.disabled]}>
+                <Text style={styles.submitText}>{saving?'Saving…':'Save & Exit'}</Text>
+              </Pressable>
+            </View>
           </View>}
         </ScrollView>
         <PartnerPolicyCalendarDialog
@@ -386,33 +449,6 @@ export default function AddPartnerScreen() {
           onCancel={() => setDateField(null)}
           onConfirm={date => setSelectedDate(date)}
         />
-        <Modal visible={uploadOpen} transparent animationType="fade" onRequestClose={() => { if (!uploadingType) setUploadOpen(false); }}>
-          <View style={styles.modalBackdrop}>
-            <Pressable style={StyleSheet.absoluteFillObject} onPress={() => { if (!uploadingType) setUploadOpen(false); }} accessibilityLabel="Close upload options" />
-            <View style={styles.modalKeyboardArea} pointerEvents="box-none">
-              <View style={styles.modal}>
-                <View style={styles.modalTitleRow}>
-                  <Text style={styles.modalTitle}>Upload Partner Documents</Text>
-                  <Pressable accessibilityRole="button" accessibilityLabel="Close upload options" disabled={Boolean(uploadingType)}
-                    onPress={() => setUploadOpen(false)}><Ionicons name="close" size={22} color="#4C5970" /></Pressable>
-                </View>
-                <Text style={styles.uploadHint}>PDF, JPG or PNG, maximum 10 MB per document. Tap a category to select its file.</Text>
-                <ScrollView style={styles.modalOptionList}>
-                  {uploadSlots.filter(slot => slot.type !== 'gst_copy' || Boolean(form.gst_number.trim())).map(slot => (
-                    <Pressable key={slot.type} accessibilityRole="button" disabled={Boolean(uploadingType)}
-                      onPress={() => void uploadDocument(slot.type)} style={styles.option}>
-                      <View style={styles.uploadLabel}>
-                        <Text style={styles.selectText}>{slot.label}</Text>
-                        {uploaded[slot.type] ? <Text style={styles.uploadedName} numberOfLines={1}>{uploaded[slot.type]}</Text> : null}
-                      </View>
-                      <Ionicons name={uploaded[slot.type] ? 'checkmark-circle' : 'cloud-upload-outline'} size={21} color="#17365D" />
-                    </Pressable>
-                  ))}
-                </ScrollView>
-              </View>
-            </View>
-          </View>
-        </Modal>
         <Modal visible={selector !== null} transparent animationType="fade" onRequestClose={closeSelector}>
           <View style={styles.modalBackdrop}>
             <Pressable style={StyleSheet.absoluteFillObject} accessibilityLabel="Close selection popup" onPress={closeSelector} />
@@ -485,6 +521,13 @@ const styles = StyleSheet.create({
   input: { minHeight: 44, backgroundColor: '#FFF', borderWidth: 1, borderColor: '#CED8E7', borderRadius: 10, paddingHorizontal: 12, fontSize: 13, color: '#152A49' },
   select: { minHeight: 44, borderWidth: 1, borderColor: '#CED8E7', borderRadius: 10, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   selectText: { color: '#17365D', fontSize: 13, fontWeight: '600', flexShrink: 1 },
+  documentList:{paddingHorizontal:12,paddingVertical:5},
+  documentRow:{flexDirection:'row',alignItems:'center',minHeight:53,gap:9,paddingVertical:9,borderBottomWidth:1,borderBottomColor:'#E7EDF5'},
+  documentLabel:{flex:1,minWidth:0,gap:3},
+  documentName:{fontSize:12,fontWeight:'700',color:'#17365D'},
+  documentAddButton:{flexDirection:'row',alignItems:'center',justifyContent:'center',gap:5,borderWidth:1,borderColor:'#CBD8E8',borderRadius:9,paddingHorizontal:10,minHeight:36},
+  documentAddText:{fontSize:11,fontWeight:'700',color:'#24517E'},
+  documentIconButton:{width:36,height:36,borderRadius:9,borderWidth:1,borderColor:'#D9E3F1',alignItems:'center',justifyContent:'center'},
   actionFooter: { backgroundColor: '#E7EEFC', borderWidth: 1, borderColor: '#CBDCFB', borderRadius: 12, padding: 10, marginTop: 4 },
   actionRow: { flexDirection: 'row', gap: 8 },
   actionButton: { flex: 1, minWidth: 0, minHeight: 44, borderRadius: 10, paddingHorizontal: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
