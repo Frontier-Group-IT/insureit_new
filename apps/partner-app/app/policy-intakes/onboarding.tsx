@@ -1375,7 +1375,7 @@ export default function NativePolicyOnboarding(){
         </View>:null}
         <ScrollView keyboardShouldPersistTaps="handled" style={styles.choiceScroll}>
           {picker?.key==='insurerId'&&!displayedPickerItems.length?<Text style={styles.sourceEmpty}>No matching insurance companies.</Text>:null}
-          {displayedPickerItems.map(item=>{
+          {picker?displayedPickerItems.map(item=>{
           const selected=(picker.product?String(productValues[picker.key]??''):String(draft?.[picker.key as FieldKey]??''))===item.value;
           return <Pressable key={item.value} accessibilityRole="button" accessibilityState={{selected}}
             style={[styles.choice,selected&&styles.choiceSelected]}
@@ -1391,7 +1391,7 @@ export default function NativePolicyOnboarding(){
             <Text style={[styles.choiceText,selected&&styles.choiceTextSelected]}>{item.label}</Text>
             {selected?<Ionicons name="checkmark" size={17} color="#FFFFFF"/>:null}
           </Pressable>;
-        })}</ScrollView>
+        }):null}</ScrollView>
       </View></View>
     </Modal>
   </PartnerScreen>;
