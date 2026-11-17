@@ -1,7 +1,7 @@
 import { partnerAlert } from '@/components/ui/partner-alert-provider';
 import { PartnerConfirmDialog } from '@/components/ui/partner-confirm-dialog';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Linking, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { AccessibilityInfo, ActivityIndicator, Animated, Linking, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useLocalSearchParams, usePathname, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
@@ -155,6 +155,31 @@ export default function NativePolicyOnboarding(){
   const isNew=usePathname()==='/policy-new';
   const [data,setData]=useState<NativeOnboardingData|null>(null);
   const [draft,setDraft]=useState<NativePolicyDraft|null>(null);
+  // Entrance occurs when data first loads, not every time the user types.
+  const formOpacity=useRef(new Animated.Value(0)).current;
+  const formShift=useRef(new Animated.Value(8)).current;
+  const numberScale=useRef(new Animated.Value(0.97)).current;
+  const [focusedInput,setFocusedInput]=useState<string|null>(null);
+  const hasDraft=Boolean(draft);
+  useEffect(()=>{
+    if(!hasDraft)return;
+    let active=true;
+    void AccessibilityInfo.isReduceMotionEnabled().then(reduced=>{
+      if(!active)return;
+      if(reduced){
+        formOpacity.setValue(1);formShift.setValue(0);numberScale.setValue(1);
+        return;
+      }
+      Animated.parallel([
+        Animated.timing(formOpacity,{toValue:1,duration:280,useNativeDriver:true}),
+        Animated.timing(formShift,{toValue:0,duration:280,useNativeDriver:true}),
+        Animated.timing(numberScale,{toValue:1,duration:220,useNativeDriver:true}),
+      ]).start();
+    }).catch(()=>{
+      if(active){formOpacity.setValue(1);formShift.setValue(0);numberScale.setValue(1);}
+    });
+    return()=>{active=false;formOpacity.stopAnimation();formShift.stopAnimation();numberScale.stopAnimation();};
+  },[hasDraft,formOpacity,formShift,numberScale]);
   const [error,setError]=useState('');
   const [loading,setLoading]=useState(true);
   const [saving,setSaving]=useState(false);
@@ -743,9 +768,10 @@ export default function NativePolicyOnboarding(){
       ):(
         <TextInput accessibilityLabel={f.label} value={current} editable={!restricted} placeholder={hint}
           placeholderTextColor="#98A6B8" onChangeText={v=>update(f.key,v)}
+          onFocus={()=>setFocusedInput(String(f.key))} onBlur={()=>setFocusedInput(current=>current===String(f.key)?null:current)}
           autoCapitalize={['registrationNo','chassisNo','engineNo','policyNo'].includes(f.key)?'characters':'sentences'}
           keyboardType={['phoneNo','idv','od','tp','cpa','capacity','manufacturingYear'].includes(f.key)?'numeric':'default'}
-          style={[styles.input,restricted&&styles.readonlyInput]} />
+          style={[styles.input,focusedInput===String(f.key)&&styles.focusedInput,restricted&&styles.readonlyInput]} />
       )}
     </View>;
   };
@@ -763,7 +789,8 @@ export default function NativePolicyOnboarding(){
         <Ionicons name="chevron-down" size={15} color="#63758D"/>
       </Pressable>:<TextInput accessibilityLabel={f.label} value={current} placeholder={['sumInsured','netPremium','gstAmount','grossPremium'].includes(f.key)?'₹ 0.00':f.key==='previousClaims'?'Brief reference':f.required?'Enter '+f.label.toLowerCase():f.key==='deductible'||productExtras.some(item=>item.key===f.key)?'Optional':'Enter '+f.label.toLowerCase()} placeholderTextColor="#98A6B8" onChangeText={v=>updateProduct(f.key,f.key==='phone'?v.replace(/\D/g,'').slice(0,10):f.key==='policyNumber'?v.toUpperCase():v)}
         keyboardType={['phone','premiumAmount','sumInsured','deductible','netPremium','gstAmount','grossPremium','employeeCount','annualWages','annualTurnover','projectValue'].includes(f.key)?'numeric':'default'}
-        style={styles.input}/>}
+        onFocus={()=>setFocusedInput('product:'+f.key)} onBlur={()=>setFocusedInput(current=>current==='product:'+f.key?null:current)}
+        style={[styles.input,focusedInput==='product:'+f.key&&styles.focusedInput]}/>}
     </View>;
   };
   // Preserve Motor's newer source ownership rendering; compact the other policy types.
@@ -783,7 +810,10 @@ export default function NativePolicyOnboarding(){
             placeholder="" style={styles.sourceMetaInput}/>}
   </View>;
   const sourceSection=()=> <View style={[styles.section,styles.firstSection]}>
-    <View style={styles.sectionHead}><Text style={styles.number}>01</Text><Text style={styles.sectionTitle}>Policy source & ownership</Text></View>
+    <View style={styles.sectionHead}><Animated.Text style={[styles.number,{transform:[{scale:numberScale}]}]}>01</Animated.Text><Text style={styles.sectionTitle}>Policy source & ownership</Text>
+      {sourceIsVerified&&policy.filter(item=>item.required).every(item=>String(draft?.[item.key]??'').trim())?
+        <Ionicons name="checkmark-circle" size={16} color="#208052" accessibilityLabel="Source details completed"/>:null}
+    </View>
     <View style={styles.fields}>{policy.slice(0,4).map(item=><View key={item.key} style={styles.sourceCell}>
       {field(item,true)}
       {item.key==='intermediaryType'?<View style={styles.sourceOwnerRow}>
@@ -802,15 +832,15 @@ export default function NativePolicyOnboarding(){
     </View>)}</View>
   </View>;
   const productSection=(number:string,title:string,items:ProductField[])=><View style={styles.section} key={number+'-'+title}>
-    <View style={styles.sectionHead}><Text style={styles.number}>{number}</Text><Text style={styles.sectionTitle}>{title}</Text></View>
+    <View style={styles.sectionHead}><Animated.Text style={[styles.number,{transform:[{scale:numberScale}]}]}>{number}</Animated.Text><Text style={styles.sectionTitle}>{title}</Text></View>
     <View style={styles.fields}>{items.map(detailField)}</View>
   </View>;
   const section=(number:string,title:string,items:Field[])=><View style={styles.section} key={number}>
-    <View style={styles.sectionHead}>{number?<Text style={styles.number}>{number}</Text>:null}<Text style={styles.sectionTitle}>{title}</Text></View>
+    <View style={styles.sectionHead}>{number?<Animated.Text style={[styles.number,{transform:[{scale:numberScale}]}]}>{number}</Animated.Text>:null}<Text style={styles.sectionTitle}>{title}</Text></View>
     <View style={styles.fields}>{items.map(item=>field(item))}</View>
   </View>;
   const nonMotorCustomerPolicySection=<View style={styles.section}>
-    <View style={styles.sectionHead}><Text style={styles.number}>02</Text><Text style={styles.sectionTitle}>Customer & policy</Text></View>
+    <View style={styles.sectionHead}><Animated.Text style={[styles.number,{transform:[{scale:numberScale}]}]}>02</Animated.Text><Text style={styles.sectionTitle}>Customer & policy</Text></View>
     <View style={styles.nonMotorCustomerArea}>
       <Text style={styles.label}>Customer record</Text>
       <View style={styles.nonMotorModeRow}>
@@ -853,14 +883,14 @@ export default function NativePolicyOnboarding(){
     <View style={styles.fields}>{otherPolicy.map(detailField)}</View>
   </View>;
   const nonMotorRiskSection=<View style={styles.section}>
-    <View style={styles.sectionHead}><Text style={styles.number}>03</Text><Text style={styles.sectionTitle}>Risk details</Text></View>
+    <View style={styles.sectionHead}><Animated.Text style={[styles.number,{transform:[{scale:numberScale}]}]}>03</Animated.Text><Text style={styles.sectionTitle}>Risk details</Text></View>
     <View style={styles.fields}>{(riskFields[productValues.category]??riskFields.Other).map(detailField)}</View>
   </View>;
   const nonMotorAdditionalSection=<View style={styles.section}>
     <Pressable accessibilityRole="button" accessibilityLabel="Additional policy details"
       accessibilityState={{expanded:nonMotorAdditionalOpen}}
       style={styles.sectionHead} onPress={()=>setNonMotorAdditionalOpen(v=>!v)}>
-      <Text style={styles.number}>05</Text>
+      <Animated.Text style={[styles.number,{transform:[{scale:numberScale}]}]}>05</Animated.Text>
       <Text style={[styles.sectionTitle,styles.headingFlex]}>Additional policy details</Text>
       <Ionicons name={nonMotorAdditionalOpen?'chevron-up':'chevron-down'} size={16} color="#315B85"/>
     </Pressable>
@@ -876,7 +906,7 @@ export default function NativePolicyOnboarding(){
     </View>:null}
   </View>;
   const onboardingDocumentsSection=(number:string)=><View style={styles.section}>
-    <View style={styles.sectionHead}><Text style={styles.number}>{number}</Text><Text style={styles.sectionTitle}>Documents</Text></View>
+    <View style={styles.sectionHead}><Animated.Text style={[styles.number,{transform:[{scale:numberScale}]}]}>{number}</Animated.Text><Text style={styles.sectionTitle}>Documents</Text></View>
     <View style={styles.nonMotorDocuments}>
       {([
         ['policy_copy','Policy Copy'],['proposal_form','Proposal Form'],
@@ -937,7 +967,7 @@ export default function NativePolicyOnboarding(){
   const registrationValid=Boolean(draft?.registrationNo.trim()&&/^[A-Z]{2}\d{1,2}[A-Z]{1,3}\d{1,4}$/i.test(draft.registrationNo.replace(/[ -]/g,'')));
   const motorVehicleSection=<View style={styles.section}>
     <View style={styles.sectionHead}>
-      <Text style={styles.number}>02</Text>
+      <Animated.Text style={[styles.number,{transform:[{scale:numberScale}]}]}>02</Animated.Text>
       <Text style={[styles.sectionTitle,styles.headingFlex]} numberOfLines={1}>Insured & vehicle</Text>
       <View style={styles.registrationToggle}>
         {(['registered','unregistered'] as const).map(mode=><Pressable key={mode}
@@ -989,7 +1019,7 @@ export default function NativePolicyOnboarding(){
     {loading?<PartnerStateView state="loading" title={isNew?'Preparing new Policy Onboarding':'Loading saved Policy Onboarding'} />:null}
     {error&&!draft?<View style={styles.error}><Ionicons name="alert-circle-outline" size={16} color="#B42318"/><Text style={styles.errorText}>{error}</Text></View>:null}
     {!loading&&!draft?<Pressable style={styles.retry} onPress={()=>void load()}><Text style={styles.retryText}>Retry loading</Text></Pressable>:null}
-    {draft?<>
+    {draft?<Animated.View style={{opacity:formOpacity,transform:[{translateY:formShift}]}}>
       {sourceSection()}
       {isMotor?motorVehicleSection:productType==='Non Motor'?nonMotorCustomerPolicySection:productSection('02','Customer / Proposer',commonPerson)}
       {isMotor?motorProductSection:productType==='Non Motor'?nonMotorRiskSection:productSection('03','Policy product & case details',lifeProduct)}
@@ -1118,13 +1148,13 @@ export default function NativePolicyOnboarding(){
         {(productType==='Life'||productType==='Health')?
           <Pressable accessibilityRole="button" accessibilityLabel="Create Policy"
             disabled={booking||saving||creatingLifeHealth||!data}
-            style={[styles.primary,(booking||saving||creatingLifeHealth||!data)&&styles.disabled]}
+            style={({pressed})=>[styles.primary,pressed&&styles.buttonPressed,(booking||saving||creatingLifeHealth||!data)&&styles.disabled]}
             onPress={()=>void createLifeHealth()}>
             {creatingLifeHealth?<ActivityIndicator size="small" color="white"/>:<Ionicons name="checkmark-circle-outline" size={16} color="white"/>}
             <Text style={styles.primaryText}>{creatingLifeHealth?'Creating case…':'Create Policy'}</Text>
           </Pressable>:
           <Pressable accessibilityRole="button" accessibilityLabel="Create Active Policy"
-            disabled={booking||saving||!data} style={[styles.primary,(booking||saving||!data)&&styles.disabled]}
+            disabled={booking||saving||!data} style={({pressed})=>[styles.primary,pressed&&styles.buttonPressed,(booking||saving||!data)&&styles.disabled]}
             onPress={()=>void createActivePolicy()}>
             {booking?<ActivityIndicator size="small" color="white"/>:<Ionicons name="checkmark-circle-outline" size={16} color="white"/>}
             <Text style={styles.primaryText}>{booking?(isMotor?'Checking & booking…':isNew?'Creating policy…':'Opening Operations…'):'Create Active Policy'}</Text>
@@ -1132,7 +1162,7 @@ export default function NativePolicyOnboarding(){
       </View>
 
 
-    </>:null}
+    </Animated.View>:null}
 
     <Modal transparent visible={Boolean(caseCreated)} animationType="fade"
       onRequestClose={()=>{ /* Case creation succeeded: require an explicit return action. */ }}>
@@ -1486,7 +1516,7 @@ const styles=StyleSheet.create({
   fields:{padding:12,flexDirection:'row',flexWrap:'wrap',columnGap:10,rowGap:11},field:{width:'48%',minWidth:0,gap:5},sourceCell:{width:'48%',minWidth:0,gap:3},sourcePrimary:{width:'100%'},sourceMeta:{minHeight:19,flexDirection:'row',alignItems:'center',gap:3,flexShrink:1},sourceMetaLabel:{fontSize:9,fontWeight:'700',color:'#000000'},sourceMetaInput:{minWidth:0,maxWidth:76,fontSize:9,color:'#315B91',fontWeight:'600',paddingVertical:0,paddingHorizontal:0,padding:0},wideField:{width:'100%'},label:{fontSize:10,color:'#000000',fontWeight:'700'},star:{color:'#B93333'},
   vehicleClassLabelRow:{flexDirection:'row',alignItems:'center',justifyContent:'flex-start',gap:7,minWidth:0},
   vehicleClassDescription:{flexShrink:1,minWidth:0,maxWidth:'65%',textAlign:'left',color:'#315B9A',fontSize:9,fontWeight:'600'},
-  input:{minHeight:42,borderWidth:1,borderColor:'#D8E1EC',backgroundColor:'#FFFFFF',borderRadius:9,paddingHorizontal:11,fontSize:12,color:'#183653'},
+  input:{minHeight:42,borderWidth:1,borderColor:'#D8E1EC',backgroundColor:'#FFFFFF',borderRadius:9,paddingHorizontal:11,fontSize:12,color:'#183653'},focusedInput:{borderColor:'#507EC5',backgroundColor:'#F8FBFF'},
   inputRow:{minHeight:42,borderWidth:1,borderColor:'#D8E1EC',borderRadius:9,paddingHorizontal:11,flexDirection:'row',alignItems:'center',justifyContent:'space-between'},
   value:{color:'#183653',fontSize:12,flex:1},placeholder:{color:'#97A5B7'},
   premiumIcon:{width:27,height:27,borderRadius:8,backgroundColor:'#EDF3FC',alignItems:'center',justifyContent:'center'},
@@ -1566,7 +1596,7 @@ const styles=StyleSheet.create({
   feedbackSecondaryText:{color:'#18436E',fontWeight:'800',fontSize:11,textAlign:'center'},
   feedbackFullButton:{width:'100%',minHeight:43,borderRadius:10,backgroundColor:'#0B55B7',alignItems:'center',justifyContent:'center'},
   actions:{flexDirection:'row',gap:8,marginBottom:11,alignItems:'stretch'},secondary:{flex:1,borderWidth:1,borderColor:'#CDD9EB',borderRadius:10,paddingHorizontal:7,paddingVertical:12,minHeight:45,alignItems:'center',justifyContent:'center'},secondaryText:{fontWeight:'700',fontSize:11,color:'#25466E'},
-  primary:{flex:1,backgroundColor:'#243F9E',borderRadius:10,paddingHorizontal:7,paddingVertical:12,minHeight:45,flexDirection:'row',gap:5,justifyContent:'center',alignItems:'center'},primaryText:{fontSize:11,fontWeight:'800',color:'white'},disabled:{opacity:.48},
+  primary:{flex:1,backgroundColor:'#243F9E',borderRadius:10,paddingHorizontal:7,paddingVertical:12,minHeight:45,flexDirection:'row',gap:5,justifyContent:'center',alignItems:'center'},buttonPressed:{opacity:0.92,transform:[{scale:0.985}]},primaryText:{fontSize:11,fontWeight:'800',color:'white'},disabled:{opacity:.48},
   bookButton:{marginBottom:11,flexDirection:'row',justifyContent:'center',gap:8},
   bookingNotice:{flexDirection:'row',gap:9,padding:12,backgroundColor:'#FFF7E9',borderRadius:10,marginBottom:14},bookingText:{flex:1,fontSize:10,lineHeight:16,color:'#75531C'},
   scrim:{flex:1,justifyContent:'center',backgroundColor:'rgba(5,18,40,.5)'},sheet:{backgroundColor:'white',borderTopLeftRadius:20,borderTopRightRadius:20,padding:17,maxHeight:'70%'},

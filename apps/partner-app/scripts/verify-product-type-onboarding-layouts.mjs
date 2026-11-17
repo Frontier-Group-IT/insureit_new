@@ -298,3 +298,15 @@ for(const label of ['Validity Upto','OD Validity Upto','TP validity Upto','CPA v
   assert.ok(screen.includes(label), 'Missing correctly formatted date heading: '+label);
 }
 assert.doesNotMatch(screen,/Validity up to|TP validity up to|CPA validity up to/,'Do not use split up to in date headings.');
+
+
+// Subtle Policy Onboarding motion must be decorative, accessible, and limited to UI.
+assert.match(screen,/AccessibilityInfo\.isReduceMotionEnabled\(\)/,'Honor device reduced-motion setting.');
+assert.match(screen,/Animated\.timing\(formOpacity,\{toValue:1,duration:280,useNativeDriver:true\}\)/,'Keep initial entrance brief and native-driven.');
+assert.match(screen,/Animated\.timing\(formShift,\{toValue:0,duration:280,useNativeDriver:true\}\)/,'Use only a small upward entrance motion.');
+assert.match(screen,/\{draft\?<Animated\.View style=\{\{opacity:formOpacity,transform:\[\{translateY:formShift\}\]\}\}>/,'Motion wraps loaded onboarding form, not modals.');
+assert.match(screen,/focusedInput===String\(f\.key\)&&styles\.focusedInput/,'Focused editable Motor fields get a quiet highlight.');
+assert.match(screen,/focusedInput==='product:'\+f\.key&&styles\.focusedInput/,'Focused product fields get the same highlight.');
+assert.match(screen,/styles\.primary,pressed&&styles\.buttonPressed/,'Submission buttons respond subtly when pressed.');
+assert.match(screen,/sourceIsVerified&&policy\.filter\(item=>item\.required\)/,'Completion indicator requires a verified source.');
+assert.doesNotMatch(screen,/Animated\.loop\(/,'Onboarding must not use continuous distracting motion.');
