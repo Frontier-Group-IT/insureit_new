@@ -1,5 +1,6 @@
+import { partnerAlert } from '@/components/ui/partner-alert-provider';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Linking, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Linking, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useLocalSearchParams, usePathname, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
@@ -261,7 +262,7 @@ export default function NativePolicyOnboarding(){
   };
   const removeOnboardingDocument=(type:NativeOnboardingDocumentType)=>{
     if(documentBusy||saving||booking||creatingLifeHealth||productType==='Motor')return;
-    Alert.alert('Remove document?','Remove this attachment from the onboarding draft?',[
+    partnerAlert('Remove document?','Remove this attachment from the onboarding draft?',[
       {text:'Cancel',style:'cancel'},
       {text:'Remove',style:'destructive',onPress:()=>{
         setDocumentBusy(type);setDocumentError('');
@@ -351,7 +352,7 @@ export default function NativePolicyOnboarding(){
     :picker?.items??[];
   const openSources=()=>{
     if(!draft?.intermediaryType){
-      Alert.alert('Select intermediary type','Choose POSP, MISP or SIBL / Partner first.');
+      partnerAlert('Select intermediary type','Choose POSP, MISP or SIBL / Partner first.');
       return;
     }
     sourceRequestId.current+=1;
@@ -487,7 +488,7 @@ export default function NativePolicyOnboarding(){
     setBooking(true);setError('');
     try{
       const {policy}=await bookNewNativeNonMotorPolicy(draft,standaloneLifeDocuments);
-      Alert.alert('Policy created',`Non-Motor policy ${policy.number} was created successfully.`,[
+      partnerAlert('Policy created',`Non-Motor policy ${policy.number} was created successfully.`,[
         {text:'Return to Policies',onPress:()=>router.replace('/(tabs)/policies')},
       ]);
     }catch(cause){setError(cause instanceof Error?cause.message:'Non-Motor booking could not be confirmed. Check Policy Register before retrying.');}
@@ -508,7 +509,7 @@ export default function NativePolicyOnboarding(){
       const result=isNew?
         await createNewNativeLifeHealthCase(draft,standaloneLifeDocuments):
         await createNativeLifeHealthCase(id,revision);
-      Alert.alert('Case created',`${productType} case ${result.case.number} created. Policy issuance remains pending in Operations.`,[
+      partnerAlert('Case created',`${productType} case ${result.case.number} created. Policy issuance remains pending in Operations.`,[
         {text:isNew?'Return to Policies':'Return to Intake',onPress:()=>isNew?router.replace('/(tabs)/policies'):router.back()},
       ]);
     }catch(cause){
@@ -553,7 +554,7 @@ export default function NativePolicyOnboarding(){
         ?await bookNewNativePolicyOnboarding(draft,resolution,verifiedApprovalId)
         :await bookNativePolicyOnboarding(id,revision,resolution,verifiedApprovalId);
       if(result.ok){
-        Alert.alert('Policy booked','Policy '+result.policyCode+' was booked successfully.',[
+        partnerAlert('Policy booked','Policy '+result.policyCode+' was booked successfully.',[
           {text:'OK',onPress:()=>router.replace(isNew?'/(tabs)/policies':'/policy-intakes')},
         ]);
         return;
@@ -563,13 +564,13 @@ export default function NativePolicyOnboarding(){
           text:'Use '+candidate.name,
           onPress:()=>void completeBooking({selectedCustomerId:candidate.id}),
         }));
-        Alert.alert('Confirm customer','Select an existing matching customer, or create a new customer.',[
+        partnerAlert('Confirm customer','Select an existing matching customer, or create a new customer.',[
           ...choices,{text:'Create new',onPress:()=>void completeBooking({createNewCustomer:true})},{text:'Cancel',style:'cancel'},
         ]);
         return;
       }
       if(result.kind==='ownership_conflict'){
-        Alert.alert('Vehicle ownership', 'The existing vehicle belongs to '+result.conflict.customerName+'. Reuse this owner?',[
+        partnerAlert('Vehicle ownership', 'The existing vehicle belongs to '+result.conflict.customerName+'. Reuse this owner?',[
           {text:'Cancel',style:'cancel'},
           {text:'Keep existing owner',onPress:()=>void completeBooking({ownershipDecision:'keep_existing',selectedCustomerId:result.conflict.customerId})},
         ]);
@@ -583,7 +584,7 @@ export default function NativePolicyOnboarding(){
         if(conflict.type==='active_policy_notice')choices.unshift({text:'Continue',onPress:()=>void completeBooking({acceptActivePolicyNotice:true})});
         if(conflict.type==='expired_policy_history')choices.unshift({text:'Continue',onPress:()=>void completeBooking({acceptExpiredPolicyHistory:true})});
         if(conflict.type==='vehicle_identity_conflict'&&conflict.existingVehicleId)choices.unshift({text:'Use existing vehicle',onPress:()=>void completeBooking({selectedExistingVehicleId:conflict.existingVehicleId})});
-        Alert.alert('Policy verification',message,choices);
+        partnerAlert('Policy verification',message,choices);
         return;
       }
       if(result.kind==='validation'&&result.error.includes('Email OTP approval is required')){
@@ -614,7 +615,7 @@ export default function NativePolicyOnboarding(){
       if(isNew&&draft)await verifyNewNativePolicyDateApproval(draft,approvalRequestId,approvalCode);
       else await verifyNativePolicyDateApproval(id,data.revision,approvalRequestId,approvalCode);
       setVerifiedApprovalId(approvalRequestId);setDateApprovalOpen(false);
-      Alert.alert('Date approved','The approved policy can now be booked.');
+      partnerAlert('Date approved','The approved policy can now be booked.');
     }catch(e){setError(e instanceof Error?e.message:'Approval could not be verified.');}
     finally{setApprovalBusy(false);}
   }
@@ -628,7 +629,7 @@ export default function NativePolicyOnboarding(){
       const vc=(review.vehicleClass||'').toLowerCase();
       const category=/two.?wheel|motor.?cycle|scooter/.test(vc)?'TWP':/goods|truck|cargo/.test(vc)?'GCV':/passenger|bus|taxi/.test(vc)?'PCV':/plant|machinery/.test(vc)?'CPM':/car|private|lmv/.test(vc)?'PCP':'MISD';
       const make=(data?.manufacturers??[]).find(m=>m.toLowerCase()===(review.make||'').toLowerCase());
-      Alert.alert('RC details found','Apply fetched details to this draft?',[
+      partnerAlert('RC details found','Apply fetched details to this draft?',[
         {text:'Cancel',style:'cancel'},
         {text:'Apply',onPress:()=>{
           setDraft(current=>current?{
