@@ -1,5 +1,6 @@
+import { partnerAlert } from '@/components/ui/partner-alert-provider';
 import { useEffect, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { PartnerScreen } from '@/components/partner-screen';
 import { getAccountDeletionRequest, submitAccountDeletionRequest, type AccountDeletionRequest } from '@/lib/account-deletion';
@@ -15,7 +16,7 @@ export default function AccountDeletionScreen() {
       .catch(() => { if (active) setError('Could not load deletion request status. Please try again.'); });
     return () => { active = false; };
   }, []);
-  const submit = () => Alert.alert(
+  const submit = () => partnerAlert(
     'Request account deletion?',
     'This requests deletion of your individual login and eligible personal information. Insurance, claims, commission and other business records may be retained where legally required. Your access may continue until the request is verified and fulfilled.',
     [{ text: 'Cancel', style: 'cancel' }, { text: 'Request deletion', style: 'destructive', onPress: () => {
