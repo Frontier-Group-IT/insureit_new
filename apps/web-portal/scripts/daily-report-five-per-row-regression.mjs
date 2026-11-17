@@ -47,8 +47,8 @@ assert.match(read("../components/reports/daily-activity-history-rows.tsx"),/rows
 assert.match(panel,/data\.category \?/,"Selected category still uses existing detail mode with employee in the heading");
 assert.match(source,/for\(const a of all\) counts\.set\(a\.category/,
   "Backend counts remain unmodified and use complete recorded source set");
-assert.match(page,/reportMode=\{isSelf \? "self" : "employee"\}/,
-  "Both Self and selected All employee share the same responsive summary");
+assert.match(page,/reportMode=\{isSelf \? "self" : chosenPerson \? "employee" : "all"\}/,
+  "Self, selected employee and All share the same responsive summary");
 assert.match(panel,/daily-report-activity-card group flex/,"Activity links use distinct, reference-style card surfaces");
 assert.match(panel,/daily-report-activity-card group flex[^"\n]*bg-white/,"All activity cards use white Tailwind backgrounds");
 assert.doesNotMatch(panel,/bg-gradient-to-br from-white to-\[#f7faff\]|hover:from-\[#f5f9ff\]|hover:to-\[#e9f2ff\]/,"Activity cards have no tinted utility gradients");
