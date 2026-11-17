@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useState } from 'react';
-import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
+import { Alert, Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { StatusBar } from 'expo-status-bar';
@@ -36,9 +36,9 @@ const sections: Array<{ heading: string; inputs: Array<{ key: Field; label: stri
   ] },
   { heading: 'Address', inputs: [
     { key: 'address', label: 'Address', hint: 'Complete address' },
+    { key: 'postal_code', label: 'PIN Code', hint: '6-digit PIN', keyboard: 'number-pad' },
     { key: 'city', label: 'City', hint: 'City' },
     { key: 'state', label: 'State', hint: 'State' },
-    { key: 'postal_code', label: 'PIN Code', hint: '6-digit PIN', keyboard: 'number-pad' },
   ] },
   { heading: 'Bank & tax', inputs: [
     { key: 'bank_account_number', label: 'Account Number', hint: 'Bank account number', keyboard: 'number-pad', secret: true },
@@ -76,6 +76,7 @@ export default function AddPartnerScreen() {
   const [banks, setBanks] = useState<Option[]>([]);
   const [loading, setLoading] = useState(true);
   const [selector, setSelector] = useState<'rm' | 'bank' | null>(null);
+  const [selectorQuery, setSelectorQuery] = useState('');
   const [saving, setSaving] = useState(false);
   const [dateField, setDateField] = useState<'date_of_birth' | 'document_received_at' | null>(null);
   const set = (key: Field, value: string) => setForm(old => ({ ...old, [key]: value }));
@@ -114,6 +115,9 @@ export default function AddPartnerScreen() {
   };
   const selectOptions = selector === 'rm' ? rms : banks;
   const selectedValue = selector === 'rm' ? form.associate_employee_id : form.bank_id;
+  const filteredOptions = selectOptions.filter(option => option.name.toLocaleLowerCase().includes(selectorQuery.trim().toLocaleLowerCase()));
+  const openSelector = (kind: 'rm' | 'bank') => { setSelectorQuery(''); setSelector(kind); };
+  const closeSelector = () => { Keyboard.dismiss(); setSelector(null); setSelectorQuery(''); };
   const submit = async () => {
     if (saving || !allowed) return;
     const dob = isoDate(form.date_of_birth);
@@ -174,7 +178,7 @@ export default function AddPartnerScreen() {
                 {index === 2 ? (
                   <View style={[styles.field, cellStyle]}>
                     <Text style={styles.label}>Bank *</Text>
-                    <Pressable disabled={loading} accessibilityRole="button" onPress={() => setSelector('bank')} style={styles.select}>
+                    <Pressable disabled={loading} accessibilityRole="button" onPress={() => openSelector('bank')} style={styles.select}>
                       <Text style={styles.selectText} numberOfLines={1}>{banks.find(x => x.id === form.bank_id)?.name || (loading ? 'Loading banks…' : 'Select bank')}</Text>
                       <Ionicons name="chevron-down" size={17} color="#17365D" />
                     </Pressable>
@@ -182,7 +186,7 @@ export default function AddPartnerScreen() {
                 ) : null}
                 {section.inputs.map(field => (
                   <Fragment key={field.key}>
-                    <View style={[styles.field, index === 1 && field.key === 'address' ? styles.fullField : cellStyle]}>
+                    <View style={[styles.field, cellStyle]}>
                       <Text style={styles.label}>{field.label}{field.optional ? '' : ' *'}</Text>
                       {field.key === 'document_received_at' || field.key === 'date_of_birth' ? (
                         <Pressable accessibilityRole="button" accessibilityLabel={`Select ${field.label}`}
@@ -202,7 +206,7 @@ export default function AddPartnerScreen() {
                     {field.key === 'document_received_at' ? (
                       <View style={[styles.field, cellStyle]}>
                         <Text style={styles.label}>RM *</Text>
-                        <Pressable disabled={loading} accessibilityRole="button" onPress={() => setSelector('rm')} style={styles.select}>
+                        <Pressable disabled={loading} accessibilityRole="button" onPress={() => openSelector('rm')} style={styles.select}>
                           <Text style={styles.selectText} numberOfLines={1}>{rms.find(x => x.id === form.associate_employee_id)?.name || (loading ? 'Loading RMs…' : 'Select RM')}</Text>
                           <Ionicons name="chevron-down" size={17} color="#17365D" />
                         </Pressable>
@@ -222,18 +226,51 @@ export default function AddPartnerScreen() {
           mode="date" display={Platform.OS === 'ios' ? 'spinner' : 'default'}
           maximumDate={new Date()} onChange={(_event, selectedDate) => setSelectedDate(selectedDate)}
         /> : null}
-        <Modal visible={selector !== null} transparent animationType="slide" onRequestClose={() => setSelector(null)}>
-          <View style={styles.modalBackdrop}><View style={styles.modal}>
-            <Text style={styles.sectionTitle}>{selector === 'rm' ? 'Select RM' : 'Select Bank'}</Text>
-            <ScrollView style={{ maxHeight: 380 }}>
-              {selectOptions.map(option => <Pressable key={option.id} accessibilityRole="button"
-                onPress={() => { set(selector === 'rm' ? 'associate_employee_id' : 'bank_id', option.id); setSelector(null); }}
-                style={[styles.option, option.id === selectedValue && styles.selectedOption]}>
-                <Text style={styles.selectText}>{option.name}</Text>
-              </Pressable>)}
-            </ScrollView>
-            <Pressable onPress={() => setSelector(null)} style={styles.cancel}><Text style={styles.selectText}>Cancel</Text></Pressable>
-          </View></View>
+        <Modal visible={selector !== null} transparent animationType="fade" onRequestClose={closeSelector}>
+          <View style={styles.modalBackdrop}>
+            <Pressable style={StyleSheet.absoluteFillObject} accessibilityLabel="Close selection popup" onPress={closeSelector} />
+            <KeyboardAvoidingView style={styles.modalKeyboardArea} behavior={Platform.OS === 'ios' ? 'padding' : undefined} pointerEvents="box-none">
+              <View style={styles.modal}>
+                <View style={styles.modalTitleRow}>
+                  <Text style={styles.modalTitle}>{selector === 'rm' ? 'Select RM' : 'Select Bank'}</Text>
+                  <Pressable accessibilityRole="button" accessibilityLabel="Close selection popup" hitSlop={10} onPress={closeSelector}>
+                    <Ionicons name="close" size={22} color="#4C5970" />
+                  </Pressable>
+                </View>
+                <View style={styles.modalSearchRow}>
+                  <TextInput
+                    accessibilityLabel={selector === 'rm' ? 'Search RM name' : 'Search bank name'}
+                    value={selectorQuery}
+                    onChangeText={setSelectorQuery}
+                    placeholder={selector === 'rm' ? 'Search RM name' : 'Search bank name'}
+                    placeholderTextColor="#8997A8"
+                    autoCorrect={false}
+                    autoCapitalize="none"
+                    returnKeyType="search"
+                    onSubmitEditing={() => Keyboard.dismiss()}
+                    style={styles.modalSearchInput}
+                  />
+                  <Pressable accessibilityRole="button" accessibilityLabel="Finish searching" onPress={() => Keyboard.dismiss()} style={styles.modalSearchButton}>
+                    <Ionicons name="search" size={19} color="#FFFFFF" />
+                  </Pressable>
+                </View>
+                <ScrollView style={styles.modalOptionList} keyboardShouldPersistTaps="always">
+                  {filteredOptions.length ? filteredOptions.map(option => (
+                    <Pressable key={option.id} accessibilityRole="button"
+                      accessibilityLabel={`Select ${option.name}`}
+                      accessibilityState={{ selected: option.id === selectedValue }}
+                      onPress={() => { set(selector === 'rm' ? 'associate_employee_id' : 'bank_id', option.id); closeSelector(); }}
+                      style={[styles.option, option.id === selectedValue && styles.selectedOption]}>
+                      <Text style={styles.selectText}>{option.name}</Text>
+                      {option.id === selectedValue ? <Ionicons name="checkmark" size={17} color="#17365D" /> : null}
+                    </Pressable>
+                  )) : (
+                    <Text style={styles.emptyOptions}>{selectorQuery.trim() ? 'No matching results.' : 'No options available.'}</Text>
+                  )}
+                </ScrollView>
+              </View>
+            </KeyboardAvoidingView>
+          </View>
         </Modal>
       </KeyboardAvoidingView>
       <PartnerStackBottomNavigation activeTab="more" includeBottomInset onNavigate={leavePartnerForm} />
@@ -258,8 +295,16 @@ const styles = StyleSheet.create({
   selectText: { color: '#17365D', fontSize: 13, fontWeight: '600', flexShrink: 1 },
   submit: { backgroundColor: '#17365D', minHeight: 47, borderRadius: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
   submitText: { color: '#FFF', fontWeight: '800', fontSize: 13 }, disabled: { opacity: .55 },
-  modalBackdrop: { flex: 1, backgroundColor: '#14233B88', justifyContent: 'flex-end' },
-  modal: { backgroundColor: '#FFF', borderTopLeftRadius: 18, borderTopRightRadius: 18, padding: 20, gap: 12 },
-  option: { padding: 14, borderBottomWidth: 1, borderBottomColor: '#E7EDF5' },
-  selectedOption: { backgroundColor: '#EAF3FF' }, cancel: { alignItems: 'center', padding: 12 },
+  modalBackdrop: { flex: 1, backgroundColor: '#14233B88' },
+  modalKeyboardArea: { flex: 1, justifyContent: 'flex-end' },
+  modal: { backgroundColor: '#FFF', borderTopLeftRadius: 18, borderTopRightRadius: 18, padding: 18, gap: 12, maxHeight: '80%' },
+  modalTitleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 9, borderBottomWidth: 1, borderBottomColor: '#E7EDF5' },
+  modalTitle: { color: '#17365D', fontSize: 16, fontWeight: '800' },
+  modalSearchRow: { flexDirection: 'row', gap: 8 },
+  modalSearchInput: { flex: 1, minWidth: 0, minHeight: 44, borderWidth: 1, borderColor: '#CED8E7', borderRadius: 10, paddingHorizontal: 12, fontSize: 13, color: '#152A49' },
+  modalSearchButton: { width: 44, borderRadius: 10, backgroundColor: '#17365D', alignItems: 'center', justifyContent: 'center' },
+  modalOptionList: { maxHeight: 350 },
+  option: { minHeight: 45, padding: 12, borderBottomWidth: 1, borderBottomColor: '#E7EDF5', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  selectedOption: { backgroundColor: '#EAF3FF' },
+  emptyOptions: { color: '#71819A', fontSize: 12, padding: 16 },
 });
