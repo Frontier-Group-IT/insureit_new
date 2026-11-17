@@ -4,12 +4,18 @@ import tempfile
 import unittest
 
 from prepare_managed_sql_restore_list import (
-    APP_SCHEMAS, build_list, chosen_entries, parse_entry,
+    APP_SCHEMAS, PG17_DEFERRED_KINDS, SafeTocSelectionError,
+    build_list, chosen_entries, parse_entry,
 )
 
 
 def fixture():
     lines = ["; Synthetic v2 custom archive, no customer information\n",
+             "1; 0 0 ENCODING - ENCODING  \n",
+             "2; 0 0 STDSTRINGS - STDSTRINGS  \n",
+             "3; 0 0 SEARCHPATH - SEARCHPATH  \n",
+             "4; 0 0 PROCEDURAL LANGUAGE - plpgsql postgres\n",
+             "5; 0 0 PUBLICATION TABLES IN SCHEMA public synthetic postgres\n",
              "10; 2615 1 SCHEMA - identity_maintenance postgres\n",
              "11; 2615 1 SCHEMA - insureit_recovery postgres\n",
              "12; 2615 1 SCHEMA - private postgres\n",
@@ -52,6 +58,32 @@ def fixture():
 
 
 class PlanTests(unittest.TestCase):
+    def test_pg17_standard_session_entries_are_recognized_but_not_replayed(self):
+        # PostgreSQL pg_dump writes these *before* any application object.
+        entries, counts = chosen_entries(fixture())
+        selected = "".join(entries)
+        self.assertGreaterEqual(len(PG17_DEFERRED_KINDS), 3)
+        for kind in ("ENCODING", "STDSTRINGS", "SEARCHPATH",
+                     "PROCEDURAL LANGUAGE", "PUBLICATION TABLES IN SCHEMA"):
+            self.assertNotIn(kind, selected)
+            self.assertEqual(counts.get(("-", kind), 0), 0)
+        self.assertEqual(parse_entry("1; 0 0 ENCODING - ENCODING  \n"),
+                         ("ENCODING", "-", "ENCODING  "))
+
+    def test_unknown_archive_kind_still_fails_without_leaking_object_name(self):
+        with self.assertRaises(SafeTocSelectionError) as failure:
+            chosen_entries(fixture() +
+                "5001; 0 0 PRIVATE_NOTE public sensitive_customer_name postgres\n")
+        self.assertEqual(failure.exception.reason, "UNRECOGNIZED_TOC_RECORD")
+        self.assertNotIn("sensitive_customer_name", str(failure.exception))
+
+    def test_unknown_archive_schema_still_fails_with_static_category(self):
+        with self.assertRaises(SafeTocSelectionError) as failure:
+            chosen_entries(fixture() +
+                "5002; 1259 1 TABLE external_project secret_object postgres\n")
+        self.assertEqual(failure.exception.reason, "UNKNOWN_ARCHIVE_NAMESPACE")
+        self.assertNotIn("secret_object", str(failure.exception))
+
     def test_select_only_safe_allowlisted_sql(self):
         entries, counts = chosen_entries(fixture())
         text = "".join(entries)
