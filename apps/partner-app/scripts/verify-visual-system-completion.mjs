@@ -244,6 +244,16 @@ for (const permission of ['canPartnerAccess(context', 'canPartnerAccessCaseRegis
 requireText(policyDetail, 'backgroundColor: \'transparent\'', 'Policy detail Quick Actions must have no colored backgrounds.');
 requireText(policyDetail, '<Image source={image} style={styles.quickActionImage} resizeMode="contain" />', '3D icons must be displayed directly without an inner icon box.');
 requireText(policyDetail, 'numberOfLines={1} adjustsFontSizeToFit', 'All action labels must stay on one line.');
+
+requireText(policyDetail, 'navyStatusBar bottomNavigationNavy', 'Policy Details must use a navy system status bar and footer safe area.');
+requireText(policyDetail, '<PartnerCaseBottomNavigation activeTab="Policies" />', 'Policy Details must use existing navigation with Policies selected.');
+const detailFooter = read('components/partner-case-bottom-navigation.tsx');
+for (const label of ['Home', 'Business', 'Policies', 'Claims', 'More']) {
+  requireText(detailFooter, `label: '${label}'`, `Bottom navigation must retain ${label}.`);
+}
+requireText(detailFooter, 'items.filter(item => item.allowed)', 'Bottom navigation must remain permission gated.');
+requireText(detailFooter, 'activeTab === item.label', 'Current section must be visually marked.');
+
 if (policyDetail.includes('styles.quickBlue') || policyDetail.includes('borderRightColor')) {
   throw Error('Policy detail must not restore colored Quick Action tiles or dividers.');
 }
