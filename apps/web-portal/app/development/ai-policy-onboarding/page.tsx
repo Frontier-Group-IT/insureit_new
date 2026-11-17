@@ -59,7 +59,7 @@ export default async function SemiAutoPolicyOnboardingPage({ searchParams }: { s
     if(item.state==="processing"||item.state==="pending")queueCounts.processing++;
     else if(item.state==="unsupported")queueCounts.unsupported++;
     else if(item.state==="failed")queueCounts.failed++;
-    else if(item.state==="verified" && !item.exception_codes.length && !row.is_duplicate)queueCounts.eligible++;
+    else if(item.state==="verified" && !item.exception_codes.length && policyIntakeBucket(row,duplicateIds.has(row.id))!=="duplicate")queueCounts.eligible++;
     else queueCounts.exceptions++;
   }
   const requestedId = typeof params.intake_id === "string"
