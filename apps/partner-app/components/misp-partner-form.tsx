@@ -49,7 +49,7 @@ const isoDate=(value:string)=>{
   return date.getUTCFullYear()===Number(m[3])&&date.getUTCMonth()===Number(m[2])-1&&date.getUTCDate()===Number(m[1])
     ? m[3]+'-'+m[2]+'-'+m[1]:null;
 };
-export function MispPartnerForm({rms,banks,oems,loading,onDirtyChange}:{rms:Option[];banks:Option[];oems:Option[];loading:boolean;onDirtyChange:(dirty:boolean)=>void}) {
+export function MispPartnerForm({rms,banks,oems,pendingMisps,loading,onDirtyChange}:{rms:Option[];banks:Option[];oems:Option[];pendingMisps:Option[];loading:boolean;onDirtyChange:(dirty:boolean)=>void}) {
   const router=useRouter();
   const [form,setForm]=useState(empty);
   const [picker,setPicker]=useState<'rm'|'oem'|'bank'|null>(null);
@@ -111,6 +111,7 @@ export function MispPartnerForm({rms,banks,oems,loading,onDirtyChange}:{rms:Opti
   };
   return (
     <View style={styles.wrapper}>
+      {pendingMisps.length>0&&<View style={styles.section}><View style={styles.sectionHeading}><Text style={styles.heading}>Continue saved MISP documents</Text></View><View style={styles.grid}>{pendingMisps.map(item=><Pressable key={item.id} accessibilityRole="button" onPress={()=>router.push({pathname:"/partner-documents",params:{applicationId:item.id}} as never)} style={styles.pendingItem}><Text style={styles.inputText} numberOfLines={1}>{item.name}</Text><Ionicons name="chevron-forward" color="#17365D" size={17}/></Pressable>)}</View></View>}
       {fields.map((section,index)=>(
         <View key={section.title} style={styles.section}>
           <View style={styles.sectionHeading}>
@@ -182,7 +183,7 @@ const styles=StyleSheet.create({
   index:{width:33,height:33,borderRadius:7,backgroundColor:'#17365D',alignItems:'center',justifyContent:'center'},
   indexText:{color:'#FFF',fontSize:11,fontWeight:'800'},heading:{color:'#172846',fontSize:13,fontWeight:'800'},
   grid:{padding:12,flexDirection:'row',flexWrap:'wrap',justifyContent:'space-between',rowGap:12},
-  half:{width:'48.5%',gap:5},label:{color:'#33465D',fontSize:11,fontWeight:'700'},
+  half:{width:'48.5%',gap:5},pendingItem:{width:"100%",minHeight:42,borderRadius:9,borderWidth:1,borderColor:"#DEE7F1",flexDirection:"row",justifyContent:"space-between",alignItems:"center",paddingHorizontal:12},label:{color:'#33465D',fontSize:11,fontWeight:'700'},
   input:{minHeight:44,paddingHorizontal:10,backgroundColor:'#FFF',borderWidth:1,borderColor:'#CED8E7',borderRadius:10,fontSize:12,color:'#152A49'},
   inputPress:{minHeight:44,paddingHorizontal:10,flexDirection:'row',justifyContent:'space-between',alignItems:'center',gap:5,borderWidth:1,borderColor:'#CED8E7',borderRadius:10},
   inputText:{color:'#17365D',fontWeight:'600',fontSize:12,flexShrink:1},
