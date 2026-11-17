@@ -166,6 +166,7 @@ export default function NativePolicyOnboarding(){
   const [verifiedApprovalId,setVerifiedApprovalId]=useState<string|null>(null);
   const [approvalCode,setApprovalCode]=useState("");
   const [picker,setPicker]=useState<{key:string;items:{value:string;label:string}[];product?:boolean}|null>(null);
+  const [pickerQuery,setPickerQuery]=useState('');
   const [sourcePickerOpen,setSourcePickerOpen]=useState(false);
   const [sourceQuery,setSourceQuery]=useState('');
   const [sourceItems,setSourceItems]=useState<NativeLeadSource[]>([]);
@@ -315,7 +316,7 @@ export default function NativePolicyOnboarding(){
     setDirty(true);
     setVerifiedApprovalId(null);
   };
-  const lookupSources=async(query:string,offset=0)=>{
+  const lookupSources=useCallback(async(query:string,offset=0)=>{
     if(!draft?.intermediaryType)return;
     const requestId=++sourceRequestId.current;
     setSourceBusy(true);setSourcePickerError('');
@@ -330,14 +331,27 @@ export default function NativePolicyOnboarding(){
     }catch(e){
       if(requestId===sourceRequestId.current)setSourcePickerError(e instanceof Error?e.message:'Lead sources are unavailable.');
     }finally{if(requestId===sourceRequestId.current)setSourceBusy(false);}
+  },[draft?.intermediaryType,isNew,id]);
+  useEffect(()=>{
+    if(!sourcePickerOpen||!draft?.intermediaryType)return;
+    const timer=setTimeout(()=>{void lookupSources(sourceQuery.trim());},300);
+    return ()=>clearTimeout(timer);
+  },[sourcePickerOpen,sourceQuery,draft?.intermediaryType,lookupSources]);
+  const openInsurerPicker=(items:{value:string;label:string}[],product=false)=>{
+    setPickerQuery('');
+    setPicker({key:'insurerId',items,product});
   };
+  const normalizedPickerQuery=pickerQuery.trim().toLowerCase();
+  const displayedPickerItems=picker?.key==='insurerId'&&normalizedPickerQuery
+    ?picker.items.filter(item=>item.label.toLowerCase().includes(normalizedPickerQuery))
+    :picker?.items??[];
   const openSources=()=>{
     if(!draft?.intermediaryType){
       Alert.alert('Select intermediary type','Choose POSP, MISP or SIBL / Partner first.');
       return;
     }
-    setSourceQuery('');setSourcePickerOpen(true);setSourceItems([]);setSourceHasMore(false);
-    void lookupSources('');
+    sourceRequestId.current+=1;
+    setSourceQuery('');setSourcePickerOpen(true);setSourceItems([]);setSourceHasMore(false);setSourcePickerError('');
   };
   const selectSource=(source:NativeLeadSource)=>{
     setDraft(current=>current?{...current,leadSource:source.name,intermediaryCode:source.code,rmName:source.rmName}:current);
@@ -696,7 +710,7 @@ export default function NativePolicyOnboarding(){
         </Pressable>
       ):options.length?(
         <Pressable accessibilityRole="button" accessibilityLabel={f.label} accessibilityState={{disabled:restricted}}
-          disabled={restricted} onPress={()=>setPicker({key:f.key,items:options})}
+          disabled={restricted} onPress={()=>f.key==='insurerId'?openInsurerPicker(options):setPicker({key:f.key,items:options})}
           style={[styles.inputRow,restricted&&styles.readonlyInput]}>
           <Text numberOfLines={1} style={[styles.value,!displayed&&styles.placeholder]}>{displayed||(f.key==='manufacturingYear'?'Select year':'Select '+f.label.toLowerCase())}</Text>
           <Ionicons name="chevron-down" size={15} color="#63758D"/>
@@ -719,7 +733,7 @@ export default function NativePolicyOnboarding(){
     const options=f.key==='insurerId'?data?.insurers??[]:(f.options??[]).map(value=>({value,label:value}));
     return <View key={f.key} style={[styles.field,f.wide&&styles.wideField]}>
       <Text style={styles.label}>{f.label}{f.required?<Text style={styles.star}> *</Text>:null}</Text>
-      {options.length?<Pressable accessibilityRole="button" accessibilityLabel={f.label} style={styles.inputRow} onPress={()=>setPicker({key:f.key,items:options,product:true})}>
+      {options.length?<Pressable accessibilityRole="button" accessibilityLabel={f.label} style={styles.inputRow} onPress={()=>f.key==='insurerId'?openInsurerPicker(options,true):setPicker({key:f.key,items:options,product:true})}>
         <Text style={[styles.value,!current&&styles.placeholder]} numberOfLines={1}>{options.find(o=>o.value===current)?.label||('Select '+f.label.toLowerCase())}</Text>
         <Ionicons name="chevron-down" size={15} color="#63758D"/>
       </Pressable>:<TextInput accessibilityLabel={f.label} value={current} placeholder={['sumInsured','netPremium','gstAmount','grossPremium'].includes(f.key)?'₹ 0.00':f.key==='previousClaims'?'Brief reference':f.key==='deductible'||productExtras.some(item=>item.key===f.key)?'Optional':'Enter '+f.label.toLowerCase()} placeholderTextColor="#98A6B8" onChangeText={v=>updateProduct(f.key,f.key==='phone'?v.replace(/\D/g,'').slice(0,10):f.key==='policyNumber'?v.toUpperCase():v)}
@@ -1321,7 +1335,10 @@ export default function NativePolicyOnboarding(){
           <Pressable accessibilityLabel="Close source list" onPress={()=>{sourceRequestId.current+=1;setSourcePickerOpen(false);}}><Ionicons name="close" size={21} color="#4C5970"/></Pressable>
         </View>
         <View style={styles.sourceSearchArea}>
-          <TextInput accessibilityLabel="Search lead source by name" value={sourceQuery} onChangeText={setSourceQuery}
+          <TextInput accessibilityLabel="Search lead source by name" value={sourceQuery} onChangeText={value=>{
+              sourceRequestId.current+=1;setSourceQuery(value);setSourceBusy(false);
+              setSourcePickerError('');setSourceItems([]);setSourceHasMore(false);
+            }}
             onSubmitEditing={()=>void lookupSources(sourceQuery)} returnKeyType="search"
             placeholder="Search name or intermediary code" style={[styles.input,styles.sourceSearchInput]}/>
           <Pressable accessibilityRole="button" accessibilityLabel="Search lead sources" disabled={sourceBusy}
@@ -1349,7 +1366,16 @@ export default function NativePolicyOnboarding(){
     <Modal transparent visible={Boolean(picker)} animationType="fade" onRequestClose={()=>setPicker(null)}>
       <View style={[styles.scrim,picker?.key==='policyProduct'&&styles.productPickerScrim]}><View style={[styles.sheet,picker?.key==='policyProduct'&&styles.productPickerSheet]}>
         <View style={styles.sheetTitle}><Text style={styles.sectionTitle}>{picker?.key==='policyProduct'?'Select product':picker?.key==='businessLine'?'Select Policy Type':`Select ${picker?.key}`}</Text><Pressable onPress={()=>setPicker(null)} accessibilityLabel="Close options"><Ionicons name="close" size={21} color="#4C5970"/></Pressable></View>
-        <ScrollView style={styles.choiceScroll}>{picker?.items.map(item=>{
+        {picker?.key==='insurerId'?<View style={styles.sourceSearchArea}>
+          <TextInput accessibilityLabel="Search insurance company" value={pickerQuery} onChangeText={setPickerQuery}
+            autoCapitalize="none" autoCorrect={false} returnKeyType="search"
+            placeholder="Search insurance company" placeholderTextColor="#98A6B8"
+            style={[styles.input,styles.sourceSearchInput]} />
+          <Ionicons name="search-outline" size={20} color="#17365D" style={styles.insurerSearchIcon}/>
+        </View>:null}
+        <ScrollView keyboardShouldPersistTaps="handled" style={styles.choiceScroll}>
+          {picker?.key==='insurerId'&&!displayedPickerItems.length?<Text style={styles.sourceEmpty}>No matching insurance companies.</Text>:null}
+          {displayedPickerItems.map(item=>{
           const selected=(picker.product?String(productValues[picker.key]??''):String(draft?.[picker.key as FieldKey]??''))===item.value;
           return <Pressable key={item.value} accessibilityRole="button" accessibilityState={{selected}}
             style={[styles.choice,selected&&styles.choiceSelected]}
@@ -1395,6 +1421,7 @@ const styles=StyleSheet.create({
   sourceLeadRow:{flexDirection:'row',alignItems:'center',justifyContent:'flex-start',gap:8,minHeight:19},
   sourcePhone:{flexDirection:'row',alignItems:'center',gap:3,flexShrink:0},
   sourcePhoneNumber:{fontSize:9,color:'#315B91',fontWeight:'600'},
+  insurerSearchIcon:{alignSelf:'center',marginRight:12},
   sourceSearchArea:{flexDirection:'row',gap:8,padding:12},sourceSearchInput:{flex:1,minWidth:0},sourceSearchButton:{width:44,borderRadius:9,alignItems:'center',justifyContent:'center',backgroundColor:'#17365D'},sourceSearchError:{fontSize:11,color:'#A32924',paddingHorizontal:12},sourceEmpty:{fontSize:11,color:'#71819A',padding:15},sourceChoiceText:{flex:1,gap:3},sourceChoiceDetail:{fontSize:10,color:'#71819A'},
   sourceMetaValue:{fontSize:9,color:'#315B91',fontWeight:'600'},
   premiumRows:{gap:0},
