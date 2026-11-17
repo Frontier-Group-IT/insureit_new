@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
+import { PartnerCaseBottomNavigation } from '@/components/partner-case-bottom-navigation';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { PartnerInsurerLogo } from '@/components/ui/partner-insurer-logo';
 import { PartnerPolicyDetailIcon, type PartnerPolicyDetailIconKind } from '@/components/ui/partner-policy-detail-icon';
@@ -83,7 +84,7 @@ export default function PolicyDetailScreen() {
   const isVerified = data ? ['active', 'issued', 'in_force', 'in force'].includes((data.policy.status || data.policy.lifecycle_status || '').toLowerCase().replaceAll('-', '_')) : false;
 
   return (
-    <PartnerScreen title="Policy Details" hideTopBar>
+    <PartnerScreen title="Policy Details" hideTopBar navyStatusBar bottomNavigationNavy bottomNavigation={<PartnerCaseBottomNavigation activeTab="Policies" />}>
       <View style={styles.pageHeader}>
         <View style={styles.headerGlowOne} />
         <View style={styles.headerGlowTwo} />
