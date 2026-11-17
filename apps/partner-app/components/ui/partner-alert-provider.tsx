@@ -13,6 +13,7 @@ type Notice = { title: string; message: string; buttons?: AlertChoice[]; options
 
 const pending: Notice[] = [];
 let notify: (() => void) | null = null;
+let activeNotice: Notice | null = null;
 
 /**
  * A UI-only replacement for React Native Alert.alert.
@@ -22,7 +23,8 @@ let notify: (() => void) | null = null;
 export function partnerAlert(title: string, message?: string, buttons?: AlertChoice[], options?: AlertOptions): void {
   const notice: Notice = { title, message: message ?? '', buttons, options };
   // Keep rapid duplicate notifications from obscuring important confirmations.
-  if (pending.some(item => item.title === notice.title && item.message === notice.message)) return;
+  if ((activeNotice?.title === notice.title && activeNotice.message === notice.message) ||
+      pending.some(item => item.title === notice.title && item.message === notice.message)) return;
   pending.push(notice);
   notify?.();
 }
@@ -47,7 +49,9 @@ export function PartnerAlertProvider({ children }: { children: ReactNode }) {
     return () => { if (notify === flush) notify = null; };
   }, []);
   useEffect(() => {
+    activeNotice = notice;
     if (!notice && pending.length) notify?.();
+    return () => { if (activeNotice === notice) activeNotice = null; };
   }, [notice]);
   const close = () => {
     setNotice(null);
