@@ -1,3 +1,4 @@
+import { PartnerFeedbackDialog } from '@/components/ui/partner-feedback-dialog';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Feather, Ionicons } from '@expo/vector-icons';
@@ -124,30 +125,22 @@ export default function LifeHealthCaseRegisterScreen() {
            </>}
          </Pressable>:null}
        </View>}
-     <Modal visible={Boolean(issuedCase)} transparent animationType="fade" onRequestClose={()=>setIssuedCase(null)}>
-       <View style={styles.modalBackdrop}>
-         <Pressable accessibilityLabel="Close issued policy popup" style={StyleSheet.absoluteFill} onPress={()=>setIssuedCase(null)}/>
-         <View style={styles.modalCard} accessibilityRole="alert">
-           <View style={styles.modalIntro}>
-             <View style={styles.modalCheck}><Ionicons name="checkmark-circle-outline" size={22} color="#18794E"/></View>
-             <View style={styles.modalCopy}>
-               <Text style={styles.modalTitle}>Policy already issued</Text>
-               <Text style={styles.modalDescription}>This case has already been issued as a policy. Open the issued policy to view and edit its details.</Text>
-             </View>
-           </View>
-           <View style={styles.modalActions}>
-             <Pressable accessibilityRole="button" onPress={()=>setIssuedCase(null)} style={styles.modalClose}><Text style={styles.modalCloseText}>Close</Text></Pressable>
-             <Pressable accessibilityRole="button" accessibilityLabel="View issued policy details in Partner App"
-               onPress={()=>{
-                 if(!issuedCase?.final_policy_id)return;
-                 const policyId=issuedCase.final_policy_id;
-                 setIssuedCase(null);
-                 router.push(`/policy/${policyId}` as never);
-               }} style={styles.modalView}><Text style={styles.modalViewText}>View Policy</Text></Pressable>
-           </View>
-         </View>
-       </View>
-     </Modal>
+     <PartnerFeedbackDialog
+       visible={Boolean(issuedCase)}
+       type="success"
+       title="Policy already issued"
+       message="This case has already been issued as a policy. Open the issued policy to view and edit its details."
+       onDismiss={()=>setIssuedCase(null)}
+       actions={[
+         {label:'Close',kind:'secondary',onPress:()=>setIssuedCase(null)},
+         {label:'View Policy',kind:'primary',onPress:()=>{
+           if(!issuedCase?.final_policy_id)return;
+           const policyId=issuedCase.final_policy_id;
+           setIssuedCase(null);
+           router.push(`/policy/${policyId}` as never);
+         }},
+       ]}
+     />
    </PartnerScreen>
  );
 }
