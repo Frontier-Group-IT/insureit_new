@@ -55,7 +55,7 @@ assert.ok(source.includes('row.detail=undefined'), "Do not expose historical old
 assert.match(ui, /My Activity Summary/, "Self default is activity summary, not flat table");
 assert.match(ui, /item\.count\.toLocaleString/, "Clickable category rows expose real computed totals");
 assert.match(ui, /href=\{linkFor\(\{activity:item\.name,page:"1"\}\)\}/, "Clicking a category selects it");
-assert.match(ui, /Back to summary/, "Drilldown returns to category totals");
+assert.doesNotMatch(ui, /Back to summary|href=\{linkFor\(\{activity:"",page:"1"\}\)\}/, "Detail header must not display Back to summary control");
 assert.match(ui, /\$\{data\.category\} \(\$\{data\.selfName\}\)/, "Detail heading identifies the selected employee without a redundant table column");
 assert.match(ui, /isOtherActivity \? \([\s\S]*?<th[^>]*>Employee Name<\/th>/, "Employee Name header appears only in Other Activities");
 assert.match(ui, /Historical activity exceeds the safe read limit/, "Caps disclose incomplete counts");

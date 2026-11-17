@@ -83,10 +83,7 @@ export function DailySelfActivityPanel({data,linkFor,reportMode="self",canViewAl
           <DailyReportHeaderScopes canViewAll={canViewAll} />
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          {data.category ? <Link prefetch={false} href={linkFor({activity:"",page:"1"})}
-            className="rounded-lg border border-[#d8e1ec] bg-white px-3 py-2 text-[10px] font-bold text-[#174b80]">
-            Back to summary
-          </Link> : <span className="daily-report-total-badge inline-flex shrink-0 items-center gap-2 text-[11px] font-extrabold tracking-wide text-white"><FileText size={16} strokeWidth={2.4} aria-hidden="true"/>{data.total.toLocaleString("en-IN")} RECORDS</span>}
+          {!data.category ? <span className="daily-report-total-badge inline-flex shrink-0 items-center gap-2 text-[11px] font-extrabold tracking-wide text-white"><FileText size={16} strokeWidth={2.4} aria-hidden="true"/>{data.total.toLocaleString("en-IN")} RECORDS</span> : null}
           <DailyReportHeaderPeriod />
         </div>
       </div>
