@@ -7,7 +7,7 @@ on:
       - main
     paths:
       - 'supabase/migrations/20261117193000_verified_ai_draft_issuance_backfill.sql'
-      - '.github/workflows/apply-policy-document-15mb-limit.yml'
+      - '.github/workflows/apply-ai-policy-issuance-backfill.yml'
 
 permissions:
   contents: read
