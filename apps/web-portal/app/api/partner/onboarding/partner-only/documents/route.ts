@@ -16,7 +16,7 @@ const response = (result: Record<string, unknown>, status = 200) =>
 
 /** Bearer-authenticated uploads for the employee who created a Partner-only application. */
 export async function POST(request: Request) {
-  const match = /^Bearer\\s+([^\\s]+)$/i.exec(request.headers.get("authorization") ?? "");
+  const match = /^Bearer\s+([^\s]+)$/i.exec(request.headers.get("authorization") ?? "");
   if (!match) return response({ ok: false, error: "Sign in again to upload documents." }, 401);
 
   const scoped = createSupabaseWithAccessToken(match[1]);
