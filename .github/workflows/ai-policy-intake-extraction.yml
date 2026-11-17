@@ -1,0 +1,32 @@
+name: AI Policy Intake Extraction (Opt-in)
+
+on:
+  schedule:
+    # At most two private PDFs per run. Queue leases make retries idempotent.
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  process:
+    if: ${{ vars.INSUREIT_AI_QUEUE_SCHEDULE_ENABLED == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Run bounded private n8n extraction worker
+        env:
+          WORKER_TOKEN: ${{ secrets.INSUREIT_AI_QUEUE_WORKER_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ "${#WORKER_TOKEN}" -lt 32 ]; then
+            echo "::error::Set INSUREIT_AI_QUEUE_WORKER_TOKEN in repository secrets before enabling scheduled extraction"
+            exit 1
+          fi
+          curl --silent --show-error --fail-with-body --max-time 240 \
+            -X POST "https://portal.insureit.in/api/internal/ai-policy-onboarding/process" \
+            -H "Authorization: Bearer ${WORKER_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -H "Cache-Control: no-store" \
+            --data '{}'
