@@ -150,7 +150,7 @@ begin
   returning i.id into v_updated;
   return v_updated is not null;
 end;
-$;
+$$;
 revoke all on function public.sync_verified_ai_intake_ocr_v1(uuid,uuid,uuid,text,jsonb,integer)
   from public,anon,authenticated;
 grant execute on function public.sync_verified_ai_intake_ocr_v1(uuid,uuid,uuid,text,jsonb,integer)
