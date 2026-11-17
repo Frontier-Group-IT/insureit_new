@@ -16,7 +16,13 @@ assert.doesNotMatch(form, /Partner category|Individual Partner|Business Partner/
 for (const heading of ['Identity & contact','Address','Bank & tax']) assert.ok(form.includes(heading));
 for (const field of ['document_received_at','associate_employee_id','pos_first_name','pos_middle_name','pos_last_name','pan_number','aadhaar_number','date_of_birth','mobile','email','address','city','state','postal_code','bank_id','bank_account_number','bank_ifsc_code','gst_number']) assert.ok(form.includes(field), 'Missing field: '+field);
 assert.match(form, /authenticatedRequest\('GET'\)/);
-assert.match(form, /Submit Partner application/);
+assert.match(form, /Save & Exit/);
+assert.match(form, /Upload Documents/);
+assert.doesNotMatch(form, /Submit Partner application/);
+assert.match(form, /savePartner\('exit'\)/);
+assert.match(form, /savePartner\('upload'\)/);
+assert.match(form, /person-add-outline/);
+assert.match(form, /api\\/partner\\/onboarding\\/partner-only\\/documents/);
 assert.match(form, /api\/partner\/onboarding\/partner-only/);
 assert.doesNotMatch(form, /Add POSP|Add MISP|Create POSP|Create MISP/);
 assert.match(form, /canPartnerAccess\(context, 'create_intermediary_application', 'edit'\)/);
