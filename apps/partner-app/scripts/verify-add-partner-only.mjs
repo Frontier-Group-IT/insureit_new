@@ -22,7 +22,7 @@ assert.doesNotMatch(form, /Submit Partner application/);
 assert.match(form, /savePartner\('exit'\)/);
 assert.match(form, /savePartner\('upload'\)/);
 assert.match(form, /person-add-outline/);
-assert.match(form, /api\\/partner\\/onboarding\\/partner-only\\/documents/);
+assert.ok(form.includes('/api/partner/onboarding/partner-only/documents'), 'Missing Partner documents endpoint');
 assert.match(form, /api\/partner\/onboarding\/partner-only/);
 assert.doesNotMatch(form, /Add POSP|Add MISP|Create POSP|Create MISP/);
 assert.match(form, /canPartnerAccess\(context, 'create_intermediary_application', 'edit'\)/);
