@@ -58,13 +58,13 @@ export function DailyReportHeaderScopes({canViewAll=false}:{canViewAll?:boolean}
   },[open,isDaily,selectedPerson,canViewAll]);
   useEffect(()=>{
     if(!open)return;
-    const outside=(event:MouseEvent)=>{if(container.current&&!container.current.contains(event.target as Node))setOpen(false);};
+    const outside=(event:PointerEvent)=>{if(container.current&&!container.current.contains(event.target as Node))setOpen(false);};
     const escape=(event:KeyboardEvent)=>{if(event.key==="Escape")setOpen(false);};
-    document.addEventListener("mousedown",outside);
+    document.addEventListener("pointerdown",outside);
     document.addEventListener("keydown",escape);
-    return ()=>{document.removeEventListener("mousedown",outside);document.removeEventListener("keydown",escape);};
+    return ()=>{document.removeEventListener("pointerdown",outside);document.removeEventListener("keydown",escape);};
   },[open]);
-  useEffect(()=>{setOpen(false);setSearch("");},[selectedPerson]);
+  useEffect(()=>{setOpen(false);setSearch("");},[selectedPerson,searchParams]);
   if(!isDaily) return null;
   // A reporting permission alone does not imply any other employee is in scope.
   // Use the authorized endpoint's filtered directory, never the job role, to
@@ -72,7 +72,7 @@ export function DailyReportHeaderScopes({canViewAll=false}:{canViewAll?:boolean}
   const hasOtherEmployees=people.length>0;
   const showDropdown=canViewAll && (hasOtherEmployees || loadError);
   if(!showDropdown) {
-    return <span aria-label="Daily Report scope: Self" className="daily-report-header-select inline-flex h-9 min-w-[145px] items-center justify-center rounded-lg border border-[#cbd7e6] bg-white px-3 text-center text-[11px] font-semibold text-[#17365D]">Self</span>;
+    return <span title="Self report only — no other authorized employees available" aria-label="Daily Report scope: Self" className="daily-report-header-select inline-flex h-9 min-w-[145px] items-center justify-center rounded-lg border border-[#cbd7e6] bg-white px-3 text-center text-[11px] font-semibold text-[#17365D]">Self</span>;
   }
   function selectPerson(personId:string|null) {
     const params=new URLSearchParams(searchParams.toString());
@@ -87,21 +87,21 @@ export function DailyReportHeaderScopes({canViewAll=false}:{canViewAll?:boolean}
     router.push(`/reports/daily?${params.toString()}`,{scroll:false});
   }
   return (
-    <div ref={container} className="relative" aria-label="Daily Report employee selector">
+    <div ref={container} className="relative z-30 min-w-0" aria-label="Daily Report employee selector">
       <button type="button" aria-haspopup="listbox" aria-expanded={open} aria-controls="daily-report-employee-options"
         onClick={()=>{setOpen(value=>!value);setSearch("");}}
-        className="daily-report-header-select relative inline-flex h-9 min-w-[145px] max-w-[235px] items-center justify-center rounded-lg border border-[#cbd7e6] bg-white px-8 text-center text-[11px] font-semibold text-[#17365D] hover:bg-[#f5f8fc] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#315b9a]">
+        className="daily-report-header-select relative inline-flex min-h-10 w-[clamp(124px,18vw,235px)] min-w-0 items-center justify-center rounded-lg border border-[#cbd7e6] bg-white px-8 text-center text-[11px] font-semibold text-[#17365D] hover:bg-[#f5f8fc] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#315b9a]">
         <span className="min-w-0 truncate text-center">{!selectedPerson?"Self":selected?.full_name||"Selected employee"}</span><ChevronDown className="absolute right-3 h-3.5 w-3.5 shrink-0"/>
       </button>
       {open ? (
-        <div className="absolute left-0 top-[calc(100%+4px)] z-50 w-[270px] max-w-[calc(100vw-32px)] rounded-lg border border-[#d8e0eb] bg-white p-2 shadow-lg">
+        <div className="absolute left-0 top-[calc(100%+4px)] z-[80] w-[270px] max-w-[calc(100vw-40px)] rounded-lg border border-[#d8e0eb] bg-white p-2 shadow-lg">
           <input type="search" aria-label="Search employee name or code" placeholder="Search employee name or code..."
             autoFocus value={search} onChange={event=>setSearch(event.target.value)}
             className="mb-1.5 h-9 w-full rounded-md border border-[#d8e0eb] px-2 text-[11px] text-[#17365D] outline-none focus:border-[#315b9a]"/>
-          <div id="daily-report-employee-options" role="listbox" aria-label="Authorized employee" className="max-h-[300px] overflow-y-auto">
+          <div id="daily-report-employee-options" role="listbox" aria-label="Authorized employee" className="max-h-[min(300px,50dvh)] overscroll-contain overflow-y-auto">
             {"self".includes(search.trim().toLowerCase())?<button type="button" role="option" aria-selected={!selectedPerson}
               onClick={()=>selectPerson(null)}
-              className={`block w-full rounded-md px-3 py-2 text-left text-[11px] font-semibold hover:bg-[#eef3fa] ${!selectedPerson?"bg-[#edf3fa] text-[#17365D]":"text-[#52627B]"}`}>Self</button>:null}
+              className={`block min-h-10 w-full rounded-md px-3 py-2 text-left text-[11px] font-semibold hover:bg-[#eef3fa] ${!selectedPerson?"bg-[#edf3fa] text-[#17365D]":"text-[#52627B]"}`}>Self</button>:null}
             {canViewAll?matching.map(person=>(
               <button key={person.id} type="button" role="option" aria-selected={selectedPerson===person.id}
                 onClick={()=>selectPerson(person.id)}
@@ -126,6 +126,7 @@ export function DailyReportHeaderPeriod() {
   const ref=useRef<HTMLDivElement>(null);
   const [open,setOpen]=useState(false);
   const [customOpen,setCustomOpen]=useState(false);
+  useEffect(()=>{setOpen(false);},[searchParams]);
   const value=searchParams.get("period");
   const active:Period=OPTIONS.some(o=>o.value===value)?value as Period:"today";
   const from=searchParams.get("from")||"";
@@ -154,16 +155,16 @@ export function DailyReportHeaderPeriod() {
     router.push(`${pathname}?${params.toString()}`,{scroll:false});
   }
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <div ref={ref} className="relative">
+    <div className="flex min-w-0 flex-wrap items-center gap-2">
+      <div ref={ref} className="relative z-20">
         <button type="button" aria-haspopup="menu" aria-expanded={open}
           onClick={()=>setOpen(v=>!v)}
-          className="daily-report-header-select inline-flex h-9 min-w-[145px] items-center justify-between gap-2 rounded-lg border border-[#cbd7e6] bg-white px-3 text-[11px] font-semibold text-[#233b5d]">
+          className="daily-report-header-select inline-flex min-h-10 min-w-[132px] items-center justify-between gap-2 rounded-lg border border-[#cbd7e6] bg-white px-3 text-[11px] font-semibold text-[#233b5d]">
           <CalendarDays className="h-4 w-4"/>{OPTIONS.find(o=>o.value===active)?.label}<ChevronDown className="h-3.5 w-3.5"/>
         </button>
-        {open&&<div role="menu" className="absolute right-0 top-[calc(100%+4px)] z-50 min-w-[145px] overflow-hidden rounded-lg border border-[#d8e0eb] bg-white p-1 shadow-lg">
+        {open&&<div role="menu" className="absolute right-0 top-[calc(100%+4px)] z-[80] min-w-[158px] max-w-[calc(100vw-40px)] overflow-hidden rounded-lg border border-[#d8e0eb] bg-white p-1 shadow-lg">
           {OPTIONS.map(option=><button key={option.value} type="button" role="menuitem"
-            className={`w-full rounded-md px-3 py-2 text-left text-[11px] hover:bg-[#eef3fa] ${active===option.value?"bg-[#edf3fa] font-bold text-[#175caa]":"text-[#344862]"}`}
+            className={`min-h-10 w-full rounded-md px-3 py-2 text-left text-[11px] hover:bg-[#eef3fa] ${active===option.value?"bg-[#edf3fa] font-bold text-[#175caa]":"text-[#344862]"}`}
             onClick={()=>{
               setOpen(false);
               if(option.value==="custom")setCustomOpen(true);
