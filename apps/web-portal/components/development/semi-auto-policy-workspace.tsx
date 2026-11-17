@@ -177,6 +177,9 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
         if (requestId.current !== next) return;
       }
       if (response.ok && response.editUrl) {
+        if (response.existingDraft) {
+          window.alert("An existing Policy Onboarding draft was found and preserved. n8n did not overwrite any manually saved fields. Compare its values against the n8n preview and original PDF before final booking.");
+        }
         router.push(response.editUrl);
       } else {
         setN8nNotice(response.error ?? "The Intake could not be forwarded. Re-run n8n before trying again.");
