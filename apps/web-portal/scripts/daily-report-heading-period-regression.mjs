@@ -72,4 +72,7 @@ assert.ok(header.includes("w-[112px] max-w-[36vw]"), "Scope dropdown is compact 
 assert.ok(!header.includes("w-[clamp(124px,18vw,235px)]"), "Old oversized Self dropdown must not return");
 assert.ok(css.includes('[aria-label="Daily Report employee selector"] .daily-report-header-select {') && css.includes("width: 112px;"), "Compact scope width overrides the shared header style");
 assert.ok(header.includes('min-w-[132px]'), "Date period filter retains its original width");
+assert.ok(panel.includes("md:min-h-[calc(100dvh-80px)]"), "Desktop Daily Report fills available viewport height instead of ending early");
+assert.ok(panel.includes("min-h-[calc(100dvh-145px)]"), "Mobile Daily Report is extended without altering table row height");
+assert.ok(panel.includes("mt-auto flex shrink-0 items-center justify-between"), "Pagination footer stays at bottom of panel");
 console.log("Daily Report header layout, Today 90D MTD YTD All time Custom, and IST range source filtering verified.");
