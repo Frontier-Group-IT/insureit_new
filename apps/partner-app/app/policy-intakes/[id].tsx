@@ -501,7 +501,7 @@ export default function PolicyIntakeDetailScreen() {
         onCancel={()=>setRejectConfirmationOpen(false)}
         actions={[
           {label:'Cancel',secondary:true,onPress:()=>setRejectConfirmationOpen(false)},
-          {label:'Reject Intake',destructive:true,onPress:()=>{setRejectConfirmationOpen(false);void submitReviewAction('rejected');}},
+          {label:'Reject Intake',destructive:true,onPress:()=>{setRejectConfirmationOpen(false); void submitReviewAction('rejected');}},
         ]}
       />
       <PartnerConfirmDialog
