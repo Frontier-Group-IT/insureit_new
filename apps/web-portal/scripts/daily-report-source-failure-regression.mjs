@@ -20,11 +20,38 @@ try {
   assert.equal(partiallyAvailable.failed,true);
   assert.equal(partiallyAvailable.partial,true);
 
+  let recoveredCalls=0;
+  const recovered=await readDailyHistoryPages("Intake finalizations",async()=>{
+    recoveredCalls++;
+    if(recoveredCalls===1) return {data:null,error:{message:"transient",code:"PGRST001"}};
+    return {data:[{id:"finalized"}],error:null};
+  },{retryFailedPage:true});
+  assert.equal(recoveredCalls,2);
+  assert.deepEqual(recovered,{rows:[{id:"finalized"}],partial:false,failed:false});
+
+  let transportCalls=0;
+  const transportRecovered=await readDailyHistoryPages("Intake finalizations",async()=>{
+    transportCalls++;
+    if(transportCalls===1) throw Error("temporary connection failure");
+    return {data:[{id:"recovered"}],error:null};
+  },{retryFailedPage:true});
+  assert.deepEqual(transportRecovered,{rows:[{id:"recovered"}],partial:false,failed:false});
+  assert.equal(transportCalls,2);
+
+  let persistentCalls=0;
+  const persistent=await readDailyHistoryPages("Intake finalizations",async()=>{
+    persistentCalls++;
+    return {data:null,error:{message:"persistent sensitive error",code:"PGRST001"}};
+  },{retryFailedPage:true});
+  assert.equal(persistentCalls,2);
+  assert.deepEqual(persistent,{rows:[],partial:true,failed:true});
+
   const rejected=await readDailyHistoryPages("Intake submissions",async()=>{throw Error("secrets or customer data")});
   assert.deepEqual(rejected,{rows:[],failed:true,partial:true});
   assert.ok(errors.some((args)=>args[1]?.source==="Audit logs" && args[1]?.code==="PGRST001"));
   assert.ok(errors.some((args)=>args[1]?.source==="Intake submissions"));
   assert.ok(!JSON.stringify(errors).includes("sensitive external error"));
+  assert.ok(!JSON.stringify(errors).includes("persistent sensitive error"));
   assert.ok(!JSON.stringify(errors).includes("secrets or customer data"));
 } finally {
   console.error=spy;
@@ -35,6 +62,7 @@ const panel=read("../components/reports/daily-self-activity-panel.tsx");
 const page=read("../app/reports/(workspace)/daily/page.tsx");
 assert.match(source,/readDailyHistoryPages\("Audit logs",loadAudit\)/);
 assert.match(source,/readDailyHistoryPages\("Case conversions",loadCaseFinal\)/);
+assert.match(source,/readDailyHistoryPages\("Intake finalizations",loadIntakeFinal,\{retryFailedPage:true\}\)/);
 assert.match(source,/const unavailableSources = sources\.filter\(s=>s\.result\.failed\)/);
 assert.match(source,/const partial = sources\.some\(s=>s\.result\.partial\)/);
 assert.match(panel,/data\.unavailableSources\.join/);

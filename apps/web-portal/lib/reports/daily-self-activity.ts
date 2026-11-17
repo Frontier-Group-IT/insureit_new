@@ -187,7 +187,7 @@ export async function loadSelfActivityHistory(
   };
   const [audits,policies,intakes,intakeFinals,cases,caseFinals,claimCreations,claimStages,claimVerifications,claimStatuses] = await Promise.all([
     readDailyHistoryPages("Audit logs",loadAudit),readDailyHistoryPages("Policies",loadPolicy),readDailyHistoryPages("Intake submissions",loadIntake),
-    readDailyHistoryPages("Intake finalizations",loadIntakeFinal),readDailyHistoryPages("Case creation",loadCase),readDailyHistoryPages("Case conversions",loadCaseFinal),
+    readDailyHistoryPages("Intake finalizations",loadIntakeFinal,{retryFailedPage:true}),readDailyHistoryPages("Case creation",loadCase),readDailyHistoryPages("Case conversions",loadCaseFinal),
     readDailyHistoryPages("Claim creation",loadClaimCreation),
     readDailyHistoryPages("Claim stage edits",loadClaimStage),
     readDailyHistoryPages("Claim verification",loadClaimVerification),
