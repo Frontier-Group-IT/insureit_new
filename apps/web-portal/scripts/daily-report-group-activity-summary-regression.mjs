@@ -30,6 +30,6 @@ assert.match(history,/const actingEmployeeName=selfProfile\?\.full_name\?\.trim\
 assert.match(history,/else row\.subjectEmployeeName=actingEmployeeName/, "Missing employee targets resolve to action performer");
 assert.match(history,/if\(row\.recordId&&row\.table==="employees"\)/, "Affected employee names retain priority for employee actions");
 assert.match(rows,/row\.subjectEmployeeName/, "Employee Name table cell displays resolved employee");
-assert.match(history,/\.eq\("actor_id",viewerId\)/, "Activity scope remains restricted to selected authorized actor");
+assert.match(history,/\.in\("actor_id",actorIds\)/, "Activity scope remains restricted to validated authorized actors at query time");
 assert.doesNotMatch(history,/\.update\(|\.insert\(|\.upsert\(|\.delete\(/, "Reporting change stays read-only");
 console.log("Daily Report activity cards remain grouped by Customer, Vehicle, Policies, Claims and Other.");
