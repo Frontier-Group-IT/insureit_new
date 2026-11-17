@@ -453,6 +453,25 @@ export default function LifeHealthCaseDetailScreen(){
       </View>:null}
 
     </View>:null}
+   <Modal visible={rejectOpen} transparent animationType="fade" onRequestClose={()=>{if(!rejectBusy)setRejectOpen(false);}}>
+     <View style={styles.editorBackdrop}><View style={styles.remarkEditor}>
+       <Text style={styles.editorTitle}>Reject Life / Health Case</Text>
+       <Text style={styles.editorHint}>Enter a reason. Rejection closes this case without deleting its documents or customer.</Text>
+       <TextInput accessibilityLabel="Rejection reason" multiline maxLength={2000} value={rejectReason}
+         onChangeText={setRejectReason} placeholder="Reason for rejection"
+         style={[styles.editInput,{minHeight:110,textAlignVertical:'top'}]}/>
+       {rejectError?<Text style={styles.saveError}>{rejectError}</Text>:null}
+       <View style={styles.editorActions}>
+         <Pressable accessibilityRole="button" disabled={rejectBusy} onPress={()=>setRejectOpen(false)} style={styles.cancelButton}>
+           <Text style={styles.cancelText}>Cancel</Text>
+         </Pressable>
+         <Pressable accessibilityRole="button" disabled={rejectBusy||!rejectReason.trim()} onPress={()=>void submitRejection()}
+           style={[styles.saveButton,{backgroundColor:'#B02E3A'},(rejectBusy||!rejectReason.trim())&&{opacity:0.5}]}>
+           <Text style={styles.saveText}>{rejectBusy?'Rejecting…':'Confirm Reject'}</Text>
+         </Pressable>
+       </View>
+     </View></View>
+   </Modal>
    <Modal visible={Boolean(picker)} transparent animationType="fade" onRequestClose={()=>setPicker(null)}>
      <View style={styles.editorBackdrop}><View style={styles.remarkEditor}>
        <View style={styles.editorHeader}>
@@ -619,8 +638,26 @@ const styles=StyleSheet.create({
   fieldValue:{fontSize:11,color:'#213653',fontWeight:'600',lineHeight:16,flexShrink:1},
   metaRow:{flexDirection:'row',flexWrap:'wrap',columnGap:7,rowGap:3,marginTop:6},
   metaText:{fontSize:9,fontWeight:'600',color:'#4C637F',flexShrink:1},
-  documentList:{gap:0},
-  document:{flexDirection:'row',alignItems:'center',gap:9,paddingVertical:10,borderBottomWidth:1,borderBottomColor:'#ECF0F6'},
+  documentList:{gap:8},
+  documentOpen:{flex:1,minWidth:0,flexDirection:'row',alignItems:'center',gap:7,paddingHorizontal:8,minHeight:40},
+  documentIconButton:{width:38,minHeight:40,justifyContent:'center',alignItems:'center',borderLeftWidth:1,borderLeftColor:'#C9E8D8'},
+  documentUploadGrid:{flexDirection:'row',flexWrap:'wrap',gap:7},
+  uploadButton:{borderRadius:9,borderWidth:1,borderColor:'#CEDAEC',paddingHorizontal:10,paddingVertical:10,flexDirection:'row',alignItems:'center',gap:6,backgroundColor:'#FFFFFF'},
+  uploadText:{fontSize:10,color:'#24569A',fontWeight:'700'},
+  activityCard:{backgroundColor:'#FFFFFF',borderRadius:14,borderWidth:1,borderColor:'#D9E2F0',padding:12,gap:10},
+  saveSuccess:{fontSize:11,color:'#166B4B',fontWeight:'700'},
+  caseActions:{flexDirection:'row',alignItems:'stretch',gap:5,backgroundColor:'#FFFFFF',padding:8,borderRadius:13,borderWidth:1,borderColor:'#D9E2F0'},
+  caseAction:{minHeight:48,borderRadius:10,alignItems:'center',justifyContent:'center',flexDirection:'row',gap:4,paddingHorizontal:3},
+  actionCancel:{flex:0.76,borderColor:'#C8D5E6',borderWidth:1,backgroundColor:'#FFFFFF'},
+  actionReject:{flex:0.65,borderColor:'#F9C8CA',borderWidth:1,backgroundColor:'#FFF3F3'},
+  actionSave:{flex:1.2,borderColor:'#BDD4F4',borderWidth:1,backgroundColor:'#EAF2FF'},
+  actionIssue:{flex:1.42,backgroundColor:'#103C74'},
+  cancelActionText:{fontSize:9,fontWeight:'800',color:'#071E49'},
+  rejectActionText:{fontSize:9,fontWeight:'800',color:'#C32B37'},
+  saveActionText:{fontSize:9,fontWeight:'800',color:'#17365D',flexShrink:1,textAlign:'center'},
+  issueActionText:{fontSize:9,fontWeight:'800',color:'#FFFFFF',flexShrink:1,textAlign:'center'},
+  disabledAction:{opacity:0.56},
+  document:{flexDirection:'row',alignItems:'center',gap:1,minHeight:42,backgroundColor:'#E9FAF0',borderWidth:1,borderColor:'#A6E1C5',borderRadius:9,overflow:'hidden'},
   documentName:{flex:1,fontSize:11,fontWeight:'600',color:navy},
   tabs:{flexDirection:'row',alignItems:'center',gap:6},
   tab:{paddingHorizontal:12,paddingVertical:9,borderRadius:9,backgroundColor:'#EDF3FB'},
