@@ -1,10 +1,18 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "regions": ["icn1"],
+  "regions": [
+    "icn1"
+  ],
   "git": {
     "deploymentEnabled": false
   },
   "framework": "nextjs",
   "installCommand": "npm install",
-  "buildCommand": "npm run build"
+  "buildCommand": "npm run build",
+  "crons": [
+    {
+      "path": "/api/internal/ai-policy-onboarding/process",
+      "schedule": "*/5 * * * *"
+    }
+  ]
 }
