@@ -774,9 +774,9 @@ assert(duplicateQueueSql.includes("policy_intake_ai_processing_queue_state_check
   && !duplicateQueueSql.includes("delete from public.policy_intake_requests")
   && !duplicateQueueSql.includes("insert into public.policies"),
   "Queue-only migration safely retires canonical duplicates and reschedules old false exceptions");
-assert.equal(duplicateQueueSql.split("\n").filter(x=>x.trim()==="as $").length,1,
+assert.equal(duplicateQueueSql.split("\n").filter(x=>x.trim()==="as $$").length,1,
   "Migration must open one PL/pgSQL body");
-assert.equal(duplicateQueueSql.split("\n").filter(x=>x.trim()==="$;").length,1,
+assert.equal(duplicateQueueSql.split("\n").filter(x=>x.trim()==="$$;").length,1,
   "Migration must close one PL/pgSQL body");
 assert(aiPageText.includes("queueCounts.extracted++") && aiPageText.includes("if(duplicate)continue;"),
   "Verified extraction count cannot misstate automatic booking eligibility or include duplicate PDFs");
