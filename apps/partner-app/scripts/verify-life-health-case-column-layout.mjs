@@ -43,9 +43,9 @@ assert.match(screen,/getLifeHealthDocumentUrl/,'Documents can be opened through 
 assert.match(screen,/mutateLifeHealthDocument/,'Documents have an authenticated delete action');
 assert.match(screen,/uploadLifeHealthDocument/,'Documents have an authenticated replace and upload action');
 assert.match(screen,/documentBusy/,'Document mutations block concurrent submissions');
-assert.match(screen,/documentList:\\{width:'100%',gap:8\\}/,'Document list occupies full available width');
-assert.match(screen,/document:\\{width:'100%',flexDirection:'row'/,'Each existing document occupies a full-width row');
-assert.match(screen,/documentUploadGrid:\\{width:'100%',flexDirection:'column'/,'Upload actions stack in one column');
-assert.match(screen,/uploadButton:\\{width:'100%',minHeight:45/,'Every missing-document upload action fills the row');
-assert.match(screen,/numberOfLines=\\{2\\} ellipsizeMode="middle"/,'Long document names can use two lines without crowding actions');
+assert.match(screen,/documentList:\{width:'100%',gap:8\}/,'Document list occupies full available width');
+assert.match(screen,/document:\{width:'100%',flexDirection:'row'/,'Each existing document occupies a full-width row');
+assert.match(screen,/documentUploadGrid:\{width:'100%',flexDirection:'column'/,'Upload actions stack in one column');
+assert.match(screen,/uploadButton:\{width:'100%',minHeight:45/,'Every missing-document upload action fills the row');
+assert.match(screen,/numberOfLines=\{2\} ellipsizeMode="middle"/,'Long document names can use two lines without crowding actions');
 console.log('Partner Life/Health case details: compact columns, four actions, document controls and tab parity verified.');
