@@ -84,6 +84,15 @@ assert.match(screen,/commercialModal==='payin'\?'Projected Insurer Pay-in':'Part
 assert.match(screen,/insurerPayinFields\.map\(/, 'Pay-in popup must use scoped insurer fields.');
 assert.match(screen,/partnerPayoutFields\.filter\(/, 'Payout popup must use scoped payout fields.');
 assert.match(screen,/accessibilityLabel="Save and close commercial popup"/, 'Commercial popup needs a Save & Close action.');
+assert.ok(screen.includes('onPress={()=>void saveCommercial()}'), 'Both commercial popups share the responsive Save & Close handler.');
+assert.ok(screen.includes('if(!isNew){'), 'Existing Intake commercial values persist through the revision-checked API.');
+assert.ok(screen.includes('const result=await saveNativePolicyOnboarding(id,data.revision,draft);'), 'Commercial Save & Close persists existing intake values.');
+assert.ok(screen.includes('setCommercialModal(null);'), 'Successful commercial save closes the modal.');
+assert.ok(screen.includes('setCommercialError(cause instanceof Error'), 'Failed save leaves an actionable local modal error.');
+assert.ok(screen.includes('commercialError?<Text accessibilityRole="alert"'), 'Save errors render within the popup.');
+assert.ok(screen.includes("isNew?<Text style={styles.commercialDraftNote}"), 'Standalone Add Policy explains that commercial terms remain in the form until creation.');
+assert.ok(screen.includes("saving?<ActivityIndicator size=\"small\""), 'Save & Close displays progress.');
+
 assert.match(screen,/Boolean\(commercialModal\)&&Boolean\(data\?\.commercialAccess\)/, 'Commercial modals stay permission gated.');
 assert.match(screen,/placeholder=\{hint\}/, 'All policy types display meaningful empty field placeholders.');
 assert.match(screen,/f.key==='model'\?'Model \/ variant'/, 'Keep the reference Model placeholder.');
@@ -186,7 +195,7 @@ assert.match(screen,/!isNew\?<View style=\{styles.documentAndSaveActions\}>/,'St
 assert.doesNotMatch(screen,/accessibilityLabel="Save Draft"/,'Intake must not show the removed Save Draft action.');
 assert.match(screen,/documentAndSaveActions:/,'Existing Intake retains its policy-document action wrapper.');
 assert.match(screen,/viewPolicyButton:/,'Intake policy copy action retains its existing styling.');
-assert.match(screen,/onPress=\{\(\)=>\{void save\(\)\.then\(success=>\{if\(success\)setCommercialModal\(null\);\}\);\}\}/,'Commercial popup must retain its underlying draft save action.');
+assert.ok(screen.includes('onPress={()=>void saveCommercial()}'), 'Commercial popup must use shared Save & Close handler.');
 assert.doesNotMatch(screen,/setDialog\('confirm-save'\)/,'Removed Save Draft confirmation must not be reachable.');
 assert.match(screen,/setDialog\('discard'\)/,'Cancel protects unsaved changes in custom dialog.');
 assert.match(screen,/onRequestClose=\{dismissDialog\}/,'Popup dismissal must be accessible on Android.');
