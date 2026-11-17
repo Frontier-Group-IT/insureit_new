@@ -893,6 +893,9 @@ assert(aiWorkbenchPageText.includes("bulkCandidates = workspaceRows.filter(row =
   && aiWorkbenchPageText.includes("!duplicateIds.has(row.id)")
   && aiWorkbenchPageText.includes("bulkCandidates={bulkCandidates}"),
   "Bulk candidates must include only authorized verified nonduplicate Motor Intakes across all pages");
+assert(workerText.includes("fetchAllPages<Customer,unknown>")
+  && !workerText.includes('matches?.length===51'),
+  "Queue worker must not mistake 51 customers sharing a phone for ambiguous exact identity");
 // Mobile number alone is not a customer identity. Read all candidate pages,
  // then permit a NEW customer when there is no exact name+mobile master.
 assert(actionsText.includes("const PAGE=200, MAX_MATCHES=2000")
