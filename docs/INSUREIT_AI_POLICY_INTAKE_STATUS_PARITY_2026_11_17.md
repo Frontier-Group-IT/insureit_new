@@ -39,3 +39,15 @@ Note: three duplicates originate from non-open Intakes; therefore the AI **Open 
 The full `Verify web portal` GitHub workflow must pass on the branch head. The production database is shared, so tests are purely synthetic and do not create customers, vehicles or policies. Check an actual authorized organization-wide Development account and Policy Intake Register account with the same scope and filters to confirm live count parity after a separately approved merge and manual deployment.
 
 No schema migration or live production data changes are required for this fix.
+
+## Customer exception integration — read-only candidate preview
+
+This branch also begins the next phase without weakening the existing policy-booking safety gates.
+
+- The **Check customer matches** action only appears for row-level customer exceptions. It requires Development administrator rights and reviewer/finalizer access on that specific Intake.
+- The server re-extracts the **current private PDF through n8n**. An insured name is considered verified only when all 13 checks pass with no extraction warnings. It is **not** copied into an existing customer or used to auto-link.
+- The server reads customer candidates by the Intake mobile number (last 10 digits), verifies exact normalised phone equality, and compares exact normalised insured names when n8n evidence is verified. If 51 or more candidates are returned, a unique match is not assumed.
+- Only the authorized operator receives the candidate names/codes and a masked phone suffix. The list has links to each existing customer's **canonical customer details**, and explicit **Customer Register** / **Create New Customer** navigation. It never calls a customer or policy INSERT/UPDATE.
+- The exception remains unresolved until the later **audited decision persistence + canonical booking preflight** is implemented. Opening a new customer form does not retroactively link the Intake or allow bulk conversion.
+
+The customer-review lookup is an incremental operator aid; it is not yet the final one-click customer-creation/link transaction.
