@@ -58,13 +58,13 @@ assert.ok(detail.includes('navyStatusBar'), 'Show a navy system status bar on bo
 assert.ok(detail.includes('bottomNavigation={<PolicyIntakeDetailNavigation'), 'Keep five-item bottom navigation on intake detail');
 assert.ok(!detail.includes('<PartnerInsurerLogo'), 'Do not use insurer/logo tile in PIR card');
 assert.ok(!detail.includes('Alert.alert('), 'Reject flow must not display a native Android browser/system confirmation');
-assert.ok(detail.includes('<Modal') && detail.includes('transparent') && detail.includes('animationType="fade"'), 'Reject confirmation is a compact in-app modal');
-assert.ok(detail.includes('maxWidth: 330') && detail.includes('styles.rejectModalCard'), 'Reject modal uses constrained compact professional layout');
+assert.ok(detail.includes('<PartnerFeedbackDialog') && detail.includes('visible={rejectConfirmationOpen}'), 'Reject confirmation uses the reference-style shared modal');
+assert.ok(detail.includes('type="delete"') && detail.includes("label:'Reject Intake'"), 'Reject confirmation uses the shared destructive layout');
 assert.ok(detail.includes("setRejectConfirmationOpen(true)"), 'Reject action requests explicit confirmation without submitting');
 assert.ok(detail.includes("if (!reviewNote.trim())"), 'Reject requires an Operations note before confirmation');
-assert.ok(detail.includes("setRejectConfirmationOpen(false); void submitReviewAction('rejected');"), 'Only explicit confirm invokes existing scoped rejection action');
-assert.ok(detail.includes("onPress={() => setRejectConfirmationOpen(false)}"), 'Cancel exits without rejecting');
-assert.ok(detail.includes("disabled={reviewBusy}"), 'Prevent duplicate rejection interaction while the action is busy');
+assert.ok(/setRejectConfirmationOpen\(false\);\s*void submitReviewAction\('rejected'\)/.test(detail), 'Only explicit confirm invokes existing scoped rejection action');
+assert.ok(detail.includes("label:'Cancel',kind:'secondary',onPress:()=>setRejectConfirmationOpen(false)"), 'Cancel exits without rejecting');
+assert.ok(detail.includes("busy={reviewBusy}"), 'Busy state is forwarded to the shared modal to prevent duplicate rejection');
 assert.ok(detail.includes('notify the submitter with your Operations note'), 'Preserve clear rejection notification explanation');
 const operationsNoteCard = detail.indexOf('style={reviewStyles.operationsNoteCard}');
 const resumeButton = detail.indexOf("label={openingReview ? 'Checking reviewer…' : row.status === 'in_review' ? 'Resume Policy Onboarding' : 'Review & Finalize'}");
