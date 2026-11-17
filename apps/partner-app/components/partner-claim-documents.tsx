@@ -1,5 +1,6 @@
+import { partnerAlert } from '@/components/ui/partner-alert-provider';
 import { useState } from 'react';
-import { ActivityIndicator, Alert, Linking, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Linking, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { PartnerClaimDocument } from '@/lib/claims';
 import { supabase } from '@/lib/supabase';
@@ -30,7 +31,7 @@ export function PartnerClaimDocuments({ documents, claimId, category }: Props) {
       if (!signed?.signedUrl) throw new Error('A secure preview link could not be generated.');
       await Linking.openURL(signed.signedUrl);
     } catch (error) {
-      Alert.alert('Unable to open document', error instanceof Error ? error.message : 'Please try again.');
+      partnerAlert('Unable to open document', error instanceof Error ? error.message : 'Please try again.');
     } finally { setOpeningId(null); }
   }
   function chooseDocument(files: PartnerClaimDocument[]) {
