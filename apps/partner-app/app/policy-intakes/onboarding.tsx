@@ -1241,7 +1241,6 @@ export default function NativePolicyOnboarding(){
                   <TextInput accessibilityLabel="Payout value" style={styles.input} keyboardType="decimal-pad" placeholder="0.00"
                     value={productValues.partnerPayoutValue||''} onChangeText={v=>updateProduct('partnerPayoutValue',v)}/></View>
                 <View style={styles.field}><Text style={styles.label}>TOTAL AGREED PAYOUT</Text><View style={[styles.inputRow,styles.readonlyInput]}><Text style={styles.premiumValue}>{rupees(productPayout)}</Text></View></View>
-                <View style={styles.field}><Text style={styles.label}>PROJECTED RETENTION</Text><View style={[styles.inputRow,styles.readonlyInput]}><Text style={styles.premiumValue}>{rupees(projectedRetention)}</Text></View></View>
                 <Text style={styles.commercialNote}>The payout is tagged to the selected Section 01 Lead Source. Negative retention is allowed and remains for finance review.</Text>
               </>}
             </View>:commercialModal==='payin'?<>
@@ -1323,12 +1322,10 @@ export default function NativePolicyOnboarding(){
                     <Text style={styles.premiumValue}>{rupees(payoutTotal)}</Text><Text style={styles.autoText}>AUTO</Text>
                   </View>}
                 </View>
-                <View style={styles.fields}><View style={styles.field}><Text style={styles.label}>PROJECTED RETENTION</Text><View style={[styles.inputRow,styles.readonlyInput]}><Text style={styles.premiumValue}>{rupees(projectedRetention)}</Text></View></View></View>
               </View>
             </>}
           </ScrollView>
           {commercialError?<Text accessibilityRole="alert" style={styles.commercialError}>{commercialError}</Text>:null}
-          {isNew?<Text style={styles.commercialDraftNote}>Details will remain in this form until the policy or case is created.</Text>:null}
           <View style={styles.modalFooter}>
             <Pressable accessibilityRole="button" accessibilityLabel="Save and close commercial popup"
               disabled={saving||booking||creatingLifeHealth} accessibilityState={{disabled:saving||booking||creatingLifeHealth}}
@@ -1489,7 +1486,6 @@ const styles=StyleSheet.create({
   scheduleHeader:{fontSize:8,color:'#405375',fontWeight:'700',width:'24%'},scheduleCell:{fontSize:8,color:'#17365D',width:'24%'},scheduleNote:{fontSize:9,lineHeight:14,color:'#738196'},
   commercialModalContent:{paddingBottom:8},
   commercialError:{color:'#A5272D',fontSize:11,fontWeight:'700',paddingHorizontal:12,paddingTop:8},
-  commercialDraftNote:{color:'#64748B',fontSize:10,paddingHorizontal:12,paddingVertical:6},
   calculatedRow:{flexDirection:'row',justifyContent:'space-between',padding:12,borderTopWidth:1,borderColor:'#E1E9F3'},
   readonlyInput:{backgroundColor:'#F3F6FA',color:'#738196'},
   commercialSave:{backgroundColor:'#17365D',borderRadius:10,paddingHorizontal:17,paddingVertical:12,alignItems:'center',flexDirection:'row',gap:8,minHeight:43},

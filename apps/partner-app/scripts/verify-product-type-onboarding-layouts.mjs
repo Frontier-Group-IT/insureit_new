@@ -90,7 +90,8 @@ assert.ok(screen.includes('const result=await saveNativePolicyOnboarding(id,data
 assert.ok(screen.includes('setCommercialModal(null);'), 'Successful commercial save closes the modal.');
 assert.ok(screen.includes('setCommercialError(cause instanceof Error'), 'Failed save leaves an actionable local modal error.');
 assert.ok(screen.includes('commercialError?<Text accessibilityRole="alert"'), 'Save errors render within the popup.');
-assert.ok(screen.includes("isNew?<Text style={styles.commercialDraftNote}"), 'Standalone Add Policy explains that commercial terms remain in the form until creation.');
+assert.doesNotMatch(screen, /PROJECTED RETENTION/, 'Projected retention fields are hidden from commercial popups.');
+assert.doesNotMatch(screen, /commercialDraftNote|Details will remain in this form until the policy or case is created/, 'Standalone draft explanatory note is removed from both popups.');
 assert.ok(screen.includes("saving?<ActivityIndicator size=\"small\""), 'Save & Close displays progress.');
 
 assert.match(screen,/Boolean\(commercialModal\)&&Boolean\(data\?\.commercialAccess\)/, 'Commercial modals stay permission gated.');
