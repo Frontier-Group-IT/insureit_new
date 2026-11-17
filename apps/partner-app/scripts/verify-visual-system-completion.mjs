@@ -266,7 +266,18 @@ for (const detailAsset of ['products.motorInsurance', 'products.healthInsurance'
 requireText(policyDetail, 'source={data.vehicle ? (manufacturerLogo || PartnerAssets.products.motorInsurance) : PartnerAssets.products.commercialInsurance}', 'Combined customer vehicle row uses the manufacturer icon or insured-risk fallback.');
 requireText(policyDetail, '<InsurerMiniInfo name={data.insurer.name} />', 'Policy overview must pass the actual insurer identity into the compact tile.');
 requireText(policyDetail, "<PartnerInsurerLogo name={name || ''}", 'Compact insurer tile must preserve insurer identity for logo artwork.');
-requireText(policyDetail, "return /^ICICI\\s+Lombard\\s+General\\b/i.test(fullName) ? 'ICICI LOMBARD GENERAL' : fullName;", 'Only ICICI Lombard insurer display label may be shortened.');
+requireText(policyDetail, 'INSURER_SHORT_LABELS.find(([pattern]) => pattern.test(fullName))', 'Known insurers are shortened through a shared display-only matcher.');
+for (const shortLabel of [
+  'ICICI Lombard', 'IFFCO-TOKIO', 'TATA AIG', 'HDFC ERGO', 'Bajaj Allianz',
+  'SBI General', 'Reliance General', 'Future Generali', 'Liberty General',
+  'Royal Sundaram', 'Chola MS', 'New India Assurance', 'United India',
+  'Oriental Insurance', 'National Insurance', 'Star Health', 'Care Health',
+  'Niva Bupa', 'Aditya Birla Health', 'ManipalCigna', 'HDFC Life',
+]) {
+  requireText(policyDetail, `'${shortLabel}'`, 'Common insurer must have concise display label: ' + shortLabel);
+}
+requireText(policyDetail, ".replace(/\\s+insurance$/i, '')", 'Unknown insurer names drop safe generic insurance suffix.');
+requireText(policyDetail, 'return compact || fullName;', 'Unknown insurer labels retain their original name if shortening would erase it.');
 requireText(policyDetail, 'styles.insurerMiniInfo', 'Insurer summary must use a compact tile.');
 requireText(policyDetail, 'styles.miniInfo, styles.insurerMiniInfo', 'Insurer tile must inherit the grey Policy Number background.');
 requireText(policyDetail, '<MiniInfo label="Policy status" value={humanize(data.policy.status || data.policy.lifecycle_status)} threeColumn />', 'Policy status must share one row with the validity dates.');
