@@ -19,7 +19,8 @@ assert.match(app,/record.status_group==='pending'\?<Section number="05"/);
 for(const key of ['policyNumber','issuanceDate','startDate','endDate','pptEndDate','nextInstallmentDate','finalPremium','sumInsured']){
   assert.ok(app.includes('issueField("'+key+'"'),'Missing issuance field '+key);
 }
-assert.match(app,/Create Policy & Close Case/);
+assert.ok(app.includes('>Create Policy</Text>'),'Pending case issuance button uses compact label');
+assert.match(app,/onPress=\{\(\)=>void submitIssue\(\)\}/,'Create Policy retains verified issuance handler');
 assert.ok(app.includes('remarkHeaderAction'), 'Pending and Rejected remarks have a separate compact action');
 assert.ok(app.includes("record.status_group==='pending'||record.status_group==='rejected'"), 'Both Pending and Rejected have the same remarks/activity layout');
 assert.ok(app.includes('accessibilityState={{expanded:activityExpanded}}'), 'Activity Status is expandable');
