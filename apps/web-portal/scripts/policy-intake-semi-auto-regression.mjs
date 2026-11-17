@@ -308,8 +308,8 @@ assert(handoff.includes("resolveMasterIntakeIdentity(admin,intake.matched_custom
 assert(handoff.includes('if(existingDraft?.draft_payload && !(verified?.fillEmptyFields))')
   && handoff.includes('.eq("intake_id",id).eq("revision",existingDraft.revision)'),
   "Existing drafts must not be overwritten; explicit blank-only refresh requires revision CAS");
-assert(handoff.includes('const customerName=verified?"":'),
-  "n8n PDF-derived insured names must never prefill onboarding customer identity");
+assert(handoff.includes('const customerName=verified?(masterIdentity?.name??"")'),
+  "Only approved customer-master identity, never the n8n PDF name, may prefill an Insured Name");
 assert(handoff.includes("const identityName=verified"),
   "Existing drafts in n8n handoff must never fall back to old OCR customer identity");
 assert(handoff.includes("mapVerifiedN8nMotorPremium(verified.premium)"),
