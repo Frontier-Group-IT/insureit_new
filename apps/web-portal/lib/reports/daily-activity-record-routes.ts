@@ -13,5 +13,8 @@ export const DAILY_ACTIVITY_RECORD_ROUTES: Readonly<Record<string,string>> = {
 export function dailyActivityRecordHref(table?:string, recordId?:string):string|null {
   if (!table || !recordId || !isValidDailyRecordId(recordId)) return null;
   const base=DAILY_ACTIVITY_RECORD_ROUTES[table];
+  // Vehicle Register opens the original capability-gated View/Edit screen.
+  // /vehicles/[id] is a separate read-only detail page; do not send report rows there.
+  if (table === "vehicles") return `${base}/${recordId}/edit`;
   return base ? `${base}/${recordId}` : null;
 }
