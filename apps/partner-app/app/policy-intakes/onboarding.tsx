@@ -1203,6 +1203,8 @@ export default function NativePolicyOnboarding(){
     <Modal transparent visible={Boolean(commercialModal)&&Boolean(data?.commercialAccess)}
       animationType="slide" onRequestClose={()=>{if(!saving)closeCommercial();}}>
       <View style={styles.scrim}>
+        <Pressable style={StyleSheet.absoluteFillObject} accessibilityLabel="Dismiss basis dropdown"
+          onPress={()=>setCommercialBasisOpen(null)}/>
         <View style={styles.commercialSheet}>
           <View style={styles.sheetTitle}>
             <View style={styles.commercialTitleGroup}>
