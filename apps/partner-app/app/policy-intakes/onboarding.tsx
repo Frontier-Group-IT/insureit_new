@@ -1,4 +1,5 @@
 import { partnerAlert } from '@/components/ui/partner-alert-provider';
+import { PartnerConfirmDialog } from '@/components/ui/partner-confirm-dialog';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Linking, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useLocalSearchParams, usePathname, useRouter } from 'expo-router';
@@ -1134,45 +1135,21 @@ export default function NativePolicyOnboarding(){
 
     </>:null}
 
-    <Modal transparent visible={Boolean(dialog)} animationType="fade"
-      onRequestClose={dismissDialog}>
-      <View style={styles.feedbackOverlay}>
-        <View style={styles.feedbackCard}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Close popup" style={styles.feedbackClose} onPress={dismissDialog}>
-            <Ionicons name="close" size={21} color="#465875"/>
-          </Pressable>
-          <View style={[styles.feedbackIcon,
-            dialog==='discard'?styles.feedbackIconWarning:
-            styles.feedbackIconError]}>
-            <Ionicons name="alert-circle-outline"
-              size={30} color={dialog==='discard'?'#DF920C':'#D33535'}/>
-          </View>
-          <Text style={styles.feedbackTitle}>
-            {dialog==='discard'?'Discard Changes?':
-             'Unable to Complete'}
-          </Text>
-          <Text style={styles.feedbackMessage}>
-            {dialog==='discard'?'Your latest changes have not been saved.':
-             dialogMessage}
-          </Text>
-          {dialog==='discard'?(
-            <View style={styles.feedbackActions}>
-              <Pressable accessibilityRole="button" style={styles.feedbackSecondary} onPress={dismissDialog}>
-                <Text style={styles.feedbackSecondaryText}>Keep Editing</Text>
-              </Pressable>
-              <Pressable accessibilityRole="button" style={styles.feedbackPrimary}
-                onPress={()=>{const destination=pendingTab;setPendingTab(null);setDialog(null);if(destination)router.navigate(destination as never);else router.back();}}>
-                <Text style={styles.feedbackPrimaryText}>Discard &amp; Leave</Text>
-              </Pressable>
-            </View>
-          ):(
-            <Pressable accessibilityRole="button" style={styles.feedbackFullButton} onPress={dismissDialog}>
-              <Text style={styles.feedbackPrimaryText}>OK</Text>
-            </Pressable>
-          )}
-        </View>
-      </View>
-    </Modal>
+    <PartnerConfirmDialog
+      visible={Boolean(dialog)}
+      title={dialog==='discard'?'Discard Changes?':'Unable to Complete'}
+      message={dialog==='discard'?'Your latest changes have not been saved.':dialogMessage}
+      kind={dialog==='discard'?'warning':'error'}
+      dismissible={!saving&&!booking&&!creatingLifeHealth}
+      onCancel={dismissDialog}
+      actions={dialog==='discard'?[
+        {label:'Keep Editing',secondary:true,onPress:dismissDialog},
+        {label:'Discard & Leave',destructive:true,onPress:()=>{
+          const destination=pendingTab;setPendingTab(null);setDialog(null);
+          if(destination)router.navigate(destination as never);else router.back();
+        }},
+      ]:[{label:'OK',onPress:dismissDialog}]}
+    />
     <Modal transparent visible={remarkOpen} animationType="fade"
       onRequestClose={()=>{if(!saving)setRemarkOpen(false);}}>
       <View style={styles.remarkOverlay}>
