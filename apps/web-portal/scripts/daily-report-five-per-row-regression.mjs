@@ -7,7 +7,15 @@ const css=read("../app/globals.css");
 const source=read("../lib/reports/daily-self-activity.ts");
 const page=read("../app/reports/(workspace)/daily/page.tsx");
 
-assert.match(panel,/data\.category \? data\.rows\.length : data\.categories\.length/,"Only populated summary or drilldown reports use viewport height");
+assert.ok(panel.includes('daily-report-panel flex min-h-[calc(100dvh-175px)]'),"All Daily Report views fill the available viewport");
+assert.ok(panel.includes('md:min-h-[calc(100dvh-135px)]'),"Desktop panel scales to available viewport");
+assert.ok(panel.includes('min-h-0 flex-1'),"Drilldown rows consume available body space");
+assert.ok(panel.includes('mt-auto flex shrink-0 items-center justify-between border-t'),"Pagination footer anchors at panel bottom");
+assert.ok(panel.includes('data.rows.length ? <table'),"Detail table is shown only with rows");
+assert.ok(panel.includes('</table> : <DailyReportEmptyState />'),"Empty detail retains pagination with centered empty state");
+assert.ok(panel.includes('flex flex-1 items-center justify-center'),"Empty summary is vertically centered");
+assert.ok(panel.includes('data.categories.length ? ('),"Summary uses full-height panel");
+assert.ok(!panel.includes('min-h-[calc(100dvh-300px)]'),"Panel height must not depend on record count");
 assert.match(panel,/aria-label="Self activity summary and register"/,"Full-height sizing applies to both modes through the shared component");
 assert.match(panel,/gridColumnsFor\(group\.items\.length\)/,"Activity cards fill the width available to each group");
 assert.doesNotMatch(panel,/h-screen|h-\[100dvh\]|overflow-y-hidden/,"Panel remains naturally scrollable when activity tables exceed the viewport");
@@ -55,7 +63,7 @@ assert.match(css,/\.reports-reference-shell:has\(\.daily-report-reference\) \.re
 assert.doesNotMatch(css,/\.reports-reference-shell:has\(\.daily-report-reference\) \.reports-reference-header::before/,"No decorative gradient is layered over the white header");
 assert.match(panel,/daily-report-activity-icon/,"Activity icons retained");
 assert.match(header,/daily-report-header-select/,"Pill-shaped period and scope filters retained");
-assert.match(panel,/data\.category && data\.rows\.length===0 \? <DailyReportEmptyState \/>/,"Empty drilldowns show illustrated empty state");
+assert.ok(panel.includes('</table> : <DailyReportEmptyState />'),"Empty drilldowns show illustrated state and retain bottom pagination");
 assert.match(panel,/<DailyReportEmptyState \/>/,"Empty summaries show illustrated empty state");
 assert.match(panel,/No activities yet/,"Empty-state title is visible");
 assert.match(panel,/Your activities will appear here once they are recorded/,"Empty-state explanation is visible");
