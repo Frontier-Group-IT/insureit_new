@@ -7,6 +7,8 @@ const EXPECTED_STORAGE_ORIGIN = "https://ilzhsfqqjyppzzvfscmh.supabase.co";
 const MAX_PDF_BYTES = 15 * 1024 * 1024;
 const SIGNED_URL_TTL_SECONDS = 120;
 const ELIGIBLE_STATUSES = new Set(["processing", "ready_for_review", "in_review", "needs_attention"]);
+const SUPPORTED_INTAKE_TYPES = new Set(["motor", "non_motor", "life", "health"]);
+// Legacy Intake rows may not have a policy_type; such rows are preview-only.
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 type IntakeRow = {
@@ -45,7 +47,8 @@ export async function createCurrentIntakePdfSignedSource(
     throw new Error("n8n_current_document_unavailable");
   }
   const intake = current.data, document = latest.data;
-  if (!ELIGIBLE_STATUSES.has(intake.status) || intake.policy_type !== "motor"
+  if (!ELIGIBLE_STATUSES.has(intake.status)
+      || (intake.policy_type !== null && !SUPPORTED_INTAKE_TYPES.has(intake.policy_type))
       || !document.is_current || intake.storage_bucket !== BUCKET
       || document.storage_bucket !== BUCKET
       || !intake.storage_path || document.storage_path !== intake.storage_path

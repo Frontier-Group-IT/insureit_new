@@ -125,6 +125,9 @@ jobs:
       - name: Verify Motor source picker and identity requirements
         run: node apps/partner-app/scripts/verify-motor-source-picker-identity.mjs
 
+      - name: Verify Policy Onboarding Lead Source and insurer autocomplete
+        run: node apps/partner-app/scripts/verify-policy-onboarding-autocomplete.mjs
+
       - name: Verify Lead Source parity and API diagnostics
         run: node apps/partner-app/scripts/verify-lead-source-portal-parity.mjs
 

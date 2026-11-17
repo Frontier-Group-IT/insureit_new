@@ -1,11 +1,12 @@
 import { useCallback, useState, type ReactNode } from 'react';
-import { ActivityIndicator, Linking, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Linking, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import * as DocumentPicker from 'expo-document-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
 import { PartnerCaseBottomNavigation } from '@/components/partner-case-bottom-navigation';
-import { getLifeHealthCase, saveLifeHealthCaseEdit, appendLifeHealthCaseRemark, listLifeHealthInsurers, issueLifeHealthPolicy, requestLifeHealthIssueApproval, verifyLifeHealthIssueApproval, operationsCaseUrl, type LifeHealthInsurer, type LifeHealthIssue, type LifeHealthCaseDetail, type LifeHealthDocument, type LifeHealthActivity } from '@/lib/life-health-cases';
+import { getLifeHealthCase, saveLifeHealthCaseEdit, appendLifeHealthCaseRemark, listLifeHealthInsurers, issueLifeHealthPolicy, requestLifeHealthIssueApproval, verifyLifeHealthIssueApproval, operationsCaseUrl, getLifeHealthDocumentUrl, mutateLifeHealthDocument, uploadLifeHealthDocument, rejectLifeHealthCaseNative, type LifeHealthInsurer, type LifeHealthIssue, type LifeHealthCaseDetail, type LifeHealthDocument, type LifeHealthActivity } from '@/lib/life-health-cases';
 import { canPartnerAccessCaseRegister } from '@/lib/partner-permissions';
 import { usePartnerSession } from '@/providers/partner-session-provider';
 
@@ -57,8 +58,15 @@ export default function LifeHealthCaseDetailScreen(){
  const [approvalOpen,setApprovalOpen]=useState(false);const [approvalId,setApprovalId]=useState('');const [approvalVerified,setApprovalVerified]=useState(false);const [approverKey,setApproverKey]=useState('');const [otp,setOtp]=useState('');const [approvalLoading,setApprovalLoading]=useState(false);
  const [saving,setSaving]=useState(false);
  const [saveError,setSaveError]=useState('');
+ const [saveSuccess,setSaveSuccess]=useState(false);
+ const [documentBusy,setDocumentBusy]=useState(false);
+ const [documentError,setDocumentError]=useState('');
+ const [rejectOpen,setRejectOpen]=useState(false);
+ const [rejectReason,setRejectReason]=useState('');
+ const [rejectBusy,setRejectBusy]=useState(false);
+ const [rejectError,setRejectError]=useState('');
  const [form,setForm]=useState<CaseEditForm|null>(null);
- const setField=(key:keyof CaseEditForm,value:string)=>setForm(prev=>prev?{...prev,[key]:value}:prev);
+ const setField=(key:keyof CaseEditForm,value:string)=>{setSaveSuccess(false);setForm(prev=>prev?{...prev,[key]:value}:prev);};
  const submitRemark=async()=>{
   if(!record||remarkSaving||!remarkDraft.trim())return;
   setRemarkError('');setRemarkSaving(true);
@@ -71,7 +79,7 @@ export default function LifeHealthCaseDetailScreen(){
  };
  const saveEdit=async()=>{
   if(!record||!form||saving)return;
-  setSaveError('');setSaving(true);
+  setSaveError('');setSaveSuccess(false);setSaving(true);
   try{
    if(record.status_group==='issued'){
     await saveLifeHealthCaseEdit({id:record.id,customerName:form.customerName,
@@ -85,9 +93,54 @@ export default function LifeHealthCaseDetailScreen(){
      paymentFrequency:form.paymentFrequency,paymentMode:form.paymentMode,
      premiumAmount:Number(form.premiumAmount.replace(/,/g,''))});
    }
-   await load();
+   await load();setSaveSuccess(true);
   }catch(cause){setSaveError(cause instanceof Error?cause.message:'Unable to save changes.');}
   finally{setSaving(false);}
+ };
+ const caseDirty=Boolean(record&&form&&JSON.stringify(form)!==JSON.stringify(initialForm(record)));
+ const confirmCancel=()=>{
+  if(saving||issuing||documentBusy||rejectBusy)return;
+  const leave=()=>router.replace('/life-health-cases');
+  if(caseDirty)Alert.alert('Discard changes?','Unsaved case edits will be lost.',[
+   {text:'Keep Editing',style:'cancel'},{text:'Discard',style:'destructive',onPress:leave}
+  ]);else leave();
+ };
+ const openDocument=async(doc:LifeHealthDocument)=>{
+  if(!record||documentBusy)return;
+  setDocumentError('');setDocumentBusy(true);
+  try{const url=await getLifeHealthDocumentUrl(record.id,doc.id);await Linking.openURL(url);}
+  catch(cause){setDocumentError(cause instanceof Error?cause.message:'Could not open document.');}
+  finally{setDocumentBusy(false);}
+ };
+ const pickDocument=async(type:string)=>{
+  if(!record||documentBusy||record.status_group!=='pending')return;
+  try{
+   const picked=await DocumentPicker.getDocumentAsync({type:['application/pdf','image/jpeg','image/png','image/webp'],copyToCacheDirectory:true,multiple:false});
+   if(picked.canceled||!picked.assets?.[0])return;
+   setDocumentError('');setDocumentBusy(true);
+   await uploadLifeHealthDocument(record.id,type,picked.assets[0]);
+   await load();
+  }catch(cause){setDocumentError(cause instanceof Error?cause.message:'Document upload failed.');}
+  finally{setDocumentBusy(false);}
+ };
+ const deleteDocument=(doc:LifeHealthDocument)=>{
+  if(!record||record.status_group!=='pending'||documentBusy)return;
+  Alert.alert('Delete document?','Permanently delete '+doc.file_name+'?',[
+   {text:'Cancel',style:'cancel'},
+   {text:'Delete',style:'destructive',onPress:()=>{void (async()=>{
+    setDocumentError('');setDocumentBusy(true);
+    try{await mutateLifeHealthDocument(record.id,doc.id,'delete_document');await load();}
+    catch(cause){setDocumentError(cause instanceof Error?cause.message:'Document delete failed.');}
+    finally{setDocumentBusy(false);}
+   })();}}
+  ]);
+ };
+ const submitRejection=async()=>{
+  if(!record||rejectBusy||!rejectReason.trim())return;
+  setRejectError('');setRejectBusy(true);
+  try{await rejectLifeHealthCaseNative(record.id,rejectReason);setRejectOpen(false);setRejectReason('');await load();}
+  catch(cause){setRejectError(cause instanceof Error?cause.message:'Unable to reject case.');}
+  finally{setRejectBusy(false);}
  };
  const load=useCallback(async()=>{
    if(!id)return;
@@ -305,15 +358,7 @@ export default function LifeHealthCaseDetailScreen(){
           onPress={()=>{setRemarkError('');setRemarkOpen(true);}} style={styles.remarkFullWidth}>
           <Ionicons name="chatbubble-ellipses-outline" size={17} color="#FFFFFF"/><Text style={styles.remarkButtonText}>Add Remark</Text>
         </Pressable>:null}
-        {form&&record.status_group!=='rejected'&&JSON.stringify(form)!==JSON.stringify(initialForm(record))?
-          <View style={styles.saveInline}>
-            {saveError?<Text style={styles.saveError}>{saveError}</Text>:null}
-            <Pressable accessibilityRole="button" accessibilityLabel="Save case changes" disabled={saving}
-              onPress={()=>void saveEdit()} style={styles.portalButton}>
-              {saving?<ActivityIndicator color="#FFFFFF"/>:<Ionicons name="save-outline" size={17} color="#FFFFFF"/>}
-              <Text style={styles.portalButtonText}>{saving?'Saving…':'Save Changes'}</Text>
-            </Pressable>
-          </View>:saveError?<Text style={styles.saveError}>{saveError}</Text>:null}
+
       </Section>
 
       {record.status_group==='pending'?<Section number="05" title="Mark Policy Issued">
@@ -328,25 +373,45 @@ export default function LifeHealthCaseDetailScreen(){
           {issueField("sumInsured","Sum assured / insured")}
         </View>
         {issueError?<Text style={styles.saveError}>{issueError}</Text>:null}
-        <Pressable accessibilityRole="button" accessibilityLabel="Create Policy and Close Case"
-          onPress={()=>void submitIssue()} disabled={issuing} style={[styles.portalButton,issuing&&{opacity:0.6}]}>
-          {issuing?<ActivityIndicator color="#FFFFFF"/>:<Ionicons name="shield-checkmark-outline" size={18} color="#FFFFFF"/>}
-          <Text style={styles.portalButtonText}>{issuing?'Creating policy…':'Create Policy & Close Case'}</Text>
-        </Pressable>
+
       </Section>:null}
       {record.policy_no?<Section number="05" title="Issued policy">
         <View style={styles.grid}><Field label="Policy number" value={record.policy_no} wide/></View>
       </Section>:null}
-      {documents.length>0?<Section number="06" title="Documents">
+      <Section number="06" title="Documents">
         <View style={styles.documentList}>
           {documents.map(doc=><View key={doc.id} style={styles.document}>
-            <Ionicons name="document-attach-outline" size={18} color={navy}/>
-            <Text style={styles.documentName} selectable>{doc.file_name}</Text>
+            <Pressable accessibilityRole="button" accessibilityLabel={'Open '+doc.file_name} onPress={()=>void openDocument(doc)} disabled={documentBusy} style={styles.documentOpen}>
+              <Ionicons name="document-text-outline" size={17} color="#11734B"/>
+              <Text style={styles.documentName} numberOfLines={1}>{doc.file_name}</Text>
+            </Pressable>
+            {record.status_group==='pending'?<>
+              <Pressable accessibilityRole="button" accessibilityLabel={'Delete '+doc.file_name} onPress={()=>deleteDocument(doc)} disabled={documentBusy} style={styles.documentIconButton}>
+                <Ionicons name="trash-outline" size={17} color="#CE3541"/>
+              </Pressable>
+              <Pressable accessibilityRole="button" accessibilityLabel={'Replace '+doc.file_name} onPress={()=>void pickDocument(doc.document_type)} disabled={documentBusy} style={styles.documentIconButton}>
+                <Ionicons name="refresh-outline" size={17} color={navy}/>
+              </Pressable>
+            </>:null}
           </View>)}
+          {record.status_group==='pending'?<View style={styles.documentUploadGrid}>
+            {([
+              ['policy_copy','Policy Copy'],['proposal_form','Proposal Form'],
+              ['benefit_illustration','Illustration Form'],['premium_receipt','Payment Receipt'],['other_document','Other Form']
+            ] as const).filter(([type])=>!documents.some(doc=>doc.document_type===type)).map(([type,label])=>
+              <Pressable key={type} accessibilityRole="button" accessibilityLabel={'Add '+label}
+                onPress={()=>void pickDocument(type)} disabled={documentBusy} style={styles.uploadButton}>
+                <Ionicons name="cloud-upload-outline" size={15} color="#24569A"/>
+                <Text style={styles.uploadText}>Add {label}</Text>
+              </Pressable>)}
+          </View>:null}
+          {documentBusy?<ActivityIndicator color={navy}/>:null}
+          {documentError?<Text style={styles.saveError}>{documentError}</Text>:null}
+          {!documents.length&&record.status_group!=='pending'?<Text style={styles.paragraph}>No documents recorded.</Text>:null}
         </View>
-      </Section>:null}
+      </Section>
 
-      <Section number="07" title="Activity status & remarks">
+      <View style={styles.activityCard}>
         <View style={styles.tabs}>
           <Pressable accessibilityRole="tab" accessibilityState={{selected:infoTab==='activity'}} style={[styles.tab,infoTab==='activity'&&styles.tabActive]} onPress={()=>setInfoTab('activity')}>
             <Text style={[styles.tabText,infoTab==='activity'&&styles.tabTextActive]}>Activity Status</Text>
@@ -357,15 +422,58 @@ export default function LifeHealthCaseDetailScreen(){
         </View>
         {infoTab==='activity'?(activities.length?activities.map(activity=><View key={activity.id} style={styles.activity}>
           <Text style={styles.activityTitle}>{activity.action.replace(/_/g,' ')}</Text>
-          <Text style={styles.activityDate}>{activityDate(activity.created_at)}</Text>
+          {activity.createdBy?<Text style={styles.activityDate}>By: {activity.createdBy}</Text>:null}
+          {activity.changes?.map((change,index)=><Text key={index} style={styles.activityDate}>• {change}</Text>)}
+          <Text style={styles.activityDate}>At: {activityDate(activity.created_at)}</Text>
         </View>):<Text style={styles.paragraph}>No recorded case activity available.</Text>):
          <View style={{gap:10}}>
           <Text style={styles.paragraph} selectable>{record.remarks?.trim()||'No remarks added yet.'}</Text>
 
          </View>}
-      </Section>
+      </View>
+      {saveError?<Text style={styles.saveError}>{saveError}</Text>:null}
+      {saveSuccess?<Text style={styles.saveSuccess}>Case details saved successfully.</Text>:null}
+      {record.status_group==='pending'?<View style={styles.caseActions}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Cancel case edits" onPress={confirmCancel}
+          disabled={saving||issuing||documentBusy||rejectBusy} style={[styles.caseAction,styles.actionCancel]}>
+          <Ionicons name="close" size={15} color={navy}/><Text style={styles.cancelActionText}>Cancel</Text>
+        </Pressable>
+        <Pressable accessibilityRole="button" accessibilityLabel="Reject case" onPress={()=>{setRejectError('');setRejectOpen(true);}}
+          disabled={saving||issuing||documentBusy||rejectBusy} style={[styles.caseAction,styles.actionReject]}>
+          <Text style={styles.rejectActionText}>Reject</Text>
+        </Pressable>
+        <Pressable accessibilityRole="button" accessibilityLabel="Save Case Details" onPress={()=>void saveEdit()}
+          disabled={saving||issuing||documentBusy||rejectBusy||!caseDirty} style={[styles.caseAction,styles.actionSave,!caseDirty&&styles.disabledAction]}>
+          {saving?<ActivityIndicator size="small" color={navy}/>:<Ionicons name="save-outline" size={15} color={navy}/>}
+          <Text style={styles.saveActionText}>Save Case Details</Text>
+        </Pressable>
+        <Pressable accessibilityRole="button" accessibilityLabel="Create Policy and Close Case" onPress={()=>void submitIssue()}
+          disabled={saving||issuing||documentBusy||rejectBusy} style={[styles.caseAction,styles.actionIssue]}>
+          {issuing?<ActivityIndicator size="small" color="#FFFFFF"/>:<Ionicons name="shield-checkmark-outline" size={15} color="#FFFFFF"/>}
+          <Text style={styles.issueActionText}>Create Policy & Close Case</Text>
+        </Pressable>
+      </View>:null}
 
     </View>:null}
+   <Modal visible={rejectOpen} transparent animationType="fade" onRequestClose={()=>{if(!rejectBusy)setRejectOpen(false);}}>
+     <View style={styles.editorBackdrop}><View style={styles.remarkEditor}>
+       <Text style={styles.editorTitle}>Reject Life / Health Case</Text>
+       <Text style={styles.editorHint}>Enter a reason. Rejection closes this case without deleting its documents or customer.</Text>
+       <TextInput accessibilityLabel="Rejection reason" multiline maxLength={2000} value={rejectReason}
+         onChangeText={setRejectReason} placeholder="Reason for rejection"
+         style={[styles.editInput,{minHeight:110,textAlignVertical:'top'}]}/>
+       {rejectError?<Text style={styles.saveError}>{rejectError}</Text>:null}
+       <View style={styles.editorActions}>
+         <Pressable accessibilityRole="button" disabled={rejectBusy} onPress={()=>setRejectOpen(false)} style={styles.cancelButton}>
+           <Text style={styles.cancelText}>Cancel</Text>
+         </Pressable>
+         <Pressable accessibilityRole="button" disabled={rejectBusy||!rejectReason.trim()} onPress={()=>void submitRejection()}
+           style={[styles.saveButton,{backgroundColor:'#B02E3A'},(rejectBusy||!rejectReason.trim())&&{opacity:0.5}]}>
+           <Text style={styles.saveText}>{rejectBusy?'Rejecting…':'Confirm Reject'}</Text>
+         </Pressable>
+       </View>
+     </View></View>
+   </Modal>
    <Modal visible={Boolean(picker)} transparent animationType="fade" onRequestClose={()=>setPicker(null)}>
      <View style={styles.editorBackdrop}><View style={styles.remarkEditor}>
        <View style={styles.editorHeader}>
@@ -532,8 +640,26 @@ const styles=StyleSheet.create({
   fieldValue:{fontSize:11,color:'#213653',fontWeight:'600',lineHeight:16,flexShrink:1},
   metaRow:{flexDirection:'row',flexWrap:'wrap',columnGap:7,rowGap:3,marginTop:6},
   metaText:{fontSize:9,fontWeight:'600',color:'#4C637F',flexShrink:1},
-  documentList:{gap:0},
-  document:{flexDirection:'row',alignItems:'center',gap:9,paddingVertical:10,borderBottomWidth:1,borderBottomColor:'#ECF0F6'},
+  documentList:{gap:8},
+  documentOpen:{flex:1,minWidth:0,flexDirection:'row',alignItems:'center',gap:7,paddingHorizontal:8,minHeight:40},
+  documentIconButton:{width:38,minHeight:40,justifyContent:'center',alignItems:'center',borderLeftWidth:1,borderLeftColor:'#C9E8D8'},
+  documentUploadGrid:{flexDirection:'row',flexWrap:'wrap',gap:7},
+  uploadButton:{borderRadius:9,borderWidth:1,borderColor:'#CEDAEC',paddingHorizontal:10,paddingVertical:10,flexDirection:'row',alignItems:'center',gap:6,backgroundColor:'#FFFFFF'},
+  uploadText:{fontSize:10,color:'#24569A',fontWeight:'700'},
+  activityCard:{backgroundColor:'#FFFFFF',borderRadius:14,borderWidth:1,borderColor:'#D9E2F0',padding:12,gap:10},
+  saveSuccess:{fontSize:11,color:'#166B4B',fontWeight:'700'},
+  caseActions:{flexDirection:'row',alignItems:'stretch',gap:5,backgroundColor:'#FFFFFF',padding:8,borderRadius:13,borderWidth:1,borderColor:'#D9E2F0'},
+  caseAction:{minHeight:48,borderRadius:10,alignItems:'center',justifyContent:'center',flexDirection:'row',gap:4,paddingHorizontal:3},
+  actionCancel:{flex:0.76,borderColor:'#C8D5E6',borderWidth:1,backgroundColor:'#FFFFFF'},
+  actionReject:{flex:0.65,borderColor:'#F9C8CA',borderWidth:1,backgroundColor:'#FFF3F3'},
+  actionSave:{flex:1.2,borderColor:'#BDD4F4',borderWidth:1,backgroundColor:'#EAF2FF'},
+  actionIssue:{flex:1.42,backgroundColor:'#103C74'},
+  cancelActionText:{fontSize:9,fontWeight:'800',color:'#071E49'},
+  rejectActionText:{fontSize:9,fontWeight:'800',color:'#C32B37'},
+  saveActionText:{fontSize:9,fontWeight:'800',color:'#17365D',flexShrink:1,textAlign:'center'},
+  issueActionText:{fontSize:9,fontWeight:'800',color:'#FFFFFF',flexShrink:1,textAlign:'center'},
+  disabledAction:{opacity:0.56},
+  document:{flexDirection:'row',alignItems:'center',gap:1,minHeight:42,backgroundColor:'#E9FAF0',borderWidth:1,borderColor:'#A6E1C5',borderRadius:9,overflow:'hidden'},
   documentName:{flex:1,fontSize:11,fontWeight:'600',color:navy},
   tabs:{flexDirection:'row',alignItems:'center',gap:6},
   tab:{paddingHorizontal:12,paddingVertical:9,borderRadius:9,backgroundColor:'#EDF3FB'},

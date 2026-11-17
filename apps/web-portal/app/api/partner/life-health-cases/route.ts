@@ -16,6 +16,10 @@ import { getOperationsHeadDownlinePolicyScope, operationsHeadVisiblePolicyFilter
 // their server-action validation can be shared with bearer-token requests.
 export const dynamic = "force-dynamic";
 const headers = { "Cache-Control": "private, no-store" };
+const DOCUMENT_BUCKET="policy-documents";
+const DOC_TYPES=new Set(["proposal_form","benefit_illustration","premium_receipt","policy_copy","kyc","other_document"]);
+const DOC_MIMES=new Set(["application/pdf","image/jpeg","image/png","image/webp"]);
+const validDocPath=(caseId:string,bucket:string,path:string)=>bucket===DOCUMENT_BUCKET&&path.startsWith("life-health-cases/"+caseId+"/")&&!path.includes("..");
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 type Profile = { id: string; role: string; full_name: string | null; employee_id: string | null; is_active: boolean };
 type CaseRow = {
@@ -82,17 +86,39 @@ export async function GET(request:Request) {
      const {data:found,error} = await lookup.maybeSingle<CaseRow>();
      if (error) return respond({ok:false,error:"Unable to load case."},500);
      if (!found) return respond({ok:false,error:"Case not found."},404);
+     const documentId=url.searchParams.get("documentId");
+     if(documentId!==null){
+       if(!uuid.test(documentId))return respond({ok:false,error:"Invalid document reference."},400);
+       const {data:doc,error:docError}=await admin.from("life_health_case_documents")
+         .select("storage_bucket,storage_path").eq("case_id",id).eq("id",documentId).maybeSingle();
+       if(docError||!doc||!validDocPath(id,doc.storage_bucket,doc.storage_path))
+         return respond({ok:false,error:"Document not found."},404);
+       const {data:signed,error:signError}=await admin.storage.from(DOCUMENT_BUCKET).createSignedUrl(doc.storage_path,60);
+       if(signError||!signed?.signedUrl)return respond({ok:false,error:"Unable to open this document."},503);
+       return respond({ok:true,url:signed.signedUrl});
+     }
      const [customer,insurer,documents,linkedPolicy,activity] = await Promise.all([
        admin.from("customers").select("id,contact_name,company_name,phone,address,address_street").eq("id",found.customer_id).maybeSingle(),
        admin.from("insurance_companies").select("id,name").eq("id",found.insurance_company_id).maybeSingle(),
        admin.from("life_health_case_documents").select("id,document_type,file_name,created_at,uploaded_by").eq("case_id",id).order("created_at",{ascending:false}),
        found.final_policy_id ? admin.from("policies").select("id,policy_no,policy_code").eq("id",found.final_policy_id).maybeSingle() : Promise.resolve({data:null,error:null}),
-       admin.from("audit_logs").select("id,created_at,action").eq("table_name","life_health_cases").eq("record_id",id).in("action",["life_health_case_edited","life_health_case_remark_added","life_health_issued_customer_edited"]).order("created_at",{ascending:false}).limit(100),
+       admin.from("audit_logs").select("id,created_at,action,actor_id,new_data").eq("table_name","life_health_cases").eq("record_id",id).in("action",["life_health_case_edited","life_health_case_remark_added","life_health_issued_customer_edited"]).order("created_at",{ascending:false}).limit(100),
      ]);
      if ([customer,insurer,documents,linkedPolicy,activity].some(result => result.error))
        return respond({ok:false,error:"Case details are temporarily unavailable."},500);
      const detail = found.details && typeof found.details === "object" && !Array.isArray(found.details) ? found.details : {};
      const rejection = detail.rejection && typeof detail.rejection === "object" && !Array.isArray(detail.rejection) ? detail.rejection as Record<string,unknown> : {};
+     const actorIds=[...new Set([
+       found.created_by,found.converted_by,
+       ...(documents.data??[]).map(doc=>doc.uploaded_by),
+       ...(activity.data??[]).map(entry=>entry.actor_id)
+     ].filter((value):value is string=>typeof value==="string"&&uuid.test(value)))];
+     const actorNames=new Map<string,string>();
+     if(actorIds.length){
+       const {data:actors,error:actorError}=await admin.from("profiles").select("id,full_name").in("id",actorIds);
+       if(!actorError)for(const actor of actors??[])actorNames.set(actor.id,actor.full_name?.trim()||"Authorized user");
+     }
+     const by=(id:string|null|undefined)=>id?actorNames.get(id)||"Authorized user":"Not recorded";
      // Do not send commercial terms, unrelated internal metadata, or raw audit payloads.
      const {details:ignoredDetails,...safeCase} = found;
      void ignoredDetails;
@@ -105,11 +131,12 @@ export async function GET(request:Request) {
        policy_no:linkedPolicy.data?.policy_no || null,
        rejection_reason:typeof rejection.reason === "string" ? rejection.reason.slice(0,2000) : "",
      },documents:documents.data??[],activities:[
-       {id:`case-${found.id}`,action:"Case Created",created_at:found.created_at},
-       ...(documents.data??[]).map(doc=>({id:`document-${doc.id}`,action:doc.document_type==="proposal_form"?"Proposal Form Uploaded":doc.document_type==="kyc"?"KYC Uploaded":doc.document_type==="policy_copy"?"Policy Document Uploaded":"Document Uploaded",created_at:doc.created_at})),
-       ...(activity.data??[]).map(entry=>({id:`audit-${entry.id}`,action:entry.action==="life_health_case_remark_added"?"Remark Added":entry.action==="life_health_issued_customer_edited"?"Customer Details Updated":"Case Details Updated",created_at:entry.created_at})),
-       ...(found.converted_at?[{id:`converted-${found.id}`,action:"Policy Created & Case Closed",created_at:found.converted_at}]:[]),
-       ...(typeof rejection.rejected_at==="string" && !Number.isNaN(Date.parse(rejection.rejected_at))?[{id:`rejected-${found.id}`,action:"Case Rejected",created_at:rejection.rejected_at}]:[]),
+       {id:`case-${found.id}`,action:"Case Created",created_at:found.created_at,createdBy:by(found.created_by),changes:[]},
+       ...(documents.data??[]).map(doc=>({id:`document-${doc.id}`,action:doc.document_type==="proposal_form"?"Proposal Form Uploaded":doc.document_type==="kyc"?"KYC Uploaded":doc.document_type==="policy_copy"?"Policy Document Uploaded":"Document Uploaded",created_at:doc.created_at,createdBy:by(doc.uploaded_by),changes:[]})),
+       ...(activity.data??[]).map(entry=>({id:`audit-${entry.id}`,action:entry.action==="life_health_case_remark_added"?"Remark Added":entry.action==="life_health_issued_customer_edited"?"Customer Details Updated":"Case Details Updated",created_at:entry.created_at,createdBy:by(entry.actor_id),changes:Array.isArray(entry.new_data?.changed_fields)
+         ?entry.new_data.changed_fields.filter((value:unknown):value is string=>typeof value==="string").slice(0,12).map((value:string)=>value.slice(0,160)):[]})),
+       ...(found.converted_at?[{id:`converted-${found.id}`,action:"Policy Created & Case Closed",created_at:found.converted_at,createdBy:by(found.converted_by),changes:[]}]:[]),
+       ...(typeof rejection.rejected_at==="string" && !Number.isNaN(Date.parse(rejection.rejected_at))?[{id:`rejected-${found.id}`,action:"Case Rejected",created_at:rejection.rejected_at,createdBy:by(typeof rejection.rejected_by==="string"?rejection.rejected_by:null),changes:[]}]:[]),
      ].sort((a,b)=>Date.parse(b.created_at)-Date.parse(a.created_at))});
    }
    const status = url.searchParams.get("status") || "pending";
@@ -168,6 +195,39 @@ export async function POST(request: Request) {
   const actor=await authorizedEmployee(request);
   if(!actor)return respond({ok:false,error:"Case Register editing is unavailable for this account."},403);
   const {profile,admin}=actor;
+  if((request.headers.get("content-type")??"").startsWith("multipart/form-data")){
+    const form=await request.formData().catch(()=>null);
+    const id=String(form?.get("id")??""),type=String(form?.get("documentType")??"");
+    const file=form?.get("file");
+    if(!uuid.test(id)||!DOC_TYPES.has(type)||!(file instanceof File))return respond({ok:false,error:"Invalid document submission."},400);
+    if(file.size<=0||file.size>4*1024*1024||!DOC_MIMES.has(file.type))
+      return respond({ok:false,error:"Upload PDF, JPG, PNG or WebP, maximum 4 MB."},400);
+    const {data:caseRow,error:caseError}=await admin.from("life_health_cases").select("status,final_policy_id").eq("id",id).maybeSingle();
+    if(caseError||!caseRow)return respond({ok:false,error:"Case not found."},404);
+    if(caseRow.final_policy_id||caseRow.status==="rejected")return respond({ok:false,error:"Closed cases cannot accept uploads."},409);
+    if(profile.role==="operations_head_life"){
+      if(!(await canAccessOperationsHeadCase(profile.id,id)))return respond({ok:false,error:"Case outside your scope."},403);
+    }else if(!(await hasEffectiveCapability(profile,"create_policies","edit")))
+      return respond({ok:false,error:"Upload permission is required."},403);
+    const name=(file.name||"document").replace(/[^a-zA-Z0-9._-]/g,"-").slice(0,140)||"document";
+    const path="life-health-cases/"+id+"/"+type+"/"+crypto.randomUUID()+"-"+name;
+    const {error:storageError}=await admin.storage.from(DOCUMENT_BUCKET).upload(path,Buffer.from(await file.arrayBuffer()),{contentType:file.type,upsert:false});
+    if(storageError)return respond({ok:false,error:"Document upload failed."},503);
+    const {data:old,error:lookupError}=await admin.from("life_health_case_documents")
+      .select("id,storage_bucket,storage_path").eq("case_id",id).eq("document_type",type).maybeSingle();
+    if(lookupError){await admin.storage.from(DOCUMENT_BUCKET).remove([path]);return respond({ok:false,error:"Document lookup failed."},503);}
+    const values={file_name:file.name,storage_bucket:DOCUMENT_BUCKET,storage_path:path,mime_type:file.type,file_size:file.size,uploaded_by:profile.id,updated_at:new Date().toISOString()};
+    const write=old
+      ?await admin.from("life_health_case_documents").update(values).eq("case_id",id).eq("id",old.id)
+      :await admin.from("life_health_case_documents").insert({case_id:id,document_type:type,...values});
+    if(write.error){await admin.storage.from(DOCUMENT_BUCKET).remove([path]);return respond({ok:false,error:"Document record update failed."},503);}
+    if(old&&validDocPath(id,old.storage_bucket,old.storage_path)&&old.storage_path!==path){
+      const {error:cleanupError}=await admin.storage.from(DOCUMENT_BUCKET).remove([old.storage_path]);
+      if(cleanupError)console.error("Prior document cleanup failed",{caseId:id,type});
+    }
+    await recordDailyWorkflowActivity(admin,{actorId:profile.id,table:"life_health_cases",recordId:id,action:old?"life_health_case_document_replaced":"life_health_case_document_uploaded"});
+    return respond({ok:true});
+  }
   const input=await request.json().catch(()=>null) as Record<string,unknown>|null;
   const id=typeof input?.id==="string"?input.id:"";
   if(!uuid.test(id))return respond({ok:false,error:"Invalid case reference."},400);
@@ -175,6 +235,46 @@ export async function POST(request: Request) {
    .select("id,status,final_policy_id,customer_id,insurance_company_id,sourcing_date,remarks,product_name,proposal_number,premium_paying_term,policy_duration,payment_frequency,payment_mode,premium_amount,updated_at,intermediary_code")
    .eq("id",id).maybeSingle();
   if(loadError||!row)return respond({ok:false,error:"Case not found."},404);
+  if(input?.operation==="delete_document"||input?.operation==="reject_case"){
+    if(row.final_policy_id||row.status==="rejected")return respond({ok:false,error:"Only pending cases can be modified."},409);
+    if(profile.role==="operations_head_life"){
+      if(!(await canAccessOperationsHeadCase(profile.id,id)))return respond({ok:false,error:"Case outside your scope."},403);
+    }else if(!(await hasEffectiveCapability(profile,"create_policies","edit")))
+      return respond({ok:false,error:"Case modification permission is required."},403);
+    if(input.operation==="delete_document"){
+      const documentId=typeof input.documentId==="string"?input.documentId:"";
+      if(!uuid.test(documentId))return respond({ok:false,error:"Invalid document reference."},400);
+      const {data:doc,error:docError}=await admin.from("life_health_case_documents")
+        .select("id,storage_bucket,storage_path").eq("case_id",id).eq("id",documentId).maybeSingle();
+      if(docError||!doc||!validDocPath(id,doc.storage_bucket,doc.storage_path))
+        return respond({ok:false,error:"Document not found."},404);
+      const {error:storageError}=await admin.storage.from(DOCUMENT_BUCKET).remove([doc.storage_path]);
+      if(storageError)return respond({ok:false,error:"Document could not be deleted from storage."},503);
+      const {error:deleteError}=await admin.from("life_health_case_documents").delete().eq("case_id",id).eq("id",documentId);
+      if(deleteError)return respond({ok:false,error:"File removed but record cleanup failed. Contact support."},503);
+      await recordDailyWorkflowActivity(admin,{actorId:profile.id,table:"life_health_cases",recordId:id,action:"life_health_case_document_deleted"});
+      return respond({ok:true});
+    }
+    if(row.status!=="awaiting_policy"&&row.status!=="draft")return respond({ok:false,error:"Only pending cases can be rejected."},409);
+    const reason=typeof input.reason==="string"?input.reason.trim().replace(/\s+/g," "):"";
+    if(!reason||reason.length>2000)return respond({ok:false,error:"Enter a rejection reason up to 2,000 characters."},400);
+    const {data:current,error:currentError}=await admin.from("life_health_cases")
+      .select("status,final_policy_id,remarks,details,updated_at").eq("id",id).maybeSingle();
+    if(currentError||!current||current.final_policy_id||!["awaiting_policy","draft"].includes(current.status))
+      return respond({ok:false,error:"Case changed. Reload and retry."},409);
+    const now=new Date().toISOString();
+    const stamp=new Intl.DateTimeFormat("en-IN",{timeZone:"Asia/Kolkata",day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit",hour12:true}).format(new Date());
+    const remarks=[current.remarks?.trim(),"["+stamp+"] Case rejected: "+reason].filter(Boolean).join("\n\n");
+    if(remarks.length>50000)return respond({ok:false,error:"Remarks history is full."},409);
+    const details={...(current.details&&typeof current.details==="object"&&!Array.isArray(current.details)?current.details:{}),rejection:{reason,rejected_at:now,rejected_by:profile.id}};
+    let update=admin.from("life_health_cases").update({status:"rejected",remarks,details,updated_at:now})
+      .eq("id",id).eq("status",current.status).eq("updated_at",current.updated_at).is("final_policy_id",null);
+    update=current.remarks===null?update.is("remarks",null):update.eq("remarks",current.remarks);
+    const {data:saved,error:saveError}=await update.select("id").maybeSingle();
+    if(saveError||!saved)return respond({ok:false,error:"Case changed. Reload before rejecting."},409);
+    await recordDailyWorkflowActivity(admin,{actorId:profile.id,table:"life_health_cases",recordId:id,action:"life_health_case_rejected"});
+    return respond({ok:true});
+  }
   // Strict actor-and-case-scoped issuance using the canonical Operations engine.
   const issueAction=["issue_case","issue_approval_request","issue_approval_verify"].includes(String(input?.operation??""));
   if(issueAction){

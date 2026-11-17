@@ -74,8 +74,8 @@ export function DailySelfActivityPanel({data,linkFor,reportMode="self",canViewAl
     {name:"Other", items:data.categories.filter(item=>!item.name.startsWith("Customer ")&&!item.name.startsWith("Vehicle ")&&!item.name.startsWith("Policy ")&&item.name!=="Claims"&&!item.name.startsWith("Claim "))},
   ].filter(group=>group.items.length>0);
   return (
-    <section className={`daily-report-panel ${(data.category ? data.rows.length : data.categories.length) ? "min-h-[calc(100dvh-300px)]" : ""} w-full overflow-hidden rounded-xl border border-[#dce4ef] bg-white shadow-sm`} aria-label="Self activity summary and register">
-      <div className="daily-report-panel-title flex flex-wrap items-center justify-between gap-3 border-b border-[#e4e9f1] px-4 py-3">
+    <section className="daily-report-panel flex min-h-[calc(100dvh-175px)] w-full flex-col overflow-hidden rounded-xl border border-[#dce4ef] bg-white shadow-sm md:min-h-[calc(100dvh-135px)]" aria-label="Self activity summary and register">
+      <div className="daily-report-panel-title flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-[#e4e9f1] px-4 py-3">
         <div className="flex min-w-0 flex-wrap items-center gap-3">
           <h3 className="flex items-center gap-2 text-[12px] font-bold text-[#17365D]"><BarChart3 size={19} strokeWidth={2.1} aria-hidden="true"/>
             {data.category ? `${data.category} (${data.selfName})` : (reportMode==="self" ? "My Activity Summary" : "Activity Summary")}
@@ -104,9 +104,9 @@ export function DailySelfActivityPanel({data,linkFor,reportMode="self",canViewAl
           )}
         </div>
       ) : null}
-      {data.category && data.rows.length===0 ? <DailyReportEmptyState /> : !data.category ? (
+      {!data.category ? (
         data.categories.length ? (
-          <div className="daily-report-groups space-y-4 p-3">
+          <div className="daily-report-groups flex-1 space-y-4 p-3">
             {categoryGroups.map(group=>(
               <section key={group.name} data-activity-group={group.name.toLowerCase()} className="daily-report-category" aria-label={`${group.name} activities`}>
                 <h4 className="daily-report-category-heading mb-2 px-1 text-[10px] font-bold uppercase tracking-wide text-[#61748E]">{group.name==="Claims"?"Claim":group.name}</h4>
@@ -123,11 +123,11 @@ export function DailySelfActivityPanel({data,linkFor,reportMode="self",canViewAl
               </section>
             ))}
           </div>
-        ) : <DailyReportEmptyState />
+        ) : <div className="flex flex-1 items-center justify-center"><DailyReportEmptyState /></div>
       ) : (
         <>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
+          <div className={`min-h-0 flex-1 ${data.rows.length ? "overflow-x-auto" : "flex items-center justify-center"}`}>
+             {data.rows.length ? <table className="w-full text-left">
               <thead className="bg-[#f7f9fc] text-[10px] font-extrabold uppercase tracking-wide text-[#243752]">
                 <tr><th className="px-4 py-3">Activity</th>
                   {isCustomerActivity ? (
@@ -163,9 +163,9 @@ export function DailySelfActivityPanel({data,linkFor,reportMode="self",canViewAl
                   <th className="px-3 py-3">Status</th></tr>
               </thead>
               <DailyActivityHistoryRows rows={data.rows} isCustomerActivity={isCustomerActivity} isClaimActivity={isClaimActivity} vehicleMode={vehicleMode} isOtherActivity={isOtherActivity} />
-            </table>
+            </table> : <DailyReportEmptyState />}
           </div>
-          <div className="flex items-center justify-between border-t border-[#e4e9f1] px-4 py-3 text-[10px] text-[#66758b]">
+          <div className="mt-auto flex shrink-0 items-center justify-between border-t border-[#e4e9f1] px-4 py-3 text-[10px] text-[#66758b]">
             <span>Page {data.page} · 30 per page</span>
             <div className="flex gap-2">
               <Link prefetch={false} aria-disabled={data.page<=1} href={data.page<=1?"#":linkFor({page:String(data.page-1)})}

@@ -9,7 +9,7 @@ import { loadPolicyIntakeDuplicateMatches } from "@/lib/policy-intake-duplicate"
 import { buildPolicyOcrOnboardingUpdate } from "@/lib/policy-ocr-onboarding-apply";
 import { policyDateDecision } from "@/lib/policy-date-rule";
 import { checkSemiAutoReadiness, type SemiAutoIssue } from "@/lib/policy-intake-semi-auto";
-import { previewSemiAutoN8nExtraction, applySemiAutoN8nExtraction, type SemiAutoN8nResult } from "@/lib/policy-intake-semi-auto-n8n";
+import { isN8nWorkbenchPrimary, previewSemiAutoN8nExtraction, applySemiAutoN8nExtraction, type SemiAutoN8nResult } from "@/lib/policy-intake-semi-auto-n8n";
 export type { SemiAutoN8nResult } from "@/lib/policy-intake-semi-auto-n8n";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import type { PolicyIntakeOcrField } from "@/lib/policy-intake-ocr-service";
@@ -178,6 +178,11 @@ async function inspectIntake(id: string): Promise<FieldResult> {
 }
 
 export async function checkSemiAutoIntake(id: string): Promise<SemiAutoActionResult> {
+  if (isN8nWorkbenchPrimary()) {
+    await requireDevelopmentPolicyOperator(id);
+    return { ok: false, ready: false, issues: [issue("n8n processing",
+      "This AI workbench uses n8n as its only extraction engine. Run the n8n processor; legacy OCR cannot authorize booking here.")] };
+  }
   const inspected = await inspectIntake(id);
   return { ok: inspected.ok, ready: inspected.ok && inspected.issues.length === 0, issues: inspected.issues };
 }
@@ -215,6 +220,8 @@ function payloadFromDraft(d: PolicyIntakeDraft, id: string, revision: number, ma
 
 export async function bookSemiAutoIntake(id: string, confirmed: boolean): Promise<SemiAutoActionResult> {
   await requireDevelopmentPolicyOperator(id);
+  if (isN8nWorkbenchPrimary()) return { ok: false, ready: false, issues: [issue("n8n review",
+    "Booking from this AI workbench is disabled while n8n training and canonical onboarding integration are being validated.", "Approval")] };
   if (confirmed !== true) return { ok: false, ready: false, issues: [issue("Authorization", "Explicit booking confirmation is required.", "Approval")] };
   const inspection = await inspectIntake(id);
   if (!inspection.ok || inspection.issues.length) return { ok: inspection.ok, ready: false, issues: inspection.issues };
@@ -254,6 +261,8 @@ export async function bookSemiAutoIntake(id: string, confirmed: boolean): Promis
 
 export async function editSemiAutoIntake(id: string, takeOver = false): Promise<SemiAutoActionResult> {
   await requireDevelopmentPolicyOperator(id);
+  if (isN8nWorkbenchPrimary()) return { ok: false, ready: false, issues: [issue("n8n review",
+    "Use the standard Intake Review or canonical Policy Onboarding route for manual corrections. This workbench does not claim or overwrite Intakes.")] };
   // Only a second, explicitly confirmed action may take ownership of an assigned
   // Intake. The canonical handoff verifies permissions, duplicates and the live
   // assignee again and atomically claims the record before opening its draft.
@@ -284,6 +293,8 @@ export async function applySemiAutoN8nIntake(
   id: string, documentId: string, fingerprint: string, confirmed: boolean,
 ): Promise<{ ok: boolean; error?: string }> {
   await requireDevelopmentPolicyOperator(id);
+  if (isN8nWorkbenchPrimary()) return { ok: false,
+    error: "n8n is the authoritative extraction engine in this workbench, but automatic OCR application is disabled until the canonical handoff is validated." };
   if (confirmed !== true) return { ok: false, error: "Explicit confirmation is required to apply the reviewed OCR result." };
   const result = await applySemiAutoN8nExtraction(id, documentId, fingerprint);
   if (result.ok) {

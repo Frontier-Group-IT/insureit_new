@@ -32,8 +32,9 @@ function compactDate(date: string) {
 
 const rupees = (amount: number) => "₹" + amount.toLocaleString("en-IN", { maximumFractionDigits: 2 });
 
-export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId }: {
+export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, primaryN8n = false }: {
   rows: SemiAutoIntakeRow[]; profileId: string; initialIntakeId?: string | null;
+  primaryN8n?: boolean;
 }) {
   const router = useRouter();
   const requestId = useRef(0);
@@ -53,7 +54,8 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId }: {
     if (!query) return rows;
     return rows.filter(row => [row.intake_number, row.lead_source_name, row.customer_mobile, row.status, row.ocr_status].join(" ").toLowerCase().includes(query));
   }, [rows, search]);
-  const available = result?.ready === true && result.issues.length === 0 && !selected?.is_duplicate;
+  const available = !primaryN8n && selected?.policy_type === "motor"
+    && result?.ready === true && result.issues.length === 0 && !selected?.is_duplicate;
   const n8nEnabled = selected?.n8n_enabled === true;
   const isWaiting = busy !== null;
 
@@ -62,12 +64,22 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId }: {
     if (selectedId === id) {
       setSelectedId(null); setResult(null); setDone(null); setBusy(null); setTakeover(null); setN8nResult(null); setN8nNotice(null); return;
     }
-    setSelectedId(id); setResult(null); setDone(null); setTakeover(null); setN8nResult(null); setN8nNotice(null); setBusy("checking");
+    setSelectedId(id); setResult(null); setDone(null); setTakeover(null); setN8nResult(null); setN8nNotice(null); setBusy(primaryN8n ? "extracting" : "checking");
     try {
+      if (primaryN8n) {
+        // Selecting an Intake explicitly starts its n8n-only extraction.
+        // The older OCR readiness engine is not invoked in primary mode.
+        const extracted = await previewSemiAutoN8nIntake(id);
+        if (requestId.current === next) setN8nResult(extracted);
+        return;
+      }
       const assessment = await checkSemiAutoIntake(id);
       if (requestId.current === next) setResult(assessment);
     } catch {
-      if (requestId.current === next) setResult({ ok: false, ready: false, issues: [{ section: "Intake", field: "Eligibility check", message: "The readiness check failed to contact the server. Refresh and try again." }] });
+      if (requestId.current === next) {
+        if (primaryN8n) setN8nResult({ ok: false, error: "The n8n extraction request failed. No old OCR fallback or policy update was attempted." });
+        else setResult({ ok: false, ready: false, issues: [{ section: "Intake", field: "Eligibility check", message: "The readiness check failed to contact the server. Refresh and try again." }] });
+      }
     } finally {
       if (requestId.current === next) setBusy(null);
     }
@@ -104,7 +116,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId }: {
   }
 
   async function applyN8n() {
-    if (!selectedId || !n8nResult?.ok || !n8nResult.preview.canApply || isWaiting) return;
+    if (!selectedId || !n8nResult?.ok || !n8nResult.preview.canApply || isWaiting || primaryN8n) return;
     const confirmed = window.confirm(
       "Apply the reviewed n8n extraction to this failed OCR Intake? Confirm all proposed fields against the original PDF. This will replace only empty failed OCR data, change the Intake to Ready for Review, and will NOT create a customer, vehicle or policy. Normal draft correction and explicit booking approval remain mandatory.",
     );
@@ -136,7 +148,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId }: {
   }
 
   async function book() {
-    if (!selectedId || !available || isWaiting) return;
+    if (!selectedId || !available || isWaiting || primaryN8n) return;
     const accepted = window.confirm("Book this issued Motor Policy using the verified Intake and saved onboarding draft? Confirm that you checked the original PDF, particularly the Policy Issuance Date, insured identity, and premiums. This action creates a real policy; it cannot be undone from this page. Unverified pay-in and payout will remain for commercial review.");
     if (!accepted) return;
     const next = ++requestId.current;
@@ -157,7 +169,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId }: {
   }
 
   async function correct() {
-    if (!selectedId || isWaiting) return;
+    if (!selectedId || isWaiting || primaryN8n) return;
     const next = ++requestId.current;
     setBusy("editing");
     try {
@@ -222,7 +234,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId }: {
         <div className="overflow-x-auto">
           <table className="min-w-[760px] w-full border-collapse text-left text-[10.5px]">
             <thead className="bg-[#f5f8fc] text-[9px] font-bold uppercase tracking-[.07em] text-[#62748e]">
-              <tr><th className="w-10 px-3 py-3"><span className="sr-only">Select</span></th><th className="px-2 py-3">Intake</th><th className="px-3 py-3">Lead source</th><th className="px-3 py-3">Customer mobile</th><th className="px-3 py-3">Status</th><th className="px-3 py-3">OCR</th><th className="px-3 py-3">Submitted</th></tr>
+              <tr><th className="w-10 px-3 py-3"><span className="sr-only">Select</span></th><th className="px-2 py-3">Intake</th><th className="px-3 py-3">Lead source</th><th className="px-3 py-3">Customer mobile</th>{primaryN8n ? <th className="px-3 py-3">Policy type</th> : null}<th className="px-3 py-3">Status</th><th className="px-3 py-3">{primaryN8n ? "Saved OCR (old)" : "OCR"}</th><th className="px-3 py-3">Submitted</th></tr>
             </thead>
             <tbody className="divide-y divide-[#edf1f5]">
               {visible.map(row => (
@@ -237,7 +249,8 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId }: {
                   </td>
                   <td className="max-w-[210px] truncate px-3 py-3 text-[#344761]" title={row.lead_source_name}>{row.lead_source_name || "-"}</td>
                   <td className="whitespace-nowrap px-3 py-3 tabular-nums text-[#334763]">{row.customer_mobile}</td>
-                  <td className="whitespace-nowrap px-3 py-3"><span className="rounded-md bg-[#edf2fa] px-2 py-1 font-semibold text-[#3f5c82]">{row.is_duplicate ? "Duplicate · Preview only" : humanStatus[row.status] || row.status}</span></td>
+                  {primaryN8n ? <td className="whitespace-nowrap px-3 py-3 text-[#445b75]">{row.policy_type === "non_motor" ? "Non-Motor" : row.policy_type === "motor" ? "Motor" : row.policy_type === "life" ? "Life" : row.policy_type === "health" ? "Health" : "Unclassified"}</td> : null}
+                  <td className="whitespace-nowrap px-3 py-3"><span className="rounded-md bg-[#edf2fa] px-2 py-1 font-semibold text-[#3f5c82]">{row.is_duplicate ? "Duplicate · Preview only" : primaryN8n && row.policy_type !== "motor" ? "Review only" : humanStatus[row.status] || row.status}</span></td>
                   <td className="whitespace-nowrap px-3 py-3"><span className={row.ocr_status === "completed" ? "font-semibold text-emerald-700" : "font-semibold text-amber-700"}>{row.ocr_status === "completed" ? "Extracted" : row.ocr_status.replaceAll("_", " ")}</span></td>
                   <td className="whitespace-nowrap px-3 py-3 text-[#62748e]">{compactDate(row.created_at)}</td>
                 </tr>
@@ -248,9 +261,9 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId }: {
         </div>
       </section>
       <section aria-live="polite" className="min-w-0 rounded-2xl border border-[#dce5f0] bg-white p-4">
-        <div className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-[#4774c1]" /><h2 className="text-[13px] font-bold text-[#142e4c]">AI Booking Check</h2></div>
+        <div className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-[#4774c1]" /><h2 className="text-[13px] font-bold text-[#142e4c]">{primaryN8n ? "n8n Policy Processing" : "AI Booking Check"}</h2></div>
         {!selectedId ? <div className="mt-5 rounded-xl border border-dashed border-[#cddbea] p-5 text-center text-[11px] leading-5 text-[#63768e]">
-          Select a checkbox in the Intake table to see exactly which fields are ready and which require correction.
+          {primaryN8n ? "Select an Intake to read its current private policy PDF using n8n. Untrained insurer layouts will be referred for manual review, not processed through Google OCR." : "Select a checkbox in the Intake table to see exactly which fields are ready and which require correction."}
         </div> : (
           <>
             <div className="mt-3 flex items-start justify-between gap-3 rounded-xl bg-[#f4f7fc] px-3 py-3">
@@ -261,11 +274,15 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId }: {
               <div className="flex flex-wrap items-center gap-2">
                 {n8nEnabled ? <button type="button" onClick={() => { void previewN8n(); }} disabled={isWaiting || Boolean(done)}
                   className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#cbd9eb] bg-white px-2.5 text-[10px] font-semibold text-[#24518a] disabled:opacity-50">
-                  {busy === "extracting" ? <Loader2 className="h-3.5 w-3.5 animate-spin"/> : <FileSearch className="h-3.5 w-3.5"/>}Preview n8n PDF
+                  {busy === "extracting" ? <Loader2 className="h-3.5 w-3.5 animate-spin"/> : <FileSearch className="h-3.5 w-3.5"/>}{primaryN8n ? (n8nResult ? "Run n8n again" : "Process with n8n") : "Preview n8n PDF"}
                 </button> : null}
-                <button type="button" onClick={() => { void retry(); }} disabled={isWaiting} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#d0deef] bg-white px-2.5 text-[10px] font-semibold text-[#29558d] disabled:opacity-50"><RefreshCw className="h-3.5 w-3.5"/>Recheck</button>
+                {!primaryN8n ? <button type="button" onClick={() => { void retry(); }} disabled={isWaiting} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#d0deef] bg-white px-2.5 text-[10px] font-semibold text-[#29558d] disabled:opacity-50"><RefreshCw className="h-3.5 w-3.5"/>Recheck</button> : null}
               </div>
             </div>
+            {primaryN8n ? <p className="mt-2 text-[10px] leading-4 text-[#61758d]">The saved OCR status shown in the table is historical. New n8n results appear below after processing and are not silently written over existing data.</p> : null}
+            {primaryN8n && selected?.policy_type !== "motor" ? <p role="status" className="mt-3 rounded-lg border border-[#cbd9ea] bg-[#f5f9ff] p-3 text-[10.5px] leading-5 text-[#264b74]">
+              {selected?.policy_type ? "This policy type is not trained for automatic onboarding yet." : "This older Intake has no policy type classification."} n8n will attempt document validation, but any unsupported layout needs training or a human reviewer. No Google OCR fallback or booking is permitted here.
+            </p> : null}
             {selected?.is_duplicate ? <p role="status" className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-[10.5px] leading-5 text-amber-900">
               Duplicate policy number detected. This Intake remains available for read-only n8n PDF comparison only; normal corrections and policy booking are blocked.
             </p> : null}
@@ -273,6 +290,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId }: {
             {busy === "extracting" ? <div className="mt-3 flex items-center gap-2 rounded-lg bg-blue-50 p-3 text-[11px] text-blue-800"><Loader2 className="h-4 w-4 animate-spin"/>Reading current private PDF through the n8n review-only bridge...</div> : null}
             {busy === "applying" ? <div className="mt-3 flex items-center gap-2 rounded-lg bg-blue-50 p-3 text-[11px] text-blue-800"><Loader2 className="h-4 w-4 animate-spin"/>Revalidating and saving the confirmed failed OCR recovery...</div> : null}
             {n8nNotice ? <p role="status" className="mt-3 rounded-lg border border-[#c8d8eb] bg-[#f5f9ff] p-3 text-[11px] leading-5 text-[#284d77]">{n8nNotice}</p> : null}
+            {primaryN8n && selectedId && !n8nResult && busy === null ? <p className="mt-3 text-[10.5px] text-[#61738a]">Click Process with n8n to extract the current policy PDF without the old OCR engine.</p> : null}
             {n8nResult && !done ? (n8nResult.ok ? (
               <section aria-label="n8n extraction review" className="mt-3 rounded-xl border border-[#c8d8eb] bg-[#f8fbff] p-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
@@ -381,7 +399,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId }: {
               <p className="mt-2 text-[11px] text-emerald-900">Policy Code: <strong>{done.policyCode}</strong></p>
               <Link href={"/policies/" + done.policyId} className="mt-2 inline-flex items-center gap-1 text-[11px] font-bold text-emerald-800 underline">View registered policy <ArrowUpRight className="h-3.5 w-3.5"/></Link>
             </div> : null}
-            <div className="mt-4 flex flex-wrap gap-2">
+            {!primaryN8n ? <><div className="mt-4 flex flex-wrap gap-2">
               <button type="button" onClick={() => { void correct(); }} disabled={isWaiting || Boolean(done) || Boolean(selected?.is_duplicate)}
                 className="inline-flex min-h-9 flex-1 items-center justify-center gap-1.5 rounded-lg border border-[#cbd9e9] bg-white px-3 text-[11px] font-semibold text-[#254f82] disabled:opacity-50">
                 {busy === "editing" ? <Loader2 className="h-3.5 w-3.5 animate-spin"/> : <PencilLine className="h-3.5 w-3.5"/>}Open & correct fields
@@ -392,6 +410,11 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId }: {
               </button>
             </div>
             <p className="mt-3 text-[9.5px] leading-4 text-[#7b8898]">Booking preserves existing duplicate, ownership, date-OTP and coverage safeguards. Missing insurer pay-in or partner payout rates are not guessed.</p>
+            </> : (
+              <p className="mt-3 text-[10px] leading-5 text-[#597086]">
+                n8n is the primary extractor for this workbench. Results remain uncommitted until a supported insurer parser and a separate, approved onboarding handoff are enabled. Use the standard Intake Review and canonical onboarding for manual corrections; no automatic booking or OCR overwrite occurs here.
+              </p>
+            )}
           </>
         )}
       </section>
