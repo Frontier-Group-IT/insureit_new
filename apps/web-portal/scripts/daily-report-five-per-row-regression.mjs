@@ -25,6 +25,11 @@ assert.match(source,/for\(const a of all\) counts\.set\(a\.category/,
 assert.match(page,/reportMode=\{isSelf \? "self" : "employee"\}/,
   "Both Self and selected All employee share the same responsive summary");
 assert.match(panel,/daily-report-activity-card group flex/,"Activity links use distinct, reference-style card surfaces");
+assert.match(panel,/daily-report-activity-card group flex[^"\n]*bg-white/,"All activity cards use white Tailwind backgrounds");
+assert.doesNotMatch(panel,/bg-gradient-to-br from-white to-\[#f7faff\]|hover:from-\[#f5f9ff\]|hover:to-\[#e9f2ff\]/,"Activity cards have no tinted utility gradients");
+assert.match(css,/\.daily-report-reference \.daily-report-activity-card \{[^}]*background: #fff;/s,"Scoped card background remains solid white");
+assert.match(css,/\.daily-report-reference \.daily-report-activity-card:hover \{[^}]*background: #fff;/s,"Hover background stays white");
+
 assert.match(panel,/hover:-translate-y-0\.5/,"Activity cards rise subtly on hover");
 assert.match(panel,/hover:shadow-\[0_5px_14px_rgba\(23,54,93,0\.13\)\]/,"Activity cards gain a restrained shadow on hover");
 assert.match(panel,/hover:border-\[#7ba7dc\]/,"Professional blue border hover feedback remains visible");
