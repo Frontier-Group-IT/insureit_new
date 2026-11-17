@@ -99,7 +99,11 @@ export async function processAiQueueBatch(options?: {preferredIntakeId?:string;m
 }> {
   if (!aiQueueEnabled()) return {enabled:false,claimed:0,processed:0,failed:0};
   const admin = createSupabaseAdminClient();
-  const parserRevision = (process.env.INSUREIT_AI_QUEUE_PARSER_REVISION||"bridge-v1").trim();
+  // One coordinated parser revision bumps old exception rows into the bounded
+  // recovery worker after deployment, without rewriting OCR/drafts or booking.
+  // Include the configured base to preserve operator-controlled versioning;
+  // this stable suffix also works when production has a pinned base revision.
+  const parserRevision = ((process.env.INSUREIT_AI_QUEUE_PARSER_REVISION||"bridge-v1").trim()+"-issue-date-v2");
   if (parserRevision.length < 1 || parserRevision.length > 80) {
     throw new Error("AI queue parser revision configuration invalid");
   }
