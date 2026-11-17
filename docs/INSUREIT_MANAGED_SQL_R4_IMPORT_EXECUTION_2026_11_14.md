@@ -2,6 +2,16 @@
 
 **Updated 14 Nov 2026 IST. Status: PREPARED, NOT EXECUTED.** Primary operator request: actually restore the SQL schema and data from encrypted R2 v2 into **only** the isolated managed Supabase project. File-byte trial limited to 500,000,000 bytes total, maximum 50,000,000 bytes per file. Never switch production apps or mutate production.
 
+## 17 Nov 2026 — R4 unknown archive namespace, fail-closed follow-up
+
+[Protected R4 dry-run #44026859831](https://github.com/Frontier-Group-IT/insureit_new/actions/runs/44026859831) authenticated exactly `20261117T041507Z`, passed destination URL guard, isolated Supabase CA `verify-full` TLS, empty target, PostgreSQL archive inspection and read-only catalog parity checks, but failed at the strict TOC selector with sanitized `failure_code=UNKNOWN_ARCHIVE_NAMESPACE`. No R4 planned-SQL output, and **no database import or production write occurred**.
+
+The source Supabase `pg_namespace` catalog was inspected using **SELECT only**. The set of existing source namespaces omitted by the R4 explicit allowlist consisted of **two PostgreSQL built-ins, `pg_catalog` and `information_schema`**, in addition to internal `pg_toast*`/`pg_temp*` namespaces excluded from the inventory. These two names are safe to *recognize* as standard PostgreSQL metadata namespaces but must **never be selected into application/managed Auth SQL**. Because the job deliberately redacts private TOC names, the specific offending TOC namespace was not directly observable; the two built-ins are the narrowed, not yet conclusively proven, diagnosis.
+
+Fix PR (separately reviewed, unmerged at authoring) adds `DEFERRED_SYSTEM_SCHEMAS = {"pg_catalog", "information_schema"}` to TOC namespace validation, plus an **independent explicit never-select guard**. Regression tests exercise TABLE, TABLE DATA, FUNCTION, POLICY and ACL records in both built-in namespaces: they must not enter the target restore list. Unknown custom schemas and prefix lookalikes (e.g. `pg_catalog_copy` or `information_schema2`) still fail closed with only a fixed non-sensitive error code.
+
+Do not broaden to all `pg_*` namespaces or assume arbitrary TOC entries are compatible. No change to schema/data minimums, managed Storage/Auth exclusions, target allowlist, snapshot lock, CA verification, or default `execute_target_import=false`. After PR CI and explicit merge approval, rerun **R4 dry-run only** against the latest matched R1/R3-verified snapshot; inspect any new failure category, preserving private TOC/credentials. Actual target import remains separately gated and does not establish Supabase service/Storage/role parity.
+
 ## 17 Nov 2026 — R4 strict TOC parser incompatibility, no import performed
 
 - **Authenticated current snapshot:** `20261117T041507Z`. [R0/R1 preflight #44022681111](https://github.com/Frontier-Group-IT/insureit_new/actions/runs/44022681111) and [R3 offline full replay #44023136022](https://github.com/Frontier-Group-IT/insureit_new/actions/runs/44023136022) both passed this same exact snapshot; R3 verified 233/233 archived COPY tables with zero row-count differences, strict data/ACL replay with two placeholder offline roles.

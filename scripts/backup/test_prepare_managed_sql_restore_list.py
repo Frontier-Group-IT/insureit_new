@@ -4,8 +4,8 @@ import tempfile
 import unittest
 
 from prepare_managed_sql_restore_list import (
-    APP_SCHEMAS, PG17_DEFERRED_KINDS, SafeTocSelectionError,
-    build_list, chosen_entries, parse_entry,
+    APP_SCHEMAS, DEFERRED_SYSTEM_SCHEMAS, PG17_DEFERRED_KINDS,
+    SafeTocSelectionError, build_list, chosen_entries, parse_entry,
 )
 
 
@@ -16,6 +16,11 @@ def fixture():
              "3; 0 0 SEARCHPATH - SEARCHPATH  \n",
              "4; 0 0 PROCEDURAL LANGUAGE - plpgsql postgres\n",
              "5; 0 0 PUBLICATION TABLES IN SCHEMA public synthetic postgres\n",
+             "6; 1255 1 FUNCTION pg_catalog system_probe() postgres\n",
+             "7; 1259 1 TABLE information_schema system_probe postgres\n",
+             "8; 0 1 TABLE DATA information_schema system_probe postgres\n",
+             "9; 0 1 ACL pg_catalog system_probe postgres\n",
+             "9; 0 2 POLICY information_schema system_probe deny postgres\n",
              "10; 2615 1 SCHEMA - identity_maintenance postgres\n",
              "11; 2615 1 SCHEMA - insureit_recovery postgres\n",
              "12; 2615 1 SCHEMA - private postgres\n",
@@ -83,6 +88,33 @@ class PlanTests(unittest.TestCase):
                 "5002; 1259 1 TABLE external_project secret_object postgres\n")
         self.assertEqual(failure.exception.reason, "UNKNOWN_ARCHIVE_NAMESPACE")
         self.assertNotIn("secret_object", str(failure.exception))
+
+    def test_pg_builtin_namespaces_deferred_and_never_imported(self):
+        # Based on read-only source pg_namespace inventory; do not copy
+        # PostgreSQL system-schema tables/functions into managed Supabase.
+        self.assertEqual(DEFERRED_SYSTEM_SCHEMAS,
+                         {"pg_catalog", "information_schema"})
+        approved, counts = chosen_entries(fixture())
+        self.assertTrue(approved)
+        selected = "".join(approved)
+        self.assertFalse(any(
+            f" {schema} " in line for schema in DEFERRED_SYSTEM_SCHEMAS
+            for line in approved
+        ))
+        self.assertNotIn(("pg_catalog", "FUNCTION"), counts)
+        self.assertNotIn(("information_schema", "TABLE"), counts)
+        self.assertNotIn(("information_schema", "TABLE DATA"), counts)
+        self.assertEqual(counts[("public", "TABLE DATA")], 151)
+
+    def test_pg_prefix_wildcard_and_unknown_archive_schema_still_rejected(self):
+        for fake_name in ("pg_catalog_copy", "pg_toast", "information_schema2",
+                          "external_project"):
+            with self.subTest(fake_name=fake_name):
+                with self.assertRaises(SafeTocSelectionError) as caught:
+                    chosen_entries(fixture() +
+                      f"5002; 1259 1 TABLE {fake_name} private_record postgres\n")
+                self.assertEqual(caught.exception.reason, "UNKNOWN_ARCHIVE_NAMESPACE")
+                self.assertNotIn(fake_name, str(caught.exception))
 
     def test_select_only_safe_allowlisted_sql(self):
         entries, counts = chosen_entries(fixture())
