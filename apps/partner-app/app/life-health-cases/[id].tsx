@@ -45,6 +45,7 @@ export default function LifeHealthCaseDetailScreen(){
  const [documents,setDocuments]=useState<LifeHealthDocument[]>([]);
  const [activities,setActivities]=useState<LifeHealthActivity[]>([]);
  const [infoTab,setInfoTab]=useState<'activity'|'remarks'>('activity');
+ const [activityExpanded,setActivityExpanded]=useState(false);
  const [remarkOpen,setRemarkOpen]=useState(false);
  const [remarkDraft,setRemarkDraft]=useState('');
  const [remarkSaving,setRemarkSaving]=useState(false);
@@ -347,19 +348,23 @@ export default function LifeHealthCaseDetailScreen(){
           {inline("premiumAmount","Premium amount",amount(record.premium_amount),true,false,false,"decimal-pad")}
           {inline("paymentMode","Payment mode",record.payment_mode,true)}
         </View>
-        <Text style={styles.fieldLabel}>REMARKS</Text>
-        {record.remarks?.trim()?<View style={styles.remarkInlineRow}>
-          <Text style={styles.remarkExisting} selectable numberOfLines={4}>{record.remarks}</Text>
-          {record.status_group!=='issued'?<Pressable accessibilityRole="button" accessibilityLabel="Add Remark"
-            onPress={()=>{setRemarkError('');setRemarkOpen(true);}} style={styles.remarkInlineAction}>
-            <Ionicons name="add" size={15} color="#FFFFFF"/><Text style={styles.remarkButtonText}>Add Remark</Text>
-          </Pressable>:null}
-        </View>:record.status_group!=='issued'?<Pressable accessibilityRole="button" accessibilityLabel="Add Remark"
-          onPress={()=>{setRemarkError('');setRemarkOpen(true);}} style={styles.remarkFullWidth}>
-          <Ionicons name="chatbubble-ellipses-outline" size={17} color="#FFFFFF"/><Text style={styles.remarkButtonText}>Add Remark</Text>
-        </Pressable>:null}
-
       </Section>
+
+      {(record.status_group==='pending'||record.status_group==='rejected')?<View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Ionicons name="chatbubble-ellipses-outline" size={18} color={navy}/>
+          <Text style={styles.sectionTitle}>Remarks</Text>
+          <View style={styles.remarkHeaderSpacer}/>
+          <Pressable accessibilityRole="button" accessibilityLabel="Add Remark"
+            onPress={()=>{setRemarkError('');setRemarkOpen(true);}} style={styles.remarkHeaderAction}>
+            <Ionicons name="add" size={15} color="#FFFFFF"/>
+            <Text style={styles.remarkButtonText}>Add Remark</Text>
+          </Pressable>
+        </View>
+        {record.remarks?.trim()?<View style={styles.sectionContent}>
+          <Text selectable style={styles.remarkExisting}>{record.remarks}</Text>
+        </View>:null}
+      </View>:null}
 
       {record.status_group==='pending'?<Section number="05" title="Mark Policy Issued">
         <View style={styles.grid}>
@@ -411,26 +416,46 @@ export default function LifeHealthCaseDetailScreen(){
         </View>
       </Section>
 
-      <View style={styles.activityCard}>
-        <View style={styles.tabs}>
-          <Pressable accessibilityRole="tab" accessibilityState={{selected:infoTab==='activity'}} style={[styles.tab,infoTab==='activity'&&styles.tabActive]} onPress={()=>setInfoTab('activity')}>
-            <Text style={[styles.tabText,infoTab==='activity'&&styles.tabTextActive]}>Activity Status</Text>
+      {(record.status_group==='pending'||record.status_group==='rejected')?(
+        <View style={styles.activityCard}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Activity Status"
+            accessibilityState={{expanded:activityExpanded}}
+            onPress={()=>setActivityExpanded(previous=>!previous)}
+            style={styles.activityToggle}>
+            <Text style={styles.activityToggleTitle}>Activity Status</Text>
+            <Ionicons name={activityExpanded?'chevron-up':'chevron-down'} size={18} color={navy}/>
           </Pressable>
-          <Pressable accessibilityRole="tab" accessibilityState={{selected:infoTab==='remarks'}} style={[styles.tab,infoTab==='remarks'&&styles.tabActive]} onPress={()=>setInfoTab('remarks')}>
-            <Text style={[styles.tabText,infoTab==='remarks'&&styles.tabTextActive]}>Remarks</Text>
-          </Pressable>
+          {activityExpanded?<View style={styles.activityHistory}>
+            {activities.length?activities.map(activity=><View key={activity.id} style={styles.activity}>
+            <Text style={styles.activityTitle}>{activity.action.replace(/_/g,' ')}</Text>
+            {activity.createdBy?<Text style={styles.activityDate}>By: {activity.createdBy}</Text>:null}
+            {activity.changes?.map((change,index)=><Text key={index} style={styles.activityDate}>• {change}</Text>)}
+            <Text style={styles.activityDate}>At: {activityDate(activity.created_at)}</Text>
+          </View>):<Text style={styles.paragraph}>No recorded case activity available.</Text>}
+          </View>:null}
         </View>
-        {infoTab==='activity'?(activities.length?activities.map(activity=><View key={activity.id} style={styles.activity}>
-          <Text style={styles.activityTitle}>{activity.action.replace(/_/g,' ')}</Text>
-          {activity.createdBy?<Text style={styles.activityDate}>By: {activity.createdBy}</Text>:null}
-          {activity.changes?.map((change,index)=><Text key={index} style={styles.activityDate}>• {change}</Text>)}
-          <Text style={styles.activityDate}>At: {activityDate(activity.created_at)}</Text>
-        </View>):<Text style={styles.paragraph}>No recorded case activity available.</Text>):
-         <View style={{gap:10}}>
-          <Text style={styles.paragraph} selectable>{record.remarks?.trim()||'No remarks added yet.'}</Text>
-
-         </View>}
-      </View>
+      ):(
+              <View style={styles.activityCard}>
+                <View style={styles.tabs}>
+                  <Pressable accessibilityRole="tab" accessibilityState={{selected:infoTab==='activity'}} style={[styles.tab,infoTab==='activity'&&styles.tabActive]} onPress={()=>setInfoTab('activity')}>
+                    <Text style={[styles.tabText,infoTab==='activity'&&styles.tabTextActive]}>Activity Status</Text>
+                  </Pressable>
+                  <Pressable accessibilityRole="tab" accessibilityState={{selected:infoTab==='remarks'}} style={[styles.tab,infoTab==='remarks'&&styles.tabActive]} onPress={()=>setInfoTab('remarks')}>
+                    <Text style={[styles.tabText,infoTab==='remarks'&&styles.tabTextActive]}>Remarks</Text>
+                  </Pressable>
+                </View>
+                {infoTab==='activity'?(activities.length?activities.map(activity=><View key={activity.id} style={styles.activity}>
+                  <Text style={styles.activityTitle}>{activity.action.replace(/_/g,' ')}</Text>
+                  {activity.createdBy?<Text style={styles.activityDate}>By: {activity.createdBy}</Text>:null}
+                  {activity.changes?.map((change,index)=><Text key={index} style={styles.activityDate}>• {change}</Text>)}
+                  <Text style={styles.activityDate}>At: {activityDate(activity.created_at)}</Text>
+                </View>):<Text style={styles.paragraph}>No recorded case activity available.</Text>):
+                 <View style={{gap:10}}>
+                  <Text style={styles.paragraph} selectable>{record.remarks?.trim()||'No remarks added yet.'}</Text>
+        
+                 </View>}
+              </View>
+      )}
       {saveError?<Text style={styles.saveError}>{saveError}</Text>:null}
       {saveSuccess?<Text style={styles.saveSuccess}>Case details saved successfully.</Text>:null}
       {record.status_group==='pending'?<View style={styles.caseActions}>
@@ -584,7 +609,9 @@ const styles=StyleSheet.create({
   inlineInput:{color:navy,fontSize:12,fontWeight:'600'},
   inlineSelector:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:5},
   remarkInlineRow:{flexDirection:'row',alignItems:'center',gap:8},
-  remarkExisting:{flex:1,color:navy,fontSize:11,lineHeight:16,backgroundColor:'#F5F8FD',borderRadius:9,padding:10},
+  remarkExisting:{color:navy,fontSize:11,lineHeight:17,backgroundColor:'#F5F8FD',borderRadius:9,padding:10},
+  remarkHeaderSpacer:{flex:1},
+  remarkHeaderAction:{flexDirection:'row',alignItems:'center',gap:4,backgroundColor:navy,paddingHorizontal:11,paddingVertical:9,borderRadius:9},
   remarkInlineAction:{flexDirection:'row',alignItems:'center',gap:3,backgroundColor:navy,paddingHorizontal:10,paddingVertical:12,borderRadius:9},
   remarkFullWidth:{flexDirection:'row',alignItems:'center',justifyContent:'center',gap:8,minHeight:44,backgroundColor:navy,borderRadius:9},
   saveInline:{gap:6},
@@ -653,6 +680,9 @@ const styles=StyleSheet.create({
   uploadButton:{width:'100%',minHeight:45,borderRadius:9,borderWidth:1,borderColor:'#CEDAEC',paddingHorizontal:12,paddingVertical:10,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:8,backgroundColor:'#FFFFFF'},
   uploadText:{fontSize:10,color:'#24569A',fontWeight:'700'},
   activityCard:{backgroundColor:'#FFFFFF',borderRadius:14,borderWidth:1,borderColor:'#D9E2F0',padding:12,gap:10},
+  activityToggle:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',minHeight:35},
+  activityToggleTitle:{fontSize:13,fontWeight:'800',color:navy},
+  activityHistory:{gap:8},
   saveSuccess:{fontSize:11,color:'#166B4B',fontWeight:'700'},
   caseActions:{gap:7,backgroundColor:'#FFFFFF',padding:10,borderRadius:13,borderWidth:1,borderColor:'#D9E2F0'},
   caseAction:{minHeight:45,borderRadius:10,alignItems:'center',justifyContent:'center',flexDirection:'row',gap:7,paddingHorizontal:10},
