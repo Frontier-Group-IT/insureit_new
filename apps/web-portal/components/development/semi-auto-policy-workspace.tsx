@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState } from "react";
 import { AlertCircle, ArrowUpRight, CheckCircle2, ClipboardCheck, FileSearch, Loader2, PencilLine, RefreshCw, Search, ShieldAlert, Sparkles } from "lucide-react";
-import { applySemiAutoN8nIntake, bookSemiAutoIntake, checkSemiAutoIntake, continueVerifiedN8nIntakeToOnboarding, editSemiAutoIntake, previewSemiAutoN8nIntake, type SemiAutoActionResult, type SemiAutoN8nResult } from "@/app/development/ai-policy-onboarding/actions";
+import { applySemiAutoN8nIntake, bookSemiAutoIntake, checkSemiAutoIntake, continueVerifiedN8nIntakeToOnboarding, editSemiAutoIntake, previewSemiAutoN8nIntake, reprocessAiPolicyIntake, type SemiAutoActionResult, type SemiAutoN8nResult } from "@/app/development/ai-policy-onboarding/actions";
 
 export type SemiAutoIntakeRow = {
   id: string;
@@ -18,6 +18,39 @@ export type SemiAutoIntakeRow = {
   assigned_to_profile_id: string | null;
   n8n_enabled?: boolean;
   is_duplicate?: boolean;
+  ai_state?: "pending" | "processing" | "exception" | "verified" | "unsupported" | "failed" | null;
+  ai_exceptions?: string[];
+  ai_processed_at?: string | null;
+};
+
+const aiIssueTitles: Record<string,string> = {
+  unsupported_layout:"Parser not trained",
+  document_missing:"Current policy PDF missing",
+  extraction_pending:"Waiting for n8n",
+  extraction_failed:"n8n extraction failed",
+  unverified_parser:"Parser checks need review",
+  duplicate_policy:"Duplicate policy detected",
+  reviewer_conflict:"Reviewer or review status conflict",
+  customer_identity:"Same mobile / different insured",
+  customer_ambiguous:"Multiple customer matches",
+  customer_duplicate:"Existing customer needs confirmation",
+  customer_master_unverified:"Customer matching not verified",
+  customer_creation_required:"Create or select customer",
+  vehicle_ownership:"Vehicle ownership conflict",
+  missing_field:"Mandatory field missing",
+  manufacturer_unmatched:"Vehicle make not matched",
+  financial_reconciliation:"Premium mismatch",
+  issuance_date_unverified:"Policy issue date needs review",
+  date_approval:"Email OTP date approval",
+  bundled_validity:"OD/TP/CPA validity review",
+  coverage_conflict:"Policy coverage conflict",
+  draft_conflict:"Saved field differs from PDF",
+  preflight_pending:"Canonical booking preflight pending",
+  stale_document:"Source PDF changed",
+};
+const aiStateLabel: Record<string,string> = {
+  pending:"Queued",processing:"Reading PDF",exception:"Needs action",
+  verified:"Verified",unsupported:"Not trained",failed:"Retry scheduled",
 };
 
 const humanStatus: Record<string, string> = {
@@ -32,9 +65,12 @@ function compactDate(date: string) {
 
 const rupees = (amount: number) => "₹" + amount.toLocaleString("en-IN", { maximumFractionDigits: 2 });
 
-export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, primaryN8n = false }: {
+export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, primaryN8n = false,
+  queueActive = false, queueCounts }: {
   rows: SemiAutoIntakeRow[]; profileId: string; initialIntakeId?: string | null;
   primaryN8n?: boolean;
+  queueActive?: boolean;
+  queueCounts?: {eligible:number;processing:number;exceptions:number;unprocessed:number;unsupported:number;failed:number};
 }) {
   const router = useRouter();
   const requestId = useRef(0);
@@ -47,6 +83,9 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
   const [n8nResult, setN8nResult] = useState<SemiAutoN8nResult | null>(null);
   const [n8nNotice, setN8nNotice] = useState<string | null>(null);
   const [done, setDone] = useState<{ policyCode: string; policyId: string } | null>(null);
+  const [exceptionRow,setExceptionRow]=useState<SemiAutoIntakeRow|null>(null);
+  const [queueRetrying,setQueueRetrying]=useState(false);
+  const [queueRetryError,setQueueRetryError]=useState<string|null>(null);
   const [takeover, setTakeover] = useState<{ intakeId: string; reviewerName: string } | null>(null);
   const [fillEmptySavedFields, setFillEmptySavedFields] = useState(true);
   const [handoffDialog, setHandoffDialog] = useState<
@@ -70,11 +109,18 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
     if (selectedId === id) {
       setSelectedId(null); setResult(null); setDone(null); setBusy(null); setTakeover(null); setHandoffDialog(null); setN8nResult(null); setN8nNotice(null); return;
     }
-    setSelectedId(id); setResult(null); setDone(null); setTakeover(null); setHandoffDialog(null); setN8nResult(null); setN8nNotice(null); setBusy(primaryN8n ? "extracting" : "checking");
+    setSelectedId(id); setResult(null); setDone(null); setTakeover(null); setHandoffDialog(null); setN8nResult(null); setN8nNotice(null); setBusy(primaryN8n && queueActive ? null : primaryN8n ? "extracting" : "checking");
     try {
       if (primaryN8n) {
-        // Selecting an Intake explicitly starts its n8n-only extraction.
-        // The older OCR readiness engine is not invoked in primary mode.
+        // Background queue performs the initial extraction without user input.
+        // Selecting a row is read-only; an explicit review may re-extract to
+        // verify the exact live PDF before continuing to canonical onboarding.
+        if (queueActive) {
+          if (requestId.current === next) setN8nNotice(
+            "The background queue processes this PDF automatically. Use Review current PDF to inspect its latest verified extraction and continue to onboarding."
+          );
+          return;
+        }
         const extracted = await previewSemiAutoN8nIntake(id);
         if (requestId.current === next) setN8nResult(extracted);
         return;
@@ -282,6 +328,36 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
 
   return (
     <div className="grid grid-cols-1 items-start gap-3 xl:grid-cols-[minmax(0,1.8fr)_minmax(310px,1fr)]">
+      {primaryN8n && queueActive ? (
+        <section aria-label="Automatic policy processing summary"
+          className="rounded-2xl border border-[#dce5f0] bg-white p-3 xl:col-span-2">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-[12px] font-bold text-[#16355a]">Automatic n8n processing queue</h2>
+              <p className="mt-1 text-[10px] text-[#61738a]">Extracted in bounded background batches. No customer or policy is created by the extraction worker.</p>
+            </div>
+            <button type="button" disabled aria-label="Convert All Eligible is disabled until canonical preflight and booking rollout"
+              className="min-h-9 rounded-lg bg-[#174b83] px-3 text-[11px] font-bold text-white opacity-45">
+              Convert All Eligible · {queueCounts?.eligible??0}
+            </button>
+          </div>
+          <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-5">
+            {[
+              ["Awaiting",queueCounts?.unprocessed??0],
+              ["Processing",queueCounts?.processing??0],
+              ["Exceptions",queueCounts?.exceptions??0],
+              ["Not trained",queueCounts?.unsupported??0],
+              ["Retrying",queueCounts?.failed??0],
+            ].map(([label,value])=>(
+              <div key={String(label)} className="rounded-lg bg-[#f5f8fc] px-3 py-2">
+                <p className="text-[9px] font-semibold text-[#6b7f99]">{label}</p>
+                <p className="text-[18px] font-bold tabular-nums text-[#1d3f67]">{value}</p>
+              </div>
+            ))}
+          </div>
+          <p className="mt-2 text-[10px] text-[#63758c]">Booking is intentionally locked until the current PDF, exact customer identity, policy dates and canonical transaction preflight are independently checked. These counts cover the full open queue.</p>
+        </section>
+      ) : null}
       <section className="min-w-0 overflow-hidden rounded-2xl border border-[#dce5f0] bg-white">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#e7eef5] px-4 py-3">
           <div>
@@ -297,7 +373,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
         <div className="overflow-x-auto">
           <table className="min-w-[760px] w-full border-collapse text-left text-[10.5px]">
             <thead className="bg-[#f5f8fc] text-[9px] font-bold uppercase tracking-[.07em] text-[#62748e]">
-              <tr><th className="w-10 px-3 py-3"><span className="sr-only">Select</span></th><th className="px-2 py-3">Intake</th><th className="px-3 py-3">Lead source</th><th className="px-3 py-3">Customer mobile</th>{primaryN8n ? <th className="px-3 py-3">Policy type</th> : null}<th className="px-3 py-3">Status</th><th className="px-3 py-3">{primaryN8n ? "Saved OCR (old)" : "OCR"}</th><th className="px-3 py-3">Submitted</th></tr>
+              <tr><th className="w-10 px-3 py-3"><span className="sr-only">Select</span></th><th className="px-2 py-3">Intake</th><th className="px-3 py-3">Lead source</th><th className="px-3 py-3">Customer mobile</th>{primaryN8n ? <th className="px-3 py-3">Policy type</th> : null}<th className="px-3 py-3">Status</th><th className="px-3 py-3">{primaryN8n ? "Saved OCR (old)" : "OCR"}</th>{primaryN8n && queueActive ? <th className="px-3 py-3">AI Exceptions</th> : null}<th className="px-3 py-3">Submitted</th></tr>
             </thead>
             <tbody className="divide-y divide-[#edf1f5]">
               {visible.map(row => (
@@ -315,6 +391,16 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
                   {primaryN8n ? <td className="whitespace-nowrap px-3 py-3 text-[#445b75]">{row.policy_type === "non_motor" ? "Non-Motor" : row.policy_type === "motor" ? "Motor" : row.policy_type === "life" ? "Life" : row.policy_type === "health" ? "Health" : "Unclassified"}</td> : null}
                   <td className="whitespace-nowrap px-3 py-3"><span className="rounded-md bg-[#edf2fa] px-2 py-1 font-semibold text-[#3f5c82]">{row.is_duplicate ? "Duplicate · Preview only" : primaryN8n && row.policy_type !== "motor" ? "Review only" : humanStatus[row.status] || row.status}</span></td>
                   <td className="whitespace-nowrap px-3 py-3"><span className={row.ocr_status === "completed" ? "font-semibold text-emerald-700" : "font-semibold text-amber-700"}>{row.ocr_status === "completed" ? "Extracted" : row.ocr_status.replaceAll("_", " ")}</span></td>
+                  {primaryN8n && queueActive ? <td className="min-w-[170px] px-3 py-3">
+                    <div className="text-[10px] font-semibold text-[#32547d]">{row.ai_state ? aiStateLabel[row.ai_state] : "Waiting for queue"}</div>
+                    {row.ai_exceptions?.length ? (
+                      <button type="button" onClick={()=>setExceptionRow(row)}
+                        className="mt-1 rounded-md border border-[#e4d4b2] bg-[#fff8e8] px-2 py-1 text-left text-[10px] font-semibold text-[#765013] hover:bg-[#fff0c8]">
+                        {aiIssueTitles[row.ai_exceptions[0]]??"Review exception"}
+                        {row.ai_exceptions.length>1 ? ` +${row.ai_exceptions.length-1}`:""}
+                      </button>
+                    ):null}
+                  </td> : null}
                   <td className="whitespace-nowrap px-3 py-3 text-[#62748e]">{compactDate(row.created_at)}</td>
                 </tr>
               ))}
@@ -326,7 +412,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
       <section aria-live="polite" className="min-w-0 rounded-2xl border border-[#dce5f0] bg-white p-4">
         <div className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-[#4774c1]" /><h2 className="text-[13px] font-bold text-[#142e4c]">{primaryN8n ? "n8n Policy Processing" : "AI Booking Check"}</h2></div>
         {!selectedId ? <div className="mt-5 rounded-xl border border-dashed border-[#cddbea] p-5 text-center text-[11px] leading-5 text-[#63768e]">
-          {primaryN8n ? "Select an Intake to read its current private policy PDF using n8n. Untrained insurer layouts will be referred for manual review, not processed through Google OCR." : "Select a checkbox in the Intake table to see exactly which fields are ready and which require correction."}
+          {primaryN8n ? queueActive ? "The queue reads Intakes automatically. Select one to review its exceptions, or review the current private PDF again before onboarding." : "Select an Intake to read its current private policy PDF using n8n. Untrained insurer layouts will be referred for manual review, not processed through Google OCR." : "Select a checkbox in the Intake table to see exactly which fields are ready and which require correction."}
         </div> : (
           <>
             <div className="mt-3 flex items-start justify-between gap-3 rounded-xl bg-[#f4f7fc] px-3 py-3">
@@ -337,7 +423,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
               <div className="flex flex-wrap items-center gap-2">
                 {n8nEnabled ? <button type="button" onClick={() => { void previewN8n(); }} disabled={isWaiting || Boolean(done)}
                   className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#cbd9eb] bg-white px-2.5 text-[10px] font-semibold text-[#24518a] disabled:opacity-50">
-                  {busy === "extracting" ? <Loader2 className="h-3.5 w-3.5 animate-spin"/> : <FileSearch className="h-3.5 w-3.5"/>}{primaryN8n ? (n8nResult ? "Run n8n again" : "Process with n8n") : "Preview n8n PDF"}
+                  {busy === "extracting" ? <Loader2 className="h-3.5 w-3.5 animate-spin"/> : <FileSearch className="h-3.5 w-3.5"/>}{primaryN8n ? (queueActive ? "Review current PDF" : n8nResult ? "Run n8n again" : "Process with n8n") : "Preview n8n PDF"}
                 </button> : null}
                 {!primaryN8n ? <button type="button" onClick={() => { void retry(); }} disabled={isWaiting} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#d0deef] bg-white px-2.5 text-[10px] font-semibold text-[#29558d] disabled:opacity-50"><RefreshCw className="h-3.5 w-3.5"/>Recheck</button> : null}
               </div>
@@ -505,6 +591,58 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
           </>
         )}
       </section>
+      {exceptionRow ? (
+        <div className="fixed inset-0 z-[170] flex items-center justify-center bg-[#101d37]/65 px-4 py-6" role="presentation">
+          <div role="alertdialog" aria-modal="true" aria-labelledby="ai-exception-title"
+            className="w-full max-w-[530px] rounded-2xl border border-[#d6e2f1] bg-white p-5 shadow-[0_24px_80px_rgba(12,28,52,.3)]">
+            <h3 id="ai-exception-title" className="flex items-center gap-2 text-[15px] font-bold text-[#193657]">
+              <ShieldAlert className="h-4 w-4 text-amber-700"/> Resolve policy exceptions
+            </h3>
+            <p className="mt-2 text-[11px] text-[#62748e]">Intake {exceptionRow.intake_number}</p>
+            <div className="mt-3 max-h-[300px] space-y-2 overflow-y-auto">
+              {(exceptionRow.ai_exceptions??[]).map(code=>(
+                <div key={code} className="rounded-lg border border-[#e6dfd0] bg-[#fffcf4] p-3">
+                  <p className="text-[11px] font-bold text-[#77511f]">{aiIssueTitles[code]??"Requires review"}</p>
+                  <p className="mt-1 text-[10px] leading-4 text-[#6c5d42]">
+                    {code.startsWith("customer_")
+                      ? "Review the original insured name and all candidate customers. Link an exact verified customer, or create a separate customer through canonical onboarding. Never reuse a customer solely because the mobile number matches."
+                      : code==="duplicate_policy"
+                        ? "Inspect the existing policy or earlier Intake. A duplicate must never be converted again."
+                        : code==="preflight_pending"
+                          ? "The PDF has been read, but customer, date, ownership, premiums and policy history have not passed the canonical booking preflight."
+                          : "Review this exception in the Intake or editable Policy Onboarding workflow before attempting conversion."}
+                  </p>
+                </div>
+              ))}
+            </div>
+            <p className="mt-3 text-[10px] leading-4 text-[#61748e]">
+              The queue is review-only until a verified resolution is recorded. Choosing an action here does not create a customer, vehicle or policy.
+            </p>
+            {queueRetryError ? <p role="alert" className="mt-3 rounded-lg bg-amber-50 p-2 text-[10px] text-amber-900">{queueRetryError}</p> : null}
+            <div className="mt-5 flex flex-wrap justify-end gap-2">
+              <button type="button" autoFocus onClick={()=>{setExceptionRow(null);setQueueRetryError(null);}}
+                className="min-h-9 rounded-lg border border-[#cbd6e5] px-3 text-[11px] font-semibold text-[#38516e]">Close</button>
+              <Link href={"/policy-intakes/"+exceptionRow.id} className="inline-flex min-h-9 items-center rounded-lg border border-[#bcd0e5] px-3 text-[11px] font-semibold text-[#24538b]">Advanced options</Link>
+              {queueActive ? <button type="button" disabled={queueRetrying}
+                onClick={async ()=>{
+                  if(!exceptionRow)return;
+                  setQueueRetrying(true);setQueueRetryError(null);
+                  try{
+                    const response=await reprocessAiPolicyIntake(exceptionRow.id);
+                    if(response.ok){setExceptionRow(null);router.refresh();}
+                    else setQueueRetryError(response.error??"Could not queue extraction.");
+                  }catch{setQueueRetryError("Unable to schedule a recheck. Refresh the Intake and try again.");}
+                  finally{setQueueRetrying(false);}
+                }}
+                className="inline-flex min-h-9 items-center rounded-lg border border-[#bcd0e5] px-3 text-[11px] font-semibold text-[#24538b] disabled:opacity-50">
+                {queueRetrying?"Queuing...":"Recheck in background"}
+              </button> : null}
+              <button type="button" onClick={()=>{const id=exceptionRow.id;setExceptionRow(null);void selectRow(id);}}
+                className="min-h-9 rounded-lg bg-[#174b83] px-3 text-[11px] font-bold text-white">Review current PDF</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
       {handoffDialog ? (
         <div className="fixed inset-0 z-[160] flex items-center justify-center bg-[#101d37]/65 px-4 py-6" role="presentation">
           <div role="alertdialog" aria-modal="true" aria-labelledby="n8n-handoff-dialog-title" aria-describedby="n8n-handoff-dialog-description"
