@@ -16,7 +16,7 @@ function authorized(request: NextRequest, secret: string) {
   return a.length===b.length && timingSafeEqual(a,b);
 }
 
-async function process() {
+async function handleQueueBatch() {
   if (!aiQueueEnabled()) return NextResponse.json({error:"AI extraction queue is disabled"},{status:503});
   try {
     return NextResponse.json(await processAiQueueBatch(),{
@@ -37,12 +37,12 @@ async function process() {
 export async function GET(request: NextRequest) {
   if (!authorized(request, process.env.CRON_SECRET??""))
     return NextResponse.json({error:"Unauthorized"},{status:401});
-  return process();
+  return handleQueueBatch();
 }
 
 /** Separate optional manual worker endpoint, never a booking action. */
 export async function POST(request: NextRequest) {
   if (!authorized(request, process.env.INSUREIT_AI_QUEUE_WORKER_TOKEN??""))
     return NextResponse.json({error:"Unauthorized"},{status:401});
-  return process();
+  return handleQueueBatch();
 }
