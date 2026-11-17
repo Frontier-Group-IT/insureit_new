@@ -30,6 +30,30 @@ type CaseEditForm = {
  productName:string;proposalNumber:string;premiumPayingTerm:string;policyDuration:string;
  paymentFrequency:string;paymentMode:string;premiumAmount:string;
 };
+const CASE_FIELD_PLACEHOLDERS:Record<keyof CaseEditForm,string>={
+ customerName:'Enter name',
+ customerPhone:'Enter mobile',
+ customerAddress:'Enter address',
+ sourcingDate:'DD/MM/YYYY',
+ insurerId:'Select insurer',
+ productName:'Enter product',
+ proposalNumber:'Enter proposal no.',
+ premiumPayingTerm:'Select PPT',
+ policyDuration:'Select PD',
+ paymentFrequency:'Select frequency',
+ paymentMode:'Select mode',
+ premiumAmount:'Enter amount',
+};
+const ISSUE_FIELD_PLACEHOLDERS:Record<'policyNumber'|'issuanceDate'|'startDate'|'endDate'|'pptEndDate'|'nextInstallmentDate'|'finalPremium'|'sumInsured',string>={
+ policyNumber:'Enter policy no.',
+ issuanceDate:'DD/MM/YYYY',
+ startDate:'DD/MM/YYYY',
+ endDate:'DD/MM/YYYY',
+ pptEndDate:'DD/MM/YYYY',
+ nextInstallmentDate:'DD/MM/YYYY',
+ finalPremium:'Enter premium',
+ sumInsured:'Enter sum assured',
+};
 const FREQUENCIES=['Monthly','Quarterly','Half Yearly','Annually','One Time'] as const;
 const PAYMENT_MODES=['Cash','Cheque','NEFT/RTGS','UPI','Credit/Debit Card','Net Banking'] as const;
 function initialForm(value:LifeHealthCaseDetail):CaseEditForm {
@@ -237,11 +261,11 @@ export default function LifeHealthCaseDetailScreen(){
        <Ionicons name="calendar-outline" size={16} color={navy}/>
      </Pressable>:items.length?<Pressable accessibilityRole="button" accessibilityLabel={'Select '+label}
        style={[styles.fieldBox,styles.inlineSelector]} onPress={()=>setPicker(key)}>
-       <Text style={styles.fieldValue}>{key==='insurerId'?insurers.find(x=>x.id===form.insurerId)?.name||record?.insurer_name:form[key]||'Select'}</Text>
+       <Text style={[styles.fieldValue,!form[key]&&styles.datePlaceholder]} numberOfLines={1} ellipsizeMode="tail">{form[key]?(key==='insurerId'?insurers.find(x=>x.id===form.insurerId)?.name||record?.insurer_name||CASE_FIELD_PLACEHOLDERS.insurerId:form[key]):CASE_FIELD_PLACEHOLDERS[key]}</Text>
        <Ionicons name="chevron-down" size={15} color={navy}/>
      </Pressable>:
      <TextInput accessibilityLabel={label} value={form[key]} onChangeText={v=>setField(key,v)}
-       multiline={multiline} keyboardType={keyboardType} placeholder={label}
+       multiline={multiline} keyboardType={keyboardType} placeholder={CASE_FIELD_PLACEHOLDERS[key]} placeholderTextColor="#90A0B7"
        style={[styles.fieldBox,styles.inlineInput,multiline&&styles.fieldBoxMultiline]}/>}
    </View>;
  };
@@ -321,7 +345,7 @@ export default function LifeHealthCaseDetailScreen(){
          onPress={()=>setIssued(key,'')}><Ionicons name="close-circle-outline" size={17} color="#7D8FA8"/></Pressable>:null}
      </View>:<View style={[styles.fieldBox,styles.issueFieldRow]}>
        <TextInput accessibilityLabel={label} style={styles.issueTextInput} value={value}
-         placeholder={label} placeholderTextColor="#90A0B7"
+         placeholder={ISSUE_FIELD_PLACEHOLDERS[key as keyof typeof ISSUE_FIELD_PLACEHOLDERS]||label} placeholderTextColor="#90A0B7"
          keyboardType={key==='finalPremium'||key==='sumInsured'?'decimal-pad':'default'}
          onChangeText={v=>setIssued(key,v)}/>
      </View>}
