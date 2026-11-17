@@ -1,0 +1,100 @@
+name: INSUREIT isolated R6 private Storage sample restore (manual protected)
+
+on:
+  workflow_dispatch:
+    inputs:
+      expected_storage_snapshot:
+        description: 'REQUIRED authenticated R5 Storage v1 snapshot YYYYMMDDTHHMMSSZ'
+        required: true
+        type: string
+      confirm_target_ref:
+        description: 'Type klnodxnmlqbofolxxrsr exactly'
+        required: true
+        type: string
+      confirm_isolated_target:
+        description: 'Confirmed no live apps/notifications and strict isolated access'
+        required: true
+        type: boolean
+        default: false
+      execute_storage_upload:
+        description: 'Actually CREATE PRIVATE Storage buckets and upload <=500MB (FALSE = NO WRITE)'
+        required: true
+        type: boolean
+        default: false
+      confirm_nonatomic_upload:
+        description: 'I acknowledge Storage API writes are NOT transactional and must not auto-retry on failure'
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: insureit-r6-storage-restore-isolated
+  cancel-in-progress: false
+
+jobs:
+  storage_r6:
+    if: >-
+      github.repository == 'Frontier-Group-IT/insureit_new' &&
+      github.ref == 'refs/heads/main' &&
+      github.event_name == 'workflow_dispatch' &&
+      inputs.confirm_isolated_target &&
+      inputs.confirm_target_ref == 'klnodxnmlqbofolxxrsr'
+    runs-on: ubuntu-latest
+    timeout-minutes: 95
+    environment: insureit-recovery-isolated
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install pinned isolated target and authenticated R2 clients
+        run: python -m pip install boto3==1.35.99 cryptography==44.0.2 'psycopg[binary]==3.2.9'
+      - name: Reject any production or unknown target URL
+        env:
+          INSUREIT_RECOVERY_DATABASE_URL: ${{ secrets.INSUREIT_RECOVERY_DATABASE_URL }}
+        run: python scripts/backup/managed_recovery_preflight.py --check-target
+      - name: Read-only CA verified SQL-restored target and EMPTY Storage baseline
+        env:
+          INSUREIT_RECOVERY_DATABASE_URL: ${{ secrets.INSUREIT_RECOVERY_DATABASE_URL }}
+          RECOVERY_DB_SSL_ROOT_CERT_PEM: ${{ secrets.RECOVERY_DB_SSL_ROOT_CERT_PEM }}
+        run: python scripts/backup/check_restored_target_storage_preflight.py
+      - name: Review pinned authenticated exact Storage sample without uploads
+        env:
+          R2_ACCOUNT_ID: ${{ secrets.RECOVERY_R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.RECOVERY_R2_READONLY_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.RECOVERY_R2_READONLY_SECRET_ACCESS_KEY }}
+          BACKUP_ENCRYPTION_KEY: ${{ secrets.RECOVERY_STORAGE_BACKUP_ENCRYPTION_KEY }}
+          R2_BUCKET: insureit-production-backups
+          RECOVERY_EXPECTED_STORAGE_SNAPSHOT: ${{ inputs.expected_storage_snapshot }}
+          RECOVERY_CONFIRM_TARGET_REF: ${{ inputs.confirm_target_ref }}
+        run: |
+          set -euo pipefail
+          python scripts/backup/restore_isolated_r6_storage_sample.py --plan
+      - name: Target-only non-atomic PRIVATE bucket create + file upload + target GET checksum
+        if: ${{ inputs.execute_storage_upload && inputs.confirm_nonatomic_upload }}
+        env:
+          R2_ACCOUNT_ID: ${{ secrets.RECOVERY_R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.RECOVERY_R2_READONLY_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.RECOVERY_R2_READONLY_SECRET_ACCESS_KEY }}
+          BACKUP_ENCRYPTION_KEY: ${{ secrets.RECOVERY_STORAGE_BACKUP_ENCRYPTION_KEY }}
+          R2_BUCKET: insureit-production-backups
+          RECOVERY_EXPECTED_STORAGE_SNAPSHOT: ${{ inputs.expected_storage_snapshot }}
+          RECOVERY_CONFIRM_TARGET_REF: ${{ inputs.confirm_target_ref }}
+          RECOVERY_ENABLE_STORAGE_UPLOAD: 'true'
+          RECOVERY_TARGET_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.RECOVERY_TARGET_SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          set -euo pipefail
+          python scripts/backup/restore_isolated_r6_storage_sample.py --upload
+      - name: Affirm NO UPLOAD if unchecked
+        if: ${{ !inputs.execute_storage_upload }}
+        run: echo "R6 PLAN ONLY; target Storage untouched"
+      - name: Stop if upload requested without non-atomic acknowledgment
+        if: ${{ inputs.execute_storage_upload && !inputs.confirm_nonatomic_upload }}
+        run: |
+          echo "R6 stopped: requires non-atomic upload acknowledgement"
+          exit 1
