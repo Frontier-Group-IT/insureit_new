@@ -6,7 +6,7 @@ import { canPartnerAccess } from '@/lib/partner-permissions';
 import { usePartnerSession } from '@/providers/partner-session-provider';
 
 /** Stack-screen companion to the permission-gated Home tab bar. */
-export function PartnerCaseBottomNavigation() {
+export function PartnerCaseBottomNavigation({ activeTab }: { activeTab?: 'Home' | 'Business' | 'Policies' | 'Claims' | 'More' } = {}) {
   const router = useRouter();
   const { context } = usePartnerSession();
   const items = [
@@ -20,9 +20,12 @@ export function PartnerCaseBottomNavigation() {
     <View style={styles.bar}>
       {items.filter(item => item.allowed).map(item => (
         <Pressable key={item.label} accessibilityRole="button" accessibilityLabel={item.label}
-          onPress={() => router.navigate(item.route as never)} style={styles.item}>
-          <Ionicons name={item.icon} color="#AFC1DE" size={20} />
-          <Text style={styles.label}>{item.label}</Text>
+          onPress={() => router.navigate(item.route as never)} style={styles.item}
+          accessibilityState={{ selected: activeTab === item.label }}>
+          <View style={[styles.iconWrap, activeTab === item.label && styles.iconWrapActive]}>
+            <Ionicons name={item.icon} color={activeTab === item.label ? '#FFFFFF' : '#AFC1DE'} size={activeTab === item.label ? 24 : 20} />
+          </View>
+          <Text style={[styles.label, activeTab === item.label && styles.activeLabel]}>{item.label}</Text>
         </Pressable>
       ))}
     </View>
@@ -31,5 +34,8 @@ export function PartnerCaseBottomNavigation() {
 const styles = StyleSheet.create({
   bar: { minHeight: 57, flexDirection: 'row', backgroundColor: '#071E49', borderTopColor: '#173968', borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 5, paddingBottom: 7 },
   item: { flex: 1, minHeight: 44, alignItems: 'center', justifyContent: 'center', gap: 2 },
+  iconWrap: { width: 44, height: 31, alignItems: 'center', justifyContent: 'center', borderRadius: 16 },
+  iconWrapActive: { backgroundColor: '#203F79' },
+  activeLabel: { color: '#FFFFFF' },
   label: { color: '#AFC1DE', fontSize: 9.25, lineHeight: 12, fontWeight: Platform.OS === 'ios' ? '400' : '600' },
 });

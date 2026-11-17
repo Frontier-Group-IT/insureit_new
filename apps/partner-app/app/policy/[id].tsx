@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
+import { PartnerCaseBottomNavigation } from '@/components/partner-case-bottom-navigation';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { PartnerInsurerLogo } from '@/components/ui/partner-insurer-logo';
 import { PartnerPolicyDetailIcon, type PartnerPolicyDetailIconKind } from '@/components/ui/partner-policy-detail-icon';
@@ -13,9 +14,12 @@ import { formatIndianCurrency } from '@/lib/format';
 import { PartnerAssets } from '@/lib/partner-assets';
 import { getPartnerManufacturerLogoSource } from '@/lib/catalog-logos';
 import { partnerTheme } from '@/lib/theme';
+import { usePartnerSession } from '@/providers/partner-session-provider';
+import { canPartnerAccess, canPartnerAccessCaseRegister } from '@/lib/partner-permissions';
 
 export default function PolicyDetailScreen() {
   const router = useRouter();
+  const { context } = usePartnerSession();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [data, setData] = useState<PartnerPolicyDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -59,10 +63,28 @@ export default function PolicyDetailScreen() {
   const category = data ? policyCategory(data) : 'Policy';
   const manufacturerLogo = data?.vehicle ? getPartnerManufacturerLogoSource(data.vehicle.make) : null;
   const policyNumber = data?.policy.policy_no || data?.policy.policy_code || 'Policy';
+  const quickActions = [
+    ...(canPartnerAccess(context, 'view_policy_intakes') ? [{
+      label: 'Policy Intake', image: require('../../assets/partner/quick-actions/policy-intake.png'),
+      accessibilityLabel: 'Open Policy Intake', route: '/policy-intakes' as const,
+    }] : []),
+    ...(canPartnerAccess(context, 'create_policies', 'edit') ? [{
+      label: 'Add Policy', image: require('../../assets/partner/quick-actions/add-policy.png'),
+      accessibilityLabel: 'Add Policy, start a new blank policy', route: '/policy-new' as const,
+    }] : []),
+    ...(canPartnerAccessCaseRegister(context) ? [{
+      label: 'Case Register', image: require('../../assets/partner/quick-actions/case-register.png'),
+      accessibilityLabel: 'Open Case Register for Life and Health cases', route: '/life-health-cases' as const,
+    }] : []),
+    ...(context?.identity.actor_kind === 'employee' && canPartnerAccess(context, 'create_intermediary_application', 'edit') ? [{
+      label: 'Add Partner', image: require('../../assets/partner/quick-actions/add-partner.png'),
+      accessibilityLabel: 'Add Partner, submit Partner-only application', route: '/partner-new' as const,
+    }] : []),
+  ];
   const isVerified = data ? ['active', 'issued', 'in_force', 'in force'].includes((data.policy.status || data.policy.lifecycle_status || '').toLowerCase().replaceAll('-', '_')) : false;
 
   return (
-    <PartnerScreen title="Policy Details" hideTopBar>
+    <PartnerScreen title="Policy Details" hideTopBar navyStatusBar bottomNavigationNavy bottomNavigation={<PartnerCaseBottomNavigation activeTab="Policies" />}>
       <View style={styles.pageHeader}>
         <View style={styles.headerGlowOne} />
         <View style={styles.headerGlowTwo} />
@@ -113,15 +135,22 @@ export default function PolicyDetailScreen() {
             </View>
           </View>
 
-          <Card>
-            <CardHeader iconKind="quick-actions" title="Quick Actions" />
-            <View style={styles.quickGrid}>
-              <QuickAction iconKind="policy-document" label="Policy Document" tone="blue" onPress={() => router.push('/policies' as never)} />
-              <QuickAction iconKind="renew-policy" label="Renew Policy" tone="green" onPress={() => router.push('/renewals' as never)} />
-              <QuickAction iconKind="raise-claim" label="Raise Claim" tone="orange" onPress={() => router.push('/claims' as never)} />
-              <QuickAction iconKind="customer-details" label="Customer Details" tone="purple" onPress={() => data.customer.id ? router.push(`/customer/${data.customer.id}` as never) : undefined} />
+          {quickActions.length > 0 ? (
+            <View style={styles.quickSection}>
+              <Text style={styles.quickSectionHeading}>Quick Actions</Text>
+              <View style={styles.quickGrid}>
+                {quickActions.map((action) => (
+                  <QuickAction
+                    key={action.route}
+                    image={action.image}
+                    label={action.label}
+                    accessibilityLabel={action.accessibilityLabel}
+                    onPress={() => router.push(action.route)}
+                  />
+                ))}
+              </View>
             </View>
-          </Card>
+          ) : null}
 
           <Card>
             <CardHeader iconKind="policy-overview" title="Policy Overview" actionLabel="View All" onAction={() => setShowOverviewDetails((value) => !value)} />
@@ -219,8 +248,20 @@ function CardHeader({ iconKind, title, actionLabel, onAction }: { iconKind: Part
   );
 }
 
-function QuickAction({ iconKind, label, onPress }: { iconKind: PartnerPolicyDetailIconKind; label: string; tone?: string; onPress?: () => void }) {
-  return <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.quickAction, iconKind === "policy-document" ? styles.quickBlue : iconKind === "renew-policy" ? styles.quickGreen : iconKind === "raise-claim" ? styles.quickOrange : styles.quickPurple, pressed && styles.pressed]}><Ionicons name={iconKind === "policy-document" ? "document-text" : iconKind === "renew-policy" ? "sync" : iconKind === "raise-claim" ? "shield-checkmark" : "people"} size={25} color="#0879E9" /><Text numberOfLines={2} style={styles.quickLabel}>{label}</Text></Pressable>;
+function QuickAction({ image, label, accessibilityLabel, onPress }: {
+  image: ImageSourcePropType; label: string; accessibilityLabel: string; onPress: () => void;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      onPress={onPress}
+      style={({ pressed }) => [styles.quickAction, pressed && styles.pressed]}
+    >
+      <Image source={image} style={styles.quickActionImage} resizeMode="contain" />
+      <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={styles.quickLabel}>{label}</Text>
+    </Pressable>
+  );
 }
 
 function OverviewItem({ iconKind, label, value, insurerName }: { iconKind: PartnerPolicyDetailIconKind; label: string; value: string; insurerName?: string | null }) {
@@ -269,10 +310,18 @@ const styles = StyleSheet.create({
   cardHeader: { minHeight: 37, paddingHorizontal: 11, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   cardHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 7 }, cardTitle: { color: '#102A51', fontSize: 12.5, lineHeight: 16, fontWeight: '800' },
   cardHeaderAction: { flexDirection: 'row', alignItems: 'center', gap: 1, minHeight: 32, paddingLeft: 8 }, cardHeaderActionText: { color: '#0969CF', fontSize: 9, lineHeight: 12, fontWeight: '700' },
-  quickGrid: { flexDirection: 'row', gap: 0, paddingHorizontal: 9, paddingBottom: 9 },
-  quickAction: { flex: 1, borderRadius: 9, marginHorizontal: 2, minHeight: 61, alignItems: 'center', justifyContent: 'center', gap: 6, paddingHorizontal: 3, borderRightWidth: StyleSheet.hairlineWidth, borderRightColor: '#DCE7F3' },
-  quickBlue: { backgroundColor: '#EAF5FF' }, quickGreen: { backgroundColor: '#E9F8F2' }, quickOrange: { backgroundColor: '#FFF1E6' }, quickPurple: { backgroundColor: '#F0EBFF' },
-  quickLabel: { color: '#17304F', textAlign: 'center', fontSize: 8.5, lineHeight: 11, fontWeight: '700' },
+  quickSection: { marginHorizontal: 12, paddingVertical: 8 },
+  quickSectionHeading: { marginHorizontal: 3, marginBottom: 8, color: '#17365D', fontSize: 12, lineHeight: 16, fontWeight: '800' },
+  quickGrid: { flexDirection: 'row', alignItems: 'stretch', gap: 7 },
+  quickAction: {
+    flex: 1, minWidth: 0, minHeight: 74, alignItems: 'center', justifyContent: 'center',
+    paddingHorizontal: 2, paddingVertical: 6, gap: 4, backgroundColor: 'transparent',
+  },
+  quickActionImage: { width: 48, height: 48 },
+  quickLabel: {
+    color: '#102D55', textAlign: 'center', fontSize: 9.25, lineHeight: 12,
+    fontWeight: '800', width: '100%', includeFontPadding: false,
+  },
   overviewGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 5, paddingHorizontal: 9, paddingBottom: 9 },
   overviewItem: { width: '31%', flexGrow: 1, minWidth: 0, minHeight: 54, flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 6, paddingHorizontal: 4, borderWidth: StyleSheet.hairlineWidth, borderColor: '#DCE7F3', borderRadius: 9 },
   overviewLogoWrap: { width: 23, height: 23, borderRadius: 9, backgroundColor: '#F0F5FC', alignItems: 'center', justifyContent: 'center' }, overviewLogo: { width: 20, height: 20 }, overviewCopy: { flex: 1, minWidth: 0 }, overviewLabel: { color: '#8A95A6', fontSize: 8.5, lineHeight: 10 }, overviewValue: { marginTop: 2, color: '#192B46', fontSize: 10, lineHeight: 13, fontWeight: '700' },
