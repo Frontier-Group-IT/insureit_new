@@ -11,9 +11,14 @@ assert.match(source,/styles\.categoryPill[\s\S]{0,300}styles\.periodValue/,'Date
 assert.match(source,/formatDate\(data\.policy\.start_date\)\} – \{formatDate\(data\.policy\.end_date\)/,'Keep real policy dates');
 assert.doesNotMatch(source,/>Policy Period</,'Do not show Policy Period label');
 assert.doesNotMatch(source,/styles\.summaryDivider|styles\.premiumRow|styles\.periodDivider/,'Remove old split premium and period row from hero');
-for (const title of ['Premium', 'Customer Details', 'Commercial Attribution']) {
-  assert.ok(source.includes('<CardHeader title="'+title+'" />'), 'Section '+title+' has no leading icon');
+// Premium and Commercial are disclosure rows inside the unified Policy Overview card.
+assert.ok(!source.includes('<CardHeader title="Premium" />'), 'Premium no longer has a separate heading');
+assert.ok(!source.includes('<CardHeader title="Commercial Attribution" />'), 'Commercial no longer has a separate heading');
+for (const title of ['Customer Details']) {
+  assert.ok(source.includes('<CardHeader title="'+title+'" />'), 'Customer heading has no leading icon');
 }
+assert.match(source,/styles\.premiumDisclosure/,'Premium breakup disclosure remains visible');
+assert.match(source,/styles\.commercialRow/,'Sales ownership disclosure remains visible');
 assert.ok(source.includes("<CardHeader title={data.vehicle ? 'Vehicle Details' : 'Insured Risk Details'} />"),
   'Vehicle/Risk section has no leading icon in either category');
 assert.match(source, /iconKind \? <PartnerPolicyDetailIcon kind=\{iconKind\}/,
