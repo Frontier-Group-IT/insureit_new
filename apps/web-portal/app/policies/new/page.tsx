@@ -125,6 +125,21 @@ export default async function NewPolicyPage({ searchParams }: { searchParams: Pr
           </p>
         </div>
       ) : null}
+      {sourceIntakeId && workflowInitialValues?.remarks?.includes("n8n validated ICICI 3005") && !workflowInitialValues.issuanceDate ? (
+        <div role="alert" className="mx-auto mb-3 max-w-[1450px] rounded-xl border border-amber-300 bg-amber-50 px-4 py-3">
+          <p className="text-[12px] font-bold text-amber-900">Policy issuance date is not verified in the current PDF extraction</p>
+          <p className="mt-1 text-[10.5px] leading-5 text-amber-800">
+            This field is deliberately blank instead of using today or the coverage start date.
+            The currently published n8n workflow now supports the original policy issue-date label.
+            Recheck this Intake using its current policy PDF to retrieve an independently printed issue date.
+            If the PDF has no such date, review the original copy and enter the correct date manually;
+            any required date approval still applies.
+          </p>
+          <a className="mt-2 inline-block text-[11px] font-semibold underline" href={"/development/ai-policy-onboarding?intake_id="+encodeURIComponent(sourceIntakeId)}>
+            Open AI Intake to recheck the current PDF
+          </a>
+        </div>
+      ) : null}
       <PolicyRemarksActionStyle />
       <PolicyOnboardingProductGuard insurers={insurerOptions} />
       <PolicyCommercialShell mode="create" insurers={insurerOptions} customers={customerOptions} rms={rmOptions} sources={sourceOptions} manufacturers={manufacturerOptions} commercialAccess={commercialAccess} initialValues={workflowInitialValues} initialRegistrationMode={workflowRegistrationMode} authoritativeInitialValues={vehicleHandoff} preselectedCustomerId={preselectedCustomerId} preselectedVehicleId={vehicleHandoff ? params.vehicle_id ?? null : null} sourceIntakeId={sourceIntakeId} initialDraftRevision={initialDraftRevision} />
