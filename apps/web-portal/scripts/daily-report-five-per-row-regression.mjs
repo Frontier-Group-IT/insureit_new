@@ -3,6 +3,7 @@ import {readFileSync} from "node:fs";
 
 const read=p=>readFileSync(new URL(p,import.meta.url),"utf8");
 const panel=read("../components/reports/daily-self-activity-panel.tsx");
+const css=read("../app/globals.css");
 const source=read("../lib/reports/daily-self-activity.ts");
 const page=read("../app/reports/(workspace)/daily/page.tsx");
 
@@ -36,7 +37,6 @@ assert.match(panel,/hover:border-\[#7ba7dc\]/,"Professional blue border hover fe
 assert.match(panel,/focus-visible:outline/,"Keyboard focus state remains visible");
 assert.match(panel,/motion-reduce:transform-none motion-reduce:transition-none/,"Reduced-motion users receive static hover feedback");
 assert.match(panel,/active:translate-y-0/,"Pressed state provides immediate feedback");
-const css=read("../app/globals.css");
 const header=read("../components/reports/daily-report-header-controls.tsx");
 assert.match(css,/width: 100%;\s*max-width: none;/,"Daily Report occupies full available workspace width");
 assert.match(page,/daily-report-reference/,"Daily Report styling scoped to the page");
