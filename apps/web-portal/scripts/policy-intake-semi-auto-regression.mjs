@@ -783,4 +783,33 @@ assert(aiPageText.includes("queueCounts.extracted++") && aiPageText.includes("if
 assert(workbenchText.includes("Duplicates skipped") && workbenchText.includes("PDF extracted")
   && workbenchText.includes("Duplicate · skipped"),
   "Queue UI must show true extraction progress and skipped duplicates separately");
+// One-click conversion must use canonical transaction, and never trust
+// browser fields or silently reuse a different insured's mobile match.
+const convertStart=actionsText.indexOf("export async function convertVerifiedAiIntake(");
+const convertEnd=actionsText.indexOf("export async function bookSemiAutoIntake(",convertStart);
+assert(convertStart>0&&convertEnd>convertStart,
+  "A separate one-click verified n8n conversion action must be available");
+const convertCode=actionsText.slice(convertStart,convertEnd);
+assert(convertCode.includes("await requireDevelopmentPolicyOperator(id)")
+  && convertCode.includes('queued.state!=="verified"')
+  && convertCode.includes("extracted.preview.fingerprint!==queued.extraction_fingerprint")
+  && convertCode.includes('prepareVerifiedN8nIntakeHandoff(id,queued.document_id')
+  && convertCode.includes('decision==="otp_required"')
+  && convertCode.includes('forwarded.draft.issuanceDate!==issuanceDate')
+  && convertCode.includes('normalizedIdentity(pdfField("insured_name"))')
+  && convertCode.includes('mapVerifiedN8nMotorPremium(extracted.preview.premium)')
+  && convertCode.includes('forwarded.draft.addOnPremium')
+  && convertCode.includes('forwarded.draft.tpValidUpto')
+  && convertCode.includes('createNewCustomer:true')
+  && convertCode.includes('await onboardPolicy(payload)'),
+  "One-click conversion must independently reverify current PDF, name, premiums, policy number, issued date and OTP, then use the canonical policy/customer transaction");
+assert(!convertCode.includes('dateApprovalId:"') && !convertCode.includes('confirmPolicyReplacement:true'),
+  "Automatic customer creation must never manufacture an email OTP approval or override an active policy");
+assert(actionsText.includes('addOnPremium:d.addOnPremium||"0"')
+  && actionsText.includes("cpaValidUpto:d.cpaValidUpto||d.tpValidUpto"),
+  "Canonical payload must preserve independently verified OD add-ons and bundled cover periods");
+assert(workbenchText.includes("Convert to Policy")&&workbenchText.includes("Confirm & Convert")
+  && workbenchText.includes("convertVerifiedAiIntake(row.id,true)")
+  && workbenchText.includes('role="alertdialog"'),
+  "Verified conversion must have a working custom confirmation, never a no-op redirect");
 console.log("Semi-auto Motor onboarding regression checks passed.");
