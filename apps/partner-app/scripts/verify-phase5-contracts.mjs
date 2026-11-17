@@ -216,6 +216,23 @@ expectAll('app.json', [
   [/"checkAutomatically"\s*:\s*"ON_LOAD"/, 'preview binary must continue checking OTA updates on launch'],
 ]);
 
+// All passive Partner success alerts close in 1 second without an OK button.
+// Interactive navigations/confirmations and errors must keep their own actions.
+expectAll('components/ui/partner-alert-provider.tsx', [
+  [/function isPassiveSuccessNotice\(notice: Notice\)/, 'shared provider classifies passive success separately from confirmations'],
+  [/noticeKind\(notice\) !== 'success'/, 'errors and warnings never auto-dismiss as successes'],
+  [/notice\.buttons\.length === 1[\s\S]*!notice\.buttons\[0\]\.onPress/, 'only non-actionable single OK alerts may auto-dismiss'],
+  [/setTimeout\(\(\) => \{[\s\S]*\}, 1000\)/, 'passive success auto-dismiss timeout remains 1000ms'],
+  [/return \(\) => clearTimeout\(timeout\)/, 'old success timer cancels when the notice changes'],
+  [/actions=\{autoDismissSuccess \? \[\] : choices\}/, 'passive success suppresses all action buttons'],
+  [/notice\.options\?\.onDismiss\?\.\(\)/, 'onDismiss callback is preserved'],
+  [/updated\|submitted\|sent\|added\|verified\|issued\|deleted\|removed/, 'common app-wide completion labels are recognized as success'],
+]);
+expectAll('components/ui/partner-confirm-dialog.tsx', [
+  [/displayedActions\.length > 0 \?/, 'no empty divider or footer is shown for actionless success'],
+  [/displayedActions\.map/, 'confirmation buttons remain available where required'],
+]);
+
 // Evaluate every contract only after all checks have run.
 if (failures.length) {
   console.error('Partner Phase 5 resilience/accessibility contract verification failed:');

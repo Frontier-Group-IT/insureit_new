@@ -87,20 +87,24 @@ export function PartnerConfirmDialog({
           <ScrollView style={styles.messageScroll} contentContainerStyle={styles.messageWrap} showsVerticalScrollIndicator={false}>
             <Text style={styles.message}>{message}</Text>
           </ScrollView>
-          <View style={styles.divider} />
-          <View style={[styles.actions, displayedActions.length > 2 && styles.stackedActions]}>
-            {displayedActions.map((action, index) => (
-              <View style={[styles.action, displayedActions.length > 2 && styles.stackedAction]} key={index}>
-                <PartnerButton
-                  label={action.label}
-                  onPress={action.onPress}
-                  variant={action.destructive ? 'danger' : action.secondary ? 'secondary' : 'primary'}
-                  loading={busy && index === displayedActions.length - 1}
-                  disabled={busy}
-                />
+          {displayedActions.length > 0 ? (
+            <>
+              <View style={styles.divider} />
+              <View style={[styles.actions, displayedActions.length > 2 && styles.stackedActions]}>
+                {displayedActions.map((action, index) => (
+                  <View style={[styles.action, displayedActions.length > 2 && styles.stackedAction]} key={index}>
+                    <PartnerButton
+                      label={action.label}
+                      onPress={action.onPress}
+                      variant={action.destructive ? 'danger' : action.secondary ? 'secondary' : 'primary'}
+                      loading={busy && index === displayedActions.length - 1}
+                      disabled={busy}
+                    />
+                  </View>
+                ))}
               </View>
-            ))}
-          </View>
+            </>
+          ) : null}
         </View>
       </View>
     </Modal>
