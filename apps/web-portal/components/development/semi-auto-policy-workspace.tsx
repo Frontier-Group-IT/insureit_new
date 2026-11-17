@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AlertCircle, ArrowUpRight, CheckCircle2, ClipboardCheck, FileSearch, Loader2, PencilLine, RefreshCw, Search, ShieldAlert, Sparkles } from "lucide-react";
-import { applySemiAutoN8nIntake, bookSemiAutoIntake, checkSemiAutoIntake, continueVerifiedN8nIntakeToOnboarding, editSemiAutoIntake, previewSemiAutoN8nIntake, reprocessAiPolicyIntake, type SemiAutoActionResult, type SemiAutoN8nResult } from "@/app/development/ai-policy-onboarding/actions";
+import { applySemiAutoN8nIntake, bookSemiAutoIntake, checkSemiAutoIntake, continueVerifiedN8nIntakeToOnboarding, editSemiAutoIntake, previewSemiAutoN8nIntake, reprocessAiPolicyIntake, reviewAiIntakeCustomerCandidates, type AiCustomerCandidateReview, type SemiAutoActionResult, type SemiAutoN8nResult } from "@/app/development/ai-policy-onboarding/actions";
 
 export type SemiAutoIntakeRow = {
   id: string;
@@ -98,6 +98,8 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
   const [n8nNotice, setN8nNotice] = useState<string | null>(null);
   const [done, setDone] = useState<{ policyCode: string; policyId: string } | null>(null);
   const [exceptionRow,setExceptionRow]=useState<SemiAutoIntakeRow|null>(null);
+  const [customerReview,setCustomerReview]=useState<AiCustomerCandidateReview|null>(null);
+  const [reviewingCustomer,setReviewingCustomer]=useState(false);
   const [queueRetrying,setQueueRetrying]=useState(false);
   const [queueRetryError,setQueueRetryError]=useState<string|null>(null);
   const [takeover, setTakeover] = useState<{ intakeId: string; reviewerName: string } | null>(null);
@@ -413,7 +415,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
                   {primaryN8n && queueActive ? <td className="min-w-[170px] px-3 py-3">
                     <div className="text-[10px] font-semibold text-[#32547d]">{row.ai_state ? aiStateLabel[row.ai_state] : "Waiting for queue"}</div>
                     {row.ai_exceptions?.length ? (
-                      <button type="button" onClick={()=>setExceptionRow(row)}
+                      <button type="button" onClick={()=>{setExceptionRow(row);setCustomerReview(null);}}
                         className="mt-1 rounded-md border border-[#e4d4b2] bg-[#fff8e8] px-2 py-1 text-left text-[10px] font-semibold text-[#765013] hover:bg-[#fff0c8]">
                         {aiIssueTitles[row.ai_exceptions[0]]??"Review exception"}
                         {row.ai_exceptions.length>1 ? ` +${row.ai_exceptions.length-1}`:""}
@@ -634,12 +636,65 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
                 </div>
               ))}
             </div>
+            {(exceptionRow.ai_exceptions??[]).some(code=>code.startsWith("customer_")) ? (
+              <div className="mt-3 space-y-2 rounded-lg border border-[#d2e0f0] bg-[#f5f9ff] p-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <p className="text-[11px] font-bold text-[#19446f]">Customer identity decision</p>
+                    <p className="text-[10px] text-[#59708d]">Inspect actual master records before linking or creating a customer.</p>
+                  </div>
+                  <button type="button" disabled={reviewingCustomer}
+                    onClick={async()=>{
+                      setReviewingCustomer(true);setCustomerReview(null);
+                      try {
+                        setCustomerReview(await reviewAiIntakeCustomerCandidates(exceptionRow.id));
+                      } catch {
+                        setCustomerReview({ok:false,error:"Customer candidate review is unavailable. Use Advanced options."});
+                      } finally {setReviewingCustomer(false);}
+                    }}
+                    className="min-h-8 rounded-md bg-[#174b83] px-3 text-[10px] font-bold text-white disabled:opacity-50">
+                    {reviewingCustomer ? "Checking current PDF..." : "Check customer matches"}
+                  </button>
+                </div>
+                {customerReview?.ok===false ? <p role="alert" className="text-[10px] text-amber-800">{customerReview.error}</p> : null}
+                {customerReview?.ok===true ? (
+                  <div className="space-y-2" aria-live="polite">
+                    <p className="text-[10px] font-semibold text-[#3b577a]">
+                      PDF insured: {customerReview.insuredName??"Not verified"} · Mobile ending {customerReview.mobileLast4}
+                    </p>
+                    <p className="text-[10px] text-[#647891]">{customerReview.verificationNote}</p>
+                    {customerReview.truncated ? <p className="text-[10px] font-bold text-amber-700">More than 50 master records found. A unique match cannot be assumed.</p> : null}
+                    {customerReview.candidates.length ? (
+                      <div className="max-h-40 space-y-1 overflow-y-auto">
+                        {customerReview.candidates.map(candidate=>(
+                          <div key={candidate.id} className="flex items-center justify-between gap-2 rounded-md border border-[#dbe6f2] bg-white px-2 py-1.5">
+                            <div>
+                              <p className="text-[10px] font-bold text-[#243f60]">{candidate.displayName} · {candidate.customerCode}</p>
+                              <p className="text-[9px] text-[#607992]">{candidate.nameMatch==="verified_exact"?"Name matches current verified PDF":candidate.nameMatch==="different"?"Different insured name — identity conflict":"Name not verified"}</p>
+                            </div>
+                            <Link href={"/customers/"+candidate.id} target="_blank" rel="noopener noreferrer"
+                              className="shrink-0 text-[10px] font-semibold text-[#1d538c] underline">Review profile</Link>
+                          </div>
+                        ))}
+                      </div>
+                    ) : <p className="text-[10px] text-[#61748e]">No matching mobile number in the customer master. Review identity before creating a new customer.</p>}
+                    <div className="flex flex-wrap gap-2">
+                      <Link href="/customers?choose_partner=1" target="_blank" rel="noopener noreferrer"
+                        className="rounded-md border border-[#bed1e8] bg-white px-3 py-2 text-[10px] font-bold text-[#174b83]">Create New Customer</Link>
+                      <Link href="/customers" target="_blank" rel="noopener noreferrer"
+                        className="rounded-md border border-[#bed1e8] bg-white px-3 py-2 text-[10px] font-bold text-[#174b83]">Customer Register</Link>
+                    </div>
+                    <p className="text-[9px] font-medium text-[#7a6472]">These actions open the canonical customer workflow. They do not link a customer or clear this exception automatically.</p>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
             <p className="mt-3 text-[10px] leading-4 text-[#61748e]">
               The queue is review-only until a verified resolution is recorded. Choosing an action here does not create a customer, vehicle or policy.
             </p>
             {queueRetryError ? <p role="alert" className="mt-3 rounded-lg bg-amber-50 p-2 text-[10px] text-amber-900">{queueRetryError}</p> : null}
             <div className="mt-5 flex flex-wrap justify-end gap-2">
-              <button type="button" autoFocus onClick={()=>{setExceptionRow(null);setQueueRetryError(null);}}
+              <button type="button" autoFocus onClick={()=>{setExceptionRow(null);setQueueRetryError(null);setCustomerReview(null);}}
                 className="min-h-9 rounded-lg border border-[#cbd6e5] px-3 text-[11px] font-semibold text-[#38516e]">Close</button>
               <Link href={"/policy-intakes/"+exceptionRow.id} className="inline-flex min-h-9 items-center rounded-lg border border-[#bcd0e5] px-3 text-[11px] font-semibold text-[#24538b]">Advanced options</Link>
               {queueActive ? <button type="button" disabled={queueRetrying}
