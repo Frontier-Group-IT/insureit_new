@@ -10,10 +10,10 @@ import type { SelfActivity } from "@/lib/reports/daily-self-activity";
 const dateFormat=new Intl.DateTimeFormat("en-IN",{timeZone:"Asia/Kolkata",day:"2-digit",month:"short",year:"numeric"});
 const timeFormat=new Intl.DateTimeFormat("en-IN",{timeZone:"Asia/Kolkata",hour:"2-digit",minute:"2-digit",hour12:true});
 
-type Props={rows:SelfActivity[];isCustomerActivity?:boolean;isClaimActivity?:boolean;vehicleMode?:boolean;isOtherActivity?:boolean};
+type Props={rows:SelfActivity[];isCustomerActivity?:boolean;isClaimActivity?:boolean;vehicleMode?:boolean;isOtherActivity?:boolean;showPerformedBy?:boolean};
 const customerField=(value:string|number|undefined|null)=>value===undefined||value===null||value===""?"—":String(value);
 
-export function DailyActivityHistoryRows({rows,isCustomerActivity=false,isClaimActivity=false,vehicleMode=false,isOtherActivity=false}:Props) {
+export function DailyActivityHistoryRows({rows,isCustomerActivity=false,isClaimActivity=false,vehicleMode=false,isOtherActivity=false,showPerformedBy=false}:Props) {
   const router=useRouter();
   const [deletedClaim,setDeletedClaim]=useState<SelfActivity|null>(null);
   const [deletedRecord,setDeletedRecord]=useState<SelfActivity|null>(null);
@@ -96,6 +96,7 @@ export function DailyActivityHistoryRows({rows,isCustomerActivity=false,isClaimA
                 </td>
               </>
             )}
+            {showPerformedBy ? <td className="whitespace-nowrap px-3 py-3 font-medium">{customerField(row.performedByName)}</td> : null}
             <td className="whitespace-nowrap px-3 py-3">{dateFormat.format(new Date(row.occurredAt))}, {timeFormat.format(new Date(row.occurredAt))}</td>
             <td className="px-3 py-3"><span className="rounded-md bg-[#edf3fa] px-2 py-1 text-[9px] font-bold text-[#35587e]">{row.status}</span></td>
           </tr>

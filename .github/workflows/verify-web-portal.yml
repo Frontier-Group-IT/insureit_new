@@ -92,6 +92,8 @@ jobs:
         run: node --experimental-strip-types scripts/daily-report-all-employee-self-access-regression.mjs
       - name: Daily Report All employee directory hierarchy and history isolation regression
         run: node --experimental-strip-types scripts/daily-report-all-employee-directory-regression.mjs
+      - name: Daily Report combined All performer attribution regression
+        run: node scripts/daily-report-performed-by-all-regression.mjs
       - name: Daily Report All excludes current employee regression
         run: node scripts/daily-report-all-exclude-self-regression.mjs
       - name: OCR-only Layout Parser opt-in regression

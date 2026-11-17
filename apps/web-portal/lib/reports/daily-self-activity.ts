@@ -16,17 +16,18 @@ export type SelfActivity = {
   customerFleetSize?: string; customerPolicyCount?: number;
   claimControlNo?: string; claimInsurerNo?: string; claimCustomerName?: string; claimVehicleNo?: string;
   subjectEmployeeName?: string;
+  actorId?: string; performedByName?: string;
 };
 type Audit = { id:string; actor_id:string|null; action:string; table_name:string|null; record_id:string|null; created_at:string };
-type Policy = { id:string; created_at:string; policy_no:string|null };
-type Intake = { id:string; created_at:string; intake_number:string|null; finalized_at:string|null };
-type IntakeFinal = { id:string; finalized_at:string|null; intake_number:string|null };
-type Case = { id:string; created_at:string; case_number:string|null; converted_at:string|null };
-type CaseFinal = { id:string; converted_at:string|null; case_number:string|null };
-type ClaimCreation = { id:string; created_at:string; claim_no:string|null };
-type ClaimStageEdit = { id:string; claim_id:string; created_at:string; details:Record<string,unknown>|null };
-type ClaimVerification = { id:string; claim_id:string; document_type:string; is_valid:boolean; created_at:string };
-type ClaimStatusEvent = { id:string; claim_id:string; created_at:string; from_status:string|null; to_status:string|null };
+type Policy = { id:string; created_at:string; policy_no:string|null; created_by:string|null };
+type Intake = { id:string; created_at:string; intake_number:string|null; finalized_at:string|null; submitted_by_profile_id:string|null };
+type IntakeFinal = { id:string; finalized_at:string|null; intake_number:string|null; finalized_by_profile_id:string|null };
+type Case = { id:string; created_at:string; case_number:string|null; converted_at:string|null; created_by:string|null };
+type CaseFinal = { id:string; converted_at:string|null; case_number:string|null; converted_by:string|null };
+type ClaimCreation = { id:string; created_at:string; claim_no:string|null; created_by:string|null };
+type ClaimStageEdit = { id:string; claim_id:string; created_at:string; details:Record<string,unknown>|null; created_by:string|null };
+type ClaimVerification = { id:string; claim_id:string; document_type:string; is_valid:boolean; created_at:string; verified_by:string|null };
+type ClaimStatusEvent = { id:string; claim_id:string; created_at:string; from_status:string|null; to_status:string|null; changed_by:string|null };
 const MAX_PAGE = 400;
 function actionCategory(action:string, table:string|null) {
   const name = (table??"").toLowerCase();
@@ -179,32 +180,32 @@ export async function loadSelfActivityHistory(
     return q.returns<Audit[]>();
   };
   const loadPolicy=(from:number,to:number)=>{
-    let q=admin.from("policies").select("id,created_at,policy_no").in("created_by",actorIds)
+    let q=admin.from("policies").select("id,created_at,policy_no,created_by").in("created_by",actorIds)
       .order("created_at",{ascending:false}).range(from,to);
     if(window) q=q.gte("created_at",window.from).lt("created_at",window.to);
     return q.returns<Policy[]>();
   };
   const loadIntake=(from:number,to:number)=>{
-    let q=admin.from("policy_intake_requests").select("id,created_at,intake_number,finalized_at")
+    let q=admin.from("policy_intake_requests").select("id,created_at,intake_number,finalized_at,submitted_by_profile_id")
       .in("submitted_by_profile_id",actorIds).order("created_at",{ascending:false}).range(from,to);
     if(window) q=q.gte("created_at",window.from).lt("created_at",window.to);
     return q.returns<Intake[]>();
   };
   const loadIntakeFinal=(from:number,to:number)=>{
-    let q=admin.from("policy_intake_requests").select("id,finalized_at,intake_number")
+    let q=admin.from("policy_intake_requests").select("id,finalized_at,intake_number,finalized_by_profile_id")
       .in("finalized_by_profile_id",actorIds).not("finalized_at","is",null)
       .order("finalized_at",{ascending:false}).range(from,to);
     if(window) q=q.gte("finalized_at",window.from).lt("finalized_at",window.to);
     return q.returns<IntakeFinal[]>();
   };
   const loadCase=(from:number,to:number)=>{
-    let q=admin.from("life_health_cases").select("id,created_at,case_number,converted_at")
+    let q=admin.from("life_health_cases").select("id,created_at,case_number,converted_at,created_by")
       .in("created_by",actorIds).order("created_at",{ascending:false}).range(from,to);
     if(window) q=q.gte("created_at",window.from).lt("created_at",window.to);
     return q.returns<Case[]>();
   };
   const loadCaseFinal=(from:number,to:number)=>{
-    let q=admin.from("life_health_cases").select("id,converted_at,case_number")
+    let q=admin.from("life_health_cases").select("id,converted_at,case_number,converted_by")
       .in("converted_by",actorIds).not("converted_at","is",null)
       .order("converted_at",{ascending:false}).range(from,to);
     if(window) q=q.gte("converted_at",window.from).lt("converted_at",window.to);
@@ -212,23 +213,23 @@ export async function loadSelfActivityHistory(
   };
   // Claim operations use actor-attributed history outside the general audit log.
   const loadClaimCreation=(from:number,to:number)=>{
-    let q=admin.from("claims").select("id,created_at,claim_no").in("created_by",actorIds).order("created_at",{ascending:false}).range(from,to);
+    let q=admin.from("claims").select("id,created_at,claim_no,created_by").in("created_by",actorIds).order("created_at",{ascending:false}).range(from,to);
     if(window) q=q.gte("created_at",window.from).lt("created_at",window.to);
     return q.returns<ClaimCreation[]>();
   };
   const loadClaimStage=(from:number,to:number)=>{
-    let q=admin.from("claim_stage_details").select("id,claim_id,created_at,details").in("created_by",actorIds).order("created_at",{ascending:false}).range(from,to);
+    let q=admin.from("claim_stage_details").select("id,claim_id,created_at,details,created_by").in("created_by",actorIds).order("created_at",{ascending:false}).range(from,to);
     if(window) q=q.gte("created_at",window.from).lt("created_at",window.to);
     return q.returns<ClaimStageEdit[]>();
   };
   const loadClaimVerification=(from:number,to:number)=>{
-    let q=admin.from("claim_document_verifications").select("id,claim_id,document_type,is_valid,created_at")
+    let q=admin.from("claim_document_verifications").select("id,claim_id,document_type,is_valid,created_at,verified_by")
       .in("verified_by",actorIds).order("created_at",{ascending:false}).range(from,to);
     if(window) q=q.gte("created_at",window.from).lt("created_at",window.to);
     return q.returns<ClaimVerification[]>();
   };
   const loadClaimStatus=(from:number,to:number)=>{
-    let q=admin.from("claim_status_history").select("id,claim_id,created_at,from_status,to_status")
+    let q=admin.from("claim_status_history").select("id,claim_id,created_at,from_status,to_status,changed_by")
       .in("changed_by",actorIds).order("created_at",{ascending:false}).range(from,to);
     if(window) q=q.gte("created_at",window.from).lt("created_at",window.to);
     return q.returns<ClaimStatusEvent[]>();
@@ -261,18 +262,18 @@ export async function loadSelfActivityHistory(
     if(!a.actor_id||a.action==="policy_created"||a.action==="life_health_case_created"||a.action==="life_health_case_closed") continue;
     all.push({id:`audit:${a.id}`,category:actionCategory(a.action,a.table_name),
       activity:displayAction(a.action),reference:sourceLabel(a.record_id),
-      occurredAt:a.created_at,status:status(a.action),source:"Audit",table:a.table_name??undefined,recordId:a.record_id??undefined});
+      occurredAt:a.created_at,status:status(a.action),source:"Audit",table:a.table_name??undefined,recordId:a.record_id??undefined,actorId:a.actor_id});
   }
-  for(const a of policies.rows) all.push({id:`policy:${a.id}`,category:"Policy Add",activity:"Policy Created",reference:a.policy_no||a.id,occurredAt:a.created_at,status:"Created",source:"Record history",table:"policies",recordId:a.id});
-  for(const a of intakes.rows) all.push({id:`intake:${a.id}`,category:"Policy Intake",activity:"Policy Intake Submitted",reference:a.intake_number||a.id,occurredAt:a.created_at,status:"Submitted",source:"Record history",table:"policy_intake_requests",recordId:a.id});
-  for(const a of intakeFinals.rows) if(a.finalized_at) all.push({id:`intake-final:${a.id}`,category:"Policy Intake",activity:"Policy Intake Finalized",reference:a.intake_number||a.id,occurredAt:a.finalized_at,status:"Completed",source:"Record history",table:"policy_intake_requests",recordId:a.id});
-  for(const a of cases.rows) all.push({id:`case:${a.id}`,category:"Policy Edit Case Register",activity:"Case Created",reference:a.case_number||a.id,occurredAt:a.created_at,status:"Created",source:"Record history",table:"life_health_cases",recordId:a.id});
-  for(const a of caseFinals.rows) if(a.converted_at) all.push({id:`case-final:${a.id}`,category:"Policy Edit Case Register",activity:"Case Converted",reference:a.case_number||a.id,occurredAt:a.converted_at,status:"Completed",source:"Record history",table:"life_health_cases",recordId:a.id});
+  for(const a of policies.rows) all.push({id:`policy:${a.id}`,category:"Policy Add",activity:"Policy Created",reference:a.policy_no||a.id,occurredAt:a.created_at,status:"Created",source:"Record history",table:"policies",recordId:a.id,actorId:a.created_by??undefined});
+  for(const a of intakes.rows) all.push({id:`intake:${a.id}`,category:"Policy Intake",activity:"Policy Intake Submitted",reference:a.intake_number||a.id,occurredAt:a.created_at,status:"Submitted",source:"Record history",table:"policy_intake_requests",recordId:a.id,actorId:a.submitted_by_profile_id??undefined});
+  for(const a of intakeFinals.rows) if(a.finalized_at) all.push({id:`intake-final:${a.id}`,category:"Policy Intake",activity:"Policy Intake Finalized",reference:a.intake_number||a.id,occurredAt:a.finalized_at,status:"Completed",source:"Record history",table:"policy_intake_requests",recordId:a.id,actorId:a.finalized_by_profile_id??undefined});
+  for(const a of cases.rows) all.push({id:`case:${a.id}`,category:"Policy Edit Case Register",activity:"Case Created",reference:a.case_number||a.id,occurredAt:a.created_at,status:"Created",source:"Record history",table:"life_health_cases",recordId:a.id,actorId:a.created_by??undefined});
+  for(const a of caseFinals.rows) if(a.converted_at) all.push({id:`case-final:${a.id}`,category:"Policy Edit Case Register",activity:"Case Converted",reference:a.case_number||a.id,occurredAt:a.converted_at,status:"Completed",source:"Record history",table:"life_health_cases",recordId:a.id,actorId:a.converted_by??undefined});
   // The unique source record ID keeps the report stable across reloads.
   for(const claim of claimCreations.rows) all.push({
     id:`claim-created:${claim.id}`,category:"Claims",activity:"Claim Created",
     reference:claim.claim_no||claim.id,occurredAt:claim.created_at,status:"Created",
-    source:"Record history",table:"claims",recordId:claim.id,
+    source:"Record history",table:"claims",recordId:claim.id,actorId:claim.created_by??undefined,
   });
   const previousDriverByClaim=new Map<string,string>();
   for(const edit of [...claimStages.rows].reverse()) {
@@ -283,7 +284,7 @@ export async function loadSelfActivityHistory(
       id:`claim-stage:${edit.id}`,category:"Claims",
       activity:driver?(previous&&previous!==driver?"Driver Name Updated":previous===driver?"Claim Details Updated":"Driver Name Recorded"):"Claim Details Updated",
       reference:edit.claim_id,occurredAt:edit.created_at,status:"Updated",source:"Record history",
-      table:"claims",recordId:edit.claim_id,
+      table:"claims",recordId:edit.claim_id,actorId:edit.created_by??undefined,
       detail:driver&&previous&&previous!==driver?`Driver name: ${previous} → ${driver}`:
         driver&&!previous?"Driver name recorded":undefined,
     });
@@ -295,7 +296,7 @@ export async function loadSelfActivityHistory(
       activity:verification.is_valid?`${documentType} Verified`:`${documentType} Verification Failed`,
       reference:verification.claim_id,occurredAt:verification.created_at,
       status:verification.is_valid?"Verified":"Rejected",source:"Record history",
-      table:"claims",recordId:verification.claim_id,
+      table:"claims",recordId:verification.claim_id,actorId:verification.verified_by??undefined,
     });
   }
   // A status transition may follow a verified document on the same claim.
@@ -323,7 +324,7 @@ export async function loadSelfActivityHistory(
       id:`claim-status:${event.id}`,category:"Claims",
       activity:matchingDocument?`${matchingDocument} Verified`:"Claim Status Updated",
       reference:event.claim_id,occurredAt:event.created_at,status:"Updated",source:"Record history",
-      table:"claims",recordId:event.claim_id,
+      table:"claims",recordId:event.claim_id,actorId:event.changed_by??undefined,
       detail:matchingDocument?undefined:`Status: ${event.from_status.slice(0,80)} → ${event.to_status.slice(0,80)}`,
     });
   }
@@ -339,6 +340,26 @@ export async function loadSelfActivityHistory(
   const filtered=category?all.filter(x=>x.category===category):[];
   const start=(page-1)*30;
   const visible=filtered.slice(start,start+30);
+  // Names are resolved only for authorized actors shown on this page.
+  // Never substitute the affected record owner or the current viewer.
+  if(combined) {
+    const visibleActorIds=[...new Set(visible.map(row=>row.actorId)
+      .filter((id):id is string=>Boolean(id && actorIds.includes(id))))];
+    if(visibleActorIds.length) {
+      const {data:actorProfiles,error:actorLookupError}=await admin.from("profiles")
+        .select("id,full_name").in("id",visibleActorIds);
+      if(actorLookupError) {
+        console.error("[daily-report] action performer labels unavailable",{
+          code:actorLookupError.code||"request_error",
+        });
+      } else {
+        const actorNames=new Map((actorProfiles??[]).map(p=>[p.id,p.full_name?.trim()||""]));
+        for(const row of visible)
+          if(row.actorId && actorNames.get(row.actorId))
+            row.performedByName=actorNames.get(row.actorId);
+      }
+    }
+  }
   // Resolve only visible audit references, never fetch unrelated record details.
   const refColumns:{table:string;column:string}[]=[
     {table:"policies",column:"policy_no"},{table:"customers",column:"customer_code"},
