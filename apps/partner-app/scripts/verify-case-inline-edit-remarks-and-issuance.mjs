@@ -123,4 +123,11 @@ assert.match(app, /kind="delete"/, 'Document confirmation uses destructive visua
 assert.match(app, /documentBusy[\s\S]*?setDeleteTarget\(null\)/, 'Document confirmation respects busy state');
 assert.match(app, /await mutateLifeHealthDocument\(record\.id,documentId,'delete_document'\)/, 'Document deletion keeps existing authorized backend operation');
 assert.doesNotMatch(app, /partnerAlert\('Delete document\?'/, 'Document delete must not fall back to a native/system alert bridge');
+assert.ok(app.includes('const load=useCallback(async(silent=false):Promise<boolean>=>'), 'Life/Health refresh supports non-blocking background reloads.');
+assert.ok(app.includes("if(!silent){setLoading(true);setError('');}"), 'Silent refresh does not activate full-page loading state.');
+assert.ok(app.includes('finally{if(!silent)setLoading(false);}'), 'Silent refresh cannot unmount the case view.');
+assert.ok(app.includes('const refreshed=await load(true);'), 'Remark and Reject both refresh without hiding the page.');
+assert.equal((app.match(/const refreshed=await load\(true\);/g)||[]).length,2, 'Both Remark and Reject use silent refresh.');
+assert.ok(!app.includes("setRemarkOpen(false);setRemarkDraft('');setExpandedCaseTab('remarks');"), 'Remark save must not expand panels and shift scroll.');
+assert.ok(app.includes("partnerAlert('Remark saved'") && app.includes("partnerAlert('Case rejected'"), 'Saved actions report refresh failures separately from mutation failures.');
 console.log('Case inline edit, append-only remarks, secure issuance and native parity verified.');
