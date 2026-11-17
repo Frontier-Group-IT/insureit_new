@@ -80,7 +80,7 @@ def redacted_sqlstate(logfile):
     except OSError:
         return "UNAVAILABLE"
     # psql -v VERBOSITY=sqlstate reduces ERROR lines to five-character codes.
-    codes = re.findall(r"\\b(?:ERROR|FATAL):\\s*([0-9A-Z]{5})\\b", tail)
+    codes = re.findall(r"\b(?:ERROR|FATAL):\s*([0-9A-Z]{5})\b", tail)
     return codes[-1] if codes else "UNAVAILABLE"
 
 
