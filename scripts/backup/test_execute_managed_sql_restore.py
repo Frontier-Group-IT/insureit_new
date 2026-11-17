@@ -6,7 +6,7 @@ import unittest
 from unittest.mock import patch, Mock
 
 from execute_managed_sql_restore import (
-    SECURITY_GUARD, run_restore, validate_target,
+    SECURITY_GUARD, run_restore, validate_target, redacted_sqlstate,
 )
 from managed_recovery_preflight import TARGET_REF, SOURCE_REF
 
@@ -101,6 +101,7 @@ class TargetRestoreSafety(unittest.TestCase):
             self.assertIn("--network host", second)
             self.assertIn("--single-transaction", second)
             self.assertIn("ON_ERROR_STOP=1", second)
+            self.assertIn("VERBOSITY=sqlstate", second)
             self.assertIn("private-security-guard.sql", second)
             self.assertNotIn("--clean", first + second)
             self.assertNotIn("top-secret-synthetic", first + second)
@@ -118,6 +119,20 @@ class TargetRestoreSafety(unittest.TestCase):
             self.assertTrue((Path(folder) / "private-security-guard.sql").is_file())
             self.assertIn("REVOKE EXECUTE ON ALL FUNCTIONS", SECURITY_GUARD)
             self.assertIn("definer_exposure <> 0", SECURITY_GUARD)
+
+    def test_only_sqlstate_not_private_pg_error_is_public(self):
+        with tempfile.TemporaryDirectory() as folder:
+            log = Path(folder) / "private.log"
+            log.write_text(
+                "psql:/archive/private.sql:601: ERROR:  23503\n"
+                "DETAIL: Key (user_id)=(private-id-must-not-be-logged)"
+                " is not present in table \"users\".\n"
+            )
+            self.assertEqual(redacted_sqlstate(log), "23503")
+            self.assertEqual(redacted_sqlstate(log.with_name("missing.log")),
+                             "UNAVAILABLE")
+            log.write_text("private customer data without SQLSTATE")
+            self.assertEqual(redacted_sqlstate(log), "UNAVAILABLE")
 
     def test_failed_atomic_restore_is_rejected(self):
         with tempfile.TemporaryDirectory() as folder:

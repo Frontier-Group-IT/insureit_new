@@ -197,7 +197,121 @@ def chosen_entries(raw_toc):
     return chosen, counts
 
 
-def build_list(source, destination):
+def read_target_auth_foreign_keys():
+    """Read only: discover enforced Auth FK dependencies on isolated Supabase.
+
+    Source rows and SQL are never fetched. This must execute only after the
+    protected workflow has validated the target URL and its project CA.
+    """
+    import os
+    import psycopg
+    from managed_recovery_preflight import (
+        checked_target_connection, isolated_ssl_root_cert,
+    )
+
+    params = checked_target_connection(os.environ["INSUREIT_RECOVERY_DATABASE_URL"])
+    with isolated_ssl_root_cert() as root_cert:
+        with psycopg.connect(
+            **params, sslmode="verify-full", sslrootcert=root_cert,
+            connect_timeout=12, autocommit=True,
+        ) as connection:
+            with connection.cursor() as cur:
+                cur.execute("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY")
+                try:
+                    cur.execute(
+                        "SELECT child.relname, parent_ns.nspname, parent.relname "
+                        "FROM pg_catalog.pg_constraint c "
+                        "JOIN pg_catalog.pg_class child ON child.oid=c.conrelid "
+                        "JOIN pg_catalog.pg_namespace child_ns "
+                        "  ON child_ns.oid=child.relnamespace "
+                        "JOIN pg_catalog.pg_class parent ON parent.oid=c.confrelid "
+                        "JOIN pg_catalog.pg_namespace parent_ns "
+                        "  ON parent_ns.oid=parent.relnamespace "
+                        "WHERE c.contype='f' AND child_ns.nspname='auth'"
+                    )
+                    rows = cur.fetchall()
+                finally:
+                    cur.execute("ROLLBACK")
+    if any(parent_schema != "auth" for _, parent_schema, _ in rows):
+        raise RuntimeError("Managed Auth has unexpected cross-schema FK")
+    edges = {(child, parent) for child, _, parent in rows}
+    # This isolated Supabase target has 24 enforced Auth FKs. A surprising
+    # catalog change must stop import, not silently drop constraints.
+    if len(edges) < 20 or ("identities", "users") not in edges:
+        raise RuntimeError("Missing expected isolated Auth FK dependency baseline")
+    return edges
+
+
+def order_auth_copy_by_foreign_keys(lines, edges):
+    """Move only Auth TABLE DATA TOC entries into target-FK parent-first order.
+
+    All other approved TOC entries keep their relative order. pg_restore -L
+    explicitly honors the order of items in this list. No trigger/FK disable.
+    """
+    if not edges or ("identities", "users") not in edges:
+        raise ValueError("Target Auth FK dependency evidence required")
+    auth_items = {}
+    auth_indices = set()
+    for index, line in enumerate(lines):
+        kind, schema, rest = parse_entry(line)
+        if schema == "auth" and kind == "TABLE DATA":
+            table = rest.split()[0]
+            if table in auth_items:
+                raise ValueError("Duplicate Auth COPY destination")
+            auth_items[table] = (index, line)
+            auth_indices.add(index)
+    if len(auth_items) < MIN_AUTH_DATA:
+        raise ValueError("Incomplete managed Auth COPY set")
+    if "users" not in auth_items or "identities" not in auth_items:
+        raise ValueError("Required Auth user/identity COPY entries missing")
+
+    dependencies = {name: set() for name in auth_items}
+    constrained_edges = 0
+    for child, parent in edges:
+        if child not in auth_items:
+            continue
+        if parent == child:
+            raise ValueError("Self-referential Auth FK requires separate review")
+        if parent not in auth_items:
+            # The destination has no data, so a missing parent cannot be
+            # assumed safe just because a particular source table might be empty.
+            raise ValueError("Auth FK parent COPY entry missing from selection")
+        dependencies[child].add(parent)
+        constrained_edges += 1
+    if ("users" not in dependencies["identities"] or constrained_edges < 15):
+        raise ValueError("Incomplete Auth FK dependency coverage")
+
+    ordered = []
+    done = set()
+    while len(ordered) < len(auth_items):
+        ready = [
+            name for name, (index, _) in auth_items.items()
+            if name not in done and dependencies[name].issubset(done)
+        ]
+        if not ready:
+            raise ValueError("Auth FK dependency cycle blocks safe COPY")
+        next_name = min(ready, key=lambda name: auth_items[name][0])
+        done.add(next_name)
+        ordered.append(next_name)
+    if ordered.index("users") >= ordered.index("identities"):
+        raise AssertionError("Auth users must load before identities")
+
+    remaining = [line for index, line in enumerate(lines) if index not in auth_indices]
+    first_copy = next(
+        (i for i, line in enumerate(remaining)
+         if parse_entry(line)[0] == "TABLE DATA"),
+        None,
+    )
+    if first_copy is None:
+        raise ValueError("Application COPY data section missing")
+    ordered_auth = [auth_items[name][1] for name in ordered]
+    output = remaining[:first_copy] + ordered_auth + remaining[first_copy:]
+    if len(output) != len(lines):
+        raise AssertionError("Auth ordering must preserve all selected TOC entries")
+    return output, constrained_edges
+
+
+def build_list(source, destination, auth_fk_edges=None):
     source = Path(source)
     dest = Path(destination)
     if not source.is_file() or not 0 < source.stat().st_size <= MAX_TOC_BYTES:
@@ -205,6 +319,12 @@ def build_list(source, destination):
     if dest.exists():
         raise ValueError("Refusing to overwrite preexisting restore list")
     lines, counts = chosen_entries(source.read_text(encoding="utf-8"))
+    if auth_fk_edges is not None:
+        lines, ordered_fk_edges = order_auth_copy_by_foreign_keys(lines, auth_fk_edges)
+        print("R4 AUTH FK COPY ORDER VERIFIED:"
+              f" auth_copy_targets={counts[('auth','TABLE DATA')]}"
+              f" enforced_fk_edges={ordered_fk_edges}"
+              " users_before_identities=1 no_fk_disable=1")
     # TOC names and original owners are confidential; only the private
     # runner-local list is written; no artifact upload or stdout excerpt.
     dest.write_text("".join(lines), encoding="utf-8")
@@ -224,7 +344,10 @@ if __name__ == "__main__":
     try:
         if len(sys.argv) != 3:
             raise ValueError("Usage: prepare_managed_sql_restore_list.py PRIVATE_TOC PRIVATE_LIST")
-        build_list(sys.argv[1], sys.argv[2])
+        # Fail closed: protected R4 CLI ALWAYS obtains the target's enforced
+        # Auth FK graph via authenticated, TLS-verified read-only catalog SQL.
+        build_list(sys.argv[1], sys.argv[2],
+                   auth_fk_edges=read_target_auth_foreign_keys())
     except SafeTocSelectionError as exc:
         print("TARGET MANAGED SQL SELECTION FAILED:"
               f" failure_code={exc.reason}; private TOC names withheld",
