@@ -203,7 +203,7 @@ async function preparePolicyIntakeHandoffInternal(
     od:verifiedPremium?.od??mapped.next.od,
     tp:verifiedPremium?.tp??mapped.next.tp,
     ...(verifiedPremium?{addOnPremium:verifiedPremium.addOnPremium,tpValidUpto:tpExpiry}:{}),
-    cpaOpted:verifiedPremium?.cpaOpted??"No",
+    cpaOpted:"No",
     cpa:verifiedPremium?.cpa??mapped.next.cpa,
     policyNo:mapped.next.policyNo,insurerId:mapped.next.insurerId,validFrom:mapped.next.validFrom,validUpto:mapped.next.validUpto,
     payoutBasis:"NET",projectedOdPercent:"",projectedTpPercent:"",insurerScheme:"",payinBillNo:"",payinBilledAmount:"",payinBillDate:"",payinStatus:"Unbilled",retention:"",payoutOdPercent:"",payoutTpPercent:"",flatPayoutAmount:"",payoutStatus:"Pending",payoutDate:"",payoutVoucherNo:"",remarks:verified
@@ -212,6 +212,9 @@ PDF premium reconciliation: Basic OD ${verified.premium.basicOd} + OD add-ons ${
 Third Party period: ${tpStart||"unavailable"} to ${tpExpiry||"unavailable"}. Verify separate TP/CPA dates, policy class/product, identity, commercial rates and unmatched PDF fields manually.`
       : `Policy Intake ${id}`,
   };
+  // Preserve the long-standing generic OCR default. A positive owner-driver
+  // CPA is opted-in only for a separately validated n8n premium breakdown.
+  if(verifiedPremium)draft.cpaOpted=verifiedPremium.cpaOpted;
   const {data:storedDraft,error:draftError}=await admin.from("policy_intake_onboarding_drafts").insert({intake_id:id,draft_payload:draft,revision:1,updated_by_profile_id:reviewer.id}).select("revision").single<{revision:number}>();
   if(draftError||!storedDraft)return{ok:false,error:"Policy Onboarding draft could not be prepared. Refresh and try again."};
   return{ok:true,draft,draftRevision:storedDraft.revision,matchedCustomerId,existingDraft:false};
