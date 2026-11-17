@@ -318,6 +318,76 @@ export async function previewSemiAutoN8nIntake(id: string): Promise<SemiAutoN8nR
   return previewSemiAutoN8nExtraction(id);
 }
 
+export type AiCustomerCandidateReview =
+  | {ok:false;error:string}
+  | {ok:true;insuredName:string|null;mobileLast4:string;otherOpenIntakes:number|null;
+      candidates:Array<{id:string;customerCode:string;displayName:string;
+        nameMatch:"verified_exact"|"different"|"unverified"}>;
+      truncated:boolean;verificationNote:string};
+
+/**
+ * Phase 2 (read-only): a focused customer identity decision preview.
+ * The current signed PDF must be reverified by n8n before proposing any
+ * insured name. A shared mobile number is NOT proof of matching identity.
+ * There is no customer creation, linking, decision persistence or booking here.
+ */
+export async function reviewAiIntakeCustomerCandidates(id:string):Promise<AiCustomerCandidateReview>{
+  await requireDevelopmentPolicyOperator(id);
+  if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)){
+    return {ok:false,error:"Invalid Intake reference."};
+  }
+  const admin=createSupabaseAdminClient();
+  const {data:intake,error:intakeError}=await admin.from("policy_intake_requests")
+    .select("id,status,customer_mobile").eq("id",id)
+    .maybeSingle<{id:string;status:string;customer_mobile:string}>();
+  if(intakeError || !intake ||
+    !["ready_for_review","in_review","needs_attention","processing"].includes(intake.status)){
+    return {ok:false,error:"This Intake is no longer open for customer review."};
+  }
+  const normalizedPhone=(v:string)=>v.replace(/\D/g,"").slice(-10);
+  const phone=normalizedPhone(intake.customer_mobile??"");
+  if(!/^\d{10}$/.test(phone)){
+    return {ok:false,error:"The Intake mobile number requires correction before customer matching."};
+  }
+  // Prefix/country-code formats vary across customer masters. Query by the
+  // last 10 digits but require exact post-normalization equality on every hit.
+  const {data:rows,error}=await admin.from("customers")
+    .select("id,customer_code,contact_name,company_name,phone")
+    .ilike("phone","%"+phone).limit(51)
+    .returns<Array<{id:string;customer_code:string;contact_name:string;
+      company_name:string|null;phone:string}>>();
+  if(error)return {ok:false,error:"Customer master lookup is temporarily unavailable."};
+  const candidates=(rows??[]).filter(row=>normalizedPhone(row.phone)===phone);
+  // Another Intake using the same mobile is a review signal, not evidence
+  // that the insured names are different or customers should be merged.
+  const group=await admin.from("policy_intake_requests")
+    .select("id",{count:"exact",head:true}).eq("customer_mobile",intake.customer_mobile)
+    .in("status",["processing","ready_for_review","in_review","needs_attention"]);
+  const otherOpenIntakes=group.error||group.count===null?null:Math.max(0,group.count-1);
+  // A truncated result must NEVER be treated as a unique identity.
+  const truncated=(rows??[]).length>=51;
+  const extraction=await previewSemiAutoN8nExtraction(id);
+  const pdfName=extraction.ok
+    ? extraction.preview.fields.find(v=>v.key==="insured_name")?.value?.trim()??""
+    : "";
+  const normalizedName=(v:string)=>v.normalize("NFKC").replace(/\s+/g," ").trim().toUpperCase();
+  const trustedName=pdfName && extraction.ok && extraction.preview.checksPassed===13 && extraction.preview.warnings.length===0
+    ? pdfName:null;
+  return {
+    ok:true,insuredName:trustedName,mobileLast4:phone.slice(-4),otherOpenIntakes,truncated,
+    candidates:candidates.slice(0,50).map(row=>({
+      id:row.id,customerCode:row.customer_code,
+      displayName:row.company_name?.trim()||row.contact_name,
+      nameMatch:!trustedName?"unverified"
+        :[row.company_name,row.contact_name].some(value=>normalizedName(value??"")===normalizedName(trustedName))
+        ?"verified_exact":"different",
+    })),
+    verificationNote:trustedName
+      ?"Insured name verified against the current PDF; matching is informational only. Explicit customer linking still requires canonical onboarding checks."
+      :"Insured name could not be independently verified from the current PDF. All customer candidates require manual identity review.",
+  };
+}
+
 /**
  * Explicit authorized reset of an already processed queue row. Never alters
  * OCR, saved onboarding drafts, customers, vehicles or registered policies.
