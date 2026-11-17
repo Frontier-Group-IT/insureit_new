@@ -36,17 +36,25 @@ assert.doesNotMatch(screen,/function Item\(/,'Old label-value stacking is remove
 assert.doesNotMatch(screen,/uploadLifeHealthCaseDocument|convertLifeHealthCaseToPolicy|deleteLifeHealthCaseDocument\(/,'No direct unauthenticated web server-action calls');
 assert.doesNotMatch(screen,/<Section number="07" title="Activity status & remarks">/,'Activity Status heading is removed');
 assert.match(screen,/styles\.activityCard/,'Activity Status and Remarks retain tabs without numbered header');
-for(const title of ['Cancel case edits','Reject case','Save Case Details','Create Policy and Close Case']){
+for(const title of ['Cancel case edits','Reject case','Save Case Details','Create Policy']){
   assert.ok(screen.includes('accessibilityLabel="'+title+'"'),'Missing action: '+title);
 }
-const actionBar=screen.slice(screen.indexOf("record.status_group==='pending'?<View style={styles.caseActions}>"),screen.indexOf("</View>:null}",screen.indexOf("record.status_group==='pending'?<View style={styles.caseActions}>")));
-assert.ok(actionBar.indexOf('accessibilityLabel="Save Case Details"')<actionBar.indexOf('accessibilityLabel="Cancel case edits"'),'Save must appear above Cancel/Reject');
-assert.ok(actionBar.indexOf('accessibilityLabel="Cancel case edits"')<actionBar.indexOf('accessibilityLabel="Reject case"'),'Cancel and Reject retain order');
-assert.ok(actionBar.indexOf('accessibilityLabel="Reject case"')<actionBar.indexOf('accessibilityLabel="Create Policy and Close Case"'),'Issuance action stays last');
-assert.match(screen,/caseActionMiddle:\{flexDirection:'row'/,'Cancel and Reject share a row');
-assert.match(screen,/actionSave:\{width:'100%'/,'Save spans full width');
-assert.match(screen,/actionIssue:\{width:'100%'/,'Create Policy spans full width');
-assert.match(screen,/Complete the policy creation process/,'Issuance button retains reference subtitle');
+const actionStart=screen.indexOf("record.status_group==='pending'?<View style={styles.caseActions}>");
+const actionBar=screen.slice(actionStart,screen.indexOf('</View>:null}',actionStart));
+assert.ok(actionStart>0,'Pending case action bar exists');
+const reject=actionBar.indexOf('accessibilityLabel="Reject case"');
+const cancel=actionBar.indexOf('accessibilityLabel="Cancel case edits"');
+const save=actionBar.indexOf('accessibilityLabel="Save Case Details"');
+const create=actionBar.indexOf('accessibilityLabel="Create Policy"');
+assert.ok(reject>=0&&reject<cancel&&cancel<save&&save<create,'Reject above Cancel | Save | Create Policy');
+assert.match(screen,/caseActionMiddle:\{flexDirection:'row',gap:7,width:'100%'/,'Three action buttons share one row');
+assert.match(screen,/actionReject:\{width:'100%'/,'Reject is full width');
+assert.match(screen,/actionSave:\{flex:1,/,'Save occupies one slot in three-column row');
+assert.match(screen,/actionIssue:\{flex:1\.15,/,'Create Policy fits in compact three-column row');
+assert.match(actionBar,/numberOfLines=\{1\}/,'Action labels are kept to one line');
+assert.match(actionBar,/Create Policy<\/Text>/,'Policy button label is shortened');
+assert.doesNotMatch(actionBar,/Complete the policy creation process|Create Policy & Close Case|<Ionicons/,'No subtitle, icons, or long policy label');
+assert.match(screen,/caseActions:\{gap:8\}/,'No outer action card or background');
 assert.match(screen,/getLifeHealthDocumentUrl/,'Documents can be opened through scoped URL');
 assert.match(screen,/mutateLifeHealthDocument/,'Documents have an authenticated delete action');
 assert.match(screen,/uploadLifeHealthDocument/,'Documents have an authenticated replace and upload action');
