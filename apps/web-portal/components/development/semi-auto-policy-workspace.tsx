@@ -340,7 +340,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
         // A shared upstream n8n failure must abort the batch immediately;
         // continuing would hold every healthy Intake for manual review.
         stopForServiceFailure=!result.ok && result.issues.some(issue=>
-          issue.field==="Extraction" && /\\bn8n\\b.*\\b(HTTP|webhook|service|connection|rate-limit)/i.test(issue.message));
+          issue.field==="Extraction" && /n8n/i.test(issue.message) && /HTTP|webhook|service|connection|rate.limit/i.test(issue.message));
         outcome={id:item.id,intake_number:item.intake_number,ok:result.ok&&Boolean(result.policyId),
           message:result.ok&&result.policyCode&&result.policyId
             ? "Registered "+result.policyCode
