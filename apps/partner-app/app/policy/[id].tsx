@@ -159,9 +159,9 @@ export default function PolicyDetailScreen() {
             </View>
             {showOverviewDetails ? (
               <View style={styles.detailGrid}>
-                <OverviewItem iconKind="insurer" label="Insurer" value={data.insurer.name || 'Not recorded'} insurerName={data.insurer.name} />
+                <InsurerMiniInfo name={data.insurer.name} />
                 <MiniInfo label="Policy number" value={data.policy.policy_no || data.policy.policy_code || 'Not recorded'} />
-                <MiniInfo label="Policy status" value={humanize(data.policy.status || data.policy.lifecycle_status)} />
+                <MiniInfo label="Policy status" value={humanize(data.policy.status || data.policy.lifecycle_status)} fullWidth />
                 <MiniInfo label="Start date" value={formatDate(data.policy.start_date)} />
                 <MiniInfo label="End date" value={formatDate(data.policy.end_date)} />
               </View>
@@ -256,7 +256,25 @@ function EntityRow({ image, icon, title, subtitle, onPress }: { image?: ImageSou
   return <Pressable accessibilityRole={onPress ? 'button' : undefined} disabled={!onPress} onPress={onPress} style={({ pressed }) => [styles.entityRow, pressed && onPress ? styles.pressed : null]}><View style={styles.entityIcon}>{icon ? <Ionicons name={icon} size={20} color="#2468D7" /> : image ? <Image source={image} style={styles.entityArtwork} resizeMode="contain" /> : null}</View><View style={styles.entityBody}><Text numberOfLines={1} style={styles.entityTitle}>{title}</Text><Text numberOfLines={1} style={styles.entityMeta}>{subtitle}</Text></View></Pressable>;
 }
 
-function MiniInfo({ label, value, compact = false }: { label: string; value: string; compact?: boolean }) { return <View style={[styles.miniInfo, compact && styles.miniInfoCompact]}><Text style={styles.miniLabel}>{label}</Text><Text style={styles.miniValue}>{value}</Text></View>; }
+function displayInsurerSummary(name: string | null | undefined): string {
+  const fullName = name?.trim() || 'Not recorded';
+  // Presentation-only short label; preserve the full insurer identity for data and logo lookup.
+  return /^ICICI\s+Lombard\s+General\b/i.test(fullName) ? 'ICICI LOMBARD GENERAL' : fullName;
+}
+function InsurerMiniInfo({ name }: { name: string | null | undefined }) {
+  return (
+    <View style={[styles.miniInfo, styles.insurerMiniInfo]}>
+      <View style={styles.insurerMiniLogo}>
+        <PartnerInsurerLogo name={name || ''} fallback={PartnerAssets.products.motorInsurance} style={styles.overviewLogo} />
+      </View>
+      <View style={styles.insurerMiniCopy}>
+        <Text style={styles.miniLabel}>Insurer</Text>
+        <Text numberOfLines={2} style={styles.miniValue}>{displayInsurerSummary(name)}</Text>
+      </View>
+    </View>
+  );
+}
+function MiniInfo({ label, value, compact = false, fullWidth = false }: { label: string; value: string; compact?: boolean; fullWidth?: boolean }) { return <View style={[styles.miniInfo, compact && styles.miniInfoCompact, fullWidth && styles.miniInfoFullWidth]}><Text style={styles.miniLabel}>{label}</Text><Text style={styles.miniValue}>{value}</Text></View>; }
 function policyArtwork(category: string): ImageSourcePropType { if (category === 'Motor') return PartnerAssets.products.motorInsurance; if (category === 'Health') return PartnerAssets.products.healthInsurance; if (category === 'Life') return PartnerAssets.products.familyInsurance; return PartnerAssets.products.commercialInsurance; }
 function displayParts(...values: Array<string | number | null | undefined>) { return values.map((value) => value == null ? '' : String(value).trim()).filter((value) => value && value.toLowerCase() !== 'null' && value.toLowerCase() !== 'undefined').join(' · '); }
 function policyCategory(data: PartnerPolicyDetail) { const value = [data.policy.policy_type, data.policy.policy_product, data.policy.business_line].filter(Boolean).join(' ').toLowerCase(); if (value.includes('health')) return 'Health'; if (value.includes('life')) return 'Life'; if (value.includes('motor') || data.vehicle) return 'Motor'; return 'Non-Motor'; }
@@ -326,6 +344,10 @@ const styles = StyleSheet.create({
   premiumDetailGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingHorizontal: 10, paddingBottom: 10 },
   detailGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 10, paddingBottom: 10 }, miniInfo: { width: '47%', minHeight: 38, padding: 7, borderRadius: 8, backgroundColor: '#F7F9FC' }, miniLabel: { color: '#8A95A6', fontSize: 8, lineHeight: 10, textTransform: 'uppercase' }, miniValue: { marginTop: 2, color: '#21334E', fontSize: 9.5, lineHeight: 12, fontWeight: '700' },
   miniInfoCompact: { width: '31%', flexGrow: 1, minWidth: 0, paddingHorizontal: 5 },
+  miniInfoFullWidth: { width: '100%' },
+  insurerMiniInfo: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  insurerMiniLogo: { width: 25, height: 25, alignItems: 'center', justifyContent: 'center' },
+  insurerMiniCopy: { flex: 1, minWidth: 0 },
   customerVehicleRow: { minHeight: 59, flexDirection: 'row', alignItems: 'center', gap: 9, paddingHorizontal: 18, paddingVertical: 9 },
   customerVehicleTitleRow: { flexDirection: 'row', alignItems: 'center', minWidth: 0, gap: 5 },
   customerVehicleRegistration: { color: '#142A49', fontSize: 10, lineHeight: 13, fontWeight: '800', flexShrink: 1 },

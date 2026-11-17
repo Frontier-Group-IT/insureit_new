@@ -256,8 +256,14 @@ requireText(policyIntakeDetail, '<Ionicons name="alert-circle-outline"', 'Duplic
 
 for (const detailAsset of ['products.motorInsurance', 'products.healthInsurance', 'products.familyInsurance', 'products.commercialInsurance']) requireText(policyDetail, `PartnerAssets.${detailAsset}`, `Policy detail is missing ${detailAsset} artwork.`);
 requireText(policyDetail, 'source={data.vehicle ? (manufacturerLogo || PartnerAssets.products.motorInsurance) : PartnerAssets.products.commercialInsurance}', 'Combined customer vehicle row uses the manufacturer icon or insured-risk fallback.');
-requireText(policyDetail, 'insurerName={data.insurer.name}', 'Policy overview must pass insurer identity to logo renderer.');
-requireText(policyDetail, '<PartnerInsurerLogo name={insurerName}', 'Policy overview must render insurer brand artwork.');
+requireText(policyDetail, '<InsurerMiniInfo name={data.insurer.name} />', 'Policy overview must pass the actual insurer identity into the compact tile.');
+requireText(policyDetail, "<PartnerInsurerLogo name={name || ''}", 'Compact insurer tile must preserve insurer identity for logo artwork.');
+requireText(policyDetail, "return /^ICICI\\s+Lombard\\s+General\\b/i.test(fullName) ? 'ICICI LOMBARD GENERAL' : fullName;", 'Only ICICI Lombard insurer display label may be shortened.');
+requireText(policyDetail, 'styles.insurerMiniInfo', 'Insurer summary must use a compact tile.');
+requireText(policyDetail, 'styles.miniInfo, styles.insurerMiniInfo', 'Insurer tile must inherit the grey Policy Number background.');
+requireText(policyDetail, '<MiniInfo label="Policy status" value={humanize(data.policy.status || data.policy.lifecycle_status)} fullWidth />', 'Policy status must span the row so validity dates align together.');
+requireText(policyDetail, '<MiniInfo label="Start date" value={formatDate(data.policy.start_date)} />', 'Start date must retain its original stored value.');
+requireText(policyDetail, '<MiniInfo label="End date" value={formatDate(data.policy.end_date)} />', 'End date must retain its original stored value.');
 requireText(policyDetail, 'getPartnerPolicyDetail(id)', 'Policy detail must preserve the existing scoped data service.');
 // Policy Details keeps the navy title and a separate white summary, retaining all values.
 for (const required of [
