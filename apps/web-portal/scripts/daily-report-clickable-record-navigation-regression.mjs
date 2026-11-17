@@ -17,6 +17,13 @@ for(const [table,base] of Object.entries({
   assert.ok(routes.includes(`${table}: "${base}"`),`Canonical ${table} route is allowlisted`);
 }
 assert.match(routes, /isValidDailyRecordId\(recordId\)/, "Record ID must be a validated UUID");
+assert.ok(routes.includes('if (table === "vehicles") return `${base}/${recordId}/edit`'), "Vehicle activity rows must open existing Vehicle View/Edit route");
+assert.doesNotMatch(routes,/return base \? `\$\{base\}\/\$\{recordId\}` : null;[\s\S]*if \(table === "vehicles"\)/,"Vehicle canonical route must precede generic route");
+const vehicleEdit=read("../app/vehicles/[id]/edit/page.tsx");
+assert.ok(vehicleEdit.includes('hasEffectiveCapability(profile, "view_vehicles", "edit")'), "Vehicle View/Edit respects existing edit permission");
+assert.ok(vehicleEdit.includes('<fieldset disabled={!canEdit}'), "Viewer without edit permission remains view only");
+const vehicleRegister=read("../app/vehicles/vehicle-workspace.tsx");
+assert.ok(vehicleRegister.includes('href={`/vehicles/${vehicle.id}/edit`}'), "Report uses same Vehicle View/Edit route as Vehicle Register");
 assert.match(routes, /const base=DAILY_ACTIVITY_RECORD_ROUTES\[table\]/, "Unknown table names cannot become arbitrary paths");
 assert.match(loader, /Object\.keys\(DAILY_ACTIVITY_RECORD_ROUTES\)\.map\(async table/, "Lookup only allowlisted tables");
 assert.match(loader, /visible\s*\.filter\(row=>row\.table===table && isValidDailyRecordId\(row\.recordId\?\?""\)\)/, "Record checks are limited to visible rows with valid IDs");
