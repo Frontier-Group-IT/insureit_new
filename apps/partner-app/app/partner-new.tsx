@@ -16,7 +16,7 @@ type Field = 'document_received_at' | 'associate_employee_id' | 'pos_first_name'
   | 'address' | 'city' | 'state' | 'postal_code' | 'bank_id' | 'bank_account_number'
   | 'bank_ifsc_code' | 'gst_number';
 type Option = { id: string; name: string };
-type MasterData = { ok?: boolean; error?: string; rms?: Option[]; banks?: Option[]; oems?: Option[] };
+type MasterData = { ok?: boolean; error?: string; rms?: Option[]; banks?: Option[]; oems?: Option[]; pendingMisps?: Option[] };
 const initial: Record<Field, string> = {
   document_received_at: '', associate_employee_id: '', pos_first_name: '', pos_middle_name: '', pos_last_name: '',
   pan_number: '', aadhaar_number: '', date_of_birth: '', mobile: '', email: '',
@@ -76,6 +76,7 @@ export default function AddPartnerScreen() {
   const [partnerType,setPartnerType]=useState<"posp"|"misp">("posp");
   const [mispDirty,setMispDirty]=useState(false);
   const [oems,setOems]=useState<Option[]>([]);
+  const [pendingMisps,setPendingMisps]=useState<Option[]>([]);
   const [rms, setRms] = useState<Option[]>([]);
   const [banks, setBanks] = useState<Option[]>([]);
   const [loading, setLoading] = useState(true);
@@ -111,7 +112,7 @@ export default function AddPartnerScreen() {
         const response = await authenticatedRequest('GET');
         const result = await response.json() as MasterData;
         if (!response.ok || !result.ok) throw new Error(result.error || 'Could not load RM and Bank lists.');
-        if (active) { setRms(result.rms || []); setBanks(result.banks || []); setOems(result.oems || []); }
+        if (active) { setRms(result.rms || []); setBanks(result.banks || []); setOems(result.oems || []);setPendingMisps(result.pendingMisps || []); }
       } catch (error) {
         if (active) Alert.alert('Master data unavailable', error instanceof Error ? error.message : 'Please retry.');
       } finally { if (active) setLoading(false); }
@@ -190,7 +191,7 @@ export default function AddPartnerScreen() {
               </Pressable>)}
           </View>
           {partnerType==='misp' ? (
-            <MispPartnerForm rms={rms} banks={banks} oems={oems} loading={loading} onDirtyChange={setMispDirty}/>
+            <MispPartnerForm rms={rms} banks={banks} oems={oems} pendingMisps={pendingMisps} loading={loading} onDirtyChange={setMispDirty}/>
           ) : (
           <>
           {sections.map((section, index) => (
