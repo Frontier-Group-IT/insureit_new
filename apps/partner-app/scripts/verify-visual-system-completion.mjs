@@ -239,6 +239,28 @@ requireText(policyDetail, 'icon="person-outline"', 'Policy detail customer row m
 requireText(policyDetail, 'insurerName={data.insurer.name}', 'Policy overview must pass insurer identity to logo renderer.');
 requireText(policyDetail, '<PartnerInsurerLogo name={insurerName}', 'Policy overview must render insurer brand artwork.');
 requireText(policyDetail, 'getPartnerPolicyDetail(id)', 'Policy detail must preserve the existing scoped data service.');
+// Policy Details reference: white, flat record header, same values and routes.
+for (const required of [
+  "backgroundColor: '#FFFFFF', borderBottomWidth: StyleSheet.hairlineWidth",
+  "color: '#17365D', fontSize: 16",
+  "color: '#1B2536', fontSize: 18",
+  "backgroundColor: '#FFF2DE'",
+  "{policyNumber}",
+  "{category}",
+  "{nullableMoney(data.premium.net_premium)}",
+  "{formatDate(data.policy.start_date)} – {formatDate(data.policy.end_date)}",
+  "PartnerInsurerLogo name={data.insurer.name}",
+  "accessibilityLabel=\"Back\"",
+]) {
+  requireText(policyDetail, required, 'Policy Details white header must retain existing values and back navigation: ' + required);
+}
+if (policyDetail.includes("backgroundColor: '#073472'") || policyDetail.includes("backgroundColor: '#081F4C'")) {
+  throw new Error('Policy Details should not retain the navy title/summary background.');
+}
+requireText(policyDetail, 'navyStatusBar bottomNavigationNavy', 'System status bar remains navy and navigation remains visible.');
+
+
+
 
 // Policy Details keeps its own four original policy-specific actions;
 // only the visual layout matches the transparent Policies Quick Actions row.
