@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert } from '@/lib/partner-alert';
 import { useRouter } from 'expo-router';
 import { PartnerScreen } from '@/components/partner-screen';
 import { getAccountDeletionRequest, submitAccountDeletionRequest, type AccountDeletionRequest } from '@/lib/account-deletion';
