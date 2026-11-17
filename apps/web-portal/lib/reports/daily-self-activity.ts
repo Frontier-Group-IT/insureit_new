@@ -23,6 +23,10 @@ type Intake = { id:string; created_at:string; intake_number:string|null; finaliz
 type IntakeFinal = { id:string; finalized_at:string|null; intake_number:string|null };
 type Case = { id:string; created_at:string; case_number:string|null; converted_at:string|null };
 type CaseFinal = { id:string; converted_at:string|null; case_number:string|null };
+type ClaimCreation = { id:string; created_at:string; claim_no:string|null };
+type ClaimStageEdit = { id:string; claim_id:string; created_at:string; details:Record<string,unknown>|null };
+type ClaimVerification = { id:string; claim_id:string; document_type:string; is_valid:boolean; created_at:string };
+type ClaimStatusEvent = { id:string; claim_id:string; created_at:string; from_status:string|null; to_status:string|null };
 const MAX_PAGE = 400;
 function actionCategory(action:string, table:string|null) {
   const name = (table??"").toLowerCase();
@@ -158,9 +162,36 @@ export async function loadSelfActivityHistory(
     if(window) q=q.gte("converted_at",window.from).lt("converted_at",window.to);
     return q.returns<CaseFinal[]>();
   };
-  const [audits,policies,intakes,intakeFinals,cases,caseFinals] = await Promise.all([
+  // Claim operations use actor-attributed history outside the general audit log.
+  const loadClaimCreation=(from:number,to:number)=>{
+    let q=admin.from("claims").select("id,created_at,claim_no").eq("created_by",viewerId).order("created_at",{ascending:false}).range(from,to);
+    if(window) q=q.gte("created_at",window.from).lt("created_at",window.to);
+    return q.returns<ClaimCreation[]>();
+  };
+  const loadClaimStage=(from:number,to:number)=>{
+    let q=admin.from("claim_stage_details").select("id,claim_id,created_at,details").eq("created_by",viewerId).order("created_at",{ascending:false}).range(from,to);
+    if(window) q=q.gte("created_at",window.from).lt("created_at",window.to);
+    return q.returns<ClaimStageEdit[]>();
+  };
+  const loadClaimVerification=(from:number,to:number)=>{
+    let q=admin.from("claim_document_verifications").select("id,claim_id,document_type,is_valid,created_at")
+      .eq("verified_by",viewerId).order("created_at",{ascending:false}).range(from,to);
+    if(window) q=q.gte("created_at",window.from).lt("created_at",window.to);
+    return q.returns<ClaimVerification[]>();
+  };
+  const loadClaimStatus=(from:number,to:number)=>{
+    let q=admin.from("claim_status_history").select("id,claim_id,created_at,from_status,to_status")
+      .eq("changed_by",viewerId).order("created_at",{ascending:false}).range(from,to);
+    if(window) q=q.gte("created_at",window.from).lt("created_at",window.to);
+    return q.returns<ClaimStatusEvent[]>();
+  };
+  const [audits,policies,intakes,intakeFinals,cases,caseFinals,claimCreations,claimStages,claimVerifications,claimStatuses] = await Promise.all([
     readDailyHistoryPages("Audit logs",loadAudit),readDailyHistoryPages("Policies",loadPolicy),readDailyHistoryPages("Intake submissions",loadIntake),
     readDailyHistoryPages("Intake finalizations",loadIntakeFinal),readDailyHistoryPages("Case creation",loadCase),readDailyHistoryPages("Case conversions",loadCaseFinal),
+    readDailyHistoryPages("Claim creation",loadClaimCreation),
+    readDailyHistoryPages("Claim stage edits",loadClaimStage),
+    readDailyHistoryPages("Claim verification",loadClaimVerification),
+    readDailyHistoryPages("Claim status history",loadClaimStatus),
   ]);
   const sources = [
     {name:"Audit logs",result:audits},
@@ -169,6 +200,10 @@ export async function loadSelfActivityHistory(
     {name:"Intake finalizations",result:intakeFinals},
     {name:"Case creation",result:cases},
     {name:"Case conversions",result:caseFinals},
+    {name:"Claim creation",result:claimCreations},
+    {name:"Claim stage edits",result:claimStages},
+    {name:"Claim verification",result:claimVerifications},
+    {name:"Claim status history",result:claimStatuses},
   ];
   const unavailableSources = sources.filter(s=>s.result.failed).map(s=>s.name);
   const allSourcesUnavailable = unavailableSources.length === sources.length;
@@ -185,6 +220,46 @@ export async function loadSelfActivityHistory(
   for(const a of intakeFinals.rows) if(a.finalized_at) all.push({id:`intake-final:${a.id}`,category:"Policy Intake",activity:"Policy Intake Finalized",reference:a.intake_number||a.id,occurredAt:a.finalized_at,status:"Completed",source:"Record history",table:"policy_intake_requests",recordId:a.id});
   for(const a of cases.rows) all.push({id:`case:${a.id}`,category:"Policy Edit Case Register",activity:"Case Created",reference:a.case_number||a.id,occurredAt:a.created_at,status:"Created",source:"Record history",table:"life_health_cases",recordId:a.id});
   for(const a of caseFinals.rows) if(a.converted_at) all.push({id:`case-final:${a.id}`,category:"Policy Edit Case Register",activity:"Case Converted",reference:a.case_number||a.id,occurredAt:a.converted_at,status:"Completed",source:"Record history",table:"life_health_cases",recordId:a.id});
+  // The unique source record ID keeps the report stable across reloads.
+  for(const claim of claimCreations.rows) all.push({
+    id:`claim-created:${claim.id}`,category:"Claims",activity:"Claim Created",
+    reference:claim.claim_no||claim.id,occurredAt:claim.created_at,status:"Created",
+    source:"Record history",table:"claims",recordId:claim.id,
+  });
+  const previousDriverByClaim=new Map<string,string>();
+  for(const edit of [...claimStages.rows].reverse()) {
+    const driver=typeof edit.details?.driver_name==="string"?edit.details.driver_name.trim().slice(0,80):"";
+    const previous=previousDriverByClaim.get(edit.claim_id);
+    if(driver) previousDriverByClaim.set(edit.claim_id,driver);
+    all.push({
+      id:`claim-stage:${edit.id}`,category:"Claims",
+      activity:driver?(previous&&previous!==driver?"Driver Name Updated":previous===driver?"Claim Details Updated":"Driver Name Recorded"):"Claim Details Updated",
+      reference:edit.claim_id,occurredAt:edit.created_at,status:"Updated",source:"Record history",
+      table:"claims",recordId:edit.claim_id,
+      detail:driver&&previous&&previous!==driver?`Driver name: ${previous} → ${driver}`:
+        driver&&!previous?"Driver name recorded":undefined,
+    });
+  }
+  for(const verification of claimVerifications.rows) {
+    const documentType=verification.document_type.trim().slice(0,70)||"Claim document";
+    all.push({
+      id:`claim-verify:${verification.id}`,category:"Claims",
+      activity:verification.is_valid?`${documentType} Verified`:`${documentType} Verification Failed`,
+      reference:verification.claim_id,occurredAt:verification.created_at,
+      status:verification.is_valid?"Verified":"Rejected",source:"Record history",
+      table:"claims",recordId:verification.claim_id,
+    });
+  }
+  // Same-status history often describes the same verification/stage save.
+  for(const event of claimStatuses.rows) {
+    if(!event.from_status||!event.to_status||event.from_status===event.to_status) continue;
+    all.push({
+      id:`claim-status:${event.id}`,category:"Claims",activity:"Claim Status Updated",
+      reference:event.claim_id,occurredAt:event.created_at,status:"Updated",source:"Record history",
+      table:"claims",recordId:event.claim_id,
+      detail:`Status: ${event.from_status.slice(0,80)} → ${event.to_status.slice(0,80)}`,
+    });
+  }
   all.sort((a,b)=>b.occurredAt.localeCompare(a.occurredAt)||a.id.localeCompare(b.id));
   const counts=new Map<string,number>();
   for(const a of all) counts.set(a.category,(counts.get(a.category)??0)+1);
@@ -260,6 +335,7 @@ export async function loadSelfActivityHistory(
           if(row.table!=="claims"||!row.recordId) continue;
           const claim=claimsById.get(row.recordId);
           if(!claim) continue;
+          row.reference=claim.claim_no||row.reference;
           row.claimControlNo=claim.claim_no||undefined;
           row.claimInsurerNo=claim.insurer_claim_no||undefined;
           row.claimCustomerName=claim.customers?.[0]?.contact_name||claim.customers?.[0]?.company_name||undefined;
