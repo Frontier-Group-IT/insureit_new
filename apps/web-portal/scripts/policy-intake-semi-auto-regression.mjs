@@ -283,6 +283,9 @@ assert(handoff.includes("const parsed=await previewSemiAutoN8nExtraction(id)"),
   "The handoff must re-extract the current private PDF server-side, not accept browser OCR fields");
 assert(handoff.includes("parsed.preview.fingerprint!==expectedFingerprint"),
   "A changed extraction must block a previously reviewed handoff");
+assert(n8nServer.includes("JSON.stringify({ intakeId: id, documentId, fields, warnings, premium })")
+  && n8nServer.includes("extraction.warnings, extraction.premium"),
+  "The reviewed fingerprint must include verified financial components, not only OCR field text");
 assert(handoff.includes("parsed.preview.documentId!==expectedDocumentId"),
   "A replaced PDF must not be forwarded under the prior review");
 assert(handoff.includes("parsed.preview.checksPassed!==13 || parsed.preview.warnings.length>0"),
