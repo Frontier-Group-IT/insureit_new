@@ -293,7 +293,8 @@ export function buildPolicyOcrOnboardingUpdate(input: OcrApplyInput): OcrApplyRe
     if (isIciciChetakElectric) {
       // Prefer the literal "Bajaj" master choice, not an invented CHETAK option.
       const named = input.manufacturers.find(option => option.trim().toLowerCase() === "bajaj")
-        ?? input.manufacturers.find(option => option.trim().toLowerCase() === "bajaj auto");
+        ?? input.manufacturers.find(option => option.trim().toLowerCase() === "bajaj auto")
+        ?? input.manufacturers.find(option => /^bajaj auto (?:limited|ltd\.?|ltd\.?)$/i.test(option.trim()));
       return named ?? "";
     }
     return manufacturer(raw, input.manufacturers);
