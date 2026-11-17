@@ -53,10 +53,8 @@ export function enrichVerifiedN8nOnboardingFields<T extends N8nPrefillField>(
   if (isKnownChetak && get("policy_product").toLowerCase() === "bundled") {
     add("vehicle_class", "TWP", "Verified two-wheeler class");
     add("vehicle_fuel_type", "Electric", "Known Chetak electric model");
-    const bajaj = manufacturerOptions.find(name => name.trim().toLowerCase() === "bajaj")
-      ?? manufacturerOptions.find(name => name.trim().toLowerCase() === "bajaj auto");
-    const make = fields.find(field => field.key === "vehicle_make");
-    if (bajaj && make) make.value = bajaj;
+    // Resolve the precise Bajaj select option in the canonical mapper. Keep
+    // original CHETAK evidence intact for the model-specific kW path.
   }
 
   const rto = splitN8nRtoStateAndCity(get("vehicle_rto_name"));
