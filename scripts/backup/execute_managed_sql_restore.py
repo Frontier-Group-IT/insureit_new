@@ -7,6 +7,7 @@ schema/data and *restrictive privileges + RLS checks* in ONE transaction.
 No production URL, R2 write, public customer data artifact, or --clean allowed.
 """
 import os
+import re
 from pathlib import Path
 import subprocess
 import sys
@@ -66,6 +67,21 @@ BEGIN
   END IF;
 END $insureit_target_guard$;
 """
+
+
+def redacted_sqlstate(logfile):
+    """Never print psql's private log, SQL, row values or relation names."""
+    try:
+        # Only the final 64 KiB of a private runner-local file is needed.
+        with Path(logfile).open("rb") as handle:
+            handle.seek(0, os.SEEK_END)
+            handle.seek(max(0, handle.tell() - 65536))
+            tail = handle.read().decode("utf-8", errors="replace")
+    except OSError:
+        return "UNAVAILABLE"
+    # psql -v VERBOSITY=sqlstate reduces ERROR lines to five-character codes.
+    codes = re.findall(r"\\b(?:ERROR|FATAL):\\s*([0-9A-Z]{5})\\b", tail)
+    return codes[-1] if codes else "UNAVAILABLE"
 
 
 def validate_target(url):
@@ -159,17 +175,22 @@ def run_restore(directory, url, dry_run=False):
         apply_cmd += [
             "--entrypoint", "psql", POSTGRES_IMAGE,
             "--no-psqlrc", "--single-transaction",
-            "--variable", "ON_ERROR_STOP=1", "--quiet",
+            "--variable", "ON_ERROR_STOP=1",
+            "--variable", "VERBOSITY=sqlstate", "--quiet",
             "--dbname=postgres",
             "--file=/archive/private-restore.sql",
             "--file=/archive/private-security-guard.sql",
         ]
-        with (directory / "managed-restore-private.log").open("xb") as log:
+        private_log = directory / "managed-restore-private.log"
+        with private_log.open("xb") as log:
             proc = subprocess.run(
                 apply_cmd, stdout=log, stderr=subprocess.STDOUT,
                 timeout=1800, env=environment, check=False,
             )
         if proc.returncode:
+            print("R4 MANAGED SQL APPLY FAILED:"
+                  f" sqlstate={redacted_sqlstate(private_log)}"
+                  " confidential details withheld", file=sys.stderr)
             raise RuntimeError("Atomic managed SQL import/security check FAILED and rolled back")
     print("TARGET MANAGED SQL R4 ATOMIC RESTORE + RESTRICTIVE SECURITY GUARDS PASSED;"
           " independent snapshot/permission parity audit follows")
