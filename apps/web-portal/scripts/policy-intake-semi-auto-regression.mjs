@@ -875,6 +875,21 @@ assert(workbenchText.includes("async function beginDirectN8nHandoff()")
   && workbenchText.includes("n8nResult.preview.fingerprint"),
   "Direct handoff must reverify current PDF and retain existing confirmed fingerprint checks");
 // Bulk booking is intentionally not silently enabled by clearing an extraction exception.
-assert(workbenchText.includes("Convert All Eligible is disabled until canonical preflight and booking rollout"),
-  "Automatic bulk booking must remain gated by full canonical preflight");
+assert(workbenchText.includes("Confirm bulk Policy registration")
+  && workbenchText.includes("const bulkBatch=bulkRemaining.slice(0,10)")
+  && workbenchText.includes("const result=await convertVerifiedAiIntake(item.id,true)")
+  && workbenchText.includes("setBulkAttemptedIds(previous=>")
+  && workbenchText.includes("Verify this Intake in Policy Register before retrying"),
+  "Bulk registration must require explicit per-batch confirmation, cap at 10 and use canonical per-Intake checks without ambiguous retries");
+const aiQueueRevisionText=text("lib/ai-policy-onboarding-queue-server.ts");
+assert(aiQueueRevisionText.includes('+"-issue-date-v2"')
+  && aiQueueRevisionText.includes("processAiQueueBatch")
+  && aiQueueRevisionText.includes("MAX_BATCH = 6")
+  && aiQueueRevisionText.includes("MAX_CONCURRENT = 3"),
+  "Old issuance exceptions must refresh via stable parser revision and existing bounded worker");
+assert(aiWorkbenchPageText.includes("bulkCandidates = workspaceRows.filter(row =>")
+  && aiWorkbenchPageText.includes('q?.state==="verified" && q.exception_codes.length===0')
+  && aiWorkbenchPageText.includes("!duplicateIds.has(row.id)")
+  && aiWorkbenchPageText.includes("bulkCandidates={bulkCandidates}"),
+  "Bulk candidates must include only authorized verified nonduplicate Motor Intakes across all pages");
 console.log("Semi-auto Motor onboarding regression checks passed.");
