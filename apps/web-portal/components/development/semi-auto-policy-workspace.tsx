@@ -110,6 +110,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
   const [bulkRunning,setBulkRunning]=useState(false);
   const [bulkAttemptedIds,setBulkAttemptedIds]=useState<string[]>([]);
   const [bulkProgress,setBulkProgress]=useState<{done:number;total:number}|null>(null);
+  const [bulkStoppedReason,setBulkStoppedReason]=useState<string|null>(null);
   const [bulkResults,setBulkResults]=useState<Array<{id:string;intake_number:string;ok:boolean;message:string}>>([]);
   const [customerReview,setCustomerReview]=useState<AiCustomerCandidateReview|null>(null);
   const [reviewingCustomer,setReviewingCustomer]=useState(false);
@@ -327,18 +328,27 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
     setBusy("booking");
     setBulkProgress({done:0,total:batch.length});
     setBulkResults([]);
+    setBulkStoppedReason(null);
     let completed=0;
     // Deliberately sequential: one canonical registration transaction at a time.
     // No optimistic booking or automatic retry following an ambiguous response.
     for (const item of batch) {
+      let stopForServiceFailure=false;
       let outcome:{id:string;intake_number:string;ok:boolean;message:string};
       try {
         const result=await convertVerifiedAiIntake(item.id,true);
+        // A shared upstream n8n failure must abort the batch immediately;
+        // continuing would hold every healthy Intake for manual review.
+        stopForServiceFailure=!result.ok && result.issues.some(issue=>
+          issue.field==="Extraction" && /n8n/i.test(issue.message) && /HTTP|webhook|service|connection|rate.limit/i.test(issue.message));
         outcome={id:item.id,intake_number:item.intake_number,ok:result.ok&&Boolean(result.policyId),
           message:result.ok&&result.policyCode&&result.policyId
             ? "Registered "+result.policyCode
             : result.issues.map(issue=>issue.message).join(" ") || "Canonical verification stopped this policy."};
       } catch {
+        // An interrupted booking response is also ambiguous. Stop the whole
+        // batch rather than issue another policy booking request.
+        stopForServiceFailure=true;
         outcome={id:item.id,intake_number:item.intake_number,ok:false,
           message:"Booking response was interrupted. Verify this Intake in Policy Register before retrying."};
       }
@@ -348,6 +358,10 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
       setBulkResults(previous=>[...previous,outcome]);
       completed++;
       setBulkProgress({done:completed,total:batch.length});
+      if(stopForServiceFailure){
+        setBulkStoppedReason("Stopped after a shared n8n or interrupted response. The remaining "+(batch.length-completed)+" policies were NOT attempted. Investigate the webhook before another confirmed batch.");
+        break;
+      }
     }
     setBulkRunning(false);
     setBusy(null);
@@ -482,6 +496,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
           {bulkProgress ? (
             <div role="status" className="mt-2 rounded-lg border border-[#cbd9ea] bg-[#f5f9ff] p-3 text-[11px] text-[#285078]">
               Bulk conversion: {bulkProgress.done} / {bulkProgress.total} attempts completed{bulkRunning?" · processing next policy":""}.
+              {bulkStoppedReason ? <p className="mt-2 font-semibold text-amber-900">{bulkStoppedReason}</p> : null}
               {bulkResults.length ? <div className="mt-2 max-h-40 overflow-y-auto">{bulkResults.map(result=>(
                 <p key={result.id} className="py-1">{result.ok?"✓":"Needs review"} · {result.intake_number} · {result.message}</p>
               ))}</div> : null}

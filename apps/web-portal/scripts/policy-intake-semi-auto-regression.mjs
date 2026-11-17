@@ -913,4 +913,23 @@ assert(actionsText.includes("async function holdFailedAiConversion(id:string)")
   "Failed or uncertain bulk conversion must persist a review hold on previously verified queue rows");
 assert(workbenchText.includes('booking_review_required:"Bulk booking requires manual review"'),
   "Held bulk bookings must show a specific manual-review reason");
+// Surface a sanitized status without revealing n8n response bodies, signed
+// PDF URLs, secret headers or policy data; stop a batch on shared service error.
+const webhookBridgeText=text("lib/policy-intake-n8n-bridge.ts");
+assert(webhookBridgeText.includes("function assertN8nHttpSuccess(response: Response)")
+  && webhookBridgeText.includes('n8n_bridge_http_failure_')
+  && !webhookBridgeText.includes('if (!response.ok) throw new Error("n8n_bridge_http_failure")'),
+  "Webhook bridge must retain only sanitized HTTP response codes");
+assert(n8nPreviewServerText.includes('n8n_bridge_http_failure_401')
+  && n8nPreviewServerText.includes('n8n_bridge_http_failure_404')
+  && n8nPreviewServerText.includes('n8n_bridge_http_failure_429')
+  && n8nPreviewServerText.includes('n8n_bridge_http_failure_503')
+  && !n8nPreviewServerText.includes("response.text()"),
+  "Webhook diagnostics must classify errors safely without exposing private body");
+assert(workbenchText.includes("let stopForServiceFailure=false")
+  && workbenchText.includes("if(stopForServiceFailure){")
+  && workbenchText.includes("The remaining ")
+  && workbenchText.includes("policies were NOT attempted")
+  && workbenchText.includes("setBulkStoppedReason(null)"),
+  "Systemic n8n error must stop confirmed batch after first failed Intake");
 console.log("Semi-auto Motor onboarding regression checks passed.");

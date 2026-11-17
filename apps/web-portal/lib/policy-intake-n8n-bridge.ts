@@ -9,6 +9,16 @@ const MAX_FILE_BYTES = 15 * 1024 * 1024;
 const TRUSTED_STORAGE_ORIGIN = "https://ilzhsfqqjyppzzvfscmh.supabase.co";
 const SIGNED_OBJECT_PREFIX = "/storage/v1/object/sign/policy-documents/intakes/";
 
+// Preserve only the HTTP status, never webhook response bodies, URLs,
+// authentication headers, PDF bytes or customer details.
+function assertN8nHttpSuccess(response: Response): void {
+  if (response.ok) return;
+  const code = Number.isInteger(response.status) && response.status >= 400
+    && response.status <= 599 ? response.status : 0;
+  throw new Error("n8n_bridge_http_failure_" + code);
+}
+
+
 /** Signed source is issued only by our server after checking the current private document. */
 export type N8nSignedSourceInput = Pick<N8nOcrBridgeInput, "intakeId" | "documentId" | "requestId"> & {
   signedUrl: string;
@@ -57,7 +67,7 @@ export async function requestN8nPolicyIntakeBySignedSource(
       signal: controller.signal,
       redirect: "error",
     });
-    if (!response.ok) throw new Error("n8n_bridge_http_failure");
+    assertN8nHttpSuccess(response);
     const payload: unknown = await response.json();
     return validateN8nPolicyIntakeResponse(payload, input);
   } finally {
@@ -110,7 +120,7 @@ export async function requestN8nPolicyIntakeExtraction(
       signal: controller.signal,
       redirect: "error",
     });
-    if (!response.ok) throw new Error("n8n_bridge_http_failure");
+    assertN8nHttpSuccess(response);
     const payload: unknown = await response.json();
     return validateN8nPolicyIntakeResponse(payload, input);
   } finally {

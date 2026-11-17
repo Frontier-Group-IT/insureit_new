@@ -143,8 +143,19 @@ export async function previewSemiAutoN8nExtraction(id: string): Promise<SemiAuto
         ? "The current private PDF reference or signed access could not be validated. Check the linked document in Policy Intake."
       : ["n8n_bridge_not_configured", "n8n_webhook_url_not_allowed"].includes(code)
         ? "The portal's n8n bridge configuration is unavailable or invalid. Contact the portal administrator."
+      : code === "n8n_bridge_http_failure_401" || code === "n8n_bridge_http_failure_403"
+        ? "n8n rejected the portal webhook credentials (HTTP " + code.slice(-3) + "). The n8n Header Auth credential and portal connection must be reconciled by an administrator."
+      : code === "n8n_bridge_http_failure_404" || code === "n8n_bridge_http_failure_405"
+        ? "n8n did not recognize the configured production webhook (HTTP " + code.slice(-3) + "). Verify the workflow is active and the POST webhook path is published."
+      : code === "n8n_bridge_http_failure_429"
+        ? "n8n is rate-limiting incoming requests (HTTP 429). Stop bulk conversion and verify n8n capacity before explicitly retrying."
+      : ["n8n_bridge_http_failure_500","n8n_bridge_http_failure_502",
+         "n8n_bridge_http_failure_503","n8n_bridge_http_failure_504"].includes(code)
+        ? "The n8n service or workflow failed (HTTP " + code.slice(-3) + "). Stop bulk conversion and inspect workflow health before retrying."
+      : code.startsWith("n8n_bridge_http_failure_")
+        ? "The n8n webhook returned HTTP " + code.slice(-3) + ". Stop the batch and inspect the production n8n connection before retrying."
       : code === "n8n_bridge_http_failure"
-        ? "The n8n webhook returned an unsuccessful response while processing this PDF. Check the active n8n workflow and its execution logs."
+        ? "The n8n webhook returned an unsuccessful response. Check workflow availability before retrying."
       : code === "n8n_issuance_date_invalid"
         ? "The n8n response contained an invalid policy issuance date. Review the parser's printed-date extraction."
       : code === "AbortError" || (error instanceof Error && error.name === "AbortError")
