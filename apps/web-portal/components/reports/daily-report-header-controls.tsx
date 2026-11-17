@@ -72,7 +72,7 @@ export function DailyReportHeaderScopes({canViewAll=false}:{canViewAll?:boolean}
   const hasOtherEmployees=people.length>0;
   const showDropdown=canViewAll && (hasOtherEmployees || loadError);
   if(!showDropdown) {
-    return <span title="Self report only — no other authorized employees available" aria-label="Daily Report scope: Self" className="daily-report-header-select inline-flex h-9 min-w-[145px] items-center justify-center rounded-lg border border-[#cbd7e6] bg-white px-3 text-center text-[11px] font-semibold text-[#17365D]">Self</span>;
+    return <span title="Self report only — no other authorized employees available" aria-label="Daily Report scope: Self" className="daily-report-header-select inline-flex h-9 min-w-0 items-center justify-center rounded-lg border border-[#cbd7e6] bg-white px-4 text-center text-[11px] font-semibold text-[#17365D]">Self</span>;
   }
   function selectPerson(personId:string|null) {
     const params=new URLSearchParams(searchParams.toString());
@@ -90,7 +90,7 @@ export function DailyReportHeaderScopes({canViewAll=false}:{canViewAll?:boolean}
     <div ref={container} className="relative z-30 min-w-0" aria-label="Daily Report employee selector">
       <button type="button" aria-haspopup="listbox" aria-expanded={open} aria-controls="daily-report-employee-options"
         onClick={()=>{setOpen(value=>!value);setSearch("");}}
-        className="daily-report-header-select relative inline-flex min-h-10 w-[clamp(124px,18vw,235px)] min-w-0 items-center justify-center rounded-lg border border-[#cbd7e6] bg-white px-8 text-center text-[11px] font-semibold text-[#17365D] hover:bg-[#f5f8fc] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#315b9a]">
+        className="daily-report-header-select relative inline-flex min-h-9 w-[112px] max-w-[36vw] min-w-0 items-center justify-center rounded-lg border border-[#cbd7e6] bg-white pl-3 pr-7 text-center text-[11px] font-semibold text-[#17365D] hover:bg-[#f5f8fc] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#315b9a]">
         <span className="min-w-0 truncate text-center">{!selectedPerson?"Self":selected?.full_name||"Selected employee"}</span><ChevronDown className="absolute right-3 h-3.5 w-3.5 shrink-0"/>
       </button>
       {open ? (
