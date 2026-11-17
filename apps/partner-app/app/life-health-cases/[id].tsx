@@ -422,7 +422,9 @@ export default function LifeHealthCaseDetailScreen(){
         </View>
         {infoTab==='activity'?(activities.length?activities.map(activity=><View key={activity.id} style={styles.activity}>
           <Text style={styles.activityTitle}>{activity.action.replace(/_/g,' ')}</Text>
-          <Text style={styles.activityDate}>{activityDate(activity.created_at)}</Text>
+          {activity.createdBy?<Text style={styles.activityDate}>By: {activity.createdBy}</Text>:null}
+          {activity.changes?.map((change,index)=><Text key={index} style={styles.activityDate}>• {change}</Text>)}
+          <Text style={styles.activityDate}>At: {activityDate(activity.created_at)}</Text>
         </View>):<Text style={styles.paragraph}>No recorded case activity available.</Text>):
          <View style={{gap:10}}>
           <Text style={styles.paragraph} selectable>{record.remarks?.trim()||'No remarks added yet.'}</Text>
