@@ -15,9 +15,9 @@ assert.match(header, /if\(!isDaily\) return null/, "Daily header controls are hi
 assert.match(header, /aria-label="Daily Report employee selector"/);
 assert.match(header, /aria-haspopup="listbox"/, "Self and All must use a dropdown instead of segmented navigation");
 assert.match(header, /type="search" aria-label="Search employee name or code"/, "Employee dropdown must be searchable");
-assert.match(header, /const selectedPerson=canViewAll && searchParams.get\("scope"\)==="all" \? searchParams.get\("person"\) : null/, "Self remains selected by default");
+assert.match(header, /const allSelected=canViewAll && searchParams.get\("scope"\)==="all"/, "Self remains selected by default without All selection");
 assert.match(header, /matching\.map\(person=>\(/, "Authorized employee names appear in dropdown");
-assert.match(header, /params.set\("scope",personId && canViewAll\?"all":"self"\)/, "Employee selection navigates directly to the report");
+assert.match(header, /params.set\("scope",personId!==null && canViewAll\?"all":"self"\)/, "All and employee selection navigate to the report");
 assert.match(header, /else params.delete\("person"\)/, "Self clears selected employee");
 assert.match(header, /params.delete\("employee"\)/, "Scope transitions clear employee search");
 assert.match(header, /params.set\("page","1"\)/, "Scope selection resets pagination");
