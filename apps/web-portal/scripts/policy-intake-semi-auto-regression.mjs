@@ -558,4 +558,38 @@ blockedBy("reviewer_conflict",{intakeStatus:"processing"});
 assert.deepEqual(assessAi({policyType:"life"}).state,"unsupported",
   "Unsupported policy categories never enter the one-click bulk queue");
 
+// Unattended extraction is private and fail-closed. No booking call should
+// ever be reachable from the queue processor or scheduler endpoint.
+const workerText=text("lib/ai-policy-onboarding-queue-server.ts");
+const routeText=text("app/api/internal/ai-policy-onboarding/process/route.ts");
+const actionsText=text("app/development/ai-policy-onboarding/actions.ts");
+const workbenchText=text("components/development/semi-auto-policy-workspace.tsx");
+const queueSql=readFileSync(new URL("../../../supabase/migrations/20261117154000_policy_intake_ai_processing_queue.sql",import.meta.url),"utf8");
+const schedulerYaml=readFileSync(new URL("../../../.github/workflows/ai-policy-intake-extraction.yml",import.meta.url),"utf8");
+assert(workerText.includes("previewSemiAutoN8nExtraction(")
+  && workerText.includes("claim_policy_intake_ai_queue_v1")
+  && workerText.includes("canonicalPreflightPassed:false"),
+  "Background extraction must use current signed n8n PDF, atomically claim and never mark booking-ready on parse success");
+assert(!workerText.includes("onboardPolicy(")
+  && !routeText.includes("onboardPolicy("),
+  "Unattended extraction can NEVER create a policy or customer");
+assert(routeText.includes("timingSafeEqual")
+  && routeText.includes("INSUREIT_AI_QUEUE_WORKER_TOKEN")
+  && routeText.includes("aiQueueEnabled()"),
+  "Worker must authenticate and be explicitly feature flagged");
+assert(queueSql.includes("enable row level security")
+  && queueSql.includes("for update of q skip locked")
+  && queueSql.includes("revoke all on public.policy_intake_ai_processing_queue from public, anon, authenticated"),
+  "Private service-role queue requires RLS, transactional leases, and no public read/write grants");
+assert(schedulerYaml.includes("vars.INSUREIT_AI_QUEUE_SCHEDULE_ENABLED == 'true'")
+  && schedulerYaml.includes("secrets.INSUREIT_AI_QUEUE_WORKER_TOKEN"),
+  "Automatic scheduler must remain disabled until separately approved and configured");
+assert(workbenchText.includes("Resolve policy exceptions")
+  && workbenchText.includes("Convert All Eligible")
+  && workbenchText.includes("disabled aria-label=")
+  && workbenchText.includes("queueActive)"),
+  "Queue UI must render exception actions but keep bulk conversion disabled until canonical preflight exists");
+assert(actionsText.includes("reprocessAiPolicyIntake")
+  && actionsText.includes("requireDevelopmentPolicyOperator(id)"),
+  "Each manual background reprocess request must require the current authorized reviewer");
 console.log("Semi-auto Motor onboarding regression checks passed.");
