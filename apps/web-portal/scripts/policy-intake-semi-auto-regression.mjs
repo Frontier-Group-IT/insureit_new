@@ -568,6 +568,7 @@ const actionsText=text("app/development/ai-policy-onboarding/actions.ts");
 const workbenchText=text("components/development/semi-auto-policy-workspace.tsx");
 const queueSql=readFileSync(new URL("../../../supabase/migrations/20261117154000_policy_intake_ai_processing_queue.sql",import.meta.url),"utf8");
 const queueV2Sql=readFileSync(new URL("../../../supabase/migrations/20261117170000_ai_policy_priority_batch_queue_v2.sql",import.meta.url),"utf8");
+const prioritizedQueueSql=readFileSync(new URL("../../../supabase/migrations/20261117173000_ai_policy_prioritize_trained_3005.sql",import.meta.url),"utf8");
 const normalUploadActions=text("app/policy-intakes/actions.ts");
 const partnerUploadApi=text("app/api/partner/policy-intakes/route.ts");
 const schedulerYaml=readFileSync(new URL("../../../.github/workflows/ai-policy-intake-extraction.yml",import.meta.url),"utf8");
@@ -720,4 +721,17 @@ assert(queueV2Sql.includes("create or replace function public.sync_verified_ai_i
   && queueV2Sql.includes("d.is_current=true")
   && !queueV2Sql.includes("insert into public.policies"),
   "Canonical OCR synchronization requires strict checked current PDF/lease, empty fields and no saved draft; never books");
+// 3005 Motor filename may only affect queue attempt priority. Untrained
+// formats remain valid review items and must not be silently dropped.
+assert(prioritizedQueueSql.includes("case when i.policy_type='motor' and i.file_name ilike '3005%' then 0 else 1 end")
+  && prioritizedQueueSql.includes("q.retry_after asc,q.created_at asc")
+  && prioritizedQueueSql.includes("for update of q skip locked")
+  && prioritizedQueueSql.includes("current_user <> 'service_role'")
+  && prioritizedQueueSql.includes("p_preferred_intake_id is null or q.intake_id=p_preferred_intake_id")
+  && prioritizedQueueSql.includes("grant execute on function public.claim_policy_intake_ai_queue_v2")
+  && !prioritizedQueueSql.includes("insert into public.policies")
+  && !prioritizedQueueSql.includes("delete from public.policy_intake_requests"),
+  "Trained PDF filename can change only order; private priority claim must retain lease and authorization checks");
+assert.equal(prioritizedQueueSql.split("\n").filter(line=>line.trim()==="as $$").length,1);
+assert.equal(prioritizedQueueSql.split("\n").filter(line=>line.trim()==="$$;").length,1);
 console.log("Semi-auto Motor onboarding regression checks passed.");
