@@ -15,7 +15,7 @@ for(const key of ['sourcingDate','customerName','customerPhone','customerAddress
   assert.ok(app.includes('inline("'+key+'"'),'Inline edit missing '+key);
 }
 assert.match(app,/record\?\.status_group==='issued'&&\['customerName','customerPhone','customerAddress'\]/);
-assert.match(app,/record.status_group==='pending'\?<Section number="05"/);
+assert.match(app,/record.status_group==='pending'\?<Section number="05" title="Mark Policy Issued" highlight/);
 for(const key of ['policyNumber','issuanceDate','startDate','endDate','pptEndDate','nextInstallmentDate','finalPremium','sumInsured']){
   assert.ok(app.includes('issueField("'+key+'"'),'Missing issuance field '+key);
 }
