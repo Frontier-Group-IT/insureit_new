@@ -10,7 +10,7 @@ type Data = {
   page:number;hasNext:boolean;total:number;selectedCount:number;partial:boolean;day:string;
   unavailableSources:string[];allSourcesUnavailable:boolean;
 };
-type Props = {data:Data;linkFor:(updates:Partial<DailyActivityQuery>)=>string; reportMode?:"self"|"employee"; canViewAll?:boolean};
+type Props = {data:Data;linkFor:(updates:Partial<DailyActivityQuery>)=>string; reportMode?:"self"|"employee"|"all"; canViewAll?:boolean};
 
 function activityIcon(name:string) {
   if(name==="Customer Add")return UserRoundPlus;
@@ -78,7 +78,7 @@ export function DailySelfActivityPanel({data,linkFor,reportMode="self",canViewAl
       <div className="daily-report-panel-title flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-[#e4e9f1] px-4 py-3">
         <div className="flex min-w-0 flex-wrap items-center gap-3">
           <h3 className="flex items-center gap-2 text-[12px] font-bold text-[#17365D]"><BarChart3 size={19} strokeWidth={2.1} aria-hidden="true"/>
-            {data.category ? `${data.category} (${data.selfName})` : (reportMode==="self" ? "My Activity Summary" : "Activity Summary")}
+            {data.category ? `${data.category} (${data.selfName})` : (reportMode==="self" ? "My Activity Summary" : reportMode==="all" ? "All Activity Summary" : "Activity Summary")}
           </h3>
           <DailyReportHeaderScopes canViewAll={canViewAll} />
         </div>
