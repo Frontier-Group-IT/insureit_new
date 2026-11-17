@@ -229,8 +229,13 @@ assert.doesNotMatch(actions, /writeFile|appendFile|apply_patch/);
 
 assert.equal(existsSync("app/api/internal/policy-ocr-training/process/route.ts"), false);
 assert.equal(existsSync("lib/policy-ocr-training-schedule.ts"), false);
-const vercelConfig = readFileSync("vercel.json", "utf8");
-assert.doesNotMatch(vercelConfig, /"crons"/);
+const vercelConfig = JSON.parse(readFileSync("vercel.json", "utf8"));
+assert.deepEqual(vercelConfig.crons ?? [],[
+  {path:"/api/internal/ai-policy-onboarding/process",schedule:"*/5 * * * *"},
+],"The only allowed production cron is the newly approved, separate read-only n8n Intake extraction queue");
+assert(!vercelConfig.crons.some((job: {path:string})=>
+  job.path.includes("policy-ocr-training") || job.path.includes("ocr-training")),
+  "Policy OCR training remains strictly manual and can never be scheduled");
 
 const uploadActions = [
   readFileSync("app/policies/policy-document-actions.ts", "utf8"),
