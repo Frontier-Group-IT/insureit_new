@@ -124,6 +124,7 @@ export default function LifeHealthCaseDetailScreen(){
  const [calendarField,setCalendarField]=useState<'sourcingDate'|'issuanceDate'|'startDate'|'endDate'|'pptEndDate'|'nextInstallmentDate'|null>(null);
  const [issue,setIssue]=useState<LifeHealthIssue>({policyNumber:'',issuanceDate:'',startDate:'',endDate:'',pptEndDate:'',nextInstallmentDate:'',finalPremium:'',sumInsured:''});
  const [issuing,setIssuing]=useState(false);const [issueError,setIssueError]=useState('');
+ const [createPolicyError,setCreatePolicyError]=useState('');
  const [approvalOpen,setApprovalOpen]=useState(false);const [approvalId,setApprovalId]=useState('');const [approvalVerified,setApprovalVerified]=useState(false);const [approverKey,setApproverKey]=useState('');const [otp,setOtp]=useState('');const [approvalLoading,setApprovalLoading]=useState(false);
  const [saving,setSaving]=useState(false);
  const [saveError,setSaveError]=useState('');
@@ -307,26 +308,31 @@ export default function LifeHealthCaseDetailScreen(){
    const [y,m]=value.split('-').map(Number),delta=(current('year')-y)*12+current('month')-m;
    return delta>1||(delta===1&&current('day')>15);
  };
+ const showCreatePolicyError=(message:string)=>{
+  setIssueError(message);
+  setCreatePolicyError(message);
+ };
  const submitIssue=async()=>{
    if(!record||record.status_group!=='pending'||issuing||!form)return;
    setIssueError('');
+   setCreatePolicyError('');
    const data=issuedForm();
    if(!data.policyNumber.trim()||!data.issuanceDate||!data.startDate||
       !data.finalPremium.trim()||!Number.isFinite(Number(data.finalPremium))){
-     setIssueError('Enter a valid policy number, issuance date, start date and final premium.');return;
+     showCreatePolicyError('Enter a valid policy number, issuance date, start date and final premium.');return;
    }
    for(const key of ['endDate','pptEndDate','nextInstallmentDate'] as const){
      if(issue[key].trim()&&!data[key]){
-       setIssueError('Enter a valid DD/MM/YYYY date for '+key+'.');return;
+       showCreatePolicyError('Enter a valid DD/MM/YYYY date for '+key+'.');return;
      }
    }
    if(JSON.stringify(form)!==JSON.stringify(initialForm(record))){
-     setIssueError('Save your case edits before issuing the policy.');return;
+     showCreatePolicyError('Save your case edits before issuing the policy.');return;
    }
    if(requiresApproval()&&!approvalVerified){setApprovalOpen(true);return;}
    setIssuing(true);
    try{await issueLifeHealthPolicy(record.id,data);await load();}
-   catch(e){setIssueError(e instanceof Error?e.message:'Issuance outcome unclear. Check Policy Register before retrying.');}
+   catch(e){showCreatePolicyError(e instanceof Error?e.message:'Issuance outcome unclear. Check Policy Register before retrying.');}
    finally{setIssuing(false);}
  };
  const requestApproval=async()=>{
@@ -462,9 +468,7 @@ export default function LifeHealthCaseDetailScreen(){
           {issueField("finalPremium","Final premium",true)}
           {issueField("sumInsured","Sum assured / insured")}
         </View>
-        {issueError?<Text style={styles.saveError}>{issueError}</Text>:null}
-
-      </Section>:null}
+        </Section>:null}
       {record.policy_no?<Section number="05" title="Issued policy">
         <View style={styles.grid}><Field label="Policy number" value={record.policy_no} wide/></View>
       </Section>:null}
@@ -581,6 +585,14 @@ export default function LifeHealthCaseDetailScreen(){
       </View>:null}
 
     </View>:null}
+   <PartnerConfirmDialog
+     visible={Boolean(createPolicyError)}
+     kind="error"
+     title="Unable to Create Policy"
+     message={createPolicyError}
+     onCancel={()=>setCreatePolicyError('')}
+     actions={[{label:'OK',onPress:()=>setCreatePolicyError('')}]}
+   />
    <PartnerConfirmDialog
      visible={Boolean(deleteTarget)}
      kind="delete"
