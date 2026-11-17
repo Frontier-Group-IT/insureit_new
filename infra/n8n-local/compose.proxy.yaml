@@ -1,0 +1,12 @@
+# Attach this overlay alongside compose.yaml. The public tunnel MUST target port
+# 8787, never the n8n editor at port 5678.
+services:
+  webhook-proxy:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8787:8080"
+    volumes:
+      - ./webhook-proxy.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - internal

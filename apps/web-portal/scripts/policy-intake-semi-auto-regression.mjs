@@ -932,4 +932,15 @@ assert(workbenchText.includes("let stopForServiceFailure=false")
   && workbenchText.includes("policies were NOT attempted")
   && workbenchText.includes("setBulkStoppedReason(null)"),
   "Systemic n8n error must stop confirmed batch after first failed Intake");
+// Self-hosted cutover must be explicit, HTTPS-only and pinned to the approved
+// INSUREIT hostname; Cloud remains the rollback default.
+assert(webhookBridgeText.includes('const EXPECTED_N8N_ORIGIN = "https://insureit.app.n8n.cloud"')
+  && webhookBridgeText.includes('const SELF_HOSTED_N8N_ORIGIN = "https://n8n.nishant.uk"')
+  && webhookBridgeText.includes('INSUREIT_N8N_OCR_ENDPOINT_MODE')
+  && webhookBridgeText.includes('=== "self_hosted"')
+  && webhookBridgeText.includes('url.protocol !== "https:"')
+  && webhookBridgeText.includes('url.origin !== origin')
+  && webhookBridgeText.includes('url.pathname !== EXPECTED_WEBHOOK_PATH')
+  && webhookBridgeText.includes('redirect: "error"'),
+  "Production self-hosted cutover must enforce an exact HTTPS host and path with Cloud rollback");
 console.log("Semi-auto Motor onboarding regression checks passed.");
