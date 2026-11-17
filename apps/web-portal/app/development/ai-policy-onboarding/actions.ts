@@ -551,6 +551,19 @@ export async function reprocessAiPolicyIntake(id: string): Promise<{ok:boolean;e
   await requireDevelopmentPolicyOperator(id);
   if(!aiQueueEnabled())return{ok:false,error:"The automatic extraction queue is not enabled."};
   const admin=createSupabaseAdminClient();
+  // A reprocess request cannot reopen a registered/completed policy or
+  // override the canonical Policy Intake duplicate exclusion.
+  const {data:intake,error:intakeError}=await admin.from("policy_intake_requests")
+    .select("id,intake_number,status,policy_type,final_policy_id,created_at,ocr_fields")
+    .eq("id",id).maybeSingle();
+  if(intakeError||!intake||intake.policy_type!=="motor"
+    ||!["processing","ready_for_review","in_review","needs_attention"].includes(intake.status)
+    ||intake.final_policy_id){
+    return{ok:false,error:"Only an open, unregistered Motor Intake can be reprocessed."};
+  }
+  const duplicates=await loadPolicyIntakeDuplicateMatches(admin,[intake]);
+  if(!duplicates.ok)return{ok:false,error:"Duplicate safety check is unavailable; no queue change was made."};
+  if(duplicates.matches.has(id))return{ok:false,error:"This Intake is a duplicate. Resolve it in Policy Intake before reprocessing."};
   const {data:copy,error:copyError}=await admin.from("policy_intake_documents")
     .select("id").eq("intake_id",id).eq("is_current",true)
     .maybeSingle<{id:string}>();
