@@ -30,6 +30,8 @@ function compactDate(date: string) {
   return Number.isNaN(parsed.getTime()) ? "-" : new Intl.DateTimeFormat("en-IN", { day: "2-digit", month: "short", year: "numeric" }).format(parsed);
 }
 
+const rupees = (amount: number) => "₹" + amount.toLocaleString("en-IN", { maximumFractionDigits: 2 });
+
 export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId }: {
   rows: SemiAutoIntakeRow[]; profileId: string; initialIntakeId?: string | null;
 }) {
@@ -280,6 +282,67 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId }: {
                 <p className="mt-1 text-[10px] leading-4 text-[#5e7188]">
                   Compare each value with the original policy copy. Confidence scores are not available. This preview does not change the Intake, draft or booking state.
                 </p>
+                <div className="mt-3 rounded-lg border border-[#d2e1f1] bg-white p-3">
+                  <p className="text-[10.5px] font-bold text-[#23466e]">
+                    Exact field differences from saved OCR · {n8nResult.preview.changedFields.length}
+                  </p>
+                  <p className="mt-1 text-[10px] text-[#687b92]">New or different does not mean incorrect. Confirm every difference with the printed PDF before accepting the n8n parser.</p>
+                  {n8nResult.preview.changedFields.length ? (
+                    <div className="mt-2 max-h-[230px] space-y-2 overflow-y-auto">
+                      {n8nResult.preview.changedFields.map(item => (
+                        <div key={item.key} className="rounded-md border border-[#e1e9f3] bg-[#f9fbfe] p-2 text-[10px]">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-bold text-[#2c4e78]">{item.label}</span>
+                            <span className={item.kind === "new" ? "rounded bg-blue-100 px-1.5 py-0.5 font-bold text-blue-800" : "rounded bg-amber-100 px-1.5 py-0.5 font-bold text-amber-800"}>
+                              {item.kind === "new" ? "New" : "Different"}
+                            </span>
+                          </div>
+                          <p className="mt-1 break-words text-[#65768c]">Saved OCR: {item.previousValue ?? "Not previously extracted"}</p>
+                          <p className="mt-0.5 break-words font-semibold text-[#173d64]">n8n: {item.extractedValue}</p>
+                          <p className="mt-0.5 text-[#718097]">PDF p.{item.page ?? "?"} · {item.evidence}</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : <p className="mt-2 text-[10px] font-semibold text-emerald-800">All n8n fields match the saved OCR values exactly.</p>}
+                </div>
+                <div className="mt-3 rounded-lg border border-[#cbded5] bg-[#f7fcf8] p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-[10.5px] font-bold text-[#195339]">PDF premium reconciliation</p>
+                    <span className="text-[10px] font-semibold text-emerald-800">{n8nResult.preview.checksPassed} parser checks passed</span>
+                  </div>
+                  <p className="mt-1 text-[10px] text-[#4e7360]">These are n8n values from the policy PDF, checked independently by INSUREIT. They are not saved or booked by preview.</p>
+                  {[
+                    { label: "Basic OD", amount: n8nResult.preview.premium.basicOd },
+                    { label: "OD add-ons", amount: n8nResult.preview.premium.odAddons.reduce((total, item) => total + item.amount, 0) },
+                    { label: "Total OD", amount: n8nResult.preview.premium.totalOd },
+                    { label: "Third party", amount: n8nResult.preview.premium.basicTp },
+                    { label: "CPA", amount: n8nResult.preview.premium.cpa },
+                    { label: "Total liability", amount: n8nResult.preview.premium.liability },
+                    { label: "Net premium", amount: n8nResult.preview.premium.net },
+                    { label: "Exact IGST", amount: n8nResult.preview.premium.exactIgst },
+                    { label: "Rounded printed tax", amount: n8nResult.preview.premium.tax },
+                    { label: "Printed gross", amount: n8nResult.preview.premium.gross },
+                  ].map(item => (
+                    <div key={item.label} className="flex items-center justify-between gap-2 border-b border-[#e0ede5] py-1 text-[10px] last:border-b-0">
+                      <span className="text-[#567060]">{item.label}</span>
+                      <span className="font-semibold tabular-nums text-[#214b32]">{rupees(item.amount)}</span>
+                    </div>
+                  ))}
+                  {n8nResult.preview.premium.odAddons.length > 0 ? (
+                    <div className="mt-2 rounded-md bg-white px-2 py-1.5">
+                      <p className="text-[10px] font-bold text-[#35694b]">Individual OD add-ons</p>
+                      {n8nResult.preview.premium.odAddons.map((item, index) => (
+                        <div key={item.name + index} className="flex items-center justify-between gap-2 py-0.5 text-[10px]">
+                          <span className="text-[#597366]">{item.name}</span>
+                          <span className="font-semibold tabular-nums">{rupees(item.amount)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+                  <p className="mt-2 text-[10px] font-semibold text-[#246442]">
+                    Verified: Basic OD + add-ons = Total OD; TP + CPA = liability; Total OD + liability = net; net + rounded tax = gross.
+                  </p>
+                </div>
                 <div className="mt-2 max-h-[320px] overflow-auto rounded-lg border border-[#d9e5f1] bg-white">
                   <table className="w-full min-w-[320px] text-left text-[10px]">
                     <thead className="sticky top-0 bg-[#eaf2fc] text-[#2d5076]"><tr><th className="p-2">Field</th><th className="p-2">Extracted value</th><th className="p-2">Evidence</th></tr></thead>
