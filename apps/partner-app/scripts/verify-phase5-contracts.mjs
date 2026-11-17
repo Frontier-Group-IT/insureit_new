@@ -113,8 +113,9 @@ expectAll('app/policy-intake-new.tsx', [
 expectAll('app/policy-intakes/[id].tsx', [
   [/actionLabel="Try again"/, 'Policy Intake detail load errors must expose retry'],
   [/accessibilityLiveRegion="polite"/, 'replacement upload progress must be announced'],
-  [/accessibilityRole="progressbar"/, 'Policy Intake status/replacement progress must expose progressbar semantics'],
-  [/Step \${activeStep} of 4/, 'Policy Intake stage progress must expose a text step description'],
+  [/accessibilityRole="progressbar"/, 'replacement upload progress must expose progressbar semantics'],
+  [/accessibilityLabel=\{\`\$\{replacementLabel\(progress\)\}, \$\{Math\.round\(percent\)\} percent\`\}/, 'replacement upload progress retains an accessible text description'],
+  [/statusBadgeTextStyle\(row\)/, 'Policy Intake review state remains visibly labeled'],
   [/submitPartnerPolicyIntakeReplacement/, 'attention-required flow must support replacement submission'],
 ]);
 
