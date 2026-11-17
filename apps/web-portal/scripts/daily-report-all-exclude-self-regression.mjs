@@ -16,7 +16,7 @@ assert.match(directory, /if\(!authorized\) throw/,
   "Self selection through All URL fails closed");
 assert.match(page, /loadSelfActivityHistory\(profile\.id/,
   "Self continues to show the signed-in employee");
-assert.match(page, /assertDailyReportEmployeeAllowed\(chosenPerson, employeeDirectory\);[\s\S]*?loadSelfActivityHistory\(chosenPerson/,
+assert.match(page, /if \(chosenPerson\) assertDailyReportEmployeeAllowed\(chosenPerson, employeeDirectory\)/,
   "All validates selected employee before loading admin-scoped history");
 assert.match(selector, /people\.filter\(person=>/,
   "Search still filters the authorized list");

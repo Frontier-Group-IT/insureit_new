@@ -26,7 +26,8 @@ type ReportPerson = { id: string; full_name: string | null; employee_code: strin
 export function DailyReportHeaderScopes({canViewAll=false}:{canViewAll?:boolean}) {
   const {isDaily,searchParams}=useDailyReportLocation();
   const router=useRouter();
-  const selectedPerson=canViewAll && searchParams.get("scope")==="all" ? searchParams.get("person") : null;
+  const allSelected=canViewAll && searchParams.get("scope")==="all";
+  const selectedPerson=allSelected ? searchParams.get("person") : null;
   const [open,setOpen]=useState(false);
   const [search,setSearch]=useState("");
   const [people,setPeople]=useState<ReportPerson[]>([]);
@@ -74,10 +75,10 @@ export function DailyReportHeaderScopes({canViewAll=false}:{canViewAll?:boolean}
   if(!showDropdown) {
     return <span title="Self report only — no other authorized employees available" aria-label="Daily Report scope: Self" className="daily-report-header-select inline-flex h-9 min-w-0 items-center justify-center rounded-lg border border-[#cbd7e6] bg-white px-4 text-center text-[11px] font-semibold text-[#17365D]">Self</span>;
   }
-  function selectPerson(personId:string|null) {
+  function selectPerson(personId:string|null|"all") {
     const params=new URLSearchParams(searchParams.toString());
-    params.set("scope",personId && canViewAll?"all":"self");
-    if(personId && canViewAll)params.set("person",personId);
+    params.set("scope",personId!==null && canViewAll?"all":"self");
+    if(personId && personId!=="all" && canViewAll)params.set("person",personId);
     else params.delete("person");
     params.delete("employee");
     params.delete("activity");
@@ -91,7 +92,7 @@ export function DailyReportHeaderScopes({canViewAll=false}:{canViewAll?:boolean}
       <button type="button" aria-haspopup="listbox" aria-expanded={open} aria-controls="daily-report-employee-options"
         onClick={()=>{setOpen(value=>!value);setSearch("");}}
         className="daily-report-header-select relative inline-flex min-h-9 w-[112px] max-w-[36vw] min-w-0 items-center justify-center rounded-lg border border-[#cbd7e6] bg-white pl-3 pr-7 text-center text-[11px] font-semibold text-[#17365D] hover:bg-[#f5f8fc] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#315b9a]">
-        <span className="min-w-0 truncate text-center">{!selectedPerson?"Self":selected?.full_name||"Selected employee"}</span><ChevronDown className="absolute right-3 h-3.5 w-3.5 shrink-0"/>
+        <span className="min-w-0 truncate text-center">{allSelected ? (selectedPerson ? selected?.full_name||"Selected employee" : "All") : "Self"}</span><ChevronDown className="absolute right-3 h-3.5 w-3.5 shrink-0"/>
       </button>
       {open ? (
         <div className="absolute left-0 top-[calc(100%+4px)] z-[80] w-[270px] max-w-[calc(100vw-40px)] rounded-lg border border-[#d8e0eb] bg-white p-2 shadow-lg">
@@ -99,9 +100,12 @@ export function DailyReportHeaderScopes({canViewAll=false}:{canViewAll?:boolean}
             autoFocus value={search} onChange={event=>setSearch(event.target.value)}
             className="mb-1.5 h-9 w-full rounded-md border border-[#d8e0eb] px-2 text-[11px] text-[#17365D] outline-none focus:border-[#315b9a]"/>
           <div id="daily-report-employee-options" role="listbox" aria-label="Authorized employee" className="max-h-[min(300px,50dvh)] overscroll-contain overflow-y-auto">
-            {"self".includes(search.trim().toLowerCase())?<button type="button" role="option" aria-selected={!selectedPerson}
+            {"self".includes(search.trim().toLowerCase())?<button type="button" role="option" aria-selected={!allSelected}
               onClick={()=>selectPerson(null)}
-              className={`block min-h-10 w-full rounded-md px-3 py-2 text-left text-[11px] font-semibold hover:bg-[#eef3fa] ${!selectedPerson?"bg-[#edf3fa] text-[#17365D]":"text-[#52627B]"}`}>Self</button>:null}
+              className={`block min-h-10 w-full rounded-md px-3 py-2 text-left text-[11px] font-semibold hover:bg-[#eef3fa] ${!allSelected?"bg-[#edf3fa] text-[#17365D]":"text-[#52627B]"}`}>Self</button>:null}
+            {canViewAll&&"all".includes(search.trim().toLowerCase())?<button type="button" role="option" aria-selected={allSelected&&!selectedPerson}
+              onClick={()=>selectPerson("all")}
+              className={`block min-h-10 w-full rounded-md px-3 py-2 text-left text-[11px] font-semibold hover:bg-[#eef3fa] ${allSelected&&!selectedPerson?"bg-[#edf3fa] text-[#17365D]":"text-[#52627B]"}`}>All</button>:null}
             {canViewAll?matching.map(person=>(
               <button key={person.id} type="button" role="option" aria-selected={selectedPerson===person.id}
                 onClick={()=>selectPerson(person.id)}
@@ -112,7 +116,7 @@ export function DailyReportHeaderScopes({canViewAll=false}:{canViewAll?:boolean}
             )):null}
             {canViewAll&&loading?<p className="px-3 py-2 text-[11px] text-[#667085]">Loading employees...</p>:null}
             {canViewAll&&loadError?<p role="alert" className="px-3 py-2 text-[11px] text-red-700">Could not load authorized employees. Close and reopen to retry.</p>:null}
-            {canViewAll&&!loading&&!loadError&&!matching.length&&!("self".includes(search.trim().toLowerCase()))?<p className="px-3 py-2 text-[11px] text-[#667085]">No matching employees</p>:null}
+            {canViewAll&&!loading&&!loadError&&!matching.length&&!("self".includes(search.trim().toLowerCase()))&&!("all".includes(search.trim().toLowerCase()))?<p className="px-3 py-2 text-[11px] text-[#667085]">No matching employees</p>:null}
           </div>
         </div>
       ):null}

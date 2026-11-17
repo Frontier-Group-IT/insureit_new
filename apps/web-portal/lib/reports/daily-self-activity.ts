@@ -149,17 +149,22 @@ function auditChangeDetail(oldValue:unknown,newValue:unknown):string|undefined {
 
 
 export async function loadSelfActivityHistory(
-  viewerId:string, options:{day?:string;from?:string;to?:string;category?:string;page?:string},
+  viewerId:string, options:{day?:string;from?:string;to?:string;category?:string;page?:string;authorizedActorIds?:string[]},
 ) {
   if(!isValidDailyProfileId(viewerId)) throw new Error("Invalid authenticated employee");
+  // Caller must validate every All-mode actor against the authorized employee directory.
+  // Database queries are scoped before retrieval, never filtered from a global history scan.
+  const actorIds=options.authorizedActorIds===undefined?[viewerId]:[...new Set(options.authorizedActorIds)];
+  if(!actorIds.length||actorIds.some(id=>!isValidDailyProfileId(id))) throw new Error("Invalid authorized employee scope");
+  const combined=options.authorizedActorIds!==undefined;
   const admin = createSupabaseAdminClient();
   // A temporary name lookup failure must not suppress attributable history.
   const {data:selfProfile,error:selfProfileError} = await admin.from("profiles")
     .select("full_name,employee_code").eq("id",viewerId)
     .maybeSingle<{full_name:string|null;employee_code:string|null}>();
   if(selfProfileError) console.error("[daily-report] employee label unavailable", {code:selfProfileError.code || "request_error"});
-  const selfName = selfProfile?.full_name || "Current employee";
-  const employeeCode = selfProfile?.employee_code || "";
+  const selfName = combined?"All authorized employees":(selfProfile?.full_name || "Current employee");
+  const employeeCode = combined?"":(selfProfile?.employee_code || "");
   const window = options.from || options.to
     ? dailyReportRangeWindow(options.from,options.to)
     : selfDateWindow(options.day);
@@ -169,62 +174,62 @@ export async function loadSelfActivityHistory(
     Math.min(MAX_PAGE,pageRaw):1;
   const loadAudit=(from:number,to:number)=>{
     let q=admin.from("audit_logs").select("id,actor_id,action,table_name,record_id,created_at")
-      .eq("actor_id",viewerId).order("created_at",{ascending:false}).range(from,to);
+      .in("actor_id",actorIds).order("created_at",{ascending:false}).range(from,to);
     if(window) q=q.gte("created_at",window.from).lt("created_at",window.to);
     return q.returns<Audit[]>();
   };
   const loadPolicy=(from:number,to:number)=>{
-    let q=admin.from("policies").select("id,created_at,policy_no").eq("created_by",viewerId)
+    let q=admin.from("policies").select("id,created_at,policy_no").in("created_by",actorIds)
       .order("created_at",{ascending:false}).range(from,to);
     if(window) q=q.gte("created_at",window.from).lt("created_at",window.to);
     return q.returns<Policy[]>();
   };
   const loadIntake=(from:number,to:number)=>{
     let q=admin.from("policy_intake_requests").select("id,created_at,intake_number,finalized_at")
-      .eq("submitted_by_profile_id",viewerId).order("created_at",{ascending:false}).range(from,to);
+      .in("submitted_by_profile_id",actorIds).order("created_at",{ascending:false}).range(from,to);
     if(window) q=q.gte("created_at",window.from).lt("created_at",window.to);
     return q.returns<Intake[]>();
   };
   const loadIntakeFinal=(from:number,to:number)=>{
     let q=admin.from("policy_intake_requests").select("id,finalized_at,intake_number")
-      .eq("finalized_by_profile_id",viewerId).not("finalized_at","is",null)
+      .in("finalized_by_profile_id",actorIds).not("finalized_at","is",null)
       .order("finalized_at",{ascending:false}).range(from,to);
     if(window) q=q.gte("finalized_at",window.from).lt("finalized_at",window.to);
     return q.returns<IntakeFinal[]>();
   };
   const loadCase=(from:number,to:number)=>{
     let q=admin.from("life_health_cases").select("id,created_at,case_number,converted_at")
-      .eq("created_by",viewerId).order("created_at",{ascending:false}).range(from,to);
+      .in("created_by",actorIds).order("created_at",{ascending:false}).range(from,to);
     if(window) q=q.gte("created_at",window.from).lt("created_at",window.to);
     return q.returns<Case[]>();
   };
   const loadCaseFinal=(from:number,to:number)=>{
     let q=admin.from("life_health_cases").select("id,converted_at,case_number")
-      .eq("converted_by",viewerId).not("converted_at","is",null)
+      .in("converted_by",actorIds).not("converted_at","is",null)
       .order("converted_at",{ascending:false}).range(from,to);
     if(window) q=q.gte("converted_at",window.from).lt("converted_at",window.to);
     return q.returns<CaseFinal[]>();
   };
   // Claim operations use actor-attributed history outside the general audit log.
   const loadClaimCreation=(from:number,to:number)=>{
-    let q=admin.from("claims").select("id,created_at,claim_no").eq("created_by",viewerId).order("created_at",{ascending:false}).range(from,to);
+    let q=admin.from("claims").select("id,created_at,claim_no").in("created_by",actorIds).order("created_at",{ascending:false}).range(from,to);
     if(window) q=q.gte("created_at",window.from).lt("created_at",window.to);
     return q.returns<ClaimCreation[]>();
   };
   const loadClaimStage=(from:number,to:number)=>{
-    let q=admin.from("claim_stage_details").select("id,claim_id,created_at,details").eq("created_by",viewerId).order("created_at",{ascending:false}).range(from,to);
+    let q=admin.from("claim_stage_details").select("id,claim_id,created_at,details").in("created_by",actorIds).order("created_at",{ascending:false}).range(from,to);
     if(window) q=q.gte("created_at",window.from).lt("created_at",window.to);
     return q.returns<ClaimStageEdit[]>();
   };
   const loadClaimVerification=(from:number,to:number)=>{
     let q=admin.from("claim_document_verifications").select("id,claim_id,document_type,is_valid,created_at")
-      .eq("verified_by",viewerId).order("created_at",{ascending:false}).range(from,to);
+      .in("verified_by",actorIds).order("created_at",{ascending:false}).range(from,to);
     if(window) q=q.gte("created_at",window.from).lt("created_at",window.to);
     return q.returns<ClaimVerification[]>();
   };
   const loadClaimStatus=(from:number,to:number)=>{
     let q=admin.from("claim_status_history").select("id,claim_id,created_at,from_status,to_status")
-      .eq("changed_by",viewerId).order("created_at",{ascending:false}).range(from,to);
+      .in("changed_by",actorIds).order("created_at",{ascending:false}).range(from,to);
     if(window) q=q.gte("created_at",window.from).lt("created_at",window.to);
     return q.returns<ClaimStatusEvent[]>();
   };
@@ -384,6 +389,9 @@ export async function loadSelfActivityHistory(
       else if(row.recordId&&(row.table==="profiles"||row.table==="auth.users"))
         row.subjectEmployeeName=profileNames.get(row.recordId)||undefined;
       else row.subjectEmployeeName=actingEmployeeName;
+      // The one-viewer fallback is never valid for other actors in combined All.
+      if(combined && row.table!=="employees" && row.table!=="profiles" && row.table!=="auth.users")
+        row.subjectEmployeeName=undefined;
     }
     // Only query existing groups already referenced by visible, actor-scoped audits.
     const groupIds=[...new Set(visible.filter(row=>row.table==="intermediary_groups"&&isValidDailyRecordId(row.recordId??"")).map(row=>row.recordId as string))];
@@ -644,7 +652,7 @@ export async function loadSelfActivityHistory(
     .map(row=>row.id.slice("audit:".length)).filter(isValidDailyRecordId);
   if(visibleAuditIds.length) {
     const {data:changes,error:changesError}=await admin.from("audit_logs")
-      .select("id,old_data,new_data").eq("actor_id",viewerId).in("id",visibleAuditIds)
+      .select("id,old_data,new_data").in("actor_id",actorIds).in("id",visibleAuditIds)
       .returns<{id:string;old_data:unknown;new_data:unknown}[]>();
     if(changesError) console.error("[daily-report] audit change details unavailable",{code:changesError.code || "request_error"});
     else {
