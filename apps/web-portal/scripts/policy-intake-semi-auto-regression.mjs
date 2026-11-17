@@ -824,4 +824,21 @@ assert(!workbenchText.includes('<Link href="/customers?choose_partner=1"')
   && workbenchText.includes("A separate customer will be created as part of the policy booking transaction")
   === false,
   "The customer-resolution popup must not redirect to unrelated Customer Register onboarding");
+const issuanceBackfillSql=readFileSync(new URL("../../../supabase/migrations/20261117193000_verified_ai_draft_issuance_backfill.sql",import.meta.url),"utf8");
+assert(issuanceBackfillSql.includes("current_user <> 'service_role'")
+  && issuanceBackfillSql.includes("coalesce(d.draft_payload->>'issuanceDate','')=''")
+  && issuanceBackfillSql.includes("q.extraction_fingerprint=p_fingerprint")
+  && issuanceBackfillSql.includes("q.checks_passed=13")
+  && issuanceBackfillSql.includes("q.field_keys @> array['policy_issuance_date']")
+  && issuanceBackfillSql.includes("doc.is_current=true")
+  && issuanceBackfillSql.includes("d.revision+1")
+  && issuanceBackfillSql.includes("q.state in ('verified','exception')")
+  && !issuanceBackfillSql.includes("insert into public.policies"),
+  "Server-only issue date backfill must require current document/verified n8n fingerprint and modify only an empty draft date");
+assert.equal(issuanceBackfillSql.split("\n").filter(line=>line.trim()==="as $").length,1);
+assert.equal(issuanceBackfillSql.split("\n").filter(line=>line.trim()==="$;").length,1);
+assert(workerText.includes('fill_verified_ai_draft_issuance_date_v1')
+  && workerText.includes('if(completed && (state==="verified" || state==="exception")')
+  && workerText.includes('issuanceDateVerified && pdfIssuanceDate'),
+  "Only a completed, strictly verified n8n result may auto-fill an empty issue date");
 console.log("Semi-auto Motor onboarding regression checks passed.");
