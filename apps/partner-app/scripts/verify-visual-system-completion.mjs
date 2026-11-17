@@ -35,6 +35,20 @@ const policyIntakeNew = read('app/policy-intake-new.tsx');
 const policyIntakeDetail = read('app/policy-intakes/[id].tsx');
 const customerDetail = read('app/customer/[id].tsx');
 const policyDetail = read('app/policy/[id].tsx');
+for (const heading of [
+  'iconKind="premium" title="Premium"',
+  'iconKind="customer-vehicle" title="Customer Details"',
+  'iconKind="customer-vehicle" title={data.vehicle ? \'Vehicle Details\' : \'Insured Risk Details\'}',
+  'iconKind="commercial-attribution" title="Commercial Attribution"',
+]) {
+  requireText(policyDetail, '<View style={styles.externalSectionHeading}><CardHeader ' + heading + ' /></View>', 'Detail section heading must be outside the white card: ' + heading);
+}
+requireText(policyDetail, 'externalSection: { gap: 5 }', 'Headings must sit closely above their cards');
+requireText(policyDetail, '<CardHeader iconKind="policy-overview" title="Policy Overview"', 'Policy Overview keeps original in-card heading');
+requireText(policyDetail, 'accessibilityState={{ expanded: showPremiumDetails }}', 'Premium expansion remains active');
+requireText(policyDetail, 'accessibilityState={{ expanded: showCommercialDetails }}', 'Commercial expansion remains active');
+requireText(policyDetail, 'accessibilityLabel="Open customer details for this vehicle"', 'Vehicle card navigation remains active');
+
 const policyDetailIcon = read('components/ui/partner-policy-detail-icon.tsx');
 const claimDetail = read('app/claim/[id].tsx');
 const search = read('app/search.tsx');

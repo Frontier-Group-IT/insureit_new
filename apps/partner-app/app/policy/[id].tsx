@@ -146,8 +146,9 @@ export default function PolicyDetailScreen() {
             ) : null}
           </Card>
 
-          <Card>
-            <CardHeader iconKind="premium" title="Premium" />
+          <View style={styles.externalSection}>
+            <View style={styles.externalSectionHeading}><CardHeader iconKind="premium" title="Premium" /></View>
+            <Card>
             <Pressable accessibilityRole="button" accessibilityState={{ expanded: showPremiumDetails }} onPress={() => setShowPremiumDetails((value) => !value)} style={({ pressed }) => [styles.premiumDisclosure, pressed && styles.pressed]}>
               <PartnerPolicyDetailIcon kind="premium-breakup" size={25} />
               <View style={styles.disclosureText}><Text style={styles.disclosureTitle}>Premium breakup</Text><Text style={styles.disclosureSummary}>{formatIndianCurrency(data.premium.gross_premium)}</Text></View>
@@ -162,16 +163,20 @@ export default function PolicyDetailScreen() {
                 <MiniInfo compact label="CPA" value={data.premium.cpa_opted ? nullableMoney(data.premium.cpa_amount) : 'Not opted / not recorded'} />
               </View>
             ) : null}
-          </Card>
+            </Card>
+          </View>
 
-          <Card>
-            <CardHeader iconKind="customer-vehicle" title="Customer Details" />
+          <View style={styles.externalSection}>
+            <View style={styles.externalSectionHeading}><CardHeader iconKind="customer-vehicle" title="Customer Details" /></View>
+            <Card>
             <View style={styles.entityStack}>
               <EntityRow icon="person-outline" title={data.customer.name} subtitle={data.customer.customer_code || 'Customer'} onPress={data.customer.id ? () => router.push(`/customer/${data.customer.id}` as never) : undefined} />
             </View>
-          </Card>
-          <Card onPress={data.vehicle && data.customer.id ? () => router.push(`/customer/${data.customer.id}` as never) : undefined} accessibilityLabel="Open customer details for this vehicle">
-            <CardHeader iconKind="customer-vehicle" title={data.vehicle ? 'Vehicle Details' : 'Insured Risk Details'} />
+            </Card>
+          </View>
+          <View style={styles.externalSection}>
+            <View style={styles.externalSectionHeading}><CardHeader iconKind="customer-vehicle" title={data.vehicle ? 'Vehicle Details' : 'Insured Risk Details'} /></View>
+            <Card onPress={data.vehicle && data.customer.id ? () => router.push(`/customer/${data.customer.id}` as never) : undefined} accessibilityLabel="Open customer details for this vehicle">
             <View style={styles.entityStack}>
               {data.vehicle ? (
                 <EntityRow image={manufacturerLogo || PartnerAssets.products.motorInsurance} title={data.vehicle.vehicle_no || 'Vehicle'} subtitle={displayParts(data.vehicle.make, data.vehicle.model, data.vehicle.year) || humanize(data.vehicle.vehicle_type || 'vehicle')} />
@@ -179,10 +184,12 @@ export default function PolicyDetailScreen() {
                 <EntityRow image={PartnerAssets.products.commercialInsurance} title={data.policy.policy_product || data.policy.policy_type || data.policy.business_line || 'Non-motor insured risk'} subtitle="No vehicle is linked to this policy." />
               )}
             </View>
-          </Card>
+            </Card>
+          </View>
 
-          <Card>
-            <CardHeader iconKind="commercial-attribution" title="Commercial Attribution" />
+          <View style={styles.externalSection}>
+            <View style={styles.externalSectionHeading}><CardHeader iconKind="commercial-attribution" title="Commercial Attribution" /></View>
+            <Card>
             <Pressable accessibilityRole="button" accessibilityState={{ expanded: showCommercialDetails }} onPress={() => setShowCommercialDetails((value) => !value)} style={({ pressed }) => [styles.commercialRow, pressed && styles.pressed]}>
               <PartnerPolicyDetailIcon kind="sales-ownership" size={25} />
               <View style={styles.disclosureText}><Text style={styles.disclosureTitle}>Sales ownership</Text><Text numberOfLines={1} style={styles.disclosureSummary}>{[data.commercial.rm_name, data.commercial.intermediary_code].filter(Boolean).join(' · ') || 'View details'}</Text></View>
@@ -196,7 +203,8 @@ export default function PolicyDetailScreen() {
                 <MiniInfo label="Policy lifecycle" value={humanize(data.policy.lifecycle_status)} />
               </View>
             ) : null}
-          </Card>
+            </Card>
+          </View>
         </View>
       )}
     </PartnerScreen>
@@ -284,6 +292,8 @@ const styles = StyleSheet.create({
   premiumBlock: { flex: 1 }, premiumLabel: { color: '#D5E5FA', fontSize: 9, lineHeight: 11 }, premiumValue: { marginTop: 1, color: '#FFFFFF', fontSize: 16, lineHeight: 20, fontWeight: '800', letterSpacing: -0.3 },
   periodDivider: { width: StyleSheet.hairlineWidth, alignSelf: 'stretch', marginHorizontal: 12, backgroundColor: '#6B89AD' },
   periodBlock: { flex: 1.03, minWidth: 0 }, periodTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 5 }, periodLabel: { color: '#D5E5FA', fontSize: 9, lineHeight: 11 }, periodValue: { marginTop: 2, color: '#FFFFFF', fontSize: 9.5, lineHeight: 12, fontWeight: '700' },
+  externalSection: { gap: 5 },
+  externalSectionHeading: { paddingHorizontal: 2 },
   card: { overflow: 'hidden', borderRadius: 13, borderWidth: StyleSheet.hairlineWidth, borderColor: '#E2E8F1', backgroundColor: '#FFFFFF' },
   cardHeader: { minHeight: 37, paddingHorizontal: 11, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   cardHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 7 }, cardTitle: { color: '#102A51', fontSize: 12.5, lineHeight: 16, fontWeight: '800' },
