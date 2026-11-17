@@ -6,6 +6,7 @@ import { buildPolicyOcrOnboardingUpdate } from "@/lib/policy-ocr-onboarding-appl
 import { selectPolicyIntakeCustomerMatch, type PolicyIntakeCustomerIdentityCandidate } from "@/lib/policy-intake-customer-match";
 import { requirePolicyIntakeFinalizer, requirePolicyIntakeReviewer } from "@/lib/policy-intake-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { isN8nWorkbenchPrimary, previewSemiAutoN8nExtraction } from "@/lib/policy-intake-semi-auto-n8n";
 
 export type PolicyIntakeDraft = {
   registrationMode:"registered"|"unregistered";
@@ -50,20 +51,77 @@ type IntakeForHandoff={
   status:string;
   created_at:string;
   assigned_to_profile_id:string|null;
+  policy_type:string|null;
+  storage_bucket:string|null;
+  storage_path:string|null;
 };
 
+type VerifiedN8nHandoff = { documentId:string; fields:PolicyIntakeOcrField[] };
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+/**
+ * The client supplies only IDs + the reviewed fingerprint. We re-run n8n
+ * against the current private PDF before creating a canonical editable draft.
+ * No policy is booked; this is a deliberate, auditable reviewer handoff.
+ */
+export async function prepareVerifiedN8nIntakeHandoff(
+  id:string, expectedDocumentId:string, expectedFingerprint:string, takeOver=false,
+):Promise<PolicyIntakeHandoffResult> {
+  if (!isN8nWorkbenchPrimary() || !UUID.test(id) || !UUID.test(expectedDocumentId)
+      || !/^[a-f0-9]{64}$/i.test(expectedFingerprint)) {
+    return {ok:false,error:"n8n handoff is not enabled or the reviewed PDF reference is invalid."};
+  }
+  // Reject unauthorized calls before re-extracting a private customer PDF.
+  await requirePolicyIntakeFinalizer(id);
+  await requirePolicyIntakeReviewer(id);
+  const parsed=await previewSemiAutoN8nExtraction(id);
+  if(!parsed.ok)return{ok:false,error:parsed.error};
+  if(parsed.preview.documentId!==expectedDocumentId
+      || parsed.preview.fingerprint!==expectedFingerprint) {
+    return{ok:false,error:"The n8n extraction changed after review. Run n8n again and check the new fields before continuing."};
+  }
+  if(parsed.preview.checksPassed!==13 || parsed.preview.warnings.length>0) {
+    return{ok:false,error:"n8n validation warnings must be resolved before creating an onboarding draft."};
+  }
+  return preparePolicyIntakeHandoffInternal(id,takeOver===true,{
+    documentId:expectedDocumentId,fields:parsed.preview.fields,
+  });
+}
+
 export async function preparePolicyIntakeHandoff(id:string,takeOver=false):Promise<PolicyIntakeHandoffResult> {
+  return preparePolicyIntakeHandoffInternal(id,takeOver);
+}
+
+async function preparePolicyIntakeHandoffInternal(
+  id:string,takeOver=false,verified?:VerifiedN8nHandoff,
+):Promise<PolicyIntakeHandoffResult> {
   await requirePolicyIntakeFinalizer(id);
   const reviewer=await requirePolicyIntakeReviewer(id);
   const admin=createSupabaseAdminClient();
   const {data:intake}=await admin.from("policy_intake_requests")
-    .select("id,intake_number,lead_source_type,lead_source_name,lead_source_code,customer_mobile,matched_customer_id,ocr_fields,status,created_at,assigned_to_profile_id")
+    .select("id,intake_number,lead_source_type,lead_source_name,lead_source_code,customer_mobile,matched_customer_id,ocr_fields,status,created_at,assigned_to_profile_id,policy_type,storage_bucket,storage_path")
     .eq("id",id)
     .maybeSingle<IntakeForHandoff>();
   if(!intake||["completed","rejected"].includes(intake.status))return{ok:false,error:"This intake is no longer available for onboarding."};
+  if(verified){
+    if(intake.policy_type!=="motor" || !["processing","ready_for_review","in_review"].includes(intake.status))
+      return{ok:false,error:"Only an open Motor Intake with verified n8n output can continue to Motor Policy Onboarding."};
+    const{data:currentDocument,error:documentError}=await admin.from("policy_intake_documents")
+      .select("id,storage_path,storage_bucket").eq("intake_id",id).eq("is_current",true)
+      .maybeSingle<{id:string;storage_path:string;storage_bucket:string}>();
+    if(documentError||!currentDocument||currentDocument.id!==verified.documentId
+        ||currentDocument.storage_path!==intake.storage_path
+        ||currentDocument.storage_bucket!==intake.storage_bucket)
+      return{ok:false,error:"The current policy PDF has changed. Run n8n again before continuing."};
+  }
   const duplicateCheck=await loadPolicyIntakeDuplicateMatches(admin,[intake]);
   if(!duplicateCheck.ok)return{ok:false,error:duplicateCheck.error};
   if(duplicateCheck.matches.has(id))return{ok:false,error:"This policy intake is a duplicate and cannot be sent to Policy Onboarding."};
+  if(verified){
+    const fromN8n=await loadPolicyIntakeDuplicateMatches(admin,[{...intake,ocr_fields:verified.fields}]);
+    if(!fromN8n.ok)return{ok:false,error:fromN8n.error};
+    if(fromN8n.matches.has(id))return{ok:false,error:"The verified n8n policy number already exists or matches an earlier Intake. Booking handoff is blocked."};
+  }
 
   const assignedToAnother=Boolean(intake.assigned_to_profile_id&&intake.assigned_to_profile_id!==reviewer.id);
   if(assignedToAnother&&!takeOver){
@@ -76,6 +134,7 @@ export async function preparePolicyIntakeHandoff(id:string,takeOver=false):Promi
     .update({status:"in_review",assigned_to_profile_id:reviewer.id,attention_reason:null})
     .eq("id",id)
     .in("status",["ready_for_review","in_review","processing"]);
+  if(verified)assignmentQuery=assignmentQuery.eq("storage_path",intake.storage_path as string);
   if(assignedToAnother){
     assignmentQuery=assignmentQuery.eq("assigned_to_profile_id",intake.assigned_to_profile_id as string);
   }else{
@@ -88,7 +147,8 @@ export async function preparePolicyIntakeHandoff(id:string,takeOver=false):Promi
 
   const {data:existingDraft}=await admin.from("policy_intake_onboarding_drafts").select("draft_payload,revision").eq("intake_id",id).maybeSingle<{draft_payload:PolicyIntakeDraft;revision:number}>();
   if(existingDraft?.draft_payload){
-    const identityName=ocrInsuredName(intake.ocr_fields??[])||existingDraft.draft_payload.insuredName;
+    // A pre-existing operator draft must NEVER be overwritten by n8n.
+    const identityName=existingDraft.draft_payload.insuredName||ocrInsuredName(intake.ocr_fields??[]);
     const matchedCustomerId=await resolveConfirmedIntakeCustomerId(admin,intake.customer_mobile,identityName);
     return{ok:true,draft:existingDraft.draft_payload,draftRevision:existingDraft.revision,matchedCustomerId};
   }
@@ -107,7 +167,7 @@ export async function preparePolicyIntakeHandoff(id:string,takeOver=false):Promi
     mode:"create",
     registrationMode:"registered",
     current:{registrationNo:"",vehicleClass:"",make:"",model:"",fuelType:"",manufacturingYear:"",capacity:"",chassisNo:"",engineNo:"",rtoState:"",rtoName:"",policyProduct:"",idv:"",od:"",tp:"",cpa:"",policyNo:"",insurerId:"",validFrom:"",validUpto:""},
-    fields:intake.ocr_fields??[],manufacturers:manufacturerOptions,insurers,rcVerified:false,
+    fields:verified?.fields??intake.ocr_fields??[],manufacturers:manufacturerOptions,insurers,rcVerified:false,
   });
   const customerName=mapped.next.insuredName?.trim()||"";
   const matchedCustomerId=await resolveConfirmedIntakeCustomerId(admin,intake.customer_mobile,customerName);
@@ -116,8 +176,8 @@ export async function preparePolicyIntakeHandoff(id:string,takeOver=false):Promi
     registrationMode:mapped.registrationMode,
     issuanceDate:new Date().toISOString().slice(0,10),rmName:"",intermediaryType,leadSource:intake.lead_source_name,intermediaryCode:intake.lead_source_code??"",businessLine:"Motor",
     registrationNo:mapped.next.registrationNo,insuredName:customerName,phoneNo:intake.customer_mobile,vehicleClass:mapped.next.vehicleClass,make:mapped.next.make,model:mapped.next.model,fuelType:mapped.next.fuelType,capacity:mapped.next.capacity,manufacturingYear:mapped.next.manufacturingYear,chassisNo:mapped.next.chassisNo,engineNo:mapped.next.engineNo,rtoState:mapped.next.rtoState,rtoName:mapped.next.rtoName,
-    policyProduct:mapped.next.policyProduct,idv:mapped.next.idv,od:mapped.next.od,tp:mapped.next.tp,cpaOpted:"No",cpa:mapped.next.cpa,policyNo:mapped.next.policyNo,insurerId:mapped.next.insurerId,validFrom:mapped.next.validFrom,validUpto:mapped.next.validUpto,
-    payoutBasis:"NET",projectedOdPercent:"",projectedTpPercent:"",insurerScheme:"",payinBillNo:"",payinBilledAmount:"",payinBillDate:"",payinStatus:"Unbilled",retention:"",payoutOdPercent:"",payoutTpPercent:"",flatPayoutAmount:"",payoutStatus:"Pending",payoutDate:"",payoutVoucherNo:"",remarks:`Policy Intake ${id}`,
+    policyProduct:mapped.next.policyProduct,idv:mapped.next.idv,od:mapped.next.od,tp:mapped.next.tp,cpaOpted:verified&&Number(mapped.next.cpa)>0?"Yes":"No",cpa:mapped.next.cpa,policyNo:mapped.next.policyNo,insurerId:mapped.next.insurerId,validFrom:mapped.next.validFrom,validUpto:mapped.next.validUpto,
+    payoutBasis:"NET",projectedOdPercent:"",projectedTpPercent:"",insurerScheme:"",payinBillNo:"",payinBilledAmount:"",payinBillDate:"",payinStatus:"Unbilled",retention:"",payoutOdPercent:"",payoutTpPercent:"",flatPayoutAmount:"",payoutStatus:"Pending",payoutDate:"",payoutVoucherNo:"",remarks:verified?`Policy Intake ${id} — n8n validated ICICI 3005 PDF. Review all prefilled values, including OD add-ons and TP dates, before booking.`:`Policy Intake ${id}`,
   };
   const {data:storedDraft,error:draftError}=await admin.from("policy_intake_onboarding_drafts").insert({intake_id:id,draft_payload:draft,revision:1,updated_by_profile_id:reviewer.id}).select("revision").single<{revision:number}>();
   if(draftError||!storedDraft)return{ok:false,error:"Policy Onboarding draft could not be prepared. Refresh and try again."};
