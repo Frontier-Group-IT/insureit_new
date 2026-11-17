@@ -712,3 +712,34 @@ form:has(input[name="fitness_valid_upto"]) > div:last-child button {
     min-width: 105px;
   }
 }
+
+
+/* Daily Report only: consume the desktop workspace down to its bottom gutter.
+   The shell and pending wrappers must grow together; fixed viewport guesses
+   leave a large gap below short summary or drilldown pages. */
+@media (min-width: 1024px) {
+  main:has(.daily-report-reference) {
+    display: flex;
+    flex-direction: column;
+    padding-bottom: 20px;
+  }
+  main:has(.daily-report-reference) > .relative.animate-portal-enter,
+  main:has(.daily-report-reference) .ui-page-stage,
+  main:has(.daily-report-reference) .reports-reference-shell,
+  main:has(.daily-report-reference) .reports-reference-shell > .relative,
+  main:has(.daily-report-reference) .reports-reference-shell > .relative > .visible,
+  main:has(.daily-report-reference) .daily-report-reference {
+    display: flex;
+    flex: 1 1 auto;
+    min-width: 0;
+    flex-direction: column;
+  }
+  main:has(.daily-report-reference) .ui-page-stage,
+  main:has(.daily-report-reference) .reports-reference-shell {
+    padding-bottom: 0;
+  }
+  main:has(.daily-report-reference) .daily-report-panel {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+}
