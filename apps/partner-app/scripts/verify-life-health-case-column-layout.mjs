@@ -23,7 +23,7 @@ assert.match(screen,/fieldWide:\{width:'100%'\}/,'Long fields span full width');
 assert.match(screen,/field:\{width:'48%'/,'Native two-column width is defined');
 assert.match(screen,/fieldLabel:/,'Field labels appear above boxed values');
 assert.match(screen,/dateLabel\(record\.sourcing_date\)/,'Dates show the Operations DD/MM/YYYY convention');
-assert.match(screen,/record\.status_group==='pending'\?<Section number="05"/,'Issuance section only for pending cases');
+assert.match(screen,/record\.status_group==='pending'\?<Section number="05"/,'Highlighted issuance section only for pending cases');
 assert.match(screen,/issueLifeHealthPolicy\(record.id,data\)/,'Native issuance uses the verified Operations conversion endpoint');
 assert.match(screen,/canPartnerAccessCaseRegister\(context\)/,'Existing Case Register permission remains enforced');
 assert.match(screen,/getLifeHealthCase\(id\)/,'Scoped read-only case API is preserved');
