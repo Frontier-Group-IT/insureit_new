@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { checkSemiAutoReadiness } from "../lib/policy-intake-semi-auto.ts";
 import { policyIntakeBucket, policyIntakeStatusCounts } from "../lib/policy-intake-status-buckets.ts";
 import { validateN8nPolicyIntakeResponse } from "../lib/policy-intake-n8n-validation.ts";
+import { extractIcici3005PolicyIssuanceDate, verifiedN8nPolicyIssuanceDate } from "../lib/icici-3005-issuance-date.ts";
 import { mapVerifiedN8nMotorPremium } from "../lib/policy-n8n-onboarding-premium.ts";
 import { filterVerifiedN8nOnboardingFields } from "../lib/policy-n8n-onboarding-fields.ts";
 import { enrichVerifiedN8nOnboardingFields, splitN8nRtoStateAndCity } from "../lib/policy-n8n-onboarding-enrichment.ts";
@@ -216,6 +217,42 @@ const auditPayload = {
     igst_exact:1100.52,printed_total_tax:1101,gross_premium:7215,
   },
 };
+const testIssued = (source,expected)=>{
+  const evidence=extractIcici3005PolicyIssuanceDate(source);
+  assert.equal(evidence?.date??"",expected);
+  if(evidence){
+    assert.equal(verifiedN8nPolicyIssuanceDate([
+      {key:"policy_issuance_date",value:evidence.date,evidence:evidence.label},
+    ]),expected);
+  }
+};
+testIssued("Policy Issued On : Nov 05, 2026\\nPeriod of Insurance - Own Damage: Nov 06, 2026 to Nov 05, 2027", "2026-11-05");
+testIssued("Policy Issuance Date\\n06/11/2026\\nOwn Damage starts 07/11/2026","2026-11-06");
+testIssued("Date of Issue: 2026-11-04 10:45 AM","2026-11-04");
+testIssued("Issue Date: 06-Nov-2026",""); // unsupported date shape must remain manual
+testIssued("Policy start date: 2026-11-06\\nThird Party valid from: 2026-11-06","");
+testIssued("Policy Issued On: 31/02/2026","");
+testIssued("Policy Issued On: 05/11/2026\\nDate of Issue: 06/11/2026","");
+assert.equal(verifiedN8nPolicyIssuanceDate([
+  {key:"policy_issuance_date",value:"2026-11-06",evidence:"OD coverage from"},
+]),"","Coverage dates must never impersonate issuance evidence");
+assert.equal(verifiedN8nPolicyIssuanceDate([]),"","Missing printed issuance must remain empty");
+
+const issuanceField={key:"policy_issuance_date",value:"2026-11-05",
+  label:"Policy Issuance Date",confidence:null,page:1,evidence:"Policy Issued On"};
+const parsedWithIssuance=validateN8nPolicyIntakeResponse({
+  ...auditPayload,fields:[...auditFields,issuanceField],
+},auditIds);
+assert.equal(parsedWithIssuance.fields.find(f=>f.key==="policy_issuance_date")?.value,
+  "2026-11-05","Printed issuance date must pass separately from coverage inception");
+assert.throws(()=>validateN8nPolicyIntakeResponse({
+  ...auditPayload,fields:[...auditFields,{...issuanceField,value:"2026-02-30"}],
+},auditIds),/n8n_policy_issuance_date_invalid/,"Impossible issuance dates fail closed");
+assert.throws(()=>validateN8nPolicyIntakeResponse({
+  ...auditPayload,fields:[...auditFields,{...issuanceField,evidence:"OD period start"}],
+},auditIds),/n8n_policy_issuance_date_invalid/,"Coverage-start evidence cannot authorize issuance");
+const missingIssue=validateN8nPolicyIntakeResponse(auditPayload,auditIds);
+assert.equal(verifiedN8nPolicyIssuanceDate(missingIssue.fields),"","Missing date must be editable, never silently defaulted");
 const audited = validateN8nPolicyIntakeResponse(auditPayload,auditIds);
 assert.equal(audited.checksPassed,13,"Validator must prove all thirteen checks");
 assert.equal(audited.premium.basicOd,2026,"Do not confuse Basic OD with Total OD");
@@ -734,4 +771,16 @@ assert(prioritizedQueueSql.includes("case when i.policy_type='motor' and i.file_
   "Trained PDF filename can change only order; private priority claim must retain lease and authorization checks");
 assert.equal(prioritizedQueueSql.split("\n").filter(line=>line.trim()==="as $$").length,1);
 assert.equal(prioritizedQueueSql.split("\n").filter(line=>line.trim()==="$$;").length,1);
+const handoffIssueDate = text("app/policy-intakes/handoff-actions.ts");
+const policyUnifiedForm=text("components/policy-unified-form.tsx");
+assert(handoffIssueDate.includes("issuanceDate:verifiedIssueDate") &&
+  handoffIssueDate.includes('verifiedN8nPolicyIssuanceDate(verified.fields)') &&
+  !handoffIssueDate.includes('issuanceDate:new Date().toISOString().slice(0,10)'),
+  "Intake-origin onboarding must not quietly default issuance to today's date");
+assert(handoffIssueDate.includes('"issuanceDate","insuredName"') &&
+  handoffIssueDate.includes('if(!String(original[key]??"").trim()'),
+  "Existing saved operator issuance date must not be overwritten; explicit fill may touch only blanks");
+assert(policyUnifiedForm.includes("Older saved drafts may contain a previously defaulted date") &&
+  policyUnifiedForm.includes("do not use coverage start or today by default"),
+  "Intake-onboarding date must warn about legacy defaults and unverifiable PDF date");
 console.log("Semi-auto Motor onboarding regression checks passed.");
