@@ -732,6 +732,11 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
                     ) : null}
                     <p className="text-[10px] text-[#647891]">{customerReview.verificationNote}</p>
                     {customerReview.truncated ? <p className="text-[10px] font-bold text-amber-700">More than 50 master records found. A unique match cannot be assumed.</p> : null}
+                    {customerReview.candidates.some(c=>c.nameMatch==="verified_exact") ? (
+                      <p className="text-[10px] font-medium text-[#305c83]">An existing exact-name match must be checked by the canonical booking transaction before creating another customer.</p>
+                    ) : (
+                      <p className="text-[10px] font-medium text-[#305c83]">No exact-name customer found: policy conversion can use the existing create-new-customer transaction even if this phone belongs to other people.</p>
+                    )}
                     {customerReview.candidates.length ? (
                       <div className="max-h-40 space-y-1 overflow-y-auto">
                         {customerReview.candidates.map(candidate=>(
@@ -747,12 +752,38 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
                       </div>
                     ) : <p className="text-[10px] text-[#61748e]">No matching mobile number in the customer master. Review identity before creating a new customer.</p>}
                     <div className="flex flex-wrap gap-2">
-                      <Link href="/customers?choose_partner=1" target="_blank" rel="noopener noreferrer"
-                        className="rounded-md border border-[#bed1e8] bg-white px-3 py-2 text-[10px] font-bold text-[#174b83]">Create New Customer</Link>
+                      <button type="button" disabled={isWaiting || queueRetrying || !customerReview.insuredName}
+                        onClick={async()=>{
+                          const row=exceptionRow;
+                          if(row.ai_state==="verified" && !row.is_duplicate && !(row.ai_exceptions??[]).length){
+                            setExceptionRow(null);setAutoConvertRow(row);setCustomerReview(null);
+                            return;
+                          }
+                          if(row.is_duplicate){
+                            setQueueRetryError("Duplicate policy records cannot be converted into a new policy.");
+                            return;
+                          }
+                          setQueueRetrying(true);setQueueRetryError(null);
+                          try {
+                            const queued=await reprocessAiPolicyIntake(row.id);
+                            if(queued.ok){
+                              setExceptionRow(null);setCustomerReview(null);router.refresh();
+                              setAutoConvertMessage("The latest policy PDF is queued for n8n revalidation. When the Intake shows PDF extracted, Convert to Policy will create a separate customer within the canonical booking transaction if no exact insured-name match exists.");
+                            }else{
+                              setQueueRetryError(queued.error==="This Intake is already queued or being processed."
+                                ?"The current policy is already queued for n8n. It will be eligible for normal conversion once the verified PDF and required issuance date have been confirmed."
+                                :queued.error??"Could not revalidate this Intake.");
+                            }
+                          } catch {setQueueRetryError("Could not schedule the verified policy recheck. No customer or policy was created.");}
+                          finally {setQueueRetrying(false);}
+                        }}
+                        className="rounded-md border border-[#bed1e8] bg-white px-3 py-2 text-[10px] font-bold text-[#174b83] disabled:opacity-50">
+                        Create New Customer with Policy
+                      </button>
                       <Link href="/customers" target="_blank" rel="noopener noreferrer"
                         className="rounded-md border border-[#bed1e8] bg-white px-3 py-2 text-[10px] font-bold text-[#174b83]">Customer Register</Link>
                     </div>
-                    <p className="text-[9px] font-medium text-[#7a6472]">These actions open the canonical customer workflow. They do not link a customer or clear this exception automatically.</p>
+                    <p className="text-[9px] font-medium text-[#7a6472]">A different insured name with the same mobile is normally handled inside canonical Policy Onboarding. No unrelated Customer Register redirect or customer record is created before the verified policy transaction succeeds.</p>
                   </div>
                 ) : null}
               </div>

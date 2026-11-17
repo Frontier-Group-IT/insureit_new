@@ -334,7 +334,7 @@ async function processClaim(item: Claimed) {
   const state:AiQueueState=isDuplicate?"duplicate"
     :assessment.state==="unsupported"?"unsupported"
     :codes.length?"exception":"verified";
-  await finishClaim(item,{
+  const completed=await finishClaim(item,{
     state, exception_codes:codes,field_keys:extraction.preview.fields.map(f=>f.key),
     parser_id:"icici_3005_n8n_native_pdf",
     checks_passed:extraction.preview.checksPassed,
@@ -342,4 +342,17 @@ async function processClaim(item: Claimed) {
     last_error_code:null,processed_at:new Date().toISOString(),
     retry_after:retryAfter(1440),
   });
+  // The same canonical, current-document guard fills only an EMPTY saved
+  // n8n issue-date field, never a manual value. A missing PDF-issued date
+  // stays blank: do not replace it with today's date or OD/TP start.
+  if(completed && (state==="verified" || state==="exception") && !isDuplicate
+    && extraction.preview.checksPassed===13 && extraction.preview.warnings.length===0
+    && issuanceDateVerified && pdfIssuanceDate){
+    const backfill=await admin.rpc("fill_verified_ai_draft_issuance_date_v1",{
+      p_intake_id:item.intake_id,p_document_id:item.document_id,
+      p_fingerprint:extraction.preview.fingerprint,
+      p_issuance_date:pdfIssuanceDate,
+    });
+    if(backfill.error)console.error("[ai-policy] verified issuance draft sync unavailable");
+  }
 }

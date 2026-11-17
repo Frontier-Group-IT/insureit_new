@@ -692,7 +692,9 @@ assert(!customerPreviewCode.includes(".update(") && !customerPreviewCode.include
   "Customer exception review is strictly read-only and cannot create/link customers or book a policy");
 assert(workbenchText.includes("Check customer matches")
   && workbenchText.includes("Create New Customer")
-  && workbenchText.includes("/customers?choose_partner=1")
+  && workbenchText.includes("Create New Customer with Policy")
+  && !workbenchText.includes("/customers?choose_partner=1")
+  && workbenchText.includes("reprocessAiPolicyIntake(row.id)")
   && workbenchText.includes("This mobile also appears on")
   && workbenchText.includes("reviewAiIntakeCustomerCandidates(exceptionRow.id)"),
   "Customer decision popup provides guided canonical review/create routes, not a silent automatic link");
@@ -812,4 +814,42 @@ assert(workbenchText.includes("Convert to Policy")&&workbenchText.includes("Conf
   && workbenchText.includes("convertVerifiedAiIntake(row.id,true)")
   && workbenchText.includes('role="alertdialog"'),
   "Verified conversion must have a working custom confirmation, never a no-op redirect");
+// An older missing-issue-date n8n draft must never falsely show today.
+const onboardingPageText=text("app/policies/new/page.tsx");
+assert(onboardingPageText.includes("Policy issuance date is not verified in the current PDF extraction")
+  && onboardingPageText.includes("!workflowInitialValues.issuanceDate")
+  && onboardingPageText.includes("/development/ai-policy-onboarding?intake_id="),
+  "A missing n8n issue date needs a visible recheck path and cannot be silently replaced with today");
+assert(!workbenchText.includes('<Link href="/customers?choose_partner=1"')
+  && workbenchText.includes("A separate customer will be created as part of the policy booking transaction")
+  === false,
+  "The customer-resolution popup must not redirect to unrelated Customer Register onboarding");
+const issuanceBackfillSql=readFileSync(new URL("../../../supabase/migrations/20261117193000_verified_ai_draft_issuance_backfill.sql",import.meta.url),"utf8");
+assert(issuanceBackfillSql.includes("current_user <> 'service_role'")
+  && issuanceBackfillSql.includes("coalesce(d.draft_payload->>'issuanceDate','')=''")
+  && issuanceBackfillSql.includes("q.extraction_fingerprint=p_fingerprint")
+  && issuanceBackfillSql.includes("q.checks_passed=13")
+  && issuanceBackfillSql.includes("q.field_keys @> array['policy_issuance_date']")
+  && issuanceBackfillSql.includes("doc.is_current=true")
+  && issuanceBackfillSql.includes("d.revision+1")
+  && issuanceBackfillSql.includes("q.state in ('verified','exception')")
+  && !issuanceBackfillSql.includes("insert into public.policies"),
+  "Server-only issue date backfill must require current document/verified n8n fingerprint and modify only an empty draft date");
+assert.equal(issuanceBackfillSql.split("\n").filter(line=>line.trim()==="as $$").length,1);
+assert.equal(issuanceBackfillSql.split("\n").filter(line=>line.trim()==="$$;").length,1);
+assert(workerText.includes('fill_verified_ai_draft_issuance_date_v1')
+  && workerText.includes('if(completed && (state==="verified" || state==="exception")')
+  && workerText.includes('issuanceDateVerified && pdfIssuanceDate'),
+  "Only a completed, strictly verified n8n result may auto-fill an empty issue date");
+const aiIssueSchemaWorkflow=readFileSync(new URL("../../../.github/workflows/apply-ai-policy-issuance-backfill.yml",import.meta.url),"utf8");
+const productionDeployGate=readFileSync(new URL("../../../.github/workflows/deploy-production.yml",import.meta.url),"utf8");
+assert(aiIssueSchemaWorkflow.includes("20261117193000_verified_ai_draft_issuance_backfill.sql")
+  && aiIssueSchemaWorkflow.includes("workflow_dispatch:")
+  && aiIssueSchemaWorkflow.includes("supabase migration repair --linked --status applied 20261117193000")
+  && aiIssueSchemaWorkflow.includes("service_exec")
+  && aiIssueSchemaWorkflow.includes("auth_exec"),
+  "Issuance migration must have a gated Supabase schema workflow with service-role permission verification");
+assert(productionDeployGate.includes('schema_workflow="apply-ai-policy-issuance-backfill.yml"')
+  && productionDeployGate.includes("AI Policy issuance-date backfill migration detected"),
+  "Production deployment must wait on the exact issuance-date schema workflow instead of timing out");
 console.log("Semi-auto Motor onboarding regression checks passed.");
