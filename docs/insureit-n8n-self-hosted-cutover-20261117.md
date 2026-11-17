@@ -17,15 +17,15 @@ Use the Cloudflare dashboard account that manages **insureit.in**:
 
 1. **Networking → Tunnels → Create tunnel**, connector `cloudflared`; name it `insureit-n8n-windows`.
 2. Install `cloudflared` *on the Windows host* with the command shown by Cloudflare. Because the connector runs on the same Windows host as the loopback-bound Docker n8n service, the private service URL is `http://localhost:5678`.
-3. Create **one published application route** for `n8n.insureit.in`, scoped to the path `/webhook/insureit-policy-intake-icici-v1`; use the local service URL `http://localhost:5678`. If the dashboard cannot reliably restrict the route to exactly this path, **do not proceed** until a path-restricting reverse proxy or edge WAF rule is installed and verified.
-4. Check tunnel health and public HTTPS. A request to `https://n8n.insureit.in/` or `https://n8n.insureit.in/rest/settings` **must not expose the editor/API**. Only the authorized webhook path is allowed; the webhook's Header Auth rejects missing/wrong secrets.
+3. Create **one published application route** for `n8n.nishant.uk`, scoped to the path `/webhook/insureit-policy-intake-icici-v1`; use the local service URL `http://localhost:5678`. If the dashboard cannot reliably restrict the route to exactly this path, **do not proceed** until a path-restricting reverse proxy or edge WAF rule is installed and verified.
+4. Check tunnel health and public HTTPS. A request to `https://n8n.nishant.uk/` or `https://n8n.nishant.uk/rest/settings` **must not expose the editor/API**. Only the authorized webhook path is allowed; the webhook's Header Auth rejects missing/wrong secrets.
 5. No port forwarding or public Docker port 5678. Ensure the Windows PC remains on, Docker Desktop remains running and the `cloudflared` connector starts automatically after reboot.
 
 Reference: https://developers.cloudflare.com/tunnel/get-started/ and https://developers.cloudflare.com/tunnel/features/locally-managed-tunnels/configuration-file/
 
 ## 3. Ensure n8n shows the correct public URL
 
-Behind the HTTPS tunnel, set `WEBHOOK_URL=https://n8n.insureit.in/` on the n8n service and `N8N_PROXY_HOPS=1` when there is one trusted reverse-proxy hop, validating this on the running setup. Keep the editor accessible **locally only**, e.g. `N8N_EDITOR_BASE_URL=http://localhost:5678/`, and don't expose the editor hostname. Depending on the n8n release, serving the editor over local HTTP may require the existing local `N8N_SECURE_COOKIE=false`; do not expose that local editor publicly.
+Behind the HTTPS tunnel, set `WEBHOOK_URL=https://n8n.nishant.uk/` on the n8n service and `N8N_PROXY_HOPS=1` when there is one trusted reverse-proxy hop, validating this on the running setup. Keep the editor accessible **locally only**, e.g. `N8N_EDITOR_BASE_URL=http://localhost:5678/`, and don't expose the editor hostname. Depending on the n8n release, serving the editor over local HTTP may require the existing local `N8N_SECURE_COOKIE=false`; do not expose that local editor publicly.
 
 Do not edit the existing `N8N_ENCRYPTION_KEY` without a safe key-rotation plan. Apply config to the private Docker Compose file and restart only the local n8n service while preserving PostgreSQL and named volumes.
 
@@ -33,7 +33,7 @@ Reference: https://github.com/n8n-io/n8n-docs/blob/main/docs/deploy/host-n8n/con
 
 ## 4. Validate public webhook in read-only mode
 
-First verify with a test PDF and throwaway UUIDs. Do not create or modify any production Intake or policy. The public route must be `https://n8n.insureit.in/webhook/insureit-policy-intake-icici-v1` (not `/webhook-test/`). The local n8n workflow must be published **only after** Header Auth, ingress restriction, rate/concurrency limits and logging are confirmed.
+First verify with a test PDF and throwaway UUIDs. Do not create or modify any production Intake or policy. The public route must be `https://n8n.nishant.uk/webhook/insureit-policy-intake-icici-v1` (not `/webhook-test/`). The local n8n workflow must be published **only after** Header Auth, ingress restriction, rate/concurrency limits and logging are confirmed.
 
 Expected: HTTP 200, `contract_version=1`, `ok=true`, issuance date `2026-11-15`, all 13 financial/identity checks true, no warnings, `auto_finalize_allowed=false`. Check a missing/wrong Header Auth header fails and an unrelated path is blocked. The same must work with a real *short-lived Supabase signed PDF URL* on the private n8n downloader path, not only multipart upload.
 
@@ -45,11 +45,11 @@ After verification, deploy the reviewed portal code with these server-side envir
 
 ```
 INSUREIT_N8N_OCR_ENDPOINT_MODE=self_hosted
-INSUREIT_N8N_OCR_WEBHOOK_URL=https://n8n.insureit.in/webhook/insureit-policy-intake-icici-v1
+INSUREIT_N8N_OCR_WEBHOOK_URL=https://n8n.nishant.uk/webhook/insureit-policy-intake-icici-v1
 INSUREIT_N8N_OCR_HEADER_SECRET=<new secret matching local Header Auth>
 ```
 
-The code strictly accepts the pinned HTTPS `n8n.insureit.in` destination when `self_hosted` is selected, or n8n Cloud when omitted. Updating a `.env` on the local Windows PC alone does not modify the deployed portal.
+The code strictly accepts the pinned HTTPS `n8n.nishant.uk` destination when `self_hosted` is selected, or n8n Cloud when omitted. Updating a `.env` on the local Windows PC alone does not modify the deployed portal.
 
 For rollback, restore the old Cloud webhook URL and secret, and set mode to `cloud` (or remove mode). Deploy the restored server-side configuration through the approved manual release workflow, after confirming the Cloud workflow is still available.
 
