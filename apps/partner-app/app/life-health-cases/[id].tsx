@@ -21,7 +21,7 @@ const dateLabel=(value:string|null|undefined)=>{
   return `${day}/${month}/${year}`;
 };
 /** Backend filenames sometimes contain URL-encoded spaces; decode only for display. */
-export const caseDocumentDisplayName=(fileName:string):string=>{
+const caseDocumentDisplayName=(fileName:string):string=>{
  if(!/%[0-9a-fA-F]{2}/.test(fileName))return fileName;
  try{return decodeURIComponent(fileName);}catch{return fileName;}
 };
