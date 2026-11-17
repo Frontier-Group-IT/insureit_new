@@ -383,7 +383,7 @@ export default function LifeHealthCaseDetailScreen(){
           {documents.map(doc=><View key={doc.id} style={styles.document}>
             <Pressable accessibilityRole="button" accessibilityLabel={'Open '+doc.file_name} onPress={()=>void openDocument(doc)} disabled={documentBusy} style={styles.documentOpen}>
               <Ionicons name="document-text-outline" size={17} color="#11734B"/>
-              <Text style={styles.documentName} numberOfLines={1}>{doc.file_name}</Text>
+              <Text style={styles.documentName} numberOfLines={2} ellipsizeMode="middle">{doc.file_name}</Text>
             </Pressable>
             {record.status_group==='pending'?<>
               <Pressable accessibilityRole="button" accessibilityLabel={'Delete '+doc.file_name} onPress={()=>deleteDocument(doc)} disabled={documentBusy} style={styles.documentIconButton}>
@@ -646,11 +646,11 @@ const styles=StyleSheet.create({
   fieldValue:{fontSize:11,color:'#213653',fontWeight:'600',lineHeight:16,flexShrink:1},
   metaRow:{flexDirection:'row',flexWrap:'wrap',columnGap:7,rowGap:3,marginTop:6},
   metaText:{fontSize:9,fontWeight:'600',color:'#4C637F',flexShrink:1},
-  documentList:{gap:8},
+  documentList:{width:'100%',gap:8},
   documentOpen:{flex:1,minWidth:0,flexDirection:'row',alignItems:'center',gap:7,paddingHorizontal:8,minHeight:40},
   documentIconButton:{width:38,minHeight:40,justifyContent:'center',alignItems:'center',borderLeftWidth:1,borderLeftColor:'#C9E8D8'},
-  documentUploadGrid:{flexDirection:'row',flexWrap:'wrap',gap:7},
-  uploadButton:{borderRadius:9,borderWidth:1,borderColor:'#CEDAEC',paddingHorizontal:10,paddingVertical:10,flexDirection:'row',alignItems:'center',gap:6,backgroundColor:'#FFFFFF'},
+  documentUploadGrid:{width:'100%',flexDirection:'column',gap:8},
+  uploadButton:{width:'100%',minHeight:45,borderRadius:9,borderWidth:1,borderColor:'#CEDAEC',paddingHorizontal:12,paddingVertical:10,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:8,backgroundColor:'#FFFFFF'},
   uploadText:{fontSize:10,color:'#24569A',fontWeight:'700'},
   activityCard:{backgroundColor:'#FFFFFF',borderRadius:14,borderWidth:1,borderColor:'#D9E2F0',padding:12,gap:10},
   saveSuccess:{fontSize:11,color:'#166B4B',fontWeight:'700'},
@@ -668,7 +668,7 @@ const styles=StyleSheet.create({
   issueActionText:{fontSize:13,fontWeight:'800',color:'#FFFFFF',textAlign:'center'},
   issueActionSubtitle:{fontSize:10,color:'#EDF5FF',fontWeight:'500',textAlign:'center'},
   disabledAction:{opacity:0.56},
-  document:{flexDirection:'row',alignItems:'center',gap:1,minHeight:42,backgroundColor:'#E9FAF0',borderWidth:1,borderColor:'#A6E1C5',borderRadius:9,overflow:'hidden'},
+  document:{width:'100%',flexDirection:'row',alignItems:'center',gap:1,minHeight:45,backgroundColor:'#E9FAF0',borderWidth:1,borderColor:'#A6E1C5',borderRadius:9,overflow:'hidden'},
   documentName:{flex:1,fontSize:11,fontWeight:'600',color:navy},
   tabs:{flexDirection:'row',alignItems:'center',gap:6},
   tab:{paddingHorizontal:12,paddingVertical:9,borderRadius:9,backgroundColor:'#EDF3FB'},
