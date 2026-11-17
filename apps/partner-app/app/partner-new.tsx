@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
-import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Fragment, useEffect, useState } from 'react';
+import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { canPartnerAccess } from '@/lib/partner-permissions';
@@ -64,6 +65,9 @@ async function authenticatedRequest(method: 'GET' | 'POST', body?: unknown) {
 }
 export default function AddPartnerScreen() {
   const router = useRouter();
+  const { width, fontScale } = useWindowDimensions();
+  const twoColumns = width >= 350 && fontScale <= 1.3;
+  const cellStyle = twoColumns ? styles.halfField : styles.fullField;
   const { context } = usePartnerSession();
   const allowed = context?.identity.actor_kind === 'employee'
     && canPartnerAccess(context, 'create_intermediary_application', 'edit');
@@ -153,9 +157,10 @@ export default function AddPartnerScreen() {
   if (!allowed) return <SafeAreaView style={styles.screen}><View style={styles.content}><Text style={styles.heading}>Add Partner</Text><Text>Employee Partner-onboarding permission required.</Text></View></SafeAreaView>;
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
+      <StatusBar style="light" backgroundColor="#071E49" />
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={styles.header}>
-          <Pressable accessibilityLabel="Back" onPress={() => leavePartnerForm()} hitSlop={10}><Ionicons name="arrow-back" size={21} color="#17365D" /></Pressable>
+          <Pressable accessibilityLabel="Back" onPress={() => leavePartnerForm()} hitSlop={10}><Ionicons name="arrow-back" size={21} color="#FFFFFF" /></Pressable>
           <Text style={styles.heading}>Add Partner</Text><View style={{ width: 21 }} />
         </View>
         <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
@@ -166,19 +171,23 @@ export default function AddPartnerScreen() {
                 <Text style={styles.sectionTitle}>{section.heading}</Text>
               </View>
               <View style={styles.sectionBody}>
-                {index === 2 ? <View style={styles.field}><Text style={styles.label}>Bank *</Text>
-                  <Pressable disabled={loading} accessibilityRole="button" onPress={() => setSelector('bank')} style={styles.select}>
-                    <Text style={styles.selectText}>{banks.find(x => x.id === form.bank_id)?.name || (loading ? 'Loading banks…' : 'Select bank')}</Text>
-                    <Ionicons name="chevron-down" size={17} color="#17365D" />
-                  </Pressable></View> : null}
+                {index === 2 ? (
+                  <View style={[styles.field, cellStyle]}>
+                    <Text style={styles.label}>Bank *</Text>
+                    <Pressable disabled={loading} accessibilityRole="button" onPress={() => setSelector('bank')} style={styles.select}>
+                      <Text style={styles.selectText} numberOfLines={1}>{banks.find(x => x.id === form.bank_id)?.name || (loading ? 'Loading banks…' : 'Select bank')}</Text>
+                      <Ionicons name="chevron-down" size={17} color="#17365D" />
+                    </Pressable>
+                  </View>
+                ) : null}
                 {section.inputs.map(field => (
-                  <View key={field.key}>
-                    <View style={styles.field}>
+                  <Fragment key={field.key}>
+                    <View style={[styles.field, index === 1 && field.key === 'address' ? styles.fullField : cellStyle]}>
                       <Text style={styles.label}>{field.label}{field.optional ? '' : ' *'}</Text>
                       {field.key === 'document_received_at' || field.key === 'date_of_birth' ? (
                         <Pressable accessibilityRole="button" accessibilityLabel={`Select ${field.label}`}
                           onPress={() => setDateField(field.key as 'date_of_birth' | 'document_received_at')} style={styles.select}>
-                          <Text style={styles.selectText}>{form[field.key] || 'DD/MM/YYYY'}</Text>
+                          <Text style={styles.selectText} numberOfLines={1}>{form[field.key] || 'DD/MM/YYYY'}</Text>
                           <Ionicons name="calendar-outline" size={18} color="#17365D" />
                         </Pressable>
                       ) : (
@@ -190,14 +199,16 @@ export default function AddPartnerScreen() {
                           style={styles.input} />
                       )}
                     </View>
-                    {field.key === 'document_received_at' ? <View style={[styles.field, { marginTop: 11 }]}>
-                      <Text style={styles.label}>RM *</Text>
-                      <Pressable disabled={loading} accessibilityRole="button" onPress={() => setSelector('rm')} style={styles.select}>
-                        <Text style={styles.selectText}>{rms.find(x => x.id === form.associate_employee_id)?.name || (loading ? 'Loading RMs…' : 'Select RM')}</Text>
-                        <Ionicons name="chevron-down" size={17} color="#17365D" />
-                      </Pressable>
-                    </View> : null}
-                  </View>
+                    {field.key === 'document_received_at' ? (
+                      <View style={[styles.field, cellStyle]}>
+                        <Text style={styles.label}>RM *</Text>
+                        <Pressable disabled={loading} accessibilityRole="button" onPress={() => setSelector('rm')} style={styles.select}>
+                          <Text style={styles.selectText} numberOfLines={1}>{rms.find(x => x.id === form.associate_employee_id)?.name || (loading ? 'Loading RMs…' : 'Select RM')}</Text>
+                          <Ionicons name="chevron-down" size={17} color="#17365D" />
+                        </Pressable>
+                      </View>
+                    ) : null}
+                  </Fragment>
                 ))}
               </View>
             </View>
@@ -230,16 +241,17 @@ export default function AddPartnerScreen() {
   );
 }
 const styles = StyleSheet.create({
-  flex: { flex: 1 }, screen: { flex: 1, backgroundColor: '#F2F5FB' },
-  header: { height: 54, backgroundColor: '#FFF', borderBottomWidth: 1, borderBottomColor: '#E0E6F0', paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  heading: { fontSize: 17, color: '#152A49', fontWeight: '800' },
+  flex: { flex: 1, backgroundColor: '#F2F5FB' }, screen: { flex: 1, backgroundColor: '#071E49' },
+  header: { height: 54, backgroundColor: '#071E49', borderBottomWidth: 1, borderBottomColor: '#071E49', paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  heading: { fontSize: 17, color: '#FFFFFF', fontWeight: '800' },
   content: { padding: 12, paddingBottom: 35, gap: 12 },
   section: { backgroundColor: '#FFF', borderWidth: 1, borderColor: '#E1E7F1', borderRadius: 14, overflow: 'hidden' },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12, backgroundColor: '#F9FBFD', borderBottomWidth: 1, borderBottomColor: '#E1E7F1' },
   index: { backgroundColor: '#17365D', borderRadius: 7, width: 33, height: 33, justifyContent: 'center', alignItems: 'center' },
   indexText: { color: '#FFF', fontSize: 11, fontWeight: '800' },
   sectionTitle: { color: '#172846', fontSize: 13, fontWeight: '800' },
-  sectionBody: { padding: 12, gap: 11 },
+  sectionBody: { padding: 12, flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 11 },
+  halfField: { width: '48.5%' }, fullField: { width: '100%' },
   field: { gap: 5 }, label: { fontSize: 11, fontWeight: '700', color: '#33465D' },
   input: { minHeight: 44, backgroundColor: '#FFF', borderWidth: 1, borderColor: '#CED8E7', borderRadius: 10, paddingHorizontal: 12, fontSize: 13, color: '#152A49' },
   select: { minHeight: 44, borderWidth: 1, borderColor: '#CED8E7', borderRadius: 10, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
