@@ -388,7 +388,10 @@ export async function loadSelfActivityHistory(
       if(row.recordId&&row.table==="employees")row.subjectEmployeeName=employeeNames.get(row.recordId)||undefined;
       else if(row.recordId&&(row.table==="profiles"||row.table==="auth.users"))
         row.subjectEmployeeName=profileNames.get(row.recordId)||undefined;
-      else row.subjectEmployeeName=combined?undefined:actingEmployeeName;
+      else row.subjectEmployeeName=actingEmployeeName;
+      // The one-viewer fallback is never valid for other actors in combined All.
+      if(combined && row.table!=="employees" && row.table!=="profiles" && row.table!=="auth.users")
+        row.subjectEmployeeName=undefined;
     }
     // Only query existing groups already referenced by visible, actor-scoped audits.
     const groupIds=[...new Set(visible.filter(row=>row.table==="intermediary_groups"&&isValidDailyRecordId(row.recordId??"")).map(row=>row.recordId as string))];
