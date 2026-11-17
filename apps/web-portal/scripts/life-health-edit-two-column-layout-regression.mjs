@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 const form=readFileSync("components/life-health-issued-policy-edit-form.tsx","utf8");
-assert.match(form, /function Section\([\s\S]*?className="grid gap-3 p-4 md:grid-cols-2"/, "Every Operations form section keeps two columns on desktop");
-assert.doesNotMatch(form, /xl:grid-cols-4|xl:grid-cols-5|xl:grid-cols-\[minmax\(0,1fr\)_336px\]/, "No four/five-column form or sticky sidebar");
+assert.match(form, /function Section\([\s\S]*?className="grid gap-2\.5 p-3 md:grid-cols-2 xl:grid-cols-4"/, "Standard sections use compact four-column desktop grid");
+assert.equal((form.match(/col-span-full grid gap-2\.5 md:grid-cols-2 xl:grid-cols-5/g)||[]).length,2,"Source and customer sections restore the previous five-field desktop rows");
+assert.match(form, /className="mt-3 space-y-3"/, "Compact vertical section spacing remains");
+assert.doesNotMatch(form, /xl:grid-cols-\[minmax\(0,1fr\)_336px\]/, "Keep the current full-width editor; do not restore the old sticky sidebar");
 for(const title of ["Policy source & ownership","Customer / proposer","Policy product & case details","Issued policy details"])assert.ok(form.includes(`title="${title}"`),`Missing section ${title}`);
 assert.match(form, /aria-label="Onboarding summary"/, "Keep full-width summary");
 assert.match(form, /const \[infoExpanded,setInfoExpanded\] = useState\(false\)/, "Activity/Remarks default collapsed");
@@ -13,4 +15,4 @@ assert.ok(form.indexOf('aria-label="Onboarding summary"')<form.indexOf('aria-lab
 assert.ok(form.indexOf('aria-label="Activity status and remarks"')<form.indexOf('aria-label="Policy documents"'));
 assert.ok(form.indexOf('aria-label="Policy documents"')<form.indexOf('Save Policy Changes'));
 for(const x of ["removeDocument(type,label)","uploadDocument(type,e.target.files?.[0])","onClick={()=>save()}","setRemarksModalOpen(true)","commercialAccess?<CommercialStatus","PolicyDateApprovalDialog"])assert.ok(form.includes(x), `Preserve ${x}`);
-console.log("Life/Health Edit Policy two-column layout and preserved actions passed");
+console.log("Life/Health Edit Policy restored compact responsive layout and preserved actions passed");
