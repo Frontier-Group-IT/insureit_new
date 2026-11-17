@@ -134,8 +134,25 @@ export async function previewSemiAutoN8nExtraction(id: string): Promise<SemiAuto
       return { ok: false, reason: "untrained_or_unverified",
         error: "n8n has not validated this policy layout. It needs parser training or manual document review; no old OCR fallback, Intake update or booking was performed." };
     }
+    // Only known, safe error codes are exposed. Never show signed URLs,
+    // response bodies or private PDF content in an operator-facing error.
+    const problem =
+      ["n8n_current_pdf_not_eligible", "n8n_current_document_unavailable",
+       "n8n_pdf_reference_invalid", "n8n_pdf_download_authorization_failed",
+       "n8n_signed_pdf_origin_invalid", "n8n_signed_source_invalid"].includes(code)
+        ? "The current private PDF reference or signed access could not be validated. Check the linked document in Policy Intake."
+      : ["n8n_bridge_not_configured", "n8n_webhook_url_not_allowed"].includes(code)
+        ? "The portal's n8n bridge configuration is unavailable or invalid. Contact the portal administrator."
+      : code === "n8n_bridge_http_failure"
+        ? "The n8n webhook returned an unsuccessful response while processing this PDF. Check the active n8n workflow and its execution logs."
+      : code === "n8n_issuance_date_invalid"
+        ? "The n8n response contained an invalid policy issuance date. Review the parser's printed-date extraction."
+      : code === "AbortError" || (error instanceof Error && error.name === "AbortError")
+        ? "The n8n PDF processing request timed out. The saved OCR is still available below."
+        : "n8n could not complete the current PDF re-extraction or response validation. Check the n8n workflow logs.";
+    console.error("[ai-policy] n8n re-extraction failed", {code: code.slice(0,80) || "unknown"});
     return { ok: false, reason: "unavailable",
-      error: "n8n could not securely download or validate this PDF. No old OCR fallback, Intake update or booking was performed." };
+      error: problem + " No old OCR fallback, Intake update or booking was performed." };
   }
   // The only currently validated n8n parser is for Motor ICICI 3005.
   // A mismatched, explicitly Non-Motor/Life/Health Intake must never be

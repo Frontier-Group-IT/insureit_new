@@ -114,6 +114,7 @@ export default async function SemiAutoPolicyOnboardingPage({ searchParams }: { s
       lead_source_name: row.lead_source_name,
       customer_mobile: row.customer_mobile,
       ocr_status: row.ocr_status,
+      ocr_fields: Array.isArray(row.ocr_fields) ? row.ocr_fields : [],
       created_at: row.created_at,
       assigned_to_profile_id: row.assigned_to_profile_id,
       intake_bucket: policyIntakeBucket(row, duplicateIds.has(row.id)),

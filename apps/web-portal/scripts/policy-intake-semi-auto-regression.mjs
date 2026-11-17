@@ -852,4 +852,18 @@ assert(aiIssueSchemaWorkflow.includes("20261117193000_verified_ai_draft_issuance
 assert(productionDeployGate.includes('schema_workflow="apply-ai-policy-issuance-backfill.yml"')
   && productionDeployGate.includes("AI Policy issuance-date backfill migration detected"),
   "Production deployment must wait on the exact issuance-date schema workflow instead of timing out");
+// Selecting an already-processed Intake must show retained OCR without re-running n8n.
+assert(workbenchText.includes("Previously extracted details · saved OCR")
+  && workbenchText.includes("selected.ocr_fields.filter(")
+  && workbenchText.includes("Re-extract current PDF")
+  && workbenchText.includes("These are not current n8n-verified results"),
+  "AI Intake selection must immediately show clearly labelled saved OCR details");
+const aiWorkbenchPageText=text("app/development/ai-policy-onboarding/page.tsx");
+assert(aiWorkbenchPageText.includes("ocr_fields: Array.isArray(row.ocr_fields)")
+  && aiWorkbenchPageText.includes("getPartnerEmployeeIntakeReadScope"),
+  "Saved OCR must remain in the existing scoped Intake list");
+const n8nPreviewServerText=text("lib/policy-intake-semi-auto-n8n.ts");
+assert(n8nPreviewServerText.includes("n8n webhook returned an unsuccessful response".replace(/^n/, "The n"))
+  || n8nPreviewServerText.includes("The n8n webhook returned an unsuccessful response"),
+  "Fresh n8n failure must have an actionable and sanitized diagnostic");
 console.log("Semi-auto Motor onboarding regression checks passed.");

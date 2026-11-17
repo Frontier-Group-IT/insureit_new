@@ -15,6 +15,8 @@ export type SemiAutoIntakeRow = {
   lead_source_name: string;
   customer_mobile: string;
   ocr_status: string;
+  // Historical OCR is display-only, never authoritative n8n verification.
+  ocr_fields?: Array<{key:string;label:string;value:string;page?:number|null;evidence?:string|null}> | null;
   created_at: string;
   assigned_to_profile_id: string | null;
   n8n_enabled?: boolean;
@@ -137,7 +139,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
         // verify the exact live PDF before continuing to canonical onboarding.
         if (queueActive) {
           if (requestId.current === next) setN8nNotice(
-            "The background queue processes this PDF automatically. Use Review current PDF to inspect its latest verified extraction and continue to onboarding."
+            "Saved historical OCR is displayed below. Re-extract current PDF only when fresh n8n verification is required before onboarding."
           );
           return;
         }
@@ -479,12 +481,30 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
               <div className="flex flex-wrap items-center gap-2">
                 {n8nEnabled ? <button type="button" onClick={() => { void previewN8n(); }} disabled={isWaiting || Boolean(done)}
                   className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#cbd9eb] bg-white px-2.5 text-[10px] font-semibold text-[#24518a] disabled:opacity-50">
-                  {busy === "extracting" ? <Loader2 className="h-3.5 w-3.5 animate-spin"/> : <FileSearch className="h-3.5 w-3.5"/>}{primaryN8n ? (queueActive ? "Review current PDF" : n8nResult ? "Run n8n again" : "Process with n8n") : "Preview n8n PDF"}
+                  {busy === "extracting" ? <Loader2 className="h-3.5 w-3.5 animate-spin"/> : <FileSearch className="h-3.5 w-3.5"/>}{primaryN8n ? (queueActive ? "Re-extract current PDF" : n8nResult ? "Run n8n again" : "Process with n8n") : "Preview n8n PDF"}
                 </button> : null}
                 {!primaryN8n ? <button type="button" onClick={() => { void retry(); }} disabled={isWaiting} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#d0deef] bg-white px-2.5 text-[10px] font-semibold text-[#29558d] disabled:opacity-50"><RefreshCw className="h-3.5 w-3.5"/>Recheck</button> : null}
               </div>
             </div>
-            {primaryN8n ? <p className="mt-2 text-[10px] leading-4 text-[#61758d]">The saved OCR status shown in the table is historical. New n8n results appear below after processing and are not silently written over existing data.</p> : null}
+            {primaryN8n ? (
+              <section aria-label="Previously saved OCR fields" className="mt-3 rounded-xl border border-[#d5e1ed] bg-[#f8fafd] p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="text-[11px] font-bold text-[#23466e]">Previously extracted details · saved OCR</h3>
+                  <span className="text-[10px] text-[#63768e]">{selected?.ocr_fields?.length ?? 0} fields</span>
+                </div>
+                <p className="mt-1 text-[10px] leading-4 text-[#697c93]">Historical values are shown immediately without downloading the PDF or calling n8n. These are not current n8n-verified results. Check against the policy copy before using them for onboarding.</p>
+                {selected?.ocr_fields?.length ? (
+                  <div className="mt-2 max-h-72 overflow-auto rounded-lg border border-[#e0e7f0] bg-white">
+                    {selected.ocr_fields.filter(field=>field && typeof field.key==="string" && typeof field.value==="string" && field.value.trim()).map((field,index)=>(
+                      <div key={field.key+"-"+index} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)] gap-2 border-b border-[#e8edf4] px-3 py-2 text-[10.5px] last:border-b-0">
+                        <span className="min-w-0 font-semibold text-[#4c6280]">{field.label || field.key}{field.page ? ` · p. ${field.page}` : ""}</span>
+                        <span className="min-w-0 break-words font-medium text-[#1c3657]">{field.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : <p className="mt-2 text-[10.5px] text-[#697c93]">No previously saved OCR fields are available for this Intake.</p>}
+              </section>
+            ) : null}
             {primaryN8n && selected?.policy_type !== "motor" ? <p role="status" className="mt-3 rounded-lg border border-[#cbd9ea] bg-[#f5f9ff] p-3 text-[10.5px] leading-5 text-[#264b74]">
               {selected?.policy_type ? "This policy type is not trained for automatic onboarding yet." : "This older Intake has no policy type classification."} n8n will attempt document validation, but any unsupported layout needs training or a human reviewer. No Google OCR fallback or booking is permitted here.
             </p> : null}
@@ -495,7 +515,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
             {busy === "extracting" ? <div className="mt-3 flex items-center gap-2 rounded-lg bg-blue-50 p-3 text-[11px] text-blue-800"><Loader2 className="h-4 w-4 animate-spin"/>Reading current private PDF through the n8n review-only bridge...</div> : null}
             {busy === "applying" ? <div className="mt-3 flex items-center gap-2 rounded-lg bg-blue-50 p-3 text-[11px] text-blue-800"><Loader2 className="h-4 w-4 animate-spin"/>Revalidating and saving the confirmed failed OCR recovery...</div> : null}
             {n8nNotice ? <p role="status" className="mt-3 rounded-lg border border-[#c8d8eb] bg-[#f5f9ff] p-3 text-[11px] leading-5 text-[#284d77]">{n8nNotice}</p> : null}
-            {primaryN8n && selectedId && !n8nResult && busy === null ? <p className="mt-3 text-[10.5px] text-[#61738a]">Click Process with n8n to extract the current policy PDF without the old OCR engine.</p> : null}
+            {primaryN8n && selectedId && !n8nResult && busy === null ? <p className="mt-3 text-[10.5px] text-[#61738a]">Previously saved details appear above. Re-extract the current PDF only when a new verified result is necessary.</p> : null}
             {n8nResult && !done ? (n8nResult.ok ? (
               <section aria-label="n8n extraction review" className="mt-3 rounded-xl border border-[#c8d8eb] bg-[#f8fbff] p-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
