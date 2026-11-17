@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AlertCircle, ArrowUpRight, CheckCircle2, ClipboardCheck, FileSearch, Loader2, PencilLine, RefreshCw, Search, ShieldAlert, Sparkles } from "lucide-react";
 import { applySemiAutoN8nIntake, bookSemiAutoIntake, checkSemiAutoIntake, continueVerifiedN8nIntakeToOnboarding, editSemiAutoIntake, previewSemiAutoN8nIntake, reprocessAiPolicyIntake, type SemiAutoActionResult, type SemiAutoN8nResult } from "@/app/development/ai-policy-onboarding/actions";
 
@@ -18,6 +18,7 @@ export type SemiAutoIntakeRow = {
   assigned_to_profile_id: string | null;
   n8n_enabled?: boolean;
   is_duplicate?: boolean;
+  intake_bucket?: "action_required" | "in_review" | "processing" | "duplicate";
   ai_state?: "pending" | "processing" | "exception" | "verified" | "unsupported" | "failed" | null;
   ai_exceptions?: string[];
   ai_processed_at?: string | null;
@@ -70,10 +71,23 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
   rows: SemiAutoIntakeRow[]; profileId: string; initialIntakeId?: string | null;
   primaryN8n?: boolean;
   queueActive?: boolean;
-  queueCounts?: {eligible:number;processing:number;exceptions:number;unprocessed:number;unsupported:number;failed:number};
+  queueCounts?: {eligible:number;queued:number;extracting:number;exceptions:number;unprocessed:number;unsupported:number;failed:number};
 }) {
   const router = useRouter();
   const requestId = useRef(0);
+  // Match Policy Intake Register: refresh on page focus and periodically
+  // while visible, without changing the selected server-side status view.
+  useEffect(()=>{
+    const onFocus=()=>{if(document.visibilityState==="visible")router.refresh();};
+    const timer=window.setInterval(onFocus,60_000);
+    window.addEventListener("focus",onFocus);
+    document.addEventListener("visibilitychange",onFocus);
+    return ()=>{
+      window.clearInterval(timer);
+      window.removeEventListener("focus",onFocus);
+      document.removeEventListener("visibilitychange",onFocus);
+    };
+  },[router]);
   const [search, setSearch] = useState("");
   // Direct ?intake_id= links are resolved against the authorized server list.
   // Selection itself never sends the PDF or creates a policy.
@@ -334,17 +348,18 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 className="text-[12px] font-bold text-[#16355a]">Automatic n8n processing queue</h2>
-              <p className="mt-1 text-[10px] text-[#61738a]">Extracted in bounded background batches. No customer or policy is created by the extraction worker.</p>
+              <p className="mt-1 text-[10px] text-[#61738a]">These are n8n extraction states, not Policy Intake workflow statuses. Each scheduled run processes at most two PDFs. No customer or policy is created by the worker.</p>
             </div>
             <button type="button" disabled aria-label="Convert All Eligible is disabled until canonical preflight and booking rollout"
               className="min-h-9 rounded-lg bg-[#174b83] px-3 text-[11px] font-bold text-white opacity-45">
               Convert All Eligible · {queueCounts?.eligible??0}
             </button>
           </div>
-          <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-5">
+          <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-6">
             {[
-              ["Awaiting",queueCounts?.unprocessed??0],
-              ["Processing",queueCounts?.processing??0],
+              ["Not yet queued",queueCounts?.unprocessed??0],
+              ["Queued for n8n",queueCounts?.queued??0],
+              ["Reading PDF",queueCounts?.extracting??0],
               ["Exceptions",queueCounts?.exceptions??0],
               ["Not trained",queueCounts?.unsupported??0],
               ["Retrying",queueCounts?.failed??0],
@@ -361,8 +376,8 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
       <section className="min-w-0 overflow-hidden rounded-2xl border border-[#dce5f0] bg-white">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#e7eef5] px-4 py-3">
           <div>
-            <div className="flex items-center gap-2"><ClipboardCheck className="h-4 w-4 text-[#2861a0]"/><h2 className="text-[13px] font-bold text-[#142e4c]">Existing Motor Policy Intakes</h2></div>
-            <p className="mt-1 text-[10px] text-[#61738a]">Select any open Motor Intake to preview its current PDF with n8n. Duplicates remain read-only; nothing is booked on selection.</p>
+            <div className="flex items-center gap-2"><ClipboardCheck className="h-4 w-4 text-[#2861a0]"/><h2 className="text-[13px] font-bold text-[#142e4c]">{primaryN8n ? "Policy Intakes · Matching register status" : "Existing Motor Policy Intakes"}</h2></div>
+            <p className="mt-1 text-[10px] text-[#61738a]">The Intake workflow status matches Policy Intake Register. n8n extraction status and exceptions are separate. Open duplicates remain review-only and cannot be booked.</p>
           </div>
           <div className="relative w-full sm:w-[220px]">
             <Search className="pointer-events-none absolute left-3 top-2.5 h-3.5 w-3.5 text-[#8090a6]"/>
@@ -373,7 +388,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
         <div className="overflow-x-auto">
           <table className="min-w-[760px] w-full border-collapse text-left text-[10.5px]">
             <thead className="bg-[#f5f8fc] text-[9px] font-bold uppercase tracking-[.07em] text-[#62748e]">
-              <tr><th className="w-10 px-3 py-3"><span className="sr-only">Select</span></th><th className="px-2 py-3">Intake</th><th className="px-3 py-3">Lead source</th><th className="px-3 py-3">Customer mobile</th>{primaryN8n ? <th className="px-3 py-3">Policy type</th> : null}<th className="px-3 py-3">Status</th><th className="px-3 py-3">{primaryN8n ? "Saved OCR (old)" : "OCR"}</th>{primaryN8n && queueActive ? <th className="px-3 py-3">AI Exceptions</th> : null}<th className="px-3 py-3">Submitted</th></tr>
+              <tr><th className="w-10 px-3 py-3"><span className="sr-only">Select</span></th><th className="px-2 py-3">Intake</th><th className="px-3 py-3">Lead source</th><th className="px-3 py-3">Customer mobile</th>{primaryN8n ? <th className="px-3 py-3">Policy type</th> : null}<th className="px-3 py-3">{primaryN8n ? "Intake workflow" : "Status"}</th><th className="px-3 py-3">{primaryN8n ? "Saved OCR (old)" : "OCR"}</th>{primaryN8n && queueActive ? <th className="px-3 py-3">AI Exceptions</th> : null}<th className="px-3 py-3">Submitted</th></tr>
             </thead>
             <tbody className="divide-y divide-[#edf1f5]">
               {visible.map(row => (
@@ -389,7 +404,11 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
                   <td className="max-w-[210px] truncate px-3 py-3 text-[#344761]" title={row.lead_source_name}>{row.lead_source_name || "-"}</td>
                   <td className="whitespace-nowrap px-3 py-3 tabular-nums text-[#334763]">{row.customer_mobile}</td>
                   {primaryN8n ? <td className="whitespace-nowrap px-3 py-3 text-[#445b75]">{row.policy_type === "non_motor" ? "Non-Motor" : row.policy_type === "motor" ? "Motor" : row.policy_type === "life" ? "Life" : row.policy_type === "health" ? "Health" : "Unclassified"}</td> : null}
-                  <td className="whitespace-nowrap px-3 py-3"><span className="rounded-md bg-[#edf2fa] px-2 py-1 font-semibold text-[#3f5c82]">{row.is_duplicate ? "Duplicate · Preview only" : primaryN8n && row.policy_type !== "motor" ? "Review only" : humanStatus[row.status] || row.status}</span></td>
+                  <td className="whitespace-nowrap px-3 py-3"><span className="rounded-md bg-[#edf2fa] px-2 py-1 font-semibold text-[#3f5c82]">{row.is_duplicate ? "Duplicate · Review only"
+                      : primaryN8n && row.intake_bucket === "action_required" ? "Action Required"
+                      : primaryN8n && row.intake_bucket === "in_review" ? "In Review"
+                      : primaryN8n && row.intake_bucket === "processing" ? "Processing"
+                      : humanStatus[row.status] || row.status}</span></td>
                   <td className="whitespace-nowrap px-3 py-3"><span className={row.ocr_status === "completed" ? "font-semibold text-emerald-700" : "font-semibold text-amber-700"}>{row.ocr_status === "completed" ? "Extracted" : row.ocr_status.replaceAll("_", " ")}</span></td>
                   {primaryN8n && queueActive ? <td className="min-w-[170px] px-3 py-3">
                     <div className="text-[10px] font-semibold text-[#32547d]">{row.ai_state ? aiStateLabel[row.ai_state] : "Waiting for queue"}</div>
