@@ -163,7 +163,11 @@ export default function LifeHealthCaseDetailScreen(){
   finally{setRemarkSaving(false);}
  };
  const saveEdit=async()=>{
-  if(!record||!form||saving)return;
+  if(!record||!form||saving||issuing||documentBusy||rejectBusy)return;
+  if(JSON.stringify(form)===JSON.stringify(initialForm(record))){
+   partnerAlert('No changes to save','Case details are already up to date.');
+   return;
+  }
   setSaveError('');setSaveSuccess(false);setSaving(true);
   try{
    if(record.status_group==='issued'){
@@ -573,9 +577,9 @@ export default function LifeHealthCaseDetailScreen(){
             <Text style={styles.cancelActionText} numberOfLines={1}>Cancel</Text>
           </Pressable>
           <Pressable accessibilityRole="button" accessibilityLabel="Save Case Details" onPress={()=>void saveEdit()}
-            disabled={saving||issuing||documentBusy||rejectBusy||!caseDirty}
-            style={[styles.caseAction,styles.actionSave,!caseDirty&&styles.disabledAction]}>
-            {saving?<ActivityIndicator size="small" color={navy}/>:<Text style={styles.saveActionText} numberOfLines={1}>Save Case</Text>}
+            disabled={saving||issuing||documentBusy||rejectBusy}
+            style={[styles.caseAction,styles.actionSave]}>
+            {saving?<ActivityIndicator size="small" color="#FFFFFF"/>:<Text style={styles.saveActionText} numberOfLines={1}>Save Case</Text>}
           </Pressable>
           <Pressable accessibilityRole="button" accessibilityLabel="Create Policy" onPress={()=>void submitIssue()}
             disabled={saving||issuing||documentBusy||rejectBusy} style={[styles.caseAction,styles.actionIssue]}>
@@ -872,11 +876,11 @@ const styles=StyleSheet.create({
   caseActionMiddle:{flexDirection:'row',gap:7,width:'100%'},
   actionReject:{width:'100%',borderColor:'#F9C8CA',borderWidth:1,backgroundColor:'#FFF3F3'},
   actionCancel:{flex:1,borderColor:'#C8D5E6',borderWidth:1,backgroundColor:'#FFFFFF'},
-  actionSave:{flex:1,borderColor:'#BDD4F4',borderWidth:1,backgroundColor:'#EAF2FF'},
+  actionSave:{flex:1,borderColor:'#1765C1',borderWidth:1,backgroundColor:'#1765C1'},
   actionIssue:{flex:1.15,backgroundColor:'#103C74'},
   cancelActionText:{fontSize:12,fontWeight:'800',color:'#071E49',textAlign:'center'},
   rejectActionText:{fontSize:12,fontWeight:'800',color:'#C32B37',textAlign:'center'},
-  saveActionText:{fontSize:12,fontWeight:'800',color:'#17365D',textAlign:'center'},
+  saveActionText:{fontSize:12,fontWeight:'800',color:'#FFFFFF',textAlign:'center'},
   issueActionText:{fontSize:11,fontWeight:'800',color:'#FFFFFF',textAlign:'center',flexShrink:1},
   disabledAction:{opacity:0.56},
   document:{width:'100%',flexDirection:'row',alignItems:'center',gap:1,minHeight:45,backgroundColor:'#E9FAF0',borderWidth:1,borderColor:'#A6E1C5',borderRadius:9,overflow:'hidden'},
