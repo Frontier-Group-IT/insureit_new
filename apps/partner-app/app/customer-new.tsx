@@ -1,5 +1,6 @@
+import { partnerAlert } from '@/components/ui/partner-alert-provider';
 import { useState } from 'react';
-import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { useRouter } from 'expo-router';
@@ -28,29 +29,29 @@ export default function NewPartnerCustomerScreen() {
       const picked = await DocumentPicker.getDocumentAsync({ type: ['image/jpeg', 'image/png', 'application/pdf'], copyToCacheDirectory: true });
       if (picked.canceled || !picked.assets?.[0]) return;
       const file = picked.assets[0];
-      if ((file.size ?? 0) > 5 * 1024 * 1024) { Alert.alert('File too large', 'Choose a file under 5 MB.'); return; }
+      if ((file.size ?? 0) > 5 * 1024 * 1024) { partnerAlert('File too large', 'Choose a file under 5 MB.'); return; }
       setDocuments(previous => ({ ...previous, [type]: { type, uri: file.uri, name: file.name, mimeType: file.mimeType ?? 'application/octet-stream', size: file.size ?? 0 } }));
-    } catch { Alert.alert('File selection failed', 'Please try again.'); }
+    } catch { partnerAlert('File selection failed', 'Please try again.'); }
   }
   async function save() {
     if (busy) return;
     if (!form.customer_name.trim() || !/^[6-9]\\d{9}$/.test(form.mobile.trim())) {
-      Alert.alert('Action required', 'Enter a customer name and valid 10-digit Indian mobile number.'); return;
+      partnerAlert('Action required', 'Enter a customer name and valid 10-digit Indian mobile number.'); return;
     }
     if (form.email.trim() && !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(form.email.trim())) {
-      Alert.alert('Invalid email', 'Enter a valid email address or leave the field blank.'); return;
+      partnerAlert('Invalid email', 'Enter a valid email address or leave the field blank.'); return;
     }
-    if (form.pin_code && !/^\\d{6}$/.test(form.pin_code.trim())) { Alert.alert('Invalid PIN', 'Enter a 6-digit PIN code.'); return; }
-    if (form.pan_number && !/^[A-Z]{5}\\d{4}[A-Z]$/.test(form.pan_number.trim().toUpperCase())) { Alert.alert('Invalid PAN', 'Enter a valid PAN number.'); return; }
-    if (form.aadhaar_number && !/^\\d{12}$/.test(form.aadhaar_number.replace(/\\s/g, ''))) { Alert.alert('Invalid Aadhaar', 'Enter a valid 12-digit Aadhaar number.'); return; }
+    if (form.pin_code && !/^\\d{6}$/.test(form.pin_code.trim())) { partnerAlert('Invalid PIN', 'Enter a 6-digit PIN code.'); return; }
+    if (form.pan_number && !/^[A-Z]{5}\\d{4}[A-Z]$/.test(form.pan_number.trim().toUpperCase())) { partnerAlert('Invalid PAN', 'Enter a valid PAN number.'); return; }
+    if (form.aadhaar_number && !/^\\d{12}$/.test(form.aadhaar_number.replace(/\\s/g, ''))) { partnerAlert('Invalid Aadhaar', 'Enter a valid 12-digit Aadhaar number.'); return; }
     setBusy(true);
     try {
       const customerId = await createPartnerCustomer(form, Object.values(documents).filter((file): file is PartnerCustomerDocument => Boolean(file)));
-      Alert.alert('Customer saved', 'The new customer has been added to your partner network.', [
+      partnerAlert('Customer saved', 'The new customer has been added to your partner network.', [
         { text: 'View customer', onPress: () => router.replace({ pathname: '/customer/[id]', params: { id: customerId } } as never) },
       ]);
     } catch (error) {
-      Alert.alert('Unable to save customer', error instanceof Error ? error.message : 'Please try again.');
+      partnerAlert('Unable to save customer', error instanceof Error ? error.message : 'Please try again.');
     } finally { setBusy(false); }
   }
   function field(label: string, key: TextKey, placeholder: string, options?: { keyboardType?: 'default' | 'phone-pad' | 'email-address' | 'numeric'; autoCapitalize?: 'none' | 'characters' }) {
