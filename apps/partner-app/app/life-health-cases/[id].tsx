@@ -250,11 +250,12 @@ export default function LifeHealthCaseDetailScreen(){
      ?[...(key==='premiumPayingTerm'?['Single Pay']:[]),...Array.from({length:100},(_,i)=>(i+1)+' Year'+(i?'s':''))].map(value=>({value,label:value}))
      :[];
  const inline=(key:keyof CaseEditForm,label:string,fallback:string,required=false,wide=false,multiline=false,keyboardType?:'phone-pad'|'decimal-pad')=>{
+   const darkLabel=['insurerId','productName','proposalNumber','paymentFrequency','premiumPayingTerm','policyDuration','premiumAmount','paymentMode'].includes(key);
    const editable=record?.status_group==='pending'||(record?.status_group==='issued'&&['customerName','customerPhone','customerAddress'].includes(key));
-   if(!editable||!form)return <Field label={label} value={fallback} required={required} wide={wide} multiline={multiline}/>;
+   if(!editable||!form)return <Field label={label} value={fallback} required={required} wide={wide} multiline={multiline} darkLabel={darkLabel}/>;
    const items=choices(key);
    return <View style={[styles.field,wide&&styles.fieldWide]}>
-     <Text style={styles.fieldLabel}>{label.toUpperCase()}{required?<Text style={styles.asterisk}> *</Text>:null}</Text>
+     <Text style={[styles.fieldLabel,darkLabel&&styles.darkFieldLabel]}>{label.toUpperCase()}{required?<Text style={styles.asterisk}> *</Text>:null}</Text>
      {key==='sourcingDate'?<Pressable accessibilityRole="button" accessibilityLabel={'Select '+label+' date'}
        style={[styles.fieldBox,styles.inlineSelector]} onPress={()=>setCalendarField('sourcingDate')}>
        <Text style={styles.fieldValue}>{dateLabel(form.sourcingDate)||'DD/MM/YYYY'}</Text>
@@ -334,12 +335,12 @@ export default function LifeHealthCaseDetailScreen(){
  const issueField=(key:keyof LifeHealthIssue,label:string,required=false,date=false)=>{
    const value=issue[key]||'';
    return <View style={styles.field}>
-     <Text style={styles.fieldLabel}>{label.toUpperCase()}{required?<Text style={styles.asterisk}> *</Text>:null}</Text>
+     <Text style={[styles.fieldLabel,styles.darkFieldLabel]}>{label.toUpperCase()}{required?<Text style={styles.asterisk}> *</Text>:null}</Text>
      {date?<View style={[styles.fieldBox,styles.issueFieldRow]}>
        <Pressable accessibilityRole="button" accessibilityLabel={'Select '+label+' date'} style={styles.issueDateTap}
          onPress={()=>setCalendarField(key as 'issuanceDate'|'startDate'|'endDate'|'pptEndDate'|'nextInstallmentDate')}>
          <Text style={[styles.fieldValue,!value&&styles.datePlaceholder]}>{value||'DD/MM/YYYY'}</Text>
-         <Ionicons name="calendar-outline" size={15} color="#7D8FA8"/>
+         <Ionicons name="calendar-outline" size={15} color="#000000"/>
        </Pressable>
        {!required&&value?<Pressable accessibilityRole="button" accessibilityLabel={'Clear '+label+' date'} hitSlop={8}
          onPress={()=>setIssued(key,'')}><Ionicons name="close-circle-outline" size={17} color="#7D8FA8"/></Pressable>:null}
@@ -445,8 +446,8 @@ export default function LifeHealthCaseDetailScreen(){
           {issueField("issuanceDate","Issuance date",false,true)}
           {issueField("startDate","Policy start date",true,true)}
           {issueField("endDate","Policy end / maturity date",false,true)}
-          {form?.premiumPayingTerm==='Single Pay'?<Field label="PPT end date" value="Not applicable · Single Pay"/>:issueField("pptEndDate","PPT end date",false,true)}
-          {form?.paymentFrequency==='One Time'||form?.premiumPayingTerm==='Single Pay'?<Field label="Next installment date" value="Not applicable · One Time"/>:issueField("nextInstallmentDate","Next installment date",false,true)}
+          {form?.premiumPayingTerm==='Single Pay'?<Field label="PPT end date" value="Not applicable · Single Pay" darkLabel/>:issueField("pptEndDate","PPT end date",false,true)}
+          {form?.paymentFrequency==='One Time'||form?.premiumPayingTerm==='Single Pay'?<Field label="Next installment date" value="Not applicable · One Time" darkLabel/>:issueField("nextInstallmentDate","Next installment date",false,true)}
           {issueField("finalPremium","Final premium",true)}
           {issueField("sumInsured","Sum assured / insured")}
         </View>
@@ -698,11 +699,11 @@ function Section({number,title,children,highlight=false}:{number?:string;title:s
   </View>;
 }
 
-function Field({label,value,meta,secondaryMeta,required=false,wide=false,multiline=false}:{
-  label:string;value:string|null|undefined;meta?:string;secondaryMeta?:string;required?:boolean;wide?:boolean;multiline?:boolean;
+function Field({label,value,meta,secondaryMeta,required=false,wide=false,multiline=false,darkLabel=false}:{
+  label:string;value:string|null|undefined;meta?:string;secondaryMeta?:string;required?:boolean;wide?:boolean;multiline?:boolean;darkLabel?:boolean;
 }){
   return <View style={[styles.field,wide&&styles.fieldWide]}>
-    <Text style={styles.fieldLabel}>{label.toUpperCase()}{required?<Text style={styles.asterisk}> *</Text>:null}</Text>
+    <Text style={[styles.fieldLabel,darkLabel&&styles.darkFieldLabel]}>{label.toUpperCase()}{required?<Text style={styles.asterisk}> *</Text>:null}</Text>
     <View style={[styles.fieldBox,multiline&&styles.fieldBoxMultiline]}>
       <Text style={styles.fieldValue} selectable>{value?.trim()||'—'}</Text>
     </View>
@@ -803,6 +804,7 @@ const styles=StyleSheet.create({
   field:{width:'48%',minWidth:0,flexShrink:0},
   fieldWide:{width:'100%'},
   fieldLabel:{fontSize:9,color:'#66758B',fontWeight:'800',marginBottom:6,letterSpacing:0.2},
+  darkFieldLabel:{color:'#000000'},
   asterisk:{color:'#B82F3B'},
   fieldBox:{borderWidth:1,borderColor:'#D8E0ED',borderRadius:10,paddingHorizontal:10,paddingVertical:10,minHeight:43,justifyContent:'center',backgroundColor:'#FBFCFE'},
   fieldBoxMultiline:{minHeight:52,justifyContent:'flex-start'},
