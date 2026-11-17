@@ -78,6 +78,10 @@ def validated_sample(manifest, grouped, expected):
         raise RuntimeError("R6 expected reviewed Storage sample plan changed")
     if len(chosen) > MAX_SELECTED_OBJECTS:
         raise RuntimeError("Too many selected objects")
+    if (sum(entry["bytes"] for _, entry in chosen) != metrics["sample_plain_bytes"] or
+        len({safe_object_identity(identifier)[0] for identifier, _ in chosen}) !=
+        metrics["sample_buckets"]):
+        raise RuntimeError("Authenticated Storage sample selection mismatch")
     for identifier, entry in chosen:
         safe_object_identity(identifier)
         if not re.fullmatch(r"[0-9a-f]{64}", entry["sha256"]):
