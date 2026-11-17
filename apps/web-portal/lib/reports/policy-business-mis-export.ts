@@ -196,7 +196,7 @@ export async function loadPolicyBusinessMisExport(profile: ViewerProfile, query:
   // Chunks are disjoint by customer ID. Restore the global ordering that the
   // original single-query export used (with policy ID as stable tie-breaker).
   rows.sort((a, b) =>
-    (a.issuance_date === null ? 1 : b.issuance_date === null ? -1 : a.issuance_date.localeCompare(b.issuance_date))
+    (a.issuance_date === null && b.issuance_date === null ? 0 : a.issuance_date === null ? 1 : b.issuance_date === null ? -1 : a.issuance_date.localeCompare(b.issuance_date))
     || a.created_at.localeCompare(b.created_at)
     || a.id.localeCompare(b.id),
   );
