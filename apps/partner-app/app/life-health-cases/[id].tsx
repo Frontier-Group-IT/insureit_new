@@ -1,11 +1,12 @@
 import { useCallback, useState, type ReactNode } from 'react';
-import { ActivityIndicator, Linking, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Linking, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import * as DocumentPicker from 'expo-document-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
 import { PartnerCaseBottomNavigation } from '@/components/partner-case-bottom-navigation';
-import { getLifeHealthCase, saveLifeHealthCaseEdit, appendLifeHealthCaseRemark, listLifeHealthInsurers, issueLifeHealthPolicy, requestLifeHealthIssueApproval, verifyLifeHealthIssueApproval, operationsCaseUrl, type LifeHealthInsurer, type LifeHealthIssue, type LifeHealthCaseDetail, type LifeHealthDocument, type LifeHealthActivity } from '@/lib/life-health-cases';
+import { getLifeHealthCase, saveLifeHealthCaseEdit, appendLifeHealthCaseRemark, listLifeHealthInsurers, issueLifeHealthPolicy, requestLifeHealthIssueApproval, verifyLifeHealthIssueApproval, operationsCaseUrl, getLifeHealthDocumentUrl, mutateLifeHealthDocument, uploadLifeHealthDocument, rejectLifeHealthCaseNative, type LifeHealthInsurer, type LifeHealthIssue, type LifeHealthCaseDetail, type LifeHealthDocument, type LifeHealthActivity } from '@/lib/life-health-cases';
 import { canPartnerAccessCaseRegister } from '@/lib/partner-permissions';
 import { usePartnerSession } from '@/providers/partner-session-provider';
 
@@ -57,8 +58,15 @@ export default function LifeHealthCaseDetailScreen(){
  const [approvalOpen,setApprovalOpen]=useState(false);const [approvalId,setApprovalId]=useState('');const [approvalVerified,setApprovalVerified]=useState(false);const [approverKey,setApproverKey]=useState('');const [otp,setOtp]=useState('');const [approvalLoading,setApprovalLoading]=useState(false);
  const [saving,setSaving]=useState(false);
  const [saveError,setSaveError]=useState('');
+ const [saveSuccess,setSaveSuccess]=useState(false);
+ const [documentBusy,setDocumentBusy]=useState(false);
+ const [documentError,setDocumentError]=useState('');
+ const [rejectOpen,setRejectOpen]=useState(false);
+ const [rejectReason,setRejectReason]=useState('');
+ const [rejectBusy,setRejectBusy]=useState(false);
+ const [rejectError,setRejectError]=useState('');
  const [form,setForm]=useState<CaseEditForm|null>(null);
- const setField=(key:keyof CaseEditForm,value:string)=>setForm(prev=>prev?{...prev,[key]:value}:prev);
+ const setField=(key:keyof CaseEditForm,value:string)=>{setSaveSuccess(false);setForm(prev=>prev?{...prev,[key]:value}:prev);};
  const submitRemark=async()=>{
   if(!record||remarkSaving||!remarkDraft.trim())return;
   setRemarkError('');setRemarkSaving(true);
@@ -71,7 +79,7 @@ export default function LifeHealthCaseDetailScreen(){
  };
  const saveEdit=async()=>{
   if(!record||!form||saving)return;
-  setSaveError('');setSaving(true);
+  setSaveError('');setSaveSuccess(false);setSaving(true);
   try{
    if(record.status_group==='issued'){
     await saveLifeHealthCaseEdit({id:record.id,customerName:form.customerName,
@@ -85,9 +93,54 @@ export default function LifeHealthCaseDetailScreen(){
      paymentFrequency:form.paymentFrequency,paymentMode:form.paymentMode,
      premiumAmount:Number(form.premiumAmount.replace(/,/g,''))});
    }
-   await load();
+   await load();setSaveSuccess(true);
   }catch(cause){setSaveError(cause instanceof Error?cause.message:'Unable to save changes.');}
   finally{setSaving(false);}
+ };
+ const caseDirty=Boolean(record&&form&&JSON.stringify(form)!==JSON.stringify(initialForm(record)));
+ const confirmCancel=()=>{
+  if(saving||issuing||documentBusy||rejectBusy)return;
+  const leave=()=>router.replace('/life-health-cases');
+  if(caseDirty)Alert.alert('Discard changes?','Unsaved case edits will be lost.',[
+   {text:'Keep Editing',style:'cancel'},{text:'Discard',style:'destructive',onPress:leave}
+  ]);else leave();
+ };
+ const openDocument=async(doc:LifeHealthDocument)=>{
+  if(!record||documentBusy)return;
+  setDocumentError('');setDocumentBusy(true);
+  try{const url=await getLifeHealthDocumentUrl(record.id,doc.id);await Linking.openURL(url);}
+  catch(cause){setDocumentError(cause instanceof Error?cause.message:'Could not open document.');}
+  finally{setDocumentBusy(false);}
+ };
+ const pickDocument=async(type:string)=>{
+  if(!record||documentBusy||record.status_group!=='pending')return;
+  try{
+   const picked=await DocumentPicker.getDocumentAsync({type:['application/pdf','image/jpeg','image/png','image/webp'],copyToCacheDirectory:true,multiple:false});
+   if(picked.canceled||!picked.assets?.[0])return;
+   setDocumentError('');setDocumentBusy(true);
+   await uploadLifeHealthDocument(record.id,type,picked.assets[0]);
+   await load();
+  }catch(cause){setDocumentError(cause instanceof Error?cause.message:'Document upload failed.');}
+  finally{setDocumentBusy(false);}
+ };
+ const deleteDocument=(doc:LifeHealthDocument)=>{
+  if(!record||record.status_group!=='pending'||documentBusy)return;
+  Alert.alert('Delete document?','Permanently delete '+doc.file_name+'?',[
+   {text:'Cancel',style:'cancel'},
+   {text:'Delete',style:'destructive',onPress:()=>{void (async()=>{
+    setDocumentError('');setDocumentBusy(true);
+    try{await mutateLifeHealthDocument(record.id,doc.id,'delete_document');await load();}
+    catch(cause){setDocumentError(cause instanceof Error?cause.message:'Document delete failed.');}
+    finally{setDocumentBusy(false);}
+   })();}}
+  ]);
+ };
+ const submitRejection=async()=>{
+  if(!record||rejectBusy||!rejectReason.trim())return;
+  setRejectError('');setRejectBusy(true);
+  try{await rejectLifeHealthCaseNative(record.id,rejectReason);setRejectOpen(false);setRejectReason('');await load();}
+  catch(cause){setRejectError(cause instanceof Error?cause.message:'Unable to reject case.');}
+  finally{setRejectBusy(false);}
  };
  const load=useCallback(async()=>{
    if(!id)return;
