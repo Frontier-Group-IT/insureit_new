@@ -118,9 +118,10 @@ export default async function NewPolicyPage({ searchParams }: { searchParams: Pr
           <p className="text-[12px] font-bold text-[#1b5740]">n8n-verified Policy Intake · Manual onboarding review</p>
           <p className="mt-1 text-[10.5px] leading-5 text-[#3d6a57]">
             Verified fields have been mapped into the existing Policy Onboarding form where supported.
-            Basic OD and add-on premiums are separated to prevent double counting. Review any blank
-            fields, vehicle class, insured identity, TP/CPA expiry, insurer, product, original PDF,
-            and pay-in/payout information before saving or booking. No policy is automatically registered.
+            Basic OD and add-on premiums are separated to prevent double counting. Insured Name
+            may be prefilled from the verified policy PDF, but customer matching is never inferred
+            from the PDF name. Check the name and kW capacity against the original PDF, along with
+            all remaining fields, TP/CPA expiry and pay-in/payout before booking. No policy is automatically registered.
           </p>
         </div>
       ) : null}
