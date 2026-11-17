@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
+import { aiQueueEnabled, processAiQueueBatch } from "@/lib/ai-policy-onboarding-queue-server";
 import { extractPolicyIntakeDocument, type PolicyIntakeOcrField } from "@/app/policy-intakes/ocr-actions";
 import { extractPolicyIntakeWithN8nFallback, extractPolicyIntakeWithN8nOnly, requiresN8nForIntake } from "@/lib/policy-intake-n8n-router";
 import { canAccessIntermediary } from "@/lib/employee-access-scope";
@@ -138,7 +139,14 @@ export async function completePolicyIntakeUpload(input:{id:string;number:string;
     return{ok:false,error:"The policy intake was saved, but document linking needs attention. Your uploaded file was preserved."};
   }
   revalidatePath("/policy-intakes");revalidatePath(`/policy-intakes/${input.id}`);
-  if(!proposal)after(async()=>{await processStoredOcr(input.id);});
+  if(aiQueueEnabled()){
+    // Run n8n as soon as the CURRENT document is saved, not on the next cron.
+    // On request shutdown/error the one-minute durable queue drain retries it.
+    after(async()=>{
+      try { await processAiQueueBatch({preferredIntakeId:input.id}); }
+      catch { console.error("[policy-intake] immediate n8n queue unavailable",{intakeId:input.id}); }
+    });
+  } else if(!proposal)after(async()=>{await processStoredOcr(input.id);});
   return{ok:true,id:input.id,number:input.number,status};
 }
 
@@ -167,7 +175,14 @@ export async function completePolicyIntakeResponseUpload(input:{id:string;storag
   await admin.from("policy_intake_documents").update({is_current:false}).eq("intake_id",input.id).eq("is_current",true);const{error:currentError}=await admin.from("policy_intake_documents").update({is_current:true}).eq("id",newDocument.id);if(currentError)return{ok:false,error:`Could not activate the replacement ${proposal?"proposal form":"policy copy"}.`};
   const nextStatus=proposal?"ready_for_review":"processing",nextOcr=proposal?"completed":"pending";const{data:savedResponse,error:updateError}=await admin.from("policy_intake_requests").update({status:nextStatus,storage_path:input.storagePath,file_name:input.file.name,mime_type:input.file.type,file_size:blob.size,ocr_status:nextOcr,ocr_fields:[],ocr_warnings:[],ocr_parser_id:null,ocr_parser_version:null,attention_reason:null,assigned_to_profile_id:null}).eq("id",input.id).eq("status","needs_attention").eq("submitted_by_profile_id",profile.id).select("id").maybeSingle<{id:string}>();if(updateError||!savedResponse)return{ok:false,error:"Could not attach the replacement document."};
   await recordDailyWorkflowActivity(admin,{actorId:profile.id,table:"policy_intake_requests",recordId:input.id,action:"policy_intake_response_uploaded"});
-  revalidatePath("/policy-intakes");revalidatePath(`/policy-intakes/${input.id}`);if(!proposal)after(async()=>{await processStoredOcr(input.id);});return{ok:true,id:input.id,number:intake.intake_number,status:nextStatus};
+  revalidatePath("/policy-intakes");revalidatePath(`/policy-intakes/${input.id}`);if(aiQueueEnabled()){
+    // Run n8n as soon as the CURRENT document is saved, not on the next cron.
+    // On request shutdown/error the one-minute durable queue drain retries it.
+    after(async()=>{
+      try { await processAiQueueBatch({preferredIntakeId:input.id}); }
+      catch { console.error("[policy-intake] immediate n8n queue unavailable",{intakeId:input.id}); }
+    });
+  } else if(!proposal)after(async()=>{await processStoredOcr(input.id);});return{ok:true,id:input.id,number:intake.intake_number,status:nextStatus};
 }
 
 export async function openPolicyIntakeDocument(id:string){const profile=await requirePolicyIntakeViewer(id),admin=createSupabaseAdminClient();const{data}=await admin.from("policy_intake_requests").select("submitted_by_profile_id,storage_bucket,storage_path").eq("id",id).maybeSingle<{submitted_by_profile_id:string;storage_bucket:string;storage_path:string}>();if(!data)return{ok:false as const,error:"Policy document is unavailable."};const[canReview,canFinalize]=await Promise.all([reviewerAccess(profile.id,profile.role),finalizerAccess(profile.id,profile.role)]);if(profile.role!=="operations_head_life"&&!canReview&&!canFinalize&&data.submitted_by_profile_id!==profile.id)return{ok:false as const,error:"You do not have access to this intake."};const{data:signed,error:storageError}=await admin.storage.from(data.storage_bucket).createSignedUrl(data.storage_path,300);
