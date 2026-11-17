@@ -37,6 +37,13 @@ for(const key of ['policyNumber','issuanceDate','startDate','endDate','pptEndDat
   assert.ok(app.includes('issueField("'+key+'"'),'Missing issuance field '+key);
 }
 assert.ok(app.includes('>Create Policy</Text>'),'Pending case issuance button uses compact label');
+assert.ok(app.includes("if(JSON.stringify(form)===JSON.stringify(initialForm(record)))"), 'Save Case detects unchanged forms without a database write');
+assert.ok(app.includes("partnerAlert('No changes to save','Case details are already up to date.')"), 'No-change Save Case shows informational feedback');
+assert.ok(app.includes("disabled={saving||issuing||documentBusy||rejectBusy}"), 'Save Case only disables during conflicting operations');
+assert.ok(!app.includes("disabled={saving||issuing||documentBusy||rejectBusy||!caseDirty}"), 'Save Case is clickable when form has no changes');
+assert.ok(app.includes("style={[styles.caseAction,styles.actionSave]}"), 'Save Case styling does not depend on dirty state');
+assert.ok(app.includes("actionSave:{flex:1,borderColor:'#1765C1',borderWidth:1,backgroundColor:'#1765C1'}"), 'Save Case has visible blue active styling');
+
 assert.match(app,/const showCreatePolicyError=\(message:string\)=>/, 'Create Policy failures must use shared feedback handling');
 assert.match(app,/visible=\{Boolean\(createPolicyError\)\}/, 'Create Policy failure renders a custom dialog');
 assert.match(app,/title="Unable to Create Policy"/, 'Error dialog identifies failed action');
