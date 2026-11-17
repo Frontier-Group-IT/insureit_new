@@ -11,6 +11,7 @@ import { requirePolicyCreator } from "@/lib/policy-access-server";
 import { isN8nWorkbenchPrimary, previewSemiAutoN8nExtraction } from "@/lib/policy-intake-semi-auto-n8n";
 import type { N8nVerifiedPremiumBreakdown } from "@/lib/policy-intake-n8n-validation";
 import { mapVerifiedN8nMotorPremium } from "@/lib/policy-n8n-onboarding-premium";
+import { verifiedN8nPolicyIssuanceDate } from "@/lib/icici-3005-issuance-date";
 import { enrichVerifiedN8nOnboardingFields } from "@/lib/policy-n8n-onboarding-enrichment";
 import { sameInsuredIdentity, selectVerifiedN8nInsuredDraftIdentity } from "@/lib/policy-n8n-onboarding-insured";
 
@@ -218,6 +219,10 @@ async function preparePolicyIntakeHandoffInternal(
   // "od_premium" OCR field is *Total OD*, so never copy it directly into
   // the form's Basic OD field and then add add-ons again.
   const verifiedPremium=verified?mapVerifiedN8nMotorPremium(verified.premium):null;
+  // Printed Policy Issue Date is distinct from OD/TP coverage commencement.
+  // When missing, require the operator to enter the actual date manually;
+  // never put today's date into a policy-Intake-origin draft.
+  const verifiedIssueDate=verified?verifiedN8nPolicyIssuanceDate(verified.fields):"";
   const addOnTotal=verifiedPremium?Number(verifiedPremium.addOnPremium):0;
   const tpStart=verified?.fields.find(field=>field.key==="third_party_start_date")?.value??"";
   const tpExpiry=verified?.fields.find(field=>field.key==="third_party_end_date")?.value??"";
@@ -227,7 +232,7 @@ async function preparePolicyIntakeHandoffInternal(
   const intermediaryType=intake.lead_source_type==="posp"?"POSP":intake.lead_source_type==="misp"?"MISP":"SIBL / Partner";
   const draft:PolicyIntakeDraft={
     registrationMode:mapped.registrationMode,
-    issuanceDate:new Date().toISOString().slice(0,10),rmName:"",intermediaryType,leadSource:intake.lead_source_name,intermediaryCode:intake.lead_source_code??"",businessLine:"Motor",
+    issuanceDate:verifiedIssueDate,rmName:"",intermediaryType,leadSource:intake.lead_source_name,intermediaryCode:intake.lead_source_code??"",businessLine:"Motor",
     registrationNo:mapped.next.registrationNo,insuredName:customerName,phoneNo:intake.customer_mobile,vehicleClass:mapped.next.vehicleClass,make:mapped.next.make,model:mapped.next.model,fuelType:mapped.next.fuelType,capacity:mapped.next.capacity,manufacturingYear:mapped.next.manufacturingYear,chassisNo:mapped.next.chassisNo,engineNo:mapped.next.engineNo,rtoState:mapped.next.rtoState,rtoName:mapped.next.rtoName,
     policyProduct:mapped.next.policyProduct,idv:mapped.next.idv,
     od:verifiedPremium?.od??mapped.next.od,
@@ -239,6 +244,7 @@ async function preparePolicyIntakeHandoffInternal(
     payoutBasis:"NET",projectedOdPercent:"",projectedTpPercent:"",insurerScheme:"",payinBillNo:"",payinBilledAmount:"",payinBillDate:"",payinStatus:"Unbilled",retention:"",payoutOdPercent:"",payoutTpPercent:"",flatPayoutAmount:"",payoutStatus:"Pending",payoutDate:"",payoutVoucherNo:"",remarks:verified
       ? `Policy Intake ${id} — n8n validated ICICI 3005 PDF. Review every prefilled value before booking.
 PDF premium reconciliation: Basic OD ${verified.premium.basicOd} + OD add-ons ${addOnTotal} = Total OD ${verified.premium.totalOd}; TP ${verified.premium.basicTp}, CPA ${verified.premium.cpa}, Net ${verified.premium.net}, GST ${verified.premium.tax}, Gross ${verified.premium.gross}.
+Policy issuance date: ${verifiedIssueDate||"not extracted — enter and verify from the PDF before booking"}. Do not infer issuance from OD/TP coverage start or the current date.
 Third Party period: ${tpStart||"unavailable"} to ${tpExpiry||"unavailable"}. Verify separate TP/CPA dates, policy class/product, identity, commercial rates and unmatched PDF fields manually.`
       : `Policy Intake ${id}`,
   };
@@ -251,7 +257,7 @@ Third Party period: ${tpStart||"unavailable"} to ${tpExpiry||"unavailable"}. Ver
     const original=existingDraft.draft_payload;
     const supplemented={...original};
     const fillable:(keyof PolicyIntakeDraft)[]=[
-      "insuredName","vehicleClass","make","model","fuelType","capacity",
+      "issuanceDate","insuredName","vehicleClass","make","model","fuelType","capacity",
       "rtoState","rtoName","policyProduct","manufacturingYear",
     ];
     let changed=false;
