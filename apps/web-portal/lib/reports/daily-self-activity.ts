@@ -678,6 +678,22 @@ export async function loadSelfActivityHistory(
           // Do not repeat old/new business values when the user requested column names.
           row.detail=undefined;
         }
+        if(row.table==="policies" && row.status==="Deleted") {
+          // The original policy may no longer exist. Read ONLY this already
+          // scoped visible audit's captured labels; never guess them from UUIDs.
+          const snapshot=change.old_data;
+          const old=snapshot && typeof snapshot==="object" && !Array.isArray(snapshot)
+            ? snapshot as Record<string,unknown> : {};
+          const label=(value:unknown)=>typeof value==="string"&&value.trim()
+            ? value.trim().slice(0,180) : undefined;
+          // Legacy deletion audits have no snapshot. Make that absence explicit
+          // instead of presenting an internal record UUID as a policy number.
+          row.reference=label(old.policy_no)||label(old.policy_code)||"Not retained (deleted policy)";
+          row.customerVehicle=[
+            label(old.customer_name),label(old.vehicle_no)
+          ].filter(Boolean).join(" · ")||undefined;
+          row.insurer=label(old.insurance_company_name);
+        }
         if(row.table==="claims" && row.status==="Deleted") {
           // Name belongs to the ORIGINAL claim creator, not the deleting actor.
           // Historic audits without captured creator metadata cannot be attributed.
