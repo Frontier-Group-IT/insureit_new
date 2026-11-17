@@ -566,6 +566,9 @@ const actionsText=text("app/development/ai-policy-onboarding/actions.ts");
 const workbenchText=text("components/development/semi-auto-policy-workspace.tsx");
 const queueSql=readFileSync(new URL("../../../supabase/migrations/20261117154000_policy_intake_ai_processing_queue.sql",import.meta.url),"utf8");
 const schedulerYaml=readFileSync(new URL("../../../.github/workflows/ai-policy-intake-extraction.yml",import.meta.url),"utf8");
+assert(workerText.includes("offset<ids.length;offset+=100")
+  && workerText.includes("ids.slice(offset,offset+100)"),
+  "All authorized open Intakes must contribute to AI queue counts across pages");
 assert(workerText.includes("previewSemiAutoN8nExtraction(")
   && workerText.includes("claim_policy_intake_ai_queue_v1")
   && workerText.includes("canonicalPreflightPassed:false"),
