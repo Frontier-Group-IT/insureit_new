@@ -15,7 +15,7 @@ assert.doesNotMatch(page,/backToEmployees/, "Unused back-to-directory prop is re
 assert.match(read("../components/reports/daily-report-header-controls.tsx"),/Daily Report employee selector/, "Employee selection is beside Reports heading");
 assert.match(page,/<DailySelfActivityPanel/, "Activity summary and detail remain");
 assert.doesNotMatch(page,/<DailyEmployeeDirectory/, "Standalone All directory removed");
-assert.match(panel,/Back to summary/, "Category detail can return to summary");
+assert.doesNotMatch(panel,/Back to summary/, "Category detail header no longer shows Back to summary");
 assert.match(panel,/data\.unavailableSources/, "Operational partial-source warning is retained");
 assert.match(panel,/categoryGroups\.map/, "Grouped category summaries remain");
 assert.match(panel,/<DailyActivityHistoryRows rows=\{data\.rows\}/, "Detail table passes report rows to interactive renderer");
