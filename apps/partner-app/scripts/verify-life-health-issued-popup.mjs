@@ -16,4 +16,11 @@ assert.match(api,/export async function saveLifeHealthCaseEdit/, "Native save cl
 assert.match(route,/export async function POST\(request: Request\)/, "Scoped native write endpoint is available");
 assert.match(route,/canAccessPolicy\(profile\.id,profile\.role,row\.final_policy_id!/, "Issued edits require scoped policy access");
 assert.match(route,/final_policy_id/, "Scoped list returns final policy ID");
+assert.match(screen,/Load More Cases<\/Text>/, "Case list uses the same Load More label pattern as Policies");
+assert.match(screen,/<Feather name="chevron-down" size=\{13\} color="#3156B8"\/>/, "Case list has the Policies downward chevron");
+assert.match(screen,/Loading more cases…/, "Case list has loading progress text");
+assert.match(screen,/rows\.length<total\?<Pressable/, "Case footer is hidden after all matching cases are loaded");
+assert.match(screen,/listLifeHealthCases\(\{status,search,offset,limit:10\}\)/, "Existing 10-item server pagination is unchanged");
+assert.match(screen,/accessibilityState=\{\{disabled:more,busy:more\}\}/, "Loading state disables repeated pagination taps");
+assert.doesNotMatch(screen,/Load More \(\$\{rows\.length\} of \$\{total\}\)/, "Old numeric footer is removed");
 console.log("Partner issued policy popup, native detail and scoped edits passed");
