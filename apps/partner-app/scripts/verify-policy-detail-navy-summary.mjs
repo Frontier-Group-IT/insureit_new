@@ -22,7 +22,7 @@ assert.match(source, /<CardHeader iconKind="policy-overview" title="Policy Overv
   'Policy Overview icon is retained');
 assert.match(source, /iconKind === 'renew-policy'\s*\? PartnerAssets\.actions\.quickRenewals/, 'Renew Policy uses the exact Home Renewals asset');
 assert.match(source, /iconKind === 'raise-claim'\s*\? PartnerAssets\.actions\.quickClaims/, 'Raise Claim uses the exact Home Claims asset');
-assert.doesNotMatch(source, /sync-circle|shield-checkmark/, 'Do not substitute generic vectors for the Home icons');
+assert.doesNotMatch(source, /quickGlyph/, 'QuickAction must not use generic vector fallback for Renewals or Claims');
 assert.match(source, /iconKind="renew-policy" label="Renew Policy" onPress=\{\(\) => router\.push\('\/renewals'/, 'Renewal route remains unchanged');
 assert.match(source, /iconKind="raise-claim" label="Raise Claim" onPress=\{\(\) => router\.push\('\/claims'/, 'Claims route remains unchanged');
 assert.match(source,/PartnerCaseBottomNavigation activeTab="Policies"/,'Bottom navigation unchanged');
