@@ -34,7 +34,7 @@ assert.match(onboarding, /if\(destination\)router\.navigate\(destination as neve
 assert.match(standalone, /from '\.\/policy-intakes\/onboarding'/, 'Standalone Add Policy shares guarded onboarding');
 assert.match(partner, /<PartnerStackBottomNavigation activeTab="more" includeBottomInset onNavigate=\{leavePartnerForm\} \/>/, 'Add Partner includes Home navigator');
 assert.match(partner, /hasUnsavedDetails/, 'Warn before abandoning Partner form');
-assert.match(partner, /if \(saving\) return/, 'Do not navigate during Partner submission');
+assert.match(partner, /if \(saving \|\| uploadingType\) return/, 'Do not navigate during Partner saves or document uploads');
 assert.match(cases, /bottomNavigation=\{<PartnerCaseBottomNavigation\/>\}/, 'Existing Case Register navigation preserved');
 assert.match(detail, /bottomNavigation=\{<PartnerCaseBottomNavigation\/>\}/, 'Existing Case Details navigation preserved');
 assert.match(cases, /status_group==='issued' && row\.final_policy_id/, 'Issued popup remains functional');
