@@ -161,7 +161,7 @@ export default function AddPartnerScreen() {
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={styles.header}>
           <Pressable accessibilityLabel="Back" onPress={() => leavePartnerForm()} hitSlop={10}><Ionicons name="arrow-back" size={21} color="#FFFFFF" /></Pressable>
-          <Text style={styles.heading}>Add Partner</Text><View style={{ width: 21 }} />
+          <Text style={styles.heading}>Add Partner</Text>
         </View>
         <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
           {sections.map((section, index) => (
@@ -242,7 +242,7 @@ export default function AddPartnerScreen() {
 }
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: '#F2F5FB' }, screen: { flex: 1, backgroundColor: '#071E49' },
-  header: { height: 54, backgroundColor: '#071E49', borderBottomWidth: 1, borderBottomColor: '#071E49', paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  header: { height: 54, backgroundColor: '#071E49', borderBottomWidth: 1, borderBottomColor: '#071E49', paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', gap: 14 },
   heading: { fontSize: 17, color: '#FFFFFF', fontWeight: '800' },
   content: { padding: 12, paddingBottom: 35, gap: 12 },
   section: { backgroundColor: '#FFF', borderWidth: 1, borderColor: '#E1E7F1', borderRadius: 14, overflow: 'hidden' },
