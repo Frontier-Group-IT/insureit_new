@@ -662,6 +662,14 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
                     <p className="text-[10px] font-semibold text-[#3b577a]">
                       PDF insured: {customerReview.insuredName??"Not verified"} · Mobile ending {customerReview.mobileLast4}
                     </p>
+                    {customerReview.otherOpenIntakes !== null && customerReview.otherOpenIntakes > 0 ? (
+                      <p className="text-[10px] font-semibold text-amber-800">
+                        This mobile also appears on {customerReview.otherOpenIntakes} other open Intake(s). Multiple policies may belong to the same person; verify each legal insured identity before selecting or creating a customer.
+                      </p>
+                    ) : null}
+                    {customerReview.otherOpenIntakes === null ? (
+                      <p className="text-[10px] text-amber-800">The related-Intake check is unavailable; do not assume this phone belongs to only one insured.</p>
+                    ) : null}
                     <p className="text-[10px] text-[#647891]">{customerReview.verificationNote}</p>
                     {customerReview.truncated ? <p className="text-[10px] font-bold text-amber-700">More than 50 master records found. A unique match cannot be assumed.</p> : null}
                     {customerReview.candidates.length ? (
