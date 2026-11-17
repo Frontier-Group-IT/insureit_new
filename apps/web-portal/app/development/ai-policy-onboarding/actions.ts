@@ -333,7 +333,7 @@ export type AiCustomerCandidateReview =
  */
 export async function reviewAiIntakeCustomerCandidates(id:string):Promise<AiCustomerCandidateReview>{
   await requireDevelopmentPolicyOperator(id);
-  if(!/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(id)){
+  if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)){
     return {ok:false,error:"Invalid Intake reference."};
   }
   const admin=createSupabaseAdminClient();
