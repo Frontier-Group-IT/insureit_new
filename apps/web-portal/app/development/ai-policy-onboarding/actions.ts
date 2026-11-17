@@ -232,7 +232,37 @@ function payloadFromDraft(d: PolicyIntakeDraft, id: string, revision: number, ma
  * the canonical draft and runs the SAME policy/customer/vehicle transaction
  * as standard onboarding. No browser-submitted OCR, customer ID or date.
  */
+// Persist every failed/uncertain bulk conversion as review-required. A client
+// refresh or another bulk batch must not automatically retry the same Intake.
+// Only verified queue rows are held, retaining the validated fingerprint and
+// source fields for manual inspection. Explicit operator reprocessing remains
+// available through the existing authorized recovery action.
+async function holdFailedAiConversion(id:string):Promise<void>{
+  const admin=createSupabaseAdminClient();
+  const now=new Date().toISOString();
+  const {error}=await admin.from("policy_intake_ai_processing_queue")
+    .update({state:"exception",exception_codes:["booking_review_required"],
+      last_error_code:"bulk_conversion_review_required",updated_at:now})
+    .eq("intake_id",id).eq("state","verified");
+  if(error)console.error("[ai-policy] booking review hold failed",{code:error.code||"unknown"});
+}
+
 export async function convertVerifiedAiIntake(id:string,confirmed:boolean):Promise<SemiAutoActionResult>{
+  await requireDevelopmentPolicyOperator(id);
+  // Invalid or unconfirmed requests do not mutate the queue.
+  if(confirmed!==true)return{ok:false,ready:false,issues:[issue("Confirmation","Explicit policy registration confirmation is required.")]};
+  try{
+    const result=await convertVerifiedAiIntakeCore(id,confirmed);
+    if(!result.ok)await holdFailedAiConversion(id);
+    return result;
+  }catch{
+    await holdFailedAiConversion(id);
+    return{ok:false,ready:false,issues:[issue("Booking status",
+      "The result could not be confirmed. Review Policy Register and this Intake before explicitly retrying; automatic re-queue is blocked.")]};
+  }
+}
+
+async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<SemiAutoActionResult>{
   await requireDevelopmentPolicyOperator(id);
   const fail=(field:string,message:string)=>({ok:false,ready:false,issues:[issue(field,message)]});
   if(!aiQueueEnabled()||!isN8nWorkbenchPrimary())return fail("Automation","Verified n8n onboarding is disabled.");
@@ -295,11 +325,26 @@ export async function convertVerifiedAiIntake(id:string,confirmed:boolean):Promi
   const phone=forwarded.draft.phoneNo.replace(/\D/g,"").slice(-10);
   if(!insured||!/^\d{10}$/.test(phone))
     return fail("Customer identity","Insured name or mobile is missing from the verified Intake.");
-  const {data:masters,error:masterError}=await admin.from("customers")
-    .select("id,phone,contact_name,company_name").ilike("phone","%"+phone).limit(51)
-    .returns<Array<{id:string;phone:string;contact_name:string;company_name:string|null}>>();
-  if(masterError||!masters||masters.length===51)
-    return fail("Customer identity","Customer master matching is unavailable or too many candidates were returned.");
+  // A shared dealership/branch mobile can belong to many distinct insureds.
+  // Read every bounded page and match BOTH exact normalized name and phone.
+  // Never infer a customer from mobile alone or arbitrarily reject at 51.
+  type Master = {id:string;phone:string;contact_name:string;company_name:string|null};
+  const masters:Master[]=[];
+  let customerLookupFailed=false;
+  const PAGE=200, MAX_MATCHES=2000;
+  for(let offset=0;offset<MAX_MATCHES;offset+=PAGE){
+    const page=await admin.from("customers")
+      .select("id,phone,contact_name,company_name").ilike("phone","%"+phone)
+      .order("id",{ascending:true}).range(offset,offset+PAGE-1)
+      .returns<Master[]>();
+    if(page.error){customerLookupFailed=true;break;}
+    masters.push(...(page.data??[]));
+    if((page.data??[]).length<PAGE)break;
+  }
+  // Hitting the cap is an ambiguous identity lookup, never permission to
+  // create a duplicate exact-identity customer.
+  if(customerLookupFailed||masters.length>=MAX_MATCHES)
+    return fail("Customer identity","Complete customer master lookup is unavailable or exceeds the review limit. No customer was created.");
   const norm=(v:string)=>v.normalize("NFKC").trim().replace(/\s+/g," ").toUpperCase();
   const exactMatches=masters.filter(c=>c.phone.replace(/\D/g,"").slice(-10)===phone
     && [c.company_name,c.contact_name].some(v=>norm(v??"")===norm(insured)));

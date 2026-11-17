@@ -893,4 +893,24 @@ assert(aiWorkbenchPageText.includes("bulkCandidates = workspaceRows.filter(row =
   && aiWorkbenchPageText.includes("!duplicateIds.has(row.id)")
   && aiWorkbenchPageText.includes("bulkCandidates={bulkCandidates}"),
   "Bulk candidates must include only authorized verified nonduplicate Motor Intakes across all pages");
+assert(workerText.includes("fetchAllPages<Customer,unknown>")
+  && !workerText.includes('matches?.length===51'),
+  "Queue worker must not mistake 51 customers sharing a phone for ambiguous exact identity");
+// Mobile number alone is not a customer identity. Read all candidate pages,
+ // then permit a NEW customer when there is no exact name+mobile master.
+assert(actionsText.includes("const PAGE=200, MAX_MATCHES=2000")
+  && actionsText.includes('.order("id",{ascending:true}).range(offset,offset+PAGE-1)')
+  && actionsText.includes("const exactMatches=masters.filter(")
+  && actionsText.includes(":{createNewCustomer:true}")
+  && !actionsText.includes('limit(51)\n    .returns<Array<{id:string;phone:string;contact_name:string;company_name:string|null}>>()'),
+  "Shared-mobile identities must not be rejected by a 51-row arbitrary cutoff");
+assert(actionsText.includes("async function holdFailedAiConversion(id:string)")
+  && actionsText.includes('exception_codes:["booking_review_required"]')
+  && actionsText.includes('last_error_code:"bulk_conversion_review_required"')
+  && actionsText.includes('.eq("intake_id",id).eq("state","verified")')
+  && actionsText.includes("if(!result.ok)await holdFailedAiConversion(id)")
+  && actionsText.includes("await holdFailedAiConversion(id);"),
+  "Failed or uncertain bulk conversion must persist a review hold on previously verified queue rows");
+assert(workbenchText.includes('booking_review_required:"Bulk booking requires manual review"'),
+  "Held bulk bookings must show a specific manual-review reason");
 console.log("Semi-auto Motor onboarding regression checks passed.");
