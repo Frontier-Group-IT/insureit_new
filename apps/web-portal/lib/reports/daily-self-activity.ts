@@ -383,12 +383,12 @@ export async function loadSelfActivityHistory(
     // The Employee Name column identifies the affected employee for employee/profile
     // events, but the actor for group/business operations with no employee target.
     // These rows are already restricted to this actor's authorized report scope.
-    const actingEmployeeName=combined?undefined:(selfProfile?.full_name?.trim()||undefined);
+    const actingEmployeeName=selfProfile?.full_name?.trim()||undefined;
     for(const row of visible) {
       if(row.recordId&&row.table==="employees")row.subjectEmployeeName=employeeNames.get(row.recordId)||undefined;
       else if(row.recordId&&(row.table==="profiles"||row.table==="auth.users"))
         row.subjectEmployeeName=profileNames.get(row.recordId)||undefined;
-      else row.subjectEmployeeName=actingEmployeeName;
+      else row.subjectEmployeeName=combined?undefined:actingEmployeeName;
     }
     // Only query existing groups already referenced by visible, actor-scoped audits.
     const groupIds=[...new Set(visible.filter(row=>row.table==="intermediary_groups"&&isValidDailyRecordId(row.recordId??"")).map(row=>row.recordId as string))];
