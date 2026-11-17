@@ -256,10 +256,52 @@ function EntityRow({ image, icon, title, subtitle, onPress }: { image?: ImageSou
   return <Pressable accessibilityRole={onPress ? 'button' : undefined} disabled={!onPress} onPress={onPress} style={({ pressed }) => [styles.entityRow, pressed && onPress ? styles.pressed : null]}><View style={styles.entityIcon}>{icon ? <Ionicons name={icon} size={20} color="#2468D7" /> : image ? <Image source={image} style={styles.entityArtwork} resizeMode="contain" /> : null}</View><View style={styles.entityBody}><Text numberOfLines={1} style={styles.entityTitle}>{title}</Text><Text numberOfLines={1} style={styles.entityMeta}>{subtitle}</Text></View></Pressable>;
 }
 
+// Display-only insurer labels. Match known master-data variants first, keeping
+// the original insurer name unchanged for logo resolution, API calls and storage.
+const INSURER_SHORT_LABELS: ReadonlyArray<readonly [RegExp, string]> = [
+  [/^icici[\s.-]*lombard\b/i, 'ICICI Lombard'],
+  [/^iffco[\s.-]*tokio\b/i, 'IFFCO-TOKIO'],
+  [/^tata\s*aig\b/i, 'TATA AIG'],
+  [/^hdfc\s*ergo\b/i, 'HDFC ERGO'],
+  [/^bajaj\s*allianz\s*life\b/i, 'Bajaj Allianz Life'],
+  [/^bajaj\s*allianz\b/i, 'Bajaj Allianz'],
+  [/^sbi\s*life\b/i, 'SBI Life'],
+  [/^sbi\s*general\b/i, 'SBI General'],
+  [/^reliance\s*general\b/i, 'Reliance General'],
+  [/^future\s*generali\s*india\s*life\b/i, 'Future Generali Life'],
+  [/^future\s*generali\b/i, 'Future Generali'],
+  [/^liberty\s*general\b/i, 'Liberty General'],
+  [/^royal\s*sundaram\b/i, 'Royal Sundaram'],
+  [/^(?:cholamandalam\s*ms|chola\s*ms)\b/i, 'Chola MS'],
+  [/^(?:the\s+)?new\s+india\s+assurance\b/i, 'New India Assurance'],
+  [/^united\s+india\s+insurance\b/i, 'United India'],
+  [/^(?:the\s+)?oriental\s+insurance\b/i, 'Oriental Insurance'],
+  [/^national\s+insurance\b/i, 'National Insurance'],
+  [/^star\s+health\b/i, 'Star Health'],
+  [/^care\s+health\b/i, 'Care Health'],
+  [/^niva\s*bupa\b/i, 'Niva Bupa'],
+  [/^aditya\s+birla\s+health\b/i, 'Aditya Birla Health'],
+  [/^manipal\s*cigna\b/i, 'ManipalCigna'],
+  [/^max\s*life\b/i, 'Max Life'],
+  [/^hdfc\s*life\b/i, 'HDFC Life'],
+  [/^icici\s*prudential\b/i, 'ICICI Prudential'],
+  [/^tata\s*aia\b/i, 'TATA AIA'],
+  [/^lic\b/i, 'LIC'],
+];
+
 function displayInsurerSummary(name: string | null | undefined): string {
-  const fullName = name?.trim() || 'Not recorded';
-  // Presentation-only short label; preserve the full insurer identity for data and logo lookup.
-  return /^ICICI\s+Lombard\s+General\b/i.test(fullName) ? 'ICICI LOMBARD GENERAL' : fullName;
+  const fullName = name?.trim().replace(/\s+/g, ' ') || 'Not recorded';
+  if (fullName === 'Not recorded') return fullName;
+  const known = INSURER_SHORT_LABELS.find(([pattern]) => pattern.test(fullName));
+  if (known) return known[1];
+  // Unknown insurer: remove legal suffixes, but retain meaningful words such as
+  // Life, Health, India or General so unrelated brands do not collapse together.
+  const compact = fullName
+    .replace(/\s+(?:company|co\.?)(?:\s+(?:private|pvt\.?))?\s+(?:limited|ltd\.?)$/i, '')
+    .replace(/\s+(?:private|pvt\.?)?\s*(?:limited|ltd\.?)$/i, '')
+    .replace(/\s+insurance\s+company$/i, '')
+    .trim();
+  return compact || fullName;
 }
 function InsurerMiniInfo({ name }: { name: string | null | undefined }) {
   return (
