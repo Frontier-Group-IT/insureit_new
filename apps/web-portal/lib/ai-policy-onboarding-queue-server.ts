@@ -345,7 +345,9 @@ async function processClaim(item: Claimed) {
   // The same canonical, current-document guard fills only an EMPTY saved
   // n8n issue-date field, never a manual value. A missing PDF-issued date
   // stays blank: do not replace it with today's date or OD/TP start.
-  if(completed && state==="verified" && issuanceDateVerified && pdfIssuanceDate){
+  if(completed && (state==="verified" || state==="exception") && !isDuplicate
+    && extraction.preview.checksPassed===13 && extraction.preview.warnings.length===0
+    && issuanceDateVerified && pdfIssuanceDate){
     const backfill=await admin.rpc("fill_verified_ai_draft_issuance_date_v1",{
       p_intake_id:item.intake_id,p_document_id:item.document_id,
       p_fingerprint:extraction.preview.fingerprint,
