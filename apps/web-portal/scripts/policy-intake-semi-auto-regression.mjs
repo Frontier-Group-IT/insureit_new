@@ -957,7 +957,6 @@ assert(workbenchText.includes("Reprocess Previous ·")
   "Reprocessing must be separately confirmed, capped at 10 and never call the booking action");
 assert(actionsText.includes('Only an open, unregistered Motor Intake can be reprocessed.')
   && actionsText.includes("duplicates.matches.has(id)")
-  && actionsText.includes('if(!["exception","failed"].includes(row.state))')
-  && actionsText.includes('.in("state",["exception","failed"])'),
-  "Reprocessing must reject completed, registered, duplicate, or non-exception queue rows");
+  && actionsText.includes('.in("state",["exception","verified","unsupported","failed"])'),
+  "Reprocessing must reject completed, registered and duplicate Intakes while preserving individual rechecks");
 console.log("Semi-auto Motor onboarding regression checks passed.");
