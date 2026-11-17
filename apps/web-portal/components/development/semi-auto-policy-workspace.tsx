@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState } from "react";
 import { AlertCircle, ArrowUpRight, CheckCircle2, ClipboardCheck, FileSearch, Loader2, PencilLine, RefreshCw, Search, ShieldAlert, Sparkles } from "lucide-react";
-import { applySemiAutoN8nIntake, bookSemiAutoIntake, checkSemiAutoIntake, continueVerifiedN8nIntakeToOnboarding, editSemiAutoIntake, previewSemiAutoN8nIntake, type SemiAutoActionResult, type SemiAutoN8nResult } from "@/app/development/ai-policy-onboarding/actions";
+import { applySemiAutoN8nIntake, bookSemiAutoIntake, checkSemiAutoIntake, continueVerifiedN8nIntakeToOnboarding, editSemiAutoIntake, previewSemiAutoN8nIntake, reprocessAiPolicyIntake, type SemiAutoActionResult, type SemiAutoN8nResult } from "@/app/development/ai-policy-onboarding/actions";
 
 export type SemiAutoIntakeRow = {
   id: string;
@@ -84,6 +84,8 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
   const [n8nNotice, setN8nNotice] = useState<string | null>(null);
   const [done, setDone] = useState<{ policyCode: string; policyId: string } | null>(null);
   const [exceptionRow,setExceptionRow]=useState<SemiAutoIntakeRow|null>(null);
+  const [queueRetrying,setQueueRetrying]=useState(false);
+  const [queueRetryError,setQueueRetryError]=useState<string|null>(null);
   const [takeover, setTakeover] = useState<{ intakeId: string; reviewerName: string } | null>(null);
   const [fillEmptySavedFields, setFillEmptySavedFields] = useState(true);
   const [handoffDialog, setHandoffDialog] = useState<
@@ -616,10 +618,25 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
             <p className="mt-3 text-[10px] leading-4 text-[#61748e]">
               The queue is review-only until a verified resolution is recorded. Choosing an action here does not create a customer, vehicle or policy.
             </p>
+            {queueRetryError ? <p role="alert" className="mt-3 rounded-lg bg-amber-50 p-2 text-[10px] text-amber-900">{queueRetryError}</p> : null}
             <div className="mt-5 flex flex-wrap justify-end gap-2">
-              <button type="button" autoFocus onClick={()=>setExceptionRow(null)}
+              <button type="button" autoFocus onClick={()=>{setExceptionRow(null);setQueueRetryError(null);}}
                 className="min-h-9 rounded-lg border border-[#cbd6e5] px-3 text-[11px] font-semibold text-[#38516e]">Close</button>
               <Link href={"/policy-intakes/"+exceptionRow.id} className="inline-flex min-h-9 items-center rounded-lg border border-[#bcd0e5] px-3 text-[11px] font-semibold text-[#24538b]">Advanced options</Link>
+              {queueActive ? <button type="button" disabled={queueRetrying}
+                onClick={async ()=>{
+                  if(!exceptionRow)return;
+                  setQueueRetrying(true);setQueueRetryError(null);
+                  try{
+                    const response=await reprocessAiPolicyIntake(exceptionRow.id);
+                    if(response.ok){setExceptionRow(null);router.refresh();}
+                    else setQueueRetryError(response.error??"Could not queue extraction.");
+                  }catch{setQueueRetryError("Unable to schedule a recheck. Refresh the Intake and try again.");}
+                  finally{setQueueRetrying(false);}
+                }}
+                className="inline-flex min-h-9 items-center rounded-lg border border-[#bcd0e5] px-3 text-[11px] font-semibold text-[#24538b] disabled:opacity-50">
+                {queueRetrying?"Queuing...":"Recheck in background"}
+              </button> : null}
               <button type="button" onClick={()=>{const id=exceptionRow.id;setExceptionRow(null);void selectRow(id);}}
                 className="min-h-9 rounded-lg bg-[#174b83] px-3 text-[11px] font-bold text-white">Review current PDF</button>
             </div>
