@@ -279,7 +279,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
                 {!primaryN8n ? <button type="button" onClick={() => { void retry(); }} disabled={isWaiting} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#d0deef] bg-white px-2.5 text-[10px] font-semibold text-[#29558d] disabled:opacity-50"><RefreshCw className="h-3.5 w-3.5"/>Recheck</button> : null}
               </div>
             </div>
-            {primaryN8n ? <p className="mt-2 text-[10px] leading-4 text-[#61758d]">The table's saved OCR status is historical. New n8n results appear below after processing and are not silently written over existing data.</p> : null}
+            {primaryN8n ? <p className="mt-2 text-[10px] leading-4 text-[#61758d]">The saved OCR status shown in the table is historical. New n8n results appear below after processing and are not silently written over existing data.</p> : null}
             {primaryN8n && selected?.policy_type !== "motor" ? <p role="status" className="mt-3 rounded-lg border border-[#cbd9ea] bg-[#f5f9ff] p-3 text-[10.5px] leading-5 text-[#264b74]">
               {selected?.policy_type ? "This policy type is not trained for automatic onboarding yet." : "This older Intake has no policy type classification."} n8n will attempt document validation, but any unsupported layout needs training or a human reviewer. No Google OCR fallback or booking is permitted here.
             </p> : null}
