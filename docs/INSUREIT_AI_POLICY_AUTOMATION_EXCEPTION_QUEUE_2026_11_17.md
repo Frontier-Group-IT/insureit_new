@@ -100,3 +100,42 @@ A mobile number repeated on several policies for **one verified customer** is no
 6. All booking remains through the existing manually confirmed canonical form until the next separately reviewed release.
 
 **Current status:** This PR supplies a working **flagged/unreleased read-only extraction queue and exception UI**, not the finished full automation. Its migrations and scheduler are intentionally inactive on production.
+
+
+## Production scheduler integration (Vercel Pro; 2026-11-17)
+
+The project is linked to Vercel **Pro**, and its canonical domain is
+`portal.insureit.in`. Since GitHub connector permissions do not allow
+creating or enabling a fresh Actions repository secret/variable, the secure
+five-minute production scheduler uses **Vercel Cron Jobs** rather than the
+optional disabled GitHub workflow.
+
+- `apps/web-portal/vercel.json` registers `*/5 * * * *` for
+  `GET /api/internal/ai-policy-onboarding/process`.
+- Vercel sends `Authorization: Bearer <CRON_SECRET>` for cron requests.
+  The GET route rejects unset, short or mismatched secrets with 401 using
+  constant-time comparison. It also rejects work if
+  `INSUREIT_AI_QUEUE_ENABLED !== 'true'` or n8n-primary mode is not enabled.
+- `CRON_SECRET` must be a distinct random **production-only encrypted**
+  Vercel environment variable with at least 32 characters. It is never
+  included in git, n8n nodes, logs, issue comments or browser responses.
+- The optional POST endpoint still accepts only the separately configured
+  `INSUREIT_AI_QUEUE_WORKER_TOKEN` for GitHub/manual jobs, and is not
+  usable with `CRON_SECRET`. Leave the GitHub repository variable
+  `INSUREIT_AI_QUEUE_SCHEDULE_ENABLED` unset/false to avoid a second
+  scheduler.
+- Vercel Git auto-deployment remains disabled as before. Deploy an exact
+  verified main commit manually to **production** after setting the
+  Vercel `INSUREIT_AI_QUEUE_ENABLED=true` and `CRON_SECRET` variables.
+  The new crons register from that production deployment.
+- Each trigger claims at most **two** queued Intakes; at most five retries
+  per unchanged document and parser revision. No n8n result is allowed to
+  book a policy, create a customer, alter existing OCR or silently change
+  a canonical draft.
+
+To pause: set `INSUREIT_AI_QUEUE_ENABLED=false` in Vercel and redeploy
+production or remove the `crons` entry through a reviewed release. The
+database queue rows will remain intact; no original policy Intake records
+are changed by pausing. A production smoke test should check the deployed
+commit, Cron registration, authorized successful worker response and the
+first bounded job results, plus the unauthenticated 401 behavior.
