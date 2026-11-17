@@ -25,8 +25,12 @@ for(const field of [
   assert.ok(form.includes("key:'"+field+"'"),'Missing MISP field '+field);
   assert.ok(web.includes('name="'+field+'"'),'Field not found on website MISP reference: '+field);
 }
+// Native POSP and MISP now share Save Detail and the optional document popup.
+assert.ok(form.includes('Save Detail'),'MISP uses the native Save Detail action');
+assert.ok(form.includes('Upload Documents'),'MISP can open document-category popup after save');
+assert.ok(form.includes('Not Now'),'MISP can save without document upload');
+assert.match(form,/visible=\{documentsOpen\}/,'MISP categories render in a separate modal');
 for(const label of ['Save & Exit','Upload Documents']){
-  assert.ok(form.includes(label),'Missing website parity action '+label);
   assert.ok(web.includes(label),'Website reference action missing: '+label);
 }
 assert.match(api,/input.partner_type === "misp" \? "misp" : "posp"/,'MISP is saved with true MISP type');
