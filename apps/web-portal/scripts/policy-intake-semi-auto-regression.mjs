@@ -249,6 +249,8 @@ assert(signedSource.includes("intake.policy_type !== null"),
   "Unclassified legacy Intakes must be considered for review without inventing a type");
 assert(n8nServer.includes('reason: "untrained_or_unverified"'),
   "Unsupported insurer layouts must have an explicit, non-successful review-needed result");
+assert(n8nServer.includes('snapshot.intake.policy_type !== null && snapshot.intake.policy_type !== "motor"'),
+  "A validated ICICI Motor parser result must not authorize a Non-Motor, Life or Health Intake");
 assert(n8nServer.includes('No old OCR fallback, Intake update or booking'),
   "Unsupported policies must fail closed rather than falling back to Google OCR");
 assert(client.includes("const extracted = await previewSemiAutoN8nIntake(id)"),
