@@ -11,6 +11,7 @@ import { requirePolicyCreator } from "@/lib/policy-access-server";
 import { isN8nWorkbenchPrimary, previewSemiAutoN8nExtraction } from "@/lib/policy-intake-semi-auto-n8n";
 import type { N8nVerifiedPremiumBreakdown } from "@/lib/policy-intake-n8n-validation";
 import { mapVerifiedN8nMotorPremium } from "@/lib/policy-n8n-onboarding-premium";
+import { filterVerifiedN8nOnboardingFields } from "@/lib/policy-n8n-onboarding-fields";
 
 export type PolicyIntakeDraft = {
   registrationMode:"registered"|"unregistered";
@@ -171,7 +172,9 @@ async function preparePolicyIntakeHandoffInternal(
   const {data:existingDraft}=await admin.from("policy_intake_onboarding_drafts").select("draft_payload,revision").eq("intake_id",id).maybeSingle<{draft_payload:PolicyIntakeDraft;revision:number}>();
   if(existingDraft?.draft_payload){
     // A pre-existing operator draft must NEVER be overwritten by n8n.
-    const identityName=existingDraft.draft_payload.insuredName||ocrInsuredName(intake.ocr_fields??[]);
+    const identityName=verified
+      ? existingDraft.draft_payload.insuredName // Manual saved identity only; never fall back to OCR for n8n handoff.
+      : existingDraft.draft_payload.insuredName||ocrInsuredName(intake.ocr_fields??[]);
     const matchedCustomerId=await resolveConfirmedIntakeCustomerId(admin,intake.customer_mobile,identityName);
     return{ok:true,draft:existingDraft.draft_payload,draftRevision:existingDraft.revision,matchedCustomerId,existingDraft:true};
   }
@@ -190,9 +193,12 @@ async function preparePolicyIntakeHandoffInternal(
     mode:"create",
     registrationMode:"registered",
     current:{registrationNo:"",vehicleClass:"",make:"",model:"",fuelType:"",manufacturingYear:"",capacity:"",chassisNo:"",engineNo:"",rtoState:"",rtoName:"",policyProduct:"",idv:"",od:"",tp:"",cpa:"",policyNo:"",insurerId:"",validFrom:"",validUpto:""},
-    fields:verified?.fields??intake.ocr_fields??[],manufacturers:manufacturerOptions,insurers,rcVerified:false,
+    fields:verified?filterVerifiedN8nOnboardingFields(verified.fields):(intake.ocr_fields??[]),
+    manufacturers:manufacturerOptions,insurers,rcVerified:false,
   });
-  const customerName=mapped.next.insuredName?.trim()||"";
+  // The document-derived insured_name is checked by n8n but may not be
+  // proposed as onboarding identity. Request manual/approved master identity.
+  const customerName=verified?"":mapped.next.insuredName?.trim()||"";
   // Canonical form computes net = Basic OD + add-ons + TP + CPA. The n8n
   // "od_premium" OCR field is *Total OD*, so never copy it directly into
   // the form's Basic OD field and then add add-ons again.
