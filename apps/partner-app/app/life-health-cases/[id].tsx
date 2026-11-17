@@ -505,10 +505,14 @@ export default function LifeHealthCaseDetailScreen(){
           </View>
           {expandedCaseTab==='activity'?<View style={styles.activityHistory}>
             {activities.length?activities.map(activity=><View key={activity.id} style={styles.activity}>
-              <Text style={styles.activityTitle}>{activity.action.replace(/_/g,' ')}</Text>
-              {activity.createdBy?<Text style={styles.activityDate}>By: {activity.createdBy}</Text>:null}
+              <View style={styles.activityRow}>
+                <View style={styles.activityDetails}>
+                  <Text style={styles.activityTitle}>{activity.action.replace(/_/g,' ')}</Text>
+                  {activity.createdBy?<Text style={styles.activityDate}>By: {activity.createdBy}</Text>:null}
+                </View>
+                <Text style={styles.activityTimestamp}>At: {activityDate(activity.created_at)}</Text>
+              </View>
               {activity.changes?.map((change,index)=><Text key={index} style={styles.activityDate}>• {change}</Text>)}
-              <Text style={styles.activityDate}>At: {activityDate(activity.created_at)}</Text>
             </View>):<Text style={styles.paragraph}>No recorded case activity available.</Text>}
           </View>:expandedCaseTab==='remarks'?<View style={styles.activityHistory}>
             {record.remarks?.trim()?record.remarks.trim().split(/\n\s*\n/).filter(Boolean).map((remark,index)=>
@@ -527,10 +531,14 @@ export default function LifeHealthCaseDetailScreen(){
             </Pressable>
           </View>
           {infoTab==='activity'?(activities.length?activities.map(activity=><View key={activity.id} style={styles.activity}>
-            <Text style={styles.activityTitle}>{activity.action.replace(/_/g,' ')}</Text>
-            {activity.createdBy?<Text style={styles.activityDate}>By: {activity.createdBy}</Text>:null}
+            <View style={styles.activityRow}>
+              <View style={styles.activityDetails}>
+                <Text style={styles.activityTitle}>{activity.action.replace(/_/g,' ')}</Text>
+                {activity.createdBy?<Text style={styles.activityDate}>By: {activity.createdBy}</Text>:null}
+              </View>
+              <Text style={styles.activityTimestamp}>At: {activityDate(activity.created_at)}</Text>
+            </View>
             {activity.changes?.map((change,index)=><Text key={index} style={styles.activityDate}>• {change}</Text>)}
-            <Text style={styles.activityDate}>At: {activityDate(activity.created_at)}</Text>
           </View>):<Text style={styles.paragraph}>No recorded case activity available.</Text>):
             (record.remarks?.trim()?record.remarks.trim().split(/\n\s*\n/).filter(Boolean).map((remark,index)=>
               <View key={index} style={styles.activity}><Text style={styles.paragraph} selectable>{remark}</Text></View>
@@ -842,6 +850,9 @@ const styles=StyleSheet.create({
   tabText:{fontSize:11,fontWeight:'700',color:navy},
   tabTextActive:{color:'#FFFFFF'},
   activity:{borderTopWidth:1,borderTopColor:'#ECF0F6',paddingTop:10,gap:4},
+  activityRow:{flexDirection:'row',alignItems:'flex-start',justifyContent:'space-between',gap:8},
+  activityDetails:{flex:1,minWidth:0,gap:4},
+  activityTimestamp:{color:'#64748B',fontSize:10,lineHeight:15,textAlign:'right',width:130,flexShrink:0},
   activityTitle:{fontSize:11,fontWeight:'700',color:navy},
   activityDate:{fontSize:10,color:'#64748B'},
   paragraph:{fontSize:11,lineHeight:17,color:'#30445D'},
