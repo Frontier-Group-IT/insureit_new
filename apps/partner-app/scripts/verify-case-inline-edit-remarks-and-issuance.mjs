@@ -21,8 +21,14 @@ for(const key of ['policyNumber','issuanceDate','startDate','endDate','pptEndDat
 }
 assert.ok(app.includes('>Create Policy</Text>'),'Pending case issuance button uses compact label');
 assert.match(app,/onPress=\{\(\)=>void submitIssue\(\)\}/,'Create Policy retains verified issuance handler');
-assert.ok(app.includes('remarkHeaderAction'), 'Pending and Rejected remarks have a separate compact action');
-assert.ok(app.includes("record.status_group==='pending'||record.status_group==='rejected'"), 'Both Pending and Rejected have the same remarks/activity layout');
+assert.ok(app.includes('remarkHeaderAction'), 'Pending case keeps the secured Add Remark action');
+assert.match(app,/<Section number="04" title="Premium & payment">[\\s\\S]*?accessibilityLabel="Add Remark"[\\s\\S]*?<\\/Section>/, 'Add Remark appears inside the Premium section');
+assert.ok(app.includes("record.status_group==='pending'?<Pressable"), 'Remarks action only enabled for pending cases');
+assert.match(app,/issueSchedule\\(value,form\\)/, 'Policy start date recalculates the issuance schedule');
+assert.match(app,/issueSchedule\\(issue.startDate,nextForm\\)/, 'Changing terms or payment frequency recalculates schedule');
+assert.match(app,/dateOverrides\\.endDate/, 'Manual date overrides are retained during term changes');
+assert.match(app,/Not applicable · Single Pay/, 'Single Pay does not request PPT end date');
+assert.match(app,/Not applicable · One Time/, 'One-time payment does not request another installment');
 assert.ok(app.includes('accessibilityState={{expanded:activityExpanded}}'), 'Activity Status is expandable');
 assert.ok(app.includes('const [activityExpanded,setActivityExpanded]=useState(false)'), 'Activity Status starts collapsed');
 assert.ok(app.includes('activityExpanded?<View style={styles.activityHistory}>'), 'History appears only when expanded');
