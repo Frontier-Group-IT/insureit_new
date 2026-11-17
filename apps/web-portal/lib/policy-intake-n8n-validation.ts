@@ -1,7 +1,8 @@
 const KEYS = new Set([
   "policy_number", "insurer_name", "policy_product", "policy_start_date", "policy_end_date",
   "third_party_start_date", "third_party_end_date",
-  "insured_name", "vehicle_make", "vehicle_model", "vehicle_registration_status",
+  "insured_name", "vehicle_make", "vehicle_model", "vehicle_class", "vehicle_fuel_type",
+  "vehicle_motor_power_kw", "vehicle_capacity", "vehicle_rto_state", "vehicle_registration_status",
   "vehicle_registration_number", "vehicle_engine_number", "vehicle_chassis_number",
   "vehicle_manufacturing_year", "vehicle_rto_name", "idv", "od_premium", "tp_premium", "cpa_premium",
 ]);
