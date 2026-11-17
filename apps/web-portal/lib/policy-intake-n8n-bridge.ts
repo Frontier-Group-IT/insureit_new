@@ -7,7 +7,7 @@ const EXPECTED_N8N_ORIGIN = "https://insureit.app.n8n.cloud";
 // Approved prospective dedicated webhook hostname. A Cloudflare Tunnel,
 // working HTTPS and n8n Header Auth MUST be configured before opting in.
 // Never accept arbitrary n8n URLs from a request or environment variable.
-const SELF_HOSTED_N8N_ORIGIN = "https://n8n.insureit.in";
+const SELF_HOSTED_N8N_ORIGIN = "https://n8n.nishant.uk";
 const EXPECTED_WEBHOOK_PATH = "/webhook/insureit-policy-intake-icici-v1";
 const MAX_FILE_BYTES = 15 * 1024 * 1024;
 const TRUSTED_STORAGE_ORIGIN = "https://ilzhsfqqjyppzzvfscmh.supabase.co";
