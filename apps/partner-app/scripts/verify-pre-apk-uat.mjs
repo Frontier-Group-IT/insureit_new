@@ -150,10 +150,10 @@ if (/PartnerAnchoredDropdown|filterMenuOpen|CLAIM_FILTER_OPTIONS/.test(read('app
 
 // Renewal Work Queue uses bundled 3D page artwork while retaining functional actions.
 expectAll('app/renewals.tsx', [
-  [/PartnerAssets\.actions\.renewalsReference/, 'Renewal title uses existing 3D artwork'],
-  [/PartnerAssets\.status\.renewalDue/, 'Renewal summary uses existing 3D artwork'],
-  [/PartnerAssets\.actions\.policyChecklist/, 'Opportunity heading uses existing 3D artwork'],
-  [/leadingIconSource=\{PartnerAssets\.navigation\.search\}/, 'Renewal search opts into 3D artwork'],
+  [/PartnerAssets\.actions\.quickRenewals/, 'Renewal title uses existing 3D artwork'],
+  [/PartnerAssets\.actions\.quickRenewals/, 'Renewal summary uses existing 3D artwork'],
+  [/PartnerAssets\.actions\.quickPolicyIntake/, 'Opportunity heading uses existing 3D artwork'],
+  [/leadingIconVariant="blue3d"/, 'Renewal search opts into 3D artwork'],
   [/accessibilityLabel="Back"/, 'Back button remains functional'],
   [/accessibilityLabel="Sort renewals by due date"/, 'Due date sort remains accessible'],
   [/PartnerCaseBottomNavigation activeTab="Policies"/, 'Shared bottom navigation is unchanged'],
@@ -165,6 +165,7 @@ if (read('app/renewals.tsx').includes('accessibilityLabel="Go to Home"')) {
 }
 expectAll('components/ui/partner-search-field.tsx', [
   [/leadingIconSource\?: ImageSourcePropType/, 'Search field supports opt-in local artwork'],
+  [/leadingIconVariant\?: 'blue3d'/, 'Search field offers a bright blue raised style without affecting other screens'],
   [/leadingIconSource[\s\S]*?<Image source=\{leadingIconSource\}/, 'Search artwork is displayed only when supplied'],
   [/name="search-outline"/, 'Standard search icons remain unchanged on other pages'],
 ]);

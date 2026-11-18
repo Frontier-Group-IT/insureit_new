@@ -89,6 +89,7 @@ export function PartnerSearchField({
   autoFocus = false,
   containerStyle,
   leadingIconSource,
+  leadingIconVariant,
 }: {
   value: string;
   onChangeText: (value: string) => void;
@@ -101,6 +102,8 @@ export function PartnerSearchField({
   containerStyle?: StyleProp<ViewStyle>;
   /** Optional local 3D icon; all existing callers keep the standard search glyph. */
   leadingIconSource?: ImageSourcePropType;
+  /** Opt-in bright blue raised search artwork for compact feature screens. */
+  leadingIconVariant?: 'blue3d';
 }) {
   const [focused, setFocused] = useState(false);
   const [chosen, setChosen] = useState("");
@@ -121,11 +124,15 @@ export function PartnerSearchField({
     <View style={[styles.wrap, containerStyle, focused && styles.focused]}>
       {leadingIconSource
         ? <Image source={leadingIconSource} style={styles.leadingArtwork} resizeMode="contain" accessibilityIgnoresInvertColors />
-        : <Ionicons
-            name="search-outline"
-            size={21}
-            color={focused ? partnerTheme.colors.brand : '#3156B8'}
-          />}
+        : leadingIconVariant === 'blue3d'
+          ? <View pointerEvents="none" style={styles.raisedSearchIcon}>
+              <Ionicons name="search" size={19} color="#057CE9" />
+            </View>
+          : <Ionicons
+              name="search-outline"
+              size={21}
+              color={focused ? partnerTheme.colors.brand : '#3156B8'}
+            />}
       <View style={styles.inputShell}>
         {rotating ? (
           <PartnerRotatingSearchPlaceholder placeholders={rotatingItems} containerStyle={styles.placeholderOverlay} />
@@ -181,6 +188,7 @@ export function PartnerSearchField({
 
 const styles = StyleSheet.create({
   leadingArtwork: { width: 26, height: 26 },
+  raisedSearchIcon: { width: 29, height: 29, borderRadius: 9, backgroundColor: '#E7F6FF', borderWidth: 1, borderColor: '#A1DDFF', alignItems: 'center', justifyContent: 'center', shadowColor: '#076ACB', shadowOpacity: 0.26, shadowRadius: 3, shadowOffset: { width: 1, height: 2 }, elevation: 3 },
   suggestionList: { position: 'absolute', top: 46, left: 0, right: 0, zIndex: 300, backgroundColor: '#FFFFFF', borderColor: '#DCE5EF', borderWidth: 1, borderRadius: 11, overflow: 'hidden', elevation: 12 },
   suggestionRow: { minHeight: 38, justifyContent: 'center', paddingHorizontal: 12, borderBottomColor: '#EEF2F6', borderBottomWidth: StyleSheet.hairlineWidth },
   suggestionText: { fontSize: 11, fontWeight: '600', color: '#17365D' },
