@@ -43,6 +43,13 @@ export async function POST(request:Request){
   if(policyError||!policy||policy.created_by!==profile.id||policy.business_line!=="Motor")
     return reply({ok:false,error:"Only the employee who booked this Motor policy may attach its policy copy."},403);
   if(body.action==="prepare"){
+    // A lost client response must never attach the same selected copy twice.
+    const existing=await admin.from("policy_documents").select("id")
+      .eq("policy_id",policy.id).eq("document_type","policy_copy")
+      .eq("file_name",name).eq("file_size",size).eq("mime_type",type)
+      .limit(1).maybeSingle<{id:string}>();
+    if(existing.error)return reply({ok:false,error:"Could not check the existing policy copy."},503);
+    if(existing.data)return reply({ok:true,attached:true,document_id:existing.data.id});
     const path=policy.id+"/"+randomUUID()+"-"+safeName(name);
     const {data,error}=await admin.storage.from(BUCKET).createSignedUploadUrl(path,{upsert:false});
     if(error||!data?.token)return reply({ok:false,error:"Could not prepare the secure policy-copy upload."},503);
