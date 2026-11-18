@@ -34,6 +34,28 @@ assert(intermediaryRoot.includes('redirect('), "legacy Intermediaries root must 
 assert(intermediaryRoot.includes('"/intermediaries/partner"'), "Intermediaries root must default to Partner");
 assert(!intermediaryRoot.includes("OverviewIntermediaryRegister"), "removed Intermediaries Overview must not render");
 
+// Partner App saves applications before intermediary master materialization.
+const operationsRegister = read("app/intermediaries/intermediary-register.tsx");
+const operationsClient = read("app/intermediaries/partner-register-client.tsx");
+assert(operationsRegister.includes("getAccessibleIntermediaryApplicationIds(profile.id, profile.role)"),
+  "Pending mobile Partner applications must use existing application-level access scope");
+assert(operationsRegister.includes('mobile_partner_only: true'),
+  "Register must discover only unmaterialized mobile Partner applications");
+assert(operationsRegister.includes('application.partner_status === "active_partner"'),
+  "Active Partner records must not be incorrectly projected as onboarding");
+assert(operationsRegister.includes('alreadyLinked.has(application.id)'),
+  "Register must not duplicate applications already represented by intermediary master rows");
+assert(operationsRegister.includes('isApplicationOnly: true'),
+  "Pending application rows must never be mistaken for intermediary master records");
+assert(operationsRegister.includes('partnerStatus: "Onboarding"'),
+  "Newly submitted Partner App details must appear in the Onboarding filter");
+assert(operationsRegister.includes('canCreateLinked: false'),
+  "Application-only rows cannot create linked accounts before activation");
+assert(operationsClient.includes('!row.isApplicationOnly'),
+  "IT Super User permanent delete must exclude application-only display rows");
+assert(operationsClient.includes("row.applicationId"),
+  "Partner Register rows must preserve the authorized application review link");
+
 const requiredRoutes = [
   "app/partner/page.tsx",
   "app/partner/business/page.tsx",
