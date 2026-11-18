@@ -234,7 +234,8 @@ assert.match(screen,/styles\.referenceLifeHealthPayinRow/, 'Life and Health Pay-
 assert.match(screen,/styles\.referenceLifeHealthPayoutRow/, 'Life and Health Payout has an outlined card.');
 assert.match(screen,/referenceLifeHealthPayinRow:\{borderWidth:1,borderColor:'#DCE6F1'/, 'Pay-in border stays light blue.');
 assert.match(screen,/referenceLifeHealthPayoutRow:\{borderWidth:1,borderColor:'#E3DEF1'/, 'Payout border stays light violet.');
-assert.match(screen,/if\(isMotor\)\{await completeBooking\(\);return;\}/, 'Motor retains authorized native booking.');
+assert.match(screen,/if\(isMotor\)\{setMotorCopyDialogOpen\(true\);return;\}/, 'Motor now requires native copy confirmation before authorized booking.');
+assert.match(screen,/await completeBooking\(\)/, 'Confirmed Motor flow retains authorized native booking.');
 assert.match(screen,/createPartnerPolicyIntakeBridgeUrl\(id,false,null\)/, 'Non Motor retains secure Operations handoff for policy issuance.');
 assert.match(screen,/Linking.openURL\(url\)/, 'Handoff opens the existing website booking flow.');
 assert.doesNotMatch(screen,/pendingBusinessLine/, 'Policy type changes immediately without confirmation state.');
