@@ -1,3 +1,4 @@
+import { supabase } from '@/lib/supabase';
 import { getCurrentSession } from '@/lib/partner-session';
 
 const portal = (process.env.EXPO_PUBLIC_PORTAL_URL || 'https://portal.insureit.in').replace(/\/$/, '');
@@ -63,6 +64,36 @@ export async function bookNativePolicyOnboarding(
   return request<{booking:NativePolicyBookingResult}>({
     action:'book',intake_id:intakeId,revision,resolution,date_approval_id:dateApprovalId??null,
   });
+}
+
+export type NativeMotorPolicyCopy = {uri:string;name:string;size:number;mimeType:string};
+/** Upload directly into private Storage using a server-issued, scoped, one-time token.
+ * Never send the 15 MB policy file through Vercel's request-body limit. */
+export async function attachNewNativeMotorPolicyCopy(policyId:string,file:NativeMotorPolicyCopy){
+  const session=await getCurrentSession();
+  if(!session?.access_token)throw new Error('Partner session expired. Sign in again.');
+  const endpoint=portal+'/api/partner/policy-intakes/native-onboarding/policy-copy';
+  const send=async(body:Record<string,unknown>)=>{
+    const response=await fetch(endpoint,{method:'POST',cache:'no-store',
+      headers:{Authorization:'Bearer '+session.access_token,'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const data=await response.json().catch(()=>null) as {ok?:boolean;error?:string;path?:string;token?:string;document_id?:string}|null;
+    if(!response.ok||!data?.ok)throw new Error(data?.error||'Policy-copy service is unavailable.');
+    return data;
+  };
+  const metadata={policy_id:policyId,name:file.name,size:file.size,type:file.mimeType};
+  const prepared=await send({action:'prepare',...metadata});
+  if(!prepared.path||!prepared.token)throw new Error('Secure upload authorization is incomplete.');
+  let bytes:Blob;
+  try{
+    const localFile=await fetch(file.uri);
+    if(!localFile.ok)throw new Error('File inaccessible');
+    bytes=await localFile.blob();
+  }catch{throw new Error('Selected policy copy could not be read. Re-select the file, then retry the upload.');}
+  if(bytes.size!==file.size)throw new Error('Selected policy copy changed. Re-select the file before uploading.');
+  const {error:storageError}=await supabase.storage.from('policy-documents')
+    .uploadToSignedUrl(prepared.path,prepared.token,bytes,{contentType:file.mimeType,upsert:false});
+  if(storageError)throw new Error('Policy was created but policy-copy upload failed: '+storageError.message+'. Retry without creating another policy.');
+  return send({action:'finalize',...metadata,path:prepared.path});
 }
 
 export async function createNativeLifeHealthCase(intakeId:string,revision:number){
