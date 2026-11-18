@@ -13,6 +13,7 @@ import { PermanentDeleteButton } from "@/components/permanent-delete-button";
 
 export type PartnerRegisterRow = {
   id: string;
+  isApplicationOnly?: boolean;
   applicationId: string;
   partnerRecordId: string | null;
   displayName: string;
@@ -342,7 +343,7 @@ function PartnerDeletePanel({ rows, embedded = false }: { rows: PartnerRegisterR
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState("");
-  const choices = useMemo(() => rows.filter((row) => [row.displayName, row.partnerId, row.mobile, row.id].join(" ").toLowerCase().includes(query.trim().toLowerCase())), [rows, query]);
+  const choices = useMemo(() => rows.filter((row) => !row.isApplicationOnly).filter((row) => [row.displayName, row.partnerId, row.mobile, row.id].join(" ").toLowerCase().includes(query.trim().toLowerCase())), [rows, query]);
   const selected = rows.find((row) => row.id === selectedId) ?? null;
   return <section className={embedded ? "border-b border-red-100 bg-gradient-to-r from-red-50 via-white to-amber-50" : "overflow-hidden rounded-2xl border border-red-200 bg-gradient-to-r from-red-50 via-white to-amber-50 shadow-sm"}>
     <button type="button" onClick={() => setOpen((value) => !value)} aria-expanded={open} className="flex w-full items-center gap-3 border-b border-red-100 px-5 py-3 text-left">
