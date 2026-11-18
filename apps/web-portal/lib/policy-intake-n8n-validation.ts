@@ -41,6 +41,9 @@ export type N8nVerifiedPremiumBreakdown = {
   exactIgst: number;
   tax: number;
   gross: number;
+  /** OD-only: original PDF subtotal and No Claim Bonus/OD deductions. */
+  odSubtotal?: number;
+  odDeductions?: number;
 };
 export type N8nOcrBridgeResponse = {
   ok: true; fields: N8nOcrField[]; warnings: string[];
@@ -126,8 +129,8 @@ export function validateN8nPolicyIntakeResponse(
   }
   const policyNumber = fieldValue("policy_number");
   const expectedNumber = isOd
-    ? /^3005\/O\/\d{7,12}\/\d{2}\/\d{3}$/
-    : /^3005\/\d{7,12}\/\d{2}\/\d{3}$/;
+    ? /^3005\/O\/\d{7,12}\/\d{2}\/[A-Z0-9]{3}$/
+    : /^3005\/\d{7,12}\/\d{2}\/[A-Z0-9]{3}$/;
   if (!expectedNumber.test(policyNumber)) throw new Error("n8n_wrong_policy_product");
   if (isOd && (!fieldValue("third_party_policy_number") || !fieldValue("third_party_insurer_name")
       || fieldValue("policy_product") !== "Stand-Alone Own Damage")) {
@@ -166,9 +169,13 @@ export function validateN8nPolicyIntakeResponse(
   });
   const addOns = odAddons.reduce((total, addon) => total + addon.amount, 0);
   const cents = (number: number) => Math.round(number * 100);
+  let odSubtotal: number | undefined;
+  let odDeductions: number | undefined;
   if (isOd) {
     const subtotal = exactMoney(premium.printed_od_subtotal);
     const deduction = exactMoney(premium.od_deductions);
+    odSubtotal = subtotal;
+    odDeductions = deduction;
     if (cents(basicOd + addOns) !== cents(subtotal)
         || cents(subtotal - deduction) !== cents(od)
         || tp !== 0 || cpa !== 0 || liability !== 0 || cents(net) !== cents(od)
@@ -198,6 +205,7 @@ export function validateN8nPolicyIntakeResponse(
     parserVersion: String(value.parser_version),
     checksPassed: requiredChecks.size,
     premium: { basicOd, odAddons, totalOd: od, basicTp: tp, cpa, liability,
-      net, exactIgst: igst, tax, gross } };
+      net, exactIgst: igst, tax, gross,
+      ...(isOd ? { odSubtotal, odDeductions } : {}) } };
 }
 

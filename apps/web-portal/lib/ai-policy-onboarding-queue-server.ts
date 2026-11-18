@@ -126,7 +126,7 @@ export async function processAiQueueBatch(options?: {preferredIntakeId?:string;m
     const wave=claimed.slice(offset,offset+MAX_CONCURRENT);
     await Promise.all(wave.map(async item=>{
       try {
-        await processClaim(item);
+        await processClaim(item,parserRevision);
         processed++;
       } catch {
         failed++;
@@ -160,7 +160,7 @@ async function finishClaim(item: Claimed, update: QueueUpdate) {
   return Boolean(data?.intake_id);
 }
 
-async function processClaim(item: Claimed) {
+async function processClaim(item: Claimed, parserRevision: string) {
   const admin=createSupabaseAdminClient();
   const {data:intake,error}=await admin.from("policy_intake_requests")
     .select("id,intake_number,created_at,policy_type,status,ocr_status,ocr_fields,customer_mobile,matched_customer_id,assigned_to_profile_id")
@@ -194,8 +194,8 @@ async function processClaim(item: Claimed) {
     }
   }
 
-  // Only a verified ICICI 3005 Motor PDF is trained. Never run an
-  // experimental parser on explicitly non-Motor business lines.
+  // Only independently verified ICICI 3005 Bundled or 3005/O OD Motor PDFs
+  // are trained. Never run an experimental parser on Non-Motor documents.
   if (intake.policy_type!==null && intake.policy_type!=="motor") {
     await finishClaim(item,{
       state:"unsupported",exception_codes:["unsupported_layout"],field_keys:[],
@@ -270,18 +270,44 @@ async function processClaim(item: Claimed) {
   // Copy ONLY strictly validated n8n OCR into an empty, unchanged Intake.
   // An atomic SQL compare-and-set checks current document, lease, empty OCR,
   // status, and absence of saved draft. This never books a policy.
-  if(extraction.preview.checksPassed===13 && extraction.preview.warnings.length===0){
-    const synced=await admin.rpc("sync_verified_ai_intake_ocr_v1",{
+  if(extraction.preview.checksPassed===13 && extraction.preview.warnings.length===0
+    && intake.status==="processing"
+    && ["pending","processing","failed"].includes(intake.ocr_status)
+    && (intake.ocr_fields??[]).length===0
+    && !draft) {
+    // v1 hardcoded the Bundled parser and compared a base revision against
+    // the claimed suffixed revision. v2 binds BOTH the actual parser identity
+    // and the exact queue lease/revision, and refuses to rewrite a draft.
+    const synced=await admin.rpc("sync_verified_ai_intake_ocr_v2",{
       p_intake_id:intake.id,p_document_id:item.document_id,p_lease_id:item.lease_id,
-      p_parser_revision:(process.env.INSUREIT_AI_QUEUE_PARSER_REVISION||"bridge-v1").trim(),
+      p_parser_revision:parserRevision,
+      p_parser_id:extraction.preview.parserId,
+      p_parser_version:extraction.preview.parserVersion,
       p_verified_fields:extraction.preview.fields,p_checks_passed:13,
     });
     if(synced.error)throw new Error("Canonical verified OCR synchronization unavailable");
+    if(synced.data!==true){
+      // Never label unsaved OCR as verified when the transactional guard
+      // refused it. Keep the PDF/draft untouched and require fresh review.
+      await finishClaim(item,{
+        state:"exception",exception_codes:["draft_conflict"],field_keys:[],
+        parser_id:extraction.preview.parserId,checks_passed:13,
+        extraction_fingerprint:extraction.preview.fingerprint,
+        last_error_code:"verified_ocr_sync_guard_refused",
+        processed_at:null,retry_after:retryAfter(1440),
+      });
+      return;
+    }
   }
   const model=normalizedName(values.get("vehicle_model")??"");
   const rawMake=normalizedName(values.get("vehicle_make")??"");
-  const recognizedChetak=/^(?:C|CHETAK[ -]+)(2501|3001|3501|3502|3503)$/.test(model)
-    && rawMake==="CHETAK";
+  // CHETAK is Bajaj's EV product marque, including BLUE 2903 and
+  // 2413 PREMIUM. Independently verified class + fuel allow OEM matching;
+  // missing CC/KW still blocks mandatory-field eligibility, never guessed.
+  const recognizedChetak=rawMake==="CHETAK"
+    && model.length>=2 && model.length<=100
+    && normalizedName(values.get("vehicle_class")??"")==="TWO WHEELER"
+    && normalizedName(values.get("vehicle_fuel_type")??"")==="ELECTRIC";
   const make=recognizedChetak?"BAJAJ":rawMake;
   const enabledMakes=new Set((brands??[]).map(x=>normalizedName(x.brand_name)));
   const matchedManufacturer=enabledMakes.has(make)
@@ -314,7 +340,7 @@ async function processClaim(item: Claimed) {
     policyType:intake.policy_type??"motor", intakeStatus:intake.status,
     isDuplicate, // Derived from the canonical registered-policy / earlier-Intake detector.
     hasCurrentDocument:true,documentStillCurrent:true,
-    parserId:"icici_3005_n8n_native_pdf",
+    parserId:extraction.preview.parserId,
     parserChecksPassed:extraction.preview.checksPassed,
     extractionState:"success" as const,
     extractionWarnings:extraction.preview.warnings,
@@ -342,7 +368,7 @@ async function processClaim(item: Claimed) {
     :codes.length?"exception":"verified";
   const completed=await finishClaim(item,{
     state, exception_codes:codes,field_keys:extraction.preview.fields.map(f=>f.key),
-    parser_id:"icici_3005_n8n_native_pdf",
+    parser_id:extraction.preview.parserId,
     checks_passed:extraction.preview.checksPassed,
     extraction_fingerprint:extraction.preview.fingerprint,
     last_error_code:null,processed_at:new Date().toISOString(),

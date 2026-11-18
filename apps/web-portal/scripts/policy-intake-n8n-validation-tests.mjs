@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { validateN8nPolicyIntakeResponse } from "../lib/policy-intake-n8n-validation.ts";
+import { mapVerifiedN8nMotorPremium } from "../lib/policy-n8n-onboarding-premium.ts";
+import { buildPolicyOcrOnboardingUpdate } from "../lib/policy-ocr-onboarding-apply.ts";
 
 const ids = {intakeId:"00000000-0000-4000-8000-000000000001",documentId:"00000000-0000-4000-8000-000000000002",requestId:"00000000-0000-4000-8000-000000000003"};
 const checks = Object.fromEntries([
@@ -168,4 +170,51 @@ test("rejects OD NCB mismatch, charged TP, missing TP reference, and wrong polic
   const x=odFixture();bad(x);
   assert.throws(()=>validateN8nPolicyIntakeResponse(x,ids));
  }
+});
+
+test("ICICI 3005/O: preserve printed NCB and reconcile exactly to canonical net OD", () => {
+ const premium=validateN8nPolicyIntakeResponse(odFixture(),ids).premium;
+ assert.equal(premium.odSubtotal,3129);
+ assert.equal(premium.odDeductions,778);
+ const fields=mapVerifiedN8nMotorPremium(premium);
+ assert.deepEqual(fields,{od:"1444",addOnPremium:"907",tp:"0",cpa:"0",cpaOpted:"No"});
+ assert.equal(Number(fields.od)+Number(fields.addOnPremium),2351);
+ const bundled=mapVerifiedN8nMotorPremium(validateN8nPolicyIntakeResponse(fresh(),ids).premium);
+ assert.equal(bundled.od,"1758");
+ assert.equal(bundled.tp,"3273");
+ assert.equal(bundled.cpa,"575");
+});
+test("OD safely refuses a booking representation when addons exceed total OD", () => {
+ const premium=validateN8nPolicyIntakeResponse(odFixture(),ids).premium;
+ const impossible={...premium,basicOd:100,odSubtotal:1007,odDeductions:999,totalOd:8,net:8,
+   odAddons:[{name:"Zero Depreciation",amount:907}]};
+ assert.throws(()=>mapVerifiedN8nMotorPremium(impossible),/n8n_motor_premium_handoff_unreconciled/);
+});
+test("ICICI 3005/O amendment B00 remains validated by all 13 checks",()=>{
+ const x=odFixture();
+ x.fields.find(f=>f.key==="policy_number").value="3005/O/461963798/00/B00";
+ assert.equal(validateN8nPolicyIntakeResponse(x,ids).checksPassed,13);
+});
+test("CHETAK model variants map to Bajaj only with verified EV motor evidence",()=>{
+ const current=Object.fromEntries([
+  "registrationNo","vehicleClass","make","model","fuelType","manufacturingYear","capacity",
+  "chassisNo","engineNo","rtoState","rtoName","policyProduct","idv","od","tp","cpa",
+  "policyNo","insurerId","validFrom","validUpto"].map(k=>[k,""]));
+ const fields=[
+  ["vehicle_class","Two Wheeler"],["vehicle_make","CHETAK"],["vehicle_model","BLUE 2903"],
+  ["vehicle_fuel_type","Electric"],["vehicle_motor_power_kw","2.8"]
+ ].map(([key,value])=>({key,value,label:key}));
+ const opts={mode:"create",registrationMode:"registered",current,fields,
+   manufacturers:["Bajaj","Hero"],insurers:[],rcVerified:false};
+ const good=buildPolicyOcrOnboardingUpdate(opts);
+ assert.equal(good.next.make,"Bajaj");
+ assert.equal(good.next.model,"BLUE 2903");
+ assert.equal(good.next.fuelType,"Electric");
+ assert.equal(good.next.capacity,"2.8");
+ const premium2413=buildPolicyOcrOnboardingUpdate({...opts,fields:fields.map(f=>
+   f.key==="vehicle_model"?{...f,value:"CHETAK 2413 PREMIUM"}:{...f})});
+ assert.equal(premium2413.next.make,"Bajaj");
+ const noEvidence=buildPolicyOcrOnboardingUpdate({...opts,
+  fields:fields.filter(f=>f.key!=="vehicle_fuel_type")});
+ assert.notEqual(noEvidence.next.make,"Bajaj");
 });

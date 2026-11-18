@@ -79,7 +79,7 @@ export function assessAiPolicyIntake(input: AiPolicyEvidence): AiAssessment {
       exceptions.push({ code, title, resolution, blocking: true });
     }
   };
-  if (input.policyType !== "motor" || input.parserId !== "icici_3005_n8n_native_pdf") {
+  if (input.policyType !== "motor" || !["icici_3005_n8n_native_pdf", "icici_3005_od_n8n_native_pdf"].includes(input.parserId ?? "")) {
     add("unsupported_layout", "Parser not trained for this policy", "train_parser");
   }
   if (!input.hasCurrentDocument) add("document_missing", "Current policy PDF missing", "edit_draft");

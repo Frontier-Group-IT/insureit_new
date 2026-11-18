@@ -30,6 +30,8 @@ export type SemiAutoN8nPreview = {
   documentId: string;
   fingerprint: string;
   fields: N8nOcrField[];
+  parserId: string;
+  parserVersion: string;
   changedFieldCount: number;
   changedFields: SemiAutoN8nChangedField[];
   premium: N8nVerifiedPremiumBreakdown;
@@ -211,6 +213,8 @@ export async function previewSemiAutoN8nExtraction(id: string): Promise<SemiAuto
     documentId: current.document.id,
     fingerprint: fingerprint(id, current.document.id, extraction.fields, extraction.warnings, extraction.premium),
     fields: extraction.fields,
+    parserId: extraction.parserId,
+    parserVersion: extraction.parserVersion,
     changedFieldCount,
     changedFields,
     premium: extraction.premium,
@@ -286,8 +290,8 @@ export async function applySemiAutoN8nExtraction(
     .update({
       status: "ready_for_review", ocr_status: "completed",
       ocr_fields: parsed.preview.fields,
-      ocr_parser_id: "icici_3005_n8n_native_pdf",
-      ocr_parser_version: "bridge-v1",
+      ocr_parser_id: parsed.preview.parserId,
+      ocr_parser_version: parsed.preview.parserVersion,
       ocr_warnings: parsed.preview.warnings,
       attention_reason: null,
     })
