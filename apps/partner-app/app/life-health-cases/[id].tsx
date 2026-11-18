@@ -638,7 +638,7 @@ export default function LifeHealthCaseDetailScreen(){
              <Text style={styles.cancelText}>Cancel</Text>
            </Pressable>
            <Pressable accessibilityRole="button" disabled={rejectBusy||!rejectReason.trim()}
-             onPress={()=>{Keyboard.dismiss();void submitRejection();}}
+             onPress={()=>void submitRejection()}
              style={[styles.saveButton,rejectReason.trim()&& !rejectBusy?styles.confirmRejectButtonActive:styles.confirmRejectButton]}>
              <Text style={styles.saveText}>{rejectBusy?'Rejecting…':'Confirm Reject'}</Text>
            </Pressable>
@@ -714,7 +714,7 @@ export default function LifeHealthCaseDetailScreen(){
                <Text style={styles.cancelText}>Cancel</Text>
              </Pressable>
              <Pressable accessibilityRole="button" disabled={remarkSaving||!remarkDraft.trim()}
-               onPress={()=>{Keyboard.dismiss();void submitRemark();}}
+               onPress={()=>void submitRemark()}
                style={[styles.saveButton,(remarkSaving||!remarkDraft.trim())&&{opacity:0.5}]}>
                {remarkSaving?<ActivityIndicator color="#FFFFFF" size="small"/>:<Ionicons name="checkmark" size={17} color="#FFFFFF"/>}
                <Text style={styles.saveText}>{remarkSaving?'Saving…':'Save Remark'}</Text>
