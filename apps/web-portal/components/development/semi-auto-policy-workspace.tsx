@@ -948,6 +948,11 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
                 </div>
               ))}
             </div>
+            {exceptionRow.ai_diagnostic_code ? (
+              <p className="mt-2 rounded-lg border border-[#e6dfd0] bg-[#fffcf4] p-2 text-[10px] font-medium text-[#79531e]">
+                Parser validation reason: <code>{exceptionRow.ai_diagnostic_code}</code>. A response failing verification is not necessarily a new/untrained product. Review the matching local n8n execution; no policy is booked.
+              </p>
+            ):null}
             {primaryN8n && queueActive && reprocessCandidates.some(candidate=>candidate.id===exceptionRow.id)
                && !reprocessAttemptedIds.includes(exceptionRow.id) ? (
                <div className="mt-3 rounded-lg border border-[#cbd9ea] bg-[#f5f9ff] p-3">
