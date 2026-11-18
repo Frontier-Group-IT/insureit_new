@@ -279,14 +279,16 @@ expectAll('app/customer/[id].tsx', [
 ]);
 
 // Renewal Work Queue: flat edge-to-edge summary directly beneath the header.
+checks += 1;
+if (read('app/renewals.tsx').includes('accessibilityLabel="Go to Home"')) failures.push('Renewal Work Queue must not retain a redundant header Home action');
 expectAll('app/renewals.tsx', [
   [/summaryPanel: \{ marginTop: 0, marginHorizontal: -partnerTheme\.spacing\.lg, backgroundColor: '#FFFFFF' \}/, 'renewal summary has no card border, radius or inset margin'],
   [/referenceHeader: \{ minHeight: 64, marginHorizontal: -partnerTheme\.spacing\.lg, marginBottom: 0/, 'summary attaches to the navy header without a gap'],
   [/summaryDivider: \{ height: StyleSheet\.hairlineWidth/, 'a thin divider separates summary and tabs'],
   [/<Text style=\{styles\.summaryCount\} numberOfLines=\{1\}>POLICIES \{selectedSummary\.count\}<\/Text>/, 'count is plain text in POLICIES N order without a badge'],
   [/summaryCount: \{ color: '#172A48', fontSize: 11/, 'policy count is styled as plain text'],
-  [/canPartnerAccess\(context, 'view_dashboard'\)/, 'header Home shortcut retains dashboard permission gating'],
-  [/accessibilityLabel="Go to Home" onPress=\{\(\) => router\.navigate\('\/\(tabs\)' as never\)\}/, 'header Home button navigates to the Partner Home tab'],
+  [/PartnerAssets\\.actions\\.renewalsReference/, 'header uses the bundled renewal artwork without a redundant Home shortcut'],
+  [/PartnerAssets\\.status\\.renewalDue/, 'summary displays the bundled 3D renewal icon'],
   [/bottomNavigation=\{<PartnerCaseBottomNavigation activeTab="Policies" \/>\}/, 'existing bottom Home navigation remains available'],
   [/selectedSummary\.premium/, 'existing renewal premium calculation remains'],
   [/onPress=\{\(\) => selectBucket\(mode === 'expired' \? 'overdue' : 'all'\)\}/, 'summary remains interactive with its existing filtering'],
