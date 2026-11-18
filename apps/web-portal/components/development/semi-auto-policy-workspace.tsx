@@ -853,26 +853,27 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
           </>
         )}
       </section>
-      {reprocessConfirmOpen ? (
-        <div className="fixed inset-0 z-[180] flex items-center justify-center bg-[#101d37]/65 px-4 py-6" role="presentation">
+      {reprocessConfirmOpen && typeof document !== "undefined" ? createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center overflow-y-auto bg-[#101d37]/75 px-3 py-4 backdrop-blur-[2px]" role="presentation">
           <div role="alertdialog" aria-modal="true" aria-labelledby="bulk-reprocess-title"
             className="w-full max-w-[510px] rounded-2xl border border-[#d6e2f1] bg-white p-5 shadow-[0_24px_80px_rgba(12,28,52,.3)]">
-            <h3 id="bulk-reprocess-title" className="text-[15px] font-bold text-[#17365d]">Reprocess previously checked policies?</h3>
-            <p className="mt-3 text-[11px] leading-5 text-[#4f627c]">
-              Queue up to {reprocessBatch.length} open Motor Intakes with exceptions or failed extraction for fresh n8n verification.
-              No customer, vehicle or policy will be created by this action. Completed policies, registered policies and duplicates are excluded.
-              Previous review holds are reconsidered only after new verification; booking still requires a separate confirmation.
-              Check ambiguous prior booking results in Policy Register before selecting this operation.
+            <div className="flex items-center gap-2"><span aria-hidden="true" className="h-2 w-2 rounded-full bg-[#11a6bf]"/><p className="text-[9px] font-bold uppercase tracking-[.14em] text-[#36849b]">AI RECOVERY / REVIEW ONLY</p></div>
+            <h3 id="bulk-reprocess-title" className="mt-2 text-[17px] font-bold text-[#17365d]">Reprocess all previous Intakes?</h3>
+            <p className="mt-2 text-[11px] leading-5 text-[#4f627c]">
+              This will queue <strong>{reprocessBatch.length} eligible open Motor Intakes</strong> for fresh n8n PDF verification.
+              No arbitrary 10-policy limit applies; requests are submitted one at a time and progress is visible.
+              Completed, registered and duplicate policies remain protected. This does not create a customer, vehicle or policy.
+              Verify uncertain prior bookings in Policy Register before retrying.
             </p>
             <div className="mt-5 flex justify-end gap-2">
-              <button type="button" onClick={()=>setReprocessConfirmOpen(false)}
+              <button type="button" autoFocus onClick={()=>setReprocessConfirmOpen(false)}
                 className="min-h-9 rounded-lg border border-[#cbd6e5] px-4 text-[11px] font-semibold text-[#38516e]">Cancel</button>
               <button type="button" onClick={()=>{void runConfirmedReprocess();}}
-                className="min-h-9 rounded-lg bg-[#174b83] px-4 text-[11px] font-bold text-white">Queue Reprocess Batch</button>
+                className="min-h-9 rounded-lg bg-[#174b83] px-4 text-[11px] font-bold text-white">Queue All {reprocessBatch.length}</button>
             </div>
           </div>
         </div>
-      ) : null}
+      , document.body) : null}
       {bulkConfirmOpen ? (
         <div className="fixed inset-0 z-[180] flex items-center justify-center bg-[#101d37]/65 px-4 py-6" role="presentation">
           <div role="alertdialog" aria-modal="true" aria-labelledby="bulk-convert-title"
