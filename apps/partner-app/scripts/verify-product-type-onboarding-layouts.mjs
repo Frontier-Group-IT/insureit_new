@@ -230,10 +230,10 @@ assert.match(screen,/productType==='Life'\|\|productType==='Health'/, 'Life and 
 assert.match(screen,/createNativeLifeHealthCase\(id,revision\)/, 'Life and Health perform authorized case creation.');
 assert.match(api,/body.action==="create_life_health"/, 'Native creation is limited to a separate authorized endpoint.');
 assert.match(api,/\["Insurance company",values.insurerId\]/, 'Life and Health selected insurer comes from product-specific draft.');
-assert.match(screen,/styles\.referenceLifeHealthPayinRow/, 'Life and Health Pay-in has an outlined card.');
+assert.match(screen,/styles\.referenceLifeHealthPayinRow/, 'Life and Health Pay-in remains a distinct, flat row.');
 assert.match(screen,/styles\.referenceLifeHealthPayoutRow/, 'Life and Health Payout has an outlined card.');
-assert.match(screen,/referenceLifeHealthPayinRow:\{borderWidth:1,borderColor:'#DCE6F1'/, 'Pay-in border stays light blue.');
-assert.match(screen,/referenceLifeHealthPayoutRow:\{borderWidth:1,borderColor:'#E3DEF1'/, 'Payout border stays light violet.');
+assert.match(screen,/referenceLifeHealthPayinRow:\{marginTop:2\}/, 'Life/Health Pay-in has no nested card border.');
+assert.match(screen,/referenceLifeHealthPayoutRow:\{marginTop:2,borderBottomWidth:0\}/, 'Life/Health Payout has no nested card border.');
 assert.match(screen,/if\(isMotor\)\{setMotorCopyDialogOpen\(true\);return;\}/, 'Motor now requires native copy confirmation before authorized booking.');
 assert.match(screen,/await completeBooking\(\)/, 'Confirmed Motor flow retains authorized native booking.');
 assert.match(screen,/createPartnerPolicyIntakeBridgeUrl\(id,false,null\)/, 'Non Motor retains secure Operations handoff for policy issuance.');
@@ -249,6 +249,15 @@ assert.match(screen,/verifiedSource\?\.rmCode/, 'RM ID comes from the matched so
 assert.match(screen,/verifiedSource\?\.mobile/, 'Lead source phone comes from the matched source master.');
 assert.match(screen,/name="call-outline"/, 'Use a call icon instead of a text telephone glyph.');
 assert.doesNotMatch(screen,/Source Mobile ·|RM Mobile ·|RM ID ·/, 'No duplicate verbose metadata labels.');
+// All Motor, Life, Health and Non-Motor onboarding sections share one card shell.
+assert.match(screen,/section:\{backgroundColor:'#FFFFFF',borderWidth:1,borderColor:'#DFE6F0'/,'One main card per onboarding section remains');
+assert.match(screen,/referenceCommercial:\{marginHorizontal:14,marginBottom:13,borderTopWidth:1/,'Commercial summary uses a simple divider instead of an inset card');
+assert.match(screen,/referenceCard:\{minHeight:60,marginHorizontal:0,marginBottom:0,[^\n]*borderBottomWidth:StyleSheet.hairlineWidth/,'Motor pay-in and payout use flat rows');
+assert.match(screen,/referencePayinCard:\{\},referencePayoutCard:\{borderBottomWidth:0\}/,'No nested Motor commercial cards');
+assert.match(screen,/nonMotorDocumentRow:\{[^\n]*borderBottomWidth:StyleSheet.hairlineWidth/,'Document rows use dividers without inner cards');
+assert.match(screen,/remarkEntry:\{borderBottomWidth:StyleSheet.hairlineWidth/,'Remarks use simple rows without individual cards');
+assert.match(screen,/nonMotorCustomerChoice:\{[^\n]*borderBottomWidth:StyleSheet.hairlineWidth/,'Non-Motor customer results do not nest cards');
+assert.match(screen,/referenceCommercialRow:\{[^\n]*borderBottomWidth:StyleSheet.hairlineWidth/,'Life/Health/Non-Motor payin/payout use flat rows');
 assert.match(screen,/const sourceSection=\(\)=> <View style=\{\[styles.section,styles.firstSection\]\}>/, 'First onboarding section uses its own header clearance.');
 assert.match(screen,/firstSection:\{marginTop:14\}/, 'Keep a 14px gap between the navy header and Section 01.');
 assert.doesNotMatch(screen,/sourceMonth|Month ·/, 'Do not display a derived Month row beneath the issuance date.');
