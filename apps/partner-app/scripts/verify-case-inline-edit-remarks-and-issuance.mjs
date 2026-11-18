@@ -2,6 +2,14 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 const read=p=>readFileSync(p,'utf8');
 const app=read('apps/partner-app/app/life-health-cases/[id].tsx');
+assert.ok(app.includes("const CaseNormalWeightContext = createContext(false)"), 'Case detail uses scoped typography context');
+assert.ok(app.includes("record?.status_group === 'pending' || record?.status_group === 'rejected'"), 'Normal typography applies to pending and rejected only');
+assert.ok(app.includes("return <CaseNormalWeightContext.Provider value={useNormalCaseFont}><PartnerScreen title=\"Case Details\""), 'Whole Case Details screen including dialogs uses normal typography');
+assert.ok(app.includes('style={[props.style, normal && normalCaseText]}'), 'Existing text styles are overridden with normal weight when required');
+assert.ok(app.includes("const normalCaseText = { fontWeight: '400' as const }"), 'Pending and rejected text uses true normal font weight');
+assert.ok(app.includes('Text as NativeText, TextInput as NativeTextInput'), 'Both text and editable inputs use scoped typography wrappers');
+assert.ok(app.includes('</PartnerScreen></CaseNormalWeightContext.Provider>'), 'Typography context does not leak into other screens');
+
 const client=read('apps/partner-app/lib/life-health-cases.ts');
 const api=read('apps/web-portal/app/api/partner/life-health-cases/route.ts');
 const action=read('apps/web-portal/app/policies/life-health-policy-actions.ts');
