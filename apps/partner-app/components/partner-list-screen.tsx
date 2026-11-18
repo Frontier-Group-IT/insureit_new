@@ -25,6 +25,7 @@ export function PartnerListScreen<T>({
   action,
   topBar,
   navyStatusBar = false,
+  whiteCanvas = false,
   bottomNavigation,
   data,
   renderItem,
@@ -46,6 +47,8 @@ export function PartnerListScreen<T>({
   topBar?: ReactNode;
   /** Opt-in navy status/safe area for stack screens without changing other lists. */
   navyStatusBar?: boolean;
+  /** White scrolling canvas for screens with an edge-to-edge white content area. */
+  whiteCanvas?: boolean;
   /** Fixed navigation below the scrollable list, outside the FlatList. */
   bottomNavigation?: ReactNode;
   data: readonly T[];
@@ -67,7 +70,7 @@ export function PartnerListScreen<T>({
     <View style={[styles.screen, navyStatusBar && styles.navyStatusArea]}>
     <SafeAreaView style={[styles.safeArea, navyStatusBar && styles.navyStatusArea]} edges={['top']}>
       <FlatList
-        style={styles.listCanvas}
+        style={[styles.listCanvas, whiteCanvas && styles.whiteCanvas]}
         data={data}
         renderItem={renderItem}
         keyExtractor={keyExtractor}
@@ -113,6 +116,7 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: partnerTheme.colors.canvas },
   navyStatusArea: { backgroundColor: '#071E49' },
   listCanvas: { backgroundColor: partnerTheme.colors.canvas },
+  whiteCanvas: { backgroundColor: '#FFFFFF' },
   bottomNavigation: { backgroundColor: '#071E49' },
   content: {
     paddingHorizontal: partnerTheme.spacing.lg,

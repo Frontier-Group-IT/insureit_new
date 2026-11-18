@@ -253,6 +253,7 @@ export default function RenewalsScreen() {
       onBack={() => router.back()}
       showArtwork={false}
       navyStatusBar
+      whiteCanvas
       bottomNavigation={<PartnerCaseBottomNavigation activeTab="Policies" />}
       topBar={<View style={styles.referenceHeader}><Ionicons name="arrow-back" size={21} color="#FFFFFF" onPress={() => router.back()} /><Ionicons name="document-text-outline" size={23} color="#FFFFFF" /><Text style={styles.referenceTitle}>Renewal Work Queue</Text></View>}
       data={sortedRows}

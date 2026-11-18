@@ -596,3 +596,13 @@ for (const item of ['partner_app_commercial_scope()', 'partner_branch_authorized
 
 requireText(policies, "value.includes('non motor')", 'Non Motor category must not fall into Motor substring matching');
 requireText(migration, "ilike '%non motor%'", 'Server-side Non Motor category must match the card classifier');
+
+
+// Renewal Work Queue uses a full-white canvas while other list screens retain their defaults.
+const renewalScreen = read('app/renewals.tsx');
+const sharedListScreen = read('components/partner-list-screen.tsx');
+requireText(renewalScreen, 'whiteCanvas', 'Renewal Work Queue must opt in to white page background');
+requireText(sharedListScreen, 'whiteCanvas = false', 'White canvas must not affect other Partner list screens');
+requireText(sharedListScreen, 'whiteCanvas && styles.whiteCanvas', 'Only opted-in lists should render white canvas');
+requireText(sharedListScreen, "whiteCanvas: { backgroundColor: '#FFFFFF' }", 'White canvas must match Policy Details white');
+requireText(renewalScreen, 'navyStatusBar', 'Renewal Work Queue must retain its navy header and status bar');
