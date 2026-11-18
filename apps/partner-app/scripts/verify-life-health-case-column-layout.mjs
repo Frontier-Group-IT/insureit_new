@@ -36,17 +36,20 @@ assert.doesNotMatch(screen,/function Item\(/,'Old label-value stacking is remove
 assert.doesNotMatch(screen,/uploadLifeHealthCaseDocument|convertLifeHealthCaseToPolicy|deleteLifeHealthCaseDocument\(/,'No direct unauthenticated web server-action calls');
 assert.doesNotMatch(screen,/<Section number="07" title="Activity status & remarks">/,'Activity Status heading is removed');
 assert.match(screen,/styles\.activityCard/,'Activity Status and Remarks retain tabs without numbered header');
-for(const title of ['Cancel case edits','Reject case','Save Case Details','Create Policy']){
+for(const title of ['Edit case details','Cancel editing case','Reject case','Save Case Details','Create Policy']){
   assert.ok(screen.includes('accessibilityLabel="'+title+'"'),'Missing action: '+title);
 }
 const actionStart=screen.indexOf("record.status_group==='pending'?<View style={styles.caseActions}>");
 const actionBar=screen.slice(actionStart,screen.indexOf('</View>:null}',actionStart));
 assert.ok(actionStart>0,'Pending case action bar exists');
 const reject=actionBar.indexOf('accessibilityLabel="Reject case"');
-const cancel=actionBar.indexOf('accessibilityLabel="Cancel case edits"');
+const cancel=actionBar.indexOf('accessibilityLabel="Cancel editing case"');
 const save=actionBar.indexOf('accessibilityLabel="Save Case Details"');
 const create=actionBar.indexOf('accessibilityLabel="Create Policy"');
-assert.ok(reject>=0&&reject<cancel&&cancel<save&&save<create,'Reject above Cancel | Save | Create Policy');
+assert.ok(reject>=0&&reject<cancel&&cancel<save&&save<create,'Reject stays first, while edit mode offers Cancel Edit and Save, and view mode offers Create Policy');
+assert.match(actionBar,/editMode\?<><Pressable/,'Case edit buttons are shown only after tapping the pencil');
+assert.match(actionBar,/\:<Pressable accessibilityRole="button" accessibilityLabel="Create Policy"/,'Create Policy remains a separate view-mode action');
+assert.match(screen,/const \[editMode,setEditMode\]=useState\(false\)/,'Case details start view-only');
 assert.match(screen,/caseActionMiddle:\{flexDirection:'row',gap:7,width:'100%'/,'Three action buttons share one row');
 assert.match(screen,/actionReject:\{width:'100%'/,'Reject is full width');
 assert.match(screen,/actionSave:\{flex:1,/,'Save occupies one slot in three-column row');
