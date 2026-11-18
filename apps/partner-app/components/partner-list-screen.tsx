@@ -7,7 +7,9 @@ import {
   type FlatListProps,
   type ListRenderItem,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
+import { useIsFocused } from '@react-navigation/native';
 
 import { PartnerBanner } from '@/components/ui/partner-banner';
 import { PartnerTopBar } from '@/components/ui/partner-top-bar';
@@ -22,6 +24,8 @@ export function PartnerListScreen<T>({
   showArtwork = true,
   action,
   topBar,
+  navyStatusBar = false,
+  bottomNavigation,
   data,
   renderItem,
   keyExtractor,
@@ -40,6 +44,10 @@ export function PartnerListScreen<T>({
   showArtwork?: boolean;
   action?: ReactNode;
   topBar?: ReactNode;
+  /** Opt-in navy status/safe area for stack screens without changing other lists. */
+  navyStatusBar?: boolean;
+  /** Fixed navigation below the scrollable list, outside the FlatList. */
+  bottomNavigation?: ReactNode;
   data: readonly T[];
   renderItem: ListRenderItem<T>;
   keyExtractor: (item: T, index: number) => string;
@@ -52,10 +60,14 @@ export function PartnerListScreen<T>({
   ItemSeparatorComponent?: FlatListProps<T>['ItemSeparatorComponent'];
 }) {
   const { isOffline } = usePartnerNetwork();
+  const isFocused = useIsFocused();
+  const insets = useSafeAreaInsets();
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+    <View style={[styles.screen, navyStatusBar && styles.navyStatusArea]}>
+    <SafeAreaView style={[styles.safeArea, navyStatusBar && styles.navyStatusArea]} edges={['top']}>
       <FlatList
+        style={styles.listCanvas}
         data={data}
         renderItem={renderItem}
         keyExtractor={keyExtractor}
@@ -90,11 +102,18 @@ export function PartnerListScreen<T>({
         windowSize={7}
       />
     </SafeAreaView>
+    {bottomNavigation ? <View style={[styles.bottomNavigation, { paddingBottom: insets.bottom }]}>{bottomNavigation}</View> : null}
+    {navyStatusBar && isFocused ? <StatusBar style="light" backgroundColor="#071E49" /> : null}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: partnerTheme.colors.canvas },
   safeArea: { flex: 1, backgroundColor: partnerTheme.colors.canvas },
+  navyStatusArea: { backgroundColor: '#071E49' },
+  listCanvas: { backgroundColor: partnerTheme.colors.canvas },
+  bottomNavigation: { backgroundColor: '#071E49' },
   content: {
     paddingHorizontal: partnerTheme.spacing.lg,
     paddingBottom: 104,

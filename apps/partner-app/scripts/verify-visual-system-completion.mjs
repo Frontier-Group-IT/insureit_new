@@ -231,6 +231,18 @@ requireText(renewals, 'styles.recordCardLast', 'Renewal records must sit inside 
 requireText(renewals, '<Modal visible={sortOpen}', 'Renewal sort menu must use a top-level overlay, not the clipped FlatList header.');
 requireText(renewals, 'sortAnchorRef.current?.measureInWindow', 'Renewal sort popup must anchor to its Due Date button.');
 requireText(renewals, 'styles.emptyCard', 'Renewal empty and loading states must remain within the opportunity card.');
+requireText(renewals, 'const PAGE_SIZE = 10;', 'Renewals initially show 10 records.');
+requireText(renewals, 'bottomNavigation={<PartnerCaseBottomNavigation activeTab="Policies" />}', 'Renewals retain the standard permission-aware five-tab navigation.');
+requireText(renewals, 'navyStatusBar', 'Renewals use a navy status area with light system icons.');
+requireText(renewals, 'setVisibleLimit(nextLimit)', 'Load More appends the next 10 policies.');
+requireText(renewals, ':limit:${visibleLimit}', 'Changing the requested limit must invalidate old 10-row cached page identity.');
+requireText(renewals, 'collection.rows.length < collection.total', 'Load More is hidden when all filtered policies are shown.');
+requireText(renewals, 'Load More Policies', 'The old numbered pagination is replaced with a Load More button.');
+if (renewals.includes('<PartnerPagination') || renewals.includes('collection.nextPage') || renewals.includes('renewals-page-${collection.page}')) throw new Error('Renewals must not restore numbered page buttons or remount the list for pages.');
+const partnerList = read('components/partner-list-screen.tsx');
+requireText(partnerList, 'bottomNavigation?: ReactNode;', 'List screen supports fixed bottom navigation without replacing the scroll list.');
+requireText(partnerList, '<StatusBar style="light" backgroundColor="#071E49" />', 'Renewals can opt into light status icons on navy.');
+
 if (renewals.includes('<Metric ') || renewals.includes('styles.metricRow')) throw new Error('Renewal 0-7/8-15/16-30/overdue mini summary cards must not return.');
 requireText(policyIntakes, 'styles.emptyIllustration', 'Empty Policy Intake history must show the compact illustrated placeholder.');
 requireText(policyIntakes, 'EMPTY_SUBMISSION_COPY[filter].title', 'Empty Policy Intake history must explain the selected status.');
