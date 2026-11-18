@@ -512,9 +512,9 @@ requireText(settings, "linkIcon: { width: 44, height: 44", 'Settings must use la
 
 requireText(settings, 'icon="person-outline" title="Profile & registration"', 'Settings Account profile row must use the professional profile icon.');
 requireText(settings, 'icon="headset-outline" title="Support"', 'Settings Account support row must use the professional support icon.');
-requireText(settings, 'controlTitle: { color: partnerTheme.colors.ink', 'Device security titles must use a dedicated non-flexing title style.');
+requireText(settings, "controlTitle: { color: '#141C3F', fontSize: 14", 'Device security titles must use a dedicated non-flexing title style.');
 requireText(settings, "controlCopy: { flex: 1, minWidth: 0, justifyContent: 'center' }", 'Device security title and helper copy must remain a compact vertical stack.');
-requireText(settings, 'controlSubtitle: { marginTop: 1', 'Device security helper text must sit directly below its row title.');
+requireText(settings, "controlSubtitle: { marginTop: 2", 'Device security helper text must sit directly below its row title.');
 requireText(settings, 'controlRow: { minHeight: 58', 'Device security rows must keep the compact joined-list height.');
 
 requireText(profile, "marginHorizontal: -partnerTheme.spacing.lg,\n    marginTop: 0,\n    paddingHorizontal: 20,", 'Profile blue hero must attach directly below the navy title header with no blank gap.');
