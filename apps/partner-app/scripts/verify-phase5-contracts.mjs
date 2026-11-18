@@ -303,6 +303,8 @@ expectAll('app/customer-new.tsx', [
   [/DOCUMENTS\.filter\(doc => doc\.key !== 'gst_copy' \|\| form\.gst_registered\)/, 'GST Copy is conditional in Documents'],
   [/setDocuments\(previous => \{ const \{ gst_copy: _discarded, \.\.\.rest \} = previous; return rest; \}\)/, 'GST Copy clears if GST is toggled off'],
   [/Invalid GSTIN/, 'GSTIN is validated before saving'],
+  [/label\.endsWith\(' \*'\)/, 'Only mandatory field labels receive a separate star'],
+  [/requiredStar: \{ color: '#D92D20'/, 'Mandatory field asterisk uses visible red colour'],
 ]);
 expectAll('lib/customers.ts', [
   [/gst_number: string/, 'customer creation form includes GSTIN'],
