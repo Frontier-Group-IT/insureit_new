@@ -270,13 +270,34 @@ async function processClaim(item: Claimed) {
   // Copy ONLY strictly validated n8n OCR into an empty, unchanged Intake.
   // An atomic SQL compare-and-set checks current document, lease, empty OCR,
   // status, and absence of saved draft. This never books a policy.
-  if(extraction.preview.checksPassed===13 && extraction.preview.warnings.length===0){
-    const synced=await admin.rpc("sync_verified_ai_intake_ocr_v1",{
+  if(extraction.preview.checksPassed===13 && extraction.preview.warnings.length===0
+    && intake.status==="processing"
+    && ["pending","processing","failed"].includes(intake.ocr_status)
+    && (intake.ocr_fields??[]).length===0
+    && !draft) {
+    // v1 hardcoded the Bundled parser and compared a base revision against
+    // the claimed suffixed revision. v2 binds BOTH the actual parser identity
+    // and the exact queue lease/revision, and refuses to rewrite a draft.
+    const synced=await admin.rpc("sync_verified_ai_intake_ocr_v2",{
       p_intake_id:intake.id,p_document_id:item.document_id,p_lease_id:item.lease_id,
-      p_parser_revision:(process.env.INSUREIT_AI_QUEUE_PARSER_REVISION||"bridge-v1").trim(),
+      p_parser_revision:item.parser_revision,
+      p_parser_id:extraction.preview.parserId,
+      p_parser_version:extraction.preview.parserVersion,
       p_verified_fields:extraction.preview.fields,p_checks_passed:13,
     });
     if(synced.error)throw new Error("Canonical verified OCR synchronization unavailable");
+    if(synced.data!==true){
+      // Never label unsaved OCR as verified when the transactional guard
+      // refused it. Keep the PDF/draft untouched and require fresh review.
+      await finishClaim(item,{
+        state:"exception",exception_codes:["draft_conflict"],field_keys:[],
+        parser_id:extraction.preview.parserId,checks_passed:13,
+        extraction_fingerprint:extraction.preview.fingerprint,
+        last_error_code:"verified_ocr_sync_guard_refused",
+        processed_at:null,retry_after:retryAfter(1440),
+      });
+      return;
+    }
   }
   const model=normalizedName(values.get("vehicle_model")??"");
   const rawMake=normalizedName(values.get("vehicle_make")??"");
