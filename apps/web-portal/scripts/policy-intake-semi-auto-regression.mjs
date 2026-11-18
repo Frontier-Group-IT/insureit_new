@@ -156,7 +156,7 @@ assert(client.includes("bookSemiAutoIntake(selectedId, true)"),
 const n8nValidator = text("lib/policy-intake-n8n-validation.ts");
 assert(n8nValidator.includes("export type N8nVerifiedPremiumBreakdown"),
   "Validated premium breakdown must have a typed, bounded response contract");
-assert(n8nValidator.includes("checksPassed: REQUIRED_CHECKS.size"),
+assert(n8nValidator.includes("checksPassed: requiredChecks.size") && n8nValidator.includes("const requiredChecks = isOd ? REQUIRED_OD_CHECKS : REQUIRED_CHECKS"),
   "Display a check count derived from the strict validator, not an untrusted n8n claim");
 assert(n8nValidator.includes("const odAddons = premium.od_addons.map"),
   "Each individual OD add-on must be validated before reaching the preview");
