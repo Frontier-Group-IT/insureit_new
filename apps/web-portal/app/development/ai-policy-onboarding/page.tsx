@@ -24,7 +24,7 @@ const OPEN_INTAKE_VIEWS: { view: OpenIntakeView; label: string }[] = [
   { view: "all", label: "All Open" },
 ];
 type Params = { page?: string; intake_id?: string; view?: string };
-type CandidateIntake = SemiAutoIntakeRow & { ocr_fields: PolicyIntakeOcrField[] | null };
+type CandidateIntake = SemiAutoIntakeRow & { ocr_fields: PolicyIntakeOcrField[] | null; file_name?: string | null };
 
 export default async function SemiAutoPolicyOnboardingPage({ searchParams }: { searchParams?: Promise<Params> }) {
   const profile = await requireCapability("manage_system", "approve");
@@ -42,7 +42,7 @@ export default async function SemiAutoPolicyOnboardingPage({ searchParams }: { s
   // preview; canonical booking continues to block duplicates server-side.
   const list = await fetchAllPages<CandidateIntake, unknown>((from, to) => {
     const current = admin.from("policy_intake_requests")
-      .select("id,intake_number,status,policy_type,lead_source_name,customer_mobile,ocr_status,created_at,assigned_to_profile_id,ocr_fields")
+      .select("id,intake_number,status,policy_type,lead_source_name,customer_mobile,ocr_status,created_at,assigned_to_profile_id,ocr_fields,file_name")
       .in("status", ["ready_for_review", "in_review", "needs_attention", "processing"]);
     // n8n is the only extractor in this workbench. Include every open Intake
     // policy type, even older rows without a classified policy_type; untrained
@@ -98,11 +98,14 @@ export default async function SemiAutoPolicyOnboardingPage({ searchParams }: { s
   }).map(row=>({id:row.id,intake_number:row.intake_number}));
   // An explicit operator action can re-queue prior failed/exceptions for fresh
   // n8n validation. This is not conversion eligibility or permission to book.
-  // Never include completed Intakes, canonical duplicates or untrained parsers.
+  // Previously unsupported ICICI 3005/O filenames may be explicitly rechecked
+  // only once the new OD parser is deployed; the server revalidates the actual
+  // PDF. Other untrained products never join this bulk operation.
   const reprocessCandidates = workspaceRows.filter(row => {
     const q = queue.get(row.id);
     return row.policy_type === "motor" && !duplicateIds.has(row.id)
-      && (q?.state === "exception" || q?.state === "failed");
+      && (q?.state === "exception" || q?.state === "failed"
+        || (q?.state === "unsupported" && /3005[_\-.]O[_\-.]/i.test(row.file_name ?? "")));
   }).map(row => ({ id: row.id, intake_number: row.intake_number }));
   const requestedId = typeof params.intake_id === "string"
     && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(params.intake_id)
