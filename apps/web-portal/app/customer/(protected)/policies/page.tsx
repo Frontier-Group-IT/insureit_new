@@ -86,21 +86,6 @@ export default async function CustomerPoliciesPage({
   return (
     <div className="customer-register-motion customer-policies-page space-y-3">
       <CustomerAccountTabs accounts={accounts} selectedId={account.id} pathname="/customer/policies" />
-      <section className="customer-register-hero relative isolate overflow-hidden rounded-2xl border border-[#D6E7FA] bg-[#DDEEFF] text-[#102B54] shadow-[0_6px_24px_rgba(20,58,100,.05)]">
-        <div className="pointer-events-none absolute inset-0 bg-[url('/assets/policy%20(2).jpeg')] bg-cover bg-center bg-no-repeat opacity-95" />
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#EEF7FF]/85 via-[#EEF7FF]/45 via-45% to-transparent" />
-        <div className="relative flex min-h-[170px] items-center px-5 py-6 sm:px-7">
-          <div className="max-w-[520px]">
-            <div className="flex items-center gap-3">
-              <img src="/assets/Custom-Icons/optimized-128/policy.png" alt="" aria-hidden="true" width={72} height={72} className="h-[64px] w-[64px] shrink-0 object-contain sm:h-[72px] sm:w-[72px]" />
-              <div className="min-w-0">
-                <h1 className="text-[clamp(28px,3.2vw,40px)] font-bold tracking-tight">My <span className="text-[#1769DC]">Policies</span></h1>
-                <p className="mt-1 text-[14px] leading-relaxed text-[#4B6C94]">All your insurance covers and documents in one place.</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
       {counts.due>0?<section className="flex items-center justify-between gap-3 rounded-2xl border border-[#F0DFC0] bg-white px-4 py-3">
         <div className="flex min-w-0 items-center gap-3"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#FFF0CF] text-[#B66A16]"><Clock3 className="h-5 w-5"/></span><div><strong className="block text-[13px] text-[#7A4B10]">{counts.due} polic{counts.due===1?"y is":"ies are"} approaching renewal</strong><span className="text-[12px] text-[#92714A]">Review due policies to avoid a break in cover.</span></div></div>
         <Link href={makeHref({status:"due"})} className="customer-register-action shrink-0 rounded-lg bg-white px-3 py-2 text-[12px] font-semibold text-[#9A5C12] shadow-sm">Review</Link>
