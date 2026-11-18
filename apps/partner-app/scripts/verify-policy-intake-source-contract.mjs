@@ -248,7 +248,8 @@ requireText(nativeOnboarding, 'accessibilityLabel="Remarks" multiline', 'Non-Mot
 if(nativeOnboarding.includes('>In progress</Text>')) throw new Error('Remove In progress badge from onboarding summary.');
 if(nativeOnboarding.includes('Final booking is completed in the Operations Portal.') || nativeOnboarding.includes('Draft saving is available for')) throw new Error('Remove redundant bottom draft/booking notices.');
 requireText(nativeOnboarding, "createPartnerPolicyIntakeBridgeUrl(id,false,null)", 'Non-Motor finalization must use secure Operations handoff.');
-requireText(nativeOnboarding, 'accessibilityLabel="Create Active Policy"', 'Show the requested Create Active Policy action.');
+requireText(nativeOnboarding, "accessibilityLabel={isNew?(isMotor?'Upload Policy':'Create Policy'):'Create Active Policy'}", 'Standalone Motor and Non-Motor labels must match the selected product while keeping Intake actions.');
+requireText(nativeOnboarding, "accessibilityLabel={isNew?'Create Case':'Create Policy'}", 'Life and Health standalone creation must be labelled Create Case.');
 if(nativeOnboarding.includes('summaryDocuments')||nativeOnboarding.includes('Upload Forms')||nativeOnboarding.includes('Form uploads are available in Operations Portal.')) throw new Error('Remove onboarding document blocks and redundant upload helper copy.');
 if(nativeOnboarding.includes('View submitted policy copy')) throw new Error('Remove document action from onboarding; register/details flows remain separate.');
 console.log('Partner Policy Intake source, policy-type and detail presentation contracts verified.');

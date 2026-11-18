@@ -120,7 +120,9 @@ assert.ok(screen.includes('numberOfLines={1} adjustsFontSizeToFit minimumFontSca
 assert.ok(screen.includes("progressText:{color:'#324D9E',fontWeight:'700',fontSize:8"), 'Onboarding percentage has a compact 8pt font.');
 assert.ok(screen.includes('summaryProgress:{width:35,height:35,borderRadius:18,borderWidth:3,'), 'Progress ring stays compact with extra text space.');
 
-assert.match(screen,/accessibilityLabel="Create Active Policy"/, 'Shared create action is labelled as requested.');
+assert.ok(screen.includes("accessibilityLabel={isNew?(isMotor?'Upload Policy':'Create Policy'):'Create Active Policy'}"), 'Standalone Motor / Non-Motor and existing intake actions have product-specific accessible labels.');
+assert.ok(screen.includes("accessibilityLabel={isNew?'Create Case':'Create Policy'}"), 'Standalone Life / Health action is Create Case.');
+assert.ok(screen.includes("isNew?(isMotor?'Upload Policy':'Create Policy'):'Create Active Policy'"), 'Visible action labels match selected standalone product.');
 assert.match(screen,/createPartnerPolicyIntakeBridgeUrl\(id,false,null\)/, 'Non-Motor active creation uses authorised web handoff.');
 assert.match(screen,/disabled=\{booking\|\|saving\|\|!data\}/, 'Booking remains gated by loading and saving.');
 
@@ -222,8 +224,8 @@ assert.doesNotMatch(screen,/<Text style=\{styles.documentHint\}>/,'Upload hint m
 assert.doesNotMatch(screen, /\{documentError\?<Text style=\{styles.documentError\}>/,'Document errors must not be inline.');
 assert.match(screen,/accessibilityLabel="Cancel Policy Onboarding"/, 'Cancel button is available.');
 assert.match(screen,/Discard Changes\?/, 'Cancelling protects unsaved data with the new branded popup.');
-assert.match(screen,/accessibilityLabel="Create Active Policy"/, 'Create Active Policy replaces booking and draft actions.');
-assert.match(screen,/accessibilityLabel="Create Policy"/, 'Life and Health use Create Policy.');
+assert.ok(screen.includes("accessibilityLabel={isNew?(isMotor?'Upload Policy':'Create Policy'):'Create Active Policy'}"), 'Motor and Non-Motor standalone action labels match their products and existing Intake actions remain available.');
+assert.ok(screen.includes("accessibilityLabel={isNew?'Create Case':'Create Policy'}"), 'Life and Health standalone Add Policy creates a case with the correct accessible name.');
 assert.match(screen,/productType==='Life'\|\|productType==='Health'/, 'Life and Health use identical action and border rules.');
 assert.match(screen,/createNativeLifeHealthCase\(id,revision\)/, 'Life and Health perform authorized case creation.');
 assert.match(api,/body.action==="create_life_health"/, 'Native creation is limited to a separate authorized endpoint.');
