@@ -59,7 +59,7 @@ export default function NewPartnerCustomerScreen() {
     } finally { setBusy(false); }
   }
   function field(label: string, key: TextKey, placeholder: string, options?: { keyboardType?: 'default' | 'phone-pad' | 'email-address' | 'numeric'; autoCapitalize?: 'none' | 'characters' }) {
-    return <View style={styles.field} key={key}><Text style={styles.label}>{label}</Text><TextInput accessibilityLabel={label} style={styles.input} value={form[key]} onChangeText={value => set(key, value)} placeholder={placeholder} placeholderTextColor="#95A2B5" keyboardType={options?.keyboardType ?? 'default'} autoCapitalize={options?.autoCapitalize ?? 'sentences'} editable={!busy} /></View>;
+    return <View style={styles.field} key={key}><Text style={styles.label}>{label.endsWith(' *') ? <>{label.slice(0, -2)} <Text style={styles.requiredStar}>*</Text></> : label}</Text><TextInput accessibilityLabel={label} style={styles.input} value={form[key]} onChangeText={value => set(key, value)} placeholder={placeholder} placeholderTextColor="#95A2B5" keyboardType={options?.keyboardType ?? 'default'} autoCapitalize={options?.autoCapitalize ?? 'sentences'} editable={!busy} /></View>;
   }
   return <SafeAreaView style={styles.root} edges={['top']}>
     <StatusBar style="light" backgroundColor="#071E49" />
@@ -116,7 +116,7 @@ const styles = StyleSheet.create({
   back: { padding: 5 }, title: { color: '#FFF', fontSize: 19, fontWeight: '800' }, subtitle: { color: '#D7E7FC', fontSize: 11, marginTop: 3 },
   content: { padding: 13, paddingBottom: 28, gap: 12 }, card: { backgroundColor: '#FFF', borderRadius: 16, padding: 15, gap: 11, borderWidth: 1, borderColor: '#E1E8F3' },
   section: { fontSize: 14, fontWeight: '800', color: '#102C5B' }, sectionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 },
-  field: { flex: 1, gap: 5, minWidth: 0 }, label: { fontSize: 11, fontWeight: '600', color: '#34445F' },
+  field: { flex: 1, gap: 5, minWidth: 0 }, label: { fontSize: 11, fontWeight: '600', color: '#34445F' }, requiredStar: { color: '#D92D20', fontWeight: '800' },
   input: { minHeight: 45, borderWidth: 1, borderColor: '#CBD7E7', borderRadius: 9, paddingHorizontal: 12, fontSize: 13, color: '#14294D', backgroundColor: '#FFF' },
   two: { flexDirection: 'row', gap: 9 }, gst: { flexDirection: 'row', alignItems: 'center', gap: 7 }, gstLabel: { fontSize: 10, color: '#102C5B', fontWeight: '700' },
   document: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, borderRadius: 10, borderWidth: 1, borderColor: '#D9E5F4', backgroundColor: '#F8FAFE' },
