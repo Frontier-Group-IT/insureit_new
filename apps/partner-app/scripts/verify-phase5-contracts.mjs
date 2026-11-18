@@ -356,10 +356,10 @@ expectAll('components/ui/partner-section-header.tsx', [
   [/settingsHeading = false/, 'Settings heading variant is opt-in'],
   [/settingsHeading && styles\.settingsRow/, 'Settings heading spacing applies only when requested'],
   [/settingsHeading && styles\.settingsTitle/, 'Settings heading colour applies only when requested'],
-  [ /settingsTitle: \\{ color: '#20234C', fontSize: 15, lineHeight: 20, fontWeight: '900'/, 'Settings headings use bold high-contrast typography'],
+  [ /settingsTitle: \{ color: '#20234C', fontSize: 15, lineHeight: 20, fontWeight: '900'/, 'Settings headings use bold high-contrast typography'],
   [/textTransform: 'uppercase'/, 'Heading capitalization remains unchanged'],
-  [ /settingsRow: \\{ marginTop: 22, marginBottom: 10, minHeight: 24 \\}/, 'Settings headings use reference spacing'],
-  [/settingsAccent: \\{ height: 3, width: 28, borderRadius: 2, backgroundColor: '#6441BE' \\}/, 'Settings headings include purple accent'],
+  [ /settingsRow: \{ marginTop: 22, marginBottom: 10, minHeight: 24 \}/, 'Settings headings use reference spacing'],
+  [/settingsAccent: \{ height: 3, width: 28, borderRadius: 2, backgroundColor: '#6441BE' \}/, 'Settings headings include purple accent'],
 ]);
 
 // Evaluate every contract only after all checks have run.
