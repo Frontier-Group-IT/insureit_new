@@ -72,19 +72,6 @@ export function CustomerRenewalsRegister({accountId,items,categories}:{
     </div>
   );
   return <div className={`customer-register-motion customer-renewals-page gap-4 text-[#293461] ${motion.pageEnter}`}>
-    <section className="customer-register-hero relative isolate min-h-[175px] overflow-hidden rounded-xl border border-[#E1E8F9] bg-[#EDF4FF]">
-      <div aria-hidden="true" className={`pointer-events-none absolute -inset-2 bg-[url('/assets/renewal.jpeg')] bg-cover bg-center ${motion.heroParallax}`}/>
-      <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#F0F5FF]/95 via-[#F0F5FF]/75 via-40% to-transparent"/>
-      <div className="relative z-10 flex min-h-[175px] items-center px-5 py-5 sm:px-7">
-        <div className="flex items-start gap-3">
-          <img src="/assets/customer-3d-icons/renewals.png" alt="" aria-hidden="true" width={72} height={72} className="h-14 w-14 shrink-0 object-contain sm:h-[72px] sm:w-[72px]"/>
-          <div><p className="text-[10px] font-extrabold uppercase tracking-[.14em] text-[#7364D3]">Renewals</p>
-            <h1 className="mt-1 text-[24px] font-extrabold leading-tight tracking-tight text-[#212D67]">Your Policy Renewals</h1>
-            <p className="mt-2 text-[11px] font-medium leading-5 text-[#657698]">Stay protected and keep your vehicles covered.<br/>Renew on time, drive with confidence.</p>
-          </div>
-        </div>
-      </div>
-    </section>
     <div className={`customer-renewals-controls grid gap-2 sm:grid-cols-[minmax(0,1fr)_190px] ${motion.controls}`}>
       <label className="customer-register-control flex h-10 min-w-0 items-center gap-2 rounded-lg border border-[#E0E7F4] bg-white px-3 text-[#8090B0]"><Search className="h-4 w-4 shrink-0"/><CustomerSearchAutocomplete label="Search renewals" value={query} onChange={setQuery} options={items.flatMap(item => [item.vehicleNo, item.title, item.reference, item.insurerName || ""])} hints={["Search reference number…", "Search vehicle number…", "Search policy…"]} className="text-[12px] text-[#253760]"/></label>
       <select aria-label="Filter by status" value={status} onChange={e=>setStatus(e.target.value)} className={`customer-register-control h-10 rounded-lg border border-[#E0E7F4] bg-white px-3 text-[11px] font-semibold text-[#53648C] ${motion.filterControl}`}>
