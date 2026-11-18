@@ -36,6 +36,10 @@ assert.match(app,/navyTopBar navyStatusBar bottomNavigationNavy/);
 assert.match(app,/heroSecond/);
 assert.match(app,/justifyContent:'space-between'/);
 assert.doesNotMatch(app,/Open Issuance Form|Edit Case Details|beginEdit|setEditing/);
+assert.ok(app.includes('name="pencil"') && app.includes('accessibilityLabel={editMode?"Editing case details":"Edit case details"}'), 'Pending Case Details exposes the accessible pencil edit action');
+assert.ok(app.includes("const editable=(record?.status_group==='pending'&&editMode)"), 'Pending case fields become editable after pencil selection');
+assert.ok(app.includes("setEditMode(false);"), 'Successful save and focus reset edit mode');
+
 for(const key of ['sourcingDate','customerName','customerPhone','customerAddress','insurerId','productName','proposalNumber','premiumPayingTerm','policyDuration','paymentFrequency','premiumAmount','paymentMode']){
   assert.ok(app.includes('inline("'+key+'"'),'Inline edit missing '+key);
 }
