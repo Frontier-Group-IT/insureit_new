@@ -148,6 +148,27 @@ if (/PartnerAnchoredDropdown|filterMenuOpen|CLAIM_FILTER_OPTIONS/.test(read('app
   failures.push('app/(tabs)/claims.tsx: Claims Filter must never mount an anchored dropdown');
 }
 
+// Renewal Work Queue uses bundled 3D page artwork while retaining functional actions.
+expectAll('app/renewals.tsx', [
+  [/PartnerAssets\.actions\.renewalsReference/, 'Renewal title uses existing 3D artwork'],
+  [/PartnerAssets\.status\.renewalDue/, 'Renewal summary uses existing 3D artwork'],
+  [/PartnerAssets\.actions\.policyChecklist/, 'Opportunity heading uses existing 3D artwork'],
+  [/leadingIconSource=\{PartnerAssets\.navigation\.search\}/, 'Renewal search opts into 3D artwork'],
+  [/accessibilityLabel="Back"/, 'Back button remains functional'],
+  [/accessibilityLabel="Sort renewals by due date"/, 'Due date sort remains accessible'],
+  [/PartnerCaseBottomNavigation activeTab="Policies"/, 'Shared bottom navigation is unchanged'],
+  [/PartnerInsurerLogo name=\{row\.insurer_name\}/, 'Actual insurer logos remain on policy cards'],
+]);
+checks += 1;
+if (read('app/renewals.tsx').includes('accessibilityLabel="Go to Home"')) {
+  failures.push('Renewal Work Queue must not render the redundant top-right Home action');
+}
+expectAll('components/ui/partner-search-field.tsx', [
+  [/leadingIconSource\?: ImageSourcePropType/, 'Search field supports opt-in local artwork'],
+  [/leadingIconSource[\s\S]*?<Image source=\{leadingIconSource\}/, 'Search artwork is displayed only when supplied'],
+  [/name="search-outline"/, 'Standard search icons remain unchanged on other pages'],
+]);
+
 if (failures.length) {
   console.error('Partner pre-APK UAT/security contract verification failed:');
   for (const failure of failures) console.error(`- ${failure}`);
