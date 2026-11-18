@@ -11,6 +11,7 @@ export type PartnerPolicySummary = {
 };
 
 export type PartnerPolicyLifecycle = 'all' | 'in_force' | 'expiring' | 'expired' | 'upcoming';
+export type PartnerPolicyBusinessLine = 'all' | 'motor' | 'non motor' | 'life' | 'health';
 
 export type PartnerPolicyRow = {
   policy_id: string;
@@ -51,19 +52,31 @@ export async function listPartnerPolicies({
   offset = 0,
   search,
   lifecycle = 'all',
+  businessLine = 'all',
 }: {
   limit?: number;
   offset?: number;
   search?: string;
   lifecycle?: PartnerPolicyLifecycle;
+  businessLine?: PartnerPolicyBusinessLine;
 } = {}) {
-  const { data, error } = await supabase.rpc('partner_app_list_policies', {
+  // Preserve the existing production RPC for the default unfiltered list.
+  // Filtered tabs use the matching scoped server-side RPC, never a local slice of 10 rows.
+  const args = {
     p_limit: limit,
     p_offset: offset,
     p_search: search?.trim() || null,
     p_lifecycle: lifecycle,
-  });
-  if (error) throw error;
+  };
+  const { data, error } = businessLine === 'all'
+    ? await supabase.rpc('partner_app_list_policies', args)
+    : await supabase.rpc('partner_app_list_policies_by_line', { ...args, p_business_line: businessLine });
+  if (error) {
+    if (businessLine !== 'all' && (error.code === 'PGRST202' || error.code === '42883')) {
+      throw new Error('Business-line filtering is not available on the server yet. Please contact support.');
+    }
+    throw error;
+  }
   return (data ?? []) as PartnerPolicyRow[];
 }
 
