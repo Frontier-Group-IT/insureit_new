@@ -85,7 +85,7 @@ export default function NetworkScreen() {
 
   return (
     <PartnerScreen title="Commercial relationships" hideTopBar navyStatusBar bottomNavigationNavy bottomNavigation={<PartnerStackBottomNavigation activeTab="business" />}>
-      <View style={styles.navyCanvas}>
+      <View style={styles.pageCanvas}>
       <View style={styles.header}>
         <View style={styles.headerAccentOne} />
         <View style={styles.headerAccentTwo} />
@@ -397,7 +397,7 @@ function formatUpdatedAt(value: string) {
 }
 
 const styles = StyleSheet.create({
-  navyCanvas: { flexGrow: 1, marginHorizontal: -partnerTheme.spacing.lg, paddingHorizontal: partnerTheme.spacing.lg, backgroundColor: '#071E49' },
+  pageCanvas: { flexGrow: 1, marginHorizontal: -partnerTheme.spacing.lg, paddingHorizontal: partnerTheme.spacing.lg, backgroundColor: '#F5F7FB' },
   header: {
     position: 'relative',
     minHeight: 62,
@@ -434,8 +434,8 @@ const styles = StyleSheet.create({
   headerTitle: { marginTop: 1, color: '#FFFFFF', fontSize: 16, lineHeight: 19, fontWeight: '700' },
 
   freshnessRow: { minHeight: 30, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
-  scope: { color: '#DFE8F5', fontSize: 10, lineHeight: 13, fontWeight: '500' },
-  updated: { color: '#BECCE2', fontSize: 9, lineHeight: 12 },
+  scope: { color: '#58677E', fontSize: 10, lineHeight: 13, fontWeight: '500' },
+  updated: { color: '#8995A7', fontSize: 9, lineHeight: 12 },
 
   summaryRow: { flexDirection: 'row', gap: 8, marginBottom: 10 },
   summaryCard: {
@@ -567,7 +567,7 @@ const styles = StyleSheet.create({
   ownerValue: { flex: 1, textAlign: 'right', color: partnerTheme.colors.ink, ...partnerTheme.typography.caption },
 
   noResults: { marginTop: 34, alignItems: 'center', paddingVertical: 24 },
-  noResultsTitle: { marginTop: 8, color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
-  noResultsText: { marginTop: 4, color: '#D2DDEF', fontSize: 10 },
+  noResultsTitle: { marginTop: 8, color: '#27364B', fontSize: 13, fontWeight: '700' },
+  noResultsText: { marginTop: 4, color: '#74829A', fontSize: 10 },
   pressed: { opacity: 0.72 },
 });
