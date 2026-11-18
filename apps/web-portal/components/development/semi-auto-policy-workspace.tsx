@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { reviewVerifiedAiLegacyDraft, applyVerifiedAiLegacyDraft, type VerifiedDraftReview } from "@/app/development/ai-policy-onboarding/verified-draft-actions";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -106,6 +107,10 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
   const [n8nNotice, setN8nNotice] = useState<string | null>(null);
   const [done, setDone] = useState<{ policyCode: string; policyId: string } | null>(null);
   const [exceptionRow,setExceptionRow]=useState<SemiAutoIntakeRow|null>(null);
+  const [legacyReview,setLegacyReview]=useState<VerifiedDraftReview|null>(null);
+  const [legacySelected,setLegacySelected]=useState<string[]>([]);
+  const [legacyBusy,setLegacyBusy]=useState(false);
+  const [legacyError,setLegacyError]=useState<string|null>(null);
   const [autoConvertRow,setAutoConvertRow]=useState<SemiAutoIntakeRow|null>(null);
   const [autoConvertMessage,setAutoConvertMessage]=useState<string|null>(null);
   const [bulkConfirmOpen,setBulkConfirmOpen]=useState(false);
@@ -141,7 +146,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
   const available = !primaryN8n && selected?.policy_type === "motor"
     && result?.ready === true && result.issues.length === 0 && !selected?.is_duplicate;
   const n8nEnabled = selected?.n8n_enabled === true;
-  const isWaiting = busy !== null || bulkRunning || reprocessRunning;
+  const isWaiting = busy !== null || bulkRunning || reprocessRunning || legacyBusy;
   // A bounded set of currently verified CANDIDATES. Server-side canonical
   // authorization and PDF reconciliation can still reject any candidate.
   const bulkRemaining=bulkCandidates.filter(row=>!bulkAttemptedIds.includes(row.id));
@@ -151,6 +156,31 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
   // sequentially through the same server-side authorization and queue CAS.
   const reprocessBatch=reprocessRemaining;
 
+  async function compareLegacyDraft(row:SemiAutoIntakeRow){
+    if(isWaiting)return;
+    setLegacyBusy(true);setLegacyError(null);setLegacyReview(null);
+    try{
+      const inspected=await reviewVerifiedAiLegacyDraft(row.id);
+      setExceptionRow(null);
+      setLegacyReview(inspected);
+      setLegacySelected(inspected.ok?inspected.differences.filter(d=>d.wasBlank).map(d=>d.key):[]);
+    }catch{setLegacyError("Review interrupted. Check this Intake and its current PDF before retrying.");}
+    finally{setLegacyBusy(false);}
+  }
+  async function applyLegacyReview(){
+    if(!legacyReview?.ok||legacyBusy||!legacySelected.length)return;
+    setLegacyBusy(true);setLegacyError(null);
+    try{
+      const id=rows.find(row=>row.intake_number===legacyReview.intakeNumber)?.id??"";
+      const response=await applyVerifiedAiLegacyDraft(
+        id,legacyReview.revision,legacyReview.fingerprint,legacySelected);
+      if(!response.ok){setLegacyError(response.error);return;}
+      setAutoConvertMessage(legacyReview.intakeNumber+": "+response.updatedFields.length+
+        " verified PDF fields saved. No policy registered. Recheck before conversion.");
+      setLegacyReview(null);setLegacySelected([]);router.refresh();
+    }catch{setLegacyError("Save status unknown. Refresh and verify draft revision before retrying.");}
+    finally{setLegacyBusy(false);}
+  }
   async function selectRow(id: string) {
     const next = ++requestId.current;
     if (selectedId === id) {
@@ -943,7 +973,21 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
                 </div>
               ))}
             </div>
-            {primaryN8n && queueActive && reprocessCandidates.some(candidate=>candidate.id===exceptionRow.id)
+            {primaryN8n && exceptionRow.policy_type==="motor" && !exceptionRow.is_duplicate
+               && (exceptionRow.ai_exceptions??[]).some(x=>["booking_review_required","draft_conflict"].includes(x)) ? (
+             <div className="mt-3 rounded-lg border border-[#cbd9ea] bg-[#f5f9ff] p-3">
+               <p className="text-[10px] text-[#49627f]">
+                 Compare the saved draft against current verified ICICI PDF values.
+                 Select each field to correct; this does not register a policy.
+               </p>
+               <button type="button" disabled={isWaiting} onClick={()=>{void compareLegacyDraft(exceptionRow);}}
+                 className="mt-2 rounded-md bg-[#174b83] px-3 py-2 text-[10px] font-bold text-white disabled:opacity-50">
+                 {legacyBusy?"Reading current PDF...":"Compare saved draft with PDF"}
+               </button>
+             </div>
+           ) : null}
+           {legacyError ? <p role="alert" className="mt-2 text-[10px] text-amber-800">{legacyError}</p> : null}
+           {primaryN8n && queueActive && reprocessCandidates.some(candidate=>candidate.id===exceptionRow.id)
                && !reprocessAttemptedIds.includes(exceptionRow.id) ? (
                <div className="mt-3 rounded-lg border border-[#cbd9ea] bg-[#f5f9ff] p-3">
                  <p className="text-[10px] text-[#49627f]">Queue the current private PDF for another n8n extraction with the newly trained parser. This does not register a policy or overwrite existing OCR.</p>
