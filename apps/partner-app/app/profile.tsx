@@ -332,7 +332,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     width: 'auto',
     marginHorizontal: -partnerTheme.spacing.lg,
-    marginTop: 14,
+    marginTop: 0,
     paddingHorizontal: 20,
     paddingTop: 18,
     paddingBottom: 20,
