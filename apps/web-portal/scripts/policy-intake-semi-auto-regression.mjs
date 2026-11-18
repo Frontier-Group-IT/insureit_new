@@ -943,18 +943,30 @@ assert(webhookBridgeText.includes('const EXPECTED_N8N_ORIGIN = "https://insureit
   && webhookBridgeText.includes('url.pathname !== EXPECTED_WEBHOOK_PATH')
   && webhookBridgeText.includes('redirect: "error"'),
   "Production self-hosted cutover must enforce an exact HTTPS host and path with Cloud rollback");
-// Reprocessing is a separate, confirmed and bounded extraction-only action.
+// Production studio keeps canonical server-side scope and makes reprocessing
+// intentionally uncapped without overloading n8n or booking a policy.
 assert(aiWorkbenchPageText.includes("const reprocessCandidates = workspaceRows.filter(row =>")
   && aiWorkbenchPageText.includes('q?.state === "exception" || q?.state === "failed"')
   && aiWorkbenchPageText.includes("reprocessCandidates={reprocessCandidates}")
   && aiWorkbenchPageText.includes("!duplicateIds.has(row.id)"),
   "Only authorized open exception/failed nonduplicate Motor Intakes can be offered for reprocessing");
-assert(workbenchText.includes("Reprocess Previous ·")
-  && workbenchText.includes("const reprocessBatch=reprocessRemaining.slice(0,10)")
-  && workbenchText.includes("Reprocess previously checked policies?")
+assert(workbenchText.includes("Reprocess All Previous ·")
+  && workbenchText.includes("const reprocessBatch=reprocessRemaining;")
+  && !workbenchText.includes("reprocessRemaining.slice(0,10)")
+  && workbenchText.includes("Reprocess all previous Intakes?")
   && workbenchText.includes("await reprocessAiPolicyIntake(item.id)")
-  && workbenchText.includes("No customer, vehicle or policy will be created by this action"),
-  "Reprocessing must be separately confirmed, capped at 10 and never call the booking action");
+  && workbenchText.includes("if (reprocessCancelRef.current)")
+  && workbenchText.includes("Stop remaining")
+  && workbenchText.includes("createPortal(")
+  && workbenchText.includes("document.body) : null")
+  && workbenchText.includes("No customer, vehicle or policy"),
+  "Uncapped reprocess must be confirmed, sequential, cancelable, page-independent and never book");
+assert(aiWorkbenchPageText.includes("const PAGE_SIZE = 30;")
+  && aiWorkbenchPageText.includes("AI Policy Studio")
+  && aiWorkbenchPageText.indexOf("Page {safePage}") < aiWorkbenchPageText.indexOf("<SemiAutoPolicyWorkspace")
+  && workbenchText.includes('xl:overflow-y-auto')
+  && workbenchText.includes('sticky top-0 z-10'),
+  "Production studio must be compact with top pagination and independent review/table scrolling");
 assert(actionsText.includes('Only an open, unregistered Motor Intake can be reprocessed.')
   && actionsText.includes("duplicates.matches.has(id)")
   && actionsText.includes('.in("state",["exception","verified","unsupported","failed"])'),
