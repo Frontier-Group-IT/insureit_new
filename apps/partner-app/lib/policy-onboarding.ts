@@ -83,13 +83,14 @@ export async function attachNewNativeMotorPolicyCopy(policyId:string,file:Native
   const metadata={policy_id:policyId,name:file.name,size:file.size,type:file.mimeType};
   const prepared=await send({action:'prepare',...metadata});
   if(!prepared.path||!prepared.token)throw new Error('Secure upload authorization is incomplete.');
-  let bytes:Blob;
+  let bytes:ArrayBuffer;
   try{
     const localFile=await fetch(file.uri);
     if(!localFile.ok)throw new Error('File inaccessible');
-    bytes=await localFile.blob();
+    bytes=await localFile.arrayBuffer();
   }catch{throw new Error('Selected policy copy could not be read. Re-select the file, then retry the upload.');}
-  if(bytes.size!==file.size)throw new Error('Selected policy copy changed. Re-select the file before uploading.');
+  if(bytes.byteLength!==file.size)throw new Error('Selected policy copy changed. Re-select the file before uploading.');
+  // Supabase recommends ArrayBuffer rather than Blob/FormData in React Native.
   const {error:storageError}=await supabase.storage.from('policy-documents')
     .uploadToSignedUrl(prepared.path,prepared.token,bytes,{contentType:file.mimeType,upsert:false});
   if(storageError)throw new Error('Policy was created but policy-copy upload failed: '+storageError.message+'. Retry without creating another policy.');
