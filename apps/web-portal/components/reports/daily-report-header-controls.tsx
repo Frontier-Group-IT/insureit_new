@@ -91,7 +91,7 @@ export function DailyReportHeaderScopes({canViewAll=false}:{canViewAll?:boolean}
     <div ref={container} className="relative z-30 min-w-0" aria-label="Daily Report employee selector">
       <button type="button" aria-haspopup="listbox" aria-expanded={open} aria-controls="daily-report-employee-options"
         onClick={()=>{setOpen(value=>!value);setSearch("");}}
-        className="daily-report-header-select relative inline-flex min-h-9 w-[112px] max-w-[36vw] min-w-0 items-center justify-center rounded-lg border border-[#cbd7e6] bg-white pl-3 pr-7 text-center text-[11px] font-semibold text-[#17365D] hover:bg-[#f5f8fc] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#315b9a]">
+        className="daily-report-header-select relative inline-flex min-h-9 w-fit min-w-[112px] max-w-[calc(100vw-40px)] items-center justify-center sm:max-w-[320px] rounded-lg border border-[#cbd7e6] bg-white pl-3 pr-7 text-center text-[11px] font-semibold text-[#17365D] hover:bg-[#f5f8fc] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#315b9a]">
         <span className="min-w-0 truncate text-center">{allSelected ? (selectedPerson ? selected?.full_name||"Selected employee" : "All") : "Self"}</span><ChevronDown className="absolute right-3 h-3.5 w-3.5 shrink-0"/>
       </button>
       {open ? (

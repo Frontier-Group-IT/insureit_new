@@ -666,12 +666,12 @@ form:has(input[name="fitness_valid_upto"]) > div:last-child button {
 .daily-report-reference .daily-report-panel-title [aria-label="Daily Report employee selector"] {
   z-index: 60;
 }
-/* Keep only the scope selector compact; the Today period filter stays unchanged. */
+/* Keep short names compact; expand selected employee names without changing the Today filter. */
 .daily-report-reference .daily-report-panel-title [aria-label="Daily Report employee selector"] .daily-report-header-select {
-  min-width: 0;
+  min-width: 112px;
   min-height: 36px;
-  width: 112px;
-  max-width: 36vw;
+  width: max-content;
+  max-width: min(320px, calc(100vw - 40px));
 }
 .daily-report-reference .daily-report-panel-title > div > .daily-report-header-select {
   min-width: 0;
