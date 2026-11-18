@@ -500,6 +500,16 @@ for (const featureAsset of ['navigation.customers', 'navigation.policies', 'navi
 requireText(support, 'PartnerAssets.actions.supportVerified', 'Support fallback must use the prepared verified-support artwork.');
 if (support.includes('asset={PartnerAssets.emptyStates.supportResolved}')) throw new Error('Support-unavailable errors must not misuse the support-resolved artwork.');
 requireText(settings, 'PartnerAssets.status.settings', 'Settings must retain branded Check for updates artwork.');
+const settingsSectionHeader = read('components/ui/partner-section-header.tsx');
+requireText(settingsSectionHeader, 'settingsHeading ? <View style={styles.settingsAccent} /> : null', 'Settings section headings must have reference purple accent.');
+requireText(settingsSectionHeader, 'fontWeight: \'900\', letterSpacing: 0.35', 'Settings headings must be bold and readable.');
+for (const heading of ['Account', 'Device security', 'Privacy', 'App information']) {
+  requireText(settings, `title="${heading}" settingsHeading`, `Settings must retain bold ${heading} heading.`);
+}
+requireText(settings, 'subtitle="Manage your profile details"', 'Profile row must show reference helper copy.');
+requireText(settings, 'subtitle="Get help and assistance"', 'Support row must show reference helper copy.');
+requireText(settings, "linkIcon: { width: 44, height: 44", 'Settings must use larger reference-style lavender icons.');
+
 requireText(settings, 'icon="person-outline" title="Profile & registration"', 'Settings Account profile row must use the professional profile icon.');
 requireText(settings, 'icon="headset-outline" title="Support"', 'Settings Account support row must use the professional support icon.');
 requireText(settings, 'controlTitle: { color: partnerTheme.colors.ink', 'Device security titles must use a dedicated non-flexing title style.');
