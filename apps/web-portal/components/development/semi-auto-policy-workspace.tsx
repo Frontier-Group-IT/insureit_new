@@ -1131,7 +1131,52 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
           </div>
         </div>
       ) : null}
-      {handoffDialog ? (
+      {legacyReview ? (
+         <div className="fixed inset-0 z-[190] flex items-center justify-center bg-[#101d37]/70 px-3 py-5" role="presentation">
+           <div role="alertdialog" aria-modal="true" aria-labelledby="legacy-draft-title"
+             className="w-full max-w-[700px] rounded-2xl border border-[#d6e2f1] bg-white p-5 shadow-xl">
+             <h3 id="legacy-draft-title" className="text-[15px] font-bold text-[#193657]">Review saved draft vs verified PDF</h3>
+             {legacyReview.ok ? <>
+               <p className="mt-2 text-[11px] text-[#52647b]">
+                 {legacyReview.intakeNumber} · saved revision {legacyReview.revision}.
+                 Only checked fields change. Identity, reviewer, payments and booked policies are untouched.
+               </p>
+               <div className="mt-4 max-h-[52vh] space-y-2 overflow-y-auto">
+                 {legacyReview.differences.length===0 ? <p className="text-[11px]">No remaining differences in the approved field set.</p> : null}
+                 {legacyReview.differences.map(diff=>(
+                   <label key={diff.key} className="flex cursor-pointer gap-3 rounded-lg border border-[#dce5f0] p-3 text-[11px]">
+                     <input type="checkbox" disabled={legacyBusy} checked={legacySelected.includes(diff.key)}
+                       onChange={event=>setLegacySelected(keys=>event.target.checked
+                         ?[...keys,diff.key]:keys.filter(x=>x!==diff.key))}
+                       className="mt-0.5 h-4 w-4 accent-[#174b83]"/>
+                     <span className="min-w-0 flex-1">
+                       <strong>{diff.label}</strong>
+                       <span className="mt-1 block break-all text-[#62748e]">Saved: {diff.savedValue||"(blank)"}</span>
+                       <span className="mt-1 block break-all font-semibold text-[#174b83]">Verified PDF: {diff.verifiedPdfValue}</span>
+                       {!diff.wasBlank ? <span className="mt-1 block text-amber-800">Existing value — explicitly review before replacing it.</span> : null}
+                     </span>
+                   </label>
+                 ))}
+               </div>
+               <p className="mt-3 text-[10px] text-[#667991]">
+                 Earlier issuance dates still require normal date approval/OTP during booking.
+                 A changed draft revision or source PDF invalidates the review.
+               </p>
+             </> : <p role="alert" className="mt-4 text-[11px] text-amber-800">{legacyReview.error}</p>}
+             {legacyError ? <p role="alert" className="mt-2 text-[11px] text-amber-800">{legacyError}</p> : null}
+             <div className="mt-5 flex justify-end gap-2">
+               <button type="button" disabled={legacyBusy} onClick={()=>{setLegacyReview(null);setLegacySelected([]);setLegacyError(null);}}
+                 className="min-h-9 rounded-lg border border-[#cbd6e5] px-4 text-[11px] font-semibold text-[#38516e] disabled:opacity-50">Close</button>
+               {legacyReview.ok ? <button type="button" disabled={legacyBusy||legacySelected.length===0}
+                 onClick={()=>{void applyLegacyReview();}}
+                 className="min-h-9 rounded-lg bg-[#174b83] px-4 text-[11px] font-bold text-white disabled:opacity-50">
+                 {legacyBusy?"Saving reviewed fields...":"Apply selected verified fields"}
+               </button> : null}
+             </div>
+           </div>
+         </div>
+       ) : null}
+       {handoffDialog ? (
         <div className="fixed inset-0 z-[160] flex items-center justify-center bg-[#101d37]/65 px-4 py-6" role="presentation">
           <div role="alertdialog" aria-modal="true" aria-labelledby="n8n-handoff-dialog-title" aria-describedby="n8n-handoff-dialog-description"
             className="w-full max-w-[480px] rounded-2xl border border-[#d6e2f1] bg-white p-5 shadow-[0_24px_80px_rgba(12,28,52,.3)]">
