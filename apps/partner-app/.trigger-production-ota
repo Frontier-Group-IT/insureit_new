@@ -1,13 +1,12 @@
 Partner production OTA trigger
-release=partner-policies-business-line-dropdown-pr-4783
+release=partner-profile-header-banner-flush-pr-4805
 source=verified-merged-main
-source_pr=4783
-source_merge=f54ebea04042d0bcc981bddb6d61458a6624af48
+source_pr=4805
+source_merge=04905c37f392aeebe4358f1c0dd11ac1fe1359b8
 reason=user-approved-merge-and-publish
 channel=production
 runtime=0.2.0
 requested=2026-11-18
-database_migration=partner_policy_business_line_filter_20261118_applied_and_verified
 no_native_build=true
 no_apk=true
 no_aab=true
