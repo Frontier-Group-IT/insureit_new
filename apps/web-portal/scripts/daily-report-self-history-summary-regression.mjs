@@ -53,11 +53,11 @@ assert.match(source, /POLICY_EDIT_FIELD_LABELS/, "Policy Edit labels are allowli
 assert.ok(source.includes('row.activity=policyEditFieldNames(change.new_data)'), "Policy Edit activity shows the actual recorded column names");
 assert.match(source, /Changed fields not recorded/, "Do not invent missing historical field names");
 assert.ok(source.includes('row.detail=undefined'), "Do not expose historical old/new policy values in the activity column");
-assert.match(headerControls, /min-h-9 w-fit min-w-\\[112px\\] max-w-\\[calc\\(100vw-40px\\)\\]/, "Employee selector grows to selected name while preserving a compact 112px minimum");
-assert.match(headerControls, /sm:max-w-\\[320px\\]/, "Long employee names are capped responsibly on wider screens");
-assert.doesNotMatch(headerControls, /w-\\[112px\\] max-w-\\[36vw\\]/, "Fixed narrow employee width no longer truncates medium names");
-assert.match(headerControls, /selected\\?\\.full_name/, "Selector still shows the authorized employee's actual name");
-assert.match(headerControls, /min-w-0 truncate text-center/, "Exceptionally long names still ellipsize within the responsive maximum");
+assert.ok(headerControls.includes("min-h-9 w-fit min-w-[112px] max-w-[calc(100vw-40px)]"), "Employee selector expands to name with a compact 112px minimum");
+assert.ok(headerControls.includes("sm:max-w-[320px]"), "Very long employee names have a responsive maximum");
+assert.ok(!headerControls.includes("w-[112px] max-w-[36vw]"), "The old fixed narrow width is removed");
+assert.ok(headerControls.includes("selected?.full_name"), "Selected authorized employee name is displayed");
+assert.ok(headerControls.includes("min-w-0 truncate text-center"), "Overlong names remain safely truncated at the maximum");
 assert.match(ui, /My Activity Summary/, "Self default is activity summary, not flat table");
 assert.match(ui, /item\.count\.toLocaleString/, "Clickable category rows expose real computed totals");
 assert.match(ui, /href=\{linkFor\(\{activity:item\.name,page:"1"\}\)\}/, "Clicking a category selects it");
