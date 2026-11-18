@@ -4,6 +4,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
+import { PartnerCaseBottomNavigation } from '@/components/partner-case-bottom-navigation';
+import { PartnerCasePageHeader } from '@/components/partner-case-page-header';
 import { PartnerSectionHeader } from '@/components/ui/partner-section-header';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { getPartnerSupport, type PartnerSupport } from '@/lib/engagement';
@@ -34,7 +36,8 @@ export default function SupportScreen() {
   }, [load]);
 
   return (
-    <PartnerScreen title="Support" onBack={() => router.back()}>
+    <PartnerScreen title="Support" hideTopBar navyStatusBar bottomNavigationNavy bottomNavigation={<PartnerCaseBottomNavigation activeTab="More" />}>
+      <PartnerCasePageHeader title="Support" icon="headset-outline" onBack={() => router.back()} />
       {loading ? (
         <PartnerStateView state="loading" title="Loading support" />
       ) : error || !data ? (
