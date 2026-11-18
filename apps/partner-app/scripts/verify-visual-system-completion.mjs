@@ -259,9 +259,10 @@ requireText(claims, "claimToneStyles[stageTone].pill", 'Claim status badges must
 requireText(renewals, 'PartnerAssets.emptyStates.noRenewals', 'Renewal empty states must use the prepared no-renewals artwork.');
 requireText(renewals, 'PartnerAssets.actions.renewals', 'Upcoming renewal rows must use Partner renewal artwork.');
 requireText(renewals, 'styles.opportunitiesHeader', 'Renewal opportunity card must keep a section header.');
-requireText(renewals, "summaryPanel: { marginTop: 0, borderRadius: 15, borderWidth: 1, borderColor: '#E1E8F1', backgroundColor: '#FFFFFF' }", 'Renewal summary must be a white reference-style block, not navy.');
+requireText(renewals, "summaryPanel: { marginTop: 0, marginHorizontal: -partnerTheme.spacing.lg, backgroundColor: '#FFFFFF' }", 'Renewal summary must be white, full-width and without a card border.');
 requireText(renewals, 'styles.summaryMain', 'Renewal summary must show a left-side icon and heading.');
-requireText(renewals, '<Text style={styles.summaryCountValue}>{selectedSummary.count}</Text>', 'Policy count must remain visible on the right.');
+requireText(renewals, '<Text style={styles.summaryCount} numberOfLines={1}>POLICIES {selectedSummary.count}</Text>', 'Policy count must appear on the right as plain POLICIES N text.');
+requireText(renewals, 'styles.summaryDivider', 'A thin divider separates the full-width summary from the tabs.');
 requireText(renewals, 'Net Premium - {formatWholeRupees(selectedSummary.premium)}', 'Summary must display whole-rupee net premium inline.');
 requireText(renewals, 'Math.trunc(amount)', 'Summary premium must remove paise without rounding up.');
 requireText(renewals, "formatIndianCurrency(Number.isFinite(amount) ? Math.trunc(amount) : 0)", 'Whole-rupee summary must use Indian digit grouping.');
