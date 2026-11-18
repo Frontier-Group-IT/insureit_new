@@ -94,8 +94,8 @@ export default function SettingsScreen() {
       <PartnerCasePageHeader title="Settings & app info" icon="settings-outline" onBack={() => router.back()} />
       <PartnerSectionHeader title="Account" settingsHeading />
       <View style={styles.menu}>
-        <SettingsLink icon="person-outline" title="Profile & registration" onPress={() => router.push('/profile')} />
-        <SettingsLink icon="headset-outline" title="Support" onPress={() => router.push('/support')} last />
+        <SettingsLink icon="person-outline" title="Profile & registration" subtitle="Manage your profile details" onPress={() => router.push('/profile')} />
+        <SettingsLink icon="headset-outline" title="Support" subtitle="Get help and assistance" onPress={() => router.push('/support')} last />
       </View>
 
       <PartnerSectionHeader title="Device security" settingsHeading />
@@ -159,10 +159,11 @@ export default function SettingsScreen() {
   );
 }
 
-function SettingsLink({ icon, asset, title, onPress, last = false }: {
+function SettingsLink({ icon, asset, title, subtitle, onPress, last = false }: {
   icon?: keyof typeof Ionicons.glyphMap;
   asset?: ImageSourcePropType;
   title: string;
+  subtitle?: string;
   onPress: () => void;
   last?: boolean;
 }) {
@@ -177,11 +178,14 @@ function SettingsLink({ icon, asset, title, onPress, last = false }: {
         {asset ? (
           <Image source={asset} style={styles.linkArtworkImage} resizeMode="contain" />
         ) : icon ? (
-          <Ionicons name={icon} size={18} color={partnerTheme.colors.brand} />
+          <Ionicons name={icon} size={23} color="#6335B7" />
         ) : null}
       </View>
-      <Text style={styles.linkTitle}>{title}</Text>
-      <Ionicons name="chevron-forward" size={17} color="#A0A8B6" />
+      <View style={styles.linkCopy}>
+        <Text style={styles.linkTitle}>{title}</Text>
+        {subtitle ? <Text style={styles.linkSubtitle}>{subtitle}</Text> : null}
+      </View>
+      <Ionicons name="chevron-forward" size={21} color="#51468C" />
     </Pressable>
   );
 }
@@ -197,7 +201,7 @@ function SettingsToggleRow({ icon, title, subtitle, value, disabled, onValueChan
 }) {
   return (
     <View style={[styles.controlRow, !last && styles.divider]}>
-      <View style={styles.linkIcon}><Ionicons name={icon} size={18} color={partnerTheme.colors.brand} /></View>
+      <View style={styles.linkIcon}><Ionicons name={icon} size={23} color="#6335B7" /></View>
       <View style={styles.controlCopy}>
         <Text style={styles.controlTitle}>{title}</Text>
         <Text style={styles.controlSubtitle}>{subtitle}</Text>
@@ -225,7 +229,7 @@ function SettingsActionRow({ icon, title, subtitle, actionLabel, disabled, onPre
 }) {
   return (
     <View style={[styles.controlRow, !last && styles.divider]}>
-      <View style={styles.linkIcon}><Ionicons name={icon} size={18} color={partnerTheme.colors.brand} /></View>
+      <View style={styles.linkIcon}><Ionicons name={icon} size={23} color="#6335B7" /></View>
       <View style={styles.controlCopy}>
         <Text style={styles.controlTitle}>{title}</Text>
         <Text style={styles.controlSubtitle}>{subtitle}</Text>
@@ -247,24 +251,26 @@ function InfoRow({ label, value, last = false }: { label: string; value: string;
 }
 
 const styles = StyleSheet.create({
-  menu: { overflow: 'hidden', borderRadius: partnerTheme.radius.lg, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
+  menu: { overflow: 'hidden', borderRadius: 19, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DAE0F4', shadowColor: '#6570B4', shadowOpacity: 0.06, shadowRadius: 9, elevation: 1 },
   updateMenu: { marginTop: 8 },
-  linkRow: { minHeight: 56, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 13 },
-  controlRow: { minHeight: 58, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 13, paddingVertical: 6 },
-  linkIcon: { width: 36, height: 36, borderRadius: 11, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.brandSoft },
+  linkRow: { minHeight: 68, flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 15, paddingVertical: 8 },
+  controlRow: { minHeight: 58, flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 15, paddingVertical: 10 },
+  linkIcon: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: '#EEE8FF' },
   linkArtwork: { backgroundColor: 'transparent' },
   linkArtworkImage: { width: 34, height: 34 },
-  linkTitle: { flex: 1, color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
+  linkCopy: { flex: 1, minWidth: 0, justifyContent: 'center' },
+  linkTitle: { color: '#141C3F', fontSize: 14, lineHeight: 19, fontWeight: '800' },
+  linkSubtitle: { color: '#525A81', fontSize: 11.5, lineHeight: 16, marginTop: 2 },
   controlCopy: { flex: 1, minWidth: 0, justifyContent: 'center' },
-  controlTitle: { color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
-  controlSubtitle: { marginTop: 1, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
-  smallAction: { minHeight: 36, minWidth: 62, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 10, borderRadius: 10, backgroundColor: partnerTheme.colors.brandSoft },
-  smallActionText: { color: partnerTheme.colors.brand, ...partnerTheme.typography.label },
-  details: { overflow: 'hidden', borderRadius: partnerTheme.radius.lg, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
+  controlTitle: { color: '#141C3F', fontSize: 14, lineHeight: 19, fontWeight: '800' },
+  controlSubtitle: { marginTop: 2, color: '#525A81', fontSize: 11.5, lineHeight: 16 },
+  smallAction: { minHeight: 38, minWidth: 76, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12, borderRadius: 19, backgroundColor: '#EDE7FF' },
+  smallActionText: { color: '#6335B7', ...partnerTheme.typography.label },
+  details: { overflow: 'hidden', borderRadius: 19, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DAE0F4' },
   infoRow: { minHeight: partnerTheme.control.minTouchTarget, flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14 },
   infoLabel: { color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
   infoValue: { flex: 1, color: partnerTheme.colors.ink, textAlign: 'right', ...partnerTheme.typography.bodyStrong },
-  divider: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: partnerTheme.colors.line },
+  divider: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#DBE0F1' },
   updateMessage: { marginTop: 6, paddingHorizontal: 4, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
   note: { marginTop: partnerTheme.spacing.lg, minHeight: partnerTheme.control.minTouchTarget, flexDirection: 'row', alignItems: 'center', gap: 9, paddingHorizontal: 12, borderRadius: partnerTheme.radius.lg, backgroundColor: partnerTheme.colors.brandSoft },
   noteText: { flex: 1, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },

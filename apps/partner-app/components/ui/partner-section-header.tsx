@@ -19,7 +19,10 @@ export function PartnerSectionHeader({
   return (
     <View style={[styles.row, compact && styles.rowCompact, settingsHeading && styles.settingsRow]}>
       <View style={styles.text}>
-        <Text style={[styles.title, settingsHeading && styles.settingsTitle]}>{title}</Text>
+        <View style={settingsHeading ? styles.settingsHeadingLine : undefined}>
+          <Text style={[styles.title, settingsHeading && styles.settingsTitle]}>{title}</Text>
+          {settingsHeading ? <View style={styles.settingsAccent} /> : null}
+        </View>
         {meta ? <Text numberOfLines={1} style={styles.meta}>{meta}</Text> : null}
       </View>
       {action ? <View style={styles.action}>{action}</View> : null}
@@ -42,8 +45,10 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     minHeight: 28,
   },
-  settingsRow: { marginTop: 10, marginBottom: 5, minHeight: 20 },
-  settingsTitle: { color: '#111111' },
+  settingsRow: { marginTop: 22, marginBottom: 10, minHeight: 24 },
+  settingsHeadingLine: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  settingsTitle: { color: '#20234C', fontSize: 15, lineHeight: 20, fontWeight: '900', letterSpacing: 0.35 },
+  settingsAccent: { height: 3, width: 28, borderRadius: 2, backgroundColor: '#6441BE' },
   text: { flex: 1, minWidth: 0 },
   title: {
     color: partnerTheme.colors.inkMuted,
