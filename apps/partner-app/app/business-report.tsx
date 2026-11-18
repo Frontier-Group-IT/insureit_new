@@ -1,8 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback } from 'react';
+import { useRouter } from 'expo-router';
 import { RefreshControl, StyleSheet, Text, View } from 'react-native';
 
 import { PartnerScreen } from '@/components/partner-screen';
+import { PartnerCasePageHeader } from '@/components/partner-case-page-header';
 import { PartnerStackBottomNavigation } from '@/components/partner-stack-bottom-navigation';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { getPartnerBusinessReportNet, type PartnerBusinessPerformance } from '@/lib/business';
@@ -12,6 +14,7 @@ import { usePartnerQuery } from '@/lib/use-partner-query';
 import { usePartnerSession } from '@/providers/partner-session-provider';
 
 export default function BusinessReportScreen() {
+  const router = useRouter();
   const { cacheScopeKey } = usePartnerSession();
   const fetchReport = useCallback(() => getPartnerBusinessReportNet(), []);
   const report = usePartnerQuery<PartnerBusinessPerformance>({
@@ -24,6 +27,8 @@ export default function BusinessReportScreen() {
   return (
     <PartnerScreen
       title="Business Report"
+      hideTopBar
+      navyStatusBar
       bottomNavigationNavy
       bottomNavigation={<PartnerStackBottomNavigation activeTab="business" />}
       scrollProps={{
@@ -37,6 +42,7 @@ export default function BusinessReportScreen() {
         ),
       }}
     >
+      <PartnerCasePageHeader title="Business Report" icon="business-outline" onBack={() => router.back()} />
       {report.loading && !report.data ? (
         <PartnerStateView state="loading" title="Loading business report" />
       ) : !report.data ? (

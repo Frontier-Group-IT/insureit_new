@@ -26,7 +26,14 @@ const businessGrowthIcon = read('components/ui/partner-business-growth-icon.tsx'
 const businessOverviewIcons = read('components/ui/partner-business-overview-icons.tsx');
 const homeMetricIcons = read('components/ui/partner-home-metric-icons.tsx');
 const business = read('app/(tabs)/business.tsx');
+const businessReport = read('app/business-report.tsx');
 const customers = read('app/customers.tsx');
+requireText(businessReport, 'hideTopBar', 'Business Report must hide its default light header.');
+requireText(businessReport, 'navyStatusBar', 'Business Report must render the navy status area.');
+requireText(businessReport, '<PartnerCasePageHeader title="Business Report" icon="business-outline" onBack={() => router.back()} />', 'Business Report must reuse the navy header with a white building icon and Back action.');
+requireText(businessReport, 'getPartnerBusinessReportNet()', 'Business Report data source must remain unchanged.');
+requireText(businessReport, 'bottomNavigation={<PartnerStackBottomNavigation activeTab="business" />}', 'Business Report must retain its existing bottom navigation.');
+
 const policies = read('app/(tabs)/policies.tsx');
 const claims = read('app/(tabs)/claims.tsx');
 const renewals = read('app/renewals.tsx');
