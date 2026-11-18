@@ -102,25 +102,25 @@ export default function ProfileScreen() {
 
         <View style={styles.heroTopRow}>
           <View style={styles.avatarStage}>
-          <View style={styles.avatarShell}>
-            {avatarUri ? (
-              <Image source={{ uri: avatarUri }} style={styles.avatarImage} resizeMode="cover" />
-            ) : (
-              <Text style={styles.avatarText}>{initials(signedInPersonName(identity))}</Text>
-            )}
-          </View>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Change profile photo"
-            disabled={avatarUploading}
-            onPress={() => void changeProfilePhoto()}
-            style={({ pressed }) => [
-              styles.avatarCamera,
-              (pressed || avatarUploading) && styles.avatarCameraDisabled,
-            ]}
-          >
-            <Ionicons name={avatarUploading ? 'cloud-upload-outline' : 'camera'} size={18} color="#FFFFFF" />
-          </Pressable>
+            <View style={styles.avatarShell}>
+              {avatarUri ? (
+                <Image source={{ uri: avatarUri }} style={styles.avatarImage} resizeMode="cover" />
+              ) : (
+                <Text style={styles.avatarText}>{initials(signedInPersonName(identity))}</Text>
+              )}
+            </View>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Change profile photo"
+              disabled={avatarUploading}
+              onPress={() => void changeProfilePhoto()}
+              style={({ pressed }) => [
+                styles.avatarCamera,
+                (pressed || avatarUploading) && styles.avatarCameraDisabled,
+              ]}
+            >
+              <Ionicons name={avatarUploading ? 'cloud-upload-outline' : 'camera'} size={18} color="#FFFFFF" />
+            </Pressable>
           </View>
 
           <View style={styles.heroBody}>
@@ -131,16 +131,16 @@ export default function ProfileScreen() {
           </View>
 
           <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Sign out"
-          disabled={signingOut}
-          onPress={() => setLogoutOpen(true)}
-          style={({ pressed }) => [
-            styles.heroProfileIcon,
-            (pressed || signingOut) && styles.heroProfileIconPressed,
-          ]}
-        >
-          <Ionicons name="log-out-outline" size={25} color="#FFFFFF" />
+            accessibilityRole="button"
+            accessibilityLabel="Sign out"
+            disabled={signingOut}
+            onPress={() => setLogoutOpen(true)}
+            style={({ pressed }) => [
+              styles.heroProfileIcon,
+              (pressed || signingOut) && styles.heroProfileIconPressed,
+            ]}
+          >
+            <Ionicons name="log-out-outline" size={25} color="#FFFFFF" />
           </Pressable>
         </View>
       </View>
