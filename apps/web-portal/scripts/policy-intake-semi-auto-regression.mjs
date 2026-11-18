@@ -959,7 +959,7 @@ assert(workbenchText.includes("Reprocess All Previous ·")
   && workbenchText.includes("Stop remaining")
   && workbenchText.includes("createPortal(")
   && workbenchText.includes("document.body) : null")
-  && workbenchText.includes("No customer, vehicle or policy"),
+  && workbenchText.includes("This does not create a customer, vehicle or policy."),
   "Uncapped reprocess must be confirmed, sequential, cancelable, page-independent and never book");
 assert(aiWorkbenchPageText.includes("const PAGE_SIZE = 30;")
   && aiWorkbenchPageText.includes("AI Policy Studio")
