@@ -44,6 +44,7 @@ export function PartnerScreen({
   fullWidth = false,
   children,
   scrollProps,
+  resetScrollOnFocus = true,
   heroSearch,
   homeMotionScrollY,
   stickyHeading,
@@ -68,7 +69,7 @@ export function PartnerScreen({
   /** Opt-in edge-to-edge content without changing other Partner screens. */
   fullWidth?: boolean;
   scrollProps?: Omit<ScrollViewProps, 'contentContainerStyle'>;
-  /** Retained for existing callers; all PartnerScreen pages now reset on focus. */
+  /** Set false to preserve vertical scroll position when this screen regains focus. */
   resetScrollOnFocus?: boolean;
   /** Optional native-driven parallax on Home only; does not alter other tabs. */
   homeMotionScrollY?: Animated.Value;
@@ -134,9 +135,9 @@ export function PartnerScreen({
     };
   }, [isHomeHero]));
 
-  // Reset the main vertical scroll position whenever this screen regains focus.
-  // React Navigation retains tab screens, so an explicit reset is required.
+  // Reset on focus by default, but preserve position for detail screens with open modals.
   useFocusEffect(useCallback(() => {
+    if (!resetScrollOnFocus) return undefined;
     const reset = () => {
       scrollRef.current?.scrollTo({ y: 0, animated: false });
       latestScrollY.current = 0;
@@ -145,7 +146,7 @@ export function PartnerScreen({
     reset();
     const frame = requestAnimationFrame(reset);
     return () => cancelAnimationFrame(frame);
-  }, [homeMotionScrollY]));
+  }, [homeMotionScrollY, resetScrollOnFocus]));
 
   const submitHomeSearch = () => {
     if (heroSearch?.onSubmit) {
