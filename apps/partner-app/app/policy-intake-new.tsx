@@ -13,6 +13,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { PartnerStackBottomNavigation, type PartnerTabDestination } from '@/components/partner-stack-bottom-navigation';
 
 import { PartnerAnchoredDropdown } from '@/components/ui/partner-anchored-dropdown';
 import { PartnerBanner } from '@/components/ui/partner-banner';
@@ -67,6 +68,7 @@ export default function NewPolicyIntakeScreen() {
   const [progress, setProgress] = useState<PartnerPolicyIntakeUploadProgress | null>(null);
   const [error, setError] = useState('');
   const [closeConfirmVisible, setCloseConfirmVisible] = useState(false);
+  const [pendingTab, setPendingTab] = useState<PartnerTabDestination | null>(null);
   const [query, setQuery] = useState('');
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all');
   const [filterOpen, setFilterOpen] = useState(false);
@@ -180,13 +182,15 @@ export default function NewPolicyIntakeScreen() {
     setFile(asset);
   }
 
-  function requestClose() {
+  function requestClose(destination: PartnerTabDestination | null = null) {
     if (submitting) return;
     if (file) {
+      setPendingTab(destination);
       setCloseConfirmVisible(true);
       return;
     }
-    router.back();
+    if (destination) router.navigate(destination as never);
+    else router.back();
   }
 
   async function submit() {
@@ -222,10 +226,12 @@ export default function NewPolicyIntakeScreen() {
       message="Your lead source, policy type and mobile number are saved as a draft, but the selected document will need to be chosen again."
       confirmLabel="Leave"
       cancelLabel="Stay"
-      onCancel={() => setCloseConfirmVisible(false)}
+      onCancel={() => { setCloseConfirmVisible(false); setPendingTab(null); }}
       onConfirm={() => {
         setCloseConfirmVisible(false);
-        router.back();
+        if (pendingTab) router.navigate(pendingTab as never);
+        else router.back();
+        setPendingTab(null);
       }}
     />
   );
@@ -357,12 +363,13 @@ export default function NewPolicyIntakeScreen() {
             <Ionicons name="arrow-forward" size={17} color="#FFFFFF" />
           </Pressable>
         </View>
+        <PartnerStackBottomNavigation activeTab="policies" includeBottomInset onNavigate={requestClose} />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
       {confirmDialog}
       <ReferenceHeader />
       <ScrollView
@@ -522,6 +529,7 @@ export default function NewPolicyIntakeScreen() {
           />
         </View>
       </ScrollView>
+      <PartnerStackBottomNavigation activeTab="policies" includeBottomInset onNavigate={requestClose} />
     </SafeAreaView>
   );
 }
