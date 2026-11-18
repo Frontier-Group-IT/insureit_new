@@ -156,7 +156,7 @@ assert(client.includes("bookSemiAutoIntake(selectedId, true)"),
 const n8nValidator = text("lib/policy-intake-n8n-validation.ts");
 assert(n8nValidator.includes("export type N8nVerifiedPremiumBreakdown"),
   "Validated premium breakdown must have a typed, bounded response contract");
-assert(n8nValidator.includes("checksPassed: REQUIRED_CHECKS.size"),
+assert(n8nValidator.includes("checksPassed: requiredChecks.size"),
   "Display a check count derived from the strict validator, not an untrusted n8n claim");
 assert(n8nValidator.includes("const odAddons = premium.od_addons.map"),
   "Each individual OD add-on must be validated before reaching the preview");
@@ -761,7 +761,7 @@ assert(n8nValidator.includes('"policy_issuance_date"')
   "Accept strict independent issue dates while rejecting invalid dates");
 assert(!workerText.includes("const bundledPeriodsVerified=!bundled;")
   && workerText.includes('issuanceDecision==="otp_required"')
-  && workerText.includes('const bundledPeriodsVerified=!bundled||('),
+  && workerText.includes('const bundledPeriodsVerified=ownDamageOnly || !bundled || ('),
   "A validated bundled period is not an exception, but actual earlier-month OTP remains blocking");
 assert(workerText.includes('const state:AiQueueState=isDuplicate?"duplicate"')
   && workerText.includes('filter(e=>e.code!=="preflight_pending")')
@@ -971,4 +971,81 @@ assert(actionsText.includes('Only an open, unregistered Motor Intake can be repr
   && actionsText.includes("duplicates.matches.has(id)")
   && actionsText.includes('.in("state",["exception","verified","unsupported","failed"])'),
   "Reprocessing must reject completed, registered and duplicate Intakes while preserving individual rechecks");
+
+// OD-only 3005/O must be parsed without treating historic TP coverage as a
+// newly charged premium. These synthetic fixtures contain no customer PII.
+const odCode=readFileSync(new URL("../../../docs/n8n/icici-3005-od-parser.js",import.meta.url),"utf8");
+const parseOd=new Function(odCode+";return parseIcici3005Od;")();
+const odChecks=["is_icici_3005_od","insured_name_present","policy_number_present","vehicle_details_present",
+  "dates_present","od_subtotal_reconciled","ncb_deduction_reconciled","net_tax_equal_gross",
+  "idv_present","manufacturing_year_present","third_party_reference_present","zero_tp_charged",
+  "exact_igst_rounds_to_tax"];
+const fixtureOd=({index,base,addon,deduction,tax,igst,gross,idv,odStart="Nov 15, 2026",odEnd="Nov 14, 2027",
+  tpStart="Nov 15, 2025",tpEnd="Nov 14, 2030"})=>{
+  const subtotal=base+addon,net=subtotal-deduction;
+  return [
+    "ICICI Lombard General Insurance Company Limited",
+    "Product Code: 3005/O UIN: TEST",
+    "Stand-Alone Own Damage Two wheeler Insurance Policy",
+    "Please find enclosed Policy No. 3005/O/"+String(index).padStart(9,"0")+"/00/000",
+    "Name of the Insured              TEST CUSTOMER",
+    "Period of Insurance - Own Damage     "+odStart+" to "+odEnd,
+    "Vehicle Make / Model           BAJAJ / CHETAK 3503",
+    "RTO City                       MADHYA PRADESH-JABALPUR",
+    "Vehicle Registration No.       MP20AB1234",
+    "Engine No.                     TESTENGINE123",
+    "Chassis No.                    TESTCHASSIS1234567",
+    "Third Party Policy No.         TEST-TP-REFERENCE",
+    "Third Party Period of Insurance   "+tpStart+" to "+tpEnd,
+    "Third Party Insurer Name        TEST THIRD PARTY INSURER",
+    "Policy Issued On : Nov 13, 2026",
+    "This Policy covers only Own Damage Risk with no other liability",
+    "Vehicle Registration     Make     Model     Type of Body     CC/KW    Mfg Yr",
+    "MP20AB1234    BAJAJ    CHETAK 3503    Solo With Pillion     4.2    2025    2",
+    "Vehicle IDV      Total IDV",
+    idv.toFixed(2)+"  0.00  0.00  "+idv.toFixed(2),
+    "Premium Details",
+    "Basic OD Premium                  "+base.toFixed(2),
+    "Zero Depreciation (Silver)        "+addon.toFixed(2),
+    "Sub Total                         "+subtotal.toFixed(2),
+    "Less:",
+    "Sub-Total Deductions              "+deduction.toFixed(2),
+    "Total Own Damage Premium(A)       "+net.toFixed(2),
+    "IGST",
+    "18",
+    "Rs    "+igst.toFixed(2),
+    "Total Tax Payable                 "+tax.toFixed(2),
+    "Total Premium Payable             "+gross.toFixed(2),
+    "Unique Identification Number (UIN) Details"
+  ].join("\n");
+};
+const odExamples=[
+  {base:2076,addon:647,deduction:519,tax:397,igst:396.72,gross:2601,idv:99468},
+  {base:2056,addon:640,deduction:411,tax:411,igst:411.30,gross:2696,idv:98500},
+  {base:2310,addon:722,deduction:462,tax:463,igst:462.60,gross:3033,idv:111149},
+  {base:2056,addon:640,deduction:411,tax:411,igst:411.30,gross:2696,idv:98505},
+  {base:2222,addon:907,deduction:778,tax:423,igst:423.18,gross:2774,idv:106760}
+];
+for (const [index,params] of odExamples.entries()){
+  const sample=fixtureOd({index:index+1,...params});
+  const parsed=parseOd(sample);
+  assert.equal(parsed.validation_passed,true,"Synthetic OD layout "+(index+1)+" must pass");
+  assert.equal(Object.keys(parsed.checks).length,13);
+  assert(odChecks.every(k=>parsed.checks[k]===true),"All OD checks must pass");
+  assert.equal(parsed.premium_components.gross_premium,params.gross);
+  assert.equal(parsed.premium_components.basic_tp_premium,0);
+  assert.equal(parsed.premium_components.owner_driver_cpa,0);
+  assert.equal(parsed.parser_id,"icici_3005_od_n8n_native_pdf");
+  assert.equal(parsed.insureit_proposal.find(f=>f.key==="policy_product")?.value,"Stand-Alone Own Damage");
+  assert.equal(parseOd(sample.replace("Total Premium Payable             "+params.gross.toFixed(2),
+    "Total Premium Payable             99999.00")).validation_passed,false,
+    "Incorrect OD premium must fail closed");
+}
+assert(n8nValidator.includes("REQUIRED_OD_CHECKS")
+  && n8nValidator.includes("printed_od_subtotal")
+  && n8nValidator.includes("od_deductions")
+  && n8nValidator.includes("tpStartDate !== startDate")
+  && workerText.includes('extraction.preview.parserId==="icici_3005_n8n_native_pdf"'),
+  "OD contract keeps distinct validity and never syncs an OD parser as the bundled parser");
+
 console.log("Semi-auto Motor onboarding regression checks passed.");
