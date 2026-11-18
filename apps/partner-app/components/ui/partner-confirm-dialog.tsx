@@ -10,6 +10,7 @@ export type PartnerDialogAction = {
   onPress: () => void;
   destructive?: boolean;
   secondary?: boolean;
+  singleLineNormalLabel?: boolean;
 };
 
 const KIND_ICON: Record<PartnerDialogKind, keyof typeof Ionicons.glyphMap> = {
@@ -95,6 +96,7 @@ export function PartnerConfirmDialog({
                   <View style={[styles.action, displayedActions.length > 2 && styles.stackedAction]} key={index}>
                     <PartnerButton
                       label={action.label}
+                      singleLineNormalLabel={action.singleLineNormalLabel}
                       onPress={action.onPress}
                       variant={action.destructive ? 'danger' : action.secondary ? 'secondary' : 'primary'}
                       loading={busy && index === displayedActions.length - 1}
