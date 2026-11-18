@@ -1,6 +1,6 @@
 const KEYS = new Set([
   "policy_number", "insurer_name", "policy_product", "policy_issuance_date", "policy_start_date", "policy_end_date",
-  "third_party_start_date", "third_party_end_date",
+  "third_party_start_date", "third_party_end_date", "third_party_policy_number", "third_party_insurer_name",
   "insured_name", "vehicle_make", "vehicle_model", "vehicle_class", "vehicle_fuel_type",
   "vehicle_motor_power_kw", "vehicle_capacity", "vehicle_rto_state", "vehicle_registration_status",
   "vehicle_registration_number", "vehicle_engine_number", "vehicle_chassis_number",
@@ -8,13 +8,21 @@ const KEYS = new Set([
 ]);
 
 // Fail closed if n8n omits or renames any safety check in this parser contract.
-const REQUIRED_CHECKS = new Set([
+const REQUIRED_BUNDLED_CHECKS = new Set([
   "is_icici_3005", "insured_name_present", "policy_number_present",
   "vehicle_details_present", "dates_present", "od_liability_equal_net",
   "tp_cpa_equal_liability", "net_tax_equal_gross", "idv_present",
   "manufacturing_year_present", "basic_od_plus_addons_equals_printed_total",
   "basic_tp_equals_derived_tp", "exact_igst_rounds_to_tax",
 ]);
+const REQUIRED_OD_CHECKS = new Set([
+  "is_icici_3005_od", "insured_name_present", "policy_number_present",
+  "vehicle_details_present", "dates_present", "od_subtotal_reconciled",
+  "ncb_deduction_reconciled", "net_tax_equal_gross", "idv_present",
+  "manufacturing_year_present", "third_party_reference_present",
+  "zero_tp_charged", "exact_igst_rounds_to_tax",
+]);
+const OD_PARSER_ID = "icici_3005_od_n8n_native_pdf";
 
 export type N8nOcrField = {
   key: string; label: string; value: string; confidence: number | null;
@@ -59,13 +67,14 @@ export function validateN8nPolicyIntakeResponse(
   if (!plainObject(value) || value.contract_version !== "1") throw new Error("n8n_contract_version_invalid");
   if (value.intake_id !== ids.intakeId || value.document_id !== ids.documentId
       || value.request_id !== ids.requestId) throw new Error("n8n_request_identity_mismatch");
+  const odOnly = value.parser_id === OD_PARSER_ID && value.parser_version === "bridge-od-v1";
+  const bundled = value.parser_id === "icici_3005_n8n_native_pdf" && value.parser_version === "bridge-v1";
   if (value.ok !== true || value.review_required !== true || value.auto_finalize_allowed !== false
-      || value.parser_id !== "icici_3005_n8n_native_pdf"
-      || value.parser_version !== "bridge-v1"
-      || value.extraction_method !== "native_pdf_text") throw new Error("n8n_review_required");
+      || (!odOnly && !bundled) || value.extraction_method !== "native_pdf_text") throw new Error("n8n_review_required");
+  const requiredChecks = odOnly ? REQUIRED_OD_CHECKS : REQUIRED_BUNDLED_CHECKS;
   const checks = value.checks;
-  if (!plainObject(checks) || Object.keys(checks).length !== REQUIRED_CHECKS.size
-      || [...REQUIRED_CHECKS].some((key) => checks[key] !== true)
+  if (!plainObject(checks) || Object.keys(checks).length !== requiredChecks.size
+      || [...requiredChecks].some((key) => checks[key] !== true)
       || Object.values(checks).some((check) => check !== true)) {
     throw new Error("n8n_financial_validation_failed");
   }
@@ -109,13 +118,20 @@ export function validateN8nPolicyIntakeResponse(
   const tpEndDate = fieldValue("third_party_end_date");
   if (!isoDate(startDate) || !isoDate(endDate) || endDate < startDate
       || !isoDate(tpStartDate) || !isoDate(tpEndDate) || tpEndDate < tpStartDate
-      || tpStartDate !== startDate || tpEndDate < endDate) {
+      || (!odOnly && tpStartDate !== startDate) || tpEndDate < endDate) {
     // ICICI 3005 bundled coverage starts together; TP must not expire
     // before OD, but its own printed date must be extracted separately.
     throw new Error("n8n_coverage_dates_invalid");
   }
   const policyNumber = fieldValue("policy_number");
-  if (!/^3005\/\d{7,12}\/\d{2}\/\d{3}$/.test(policyNumber)) throw new Error("n8n_wrong_policy_product");
+  if (!(odOnly
+      ? /^3005\/O\/\d{7,12}\/\d{2}\/\d{3}$/.test(policyNumber)
+      : /^3005\/\d{7,12}\/\d{2}\/\d{3}$/.test(policyNumber)))
+    throw new Error("n8n_wrong_policy_product");
+  if (odOnly && (fieldValue("policy_product") !== "Stand-Alone Own Damage"
+      || !fieldValue("third_party_policy_number")
+      || !fieldValue("third_party_insurer_name")
+      || !issuanceDate)) throw new Error("n8n_od_evidence_missing");
 
   // Never accept a remote boolean as proof that the policy's money adds up.
   // All components below are parsed from PDF text by the n8n workflow.
@@ -149,9 +165,17 @@ export function validateN8nPolicyIntakeResponse(
   });
   const addOns = odAddons.reduce((total, addon) => total + addon.amount, 0);
   const cents = (number: number) => Math.round(number * 100);
-  if (cents(basicOd + addOns) !== cents(od)
-      || cents(tp + cpa) !== cents(liability)
-      || cents(od + liability) !== cents(net)
+  const subtotal = odOnly ? exactMoney(premium.printed_od_subtotal) : 0;
+  const deductions = odOnly ? exactMoney(premium.od_deductions) : 0;
+  const financeCorrect = odOnly
+    ? cents(basicOd + addOns) === cents(subtotal)
+      && cents(subtotal - deductions) === cents(od)
+      && cents(net) === cents(od)
+      && cents(tp) === 0 && cents(cpa) === 0 && cents(liability) === 0
+    : cents(basicOd + addOns) === cents(od)
+      && cents(tp + cpa) === cents(liability)
+      && cents(od + liability) === cents(net);
+  if (!financeCorrect
       || cents(net + tax) !== cents(gross)
       || Math.round(igst) !== tax) {
     throw new Error("n8n_premium_reconciliation_failed");
@@ -168,9 +192,10 @@ export function validateN8nPolicyIntakeResponse(
     if (typeof warning !== "string" || warning.length > 240) throw new Error("n8n_warning_invalid");
     return warning;
   });
-  return { ok: true, fields, warnings, parserId: "icici_3005_n8n_native_pdf",
-    parserVersion: "bridge-v1",
-    checksPassed: REQUIRED_CHECKS.size,
+  return { ok: true, fields, warnings,
+    parserId: odOnly ? OD_PARSER_ID : "icici_3005_n8n_native_pdf",
+    parserVersion: odOnly ? "bridge-od-v1" : "bridge-v1",
+    checksPassed: requiredChecks.size,
     premium: { basicOd, odAddons, totalOd: od, basicTp: tp, cpa, liability,
       net, exactIgst: igst, tax, gross } };
 }
