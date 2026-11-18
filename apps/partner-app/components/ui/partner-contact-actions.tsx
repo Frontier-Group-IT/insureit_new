@@ -113,7 +113,7 @@ const styles = StyleSheet.create({
   compactRow: { gap: 2 },
   verticalRow: { flexDirection: 'column', alignItems: 'center', gap: 2 },
   inlineLabeledRow: { justifyContent: 'center', alignItems: 'center', flexWrap: 'wrap', gap: 8 },
-  customerDetailRow: { width: '100%', justifyContent: 'flex-start', alignItems: 'center', flexWrap: 'nowrap', gap: 12 },
+  customerDetailRow: { width: '100%', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'nowrap', gap: 4 },
   customerDetailAction: { flex: 0, flexShrink: 0, width: 'auto', minHeight: 42, height: 42, paddingHorizontal: 0, gap: 5, borderWidth: 0, borderRadius: 0, backgroundColor: 'transparent' },
   inlineLabeledAction: { flexDirection: 'row', width: 'auto', height: 42, minHeight: 42, gap: 4, paddingHorizontal: 3 },
   inlineLabeledText: { color: partnerTheme.colors.brandStrong, fontSize: 11, fontWeight: '700' },
