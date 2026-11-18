@@ -1037,6 +1037,27 @@ for (const [index,params] of odExamples.entries()){
   assert.equal(parsed.premium_components.owner_driver_cpa,0);
   assert.equal(parsed.parser_id,"icici_3005_od_n8n_native_pdf");
   assert.equal(parsed.insureit_proposal.find(f=>f.key==="policy_product")?.value,"Stand-Alone Own Damage");
+  const odPayload={
+    contract_version:"1",intake_id:auditIds.intakeId,document_id:auditIds.documentId,
+    request_id:auditIds.requestId,ok:parsed.validation_passed,
+    parser_id:parsed.parser_id,parser_version:parsed.parser_version,
+    extraction_method:"native_pdf_text",review_required:true,auto_finalize_allowed:false,
+    fields:parsed.insureit_proposal,warnings:parsed.warnings,checks:parsed.checks,
+    premium_components:parsed.premium_components,
+  };
+  const validatedOd=validateN8nPolicyIntakeResponse(odPayload,auditIds);
+  assert.equal(validatedOd.parserId,"icici_3005_od_n8n_native_pdf");
+  assert.equal(validatedOd.checksPassed,13);
+  assert.equal(validatedOd.premium.gross,params.gross);
+  const odForm=mapVerifiedN8nMotorPremium(validatedOd.premium);
+  assert.equal(Number(odForm.od)+Number(odForm.addOnPremium),validatedOd.premium.net,
+    "Canonical form must preserve discounted OD payable net");
+  assert.equal(Number(odForm.tp)+Number(odForm.cpa),0);
+  assert.throws(()=>validateN8nPolicyIntakeResponse({
+    ...odPayload, premium_components:{...odPayload.premium_components,od_deductions:0}
+  },auditIds),/n8n_premium_reconciliation_failed/,
+    "OD NCB cannot be discarded without changing validated net");
+
   assert.equal(parseOd(sample.replace("Total Premium Payable             "+params.gross.toFixed(2),
     "Total Premium Payable             99999.00")).validation_passed,false,
     "Incorrect OD premium must fail closed");
