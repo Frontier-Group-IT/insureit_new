@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ComponentProps 
 import {
   BackHandler,
   FlatList,
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -240,7 +241,7 @@ export default function NewPolicyIntakeScreen() {
     return (
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         {confirmDialog}
-        <ReferenceHeader />
+        <ReferenceHeader onBack={() => requestClose()} />
 
         <View style={styles.searchFloat}>
           <Ionicons name="search-outline" size={20} color="#60708A" />
@@ -371,7 +372,7 @@ export default function NewPolicyIntakeScreen() {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       {confirmDialog}
-      <ReferenceHeader />
+      <ReferenceHeader onBack={() => requestClose()} />
       <ScrollView
         ref={mainScrollRef}
         contentContainerStyle={styles.detailsContent}
@@ -534,12 +535,14 @@ export default function NewPolicyIntakeScreen() {
   );
 }
 
-function ReferenceHeader() {
+function ReferenceHeader({ onBack }: { onBack: () => void }) {
   return (
     <View style={styles.header}>
-      <View style={styles.headerGlowOne} />
-      <View style={styles.headerGlowTwo} />
-      <Text style={styles.headerTitle}>Policy Intake</Text>
+      <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={onBack} hitSlop={8} style={styles.headerBack}>
+        <Ionicons name="arrow-back" size={21} color="#FFFFFF" />
+      </Pressable>
+      <Image source={require('../assets/partner/actions/add-policy-reference.png')} resizeMode="contain" style={styles.headerPolicyIcon} accessibilityLabel="Add Policy" />
+      <Text style={styles.headerTitle} numberOfLines={1}>NEW POLICY INTAKE</Text>
     </View>
   );
 }
@@ -674,40 +677,21 @@ function formatBytes(value: number) {
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#F6F8FC' },
   header: {
-    height: 78,
-    marginBottom: 24,
-    overflow: 'hidden',
-    justifyContent: 'center',
-    paddingHorizontal: 16,
-    backgroundColor: '#0663C4',
+    minHeight: 58,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 14,
+    backgroundColor: '#071E49',
   },
-  headerGlowOne: {
-    position: 'absolute',
-    width: 210,
-    height: 105,
-    borderRadius: 105,
-    right: -36,
-    top: -52,
-    backgroundColor: 'rgba(0,145,255,0.28)',
-    transform: [{ rotate: '-9deg' }],
-  },
-  headerGlowTwo: {
-    position: 'absolute',
-    width: 180,
-    height: 72,
-    borderRadius: 90,
-    right: -24,
-    bottom: -42,
-    backgroundColor: 'rgba(0,97,212,0.38)',
-    transform: [{ rotate: '-13deg' }],
-  },
-  headerTitle: { color: '#FFFFFF', fontSize: 16, lineHeight: 21, fontWeight: '700', letterSpacing: -0.12 },
+  headerBack: { width: 32, height: 44, alignItems: 'center', justifyContent: 'center' },
+  headerPolicyIcon: { width: 37, height: 37, borderRadius: 5, backgroundColor: '#FFFFFF' },
+  headerTitle: { flexShrink: 1, color: '#FFFFFF', fontSize: 16, lineHeight: 21, fontWeight: '700', letterSpacing: -0.12 },
   searchFloat: {
-    position: 'absolute',
     zIndex: 8,
-    top: 58,
-    left: 14,
-    right: 14,
+    marginHorizontal: 14,
+    marginTop: 12,
+    marginBottom: 12,
     height: 50,
     borderRadius: 10,
     borderWidth: StyleSheet.hairlineWidth,
