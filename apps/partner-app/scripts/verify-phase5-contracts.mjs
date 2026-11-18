@@ -338,6 +338,13 @@ expectAll('../web-portal/app/api/partner/customers/create/route.ts', [
   [/from\("customer_documents"\)\.insert/, 'document metadata is recorded'],
   [/new Uint8Array\(await file\.arrayBuffer\(\)\)/, 'uploaded content is scanned for signature'],
 ]);
+// New Customer GST header remains one line with a plain label and no redundant status copy.
+expectAll('app/customer-new.tsx', [
+  [/<Text style=\{\[styles\.section, styles\.kycHeading\]\}>KYC and GST Details<\/Text>/, 'KYC section heading uses shrink-safe inline layout'],
+  [/<Text style=\{styles\.gstLabel\}>GST Registered<\/Text>/, 'GST label omits YES/NO status copy'],
+  [/sectionRow: \{[^\n]*flexWrap: 'nowrap'/, 'KYC heading controls stay on one row'],
+  [/gstLabel: \{[^\n]*fontWeight: '400'/, 'GST Registered label uses normal text weight'],
+]);
 // Evaluate every contract only after all checks have run.
 if (failures.length) {
   console.error('Partner Phase 5 resilience/accessibility contract verification failed:');

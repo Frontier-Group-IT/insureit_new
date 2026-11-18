@@ -99,9 +99,9 @@ export default function NewPartnerCustomerScreen() {
         </View>
         <View style={styles.card}>
           <View style={styles.sectionRow}>
-            <Text style={styles.section}>KYC and GST Details</Text>
+            <Text style={[styles.section, styles.kycHeading]}>KYC and GST Details</Text>
             <View style={styles.gst}>
-              <Text style={styles.gstLabel}>GST Registered · {form.gst_registered ? 'YES' : 'NO'}</Text>
+              <Text style={styles.gstLabel}>GST Registered</Text>
               <Switch accessibilityLabel="GST Registered" value={form.gst_registered}
                 onValueChange={value => { setForm(previous => ({ ...previous, gst_registered: value, gst_number: value ? previous.gst_number : '' })); if (!value) setDocuments(previous => { const { gst_copy: _discarded, ...rest } = previous; return rest; }); }}
                 disabled={busy || !!createdCustomerId} trackColor={{ false: '#A3B0C4', true: '#2563EB' }} thumbColor="#FFFFFF" ios_backgroundColor="#A3B0C4" />
@@ -132,10 +132,10 @@ const styles = StyleSheet.create({
   header: { backgroundColor: '#071E49', paddingHorizontal: 18, paddingVertical: 16, flexDirection: 'row', alignItems: 'center', gap: 12 },
   back: { padding: 5 }, title: { color: '#FFF', fontSize: 19, fontWeight: '800' }, subtitle: { color: '#D7E7FC', fontSize: 11, marginTop: 3 },
   content: { padding: 13, paddingBottom: 28, gap: 12 }, card: { backgroundColor: '#FFF', borderRadius: 16, padding: 15, gap: 11, borderWidth: 1, borderColor: '#E1E8F3' },
-  section: { fontSize: 14, fontWeight: '800', color: '#102C5B' }, sectionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 },
+  section: { fontSize: 14, fontWeight: '800', color: '#102C5B' }, sectionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'nowrap', gap: 4 }, kycHeading: { flexShrink: 1 },
   field: { flex: 1, gap: 5, minWidth: 0 }, label: { fontSize: 11, fontWeight: '600', color: '#34445F' }, requiredStar: { color: '#D92D20', fontWeight: '800' },
   input: { minHeight: 45, borderWidth: 1, borderColor: '#CBD7E7', borderRadius: 9, paddingHorizontal: 12, fontSize: 13, color: '#14294D', backgroundColor: '#FFF' },
-  two: { flexDirection: 'row', gap: 9 }, gst: { flexDirection: 'row', alignItems: 'center', gap: 7 }, gstLabel: { fontSize: 10, color: '#102C5B', fontWeight: '700' },
+  two: { flexDirection: 'row', gap: 9 }, gst: { flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 0 }, gstLabel: { fontSize: 10, color: '#102C5B', fontWeight: '400' },
   document: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, borderRadius: 10, borderWidth: 1, borderColor: '#D9E5F4', backgroundColor: '#F8FAFE' },
   documentText: { flex: 1 }, documentTitle: { fontSize: 12, fontWeight: '700', color: '#14294D' }, documentHint: { fontSize: 10, color: '#7B8BA4', marginTop: 3 },
   footer: { paddingVertical: 4, flexDirection: 'row', gap: 10 },
