@@ -143,5 +143,5 @@ assert.ok(partnerScreen.includes('if (!resetScrollOnFocus) return undefined;'), 
 assert.ok(partnerScreen.includes('[homeMotionScrollY, resetScrollOnFocus]'), 'Focus reset callback responds to the opt-out prop.');
 assert.ok(app.includes('title="Case Details" resetScrollOnFocus={false}'), 'Life/Health Case Details prevents the shared focus scroll jump.');
 assert.ok(app.includes('const refreshed=await load(true);'), 'Save Remark and Reject continue to use silent refresh.');
-assert.equal((app.match(/const refreshed=await load\\(true\\);/g)||[]).length,2, 'Save Remark and Reject both preserve the visible case view.');
+assert.equal((app.match(/const refreshed=await load\(true\);/g)||[]).length,2, 'Save Remark and Reject both preserve the visible case view.');
 console.log('Case inline edit, append-only remarks, secure issuance and native parity verified.');
