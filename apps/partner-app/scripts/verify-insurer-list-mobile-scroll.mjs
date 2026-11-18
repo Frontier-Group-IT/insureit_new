@@ -11,8 +11,8 @@ for (const alias of ['United India', 'New India', 'ICICI Lombard', 'Tata AIG', '
 assert.match(screen, /accessibilityLabel=\{insurer\.name\}/);
 assert.match(screen, /numberOfLines=\{2\} ellipsizeMode="tail"/);
 assert.match(screen, /BUSINESS PERFORMANCE/);
-assert.match(screen, /bar-chart-outline/);
-assert.match(screen, /hideTopBar fullWidth/, 'Preserve compact blue header');
+assert.match(screen, /source=\{PartnerAssets\.actions\.businessPerformance\}/, 'Header uses existing 3D business artwork');
+assert.match(screen, /hideTopBar fullWidth/, 'Preserve compact header');
 assert.match(screen, /accessibilityLabel="Date Range"/, 'Date Range is the only register filter');
 assert.match(screen, /styles\.dateRangeTrigger/, 'Full-width date range control remains');
 assert.match(screen, /dateExpanded \? \(/, 'Calendar opens immediately beneath Date Range');
@@ -35,7 +35,7 @@ for (const label of ["label: 'Policies'", "label: 'Net Premium'", "label: 'Pay-I
 assert.doesNotMatch(screen, /label: 'Amount'|key: 'amounts'/, 'Duplicate Amount column must not return');
 assert.match(screen, /const canViewCommercials = employee && context\?\.can_view_insurer_commercials === true/, 'Commercial columns require the authenticated permission');
 assert.match(screen, /headerTitleRow: \{ flexDirection: 'row', alignItems: 'center'/, 'Header icon and title must align in the same row');
-assert.match(screen, /<View style=\{styles\.headerTitleRow\}>[\s\S]*?<Pressable[\s\S]*?bar-chart-outline[\s\S]*?Insurer-wise Performance/, 'Header icon sits with the title, not above it');
+assert.match(screen, /<View style=\{styles\.headerTitleRow\}>[\s\S]*?<Pressable[\s\S]*?source=\{PartnerAssets\.actions\.businessPerformance\}[\s\S]*?Insurer-wise Performance/, '3D artwork sits with the header title, not above it');
 assert.match(screen, /const columns: Array<\{ key: Metric \| 'policies'; label: string \}> = employee/, 'Actor-specific column sets');
 assert.match(screen, /getPartnerInsurerRegister\(from, to\)/, 'Keep authorized RPC');
 assert.match(screen, /setRange\(draft\)/, 'Applying date range refreshes query');
