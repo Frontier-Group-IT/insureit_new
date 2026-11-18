@@ -120,7 +120,9 @@ assert.ok(screen.includes('numberOfLines={1} adjustsFontSizeToFit minimumFontSca
 assert.ok(screen.includes("progressText:{color:'#324D9E',fontWeight:'700',fontSize:8"), 'Onboarding percentage has a compact 8pt font.');
 assert.ok(screen.includes('summaryProgress:{width:35,height:35,borderRadius:18,borderWidth:3,'), 'Progress ring stays compact with extra text space.');
 
-assert.match(screen,/accessibilityLabel="Create Active Policy"/, 'Shared create action is labelled as requested.');
+assert.ok(screen.includes("accessibilityLabel={isNew?(isMotor?'Upload Policy':'Create Policy'):'Create Active Policy'}"), 'Standalone Motor / Non-Motor and existing intake actions have product-specific accessible labels.');
+assert.ok(screen.includes("accessibilityLabel={isNew?'Create Case':'Create Policy'}"), 'Standalone Life / Health action is Create Case.');
+assert.ok(screen.includes("isNew?(isMotor?'Upload Policy':'Create Policy'):'Create Active Policy'"), 'Visible action labels match selected standalone product.');
 assert.match(screen,/createPartnerPolicyIntakeBridgeUrl\(id,false,null\)/, 'Non-Motor active creation uses authorised web handoff.');
 assert.match(screen,/disabled=\{booking\|\|saving\|\|!data\}/, 'Booking remains gated by loading and saving.');
 
