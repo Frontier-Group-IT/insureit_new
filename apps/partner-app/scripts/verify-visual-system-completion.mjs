@@ -564,3 +564,6 @@ const migration = fs.readFileSync(path.join(root, '../../supabase/migrations/202
 for (const item of ['partner_app_commercial_scope()', 'partner_branch_authorized_policy_ids()', 'count(*) over() as total_count', 'v_line not in', "GRANT EXECUTE ON FUNCTION public.partner_app_list_policies_by_line"]) {
   requireText(migration, item, 'Business-line RPC migration lost scoped paging or permissions contract: '+item);
 }
+
+requireText(policies, "value.includes('non motor')", 'Non Motor category must not fall into Motor substring matching');
+requireText(migration, "ilike '%non motor%'", 'Server-side Non Motor category must match the card classifier');
