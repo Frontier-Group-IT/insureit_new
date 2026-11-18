@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { PartnerScreen } from '@/components/partner-screen';
+import { PartnerCaseBottomNavigation } from '@/components/partner-case-bottom-navigation';
+import { PartnerCasePageHeader } from '@/components/partner-case-page-header';
 import { getAccountDeletionRequest, submitAccountDeletionRequest, type AccountDeletionRequest } from '@/lib/account-deletion';
 
 export default function AccountDeletionScreen() {
@@ -28,7 +30,8 @@ export default function AccountDeletionScreen() {
     } }],
   );
   const active = request?.status === 'requested' || request?.status === 'under_review' || request?.status === 'fulfilling';
-  return <PartnerScreen eyebrow="PRIVACY" title="Account deletion" onBack={() => router.back()}>
+  return <PartnerScreen title="Account deletion" hideTopBar navyStatusBar bottomNavigationNavy bottomNavigation={<PartnerCaseBottomNavigation activeTab="More" />}>
+    <PartnerCasePageHeader title="Account deletion" icon="shield-checkmark-outline" onBack={() => router.back()} />
     <ScrollView contentContainerStyle={styles.body}>
       <Text style={styles.heading}>Your account, your choice</Text>
       <Text style={styles.text}>Request removal of your individual INSUREIT Partner login and eligible personal data. We verify ownership and legal retention obligations before fulfillment.</Text>

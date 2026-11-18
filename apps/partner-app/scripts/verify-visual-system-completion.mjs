@@ -123,6 +123,16 @@ const search = read('app/search.tsx');
 const support = read('app/support.tsx');
 const settings = read('app/settings.tsx');
 const profile = read('app/profile.tsx');
+const accountShellHeader = read('components/partner-case-page-header.tsx');
+requireText(accountShellHeader, "backgroundColor: '#0A234A'", 'Account header must match the Policy Details title strip.');
+requireText(accountShellHeader, 'accessibilityRole="header"', 'Account page title must be accessible.');
+const deletionScreen = read('app/account-deletion.tsx');
+for (const [screen, label] of [[settings, 'Settings'], [profile, 'Profile'], [support, 'Support'], [deletionScreen, 'Account deletion']]) {
+  requireText(screen, 'hideTopBar navyStatusBar bottomNavigationNavy', `${label} must opt into the Policy Details navy shell.`);
+  requireText(screen, '<PartnerCaseBottomNavigation activeTab="More" />', `${label} must retain permission-aware five-tab navigation with More selected.`);
+  requireText(screen, '<PartnerCasePageHeader', `${label} must use the Policy Details-style title strip.`);
+}
+
 const activity = read('app/activity.tsx');
 const impact = read('app/impact.tsx');
 const journey = read('app/journey.tsx');
