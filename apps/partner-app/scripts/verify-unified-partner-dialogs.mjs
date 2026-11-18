@@ -20,6 +20,12 @@ assert.match(presenter, /cancelable === true/, 'Native alerts cannot dismiss by 
 assert.match(dialog, /KIND_ICON/, 'Success, error, warning, info and destructive states use the same icon treatment');
 assert.match(dialog, /accessibilityViewIsModal/, 'Dialog is exposed to screen readers');
 assert.match(dialog, /displayedActions\.map/, 'One, two and multi-action confirmations use the same surface');
+assert.match(presenter, /singleLineNormalLabel: choice\.singleLineNormalLabel/, 'Only explicitly flagged dialog actions get compact label treatment');
+assert.match(dialog, /singleLineNormalLabel=\{action\.singleLineNormalLabel\}/, 'Per-action label styling reaches the shared button');
+const button = read('components/ui/partner-button.tsx');
+assert.match(button, /numberOfLines=\{singleLineNormalLabel \? 1 : undefined\}/, 'Flagged action label remains one line');
+assert.match(button, /singleLineLabel: \{ fontSize: 12, lineHeight: 16, fontWeight: '400'/, 'Flagged button font is compact and normal weight');
+
 
 const sourceFiles = [...walk('app'), ...walk('components')];
 const exceptions = new Set(['components/ui/partner-alert-provider.tsx']);
