@@ -269,6 +269,15 @@ expectAll('../../supabase/migrations/20261117181500_partner_customer_vehicle_ref
   [/'permit_no',permit_no/, 'Scoped RPC returns permit'],
 ]);
 
+// Customer Details names must stay on one line with the verification icon visible.
+expectAll('app/customer/[id].tsx', [
+  [/numberOfLines=\{1\} ellipsizeMode="tail"\>\{data\.customer\.customer_name\}/, 'long customer names truncate with trailing ellipsis'],
+  [/profileNameWrap: \{ flexDirection: 'row', flexWrap: 'nowrap', alignItems: 'center', gap: 5, minWidth: 0 \}/, 'customer name and verification icon never wrap'],
+  [/profileName: \{[^\n]*flexShrink: 1, minWidth: 0/, 'only the name shrinks inside its row'],
+  [/name="checkmark-circle" size=\{19\} color="#0CB76B"/, 'existing verified customer icon remains visible'],
+  [/<PartnerContactActions phone=\{data\.customer\.phone\} email=\{data\.customer\.email\} inlineLabeled customerDetailLayout/, 'contact actions remain in place'],
+]);
+
 // Evaluate every contract only after all checks have run.
 if (failures.length) {
   console.error('Partner Phase 5 resilience/accessibility contract verification failed:');

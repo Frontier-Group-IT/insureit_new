@@ -62,7 +62,7 @@ export default function CustomerDetailScreen() {
             <View style={redesign.avatar}><Text style={redesign.avatarText}>{initials(data.customer.customer_name)}</Text></View>
             <View style={redesign.profileContent}>
               <View style={redesign.profileNameWrap}>
-                <Text style={redesign.profileName}>{data.customer.customer_name}</Text>
+                <Text style={redesign.profileName} numberOfLines={1} ellipsizeMode="tail">{data.customer.customer_name}</Text>
                 {customerTone(data.customer.status) === 'success' ? <Ionicons name="checkmark-circle" size={19} color="#0CB76B" /> : null}
               </View>
               <View style={redesign.actions}>
@@ -236,8 +236,8 @@ const redesign = StyleSheet.create({
   avatar: { width: 64, height: 64, borderRadius: 32, backgroundColor: '#EEE1FF', alignItems: 'center', justifyContent: 'center' },
   avatarText: { color: '#6B28CE', fontSize: 24, fontWeight: '700' },
   profileContent: { flex: 1, minWidth: 0, gap: 6 },
-  profileNameWrap: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 5 },
-  profileName: { color: '#111B37', fontSize: 13, fontWeight: '700', flexShrink: 1 },
+  profileNameWrap: { flexDirection: 'row', flexWrap: 'nowrap', alignItems: 'center', gap: 5, minWidth: 0 },
+  profileName: { color: '#111B37', fontSize: 13, fontWeight: '700', flexShrink: 1, minWidth: 0 },
   actions: { alignItems: 'flex-start', width: '100%' },
   tabs: { flexDirection: 'row', backgroundColor: '#FFFFFF' },
   tab: { flex: 1, paddingVertical: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, borderBottomWidth: 3, borderBottomColor: 'transparent' },
