@@ -1,7 +1,7 @@
 import { partnerAlert } from '@/components/ui/partner-alert-provider';
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useMemo, useState } from 'react';
-import { Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Image, Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
@@ -9,6 +9,7 @@ import { PartnerStackBottomNavigation } from '@/components/partner-stack-bottom-
 import { PartnerInsurerLogo } from '@/components/ui/partner-insurer-logo';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { getPartnerInsurerRegister, type PartnerInsurerRegisterRow } from '@/lib/business';
+import { PartnerAssets } from '@/lib/partner-assets';
 import { usePartnerQuery } from '@/lib/use-partner-query';
 import { usePartnerSession } from '@/providers/partner-session-provider';
 
@@ -200,7 +201,7 @@ export default function InsurerListScreen() {
           <View style={styles.headerTitleRow}>
             <Pressable accessibilityRole="button" accessibilityLabel="Back to Business"
               onPress={() => router.back()} style={styles.headerIcon}>
-              <Ionicons name="bar-chart-outline" size={21} color="#FFFFFF" />
+              <Image source={PartnerAssets.actions.businessPerformance} style={styles.headerArtwork} resizeMode="contain" />
             </Pressable>
             <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Insurer-wise Performance</Text>
           </View>
@@ -385,15 +386,16 @@ export default function InsurerListScreen() {
 }
 
 const styles = StyleSheet.create({
-  referenceHeader: { marginHorizontal: -16, height: 64, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', overflow: 'hidden', backgroundColor: '#0860C8' },
-  headerOrbLarge: { position: 'absolute', right: -38, top: -52, width: 170, height: 130, borderRadius: 90, backgroundColor: '#0D74E3', opacity: 0.9 },
-  headerOrbSmall: { position: 'absolute', right: 95, top: -25, width: 85, height: 85, borderRadius: 45, backgroundColor: '#096BD7', opacity: 0.8 },
-  headerIcon: { width: 37, height: 37, borderRadius: 8, backgroundColor: '#FFFFFF25', alignItems: 'center', justifyContent: 'center', marginRight: 9 },
+  referenceHeader: { marginHorizontal: -16, height: 64, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', overflow: 'hidden', backgroundColor: '#071E49' },
+  headerOrbLarge: { position: 'absolute', right: -38, top: -52, width: 170, height: 130, borderRadius: 90, backgroundColor: '#13305F', opacity: 0.65 },
+  headerOrbSmall: { position: 'absolute', right: 95, top: -25, width: 85, height: 85, borderRadius: 45, backgroundColor: '#112B57', opacity: 0.55 },
+  headerIcon: { width: 42, height: 42, borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginRight: 7 },
+  headerArtwork: { width: 42, height: 42 },
   headerCopy: { flex: 1, minWidth: 0 },
-  headerEyebrow: { marginLeft: 46, marginBottom: 2, fontSize: 8.5, color: '#DAEAFF', fontWeight: '800', letterSpacing: 1.1 },
+  headerEyebrow: { marginLeft: 49, marginBottom: 2, fontSize: 8.5, color: '#DAEAFF', fontWeight: '800', letterSpacing: 1.1 },
   headerTitleRow: { flexDirection: 'row', alignItems: 'center', minWidth: 0 },
   headerTitle: { flex: 1, minWidth: 0, fontSize: 18, fontWeight: '800', color: '#FFFFFF', lineHeight: 23 },
-  headerSearchBand: { backgroundColor: '#0860C8', marginHorizontal: -16, paddingHorizontal: 12, paddingTop: 4, paddingBottom: 12 },
+  headerSearchBand: { backgroundColor: '#071E49', marginHorizontal: -16, paddingHorizontal: 12, paddingTop: 4, paddingBottom: 12 },
   headerSearch: { backgroundColor: '#FFFFFF', borderRadius: 10, minHeight: 42, paddingHorizontal: 12, alignItems: 'center', flexDirection: 'row', gap: 9 },
   headerSearchInput: { flex: 1, color: '#233D62', fontSize: 12, paddingVertical: 6 },
   dateSection: { marginHorizontal: 10, marginTop: 10, marginBottom: 8 },
