@@ -117,3 +117,55 @@ test("rejects invalid add-on amounts, missing breakdown and oversized evidence",
  const field=fresh();field.fields[0].evidence="x".repeat(130);
  assert.throws(()=>validateN8nPolicyIntakeResponse(field,ids),/n8n_field_shape_invalid/);
 });
+
+function odFixture() {
+ const x=fresh();
+ x.parser_id="icici_3005_od_n8n_native_pdf";
+ x.parser_version="bridge-od-v1";
+ x.checks=Object.fromEntries([
+   "is_icici_3005_od","insured_name_present","policy_number_present",
+   "vehicle_details_present","dates_present","od_subtotal_reconciled",
+   "ncb_deduction_reconciled","net_tax_equal_gross","idv_present",
+   "manufacturing_year_present","third_party_reference_present",
+   "zero_tp_charged","exact_igst_rounds_to_tax"
+ ].map(k=>[k,true]));
+ const overrides={
+   policy_number:"3005/O/462448679/00/000",policy_product:"Stand-Alone Own Damage",
+   policy_issuance_date:"2026-11-13",policy_start_date:"2026-11-15",policy_end_date:"2027-11-14",
+   third_party_start_date:"2023-10-16",third_party_end_date:"2028-10-15",
+   third_party_policy_number:"32070031236260013654",third_party_insurer_name:"IRAO",
+   insured_name:"TEST OD CUSTOMER",vehicle_make:"BAJAJ",vehicle_model:"CHETAK 2413 PREMIUM",
+   idv:"106760",od_premium:"2351",tp_premium:"0",cpa_premium:"0"
+ };
+ const byKey=new Map(x.fields.map(f=>[f.key,f]));
+ for(const [key,value] of Object.entries(overrides)){
+   if(byKey.has(key))byKey.get(key).value=value;
+   else x.fields.push({key,label:key,value,confidence:null,page:1,evidence:key});
+ }
+ x.premium_components={
+  basic_od_premium:2222,od_addons:[{name:"Zero Depreciation (Silver)",amount:907}],
+  printed_od_subtotal:3129,od_deductions:778,total_od_premium:2351,
+  basic_tp_premium:0,owner_driver_cpa:0,total_liability_premium:0,
+  net_premium:2351,igst_exact:423.18,printed_total_tax:423,gross_premium:2774
+ };
+ return x;
+}
+test("accepts consistent ICICI 3005/O OD policy with independent TP dates",()=>{
+ const x=odFixture();const validated=validateN8nPolicyIntakeResponse(x,ids);
+ assert.equal(validated.ok,true);
+ assert.equal(validated.parserId,"icici_3005_od_n8n_native_pdf");
+ assert.equal(validated.checksPassed,13);
+ assert.equal(validated.premium.gross,2774);
+});
+test("rejects OD NCB mismatch, charged TP, missing TP reference, and wrong policy number",()=>{
+ const mistakes=[
+  x=>x.premium_components.od_deductions++,
+  x=>x.premium_components.basic_tp_premium=100,
+  x=>x.fields=x.fields.filter(f=>f.key!=="third_party_policy_number"),
+  x=>x.fields.find(f=>f.key==="policy_number").value="3005/462448679/00/000"
+ ];
+ for(const bad of mistakes){
+  const x=odFixture();bad(x);
+  assert.throws(()=>validateN8nPolicyIntakeResponse(x,ids));
+ }
+});
