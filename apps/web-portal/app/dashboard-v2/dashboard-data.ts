@@ -418,13 +418,16 @@ export async function getDashboardCurrentData(
     return effectiveDate >= monthStartKey && effectiveDate <= todayKey;
   });
 
+  const mtdPolicyIds = mtdPolicies.map((row) => row.id);
   const premiumMap = new Map<string, { gross: number; net: number }>();
-  if (access.commercial && mtdPolicies.length) {
-    const premiumResult = await admin
+  if (access.commercial && mtdPolicyIds.length) {
+    // Keep each PostgREST UUID filter bounded; never use a partial result
+    // when any batch fails. The dashboard's other scoped reads share this helper.
+    const premiumResult = await loadScopedDashboardRows<PremiumRow>(mtdPolicyIds, (batch, from, to) => admin
       .from("policy_premium_details")
       .select("policy_id,net_premium,gross_premium")
-      .in("policy_id", mtdPolicies.map((row) => row.id))
-      .returns<PremiumRow[]>();
+      .in("policy_id", batch).order("policy_id").range(from, to)
+      .returns<PremiumRow[]>());
     if (premiumResult.error) warnings.push("MTD premium figures could not be refreshed.");
     else {
       for (const row of premiumResult.data ?? []) {
@@ -761,22 +764,17 @@ export async function getDashboardCurrentData(
 
   let commercial: DashboardCurrentData["commercial"] = null;
   if (access.viewAccounts && access.commercial) {
-    const mtdPolicyIds = mtdPolicies.map((row) => row.id);
     const [payinResult, payoutResult, receivableResult, invoiceResult, payableResult] = await Promise.all([
-      mtdPolicyIds.length
-        ? admin
-            .from("policy_payin_details")
-            .select("policy_id,total_projected_payin,payin_after_tds,commercial_status")
-            .in("policy_id", mtdPolicyIds)
-            .returns<PayinRow[]>()
-        : Promise.resolve({ data: [] as PayinRow[], error: null }),
-      mtdPolicyIds.length
-        ? admin
-            .from("policy_intermediary_payouts")
-            .select("policy_id,gross_payout,partner_payout_amount,retention_amount,commercial_status,status")
-            .in("policy_id", mtdPolicyIds)
-            .returns<PayoutRow[]>()
-        : Promise.resolve({ data: [] as PayoutRow[], error: null }),
+      loadScopedDashboardRows<PayinRow>(mtdPolicyIds, (batch, from, to) => admin
+        .from("policy_payin_details")
+        .select("policy_id,total_projected_payin,payin_after_tds,commercial_status")
+        .in("policy_id", batch).order("policy_id").range(from, to)
+        .returns<PayinRow[]>()),
+      loadScopedDashboardRows<PayoutRow>(mtdPolicyIds, (batch, from, to) => admin
+        .from("policy_intermediary_payouts")
+        .select("policy_id,gross_payout,partner_payout_amount,retention_amount,commercial_status,status")
+        .in("policy_id", batch).order("policy_id").range(from, to)
+        .returns<PayoutRow[]>()),
       admin.from("accounts_receivable_entries").select("debit_amount,credit_amount").limit(5000).returns<ReceivableRow[]>(),
       admin.from("accounts_invoices").select("id,outstanding_amount,due_date").gt("outstanding_amount", 0).limit(2000).returns<InvoiceRow[]>(),
       admin.from("partner_payables").select("id,outstanding_amount,status").gt("outstanding_amount", 0).limit(2000).returns<PayableRow[]>(),
