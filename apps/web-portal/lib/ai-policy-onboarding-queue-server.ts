@@ -270,7 +270,11 @@ async function processClaim(item: Claimed) {
   // Copy ONLY strictly validated n8n OCR into an empty, unchanged Intake.
   // An atomic SQL compare-and-set checks current document, lease, empty OCR,
   // status, and absence of saved draft. This never books a policy.
-  if(extraction.preview.checksPassed===13 && extraction.preview.warnings.length===0){
+  // The existing sync_verified_ai_intake_ocr_v1 RPC pins the bundled parser
+  // and its revision. Keep OD-only extraction review-only until a separate,
+  // reviewed database migration supports its parser identity explicitly.
+  if(extraction.preview.parserId==="icici_3005_n8n_native_pdf"
+    && extraction.preview.checksPassed===13 && extraction.preview.warnings.length===0){
     const synced=await admin.rpc("sync_verified_ai_intake_ocr_v1",{
       p_intake_id:intake.id,p_document_id:item.document_id,p_lease_id:item.lease_id,
       p_parser_revision:(process.env.INSUREIT_AI_QUEUE_PARSER_REVISION||"bridge-v1").trim(),
