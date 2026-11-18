@@ -18,6 +18,7 @@ export function PartnerButton({
   trailing,
   backgroundColor,
   pressedBackgroundColor,
+  singleLineNormalLabel = false,
 }: {
   label: string;
   onPress: () => void;
@@ -30,6 +31,7 @@ export function PartnerButton({
   trailing?: ReactNode;
   backgroundColor?: string;
   pressedBackgroundColor?: string;
+  singleLineNormalLabel?: boolean;
 }) {
   const blocked = disabled || loading;
   const foreground = variant === 'primary'
@@ -47,6 +49,7 @@ export function PartnerButton({
       onPress={onPress}
       style={({ pressed }) => [
         styles.base,
+        singleLineNormalLabel && styles.singleLineButton,
         size === 'compact' ? styles.compact : styles.regular,
         fullWidth && styles.fullWidth,
         styles[variant],
@@ -61,7 +64,7 @@ export function PartnerButton({
       ) : icon ? (
         <Ionicons name={icon} size={size === 'compact' ? 16 : 18} color={foreground} />
       ) : null}
-      <Text style={[styles.label, size === 'compact' && styles.labelCompact, { color: foreground }]}>{label}</Text>
+      <Text numberOfLines={singleLineNormalLabel ? 1 : undefined} adjustsFontSizeToFit={singleLineNormalLabel} minimumFontScale={0.82} style={[styles.label, size === 'compact' && styles.labelCompact, singleLineNormalLabel && styles.singleLineLabel, { color: foreground }]}>{label}</Text>
       {trailing ? <View style={styles.trailing}>{trailing}</View> : null}
     </Pressable>
   );
@@ -79,6 +82,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   regular: { minHeight: partnerTheme.control.buttonHeight },
+  singleLineButton: { paddingHorizontal: 6 },
   compact: { minHeight: partnerTheme.control.compactHeight, paddingHorizontal: 13 },
   fullWidth: { alignSelf: 'stretch' },
   primary: {
@@ -99,6 +103,7 @@ const styles = StyleSheet.create({
   },
   label: { ...partnerTheme.typography.label },
   labelCompact: { fontSize: 10.5, lineHeight: 15 },
+  singleLineLabel: { fontSize: 12, lineHeight: 16, fontWeight: '400', textAlign: 'center' },
   trailing: { marginLeft: 2 },
   pressed: { opacity: 0.86, transform: [{ scale: 0.99 }] },
   disabled: { opacity: 0.42 },
