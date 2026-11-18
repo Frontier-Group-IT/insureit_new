@@ -227,6 +227,13 @@ requireText(claims, "claimToneStyles[stageTone].pill", 'Claim status badges must
 requireText(renewals, 'PartnerAssets.emptyStates.noRenewals', 'Renewal empty states must use the prepared no-renewals artwork.');
 requireText(renewals, 'PartnerAssets.actions.renewals', 'Upcoming renewal rows must use Partner renewal artwork.');
 requireText(renewals, 'styles.opportunitiesHeader', 'Renewal opportunity card must keep a section header.');
+requireText(renewals, "summaryPanel: { marginTop: 0, borderRadius: 15, borderWidth: 1, borderColor: '#E1E8F1', backgroundColor: '#FFFFFF' }", 'Renewal summary must be a white reference-style block, not navy.');
+requireText(renewals, 'styles.summaryMain', 'Renewal summary must show a left-side icon and heading.');
+requireText(renewals, '<Text style={styles.summaryCountValue}>{selectedSummary.count}</Text>', 'Policy count must remain visible on the right.');
+requireText(renewals, 'Net Premium - {formatWholeRupees(selectedSummary.premium)}', 'Summary must display whole-rupee net premium inline.');
+requireText(renewals, 'Math.trunc(amount)', 'Summary premium must remove paise without rounding up.');
+requireText(renewals, "formatIndianCurrency(Number.isFinite(amount) ? Math.trunc(amount) : 0)", 'Whole-rupee summary must use Indian digit grouping.');
+
 requireText(renewals, 'styles.recordCardLast', 'Renewal records must sit inside the joined opportunity card.');
 requireText(renewals, '<Modal visible={sortOpen}', 'Renewal sort menu must use a top-level overlay, not the clipped FlatList header.');
 requireText(renewals, 'sortAnchorRef.current?.measureInWindow', 'Renewal sort popup must anchor to its Due Date button.');
