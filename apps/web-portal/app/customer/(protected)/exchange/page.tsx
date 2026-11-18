@@ -6,7 +6,7 @@ import Link from "next/link";
 import { CustomerExchangeSellWorkspace } from "@/components/customer-portal/customer-exchange-sell-workspace";
 import { CustomerExchangeActivityFilter } from "@/components/customer-portal/customer-exchange-activity-filter";
 import { customerExchangeVehicleArt } from "@/lib/customer-exchange-vehicle-art";
-import { Activity, Heart, BadgeCheck, MapPin, MoreVertical, Search, ShoppingBag, Store, Truck, ChevronDown, ChevronRight, Clock3, ShieldCheck } from "lucide-react";
+import { Activity, Heart, BadgeCheck, MapPin, MoreVertical, Search, ShoppingBag, Store, Truck, ChevronDown, ChevronRight, Clock3 } from "lucide-react";
 import {
   CustomerAccountTabs,
   EmptyCustomerState,
