@@ -8,16 +8,18 @@ export function PartnerSectionHeader({
   meta,
   action,
   compact = false,
+  settingsHeading = false,
 }: {
   title: string;
   meta?: string;
   action?: ReactNode;
   compact?: boolean;
+  settingsHeading?: boolean;
 }) {
   return (
-    <View style={[styles.row, compact && styles.rowCompact]}>
+    <View style={[styles.row, compact && styles.rowCompact, settingsHeading && styles.settingsRow]}>
       <View style={styles.text}>
-        <Text style={styles.title}>{title}</Text>
+        <Text style={[styles.title, settingsHeading && styles.settingsTitle]}>{title}</Text>
         {meta ? <Text numberOfLines={1} style={styles.meta}>{meta}</Text> : null}
       </View>
       {action ? <View style={styles.action}>{action}</View> : null}
@@ -40,6 +42,8 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     minHeight: 28,
   },
+  settingsRow: { marginTop: 10, marginBottom: 5, minHeight: 20 },
+  settingsTitle: { color: '#111111' },
   text: { flex: 1, minWidth: 0 },
   title: {
     color: partnerTheme.colors.inkMuted,
