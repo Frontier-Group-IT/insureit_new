@@ -50,6 +50,8 @@ assert.ok(reject>=0&&reject<cancel&&cancel<save&&save<create,'Reject stays first
 assert.match(actionBar,/editMode\?<><Pressable/,'Case edit buttons are shown only after tapping the pencil');
 assert.match(actionBar,/\:<Pressable accessibilityRole="button" accessibilityLabel="Create Policy"/,'Create Policy remains a separate view-mode action');
 assert.match(screen,/const \[editMode,setEditMode\]=useState\(false\)/,'Case details start view-only');
+assert.match(screen,/const editable=editMode&&canEditCase&&/,'Case fields require explicit pencil edit mode');
+assert.doesNotMatch(actionBar,/accessibilityLabel="Cancel case edits"/,'Legacy navigation Cancel is not an edit-mode action');
 assert.match(screen,/caseActionMiddle:\{flexDirection:'row',gap:7,width:'100%'/,'Three action buttons share one row');
 assert.match(screen,/actionReject:\{width:'100%'/,'Reject is full width');
 assert.match(screen,/actionSave:\{flex:1,/,'Save occupies one slot in three-column row');
