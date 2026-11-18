@@ -293,6 +293,51 @@ expectAll('app/renewals.tsx', [
   [/selectedSummary\.premium/, 'existing renewal premium calculation remains'],
   [/onPress=\{\(\) => selectBucket\(mode === 'expired' \? 'overdue' : 'all'\)\}/, 'summary remains interactive with its existing filtering'],
 ]);
+// New Customer compact-layout and GST state contract.
+expectAll('app/customer-new.tsx', [
+  [/New Customer<\/Text><\/View><\/View>/, 'New Customer header has no secondary subtitle'],
+  [/<View style=\{styles\.two\}>[\s\S]*?Mobile Number \*[\s\S]*?Email ID[\s\S]*?<\/View>/, 'mobile and email share a two-column row'],
+  [/<View style=\{styles\.two\}>[\s\S]*?Street[\s\S]*?Locality[\s\S]*?<\/View>/, 'street and locality share a row'],
+  [/trackColor=\{\{ false: '#A3B0C4', true: '#2563EB' \}\}/, 'GST toggle has visible off and on colors'],
+  [/form\.gst_registered \? field\('GST Number \*'/, 'GSTIN field is visible only for GST-registered customers'],
+  [/DOCUMENTS\.filter\(doc => doc\.key !== 'gst_copy' \|\| form\.gst_registered\)/, 'GST Copy is conditional in Documents'],
+  [/setDocuments\(previous => \{ const \{ gst_copy: _discarded, \.\.\.rest \} = previous; return rest; \}\)/, 'GST Copy clears if GST is toggled off'],
+  [/Invalid GSTIN/, 'GSTIN is validated before saving'],
+  [/label\.endsWith\(' \*'\)/, 'Only mandatory field labels receive a separate star'],
+  [/requiredStar: \{ color: '#D92D20'/, 'Mandatory field asterisk uses visible red colour'],
+]);
+expectAll('lib/customers.ts', [
+  [/gst_number: string/, 'customer creation form includes GSTIN'],
+  [/type: 'pan_copy' \| 'aadhaar_front' \| 'aadhaar_back' \| 'gst_copy'/, 'document type supports GST Copy'],
+  [/partnerCustomerRequest\('POST', JSON\.stringify\(\{ \.\.\.input, requestId \}\)\)/, 'customer creation carries a stable retry identifier to authorized portal endpoint'],
+  [/partnerCustomerRequest\('PUT',payload\)/, 'KYC documents use authenticated upload endpoint'],
+  [/payload\.append\('customerId', customerId\)/, 'document upload binds the created customer id'],
+]);
+
+expectAll('app/customer-new.tsx', [
+  [/setCreatedCustomerId\(customerId\)/, 'creation stores the confirmed id to prevent duplicate customer rows on upload retry'],
+  [/createPartnerCustomer\(form, requestId\)/, 'creation retries reuse the stable request ID'],
+  [/uploadedTypes\.includes\(file\.type\)/, 'already uploaded files are skipped on retry'],
+  [/uploadPartnerCustomerDocument\(customerId,file\)/, 'selected KYC files are submitted after customer creation'],
+  [/Legal Trade Name required/, 'registered GST requires legal trade name'],
+]);
+// Partner customer backend must remain authenticated, scoped, private and retry-safe.
+expectAll('../web-portal/app/api/partner/customers/create/route.ts', [
+  [/scoped\.auth\.getUser\(token\)/, 'customer endpoint verifies the bearer token'],
+  [/partner_app_current_identity/, 'customer endpoint verifies canonical actor identity'],
+  [/partner_app_commercial_scope/, 'customer endpoint derives server-side commercial scope'],
+  [/hasEffectiveCapability\(profile,"create_customers","edit"\)/, 'employee creation requires effective edit permission'],
+  [/lead_source_intermediary_id: sourceId/, 'server assigns commercial owner, never trusts client-supplied source'],
+  [/aadhaar_last_four: aadhaar \? aadhaar\.slice\(-4\) : null/, 'raw Aadhaar is not persisted'],
+  [/gst_number: gstRegistered \? gstNumber : null/, 'validated GSTIN is written to existing customer column'],
+  [/gstin: gstRegistered \? gstNumber : null/, 'GSTIN mirror column is consistent'],
+  [/createHash\("sha256"\).*requestId/, 'request identifier is scoped to user for idempotency'],
+  [/partner_app_customer_in_scope/, 'document uploads validate current customer scope'],
+  [/customer\.created_by !== actor\.authId/, 'upload requires original creator'],
+  [/storage\.from\("customer-documents"\)\.upload/, 'documents use private customer storage bucket'],
+  [/from\("customer_documents"\)\.insert/, 'document metadata is recorded'],
+  [/new Uint8Array\(await file\.arrayBuffer\(\)\)/, 'uploaded content is scanned for signature'],
+]);
 // Evaluate every contract only after all checks have run.
 if (failures.length) {
   console.error('Partner Phase 5 resilience/accessibility contract verification failed:');

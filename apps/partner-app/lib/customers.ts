@@ -154,28 +154,50 @@ export async function getPartnerCustomerDetail(customerId: string) {
 export type NewPartnerCustomer = {
   customer_name: string; mobile: string; email: string; street: string; locality: string;
   city: string; state: string; pin_code: string; pan_number: string; aadhaar_number: string;
-  legal_trade_name: string; gst_registered: boolean;
+  legal_trade_name: string; gst_registered: boolean; gst_number: string;
 };
 export type PartnerCustomerDocument = {
-  type: 'pan_copy' | 'aadhaar_front' | 'aadhaar_back';
+  type: 'pan_copy' | 'aadhaar_front' | 'aadhaar_back' | 'gst_copy';
   uri: string; name: string; mimeType: string; size: number;
 };
-export async function createPartnerCustomer(input: NewPartnerCustomer, documents: PartnerCustomerDocument[]): Promise<string> {
+const portalUrl = (process.env.EXPO_PUBLIC_PORTAL_URL || 'https://portal.insureit.in').replace(/\/$/, '');
+
+async function partnerCustomerRequest(method: 'POST' | 'PUT', payload: string | FormData) {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const token = sessionData.session?.access_token;
+  if (!token) throw new Error('Sign in again to continue.');
+  let response: Response;
+  try {
+    response = await fetch(portalUrl + '/api/partner/customers/create', {
+      method,
+      headers: {
+        Authorization: 'Bearer ' + token,
+        ...(method === 'POST' ? { 'Content-Type': 'application/json' } : {}),
+      },
+      body: payload,
+    });
+  } catch {
+    throw new Error('Cannot connect to customer service. Check your internet connection.');
+  }
+  const result = await response.json().catch(() => null) as {ok?:boolean;customerId?:string;error?:string}|null;
+  if (!response.ok || !result?.ok) {
+    throw new Error(result?.error || 'Customer request was not confirmed. Check customer list before retrying.');
+  }
+  return result;
+}
+
+export async function createPartnerCustomer(input: NewPartnerCustomer, requestId: string): Promise<string> {
   await requirePartnerWritePermission('create_customers');
-  if (documents.length) throw new Error('KYC uploads are not configured yet. Please remove selected documents before saving.');
-  // Fail closed until the partner-scoped creation RPC is present and verified.
-  // No service-role API or direct INSERT is permitted from the mobile client.
-  const { data, error } = await supabase.rpc('partner_app_create_customer', {
-    p_customer: {
-      customer_name: input.customer_name.trim(), mobile: input.mobile.trim(), email: input.email.trim() || null,
-      street: input.street.trim() || null, locality: input.locality.trim() || null,
-      city: input.city.trim() || null, state: input.state.trim() || null, pin_code: input.pin_code.trim() || null,
-      pan_number: input.pan_number.trim().toUpperCase() || null,
-      aadhaar_number: input.aadhaar_number.replace(/\\s/g, '') || null,
-      legal_trade_name: input.legal_trade_name.trim() || null, gst_registered: input.gst_registered,
-    },
-  });
-  if (error) throw new Error(error.code === 'PGRST202' ? 'Customer creation is not configured yet. Contact the administrator.' : error.message);
-  if (typeof data !== 'string' || !data) throw new Error('Customer creation could not be confirmed.');
-  return data;
+  const result = await partnerCustomerRequest('POST', JSON.stringify({ ...input, requestId }));
+  if (!result.customerId) throw new Error('Customer creation was not confirmed. Check customer list before retrying.');
+  return result.customerId;
+}
+
+export async function uploadPartnerCustomerDocument(customerId: string, document: PartnerCustomerDocument): Promise<void> {
+  await requirePartnerWritePermission('create_customers');
+  const payload = new FormData();
+  payload.append('customerId', customerId);
+  payload.append('type', document.type);
+  payload.append('file', { uri:document.uri, name:document.name, type:document.mimeType } as unknown as Blob);
+  await partnerCustomerRequest('PUT',payload);
 }
