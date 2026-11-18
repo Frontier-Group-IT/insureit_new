@@ -581,6 +581,7 @@ const actionsText=text("app/development/ai-policy-onboarding/actions.ts");
 const workbenchText=text("components/development/semi-auto-policy-workspace.tsx");
 const queueSql=readFileSync(new URL("../../../supabase/migrations/20261117154000_policy_intake_ai_processing_queue.sql",import.meta.url),"utf8");
 const queueV2Sql=readFileSync(new URL("../../../supabase/migrations/20261117170000_ai_policy_priority_batch_queue_v2.sql",import.meta.url),"utf8");
+const iciciSyncV2Sql=readFileSync(new URL("../../../supabase/migrations/20261118102500_icici_3005_ai_verified_ocr_sync_v2.sql",import.meta.url),"utf8");
 const prioritizedQueueSql=readFileSync(new URL("../../../supabase/migrations/20261117173000_ai_policy_prioritize_trained_3005.sql",import.meta.url),"utf8");
 const normalUploadActions=text("app/policy-intakes/actions.ts");
 const partnerUploadApi=text("app/api/partner/policy-intakes/route.ts");
@@ -715,10 +716,23 @@ assert(workerText.includes("const MAX_BATCH = 6")
   && workerText.includes("Promise.all(wave.map(")
   && workerText.includes("p_preferred_intake_id:preferredIntakeId??null"),
   "Backlog uses bounded three-way concurrency; an immediate upload claims only its own Intake");
-assert(workerText.includes('sync_verified_ai_intake_ocr_v1')
+assert(workerText.includes('sync_verified_ai_intake_ocr_v2')
+  && workerText.includes('p_parser_revision:parserRevision')
+  && workerText.includes('p_parser_id:extraction.preview.parserId')
+  && workerText.includes('synced.data!==true')
   && workerText.includes('loadPolicyIntakeDuplicateMatches(admin,[{')
   && workerText.includes('isDuplicate, // Derived from the canonical'),
-  "Strict n8n PDF fields must feed the canonical duplicate status and OCR only through the guarded RPC");
+  "Strict n8n PDF fields must feed canonical duplicate status and OCR through an identity- and lease-checked RPC");
+assert(iciciSyncV2Sql.includes("create or replace function public.sync_verified_ai_intake_ocr_v2")
+  && iciciSyncV2Sql.includes("p_parser_id='icici_3005_od_n8n_native_pdf'")
+  && iciciSyncV2Sql.includes("p_parser_version='bridge-od-v1'")
+  && iciciSyncV2Sql.includes("q.parser_revision=p_parser_revision")
+  && iciciSyncV2Sql.includes("q.lease_id=p_lease_id")
+  && iciciSyncV2Sql.includes("i.final_policy_id is null")
+  && iciciSyncV2Sql.includes("policy_intake_onboarding_drafts")
+  && iciciSyncV2Sql.includes("grant execute on function public.sync_verified_ai_intake_ocr_v2")
+  && !iciciSyncV2Sql.includes("insert into public.policies"),
+  "v2 OCR sync must preserve customer drafts, completed policies and service-role-only lease guards");
 assert.equal(queueV2Sql.split("\n").filter(line=>line.trim()==="as $$").length,2, "Both private queue SQL functions need correctly paired PL/pgSQL dollar-quote openings");
 assert.equal(queueV2Sql.split("\n").filter(line=>line.trim()==="$$;").length,2, "Both private queue SQL functions need correctly paired PL/pgSQL dollar-quote closings");
 assert(queueV2Sql.includes("create or replace function public.claim_policy_intake_ai_queue_v2")
