@@ -347,7 +347,6 @@ export default function PoliciesScreen() {
       ) : null}
 
       <View style={styles.policyListHeadingSection}>
-        <Text style={styles.policyListTitle}>Policies</Text>
         <Pressable
           ref={lineButtonRef}
           accessibilityRole="button"
@@ -782,9 +781,8 @@ const styles = StyleSheet.create({
   summaryChipPressed: { opacity: 0.78 },
   quickActionsSection: { marginHorizontal: 12, marginTop: 13, marginBottom: 2 },
   policyListHeadingSection: { marginHorizontal: 12, marginTop: 9, marginBottom: 10, flexDirection:'row',alignItems:'center',gap:10 },
-  policyListTitle:{marginHorizontal:3,color:'#17365D',fontSize:12,lineHeight:16,fontWeight:'800'},
-  businessLineButton:{flexDirection:'row',alignItems:'center',gap:7,minHeight:30,paddingHorizontal:10,backgroundColor:'#F0F5FC',borderWidth:1,borderColor:'#D5E0F0',borderRadius:9},
-  businessLineText:{color:'#17365D',fontSize:11,fontWeight:'700'},
+  businessLineButton:{flexDirection:'row',alignItems:'center',gap:7,minHeight:30,paddingHorizontal:3,backgroundColor:'transparent',borderWidth:0},
+  businessLineText:{color:'#17365D',fontSize:12,fontWeight:'800'},
   businessLineMenu:{position:'absolute',width:210,padding:7,borderWidth:1,borderColor:'#D7E1EF',borderRadius:14,backgroundColor:'#FFFFFF',shadowColor:'#001B42',shadowOpacity:0.15,shadowRadius:12,shadowOffset:{width:0,height:4},elevation:12},
   businessLineMenuTitle:{paddingHorizontal:10,paddingTop:9,paddingBottom:8,color:'#93A1B5',fontSize:10,letterSpacing:0.7,fontWeight:'700'},
   businessLineOption:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',paddingHorizontal:11,minHeight:38,borderRadius:9},
