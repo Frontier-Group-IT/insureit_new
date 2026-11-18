@@ -238,7 +238,7 @@ export default function NewPolicyIntakeScreen() {
 
   if (!sourceStepComplete && sources.length !== 1) {
     return (
-      <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
         {confirmDialog}
         <ReferenceHeader />
 
@@ -346,7 +346,7 @@ export default function NewPolicyIntakeScreen() {
             accessibilityRole="button"
             accessibilityLabel="Cancel Policy Intake"
             disabled={submitting}
-            onPress={requestClose}
+            onPress={() => requestClose()}
             style={({ pressed }) => [styles.cancelButton, pressed && styles.footerPressed]}
           >
             <Text style={styles.cancelText}>Cancel</Text>
