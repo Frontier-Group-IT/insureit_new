@@ -73,6 +73,7 @@ type VerifiedN8nHandoff = {
   documentId:string; fields:PolicyIntakeOcrField[];
   premium:N8nVerifiedPremiumBreakdown;
   fillEmptyFields?:boolean;
+  reviewedIssueDateReplacement?:{expectedPrevious:string;expectedRevision:number};
 };
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -83,6 +84,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-
  */
 export async function prepareVerifiedN8nIntakeHandoff(
   id:string, expectedDocumentId:string, expectedFingerprint:string, takeOver=false, fillEmptyFields=false,
+  reviewedIssueDateReplacement?:{expectedPrevious:string;expectedRevision:number},
 ):Promise<PolicyIntakeHandoffResult> {
   if (!isN8nWorkbenchPrimary() || !UUID.test(id) || !UUID.test(expectedDocumentId)
       || !/^[a-f0-9]{64}$/i.test(expectedFingerprint)) {
@@ -107,6 +109,7 @@ export async function prepareVerifiedN8nIntakeHandoff(
   }
   return preparePolicyIntakeHandoffInternal(id,takeOver===true,{
     documentId:expectedDocumentId,fields:parsed.preview.fields,premium:parsed.preview.premium,fillEmptyFields,
+    reviewedIssueDateReplacement,
   });
 }
 
@@ -253,11 +256,29 @@ Third Party period: ${tpStart||"unavailable"} to ${tpExpiry||"unavailable"}. Ver
     // Never replace a nonempty saved value; use optimistic revision control.
     const original=existingDraft.draft_payload;
     const supplemented={...original};
+    // The older allowlist left the entire policy/premium section blank on
+    // legacy drafts, so correcting the issue date simply exposed another
+    // booking error. Complete ONLY blank fields from this reverified PDF.
     const fillable:(keyof PolicyIntakeDraft)[]=[
       "insuredName","vehicleClass","make","model","fuelType","capacity",
       "rtoState","rtoName","policyProduct","manufacturingYear","issuanceDate",
+      "registrationNo","chassisNo","engineNo","policyNo","insurerId",
+      "validFrom","validUpto","tpValidUpto","idv","od","addOnPremium","tp","cpa",
     ];
+    const dateReview=verified?.reviewedIssueDateReplacement;
+    if(dateReview && (
+      existingDraft.revision!==dateReview.expectedRevision
+      || original.issuanceDate!==dateReview.expectedPrevious
+      || !verifiedIssuanceDate
+      || policyDateDecision(verifiedIssuanceDate)==="invalid"
+      || policyDateDecision(verifiedIssuanceDate)==="future"
+      || !verified?.fields.some(f=>f.key==="policy_issuance_date"&&f.value===verifiedIssuanceDate)
+    ))return{ok:false,error:"The saved draft revision, previous issue date or verified PDF changed. Refresh the date comparison before applying the correction."};
     let changed=false;
+    if(dateReview && original.issuanceDate!==verifiedIssuanceDate){
+      supplemented.issuanceDate=verifiedIssuanceDate;
+      changed=true;
+    }
     for(const key of fillable){
       if(!String(original[key]??"").trim()&&String(draft[key]??"").trim()){
         (supplemented as unknown as Record<string,unknown>)[key]=draft[key];
