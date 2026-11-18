@@ -35,6 +35,20 @@ const policyIntakeNew = read('app/policy-intake-new.tsx');
 const policyIntakeDetail = read('app/policy-intakes/[id].tsx');
 const customerDetail = read('app/customer/[id].tsx');
 const policyDetail = read('app/policy/[id].tsx');
+// Scope system and header navy to Claim Tracker and its nine stage views.
+requireText(read('app/claim/[id].tsx'), "backgroundColor: '#07347E'", 'Claim Tracker must use Claim Tracker navy for navigation.');
+requireText(read('app/claim/[id].tsx'), '<StatusBar style="light" backgroundColor="#07347E" />', 'Claim Tracker must use light status-bar icons.');
+requireText(read('app/claim/[id].tsx'), "backgroundColor:'#EDF6FE'", 'Claim Tracker must preserve the light content background.');
+requireText(read('app/claim/stage.tsx'), "header:{height:72,backgroundColor:'#07347E'", 'Read-only claim stage must use Claim Tracker navy for navigation.');
+requireText(read('app/claim/stage.tsx'), '<StatusBar style="light" backgroundColor="#07347E" />', 'Read-only claim stage must use light status-bar icons.');
+requireText(read('app/claim/stage.tsx'), "backgroundColor:'#EDF6FE'", 'Read-only claim stage must preserve the light content background.');
+requireText(read('components/partner-spot-intimation.tsx'), "header:{height:50,backgroundColor:'#07347E'", 'Spot Intimation must use Claim Tracker navy for navigation.');
+requireText(read('components/partner-spot-intimation.tsx'), '<StatusBar style="light" backgroundColor="#07347E" />', 'Spot Intimation must use light status-bar icons.');
+requireText(read('components/partner-spot-intimation.tsx'), "backgroundColor:'#EDF6FE'", 'Spot Intimation must preserve the light content background.');
+requireText(read('components/partner-claim-stage-editor.tsx'), "header:{height:50,backgroundColor:'#07347E'", 'Eight editable stages must use Claim Tracker navy for navigation.');
+requireText(read('components/partner-claim-stage-editor.tsx'), '<StatusBar style="light" backgroundColor="#07347E" />', 'Eight editable stages must use light status-bar icons.');
+requireText(read('components/partner-claim-stage-editor.tsx'), "backgroundColor:'#EDF6FE'", 'Eight editable stages must preserve the light content background.');
+
 const claimTracker = read('app/claim/[id].tsx');
 const claimStageReadOnly = read('app/claim/stage.tsx');
 const spotIntimation = read('components/partner-spot-intimation.tsx');
