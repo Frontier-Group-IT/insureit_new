@@ -278,18 +278,15 @@ export function buildPolicyOcrOnboardingUpdate(input: OcrApplyInput): OcrApplyRe
 
   // ICICI 3005 and 3005/O print the Bajaj marque as CHETAK, including
   // BLUE 2903 and 2413 PREMIUM variants. Preserve the literal PDF model.
-  // A Two Wheeler + Electric + separately printed CC/KW reading must be
-  // present: a model string or seating capacity is not proof of power.
+  // Verified Two Wheeler + Electric may determine the OEM even when motor
+  // power is missing; never fill kW from the model or seating capacity.
   const chetakIdentity = /^CHETAK$/i.test(byKey.get("vehicle_make")?.value.trim() ?? "")
     && next.vehicleClass === "TWP";
   const pdfChetakModel = (byKey.get("vehicle_model")?.value ?? "").trim();
-  const chetakPower = (byKey.get("vehicle_motor_power_kw")?.value ?? "").trim();
-  const validChetakPower = /^\d{1,2}(?:\.\d{1,2})?$/.test(chetakPower)
-    && Number(chetakPower) > 0 && Number(chetakPower) <= 50;
+  // Independent kW validation happens below before copying capacity.
   const isIciciChetakElectric = chetakIdentity
     && pdfChetakModel.length >= 2 && pdfChetakModel.length <= 100
-    && byKey.get("vehicle_fuel_type")?.value.trim().toLowerCase() === "electric"
-    && validChetakPower;
+    && byKey.get("vehicle_fuel_type")?.value.trim().toLowerCase() === "electric";
   setText("vehicle_make", (value) => { next.make = value; }, (raw) => {
     if (isIciciChetakElectric) {
       // Prefer the literal "Bajaj" master choice, not an invented CHETAK option.
