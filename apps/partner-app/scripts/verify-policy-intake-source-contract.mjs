@@ -63,7 +63,7 @@ for (const required of [
   'statusBadgeStyle(row)',
   'statusDate',
   'navyStatusBar',
-  'bottomNavigation={<PolicyIntakeDetailNavigation',
+  'bottomNavigation={<PartnerStackBottomNavigation activeTab="policies" />}',
 ]) {
   requireText(detailScreen, required, `Policy Intake detail redesign must preserve ${required}.`);
 }

@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
+import { PartnerStackBottomNavigation } from '@/components/partner-stack-bottom-navigation';
 import { PartnerBanner } from '@/components/ui/partner-banner';
 import { PartnerButton } from '@/components/ui/partner-button';
 import { PartnerSectionHeader } from '@/components/ui/partner-section-header';
@@ -24,15 +25,12 @@ import {
 } from '@/lib/policy-intakes';
 import { partnerTheme } from '@/lib/theme';
 import { prepareNativePolicyOnboarding } from '@/lib/policy-onboarding';
-import { canPartnerAccess } from '@/lib/partner-permissions';
-import { usePartnerSession } from '@/providers/partner-session-provider';
 
 const ALLOWED_TYPES = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
 const MAX_FILE_SIZE = 15 * 1024 * 1024;
 
 export default function PolicyIntakeDetailScreen() {
   const router = useRouter();
-  const { context } = usePartnerSession();
   const { id, submitted } = useLocalSearchParams<{ id: string; submitted?: string }>();
   const [row, setRow] = useState<(PartnerPolicyIntake & { review_access: PolicyIntakeReviewAccess; reviewer_conflict_name: string | null; reviewer_conflict_id: string | null; duplicate_match: PolicyIntakeDuplicateMatch | null }) | null>(null);
   const [reviewNote, setReviewNote] = useState('');
@@ -211,7 +209,8 @@ export default function PolicyIntakeDetailScreen() {
       navyTopBar
       navyStatusBar
       fullWidth
-      bottomNavigation={<PolicyIntakeDetailNavigation router={router} canViewDashboard={canPartnerAccess(context, "view_dashboard")} canViewPolicies={canPartnerAccess(context, "view_policies")} canViewClaims={canPartnerAccess(context, "view_claims")} />}
+      bottomNavigationNavy
+      bottomNavigation={<PartnerStackBottomNavigation activeTab="policies" />}
       artwork={PartnerAssets.actions.quickPolicyIntake}
       onBack={() => router.back()}
     >
@@ -519,41 +518,6 @@ export default function PolicyIntakeDetailScreen() {
       />
     </PartnerScreen>
   );
-}
-
-function PolicyIntakeDetailNavigation({
-  router, canViewDashboard, canViewPolicies, canViewClaims,
-}: {
-  router: ReturnType<typeof useRouter>;
-  canViewDashboard: boolean;
-  canViewPolicies: boolean;
-  canViewClaims: boolean;
-}) {
-  const items: Array<{ label: string; icon: keyof typeof Ionicons.glyphMap; path: string; available: boolean; active?: boolean }> = [
-    { label: 'Home', icon: 'home-outline', path: '/(tabs)', available: canViewDashboard },
-    { label: 'Business', icon: 'briefcase-outline', path: '/(tabs)/business', available: canViewDashboard },
-    { label: 'Policies', icon: 'document-text', path: '/(tabs)/policies', available: canViewPolicies, active: true },
-    { label: 'Claims', icon: 'shield-checkmark-outline', path: '/(tabs)/claims', available: canViewClaims },
-    { label: 'More', icon: 'grid-outline', path: '/(tabs)/more', available: true },
-  ];
-  return <View style={styles.bottomNav}>
-    {items.map((item) => (
-      <Pressable
-        key={item.label}
-        accessibilityRole="button"
-        accessibilityLabel={item.label}
-        accessibilityState={{ disabled: !item.available, selected: Boolean(item.active) }}
-        disabled={!item.available}
-        onPress={() => router.push(item.path as never)}
-        style={({ pressed }) => [styles.navItem, !item.available && styles.navDisabled, pressed && styles.pressed]}
-      >
-        <View style={[styles.navIconWrap, item.active && styles.navIconWrapActive]}>
-          <Ionicons name={item.icon} size={19} color={item.active ? '#633DF1' : '#60738F'} />
-        </View>
-        <Text style={[styles.navLabel, item.active && styles.navLabelActive]}>{item.label}</Text>
-      </Pressable>
-    ))}
-  </View>;
 }
 
 const vehicleReviewKeys: Array<[string, string]> = [

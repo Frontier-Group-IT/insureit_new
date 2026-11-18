@@ -3,6 +3,7 @@ import { useCallback } from 'react';
 import { RefreshControl, StyleSheet, Text, View } from 'react-native';
 
 import { PartnerScreen } from '@/components/partner-screen';
+import { PartnerStackBottomNavigation } from '@/components/partner-stack-bottom-navigation';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { getPartnerBusinessReportNet, type PartnerBusinessPerformance } from '@/lib/business';
 import { formatIndianCurrency } from '@/lib/format';
@@ -23,6 +24,8 @@ export default function BusinessReportScreen() {
   return (
     <PartnerScreen
       title="Business Report"
+      bottomNavigationNavy
+      bottomNavigation={<PartnerStackBottomNavigation activeTab="business" />}
       scrollProps={{
         refreshControl: (
           <RefreshControl

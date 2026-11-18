@@ -322,9 +322,11 @@ requireText(screen, "backgroundColor={statusBarColor ?? (navyStatusBar ? '#071E4
 requireText(screen, "statusBarColor || navyStatusBar || (showFixedHeader && stickyHeaderNavy) ? 'light' : 'dark'", 'Status bar foreground must stay white on navy and explicitly colored screens only.');
 requireText(screen, 'statusBarColor ? { backgroundColor: statusBarColor } : null', 'Activity color must extend into the top native safe area without changing other screens.');
 requireText(screen, 'bottomNavigation ? (', 'Partner screen must host a fixed footer outside scrollable detail content.');
-requireText(policyIntakeDetail, 'bottomNavigation={<PolicyIntakeDetailNavigation', 'Both Policy Intake detail states must render the five-tab footer.');
-for (const tab of ["Home", "Business", "Policies", "Claims", "More"]) requireText(policyIntakeDetail, "label: '" + tab + "'", 'Policy Intake footer must include ' + tab + '.');
-requireText(policyIntakeDetail, "navDisabled: { opacity: 0.35 }", 'Restricted tabs must not expose unauthorized navigation.');
+requireText(policyIntakeDetail, 'bottomNavigation={<PartnerStackBottomNavigation activeTab="policies" />}', 'Policy Intake detail uses the shared five-tab footer with Policies selected.');
+requireText(policyIntakeDetail, 'bottomNavigationNavy', 'Policy Intake detail footer and device inset must use the shared navy color.');
+const sharedIntakeFooter = read('components/partner-stack-bottom-navigation.tsx');
+for (const tab of ["Home", "Business", "Policies", "Claims", "More"]) requireText(sharedIntakeFooter, "label: '" + tab + "'", 'Shared Policy Intake footer must include ' + tab + '.');
+requireText(sharedIntakeFooter, 'if (!permitted) return null;', 'Restricted tabs remain permission-gated by the shared footer.');
 requireText(policyIntakeDetail, "submittedByName: { fontSize: 10, fontWeight: '500'", 'Submitter name must no longer be bold.');
 requireText(policyIntakeDetail, 'statusMetaDuplicate: { paddingTop: 0 }', 'Duplicate submitter name must align with the top-right status stack.');
 

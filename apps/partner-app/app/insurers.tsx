@@ -5,6 +5,7 @@ import { Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from 're
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
+import { PartnerStackBottomNavigation } from '@/components/partner-stack-bottom-navigation';
 import { PartnerInsurerLogo } from '@/components/ui/partner-insurer-logo';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { getPartnerInsurerRegister, type PartnerInsurerRegisterRow } from '@/lib/business';
@@ -187,7 +188,8 @@ export default function InsurerListScreen() {
     && calendarMonth.getMonth() === today.getMonth();
 
   return (
-    <PartnerScreen title="Insurer-wise Performance" hideTopBar fullWidth
+    <PartnerScreen title="Insurer-wise Performance" hideTopBar fullWidth bottomNavigationNavy
+      bottomNavigation={<PartnerStackBottomNavigation activeTab="business" />}
       scrollProps={{ refreshControl: <RefreshControl refreshing={query.refreshing} onRefresh={() => void query.refresh()} /> }}
     >
       <View style={styles.referenceHeader}>

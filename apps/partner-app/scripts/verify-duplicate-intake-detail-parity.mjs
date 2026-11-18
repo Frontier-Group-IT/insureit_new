@@ -55,7 +55,7 @@ assert.ok(detail.includes('sheet:{marginHorizontal:8,'), 'Use full-width intake 
 assert.ok(detail.includes("styles.statusLogoWrap"), 'Keep a plain icon alignment container');
 assert.ok(detail.includes('source={PartnerAssets.actions.policyChecklist}'), 'Use a bundled 3D policy-document icon in the PIR card');
 assert.ok(detail.includes('navyStatusBar'), 'Show a navy system status bar on both duplicate and ready-for-review pages');
-assert.ok(detail.includes('bottomNavigation={<PolicyIntakeDetailNavigation'), 'Keep five-item bottom navigation on intake detail');
+assert.ok(detail.includes('bottomNavigation={<PartnerStackBottomNavigation activeTab="policies" />}'), 'Keep five-item bottom navigation on intake detail');
 assert.ok(!detail.includes('<PartnerInsurerLogo'), 'Do not use insurer/logo tile in PIR card');
 assert.ok(!detail.includes('Alert.alert('), 'Reject flow must not display a native Android browser/system confirmation');
 assert.ok(detail.includes('<PartnerConfirmDialog') && detail.includes('visible={rejectConfirmationOpen}'), 'Reject confirmation uses the shared Partner dialog');
