@@ -224,8 +224,8 @@ assert.doesNotMatch(screen,/<Text style=\{styles.documentHint\}>/,'Upload hint m
 assert.doesNotMatch(screen, /\{documentError\?<Text style=\{styles.documentError\}>/,'Document errors must not be inline.');
 assert.match(screen,/accessibilityLabel="Cancel Policy Onboarding"/, 'Cancel button is available.');
 assert.match(screen,/Discard Changes\?/, 'Cancelling protects unsaved data with the new branded popup.');
-assert.match(screen,/accessibilityLabel="Create Active Policy"/, 'Create Active Policy replaces booking and draft actions.');
-assert.match(screen,/accessibilityLabel="Create Policy"/, 'Life and Health use Create Policy.');
+assert.ok(screen.includes("accessibilityLabel={isNew?(isMotor?'Upload Policy':'Create Policy'):'Create Active Policy'}"), 'Motor and Non-Motor standalone action labels match their products and existing Intake actions remain available.');
+assert.ok(screen.includes("accessibilityLabel={isNew?'Create Case':'Create Policy'}"), 'Life and Health standalone Add Policy creates a case with the correct accessible name.');
 assert.match(screen,/productType==='Life'\|\|productType==='Health'/, 'Life and Health use identical action and border rules.');
 assert.match(screen,/createNativeLifeHealthCase\(id,revision\)/, 'Life and Health perform authorized case creation.');
 assert.match(api,/body.action==="create_life_health"/, 'Native creation is limited to a separate authorized endpoint.');
