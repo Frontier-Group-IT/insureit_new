@@ -44,8 +44,8 @@ assert.match(customerDetail, /bottomNavigationNavy/, 'Customer Details footer sa
 assert.match(customerDetail, /avatar: \{ width: 64, height: 64, borderRadius: 32/, 'Customer avatar is enlarged to 64px while staying circular');
 assert.match(customerDetail, /avatarText: \{ color: '#6B28CE', fontSize: 24/, 'Customer initials scale with avatar');
 assert.match(customerDetail, /<PartnerContactActions[^>]*inlineLabeled customerDetailLayout/, 'Customer Details uses dedicated contact layout');
-assert.match(contactActions, /customerDetailRow: \{ width: '100%', justifyContent: 'flex-start'/, 'Call starts at customer name left edge');
-assert.match(contactActions, /customerDetailAction: \{ flex: 0, flexShrink: 0, width: 'auto'/, 'Customer contact controls do not fill or spread across profile');
+assert.match(contactActions, /customerDetailRow: \{ width: '100%', justifyContent: 'space-between'/, 'Call starts at customer name left edge and contact actions occupy available width');
+assert.match(contactActions, /customerDetailAction: \{ flex: 0, flexShrink: 0, width: 'auto'/, 'Individual customer contact controls retain their original compact appearance');
 assert.match(contactActions, /customerDetailLayout && styles\.customerDetailAction/, 'Other contact action layouts remain unaffected');
 
 assert.match(customerDetail, /\['overview', 'person-outline', 'Overview'\]/, 'Existing Overview detail tab is preserved');
