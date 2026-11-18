@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { IntakeStatusBucket } from "@/lib/policy-intake-status-buckets";
 import { AlertCircle, ArrowUpRight, CheckCircle2, ClipboardCheck, FileSearch, Loader2, PencilLine, RefreshCw, Search, ShieldAlert, Sparkles } from "lucide-react";
-import { applySemiAutoN8nIntake, bookSemiAutoIntake, convertVerifiedAiIntake, checkSemiAutoIntake, continueVerifiedN8nIntakeToOnboarding, editSemiAutoIntake, previewSemiAutoN8nIntake, reprocessAiPolicyIntake, reviewAiIntakeCustomerCandidates, type AiCustomerCandidateReview, type SemiAutoActionResult, type SemiAutoN8nResult } from "@/app/development/ai-policy-onboarding/actions";
+import { applySemiAutoN8nIntake, bookSemiAutoIntake, convertVerifiedAiIntake, checkSemiAutoIntake, continueVerifiedN8nIntakeToOnboarding, editSemiAutoIntake, previewSemiAutoN8nIntake, reprocessAiPolicyIntake, reviewAiIntakeCustomerCandidates, reviewIciciVerifiedDraftRepair, applyReviewedIciciDraftRepair, type ReviewedIciciDraftComparison, type AiCustomerCandidateReview, type SemiAutoActionResult, type SemiAutoN8nResult } from "@/app/development/ai-policy-onboarding/actions";
 
 export type SemiAutoIntakeRow = {
   id: string;
@@ -125,6 +125,10 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
   const [reviewingCustomer,setReviewingCustomer]=useState(false);
   const [queueRetrying,setQueueRetrying]=useState(false);
   const [queueRetryError,setQueueRetryError]=useState<string|null>(null);
+  const [draftReview,setDraftReview]=useState<ReviewedIciciDraftComparison|null>(null);
+  const [draftReviewBusy,setDraftReviewBusy]=useState(false);
+  const [draftApplyBusy,setDraftApplyBusy]=useState(false);
+  const [draftReviewMessage,setDraftReviewMessage]=useState<string|null>(null);
   const [takeover, setTakeover] = useState<{ intakeId: string; reviewerName: string } | null>(null);
   const [fillEmptySavedFields, setFillEmptySavedFields] = useState(true);
   const [handoffDialog, setHandoffDialog] = useState<
@@ -967,7 +971,56 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
                  </button>
                </div>
              ) : null}
-             {(exceptionRow.ai_exceptions??[]).some(code=>code.startsWith("customer_")) ? (
+             {primaryN8n && (exceptionRow.ai_exceptions??[]).includes("booking_review_required") ? (
+               <div className="mt-3 space-y-2 rounded-lg border border-[#bfd0e4] bg-[#f5f9ff] p-3">
+                 <p className="text-[11px] font-bold text-[#19446f]">Review saved draft versus current PDF</p>
+                 <p className="text-[10px] text-[#4c6280]">Compare old issue dates and missing policy fields with independently verified PDF values. No changes or bookings occur until you approve the specific correction.</p>
+                 <button type="button" disabled={draftReviewBusy||draftApplyBusy||isWaiting}
+                   onClick={async()=>{
+                     setDraftReview(null);setDraftReviewMessage(null);setDraftReviewBusy(true);
+                     try{setDraftReview(await reviewIciciVerifiedDraftRepair(exceptionRow.id));}
+                     catch{setDraftReview({ok:false,error:"The PDF/draft comparison is unavailable. No changes were made."});}
+                     finally{setDraftReviewBusy(false);}
+                   }}
+                   className="rounded-md border border-[#adc5e0] bg-white px-3 py-2 text-[10px] font-bold text-[#174b83] disabled:opacity-50">
+                   {draftReviewBusy?"Verifying current PDF...":"Compare current PDF and saved draft"}
+                 </button>
+                 {draftReview?.ok===false?<p role="alert" className="text-[10px] text-amber-800">{draftReview.error}</p>:null}
+                 {draftReview?.ok===true&&draftReview.intakeId===exceptionRow.id ? (
+                   <div className="space-y-2 rounded-lg border border-[#d0dfed] bg-white p-3 text-[10px] text-[#405875]">
+                     <p><strong>Saved issue date:</strong> {draftReview.savedIssueDate||"Not provided"}</p>
+                     <p><strong>PDF Policy Issued On:</strong> {draftReview.pdfIssueDate}</p>
+                     <p><strong>Current policy:</strong> {draftReview.policyNumber}</p>
+                     <p><strong>Draft revision:</strong> {draftReview.revision}</p>
+                     <p><strong>Missing draft fields:</strong> {draftReview.missingFields.length?draftReview.missingFields.join(", "):"None in comparison"}</p>
+                     {draftReview.otherConflicts.length>0 ? <p className="font-semibold text-amber-800">Other nonempty conflicts require manual review: {draftReview.otherConflicts.join(", ")}</p>:null}
+                     <p className="text-amber-900">Confirming will replace only the displayed saved issue date with the PDF-verified issue date and populate eligible blank draft fields. Existing nonempty vehicle, identity, policy, and premium values remain unchanged. Booking remains separate.</p>
+                     <div className="flex gap-2">
+                       <button type="button" onClick={()=>setDraftReview(null)} className="rounded-md border px-3 py-2 font-semibold">Cancel</button>
+                       <button type="button" disabled={draftApplyBusy||isWaiting}
+                         onClick={async()=>{
+                           const review=draftReview;
+                           if(!review?.ok||review.intakeId!==exceptionRow.id)return;
+                           setDraftApplyBusy(true);setDraftReviewMessage(null);
+                           try{
+                             const res=await applyReviewedIciciDraftRepair(review.intakeId,review.documentId,review.fingerprint,review.revision,review.savedIssueDate,true);
+                             if(res.ok){
+                               setDraftReview(null);setDraftReviewMessage("Verified fields applied to the draft only. No policy was registered. Refresh and review other conflicts before conversion.");
+                               router.refresh();
+                             }else setDraftReviewMessage(res.error??"Draft correction was refused. Nothing was changed.");
+                           }catch{setDraftReviewMessage("Draft correction status is uncertain. Refresh and review the draft before trying again.");}
+                           finally{setDraftApplyBusy(false);}
+                         }}
+                         className="rounded-md bg-[#174b83] px-3 py-2 font-bold text-white disabled:opacity-50">
+                         {draftApplyBusy?"Applying reviewed changes...":"Confirm PDF-verified draft repair"}
+                       </button>
+                     </div>
+                   </div>
+                 ):null}
+                 {draftReviewMessage?<p role="status" className="text-[10px] font-semibold text-[#245583]">{draftReviewMessage}</p>:null}
+               </div>
+             ) : null}
+                          {(exceptionRow.ai_exceptions??[]).some(code=>code.startsWith("customer_")) ? (
               <div className="mt-3 space-y-2 rounded-lg border border-[#d2e0f0] bg-[#f5f9ff] p-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
