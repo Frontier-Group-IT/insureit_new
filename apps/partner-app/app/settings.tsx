@@ -4,6 +4,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
+import { PartnerCaseBottomNavigation } from '@/components/partner-case-bottom-navigation';
+import { PartnerCasePageHeader } from '@/components/partner-case-page-header';
 import { PartnerSectionHeader } from '@/components/ui/partner-section-header';
 import { partnerSelectionHaptic, partnerSuccessHaptic, partnerWarningHaptic } from '@/lib/partner-haptics';
 import { getPartnerNotificationPermission, registerPartnerPushDevice, requestPartnerNotificationPermission } from '@/lib/partner-notifications';
@@ -88,7 +90,8 @@ export default function SettingsScreen() {
   };
 
   return (
-    <PartnerScreen eyebrow="ACCOUNT" title="Settings & app info" onBack={() => router.back()}>
+    <PartnerScreen title="Settings & app info" hideTopBar navyStatusBar bottomNavigationNavy bottomNavigation={<PartnerCaseBottomNavigation activeTab="More" />}>
+      <PartnerCasePageHeader title="Settings & app info" icon="settings-outline" onBack={() => router.back()} />
       <PartnerSectionHeader title="Account" />
       <View style={styles.menu}>
         <SettingsLink icon="person-outline" title="Profile & registration" onPress={() => router.push('/profile')} />
