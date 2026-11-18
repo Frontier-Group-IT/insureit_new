@@ -743,6 +743,10 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
                   {[
                     { label: "Basic OD", amount: n8nResult.preview.premium.basicOd },
                     { label: "OD add-ons", amount: n8nResult.preview.premium.odAddons.reduce((total, item) => total + item.amount, 0) },
+                    ...(n8nResult.preview.parserId==="icici_3005_od_n8n_native_pdf" ? [
+                      {label:"OD subtotal (before NCB)",amount:n8nResult.preview.premium.printedOdSubtotal??0},
+                      {label:"NCB / OD deductions",amount:n8nResult.preview.premium.odDeductions??0},
+                    ] : []),
                     { label: "Total OD", amount: n8nResult.preview.premium.totalOd },
                     { label: "Third party", amount: n8nResult.preview.premium.basicTp },
                     { label: "CPA", amount: n8nResult.preview.premium.cpa },
@@ -769,7 +773,9 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
                     </div>
                   ) : null}
                   <p className="mt-2 text-[10px] font-semibold text-[#246442]">
-                    Verified: Basic OD + add-ons = Total OD; TP + CPA = liability; Total OD + liability = net; net + rounded tax = gross.
+                    {n8nResult.preview.parserId==="icici_3005_od_n8n_native_pdf"
+                      ? "OD-only verified: Basic OD + add-ons − NCB/deductions = OD net; OD net + rounded tax = gross. Third Party cover is a separate reference with no new TP/CPA premium charged."
+                      : "Verified: Basic OD + add-ons = Total OD; TP + CPA = liability; Total OD + liability = net; net + rounded tax = gross."}
                   </p>
                 </div>
                 <div className="mt-2 max-h-[320px] overflow-auto rounded-lg border border-[#d9e5f1] bg-white">
