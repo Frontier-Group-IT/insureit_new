@@ -35,7 +35,7 @@ export default function NewPartnerCustomerScreen() {
       const picked = await DocumentPicker.getDocumentAsync({ type: ['image/jpeg', 'image/png', 'application/pdf'], copyToCacheDirectory: true });
       if (picked.canceled || !picked.assets?.[0]) return;
       const file = picked.assets[0];
-      if ((file.size ?? 0) > 5 * 1024 * 1024) { partnerAlert('File too large', 'Choose a file under 5 MB.'); return; }
+      if ((file.size ?? 0) > 4 * 1024 * 1024) { partnerAlert('File too large', 'Choose a file under 4 MB.'); return; }
       setDocuments(previous => ({ ...previous, [type]: { type, uri: file.uri, name: file.name, mimeType: file.mimeType ?? 'application/octet-stream', size: file.size ?? 0 } }));
     } catch { partnerAlert('File selection failed', 'Please try again.'); }
   }
