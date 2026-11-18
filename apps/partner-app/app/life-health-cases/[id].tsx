@@ -409,7 +409,7 @@ export default function LifeHealthCaseDetailScreen(){
     <Text style={styles.errorText}>You do not have Case Register permission.</Text>
   </PartnerScreen>;
 
-  return <PartnerScreen title="Case Details" resetScrollOnFocus={false} navyTopBar navyStatusBar bottomNavigationNavy bottomNavigation={<PartnerCaseBottomNavigation/>} onBack={()=>router.back()}>
+  return <PartnerScreen title="Case Details" resetScrollOnFocus={false} navyTopBar navyStatusBar bottomNavigationNavy bottomNavigation={<PartnerCaseBottomNavigation/>} onBack={editMode?confirmCancel:()=>router.back()}>
     {loading?<ActivityIndicator color={navy} style={{marginTop:24}}/>:null}
     {error?<View style={styles.alert}>
       <Text style={styles.errorText}>{error}</Text>
@@ -594,6 +594,18 @@ export default function LifeHealthCaseDetailScreen(){
       )}
       {saveError?<Text style={styles.saveError}>{saveError}</Text>:null}
       {saveSuccess?<Text style={styles.saveSuccess}>Case details saved successfully.</Text>:null}
+      {record.status_group==='issued'&&editMode?<View style={styles.caseActions}>
+        <View style={styles.caseActionMiddle}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Cancel editing case" onPress={cancelCaseEdit}
+            disabled={saving} style={[styles.caseAction,styles.actionCancel]}>
+            <Text style={styles.cancelActionText} numberOfLines={1}>Cancel Edit</Text>
+          </Pressable>
+          <Pressable accessibilityRole="button" accessibilityLabel="Save Case Details" onPress={()=>void saveEdit()}
+            disabled={saving||!caseDirty} style={[styles.caseAction,styles.actionSave,!caseDirty&&styles.disabledAction]}>
+            {saving?<ActivityIndicator size="small" color="#FFFFFF"/>:<Text style={styles.saveActionText} numberOfLines={1}>Save Case</Text>}
+          </Pressable>
+        </View>
+      </View>:null}
       {record.status_group==='pending'?<View style={styles.caseActions}>
         <Pressable accessibilityRole="button" accessibilityLabel="Reject case" onPress={()=>{setRejectError('');setRejectOpen(true);}}
           disabled={saving||issuing||documentBusy||rejectBusy} style={[styles.caseAction,styles.actionReject]}>
