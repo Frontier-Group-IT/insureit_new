@@ -189,7 +189,7 @@ export default function InsurerListScreen() {
     && calendarMonth.getMonth() === today.getMonth();
 
   return (
-    <PartnerScreen title="Insurer-wise Performance" hideTopBar fullWidth bottomNavigationNavy
+    <PartnerScreen title="Insurer-wise Performance" hideTopBar fullWidth bottomNavigationNavy navyStatusBar
       bottomNavigation={<PartnerStackBottomNavigation activeTab="business" />}
       scrollProps={{ refreshControl: <RefreshControl refreshing={query.refreshing} onRefresh={() => void query.refresh()} /> }}
     >
@@ -201,7 +201,7 @@ export default function InsurerListScreen() {
           <View style={styles.headerTitleRow}>
             <Pressable accessibilityRole="button" accessibilityLabel="Back to Business"
               onPress={() => router.back()} style={styles.headerIcon}>
-              <Image source={PartnerAssets.actions.businessPerformance} style={styles.headerArtwork} resizeMode="contain" />
+              <Image source={PartnerAssets.status.businessGrowth} style={styles.headerArtwork} resizeMode="contain" />
             </Pressable>
             <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Insurer-wise Performance</Text>
           </View>
@@ -389,8 +389,8 @@ const styles = StyleSheet.create({
   referenceHeader: { marginHorizontal: -16, height: 64, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', overflow: 'hidden', backgroundColor: '#071E49' },
   headerOrbLarge: { position: 'absolute', right: -38, top: -52, width: 170, height: 130, borderRadius: 90, backgroundColor: '#13305F', opacity: 0.65 },
   headerOrbSmall: { position: 'absolute', right: 95, top: -25, width: 85, height: 85, borderRadius: 45, backgroundColor: '#112B57', opacity: 0.55 },
-  headerIcon: { width: 42, height: 42, borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginRight: 7 },
-  headerArtwork: { width: 42, height: 42 },
+  headerIcon: { width: 46, height: 46, alignItems: 'center', justifyContent: 'center', marginRight: 6 },
+  headerArtwork: { width: 51, height: 51 },
   headerCopy: { flex: 1, minWidth: 0 },
   headerEyebrow: { marginLeft: 49, marginBottom: 2, fontSize: 8.5, color: '#DAEAFF', fontWeight: '800', letterSpacing: 1.1 },
   headerTitleRow: { flexDirection: 'row', alignItems: 'center', minWidth: 0 },

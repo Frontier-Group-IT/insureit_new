@@ -14,6 +14,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 import { PartnerStackBottomNavigation, type PartnerTabDestination } from '@/components/partner-stack-bottom-navigation';
 
 import { PartnerAnchoredDropdown } from '@/components/ui/partner-anchored-dropdown';
@@ -239,7 +240,9 @@ export default function NewPolicyIntakeScreen() {
 
   if (!sourceStepComplete && sources.length !== 1) {
     return (
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <SafeAreaView style={styles.navySafeArea} edges={['top']}>
+      <StatusBar style="light" backgroundColor="#071E49" />
+      <View style={styles.safeArea}>
         {confirmDialog}
         <ReferenceHeader onBack={() => requestClose()} />
 
@@ -365,12 +368,15 @@ export default function NewPolicyIntakeScreen() {
           </Pressable>
         </View>
         <PartnerStackBottomNavigation activeTab="policies" includeBottomInset onNavigate={requestClose} />
-      </SafeAreaView>
+      </View>
+    </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+    <SafeAreaView style={styles.navySafeArea} edges={['top']}>
+      <StatusBar style="light" backgroundColor="#071E49" />
+      <View style={styles.safeArea}>
       {confirmDialog}
       <ReferenceHeader onBack={() => requestClose()} />
       <ScrollView
@@ -531,6 +537,7 @@ export default function NewPolicyIntakeScreen() {
         </View>
       </ScrollView>
       <PartnerStackBottomNavigation activeTab="policies" includeBottomInset onNavigate={requestClose} />
+    </View>
     </SafeAreaView>
   );
 }
@@ -541,7 +548,7 @@ function ReferenceHeader({ onBack }: { onBack: () => void }) {
       <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={onBack} hitSlop={8} style={styles.headerBack}>
         <Ionicons name="arrow-back" size={21} color="#FFFFFF" />
       </Pressable>
-      <Image source={require('../assets/partner/actions/add-policy-reference.png')} resizeMode="contain" style={styles.headerPolicyIcon} accessibilityLabel="Add Policy" />
+      <Image source={require('../assets/partner/quick-actions/add-policy.png')} resizeMode="contain" style={styles.headerPolicyIcon} accessibilityLabel="Add Policy" />
       <Text style={styles.headerTitle} numberOfLines={1}>NEW POLICY INTAKE</Text>
     </View>
   );
@@ -675,6 +682,7 @@ function formatBytes(value: number) {
 }
 
 const styles = StyleSheet.create({
+  navySafeArea: { flex: 1, backgroundColor: '#071E49' },
   safeArea: { flex: 1, backgroundColor: '#F6F8FC' },
   header: {
     minHeight: 58,
@@ -685,7 +693,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#071E49',
   },
   headerBack: { width: 32, height: 44, alignItems: 'center', justifyContent: 'center' },
-  headerPolicyIcon: { width: 37, height: 37, borderRadius: 5, backgroundColor: '#FFFFFF' },
+  headerPolicyIcon: { width: 43, height: 43 },
   headerTitle: { flexShrink: 1, color: '#FFFFFF', fontSize: 16, lineHeight: 21, fontWeight: '700', letterSpacing: -0.12 },
   searchFloat: {
     zIndex: 8,
