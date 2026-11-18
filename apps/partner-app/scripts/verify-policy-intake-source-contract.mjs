@@ -213,7 +213,7 @@ if (nativeOnboarding.includes('OD + TP + Add-on + CPA')) throw new Error('Hide o
 for (const key of ['insuredName','phoneNo','registrationNo','vehicleClass','make','model','policyProduct','policyNo','insurerId','idv','od','tp','cpa','validFrom','validUpto']) {
   if (!nativeOnboarding.includes("key:'" + key + "'")) throw new Error('A persisted Motor field was removed from the form: ' + key);
 }
-for (const safeguard of ['saveNativePolicyOnboarding(id,data.revision,draft)', 'bookNativePolicyOnboarding(id,revision,resolution,verifiedApprovalId)', 'lookupNativePolicyRc(id,draft.registrationNo)']) {
+for (const safeguard of ['saveNativePolicyOnboarding(id,data.revision,draft)', 'bookNativePolicyOnboarding(id,revision,resolution,approvalOverride??verifiedApprovalId)', 'lookupNativePolicyRc(id,draft.registrationNo)']) {
   requireText(nativeOnboarding, safeguard, 'Preserve existing save, booking, RC lookup and document access: ' + safeguard);
 }
 requireText(nativeApi, 'if(d.businessLine!=="Motor")', 'Do not misrepresent Motor-only native booking as Life/Health parity.');

@@ -211,7 +211,7 @@ assert.match(nativeForm, /styles.registrationRow/, 'Keep the registration field 
 assert.match(nativeForm, /styles.registrationToggle/, 'Keep registration mode buttons in section heading');
 assert.match(nativeForm, /saveNativePolicyOnboarding\(id,data.revision,draft\)/, 'Draft can be saved and reopened with revision control');
 assert.ok(nativeForm.includes("accessibilityLabel={isNew?(isMotor?'Upload Policy':'Create Policy'):'Create Active Policy'}"), 'Motor booking keeps its authorized handler, with standalone Upload Policy label and Intake Create Active Policy fallback');
-assert.ok(nativeForm.includes('bookNativePolicyOnboarding(id,revision,resolution,verifiedApprovalId)'), 'Booking uses revision-checked authenticated endpoint');
+assert.ok(nativeForm.includes('bookNativePolicyOnboarding(id,revision,resolution,approvalOverride??verifiedApprovalId)'), 'Booking uses revision-checked authenticated endpoint');
 assert.match(nativeClient, /saveNativePolicyOnboarding/, 'Native draft uses authenticated API');
 assert.match(nativeApi, /loadPolicyIntakeDuplicateMatches/, 'Native backend blocks duplicates');
 assert.match(nativeApi, /onboardPolicyForVerifiedActor/, 'Native booking calls authoritative website booking engine');

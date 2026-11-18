@@ -72,6 +72,9 @@ jobs:
           if (projectId && projectId === customer?.expo?.extra?.eas?.projectId) throw new Error('Partner EAS project ID must never equal the Customer project ID.');
           NODE
 
+      - name: Verify Motor policy-copy confirmation and OTP parity
+        run: node apps/partner-app/scripts/verify-motor-policy-copy-otp-parity.mjs
+
       - name: Verify Partner route integrity
         run: npm --workspace apps/partner-app run verify:routes
 

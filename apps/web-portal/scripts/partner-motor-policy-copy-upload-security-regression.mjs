@@ -1,0 +1,18 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+const route=readFileSync(new URL("../app/api/partner/policy-intakes/native-onboarding/policy-copy/route.ts",import.meta.url),"utf8");
+const engine=readFileSync(new URL("../lib/policy-onboarding-engine.ts",import.meta.url),"utf8");
+assert.match(route,/scoped\.auth\.getUser\(bearer\)/,"Bearer token must be verified");
+assert.match(route,/profile\?\.is_active/,"Inactive profiles cannot upload");
+assert.match(route,/hasEffectiveCapability\(profile,"create_policies","edit"\)/);
+assert.match(route,/policy\.created_by!==profile\.id/,"Only creator can upload");
+assert.match(route,/policy\.business_line!=="Motor"/,"Motor-only operation");
+assert.match(route,/MAX_BYTES = 15 \* 1024 \* 1024/);
+assert.match(route,/createSignedUploadUrl\(path,\{upsert:false\}\)/);
+assert.match(route,/\.info\(path\)/,"Verify actual stored object");
+assert.match(route,/stored\.size!==size\|\|stored\.contentType!==type/);
+assert.match(route,/if\(prior\.data\)return reply/,"Finalize must be idempotent");
+assert.match(engine,/policy_intake_policy_copy_guard/,"Intake policy copy remains required");
+assert.match(engine,/intakeCopy\.storage_bucket !== intakeGuard\.storage_bucket/,"Intake copy source must match");
+assert.doesNotMatch(route,/body\.file|request\.formData\(/,"15MB file must not transit Vercel server");
+console.log("Partner Motor signed policy-copy endpoint scope and Intake copy guard passed.");
