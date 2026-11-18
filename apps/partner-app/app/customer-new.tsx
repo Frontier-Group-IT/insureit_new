@@ -87,7 +87,7 @@ export default function NewPartnerCustomerScreen() {
             <View style={styles.gst}>
               <Text style={styles.gstLabel}>GST Registered · {form.gst_registered ? 'YES' : 'NO'}</Text>
               <Switch accessibilityLabel="GST Registered" value={form.gst_registered}
-                onValueChange={value => setForm(previous => ({ ...previous, gst_registered: value, gst_number: value ? previous.gst_number : '' }))}
+                onValueChange={value => { setForm(previous => ({ ...previous, gst_registered: value, gst_number: value ? previous.gst_number : '' })); if (!value) setDocuments(previous => { const { gst_copy: _discarded, ...rest } = previous; return rest; }); }}
                 disabled={busy} trackColor={{ false: '#A3B0C4', true: '#2563EB' }} thumbColor="#FFFFFF" ios_backgroundColor="#A3B0C4" />
             </View>
           </View>
