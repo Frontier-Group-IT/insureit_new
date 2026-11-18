@@ -152,7 +152,7 @@ export default function RenewalsScreen() {
             style={({ pressed }) => [styles.summaryLead, pressed && styles.summaryPressed]}
           >
             <View style={styles.summaryMain}>
-              <Image source={PartnerAssets.status.renewalDue} style={styles.summaryArtwork} resizeMode="contain" />
+              <Image source={PartnerAssets.actions.quickRenewals} style={styles.summaryArtwork} resizeMode="contain" />
               <View style={styles.summaryText}>
                 <Text style={styles.summaryEyebrow}>{selectedSummary.eyebrow}</Text>
                 <Text style={styles.summaryPremium}>Net Premium - {formatWholeRupees(selectedSummary.premium)}</Text>
@@ -182,7 +182,7 @@ export default function RenewalsScreen() {
             onChangeText={setQuery}
             onClear={() => setQuery('')}
             placeholder="Search policy, customer or insurer..."
-            leadingIconSource={PartnerAssets.navigation.search}
+            leadingIconVariant="blue3d"
             containerStyle={styles.searchField}
           />
         </View>
@@ -190,7 +190,7 @@ export default function RenewalsScreen() {
 
       <View style={styles.opportunitiesHeader}>
         <View style={styles.opportunitiesLeft}>
-          <View style={styles.listIcon}><Image source={PartnerAssets.actions.policyChecklist} style={styles.listArtwork} resizeMode="contain" /></View>
+          <View style={styles.listIcon}><Image source={PartnerAssets.actions.quickPolicyIntake} style={styles.listArtwork} resizeMode="contain" /></View>
           <View>
             <Text style={styles.opportunitiesTitle}>{mode === 'expired' ? 'OVERDUE POLICIES' : 'RENEWAL OPPORTUNITIES'}</Text>
             <Text style={styles.opportunitiesMeta}>{collection.loading ? 'Loading…' : `${collection.rows.length} policies · ${collection.total} total`}</Text>
@@ -258,7 +258,7 @@ export default function RenewalsScreen() {
         <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={() => router.back()} style={styles.headerAction}>
           <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
         </Pressable>
-        <Image source={PartnerAssets.actions.renewalsReference} style={styles.headerArtwork} resizeMode="contain" />
+        <Image source={PartnerAssets.actions.quickRenewals} style={styles.headerArtwork} resizeMode="contain" />
         <Text style={styles.referenceTitle} numberOfLines={1}>Renewal Work Queue</Text>
       </View>}
       data={sortedRows}
@@ -346,9 +346,9 @@ const styles = StyleSheet.create({
   loadMoreTextLoading: { color: '#FFFFFF', fontSize: 11, fontWeight: '800' },
   referenceHeader: { minHeight: 64, marginHorizontal: -partnerTheme.spacing.lg, marginBottom: 0, paddingHorizontal: 14, backgroundColor: '#071E49', flexDirection: 'row', alignItems: 'center', gap: 10 },
   headerAction: { width: 34, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
-  headerArtwork: { width: 29, height: 29 },
-  summaryArtwork: { width: 33, height: 33 },
-  listArtwork: { width: 27, height: 27 },
+  headerArtwork: { width: 36, height: 36 },
+  summaryArtwork: { width: 37, height: 37 },
+  listArtwork: { width: 31, height: 31 },
   referenceTitle: { color: '#FFFFFF', fontSize: 18, fontWeight: '800', flexShrink: 1 },
   summaryPanel: { marginTop: 0, marginHorizontal: -partnerTheme.spacing.lg, backgroundColor: '#FFFFFF' },
   summaryDivider: { height: StyleSheet.hairlineWidth, backgroundColor: '#D9E2EE', marginHorizontal: 14 },
