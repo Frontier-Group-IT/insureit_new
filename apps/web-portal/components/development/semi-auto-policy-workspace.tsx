@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { IntakeStatusBucket } from "@/lib/policy-intake-status-buckets";
@@ -115,6 +116,9 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
   const [bulkResults,setBulkResults]=useState<Array<{id:string;intake_number:string;ok:boolean;message:string}>>([]);
   const [reprocessConfirmOpen,setReprocessConfirmOpen]=useState(false);
   const [reprocessRunning,setReprocessRunning]=useState(false);
+  const reprocessCancelRef=useRef(false);
+  const [reprocessProgress,setReprocessProgress]=useState<{done:number;total:number}|null>(null);
+  const [reprocessStopped,setReprocessStopped]=useState(false);
   const [reprocessAttemptedIds,setReprocessAttemptedIds]=useState<string[]>([]);
   const [reprocessResults,setReprocessResults]=useState<Array<{id:string;intake_number:string;ok:boolean;message:string}>>([]);
   const [customerReview,setCustomerReview]=useState<AiCustomerCandidateReview|null>(null);
@@ -143,7 +147,9 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
   const bulkRemaining=bulkCandidates.filter(row=>!bulkAttemptedIds.includes(row.id));
   const bulkBatch=bulkRemaining.slice(0,10);
   const reprocessRemaining=reprocessCandidates.filter(row=>!reprocessAttemptedIds.includes(row.id));
-  const reprocessBatch=reprocessRemaining.slice(0,10);
+  // Reprocess is unbounded by UI batch size, but every Intake is checked
+  // sequentially through the same server-side authorization and queue CAS.
+  const reprocessBatch=reprocessRemaining;
 
   async function selectRow(id: string) {
     const next = ++requestId.current;
@@ -333,9 +339,17 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
     setReprocessConfirmOpen(false);
     setReprocessRunning(true);
     setReprocessResults([]);
+    setReprocessProgress({done:0,total:batch.length});
+    setReprocessStopped(false);
+    reprocessCancelRef.current=false;
     // Each record is reauthorized and rechecked against current PDF, status
     // and canonical duplicates by the server action. No booking occurs.
+    let completed=0;
     for (const item of batch) {
+      if (reprocessCancelRef.current) {
+        setReprocessStopped(true);
+        break;
+      }
       let ok=false;
       let message="Reprocessing could not be scheduled.";
       try {
@@ -347,6 +361,8 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
       }
       setReprocessAttemptedIds(previous=>previous.includes(item.id)?previous:[...previous,item.id]);
       setReprocessResults(previous=>[...previous,{...item,ok,message}]);
+      completed++;
+      setReprocessProgress({done:completed,total:batch.length});
     }
     setReprocessRunning(false);
     router.refresh();
@@ -492,20 +508,29 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
     }
   }
 
+  useEffect(()=>{
+    if (!reprocessConfirmOpen) return;
+    const previousOverflow=document.body.style.overflow;
+    document.body.style.overflow="hidden";
+    const onKey=(event:KeyboardEvent)=>{if(event.key==="Escape")setReprocessConfirmOpen(false);};
+    document.addEventListener("keydown",onKey);
+    return ()=>{document.body.style.overflow=previousOverflow;document.removeEventListener("keydown",onKey);};
+  },[reprocessConfirmOpen]);
+
   return (
-    <div className="grid grid-cols-1 items-start gap-3 xl:grid-cols-[minmax(0,1.8fr)_minmax(310px,1fr)]">
+    <div className="grid grid-cols-1 items-start gap-2 xl:grid-cols-[minmax(0,1.65fr)_minmax(350px,1fr)]">
       {primaryN8n && queueActive ? (
         <section aria-label="Automatic policy processing summary"
-          className="rounded-2xl border border-[#dce5f0] bg-white p-3 xl:col-span-2">
+          className="rounded-xl border border-[#d3e3ef] bg-white px-3 py-2.5 xl:col-span-2">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h2 className="text-[12px] font-bold text-[#16355a]">Automatic n8n processing queue</h2>
-              <p className="mt-1 text-[10px] text-[#61738a]">These are n8n extraction states, not Policy Intake workflow statuses. New uploads run immediately; the recovery worker processes up to six PDFs per minute. Verified extraction alone does not book a policy.</p>
+              <h2 className="flex items-center gap-2 text-[12px] font-bold text-[#16355a]"><span className="h-1.5 w-1.5 rounded-full bg-cyan-500"/> AI extraction pipeline <span className="rounded bg-[#eef6f9] px-1.5 py-0.5 text-[9px] font-semibold text-[#267a8d]">REVIEW CONTROLLED</span></h2>
+              <p className="mt-0.5 text-[10px] text-[#61738a]">Current PDF → n8n extraction → human review → approved onboarding. Extraction never registers a policy.</p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <button type="button" onClick={()=>setReprocessConfirmOpen(true)} disabled={isWaiting||reprocessBatch.length===0}
                 className="min-h-9 rounded-lg border border-[#adc5e0] bg-white px-3 text-[11px] font-bold text-[#174b83] disabled:opacity-45">
-                Reprocess Previous · {reprocessRemaining.length}
+                Reprocess All Previous · {reprocessRemaining.length}
               </button>
               <button type="button" onClick={()=>setBulkConfirmOpen(true)} disabled={isWaiting||bulkBatch.length===0}
                 className="min-h-9 rounded-lg bg-[#174b83] px-3 text-[11px] font-bold text-white disabled:opacity-45">
@@ -513,7 +538,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
               </button>
             </div>
           </div>
-          <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-8">
+          <div className="mt-2 grid grid-cols-2 gap-1.5 sm:grid-cols-4 xl:grid-cols-8">
             {[
               ["Not yet queued",queueCounts?.unprocessed??0],
               ["Queued for n8n",queueCounts?.queued??0],
@@ -524,13 +549,13 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
               ["Not trained",queueCounts?.unsupported??0],
               ["Retrying",queueCounts?.failed??0],
             ].map(([label,value])=>(
-              <div key={String(label)} className="rounded-lg bg-[#f5f8fc] px-3 py-2">
+              <div key={String(label)} className="rounded-md border border-[#e9eff5] bg-[#f6f9fc] px-2.5 py-1.5">
                 <p className="text-[9px] font-semibold text-[#6b7f99]">{label}</p>
-                <p className="text-[18px] font-bold tabular-nums text-[#1d3f67]">{value}</p>
+                <p className="text-[16px] font-bold tabular-nums leading-5 text-[#1d3f67]">{value}</p>
               </div>
             ))}
           </div>
-          <p className="mt-2 text-[10px] text-[#63758c]">Verified candidates are not guaranteed bookable. Each registration rechecks the current PDF, customer identity, duplicates, vehicle ownership, policy dates, OTP and canonical booking transaction. A confirmed bulk run processes up to 10 sequentially, stops individual failures without retrying and reports every result.</p>
+          <p className="mt-1.5 text-[9.5px] text-[#63758c]">Verified ≠ bookable. Conversion requires a separate confirmation and canonical checks for PDF, identity, dates, duplicates, ownership and OTP.</p>
           {bulkProgress ? (
             <div role="status" className="mt-2 rounded-lg border border-[#cbd9ea] bg-[#f5f9ff] p-3 text-[11px] text-[#285078]">
               Bulk conversion: {bulkProgress.done} / {bulkProgress.total} attempts completed{bulkRunning?" · processing next policy":""}.
@@ -540,8 +565,12 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
               ))}</div> : null}
             </div>
           ) : null}
-          {reprocessResults.length ? <div role="status" className="mt-2 rounded-lg border border-[#cbd9ea] bg-[#f5f9ff] p-3 text-[11px] text-[#285078]">
-            Reprocess requests: {reprocessResults.filter(item=>item.ok).length} queued / {reprocessResults.length} checked.
+          {reprocessProgress ? <div role="status" aria-live="polite" className="mt-2 rounded-lg border border-[#cbd9ea] bg-[#f5f9ff] p-3 text-[11px] text-[#285078]">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="font-semibold">Reprocess: {reprocessProgress.done} / {reprocessProgress.total} checked · {reprocessResults.filter(item=>item.ok).length} queued{reprocessStopped?" · stopped by operator":""}</span>
+              {reprocessRunning ? <button type="button" onClick={()=>{reprocessCancelRef.current=true;}} className="rounded-md border border-amber-300 bg-white px-2 py-1 font-bold text-amber-900">Stop remaining</button> : null}
+            </div>
+            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#d4e3f0]"><div className="h-full rounded-full bg-[#168b9b] transition-all" style={{width:(reprocessProgress.total?100*reprocessProgress.done/reprocessProgress.total:0)+"%"}}/></div>
             <div className="mt-2 max-h-40 overflow-y-auto">{reprocessResults.map(result=>(
               <p key={result.id} className="py-1">{result.ok?"Queued":"Not queued"} · {result.intake_number} · {result.message}</p>
             ))}</div>
@@ -549,11 +578,11 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
           {autoConvertMessage ? <p role="status" className="mt-2 rounded-lg border border-[#cbd9ea] bg-[#f5f9ff] p-3 text-[11px] text-[#285078]">{autoConvertMessage}</p> : null}
         </section>
       ) : null}
-      <section className="min-w-0 overflow-hidden rounded-2xl border border-[#dce5f0] bg-white">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#e7eef5] px-4 py-3">
+      <section className="min-w-0 overflow-hidden rounded-xl border border-[#d4e2ef] bg-white xl:flex xl:h-[min(76vh,790px)] xl:flex-col">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#e7eef5] px-3 py-2.5">
           <div>
             <div className="flex items-center gap-2"><ClipboardCheck className="h-4 w-4 text-[#2861a0]"/><h2 className="text-[13px] font-bold text-[#142e4c]">{primaryN8n ? "Policy Intakes · Matching register status" : "Existing Motor Policy Intakes"}</h2></div>
-            <p className="mt-1 text-[10px] text-[#61738a]">The Intake workflow status matches Policy Intake Register. n8n extraction status and exceptions are separate. Open duplicates remain review-only and cannot be booked.</p>
+            <p className="mt-0.5 text-[10px] text-[#61738a]">Open Intake register · Select a row to inspect its AI evidence</p>
           </div>
           <div className="relative w-full sm:w-[220px]">
             <Search className="pointer-events-none absolute left-3 top-2.5 h-3.5 w-3.5 text-[#8090a6]"/>
@@ -561,15 +590,15 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
               placeholder="Search number, source, mobile" className="h-9 w-full rounded-lg border border-[#d9e3ee] bg-[#f9fbff] pl-9 pr-3 text-[11px] outline-none focus:border-[#456ba6]" />
           </div>
         </div>
-        <div className="overflow-x-auto">
+        <div className="min-h-0 overflow-auto xl:flex-1">
           <table className="min-w-[760px] w-full border-collapse text-left text-[10.5px]">
-            <thead className="bg-[#f5f8fc] text-[9px] font-bold uppercase tracking-[.07em] text-[#62748e]">
+            <thead className="sticky top-0 z-10 bg-[#edf4fa] text-[9px] font-bold uppercase tracking-[.07em] text-[#62748e]">
               <tr><th className="w-10 px-3 py-3"><span className="sr-only">Select</span></th><th className="px-2 py-3">Intake</th><th className="px-3 py-3">Lead source</th><th className="px-3 py-3">Customer mobile</th>{primaryN8n ? <th className="px-3 py-3">Policy type</th> : null}<th className="px-3 py-3">{primaryN8n ? "Intake workflow" : "Status"}</th><th className="px-3 py-3">{primaryN8n ? "Saved OCR (old)" : "OCR"}</th>{primaryN8n && queueActive ? <th className="px-3 py-3">AI Exceptions</th> : null}<th className="px-3 py-3">Submitted</th></tr>
             </thead>
             <tbody className="divide-y divide-[#edf1f5]">
               {visible.map(row => (
                 <tr key={row.id} className={selectedId === row.id ? "bg-[#ebf4ff]" : "hover:bg-[#f9fbff]"}>
-                  <td className="px-3 py-3">
+                  <td className="px-3 py-2">
                     <input type="checkbox" aria-label={"Select " + row.intake_number} checked={selectedId === row.id} disabled={isWaiting && selectedId !== row.id}
                       onChange={() => { void selectRow(row.id); }} className="h-4 w-4 accent-[#215a9c]" />
                   </td>
@@ -610,7 +639,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
           {!visible.length ? <div className="p-7 text-center text-[12px] text-[#718197]">No Intake matches this filter on the current page.</div> : null}
         </div>
       </section>
-      <section aria-live="polite" className="min-w-0 rounded-2xl border border-[#dce5f0] bg-white p-4">
+      <section aria-live="polite" className="min-w-0 rounded-xl border border-[#d4e2ef] bg-white p-3 xl:h-[min(76vh,790px)] xl:overflow-y-auto">
         <div className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-[#4774c1]" /><h2 className="text-[13px] font-bold text-[#142e4c]">{primaryN8n ? "n8n Policy Processing" : "AI Booking Check"}</h2></div>
         {!selectedId ? <div className="mt-5 rounded-xl border border-dashed border-[#cddbea] p-5 text-center text-[11px] leading-5 text-[#63768e]">
           {primaryN8n ? queueActive ? "The queue reads Intakes automatically. Select one to review its exceptions, or review the current private PDF again before onboarding." : "Select an Intake to read its current private policy PDF using n8n. Untrained insurer layouts will be referred for manual review, not processed through Google OCR." : "Select a checkbox in the Intake table to see exactly which fields are ready and which require correction."}
