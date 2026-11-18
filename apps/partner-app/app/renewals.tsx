@@ -9,7 +9,6 @@ import { PartnerSearchField } from '@/components/ui/partner-search-field';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { PartnerInsurerLogo } from '@/components/ui/partner-insurer-logo';
 import { PartnerCaseBottomNavigation } from '@/components/partner-case-bottom-navigation';
-import { canPartnerAccess } from '@/lib/partner-permissions';
 import {
   getPartnerRenewalSummary,
   listPartnerRenewals,
@@ -43,8 +42,7 @@ export default function RenewalsScreen() {
   const { width: windowWidth } = useWindowDimensions();
   const sortAnchorRef = useRef<View>(null);
   const [sortMenuPosition, setSortMenuPosition] = useState({ top: 0, left: 0 });
-  const { cacheScopeKey, context } = usePartnerSession();
-  const canOpenHome = canPartnerAccess(context, 'view_dashboard');
+  const { cacheScopeKey } = usePartnerSession();
   const [mode, setMode] = useState<PartnerRenewalMode>(savedRenewalMode);
   const [bucket, setBucket] = useState<PartnerRenewalBucket>(savedRenewalMode === 'expired' ? 'overdue' : 'all');
   const [query, setQuery] = useState(savedRenewalQuery);
@@ -154,7 +152,7 @@ export default function RenewalsScreen() {
             style={({ pressed }) => [styles.summaryLead, pressed && styles.summaryPressed]}
           >
             <View style={styles.summaryMain}>
-              <Ionicons name="document-text-outline" size={23} color="#17365D" />
+              <Image source={PartnerAssets.status.renewalDue} style={styles.summaryArtwork} resizeMode="contain" />
               <View style={styles.summaryText}>
                 <Text style={styles.summaryEyebrow}>{selectedSummary.eyebrow}</Text>
                 <Text style={styles.summaryPremium}>Net Premium - {formatWholeRupees(selectedSummary.premium)}</Text>
@@ -184,6 +182,7 @@ export default function RenewalsScreen() {
             onChangeText={setQuery}
             onClear={() => setQuery('')}
             placeholder="Search policy, customer or insurer..."
+            leadingIconSource={PartnerAssets.navigation.search}
             containerStyle={styles.searchField}
           />
         </View>
@@ -191,7 +190,7 @@ export default function RenewalsScreen() {
 
       <View style={styles.opportunitiesHeader}>
         <View style={styles.opportunitiesLeft}>
-          <View style={styles.listIcon}><Ionicons name="list-outline" size={23} color="#0877EB" /></View>
+          <View style={styles.listIcon}><Image source={PartnerAssets.actions.policyChecklist} style={styles.listArtwork} resizeMode="contain" /></View>
           <View>
             <Text style={styles.opportunitiesTitle}>{mode === 'expired' ? 'OVERDUE POLICIES' : 'RENEWAL OPPORTUNITIES'}</Text>
             <Text style={styles.opportunitiesMeta}>{collection.loading ? 'Loading…' : `${collection.rows.length} policies · ${collection.total} total`}</Text>
@@ -259,11 +258,8 @@ export default function RenewalsScreen() {
         <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={() => router.back()} style={styles.headerAction}>
           <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
         </Pressable>
-        <Ionicons name="document-text-outline" size={23} color="#FFFFFF" />
+        <Image source={PartnerAssets.actions.renewalsReference} style={styles.headerArtwork} resizeMode="contain" />
         <Text style={styles.referenceTitle} numberOfLines={1}>Renewal Work Queue</Text>
-        {canOpenHome ? <Pressable accessibilityRole="button" accessibilityLabel="Go to Home" onPress={() => router.navigate('/(tabs)' as never)} style={styles.headerAction}>
-          <Ionicons name="home-outline" size={22} color="#FFFFFF" />
-        </Pressable> : null}
       </View>}
       data={sortedRows}
       keyExtractor={(row) => row.policy_id}
@@ -350,6 +346,9 @@ const styles = StyleSheet.create({
   loadMoreTextLoading: { color: '#FFFFFF', fontSize: 11, fontWeight: '800' },
   referenceHeader: { minHeight: 64, marginHorizontal: -partnerTheme.spacing.lg, marginBottom: 0, paddingHorizontal: 14, backgroundColor: '#071E49', flexDirection: 'row', alignItems: 'center', gap: 10 },
   headerAction: { width: 34, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
+  headerArtwork: { width: 29, height: 29 },
+  summaryArtwork: { width: 33, height: 33 },
+  listArtwork: { width: 27, height: 27 },
   referenceTitle: { color: '#FFFFFF', fontSize: 18, fontWeight: '800', flexShrink: 1 },
   summaryPanel: { marginTop: 0, marginHorizontal: -partnerTheme.spacing.lg, backgroundColor: '#FFFFFF' },
   summaryDivider: { height: StyleSheet.hairlineWidth, backgroundColor: '#D9E2EE', marginHorizontal: 14 },
@@ -369,7 +368,7 @@ const styles = StyleSheet.create({
   searchRow: { marginTop: 10, flexDirection: 'row', alignItems: 'center' }, searchGrow: { flex: 1 },
   searchField: { borderColor: '#D8E0EB', backgroundColor: '#FFFFFF' },
   opportunitiesHeader: { marginTop: 14, paddingHorizontal: 10, paddingVertical: 10, backgroundColor: '#FFFFFF', borderColor: '#E4E9F1', borderWidth: 1, borderBottomWidth: 0, borderTopLeftRadius: 14, borderTopRightRadius: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, opportunitiesLeft: { flexDirection: 'row', alignItems: 'center', gap: 9, flexShrink: 1 },
-  listIcon: { backgroundColor: '#EAF4FF', borderRadius: 9, width: 34, height: 34, alignItems: 'center', justifyContent: 'center' },
+  listIcon: { width: 34, height: 34, alignItems: 'center', justifyContent: 'center' },
   opportunitiesTitle: { color: '#17233B', fontSize: 11, lineHeight: 15, fontWeight: '900', letterSpacing: 0.25 }, opportunitiesMeta: { marginTop: 1, color: '#7A8598', fontSize: 9 },
   sortArea: { flexDirection: 'row', alignItems: 'center' }, sortButton: { minHeight: 35, flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 11, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E4E9F1' }, sortText: { color: '#263249', fontSize: 10, fontWeight: '700' },
   sortOverlay: { flex: 1, justifyContent: 'flex-start' },

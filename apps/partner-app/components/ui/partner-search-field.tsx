@@ -2,11 +2,13 @@ import { useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Keyboard,
+  Image,
   Pressable,
   Text,
   StyleSheet,
   TextInput,
   View,
+  type ImageSourcePropType,
   type StyleProp,
   type TextStyle,
   type ViewStyle,
@@ -86,6 +88,7 @@ export function PartnerSearchField({
   suggestions,
   autoFocus = false,
   containerStyle,
+  leadingIconSource,
 }: {
   value: string;
   onChangeText: (value: string) => void;
@@ -96,6 +99,8 @@ export function PartnerSearchField({
   suggestions?: readonly string[];
   autoFocus?: boolean;
   containerStyle?: StyleProp<ViewStyle>;
+  /** Optional local 3D icon; all existing callers keep the standard search glyph. */
+  leadingIconSource?: ImageSourcePropType;
 }) {
   const [focused, setFocused] = useState(false);
   const [chosen, setChosen] = useState("");
@@ -114,11 +119,13 @@ export function PartnerSearchField({
 
   return (
     <View style={[styles.wrap, containerStyle, focused && styles.focused]}>
-      <Ionicons
-        name="search-outline"
-        size={21}
-        color={focused ? partnerTheme.colors.brand : '#3156B8'}
-      />
+      {leadingIconSource
+        ? <Image source={leadingIconSource} style={styles.leadingArtwork} resizeMode="contain" accessibilityIgnoresInvertColors />
+        : <Ionicons
+            name="search-outline"
+            size={21}
+            color={focused ? partnerTheme.colors.brand : '#3156B8'}
+          />}
       <View style={styles.inputShell}>
         {rotating ? (
           <PartnerRotatingSearchPlaceholder placeholders={rotatingItems} containerStyle={styles.placeholderOverlay} />
@@ -173,6 +180,7 @@ export function PartnerSearchField({
 }
 
 const styles = StyleSheet.create({
+  leadingArtwork: { width: 26, height: 26 },
   suggestionList: { position: 'absolute', top: 46, left: 0, right: 0, zIndex: 300, backgroundColor: '#FFFFFF', borderColor: '#DCE5EF', borderWidth: 1, borderRadius: 11, overflow: 'hidden', elevation: 12 },
   suggestionRow: { minHeight: 38, justifyContent: 'center', paddingHorizontal: 12, borderBottomColor: '#EEF2F6', borderBottomWidth: StyleSheet.hairlineWidth },
   suggestionText: { fontSize: 11, fontWeight: '600', color: '#17365D' },
