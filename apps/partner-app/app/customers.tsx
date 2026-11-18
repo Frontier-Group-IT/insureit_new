@@ -290,7 +290,7 @@ function formatUpdatedAt(value: number | null) { if (!value) return 'earlier'; r
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#071E49' },
-  content: { paddingBottom: 16, backgroundColor: '#071E49', flexGrow: 1 },
+  content: { paddingBottom: 16, backgroundColor: '#F5F7FB', flexGrow: 1 },
   pressed: { opacity: 0.72 },
   hero: { height: 58, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', overflow: 'hidden', backgroundColor: '#071E49' },
   heroOrbLarge: { position: 'absolute', right: -42, top: -55, width: 180, height: 130, borderRadius: 90, backgroundColor: '#102D59', opacity: 0.92 },
@@ -301,7 +301,7 @@ const styles = StyleSheet.create({
   eyebrow: { color: '#D6E9FF', fontSize: 7.5, lineHeight: 9, letterSpacing: 0.85, fontWeight: '800' },
   title: { marginTop: 1, color: '#FFFFFF', fontSize: 14, lineHeight: 17, fontWeight: '800' },
 
-  kpiOuter: { paddingHorizontal: 10, paddingTop: 8, backgroundColor: '#071E49' },
+  kpiOuter: { paddingHorizontal: 10, paddingTop: 8, backgroundColor: '#F5F7FB' },
   kpiLoading: { height: 48, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 10, borderRadius: 10, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#DEE7F2' },
   kpiSkeletonBlock: { flex: 1, height: 35, borderRadius: 8, backgroundColor: '#EDEFF3' },
   kpiStrip: { height: 48, flexDirection: 'row', borderRadius: 10, overflow: 'hidden', backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#DCE5F0' },
