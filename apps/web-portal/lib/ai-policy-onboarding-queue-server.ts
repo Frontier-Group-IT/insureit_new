@@ -298,11 +298,12 @@ async function processClaim(item: Claimed) {
   const issuanceDecision=pdfIssuanceDate?policyDateDecision(pdfIssuanceDate):"invalid";
   const issuanceDateVerified=issuanceDecision!=="invalid"&&issuanceDecision!=="future";
   const bundled=normalizedName(values.get("policy_product")??"")==="BUNDLED";
+  const ownDamageOnly=extraction.preview.parserId==="icici_3005_od_n8n_native_pdf";
   // The strict 3005 bridge independently verifies both OD and Third Party
   // dates. Bundled itself is not an exception once both periods were validated.
   // Canonical form derives the associated CPA schedule from verified cover
   // dates; final booking independently validates it through existing rules.
-  const bundledPeriodsVerified=!bundled||(
+  const bundledPeriodsVerified=ownDamageOnly || !bundled || (
     extraction.preview.checksPassed===13
     && extraction.preview.warnings.length===0
     && ["policy_start_date","policy_end_date","third_party_start_date","third_party_end_date"]
@@ -314,7 +315,7 @@ async function processClaim(item: Claimed) {
     policyType:intake.policy_type??"motor", intakeStatus:intake.status,
     isDuplicate, // Derived from the canonical registered-policy / earlier-Intake detector.
     hasCurrentDocument:true,documentStillCurrent:true,
-    parserId:"icici_3005_n8n_native_pdf",
+    parserId:extraction.preview.parserId,
     parserChecksPassed:extraction.preview.checksPassed,
     extractionState:"success" as const,
     extractionWarnings:extraction.preview.warnings,
@@ -342,7 +343,7 @@ async function processClaim(item: Claimed) {
     :codes.length?"exception":"verified";
   const completed=await finishClaim(item,{
     state, exception_codes:codes,field_keys:extraction.preview.fields.map(f=>f.key),
-    parser_id:"icici_3005_n8n_native_pdf",
+    parser_id:extraction.preview.parserId,
     checks_passed:extraction.preview.checksPassed,
     extraction_fingerprint:extraction.preview.fingerprint,
     last_error_code:null,processed_at:new Date().toISOString(),
