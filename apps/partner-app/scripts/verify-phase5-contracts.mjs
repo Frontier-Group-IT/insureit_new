@@ -309,13 +309,14 @@ expectAll('app/customer-new.tsx', [
 expectAll('lib/customers.ts', [
   [/gst_number: string/, 'customer creation form includes GSTIN'],
   [/type: 'pan_copy' \| 'aadhaar_front' \| 'aadhaar_back' \| 'gst_copy'/, 'document type supports GST Copy'],
-  [/partnerCustomerRequest\('POST', JSON\.stringify\(input\)\)/, 'customer creation goes to the authorized portal endpoint'],
+  [/partnerCustomerRequest\('POST', JSON\.stringify\(\{ \.\.\.input, requestId \}\)\)/, 'customer creation carries a stable retry identifier to authorized portal endpoint'],
   [/partnerCustomerRequest\('PUT',payload\)/, 'KYC documents use authenticated upload endpoint'],
   [/payload\.append\('customerId', customerId\)/, 'document upload binds the created customer id'],
 ]);
 
 expectAll('app/customer-new.tsx', [
   [/setCreatedCustomerId\(customerId\)/, 'creation stores the confirmed id to prevent duplicate customer rows on upload retry'],
+  [/createPartnerCustomer\(form, requestId\)/, 'creation retries reuse the stable request ID'],
   [/uploadedTypes\.includes\(file\.type\)/, 'already uploaded files are skipped on retry'],
   [/uploadPartnerCustomerDocument\(customerId,file\)/, 'selected KYC files are submitted after customer creation'],
   [/Legal Trade Name required/, 'registered GST requires legal trade name'],
