@@ -62,6 +62,16 @@ for (const file of requiredFiles) {
   assert(fs.existsSync(path.join(root, file)), "missing Customer Web foundation file: " + file);
 }
 
+const renewalCards = read("app/customer/(protected)/renewals/customer-renewals-register.tsx");
+assert(renewalCards.includes('flex min-w-0 items-center gap-2'), "Renewals category icon and title should align horizontally at top-left");
+assert(renewalCards.includes('flex min-h-[23px] flex-wrap items-center justify-end gap-1'), "Renewals badges must align at the bottom-right");
+assert(renewalCards.includes('justify-between gap-3 overflow-hidden'), "Category card must separate top label from bottom badges");
+assert(renewalCards.includes('>Due {cat.due}</span>'), "Due count badge must retain existing data");
+assert(renewalCards.includes('>Expired {cat.expired}</span>'), "Expired count badge must retain existing data");
+assert(renewalCards.includes('onClick={() => setActiveCategory(selected ? null : cat.key)}'), "Category selection must remain interactive");
+assert(renewalCards.includes('grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6'), "Category cards must remain responsive");
+assert(!renewalCards.includes('absolute right-2 top-2'), "Renewals status badges must not overlap top-right title area");
+
 const guard = read("lib/customer-web.ts");
 assert(guard.includes('profile.role !== "customer"'), "Customer Web guard must explicitly require the customer role");
 assert(guard.includes('redirect("/customer/login")'), "missing Customer Web session must return to Customer Login");
