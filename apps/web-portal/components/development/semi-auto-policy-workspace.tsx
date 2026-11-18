@@ -26,6 +26,7 @@ export type SemiAutoIntakeRow = {
   intake_bucket?: Exclude<IntakeStatusBucket, "all">;
   ai_state?: "pending" | "processing" | "exception" | "verified" | "unsupported" | "failed" | null;
   ai_exceptions?: string[];
+  ai_field_keys?: string[];
   ai_processed_at?: string | null;
 };
 
@@ -61,6 +62,34 @@ const aiStateLabel: Record<string,string> = {
   failed:"Retry scheduled",duplicate:"Duplicate · skipped",
 };
 
+const requiredPdfKeys=[
+  "insured_name","policy_number","insurer_name","vehicle_class","vehicle_make",
+  "vehicle_model","vehicle_fuel_type","vehicle_motor_power_kw",
+  "vehicle_manufacturing_year","vehicle_chassis_number","vehicle_engine_number",
+  "vehicle_rto_name","policy_product","policy_start_date","policy_end_date",
+  "third_party_end_date","idv","od_premium","tp_premium",
+];
+// Only the presence of n8n field keys is sent to the UI, never raw PDF values.
+function explainAiException(row:SemiAutoIntakeRow,code:string):string{
+  const present=new Set(row.ai_field_keys??[]);
+  if(code==="missing_field"){
+    const missing=requiredPdfKeys.filter(key=>!present.has(key));
+    return missing.length
+      ? "Missing from last n8n extraction: "+missing.join(", ")+". Saved draft values do not replace PDF evidence."
+      : "One or more mandatory values were blank despite their field keys being present.";
+  }
+  if(code==="manufacturer_unmatched")
+    return !present.has("vehicle_class")||!present.has("vehicle_fuel_type")
+      ? "The manufacturer cannot be resolved reliably until the PDF class and fuel evidence is extracted. Fix those fields first."
+      : "The extracted make did not match an active manufacturer master option. Check the printed make/model.";
+  if(code==="issuance_date_unverified")
+    return !present.has("policy_issuance_date")
+      ? "The parser did not return the separately printed Policy Issued On date. An old draft date or cover start is not PDF evidence."
+      : "The returned issue date failed validation; review the printed policy date and required approvals.";
+  if(code==="unsupported_layout")
+    return "n8n did not pass all strict policy-layout checks. This may be a known ICICI PDF variant, not necessarily an unsupported insurer. Review execution checks.";
+  return "Review this exception in the Intake or editable Policy Onboarding workflow before attempting conversion.";
+}
 const humanStatus: Record<string, string> = {
   ready_for_review: "Ready for Review", in_review: "In Review",
   needs_attention: "Needs Attention", processing: "Processing",
@@ -968,7 +997,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
                         ? "Inspect the existing policy or earlier Intake. A duplicate must never be converted again."
                         : code==="preflight_pending"
                           ? "The PDF has been read, but customer, date, ownership, premiums and policy history have not passed the canonical booking preflight."
-                          : "Review this exception in the Intake or editable Policy Onboarding workflow before attempting conversion."}
+                          : explainAiException(exceptionRow,code)}
                   </p>
                 </div>
               ))}
