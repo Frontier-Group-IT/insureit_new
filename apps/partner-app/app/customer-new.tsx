@@ -111,7 +111,7 @@ export default function NewPartnerCustomerScreen() {
             {field('Aadhaar Number', 'aadhaar_number', '12-digit Aadhaar number', { keyboardType: 'numeric' })}
           </View>
           <View style={styles.two}>
-            {field('Legal Trade Name', 'legal_trade_name', 'Optional')}
+            {field(form.gst_registered ? 'Legal Trade Name *' : 'Legal Trade Name', 'legal_trade_name', form.gst_registered ? 'Required for GST' : 'Optional')}
             {form.gst_registered ? field('GST Number *', 'gst_number', '15-character GSTIN', { autoCapitalize: 'characters' }) : <View style={styles.field}/>}
           </View>
         </View>
