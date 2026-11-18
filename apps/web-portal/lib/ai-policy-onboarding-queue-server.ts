@@ -212,7 +212,7 @@ async function processClaim(item: Claimed, parserRevision: string) {
       state:untrained?"unsupported":"failed",
       exception_codes:[untrained?"unsupported_layout":"extraction_failed"],
       field_keys:[],parser_id:null,checks_passed:0,extraction_fingerprint:null,
-      last_error_code:untrained?"parser_not_trained":"n8n_unavailable",
+      last_error_code:untrained?(extraction.diagnosticCode??"parser_not_trained"):"n8n_unavailable",
       processed_at:untrained?new Date().toISOString():null,
       retry_after:retryAfter(untrained?1440:5),
     });
