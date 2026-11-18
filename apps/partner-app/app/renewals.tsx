@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Image, Modal, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, Image, Modal, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
@@ -8,7 +8,7 @@ import { PartnerBanner } from '@/components/ui/partner-banner';
 import { PartnerSearchField } from '@/components/ui/partner-search-field';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { PartnerInsurerLogo } from '@/components/ui/partner-insurer-logo';
-import { PartnerPagination } from '@/components/ui/partner-pagination';
+import { PartnerCaseBottomNavigation } from '@/components/partner-case-bottom-navigation';
 import {
   getPartnerRenewalSummary,
   listPartnerRenewals,
@@ -33,7 +33,7 @@ type SummarySelection = {
   count: number;
 };
 
-const PAGE_SIZE = 25;
+const PAGE_SIZE = 10;
 let savedRenewalMode: PartnerRenewalMode = 'expiring';
 let savedRenewalQuery = '';
 
@@ -48,7 +48,17 @@ export default function RenewalsScreen() {
   const [query, setQuery] = useState(savedRenewalQuery);
   const [sortDirection, setSortDirection] = useState<DueDateSort>('asc');
   const [sortOpen, setSortOpen] = useState(false);
+  const [visibleLimit, setVisibleLimit] = useState(PAGE_SIZE);
+  const [requestedLimit, setRequestedLimit] = useState(PAGE_SIZE);
+  const [loadMoreFeedback, setLoadMoreFeedback] = useState(false);
+  const loadMoreStartedAt = useRef(0);
   const debouncedSearch = useDebouncedValue(query.trim(), 350);
+
+  useEffect(() => {
+    setVisibleLimit(PAGE_SIZE);
+    setRequestedLimit(PAGE_SIZE);
+    setLoadMoreFeedback(false);
+  }, [mode, bucket, debouncedSearch]);
 
   useEffect(() => {
     savedRenewalMode = mode;
@@ -70,8 +80,8 @@ export default function RenewalsScreen() {
 
   const collection = usePartnerPageQuery<PartnerRenewalRow>({
     scopeKey: cacheScopeKey,
-    key: `renewals:list:${mode}:${bucket}:${debouncedSearch || 'all'}`,
-    pageSize: PAGE_SIZE,
+    key: `renewals:list:${mode}:${bucket}:${debouncedSearch || 'all'}:limit:${visibleLimit}`,
+    pageSize: visibleLimit,
     fetchPage,
     staleTimeMs: 60_000,
   });
@@ -81,6 +91,16 @@ export default function RenewalsScreen() {
     const bTime = expirySortValue(b.end_date, sortDirection);
     return sortDirection === 'asc' ? aTime - bTime : bTime - aTime;
   }), [collection.rows, sortDirection]);
+
+  useEffect(() => {
+    if (!loadMoreFeedback) return;
+    const reachedRequestedSize = collection.rows.length >= requestedLimit ||
+      (collection.total > 0 && collection.rows.length >= collection.total);
+    if ((collection.loading || collection.changingPage || !reachedRequestedSize) && !collection.error) return;
+    const elapsed = Date.now() - loadMoreStartedAt.current;
+    const timer = setTimeout(() => setLoadMoreFeedback(false), Math.max(0, 600 - elapsed));
+    return () => clearTimeout(timer);
+  }, [collection.rows.length, collection.total, collection.loading, collection.changingPage, collection.error, loadMoreFeedback, requestedLimit]);
 
   const selectedSummary = useMemo(
     () => resolveSummarySelection(summary.data, mode, bucket),
@@ -204,26 +224,35 @@ export default function RenewalsScreen() {
     </View>
   );
 
-  const footer = collection.rows.length ? (
-    <PartnerPagination
-      page={collection.page}
-      totalPages={collection.totalPages}
-      total={collection.total}
-      pageSize={PAGE_SIZE}
-      rowCount={collection.rows.length}
-      onPrevious={collection.previousPage}
-      onNext={collection.nextPage}
-      disabled={collection.changingPage}
-    />
+  const isLoadingMore = loadMoreFeedback || collection.loading || collection.changingPage;
+  const footer = collection.rows.length > 0 && collection.rows.length < collection.total ? (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={isLoadingMore ? 'Loading more policies' : 'Load More Policies'}
+      accessibilityState={{ disabled: isLoadingMore, busy: isLoadingMore }}
+      disabled={isLoadingMore}
+      onPress={() => {
+        const nextLimit = visibleLimit + PAGE_SIZE;
+        loadMoreStartedAt.current = Date.now();
+        setRequestedLimit(nextLimit);
+        setLoadMoreFeedback(true);
+        setVisibleLimit(nextLimit);
+      }}
+      style={({ pressed }) => [styles.loadMoreButton, isLoadingMore && styles.loadMoreButtonLoading, pressed && !isLoadingMore && styles.pressed]}
+    >
+      {isLoadingMore ? <><ActivityIndicator size="small" color="#FFFFFF" /><Text style={styles.loadMoreTextLoading}>Loading more policies…</Text></> :
+        <><Text style={styles.loadMoreText}>Load More Policies</Text><Ionicons name="chevron-down" size={16} color="#3156B8" /></>}
+    </Pressable>
   ) : null;
 
   return (
     <>
       <PartnerListScreen
-      key={`renewals-page-${collection.page}`}
       title="Renewal Work Queue"
       onBack={() => router.back()}
       showArtwork={false}
+      navyStatusBar
+      bottomNavigation={<PartnerCaseBottomNavigation activeTab="Policies" />}
       topBar={<View style={styles.referenceHeader}><Ionicons name="arrow-back" size={21} color="#FFFFFF" onPress={() => router.back()} /><Ionicons name="document-text-outline" size={23} color="#FFFFFF" /><Text style={styles.referenceTitle}>Renewal Work Queue</Text></View>}
       data={sortedRows}
       keyExtractor={(row) => row.policy_id}
@@ -299,6 +328,10 @@ function renewalTone(value: string | null): 'warning' | 'info' { return daysUnti
 function formatUpdatedAt(value: number | null) { if (!value) return 'earlier'; return new Intl.DateTimeFormat('en-IN', { hour: '2-digit', minute: '2-digit' }).format(new Date(value)); }
 
 const styles = StyleSheet.create({
+  loadMoreButton: { minHeight: 46, marginTop: 12, marginBottom: 12, borderRadius: 12, backgroundColor: '#EDF2FF', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  loadMoreButtonLoading: { backgroundColor: '#3156B8' },
+  loadMoreText: { color: '#3156B8', fontSize: 11, fontWeight: '800' },
+  loadMoreTextLoading: { color: '#FFFFFF', fontSize: 11, fontWeight: '800' },
   referenceHeader: { minHeight: 64, marginHorizontal: -partnerTheme.spacing.lg, marginBottom: 14, paddingHorizontal: 18, backgroundColor: '#071E49', flexDirection: 'row', alignItems: 'center', gap: 12 },
   referenceTitle: { color: '#FFFFFF', fontSize: 18, fontWeight: '800', flexShrink: 1 },
   summaryPanel: { marginTop: 0, padding: 16, borderRadius: 15, backgroundColor: '#092D69', shadowColor: '#0A285F', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 2 },
