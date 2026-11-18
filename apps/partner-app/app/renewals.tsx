@@ -131,15 +131,16 @@ export default function RenewalsScreen() {
             onPress={() => selectBucket(mode === 'expired' ? 'overdue' : 'all')}
             style={({ pressed }) => [styles.summaryLead, pressed && styles.summaryPressed]}
           >
-            <View>
-              <Text style={styles.summaryEyebrow}>{selectedSummary.eyebrow}</Text>
-              <Text style={styles.summaryPremium}>{formatIndianCurrency(selectedSummary.premium)}</Text>
-              <Text style={styles.summaryLabel}>Net Premium</Text>
+            <View style={styles.summaryMain}>
+              <View style={styles.summaryCountIcon}><Ionicons name="document-text-outline" size={22} color="#0A346B" /></View>
+              <View style={styles.summaryText}>
+                <Text style={styles.summaryEyebrow}>{selectedSummary.eyebrow}</Text>
+                <Text style={styles.summaryPremium}>Net Premium - {formatWholeRupees(selectedSummary.premium)}</Text>
+              </View>
             </View>
             <View style={styles.summaryCount}>
-              <View style={styles.summaryCountIcon}><Ionicons name="document-text-outline" size={22} color="#FFFFFF" /></View>
-              <View><Text style={styles.summaryCountValue}>{selectedSummary.count}</Text>
-              <Text style={styles.summaryCountLabel}>Policies</Text></View>
+              <Text style={styles.summaryCountValue}>{selectedSummary.count}</Text>
+              <Text style={styles.summaryCountLabel}>Policies</Text>
             </View>
           </Pressable>
         </View>
@@ -258,6 +259,11 @@ export default function RenewalsScreen() {
   );
 }
 
+function formatWholeRupees(value: number | string): string {
+  const amount = Number(value);
+  return formatIndianCurrency(Number.isFinite(amount) ? Math.trunc(amount) : 0);
+}
+
 function ModeTab({ label, count, active, danger = false, onPress }: { label: string; count: number; active: boolean; danger?: boolean; onPress: () => void }) {
   return <Pressable onPress={onPress} style={[styles.modeTab, active && styles.modeTabActive]}><Text style={[styles.modeLabel, active && styles.modeLabelActive]}>{label}</Text><View style={[styles.tabBadge, danger ? styles.tabBadgeDanger : styles.tabBadgeBlue]}><Text style={[styles.tabBadgeText, danger ? styles.tabBadgeDangerText : styles.tabBadgeBlueText]}>{count}</Text></View></Pressable>;
 }
@@ -301,16 +307,17 @@ function formatUpdatedAt(value: number | null) { if (!value) return 'earlier'; r
 const styles = StyleSheet.create({
   referenceHeader: { minHeight: 64, marginHorizontal: -partnerTheme.spacing.lg, marginBottom: 14, paddingHorizontal: 18, backgroundColor: '#071E49', flexDirection: 'row', alignItems: 'center', gap: 12 },
   referenceTitle: { color: '#FFFFFF', fontSize: 18, fontWeight: '800', flexShrink: 1 },
-  summaryPanel: { marginTop: 0, padding: 16, borderRadius: 15, backgroundColor: '#092D69', shadowColor: '#0A285F', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 2 },
-  summaryLead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  summaryPanel: { marginTop: 0, borderRadius: 15, borderWidth: 1, borderColor: '#E1E8F1', backgroundColor: '#FFFFFF' },
+  summaryLead: { minHeight: 82, paddingHorizontal: 14, paddingVertical: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 9 },
   summaryPressed: { opacity: 0.72 },
-  summaryEyebrow: { color: '#B6C9E6', fontSize: 9, lineHeight: 12, fontWeight: '800', letterSpacing: 1.4 },
-  summaryPremium: { marginTop: 2, color: '#FFFFFF', fontSize: 22, lineHeight: 27, fontWeight: '800' },
-  summaryLabel: { marginTop: 1, color: '#E6EFFF', fontSize: 10 },
-  summaryCount: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingLeft: 13, borderLeftWidth: 1, borderLeftColor: '#5C79A4' },
-  summaryCountIcon: { backgroundColor: '#1262BD', width: 37, height: 37, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
-  summaryCountValue: { color: '#FFFFFF', fontSize: 23, lineHeight: 27, fontWeight: '800' },
-  summaryCountLabel: { marginTop: 3, color: '#DAE7FA', fontSize: 10 },
+  summaryMain: { flexDirection: 'row', flex: 1, minWidth: 0, alignItems: 'center', gap: 10 },
+  summaryText: { flex: 1, minWidth: 0, gap: 5 },
+  summaryEyebrow: { color: '#172A48', fontSize: 12, lineHeight: 16, fontWeight: '800', letterSpacing: 0.2 },
+  summaryPremium: { color: '#53677F', fontSize: 12, lineHeight: 17, fontWeight: '700' },
+  summaryCount: { minWidth: 82, flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'baseline', gap: 4 },
+  summaryCountIcon: { backgroundColor: '#EAF3FC', width: 39, height: 39, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  summaryCountValue: { color: '#172A48', fontSize: 19, lineHeight: 24, fontWeight: '800' },
+  summaryCountLabel: { color: '#53677F', fontSize: 10, fontWeight: '600' },
   banner: { marginTop: 9 }, inlineBanner: { marginBottom: 8 },
   modeTabs: { marginTop: 14, flexDirection: 'row', gap: 0, borderBottomWidth: 1, borderBottomColor: '#D5E3F2' },
   modeTab: { flex: 1, minHeight: 43, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, paddingHorizontal: 5, borderBottomWidth: 3, borderBottomColor: 'transparent' },
