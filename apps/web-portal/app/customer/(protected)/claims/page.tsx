@@ -1,6 +1,6 @@
 import "./customer-claims-motion.css";
 import Link from "next/link";
-import { ChevronDown, ClipboardList, Plus, ShieldCheck } from "lucide-react";
+import { ChevronDown, ClipboardList, Plus } from "lucide-react";
 import { createCustomerServerSupabaseClient } from "@/lib/auth-server";
 import { CustomerClaimLogo } from "@/components/customer-portal/customer-claim-logo";
 import { CustomerClaimsSearch } from "./customer-claims-search";
