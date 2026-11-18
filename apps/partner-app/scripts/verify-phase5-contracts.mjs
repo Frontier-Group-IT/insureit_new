@@ -321,6 +321,23 @@ expectAll('app/customer-new.tsx', [
   [/uploadPartnerCustomerDocument\(customerId,file\)/, 'selected KYC files are submitted after customer creation'],
   [/Legal Trade Name required/, 'registered GST requires legal trade name'],
 ]);
+// Partner customer backend must remain authenticated, scoped, private and retry-safe.
+expectAll('../web-portal/app/api/partner/customers/create/route.ts', [
+  [/scoped\.auth\.getUser\(token\)/, 'customer endpoint verifies the bearer token'],
+  [/partner_app_current_identity/, 'customer endpoint verifies canonical actor identity'],
+  [/partner_app_commercial_scope/, 'customer endpoint derives server-side commercial scope'],
+  [/hasEffectiveCapability\(profile,"create_customers","edit"\)/, 'employee creation requires effective edit permission'],
+  [/lead_source_intermediary_id: sourceId/, 'server assigns commercial owner, never trusts client-supplied source'],
+  [/aadhaar_last_four: aadhaar \? aadhaar\.slice\(-4\) : null/, 'raw Aadhaar is not persisted'],
+  [/gst_number: gstRegistered \? gstNumber : null/, 'validated GSTIN is written to existing customer column'],
+  [/gstin: gstRegistered \? gstNumber : null/, 'GSTIN mirror column is consistent'],
+  [/createHash\("sha256"\).*requestId/, 'request identifier is scoped to user for idempotency'],
+  [/partner_app_customer_in_scope/, 'document uploads validate current customer scope'],
+  [/customer\.created_by !== actor\.authId/, 'upload requires original creator'],
+  [/storage\.from\("customer-documents"\)\.upload/, 'documents use private customer storage bucket'],
+  [/from\("customer_documents"\)\.insert/, 'document metadata is recorded'],
+  [/new Uint8Array\(await file\.arrayBuffer\(\)\)/, 'uploaded content is scanned for signature'],
+]);
 // Evaluate every contract only after all checks have run.
 if (failures.length) {
   console.error('Partner Phase 5 resilience/accessibility contract verification failed:');
