@@ -14,7 +14,7 @@ import { aiQueueEnabled, loadAiQueueDisplay } from "@/lib/ai-policy-onboarding-q
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
-const PAGE_SIZE = 75;
+const PAGE_SIZE = 30;
 type OpenIntakeView = "action_required" | "in_review" | "processing" | "duplicate" | "all";
 const OPEN_INTAKE_VIEWS: { view: OpenIntakeView; label: string }[] = [
   { view: "action_required", label: "Action Required" },
@@ -146,50 +146,58 @@ export default async function SemiAutoPolicyOnboardingPage({ searchParams }: { s
       ai_processed_at: queue.get(row.id)?.processed_at ?? null,
     }));
   return (
-    <AppShell title="AI Policy Onboarding">
-      <main className="mx-auto max-w-[1500px] space-y-3">
-        <div className="flex flex-wrap items-start justify-between gap-3 rounded-2xl border border-[#d7e3f2] bg-white p-4">
-          <div>
-            <p className="text-[9px] font-bold uppercase tracking-[.12em] text-[#446ca4]">Development / {primaryN8n ? "All open Intakes" : "Motor policies"}</p>
-            <h1 className="mt-1 text-[19px] font-bold tracking-tight text-[#122b4a]">{primaryN8n ? "AI Policy Onboarding · n8n primary" : "Semi-Automated Policy Onboarding"}</h1>
-            <p className="mt-1 max-w-3xl text-[11px] leading-5 text-[#54667e]">
-              {primaryN8n
-                ? queueActive
-                  ? "The server-only queue processes current PDF revisions with n8n automatically. Open each exception to review its next action. Booking remains locked until canonical preflight and exception resolution are verified."
-                  : "n8n is the primary extraction engine for this workbench. The unattended processing queue is not enabled yet; selecting an Intake still runs the current read-only n8n preview. No policies are booked automatically."
-                : "Select an existing Policy Intake to run a read-only eligibility check. Correct individual errors in its saved onboarding draft. Verified policies can then be booked through the existing transactional workflow with your explicit confirmation."}
-            </p>
+    <AppShell title="AI Policy Studio">
+      <main className="mx-auto max-w-[1560px] space-y-2 pb-4">
+        <header className="relative overflow-hidden rounded-xl border border-[#253c5b] bg-[#101f36] px-4 py-3 text-white shadow-sm">
+          <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 w-1/3 opacity-30"
+            style={{backgroundImage:"linear-gradient(90deg,transparent,#102c4b),repeating-linear-gradient(90deg,transparent 0,transparent 19px,#4fb6d5 20px),repeating-linear-gradient(0deg,transparent 0,transparent 19px,#4fb6d5 20px)"}}/>
+          <div className="relative flex flex-wrap items-center justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-3">
+              <div aria-hidden="true" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#4b789a] bg-[#213d5b] text-base font-bold text-[#8ce2ee]">AI</div>
+              <div className="min-w-0">
+                <p className="text-[9px] font-bold uppercase tracking-[.19em] text-[#8fc5d9]">INSUREIT / Policy intelligence</p>
+                <h1 className="text-[18px] font-semibold tracking-tight">AI Policy Studio</h1>
+                <p className="text-[10px] text-[#b6c9d9]">Extract · verify · review · onboard — human approval for every registration</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="inline-flex h-8 items-center gap-1.5 rounded-md border border-[#45627e] bg-[#1c344f] px-3 text-[10px] font-semibold text-[#c1d7e5]">
+                <span aria-hidden="true" className={queueActive ? "h-1.5 w-1.5 rounded-full bg-[#65dec4]" : "h-1.5 w-1.5 rounded-full bg-amber-300"}/>
+                {queueActive ? "n8n queue enabled" : primaryN8n ? "n8n review mode" : "Manual review"}
+              </span>
+              <Link href="/policy-intakes" className="inline-flex h-8 items-center rounded-md border border-[#607a97] bg-white px-3 text-[10px] font-bold text-[#163a5b] hover:bg-[#f0f7ff]">Policy Intake Register</Link>
+            </div>
           </div>
-          <Link href="/policy-intakes" className="inline-flex h-9 items-center rounded-lg border border-[#c9d7e8] px-3 text-[11px] font-semibold text-[#183b66]">Policy Intake Register</Link>
-        </div>
+        </header>
         {unavailable ? (
           <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-[12px] font-semibold text-rose-800">
             Existing Policy Intakes could not be loaded. Refresh this page or contact your administrator.
           </div>
         ) : (
           <>
-            <nav className="flex flex-wrap items-center gap-2 rounded-2xl border border-[#dce5f0] bg-white px-3 py-3" aria-label="Policy Intake workflow status filters">
-              <span className="mr-1 text-[10px] font-bold text-[#415b7c]">Intake status</span>
-              {OPEN_INTAKE_VIEWS.map(item=>(
-                <Link key={item.view} href={viewLink(item.view)}
-                  aria-current={selectedView===item.view ? "page" : undefined}
-                  className={`inline-flex items-center gap-1 rounded-lg border px-3 py-2 text-[10px] font-semibold ${selectedView===item.view?"border-[#17365d] bg-[#17365d] text-white":"border-[#d5dfeb] bg-white text-[#375474] hover:bg-[#f5f8fd]"}`}>
-                  {item.label} <span className="tabular-nums opacity-80">{intakeCounts[item.view as IntakeStatusBucket]}</span>
-                </Link>
-              ))}
-              <span className="ml-auto text-[9px] text-[#6d7f98]">Same status rules as Policy Intake Register · duplicate items excluded from Action Required and In Review</span>
-            </nav>
-            <SemiAutoPolicyWorkspace rows={pageRows} profileId={profile.id} primaryN8n={primaryN8n}
+            <nav className="flex flex-wrap items-center gap-1 rounded-lg border border-[#dae5ef] bg-white px-2 py-2" aria-label="Policy Intake workflow status filters">
+               <span className="mr-2 px-1 text-[10px] font-bold text-[#566b82]">STATUS</span>
+               {OPEN_INTAKE_VIEWS.map(item=>(
+                 <Link key={item.view} href={viewLink(item.view)}
+                   aria-current={selectedView===item.view ? "page" : undefined}
+                   className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[10.5px] font-semibold transition-colors ${selectedView===item.view?"bg-[#153454] text-white":"text-[#47627f] hover:bg-[#ecf3fa]"}`}>
+                   {item.label} <span className={`rounded px-1.5 py-0.5 text-[9px] tabular-nums ${selectedView===item.view?"bg-[#315575]":"bg-[#edf2f8]"}`}>{intakeCounts[item.view as IntakeStatusBucket]}</span>
+                 </Link>
+               ))}
+               <span className="ml-auto px-1 text-[10px] text-[#72849a]">{total} open Intakes</span>
+             </nav>
+             <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[#dae5ef] bg-white px-3 py-2 text-[10.5px] text-[#52657f]">
+               <span><strong className="text-[#163b61]">{statusRows.length}</strong> records in {OPEN_INTAKE_VIEWS.find(v=>v.view===selectedView)?.label} · Page {safePage} / {Math.max(1, Math.ceil(statusRows.length / PAGE_SIZE))}</span>
+               <div className="flex items-center gap-2">
+                 <span className="mr-1 text-[#8392a5]">{PAGE_SIZE} per page</span>
+                 {safePage > 1 ? <Link href={viewLink(selectedView,safePage - 1)} className="rounded-md border border-[#cad9e8] px-3 py-1 font-bold text-[#204b78]">Previous</Link> : null}
+                 {safePage * PAGE_SIZE < statusRows.length ? <Link href={viewLink(selectedView,safePage + 1)} className="rounded-md border border-[#cad9e8] px-3 py-1 font-bold text-[#204b78]">Next</Link> : null}
+               </div>
+             </div>
+             <SemiAutoPolicyWorkspace rows={pageRows} profileId={profile.id} primaryN8n={primaryN8n}
               queueActive={queueActive} queueCounts={queueCounts} bulkCandidates={bulkCandidates} reprocessCandidates={reprocessCandidates}
               initialIntakeId={requestedId && pageRows.some(row => row.id === requestedId) ? requestedId : null} />
-            <div className="flex items-center justify-between gap-3 rounded-xl border border-[#e0e6ed] bg-white px-4 py-3 text-[11px] text-[#52657f]">
-              <span>{statusRows.length} in {OPEN_INTAKE_VIEWS.find(v=>v.view===selectedView)?.label} · {total} open {primaryN8n ? "Policy" : "Motor"} Intake(s) · {duplicateCount} open duplicate(s) · page {safePage} of {Math.max(1, Math.ceil(statusRows.length / PAGE_SIZE))}</span>
-              <div className="flex items-center gap-2">
-                {safePage > 1 ? <Link href={viewLink(selectedView,safePage - 1)} className="rounded-lg border border-[#d9e2ed] px-3 py-1.5 font-semibold">Previous</Link> : null}
-                {safePage * PAGE_SIZE < statusRows.length ? <Link href={viewLink(selectedView,safePage + 1)} className="rounded-lg border border-[#d9e2ed] px-3 py-1.5 font-semibold">Next</Link> : null}
-              </div>
-            </div>
-          </>
+                      </>
         )}
       </main>
     </AppShell>
