@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
+import { PartnerStackBottomNavigation } from '@/components/partner-stack-bottom-navigation';
 import { PartnerAnchoredDropdown } from '@/components/ui/partner-anchored-dropdown';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { getPartnerNetwork, type PartnerNetworkData, type PartnerNetworkRow } from '@/lib/network';
@@ -83,7 +84,8 @@ export default function NetworkScreen() {
   };
 
   return (
-    <PartnerScreen title="Commercial relationships" hideTopBar>
+    <PartnerScreen title="Commercial relationships" hideTopBar navyStatusBar bottomNavigationNavy bottomNavigation={<PartnerStackBottomNavigation activeTab="business" />}>
+      <View style={styles.navyCanvas}>
       <View style={styles.header}>
         <View style={styles.headerAccentOne} />
         <View style={styles.headerAccentTwo} />
@@ -318,6 +320,7 @@ export default function NetworkScreen() {
           )}
         </>
       )}
+      </View>
     </PartnerScreen>
   );
 }
@@ -394,6 +397,7 @@ function formatUpdatedAt(value: string) {
 }
 
 const styles = StyleSheet.create({
+  navyCanvas: { flexGrow: 1, marginHorizontal: -partnerTheme.spacing.lg, paddingHorizontal: partnerTheme.spacing.lg, backgroundColor: '#071E49' },
   header: {
     position: 'relative',
     minHeight: 62,
@@ -403,7 +407,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 9,
     overflow: 'hidden',
-    backgroundColor: '#0756B8',
+    backgroundColor: '#071E49',
   },
   headerAccentOne: {
     position: 'absolute',
@@ -411,7 +415,7 @@ const styles = StyleSheet.create({
     top: -42,
     width: 112,
     height: 126,
-    backgroundColor: '#0A68D5',
+    backgroundColor: '#102D59',
     transform: [{ rotate: '26deg' }],
   },
   headerAccentTwo: {
@@ -420,7 +424,7 @@ const styles = StyleSheet.create({
     top: -42,
     width: 104,
     height: 132,
-    backgroundColor: '#0961CB',
+    backgroundColor: '#0C2853',
     transform: [{ rotate: '24deg' }],
   },
   headerButton: { width: 34, height: 40, alignItems: 'center', justifyContent: 'center' },
@@ -430,8 +434,8 @@ const styles = StyleSheet.create({
   headerTitle: { marginTop: 1, color: '#FFFFFF', fontSize: 16, lineHeight: 19, fontWeight: '700' },
 
   freshnessRow: { minHeight: 30, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
-  scope: { color: '#58677E', fontSize: 10, lineHeight: 13, fontWeight: '500' },
-  updated: { color: '#8995A7', fontSize: 9, lineHeight: 12 },
+  scope: { color: '#DFE8F5', fontSize: 10, lineHeight: 13, fontWeight: '500' },
+  updated: { color: '#BECCE2', fontSize: 9, lineHeight: 12 },
 
   summaryRow: { flexDirection: 'row', gap: 8, marginBottom: 10 },
   summaryCard: {
@@ -563,7 +567,7 @@ const styles = StyleSheet.create({
   ownerValue: { flex: 1, textAlign: 'right', color: partnerTheme.colors.ink, ...partnerTheme.typography.caption },
 
   noResults: { marginTop: 34, alignItems: 'center', paddingVertical: 24 },
-  noResultsTitle: { marginTop: 8, color: '#27364B', fontSize: 13, fontWeight: '700' },
-  noResultsText: { marginTop: 4, color: '#74829A', fontSize: 10 },
+  noResultsTitle: { marginTop: 8, color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
+  noResultsText: { marginTop: 4, color: '#D2DDEF', fontSize: 10 },
   pressed: { opacity: 0.72 },
 });
