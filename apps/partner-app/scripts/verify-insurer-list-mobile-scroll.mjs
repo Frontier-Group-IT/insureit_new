@@ -13,6 +13,9 @@ assert.match(screen, /numberOfLines=\{2\} ellipsizeMode="tail"/);
 assert.match(screen, /BUSINESS PERFORMANCE/);
 assert.match(screen, /source=\{PartnerAssets\.actions\.businessPerformance\}/, 'Header uses existing 3D business artwork');
 assert.match(screen, /hideTopBar fullWidth/, 'Preserve compact header');
+assert.match(screen, /bottomNavigationNavy navyStatusBar/, 'Insurer screen must paint navy top safe area with white iOS status icons');
+assert.doesNotMatch(screen, /source=\{PartnerAssets\.actions\.businessPerformance\}/, 'Do not reuse opaque white-tile performance PNG');
+
 assert.match(screen, /accessibilityLabel="Date Range"/, 'Date Range is the only register filter');
 assert.match(screen, /styles\.dateRangeTrigger/, 'Full-width date range control remains');
 assert.match(screen, /dateExpanded \? \(/, 'Calendar opens immediately beneath Date Range');
