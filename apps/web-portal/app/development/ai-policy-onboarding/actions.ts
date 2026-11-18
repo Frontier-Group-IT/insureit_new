@@ -255,7 +255,12 @@ export async function convertVerifiedAiIntake(id:string,confirmed:boolean):Promi
     const result=await convertVerifiedAiIntakeCore(id,confirmed);
     if(!result.ok)await holdFailedAiConversion(id);
     return result;
-  }catch{
+  }catch(error){
+    // Preserve the exact error class for server-side diagnosis without
+    // logging customer data, request payloads, PDF text or credentials.
+    const code=error instanceof Error && error.message==="n8n_motor_premium_handoff_unreconciled"
+      ?"n8n_motor_premium_handoff_unreconciled":"unexpected_conversion_exception";
+    console.error("[ai-policy] canonical conversion aborted",{code});
     await holdFailedAiConversion(id);
     return{ok:false,ready:false,issues:[issue("Booking status",
       "The result could not be confirmed. Review Policy Register and this Intake before explicitly retrying; automatic re-queue is blocked.")]};
@@ -288,6 +293,12 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
   if(decision==="otp_required")
     return fail("Date approval","The verified original policy issue date requires the existing email OTP approval. This cannot be bypassed automatically.");
 
+  // Validate the original PDF premium and its OD/NCB deduction before a
+  // handoff can claim the Intake or create a canonical draft.
+  let verifiedMoney:ReturnType<typeof mapVerifiedN8nMotorPremium>;
+  try{verifiedMoney=mapVerifiedN8nMotorPremium(extracted.preview.premium);}
+  catch{return fail("Premium","The validated ICICI premium or OD/NCB deduction cannot be represented safely in canonical onboarding. Review the policy manually.");}
+
   const forwarded=await prepareVerifiedN8nIntakeHandoff(id,queued.document_id,
     queued.extraction_fingerprint,false,false);
   if(!forwarded.ok)return fail("Canonical Intake handoff",forwarded.error);
@@ -302,9 +313,6 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
   }
   const sameMoney=(a:string,b:string)=>Number.isFinite(Number(a||"0"))
     && Number.isFinite(Number(b||"0")) && Math.round(Number(a||"0")*100)===Math.round(Number(b||"0")*100);
-  let verifiedMoney:ReturnType<typeof mapVerifiedN8nMotorPremium>;
-  try{verifiedMoney=mapVerifiedN8nMotorPremium(extracted.preview.premium);}
-  catch{return fail("Premium","The extracted premium breakdown does not reconcile.");}
   if(!sameMoney(forwarded.draft.od,verifiedMoney.od)
     ||!sameMoney(forwarded.draft.addOnPremium??"0",verifiedMoney.addOnPremium)
     ||!sameMoney(forwarded.draft.tp,verifiedMoney.tp)
