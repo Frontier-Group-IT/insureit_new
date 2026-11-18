@@ -33,6 +33,14 @@ const renewals = read('app/renewals.tsx');
 const policyIntakes = read('app/policy-intakes.tsx');
 const policyIntakeNew = read('app/policy-intake-new.tsx');
 const policyIntakeDetail = read('app/policy-intakes/[id].tsx');
+const policyOnboarding = read('app/policy-intakes/onboarding.tsx');
+// Standalone Add Policy labels match the website, but existing Intake actions stay unchanged.
+requireText(policyOnboarding, "accessibilityLabel={isNew?'Create Case':'Create Policy'}", 'Life/Health Add Policy button must announce Create Case.');
+requireText(policyOnboarding, "creatingLifeHealth?'Creating case…':isNew?'Create Case':'Create Policy'", 'Life/Health Add Policy must show Create Case without changing Intake copy.');
+requireText(policyOnboarding, "accessibilityLabel={isNew?(isMotor?'Upload Policy':'Create Policy'):'Create Active Policy'}", 'Standalone Motor button must announce Upload Policy and Non-Motor Create Policy.');
+requireText(policyOnboarding, "isNew?(isMotor?'Upload Policy':'Create Policy'):'Create Active Policy'", 'Product-aware action labels must retain Intake fallback.');
+requireText(policyOnboarding, "onPress={()=>void createLifeHealth()}", 'Case creation handler must remain unchanged.');
+requireText(policyOnboarding, "onPress={()=>void createActivePolicy()}", 'Motor and Non-Motor booking handlers must remain unchanged.');
 const customerDetail = read('app/customer/[id].tsx');
 const policyDetail = read('app/policy/[id].tsx');
 const claimTracker = read('app/claim/[id].tsx');
