@@ -34,6 +34,8 @@ export type SemiAutoN8nPreview = {
   changedFields: SemiAutoN8nChangedField[];
   premium: N8nVerifiedPremiumBreakdown;
   checksPassed: number;
+  parserId: string;
+  parserVersion: string;
   warnings: string[];
   canApply: boolean;
 };
@@ -215,6 +217,8 @@ export async function previewSemiAutoN8nExtraction(id: string): Promise<SemiAuto
     changedFields,
     premium: extraction.premium,
     checksPassed: extraction.checksPassed,
+    parserId: extraction.parserId,
+    parserVersion: extraction.parserVersion,
     warnings: extraction.warnings,
     canApply,
   } };
