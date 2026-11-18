@@ -26,6 +26,7 @@ export type SemiAutoIntakeRow = {
   ai_state?: "pending" | "processing" | "exception" | "verified" | "unsupported" | "failed" | null;
   ai_exceptions?: string[];
   ai_processed_at?: string | null;
+  ai_diagnostic_code?: string | null;
 };
 
 const aiIssueTitles: Record<string,string> = {
