@@ -22,9 +22,10 @@ assert.match(claims, /<Text style=\{styles.stickyTitle\}>Claims<\/Text>/);
 // Policies use one search-row dropdown with all five live lifecycle counts.
 assert.match(policies, /onPress=\{openStatusMenu\}/, 'Policies lifecycle dropdown opens from the search row');
 assert.match(policies, /<Text style=\{styles\.quickActionsHeading\}>Quick Actions<\/Text>/, 'Quick Actions heading keeps its styling');
-assert.match(policies, /<View style=\{styles\.policyListHeadingSection\}>\s*<Text style=\{styles\.quickActionsHeading\}>Policies<\/Text>/, 'Policies section heading reuses Quick Actions typography');
-assert.ok(policies.indexOf('<Text style={styles.quickActionsHeading}>Policies</Text>') > policies.indexOf('quickActions.map((action)'), 'Policies heading follows the four quick actions');
-assert.ok(policies.indexOf('<Text style={styles.quickActionsHeading}>Policies</Text>') < policies.indexOf('{isOffline || collection.stale || summary.stale'), 'Policies title precedes the list and feedback');
+assert.match(policies, /<View style=\{styles\.policyListHeadingSection\}>\s*<Text style=\{styles\.policyListTitle\}>Policies<\/Text>/, 'Policies heading remains directly above the list beside the business-line filter');
+assert.ok(policies.indexOf('<Text style={styles.policyListTitle}>Policies</Text>') > policies.indexOf('quickActions.map((action)'), 'Policies heading follows the four quick actions');
+assert.ok(policies.indexOf('<Text style={styles.policyListTitle}>Policies</Text>') < policies.indexOf('{isOffline || collection.stale || summary.stale'), 'Policies title precedes the list and feedback');
+assert.match(policies, /onPress=\{openBusinessLineMenu\}/, 'Business-line selection is immediately beside the Policies heading');
 
 assert.ok(policies.includes("filterButton: {") && policies.includes("backgroundColor: '#FFFFFF'"), 'Policy filter outer area stays white');
 assert.ok(policies.includes("filterNameBadge: {") && policies.includes("backgroundColor: '#17365D'"), 'Only the selected filter name uses a navy badge');

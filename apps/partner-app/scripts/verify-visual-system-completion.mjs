@@ -555,3 +555,22 @@ for (const forbidden of ['styles.summaryRow', 'styles.summaryChipSelected', 'Fil
 for (const forbidden of ['See all policy status filters', '>See all</Text>', 'visible={seeAllOpen}', 'summarySeeAll:', 'statusSheetOverlay:']) {
   if (policies.includes(forbidden)) throw new Error('Policies screen must not render the See all button or modal: ' + forbidden);
 }
+
+
+// Business-line dropdown is separate from lifecycle status and applies to the scoped backend list.
+const partnerPolicyApi = read('lib/policies.ts');
+for (const label of ["label:'All Policies'","label:'Motor'","label:'Non Motor'","label:'Life'","label:'Health'"]) {
+  requireText(policies, label, 'Missing policy business-line option: '+label);
+}
+for (const item of ["useState<PartnerPolicyBusinessLine>('all')","onPress={openBusinessLineMenu}","visible={lineMenuOpen}","onPress={()=>selectBusinessLine(option.value)}","businessLine,","policies:list:${lifecycle}:${businessLine}:"]) {
+  requireText(policies, item, 'Business-line dropdown is not wired to policy fetch/pagination: '+item);
+}
+requireText(partnerPolicyApi, "partner_app_list_policies_by_line", 'Filtered policy lists must use the server-side scoped RPC');
+requireText(partnerPolicyApi, "businessLine === 'all'", 'Default all-policies view must retain the deployed RPC');
+const migration = fs.readFileSync(path.join(root, '../../supabase/migrations/20261118113000_partner_policy_business_line_filter.sql'), 'utf8');
+for (const item of ['partner_app_commercial_scope()', 'partner_branch_authorized_policy_ids()', 'count(*) over() as total_count', 'v_line not in', "GRANT EXECUTE ON FUNCTION public.partner_app_list_policies_by_line"]) {
+  requireText(migration, item, 'Business-line RPC migration lost scoped paging or permissions contract: '+item);
+}
+
+requireText(policies, "value.includes('non motor')", 'Non Motor category must not fall into Motor substring matching');
+requireText(migration, "ilike '%non motor%'", 'Server-side Non Motor category must match the card classifier');
