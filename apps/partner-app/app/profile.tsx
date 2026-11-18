@@ -5,6 +5,8 @@ import { useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { PartnerScreen } from '@/components/partner-screen';
+import { PartnerCaseBottomNavigation } from '@/components/partner-case-bottom-navigation';
+import { PartnerCasePageHeader } from '@/components/partner-case-page-header';
 import { PartnerBanner } from '@/components/ui/partner-banner';
 import { PartnerConfirmDialog } from '@/components/ui/partner-confirm-dialog';
 import { PARTNER_PROFILE_PHOTO_BUCKET, partnerProfilePhotoPath } from '@/lib/partner-profile-photo';
@@ -86,28 +88,8 @@ export default function ProfileScreen() {
   }
 
   return (
-    <PartnerScreen title="Profile & registration" hideTopBar>
-      <View style={styles.header}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Go back"
-          hitSlop={10}
-          onPress={() => router.back()}
-          style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}
-        >
-          <Ionicons name="arrow-back" size={24} color="#123B7A" />
-        </Pressable>
-
-        <View style={styles.headerIcon}>
-          <Ionicons name="person" size={22} color="#0756C9" />
-        </View>
-
-        <View style={styles.headerTextWrap}>
-          <Text style={styles.headerEyebrow}>ACCOUNT</Text>
-          <Text style={styles.headerTitle}>Profile & registration</Text>
-        </View>
-      </View>
-
+    <PartnerScreen title="Profile & registration" hideTopBar navyStatusBar bottomNavigationNavy bottomNavigation={<PartnerCaseBottomNavigation activeTab="More" />}>
+      <PartnerCasePageHeader title="Profile & registration" icon="person-outline" onBack={() => router.back()} />
       {avatarMessage ? (
         <View style={styles.avatarFeedback}>
           <PartnerBanner tone={avatarMessage.tone} message={avatarMessage.text} />
