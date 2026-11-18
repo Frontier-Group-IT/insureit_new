@@ -68,9 +68,9 @@ assert.ok(page.includes('canViewAll={canViewAll}'), "Employee access permission 
 assert.ok(css.includes("> .reports-reference-header {") && css.includes("display: none;"), "Redundant Reports heading is hidden on Daily Report only");
 assert.ok(css.includes(".daily-report-reference .daily-report-panel {") && css.includes("overflow: visible;"), "Summary menus are not clipped by the activity panel");
 assert.ok(css.includes(".daily-report-panel-title .daily-report-total-badge {") && css.includes("color: #fff !important;"), "Record total remains visible in white");
-assert.ok(header.includes("w-[112px] max-w-[36vw]"), "Scope dropdown is compact beside the activity title");
+assert.ok(header.includes("w-fit min-w-[112px]"), "Scope dropdown retains a compact minimum while sizing to selected name");
 assert.ok(!header.includes("w-[clamp(124px,18vw,235px)]"), "Old oversized Self dropdown must not return");
-assert.ok(css.includes('[aria-label="Daily Report employee selector"] .daily-report-header-select {') && css.includes("width: 112px;"), "Compact scope width overrides the shared header style");
+assert.ok(css.includes('[aria-label="Daily Report employee selector"] .daily-report-header-select {') && css.includes("width: max-content;") && css.includes("min-width: 112px;") && css.includes("max-width: min(320px, calc(100vw - 40px));"), "Employee scope CSS expands long names without overriding the compact minimum");
 assert.ok(header.includes('min-w-[132px]'), "Date period filter retains its original width");
 assert.ok(panel.includes("md:min-h-[calc(100dvh-80px)]"), "Desktop Daily Report fills available screen height");
 assert.ok(panel.includes("min-h-[calc(100dvh-145px)]"), "Mobile Daily Report height tracks viewport");
