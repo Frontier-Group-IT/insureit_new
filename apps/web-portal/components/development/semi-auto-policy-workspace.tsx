@@ -31,7 +31,7 @@ export type SemiAutoIntakeRow = {
 };
 
 const aiIssueTitles: Record<string,string> = {
-  unsupported_layout:"Parser not trained",
+  unsupported_layout:"Parser unavailable / validation failed",
   document_missing:"Current policy PDF missing",
   extraction_pending:"Waiting for n8n",
   extraction_failed:"n8n extraction failed",
@@ -58,7 +58,7 @@ const aiIssueTitles: Record<string,string> = {
 };
 const aiStateLabel: Record<string,string> = {
   pending:"Queued",processing:"Reading PDF",exception:"Needs action",
-  verified:"Extracted · booking preflight pending",unsupported:"Not trained",
+  verified:"Extracted · booking preflight pending",unsupported:"Parser review required",
   failed:"Retry scheduled",duplicate:"Duplicate · skipped",
 };
 
@@ -685,7 +685,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
                     {row.ai_exceptions?.length ? (
                       <button type="button" onClick={()=>{setExceptionRow(row);setCustomerReview(null);}}
                         className="mt-1 rounded-md border border-[#e4d4b2] bg-[#fff8e8] px-2 py-1 text-left text-[10px] font-semibold text-[#765013] hover:bg-[#fff0c8]">
-                        {row.ai_state==="unsupported" ? "Parser not trained · Reprocess" : aiIssueTitles[row.ai_exceptions[0]]??"Review exception"}
+                        {row.ai_state==="unsupported" ? "Parser review required · Reprocess" : aiIssueTitles[row.ai_exceptions[0]]??"Review exception"}
                         {row.ai_exceptions.length>1 ? ` +${row.ai_exceptions.length-1}`:""}
                       </button>
                     ):null}
