@@ -1,13 +1,13 @@
 Partner production OTA trigger
-release=partner-customer-vehicle-details-pr-4745
+release=partner-policies-business-line-dropdown-pr-4783
 source=verified-merged-main
-source_pr=4745
-source_merge=6f3557a8add0902a8581ea66d84a1434dc74bf99
+source_pr=4783
+source_merge=f54ebea04042d0bcc981bddb6d61458a6624af48
 reason=user-approved-merge-and-publish
 channel=production
 runtime=0.2.0
-requested=2026-11-17
-database_migration=partner_customer_vehicle_reference_details_applied_and_verified
+requested=2026-11-18
+database_migration=partner_policy_business_line_filter_20261118_applied_and_verified
 no_native_build=true
 no_apk=true
 no_aab=true
