@@ -71,7 +71,7 @@ type IntakeForHandoff={
 
 type VerifiedN8nHandoff = {
   documentId:string; fields:PolicyIntakeOcrField[];
-  premium:N8nVerifiedPremiumBreakdown;
+  parserId:string; premium:N8nVerifiedPremiumBreakdown;
   fillEmptyFields?:boolean;
 };
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -106,7 +106,8 @@ export async function prepareVerifiedN8nIntakeHandoff(
     return{ok:false,error:"n8n validation warnings must be resolved before creating an onboarding draft."};
   }
   return preparePolicyIntakeHandoffInternal(id,takeOver===true,{
-    documentId:expectedDocumentId,fields:parsed.preview.fields,premium:parsed.preview.premium,fillEmptyFields,
+    documentId:expectedDocumentId,fields:parsed.preview.fields,parserId:parsed.preview.parserId,
+    premium:parsed.preview.premium,fillEmptyFields,
   });
 }
 
@@ -241,7 +242,7 @@ async function preparePolicyIntakeHandoffInternal(
     policyNo:mapped.next.policyNo,insurerId:mapped.next.insurerId,validFrom:mapped.next.validFrom,validUpto:mapped.next.validUpto,
     payoutBasis:"NET",projectedOdPercent:"",projectedTpPercent:"",insurerScheme:"",payinBillNo:"",payinBilledAmount:"",payinBillDate:"",payinStatus:"Unbilled",retention:"",payoutOdPercent:"",payoutTpPercent:"",flatPayoutAmount:"",payoutStatus:"Pending",payoutDate:"",payoutVoucherNo:"",remarks:verified
       ? `Policy Intake ${id} — n8n validated ICICI 3005 PDF. Review every prefilled value before booking.
-PDF premium reconciliation: Basic OD ${verified.premium.basicOd} + OD add-ons ${addOnTotal} = Total OD ${verified.premium.totalOd}; TP ${verified.premium.basicTp}, CPA ${verified.premium.cpa}, Net ${verified.premium.net}, GST ${verified.premium.tax}, Gross ${verified.premium.gross}.
+PDF premium reconciliation: ${verified.parserId==="icici_3005_od_n8n_native_pdf" ? `Basic OD ${verified.premium.basicOd} + OD add-ons ${addOnTotal} - NCB/OD deductions ${verified.premium.odDeductions} = OD net ${verified.premium.totalOd}; form OD input represents discounted Basic OD` : `Basic OD ${verified.premium.basicOd} + OD add-ons ${addOnTotal} = Total OD ${verified.premium.totalOd}`}; TP ${verified.premium.basicTp}, CPA ${verified.premium.cpa}, Net ${verified.premium.net}, GST ${verified.premium.tax}, Gross ${verified.premium.gross}.
 Third Party period: ${tpStart||"unavailable"} to ${tpExpiry||"unavailable"}. Verify separate TP/CPA dates, policy class/product, identity, commercial rates and unmatched PDF fields manually.`
       : `Policy Intake ${id}`,
   };

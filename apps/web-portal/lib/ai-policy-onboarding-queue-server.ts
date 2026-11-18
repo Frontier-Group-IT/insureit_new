@@ -270,7 +270,11 @@ async function processClaim(item: Claimed) {
   // Copy ONLY strictly validated n8n OCR into an empty, unchanged Intake.
   // An atomic SQL compare-and-set checks current document, lease, empty OCR,
   // status, and absence of saved draft. This never books a policy.
-  if(extraction.preview.checksPassed===13 && extraction.preview.warnings.length===0){
+  // The existing sync_verified_ai_intake_ocr_v1 RPC pins the bundled parser
+  // and its revision. Keep OD-only extraction review-only until a separate,
+  // reviewed database migration supports its parser identity explicitly.
+  if(extraction.preview.parserId==="icici_3005_n8n_native_pdf"
+    && extraction.preview.checksPassed===13 && extraction.preview.warnings.length===0){
     const synced=await admin.rpc("sync_verified_ai_intake_ocr_v1",{
       p_intake_id:intake.id,p_document_id:item.document_id,p_lease_id:item.lease_id,
       p_parser_revision:(process.env.INSUREIT_AI_QUEUE_PARSER_REVISION||"bridge-v1").trim(),
@@ -298,11 +302,12 @@ async function processClaim(item: Claimed) {
   const issuanceDecision=pdfIssuanceDate?policyDateDecision(pdfIssuanceDate):"invalid";
   const issuanceDateVerified=issuanceDecision!=="invalid"&&issuanceDecision!=="future";
   const bundled=normalizedName(values.get("policy_product")??"")==="BUNDLED";
+  const ownDamageOnly=extraction.preview.parserId==="icici_3005_od_n8n_native_pdf";
   // The strict 3005 bridge independently verifies both OD and Third Party
   // dates. Bundled itself is not an exception once both periods were validated.
   // Canonical form derives the associated CPA schedule from verified cover
   // dates; final booking independently validates it through existing rules.
-  const bundledPeriodsVerified=!bundled||(
+  const bundledPeriodsVerified=ownDamageOnly || !bundled || (
     extraction.preview.checksPassed===13
     && extraction.preview.warnings.length===0
     && ["policy_start_date","policy_end_date","third_party_start_date","third_party_end_date"]
@@ -314,7 +319,7 @@ async function processClaim(item: Claimed) {
     policyType:intake.policy_type??"motor", intakeStatus:intake.status,
     isDuplicate, // Derived from the canonical registered-policy / earlier-Intake detector.
     hasCurrentDocument:true,documentStillCurrent:true,
-    parserId:"icici_3005_n8n_native_pdf",
+    parserId:extraction.preview.parserId,
     parserChecksPassed:extraction.preview.checksPassed,
     extractionState:"success" as const,
     extractionWarnings:extraction.preview.warnings,
@@ -342,7 +347,7 @@ async function processClaim(item: Claimed) {
     :codes.length?"exception":"verified";
   const completed=await finishClaim(item,{
     state, exception_codes:codes,field_keys:extraction.preview.fields.map(f=>f.key),
-    parser_id:"icici_3005_n8n_native_pdf",
+    parser_id:extraction.preview.parserId,
     checks_passed:extraction.preview.checksPassed,
     extraction_fingerprint:extraction.preview.fingerprint,
     last_error_code:null,processed_at:new Date().toISOString(),
