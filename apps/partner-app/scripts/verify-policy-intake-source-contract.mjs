@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -6,6 +7,12 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, '..');
 const service = fs.readFileSync(path.join(root, 'lib/policy-intakes.ts'), 'utf8');
 const screen = fs.readFileSync(path.join(root, 'app/policy-intake-new.tsx'), 'utf8');
+const exactAddPolicyIcon = fs.readFileSync(path.join(root, 'assets/partner/actions/add-policy-reference.png'));
+const iconDigest = createHash('sha256').update(exactAddPolicyIcon).digest('hex');
+if (iconDigest !== '6ba503606345ebb00c04579c61767365904c37fad75c475d19159112466fc869') {
+  throw new Error('New Policy Intake header must keep the exact cropped uploaded Add Policy artwork.');
+}
+
 const detailScreen = fs.readFileSync(path.join(root, 'app/policy-intakes/[id].tsx'), 'utf8');
 const manufacturerLogo = fs.readFileSync(path.join(root, 'components/ui/partner-manufacturer-logo.tsx'), 'utf8');
 const api = fs.readFileSync(path.resolve(root, '../web-portal/app/api/partner/policy-intakes/route.ts'), 'utf8');
@@ -21,6 +28,13 @@ requireText(service, 'Array.isArray(page.intakes)', 'Each requested Policy Intak
 requireText(service, 'export async function listPartnerPolicyIntakesPage(', 'Policy Intake list must load authorized pages independently.');
 requireText(service, 'offset = 0,', 'Keep default offset at the first authorized page.');
 
+requireText(screen, '<Text style={styles.headerTitle} numberOfLines={1}>NEW POLICY INTAKE</Text>', 'Both New Policy Intake steps must show the approved header title.');
+requireText(screen, "backgroundColor: '#071E49'", 'New Policy Intake header must use navy background.');
+requireText(screen, "require('../assets/partner/actions/add-policy-reference.png')", 'Use the exact user-supplied Add Policy PNG rather than a generic icon.');
+requireText(screen, 'function ReferenceHeader({ onBack }', 'New intake header retains safe Back/Cancel navigation.');
+requireText(screen, 'onBack={() => requestClose()}', 'Header back action follows the existing draft exit confirmation.');
+if ((screen.match(/<ReferenceHeader onBack=\{\(\) => requestClose\(\)\} \/>/g) || []).length !== 2) throw new Error('Both lead-source and details stages must use the same navy header.');
+requireText(screen, 'marginTop: 12,', 'Search field is positioned below the header.');
 requireText(screen, 'listPartnerPolicyIntakeSources()', 'New Policy Intake must load lead sources from the dedicated source endpoint.');
 requireText(screen, 'const nextSources = Array.isArray(result) ? result : [];', 'New Policy Intake must normalize source data before array operations.');
 if (screen.includes('listPartnerPolicyIntakes(),')) {
