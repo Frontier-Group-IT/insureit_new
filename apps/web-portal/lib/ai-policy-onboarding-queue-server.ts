@@ -126,7 +126,7 @@ export async function processAiQueueBatch(options?: {preferredIntakeId?:string;m
     const wave=claimed.slice(offset,offset+MAX_CONCURRENT);
     await Promise.all(wave.map(async item=>{
       try {
-        await processClaim(item);
+        await processClaim(item,parserRevision);
         processed++;
       } catch {
         failed++;
@@ -160,7 +160,7 @@ async function finishClaim(item: Claimed, update: QueueUpdate) {
   return Boolean(data?.intake_id);
 }
 
-async function processClaim(item: Claimed) {
+async function processClaim(item: Claimed, parserRevision: string) {
   const admin=createSupabaseAdminClient();
   const {data:intake,error}=await admin.from("policy_intake_requests")
     .select("id,intake_number,created_at,policy_type,status,ocr_status,ocr_fields,customer_mobile,matched_customer_id,assigned_to_profile_id")
@@ -280,7 +280,7 @@ async function processClaim(item: Claimed) {
     // and the exact queue lease/revision, and refuses to rewrite a draft.
     const synced=await admin.rpc("sync_verified_ai_intake_ocr_v2",{
       p_intake_id:intake.id,p_document_id:item.document_id,p_lease_id:item.lease_id,
-      p_parser_revision:item.parser_revision,
+      p_parser_revision:parserRevision,
       p_parser_id:extraction.preview.parserId,
       p_parser_version:extraction.preview.parserVersion,
       p_verified_fields:extraction.preview.fields,p_checks_passed:13,
