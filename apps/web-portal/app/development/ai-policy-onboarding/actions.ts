@@ -489,6 +489,91 @@ export async function continueVerifiedN8nIntakeToOnboarding(
 }
 
 /**
+ * Read-only, source-verified comparison for older ICICI drafts. It does not
+ * change queue state, reviewer, draft or registered policies.
+ */
+export type ReviewedIciciDraftComparison =
+  | {ok:false;error:string}
+  | {ok:true;intakeId:string;documentId:string;fingerprint:string;revision:number;
+     savedIssueDate:string;pdfIssueDate:string;
+     missingFields:string[];otherConflicts:string[];
+     policyNumber:string;parserId:string;};
+
+export async function reviewIciciVerifiedDraftRepair(id:string):Promise<ReviewedIciciDraftComparison>{
+  await requireDevelopmentPolicyOperator(id);
+  await requirePolicyCreator();
+  if(!isN8nWorkbenchPrimary())return{ok:false,error:"n8n-primary verification is disabled."};
+  const admin=createSupabaseAdminClient();
+  const {data:queue,error:queueError}=await admin.from("policy_intake_ai_processing_queue")
+    .select("state,document_id,extraction_fingerprint,checks_passed,exception_codes")
+    .eq("intake_id",id).maybeSingle<{state:string;document_id:string;extraction_fingerprint:string|null;checks_passed:number;exception_codes:string[]}>();
+  if(queueError||!queue||queue.checks_passed!==13||!queue.extraction_fingerprint
+      ||!["exception","verified"].includes(queue.state)
+      ||queue.exception_codes.some(code=>code!=="booking_review_required"))
+    return{ok:false,error:"Only an independently validated ICICI draft held for booking review can be reconciled."};
+  const {data:existing,error:draftError}=await admin.from("policy_intake_onboarding_drafts")
+    .select("revision,draft_payload").eq("intake_id",id)
+    .maybeSingle<{revision:number;draft_payload:PolicyIntakeDraft}>();
+  if(draftError||!existing?.draft_payload)
+    return{ok:false,error:"No previously saved onboarding draft exists for this Intake."};
+  const extracted=await previewSemiAutoN8nExtraction(id);
+  if(!extracted.ok)return{ok:false,error:extracted.error};
+  const preview=extracted.preview;
+  if(preview.documentId!==queue.document_id
+    ||preview.fingerprint!==queue.extraction_fingerprint
+    ||preview.checksPassed!==13||preview.warnings.length
+    ||!["icici_3005_n8n_native_pdf","icici_3005_od_n8n_native_pdf"].includes(preview.parserId))
+    return{ok:false,error:"The current verified PDF is different or has incomplete checks; reprocess and review before changing any saved draft."};
+  const pdfField=(key:string)=>preview.fields.find(field=>field.key===key)?.value?.trim()??"";
+  const pdfIssueDate=pdfField("policy_issuance_date");
+  if(policyDateDecision(pdfIssueDate)==="invalid"||policyDateDecision(pdfIssueDate)==="future")
+    return{ok:false,error:"The PDF does not establish a valid separately printed issuance date."};
+  const draft=existing.draft_payload;
+  // No sensitive PDF text, signed URL, or raw policy data is logged.
+  const fields:[keyof PolicyIntakeDraft,string][]=[
+    ["insuredName",pdfField("insured_name")],["policyNo",pdfField("policy_number")],
+    ["validFrom",pdfField("policy_start_date")],["validUpto",pdfField("policy_end_date")],
+    ["tpValidUpto",pdfField("third_party_end_date")],
+    ["vehicleClass",pdfField("vehicle_class")],["model",pdfField("vehicle_model")],
+    ["fuelType",pdfField("vehicle_fuel_type")],["capacity",pdfField("vehicle_motor_power_kw")],
+    ["manufacturingYear",pdfField("vehicle_manufacturing_year")],
+  ];
+  const missingFields=fields.filter(([key,val])=>val&&!String(draft[key]??"").trim()).map(([key])=>key);
+  // Do not silently overwrite conflicts other than explicitly approved issue date.
+  // Other strict identity/coverage/premium comparisons remain in the converter.
+  const otherConflicts=fields.filter(([key,val])=>val&&String(draft[key]??"").trim()
+    && key!=="model"&&key!=="vehicleClass"&&key!=="fuelType"
+    && String(draft[key]??"").trim().toUpperCase()!==val.toUpperCase()).map(([key])=>key);
+  return{ok:true,intakeId:id,documentId:queue.document_id,
+    fingerprint:preview.fingerprint,revision:existing.revision,
+    savedIssueDate:draft.issuanceDate??"",pdfIssueDate,missingFields,
+    otherConflicts,policyNumber:pdfField("policy_number"),parserId:preview.parserId};
+}
+
+/** Separate explicit operator confirmation; applies NO policy booking. */
+export async function applyReviewedIciciDraftRepair(
+  id:string, documentId:string, fingerprint:string,
+  revision:number,expectedSavedIssueDate:string,confirmed:boolean,
+):Promise<{ok:boolean;error?:string;revision?:number}>{
+  await requireDevelopmentPolicyOperator(id);
+  await requirePolicyCreator();
+  if(confirmed!==true||!Number.isSafeInteger(revision)||revision<1)
+    return{ok:false,error:"Review the verified PDF changes and explicitly confirm before applying."};
+  const review=await reviewIciciVerifiedDraftRepair(id);
+  if(!review.ok)return review;
+  if(review.documentId!==documentId||review.fingerprint!==fingerprint
+    ||review.revision!==revision||review.savedIssueDate!==expectedSavedIssueDate)
+    return{ok:false,error:"The saved draft or PDF changed; refresh the comparison. No changes were applied."};
+  const out=await prepareVerifiedN8nIntakeHandoff(id,documentId,fingerprint,true,true,{
+    expectedPrevious:expectedSavedIssueDate,expectedRevision:revision,
+  });
+  if(!out.ok)return{ok:false,error:out.error};
+  revalidatePath("/development/ai-policy-onboarding");
+  revalidatePath("/policy-intakes/"+encodeURIComponent(id));
+  return{ok:true,revision:out.draftRevision};
+}
+
+/**
  * The existing Development workbench uses the n8n bridge only after a
  * deliberate button click and the same reviewer + finalizer permissions.
  * Preview is read-only and never marks the Intake as bookable.
