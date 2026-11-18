@@ -1,6 +1,6 @@
 import { partnerAlert } from '@/components/ui/partner-alert-provider';
-import { useCallback, useState, type ReactNode } from 'react';
-import { ActivityIndicator, Keyboard, KeyboardAvoidingView, Platform, Linking, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { createContext, useCallback, useContext, useState, type ReactNode } from 'react';
+import { ActivityIndicator, Keyboard, KeyboardAvoidingView, Platform, Linking, Modal, Pressable, ScrollView, StyleSheet, Text as NativeText, TextInput as NativeTextInput, View, type TextProps, type TextInputProps } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
@@ -12,6 +12,23 @@ import { PartnerPolicyCalendarDialog } from '@/components/policy-intakes/partner
 import { getLifeHealthCase, saveLifeHealthCaseEdit, appendLifeHealthCaseRemark, listLifeHealthInsurers, issueLifeHealthPolicy, requestLifeHealthIssueApproval, verifyLifeHealthIssueApproval, operationsCaseUrl, getLifeHealthDocumentUrl, mutateLifeHealthDocument, uploadLifeHealthDocument, rejectLifeHealthCaseNative, type LifeHealthInsurer, type LifeHealthIssue, type LifeHealthCaseDetail, type LifeHealthDocument, type LifeHealthActivity } from '@/lib/life-health-cases';
 import { canPartnerAccessCaseRegister } from '@/lib/partner-permissions';
 import { usePartnerSession } from '@/providers/partner-session-provider';
+
+/**
+ * Only Pending / Rejected case detail content uses normal-weight typography.
+ * The local wrappers retain the original Text/TextInput props, sizing, color and
+ * interactions while overriding explicit 600/700/800 weights in existing styles.
+ * Issued cases and shared Partner components remain unaffected.
+ */
+const CaseNormalWeightContext = createContext(false);
+const normalCaseText = { fontWeight: '400' as const };
+function Text(props: TextProps) {
+  const normal = useContext(CaseNormalWeightContext);
+  return <NativeText {...props} style={[props.style, normal && normalCaseText]} />;
+}
+function TextInput(props: TextInputProps) {
+  const normal = useContext(CaseNormalWeightContext);
+  return <NativeTextInput {...props} style={[props.style, normal && normalCaseText]} />;
+}
 
 const navy='#071E49';
 const dateLabel=(value:string|null|undefined)=>{
@@ -398,7 +415,8 @@ export default function LifeHealthCaseDetailScreen(){
     <Text style={styles.errorText}>You do not have Case Register permission.</Text>
   </PartnerScreen>;
 
-  return <PartnerScreen title="Case Details" resetScrollOnFocus={false} navyTopBar navyStatusBar bottomNavigationNavy bottomNavigation={<PartnerCaseBottomNavigation/>} onBack={()=>router.back()}>
+  const useNormalCaseFont = record?.status_group === 'pending' || record?.status_group === 'rejected';
+  return <CaseNormalWeightContext.Provider value={useNormalCaseFont}><PartnerScreen title="Case Details" resetScrollOnFocus={false} navyTopBar navyStatusBar bottomNavigationNavy bottomNavigation={<PartnerCaseBottomNavigation/>} onBack={()=>router.back()}>
     {loading?<ActivityIndicator color={navy} style={{marginTop:24}}/>:null}
     {error?<View style={styles.alert}>
       <Text style={styles.errorText}>{error}</Text>
@@ -726,7 +744,7 @@ export default function LifeHealthCaseDetailScreen(){
    </Modal>
    <PartnerPolicyCalendarDialog visible={Boolean(calendarField)} value={selectedCalendarDate}
      onCancel={()=>setCalendarField(null)} onConfirm={chooseCalendarDay}/>
- </PartnerScreen>;
+ </PartnerScreen></CaseNormalWeightContext.Provider>;
 }
 function EditInput({title,value,onChange,keyboardType,multiline}:{title:string;value:string;onChange:(v:string)=>void;keyboardType?:'phone-pad'|'decimal-pad';multiline?:boolean}){
  return <View style={styles.editField}><Text style={styles.editLabel}>{title}</Text>
