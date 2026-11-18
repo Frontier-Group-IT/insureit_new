@@ -22,7 +22,7 @@ assert.match(booking, /if\(dirty&&!isNew\)\{[\s\S]*saveNativePolicyOnboarding\(i
   'Only Intake-linked Motor booking saves an Intake draft before booking');
 assert.match(booking, /isNew\s*\?await bookNewNativePolicyOnboarding\(draft,resolution,approvalOverride\?\?verifiedApprovalId\)/,
   'New standalone Motor sends its current draft directly to the new_book endpoint');
-assert.match(booking, /:await bookNativePolicyOnboarding\(id,revision,resolution,verifiedApprovalId\)/,
+assert.match(booking, /:await bookNativePolicyOnboarding\(id,revision,resolution,approvalOverride\?\?verifiedApprovalId\)/,
   'Existing Intake Motor booking retains revision-checked booking');
 assert.doesNotMatch(booking, /if\(dirty\)\{\s*const saved=await saveNativePolicyOnboarding/,
   'Never send a standalone draft to the Intake save API');
