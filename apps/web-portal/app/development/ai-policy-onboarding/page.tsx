@@ -98,11 +98,13 @@ export default async function SemiAutoPolicyOnboardingPage({ searchParams }: { s
   }).map(row=>({id:row.id,intake_number:row.intake_number}));
   // An explicit operator action can re-queue prior failed/exceptions for fresh
   // n8n validation. This is not conversion eligibility or permission to book.
-  // Never include completed Intakes, canonical duplicates or untrained parsers.
+  // Never include completed Intakes or canonical duplicates. Previously
+  // unsupported/untrained queue rows can be explicitly retried after a parser is added.
+  // The server action independently checks document identity, cooldown and authorization.
   const reprocessCandidates = workspaceRows.filter(row => {
     const q = queue.get(row.id);
     return row.policy_type === "motor" && !duplicateIds.has(row.id)
-      && (q?.state === "exception" || q?.state === "failed");
+      && (q?.state === "exception" || q?.state === "failed" || q?.state === "unsupported");
   }).map(row => ({ id: row.id, intake_number: row.intake_number }));
   const requestedId = typeof params.intake_id === "string"
     && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(params.intake_id)

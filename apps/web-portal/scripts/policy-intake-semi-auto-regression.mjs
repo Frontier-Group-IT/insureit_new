@@ -946,10 +946,16 @@ assert(webhookBridgeText.includes('const EXPECTED_N8N_ORIGIN = "https://insureit
 // Production studio keeps canonical server-side scope and makes reprocessing
 // intentionally uncapped without overloading n8n or booking a policy.
 assert(aiWorkbenchPageText.includes("const reprocessCandidates = workspaceRows.filter(row =>")
-  && aiWorkbenchPageText.includes('q?.state === "exception" || q?.state === "failed"')
+  && aiWorkbenchPageText.includes('q?.state === "exception" || q?.state === "failed" || q?.state === "unsupported"')
   && aiWorkbenchPageText.includes("reprocessCandidates={reprocessCandidates}")
   && aiWorkbenchPageText.includes("!duplicateIds.has(row.id)"),
-  "Only authorized open exception/failed nonduplicate Motor Intakes can be offered for reprocessing");
+  "Previously untrained, failed and exception Motor Intakes must be eligible for explicit safe retry");
+assert(workbenchText.includes("Parser not trained · Reprocess")
+  && workbenchText.includes("Reprocess current PDF")
+  && workbenchText.includes("reprocessCandidates.some(candidate=>candidate.id===exceptionRow.id)")
+  && workbenchText.includes("await reprocessAiPolicyIntake(row.id)")
+  && workbenchText.includes("queueRetrying || isWaiting"),
+  "Untrained rows must offer an explicitly confirmed, protected single-policy retry");
 assert(workbenchText.includes("Reprocess All Previous ·")
   && workbenchText.includes("const reprocessBatch=reprocessRemaining;")
   && !workbenchText.includes("reprocessRemaining.slice(0,10)")
