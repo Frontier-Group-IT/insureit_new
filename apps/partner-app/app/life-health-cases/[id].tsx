@@ -10,7 +10,7 @@ import { PartnerConfirmDialog } from '@/components/ui/partner-confirm-dialog';
 import { PartnerCaseBottomNavigation } from '@/components/partner-case-bottom-navigation';
 import { PartnerPolicyCalendarDialog } from '@/components/policy-intakes/partner-policy-calendar-dialog';
 import { getLifeHealthCase, saveLifeHealthCaseEdit, appendLifeHealthCaseRemark, listLifeHealthInsurers, issueLifeHealthPolicy, requestLifeHealthIssueApproval, verifyLifeHealthIssueApproval, operationsCaseUrl, getLifeHealthDocumentUrl, mutateLifeHealthDocument, uploadLifeHealthDocument, rejectLifeHealthCaseNative, type LifeHealthInsurer, type LifeHealthIssue, type LifeHealthCaseDetail, type LifeHealthDocument, type LifeHealthActivity } from '@/lib/life-health-cases';
-import { canPartnerAccessCaseRegister } from '@/lib/partner-permissions';
+import { canPartnerAccess, canPartnerAccessCaseRegister } from '@/lib/partner-permissions';
 import { usePartnerSession } from '@/providers/partner-session-provider';
 
 const navy='#071E49';
@@ -129,6 +129,7 @@ export default function LifeHealthCaseDetailScreen(){
  const [saving,setSaving]=useState(false);
  const [saveError,setSaveError]=useState('');
  const [saveSuccess,setSaveSuccess]=useState(false);
+ const [editMode,setEditMode]=useState(false);
  const [documentBusy,setDocumentBusy]=useState(false);
  const [deleteTarget,setDeleteTarget]=useState<LifeHealthDocument|null>(null);
  const [documentError,setDocumentError]=useState('');
@@ -164,10 +165,18 @@ export default function LifeHealthCaseDetailScreen(){
   }catch(cause){setRemarkError(cause instanceof Error?cause.message:'Unable to save remark.');}
   finally{setRemarkSaving(false);}
  };
+ const canEditCase=Boolean(record&&context?.identity.actor_kind==='employee'&&record.status_group!=='rejected'&&(
+  context.identity.role==='operations_head_life'||canPartnerAccess(context,'create_policies','edit')||canPartnerAccess(context,'view_policies','edit')));
+ const cancelCaseEdit=()=>{
+  if(saving)return;
+  Keyboard.dismiss();
+  if(record)setForm(initialForm(record));
+  setSaveError('');setSaveSuccess(false);setPicker(null);setCalendarField(null);setEditMode(false);
+ };
  const saveEdit=async()=>{
-  if(!record||!form||saving||issuing||documentBusy||rejectBusy)return;
+  if(!editMode||!canEditCase||!record||!form||saving||issuing||documentBusy||rejectBusy)return;
   if(JSON.stringify(form)===JSON.stringify(initialForm(record))){
-   partnerAlert('No changes to save','Case details are already up to date.');
+   cancelCaseEdit();
    return;
   }
   setSaveError('');setSaveSuccess(false);setSaving(true);
@@ -184,7 +193,9 @@ export default function LifeHealthCaseDetailScreen(){
      paymentFrequency:form.paymentFrequency,paymentMode:form.paymentMode,
      premiumAmount:Number(form.premiumAmount.replace(/,/g,''))});
    }
-   await load();setSaveSuccess(true);
+   setEditMode(false);setSaveSuccess(true);
+   const refreshed=await load(true);
+   if(!refreshed)partnerAlert('Case details saved','Changes were saved, but the details could not refresh. Reopen the case to see the latest information.');
   }catch(cause){setSaveError(cause instanceof Error?cause.message:'Unable to save changes.');}
   finally{setSaving(false);}
  };
@@ -256,7 +267,7 @@ export default function LifeHealthCaseDetailScreen(){
  },[id]);
  useFocusEffect(useCallback(()=>{
    let active=true;
-   setExpandedCaseTab(null);
+   setExpandedCaseTab(null);setEditMode(false);
    // Guard against stale detail data after switching accounts or navigating away.
    void load();
    void listLifeHealthInsurers().then(setInsurers).catch(()=>setInsurers([]));
@@ -277,7 +288,7 @@ export default function LifeHealthCaseDetailScreen(){
      :[];
  const inline=(key:keyof CaseEditForm,label:string,fallback:string,required=false,wide=false,multiline=false,keyboardType?:'phone-pad'|'decimal-pad')=>{
    const darkLabel=['insurerId','productName','proposalNumber','paymentFrequency','premiumPayingTerm','policyDuration','premiumAmount','paymentMode'].includes(key);
-   const editable=record?.status_group==='pending'||(record?.status_group==='issued'&&['customerName','customerPhone','customerAddress'].includes(key));
+   const editable=editMode&&canEditCase&&(record?.status_group==='pending'||(record?.status_group==='issued'&&['customerName','customerPhone','customerAddress'].includes(key)));
    if(!editable||!form)return <Field label={label} value={fallback} required={required} wide={wide} multiline={multiline} darkLabel={darkLabel}/>;
    const items=choices(key);
    return <View style={[styles.field,wide&&styles.fieldWide]}>
@@ -398,7 +409,7 @@ export default function LifeHealthCaseDetailScreen(){
     <Text style={styles.errorText}>You do not have Case Register permission.</Text>
   </PartnerScreen>;
 
-  return <PartnerScreen title="Case Details" resetScrollOnFocus={false} navyTopBar navyStatusBar bottomNavigationNavy bottomNavigation={<PartnerCaseBottomNavigation/>} onBack={()=>router.back()}>
+  return <PartnerScreen title="Case Details" resetScrollOnFocus={false} navyTopBar navyStatusBar bottomNavigationNavy bottomNavigation={<PartnerCaseBottomNavigation/>} onBack={editMode?confirmCancel:()=>router.back()}>
     {loading?<ActivityIndicator color={navy} style={{marginTop:24}}/>:null}
     {error?<View style={styles.alert}>
       <Text style={styles.errorText}>{error}</Text>
@@ -410,8 +421,15 @@ export default function LifeHealthCaseDetailScreen(){
       <View style={[styles.hero,record.status_group==='issued'?styles.heroIssued:record.status_group==='rejected'?styles.heroRejected:null]}>
         <View style={styles.heroTop}>
           <Text style={styles.heroTitle}>Life / Health Case</Text>
-          <View style={styles.statusPill}>
-            <Text style={styles.statusText}>{record.status_group==='issued'?'Issued':record.status_group==='rejected'?'Rejected':'Pending'}</Text>
+          <View style={styles.heroStatusActions}>
+            <View style={styles.statusPill}>
+              <Text style={styles.statusText}>{record.status_group==='issued'?'Issued':record.status_group==='rejected'?'Rejected':'Pending'}</Text>
+            </View>
+            {canEditCase&&!editMode?<Pressable accessibilityRole="button" accessibilityLabel="Edit case details"
+              accessibilityHint="Enable editing of permitted case fields"
+              onPress={()=>{setSaveError('');setSaveSuccess(false);setEditMode(true);}} style={styles.heroEditAction}>
+              <Ionicons name="pencil" size={17} color="#FFFFFF"/>
+            </Pressable>:null}
           </View>
         </View>
         <View style={styles.heroSecond}><Text style={styles.heroSubtitle} numberOfLines={1}>{record.customer_name} · {record.proposal_number}</Text><Text style={styles.heroCaseNumber} numberOfLines={1} selectable>{record.case_number}</Text></View>
@@ -576,25 +594,35 @@ export default function LifeHealthCaseDetailScreen(){
       )}
       {saveError?<Text style={styles.saveError}>{saveError}</Text>:null}
       {saveSuccess?<Text style={styles.saveSuccess}>Case details saved successfully.</Text>:null}
+      {record.status_group==='issued'&&editMode?<View style={styles.caseActions}>
+        <View style={styles.caseActionMiddle}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Cancel editing case" onPress={cancelCaseEdit}
+            disabled={saving} style={[styles.caseAction,styles.actionCancel]}>
+            <Text style={styles.cancelActionText} numberOfLines={1}>Cancel Edit</Text>
+          </Pressable>
+          <Pressable accessibilityRole="button" accessibilityLabel="Save Case Details" onPress={()=>void saveEdit()}
+            disabled={saving||!caseDirty} style={[styles.caseAction,styles.actionSave,!caseDirty&&styles.disabledAction]}>
+            {saving?<ActivityIndicator size="small" color="#FFFFFF"/>:<Text style={styles.saveActionText} numberOfLines={1}>Save Case</Text>}
+          </Pressable>
+        </View>
+      </View>:null}
       {record.status_group==='pending'?<View style={styles.caseActions}>
         <Pressable accessibilityRole="button" accessibilityLabel="Reject case" onPress={()=>{setRejectError('');setRejectOpen(true);}}
           disabled={saving||issuing||documentBusy||rejectBusy} style={[styles.caseAction,styles.actionReject]}>
           <Text style={styles.rejectActionText} numberOfLines={1}>Reject</Text>
         </Pressable>
         <View style={styles.caseActionMiddle}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Cancel case edits" onPress={confirmCancel}
+          {editMode?<><Pressable accessibilityRole="button" accessibilityLabel="Cancel editing case" onPress={cancelCaseEdit}
             disabled={saving||issuing||documentBusy||rejectBusy} style={[styles.caseAction,styles.actionCancel]}>
-            <Text style={styles.cancelActionText} numberOfLines={1}>Cancel</Text>
+            <Text style={styles.cancelActionText} numberOfLines={1}>Cancel Edit</Text>
           </Pressable>
           <Pressable accessibilityRole="button" accessibilityLabel="Save Case Details" onPress={()=>void saveEdit()}
-            disabled={saving||issuing||documentBusy||rejectBusy}
-            style={[styles.caseAction,styles.actionSave]}>
+            disabled={saving||issuing||documentBusy||rejectBusy||!caseDirty} style={[styles.caseAction,styles.actionSave,!caseDirty&&styles.disabledAction]}>
             {saving?<ActivityIndicator size="small" color="#FFFFFF"/>:<Text style={styles.saveActionText} numberOfLines={1}>Save Case</Text>}
-          </Pressable>
-          <Pressable accessibilityRole="button" accessibilityLabel="Create Policy" onPress={()=>void submitIssue()}
+          </Pressable></>:<Pressable accessibilityRole="button" accessibilityLabel="Create Policy" onPress={()=>void submitIssue()}
             disabled={saving||issuing||documentBusy||rejectBusy} style={[styles.caseAction,styles.actionIssue]}>
             {issuing?<ActivityIndicator size="small" color="#FFFFFF"/>:<Text style={styles.issueActionText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>Create Policy</Text>}
-          </Pressable>
+          </Pressable>}
         </View>
       </View>:null}
 
@@ -842,6 +870,8 @@ const styles=StyleSheet.create({
   heroIssued:{backgroundColor:'#1E694F'},
   heroRejected:{backgroundColor:'#913D3D'},
   heroTop:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:8},
+  heroStatusActions:{flexDirection:'row',alignItems:'center',gap:7},
+  heroEditAction:{width:33,height:33,borderRadius:8,borderWidth:1,borderColor:'rgba(255,255,255,0.5)',backgroundColor:'rgba(255,255,255,0.16)',alignItems:'center',justifyContent:'center'},
   heroSecond:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:8},
   heroTitle:{color:'#FFFFFF',fontSize:15,fontWeight:'800'},
   statusPill:{borderRadius:6,backgroundColor:'rgba(255,255,255,0.16)',borderWidth:1,borderColor:'rgba(255,255,255,0.36)',paddingHorizontal:9,paddingVertical:3},
