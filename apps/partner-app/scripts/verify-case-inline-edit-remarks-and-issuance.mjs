@@ -152,4 +152,20 @@ assert.ok(!app.includes('Keyboard.dismiss();void submitRejection()'), 'Confirm R
 assert.ok(app.includes('setRemarkOpen(false);setRemarkDraft(\'\');'), 'Remark modal still closes only after successful save.');
 assert.ok(app.includes('setRejectOpen(false);setRejectReason(\'\');'), 'Reject modal still closes only after successful rejection.');
 assert.ok(app.includes("behavior={Platform.OS==='ios'?'padding':'height'}"), 'KeyboardAvoidingView remains available while the user is entering text.');
+// Life/Health Case Details is read-only until an authorized user taps the header pencil.
+assert.ok(app.includes('const [editMode,setEditMode]=useState(false);'), 'Life/Health cases open in view-only mode.');
+assert.ok(app.includes('const editable=editMode&&canEditCase&&'), 'Case inline fields are gated by explicit edit mode and role permission.');
+assert.ok(app.includes('canPartnerAccess(context,\'create_policies\',\'edit\')'), 'Pencil edit respects employee create-policy capability.');
+assert.ok(app.includes('canPartnerAccess(context,\'view_policies\',\'edit\')'), 'Pencil edit respects employee view-policy edit capability.');
+assert.ok(app.includes("record.status_group!=='rejected'"), 'Rejected cases cannot enter edit mode.');
+assert.ok(app.includes('accessibilityLabel="Edit case details"'), 'Header pencil exposes accessible edit action.');
+assert.ok(app.includes('name="pencil" size={17}'), 'Header displays pencil icon beside status.');
+assert.ok(app.includes('onPress={()=>{setSaveError(\'\');setSaveSuccess(false);setEditMode(true);}}'), 'Header pencil activates edit state.');
+assert.ok(app.includes("setForm(initialForm(record))"), 'Cancel Edit discards local draft.');
+assert.ok(app.includes('const cancelCaseEdit=()=>'), 'Edit cancellation is separate from navigating away.');
+assert.ok(app.includes('if(!editMode||!canEditCase||!record||!form'), 'Save Case cannot write outside authorized edit mode.');
+assert.ok(app.includes("setEditMode(false);setSaveSuccess(true);"), 'Successful Save Case returns to view mode.');
+assert.ok(app.includes("record.status_group==='issued'&&editMode"), 'Issued cases expose a Save/Cancel path for permitted customer fields.');
+assert.ok(app.includes('disabled={saving||issuing||documentBusy||rejectBusy||!caseDirty}'), 'Save is disabled when nothing changed.');
+assert.ok(app.includes('resetScrollOnFocus={false}'), 'Edit toggle does not regress saved case scroll behavior.');
 console.log('Case inline edit, append-only remarks, secure issuance and native parity verified.');
