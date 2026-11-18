@@ -9,7 +9,10 @@ function parse(text){
   return rows[0].json;
 }
 function assertPassed(result,parser){
-  assert.equal(result.parser_id,parser);
+  // The bundled Code node returns check data and the final response node
+  // assigns its parser_id; the OD Code node includes parser_id itself.
+  if(parser==="icici_3005_od_n8n_native_pdf")assert.equal(result.parser_id,parser);
+  else assert.equal(result.checks?.is_icici_3005,true);
   assert.equal(result.validation_passed,true,JSON.stringify(result.checks));
   assert.equal(result.warnings.length,0,JSON.stringify(result.warnings));
   assert.equal(Object.keys(result.checks).length,13);
