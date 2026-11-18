@@ -15,6 +15,9 @@ const contactActions = read('components/ui/partner-contact-actions.tsx');
 const intakeDetail = read('app/policy-intakes/[id].tsx');
 const newIntake = read('app/policy-intake-new.tsx');
 const businessReport = read('app/business-report.tsx');
+const network = read('app/network.tsx');
+const customers = read('app/customers.tsx');
+
 const insurers = read('app/insurers.tsx');
 
 for (const title of ['Home', 'Business', 'Policies', 'Claims', 'More']) {
@@ -31,6 +34,16 @@ assert.match(newIntake, /if \(submitting\) return;[\s\S]*setPendingTab\(destinat
 assert.match(newIntake, /onPress=\{\(\) => requestClose\(\)\}/, 'Cancel remains back navigation, not an event object');
 assert.match(businessReport, /bottomNavigationNavy[\s\S]*bottomNavigation=\{<PartnerStackBottomNavigation activeTab="business" \/>\}/, 'Business Report shows navy Business nav');
 assert.match(insurers, /bottomNavigationNavy[\s\S]*bottomNavigation=\{<PartnerStackBottomNavigation activeTab="business" \/>\}/, 'Insurer Performance shows navy Business nav');
+assert.match(network, /navyStatusBar bottomNavigationNavy bottomNavigation=\{<PartnerStackBottomNavigation activeTab="business" \/>\}/, 'Commercial Relationships uses navy status bar and the shared Business-active Home navigator');
+assert.match(network, /navyCanvas: \{[^\n]*backgroundColor: '#071E49'/, 'Commercial Relationships page canvas must be navy');
+assert.match(network, /header: \{[\s\S]*?backgroundColor: '#071E49'/, 'Commercial Relationships header must be navy');
+assert.match(customers, /<StatusBar style="light" backgroundColor="#071E49" \/>/, 'Customers uses a navy system status area with white icons');
+assert.match(customers, /safeArea: \{ flex: 1, backgroundColor: '#071E49' \}/, 'Customers outer canvas must remain navy');
+assert.match(customers, /content: \{[^\n]*backgroundColor: '#071E49'/, 'Customers scrolling content must remain navy');
+assert.match(customers, /hero: \{[^\n]*backgroundColor: '#071E49'/, 'Customers header must be navy');
+assert.match(customers, /<PartnerStackBottomNavigation activeTab="business" \/>/, 'Customers uses shared permission-aware Home navigator, Business selected');
+assert.doesNotMatch(customers, /<NavItem icon=/, 'Customers must not restore separate white navigation tabs');
+
 assert.match(bar, /canPartnerAccess\(context, 'view_claims'\)/, 'Claims tab permission retained');
 assert.match(bar, /canPartnerAccess\(context, 'view_policies'\)/, 'Policies tab permission retained');
 assert.match(bar, /canPartnerAccess\(context, 'view_dashboard'\)/, 'Home and Business permissions retained');
