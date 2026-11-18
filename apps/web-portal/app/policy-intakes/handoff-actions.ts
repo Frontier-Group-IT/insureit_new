@@ -71,7 +71,7 @@ type IntakeForHandoff={
 
 type VerifiedN8nHandoff = {
   documentId:string; fields:PolicyIntakeOcrField[];
-  premium:N8nVerifiedPremiumBreakdown;
+  parserId:string; premium:N8nVerifiedPremiumBreakdown;
   fillEmptyFields?:boolean;
 };
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -106,7 +106,8 @@ export async function prepareVerifiedN8nIntakeHandoff(
     return{ok:false,error:"n8n validation warnings must be resolved before creating an onboarding draft."};
   }
   return preparePolicyIntakeHandoffInternal(id,takeOver===true,{
-    documentId:expectedDocumentId,fields:parsed.preview.fields,premium:parsed.preview.premium,fillEmptyFields,
+    documentId:expectedDocumentId,fields:parsed.preview.fields,parserId:parsed.preview.parserId,
+    premium:parsed.preview.premium,fillEmptyFields,
   });
 }
 
