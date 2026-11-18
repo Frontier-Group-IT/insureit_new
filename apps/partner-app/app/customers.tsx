@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { StatusBar } from 'expo-status-bar';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PartnerBanner } from '@/components/ui/partner-banner';
+import { PartnerStackBottomNavigation } from '@/components/partner-stack-bottom-navigation';
 import { PartnerSearchField } from '@/components/ui/partner-search-field';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { PartnerPagination } from '@/components/ui/partner-pagination';
@@ -183,6 +185,7 @@ export default function CustomersScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+      <StatusBar style="light" backgroundColor="#071E49" />
       <FlatList
         ref={verticalListRef}
         key={`customers-page-${collection.page}`}
@@ -199,13 +202,7 @@ export default function CustomersScreen() {
         onRefresh={() => void refreshAll()}
       />
 
-      <View style={styles.bottomNav}>
-        <NavItem icon="home-outline" label="Home" onPress={() => router.push('/(tabs)' as never)} />
-        <NavItem icon="briefcase" label="Business" active onPress={() => router.push('/(tabs)/business' as never)} />
-        <NavItem icon="document-text-outline" label="Policies" onPress={() => router.push('/(tabs)/policies' as never)} />
-        <NavItem icon="shield-checkmark-outline" label="Claims" onPress={() => router.push('/(tabs)/claims' as never)} />
-        <NavItem icon="grid-outline" label="More" onPress={() => router.push('/(tabs)/more' as never)} />
-      </View>
+      <PartnerStackBottomNavigation activeTab="business" />
     </SafeAreaView>
   );
 }
@@ -287,33 +284,24 @@ function ContactIcon({ icon, label, disabled, tone, onPress }: { icon: 'call-out
   );
 }
 
-function NavItem({ icon, label, active = false, onPress }: { icon: keyof typeof Ionicons.glyphMap; label: string; active?: boolean; onPress: () => void }) {
-  return (
-    <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={({ pressed }) => [styles.navItem, pressed && styles.pressed]}>
-      <View style={[styles.navIconWrap, active && styles.navIconWrapActive]}><Ionicons name={icon} size={19} color={active ? '#633DF1' : '#60738F'} /></View>
-      <Text style={[styles.navLabel, active && styles.navLabelActive]}>{label}</Text>
-    </Pressable>
-  );
-}
-
 function normalizePhone(value: string) { return value.replace(/\D/g, '').slice(-10); }
 function initials(value: string) { return value.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'CU'; }
 function formatUpdatedAt(value: number | null) { if (!value) return 'earlier'; return new Intl.DateTimeFormat('en-IN', { hour: '2-digit', minute: '2-digit' }).format(new Date(value)); }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#F5F7FB' },
-  content: { paddingBottom: 88, backgroundColor: '#F5F7FB' },
+  safeArea: { flex: 1, backgroundColor: '#071E49' },
+  content: { paddingBottom: 16, backgroundColor: '#071E49', flexGrow: 1 },
   pressed: { opacity: 0.72 },
-  hero: { height: 58, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', overflow: 'hidden', backgroundColor: '#0762CC' },
-  heroOrbLarge: { position: 'absolute', right: -42, top: -55, width: 180, height: 130, borderRadius: 90, backgroundColor: '#0B78E6', opacity: 0.92 },
-  heroOrbSmall: { position: 'absolute', right: 105, top: -32, width: 100, height: 88, borderRadius: 52, backgroundColor: '#0870DA', opacity: 0.82 },
+  hero: { height: 58, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', overflow: 'hidden', backgroundColor: '#071E49' },
+  heroOrbLarge: { position: 'absolute', right: -42, top: -55, width: 180, height: 130, borderRadius: 90, backgroundColor: '#102D59', opacity: 0.92 },
+  heroOrbSmall: { position: 'absolute', right: 105, top: -32, width: 100, height: 88, borderRadius: 52, backgroundColor: '#0C2853', opacity: 0.82 },
   backButton: { width: 30, height: 34, alignItems: 'flex-start', justifyContent: 'center' },
   heroIcon: { width: 31, height: 31, marginLeft: 2, marginRight: 8, borderRadius: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF' },
   heroCopy: { flex: 1 },
   eyebrow: { color: '#D6E9FF', fontSize: 7.5, lineHeight: 9, letterSpacing: 0.85, fontWeight: '800' },
   title: { marginTop: 1, color: '#FFFFFF', fontSize: 14, lineHeight: 17, fontWeight: '800' },
 
-  kpiOuter: { paddingHorizontal: 10, paddingTop: 8, backgroundColor: '#F5F7FB' },
+  kpiOuter: { paddingHorizontal: 10, paddingTop: 8, backgroundColor: '#071E49' },
   kpiLoading: { height: 48, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 10, borderRadius: 10, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#DEE7F2' },
   kpiSkeletonBlock: { flex: 1, height: 35, borderRadius: 8, backgroundColor: '#EDEFF3' },
   kpiStrip: { height: 48, flexDirection: 'row', borderRadius: 10, overflow: 'hidden', backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#DCE5F0' },
@@ -355,10 +343,5 @@ const styles = StyleSheet.create({
   loadingMore: { flexDirection: 'row', alignItems: 'center', gap: 7 },
   loadingMoreText: { color: '#71819A', fontSize: 7.5, lineHeight: 10 },
 
-  bottomNav: { height: 58, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#DDE5EF', backgroundColor: '#FFFFFF', paddingHorizontal: 5, paddingBottom: 2 },
-  navItem: { flex: 1, height: 52, alignItems: 'center', justifyContent: 'center' },
-  navIconWrap: { width: 34, height: 24, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
-  navIconWrapActive: { backgroundColor: '#F0ECFF' },
-  navLabel: { marginTop: 1, color: '#60738F', fontSize: 7, lineHeight: 9, fontWeight: '600' },
-  navLabelActive: { color: '#633DF1', fontWeight: '800' },
+
 });
