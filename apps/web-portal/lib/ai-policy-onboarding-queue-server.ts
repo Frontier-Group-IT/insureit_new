@@ -194,8 +194,8 @@ async function processClaim(item: Claimed) {
     }
   }
 
-  // Only a verified ICICI 3005 Motor PDF is trained. Never run an
-  // experimental parser on explicitly non-Motor business lines.
+  // Only independently verified ICICI 3005 Bundled or 3005/O OD Motor PDFs
+  // are trained. Never run an experimental parser on Non-Motor documents.
   if (intake.policy_type!==null && intake.policy_type!=="motor") {
     await finishClaim(item,{
       state:"unsupported",exception_codes:["unsupported_layout"],field_keys:[],
@@ -280,8 +280,17 @@ async function processClaim(item: Claimed) {
   }
   const model=normalizedName(values.get("vehicle_model")??"");
   const rawMake=normalizedName(values.get("vehicle_make")??"");
-  const recognizedChetak=/^(?:C|CHETAK[ -]+)(2501|3001|3501|3502|3503)$/.test(model)
-    && rawMake==="CHETAK";
+  // CHETAK is the Bajaj EV product marque. Its documented model line includes
+  // BLUE 2903 and 2413 PREMIUM as well as C-series numbers. Match the OEM
+  // only when the verified PDF supplies Two Wheeler + Electric + CC/KW power;
+  // never guess an unverified fuel type or motor capacity from model text.
+  const motorPower=String(values.get("vehicle_motor_power_kw")??"").trim();
+  const recognizedChetak=rawMake==="CHETAK"
+    && model.length>=2 && model.length<=100
+    && normalizedName(values.get("vehicle_class")??"")==="TWO WHEELER"
+    && normalizedName(values.get("vehicle_fuel_type")??"")==="ELECTRIC"
+    && /^\d{1,2}(?:\.\d{1,2})?$/.test(motorPower)
+    && Number(motorPower)>0 && Number(motorPower)<=50;
   const make=recognizedChetak?"BAJAJ":rawMake;
   const enabledMakes=new Set((brands??[]).map(x=>normalizedName(x.brand_name)));
   const matchedManufacturer=enabledMakes.has(make)
@@ -314,7 +323,7 @@ async function processClaim(item: Claimed) {
     policyType:intake.policy_type??"motor", intakeStatus:intake.status,
     isDuplicate, // Derived from the canonical registered-policy / earlier-Intake detector.
     hasCurrentDocument:true,documentStillCurrent:true,
-    parserId:"icici_3005_n8n_native_pdf",
+    parserId:extraction.preview.parserId,
     parserChecksPassed:extraction.preview.checksPassed,
     extractionState:"success" as const,
     extractionWarnings:extraction.preview.warnings,
@@ -342,7 +351,7 @@ async function processClaim(item: Claimed) {
     :codes.length?"exception":"verified";
   const completed=await finishClaim(item,{
     state, exception_codes:codes,field_keys:extraction.preview.fields.map(f=>f.key),
-    parser_id:"icici_3005_n8n_native_pdf",
+    parser_id:extraction.preview.parserId,
     checks_passed:extraction.preview.checksPassed,
     extraction_fingerprint:extraction.preview.fingerprint,
     last_error_code:null,processed_at:new Date().toISOString(),
