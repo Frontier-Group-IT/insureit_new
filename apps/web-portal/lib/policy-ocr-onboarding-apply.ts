@@ -276,20 +276,20 @@ export function buildPolicyOcrOnboardingUpdate(input: OcrApplyInput): OcrApplyRe
     }
   }
 
-  // ICICI Product 3005 prints Chetak model names as both "C3503"
-  // and "CHETAK 3503". Match exact supported aliases for the Bajaj OEM
-  // dropdown and CC/KW mapping, but preserve the original PDF model text.
+  // ICICI 3005 and 3005/O print the Bajaj marque as CHETAK, including
+  // BLUE 2903 and 2413 PREMIUM variants. Preserve the literal PDF model.
+  // A Two Wheeler + Electric + separately printed CC/KW reading must be
+  // present: a model string or seating capacity is not proof of power.
   const chetakIdentity = /^CHETAK$/i.test(byKey.get("vehicle_make")?.value.trim() ?? "")
     && next.vehicleClass === "TWP";
-  const pdfChetakModel = (byKey.get("vehicle_model")?.value ?? "").trim()
-    .toUpperCase().replace(/\s+/g, " ");
-  const chetakModelMatch = pdfChetakModel.match(/^(?:C|CHETAK[ -]+)(2501|3001|3501|3502|3503)$/);
-  const chetakModelCode = chetakModelMatch ? `C${chetakModelMatch[1]}` : "";
-  // All 3503 variants require independent Electric evidence. Do not
-  // treat seating capacity as motor kW; only the CC/KW field may supply it.
-  const isIciciChetakElectric = chetakIdentity && Boolean(chetakModelCode)
-    && (byKey.get("vehicle_fuel_type")?.value.trim().toLowerCase() === "electric"
-      || chetakModelCode === "C3001");
+  const pdfChetakModel = (byKey.get("vehicle_model")?.value ?? "").trim();
+  const chetakPower = (byKey.get("vehicle_motor_power_kw")?.value ?? "").trim();
+  const validChetakPower = /^\d{1,2}(?:\.\d{1,2})?$/.test(chetakPower)
+    && Number(chetakPower) > 0 && Number(chetakPower) <= 50;
+  const isIciciChetakElectric = chetakIdentity
+    && pdfChetakModel.length >= 2 && pdfChetakModel.length <= 100
+    && byKey.get("vehicle_fuel_type")?.value.trim().toLowerCase() === "electric"
+    && validChetakPower;
   setText("vehicle_make", (value) => { next.make = value; }, (raw) => {
     if (isIciciChetakElectric) {
       // Prefer the literal "Bajaj" master choice, not an invented CHETAK option.
