@@ -1001,7 +1001,7 @@ assert(aiWorkbenchPageText.includes("const reprocessCandidates = workspaceRows.f
   && aiWorkbenchPageText.includes("reprocessCandidates={reprocessCandidates}")
   && aiWorkbenchPageText.includes("!duplicateIds.has(row.id)"),
   "Previously untrained, failed and exception Motor Intakes must be eligible for explicit safe retry");
-assert(workbenchText.includes("Parser not trained · Reprocess")
+assert(workbenchText.includes("Parser review required · Reprocess")
   && workbenchText.includes("Reprocess current PDF")
   && workbenchText.includes("reprocessCandidates.some(candidate=>candidate.id===exceptionRow.id)")
   && workbenchText.includes("await reprocessAiPolicyIntake(row.id)")
