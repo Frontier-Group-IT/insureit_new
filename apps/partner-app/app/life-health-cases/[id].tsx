@@ -144,6 +144,7 @@ export default function LifeHealthCaseDetailScreen(){
  const [createPolicyError,setCreatePolicyError]=useState('');
  const [approvalOpen,setApprovalOpen]=useState(false);const [approvalId,setApprovalId]=useState('');const [approvalVerified,setApprovalVerified]=useState(false);const [approverKey,setApproverKey]=useState('');const [otp,setOtp]=useState('');const [approvalLoading,setApprovalLoading]=useState(false);
  const [saving,setSaving]=useState(false);
+ const [editMode,setEditMode]=useState(false);
  const [saveError,setSaveError]=useState('');
  const [saveSuccess,setSaveSuccess]=useState(false);
  const [documentBusy,setDocumentBusy]=useState(false);
@@ -184,6 +185,7 @@ export default function LifeHealthCaseDetailScreen(){
  const saveEdit=async()=>{
   if(!record||!form||saving||issuing||documentBusy||rejectBusy)return;
   if(JSON.stringify(form)===JSON.stringify(initialForm(record))){
+   setEditMode(false);
    partnerAlert('No changes to save','Case details are already up to date.');
    return;
   }
@@ -201,7 +203,7 @@ export default function LifeHealthCaseDetailScreen(){
      paymentFrequency:form.paymentFrequency,paymentMode:form.paymentMode,
      premiumAmount:Number(form.premiumAmount.replace(/,/g,''))});
    }
-   await load();setSaveSuccess(true);
+   await load();setSaveSuccess(true);setEditMode(false);
   }catch(cause){setSaveError(cause instanceof Error?cause.message:'Unable to save changes.');}
   finally{setSaving(false);}
  };
@@ -274,6 +276,7 @@ export default function LifeHealthCaseDetailScreen(){
  useFocusEffect(useCallback(()=>{
    let active=true;
    setExpandedCaseTab(null);
+   setEditMode(false);
    // Guard against stale detail data after switching accounts or navigating away.
    void load();
    void listLifeHealthInsurers().then(setInsurers).catch(()=>setInsurers([]));
@@ -294,7 +297,7 @@ export default function LifeHealthCaseDetailScreen(){
      :[];
  const inline=(key:keyof CaseEditForm,label:string,fallback:string,required=false,wide=false,multiline=false,keyboardType?:'phone-pad'|'decimal-pad')=>{
    const darkLabel=['insurerId','productName','proposalNumber','paymentFrequency','premiumPayingTerm','policyDuration','premiumAmount','paymentMode'].includes(key);
-   const editable=record?.status_group==='pending'||(record?.status_group==='issued'&&['customerName','customerPhone','customerAddress'].includes(key));
+   const editable=(record?.status_group==='pending'&&editMode)||(record?.status_group==='issued'&&['customerName','customerPhone','customerAddress'].includes(key));
    if(!editable||!form)return <Field label={label} value={fallback} required={required} wide={wide} multiline={multiline} darkLabel={darkLabel}/>;
    const items=choices(key);
    return <View style={[styles.field,wide&&styles.fieldWide]}>
@@ -428,8 +431,15 @@ export default function LifeHealthCaseDetailScreen(){
       <View style={[styles.hero,record.status_group==='issued'?styles.heroIssued:record.status_group==='rejected'?styles.heroRejected:null]}>
         <View style={styles.heroTop}>
           <Text style={styles.heroTitle}>Life / Health Case</Text>
-          <View style={styles.statusPill}>
-            <Text style={styles.statusText}>{record.status_group==='issued'?'Issued':record.status_group==='rejected'?'Rejected':'Pending'}</Text>
+          <View style={styles.heroStatusActions}>
+            {record.status_group==='pending'?<Pressable accessibilityRole="button" accessibilityLabel={editMode?"Editing case details":"Edit case details"}
+              accessibilityState={{selected:editMode,disabled:saving||issuing||documentBusy||rejectBusy}} disabled={saving||issuing||documentBusy||rejectBusy}
+              onPress={()=>setEditMode(true)} style={[styles.heroEditPencil,editMode&&styles.heroEditPencilActive]}>
+              <Ionicons name="pencil" size={17} color="#FFFFFF"/>
+            </Pressable>:null}
+            <View style={styles.statusPill}>
+              <Text style={styles.statusText}>{record.status_group==='issued'?'Issued':record.status_group==='rejected'?'Rejected':'Pending'}</Text>
+            </View>
           </View>
         </View>
         <View style={styles.heroSecond}><Text style={styles.heroSubtitle} numberOfLines={1}>{record.customer_name} · {record.proposal_number}</Text><Text style={styles.heroCaseNumber} numberOfLines={1} selectable>{record.case_number}</Text></View>
@@ -860,6 +870,9 @@ const styles=StyleSheet.create({
   heroIssued:{backgroundColor:'#1E694F'},
   heroRejected:{backgroundColor:'#913D3D'},
   heroTop:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:8},
+  heroStatusActions:{flexDirection:'row',alignItems:'center',gap:8},
+  heroEditPencil:{width:36,height:36,borderRadius:10,borderWidth:1,borderColor:'rgba(255,255,255,0.55)',alignItems:'center',justifyContent:'center',backgroundColor:'rgba(255,255,255,0.12)'},
+  heroEditPencilActive:{backgroundColor:'rgba(255,255,255,0.30)',borderColor:'#FFFFFF'},
   heroSecond:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:8},
   heroTitle:{color:'#FFFFFF',fontSize:15,fontWeight:'800'},
   statusPill:{borderRadius:6,backgroundColor:'rgba(255,255,255,0.16)',borderWidth:1,borderColor:'rgba(255,255,255,0.36)',paddingHorizontal:9,paddingVertical:3},
