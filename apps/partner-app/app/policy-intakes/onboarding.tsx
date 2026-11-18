@@ -563,7 +563,7 @@ export default function NativePolicyOnboarding(){
     }finally{setCreatingLifeHealth(false);}
   };
     const createActivePolicy=async()=>{
-    if(isMotor){await completeBooking();return;}
+    if(isMotor){setMotorCopyDialogOpen(true);return;}
     if(isNew&&productType==='Non Motor'){await createNonMotorStandalone();return;}
     if(!draft||!data||saving||booking)return;
     // Non-Motor/Life/Health final booking is performed by the authorized Operations flow.
@@ -580,7 +580,60 @@ export default function NativePolicyOnboarding(){
     }catch(e){setError(e instanceof Error?e.message:'Could not open the authorized policy creation flow.');}
     finally{setBooking(false);}
   };
-  async function completeBooking(resolution?:Record<string,unknown>){
+  async function retryBookedMotorCopy(){
+    if(!bookedMotorPolicyId||!motorCopy||uploadingMotorCopy)return;
+    setUploadingMotorCopy(true);setError('');
+    try{
+      await attachNewNativeMotorPolicyCopy(bookedMotorPolicyId,motorCopy);
+      setMotorCopyDialogOpen(false);
+      partnerAlert('Policy copy uploaded','The active policy and its copy are saved.',[
+        {text:'OK',onPress:()=>router.replace('/(tabs)/policies')},
+      ]);
+    }catch(cause){
+      setError('Policy is already created. Do NOT book again. '+(cause instanceof Error?cause.message:'Upload failed. Retry document upload.'));
+      setMotorCopyDialogOpen(true);
+    }finally{setUploadingMotorCopy(false);}
+  }
+  async function pickMotorCopy(){
+    try{
+      const result=await DocumentPicker.getDocumentAsync({type:MOTOR_COPY_TYPES,copyToCacheDirectory:true});
+      if(result.canceled||!result.assets[0])return;
+      const asset=result.assets[0];
+      const extensions:Record<string,string>={pdf:'application/pdf',jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',webp:'image/webp'};
+      const mime=asset.mimeType||extensions[asset.name.split('.').pop()?.toLowerCase()||'']||'';
+      if(!asset.size||asset.size>MOTOR_COPY_MAX_BYTES||!MOTOR_COPY_TYPES.includes(mime)){
+        setError('Choose a PDF, JPG, PNG or WebP policy copy up to 15 MB.');return;
+      }
+      setMotorCopy({uri:asset.uri,name:asset.name,size:asset.size,mimeType:mime});
+      setError('');
+    }catch(cause){setError(cause instanceof Error?cause.message:'Could not select policy copy.');}
+  }
+  async function continueMotorConfirmation(){
+    if(booking||saving||uploadingMotorCopy)return;
+    if(bookedMotorPolicyId){await retryBookedMotorCopy();return;}
+    if(isNew&&!motorCopy){setError('Select the issued policy copy before saving.');return;}
+    if(!draft)return;
+    const decision=motorDateDecision(draft.issuanceDate);
+    if(decision==='invalid'||decision==='future'){
+      setError('Choose a valid policy issuance date within the current or an earlier month.');return;
+    }
+    setMotorCopyDialogOpen(false);
+    if(decision==='otp_required'&&!verifiedApprovalId){
+      if(dirty&&!isNew&&data){
+        try{
+          setSaving(true);
+          const saved=await saveNativePolicyOnboarding(id,data.revision,draft);
+          setData(current=>current?{...current,revision:saved.revision,draft}:current);
+          setDirty(false);
+        }catch(cause){setError(cause instanceof Error?cause.message:'Could not save draft before OTP.');setMotorCopyDialogOpen(true);return;}
+        finally{setSaving(false);}
+      }
+      setDateApprovalOpen(true);
+      return;
+    }
+    await completeBooking();
+  }
+  async function completeBooking(resolution?:Record<string,unknown>,approvalOverride?:string){
     if(!draft||!data||booking||saving)return;
     if(!draft.chassisNo.trim()||!draft.engineNo.trim()){
       setError('Enter both chassis number and engine number before booking.');return;
@@ -597,9 +650,25 @@ export default function NativePolicyOnboarding(){
         setDirty(false);
       }
       const {booking:result}=isNew
-        ?await bookNewNativePolicyOnboarding(draft,resolution,verifiedApprovalId)
-        :await bookNativePolicyOnboarding(id,revision,resolution,verifiedApprovalId);
+        ?await bookNewNativePolicyOnboarding(draft,resolution,approvalOverride??verifiedApprovalId)
+        :await bookNativePolicyOnboarding(id,revision,resolution,approvalOverride??verifiedApprovalId);
       if(result.ok){
+        if(isNew){
+          setBookedMotorPolicyId(result.policyId);
+          if(!motorCopy){
+            setError('Policy was created but the selected copy is unavailable. Select it and retry uploading; do not create another policy.');
+            setMotorCopyDialogOpen(true);
+            return;
+          }
+          setUploadingMotorCopy(true);
+          try{
+            await attachNewNativeMotorPolicyCopy(result.policyId,motorCopy);
+          }catch(cause){
+            setError('Policy created, but its copy was not attached. Do NOT book again. '+(cause instanceof Error?cause.message:'Retry the upload.'));
+            setMotorCopyDialogOpen(true);
+            return;
+          }finally{setUploadingMotorCopy(false);}
+        }
         partnerAlert('Policy booked','Policy '+result.policyCode+' was booked successfully.',[
           {text:'OK',onPress:()=>router.replace(isNew?'/(tabs)/policies':'/policy-intakes')},
         ]);
@@ -661,7 +730,8 @@ export default function NativePolicyOnboarding(){
       if(isNew&&draft)await verifyNewNativePolicyDateApproval(draft,approvalRequestId,approvalCode);
       else await verifyNativePolicyDateApproval(id,data.revision,approvalRequestId,approvalCode);
       setVerifiedApprovalId(approvalRequestId);setDateApprovalOpen(false);
-      partnerAlert('Date approved','The approved policy can now be booked.');
+      if(productType==='Motor')void completeBooking(undefined,approvalRequestId);
+      else partnerAlert('Date approved','The approved policy can now be booked.');
     }catch(e){setError(e instanceof Error?e.message:'Approval could not be verified.');}
     finally{setApprovalBusy(false);}
   }
