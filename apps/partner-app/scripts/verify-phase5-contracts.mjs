@@ -248,7 +248,7 @@ expectAll('app/customer/[id].tsx', [
   [/vehicle\.permit_no/, 'Permit number is displayed'],
 ]);
 expectAll('components/ui/partner-contact-actions.tsx', [
-  [/customerDetailRow:.*justifyContent: 'flex-start'.*flexWrap: 'nowrap'/, 'Customer contact buttons align from the name start without stretching'],
+  [/customerDetailRow:.*width: '100%'.*justifyContent: 'space-between'.*flexWrap: 'nowrap'/, 'Customer contact buttons span the name-aligned content width without changing the customer header layout'],
   [/customerDetailAction:.*flex: 0.*flexShrink: 0.*borderWidth: 0.*backgroundColor: 'transparent'/, 'Customer contact actions stay compact with transparent background and no border'],
 ]);
 expectAll('lib/customers.ts', [
