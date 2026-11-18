@@ -26,6 +26,7 @@ export default function NewPartnerCustomerScreen() {
   const [form, setForm] = useState<NewPartnerCustomer>(INITIAL);
   const [documents, setDocuments] = useState<Partial<Record<PartnerCustomerDocument['type'], PartnerCustomerDocument>>>({});
   const [busy, setBusy] = useState(false);
+  const [requestId] = useState(() => Date.now().toString(36) + Math.random().toString(36).slice(2,14));
   const [createdCustomerId, setCreatedCustomerId] = useState<string | null>(null);
   const [uploadedTypes, setUploadedTypes] = useState<string[]>([]);
   const set = (key: TextKey, value: string) => setForm(previous => ({ ...previous, [key]: value }));
@@ -55,7 +56,7 @@ export default function NewPartnerCustomerScreen() {
     let customerId = createdCustomerId;
     try {
       if (!customerId) {
-        customerId = await createPartnerCustomer(form);
+        customerId = await createPartnerCustomer(form, requestId);
         setCreatedCustomerId(customerId);
       }
       const selected = Object.values(documents).filter((file): file is PartnerCustomerDocument => Boolean(file) && (form.gst_registered || file?.type !== 'gst_copy'));
