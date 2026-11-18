@@ -41,7 +41,8 @@ assert.match(network, /updated: \{ color: '#8995A7'/, 'Updated time remains read
 assert.match(network, /header: \{[\s\S]*?backgroundColor: '#071E49'/, 'Commercial Relationships header must be navy');
 assert.match(customers, /<StatusBar style="light" backgroundColor="#071E49" \/>/, 'Customers uses a navy system status area with white icons');
 assert.match(customers, /safeArea: \{ flex: 1, backgroundColor: '#071E49' \}/, 'Customers outer canvas must remain navy');
-assert.match(customers, /content: \{[^\n]*backgroundColor: '#071E49'/, 'Customers scrolling content must remain navy');
+assert.match(customers, /content: \{[^\n]*backgroundColor: '#F5F7FB'/, 'Customers scrolling content must be light behind white cards');
+assert.match(customers, /kpiOuter: \{[^\n]*backgroundColor: '#F5F7FB'/, 'Customers KPI strip must sit on a light background');
 assert.match(customers, /hero: \{[^\n]*backgroundColor: '#071E49'/, 'Customers header must be navy');
 assert.match(customers, /<PartnerStackBottomNavigation activeTab="business" \/>/, 'Customers uses shared permission-aware Home navigator, Business selected');
 assert.doesNotMatch(customers, /<NavItem icon=/, 'Customers must not restore separate white navigation tabs');
