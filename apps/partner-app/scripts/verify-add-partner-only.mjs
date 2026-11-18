@@ -22,7 +22,7 @@ assert.match(form, /visible=\{uploadOpen\}/, 'Document categories open inside a 
 assert.match(form, /<Text style=\{styles.modalTitle\}>Upload Documents<\/Text>/);
 assert.match(form, /Would you like to upload documents now\?/);
 assert.match(form, /text: 'Not Now'.*router\.replace\('\/\(tabs\)\/policies'\)/);
-assert.match(form, /text: 'Upload Documents', onPress: \(\) => setUploadOpen\(true\)/);
+assert.match(form, /text: 'Upload Documents', singleLineNormalLabel: true, onPress: \(\) => setUploadOpen\(true\)/, 'Add Partner Upload Documents uses one-line normal-weight label while preserving upload action');
 assert.match(form, /const savedId = applicationId;/, 'Upload requires an existing saved application');
 assert.doesNotMatch(form, /applicationId \|\| await savePartner\(/, 'Upload cannot create application implicitly');
 const scrollStart=form.search(/<ScrollView\b[^>]*keyboardShouldPersistTaps="handled"[^>]*contentContainerStyle=\{styles\.content\}[^>]*>/);

@@ -7,6 +7,7 @@ type AlertChoice = {
   style?: 'default' | 'cancel' | 'destructive';
   onPress?: (value?: string) => void;
   isPreferred?: boolean;
+  singleLineNormalLabel?: boolean;
 };
 type AlertOptions = { cancelable?: boolean; onDismiss?: () => void };
 type Notice = { title: string; message: string; buttons?: AlertChoice[]; options?: AlertOptions };
@@ -84,6 +85,7 @@ export function PartnerAlertProvider({ children }: { children: ReactNode }) {
     ? notice.buttons.map((choice, index) => ({
       label: choice.text ?? (index === 0 ? 'OK' : 'Confirm'),
       secondary: choice.style === 'cancel',
+      singleLineNormalLabel: choice.singleLineNormalLabel,
       destructive: choice.style === 'destructive',
       onPress: () => {
         setNotice(null);

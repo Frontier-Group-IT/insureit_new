@@ -213,7 +213,7 @@ export default function AddPartnerScreen() {
   const showSavedChoice = () => {
     partnerAlert('Partner Details Saved', 'Would you like to upload documents now?', [
       { text: 'Not Now', style: 'cancel', onPress: () => router.replace('/(tabs)/policies') },
-      { text: 'Upload Documents', onPress: () => setUploadOpen(true) },
+      { text: 'Upload Documents', singleLineNormalLabel: true, onPress: () => setUploadOpen(true) },
     ]);
   };
   const savePartner = async ():Promise<string|null> => {
