@@ -6,7 +6,7 @@ import Link from "next/link";
 import { CustomerExchangeSellWorkspace } from "@/components/customer-portal/customer-exchange-sell-workspace";
 import { CustomerExchangeActivityFilter } from "@/components/customer-portal/customer-exchange-activity-filter";
 import { customerExchangeVehicleArt } from "@/lib/customer-exchange-vehicle-art";
-import { Activity, Heart, BadgeCheck, MapPin, MoreVertical, Search, ShoppingBag, Store, Truck, ChevronDown, ChevronRight, Clock3, ShieldCheck } from "lucide-react";
+import { Activity, Heart, BadgeCheck, MapPin, MoreVertical, Search, ShoppingBag, Store, Truck, ChevronDown, ChevronRight, Clock3 } from "lucide-react";
 import {
   CustomerAccountTabs,
   EmptyCustomerState,
@@ -99,18 +99,6 @@ export default async function CustomerExchangePage({
   return (
     <div className="customer-register-motion customer-exchange-premium exchange-reference space-y-3">
       <CustomerAccountTabs accounts={accounts} selectedId={account.id} pathname="/customer/exchange" />
-
-      <section className={`${tab === "sell" ? "exchange-sell-hero" : ""} exchange-premium-hero customer-register-hero relative isolate overflow-hidden rounded-2xl border border-[#DCE6F2] bg-[#EAF4FF] px-5 py-6 shadow-[0_10px_28px_rgba(28,50,82,.05)] sm:px-7 sm:py-7`}>
-        <div aria-hidden="true" className={`exchange-premium-hero-art pointer-events-none absolute inset-0 bg-cover bg-center opacity-95 bg-[url('/assets/Exchange.jpeg')]`} />
-        <div aria-hidden="true" className={`exchange-premium-hero-shade pointer-events-none absolute inset-0 ${tab === "sell" ? "bg-gradient-to-r from-[#0C315C]/95 via-[#133E6C]/80 to-[#133E6C]/5" : "bg-gradient-to-r from-[#F7FBFF]/85 via-[#F7FBFF]/45 via-45% to-transparent"}`} />
-        <div className="relative z-10 max-w-[650px]">
-          {tab === "sell" ? <div className="space-y-2"><p className="text-[10px] font-extrabold uppercase tracking-widest text-[#B7D8FB]">InsureIt Exchange</p><h1 className="text-[clamp(23px,3vw,32px)] font-black text-white">Sell Your Commercial Vehicle</h1><p className="text-[12px] text-[#DBE8FA]">Turn your existing vehicle into new opportunities.</p><div className="flex flex-wrap gap-x-6 gap-y-2 pt-3 text-[10px] font-semibold text-white"><span>✓ List Easily</span><span>✓ Reach Buyers</span><span>✓ Trusted Platform</span></div></div> : <div className="flex items-center gap-3"><img src="/assets/customer-3d-icons/vehicle_exchange.png" alt="" aria-hidden="true" width={84} height={84} className="exchange-reference-hero-icon h-[72px] w-[72px] shrink-0 object-contain sm:h-[84px] sm:w-[84px]" /><div><h1 className="text-[clamp(25px,3vw,34px)] font-black leading-tight text-[#15234A]">
-            Vehicle <span className="exchange-reference-gradient-text">Exchange</span>
-          </h1>
-          <p className="mt-2 max-w-[430px] text-[11px] font-medium leading-relaxed text-[#64748B] sm:text-[12px]">Buy, sell and track commercial vehicle Exchange activity from the same Customer account.</p>
-          </div></div>}
-        </div>
-      </section>
 
       <section className="exchange-premium-tabs customer-register-panel grid grid-cols-3 gap-2 rounded-2xl border border-[#DCE4EE] bg-white p-2 shadow-[0_8px_24px_rgba(28,50,82,.04)]">
         <Link href={tabHref("buy")} className={tabClass(tab === "buy")}>

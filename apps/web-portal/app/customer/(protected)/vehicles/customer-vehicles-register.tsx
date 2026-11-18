@@ -35,15 +35,6 @@ export function CustomerVehiclesRegister({ accountId, items, initialQuery = "" }
   const visibleRows = rows.slice((currentPage - 1) * pageSize, currentPage * pageSize);
   const openVehicle = (id: string) => router.push(`/customer/vehicles/${encodeURIComponent(id)}?account=${encodeURIComponent(accountId)}`);
   return <div className="customer-register-motion customer-vehicles-page space-y-3">
-    <section className="customer-register-hero relative isolate overflow-hidden rounded-2xl border border-[#D6E7FA] bg-[#DDEEFF] text-[#102B54] shadow-[0_6px_24px_rgba(20,58,100,.05)]">
-      <div className="pointer-events-none absolute inset-0 bg-[url('/assets/vehicle.jpeg')] bg-cover bg-center bg-no-repeat opacity-95" />
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#EEF7FF]/85 via-[#EEF7FF]/45 via-45% to-transparent" />
-      <div className="relative flex min-h-[175px] items-center px-5 py-6 sm:px-7">
-        <div className="max-w-[500px]">
-          <div className="flex items-center gap-3 sm:gap-4"><img src="/assets/customer-3d-icons/my_vehicles.png" alt="" aria-hidden="true" width={84} height={84} className="h-[68px] w-[68px] shrink-0 object-contain sm:h-[84px] sm:w-[84px]"/><h1 className="text-[clamp(28px,3.2vw,40px)] font-bold tracking-tight">My <span className="text-[#1769DC]">Vehicles</span></h1></div>
-        </div>
-      </div>
-    </section>
     <section className="customer-register-panel rounded-2xl border border-[#DFE9F5] bg-white p-3 shadow-sm sm:p-4">
       <header className="mb-3 flex flex-wrap items-center gap-2">
         <h2 className="flex shrink-0 items-center gap-2 text-[17px] font-bold text-[#102B54]"><img src="/assets/customer-3d-icons/vehicle_register.png" alt="" aria-hidden="true" width={44} height={44} className="h-11 w-11 shrink-0 object-contain"/>Vehicle Register</h2>
