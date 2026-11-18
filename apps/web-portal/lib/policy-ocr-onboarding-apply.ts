@@ -185,6 +185,15 @@ function capacity(raw: string) {
   return Number.isFinite(value) && value >= 0 && value <= 100000 ? String(value) : "";
 }
 
+/** Use the CC/KW field explicitly verified by n8n; never treat seats or model
+ * digits as motor power. Supports numeric output and a harmless printed kW unit. */
+export function normalizeVerifiedMotorPowerKw(raw: string): string {
+  const match = raw.trim().match(/^(\d{1,2}(?:\.\d{1,2})?)\s*(?:kW|\(kW\))?$/i);
+  if (!match) return "";
+  const power = Number(match[1]);
+  return Number.isFinite(power) && power > 0 && power <= 50 ? String(power) : "";
+}
+
 function vehicleIdentifier(raw: string) {
   const value = raw.toUpperCase().replace(/[^A-Z0-9-]/g, "");
   if (value.length < 5 || value.length > 40) return "";
@@ -307,18 +316,15 @@ export function buildPolicyOcrOnboardingUpdate(input: OcrApplyInput): OcrApplyRe
   setText("vehicle_rto_name", (value) => { next.rtoName = value; });
   setText("vehicle_chassis_number", (value) => { next.chassisNo = value; }, vehicleIdentifier);
   setText("vehicle_engine_number", (value) => { next.engineNo = value; }, vehicleIdentifier);
-  // The source's "2" is seating capacity, not 2 kW. For verified
-  // electric Chetak C3001 use the separately labelled CC/KW 4.2 value.
-  // Keep the original seating field intact in the extraction review.
-  if (!isIciciChetakElectric) {
+  // Two-wheeler Electric motor capacity comes from the explicit, separately
+  // extracted CC/KW field, regardless of whether PDF make says BAJAJ or
+  // CHETAK. This is not a brand alias check. Never use seating capacity ("2")
+  // as kW and never guess motor power from a Chetak model number.
+  const electricTwoWheeler = next.vehicleClass === "TWP" && next.fuelType === "Electric";
+  if (electricTwoWheeler) {
+    setText("vehicle_motor_power_kw", (value) => { next.capacity = value; }, normalizeVerifiedMotorPowerKw);
+  } else {
     setText("vehicle_capacity", (value) => { next.capacity = value; }, capacity);
-  }
-  if (isIciciChetakElectric && next.fuelType === "Electric") {
-    setText("vehicle_motor_power_kw", (value) => { next.capacity = value; }, (raw) => {
-      const trimmed = raw.trim();
-      return /^\d{1,2}(?:\.\d{1,2})?$/.test(trimmed)
-        && Number(trimmed) > 0 && Number(trimmed) <= 50 ? String(Number(trimmed)) : "";
-    });
   }
 
   setText("policy_product", (value) => { next.policyProduct = value; }, (raw) => policyProduct(raw, next.vehicleClass));
