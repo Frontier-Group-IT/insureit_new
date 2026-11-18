@@ -216,12 +216,9 @@ export function LifeHealthIssuedPolicyEditForm({ initial, insurers, sources, act
           <Field label="Final premium" value={form.finalPremium} onChange={(v)=>set("finalPremium",v.replace(/[^0-9.]/g,""))} required/>
           <Field label="Sum assured / insured" value={form.sumInsured} onChange={(v)=>set("sumInsured",v.replace(/[^0-9.]/g,""))}/>
           <Field label="Case premium amount" value={form.premiumAmount} onChange={(v)=>set("premiumAmount",v.replace(/[^0-9.]/g,""))}/>
-          <div className="min-w-0">
-            <label className={labelClass}>Payment mode <Req/></label>
-            <div className="flex min-w-0 items-center gap-2">
-              <select aria-label="Payment mode" className={inputClass} value={form.paymentMode} onChange={(e)=>set("paymentMode",e.target.value)}>{modes.map((mode)=><option key={mode} value={mode}>{mode}</option>)}</select>
-              <button type="button" onClick={()=>{setRemarkError(null);setRemarkDraft("");setRemarksModalOpen(true);}} className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg border border-[#BFD3F5] bg-[#F8FBFF] px-3 text-[10px] font-semibold text-[#17365D] hover:bg-[#EEF5FF]"><MessageSquareText className="h-3.5 w-3.5"/>Add Remark</button>
-            </div>
+          <div className="flex min-w-0 items-end gap-2">
+            <div className="min-w-0 flex-1"><Select label="Payment mode" value={form.paymentMode} onChange={(v)=>set("paymentMode",v)} options={modes}/></div>
+            <button type="button" onClick={()=>{setRemarkError(null);setRemarkDraft("");setRemarksModalOpen(true);}} className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg border border-[#BFD3F5] bg-[#F8FBFF] px-3 text-[10px] font-semibold text-[#17365D] hover:bg-[#EEF5FF]"><MessageSquareText className="h-3.5 w-3.5"/>Add Remark</button>
           </div>
         </Section>
       <section aria-label="Onboarding summary" className="rounded-2xl border border-[#D9E2F0] bg-white shadow-sm">
