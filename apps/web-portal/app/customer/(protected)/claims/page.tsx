@@ -76,23 +76,6 @@ export default async function CustomerClaimsPage({ searchParams }: { searchParam
     <div className="customer-claims-motion customer-claims-page space-y-4 pb-6">
       <CustomerAccountTabs accounts={accounts} selectedId={account.id} pathname="/customer/claims" />
 
-      <section className="claims-motion-hero relative isolate overflow-hidden rounded-2xl border border-[#D6E7FA] bg-[#DDEEFF] text-[#102B54] shadow-[0_6px_24px_rgba(20,58,100,.05)]">
-        <div className="claims-motion-hero-photo pointer-events-none absolute inset-0 bg-[url('/assets/claim%20(2).jpeg')] bg-cover bg-center bg-no-repeat opacity-95" />
-        <div className="claims-motion-hero-overlay pointer-events-none absolute inset-0 bg-gradient-to-r from-[#EEF7FF]/85 via-[#EEF7FF]/45 via-45% to-transparent" />
-        <div className="relative flex min-h-[170px] items-center px-5 py-6 sm:px-7">
-          <div className="max-w-[520px]">
-            <div className="flex items-center gap-3">
-              <img src="/assets/Custom-Icons/optimized-128/claims.png" alt="" aria-hidden="true" width={60} height={60} className="h-[60px] w-[60px] shrink-0 object-contain" />
-              <div className="min-w-0">
-                <h1 className="text-[clamp(28px,3.2vw,40px)] font-bold tracking-tight text-[#242C89]">Claims</h1>
-                <p className="mt-2 text-[12px] font-medium leading-5 text-[#5D6F8F] sm:text-[13px]">Track and manage your claims easily.<span className="block">Stay updated at every step.</span></p>
-                <span className="mt-3 block h-1 w-14 rounded-full bg-gradient-to-r from-[#6953DC] to-[#B5B4F7]" aria-hidden="true"/>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
       <section className="claims-motion-panel overflow-hidden rounded-2xl border border-[#DCE4EE] bg-white">
         <div className="claims-motion-toolbar flex flex-wrap items-center gap-3 border-b border-[#E6ECF4] p-4">
           <h2 className="flex shrink-0 items-center gap-2 text-[17px] font-bold text-[#102B54]">
