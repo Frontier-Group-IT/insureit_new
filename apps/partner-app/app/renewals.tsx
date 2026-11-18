@@ -9,6 +9,7 @@ import { PartnerSearchField } from '@/components/ui/partner-search-field';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { PartnerInsurerLogo } from '@/components/ui/partner-insurer-logo';
 import { PartnerCaseBottomNavigation } from '@/components/partner-case-bottom-navigation';
+import { canPartnerAccess } from '@/lib/partner-permissions';
 import {
   getPartnerRenewalSummary,
   listPartnerRenewals,
@@ -42,7 +43,8 @@ export default function RenewalsScreen() {
   const { width: windowWidth } = useWindowDimensions();
   const sortAnchorRef = useRef<View>(null);
   const [sortMenuPosition, setSortMenuPosition] = useState({ top: 0, left: 0 });
-  const { cacheScopeKey } = usePartnerSession();
+  const { cacheScopeKey, context } = usePartnerSession();
+  const canOpenHome = canPartnerAccess(context, 'view_dashboard');
   const [mode, setMode] = useState<PartnerRenewalMode>(savedRenewalMode);
   const [bucket, setBucket] = useState<PartnerRenewalBucket>(savedRenewalMode === 'expired' ? 'overdue' : 'all');
   const [query, setQuery] = useState(savedRenewalQuery);
@@ -152,17 +154,15 @@ export default function RenewalsScreen() {
             style={({ pressed }) => [styles.summaryLead, pressed && styles.summaryPressed]}
           >
             <View style={styles.summaryMain}>
-              <View style={styles.summaryCountIcon}><Ionicons name="document-text-outline" size={22} color="#0A346B" /></View>
+              <Ionicons name="document-text-outline" size={23} color="#17365D" />
               <View style={styles.summaryText}>
                 <Text style={styles.summaryEyebrow}>{selectedSummary.eyebrow}</Text>
                 <Text style={styles.summaryPremium}>Net Premium - {formatWholeRupees(selectedSummary.premium)}</Text>
               </View>
             </View>
-            <View style={styles.summaryCount}>
-              <Text style={styles.summaryCountValue}>{selectedSummary.count}</Text>
-              <Text style={styles.summaryCountLabel}>Policies</Text>
-            </View>
+            <Text style={styles.summaryCount} numberOfLines={1}>POLICIES {selectedSummary.count}</Text>
           </Pressable>
+          <View style={styles.summaryDivider} />
         </View>
       )}
 
@@ -255,7 +255,16 @@ export default function RenewalsScreen() {
       navyStatusBar
       whiteCanvas
       bottomNavigation={<PartnerCaseBottomNavigation activeTab="Policies" />}
-      topBar={<View style={styles.referenceHeader}><Ionicons name="arrow-back" size={21} color="#FFFFFF" onPress={() => router.back()} /><Ionicons name="document-text-outline" size={23} color="#FFFFFF" /><Text style={styles.referenceTitle}>Renewal Work Queue</Text></View>}
+      topBar={<View style={styles.referenceHeader}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={() => router.back()} style={styles.headerAction}>
+          <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
+        </Pressable>
+        <Ionicons name="document-text-outline" size={23} color="#FFFFFF" />
+        <Text style={styles.referenceTitle} numberOfLines={1}>Renewal Work Queue</Text>
+        {canOpenHome ? <Pressable accessibilityRole="button" accessibilityLabel="Go to Home" onPress={() => router.navigate('/(tabs)' as never)} style={styles.headerAction}>
+          <Ionicons name="home-outline" size={22} color="#FFFFFF" />
+        </Pressable> : null}
+      </View>}
       data={sortedRows}
       keyExtractor={(row) => row.policy_id}
       renderItem={({ item, index }) => (
@@ -339,21 +348,20 @@ const styles = StyleSheet.create({
   loadMoreButtonLoading: { backgroundColor: '#3156B8' },
   loadMoreText: { color: '#3156B8', fontSize: 11, fontWeight: '800' },
   loadMoreTextLoading: { color: '#FFFFFF', fontSize: 11, fontWeight: '800' },
-  referenceHeader: { minHeight: 64, marginHorizontal: -partnerTheme.spacing.lg, marginBottom: 14, paddingHorizontal: 18, backgroundColor: '#071E49', flexDirection: 'row', alignItems: 'center', gap: 12 },
+  referenceHeader: { minHeight: 64, marginHorizontal: -partnerTheme.spacing.lg, marginBottom: 0, paddingHorizontal: 14, backgroundColor: '#071E49', flexDirection: 'row', alignItems: 'center', gap: 10 },
+  headerAction: { width: 34, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   referenceTitle: { color: '#FFFFFF', fontSize: 18, fontWeight: '800', flexShrink: 1 },
-  summaryPanel: { marginTop: 0, borderRadius: 15, borderWidth: 1, borderColor: '#E1E8F1', backgroundColor: '#FFFFFF' },
-  summaryLead: { minHeight: 82, paddingHorizontal: 14, paddingVertical: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 9 },
+  summaryPanel: { marginTop: 0, marginHorizontal: -partnerTheme.spacing.lg, backgroundColor: '#FFFFFF' },
+  summaryDivider: { height: StyleSheet.hairlineWidth, backgroundColor: '#D9E2EE', marginHorizontal: 14 },
+  summaryLead: { minHeight: 66, paddingHorizontal: 16, paddingVertical: 11, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   summaryPressed: { opacity: 0.72 },
   summaryMain: { flexDirection: 'row', flex: 1, minWidth: 0, alignItems: 'center', gap: 10 },
   summaryText: { flex: 1, minWidth: 0, gap: 5 },
   summaryEyebrow: { color: '#172A48', fontSize: 12, lineHeight: 16, fontWeight: '800', letterSpacing: 0.2 },
   summaryPremium: { color: '#53677F', fontSize: 12, lineHeight: 17, fontWeight: '700' },
-  summaryCount: { minWidth: 82, flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'baseline', gap: 4 },
-  summaryCountIcon: { backgroundColor: '#EAF3FC', width: 39, height: 39, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  summaryCountValue: { color: '#172A48', fontSize: 19, lineHeight: 24, fontWeight: '800' },
-  summaryCountLabel: { color: '#53677F', fontSize: 10, fontWeight: '600' },
+  summaryCount: { color: '#172A48', fontSize: 11, lineHeight: 17, fontWeight: '700', textAlign: 'right', flexShrink: 0 },
   banner: { marginTop: 9 }, inlineBanner: { marginBottom: 8 },
-  modeTabs: { marginTop: 14, flexDirection: 'row', gap: 0, borderBottomWidth: 1, borderBottomColor: '#D5E3F2' },
+  modeTabs: { marginTop: 0, flexDirection: 'row', gap: 0, borderBottomWidth: 1, borderBottomColor: '#D5E3F2' },
   modeTab: { flex: 1, minHeight: 43, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, paddingHorizontal: 5, borderBottomWidth: 3, borderBottomColor: 'transparent' },
   modeTabActive: { borderBottomColor: '#0877EB' }, modeLabel: { color: '#29344B', fontSize: 12, fontWeight: '700' }, modeLabelActive: { color: '#111B31' },
   tabBadge: { minWidth: 23, height: 23, paddingHorizontal: 6, borderRadius: 12, alignItems: 'center', justifyContent: 'center' }, tabBadgeBlue: { backgroundColor: '#EAF0FF' }, tabBadgeDanger: { backgroundColor: '#FFE9E9' },

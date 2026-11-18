@@ -278,6 +278,19 @@ expectAll('app/customer/[id].tsx', [
   [/<PartnerContactActions phone=\{data\.customer\.phone\} email=\{data\.customer\.email\} inlineLabeled customerDetailLayout/, 'contact actions remain in place'],
 ]);
 
+// Renewal Work Queue: flat edge-to-edge summary directly beneath the header.
+expectAll('app/renewals.tsx', [
+  [/summaryPanel: \{ marginTop: 0, marginHorizontal: -partnerTheme\.spacing\.lg, backgroundColor: '#FFFFFF' \}/, 'renewal summary has no card border, radius or inset margin'],
+  [/referenceHeader: \{ minHeight: 64, marginHorizontal: -partnerTheme\.spacing\.lg, marginBottom: 0/, 'summary attaches to the navy header without a gap'],
+  [/summaryDivider: \{ height: StyleSheet\.hairlineWidth/, 'a thin divider separates summary and tabs'],
+  [/<Text style=\{styles\.summaryCount\} numberOfLines=\{1\}>POLICIES \{selectedSummary\.count\}<\/Text>/, 'count is plain text in POLICIES N order without a badge'],
+  [/summaryCount: \{ color: '#172A48', fontSize: 11/, 'policy count is styled as plain text'],
+  [/canPartnerAccess\(context, 'view_dashboard'\)/, 'header Home shortcut retains dashboard permission gating'],
+  [/accessibilityLabel="Go to Home" onPress=\{\(\) => router\.navigate\('\/\(tabs\)' as never\)\}/, 'header Home button navigates to the Partner Home tab'],
+  [/bottomNavigation=\{<PartnerCaseBottomNavigation activeTab="Policies" \/>\}/, 'existing bottom Home navigation remains available'],
+  [/selectedSummary\.premium/, 'existing renewal premium calculation remains'],
+  [/onPress=\{\(\) => selectBucket\(mode === 'expired' \? 'overdue' : 'all'\)\}/, 'summary remains interactive with its existing filtering'],
+]);
 // Evaluate every contract only after all checks have run.
 if (failures.length) {
   console.error('Partner Phase 5 resilience/accessibility contract verification failed:');
