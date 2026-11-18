@@ -1492,6 +1492,40 @@ export default function NativePolicyOnboarding(){
         </View>
       </View>
     </Modal>
+    <Modal transparent visible={motorCopyDialogOpen} animationType="fade"
+      onRequestClose={()=>{if(!booking&&!uploadingMotorCopy)setMotorCopyDialogOpen(false);}}>
+      <View style={styles.scrim}><View style={styles.sheet}>
+        <View style={styles.sheetTitle}>
+          <Text style={styles.sectionTitle}>{bookedMotorPolicyId?'Complete Policy Copy Upload':'Save Active Policy'}</Text>
+          <Pressable accessibilityLabel="Close policy copy confirmation" disabled={booking||uploadingMotorCopy}
+            onPress={()=>setMotorCopyDialogOpen(false)}><Ionicons name="close" size={21} color="#4C5970"/></Pressable>
+        </View>
+        <Text style={styles.notice}>{bookedMotorPolicyId
+          ?'This policy is already booked. Retry its copy upload only; do not create another policy.'
+          :isNew?'Attach the issued policy copy before creating the active policy.'
+          :'The current Policy Intake copy will be reused for this active policy.'}</Text>
+        {isNew?<Pressable accessibilityRole="button" accessibilityLabel="Choose policy copy"
+          disabled={booking||uploadingMotorCopy} onPress={()=>void pickMotorCopy()} style={styles.choice}>
+          <Ionicons name="document-attach-outline" size={17} color="#17365D"/>
+          <Text style={[styles.choiceText,{flex:1}]} numberOfLines={2}>{motorCopy?.name||'Upload Policy Copy · Browse'}</Text>
+        </Pressable>:<View style={styles.choice}>
+          <Ionicons name="checkmark-circle-outline" size={18} color="#168552"/>
+          <Text style={styles.choiceText}>Use current Policy Intake copy</Text>
+        </View>}
+        {isNew?<Text style={styles.notice}>PDF, JPG, PNG or WebP · Maximum 15 MB</Text>:null}
+        {bookedMotorPolicyId?<Text style={styles.notice}>Policy already booked · upload only</Text>:null}
+        <View style={styles.modalFooter}>
+          <Pressable accessibilityRole="button" disabled={booking||uploadingMotorCopy}
+            onPress={()=>setMotorCopyDialogOpen(false)} style={styles.secondary}><Text style={styles.secondaryText}>Cancel</Text></Pressable>
+          <Pressable accessibilityRole="button" accessibilityLabel={bookedMotorPolicyId?'Retry policy copy upload':'Confirm Create Active Policy'}
+            disabled={booking||saving||uploadingMotorCopy||(isNew&&!motorCopy)}
+            onPress={()=>void continueMotorConfirmation()} style={[styles.primary,styles.bookButton,(booking||saving||uploadingMotorCopy||(isNew&&!motorCopy))&&styles.disabled]}>
+            {(booking||uploadingMotorCopy)?<ActivityIndicator size="small" color="#FFFFFF"/>:null}
+            <Text style={styles.primaryText}>{bookedMotorPolicyId?'Retry Upload':'Save Active Policy'}</Text>
+          </Pressable>
+        </View>
+      </View></View>
+    </Modal>
     <Modal transparent visible={dateApprovalOpen} animationType="fade" onRequestClose={()=>setDateApprovalOpen(false)}>
       <View style={styles.scrim}><View style={styles.sheet}>
         <View style={styles.sheetTitle}><Text style={styles.sectionTitle}>Policy Date Approval</Text><Pressable onPress={()=>setDateApprovalOpen(false)} accessibilityLabel="Close approval"><Ionicons name="close" size={21} color="#4C5970"/></Pressable></View>
