@@ -309,10 +309,17 @@ expectAll('app/customer-new.tsx', [
 expectAll('lib/customers.ts', [
   [/gst_number: string/, 'customer creation form includes GSTIN'],
   [/type: 'pan_copy' \| 'aadhaar_front' \| 'aadhaar_back' \| 'gst_copy'/, 'document type supports GST Copy'],
-  [/gst_number: input\.gst_registered \? input\.gst_number\.trim\(\)\.toUpperCase\(\) : null/, 'GSTIN is passed to the authorized creation RPC'],
-  [/if \(documents\.length\) throw new Error\('KYC uploads are not configured yet/, 'documents fail closed until an authorized upload backend is available'],
+  [/partnerCustomerRequest\('POST', JSON\.stringify\(input\)\)/, 'customer creation goes to the authorized portal endpoint'],
+  [/partnerCustomerRequest\('PUT',payload\)/, 'KYC documents use authenticated upload endpoint'],
+  [/payload\.append\('customerId', customerId\)/, 'document upload binds the created customer id'],
 ]);
 
+expectAll('app/customer-new.tsx', [
+  [/setCreatedCustomerId\(customerId\)/, 'creation stores the confirmed id to prevent duplicate customer rows on upload retry'],
+  [/uploadedTypes\.includes\(file\.type\)/, 'already uploaded files are skipped on retry'],
+  [/uploadPartnerCustomerDocument\(customerId,file\)/, 'selected KYC files are submitted after customer creation'],
+  [/Legal Trade Name required/, 'registered GST requires legal trade name'],
+]);
 // Evaluate every contract only after all checks have run.
 if (failures.length) {
   console.error('Partner Phase 5 resilience/accessibility contract verification failed:');
