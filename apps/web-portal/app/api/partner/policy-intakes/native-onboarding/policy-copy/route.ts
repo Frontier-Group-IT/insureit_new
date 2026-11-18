@@ -33,7 +33,7 @@ export async function POST(request:Request){
   if(!UUID.test(body.policy_id??"")||!["prepare","finalize"].includes(body.action??""))
     return reply({ok:false,error:"Invalid saved policy or upload action."},400);
   const size=body.size, type=body.type??"", name=body.name??"";
-  if(!name.trim()||name.length>180||!Number.isSafeInteger(size)||!size||size>MAX_BYTES||!TYPES.has(type))
+  if(!name.trim()||name.length>180||typeof size!=="number"||!Number.isSafeInteger(size)||size<=0||size>MAX_BYTES||!TYPES.has(type))
     return reply({ok:false,error:"Choose a PDF, JPG, PNG or WebP policy copy up to 15 MB."},400);
   // This endpoint is reserved for the creator's newly booked standalone
   // Motor policy. Intake copies are already enforced by the booking engine.
