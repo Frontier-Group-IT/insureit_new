@@ -192,7 +192,7 @@ test("OD safely refuses a booking representation when addons exceed total OD", (
 });
 test("ICICI 3005/O amendment B00 remains validated by all 13 checks",()=>{
  const x=odFixture();
- x.fields.find(f=>f.key==="policy_number").value="3005/O/461963798/00/B00";
+ x.fields.find(f=>f.key==="policy_number").value="3005/O/123450002/00/B00";
  assert.equal(validateN8nPolicyIntakeResponse(x,ids).checksPassed,13);
 });
 test("CHETAK model variants map to Bajaj only with verified EV motor evidence",()=>{
@@ -226,7 +226,7 @@ test("CHETAK model variants map to Bajaj only with verified EV motor evidence",(
 test("3005/O ordinary BAJAJ Chetak: no NCB and one zero-depreciation add-on",()=>{
  const x=odFixture();
  const update={
-   policy_number:"3005/O/461929603/00/000",
+   policy_number:"3005/O/123450001/00/000",
    policy_issuance_date:"2026-11-10",
    policy_start_date:"2026-11-12",policy_end_date:"2027-11-11",
    third_party_start_date:"2025-11-12",third_party_end_date:"2030-11-11",
@@ -253,7 +253,7 @@ test("3005/O ordinary BAJAJ Chetak: no NCB and one zero-depreciation add-on",()=
 test("3005/O B00 endorsement: two add-ons, printed NCB deduction, independent TP dates",()=>{
  const x=odFixture();
  const update={
-   policy_number:"3005/O/461963798/00/B00",
+   policy_number:"3005/O/123450002/00/B00",
    policy_issuance_date:"2026-11-10",
    policy_start_date:"2026-11-10",policy_end_date:"2027-11-09",
    third_party_start_date:"2024-09-10",third_party_end_date:"2029-09-09",
@@ -282,7 +282,7 @@ test("3005/O B00 endorsement: two add-ons, printed NCB deduction, independent TP
 test("3005 Bundled non-individual: three OD addons and zero owner-driver CPA",()=>{
  const x=fresh();
  const update={
-   policy_number:"3005/462563441/00/000",
+   policy_number:"3005/123450003/00/000",
    policy_issuance_date:"2026-11-16",
    policy_start_date:"2026-11-16",policy_end_date:"2027-11-15",
    third_party_start_date:"2026-11-16",third_party_end_date:"2031-11-15",
