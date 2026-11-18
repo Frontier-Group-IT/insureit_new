@@ -241,7 +241,7 @@ async function preparePolicyIntakeHandoffInternal(
     policyNo:mapped.next.policyNo,insurerId:mapped.next.insurerId,validFrom:mapped.next.validFrom,validUpto:mapped.next.validUpto,
     payoutBasis:"NET",projectedOdPercent:"",projectedTpPercent:"",insurerScheme:"",payinBillNo:"",payinBilledAmount:"",payinBillDate:"",payinStatus:"Unbilled",retention:"",payoutOdPercent:"",payoutTpPercent:"",flatPayoutAmount:"",payoutStatus:"Pending",payoutDate:"",payoutVoucherNo:"",remarks:verified
       ? `Policy Intake ${id} — n8n validated ICICI 3005 PDF. Review every prefilled value before booking.
-PDF premium reconciliation: Basic OD ${verified.premium.basicOd} + OD add-ons ${addOnTotal} = Total OD ${verified.premium.totalOd}; TP ${verified.premium.basicTp}, CPA ${verified.premium.cpa}, Net ${verified.premium.net}, GST ${verified.premium.tax}, Gross ${verified.premium.gross}.
+PDF premium reconciliation: ${verified.parserId==="icici_3005_od_n8n_native_pdf" ? `Basic OD ${verified.premium.basicOd} + OD add-ons ${addOnTotal} - NCB/OD deductions ${verified.premium.odDeductions} = OD net ${verified.premium.totalOd}; form OD input represents discounted Basic OD` : `Basic OD ${verified.premium.basicOd} + OD add-ons ${addOnTotal} = Total OD ${verified.premium.totalOd}`}; TP ${verified.premium.basicTp}, CPA ${verified.premium.cpa}, Net ${verified.premium.net}, GST ${verified.premium.tax}, Gross ${verified.premium.gross}.
 Third Party period: ${tpStart||"unavailable"} to ${tpExpiry||"unavailable"}. Verify separate TP/CPA dates, policy class/product, identity, commercial rates and unmatched PDF fields manually.`
       : `Policy Intake ${id}`,
   };
