@@ -137,4 +137,11 @@ assert.ok(app.includes('const refreshed=await load(true);'), 'Remark and Reject 
 assert.equal((app.match(/const refreshed=await load\(true\);/g)||[]).length,2, 'Both Remark and Reject use silent refresh.');
 assert.ok(!app.includes("setRemarkOpen(false);setRemarkDraft('');setExpandedCaseTab('remarks');"), 'Remark save must not expand panels and shift scroll.');
 assert.ok(app.includes("partnerAlert('Remark saved'") && app.includes("partnerAlert('Case rejected'"), 'Saved actions report refresh failures separately from mutation failures.');
+const partnerScreen=read('apps/partner-app/components/partner-screen.tsx');
+assert.ok(partnerScreen.includes('resetScrollOnFocus = true'), 'Partner screens preserve their existing default scroll reset behavior.');
+assert.ok(partnerScreen.includes('if (!resetScrollOnFocus) return undefined;'), 'Scroll-reset focus effect supports an explicit opt-out.');
+assert.ok(partnerScreen.includes('[homeMotionScrollY, resetScrollOnFocus]'), 'Focus reset callback responds to the opt-out prop.');
+assert.ok(app.includes('title="Case Details" resetScrollOnFocus={false}'), 'Life/Health Case Details prevents the shared focus scroll jump.');
+assert.ok(app.includes('const refreshed=await load(true);'), 'Save Remark and Reject continue to use silent refresh.');
+assert.equal((app.match(/const refreshed=await load\(true\);/g)||[]).length,2, 'Save Remark and Reject both preserve the visible case view.');
 console.log('Case inline edit, append-only remarks, secure issuance and native parity verified.');
