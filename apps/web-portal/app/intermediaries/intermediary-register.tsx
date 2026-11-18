@@ -4,7 +4,7 @@ import { Search } from "lucide-react";
 import { compactDarkActionClassName, compactPrimaryActionClassName, compactSecondaryActionClassName } from "@/components/action-styles";
 import { AppShell } from "@/components/shell";
 import { FormSubmitButton } from "@/components/form-submit-button";
-import { getAccessibleIntermediaryIds } from "@/lib/employee-access-scope";
+import { getAccessibleIntermediaryApplicationIds, getAccessibleIntermediaryIds } from "@/lib/employee-access-scope";
 import { requirePospMispManager } from "@/lib/master-data-server";
 import { hasEffectiveCapability } from "@/lib/effective-permissions";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
@@ -88,6 +88,12 @@ export async function IntermediaryRegister({
   const effectiveType = selectedType ?? typeFilter;
   const accessibleIds = await getAccessibleIntermediaryIds(profile.id, profile.role);
   const canReview = await hasEffectiveCapability(profile, "review_intermediary_application", "edit");
+  // Mobile applications are not intermediary master records until reviewed/activated.
+  // The same application-level scope as the review page must govern their visibility.
+  const accessibleApplicationIds = selectedType === "partner"
+    ? await getAccessibleIntermediaryApplicationIds(profile.id, profile.role)
+    : [];
+
 
   const buildRequest = (from?: number, to?: number) => {
     let request = admin
@@ -128,6 +134,42 @@ export async function IntermediaryRegister({
       const active = applicationMap.get(row.application_id as string)?.partner_status === "active_partner";
       return accountStatus === "active" ? active : accountStatus === "onboarding" ? !active : true;
     });
+  }
+
+  // Include saved Partner App applications that have not yet materialized into
+  // intermediaries. Read only: do not create fake partner master records or
+  // bypass activation, documents, review, and registration rules.
+  type MobileApplication = ApplicationState;
+  const mobileApplications: MobileApplication[] = [];
+  let mobileLoadError = false;
+  if (selectedType === "partner" && (accessibleApplicationIds === null || accessibleApplicationIds.length)) {
+    const permittedIds = accessibleApplicationIds === null ? null : new Set(accessibleApplicationIds);
+    const { data: candidates, error: candidatesError } = await fetchAllPages<MobileApplication, unknown>((from, to) => admin
+      .from("intermediary_onboarding_applications")
+      .select(APPLICATION_SELECT)
+      .contains("draft_data", { mobile_partner_only: true })
+      .in("status", ["submitted", "under_review", "changes_requested"])
+      .order("id", { ascending: true })
+      .range(from, to)
+      .returns<MobileApplication[]>());
+    if (candidatesError) mobileLoadError = true;
+    else for (const application of candidates ?? []) {
+      if (permittedIds !== null && !permittedIds.has(application.id)) continue;
+      if (application.partner_status === "active_partner") continue;
+      if (application.draft_data?.account_context !== "partner") continue;
+      if (registrationStatus && application.registration_status !== registrationStatus) continue;
+      mobileApplications.push(application);
+    }
+  }
+  // Even if a master row is outside this page's intermediary query, never
+  // manufacture a second visible entry for an already-linked application.
+  const alreadyLinked = new Set(rows.map(row => row.application_id).filter((id): id is string => Boolean(id)));
+  for (let index = 0; index < mobileApplications.length; index += 100) {
+    const batch = mobileApplications.slice(index, index + 100).map(app => app.id);
+    const { data: linked, error: linkError } = await admin.from("intermediaries")
+      .select("application_id").in("application_id", batch);
+    if (linkError) { mobileLoadError = true; break; }
+    for (const row of linked ?? []) if (row.application_id) alreadyLinked.add(row.application_id);
   }
 
   const partnerRecordIds = selectedType === "partner" ? rows
@@ -284,9 +326,48 @@ export async function IntermediaryRegister({
         ].filter(Boolean).join(" ").toLowerCase(),
       };
     });
+    if (!mobileLoadError) for (const application of mobileApplications) {
+      if (alreadyLinked.has(application.id)) continue;
+      const draft = application.draft_data;
+      const type = application.requested_type;
+      const name = textValue(type === "misp" ? draft?.misp_name : draft?.pos_name) ?? "Unnamed Partner";
+      const mobile = mobile10(textValue(draft?.applicant_phone) ?? "");
+      const assignedRm = textValue(draft?.associate_name) ?? "Not assigned";
+      const partnerId = `Pending · ${application.id.slice(0, 8)}`;
+      clientRows.push({
+        // This is an application-only display row, NOT an intermediary master ID.
+        id: application.id,
+        isApplicationOnly: true,
+        applicationId: application.id,
+        partnerRecordId: null,
+        displayName: name,
+        mobile,
+        partnerId,
+        groupId: null,
+        groupName: null,
+        associateCount: null,
+        branchCount: null,
+        accountType: type === "misp" ? "Business" : "Individual",
+        assignedRm,
+        onboardingDate: application.created_at,
+        linkedLabel: "Not created",
+        linkedHref: null,
+        portalAccess: "Not created",
+        partnerStatus: "Onboarding",
+        policyCount: null,
+        customerCount: null,
+        netPremium: null,
+        payout: null,
+        active: false,
+        createType: type,
+        canCreateLinked: false,
+        searchText: [name, mobile, textValue(draft?.applicant_email), partnerId,
+          assignedRm, type, "onboarding"].filter(Boolean).join(" ").toLowerCase(),
+      });
+    }
     return (
       <AppShell title={pageTitle}>
-        <PartnerRegisterClient rows={clientRows} canPermanentDelete={profile.role === "it_super_user"} initialSearch={search} initialStatus={accountStatus} initialPeriod={selectedPeriod} initialDateFrom={selectedCustomFrom} initialDateTo={selectedCustomTo} success={success} error={error} loadError={Boolean(loadError || partnerBusinessError)} />
+        <PartnerRegisterClient rows={clientRows} canPermanentDelete={profile.role === "it_super_user"} initialSearch={search} initialStatus={accountStatus} initialPeriod={selectedPeriod} initialDateFrom={selectedCustomFrom} initialDateTo={selectedCustomTo} success={success} error={error} loadError={Boolean(loadError || partnerBusinessError || mobileLoadError)} />
       </AppShell>
     );
   }

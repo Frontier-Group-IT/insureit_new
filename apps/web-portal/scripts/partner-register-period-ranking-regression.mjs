@@ -34,7 +34,7 @@ assert.match(page, /periodFrom=\{periodFrom\}/);
 assert.match(page, /periodTo=\{periodTo\}/);
 assert.match(loader, /admin\.rpc\("partner_register_period_business_metrics", \{ p_partner_ids: partnerBusinessIds, p_from_date: periodFrom, p_to_date: periodTo \}\)/, "Run period business calculation for entire authorized partner set.");
 assert.match(loader, /policyCount: metric \? Number\(metric\.policy_count\) : null/, "Expose actual policy count, not onboarding date.");
-assert.match(loader, /loadError=\{Boolean\(loadError \|\| partnerBusinessError\)\}/, "Do not show false zero records on RPC failure.");
+assert.match(loader, /loadError=\{Boolean\(loadError \|\| partnerBusinessError \|\| mobileLoadError\)\}/, "Do not show false zero records on RPC or pending-application load failure.");
 assert.doesNotMatch(client, /\(row\.policyCount \?\? 0\) > 0/, "Partners with zero selected-period business must stay visible.");
 assert.doesNotMatch(client, /indiaDateKey\(row\.onboardingDate\)/, "Partner onboarding date must never filter period business.");
 assert.match(client, /\(b\.netPremium \?\? 0\) - \(a\.netPremium \?\? 0\)/, "Rank highest business first.");
