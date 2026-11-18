@@ -41,6 +41,9 @@ export type N8nVerifiedPremiumBreakdown = {
   exactIgst: number;
   tax: number;
   gross: number;
+  // Only the OD-only contract reports NCB/deductions and pre-deduction subtotal.
+  printedOdSubtotal?: number;
+  odDeductions?: number;
 };
 export type N8nOcrBridgeResponse = {
   ok: true; fields: N8nOcrField[]; warnings: string[];
@@ -197,6 +200,7 @@ export function validateN8nPolicyIntakeResponse(
     parserVersion: odOnly ? "bridge-od-v1" : "bridge-v1",
     checksPassed: requiredChecks.size,
     premium: { basicOd, odAddons, totalOd: od, basicTp: tp, cpa, liability,
-      net, exactIgst: igst, tax, gross } };
+      net, exactIgst: igst, tax, gross,
+      ...(odOnly ? { printedOdSubtotal: subtotal, odDeductions: deductions } : {}) } };
 }
 
