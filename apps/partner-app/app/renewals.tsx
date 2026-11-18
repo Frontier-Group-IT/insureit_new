@@ -158,7 +158,9 @@ export default function RenewalsScreen() {
                 <Text style={styles.summaryPremium}>Net Premium - {formatWholeRupees(selectedSummary.premium)}</Text>
               </View>
             </View>
-            <Text style={styles.summaryCount} numberOfLines={1}>POLICIES {selectedSummary.count}</Text>
+            <View style={styles.summaryCountBadge}>
+              <Text style={styles.summaryCount} numberOfLines={1}>Policies {selectedSummary.count}</Text>
+            </View>
           </Pressable>
           <View style={styles.summaryDivider} />
         </View>
@@ -358,7 +360,8 @@ const styles = StyleSheet.create({
   summaryText: { flex: 1, minWidth: 0, gap: 5 },
   summaryEyebrow: { color: '#172A48', fontSize: 12, lineHeight: 16, fontWeight: '800', letterSpacing: 0.2 },
   summaryPremium: { color: '#53677F', fontSize: 12, lineHeight: 17, fontWeight: '700' },
-  summaryCount: { color: '#172A48', fontSize: 11, lineHeight: 17, fontWeight: '700', textAlign: 'right', flexShrink: 0 },
+  summaryCountBadge: { flexShrink: 0, minHeight: 28, paddingHorizontal: 11, paddingVertical: 5, borderRadius: 16, backgroundColor: '#E9F2FF', alignItems: 'center', justifyContent: 'center' },
+  summaryCount: { color: '#1558B0', fontSize: 11, lineHeight: 16, fontWeight: '800', textAlign: 'center' },
   banner: { marginTop: 9 }, inlineBanner: { marginBottom: 8 },
   modeTabs: { marginTop: 0, flexDirection: 'row', gap: 0, borderBottomWidth: 1, borderBottomColor: '#D5E3F2' },
   modeTab: { flex: 1, minHeight: 43, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, paddingHorizontal: 5, borderBottomWidth: 3, borderBottomColor: 'transparent' },
@@ -379,13 +382,13 @@ const styles = StyleSheet.create({
   recordCard: { backgroundColor: '#FFFFFF', borderLeftWidth: 1, borderRightWidth: 1, borderColor: '#E4E9F1' },
   recordCardLast: { borderBottomWidth: 1, borderBottomLeftRadius: 14, borderBottomRightRadius: 14, overflow: 'hidden' },
   recordDivider: { height: StyleSheet.hairlineWidth, backgroundColor: '#E4E9F1' },
-renewalArtwork: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center' }, renewalArtworkImage: { width: 44, height: 44 },
-  renewalRow: { minHeight: 78, paddingHorizontal: 12, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 10 },
-  renewalCopy: { flex: 1, minWidth: 0, gap: 3 },
+  renewalArtwork: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center', flexShrink: 0 }, renewalArtworkImage: { width: 32, height: 32 },
+  renewalRow: { minHeight: 64, paddingHorizontal: 12, paddingVertical: 7, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  renewalCopy: { flex: 1, minWidth: 0, gap: 2 },
   renewalName: { color: '#102B53', fontWeight: '800', fontSize: 12 },
   renewalPolicy: { color: '#7B879B', fontSize: 10.5 },
   renewalPremium: { color: '#142A4A', fontWeight: '800', fontSize: 12 },
-  renewalBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, borderRadius: 20, paddingHorizontal: 9, paddingVertical: 7 },
+  renewalBadge: { flexDirection: 'row', flexShrink: 0, alignItems: 'center', gap: 3, borderRadius: 20, paddingHorizontal: 8, paddingVertical: 6 },
   badgeOverdue: { backgroundColor: '#FFEBEB' }, badgeUpcoming: { backgroundColor: '#FFF4E3' },
   renewalBadgeText: { fontSize: 10, fontWeight: '800' }, badgeOverdueText: { color: '#BF2929' }, badgeUpcomingText: { color: '#94611C' },
   pressed: { opacity: 0.65 },

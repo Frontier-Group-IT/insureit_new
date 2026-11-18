@@ -276,7 +276,11 @@ requireText(renewals, 'PartnerAssets.actions.renewals', 'Upcoming renewal rows m
 requireText(renewals, 'styles.opportunitiesHeader', 'Renewal opportunity card must keep a section header.');
 requireText(renewals, "summaryPanel: { marginTop: 0, marginHorizontal: -partnerTheme.spacing.lg, backgroundColor: '#FFFFFF' }", 'Renewal summary must be white, full-width and without a card border.');
 requireText(renewals, 'styles.summaryMain', 'Renewal summary must show a left-side icon and heading.');
-requireText(renewals, '<Text style={styles.summaryCount} numberOfLines={1}>POLICIES {selectedSummary.count}</Text>', 'Policy count must appear on the right as plain POLICIES N text.');
+requireText(renewals, '<View style={styles.summaryCountBadge}>', 'Policy count must sit inside a rounded badge.');
+requireText(renewals, '<Text style={styles.summaryCount} numberOfLines={1}>Policies {selectedSummary.count}</Text>', 'Badge must use the dynamic renewal policy count.');
+requireText(renewals, "summaryCountBadge: { flexShrink: 0, minHeight: 28", 'Policy count badge must remain compact and right aligned.');
+requireText(renewals, "renewalArtworkImage: { width: 32, height: 32 }", 'Insurer logo must be compact without changing brand mapping.');
+requireText(renewals, "renewalRow: { minHeight: 64", 'Renewal rows must be compact.');
 requireText(renewals, 'styles.summaryDivider', 'A thin divider separates the full-width summary from the tabs.');
 requireText(renewals, 'Net Premium - {formatWholeRupees(selectedSummary.premium)}', 'Summary must display whole-rupee net premium inline.');
 requireText(renewals, 'Math.trunc(amount)', 'Summary premium must remove paise without rounding up.');
