@@ -1,6 +1,6 @@
 const KEYS = new Set([
   "policy_number", "insurer_name", "policy_product", "policy_issuance_date", "policy_start_date", "policy_end_date",
-  "third_party_start_date", "third_party_end_date",
+  "third_party_start_date", "third_party_end_date", "third_party_policy_number", "third_party_insurer_name",
   "insured_name", "vehicle_make", "vehicle_model", "vehicle_class", "vehicle_fuel_type",
   "vehicle_motor_power_kw", "vehicle_capacity", "vehicle_rto_state", "vehicle_registration_status",
   "vehicle_registration_number", "vehicle_engine_number", "vehicle_chassis_number",
@@ -14,6 +14,14 @@ const REQUIRED_CHECKS = new Set([
   "tp_cpa_equal_liability", "net_tax_equal_gross", "idv_present",
   "manufacturing_year_present", "basic_od_plus_addons_equals_printed_total",
   "basic_tp_equals_derived_tp", "exact_igst_rounds_to_tax",
+]);
+
+const REQUIRED_OD_CHECKS = new Set([
+  "is_icici_3005_od", "insured_name_present", "policy_number_present",
+  "vehicle_details_present", "dates_present", "od_subtotal_reconciled",
+  "ncb_deduction_reconciled", "net_tax_equal_gross", "idv_present",
+  "manufacturing_year_present", "third_party_reference_present",
+  "zero_tp_charged", "exact_igst_rounds_to_tax",
 ]);
 
 export type N8nOcrField = {
@@ -59,13 +67,17 @@ export function validateN8nPolicyIntakeResponse(
   if (!plainObject(value) || value.contract_version !== "1") throw new Error("n8n_contract_version_invalid");
   if (value.intake_id !== ids.intakeId || value.document_id !== ids.documentId
       || value.request_id !== ids.requestId) throw new Error("n8n_request_identity_mismatch");
+  const isOd = value.parser_id === "icici_3005_od_n8n_native_pdf"
+    && value.parser_version === "bridge-od-v1";
+  const isBundled = value.parser_id === "icici_3005_n8n_native_pdf"
+    && value.parser_version === "bridge-v1";
   if (value.ok !== true || value.review_required !== true || value.auto_finalize_allowed !== false
-      || value.parser_id !== "icici_3005_n8n_native_pdf"
-      || value.parser_version !== "bridge-v1"
+      || (!isOd && !isBundled)
       || value.extraction_method !== "native_pdf_text") throw new Error("n8n_review_required");
   const checks = value.checks;
-  if (!plainObject(checks) || Object.keys(checks).length !== REQUIRED_CHECKS.size
-      || [...REQUIRED_CHECKS].some((key) => checks[key] !== true)
+  const requiredChecks = isOd ? REQUIRED_OD_CHECKS : REQUIRED_CHECKS;
+  if (!plainObject(checks) || Object.keys(checks).length !== requiredChecks.size
+      || [...requiredChecks].some((key) => checks[key] !== true)
       || Object.values(checks).some((check) => check !== true)) {
     throw new Error("n8n_financial_validation_failed");
   }
@@ -109,13 +121,18 @@ export function validateN8nPolicyIntakeResponse(
   const tpEndDate = fieldValue("third_party_end_date");
   if (!isoDate(startDate) || !isoDate(endDate) || endDate < startDate
       || !isoDate(tpStartDate) || !isoDate(tpEndDate) || tpEndDate < tpStartDate
-      || tpStartDate !== startDate || tpEndDate < endDate) {
-    // ICICI 3005 bundled coverage starts together; TP must not expire
-    // before OD, but its own printed date must be extracted separately.
+      || (!isOd && (tpStartDate !== startDate || tpEndDate < endDate))) {
     throw new Error("n8n_coverage_dates_invalid");
   }
   const policyNumber = fieldValue("policy_number");
-  if (!/^3005\/\d{7,12}\/\d{2}\/\d{3}$/.test(policyNumber)) throw new Error("n8n_wrong_policy_product");
+  const expectedNumber = isOd
+    ? /^3005\/O\/\d{7,12}\/\d{2}\/\d{3}$/
+    : /^3005\/\d{7,12}\/\d{2}\/\d{3}$/;
+  if (!expectedNumber.test(policyNumber)) throw new Error("n8n_wrong_policy_product");
+  if (isOd && (!fieldValue("third_party_policy_number") || !fieldValue("third_party_insurer_name")
+      || fieldValue("policy_product") !== "Stand-Alone Own Damage")) {
+    throw new Error("n8n_od_reference_missing");
+  }
 
   // Never accept a remote boolean as proof that the policy's money adds up.
   // All components below are parsed from PDF text by the n8n workflow.
@@ -149,7 +166,16 @@ export function validateN8nPolicyIntakeResponse(
   });
   const addOns = odAddons.reduce((total, addon) => total + addon.amount, 0);
   const cents = (number: number) => Math.round(number * 100);
-  if (cents(basicOd + addOns) !== cents(od)
+  if (isOd) {
+    const subtotal = exactMoney(premium.printed_od_subtotal);
+    const deduction = exactMoney(premium.od_deductions);
+    if (cents(basicOd + addOns) !== cents(subtotal)
+        || cents(subtotal - deduction) !== cents(od)
+        || tp !== 0 || cpa !== 0 || liability !== 0 || cents(net) !== cents(od)
+        || cents(net + tax) !== cents(gross) || Math.round(igst) !== tax) {
+      throw new Error("n8n_premium_reconciliation_failed");
+    }
+  } else if (cents(basicOd + addOns) !== cents(od)
       || cents(tp + cpa) !== cents(liability)
       || cents(od + liability) !== cents(net)
       || cents(net + tax) !== cents(gross)
@@ -168,9 +194,9 @@ export function validateN8nPolicyIntakeResponse(
     if (typeof warning !== "string" || warning.length > 240) throw new Error("n8n_warning_invalid");
     return warning;
   });
-  return { ok: true, fields, warnings, parserId: "icici_3005_n8n_native_pdf",
-    parserVersion: "bridge-v1",
-    checksPassed: REQUIRED_CHECKS.size,
+  return { ok: true, fields, warnings, parserId: String(value.parser_id),
+    parserVersion: String(value.parser_version),
+    checksPassed: requiredChecks.size,
     premium: { basicOd, odAddons, totalOd: od, basicTp: tp, cpa, liability,
       net, exactIgst: igst, tax, gross } };
 }

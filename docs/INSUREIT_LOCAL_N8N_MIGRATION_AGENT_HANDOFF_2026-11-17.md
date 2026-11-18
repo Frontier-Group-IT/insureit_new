@@ -143,3 +143,60 @@ Current code path `apps/web-portal/lib/policy-intake-n8n-bridge.ts`:
 - Cost saving is the primary driver: avoid paid ngrok, VPS or subscription as a hidden dependency.
 - Current local Windows host is a reliability limit: sleep, Docker Desktop, home network or electricity outage interrupts automation. Do not claim production-grade uptime.
 - User authorized migration and eventual connection, but this does not imply permission to bypass the defined production tests/security checks or to book policies.
+
+
+## Update — 2026-11-18: ICICI 3005/O OD + 3005 automatic parser integration
+
+**Status at this handoff:** The separate local **candidate** successfully processes one genuine OD PDF and one bundled test PDF end-to-end over its test webhook; 13/13 checks passed in each case. **Do not infer that live production website integration has been released or validated.** The actual live webhook remains `/webhook/insureit-policy-intake-icici-v1`, behind loopback port 8787. Candidate remains isolated and unpublished unless subsequently verified and deliberately switched.
+
+### Current components and exact IDs
+
+- Local user PC: `C:\Users\HP\insureit_new\infra\n8n-local`; n8n editor `http://localhost:5678`, database Postgres in Docker. Local original production workflow ID `0uGscm0WUegvxa6V` (re-verify its current publish state). Original OD-only local draft ID `fH39HvXHTeSKGJ2F`; dual-parser **candidate workflow ID `ETTaxqnhhktuFavz`**.
+- Candidate named **INSUREIT - ICICI 3005 + 3005-O Auto-Detect - Local Candidate**. Test webhook `POST http://localhost:5678/webhook-test/insureit-icici-3005-auto-local-candidate-v1`. Separate from the production webhook; do not publish under production route until website compatibility and rollback verified.
+- Local files: `C:\Users\HP\insureit-n8n-backup\icici-3005-od-local-fixed.json`; `C:\Users\HP\insureit-n8n-backup\icici-3005-dual-parser-candidate.json`; preparation script in Downloads `prepare_insureit_3005_dual_parser.ps1`. User imported candidate via n8n UI. These are *local files*, not guaranteed committed or automatically synchronized with Cloud.
+- n8n Cloud **development-only** dual parser draft `https://insureit.app.n8n.cloud/workflow/CANYTNXLSxnMfFyd` was updated to explicitly detect `3005/O` vs `3005` and fail-closed for unknown products; it remained inactive. Cloud execution through MCP returned **execution quota reached**, so do not claim the Cloud draft was executed successfully.
+- Website compatibility draft PR **#4798** `feat/icici-3005-od-auto-routing-20261118`: `https://github.com/Frontier-Group-IT/insureit_new/pull/4798`. Adds OD response validation with independent TP reference dates, strict 3005/O policy numbers, OD subtotal minus NCB reconciliation, TP/CPA zero, and regression fixtures. No automatic finalization. Merge and manual production deployment only after current required GitHub CI checks pass.
+
+### What was implemented and actually tested locally
+
+1. The incoming PDF is validated for UUID request IDs, passed on as binary `data`, converted to text by `Read Policy PDF Text`, then the parser dispatches on policy code:
+   - Product `3005/O`: `icici_3005_od_n8n_native_pdf`, version `bridge-od-v1`.
+   - Bundled product `3005`: `icici_3005_n8n_native_pdf`, version `bridge-v1`.
+   - Unknown code: `validation_passed=false`, manual review; not treated as a valid automated extraction.
+2. The real PDF `C:\Users\HP\Downloads\od icici.pdf` is ICICI 3005/O policy ending **462448679**, insured **MITHLESH SINGH YADAV**. PDF layout uses separate label and value rows; the corrected `normalizeOdPdfText` fixes missing insured/vehicle/dates/TP refs and reconstructs itemized OD premium table. Original OD-only parser initially failed 7 of 13 checks; corrected OD-only workflow and dual candidate subsequently returned **all 13 checks true, no warnings**, `ok=true` in final webhook response.
+   - Extracted OD 2026-11-15 to 2027-11-14; issued 2026-11-13; make BAJAJ; model CHETAK 2413 PREMIUM; electric 4 kW; IDV 106760; manufacture 2023; RTO state MADHYA PRADESH and name MADHYA PRADESH-JABALPUR. Existing TP reference 2023-10-16 through 2028-10-15. Basic OD 2222 + Zero Depreciation Silver 907 = subtotal 3129; less NCB 778 = net OD 2351; exact IGST 423.18 / printed 423 = gross 2774; new TP and CPA charged 0.
+3. Bundled `C:\Users\HP\Downloads\policy-test.pdf` ran through the **same candidate** (green nodes from webhook through final JSON; HTTP 200); 13/13 bundled checks true and no warnings; basic OD 2026 + Zero Depreciation 766 = OD 2792, TP 3273, CPA 575, net 6640, exact GST 1195.2, printed GST 1195, gross 7835. A final paste omitted the bundled `parser_id` itself; checks `is_icici_3005=true` imply bundled detection, but confirm exact ID if release gate requires it.
+4. During earlier tests, clicking **Listen for test event** on just the trigger returned input headers and no downstream processing; executing the **whole canvas workflow** and then POSTing the test URL resulted in successful end-to-end parsing. Test URLs are one-shot; 404 after one test normally means restart listener. Avoid recording raw request headers in tickets/screenshots. The user's screenshot and PowerShell response confirmed the candidate graph was fully green.
+5. Candidate connections: Webhook -> Validate -> Signed Source IF; false branch -> Read PDF Text; true branch -> Download Current Private PDF -> Read PDF Text; Read PDF Text -> Parser -> Return INSUREIT Review-Only JSON. Synthetic manual trigger remains disabled.
+
+### Remaining production blockers and release procedure
+
+- PR #4798 CI: first `Verify web portal` run ID **44258679479** **failed** in `policy-intake:workflow-regression` because `policy-intake-n8n-bridge-regression.mjs` had a static assertion insisting on only `value.parser_version !== "bridge-v1"`. This test has been updated in the PR branch to recognize both `bridge-v1` and `bridge-od-v1`; **verify the fresh CI run**, including regression, typecheck, lint, build. Never merge with failed checks.
+- The website expects a **normalized review-only signed-source JSON response**, with `contract_version=1`, matching identity IDs, `ok=true`, `review_required=true`, `auto_finalize_allowed=false`, `extraction_method=native_pdf_text`, supported `parser_id`/version, fields, checks and reconciled premium components. Confirm OD output meets it and that the browser onboarding flow maps OD fields; `vehicle_rto_city` isn't in the OD proposal (state is). No new policy booking or customer writes by the parser itself.
+- **Critical test gap:** Real website uses `signed_pdf_url` pointing to a temporary private Supabase Storage URL, not the multipart PDF used for candidate tests. Test the IF **true branch** with an authorized single-intake pilot *without logging token URL* and ensure the final response satisfies strict server-side validator. Don't assume multipart success proves signed-source works.
+- Local candidate is **not** the live `/webhook/insureit-policy-intake-icici-v1` workflow. Production nginx whitelist only allows the existing webhook, and the candidate URL is local test-only. After CI/website deployment, back up the existing published n8n workflow, apply the verified candidate parser/response safely to the existing local live workflow, retain its exact webhook path and credential, publish only after both product types and signed-source pass. Verify local port 8787 route, public Cloudflare route, host's uptime and no edit/admin exposure. Ensure one active handler for the URL; preserve rollback JSON.
+- **Routing / hosting caveat:** Website bridge originally defaults to n8n Cloud and has strict self-hosted opt-in origin `https://n8n.nishant.uk`. A named Cloudflare Tunnel is reported for the Windows host, with webhook routes `n8n.insureit.in` and `n8n.nishant.uk`; do NOT confuse the separately configured MCP hostname `mcp.nishant.uk` on 8788 with the policy webhook on 8787. Check **actual live** server environment `INSUREIT_N8N_OCR_ENDPOINT_MODE`, URL/secret and feature gates in Vercel/hosting (never disclose secret values), and verify which production host/provider is serving portal before any cutover.
+- Preserve old Cloud workflow, old original local workflow, and existing Vercel env/fallback until a complete authenticated website preview + manual rollback smoke test. Make the portal change through approved manual GitHub Actions after merge; no silent auto-deploy, policy creation, or bulk booking.
+- Local n8n logs had proxy-trust `ERR_ERL_UNEXPECTED_X_FORWARDED_FOR`, occasional `Inbound authentication denied`, PDF.js `standardFontDataUrl` and `TT` warnings, and one `Slow database query`. None proved the parser had failed; investigate proxy hops separately and do not casually restart/modify production services during testing.
+
+### Commands used for test (credential values omitted)
+
+```powershell
+# From Windows PowerShell after starting Execute workflow in the candidate canvas:
+$url = "http://localhost:5678/webhook-test/insureit-icici-3005-auto-local-candidate-v1"
+$pdf = "C:\Users\HP\Downloads\od icici.pdf" # change to policy-test.pdf for bundled
+$secret = Read-Host "Enter LOCAL Header Auth secret"
+curl.exe -sS -X POST "$url" `
+  -H "x-insureit-policy-intake-secret: $secret" `
+  -F "intake_id=00000000-0000-4000-8000-000000000001" `
+  -F "document_id=00000000-0000-4000-8000-000000000002" `
+  -F "request_id=00000000-0000-4000-8000-000000000003" `
+  -F "data=@$pdf;type=application/pdf" `
+  -o "$env:TEMP\dual-parser-result.json" `
+  -w "HTTP %{http_code}`n"
+$result = Get-Content "$env:TEMP\dual-parser-result.json" -Raw | ConvertFrom-Json
+$result | Select-Object ok,parser_id,parser_version
+$result.checks | Format-List
+```
+
+**Operational decision:** full dual-parser candidate testing has passed via multipart PDF locally, while website full signed-source, CI, production publication and rollback validation remain release gates. Do not mark deployment complete solely because the candidate returns HTTP 200.
