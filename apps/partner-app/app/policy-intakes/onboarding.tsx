@@ -12,8 +12,24 @@ import { motorValidityEnds } from '@/lib/motor-validity-dates';
 import { createPartnerPolicyIntakeBridgeUrl, getPartnerPolicyIntakeDocumentUrl } from '@/lib/policy-intakes';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { PartnerPolicyDateField } from '@/components/policy-intakes/partner-policy-date-field';
-import { prepareNativePolicyOnboarding, saveNativePolicyOnboarding, bookNativePolicyOnboarding, createNativeLifeHealthCase, requestNativePolicyDateApproval, verifyNativePolicyDateApproval, lookupNativePolicyRc, prepareNewNativePolicyOnboarding, bookNewNativePolicyOnboarding, lookupNewNativePolicyRc, createNewNativeLifeHealthCase, bookNewNativeNonMotorPolicy, searchNewNativeNonMotorCustomers, requestNewNativePolicyDateApproval, verifyNewNativePolicyDateApproval, searchNativeNonMotorCustomers, searchNativeLeadSources, type NativeLeadSource, type NativeNonMotorCustomer, type NativePolicyDraft, type NativeOnboardingData, type NativeProductType, listNativeOnboardingDocuments, uploadNativeOnboardingDocument, deleteNativeOnboardingDocument, type NativeOnboardingDocument, type NativeOnboardingDocumentType } from '@/lib/policy-onboarding';
+import { prepareNativePolicyOnboarding, saveNativePolicyOnboarding, bookNativePolicyOnboarding, createNativeLifeHealthCase, requestNativePolicyDateApproval, verifyNativePolicyDateApproval, lookupNativePolicyRc, prepareNewNativePolicyOnboarding, bookNewNativePolicyOnboarding, lookupNewNativePolicyRc, createNewNativeLifeHealthCase, bookNewNativeNonMotorPolicy, searchNewNativeNonMotorCustomers, requestNewNativePolicyDateApproval, verifyNewNativePolicyDateApproval, searchNativeNonMotorCustomers, searchNativeLeadSources, type NativeLeadSource, type NativeNonMotorCustomer, type NativePolicyDraft, type NativeOnboardingData, type NativeProductType, listNativeOnboardingDocuments, uploadNativeOnboardingDocument, deleteNativeOnboardingDocument, type NativeOnboardingDocument, type NativeOnboardingDocumentType, attachNewNativeMotorPolicyCopy } from '@/lib/policy-onboarding';
 
+type MotorCopy = {uri:string;name:string;size:number;mimeType:string};
+const MOTOR_COPY_TYPES = ['application/pdf','image/jpeg','image/png','image/webp'];
+const MOTOR_COPY_MAX_BYTES = 15*1024*1024;
+// Mirror website India-calendar cutoff without trusting the device timezone.
+function motorDateDecision(date:string):'allowed'|'otp_required'|'invalid'|'future'{
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return 'invalid';
+  const parsed=new Date(date+'T00:00:00.000Z');
+  if(Number.isNaN(parsed.getTime())||parsed.toISOString().slice(0,10)!==date)return 'invalid';
+  const now=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Kolkata',day:'2-digit',month:'2-digit',year:'numeric'}).formatToParts(new Date());
+  const part=(key:string)=>Number(now.find(p=>p.type===key)?.value??0);
+  const thisMonth=part('year')*12+part('month')-1;
+  const policyMonth=parsed.getUTCFullYear()*12+parsed.getUTCMonth();
+  if(policyMonth>thisMonth)return 'future';
+  if(policyMonth===thisMonth||(policyMonth===thisMonth-1&&part('day')<=15))return 'allowed';
+  return 'otp_required';
+}
 type FieldKey = keyof NativePolicyDraft;
 type Field = { key:FieldKey; label:string; required?:boolean; options?:string[] };
 const policy = [
@@ -187,6 +203,11 @@ export default function NativePolicyOnboarding(){
   const [creatingLifeHealth,setCreatingLifeHealth]=useState(false);
   const [lookingUpRc,setLookingUpRc]=useState(false);
   const [dateApprovalOpen,setDateApprovalOpen]=useState(false);
+  const [motorCopyDialogOpen,setMotorCopyDialogOpen]=useState(false);
+  const [motorCopy,setMotorCopy]=useState<MotorCopy|null>(null);
+  // A booked policy must never be booked a second time to retry its upload.
+  const [bookedMotorPolicyId,setBookedMotorPolicyId]=useState<string|null>(null);
+  const [uploadingMotorCopy,setUploadingMotorCopy]=useState(false);
   const [approvalBusy,setApprovalBusy]=useState(false);
   const [approverKey,setApproverKey]=useState("");
   const [approvalRequestId,setApprovalRequestId]=useState<string|null>(null);
