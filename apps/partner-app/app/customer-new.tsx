@@ -4,6 +4,8 @@ import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollVie
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { PartnerStackBottomNavigation } from '@/components/partner-stack-bottom-navigation';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { createPartnerCustomer, type NewPartnerCustomer, type PartnerCustomerDocument } from '@/lib/customers';
 
@@ -57,7 +59,8 @@ export default function NewPartnerCustomerScreen() {
   function field(label: string, key: TextKey, placeholder: string, options?: { keyboardType?: 'default' | 'phone-pad' | 'email-address' | 'numeric'; autoCapitalize?: 'none' | 'characters' }) {
     return <View style={styles.field} key={key}><Text style={styles.label}>{label}</Text><TextInput accessibilityLabel={label} style={styles.input} value={form[key]} onChangeText={value => set(key, value)} placeholder={placeholder} placeholderTextColor="#95A2B5" keyboardType={options?.keyboardType ?? 'default'} autoCapitalize={options?.autoCapitalize ?? 'sentences'} editable={!busy} /></View>;
   }
-  return <SafeAreaView style={styles.root} edges={['top', 'bottom']}>
+  return <SafeAreaView style={styles.root} edges={['top']}>
+    <StatusBar style="light" backgroundColor="#071E49" />
     <View style={styles.header}><Pressable accessibilityRole="button" accessibilityLabel="Go back" onPress={() => router.back()} style={styles.back}><Ionicons name="chevron-back" size={24} color="#FFF" /></Pressable><View><Text style={styles.title}>New Customer</Text><Text style={styles.subtitle}>Add a customer to your partner network</Text></View></View>
     <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
@@ -81,15 +84,16 @@ export default function NewPartnerCustomerScreen() {
         <View style={styles.card}><Text style={styles.section}>Documents</Text>
           {DOCUMENTS.map(doc => <Pressable key={doc.key} accessibilityRole="button" onPress={() => void selectDocument(doc.key)} disabled={busy} style={styles.document}><Ionicons name="document-attach-outline" size={21} color="#245FB0"/><View style={styles.documentText}><Text style={styles.documentTitle}>{doc.label}</Text><Text numberOfLines={1} style={styles.documentHint}>{documents[doc.key]?.name ?? 'Choose file • Optional • PDF / JPG / PNG'}</Text></View><Ionicons name={documents[doc.key] ? 'checkmark-circle' : 'cloud-upload-outline'} size={20} color={documents[doc.key] ? '#16865B' : '#245FB0'} /></Pressable>)}
         </View>
+        <View style={styles.footer}><Pressable onPress={() => router.back()} disabled={busy} style={[styles.button, styles.cancel]}><Text style={styles.cancelText}>Cancel</Text></Pressable><Pressable onPress={() => void save()} disabled={busy} style={[styles.button, styles.save]}>{busy ? <ActivityIndicator color="#FFF" /> : <><Ionicons name="checkmark" size={18} color="#FFF"/><Text style={styles.saveText}>Save Customer</Text></>}</Pressable></View>
       </ScrollView>
-      <View style={styles.footer}><Pressable onPress={() => router.back()} disabled={busy} style={[styles.button, styles.cancel]}><Text style={styles.cancelText}>Cancel</Text></Pressable><Pressable onPress={() => void save()} disabled={busy} style={[styles.button, styles.save]}>{busy ? <ActivityIndicator color="#FFF" /> : <><Ionicons name="checkmark" size={18} color="#FFF"/><Text style={styles.saveText}>Save Customer</Text></>}</Pressable></View>
     </KeyboardAvoidingView>
+    <PartnerStackBottomNavigation activeTab="home" includeBottomInset />
   </SafeAreaView>;
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#F3F6FC' }, flex: { flex: 1 },
-  header: { backgroundColor: '#092755', paddingHorizontal: 18, paddingVertical: 16, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  root: { flex: 1, backgroundColor: '#071E49' }, flex: { flex: 1, backgroundColor: '#F3F6FC' },
+  header: { backgroundColor: '#071E49', paddingHorizontal: 18, paddingVertical: 16, flexDirection: 'row', alignItems: 'center', gap: 12 },
   back: { padding: 5 }, title: { color: '#FFF', fontSize: 19, fontWeight: '800' }, subtitle: { color: '#D7E7FC', fontSize: 11, marginTop: 3 },
   content: { padding: 13, paddingBottom: 28, gap: 12 }, card: { backgroundColor: '#FFF', borderRadius: 16, padding: 15, gap: 11, borderWidth: 1, borderColor: '#E1E8F3' },
   section: { fontSize: 14, fontWeight: '800', color: '#102C5B' }, sectionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 },
@@ -98,7 +102,7 @@ const styles = StyleSheet.create({
   two: { flexDirection: 'row', gap: 9 }, gst: { flexDirection: 'row', alignItems: 'center', gap: 4 }, gstLabel: { fontSize: 10, color: '#41516A' },
   document: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, borderRadius: 10, borderWidth: 1, borderColor: '#D9E5F4', backgroundColor: '#F8FAFE' },
   documentText: { flex: 1 }, documentTitle: { fontSize: 12, fontWeight: '700', color: '#14294D' }, documentHint: { fontSize: 10, color: '#7B8BA4', marginTop: 3 },
-  footer: { backgroundColor: '#FFF', paddingHorizontal: 14, paddingVertical: 10, flexDirection: 'row', gap: 10, borderTopWidth: 1, borderTopColor: '#DEE6F1' },
+  footer: { paddingVertical: 4, flexDirection: 'row', gap: 10 },
   button: { flex: 1, minHeight: 46, borderRadius: 11, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6 },
   cancel: { borderWidth: 1, borderColor: '#BAC8DB' }, cancelText: { fontWeight: '700', color: '#33455D' },
   save: { backgroundColor: '#315FEE' }, saveText: { fontWeight: '700', color: '#FFF' },
