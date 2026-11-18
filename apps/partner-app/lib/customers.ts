@@ -154,10 +154,10 @@ export async function getPartnerCustomerDetail(customerId: string) {
 export type NewPartnerCustomer = {
   customer_name: string; mobile: string; email: string; street: string; locality: string;
   city: string; state: string; pin_code: string; pan_number: string; aadhaar_number: string;
-  legal_trade_name: string; gst_registered: boolean;
+  legal_trade_name: string; gst_registered: boolean; gst_number: string;
 };
 export type PartnerCustomerDocument = {
-  type: 'pan_copy' | 'aadhaar_front' | 'aadhaar_back';
+  type: 'pan_copy' | 'aadhaar_front' | 'aadhaar_back' | 'gst_copy';
   uri: string; name: string; mimeType: string; size: number;
 };
 export async function createPartnerCustomer(input: NewPartnerCustomer, documents: PartnerCustomerDocument[]): Promise<string> {
@@ -173,6 +173,7 @@ export async function createPartnerCustomer(input: NewPartnerCustomer, documents
       pan_number: input.pan_number.trim().toUpperCase() || null,
       aadhaar_number: input.aadhaar_number.replace(/\\s/g, '') || null,
       legal_trade_name: input.legal_trade_name.trim() || null, gst_registered: input.gst_registered,
+      gst_number: input.gst_registered ? input.gst_number.trim().toUpperCase() : null,
     },
   });
   if (error) throw new Error(error.code === 'PGRST202' ? 'Customer creation is not configured yet. Contact the administrator.' : error.message);
