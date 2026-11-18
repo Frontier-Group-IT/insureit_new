@@ -131,6 +131,9 @@ begin
         (case
           when concat_ws(' ',b.policy_type,b.policy_product,b.business_line) ilike '%health%' then 'health'
           when concat_ws(' ',b.policy_type,b.policy_product,b.business_line) ilike '%life%' then 'life'
+          when concat_ws(' ',b.policy_type,b.policy_product,b.business_line) ilike '%non motor%'
+            or concat_ws(' ',b.policy_type,b.policy_product,b.business_line) ilike '%non-motor%'
+            or concat_ws(' ',b.policy_type,b.policy_product,b.business_line) ilike '%non_motor%' then 'non motor'
           when concat_ws(' ',b.policy_type,b.policy_product,b.business_line) ilike '%motor%' or b.vehicle_id is not null or b.vehicle_no is not null then 'motor'
           else 'non motor'
         end)=v_line)
