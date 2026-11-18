@@ -590,6 +590,7 @@ function policyCategory(row: PartnerPolicyRow) {
   const value = [row.policy_type, row.policy_product, row.business_line].filter(Boolean).join(' ').toLowerCase();
   if (value.includes('health')) return 'Health';
   if (value.includes('life')) return 'Life';
+  if (value.includes('non motor') || value.includes('non-motor') || value.includes('non_motor')) return 'Non-Motor';
   if (value.includes('motor') || row.vehicle_id || row.vehicle_no) return 'Motor';
   return 'Non-Motor';
 }
