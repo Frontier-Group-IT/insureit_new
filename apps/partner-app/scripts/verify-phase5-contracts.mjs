@@ -345,7 +345,7 @@ expectAll('app/customer-new.tsx', [
   [/sectionRow: \{[^\n]*flexWrap: 'nowrap'/, 'KYC heading controls stay on one row'],
   [/gstLabel: \{[^\n]*fontWeight: '400'/, 'GST Registered label uses normal text weight'],
 ]);
-// The Settings screen alone uses tighter gaps and black uppercase section headings.
+// Settings-only reference styling uses bolder type and more generous spacing.
 expectAll('app/settings.tsx', [
   [/<PartnerSectionHeader title="Account" settingsHeading \/>/, 'Account heading uses the Settings-specific style'],
   [/<PartnerSectionHeader title="Device security" settingsHeading \/>/, 'Device security heading uses the Settings-specific style'],
@@ -356,9 +356,10 @@ expectAll('components/ui/partner-section-header.tsx', [
   [/settingsHeading = false/, 'Settings heading variant is opt-in'],
   [/settingsHeading && styles\.settingsRow/, 'Settings heading spacing applies only when requested'],
   [/settingsHeading && styles\.settingsTitle/, 'Settings heading colour applies only when requested'],
-  [/settingsTitle: \{ color: '#111111' \}/, 'Settings headings render black'],
+  [ /settingsTitle: \\{ color: '#20234C', fontSize: 15, lineHeight: 20, fontWeight: '900'/, 'Settings headings use bold high-contrast typography'],
   [/textTransform: 'uppercase'/, 'Heading capitalization remains unchanged'],
-  [/settingsRow: \{ marginTop: 10, marginBottom: 5, minHeight: 20 \}/, 'Settings heading gaps are compact'],
+  [ /settingsRow: \\{ marginTop: 22, marginBottom: 10, minHeight: 24 \\}/, 'Settings headings use reference spacing'],
+  [/settingsAccent: \\{ height: 3, width: 28, borderRadius: 2, backgroundColor: '#6441BE' \\}/, 'Settings headings include purple accent'],
 ]);
 
 // Evaluate every contract only after all checks have run.
