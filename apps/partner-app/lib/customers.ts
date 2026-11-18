@@ -186,9 +186,9 @@ async function partnerCustomerRequest(method: 'POST' | 'PUT', payload: string | 
   return result;
 }
 
-export async function createPartnerCustomer(input: NewPartnerCustomer): Promise<string> {
+export async function createPartnerCustomer(input: NewPartnerCustomer, requestId: string): Promise<string> {
   await requirePartnerWritePermission('create_customers');
-  const result = await partnerCustomerRequest('POST', JSON.stringify(input));
+  const result = await partnerCustomerRequest('POST', JSON.stringify({ ...input, requestId }));
   if (!result.customerId) throw new Error('Customer creation was not confirmed. Check customer list before retrying.');
   return result.customerId;
 }
