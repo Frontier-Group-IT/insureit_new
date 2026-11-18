@@ -1,5 +1,4 @@
 import fs from 'node:fs';
-import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -7,10 +6,9 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, '..');
 const service = fs.readFileSync(path.join(root, 'lib/policy-intakes.ts'), 'utf8');
 const screen = fs.readFileSync(path.join(root, 'app/policy-intake-new.tsx'), 'utf8');
-const exactAddPolicyIcon = fs.readFileSync(path.join(root, 'assets/partner/actions/add-policy-reference.png'));
-const iconDigest = createHash('sha256').update(exactAddPolicyIcon).digest('hex');
-if (iconDigest !== '6ba503606345ebb00c04579c61767365904c37fad75c475d19159112466fc869') {
-  throw new Error('New Policy Intake header must keep the exact cropped uploaded Add Policy artwork.');
+const transparentAddPolicyIcon = fs.readFileSync(path.join(root, 'assets/partner/quick-actions/add-policy.png'));
+if (!transparentAddPolicyIcon.includes(Buffer.from('tRNS'))) {
+  throw new Error('New Policy Intake header must use a transparent 3D icon, not the opaque white-tile reference.');
 }
 
 const detailScreen = fs.readFileSync(path.join(root, 'app/policy-intakes/[id].tsx'), 'utf8');
@@ -30,7 +28,12 @@ requireText(service, 'offset = 0,', 'Keep default offset at the first authorized
 
 requireText(screen, '<Text style={styles.headerTitle} numberOfLines={1}>NEW POLICY INTAKE</Text>', 'Both New Policy Intake steps must show the approved header title.');
 requireText(screen, "backgroundColor: '#071E49'", 'New Policy Intake header must use navy background.');
-requireText(screen, "require('../assets/partner/actions/add-policy-reference.png')", 'Use the exact user-supplied Add Policy PNG rather than a generic icon.');
+requireText(screen, "require('../assets/partner/quick-actions/add-policy.png')", 'Use the exact user-supplied Add Policy PNG rather than a generic icon.');
+requireText(screen, '<StatusBar style="light" backgroundColor="#071E49" />', 'iOS system status icons must be white over navy.');
+requireText(screen, 'navySafeArea: { flex: 1, backgroundColor: \'#071E49\' }', 'Both steps must paint the top safe area navy.');
+if (screen.includes("headerPolicyIcon: { width: 37, height: 37, borderRadius: 5, backgroundColor: '#FFFFFF' }")) {
+  throw new Error('New Policy Intake header must not add the obsolete white icon tile.');
+}
 requireText(screen, 'function ReferenceHeader({ onBack }', 'New intake header retains safe Back/Cancel navigation.');
 requireText(screen, 'onBack={() => requestClose()}', 'Header back action follows the existing draft exit confirmation.');
 if ((screen.match(/<ReferenceHeader onBack=\{\(\) => requestClose\(\)\} \/>/g) || []).length !== 2) throw new Error('Both lead-source and details stages must use the same navy header.');
