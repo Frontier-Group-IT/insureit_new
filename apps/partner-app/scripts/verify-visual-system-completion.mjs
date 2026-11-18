@@ -33,6 +33,13 @@ const renewals = read('app/renewals.tsx');
 const policyIntakes = read('app/policy-intakes.tsx');
 const policyIntakeNew = read('app/policy-intake-new.tsx');
 const policyIntakeDetail = read('app/policy-intakes/[id].tsx');
+const insurerPerformance = read('app/insurers.tsx');
+requireText(insurerPerformance, 'source={PartnerAssets.actions.businessPerformance}', 'Insurer performance header uses bundled 3D business artwork.');
+requireText(insurerPerformance, "referenceHeader: { marginHorizontal: -16, height: 64, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', overflow: 'hidden', backgroundColor: '#071E49' }", 'Insurer performance header must use the standard navy.');
+requireText(insurerPerformance, "headerSearchBand: { backgroundColor: '#071E49'", 'Insurer search band matches the navy header.');
+requireText(insurerPerformance, '>BUSINESS PERFORMANCE</Text>', 'Existing Business Performance eyebrow remains visible.');
+requireText(insurerPerformance, 'bottomNavigation={<PartnerStackBottomNavigation activeTab="business" />}', 'Existing Business-active footer must be preserved.');
+
 const policyOnboarding = read('app/policy-intakes/onboarding.tsx');
 // Standalone Add Policy labels match the website, but existing Intake actions stay unchanged.
 requireText(policyOnboarding, "accessibilityLabel={isNew?'Create Case':'Create Policy'}", 'Life/Health Add Policy button must announce Create Case.');
