@@ -76,12 +76,13 @@ export async function attachNewNativeMotorPolicyCopy(policyId:string,file:Native
   const send=async(body:Record<string,unknown>)=>{
     const response=await fetch(endpoint,{method:'POST',cache:'no-store',
       headers:{Authorization:'Bearer '+session.access_token,'Content-Type':'application/json'},body:JSON.stringify(body)});
-    const data=await response.json().catch(()=>null) as {ok?:boolean;error?:string;path?:string;token?:string;document_id?:string}|null;
+    const data=await response.json().catch(()=>null) as {ok?:boolean;error?:string;path?:string;token?:string;document_id?:string;attached?:boolean}|null;
     if(!response.ok||!data?.ok)throw new Error(data?.error||'Policy-copy service is unavailable.');
     return data;
   };
   const metadata={policy_id:policyId,name:file.name,size:file.size,type:file.mimeType};
   const prepared=await send({action:'prepare',...metadata});
+  if(prepared.attached&&prepared.document_id)return prepared;
   if(!prepared.path||!prepared.token)throw new Error('Secure upload authorization is incomplete.');
   let bytes:ArrayBuffer;
   try{
