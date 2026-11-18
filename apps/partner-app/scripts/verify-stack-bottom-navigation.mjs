@@ -35,7 +35,9 @@ assert.match(newIntake, /onPress=\{\(\) => requestClose\(\)\}/, 'Cancel remains 
 assert.match(businessReport, /bottomNavigationNavy[\s\S]*bottomNavigation=\{<PartnerStackBottomNavigation activeTab="business" \/>\}/, 'Business Report shows navy Business nav');
 assert.match(insurers, /bottomNavigationNavy[\s\S]*bottomNavigation=\{<PartnerStackBottomNavigation activeTab="business" \/>\}/, 'Insurer Performance shows navy Business nav');
 assert.match(network, /navyStatusBar bottomNavigationNavy bottomNavigation=\{<PartnerStackBottomNavigation activeTab="business" \/>\}/, 'Commercial Relationships uses navy status bar and the shared Business-active Home navigator');
-assert.match(network, /navyCanvas: \{[^\n]*backgroundColor: '#071E49'/, 'Commercial Relationships page canvas must be navy');
+assert.match(network, /pageCanvas: \{[^\n]*backgroundColor: '#F5F7FB'/, 'Commercial Relationships content canvas must be light while the header and footer stay navy');
+assert.match(network, /scope: \{ color: '#58677E'/, 'Organization scope text remains readable on the light page');
+assert.match(network, /updated: \{ color: '#8995A7'/, 'Updated time remains readable on the light page');
 assert.match(network, /header: \{[\s\S]*?backgroundColor: '#071E49'/, 'Commercial Relationships header must be navy');
 assert.match(customers, /<StatusBar style="light" backgroundColor="#071E49" \/>/, 'Customers uses a navy system status area with white icons');
 assert.match(customers, /safeArea: \{ flex: 1, backgroundColor: '#071E49' \}/, 'Customers outer canvas must remain navy');
