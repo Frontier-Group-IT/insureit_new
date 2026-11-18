@@ -35,6 +35,19 @@ const policyIntakeNew = read('app/policy-intake-new.tsx');
 const policyIntakeDetail = read('app/policy-intakes/[id].tsx');
 const customerDetail = read('app/customer/[id].tsx');
 const policyDetail = read('app/policy/[id].tsx');
+const claimTracker = read('app/claim/[id].tsx');
+const claimStageReadOnly = read('app/claim/stage.tsx');
+const spotIntimation = read('components/partner-spot-intimation.tsx');
+const claimStageEditor = read('components/partner-claim-stage-editor.tsx');
+for (const [source, fragment, label] of [
+  [claimTracker, "hero:{backgroundColor:'#07347E'", 'Claim Tracker'],
+  [claimStageReadOnly, "status:{backgroundColor:'#07347E'", 'read-only claim stage'],
+  [spotIntimation, "hero:{position:'relative',overflow:'hidden',backgroundColor:'#07347E'", 'Spot Intimation'],
+  [claimStageEditor, "hero:{backgroundColor:'#07347E'", 'editable claim stages'],
+]) {
+  requireText(source, fragment, `${label} status card must match the Claim Tracker navy #07347E.`);
+}
+
 // Policy Overview, Premium and Commercial remain a single white card.
 // Customer and vehicle identity now share one compact row and separate heading.
 requireText(policyDetail, '<CardHeader title="Customer & Vehicle Details" />', 'Combined customer and vehicle heading is present');
