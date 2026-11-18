@@ -12,6 +12,10 @@ const cases = read('app/life-health-cases/index.tsx');
 const detail = read('app/life-health-cases/[id].tsx');
 const customerDetail = read('app/customer/[id].tsx');
 const contactActions = read('components/ui/partner-contact-actions.tsx');
+const intakeDetail = read('app/policy-intakes/[id].tsx');
+const newIntake = read('app/policy-intake-new.tsx');
+const businessReport = read('app/business-report.tsx');
+const insurers = read('app/insurers.tsx');
 
 for (const title of ['Home', 'Business', 'Policies', 'Claims', 'More']) {
   assert.match(tabs, new RegExp(`title: '${title}'`), `Existing Home navigator has ${title}`);
@@ -20,6 +24,13 @@ for (const title of ['Home', 'Business', 'Policies', 'Claims', 'More']) {
 for (const route of ['/(tabs)', '/(tabs)/business', '/(tabs)/policies', '/(tabs)/claims', '/(tabs)/more']) {
   assert.ok(bar.includes(`href: '${route}'`), `Use shared tab destination ${route}`);
 }
+assert.match(intakeDetail, /bottomNavigationNavy[\s\S]*bottomNavigation=\{<PartnerStackBottomNavigation activeTab="policies" \/>\}/, 'Policy Intake Review uses shared navy nav, Policies active');
+assert.doesNotMatch(intakeDetail, /function PolicyIntakeDetailNavigation/, 'Old white intake-specific nav is removed');
+assert.equal((newIntake.match(/<PartnerStackBottomNavigation activeTab="policies" includeBottomInset onNavigate=\{requestClose\} \/>/g)||[]).length,2, 'Both lead-source and intake form steps include the shared nav');
+assert.match(newIntake, /if \(submitting\) return;[\s\S]*setPendingTab\(destination\)/, 'Intake navigation blocks during submission and preserves unsaved-file warning');
+assert.match(newIntake, /onPress=\{\(\) => requestClose\(\)\}/, 'Cancel remains back navigation, not an event object');
+assert.match(businessReport, /bottomNavigationNavy[\s\S]*bottomNavigation=\{<PartnerStackBottomNavigation activeTab="business" \/>\}/, 'Business Report shows navy Business nav');
+assert.match(insurers, /bottomNavigationNavy[\s\S]*bottomNavigation=\{<PartnerStackBottomNavigation activeTab="business" \/>\}/, 'Insurer Performance shows navy Business nav');
 assert.match(bar, /canPartnerAccess\(context, 'view_claims'\)/, 'Claims tab permission retained');
 assert.match(bar, /canPartnerAccess\(context, 'view_policies'\)/, 'Policies tab permission retained');
 assert.match(bar, /canPartnerAccess\(context, 'view_dashboard'\)/, 'Home and Business permissions retained');
