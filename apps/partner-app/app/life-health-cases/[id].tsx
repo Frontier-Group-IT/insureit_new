@@ -165,7 +165,7 @@ export default function LifeHealthCaseDetailScreen(){
   }catch(cause){setRemarkError(cause instanceof Error?cause.message:'Unable to save remark.');}
   finally{setRemarkSaving(false);}
  };
- const canEditCase=Boolean(context?.identity.actor_kind==='employee'&&record?.status_group!=='rejected'&&(
+ const canEditCase=Boolean(record&&context?.identity.actor_kind==='employee'&&record.status_group!=='rejected'&&(
   context.identity.role==='operations_head_life'||canPartnerAccess(context,'create_policies','edit')||canPartnerAccess(context,'view_policies','edit')));
  const cancelCaseEdit=()=>{
   if(saving)return;
