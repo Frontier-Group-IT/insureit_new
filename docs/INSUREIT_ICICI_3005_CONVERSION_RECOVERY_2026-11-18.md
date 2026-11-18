@@ -1,6 +1,6 @@
 # INSUREIT — ICICI 3005 + 3005/O conversion recovery (2026-11-18)
 
-**Status:** Draft PR #4806 only. No production data updates, queue reprocess, customer/policy registration, Supabase migration application, n8n publish or website deployment from this change. Scope is ICICI Lombard Product 3005 Bundled and 3005/O Stand-Alone Own Damage. **Do not reprocess/train Go Digit, United India, New India Assurance** as part of this release.
+**Status:** Supabase v2 migration applied to production and verified (recorded version `20261118103431`). Draft PR #4806 awaiting merge; no queue reprocess, customer/policy registration, n8n publish or website deployment. Scope is ICICI Lombard Product 3005 Bundled and 3005/O Stand-Alone Own Damage. **Do not reprocess/train Go Digit, United India, New India Assurance** as part of this release.
 
 ## Starting point — live production audit
 
@@ -26,7 +26,7 @@ Original database audit was read-only; no policy booking was confirmed for the s
 ## Implementation/release dependencies — strict order
 
 1. CI for PR #4806: Web Portal regression, typecheck, lint, build; inspect any failures. Maintain reviewer/OTP/date, duplicate, ownership and coverage guards.
-2. Back up and review the migration `supabase/migrations/20261118102500_icici_3005_ai_verified_ocr_sync_v2.sql`. Apply it using the authorized production database migration process **before** web deployment. Do not bypass migration-history parity.
+2. Completed: production migration applied and verified (service-role grant only, no records modified). Keep the migration `supabase/migrations/20261118103431_icici_3005_ai_verified_ocr_sync_v2.sql`. in repository with the same remote version for migration-history parity; **web deployment remains separate**. Do not bypass migration-history parity.
 3. On local Windows n8n `http://localhost:5678`, verify that **published** workflow `0uGscm0WUegvxa6V` accepts real PDF files in a separate review-only test: representative 3005 Bundled, 3005/O, 3005/O B00. Require true parser identity, correct issuance dates, 13/13 checks, correct amounts, no warnings and `auto_finalize_allowed=false`. If B00 fails the local parser, patch and retest that isolated workflow; do not switch production on mere website contract approval.
 4. Obtain explicit release approval and manually deploy Vercel, preserving the existing n8n private webhook tunnel and GoDaddy domain settings. No auto-deploy or DNS changes.
 5. Reprocess **only the selected ICICI IDs** using authorized per-Intake action. Do not use `Reprocess All Previous`, which may reset unsupported Go Digit/United India queues; do not change any existing ANJU/JATIN assignment. Existing drafts must be reconciled, never overwritten.
@@ -37,4 +37,4 @@ Original database audit was read-only; no policy booking was confirmed for the s
 
 - This PR does not install/modify/publish the **user's Windows-hosted local n8n workflow**; it is not remotely accessible via the connected cloud n8n MCP. The B00 parser variant and the three unsupported ICICI PDFs require isolated local tests.
 - An older manually corrected/saved onboarding draft is preserved and may need authorized manual reconciliation. A missing PDF issuance date is not silently replaced with the current date.
-- No modifications to Go Digit, United India, New India Assurance policy parser rules, PDFs, queue states or registered policies.
+- No modifications to Go Digit, United India, New India Assurance policy parser rules, PDFs, queue states or registered policies. Production v2 RPC installation does not itself reprocess any policy.
