@@ -145,6 +145,7 @@ export default async function SemiAutoPolicyOnboardingPage({ searchParams }: { s
       ai_exceptions: policyIntakeBucket(row, duplicateIds.has(row.id)) === "duplicate"
         ? [...new Set(["duplicate_policy",...(queue.get(row.id)?.exception_codes??[])])]
         : queue.get(row.id)?.exception_codes??[],
+      ai_field_keys: queue.get(row.id)?.field_keys ?? [],
       ai_processed_at: queue.get(row.id)?.processed_at ?? null,
     }));
   return (

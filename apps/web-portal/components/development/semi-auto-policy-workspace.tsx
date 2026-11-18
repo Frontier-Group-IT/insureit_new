@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { reviewVerifiedAiLegacyDraft, applyVerifiedAiLegacyDraft, type VerifiedDraftReview } from "@/app/development/ai-policy-onboarding/verified-draft-actions";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -25,11 +26,12 @@ export type SemiAutoIntakeRow = {
   intake_bucket?: Exclude<IntakeStatusBucket, "all">;
   ai_state?: "pending" | "processing" | "exception" | "verified" | "unsupported" | "failed" | null;
   ai_exceptions?: string[];
+  ai_field_keys?: string[];
   ai_processed_at?: string | null;
 };
 
 const aiIssueTitles: Record<string,string> = {
-  unsupported_layout:"Parser not trained",
+  unsupported_layout:"Parser unavailable / validation failed",
   document_missing:"Current policy PDF missing",
   extraction_pending:"Waiting for n8n",
   extraction_failed:"n8n extraction failed",
@@ -56,10 +58,38 @@ const aiIssueTitles: Record<string,string> = {
 };
 const aiStateLabel: Record<string,string> = {
   pending:"Queued",processing:"Reading PDF",exception:"Needs action",
-  verified:"Extracted · booking preflight pending",unsupported:"Not trained",
+  verified:"Extracted · booking preflight pending",unsupported:"Parser review required",
   failed:"Retry scheduled",duplicate:"Duplicate · skipped",
 };
 
+const requiredPdfKeys=[
+  "insured_name","policy_number","insurer_name","vehicle_class","vehicle_make",
+  "vehicle_model","vehicle_fuel_type","vehicle_motor_power_kw",
+  "vehicle_manufacturing_year","vehicle_chassis_number","vehicle_engine_number",
+  "vehicle_rto_name","policy_product","policy_start_date","policy_end_date",
+  "third_party_end_date","idv","od_premium","tp_premium",
+];
+// Only the presence of n8n field keys is sent to the UI, never raw PDF values.
+function explainAiException(row:SemiAutoIntakeRow,code:string):string{
+  const present=new Set(row.ai_field_keys??[]);
+  if(code==="missing_field"){
+    const missing=requiredPdfKeys.filter(key=>!present.has(key));
+    return missing.length
+      ? "Missing from last n8n extraction: "+missing.join(", ")+". Saved draft values do not replace PDF evidence."
+      : "One or more mandatory values were blank despite their field keys being present.";
+  }
+  if(code==="manufacturer_unmatched")
+    return !present.has("vehicle_class")||!present.has("vehicle_fuel_type")
+      ? "The manufacturer cannot be resolved reliably until the PDF class and fuel evidence is extracted. Fix those fields first."
+      : "The extracted make did not match an active manufacturer master option. Check the printed make/model.";
+  if(code==="issuance_date_unverified")
+    return !present.has("policy_issuance_date")
+      ? "The parser did not return the separately printed Policy Issued On date. An old draft date or cover start is not PDF evidence."
+      : "The returned issue date failed validation; review the printed policy date and required approvals.";
+  if(code==="unsupported_layout")
+    return "n8n did not pass all strict policy-layout checks. This may be a known ICICI PDF variant, not necessarily an unsupported insurer. Review execution checks.";
+  return "Review this exception in the Intake or editable Policy Onboarding workflow before attempting conversion.";
+}
 const humanStatus: Record<string, string> = {
   ready_for_review: "Ready for Review", in_review: "In Review",
   needs_attention: "Needs Attention", processing: "Processing",
@@ -106,6 +136,10 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
   const [n8nNotice, setN8nNotice] = useState<string | null>(null);
   const [done, setDone] = useState<{ policyCode: string; policyId: string } | null>(null);
   const [exceptionRow,setExceptionRow]=useState<SemiAutoIntakeRow|null>(null);
+  const [legacyReview,setLegacyReview]=useState<VerifiedDraftReview|null>(null);
+  const [legacySelected,setLegacySelected]=useState<string[]>([]);
+  const [legacyBusy,setLegacyBusy]=useState(false);
+  const [legacyError,setLegacyError]=useState<string|null>(null);
   const [autoConvertRow,setAutoConvertRow]=useState<SemiAutoIntakeRow|null>(null);
   const [autoConvertMessage,setAutoConvertMessage]=useState<string|null>(null);
   const [bulkConfirmOpen,setBulkConfirmOpen]=useState(false);
@@ -141,7 +175,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
   const available = !primaryN8n && selected?.policy_type === "motor"
     && result?.ready === true && result.issues.length === 0 && !selected?.is_duplicate;
   const n8nEnabled = selected?.n8n_enabled === true;
-  const isWaiting = busy !== null || bulkRunning || reprocessRunning;
+  const isWaiting = busy !== null || bulkRunning || reprocessRunning || legacyBusy;
   // A bounded set of currently verified CANDIDATES. Server-side canonical
   // authorization and PDF reconciliation can still reject any candidate.
   const bulkRemaining=bulkCandidates.filter(row=>!bulkAttemptedIds.includes(row.id));
@@ -151,6 +185,31 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
   // sequentially through the same server-side authorization and queue CAS.
   const reprocessBatch=reprocessRemaining;
 
+  async function compareLegacyDraft(row:SemiAutoIntakeRow){
+    if(isWaiting)return;
+    setLegacyBusy(true);setLegacyError(null);setLegacyReview(null);
+    try{
+      const inspected=await reviewVerifiedAiLegacyDraft(row.id);
+      setExceptionRow(null);
+      setLegacyReview(inspected);
+      setLegacySelected(inspected.ok?inspected.differences.filter(d=>d.wasBlank).map(d=>d.key):[]);
+    }catch{setLegacyError("Review interrupted. Check this Intake and its current PDF before retrying.");}
+    finally{setLegacyBusy(false);}
+  }
+  async function applyLegacyReview(){
+    if(!legacyReview?.ok||legacyBusy||!legacySelected.length)return;
+    setLegacyBusy(true);setLegacyError(null);
+    try{
+      const id=rows.find(row=>row.intake_number===legacyReview.intakeNumber)?.id??"";
+      const response=await applyVerifiedAiLegacyDraft(
+        id,legacyReview.revision,legacyReview.fingerprint,legacySelected);
+      if(!response.ok){setLegacyError(response.error);return;}
+      setAutoConvertMessage(legacyReview.intakeNumber+": "+response.updatedFields.length+
+        " verified PDF fields saved. No policy registered. Recheck before conversion.");
+      setLegacyReview(null);setLegacySelected([]);router.refresh();
+    }catch{setLegacyError("Save status unknown. Refresh and verify draft revision before retrying.");}
+    finally{setLegacyBusy(false);}
+  }
   async function selectRow(id: string) {
     const next = ++requestId.current;
     if (selectedId === id) {
@@ -626,7 +685,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
                     {row.ai_exceptions?.length ? (
                       <button type="button" onClick={()=>{setExceptionRow(row);setCustomerReview(null);}}
                         className="mt-1 rounded-md border border-[#e4d4b2] bg-[#fff8e8] px-2 py-1 text-left text-[10px] font-semibold text-[#765013] hover:bg-[#fff0c8]">
-                        {row.ai_state==="unsupported" ? "Parser not trained · Reprocess" : aiIssueTitles[row.ai_exceptions[0]]??"Review exception"}
+                        {row.ai_state==="unsupported" ? "Parser review required · Reprocess" : aiIssueTitles[row.ai_exceptions[0]]??"Review exception"}
                         {row.ai_exceptions.length>1 ? ` +${row.ai_exceptions.length-1}`:""}
                       </button>
                     ):null}
@@ -938,12 +997,26 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
                         ? "Inspect the existing policy or earlier Intake. A duplicate must never be converted again."
                         : code==="preflight_pending"
                           ? "The PDF has been read, but customer, date, ownership, premiums and policy history have not passed the canonical booking preflight."
-                          : "Review this exception in the Intake or editable Policy Onboarding workflow before attempting conversion."}
+                          : explainAiException(exceptionRow,code)}
                   </p>
                 </div>
               ))}
             </div>
-            {primaryN8n && queueActive && reprocessCandidates.some(candidate=>candidate.id===exceptionRow.id)
+            {primaryN8n && exceptionRow.policy_type==="motor" && !exceptionRow.is_duplicate
+               && (exceptionRow.ai_exceptions??[]).some(x=>["booking_review_required","draft_conflict"].includes(x)) ? (
+             <div className="mt-3 rounded-lg border border-[#cbd9ea] bg-[#f5f9ff] p-3">
+               <p className="text-[10px] text-[#49627f]">
+                 Compare the saved draft against current verified ICICI PDF values.
+                 Select each field to correct; this does not register a policy.
+               </p>
+               <button type="button" disabled={isWaiting} onClick={()=>{void compareLegacyDraft(exceptionRow);}}
+                 className="mt-2 rounded-md bg-[#174b83] px-3 py-2 text-[10px] font-bold text-white disabled:opacity-50">
+                 {legacyBusy?"Reading current PDF...":"Compare saved draft with PDF"}
+               </button>
+             </div>
+           ) : null}
+           {legacyError ? <p role="alert" className="mt-2 text-[10px] text-amber-800">{legacyError}</p> : null}
+           {primaryN8n && queueActive && reprocessCandidates.some(candidate=>candidate.id===exceptionRow.id)
                && !reprocessAttemptedIds.includes(exceptionRow.id) ? (
                <div className="mt-3 rounded-lg border border-[#cbd9ea] bg-[#f5f9ff] p-3">
                  <p className="text-[10px] text-[#49627f]">Queue the current private PDF for another n8n extraction with the newly trained parser. This does not register a policy or overwrite existing OCR.</p>
@@ -1087,7 +1160,52 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
           </div>
         </div>
       ) : null}
-      {handoffDialog ? (
+      {legacyReview ? (
+         <div className="fixed inset-0 z-[190] flex items-center justify-center bg-[#101d37]/70 px-3 py-5" role="presentation">
+           <div role="alertdialog" aria-modal="true" aria-labelledby="legacy-draft-title"
+             className="w-full max-w-[700px] rounded-2xl border border-[#d6e2f1] bg-white p-5 shadow-xl">
+             <h3 id="legacy-draft-title" className="text-[15px] font-bold text-[#193657]">Review saved draft vs verified PDF</h3>
+             {legacyReview.ok ? <>
+               <p className="mt-2 text-[11px] text-[#52647b]">
+                 {legacyReview.intakeNumber} · saved revision {legacyReview.revision}.
+                 Only checked fields change. Identity, reviewer, payments and booked policies are untouched.
+               </p>
+               <div className="mt-4 max-h-[52vh] space-y-2 overflow-y-auto">
+                 {legacyReview.differences.length===0 ? <p className="text-[11px]">No remaining differences in the approved field set.</p> : null}
+                 {legacyReview.differences.map(diff=>(
+                   <label key={diff.key} className="flex cursor-pointer gap-3 rounded-lg border border-[#dce5f0] p-3 text-[11px]">
+                     <input type="checkbox" disabled={legacyBusy} checked={legacySelected.includes(diff.key)}
+                       onChange={event=>setLegacySelected(keys=>event.target.checked
+                         ?[...keys,diff.key]:keys.filter(x=>x!==diff.key))}
+                       className="mt-0.5 h-4 w-4 accent-[#174b83]"/>
+                     <span className="min-w-0 flex-1">
+                       <strong>{diff.label}</strong>
+                       <span className="mt-1 block break-all text-[#62748e]">Saved: {diff.savedValue||"(blank)"}</span>
+                       <span className="mt-1 block break-all font-semibold text-[#174b83]">Verified PDF: {diff.verifiedPdfValue}</span>
+                       {!diff.wasBlank ? <span className="mt-1 block text-amber-800">Existing value — explicitly review before replacing it.</span> : null}
+                     </span>
+                   </label>
+                 ))}
+               </div>
+               <p className="mt-3 text-[10px] text-[#667991]">
+                 Earlier issuance dates still require normal date approval/OTP during booking.
+                 A changed draft revision or source PDF invalidates the review.
+               </p>
+             </> : <p role="alert" className="mt-4 text-[11px] text-amber-800">{legacyReview.error}</p>}
+             {legacyError ? <p role="alert" className="mt-2 text-[11px] text-amber-800">{legacyError}</p> : null}
+             <div className="mt-5 flex justify-end gap-2">
+               <button type="button" disabled={legacyBusy} onClick={()=>{setLegacyReview(null);setLegacySelected([]);setLegacyError(null);}}
+                 className="min-h-9 rounded-lg border border-[#cbd6e5] px-4 text-[11px] font-semibold text-[#38516e] disabled:opacity-50">Close</button>
+               {legacyReview.ok ? <button type="button" disabled={legacyBusy||legacySelected.length===0}
+                 onClick={()=>{void applyLegacyReview();}}
+                 className="min-h-9 rounded-lg bg-[#174b83] px-4 text-[11px] font-bold text-white disabled:opacity-50">
+                 {legacyBusy?"Saving reviewed fields...":"Apply selected verified fields"}
+               </button> : null}
+             </div>
+           </div>
+         </div>
+       ) : null}
+       {handoffDialog ? (
         <div className="fixed inset-0 z-[160] flex items-center justify-center bg-[#101d37]/65 px-4 py-6" role="presentation">
           <div role="alertdialog" aria-modal="true" aria-labelledby="n8n-handoff-dialog-title" aria-describedby="n8n-handoff-dialog-description"
             className="w-full max-w-[480px] rounded-2xl border border-[#d6e2f1] bg-white p-5 shadow-[0_24px_80px_rgba(12,28,52,.3)]">
