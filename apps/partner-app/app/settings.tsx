@@ -92,13 +92,13 @@ export default function SettingsScreen() {
   return (
     <PartnerScreen title="Settings & app info" hideTopBar navyStatusBar bottomNavigationNavy bottomNavigation={<PartnerCaseBottomNavigation activeTab="More" />}>
       <PartnerCasePageHeader title="Settings & app info" icon="settings-outline" onBack={() => router.back()} />
-      <PartnerSectionHeader title="Account" />
+      <PartnerSectionHeader title="Account" settingsHeading />
       <View style={styles.menu}>
         <SettingsLink icon="person-outline" title="Profile & registration" onPress={() => router.push('/profile')} />
         <SettingsLink icon="headset-outline" title="Support" onPress={() => router.push('/support')} last />
       </View>
 
-      <PartnerSectionHeader title="Device security" />
+      <PartnerSectionHeader title="Device security" settingsHeading />
       <View style={styles.menu}>
         <SettingsToggleRow
           icon="finger-print-outline"
@@ -123,7 +123,7 @@ export default function SettingsScreen() {
       </View>
       {securityMessage ? <Text accessibilityLiveRegion="polite" style={styles.updateMessage}>{securityMessage}</Text> : null}
 
-      <PartnerSectionHeader title="Privacy" />
+      <PartnerSectionHeader title="Privacy" settingsHeading />
       <View style={styles.menu}>
         <SettingsLink
           icon="shield-checkmark-outline"
@@ -133,7 +133,7 @@ export default function SettingsScreen() {
         <SettingsLink icon="person-remove-outline" title="Request account deletion" onPress={() => router.push('/account-deletion')} last />
       </View>
 
-      <PartnerSectionHeader title="App information" />
+      <PartnerSectionHeader title="App information" settingsHeading />
       <View style={styles.details}>
         <InfoRow label="App" value="INSUREIT Partner" />
         <InfoRow label="Version" value="0.2.0" />
