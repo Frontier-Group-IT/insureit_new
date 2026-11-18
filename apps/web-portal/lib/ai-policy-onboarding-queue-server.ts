@@ -301,17 +301,13 @@ async function processClaim(item: Claimed, parserRevision: string) {
   }
   const model=normalizedName(values.get("vehicle_model")??"");
   const rawMake=normalizedName(values.get("vehicle_make")??"");
-  // CHETAK is the Bajaj EV product marque. Its documented model line includes
-  // BLUE 2903 and 2413 PREMIUM as well as C-series numbers. Match the OEM
-  // only when the verified PDF supplies Two Wheeler + Electric + CC/KW power;
-  // never guess an unverified fuel type or motor capacity from model text.
-  const motorPower=String(values.get("vehicle_motor_power_kw")??"").trim();
+  // CHETAK is Bajaj's EV product marque, including BLUE 2903 and
+  // 2413 PREMIUM. Independently verified class + fuel allow OEM matching;
+  // missing CC/KW still blocks mandatory-field eligibility, never guessed.
   const recognizedChetak=rawMake==="CHETAK"
     && model.length>=2 && model.length<=100
     && normalizedName(values.get("vehicle_class")??"")==="TWO WHEELER"
-    && normalizedName(values.get("vehicle_fuel_type")??"")==="ELECTRIC"
-    && /^\d{1,2}(?:\.\d{1,2})?$/.test(motorPower)
-    && Number(motorPower)>0 && Number(motorPower)<=50;
+    && normalizedName(values.get("vehicle_fuel_type")??"")==="ELECTRIC";
   const make=recognizedChetak?"BAJAJ":rawMake;
   const enabledMakes=new Set((brands??[]).map(x=>normalizedName(x.brand_name)));
   const matchedManufacturer=enabledMakes.has(make)
