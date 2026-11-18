@@ -125,14 +125,16 @@ export async function PUT(request: Request) {
   try {
     const actor = await authorize(request);
     if (!actor) return response({ ok:false,error:"Customer document upload is not authorised." },403);
+    const claimedSize = Number(request.headers.get("content-length") || 0);
+    if (claimedSize > 4.4*1024*1024) return response({ok:false,error:"File upload exceeds the secure request limit."},413);
     const input = await request.formData();
     const customerId = input.get("customerId"), docType = input.get("type"), file = input.get("file");
     if (typeof customerId !== "string" || !uuid.test(customerId) ||
         typeof docType !== "string" || !documentTypes.has(docType) || !(file instanceof File)) {
       return response({ ok:false,error:"Invalid customer document request." },400);
     }
-    if (file.size < 1 || file.size > 5*1024*1024 || !mimeExtensions[file.type]) {
-      return response({ ok:false,error:"Only PDF, JPG or PNG files under 5 MB are allowed." },400);
+    if (file.size < 1 || file.size > 4*1024*1024 || !mimeExtensions[file.type]) {
+      return response({ ok:false,error:"Only PDF, JPG or PNG files under 4 MB are allowed." },400);
     }
     const { data: customer } = await actor.admin.from("customers")
       .select("id,created_by,lead_source_intermediary_id,is_gst_registered")
