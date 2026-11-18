@@ -490,6 +490,7 @@ requireText(settings, "controlCopy: { flex: 1, minWidth: 0, justifyContent: 'cen
 requireText(settings, 'controlSubtitle: { marginTop: 1', 'Device security helper text must sit directly below its row title.');
 requireText(settings, 'controlRow: { minHeight: 58', 'Device security rows must keep the compact joined-list height.');
 
+requireText(profile, "marginHorizontal: -partnerTheme.spacing.lg,\n    marginTop: 0,\n    paddingHorizontal: 20,", 'Profile blue hero must attach directly below the navy title header with no blank gap.');
 requireText(profile, 'name="log-out-outline"', 'Profile hero must expose the logout icon.');
 requireText(profile, 'onPress={() => setLogoutOpen(true)}', 'Profile hero logout icon must open confirmation instead of signing out immediately.');
 requireText(profile, '<PartnerConfirmDialog', 'Profile logout must use the shared confirmation dialog.');
