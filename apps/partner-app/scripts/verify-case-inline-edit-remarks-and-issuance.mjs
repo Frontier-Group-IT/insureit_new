@@ -144,4 +144,12 @@ assert.ok(partnerScreen.includes('[homeMotionScrollY, resetScrollOnFocus]'), 'Fo
 assert.ok(app.includes('title="Case Details" resetScrollOnFocus={false}'), 'Life/Health Case Details prevents the shared focus scroll jump.');
 assert.ok(app.includes('const refreshed=await load(true);'), 'Save Remark and Reject continue to use silent refresh.');
 assert.equal((app.match(/const refreshed=await load\(true\);/g)||[]).length,2, 'Save Remark and Reject both preserve the visible case view.');
+// iOS keyboard avoidance must not re-center the visible modal while an async mutation runs.
+assert.ok(app.includes('onPress={()=>void submitRemark()}'), 'Save Remark does not dismiss the keyboard before mutation completes.');
+assert.ok(app.includes('onPress={()=>void submitRejection()}'), 'Confirm Reject does not dismiss the keyboard before mutation completes.');
+assert.ok(!app.includes('Keyboard.dismiss();void submitRemark()'), 'Save Remark cannot trigger keyboard-driven sinking.');
+assert.ok(!app.includes('Keyboard.dismiss();void submitRejection()'), 'Confirm Reject cannot trigger keyboard-driven sinking.');
+assert.ok(app.includes('setRemarkOpen(false);setRemarkDraft(\'\');'), 'Remark modal still closes only after successful save.');
+assert.ok(app.includes('setRejectOpen(false);setRejectReason(\'\');'), 'Reject modal still closes only after successful rejection.');
+assert.ok(app.includes("behavior={Platform.OS==='ios'?'padding':'height'}"), 'KeyboardAvoidingView remains available while the user is entering text.');
 console.log('Case inline edit, append-only remarks, secure issuance and native parity verified.');
