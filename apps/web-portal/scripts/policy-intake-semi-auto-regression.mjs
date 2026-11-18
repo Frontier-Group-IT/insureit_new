@@ -7,7 +7,7 @@ import { mapVerifiedN8nMotorPremium } from "../lib/policy-n8n-onboarding-premium
 import { filterVerifiedN8nOnboardingFields } from "../lib/policy-n8n-onboarding-fields.ts";
 import { enrichVerifiedN8nOnboardingFields, splitN8nRtoStateAndCity } from "../lib/policy-n8n-onboarding-enrichment.ts";
 import { selectVerifiedN8nInsuredDraftIdentity, sameInsuredIdentity } from "../lib/policy-n8n-onboarding-insured.ts";
-import { buildPolicyOcrOnboardingUpdate } from "../lib/policy-ocr-onboarding-apply.ts";
+import { buildPolicyOcrOnboardingUpdate, normalizeVerifiedMotorPowerKw } from "../lib/policy-ocr-onboarding-apply.ts";
 import { assessAiPolicyIntake } from "../lib/ai-policy-onboarding-eligibility.ts";
 
 const text = path => readFileSync(new URL("../" + path, import.meta.url), "utf8");
@@ -459,6 +459,35 @@ assert.equal(mapped3503.next.make,"Bajaj");
 assert.equal(mapped3503.next.model,"CHETAK 3503","Preserve the exact printed model");
 assert.equal(mapped3503.next.fuelType,"Electric");
 assert.equal(mapped3503.next.capacity,"4.2","Never read 2 seats as 2 kW");
+assert.equal(normalizeVerifiedMotorPowerKw("4.2 kW"),"4.2");
+assert.equal(normalizeVerifiedMotorPowerKw("4.2 (KW)"),"4.2");
+assert.equal(normalizeVerifiedMotorPowerKw("2 seats"),"");
+assert.equal(normalizeVerifiedMotorPowerKw("3503"),"");
+assert.equal(normalizeVerifiedMotorPowerKw("0"),"");
+assert.equal(normalizeVerifiedMotorPowerKw("55"),"");
+// Regression: real OD policies often print BAJAJ as make and CHETAK 3503
+// as model. The old branch only copied motor kW for raw make CHETAK.
+const odBajajFields=[
+  {key:"policy_product",label:"Product",value:"Stand-Alone Own Damage"},
+  {key:"vehicle_class",label:"Class",value:"Two Wheeler"},
+  {key:"vehicle_make",label:"Make",value:"BAJAJ"},
+  {key:"vehicle_model",label:"Model",value:"CHETAK 3503"},
+  {key:"vehicle_fuel_type",label:"Fuel",value:"Electric"},
+  {key:"vehicle_motor_power_kw",label:"CC/KW",value:"4.2 kW"},
+  {key:"vehicle_capacity",label:"Seats",value:"2"},
+];
+const mappedOdBajaj=buildPolicyOcrOnboardingUpdate({
+  mode:"create",registrationMode:"registered",current:baseState,
+  fields:odBajajFields,manufacturers:["Bajaj"],insurers:[],rcVerified:false,
+});
+assert.equal(mappedOdBajaj.next.make,"Bajaj");
+assert.equal(mappedOdBajaj.next.capacity,"4.2","OD Electric power must be copied independently of OEM alias");
+assert.equal(mappedOdBajaj.next.policyProduct,"SAOD");
+assert.equal(buildPolicyOcrOnboardingUpdate({
+  mode:"create",registrationMode:"registered",current:baseState,
+  fields:odBajajFields.filter(f=>f.key!=="vehicle_motor_power_kw"),
+  manufacturers:["Bajaj"],insurers:[],rcVerified:false,
+}).next.capacity,"","Without CC/KW, never substitute a seating count.");
 assert.equal(mapped3503.next.policyProduct,"Bundled");
 assert.equal(mapped3503.next.rtoState,"Madhya Pradesh");
 assert.equal(mapped3503.next.rtoName,"Jabalpur");
@@ -820,6 +849,14 @@ assert(convertCode.includes("await requireDevelopmentPolicyOperator(id)")
   && convertCode.includes('createNewCustomer:true')
   && convertCode.includes('await onboardPolicy(payload)'),
   "One-click conversion must independently reverify current PDF, name, premiums, policy number, issued date and OTP, then use the canonical policy/customer transaction");
+assert(convertCode.includes('queued.extraction_fingerprint,true,true')
+  && convertCode.includes('normalizeVerifiedMotorPowerKw(pdfField("vehicle_motor_power_kw"))')
+  && convertCode.includes('forwarded.draft.capacity!==verifiedKw')
+  && convertCode.includes('await requireDevelopmentPolicyOperator(id)'),
+  "Only the confirmed authorized auto-converter may atomically take reviewer ownership and fill empty verified kW fields");
+assert(handoff.includes('if(assignedToAnother&&!takeOver)')
+  && handoff.includes('assignmentQuery.eq("assigned_to_profile_id",intake.assigned_to_profile_id as string)'),
+  "Manual reviewer assignment gate and optimistic takeover guard must be preserved");
 assert(!convertCode.includes('dateApprovalId:"') && !convertCode.includes('confirmPolicyReplacement:true'),
   "Automatic customer creation must never manufacture an email OTP approval or override an active policy");
 assert(actionsText.includes('addOnPremium:d.addOnPremium||"0"')

@@ -7,7 +7,7 @@ import { loadPospMispAssociates } from "@/lib/posp-misp-associates";
 import { requireCapability } from "@/lib/master-data-server";
 import { requirePolicyIntakeFinalizer, requirePolicyIntakeReviewer } from "@/lib/policy-intake-server";
 import { loadPolicyIntakeDuplicateMatches } from "@/lib/policy-intake-duplicate";
-import { buildPolicyOcrOnboardingUpdate } from "@/lib/policy-ocr-onboarding-apply";
+import { buildPolicyOcrOnboardingUpdate, normalizeVerifiedMotorPowerKw } from "@/lib/policy-ocr-onboarding-apply";
 import { policyDateDecision } from "@/lib/policy-date-rule";
 import { mapVerifiedN8nMotorPremium } from "@/lib/policy-n8n-onboarding-premium";
 import { checkSemiAutoReadiness, type SemiAutoIssue } from "@/lib/policy-intake-semi-auto";
@@ -286,7 +286,18 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
      extracted.preview.checksPassed!==13||extracted.preview.warnings.length)
     return fail("Source PDF","The PDF/extraction changed. Recheck the current Intake before booking.");
 
-  const issuanceDate=extracted.preview.fields.find(f=>f.key==="policy_issuance_date")?.value??"";
+  const pdfField=(key:string)=>extracted.preview.fields.find(f=>f.key===key)?.value?.trim()??"";
+  // A passed arithmetic/PDF check does not establish vehicle motor power.
+  // Verify the separate CC/KW field before auto-taking over reviewer ownership.
+  const isOdElectricTwoWheeler=extracted.preview.parserId==="icici_3005_od_n8n_native_pdf"
+    && /^(TWP|TWO\s*-?\s*WHEELER)$/i.test(pdfField("vehicle_class"))
+    && pdfField("vehicle_fuel_type").toLowerCase()==="electric";
+  const verifiedKw=isOdElectricTwoWheeler
+    ? normalizeVerifiedMotorPowerKw(pdfField("vehicle_motor_power_kw")):"";
+  if(isOdElectricTwoWheeler&&!verifiedKw)
+    return fail("Vehicle capacity","The current verified PDF extraction has no usable Motor CC/KW value. Review the PDF/parser; seating capacity or model number cannot be substituted.");
+
+  const issuanceDate=pdfField("policy_issuance_date");
   const decision=policyDateDecision(issuanceDate);
   if(decision==="invalid"||decision==="future")
     return fail("Policy issuance date","The original PDF does not contain a valid separately verified Policy Issued On date. Correct it through canonical onboarding; today's date is not substituted.");
@@ -299,13 +310,20 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
   try{verifiedMoney=mapVerifiedN8nMotorPremium(extracted.preview.premium);}
   catch{return fail("Premium","The validated ICICI premium or OD/NCB deduction cannot be represented safely in canonical onboarding. Review the policy manually.");}
 
+  // Explicitly confirmed IT/Admin auto-conversion uses the existing atomic
+  // reviewer takeover; manual handoffs keep their separate confirmation.
+  // Fill blank fields from CURRENT verified PDF only, never overwrite edits.
   const forwarded=await prepareVerifiedN8nIntakeHandoff(id,queued.document_id,
-    queued.extraction_fingerprint,false,false);
+    queued.extraction_fingerprint,true,true);
   if(!forwarded.ok)return fail("Canonical Intake handoff",forwarded.error);
   if(forwarded.draft.issuanceDate!==issuanceDate)
     return fail("Saved issuance date","The saved draft's issue date differs from the verified current PDF. Review it before booking; no existing manual value was overwritten.");
   if(forwarded.draftRevision<1)return fail("Draft revision","Canonical revision is unavailable.");
-  const pdfField=(key:string)=>extracted.preview.fields.find(f=>f.key===key)?.value?.trim()??"";
+  if(isOdElectricTwoWheeler
+      && (forwarded.draft.vehicleClass!=="TWP"
+        ||forwarded.draft.fuelType!=="Electric"
+        ||forwarded.draft.capacity!==verifiedKw))
+    return fail("Vehicle capacity","The saved class, fuel or motor capacity conflicts with the verified PDF CC/KW. Review the existing onboarding draft; automatic conversion will not overwrite it.");
   const normalizedIdentity=(value:string)=>value.normalize("NFKC").trim().replace(/\s+/g," ").toUpperCase();
   if(!pdfField("insured_name")||
      normalizedIdentity(pdfField("insured_name"))!==normalizedIdentity(forwarded.draft.insuredName)){
