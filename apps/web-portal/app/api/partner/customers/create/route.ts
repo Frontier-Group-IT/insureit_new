@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { createSupabaseWithAccessToken } from "@/lib/auth";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
@@ -56,6 +56,9 @@ export async function POST(request: Request) {
     const body = await request.json().catch(() => null) as Record<string, unknown> | null;
     if (!body || Array.isArray(body)) return response({ ok:false,error:"Invalid customer details." },400);
     const name = trimmed(body.customer_name,160), mobile = trimmed(body.mobile,20);
+    const requestId = trimmed(body.requestId,80);
+    if (!/^[a-z0-9_-]{12,80}$/i.test(requestId)) return response({ok:false,error:"Missing customer request identifier."},400);
+    const customerCode = "CUST-" + createHash("sha256").update(actor.authId + ":" + requestId).digest("hex").slice(0,20).toUpperCase();
     const email = trimmed(body.email,254).toLowerCase();
     const pan = trimmed(body.pan_number,15).toUpperCase();
     const aadhaar = trimmed(body.aadhaar_number,20).replace(/\s/g,"");
@@ -83,8 +86,15 @@ export async function POST(request: Request) {
       if (scopedIds.length !== 1) return response({ ok:false,error:"Your account has multiple customer sources. Select a source through Operations." },403);
       sourceId = scopedIds[0];
     }
+    const { data: prior } = await actor.admin.from("customers")
+      .select("id,contact_name,phone,created_by").eq("customer_code",customerCode).maybeSingle();
+    if (prior) {
+      if (prior.created_by !== actor.authId || prior.contact_name !== name || prior.phone !== mobile)
+        return response({ok:false,error:"This request identifier belongs to another customer."},409);
+      return response({ok:true,customerId:prior.id},200);
+    }
     const { data, error } = await actor.admin.from("customers").insert({
-      customer_code: "CUST-" + randomUUID().replace(/-/g,"").slice(0,20).toUpperCase(),
+      customer_code: customerCode,
       contact_name: name, phone: mobile, email: optional(email),
       address: optional([trimmed(body.street,200),trimmed(body.locality,150)].filter(Boolean).join(", ")),
       address_street: optional(trimmed(body.street,200)), address_locality: optional(trimmed(body.locality,150)),
@@ -97,6 +107,12 @@ export async function POST(request: Request) {
       lead_source_intermediary_id: sourceId, created_by: actor.authId,
       creation_channel: "legacy", source: "Partner App", status: "active",
     }).select("id").single();
+    if (error?.code === "23505") {
+      const { data: recovered } = await actor.admin.from("customers")
+        .select("id,contact_name,phone,created_by").eq("customer_code",customerCode).maybeSingle();
+      if (recovered?.created_by === actor.authId && recovered.contact_name === name && recovered.phone === mobile)
+        return response({ok:true,customerId:recovered.id},200);
+    }
     if (error || !data?.id) return response({ ok:false,error:"Customer could not be created. No confirmation was returned." },422);
     return response({ ok:true,customerId:data.id },201);
   } catch {
@@ -127,6 +143,10 @@ export async function PUT(request: Request) {
     }
     const { data: allowed } = await actor.scoped.rpc("partner_app_customer_in_scope",{p_customer_id:customerId});
     if (allowed !== true) return response({ ok:false,error:"Customer is outside your authorised scope." },403);
+    const { data: savedDocument } = await actor.admin.from("customer_documents")
+      .select("id").eq("customer_id",customerId).eq("document_type",docType)
+      .eq("uploaded_by",actor.authId).limit(1).maybeSingle();
+    if (savedDocument) return response({ok:true,alreadySaved:true},200);
     const bytes = new Uint8Array(await file.arrayBuffer());
     const signature = file.type === "application/pdf" ? bytes[0]===37&&bytes[1]===80&&bytes[2]===68&&bytes[3]===70
       : file.type === "image/png" ? bytes[0]===137&&bytes[1]===80&&bytes[2]===78&&bytes[3]===71
