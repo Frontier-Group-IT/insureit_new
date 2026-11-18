@@ -30,6 +30,7 @@ import {
   getPartnerPolicySummary,
   listPartnerPolicies,
   type PartnerPolicyLifecycle,
+  type PartnerPolicyBusinessLine,
   type PartnerPolicyRow,
   type PartnerPolicySummary,
 } from '@/lib/policies';
@@ -44,6 +45,13 @@ import { usePartnerNetwork } from '@/providers/partner-network-provider';
 import { usePartnerSession } from '@/providers/partner-session-provider';
 
 const PAGE_SIZE = 10;
+const businessLineOptions: {label:string;value:PartnerPolicyBusinessLine}[] = [
+  {label:'All Policies',value:'all'},
+  {label:'Motor',value:'motor'},
+  {label:'Non Motor',value:'non motor'},
+  {label:'Life',value:'life'},
+  {label:'Health',value:'health'},
+];
 let savedPolicyQuery = '';
 let savedPolicyLifecycle: PartnerPolicyLifecycle = 'all';
 
@@ -51,7 +59,7 @@ export default function PoliciesScreen() {
   const router = useRouter();
   const isFocused = useIsFocused();
   const safeAreaInsets = useSafeAreaInsets();
-  const { height: windowHeight } = useWindowDimensions();
+  const { height: windowHeight, width: windowWidth } = useWindowDimensions();
   // SafeAreaView already offsets overlays when iOS reports a top inset.
   // Only fall back when older OTA runtimes report zero, avoiding double spacing.
   const verticalListRef = useRef<FlatList>(null);
@@ -65,6 +73,10 @@ export default function PoliciesScreen() {
   const { isOffline } = usePartnerNetwork();
   const [lifecycle, setLifecycle] = useState<PartnerPolicyLifecycle>(savedPolicyLifecycle);
   const [statusMenuOpen, setStatusMenuOpen] = useState(false);
+  const [businessLine, setBusinessLine] = useState<PartnerPolicyBusinessLine>('all');
+  const [lineMenuOpen, setLineMenuOpen] = useState(false);
+  const [lineMenuPosition, setLineMenuPosition] = useState({top:300,left:88});
+  const lineButtonRef = useRef<View>(null);
   const [statusMenuTop, setStatusMenuTop] = useState(180);
   const statusButtonRef = useRef<View>(null);
   const [query, setQuery] = useState(savedPolicyQuery);
@@ -88,7 +100,7 @@ export default function PoliciesScreen() {
     setVisibleLimit(PAGE_SIZE);
     setRequestedLimit(PAGE_SIZE);
     setLoadMoreFeedback(false);
-  }, [lifecycle, debouncedSearch]);
+  }, [lifecycle, debouncedSearch, businessLine]);
 
   useEffect(() => {
     savedPolicyQuery = query;
@@ -106,6 +118,7 @@ export default function PoliciesScreen() {
   const fetchPage = useCallback(async ({ limit, offset }: { limit: number; offset: number }) => {
     const nextRows = await listPartnerPolicies({
       lifecycle,
+      businessLine,
       search: debouncedSearch,
       limit,
       offset,
@@ -114,13 +127,13 @@ export default function PoliciesScreen() {
       rows: nextRows,
       total: nextRows[0]?.total_count ?? 0,
     };
-  }, [debouncedSearch, lifecycle]);
+  }, [debouncedSearch, lifecycle, businessLine]);
 
   const collection = usePartnerPageQuery<PartnerPolicyRow>({
     scopeKey: cacheScopeKey,
     // The requested limit is part of the cache identity. Without this, increasing
     // 10 -> 20 can reuse the cached 10-row "page 0" result and appear to do nothing.
-    key: `policies:list:${lifecycle}:${debouncedSearch || 'all'}:limit:${visibleLimit}`,
+    key: `policies:list:${lifecycle}:${businessLine}:${debouncedSearch || 'all'}:limit:${visibleLimit}`,
     pageSize: visibleLimit,
     fetchPage,
     staleTimeMs: 60_000,
@@ -176,9 +189,27 @@ export default function PoliciesScreen() {
     });
   };
   useEffect(() => {
-    if (!isFocused) setStatusMenuOpen(false);
+    if (!isFocused) { setStatusMenuOpen(false); setLineMenuOpen(false); }
   }, [isFocused]);
 
+  const selectBusinessLine = (line: PartnerPolicyBusinessLine) => {
+    setLineMenuOpen(false);
+    setBusinessLine(line);
+    setVisibleLimit(PAGE_SIZE);
+    setRequestedLimit(PAGE_SIZE);
+    setLoadMoreFeedback(false);
+    verticalListRef.current?.scrollToOffset({offset:0,animated:false});
+  };
+  const openBusinessLineMenu = () => {
+    setStatusMenuOpen(false);
+    lineButtonRef.current?.measureInWindow((x,y,width,height) => {
+      setLineMenuPosition({
+        top:Math.max(8,Math.min(y+height+4,windowHeight-260)),
+        left:Math.max(8,Math.min(x,windowWidth-218)),
+      });
+      setLineMenuOpen(true);
+    });
+  };
   const name = context?.identity.display_name || 'Partner';
   const quickActions = [
     ...(canPartnerAccess(context, 'view_policy_intakes') ? [{
@@ -316,7 +347,17 @@ export default function PoliciesScreen() {
       ) : null}
 
       <View style={styles.policyListHeadingSection}>
-        <Text style={styles.quickActionsHeading}>Policies</Text>
+        <Text style={styles.policyListTitle}>Policies</Text>
+        <Pressable
+          ref={lineButtonRef}
+          accessibilityRole="button"
+          accessibilityLabel={'Filter by business line, '+(businessLineOptions.find(x=>x.value===businessLine)?.label??'All Policies')}
+          accessibilityState={{expanded:lineMenuOpen}}
+          onPress={openBusinessLineMenu}
+          style={({pressed})=>[styles.businessLineButton,pressed&&styles.summaryChipPressed]}>
+          <Text style={styles.businessLineText} numberOfLines={1}>{businessLineOptions.find(x=>x.value===businessLine)?.label??'All Policies'}</Text>
+          <Ionicons name="chevron-down" size={13} color="#17365D"/>
+        </Pressable>
       </View>
 
       {isOffline || collection.stale || summary.stale ? (
@@ -435,6 +476,24 @@ export default function PoliciesScreen() {
       {isFocused ? <StatusBar style={searchSticky ? 'light' : 'dark'} /> : null}
       {searchSticky && safeAreaInsets.top > 0 ? <View pointerEvents="none" style={[styles.stickyStatusBarShield, { height: safeAreaInsets.top }]} /> : null}
       {searchSticky ? <View style={[styles.stickySearchOverlay, { top: safeAreaInsets.top }]} pointerEvents="box-none"><Text style={styles.stickyClaimsHeading}>Policies</Text>{searchControls}</View> : null}
+      <Modal visible={lineMenuOpen} transparent animationType="fade" onRequestClose={()=>setLineMenuOpen(false)}>
+        <View style={styles.statusMenuOverlay}>
+          <Pressable style={StyleSheet.absoluteFill} accessibilityRole="button" accessibilityLabel="Close business line menu" onPress={()=>setLineMenuOpen(false)}/>
+          <View style={[styles.businessLineMenu,lineMenuPosition]}>
+            <Text style={styles.businessLineMenuTitle}>BUSINESS LINE</Text>
+            {businessLineOptions.map(option=>{
+              const selected=businessLine===option.value;
+              return <Pressable key={option.value} accessibilityRole="button"
+                accessibilityLabel={option.label} accessibilityState={{selected}}
+                onPress={()=>selectBusinessLine(option.value)}
+                style={({pressed})=>[styles.businessLineOption,selected&&styles.businessLineSelected,pressed&&styles.summaryChipPressed]}>
+                <Text style={[styles.businessLineOptionText,selected&&styles.businessLineOptionSelectedText]}>{option.label}</Text>
+                <Ionicons name={selected?'radio-button-on':'radio-button-off'} size={15} color={selected?'#17365D':'#CBD6E7'}/>
+              </Pressable>;
+            })}
+          </View>
+        </View>
+      </Modal>
       <Modal visible={statusMenuOpen} transparent animationType="fade" onRequestClose={() => setStatusMenuOpen(false)}>
         <View style={styles.statusMenuOverlay}>
           <Pressable
@@ -721,7 +780,16 @@ const styles = StyleSheet.create({
   statusMenuSelectedText: { color: '#234F9F' },
   summaryChipPressed: { opacity: 0.78 },
   quickActionsSection: { marginHorizontal: 12, marginTop: 13, marginBottom: 2 },
-  policyListHeadingSection: { marginHorizontal: 12, marginTop: 9, marginBottom: 5 },
+  policyListHeadingSection: { marginHorizontal: 12, marginTop: 9, marginBottom: 10, flexDirection:'row',alignItems:'center',gap:10 },
+  policyListTitle:{marginHorizontal:3,color:'#17365D',fontSize:12,lineHeight:16,fontWeight:'800'},
+  businessLineButton:{flexDirection:'row',alignItems:'center',gap:7,minHeight:30,paddingHorizontal:10,backgroundColor:'#F0F5FC',borderWidth:1,borderColor:'#D5E0F0',borderRadius:9},
+  businessLineText:{color:'#17365D',fontSize:11,fontWeight:'700'},
+  businessLineMenu:{position:'absolute',width:210,padding:7,borderWidth:1,borderColor:'#D7E1EF',borderRadius:14,backgroundColor:'#FFFFFF',shadowColor:'#001B42',shadowOpacity:0.15,shadowRadius:12,shadowOffset:{width:0,height:4},elevation:12},
+  businessLineMenuTitle:{paddingHorizontal:10,paddingTop:9,paddingBottom:8,color:'#93A1B5',fontSize:10,letterSpacing:0.7,fontWeight:'700'},
+  businessLineOption:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',paddingHorizontal:11,minHeight:38,borderRadius:9},
+  businessLineSelected:{backgroundColor:'#EDF3FC'},
+  businessLineOptionText:{color:'#40536F',fontSize:12,fontWeight:'600'},
+  businessLineOptionSelectedText:{color:'#17365D',fontWeight:'700'},
   quickActionsHeading: { marginHorizontal: 3, marginBottom: 8, color: '#17365D', fontSize: 12, lineHeight: 16, fontWeight: '800' },
   quickActionsRow: { flexDirection: 'row', alignItems: 'stretch', gap: 7 },
   quickAction: {
