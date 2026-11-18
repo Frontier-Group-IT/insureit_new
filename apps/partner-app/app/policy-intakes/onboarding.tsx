@@ -1146,18 +1146,18 @@ export default function NativePolicyOnboarding(){
           <Text style={styles.secondaryText}>Cancel</Text>
         </Pressable>
         {(productType==='Life'||productType==='Health')?
-          <Pressable accessibilityRole="button" accessibilityLabel="Create Policy"
+          <Pressable accessibilityRole="button" accessibilityLabel={isNew?'Create Case':'Create Policy'}
             disabled={booking||saving||creatingLifeHealth||!data}
             style={({pressed})=>[styles.primary,pressed&&styles.buttonPressed,(booking||saving||creatingLifeHealth||!data)&&styles.disabled]}
             onPress={()=>void createLifeHealth()}>
             {creatingLifeHealth?<ActivityIndicator size="small" color="white"/>:<Ionicons name="checkmark-circle-outline" size={16} color="white"/>}
-            <Text style={styles.primaryText}>{creatingLifeHealth?'Creating case…':'Create Policy'}</Text>
+            <Text style={styles.primaryText}>{creatingLifeHealth?'Creating case…':isNew?'Create Case':'Create Policy'}</Text>
           </Pressable>:
-          <Pressable accessibilityRole="button" accessibilityLabel="Create Active Policy"
+          <Pressable accessibilityRole="button" accessibilityLabel={isNew?(isMotor?'Upload Policy':'Create Policy'):'Create Active Policy'}
             disabled={booking||saving||!data} style={({pressed})=>[styles.primary,pressed&&styles.buttonPressed,(booking||saving||!data)&&styles.disabled]}
             onPress={()=>void createActivePolicy()}>
             {booking?<ActivityIndicator size="small" color="white"/>:<Ionicons name="checkmark-circle-outline" size={16} color="white"/>}
-            <Text style={styles.primaryText}>{booking?(isMotor?'Checking & booking…':isNew?'Creating policy…':'Opening Operations…'):'Create Active Policy'}</Text>
+            <Text style={styles.primaryText}>{booking?(isMotor?'Checking & booking…':isNew?'Creating policy…':'Opening Operations…'):isNew?(isMotor?'Upload Policy':'Create Policy'):'Create Active Policy'}</Text>
           </Pressable>}
       </View>
 
