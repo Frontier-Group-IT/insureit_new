@@ -580,6 +580,12 @@ for (const forbidden of ['See all policy status filters', '>See all</Text>', 'vi
 
 
 // Business-line dropdown is separate from lifecycle status and applies to the scoped backend list.
+
+requireText(policies, '<View style={styles.policyListHeadingSection}>\\n        <Pressable'.replace('\\n','\n'), 'Policies list heading is replaced directly by business-line dropdown.');
+if (policies.includes('<Text style={styles.policyListTitle}>Policies</Text>')) throw new Error('Remove redundant Policies heading before business-line dropdown.');
+requireText(policies, "businessLineButton:{flexDirection:'row',alignItems:'center',gap:7,minHeight:30,paddingHorizontal:3,backgroundColor:'transparent',borderWidth:0}", 'Business-line dropdown has no card background or border.');
+requireText(policies, "businessLineText:{color:'#17365D',fontSize:12,fontWeight:'800'}", 'Borderless dropdown remains bold navy text.');
+requireText(policies, 'accessibilityState={{expanded:lineMenuOpen}}', 'Business-line dropdown retains accessible expanded state.');
 const partnerPolicyApi = read('lib/policies.ts');
 for (const label of ["label:'All Policies'","label:'Motor'","label:'Non Motor'","label:'Life'","label:'Health'"]) {
   requireText(policies, label, 'Missing policy business-line option: '+label);

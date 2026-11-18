@@ -22,10 +22,11 @@ assert.match(claims, /<Text style=\{styles.stickyTitle\}>Claims<\/Text>/);
 // Policies use one search-row dropdown with all five live lifecycle counts.
 assert.match(policies, /onPress=\{openStatusMenu\}/, 'Policies lifecycle dropdown opens from the search row');
 assert.match(policies, /<Text style=\{styles\.quickActionsHeading\}>Quick Actions<\/Text>/, 'Quick Actions heading keeps its styling');
-assert.match(policies, /<View style=\{styles\.policyListHeadingSection\}>\s*<Text style=\{styles\.policyListTitle\}>Policies<\/Text>/, 'Policies heading remains directly above the list beside the business-line filter');
-assert.ok(policies.indexOf('<Text style={styles.policyListTitle}>Policies</Text>') > policies.indexOf('quickActions.map((action)'), 'Policies heading follows the four quick actions');
-assert.ok(policies.indexOf('<Text style={styles.policyListTitle}>Policies</Text>') < policies.indexOf('{isOffline || collection.stale || summary.stale'), 'Policies title precedes the list and feedback');
-assert.match(policies, /onPress=\{openBusinessLineMenu\}/, 'Business-line selection is immediately beside the Policies heading');
+assert.ok(policies.includes('<View style={styles.policyListHeadingSection}>\n        <Pressable'), 'Business-line dropdown replaces the redundant Policies list heading');
+assert.ok(!policies.includes('<Text style={styles.policyListTitle}>Policies</Text>'), 'Policies list does not repeat the page heading');
+assert.ok(policies.indexOf('onPress={openBusinessLineMenu}') > policies.indexOf('quickActions.map((action)'), 'Business-line dropdown follows the four quick actions');
+assert.ok(policies.indexOf('onPress={openBusinessLineMenu}') < policies.indexOf('{isOffline || collection.stale || summary.stale'), 'Business-line dropdown precedes the policy list and feedback');
+assert.ok(policies.includes('onPress={openBusinessLineMenu}'), 'Business-line dropdown remains interactive');
 
 assert.ok(policies.includes("filterButton: {") && policies.includes("backgroundColor: '#FFFFFF'"), 'Policy filter outer area stays white');
 assert.ok(policies.includes("filterNameBadge: {") && policies.includes("backgroundColor: '#17365D'"), 'Only the selected filter name uses a navy badge');
