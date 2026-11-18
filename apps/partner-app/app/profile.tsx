@@ -100,6 +100,7 @@ export default function ProfileScreen() {
         <View pointerEvents="none" style={styles.heroGlowLarge} />
         <View pointerEvents="none" style={styles.heroGlowSmall} />
 
+        <View style={styles.heroTopRow}>
         <View style={styles.avatarStage}>
           <View style={styles.avatarShell}>
             {avatarUri ? (
@@ -122,13 +123,6 @@ export default function ProfileScreen() {
           </Pressable>
         </View>
 
-        <View style={styles.heroBody}>
-          <Text numberOfLines={1} style={styles.name}>{signedInPersonName(identity)}</Text>
-          <View style={styles.rolePill}>
-            <Text numberOfLines={1} style={styles.roleText}>{roleLabel}</Text>
-          </View>
-        </View>
-
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Sign out"
@@ -141,6 +135,13 @@ export default function ProfileScreen() {
         >
           <Ionicons name="log-out-outline" size={25} color="#FFFFFF" />
         </Pressable>
+        </View>
+        <View style={styles.heroBody}>
+          <Text style={styles.name}>{signedInPersonName(identity)}</Text>
+          <View style={styles.rolePill}>
+            <Text style={styles.roleText}>{roleLabel}</Text>
+          </View>
+        </View>
       </View>
 
       <SectionTitle icon="document-text-outline" title="Registration" />
@@ -263,7 +264,7 @@ function Detail({
         <Ionicons name={icon} size={19} color={iconColor} />
       </View>
       <Text style={styles.detailLabel}>{label}</Text>
-      <Text numberOfLines={1} style={styles.detailValue}>{value}</Text>
+      <Text style={styles.detailValue}>{value}</Text>
     </View>
   );
 }
@@ -328,13 +329,20 @@ const styles = StyleSheet.create({
   },
   hero: {
     position: 'relative',
-    minHeight: 126,
     overflow: 'hidden',
+    width: 'auto',
+    marginHorizontal: -partnerTheme.spacing.lg,
+    marginTop: 14,
+    paddingHorizontal: 20,
+    paddingTop: 18,
+    paddingBottom: 20,
+    backgroundColor: '#103FA5',
+  },
+  heroTopRow: {
+    width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    borderRadius: 18,
-    backgroundColor: '#103FA5',
+    justifyContent: 'space-between',
   },
   heroGlowLarge: {
     position: 'absolute',
@@ -411,20 +419,23 @@ const styles = StyleSheet.create({
     opacity: 0.65,
   },
   heroBody: {
-    flex: 1,
+    width: '100%',
     minWidth: 0,
-    marginLeft: 14,
+    marginTop: 15,
+    alignItems: 'flex-start',
   },
   name: {
+    width: '100%',
     color: partnerTheme.colors.white,
-    fontSize: 16,
-    lineHeight: 20,
+    fontSize: 19,
+    lineHeight: 25,
     fontWeight: '800',
+    flexShrink: 1,
   },
   rolePill: {
     alignSelf: 'flex-start',
-    maxWidth: '92%',
-    marginTop: 6,
+    maxWidth: '100%',
+    marginTop: 8,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 999,
@@ -439,7 +450,6 @@ const styles = StyleSheet.create({
   heroProfileIcon: {
     width: 42,
     height: 42,
-    marginLeft: 8,
     borderRadius: 21,
     alignItems: 'center',
     justifyContent: 'center',
@@ -494,6 +504,7 @@ const styles = StyleSheet.create({
   },
   detailLabel: {
     flexShrink: 1,
+    maxWidth: '43%',
     color: '#68748B',
     fontSize: 12,
     lineHeight: 16,
@@ -501,6 +512,7 @@ const styles = StyleSheet.create({
   },
   detailValue: {
     flex: 1,
+    minWidth: 0,
     marginLeft: 12,
     textAlign: 'right',
     color: '#101833',

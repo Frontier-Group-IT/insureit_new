@@ -17,6 +17,16 @@ assert.match(avatar, /uri && failedUri !== uri/, 'Reset fallback when a new sign
 assert.match(provider, /getPartnerProfilePhotoUrl\(nextContext\.identity\.auth_user_id\)/, 'Photo identity must stay account-scoped');
 assert.match(provider, /setAvatarUri\(null\)/, 'Clear avatar on logout');
 assert.match(profile, /refreshAvatar\(\)/, 'Partner upload must refresh shared avatar state');
+assert.match(profile, /<PartnerCasePageHeader title="Profile & registration"/, 'Keep the existing navy page header');
+assert.match(profile, /marginTop: 14/, 'Keep the profile banner below the title header');
+assert.match(profile, /marginHorizontal: -partnerTheme\.spacing\.lg/, 'Allow profile banner to fill the screen width');
+assert.match(profile, /<View style=\{styles\.heroTopRow\}>/, 'Photo and sign-out must stay in the upper row');
+assert.match(profile, /<View style=\{styles\.heroBody\}>[\s\S]*?<Text style=\{styles\.name\}>/, 'Name must occupy a separate full-width block');
+assert.doesNotMatch(profile, /numberOfLines=\{1\} style=\{styles\.name\}/, 'Long names must wrap');
+assert.doesNotMatch(profile, /numberOfLines=\{1\} style=\{styles\.detailValue\}/, 'Full registration details must not truncate');
+assert.match(profile, /accessibilityLabel="Change profile photo"/, 'Camera upload remains accessible');
+assert.match(profile, /accessibilityLabel="Sign out"/, 'Sign out remains accessible');
+assert.match(profile, /PartnerCaseBottomNavigation activeTab="More"/, 'More navigation remains present');
 for (const tab of tabs) {
   const body = read('apps/partner-app/app/(tabs)/' + tab + '.tsx');
   assert.match(body, /PartnerProfileAvatar/, tab + ' should display a shared avatar');
