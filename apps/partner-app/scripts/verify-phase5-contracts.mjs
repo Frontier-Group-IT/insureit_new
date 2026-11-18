@@ -293,6 +293,24 @@ expectAll('app/renewals.tsx', [
   [/selectedSummary\.premium/, 'existing renewal premium calculation remains'],
   [/onPress=\{\(\) => selectBucket\(mode === 'expired' \? 'overdue' : 'all'\)\}/, 'summary remains interactive with its existing filtering'],
 ]);
+// New Customer compact-layout and GST state contract.
+expectAll('app/customer-new.tsx', [
+  [/New Customer<\/Text><\/View><\/View>/, 'New Customer header has no secondary subtitle'],
+  [/<View style=\{styles\.two\}>[\s\S]*?Mobile Number \*[\s\S]*?Email ID[\s\S]*?<\/View>/, 'mobile and email share a two-column row'],
+  [/<View style=\{styles\.two\}>[\s\S]*?Street[\s\S]*?Locality[\s\S]*?<\/View>/, 'street and locality share a row'],
+  [/trackColor=\{\{ false: '#A3B0C4', true: '#2563EB' \}\}/, 'GST toggle has visible off and on colors'],
+  [/form\.gst_registered \? field\('GST Number \*'/, 'GSTIN field is visible only for GST-registered customers'],
+  [/DOCUMENTS\.filter\(doc => doc\.key !== 'gst_copy' \|\| form\.gst_registered\)/, 'GST Copy is conditional in Documents'],
+  [/setDocuments\(previous => \{ const \{ gst_copy: _discarded, \.\.\.rest \} = previous; return rest; \}\)/, 'GST Copy clears if GST is toggled off'],
+  [/Invalid GSTIN/, 'GSTIN is validated before saving'],
+]);
+expectAll('lib/customers.ts', [
+  [/gst_number: string/, 'customer creation form includes GSTIN'],
+  [/type: 'pan_copy' \| 'aadhaar_front' \| 'aadhaar_back' \| 'gst_copy'/, 'document type supports GST Copy'],
+  [/gst_number: input\.gst_registered \? input\.gst_number\.trim\(\)\.toUpperCase\(\) : null/, 'GSTIN is passed to the authorized creation RPC'],
+  [/if \(documents\.length\) throw new Error\('KYC uploads are not configured yet/, 'documents fail closed until an authorized upload backend is available'],
+]);
+
 // Evaluate every contract only after all checks have run.
 if (failures.length) {
   console.error('Partner Phase 5 resilience/accessibility contract verification failed:');
