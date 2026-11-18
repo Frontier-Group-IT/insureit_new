@@ -101,7 +101,7 @@ export default function ProfileScreen() {
         <View pointerEvents="none" style={styles.heroGlowSmall} />
 
         <View style={styles.heroTopRow}>
-        <View style={styles.avatarStage}>
+          <View style={styles.avatarStage}>
           <View style={styles.avatarShell}>
             {avatarUri ? (
               <Image source={{ uri: avatarUri }} style={styles.avatarImage} resizeMode="cover" />
@@ -121,9 +121,16 @@ export default function ProfileScreen() {
           >
             <Ionicons name={avatarUploading ? 'cloud-upload-outline' : 'camera'} size={18} color="#FFFFFF" />
           </Pressable>
-        </View>
+          </View>
 
-        <Pressable
+          <View style={styles.heroBody}>
+            <Text style={styles.name}>{signedInPersonName(identity)}</Text>
+            <View style={styles.rolePill}>
+              <Text style={styles.roleText}>{roleLabel}</Text>
+            </View>
+          </View>
+
+          <Pressable
           accessibilityRole="button"
           accessibilityLabel="Sign out"
           disabled={signingOut}
@@ -134,13 +141,7 @@ export default function ProfileScreen() {
           ]}
         >
           <Ionicons name="log-out-outline" size={25} color="#FFFFFF" />
-        </Pressable>
-        </View>
-        <View style={styles.heroBody}>
-          <Text style={styles.name}>{signedInPersonName(identity)}</Text>
-          <View style={styles.rolePill}>
-            <Text style={styles.roleText}>{roleLabel}</Text>
-          </View>
+          </Pressable>
         </View>
       </View>
 
@@ -334,15 +335,15 @@ const styles = StyleSheet.create({
     marginHorizontal: -partnerTheme.spacing.lg,
     marginTop: 0,
     paddingHorizontal: 20,
-    paddingTop: 18,
-    paddingBottom: 20,
+    paddingTop: 14,
+    paddingBottom: 14,
     backgroundColor: '#103FA5',
   },
   heroTopRow: {
     width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 12,
   },
   heroGlowLarge: {
     position: 'absolute',
@@ -365,16 +366,16 @@ const styles = StyleSheet.create({
     opacity: 0.34,
   },
   avatarStage: {
-    width: 94,
-    height: 94,
+    width: 72,
+    height: 72,
     position: 'relative',
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarShell: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
+    width: 68,
+    height: 68,
+    borderRadius: 34,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
@@ -393,17 +394,17 @@ const styles = StyleSheet.create({
   },
   avatarText: {
     color: partnerTheme.colors.white,
-    fontSize: 28,
-    lineHeight: 34,
+    fontSize: 22,
+    lineHeight: 27,
     fontWeight: '800',
   },
   avatarCamera: {
     position: 'absolute',
-    right: 0,
-    bottom: 2,
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    right: -1,
+    bottom: 0,
+    width: 29,
+    height: 29,
+    borderRadius: 15,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#0B63CE',
@@ -419,23 +420,22 @@ const styles = StyleSheet.create({
     opacity: 0.65,
   },
   heroBody: {
-    width: '100%',
+    flex: 1,
     minWidth: 0,
-    marginTop: 15,
     alignItems: 'flex-start',
+    justifyContent: 'center',
   },
   name: {
-    width: '100%',
-    color: partnerTheme.colors.white,
-    fontSize: 19,
-    lineHeight: 25,
-    fontWeight: '800',
     flexShrink: 1,
+    color: partnerTheme.colors.white,
+    fontSize: 17,
+    lineHeight: 22,
+    fontWeight: '800',
   },
   rolePill: {
     alignSelf: 'flex-start',
     maxWidth: '100%',
-    marginTop: 8,
+    marginTop: 5,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 999,
@@ -448,9 +448,10 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   heroProfileIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+    flexShrink: 0,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.12)',
