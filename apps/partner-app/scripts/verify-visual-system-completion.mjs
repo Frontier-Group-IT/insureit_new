@@ -629,7 +629,8 @@ requireText(journey, 'data.next_milestone.current.toLocaleString', 'Real milesto
 requireText(journey, 'Math.round(progress * 100)', 'Real progress percentage must be retained.');
 
 for (const tinySize of ['fontSize: 7.5', 'fontSize: 8.5', 'fontSize: 8,']) if (journey.includes(tinySize)) throw new Error(`Journey must not regress to tiny typography: ${tinySize}`);
-requireText(weeklyStory, 'PartnerAssets.actions.renewals', 'Your Week must keep renewal artwork for upcoming work.');
+requireText(weeklyStory, 'PartnerAssets.actions.quickRenewals', 'Your Week uses the Renewal Work Queue reference icon for upcoming work.');
+if (weeklyStory.includes('styles.clockBadge') || weeklyStory.includes('name="time" size={12}')) throw new Error('Your Week must not overlay an extra clock badge on the renewal icon.');
 requireText(weeklyStory, "backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#DCE9FA'", 'Your Week This Week pill must use the white treatment.');
 requireText(weeklyStory, 'minWidth: 92, flexShrink: 0', 'Your Week This Week pill must not clip the Week label on compact widths.');
 requireText(weeklyStory, "backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E1E7F0'", 'Your Week reflection card must use a white surface.');
