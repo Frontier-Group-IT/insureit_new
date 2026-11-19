@@ -529,6 +529,7 @@ async function updateMobileIntakeReview(
   // Enforce the same duplicate protection used by the Operations Review page.
   let readable = admin.from("policy_intake_requests")
     .select("id,intake_number,status,created_at,ocr_fields").eq("id", body.id);
+  if (segregatePolicyIntakeLanes()) readable=readable.eq("processing_lane","manual");
   if (readScope.mode === "or") readable = readable.or(readScope.predicates);
   else if (readScope.mode === "submitter") readable = readable.eq("submitted_by_profile_id", readScope.profileId);
   const { data: intake, error: readError } = await readable.maybeSingle();
@@ -539,6 +540,7 @@ async function updateMobileIntakeReview(
   let query = admin.from("policy_intake_requests").update({
     status: body.status, attention_reason: reason, assigned_to_profile_id: identity.profile_id,
   }).eq("id", body.id).in("status", ["processing", "ready_for_review", "in_review", "needs_attention"]);
+  if (segregatePolicyIntakeLanes()) query=query.eq("processing_lane","manual");
   if (readScope.mode === "or") query = query.or(readScope.predicates);
   else if (readScope.mode === "submitter") query = query.eq("submitted_by_profile_id", readScope.profileId);
   const { data, error } = await query.select("id").maybeSingle<{ id: string }>();
