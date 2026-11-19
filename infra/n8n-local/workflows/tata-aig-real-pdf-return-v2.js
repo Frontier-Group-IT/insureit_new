@@ -79,6 +79,7 @@ return [{json:{
  warnings:[
   'tata_aig_issuance_date_unverified',
   'tata_aig_human_review_required',
+   ...(!p.digital_signature_date?['tata_aig_signature_date_not_in_native_text']:[]),
   ...(Math.abs(p.component_net-p.printed_net)>0.005?['tata_aig_printed_net_rounding']:[]),
  ],
 }}];

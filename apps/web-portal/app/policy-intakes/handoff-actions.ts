@@ -111,6 +111,7 @@ export async function prepareVerifiedN8nIntakeHandoff(
     "tata_aig_issuance_date_unverified",
     "tata_aig_human_review_required",
     "tata_aig_printed_net_rounding",
+    "tata_aig_signature_date_not_in_native_text",
   ]);
   const blockingWarnings = parsed.preview.warnings.filter(warning =>
     !isTata || !informationalTataWarnings.has(warning));
