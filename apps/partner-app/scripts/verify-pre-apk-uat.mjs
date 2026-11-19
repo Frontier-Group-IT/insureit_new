@@ -123,7 +123,7 @@ expectAll('app/(tabs)/policies.tsx', [
   [/label: 'Expiring Soon', filter: 'expiring'/, 'Expiring Soon option is available'],
   [/label: 'Lapsed Policies', filter: 'expired'/, 'Lapsed Policies option is available'],
   [/label: 'Upcoming', filter: 'upcoming'/, 'Upcoming option is available'],
-  [/count: summary\.data\?\.total_policies/, 'Dropdown total count uses real summary data'],
+  [/count: activePeriodCounts\?\.all/, 'Dropdown total count uses live period-scoped data'],
   [/selectedStatus\.label/, 'Search dropdown displays the selected lifecycle'],
   [/formatStatusCount\(selectedStatus\.count\)/, 'Search dropdown displays the selected live count'],
   [/onPress=\{openStatusMenu\}/, 'Dropdown opens from search row'],
