@@ -43,7 +43,7 @@ const styles = StyleSheet.create({
     minHeight: 28,
   },
   settingsRow: { marginTop: 12, marginBottom: 3, minHeight: 22 },
-  settingsRowCompact: { marginTop: 20, marginBottom: 10, minHeight: 24 },
+  settingsRowCompact: { marginTop: 12, marginBottom: 7, minHeight: 22 },
   settingsTitle: { color: '#20234C', fontSize: 15, lineHeight: 20, fontWeight: '900', letterSpacing: 0.35 },
   text: { flex: 1, minWidth: 0 },
   title: {
