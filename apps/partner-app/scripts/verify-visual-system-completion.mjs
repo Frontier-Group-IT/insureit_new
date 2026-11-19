@@ -654,7 +654,7 @@ for (const impactMarker of [
   'PartnerAssets.actions.quickClaims',
   'PartnerAssets.actions.businessPerformance',
   'PartnerAssets.actions.addCustomer',
-  'styles.heroDivider',
+  'borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: \'#E3E9F1\'',
   'styles.monthDivider',
   'styles.monthStatDivider',
   'styles.cardDetails',
@@ -662,6 +662,8 @@ for (const impactMarker of [
   '<ImpactIcon art={art} size={43} plain />',
 ]) requireText(impact, impactMarker, `Impact reference layout is missing ${impactMarker}.`);
 if (impact.includes('icon={icon}') || impact.includes('styles.cardLeft')) throw new Error('Impact must keep blue artwork left with metric and label stacked to its right.');
+if (impact.includes('styles.heroDivider') || impact.includes('borderRadius: 18, minHeight: 94')) throw new Error('Impact top summary must match Policy Details: full-width flat white strip with a bottom divider.');
+requireText(impact, 'marginHorizontal: -partnerTheme.spacing.lg, minHeight: 82', 'Impact summary must span the viewport like the Policy Details summary.');
 for (const impactRoute of ["router.push('/customers')", "router.push('/(tabs)/policies')", "router.push('/(tabs)/claims')", "router.push('/business-report')", "router.push('/journey')"]) requireText(impact, impactRoute, `Impact clickable-card route is missing ${impactRoute}.`);
 for (const tinySize of ['fontSize: 7.5', 'fontSize: 8.5', 'fontSize: 8,']) if (impact.includes(tinySize)) throw new Error(`Impact must not regress to tiny typography: ${tinySize}`);
 requireText(journey, 'PartnerAssets.status.journey', 'Journey timeline and empty state must use journey artwork.');
