@@ -11,16 +11,17 @@ import { getPartnerImpact, type PartnerImpactData } from '@/lib/impact';
 import { PartnerAssets } from '@/lib/partner-assets';
 import { partnerTheme } from '@/lib/theme';
 
-type ImpactArt = 'motor' | 'vehicle' | 'customer' | 'policy' | 'claim' | 'premium' | 'new-customer' | 'settlement' | 'journey';
+type ImpactArt = 'motor' | 'vehicle' | 'customer' | 'policy' | 'monthly-policy' | 'claim' | 'premium' | 'new-customer' | 'settlement' | 'journey';
 
 const IMPACT_ART: Record<ImpactArt, ImageSourcePropType> = {
   motor: PartnerAssets.actions.addVehicle,
   vehicle: PartnerAssets.actions.addVehicle,
-  customer: PartnerAssets.actions.quickCustomers,
-  policy: PartnerAssets.actions.quickPolicyIntake,
+  customer: PartnerAssets.actions.impactCustomerDetail,
+  policy: PartnerAssets.actions.impactPolicyDocument,
+  'monthly-policy': PartnerAssets.actions.impactAddPolicy,
   claim: PartnerAssets.actions.quickClaims,
   premium: PartnerAssets.actions.businessPerformance,
-  'new-customer': PartnerAssets.actions.addCustomer,
+  'new-customer': PartnerAssets.actions.impactCustomerAdded,
   settlement: PartnerAssets.status.verified,
   journey: PartnerAssets.status.journey,
 };
@@ -129,7 +130,7 @@ export default function ImpactScreen() {
             </Pressable>
             <View style={styles.monthDivider} />
             <View style={styles.monthStatsRow}>
-              <MonthStat art="policy" label="Policies" value={count(data.policies_this_month)} onPress={() => router.push('/(tabs)/policies')} />
+              <MonthStat art="monthly-policy" label="Policies" value={count(data.policies_this_month)} onPress={() => router.push('/(tabs)/policies')} />
               <View style={styles.monthStatDivider} />
               <MonthStat art="new-customer" label="Customers added" value={count(data.customers_this_month)} onPress={() => router.push('/customers')} />
             </View>
