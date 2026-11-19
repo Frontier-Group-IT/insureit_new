@@ -23,8 +23,8 @@ export async function isTrainedLocalN8nMotorPdf(blob: Blob, mimeType: string): P
     // A generic mention of Tata in a prior insurer/agent section is NOT enough.
     const tataAig = process.env.INSUREIT_TATA_AIG_N8N_ENABLED === "true"
       && /\bTATA\s+AIG\b/i.test(beginning.slice(0, 2400))
-      && /Thank\s+you\s+for\s+choosing\s+TATA\s+AIG\s+as\s+your\s+Insurer/i.test(beginning.slice(0, 6000))
-      && /(?:Bundled Auto Secure - Private Car Policy|Auto Secure - Standalone Own Damage Private Car Policy|Auto Secure - Private Car Package Policy)/i.test(beginning.slice(0, 800))
+      && /(?:Thank\s+you\s+for\s+choosing\s+TATA\s+AIG\s+as\s+your\s+Insurer|Welcome\s+to\s+TATA\s+AIG\s+family)/i.test(beginning.slice(0, 6000))
+      && /(?:Bundled Auto Secure\s*-\s*(?:Private Car|Two Wheeler) Policy|Auto Secure - Standalone Own Damage Private Car Policy|Auto Secure - Private Car Package Policy)/i.test(beginning.slice(0, 800))
       && /\bPolicy No\.\s*\d{10}\s+\d{2}\s+\d{2}\b/i.test(beginning.slice(0, 3000));
     return icici3005 || tataAig;
   } catch {

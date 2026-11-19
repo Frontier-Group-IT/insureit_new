@@ -226,6 +226,7 @@ const PRODUCTS = {
   tata_aig_private_car_saod_n8n_native_pdf: "Stand-Alone Own Damage",
   tata_aig_private_car_package_n8n_native_pdf: "Package",
   tata_aig_private_car_bundled_n8n_native_pdf: "Bundled",
+  tata_aig_two_wheeler_bundled_n8n_native_pdf: "Bundled",
 } as const;
 const CHECKS = new Set([
   "current_insurer_verified", "supported_layout_verified", "policy_identity_verified",
@@ -292,6 +293,7 @@ export function validateTataAigN8nResponse(
     || value.review_required !== true || value.auto_finalize_allowed !== false
     || value.extraction_method !== "native_pdf_text") fail("n8n_review_required");
   const product = PRODUCTS[parserId as keyof typeof PRODUCTS];
+  const twoWheeler = parserId === "tata_aig_two_wheeler_bundled_n8n_native_pdf";
   const checks = value.checks;
   if (!object(checks) || Object.keys(checks).length !== CHECKS.size
     || [...CHECKS].some(key => checks[key] !== true)
@@ -324,20 +326,26 @@ export function validateTataAigN8nResponse(
   };
   if (!/^\d{14}$/.test(get("policy_number"))
     || get("insurer_name") !== "Tata AIG General Insurance Company Limited"
-    || get("policy_product") !== product || get("vehicle_class") !== "PCP"
-    || get("vehicle_fuel_type").toUpperCase() !== "PETROL"
+    || get("policy_product") !== product || get("vehicle_class") !== (twoWheeler ? "TWP" : "PCP")
+    || get("vehicle_fuel_type").toUpperCase() !== (twoWheeler ? "ELECTRIC" : "PETROL")
+    || (twoWheeler && (get("vehicle_motor_power_kw") !== get("vehicle_capacity")
+      || !/^[1-9][0-9]?(?:\\.[0-9]{1,2})?$/.test(get("vehicle_motor_power_kw"))))
     || !/^(?:19|20)\d{2}$/.test(get("vehicle_manufacturing_year"))
-    || !/^[0-9]{2,5}(?:\.\d{1,2})?$/.test(get("vehicle_capacity"))
+    || !(twoWheeler ? /^[1-9][0-9]?(?:\.\d{1,2})?$/.test(get("vehicle_capacity"))
+      : /^[0-9]{2,5}(?:\.\d{1,2})?$/.test(get("vehicle_capacity")))
     || get("vehicle_engine_number").length < 6 || get("vehicle_chassis_number").length < 12
     || get("vehicle_engine_number") === get("vehicle_chassis_number")
     || !/^[a-z ]{2,60}$/i.test(get("vehicle_rto_name"))
-    || !["HARYANA", "DELHI"].includes(get("vehicle_rto_state").toUpperCase()))
+    || !(twoWheeler ? get("vehicle_rto_state").toUpperCase() === "MADHYA PRADESH"
+      && ["JABALPUR", "SATNA"].includes(get("vehicle_rto_name").toUpperCase())
+      : ["HARYANA", "DELHI"].includes(get("vehicle_rto_state").toUpperCase())))
+
     fail("n8n_tata_aig_vehicle_or_policy_invalid");
 
   const status = get("vehicle_registration_status");
   const plate = get("vehicle_registration_number");
   if (status === "registered") {
-    if (!/^(?:HR|DL)[A-Z0-9]{7,13}$/.test(plate)
+    if (twoWheeler || !/^(?:HR|DL)[A-Z0-9]{7,13}$/.test(plate)
       || (plate.startsWith("HR") ? "HARYANA" : "DELHI") !== get("vehicle_rto_state").toUpperCase())
       fail("n8n_tata_aig_registration_invalid");
   } else if (status === "unregistered") {
@@ -347,7 +355,9 @@ export function validateTataAigN8nResponse(
   const tpStart = get("third_party_start_date"), tpEnd = get("third_party_end_date");
   if (![odStart, odEnd, tpStart, tpEnd].every(date) || odEnd < odStart || tpEnd < tpStart
     || (product !== "Stand-Alone Own Damage" && (tpStart !== odStart || tpEnd < odEnd))
-    || (product === "Bundled" && tpEnd === odEnd)) fail("n8n_coverage_dates_invalid");
+    || (product === "Bundled" && tpEnd === odEnd)
+    || (twoWheeler && (tpEnd.slice(0,4) !== String(Number(odEnd.slice(0,4))+4)
+      || tpStart !== odStart))) fail("n8n_coverage_dates_invalid");
 
   const money = value.premium_components;
   if (!object(money) || !Array.isArray(money.od_addons) || money.od_addons.length > 20)

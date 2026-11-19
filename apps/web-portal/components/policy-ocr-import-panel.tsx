@@ -208,7 +208,7 @@ export function PolicyOcrImportPanel({ variant = "header", context, onApply, onC
       // per-field confidence is null by design; select eligible verified
       // fields for reviewer confirmation, never fabricate a confidence score.
       const n8nVerified=result.extractionMethod==="native_pdf_text"
-        && ["icici_3005_n8n_native_pdf","icici_3005_od_n8n_native_pdf","tata_aig_private_car_saod_n8n_native_pdf","tata_aig_private_car_package_n8n_native_pdf","tata_aig_private_car_bundled_n8n_native_pdf"].includes(result.parserId);
+        && ["icici_3005_n8n_native_pdf","icici_3005_od_n8n_native_pdf","tata_aig_private_car_saod_n8n_native_pdf","tata_aig_private_car_package_n8n_native_pdf","tata_aig_private_car_bundled_n8n_native_pdf","tata_aig_two_wheeler_bundled_n8n_native_pdf"].includes(result.parserId);
       const safeKeys = result.fields
         .filter((field) => APPLY_FIELDS.has(field.key)
           && ((field.confidence ?? 0) >= .9 || n8nVerified))
@@ -253,7 +253,7 @@ export function PolicyOcrImportPanel({ variant = "header", context, onApply, onC
       .map((field) => [field.key, field]));
     const chosen = APPLY_ORDER.map((key) => selectedByKey.get(key)).filter((field): field is PolicyOcrField => Boolean(field));
     if (!chosen.length) return;
-    const verifiedTata = /^tata_aig_private_car_(?:saod|package|bundled)_n8n_native_pdf$/.test(verifiedParserId);
+    const verifiedTata = /^tata_aig_(?:private_car_(?:saod|package|bundled)|two_wheeler_bundled)_n8n_native_pdf$/.test(verifiedParserId);
     // Owner-driver CPA is a verified companion to the selected numeric CPA
     // field, not a guess from positive non-owner liability premiums.
     if (verifiedTata && selectedByKey.has("cpa_premium")) {

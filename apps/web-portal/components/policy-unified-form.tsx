@@ -469,7 +469,7 @@ export function PolicyUnifiedForm({ mode, insurers, customers = [], rms, sources
       setForm(current=>normalizePolicyIdentifierFields({...current,...result.next}));
       if(exactIciciChetakC3503)setForm(current=>({...current,cpaOpted:"Yes"}));
       const verifiedTata = provenance?.nativeVerified
-        && /^tata_aig_private_car_(?:saod|package|bundled)_n8n_native_pdf$/.test(provenance.parserId);
+        && /^tata_aig_(?:private_car_(?:saod|package|bundled)|two_wheeler_bundled)_n8n_native_pdf$/.test(provenance.parserId);
       const explicitTataCpa = fields.find(field=>field.key==="cpa_opted")?.value;
       if (verifiedTata && (explicitTataCpa==="Yes" || explicitTataCpa==="No")
         && fields.some(field=>field.key==="cpa_premium")
