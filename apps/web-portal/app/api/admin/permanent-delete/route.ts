@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 function isPermanentDeleteKind(value: unknown): value is PermanentDeleteKind {
-  return value === "user" || value === "branch" || value === "partner";
+  return value === "user" || value === "branch" || value === "partner" || value === "onboarding_application";
 }
 
 export async function POST(request: Request) {

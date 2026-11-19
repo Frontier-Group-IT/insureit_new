@@ -343,7 +343,10 @@ function PartnerDeletePanel({ rows, embedded = false }: { rows: PartnerRegisterR
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState("");
-  const choices = useMemo(() => rows.filter((row) => !row.isApplicationOnly).filter((row) => [row.displayName, row.partnerId, row.mobile, row.id].join(" ").toLowerCase().includes(query.trim().toLowerCase())), [rows, query]);
+  const masterChoices = useMemo(() => rows.filter((row) => !row.isApplicationOnly).filter((row) => [row.displayName, row.partnerId, row.mobile, row.id].join(" ").toLowerCase().includes(query.trim().toLowerCase())), [rows, query]);
+  const applicationChoices = useMemo(() => rows.filter((row) => row.isApplicationOnly).filter((row) => [row.displayName, row.partnerId, row.mobile, row.applicationId].join(" ").toLowerCase().includes(query.trim().toLowerCase())), [rows, query]);
+  const [selectedApplicationId, setSelectedApplicationId] = useState("");
+  const selectedApplication = rows.find((row) => row.isApplicationOnly && row.applicationId === selectedApplicationId) ?? null;
   const selected = rows.find((row) => row.id === selectedId) ?? null;
   return <section className={embedded ? "border-b border-red-100 bg-gradient-to-r from-red-50 via-white to-amber-50" : "overflow-hidden rounded-2xl border border-red-200 bg-gradient-to-r from-red-50 via-white to-amber-50 shadow-sm"}>
     <button type="button" onClick={() => setOpen((value) => !value)} aria-expanded={open} className="flex w-full items-center gap-3 border-b border-red-100 px-5 py-3 text-left">
@@ -354,15 +357,28 @@ function PartnerDeletePanel({ rows, embedded = false }: { rows: PartnerRegisterR
     {open ? <div className="grid items-end gap-3 px-5 py-4 lg:grid-cols-[minmax(150px,1fr)_minmax(200px,1.3fr)_minmax(280px,1.7fr)_auto]">
       <p className="text-[10.5px] leading-relaxed text-[#64748B]">Permanent deletion is blocked when the Partner has protected business records or dependent relationships.</p>
       <label className="grid gap-1 text-[9px] font-bold uppercase text-[#64748B]">Find Record
-        <input value={query} onChange={(event) => { setQuery(event.target.value); setSelectedId(""); }} placeholder="Search Partner name, code or mobile" className="h-10 rounded-xl border border-[#D8E1EC] bg-white px-3 text-[11px] font-normal normal-case outline-none focus:border-[#315B9A]" />
+        <input value={query} onChange={(event) => { setQuery(event.target.value); setSelectedId(""); setSelectedApplicationId(""); }} placeholder="Search Partner name, code or mobile" className="h-10 rounded-xl border border-[#D8E1EC] bg-white px-3 text-[11px] font-normal normal-case outline-none focus:border-[#315B9A]" />
       </label>
       <label className="grid gap-1 text-[9px] font-bold uppercase text-[#64748B]">Select Exact Record
         <select value={selectedId} onChange={(event) => setSelectedId(event.target.value)} className="h-10 rounded-xl border border-[#D8E1EC] bg-white px-3 text-[11px] font-normal normal-case text-[#17203A]">
           <option value="">Choose a Partner</option>
-          {choices.map((row) => <option key={row.id} value={row.id}>{row.displayName} · {row.partnerId} · {row.mobile}</option>)}
+          {masterChoices.map((row) => <option key={row.id} value={row.id}>{row.displayName} · {row.partnerId} · {row.mobile}</option>)}
         </select>
       </label>
       <div className="min-w-[130px]">{selected ? <PermanentDeleteButton kind="partner" id={selected.id} relatedId={selected.partnerRecordId ?? undefined} name={selected.displayName} label="Delete Partner" /> : <button type="button" disabled className="h-10 w-full rounded-xl bg-red-300 px-4 text-[11px] font-bold text-white opacity-60">Delete Partner</button>}</div>
+      <div className="border-t border-red-100 pt-3 lg:col-span-4">
+        <p className="mb-2 text-[11px] font-bold text-[#17203A]">Delete Pending Onboarding Application</p>
+        <p className="mb-3 text-[10.5px] text-[#64748B]">Only unlinked pending applications can be deleted. Linked business, registration or portal-account history blocks deletion.</p>
+        <div className="grid items-end gap-3 sm:grid-cols-[minmax(220px,1fr)_auto]">
+          <label className="grid gap-1 text-[9px] font-bold uppercase text-[#64748B]">Select Exact Pending Application
+            <select aria-label="Select exact pending onboarding application" value={selectedApplicationId} onChange={(event) => setSelectedApplicationId(event.target.value)} className="h-10 rounded-xl border border-[#D8E1EC] bg-white px-3 text-[11px] font-normal normal-case text-[#17203A]">
+              <option value="">Choose a Pending Application</option>
+              {applicationChoices.map((row) => <option key={row.applicationId} value={row.applicationId}>{row.displayName} · {row.partnerId} · {row.mobile}</option>)}
+            </select>
+          </label>
+          <div className="min-w-[180px]">{selectedApplication ? <PermanentDeleteButton kind="onboarding_application" id={selectedApplication.applicationId} name={selectedApplication.displayName} label="Delete Pending Application" /> : <button type="button" disabled className="h-10 w-full rounded-xl bg-red-300 px-4 text-[11px] font-bold text-white opacity-60">Delete Pending Application</button>}</div>
+        </div>
+      </div>
     </div> : null}
   </section>;
 }
