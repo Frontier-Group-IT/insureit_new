@@ -109,3 +109,65 @@ grant execute on function public.claim_policy_intake_ai_queue_v3(integer,text,uu
 to service_role;
 comment on function public.claim_policy_intake_ai_queue_v3(integer,text,uuid)
 is 'Service-only explicit automation lane queue, safe from manual intake interference. No policy booking.';
+
+
+-- An IT reviewer may explicitly release a *terminal failed* automation
+-- Intake to the manual worklist. This must be atomic with the queue check:
+-- pending/processing, verified, duplicate and completed records cannot move.
+-- The original PDF, customer, policy, reviewer and queue results are preserved.
+create or replace function public.move_policy_intake_automation_to_manual_v1(
+  p_intake_id uuid,
+  p_actor_id uuid,
+  p_reason text
+) returns boolean
+language plpgsql
+security invoker
+set search_path to 'public','pg_catalog'
+as $function$
+declare
+  v_intake record;
+  v_queue record;
+begin
+  if current_user <> 'service_role' then
+    raise exception 'service_role_required';
+  end if;
+  if p_actor_id is null or p_intake_id is null
+     or length(btrim(coalesce(p_reason,''))) < 12
+     or length(p_reason) > 500 then
+    raise exception 'invalid_lane_transfer_request';
+  end if;
+  select i.id,i.processing_lane,i.status,i.final_policy_id
+    into v_intake
+  from public.policy_intake_requests i where i.id=p_intake_id
+  for update;
+  if not found or v_intake.processing_lane<>'automation'
+    or v_intake.final_policy_id is not null
+    or v_intake.status not in ('processing','ready_for_review','in_review','needs_attention') then
+    return false;
+  end if;
+  select q.state,q.leased_until
+    into v_queue
+  from public.policy_intake_ai_processing_queue q
+  where q.intake_id=p_intake_id for update;
+  if not found or v_queue.state not in ('unsupported','exception','failed')
+     or (v_queue.leased_until is not null and v_queue.leased_until>now()) then
+    return false;
+  end if;
+  update public.policy_intake_requests
+    set processing_lane='manual'
+  where id=p_intake_id and processing_lane='automation'
+    and final_policy_id is null;
+  if not found then return false; end if;
+  insert into public.audit_logs(actor_id,action,table_name,record_id,old_data,new_data)
+  values (p_actor_id,'policy_intake_lane_transferred','policy_intake_requests',p_intake_id,
+    jsonb_build_object('processing_lane','automation','queue_state',v_queue.state),
+    jsonb_build_object('processing_lane','manual','reason',btrim(p_reason)));
+  return true;
+end;
+$function$;
+revoke all on function public.move_policy_intake_automation_to_manual_v1(uuid,uuid,text)
+  from public,anon,authenticated;
+grant execute on function public.move_policy_intake_automation_to_manual_v1(uuid,uuid,text)
+  to service_role;
+comment on function public.move_policy_intake_automation_to_manual_v1(uuid,uuid,text)
+is 'Atomic audited IT transfer of terminal failed automation Intake to manual; never books a policy.';
