@@ -764,3 +764,23 @@ if (policies.includes("claims-header-reference.jpg") || policies.includes("insur
 }
 requireText(policies,"accessibilityLabel=\"Open profile\"",'White header must retain the profile action');
 requireText(policies,"accessibilityLabel={unreadActivityCount ?", 'White header must retain notifications');
+
+for(const phrase of [
+  "const sortPurpleGradient = [",
+  "function SortPurpleGradient()",
+  "name=\"calendar\"",
+  "name=\"layers-outline\"",
+  "styles.sortPeriodContent",
+  "name=\"checkmark-circle\"",
+  "sortChoiceSelected:{backgroundColor:'#EFEBFF'}",
+  "sortCountPurple:{backgroundColor:'#DDDDFE'}",
+  "sortCountGreen:{backgroundColor:'#DFF8E9'}",
+  "sortCountRed:{backgroundColor:'#FCE5E5'}",
+  "sortCountAmber:{backgroundColor:'#FFF0D9'}",
+  "styles.sortChoiceCountBadge",
+  "styles.sortApplyContent",
+  "name=\"filter\"",
+  "setDraftPeriod(value);setDraftLifecycle('all');",
+  "onPress={applySortSheet}",
+  "maxHeight:windowHeight-36",
+]) requireText(policies,phrase,'Premium Sort by sheet must match reference without changing filtering semantics: '+phrase);
