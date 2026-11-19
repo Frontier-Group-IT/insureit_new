@@ -17,7 +17,7 @@ export function PartnerSectionHeader({
   settingsHeading?: boolean;
 }) {
   return (
-    <View style={[styles.row, compact && styles.rowCompact, settingsHeading && styles.settingsRow]}>
+    <View style={[styles.row, compact && styles.rowCompact, settingsHeading && styles.settingsRow, settingsHeading && compact && styles.settingsRowCompact]}>
       <View style={styles.text}>
         <View style={settingsHeading ? styles.settingsHeadingLine : undefined}>
           <Text style={[styles.title, settingsHeading && styles.settingsTitle]}>{title}</Text>
@@ -46,6 +46,7 @@ const styles = StyleSheet.create({
     minHeight: 28,
   },
   settingsRow: { marginTop: 22, marginBottom: 10, minHeight: 24 },
+  settingsRowCompact: { marginTop: 7, marginBottom: 4, minHeight: 20 },
   settingsHeadingLine: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   settingsTitle: { color: '#20234C', fontSize: 15, lineHeight: 20, fontWeight: '900', letterSpacing: 0.35 },
   settingsAccent: { height: 3, width: 28, borderRadius: 2, backgroundColor: '#6441BE' },
