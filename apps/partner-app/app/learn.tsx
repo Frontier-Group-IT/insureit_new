@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -37,11 +37,6 @@ export default function LearnScreen() {
   useEffect(() => { void load(); }, [load]);
 
   const answer = data?.answer || null;
-  const selectedLabel = useMemo(() => {
-    if (!data?.card || !answer) return null;
-    return data.card.options.find((option) => option.key === answer.selected_option_key)?.label || null;
-  }, [data, answer]);
-
   async function choose(optionKey: string) {
     if (!data?.card || data.answered_today || submitting) return;
     setSubmitting(true);
@@ -79,18 +74,17 @@ export default function LearnScreen() {
         <PartnerStateView state="empty" asset={PartnerAssets.actions.policyChecklist} title="No card scheduled today" message="A new learning card will appear when content is active." />
       ) : (
         <>
-          <View style={styles.topStrip}>
-            <View style={styles.categoryPill}>
-              <Ionicons name="sparkles-outline" size={14} color={partnerTheme.colors.brand} />
-              <Text style={styles.categoryText}>{data.card.category}</Text>
-            </View>
-            <View style={styles.streak}>
-              <Ionicons name="flame-outline" size={15} color={partnerTheme.colors.warning} />
-              <Text style={styles.streakText}>{data.stats.current_streak} day streak</Text>
-            </View>
-          </View>
-
           <View style={styles.questionCard}>
+            <View style={styles.topStrip}>
+              <View style={styles.categoryPill}>
+                <Ionicons name="sparkles-outline" size={14} color={partnerTheme.colors.brand} />
+                <Text style={styles.categoryText}>{data.card.category}</Text>
+              </View>
+              <View style={styles.streak}>
+                <Ionicons name="flame-outline" size={15} color={partnerTheme.colors.warning} />
+                <Text style={styles.streakText}>{data.stats.current_streak} day streak</Text>
+              </View>
+            </View>
             <Text style={styles.questionMeta}>TODAY’S QUESTION</Text>
             <Text style={styles.question}>{data.card.prompt}</Text>
           </View>
@@ -129,11 +123,9 @@ export default function LearnScreen() {
                   <Image source={answer.is_correct ? PartnerAssets.status.verified : PartnerAssets.actions.policyChecklist} style={styles.answerArtworkImage} resizeMode="contain" />
                 </View>
                 <View style={styles.answerHeaderBody}>
-                  <Text style={styles.answerEyebrow}>{answer.is_correct ? 'NICE WORK' : 'GOOD TO KNOW'}</Text>
                   <Text style={styles.answerTitle}>{answer.is_correct ? 'That’s right.' : 'Here’s the stronger answer.'}</Text>
                 </View>
               </View>
-              {!answer.is_correct && selectedLabel ? <Text style={styles.selectedText}>You selected: {selectedLabel}</Text> : null}
               <Text style={styles.explanation}>{answer.explanation}</Text>
             </View>
           ) : null}
@@ -171,14 +163,14 @@ const styles = StyleSheet.create({
   headerAction: { width: 34, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   headerArtwork: { width: 36, height: 36 },
   referenceTitle: { flexShrink: 1, color: '#FFFFFF', fontSize: 18, fontWeight: '800' },
-  topStrip: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
-  categoryPill: { minHeight: 36, flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 999, paddingHorizontal: 11, backgroundColor: partnerTheme.colors.brandSoft },
+  topStrip: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', flexWrap: 'wrap', gap: 7, marginBottom: 12 },
+  categoryPill: { minHeight: 30, flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 999, paddingHorizontal: 9, backgroundColor: partnerTheme.colors.brandSoft },
   categoryText: { color: partnerTheme.colors.brandStrong, ...partnerTheme.typography.meta, fontWeight: '800' },
-  streak: { minHeight: 36, flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 999, paddingHorizontal: 11, backgroundColor: '#FFF4E5' },
+  streak: { minHeight: 30, flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 999, paddingHorizontal: 9, backgroundColor: '#FFF4E5' },
   streakText: { color: '#8A5518', ...partnerTheme.typography.meta, fontWeight: '800' },
-  questionCard: { marginTop: 10, minHeight: 142, justifyContent: 'center', borderRadius: partnerTheme.radius.xl, padding: 15, backgroundColor: partnerTheme.colors.nav },
-  questionMeta: { color: '#AAA5FF', letterSpacing: 1.1, ...partnerTheme.typography.meta },
-  question: { marginTop: 7, color: '#FFFFFF', fontSize: 20, lineHeight: 28, fontWeight: '800' },
+  questionCard: { marginTop: 8, borderRadius: partnerTheme.radius.xl, padding: 15, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2E7F0' },
+  questionMeta: { color: '#071E49', fontSize: 16, lineHeight: 21, letterSpacing: 0.4, fontWeight: '800' },
+  question: { marginTop: 8, color: '#172B51', fontSize: 17, lineHeight: 24, fontWeight: '700' },
   options: { marginTop: 9, gap: 7 },
   option: { minHeight: 58, flexDirection: 'row', alignItems: 'center', gap: 11, borderRadius: partnerTheme.radius.lg, paddingHorizontal: 13, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
   optionSelected: { borderColor: '#ACA8FA', backgroundColor: '#F8F7FF' },
@@ -198,9 +190,7 @@ const styles = StyleSheet.create({
   answerArtwork: { width: 42, height: 42, alignItems: 'center', justifyContent: 'center' },
   answerArtworkImage: { width: 40, height: 40 },
   answerHeaderBody: { flex: 1 },
-  answerEyebrow: { color: partnerTheme.colors.inkMuted, letterSpacing: 0.8, ...partnerTheme.typography.meta },
-  answerTitle: { marginTop: 3, color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
-  selectedText: { marginTop: 8, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
+  answerTitle: { color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
   explanation: { marginTop: 6, color: '#4C586D', ...partnerTheme.typography.body },
   statsCard: { marginTop: 10, flexDirection: 'row', borderRadius: partnerTheme.radius.lg, paddingVertical: 10, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
   stat: { flex: 1, alignItems: 'center' },
