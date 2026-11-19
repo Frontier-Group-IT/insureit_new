@@ -571,7 +571,7 @@ requireText(settingsSectionHeader, 'settingsRowCompact: { marginTop: 12, marginB
 for (const compactStyle of [
   'linkRow: { minHeight: 58',
   'infoRow: { minHeight: 37',
-  'linkIcon: { width: 43, height: 43',
+  'linkIcon: { width: 40, height: 40',
   'updateMenu: { marginTop: 7 }',
   'note: { marginTop: 7, minHeight: 40',
 ]) requireText(settings, compactStyle, 'Comfortable Settings layout contract: ' + compactStyle);
