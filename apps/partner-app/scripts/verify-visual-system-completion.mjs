@@ -609,11 +609,13 @@ requireText(journey, 'PartnerAssets.status.journey', 'Journey timeline and empty
 requireText(journey, 'navyTopBar navyStatusBar bottomNavigationNavy', 'My Progress must use navy header and status bar.');
 requireText(journey, 'bottomNavigation={<PartnerStackBottomNavigation activeTab="home" />}', 'My Progress must have the permission-gated Home bottom navigator.');
 if (journey.includes('name="locate-outline"')) throw new Error('Milestone top-right circle icon must be removed.');
-requireText(journey, 'accessibilityLabel="Choose journey timeline date"', 'Journey timeline calendar must open a working picker.');
-requireText(journey, '<PartnerPolicyCalendarDialog visible={calendarOpen}', 'Journey timeline uses the shared tappable month/year calendar.');
-requireText(journey, 'item.date === timelineDate', 'Date selection must filter timeline entries without rewriting milestone records.');
-requireText(journey, 'accessibilityLabel="Clear timeline date filter"', 'Journey timeline must allow clearing the selected date.');
-requireText(journey, "filter === 'all' || milestoneCategory(item.kind, item.title) === filter", 'Category filters remain active alongside selected date.');
+if (/calendar-outline|PartnerPolicyCalendarDialog|calendarOpen|timelineDate|calendarButton|dateFilterRow|Clear timeline date filter/.test(journey)) throw new Error('Journey timeline must not include the removed calendar/date picker or its unused state.');
+requireText(journey, "filter === 'all' || milestoneCategory(item.kind, item.title) === filter", 'Journey timeline must retain category filtering.');
+requireText(journey, "hero: { marginTop: 16, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 14", 'Milestone card must be spaced below the header and compact.');
+requireText(journey, "heroNumbers: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', marginTop: 10", 'Milestone values must use compact vertical spacing.');
+requireText(journey, "progressTrack: { height: 8, marginTop: 10", 'Progress bar retains compact height and spacing.');
+requireText(journey, 'data.next_milestone.current.toLocaleString', 'Real milestone counts must be retained.');
+requireText(journey, 'Math.round(progress * 100)', 'Real progress percentage must be retained.');
 
 for (const tinySize of ['fontSize: 7.5', 'fontSize: 8.5', 'fontSize: 8,']) if (journey.includes(tinySize)) throw new Error(`Journey must not regress to tiny typography: ${tinySize}`);
 requireText(weeklyStory, 'PartnerAssets.actions.renewals', 'Your Week must keep renewal artwork for upcoming work.');
