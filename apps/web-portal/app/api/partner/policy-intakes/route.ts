@@ -699,7 +699,7 @@ async function completeUpload(
     return json({ ok: false, error: "Policy intake could not be created." }, 500);
   }
 
-  if (aiQueueEnabled() && (!segregatePolicyIntakeLanes() || lane==="automation")) {
+  if (!proposalForm && aiQueueEnabled() && (!segregatePolicyIntakeLanes() || lane==="automation")) {
     // Event-driven n8n extraction for Partner, POSP, MISP and Branch uploads.
     // The durable one-minute worker remains the recovery path on shutdown.
     after(async () => {
@@ -868,7 +868,7 @@ async function completeResponse(
   const { error: updateError } = await update;
   if (updateError) return json({ ok: false, error: "Could not attach the replacement policy copy." }, 500);
 
-  if (aiQueueEnabled() && (!segregatePolicyIntakeLanes() || intake.processing_lane==="automation")) {
+  if (!proposalForm && aiQueueEnabled() && (!segregatePolicyIntakeLanes() || intake.processing_lane==="automation")) {
     // Event-driven n8n extraction for Partner, POSP, MISP and Branch uploads.
     // The durable one-minute worker remains the recovery path on shutdown.
     after(async () => {
