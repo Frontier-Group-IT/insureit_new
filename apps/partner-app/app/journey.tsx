@@ -4,6 +4,8 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 import { PartnerScreen } from '@/components/partner-screen';
+import { PartnerStackBottomNavigation } from '@/components/partner-stack-bottom-navigation';
+import { PartnerPolicyCalendarDialog } from '@/components/policy-intakes/partner-policy-calendar-dialog';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { getPartnerJourney, type PartnerJourneyData } from '@/lib/journey';
 import { PartnerAssets } from '@/lib/partner-assets';
@@ -16,6 +18,8 @@ export default function JourneyScreen() {
   const [error, setError] = useState('');
   const [filter, setFilter] = useState<JourneyFilter>('all');
   const [showAll, setShowAll] = useState(false);
+  const [timelineDate, setTimelineDate] = useState<string | null>(null);
+  const [calendarOpen, setCalendarOpen] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -40,11 +44,16 @@ export default function JourneyScreen() {
 
   const milestones = useMemo(() => [...(data?.milestones ?? [])].sort((a, b) => b.date.localeCompare(a.date)), [data]);
   const achievements = useMemo(() => milestones.filter((item) => !/tracking started/i.test(item.title)).slice(0, 3), [milestones]);
-  const filtered = useMemo(() => milestones.filter((item) => filter === 'all' || milestoneCategory(item.kind, item.title) === filter), [milestones, filter]);
+  const filtered = useMemo(() => milestones.filter((item) =>
+    (filter === 'all' || milestoneCategory(item.kind, item.title) === filter)
+    && (!timelineDate || item.date === timelineDate)
+  ), [milestones, filter, timelineDate]);
   const visible = showAll ? filtered : filtered.slice(0, 8);
 
   return (
-    <PartnerScreen eyebrow="MY JOURNEY" title="My progress" onBack={() => router.back()}>
+    <PartnerScreen eyebrow="MY JOURNEY" title="My progress" onBack={() => router.back()}
+      navyTopBar navyStatusBar bottomNavigationNavy
+      bottomNavigation={<PartnerStackBottomNavigation activeTab="home" />}>
       {loading ? (
         <PartnerStateView state="loading" title="Loading your journey" />
       ) : error || !data ? (
@@ -54,7 +63,6 @@ export default function JourneyScreen() {
           <View style={styles.hero}>
             <View style={styles.heroTop}>
               <Text style={styles.heroEyebrow}>NEXT CUSTOMER MILESTONE</Text>
-              <Ionicons name="locate-outline" size={22} color="#C4B5FD" />
             </View>
             <Text style={styles.heroTitle}>{data.next_milestone.title}</Text>
             <View style={styles.heroNumbers}>
@@ -113,8 +121,20 @@ export default function JourneyScreen() {
           <View style={styles.card}>
             <View style={styles.cardHeading}>
               <Text style={styles.sectionTitle}>Journey timeline</Text>
-              <Ionicons name="calendar-outline" size={18} color="#667085" />
+              <Pressable accessibilityRole="button" accessibilityLabel="Choose journey timeline date"
+                accessibilityHint="Filter journey milestones by date" onPress={() => setCalendarOpen(true)}
+                hitSlop={12} style={styles.calendarButton}>
+                <Ionicons name="calendar-outline" size={20} color="#315E9C" />
+              </Pressable>
             </View>
+            {timelineDate ? <View style={styles.dateFilterRow}>
+              <Text style={styles.dateFilterLabel}>Showing {formatDate(timelineDate)}</Text>
+              <Pressable accessibilityRole="button" accessibilityLabel="Clear timeline date filter"
+                onPress={() => { setTimelineDate(null); setShowAll(false); }} style={styles.clearDateButton}>
+                <Ionicons name="close-circle-outline" size={16} color="#315E9C" />
+                <Text style={styles.clearDateText}>Clear date</Text>
+              </Pressable>
+            </View> : null}
             <View style={styles.filters}>
               {JOURNEY_FILTERS.map((choice) => (
                 <Pressable
@@ -150,7 +170,7 @@ export default function JourneyScreen() {
                 })}
               </View>
             ) : (
-              <PartnerStateView state="empty" title={filter === 'all' ? 'Your journey is just beginning' : 'No milestones in this category'} message="Recorded milestones will appear here when achieved." asset={PartnerAssets.status.journey} />
+              <PartnerStateView state="empty" title={timelineDate ? 'No milestones on this date' : filter === 'all' ? 'Your journey is just beginning' : 'No milestones in this category'} message={timelineDate ? 'Choose another date or clear the timeline date filter.' : 'Recorded milestones will appear here when achieved.'} asset={PartnerAssets.status.journey} />
             )}
             {filtered.length > 8 ? (
               <Pressable accessibilityRole="button" accessibilityLabel={showAll ? 'Show fewer milestones' : 'View all milestones'} onPress={() => setShowAll(!showAll)} style={styles.showMore}>
@@ -161,6 +181,15 @@ export default function JourneyScreen() {
           </View>
         </>
       )}
+      <PartnerPolicyCalendarDialog visible={calendarOpen}
+        value={timelineDate ? new Date(`${timelineDate}T12:00:00`) : new Date()}
+        onCancel={() => setCalendarOpen(false)}
+        onConfirm={(date) => {
+          const day = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+          setTimelineDate(day);
+          setShowAll(false);
+          setCalendarOpen(false);
+        }} />
     </PartnerScreen>
   );
 }
@@ -234,6 +263,11 @@ const styles = StyleSheet.create({
   card: { marginTop: 13, padding: 15, borderRadius: 19, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E7E9EE' },
   cardHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 15 },
   sectionTitle: { color: partnerTheme.colors.ink, fontSize: 16, fontWeight: '800' },
+  calendarButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', borderRadius: 10, backgroundColor: '#EDF3FB' },
+  dateFilterRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 12 },
+  dateFilterLabel: { flex: 1, color: '#315E9C', fontSize: 11, fontWeight: '700' },
+  clearDateButton: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 8, paddingHorizontal: 6 },
+  clearDateText: { color: '#315E9C', fontSize: 10.5, fontWeight: '700' },
   smallPill: { paddingHorizontal: 10, paddingVertical: 5, backgroundColor: '#F0F1F4', borderRadius: 999 },
   smallPillText: { fontSize: 10, color: '#667085', fontWeight: '700' },
   achievementRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 6 },
