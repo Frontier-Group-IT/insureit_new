@@ -64,9 +64,6 @@ export default function RecognitionScreen() {
                 <Text style={styles.heroTitle}>Every milestone matters.</Text>
               </View>
             </View>
-            <Text style={styles.heroDescription}>
-              Celebrate the achievements earned throughout your INSUREIT journey.
-            </Text>
             <View style={styles.earnedRow}>
               <Ionicons name="checkmark-circle-outline" color="#A6E7BF" size={18} />
               <Text style={styles.earnedText}>
@@ -102,8 +99,6 @@ export default function RecognitionScreen() {
                         ) : null}
                       </View>
                     </View>
-                    <View style={styles.cardDivider} />
-                    <Text style={styles.description}>{item.body}</Text>
                   </View>
                 );
               })}
@@ -124,11 +119,9 @@ export default function RecognitionScreen() {
               <View style={styles.progressNumbers}>
                 <View>
                   <Text style={styles.currentNumber}>{next.current.toLocaleString('en-IN')}</Text>
-                  <Text style={styles.progressCaption}>Customers achieved</Text>
                 </View>
                 <View style={styles.percentGroup}>
                   <Text style={styles.percentText}>{(progress * 100).toFixed(1)}%</Text>
-                  <Text style={styles.progressCaption}>Completed</Text>
                 </View>
               </View>
               <View
@@ -139,9 +132,6 @@ export default function RecognitionScreen() {
               >
                 <View style={[styles.fill, { width: `${progress * 100}%` }]} />
               </View>
-              <Text style={styles.remaining}>
-                {next.remaining > 0 ? `${next.remaining.toLocaleString('en-IN')} more customers to unlock` : 'Milestone achieved'}
-              </Text>
             </View>
           ) : null}
 
@@ -185,8 +175,7 @@ const styles = StyleSheet.create({
   heroCopy: { flex: 1, minWidth: 0 },
   heroEyebrow: { color: '#C4B5FD', fontSize: 10, letterSpacing: 1, fontWeight: '800' },
   heroTitle: { marginTop: 5, color: '#FFFFFF', fontSize: 19, lineHeight: 24, fontWeight: '800' },
-  heroDescription: { marginTop: 15, color: '#D3DDEF', fontSize: 12, lineHeight: 18 },
-  earnedRow: { marginTop: 14, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  earnedRow: { marginTop: 12, flexDirection: 'row', alignItems: 'center', gap: 8 },
   earnedText: { color: '#FFFFFF', fontSize: 11.5, fontWeight: '700' },
   sectionHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 20, marginBottom: 10 },
   sectionTitle: { flex: 1, color: '#151C2B', fontSize: 16, fontWeight: '800' },
@@ -201,21 +190,17 @@ const styles = StyleSheet.create({
   title: { color: '#1C2638', fontSize: 14, lineHeight: 19, fontWeight: '800' },
   dateRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 7 },
   date: { color: '#6957C9', fontSize: 11, fontWeight: '700' },
-  cardDivider: { height: 1, marginVertical: 13, backgroundColor: '#E9EDF3' },
-  description: { color: '#657186', fontSize: 11.5, lineHeight: 18 },
   nextCard: { marginTop: 15, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E4E8EF', borderRadius: 19, padding: 16 },
   nextHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   nextHeadingText: { flex: 1, minWidth: 0 },
   nextEyebrow: { color: '#6856D5', fontSize: 10, letterSpacing: 0.9, fontWeight: '800' },
   nextTitle: { marginTop: 5, color: '#17233A', fontSize: 18, lineHeight: 23, fontWeight: '800' },
-  progressNumbers: { marginTop: 19, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' },
+  progressNumbers: { marginTop: 14, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' },
   currentNumber: { color: '#17233A', fontSize: 23, fontWeight: '800' },
   percentGroup: { alignItems: 'flex-end' },
   percentText: { color: '#6954D6', fontSize: 21, fontWeight: '800' },
-  progressCaption: { color: '#657186', fontSize: 10.5, fontWeight: '600', marginTop: 3 },
   track: { height: 9, borderRadius: 999, overflow: 'hidden', backgroundColor: '#E5E1FA', marginTop: 14 },
   fill: { height: '100%', borderRadius: 999, backgroundColor: '#7158DC' },
-  remaining: { color: '#57657B', fontSize: 11, fontWeight: '600', marginTop: 11 },
   journeyLink: { marginTop: 12, paddingVertical: 12, flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center', borderRadius: partnerTheme.radius.md, backgroundColor: '#EBF1FA' },
   journeyLinkPressed: { opacity: 0.7 },
   journeyLinkText: { color: '#315E9C', fontSize: 12, fontWeight: '800' },
