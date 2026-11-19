@@ -23,7 +23,7 @@ export function NonTataParserTestPanel() {
     try {
       const form = new FormData();
       form.set("file", file);
-      const response = await fetch("/policies/non-tata-parser-test", {
+      const response = await fetch("/api/policies/non-tata-parser-test", {
         method: "POST", body: form, cache: "no-store", credentials: "same-origin",
       });
       const parsed: Result = await response.json().catch(() => ({ ok: false, error: "Unexpected server response." }));
