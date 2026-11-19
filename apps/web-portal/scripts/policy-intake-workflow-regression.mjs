@@ -37,8 +37,13 @@ assert(actions.includes('profile.role === "claims_head" || await canAccessInterm
 assert(read("lib/policy-intake-server.ts").includes('profile.role === "claims_head"'),"Claims Head source list must include all active sources");
 assert(actions.includes('createSignedUploadUrl(storagePath,{upsert:false})'),"Large policy files must use direct signed storage upload instead of a Server Action request body");
 assert(actions.includes('.from("policy_intake_requests").insert('),"Submission must persist the intake before automatic extraction");
-assert(actions.includes('ocrStatus=proposal?"completed":"pending"'),"Motor/Non-Motor intake must still be stored with pending OCR while Life/Health proposal forms bypass OCR");
-assert(actions.includes('if(!proposal)after(async()=>{await processStoredOcr(input.id);})'),"OCR must only be scheduled after submission for Motor/Non-Motor intakes");
+assert(actions.includes('ocrStatus=proposal?"completed":manualSplit?"failed":"pending"')
+  && actions.includes('const lane=incomingPolicyIntakeLane(input.policyType,aiQueueEnabled())')
+  && actions.includes('status=proposal||manualSplit?"ready_for_review":"processing"'),
+  "Default non-proposal Intake uses pending OCR, while manual lane skips automatic OCR and Life/Health proposals bypass it");
+assert(actions.includes('else if(!proposal && !manualSplit) after(async()=>{await processStoredOcr(input.id);})')
+  && actions.includes('if(aiQueueEnabled() && (!segregatePolicyIntakeLanes() || lane==="automation"))'),
+  "Automatic OCR may run only after non-proposal Intake submission and must never drain a manual-lane Intake");
 assert(actions.includes('if(isProposalType(intake.policy_type))'),"Background OCR must refuse Life/Health proposal forms server-side");
 assert(actions.includes('policy_type:input.policyType'),"New intake must persist the selected policy type");
 assert(!/from\(["']policies["']\)\s*\.insert\(/.test(actions),"Sales intake submission must never insert a real policy");
