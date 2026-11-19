@@ -83,6 +83,7 @@ const aiWorkspace=read("components/development/semi-auto-policy-workspace.tsx");
 assert(migration.includes("move_policy_intake_automation_to_manual_v1")
  && migration.includes("from public.policy_intake_ai_processing_queue q")
  && migration.includes("v_queue.state not in ('unsupported','exception','failed')")
+ && migration.includes("'policy_intake_lane_backfilled'")
  && migration.includes("for update")
  && migration.includes("'policy_intake_lane_transferred'")
  && migration.includes("grant execute on function public.move_policy_intake_automation_to_manual_v1"),
