@@ -489,6 +489,9 @@ requireText(policyDetailIcon, "borderColor: palette.border", 'Policy detail prof
 requireText(policyDetailIcon, "shadowColor: palette.fg", 'Policy detail professional icons must keep subtle semantic depth.');
 if (policyDetail.includes('name="person-outline"') || policyDetail.includes('name="car-outline"') || policyDetail.includes("category === 'Motor' ? 'car-outline'")) throw new Error('Policy detail feature/entity identity must not regress to generic person/car glyphs.');
 
+requireText(customerDetail, "profile: { backgroundColor: '#FFFFFF', flexDirection: 'row', alignItems: 'flex-start'", 'Customer Details identity strip must be white with name aligned to avatar top.');
+requireText(customerDetail, 'numberOfLines={1} ellipsizeMode="tail"', 'Long customer names must truncate to one line.');
+requireText(customerDetail, "name=\"checkmark-circle\" size={19} color=\"#0CB76B\"", 'Verified customer icon remains alongside name.');
 requireText(customerDetail, 'getPartnerInsurerLogoSource', 'Customer detail must resolve insurer logos for policy and claim rows.');
 requireText(customerDetail, 'getPartnerManufacturerLogoSource', 'Customer detail must resolve manufacturer logos for vehicle rows.');
 requireText(customerDetail, 'policy.insurer_name', 'Customer detail policy rows must bind insurer identity from real policy data.');
