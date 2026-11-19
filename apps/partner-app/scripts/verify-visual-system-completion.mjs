@@ -548,22 +548,22 @@ for (const heading of ['Account', 'Device security', 'Privacy', 'App information
 }
 requireText(settings, 'subtitle="Manage your profile details"', 'Profile row must show reference helper copy.');
 requireText(settings, 'subtitle="Get help and assistance"', 'Support row must show reference helper copy.');
-requireText(settings, "linkIcon: { width: 34, height: 34", 'Settings must use larger reference-style lavender icons.');
+requireText(settings, "linkIcon: { width: 43, height: 43", 'Settings must use larger reference-style lavender icons.');
 
 requireText(settings, 'icon="person-outline" title="Profile & registration"', 'Settings Account profile row must use the professional profile icon.');
 requireText(settings, 'icon="headset-outline" title="Support"', 'Settings Account support row must use the professional support icon.');
-requireText(settings, "controlTitle: { color: '#141C3F', fontSize: 13", 'Device security titles must use a dedicated non-flexing title style.');
+requireText(settings, "controlTitle: { color: '#141C3F', fontSize: 14", 'Device security titles must use a dedicated non-flexing title style.');
 requireText(settings, "controlCopy: { flex: 1, minWidth: 0, justifyContent: 'center' }", 'Device security title and helper copy must remain a compact vertical stack.');
-requireText(settings, "controlSubtitle: { marginTop: 1", 'Device security helper text must sit directly below its row title.');
-requireText(settings, 'controlRow: { minHeight: 46', 'Device security rows must keep the compact joined-list height.');
-requireText(settingsSectionHeader, 'settingsRowCompact: { marginTop: 6, marginBottom: 2, minHeight: 20 }', 'Compact Settings headings reduce the gap to their cards.');
+requireText(settings, "controlSubtitle: { marginTop: 3", 'Device security helper text must sit directly below its row title.');
+requireText(settings, 'controlRow: { minHeight: 68', 'Device security rows must keep the compact joined-list height.');
+requireText(settingsSectionHeader, 'settingsRowCompact: { marginTop: 20, marginBottom: 10, minHeight: 24 }', 'Compact Settings headings reduce the gap to their cards.');
 for (const compactStyle of [
-  'linkRow: { minHeight: 46',
-  'infoRow: { minHeight: 28',
-  'linkIcon: { width: 34, height: 34',
-  'updateMenu: { marginTop: 5 }',
-  'note: { marginTop: 6, minHeight: 34',
-]) requireText(settings, compactStyle, 'Compact Settings layout contract: ' + compactStyle);
+  'linkRow: { minHeight: 66',
+  'infoRow: { minHeight: 44',
+  'linkIcon: { width: 43, height: 43',
+  'updateMenu: { marginTop: 12 }',
+  'note: { marginTop: 14, minHeight: 54',
+]) requireText(settings, compactStyle, 'Comfortable Settings layout contract: ' + compactStyle);
 for (const item of ['Profile & registration', 'Support', 'Biometric re-entry', 'Partner notifications', 'Privacy Policy', 'Request account deletion', 'Check for updates']) {
   requireText(settings, item, 'Compact layout must preserve Settings action: ' + item);
 }
