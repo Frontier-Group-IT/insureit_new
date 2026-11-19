@@ -363,6 +363,8 @@ jobs:
         run: npm run register-prefetch:regression
       - name: Commercial and reports prefetch regression
         run: npm run commercial-reports-prefetch:regression
+      - name: Commercial Review incomplete status refresh regression
+        run: node scripts/commercial-review-incomplete-refresh-regression.mjs
       - name: Reports business type global filter regression
         run: node scripts/reports-business-type-filter-regression.mjs
       - name: Register performance observability regression
