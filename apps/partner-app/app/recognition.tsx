@@ -63,20 +63,15 @@ export default function RecognitionScreen() {
                 <Text style={styles.heroEyebrow}>YOUR RECOGNITION</Text>
                 <Text style={styles.heroTitle}>Every milestone matters.</Text>
               </View>
-            </View>
-            <View style={styles.earnedRow}>
-              <Ionicons name="checkmark-circle-outline" color="#A6E7BF" size={18} />
-              <Text style={styles.earnedText}>
-                {data.items.length.toLocaleString('en-IN')} recorded {data.items.length === 1 ? 'achievement' : 'achievements'}
-              </Text>
+              <View style={styles.earnedCount} accessibilityLabel={`${data.items.length} recorded achievements`}>
+                <Text style={styles.earnedNumber}>{data.items.length.toLocaleString('en-IN')}</Text>
+                <Text style={styles.earnedLabel}>{data.items.length === 1 ? 'Recorded achievement' : 'Recorded achievements'}</Text>
+              </View>
             </View>
           </View>
 
           <View style={styles.sectionHeading}>
             <Text style={styles.sectionTitle}>Unlocked achievements</Text>
-            {data.items.length > 0 ? (
-              <View style={styles.earnedPill}><Text style={styles.earnedPillText}>ACHIEVED</Text></View>
-            ) : null}
           </View>
 
           {data.items.length ? (
@@ -91,12 +86,10 @@ export default function RecognitionScreen() {
                       </View>
                       <View style={styles.achievementHeading}>
                         <Text style={styles.title}>{item.title}</Text>
-                        {item.date ? (
-                          <View style={styles.dateRow}>
-                            <Ionicons name="calendar-outline" size={13} color="#6957C9" />
-                            <Text style={styles.date}>{formatDate(item.date)}</Text>
-                          </View>
-                        ) : null}
+                      </View>
+                      <View style={styles.achievementMeta}>
+                        <View style={styles.earnedPill}><Text style={styles.earnedPillText}>ACHIEVED</Text></View>
+                        {item.date ? <Text style={styles.date}>{formatDate(item.date)}</Text> : null}
                       </View>
                     </View>
                   </View>
@@ -114,23 +107,17 @@ export default function RecognitionScreen() {
                   <Text style={styles.nextEyebrow}>NEXT MILESTONE</Text>
                   <Text style={styles.nextTitle}>{next.title}</Text>
                 </View>
-                <Ionicons name="flag-outline" size={22} color="#6856D5" />
-              </View>
-              <View style={styles.progressNumbers}>
-                <View>
+                <View style={styles.percentGroup}>
+                  <View
+                    style={styles.percentCircle}
+                    accessibilityRole="progressbar"
+                    accessibilityLabel={next.title}
+                    accessibilityValue={{ min: 0, max: Math.max(0, next.target), now: Math.max(0, Math.min(next.current, Math.max(0, next.target))) }}
+                  >
+                    <Text style={styles.percentText}>{(progress * 100).toFixed(1)}%</Text>
+                  </View>
                   <Text style={styles.currentNumber}>{next.current.toLocaleString('en-IN')}</Text>
                 </View>
-                <View style={styles.percentGroup}>
-                  <Text style={styles.percentText}>{(progress * 100).toFixed(1)}%</Text>
-                </View>
-              </View>
-              <View
-                style={styles.track}
-                accessibilityRole="progressbar"
-                accessibilityLabel={next.title}
-                accessibilityValue={{ min: 0, max: Math.max(0, next.target), now: Math.max(0, Math.min(next.current, Math.max(0, next.target))) }}
-              >
-                <View style={[styles.fill, { width: `${progress * 100}%` }]} />
               </View>
             </View>
           ) : null}
@@ -168,39 +155,38 @@ function formatDate(value: string) {
 }
 
 const styles = StyleSheet.create({
-  hero: { marginTop: 13, borderRadius: 22, padding: 18, backgroundColor: '#142849' },
-  heroContent: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  trophyTile: { width: 58, height: 58, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: '#2C4166' },
-  heroArtwork: { width: 44, height: 44 },
+  hero: { marginHorizontal: -partnerTheme.spacing.lg, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#E5E7EB' },
+  heroContent: { flexDirection: 'row', alignItems: 'center', gap: 9, paddingHorizontal: partnerTheme.spacing.lg, paddingVertical: 16 },
+  trophyTile: { width: 48, height: 48, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: '#EDF2FA' },
+  heroArtwork: { width: 39, height: 39 },
   heroCopy: { flex: 1, minWidth: 0 },
-  heroEyebrow: { color: '#C4B5FD', fontSize: 10, letterSpacing: 1, fontWeight: '800' },
-  heroTitle: { marginTop: 5, color: '#FFFFFF', fontSize: 19, lineHeight: 24, fontWeight: '800' },
-  earnedRow: { marginTop: 10, flexDirection: 'row', alignItems: 'center', gap: 8 },
-  earnedText: { color: '#FFFFFF', fontSize: 11.5, fontWeight: '700' },
-  sectionHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 15, marginBottom: 9 },
-  sectionTitle: { flex: 1, color: '#151C2B', fontSize: 16, fontWeight: '800' },
-  earnedPill: { paddingVertical: 6, paddingHorizontal: 11, borderRadius: 999, backgroundColor: '#E9E5FF' },
-  earnedPillText: { color: '#604BC5', fontSize: 10, fontWeight: '800', letterSpacing: 0.35 },
+  heroEyebrow: { color: '#6856C9', fontSize: 9, letterSpacing: 0.7, fontWeight: '800' },
+  heroTitle: { marginTop: 4, color: '#17233A', fontSize: 15, lineHeight: 20, fontWeight: '800' },
+  earnedCount: { alignItems: 'center', justifyContent: 'center', width: 92, flexShrink: 0 },
+  earnedNumber: { color: '#16805B', fontSize: 24, lineHeight: 29, fontWeight: '800' },
+  earnedLabel: { color: '#56657C', fontSize: 9, lineHeight: 13, fontWeight: '700', textAlign: 'center' },
+  sectionHeading: { marginTop: 15, marginBottom: 9 },
+  sectionTitle: { color: '#151C2B', fontSize: 16, fontWeight: '800' },
+  earnedPill: { paddingVertical: 5, paddingHorizontal: 8, borderRadius: 999, backgroundColor: '#E9E5FF' },
+  earnedPillText: { color: '#604BC5', fontSize: 9, fontWeight: '800', letterSpacing: 0.3 },
   list: { gap: 10 },
-  card: { backgroundColor: '#FFFFFF', borderRadius: 19, padding: 13, borderWidth: 1, borderColor: '#E4E8EF' },
-  achievementTop: { flexDirection: 'row', alignItems: 'center', gap: 13 },
-  artworkTile: { width: 56, height: 56, borderRadius: 15, justifyContent: 'center', alignItems: 'center' },
-  achievementArtwork: { width: 40, height: 40 },
+  card: { backgroundColor: '#FFFFFF', borderRadius: 17, padding: 12, borderWidth: 1, borderColor: '#E4E8EF' },
+  achievementTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  artworkTile: { width: 48, height: 48, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
+  achievementArtwork: { width: 36, height: 36 },
   achievementHeading: { flex: 1, minWidth: 0 },
-  title: { color: '#1C2638', fontSize: 14, lineHeight: 19, fontWeight: '800' },
-  dateRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 7 },
-  date: { color: '#6957C9', fontSize: 11, fontWeight: '700' },
-  nextCard: { marginTop: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E4E8EF', borderRadius: 19, padding: 14 },
-  nextHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  title: { color: '#1C2638', fontSize: 13, lineHeight: 18, fontWeight: '800' },
+  achievementMeta: { alignItems: 'flex-end', justifyContent: 'center', gap: 7, maxWidth: '39%' },
+  date: { color: '#6957C9', fontSize: 10, fontWeight: '700', textAlign: 'right' },
+  nextCard: { marginTop: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E4E8EF', borderRadius: 17, padding: 12 },
+  nextHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   nextHeadingText: { flex: 1, minWidth: 0 },
-  nextEyebrow: { color: '#6856D5', fontSize: 10, letterSpacing: 0.9, fontWeight: '800' },
-  nextTitle: { marginTop: 5, color: '#17233A', fontSize: 18, lineHeight: 23, fontWeight: '800' },
-  progressNumbers: { marginTop: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' },
-  currentNumber: { color: '#17233A', fontSize: 23, fontWeight: '800' },
-  percentGroup: { alignItems: 'flex-end' },
-  percentText: { color: '#6954D6', fontSize: 21, fontWeight: '800' },
-  track: { height: 9, borderRadius: 999, overflow: 'hidden', backgroundColor: '#E5E1FA', marginTop: 10 },
-  fill: { height: '100%', borderRadius: 999, backgroundColor: '#7158DC' },
+  nextEyebrow: { color: '#6856D5', fontSize: 10, letterSpacing: 0.8, fontWeight: '800' },
+  nextTitle: { marginTop: 5, color: '#17233A', fontSize: 17, lineHeight: 22, fontWeight: '800' },
+  percentGroup: { alignItems: 'center', justifyContent: 'center', gap: 5 },
+  percentCircle: { width: 64, height: 64, borderRadius: 32, borderWidth: 5, borderColor: '#7158DC', alignItems: 'center', justifyContent: 'center', backgroundColor: '#F7F4FF' },
+  percentText: { color: '#6954D6', fontSize: 14, fontWeight: '800' },
+  currentNumber: { color: '#17233A', fontSize: 15, fontWeight: '800' },
   journeyLink: { marginTop: 12, paddingVertical: 12, flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center', borderRadius: partnerTheme.radius.md, backgroundColor: '#EBF1FA' },
   journeyLinkPressed: { opacity: 0.7 },
   journeyLinkText: { color: '#315E9C', fontSize: 12, fontWeight: '800' },
