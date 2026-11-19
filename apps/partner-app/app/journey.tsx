@@ -55,30 +55,16 @@ export default function JourneyScreen() {
       ) : (
         <>
           <View style={styles.hero}>
-            <View style={styles.heroTop}>
-              <Text style={styles.heroEyebrow}>NEXT CUSTOMER MILESTONE</Text>
+            <View style={styles.heroHeadline}>
+              <Text style={styles.heroTitle} numberOfLines={2}>{data.next_milestone.title}</Text>
+              <Ionicons name="flag-outline" size={18} color="#C4B5FD" />
             </View>
-            <Text style={styles.heroTitle}>{data.next_milestone.title}</Text>
-            <View style={styles.heroNumbers}>
-              <View>
-                <Text style={styles.heroCount}>{data.next_milestone.current.toLocaleString('en-IN')}</Text>
-                <Text style={styles.heroMuted}>Customers achieved</Text>
-              </View>
-              <View style={styles.heroPercentWrap}>
-                <Text style={styles.heroPercent}>{Math.round(progress * 100)}%</Text>
-                <Text style={styles.heroMuted}>Completed</Text>
-              </View>
+            <View style={styles.heroProgressHeading}>
+              <Text style={styles.heroProgressLabel}>Milestone progress</Text>
+              <Text style={styles.heroPercent}>{Math.round(progress * 100)}%</Text>
             </View>
             <View style={styles.progressTrack} accessibilityRole="progressbar" accessibilityValue={{ min: 0, max: data.next_milestone.target, now: Math.min(data.next_milestone.current, data.next_milestone.target) }}>
               <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
-            </View>
-            <View style={styles.heroBottom}>
-              <Text style={styles.heroRemaining}>
-                {data.next_milestone.remaining > 0
-                  ? `${data.next_milestone.remaining.toLocaleString('en-IN')} more customers to unlock`
-                  : 'Milestone achieved'}
-              </Text>
-              <Ionicons name="flag-outline" size={17} color="#C4B5FD" />
             </View>
           </View>
 
@@ -103,7 +89,7 @@ export default function JourneyScreen() {
                       <View style={[styles.achievementIcon, { backgroundColor: tone.background }]}>
                         <Ionicons name={journeyMilestoneIcon(item.kind, item.title)} size={25} color={tone.color} />
                       </View>
-                      <Text style={styles.achievementTitle} numberOfLines={2}>{item.title}</Text>
+                      <Text style={styles.achievementTitle} numberOfLines={1} ellipsizeMode="tail" accessibilityLabel={item.title}>{item.title}</Text>
                       <Text style={styles.achievementDate}>{formatDate(item.date)}</Text>
                     </View>
                   );
@@ -132,20 +118,13 @@ export default function JourneyScreen() {
             {visible.length ? (
               <View style={styles.timeline}>
                 {visible.map((item, index) => {
-                  const tone = categoryTone(milestoneCategory(item.kind, item.title));
                   return (
-                    <View key={`${item.kind}-${item.date}-${index}`} style={styles.timelineRow}>
-                      <View style={styles.rail}>
-                        <View style={[styles.timelineArtwork, { backgroundColor: tone.background }]}>
-                          <Ionicons name={journeyMilestoneIcon(item.kind, item.title)} size={19} color={tone.color} />
-                        </View>
-                        {index < visible.length - 1 ? <View style={styles.line} /> : null}
-                      </View>
+                    <View key={`${item.kind}-${item.date}-${index}`} style={[styles.timelineRow, index > 0 && styles.timelineDivider]}>
                       <View style={styles.timelineBody}>
-                        <Text style={styles.timelineDate}>{formatDate(item.date)}</Text>
                         <Text style={styles.timelineTitle}>{item.title}</Text>
-                        <Text style={styles.timelineText}>{item.subtitle}</Text>
+                        {item.subtitle ? <Text style={styles.timelineText}>{item.subtitle}</Text> : null}
                       </View>
+                      <Text style={styles.timelineDate}>{formatDate(item.date)}</Text>
                     </View>
                   );
                 })}
@@ -191,8 +170,10 @@ function Summary({ value, label, icon, color, background, onPress }: { value: nu
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={`Open ${label}`} onPress={onPress} style={({ pressed }) => [styles.summaryItem, pressed && styles.summaryItemPressed]}>
       <View style={[styles.summaryIcon, { backgroundColor: background }]}><Ionicons name={icon} size={21} color={color} /></View>
-      <Text style={styles.summaryValue} adjustsFontSizeToFit numberOfLines={1}>{value.toLocaleString('en-IN')}</Text>
-      <Text style={styles.summaryLabel}>{label}</Text>
+      <View style={styles.summaryDetails}>
+        <Text style={styles.summaryLabel} numberOfLines={1} ellipsizeMode="tail">{label}</Text>
+        <Text style={styles.summaryValue} adjustsFontSizeToFit numberOfLines={1}>{value.toLocaleString('en-IN')}</Text>
+      </View>
     </Pressable>
   );
 }
@@ -214,47 +195,41 @@ function formatDate(value: string) {
 
 const styles = StyleSheet.create({
   hero: { marginTop: 16, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 14, backgroundColor: '#142849' },
-  heroTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  heroEyebrow: { color: '#C3B6FF', letterSpacing: 0.9, fontSize: 10, fontWeight: '800' },
-  heroTitle: { marginTop: 5, color: '#FFFFFF', fontSize: 22, lineHeight: 28, fontWeight: '800' },
-  heroNumbers: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', marginTop: 10 },
-  heroCount: { color: '#FFFFFF', fontSize: 22, fontWeight: '800' },
-  heroPercentWrap: { alignItems: 'flex-end' },
+  heroHeadline: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  heroTitle: { flex: 1, minWidth: 0, color: '#FFFFFF', fontSize: 22, lineHeight: 28, fontWeight: '800' },
+  heroProgressHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 12 },
+  heroProgressLabel: { color: '#CBD6EA', fontSize: 11, fontWeight: '600' },
   heroPercent: { color: '#C4B5FD', fontSize: 21, fontWeight: '800' },
-  heroMuted: { marginTop: 3, color: '#CAD6EE', fontSize: 10.5, fontWeight: '500' },
   progressTrack: { height: 8, marginTop: 10, overflow: 'hidden', borderRadius: 999, backgroundColor: '#405171' },
   progressFill: { height: '100%', borderRadius: 999, backgroundColor: '#A78BFA' },
-  heroBottom: { marginTop: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  heroRemaining: { color: '#DFE7F8', fontSize: 11, fontWeight: '600', flexShrink: 1 },
   summary: { marginTop: 12, flexDirection: 'row', gap: 8 },
-  summaryItem: { flex: 1, minWidth: 0, minHeight: 109, alignItems: 'center', justifyContent: 'center', padding: 7, borderRadius: 17, borderWidth: 1, borderColor: '#E7E9EE', backgroundColor: '#FFFFFF' },
+  summaryItem: { flex: 1, minWidth: 0, minHeight: 88, alignItems: 'flex-start', justifyContent: 'space-between', padding: 9, borderRadius: 17, borderWidth: 1, borderColor: '#E7E9EE', backgroundColor: '#FFFFFF' },
   summaryItemPressed: { backgroundColor: '#F1F5FB' },
   summaryIcon: { width: 35, height: 35, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginBottom: 6 },
-  summaryValue: { color: partnerTheme.colors.ink, fontSize: 18, lineHeight: 23, fontWeight: '800' },
-  summaryLabel: { marginTop: 2, color: partnerTheme.colors.inkMuted, textAlign: 'center', fontSize: 10.5, fontWeight: '600' },
+  summaryDetails: { width: '100%', minWidth: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 3 },
+  summaryValue: { flexShrink: 1, color: partnerTheme.colors.ink, fontSize: 13, lineHeight: 17, fontWeight: '800', textAlign: 'right' },
+  summaryLabel: { flexShrink: 1, color: partnerTheme.colors.inkMuted, fontSize: 10, fontWeight: '600' },
   card: { marginTop: 13, padding: 15, borderRadius: 19, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E7E9EE' },
   cardHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 15 },
   sectionTitle: { color: partnerTheme.colors.ink, fontSize: 16, fontWeight: '800' },
-  smallPill: { paddingHorizontal: 10, paddingVertical: 5, backgroundColor: '#F0F1F4', borderRadius: 999 },
-  smallPillText: { fontSize: 10, color: '#667085', fontWeight: '700' },
+  smallPill: { paddingHorizontal: 10, paddingVertical: 5, backgroundColor: '#E9E1FF', borderRadius: 999 },
+  smallPillText: { fontSize: 10, color: '#6842B5', fontWeight: '700' },
   achievementRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 6 },
   achievement: { flex: 1, minWidth: 0, alignItems: 'center' },
   achievementIcon: { width: 57, height: 57, borderRadius: 29, justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
-  achievementTitle: { color: '#192333', fontSize: 11, lineHeight: 15, fontWeight: '700', textAlign: 'center', minHeight: 30 },
+  achievementTitle: { width: '100%', color: '#192333', fontSize: 11, lineHeight: 15, fontWeight: '700', textAlign: 'center' },
   achievementDate: { color: '#7A8698', fontSize: 9.5, textAlign: 'center', marginTop: 4 },
   filters: { flexDirection: 'row', gap: 5, marginBottom: 19 },
   filterButton: { flex: 1, minWidth: 0, paddingVertical: 10, paddingHorizontal: 2, alignItems: 'center', borderRadius: 9, backgroundColor: '#F3F5F9' },
   filterActive: { backgroundColor: '#142849' },
   filterText: { fontSize: 10, fontWeight: '700', color: '#667085' },
   filterActiveText: { color: '#FFFFFF' },
-  timeline: { paddingLeft: 1 },
-  timelineRow: { minHeight: 74, flexDirection: 'row' },
-  rail: { width: 49, alignItems: 'flex-start', paddingLeft: 1 },
-  timelineArtwork: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center', borderRadius: 13 },
-  line: { width: 1.5, flex: 1, marginTop: 3, marginLeft: 18, marginBottom: 2, backgroundColor: '#E2E7EE' },
-  timelineBody: { flex: 1, paddingBottom: 20 },
-  timelineDate: { color: '#6C72A1', fontSize: 10, fontWeight: '700' },
-  timelineTitle: { marginTop: 4, color: '#182333', fontSize: 12.5, fontWeight: '800' },
+  timeline: { borderTopWidth: 1, borderTopColor: '#E7E9EE' },
+  timelineRow: { minHeight: 66, flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingVertical: 13 },
+  timelineDivider: { borderTopWidth: 1, borderTopColor: '#E7E9EE' },
+  timelineBody: { flex: 1, minWidth: 0 },
+  timelineDate: { width: 105, flexShrink: 0, color: '#6C72A1', fontSize: 10, fontWeight: '600', textAlign: 'right' },
+  timelineTitle: { color: '#182333', fontSize: 12.5, lineHeight: 18, fontWeight: '700' },
   timelineText: { marginTop: 4, color: '#667085', fontSize: 10.5, lineHeight: 15 },
   showMore: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6, paddingVertical: 11, borderRadius: 11, backgroundColor: '#F0F4FA', marginTop: 3 },
   showMoreText: { color: '#315E9C', fontSize: 12, fontWeight: '700' },
