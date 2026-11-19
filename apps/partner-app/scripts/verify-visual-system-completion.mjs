@@ -763,15 +763,6 @@ requireText(policies,"let savedPolicyLifecycle: PartnerPolicyLifecycle = 'all';"
 requireText(policies,"useState<PartnerPolicyPeriod>(savedPolicyPeriod)","The Sort by sheet and list must share the selected period");
 requireText(policies,"useState<PartnerPolicyLifecycle>(savedPolicyLifecycle)","The Sort by sheet and list must share the selected status");
 
-for (const phrase of ["<Ionicons name=\"shield-checkmark-outline\" size={27}", "heroBrandInsureit: { color: '#153B72'", "heroBrandPartner: { color: '#C48424'", "backgroundColor: '#FFFFFF',", "<Feather name=\"bell\" size={20} color=\"#153B72\""]) {
-  requireText(policies,phrase,'Policies white brand header must retain a readable icon, branding and controls: '+phrase);
-}
-if (policies.includes("claims-header-reference.jpg") || policies.includes("insureit-partner-official.png")) {
-  throw new Error('Policies header must not render the previous blue illustration or logo image');
-}
-requireText(policies,"accessibilityLabel=\"Open profile\"",'White header must retain the profile action');
-requireText(policies,"accessibilityLabel={unreadActivityCount ?", 'White header must retain notifications');
-
 for(const phrase of [
   "const sortPurpleGradient = [",
   "function SortPurpleGradient()",

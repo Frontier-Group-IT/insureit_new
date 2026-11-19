@@ -329,9 +329,21 @@ export default function PoliciesScreen() {
   const header = (
     <View>
       <View style={styles.hero}>
+        <Image
+          source={require('../../assets/partner/banners/claims-header-reference.jpg')}
+          resizeMode="cover"
+          style={styles.heroBackdrop}
+        />
+        <View style={styles.heroShade} />
+
         <View style={styles.heroTopRow}>
           <View style={styles.heroBrand}>
-            <Ionicons name="shield-checkmark-outline" size={27} color="#153B72" accessibilityLabel="INSUREIT icon" />
+            <Image
+              source={require('../../assets/insureit-partner-official.png')}
+              resizeMode="contain"
+              style={styles.heroLogo}
+              accessibilityLabel="InsureIT Partner"
+            />
             <View style={styles.heroBrandCopy} accessibilityLabel="insureit Partner">
               <Text style={styles.heroBrandInsureit}>insureit</Text>
               <Text style={styles.heroBrandPartner}>Partner</Text>
@@ -344,7 +356,7 @@ export default function PoliciesScreen() {
               onPress={() => router.push('/activity')}
               style={({ pressed }) => [styles.heroIconButton, pressed && styles.pressed]}
             >
-              <Feather name="bell" size={20} color="#153B72" />
+              <Feather name="bell" size={20} color="#FFFFFF" />
               {unreadActivityCount > 0 ? <View style={styles.unreadBadge}><Text style={styles.unreadBadgeText}>{unreadActivityCount > 99 ? "99+" : unreadActivityCount}</Text></View> : null}
             </Pressable>
             <Pressable
@@ -738,7 +750,17 @@ const styles = StyleSheet.create({
   hero: {
     height: 98,
     overflow: 'hidden',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#0752A2',
+  },
+  heroBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    width: '100%',
+    height: '100%',
+    opacity: 0.92,
+  },
+  heroShade: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(1,42,95,0.10)',
   },
   heroTopRow: {
     zIndex: 3,
@@ -752,9 +774,10 @@ const styles = StyleSheet.create({
     minHeight: 35,
   },
   heroBrand: { flexDirection: 'row', alignItems: 'center', gap: 5, maxWidth: '60%' },
+  heroLogo: { width: 30, height: 35, tintColor: '#FFFFFF' },
   heroBrandCopy: { justifyContent: 'center' },
-  heroBrandInsureit: { color: '#153B72', fontSize: 14, lineHeight: 16, fontWeight: Platform.OS === 'ios' ? '400' : '800', letterSpacing: -0.08 },
-  heroBrandPartner: { color: '#C48424', fontSize: 14, lineHeight: 16, fontWeight: Platform.OS === 'ios' ? '400' : '800', letterSpacing: -0.08 },
+  heroBrandInsureit: { color: '#FFFFFF', fontSize: 14, lineHeight: 16, fontWeight: Platform.OS === 'ios' ? '400' : '800', letterSpacing: -0.08 },
+  heroBrandPartner: { color: '#F5AB2E', fontSize: 14, lineHeight: 16, fontWeight: Platform.OS === 'ios' ? '400' : '800', letterSpacing: -0.08 },
   heroActions: { minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 7 },
   unreadBadge: {
     position: 'absolute', top: -8, right: -9, minWidth: 21, height: 21,
@@ -768,9 +791,9 @@ const styles = StyleSheet.create({
     borderRadius: 17,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F2F6FC',
-    borderWidth: 1,
-    borderColor: '#D5E0F0',
+    backgroundColor: 'rgba(4,33,78,0.72)',
+    borderWidth: 1.25,
+    borderColor: '#FFFFFF',
   },
   heroAvatarTouch: { borderRadius: 18 },
   heroAvatar: {
@@ -781,7 +804,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: '#FFFFFF',
     borderWidth: 1.5,
-    borderColor: '#D5E0F0',
+    borderColor: 'rgba(255,255,255,0.98)',
     shadowColor: '#001B42',
     shadowOpacity: 0.22,
     shadowRadius: 5,
@@ -801,7 +824,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   heroTitle: {
-    color: '#153B72',
+    color: '#FFFFFF',
     fontSize: 15,
     lineHeight: 18,
     fontWeight: Platform.OS === 'ios' ? '400' : '800',
