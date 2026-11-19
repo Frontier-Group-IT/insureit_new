@@ -3,7 +3,7 @@ import "server-only";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { isN8nWorkbenchPrimary, previewSemiAutoN8nExtraction } from "@/lib/policy-intake-semi-auto-n8n";
 import { segregatePolicyIntakeLanes } from "@/lib/policy-ocr-routing-mode";
-import { assessAiPolicyIntake, hasVerifiedN8nParserEvidence, ICICI_N8N_IDS, type AiPolicyEvidence, type AiPolicyExceptionCode } from "@/lib/ai-policy-onboarding-eligibility";
+import { assessAiPolicyIntake, acceptedTataAigIssuanceDate, hasVerifiedN8nParserEvidence, ICICI_N8N_IDS, type AiPolicyEvidence, type AiPolicyExceptionCode } from "@/lib/ai-policy-onboarding-eligibility";
 import { loadPolicyIntakeDuplicateMatches } from "@/lib/policy-intake-duplicate";
 import { policyDateDecision } from "@/lib/policy-date-rule";
 import type { PolicyIntakeOcrField } from "@/lib/policy-intake-ocr-service";
@@ -107,7 +107,7 @@ export async function processAiQueueBatch(options?: {preferredIntakeId?:string;m
   // recovery worker after deployment, without rewriting OCR/drafts or booking.
   // Include the configured base to preserve operator-controlled versioning;
   // this stable suffix also works when production has a pinned base revision.
-  const parserRevision = ((process.env.INSUREIT_AI_QUEUE_PARSER_REVISION||"bridge-v1").trim()+"-issue-date-v2");
+  const parserRevision = ((process.env.INSUREIT_AI_QUEUE_PARSER_REVISION||"bridge-v1").trim()+"-issue-date-v3");
   if (parserRevision.length < 1 || parserRevision.length > 80) {
     throw new Error("AI queue parser revision configuration invalid");
   }
@@ -327,9 +327,16 @@ async function processClaim(item: Claimed, parserRevision: string) {
     (savedDraft.insuredName && normalizedName(savedDraft.insuredName)!==customerName)
     || (savedDraft.model && normalizedName(savedDraft.model)!==model)
   ));
-  // An old default issue date is not authoritative PDF evidence. No auto
-  // booking until a parser field explicitly verifies the policy issue date.
-  const pdfIssuanceDate=values.get("policy_issuance_date")??"";
+  // The signed-PDF/printed-receipt Tata rule is a narrowly authorized
+  // issuance-date BUSINESS decision, not cryptographic CMS certificate trust.
+  // An absent/mismatched signature, untrained parser, failed checks or future
+  // date still produces the existing issuance-date exception. No policy is booked.
+  const inferredTataDate=acceptedTataAigIssuanceDate({
+    parserId:extraction.preview.parserId,checksPassed:extraction.preview.checksPassed,
+    warnings:extraction.preview.warnings,fields:extraction.preview.fields,
+    issuanceEvidence:extraction.preview.issuanceEvidence,
+  });
+  const pdfIssuanceDate=values.get("policy_issuance_date")??inferredTataDate??"";
   const issuanceDecision=pdfIssuanceDate?policyDateDecision(pdfIssuanceDate):"invalid";
   const issuanceDateVerified=issuanceDecision!=="invalid"&&issuanceDecision!=="future";
   const bundled=normalizedName(values.get("policy_product")??"")==="BUNDLED";
