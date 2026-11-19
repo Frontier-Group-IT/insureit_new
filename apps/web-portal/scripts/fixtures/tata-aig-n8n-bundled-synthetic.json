@@ -1,0 +1,323 @@
+{
+  "contract_version": "1",
+  "intake_id": "00000000-0000-4000-8000-000000000001",
+  "document_id": "00000000-0000-4000-8000-000000000002",
+  "request_id": "00000000-0000-4000-8000-000000000003",
+  "ok": true,
+  "review_required": true,
+  "auto_finalize_allowed": false,
+  "extraction_method": "native_pdf_text",
+  "parser_id": "tata_aig_private_car_bundled_n8n_native_pdf",
+  "parser_version": "tata-aig-layout-v1",
+  "fields": [
+    {
+      "key": "policy_number",
+      "label": "Current policy number",
+      "value": "62000000030000",
+      "confidence": null,
+      "page": null,
+      "evidence": "Tata AIG current-policy schedule"
+    },
+    {
+      "key": "insurer_name",
+      "label": "Current insurer",
+      "value": "Tata AIG General Insurance Company Limited",
+      "confidence": null,
+      "page": null,
+      "evidence": "Tata AIG current-policy schedule"
+    },
+    {
+      "key": "policy_product",
+      "label": "Policy product",
+      "value": "Bundled",
+      "confidence": null,
+      "page": null,
+      "evidence": "Tata AIG current-policy schedule"
+    },
+    {
+      "key": "insured_name",
+      "label": "Name of insured",
+      "value": "SAMPLE COMPANY LLP",
+      "confidence": null,
+      "page": 1,
+      "evidence": "Name of Insured"
+    },
+    {
+      "key": "vehicle_registration_status",
+      "label": "Registration status",
+      "value": "unregistered",
+      "confidence": null,
+      "page": null,
+      "evidence": "Tata AIG current-policy schedule"
+    },
+    {
+      "key": "vehicle_class",
+      "label": "Vehicle class",
+      "value": "PCP",
+      "confidence": null,
+      "page": null,
+      "evidence": "Tata AIG current-policy schedule"
+    },
+    {
+      "key": "vehicle_make",
+      "label": "Vehicle make",
+      "value": "HONDA",
+      "confidence": null,
+      "page": null,
+      "evidence": "Tata AIG current-policy schedule"
+    },
+    {
+      "key": "vehicle_model",
+      "label": "Vehicle model and variant",
+      "value": "AMAZE / 1.2 E MT I-VTEC",
+      "confidence": null,
+      "page": null,
+      "evidence": "Tata AIG current-policy schedule"
+    },
+    {
+      "key": "vehicle_fuel_type",
+      "label": "Fuel type",
+      "value": "PETROL",
+      "confidence": null,
+      "page": null,
+      "evidence": "Tata AIG current-policy schedule"
+    },
+    {
+      "key": "vehicle_manufacturing_year",
+      "label": "Manufacturing year",
+      "value": "2026",
+      "confidence": null,
+      "page": null,
+      "evidence": "Tata AIG current-policy schedule"
+    },
+    {
+      "key": "vehicle_capacity",
+      "label": "Engine capacity CC",
+      "value": "1198",
+      "confidence": null,
+      "page": null,
+      "evidence": "Tata AIG current-policy schedule"
+    },
+    {
+      "key": "vehicle_chassis_number",
+      "label": "Chassis number",
+      "value": "SYNTHETICCHASSIS0003",
+      "confidence": null,
+      "page": null,
+      "evidence": "Tata AIG current-policy schedule"
+    },
+    {
+      "key": "vehicle_engine_number",
+      "label": "Engine number",
+      "value": "SYNENGINE0003",
+      "confidence": null,
+      "page": null,
+      "evidence": "Tata AIG current-policy schedule"
+    },
+    {
+      "key": "vehicle_rto_name",
+      "label": "RTO city",
+      "value": "FARIDABAD",
+      "confidence": null,
+      "page": null,
+      "evidence": "Tata AIG current-policy schedule"
+    },
+    {
+      "key": "vehicle_rto_state",
+      "label": "RTO state",
+      "value": "HARYANA",
+      "confidence": null,
+      "page": null,
+      "evidence": "Tata AIG current-policy schedule"
+    },
+    {
+      "key": "idv",
+      "label": "Total insured declared value",
+      "value": "569050",
+      "confidence": null,
+      "page": null,
+      "evidence": "Tata AIG current-policy schedule"
+    },
+    {
+      "key": "policy_start_date",
+      "label": "Own damage start",
+      "value": "2026-11-13",
+      "confidence": null,
+      "page": null,
+      "evidence": "Tata AIG current-policy schedule"
+    },
+    {
+      "key": "policy_end_date",
+      "label": "Own damage end",
+      "value": "2027-11-12",
+      "confidence": null,
+      "page": null,
+      "evidence": "Tata AIG current-policy schedule"
+    },
+    {
+      "key": "third_party_start_date",
+      "label": "TP start / existing TP reference",
+      "value": "2026-11-13",
+      "confidence": null,
+      "page": null,
+      "evidence": "Tata AIG current-policy schedule"
+    },
+    {
+      "key": "third_party_end_date",
+      "label": "TP end / existing TP reference",
+      "value": "2029-11-12",
+      "confidence": null,
+      "page": null,
+      "evidence": "Tata AIG current-policy schedule"
+    },
+    {
+      "key": "cpa_start_date",
+      "label": "Owner driver PA start",
+      "value": "2026-11-13",
+      "confidence": null,
+      "page": null,
+      "evidence": "Tata AIG current-policy schedule"
+    },
+    {
+      "key": "cpa_end_date",
+      "label": "Owner driver PA end",
+      "value": "2029-11-12",
+      "confidence": null,
+      "page": null,
+      "evidence": "Tata AIG current-policy schedule"
+    },
+    {
+      "key": "od_premium",
+      "label": "Own damage after NCB",
+      "value": "2723.76",
+      "confidence": null,
+      "page": null,
+      "evidence": "Tata AIG current-policy schedule"
+    },
+    {
+      "key": "add_on_premium",
+      "label": "OD add-ons and SAOD extras",
+      "value": "5706.93",
+      "confidence": null,
+      "page": null,
+      "evidence": "Tata AIG current-policy schedule"
+    },
+    {
+      "key": "tp_premium",
+      "label": "TP and non-owner liability",
+      "value": "10906",
+      "confidence": null,
+      "page": null,
+      "evidence": "Tata AIG current-policy schedule"
+    },
+    {
+      "key": "cpa_premium",
+      "label": "Owner-driver CPA only",
+      "value": "1125",
+      "confidence": null,
+      "page": null,
+      "evidence": "Tata AIG current-policy schedule"
+    },
+    {
+      "key": "cpa_opted",
+      "label": "Owner-driver CPA opted",
+      "value": "Yes",
+      "confidence": null,
+      "page": null,
+      "evidence": "Tata AIG current-policy schedule"
+    }
+  ],
+  "checks": {
+    "current_insurer_verified": true,
+    "supported_layout_verified": true,
+    "policy_identity_verified": true,
+    "insured_present": true,
+    "vehicle_identity_verified": true,
+    "vehicle_registration_status_verified": true,
+    "vehicle_specs_verified": true,
+    "rto_resolved": true,
+    "idv_verified": true,
+    "coverage_periods_verified": true,
+    "basic_od_ncb_reconciled": true,
+    "itemized_addons_reconciled": true,
+    "liability_components_reconciled": true,
+    "net_premium_reconciled": true,
+    "tax_premium_reconciled": true,
+    "gross_premium_reconciled": true,
+    "receipt_signature_date_agree": true,
+    "policy_number_receipt_agree": true
+  },
+  "premium_components": {
+    "basic_od_premium": 2723.76,
+    "ncb_deduction": 0,
+    "post_ncb_od_premium": 2723.76,
+    "od_addons": [
+      {
+        "name": "Depreciation Reimbursement",
+        "amount": 2560.72,
+        "code": "TA01"
+      },
+      {
+        "name": "Return to Invoice",
+        "amount": 682.86,
+        "code": "TA05"
+      },
+      {
+        "name": "Loss of personal belongings",
+        "amount": 180,
+        "code": "TA09"
+      },
+      {
+        "name": "Emergency transport and hotel expenses",
+        "amount": 180,
+        "code": "TA10"
+      },
+      {
+        "name": "Key Replacement",
+        "amount": 425,
+        "code": "TA15"
+      },
+      {
+        "name": "Engine Secure",
+        "amount": 569.05,
+        "code": "TA16"
+      },
+      {
+        "name": "Tyre Secure",
+        "amount": 569.05,
+        "code": "TA17"
+      },
+      {
+        "name": "Consumable expenses",
+        "amount": 455.24,
+        "code": "TA18"
+      },
+      {
+        "name": "Repair of Glass, Rubber & Plastic Parts",
+        "amount": 0,
+        "code": "TA08"
+      },
+      {
+        "name": "Misfuelling",
+        "amount": 85,
+        "code": "TA24"
+      }
+    ],
+    "addon_subtotal": 5706.93,
+    "basic_tp_premium": 10640,
+    "owner_driver_cpa": 1125,
+    "paid_driver_liability": 150,
+    "passenger_pa": 0,
+    "roadside_assistance": 116,
+    "total_liability_premium": 11915,
+    "printed_net_premium": 20462,
+    "component_net_premium": 20461.69,
+    "printed_total_tax": 3683,
+    "gross_premium": 24145
+  },
+  "warnings": [
+    "tata_aig_issuance_date_unverified",
+    "tata_aig_human_review_required",
+    "tata_aig_printed_net_rounding"
+  ]
+}

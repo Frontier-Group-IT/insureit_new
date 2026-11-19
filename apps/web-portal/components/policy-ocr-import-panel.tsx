@@ -32,12 +32,15 @@ export const SECTION_03_OCR_FIELDS = [
   "policy_product",
   "idv",
   "od_premium",
+  "add_on_premium",
   "tp_premium",
   "cpa_premium",
   "policy_number",
   "insurer_name",
   "policy_start_date",
   "policy_end_date",
+  "third_party_end_date",
+  "cpa_end_date",
 ] as const;
 
 const SECTION_02_FIELDS = new Set<string>(SECTION_02_OCR_FIELDS);
@@ -65,10 +68,13 @@ const APPLY_ORDER = [
   "insurer_name",
   "idv",
   "od_premium",
+  "add_on_premium",
   "tp_premium",
   "cpa_premium",
   "policy_start_date",
   "policy_end_date",
+  "third_party_end_date",
+  "cpa_end_date",
 ];
 
 export type PolicyOcrImportContext = {
@@ -83,10 +89,12 @@ export type PolicyOcrApplyOutcome = {
   skipped: string[];
 };
 
+export type PolicyOcrApplyProvenance = { parserId: string; nativeVerified: boolean };
+
 export type PolicyOcrImportPanelProps = {
   variant?: "header" | "icon";
   context: PolicyOcrImportContext;
-  onApply: (fields: PolicyOcrField[]) => PolicyOcrApplyOutcome | Promise<PolicyOcrApplyOutcome>;
+  onApply: (fields: PolicyOcrField[], provenance?: PolicyOcrApplyProvenance) => PolicyOcrApplyOutcome | Promise<PolicyOcrApplyOutcome>;
   onClearForm?: () => void;
 };
 
@@ -114,6 +122,7 @@ export function PolicyOcrImportPanel({ variant = "header", context, onApply, onC
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [parserInfo, setParserInfo] = useState<string | null>(null);
+  const [verifiedParserId, setVerifiedParserId] = useState("");
   const [warnings, setWarnings] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -163,6 +172,7 @@ export function PolicyOcrImportPanel({ variant = "header", context, onApply, onC
     setSelected(new Set());
     setWarnings([]);
     setParserInfo(null);
+    setVerifiedParserId("");
     setError(null);
   }
 
@@ -192,12 +202,13 @@ export function PolicyOcrImportPanel({ variant = "header", context, onApply, onC
       }
       setFields(result.fields);
       setParserInfo(`${friendlyParserName(result.parserId)} · ${friendlyMethod(result.extractionMethod)}`);
+      setVerifiedParserId(result.extractionMethod === "native_pdf_text" ? result.parserId : "");
       setWarnings(filterPolicyOcrUserWarnings(result.warnings));
       // Strict n8n 13-check validation is performed server-side. Its
       // per-field confidence is null by design; select eligible verified
       // fields for reviewer confirmation, never fabricate a confidence score.
       const n8nVerified=result.extractionMethod==="native_pdf_text"
-        && ["icici_3005_n8n_native_pdf","icici_3005_od_n8n_native_pdf"].includes(result.parserId);
+        && ["icici_3005_n8n_native_pdf","icici_3005_od_n8n_native_pdf","tata_aig_private_car_saod_n8n_native_pdf","tata_aig_private_car_package_n8n_native_pdf","tata_aig_private_car_bundled_n8n_native_pdf"].includes(result.parserId);
       const safeKeys = result.fields
         .filter((field) => APPLY_FIELDS.has(field.key)
           && ((field.confidence ?? 0) >= .9 || n8nVerified))
@@ -242,8 +253,14 @@ export function PolicyOcrImportPanel({ variant = "header", context, onApply, onC
       .map((field) => [field.key, field]));
     const chosen = APPLY_ORDER.map((key) => selectedByKey.get(key)).filter((field): field is PolicyOcrField => Boolean(field));
     if (!chosen.length) return;
-
-    const outcome = await onApply(chosen);
+    const verifiedTata = /^tata_aig_private_car_(?:saod|package|bundled)_n8n_native_pdf$/.test(verifiedParserId);
+    // Owner-driver CPA is a verified companion to the selected numeric CPA
+    // field, not a guess from positive non-owner liability premiums.
+    if (verifiedTata && selectedByKey.has("cpa_premium")) {
+      const explicitCpa = fields.find(field => field.key === "cpa_opted");
+      if (explicitCpa) chosen.push(explicitCpa);
+    }
+    const outcome = await onApply(chosen, {parserId:verifiedParserId,nativeVerified:Boolean(verifiedParserId)});
     if (!outcome.applied) {
       setError("The selected details could not be applied. Protected or unmatched values were left unchanged.");
       return;
@@ -331,7 +348,7 @@ function ReviewRow({field,checked,onToggle}:{field:ReviewedField;checked:boolean
 function SummaryChip({label,value,tone="neutral"}:{label:string;value:string;tone?:"neutral"|"warn"|"ok"}){const style=tone==="warn"?"border-[#F0D9A8] bg-[#FFF8E8] text-[#8A5A10]":tone==="ok"?"border-[#CFE8DA] bg-[#F1FAF5] text-[#18794E]":"border-[#D6E0EB] bg-white text-[#53657D]";return <span className={`rounded-full border px-2.5 py-1 text-[8px] font-semibold ${style}`}>{label} · {value}</span>;}
 function friendlyParserName(parserId:string){if(parserId.startsWith("digit_"))return"Digit commercial vehicle format";if(parserId.startsWith("iffco_tokio_"))return"IFFCO-Tokio commercial vehicle format";if(parserId.startsWith("new_india_"))return"New India motor format";if(parserId.startsWith("tata_aig_"))return"TATA AIG bundled two-wheeler format";return"Standard motor policy format";}
 function friendlyMethod(method:string){return method==="native_pdf_text"?"verified local n8n PDF":"Legacy Google Document AI";}
-function formatFieldValue(field:PolicyOcrField){if(["idv","od_premium","tp_premium","cpa_premium","total_premium","tax_amount","gross_premium"].includes(field.key)){const number=Number(field.value.replace(/,/g,""));if(Number.isFinite(number))return new Intl.NumberFormat("en-IN",{style:"currency",currency:"INR",maximumFractionDigits:2}).format(number);}return field.value;}
+function formatFieldValue(field:PolicyOcrField){if(["idv","od_premium","add_on_premium","tp_premium","cpa_premium","total_premium","tax_amount","gross_premium"].includes(field.key)){const number=Number(field.value.replace(/,/g,""));if(Number.isFinite(number))return new Intl.NumberFormat("en-IN",{style:"currency",currency:"INR",maximumFractionDigits:2}).format(number);}return field.value;}
 function normalizeText(value:string){return value.toLowerCase().replace(/\b(?:the|co|company|limited|ltd|general|insurance)\b/g," ").replace(/[^a-z0-9]+/g," ").replace(/\s+/g," ").trim();}
-function valuesEquivalent(field:PolicyOcrField,current:string){if(!current.trim())return false;if(field.key==="vehicle_registration_status")return /pending|unregistered|new vehicle/i.test(field.value)?/unregistered/i.test(current):/registered/i.test(current)&&!/unregistered/i.test(current);if(["idv","od_premium","tp_premium","cpa_premium"].includes(field.key)){const a=Number(field.value.replace(/,/g,"")),b=Number(current.replace(/[^0-9.]/g,""));return Number.isFinite(a)&&Number.isFinite(b)&&Math.abs(a-b)<=2;}if(field.key==="policy_start_date"||field.key==="policy_end_date")return toIsoDate(field.value)===toIsoDate(current);const a=normalizeText(field.value),b=normalizeText(current);return Boolean(a&&b&&(a===b||a.includes(b)||b.includes(a)));}
+function valuesEquivalent(field:PolicyOcrField,current:string){if(!current.trim())return false;if(field.key==="vehicle_registration_status")return /pending|unregistered|new vehicle/i.test(field.value)?/unregistered/i.test(current):/registered/i.test(current)&&!/unregistered/i.test(current);if(["idv","od_premium","add_on_premium","tp_premium","cpa_premium"].includes(field.key)){const a=Number(field.value.replace(/,/g,"")),b=Number(current.replace(/[^0-9.]/g,""));return Number.isFinite(a)&&Number.isFinite(b)&&Math.abs(a-b)<=2;}if(["policy_start_date","policy_end_date","third_party_end_date","cpa_end_date"].includes(field.key))return toIsoDate(field.value)===toIsoDate(current);const a=normalizeText(field.value),b=normalizeText(current);return Boolean(a&&b&&(a===b||a.includes(b)||b.includes(a)));}
 function toIsoDate(value:string){if(/^\d{4}-\d{2}-\d{2}$/.test(value))return value;const months:Record<string,string>={JAN:"01",FEB:"02",MAR:"03",APR:"04",MAY:"05",JUN:"06",JUL:"07",AUG:"08",SEP:"09",OCT:"10",NOV:"11",DEC:"12"};const match=value.toUpperCase().match(/(\d{1,2})[-/]([A-Z]{3}|\d{1,2})[-/](\d{4})/);if(!match)return"";const month=months[match[2]]??match[2].padStart(2,"0");return`${match[3]}-${month}-${match[1].padStart(2,"0")}`;}

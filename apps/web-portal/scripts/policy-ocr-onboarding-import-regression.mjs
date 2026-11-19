@@ -15,7 +15,7 @@ const regexChecks = [
   ["Section 03 field contract is exported", panel, /export const SECTION_03_OCR_FIELDS = \[[\s\S]*policy_product[\s\S]*idv[\s\S]*od_premium[\s\S]*tp_premium[\s\S]*policy_end_date/],
   ["CPA opted remains verification-only", panel, /const VERIFICATION_FIELDS = new Set\(\["cpa_opted"/],
   ["Current-vs-extracted review remains", panel, /Current<\/span>[\s\S]*Extracted<\/span>[\s\S]*Status<\/span>/],
-  ["Panel delegates application to parent", panel, /const outcome = await onApply\(chosen\)/],
+  ["Panel delegates application with server-validated n8n provenance to parent", panel, /const outcome = await onApply\(chosen, \{parserId:verifiedParserId,nativeVerified:Boolean\(verifiedParserId\)\}\)/],
   ["OCR apply carries existing insured identity", form, /current:\{registrationNo:form\.registrationNo,insuredName:form\.insuredName,phoneNo:form\.phoneNo,vehicleClass:/],
   ["Phone requires manual selection", panel, /field\.key !== INSURED_PHONE_FIELD/],
   ["Importer receives current form context", form, /context=\{ocrImportContext\}[\s\S]*onApply=\{applyPolicyOcrFields\}/],

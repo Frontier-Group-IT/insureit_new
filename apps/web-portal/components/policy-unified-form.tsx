@@ -26,6 +26,7 @@ import {
   PolicyOcrImportPanel,
   SECTION_02_OCR_FIELDS,
   type PolicyOcrApplyOutcome,
+  type PolicyOcrApplyProvenance,
   type PolicyOcrImportContext,
 } from "@/components/policy-ocr-import-panel";
 import { LifeHealthPolicyForm } from "@/components/life-health-policy-form";
@@ -442,11 +443,11 @@ export function PolicyUnifiedForm({ mode, insurers, customers = [], rms, sources
     setPendingPayload(null);
   }
 
-  function applyPolicyOcrFields(fields:PolicyOcrField[]):PolicyOcrApplyOutcome{
+  function applyPolicyOcrFields(fields:PolicyOcrField[],provenance?:PolicyOcrApplyProvenance):PolicyOcrApplyOutcome{
     const result=buildPolicyOcrOnboardingUpdate({
       mode,
       registrationMode:vehicleRegistrationMode,
-      current:{registrationNo:form.registrationNo,insuredName:form.insuredName,phoneNo:form.phoneNo,vehicleClass:form.vehicleClass,make:form.make,model:form.model,fuelType:form.fuelType,manufacturingYear:form.manufacturingYear,capacity:form.capacity,chassisNo:form.chassisNo,engineNo:form.engineNo,rtoState:form.rtoState,rtoName:form.rtoName,policyProduct:form.policyProduct,idv:form.idv,od:form.od,tp:form.tp,cpa:form.cpa,policyNo:form.policyNo,insurerId:form.insurerId,validFrom:form.validFrom,validUpto:form.validUpto},
+      current:{registrationNo:form.registrationNo,insuredName:form.insuredName,phoneNo:form.phoneNo,vehicleClass:form.vehicleClass,make:form.make,model:form.model,fuelType:form.fuelType,manufacturingYear:form.manufacturingYear,capacity:form.capacity,chassisNo:form.chassisNo,engineNo:form.engineNo,rtoState:form.rtoState,rtoName:form.rtoName,policyProduct:form.policyProduct,idv:form.idv,od:form.od,tp:form.tp,cpa:form.cpa,addOnPremium:form.addOnPremium,tpValidUpto:form.tpValidUpto,cpaValidUpto:form.cpaValidUpto,policyNo:form.policyNo,insurerId:form.insurerId,validFrom:form.validFrom,validUpto:form.validUpto},
       fields,
       manufacturers,
       insurers,
@@ -467,6 +468,14 @@ export function PolicyUnifiedForm({ mode, insurers, customers = [], rms, sources
         && selectedCpa?.value.replace(/,/g,"")==="575";
       setForm(current=>normalizePolicyIdentifierFields({...current,...result.next}));
       if(exactIciciChetakC3503)setForm(current=>({...current,cpaOpted:"Yes"}));
+      const verifiedTata = provenance?.nativeVerified
+        && /^tata_aig_private_car_(?:saod|package|bundled)_n8n_native_pdf$/.test(provenance.parserId);
+      const explicitTataCpa = fields.find(field=>field.key==="cpa_opted")?.value;
+      if (verifiedTata && (explicitTataCpa==="Yes" || explicitTataCpa==="No")
+        && fields.some(field=>field.key==="cpa_premium")
+        && (explicitTataCpa==="Yes")===(Number(result.next.cpa)>0)) {
+        setForm(current=>({...current,cpaOpted:explicitTataCpa}));
+      }
       if(result.registrationMode!==vehicleRegistrationMode)setVehicleRegistrationMode(result.registrationMode);
       if(result.touchedSection02){setLookupError(null);setRegistrationTouched(false);setRcReview(null);if(!appliedRc)setAppliedRc(null);}
     }
@@ -502,12 +511,15 @@ export function PolicyUnifiedForm({ mode, insurers, customers = [], rms, sources
       policy_product:form.policyProduct,
       idv:form.idv,
       od_premium:form.od,
+      add_on_premium:form.addOnPremium,
       tp_premium:form.tp,
       cpa_premium:form.cpa,
       policy_number:form.policyNo,
       insurer_name:currentInsurerLabel,
       policy_start_date:form.validFrom,
       policy_end_date:form.validUpto,
+      third_party_end_date:form.tpValidUpto,
+      cpa_end_date:form.cpaValidUpto,
     },
     protectedKeys:appliedRc?[...SECTION_02_OCR_FIELDS]:[],
   };
