@@ -2,7 +2,7 @@ import { revalidatePath } from "next/cache";
 import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
-export type PermanentDeleteKind = "user" | "branch" | "partner";
+export type PermanentDeleteKind = "user" | "branch" | "partner" | "onboarding_application";
 export type PermanentDeleteResult = { status: "success" | "error"; message: string };
 
 type Blocker = { table: string; column: string; delete_rule: string; count: number };
@@ -297,6 +297,83 @@ async function deletePartner(intermediaryId: string, partnerRecordId?: string): 
   return { status: "success", message: `${intermediary.display_name} was permanently deleted.` };
 }
 
+
+/**
+ * Application-only Partner onboarding deletion.
+ * The database cascades application-owned draft tables (documents, contacts and onboarding profile).
+ * Any business, registration, identity or portal-account association must block deletion.
+ * This is deliberately separate from deleting a Partner master.
+ */
+async function deletePendingPartnerApplication(applicationId: string): Promise<PermanentDeleteResult> {
+  const admin = createSupabaseAdminClient();
+  const { data: application, error: lookupError } = await admin
+    .from("intermediary_onboarding_applications")
+    .select("id,applicant_phone,status,registration_status,partner_status,partner_record_id,intermediary_id,registration_record_id,completed_at,partner_activated_at,requested_type")
+    .eq("id", applicationId)
+    .maybeSingle<{
+      id: string; applicant_phone: string | null; status: string | null;
+      registration_status: string | null; partner_status: string | null;
+      partner_record_id: string | null; intermediary_id: string | null;
+      registration_record_id: string | null; completed_at: string | null;
+      partner_activated_at: string | null; requested_type: string | null;
+    }>();
+  if (lookupError) return { status: "error", message: "The onboarding application could not be checked." };
+  if (!application) return { status: "error", message: "The pending onboarding application was not found." };
+
+  // Fail closed if status is unexpected or anything has been activated/registered.
+  const allowedStatuses = new Set(["draft", "submitted", "pending", "in_review"]);
+  if (!allowedStatuses.has((application.status ?? "").toLowerCase())
+    || application.completed_at || application.partner_activated_at
+    || application.partner_record_id || application.intermediary_id || application.registration_record_id
+    || (application.partner_status ?? "").toLowerCase() === "active_partner"
+    || !["primary_pending", "draft", "pending", "", "submitted"].includes((application.registration_status ?? "").toLowerCase())) {
+    return { status: "error", message: "This application is no longer an unlinked pending onboarding record. Review it instead of permanently deleting it." };
+  }
+
+  // Check every reference that could carry live business, identity, portal login,
+  // import or registration history. Do not silently detach SET NULL relationships.
+  const protectedLinks: Array<[string, string]> = [
+    ["business_referral_identities", "intermediary_application_id"],
+    ["intermediaries", "application_id"],
+    ["intermediary_portal_accounts", "application_id"],
+    ["intermediary_registrations", "application_id"],
+    ["partner_branch_profiles", "source_application_id"],
+    ["partner_portal_associate_accounts", "application_id"],
+    ["partners", "source_application_id"],
+    ["posp_misp_import_rows", "application_id"],
+    ["intermediary_iib_submission_packets", "application_id"],
+    ["intermediary_training_exam_assignments", "application_id"],
+    ["pan_verification_jobs", "application_id"],
+  ];
+  for (const [table, column] of protectedLinks) {
+    const { data, error } = await admin.from(table).select("id").eq(column, applicationId).limit(1);
+    if (error) return { status: "error", message: "A dependency safety check failed. Nothing was deleted." };
+    if (data?.length) return { status: "error", message: "This application has linked registration, verification or business history and cannot be permanently deleted." };
+  }
+
+  // Equality guards prevent acting on a different status after review.
+  // PostgreSQL foreign-key restrictions still prevent late creation of protected RESTRICT rows.
+  const { data: deleted, error: deleteError } = await admin
+    .from("intermediary_onboarding_applications")
+    .delete()
+    .eq("id", applicationId)
+    .eq("status", application.status)
+    .eq("registration_status", application.registration_status)
+    .is("partner_record_id", null)
+    .is("intermediary_id", null)
+    .is("registration_record_id", null)
+    .is("completed_at", null)
+    .is("partner_activated_at", null)
+    .select("id");
+  if (deleteError) return { status: "error", message: "Deletion was blocked by linked records or a database safety constraint. No successful deletion was confirmed." };
+  if (deleted?.length !== 1) return { status: "error", message: "The application changed while being reviewed. Refresh and select the exact pending record again." };
+
+  revalidatePath("/intermediaries/partner");
+  revalidatePath("/intermediaries/applications");
+  revalidatePath("/intermediaries");
+  return { status: "success", message: "The pending onboarding application and its application-owned draft data were deleted." };
+}
+
 export async function permanentDeleteEntity(
   kind: PermanentDeleteKind,
   id: string,
@@ -308,6 +385,7 @@ export async function permanentDeleteEntity(
     if (kind === "user") return deleteUser(id, actor.id);
     if (kind === "branch") return deleteBranch(id);
     if (kind === "partner") return deletePartner(id, relatedId);
+    if (kind === "onboarding_application") return deletePendingPartnerApplication(id);
     return { status: "error", message: "Unsupported permanent-delete request." };
   } catch (error) {
     return { status: "error", message: error instanceof Error ? error.message : "Permanent deletion could not be completed." };
