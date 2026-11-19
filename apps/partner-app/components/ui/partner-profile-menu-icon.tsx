@@ -34,12 +34,12 @@ type IconPalette = {
 // Only these six destinations use the supplied illustrated 3D PNG artwork.
 // All other More menu icons preserve their existing native vector rendering.
 const ILLUSTRATED_ICONS: Partial<Record<PartnerProfileMenuIconKind, ImageSourcePropType>> = {
-  'policy-intake': require('../../../assets/partner/icons/more-policy-intake.png'),
-  'case-register': require('../../../assets/partner/icons/more-case-register.png'),
-  renewals: require('../../../assets/partner/icons/more-renewals.png'),
-  customers: require('../../../assets/partner/icons/more-customers.png'),
-  impact: require('../../../assets/partner/icons/more-impact.png'),
-  journey: require('../../../assets/partner/icons/more-journey.png'),
+  'policy-intake': require('../../assets/partner/icons/more-policy-intake.png'),
+  'case-register': require('../../assets/partner/icons/more-case-register.png'),
+  renewals: require('../../assets/partner/icons/more-renewals.png'),
+  customers: require('../../assets/partner/icons/more-customers.png'),
+  impact: require('../../assets/partner/icons/more-impact.png'),
+  journey: require('../../assets/partner/icons/more-journey.png'),
 };
 
 const CONFIG: Record<Exclude<PartnerProfileMenuIconKind, 'case-register'>, IconPalette> = {
