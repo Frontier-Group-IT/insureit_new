@@ -41,7 +41,7 @@ for (const label of ['Total Policies', 'Active Policies', 'Expiring Soon', 'Laps
 for (const lifecycle of ['all', 'in_force', 'expiring', 'expired', 'upcoming']) {
   assert.ok(policies.includes("filter: '" + lifecycle + "'"), 'Preserve lifecycle ' + lifecycle);
 }
-assert.match(policies, /count: summary\.data\?\.total_policies/, 'Dropdown counts use portfolio summary');
+assert.match(policies, /count: activePeriodCounts\?\.all/, 'Dropdown counts use the selected period summary');
 assert.match(policies, /onPress=\{\(\) => selectSummary\(option\.filter\)\}/, 'Dropdown selection filters policies');
 assert.match(policies, /accessibilityState=\{\{ selected \}\}/, 'Dropdown selection announced accessibly');
 assert.match(policies, /visible=\{statusMenuOpen\}/, 'Dropdown displays all options on demand');

@@ -12,6 +12,20 @@ export type PartnerPolicySummary = {
 
 export type PartnerPolicyLifecycle = 'all' | 'in_force' | 'expiring' | 'expired' | 'upcoming';
 export type PartnerPolicyBusinessLine = 'all' | 'motor' | 'non motor' | 'life' | 'health';
+export type PartnerPolicyPeriod = 'mtd' | 'all';
+export type PartnerPolicyStatusFilter = 'all' | 'active' | 'expired' | 'due';
+export type PartnerPolicyPeriodCounts = Record<PartnerPolicyPeriod, Record<PartnerPolicyStatusFilter, number>>;
+
+export async function getPartnerPolicyPeriodCounts({
+  businessLine = 'all', search,
+}: { businessLine?: PartnerPolicyBusinessLine; search?: string } = {}): Promise<PartnerPolicyPeriodCounts> {
+  const {data,error} = await supabase.rpc('partner_app_policy_period_counts', {
+    p_business_line: businessLine, p_search: search?.trim() || null,
+  });
+  if (error) throw error;
+  if (!data || !data.mtd || !data.all) throw new Error('Policy filter counts are unavailable.');
+  return data as PartnerPolicyPeriodCounts;
+}
 
 export type PartnerPolicyRow = {
   policy_id: string;
@@ -53,12 +67,14 @@ export async function listPartnerPolicies({
   search,
   lifecycle = 'all',
   businessLine = 'all',
+  period = 'all',
 }: {
   limit?: number;
   offset?: number;
   search?: string;
   lifecycle?: PartnerPolicyLifecycle;
   businessLine?: PartnerPolicyBusinessLine;
+  period?: PartnerPolicyPeriod;
 } = {}) {
   // Preserve the existing production RPC for the default unfiltered list.
   // Filtered tabs use the matching scoped server-side RPC, never a local slice of 10 rows.
@@ -68,12 +84,14 @@ export async function listPartnerPolicies({
     p_search: search?.trim() || null,
     p_lifecycle: lifecycle,
   };
-  const { data, error } = businessLine === 'all'
-    ? await supabase.rpc('partner_app_list_policies', args)
-    : await supabase.rpc('partner_app_list_policies_by_line', { ...args, p_business_line: businessLine });
+  const { data, error } = period === 'mtd'
+    ? await supabase.rpc('partner_app_list_policies_by_period', {...args, p_business_line: businessLine, p_period: period})
+    : businessLine === 'all'
+      ? await supabase.rpc('partner_app_list_policies', args)
+      : await supabase.rpc('partner_app_list_policies_by_line', { ...args, p_business_line: businessLine });
   if (error) {
-    if (businessLine !== 'all' && (error.code === 'PGRST202' || error.code === '42883')) {
-      throw new Error('Business-line filtering is not available on the server yet. Please contact support.');
+    if ((period === 'mtd' || businessLine !== 'all') && (error.code === 'PGRST202' || error.code === '42883')) {
+      throw new Error('Policy period filtering is not available on the server yet. Please contact support.');
     }
     throw error;
   }

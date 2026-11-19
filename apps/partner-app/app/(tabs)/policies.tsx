@@ -28,9 +28,13 @@ import { PartnerSearchField } from '@/components/ui/partner-search-field';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import {
   getPartnerPolicySummary,
+  getPartnerPolicyPeriodCounts,
   listPartnerPolicies,
   type PartnerPolicyLifecycle,
   type PartnerPolicyBusinessLine,
+  type PartnerPolicyPeriod,
+  type PartnerPolicyPeriodCounts,
+  type PartnerPolicyStatusFilter,
   type PartnerPolicyRow,
   type PartnerPolicySummary,
 } from '@/lib/policies';
@@ -54,6 +58,13 @@ const businessLineOptions: {label:string;value:PartnerPolicyBusinessLine}[] = [
 ];
 let savedPolicyQuery = '';
 let savedPolicyLifecycle: PartnerPolicyLifecycle = 'all';
+let savedPolicyPeriod: PartnerPolicyPeriod = 'mtd';
+const sheetStatuses: {label:string;value:PartnerPolicyStatusFilter;lifecycle:PartnerPolicyLifecycle}[] = [
+  {label:'All Policies',value:'all',lifecycle:'all'},
+  {label:'Active',value:'active',lifecycle:'in_force'},
+  {label:'Expired',value:'expired',lifecycle:'expired'},
+  {label:'Due',value:'due',lifecycle:'expiring'},
+];
 
 export default function PoliciesScreen() {
   const router = useRouter();
@@ -72,6 +83,10 @@ export default function PoliciesScreen() {
   const { cacheScopeKey, context, avatarUri } = usePartnerSession();
   const { isOffline } = usePartnerNetwork();
   const [lifecycle, setLifecycle] = useState<PartnerPolicyLifecycle>(savedPolicyLifecycle);
+  const [period, setPeriod] = useState<PartnerPolicyPeriod>(savedPolicyPeriod);
+  const [sortSheetOpen, setSortSheetOpen] = useState(false);
+  const [draftPeriod, setDraftPeriod] = useState<PartnerPolicyPeriod>(savedPolicyPeriod);
+  const [draftLifecycle, setDraftLifecycle] = useState<PartnerPolicyLifecycle>(savedPolicyLifecycle);
   const [statusMenuOpen, setStatusMenuOpen] = useState(false);
   const [businessLine, setBusinessLine] = useState<PartnerPolicyBusinessLine>('all');
   const [lineMenuOpen, setLineMenuOpen] = useState(false);
@@ -100,14 +115,22 @@ export default function PoliciesScreen() {
     setVisibleLimit(PAGE_SIZE);
     setRequestedLimit(PAGE_SIZE);
     setLoadMoreFeedback(false);
-  }, [lifecycle, debouncedSearch, businessLine]);
+  }, [period, lifecycle, debouncedSearch, businessLine]);
 
   useEffect(() => {
     savedPolicyQuery = query;
     savedPolicyLifecycle = lifecycle;
-  }, [lifecycle, query]);
+    savedPolicyPeriod = period;
+  }, [lifecycle, period, query]);
 
   const fetchSummary = useCallback(() => getPartnerPolicySummary(), []);
+  const fetchPeriodCounts = useCallback(() => getPartnerPolicyPeriodCounts({businessLine,search:debouncedSearch}),[businessLine,debouncedSearch]);
+  const periodCounts = usePartnerQuery<PartnerPolicyPeriodCounts>({
+    scopeKey:cacheScopeKey,
+    key:`policies:period-counts:${businessLine}:${debouncedSearch || 'all'}`,
+    fetcher:fetchPeriodCounts,
+    staleTimeMs:60_000,
+  });
   const summary = usePartnerQuery<PartnerPolicySummary>({
     scopeKey: cacheScopeKey,
     key: 'policies:summary',
@@ -119,6 +142,7 @@ export default function PoliciesScreen() {
     const nextRows = await listPartnerPolicies({
       lifecycle,
       businessLine,
+      period,
       search: debouncedSearch,
       limit,
       offset,
@@ -127,13 +151,13 @@ export default function PoliciesScreen() {
       rows: nextRows,
       total: nextRows[0]?.total_count ?? 0,
     };
-  }, [debouncedSearch, lifecycle, businessLine]);
+  }, [debouncedSearch, lifecycle, businessLine, period]);
 
   const collection = usePartnerPageQuery<PartnerPolicyRow>({
     scopeKey: cacheScopeKey,
     // The requested limit is part of the cache identity. Without this, increasing
     // 10 -> 20 can reuse the cached 10-row "page 0" result and appear to do nothing.
-    key: `policies:list:${lifecycle}:${businessLine}:${debouncedSearch || 'all'}:limit:${visibleLimit}`,
+    key: `policies:list:${period}:${lifecycle}:${businessLine}:${debouncedSearch || 'all'}:limit:${visibleLimit}`,
     pageSize: visibleLimit,
     fetchPage,
     staleTimeMs: 60_000,
@@ -164,8 +188,8 @@ export default function PoliciesScreen() {
   ]);
 
   const refreshAll = useCallback(async () => {
-    await Promise.all([summary.refresh(), collection.refresh()]);
-  }, [collection, summary]);
+    await Promise.all([summary.refresh(), periodCounts.refresh(), collection.refresh()]);
+  }, [collection, summary, periodCounts]);
 
   const selectSummary = (filter: PartnerPolicyLifecycle) => {
     setStatusMenuOpen(false);
@@ -173,12 +197,13 @@ export default function PoliciesScreen() {
     setVisibleLimit(PAGE_SIZE);
     setLifecycle(filter);
   };
+  const activePeriodCounts = periodCounts.data?.[period];
   const statusOptions: { label: string; filter: PartnerPolicyLifecycle; count: number | undefined }[] = [
-    { label: 'Total Policies', filter: 'all', count: summary.data?.total_policies },
-    { label: 'Active Policies', filter: 'in_force', count: summary.data?.in_force_policies },
-    { label: 'Expiring Soon', filter: 'expiring', count: summary.data?.expiring_30_days },
-    { label: 'Lapsed Policies', filter: 'expired', count: summary.data?.expired_policies },
-    { label: 'Upcoming', filter: 'upcoming', count: summary.data?.upcoming_policies },
+    { label: 'Total Policies', filter: 'all', count: activePeriodCounts?.all },
+    { label: 'Active Policies', filter: 'in_force', count: activePeriodCounts?.active },
+    { label: 'Expiring Soon', filter: 'expiring', count: activePeriodCounts?.due },
+    { label: 'Lapsed Policies', filter: 'expired', count: activePeriodCounts?.expired },
+    { label: 'Upcoming', filter: 'upcoming', count: period==='all' ? summary.data?.upcoming_policies : undefined },
   ];
   const selectedStatus = statusOptions.find((option) => option.filter === lifecycle) ?? statusOptions[0];
   const formatStatusCount = (count: number | undefined) => count === undefined ? '—' : count.toLocaleString('en-IN');
@@ -189,9 +214,25 @@ export default function PoliciesScreen() {
     });
   };
   useEffect(() => {
-    if (!isFocused) { setStatusMenuOpen(false); setLineMenuOpen(false); }
+    if (!isFocused) { setStatusMenuOpen(false); setLineMenuOpen(false); setSortSheetOpen(false); }
   }, [isFocused]);
 
+  const openSortSheet = () => {
+    setStatusMenuOpen(false);
+    setLineMenuOpen(false);
+    setDraftPeriod(period);
+    setDraftLifecycle(lifecycle==='upcoming' ? 'all' : lifecycle);
+    setSortSheetOpen(true);
+  };
+  const applySortSheet = () => {
+    setSortSheetOpen(false);
+    setPeriod(draftPeriod);
+    setLifecycle(draftLifecycle);
+    setVisibleLimit(PAGE_SIZE);
+    setRequestedLimit(PAGE_SIZE);
+    setLoadMoreFeedback(false);
+    verticalListRef.current?.scrollToOffset({offset:0,animated:false});
+  };
   const selectBusinessLine = (line: PartnerPolicyBusinessLine) => {
     setLineMenuOpen(false);
     setBusinessLine(line);
@@ -472,6 +513,11 @@ export default function PoliciesScreen() {
         windowSize={7}
       />
       </SafeAreaView>
+      <Pressable accessibilityRole="button" accessibilityLabel="Sort by policy period and status"
+        onPress={openSortSheet} style={({pressed})=>[styles.sortFloating,pressed&&styles.summaryChipPressed]}>
+        <Feather name="sliders" size={15} color="#17365D"/>
+        <Text style={styles.sortFloatingText}>Sort by</Text>
+      </Pressable>
       {isFocused ? <StatusBar style={searchSticky ? 'light' : 'dark'} /> : null}
       {searchSticky && safeAreaInsets.top > 0 ? <View pointerEvents="none" style={[styles.stickyStatusBarShield, { height: safeAreaInsets.top }]} /> : null}
       {searchSticky ? <View style={[styles.stickySearchOverlay, { top: safeAreaInsets.top }]} pointerEvents="box-none"><Text style={styles.stickyClaimsHeading}>Policies</Text>{searchControls}</View> : null}
@@ -490,6 +536,46 @@ export default function PoliciesScreen() {
                 <Ionicons name={selected?'radio-button-on':'radio-button-off'} size={15} color={selected?'#17365D':'#CBD6E7'}/>
               </Pressable>;
             })}
+          </View>
+        </View>
+      </Modal>
+      <Modal visible={sortSheetOpen} transparent animationType="slide" onRequestClose={()=>setSortSheetOpen(false)}>
+        <View style={styles.sortOverlay}>
+          <Pressable style={StyleSheet.absoluteFill} accessibilityRole="button" accessibilityLabel="Close sort by popup" onPress={()=>setSortSheetOpen(false)}/>
+          <View style={[styles.sortSheet,{paddingBottom:Math.max(22,safeAreaInsets.bottom+12)}]}>
+            <View style={styles.sortSheetHeader}>
+              <Text style={styles.sortSheetTitle}>Sort by</Text>
+              <Pressable accessibilityRole="button" accessibilityLabel="Close sort by popup" onPress={()=>setSortSheetOpen(false)} style={styles.sortSheetClose}>
+                <Ionicons name="close" size={21} color="#586980"/>
+              </Pressable>
+            </View>
+            <Text style={styles.sortSectionLabel}>PERIOD</Text>
+            <View style={styles.sortPeriodRow}>
+              {(['mtd','all'] as const).map(value=>(
+                <Pressable key={value} accessibilityRole="button" accessibilityState={{selected:draftPeriod===value}}
+                  onPress={()=>{setDraftPeriod(value);setDraftLifecycle('all');}}
+                  style={[styles.sortPeriodOption,draftPeriod===value&&styles.sortPeriodSelected]}>
+                  <Text style={[styles.sortPeriodText,draftPeriod===value&&styles.sortSelectedText]}>{value==='mtd'?'MTD':'All'}</Text>
+                </Pressable>
+              ))}
+            </View>
+            <Text style={styles.sortSectionLabel}>{draftPeriod==='mtd'?'MTD':'ALL'} POLICY STATUS</Text>
+            {sheetStatuses.map(option=>{
+              const selected=draftLifecycle===option.lifecycle;
+              const count=periodCounts.data?.[draftPeriod]?.[option.value];
+              return <Pressable key={option.value} accessibilityRole="button" accessibilityLabel={option.label}
+                accessibilityState={{selected}} onPress={()=>setDraftLifecycle(option.lifecycle)}
+                style={({pressed})=>[styles.sortChoice,pressed&&styles.summaryChipPressed]}>
+                <Ionicons name={selected?'radio-button-on':'radio-button-off'} color={selected?'#1479EA':'#9EAABA'} size={20}/>
+                <Text style={[styles.sortChoiceText,selected&&styles.sortSelectedText]}>{option.label}</Text>
+                <Text style={styles.sortChoiceCount}>{count===undefined?'—':count.toLocaleString('en-IN')}</Text>
+              </Pressable>;
+            })}
+            {periodCounts.error ? <Text style={styles.sortError}>Counts are unavailable. The selected filter may need a server update.</Text>:null}
+            <Pressable accessibilityRole="button" accessibilityLabel="Apply policy filters"
+              style={styles.sortApply} onPress={applySortSheet}>
+              <Text style={styles.sortApplyText}>Apply Filter</Text>
+            </Pressable>
           </View>
         </View>
       </Modal>
@@ -779,6 +865,27 @@ const styles = StyleSheet.create({
   statusMenuCount: { color: '#657995', fontSize: 11, fontWeight: '700' },
   statusMenuSelectedText: { color: '#234F9F' },
   summaryChipPressed: { opacity: 0.78 },
+  sortFloating:{position:'absolute',bottom:18,alignSelf:'center',flexDirection:'row',alignItems:'center',gap:8,
+    paddingHorizontal:20,minHeight:43,borderRadius:24,backgroundColor:'#FFFFFF',borderWidth:1,borderColor:'#D5E1F0',
+    shadowColor:'#082657',shadowOpacity:0.18,shadowRadius:10,shadowOffset:{width:0,height:3},elevation:8},
+  sortFloatingText:{fontSize:12,fontWeight:'800',color:'#17365D'},
+  sortOverlay:{flex:1,justifyContent:'flex-end',backgroundColor:'rgba(11,30,65,0.72)'},
+  sortSheet:{backgroundColor:'#FFFFFF',borderTopLeftRadius:30,borderTopRightRadius:30,paddingHorizontal:22,paddingTop:17},
+  sortSheetHeader:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',paddingBottom:14,borderBottomWidth:1,borderColor:'#E7ECF3'},
+  sortSheetTitle:{fontSize:18,fontWeight:'800',color:'#172C4A'},
+  sortSheetClose:{minWidth:38,minHeight:38,alignItems:'center',justifyContent:'center'},
+  sortSectionLabel:{marginTop:18,marginBottom:11,fontSize:10,color:'#8190A6',fontWeight:'800',letterSpacing:0.8},
+  sortPeriodRow:{flexDirection:'row',gap:10},
+  sortPeriodOption:{flex:1,minHeight:40,borderRadius:10,borderWidth:1,borderColor:'#D8E1EF',alignItems:'center',justifyContent:'center'},
+  sortPeriodSelected:{backgroundColor:'#EAF3FF',borderColor:'#397FDB'},
+  sortPeriodText:{fontSize:12,fontWeight:'700',color:'#425574'},
+  sortSelectedText:{color:'#1479EA',fontWeight:'800'},
+  sortChoice:{flexDirection:'row',alignItems:'center',gap:14,minHeight:50},
+  sortChoiceText:{flex:1,fontSize:13,color:'#394961'},
+  sortChoiceCount:{fontSize:11,fontWeight:'700',color:'#8492A7'},
+  sortError:{color:'#B42318',fontSize:11,marginTop:8},
+  sortApply:{height:45,borderRadius:11,alignItems:'center',justifyContent:'center',backgroundColor:'#176AE4',marginTop:13},
+  sortApplyText:{fontSize:13,fontWeight:'800',color:'#FFFFFF'},
   quickActionsSection: { marginHorizontal: 12, marginTop: 13, marginBottom: 2 },
   policyListHeadingSection: { marginHorizontal: 12, marginTop: 9, marginBottom: 10, flexDirection:'row',alignItems:'center',gap:10 },
   businessLineButton:{flexDirection:'row',alignItems:'center',gap:7,minHeight:30,paddingHorizontal:3,backgroundColor:'transparent',borderWidth:0},

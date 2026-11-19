@@ -659,7 +659,7 @@ const partnerPolicyApi = read('lib/policies.ts');
 for (const label of ["label:'All Policies'","label:'Motor'","label:'Non Motor'","label:'Life'","label:'Health'"]) {
   requireText(policies, label, 'Missing policy business-line option: '+label);
 }
-for (const item of ["useState<PartnerPolicyBusinessLine>('all')","onPress={openBusinessLineMenu}","visible={lineMenuOpen}","onPress={()=>selectBusinessLine(option.value)}","businessLine,","policies:list:${lifecycle}:${businessLine}:"]) {
+for (const item of ["useState<PartnerPolicyBusinessLine>('all')","onPress={openBusinessLineMenu}","visible={lineMenuOpen}","onPress={()=>selectBusinessLine(option.value)}","businessLine,","policies:list:${period}:${lifecycle}:${businessLine}:"]) {
   requireText(policies, item, 'Business-line dropdown is not wired to policy fetch/pagination: '+item);
 }
 requireText(partnerPolicyApi, "partner_app_list_policies_by_line", 'Filtered policy lists must use the server-side scoped RPC');
@@ -681,3 +681,20 @@ requireText(sharedListScreen, 'whiteCanvas = false', 'White canvas must not affe
 requireText(sharedListScreen, 'whiteCanvas && styles.whiteCanvas', 'Only opted-in lists should render white canvas');
 requireText(sharedListScreen, "whiteCanvas: { backgroundColor: '#FFFFFF' }", 'White canvas must match Policy Details white');
 requireText(renewalScreen, 'navyStatusBar', 'Renewal Work Queue must retain its navy header and status bar');
+
+
+// Policy list MTD / All bottom sheet, scoped database date/status filtering and counts.
+const periodPolicyLib = read('lib/policies.ts');
+const periodSql = fs.readFileSync(path.join(root,'../../supabase/migrations/20261119113000_partner_policy_period_status_filters.sql'),'utf8');
+for(const phrase of ["setSortSheetOpen(true)","Sort by","MTD","All","sheetStatuses.map","Apply Filter","setPeriod(draftPeriod)","setLifecycle(draftLifecycle)","periodCounts.data?.[draftPeriod]?.[option.value]","styles.sortFloating"]) {
+  requireText(policies,phrase,'Policy period/status bottom sheet is missing '+phrase);
+}
+for(const phrase of ["period,","policies:list:${period}:${lifecycle}","[period, lifecycle, debouncedSearch, businessLine]","setVisibleLimit(PAGE_SIZE)"]) {
+  requireText(policies,phrase,'Period filter must invalidate fetched pages and reset pagination: '+phrase);
+}
+for(const phrase of ["partner_app_list_policies_by_period","partner_app_policy_period_counts","p_period: period","businessLine === 'all'"]) {
+  requireText(periodPolicyLib,phrase,'Period filter must use server-side scoped RPC: '+phrase);
+}
+for(const phrase of ["partner_app_commercial_scope()","partner_branch_authorized_policy_ids()","v_scope_mode='none'","v_period='all'","Asia/Kolkata","coalesce(b.issuance_date,b.start_date,b.created_at::date)","count(*) filter (where f.lifecycle_status='expired')","REVOKE ALL ON FUNCTION public.partner_app_policy_period_counts"]) {
+  requireText(periodSql,phrase,'Period filtering SQL must retain safe scope/count semantics: '+phrase);
+}
