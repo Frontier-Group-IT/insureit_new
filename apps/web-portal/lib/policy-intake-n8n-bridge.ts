@@ -1,4 +1,5 @@
 import "server-only";
+import { extractTataAigSigningDateProposal } from "@/lib/policy-issuance-signature-evidence";
 import { validateN8nPolicyIntakeResponse, type N8nOcrBridgeInput, type N8nOcrBridgeResponse } from "@/lib/policy-intake-n8n-validation";
 export { validateN8nPolicyIntakeResponse } from "@/lib/policy-intake-n8n-validation";
 export type { N8nOcrField, N8nOcrBridgeInput, N8nOcrBridgeResponse, N8nVerifiedPremiumBreakdown } from "@/lib/policy-intake-n8n-validation";
@@ -12,6 +13,39 @@ const EXPECTED_WEBHOOK_PATH = "/webhook/insureit-policy-intake-icici-v1";
 const MAX_FILE_BYTES = 15 * 1024 * 1024;
 const TRUSTED_STORAGE_ORIGIN = "https://ilzhsfqqjyppzzvfscmh.supabase.co";
 const SIGNED_OBJECT_PREFIX = "/storage/v1/object/sign/policy-documents/intakes/";
+
+/** Only inspect already-authorized current private objects; never persist bytes. */
+async function readEvidencePdf(url: URL): Promise<Uint8Array | null> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 20_000);
+  try {
+    const response = await fetch(url, {cache:"no-store",redirect:"error",signal:controller.signal});
+    if(!response.ok || (response.headers.get("content-type")??"").includes("text/html")) return null;
+    const declared=Number(response.headers.get("content-length")??0);
+    if(declared>MAX_FILE_BYTES) return null;
+    const reader=response.body?.getReader();
+    if(!reader)return null;
+    let size=0;
+    const chunks:Uint8Array[]=[];
+    for(;;) {
+      const {done,value}=await reader.read();
+      if(done)break;
+      size+=value.byteLength;
+      if(size>MAX_FILE_BYTES) {await reader.cancel();return null;}
+      chunks.push(value);
+    }
+    const bytes=new Uint8Array(size);
+    let offset=0;
+    for(const chunk of chunks) {bytes.set(chunk,offset);offset+=chunk.byteLength;}
+    return bytes;
+  } catch {return null;}
+  finally {clearTimeout(timer);}
+}
+function attachSigningProposal(extraction:N8nOcrBridgeResponse,pdf:Uint8Array|null):N8nOcrBridgeResponse {
+  if(!pdf || !extraction.parserId.startsWith("tata_aig_") || !extraction.receiptDate) return extraction;
+  const issuanceEvidence=extractTataAigSigningDateProposal(pdf,extraction.receiptDate);
+  return issuanceEvidence?{...extraction,issuanceEvidence}:extraction;
+}
 
 // Preserve only the HTTP status, never webhook response bodies, URLs,
 // authentication headers, PDF bytes or customer details.
@@ -50,6 +84,9 @@ export async function requestN8nPolicyIntakeBySignedSource(
     throw new Error("n8n_signed_source_invalid");
   }
   const { url, secret } = n8nConfiguration();
+  // Read signature metadata in parallel with n8n, while the short-lived URL is
+  // still valid. Errors do not interrupt regular verified policy extraction.
+  const evidencePdf=readEvidencePdf(signed);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 60_000);
   const onAbort = () => controller.abort();
@@ -73,7 +110,8 @@ export async function requestN8nPolicyIntakeBySignedSource(
     });
     assertN8nHttpSuccess(response);
     const payload: unknown = await response.json();
-    return validateN8nPolicyIntakeResponse(payload, input);
+    const extracted=validateN8nPolicyIntakeResponse(payload, input);
+    return attachSigningProposal(extracted,await evidencePdf);
   } finally {
     clearTimeout(timer);
     signal?.removeEventListener("abort", onAbort);
@@ -136,7 +174,10 @@ export async function requestN8nPolicyIntakeExtraction(
     });
     assertN8nHttpSuccess(response);
     const payload: unknown = await response.json();
-    return validateN8nPolicyIntakeResponse(payload, input);
+    const extracted=validateN8nPolicyIntakeResponse(payload, input);
+    if(!extracted.parserId.startsWith("tata_aig_") || !extracted.receiptDate) return extracted;
+    const pdfBytes=new Uint8Array(await input.file.arrayBuffer());
+    return attachSigningProposal(extracted,pdfBytes);
   } finally {
     clearTimeout(timeout);
     signal?.removeEventListener("abort", onAbort);
