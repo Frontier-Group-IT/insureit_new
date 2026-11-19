@@ -1,13 +1,12 @@
 Partner production OTA trigger
-release=partner-policy-period-status-filters-pr-4834
+release=partner-more-dimensional-3d-icons-pr-4837
 source=verified-merged-main
-source_pr=4834
-source_merge=46053e262724599154accc0d727921076c90e6e9
-reason=user-approved-migration-merge-and-publish
+source_pr=4837
+source_merge=7b9847ab6b9f048ba93b777005240bbe0b8d8e65
+reason=user-approved-merge-and-publish-after-automatic-gate-block
 channel=production
 runtime=0.2.0
 requested=2026-11-19
-database_migration=partner_policy_period_status_filters_20261119_applied_and_verified
 no_native_build=true
 no_apk=true
 no_aab=true
