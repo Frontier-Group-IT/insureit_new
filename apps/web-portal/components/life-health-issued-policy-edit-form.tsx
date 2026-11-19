@@ -224,9 +224,20 @@ export function LifeHealthIssuedPolicyEditForm({ initial, insurers, sources, act
       <section aria-label="Onboarding summary" className="rounded-2xl border border-[#D9E2F0] bg-white shadow-sm">
         <div className="flex items-center justify-between border-b border-[#E5ECF5] p-4"><div><p className="text-[8px] font-bold uppercase tracking-[.08em] text-[#7A8799]">Policy status</p><h2 className="mt-1 text-[13px] font-semibold text-[#17365D]">Onboarding summary</h2></div><span className="grid h-12 w-12 place-items-center rounded-full border-[5px] border-[#E7EEF7] text-[10px] font-bold text-[#17365D]">{completion}%</span></div>
         <div className="px-4 pb-2 pt-3">
-          <p className="text-[9px] font-bold uppercase text-[#667085]">Premium</p>
-          <p className="mt-1 text-[18px] font-semibold text-[#17365D]">₹{form.finalPremium||"0"}</p>
-          <p className="mt-1 text-[9px] text-[#7A8799]">{form.paymentFrequency||"Frequency pending"} · {form.paymentMode||"Mode pending"}</p>
+          <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
+            <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1.5">
+              <div>
+                <p className="text-[9px] font-bold uppercase text-[#667085]">Premium</p>
+                <p className="mt-1 text-[18px] font-semibold text-[#17365D]">₹{form.finalPremium||"0"}</p>
+              </div>
+              <p className="text-[9px] text-[#7A8799]">{form.paymentFrequency||"Frequency pending"} · {form.paymentMode||"Mode pending"}</p>
+            </div>
+            {commercialAccess?<div className="ml-auto text-right">
+              <p className="text-[9px] font-bold uppercase tracking-[0.07em] text-[#667085]">Projected retention</p>
+              <p className={`mt-1 text-[18px] font-semibold ${commercialCalculations.retention<0?"text-red-600":"text-[#17365D]"}`}>{money(commercialCalculations.retention)}</p>
+              <p className="mt-0.5 text-[9px] text-[#98A2B3]">After 10% TDS</p>
+            </div>:null}
+          </div>
         </div>
         {commercialAccess?<CommercialStatus commercial={commercial} calculations={commercialCalculations} onOpen={setCommercialModal}/>:null}
       </section>
@@ -261,7 +272,6 @@ function CommercialStatus({commercial,calculations,onOpen}:{commercial:{payinBas
       <CommercialSummaryButton label="Insurer Pay-in" value={calculations.totalPayin} detail={payinDetail} onClick={()=>onOpen("payin")} kind="payin"/>
       <CommercialSummaryButton label="Partner Payout" value={calculations.totalPayout} detail={payoutDetail} onClick={()=>onOpen("payout")} kind="payout"/>
     </div>
-    <div className="mt-2 flex items-center justify-between gap-3 border-t border-[#E3EAF2] px-1 pt-2.5"><div><p className="text-[7.5px] font-bold uppercase tracking-[0.07em] text-[#98A2B3]">Projected retention</p><p className={`mt-0.5 text-[10.5px] font-bold ${calculations.retention<0?"text-red-600":"text-[#344054]"}`}>{money(calculations.retention)}</p></div><span className="text-[7.5px] text-[#98A2B3]">After 10% TDS</span></div>
   </div>
 }
 function CommercialSummaryButton({label,value,detail,onClick,kind}:{label:string;value:number;detail:string;onClick:()=>void;kind:"payin"|"payout"}){
