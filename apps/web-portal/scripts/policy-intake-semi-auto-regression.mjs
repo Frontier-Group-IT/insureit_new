@@ -137,7 +137,8 @@ assert(n8nServer.includes('loadPolicyIntakeDuplicateMatches(admin, [{'),
 assert(n8nServer.includes('policy_intake_onboarding_drafts'),
   "Existing saved drafts must not be overwritten by n8n");
 assert(n8nServer.includes("extraction.warnings.length === 0"), "Warnings must prevent automatic failed-OCR recovery");
-assert(n8nServer.includes("fingerprint(id, current.document.id, extraction.fields, extraction.warnings, extraction.premium)"),
+assert(n8nServer.includes("fingerprint(id, current.document.id, extraction.fields, visibleWarnings,")
+  && n8nServer.includes("extraction.premium, extraction.issuanceEvidence,acceptedIssuanceDate"),
   "Reviewed preview fingerprint must bind the document, fields, warnings and independently checked premium breakdown");
 assert(n8nServer.includes("An onboarding draft was created while extraction was running"),
   "Apply must recheck draft creation immediately before the final OCR update");
