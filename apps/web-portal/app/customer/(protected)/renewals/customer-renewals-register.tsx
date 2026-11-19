@@ -87,14 +87,14 @@ export function CustomerRenewalsRegister({accountId,items,categories}:{
             ? "border-[#6050E5] bg-white shadow-sm hover:bg-[#F8FAFF]"
             : "border-[#E2E9F5] bg-white hover:bg-[#F7F8FF]";
           return <button key={cat.key} type="button" aria-pressed={selected} aria-expanded={selected} onClick={() => setActiveCategory(selected ? null : cat.key)}
-            className={`flex min-h-[76px] min-w-0 items-start justify-between gap-1.5 overflow-hidden rounded-xl border px-2 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6050E5] ${cardTone}`}>
-            <span className="flex min-w-0 flex-1 flex-col items-start gap-1">
+            className={`grid min-h-[76px] min-w-0 grid-cols-2 items-start gap-1.5 overflow-hidden rounded-xl border px-2 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6050E5] ${cardTone}`}>
+            <span className="flex min-w-0 flex-col items-start gap-1">
               <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg"><CategoryIcon title={cat.title}/></span>
-              <strong className="min-w-0 text-[10px] font-semibold leading-4 text-[#28346A]" title={cat.title}>{cat.title}</strong>
+              <strong className="min-w-0 break-words text-[10px] font-semibold leading-4 text-[#28346A]" title={cat.title}>{cat.title}</strong>
             </span>
-            <span className="flex shrink-0 flex-col items-end gap-1" aria-label={`Due ${cat.due}, expired ${cat.expired}`}>
-              {cat.due > 0 ? <span title={`${cat.due} due renewals`} className={`${motion.countPulseDue} inline-flex min-h-[20px] min-w-[22px] items-center justify-center rounded-full border border-[#F29C26] bg-[#FFAF36] px-1.5 text-[10px] font-extrabold tabular-nums text-[#572D00]`}>{cat.due}</span> : null}
-              {cat.expired > 0 ? <span title={`${cat.expired} expired renewals`} className={`${motion.countPulseExpired} inline-flex min-h-[20px] min-w-[22px] items-center justify-center rounded-full border border-[#DC2F46] bg-[#EF394D] px-1.5 text-[10px] font-extrabold tabular-nums text-white`}>{cat.expired}</span> : null}
+            <span className="flex min-w-0 flex-col items-end gap-1" aria-label={`Due ${cat.due}, expired ${cat.expired}`}>
+              {cat.due > 0 ? <span title={`${cat.due} due renewals`} className={`${motion.countPulseDue} inline-flex h-5 w-full max-w-[56px] items-center justify-center rounded-full border border-[#F29C26] bg-[#FFAF36] px-1.5 text-[10px] font-extrabold tabular-nums text-[#572D00]`}>{cat.due}</span> : null}
+              {cat.expired > 0 ? <span title={`${cat.expired} expired renewals`} className={`${motion.countPulseExpired} inline-flex h-5 w-full max-w-[56px] items-center justify-center rounded-full border border-[#DC2F46] bg-[#EF394D] px-1.5 text-[10px] font-extrabold tabular-nums text-white`}>{cat.expired}</span> : null}
             </span>
           </button>;
         })}
