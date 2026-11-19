@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, type ImageSourcePropType, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
@@ -57,7 +57,7 @@ export default function RecognitionScreen() {
           <View style={styles.hero}>
             <View style={styles.heroContent}>
               <View style={styles.trophyTile}>
-                <Ionicons name="trophy-outline" color="#FFD985" size={28} />
+                <Image source={PartnerAssets.status.achievement} style={styles.heroArtwork} resizeMode="contain" />
               </View>
               <View style={styles.heroCopy}>
                 <Text style={styles.heroEyebrow}>YOUR RECOGNITION</Text>
@@ -90,7 +90,7 @@ export default function RecognitionScreen() {
                   <View key={item.code} style={styles.card}>
                     <View style={styles.achievementTop}>
                       <View style={[styles.artworkTile, { backgroundColor: colors.background }]}>
-                        <Ionicons name={achievementIcon(item.icon)} size={27} color={colors.foreground} />
+                        <Image source={milestoneArtwork(item.icon)} style={styles.achievementArtwork} resizeMode="contain" />
                       </View>
                       <View style={styles.achievementHeading}>
                         <Text style={styles.title}>{item.title}</Text>
@@ -160,10 +160,10 @@ export default function RecognitionScreen() {
   );
 }
 
-function achievementIcon(icon: RecognitionItem['icon']): keyof typeof Ionicons.glyphMap {
-  if (icon === 'learn') return 'school-outline';
-  if (icon === 'renewal') return 'refresh-circle-outline';
-  return 'shield-checkmark-outline';
+function milestoneArtwork(icon: RecognitionItem['icon']): ImageSourcePropType {
+  if (icon === 'learn') return PartnerAssets.actions.policyChecklist;
+  if (icon === 'renewal') return PartnerAssets.actions.renewals;
+  return PartnerAssets.status.journey;
 }
 
 function achievementTone(tone: RecognitionItem['tone']) {
@@ -181,6 +181,7 @@ const styles = StyleSheet.create({
   hero: { marginTop: 13, borderRadius: 22, padding: 18, backgroundColor: '#142849' },
   heroContent: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   trophyTile: { width: 58, height: 58, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: '#2C4166' },
+  heroArtwork: { width: 44, height: 44 },
   heroCopy: { flex: 1, minWidth: 0 },
   heroEyebrow: { color: '#C4B5FD', fontSize: 10, letterSpacing: 1, fontWeight: '800' },
   heroTitle: { marginTop: 5, color: '#FFFFFF', fontSize: 19, lineHeight: 24, fontWeight: '800' },
@@ -195,6 +196,7 @@ const styles = StyleSheet.create({
   card: { backgroundColor: '#FFFFFF', borderRadius: 19, padding: 15, borderWidth: 1, borderColor: '#E4E8EF' },
   achievementTop: { flexDirection: 'row', alignItems: 'center', gap: 13 },
   artworkTile: { width: 56, height: 56, borderRadius: 15, justifyContent: 'center', alignItems: 'center' },
+  achievementArtwork: { width: 40, height: 40 },
   achievementHeading: { flex: 1, minWidth: 0 },
   title: { color: '#1C2638', fontSize: 14, lineHeight: 19, fontWeight: '800' },
   dateRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 7 },
