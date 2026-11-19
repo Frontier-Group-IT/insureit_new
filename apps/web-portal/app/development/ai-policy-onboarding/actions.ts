@@ -482,6 +482,9 @@ export async function editSemiAutoIntake(id: string, takeOver = false): Promise<
  */
 export async function continueVerifiedN8nIntakeToOnboarding(
   id: string, documentId: string, fingerprint: string, confirmed: boolean, takeOver = false, fillEmptyFields = false,
+  reviewerConfirmedSigningDate?:{
+    date:string;documentSha256:string;expectedDraftRevision:number|null;expectedPreviousDate:string|null;
+  },
 ): Promise<{ ok: boolean; editUrl?: string; error?: string; existingDraft?:boolean; assignmentConflict?: { reviewerName: string } }> {
   await requireDevelopmentPolicyOperator(id);
   // Do not claim or create a draft for someone who cannot open /policies/new.
@@ -489,7 +492,7 @@ export async function continueVerifiedN8nIntakeToOnboarding(
   if (!isN8nWorkbenchPrimary() || confirmed !== true) {
     return { ok: false, error: "A confirmed n8n-primary review is required before forwarding to Policy Onboarding." };
   }
-  const handoff = await prepareVerifiedN8nIntakeHandoff(id,documentId,fingerprint,takeOver===true,fillEmptyFields===true);
+  const handoff = await prepareVerifiedN8nIntakeHandoff(id,documentId,fingerprint,takeOver===true,fillEmptyFields===true,undefined,reviewerConfirmedSigningDate);
   if (!handoff.ok) {
     if (handoff.conflict) return { ok:false,error:handoff.error,assignmentConflict:{reviewerName:handoff.reviewerName} };
     return { ok:false,error:handoff.error };
