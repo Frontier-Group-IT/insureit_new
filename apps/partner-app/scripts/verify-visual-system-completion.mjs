@@ -641,6 +641,8 @@ for (const impactRoute of ["router.push('/customers')", "router.push('/(tabs)/po
 for (const tinySize of ['fontSize: 7.5', 'fontSize: 8.5', 'fontSize: 8,']) if (impact.includes(tinySize)) throw new Error(`Impact must not regress to tiny typography: ${tinySize}`);
 requireText(journey, 'PartnerAssets.status.journey', 'Journey timeline and empty state must use journey artwork.');
 requireText(journey, 'navyTopBar navyStatusBar bottomNavigationNavy', 'My Progress must use navy header and status bar.');
+requireText(journey, '<PartnerScreen title="My progress" onBack={() => router.back()}', 'My Progress header must show only its title without a secondary eyebrow.');
+if (journey.includes('eyebrow="MY JOURNEY"')) throw new Error('My Progress must not show MY JOURNEY above its title.');
 requireText(journey, 'bottomNavigation={<PartnerStackBottomNavigation activeTab="home" />}', 'My Progress must have the permission-gated Home bottom navigator.');
 if (journey.includes('name="locate-outline"')) throw new Error('Milestone top-right circle icon must be removed.');
 if (/calendar-outline|PartnerPolicyCalendarDialog|calendarOpen|setTimelineDate|\[timelineDate,|calendarButton|dateFilterRow|Clear timeline date filter/.test(journey)) throw new Error('Journey timeline must not include the removed calendar/date picker or its unused state.');
