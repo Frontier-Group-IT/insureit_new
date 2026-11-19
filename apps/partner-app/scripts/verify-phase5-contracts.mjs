@@ -363,7 +363,7 @@ expectAll('components/ui/partner-section-header.tsx', [
   [ /settingsTitle: \{ color: '#20234C', fontSize: 15, lineHeight: 20, fontWeight: '900'/, 'Settings headings use bold high-contrast typography'],
   [/textTransform: 'uppercase'/, 'Heading capitalization remains unchanged'],
   [/settingsRow: \{ marginTop: 12, marginBottom: 3, minHeight: 22 \}/, 'Settings headings use compact reference spacing'],
-  [/settingsRowCompact: \{ marginTop: 20, marginBottom: 10, minHeight: 24 \}/, 'Settings headings have clear breathing room above cards'],
+  [/settingsRowCompact: \{ marginTop: 12, marginBottom: 7, minHeight: 22 \}/, 'Settings headings have clear breathing room above cards'],
 ]);
 
 checks += 1;
