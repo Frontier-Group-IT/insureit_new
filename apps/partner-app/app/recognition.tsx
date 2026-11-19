@@ -3,6 +3,8 @@ import { Image, type ImageSourcePropType, StyleSheet, Text, View } from 'react-n
 import { useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
+import { PartnerCasePageHeader } from '@/components/partner-case-page-header';
+import { PartnerCaseBottomNavigation } from '@/components/partner-case-bottom-navigation';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { getPartnerRecognition, type PartnerRecognition } from '@/lib/engagement';
 import { PartnerAssets } from '@/lib/partner-assets';
@@ -30,7 +32,8 @@ export default function RecognitionScreen() {
   useEffect(() => { void load(); }, [load]);
 
   return (
-    <PartnerScreen eyebrow="RECOGNITION" title="Progress worth noticing" onBack={() => router.back()}>
+    <PartnerScreen title="Progress worth noticing" hideTopBar navyStatusBar bottomNavigationNavy bottomNavigation={<PartnerCaseBottomNavigation activeTab="More" />}>
+      <PartnerCasePageHeader title="Progress worth noticing" icon="ribbon-outline" onBack={() => router.back()} />
       {loading ? (
         <PartnerStateView state="loading" title="Loading recognition" />
       ) : error || !data ? (

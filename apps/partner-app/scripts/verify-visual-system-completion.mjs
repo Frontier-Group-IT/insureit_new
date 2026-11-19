@@ -154,6 +154,16 @@ const journey = read('app/journey.tsx');
 const weeklyStory = read('app/weekly-story.tsx');
 const recognition = read('app/recognition.tsx');
 const learn = read('app/learn.tsx');
+for (const [screen, title, icon] of [
+  [weeklyStory, 'A week with INSUREIT', 'bar-chart-outline'],
+  [learn, '60-Second Learn', 'school-outline'],
+  [recognition, 'Progress worth noticing', 'ribbon-outline'],
+]) {
+  requireText(screen, 'hideTopBar navyStatusBar bottomNavigationNavy', `${title} must use navy header and Android status bar like Profile.`);
+  requireText(screen, '<PartnerCaseBottomNavigation activeTab="More" />', `${title} must show the permission-aware five-tab bottom navigation.`);
+  requireText(screen, `<PartnerCasePageHeader title="${title}" icon="${icon}" onBack={() => router.back()} />`, `${title} must show a white title and back action on navy.`);
+}
+
 const pulse = read('app/pulse.tsx');
 
 for (const asset of ['policyChecklist', 'appsGrid', 'settings', 'supportVerified']) {

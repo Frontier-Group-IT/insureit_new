@@ -4,6 +4,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
+import { PartnerCasePageHeader } from '@/components/partner-case-page-header';
+import { PartnerCaseBottomNavigation } from '@/components/partner-case-bottom-navigation';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import {
   getPartnerLearningToday,
@@ -55,7 +57,8 @@ export default function LearnScreen() {
   }
 
   return (
-    <PartnerScreen eyebrow="60 SEC LEARN" title="60-Second Learn" onBack={() => router.back()}>
+    <PartnerScreen title="60-Second Learn" hideTopBar navyStatusBar bottomNavigationNavy bottomNavigation={<PartnerCaseBottomNavigation activeTab="More" />}>
+      <PartnerCasePageHeader title="60-Second Learn" icon="school-outline" onBack={() => router.back()} />
       {loading ? (
         <PartnerStateView state="loading" title="Loading today’s learning card" />
       ) : error && !data ? (

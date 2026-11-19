@@ -4,6 +4,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
+import { PartnerCasePageHeader } from '@/components/partner-case-page-header';
+import { PartnerCaseBottomNavigation } from '@/components/partner-case-bottom-navigation';
 import { PartnerAnchoredDropdown } from '@/components/ui/partner-anchored-dropdown';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { getPartnerWeeklyStory, type PartnerWeeklyStory } from '@/lib/engagement';
@@ -70,7 +72,8 @@ export default function WeeklyStoryScreen() {
   }, [comparisonDays]);
 
   return (
-    <PartnerScreen eyebrow="YOUR WEEK" title="A week with INSUREIT" onBack={() => router.back()}>
+    <PartnerScreen title="A week with INSUREIT" hideTopBar navyStatusBar bottomNavigationNavy bottomNavigation={<PartnerCaseBottomNavigation activeTab="More" />}>
+      <PartnerCasePageHeader title="A week with INSUREIT" icon="bar-chart-outline" onBack={() => router.back()} />
       {loading ? (
         <PartnerStateView state="loading" title="Loading your week" />
       ) : error || !data ? (
