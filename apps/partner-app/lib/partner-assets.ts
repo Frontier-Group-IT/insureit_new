@@ -41,6 +41,7 @@ export const PartnerAssets = {
     quickRenewals: require('../assets/partner/actions/quick-renewals.png'),
     quickClaims: require('../assets/partner/actions/quick-claims.png'),
     quickCustomers: require('../assets/partner/actions/quick-customers.png'),
+    impactBlue3dCar: require('../assets/partner/actions/impact-blue-3d-car.png'),
     impactCustomerDetail: require('../assets/partner/actions/impact-customer-detail.png'),
     impactCustomerAdded: require('../assets/partner/actions/impact-customer-added.png'),
     impactPolicyDocument: require('../assets/partner/actions/impact-policy-document.png'),
