@@ -15,10 +15,9 @@ function buildSignedPdf(time="D:20261119111104+00'00'", signer="TATA AIG", fully
   const pdf=Buffer.from(prelude+content+ranged);
   assert.equal(pdf.byteLength,secondBegin+Buffer.byteLength(ranged));
   if(!fullySigned) {
-    const changed=Buffer.from(pdf);
-    const idx=changed.lastIndexOf("%%EOF");
-    changed.set(Buffer.from("EXTRA"),idx);
-    return changed;
+    // Appending an unsigned revision changes the total PDF length, so the
+    // signed ByteRange no longer covers the complete current document.
+    return Buffer.concat([pdf,Buffer.from("UNSIGNED_TRAILING_BYTES")]);
   }
   return duplicate ? Buffer.concat([pdf,Buffer.from("\\n/ByteRange [0 1 3 4]\\n")]):pdf;
 }
