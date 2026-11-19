@@ -231,9 +231,11 @@ for (const kind of [
   const configKey = kind.includes('-') ? `'${kind}':` : `${kind}:`;
   requireText(profileMenuIcon, configKey, `Partner Profile menu icon system is missing ${kind}.`);
 }
-requireText(profileMenuIcon, "backgroundColor: '#EDF6FF'", 'Partner Profile menu icons must keep the same soft professional blue tile language as Business KPI icons.');
-requireText(profileMenuIcon, "borderColor: '#D4E8FF'", 'Partner Profile menu icons must keep the professional blue border treatment.');
-requireText(profileMenuIcon, "shadowColor: '#0B4E9B'", 'Partner Profile menu icons must keep subtle branded depth.');
+requireText(profileMenuIcon, 'styles.glyphDepth', 'Partner Profile icons must show layered dimensional glyph depth.');
+requireText(profileMenuIcon, 'styles.glyphFace', 'Partner Profile icons must show a visible dimensional front face.');
+requireText(profileMenuIcon, 'styles.topRim', 'Partner Profile icons must retain a softly illuminated raised tile.');
+requireText(profileMenuIcon, 'styles.badgeShine', 'Partner Profile icon badge must retain native 3D highlights.');
+requireText(profileMenuIcon, "borderTopColor: '#FFFFFF'", 'Partner Profile icons must retain a light beveled tile rim.');
 if (more.includes('PartnerAssets.actions.') || more.includes('PartnerAssets.status.') || more.includes('PartnerAssets.navigation.')) {
   throw new Error('Partner Profile/More menu must not regress to mixed legacy artwork after professional icon unification.');
 }

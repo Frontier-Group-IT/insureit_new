@@ -17,24 +17,34 @@ export type PartnerProfileMenuIconKind =
   | 'support'
   | 'settings';
 
-const CONFIG: Record<PartnerProfileMenuIconKind, {
+type IconPalette = {
   icon: keyof typeof Ionicons.glyphMap;
-  accentIcon?: keyof typeof Ionicons.glyphMap;
-}> = {
-  search: { icon: 'search', accentIcon: 'briefcase' },
-  'policy-intake': { icon: 'document-text', accentIcon: 'add' },
-  renewals: { icon: 'refresh-circle', accentIcon: 'calendar' },
-  customers: { icon: 'people', accentIcon: 'checkmark' },
-  week: { icon: 'bar-chart', accentIcon: 'trending-up' },
-  impact: { icon: 'analytics', accentIcon: 'sparkles' },
-  journey: { icon: 'navigate-circle', accentIcon: 'flag' },
-  activity: { icon: 'pulse', accentIcon: 'notifications' },
-  learn: { icon: 'school', accentIcon: 'play' },
-  recognition: { icon: 'ribbon', accentIcon: 'star' },
-  stories: { icon: 'newspaper', accentIcon: 'play' },
-  profile: { icon: 'person', accentIcon: 'shield-checkmark' },
-  support: { icon: 'headset', accentIcon: 'chatbubble-ellipses' },
-  settings: { icon: 'settings', accentIcon: 'information' },
+  accentIcon: keyof typeof Ionicons.glyphMap;
+  face: string;
+  edge: string;
+  shadow: string;
+  tile: string;
+  light: string;
+};
+
+// A palette per destination makes the small icons easy to distinguish at a glance.
+// The extruded silhouettes, rim lighting and inset tile replace flat monochrome glyphs
+// without adding image downloads, native dependencies, or changing touch targets.
+const CONFIG: Record<PartnerProfileMenuIconKind, IconPalette> = {
+  search: { icon: 'search', accentIcon: 'briefcase', face: '#3488F2', edge: '#0756BB', shadow: '#123A7B', tile: '#EAF4FF', light: '#FFFFFF' },
+  'policy-intake': { icon: 'document-text', accentIcon: 'add', face: '#527AF2', edge: '#2147B4', shadow: '#172F73', tile: '#EDF2FF', light: '#FFFFFF' },
+  renewals: { icon: 'refresh-circle', accentIcon: 'calendar', face: '#13B6A9', edge: '#087A86', shadow: '#12526A', tile: '#E5FAF6', light: '#FFFFFF' },
+  customers: { icon: 'people', accentIcon: 'checkmark', face: '#327CE7', edge: '#2351B6', shadow: '#192E74', tile: '#E9F3FF', light: '#FFFFFF' },
+  week: { icon: 'bar-chart', accentIcon: 'trending-up', face: '#238CEB', edge: '#1456B5', shadow: '#1D3F80', tile: '#E9F5FF', light: '#FFFFFF' },
+  impact: { icon: 'analytics', accentIcon: 'sparkles', face: '#8563E6', edge: '#5A38B5', shadow: '#362477', tile: '#F2EEFF', light: '#FFFFFF' },
+  journey: { icon: 'navigate-circle', accentIcon: 'flag', face: '#2BA5CA', edge: '#096C99', shadow: '#175575', tile: '#E7F8FF', light: '#FFFFFF' },
+  activity: { icon: 'pulse', accentIcon: 'notifications', face: '#EB638B', edge: '#AC3D70', shadow: '#752954', tile: '#FFF0F5', light: '#FFFFFF' },
+  learn: { icon: 'school', accentIcon: 'play', face: '#427CE6', edge: '#2251B6', shadow: '#253E77', tile: '#EAF2FF', light: '#FFFFFF' },
+  recognition: { icon: 'ribbon', accentIcon: 'star', face: '#E5A43B', edge: '#B56D18', shadow: '#75501D', tile: '#FFF5E2', light: '#FFFFFF' },
+  stories: { icon: 'newspaper', accentIcon: 'play', face: '#7666E8', edge: '#4534A9', shadow: '#342B75', tile: '#F1EFFF', light: '#FFFFFF' },
+  profile: { icon: 'person', accentIcon: 'shield-checkmark', face: '#387DDC', edge: '#1451A9', shadow: '#1E376F', tile: '#EAF3FF', light: '#FFFFFF' },
+  support: { icon: 'headset', accentIcon: 'chatbubble-ellipses', face: '#17A5AC', edge: '#087880', shadow: '#164E61', tile: '#E7FAFA', light: '#FFFFFF' },
+  settings: { icon: 'settings', accentIcon: 'information', face: '#7384A7', edge: '#44577A', shadow: '#33405F', tile: '#EFF2F8', light: '#FFFFFF' },
 };
 
 export function PartnerProfileMenuIcon({
@@ -45,22 +55,46 @@ export function PartnerProfileMenuIcon({
   size?: number;
 }) {
   const config = CONFIG[kind];
-  const iconSize = Math.round(size * 0.5);
+  const glyph = Math.round(size * 0.56);
+  const badgeSize = Math.round(size * 0.33);
 
   return (
     <View
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
-      style={[styles.tile, { width: size, height: size, borderRadius: Math.round(size * 0.28) }]}
+      style={[styles.tile, {
+        width: size,
+        height: size,
+        borderRadius: Math.round(size * 0.27),
+        backgroundColor: config.tile,
+        shadowColor: config.shadow,
+      }]}
     >
-      <View style={styles.glowTop} />
-      <View style={styles.glowBottom} />
-      <Ionicons name={config.icon} size={iconSize} color="#0A63C9" />
-      {config.accentIcon ? (
-        <View style={styles.badge}>
-          <Ionicons name={config.accentIcon} size={8} color="#FFFFFF" />
-        </View>
-      ) : null}
+      {/* Layered lighting gives the tile a raised, softly rounded 3D surface. */}
+      <View pointerEvents="none" style={styles.upperLight} />
+      <View pointerEvents="none" style={styles.lowerShade} />
+      <View pointerEvents="none" style={styles.topRim} />
+      <View pointerEvents="none" style={styles.iconStack}>
+        <Ionicons name={config.icon} size={glyph} color={config.shadow}
+          style={[styles.glyph, styles.glyphDepth]} />
+        <Ionicons name={config.icon} size={glyph} color={config.edge}
+          style={[styles.glyph, styles.glyphEdge]} />
+        <Ionicons name={config.icon} size={glyph} color={config.face}
+          style={[styles.glyph, styles.glyphFace]} />
+        <Ionicons name={config.icon} size={glyph} color={config.light}
+          style={[styles.glyph, styles.glyphRim]} />
+      </View>
+      <View pointerEvents="none" style={[styles.badgeShadow, {
+        width: badgeSize, height: badgeSize, borderRadius: badgeSize / 2,
+        backgroundColor: config.shadow,
+      }]} />
+      <View pointerEvents="none" style={[styles.badge, {
+        width: badgeSize, height: badgeSize, borderRadius: badgeSize / 2,
+        backgroundColor: config.edge,
+      }]}>
+        <View pointerEvents="none" style={styles.badgeShine} />
+        <Ionicons name={config.accentIcon} size={Math.round(badgeSize * 0.59)} color="#FFFFFF" />
+      </View>
     </View>
   );
 }
@@ -68,47 +102,62 @@ export function PartnerProfileMenuIcon({
 const styles = StyleSheet.create({
   tile: {
     position: 'relative',
-    overflow: 'hidden',
+    overflow: 'visible',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#EDF6FF',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#D4E8FF',
-    shadowColor: '#0B4E9B',
-    shadowOpacity: 0.12,
-    shadowRadius: 5,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
+    borderWidth: 1,
+    borderTopColor: '#FFFFFF',
+    borderLeftColor: '#FFFFFF',
+    borderRightColor: '#D6E0F2',
+    borderBottomColor: '#CBD8EB',
+    shadowOpacity: 0.25,
+    shadowRadius: 3.5,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 4,
   },
-  glowTop: {
+  upperLight: {
     position: 'absolute',
-    top: -8,
-    right: -7,
-    width: 25,
-    height: 25,
-    borderRadius: 14,
-    backgroundColor: 'rgba(61, 171, 255, 0.20)',
+    top: 3, left: 4, right: 5, height: '42%',
+    borderTopLeftRadius: 10, borderTopRightRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.55)',
   },
-  glowBottom: {
+  lowerShade: {
     position: 'absolute',
-    left: -10,
-    bottom: -12,
-    width: 28,
-    height: 28,
-    borderRadius: 16,
-    backgroundColor: 'rgba(7, 91, 200, 0.07)',
+    bottom: 2, left: 4, right: 3, height: '32%',
+    borderBottomLeftRadius: 9, borderBottomRightRadius: 9,
+    backgroundColor: 'rgba(50,95,170,0.08)',
+  },
+  topRim: {
+    position: 'absolute',
+    top: 2, left: 6, right: 7, height: 1.5,
+    backgroundColor: 'rgba(255,255,255,0.95)',
+    borderRadius: 2,
+  },
+  iconStack: {
+    width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center',
+    transform: [{ translateX: -1 }, { translateY: -1 }],
+  },
+  glyph: { position: 'absolute' },
+  glyphDepth: { transform: [{ translateX: 2 }, { translateY: 3 }] },
+  glyphEdge: { transform: [{ translateX: 0.9 }, { translateY: 1.5 }] },
+  glyphFace: { transform: [{ translateX: -0.7 }, { translateY: -0.8 }] },
+  glyphRim: {
+    opacity: 0.25,
+    transform: [{ translateX: -1.8 }, { translateY: -2 }],
+  },
+  badgeShadow: {
+    position: 'absolute', right: -2, bottom: -3,
+    opacity: 0.36,
   },
   badge: {
-    position: 'absolute',
-    right: 2,
-    bottom: 2,
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#075BC8',
-    borderWidth: 1,
-    borderColor: '#FFFFFF',
+    position: 'absolute', right: -1, bottom: -1,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: '#FFFFFF',
+    overflow: 'hidden',
+  },
+  badgeShine: {
+    position: 'absolute', left: 1, top: 1, right: 1,
+    height: '45%', borderTopLeftRadius: 8, borderTopRightRadius: 8,
+    backgroundColor: 'rgba(255,255,255,0.27)',
   },
 });
