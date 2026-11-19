@@ -684,7 +684,10 @@ function policyCategory(policy: PolicyRow) {
 }
 
 function riskAssetPrimary(policy: PolicyRow) {
-  if (policyBusinessLine(policy) !== "Non Motor") return policy.vehicles?.vehicle_no?.trim() || "Vehicle not linked";
+  const businessLine = policyBusinessLine(policy);
+  // Life and Health do not require a linked vehicle: use their existing policy number.
+  if (businessLine === "Life" || businessLine === "Health") return policy.policy_no?.trim() || "Policy number unavailable";
+  if (businessLine !== "Non Motor") return policy.vehicles?.vehicle_no?.trim() || "Vehicle not linked";
   const detail = policy.non_motor_policy_details;
   const risk = detail?.risk_details ?? {};
   return firstText(
