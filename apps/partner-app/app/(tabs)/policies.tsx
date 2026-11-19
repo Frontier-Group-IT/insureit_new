@@ -49,26 +49,6 @@ import { usePartnerNetwork } from '@/providers/partner-network-provider';
 import { usePartnerSession } from '@/providers/partner-session-provider';
 
 const PAGE_SIZE = 10;
-// Fine-grained native View strips provide the purple gradient without introducing
-// a native dependency or changing the app's OTA runtime.
-const sortPurpleGradient = [
-  '#4F43C8','#4D40C5','#4B3CC1','#4838BC','#4534B8','#4230B3',
-  '#3F2CAD','#3C28A9','#3925A5','#3722A0','#341F9D','#321C99',
-  '#301A95','#2E1791','#2B148D','#291289',
-] as const;
-
-function SortPurpleGradient() {
-  return (
-    <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
-      <View style={styles.sortGradientRow}>
-        {sortPurpleGradient.map((color,index) => (
-          <View key={index} style={{flex:1,backgroundColor:color}} />
-        ))}
-      </View>
-    </View>
-  );
-}
-
 const businessLineOptions: {label:string;value:PartnerPolicyBusinessLine}[] = [
   {label:'All Policies',value:'all'},
   {label:'Motor',value:'motor'},
@@ -550,7 +530,7 @@ export default function PoliciesScreen() {
       <Modal visible={sortSheetOpen} transparent animationType="slide" onRequestClose={()=>setSortSheetOpen(false)}>
         <View style={styles.sortOverlay}>
           <Pressable style={StyleSheet.absoluteFill} accessibilityRole="button" accessibilityLabel="Close sort by popup" onPress={()=>setSortSheetOpen(false)}/>
-          <View style={[styles.sortSheet,{paddingBottom:Math.max(20,safeAreaInsets.bottom+12),maxHeight:windowHeight-36}]}>
+          <View style={[styles.sortSheet,{paddingBottom:Math.max(12,safeAreaInsets.bottom+7),maxHeight:windowHeight-36}]}>
             <View style={styles.sortSheetHeader}>
               <Text style={styles.sortSheetTitle}>Sort by</Text>
               <Pressable accessibilityRole="button" accessibilityLabel="Close sort by popup" onPress={()=>setSortSheetOpen(false)} style={styles.sortSheetClose}>
@@ -568,9 +548,7 @@ export default function PoliciesScreen() {
                   return <Pressable key={value} accessibilityRole="button" accessibilityLabel={value==='mtd'?'MTD':'All'}
                     accessibilityState={{selected}} onPress={()=>{setDraftPeriod(value);setDraftLifecycle('all');}}
                     style={({pressed})=>[styles.sortPeriodOption,selected&&styles.sortPeriodSelected,pressed&&styles.summaryChipPressed]}>
-                    {selected?<SortPurpleGradient/>:null}
                     <View style={styles.sortPeriodContent}>
-                      {selected?<Ionicons name="checkmark-circle" size={21} color="#FFFFFF"/>:null}
                       <Text style={[styles.sortPeriodText,selected&&styles.sortPeriodTextSelected]}>{value==='mtd'?'MTD':'All'}</Text>
                     </View>
                   </Pressable>;
@@ -607,7 +585,6 @@ export default function PoliciesScreen() {
               {periodCounts.error ? <Text style={styles.sortError}>Counts are unavailable. The selected filter may need a server update.</Text>:null}
               <Pressable accessibilityRole="button" accessibilityLabel="Apply policy filters"
                 style={({pressed})=>[styles.sortApply,pressed&&styles.summaryChipPressed]} onPress={applySortSheet}>
-                <SortPurpleGradient/>
                 <View style={styles.sortApplyContent}>
                   <Feather name="filter" size={20} color="#FFFFFF"/>
                   <Text style={styles.sortApplyText}>Apply Filter</Text>
@@ -897,31 +874,30 @@ const styles = StyleSheet.create({
     shadowColor:'#5C5493',shadowOpacity:0.13,shadowRadius:8,shadowOffset:{width:0,height:2},elevation:6},
   sortFloatingText:{fontSize:11,fontWeight:'800',color:'#304778'},
   sortOverlay:{flex:1,justifyContent:'flex-end',backgroundColor:'rgba(16,30,66,0.73)'},
-  sortSheet:{backgroundColor:'#FFFFFF',borderTopLeftRadius:30,borderTopRightRadius:30,paddingHorizontal:20,paddingTop:16},
-  sortSheetHeader:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',paddingBottom:14,borderBottomWidth:1,borderColor:'#E4E5F1'},
-  sortSheetTitle:{fontSize:19,fontWeight:'800',color:'#14244B'},
-  sortSheetClose:{minWidth:40,minHeight:40,alignItems:'center',justifyContent:'center'},
-  sortSheetBody:{paddingTop:14,paddingBottom:8},
-  sortSectionHeading:{flexDirection:'row',alignItems:'center',gap:11,marginTop:6,marginBottom:15},
-  sortSectionLabel:{fontSize:15,lineHeight:21,color:'#172552',fontWeight:'800'},
-  sortSectionDivider:{height:1,backgroundColor:'#E1E3EE',marginTop:20,marginBottom:17},
-  sortGradientRow:{flex:1,flexDirection:'row'},
+  sortSheet:{backgroundColor:'#FFFFFF',borderTopLeftRadius:24,borderTopRightRadius:24,paddingHorizontal:18,paddingTop:10},
+  sortSheetHeader:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',paddingBottom:8,borderBottomWidth:1,borderColor:'#E4E5F1'},
+  sortSheetTitle:{fontSize:17,fontWeight:'800',color:'#14244B'},
+  sortSheetClose:{minWidth:36,minHeight:36,alignItems:'center',justifyContent:'center'},
+  sortSheetBody:{paddingTop:8,paddingBottom:3},
+  sortSectionHeading:{flexDirection:'row',alignItems:'center',gap:9,marginTop:4,marginBottom:9},
+  sortSectionLabel:{fontSize:13,lineHeight:19,color:'#172552',fontWeight:'800'},
+  sortSectionDivider:{height:1,backgroundColor:'#E1E3EE',marginTop:12,marginBottom:10},
   sortPeriodRow:{flexDirection:'row',gap:10},
-  sortPeriodOption:{flex:1,minHeight:52,borderRadius:15,borderWidth:1,borderColor:'#D8DCEA',
+  sortPeriodOption:{flex:1,minHeight:43,borderRadius:12,borderWidth:1,borderColor:'#D8DCEA',
     backgroundColor:'#FFFFFF',alignItems:'center',justifyContent:'center',overflow:'hidden'},
-  sortPeriodSelected:{borderColor:'#4B39BF',shadowColor:'#4535B5',shadowOpacity:0.14,shadowRadius:8,elevation:3},
+  sortPeriodSelected:{backgroundColor:'#4030AF',borderColor:'#4030AF',shadowColor:'#4535B5',shadowOpacity:0.14,shadowRadius:8,elevation:3},
   sortPeriodContent:{flexDirection:'row',alignItems:'center',justifyContent:'center',gap:10},
-  sortPeriodText:{fontSize:15,fontWeight:'800',color:'#172552'},
+  sortPeriodText:{fontSize:13,fontWeight:'800',color:'#172552'},
   sortPeriodTextSelected:{color:'#FFFFFF'},
-  sortChoices:{gap:6},
-  sortChoice:{flexDirection:'row',alignItems:'center',gap:13,minHeight:55,paddingHorizontal:16,
-    borderRadius:17,backgroundColor:'#FFFFFF',shadowColor:'#31296A',shadowOpacity:0.08,
+  sortChoices:{gap:4},
+  sortChoice:{flexDirection:'row',alignItems:'center',gap:11,minHeight:46,paddingHorizontal:13,
+    borderRadius:13,backgroundColor:'#FFFFFF',shadowColor:'#31296A',shadowOpacity:0.06,
     shadowRadius:10,shadowOffset:{width:0,height:3},elevation:2},
   sortChoiceSelected:{backgroundColor:'#EFEBFF'},
-  sortChoiceText:{flex:1,fontSize:15,color:'#172552',fontWeight:'600'},
+  sortChoiceText:{flex:1,fontSize:13,color:'#172552',fontWeight:'600'},
   sortChoiceTextSelected:{color:'#3829A9',fontWeight:'800'},
-  sortChoiceCountBadge:{minWidth:42,minHeight:32,borderRadius:18,alignItems:'center',justifyContent:'center',paddingHorizontal:11},
-  sortChoiceCount:{fontSize:14,fontWeight:'800'},
+  sortChoiceCountBadge:{minWidth:38,minHeight:28,borderRadius:15,alignItems:'center',justifyContent:'center',paddingHorizontal:11},
+  sortChoiceCount:{fontSize:12,fontWeight:'800'},
   sortCountPurple:{backgroundColor:'#DDDDFE'},
   sortCountPurpleText:{color:'#4331BC'},
   sortCountGreen:{backgroundColor:'#DFF8E9'},
@@ -931,10 +907,10 @@ const styles = StyleSheet.create({
   sortCountAmber:{backgroundColor:'#FFF0D9'},
   sortCountAmberText:{color:'#CC8618'},
   sortError:{color:'#B42318',fontSize:11,marginTop:8},
-  sortApply:{height:57,borderRadius:29,alignItems:'center',justifyContent:'center',
-    marginTop:22,marginBottom:5,overflow:'hidden',shadowColor:'#4530B5',shadowOpacity:0.19,shadowRadius:8,elevation:5},
+  sortApply:{height:46,borderRadius:24,alignItems:'center',justifyContent:'center',
+    backgroundColor:'#4030AF',marginTop:14,marginBottom:3,overflow:'hidden',shadowColor:'#4530B5',shadowOpacity:0.19,shadowRadius:8,elevation:5},
   sortApplyContent:{flexDirection:'row',alignItems:'center',justifyContent:'center',gap:12},
-  sortApplyText:{fontSize:16,fontWeight:'800',color:'#FFFFFF'},
+  sortApplyText:{fontSize:14,fontWeight:'800',color:'#FFFFFF'},
   quickActionsSection: { marginHorizontal: 12, marginTop: 13, marginBottom: 2 },
   policyListHeadingSection: { marginHorizontal: 12, marginTop: 9, marginBottom: 10, flexDirection:'row',alignItems:'center',gap:10 },
   businessLineButton:{flexDirection:'row',alignItems:'center',gap:7,minHeight:30,paddingHorizontal:3,backgroundColor:'transparent',borderWidth:0},
