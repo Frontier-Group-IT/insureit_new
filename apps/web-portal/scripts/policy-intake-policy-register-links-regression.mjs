@@ -102,7 +102,7 @@ assert(caseRegister.includes("const pendingCount = caseSummary?.pending"), "Case
 
 const workspace = read("components/policy-intake-workspace.tsx");
 assert(workspace.includes("export type PolicyIntakeViewKey"), "Policy Intake view keys must remain explicit and typed");
-assert(workspace.includes('useState<ViewKey>(initialView ?? (reviewer ? "action" : "all"))'), "Policy Intake workspace must honor the validated owner In Review deep link without granting reviewer defaults");
+assert(workspace.includes('useState<ViewKey>(initialView ?? (reviewer ? "action" : "open"))'), "Policy Intake workspace must honor owner In Review deep links while defaulting non-reviewers to nonduplicate open work");
 const statusBuckets = read("lib/policy-intake-status-buckets.ts");
 assert(workspace.includes('action: bucketCounts.action_required') && statusBuckets.includes('row.status === "ready_for_review"') && statusBuckets.includes('row.status === "needs_attention"') && statusBuckets.includes('row.ocr_status === "failed"'), "Action Required uses the shared full-status definition, excluding derived duplicates");
 assert(workspace.includes('inReview: bucketCounts.in_review') && statusBuckets.includes('row.status === "in_review"'), "In Review uses canonical effective classification");
