@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
+import { PartnerCaseBottomNavigation } from '@/components/partner-case-bottom-navigation';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { formatIndianCurrency } from '@/lib/format';
 import { getPartnerImpact, type PartnerImpactData } from '@/lib/impact';
@@ -32,7 +33,23 @@ export default function ImpactScreen() {
   }, [load]);
 
   return (
-    <PartnerScreen eyebrow="MY IMPACT" title="Protection delivered" onBack={() => router.back()}>
+    <PartnerScreen
+      title="Protection delivered"
+      hideTopBar
+      navyStatusBar
+      bottomNavigationNavy
+      bottomNavigation={<PartnerCaseBottomNavigation activeTab="Home" />}
+    >
+      <View style={styles.pageHeader}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Back" hitSlop={8} onPress={() => router.back()} style={styles.headerBack}>
+          <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
+        </Pressable>
+        <Ionicons name="stats-chart-outline" size={25} color="#FFFFFF" />
+        <View style={styles.headerCopy}>
+          <Text style={styles.headerEyebrow}>MY IMPACT</Text>
+          <Text style={styles.headerTitle} numberOfLines={1}>Protection delivered</Text>
+        </View>
+      </View>
       {loading ? (
         <PartnerStateView state="loading" title="Loading your impact" />
       ) : error || !data ? (
@@ -191,6 +208,19 @@ function ImpactIcon({
 }
 
 const styles = StyleSheet.create({
+  pageHeader: {
+    height: 64,
+    marginHorizontal: -partnerTheme.spacing.lg,
+    paddingHorizontal: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: '#071E49',
+  },
+  headerBack: { width: 34, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
+  headerCopy: { flex: 1, minWidth: 0, justifyContent: 'center' },
+  headerEyebrow: { color: '#B5C8E5', fontSize: 9, letterSpacing: 1.1, fontWeight: '800' },
+  headerTitle: { color: '#FFFFFF', fontSize: 18, fontWeight: '800', marginTop: 2 },
   hero: { borderRadius: partnerTheme.radius.xl, padding: 14, backgroundColor: partnerTheme.colors.nav },
   heroTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   heroBottomRow: { marginTop: 4, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
