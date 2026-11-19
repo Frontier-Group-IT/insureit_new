@@ -147,9 +147,11 @@ for (const [fragment, reason] of [
   ['styles.hero', 'Branded deletion page has a hero'],
   ['styles.heroUnderline', 'Hero title uses purple accent underline'],
   ["backgroundColor: '#FFFFFF' },", 'Deletion heading must have a clean white background'],
-  ["backgroundColor: '#0652AB'", 'The INSUREIT Partner lockup must use reference blue rather than purple'],
-  ["tintColor: '#FFFFFF'", 'The existing official crest must render white on blue'],
+  ["heroBrand: { width: 165, minHeight: 70", 'Official crest and Partner wordmark remain in a compact background-free lockup'],
+  ["tintColor: '#0B438C'", 'The official crest must render navy on the white banner'],
   ['styles.heroBrandCopy', 'Crest and insureit Partner text must form a horizontal logo lockup'],
+  ["alignItems: 'flex-start', backgroundColor: '#FFFFFF'", 'Deletion hero top-aligns the heading on its white banner'],
+  ["heroBrandName: { fontSize: 19, lineHeight: 22, fontWeight: '900', color: '#0B438C'", 'Wordmark uses dark navy on white'],
 
   ["require('../assets/insureit-partner-official.png')", 'Hero uses official Partner brand asset'],
   ['styles.cardHeader', 'Data retention explanation has a lavender info header'],
