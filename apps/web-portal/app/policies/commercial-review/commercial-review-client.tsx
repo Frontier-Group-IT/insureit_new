@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState, useTransition, type ReactNode } from "react";
+import { useEffect, useMemo, useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import type { LucideIcon } from "lucide-react";
 import {
@@ -102,7 +102,28 @@ export function CommercialReviewClient({ rows }: { rows: CommercialReviewRow[] }
   const [bulk, setBulk] = useState<EditState>({ od: "", tp: "", scheme: "", note: "" });
   const [bulkStatus, setBulkStatus] = useState<CommercialStatus | "">("");
   const [message, setMessage] = useState<string | null>(null);
+  // Reflect successful saves immediately while the authoritative server refresh is loading.
+  const [savedStatuses, setSavedStatuses] = useState<Record<string, Partial<Record<CommercialSide, LedgerStatus>>>>({});
   const [isPending, startTransition] = useTransition();
+
+  useEffect(() => {
+    // Once router.refresh supplies new server rows, stop using optimistic statuses.
+    setSavedStatuses({});
+  }, [rows]);
+
+  const displayedRows = useMemo(() => rows.map((row) => ({
+    ...row,
+    insurerStatus: savedStatuses[row.id]?.insurer ?? row.insurerStatus,
+    partnerStatus: savedStatuses[row.id]?.partner ?? row.partnerStatus,
+  })), [rows, savedStatuses]);
+
+  function reflectSavedStatus(policyIds: string[], savedSide: CommercialSide, nextStatus: LedgerStatus) {
+    setSavedStatuses((previous) => {
+      const updated = { ...previous };
+      for (const id of policyIds) updated[id] = { ...updated[id], [savedSide]: nextStatus };
+      return updated;
+    });
+  }
 
   const insurers = useMemo(() => Array.from(new Set(rows.map((row) => row.insurerName))).sort(), [rows]);
   const intermediaries = useMemo(() => {
@@ -113,16 +134,23 @@ export function CommercialReviewClient({ rows }: { rows: CommercialReviewRow[] }
   const intermediaryTypes = useMemo(() => Array.from(new Set(rows.map((row) => row.intermediaryType).filter((value): value is string => Boolean(value)))).sort(), [rows]);
   const vehicleClasses = useMemo(() => Array.from(new Set(rows.map((row) => row.vehicleClass).filter((value): value is string => Boolean(value)))).sort((a, b) => (vehicleClassLabels[a] ?? a).localeCompare(vehicleClassLabels[b] ?? b)), [rows]);
   const statusKey = side === "insurer" ? "insurerStatus" : "partnerStatus";
-  const counts = useMemo(() => rows.reduce<Record<LedgerStatus, number>>((acc, row) => {
+  const counts = useMemo(() => displayedRows.reduce<Record<LedgerStatus, number>>((acc, row) => {
     acc[row[statusKey]] += 1;
     return acc;
-  }, { not_entered: 0, needs_review: 0, entered: 0, reviewed: 0, not_applicable: 0 }), [rows, statusKey]);
+  }, { not_entered: 0, needs_review: 0, entered: 0, reviewed: 0, not_applicable: 0 }), [displayedRows, statusKey]);
   const incompleteCount = counts.not_entered + counts.needs_review;
-  const completeCount = rows.length - incompleteCount;
+  const completeCount = displayedRows.length - incompleteCount;
+  // Amounts alone do not constitute approval; make these status mismatches visible for review.
+  const amountPendingReviewCount = useMemo(() => displayedRows.filter((row) => {
+    const ratesEntered = side === "insurer"
+      ? row.projectedOdPercent !== 0 || row.projectedTpPercent !== 0 || row.schemeAmount !== 0
+      : row.payoutOdPercent !== 0 || row.payoutTpPercent !== 0;
+    return incompleteStatuses.has(row[statusKey]) && ratesEntered;
+  }).length, [displayedRows, side, statusKey]);
 
   const filteredRows = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
-    return rows.filter((row) => {
+    return displayedRows.filter((row) => {
       const rowStatus = row[statusKey];
       const odValue = side === "insurer" ? row.projectedOdPercent : row.payoutOdPercent;
       const tpValue = side === "insurer" ? row.projectedTpPercent : row.payoutTpPercent;
@@ -142,7 +170,7 @@ export function CommercialReviewClient({ rows }: { rows: CommercialReviewRow[] }
       if (!normalizedQuery) return true;
       return [row.policyNo, row.insurerName, row.intermediaryName, row.intermediaryCode ?? "", row.intermediaryType ?? "", row.vehicleClass ?? "", row.vehicleClass ? (vehicleClassLabels[row.vehicleClass] ?? row.vehicleClass) : ""].some((value) => value.toLowerCase().includes(normalizedQuery));
     });
-  }, [rows, statusKey, status, insurer, intermediary, intermediaryType, vehicleClass, backfill, dateFrom, dateTo, query, side]);
+  }, [displayedRows, statusKey, status, insurer, intermediary, intermediaryType, vehicleClass, backfill, dateFrom, dateTo, query, side]);
 
   const allFilteredSelected = filteredRows.length > 0 && filteredRows.every((row) => selected.has(row.id));
   const activeTotal = side === "insurer"
@@ -192,6 +220,7 @@ export function CommercialReviewClient({ rows }: { rows: CommercialReviewRow[] }
       setMessage(null);
       const result = await savePolicyCommercialRow({ policyId: row.id, side, odPercent: edit.od, tpPercent: edit.tp, schemeAmount: edit.scheme, note: edit.note });
       if (!result.ok) return setMessage(result.error);
+      reflectSavedStatus([row.id], side, "entered");
       const currentIndex = filteredRows.findIndex((item) => item.id === row.id);
       const nextRow = moveNext ? filteredRows.slice(currentIndex + 1).find((item) => incompleteStatuses.has(item[statusKey])) : undefined;
       if (nextRow) beginEdit(nextRow); else setEditingId(null);
@@ -214,6 +243,10 @@ export function CommercialReviewClient({ rows }: { rows: CommercialReviewRow[] }
         note: bulk.note,
       });
       if (!result.ok) return setMessage(result.error);
+      // A partially updated bulk request must use the server response, not guess which rows changed.
+      if (result.updated === policyIds.length && (statusOverride || bulkStatus || bulk.od.trim() || bulk.tp.trim() || (side === "insurer" && bulk.scheme.trim()))) {
+        reflectSavedStatus(policyIds, side, statusOverride ?? (bulkStatus || "entered"));
+      }
       setMessage(`${result.updated} policies updated.`);
       setSelected(new Set());
       setBulk({ od: "", tp: "", scheme: "", note: "" });
@@ -228,6 +261,7 @@ export function CommercialReviewClient({ rows }: { rows: CommercialReviewRow[] }
       setMessage(null);
       const result = await bulkSavePolicyCommercials({ policyIds: [row.id], side, status: nextStatus });
       if (!result.ok) return setMessage(result.error);
+      reflectSavedStatus([row.id], side, nextStatus);
       setMessage(`${row.policyNo} updated.`);
       if (editingId === row.id) setEditingId(null);
       router.refresh();
@@ -255,10 +289,13 @@ export function CommercialReviewClient({ rows }: { rows: CommercialReviewRow[] }
           <TabButton active={side === "insurer"} onClick={() => switchSide("insurer")} icon={ShieldCheck}>Insurer Pay-In</TabButton>
           <TabButton active={side === "partner"} onClick={() => switchSide("partner")} icon={UserRoundCheck}>Partner Payout</TabButton>
         </div>
-        <button type="button" onClick={() => setBackfill(backfill === "incomplete" ? "all" : "incomplete")} className={`rounded-lg border px-3 py-2 text-[8.5px] font-bold ${backfill === "incomplete" ? "border-[#D7A94B] bg-[#FFF7E6] text-[#9A6700]" : "border-[#D9E2F0] text-[#526277]"}`}>Incomplete {incompleteCount}</button>
-        <button type="button" onClick={() => setBackfill(backfill === "complete" ? "all" : "complete")} className={`rounded-lg border px-3 py-2 text-[8.5px] font-bold ${backfill === "complete" ? "border-[#A7D7BE] bg-[#ECF8F1] text-[#137A4A]" : "border-[#D9E2F0] text-[#526277]"}`}>Complete {completeCount}</button>
+        <button type="button" onClick={() => setBackfill(backfill === "incomplete" ? "all" : "incomplete")} className={`rounded-lg border px-3 py-2 text-[8.5px] font-bold ${backfill === "incomplete" ? "border-[#D7A94B] bg-[#FFF7E6] text-[#9A6700]" : "border-[#D9E2F0] text-[#526277]"}`}>{side === "insurer" ? "Pay-In" : "Payout"} incomplete {incompleteCount}</button>
+        <button type="button" onClick={() => setBackfill(backfill === "complete" ? "all" : "complete")} className={`rounded-lg border px-3 py-2 text-[8.5px] font-bold ${backfill === "complete" ? "border-[#A7D7BE] bg-[#ECF8F1] text-[#137A4A]" : "border-[#D9E2F0] text-[#526277]"}`}>{side === "insurer" ? "Pay-In" : "Payout"} complete {completeCount}</button>
         <div className="ml-auto flex items-center gap-1.5 text-[8.5px] text-[#667085]"><span>{filteredRows.length.toLocaleString("en-IN")} rows</span><span>·</span><span>{money.format(activeTotal)}</span></div>
       </div>
+      {amountPendingReviewCount > 0 ? <p role="status" className="mt-1 text-[9px] text-[#956800]">
+        {amountPendingReviewCount} {side === "insurer" ? "Pay-In" : "Payout"} case(s) have rates entered but are still marked incomplete. Review their status before completing them.
+      </p> : null}
       <div className="mt-2 grid gap-2 xl:grid-cols-[minmax(220px,1.1fr)_minmax(150px,.65fr)_minmax(190px,.8fr)_minmax(165px,.68fr)_minmax(140px,.55fr)_minmax(165px,.68fr)_auto_auto]">
         <label className="relative"><Search className="absolute left-3 top-2.5 h-4 w-4 text-[#98A2B3]" /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Policy / insurer / intermediary" className="h-9 w-full rounded-xl border border-[#D8DEE9] pl-9 pr-3 text-[9.5px] outline-none focus:border-[#315B9A]" /></label>
         <select value={insurer} onChange={(e) => setInsurer(e.target.value)} className="h-9 rounded-xl border border-[#D8DEE9] bg-white px-3 text-[9px]"><option value="all">All insurers</option>{insurers.map((name) => <option key={name}>{name}</option>)}</select>
@@ -321,7 +358,7 @@ export function CommercialReviewClient({ rows }: { rows: CommercialReviewRow[] }
             <th className="px-2 py-2 text-right">{side === "insurer" ? "TP Pay-In %" : "TP Payout %"}</th>
             {side === "insurer" ? <th className="px-2 py-2 text-right">Scheme</th> : null}
             <th className="min-w-[100px] px-2 py-2 text-right">{side === "insurer" ? "Projected Pay-In" : "Agreed Payout"}</th>
-            <th className="min-w-[88px] px-2 py-2 text-left">Status</th>
+            <th className="min-w-[88px] px-2 py-2 text-left">{side === "insurer" ? "Pay-In status" : "Payout status"}</th>
             <th className="sticky right-0 z-40 w-[126px] min-w-[126px] bg-[#F8FAFC] px-2 py-2 text-center">Actions</th>
           </tr></thead>
           <tbody className="divide-y divide-[#EDF0F4]">{filteredRows.map((row) => {
@@ -342,7 +379,7 @@ export function CommercialReviewClient({ rows }: { rows: CommercialReviewRow[] }
               <EditableNumber editing={isEditing} value={isEditing ? edit.tp : tp.toFixed(2)} onChange={(value) => setEdit((state) => ({ ...state, tp: value }))} onEnter={() => saveRow(row, true)} suffix="%" />
               {side === "insurer" ? <EditableNumber editing={isEditing} value={isEditing ? edit.scheme : String(row.schemeAmount)} onChange={(value) => setEdit((state) => ({ ...state, scheme: value }))} onEnter={() => saveRow(row, true)} moneyValue /> : null}
               <td className="bg-[#FAFCFF] px-2 py-2 text-right font-bold text-[#315B9A] tabular-nums">{money.format(preview)}</td>
-              <td className="px-2 py-2"><StatusBadge status={rowStatus} /></td>
+              <td className="px-2 py-2"><StatusBadge status={rowStatus} />{incompleteStatuses.has(rowStatus) && (od !== 0 || tp !== 0 || (side === "insurer" && row.schemeAmount !== 0)) ? <div className="mt-1 text-[7px] font-semibold text-[#956800]" title="Rates have been recorded, but the saved commercial status still requires review.">Rates entered · review status</div> : null}</td>
               <td className="sticky right-0 z-20 w-[126px] min-w-[126px] bg-white px-2 py-2 shadow-[-8px_0_12px_-12px_rgba(15,23,42,.35)]"><div className="flex justify-center gap-1">
                 {isEditing ? <><IconButton label="Save" onClick={() => saveRow(row)} disabled={isPending}><Save className="h-3.5 w-3.5" /></IconButton><IconButton label="Undo" onClick={() => setEditingId(null)}><Undo2 className="h-3.5 w-3.5" /></IconButton></> : <IconButton label="Edit row" onClick={() => beginEdit(row)}><Pencil className="h-3.5 w-3.5" /></IconButton>}
                 <IconButton label="Mark not applicable" onClick={() => applyRowStatus(row, "not_applicable")} disabled={isPending}><CircleOff className="h-3.5 w-3.5" /></IconButton>
