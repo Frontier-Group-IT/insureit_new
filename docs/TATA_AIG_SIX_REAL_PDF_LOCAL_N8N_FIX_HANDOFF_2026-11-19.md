@@ -15,7 +15,7 @@ The earlier training only admitted private cars, and its strict field regex assu
 ## n8n update (not yet published)
 Live self-hosted instance only: workflow ID `0uGscm0WUegvxa6V`, authenticated `/webhook/insureit-policy-intake-icici-v1`. Preserve webhook Header Auth credential, signed-source HTTP Request node, ICICI parser branch, all workflow settings and prior active version.
 1. Update the IF node **Is Tata AIG Private Car?** condition's **rightValue regex** to:
-   `(?:Bundled Auto Secure\\s*-\\s*Two Wheeler Policy|Bundled Auto Secure\\s*-\\s*Private Car Policy|Auto Secure\\s*-\\s*Standalone Own Damage Private Car Policy|Auto Secure\\s*-\\s*Private Car Package Policy)`
+   `(?:Bundled Auto Secure\s*-\s*Two Wheeler Policy|Bundled Auto Secure\s*-\s*Private Car Policy|Auto Secure\s*-\s*Standalone Own Damage Private Car Policy|Auto Secure\s*-\s*Private Car Package Policy)`
    Keep leftValue `={{ String($json.text || '').slice(0,1200) }}`.
 2. Replace **Tata AIG Private Car 18-Check Parser** Code node JS with the versioned parser source above. Name may remain unchanged for compatibility.
 3. Replace **Return Tata AIG Review-Only JSON** Code node JS with the versioned return source above.
