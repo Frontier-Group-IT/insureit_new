@@ -133,7 +133,7 @@ export function acceptedTataAigIssuanceDate(input: {
       || evidence.requiresReviewerConfirmation!==true
       || !/^[a-f0-9]{64}$/.test(evidence.documentSha256)) return null;
   const day=(value:string)=>{
-    if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(value))return false;
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(value))return false;
     const parsed=new Date(value+"T00:00:00Z");
     return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0,10)===value;
   };
