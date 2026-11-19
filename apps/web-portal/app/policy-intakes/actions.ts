@@ -6,6 +6,7 @@ import { aiQueueEnabled, processAiQueueBatch } from "@/lib/ai-policy-onboarding-
 import { extractPolicyIntakeDocument, type PolicyIntakeOcrField } from "@/app/policy-intakes/ocr-actions";
 import { extractPolicyIntakeWithN8nFallback, extractPolicyIntakeWithN8nOnly, requiresN8nForIntake } from "@/lib/policy-intake-n8n-router";
 import { isN8nPolicyReadEnabled, incomingPolicyIntakeLane, segregatePolicyIntakeLanes } from "@/lib/policy-ocr-routing-mode";
+import { isTrainedLocalN8nMotorPdf } from "@/lib/policy-intake-n8n-layout-eligibility";
 import { canAccessIntermediary } from "@/lib/employee-access-scope";
 import { canAccessPolicy, getOperationsHeadDownlinePolicyScope } from "@/lib/policy-access-scope";
 import { loadPolicyIntakeDuplicateMatches } from "@/lib/policy-intake-duplicate";
@@ -110,7 +111,9 @@ export async function completePolicyIntakeUpload(input:{id:string;number:string;
   const{data:blob,error:downloadError}=await admin.storage.from(BUCKET).download(input.storagePath);
   if(downloadError||!blob)return{ok:false,error:`The ${proposal?"proposal form":"policy copy"} upload did not complete. Please try again.`};
   if(blob.size>MAX_FILE_SIZE)return{ok:false,error:`${proposal?"Proposal form":"Policy copy"} must be 15 MB or smaller.`};
-  const lane=incomingPolicyIntakeLane(input.policyType,aiQueueEnabled());
+  const trainedLayout=segregatePolicyIntakeLanes() && isN8nPolicyReadEnabled() && aiQueueEnabled() && input.policyType==="motor"
+    ? await isTrainedLocalN8nMotorPdf(blob,input.file.type) : false;
+  const lane=incomingPolicyIntakeLane(input.policyType,aiQueueEnabled(),trainedLayout);
   const manualSplit=segregatePolicyIntakeLanes() && lane==="manual";
   const source=sourceResult.source,status=proposal||manualSplit?"ready_for_review":"processing",
     ocrStatus=proposal?"completed":manualSplit?"failed":"pending";
