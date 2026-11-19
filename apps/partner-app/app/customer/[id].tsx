@@ -232,7 +232,7 @@ function DetailCell({ icon, label, value }: { icon: keyof typeof Ionicons.glyphM
 const redesign = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 15, paddingHorizontal: 12, backgroundColor: '#071E49' },
   headerTitle: { fontSize: 18, fontWeight: '700', color: '#FFFFFF' },
-  profile: { backgroundColor: '#E5F1FF', flexDirection: 'row', alignItems: 'center', gap: 9, padding: 12 },
+  profile: { backgroundColor: '#FFFFFF', flexDirection: 'row', alignItems: 'flex-start', gap: 9, padding: 12 },
   avatar: { width: 64, height: 64, borderRadius: 32, backgroundColor: '#EEE1FF', alignItems: 'center', justifyContent: 'center' },
   avatarText: { color: '#6B28CE', fontSize: 24, fontWeight: '700' },
   profileContent: { flex: 1, minWidth: 0, gap: 6 },
