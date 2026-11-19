@@ -1031,7 +1031,14 @@ assert(actionsText.includes('Only an open, unregistered Motor Intake can be repr
 console.log("Semi-auto Motor onboarding regression checks passed.");
 
 
-// ICICI old drafts must not hide saved-date conflicts or drop later policy
+// An existing saved CPA opt-out must never silently become a payable CPA.
+assert(handoff.includes('if(key==="cpa" && verifiedPremium && Number(verifiedPremium.cpa)>0')
+  && handoff.includes('original.cpaOpted!=="Yes") continue;')
+  && actionsText.includes('verifiedCpaSelectionMatches(forwarded.draft.cpaOpted,Number(verifiedMoney.cpa))')
+  && workbenchText.includes('CPA amount and opt-in need separate review.'),
+  "Positive CPA cannot be filled under saved opt-out or booked without explicit CPA amount/choice parity");
+
+// // ICICI old drafts must not hide saved-date conflicts or drop later policy
 // fields. A user must compare/confirm a trusted current PDF separately.
 assert(handoff.includes('reviewedIssueDateReplacement')
   && handoff.includes('existingDraft.revision!==dateReview.expectedRevision')
