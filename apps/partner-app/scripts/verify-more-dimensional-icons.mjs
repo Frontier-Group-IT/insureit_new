@@ -7,7 +7,7 @@ const icons = load('../components/ui/partner-profile-menu-icon.tsx');
 
 // Use the one shared icon renderer throughout the More menu; do not change
 // destinations, permissions, accessible row names, or sticky bottom tabs.
-assert.match(more, /PartnerProfileMenuIcon kind=\{iconKind\} size=\{38\}/);
+assert.match(more, /PartnerProfileMenuIcon kind=\{iconKind\} size=\{iconKind === 'policy-intake' \? 48 : 42\}/);
 assert.match(more, /accessibilityLabel=\{helper \? \x60\$\{title\}\. \$\{helper\}\x60 : title\}/);
 for (const title of ['Search all business', 'Policy Intake', 'Case Register',
   'Renewals', 'Customers', 'Your Week', 'My Impact', 'My Journey',
@@ -21,6 +21,8 @@ for (const kind of ['search','policy-intake','renewals','customers','week',
   assert.ok(icons.includes(kind+': {') || icons.includes("'"+kind+"': {"),
     '3D palette missing for '+kind);
 }
+assert.match(more, /sectionRows/, 'More groups should not have rounded card containers');
+assert.match(more, /width: 52/, 'Enlarged icons need a sufficient layout slot');
 assert.match(icons, /styles\.glyphDepth/);
 assert.match(icons, /styles\.glyphEdge/);
 assert.match(icons, /styles\.glyphFace/);
