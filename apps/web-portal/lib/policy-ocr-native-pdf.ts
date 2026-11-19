@@ -1,6 +1,8 @@
 import type { ParsedPolicyField, ParsedPolicyResult } from "@/lib/policy-ocr-parsers";
 
-const MAX_NATIVE_PDF_PAGES = 12;
+// Tata AIG private-car schedules commonly contain 12–14 pages; only the first
+// two are decoded, and the same 8-second/15-MB intake limits still apply.
+const MAX_NATIVE_PDF_PAGES = 16;
 const MAX_NATIVE_TEXT_PAGES = 2;
 const NATIVE_PDF_TIMEOUT_MS = 8_000;
 const MAX_IMAGE_SIZE = 16_777_216;
