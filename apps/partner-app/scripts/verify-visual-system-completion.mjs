@@ -773,12 +773,9 @@ requireText(policies,"accessibilityLabel=\"Open profile\"",'White header must re
 requireText(policies,"accessibilityLabel={unreadActivityCount ?", 'White header must retain notifications');
 
 for(const phrase of [
-  "const sortPurpleGradient = [",
-  "function SortPurpleGradient()",
   "name=\"calendar\"",
   "name=\"layers-outline\"",
   "styles.sortPeriodContent",
-  "name=\"checkmark-circle\"",
   "sortChoiceSelected:{backgroundColor:'#EFEBFF'}",
   "sortCountPurple:{backgroundColor:'#DDDDFE'}",
   "sortCountGreen:{backgroundColor:'#DFF8E9'}",
@@ -791,3 +788,14 @@ for(const phrase of [
   "onPress={applySortSheet}",
   "maxHeight:windowHeight-36",
 ]) requireText(policies,phrase,'Premium Sort by sheet must match reference without changing filtering semantics: '+phrase);
+
+for (const phrase of [
+  "sortPeriodSelected:{backgroundColor:'#4030AF'",
+  "sortPeriodOption:{flex:1,minHeight:43",
+  "sortChoice:{flexDirection:'row',alignItems:'center',gap:11,minHeight:46",
+  "sortApply:{height:46,borderRadius:24",
+  "backgroundColor:'#4030AF',marginTop:14",
+]) requireText(policies,phrase,'Sort sheet must remain compact with seamless purple fill: '+phrase);
+if (policies.includes("SortPurpleGradient") || policies.includes("sortPurpleGradient") || policies.includes('name="checkmark-circle" size={21}')) {
+  throw new Error('Sort sheet must not use striped gradient pieces or the period checkmark');
+}
