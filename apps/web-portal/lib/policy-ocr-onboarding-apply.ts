@@ -23,6 +23,9 @@ export type OcrOperationalState = {
   od: string;
   tp: string;
   cpa: string;
+  addOnPremium?: string;
+  tpValidUpto?: string;
+  cpaValidUpto?: string;
   policyNo: string;
   insurerId: string;
   validFrom: string;
@@ -252,10 +255,20 @@ export function buildPolicyOcrOnboardingUpdate(input: OcrApplyInput): OcrApplyRe
   if (registrationStatus) {
     if (section02Protected) skip("vehicle_registration_status");
     else {
-      registrationMode = /pending|unregistered|new vehicle/i.test(registrationStatus.value) ? "unregistered" : "registered";
-      if (registrationMode === "unregistered") next.registrationNo = "";
-      applied += 1;
-      touchedSection02 = true;
+      const value = registrationStatus.value.trim().toLowerCase();
+      if (["unregistered", "registration_pending", "new vehicle"].includes(value)) {
+        registrationMode = "unregistered";
+        next.registrationNo = "";
+        applied += 1;
+        touchedSection02 = true;
+      } else if (value === "registered" && byKey.has("vehicle_registration_number")) {
+        // Only a proven plate can turn the registered toggle on.
+        registrationMode = "registered";
+        applied += 1;
+        touchedSection02 = true;
+      } else {
+        skip("vehicle_registration_status");
+      }
     }
   }
 
@@ -332,12 +345,15 @@ export function buildPolicyOcrOnboardingUpdate(input: OcrApplyInput): OcrApplyRe
   setText("insurer_name", (value) => { next.insurerId = value; }, (raw) => insurer(raw, input.insurers));
   setText("idv", (value) => { next.idv = value; }, amount);
   setText("od_premium", (value) => { next.od = value; }, amount);
+  setText("add_on_premium", (value) => { next.addOnPremium = value; }, amount);
   setText("tp_premium", (value) => { next.tp = value; }, amount);
   // Historical cpa_premium can include paid-driver/workmen liability additions. The
   // amount may be imported, but cpaOpted is intentionally not changed here.
   setText("cpa_premium", (value) => { next.cpa = value; }, amount);
   setText("policy_start_date", (value) => { next.validFrom = value; }, isoDate);
   setText("policy_end_date", (value) => { next.validUpto = value; }, isoDate);
+  setText("third_party_end_date", (value) => { next.tpValidUpto = value; }, isoDate);
+  setText("cpa_end_date", (value) => { next.cpaValidUpto = value; }, isoDate);
 
   if (next.policyProduct && !policyProductsForClass(next.vehicleClass).includes(next.policyProduct)) {
     next.policyProduct = "";
