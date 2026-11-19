@@ -45,7 +45,12 @@ requireText(insurerPerformance, 'source={PartnerAssets.status.businessGrowth}', 
 requireText(insurerPerformance, 'bottomNavigationNavy navyStatusBar', 'Insurer performance has a navy status area with white system icons.');
 requireText(insurerPerformance, "referenceHeader: { marginHorizontal: -16, height: 64, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', overflow: 'hidden', backgroundColor: '#071E49' }", 'Insurer performance header must use the standard navy.');
 requireText(insurerPerformance, "headerSearchBand: { backgroundColor: '#071E49'", 'Insurer search band matches the navy header.');
-requireText(insurerPerformance, '>BUSINESS PERFORMANCE</Text>', 'Existing Business Performance eyebrow remains visible.');
+if (insurerPerformance.includes('>BUSINESS PERFORMANCE</Text>') || insurerPerformance.includes('headerEyebrow:')) throw new Error('Insurer-wise Performance must not show the secondary eyebrow heading.');
+requireText(insurerPerformance, '<Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Insurer-wise Performance</Text>', 'Insurer-wise Performance main heading remains visible.');
+requireText(insurerPerformance, "headerCopy: { flex: 1, minWidth: 0, justifyContent: 'center' }", 'Main insurer performance title is vertically centered.');
+requireText(insurerPerformance, "backgroundColor: '#071E49'", 'Insurer Performance keeps the navy header.');
+requireText(insurerPerformance, 'PartnerAssets.status.businessGrowth', 'Existing business growth icon is preserved.');
+requireText(insurerPerformance, 'Search insurer', 'Insurer search stays available.');
 requireText(insurerPerformance, 'bottomNavigation={<PartnerStackBottomNavigation activeTab="business" />}', 'Existing Business-active footer must be preserved.');
 
 const policyOnboarding = read('app/policy-intakes/onboarding.tsx');
