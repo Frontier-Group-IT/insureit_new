@@ -64,10 +64,10 @@ for (const file of requiredFiles) {
 
 const renewalCards = read("app/customer/(protected)/renewals/customer-renewals-register.tsx");
 assert(renewalCards.includes('flex min-w-0 items-center gap-2'), "Renewals category icon and title should align horizontally at top-left");
-assert(renewalCards.includes('flex min-h-[23px] flex-wrap items-center justify-end gap-1'), "Renewals badges must align at the bottom-right");
-assert(renewalCards.includes('justify-between gap-3 overflow-hidden'), "Category card must separate top label from bottom badges");
-assert(renewalCards.includes('>Due {cat.due}</span>'), "Due count badge must retain existing data");
-assert(renewalCards.includes('>Expired {cat.expired}</span>'), "Expired count badge must retain existing data");
+assert(renewalCards.includes('flex shrink-0 flex-col items-end gap-1'), "Renewals count badges must stack on the right");
+assert(renewalCards.includes('flex min-w-0 flex-1 flex-col items-start gap-1'), "Category card must place label below its top-left icon");
+assert(renewalCards.includes('>{cat.due}</span>'), "Due badge retains dynamic number only");
+assert(renewalCards.includes('>{cat.expired}</span>'), "Expired badge retains dynamic number only");
 assert(renewalCards.includes('onClick={() => setActiveCategory(selected ? null : cat.key)}'), "Category selection must remain interactive");
 assert(renewalCards.includes('grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6'), "Category cards must remain responsive");
 assert(!renewalCards.includes('absolute right-2 top-2'), "Renewals status badges must not overlap top-right title area");
