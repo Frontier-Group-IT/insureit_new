@@ -10,7 +10,9 @@ for (const alias of ['United India', 'New India', 'ICICI Lombard', 'Tata AIG', '
   assert.ok(screen.includes(alias), 'Required short name ' + alias);
 assert.match(screen, /accessibilityLabel=\{insurer\.name\}/);
 assert.match(screen, /numberOfLines=\{2\} ellipsizeMode="tail"/);
-assert.match(screen, /BUSINESS PERFORMANCE/);
+assert.doesNotMatch(screen, /BUSINESS PERFORMANCE|headerEyebrow/, 'Unwanted secondary eyebrow and unused style must be removed');
+assert.match(screen, /headerCopy: \{ flex: 1, minWidth: 0, justifyContent: 'center' \}/, 'Only title row is vertically centered');
+assert.match(screen, /headerTitleRow: \{ flexDirection: 'row', alignItems: 'center', minWidth: 0, minHeight: 51 \}/, 'Icon and title share an aligned row');
 assert.match(screen, /source=\{PartnerAssets\.status\.businessGrowth\}/, 'Header uses existing 3D business artwork');
 assert.match(screen, /hideTopBar fullWidth/, 'Preserve compact header');
 assert.match(screen, /bottomNavigationNavy navyStatusBar/, 'Insurer screen must paint navy top safe area with white iOS status icons');
