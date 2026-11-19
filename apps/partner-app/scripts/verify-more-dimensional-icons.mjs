@@ -22,6 +22,7 @@ for (const kind of ['search','policy-intake','renewals','customers','week',
     '3D palette missing for '+kind);
 }
 assert.match(more, /sectionRows/, 'More groups should not have rounded card containers');
+assert.doesNotMatch(more, /menuRowDivider|borderBottomWidth/, 'More menu rows must not render divider lines');
 assert.match(more, /width: 52/, 'Enlarged icons need a sufficient layout slot');
 assert.match(icons, /styles\.glyphDepth/);
 assert.match(icons, /styles\.glyphEdge/);
