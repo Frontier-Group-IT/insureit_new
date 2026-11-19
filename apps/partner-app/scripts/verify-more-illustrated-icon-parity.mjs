@@ -4,44 +4,35 @@ import { readFileSync } from 'node:fs';
 const read = path => readFileSync(new URL(path, import.meta.url), 'utf8');
 const more = read('../app/(tabs)/more.tsx');
 const icon = read('../components/ui/partner-profile-menu-icon.tsx');
-const illustrated = [
-  ['policy-intake','Policy Intake'],
-  ['case-register','Case Register'],
-  ['renewals','Renewals'],
-  ['customers','Customers'],
-  ['impact','My Impact'],
-  ['journey','My Journey'],
-];
-const untouched = ['search','week','activity','learn','recognition','stories','profile','support','settings'];
 
-assert.match(more, /iconKind="case-register" title="Case Register"/);
-assert.match(more, /iconKind="policy-intake" title="Policy Intake"/);
-const mapping = icon.slice(icon.indexOf('const ILLUSTRATED_ICONS:'),icon.indexOf('const CONFIG:'));
-assert.ok(mapping.startsWith('const ILLUSTRATED_ICONS:'), 'Illustrated icons must be centrally mapped');
-const redesigned = new Set(['policy-intake', 'customers', 'journey']);
-for (const [kind,title] of illustrated) {
-  const file = `more-${kind}${redesigned.has(kind) ? '-3d' : ''}.png`;
-  assert.ok(more.includes('title="'+title+'"'), 'Preserve menu action '+title);
-  assert.ok(mapping.includes(file), 'Missing illustrated asset mapping '+kind);
-  const png=readFileSync(new URL('../assets/partner/icons/'+file,import.meta.url));
-  assert.equal(png.subarray(0,8).toString('hex'),'89504e470d0a1a0a', 'Asset must be local PNG: '+kind);
-  assert.ok(png.length>(redesigned.has(kind) ? 500 : 1000),'Icon artwork missing content for '+kind);
-  if (redesigned.has(kind)) {
-    assert.equal(png.readUInt32BE(16), 64, 'Updated icon must be 64px wide: '+kind);
-    assert.equal(png.readUInt32BE(20), 64, 'Updated icon must be 64px high: '+kind);
-  }
+const items = [
+  ['search', 'Search all business'],
+  ['policy-intake', 'Policy Intake'],
+  ['case-register', 'Case Register'],
+  ['renewals', 'Renewals'],
+  ['customers', 'Customers'],
+  ['week', 'Your Week'],
+  ['impact', 'My Impact'],
+  ['journey', 'My Journey'],
+  ['activity', 'Activity'],
+  ['learn', '60-Second Learn'],
+  ['recognition', 'Recognition'],
+  ['stories', 'INSUREIT Stories'],
+  ['profile', 'Profile & registration'],
+  ['support', 'Support'],
+  ['settings', 'Settings & app info'],
+];
+
+for (const [kind, title] of items) {
+  assert.ok(more.includes('iconKind="' + kind + '" title="' + title + '"'), 'Preserve menu action ' + title);
+  assert.ok(icon.includes(kind.includes('-') ? "  '" + kind + "': {" : '  ' + kind + ': {'), 'Missing background-free glyph mapping ' + kind);
 }
-for (const kind of untouched) {
-  assert.doesNotMatch(mapping,new RegExp("^(?:\\s*['\\\"]?"+kind+"['\\\"]?)\\s*:",'m'),
-    'Approved icon must not be replaced: '+kind);
-  assert.ok(icon.includes('  '+kind+': {') || icon.includes("  '"+kind+"': {"),
-    'Approved vector palette must remain for '+kind);
-}
-assert.match(icon,/const config = CONFIG\[kind as Exclude<PartnerProfileMenuIconKind, 'case-register'>\]/);
-assert.match(icon,/if \(artwork\) \{/);
-assert.match(icon,/resizeMode="contain"/);
-assert.match(more,/onPress=\{\(\) => router\.push\('\/life-health-cases'\)\}/);
-assert.match(more,/canPartnerAccessCaseRegister\(context\)/);
-assert.match(more,/canPartnerAccess\(context, 'view_policy_intakes'\)/);
-assert.match(more,/PartnerProfileMenuIcon kind=\{iconKind\} size=\{38\}/);
-console.log('Six illustrated 3D More icons and nine untouched approved icons verified.');
+assert.match(icon, /const MENU_ICONS: Record<PartnerProfileMenuIconKind, MenuIconConfig>/);
+assert.match(icon, /<Ionicons name=\{config\.icon\} size=\{size\} color=\{config\.color\} \/>/);
+assert.match(more, /iconKind === 'policy-intake' \? 48 : iconKind === 'journey' \? 46 : 42/);
+assert.match(more, /rowIcon: \{[\s\S]*?width: 50,[\s\S]*?height: 50,/);
+assert.doesNotMatch(icon, /ILLUSTRATED_ICONS|styles\.tile|backgroundColor|shadowOpacity|borderWidth|resizeMode=/, 'More menu icons must not use background tiles or illustrated PNGs');
+assert.match(more, /onPress=\{\(\) => router\.push\('\/life-health-cases'\)\}/);
+assert.match(more, /canPartnerAccessCaseRegister\(context\)/);
+assert.match(more, /canPartnerAccess\(context, 'view_policy_intakes'\)/);
+console.log('Background-free More icons and larger Policy Intake/Journey sizes verified.');
