@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { IntakeStatusBucket } from "@/lib/policy-intake-status-buckets";
+import { hasVerifiedN8nParserEvidence } from "@/lib/ai-policy-onboarding-eligibility";
 import { AlertCircle, ArrowUpRight, CheckCircle2, ClipboardCheck, FileSearch, Loader2, PencilLine, RefreshCw, Search, ShieldAlert, Sparkles } from "lucide-react";
 import { applySemiAutoN8nIntake, bookSemiAutoIntake, convertVerifiedAiIntake, checkSemiAutoIntake, continueVerifiedN8nIntakeToOnboarding, editSemiAutoIntake, previewSemiAutoN8nIntake, reprocessAiPolicyIntake, reviewAiIntakeCustomerCandidates, reviewIciciVerifiedDraftRepair, applyReviewedIciciDraftRepair, transferFailedAiIntakeToManual, type ReviewedIciciDraftComparison, type AiCustomerCandidateReview, type SemiAutoActionResult, type SemiAutoN8nResult } from "@/app/development/ai-policy-onboarding/actions";
 
@@ -271,7 +272,8 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
       setN8nResult(fresh);
       if (!fresh.ok) {
         setN8nNotice("Fresh verification failed; the historical OCR remains visible. No onboarding draft was changed.");
-      } else if (fresh.preview.warnings.length || fresh.preview.checksPassed !== 13) {
+      } else if (!hasVerifiedN8nParserEvidence(
+        fresh.preview.parserId, fresh.preview.checksPassed, fresh.preview.warnings)) {
         setN8nNotice("The PDF needs review before onboarding. Check the latest n8n results and resolve any warnings.");
       } else {
         setFillEmptySavedFields(true);
@@ -288,7 +290,11 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
   function forwardN8nToOnboarding() {
     if (!primaryN8n || !selectedId || !selected || selected.policy_type !== "motor"
         || selected.is_duplicate || !["ready_for_review","in_review","processing"].includes(selected.status)
-        || !n8nResult?.ok || n8nResult.preview.warnings.length || isWaiting) return;
+        || !n8nResult?.ok || !hasVerifiedN8nParserEvidence(
+          n8nResult.preview.parserId,n8nResult.preview.checksPassed,n8nResult.preview.warnings)
+        || isWaiting) return;
+    // Only exact trained 13/18-check parser results with approved review
+    // warnings may open a draft. Backend re-extracts and independently checks.
     // A local, accessible dialog replaces the browser-native confirmation.
     setFillEmptySavedFields(true);
     setHandoffDialog({
@@ -804,7 +810,9 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
                 {primaryN8n && selected?.policy_type === "motor"
                   && !selected.is_duplicate
                   && ["processing", "ready_for_review", "in_review"].includes(selected.status)
-                  && n8nResult.preview.warnings.length === 0 ? (
+                  && hasVerifiedN8nParserEvidence(
+                    n8nResult.preview.parserId,n8nResult.preview.checksPassed,
+                    n8nResult.preview.warnings) ? (
                   <div className="mt-3 rounded-lg border border-[#bcd9d0] bg-[#f5fbf8] p-3">
                     <p className="text-[10.5px] font-bold text-[#215b46]">Ready for manual Policy Onboarding review</p>
                     <p className="mt-1 text-[10px] leading-4 text-[#47675b]">
@@ -821,8 +829,8 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
                   </div>
                 ) : primaryN8n ? (
                   <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-2.5 text-[10px] text-amber-900">
-                    Policy Onboarding handoff requires a non-duplicate, open Motor Intake with validated, warning-free n8n fields.
-                    Other policy types and incomplete documents remain in manual review until trained.
+                    Policy Onboarding handoff requires a non-duplicate, open Motor Intake and verified n8n checks. Informational Tata AIG warnings stay for manual review.
+                    Unknown or blocking parser warnings prevent handoff; incomplete documents still require manual review.
                   </p>
                 ) : null}
                 {n8nResult.preview.canApply ? (
