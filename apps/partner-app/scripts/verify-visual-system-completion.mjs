@@ -655,7 +655,7 @@ for (const impactMarker of [
   'PartnerAssets.actions.impactAddPolicy',
   'PartnerAssets.actions.quickClaims',
   'PartnerAssets.actions.businessPerformance',
-  'PartnerAssets.actions.addCustomer',
+  'PartnerAssets.actions.impactCustomerAdded',
   'borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: \'#E3E9F1\'',
   'styles.monthDivider',
   'styles.monthStatDivider',
