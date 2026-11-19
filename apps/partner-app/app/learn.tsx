@@ -74,19 +74,23 @@ export default function LearnScreen() {
         <PartnerStateView state="empty" asset={PartnerAssets.actions.policyChecklist} title="No card scheduled today" message="A new learning card will appear when content is active." />
       ) : (
         <>
-          <View style={styles.questionCard}>
-            <View style={styles.topStrip}>
-              <View style={styles.categoryPill}>
-                <Ionicons name="sparkles-outline" size={14} color={partnerTheme.colors.brand} />
-                <Text style={styles.categoryText}>{data.card.category}</Text>
+          <View style={styles.questionSection}>
+            <View style={styles.questionContent}>
+              <View style={styles.questionCopy}>
+                <Text style={styles.questionMeta}>TODAY’S QUESTION</Text>
+                <Text style={styles.question}>{data.card.prompt}</Text>
               </View>
-              <View style={styles.streak}>
-                <Ionicons name="flame-outline" size={15} color={partnerTheme.colors.warning} />
-                <Text style={styles.streakText}>{data.stats.current_streak} day streak</Text>
+              <View style={styles.badgeColumn}>
+                <View style={styles.categoryPill}>
+                  <Ionicons name="sparkles-outline" size={14} color={partnerTheme.colors.brand} />
+                  <Text style={styles.categoryText}>{data.card.category}</Text>
+                </View>
+                <View style={styles.streak}>
+                  <Ionicons name="flame-outline" size={15} color={partnerTheme.colors.warning} />
+                  <Text style={styles.streakText}>{data.stats.current_streak} day streak</Text>
+                </View>
               </View>
             </View>
-            <Text style={styles.questionMeta}>TODAY’S QUESTION</Text>
-            <Text style={styles.question}>{data.card.prompt}</Text>
           </View>
 
           <View style={styles.options}>
@@ -163,14 +167,17 @@ const styles = StyleSheet.create({
   headerAction: { width: 34, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   headerArtwork: { width: 36, height: 36 },
   referenceTitle: { flexShrink: 1, color: '#FFFFFF', fontSize: 18, fontWeight: '800' },
-  topStrip: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', flexWrap: 'wrap', gap: 7, marginBottom: 12 },
-  categoryPill: { minHeight: 30, flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 999, paddingHorizontal: 9, backgroundColor: partnerTheme.colors.brandSoft },
-  categoryText: { color: partnerTheme.colors.brandStrong, ...partnerTheme.typography.meta, fontWeight: '800' },
-  streak: { minHeight: 30, flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 999, paddingHorizontal: 9, backgroundColor: '#FFF4E5' },
+  questionSection: { marginHorizontal: -partnerTheme.spacing.lg, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#E5E7EB' },
+  questionContent: { paddingHorizontal: partnerTheme.spacing.lg, paddingTop: 18, paddingBottom: 18, flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  questionCopy: { flex: 1, minWidth: 0 },
+  badgeColumn: { alignItems: 'flex-end', justifyContent: 'flex-start', gap: 8, maxWidth: '45%', flexShrink: 0 },
+  categoryPill: { minHeight: 30, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, borderRadius: 999, paddingHorizontal: 9, backgroundColor: partnerTheme.colors.brandSoft, maxWidth: '100%' },
+  categoryText: { flexShrink: 1, color: partnerTheme.colors.brandStrong, ...partnerTheme.typography.meta, fontWeight: '800', textAlign: 'right' },
+  streak: { minHeight: 30, flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 999, paddingHorizontal: 9, backgroundColor: '#FFF4E5', maxWidth: '100%' },
   streakText: { color: '#8A5518', ...partnerTheme.typography.meta, fontWeight: '800' },
-  questionCard: { marginTop: 8, borderRadius: partnerTheme.radius.xl, padding: 15, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2E7F0' },
+
   questionMeta: { color: '#071E49', fontSize: 16, lineHeight: 21, letterSpacing: 0.4, fontWeight: '800' },
-  question: { marginTop: 8, color: '#172B51', fontSize: 17, lineHeight: 24, fontWeight: '700' },
+  question: { marginTop: 9, color: '#172B51', fontSize: 17, lineHeight: 24, fontWeight: '700' },
   options: { marginTop: 9, gap: 7 },
   option: { minHeight: 58, flexDirection: 'row', alignItems: 'center', gap: 11, borderRadius: partnerTheme.radius.lg, paddingHorizontal: 13, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
   optionSelected: { borderColor: '#ACA8FA', backgroundColor: '#F8F7FF' },
