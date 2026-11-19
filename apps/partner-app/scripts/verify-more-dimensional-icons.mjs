@@ -24,7 +24,7 @@ for (const kind of ['search','policy-intake','renewals','customers','week',
 assert.match(more, /sectionRows/, 'More groups should not have rounded card containers');
 assert.match(more, /!last && styles\.menuRowDivider/, 'Dividers must separate adjacent menu items');
 assert.match(more, /borderBottomWidth: 1/, 'Dividers must be clearly visible, not hairline-faded');
-assert.match(more, /borderBottomColor: '#8B9DB8'/, 'Dividers must use a visible slate color');
+assert.match(more, /borderBottomColor: '#E6EAF0'/, 'Dividers must use subtle reference-style light gray');
 assert.match(more, /width: 52/, 'Enlarged icons need a sufficient layout slot');
 assert.match(icons, /styles\.glyphDepth/);
 assert.match(icons, /styles\.glyphEdge/);

@@ -31,17 +31,17 @@ type IconPalette = {
 // A palette per destination makes the small icons easy to distinguish at a glance.
 // The extruded silhouettes, rim lighting and inset tile replace flat monochrome glyphs
 // without adding image downloads, native dependencies, or changing touch targets.
-// Preserve the supplied Customers reference art and original Journey 3D artwork.
+// Reuse the bundled transparent Customers and Journey artwork without adding backgrounds.
 // Keep other menu icons and their existing destinations unchanged.
 const ILLUSTRATED_ICONS: Partial<Record<PartnerProfileMenuIconKind, ImageSourcePropType>> = {
   'policy-intake': require('../../assets/partner/icons/more-policy-intake-3d.png'),
   'case-register': require('../../assets/partner/icons/more-case-register.png'),
   renewals: require('../../assets/partner/icons/more-renewals.png'),
-  // Cropped directly from the user-provided blue-person / purple-plus reference.
-  customers: require('../../assets/partner/icons/more-customers-reference.png'),
+  // Use the bundled transparent Customers group illustration with no enclosing tile.
+  customers: require('../../assets/partner/icons/more-customers-3d.png'),
   impact: require('../../assets/partner/icons/more-impact.png'),
-  // Restore the original illustrated 3D Journey design instead of substituting a vector.
-  journey: require('../../assets/partner/icons/more-journey-3d.png'),
+  // The former menu PNG cannot be decoded reliably; reuse the verified bundled 3D journey illustration.
+  journey: require('../../assets/partner/status/journey.png'),
 };
 
 const CONFIG: Record<Exclude<PartnerProfileMenuIconKind, 'case-register'>, IconPalette> = {
