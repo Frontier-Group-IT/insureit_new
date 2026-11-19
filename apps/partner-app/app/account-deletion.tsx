@@ -35,17 +35,17 @@ export default function AccountDeletionScreen() {
     <PartnerCasePageHeader title="Account deletion" icon="shield-checkmark-outline" onBack={() => router.back()} />
     <ScrollView style={styles.canvas} contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
       <View style={styles.hero}>
-        <View style={styles.heroCopy}>
-          <Text accessibilityRole="header" style={styles.heroTitle}>Your account,</Text>
-          <Text style={[styles.heroTitle, styles.heroTitleAccent]}>your choice</Text>
-          <View style={styles.heroUnderline} />
-        </View>
         <View style={styles.heroBrand} accessibilityLabel="insureit Partner">
           <Image source={require('../assets/insureit-partner-official.png')} style={styles.heroLogo} resizeMode="contain" accessibilityLabel="INSUREIT crest" />
           <View style={styles.heroBrandCopy}>
             <Text style={styles.heroBrandName}>insureit</Text>
             <Text style={styles.heroBrandPartner}>Partner</Text>
           </View>
+        </View>
+        <View style={styles.heroCopy}>
+          <Text accessibilityRole="header" style={styles.heroTitle}>Your account,</Text>
+          <Text style={[styles.heroTitle, styles.heroTitleAccent]}>your choice</Text>
+          <View style={styles.heroUnderline} />
         </View>
       </View>
       <Text style={styles.intro}>Request removal of your individual INSUREIT Partner login and eligible personal data. We verify ownership and legal retention obligations before fulfillment.</Text>
@@ -83,11 +83,11 @@ const styles = StyleSheet.create({
   canvas: { flex: 1, backgroundColor: '#FAF7FF', marginHorizontal: -18 },
   body: { paddingHorizontal: 18, paddingBottom: 28, gap: 19, minHeight: 700 },
   hero: { minHeight: 116, marginHorizontal: -18, paddingHorizontal: 18, paddingTop: 16, paddingBottom: 12, overflow: 'hidden', flexDirection: 'row', alignItems: 'flex-start', backgroundColor: '#FFFFFF' },
-  heroCopy: { flex: 1, minWidth: 0, paddingRight: 10, paddingTop: 0 },
-  heroTitle: { fontSize: 22, lineHeight: 28, fontWeight: '900', color: '#171B59', letterSpacing: -0.6 },
+  heroCopy: { flex: 1, minWidth: 0, paddingLeft: 10, paddingTop: 0, alignItems: 'flex-end' },
+  heroTitle: { fontSize: 22, lineHeight: 28, fontWeight: '900', color: '#171B59', letterSpacing: -0.6, textAlign: 'right' },
   heroTitleAccent: { color: '#4726B6' },
   heroUnderline: { width: 83, height: 4, borderRadius: 3, marginTop: 9, backgroundColor: '#8241E9' },
-  heroBrand: { width: 156, minHeight: 70, marginRight: -8, paddingHorizontal: 0, paddingVertical: 0, flexDirection: 'row', alignSelf: 'flex-start', alignItems: 'center', justifyContent: 'flex-end', gap: 7 },
+  heroBrand: { width: 156, minHeight: 70, paddingHorizontal: 0, paddingVertical: 0, flexDirection: 'row', alignSelf: 'flex-start', alignItems: 'center', justifyContent: 'flex-start', gap: 7 },
   heroLogo: { width: 51, height: 64, tintColor: '#0B438C' },
   heroBrandCopy: { flex: 1, minWidth: 0, justifyContent: 'center' },
   heroBrandName: { fontSize: 19, lineHeight: 22, fontWeight: '900', color: '#0B438C' },
