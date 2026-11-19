@@ -1,5 +1,5 @@
 /**
- * Explicit operator-reviewed ICICI Product 3005 n8n handoff only.
+ * Explicit operator-reviewed native-PDF n8n handoff (ICICI and Tata AIG).
  *
  * The n8n parser has validated the current private PDF; an insured name may be
  * proposed into the *editable draft* but NEVER used by itself to choose/link a
@@ -39,7 +39,7 @@ export function selectVerifiedN8nInsuredDraftIdentity(
   const candidate = source ? normalizedName(source.value) : "";
   // Fail closed for an empty, placeholder or malformed PDF identity.
   const pdfName = candidate.length >= 2 && candidate.length <= 120
-    && /^[\p{L}][\p{L}\p{M} .'-]*$/u.test(candidate)
+    && /^[\p{L}][\p{L}\p{M}0-9 &/.'-]*$/u.test(candidate)
     && !/^(?:NA|N\/A|NAME|UNKNOWN|INSURED|CUSTOMER)$/i.test(candidate)
     ? candidate : "";
 
