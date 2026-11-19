@@ -377,6 +377,8 @@ jobs:
         run: node scripts/policy-copy-direct-upload-regression.mjs
       - name: Policy register payload regression
         run: npm run policy-register-payload:regression
+      - name: Policy Register Risk Asset business-line regression
+        run: node scripts/policy-register-risk-asset-by-line-regression.mjs
       - name: Register customer relation payload regression
         run: npm run register-customer-relation-payload:regression
       - name: Remaining register prefetch regression
