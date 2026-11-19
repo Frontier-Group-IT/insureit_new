@@ -2,7 +2,7 @@ import "server-only";
 
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { extractNativePdfTextPages } from "@/lib/policy-ocr-native-pdf";
-import { useN8nForAllPolicyReads } from "@/lib/policy-ocr-routing-mode";
+import { isN8nPolicyReadEnabled } from "@/lib/policy-ocr-routing-mode";
 import { requestN8nPolicyIntakeExtraction } from "@/lib/policy-intake-n8n-bridge";
 import { requestN8nPolicyIntakeBySignedSource } from "@/lib/policy-intake-n8n-bridge";
 import { createCurrentIntakePdfSignedSource } from "@/lib/policy-intake-n8n-signed-source";
@@ -24,7 +24,7 @@ export async function extractPolicyIntakeWithN8nFallback(
 ): Promise<PolicyIntakeOcrResult> {
   // Hard cutover: unknown insurer PDFs fail closed to human review. Never
   // silently reroute an n8n failure to the paid Google Document AI service.
-  if (useN8nForAllPolicyReads()) {
+  if (isN8nPolicyReadEnabled()) {
     if (file.type !== "application/pdf" || !file.size || file.size > 15 * 1024 * 1024)
       return {ok:false,error:"Only trained PDF layouts can be parsed by local n8n. Use manual onboarding for this file."};
     return extractPolicyIntakeWithN8nOnly(intakeId,storagePath,true);
@@ -148,7 +148,7 @@ export async function extractPolicyIntakeWithN8nOnly(
   intakeId: string, storagePath: string, verifiedAutoIcici3005 = false,
 ): Promise<PolicyIntakeOcrResult> {
   const autoAuthorized = verifiedAutoIcici3005
-    && (useN8nForAllPolicyReads()
+    && (isN8nPolicyReadEnabled()
        || (process.env.INSUREIT_N8N_OCR_MODE === "required"
          && process.env.INSUREIT_N8N_OCR_AUTO_ICICI_3005 === "true"));
   if (!requiresN8nForIntake(intakeId) && !autoAuthorized) {
