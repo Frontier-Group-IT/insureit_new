@@ -85,6 +85,7 @@ const digitText=[
  'YOUR VEHICLE IDV',
  'Vehicle IDV',
  '2061770 --',
+ 'OWN DAMAGE PREMIUM [A]',
  'Total OD () 2415.46      TotalPremiumAct () 7647.00',
  'Net Premium [A+B} () 10062.46',
  'IGST @ 18% = (1811.24)',
