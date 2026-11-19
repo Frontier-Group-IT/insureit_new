@@ -688,6 +688,9 @@ requireText(journey, "filter === 'all' || milestoneCategory(item.kind, item.titl
 requireText(journey, "hero: { marginTop: 0, marginHorizontal: -partnerTheme.spacing.lg, borderBottomWidth: 1, borderBottomColor: '#E4E8EF'", 'Milestone section must use full-width white Policy Details layout with divider.');
 requireText(journey, 'numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72} accessibilityLabel={data.next_milestone.title}', 'Milestone heading must fit a single row.');
 requireText(journey, "progressCircle: { width: 72, height: 72", 'Circular progress diameter must be compact.');
+requireText(journey, 'numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.9}>Milestone progress', 'Milestone progress label must remain on one line.');
+requireText(journey, "progressColumn: { width: 122", 'Milestone progress label must have enough horizontal space.');
+requireText(journey, "paddingHorizontal: 16, paddingVertical: 10, backgroundColor: '#FFFFFF'", 'Milestone section vertical spacing must remain compact.');
 requireText(journey, "left: 36 + Math.sin(angle) * 27", 'Ring segments must match the smaller geometry.');
 requireText(journey, 'numberOfLines={1} ellipsizeMode="tail" accessibilityLabel={item.subtitle}', 'Timeline descriptions must truncate to one line.');
 requireText(journey, 'numberOfLines={1} ellipsizeMode="tail" accessibilityLabel={item.title}', 'Timeline titles must truncate to one line.');
