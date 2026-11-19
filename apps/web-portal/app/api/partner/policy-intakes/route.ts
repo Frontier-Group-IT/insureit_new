@@ -2,6 +2,7 @@ import { after } from "next/server";
 import { aiQueueEnabled, processAiQueueBatch } from "@/lib/ai-policy-onboarding-queue-server";
 import { incomingPolicyIntakeLane, segregatePolicyIntakeLanes, isN8nPolicyReadEnabled } from "@/lib/policy-ocr-routing-mode";
 import { NextResponse } from "next/server";
+import { isTrainedLocalN8nMotorPdf } from "@/lib/policy-intake-n8n-layout-eligibility";
 
 import { createSupabaseWithAccessToken } from "@/lib/auth";
 import { getServerAccessToken } from "@/lib/auth-server";
@@ -647,7 +648,9 @@ async function completeUpload(
   const submitter = submitterColumns(identity);
 
   const proposalForm = LIFE_HEALTH_TYPES.has(input.policy_type);
-  const lane=incomingPolicyIntakeLane(input.policy_type,aiQueueEnabled());
+  const trainedLayout=segregatePolicyIntakeLanes() && isN8nPolicyReadEnabled() && aiQueueEnabled() && input.policy_type==="motor"
+    ? await isTrainedLocalN8nMotorPdf(blob,input.file.type) : false;
+  const lane=incomingPolicyIntakeLane(input.policy_type,aiQueueEnabled(),trainedLayout);
   const manualSplit=segregatePolicyIntakeLanes() && lane==="manual";
   const { error: intakeError } = await admin.from("policy_intake_requests").insert({
     id: input.id,
