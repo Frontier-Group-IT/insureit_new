@@ -1,3 +1,5 @@
+import type { PolicyIssuanceDateEvidence } from "./policy-issuance-signature-evidence.ts";
+
 /**
  * Pure, conservative exception vocabulary for future AI Policy Intake queue.
  * This DOES NOT book a policy or mark it canonically ready: eligibility for
@@ -103,6 +105,54 @@ export function hasVerifiedN8nParserEvidence(
   return Boolean(profile && checksPassed===profile.checks
     && (profile.family==="icici" ? warnings.length===0
       : warnings.every(warning=>TATA_INFORMATIONAL_WARNINGS.has(warning))));
+}
+
+/**
+ * INSUREIT's Tata AIG issuance-date BUSINESS RULE (not CMS chain validation):
+ * For approved 18-check Tata AIG variants, use the full-document signing
+ * timestamp as the issuance date only if it agrees with the independently
+ * read printed receipt date. The PDF metadata extractor additionally rejects
+ * partial signed revisions, multiple ByteRanges, non-Tata claimed signers
+ * and inconsistent Indian-calendar dates.
+ *
+ * This is an explicit insurer-scoped business assumption. It is NOT proof of
+ * cryptographic signature trust. Other policy/booking/OTP checks still apply.
+ */
+export function acceptedTataAigIssuanceDate(input: {
+  parserId:string; checksPassed:number; warnings:readonly string[];
+  fields:readonly {key:string;value:string}[];
+  issuanceEvidence?:PolicyIssuanceDateEvidence;
+}):string|null {
+  const profile=trainedN8nParserProfile(input.parserId);
+  if(!profile || profile.family==="icici"
+    || !hasVerifiedN8nParserEvidence(input.parserId,input.checksPassed,input.warnings))
+    return null;
+  const evidence=input.issuanceEvidence;
+  if(!evidence || evidence.verification!=="metadata_only_requires_reviewer"
+      || evidence.source!=="embedded_pdf_signature_timestamp"
+      || evidence.requiresReviewerConfirmation!==true
+      || !/^[a-f0-9]{64}$/.test(evidence.documentSha256)) return null;
+  const day=(value:string)=>{
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(value))return false;
+    const parsed=new Date(value+"T00:00:00Z");
+    return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0,10)===value;
+  };
+  // Never accept a future calendar day, including later in this same month.
+  const parts=new Intl.DateTimeFormat("en-GB",{
+    timeZone:"Asia/Kolkata",year:"numeric",month:"2-digit",day:"2-digit",
+  }).formatToParts(new Date());
+  const indiaPart=(type:string)=>parts.find(p=>p.type===type)?.value??"";
+  const indiaToday=`${indiaPart("year")}-${indiaPart("month")}-${indiaPart("day")}`;
+  if(!day(evidence.proposedDate) || evidence.proposedDate>indiaToday
+    || evidence.proposedDate!==evidence.receiptDate) return null;
+  const fields=new Map(input.fields.map(f=>[f.key,f.value.trim()]));
+  // A separately printed issue date takes precedence; conflicting evidence
+  // requires human attention rather than choosing one silently.
+  const printed=fields.get("policy_issuance_date")||"";
+  if(printed && printed!==evidence.proposedDate)return null;
+  const expiry=fields.get("policy_end_date");
+  if(!expiry || !day(expiry) || evidence.proposedDate>expiry) return null;
+  return evidence.proposedDate;
 }
 
 const requiredFields = [

@@ -1,5 +1,6 @@
 import "server-only";
 import type { PolicyIssuanceDateEvidence } from "@/lib/policy-issuance-signature-evidence";
+import { acceptedTataAigIssuanceDate } from "@/lib/ai-policy-onboarding-eligibility";
 
 import { createHash, randomUUID } from "node:crypto";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
@@ -42,6 +43,8 @@ export type SemiAutoN8nPreview = {
   warnings: string[];
   canApply: boolean;
   issuanceEvidence?: PolicyIssuanceDateEvidence;
+  /** Automatically accepted under Tata AIG signing/receipt business rule; not CMS certificate trust. */
+  acceptedIssuanceDate?: string;
   savedDraftIssueDate?: { value:string; revision:number };
 };
 export type SemiAutoN8nResult =
@@ -106,9 +109,17 @@ async function currentSnapshot(id: string): Promise<SourceSnapshot | null> {
 function fingerprint(
   id: string, documentId: string, fields: N8nOcrField[], warnings: string[],
   premium: N8nVerifiedPremiumBreakdown,
+  issuanceEvidence?: PolicyIssuanceDateEvidence, acceptedIssuanceDate?:string|null,
 ): string {
+  // Bind the review token to the exact signed-PDF hash, even if metadata
+  // changes without altering the 18 extracted insurance fields.
   return createHash("sha256")
-    .update(JSON.stringify({ intakeId: id, documentId, fields, warnings, premium }))
+    .update(JSON.stringify({ intakeId: id, documentId, fields, warnings, premium,
+      issuanceEvidence:issuanceEvidence?{
+        documentSha256:issuanceEvidence.documentSha256,
+        proposedDate:issuanceEvidence.proposedDate,
+      }:null,
+      acceptedIssuanceDate:acceptedIssuanceDate??null }))
     .digest("hex");
 }
 
@@ -214,6 +225,17 @@ export async function previewSemiAutoN8nExtraction(id: string): Promise<SemiAuto
     }];
   });
   const changedFieldCount = changedFields.length;
+  const acceptedIssuanceDate=acceptedTataAigIssuanceDate({
+    parserId:extraction.parserId,checksPassed:extraction.checksPassed,
+    warnings:extraction.warnings,fields:extraction.fields,
+    issuanceEvidence:extraction.issuanceEvidence,
+  });
+  // An accepted date should not keep the old "date unverified" informational
+  // warning in the operator-facing preview. Keep all unrelated review notes.
+  const visibleWarnings=acceptedIssuanceDate
+    ? extraction.warnings.filter(warning=>warning!=="tata_aig_issuance_date_unverified"
+       && warning!=="tata_aig_signature_date_not_in_native_text")
+    : extraction.warnings;
   let canApply = current.intake.policy_type === "motor"
     && !isN8nWorkbenchPrimary()
     && extraction.warnings.length === 0 && semiAutoN8nApplyEnabled()
@@ -231,7 +253,8 @@ export async function previewSemiAutoN8nExtraction(id: string): Promise<SemiAuto
     .maybeSingle<{draft_payload:{issuanceDate?:string}|null;revision:number}>();
   return { ok: true, preview: {
     documentId: current.document.id,
-    fingerprint: fingerprint(id, current.document.id, extraction.fields, extraction.warnings, extraction.premium),
+    fingerprint: fingerprint(id, current.document.id, extraction.fields, visibleWarnings,
+      extraction.premium, extraction.issuanceEvidence,acceptedIssuanceDate),
     fields: extraction.fields,
     parserId: extraction.parserId,
     parserVersion: extraction.parserVersion,
@@ -239,8 +262,9 @@ export async function previewSemiAutoN8nExtraction(id: string): Promise<SemiAuto
     changedFields,
     premium: extraction.premium,
     checksPassed: extraction.checksPassed,
-    warnings: extraction.warnings,
+    warnings: visibleWarnings,
     ...(extraction.issuanceEvidence?{issuanceEvidence:extraction.issuanceEvidence}:{}),
+    ...(acceptedIssuanceDate?{acceptedIssuanceDate}:{}),
     ...(reviewDraft && typeof reviewDraft.draft_payload?.issuanceDate==="string"
       ? {savedDraftIssueDate:{value:reviewDraft.draft_payload.issuanceDate,revision:reviewDraft.revision}}:{}),
     canApply,

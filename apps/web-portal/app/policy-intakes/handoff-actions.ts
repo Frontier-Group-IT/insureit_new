@@ -75,6 +75,8 @@ type VerifiedN8nHandoff = {
   documentId:string; fields:PolicyIntakeOcrField[];
   premium:N8nVerifiedPremiumBreakdown;
   fillEmptyFields?:boolean;
+  /** Date accepted using Tata AIG's matching signing/receipt business rule. */
+  autoAcceptedIssuanceDate?:{date:string;documentSha256:string};
   reviewedIssueDateReplacement?:{expectedPrevious:string;expectedRevision:number};
   reviewerConfirmedSigningDate?:{
     date:string;documentSha256:string;
@@ -142,9 +144,17 @@ export async function prepareVerifiedN8nIntakeHandoff(
       return{ok:false,error:"The signing-date proposal or saved draft changed. Review the current PDF and confirm again."};
     }
   }
+  // This server-side preview already re-read the *current* PDF and checked
+  // the strict Tata 18-check profile, signer/receipt date agreement and hash.
+  const autoDate=parsed.preview.acceptedIssuanceDate;
+  const autoAcceptedIssuanceDate=autoDate&&signature
+    && signature.proposedDate===autoDate
+    && !["invalid","future"].includes(policyDateDecision(autoDate))
+    ?{date:autoDate,documentSha256:signature.documentSha256}:undefined;
   return preparePolicyIntakeHandoffInternal(id,takeOver===true,{
     documentId:expectedDocumentId,fields:parsed.preview.fields,premium:parsed.preview.premium,fillEmptyFields,
     reviewedIssueDateReplacement,
+    ...(autoAcceptedIssuanceDate?{autoAcceptedIssuanceDate}:{}),
     ...(reviewerConfirmedSigningDate?{reviewerConfirmedSigningDate}:{}),
   });
 }
@@ -263,9 +273,10 @@ async function preparePolicyIntakeHandoffInternal(
   // the form's Basic OD field and then add add-ons again.
   const verifiedPremium=verified?mapVerifiedN8nMotorPremium(verified.premium):null;
   const addOnTotal=verifiedPremium?Number(verifiedPremium.addOnPremium):0;
-  // Strict current-PDF n8n extraction is the only authority for an automated
-  // issuance date; the OD/TP start date and the server clock are not evidence.
-  const verifiedIssuanceDate=verified?.fields.find(field=>field.key==="policy_issuance_date")?.value??"";
+  // Only a separately printed issued-on date OR the exact insurer-scoped
+  // signing+receipt rule is accepted; OD/TP start and clock are never substitutes.
+  const verifiedIssuanceDate=verified?.fields.find(field=>field.key==="policy_issuance_date")?.value
+    || verified?.autoAcceptedIssuanceDate?.date || "";
   const approvedSigningDate=verified?.reviewerConfirmedSigningDate?.date??"";
   const tpStart=verified?.fields.find(field=>field.key==="third_party_start_date")?.value??"";
   const tpExpiry=verified?.fields.find(field=>field.key==="third_party_end_date")?.value??"";
@@ -288,7 +299,7 @@ async function preparePolicyIntakeHandoffInternal(
     payoutBasis:"NET",projectedOdPercent:"",projectedTpPercent:"",insurerScheme:"",payinBillNo:"",payinBilledAmount:"",payinBillDate:"",payinStatus:"Unbilled",retention:"",payoutOdPercent:"",payoutTpPercent:"",flatPayoutAmount:"",payoutStatus:"Pending",payoutDate:"",payoutVoucherNo:"",remarks:verified
       ? `Policy Intake ${id} — n8n validated ${verified.premium.tataAig ? "Tata AIG private car" : "ICICI 3005"} PDF. Review every prefilled value before booking.
 PDF premium reconciliation: Printed Basic OD ${verified.premium.basicOd} + OD add-ons ${addOnTotal} - validated NCB/OD deductions ${verified.premium.odDeductions??0} = Total OD ${verified.premium.totalOd}; net-of-deductions Basic OD entered for onboarding ${verifiedPremium?.od??"unavailable"}. TP ${verified.premium.basicTp}, CPA ${verified.premium.cpa}, Net ${verified.premium.net}, GST ${verified.premium.tax}, Gross ${verified.premium.gross}.
-Third Party period: ${tpStart||"unavailable"} to ${tpExpiry||"unavailable"}. ${verified.premium.tataAig ? "Tata AIG signature/receipt dates do not prove issuance; enter a verified issue date before booking. Non-owner-driver paid-liability amounts are allocated to the TP form bucket, not CPA." : ""} Verify separate TP/CPA dates, policy class/product, identity, commercial rates and unmatched PDF fields manually.`
+Third Party period: ${tpStart||"unavailable"} to ${tpExpiry||"unavailable"}. ${verified.premium.tataAig ? "Tata AIG issuance uses the signing-date/printed-receipt business rule if both agree; this does NOT certify the CMS signer trust. Non-owner-driver paid-liability amounts are allocated to the TP form bucket, not CPA." : ""} Verify separate TP/CPA dates, policy class/product, identity, commercial rates and unmatched PDF fields manually.`
       : `Policy Intake ${id}`,
   };
   // Preserve the long-standing generic OCR default. A positive owner-driver
@@ -324,6 +335,19 @@ Third Party period: ${tpStart||"unavailable"} to ${tpExpiry||"unavailable"}. ${v
       || !verified?.fields.some(f=>f.key==="policy_issuance_date"&&f.value===verifiedIssuanceDate)
     ))return{ok:false,error:"The saved draft revision, previous issue date or verified PDF changed. Refresh the date comparison before applying the correction."};
     let changed=false;
+    const autoDate=verified?.autoAcceptedIssuanceDate;
+    // Explicit insurer-scoped business rule: correct even a stale saved
+    // issuance date, but preserve its former value and document hash in the
+    // existing audited revision-CAS draft. Do not change booked policies.
+    if(autoDate && original.issuanceDate!==autoDate.date){
+      supplemented.issuanceDate=autoDate.date;
+      supplemented.remarks=(original.remarks||"")
+        +"\nAUTO_TATA_ISSUANCE_DATE: "+(original.issuanceDate||"(blank)")
+        +" -> "+autoDate.date
+        +" under signing/receipt business rule; source PDF SHA-256 "
+        +autoDate.documentSha256+". This does not establish CMS certificate trust.";
+      changed=true;
+    }
     if(dateReview && original.issuanceDate!==verifiedIssuanceDate){
       supplemented.issuanceDate=verifiedIssuanceDate;
       changed=true;
