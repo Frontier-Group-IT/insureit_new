@@ -281,6 +281,13 @@ Third Party period: ${tpStart||"unavailable"} to ${tpExpiry||"unavailable"}. Ver
       changed=true;
     }
     for(const key of fillable){
+      // CPA amount and opt-in form a pair in the booking engine. Never
+      // silently fill a positive PDF CPA amount while an older draft
+      // explicitly says "No" to owner-driver CPA: canonical booking would
+      // otherwise persist zero CPA despite a correct numeric comparison.
+      // The reviewer must resolve BOTH fields together in Policy Onboarding.
+      if(key==="cpa" && verifiedPremium && Number(verifiedPremium.cpa)>0
+          && original.cpaOpted!=="Yes") continue;
       if(!String(original[key]??"").trim()&&String(draft[key]??"").trim()){
         (supplemented as unknown as Record<string,unknown>)[key]=draft[key];
         changed=true;
