@@ -8,7 +8,7 @@ export function segregatePolicyIntakeLanes(): boolean {
   return process.env.INSUREIT_POLICY_LANE_SPLIT === "true";
 }
 export type PolicyIntakeLane = "manual" | "automation";
-export function incomingPolicyIntakeLane(policyType: string, queueEnabled: boolean): PolicyIntakeLane {
-  return segregatePolicyIntakeLanes() && queueEnabled && policyType === "motor"
+export function incomingPolicyIntakeLane(policyType: string, queueEnabled: boolean, trainedLayout = false): PolicyIntakeLane {
+  return segregatePolicyIntakeLanes() && isN8nPolicyReadEnabled() && queueEnabled && trainedLayout && policyType === "motor"
     ? "automation" : "manual";
 }
