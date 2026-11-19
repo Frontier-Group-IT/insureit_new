@@ -71,7 +71,9 @@ export default async function SemiAutoPolicyOnboardingPage({ searchParams }: { s
   // rejected/completed Intakes visible in the full register.
   const intakeCounts = policyIntakeStatusCounts(workspaceRows,duplicateIds);
   const duplicateCount = intakeCounts.duplicate;
-  const total = intakeCounts.all;
+  // Open-work count must exclude canonical duplicates; the Duplicate tab
+  // remains available for read-only audit, not as pending AI work.
+  const total = intakeCounts.action_required + intakeCounts.in_review + intakeCounts.processing;
   const queueActive = primaryN8n && aiQueueEnabled();
   const queue = queueActive ? await loadAiQueueDisplay(workspaceRows.map(row=>row.id)) : new Map();
   const queueCounts = { eligible:0, extracted:0, duplicates:duplicateCount, queued:0, extracting:0,
@@ -118,8 +120,9 @@ export default async function SemiAutoPolicyOnboardingPage({ searchParams }: { s
     : requestedRow
       ? policyIntakeBucket(requestedRow,duplicateIds.has(requestedRow.id)) as OpenIntakeView
       : "action_required";
-  const statusRows = selectedView==="all" ? workspaceRows : workspaceRows.filter(row=>
-    policyIntakeBucket(row,duplicateIds.has(row.id)) === selectedView);
+  const statusRows = selectedView==="all"
+    ? workspaceRows.filter(row => policyIntakeBucket(row,duplicateIds.has(row.id)) !== "duplicate")
+    : workspaceRows.filter(row => policyIntakeBucket(row,duplicateIds.has(row.id)) === selectedView);
   const targetIndex = requestedId ? statusRows.findIndex(row => row.id === requestedId) : -1;
   const wantedPage = targetIndex >= 0 ? Math.floor(targetIndex / PAGE_SIZE) + 1 : page;
   const safePage = Math.min(wantedPage, Math.max(1, Math.ceil(statusRows.length / PAGE_SIZE)));
