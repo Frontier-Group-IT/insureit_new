@@ -515,7 +515,7 @@ requireText(support, 'PartnerAssets.actions.supportVerified', 'Support fallback 
 if (support.includes('asset={PartnerAssets.emptyStates.supportResolved}')) throw new Error('Support-unavailable errors must not misuse the support-resolved artwork.');
 requireText(settings, 'PartnerAssets.status.settings', 'Settings must retain branded Check for updates artwork.');
 const settingsSectionHeader = read('components/ui/partner-section-header.tsx');
-requireText(settingsSectionHeader, 'settingsHeading ? <View style={styles.settingsAccent} /> : null', 'Settings section headings must have reference purple accent.');
+if (settingsSectionHeader.includes('settingsAccent')) throw new Error('Settings headings must not display a decorative purple dash.');
 requireText(settingsSectionHeader, 'fontWeight: \'900\', letterSpacing: 0.35', 'Settings headings must be bold and readable.');
 for (const heading of ['Account', 'Device security', 'Privacy', 'App information']) {
   requireText(settings, `title="${heading}" settingsHeading compact`, `Settings must retain bold ${heading} heading.`);
@@ -530,7 +530,7 @@ requireText(settings, "controlTitle: { color: '#141C3F', fontSize: 13", 'Device 
 requireText(settings, "controlCopy: { flex: 1, minWidth: 0, justifyContent: 'center' }", 'Device security title and helper copy must remain a compact vertical stack.');
 requireText(settings, "controlSubtitle: { marginTop: 1", 'Device security helper text must sit directly below its row title.');
 requireText(settings, 'controlRow: { minHeight: 46', 'Device security rows must keep the compact joined-list height.');
-requireText(settingsSectionHeader, 'settingsRowCompact: { marginTop: 7, marginBottom: 4, minHeight: 20 }', 'Compact Settings headings reduce large vertical section gaps without changing other pages.');
+requireText(settingsSectionHeader, 'settingsRowCompact: { marginTop: 6, marginBottom: 2, minHeight: 20 }', 'Compact Settings headings reduce the gap to their cards.');
 for (const compactStyle of [
   'linkRow: { minHeight: 46',
   'infoRow: { minHeight: 28',

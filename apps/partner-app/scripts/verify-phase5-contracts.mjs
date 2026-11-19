@@ -362,9 +362,12 @@ expectAll('components/ui/partner-section-header.tsx', [
   [/settingsHeading && styles\.settingsTitle/, 'Settings heading colour applies only when requested'],
   [ /settingsTitle: \{ color: '#20234C', fontSize: 15, lineHeight: 20, fontWeight: '900'/, 'Settings headings use bold high-contrast typography'],
   [/textTransform: 'uppercase'/, 'Heading capitalization remains unchanged'],
-  [ /settingsRow: \{ marginTop: 22, marginBottom: 10, minHeight: 24 \}/, 'Settings headings use reference spacing'],
-  [/settingsAccent: \{ height: 3, width: 28, borderRadius: 2, backgroundColor: '#6441BE' \}/, 'Settings headings include purple accent'],
+  [/settingsRow: \{ marginTop: 12, marginBottom: 3, minHeight: 22 \}/, 'Settings headings use compact reference spacing'],
+  [/settingsRowCompact: \{ marginTop: 6, marginBottom: 2, minHeight: 20 \}/, 'Compact Settings headings sit close to cards'],
 ]);
+
+checks += 1;
+if (/settingsAccent|settingsHeadingLine/.test(read('components/ui/partner-section-header.tsx'))) failures.push('Settings headers must not display purple accent dashes');
 
 // Evaluate every contract only after all checks have run.
 if (failures.length) {
