@@ -1,6 +1,8 @@
 "use server";
 
 import { headers } from "next/headers";
+import { requestN8nPolicyIntakeExtraction } from "@/lib/policy-intake-n8n-bridge";
+import { useN8nForAllPolicyReads } from "@/lib/policy-ocr-routing-mode";
 import { requirePolicyEditor } from "@/lib/policy-access-server";
 import {
   buildTrainingProposal,
@@ -124,6 +126,30 @@ async function extractPolicyFile(
   if (!(file instanceof File) || file.size === 0) return { ok: false, error: "Select a policy PDF or image." };
   if (!ALLOWED_TYPES.has(file.type)) return { ok: false, error: "Only PDF, JPG, PNG and WebP policy copies are supported." };
   if (file.size > MAX_FILE_SIZE) return { ok: false, error: "The policy document must be 15 MB or smaller." };
+  if (useN8nForAllPolicyReads()) {
+    if (file.type !== "application/pdf") return {
+      ok: false, error: "The local n8n reader currently supports verified digital PDF files. Use manual onboarding for images or untrained policies.",
+    };
+    try {
+      // Read alone is not a Policy Intake: these UUIDs correlate the response,
+      // but never create an Intake, vehicle, customer or booked policy.
+      const result = await requestN8nPolicyIntakeExtraction({
+        intakeId: crypto.randomUUID(), documentId: crypto.randomUUID(),
+        requestId: crypto.randomUUID(), file,
+      });
+      return {
+        ok: true, fields: result.fields, parserId: result.parserId,
+        parserVersion: result.parserVersion, model: "INSUREIT local n8n verified PDF",
+        extractionMethod: "native_pdf_text", warnings: result.warnings,
+      };
+    } catch (error) {
+      const code = error instanceof Error ? error.message : "n8n_unavailable";
+      console.error("[policy-read] n8n extraction refused", {
+        code: /^n8n_[a-z0-9_]{1,75}$/.test(code) ? code : "n8n_unavailable",
+      });
+      return { ok: false, error: "Local n8n could not verify this policy PDF. Enter details manually; Google Document AI was not called and no policy was booked." };
+    }
+  }
 
   const config = getGoogleConfig();
   if (!config) return { ok: false, error: "Policy document reading is temporarily unavailable. Please contact the administrator if the issue continues." };
@@ -297,6 +323,7 @@ export async function processPolicyOcrTrainingWorkerBatch(
     subjectTokenOverride: string | null,
     limit = 2,
   ) {
+    if (useN8nForAllPolicyReads()) return {ok:false as const,error:"legacy_google_training_disabled",processed:0,succeeded:0,needsReview:0};
     if (!getGoogleConfig()) return { ok: false as const, error: "google_ocr_configuration_missing", processed: 0, succeeded: 0, needsReview: 0 };
     const subjectToken = subjectTokenOverride?.trim()
       || process.env.VERCEL_OIDC_TOKEN?.trim()
@@ -330,6 +357,7 @@ export async function processPolicyOcrTrainingOrchestratorBatch(
       orchestratorId: string,
       limit = 25,
     ) {
+      if (useN8nForAllPolicyReads()) return {ok:false as const,error:"legacy_google_training_disabled",processed:0,succeeded:0,needsReview:0};
       if (process.env.POLICY_OCR_ORCHESTRATOR_ENABLED !== "true") {
         return { ok: false as const, error: "orchestrator_disabled", processed: 0, succeeded: 0, needsReview: 0 };
       }
@@ -406,6 +434,7 @@ export async function processPolicyOcrTrainingDocument(
   labelId: string,
 ) {
   await requirePolicyOcrTrainingOperator();
+  if (useN8nForAllPolicyReads()) return {ok:false as const,error:"legacy_google_training_disabled",processed:0};
 
   if (!getGoogleConfig()) {
     console.error(JSON.stringify({ level: "error", message: "Policy OCR manual run preflight failed", code: "google_ocr_configuration_missing" }));
