@@ -3,6 +3,7 @@
 import type { PolicyIntakeOcrField } from "@/app/policy-intakes/ocr-actions";
 import { loadPolicyIntakeDuplicateMatches } from "@/lib/policy-intake-duplicate";
 import { buildPolicyOcrOnboardingUpdate } from "@/lib/policy-ocr-onboarding-apply";
+import { segregatePolicyIntakeLanes } from "@/lib/policy-ocr-routing-mode";
 import { selectPolicyIntakeCustomerMatch, type PolicyIntakeCustomerIdentityCandidate } from "@/lib/policy-intake-customer-match";
 import { requirePolicyIntakeFinalizer, requirePolicyIntakeReviewer } from "@/lib/policy-intake-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
@@ -115,6 +116,11 @@ export async function prepareVerifiedN8nIntakeHandoff(
 }
 
 export async function preparePolicyIntakeHandoff(id:string,takeOver=false):Promise<PolicyIntakeHandoffResult> {
+  if (segregatePolicyIntakeLanes()) {
+    const admin=createSupabaseAdminClient();
+    const {data}=await admin.from("policy_intake_requests").select("processing_lane").eq("id",id).maybeSingle<{processing_lane:string}>();
+    if(data?.processing_lane==="automation") return{ok:false,error:"AI Automation owns this Intake. Use the controlled n8n workbench, not manual Operations handoff."};
+  }
   return preparePolicyIntakeHandoffInternal(id,takeOver);
 }
 

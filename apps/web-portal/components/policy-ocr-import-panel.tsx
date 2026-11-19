@@ -193,8 +193,14 @@ export function PolicyOcrImportPanel({ variant = "header", context, onApply, onC
       setFields(result.fields);
       setParserInfo(`${friendlyParserName(result.parserId)} · ${friendlyMethod(result.extractionMethod)}`);
       setWarnings(filterPolicyOcrUserWarnings(result.warnings));
+      // Strict n8n 13-check validation is performed server-side. Its
+      // per-field confidence is null by design; select eligible verified
+      // fields for reviewer confirmation, never fabricate a confidence score.
+      const n8nVerified=result.extractionMethod==="native_pdf_text"
+        && ["icici_3005_n8n_native_pdf","icici_3005_od_n8n_native_pdf"].includes(result.parserId);
       const safeKeys = result.fields
-        .filter((field) => APPLY_FIELDS.has(field.key) && (field.confidence ?? 0) >= .9)
+        .filter((field) => APPLY_FIELDS.has(field.key)
+          && ((field.confidence ?? 0) >= .9 || n8nVerified))
         .filter((field) => field.key !== INSURED_PHONE_FIELD)
         .filter((field) => {
           if ((context.mode === "edit" && SECTION_02_FIELDS.has(field.key)) || protectedKeys.has(field.key)) return false;
@@ -324,7 +330,7 @@ function ReviewRow({field,checked,onToggle}:{field:ReviewedField;checked:boolean
 
 function SummaryChip({label,value,tone="neutral"}:{label:string;value:string;tone?:"neutral"|"warn"|"ok"}){const style=tone==="warn"?"border-[#F0D9A8] bg-[#FFF8E8] text-[#8A5A10]":tone==="ok"?"border-[#CFE8DA] bg-[#F1FAF5] text-[#18794E]":"border-[#D6E0EB] bg-white text-[#53657D]";return <span className={`rounded-full border px-2.5 py-1 text-[8px] font-semibold ${style}`}>{label} · {value}</span>;}
 function friendlyParserName(parserId:string){if(parserId.startsWith("digit_"))return"Digit commercial vehicle format";if(parserId.startsWith("iffco_tokio_"))return"IFFCO-Tokio commercial vehicle format";if(parserId.startsWith("new_india_"))return"New India motor format";if(parserId.startsWith("tata_aig_"))return"TATA AIG bundled two-wheeler format";return"Standard motor policy format";}
-function friendlyMethod(method:string){return method==="native_pdf_text"?"digital policy":"Google Document AI";}
+function friendlyMethod(method:string){return method==="native_pdf_text"?"verified local n8n PDF":"Legacy Google Document AI";}
 function formatFieldValue(field:PolicyOcrField){if(["idv","od_premium","tp_premium","cpa_premium","total_premium","tax_amount","gross_premium"].includes(field.key)){const number=Number(field.value.replace(/,/g,""));if(Number.isFinite(number))return new Intl.NumberFormat("en-IN",{style:"currency",currency:"INR",maximumFractionDigits:2}).format(number);}return field.value;}
 function normalizeText(value:string){return value.toLowerCase().replace(/\b(?:the|co|company|limited|ltd|general|insurance)\b/g," ").replace(/[^a-z0-9]+/g," ").replace(/\s+/g," ").trim();}
 function valuesEquivalent(field:PolicyOcrField,current:string){if(!current.trim())return false;if(field.key==="vehicle_registration_status")return /pending|unregistered|new vehicle/i.test(field.value)?/unregistered/i.test(current):/registered/i.test(current)&&!/unregistered/i.test(current);if(["idv","od_premium","tp_premium","cpa_premium"].includes(field.key)){const a=Number(field.value.replace(/,/g,"")),b=Number(current.replace(/[^0-9.]/g,""));return Number.isFinite(a)&&Number.isFinite(b)&&Math.abs(a-b)<=2;}if(field.key==="policy_start_date"||field.key==="policy_end_date")return toIsoDate(field.value)===toIsoDate(current);const a=normalizeText(field.value),b=normalizeText(current);return Boolean(a&&b&&(a===b||a.includes(b)||b.includes(a)));}

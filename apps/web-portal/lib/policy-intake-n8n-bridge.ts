@@ -81,6 +81,11 @@ export async function requestN8nPolicyIntakeBySignedSource(
 }
 
 function n8nConfiguration(): { url: URL; secret: string } {
+  // Full provider cutover must NEVER silently select old n8n Cloud even if
+  // an old env configuration remains; preserve n8n-only fail-closed semantics.
+  if (process.env.INSUREIT_POLICY_OCR_PROVIDER === "n8n"
+      && process.env.INSUREIT_N8N_OCR_ENDPOINT_MODE !== "self_hosted")
+    throw new Error("n8n_self_hosted_required");
   const configuredUrl = process.env.INSUREIT_N8N_OCR_WEBHOOK_URL;
   const secret = process.env.INSUREIT_N8N_OCR_HEADER_SECRET;
   if (!configuredUrl || !secret || secret.length < 32) throw new Error("n8n_bridge_not_configured");

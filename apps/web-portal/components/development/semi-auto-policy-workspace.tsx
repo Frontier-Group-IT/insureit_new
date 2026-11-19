@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { IntakeStatusBucket } from "@/lib/policy-intake-status-buckets";
 import { AlertCircle, ArrowUpRight, CheckCircle2, ClipboardCheck, FileSearch, Loader2, PencilLine, RefreshCw, Search, ShieldAlert, Sparkles } from "lucide-react";
-import { applySemiAutoN8nIntake, bookSemiAutoIntake, convertVerifiedAiIntake, checkSemiAutoIntake, continueVerifiedN8nIntakeToOnboarding, editSemiAutoIntake, previewSemiAutoN8nIntake, reprocessAiPolicyIntake, reviewAiIntakeCustomerCandidates, reviewIciciVerifiedDraftRepair, applyReviewedIciciDraftRepair, type ReviewedIciciDraftComparison, type AiCustomerCandidateReview, type SemiAutoActionResult, type SemiAutoN8nResult } from "@/app/development/ai-policy-onboarding/actions";
+import { applySemiAutoN8nIntake, bookSemiAutoIntake, convertVerifiedAiIntake, checkSemiAutoIntake, continueVerifiedN8nIntakeToOnboarding, editSemiAutoIntake, previewSemiAutoN8nIntake, reprocessAiPolicyIntake, reviewAiIntakeCustomerCandidates, reviewIciciVerifiedDraftRepair, applyReviewedIciciDraftRepair, transferFailedAiIntakeToManual, type ReviewedIciciDraftComparison, type AiCustomerCandidateReview, type SemiAutoActionResult, type SemiAutoN8nResult } from "@/app/development/ai-policy-onboarding/actions";
 
 export type SemiAutoIntakeRow = {
   id: string;
@@ -107,6 +107,10 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
   const [n8nNotice, setN8nNotice] = useState<string | null>(null);
   const [done, setDone] = useState<{ policyCode: string; policyId: string } | null>(null);
   const [exceptionRow,setExceptionRow]=useState<SemiAutoIntakeRow|null>(null);
+  const [manualTransferRow,setManualTransferRow]=useState<SemiAutoIntakeRow|null>(null);
+  const [manualTransferReason,setManualTransferReason]=useState("");
+  const [manualTransferError,setManualTransferError]=useState<string|null>(null);
+  const [manualTransferBusy,setManualTransferBusy]=useState(false);
   const [autoConvertRow,setAutoConvertRow]=useState<SemiAutoIntakeRow|null>(null);
   const [autoConvertMessage,setAutoConvertMessage]=useState<string|null>(null);
   const [bulkConfirmOpen,setBulkConfirmOpen]=useState(false);
@@ -146,7 +150,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
   const available = !primaryN8n && selected?.policy_type === "motor"
     && result?.ready === true && result.issues.length === 0 && !selected?.is_duplicate;
   const n8nEnabled = selected?.n8n_enabled === true;
-  const isWaiting = busy !== null || bulkRunning || reprocessRunning;
+  const isWaiting = busy !== null || bulkRunning || reprocessRunning || manualTransferBusy;
   // A bounded set of currently verified CANDIDATES. Server-side canonical
   // authorization and PDF reconciliation can still reject any candidate.
   const bulkRemaining=bulkCandidates.filter(row=>!bulkAttemptedIds.includes(row.id));
@@ -628,6 +632,13 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
                         Convert to Policy
                       </button>
                     ) : null}
+                    {!row.is_duplicate && ["unsupported","exception","failed"].includes(row.ai_state??"") ? (
+                      <button type="button" disabled={isWaiting}
+                        onClick={()=>{setManualTransferRow(row);setManualTransferReason("");setManualTransferError(null);}}
+                        className="mt-1 ml-1 rounded-md border border-amber-300 bg-amber-50 px-2 py-1 text-[10px] font-semibold text-amber-900 disabled:opacity-50">
+                        Move to Manual
+                      </button>
+                    ):null}
                     {row.ai_exceptions?.length ? (
                       <button type="button" onClick={()=>{setExceptionRow(row);setCustomerReview(null);}}
                         className="mt-1 rounded-md border border-[#e4d4b2] bg-[#fff8e8] px-2 py-1 text-left text-[10px] font-semibold text-[#765013] hover:bg-[#fff0c8]">
@@ -1125,6 +1136,14 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
             </p>
             {queueRetryError ? <p role="alert" className="mt-3 rounded-lg bg-amber-50 p-2 text-[10px] text-amber-900">{queueRetryError}</p> : null}
             <div className="mt-5 flex flex-wrap justify-end gap-2">
+              {primaryN8n && queueActive && !exceptionRow.is_duplicate
+                && ["unsupported","exception","failed"].includes(exceptionRow.ai_state??"") ? (
+                <button type="button" disabled={isWaiting || queueRetrying}
+                  onClick={()=>{setManualTransferRow(exceptionRow);setManualTransferReason("");setManualTransferError(null);setExceptionRow(null);}}
+                  className="min-h-9 rounded-lg border border-amber-300 bg-amber-50 px-3 text-[11px] font-bold text-amber-900 disabled:opacity-50">
+                  Move to Manual Onboarding
+                </button>
+              ):null}
               <button type="button" autoFocus onClick={()=>{setExceptionRow(null);setQueueRetryError(null);setCustomerReview(null);}}
                 className="min-h-9 rounded-lg border border-[#cbd6e5] px-3 text-[11px] font-semibold text-[#38516e]">Close</button>
               <Link href={"/policy-intakes/"+exceptionRow.id} className="inline-flex min-h-9 items-center rounded-lg border border-[#bcd0e5] px-3 text-[11px] font-semibold text-[#24538b]">Advanced options</Link>
@@ -1144,6 +1163,41 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
               </button> : null}
               <button type="button" onClick={()=>{const id=exceptionRow.id;setExceptionRow(null);void selectRow(id);}}
                 className="min-h-9 rounded-lg bg-[#174b83] px-3 text-[11px] font-bold text-white">Review current PDF</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {manualTransferRow ? (
+        <div className="fixed inset-0 z-[180] flex items-center justify-center bg-[#101d37]/65 px-4 py-6" role="presentation">
+          <div role="alertdialog" aria-modal="true" aria-labelledby="ai-manual-transfer-title"
+            className="w-full max-w-[480px] rounded-2xl border border-[#d6e2f1] bg-white p-5 shadow-[0_24px_80px_rgba(12,28,52,.3)]">
+            <h3 id="ai-manual-transfer-title" className="text-[15px] font-bold text-[#193657]">Move failed Intake to Manual Onboarding?</h3>
+            <p className="mt-2 text-[11px] leading-5 text-[#51657e]">This IT-only action transfers <strong>{manualTransferRow.intake_number}</strong> out of the n8n queue so Operations can review it manually. Only terminal parser failures qualify. The audit records your account and reason. No policy, customer, vehicle, PDF, or reviewer assignment is changed.</p>
+            <label htmlFor="ai-manual-transfer-reason" className="mt-3 block text-[11px] font-semibold text-[#1d3b5f]">Reason for transfer (required; do not include customer, vehicle or policy identifiers)</label>
+            <textarea id="ai-manual-transfer-reason" value={manualTransferReason}
+              onChange={event=>setManualTransferReason(event.target.value)} maxLength={500} rows={3}
+              placeholder="Example: ICICI policy PDF layout is not yet supported; route for manual review"
+              className="mt-1 w-full rounded-lg border border-[#bdcfe2] p-2 text-[11px] text-[#253d5b] outline-none focus:ring-2 focus:ring-[#91b7db]"/>
+            {manualTransferError ? <p role="alert" className="mt-2 text-[11px] text-rose-700">{manualTransferError}</p> : null}
+            <div className="mt-4 flex justify-end gap-2">
+              <button type="button" disabled={manualTransferBusy}
+                onClick={()=>{setManualTransferRow(null);setManualTransferError(null);}}
+                className="min-h-9 rounded-lg border border-[#bdcfe2] px-3 text-[11px] font-semibold text-[#335270]">Cancel</button>
+              <button type="button" disabled={manualTransferBusy || manualTransferReason.trim().length<12}
+                onClick={async()=>{
+                  if(!manualTransferRow || manualTransferBusy)return;
+                  setManualTransferBusy(true);setManualTransferError(null);
+                  try {
+                    const result=await transferFailedAiIntakeToManual(manualTransferRow.id,manualTransferReason);
+                    if(result.ok){setManualTransferRow(null);setSelectedId(null);router.refresh();}
+                    else setManualTransferError(result.error);
+                  } catch {
+                    setManualTransferError("Transfer failed. Refresh this Intake and try again.");
+                  } finally {setManualTransferBusy(false);}
+                }}
+                className="min-h-9 rounded-lg bg-[#174b83] px-4 text-[11px] font-bold text-white disabled:opacity-50">
+                {manualTransferBusy?"Transferring...":"Confirm transfer"}
+              </button>
             </div>
           </div>
         </div>

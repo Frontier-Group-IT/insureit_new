@@ -6,6 +6,7 @@ import { PolicyIntakeHandoffButton } from "@/components/policy-intake-handoff-bu
 import { PolicyIntakeResponseUpload } from "@/components/policy-intake-response-upload";
 import { PolicyIntakeReviewActions } from "@/components/policy-intake-review-actions";
 import { hasEffectiveCapability } from "@/lib/effective-permissions";
+import { segregatePolicyIntakeLanes } from "@/lib/policy-ocr-routing-mode";
 import { loadPolicyIntakeDuplicateMatches } from "@/lib/policy-intake-duplicate";
 import { requirePolicyIntakeViewer } from "@/lib/policy-intake-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
@@ -17,6 +18,7 @@ type Intake = {
   id: string;
   intake_number: string;
   status: string;
+  processing_lane?: "manual" | "automation";
   lead_source_name: string;
   lead_source_type: string;
   lead_source_code: string | null;
@@ -86,8 +88,9 @@ export default async function PolicyIntakeDetail({ params }: { params: Promise<{
     profile.role === "operations_head_life" ? Promise.resolve(true) : hasEffectiveCapability(profile, "finalize_policy_intakes", "approve"),
   ]);
   const admin = createSupabaseAdminClient();
-  const { data } = await admin.from("policy_intake_requests").select("id,intake_number,status,lead_source_name,lead_source_type,lead_source_code,customer_mobile,matched_customer_id,file_name,ocr_status,ocr_fields,ocr_warnings,attention_reason,created_at,submitted_by_profile_id,submitted_by_portal_account_id,assigned_to_profile_id,final_policy_id").eq("id", id).maybeSingle<Intake>();
+  const { data } = await admin.from("policy_intake_requests").select("id,intake_number,status,lead_source_name,lead_source_type,lead_source_code,customer_mobile,matched_customer_id,file_name,ocr_status,ocr_fields,ocr_warnings,attention_reason,created_at,submitted_by_profile_id,submitted_by_portal_account_id,assigned_to_profile_id,final_policy_id,processing_lane").eq("id", id).maybeSingle<Intake>();
   if (!data) return <AppShell title="Policy Intake" backHref="/policy-intakes"><div className="rounded-xl bg-white p-5 text-[11px]">Intake not found.</div></AppShell>;
+  const automated=segregatePolicyIntakeLanes() && data.processing_lane==="automation";
   const owner = data.submitted_by_profile_id === profile.id;
   if (!reviewer && !finalizer && !owner) return <AppShell title="Policy Intake" backHref="/policy-intakes"><div className="rounded-xl bg-white p-5 text-[11px]">You do not have access to this intake.</div></AppShell>;
 
@@ -134,6 +137,7 @@ export default async function PolicyIntakeDetail({ params }: { params: Promise<{
             <HeaderMeta icon={<ShieldCheck className="h-3.5 w-3.5" />} label="Lead source" value={data.lead_source_name} hint={`${data.lead_source_type.toUpperCase()}${data.lead_source_code ? ` · ${data.lead_source_code}` : ""}`} />
             <HeaderMeta icon={<FileText className="h-3.5 w-3.5" />} label="Policy copy" value={data.file_name} hint="Original source document" />
           </div>
+          {automated ? <div className="mt-3 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-[10px] text-blue-900">This Intake belongs to AI Automation. Operations review and manual onboarding actions are disabled. <Link className="font-bold underline" href={"/development/ai-policy-onboarding?intake_id="+encodeURIComponent(data.id)}>Open AI workbench</Link> (IT/Admin access required).</div> : null}
           {data.attention_reason ? <div className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-[9px] font-medium text-amber-900">Operations note: {data.attention_reason}</div> : null}
         </header>
 
@@ -171,9 +175,9 @@ export default async function PolicyIntakeDetail({ params }: { params: Promise<{
           {(reviewer || finalizer) ? <Link href={duplicateMatch.kind === "registered_policy" ? `/policies/${duplicateMatch.policyId}/edit` : `/policy-intakes/${duplicateMatch.intakeId}`} className="mt-2 inline-flex h-8 items-center rounded-lg border border-rose-200 bg-white px-2.5 text-[8.5px] font-bold text-rose-800 hover:bg-rose-100">{duplicateMatch.kind === "registered_policy" ? "View Existing Policy" : "View Earlier Intake"}</Link> : null}
         </section> : null}
         {!duplicateCheck.ok ? <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-[8.5px] leading-4 text-amber-900">Duplicate protection could not be verified. Review and Policy Onboarding actions are temporarily disabled.</div> : null}
-        {!duplicateBlocked && owner && data.status === "needs_attention" ? <PolicyIntakeResponseUpload id={data.id} /> : null}
-        {!duplicateBlocked && reviewer && !["completed", "rejected"].includes(data.status) ? <PolicyIntakeReviewActions id={data.id} /> : null}
-        {!duplicateBlocked && finalizer && (!["completed", "rejected", "needs_attention", "processing"].includes(data.status) || manualReview) ? <PolicyIntakeHandoffButton id={data.id} status={data.status} /> : null}
+        {!automated && !duplicateBlocked && owner && data.status === "needs_attention" ? <PolicyIntakeResponseUpload id={data.id} /> : null}
+        {!automated && !duplicateBlocked && reviewer && !["completed", "rejected"].includes(data.status) ? <PolicyIntakeReviewActions id={data.id} /> : null}
+        {!automated && !duplicateBlocked && finalizer && (!["completed", "rejected", "needs_attention", "processing"].includes(data.status) || manualReview) ? <PolicyIntakeHandoffButton id={data.id} status={data.status} /> : null}
         <div className="rounded-xl bg-[#F3F7FB] px-3 py-2.5 text-[8.5px] leading-4 text-[#64748B]"><UserRound className="mb-1.5 h-3.5 w-3.5 text-[#315B9A]" />This is a pre-onboarding review sheet. The saved policy copy remains the source document; final corrections are made in Policy Onboarding.</div>
       </aside>
     </div>

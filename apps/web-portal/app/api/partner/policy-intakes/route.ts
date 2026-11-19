@@ -1,6 +1,8 @@
 import { after } from "next/server";
 import { aiQueueEnabled, processAiQueueBatch } from "@/lib/ai-policy-onboarding-queue-server";
+import { incomingPolicyIntakeLane, segregatePolicyIntakeLanes, isN8nPolicyReadEnabled } from "@/lib/policy-ocr-routing-mode";
 import { NextResponse } from "next/server";
+import { isTrainedLocalN8nMotorPdf } from "@/lib/policy-intake-n8n-layout-eligibility";
 
 import { createSupabaseWithAccessToken } from "@/lib/auth";
 import { getServerAccessToken } from "@/lib/auth-server";
@@ -528,6 +530,7 @@ async function updateMobileIntakeReview(
   // Enforce the same duplicate protection used by the Operations Review page.
   let readable = admin.from("policy_intake_requests")
     .select("id,intake_number,status,created_at,ocr_fields").eq("id", body.id);
+  if (segregatePolicyIntakeLanes()) readable=readable.eq("processing_lane","manual");
   if (readScope.mode === "or") readable = readable.or(readScope.predicates);
   else if (readScope.mode === "submitter") readable = readable.eq("submitted_by_profile_id", readScope.profileId);
   const { data: intake, error: readError } = await readable.maybeSingle();
@@ -538,6 +541,7 @@ async function updateMobileIntakeReview(
   let query = admin.from("policy_intake_requests").update({
     status: body.status, attention_reason: reason, assigned_to_profile_id: identity.profile_id,
   }).eq("id", body.id).in("status", ["processing", "ready_for_review", "in_review", "needs_attention"]);
+  if (segregatePolicyIntakeLanes()) query=query.eq("processing_lane","manual");
   if (readScope.mode === "or") query = query.or(readScope.predicates);
   else if (readScope.mode === "submitter") query = query.eq("submitted_by_profile_id", readScope.profileId);
   const { data, error } = await query.select("id").maybeSingle<{ id: string }>();
@@ -644,11 +648,16 @@ async function completeUpload(
   const submitter = submitterColumns(identity);
 
   const proposalForm = LIFE_HEALTH_TYPES.has(input.policy_type);
+  const trainedLayout=segregatePolicyIntakeLanes() && isN8nPolicyReadEnabled() && aiQueueEnabled() && input.policy_type==="motor"
+    ? await isTrainedLocalN8nMotorPdf(blob,input.file.type) : false;
+  const lane=incomingPolicyIntakeLane(input.policy_type,aiQueueEnabled(),trainedLayout);
+  const manualSplit=segregatePolicyIntakeLanes() && lane==="manual";
   const { error: intakeError } = await admin.from("policy_intake_requests").insert({
     id: input.id,
     intake_number: input.number,
-    status: proposalForm ? "ready_for_review" : "processing",
+    status: proposalForm || manualSplit ? "ready_for_review" : "processing",
     policy_type: input.policy_type,
+    ...(segregatePolicyIntakeLanes()?{processing_lane:lane}:{}),
     ...submitter,
     lead_source_id: source.id,
     lead_source_type: source.intermediary_type,
@@ -661,7 +670,7 @@ async function completeUpload(
     file_name: input.file.name,
     mime_type: input.file.type,
     file_size: blob.size,
-    ocr_status: proposalForm ? "completed" : "pending",
+    ocr_status: proposalForm ? "completed" : manualSplit ? "failed" : "pending",
     ...(proposalForm ? { ocr_fields: [], ocr_warnings: [] } : {}),
   });
 
@@ -690,14 +699,14 @@ async function completeUpload(
     return json({ ok: false, error: "Policy intake could not be created." }, 500);
   }
 
-  if (aiQueueEnabled()) {
+  if (aiQueueEnabled() && (!segregatePolicyIntakeLanes() || lane==="automation")) {
     // Event-driven n8n extraction for Partner, POSP, MISP and Branch uploads.
     // The durable one-minute worker remains the recovery path on shutdown.
     after(async () => {
       try { await processAiQueueBatch({preferredIntakeId:input.id}); }
       catch { console.error("[partner-policy-intake] immediate n8n queue unavailable",{intakeId:input.id}); }
     });
-  } else if (!proposalForm) {
+  } else if (!proposalForm && !manualSplit) {
     after(async () => { await processStoredOcr(input.id); });
   }
 
@@ -705,7 +714,7 @@ async function completeUpload(
     ok: true,
     id: input.id,
     number: input.number,
-    status: proposalForm ? "ready_for_review" : "processing",
+    status: proposalForm || manualSplit ? "ready_for_review" : "processing",
   });
 }
 
@@ -799,6 +808,7 @@ async function completeResponse(
   const { data: blob, error: downloadError } = await admin.storage.from(BUCKET).download(input.storage_path);
   if (downloadError || !blob) return json({ ok: false, error: "The replacement upload did not complete." }, 400);
   const proposalForm = intake.policy_type === "life" || intake.policy_type === "health";
+  const replacementManual=segregatePolicyIntakeLanes() && intake.processing_lane!=="automation";
   if (blob.size > MAX_FILE_SIZE) {
     await admin.storage.from(BUCKET).remove([input.storage_path]);
     return json({ ok: false, error: `${proposalForm ? "Proposal form" : "Policy copy"} must be 15 MB or smaller.` }, 400);
@@ -834,12 +844,12 @@ async function completeResponse(
   let update = admin
     .from("policy_intake_requests")
     .update({
-      status: proposalForm ? "ready_for_review" : "processing",
+      status: proposalForm || replacementManual ? "ready_for_review" : "processing",
       storage_path: input.storage_path,
       file_name: input.file.name,
       mime_type: input.file.type,
       file_size: blob.size,
-      ocr_status: proposalForm ? "completed" : "pending",
+      ocr_status: proposalForm ? "completed" : replacementManual ? "failed" : "pending",
       ocr_fields: [],
       ocr_warnings: [],
       ocr_parser_id: null,
@@ -858,14 +868,14 @@ async function completeResponse(
   const { error: updateError } = await update;
   if (updateError) return json({ ok: false, error: "Could not attach the replacement policy copy." }, 500);
 
-  if (aiQueueEnabled()) {
+  if (aiQueueEnabled() && (!segregatePolicyIntakeLanes() || intake.processing_lane==="automation")) {
     // Event-driven n8n extraction for Partner, POSP, MISP and Branch uploads.
     // The durable one-minute worker remains the recovery path on shutdown.
     after(async () => {
       try { await processAiQueueBatch({preferredIntakeId:input.id}); }
       catch { console.error("[partner-policy-intake] immediate n8n queue unavailable",{intakeId:input.id}); }
     });
-  } else if (!proposalForm) {
+  } else if (!proposalForm && !replacementManual) {
     after(async () => { await processStoredOcr(input.id); });
   }
 
@@ -873,7 +883,7 @@ async function completeResponse(
     ok: true,
     id: input.id,
     number: intake.intake_number,
-    status: proposalForm ? "ready_for_review" : "processing",
+    status: proposalForm || replacementManual ? "ready_for_review" : "processing",
   });
 }
 
@@ -881,7 +891,7 @@ async function ownIntake(identity: PartnerIdentity, id: string) {
   const admin = createSupabaseAdminClient();
   let query = admin
     .from("policy_intake_requests")
-    .select("id,intake_number,status,policy_type,storage_bucket,storage_path")
+    .select("id,intake_number,status,policy_type,storage_bucket,storage_path,processing_lane")
     .eq("id", id);
 
   const profileSubmitterId = submittedByProfileId(identity);
@@ -896,6 +906,7 @@ async function ownIntake(identity: PartnerIdentity, id: string) {
     policy_type: PolicyType | null;
     storage_bucket: string;
     storage_path: string;
+    processing_lane?: "manual"|"automation";
   }>();
   return data;
 }
@@ -1034,8 +1045,8 @@ async function processStoredOcr(id: string) {
 
   // Controlled n8n-required route: n8n fetches the private PDF itself via
   // short-lived signed Storage URL. Google OCR is never called for this Intake.
-  const ocr = intake.policy_type === "motor" && requiresN8nForIntake(id)
-    ? await extractPolicyIntakeWithN8nOnly(id, intake.storage_path)
+  const ocr = intake.policy_type === "motor" && (requiresN8nForIntake(id) || isN8nPolicyReadEnabled())
+    ? await extractPolicyIntakeWithN8nOnly(id, intake.storage_path, isN8nPolicyReadEnabled())
     : await (async () => {
         const { data: blob, error } = await admin.storage.from(intake.storage_bucket).download(intake.storage_path);
         if (error || !blob) {

@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { segregatePolicyIntakeLanes } from "@/lib/policy-ocr-routing-mode";
 import { after } from "next/server";
 import { extractPolicyIntakeDocumentTrusted } from "@/lib/policy-intake-ocr-service";
 import { POLICY_INTAKE_OCR_STALE_MS, isPolicyIntakeOcrRetryable } from "@/lib/policy-intake-ocr-retry";
@@ -18,6 +19,7 @@ type RetryableIntake = {
   storage_path: string;
   file_name: string;
   mime_type: string | null;
+  processing_lane?: string;
 };
 
 function isProposalType(value: string | null | undefined) {
@@ -33,11 +35,13 @@ export async function getPolicyIntakeOcrRetryState(id: string) {
   const admin = createSupabaseAdminClient();
   const { data, error } = await admin
     .from("policy_intake_requests")
-    .select("status,policy_type,ocr_status,created_at,submitted_by_profile_id")
+    .select("status,policy_type,ocr_status,created_at,submitted_by_profile_id,processing_lane")
     .eq("id", id)
     .maybeSingle<{ status: string; policy_type: string | null; ocr_status: string; created_at: string; submitted_by_profile_id: string | null }>();
   if (error || !data) return { ok: false as const, retryable: false, error: "Retry status is unavailable." };
 
+  if (segregatePolicyIntakeLanes() && (data as typeof data & {processing_lane?:string}).processing_lane==="automation")
+    return {ok:true as const,retryable:false,ocrStatus:data.ocr_status};
   const canReview = profile.role === "operations_head_life" || await hasEffectiveCapability(profile, "review_policy_intakes", "edit");
   const isOwner = data.submitted_by_profile_id === profile.id;
   if (!canReview && !isOwner) {
@@ -56,11 +60,12 @@ export async function retryPolicyIntakeOcr(id: string): Promise<RetryPolicyIntak
   const admin = createSupabaseAdminClient();
   const { data: intake, error } = await admin
     .from("policy_intake_requests")
-    .select("id,status,policy_type,ocr_status,created_at,storage_bucket,storage_path,file_name,mime_type")
+    .select("id,status,policy_type,ocr_status,created_at,storage_bucket,storage_path,file_name,mime_type,processing_lane")
     .eq("id", id)
     .maybeSingle<RetryableIntake>();
 
   if (error || !intake) return { ok: false, error: "This policy intake is unavailable. Refresh and try again." };
+  if (segregatePolicyIntakeLanes() && intake.processing_lane==="automation") return {ok:false,error:"This Intake belongs to AI Automation; use its controlled reprocess action."};
   if (isProposalType(intake.policy_type)) return { ok: false, error: "Life and Health proposal forms do not use policy OCR and are stored for review only." };
   if (!isPolicyIntakeOcrRetryable({ status: intake.status, ocrStatus: intake.ocr_status, createdAt: intake.created_at })) {
     return { ok: false, error: "This detail fetch is already running or no longer needs a retry." };
@@ -71,6 +76,7 @@ export async function retryPolicyIntakeOcr(id: string): Promise<RetryPolicyIntak
     .update({ ocr_status: "pending", ocr_warnings: [] })
     .eq("id", id)
     .eq("status", intake.status);
+  if (segregatePolicyIntakeLanes()) claim=claim.eq("processing_lane","manual");
 
   if (intake.ocr_status === "failed") {
     claim = claim.eq("ocr_status", "failed");
@@ -96,11 +102,11 @@ async function processRetry(id: string, expectedStoragePath: string, expectedWor
   const admin = createSupabaseAdminClient();
   const { data: intake } = await admin
     .from("policy_intake_requests")
-    .select("id,status,policy_type,ocr_status,storage_bucket,storage_path,file_name,mime_type")
+    .select("id,status,policy_type,ocr_status,storage_bucket,storage_path,file_name,mime_type,processing_lane")
     .eq("id", id)
     .maybeSingle<Omit<RetryableIntake, "created_at">>();
 
-  if (!intake || isProposalType(intake.policy_type) || intake.status !== expectedWorkflowStatus || intake.ocr_status !== "pending" || intake.storage_path !== expectedStoragePath) return;
+  if (!intake || (segregatePolicyIntakeLanes() && intake.processing_lane==="automation") || isProposalType(intake.policy_type) || intake.status !== expectedWorkflowStatus || intake.ocr_status !== "pending" || intake.storage_path !== expectedStoragePath) return;
 
   const { data: started } = await admin
     .from("policy_intake_requests")

@@ -3,6 +3,7 @@ import "server-only";
 import { createHash, randomUUID } from "node:crypto";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { createCurrentIntakePdfSignedSource } from "@/lib/policy-intake-n8n-signed-source";
+import { segregatePolicyIntakeLanes } from "@/lib/policy-ocr-routing-mode";
 import { requestN8nPolicyIntakeBySignedSource, type N8nOcrField, type N8nVerifiedPremiumBreakdown } from "@/lib/policy-intake-n8n-bridge";
 import { loadPolicyIntakeDuplicateMatches } from "@/lib/policy-intake-duplicate";
 
@@ -12,6 +13,7 @@ const ALLOWED_STATUSES = new Set(["processing", "ready_for_review", "in_review",
 
 type Intake = {
   id: string; intake_number: string; status: string; policy_type: string | null;
+  processing_lane?: "manual" | "automation";
   ocr_status: string; ocr_fields: N8nOcrField[] | null; created_at: string;
   storage_bucket: string; storage_path: string; file_name: string; mime_type: string | null;
 };
@@ -78,7 +80,7 @@ async function currentSnapshot(id: string): Promise<SourceSnapshot | null> {
   const admin = createSupabaseAdminClient();
   const [record, copy] = await Promise.all([
     admin.from("policy_intake_requests")
-      .select("id,intake_number,status,policy_type,ocr_status,ocr_fields,created_at,storage_bucket,storage_path,file_name,mime_type")
+      .select("id,intake_number,status,policy_type,processing_lane,ocr_status,ocr_fields,created_at,storage_bucket,storage_path,file_name,mime_type")
       .eq("id", id).maybeSingle<Intake>(),
     admin.from("policy_intake_documents")
       .select("id,storage_bucket,storage_path,file_name,mime_type")
@@ -86,7 +88,8 @@ async function currentSnapshot(id: string): Promise<SourceSnapshot | null> {
   ]);
   if (record.error || copy.error || !record.data || !copy.data) return null;
   const intake = record.data, document = copy.data;
-  if ((intake.policy_type !== null
+  if ((segregatePolicyIntakeLanes() && intake.processing_lane!=="automation")
+      || (intake.policy_type !== null
       && !["motor", "non_motor", "life", "health"].includes(intake.policy_type))
       || !ALLOWED_STATUSES.has(intake.status)
       || intake.storage_bucket !== BUCKET || document.storage_bucket !== BUCKET

@@ -734,12 +734,14 @@ assert(workbenchText.includes("Check customer matches")
 // be invoked when the verified n8n workbench/queue is enabled.
 assert(normalUploadActions.includes("processAiQueueBatch({preferredIntakeId:input.id})")
   && normalUploadActions.split("processAiQueueBatch({preferredIntakeId:input.id})").length===3
-  && normalUploadActions.includes("if(aiQueueEnabled())"),
-  "Operations originals and replacements must dispatch immediate n8n independently of cron");
+  && normalUploadActions.includes('if(aiQueueEnabled() && (!segregatePolicyIntakeLanes() || lane==="automation"))')
+  && normalUploadActions.includes('if(aiQueueEnabled() && !segregatePolicyIntakeLanes())'),
+  "Operations originals must dispatch immediate n8n only in automation lane; manual replacements cannot bypass isolation");
 assert(partnerUploadApi.includes("processAiQueueBatch({preferredIntakeId:input.id})")
   && partnerUploadApi.split("processAiQueueBatch({preferredIntakeId:input.id})").length===3
-  && partnerUploadApi.includes("if (aiQueueEnabled())"),
-  "Partner and Branch originals and replacements must dispatch immediate n8n independently of cron");
+  && partnerUploadApi.includes('if (aiQueueEnabled() && (!segregatePolicyIntakeLanes() || lane==="automation"))')
+  && partnerUploadApi.includes('if (aiQueueEnabled() && (!segregatePolicyIntakeLanes() || intake.processing_lane==="automation"))'),
+  "Partner and Branch originals and replacements must dispatch n8n only for automation lane");
 assert(workerText.includes("const MAX_BATCH = 6")
   && workerText.includes("const MAX_CONCURRENT = 3")
   && workerText.includes("Promise.all(wave.map(")

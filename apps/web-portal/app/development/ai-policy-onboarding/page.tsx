@@ -6,6 +6,7 @@ import { requireCapability } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { fetchAllPages } from "@/lib/fetch-all-pages";
 import { loadPolicyIntakeDuplicateMatches } from "@/lib/policy-intake-duplicate";
+import { segregatePolicyIntakeLanes } from "@/lib/policy-ocr-routing-mode";
 import { policyIntakeBucket, policyIntakeStatusCounts, type IntakeStatusBucket } from "@/lib/policy-intake-status-buckets";
 import { getPartnerEmployeeIntakeReadScope } from "@/lib/partner-policy-intake-read-access";
 import { isN8nWorkbenchPrimary, semiAutoN8nEnabledForIntake } from "@/lib/policy-intake-semi-auto-n8n";
@@ -48,6 +49,7 @@ export default async function SemiAutoPolicyOnboardingPage({ searchParams }: { s
     // policy type, even older rows without a classified policy_type; untrained
     // formats receive a review-needed response, not a fabricated extraction.
     let scoped = primaryN8n ? current : current.eq("policy_type", "motor");
+    if (segregatePolicyIntakeLanes()) scoped = scoped.eq("processing_lane","automation");
     if (intakeScope.mode === "or") scoped = scoped.or(intakeScope.predicates);
     else if (intakeScope.mode === "submitter") scoped = scoped.eq("submitted_by_profile_id", intakeScope.profileId);
     else if (intakeScope.mode === "none") scoped = scoped.eq("id","00000000-0000-0000-0000-000000000000");
@@ -168,7 +170,7 @@ export default async function SemiAutoPolicyOnboardingPage({ searchParams }: { s
                 <span aria-hidden="true" className={queueActive ? "h-1.5 w-1.5 rounded-full bg-[#65dec4]" : "h-1.5 w-1.5 rounded-full bg-amber-300"}/>
                 {queueActive ? "n8n queue enabled" : primaryN8n ? "n8n review mode" : "Manual review"}
               </span>
-              <Link href="/policy-intakes" className="inline-flex h-8 items-center rounded-md border border-[#607a97] bg-white px-3 text-[10px] font-bold text-[#163a5b] hover:bg-[#f0f7ff]">Policy Intake Register</Link>
+              <Link href="/policy-intakes" className="inline-flex h-8 items-center rounded-md border border-[#607a97] bg-white px-3 text-[10px] font-bold text-[#163a5b] hover:bg-[#f0f7ff]">{segregatePolicyIntakeLanes()?"Manual Onboarding":"Policy Intake Register"}</Link>
             </div>
           </div>
         </header>
