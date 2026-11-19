@@ -63,6 +63,48 @@ export type AiAssessment =
   | { state: "unsupported" | "needs_action" | "preflight_pending"; exceptions: AiPolicyException[] }
   | { state: "eligible"; exceptions: [] };
 
+/**
+ * Independent n8n bridge validation already checks all per-field/financial
+ * evidence. This second-stage assessment must recognize the exact trained
+ * parser and its full check count, without mistaking informational Tata AIG
+ * review warnings for unreadable/unsupported PDFs.
+ *
+ * These are extraction checks, NOT policy-booking authorization.
+ */
+export const ICICI_N8N_IDS = new Set([
+  "icici_3005_n8n_native_pdf", "icici_3005_od_n8n_native_pdf",
+]);
+export const TATA_AIG_PRIVATE_CAR_N8N_IDS = new Set([
+  "tata_aig_private_car_saod_n8n_native_pdf",
+  "tata_aig_private_car_package_n8n_native_pdf",
+  "tata_aig_private_car_bundled_n8n_native_pdf",
+]);
+export const TATA_AIG_TWO_WHEELER_N8N_ID = "tata_aig_two_wheeler_bundled_n8n_native_pdf";
+const TATA_INFORMATIONAL_WARNINGS = new Set([
+  "tata_aig_issuance_date_unverified",
+  "tata_aig_human_review_required",
+  "tata_aig_printed_net_rounding",
+  "tata_aig_signature_date_not_in_native_text",
+]);
+export type TrainedN8nParserFamily = "icici" | "tata_private_car" | "tata_two_wheeler";
+export function trainedN8nParserProfile(parserId: string | null): {
+  checks: 13 | 18; family: TrainedN8nParserFamily;
+} | null {
+  if (!parserId) return null;
+  if (ICICI_N8N_IDS.has(parserId)) return { checks:13, family:"icici" };
+  if (TATA_AIG_PRIVATE_CAR_N8N_IDS.has(parserId)) return { checks:18, family:"tata_private_car" };
+  if (parserId===TATA_AIG_TWO_WHEELER_N8N_ID) return { checks:18, family:"tata_two_wheeler" };
+  return null;
+}
+export function hasVerifiedN8nParserEvidence(
+  parserId: string | null, checksPassed: number, warnings: readonly string[],
+): boolean {
+  const profile=trainedN8nParserProfile(parserId);
+  return Boolean(profile && checksPassed===profile.checks
+    && (profile.family==="icici" ? warnings.length===0
+      : warnings.every(warning=>TATA_INFORMATIONAL_WARNINGS.has(warning))));
+}
+
 const requiredFields = [
   "insured_name", "policy_number", "insurer_name", "vehicle_class",
   "vehicle_make", "vehicle_model", "vehicle_fuel_type",
@@ -79,7 +121,8 @@ export function assessAiPolicyIntake(input: AiPolicyEvidence): AiAssessment {
       exceptions.push({ code, title, resolution, blocking: true });
     }
   };
-  if (input.policyType !== "motor" || !["icici_3005_n8n_native_pdf", "icici_3005_od_n8n_native_pdf"].includes(input.parserId ?? "")) {
+  const parser=trainedN8nParserProfile(input.parserId);
+  if (input.policyType !== "motor" || !parser) {
     add("unsupported_layout", "Parser not trained for this policy", "train_parser");
   }
   if (!input.hasCurrentDocument) add("document_missing", "Current policy PDF missing", "edit_draft");
@@ -87,7 +130,7 @@ export function assessAiPolicyIntake(input: AiPolicyEvidence): AiAssessment {
   if (input.extractionState === "pending") add("extraction_pending", "Awaiting n8n extraction", "reprocess");
   if (input.extractionState === "failed") add("extraction_failed", "n8n could not verify this policy", "reprocess");
   if (input.extractionState === "success" &&
-      (input.parserChecksPassed !== 13 || input.extractionWarnings.length > 0)) {
+      !hasVerifiedN8nParserEvidence(input.parserId,input.parserChecksPassed,input.extractionWarnings)) {
     add("unverified_parser", "Policy validation or premium evidence incomplete", "edit_draft");
   }
   if (input.isDuplicate) add("duplicate_policy", "Possible duplicate policy or Intake", "inspect_duplicate");
@@ -95,7 +138,17 @@ export function assessAiPolicyIntake(input: AiPolicyEvidence): AiAssessment {
 
   if (input.extractionState === "success") {
     const fields = new Map(input.fields.map(field => [field.key, field.value.trim()]));
-    if (requiredFields.some(key => !fields.get(key))) {
+    // The old kW-only requirement is valid for ICICI 3005 and electric
+    // two-wheelers, but not for petrol/diesel Tata AIG private cars.
+    const required=[...requiredFields].filter(key =>
+      key!=="vehicle_motor_power_kw" || parser?.family!=="tata_private_car");
+    if (parser?.family==="tata_private_car" || parser?.family==="tata_two_wheeler") {
+      required.push("vehicle_capacity","vehicle_registration_status","vehicle_rto_state");
+      if (fields.get("vehicle_registration_status")?.toLowerCase()==="registered") {
+        required.push("vehicle_registration_number");
+      }
+    }
+    if (required.some(key => !fields.get(key))) {
       add("missing_field", "Mandatory extracted fields are missing", "edit_draft");
     }
     if (!input.matchedManufacturer) add("manufacturer_unmatched", "Vehicle make not matched to master", "edit_draft");
