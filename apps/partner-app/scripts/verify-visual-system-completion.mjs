@@ -142,6 +142,21 @@ const accountShellHeader = read('components/partner-case-page-header.tsx');
 requireText(accountShellHeader, "backgroundColor: '#0A234A'", 'Account header must match the Policy Details title strip.');
 requireText(accountShellHeader, 'accessibilityRole="header"', 'Account page title must be accessible.');
 const deletionScreen = read('app/account-deletion.tsx');
+for (const [fragment, reason] of [
+  ['styles.hero', 'Branded deletion page has a hero'],
+  ['styles.heroUnderline', 'Hero title uses purple accent underline'],
+  ["require('../assets/insureit-partner-official.png')", 'Hero uses official Partner brand asset'],
+  ['styles.cardHeader', 'Data retention explanation has a lavender info header'],
+  ['name="information"', 'Data card shows an information icon'],
+  ['name="trash-outline"', 'Deletion CTA shows a trash icon'],
+  ['name="chevron-forward"', 'Deletion CTA shows a forward chevron'],
+  ['styles.noteCard', 'Deletion advice uses a lavender support card'],
+  ['styles.noteEmphasis', 'Password safety message remains emphasized'],
+  ['submitAccountDeletionRequest().then(setRequest)', 'Existing deletion submission remains intact'],
+  ['disabled={busy || active}', 'Duplicate deletion requests remain disabled'],
+  ['<PartnerCaseBottomNavigation activeTab="More" />', 'Account deletion retains the five-tab navy footer'],
+]) requireText(deletionScreen, fragment, reason);
+
 for (const [screen, label] of [[settings, 'Settings'], [profile, 'Profile'], [support, 'Support'], [deletionScreen, 'Account deletion']]) {
   requireText(screen, 'hideTopBar navyStatusBar bottomNavigationNavy', `${label} must opt into the Policy Details navy shell.`);
   requireText(screen, '<PartnerCaseBottomNavigation activeTab="More" />', `${label} must retain permission-aware five-tab navigation with More selected.`);
