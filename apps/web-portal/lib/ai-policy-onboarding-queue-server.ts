@@ -3,7 +3,7 @@ import "server-only";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { isN8nWorkbenchPrimary, previewSemiAutoN8nExtraction } from "@/lib/policy-intake-semi-auto-n8n";
 import { segregatePolicyIntakeLanes } from "@/lib/policy-ocr-routing-mode";
-import { assessAiPolicyIntake, type AiPolicyEvidence, type AiPolicyExceptionCode } from "@/lib/ai-policy-onboarding-eligibility";
+import { assessAiPolicyIntake, hasVerifiedN8nParserEvidence, ICICI_N8N_IDS, type AiPolicyEvidence, type AiPolicyExceptionCode } from "@/lib/ai-policy-onboarding-eligibility";
 import { loadPolicyIntakeDuplicateMatches } from "@/lib/policy-intake-duplicate";
 import { policyDateDecision } from "@/lib/policy-date-rule";
 import type { PolicyIntakeOcrField } from "@/lib/policy-intake-ocr-service";
@@ -197,8 +197,9 @@ async function processClaim(item: Claimed, parserRevision: string) {
     }
   }
 
-  // Only independently verified ICICI 3005 Bundled or 3005/O OD Motor PDFs
-  // are trained. Never run an experimental parser on Non-Motor documents.
+  // Only Motor PDFs proceed to the strict independent n8n bridge.
+  // The subsequent assessment recognizes trained ICICI and Tata AIG formats;
+  // Non-Motor documents remain outside this workflow.
   if (intake.policy_type!==null && intake.policy_type!=="motor") {
     await finishClaim(item,{
       state:"unsupported",exception_codes:["unsupported_layout"],field_keys:[],
@@ -273,7 +274,12 @@ async function processClaim(item: Claimed, parserRevision: string) {
   // Copy ONLY strictly validated n8n OCR into an empty, unchanged Intake.
   // An atomic SQL compare-and-set checks current document, lease, empty OCR,
   // status, and absence of saved draft. This never books a policy.
-  if(extraction.preview.checksPassed===13 && extraction.preview.warnings.length===0
+  // The transactional OCR-sync RPC is still approved for warning-free ICICI
+  // only. Tata AIG is review-only, with issuance/signature evidence requiring
+  // human review, and must not be silently persisted as canonical OCR.
+  if(ICICI_N8N_IDS.has(extraction.preview.parserId)
+    && hasVerifiedN8nParserEvidence(extraction.preview.parserId,
+      extraction.preview.checksPassed,extraction.preview.warnings)
     && intake.status==="processing"
     && ["pending","processing","failed"].includes(intake.ocr_status)
     && (intake.ocr_fields??[]).length===0
@@ -309,7 +315,7 @@ async function processClaim(item: Claimed, parserRevision: string) {
   // missing CC/KW still blocks mandatory-field eligibility, never guessed.
   const recognizedChetak=rawMake==="CHETAK"
     && model.length>=2 && model.length<=100
-    && normalizedName(values.get("vehicle_class")??"")==="TWO WHEELER"
+    && ["TWO WHEELER","TWP"].includes(normalizedName(values.get("vehicle_class")??""))
     && normalizedName(values.get("vehicle_fuel_type")??"")==="ELECTRIC";
   const make=recognizedChetak?"BAJAJ":rawMake;
   const enabledMakes=new Set((brands??[]).map(x=>normalizedName(x.brand_name)));
@@ -331,9 +337,10 @@ async function processClaim(item: Claimed, parserRevision: string) {
   // dates. Bundled itself is not an exception once both periods were validated.
   // Canonical form derives the associated CPA schedule from verified cover
   // dates; final booking independently validates it through existing rules.
+  const verifiedParserEvidence=hasVerifiedN8nParserEvidence(
+    extraction.preview.parserId,extraction.preview.checksPassed,extraction.preview.warnings);
   const bundledPeriodsVerified=!bundled||(
-    extraction.preview.checksPassed===13
-    && extraction.preview.warnings.length===0
+    verifiedParserEvidence
     && ["policy_start_date","policy_end_date","third_party_start_date","third_party_end_date"]
       .every(key=>Boolean(values.get(key)))
   );
@@ -348,8 +355,7 @@ async function processClaim(item: Claimed, parserRevision: string) {
     extractionState:"success" as const,
     extractionWarnings:extraction.preview.warnings,
     fields:extraction.preview.fields.map(f=>({key:f.key,value:f.value})),
-    premiumReconciled:extraction.preview.checksPassed===13
-      && extraction.preview.warnings.length===0,
+    premiumReconciled:verifiedParserEvidence,
     matchedManufacturer,customerMatch,
     sharedPhoneHasDistinctNames:sharedDifferentNames,
     existingCustomerSameIdentity:exact.length>0,
