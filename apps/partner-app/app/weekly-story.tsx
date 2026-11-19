@@ -195,8 +195,7 @@ export default function WeeklyStoryScreen() {
             style={({ pressed }) => [styles.nextCard, pressed && styles.cardPressed]}
           >
             <View style={styles.nextIcon}>
-              <Image source={PartnerAssets.actions.renewals} style={styles.nextArtwork} resizeMode="contain" />
-              <View style={styles.clockBadge}><Ionicons name="time" size={12} color="#FFFFFF" /></View>
+              <Image source={PartnerAssets.actions.quickRenewals} style={styles.nextArtwork} resizeMode="contain" />
             </View>
             <View style={styles.nextBody}>
               <Text style={styles.nextTitle}>{data.renewals_next_week} renewal{data.renewals_next_week === 1 ? '' : 's'} next week</Text>
@@ -332,8 +331,7 @@ const styles = StyleSheet.create({
   nextCard: { minHeight: 79, flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 16, paddingHorizontal: 15, paddingVertical: 13, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E1E7F0', shadowColor: '#163565', shadowOpacity: 0.05, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 2 },
   cardPressed: { opacity: 0.72 },
   nextIcon: { position: 'relative', width: 48, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: '#E6F1FF' },
-  nextArtwork: { width: 34, height: 34 },
-  clockBadge: { position: 'absolute', right: 4, bottom: 4, width: 17, height: 17, borderRadius: 9, alignItems: 'center', justifyContent: 'center', backgroundColor: '#3C87E8', borderWidth: 1.5, borderColor: '#E6F1FF' },
+  nextArtwork: { width: 40, height: 40 },
   nextBody: { flex: 1, minWidth: 0 },
   nextTitle: { color: '#07142F', fontSize: 13.5, lineHeight: 18, fontWeight: '800' },
   nextText: { marginTop: 5, color: '#65728C', fontSize: 10.5, lineHeight: 15, fontWeight: '500' },
