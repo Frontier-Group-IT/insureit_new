@@ -739,8 +739,8 @@ assert(normalUploadActions.includes("processAiQueueBatch({preferredIntakeId:inpu
   "Operations originals must dispatch immediate n8n only in automation lane; manual replacements cannot bypass isolation");
 assert(partnerUploadApi.includes("processAiQueueBatch({preferredIntakeId:input.id})")
   && partnerUploadApi.split("processAiQueueBatch({preferredIntakeId:input.id})").length===3
-  && partnerUploadApi.includes('if (aiQueueEnabled() && (!segregatePolicyIntakeLanes() || lane==="automation"))')
-  && partnerUploadApi.includes('if (aiQueueEnabled() && (!segregatePolicyIntakeLanes() || intake.processing_lane==="automation"))'),
+  && partnerUploadApi.includes('if (!proposalForm && aiQueueEnabled() && (!segregatePolicyIntakeLanes() || lane==="automation"))')
+  && partnerUploadApi.includes('if (!proposalForm && aiQueueEnabled() && (!segregatePolicyIntakeLanes() || intake.processing_lane==="automation"))'),
   "Partner and Branch originals and replacements must dispatch n8n only for automation lane");
 assert(workerText.includes("const MAX_BATCH = 6")
   && workerText.includes("const MAX_CONCURRENT = 3")
