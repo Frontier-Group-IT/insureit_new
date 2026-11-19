@@ -1,0 +1,25 @@
+name: Verify isolated non-Tata commercial parser
+
+on:
+  pull_request:
+    paths:
+      - 'infra/n8n-local/workflows/non-tata-commercial-motor-native-pdf-parser-v1.js'
+      - 'infra/n8n-local/tests/non-tata-commercial-parser-regression.mjs'
+      - '.github/workflows/verify-nontata-commercial-parser.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  nontata-parser:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify original-PII-free source and synthetic fixtures
+        run: node infra/n8n-local/tests/non-tata-commercial-parser-regression.mjs
