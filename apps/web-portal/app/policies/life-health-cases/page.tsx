@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { LifeHealthLineFilter } from "@/components/life-health-line-filter";
 import { AppShell } from "@/components/shell";
 import { LifeHealthSuperUserDeletePanel } from "@/components/life-health-superuser-delete-panel";
 import { LifeHealthCaseRegister, type LifeHealthCaseRegisterRow } from "@/components/life-health-case-register";
@@ -15,8 +16,9 @@ type CaseRow = { id: string; case_number: string; business_line: string; status:
 type CustomerRow = { id: string; contact_name: string; company_name: string | null; phone: string };
 type InsurerRow = { id: string; name: string };
 type CaseFilter = "pending" | "rejected" | "issued" | "all";
+type BusinessLineFilter = "all" | "life" | "health";
 
-export default async function LifeHealthCasesPage({ searchParams }: { searchParams?: Promise<{ status?: string }> }) {
+export default async function LifeHealthCasesPage({ searchParams }: { searchParams?: Promise<{ status?: string; line?: string }> }) {
   const profile = await requireCapability("view_policies");
   if (profile.role !== "operations_head_life") await requirePolicyCreator();
   const downlineCaseFilter = profile.role === "operations_head_life"
@@ -24,6 +26,7 @@ export default async function LifeHealthCasesPage({ searchParams }: { searchPara
     : null;
   const params = searchParams ? await searchParams : undefined;
   const filter: CaseFilter = params?.status === "issued" || params?.status === "rejected" || params?.status === "all" ? params.status : "pending";
+  const lineFilter: BusinessLineFilter = params?.line === "life" || params?.line === "health" ? params.line : "all";
   const admin = createSupabaseAdminClient();
   const [{ data: rows, error }, caseSummary] = await Promise.all([
     downlineCaseFilter !== null
@@ -37,10 +40,11 @@ export default async function LifeHealthCasesPage({ searchParams }: { searchPara
   ]);
   if (error) return <AppShell title="Life / Health Cases"><div className="rounded-xl border border-red-200 bg-red-50 px-4 py-4 text-[10px] text-red-700">Life / Health cases could not be loaded.</div></AppShell>;
   const allRows = rows ?? [];
-  const pendingCount = caseSummary?.pending ?? allRows.filter((row) => !row.final_policy_id && row.status !== "rejected").length;
-  const rejectedCount = caseSummary?.rejected ?? allRows.filter((row) => row.status === "rejected" && !row.final_policy_id).length;
-  const issuedCount = caseSummary?.issued ?? allRows.filter((row) => Boolean(row.final_policy_id)).length;
-  const allCount = caseSummary?.all ?? allRows.length;
+  const lineRows = lineFilter === "all" ? allRows : allRows.filter((row) => row.business_line.trim().toLowerCase() === lineFilter);
+  const pendingCount = lineFilter === "all" && caseSummary ? caseSummary.pending : lineRows.filter((row) => !row.final_policy_id && row.status !== "rejected").length;
+  const rejectedCount = lineFilter === "all" && caseSummary ? caseSummary.rejected : lineRows.filter((row) => row.status === "rejected" && !row.final_policy_id).length;
+  const issuedCount = lineFilter === "all" && caseSummary ? caseSummary.issued : lineRows.filter((row) => Boolean(row.final_policy_id)).length;
+  const allCount = lineFilter === "all" && caseSummary ? caseSummary.all : lineRows.length;
   const customerIds = Array.from(new Set(allRows.map((row) => row.customer_id)));
   const insurerIds = Array.from(new Set(allRows.map((row) => row.insurance_company_id)));
   const [customersResult, insurersResult] = await Promise.all([
@@ -55,7 +59,7 @@ export default async function LifeHealthCasesPage({ searchParams }: { searchPara
     { key: "issued", label: "Issued", count: issuedCount },
     { key: "all", label: "All", count: allCount },
   ];
-  const registerRows: LifeHealthCaseRegisterRow[] = allRows.map((row) => {
+  const registerRows: LifeHealthCaseRegisterRow[] = lineRows.map((row) => {
     const customer = customerMap.get(row.customer_id);
     return {
       id: row.id,
@@ -77,5 +81,5 @@ export default async function LifeHealthCasesPage({ searchParams }: { searchPara
   });
   return <AppShell title="Life / Health Cases"><div className="mx-auto max-w-[1480px] space-y-4 pb-8">
     {profile.role === "it_super_user" ? <LifeHealthSuperUserDeletePanel records={allRows.map((row) => { const customer = customerMap.get(row.customer_id); return { id: row.id, label: row.case_number, detail: [row.business_line, customer?.company_name?.trim() || customer?.contact_name, insurerMap.get(row.insurance_company_id), row.proposal_number].filter(Boolean).join(" • "), issued: Boolean(row.final_policy_id) }; })} /> : null}
-    <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#D9E2F0] bg-white px-4 py-3 shadow-sm"><div><p className="text-[8px] font-bold uppercase tracking-[.1em] text-[#64748B]">Case register</p><h1 className="mt-1 text-[15px] font-semibold text-[#17365D]">Life & Health Cases</h1></div><div className="flex items-center gap-2"><div className="flex items-center rounded-xl border border-[#D9E2F0] bg-[#F8FAFC] p-1">{filters.map((item) => <Link key={item.key} href={item.key === "pending" ? "/policies/life-health-cases" : `/policies/life-health-cases?status=${item.key}`} className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-[9px] font-bold transition-colors ${filter === item.key ? "bg-[#17365D] text-white shadow-sm" : "text-[#64748B] hover:bg-white hover:text-[#17365D]"}`}><span>{item.label}</span><span className={`tabular-nums ${filter === item.key ? "text-white/80" : "text-[#98A2B3]"}`}>{item.count}</span></Link>)}</div><Link href="/policies/new" className="rounded-xl bg-[#17365D] px-4 py-2.5 text-[10px] font-bold text-white">Add Policy / Case</Link></div></div><LifeHealthCaseRegister rows={registerRows} statusFilter={filter} emptyLabel={`No ${filter === "pending" ? "pending" : filter === "issued" ? "issued" : filter === "rejected" ? "rejected" : "Life / Health"} cases found.`} /></div></AppShell>;
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#D9E2F0] bg-white px-4 py-3 shadow-sm"><div><p className="text-[8px] font-bold uppercase tracking-[.1em] text-[#64748B]">Case register</p><h1 className="mt-1 text-[15px] font-semibold text-[#17365D]">Life & Health Cases</h1></div><div className="flex flex-wrap items-center gap-2"><LifeHealthLineFilter line={lineFilter} status={filter} /><div className="flex items-center rounded-xl border border-[#D9E2F0] bg-[#F8FAFC] p-1">{filters.map((item) => <Link key={item.key} href={`/policies/life-health-cases?${new URLSearchParams({ ...(item.key === "pending" ? {} : { status: item.key }), ...(lineFilter === "all" ? {} : { line: lineFilter }) }).toString()}`} className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-[9px] font-bold transition-colors ${filter === item.key ? "bg-[#17365D] text-white shadow-sm" : "text-[#64748B] hover:bg-white hover:text-[#17365D]"}`}><span>{item.label}</span><span className={`tabular-nums ${filter === item.key ? "text-white/80" : "text-[#98A2B3]"}`}>{item.count}</span></Link>)}</div><Link href="/policies/new" className="rounded-xl bg-[#17365D] px-4 py-2.5 text-[10px] font-bold text-white">Add Policy / Case</Link></div></div><LifeHealthCaseRegister rows={registerRows} statusFilter={filter} emptyLabel={`No ${lineFilter === "all" ? "Life / Health" : lineFilter === "life" ? "Life" : "Health"} ${filter === "all" ? "" : filter} cases found.`} /></div></AppShell>;
 }
