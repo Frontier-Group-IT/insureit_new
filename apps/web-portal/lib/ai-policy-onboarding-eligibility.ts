@@ -1,4 +1,5 @@
 import type { PolicyIssuanceDateEvidence } from "./policy-issuance-signature-evidence.ts";
+import { indiaDate } from "./policy-date-rule.ts";
 
 /**
  * Pure, conservative exception vocabulary for future AI Policy Intake queue.
@@ -137,7 +138,9 @@ export function acceptedTataAigIssuanceDate(input: {
     const parsed=new Date(value+"T00:00:00Z");
     return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0,10)===value;
   };
-  if(!day(evidence.proposedDate) || evidence.proposedDate!==evidence.receiptDate) return null;
+  // Never accept a future calendar day, including later in this same month.
+  if(!day(evidence.proposedDate) || evidence.proposedDate>indiaDate()
+    || evidence.proposedDate!==evidence.receiptDate) return null;
   const fields=new Map(input.fields.map(f=>[f.key,f.value.trim()]));
   // A separately printed issue date takes precedence; conflicting evidence
   // requires human attention rather than choosing one silently.
