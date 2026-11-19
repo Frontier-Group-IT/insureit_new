@@ -126,7 +126,11 @@ expect(activity.includes("styles.itemCardUnread") && activity.includes("styles.u
   activity.includes("styles.titleRead"), "Unread highlight, dot and read styling remain intact");
 
 // Activity-only layout refresh: title, iOS/Android safe-area color, compact width and reference overflow.
-expect(activity.includes('<PartnerScreen title="Activity" hideTopBar fullWidth statusBarColor="#0879DF">'), "Activity title, full-width screen and blue status-bar opt-in are configured");
+expect(activity.includes('title="Activity"') && activity.includes('hideTopBar') && activity.includes('fullWidth') &&
+  activity.includes('navyStatusBar') && activity.includes('bottomNavigationNavy') &&
+  activity.includes('<PartnerCaseBottomNavigation activeTab="Home" />') &&
+  activity.includes("height: 56,") && activity.includes("backgroundColor: '#071E49'"),
+  "Activity retains its full-width title, compact 56-point navy header and permission-aware bottom navigation");
 expect(activity.includes('<Text style={styles.heroTitle}>Activity</Text>') && !activity.includes('What changed'), "Visible Activity header no longer says What changed");
 expect(screen.includes('statusBarColor?: string;') && screen.includes('statusBarColor ? { backgroundColor: statusBarColor } : null'), "Shared PartnerScreen supports an opt-in colored safe area");
 expect(screen.includes("backgroundColor={statusBarColor ?? (navyStatusBar ? '#071E49' : undefined)}") && screen.includes("style={statusBarColor || navyStatusBar"), "Status bar uses matching color and light system indicators");
