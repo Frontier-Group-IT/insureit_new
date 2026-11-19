@@ -31,15 +31,15 @@ type IconPalette = {
 // A palette per destination makes the small icons easy to distinguish at a glance.
 // The extruded silhouettes, rim lighting and inset tile replace flat monochrome glyphs
 // without adding image downloads, native dependencies, or changing touch targets.
-// Only these six destinations use the supplied illustrated 3D PNG artwork.
+// Six destinations use bundled illustrated 3D PNG artwork, including three updated icons.
 // All other More menu icons preserve their existing native vector rendering.
 const ILLUSTRATED_ICONS: Partial<Record<PartnerProfileMenuIconKind, ImageSourcePropType>> = {
-  'policy-intake': require('../../assets/partner/icons/more-policy-intake.png'),
+  'policy-intake': require('../../assets/partner/icons/more-policy-intake-3d.png'),
   'case-register': require('../../assets/partner/icons/more-case-register.png'),
   renewals: require('../../assets/partner/icons/more-renewals.png'),
-  customers: require('../../assets/partner/icons/more-customers.png'),
+  customers: require('../../assets/partner/icons/more-customers-3d.png'),
   impact: require('../../assets/partner/icons/more-impact.png'),
-  journey: require('../../assets/partner/icons/more-journey.png'),
+  journey: require('../../assets/partner/icons/more-journey-3d.png'),
 };
 
 const CONFIG: Record<Exclude<PartnerProfileMenuIconKind, 'case-register'>, IconPalette> = {

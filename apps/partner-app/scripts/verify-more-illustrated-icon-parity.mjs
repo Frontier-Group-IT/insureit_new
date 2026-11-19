@@ -18,12 +18,18 @@ assert.match(more, /iconKind="case-register" title="Case Register"/);
 assert.match(more, /iconKind="policy-intake" title="Policy Intake"/);
 const mapping = icon.slice(icon.indexOf('const ILLUSTRATED_ICONS:'),icon.indexOf('const CONFIG:'));
 assert.ok(mapping.startsWith('const ILLUSTRATED_ICONS:'), 'Illustrated icons must be centrally mapped');
+const redesigned = new Set(['policy-intake', 'customers', 'journey']);
 for (const [kind,title] of illustrated) {
+  const file = `more-${kind}${redesigned.has(kind) ? '-3d' : ''}.png`;
   assert.ok(more.includes('title="'+title+'"'), 'Preserve menu action '+title);
-  assert.ok(mapping.includes("more-"+kind+".png"), 'Missing illustrated asset mapping '+kind);
-  const png=readFileSync(new URL('../assets/partner/icons/more-'+kind+'.png',import.meta.url));
+  assert.ok(mapping.includes(file), 'Missing illustrated asset mapping '+kind);
+  const png=readFileSync(new URL('../assets/partner/icons/'+file,import.meta.url));
   assert.equal(png.subarray(0,8).toString('hex'),'89504e470d0a1a0a', 'Asset must be local PNG: '+kind);
-  assert.ok(png.length>1000,'Icon artwork missing content for '+kind);
+  assert.ok(png.length>(redesigned.has(kind) ? 500 : 1000),'Icon artwork missing content for '+kind);
+  if (redesigned.has(kind)) {
+    assert.equal(png.readUInt32BE(16), 64, 'Updated icon must be 64px wide: '+kind);
+    assert.equal(png.readUInt32BE(20), 64, 'Updated icon must be 64px high: '+kind);
+  }
 }
 for (const kind of untouched) {
   assert.doesNotMatch(mapping,new RegExp("^(?:\\s*['\\\"]?"+kind+"['\\\"]?)\\s*:",'m'),
