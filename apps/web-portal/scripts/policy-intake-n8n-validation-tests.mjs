@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { validateN8nPolicyIntakeResponse } from "../lib/policy-intake-n8n-validation.ts";
-import { mapVerifiedN8nMotorPremium } from "../lib/policy-n8n-onboarding-premium.ts";
+import { mapVerifiedN8nMotorPremium, verifiedCpaSelectionMatches } from "../lib/policy-n8n-onboarding-premium.ts";
 import { buildPolicyOcrOnboardingUpdate } from "../lib/policy-ocr-onboarding-apply.ts";
 
 const ids = {intakeId:"00000000-0000-4000-8000-000000000001",documentId:"00000000-0000-4000-8000-000000000002",requestId:"00000000-0000-4000-8000-000000000003"};
@@ -310,4 +310,13 @@ test("3005 Bundled non-individual: three OD addons and zero owner-driver CPA",()
  assert.equal(checked.checksPassed,13);
  assert.deepEqual(mapVerifiedN8nMotorPremium(checked.premium),
    {od:"1598",addOnPremium:"1241",tp:"3273",cpa:"0",cpaOpted:"No"});
+});
+
+test("owner-driver CPA booking requires saved opt-in to match independently verified PDF charge",()=>{
+ assert.equal(verifiedCpaSelectionMatches("Yes",575),true);
+ assert.equal(verifiedCpaSelectionMatches("No",575),false);
+ assert.equal(verifiedCpaSelectionMatches("No",0),true);
+ assert.equal(verifiedCpaSelectionMatches("Yes",0),false);
+ assert.equal(verifiedCpaSelectionMatches("Yes",Number.NaN),false);
+ assert.equal(verifiedCpaSelectionMatches("Yes",-1),false);
 });
