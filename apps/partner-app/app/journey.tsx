@@ -208,7 +208,7 @@ const styles = StyleSheet.create({
   progressCircle: { width: 72, height: 72, alignItems: 'center', justifyContent: 'center' },
   progressSegment: { position: 'absolute', width: 3, height: 6, borderRadius: 2 },
   progressCircleText: { color: '#6954D6', fontSize: 17, fontWeight: '800' },
-  heroProgressLabel: { color: '#6856D5', fontSize: 8, fontWeight: '700', textAlign: 'center' },
+  heroProgressLabel: { color: '#6856D5', fontSize: 9, fontWeight: '700', textAlign: 'center' },
   summary: { marginTop: 12, flexDirection: 'row', gap: 8 },
   summaryItem: { flex: 1, minWidth: 0, minHeight: 75, flexDirection: 'row', alignItems: 'center', padding: 7, gap: 5, borderRadius: 17, borderWidth: 1, borderColor: '#E7E9EE', backgroundColor: '#FFFFFF' },
   summaryItemPressed: { backgroundColor: '#F1F5FB' },
