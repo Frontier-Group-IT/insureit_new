@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { useN8nForAllPolicyReads, segregatePolicyIntakeLanes, incomingPolicyIntakeLane } from "../lib/policy-ocr-routing-mode.ts";
+import { isN8nPolicyReadEnabled, segregatePolicyIntakeLanes, incomingPolicyIntakeLane } from "../lib/policy-ocr-routing-mode.ts";
 
 const read=(path)=>readFileSync(new URL("../"+path,import.meta.url),"utf8");
 const oldProvider=process.env.INSUREIT_POLICY_OCR_PROVIDER;
@@ -8,7 +8,7 @@ const oldLane=process.env.INSUREIT_POLICY_LANE_SPLIT;
 try {
  process.env.INSUREIT_POLICY_OCR_PROVIDER="n8n";
  process.env.INSUREIT_POLICY_LANE_SPLIT="true";
- assert.equal(useN8nForAllPolicyReads(),true);
+ assert.equal(isN8nPolicyReadEnabled(),true);
  assert.equal(segregatePolicyIntakeLanes(),true);
  assert.equal(incomingPolicyIntakeLane("motor",true),"automation");
  assert.equal(incomingPolicyIntakeLane("motor",false),"manual");
@@ -16,7 +16,7 @@ try {
  assert.equal(incomingPolicyIntakeLane("non_motor",true),"manual");
  process.env.INSUREIT_POLICY_OCR_PROVIDER="google";
  process.env.INSUREIT_POLICY_LANE_SPLIT="false";
- assert.equal(useN8nForAllPolicyReads(),false);
+ assert.equal(isN8nPolicyReadEnabled(),false);
  assert.equal(segregatePolicyIntakeLanes(),false);
  assert.equal(incomingPolicyIntakeLane("motor",true),"manual");
 } finally {
@@ -35,7 +35,7 @@ const detail=read("app/policy-intakes/[id]/page.tsx");
 const handoff=read("app/policy-intakes/handoff-actions.ts");
 const retry=read("app/policy-intakes/retry-actions.ts");
 const migration=read("../../supabase/migrations/20261119131500_policy_intake_processing_lanes.sql");
-assert(readAction.includes('if (useN8nForAllPolicyReads())')
+assert(readAction.includes('if (isN8nPolicyReadEnabled())')
  && readAction.includes('requestN8nPolicyIntakeExtraction({')
  && readAction.includes('legacy_google_training_disabled')
  && !readAction.includes('auto_finalize_allowed:true'),
@@ -43,8 +43,8 @@ assert(readAction.includes('if (useN8nForAllPolicyReads())')
 assert(panel.includes('n8nVerified=result.extractionMethod==="native_pdf_text"')
  && panel.includes('protectedKeys.has(field.key)')
  && panel.includes('verified local n8n PDF'),"Read must surface human-reviewed n8n fields without overriding protected entries");
-assert(intakeOcr.includes('if (useN8nForAllPolicyReads())')
- && router.includes('if (useN8nForAllPolicyReads())')
+assert(intakeOcr.includes('if (isN8nPolicyReadEnabled())')
+ && router.includes('if (isN8nPolicyReadEnabled())')
  && router.includes('return extractPolicyIntakeWithN8nOnly(intakeId,storagePath,true);'),
  "Old Intake Google OCR path must fail closed to local n8n under feature gate");
 assert(intakeActions.includes('incomingPolicyIntakeLane(input.policyType,aiQueueEnabled())')
