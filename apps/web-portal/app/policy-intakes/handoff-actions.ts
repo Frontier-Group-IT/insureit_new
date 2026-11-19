@@ -106,7 +106,17 @@ export async function prepareVerifiedN8nIntakeHandoff(
       || parsed.preview.fingerprint!==expectedFingerprint) {
     return{ok:false,error:"The n8n extraction changed after review. Run n8n again and check the new fields before continuing."};
   }
-  if(parsed.preview.checksPassed!==13 || parsed.preview.warnings.length>0) {
+  const isTata = /^tata_aig_private_car_(?:saod|package|bundled)_n8n_native_pdf$/.test(parsed.preview.parserId);
+  const informationalTataWarnings = new Set([
+    "tata_aig_issuance_date_unverified",
+    "tata_aig_human_review_required",
+    "tata_aig_printed_net_rounding",
+  ]);
+  const blockingWarnings = parsed.preview.warnings.filter(warning =>
+    !isTata || !informationalTataWarnings.has(warning));
+  // Missing Tata issuance-date evidence is *not* auto-approved: reviewers
+  // must explicitly supply and date-authorize it before a final booking.
+  if(parsed.preview.checksPassed!==(isTata?18:13) || blockingWarnings.length>0) {
     return{ok:false,error:"n8n validation warnings must be resolved before creating an onboarding draft."};
   }
   return preparePolicyIntakeHandoffInternal(id,takeOver===true,{
@@ -219,7 +229,7 @@ async function preparePolicyIntakeHandoffInternal(
     fields:verified?enrichVerifiedN8nOnboardingFields(verified.fields):(intake.ocr_fields??[]),
     manufacturers:manufacturerOptions,insurers,rcVerified:false,
   });
-  // Only the server-verified ICICI 3005 current-PDF name is offered as an
+  // Only a server-verified current-PDF insured name is offered as an
   // editable, review-required draft value. It NEVER auto-links a customer.
   const masterIdentity=verified?await resolveMasterIntakeIdentity(admin,intake.matched_customer_id,intake.customer_mobile):null;
   const verifiedIdentity=verified?selectVerifiedN8nInsuredDraftIdentity(verified.fields,masterIdentity):null;
@@ -234,6 +244,7 @@ async function preparePolicyIntakeHandoffInternal(
   const verifiedIssuanceDate=verified?.fields.find(field=>field.key==="policy_issuance_date")?.value??"";
   const tpStart=verified?.fields.find(field=>field.key==="third_party_start_date")?.value??"";
   const tpExpiry=verified?.fields.find(field=>field.key==="third_party_end_date")?.value??"";
+   const cpaExpiry=verified?.fields.find(field=>field.key==="cpa_end_date")?.value??"";
   const matchedCustomerId=verified
     ? (verifiedIdentity?.matchedCustomerId??null)
     : await resolveConfirmedIntakeCustomerId(admin,intake.customer_mobile,customerName);
@@ -245,14 +256,14 @@ async function preparePolicyIntakeHandoffInternal(
     policyProduct:mapped.next.policyProduct,idv:mapped.next.idv,
     od:verifiedPremium?.od??mapped.next.od,
     tp:verifiedPremium?.tp??mapped.next.tp,
-    ...(verifiedPremium?{addOnPremium:verifiedPremium.addOnPremium,tpValidUpto:tpExpiry}:{}),
+    ...(verifiedPremium?{addOnPremium:verifiedPremium.addOnPremium,tpValidUpto:tpExpiry,cpaValidUpto:cpaExpiry}:{}),
     cpaOpted:"No",
     cpa:verifiedPremium?.cpa??mapped.next.cpa,
     policyNo:mapped.next.policyNo,insurerId:mapped.next.insurerId,validFrom:mapped.next.validFrom,validUpto:mapped.next.validUpto,
     payoutBasis:"NET",projectedOdPercent:"",projectedTpPercent:"",insurerScheme:"",payinBillNo:"",payinBilledAmount:"",payinBillDate:"",payinStatus:"Unbilled",retention:"",payoutOdPercent:"",payoutTpPercent:"",flatPayoutAmount:"",payoutStatus:"Pending",payoutDate:"",payoutVoucherNo:"",remarks:verified
-      ? `Policy Intake ${id} — n8n validated ICICI 3005 PDF. Review every prefilled value before booking.
+      ? `Policy Intake ${id} — n8n validated ${verified.premium.tataAig ? "Tata AIG private car" : "ICICI 3005"} PDF. Review every prefilled value before booking.
 PDF premium reconciliation: Printed Basic OD ${verified.premium.basicOd} + OD add-ons ${addOnTotal} - validated NCB/OD deductions ${verified.premium.odDeductions??0} = Total OD ${verified.premium.totalOd}; net-of-deductions Basic OD entered for onboarding ${verifiedPremium?.od??"unavailable"}. TP ${verified.premium.basicTp}, CPA ${verified.premium.cpa}, Net ${verified.premium.net}, GST ${verified.premium.tax}, Gross ${verified.premium.gross}.
-Third Party period: ${tpStart||"unavailable"} to ${tpExpiry||"unavailable"}. Verify separate TP/CPA dates, policy class/product, identity, commercial rates and unmatched PDF fields manually.`
+Third Party period: ${tpStart||"unavailable"} to ${tpExpiry||"unavailable"}. ${verified.premium.tataAig ? "Tata AIG signature/receipt dates do not prove issuance; enter a verified issue date before booking. Non-owner-driver paid-liability amounts are allocated to the TP form bucket, not CPA." : ""} Verify separate TP/CPA dates, policy class/product, identity, commercial rates and unmatched PDF fields manually.`
       : `Policy Intake ${id}`,
   };
   // Preserve the long-standing generic OCR default. A positive owner-driver
