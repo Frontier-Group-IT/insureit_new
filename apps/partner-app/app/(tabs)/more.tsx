@@ -205,7 +205,7 @@ function MenuRow({
       ]}
     >
       <View style={styles.rowIcon}>
-        <PartnerProfileMenuIcon kind={iconKind} size={38} />
+        <PartnerProfileMenuIcon kind={iconKind} size={iconKind === 'policy-intake' ? 48 : iconKind === 'journey' ? 46 : 42} />
       </View>
       <View style={styles.rowBody}>
         <Text style={styles.rowTitle}>{title}</Text>
@@ -362,8 +362,8 @@ const styles = StyleSheet.create({
     borderBottomColor: partnerTheme.colors.line,
   },
   rowIcon: {
-    width: 38,
-    height: 38,
+    width: 50,
+    height: 50,
     alignItems: 'center',
     justifyContent: 'center',
   },
