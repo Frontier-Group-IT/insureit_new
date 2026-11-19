@@ -350,14 +350,15 @@ expectAll('app/customer-new.tsx', [
 ]);
 // Settings-only reference styling uses bolder type and more generous spacing.
 expectAll('app/settings.tsx', [
-  [/<PartnerSectionHeader title="Account" settingsHeading \/>/, 'Account heading uses the Settings-specific style'],
-  [/<PartnerSectionHeader title="Device security" settingsHeading \/>/, 'Device security heading uses the Settings-specific style'],
-  [/<PartnerSectionHeader title="Privacy" settingsHeading \/>/, 'Privacy heading uses the Settings-specific style'],
-  [/<PartnerSectionHeader title="App information" settingsHeading \/>/, 'App information heading uses the Settings-specific style'],
+  [/<PartnerSectionHeader title="Account" settingsHeading compact \/>/, 'Account heading uses the Settings-specific style'],
+  [/<PartnerSectionHeader title="Device security" settingsHeading compact \/>/, 'Device security heading uses the Settings-specific style'],
+  [/<PartnerSectionHeader title="Privacy" settingsHeading compact \/>/, 'Privacy heading uses the Settings-specific style'],
+  [/<PartnerSectionHeader title="App information" settingsHeading compact \/>/, 'App information heading uses the Settings-specific style'],
 ]);
 expectAll('components/ui/partner-section-header.tsx', [
   [/settingsHeading = false/, 'Settings heading variant is opt-in'],
   [/settingsHeading && styles\.settingsRow/, 'Settings heading spacing applies only when requested'],
+  [/settingsHeading && compact && styles\.settingsRowCompact/, 'Compact Settings spacing must be opt-in'],
   [/settingsHeading && styles\.settingsTitle/, 'Settings heading colour applies only when requested'],
   [ /settingsTitle: \{ color: '#20234C', fontSize: 15, lineHeight: 20, fontWeight: '900'/, 'Settings headings use bold high-contrast typography'],
   [/textTransform: 'uppercase'/, 'Heading capitalization remains unchanged'],
