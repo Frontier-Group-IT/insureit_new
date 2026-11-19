@@ -656,7 +656,7 @@ const partnerPolicyApi = read('lib/policies.ts');
 for (const label of ["label:'All Policies'","label:'Motor'","label:'Non Motor'","label:'Life'","label:'Health'"]) {
   requireText(policies, label, 'Missing policy business-line option: '+label);
 }
-for (const item of ["useState<PartnerPolicyBusinessLine>('all')","onPress={openBusinessLineMenu}","visible={lineMenuOpen}","onPress={()=>selectBusinessLine(option.value)}","businessLine,","policies:list:${lifecycle}:${businessLine}:"]) {
+for (const item of ["useState<PartnerPolicyBusinessLine>('all')","onPress={openBusinessLineMenu}","visible={lineMenuOpen}","onPress={()=>selectBusinessLine(option.value)}","businessLine,","policies:list:${period}:${lifecycle}:${businessLine}:"]) {
   requireText(policies, item, 'Business-line dropdown is not wired to policy fetch/pagination: '+item);
 }
 requireText(partnerPolicyApi, "partner_app_list_policies_by_line", 'Filtered policy lists must use the server-side scoped RPC');
