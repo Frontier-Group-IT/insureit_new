@@ -1,5 +1,8 @@
 # Policy OCR and Google Document AI Handoff
 
+> **2026-11-19 provider migration overlay (PR #4866, not automatically live):** The earlier Google reading architecture below remains historical/rollback context. A server-gated `INSUREIT_POLICY_OCR_PROVIDER=n8n` path is implemented for standalone Policy Onboarding **Read** and Intake extraction, without Google fallback when enabled. The only validated local product families are **ICICI Lombard 3005 Bundled** and **3005/O Stand-Alone OD**, on native digital PDFs; image-only/untrained insurers require manual review until individually trained. A second opt-in `INSUREIT_POLICY_LANE_SPLIT=true` and the reviewed database migration isolate automatic ICICI candidates from Operations Manual Onboarding. Neither implementation, merge nor Vercel READY proves a production cutover: verify real Windows local n8n workflow, signed-source and multipart live paths, tests, migration and environment separately. For the current operating runbook and next insurer training, see `docs/INSUREIT_LOCAL_N8N_MIGRATION_AGENT_HANDOFF_2026-11-17.md`. Preserve Google server credentials dormant for rollback, avoid simultaneous queue consumers, and never auto-book policies.
+
+
 > **Consolidated:** 2026-08-09 (IST)
 >
 > Source of truth for Policy Onboarding OCR. Never store credentials, tokens, raw OCR text, complete policy documents, policyholder PII, vehicle identifiers, or secrets here.
