@@ -7,7 +7,7 @@ const LAYOUTS = {
   private_bundled: { id: 'tata_aig_private_car_bundled_n8n_native_pdf', product: 'Bundled', clazz: 'PCP' },
   two_wheeler: { id: 'tata_aig_two_wheeler_bundled_n8n_native_pdf', product: 'Bundled', clazz: 'TWP' },
 };
-const KEYS = ['current_insurer_verified','supported_layout_verified','policy_identity_verified','insured_present','vehicle_identity_verified','vehicle_registration_status_verified','vehicle_specs_verified','rto_resolved','idv_verified','coverage_periods_verified','basic_od_ncb_reconciled','itemized_addons_reconciled','liability_components_reconciled','net_premium_reconciled','tax_premium_reconciled','gross_premium_reconciled','receipt_signature_date_agree','policy_number_receipt_agree'];
+const KEYS = ['current_insurer_verified','supported_layout_verified','policy_identity_verified','insured_present','vehicle_identity_verified','vehicle_registration_status_verified','vehicle_specs_verified','rto_resolved','idv_verified','coverage_periods_verified','basic_od_ncb_reconciled','itemized_addons_reconciled','liability_components_reconciled','net_premium_reconciled','tax_premium_reconciled','gross_premium_reconciled','receipt_date_document_consistent','policy_number_receipt_agree'];
 const clean = x => String(x ?? '').replace(/\s+/g,' ').trim();
 const amount = x => Number(String(x ?? '').replace(/[₹,\s]/g,''));
 const cent = n => Math.round(Number(n) * 100) / 100;
@@ -110,7 +110,9 @@ function extract(raw){
  const registered=/^(?:HR|DL|MP)[A-Z0-9]{7,13}$/.test(rawPlate);
  const status=unregistered?'unregistered':registered?'registered':'unknown';
  checks.vehicle_registration_status_verified=status!=='unknown';
- const vehicleRaw=text.slice(text.search(/Certificate of Insurance Cum Policy Schedule/i));
+ // PDF.js omits the literal Certificate of prefix in actual Tata AIG PDFs.
+ const vehicleStart=text.search(/(?:Certificate\s+of\s+Insurance|Insurance)\s+Cum\s+Policy\s+Schedule/i);
+ const vehicleRaw=text.slice(vehicleStart>=0?vehicleStart:Math.max(0,text.search(/\bVehicle Details\b/i)));
  const layoutView=/\S {18,}\S/.test(vehicleRaw.slice(0,3000));
  const vehicleSection=layoutView?splitPdfColumns(vehicleRaw,78).left+'\n'+splitPdfColumns(vehicleRaw,78).right:vehicleRaw;
  const makeModel=match(vehicleSection,/Make\s*\/\s*Model\s*\/\s*(?:Variant\s*)?([\s\S]{3,145}?)(?=\n\s*Fuel Type|\s{4,}Mfg\. Year|\n\s*Engine|\n\s*Chassis)/i);
@@ -174,7 +176,18 @@ function extract(raw){
  checks.gross_premium_reconciled=Boolean(gross!==null&&headerGross!==null&&near(gross,headerGross,0.01));
  const signed=match(text,/Digitally Signed by:[\s\S]{0,100}?\bDate:\s*(\d{2}\/\d{2}\/\d{4})/i);
  const receipt=match(text,/\bReceipt Date\s*(\d{2}\/\d{2}\/\d{4})/i);
- checks.receipt_signature_date_agree=Boolean(signed&&receipt&&signed===receipt);
+ // A rasterized digital-signature date is not guaranteed to appear in PDF.js text.
+ // Instead verify the printed receipt date against the covered period. When
+ // the signature date IS present, its date must agree with the receipt.
+ // Never infer issuance date from receipt, signing, or coverage dates.
+ const receiptDate=receipt?iso(receipt):null;
+ const receiptEpoch=receiptDate?Date.parse(receiptDate+'T00:00:00Z'):NaN;
+ const odStartEpoch=od?.from?Date.parse(od.from+'T00:00:00Z'):NaN;
+ const odEndEpoch=od?.to?Date.parse(od.to+'T00:00:00Z'):NaN;
+ checks.receipt_date_document_consistent=Boolean(receiptDate
+   && Number.isFinite(odStartEpoch) && Number.isFinite(odEndEpoch)
+   && receiptEpoch>=odStartEpoch-366*86400000 && receiptEpoch<=odEndEpoch
+   && (!signed||signed===receipt));
  // The receipt must contain the exact current policy number, not a previous/TP reference.
  const receiptIx=text.lastIndexOf('Receipt Date');
  const receiptSection=receiptIx>=0?text.slice(receiptIx,receiptIx+2500):'';
@@ -207,7 +220,8 @@ function extract(raw){
   parser_id:layout.id,parser_version:'tata-aig-layout-v1',ok:failed.length===0,
   checks,checks_passed:KEYS.length-failed.length,failed_checks:failed,fields,
   premium_components:rawPremium,form_premium_projection:form,form_premium_reconciled:near(formNet,net,0.01),
-  warnings:['Policy issuance date needs human verification; not inferred from receipt or signing date'],booking_ready:false,
+  warnings:['Policy issuance date needs human verification; not inferred from receipt or signing date',
+    ...(!signed?['Native PDF text omits the digital signature date; verify it visually before booking']:[])],booking_ready:false,
  };
 }
 return $input.all().map(item=>{
