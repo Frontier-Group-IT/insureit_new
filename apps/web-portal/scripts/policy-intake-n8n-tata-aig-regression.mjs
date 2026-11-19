@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { fileURLToPath } from "node:url";
-import { validateTataAigN8nResponse } from "../lib/policy-n8n-tata-aig-validation.ts";
+import { validateTataAigN8nResponse } from "../lib/policy-intake-n8n-validation.ts";
 import { mapVerifiedN8nMotorPremium } from "../lib/policy-n8n-onboarding-premium.ts";
 import { buildPolicyOcrOnboardingUpdate } from "../lib/policy-ocr-onboarding-apply.ts";
 import { selectVerifiedN8nInsuredDraftIdentity } from "../lib/policy-n8n-onboarding-insured.ts";
