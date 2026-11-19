@@ -203,8 +203,9 @@ export async function loadPolicyIntakeOnboardingContext(id:string):Promise<{ok:t
 
 export async function claimPolicyIntakeForReview(id:string){
   const profile=await requirePolicyIntakeReviewer(id),admin=createSupabaseAdminClient();
-  const{data:intake,error:intakeError}=await admin.from("policy_intake_requests").select("id,intake_number,status,created_at,ocr_fields").eq("id",id).maybeSingle<{id:string;intake_number:string;status:string;created_at:string;ocr_fields:PolicyIntakeOcrField[]}>();
+  const{data:intake,error:intakeError}=await admin.from("policy_intake_requests").select("id,intake_number,status,created_at,ocr_fields,processing_lane").eq("id",id).maybeSingle<{id:string;intake_number:string;status:string;created_at:string;ocr_fields:PolicyIntakeOcrField[]}>();
   if(intakeError||!intake)return{ok:false as const,error:"This policy intake is unavailable. Refresh and try again."};
+  if(segregatePolicyIntakeLanes() && (intake as typeof intake & {processing_lane?:string}).processing_lane==="automation")return{ok:false as const,error:"This Intake belongs to AI Automation. Use its dedicated workbench."};
   const duplicateCheck=await loadPolicyIntakeDuplicateMatches(admin,[intake]);
   if(!duplicateCheck.ok)return{ok:false as const,error:duplicateCheck.error};
   if(duplicateCheck.matches.has(id))return{ok:false as const,error:"This policy intake is a duplicate and cannot be claimed for review."};
