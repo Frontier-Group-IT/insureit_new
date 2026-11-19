@@ -234,7 +234,7 @@ const CHECKS = new Set([
   "vehicle_specs_verified", "rto_resolved", "idv_verified", "coverage_periods_verified",
   "basic_od_ncb_reconciled", "itemized_addons_reconciled", "liability_components_reconciled",
   "net_premium_reconciled", "tax_premium_reconciled", "gross_premium_reconciled",
-  "receipt_signature_date_agree", "policy_number_receipt_agree",
+  "receipt_date_document_consistent", "policy_number_receipt_agree",
 ]);
 const FIELD_KEYS = new Set([
   "policy_number", "insurer_name", "policy_product", "insured_name",
@@ -260,6 +260,7 @@ const INFO_WARNINGS = new Set([
   "tata_aig_issuance_date_unverified",
   "tata_aig_human_review_required",
   "tata_aig_printed_net_rounding",
+  "tata_aig_signature_date_not_in_native_text",
 ]);
 function object(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -295,9 +296,17 @@ export function validateTataAigN8nResponse(
   const product = PRODUCTS[parserId as keyof typeof PRODUCTS];
   const twoWheeler = parserId === "tata_aig_two_wheeler_bundled_n8n_native_pdf";
   const checks = value.checks;
+  // Allow previously published Tata AIG response versions (which had printed
+  // digital-signature dates) as well as the native PDF.js receipt-date check.
+  // Exactly one of these receipt proof keys must exist, never both.
+  const receiptProofKey = object(checks) && Object.prototype.hasOwnProperty.call(
+    checks, "receipt_date_document_consistent")
+      ? "receipt_date_document_consistent" : "receipt_signature_date_agree";
+  const expectedChecks = new Set([...CHECKS].map(key =>
+    key === "receipt_date_document_consistent" ? receiptProofKey : key));
   if (!object(checks) || Object.keys(checks).length !== CHECKS.size
-    || [...CHECKS].some(key => checks[key] !== true)
-    || Object.values(checks).some(item => item !== true))
+    || Object.keys(checks).some(key => !expectedChecks.has(key))
+    || [...expectedChecks].some(key => checks[key] !== true))
     fail("n8n_financial_validation_failed");
   if (!Array.isArray(value.fields) || value.fields.length < REQUIRED_FIELDS.length
     || value.fields.length > FIELD_KEYS.size) fail("n8n_fields_invalid");
