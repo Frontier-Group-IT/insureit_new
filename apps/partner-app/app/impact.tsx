@@ -71,7 +71,7 @@ export default function ImpactScreen() {
         <Pressable accessibilityRole="button" accessibilityLabel="Back" hitSlop={8} onPress={() => router.back()} style={styles.headerBack}>
           <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
         </Pressable>
-        <Ionicons name="stats-chart-outline" size={25} color="#FFFFFF" />
+        <Ionicons name="document-text" size={23} color="#FFFFFF" />
         <View style={styles.headerCopy}>
           <Text style={styles.headerTitle} numberOfLines={1}>Protection delivered</Text>
         </View>
@@ -89,12 +89,11 @@ export default function ImpactScreen() {
             onPress={() => router.push('/(tabs)/business')}
             style={({ pressed }) => [styles.hero, pressed && styles.pressed]}
           >
-            <ImpactIcon art="motor" size={59} plain />
-            <View style={styles.heroDivider} />
+            <ImpactIcon art="motor" size={48} plain />
             <Text style={styles.heroValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65}>
               {shortCurrency(data.active_motor_idv)}
             </Text>
-            <Ionicons name="chevron-forward" size={19} color="#203C62" />
+
           </Pressable>
 
           <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>Protection footprint</Text></View>
@@ -242,18 +241,20 @@ function ImpactIcon({ art, size, plain = false }: {
 
 const styles = StyleSheet.create({
   pageHeader: {
-    height: 64, marginHorizontal: -partnerTheme.spacing.lg, paddingHorizontal: 14,
-    flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#071E49',
+    height: 52, marginHorizontal: -partnerTheme.spacing.lg, paddingHorizontal: 16,
+    flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#0A234A',
+    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#244269',
   },
-  headerBack: { width: 34, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
+  headerBack: { width: 32, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   headerCopy: { flex: 1, minWidth: 0, justifyContent: 'center' },
-  headerTitle: { color: '#FFFFFF', fontSize: 19, fontWeight: '800' },
+  headerTitle: { color: '#FFFFFF', fontSize: 16, lineHeight: 22, fontWeight: '700', letterSpacing: -0.12 },
   hero: {
-    marginTop: 10, borderRadius: 18, minHeight: 94, paddingHorizontal: 14, paddingVertical: 12,
-    backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DFE6F0', borderBottomWidth: 2,
+    marginHorizontal: -partnerTheme.spacing.lg, minHeight: 82,
+    paddingHorizontal: 16, paddingVertical: 12,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E3E9F1',
     flexDirection: 'row', alignItems: 'center', gap: 12,
   },
-  heroDivider: { width: StyleSheet.hairlineWidth, height: 59, backgroundColor: '#D6DEEA' },
   heroValue: { flex: 1, minWidth: 0, color: '#11274A', fontSize: 28, lineHeight: 36, fontWeight: '800' },
   sectionHeader: { marginTop: 17, marginBottom: 9 },
   sectionTitle: { color: '#17233A', fontSize: 16, fontWeight: '800' },
