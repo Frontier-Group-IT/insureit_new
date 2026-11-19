@@ -599,6 +599,15 @@ for (const impactMarker of ['function ImpactIcon(', 'icon="car-sport"', 'icon="p
 for (const impactRoute of ["router.push('/customers')", "router.push('/(tabs)/policies')", "router.push('/(tabs)/claims')", "router.push('/business-report')", "router.push('/journey')"]) requireText(impact, impactRoute, `Impact clickable-card route is missing ${impactRoute}.`);
 for (const tinySize of ['fontSize: 7.5', 'fontSize: 8.5', 'fontSize: 8,']) if (impact.includes(tinySize)) throw new Error(`Impact must not regress to tiny typography: ${tinySize}`);
 requireText(journey, 'PartnerAssets.status.journey', 'Journey timeline and empty state must use journey artwork.');
+requireText(journey, 'navyTopBar navyStatusBar bottomNavigationNavy', 'My Progress must use navy header and status bar.');
+requireText(journey, 'bottomNavigation={<PartnerStackBottomNavigation activeTab="home" />}', 'My Progress must have the permission-gated Home bottom navigator.');
+if (journey.includes('name="locate-outline"')) throw new Error('Milestone top-right circle icon must be removed.');
+requireText(journey, 'accessibilityLabel="Choose journey timeline date"', 'Journey timeline calendar must open a working picker.');
+requireText(journey, '<PartnerPolicyCalendarDialog visible={calendarOpen}', 'Journey timeline uses the shared tappable month/year calendar.');
+requireText(journey, 'item.date === timelineDate', 'Date selection must filter timeline entries without rewriting milestone records.');
+requireText(journey, 'accessibilityLabel="Clear timeline date filter"', 'Journey timeline must allow clearing the selected date.');
+requireText(journey, "filter === 'all' || milestoneCategory(item.kind, item.title) === filter", 'Category filters remain active alongside selected date.');
+
 for (const tinySize of ['fontSize: 7.5', 'fontSize: 8.5', 'fontSize: 8,']) if (journey.includes(tinySize)) throw new Error(`Journey must not regress to tiny typography: ${tinySize}`);
 requireText(weeklyStory, 'PartnerAssets.actions.renewals', 'Your Week must keep renewal artwork for upcoming work.');
 requireText(weeklyStory, "backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#DCE9FA'", 'Your Week This Week pill must use the white treatment.');
