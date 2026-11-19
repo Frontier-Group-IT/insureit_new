@@ -800,7 +800,9 @@ assert.equal(prioritizedQueueSql.split("\n").filter(line=>line.trim()==="$$;").l
 // Corrected n8n date handoff, genuine exception taxonomy and duplicate skip.
 const duplicateQueueSql=readFileSync(new URL("../../../supabase/migrations/20261117190000_ai_policy_duplicate_queue_and_reassess.sql",import.meta.url),"utf8");
 assert(handoff.includes('const verifiedIssuanceDate=verified?.fields.find(field=>field.key==="policy_issuance_date")?.value??""')
-  && handoff.includes('issuanceDate:verified?verifiedIssuanceDate:new Date().toISOString().slice(0,10)')
+  && handoff.includes('issuanceDate:verified?(verifiedIssuanceDate||approvedSigningDate):new Date().toISOString().slice(0,10)')
+  && handoff.includes('reviewerConfirmedSigningDate')
+  && handoff.includes('expectedDraftRevision')
   && handoff.includes('"manufacturingYear","issuanceDate"'),
   "Verified n8n handoff must use the PDF's own issuance date and fill only empty saved draft dates");
 assert(n8nValidator.includes('"policy_issuance_date"')

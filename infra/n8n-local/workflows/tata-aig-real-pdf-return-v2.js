@@ -68,6 +68,8 @@ const premium_components = {
  total_liability_premium:p.total_liability,
  printed_net_premium:p.printed_net,component_net_premium:p.component_net,
  printed_total_tax:p.tax,gross_premium:p.printed_gross,
+ // Printed receipt day is independently checked by the 18-check parser.
+ receipt_date:p.receipt_date,
 };
 return [{json:{
  contract_version:'1', intake_id:ids.intake_id,

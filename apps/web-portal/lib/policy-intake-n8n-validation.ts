@@ -1,3 +1,4 @@
+import type { PolicyIssuanceDateEvidence } from "@/lib/policy-issuance-signature-evidence";
 const KEYS = new Set([
   "policy_number", "insurer_name", "policy_product", "policy_issuance_date", "policy_start_date", "policy_end_date",
   "third_party_start_date", "third_party_end_date", "third_party_policy_number", "third_party_insurer_name",
@@ -56,6 +57,10 @@ export type N8nOcrBridgeResponse = {
   parserId: string; parserVersion: string;
   premium: N8nVerifiedPremiumBreakdown;
   checksPassed: number;
+  /** Printed n8n receipt date, not independently authoritative issuance. */
+  receiptDate?: string;
+  /** Optional signature timestamp proposal from the CURRENT signed PDF. */
+  issuanceEvidence?: PolicyIssuanceDateEvidence;
 };
 export type N8nOcrBridgeInput = {
   intakeId: string; documentId: string; requestId: string; file: File;
@@ -294,6 +299,10 @@ export function validateTataAigN8nResponse(
     || value.review_required !== true || value.auto_finalize_allowed !== false
     || value.extraction_method !== "native_pdf_text") fail("n8n_review_required");
   const product = PRODUCTS[parserId as keyof typeof PRODUCTS];
+  const receiptDate=(value.premium_components && object(value.premium_components)
+    && typeof value.premium_components.receipt_date === "string")
+    ? value.premium_components.receipt_date : undefined;
+  if (receiptDate !== undefined && !date(receiptDate)) fail("n8n_tata_aig_receipt_date_invalid");
   const twoWheeler = parserId === "tata_aig_two_wheeler_bundled_n8n_native_pdf";
   const checks = value.checks;
   // Allow previously published Tata AIG response versions (which had printed
@@ -416,6 +425,7 @@ export function validateTataAigN8nResponse(
     fail("n8n_tata_aig_warning_invalid");
   return {
     ok:true, fields, warnings:value.warnings as string[],
+    ...(receiptDate?{receiptDate}:{}),
     parserId, parserVersion:"tata-aig-layout-v1", checksPassed:CHECKS.size,
     premium:{
       basicOd, odAddons, totalOd:postNcbOd + addonSubtotal, basicTp,

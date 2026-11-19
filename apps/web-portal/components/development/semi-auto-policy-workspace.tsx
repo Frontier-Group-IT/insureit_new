@@ -137,6 +137,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
   const [draftReviewMessage,setDraftReviewMessage]=useState<string|null>(null);
   const [takeover, setTakeover] = useState<{ intakeId: string; reviewerName: string } | null>(null);
   const [fillEmptySavedFields, setFillEmptySavedFields] = useState(true);
+  const [approveSigningDate,setApproveSigningDate]=useState(false);
   const [handoffDialog, setHandoffDialog] = useState<
     | { kind: "confirm" | "takeover"; intakeId: string; documentId: string; fingerprint: string; reviewerName?: string }
     | { kind: "existing"; editUrl: string }
@@ -277,6 +278,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
         setN8nNotice("The PDF needs review before onboarding. Check the latest n8n results and resolve any warnings.");
       } else {
         setFillEmptySavedFields(true);
+        setApproveSigningDate(false);
         setHandoffDialog({kind:"confirm",intakeId:id,
           documentId:fresh.preview.documentId,fingerprint:fresh.preview.fingerprint});
       }
@@ -297,6 +299,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
     // warnings may open a draft. Backend re-extracts and independently checks.
     // A local, accessible dialog replaces the browser-native confirmation.
     setFillEmptySavedFields(true);
+    setApproveSigningDate(false);
     setHandoffDialog({
       kind: "confirm", intakeId: selectedId,
       documentId: n8nResult.preview.documentId, fingerprint: n8nResult.preview.fingerprint,
@@ -326,6 +329,12 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
       const response = await continueVerifiedN8nIntakeToOnboarding(
         dialog.intakeId, dialog.documentId, dialog.fingerprint, true,
         dialog.kind === "takeover", fillEmptySavedFields,
+        approveSigningDate && n8nResult.preview.issuanceEvidence ? {
+          date:n8nResult.preview.issuanceEvidence.proposedDate,
+          documentSha256:n8nResult.preview.issuanceEvidence.documentSha256,
+          expectedDraftRevision:n8nResult.preview.savedDraftIssueDate?.revision??null,
+          expectedPreviousDate:n8nResult.preview.savedDraftIssueDate?.value??null,
+        }:undefined,
       );
       if (requestId.current !== next) return;
       if (response.assignmentConflict) {
@@ -806,6 +815,15 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
                     ))}</tbody>
                   </table>
                 </div>
+                {n8nResult.preview.issuanceEvidence ? (
+                  <div className="mt-2 rounded-lg border border-[#e7c9a0] bg-[#fffaf1] p-3 text-[11px] text-[#6e4e24]">
+                    <p className="font-bold">Suggested issuance date: {n8nResult.preview.issuanceEvidence.proposedDate}</p>
+                    <p className="mt-1">The embedded PDF signing timestamp and separately read receipt date agree. The signing certificate&apos;s trust and the insurer&apos;s official issuance rule are NOT independently established. Compare the original signed policy before confirming this date.</p>
+                    {n8nResult.preview.savedDraftIssueDate ? (
+                      <p className="mt-1 font-semibold">Saved issue date: {n8nResult.preview.savedDraftIssueDate.value||"blank"}. Any change requires explicit confirmation.</p>
+                    ):null}
+                  </div>
+                ):null}
                 {n8nResult.preview.warnings.length ? <p className="mt-2 text-[10px] text-amber-800">Warnings: {n8nResult.preview.warnings.join("; ")}</p> : null}
                 {primaryN8n && selected?.policy_type === "motor"
                   && !selected.is_duplicate
@@ -1231,6 +1249,13 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
                     ? "The saved draft has been preserved. Only previously empty eligible fields were filled from the verified extraction or an approved customer master; existing manual values were not changed."
                     : "The saved draft has been preserved without changes. Compare it with the latest n8n preview and the original PDF before booking."}
             </p>
+            {handoffDialog.kind !== "existing" && n8nResult?.ok && n8nResult.preview.issuanceEvidence ? (
+              <label className="mt-4 flex cursor-pointer items-start gap-2 rounded-xl border border-amber-300 bg-amber-50 p-3 text-[11px] leading-4 text-amber-950">
+                <input type="checkbox" className="mt-0.5 h-4 w-4 accent-[#174b83]" checked={approveSigningDate}
+                  onChange={event=>setApproveSigningDate(event.target.checked)}/>
+                <span><strong>Confirm proposed issuance date {n8nResult.preview.issuanceEvidence.proposedDate}</strong> after checking the original signed PDF. Its signing timestamp agrees with the printed receipt date, but the signing certificate and insurer issuance rule are not independently trusted. {n8nResult.preview.savedDraftIssueDate ? "This will replace the saved date "+(n8nResult.preview.savedDraftIssueDate.value||"(blank)")+" only if the draft has not changed." : "This date will populate the editable draft."} Final booking and any historical-date approval remain separate.</span>
+              </label>
+            ):null}
             {handoffDialog.kind !== "existing" ? (
               <label className="mt-4 flex cursor-pointer items-start gap-2 rounded-xl border border-[#dce5f0] bg-[#f6f9fd] px-3 py-3 text-[11px] leading-4 text-[#344b68]">
                 <input type="checkbox" checked={fillEmptySavedFields} onChange={event => setFillEmptySavedFields(event.target.checked)}

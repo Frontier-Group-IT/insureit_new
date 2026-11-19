@@ -1,4 +1,5 @@
 import "server-only";
+import type { PolicyIssuanceDateEvidence } from "@/lib/policy-issuance-signature-evidence";
 
 import { createHash, randomUUID } from "node:crypto";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
@@ -40,6 +41,8 @@ export type SemiAutoN8nPreview = {
   checksPassed: number;
   warnings: string[];
   canApply: boolean;
+  issuanceEvidence?: PolicyIssuanceDateEvidence;
+  savedDraftIssueDate?: { value:string; revision:number };
 };
 export type SemiAutoN8nResult =
   | { ok: true; preview: SemiAutoN8nPreview }
@@ -222,6 +225,10 @@ export async function previewSemiAutoN8nExtraction(id: string): Promise<SemiAuto
       .select("intake_id").eq("intake_id", id).limit(1);
     canApply = !savedDraft.error && (savedDraft.data?.length ?? 0) === 0;
   }
+  // Existing manual issue dates must be displayed, not silently overwritten.
+  const {data:reviewDraft}=await admin.from("policy_intake_onboarding_drafts")
+    .select("draft_payload,revision").eq("intake_id",id)
+    .maybeSingle<{draft_payload:{issuanceDate?:string}|null;revision:number}>();
   return { ok: true, preview: {
     documentId: current.document.id,
     fingerprint: fingerprint(id, current.document.id, extraction.fields, extraction.warnings, extraction.premium),
@@ -233,6 +240,9 @@ export async function previewSemiAutoN8nExtraction(id: string): Promise<SemiAuto
     premium: extraction.premium,
     checksPassed: extraction.checksPassed,
     warnings: extraction.warnings,
+    ...(extraction.issuanceEvidence?{issuanceEvidence:extraction.issuanceEvidence}:{}),
+    ...(reviewDraft && typeof reviewDraft.draft_payload?.issuanceDate==="string"
+      ? {savedDraftIssueDate:{value:reviewDraft.draft_payload.issuanceDate,revision:reviewDraft.revision}}:{}),
     canApply,
   } };
 }
