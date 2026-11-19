@@ -126,26 +126,26 @@ export default function MoreScreen() {
         {canPartnerAccess(context, 'view_policy_intakes') ? <MenuRow iconKind="policy-intake" title="Policy Intake" onPress={() => router.push('/policy-intakes')} /> : null}
         {canPartnerAccessCaseRegister(context) ? <MenuRow iconKind="case-register" title="Case Register" helper="Life & Health cases" onPress={() => router.push('/life-health-cases')} /> : null}
         {canPartnerAccess(context, 'view_policies') ? <MenuRow iconKind="renewals" title="Renewals" onPress={() => router.push('/renewals')} /> : null}
-        {canPartnerAccess(context, 'view_customers') ? <MenuRow iconKind="customers" title="Customers" onPress={() => router.push('/customers')} /> : null}
+        {canPartnerAccess(context, 'view_customers') ? <MenuRow iconKind="customers" title="Customers" onPress={() => router.push('/customers')} last /> : null}
       </MenuSection>
 
       <MenuSection title="INSIGHTS">
         <MenuRow iconKind="week" title="Your Week" onPress={() => router.push('/weekly-story')} />
         {canPartnerAccess(context, 'view_dashboard') ? <MenuRow iconKind="impact" title="My Impact" onPress={() => router.push('/impact')} /> : null}
         <MenuRow iconKind="journey" title="My Journey" onPress={() => router.push('/journey')} />
-        {canPartnerAccess(context, 'view_notifications') ? <MenuRow iconKind="activity" title="Activity" onPress={() => router.push('/activity')} /> : null}
+        {canPartnerAccess(context, 'view_notifications') ? <MenuRow iconKind="activity" title="Activity" onPress={() => router.push('/activity')} last /> : null}
       </MenuSection>
 
       <MenuSection title="GROW & LEARN">
         <MenuRow iconKind="learn" title="60-Second Learn" onPress={() => router.push('/learn')} />
         <MenuRow iconKind="recognition" title="Recognition" onPress={() => router.push('/recognition')} />
-        <MenuRow iconKind="stories" title="INSUREIT Stories" onPress={() => router.push('/stories')} />
+        <MenuRow iconKind="stories" title="INSUREIT Stories" onPress={() => router.push('/stories')} last />
       </MenuSection>
 
       <MenuSection title="ACCOUNT">
         <MenuRow iconKind="profile" title="Profile & registration" onPress={() => router.push('/profile')} />
         <MenuRow iconKind="support" title="Support" onPress={() => router.push('/support')} />
-        <MenuRow iconKind="settings" title="Settings & app info" onPress={() => router.push('/settings')} />
+        <MenuRow iconKind="settings" title="Settings & app info" onPress={() => router.push('/settings')} last />
       </MenuSection>
 
       <Pressable
@@ -185,11 +185,13 @@ function MenuRow({
   title,
   helper,
   onPress,
+  last = false,
 }: {
   iconKind: PartnerProfileMenuIconKind;
   title: string;
   helper?: string;
   onPress: () => void;
+  last?: boolean;
 }) {
   return (
     <Pressable
@@ -198,6 +200,7 @@ function MenuRow({
       onPress={onPress}
       style={({ pressed }) => [
         styles.menuRow,
+        !last && styles.menuRowDivider,
         pressed && styles.pressed,
       ]}
     >
@@ -338,7 +341,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1.1,
     ...partnerTheme.typography.eyebrow,
   },
-  // Keep the menu rows flat, with open spacing instead of separator lines.
+  // Keep the menu rows flat with clearly visible, non-faded separators.
   sectionRows: {
     backgroundColor: 'transparent',
   },
@@ -349,6 +352,10 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingHorizontal: 6,
     paddingVertical: 9,
+  },
+  menuRowDivider: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#8B9DB8',
   },
   rowIcon: {
     width: 52,
