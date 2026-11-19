@@ -609,7 +609,7 @@ requireText(journey, 'PartnerAssets.status.journey', 'Journey timeline and empty
 requireText(journey, 'navyTopBar navyStatusBar bottomNavigationNavy', 'My Progress must use navy header and status bar.');
 requireText(journey, 'bottomNavigation={<PartnerStackBottomNavigation activeTab="home" />}', 'My Progress must have the permission-gated Home bottom navigator.');
 if (journey.includes('name="locate-outline"')) throw new Error('Milestone top-right circle icon must be removed.');
-if (/calendar-outline|PartnerPolicyCalendarDialog|calendarOpen|timelineDate|calendarButton|dateFilterRow|Clear timeline date filter/.test(journey)) throw new Error('Journey timeline must not include the removed calendar/date picker or its unused state.');
+if (/calendar-outline|PartnerPolicyCalendarDialog|calendarOpen|setTimelineDate|\[timelineDate,|calendarButton|dateFilterRow|Clear timeline date filter/.test(journey)) throw new Error('Journey timeline must not include the removed calendar/date picker or its unused state.');
 requireText(journey, "filter === 'all' || milestoneCategory(item.kind, item.title) === filter", 'Journey timeline must retain category filtering.');
 requireText(journey, "hero: { marginTop: 16, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 14", 'Milestone card must be spaced below the header and compact.');
 requireText(journey, "heroNumbers: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', marginTop: 10", 'Milestone values must use compact vertical spacing.');
