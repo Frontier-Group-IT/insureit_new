@@ -625,10 +625,20 @@ if (journey.includes('name="locate-outline"')) throw new Error('Milestone top-ri
 if (/calendar-outline|PartnerPolicyCalendarDialog|calendarOpen|setTimelineDate|\[timelineDate,|calendarButton|dateFilterRow|Clear timeline date filter/.test(journey)) throw new Error('Journey timeline must not include the removed calendar/date picker or its unused state.');
 requireText(journey, "filter === 'all' || milestoneCategory(item.kind, item.title) === filter", 'Journey timeline must retain category filtering.');
 requireText(journey, "hero: { marginTop: 16, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 14", 'Milestone card must be spaced below the header and compact.');
-requireText(journey, "heroNumbers: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', marginTop: 10", 'Milestone values must use compact vertical spacing.');
+requireText(journey, 'styles.heroHeadline', 'Milestone title and flag must share a compact header.');
+requireText(journey, 'styles.heroProgressHeading', 'Milestone progress must place percentage beside its label.');
 requireText(journey, "progressTrack: { height: 8, marginTop: 10", 'Progress bar retains compact height and spacing.');
-requireText(journey, 'data.next_milestone.current.toLocaleString', 'Real milestone counts must be retained.');
+requireText(journey, 'accessibilityValue={{ min: 0, max: data.next_milestone.target, now:', 'Real milestone count must remain accessible from the progress bar.');
 requireText(journey, 'Math.round(progress * 100)', 'Real progress percentage must be retained.');
+for (const unwanted of ['NEXT CUSTOMER MILESTONE', 'Customers achieved', 'more customers to unlock', 'styles.heroNumbers', 'styles.heroBottom']) {
+  if (journey.includes(unwanted)) throw new Error('My Progress must not restore removed milestone secondary content: ' + unwanted);
+}
+for (const required of ['styles.summaryDetails', 'numberOfLines={1} ellipsizeMode="tail" accessibilityLabel={item.title}', "backgroundColor: '#E9E1FF'", 'styles.timelineDivider', 'styles.timelineBody', 'styles.timelineDate', 'item.subtitle ?']) {
+  requireText(journey, required, 'My Progress must preserve its compact summary, achievements and remarks-style timeline: ' + required);
+}
+for (const unwanted of ['styles.rail', 'styles.timelineArtwork', 'styles.line']) {
+  if (journey.includes(unwanted)) throw new Error('Journey timeline must not restore the vertical icon rail: ' + unwanted);
+}
 
 for (const tinySize of ['fontSize: 7.5', 'fontSize: 8.5', 'fontSize: 8,']) if (journey.includes(tinySize)) throw new Error(`Journey must not regress to tiny typography: ${tinySize}`);
 requireText(weeklyStory, 'PartnerAssets.actions.quickRenewals', 'Your Week uses the Renewal Work Queue reference icon for upcoming work.');
