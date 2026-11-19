@@ -73,7 +73,7 @@ for(const [i,fixture] of fixtures.entries()){
   assert.equal(parsed.checks_passed,18);
   assert.deepEqual(new Set(Object.keys(parsed.checks)),checks);
   assert.ok(Object.values(parsed.checks).every(Boolean));
-  assert.equal(parsed.fields.policy_number,fixture.policy.replace(/\\s/g,""));
+  assert.equal(parsed.fields.policy_number,fixture.policy.replace(/\s/g,""));
   const normalized=toWeb(parsed);
   const valid=validateTataAigN8nResponse(normalized,IDs);
   assert.equal(valid.checksPassed,18);
