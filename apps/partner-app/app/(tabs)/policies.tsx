@@ -58,7 +58,7 @@ const businessLineOptions: {label:string;value:PartnerPolicyBusinessLine}[] = [
 ];
 let savedPolicyQuery = '';
 let savedPolicyLifecycle: PartnerPolicyLifecycle = 'all';
-let savedPolicyPeriod: PartnerPolicyPeriod = 'mtd';
+let savedPolicyPeriod: PartnerPolicyPeriod = 'all';
 const sheetStatuses: {label:string;value:PartnerPolicyStatusFilter;lifecycle:PartnerPolicyLifecycle}[] = [
   {label:'All Policies',value:'all',lifecycle:'all'},
   {label:'Active',value:'active',lifecycle:'in_force'},
