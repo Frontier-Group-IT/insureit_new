@@ -737,3 +737,33 @@ export async function applySemiAutoN8nIntake(
   }
   return result;
 }
+
+
+/**
+ * IT-only escape hatch for an untrained/failed automation Intake.
+ * The service-role RPC atomically locks Intake + queue, requires a terminal
+ * failure, and writes the exact actor/reason into audit_logs. It neither
+ * re-extracts the PDF nor changes booking, ownership or reviewer assignment.
+ */
+export async function transferFailedAiIntakeToManual(
+  id: string, reason: string,
+): Promise<{ok: true} | {ok: false; error: string}> {
+  if (!segregatePolicyIntakeLanes() || !/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(id)) {
+    return {ok:false,error:"The Intake lane transfer is not available."};
+  }
+  const why=reason.trim();
+  if(why.length<12 || why.length>500) {
+    return {ok:false,error:"Enter a specific reason between 12 and 500 characters."};
+  }
+  const actor=await requireDevelopmentPolicyOperator(id);
+  const admin=createSupabaseAdminClient();
+  const {data,error}=await admin.rpc("move_policy_intake_automation_to_manual_v1",{
+    p_intake_id:id,p_actor_id:actor.id,p_reason:why
+  });
+  if(error) return {ok:false,error:"The transfer could not be saved. Check the approved database migration."};
+  if(data!==true) return {ok:false,error:"Only unbooked, terminal failed/untrained Intakes can move to Manual Onboarding. Refresh and verify the current queue state."};
+  revalidatePath("/policy-intakes");
+  revalidatePath(`/policy-intakes/${id}`);
+  revalidatePath("/development/ai-policy-onboarding");
+  return {ok:true};
+}
