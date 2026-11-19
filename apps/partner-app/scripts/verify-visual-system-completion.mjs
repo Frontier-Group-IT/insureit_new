@@ -222,16 +222,26 @@ for (const fragment of [
   "height: 64,",
 ]) requireText(learn, fragment, '60-Second Learn must match the Renewal navy header and retain five-tab navigation.');
 
-// The compact learning card embeds both right-aligned badges above the larger title and prompt.
-const learnCardStart = learn.indexOf('<View style={styles.questionCard}>');
-const learnCardEnd = learn.indexOf('<View style={styles.options}>', learnCardStart);
-const learnCard = learn.slice(learnCardStart, learnCardEnd);
-for (const required of ['<View style={styles.topStrip}>', 'styles.categoryPill', 'styles.streak', 'styles.questionMeta', 'styles.question']) {
-  if (!learnCard.includes(required)) throw new Error('Learn compact question is missing ' + required);
-}
-for (const required of ["justifyContent: 'flex-end'", "flexWrap: 'wrap'", "questionMeta: { color: '#071E49', fontSize: 16", "questionCard: { marginTop: 8", "backgroundColor: '#FFFFFF'"]) {
-  requireText(learn, required, 'Learn requires right-side badges and white compact question layout.');
-}
+// The Learn heading uses the same white, edge-to-edge first-section treatment as Policy Details.
+const learnSectionStart = learn.indexOf('<View style={styles.questionSection}>');
+const learnSectionEnd = learn.indexOf('<View style={styles.options}>', learnSectionStart);
+if (learnSectionStart < 0 || learnSectionEnd < 0) throw new Error('Learn full-width question section is missing.');
+const learnSection = learn.slice(learnSectionStart, learnSectionEnd);
+for (const required of [
+  '<View style={styles.questionCopy}>',
+  '<Text style={styles.questionMeta}>TODAY’S QUESTION</Text>',
+  '<Text style={styles.question}>{data.card.prompt}</Text>',
+  '<View style={styles.badgeColumn}>',
+  'styles.categoryPill',
+  'styles.streak',
+]) if (!learnSection.includes(required)) throw new Error('Learn question layout is missing ' + required);
+for (const required of [
+  "questionSection: { marginHorizontal: -partnerTheme.spacing.lg, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#E5E7EB' }",
+  "badgeColumn: { alignItems: 'flex-end'",
+  "flexDirection: 'row', alignItems: 'flex-start'",
+  "questionMeta: { color: '#071E49', fontSize: 16",
+]) requireText(learn, required, 'Learn needs a flush white header, grey divider, two-column layout and vertically stacked badges.');
+if (learn.includes('styles.questionCard') || learn.includes('styles.topStrip')) throw new Error('Learn must not keep the old standalone question card or top strip.');
 requireText(learn, '{answer.explanation}', 'Keep the authoritative educational explanation.');
 for (const removed of ['You selected:', 'GOOD TO KNOW', 'NICE WORK', 'styles.selectedText', 'styles.answerEyebrow']) {
   if (learn.includes(removed)) throw new Error('Learn feedback must not show secondary text: ' + removed);
