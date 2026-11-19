@@ -688,6 +688,9 @@ requireText(journey, "filter === 'all' || milestoneCategory(item.kind, item.titl
 requireText(journey, "hero: { marginTop: 0, marginHorizontal: -partnerTheme.spacing.lg, borderBottomWidth: 1, borderBottomColor: '#E4E8EF'", 'Milestone section must use full-width white Policy Details layout with divider.');
 requireText(journey, 'numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72} accessibilityLabel={data.next_milestone.title}', 'Milestone heading must fit a single row.');
 requireText(journey, "progressCircle: { width: 72, height: 72", 'Circular progress diameter must be compact.');
+requireText(journey, 'numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.9}>Milestone progress', 'Milestone progress label must remain on one line.');
+requireText(journey, "progressColumn: { width: 122", 'Milestone progress label must have enough horizontal space.');
+requireText(journey, "paddingHorizontal: 16, paddingVertical: 10, backgroundColor: '#FFFFFF'", 'Milestone section vertical spacing must remain compact.');
 requireText(journey, "left: 36 + Math.sin(angle) * 27", 'Ring segments must match the smaller geometry.');
 requireText(journey, 'numberOfLines={1} ellipsizeMode="tail" accessibilityLabel={item.subtitle}', 'Timeline descriptions must truncate to one line.');
 requireText(journey, 'numberOfLines={1} ellipsizeMode="tail" accessibilityLabel={item.title}', 'Timeline titles must truncate to one line.');
@@ -712,7 +715,11 @@ if (journey.includes('journeyMilestoneIcon(') || journey.includes('styles.summar
 requireText(journey, 'style={styles.timelineArtwork}', 'Timeline rows must show their illustrated category icon.');
 requireText(journey, "flexDirection: 'row', alignItems: 'center', padding: 7, gap: 5", 'Summary tiles must show the icon on the left and stacked text on the right.');
 requireText(journey, "summaryDetails: { flex: 1, minWidth: 0, alignItems: 'flex-start'", 'Summary label and count must stack vertically.');
-if (journey.indexOf('<Text style={styles.achievementDate}>') > journey.indexOf('<Text style={styles.achievementTitle}')) throw new Error('Achievement dates must be between illustrated icon and title.');
+if (journey.indexOf('<Text style={styles.achievementDate}>') < journey.indexOf('<Text style={styles.achievementTitle}')) throw new Error('Isolated 3D-style achievement artwork must precede a one-line title, with the date underneath, as in the reference.');
+requireText(journey, "achievementIcon: { width: 52, height: 52, justifyContent: 'center', alignItems: 'center', marginBottom: 5, backgroundColor: 'transparent' }", 'Achievement art must stay isolated without background tiles.');
+requireText(journey, 'achievementArtwork: { width: 48, height: 48 }', 'Isolated achievement artwork should match the compact reference size.');
+requireText(journey, "if (value.includes('claim')) return PartnerAssets.actions.quickClaims", 'Claims achievements must retain the existing illustrated claim artwork.');
+requireText(journey, "if (value.includes('customer')) return PartnerAssets.actions.quickCustomers", 'Customer achievements must retain the existing illustrated customer artwork.');
 if (journey.includes('styles.progressTrack') || journey.includes('styles.heroArtwork')) throw new Error('Obsolete horizontal milestone bar or flag icon must be removed.');
 for (const unwanted of ['NEXT CUSTOMER MILESTONE', 'Customers achieved', 'more customers to unlock', 'styles.heroNumbers', 'styles.heroBottom']) {
   if (journey.includes(unwanted)) throw new Error('My Progress must not restore removed milestone secondary content: ' + unwanted);

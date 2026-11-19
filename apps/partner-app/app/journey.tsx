@@ -80,8 +80,8 @@ export default function JourneyScreen() {
                       <View style={styles.achievementIcon}>
                         <Image source={journeyMilestoneArtwork(item.kind, item.title)} style={styles.achievementArtwork} resizeMode="contain" accessibilityLabel={item.title} />
                       </View>
-                      <Text style={styles.achievementDate}>{formatDate(item.date)}</Text>
                       <Text style={styles.achievementTitle} numberOfLines={1} ellipsizeMode="tail" accessibilityLabel={item.title}>{item.title}</Text>
+                      <Text style={styles.achievementDate}>{formatDate(item.date)}</Text>
                     </View>
                   );
                 })}
@@ -181,7 +181,7 @@ function CircularMilestoneProgress({ progress, current, target }: { progress: nu
         ))}
         <Text style={styles.progressCircleText}>{percentage}%</Text>
       </View>
-      <Text style={styles.heroProgressLabel}>Milestone progress</Text>
+      <Text style={styles.heroProgressLabel} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.9}>Milestone progress</Text>
     </View>
   );
 }
@@ -201,14 +201,14 @@ function formatDate(value: string) {
 }
 
 const styles = StyleSheet.create({
-  hero: { marginTop: 0, marginHorizontal: -partnerTheme.spacing.lg, borderBottomWidth: 1, borderBottomColor: '#E4E8EF', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: '#FFFFFF' },
+  hero: { marginTop: 0, marginHorizontal: -partnerTheme.spacing.lg, borderBottomWidth: 1, borderBottomColor: '#E4E8EF', paddingHorizontal: 16, paddingVertical: 10, backgroundColor: '#FFFFFF' },
   heroHeadline: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   heroTitle: { flex: 1, minWidth: 0, color: '#17233A', fontSize: 18, lineHeight: 24, fontWeight: '800' },
-  progressColumn: { width: 96, flexShrink: 0, alignItems: 'center', justifyContent: 'center', gap: 3 },
+  progressColumn: { width: 122, flexShrink: 0, alignItems: 'center', justifyContent: 'center', gap: 2 },
   progressCircle: { width: 72, height: 72, alignItems: 'center', justifyContent: 'center' },
   progressSegment: { position: 'absolute', width: 3, height: 6, borderRadius: 2 },
   progressCircleText: { color: '#6954D6', fontSize: 17, fontWeight: '800' },
-  heroProgressLabel: { color: '#6856D5', fontSize: 9, fontWeight: '700', textAlign: 'center' },
+  heroProgressLabel: { width: '100%', color: '#6856D5', fontSize: 9, fontWeight: '700', textAlign: 'center' },
   summary: { marginTop: 12, flexDirection: 'row', gap: 8 },
   summaryItem: { flex: 1, minWidth: 0, minHeight: 75, flexDirection: 'row', alignItems: 'center', padding: 7, gap: 5, borderRadius: 17, borderWidth: 1, borderColor: '#E7E9EE', backgroundColor: '#FFFFFF' },
   summaryItemPressed: { backgroundColor: '#F1F5FB' },
@@ -223,10 +223,10 @@ const styles = StyleSheet.create({
   smallPillText: { fontSize: 10, color: '#6842B5', fontWeight: '700' },
   achievementRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 6 },
   achievement: { flex: 1, minWidth: 0, alignItems: 'center' },
-  achievementIcon: { width: 57, height: 57, justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
-  achievementArtwork: { width: 54, height: 54 },
-  achievementTitle: { width: '100%', color: '#192333', fontSize: 11, lineHeight: 15, fontWeight: '700', textAlign: 'center' },
-  achievementDate: { color: '#7A8698', fontSize: 9.5, textAlign: 'center', marginBottom: 5 },
+  achievementIcon: { width: 52, height: 52, justifyContent: 'center', alignItems: 'center', marginBottom: 5, backgroundColor: 'transparent' },
+  achievementArtwork: { width: 48, height: 48 },
+  achievementTitle: { width: '100%', color: '#192333', fontSize: 10.5, lineHeight: 14, fontWeight: '700', textAlign: 'center' },
+  achievementDate: { color: '#7A8698', fontSize: 9, lineHeight: 13, textAlign: 'center', marginTop: 3 },
   filters: { flexDirection: 'row', gap: 5, marginBottom: 19 },
   filterButton: { flex: 1, minWidth: 0, paddingVertical: 10, paddingHorizontal: 2, alignItems: 'center', borderRadius: 9, backgroundColor: '#F3F5F9' },
   filterActive: { backgroundColor: '#142849' },
