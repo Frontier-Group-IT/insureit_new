@@ -715,3 +715,12 @@ for(const phrase of ["partner_app_list_policies_by_period","partner_app_policy_p
 for(const phrase of ["partner_app_commercial_scope()","partner_branch_authorized_policy_ids()","v_scope_mode='none'","v_period='all'","Asia/Kolkata","coalesce(b.issuance_date,b.start_date,b.created_at::date)","count(*) filter (where f.lifecycle_status='expired')","REVOKE ALL ON FUNCTION public.partner_app_policy_period_counts"]) {
   requireText(periodSql,phrase,'Period filtering SQL must retain safe scope/count semantics: '+phrase);
 }
+
+for(const phrase of ["bottom:8,alignSelf:'center'","paddingHorizontal:15,minHeight:40","backgroundColor:'#F0EDFF'","borderColor:'#E1DBFA'","sortFloatingText:{fontSize:11"]) {
+  requireText(policies,phrase,'Sort by floating pill should stay compact, slightly lower and pale lilac: '+phrase);
+}
+requireText(policies,'onPress={openSortSheet}','Sort by must continue opening the existing filter bottom sheet');
+
+for (const phrase of ["cardGap: { height: 5 }","minHeight: 68,","marginHorizontal: 10,","paddingVertical: 8,","insurerLogo: { width: 33, height: 33 }","customerName: { color: '#173A7D', fontSize: 13","policyNumber: { marginTop: 2, color: '#5C6C84', fontSize: 10","statusText: { fontSize: 9"]) {
+  requireText(policies,phrase,'Policies cards should be less dense and use more of the available screen: '+phrase);
+}
