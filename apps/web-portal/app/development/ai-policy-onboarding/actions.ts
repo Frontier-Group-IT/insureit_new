@@ -329,6 +329,14 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
      normalizedIdentity(pdfField("insured_name"))!==normalizedIdentity(forwarded.draft.insuredName)){
     return fail("Insured name","The saved insured name differs from the current verified PDF. Review the canonical draft rather than registering the wrong identity.");
   }
+  // The booking payload uses cpaOpted to determine whether CPA is charged.
+  // An older saved draft can say "No" even when the verified PDF charges CPA:
+  // matching only the numeric CPA field would silently understate the policy.
+  // Never auto-opt-in or override an operator's saved selection.
+  const pdfCpaOpted=Number(verifiedMoney.cpa)>0;
+  if((forwarded.draft.cpaOpted==="Yes")!==pdfCpaOpted)
+    return fail("Owner-driver CPA",
+      "The verified PDF CPA premium and the saved CPA opt-in differ. Open Policy Onboarding and explicitly review both CPA amount and CPA selection before booking.");
   const sameMoney=(a:string,b:string)=>Number.isFinite(Number(a||"0"))
     && Number.isFinite(Number(b||"0")) && Math.round(Number(a||"0")*100)===Math.round(Number(b||"0")*100);
   if(!sameMoney(forwarded.draft.od,verifiedMoney.od)
@@ -497,7 +505,9 @@ export type ReviewedIciciDraftComparison =
   | {ok:true;intakeId:string;documentId:string;fingerprint:string;revision:number;
      savedIssueDate:string;pdfIssueDate:string;
      missingFields:string[];otherConflicts:string[];
-     policyNumber:string;parserId:string;};
+     policyNumber:string;parserId:string;
+     verifiedCpa:string;savedCpa:string;savedCpaOpted:"Yes"|"No";
+     cpaNeedsReview:boolean;};
 
 export async function reviewIciciVerifiedDraftRepair(id:string):Promise<ReviewedIciciDraftComparison>{
   await requireDevelopmentPolicyOperator(id);
@@ -544,10 +554,16 @@ export async function reviewIciciVerifiedDraftRepair(id:string):Promise<Reviewed
   const otherConflicts=fields.filter(([key,val])=>val&&String(draft[key]??"").trim()
     && key!=="model"&&key!=="vehicleClass"&&key!=="fuelType"
     && String(draft[key]??"").trim().toUpperCase()!==val.toUpperCase()).map(([key])=>key);
+  const verifiedCpa=String(preview.premium.cpa);
+  const savedCpa=String(draft.cpa??"");
+  const savedCpaOpted=draft.cpaOpted==="Yes"?"Yes" as const:"No" as const;
+  const cpaNeedsReview=(savedCpaOpted==="Yes")!==(preview.premium.cpa>0)
+    || (savedCpa!=="" && Number(savedCpa)!==preview.premium.cpa);
   return{ok:true,intakeId:id,documentId:queue.document_id,
     fingerprint:preview.fingerprint,revision:existing.revision,
     savedIssueDate:draft.issuanceDate??"",pdfIssueDate,missingFields,
-    otherConflicts,policyNumber:pdfField("policy_number"),parserId:preview.parserId};
+    otherConflicts,policyNumber:pdfField("policy_number"),parserId:preview.parserId,
+    verifiedCpa,savedCpa,savedCpaOpted,cpaNeedsReview};
 }
 
 /** Separate explicit operator confirmation; applies NO policy booking. */
