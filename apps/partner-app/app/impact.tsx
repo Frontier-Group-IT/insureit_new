@@ -14,8 +14,8 @@ import { partnerTheme } from '@/lib/theme';
 type ImpactArt = 'motor' | 'vehicle' | 'customer' | 'policy' | 'monthly-policy' | 'claim' | 'premium' | 'new-customer' | 'settlement' | 'journey';
 
 const IMPACT_ART: Record<ImpactArt, ImageSourcePropType> = {
-  motor: PartnerAssets.actions.addVehicle,
-  vehicle: PartnerAssets.actions.addVehicle,
+  motor: PartnerAssets.actions.impactBlue3dCar,
+  vehicle: PartnerAssets.actions.impactBlue3dCar,
   customer: PartnerAssets.actions.impactCustomerDetail,
   policy: PartnerAssets.actions.impactPolicyDocument,
   'monthly-policy': PartnerAssets.actions.impactAddPolicy,
