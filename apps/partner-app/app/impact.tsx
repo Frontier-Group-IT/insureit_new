@@ -72,7 +72,7 @@ export default function ImpactScreen() {
         <Pressable accessibilityRole="button" accessibilityLabel="Back" hitSlop={8} onPress={() => router.back()} style={styles.headerBack}>
           <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
         </Pressable>
-        <Ionicons name="document-text" size={23} color="#FFFFFF" />
+        <Ionicons name="stats-chart-outline" size={23} color="#FFFFFF" />
         <View style={styles.headerCopy}>
           <Text style={styles.headerTitle} numberOfLines={1}>Protection delivered</Text>
         </View>
@@ -91,6 +91,7 @@ export default function ImpactScreen() {
             style={({ pressed }) => [styles.hero, pressed && styles.pressed]}
           >
             <ImpactIcon art="motor" size={48} plain />
+            <View style={styles.heroDivider} />
             <Text style={styles.heroValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65}>
               {shortCurrency(data.active_motor_idv)}
             </Text>
@@ -256,6 +257,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E3E9F1',
     flexDirection: 'row', alignItems: 'center', gap: 12,
   },
+  heroDivider: { width: StyleSheet.hairlineWidth, alignSelf: 'stretch', marginVertical: 6, backgroundColor: '#D6DEEA' },
   heroValue: { flex: 1, minWidth: 0, color: '#11274A', fontSize: 28, lineHeight: 36, fontWeight: '800' },
   sectionHeader: { marginTop: 17, marginBottom: 9 },
   sectionTitle: { color: '#17233A', fontSize: 16, fontWeight: '800' },
