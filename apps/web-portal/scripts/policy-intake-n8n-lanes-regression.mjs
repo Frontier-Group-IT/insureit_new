@@ -10,19 +10,25 @@ try {
  process.env.INSUREIT_POLICY_LANE_SPLIT="true";
  assert.equal(isN8nPolicyReadEnabled(),true);
  assert.equal(segregatePolicyIntakeLanes(),true);
- assert.equal(incomingPolicyIntakeLane("motor",true),"automation");
- assert.equal(incomingPolicyIntakeLane("motor",false),"manual");
+ assert.equal(incomingPolicyIntakeLane("motor",true,true),"automation");
+ assert.equal(incomingPolicyIntakeLane("motor",true,false),"manual");
+ assert.equal(incomingPolicyIntakeLane("motor",true),"manual");
+ assert.equal(incomingPolicyIntakeLane("motor",false,true),"manual");
  assert.equal(incomingPolicyIntakeLane("life",true),"manual");
  assert.equal(incomingPolicyIntakeLane("non_motor",true),"manual");
  process.env.INSUREIT_POLICY_OCR_PROVIDER="google";
  process.env.INSUREIT_POLICY_LANE_SPLIT="false";
  assert.equal(isN8nPolicyReadEnabled(),false);
  assert.equal(segregatePolicyIntakeLanes(),false);
- assert.equal(incomingPolicyIntakeLane("motor",true),"manual");
+ assert.equal(incomingPolicyIntakeLane("motor",true,true),"manual");
 } finally {
  if(oldProvider===undefined)delete process.env.INSUREIT_POLICY_OCR_PROVIDER;else process.env.INSUREIT_POLICY_OCR_PROVIDER=oldProvider;
  if(oldLane===undefined)delete process.env.INSUREIT_POLICY_LANE_SPLIT;else process.env.INSUREIT_POLICY_LANE_SPLIT=oldLane;
 }
+const eligibility=read("lib/policy-intake-n8n-layout-eligibility.ts");
+const partnerUpload=read("app/api/partner/policy-intakes/route.ts");
+assert(eligibility.includes("extractNativePdfTextPages") && eligibility.includes("ICICI") && eligibility.includes("3005")
+ && !eligibility.includes("extractPolicyIntakeDocument"),"Only verified native ICICI 3005 layouts may join automation");
 const bridge=read("lib/policy-intake-n8n-bridge.ts");
 assert(bridge.includes('INSUREIT_N8N_OCR_ENDPOINT_MODE !== "self_hosted"') && bridge.includes('n8n_self_hosted_required'),"n8n-primary provider must refuse implicit n8n Cloud selection");
 const readAction=read("app/policies/policy-ocr-actions.ts");
@@ -49,7 +55,10 @@ assert(intakeOcr.includes('if (isN8nPolicyReadEnabled())')
  && router.includes('if (isN8nPolicyReadEnabled())')
  && router.includes('return extractPolicyIntakeWithN8nOnly(intakeId,storagePath,true);'),
  "Old Intake Google OCR path must fail closed to local n8n under feature gate");
-assert(intakeActions.includes('incomingPolicyIntakeLane(input.policyType,aiQueueEnabled())')
+assert(intakeActions.includes('incomingPolicyIntakeLane(input.policyType,aiQueueEnabled(),trainedLayout)')
+ && partnerUpload.includes('incomingPolicyIntakeLane(input.policy_type,aiQueueEnabled(),trainedLayout)')
+ && intakeActions.includes('isTrainedLocalN8nMotorPdf(blob,input.file.type)')
+ && partnerUpload.includes('isTrainedLocalN8nMotorPdf(blob,input.file.type)')
  && intakeActions.includes('processing_lane:lane')
  && intakeActions.includes('manualSplit')
  && intakeActions.includes('segregatePolicyIntakeLanes()'),
