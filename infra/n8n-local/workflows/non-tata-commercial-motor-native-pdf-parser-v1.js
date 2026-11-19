@@ -77,12 +77,12 @@ function iffco(t){
  const insured=grab(t,/\n\s*([A-Z][A-Z &.,()\-]{7,125})\s*\nPolicy\s*#:/m)||grab(t,/\n\s*([A-Z][A-Z &.,()\-]{7,125}?)\s{2,}Policy\s*#:/m);
  const p=grab(t,/P400\s+Policy\s*#\s*(N\d{6,10})/i)||grab(t,/Policy\s*#\s*(N\d{6,10})/i);
  const issue=validDate(grab(t,/Invoice\/Issuance Date:\s*(\d{2}\/\d{2}\/\d{4})/i));
- const start=validDate(grab(t,/Period of Insurance\s*From:\s*(\d{2}\/\d{2}\/\d{4})/i));
+ const start=validDate(grab(t,/Period of Insurance[\s\S]{0,350}?\bFrom:\s*(\d{2}\/\d{2}\/\d{4})/i));
  const end=validDate(grab(t,/To:\s*Midnight On\s*(\d{2}\/\d{2}\/\d{4})/i));
  const reg=grab(t,/\b(MP\d{2}[A-Z]{1,3}\d{4})\b/i);
  const engine=grab(t,/\b(H\d{8})\b/i);
  const chassis=grab(t,/\b(RAJ3DX[A-Z0-9]{10,20})\b/i);
- const modelEvidence=/JCB\s+3\s+DX[\s\S]{0,120}?2WD\s*\/\s*BACKHOE[\s\S]{0,350}?LOADER/i.test(t);
+ const modelEvidence=/JCB\s+3\s+DX[\s\S]{0,120}?2WD\s*\/\s*BACKHOE/i.test(t);
  const year=grab(t,/\bMP\d{2}[A-Z]{1,3}\d{4}\s+(20\d{2})\b/i)||null;
  const idv=amount(grab(t,/\bNet Premium Rs\.\s*(\d{6,10})(?:\.00)?\b/i))||amount(grab(t,/\b(\d{6,10})\.00\s+0\.00\s+0\.00\s+0\s+\d{6,10}\.00/i));
  const od=amountAfter(t,/\bNet \(A\)\s*([\d,]+(?:\.\d+)?)/i);
@@ -90,18 +90,24 @@ function iffco(t){
  const net=amountAfter(t,/Premium\/Taxable Value RS\.\s*([\d,]+(?:\.\d+)?)/i);
  const gross=amountAfter(t,/Gross Premium Payable Rs\.\s*([\d,]+(?:\.\d+)?)/i);
  const taxMatch=t.match(/GST Details\s*997134\s*([\d,.]+)\s+18(?:\.00)?\s+([\d,.]+)\s+([\d,.]+)/i);
- const gst=taxMatch?amount(taxMatch[2]):null;
+ const gstSection=t.slice(Math.max(0,t.indexOf('GST Details')),Math.max(0,t.indexOf('GST Details'))+1000);
+ const taxTotals=gstSection.match(/\bTotal\s+([\d,.]+)\s+([\d,.]+)\s+([\d,.]+)/i);
+ const invoiceNet=taxMatch?amount(taxMatch[1]):taxTotals?amount(taxTotals[1]):null;
+ const invoiceGross=taxMatch?amount(taxMatch[3]):taxTotals?amount(taxTotals[3]):null;
+ const gst=taxMatch?amount(taxMatch[2]):taxTotals?amount(taxTotals[2]):null;
  const base={policy_number:p,insured_name:insured?.trim()||null,policy_product:'Commercial Vehicle Package',policy_issuance_date:issue,policy_start_date:start,policy_end_date:end,third_party_start_date:start,third_party_end_date:end,vehicle_registration_number:reg,vehicle_registration_status:reg?'registered':'registration_pending',vehicle_make:modelEvidence?'JCB':null,vehicle_model:modelEvidence?'3 DX 2WD / BACKHOE LOADER':null,vehicle_class:'Commercial Vehicle - Miscellaneous Class D',vehicle_manufacturing_year:year,vehicle_chassis_number:chassis,vehicle_engine_number:engine,idv};
- return output('IFFCO Tokio General Insurance Company Limited','iffco_tokio_cv_native_pdf',base,{od,tp,net,gst,gross},{iffco_layout:/IFFCO.?TOKIO GENERAL INSURANCE/i.test(t)&&/COMMERCIAL VEHICLE CERTIFICATE/i.test(t),printed_tax_table:!!taxMatch,invoice_taxable_matches:approx(net,Number(taxMatch?.[1])),invoice_gross_matches:approx(gross,Number(taxMatch?.[3]))});
+ return output('IFFCO Tokio General Insurance Company Limited','iffco_tokio_cv_native_pdf',base,{od,tp,net,gst,gross},{iffco_layout:/IFFCO.?TOKIO GENERAL INSURANCE/i.test(t)&&/COMMERCIAL VEHICLE CERTIFICATE/i.test(t),printed_tax_table:!!(taxMatch||taxTotals),invoice_taxable_matches:approx(net,invoiceNet),invoice_gross_matches:approx(gross,invoiceGross)});
 }
 function digit(t){
  const id=grab(t,/Policy No\.\s*(D\d{8,12})/i)||grab(t,/Policy No:\s*(D\d{8,12})/i);
  const name=grab(t,/\bName\s+((?:MR|MRS|MS)\s+[^\n]{5,80}?)\s{2,}Vehicle Registration No\./i)||grab(t,/\bName\s*\n\s*((?:MR|MRS|MS)\s+[^\n]{5,80})/i);
  const reg=grab(t,/Vehicle Registration No\.\s*([A-Z]{2}\d{2}[A-Z]{1,3}\d{3,4})/i)||grab(t,/Vehicle Registration No\.\s*\n\s*([A-Z]{2}\d{2}[A-Z]{1,3}\d{3,4})/i);
  let issue=validDate(grab(t,/Policy Issue Date\s+(\d{2}-[A-Za-z]{3}-\d{4})/i));
- let start=validDate(grab(t,/\bFrom\s+(\d{2}-[A-Za-z]{3}-\d{4})\s*\d{2}:\d{2}/i));
+ let start=validDate(grab(t,/\bFrom\s+(\d{2}-[A-Za-z]{3}-\d{4})\s*00:\d{2}:\d{2}/i));
  let end=validDate(grab(t,/\bTo\s+(\d{2}-[A-Za-z]{3}-\d{4})\s*\d{2}:\d{2}/i));
  if(!issue||!start||!end){const window=t.slice(Math.max(0,t.indexOf('YOUR POLICY DETAILS')),Math.max(0,t.indexOf('YOUR VEHICLE DETAILS')));const dates=Array.from(window.matchAll(/\b\d{2}-[A-Za-z]{3}-\d{4}\b/g)).map(m=>validDate(m[0])); if(dates.length>=4&&dates[2]===dates[3]&&dates[0]&&dates[1]){start=start||dates[0];end=end||dates[1];issue=issue||dates[2];}}
+ start=start||validDate(grab(t,/(\d{2}-[A-Za-z]{3}-\d{4})\s+00:\d{2}:\d{2}/i));
+ end=end||validDate(grab(t,/(\d{2}-[A-Za-z]{3}-\d{4})\s+23:\d{2}:\d{2}/i));
  const section=t.slice(Math.max(0,t.indexOf('YOUR POLICY DETAILS')),Math.max(0,t.indexOf('YOUR VEHICLE IDV')));
  const make=/\bJCB\b/.test(section)?'JCB':null;
  const model=/DX\s*ECO\s*XPERT/i.test(section)&&/BACKHOE\s*LOADER/i.test(section)?'3 DX ECO XPERT / BACKHOE LOADER':null;
@@ -116,6 +122,8 @@ function digit(t){
  let gross=amountAfter(t,/Total Premium\s*\(?[^\n)]*\)?\s*(\d{2,8}(?:\.\d{2})?)/i);
  // Source PDF's raw stream has separate right-to-left amount column, in fixed order.
  // Only use that ordering if gross, net, GST, TP, OD each independently reconcile.
+ const pair=t.match(/Total OD[\s\S]{0,150}?Total Act[\s\S]{0,170}?Premium[^\n]{0,180}?(\d{2,8}(?:\.\d+)?)\s+Premium[^\n]{0,180}?(\d{2,8}(?:\.\d+)?)/i);
+ if(pair){od=amount(pair[1]);tp=amount(pair[2]);}
  const raw=t.match(/IGST\s*@\s*18%\s*=\s*\([^\d\n]*([\d.]+)\)\s*\n([\d.]+)\s*\n([\d.]+)\s*\n([\d.]+)\s*\n([\d.]+)\s*\n([\d.]+)/i);
  if(raw){const v=raw.slice(2).map(amount);const proposed={gross:v[0],net:v[1],gst:v[2],tp:v[3],od:v[4]};if(approx(proposed.gross,proposed.net+proposed.gst)&&approx(proposed.net,proposed.od+proposed.tp)&&approx(proposed.gst,amount(raw[1]))){od=proposed.od;tp=proposed.tp;net=proposed.net;tax=proposed.gst;gross=proposed.gross;}}
  const basicOd=amountAfter(t,/Own Damage Premium\s*\(\x60?\)\s*([\d,.]+)/i);
