@@ -175,7 +175,7 @@ function MenuSection({ title, children }: { title: string; children: ReactNode }
   return (
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>{title}</Text>
-      <View style={styles.sectionCard}>{children}</View>
+      <View style={styles.sectionRows}>{children}</View>
     </View>
   );
 }
@@ -205,7 +205,7 @@ function MenuRow({
       ]}
     >
       <View style={styles.rowIcon}>
-        <PartnerProfileMenuIcon kind={iconKind} size={38} />
+        <PartnerProfileMenuIcon kind={iconKind} size={iconKind === 'policy-intake' ? 48 : 42} />
       </View>
       <View style={styles.rowBody}>
         <Text style={styles.rowTitle}>{title}</Text>
@@ -341,29 +341,25 @@ const styles = StyleSheet.create({
     letterSpacing: 1.1,
     ...partnerTheme.typography.eyebrow,
   },
-  sectionCard: {
-    overflow: 'hidden',
-    borderRadius: 15,
-    backgroundColor: partnerTheme.colors.surface,
-    borderWidth: 1,
-    borderColor: partnerTheme.colors.line,
-    ...partnerTheme.shadowSoft,
+  // Keep the menu rows flat; only thin dividers separate destinations.
+  sectionRows: {
+    backgroundColor: 'transparent',
   },
   menuRow: {
-    minHeight: 65,
+    minHeight: 68,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    paddingHorizontal: 13,
-    paddingVertical: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 9,
   },
   menuRowDivider: {
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: partnerTheme.colors.line,
   },
   rowIcon: {
-    width: 38,
-    height: 38,
+    width: 52,
+    height: 52,
     alignItems: 'center',
     justifyContent: 'center',
   },

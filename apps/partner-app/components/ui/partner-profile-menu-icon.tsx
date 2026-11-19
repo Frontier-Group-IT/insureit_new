@@ -37,9 +37,10 @@ const ILLUSTRATED_ICONS: Partial<Record<PartnerProfileMenuIconKind, ImageSourceP
   'policy-intake': require('../../assets/partner/icons/more-policy-intake-3d.png'),
   'case-register': require('../../assets/partner/icons/more-case-register.png'),
   renewals: require('../../assets/partner/icons/more-renewals.png'),
-  customers: require('../../assets/partner/icons/more-customers-3d.png'),
+  // Reuse the established add-customer artwork for a clearer customer shortcut.
+  customers: require('../../assets/partner/actions/add-customer.png'),
   impact: require('../../assets/partner/icons/more-impact.png'),
-  journey: require('../../assets/partner/icons/more-journey-3d.png'),
+  // Render Journey as a resolution-independent vector below (old PNG is soft at row scale).
 };
 
 const CONFIG: Record<Exclude<PartnerProfileMenuIconKind, 'case-register'>, IconPalette> = {
