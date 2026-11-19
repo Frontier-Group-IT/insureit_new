@@ -718,3 +718,7 @@ for(const phrase of ["bottom:8,alignSelf:'center'","paddingHorizontal:15,minHeig
   requireText(policies,phrase,'Sort by floating pill should stay compact, slightly lower and pale lilac: '+phrase);
 }
 requireText(policies,'onPress={openSortSheet}','Sort by must continue opening the existing filter bottom sheet');
+
+for (const phrase of ["cardGap: { height: 5 }","minHeight: 68,","marginHorizontal: 10,","paddingVertical: 8,","insurerLogo: { width: 33, height: 33 }","customerName: { color: '#173A7D', fontSize: 13","policyNumber: { marginTop: 2, color: '#5C6C84', fontSize: 10","statusText: { fontSize: 9"]) {
+  requireText(policies,phrase,'Policies cards should be less dense and use more of the available screen: '+phrase);
+}
