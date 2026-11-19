@@ -14,10 +14,10 @@ import { partnerTheme } from '@/lib/theme';
 type ImpactArt = 'motor' | 'vehicle' | 'customer' | 'policy' | 'claim' | 'premium' | 'new-customer' | 'settlement' | 'journey';
 
 const IMPACT_ART: Record<ImpactArt, ImageSourcePropType> = {
-  motor: PartnerAssets.products.motorInsurance,
+  motor: PartnerAssets.actions.addVehicle,
   vehicle: PartnerAssets.actions.addVehicle,
   customer: PartnerAssets.actions.quickCustomers,
-  policy: PartnerAssets.actions.policyChecklist,
+  policy: PartnerAssets.actions.quickPolicyIntake,
   claim: PartnerAssets.actions.quickClaims,
   premium: PartnerAssets.actions.businessPerformance,
   'new-customer': PartnerAssets.actions.addCustomer,
@@ -89,7 +89,7 @@ export default function ImpactScreen() {
             onPress={() => router.push('/(tabs)/business')}
             style={({ pressed }) => [styles.hero, pressed && styles.pressed]}
           >
-            <ImpactIcon icon="shield-checkmark" art="motor" size={61} plain />
+            <ImpactIcon art="motor" size={59} plain />
             <View style={styles.heroDivider} />
             <Text style={styles.heroValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65}>
               {shortCurrency(data.active_motor_idv)}
@@ -99,12 +99,12 @@ export default function ImpactScreen() {
 
           <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>Protection footprint</Text></View>
           <View style={styles.grid}>
-            <ImpactCard art="vehicle" icon="car-sport" value={data.active_vehicles} label="Vehicles covered" onPress={() => router.push('/customers')} />
-            <ImpactCard art="customer" icon="people" value={data.customers_served} label="Customers served" onPress={() => router.push('/customers')} />
+            <ImpactCard art="vehicle" value={data.active_vehicles} label="Vehicles covered" onPress={() => router.push('/customers')} />
+            <ImpactCard art="customer" value={data.customers_served} label="Customers served" onPress={() => router.push('/customers')} />
           </View>
           <View style={styles.grid}>
-            <ImpactCard art="policy" icon="document-text" value={data.lifetime_policies} label="Policies in your book" onPress={() => router.push('/(tabs)/policies')} />
-            <ImpactCard art="claim" icon="shield-checkmark" value={data.claims_assisted} label="Claims assisted" onPress={() => router.push('/(tabs)/claims')} />
+            <ImpactCard art="policy" value={data.lifetime_policies} label="Policies in your book" onPress={() => router.push('/(tabs)/policies')} />
+            <ImpactCard art="claim" value={data.claims_assisted} label="Claims assisted" onPress={() => router.push('/(tabs)/claims')} />
           </View>
 
           <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>This month</Text></View>
@@ -117,20 +117,22 @@ export default function ImpactScreen() {
             >
               <View style={styles.monthPremiumTop}>
                 <View style={styles.premiumIconLabel}>
-                  <ImpactIcon icon="trending-up" art="premium" size={47} plain />
+                  <ImpactIcon art="premium" size={49} plain />
+                </View>
+                <View style={styles.premiumDetails}>
+                  <Text style={styles.premiumValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65}>
+                    {shortCurrency(data.gross_premium_this_month)}
+                  </Text>
                   <Text style={styles.premiumLabel}>Gross premium</Text>
                 </View>
-                <Text style={styles.premiumValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65}>
-                  {shortCurrency(data.gross_premium_this_month)}
-                </Text>
                 <Ionicons name="chevron-forward" size={17} color="#8A98AD" />
               </View>
             </Pressable>
             <View style={styles.monthDivider} />
             <View style={styles.monthStatsRow}>
-              <MonthStat icon="document-text" art="policy" label="Policies" value={count(data.policies_this_month)} onPress={() => router.push('/(tabs)/policies')} />
+              <MonthStat art="policy" label="Policies" value={count(data.policies_this_month)} onPress={() => router.push('/(tabs)/policies')} />
               <View style={styles.monthStatDivider} />
-              <MonthStat icon="person-add" art="new-customer" label="Customers added" value={count(data.customers_this_month)} onPress={() => router.push('/customers')} />
+              <MonthStat art="new-customer" label="Customers added" value={count(data.customers_this_month)} onPress={() => router.push('/customers')} />
             </View>
           </View>
 
@@ -141,7 +143,7 @@ export default function ImpactScreen() {
               onPress={() => router.push('/(tabs)/claims')}
               style={({ pressed }) => [styles.settlementCard, pressed && styles.pressed]}
             >
-              <ImpactIcon icon="checkmark-done-circle" art="settlement" size={44} />
+              <ImpactIcon art="settlement" size={44} />
               <View style={styles.settlementBody}>
                 <Text style={styles.settlementEyebrow}>CLAIM OUTCOMES</Text>
                 <Text numberOfLines={1} adjustsFontSizeToFit style={styles.settlementValue}>{formatIndianCurrency(data.claim_settlement_value)}</Text>
@@ -157,7 +159,7 @@ export default function ImpactScreen() {
             accessibilityRole="button"
             accessibilityLabel="See your journey"
           >
-            <ImpactIcon icon="navigate-circle" art="journey" size={46} />
+            <ImpactIcon art="journey" size={46} />
             <View style={styles.journeyBody}>
               <Text style={styles.journeyTitle}>See your journey</Text>
               <Text style={styles.journeySubtitle}>Milestones and achievements</Text>
@@ -170,8 +172,7 @@ export default function ImpactScreen() {
   );
 }
 
-function ImpactCard({ icon, art, value, label, onPress }: {
-  icon: keyof typeof Ionicons.glyphMap;
+function ImpactCard({ art, value, label, onPress }: {
   art: ImpactArt;
   value: number;
   label: string;
@@ -185,18 +186,17 @@ function ImpactCard({ icon, art, value, label, onPress }: {
       style={({ pressed }) => [styles.impactCard, pressed && styles.pressed]}
     >
       <View style={styles.cardContentRow}>
-        <View style={styles.cardLeft}>
-          <ImpactIcon icon={icon} art={art} size={46} plain />
+        <ImpactIcon art={art} size={49} plain />
+        <View style={styles.cardDetails}>
+          <Text style={styles.impactValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>{count(value)}</Text>
           <Text style={styles.impactLabel} numberOfLines={2}>{label}</Text>
         </View>
-        <Text style={styles.impactValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65}>{count(value)}</Text>
       </View>
     </Pressable>
   );
 }
 
-function MonthStat({ icon, art, label, value, onPress }: {
-  icon: keyof typeof Ionicons.glyphMap;
+function MonthStat({ art, label, value, onPress }: {
   art: ImpactArt;
   label: string;
   value: string;
@@ -209,17 +209,16 @@ function MonthStat({ icon, art, label, value, onPress }: {
       onPress={onPress}
       style={({ pressed }) => [styles.monthStat, pressed && styles.monthStatPressed]}
     >
-      <View style={styles.cardLeft}>
-        <ImpactIcon icon={icon} art={art} size={43} plain />
+      <ImpactIcon art={art} size={43} plain />
+      <View style={styles.cardDetails}>
+        <Text style={styles.monthValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65}>{value}</Text>
         <Text style={styles.monthLabel} numberOfLines={2}>{label}</Text>
       </View>
-      <Text style={styles.monthValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{value}</Text>
     </Pressable>
   );
 }
 
-function ImpactIcon({ icon: _icon, art, size, plain = false }: {
-  icon: keyof typeof Ionicons.glyphMap;
+function ImpactIcon({ art, size, plain = false }: {
   art: ImpactArt;
   size: number;
   plain?: boolean;
@@ -250,8 +249,8 @@ const styles = StyleSheet.create({
   headerCopy: { flex: 1, minWidth: 0, justifyContent: 'center' },
   headerTitle: { color: '#FFFFFF', fontSize: 19, fontWeight: '800' },
   hero: {
-    marginTop: 10, borderRadius: 20, minHeight: 94, paddingHorizontal: 14, paddingVertical: 12,
-    backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DFE6F0',
+    marginTop: 10, borderRadius: 18, minHeight: 94, paddingHorizontal: 14, paddingVertical: 12,
+    backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DFE6F0', borderBottomWidth: 2,
     flexDirection: 'row', alignItems: 'center', gap: 12,
   },
   heroDivider: { width: StyleSheet.hairlineWidth, height: 59, backgroundColor: '#D6DEEA' },
@@ -263,23 +262,24 @@ const styles = StyleSheet.create({
     flex: 1, minWidth: 0, minHeight: 105, borderRadius: 18, padding: 12,
     backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E4E9F0',
   },
-  cardContentRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 4 },
-  cardLeft: { flex: 1, minWidth: 0, justifyContent: 'space-between', alignSelf: 'stretch' },
-  impactValue: { maxWidth: '52%', color: '#17233A', fontSize: 22, lineHeight: 28, fontWeight: '800', textAlign: 'right' },
-  impactLabel: { color: '#17233A', fontSize: 11, lineHeight: 15, fontWeight: '700', marginTop: 6 },
+  cardContentRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  cardDetails: { flex: 1, minWidth: 0, justifyContent: 'center', gap: 4 },
+  impactValue: { color: '#17233A', fontSize: 22, lineHeight: 28, fontWeight: '800' },
+  impactLabel: { color: '#17233A', fontSize: 11, lineHeight: 15, fontWeight: '700' },
   monthCard: { borderRadius: 19, overflow: 'hidden', backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E4E9F0' },
   monthPremium: { paddingHorizontal: 14, paddingVertical: 12 },
   monthPremiumTop: { flexDirection: 'row', alignItems: 'center', gap: 7 },
-  premiumIconLabel: { flex: 1, minWidth: 0, gap: 4 },
+  premiumIconLabel: { justifyContent: 'center' },
+  premiumDetails: { flex: 1, minWidth: 0, gap: 4 },
   premiumLabel: { color: '#17233A', fontSize: 11, fontWeight: '700' },
-  premiumValue: { flexShrink: 1, minWidth: 0, color: '#17233A', fontSize: 25, lineHeight: 32, fontWeight: '800', textAlign: 'right' },
+  premiumValue: { color: '#17233A', fontSize: 25, lineHeight: 32, fontWeight: '800' },
   monthDivider: { marginHorizontal: 14, height: StyleSheet.hairlineWidth, backgroundColor: '#E6EAF0' },
   monthStatsRow: { flexDirection: 'row', paddingVertical: 5 },
   monthStat: { flex: 1, minWidth: 0, minHeight: 87, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 7, gap: 4 },
   monthStatDivider: { width: StyleSheet.hairlineWidth, backgroundColor: '#E6EAF0', marginVertical: 6 },
   monthStatPressed: { backgroundColor: '#F1F7FF' },
-  monthValue: { maxWidth: '52%', color: '#17233A', fontSize: 19, lineHeight: 24, fontWeight: '800', textAlign: 'right' },
-  monthLabel: { color: '#17233A', fontSize: 10, lineHeight: 14, fontWeight: '700', marginTop: 5 },
+  monthValue: { color: '#17233A', fontSize: 19, lineHeight: 24, fontWeight: '800' },
+  monthLabel: { color: '#17233A', fontSize: 10, lineHeight: 14, fontWeight: '700' },
   settlementCard: { marginTop: 12, flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 18, padding: 13, backgroundColor: partnerTheme.colors.accentSoft },
   settlementBody: { flex: 1, minWidth: 0 },
   settlementEyebrow: { color: '#3C7B78', letterSpacing: 0.8, fontSize: 10, fontWeight: '800' },
