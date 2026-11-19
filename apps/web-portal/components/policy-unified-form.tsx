@@ -26,6 +26,7 @@ import {
   PolicyOcrImportPanel,
   SECTION_02_OCR_FIELDS,
   type PolicyOcrApplyOutcome,
+  type PolicyOcrApplyProvenance,
   type PolicyOcrImportContext,
 } from "@/components/policy-ocr-import-panel";
 import { LifeHealthPolicyForm } from "@/components/life-health-policy-form";
@@ -442,7 +443,7 @@ export function PolicyUnifiedForm({ mode, insurers, customers = [], rms, sources
     setPendingPayload(null);
   }
 
-  function applyPolicyOcrFields(fields:PolicyOcrField[]):PolicyOcrApplyOutcome{
+  function applyPolicyOcrFields(fields:PolicyOcrField[],provenance?:PolicyOcrApplyProvenance):PolicyOcrApplyOutcome{
     const result=buildPolicyOcrOnboardingUpdate({
       mode,
       registrationMode:vehicleRegistrationMode,
@@ -467,6 +468,14 @@ export function PolicyUnifiedForm({ mode, insurers, customers = [], rms, sources
         && selectedCpa?.value.replace(/,/g,"")==="575";
       setForm(current=>normalizePolicyIdentifierFields({...current,...result.next}));
       if(exactIciciChetakC3503)setForm(current=>({...current,cpaOpted:"Yes"}));
+      const verifiedTata = provenance?.nativeVerified
+        && /^tata_aig_private_car_(?:saod|package|bundled)_n8n_native_pdf$/.test(provenance.parserId);
+      const explicitTataCpa = fields.find(field=>field.key==="cpa_opted")?.value;
+      if (verifiedTata && (explicitTataCpa==="Yes" || explicitTataCpa==="No")
+        && fields.some(field=>field.key==="cpa_premium")
+        && (explicitTataCpa==="Yes")===(Number(result.next.cpa)>0)) {
+        setForm(current=>({...current,cpaOpted:explicitTataCpa}));
+      }
       if(result.registrationMode!==vehicleRegistrationMode)setVehicleRegistrationMode(result.registrationMode);
       if(result.touchedSection02){setLookupError(null);setRegistrationTouched(false);setRcReview(null);if(!appliedRc)setAppliedRc(null);}
     }
