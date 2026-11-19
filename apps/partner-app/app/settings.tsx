@@ -92,13 +92,13 @@ export default function SettingsScreen() {
   return (
     <PartnerScreen title="Settings & app info" hideTopBar navyStatusBar bottomNavigationNavy bottomNavigation={<PartnerCaseBottomNavigation activeTab="More" />}>
       <PartnerCasePageHeader title="Settings & app info" icon="settings-outline" onBack={() => router.back()} />
-      <PartnerSectionHeader title="Account" settingsHeading />
+      <PartnerSectionHeader title="Account" settingsHeading compact />
       <View style={styles.menu}>
         <SettingsLink icon="person-outline" title="Profile & registration" subtitle="Manage your profile details" onPress={() => router.push('/profile')} />
         <SettingsLink icon="headset-outline" title="Support" subtitle="Get help and assistance" onPress={() => router.push('/support')} last />
       </View>
 
-      <PartnerSectionHeader title="Device security" settingsHeading />
+      <PartnerSectionHeader title="Device security" settingsHeading compact />
       <View style={styles.menu}>
         <SettingsToggleRow
           icon="finger-print-outline"
@@ -123,7 +123,7 @@ export default function SettingsScreen() {
       </View>
       {securityMessage ? <Text accessibilityLiveRegion="polite" style={styles.updateMessage}>{securityMessage}</Text> : null}
 
-      <PartnerSectionHeader title="Privacy" settingsHeading />
+      <PartnerSectionHeader title="Privacy" settingsHeading compact />
       <View style={styles.menu}>
         <SettingsLink
           icon="shield-checkmark-outline"
@@ -133,7 +133,7 @@ export default function SettingsScreen() {
         <SettingsLink icon="person-remove-outline" title="Request account deletion" onPress={() => router.push('/account-deletion')} last />
       </View>
 
-      <PartnerSectionHeader title="App information" settingsHeading />
+      <PartnerSectionHeader title="App information" settingsHeading compact />
       <View style={styles.details}>
         <InfoRow label="App" value="INSUREIT Partner" />
         <InfoRow label="Version" value="0.2.0" />
@@ -178,7 +178,7 @@ function SettingsLink({ icon, asset, title, subtitle, onPress, last = false }: {
         {asset ? (
           <Image source={asset} style={styles.linkArtworkImage} resizeMode="contain" />
         ) : icon ? (
-          <Ionicons name={icon} size={23} color="#6335B7" />
+          <Ionicons name={icon} size={20} color="#6335B7" />
         ) : null}
       </View>
       <View style={styles.linkCopy}>
@@ -201,7 +201,7 @@ function SettingsToggleRow({ icon, title, subtitle, value, disabled, onValueChan
 }) {
   return (
     <View style={[styles.controlRow, !last && styles.divider]}>
-      <View style={styles.linkIcon}><Ionicons name={icon} size={23} color="#6335B7" /></View>
+      <View style={styles.linkIcon}><Ionicons name={icon} size={20} color="#6335B7" /></View>
       <View style={styles.controlCopy}>
         <Text style={styles.controlTitle}>{title}</Text>
         <Text style={styles.controlSubtitle}>{subtitle}</Text>
@@ -229,7 +229,7 @@ function SettingsActionRow({ icon, title, subtitle, actionLabel, disabled, onPre
 }) {
   return (
     <View style={[styles.controlRow, !last && styles.divider]}>
-      <View style={styles.linkIcon}><Ionicons name={icon} size={23} color="#6335B7" /></View>
+      <View style={styles.linkIcon}><Ionicons name={icon} size={20} color="#6335B7" /></View>
       <View style={styles.controlCopy}>
         <Text style={styles.controlTitle}>{title}</Text>
         <Text style={styles.controlSubtitle}>{subtitle}</Text>
@@ -251,28 +251,28 @@ function InfoRow({ label, value, last = false }: { label: string; value: string;
 }
 
 const styles = StyleSheet.create({
-  menu: { overflow: 'hidden', borderRadius: 19, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DAE0F4', shadowColor: '#6570B4', shadowOpacity: 0.06, shadowRadius: 9, elevation: 1 },
-  updateMenu: { marginTop: 8 },
-  linkRow: { minHeight: 68, flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 15, paddingVertical: 8 },
-  controlRow: { minHeight: 58, flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 15, paddingVertical: 10 },
-  linkIcon: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: '#EEE8FF' },
+  menu: { overflow: 'hidden', borderRadius: 15, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DAE0F4', shadowColor: '#6570B4', shadowOpacity: 0.06, shadowRadius: 9, elevation: 1 },
+  updateMenu: { marginTop: 5 },
+  linkRow: { minHeight: 46, flexDirection: 'row', alignItems: 'center', gap: 9, paddingHorizontal: 12, paddingVertical: 4 },
+  controlRow: { minHeight: 46, flexDirection: 'row', alignItems: 'center', gap: 9, paddingHorizontal: 12, paddingVertical: 4 },
+  linkIcon: { width: 34, height: 34, borderRadius: 11, alignItems: 'center', justifyContent: 'center', backgroundColor: '#EEE8FF' },
   linkArtwork: { backgroundColor: 'transparent' },
-  linkArtworkImage: { width: 34, height: 34 },
+  linkArtworkImage: { width: 28, height: 28 },
   linkCopy: { flex: 1, minWidth: 0, justifyContent: 'center' },
-  linkTitle: { color: '#141C3F', fontSize: 14, lineHeight: 19, fontWeight: '800' },
-  linkSubtitle: { color: '#525A81', fontSize: 11.5, lineHeight: 16, marginTop: 2 },
+  linkTitle: { color: '#141C3F', fontSize: 13, lineHeight: 17, fontWeight: '800' },
+  linkSubtitle: { color: '#525A81', fontSize: 11, lineHeight: 14, marginTop: 1 },
   controlCopy: { flex: 1, minWidth: 0, justifyContent: 'center' },
-  controlTitle: { color: '#141C3F', fontSize: 14, lineHeight: 19, fontWeight: '800' },
-  controlSubtitle: { marginTop: 2, color: '#525A81', fontSize: 11.5, lineHeight: 16 },
-  smallAction: { minHeight: 38, minWidth: 76, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12, borderRadius: 19, backgroundColor: '#EDE7FF' },
+  controlTitle: { color: '#141C3F', fontSize: 13, lineHeight: 17, fontWeight: '800' },
+  controlSubtitle: { marginTop: 1, color: '#525A81', fontSize: 11, lineHeight: 14 },
+  smallAction: { minHeight: 34, minWidth: 70, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 9, borderRadius: 17, backgroundColor: '#EDE7FF' },
   smallActionText: { color: '#6335B7', ...partnerTheme.typography.label },
-  details: { overflow: 'hidden', borderRadius: 19, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DAE0F4' },
-  infoRow: { minHeight: partnerTheme.control.minTouchTarget, flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14 },
+  details: { overflow: 'hidden', borderRadius: 15, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DAE0F4' },
+  infoRow: { minHeight: 28, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 12 },
   infoLabel: { color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
   infoValue: { flex: 1, color: partnerTheme.colors.ink, textAlign: 'right', ...partnerTheme.typography.bodyStrong },
   divider: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#DBE0F1' },
   updateMessage: { marginTop: 6, paddingHorizontal: 4, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
-  note: { marginTop: partnerTheme.spacing.lg, minHeight: partnerTheme.control.minTouchTarget, flexDirection: 'row', alignItems: 'center', gap: 9, paddingHorizontal: 12, borderRadius: partnerTheme.radius.lg, backgroundColor: partnerTheme.colors.brandSoft },
+  note: { marginTop: 6, minHeight: 34, flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 10, borderRadius: partnerTheme.radius.md, backgroundColor: partnerTheme.colors.brandSoft },
   noteText: { flex: 1, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
   pressed: { opacity: 0.82 },
   disabled: { opacity: 0.55 },
