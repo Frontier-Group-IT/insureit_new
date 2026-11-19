@@ -145,6 +145,11 @@ const deletionScreen = read('app/account-deletion.tsx');
 for (const [fragment, reason] of [
   ['styles.hero', 'Branded deletion page has a hero'],
   ['styles.heroUnderline', 'Hero title uses purple accent underline'],
+  ["backgroundColor: '#FFFFFF' },", 'Deletion heading must have a clean white background'],
+  ["backgroundColor: '#0652AB'", 'The INSUREIT Partner lockup must use reference blue rather than purple'],
+  ["tintColor: '#FFFFFF'", 'The existing official crest must render white on blue'],
+  ['styles.heroBrandCopy', 'Crest and insureit Partner text must form a horizontal logo lockup'],
+
   ["require('../assets/insureit-partner-official.png')", 'Hero uses official Partner brand asset'],
   ['styles.cardHeader', 'Data retention explanation has a lavender info header'],
   ['name="information"', 'Data card shows an information icon'],
