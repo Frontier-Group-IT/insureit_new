@@ -22,6 +22,9 @@ assert.ok(source.includes('<Check className="customer-claim-motion-check'), "Com
 const renewals = readFileSync("app/customer/(protected)/renewals/customer-renewals-register.tsx","utf8");
 assert.ok(source.includes('src="/assets/customer-3d-icons/claims.png"'), "Customer Claim Journey must use the bundled 3D claims artwork");
 assert.ok(source.includes('border border-white bg-white p-1'), "Customer Claim Journey icon tile must have solid white backing");
+assert.match(source, /label === "Vehicle No\." && claimSummary\.manufacturer \? <CustomerClaimLogo value=\{claimSummary\.manufacturer\} kind="vehicle" size=\{32\} \/>/, "Vehicle No. shows manufacturer logo regardless of optional layout flag");
+assert.match(source, /label === "Policy Source" && claimSummary\.insurer \? <CustomerClaimLogo value=\{claimSummary\.insurer\} kind="insurer" size=\{32\} \/>/, "Policy Source uses the actual insurer logo regardless of optional layout flag");
+assert.doesNotMatch(source, /centerSummaryIcons && label === "Vehicle No\." \? <CustomerClaimLogo/, "Manufacturer logo must not depend on a cosmetic layout flag");
 assert.ok(!source.includes('<FolderKanban'), "Old flat folder icon must not return to Claim Journey");
 assert.ok(renewals.includes('const cardTone = selected'), "Renewal card styling must be independent of due/expired counts");
 assert.ok(renewals.includes('border-[#6050E5] bg-white'), "Selected renewal category uses a white surface with a visible selected border");

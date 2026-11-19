@@ -16,10 +16,12 @@ for (const tone of ['bg-[#FFF0F3]', 'bg-[#FFF3F5]', 'bg-[#FFEDF1]', 'bg-[#FFECEF
 assert.match(register, /aria-pressed=\{selected\}/);
 assert.match(register, /\$\{cardTone\}/);
 
-// Category badges now include a short status label beside each original count.
-assert.match(register, />Due \{cat\.due\}<\/span>/);
-assert.match(register, />Expired \{cat\.expired\}<\/span>/);
-assert.match(register, /justify-end gap-1/, 'Badges remain aligned at the bottom right');
+// Category badges display numbers only, retaining their status meaning through colour, title and aria-label.
+assert.match(register, />\{cat\.due\}<\/span>/);
+assert.doesNotMatch(register, />Due \{cat\.due\}<\/span>/);
+assert.match(register, />\{cat\.expired\}<\/span>/);
+assert.doesNotMatch(register, />Expired \{cat\.expired\}<\/span>/);
+assert.match(register, /flex shrink-0 flex-col items-end gap-1/, 'Badges stack vertically on the right');
 assert.match(register, /cat\.due > 0 \?/);
 assert.match(register, /cat\.expired > 0 \?/);
 assert.match(register, /role="group" aria-label="Renewal categories"/);
