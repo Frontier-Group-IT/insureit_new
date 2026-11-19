@@ -80,8 +80,8 @@ export default function JourneyScreen() {
                       <View style={styles.achievementIcon}>
                         <Image source={journeyMilestoneArtwork(item.kind, item.title)} style={styles.achievementArtwork} resizeMode="contain" accessibilityLabel={item.title} />
                       </View>
-                      <Text style={styles.achievementDate}>{formatDate(item.date)}</Text>
                       <Text style={styles.achievementTitle} numberOfLines={1} ellipsizeMode="tail" accessibilityLabel={item.title}>{item.title}</Text>
+                      <Text style={styles.achievementDate}>{formatDate(item.date)}</Text>
                     </View>
                   );
                 })}
@@ -223,10 +223,10 @@ const styles = StyleSheet.create({
   smallPillText: { fontSize: 10, color: '#6842B5', fontWeight: '700' },
   achievementRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 6 },
   achievement: { flex: 1, minWidth: 0, alignItems: 'center' },
-  achievementIcon: { width: 57, height: 57, justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
-  achievementArtwork: { width: 54, height: 54 },
-  achievementTitle: { width: '100%', color: '#192333', fontSize: 11, lineHeight: 15, fontWeight: '700', textAlign: 'center' },
-  achievementDate: { color: '#7A8698', fontSize: 9.5, textAlign: 'center', marginBottom: 5 },
+  achievementIcon: { width: 52, height: 52, justifyContent: 'center', alignItems: 'center', marginBottom: 5, backgroundColor: 'transparent' },
+  achievementArtwork: { width: 48, height: 48 },
+  achievementTitle: { width: '100%', color: '#192333', fontSize: 10.5, lineHeight: 14, fontWeight: '700', textAlign: 'center' },
+  achievementDate: { color: '#7A8698', fontSize: 9, lineHeight: 13, textAlign: 'center', marginTop: 3 },
   filters: { flexDirection: 'row', gap: 5, marginBottom: 19 },
   filterButton: { flex: 1, minWidth: 0, paddingVertical: 10, paddingHorizontal: 2, alignItems: 'center', borderRadius: 9, backgroundColor: '#F3F5F9' },
   filterActive: { backgroundColor: '#142849' },
