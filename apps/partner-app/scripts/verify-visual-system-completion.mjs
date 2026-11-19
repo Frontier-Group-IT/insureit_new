@@ -255,7 +255,7 @@ requireText(homeMetricIcons, "backgroundColor: '#EDF7FF'", 'Generated Home metri
 
 requireText(home, '<MiniBusinessTrend values={trend.map((item) => Number(item.premium || 0))} />', 'Partner Home MTD card must retain its small month-wise bar trend.');
 if (home.includes('<PartnerBusinessGrowthIcon')) throw new Error('Partner Home MTD card must not show the removed large growth icon.');
-requireText(more, '<PartnerProfileMenuIcon kind={iconKind} size={38} />', 'Partner Profile/More menu rows must use the shared professional icon component.');
+requireText(more, "iconKind === 'policy-intake' ? 48 : iconKind === 'journey' ? 46 : 42", 'Policy Intake and Journey have larger, clearly visible icons.');
 for (const kind of [
   'search', 'policy-intake', 'renewals', 'customers',
   'week', 'impact', 'journey', 'activity',
@@ -266,11 +266,12 @@ for (const kind of [
   const configKey = kind.includes('-') ? `'${kind}':` : `${kind}:`;
   requireText(profileMenuIcon, configKey, `Partner Profile menu icon system is missing ${kind}.`);
 }
-requireText(profileMenuIcon, 'styles.glyphDepth', 'Partner Profile icons must show layered dimensional glyph depth.');
-requireText(profileMenuIcon, 'styles.glyphFace', 'Partner Profile icons must show a visible dimensional front face.');
-requireText(profileMenuIcon, 'styles.topRim', 'Partner Profile icons must retain a softly illuminated raised tile.');
-requireText(profileMenuIcon, 'styles.badgeShine', 'Partner Profile icon badge must retain native 3D highlights.');
-requireText(profileMenuIcon, "borderTopColor: '#FFFFFF'", 'Partner Profile icons must retain a light beveled tile rim.');
+requireText(profileMenuIcon, "icon: 'document-text-outline'", 'Policy Intake uses a clear document icon without a colored tile.');
+requireText(profileMenuIcon, "icon: 'navigate-circle-outline'", 'My Journey uses a clear navigation icon without a colored tile.');
+requireText(profileMenuIcon, "style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}", 'Menu icons share a transparent alignment wrapper.');
+if (profileMenuIcon.includes('backgroundColor') || profileMenuIcon.includes('shadowOpacity') || profileMenuIcon.includes('borderWidth') || profileMenuIcon.includes('ILLUSTRATED_ICONS')) {
+  throw new Error('More menu icons must not restore background tiles, shadows, borders or embedded illustrated artwork.');
+}
 if (more.includes('PartnerAssets.actions.') || more.includes('PartnerAssets.status.') || more.includes('PartnerAssets.navigation.')) {
   throw new Error('Partner Profile/More menu must not regress to mixed legacy artwork after professional icon unification.');
 }
