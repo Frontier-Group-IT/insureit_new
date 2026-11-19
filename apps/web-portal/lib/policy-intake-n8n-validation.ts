@@ -1,3 +1,5 @@
+import { validateTataAigN8nResponse } from "./policy-n8n-tata-aig-validation";
+
 const KEYS = new Set([
   "policy_number", "insurer_name", "policy_product", "policy_issuance_date", "policy_start_date", "policy_end_date",
   "third_party_start_date", "third_party_end_date", "third_party_policy_number", "third_party_insurer_name",
@@ -44,6 +46,12 @@ export type N8nVerifiedPremiumBreakdown = {
   /** OD-only: original PDF subtotal and No Claim Bonus/OD deductions. */
   odSubtotal?: number;
   odDeductions?: number;
+  /** Tata AIG's separate OD, RSA and non-owner-liability components. */
+  tataAig?: {
+    product: string; postNcbOd: number; addonSubtotal: number;
+    paidDriverLiability: number; passengerPa: number;
+    roadsideAssistance: number; printedNet: number; ncbDiscount: number;
+  };
 };
 export type N8nOcrBridgeResponse = {
   ok: true; fields: N8nOcrField[]; warnings: string[];
@@ -67,6 +75,12 @@ function plainObject(value: unknown): value is Record<string, unknown> {
 export function validateN8nPolicyIntakeResponse(
   value: unknown, ids: Pick<N8nOcrBridgeInput, "intakeId" | "documentId" | "requestId">,
 ): N8nOcrBridgeResponse {
+  // Tata AIG uses a separately proven 18-check accounting contract. Leave
+  // every ICICI-3005/3005-O guard below unchanged.
+  if (plainObject(value) && typeof value.parser_id === "string"
+      && value.parser_id.startsWith("tata_aig_")) {
+    return validateTataAigN8nResponse(value, ids);
+  }
   if (!plainObject(value) || value.contract_version !== "1") throw new Error("n8n_contract_version_invalid");
   if (value.intake_id !== ids.intakeId || value.document_id !== ids.documentId
       || value.request_id !== ids.requestId) throw new Error("n8n_request_identity_mismatch");
