@@ -346,7 +346,7 @@ async function deletePendingPartnerApplication(applicationId: string): Promise<P
     ["pan_verification_jobs", "application_id"],
   ];
   for (const [table, column] of protectedLinks) {
-    const { data, error } = await admin.from(table).select("id").eq(column, applicationId).limit(1);
+    const { data, error } = await admin.from(table).select(column).eq(column, applicationId).limit(1);
     if (error) return { status: "error", message: "A dependency safety check failed. Nothing was deleted." };
     if (data?.length) return { status: "error", message: "This application has linked registration, verification or business history and cannot be permanently deleted." };
   }
@@ -358,7 +358,7 @@ async function deletePendingPartnerApplication(applicationId: string): Promise<P
     .delete()
     .eq("id", applicationId)
     .eq("status", application.status)
-    .eq("registration_status", application.registration_status)
+    .eq("registration_status", application.registration_status ?? "")
     .is("partner_record_id", null)
     .is("intermediary_id", null)
     .is("registration_record_id", null)
