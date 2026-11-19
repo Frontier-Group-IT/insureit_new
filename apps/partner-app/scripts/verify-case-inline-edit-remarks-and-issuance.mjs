@@ -37,13 +37,13 @@ assert.match(app,/heroSecond/);
 assert.match(app,/justifyContent:'space-between'/);
 assert.doesNotMatch(app,/Open Issuance Form|Edit Case Details|beginEdit|setEditing/);
 assert.ok(app.includes('name="pencil"') && app.includes('accessibilityLabel={editMode?"Editing case details":"Edit case details"}'), 'Pending Case Details exposes the accessible pencil edit action');
-assert.ok(app.includes("const editable=(record?.status_group==='pending'&&editMode)"), 'Pending case fields become editable after pencil selection');
+assert.ok(app.includes("const editable=Boolean(record?.status_group==='pending'&&editMode)"), 'Pending case fields unlock only after pencil selection');
 assert.ok(app.includes("setEditMode(false);"), 'Successful save and focus reset edit mode');
 
 for(const key of ['sourcingDate','customerName','customerPhone','customerAddress','insurerId','productName','proposalNumber','premiumPayingTerm','policyDuration','paymentFrequency','premiumAmount','paymentMode']){
   assert.ok(app.includes('inline("'+key+'"'),'Inline edit missing '+key);
 }
-assert.match(app,/record\?\.status_group==='issued'&&\['customerName','customerPhone','customerAddress'\]/);
+assert.doesNotMatch(app,/record\?\.status_group==='issued'&&\['customerName','customerPhone','customerAddress'\]/, 'Issued case fields remain read-only');
 assert.match(app,/record.status_group==='pending'\?<Section number="05" title="Mark Policy Issued" highlight/);
 for(const key of ['policyNumber','issuanceDate','startDate','endDate','pptEndDate','nextInstallmentDate','finalPremium','sumInsured']){
   assert.ok(app.includes('issueField("'+key+'"'),'Missing issuance field '+key);
@@ -51,7 +51,7 @@ for(const key of ['policyNumber','issuanceDate','startDate','endDate','pptEndDat
 assert.ok(app.includes('>Create Policy</Text>'),'Pending case issuance button uses compact label');
 assert.ok(app.includes("if(JSON.stringify(form)===JSON.stringify(initialForm(record)))"), 'Save Case detects unchanged forms without a database write');
 assert.ok(app.includes("partnerAlert('No changes to save','Case details are already up to date.')"), 'No-change Save Case shows informational feedback');
-assert.ok(app.includes("disabled={saving||issuing||documentBusy||rejectBusy}"), 'Save Case only disables during conflicting operations');
+assert.ok(app.includes("disabled={!editMode||saving||issuing||documentBusy||rejectBusy}"), 'Save Case disables while locked or busy');
 assert.ok(!app.includes("disabled={saving||issuing||documentBusy||rejectBusy||!caseDirty}"), 'Save Case is clickable when form has no changes');
 assert.ok(app.includes("style={[styles.caseAction,styles.actionSave]}"), 'Save Case styling does not depend on dirty state');
 assert.ok(app.includes("actionSave:{flex:1,borderColor:'#1765C1',borderWidth:1,backgroundColor:'#1765C1'}"), 'Save Case has visible blue active styling');
@@ -72,7 +72,7 @@ assert.ok(app.includes('styles.sectionHighlight') && app.includes('styles.sectio
 assert.ok(app.includes('styles.centeredModalBackdrop') && app.includes("justifyContent:'center'"), 'Remarks and Reject use centered modal positioning');
 assert.ok(app.includes('styles.centeredModalKeyboardAvoid') && app.includes('style={styles.remarkKeyboardAvoid}'), 'Centered dialogs accommodate keyboard');
 assert.ok(app.includes("record.remarks.trim().split(/\\n\\s*\\n/)"), 'Separate saved remarks receive activity-style dividers');
-assert.ok(app.includes('style={styles.activity}><Text style={styles.paragraph} selectable>{remark}</Text>'), 'Each saved remark has a divider');
+assert.ok(app.includes('<RemarkHistoryEntry key={index} remark={remark}/>'), 'Remarks render timestamp-aware rows');
 const section3=app.slice(app.indexOf('<Section number="03"'),app.indexOf('<Section number="04"'));
 assert.ok(section3.indexOf('inline("proposalNumber"')<section3.indexOf('inline("paymentFrequency"'), 'Payment frequency follows case/proposal number');
 assert.ok(section3.includes('inline("proposalNumber","Case / proposal number",record.proposal_number,true)'), 'Case number uses half width');
@@ -90,8 +90,8 @@ assert.ok(app.includes("const [expandedCaseTab,setExpandedCaseTab]=useState<'act
 assert.ok(app.includes('setExpandedCaseTab(previous=>previous===tab?null:tab)'), 'Tapping active tab collapses and switching opens only one');
 assert.ok(app.includes("expandedCaseTab==='remarks'"), 'Remarks history appears only when remarks tab expands');
 assert.ok(app.includes("expandedCaseTab==='activity'"), 'Activity history appears only when activity tab expands');
-assert.equal((app.match(/style=\{styles\.activityRow\}/g)||[]).length,2,'Pending/rejected and issued Activity tabs both show right-aligned timestamps');
-assert.equal((app.match(/style=\{styles\.activityTimestamp\}/g)||[]).length,2,'Every case activity timestamp uses the right-aligned style');
+assert.equal((app.match(/style=\{styles\.activityRow\}/g)||[]).length,3,'Remarks and both Activity tabs use aligned rows');
+assert.equal((app.match(/style=\{styles\.activityTimestamp\}/g)||[]).length,3,'Remarks and Activity share aligned timestamp style');
 assert.ok(app.includes("activityRow:{flexDirection:'row',alignItems:'flex-start',justifyContent:'space-between',gap:8}"),'Case activity uses a horizontal status and timestamp row');
 assert.ok(app.includes("activityDetails:{flex:1,minWidth:0,gap:4}") && app.includes("textAlign:'right',width:130"),'Activity actor and title remain on the left while date/time stays readable on the right');
 
@@ -164,4 +164,18 @@ assert.ok(!app.includes('Keyboard.dismiss();void submitRejection()'), 'Confirm R
 assert.ok(app.includes('setRemarkOpen(false);setRemarkDraft(\'\');'), 'Remark modal still closes only after successful save.');
 assert.ok(app.includes('setRejectOpen(false);setRejectReason(\'\');'), 'Reject modal still closes only after successful rejection.');
 assert.ok(app.includes("behavior={Platform.OS==='ios'?'padding':'height'}"), 'KeyboardAvoidingView remains available while the user is entering text.');
+
+assert.ok(app.includes('const splitRemarkTimestamp=(raw:string)=>'), 'Remarks parse stored timestamps');
+assert.ok(app.includes("timestamp:''"), 'Legacy undated remarks must not invent timestamps');
+assert.ok(app.includes('if(!editMode)return <Field label={label}'), 'Issuance fields are read-only until pencil unlock');
+assert.ok(app.includes("if(!record||!editMode||record.status_group!=='pending'||issuing||!form)return;"), 'Issue action refuses locked mode');
+assert.ok(app.includes("{record.status_group==='pending'&&editMode?<View style={styles.documentUploadGrid}>"), 'Upload is hidden while locked');
+assert.ok(app.includes("{record.status_group==='pending'&&editMode?<>"), 'Replace and delete are hidden while locked');
+assert.ok(app.includes("if(!record||!editMode||documentBusy||record.status_group!=='pending')return;"), 'Document picker guards edit mode');
+assert.ok(app.includes("if(!record||!editMode||!deleteTarget||documentBusy"), 'Delete guards edit mode');
+assert.ok(app.includes("heroEditPencil:{minWidth:33,height:25"), 'Pencil is badge-sized');
+assert.ok(app.includes('name="pencil" size={13}'), 'Pencil icon is compact');
+assert.ok(app.indexOf('<View style={styles.statusPill}>') < app.indexOf('accessibilityLabel={editMode?"Editing case details":"Edit case details"}'), 'Pencil follows Pending status');
+assert.ok(app.includes('if(editMode){'), 'Cancel handles leaving edit mode');
+
 console.log('Case inline edit, append-only remarks, secure issuance and native parity verified.');
