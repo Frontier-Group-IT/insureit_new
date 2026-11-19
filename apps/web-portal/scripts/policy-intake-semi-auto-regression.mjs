@@ -301,7 +301,7 @@ assert(handoff.includes("const parsed=await previewSemiAutoN8nExtraction(id)"),
   "The handoff must re-extract the current private PDF server-side, not accept browser OCR fields");
 assert(handoff.includes("parsed.preview.fingerprint!==expectedFingerprint"),
   "A changed extraction must block a previously reviewed handoff");
-assert(n8nServer.includes("JSON.stringify({ intakeId: id, documentId, fields, warnings, premium })")
+assert(n8nServer.includes("JSON.stringify({ intakeId: id, documentId, fields, warnings, premium,")
   && n8nServer.includes("extraction.warnings, extraction.premium"),
   "The reviewed fingerprint must include verified financial components, not only OCR field text");
 assert(handoff.includes("parsed.preview.documentId!==expectedDocumentId"),
@@ -799,7 +799,7 @@ assert.equal(prioritizedQueueSql.split("\n").filter(line=>line.trim()==="as $$")
 assert.equal(prioritizedQueueSql.split("\n").filter(line=>line.trim()==="$$;").length,1);
 // Corrected n8n date handoff, genuine exception taxonomy and duplicate skip.
 const duplicateQueueSql=readFileSync(new URL("../../../supabase/migrations/20261117190000_ai_policy_duplicate_queue_and_reassess.sql",import.meta.url),"utf8");
-assert(handoff.includes('const verifiedIssuanceDate=verified?.fields.find(field=>field.key==="policy_issuance_date")?.value??""')
+assert(handoff.includes('const verifiedIssuanceDate=verified?.fields.find(field=>field.key==="policy_issuance_date")?.value')
   && handoff.includes('issuanceDate:verified?(verifiedIssuanceDate||approvedSigningDate):new Date().toISOString().slice(0,10)')
   && handoff.includes('reviewerConfirmedSigningDate')
   && handoff.includes('expectedDraftRevision')
@@ -940,7 +940,7 @@ assert(workbenchText.includes("Confirm bulk Policy registration")
   && workbenchText.includes("Verify this Intake in Policy Register before retrying"),
   "Bulk registration must require explicit per-batch confirmation, cap at 10 and use canonical per-Intake checks without ambiguous retries");
 const aiQueueRevisionText=text("lib/ai-policy-onboarding-queue-server.ts");
-assert(aiQueueRevisionText.includes('+"-issue-date-v2"')
+assert(aiQueueRevisionText.includes('+"-issue-date-v3"')
   && aiQueueRevisionText.includes("processAiQueueBatch")
   && aiQueueRevisionText.includes("MAX_BATCH = 6")
   && aiQueueRevisionText.includes("MAX_CONCURRENT = 3"),
