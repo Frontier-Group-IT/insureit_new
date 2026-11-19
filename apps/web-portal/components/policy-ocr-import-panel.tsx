@@ -89,10 +89,12 @@ export type PolicyOcrApplyOutcome = {
   skipped: string[];
 };
 
+export type PolicyOcrApplyProvenance = { parserId: string; nativeVerified: boolean };
+
 export type PolicyOcrImportPanelProps = {
   variant?: "header" | "icon";
   context: PolicyOcrImportContext;
-  onApply: (fields: PolicyOcrField[]) => PolicyOcrApplyOutcome | Promise<PolicyOcrApplyOutcome>;
+  onApply: (fields: PolicyOcrField[], provenance?: PolicyOcrApplyProvenance) => PolicyOcrApplyOutcome | Promise<PolicyOcrApplyOutcome>;
   onClearForm?: () => void;
 };
 
@@ -120,6 +122,7 @@ export function PolicyOcrImportPanel({ variant = "header", context, onApply, onC
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [parserInfo, setParserInfo] = useState<string | null>(null);
+  const [verifiedParserId, setVerifiedParserId] = useState("");
   const [warnings, setWarnings] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -169,6 +172,7 @@ export function PolicyOcrImportPanel({ variant = "header", context, onApply, onC
     setSelected(new Set());
     setWarnings([]);
     setParserInfo(null);
+    setVerifiedParserId("");
     setError(null);
   }
 
@@ -198,6 +202,7 @@ export function PolicyOcrImportPanel({ variant = "header", context, onApply, onC
       }
       setFields(result.fields);
       setParserInfo(`${friendlyParserName(result.parserId)} · ${friendlyMethod(result.extractionMethod)}`);
+      setVerifiedParserId(result.extractionMethod === "native_pdf_text" ? result.parserId : "");
       setWarnings(filterPolicyOcrUserWarnings(result.warnings));
       // Strict n8n 13-check validation is performed server-side. Its
       // per-field confidence is null by design; select eligible verified
@@ -248,8 +253,14 @@ export function PolicyOcrImportPanel({ variant = "header", context, onApply, onC
       .map((field) => [field.key, field]));
     const chosen = APPLY_ORDER.map((key) => selectedByKey.get(key)).filter((field): field is PolicyOcrField => Boolean(field));
     if (!chosen.length) return;
-
-    const outcome = await onApply(chosen);
+    const verifiedTata = /^tata_aig_private_car_(?:saod|package|bundled)_n8n_native_pdf$/.test(verifiedParserId);
+    // Owner-driver CPA is a verified companion to the selected numeric CPA
+    // field, not a guess from positive non-owner liability premiums.
+    if (verifiedTata && selectedByKey.has("cpa_premium")) {
+      const explicitCpa = fields.find(field => field.key === "cpa_opted");
+      if (explicitCpa) chosen.push(explicitCpa);
+    }
+    const outcome = await onApply(chosen, {parserId:verifiedParserId,nativeVerified:Boolean(verifiedParserId)});
     if (!outcome.applied) {
       setError("The selected details could not be applied. Protected or unmatched values were left unchanged.");
       return;
