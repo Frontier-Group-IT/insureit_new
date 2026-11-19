@@ -38,8 +38,8 @@ for(let i=0;i<nia.length;i++){
  const r=parseNonTata(text);
  assert.equal(r.parser_id,'new_india_cv_native_pdf',tag);
  assert.deepEqual([r.premium_components.od,r.premium_components.tp,r.premium_components.net,r.premium_components.gst,r.premium_components.gross],[od,tp,net,gst,gross],tag);
- assert.equal(r.checks.net_reconciliation,true,tag);
- assert.equal(r.checks.gross_reconciliation,true,tag);
+ assert.equal(r.checks.net_od_tp_reconciled,true,tag);
+ assert.equal(r.checks.gross_net_tax_reconciled,true,tag);
  assert.equal(r.ok,complete,tag+' incomplete plate requires review');
  assert.equal(r.review_required,true);
  assert.equal(r.auto_finalize_allowed,false);
