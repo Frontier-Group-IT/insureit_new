@@ -630,7 +630,9 @@ requireText(journey, 'bottomNavigation={<PartnerStackBottomNavigation activeTab=
 if (journey.includes('name="locate-outline"')) throw new Error('Milestone top-right circle icon must be removed.');
 if (/calendar-outline|PartnerPolicyCalendarDialog|calendarOpen|setTimelineDate|\[timelineDate,|calendarButton|dateFilterRow|Clear timeline date filter/.test(journey)) throw new Error('Journey timeline must not include the removed calendar/date picker or its unused state.');
 requireText(journey, "filter === 'all' || milestoneCategory(item.kind, item.title) === filter", 'Journey timeline must retain category filtering.');
-requireText(journey, "hero: { marginTop: 16, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 14", 'Milestone card must be spaced below the header and compact.');
+requireText(journey, "hero: { marginTop: 16, borderRadius: 19, paddingHorizontal: 16, paddingVertical: 14, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E4E8EF'", 'Milestone card must use the white bordered recognition reference instead of a navy background.');
+requireText(journey, "heroTitle: { flex: 1, minWidth: 0, color: '#17233A'", 'Milestone title must stay legible on white.');
+requireText(journey, "progressTrack: { height: 8, marginTop: 10, overflow: 'hidden', borderRadius: 999, backgroundColor: '#E5E1FA'", 'Milestone progress bar must match the lavender recognition reference.');
 requireText(journey, 'styles.heroHeadline', 'Milestone title and flag must share a compact header.');
 requireText(journey, 'styles.heroProgressHeading', 'Milestone progress must place percentage beside its label.');
 requireText(journey, "progressTrack: { height: 8, marginTop: 10", 'Progress bar retains compact height and spacing.');
