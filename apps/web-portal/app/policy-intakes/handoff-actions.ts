@@ -106,7 +106,7 @@ export async function prepareVerifiedN8nIntakeHandoff(
       || parsed.preview.fingerprint!==expectedFingerprint) {
     return{ok:false,error:"The n8n extraction changed after review. Run n8n again and check the new fields before continuing."};
   }
-  const isTata = /^tata_aig_private_car_(?:saod|package|bundled)_n8n_native_pdf$/.test(parsed.preview.parserId);
+  const isTata = /^tata_aig_(?:private_car_(?:saod|package|bundled)|two_wheeler_bundled)_n8n_native_pdf$/.test(parsed.preview.parserId);
   const informationalTataWarnings = new Set([
     "tata_aig_issuance_date_unverified",
     "tata_aig_human_review_required",
