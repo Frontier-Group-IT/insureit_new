@@ -2,7 +2,7 @@
 
 import { headers } from "next/headers";
 import { requestN8nPolicyIntakeExtraction } from "@/lib/policy-intake-n8n-bridge";
-import { useN8nForAllPolicyReads } from "@/lib/policy-ocr-routing-mode";
+import { isN8nPolicyReadEnabled } from "@/lib/policy-ocr-routing-mode";
 import { requirePolicyEditor } from "@/lib/policy-access-server";
 import {
   buildTrainingProposal,
@@ -126,7 +126,7 @@ async function extractPolicyFile(
   if (!(file instanceof File) || file.size === 0) return { ok: false, error: "Select a policy PDF or image." };
   if (!ALLOWED_TYPES.has(file.type)) return { ok: false, error: "Only PDF, JPG, PNG and WebP policy copies are supported." };
   if (file.size > MAX_FILE_SIZE) return { ok: false, error: "The policy document must be 15 MB or smaller." };
-  if (useN8nForAllPolicyReads()) {
+  if (isN8nPolicyReadEnabled()) {
     if (file.type !== "application/pdf") return {
       ok: false, error: "The local n8n reader currently supports verified digital PDF files. Use manual onboarding for images or untrained policies.",
     };
@@ -323,7 +323,7 @@ export async function processPolicyOcrTrainingWorkerBatch(
     subjectTokenOverride: string | null,
     limit = 2,
   ) {
-    if (useN8nForAllPolicyReads()) return {ok:false as const,error:"legacy_google_training_disabled",processed:0,succeeded:0,needsReview:0};
+    if (isN8nPolicyReadEnabled()) return {ok:false as const,error:"legacy_google_training_disabled",processed:0,succeeded:0,needsReview:0};
     if (!getGoogleConfig()) return { ok: false as const, error: "google_ocr_configuration_missing", processed: 0, succeeded: 0, needsReview: 0 };
     const subjectToken = subjectTokenOverride?.trim()
       || process.env.VERCEL_OIDC_TOKEN?.trim()
@@ -357,7 +357,7 @@ export async function processPolicyOcrTrainingOrchestratorBatch(
       orchestratorId: string,
       limit = 25,
     ) {
-      if (useN8nForAllPolicyReads()) return {ok:false as const,error:"legacy_google_training_disabled",processed:0,succeeded:0,needsReview:0};
+      if (isN8nPolicyReadEnabled()) return {ok:false as const,error:"legacy_google_training_disabled",processed:0,succeeded:0,needsReview:0};
       if (process.env.POLICY_OCR_ORCHESTRATOR_ENABLED !== "true") {
         return { ok: false as const, error: "orchestrator_disabled", processed: 0, succeeded: 0, needsReview: 0 };
       }
@@ -434,7 +434,7 @@ export async function processPolicyOcrTrainingDocument(
   labelId: string,
 ) {
   await requirePolicyOcrTrainingOperator();
-  if (useN8nForAllPolicyReads()) return {ok:false as const,error:"legacy_google_training_disabled",processed:0};
+  if (isN8nPolicyReadEnabled()) return {ok:false as const,error:"legacy_google_training_disabled",processed:0};
 
   if (!getGoogleConfig()) {
     console.error(JSON.stringify({ level: "error", message: "Policy OCR manual run preflight failed", code: "google_ocr_configuration_missing" }));
