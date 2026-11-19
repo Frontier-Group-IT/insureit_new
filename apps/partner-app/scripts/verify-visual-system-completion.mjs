@@ -178,12 +178,19 @@ const learn = read('app/learn.tsx');
 for (const [screen, title, icon] of [
   [weeklyStory, 'A week with INSUREIT', 'bar-chart-outline'],
   [learn, '60-Second Learn', 'school-outline'],
-  [recognition, 'Progress worth noticing', 'ribbon-outline'],
 ]) {
   requireText(screen, 'hideTopBar navyStatusBar bottomNavigationNavy', `${title} must use navy header and Android status bar like Profile.`);
   requireText(screen, '<PartnerCaseBottomNavigation activeTab="More" />', `${title} must show the permission-aware five-tab bottom navigation.`);
   requireText(screen, `<PartnerCasePageHeader title="${title}" icon="${icon}" onBack={() => router.back()} />`, `${title} must show a white title and back action on navy.`);
 }
+
+// Recognition uses the same navy shell with a multiline PartnerScreen declaration.
+for (const fragment of [
+  'hideTopBar', 'navyStatusBar', 'bottomNavigationNavy',
+  '<PartnerCaseBottomNavigation activeTab="More" />',
+  '<PartnerCasePageHeader title="My Achievements" icon="ribbon-outline" onBack={() => router.back()} />',
+  'percentText', 'accessibilityRole="progressbar"',
+]) requireText(recognition, fragment, 'My Achievements must retain navy navigation and accessible milestone progress.');
 
 const pulse = read('app/pulse.tsx');
 
