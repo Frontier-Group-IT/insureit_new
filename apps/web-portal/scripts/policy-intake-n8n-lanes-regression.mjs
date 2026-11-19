@@ -78,6 +78,21 @@ for(const guard of [
  "q.state <> 'duplicate'",
  "i.file_name ~ '^3005[_-][0-9]'"
 ])assert(migration.includes(guard),"Missing guarded v3 migration rule: "+guard);
+const aiActions=read("app/development/ai-policy-onboarding/actions.ts");
+const aiWorkspace=read("components/development/semi-auto-policy-workspace.tsx");
+assert(migration.includes("move_policy_intake_automation_to_manual_v1")
+ && migration.includes("from public.policy_intake_ai_processing_queue q")
+ && migration.includes("v_queue.state not in ('unsupported','exception','failed')")
+ && migration.includes("for update")
+ && migration.includes("'policy_intake_lane_transferred'")
+ && migration.includes("grant execute on function public.move_policy_intake_automation_to_manual_v1"),
+ "IT transfer must be atomic, terminal-failure-only, audited and service-role-only");
+assert(aiActions.includes("transferFailedAiIntakeToManual")
+ && aiActions.includes("requireDevelopmentPolicyOperator(id)")
+ && aiWorkspace.includes("Move to Manual Onboarding")
+ && aiWorkspace.includes("manualTransferReason")
+ && aiWorkspace.includes("transferFailedAiIntakeToManual(manualTransferRow.id,manualTransferReason)"),
+ "AI exceptions need a custom confirmed IT-only transfer dialog and server action");
 assert(!migration.includes("delete from") && !migration.includes("truncate ")
  && !migration.includes("update public.policies"),"Lane migration must not write registered policies");
 console.log("n8n-only Policy Read and manual/automation lane regression: OK");
