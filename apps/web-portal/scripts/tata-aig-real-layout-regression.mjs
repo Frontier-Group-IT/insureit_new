@@ -17,7 +17,7 @@ const checks=new Set(["current_insurer_verified","supported_layout_verified","po
 "insured_present","vehicle_identity_verified","vehicle_registration_status_verified","vehicle_specs_verified",
 "rto_resolved","idv_verified","coverage_periods_verified","basic_od_ncb_reconciled","itemized_addons_reconciled",
 "liability_components_reconciled","net_premium_reconciled","tax_premium_reconciled","gross_premium_reconciled",
-"receipt_signature_date_agree","policy_number_receipt_agree"]);
+"receipt_date_document_consistent","policy_number_receipt_agree"]);
 const money=x=>String(Math.round(Number(x)*100)/100);
 function toWeb(r){
   const f=r.fields,p=r.premium_components;
