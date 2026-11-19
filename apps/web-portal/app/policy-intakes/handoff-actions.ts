@@ -76,6 +76,10 @@ type VerifiedN8nHandoff = {
   premium:N8nVerifiedPremiumBreakdown;
   fillEmptyFields?:boolean;
   reviewedIssueDateReplacement?:{expectedPrevious:string;expectedRevision:number};
+  reviewerConfirmedSigningDate?:{
+    date:string;documentSha256:string;
+    expectedDraftRevision:number|null;expectedPreviousDate:string|null;
+  };
 };
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -87,6 +91,10 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-
 export async function prepareVerifiedN8nIntakeHandoff(
   id:string, expectedDocumentId:string, expectedFingerprint:string, takeOver=false, fillEmptyFields=false,
   reviewedIssueDateReplacement?:{expectedPrevious:string;expectedRevision:number},
+  reviewerConfirmedSigningDate?:{
+    date:string;documentSha256:string;
+    expectedDraftRevision:number|null;expectedPreviousDate:string|null;
+  },
 ):Promise<PolicyIntakeHandoffResult> {
   if (!isN8nWorkbenchPrimary() || !UUID.test(id) || !UUID.test(expectedDocumentId)
       || !/^[a-f0-9]{64}$/i.test(expectedFingerprint)) {
@@ -120,9 +128,24 @@ export async function prepareVerifiedN8nIntakeHandoff(
   if(parsed.preview.checksPassed!==(isTata?18:13) || blockingWarnings.length>0) {
     return{ok:false,error:"n8n validation warnings must be resolved before creating an onboarding draft."};
   }
+  // Metadata-only date evidence is not certified issuance. An authorized
+  // reviewer must explicitly compare the original PDF and opt into using it.
+  const signature=parsed.preview.issuanceEvidence;
+  const existing=parsed.preview.savedDraftIssueDate;
+  if(reviewerConfirmedSigningDate) {
+    if(!signature || signature.verification!=="metadata_only_requires_reviewer"
+      || reviewerConfirmedSigningDate.date!==signature.proposedDate
+      || reviewerConfirmedSigningDate.documentSha256!==signature.documentSha256
+      || reviewerConfirmedSigningDate.expectedDraftRevision!==(existing?.revision??null)
+      || reviewerConfirmedSigningDate.expectedPreviousDate!==(existing?.value??null)
+      || ["invalid","future"].includes(policyDateDecision(reviewerConfirmedSigningDate.date))) {
+      return{ok:false,error:"The signing-date proposal or saved draft changed. Review the current PDF and confirm again."};
+    }
+  }
   return preparePolicyIntakeHandoffInternal(id,takeOver===true,{
     documentId:expectedDocumentId,fields:parsed.preview.fields,premium:parsed.preview.premium,fillEmptyFields,
     reviewedIssueDateReplacement,
+    ...(reviewerConfirmedSigningDate?{reviewerConfirmedSigningDate}:{}),
   });
 }
 
@@ -243,6 +266,7 @@ async function preparePolicyIntakeHandoffInternal(
   // Strict current-PDF n8n extraction is the only authority for an automated
   // issuance date; the OD/TP start date and the server clock are not evidence.
   const verifiedIssuanceDate=verified?.fields.find(field=>field.key==="policy_issuance_date")?.value??"";
+  const approvedSigningDate=verified?.reviewerConfirmedSigningDate?.date??"";
   const tpStart=verified?.fields.find(field=>field.key==="third_party_start_date")?.value??"";
   const tpExpiry=verified?.fields.find(field=>field.key==="third_party_end_date")?.value??"";
    const cpaExpiry=verified?.fields.find(field=>field.key==="cpa_end_date")?.value??"";
@@ -252,7 +276,7 @@ async function preparePolicyIntakeHandoffInternal(
   const intermediaryType=intake.lead_source_type==="posp"?"POSP":intake.lead_source_type==="misp"?"MISP":"SIBL / Partner";
   const draft:PolicyIntakeDraft={
     registrationMode:mapped.registrationMode,
-    issuanceDate:verified?verifiedIssuanceDate:new Date().toISOString().slice(0,10),rmName:"",intermediaryType,leadSource:intake.lead_source_name,intermediaryCode:intake.lead_source_code??"",businessLine:"Motor",
+    issuanceDate:verified?(verifiedIssuanceDate||approvedSigningDate):new Date().toISOString().slice(0,10),rmName:"",intermediaryType,leadSource:intake.lead_source_name,intermediaryCode:intake.lead_source_code??"",businessLine:"Motor",
     registrationNo:mapped.next.registrationNo,insuredName:customerName,phoneNo:intake.customer_mobile,vehicleClass:mapped.next.vehicleClass,make:mapped.next.make,model:mapped.next.model,fuelType:mapped.next.fuelType,capacity:mapped.next.capacity,manufacturingYear:mapped.next.manufacturingYear,chassisNo:mapped.next.chassisNo,engineNo:mapped.next.engineNo,rtoState:mapped.next.rtoState,rtoName:mapped.next.rtoName,
     policyProduct:mapped.next.policyProduct,idv:mapped.next.idv,
     od:verifiedPremium?.od??mapped.next.od,
@@ -274,6 +298,12 @@ Third Party period: ${tpStart||"unavailable"} to ${tpExpiry||"unavailable"}. ${v
     // Operator explicitly requested reapplying only missing verified fields.
     // Never replace a nonempty saved value; use optimistic revision control.
     const original=existingDraft.draft_payload;
+    const confirmedSigning=verified?.reviewerConfirmedSigningDate;
+    if(confirmedSigning && (
+      existingDraft.revision!==confirmedSigning.expectedDraftRevision
+      || original.issuanceDate!==confirmedSigning.expectedPreviousDate
+      || !verified?.fillEmptyFields
+    )) return{ok:false,error:"The saved issuance date changed. Reload and confirm the new comparison; nothing was overwritten."};
     const supplemented={...original};
     // The older allowlist left the entire policy/premium section blank on
     // legacy drafts, so correcting the issue date simply exposed another
@@ -296,6 +326,14 @@ Third Party period: ${tpStart||"unavailable"} to ${tpExpiry||"unavailable"}. ${v
     let changed=false;
     if(dateReview && original.issuanceDate!==verifiedIssuanceDate){
       supplemented.issuanceDate=verifiedIssuanceDate;
+      changed=true;
+    }
+    if(confirmedSigning && original.issuanceDate!==confirmedSigning.date){
+      supplemented.issuanceDate=confirmedSigning.date;
+      supplemented.remarks=(original.remarks||"")
+        +"\nReviewer confirmed proposed PDF signing date "+confirmedSigning.date
+        +" against the original policy; document SHA-256 "+confirmedSigning.documentSha256
+        +". Certificate chain is not independently trusted; booking needs normal approval.";
       changed=true;
     }
     for(const key of fillable){
