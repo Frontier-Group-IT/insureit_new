@@ -46,7 +46,7 @@ const amount=(value:number)=>`₹${Number(value||0).toLocaleString('en-IN',{mini
 const splitRemarkTimestamp=(raw:string)=>{
  const remark=raw.trim();
  const match=/^\[([^\]]+)\]\s*([\s\S]*)$/.exec(remark);
- if(!match||!match[2].trim())return {timestamp:'',body:remark};
+ if(!match||!match[2].trim()||!/^[0-3]?\d\s+[A-Za-z]{3}\s+\d{4},?\s+\d{1,2}:\d{2}\s*[ap]m$/i.test(match[1]))return {timestamp:'',body:remark};
  return {timestamp:match[1],body:match[2].trim()};
 };
 function RemarkHistoryEntry({remark}:{remark:string}){
@@ -196,7 +196,7 @@ export default function LifeHealthCaseDetailScreen(){
   finally{setRemarkSaving(false);}
  };
  const saveEdit=async()=>{
-  if(!record||!form||saving||issuing||documentBusy||rejectBusy)return;
+  if(!record||!editMode||!form||saving||issuing||documentBusy||rejectBusy)return;
   if(JSON.stringify(form)===JSON.stringify(initialForm(record))){
    setEditMode(false);
    partnerAlert('No changes to save','Case details are already up to date.');
@@ -643,8 +643,8 @@ export default function LifeHealthCaseDetailScreen(){
             <Text style={styles.cancelActionText} numberOfLines={1}>Cancel</Text>
           </Pressable>
           <Pressable accessibilityRole="button" accessibilityLabel="Save Case Details" onPress={()=>void saveEdit()}
-            disabled={saving||issuing||documentBusy||rejectBusy}
-            style={[styles.caseAction,styles.actionSave]}>
+            disabled={!editMode||saving||issuing||documentBusy||rejectBusy}
+            style={[styles.caseAction,styles.actionSave,(!editMode||saving||issuing||documentBusy||rejectBusy)&&styles.disabledAction]}>
             {saving?<ActivityIndicator size="small" color="#FFFFFF"/>:<Text style={styles.saveActionText} numberOfLines={1}>Save Case</Text>}
           </Pressable>
           <Pressable accessibilityRole="button" accessibilityLabel="Create Policy" onPress={()=>void submitIssue()}
