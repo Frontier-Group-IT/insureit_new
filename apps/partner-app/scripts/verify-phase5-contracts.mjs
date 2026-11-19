@@ -361,10 +361,11 @@ expectAll('components/ui/partner-section-header.tsx', [
   [/settingsHeading && styles\.settingsTitle/, 'Settings heading colour applies only when requested'],
   [ /settingsTitle: \{ color: '#20234C', fontSize: 15, lineHeight: 20, fontWeight: '900'/, 'Settings headings use bold high-contrast typography'],
   [/textTransform: 'uppercase'/, 'Heading capitalization remains unchanged'],
-  [ /settingsRow: \{ marginTop: 22, marginBottom: 10, minHeight: 24 \}/, 'Settings headings use reference spacing'],
-  [/settingsAccent: \{ height: 3, width: 28, borderRadius: 2, backgroundColor: '#6441BE' \}/, 'Settings headings include purple accent'],
+  [/settingsRow: \{ marginTop: 12, marginBottom: 3, minHeight: 22 \}/, 'Settings headings sit close to cards with compact spacing'],
+  [/!settingsHeading \|\| !styles\.settingsAccent|settingsHeading && styles\.settingsRow/, 'Settings heading variant remains scoped'],
 ]);
 
+expect('components/ui/partner-section-header.tsx', /settingsRow: \{ marginTop: 12, marginBottom: 3/, 'Settings heading-to-card gap remains small');
 // Evaluate every contract only after all checks have run.
 if (failures.length) {
   console.error('Partner Phase 5 resilience/accessibility contract verification failed:');
