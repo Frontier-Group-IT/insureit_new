@@ -715,7 +715,11 @@ if (journey.includes('journeyMilestoneIcon(') || journey.includes('styles.summar
 requireText(journey, 'style={styles.timelineArtwork}', 'Timeline rows must show their illustrated category icon.');
 requireText(journey, "flexDirection: 'row', alignItems: 'center', padding: 7, gap: 5", 'Summary tiles must show the icon on the left and stacked text on the right.');
 requireText(journey, "summaryDetails: { flex: 1, minWidth: 0, alignItems: 'flex-start'", 'Summary label and count must stack vertically.');
-if (journey.indexOf('<Text style={styles.achievementDate}>') > journey.indexOf('<Text style={styles.achievementTitle}')) throw new Error('Achievement dates must be between illustrated icon and title.');
+if (journey.indexOf('<Text style={styles.achievementDate}>') < journey.indexOf('<Text style={styles.achievementTitle}')) throw new Error('Isolated 3D-style achievement artwork must precede a one-line title, with the date underneath, as in the reference.');
+requireText(journey, "achievementIcon: { width: 52, height: 52, justifyContent: 'center', alignItems: 'center', marginBottom: 5, backgroundColor: 'transparent' }", 'Achievement art must stay isolated without background tiles.');
+requireText(journey, 'achievementArtwork: { width: 48, height: 48 }', 'Isolated achievement artwork should match the compact reference size.');
+requireText(journey, "if (value.includes('claim')) return PartnerAssets.actions.quickClaims", 'Claims achievements must retain the existing illustrated claim artwork.');
+requireText(journey, "if (value.includes('customer')) return PartnerAssets.actions.quickCustomers", 'Customer achievements must retain the existing illustrated customer artwork.');
 if (journey.includes('styles.progressTrack') || journey.includes('styles.heroArtwork')) throw new Error('Obsolete horizontal milestone bar or flag icon must be removed.');
 for (const unwanted of ['NEXT CUSTOMER MILESTONE', 'Customers achieved', 'more customers to unlock', 'styles.heroNumbers', 'styles.heroBottom']) {
   if (journey.includes(unwanted)) throw new Error('My Progress must not restore removed milestone secondary content: ' + unwanted);
