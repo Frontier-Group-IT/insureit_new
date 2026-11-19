@@ -177,13 +177,24 @@ const recognition = read('app/recognition.tsx');
 const learn = read('app/learn.tsx');
 for (const [screen, title, icon] of [
   [weeklyStory, 'A week with INSUREIT', 'bar-chart-outline'],
-  [learn, '60-Second Learn', 'school-outline'],
   [recognition, 'Progress worth noticing', 'ribbon-outline'],
 ]) {
   requireText(screen, 'hideTopBar navyStatusBar bottomNavigationNavy', `${title} must use navy header and Android status bar like Profile.`);
   requireText(screen, '<PartnerCaseBottomNavigation activeTab="More" />', `${title} must show the permission-aware five-tab bottom navigation.`);
   requireText(screen, `<PartnerCasePageHeader title="${title}" icon="${icon}" onBack={() => router.back()} />`, `${title} must show a white title and back action on navy.`);
 }
+
+// Learn follows the Renewal Work Queue reference header rather than the shared compact page header.
+for (const fragment of [
+  'hideTopBar navyStatusBar bottomNavigationNavy',
+  '<PartnerCaseBottomNavigation activeTab="More" />',
+  'accessibilityLabel="Back"',
+  '<Ionicons name="arrow-back" size={22} color="#FFFFFF" />',
+  'PartnerAssets.actions.policyChecklist',
+  '60-Second Learn</Text>',
+  "backgroundColor: '#071E49'",
+  "height: 64,",
+]) requireText(learn, fragment, '60-Second Learn must match the Renewal navy header and retain five-tab navigation.');
 
 const pulse = read('app/pulse.tsx');
 
