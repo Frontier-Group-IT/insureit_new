@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { validateN8nPolicyIntakeResponse } from "../lib/policy-intake-n8n-validation.ts";
-import { mapVerifiedN8nMotorPremium } from "../lib/policy-n8n-onboarding-premium.ts";
+import { mapVerifiedN8nMotorPremium, verifiedCpaSelectionMatches } from "../lib/policy-n8n-onboarding-premium.ts";
 import { buildPolicyOcrOnboardingUpdate } from "../lib/policy-ocr-onboarding-apply.ts";
 
 const ids = {intakeId:"00000000-0000-4000-8000-000000000001",documentId:"00000000-0000-4000-8000-000000000002",requestId:"00000000-0000-4000-8000-000000000003"};
@@ -192,7 +192,7 @@ test("OD safely refuses a booking representation when addons exceed total OD", (
 });
 test("ICICI 3005/O amendment B00 remains validated by all 13 checks",()=>{
  const x=odFixture();
- x.fields.find(f=>f.key==="policy_number").value="3005/O/461963798/00/B00";
+ x.fields.find(f=>f.key==="policy_number").value="3005/O/123450002/00/B00";
  assert.equal(validateN8nPolicyIntakeResponse(x,ids).checksPassed,13);
 });
 test("CHETAK model variants map to Bajaj only with verified EV motor evidence",()=>{
@@ -217,4 +217,106 @@ test("CHETAK model variants map to Bajaj only with verified EV motor evidence",(
  const noEvidence=buildPolicyOcrOnboardingUpdate({...opts,
   fields:fields.filter(f=>f.key!=="vehicle_fuel_type")});
  assert.notEqual(noEvidence.next.make,"Bajaj");
+});
+
+
+// Anonymized financial / layout fixtures derived from three manually
+// reviewed ICICI Product 3005 PDF schedules. The real policyholders' PDF
+// bytes, contact data and IDs must NEVER be committed to this repository.
+test("3005/O ordinary BAJAJ Chetak: no NCB and one zero-depreciation add-on",()=>{
+ const x=odFixture();
+ const update={
+   policy_number:"3005/O/123450001/00/000",
+   policy_issuance_date:"2026-11-10",
+   policy_start_date:"2026-11-12",policy_end_date:"2027-11-11",
+   third_party_start_date:"2025-11-12",third_party_end_date:"2030-11-11",
+   vehicle_make:"BAJAJ",vehicle_model:"CHETAK 3503",
+   vehicle_class:"Two Wheeler",vehicle_fuel_type:"Electric",
+   vehicle_motor_power_kw:"4.2",idv:"98505",od_premium:"2696",
+ };
+ for(const [key,value] of Object.entries(update)){
+   const found=x.fields.find(field=>field.key===key);
+   if(found)found.value=value;
+   else x.fields.push({key,label:key,value,confidence:null,page:3,evidence:key});
+ }
+ x.premium_components={
+   basic_od_premium:2056,od_addons:[{name:"Zero Depreciation (Silver)",amount:640}],
+   printed_od_subtotal:2696,od_deductions:0,total_od_premium:2696,
+   basic_tp_premium:0,owner_driver_cpa:0,total_liability_premium:0,
+   net_premium:2696,igst_exact:485.28,printed_total_tax:485,gross_premium:3181
+ };
+ const checked=validateN8nPolicyIntakeResponse(x,ids);
+ assert.equal(checked.checksPassed,13);
+ assert.equal(checked.premium.gross,3181);
+ assert.equal(mapVerifiedN8nMotorPremium(checked.premium).od,"2056");
+});
+test("3005/O B00 endorsement: two add-ons, printed NCB deduction, independent TP dates",()=>{
+ const x=odFixture();
+ const update={
+   policy_number:"3005/O/123450002/00/B00",
+   policy_issuance_date:"2026-11-10",
+   policy_start_date:"2026-11-10",policy_end_date:"2027-11-09",
+   third_party_start_date:"2024-09-10",third_party_end_date:"2029-09-09",
+   vehicle_make:"CHETAK",vehicle_model:"BLUE 2903",
+   vehicle_class:"Two Wheeler",vehicle_fuel_type:"Electric",
+   vehicle_motor_power_kw:"2.8",idv:"84500",od_premium:"2063",
+ };
+ for(const [key,value] of Object.entries(update)){
+   const found=x.fields.find(field=>field.key===key);
+   if(found)found.value=value;
+   else x.fields.push({key,label:key,value,confidence:null,page:3,evidence:key});
+ }
+ x.premium_components={
+   basic_od_premium:1774,od_addons:[
+     {name:"Zero Depreciation (Silver)",amount:634},
+     {name:"IL Smart Assist",amount:99}],
+   printed_od_subtotal:2507,od_deductions:444,total_od_premium:2063,
+   basic_tp_premium:0,owner_driver_cpa:0,total_liability_premium:0,
+   net_premium:2063,igst_exact:371.34,printed_total_tax:371,gross_premium:2434
+ };
+ const checked=validateN8nPolicyIntakeResponse(x,ids);
+ assert.equal(checked.checksPassed,13);
+ assert.deepEqual(mapVerifiedN8nMotorPremium(checked.premium),
+   {od:"1330",addOnPremium:"733",tp:"0",cpa:"0",cpaOpted:"No"});
+});
+test("3005 Bundled non-individual: three OD addons and zero owner-driver CPA",()=>{
+ const x=fresh();
+ const update={
+   policy_number:"3005/123450003/00/000",
+   policy_issuance_date:"2026-11-16",
+   policy_start_date:"2026-11-16",policy_end_date:"2027-11-15",
+   third_party_start_date:"2026-11-16",third_party_end_date:"2031-11-15",
+   vehicle_make:"CHETAK",vehicle_model:"CHETAK 3503",
+   vehicle_class:"Two Wheeler",vehicle_fuel_type:"Electric",
+   vehicle_motor_power_kw:"4.2",vehicle_registration_number:"NEW",
+   vehicle_manufacturing_year:"2026",idv:"124163",
+   od_premium:"2839",tp_premium:"3273",cpa_premium:"0",
+ };
+ for(const [key,value] of Object.entries(update)){
+   const found=x.fields.find(field=>field.key===key);
+   if(found)found.value=value;
+   else x.fields.push({key,label:key,value,confidence:null,page:2,evidence:key});
+ }
+ x.premium_components={
+   basic_od_premium:1598,od_addons:[
+     {name:"Zero Depreciation (Silver)",amount:683},
+     {name:"Return to Invoice",amount:248},
+     {name:"Battery Protect Premium",amount:310}],
+   total_od_premium:2839,basic_tp_premium:3273,owner_driver_cpa:0,
+   total_liability_premium:3273,net_premium:6112,
+   igst_exact:1100.16,printed_total_tax:1100,gross_premium:7212,
+ };
+ const checked=validateN8nPolicyIntakeResponse(x,ids);
+ assert.equal(checked.checksPassed,13);
+ assert.deepEqual(mapVerifiedN8nMotorPremium(checked.premium),
+   {od:"1598",addOnPremium:"1241",tp:"3273",cpa:"0",cpaOpted:"No"});
+});
+
+test("owner-driver CPA booking requires saved opt-in to match independently verified PDF charge",()=>{
+ assert.equal(verifiedCpaSelectionMatches("Yes",575),true);
+ assert.equal(verifiedCpaSelectionMatches("No",575),false);
+ assert.equal(verifiedCpaSelectionMatches("No",0),true);
+ assert.equal(verifiedCpaSelectionMatches("Yes",0),false);
+ assert.equal(verifiedCpaSelectionMatches("Yes",Number.NaN),false);
+ assert.equal(verifiedCpaSelectionMatches("Yes",-1),false);
 });

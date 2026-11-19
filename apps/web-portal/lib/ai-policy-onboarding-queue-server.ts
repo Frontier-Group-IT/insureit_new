@@ -16,6 +16,7 @@ export type AiQueueDisplay = {
   exception_codes: AiPolicyExceptionCode[];
   processed_at: string | null;
   document_id: string;
+  diagnostic_code: string | null;
 };
 
 type Claimed = { intake_id: string; document_id: string; lease_id: string };
@@ -78,7 +79,7 @@ export async function loadAiQueueDisplay(ids: readonly string[]): Promise<Map<st
   // first 75/100 visible rows. Partial reads must not invent eligibility.
   for(let offset=0;offset<ids.length;offset+=100){
     const {data,error} = await admin.from("policy_intake_ai_processing_queue")
-      .select("intake_id,document_id,state,exception_codes,processed_at")
+      .select("intake_id,document_id,state,exception_codes,processed_at,last_error_code")
       .in("intake_id",ids.slice(offset,offset+100));
     if (error) return new Map<string,AiQueueDisplay>(); // Migration not applied.
     for (const r of data??[]) {
@@ -88,6 +89,7 @@ export async function loadAiQueueDisplay(ids: readonly string[]): Promise<Map<st
         exception_codes:safeCodes(Array.isArray(r.exception_codes)?r.exception_codes:[]),
         processed_at:r.processed_at??null,
         document_id:r.document_id,
+        diagnostic_code:typeof r.last_error_code==="string" && /^n8n_[a-z0-9_]{1,60}$/.test(r.last_error_code) ? r.last_error_code : null,
       });
     }
   }
@@ -212,7 +214,7 @@ async function processClaim(item: Claimed, parserRevision: string) {
       state:untrained?"unsupported":"failed",
       exception_codes:[untrained?"unsupported_layout":"extraction_failed"],
       field_keys:[],parser_id:null,checks_passed:0,extraction_fingerprint:null,
-      last_error_code:untrained?"parser_not_trained":"n8n_unavailable",
+      last_error_code:untrained?(extraction.diagnosticCode??"parser_not_trained"):"n8n_unavailable",
       processed_at:untrained?new Date().toISOString():null,
       retry_after:retryAfter(untrained?1440:5),
     });

@@ -41,7 +41,7 @@ export type SemiAutoN8nPreview = {
 };
 export type SemiAutoN8nResult =
   | { ok: true; preview: SemiAutoN8nPreview }
-  | { ok: false; error: string; reason?: "untrained_or_unverified" | "unavailable" };
+  | { ok: false; error: string; reason?: "untrained_or_unverified" | "unavailable"; diagnosticCode?: string };
 export type SemiAutoN8nApplyResult = { ok: boolean; error?: string };
 
 /**
@@ -129,12 +129,22 @@ export async function previewSemiAutoN8nExtraction(id: string): Promise<SemiAuto
     // Report the unsupported/unverified layout without leaking PDF text,
     // signed URLs, customer data or raw remote errors.
     const code = error instanceof Error ? error.message : "";
-    if (["n8n_review_required", "n8n_financial_validation_failed",
-         "n8n_wrong_policy_product", "n8n_required_field_missing",
-         "n8n_premium_breakdown_missing", "n8n_premium_reconciliation_failed",
-         "n8n_coverage_dates_invalid"].includes(code)) {
+    // A policy whose parser ran but failed a strict response check is not
+    // necessarily a new/untrained insurer. Surface only the safe validation
+    // code (never raw PDF text, signed URLs, headers, or n8n responses).
+    const parserValidationCodes=new Set([
+      "n8n_review_required","n8n_financial_validation_failed",
+      "n8n_wrong_policy_product","n8n_required_field_missing",
+      "n8n_premium_breakdown_missing","n8n_premium_reconciliation_failed",
+      "n8n_coverage_dates_invalid","n8n_od_reference_missing",
+      "n8n_fields_invalid","n8n_field_shape_invalid",
+      "n8n_issuance_date_invalid",
+    ]);
+    if(parserValidationCodes.has(code)) {
+      console.error("[ai-policy] rejected n8n validation",{code});
       return { ok: false, reason: "untrained_or_unverified",
-        error: "n8n has not validated this policy layout. It needs parser training or manual document review; no old OCR fallback, Intake update or booking was performed." };
+        diagnosticCode:code,
+        error:"The n8n parser response failed a strict policy verification check ("+code+"). Check its policy variant, premiums, issue date and extracted fields; no old OCR fallback or booking was performed." };
     }
     // Only known, safe error codes are exposed. Never show signed URLs,
     // response bodies or private PDF content in an operator-facing error.

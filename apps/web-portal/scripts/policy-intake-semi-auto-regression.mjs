@@ -1029,3 +1029,39 @@ assert(actionsText.includes('Only an open, unregistered Motor Intake can be repr
   && actionsText.includes('.in("state",["exception","verified","unsupported","failed"])'),
   "Reprocessing must reject completed, registered and duplicate Intakes while preserving individual rechecks");
 console.log("Semi-auto Motor onboarding regression checks passed.");
+
+
+// An existing saved CPA opt-out must never silently become a payable CPA.
+assert(handoff.includes('if(key==="cpa" && verifiedPremium && Number(verifiedPremium.cpa)>0')
+  && handoff.includes('original.cpaOpted!=="Yes") continue;')
+  && actionsText.includes('verifiedCpaSelectionMatches(forwarded.draft.cpaOpted,Number(verifiedMoney.cpa))')
+  && workbenchText.includes('CPA amount and opt-in need separate review.'),
+  "Positive CPA cannot be filled under saved opt-out or booked without explicit CPA amount/choice parity");
+
+// // ICICI old drafts must not hide saved-date conflicts or drop later policy
+// fields. A user must compare/confirm a trusted current PDF separately.
+assert(handoff.includes('reviewedIssueDateReplacement')
+  && handoff.includes('existingDraft.revision!==dateReview.expectedRevision')
+  && handoff.includes('original.issuanceDate!==dateReview.expectedPrevious')
+  && handoff.includes('supplemented.issuanceDate=verifiedIssuanceDate')
+  && handoff.includes('.eq("revision",existingDraft.revision)')
+  && handoff.includes('"policyNo","insurerId"')
+  && handoff.includes('"validFrom","validUpto","tpValidUpto"')
+  && handoff.includes('"idv","od","addOnPremium","tp","cpa"')
+  && handoff.includes('!String(original[key]??"").trim()'),
+  "Legacy draft correction must use explicit revision-guarded date consent and fill only empty verified policy fields");
+assert(actionsText.includes('export async function reviewIciciVerifiedDraftRepair(')
+  && actionsText.includes('export async function applyReviewedIciciDraftRepair(')
+  && actionsText.includes('review.savedIssueDate!==expectedSavedIssueDate')
+  && actionsText.includes('confirmed!==true')
+  && actionsText.includes('previewSemiAutoN8nExtraction(id)')
+  && actionsText.includes('applyReviewedIciciDraftRepair(')
+  && workbenchText.includes('Compare current PDF and saved draft')
+  && workbenchText.includes('Confirm PDF-verified draft repair')
+  && workbenchText.includes('role="status"'),
+  "Date conflicts must be reviewed and explicitly approved in the AI Intake UI; booking remains separate");
+assert(workerText.includes('extraction.diagnosticCode??"parser_not_trained"')
+  && workbenchText.includes('Parser validation reason:')
+  && text("lib/policy-intake-semi-auto-n8n.ts").includes('diagnosticCode:code')
+  && text("lib/policy-intake-semi-auto-n8n.ts").includes('n8n_od_reference_missing'),
+  "Strict n8n parser failures must expose safe diagnostic codes instead of guessing product untrained");
