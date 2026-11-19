@@ -730,3 +730,8 @@ requireText(policies,'onPress={openSortSheet}','Sort by must continue opening th
 for (const phrase of ["cardGap: { height: 5 }","minHeight: 68,","marginHorizontal: 10,","paddingVertical: 8,","insurerLogo: { width: 33, height: 33 }","customerName: { color: '#173A7D', fontSize: 13","policyNumber: { marginTop: 2, color: '#5C6C84', fontSize: 10","statusText: { fontSize: 9"]) {
   requireText(policies,phrase,'Policies cards should be less dense and use more of the available screen: '+phrase);
 }
+
+requireText(policies,"let savedPolicyPeriod: PartnerPolicyPeriod = 'all';","Policies must start on All (all time), not MTD");
+requireText(policies,"let savedPolicyLifecycle: PartnerPolicyLifecycle = 'all';","Policies must start on All Policies status");
+requireText(policies,"useState<PartnerPolicyPeriod>(savedPolicyPeriod)","The Sort by sheet and list must share the selected period");
+requireText(policies,"useState<PartnerPolicyLifecycle>(savedPolicyLifecycle)","The Sort by sheet and list must share the selected status");
