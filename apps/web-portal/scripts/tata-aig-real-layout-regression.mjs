@@ -6,7 +6,7 @@ import { mapVerifiedN8nMotorPremium } from "../lib/policy-n8n-onboarding-premium
 import { buildPolicyOcrOnboardingUpdate } from "../lib/policy-ocr-onboarding-apply.ts";
 
 const read = relative => fs.readFileSync(fileURLToPath(new URL(relative,import.meta.url)),"utf8");
-const parse = new Function("$input",read("../../infra/n8n-local/workflows/tata-aig-real-pdf-parser-v2.js"));
+const parse = new Function("$input",read("../../../infra/n8n-local/workflows/tata-aig-real-pdf-parser-v2.js"));
 const fixtures=JSON.parse(read("./fixtures/tata-aig-real-layout-anonymized.json"));
 assert.equal(fixtures.length,6);
 const IDs={intakeId:"00000000-0000-4000-8000-000000000001",
