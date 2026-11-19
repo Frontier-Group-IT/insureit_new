@@ -181,7 +181,7 @@ function CircularMilestoneProgress({ progress, current, target }: { progress: nu
         ))}
         <Text style={styles.progressCircleText}>{percentage}%</Text>
       </View>
-      <Text style={styles.heroProgressLabel}>Milestone progress</Text>
+      <Text style={styles.heroProgressLabel} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.9}>Milestone progress</Text>
     </View>
   );
 }
@@ -201,14 +201,14 @@ function formatDate(value: string) {
 }
 
 const styles = StyleSheet.create({
-  hero: { marginTop: 0, marginHorizontal: -partnerTheme.spacing.lg, borderBottomWidth: 1, borderBottomColor: '#E4E8EF', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: '#FFFFFF' },
+  hero: { marginTop: 0, marginHorizontal: -partnerTheme.spacing.lg, borderBottomWidth: 1, borderBottomColor: '#E4E8EF', paddingHorizontal: 16, paddingVertical: 10, backgroundColor: '#FFFFFF' },
   heroHeadline: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   heroTitle: { flex: 1, minWidth: 0, color: '#17233A', fontSize: 18, lineHeight: 24, fontWeight: '800' },
-  progressColumn: { width: 96, flexShrink: 0, alignItems: 'center', justifyContent: 'center', gap: 3 },
+  progressColumn: { width: 122, flexShrink: 0, alignItems: 'center', justifyContent: 'center', gap: 2 },
   progressCircle: { width: 72, height: 72, alignItems: 'center', justifyContent: 'center' },
   progressSegment: { position: 'absolute', width: 3, height: 6, borderRadius: 2 },
   progressCircleText: { color: '#6954D6', fontSize: 17, fontWeight: '800' },
-  heroProgressLabel: { color: '#6856D5', fontSize: 9, fontWeight: '700', textAlign: 'center' },
+  heroProgressLabel: { width: '100%', color: '#6856D5', fontSize: 9, fontWeight: '700', textAlign: 'center' },
   summary: { marginTop: 12, flexDirection: 'row', gap: 8 },
   summaryItem: { flex: 1, minWidth: 0, minHeight: 75, flexDirection: 'row', alignItems: 'center', padding: 7, gap: 5, borderRadius: 17, borderWidth: 1, borderColor: '#E7E9EE', backgroundColor: '#FFFFFF' },
   summaryItemPressed: { backgroundColor: '#F1F5FB' },
