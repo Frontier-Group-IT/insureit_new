@@ -14,18 +14,18 @@ import { partnerTheme } from '@/lib/theme';
 type ImpactArt = 'motor' | 'vehicle' | 'customer' | 'policy' | 'claim' | 'premium' | 'new-customer' | 'settlement' | 'journey';
 
 const IMPACT_ART: Record<ImpactArt, ImageSourcePropType> = {
-  motor: PartnerAssets.status.verified,
-  vehicle: PartnerAssets.products.motorInsurance,
+  motor: PartnerAssets.products.motorInsurance,
+  vehicle: PartnerAssets.actions.addVehicle,
   customer: PartnerAssets.actions.quickCustomers,
   policy: PartnerAssets.actions.policyChecklist,
-  claim: PartnerAssets.navigation.claims,
+  claim: PartnerAssets.actions.quickClaims,
   premium: PartnerAssets.actions.businessPerformance,
   'new-customer': PartnerAssets.actions.addCustomer,
   settlement: PartnerAssets.status.verified,
   journey: PartnerAssets.status.journey,
 };
 
-// Keep abbreviated amounts strictly presentational. Exact server values remain beneath.
+// Abbreviated amounts are presentational; the existing RPC remains the source of truth.
 function shortCurrency(value: number | string): string {
   const amount = Number(value);
   if (!Number.isFinite(amount)) return formatIndianCurrency(value);
@@ -73,7 +73,6 @@ export default function ImpactScreen() {
         </Pressable>
         <Ionicons name="stats-chart-outline" size={25} color="#FFFFFF" />
         <View style={styles.headerCopy}>
-          <Text style={styles.headerEyebrow}>MY IMPACT</Text>
           <Text style={styles.headerTitle} numberOfLines={1}>Protection delivered</Text>
         </View>
       </View>
@@ -90,18 +89,12 @@ export default function ImpactScreen() {
             onPress={() => router.push('/(tabs)/business')}
             style={({ pressed }) => [styles.hero, pressed && styles.pressed]}
           >
-            <View style={styles.heroTopRow}>
-              <Text style={styles.heroEyebrow}>ACTIVE MOTOR PROTECTION</Text>
-              <ImpactIcon icon="shield-checkmark" art="motor" size={44} inverse />
-            </View>
-            <Text style={styles.heroValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
+            <ImpactIcon icon="shield-checkmark" art="motor" size={61} plain />
+            <View style={styles.heroDivider} />
+            <Text style={styles.heroValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65}>
               {shortCurrency(data.active_motor_idv)}
             </Text>
-            <Text style={styles.heroExact}>{formatIndianCurrency(data.active_motor_idv)} insured value</Text>
-            <View style={styles.heroBottomRow}>
-              <Text style={styles.heroLabel}>Value protected across active motor policies</Text>
-              <Ionicons name="arrow-forward-outline" size={19} color="#CFDBEF" />
-            </View>
+            <Ionicons name="chevron-forward" size={19} color="#203C62" />
           </Pressable>
 
           <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>Protection footprint</Text></View>
@@ -123,16 +116,15 @@ export default function ImpactScreen() {
               style={({ pressed }) => [styles.monthPremium, pressed && styles.monthStatPressed]}
             >
               <View style={styles.monthPremiumTop}>
-                <View style={styles.monthPremiumLabel}>
-                  <ImpactIcon icon="trending-up" art="premium" size={40} />
+                <View style={styles.premiumIconLabel}>
+                  <ImpactIcon icon="trending-up" art="premium" size={47} plain />
                   <Text style={styles.premiumLabel}>Gross premium</Text>
                 </View>
+                <Text style={styles.premiumValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65}>
+                  {shortCurrency(data.gross_premium_this_month)}
+                </Text>
                 <Ionicons name="chevron-forward" size={17} color="#8A98AD" />
               </View>
-              <Text style={styles.premiumValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>
-                {shortCurrency(data.gross_premium_this_month)}
-              </Text>
-              <Text style={styles.premiumExact}>{formatIndianCurrency(data.gross_premium_this_month)}</Text>
             </Pressable>
             <View style={styles.monthDivider} />
             <View style={styles.monthStatsRow}>
@@ -192,12 +184,13 @@ function ImpactCard({ icon, art, value, label, onPress }: {
       onPress={onPress}
       style={({ pressed }) => [styles.impactCard, pressed && styles.pressed]}
     >
-      <View style={styles.cardTopRow}>
-        <ImpactIcon icon={icon} art={art} size={43} />
-        <Ionicons name="chevron-forward" size={16} color="#9AA3B2" />
+      <View style={styles.cardContentRow}>
+        <View style={styles.cardLeft}>
+          <ImpactIcon icon={icon} art={art} size={46} plain />
+          <Text style={styles.impactLabel} numberOfLines={2}>{label}</Text>
+        </View>
+        <Text style={styles.impactValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65}>{count(value)}</Text>
       </View>
-      <Text style={styles.impactValue} numberOfLines={1} adjustsFontSizeToFit>{count(value)}</Text>
-      <Text style={styles.impactLabel}>{label}</Text>
     </Pressable>
   );
 }
@@ -216,28 +209,27 @@ function MonthStat({ icon, art, label, value, onPress }: {
       onPress={onPress}
       style={({ pressed }) => [styles.monthStat, pressed && styles.monthStatPressed]}
     >
-      <ImpactIcon icon={icon} art={art} size={37} compact />
-      <Text style={styles.monthValue} numberOfLines={1} adjustsFontSizeToFit>{value}</Text>
-      <Text style={styles.monthLabel}>{label}</Text>
+      <View style={styles.cardLeft}>
+        <ImpactIcon icon={icon} art={art} size={43} plain />
+        <Text style={styles.monthLabel} numberOfLines={2}>{label}</Text>
+      </View>
+      <Text style={styles.monthValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{value}</Text>
     </Pressable>
   );
 }
 
-function ImpactIcon({ icon, art, size, compact = false, inverse = false }: {
+function ImpactIcon({ icon: _icon, art, size, plain = false }: {
   icon: keyof typeof Ionicons.glyphMap;
   art: ImpactArt;
   size: number;
-  compact?: boolean;
-  inverse?: boolean;
+  plain?: boolean;
 }) {
   return (
     <View style={[
       styles.iconShell,
       { width: size, height: size, borderRadius: Math.round(size * 0.28) },
-      compact && styles.iconShellCompact,
-      inverse && styles.iconShellInverse,
+      plain && styles.iconShellPlain,
     ]}>
-      <View style={[styles.iconGlow, inverse && styles.iconGlowInverse]} />
       <Image
         source={IMPACT_ART[art]}
         resizeMode="contain"
@@ -256,36 +248,38 @@ const styles = StyleSheet.create({
   },
   headerBack: { width: 34, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   headerCopy: { flex: 1, minWidth: 0, justifyContent: 'center' },
-  headerEyebrow: { color: '#B5C8E5', fontSize: 9, letterSpacing: 1.1, fontWeight: '800' },
-  headerTitle: { color: '#FFFFFF', fontSize: 18, fontWeight: '800', marginTop: 2 },
-  hero: { marginTop: 10, borderRadius: 22, padding: 17, backgroundColor: '#142849' },
-  heroTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  heroEyebrow: { flex: 1, color: '#B6C6FC', letterSpacing: 1, fontSize: 10, fontWeight: '800' },
-  heroValue: { marginTop: 8, color: '#FFFFFF', fontSize: 32, lineHeight: 39, fontWeight: '800' },
-  heroExact: { marginTop: 3, color: '#CAD8EC', fontSize: 11, lineHeight: 16, fontWeight: '600' },
-  heroBottomRow: { marginTop: 15, paddingTop: 11, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#465874', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  heroLabel: { flex: 1, color: '#D8E2F1', fontSize: 11, lineHeight: 16, fontWeight: '500' },
-  sectionHeader: { marginTop: 19, marginBottom: 9 },
+  headerTitle: { color: '#FFFFFF', fontSize: 19, fontWeight: '800' },
+  hero: {
+    marginTop: 10, borderRadius: 20, minHeight: 94, paddingHorizontal: 14, paddingVertical: 12,
+    backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DFE6F0',
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+  },
+  heroDivider: { width: StyleSheet.hairlineWidth, height: 59, backgroundColor: '#D6DEEA' },
+  heroValue: { flex: 1, minWidth: 0, color: '#11274A', fontSize: 28, lineHeight: 36, fontWeight: '800' },
+  sectionHeader: { marginTop: 17, marginBottom: 9 },
   sectionTitle: { color: '#17233A', fontSize: 16, fontWeight: '800' },
   grid: { flexDirection: 'row', gap: 9, marginBottom: 9 },
-  impactCard: { flex: 1, minWidth: 0, minHeight: 120, borderRadius: 18, padding: 13, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E4E9F0' },
-  cardTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  impactValue: { marginTop: 10, color: '#17233A', fontSize: 23, lineHeight: 28, fontWeight: '800' },
-  impactLabel: { marginTop: 4, color: '#66758C', fontSize: 11, lineHeight: 16, fontWeight: '600' },
+  impactCard: {
+    flex: 1, minWidth: 0, minHeight: 105, borderRadius: 18, padding: 12,
+    backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E4E9F0',
+  },
+  cardContentRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 4 },
+  cardLeft: { flex: 1, minWidth: 0, justifyContent: 'space-between', alignSelf: 'stretch' },
+  impactValue: { maxWidth: '52%', color: '#17233A', fontSize: 22, lineHeight: 28, fontWeight: '800', textAlign: 'right' },
+  impactLabel: { color: '#17233A', fontSize: 11, lineHeight: 15, fontWeight: '700', marginTop: 6 },
   monthCard: { borderRadius: 19, overflow: 'hidden', backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E4E9F0' },
-  monthPremium: { paddingHorizontal: 15, paddingTop: 14, paddingBottom: 15 },
-  monthPremiumTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  monthPremiumLabel: { flexDirection: 'row', alignItems: 'center', gap: 9 },
-  premiumLabel: { color: '#53647C', fontSize: 12, fontWeight: '700' },
-  premiumValue: { marginTop: 9, color: '#17233A', fontSize: 26, lineHeight: 31, fontWeight: '800' },
-  premiumExact: { marginTop: 3, color: '#66758C', fontSize: 11, lineHeight: 16 },
-  monthDivider: { marginHorizontal: 15, height: StyleSheet.hairlineWidth, backgroundColor: '#E6EAF0' },
-  monthStatsRow: { flexDirection: 'row', paddingVertical: 8 },
-  monthStat: { flex: 1, minWidth: 0, alignItems: 'center', paddingHorizontal: 8, paddingVertical: 7 },
-  monthStatDivider: { width: StyleSheet.hairlineWidth, backgroundColor: '#E6EAF0', marginVertical: 4 },
+  monthPremium: { paddingHorizontal: 14, paddingVertical: 12 },
+  monthPremiumTop: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  premiumIconLabel: { flex: 1, minWidth: 0, gap: 4 },
+  premiumLabel: { color: '#17233A', fontSize: 11, fontWeight: '700' },
+  premiumValue: { flexShrink: 1, minWidth: 0, color: '#17233A', fontSize: 25, lineHeight: 32, fontWeight: '800', textAlign: 'right' },
+  monthDivider: { marginHorizontal: 14, height: StyleSheet.hairlineWidth, backgroundColor: '#E6EAF0' },
+  monthStatsRow: { flexDirection: 'row', paddingVertical: 5 },
+  monthStat: { flex: 1, minWidth: 0, minHeight: 87, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 7, gap: 4 },
+  monthStatDivider: { width: StyleSheet.hairlineWidth, backgroundColor: '#E6EAF0', marginVertical: 6 },
   monthStatPressed: { backgroundColor: '#F1F7FF' },
-  monthValue: { marginTop: 5, color: '#17233A', fontSize: 18, lineHeight: 23, fontWeight: '800' },
-  monthLabel: { marginTop: 3, color: '#66758C', textAlign: 'center', fontSize: 10.5, fontWeight: '600' },
+  monthValue: { maxWidth: '52%', color: '#17233A', fontSize: 19, lineHeight: 24, fontWeight: '800', textAlign: 'right' },
+  monthLabel: { color: '#17233A', fontSize: 10, lineHeight: 14, fontWeight: '700', marginTop: 5 },
   settlementCard: { marginTop: 12, flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 18, padding: 13, backgroundColor: partnerTheme.colors.accentSoft },
   settlementBody: { flex: 1, minWidth: 0 },
   settlementEyebrow: { color: '#3C7B78', letterSpacing: 0.8, fontSize: 10, fontWeight: '800' },
@@ -296,13 +290,9 @@ const styles = StyleSheet.create({
   journeyTitle: { color: '#17233A', fontSize: 12, fontWeight: '800' },
   journeySubtitle: { color: '#66758C', fontSize: 10, marginTop: 3 },
   iconShell: {
-    position: 'relative', overflow: 'hidden', alignItems: 'center', justifyContent: 'center',
-    backgroundColor: '#E8F5FF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#D1E9FF',
-    shadowColor: '#0A62B8', shadowOpacity: 0.12, shadowRadius: 5, shadowOffset: { width: 0, height: 2 }, elevation: 2,
+    alignItems: 'center', justifyContent: 'center', backgroundColor: '#E8F5FF',
+    borderWidth: StyleSheet.hairlineWidth, borderColor: '#D1E9FF',
   },
-  iconShellCompact: { shadowOpacity: 0.08, elevation: 1 },
-  iconShellInverse: { backgroundColor: 'rgba(255,255,255,0.10)', borderColor: 'rgba(255,255,255,0.18)' },
-  iconGlow: { position: 'absolute', width: '72%', height: '72%', right: -5, top: -5, borderRadius: 20, backgroundColor: 'rgba(56,176,255,0.22)' },
-  iconGlowInverse: { backgroundColor: 'rgba(143,209,206,0.28)' },
+  iconShellPlain: { backgroundColor: 'transparent', borderWidth: 0 },
   pressed: { opacity: 0.82, transform: [{ scale: 0.99 }] },
 });
