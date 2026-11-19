@@ -193,8 +193,14 @@ export function PolicyOcrImportPanel({ variant = "header", context, onApply, onC
       setFields(result.fields);
       setParserInfo(`${friendlyParserName(result.parserId)} · ${friendlyMethod(result.extractionMethod)}`);
       setWarnings(filterPolicyOcrUserWarnings(result.warnings));
+      // Strict n8n 13-check validation is performed server-side. Its
+      // per-field confidence is null by design; select eligible verified
+      // fields for reviewer confirmation, never fabricate a confidence score.
+      const n8nVerified=result.extractionMethod==="native_pdf_text"
+        && ["icici_3005_n8n_native_pdf","icici_3005_od_n8n_native_pdf"].includes(result.parserId);
       const safeKeys = result.fields
-        .filter((field) => APPLY_FIELDS.has(field.key) && (field.confidence ?? 0) >= .9)
+        .filter((field) => APPLY_FIELDS.has(field.key)
+          && ((field.confidence ?? 0) >= .9 || n8nVerified))
         .filter((field) => field.key !== INSURED_PHONE_FIELD)
         .filter((field) => {
           if ((context.mode === "edit" && SECTION_02_FIELDS.has(field.key)) || protectedKeys.has(field.key)) return false;
