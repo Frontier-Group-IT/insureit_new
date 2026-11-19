@@ -23,6 +23,8 @@ try {
  if(oldProvider===undefined)delete process.env.INSUREIT_POLICY_OCR_PROVIDER;else process.env.INSUREIT_POLICY_OCR_PROVIDER=oldProvider;
  if(oldLane===undefined)delete process.env.INSUREIT_POLICY_LANE_SPLIT;else process.env.INSUREIT_POLICY_LANE_SPLIT=oldLane;
 }
+const bridge=read("lib/policy-intake-n8n-bridge.ts");
+assert(bridge.includes('INSUREIT_N8N_OCR_ENDPOINT_MODE !== "self_hosted"') && bridge.includes('n8n_self_hosted_required'),"n8n-primary provider must refuse implicit n8n Cloud selection");
 const readAction=read("app/policies/policy-ocr-actions.ts");
 const panel=read("components/policy-ocr-import-panel.tsx");
 const intakeOcr=read("lib/policy-intake-ocr-service.ts");
