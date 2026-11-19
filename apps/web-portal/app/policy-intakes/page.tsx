@@ -27,9 +27,10 @@ type PolicyIntakeSearchParams = { view?: string };
 
 function resolveInitialView(value: string | undefined, reviewer: boolean, _organizationViewer: boolean): PolicyIntakeViewKey {
   if (value === "in_review") return "in_review";
+  if (value === "open") return "open";
   if (value === "all") return "all";
   // Reviewers start with actionable work, including organization-wide reviewers.
-  return reviewer ? "action" : "all";
+  return reviewer ? "action" : "open";
 }
 
 export default async function PolicyIntakesPage({ searchParams }: { searchParams?: Promise<PolicyIntakeSearchParams> }) {
@@ -186,6 +187,6 @@ export default async function PolicyIntakesPage({ searchParams }: { searchParams
         detail: [intake.status.replaceAll("_", " "), intake.lead_source_name, intake.customer_mobile].filter(Boolean).join(" • "),
       }))}
     /> : null}
-    {unavailable ? <div className="mx-auto max-w-[1480px] rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[10px] font-semibold text-red-700">Policy Intakes are temporarily unavailable. Please refresh this page. If the issue continues, contact support and mention the Policy Intake Queue.</div> : <PolicyIntakeWorkspace rows={workspaceRows} reviewer={reviewer} creator={creator} currentProfileId={profile.id} initialView={initialView} resetView={organizationViewer ? "all" : undefined} />}
+    {unavailable ? <div className="mx-auto max-w-[1480px] rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[10px] font-semibold text-red-700">Policy Intakes are temporarily unavailable. Please refresh this page. If the issue continues, contact support and mention the Policy Intake Queue.</div> : <PolicyIntakeWorkspace rows={workspaceRows} reviewer={reviewer} creator={creator} currentProfileId={profile.id} initialView={initialView} resetView={organizationViewer ? "open" : undefined} />}
   </AppShell>;
 }

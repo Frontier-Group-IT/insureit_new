@@ -86,7 +86,7 @@ assert(queue.includes('isProposal(row)?"—":field(row, "vehicle_registration_nu
 const intakePage = read("app/policy-intakes/page.tsx");
 assert(intakePage.includes("type PolicyIntakeSearchParams = { view?: string }"), "Policy Intake route must accept the view query parameter");
 assert(intakePage.includes('if (value === "in_review") return "in_review"'), "In Review deep links must be valid for reviewer and owner views");
-assert(intakePage.includes('return reviewer ? "action" : "all"'), "Non-reviewers must still reject reviewer-only Action Required as their default/deep-link fallback");
+assert(intakePage.includes('return reviewer ? "action" : "open"') && intakePage.includes('if (value === "open") return "open"'), "Non-reviewers must land on their real open nonduplicate work, not reviewer-only Action Required or historical All Records");
 const intakeScope = read("lib/partner-policy-intake-read-access.ts");
 assert(intakePage.includes("getPartnerEmployeeIntakeReadScope") && intakeScope.includes("hierarchyIntakeRoles.has(profile.role)"), "Hierarchy roles retain verified reporting-subtree Partner/Branch scope");
 assert(/getRmPolicyIntakePredicates\(profileId,\s*profile.role\)/.test(intakeScope), "RM intake scope remains resolved on the server");
@@ -102,7 +102,7 @@ assert(caseRegister.includes("const pendingCount = caseSummary?.pending"), "Case
 
 const workspace = read("components/policy-intake-workspace.tsx");
 assert(workspace.includes("export type PolicyIntakeViewKey"), "Policy Intake view keys must remain explicit and typed");
-assert(workspace.includes('useState<ViewKey>(initialView ?? (reviewer ? "action" : "all"))'), "Policy Intake workspace must honor the validated owner In Review deep link without granting reviewer defaults");
+assert(workspace.includes('useState<ViewKey>(initialView ?? (reviewer ? "action" : "open"))'), "Policy Intake workspace must honor owner In Review deep links while defaulting non-reviewers to nonduplicate open work");
 const statusBuckets = read("lib/policy-intake-status-buckets.ts");
 assert(workspace.includes('action: bucketCounts.action_required') && statusBuckets.includes('row.status === "ready_for_review"') && statusBuckets.includes('row.status === "needs_attention"') && statusBuckets.includes('row.ocr_status === "failed"'), "Action Required uses the shared full-status definition, excluding derived duplicates");
 assert(workspace.includes('inReview: bucketCounts.in_review') && statusBuckets.includes('row.status === "in_review"'), "In Review uses canonical effective classification");

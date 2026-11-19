@@ -34,7 +34,7 @@ export type PolicyIntakeWorkspaceRow = {
   assigned_to_profile_id: string | null;
 };
 
-export type PolicyIntakeViewKey = "action" | "in_review" | "mine" | "processing" | "completed" | "duplicate" | "rejected" | "all";
+export type PolicyIntakeViewKey = "open" | "action" | "in_review" | "mine" | "processing" | "completed" | "duplicate" | "rejected" | "all";
 type ViewKey = PolicyIntakeViewKey;
 const PAGE_SIZE = 15;
 const STALE_OCR_MS = 5 * 60 * 1000;
@@ -157,7 +157,7 @@ function PolicyIntakeDateRangeFilter({
 
 export function PolicyIntakeWorkspace({ rows, reviewer, creator, currentProfileId, initialView, resetView }: { rows: PolicyIntakeWorkspaceRow[]; reviewer: boolean; creator: boolean; currentProfileId: string; initialView?: PolicyIntakeViewKey; resetView?: PolicyIntakeViewKey }) {
   const [query, setQuery] = useState("");
-  const [view, setView] = useState<ViewKey>(initialView ?? (reviewer ? "action" : "all"));
+  const [view, setView] = useState<ViewKey>(initialView ?? (reviewer ? "action" : "open"));
   const [source, setSource] = useState("all");
   const [ocr, setOcr] = useState("all");
   const [fromDate, setFromDate] = useState("");
@@ -198,7 +198,9 @@ export function PolicyIntakeWorkspace({ rows, reviewer, creator, currentProfileI
     const bucketCounts = policyIntakeStatusCounts(baseFiltered, new Set(
       baseFiltered.filter(isDuplicate).map((row) => row.id),
     ));
-    return { all: bucketCounts.all, action: bucketCounts.action_required,
+    return { all: bucketCounts.all,
+      open: bucketCounts.action_required + bucketCounts.in_review + bucketCounts.processing,
+      action: bucketCounts.action_required,
       inReview: bucketCounts.in_review, processing: bucketCounts.processing,
       completed: bucketCounts.completed, duplicate: bucketCounts.duplicate,
       rejected: bucketCounts.rejected,
@@ -208,7 +210,8 @@ export function PolicyIntakeWorkspace({ rows, reviewer, creator, currentProfileI
 
   const filtered = useMemo(() => {
     const statusRows = baseFiltered.filter((row) => {
-    if (view === "all") return true;
+    if (view === "all") return true; // Historical register only: contains closed and duplicate rows.
+    if (view === "open") return ["action_required","in_review","processing"].includes(policyIntakeBucket(row, false));
     if (view === "mine") return policyIntakeBucket(row, false) === "in_review" &&
       row.assigned_to_profile_id === currentProfileId;
     return policyIntakeBucket(row, false) === (view === "action" ? "action_required" : view);
@@ -223,7 +226,7 @@ export function PolicyIntakeWorkspace({ rows, reviewer, creator, currentProfileI
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
   const pageRows = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
-  function reset() { setQuery(""); setSource("all"); setOcr("all"); setFromDate(""); setToDate(""); setView(resetView ?? (reviewer ? "action" : "all")); setPage(1); }
+  function reset() { setQuery(""); setSource("all"); setOcr("all"); setFromDate(""); setToDate(""); setView(resetView ?? (reviewer ? "action" : "open")); setPage(1); }
   function changeView(value: string) { setView(value as ViewKey); setPage(1); }
 
   return <section className="mx-auto max-w-[1480px] overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-[0_18px_55px_rgba(15,23,42,0.07)]">
@@ -252,7 +255,7 @@ export function PolicyIntakeWorkspace({ rows, reviewer, creator, currentProfileI
           <RegisterSelect value={ocr} onChange={(value) => { setOcr(value); setPage(1); }} label="Detail status"><option value="all">All Detail Status</option><option value="stored">Stored / no OCR</option><option value="queued">Queued</option><option value="pending">Queued</option><option value="processing">Fetching</option><option value="completed">Fetched</option><option value="failed">Manual review</option></RegisterSelect>
         </div>
         <div className="w-[155px] min-w-[155px] shrink-0 [&_summary]:!min-w-0 [&_summary]:!w-full"><PolicyIntakeDateRangeFilter fromDate={fromDate} toDate={toDate} onFromDateChange={(value) => { setFromDate(value); setPage(1); }} onToDateChange={(value) => { setToDate(value); setPage(1); }} onClear={() => { setFromDate(""); setToDate(""); setPage(1); }} /></div>
-        <div className="flex min-w-[110px] flex-1 items-center gap-2"><div className="min-w-0 flex-1 overflow-x-auto overscroll-x-contain pb-1" role="region" aria-label="Policy intake status filters" tabIndex={0}><div className="min-w-max shrink-0 [&>div]:!w-max [&>div]:!min-w-max [&>div]:!flex-nowrap [&>div]:!overflow-visible [&>div>button]:!min-w-max [&>div>button]:!shrink-0 [&>div>button]:!whitespace-nowrap"><RegisterViewTabs value={view === "mine" ? "" : view} onChange={changeView} options={reviewer ? [{ value: "action", label: "Action Required", count: stats.action },{ value: "in_review", label: "In Review", count: stats.inReview },{ value: "processing", label: "Processing", count: stats.processing },{ value: "completed", label: "Completed", count: stats.completed },{ value: "duplicate", label: "Duplicate", count: stats.duplicate },{ value: "rejected", label: "Rejected", count: stats.rejected },{ value: "all", label: "All", count: stats.all }] : [{ value: "all", label: "All", count: stats.all },{ value: "processing", label: "Processing", count: stats.processing },{ value: "in_review", label: "In Review", count: stats.inReview },{ value: "completed", label: "Completed", count: stats.completed },{ value: "duplicate", label: "Duplicate", count: stats.duplicate },{ value: "rejected", label: "Rejected", count: stats.rejected }]} /></div></div>{reviewer ? <button type="button" onClick={() => changeView("mine")} aria-pressed={view === "mine"} className={`inline-flex h-8 shrink-0 items-center justify-center whitespace-nowrap rounded-lg border px-3 text-[10px] font-bold transition ${view === "mine" ? "border-[#17365D] bg-[#17365D] text-white shadow-sm" : "border-[#C9D5E3] bg-white text-[#526178] hover:border-[#9FB4CD] hover:bg-[#F8FAFC]"}`} title="Show only policy intakes currently assigned to you">My Active Work <span className="ml-1.5 opacity-80">{stats.myActiveWork}</span></button> : null}</div>
+        <div className="flex min-w-[110px] flex-1 items-center gap-2"><div className="min-w-0 flex-1 overflow-x-auto overscroll-x-contain pb-1" role="region" aria-label="Policy intake status filters" tabIndex={0}><div className="min-w-max shrink-0 [&>div]:!w-max [&>div]:!min-w-max [&>div]:!flex-nowrap [&>div]:!overflow-visible [&>div>button]:!min-w-max [&>div>button]:!shrink-0 [&>div>button]:!whitespace-nowrap"><RegisterViewTabs value={view === "mine" ? "" : view} onChange={changeView} options={reviewer ? [{ value: "open", label: "All Open", count: stats.open },{ value: "action", label: "Action Required", count: stats.action },{ value: "in_review", label: "In Review", count: stats.inReview },{ value: "processing", label: "Processing", count: stats.processing },{ value: "completed", label: "Completed", count: stats.completed },{ value: "duplicate", label: "Duplicate", count: stats.duplicate },{ value: "rejected", label: "Rejected", count: stats.rejected },{ value: "all", label: "All Records", count: stats.all }] : [{ value: "open", label: "All Open", count: stats.open },{ value: "all", label: "All Records", count: stats.all },{ value: "processing", label: "Processing", count: stats.processing },{ value: "in_review", label: "In Review", count: stats.inReview },{ value: "completed", label: "Completed", count: stats.completed },{ value: "duplicate", label: "Duplicate", count: stats.duplicate },{ value: "rejected", label: "Rejected", count: stats.rejected }]} /></div></div>{reviewer ? <button type="button" onClick={() => changeView("mine")} aria-pressed={view === "mine"} className={`inline-flex h-8 shrink-0 items-center justify-center whitespace-nowrap rounded-lg border px-3 text-[10px] font-bold transition ${view === "mine" ? "border-[#17365D] bg-[#17365D] text-white shadow-sm" : "border-[#C9D5E3] bg-white text-[#526178] hover:border-[#9FB4CD] hover:bg-[#F8FAFC]"}`} title="Show only policy intakes currently assigned to you">My Active Work <span className="ml-1.5 opacity-80">{stats.myActiveWork}</span></button> : null}</div>
       </div>
     </div>
 

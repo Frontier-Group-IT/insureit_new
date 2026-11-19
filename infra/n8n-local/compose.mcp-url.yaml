@@ -1,0 +1,12 @@
+# Optional, local-only overlay for the n8n 2.47.x instance-level MCP server.
+# Use with compose.yaml and compose.proxy.yaml; never deploy this as a
+# replacement for the isolated policy webhook proxy (localhost:8787).
+#
+# n8n 2.31+ supports N8N_MCP_BASE_URL, independent of editor/webhook origins.
+# It fixes the OAuth resource advertising http://localhost:5678 when clients
+# actually connect to https://mcp.nishant.uk/mcp-server/http.
+# This does NOT create a DNS route, enable MCP access or publish workflows.
+services:
+  n8n:
+    environment:
+      N8N_MCP_BASE_URL: "https://mcp.nishant.uk"
