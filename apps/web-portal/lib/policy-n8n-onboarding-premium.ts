@@ -35,3 +35,13 @@ export function mapVerifiedN8nMotorPremium(p: N8nVerifiedPremiumBreakdown): {
     cpaOpted: p.cpa > 0 ? "Yes" : "No",
   };
 }
+
+/** Verified CPA amount and saved owner-driver opt-in must agree before booking.
+ * A positive numeric field alone cannot turn an operator's saved "No" into Yes.
+ * In particular, canonical booking zeros out CPA whenever opted is false. */
+export function verifiedCpaSelectionMatches(
+  savedOpted: "Yes" | "No", verifiedCpa: number,
+): boolean {
+  return Number.isFinite(verifiedCpa) && verifiedCpa >= 0
+    && (savedOpted === "Yes") === (verifiedCpa > 0);
+}
