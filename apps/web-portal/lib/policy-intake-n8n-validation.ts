@@ -1,4 +1,4 @@
-import { validateTataAigN8nResponse } from "./policy-n8n-tata-aig-validation";
+import { validateTataAigN8nResponse } from "./policy-n8n-tata-aig-validation.ts";
 
 const KEYS = new Set([
   "policy_number", "insurer_name", "policy_product", "policy_issuance_date", "policy_start_date", "policy_end_date",
