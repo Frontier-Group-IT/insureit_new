@@ -632,6 +632,13 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
                         Convert to Policy
                       </button>
                     ) : null}
+                    {!row.is_duplicate && ["unsupported","exception","failed"].includes(row.ai_state??"") ? (
+                      <button type="button" disabled={isWaiting}
+                        onClick={()=>{setManualTransferRow(row);setManualTransferReason("");setManualTransferError(null);}}
+                        className="mt-1 ml-1 rounded-md border border-amber-300 bg-amber-50 px-2 py-1 text-[10px] font-semibold text-amber-900 disabled:opacity-50">
+                        Move to Manual
+                      </button>
+                    ):null}
                     {row.ai_exceptions?.length ? (
                       <button type="button" onClick={()=>{setExceptionRow(row);setCustomerReview(null);}}
                         className="mt-1 rounded-md border border-[#e4d4b2] bg-[#fff8e8] px-2 py-1 text-left text-[10px] font-semibold text-[#765013] hover:bg-[#fff0c8]">
@@ -1166,7 +1173,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
             className="w-full max-w-[480px] rounded-2xl border border-[#d6e2f1] bg-white p-5 shadow-[0_24px_80px_rgba(12,28,52,.3)]">
             <h3 id="ai-manual-transfer-title" className="text-[15px] font-bold text-[#193657]">Move failed Intake to Manual Onboarding?</h3>
             <p className="mt-2 text-[11px] leading-5 text-[#51657e]">This IT-only action transfers <strong>{manualTransferRow.intake_number}</strong> out of the n8n queue so Operations can review it manually. Only terminal parser failures qualify. The audit records your account and reason. No policy, customer, vehicle, PDF, or reviewer assignment is changed.</p>
-            <label htmlFor="ai-manual-transfer-reason" className="mt-3 block text-[11px] font-semibold text-[#1d3b5f]">Reason for transfer (required)</label>
+            <label htmlFor="ai-manual-transfer-reason" className="mt-3 block text-[11px] font-semibold text-[#1d3b5f]">Reason for transfer (required; do not include customer, vehicle or policy identifiers)</label>
             <textarea id="ai-manual-transfer-reason" value={manualTransferReason}
               onChange={event=>setManualTransferReason(event.target.value)} maxLength={500} rows={3}
               placeholder="Example: ICICI policy PDF layout is not yet supported; route for manual review"
