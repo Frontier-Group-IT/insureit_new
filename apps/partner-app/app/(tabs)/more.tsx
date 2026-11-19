@@ -341,7 +341,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1.1,
     ...partnerTheme.typography.eyebrow,
   },
-  // Keep the menu rows flat; only thin dividers separate destinations.
+  // Keep the menu rows flat with clearly visible, non-faded separators.
   sectionRows: {
     backgroundColor: 'transparent',
   },
@@ -354,8 +354,8 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
   },
   menuRowDivider: {
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: partnerTheme.colors.line,
+    borderBottomWidth: 1,
+    borderBottomColor: '#8B9DB8',
   },
   rowIcon: {
     width: 52,

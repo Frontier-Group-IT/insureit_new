@@ -31,16 +31,17 @@ type IconPalette = {
 // A palette per destination makes the small icons easy to distinguish at a glance.
 // The extruded silhouettes, rim lighting and inset tile replace flat monochrome glyphs
 // without adding image downloads, native dependencies, or changing touch targets.
-// Six destinations use bundled illustrated 3D PNG artwork, including three updated icons.
-// All other More menu icons preserve their existing native vector rendering.
+// Preserve the supplied Customers reference art and original Journey 3D artwork.
+// Keep other menu icons and their existing destinations unchanged.
 const ILLUSTRATED_ICONS: Partial<Record<PartnerProfileMenuIconKind, ImageSourcePropType>> = {
   'policy-intake': require('../../assets/partner/icons/more-policy-intake-3d.png'),
   'case-register': require('../../assets/partner/icons/more-case-register.png'),
   renewals: require('../../assets/partner/icons/more-renewals.png'),
-  // Reuse the established add-customer artwork for a clearer customer shortcut.
-  customers: require('../../assets/partner/actions/add-customer.png'),
+  // Cropped directly from the user-provided blue-person / purple-plus reference.
+  customers: require('../../assets/partner/icons/more-customers-reference.png'),
   impact: require('../../assets/partner/icons/more-impact.png'),
-  // Render Journey as a resolution-independent vector below (old PNG is soft at row scale).
+  // Restore the original illustrated 3D Journey design instead of substituting a vector.
+  journey: require('../../assets/partner/icons/more-journey-3d.png'),
 };
 
 const CONFIG: Record<Exclude<PartnerProfileMenuIconKind, 'case-register'>, IconPalette> = {
@@ -75,7 +76,14 @@ export function PartnerProfileMenuIcon({
         resizeMode="contain"
         accessibilityElementsHidden
         importantForAccessibility="no-hide-descendants"
-        style={{ width: size, height: size }}
+        style={{
+          width: size,
+          height: size,
+          // The Policy Intake PNG contains large transparent margins; enlarge the
+          // visible illustration rather than merely increasing the image box.
+          ...(kind === 'policy-intake' ? { transform: [{ scale: 1.7 }] } : {}),
+          ...(kind === 'journey' ? { transform: [{ scale: 1.16 }] } : {}),
+        }}
       />
     );
   }

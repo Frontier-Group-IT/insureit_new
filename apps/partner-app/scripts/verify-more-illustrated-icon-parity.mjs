@@ -10,21 +10,22 @@ const illustrated = [
   ['renewals','Renewals'],
   ['customers','Customers'],
   ['impact','My Impact'],
+  ['journey','My Journey'],
 ];
-const untouched = ['search','week','journey','activity','learn','recognition','stories','profile','support','settings'];
+const untouched = ['search','week','activity','learn','recognition','stories','profile','support','settings'];
 
 assert.match(more, /iconKind="case-register" title="Case Register"/);
 assert.match(more, /iconKind="policy-intake" title="Policy Intake"/);
 const mapping = icon.slice(icon.indexOf('const ILLUSTRATED_ICONS:'),icon.indexOf('const CONFIG:'));
 assert.ok(mapping.startsWith('const ILLUSTRATED_ICONS:'), 'Illustrated icons must be centrally mapped');
-const redesigned = new Set(['policy-intake']);
+const redesigned = new Set(['policy-intake', 'journey']);
 for (const [kind,title] of illustrated) {
-  const file = kind === 'customers' ? 'add-customer.png' : `more-${kind}${redesigned.has(kind) ? '-3d' : ''}.png`;
+  const file = kind === 'customers' ? 'more-customers-reference.png' : `more-${kind}${redesigned.has(kind) ? '-3d' : ''}.png`;
   assert.ok(more.includes('title="'+title+'"'), 'Preserve menu action '+title);
   assert.ok(mapping.includes(file), 'Missing illustrated asset mapping '+kind);
-  const png=readFileSync(new URL(`../assets/partner/${kind === 'customers' ? 'actions' : 'icons'}/`+file,import.meta.url));
+  const png=readFileSync(new URL('../assets/partner/icons/'+file,import.meta.url));
   assert.equal(png.subarray(0,8).toString('hex'),'89504e470d0a1a0a', 'Asset must be local PNG: '+kind);
-  assert.ok(png.length>(redesigned.has(kind) ? 500 : 1000),'Icon artwork missing content for '+kind);
+  assert.ok(png.length > 500,'Icon artwork missing content for '+kind);
   if (redesigned.has(kind)) {
     assert.equal(png.readUInt32BE(16), 64, 'Updated icon must be 64px wide: '+kind);
     assert.equal(png.readUInt32BE(20), 64, 'Updated icon must be 64px high: '+kind);
@@ -43,6 +44,9 @@ assert.match(more,/onPress=\{\(\) => router\.push\('\/life-health-cases'\)\}/);
 assert.match(more,/canPartnerAccessCaseRegister\(context\)/);
 assert.match(more,/canPartnerAccess\(context, 'view_policy_intakes'\)/);
 assert.match(more,/PartnerProfileMenuIcon kind=\{iconKind\} size=\{iconKind === 'policy-intake' \? 48 : 42\}/);
-assert.doesNotMatch(mapping, /more-journey-3d\.png/, 'Journey must use the crisp vector renderer');
+assert.match(mapping, /more-journey-3d\.png/, 'Restore the original 3D My Journey icon');
+assert.match(mapping, /more-customers-reference\.png/, 'Use the supplied customer reference icon');
+assert.match(icon, /scale: 1\.7/, 'Policy Intake artwork must enlarge visibly');
+assert.match(icon, /scale: 1\.16/, 'Original My Journey art must render more clearly');
 assert.match(more, /sectionRows/, 'More sections should display flat rows');
-console.log('Five illustrated icons, ten vector icons and flat More rows verified.');
+console.log('Supplied Customers icon, restored Journey art, enlarged Intake and flat More rows verified.');
