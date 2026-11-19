@@ -12,6 +12,7 @@ import { policyDateDecision } from "@/lib/policy-date-rule";
 import { mapVerifiedN8nMotorPremium, verifiedCpaSelectionMatches } from "@/lib/policy-n8n-onboarding-premium";
 import { checkSemiAutoReadiness, type SemiAutoIssue } from "@/lib/policy-intake-semi-auto";
 import { isN8nWorkbenchPrimary, previewSemiAutoN8nExtraction, applySemiAutoN8nExtraction, type SemiAutoN8nResult } from "@/lib/policy-intake-semi-auto-n8n";
+import { segregatePolicyIntakeLanes } from "@/lib/policy-ocr-routing-mode";
 export type { SemiAutoN8nResult } from "@/lib/policy-intake-semi-auto-n8n";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import type { PolicyIntakeOcrField } from "@/lib/policy-intake-ocr-service";
@@ -251,6 +252,11 @@ export async function convertVerifiedAiIntake(id:string,confirmed:boolean):Promi
   await requireDevelopmentPolicyOperator(id);
   // Invalid or unconfirmed requests do not mutate the queue.
   if(confirmed!==true)return{ok:false,ready:false,issues:[issue("Confirmation","Explicit policy registration confirmation is required.")]};
+  if(segregatePolicyIntakeLanes()){
+    const admin=createSupabaseAdminClient();
+    const{data:lane}=await admin.from("policy_intake_requests").select("processing_lane").eq("id",id).maybeSingle<{processing_lane:string}>();
+    if(lane?.processing_lane!=="automation")return{ok:false,ready:false,issues:[issue("Processing lane","Manual Intakes cannot be converted through the AI queue.")]};
+  }
   try{
     const result=await convertVerifiedAiIntakeCore(id,confirmed);
     if(!result.ok)await holdFailedAiConversion(id);
@@ -680,9 +686,10 @@ export async function reprocessAiPolicyIntake(id: string): Promise<{ok:boolean;e
   // A reprocess request cannot reopen a registered/completed policy or
   // override the canonical Policy Intake duplicate exclusion.
   const {data:intake,error:intakeError}=await admin.from("policy_intake_requests")
-    .select("id,intake_number,status,policy_type,final_policy_id,created_at,ocr_fields")
+    .select("id,intake_number,status,policy_type,final_policy_id,created_at,ocr_fields,processing_lane")
     .eq("id",id).maybeSingle();
   if(intakeError||!intake||intake.policy_type!=="motor"
+    ||(segregatePolicyIntakeLanes() && intake.processing_lane!=="automation")
     ||!["processing","ready_for_review","in_review","needs_attention"].includes(intake.status)
     ||intake.final_policy_id){
     return{ok:false,error:"Only an open, unregistered Motor Intake can be reprocessed."};
