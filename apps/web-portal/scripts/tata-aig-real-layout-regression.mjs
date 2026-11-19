@@ -116,6 +116,31 @@ for(const [i,fixture] of fixtures.entries()){
   assert.equal(form.next.insurerId,"tata");
   if(tw){assert.equal(form.next.fuelType,"Electric");assert.equal(form.next.capacity,"4");}
   else{assert.equal(form.next.capacity,"1497");}
+  if (i===0 || i===4) {
+    // Reproduce actual n8n PDF.js output: the text extractor drops
+    // "Certificate of", and rasterized signing metadata is not text.
+    const pdfJsText=fixture.text
+      .replace(/Certificate of Insurance Cum Policy Schedule/g,"Insurance Cum Policy Schedule")
+      .replace(/Digitally Signed by:\\s*SAMPLE SIGNER\\s*Date:\\s*\\d{2}\\/\\d{2}\\/\\d{4}/g,
+        "Electronic signature present; signature date not in native PDF text");
+    assert.notEqual(pdfJsText,fixture.text);
+    const pdfJsParsed=parse({all:()=>[{json:{text:pdfJsText}}]})[0].json;
+    assert.equal(pdfJsParsed.ok,true,"PDF.js native text must not be marked untrained");
+    assert.equal(pdfJsParsed.checks_passed,18);
+    assert.equal(pdfJsParsed.premium_components.digital_signature_date,null);
+    const pdfJsEnvelope=returnWeb(
+      {first:()=>({json:pdfJsParsed})},
+      () => ({first:()=>({json:{intake_id:IDs.intakeId,document_id:IDs.documentId,request_id:IDs.requestId}})}),
+    )[0].json;
+    assert(pdfJsEnvelope.warnings.includes("tata_aig_signature_date_not_in_native_text"));
+    assert.equal(validateTataAigN8nResponse(pdfJsEnvelope,IDs).checksPassed,18);
+    // Missing signing metadata must never authorize an inconsistent receipt.
+    const invalidReceipt=pdfJsText.replace(/Receipt Date\\s*\\d{2}\\/\\d{2}\\/\\d{4}/,
+      "Receipt Date 01/01/2000");
+    const invalidParsed=parse({all:()=>[{json:{text:invalidReceipt}}]})[0].json;
+    assert.equal(invalidParsed.checks.receipt_date_document_consistent,false);
+    assert.equal(invalidParsed.ok,false);
+  }
   // Tamper financial, classification and registration evidence and verify rejection.
   const bad=structuredClone(normalized);
   bad.premium_components.gross_premium+=100;
