@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
-import { PartnerCasePageHeader } from '@/components/partner-case-page-header';
+
 import { PartnerCaseBottomNavigation } from '@/components/partner-case-bottom-navigation';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import {
@@ -58,7 +58,19 @@ export default function LearnScreen() {
 
   return (
     <PartnerScreen title="60-Second Learn" hideTopBar navyStatusBar bottomNavigationNavy bottomNavigation={<PartnerCaseBottomNavigation activeTab="More" />}>
-      <PartnerCasePageHeader title="60-Second Learn" icon="school-outline" onBack={() => router.back()} />
+      <View style={styles.referenceHeader}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Back"
+          hitSlop={8}
+          onPress={() => router.back()}
+          style={styles.headerAction}
+        >
+          <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
+        </Pressable>
+        <Image source={PartnerAssets.actions.policyChecklist} style={styles.headerArtwork} resizeMode="contain" />
+        <Text accessibilityRole="header" numberOfLines={1} style={styles.referenceTitle}>60-Second Learn</Text>
+      </View>
       {loading ? (
         <PartnerStateView state="loading" title="Loading today’s learning card" />
       ) : error && !data ? (
@@ -147,6 +159,18 @@ function Stat({ value, label }: { value: number; label: string }) {
 }
 
 const styles = StyleSheet.create({
+  referenceHeader: {
+    height: 64,
+    marginHorizontal: -partnerTheme.spacing.lg,
+    paddingHorizontal: 14,
+    backgroundColor: '#071E49',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  headerAction: { width: 34, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
+  headerArtwork: { width: 36, height: 36 },
+  referenceTitle: { flexShrink: 1, color: '#FFFFFF', fontSize: 18, fontWeight: '800' },
   topStrip: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   categoryPill: { minHeight: 36, flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 999, paddingHorizontal: 11, backgroundColor: partnerTheme.colors.brandSoft },
   categoryText: { color: partnerTheme.colors.brandStrong, ...partnerTheme.typography.meta, fontWeight: '800' },
