@@ -75,4 +75,19 @@ assert(worker.includes('ICICI_N8N_IDS.has(extraction.preview.parserId)'),
  "only warning-free ICICI may use canonical OCR-sync RPC");
 assert(worker.includes('p_checks_passed:13,'),
  "do not change live guarded 13-check ICICI OCR sync RPC contract");
+// Client and server must use the SAME verified parser profile. Tata warnings
+// requiring manual issuance review must not hide the safe editable-draft handoff.
+const workspace=read("../components/development/semi-auto-policy-workspace.tsx");
+assert(workspace.includes('import { hasVerifiedN8nParserEvidence }'));
+assert(workspace.includes('!hasVerifiedN8nParserEvidence(\n        fresh.preview.parserId,'));
+assert(workspace.includes('!n8nResult?.ok || !hasVerifiedN8nParserEvidence('));
+assert(workspace.includes('&& hasVerifiedN8nParserEvidence(\n                    n8nResult.preview.parserId,'));
+assert(!workspace.includes('fresh.preview.warnings.length || fresh.preview.checksPassed !== 13'));
+assert(!workspace.includes('n8nResult.preview.warnings.length === 0 ? ('));
+assert(workspace.includes('continueVerifiedN8nIntakeToOnboarding('));
+const backend=read("../app/policy-intakes/handoff-actions.ts");
+assert(backend.includes('const blockingWarnings = parsed.preview.warnings.filter('));
+assert(backend.includes('informationalTataWarnings.has(warning)'));
+assert(backend.includes('parsed.preview.checksPassed!==(isTata?18:13)'));
+
 console.log("AI Studio Tata AIG queue eligibility: 6 layouts, ICICI regression and negative controls passed");
