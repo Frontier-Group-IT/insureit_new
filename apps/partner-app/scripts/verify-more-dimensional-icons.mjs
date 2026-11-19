@@ -5,30 +5,24 @@ const load = path => readFileSync(new URL(path, import.meta.url), 'utf8');
 const more = load('../app/(tabs)/more.tsx');
 const icons = load('../components/ui/partner-profile-menu-icon.tsx');
 
-// Use the one shared icon renderer throughout the More menu; do not change
-// destinations, permissions, accessible row names, or sticky bottom tabs.
-assert.match(more, /PartnerProfileMenuIcon kind=\{iconKind\} size=\{38\}/);
+// Keep one background-free icon renderer and preserve permissions and navigation.
+assert.ok(more.includes("iconKind === 'policy-intake' ? 48 : iconKind === 'journey' ? 46 : 42"), 'More enlarges Policy Intake and Journey');
 assert.match(more, /accessibilityLabel=\{helper \? \x60\$\{title\}\. \$\{helper\}\x60 : title\}/);
 for (const title of ['Search all business', 'Policy Intake', 'Case Register',
   'Renewals', 'Customers', 'Your Week', 'My Impact', 'My Journey',
   'Activity', '60-Second Learn', 'Recognition', 'INSUREIT Stories',
   'Profile & registration', 'Support', 'Settings & app info']) {
-  assert.ok(more.includes('title="'+title+'"'), 'Preserve More action '+title);
+  assert.ok(more.includes('title="' + title + '"'), 'Preserve More action ' + title);
 }
-for (const kind of ['search','policy-intake','renewals','customers','week',
+for (const kind of ['search','policy-intake','case-register','renewals','customers','week',
   'impact','journey','activity','learn','recognition','stories','profile',
   'support','settings']) {
-  assert.ok(icons.includes(kind+': {') || icons.includes("'"+kind+"': {"),
-    '3D palette missing for '+kind);
+  assert.ok(icons.includes(kind + ': {') || icons.includes("'" + kind + "': {"),
+    'Clean icon mapping missing for ' + kind);
 }
-assert.match(icons, /styles\.glyphDepth/);
-assert.match(icons, /styles\.glyphEdge/);
-assert.match(icons, /styles\.glyphFace/);
-assert.match(icons, /styles\.glyphRim/);
-assert.match(icons, /styles\.upperLight/);
-assert.match(icons, /styles\.lowerShade/);
-assert.match(icons, /styles\.badgeShine/);
+assert.match(icons, /<Ionicons name=\{config\.icon\} size=\{size\} color=\{config\.color\} \/>/);
 assert.match(icons, /accessibilityElementsHidden/);
 assert.match(icons, /importantForAccessibility="no-hide-descendants"/);
-assert.doesNotMatch(icons, /fetch\(|https?:\/\//, 'Menu icons must render without network requests');
-console.log('Partner More dimensional icons, permissions and navigation contract passed.');
+assert.doesNotMatch(icons, /backgroundColor|styles\.tile|styles\.badgeShine|styles\.upperLight|resizeMode=|fetch\(|https?:\/\//,
+  'More menu icons must not reintroduce tiles, badges, remote images or background fills');
+console.log('Partner More clean icon, permissions and navigation contract passed.');
