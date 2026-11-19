@@ -38,7 +38,8 @@ assert(read("lib/policy-intake-server.ts").includes('profile.role === "claims_he
 assert(actions.includes('createSignedUploadUrl(storagePath,{upsert:false})'),"Large policy files must use direct signed storage upload instead of a Server Action request body");
 assert(actions.includes('.from("policy_intake_requests").insert('),"Submission must persist the intake before automatic extraction");
 assert(actions.includes('ocrStatus=proposal?"completed":manualSplit?"failed":"pending"')
-  && actions.includes('const lane=incomingPolicyIntakeLane(input.policyType,aiQueueEnabled())')
+  && actions.includes('const lane=incomingPolicyIntakeLane(input.policyType,aiQueueEnabled(),trainedLayout)')
+  && actions.includes('await isTrainedLocalN8nMotorPdf(blob,input.file.type)')
   && actions.includes('status=proposal||manualSplit?"ready_for_review":"processing"'),
   "Default non-proposal Intake uses pending OCR, while manual lane skips automatic OCR and Life/Health proposals bypass it");
 assert(actions.includes('else if(!proposal && !manualSplit) after(async()=>{await processStoredOcr(input.id);})')
