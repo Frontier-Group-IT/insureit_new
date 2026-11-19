@@ -7,6 +7,7 @@ import { buildPolicyOcrOnboardingUpdate } from "../lib/policy-ocr-onboarding-app
 
 const read = relative => fs.readFileSync(fileURLToPath(new URL(relative,import.meta.url)),"utf8");
 const parse = new Function("$input",read("../../../infra/n8n-local/workflows/tata-aig-real-pdf-parser-v2.js"));
+const returnWeb = new Function("$input","$",read("../../../infra/n8n-local/workflows/tata-aig-real-pdf-return-v2.js"));
 const fixtures=JSON.parse(read("./fixtures/tata-aig-real-layout-anonymized.json"));
 assert.equal(fixtures.length,6);
 const IDs={intakeId:"00000000-0000-4000-8000-000000000001",
@@ -74,7 +75,17 @@ for(const [i,fixture] of fixtures.entries()){
   assert.deepEqual(new Set(Object.keys(parsed.checks)),checks);
   assert.ok(Object.values(parsed.checks).every(Boolean));
   assert.equal(parsed.fields.policy_number,fixture.policy.replace(/\s/g,""));
-  const normalized=toWeb(parsed);
+  const normalized=returnWeb(
+    {first:()=>({json:parsed})},
+    () => ({first:()=>({json:{intake_id:IDs.intakeId,document_id:IDs.documentId,request_id:IDs.requestId}})}),
+  )[0].json;
+  assert.equal(normalized.ok,true,"strict response node must return a reviewed JSON contract");
+  const projected=toWeb(parsed);
+  for(const key of ["policy_number","vehicle_registration_status","vehicle_class","vehicle_motor_power_kw","od_premium","add_on_premium","tp_premium","cpa_premium","cpa_opted"]){
+    const expected=projected.fields.find(x=>x.key===key)?.value ?? "";
+    const actual=normalized.fields.find(x=>x.key===key)?.value ?? "";
+    assert.equal(actual,expected,fixture.name+" "+key);
+  }
   const valid=validateTataAigN8nResponse(normalized,IDs);
   assert.equal(valid.checksPassed,18);
   assert.equal(valid.fields.some(f=>f.key==="policy_issuance_date"),false);
