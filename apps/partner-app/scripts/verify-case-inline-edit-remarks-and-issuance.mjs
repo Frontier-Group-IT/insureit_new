@@ -53,7 +53,7 @@ assert.ok(app.includes("if(JSON.stringify(form)===JSON.stringify(initialForm(rec
 assert.ok(app.includes("partnerAlert('No changes to save','Case details are already up to date.')"), 'No-change Save Case shows informational feedback');
 assert.ok(app.includes("disabled={!editMode||saving||issuing||documentBusy||rejectBusy}"), 'Save Case disables while locked or busy');
 assert.ok(!app.includes("disabled={saving||issuing||documentBusy||rejectBusy||!caseDirty}"), 'Save Case is clickable when form has no changes');
-assert.ok(app.includes("style={[styles.caseAction,styles.actionSave]}"), 'Save Case styling does not depend on dirty state');
+assert.ok(app.includes("style={[styles.caseAction,styles.actionSave,(!editMode||saving||issuing||documentBusy||rejectBusy)&&styles.disabledAction]}"), 'Save Case is visibly disabled until editing is unlocked');
 assert.ok(app.includes("actionSave:{flex:1,borderColor:'#1765C1',borderWidth:1,backgroundColor:'#1765C1'}"), 'Save Case has visible blue active styling');
 
 assert.match(app,/const showCreatePolicyError=\(message:string\)=>/, 'Create Policy failures must use shared feedback handling');
