@@ -998,6 +998,8 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
                      <p><strong>PDF Policy Issued On:</strong> {draftReview.pdfIssueDate}</p>
                      <p><strong>Current policy:</strong> {draftReview.policyNumber}</p>
                      <p><strong>Draft revision:</strong> {draftReview.revision}</p>
+                     <p><strong>PDF owner-driver CPA:</strong> ₹{draftReview.verifiedCpa} · <strong>Saved CPA:</strong> {draftReview.savedCpa||"Blank"} · <strong>Saved CPA opted:</strong> {draftReview.savedCpaOpted}</p>
+                     {draftReview.cpaNeedsReview ? <p role="alert" className="font-semibold text-amber-800">CPA amount and opt-in need separate review. This repair will not silently opt you into or out of CPA. After correcting the issue date, open editable Policy Onboarding and explicitly reconcile the CPA amount and selection before booking.</p>:null}
                      <p><strong>Missing draft fields:</strong> {draftReview.missingFields.length?draftReview.missingFields.join(", "):"None in comparison"}</p>
                      {draftReview.otherConflicts.length>0 ? <p className="font-semibold text-amber-800">Other nonempty conflicts require manual review: {draftReview.otherConflicts.join(", ")}</p>:null}
                      <p className="text-amber-900">Confirming will replace only the displayed saved issue date with the PDF-verified issue date and populate eligible blank draft fields. Existing nonempty vehicle, identity, policy, and premium values remain unchanged. Booking remains separate.</p>
