@@ -362,10 +362,13 @@ expectAll('components/ui/partner-section-header.tsx', [
   [ /settingsTitle: \{ color: '#20234C', fontSize: 15, lineHeight: 20, fontWeight: '900'/, 'Settings headings use bold high-contrast typography'],
   [/textTransform: 'uppercase'/, 'Heading capitalization remains unchanged'],
   [/settingsRow: \{ marginTop: 12, marginBottom: 3, minHeight: 22 \}/, 'Settings headings sit close to cards with compact spacing'],
-  [/!settingsHeading \|\| !styles\.settingsAccent|settingsHeading && styles\.settingsRow/, 'Settings heading variant remains scoped'],
+
 ]);
 
 expect('components/ui/partner-section-header.tsx', /settingsRow: \{ marginTop: 12, marginBottom: 3/, 'Settings heading-to-card gap remains small');
+checks += 1;
+if (/settingsAccent|settingsHeadingLine/.test(read('components/ui/partner-section-header.tsx'))) failures.push('Settings section headings must not render decorative purple dashes');
+
 // Evaluate every contract only after all checks have run.
 if (failures.length) {
   console.error('Partner Phase 5 resilience/accessibility contract verification failed:');
