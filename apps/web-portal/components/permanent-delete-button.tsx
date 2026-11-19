@@ -4,7 +4,7 @@ import { useEffect, useLayoutEffect, useRef, useState, useTransition } from "rea
 import { createPortal } from "react-dom";
 import { Trash2, TriangleAlert, X } from "lucide-react";
 
-type PermanentDeleteKind = "user" | "branch" | "partner";
+type PermanentDeleteKind = "user" | "branch" | "partner" | "onboarding_application";
 type PermanentDeleteResult = { status: "success" | "error"; message: string };
 
 export function PermanentDeleteButton({
@@ -102,7 +102,7 @@ export function PermanentDeleteButton({
     });
   }
 
-  const entityLabel = kind === "user" ? "user" : kind;
+  const entityLabel = kind === "onboarding_application" ? "pending onboarding application" : kind === "user" ? "user" : kind;
 
   return (
     <>
@@ -158,7 +158,7 @@ export function PermanentDeleteButton({
               </div>
 
               <p className="mt-3 text-[11px] leading-5 text-[#667085]">
-                This action cannot be undone. The record and any removable login access will be permanently deleted. Protected business history will prevent deletion.
+                {kind === "onboarding_application" ? "This cannot be undone. The pending application, uploaded document references, contacts and onboarding draft data will be deleted. Linked business, registration or portal-account records will block deletion." : "This action cannot be undone. The record and any removable login access will be permanently deleted. Protected business history will prevent deletion."}
               </p>
 
               {message ? (
