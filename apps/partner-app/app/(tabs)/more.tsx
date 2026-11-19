@@ -341,7 +341,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1.1,
     ...partnerTheme.typography.eyebrow,
   },
-  // Keep the menu rows flat with clearly visible, non-faded separators.
+  // Use subtle, reference-style dividers between menu rows.
   sectionRows: {
     backgroundColor: 'transparent',
   },
@@ -355,7 +355,7 @@ const styles = StyleSheet.create({
   },
   menuRowDivider: {
     borderBottomWidth: 1,
-    borderBottomColor: '#8B9DB8',
+    borderBottomColor: '#E6EAF0',
   },
   rowIcon: {
     width: 52,
