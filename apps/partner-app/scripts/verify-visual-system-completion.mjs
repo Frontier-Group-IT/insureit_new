@@ -143,15 +143,22 @@ const accountShellHeader = read('components/partner-case-page-header.tsx');
 requireText(accountShellHeader, "backgroundColor: '#0A234A'", 'Account header must match the Policy Details title strip.');
 requireText(accountShellHeader, 'accessibilityRole="header"', 'Account page title must be accessible.');
 const deletionScreen = read('app/account-deletion.tsx');
+const deletionBrandIndex = deletionScreen.indexOf('<View style={styles.heroBrand} accessibilityLabel="insureit Partner">');
+const deletionSloganIndex = deletionScreen.indexOf('<View style={styles.heroCopy}>');
+if (deletionBrandIndex < 0 || deletionSloganIndex < 0 || deletionBrandIndex >= deletionSloganIndex) {
+  throw new Error('Account deletion must show the Partner logo left and the slogan right.');
+}
+requireText(deletionScreen, "heroCopy: { flex: 1, minWidth: 0, paddingLeft: 10, paddingTop: 0, alignItems: 'flex-end' }", 'Account deletion slogan must align on the right.');
+
 for (const [fragment, reason] of [
   ['styles.hero', 'Branded deletion page has a hero'],
   ['styles.heroUnderline', 'Hero title uses purple accent underline'],
   ["backgroundColor: '#FFFFFF' },", 'Deletion heading must have a clean white background'],
-  ["heroBrand: { width: 156, minHeight: 70, marginRight: -8", 'Official crest and Partner wordmark remain in a compact right-shifted lockup'],
-  ["alignSelf: 'flex-start', alignItems: 'center', justifyContent: 'flex-end'", 'Logo group top-aligns with the heading and stays right-aligned'],
+  ["heroBrand: { width: 156, minHeight: 70", 'Official crest and Partner wordmark remain in a compact left-side lockup'],
+  ["alignSelf: 'flex-start', alignItems: 'center', justifyContent: 'flex-start'", 'Logo group top-aligns with the heading and stays left-aligned'],
   ["tintColor: '#0B438C'", 'The official crest must render navy on the white banner'],
   ['styles.heroBrandCopy', 'Crest and insureit Partner text must form a horizontal logo lockup'],
-  ["alignItems: 'flex-start', backgroundColor: '#FFFFFF'", 'Deletion hero top-aligns the heading on its white banner'],
+  ["alignItems: 'flex-start', backgroundColor: '#FFFFFF'", 'Deletion hero keeps its white banner and top alignment'],
   ["heroBrandName: { fontSize: 19, lineHeight: 22, fontWeight: '900', color: '#0B438C'", 'Wordmark uses dark navy on white'],
 
   ["require('../assets/insureit-partner-official.png')", 'Hero uses official Partner brand asset'],
