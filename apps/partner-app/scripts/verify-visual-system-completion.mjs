@@ -638,6 +638,17 @@ requireText(journey, 'styles.heroProgressHeading', 'Milestone progress must plac
 requireText(journey, "progressTrack: { height: 8, marginTop: 10", 'Progress bar retains compact height and spacing.');
 requireText(journey, 'accessibilityValue={{ min: 0, max: data.next_milestone.target, now:', 'Real milestone count must remain accessible from the progress bar.');
 requireText(journey, 'Math.round(progress * 100)', 'Real progress percentage must be retained.');
+for (const required of [
+  'PartnerAssets.status.achievement',
+  'PartnerAssets.actions.quickPolicyIntake',
+  'PartnerAssets.actions.quickCustomers',
+  'PartnerAssets.actions.quickClaims',
+  'PartnerAssets.actions.payoutGrowth',
+  'function journeyMilestoneArtwork(',
+  'styles.summaryArtwork',
+  'styles.achievementArtwork',
+]) requireText(journey, required, 'My Progress must use bundled illustrated artwork: ' + required);
+if (journey.includes('journeyMilestoneIcon(') || journey.includes('styles.summaryIcon')) throw new Error('My Progress must not restore vector milestone or summary icons.');
 for (const unwanted of ['NEXT CUSTOMER MILESTONE', 'Customers achieved', 'more customers to unlock', 'styles.heroNumbers', 'styles.heroBottom']) {
   if (journey.includes(unwanted)) throw new Error('My Progress must not restore removed milestone secondary content: ' + unwanted);
 }

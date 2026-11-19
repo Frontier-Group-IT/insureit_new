@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View, type ImageSourcePropType } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -57,7 +57,7 @@ export default function JourneyScreen() {
           <View style={styles.hero}>
             <View style={styles.heroHeadline}>
               <Text style={styles.heroTitle} numberOfLines={2}>{data.next_milestone.title}</Text>
-              <Ionicons name="flag-outline" size={22} color="#6856D5" />
+              <Image source={PartnerAssets.status.achievement} style={styles.heroArtwork} resizeMode="contain" accessibilityLabel="Milestone achievement" />
             </View>
             <View style={styles.heroProgressHeading}>
               <Text style={styles.heroProgressLabel}>Milestone progress</Text>
@@ -69,9 +69,9 @@ export default function JourneyScreen() {
           </View>
 
           <View style={styles.summary}>
-            <Summary value={data.policy_count} label="Policies" icon="document-text-outline" color="#2866B8" background="#EAF2FF" onPress={() => router.push('/(tabs)/policies')} />
-            <Summary value={data.customer_count} label="Customers" icon="people-outline" color="#13805C" background="#E7F7EF" onPress={() => router.push('/customers')} />
-            <Summary value={data.claim_count} label="Claims" icon="shield-checkmark-outline" color="#7954C7" background="#F1EDFC" onPress={() => router.push('/(tabs)/claims')} />
+            <Summary value={data.policy_count} label="Policies" artwork={PartnerAssets.actions.quickPolicyIntake} onPress={() => router.push('/(tabs)/policies')} />
+            <Summary value={data.customer_count} label="Customers" artwork={PartnerAssets.actions.quickCustomers} onPress={() => router.push('/customers')} />
+            <Summary value={data.claim_count} label="Claims" artwork={PartnerAssets.actions.quickClaims} onPress={() => router.push('/(tabs)/claims')} />
           </View>
 
           {achievements.length > 0 ? (
@@ -82,12 +82,10 @@ export default function JourneyScreen() {
               </View>
               <View style={styles.achievementRow}>
                 {achievements.map((item, index) => {
-                  const category = milestoneCategory(item.kind, item.title);
-                  const tone = categoryTone(category);
                   return (
                     <View key={`${item.kind}-${item.date}-${index}`} style={styles.achievement}>
-                      <View style={[styles.achievementIcon, { backgroundColor: tone.background }]}>
-                        <Ionicons name={journeyMilestoneIcon(item.kind, item.title)} size={25} color={tone.color} />
+                      <View style={styles.achievementIcon}>
+                        <Image source={journeyMilestoneArtwork(item.kind, item.title)} style={styles.achievementArtwork} resizeMode="contain" accessibilityLabel={item.title} />
                       </View>
                       <Text style={styles.achievementTitle} numberOfLines={1} ellipsizeMode="tail" accessibilityLabel={item.title}>{item.title}</Text>
                       <Text style={styles.achievementDate}>{formatDate(item.date)}</Text>
@@ -159,17 +157,10 @@ function milestoneCategory(kind: string, title: string): JourneyFilter {
   return 'all';
 }
 
-function categoryTone(category: JourneyFilter) {
-  if (category === 'customers') return { background: '#E7F7EF', color: '#13805C' };
-  if (category === 'premium') return { background: '#F2EBFF', color: '#7954C7' };
-  if (category === 'policies') return { background: '#EAF2FF', color: '#2866B8' };
-  return { background: '#FFF3D9', color: '#A77419' };
-}
-
-function Summary({ value, label, icon, color, background, onPress }: { value: number; label: string; icon: keyof typeof Ionicons.glyphMap; color: string; background: string; onPress: () => void }) {
+function Summary({ value, label, artwork, onPress }: { value: number; label: string; artwork: ImageSourcePropType; onPress: () => void }) {
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={`Open ${label}`} onPress={onPress} style={({ pressed }) => [styles.summaryItem, pressed && styles.summaryItemPressed]}>
-      <View style={[styles.summaryIcon, { backgroundColor: background }]}><Ionicons name={icon} size={21} color={color} /></View>
+      <Image source={artwork} style={styles.summaryArtwork} resizeMode="contain" accessible={false} />
       <View style={styles.summaryDetails}>
         <Text style={styles.summaryLabel} numberOfLines={1} ellipsizeMode="tail">{label}</Text>
         <Text style={styles.summaryValue} adjustsFontSizeToFit numberOfLines={1}>{value.toLocaleString('en-IN')}</Text>
@@ -178,14 +169,14 @@ function Summary({ value, label, icon, color, background, onPress }: { value: nu
   );
 }
 
-function journeyMilestoneIcon(kind: string, title: string): keyof typeof Ionicons.glyphMap {
+function journeyMilestoneArtwork(kind: string, title: string): ImageSourcePropType {
   const value = `${kind} ${title}`.toLowerCase();
-  if (value.includes('first customer') || value.includes('customer')) return 'person-add';
-  if (value.includes('first policy')) return 'document-text';
-  if (value.includes('policy') || value.includes('policies')) return 'documents';
-  if (value.includes('₹') || value.includes('premium') || value.includes('month')) return 'cash';
-  if (value.includes('start') || value.includes('journey')) return 'flag';
-  return 'trophy';
+  if (value.includes('claim')) return PartnerAssets.actions.quickClaims;
+  if (value.includes('customer')) return PartnerAssets.actions.quickCustomers;
+  if (value.includes('policy') || value.includes('policies')) return PartnerAssets.actions.quickPolicyIntake;
+  if (value.includes('₹') || value.includes('premium') || value.includes('month')) return PartnerAssets.actions.payoutGrowth;
+  if (value.includes('start') || value.includes('journey')) return PartnerAssets.status.journey;
+  return PartnerAssets.status.achievement;
 }
 
 function formatDate(value: string) {
@@ -196,6 +187,7 @@ function formatDate(value: string) {
 const styles = StyleSheet.create({
   hero: { marginTop: 16, borderRadius: 19, paddingHorizontal: 16, paddingVertical: 14, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E4E8EF' },
   heroHeadline: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  heroArtwork: { width: 34, height: 34 },
   heroTitle: { flex: 1, minWidth: 0, color: '#17233A', fontSize: 22, lineHeight: 28, fontWeight: '800' },
   heroProgressHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 12 },
   heroProgressLabel: { color: '#6856D5', fontSize: 11, fontWeight: '700' },
@@ -205,7 +197,7 @@ const styles = StyleSheet.create({
   summary: { marginTop: 12, flexDirection: 'row', gap: 8 },
   summaryItem: { flex: 1, minWidth: 0, minHeight: 88, alignItems: 'flex-start', justifyContent: 'space-between', padding: 9, borderRadius: 17, borderWidth: 1, borderColor: '#E7E9EE', backgroundColor: '#FFFFFF' },
   summaryItemPressed: { backgroundColor: '#F1F5FB' },
-  summaryIcon: { width: 35, height: 35, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginBottom: 6 },
+  summaryArtwork: { width: 42, height: 42, marginBottom: 2 },
   summaryDetails: { width: '100%', minWidth: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 3 },
   summaryValue: { flexShrink: 1, color: partnerTheme.colors.ink, fontSize: 13, lineHeight: 17, fontWeight: '800', textAlign: 'right' },
   summaryLabel: { flexShrink: 1, color: partnerTheme.colors.inkMuted, fontSize: 10, fontWeight: '600' },
@@ -216,7 +208,8 @@ const styles = StyleSheet.create({
   smallPillText: { fontSize: 10, color: '#6842B5', fontWeight: '700' },
   achievementRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 6 },
   achievement: { flex: 1, minWidth: 0, alignItems: 'center' },
-  achievementIcon: { width: 57, height: 57, borderRadius: 29, justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
+  achievementIcon: { width: 57, height: 57, justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
+  achievementArtwork: { width: 54, height: 54 },
   achievementTitle: { width: '100%', color: '#192333', fontSize: 11, lineHeight: 15, fontWeight: '700', textAlign: 'center' },
   achievementDate: { color: '#7A8698', fontSize: 9.5, textAlign: 'center', marginTop: 4 },
   filters: { flexDirection: 'row', gap: 5, marginBottom: 19 },
