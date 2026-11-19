@@ -148,7 +148,8 @@ const deletionSloganIndex = deletionScreen.indexOf('<View style={styles.heroCopy
 if (deletionBrandIndex < 0 || deletionSloganIndex < 0 || deletionBrandIndex >= deletionSloganIndex) {
   throw new Error('Account deletion must show the Partner logo left and the slogan right.');
 }
-requireText(deletionScreen, "heroCopy: { flex: 1, minWidth: 0, paddingLeft: 10, paddingTop: 0, alignItems: 'flex-end' }", 'Account deletion slogan must align on the right.');
+requireText(deletionScreen, "heroCopy: { flex: 1, minWidth: 0, paddingLeft: 10, paddingTop: 0, alignItems: 'flex-start' }", 'Account deletion slogan must start from the left edge of its right-side column.');
+requireText(deletionScreen, "letterSpacing: -0.6, textAlign: 'left'", 'Account deletion title must be left-aligned.');
 
 for (const [fragment, reason] of [
   ['styles.hero', 'Branded deletion page has a hero'],
