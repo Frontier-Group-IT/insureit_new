@@ -45,7 +45,7 @@ export default function JourneyScreen() {
   const visible = showAll ? filtered : filtered.slice(0, 8);
 
   return (
-    <PartnerScreen eyebrow="MY JOURNEY" title="My progress" onBack={() => router.back()}
+    <PartnerScreen title="My progress" onBack={() => router.back()}
       navyTopBar navyStatusBar bottomNavigationNavy
       bottomNavigation={<PartnerStackBottomNavigation activeTab="home" />}>
       {loading ? (
@@ -57,14 +57,7 @@ export default function JourneyScreen() {
           <View style={styles.hero}>
             <View style={styles.heroHeadline}>
               <Text style={styles.heroTitle} numberOfLines={2}>{data.next_milestone.title}</Text>
-              <Image source={PartnerAssets.status.achievement} style={styles.heroArtwork} resizeMode="contain" accessibilityLabel="Milestone achievement" />
-            </View>
-            <View style={styles.heroProgressHeading}>
-              <Text style={styles.heroProgressLabel}>Milestone progress</Text>
-              <Text style={styles.heroPercent}>{Math.round(progress * 100)}%</Text>
-            </View>
-            <View style={styles.progressTrack} accessibilityRole="progressbar" accessibilityValue={{ min: 0, max: data.next_milestone.target, now: Math.min(data.next_milestone.current, data.next_milestone.target) }}>
-              <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
+              <CircularMilestoneProgress progress={progress} current={data.next_milestone.current} target={data.next_milestone.target} />
             </View>
           </View>
 
@@ -87,8 +80,8 @@ export default function JourneyScreen() {
                       <View style={styles.achievementIcon}>
                         <Image source={journeyMilestoneArtwork(item.kind, item.title)} style={styles.achievementArtwork} resizeMode="contain" accessibilityLabel={item.title} />
                       </View>
-                      <Text style={styles.achievementTitle} numberOfLines={1} ellipsizeMode="tail" accessibilityLabel={item.title}>{item.title}</Text>
                       <Text style={styles.achievementDate}>{formatDate(item.date)}</Text>
+                      <Text style={styles.achievementTitle} numberOfLines={1} ellipsizeMode="tail" accessibilityLabel={item.title}>{item.title}</Text>
                     </View>
                   );
                 })}
@@ -118,6 +111,7 @@ export default function JourneyScreen() {
                 {visible.map((item, index) => {
                   return (
                     <View key={`${item.kind}-${item.date}-${index}`} style={[styles.timelineRow, index > 0 && styles.timelineDivider]}>
+                      <Image source={journeyMilestoneArtwork(item.kind, item.title)} style={styles.timelineArtwork} resizeMode="contain" accessible={false} />
                       <View style={styles.timelineBody}>
                         <Text style={styles.timelineTitle}>{item.title}</Text>
                         {item.subtitle ? <Text style={styles.timelineText}>{item.subtitle}</Text> : null}
@@ -162,13 +156,35 @@ function Summary({ value, label, artwork, onPress }: { value: number; label: str
     <Pressable accessibilityRole="button" accessibilityLabel={`Open ${label}`} onPress={onPress} style={({ pressed }) => [styles.summaryItem, pressed && styles.summaryItemPressed]}>
       <Image source={artwork} style={styles.summaryArtwork} resizeMode="contain" accessible={false} />
       <View style={styles.summaryDetails}>
-        <Text style={styles.summaryLabel} numberOfLines={1} ellipsizeMode="tail">{label}</Text>
+        <Text style={styles.summaryLabel} adjustsFontSizeToFit numberOfLines={1} minimumFontScale={0.8}>{label}</Text>
         <Text style={styles.summaryValue} adjustsFontSizeToFit numberOfLines={1}>{value.toLocaleString('en-IN')}</Text>
       </View>
     </Pressable>
   );
 }
 
+const CIRCLE_SEGMENT_COUNT = 96;
+const CIRCLE_SEGMENTS = Array.from({ length: CIRCLE_SEGMENT_COUNT }, (_, index) => {
+  const angle = (index * 2 * Math.PI) / CIRCLE_SEGMENT_COUNT;
+  return { left: 48 + Math.sin(angle) * 38 - 1.7, top: 48 - Math.cos(angle) * 38 - 4, rotate: `${index * 360 / CIRCLE_SEGMENT_COUNT}deg` };
+});
+
+function CircularMilestoneProgress({ progress, current, target }: { progress: number; current: number; target: number }) {
+  const percentage = Math.round(progress * 100);
+  const activeSegments = Math.round(progress * CIRCLE_SEGMENT_COUNT);
+  return (
+    <View style={styles.progressColumn}>
+      <View style={styles.progressCircle} accessible accessibilityRole="progressbar" accessibilityLabel="Milestone progress"
+        accessibilityValue={{ min: 0, max: Math.max(0, target), now: Math.max(0, Math.min(current, Math.max(0, target))) }}>
+        {CIRCLE_SEGMENTS.map((segment, index) => (
+          <View key={index} style={[styles.progressSegment, { left: segment.left, top: segment.top, transform: [{ rotate: segment.rotate }], backgroundColor: index < activeSegments ? '#7158DC' : '#E5E1FA' }]} />
+        ))}
+        <Text style={styles.progressCircleText}>{percentage}%</Text>
+      </View>
+      <Text style={styles.heroProgressLabel}>Milestone progress</Text>
+    </View>
+  );
+}
 function journeyMilestoneArtwork(kind: string, title: string): ImageSourcePropType {
   const value = `${kind} ${title}`.toLowerCase();
   if (value.includes('claim')) return PartnerAssets.actions.quickClaims;
@@ -186,21 +202,20 @@ function formatDate(value: string) {
 
 const styles = StyleSheet.create({
   hero: { marginTop: 16, borderRadius: 19, paddingHorizontal: 16, paddingVertical: 14, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E4E8EF' },
-  heroHeadline: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
-  heroArtwork: { width: 34, height: 34 },
+  heroHeadline: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   heroTitle: { flex: 1, minWidth: 0, color: '#17233A', fontSize: 22, lineHeight: 28, fontWeight: '800' },
-  heroProgressHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 12 },
-  heroProgressLabel: { color: '#6856D5', fontSize: 11, fontWeight: '700' },
-  heroPercent: { color: '#6954D6', fontSize: 21, fontWeight: '800' },
-  progressTrack: { height: 8, marginTop: 10, overflow: 'hidden', borderRadius: 999, backgroundColor: '#E5E1FA' },
-  progressFill: { height: '100%', borderRadius: 999, backgroundColor: '#7158DC' },
+  progressColumn: { width: 110, flexShrink: 0, alignItems: 'center', justifyContent: 'center', gap: 4 },
+  progressCircle: { width: 96, height: 96, alignItems: 'center', justifyContent: 'center' },
+  progressSegment: { position: 'absolute', width: 3.4, height: 8, borderRadius: 2 },
+  progressCircleText: { color: '#6954D6', fontSize: 22, fontWeight: '800' },
+  heroProgressLabel: { color: '#6856D5', fontSize: 9, fontWeight: '700', textAlign: 'center' },
   summary: { marginTop: 12, flexDirection: 'row', gap: 8 },
-  summaryItem: { flex: 1, minWidth: 0, minHeight: 88, alignItems: 'flex-start', justifyContent: 'space-between', padding: 9, borderRadius: 17, borderWidth: 1, borderColor: '#E7E9EE', backgroundColor: '#FFFFFF' },
+  summaryItem: { flex: 1, minWidth: 0, minHeight: 75, flexDirection: 'row', alignItems: 'center', padding: 7, gap: 5, borderRadius: 17, borderWidth: 1, borderColor: '#E7E9EE', backgroundColor: '#FFFFFF' },
   summaryItemPressed: { backgroundColor: '#F1F5FB' },
-  summaryArtwork: { width: 42, height: 42, marginBottom: 2 },
-  summaryDetails: { width: '100%', minWidth: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 3 },
-  summaryValue: { flexShrink: 1, color: partnerTheme.colors.ink, fontSize: 13, lineHeight: 17, fontWeight: '800', textAlign: 'right' },
-  summaryLabel: { flexShrink: 1, color: partnerTheme.colors.inkMuted, fontSize: 10, fontWeight: '600' },
+  summaryArtwork: { width: 35, height: 40, flexShrink: 0 },
+  summaryDetails: { flex: 1, minWidth: 0, alignItems: 'flex-start', justifyContent: 'center', gap: 3 },
+  summaryValue: { color: partnerTheme.colors.ink, fontSize: 14, lineHeight: 18, fontWeight: '800' },
+  summaryLabel: { color: partnerTheme.colors.inkMuted, fontSize: 9.5, fontWeight: '600' },
   card: { marginTop: 13, padding: 15, borderRadius: 19, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E7E9EE' },
   cardHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 15 },
   sectionTitle: { color: partnerTheme.colors.ink, fontSize: 16, fontWeight: '800' },
@@ -211,14 +226,15 @@ const styles = StyleSheet.create({
   achievementIcon: { width: 57, height: 57, justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
   achievementArtwork: { width: 54, height: 54 },
   achievementTitle: { width: '100%', color: '#192333', fontSize: 11, lineHeight: 15, fontWeight: '700', textAlign: 'center' },
-  achievementDate: { color: '#7A8698', fontSize: 9.5, textAlign: 'center', marginTop: 4 },
+  achievementDate: { color: '#7A8698', fontSize: 9.5, textAlign: 'center', marginBottom: 5 },
   filters: { flexDirection: 'row', gap: 5, marginBottom: 19 },
   filterButton: { flex: 1, minWidth: 0, paddingVertical: 10, paddingHorizontal: 2, alignItems: 'center', borderRadius: 9, backgroundColor: '#F3F5F9' },
   filterActive: { backgroundColor: '#142849' },
   filterText: { fontSize: 10, fontWeight: '700', color: '#667085' },
   filterActiveText: { color: '#FFFFFF' },
   timeline: { borderTopWidth: 1, borderTopColor: '#E7E9EE' },
-  timelineRow: { minHeight: 66, flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingVertical: 13 },
+  timelineRow: { minHeight: 66, flexDirection: 'row', alignItems: 'flex-start', gap: 9, paddingVertical: 13 },
+  timelineArtwork: { width: 32, height: 36, flexShrink: 0 },
   timelineDivider: { borderTopWidth: 1, borderTopColor: '#E7E9EE' },
   timelineBody: { flex: 1, minWidth: 0 },
   timelineDate: { width: 105, flexShrink: 0, color: '#6C72A1', fontSize: 10, fontWeight: '600', textAlign: 'right' },

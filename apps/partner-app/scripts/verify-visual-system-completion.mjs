@@ -641,17 +641,19 @@ for (const impactRoute of ["router.push('/customers')", "router.push('/(tabs)/po
 for (const tinySize of ['fontSize: 7.5', 'fontSize: 8.5', 'fontSize: 8,']) if (impact.includes(tinySize)) throw new Error(`Impact must not regress to tiny typography: ${tinySize}`);
 requireText(journey, 'PartnerAssets.status.journey', 'Journey timeline and empty state must use journey artwork.');
 requireText(journey, 'navyTopBar navyStatusBar bottomNavigationNavy', 'My Progress must use navy header and status bar.');
+requireText(journey, '<PartnerScreen title="My progress" onBack={() => router.back()}', 'My Progress header must show only its title without a secondary eyebrow.');
+if (journey.includes('eyebrow="MY JOURNEY"')) throw new Error('My Progress must not show MY JOURNEY above its title.');
 requireText(journey, 'bottomNavigation={<PartnerStackBottomNavigation activeTab="home" />}', 'My Progress must have the permission-gated Home bottom navigator.');
 if (journey.includes('name="locate-outline"')) throw new Error('Milestone top-right circle icon must be removed.');
 if (/calendar-outline|PartnerPolicyCalendarDialog|calendarOpen|setTimelineDate|\[timelineDate,|calendarButton|dateFilterRow|Clear timeline date filter/.test(journey)) throw new Error('Journey timeline must not include the removed calendar/date picker or its unused state.');
 requireText(journey, "filter === 'all' || milestoneCategory(item.kind, item.title) === filter", 'Journey timeline must retain category filtering.');
 requireText(journey, "hero: { marginTop: 16, borderRadius: 19, paddingHorizontal: 16, paddingVertical: 14, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E4E8EF'", 'Milestone card must use the white bordered recognition reference instead of a navy background.');
 requireText(journey, "heroTitle: { flex: 1, minWidth: 0, color: '#17233A'", 'Milestone title must stay legible on white.');
-requireText(journey, "progressTrack: { height: 8, marginTop: 10, overflow: 'hidden', borderRadius: 999, backgroundColor: '#E5E1FA'", 'Milestone progress bar must match the lavender recognition reference.');
-requireText(journey, 'styles.heroHeadline', 'Milestone title and flag must share a compact header.');
-requireText(journey, 'styles.heroProgressHeading', 'Milestone progress must place percentage beside its label.');
-requireText(journey, "progressTrack: { height: 8, marginTop: 10", 'Progress bar retains compact height and spacing.');
-requireText(journey, 'accessibilityValue={{ min: 0, max: data.next_milestone.target, now:', 'Real milestone count must remain accessible from the progress bar.');
+requireText(journey, 'function CircularMilestoneProgress(', 'Milestone must have an accessible circular percentage indicator.');
+requireText(journey, 'styles.heroHeadline', 'Milestone title and circular progress must share a compact header.');
+requireText(journey, 'styles.progressCircle', 'Milestone progress ring must replace the separate horizontal bar.');
+requireText(journey, 'CIRCLE_SEGMENTS.map(', 'Progress ring must render its percentage-based circular segments.');
+requireText(journey, 'accessibilityRole="progressbar"', 'Circular milestone progress must remain accessible.');
 requireText(journey, 'Math.round(progress * 100)', 'Real progress percentage must be retained.');
 for (const required of [
   'PartnerAssets.status.achievement',
@@ -664,13 +666,18 @@ for (const required of [
   'styles.achievementArtwork',
 ]) requireText(journey, required, 'My Progress must use bundled illustrated artwork: ' + required);
 if (journey.includes('journeyMilestoneIcon(') || journey.includes('styles.summaryIcon')) throw new Error('My Progress must not restore vector milestone or summary icons.');
+requireText(journey, 'style={styles.timelineArtwork}', 'Timeline rows must show their illustrated category icon.');
+requireText(journey, "flexDirection: 'row', alignItems: 'center', padding: 7, gap: 5", 'Summary tiles must show the icon on the left and stacked text on the right.');
+requireText(journey, "summaryDetails: { flex: 1, minWidth: 0, alignItems: 'flex-start'", 'Summary label and count must stack vertically.');
+if (journey.indexOf('<Text style={styles.achievementDate}>') > journey.indexOf('<Text style={styles.achievementTitle}')) throw new Error('Achievement dates must be between illustrated icon and title.');
+if (journey.includes('styles.progressTrack') || journey.includes('styles.heroArtwork')) throw new Error('Obsolete horizontal milestone bar or flag icon must be removed.');
 for (const unwanted of ['NEXT CUSTOMER MILESTONE', 'Customers achieved', 'more customers to unlock', 'styles.heroNumbers', 'styles.heroBottom']) {
   if (journey.includes(unwanted)) throw new Error('My Progress must not restore removed milestone secondary content: ' + unwanted);
 }
-for (const required of ['styles.summaryDetails', 'numberOfLines={1} ellipsizeMode="tail" accessibilityLabel={item.title}', "backgroundColor: '#E9E1FF'", 'styles.timelineDivider', 'styles.timelineBody', 'styles.timelineDate', 'item.subtitle ?']) {
+for (const required of ['styles.summaryDetails', 'numberOfLines={1} ellipsizeMode="tail" accessibilityLabel={item.title}', "backgroundColor: '#E9E1FF'", 'styles.timelineArtwork', 'styles.timelineDivider', 'styles.timelineBody', 'styles.timelineDate', 'item.subtitle ?']) {
   requireText(journey, required, 'My Progress must preserve its compact summary, achievements and remarks-style timeline: ' + required);
 }
-for (const unwanted of ['styles.rail', 'styles.timelineArtwork', 'styles.line']) {
+for (const unwanted of ['styles.rail', 'styles.line']) {
   if (journey.includes(unwanted)) throw new Error('Journey timeline must not restore the vertical icon rail: ' + unwanted);
 }
 
