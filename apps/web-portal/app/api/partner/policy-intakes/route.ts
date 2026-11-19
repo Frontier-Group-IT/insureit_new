@@ -1,6 +1,6 @@
 import { after } from "next/server";
 import { aiQueueEnabled, processAiQueueBatch } from "@/lib/ai-policy-onboarding-queue-server";
-import { incomingPolicyIntakeLane, segregatePolicyIntakeLanes, useN8nForAllPolicyReads } from "@/lib/policy-ocr-routing-mode";
+import { incomingPolicyIntakeLane, segregatePolicyIntakeLanes, isN8nPolicyReadEnabled } from "@/lib/policy-ocr-routing-mode";
 import { NextResponse } from "next/server";
 
 import { createSupabaseWithAccessToken } from "@/lib/auth";
@@ -1042,8 +1042,8 @@ async function processStoredOcr(id: string) {
 
   // Controlled n8n-required route: n8n fetches the private PDF itself via
   // short-lived signed Storage URL. Google OCR is never called for this Intake.
-  const ocr = intake.policy_type === "motor" && (requiresN8nForIntake(id) || useN8nForAllPolicyReads())
-    ? await extractPolicyIntakeWithN8nOnly(id, intake.storage_path, useN8nForAllPolicyReads())
+  const ocr = intake.policy_type === "motor" && (requiresN8nForIntake(id) || isN8nPolicyReadEnabled())
+    ? await extractPolicyIntakeWithN8nOnly(id, intake.storage_path, isN8nPolicyReadEnabled())
     : await (async () => {
         const { data: blob, error } = await admin.storage.from(intake.storage_bucket).download(intake.storage_path);
         if (error || !blob) {
