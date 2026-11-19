@@ -75,7 +75,7 @@ const bridge=fs.readFileSync(fileURLToPath(new URL("../lib/policy-intake-n8n-bri
 const panel=fs.readFileSync(fileURLToPath(new URL("../components/policy-ocr-import-panel.tsx",import.meta.url)),"utf8");
 const actions=fs.readFileSync(fileURLToPath(new URL("../app/policy-intakes/handoff-actions.ts",import.meta.url)),"utf8");
 assert.match(eligibility,/INSUREIT_TATA_AIG_N8N_ENABLED/);
-assert.match(eligibility,/Thank you for choosing TATA AIG as your Insurer/);
+assert.match(eligibility,/Thank\\s\+you\\s\+for\\s\+choosing\\s\+TATA\\s\+AIG\\s\+as\\s\+your\\s\+Insurer/);
 assert.match(bridge,/x-insureit-policy-intake-secret/);
 assert.match(bridge,/SIGNED_OBJECT_PREFIX/);
 assert.match(panel,/cpa_opted/);
