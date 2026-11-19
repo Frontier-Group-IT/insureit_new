@@ -20,6 +20,7 @@ create index if not exists policy_intake_processing_lane_open_idx
 -- candidates. A queue row by itself is NOT proof of automation ownership;
 -- Go Digit, United India, New India and other unsupported files remain manual.
 -- Does NOT change OCR, policy, reviewer, existing draft or booking state.
+with moved as (
 update public.policy_intake_requests i
 set processing_lane='automation'
 from public.policy_intake_ai_processing_queue q
@@ -33,7 +34,14 @@ where q.intake_id=i.id and i.processing_lane='manual'
   )
   and exists (select 1 from public.policy_intake_documents d
     where d.intake_id=i.id and d.id=q.document_id and d.is_current=true
-      and d.storage_path=i.storage_path and d.storage_bucket=i.storage_bucket);
+      and d.storage_path=i.storage_path and d.storage_bucket=i.storage_bucket)
+  returning i.id
+)
+insert into public.audit_logs(actor_id,action,table_name,record_id,old_data,new_data)
+select null,'policy_intake_lane_backfilled','policy_intake_requests',m.id,
+  jsonb_build_object('processing_lane','manual'),
+  jsonb_build_object('processing_lane','automation','reason','verified_current_document_icici_3005_backfill')
+from moved m;
 
 -- v2 remains unchanged for rollback. v3 claims and processes ONLY explicit
 -- automation-lane intakes. It does not enroll anything simply because it
