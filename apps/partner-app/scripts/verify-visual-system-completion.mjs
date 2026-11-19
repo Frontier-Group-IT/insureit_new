@@ -666,7 +666,8 @@ for (const impactMarker of [
 if (impact.includes('icon={icon}') || impact.includes('styles.cardLeft')) throw new Error('Impact must keep blue artwork left with metric and label stacked to its right.');
 requireText(impact, '<MonthStat art="monthly-policy" label="Policies"', 'Monthly policies must use the distinct Add Policy reference artwork.');
 requireText(impact, '<ImpactCard art="policy" value={data.lifetime_policies}', 'Policy book must use the Policy Document reference artwork.');
-if (impact.includes('styles.heroDivider') || impact.includes('borderRadius: 18, minHeight: 94')) throw new Error('Impact top summary must match Policy Details: full-width flat white strip with a bottom divider.');
+if (impact.includes('borderRadius: 18, minHeight: 94')) throw new Error('Impact top summary must be a full-width flat white strip, not a rounded card.');
+requireText(impact, 'styles.heroDivider', 'Impact final reference keeps the thin vertical divider between car and amount.');
 requireText(impact, 'marginHorizontal: -partnerTheme.spacing.lg, minHeight: 82', 'Impact summary must span the viewport like the Policy Details summary.');
 for (const impactRoute of ["router.push('/customers')", "router.push('/(tabs)/policies')", "router.push('/(tabs)/claims')", "router.push('/business-report')", "router.push('/journey')"]) requireText(impact, impactRoute, `Impact clickable-card route is missing ${impactRoute}.`);
 for (const tinySize of ['fontSize: 7.5', 'fontSize: 8.5', 'fontSize: 8,']) if (impact.includes(tinySize)) throw new Error(`Impact must not regress to tiny typography: ${tinySize}`);
