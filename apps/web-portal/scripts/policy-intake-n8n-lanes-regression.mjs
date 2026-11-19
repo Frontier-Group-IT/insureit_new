@@ -42,7 +42,7 @@ const auto=read("app/development/ai-policy-onboarding/page.tsx");
 const detail=read("app/policy-intakes/[id]/page.tsx");
 const handoff=read("app/policy-intakes/handoff-actions.ts");
 const retry=read("app/policy-intakes/retry-actions.ts");
-const migration=read("../../supabase/migrations/20261119131500_policy_intake_processing_lanes.sql");
+const migration=read("../../supabase/migrations/20261119082721_policy_intake_processing_lanes.sql");
 assert(readAction.includes('if (isN8nPolicyReadEnabled())')
  && readAction.includes('requestN8nPolicyIntakeExtraction({')
  && readAction.includes('legacy_google_training_disabled')
