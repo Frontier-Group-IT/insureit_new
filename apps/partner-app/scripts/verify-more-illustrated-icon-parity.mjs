@@ -20,11 +20,11 @@ const mapping = icon.slice(icon.indexOf('const ILLUSTRATED_ICONS:'),icon.indexOf
 assert.ok(mapping.startsWith('const ILLUSTRATED_ICONS:'), 'Illustrated icons must be centrally mapped');
 const redesigned = new Set(['policy-intake']);
 for (const [kind,title] of illustrated) {
-  const file = kind === 'customers' ? 'more-customers-3d.png' : kind === 'journey' ? 'journey.png' : `more-${kind}${redesigned.has(kind) ? '-3d' : ''}.png`;
+  const file = kind === 'customers' ? 'add-partner.png' : kind === 'journey' ? 'journey.png' : `more-${kind}${redesigned.has(kind) ? '-3d' : ''}.png`;
   assert.ok(more.includes('title="'+title+'"'), 'Preserve menu action '+title);
   assert.ok(mapping.includes(file), 'Missing illustrated asset mapping '+kind);
-  assert.ok(mapping.includes(kind === 'journey' ? "assets/partner/status/journey.png" : `assets/partner/icons/${file}`), 'Incorrect asset directory for '+kind);
-  const png=readFileSync(new URL((kind === 'journey' ? '../assets/partner/status/' : '../assets/partner/icons/')+file,import.meta.url));
+  assert.ok(mapping.includes(kind === 'journey' ? "assets/partner/status/journey.png" : kind === 'customers' ? "assets/partner/quick-actions/add-partner.png" : `assets/partner/icons/${file}`), 'Incorrect asset directory for '+kind);
+  const png=readFileSync(new URL((kind === 'journey' ? '../assets/partner/status/' : kind === 'customers' ? '../assets/partner/quick-actions/' : '../assets/partner/icons/')+file,import.meta.url));
   assert.equal(png.subarray(0,8).toString('hex'),'89504e470d0a1a0a', 'Asset must be local PNG: '+kind);
   assert.ok(png.length > 500,'Icon artwork missing content for '+kind);
   if (redesigned.has(kind)) {
@@ -46,8 +46,8 @@ assert.match(more,/canPartnerAccessCaseRegister\(context\)/);
 assert.match(more,/canPartnerAccess\(context, 'view_policy_intakes'\)/);
 assert.match(more,/PartnerProfileMenuIcon kind=\{iconKind\} size=\{iconKind === 'policy-intake' \? 48 : 42\}/);
 assert.match(mapping, /status\/journey\.png/, 'Use existing valid Journey artwork');
-assert.match(mapping, /more-customers-3d\.png/, 'Use the existing transparent Customers icon');
+assert.match(mapping, /quick-actions\/add-partner\.png/, 'Use the exact existing Add Partner 3D reference artwork for Customers');
 assert.match(icon, /scale: 1\.7/, 'Policy Intake artwork must enlarge visibly');
 assert.match(icon, /scale: 1\.16/, 'Original My Journey art must render more clearly');
 assert.match(more, /sectionRows/, 'More sections should display flat rows');
-console.log('Existing transparent Customers icon, valid Journey art, enlarged Intake and subtle More dividers verified.');
+console.log('Existing Add Partner reference artwork on Customers, valid Journey art, enlarged Intake and subtle More dividers verified.');

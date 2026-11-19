@@ -37,8 +37,8 @@ const ILLUSTRATED_ICONS: Partial<Record<PartnerProfileMenuIconKind, ImageSourceP
   'policy-intake': require('../../assets/partner/icons/more-policy-intake-3d.png'),
   'case-register': require('../../assets/partner/icons/more-case-register.png'),
   renewals: require('../../assets/partner/icons/more-renewals.png'),
-  // Use the bundled transparent Customers group illustration with no enclosing tile.
-  customers: require('../../assets/partner/icons/more-customers-3d.png'),
+  // Match the supplied Add Partner 3D reference with the existing transparent artwork, without a tile.
+  customers: require('../../assets/partner/quick-actions/add-partner.png'),
   impact: require('../../assets/partner/icons/more-impact.png'),
   // The former menu PNG cannot be decoded reliably; reuse the verified bundled 3D journey illustration.
   journey: require('../../assets/partner/status/journey.png'),
