@@ -44,6 +44,9 @@ for(const fixture of fixtures) {
     "Matching signing/receipt date must clear issuance exception without bypassing canonical preflight");
   assert.equal(acceptedTataAigIssuanceDate({...v,issuanceEvidence:evidence("2026-10-20",receipt)}),null);
   assert.equal(acceptedTataAigIssuanceDate({...v,issuanceEvidence:undefined}),null);
+  const futureDate=new Date(Date.now()+3*86_400_000).toISOString().slice(0,10);
+  assert.equal(acceptedTataAigIssuanceDate({...v,issuanceEvidence:evidence(futureDate)}),null,
+    "Never infer future issuance, even if it falls later in the current month");
   assert.equal(acceptedTataAigIssuanceDate({...v,checksPassed:17}),null);
   assert.equal(acceptedTataAigIssuanceDate({...v,warnings:[...v.warnings,"untrusted_new_warning"]}),null);
   assert.equal(acceptedTataAigIssuanceDate({...v,parserId:"icici_3005_n8n_native_pdf"}),null);
