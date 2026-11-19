@@ -57,7 +57,7 @@ export default function JourneyScreen() {
           <View style={styles.hero}>
             <View style={styles.heroHeadline}>
               <Text style={styles.heroTitle} numberOfLines={2}>{data.next_milestone.title}</Text>
-              <Ionicons name="flag-outline" size={18} color="#C4B5FD" />
+              <Ionicons name="flag-outline" size={22} color="#6856D5" />
             </View>
             <View style={styles.heroProgressHeading}>
               <Text style={styles.heroProgressLabel}>Milestone progress</Text>
@@ -194,14 +194,14 @@ function formatDate(value: string) {
 }
 
 const styles = StyleSheet.create({
-  hero: { marginTop: 16, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 14, backgroundColor: '#142849' },
+  hero: { marginTop: 16, borderRadius: 19, paddingHorizontal: 16, paddingVertical: 14, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E4E8EF' },
   heroHeadline: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
-  heroTitle: { flex: 1, minWidth: 0, color: '#FFFFFF', fontSize: 22, lineHeight: 28, fontWeight: '800' },
+  heroTitle: { flex: 1, minWidth: 0, color: '#17233A', fontSize: 22, lineHeight: 28, fontWeight: '800' },
   heroProgressHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 12 },
-  heroProgressLabel: { color: '#CBD6EA', fontSize: 11, fontWeight: '600' },
-  heroPercent: { color: '#C4B5FD', fontSize: 21, fontWeight: '800' },
-  progressTrack: { height: 8, marginTop: 10, overflow: 'hidden', borderRadius: 999, backgroundColor: '#405171' },
-  progressFill: { height: '100%', borderRadius: 999, backgroundColor: '#A78BFA' },
+  heroProgressLabel: { color: '#6856D5', fontSize: 11, fontWeight: '700' },
+  heroPercent: { color: '#6954D6', fontSize: 21, fontWeight: '800' },
+  progressTrack: { height: 8, marginTop: 10, overflow: 'hidden', borderRadius: 999, backgroundColor: '#E5E1FA' },
+  progressFill: { height: '100%', borderRadius: 999, backgroundColor: '#7158DC' },
   summary: { marginTop: 12, flexDirection: 'row', gap: 8 },
   summaryItem: { flex: 1, minWidth: 0, minHeight: 88, alignItems: 'flex-start', justifyContent: 'space-between', padding: 9, borderRadius: 17, borderWidth: 1, borderColor: '#E7E9EE', backgroundColor: '#FFFFFF' },
   summaryItemPressed: { backgroundColor: '#F1F5FB' },
