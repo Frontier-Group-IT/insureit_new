@@ -331,7 +331,8 @@ export function validateTataAigN8nResponse(
     || (twoWheeler && (get("vehicle_motor_power_kw") !== get("vehicle_capacity")
       || !/^[1-9][0-9]?(?:\\.[0-9]{1,2})?$/.test(get("vehicle_motor_power_kw"))))
     || !/^(?:19|20)\d{2}$/.test(get("vehicle_manufacturing_year"))
-    || !/^[0-9]{2,5}(?:\.\d{1,2})?$/.test(get("vehicle_capacity"))
+    || !(twoWheeler ? /^[1-9][0-9]?(?:\.\d{1,2})?$/.test(get("vehicle_capacity"))
+      : /^[0-9]{2,5}(?:\.\d{1,2})?$/.test(get("vehicle_capacity")))
     || get("vehicle_engine_number").length < 6 || get("vehicle_chassis_number").length < 12
     || get("vehicle_engine_number") === get("vehicle_chassis_number")
     || !/^[a-z ]{2,60}$/i.test(get("vehicle_rto_name"))
