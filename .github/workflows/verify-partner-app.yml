@@ -75,6 +75,9 @@ jobs:
       - name: Verify Motor policy-copy confirmation and OTP parity
         run: node apps/partner-app/scripts/verify-motor-policy-copy-otp-parity.mjs
 
+      - name: Verify dimensional More menu icon coverage
+        run: node apps/partner-app/scripts/verify-more-dimensional-icons.mjs
+
       - name: Verify Partner route integrity
         run: npm --workspace apps/partner-app run verify:routes
 
