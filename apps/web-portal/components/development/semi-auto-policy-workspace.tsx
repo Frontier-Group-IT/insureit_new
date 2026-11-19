@@ -329,7 +329,8 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
       const response = await continueVerifiedN8nIntakeToOnboarding(
         dialog.intakeId, dialog.documentId, dialog.fingerprint, true,
         dialog.kind === "takeover", fillEmptySavedFields,
-        approveSigningDate && n8nResult.preview.issuanceEvidence ? {
+        approveSigningDate && !n8nResult.preview.acceptedIssuanceDate
+          && n8nResult.preview.issuanceEvidence ? {
           date:n8nResult.preview.issuanceEvidence.proposedDate,
           documentSha256:n8nResult.preview.issuanceEvidence.documentSha256,
           expectedDraftRevision:n8nResult.preview.savedDraftIssueDate?.revision??null,
@@ -817,10 +818,16 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
                 </div>
                 {n8nResult.preview.issuanceEvidence ? (
                   <div className="mt-2 rounded-lg border border-[#e7c9a0] bg-[#fffaf1] p-3 text-[11px] text-[#6e4e24]">
-                    <p className="font-bold">Suggested issuance date: {n8nResult.preview.issuanceEvidence.proposedDate}</p>
-                    <p className="mt-1">The embedded PDF signing timestamp and separately read receipt date agree. The signing certificate&apos;s trust and the insurer&apos;s official issuance rule are NOT independently established. Compare the original signed policy before confirming this date.</p>
+                    <p className="font-bold">{n8nResult.preview.acceptedIssuanceDate
+                      ? "Issuance date automatically accepted: "
+                      : "Suggested issuance date: "}{n8nResult.preview.issuanceEvidence.proposedDate}</p>
+                    <p className="mt-1">{n8nResult.preview.acceptedIssuanceDate
+                      ? "The signed-PDF timestamp and independently validated printed receipt agree. INSUREIT accepts this date under the Tata AIG business rule, so no separate issuance-date exception or confirmation is required. The PDF signer certificate chain has not been independently certified. Normal booking controls remain."
+                      : "The date is not accepted automatically because its evidence is incomplete or conflicting. Review the original signed policy and other date rules."}</p>
                     {n8nResult.preview.savedDraftIssueDate ? (
-                      <p className="mt-1 font-semibold">Saved issue date: {n8nResult.preview.savedDraftIssueDate.value||"blank"}. Any change requires explicit confirmation.</p>
+                      <p className="mt-1 font-semibold">Saved issue date: {n8nResult.preview.savedDraftIssueDate.value||"blank"}. {n8nResult.preview.acceptedIssuanceDate
+                        ? "If different, the verified-current-PDF handoff corrects the saved date using a revision guard and retains an audit note."
+                        : "Any change requires explicit confirmation."}</p>
                     ):null}
                   </div>
                 ):null}
@@ -1249,7 +1256,9 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
                     ? "The saved draft has been preserved. Only previously empty eligible fields were filled from the verified extraction or an approved customer master; existing manual values were not changed."
                     : "The saved draft has been preserved without changes. Compare it with the latest n8n preview and the original PDF before booking."}
             </p>
-            {handoffDialog.kind !== "existing" && n8nResult?.ok && n8nResult.preview.issuanceEvidence ? (
+            {handoffDialog.kind !== "existing" && n8nResult?.ok
+              && n8nResult.preview.issuanceEvidence
+              && !n8nResult.preview.acceptedIssuanceDate ? (
               <label className="mt-4 flex cursor-pointer items-start gap-2 rounded-xl border border-amber-300 bg-amber-50 p-3 text-[11px] leading-4 text-amber-950">
                 <input type="checkbox" className="mt-0.5 h-4 w-4 accent-[#174b83]" checked={approveSigningDate}
                   onChange={event=>setApproveSigningDate(event.target.checked)}/>
