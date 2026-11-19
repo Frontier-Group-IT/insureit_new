@@ -98,6 +98,6 @@ const unknown=parseNonTata('UNTRAINED LIFE INSURER DOCUMENT 12345');
 assert.equal(unknown.ok,false);assert.equal(unknown.auto_finalize_allowed,false);
 const altered=parseNonTata(iffcoText.replace('Gross Premium Payable Rs. 15592.52','Gross Premium Payable Rs. 16592.52'));
 assert.equal(altered.ok,false,'Tampered gross must fail independent GST validation');
-const alteredTax=parseNonTata(iffcoText.replace("'NeverMatchValue'",'unchanged').replace('18.00\\n2378.52\\n15592.52','18.00\\n2278.52\\n15592.52'));
+const alteredTax=parseNonTata(iffcoText.replace('2378.52','2278.52'));
 assert.equal(alteredTax.ok,false,'Tampered GST must fail independent net-plus-tax validation');
 console.log('PASS 6 NIA + IFFCO + Digit + 2 negative tests. Review only; no policy writes.');
