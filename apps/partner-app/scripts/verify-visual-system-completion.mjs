@@ -646,7 +646,22 @@ if (activity.includes('<Text numberOfLines={1} style={styles.meta}>{item.meta}</
 if (activity.includes('<Ionicons name="chevron-forward" size={20} color="#071C70" />')) throw new Error('Recent Activity record rows must not show a right-side chevron.');
 requireText(activity, 'width: 52', 'Recent Activity logo tile must stay compact so details sit closer to the logo.');
 requireText(activity, 'marginRight: 4', 'Recent Activity logo-to-detail spacing must stay compact.');
-for (const impactMarker of ['function ImpactIcon(', 'icon="car-sport"', 'icon="people"', 'icon="document-text"', 'icon="shield-checkmark"', 'icon="trending-up"', 'icon="person-add"', 'icon="checkmark-done-circle"', 'icon="navigate-circle"']) requireText(impact, impactMarker, `Impact is missing professional icon marker ${impactMarker}.`);
+for (const impactMarker of [
+  'function ImpactIcon(',
+  'PartnerAssets.actions.addVehicle',
+  'PartnerAssets.actions.quickCustomers',
+  'PartnerAssets.actions.quickPolicyIntake',
+  'PartnerAssets.actions.quickClaims',
+  'PartnerAssets.actions.businessPerformance',
+  'PartnerAssets.actions.addCustomer',
+  'styles.heroDivider',
+  'styles.monthDivider',
+  'styles.monthStatDivider',
+  'styles.cardDetails',
+  '<ImpactIcon art={art} size={49} plain />',
+  '<ImpactIcon art={art} size={43} plain />',
+]) requireText(impact, impactMarker, `Impact reference layout is missing ${impactMarker}.`);
+if (impact.includes('icon={icon}') || impact.includes('styles.cardLeft')) throw new Error('Impact must keep blue artwork left with metric and label stacked to its right.');
 for (const impactRoute of ["router.push('/customers')", "router.push('/(tabs)/policies')", "router.push('/(tabs)/claims')", "router.push('/business-report')", "router.push('/journey')"]) requireText(impact, impactRoute, `Impact clickable-card route is missing ${impactRoute}.`);
 for (const tinySize of ['fontSize: 7.5', 'fontSize: 8.5', 'fontSize: 8,']) if (impact.includes(tinySize)) throw new Error(`Impact must not regress to tiny typography: ${tinySize}`);
 requireText(journey, 'PartnerAssets.status.journey', 'Journey timeline and empty state must use journey artwork.');
