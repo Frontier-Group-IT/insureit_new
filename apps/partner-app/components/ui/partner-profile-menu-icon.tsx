@@ -1,9 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
-import { StyleSheet, View } from 'react-native';
+import { Image, StyleSheet, View, type ImageSourcePropType } from 'react-native';
 
 export type PartnerProfileMenuIconKind =
   | 'search'
   | 'policy-intake'
+  | 'case-register'
   | 'renewals'
   | 'customers'
   | 'week'
@@ -30,7 +31,18 @@ type IconPalette = {
 // A palette per destination makes the small icons easy to distinguish at a glance.
 // The extruded silhouettes, rim lighting and inset tile replace flat monochrome glyphs
 // without adding image downloads, native dependencies, or changing touch targets.
-const CONFIG: Record<PartnerProfileMenuIconKind, IconPalette> = {
+// Only these six destinations use the supplied illustrated 3D PNG artwork.
+// All other More menu icons preserve their existing native vector rendering.
+const ILLUSTRATED_ICONS: Partial<Record<PartnerProfileMenuIconKind, ImageSourcePropType>> = {
+  'policy-intake': require('../../assets/partner/icons/more-policy-intake.png'),
+  'case-register': require('../../assets/partner/icons/more-case-register.png'),
+  renewals: require('../../assets/partner/icons/more-renewals.png'),
+  customers: require('../../assets/partner/icons/more-customers.png'),
+  impact: require('../../assets/partner/icons/more-impact.png'),
+  journey: require('../../assets/partner/icons/more-journey.png'),
+};
+
+const CONFIG: Record<Exclude<PartnerProfileMenuIconKind, 'case-register'>, IconPalette> = {
   search: { icon: 'search', accentIcon: 'briefcase', face: '#3488F2', edge: '#0756BB', shadow: '#123A7B', tile: '#EAF4FF', light: '#FFFFFF' },
   'policy-intake': { icon: 'document-text', accentIcon: 'add', face: '#527AF2', edge: '#2147B4', shadow: '#172F73', tile: '#EDF2FF', light: '#FFFFFF' },
   renewals: { icon: 'refresh-circle', accentIcon: 'calendar', face: '#13B6A9', edge: '#087A86', shadow: '#12526A', tile: '#E5FAF6', light: '#FFFFFF' },
@@ -54,7 +66,20 @@ export function PartnerProfileMenuIcon({
   kind: PartnerProfileMenuIconKind;
   size?: number;
 }) {
-  const config = CONFIG[kind];
+  const artwork = ILLUSTRATED_ICONS[kind];
+  if (artwork) {
+    return (
+      <Image
+        source={artwork}
+        resizeMode="contain"
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+        style={{ width: size, height: size }}
+      />
+    );
+  }
+  // Only the preserved kinds reach this palette; case-register uses artwork.
+  const config = CONFIG[kind as Exclude<PartnerProfileMenuIconKind, 'case-register'>];
   const glyph = Math.round(size * 0.56);
   const badgeSize = Math.round(size * 0.33);
 

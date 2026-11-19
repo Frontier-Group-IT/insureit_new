@@ -124,7 +124,7 @@ export default function MoreScreen() {
       <MenuSection title="WORK">
         {canPartnerSearch(context) ? <MenuRow iconKind="search" title="Search all business" helper="Customers, policies and claims" onPress={() => router.push('/search')} /> : null}
         {canPartnerAccess(context, 'view_policy_intakes') ? <MenuRow iconKind="policy-intake" title="Policy Intake" onPress={() => router.push('/policy-intakes')} /> : null}
-        {canPartnerAccessCaseRegister(context) ? <MenuRow iconKind="policy-intake" title="Case Register" helper="Life & Health cases" onPress={() => router.push('/life-health-cases')} /> : null}
+        {canPartnerAccessCaseRegister(context) ? <MenuRow iconKind="case-register" title="Case Register" helper="Life & Health cases" onPress={() => router.push('/life-health-cases')} /> : null}
         {canPartnerAccess(context, 'view_policies') ? <MenuRow iconKind="renewals" title="Renewals" onPress={() => router.push('/renewals')} /> : null}
         {canPartnerAccess(context, 'view_customers') ? <MenuRow iconKind="customers" title="Customers" onPress={() => router.push('/customers')} last /> : null}
       </MenuSection>
