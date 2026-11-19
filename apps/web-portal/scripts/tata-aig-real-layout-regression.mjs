@@ -121,7 +121,7 @@ for(const [i,fixture] of fixtures.entries()){
     // "Certificate of", and rasterized signing metadata is not text.
     const pdfJsText=fixture.text
       .replace(/Certificate of Insurance Cum Policy Schedule/g,"Insurance Cum Policy Schedule")
-      .replace(/Digitally Signed by:\\s*SAMPLE SIGNER\\s*Date:\\s*\\d{2}\\/\\d{2}\\/\\d{4}/g,
+      .replace(/Digitally Signed by:[\s\S]{0,100}?Date:[^\n]*/g,
         "Electronic signature present; signature date not in native PDF text");
     assert.notEqual(pdfJsText,fixture.text);
     const pdfJsParsed=parse({all:()=>[{json:{text:pdfJsText}}]})[0].json;
@@ -135,7 +135,7 @@ for(const [i,fixture] of fixtures.entries()){
     assert(pdfJsEnvelope.warnings.includes("tata_aig_signature_date_not_in_native_text"));
     assert.equal(validateTataAigN8nResponse(pdfJsEnvelope,IDs).checksPassed,18);
     // Missing signing metadata must never authorize an inconsistent receipt.
-    const invalidReceipt=pdfJsText.replace(/Receipt Date\\s*\\d{2}\\/\\d{2}\\/\\d{4}/,
+    const invalidReceipt=pdfJsText.replace(/Receipt Date[^\n]*/,
       "Receipt Date 01/01/2000");
     const invalidParsed=parse({all:()=>[{json:{text:invalidReceipt}}]})[0].json;
     assert.equal(invalidParsed.checks.receipt_date_document_consistent,false);
