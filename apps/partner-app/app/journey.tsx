@@ -63,7 +63,7 @@ export default function JourneyScreen() {
 
           <View style={styles.summary}>
             <Summary value={data.policy_count} label="Policies" artwork={PartnerAssets.actions.quickPolicyIntake} onPress={() => router.push('/(tabs)/policies')} />
-            <Summary value={data.customer_count} label="Customers" artwork={PartnerAssets.actions.quickCustomers} onPress={() => router.push('/customers')} />
+            <Summary value={data.customer_count} label="Customers" artwork={PartnerAssets.actions.quickCustomers} combined onPress={() => router.push('/customers')} />
             <Summary value={data.claim_count} label="Claims" artwork={PartnerAssets.actions.quickClaims} onPress={() => router.push('/(tabs)/claims')} />
           </View>
 
@@ -151,11 +151,11 @@ function milestoneCategory(kind: string, title: string): JourneyFilter {
   return 'all';
 }
 
-function Summary({ value, label, artwork, onPress }: { value: number; label: string; artwork: ImageSourcePropType; onPress: () => void }) {
+function Summary({ value, label, artwork, combined = false, onPress }: { value: number; label: string; artwork: ImageSourcePropType; combined?: boolean; onPress: () => void }) {
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel={`Open ${label}`} onPress={onPress} style={({ pressed }) => [styles.summaryItem, pressed && styles.summaryItemPressed]}>
+    <Pressable accessibilityRole="button" accessibilityLabel={`Open ${label}: ${value.toLocaleString('en-IN')}`} onPress={onPress} style={({ pressed }) => [styles.summaryItem, combined && styles.summaryCombinedItem, pressed && styles.summaryItemPressed]}>
       <Image source={artwork} style={styles.summaryArtwork} resizeMode="contain" accessible={false} />
-      <View style={styles.summaryDetails}>
+      <View style={[styles.summaryDetails, combined && styles.summaryCombinedDetails]}>
         <Text style={styles.summaryLabel} adjustsFontSizeToFit numberOfLines={1} minimumFontScale={0.8}>{label}</Text>
         <Text style={styles.summaryValue} adjustsFontSizeToFit numberOfLines={1}>{value.toLocaleString('en-IN')}</Text>
       </View>
@@ -166,7 +166,7 @@ function Summary({ value, label, artwork, onPress }: { value: number; label: str
 const CIRCLE_SEGMENT_COUNT = 96;
 const CIRCLE_SEGMENTS = Array.from({ length: CIRCLE_SEGMENT_COUNT }, (_, index) => {
   const angle = (index * 2 * Math.PI) / CIRCLE_SEGMENT_COUNT;
-  return { left: 36 + Math.sin(angle) * 27 - 1.5, top: 36 - Math.cos(angle) * 27 - 3, rotate: `${index * 360 / CIRCLE_SEGMENT_COUNT}deg` };
+  return { left: 18 + Math.sin(angle) * 13.5 - 0.8, top: 18 - Math.cos(angle) * 13.5 - 1.5, rotate: `${index * 360 / CIRCLE_SEGMENT_COUNT}deg` };
 });
 
 function CircularMilestoneProgress({ progress, current, target }: { progress: number; current: number; target: number }) {
@@ -205,13 +205,15 @@ const styles = StyleSheet.create({
   heroHeadline: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   heroTitle: { flex: 1, minWidth: 0, color: '#17233A', fontSize: 18, lineHeight: 24, fontWeight: '800' },
   progressColumn: { width: 122, flexShrink: 0, alignItems: 'center', justifyContent: 'center', gap: 2 },
-  progressCircle: { width: 72, height: 72, alignItems: 'center', justifyContent: 'center' },
-  progressSegment: { position: 'absolute', width: 3, height: 6, borderRadius: 2 },
-  progressCircleText: { color: '#6954D6', fontSize: 17, fontWeight: '800' },
+  progressCircle: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
+  progressSegment: { position: 'absolute', width: 1.6, height: 3, borderRadius: 1 },
+  progressCircleText: { color: '#6954D6', fontSize: 8.5, fontWeight: '800' },
   heroProgressLabel: { width: '100%', color: '#6856D5', fontSize: 9, fontWeight: '700', textAlign: 'center' },
   summary: { marginTop: 12, flexDirection: 'row', gap: 8 },
   summaryItem: { flex: 1, minWidth: 0, minHeight: 75, flexDirection: 'row', alignItems: 'center', padding: 7, gap: 5, borderRadius: 17, borderWidth: 1, borderColor: '#E7E9EE', backgroundColor: '#FFFFFF' },
   summaryItemPressed: { backgroundColor: '#F1F5FB' },
+  summaryCombinedItem: { gap: 3, paddingHorizontal: 5 },
+  summaryCombinedDetails: { gap: 1, justifyContent: 'center' },
   summaryArtwork: { width: 35, height: 40, flexShrink: 0 },
   summaryDetails: { flex: 1, minWidth: 0, alignItems: 'flex-start', justifyContent: 'center', gap: 3 },
   summaryValue: { color: partnerTheme.colors.ink, fontSize: 14, lineHeight: 18, fontWeight: '800' },
