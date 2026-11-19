@@ -100,7 +100,7 @@ export default function ImpactScreen() {
             <Text style={styles.heroExact}>{formatIndianCurrency(data.active_motor_idv)} insured value</Text>
             <View style={styles.heroBottomRow}>
               <Text style={styles.heroLabel}>Value protected across active motor policies</Text>
-              <Ionicons name="arrow-up-forward-outline" size={19} color="#CFDBEF" />
+              <Ionicons name="arrow-forward-outline" size={19} color="#CFDBEF" />
             </View>
           </Pressable>
 
