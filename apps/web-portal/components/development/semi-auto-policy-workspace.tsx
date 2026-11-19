@@ -818,7 +818,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
                 {n8nResult.preview.issuanceEvidence ? (
                   <div className="mt-2 rounded-lg border border-[#e7c9a0] bg-[#fffaf1] p-3 text-[11px] text-[#6e4e24]">
                     <p className="font-bold">Suggested issuance date: {n8nResult.preview.issuanceEvidence.proposedDate}</p>
-                    <p className="mt-1">The embedded PDF signing timestamp and separately read receipt date agree. The signing certificate's trust and the insurer's official issuance rule are NOT independently established. Compare the original signed policy before confirming this date.</p>
+                    <p className="mt-1">The embedded PDF signing timestamp and separately read receipt date agree. The signing certificate&apos;s trust and the insurer&apos;s official issuance rule are NOT independently established. Compare the original signed policy before confirming this date.</p>
                     {n8nResult.preview.savedDraftIssueDate ? (
                       <p className="mt-1 font-semibold">Saved issue date: {n8nResult.preview.savedDraftIssueDate.value||"blank"}. Any change requires explicit confirmation.</p>
                     ):null}
