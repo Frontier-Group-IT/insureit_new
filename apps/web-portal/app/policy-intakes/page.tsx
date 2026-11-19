@@ -1,4 +1,6 @@
 import { AppShell } from "@/components/shell";
+import Link from "next/link";
+import { segregatePolicyIntakeLanes } from "@/lib/policy-ocr-routing-mode";
 import { ItSuperUserDeletePanel } from "@/components/it-super-user-delete-panel";
 import { PolicyIntakeWorkspace, type PolicyIntakeViewKey, type PolicyIntakeWorkspaceRow } from "@/components/policy-intake-workspace";
 import { hasEffectiveCapability } from "@/lib/effective-permissions";
@@ -54,6 +56,7 @@ export default async function PolicyIntakesPage({ searchParams }: { searchParams
       .order("created_at", { ascending: false })
       .order("id", { ascending: false })
       .range(from, to);
+    if (segregatePolicyIntakeLanes()) page = page.eq("processing_lane","manual");
     if (intakeOrFilter) page = page.or(intakeOrFilter);
     else if (submitterFilter) page = page.eq("submitted_by_profile_id", submitterFilter);
     return page.returns<PolicyIntakeListRow[]>();
@@ -72,9 +75,9 @@ export default async function PolicyIntakesPage({ searchParams }: { searchParams
   let zeroListMismatch = false;
   let zeroListCheckFailed = false;
   if (!error && organizationViewer && rows.length === 0) {
-    const { count, error: countError } = await admin
-      .from("policy_intake_requests")
-      .select("id", { count: "exact", head: true });
+    let counting = admin.from("policy_intake_requests").select("id", { count:"exact",head:true });
+    if (segregatePolicyIntakeLanes()) counting = counting.eq("processing_lane","manual");
+    const {count,error:countError}=await counting;
     zeroListCheckFailed = Boolean(countError);
     zeroListMismatch = !countError && (count ?? 0) > 0;
     console.error("[policy-intakes] privileged zero-list verification", {
@@ -170,6 +173,10 @@ export default async function PolicyIntakesPage({ searchParams }: { searchParams
   const unavailable = Boolean(error || zeroListMismatch || zeroListCheckFailed || (duplicateCheck && !duplicateCheck.ok));
 
   return <AppShell title={reviewer ? "Policy Intakes" : "My Policy Intakes"}>
+    {segregatePolicyIntakeLanes() ? <nav aria-label="Intake processing lanes" className="mx-auto mb-3 flex max-w-[1480px] gap-2 px-2 text-[11px] font-semibold">
+      <span aria-current="page" className="rounded-lg bg-[#17365D] px-4 py-2 text-white">Manual Onboarding</span>
+      {["it_super_user","super_admin"].includes(profile.role??"") ? <Link href="/development/ai-policy-onboarding" className="rounded-lg border border-[#B8C9DC] bg-white px-4 py-2 text-[#17365D]">AI Automation</Link> : null}
+    </nav> : null}
     {profile.role === "it_super_user" && !unavailable ? <ItSuperUserDeletePanel
       entity="policy_intake"
       title="Delete policy intake record"
