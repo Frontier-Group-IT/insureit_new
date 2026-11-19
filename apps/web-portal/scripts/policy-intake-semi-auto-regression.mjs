@@ -306,8 +306,10 @@ assert(n8nServer.includes("JSON.stringify({ intakeId: id, documentId, fields, wa
   "The reviewed fingerprint must include verified financial components, not only OCR field text");
 assert(handoff.includes("parsed.preview.documentId!==expectedDocumentId"),
   "A replaced PDF must not be forwarded under the prior review");
-assert(handoff.includes("parsed.preview.checksPassed!==13 || parsed.preview.warnings.length>0"),
-  "Only warning-free verified ICICI 3005 PDFs may create an onboarding draft");
+assert(handoff.includes("parsed.preview.checksPassed!==(isTata?18:13)")
+  && handoff.includes("const blockingWarnings = parsed.preview.warnings.filter")
+  && handoff.includes("!isTata || !informationalTataWarnings.has(warning)"),
+  "ICICI must remain warning-free at 13 checks; Tata AIG needs 18 checks with only allowlisted review warnings");
 assert(handoff.includes('intake.policy_type!=="motor"'),
   "The first n8n handoff must be Motor-only until other business lines are trained");
 assert(handoff.includes("loadPolicyIntakeDuplicateMatches(admin,[{...intake,ocr_fields:verified.fields}])"),
