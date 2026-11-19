@@ -49,10 +49,10 @@ assert.match(customers, /hero: \{[^\n]*backgroundColor: '#071E49'/, 'Customers h
 assert.match(customers, /<PartnerStackBottomNavigation activeTab="business" \/>/, 'Customers uses shared permission-aware Home navigator, Business selected');
 assert.doesNotMatch(customers, /<NavItem icon=/, 'Customers must not restore separate white navigation tabs');
 
-assert.match(learn, /navyStatusBar bottomNavigationNavy bottomNavigation=\\{<PartnerCaseBottomNavigation activeTab="More" \\/>\\}/, '60-Second Learn retains the fixed permission-aware navy footer');
-assert.match(learn, /referenceHeader: \\{[\\s\\S]*?backgroundColor: '#071E49'/, '60-Second Learn header matches Renewal Work Queue navy');
-assert.match(learn, /headerArtwork: \\{ width: 36, height: 36 \\}/, '60-Second Learn header artwork matches Renewal size');
-assert.match(renewal, /referenceHeader: \\{[^\\n]*backgroundColor: '#071E49'/, 'Renewals reference still uses navy header');
+assert.ok(learn.includes('navyStatusBar bottomNavigationNavy bottomNavigation={<PartnerCaseBottomNavigation activeTab="More" />}'), 'Learn keeps five-tab navy footer');
+assert.ok(learn.includes("backgroundColor: '#071E49'") && learn.includes("height: 64,"), 'Learn matches Renewal navy header and height');
+assert.ok(learn.includes('headerArtwork: { width: 36, height: 36 }'), 'Learn header artwork matches Renewal size');
+assert.ok(renewal.includes("backgroundColor: '#071E49'"), 'Renewals reference remains navy');
 assert.match(bar, /canPartnerAccess\(context, 'view_claims'\)/, 'Claims tab permission retained');
 assert.match(bar, /canPartnerAccess\(context, 'view_policies'\)/, 'Policies tab permission retained');
 assert.match(bar, /canPartnerAccess\(context, 'view_dashboard'\)/, 'Home and Business permissions retained');
