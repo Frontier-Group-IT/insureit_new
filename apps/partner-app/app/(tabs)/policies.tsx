@@ -515,7 +515,7 @@ export default function PoliciesScreen() {
       </SafeAreaView>
       <Pressable accessibilityRole="button" accessibilityLabel="Sort by policy period and status"
         onPress={openSortSheet} style={({pressed})=>[styles.sortFloating,pressed&&styles.summaryChipPressed]}>
-        <Feather name="sliders" size={15} color="#17365D"/>
+        <Feather name="sliders" size={14} color="#304778"/>
         <Text style={styles.sortFloatingText}>Sort by</Text>
       </Pressable>
       {isFocused ? <StatusBar style={searchSticky ? 'light' : 'dark'} /> : null}
@@ -865,10 +865,10 @@ const styles = StyleSheet.create({
   statusMenuCount: { color: '#657995', fontSize: 11, fontWeight: '700' },
   statusMenuSelectedText: { color: '#234F9F' },
   summaryChipPressed: { opacity: 0.78 },
-  sortFloating:{position:'absolute',bottom:18,alignSelf:'center',flexDirection:'row',alignItems:'center',gap:8,
-    paddingHorizontal:20,minHeight:43,borderRadius:24,backgroundColor:'#FFFFFF',borderWidth:1,borderColor:'#D5E1F0',
-    shadowColor:'#082657',shadowOpacity:0.18,shadowRadius:10,shadowOffset:{width:0,height:3},elevation:8},
-  sortFloatingText:{fontSize:12,fontWeight:'800',color:'#17365D'},
+  sortFloating:{position:'absolute',bottom:8,alignSelf:'center',flexDirection:'row',alignItems:'center',justifyContent:'center',gap:6,
+    paddingHorizontal:15,minHeight:40,borderRadius:22,backgroundColor:'#F0EDFF',borderWidth:1,borderColor:'#E1DBFA',
+    shadowColor:'#5C5493',shadowOpacity:0.13,shadowRadius:8,shadowOffset:{width:0,height:2},elevation:6},
+  sortFloatingText:{fontSize:11,fontWeight:'800',color:'#304778'},
   sortOverlay:{flex:1,justifyContent:'flex-end',backgroundColor:'rgba(11,30,65,0.72)'},
   sortSheet:{backgroundColor:'#FFFFFF',borderTopLeftRadius:30,borderTopRightRadius:30,paddingHorizontal:22,paddingTop:17},
   sortSheetHeader:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',paddingBottom:14,borderBottomWidth:1,borderColor:'#E7ECF3'},
