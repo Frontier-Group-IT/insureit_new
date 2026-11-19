@@ -369,6 +369,20 @@ expectAll('components/ui/partner-section-header.tsx', [
 checks += 1;
 if (/settingsAccent|settingsHeadingLine/.test(read('components/ui/partner-section-header.tsx'))) failures.push('Settings headers must not display purple accent dashes');
 
+// My Achievements displays milestones and progress without explanatory notes.
+expectAll('app/recognition.tsx', [
+  [/Every milestone matters\./, 'Recognition headline remains'],
+  [/recorded \{data\.items\.length === 1 \? 'achievement' : 'achievements'\}/, 'Dynamic earned count remains'],
+  [/\{item\.title\}/, 'Achievement title remains'],
+  [/formatDate\(item\.date\)/, 'Achievement dates remain'],
+  [/\{next\.current\.toLocaleString\('en-IN'\)\}/, 'Milestone total remains'],
+  [/\{\(progress \* 100\)\.toFixed\(1\)\}%/, 'Progress percentage remains'],
+  [/accessibilityRole="progressbar"/, 'Accessible milestone progress remains'],
+  [/View your full journey/, 'Journey navigation remains'],
+]);
+checks += 1;
+if (/heroDescription|styles\.description|\{item\.body\}|cardDivider|progressCaption|styles\.remaining/.test(read('app/recognition.tsx'))) failures.push('My Achievements must not render secondary notes or their dividers');
+
 // Evaluate every contract only after all checks have run.
 if (failures.length) {
   console.error('Partner Phase 5 resilience/accessibility contract verification failed:');
