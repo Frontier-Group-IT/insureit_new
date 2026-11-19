@@ -209,11 +209,16 @@ export async function claimPolicyIntakeForReview(id:string){
   const duplicateCheck=await loadPolicyIntakeDuplicateMatches(admin,[intake]);
   if(!duplicateCheck.ok)return{ok:false as const,error:duplicateCheck.error};
   if(duplicateCheck.matches.has(id))return{ok:false as const,error:"This policy intake is a duplicate and cannot be claimed for review."};
-  const{data,error}=await admin.from("policy_intake_requests").update({status:"in_review",assigned_to_profile_id:profile.id,attention_reason:null}).eq("id",id).in("status",["ready_for_review","in_review","processing"]).or(`assigned_to_profile_id.is.null,assigned_to_profile_id.eq.${profile.id}`).select("id").maybeSingle<{id:string}>();if(error||!data)return{ok:false as const,error:"This intake is already being reviewed by another Operations user."};
+  let claim=admin.from("policy_intake_requests").update({status:"in_review",assigned_to_profile_id:profile.id,attention_reason:null}).eq("id",id).in("status",["ready_for_review","in_review","processing"]).or(`assigned_to_profile_id.is.null,assigned_to_profile_id.eq.${profile.id}`);
+  if(segregatePolicyIntakeLanes())claim=claim.eq("processing_lane","manual");
+  const{data,error}=await claim.select("id").maybeSingle<{id:string}>();if(error||!data)return{ok:false as const,error:"This intake is already assigned or belongs to AI Automation."};
   if(intake.status!=="in_review") await recordDailyWorkflowActivity(admin,{actorId:profile.id,table:"policy_intake_requests",recordId:id,action:"policy_intake_review_started"});
   revalidatePath(`/policy-intakes/${id}`);revalidatePath("/policy-intakes");return{ok:true as const};
 }
-export async function updatePolicyIntakeStatus(id:string,status:"needs_attention"|"rejected",reason:string){const profile=await requirePolicyIntakeReviewer(id),clean=reason.trim();if(!clean)return{ok:false as const,error:"Add a short reason."};const admin=createSupabaseAdminClient();const{data:saved,error}=await admin.from("policy_intake_requests").update({status,attention_reason:clean,assigned_to_profile_id:profile.id}).eq("id",id).in("status",["processing","ready_for_review","in_review","needs_attention"]).select("id").maybeSingle<{id:string}>();if(error||!saved)return{ok:false as const,error:"Could not update this intake."};
+export async function updatePolicyIntakeStatus(id:string,status:"needs_attention"|"rejected",reason:string){const profile=await requirePolicyIntakeReviewer(id),clean=reason.trim();if(!clean)return{ok:false as const,error:"Add a short reason."};const admin=createSupabaseAdminClient();
+  let manualStatus=admin.from("policy_intake_requests").update({status,attention_reason:clean,assigned_to_profile_id:profile.id}).eq("id",id).in("status",["processing","ready_for_review","in_review","needs_attention"]);
+  if(segregatePolicyIntakeLanes())manualStatus=manualStatus.eq("processing_lane","manual");
+  const{data:saved,error}=await manualStatus.select("id").maybeSingle<{id:string}>();if(error||!saved)return{ok:false as const,error:"Could not update this intake."};
   await recordDailyWorkflowActivity(admin,{actorId:profile.id,table:"policy_intake_requests",recordId:id,action:status==="rejected"?"policy_intake_rejected":"policy_intake_attention_requested"});
   revalidatePath(`/policy-intakes/${id}`);revalidatePath("/policy-intakes");return{ok:true as const};}
 
