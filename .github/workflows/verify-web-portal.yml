@@ -37,6 +37,8 @@ jobs:
           cache-dependency-path: apps/web-portal/package.json
       - name: Install dependencies
         run: npm install --no-audit --no-fund
+      - name: Life and Health Case Register line filter regression
+        run: node scripts/life-health-line-filter-regression.mjs
       - name: Verify Partner Motor policy-copy upload security
         run: node scripts/partner-motor-policy-copy-upload-security-regression.mjs
       - name: Canonical identity sync and historical booked RM preservation regression

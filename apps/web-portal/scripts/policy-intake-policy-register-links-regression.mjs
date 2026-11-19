@@ -98,7 +98,7 @@ const caseRegister = read("app/policies/life-health-cases/page.tsx");
 assert(caseRegister.includes('Case register'), "Proposal Pending destination must remain the Case Register");
 assert(caseRegister.includes('type CaseFilter = "pending" | "rejected" | "issued" | "all"'), "Case Register must retain its pending default view");
 assert(caseRegister.includes("loadLifeHealthCaseSummary(admin)"), "Case Register tabs must use the same shared exact-count loader as Policy Register Proposal Pending");
-assert(caseRegister.includes("const pendingCount = caseSummary?.pending"), "Case Register Pending must prefer the exact shared database count");
+assert(caseRegister.includes('lineFilter === "all" && caseSummary ? caseSummary.pending'), "Case Register All-line Pending must prefer the exact shared database count while Life/Health filters use their scoped counts");
 
 const workspace = read("components/policy-intake-workspace.tsx");
 assert(workspace.includes("export type PolicyIntakeViewKey"), "Policy Intake view keys must remain explicit and typed");
