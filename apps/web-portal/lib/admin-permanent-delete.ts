@@ -325,7 +325,8 @@ async function deletePendingPartnerApplication(applicationId: string): Promise<P
   if (!allowedStatuses.has((application.status ?? "").toLowerCase())
     || application.completed_at || application.partner_activated_at
     || application.partner_record_id || application.intermediary_id || application.registration_record_id
-    || (application.partner_status ?? "").toLowerCase() === "active_partner"
+    || !["draft", "pending", ""].includes((application.partner_status ?? "").toLowerCase())
+    || !["partner", "posp", "misp"].includes((application.requested_type ?? "").toLowerCase())
     || !["primary_pending", "draft", "pending", "", "submitted"].includes((application.registration_status ?? "").toLowerCase())) {
     return { status: "error", message: "This application is no longer an unlinked pending onboarding record. Review it instead of permanently deleting it." };
   }
@@ -353,12 +354,15 @@ async function deletePendingPartnerApplication(applicationId: string): Promise<P
 
   // Equality guards prevent acting on a different status after review.
   // PostgreSQL foreign-key restrictions still prevent late creation of protected RESTRICT rows.
-  const { data: deleted, error: deleteError } = await admin
+  const deleteQuery = admin
     .from("intermediary_onboarding_applications")
     .delete()
     .eq("id", applicationId)
-    .eq("status", application.status)
-    .eq("registration_status", application.registration_status ?? "")
+    .eq("status", application.status);
+  const guardedQuery = application.registration_status === null
+    ? deleteQuery.is("registration_status", null)
+    : deleteQuery.eq("registration_status", application.registration_status);
+  const { data: deleted, error: deleteError } = await guardedQuery
     .is("partner_record_id", null)
     .is("intermediary_id", null)
     .is("registration_record_id", null)
