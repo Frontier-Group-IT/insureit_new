@@ -193,22 +193,30 @@ for (const [screen, title, icon] of [
   requireText(screen, `<PartnerCasePageHeader title="${title}" icon="${icon}" onBack={() => router.back()} />`, `${title} must show a white title and back action on navy.`);
 }
 
-// Recognition keeps the navy title strip and permission-gated five-tab navigation.
+// My Achievements retains navy navigation and an accessible percentage circle.
 for (const fragment of [
   'hideTopBar', 'navyStatusBar', 'bottomNavigationNavy',
   '<PartnerCaseBottomNavigation activeTab="More" />',
   '<PartnerCasePageHeader title="My Achievements" icon="ribbon-outline" onBack={() => router.back()} />',
-  'percentText', 'accessibilityRole="progressbar"',
-]) requireText(recognition, fragment, 'My Achievements must retain navy navigation and accessible milestone progress.');
-for (const unwanted of ['heroDescription', 'cardDivider', 'styles.description', '{item.body}', 'progressCaption', 'styles.remaining', 'Customers achieved', 'Completed', 'more customers to unlock']) {
-  if (recognition.includes(unwanted)) throw new Error('My Achievements must omit secondary copy and associated spacing: ' + unwanted);
-}
-for (const required of ['YOUR RECOGNITION', 'Every milestone matters.', 'recorded ', 'Unlocked achievements', 'ACHIEVED', '{item.title}', 'formatDate(item.date)', 'NEXT MILESTONE', '{next.title}', 'next.current.toLocaleString', '(progress * 100).toFixed(1)', 'accessibilityRole="progressbar"', 'View your full journey']) {
-  requireText(recognition, required, 'My Achievements must retain essential milestone information: ' + required);
-}
-requireText(recognition, 'earnedRow: { marginTop: 10', 'Recognition summary must remove leftover description spacing.');
-requireText(recognition, 'progressNumbers: { marginTop: 12', 'Next milestone must use compact value spacing.');
-
+  'accessibilityRole="progressbar"', 'accessibilityValue={{ min: 0',
+  'percentCircle', '(progress * 100).toFixed(1)',
+]) requireText(recognition, fragment, 'My Achievements must retain navy navigation and accessible percentage progress.');
+for (const unwanted of [
+  'heroDescription', 'cardDivider', 'styles.description', '{item.body}', 'progressCaption',
+  'styles.remaining', 'Customers achieved', 'Completed', 'more customers to unlock',
+  'styles.track', 'styles.fill', 'name="flag-outline"', 'styles.dateRow', 'styles.earnedRow',
+]) if (recognition.includes(unwanted)) throw new Error('My Achievements must omit old decorations and spacing: ' + unwanted);
+for (const required of [
+  'YOUR RECOGNITION', 'Every milestone matters.', 'Recorded achievement',
+  'Unlocked achievements', 'ACHIEVED', '{item.title}', 'formatDate(item.date)',
+  'NEXT MILESTONE', '{next.title}', 'next.current.toLocaleString', 'View your full journey',
+  "hero: { marginHorizontal: -partnerTheme.spacing.lg, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#E5E7EB'",
+  'styles.earnedCount', 'styles.achievementMeta', 'width: 64, height: 64',
+]) requireText(recognition, required, 'My Achievements must keep approved compact content and placement.');
+const recognitionHero = recognition.slice(recognition.indexOf('<View style={styles.hero}>'), recognition.indexOf('<View style={styles.sectionHeading}>'));
+if (!recognitionHero.includes('styles.earnedCount') || !recognitionHero.includes('styles.heroCopy')) throw new Error('Recognition count belongs inside the right side of the white header.');
+const recognitionAchievement = recognition.slice(recognition.indexOf('{data.items.map'), recognition.indexOf('</View>\n          ) : (', recognition.indexOf('{data.items.map')));
+if (!recognitionAchievement.includes('styles.earnedPill') || !recognitionAchievement.includes('styles.date')) throw new Error('Achievement badge and date must be inside each card.');
 
 // Learn follows the Renewal Work Queue reference header rather than the shared compact page header.
 for (const fragment of [
