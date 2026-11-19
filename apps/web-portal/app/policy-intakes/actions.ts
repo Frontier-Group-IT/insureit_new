@@ -110,9 +110,13 @@ export async function completePolicyIntakeUpload(input:{id:string;number:string;
   const{data:blob,error:downloadError}=await admin.storage.from(BUCKET).download(input.storagePath);
   if(downloadError||!blob)return{ok:false,error:`The ${proposal?"proposal form":"policy copy"} upload did not complete. Please try again.`};
   if(blob.size>MAX_FILE_SIZE)return{ok:false,error:`${proposal?"Proposal form":"Policy copy"} must be 15 MB or smaller.`};
-  const source=sourceResult.source,status=proposal?"ready_for_review":"processing",ocrStatus=proposal?"completed":"pending";
+  const lane=incomingPolicyIntakeLane(input.policyType,aiQueueEnabled());
+  const manualSplit=segregatePolicyIntakeLanes() && lane==="manual";
+  const source=sourceResult.source,status=proposal||manualSplit?"ready_for_review":"processing",
+    ocrStatus=proposal?"completed":manualSplit?"failed":"pending";
   const{error:insertError}=await admin.from("policy_intake_requests").insert({
     id:input.id,intake_number:input.number,status,policy_type:input.policyType,
+    ...(segregatePolicyIntakeLanes()?{processing_lane:lane}:{}),
     submitted_by_profile_id:profile.id,lead_source_id:source.id,lead_source_type:source.intermediary_type,
     lead_source_name:source.display_name,lead_source_code:source.intermediary_code,
     customer_mobile:customerMobile,matched_customer_id:null,storage_bucket:BUCKET,
@@ -140,14 +144,16 @@ export async function completePolicyIntakeUpload(input:{id:string;number:string;
     return{ok:false,error:"The policy intake was saved, but document linking needs attention. Your uploaded file was preserved."};
   }
   revalidatePath("/policy-intakes");revalidatePath(`/policy-intakes/${input.id}`);
-  if(aiQueueEnabled()){
+  if(aiQueueEnabled() && (!segregatePolicyIntakeLanes() || lane==="automation")){
     // Run n8n as soon as the CURRENT document is saved, not on the next cron.
     // On request shutdown/error the one-minute durable queue drain retries it.
     after(async()=>{
       try { await processAiQueueBatch({preferredIntakeId:input.id}); }
       catch { console.error("[policy-intake] immediate n8n queue unavailable",{intakeId:input.id}); }
     });
-  } else if(!proposal)after(async()=>{await processStoredOcr(input.id);});
+  } else if(!proposal && !manualSplit) after(async()=>{await processStoredOcr(input.id);});
+  // Manual lane has a saved PDF but no automatic OCR claim. Operations
+  // completes its separate workflow, or invokes n8n-only Read explicitly.
   return{ok:true,id:input.id,number:input.number,status};
 }
 
