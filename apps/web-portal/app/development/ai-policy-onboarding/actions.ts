@@ -9,7 +9,7 @@ import { requirePolicyIntakeFinalizer, requirePolicyIntakeReviewer } from "@/lib
 import { loadPolicyIntakeDuplicateMatches } from "@/lib/policy-intake-duplicate";
 import { buildPolicyOcrOnboardingUpdate, normalizeVerifiedMotorPowerKw } from "@/lib/policy-ocr-onboarding-apply";
 import { policyDateDecision } from "@/lib/policy-date-rule";
-import { mapVerifiedN8nMotorPremium } from "@/lib/policy-n8n-onboarding-premium";
+import { mapVerifiedN8nMotorPremium, verifiedCpaSelectionMatches } from "@/lib/policy-n8n-onboarding-premium";
 import { checkSemiAutoReadiness, type SemiAutoIssue } from "@/lib/policy-intake-semi-auto";
 import { isN8nWorkbenchPrimary, previewSemiAutoN8nExtraction, applySemiAutoN8nExtraction, type SemiAutoN8nResult } from "@/lib/policy-intake-semi-auto-n8n";
 export type { SemiAutoN8nResult } from "@/lib/policy-intake-semi-auto-n8n";
@@ -333,8 +333,7 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
   // An older saved draft can say "No" even when the verified PDF charges CPA:
   // matching only the numeric CPA field would silently understate the policy.
   // Never auto-opt-in or override an operator's saved selection.
-  const pdfCpaOpted=Number(verifiedMoney.cpa)>0;
-  if((forwarded.draft.cpaOpted==="Yes")!==pdfCpaOpted)
+  if(!verifiedCpaSelectionMatches(forwarded.draft.cpaOpted,Number(verifiedMoney.cpa)))
     return fail("Owner-driver CPA",
       "The verified PDF CPA premium and the saved CPA opt-in differ. Open Policy Onboarding and explicitly review both CPA amount and CPA selection before booking.");
   const sameMoney=(a:string,b:string)=>Number.isFinite(Number(a||"0"))
