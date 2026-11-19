@@ -45,7 +45,7 @@ export default function JourneyScreen() {
   const visible = showAll ? filtered : filtered.slice(0, 8);
 
   return (
-    <PartnerScreen eyebrow="MY JOURNEY" title="My progress" onBack={() => router.back()}
+    <PartnerScreen title="My progress" onBack={() => router.back()}
       navyTopBar navyStatusBar bottomNavigationNavy
       bottomNavigation={<PartnerStackBottomNavigation activeTab="home" />}>
       {loading ? (
