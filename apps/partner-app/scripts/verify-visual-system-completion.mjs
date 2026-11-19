@@ -648,7 +648,7 @@ requireText(activity, 'width: 52', 'Recent Activity logo tile must stay compact 
 requireText(activity, 'marginRight: 4', 'Recent Activity logo-to-detail spacing must stay compact.');
 for (const impactMarker of [
   'function ImpactIcon(',
-  'PartnerAssets.actions.addVehicle',
+  'PartnerAssets.actions.impactBlue3dCar',
   'PartnerAssets.actions.impactCustomerDetail',
   'PartnerAssets.actions.impactCustomerAdded',
   'PartnerAssets.actions.impactPolicyDocument',
