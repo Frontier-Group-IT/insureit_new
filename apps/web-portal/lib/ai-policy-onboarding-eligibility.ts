@@ -140,7 +140,7 @@ export function assessAiPolicyIntake(input: AiPolicyEvidence): AiAssessment {
     const fields = new Map(input.fields.map(field => [field.key, field.value.trim()]));
     // The old kW-only requirement is valid for ICICI 3005 and electric
     // two-wheelers, but not for petrol/diesel Tata AIG private cars.
-    const required=[...requiredFields].filter(key =>
+    const required: string[]=[...requiredFields].filter(key =>
       key!=="vehicle_motor_power_kw" || parser?.family!=="tata_private_car");
     if (parser?.family==="tata_private_car" || parser?.family==="tata_two_wheeler") {
       required.push("vehicle_capacity","vehicle_registration_status","vehicle_rto_state");
