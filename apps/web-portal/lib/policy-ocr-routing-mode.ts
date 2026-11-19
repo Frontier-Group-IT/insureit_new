@@ -1,7 +1,7 @@
 /** Server-side rollout flags. Keep off until the local signed-PDF and upload
  * paths are smoke-tested, the reviewed migration is applied and manual
  * deployment is approved. Never trust client-supplied provider or lane flags. */
-export function useN8nForAllPolicyReads(): boolean {
+export function isN8nPolicyReadEnabled(): boolean {
   return process.env.INSUREIT_POLICY_OCR_PROVIDER === "n8n";
 }
 export function segregatePolicyIntakeLanes(): boolean {
