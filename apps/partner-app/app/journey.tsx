@@ -45,7 +45,7 @@ export default function JourneyScreen() {
   const visible = showAll ? filtered : filtered.slice(0, 8);
 
   return (
-    <PartnerScreen title="My progress" onBack={() => router.back()}
+    <PartnerScreen title="My progress" topBarIcon="analytics-outline" onBack={() => router.back()}
       navyTopBar navyStatusBar bottomNavigationNavy
       bottomNavigation={<PartnerStackBottomNavigation activeTab="home" />}>
       {loading ? (
@@ -56,7 +56,7 @@ export default function JourneyScreen() {
         <>
           <View style={styles.hero}>
             <View style={styles.heroHeadline}>
-              <Text style={styles.heroTitle} numberOfLines={2}>{data.next_milestone.title}</Text>
+              <Text style={styles.heroTitle} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72} accessibilityLabel={data.next_milestone.title}>{data.next_milestone.title}</Text>
               <CircularMilestoneProgress progress={progress} current={data.next_milestone.current} target={data.next_milestone.target} />
             </View>
           </View>
@@ -113,8 +113,8 @@ export default function JourneyScreen() {
                     <View key={`${item.kind}-${item.date}-${index}`} style={[styles.timelineRow, index > 0 && styles.timelineDivider]}>
                       <Image source={journeyMilestoneArtwork(item.kind, item.title)} style={styles.timelineArtwork} resizeMode="contain" accessible={false} />
                       <View style={styles.timelineBody}>
-                        <Text style={styles.timelineTitle}>{item.title}</Text>
-                        {item.subtitle ? <Text style={styles.timelineText}>{item.subtitle}</Text> : null}
+                        <Text style={styles.timelineTitle} numberOfLines={1} ellipsizeMode="tail" accessibilityLabel={item.title}>{item.title}</Text>
+                        {item.subtitle ? <Text style={styles.timelineText} numberOfLines={1} ellipsizeMode="tail" accessibilityLabel={item.subtitle}>{item.subtitle}</Text> : null}
                       </View>
                       <Text style={styles.timelineDate}>{formatDate(item.date)}</Text>
                     </View>
@@ -166,7 +166,7 @@ function Summary({ value, label, artwork, onPress }: { value: number; label: str
 const CIRCLE_SEGMENT_COUNT = 96;
 const CIRCLE_SEGMENTS = Array.from({ length: CIRCLE_SEGMENT_COUNT }, (_, index) => {
   const angle = (index * 2 * Math.PI) / CIRCLE_SEGMENT_COUNT;
-  return { left: 48 + Math.sin(angle) * 38 - 1.7, top: 48 - Math.cos(angle) * 38 - 4, rotate: `${index * 360 / CIRCLE_SEGMENT_COUNT}deg` };
+  return { left: 36 + Math.sin(angle) * 27 - 1.5, top: 36 - Math.cos(angle) * 27 - 3, rotate: `${index * 360 / CIRCLE_SEGMENT_COUNT}deg` };
 });
 
 function CircularMilestoneProgress({ progress, current, target }: { progress: number; current: number; target: number }) {
@@ -201,14 +201,14 @@ function formatDate(value: string) {
 }
 
 const styles = StyleSheet.create({
-  hero: { marginTop: 16, borderRadius: 19, paddingHorizontal: 16, paddingVertical: 14, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E4E8EF' },
+  hero: { marginTop: 0, marginHorizontal: -partnerTheme.spacing.lg, borderBottomWidth: 1, borderBottomColor: '#E4E8EF', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: '#FFFFFF' },
   heroHeadline: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
-  heroTitle: { flex: 1, minWidth: 0, color: '#17233A', fontSize: 22, lineHeight: 28, fontWeight: '800' },
-  progressColumn: { width: 110, flexShrink: 0, alignItems: 'center', justifyContent: 'center', gap: 4 },
-  progressCircle: { width: 96, height: 96, alignItems: 'center', justifyContent: 'center' },
-  progressSegment: { position: 'absolute', width: 3.4, height: 8, borderRadius: 2 },
-  progressCircleText: { color: '#6954D6', fontSize: 22, fontWeight: '800' },
-  heroProgressLabel: { color: '#6856D5', fontSize: 9, fontWeight: '700', textAlign: 'center' },
+  heroTitle: { flex: 1, minWidth: 0, color: '#17233A', fontSize: 18, lineHeight: 24, fontWeight: '800' },
+  progressColumn: { width: 96, flexShrink: 0, alignItems: 'center', justifyContent: 'center', gap: 3 },
+  progressCircle: { width: 72, height: 72, alignItems: 'center', justifyContent: 'center' },
+  progressSegment: { position: 'absolute', width: 3, height: 6, borderRadius: 2 },
+  progressCircleText: { color: '#6954D6', fontSize: 17, fontWeight: '800' },
+  heroProgressLabel: { color: '#6856D5', fontSize: 8, fontWeight: '700', textAlign: 'center' },
   summary: { marginTop: 12, flexDirection: 'row', gap: 8 },
   summaryItem: { flex: 1, minWidth: 0, minHeight: 75, flexDirection: 'row', alignItems: 'center', padding: 7, gap: 5, borderRadius: 17, borderWidth: 1, borderColor: '#E7E9EE', backgroundColor: '#FFFFFF' },
   summaryItemPressed: { backgroundColor: '#F1F5FB' },
@@ -233,13 +233,13 @@ const styles = StyleSheet.create({
   filterText: { fontSize: 10, fontWeight: '700', color: '#667085' },
   filterActiveText: { color: '#FFFFFF' },
   timeline: { borderTopWidth: 1, borderTopColor: '#E7E9EE' },
-  timelineRow: { minHeight: 66, flexDirection: 'row', alignItems: 'flex-start', gap: 9, paddingVertical: 13 },
-  timelineArtwork: { width: 32, height: 36, flexShrink: 0 },
+  timelineRow: { minHeight: 56, flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 9 },
+  timelineArtwork: { width: 30, height: 32, flexShrink: 0 },
   timelineDivider: { borderTopWidth: 1, borderTopColor: '#E7E9EE' },
   timelineBody: { flex: 1, minWidth: 0 },
-  timelineDate: { width: 105, flexShrink: 0, color: '#6C72A1', fontSize: 10, fontWeight: '600', textAlign: 'right' },
-  timelineTitle: { color: '#182333', fontSize: 12.5, lineHeight: 18, fontWeight: '700' },
-  timelineText: { marginTop: 4, color: '#667085', fontSize: 10.5, lineHeight: 15 },
+  timelineDate: { width: 82, flexShrink: 0, color: '#6C72A1', fontSize: 9, fontWeight: '600', textAlign: 'right' },
+  timelineTitle: { color: '#182333', fontSize: 11.5, lineHeight: 16, fontWeight: '700' },
+  timelineText: { marginTop: 3, color: '#667085', fontSize: 10, lineHeight: 14 },
   showMore: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6, paddingVertical: 11, borderRadius: 11, backgroundColor: '#F0F4FA', marginTop: 3 },
   showMoreText: { color: '#315E9C', fontSize: 12, fontWeight: '700' },
 });
