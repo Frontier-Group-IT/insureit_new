@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
+import { PartnerCaseBottomNavigation } from '@/components/partner-case-bottom-navigation';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { getPartnerInsurerLogoSource, getPartnerManufacturerLogoSource } from '@/lib/catalog-logos';
 import {
@@ -99,10 +100,15 @@ export default function ActivityScreen() {
   }
 
   return (
-    <PartnerScreen title="Activity" hideTopBar fullWidth statusBarColor="#0879DF">
+    <PartnerScreen
+      title="Activity"
+      hideTopBar
+      fullWidth
+      navyStatusBar
+      bottomNavigationNavy
+      bottomNavigation={<PartnerCaseBottomNavigation activeTab="Home" />}
+    >
       <View style={styles.hero}>
-        <View style={styles.heroShapeOne} />
-        <View style={styles.heroShapeTwo} />
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Go back"
@@ -355,12 +361,12 @@ function formatActivityTime(value: string) {
 
 const styles = StyleSheet.create({
   hero: {
-    height: 76,
+    height: 56,
     overflow: 'hidden',
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 18,
-    backgroundColor: '#0879DF',
+    backgroundColor: '#071E49',
   },
   heroShapeOne: {
     position: 'absolute',
