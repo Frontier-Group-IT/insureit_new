@@ -17,6 +17,8 @@ const newIntake = read('app/policy-intake-new.tsx');
 const businessReport = read('app/business-report.tsx');
 const network = read('app/network.tsx');
 const customers = read('app/customers.tsx');
+const learn = read('app/learn.tsx');
+const renewal = read('app/renewals.tsx');
 
 const insurers = read('app/insurers.tsx');
 
@@ -47,6 +49,10 @@ assert.match(customers, /hero: \{[^\n]*backgroundColor: '#071E49'/, 'Customers h
 assert.match(customers, /<PartnerStackBottomNavigation activeTab="business" \/>/, 'Customers uses shared permission-aware Home navigator, Business selected');
 assert.doesNotMatch(customers, /<NavItem icon=/, 'Customers must not restore separate white navigation tabs');
 
+assert.match(learn, /navyStatusBar bottomNavigationNavy bottomNavigation=\\{<PartnerCaseBottomNavigation activeTab="More" \\/>\\}/, '60-Second Learn retains the fixed permission-aware navy footer');
+assert.match(learn, /referenceHeader: \\{[\\s\\S]*?backgroundColor: '#071E49'/, '60-Second Learn header matches Renewal Work Queue navy');
+assert.match(learn, /headerArtwork: \\{ width: 36, height: 36 \\}/, '60-Second Learn header artwork matches Renewal size');
+assert.match(renewal, /referenceHeader: \\{[^\\n]*backgroundColor: '#071E49'/, 'Renewals reference still uses navy header');
 assert.match(bar, /canPartnerAccess\(context, 'view_claims'\)/, 'Claims tab permission retained');
 assert.match(bar, /canPartnerAccess\(context, 'view_policies'\)/, 'Policies tab permission retained');
 assert.match(bar, /canPartnerAccess\(context, 'view_dashboard'\)/, 'Home and Business permissions retained');
