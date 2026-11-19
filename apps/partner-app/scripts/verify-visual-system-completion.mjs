@@ -661,13 +661,15 @@ requireText(activity, 'width: 52', 'Recent Activity logo tile must stay compact 
 requireText(activity, 'marginRight: 4', 'Recent Activity logo-to-detail spacing must stay compact.');
 for (const impactMarker of [
   'function ImpactIcon(',
-  'PartnerAssets.actions.addVehicle',
-  'PartnerAssets.actions.quickCustomers',
-  'PartnerAssets.actions.quickPolicyIntake',
+  'PartnerAssets.actions.impactBlue3dCar',
+  'PartnerAssets.actions.impactCustomerDetail',
+  'PartnerAssets.actions.impactCustomerAdded',
+  'PartnerAssets.actions.impactPolicyDocument',
+  'PartnerAssets.actions.impactAddPolicy',
   'PartnerAssets.actions.quickClaims',
   'PartnerAssets.actions.businessPerformance',
-  'PartnerAssets.actions.addCustomer',
-  'styles.heroDivider',
+  'PartnerAssets.actions.impactCustomerAdded',
+  'borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: \'#E3E9F1\'',
   'styles.monthDivider',
   'styles.monthStatDivider',
   'styles.cardDetails',
@@ -675,6 +677,11 @@ for (const impactMarker of [
   '<ImpactIcon art={art} size={43} plain />',
 ]) requireText(impact, impactMarker, `Impact reference layout is missing ${impactMarker}.`);
 if (impact.includes('icon={icon}') || impact.includes('styles.cardLeft')) throw new Error('Impact must keep blue artwork left with metric and label stacked to its right.');
+requireText(impact, '<MonthStat art="monthly-policy" label="Policies"', 'Monthly policies must use the distinct Add Policy reference artwork.');
+requireText(impact, '<ImpactCard art="policy" value={data.lifetime_policies}', 'Policy book must use the Policy Document reference artwork.');
+if (impact.includes('borderRadius: 18, minHeight: 94')) throw new Error('Impact top summary must be a full-width flat white strip, not a rounded card.');
+requireText(impact, 'styles.heroDivider', 'Impact final reference keeps the thin vertical divider between car and amount.');
+requireText(impact, 'marginHorizontal: -partnerTheme.spacing.lg, minHeight: 82', 'Impact summary must span the viewport like the Policy Details summary.');
 for (const impactRoute of ["router.push('/customers')", "router.push('/(tabs)/policies')", "router.push('/(tabs)/claims')", "router.push('/business-report')", "router.push('/journey')"]) requireText(impact, impactRoute, `Impact clickable-card route is missing ${impactRoute}.`);
 for (const tinySize of ['fontSize: 7.5', 'fontSize: 8.5', 'fontSize: 8,']) if (impact.includes(tinySize)) throw new Error(`Impact must not regress to tiny typography: ${tinySize}`);
 requireText(journey, 'PartnerAssets.status.journey', 'Journey timeline and empty state must use journey artwork.');
