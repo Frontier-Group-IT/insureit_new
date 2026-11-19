@@ -43,6 +43,19 @@ const caseDocumentDisplayName=(fileName:string):string=>{
  try{return decodeURIComponent(fileName);}catch{return fileName;}
 };
 const amount=(value:number)=>`₹${Number(value||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})}`;
+const splitRemarkTimestamp=(raw:string)=>{
+ const remark=raw.trim();
+ const match=/^\[([^\]]+)\]\s*([\s\S]*)$/.exec(remark);
+ if(!match||!match[2].trim()||!/^[0-3]?\d\s+[A-Za-z]{3}\s+\d{4},?\s+\d{1,2}:\d{2}\s*[ap]m$/i.test(match[1]))return {timestamp:'',body:remark};
+ return {timestamp:match[1],body:match[2].trim()};
+};
+function RemarkHistoryEntry({remark}:{remark:string}){
+ const {timestamp,body}=splitRemarkTimestamp(remark);
+ return <View style={styles.activity}><View style={styles.activityRow}>
+   <Text style={[styles.paragraph,styles.remarkBody]} selectable>{body}</Text>
+   {timestamp?<Text style={styles.activityTimestamp}>{timestamp}</Text>:null}
+ </View></View>;
+}
 const activityDate=(value:string)=>{
   const date=new Date(value);
   return Number.isNaN(date.getTime())?'':date.toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
@@ -183,7 +196,7 @@ export default function LifeHealthCaseDetailScreen(){
   finally{setRemarkSaving(false);}
  };
  const saveEdit=async()=>{
-  if(!record||!form||saving||issuing||documentBusy||rejectBusy)return;
+  if(!record||!editMode||!form||saving||issuing||documentBusy||rejectBusy)return;
   if(JSON.stringify(form)===JSON.stringify(initialForm(record))){
    setEditMode(false);
    partnerAlert('No changes to save','Case details are already up to date.');
@@ -210,6 +223,19 @@ export default function LifeHealthCaseDetailScreen(){
  const caseDirty=Boolean(record&&form&&JSON.stringify(form)!==JSON.stringify(initialForm(record)));
  const confirmCancel=()=>{
   if(saving||issuing||documentBusy||rejectBusy)return;
+  if(editMode){
+   const discard=()=>{
+    if(record)setForm(initialForm(record));
+    setIssue({policyNumber:'',issuanceDate:'',startDate:'',endDate:'',pptEndDate:'',nextInstallmentDate:'',finalPremium:String(record?.premium_amount||''),sumInsured:''});
+    setDateOverrides({endDate:false,pptEndDate:false,nextInstallmentDate:false});
+    setPicker(null);setCalendarField(null);setDeleteTarget(null);
+    setApprovalId('');setApprovalVerified(false);setEditMode(false);
+   };
+   if(caseDirty)partnerAlert('Discard changes?','Unsaved case edits will be lost.',[
+    {text:'Keep Editing',style:'cancel'},{text:'Discard',style:'destructive',onPress:discard}
+   ]);else discard();
+   return;
+  }
   const leave=()=>router.replace('/life-health-cases');
   if(caseDirty)partnerAlert('Discard changes?','Unsaved case edits will be lost.',[
    {text:'Keep Editing',style:'cancel'},{text:'Discard',style:'destructive',onPress:leave}
@@ -223,7 +249,7 @@ export default function LifeHealthCaseDetailScreen(){
   finally{setDocumentBusy(false);}
  };
  const pickDocument=async(type:string)=>{
-  if(!record||documentBusy||record.status_group!=='pending')return;
+  if(!record||!editMode||documentBusy||record.status_group!=='pending')return;
   try{
    const picked=await DocumentPicker.getDocumentAsync({type:['application/pdf','image/jpeg','image/png','image/webp'],copyToCacheDirectory:true,multiple:false});
    if(picked.canceled||!picked.assets?.[0])return;
@@ -234,11 +260,11 @@ export default function LifeHealthCaseDetailScreen(){
   finally{setDocumentBusy(false);}
  };
  const deleteDocument=(doc:LifeHealthDocument)=>{
-  if(!record||record.status_group!=='pending'||documentBusy)return;
+  if(!record||!editMode||record.status_group!=='pending'||documentBusy)return;
   setDeleteTarget(doc);
  };
  const confirmDeleteDocument=async()=>{
-  if(!record||!deleteTarget||documentBusy||record.status_group!=='pending')return;
+  if(!record||!editMode||!deleteTarget||documentBusy||record.status_group!=='pending')return;
   const documentId=deleteTarget.id;
   setDocumentError('');setDocumentBusy(true);
   try{
@@ -297,7 +323,7 @@ export default function LifeHealthCaseDetailScreen(){
      :[];
  const inline=(key:keyof CaseEditForm,label:string,fallback:string,required=false,wide=false,multiline=false,keyboardType?:'phone-pad'|'decimal-pad')=>{
    const darkLabel=['insurerId','productName','proposalNumber','paymentFrequency','premiumPayingTerm','policyDuration','premiumAmount','paymentMode'].includes(key);
-   const editable=(record?.status_group==='pending'&&editMode)||(record?.status_group==='issued'&&['customerName','customerPhone','customerAddress'].includes(key));
+   const editable=Boolean(record?.status_group==='pending'&&editMode);
    if(!editable||!form)return <Field label={label} value={fallback} required={required} wide={wide} multiline={multiline} darkLabel={darkLabel}/>;
    const items=choices(key);
    return <View style={[styles.field,wide&&styles.fieldWide]}>
@@ -347,7 +373,7 @@ export default function LifeHealthCaseDetailScreen(){
   setCreatePolicyError(message);
  };
  const submitIssue=async()=>{
-   if(!record||record.status_group!=='pending'||issuing||!form)return;
+   if(!record||!editMode||record.status_group!=='pending'||issuing||!form)return;
    setIssueError('');
    setCreatePolicyError('');
    const data=issuedForm();
@@ -385,6 +411,7 @@ export default function LifeHealthCaseDetailScreen(){
  };
  const issueField=(key:keyof LifeHealthIssue,label:string,required=false,date=false)=>{
    const value=issue[key]||'';
+   if(!editMode)return <Field label={label} value={value||(date?'DD/MM/YYYY':ISSUE_FIELD_PLACEHOLDERS[key as keyof typeof ISSUE_FIELD_PLACEHOLDERS])} required={required} darkLabel/>;
    return <View style={styles.field}>
      <Text style={[styles.fieldLabel,styles.darkFieldLabel]}>{label.toUpperCase()}{required?<Text style={styles.asterisk}> *</Text>:null}</Text>
      {date?<View style={[styles.fieldBox,styles.issueFieldRow]}>
@@ -407,6 +434,7 @@ export default function LifeHealthCaseDetailScreen(){
  const validCalendarValue=toISO(calendarValue||'');
  const selectedCalendarDate=validCalendarValue?new Date(validCalendarValue+'T12:00:00'):new Date();
  const chooseCalendarDay=(date:Date)=>{
+   if(!editMode){setCalendarField(null);return;}
    const day=String(date.getDate()).padStart(2,'0');
    const month=String(date.getMonth()+1).padStart(2,'0');
    const year=String(date.getFullYear());
@@ -432,14 +460,14 @@ export default function LifeHealthCaseDetailScreen(){
         <View style={styles.heroTop}>
           <Text style={styles.heroTitle}>Life / Health Case</Text>
           <View style={styles.heroStatusActions}>
-            {record.status_group==='pending'?<Pressable accessibilityRole="button" accessibilityLabel={editMode?"Editing case details":"Edit case details"}
-              accessibilityState={{selected:editMode,disabled:saving||issuing||documentBusy||rejectBusy}} disabled={saving||issuing||documentBusy||rejectBusy}
-              onPress={()=>setEditMode(true)} style={[styles.heroEditPencil,editMode&&styles.heroEditPencilActive]}>
-              <Ionicons name="pencil" size={17} color="#FFFFFF"/>
-            </Pressable>:null}
             <View style={styles.statusPill}>
               <Text style={styles.statusText}>{record.status_group==='issued'?'Issued':record.status_group==='rejected'?'Rejected':'Pending'}</Text>
             </View>
+            {record.status_group==='pending'?<Pressable accessibilityRole="button" accessibilityLabel={editMode?"Editing case details":"Edit case details"}
+              accessibilityState={{selected:editMode,disabled:saving||issuing||documentBusy||rejectBusy}} disabled={saving||issuing||documentBusy||rejectBusy}
+              onPress={()=>setEditMode(true)} style={[styles.heroEditPencil,editMode&&styles.heroEditPencilActive]}>
+              <Ionicons name="pencil" size={13} color="#FFFFFF"/>
+            </Pressable>:null}
           </View>
         </View>
         <View style={styles.heroSecond}><Text style={styles.heroSubtitle} numberOfLines={1}>{record.customer_name} · {record.proposal_number}</Text><Text style={styles.heroCaseNumber} numberOfLines={1} selectable>{record.case_number}</Text></View>
@@ -521,7 +549,7 @@ export default function LifeHealthCaseDetailScreen(){
               <Ionicons name="document-text-outline" size={17} color="#11734B"/>
               <Text style={styles.documentName} numberOfLines={2} ellipsizeMode="middle">{caseDocumentDisplayName(doc.file_name)}</Text>
             </Pressable>
-            {record.status_group==='pending'?<>
+            {record.status_group==='pending'&&editMode?<>
               <Pressable accessibilityRole="button" accessibilityLabel={'Delete '+caseDocumentDisplayName(doc.file_name)} onPress={()=>deleteDocument(doc)} disabled={documentBusy} style={styles.documentIconButton}>
                 <Ionicons name="trash-outline" size={17} color="#CE3541"/>
               </Pressable>
@@ -530,7 +558,7 @@ export default function LifeHealthCaseDetailScreen(){
               </Pressable>
             </>:null}
           </View>)}
-          {record.status_group==='pending'?<View style={styles.documentUploadGrid}>
+          {record.status_group==='pending'&&editMode?<View style={styles.documentUploadGrid}>
             {([
               ['policy_copy','Policy Copy'],['proposal_form','Proposal Form'],
               ['benefit_illustration','Illustration Form'],['premium_receipt','Payment Receipt'],['other_document','Other Form']
@@ -573,7 +601,7 @@ export default function LifeHealthCaseDetailScreen(){
             </View>):<Text style={styles.paragraph}>No recorded case activity available.</Text>}
           </View>:expandedCaseTab==='remarks'?<View style={styles.activityHistory}>
             {record.remarks?.trim()?record.remarks.trim().split(/\n\s*\n/).filter(Boolean).map((remark,index)=>
-              <View key={index} style={styles.activity}><Text style={styles.paragraph} selectable>{remark}</Text></View>
+              <RemarkHistoryEntry key={index} remark={remark}/>
             ):<Text style={styles.paragraph}>No remarks added yet.</Text>}
           </View>:null}
         </View>
@@ -598,7 +626,7 @@ export default function LifeHealthCaseDetailScreen(){
             {activity.changes?.map((change,index)=><Text key={index} style={styles.activityDate}>• {change}</Text>)}
           </View>):<Text style={styles.paragraph}>No recorded case activity available.</Text>):
             (record.remarks?.trim()?record.remarks.trim().split(/\n\s*\n/).filter(Boolean).map((remark,index)=>
-              <View key={index} style={styles.activity}><Text style={styles.paragraph} selectable>{remark}</Text></View>
+              <RemarkHistoryEntry key={index} remark={remark}/>
             ):<Text style={styles.paragraph}>No remarks added yet.</Text>)}
         </View>
       )}
@@ -615,12 +643,12 @@ export default function LifeHealthCaseDetailScreen(){
             <Text style={styles.cancelActionText} numberOfLines={1}>Cancel</Text>
           </Pressable>
           <Pressable accessibilityRole="button" accessibilityLabel="Save Case Details" onPress={()=>void saveEdit()}
-            disabled={saving||issuing||documentBusy||rejectBusy}
-            style={[styles.caseAction,styles.actionSave]}>
+            disabled={!editMode||saving||issuing||documentBusy||rejectBusy}
+            style={[styles.caseAction,styles.actionSave,(!editMode||saving||issuing||documentBusy||rejectBusy)&&styles.disabledAction]}>
             {saving?<ActivityIndicator size="small" color="#FFFFFF"/>:<Text style={styles.saveActionText} numberOfLines={1}>Save Case</Text>}
           </Pressable>
           <Pressable accessibilityRole="button" accessibilityLabel="Create Policy" onPress={()=>void submitIssue()}
-            disabled={saving||issuing||documentBusy||rejectBusy} style={[styles.caseAction,styles.actionIssue]}>
+            disabled={!editMode||saving||issuing||documentBusy||rejectBusy} style={[styles.caseAction,styles.actionIssue,(!editMode||saving||issuing||documentBusy||rejectBusy)&&styles.disabledAction]}>
             {issuing?<ActivityIndicator size="small" color="#FFFFFF"/>:<Text style={styles.issueActionText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>Create Policy</Text>}
           </Pressable>
         </View>
@@ -871,7 +899,7 @@ const styles=StyleSheet.create({
   heroRejected:{backgroundColor:'#913D3D'},
   heroTop:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:8},
   heroStatusActions:{flexDirection:'row',alignItems:'center',gap:8},
-  heroEditPencil:{width:36,height:36,borderRadius:10,borderWidth:1,borderColor:'rgba(255,255,255,0.55)',alignItems:'center',justifyContent:'center',backgroundColor:'rgba(255,255,255,0.12)'},
+  heroEditPencil:{minWidth:33,height:25,borderRadius:6,borderWidth:1,borderColor:'rgba(255,255,255,0.55)',alignItems:'center',justifyContent:'center',backgroundColor:'rgba(255,255,255,0.12)'},
   heroEditPencilActive:{backgroundColor:'rgba(255,255,255,0.30)',borderColor:'#FFFFFF'},
   heroSecond:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:8},
   heroTitle:{color:'#FFFFFF',fontSize:15,fontWeight:'800'},
@@ -934,6 +962,7 @@ const styles=StyleSheet.create({
   activity:{borderTopWidth:1,borderTopColor:'#ECF0F6',paddingTop:10,gap:4},
   activityRow:{flexDirection:'row',alignItems:'flex-start',justifyContent:'space-between',gap:8},
   activityDetails:{flex:1,minWidth:0,gap:4},
+  remarkBody:{flex:1,minWidth:0},
   activityTimestamp:{color:'#64748B',fontSize:10,lineHeight:15,textAlign:'right',width:130,flexShrink:0},
   activityTitle:{fontSize:11,fontWeight:'700',color:navy},
   activityDate:{fontSize:10,color:'#64748B'},
