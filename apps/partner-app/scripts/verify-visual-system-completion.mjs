@@ -153,6 +153,7 @@ const impact = read('app/impact.tsx');
 const journey = read('app/journey.tsx');
 const weeklyStory = read('app/weekly-story.tsx');
 const recognition = read('app/recognition.tsx');
+const learn = read('app/learn.tsx');
 for (const [screen, title, icon] of [
   [weeklyStory, 'A week with INSUREIT', 'bar-chart-outline'],
   [learn, '60-Second Learn', 'school-outline'],
@@ -163,7 +164,6 @@ for (const [screen, title, icon] of [
   requireText(screen, `<PartnerCasePageHeader title="${title}" icon="${icon}" onBack={() => router.back()} />`, `${title} must show a white title and back action on navy.`);
 }
 
-const learn = read('app/learn.tsx');
 const pulse = read('app/pulse.tsx');
 
 for (const asset of ['policyChecklist', 'appsGrid', 'settings', 'supportVerified']) {
