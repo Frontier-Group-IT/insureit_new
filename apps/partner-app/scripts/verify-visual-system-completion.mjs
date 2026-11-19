@@ -649,8 +649,10 @@ requireText(activity, 'marginRight: 4', 'Recent Activity logo-to-detail spacing 
 for (const impactMarker of [
   'function ImpactIcon(',
   'PartnerAssets.actions.addVehicle',
-  'PartnerAssets.actions.quickCustomers',
-  'PartnerAssets.actions.quickPolicyIntake',
+  'PartnerAssets.actions.impactCustomerDetail',
+  'PartnerAssets.actions.impactCustomerAdded',
+  'PartnerAssets.actions.impactPolicyDocument',
+  'PartnerAssets.actions.impactAddPolicy',
   'PartnerAssets.actions.quickClaims',
   'PartnerAssets.actions.businessPerformance',
   'PartnerAssets.actions.addCustomer',
@@ -662,6 +664,8 @@ for (const impactMarker of [
   '<ImpactIcon art={art} size={43} plain />',
 ]) requireText(impact, impactMarker, `Impact reference layout is missing ${impactMarker}.`);
 if (impact.includes('icon={icon}') || impact.includes('styles.cardLeft')) throw new Error('Impact must keep blue artwork left with metric and label stacked to its right.');
+requireText(impact, '<MonthStat art="monthly-policy" label="Policies"', 'Monthly policies must use the distinct Add Policy reference artwork.');
+requireText(impact, '<ImpactCard art="policy" value={data.lifetime_policies}', 'Policy book must use the Policy Document reference artwork.');
 if (impact.includes('styles.heroDivider') || impact.includes('borderRadius: 18, minHeight: 94')) throw new Error('Impact top summary must match Policy Details: full-width flat white strip with a bottom divider.');
 requireText(impact, 'marginHorizontal: -partnerTheme.spacing.lg, minHeight: 82', 'Impact summary must span the viewport like the Policy Details summary.');
 for (const impactRoute of ["router.push('/customers')", "router.push('/(tabs)/policies')", "router.push('/(tabs)/claims')", "router.push('/business-report')", "router.push('/journey')"]) requireText(impact, impactRoute, `Impact clickable-card route is missing ${impactRoute}.`);
