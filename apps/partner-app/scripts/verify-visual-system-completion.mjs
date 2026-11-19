@@ -505,7 +505,8 @@ requireText(support, 'PartnerAssets.actions.supportVerified', 'Support fallback 
 if (support.includes('asset={PartnerAssets.emptyStates.supportResolved}')) throw new Error('Support-unavailable errors must not misuse the support-resolved artwork.');
 requireText(settings, 'PartnerAssets.status.settings', 'Settings must retain branded Check for updates artwork.');
 const settingsSectionHeader = read('components/ui/partner-section-header.tsx');
-requireText(settingsSectionHeader, 'settingsHeading ? <View style={styles.settingsAccent} /> : null', 'Settings section headings must have reference purple accent.');
+requireText(settingsSectionHeader, 'settingsRow: { marginTop: 12, marginBottom: 3, minHeight: 22 }', 'Settings section headings must have compact spacing above their cards.');
+if (settingsSectionHeader.includes('settingsAccent')) throw new Error('Settings section headings must not have a purple accent.');
 requireText(settingsSectionHeader, 'fontWeight: \'900\', letterSpacing: 0.35', 'Settings headings must be bold and readable.');
 for (const heading of ['Account', 'Device security', 'Privacy', 'App information']) {
   requireText(settings, `title="${heading}" settingsHeading`, `Settings must retain bold ${heading} heading.`);
