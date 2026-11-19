@@ -192,6 +192,15 @@ for (const fragment of [
   '<PartnerCasePageHeader title="My Achievements" icon="ribbon-outline" onBack={() => router.back()} />',
   'percentText', 'accessibilityRole="progressbar"',
 ]) requireText(recognition, fragment, 'My Achievements must retain navy navigation and accessible milestone progress.');
+for (const unwanted of ['heroDescription', 'cardDivider', 'styles.description', '{item.body}', 'progressCaption', 'styles.remaining', 'Customers achieved', 'Completed', 'more customers to unlock']) {
+  if (recognition.includes(unwanted)) throw new Error('My Achievements must omit secondary copy and associated spacing: ' + unwanted);
+}
+for (const required of ['YOUR RECOGNITION', 'Every milestone matters.', 'recorded ', 'Unlocked achievements', 'ACHIEVED', '{item.title}', 'formatDate(item.date)', 'NEXT MILESTONE', '{next.title}', 'next.current.toLocaleString', '(progress * 100).toFixed(1)', 'accessibilityRole="progressbar"', 'View your full journey']) {
+  requireText(recognition, required, 'My Achievements must retain essential milestone information: ' + required);
+}
+requireText(recognition, 'earnedRow: { marginTop: 10', 'Recognition summary must remove leftover description spacing.');
+requireText(recognition, 'progressNumbers: { marginTop: 12', 'Next milestone must use compact value spacing.');
+
 
 // Learn follows the Renewal Work Queue reference header rather than the shared compact page header.
 for (const fragment of [
