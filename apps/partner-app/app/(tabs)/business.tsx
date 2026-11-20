@@ -703,12 +703,19 @@ function TrendChart({ data, emptyMessage, compact = false }: { data: TrendPoint[
           const premium = Math.max(0, Number(item.premium || 0));
           const height = premium > 0 ? Math.max(3, Math.round((premium / top) * (compact ? 45 : 60))) : 0;
           const label = item.month === 'MTD' ? 'MTD' : item.month === 'LAST' ? 'Last' : item.month === 'CUSTOM' ? 'Custom' : shortMonth(item.month);
+          const premiumLabel = formatCompactCurrency(premium);
+          // Only longer compact amounts wrap; never shrink iOS text to fit a narrow bar.
+          const visiblePremiumLabel = compact && premiumLabel.length > 6
+            ? premiumLabel.replace(/(Cr|L|k)$/, '\n$1')
+            : premiumLabel;
           return (
             <View key={`${item.month}-${index}`} style={styles.barColumn}>
-              <View style={[styles.barTrack, compact && styles.barTrackCompact]}>
-                <View style={[styles.bar, { height }]} />
-                <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85} style={[styles.barValue, { bottom: height + 5 }]}>
-                  {formatCompactCurrency(premium)}
+              <View style={[styles.barPlotSlot, compact && styles.barPlotSlotCompact]}>
+                <View style={styles.barTrack}>
+                  <View style={[styles.bar, { height }]} />
+                </View>
+                <Text numberOfLines={2} style={[styles.barValue, { bottom: height + 5 }]}>
+                  {visiblePremiumLabel}
                 </Text>
               </View>
               <Text style={styles.barMonth}>{label}</Text>
@@ -895,14 +902,15 @@ const styles = StyleSheet.create({
   growthRow: { marginTop: 1, flexDirection: 'row', alignItems: 'center', gap: 2 },
   growthText: { maxWidth: 72, color: '#16A34A', ...partnerTheme.typography.meta, fontWeight: Platform.OS === 'ios' ? '400' : '800' },
   vsText: { marginTop: 1, maxWidth: 72, color: '#9AA7B8', textAlign: 'center', ...partnerTheme.typography.meta, fontWeight: Platform.OS === 'ios' ? '400' : '500' },
-  chartCard: { minHeight: 110, flexDirection: 'row', borderRadius: 16, paddingHorizontal: 12, paddingTop: 17, paddingBottom: 8, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#DDE6F1', ...partnerTheme.shadowSoft },
+  chartCard: { minHeight: 110, flexDirection: 'row', borderRadius: 16, paddingHorizontal: 12, paddingTop: 26, paddingBottom: 8, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#DDE6F1', ...partnerTheme.shadowSoft },
   chartEmpty: { minHeight: 120, alignItems: 'center', justifyContent: 'center', borderRadius: 16, padding: 12, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#DDE6F1' },
   chartYAxis: { width: 44, height: 85, justifyContent: 'space-between', paddingVertical: 5 },
   axisText: { color: '#8795A9', ...partnerTheme.typography.meta, fontSize: 9, fontWeight: Platform.OS === 'ios' ? '400' : partnerTheme.typography.meta.fontWeight },
   chart: { flex: 1, height: 91, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'center', gap: 3 },
   barColumn: { flex: 1, maxWidth: 54, height: '100%', alignItems: 'center', justifyContent: 'flex-end' },
-  barValue: { position: 'absolute', left: -2, right: -2, height: 16, color: '#3156B8', textAlign: 'center', fontSize: 10, lineHeight: 15, fontWeight: '700', includeFontPadding: false },
-  barTrack: { height: 72, width: '92%', justifyContent: 'flex-end', position: 'relative', borderTopLeftRadius: 7, borderTopRightRadius: 7 },
+  barValue: { position: 'absolute', left: 0, right: 0, height: 27, color: '#14367B', textAlign: 'center', fontSize: 11, lineHeight: 13, fontWeight: '700', includeFontPadding: false },
+  barPlotSlot: { height: 72, width: '100%', alignItems: 'center', justifyContent: 'flex-end', position: 'relative' },
+  barTrack: { height: '100%', width: '92%', justifyContent: 'flex-end', borderTopLeftRadius: 7, borderTopRightRadius: 7 },
   bar: { width: '100%', borderTopLeftRadius: 7, borderTopRightRadius: 7, backgroundColor: '#2298E8' },
   barMonth: { marginTop: 5, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
   productGrid: { flexDirection: 'row', gap: 5, borderRadius: 16, padding: 6, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#DDE6F1', ...partnerTheme.shadowSoft },
@@ -945,10 +953,10 @@ const styles = StyleSheet.create({
   searchRowShort: { marginBottom: 1 },
   tightContainer: { padding: 3, gap: 3, borderRadius: 10 },
   tightNetwork: { gap: 4 },
-  chartCompact: { minHeight: 92, paddingHorizontal: 5, paddingTop: 18, paddingBottom: 4 },
+  chartCompact: { minHeight: 92, paddingHorizontal: 5, paddingTop: 27, paddingBottom: 4 },
   chartYAxisCompact: { height: 70 },
   chartPlotCompact: { height: 74 },
-  barTrackCompact: { height: 56 },
+  barPlotSlotCompact: { height: 56 },
   pressed: { opacity: 0.75 },
 });
 function BusinessSearchSlot({ controls }: { controls: React.ReactNode }) {
