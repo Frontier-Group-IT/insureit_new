@@ -105,8 +105,7 @@ const niaHandoff=file("../app/policy-intakes/handoff-actions.ts");
 const niaPage=file("../app/policies/new/page.tsx");
 const unified=file("../components/policy-unified-form.tsx");
 const shell=file("../components/policy-commercial-shell.tsx");
-assert.ok(niaHandoff.includes('niaVerified')&&niaHandoff.includes('^FASTag ID:
-),
+assert.ok(niaHandoff.includes('niaVerified')&&niaHandoff.includes("FASTag ID:"),
   "NIA stale drafts must not show FASTag ID as the registration authority");
 assert.ok(niaHandoff.includes('nia_missing_rto_authority_and_cpa'));
 assert.ok(niaPage.includes('readVerifiedNiaPrintedPremiumReference(')
