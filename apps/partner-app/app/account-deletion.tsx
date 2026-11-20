@@ -87,7 +87,7 @@ const styles = StyleSheet.create({
   hero: { minHeight: 116, marginHorizontal: -18, paddingHorizontal: 18, paddingTop: 16, paddingBottom: 12, overflow: 'hidden', flexDirection: 'row', alignItems: 'flex-start', backgroundColor: '#FFFFFF' },
   heroCopy: { flex: 1, minWidth: 0, paddingLeft: 10, paddingTop: 0, alignItems: 'flex-end' },
   heroSloganBlock: { alignSelf: 'flex-end', maxWidth: '100%', alignItems: 'flex-start' },
-  heroTitle: { fontSize: 22, lineHeight: 28, fontWeight: '900', color: '#171B59', letterSpacing: -0.6, textAlign: 'left' },
+  heroTitle: { fontSize: 19, lineHeight: 22, fontWeight: '900', color: '#171B59', letterSpacing: -0.6, textAlign: 'left' },
   heroTitleAccent: { color: '#4726B6' },
   heroUnderline: { width: 83, height: 4, borderRadius: 3, marginTop: 9, backgroundColor: '#8241E9' },
   heroBrand: { width: 156, minHeight: 70, paddingHorizontal: 0, paddingVertical: 0, flexDirection: 'row', alignSelf: 'flex-start', alignItems: 'center', justifyContent: 'flex-start', gap: 7 },
