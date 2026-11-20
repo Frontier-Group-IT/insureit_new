@@ -18,6 +18,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import type { PolicyIntakeOcrField } from "@/lib/policy-intake-ocr-service";
 import { revalidatePath } from "next/cache";
 import { aiQueueEnabled } from "@/lib/ai-policy-onboarding-queue-server";
+import { hasVerifiedN8nParserEvidence } from "@/lib/ai-policy-onboarding-eligibility";
 import { redirect } from "next/navigation";
 
 type Intake = {
@@ -289,8 +290,9 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
   if(!extracted.ok)return fail("Extraction",extracted.error);
   if(extracted.preview.documentId!==queued.document_id||
      extracted.preview.fingerprint!==queued.extraction_fingerprint||
-     extracted.preview.checksPassed!==13||extracted.preview.warnings.length)
-    return fail("Source PDF","The PDF/extraction changed. Recheck the current Intake before booking.");
+     !hasVerifiedN8nParserEvidence(extracted.preview.parserId,
+       extracted.preview.checksPassed,extracted.preview.warnings))
+    return fail("Source PDF","The current PDF, fingerprint or strict insurer verification is invalid. Recheck this Intake before booking.");
 
   const pdfField=(key:string)=>extracted.preview.fields.find(f=>f.key===key)?.value?.trim()??"";
   // A passed arithmetic/PDF check does not establish vehicle motor power.
@@ -303,7 +305,11 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
   if(isOdElectricTwoWheeler&&!verifiedKw)
     return fail("Vehicle capacity","The current verified PDF extraction has no usable Motor CC/KW value. Review the PDF/parser; seating capacity or model number cannot be substituted.");
 
-  const issuanceDate=pdfField("policy_issuance_date");
+  // Tata responses intentionally omit a native-text issue date. The signing
+  // proposal is accepted only by the PDF integrity/receipt cross-check in
+  // previewSemiAutoN8nExtraction; never substitute receipt or cover start.
+  const issuanceDate=pdfField("policy_issuance_date")
+    ||extracted.preview.acceptedIssuanceDate||"";
   const decision=policyDateDecision(issuanceDate);
   if(decision==="invalid"||decision==="future")
     return fail("Policy issuance date","The original PDF does not contain a valid separately verified Policy Issued On date. Correct it through canonical onboarding; today's date is not substituted.");
@@ -314,9 +320,9 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
   // handoff can claim the Intake or create a canonical draft.
   let verifiedMoney:ReturnType<typeof mapVerifiedN8nMotorPremium>;
   if (!extracted.preview.premium || extracted.preview.commercialPremium)
-    return fail("Premium","Commercial policy booking requires canonical policy onboarding review; no ICICI breakdown is inferred.");
+    return fail("Premium","This insurer does not have a safely mapped canonical premium breakdown; manual review is required.");
   try{verifiedMoney=mapVerifiedN8nMotorPremium(extracted.preview.premium);}
-  catch{return fail("Premium","The validated ICICI premium or OD/NCB deduction cannot be represented safely in canonical onboarding. Review the policy manually.");}
+  catch{return fail("Premium","The independently verified premium, OD/NCB, or Tata liability allocation cannot be reconciled with canonical onboarding. Review the policy manually.");}
 
   // Explicitly confirmed IT/Admin auto-conversion uses the existing atomic
   // reviewer takeover; manual handoffs keep their separate confirmation.
