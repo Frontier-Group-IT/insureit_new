@@ -9,7 +9,7 @@ import { requirePolicyIntakeFinalizer, requirePolicyIntakeReviewer } from "@/lib
 import { loadPolicyIntakeDuplicateMatches } from "@/lib/policy-intake-duplicate";
 import { buildPolicyOcrOnboardingUpdate, normalizeVerifiedMotorPowerKw } from "@/lib/policy-ocr-onboarding-apply";
 import { policyDateDecision } from "@/lib/policy-date-rule";
-import { mapVerifiedN8nMotorPremium, verifiedCpaSelectionMatches } from "@/lib/policy-n8n-onboarding-premium";
+import { mapVerifiedGoDigitCommercialPremium, mapVerifiedN8nMotorPremium, verifiedCpaSelectionMatches } from "@/lib/policy-n8n-onboarding-premium";
 import { checkSemiAutoReadiness, type SemiAutoIssue } from "@/lib/policy-intake-semi-auto";
 import { isN8nWorkbenchPrimary, previewSemiAutoN8nExtraction, applySemiAutoN8nExtraction, type SemiAutoN8nResult } from "@/lib/policy-intake-semi-auto-n8n";
 import { segregatePolicyIntakeLanes } from "@/lib/policy-ocr-routing-mode";
@@ -319,10 +319,34 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
   // Validate the original PDF premium and its OD/NCB deduction before a
   // handoff can claim the Intake or create a canonical draft.
   let verifiedMoney:ReturnType<typeof mapVerifiedN8nMotorPremium>;
-  if (!extracted.preview.premium || extracted.preview.commercialPremium)
-    return fail("Premium","This insurer does not have a safely mapped canonical premium breakdown; manual review is required.");
-  try{verifiedMoney=mapVerifiedN8nMotorPremium(extracted.preview.premium);}
-  catch{return fail("Premium","The independently verified premium, OD/NCB, or Tata liability allocation cannot be reconciled with canonical onboarding. Review the policy manually.");}
+  const commercial=extracted.preview.commercialPremium;
+  if (commercial) {
+    // Only the exact Go Digit 18-check native PDF contract may enter this path.
+    // The other commercial insurers remain review-only until their separate
+    // canonical premium/component mappings have been independently certified.
+    if (extracted.preview.parserId!=="go_digit_cv_native_pdf"
+        || extracted.preview.checksPassed!==18 || extracted.preview.warnings.length)
+      return fail("Premium","This commercial layout still requires insurer-specific booking review.");
+    // Do not claim reviewer ownership or update an existing draft if the PDF
+    // omits an onboarding-mandatory value. In particular registration year is
+    // NOT manufacturing year; current Digit sample prints manufacturing '--'.
+    for (const key of ["insured_name","policy_product","vehicle_manufacturing_year",
+      "vehicle_capacity","vehicle_rto_name","vehicle_rto_state","vehicle_class"]) {
+      if (!pdfField(key)) return fail("Missing verified PDF field",
+        key==="vehicle_manufacturing_year"
+          ?"Manufacturing year is not printed in this Go Digit PDF. Registration year cannot substitute. Verify the year from RC/VAHAN before policy booking."
+          :"The current Go Digit PDF does not independently verify "+key+". Review the original PDF or verified RC before booking.");
+    }
+    if (pdfField("policy_product")!=="Digit Commercial Vehicle Insurance")
+      return fail("Policy product","The commercial product is not the verified combined Go Digit motor policy.");
+    try {verifiedMoney=mapVerifiedGoDigitCommercialPremium(commercial);}
+    catch {return fail("Premium","Printed OD, TP, net, GST and gross do not reconcile with the canonical form.");}
+  } else {
+    if (!extracted.preview.premium)
+      return fail("Premium","A verified premium breakdown is missing.");
+    try{verifiedMoney=mapVerifiedN8nMotorPremium(extracted.preview.premium);}
+    catch{return fail("Premium","The independently verified premium, OD/NCB, or Tata liability allocation cannot be reconciled with canonical onboarding. Review the policy manually.");}
+  }
 
   // Explicitly confirmed IT/Admin auto-conversion uses the existing atomic
   // reviewer takeover; manual handoffs keep their separate confirmation.
@@ -333,6 +357,13 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
   if(forwarded.draft.issuanceDate!==issuanceDate)
     return fail("Saved issuance date","The saved draft's issue date differs from the verified current PDF. Review it before booking; no existing manual value was overwritten.");
   if(forwarded.draftRevision<1)return fail("Draft revision","Canonical revision is unavailable.");
+  if(commercial && (forwarded.draft.policyProduct!=="Package"
+    || forwarded.draft.vehicleClass!=="MISD"
+    || forwarded.draft.manufacturingYear!==pdfField("vehicle_manufacturing_year")
+    || forwarded.draft.capacity!==pdfField("vehicle_capacity")
+    || forwarded.draft.rtoName!==pdfField("vehicle_rto_name")
+    || forwarded.draft.rtoState!==pdfField("vehicle_rto_state")))
+    return fail("Verified Go Digit fields","The saved commercial identity, class, manufacturing year, CC, RTO or Package selection differs from the verified PDF.");
   if(isOdElectricTwoWheeler
       && (forwarded.draft.vehicleClass!=="TWP"
         ||forwarded.draft.fuelType!=="Electric"
