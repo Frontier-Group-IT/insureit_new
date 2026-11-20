@@ -111,6 +111,8 @@ export default function PoliciesScreen() {
   const [lifecycle, setLifecycle] = useState<PartnerPolicyLifecycle>(savedPolicyLifecycle);
   const [period, setPeriod] = useState<PartnerPolicyPeriod>(savedPolicyPeriod);
   const [sortSheetOpen, setSortSheetOpen] = useState(false);
+  const [draftCounts, setDraftCounts] = useState<PartnerPolicyPeriodCounts | null>(null);
+  const [draftCountsLoading, setDraftCountsLoading] = useState(false);
   const [draftPeriod, setDraftPeriod] = useState<PartnerPolicyPeriod>(savedPolicyPeriod);
   const [draftLifecycle, setDraftLifecycle] = useState<PartnerPolicyLifecycle>(savedPolicyLifecycle);
   const [filterTab,setFilterTab]=useState<PolicyFilterTab>('period');
@@ -246,6 +248,30 @@ export default function PoliciesScreen() {
     setVisibleLimit(PAGE_SIZE);
     setLifecycle(filter);
   };
+  const draftFiltersMatchApplied = draftSource===source && draftRm===rm &&
+    draftFromDate===fromDate && draftToDate===toDate;
+  // The draft period is not part of this request: each response contains both MTD and All.
+  // Fetch counts for draft Source/RM/Date selections before Apply, rather than displaying
+  // stale counts from the applied filter or hiding status badges until Apply.
+  useEffect(()=>{
+    if(!sortSheetOpen || draftFiltersMatchApplied){
+      setDraftCounts(null);
+      setDraftCountsLoading(false);
+      return;
+    }
+    let active=true;
+    setDraftCounts(null);
+    setDraftCountsLoading(true);
+    const draftAdvanced=draftSource!=='all'||draftRm!=='all'||Boolean(draftFromDate)||Boolean(draftToDate);
+    const countRequest=draftAdvanced
+      ? getPartnerAdvancedPolicyCounts({businessLine,search:debouncedSearch,source:draftSource,rm:draftRm,fromDate:draftFromDate,toDate:draftToDate})
+      : getPartnerPolicyPeriodCounts({businessLine,search:debouncedSearch});
+    void countRequest.then(result=>{if(active)setDraftCounts(result);})
+      .catch(()=>{if(active)setDraftCounts(null);})
+      .finally(()=>{if(active)setDraftCountsLoading(false);});
+    return ()=>{active=false;};
+  },[sortSheetOpen,draftFiltersMatchApplied,draftSource,draftRm,draftFromDate,draftToDate,businessLine,debouncedSearch]);
+  const draftStatusCounts = draftFiltersMatchApplied ? periodCounts.data?.[draftPeriod] : draftCounts?.[draftPeriod];
   const activePeriodCounts = periodCounts.data?.[period];
   const statusOptions: { label: string; filter: PartnerPolicyLifecycle; count: number | undefined }[] = [
     { label: 'Total Policies', filter: 'all', count: activePeriodCounts?.all },
@@ -596,7 +622,7 @@ export default function PoliciesScreen() {
       <Modal visible={sortSheetOpen} transparent animationType="slide" statusBarTranslucent={false} onRequestClose={()=>setSortSheetOpen(false)}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={0} style={styles.sortOverlay}>
           <Pressable style={StyleSheet.absoluteFill} accessibilityRole="button" accessibilityLabel="Close sort by popup" onPress={()=>setSortSheetOpen(false)}/>
-          <View style={[styles.sortSheet,{paddingBottom:Math.max(12,safeAreaInsets.bottom+7),maxHeight:windowHeight-36}]}>
+          <View style={[styles.sortSheet,{paddingBottom:Math.max(12,safeAreaInsets.bottom+7),maxHeight:windowHeight-Math.max(safeAreaInsets.top,20)-12}]}>
             <View style={styles.sortSheetHeader}>
               <Text style={styles.sortSheetTitle}>Sort by</Text>
               <Pressable accessibilityRole="button" accessibilityLabel="Close sort by popup" onPress={()=>setSortSheetOpen(false)} style={styles.sortSheetClose}>
@@ -619,7 +645,7 @@ export default function PoliciesScreen() {
               </Pressable>)}
             </View>
             <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled"
-              style={styles.advancedPanel} contentContainerStyle={styles.sortSheetBody}>
+              style={[styles.advancedPanel,{maxHeight:Math.max(160,windowHeight-safeAreaInsets.top-safeAreaInsets.bottom-210)}]} contentContainerStyle={styles.sortSheetBody}>
               {filterTab==='period'?<>
                 <View style={styles.sortSectionHeading}><Feather name="calendar" size={18} color="#182557"/>
                   <Text style={styles.sortSectionLabel}>Period</Text></View>
@@ -639,13 +665,15 @@ export default function PoliciesScreen() {
                 <View style={styles.sortChoices}>
                   {sheetStatuses.map(option=>{
                     const selected=draftLifecycle===option.lifecycle;
-                    const count=draftPeriod===period&&draftSource===source&&draftRm===rm&&draftFromDate===fromDate&&draftToDate===toDate?periodCounts.data?.[draftPeriod]?.[option.value]:undefined;
+                    const count=draftStatusCounts?.[option.value];
                     return <Pressable key={option.value} accessibilityRole="button" accessibilityLabel={option.label}
                       accessibilityState={{selected}} onPress={()=>setDraftLifecycle(option.lifecycle)}
                       style={[styles.sortChoice,selected&&styles.sortChoiceSelected]}>
                       <Ionicons name={selected?'radio-button-on':'radio-button-off'} color={selected?'#4230B3':'#A3A9B1'} size={22}/>
                       <Text style={[styles.sortChoiceText,selected&&styles.sortChoiceTextSelected]}>{option.label}</Text>
-                      {count!==undefined?<View style={styles.sortChoiceCountBadge}><Text style={styles.sortChoiceCount}>{count.toLocaleString('en-IN')}</Text></View>:null}
+                      <View style={styles.sortChoiceCountBadge}>
+                         <Text style={styles.sortChoiceCount}>{count===undefined?(draftCountsLoading?'…':'—'):count.toLocaleString('en-IN')}</Text>
+                       </View>
                     </Pressable>;
                   })}
                 </View>
@@ -1033,7 +1061,7 @@ const styles = StyleSheet.create({
   advancedTabActive:{backgroundColor:'#EEE7FF',borderColor:'#D4C6FC'},
   advancedTabText:{fontSize:10,fontWeight:'700',color:'#344765',flexShrink:1},
   advancedTabTextActive:{color:'#4230B3'},
-  advancedPanel:{maxHeight:290,marginTop:11},
+  advancedPanel:{flexShrink:1,marginTop:11},
   advancedSearch:{minHeight:41,flexDirection:'row',alignItems:'center',gap:8,
     borderWidth:1,borderColor:'#D9DEEE',borderRadius:12,paddingHorizontal:12,marginTop:9,marginBottom:6},
   advancedSearchInput:{flex:1,minHeight:40,color:'#172552',fontSize:12},

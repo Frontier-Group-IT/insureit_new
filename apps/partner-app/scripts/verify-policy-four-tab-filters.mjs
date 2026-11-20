@@ -14,6 +14,17 @@ assert.match(screen,/filterTab==='rm'/);
 assert.match(screen,/filterTab==='date'/);
 assert.match(screen,/All Policies Status/);
 assert.match(screen,/sheetStatuses\.map/);
+assert.match(screen,/const draftStatusCounts = draftFiltersMatchApplied \? periodCounts\.data\?\.\[draftPeriod\] : draftCounts\?\.\[draftPeriod\]/,
+  'Status counts use the selected MTD or All period, even before Apply');
+assert.match(screen,/getPartnerAdvancedPolicyCounts\(\{businessLine,search:debouncedSearch,source:draftSource,rm:draftRm,fromDate:draftFromDate,toDate:draftToDate\}\)/,
+  'Changing source, RM or date filters queries counts for the draft selection');
+assert.match(screen,/const count=draftStatusCounts\?\.\[option\.value\]/,'Every status option uses the selected draft period count');
+assert.match(screen,/count===undefined\?\(draftCountsLoading\?'…':'—'\):count\.toLocaleString\('en-IN'\)/,
+  'Pending or unavailable counts must not be invented');
+assert.doesNotMatch(screen,/advancedPanel:\{maxHeight:290/,'Remove fixed 290px status area height');
+assert.match(screen,/maxHeight:Math\.max\(160,windowHeight-safeAreaInsets\.top-safeAreaInsets\.bottom-210\)/,
+  'Filter panel adapts to the safe screen height, leaving room for footer');
+
 assert.match(screen,/Search source\.\.\./);
 assert.match(screen,/Search RM\.\.\./);
 assert.match(screen,/PartnerDatePicker directSelect label="From"/);

@@ -962,7 +962,7 @@ requireText(renewalScreen, 'navyStatusBar', 'Renewal Work Queue must retain its 
 // Policy list MTD / All bottom sheet, scoped database date/status filtering and counts.
 const periodPolicyLib = read('lib/policies.ts');
 const periodSql = fs.readFileSync(path.join(root,'../../supabase/migrations/20261119113000_partner_policy_period_status_filters.sql'),'utf8');
-for(const phrase of ["setSortSheetOpen(true)","Sort by","MTD","All","sheetStatuses.map","Apply Filter","setPeriod(draftPeriod)","setLifecycle(draftLifecycle)","periodCounts.data?.[draftPeriod]?.[option.value]","styles.sortFloating"]) {
+for(const phrase of ["setSortSheetOpen(true)","Sort by","MTD","All","sheetStatuses.map","Apply Filter","setPeriod(draftPeriod)","setLifecycle(draftLifecycle)","draftStatusCounts?.[option.value]","styles.sortFloating"]) {
   requireText(policies,phrase,'Policy period/status bottom sheet is missing '+phrase);
 }
 for(const phrase of ["period,","policies:list:${period}:${lifecycle}","[period, lifecycle, debouncedSearch, businessLine, source, rm, fromDate, toDate]","setVisibleLimit(PAGE_SIZE)"]) {
@@ -997,7 +997,7 @@ for (const phrase of [
   "styles.advancedFooter","styles.advancedReset","styles.advancedApply",
   "Search source...","Search RM...","PartnerDatePicker directSelect label=\"From\"",
   "PartnerDatePicker directSelect label=\"To\"","onPress={applySortSheet}",
-  "maxHeight:windowHeight-36","sortPeriodSelected:{backgroundColor:'#FFFFFF',borderColor:'#4030AF',borderWidth:1.5}",
+  "maxHeight:windowHeight-Math.max(safeAreaInsets.top,20)-12","sortPeriodSelected:{backgroundColor:'#FFFFFF',borderColor:'#4030AF',borderWidth:1.5}",
   "sortPeriodOption:{flex:1,minHeight:43","sortChoice:{flexDirection:'row',alignItems:'center',gap:11,minHeight:46",
 ]) requireText(policies,phrase,'The approved four-tab Sort by layout must remain compact: '+phrase);
 if (policies.includes("setDraftPeriod(value);setDraftLifecycle('all');")) {
