@@ -381,7 +381,7 @@ export function validateTataAigN8nResponse(
     // A verified Tata PDF may print a Haryana district+4-digit number
     // without an alphabetic series. The 18-check parser requires the
     // separately printed historic registration date for this narrow shape.
-    if (twoWheeler || !(/^(?:HR|DL)[A-Z0-9]{7,13}$/.test(plate) || /^HR\\d{6}$/.test(plate))
+    if (twoWheeler || !(/^(?:HR|DL)[A-Z0-9]{7,13}$/.test(plate) || /^HR\d{6}$/.test(plate))
       || (plate.startsWith("HR") ? "HARYANA" : "DELHI") !== get("vehicle_rto_state").toUpperCase())
       fail("n8n_tata_aig_registration_invalid");
   } else if (status === "unregistered") {
