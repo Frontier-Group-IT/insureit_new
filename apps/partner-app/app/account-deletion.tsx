@@ -43,9 +43,11 @@ export default function AccountDeletionScreen() {
           </View>
         </View>
         <View style={styles.heroCopy}>
-          <Text accessibilityRole="header" style={styles.heroTitle}>Your account,</Text>
-          <Text style={[styles.heroTitle, styles.heroTitleAccent]}>your choice</Text>
-          <View style={styles.heroUnderline} />
+          <View style={styles.heroSloganBlock}>
+            <Text accessibilityRole="header" style={styles.heroTitle}>Your account,</Text>
+            <Text style={[styles.heroTitle, styles.heroTitleAccent]}>your choice</Text>
+            <View style={styles.heroUnderline} />
+          </View>
         </View>
       </View>
       <Text style={styles.intro}>Request removal of your individual INSUREIT Partner login and eligible personal data. We verify ownership and legal retention obligations before fulfillment.</Text>
@@ -83,7 +85,8 @@ const styles = StyleSheet.create({
   canvas: { flex: 1, backgroundColor: '#FAF7FF', marginHorizontal: -18 },
   body: { paddingHorizontal: 18, paddingBottom: 28, gap: 19, minHeight: 700 },
   hero: { minHeight: 116, marginHorizontal: -18, paddingHorizontal: 18, paddingTop: 16, paddingBottom: 12, overflow: 'hidden', flexDirection: 'row', alignItems: 'flex-start', backgroundColor: '#FFFFFF' },
-  heroCopy: { flex: 1, minWidth: 0, paddingLeft: 10, paddingTop: 0, alignItems: 'flex-start' },
+  heroCopy: { flex: 1, minWidth: 0, paddingLeft: 10, paddingTop: 0, alignItems: 'flex-end' },
+  heroSloganBlock: { alignSelf: 'flex-end', maxWidth: '100%', alignItems: 'flex-start' },
   heroTitle: { fontSize: 22, lineHeight: 28, fontWeight: '900', color: '#171B59', letterSpacing: -0.6, textAlign: 'left' },
   heroTitleAccent: { color: '#4726B6' },
   heroUnderline: { width: 83, height: 4, borderRadius: 3, marginTop: 9, backgroundColor: '#8241E9' },
@@ -92,7 +95,7 @@ const styles = StyleSheet.create({
   heroBrandCopy: { flex: 1, minWidth: 0, justifyContent: 'center' },
   heroBrandName: { fontSize: 19, lineHeight: 22, fontWeight: '900', color: '#0B438C' },
   heroBrandPartner: { fontSize: 18, lineHeight: 21, fontWeight: '900', color: '#A66F12' },
-  intro: { fontSize: 14, lineHeight: 23, color: '#242657', fontWeight: '500' },
+  intro: { fontSize: 14, lineHeight: 23, color: '#242657', fontWeight: '500', textAlign: 'justify', alignSelf: 'stretch' },
   card: { overflow: 'hidden', borderRadius: 22, backgroundColor: '#FCFAFF', borderWidth: 1, borderColor: '#E2D3FA', shadowColor: '#7C4FC8', shadowOpacity: 0.12, shadowRadius: 9, elevation: 2 },
   cardHeader: { minHeight: 64, paddingHorizontal: 17, flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#F0E4FF' },
   infoIcon: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', backgroundColor: '#7732D7' },

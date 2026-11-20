@@ -167,8 +167,11 @@ const deletionSloganIndex = deletionScreen.indexOf('<View style={styles.heroCopy
 if (deletionBrandIndex < 0 || deletionSloganIndex < 0 || deletionBrandIndex >= deletionSloganIndex) {
   throw new Error('Account deletion must show the Partner logo left and the slogan right.');
 }
-requireText(deletionScreen, "heroCopy: { flex: 1, minWidth: 0, paddingLeft: 10, paddingTop: 0, alignItems: 'flex-start' }", 'Account deletion slogan must start from the left edge of its right-side column.');
-requireText(deletionScreen, "letterSpacing: -0.6, textAlign: 'left'", 'Account deletion title must be left-aligned.');
+requireText(deletionScreen, "heroCopy: { flex: 1, minWidth: 0, paddingLeft: 10, paddingTop: 0, alignItems: 'flex-end' }", 'Account deletion slogan must sit against the right edge of its hero column.');
+requireText(deletionScreen, "heroSloganBlock: { alignSelf: 'flex-end', maxWidth: '100%', alignItems: 'flex-start' }", 'Both slogan lines and underline must share the same left edge within a right-anchored block.');
+requireText(deletionScreen, '<View style={styles.heroSloganBlock}>', 'Both headline rows must use the same right-side alignment group.');
+requireText(deletionScreen, "letterSpacing: -0.6, textAlign: 'left'", 'Account deletion title lines must start at the same column.');
+requireText(deletionScreen, "intro: { fontSize: 14, lineHeight: 23, color: '#242657', fontWeight: '500', textAlign: 'justify', alignSelf: 'stretch' }", 'The introduction must justify to full content width without disturbing horizontal padding.');
 
 for (const [fragment, reason] of [
   ['styles.hero', 'Branded deletion page has a hero'],
