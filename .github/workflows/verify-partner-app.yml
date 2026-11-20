@@ -49,6 +49,9 @@ jobs:
       - name: Verify compact Recognition progress tracker
         run: node apps/partner-app/scripts/verify-recognition-compact-tracker.mjs
 
+      - name: Verify Claims unified segmented filters
+        run: node apps/partner-app/scripts/verify-claims-unified-segment-filter.mjs
+
       - name: Require synchronized dependency lockfile
         shell: bash
         run: |

@@ -54,7 +54,7 @@ for (const label of ['All Claims', 'Settled Claims', 'In Progress']) {
 }
 assert.match(claims, /onPress=\{\(\) => selectSummary\(metric\.filter\)\}/, 'Status chip preserves existing claims filtering');
 assert.match(claims, /metric\.value\.toLocaleString\('en-IN'\)/, 'Claim counts keep authorized backend summary values');
-assert.match(claims, /summaryChipSelected: \{ backgroundColor: '#17365D'/, 'Selected status chip uses navy fill');
+assert.match(claims, /summaryChipSelected: \{ backgroundColor: '#FFFFFF', borderColor: '#17365D'/, 'Selected status chip uses navy outline without competing with Add Claim');
 assert.match(claims, /<\/View>\s*\{canPartnerStartClaim\(context\) \? \(\s*<HighlightedAddClaimButton/, 'Add Claim follows all three filters in the same permission-gated row');
 assert.match(claims, /accessibilityLabel="Add Claim"/, 'Compact Add Claim remains accessible');
 assert.match(claims, /onPress=\{\(\) => router\.push\('\/claim\/select-vehicle' as never\)\}/, 'Add Claim opens the existing vehicle-selection flow');
