@@ -72,6 +72,8 @@ function parserDiagnostic(code:string|null|undefined): {title:string;detail:stri
     return {title:"PDF verification failed",detail:"The commercial reader ran but rejected these checks. Inspect the matching fields and source layout in n8n. No policy was booked.",checks};
   }
   const descriptions:Record<string,string>={
+    go_digit_missing_verified_manufacturing_year:"Go Digit PDF extraction passed, but the printed Manufacturing Year and Month is blank. The separate registration year cannot be used. Verify manufacturing year using RC/VAHAN before automatic policy booking.",
+    go_digit_missing_verified_onboarding_fields:"Go Digit PDF is verified but does not independently provide all mandatory canonical policy fields. Review the listed missing vehicle or policy fields before booking.",
     n8n_review_required:"The n8n output failed the expected parser contract. This legacy code does not identify which check failed; run a fresh reparse to obtain the new diagnostics.",
     n8n_commercial_classifier_missed_layout:"The shared n8n webhook returned a commercial parser response, but the website routed it through ICICI validation. Inspect the commercial PDF recognition rule.",
     n8n_nontata_verification_failed:"Commercial parser validation failed, but individual failing checks were not retained in this older result. Reparse to capture them.",
