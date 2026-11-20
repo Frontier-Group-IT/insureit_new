@@ -5,6 +5,7 @@ import type { NonMotorUnifiedInitialValues } from "@/components/non-motor-unifie
 import type { ExistingNonMotorDocuments } from "@/components/non-motor-document-picker";
 import type { ReactNode } from "react";
 import { PolicyCommercialAccessProvider } from "@/components/policy-commercial-access-context";
+import type { NiaPrintedPremiumReference } from "@/lib/policy-n8n-onboarding-premium";
 import { PolicyIntakeOnboardingContextCard } from "@/components/policy-intake-onboarding-context";
 import {
   PolicyUnifiedForm,
@@ -21,6 +22,7 @@ export type PolicyCommercialShellProps = {
   sources: PolicySourceOption[];
   manufacturers?: string[];
   initialValues?: PolicyUnifiedInitialValues;
+  printedPremiumReference?: NiaPrintedPremiumReference|null;
   nonMotorInitialValues?: NonMotorUnifiedInitialValues;
   nonMotorExistingDocuments?: ExistingNonMotorDocuments;
   nonMotorActivityStatus?: ReactNode;
@@ -44,6 +46,7 @@ export function PolicyCommercialShell(props: PolicyCommercialShellProps) {
         sources={props.sources}
         manufacturers={props.manufacturers}
         initialValues={props.initialValues}
+        printedPremiumReference={props.printedPremiumReference}
         nonMotorInitialValues={props.nonMotorInitialValues}
         nonMotorExistingDocuments={props.nonMotorExistingDocuments}
         nonMotorActivityStatus={props.nonMotorActivityStatus}

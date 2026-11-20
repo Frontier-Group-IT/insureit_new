@@ -80,6 +80,38 @@ export function mapVerifiedGoDigitCommercialPremium(p: {
   return { od:paisa(p.od), addOnPremium:"0", tp:paisa(p.tp), cpa:"0", cpaOpted:"No" };
 }
 
+/** Read-only printed New India tax reference, for current-PDF verified drafts.
+ * This is NOT used to compute or post a booked policy's tax. We cannot
+ * recreate a source invoice's rounded mixed-rate GST from 18%/5% estimates.
+ * Never accept a generic OCR row or a draft note without matching verified
+ * policy number, OD, TP, exact queue fingerprint and current document. */
+export type NiaPrintedPremiumReference = {
+  od:number; tp:number; net:number; gst:number; gross:number;
+};
+export function readVerifiedNiaPrintedPremiumReference(input:{
+  parserId:string|null; checksPassed:number; currentPdfVerified:boolean;
+  remarks:string; policyNumber:string;
+  fields:readonly {key:string;value:string}[];
+}):NiaPrintedPremiumReference|null {
+  if(input.parserId!=="new_india_cv_native_pdf"
+    ||input.checksPassed!==16||!input.currentPdfVerified)return null;
+  const m=input.remarks.match(/independently validated commercial-motor PDF \(new_india_cv_native_pdf\)\.[\s\S]*?Printed OD ([\d.]+), TP including liabilities ([\d.]+), Net ([\d.]+), GST ([\d.]+), Gross ([\d.]+)\./i);
+  if(!m)return null;
+  const [od,tp,net,gst,gross]=m.slice(1).map(Number);
+  const valid=(v:number)=>Number.isFinite(v)&&v>=0&&v<=1_000_000_000
+    &&Math.abs(v*100-Math.round(v*100))<.00001;
+  const cents=(v:number)=>Math.round(v*100);
+  const get=(key:string)=>input.fields.filter(f=>f.key===key).map(f=>f.value.trim());
+  if(![od,tp,net,gst,gross].every(valid)
+    ||cents(od+tp)!==cents(net)||cents(net+gst)!==cents(gross)
+    ||get("policy_number").length!==1
+    ||get("policy_number")[0]!==input.policyNumber
+    ||get("od_premium").length!==1 ||cents(Number(get("od_premium")[0]))!==cents(od)
+    ||get("tp_premium").length!==1 ||cents(Number(get("tp_premium")[0]))!==cents(tp))
+    return null;
+  return {od,tp,net,gst,gross};
+}
+
 /** Verified CPA amount and saved owner-driver opt-in must agree before booking.
  * A positive numeric field alone cannot turn an operator's saved "No" into Yes.
  * In particular, canonical booking zeros out CPA whenever opted is false. */

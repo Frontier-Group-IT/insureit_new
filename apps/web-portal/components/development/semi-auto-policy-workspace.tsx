@@ -57,6 +57,32 @@ const aiIssueTitles: Record<string,string> = {
   booking_review_required:"Bulk booking requires manual review",
   stale_document:"Source PDF changed",
 };
+/** Saved OCR offers diagnostics only; source PDF and canonical checks remain authoritative. */
+function commercialBookingIssue(row:SemiAutoIntakeRow,code:string):
+  {title:string;detail:string}|null {
+  const values=new Map((row.ocr_fields??[]).map(f=>[f.key,f.value?.trim()??""]));
+  const insurer=values.get("insurer_name")??"";
+  if(/New India Assurance/i.test(insurer) && ["booking_review_required","missing_field"].includes(code)){
+    const rawRto=values.get("vehicle_rto_name")??"";
+    const missingRto=!rawRto||/^FASTag ID:$/i.test(rawRto);
+    const goods=/goods carrying|GCV/i.test(values.get("vehicle_class")??"");
+    const cpa=Number(values.get("cpa_premium")??"0");
+    const missingCpa=goods&&(!Number.isFinite(cpa)||cpa<=0);
+    const title=missingRto||missingCpa?"NIA PDF verified · booking fields incomplete":"NIA policy · canonical booking review";
+    const issues=[
+      ...(missingRto?["The policy does not print a usable registration authority. FASTag ID is a separate label, not an RTO city."]:[]),
+      ...(missingCpa?["This goods-carrier policy has no independently verified positive owner-driver CPA, which the current canonical GCV booking rule requires. Do not invent a CPA amount."]:[]),
+    ];
+    return {title,detail:issues.length?issues.join(" "):"NIA extraction passed, but commercial-policy booking remains review-controlled. Check identity, premium components, tax and canonical preflight."};
+  }
+  if(/Go Digit General Insurance/i.test(insurer) && code==="missing_field"
+      && !values.get("vehicle_manufacturing_year")){
+    return {title:"Go Digit · manufacturing year unavailable",
+      detail:"The PDF's Year of Regn. / Manufacturing field contains separate values. A printed registration year cannot be copied into manufacturing year when the latter is '--'. Verify the manufacturing year from a separate trustworthy RC/VAHAN source."};
+  }
+  return null;
+}
+
 const aiStateLabel: Record<string,string> = {
   pending:"Queued",processing:"Reading PDF",exception:"Needs action",
   verified:"Extracted · booking preflight pending",unsupported:"Not trained",
@@ -72,6 +98,9 @@ function parserDiagnostic(code:string|null|undefined): {title:string;detail:stri
     return {title:"PDF verification failed",detail:"The commercial reader ran but rejected these checks. Inspect the matching fields and source layout in n8n. No policy was booked.",checks};
   }
   const descriptions:Record<string,string>={
+    nia_missing_rto_authority_and_cpa:"NIA PDF extraction succeeded, but the registration-authority field is unprinted and the canonical GCV policy requires positive verified owner-driver CPA. No RTO city or CPA value is invented; booking remains blocked.",
+    nia_missing_registration_authority:"NIA PDF does not print a usable registration authority. The old FASTag ID parser match has been removed. Verify the actual RTO city/code from trusted registration evidence.",
+    nia_missing_verified_gcv_cpa:"NIA GCV policy has no independently verified owner-driver CPA. The current canonical rule requires a positive CPA amount; do not silently book without it.",
     go_digit_missing_verified_manufacturing_year:"Go Digit PDF extraction passed, but the printed Manufacturing Year and Month is blank. The separate registration year cannot be used. Verify manufacturing year using RC/VAHAN before automatic policy booking.",
     go_digit_missing_verified_onboarding_fields:"Go Digit PDF is verified but does not independently provide all mandatory canonical policy fields. Review the listed missing vehicle or policy fields before booking.",
     n8n_review_required:"The n8n output failed the expected parser contract. This legacy code does not identify which check failed; run a fresh reparse to obtain the new diagnostics.",
@@ -1044,7 +1073,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
             <div className="mt-3 max-h-[300px] space-y-2 overflow-y-auto">
               {(exceptionRow.ai_exceptions??[]).map(code=>(
                 <div key={code} className="rounded-lg border border-[#e6dfd0] bg-[#fffcf4] p-3">
-                  <p className="text-[11px] font-bold text-[#77511f]">{aiIssueTitles[code]??"Requires review"}</p>
+                  <p className="text-[11px] font-bold text-[#77511f]">{commercialBookingIssue(exceptionRow,code)?.title??aiIssueTitles[code]??"Requires review"}</p>
                   <p className="mt-1 text-[10px] leading-4 text-[#6c5d42]">
                     {code.startsWith("customer_")
                       ? "Review the original insured name and all candidate customers. Link an exact verified customer, or create a separate customer through canonical onboarding. Never reuse a customer solely because the mobile number matches."
@@ -1052,7 +1081,8 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
                         ? "Inspect the existing policy or earlier Intake. A duplicate must never be converted again."
                         : code==="preflight_pending"
                           ? "The PDF has been read, but customer, date, ownership, premiums and policy history have not passed the canonical booking preflight."
-                          : "Review this exception in the Intake or editable Policy Onboarding workflow before attempting conversion."}
+                          : commercialBookingIssue(exceptionRow,code)?.detail
+                          ??"Review this exception in the Intake or editable Policy Onboarding workflow before attempting conversion."}
                   </p>
                 </div>
               ))}
