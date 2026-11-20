@@ -651,15 +651,18 @@ export default function PoliciesScreen() {
                   <Text style={styles.sortChoiceText}>All Sources</Text></Pressable>
                 {filterOptions.loading?<ActivityIndicator color="#4030AF"/>:filterOptions.error?
                   <Text style={styles.sortError}>Sources unavailable. Check network and retry.</Text>:
-                  (filterOptions.data?.sources??[]).filter((option:PartnerPolicyFilterOption)=>
-                    option.label.toLowerCase().includes(sourceSearch.trim().toLowerCase())||
-                    option.value.toLowerCase().includes(sourceSearch.trim().toLowerCase())
-                  ).map((option:PartnerPolicyFilterOption)=><Pressable key={option.value} accessibilityRole="button"
-                    accessibilityLabel={option.label} accessibilityState={{selected:draftSource===option.value}}
-                    onPress={()=>setDraftSource(option.value)}
-                    style={[styles.advancedOption,draftSource===option.value&&styles.sortChoiceSelected]}>
-                    <Ionicons name={draftSource===option.value?'checkbox':'square-outline'} size={20} color="#4230B3"/>
-                    <Text style={styles.sortChoiceText} numberOfLines={2}>{option.label}</Text></Pressable>)}
+                  <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator
+                    style={styles.advancedOptionsScroll} contentContainerStyle={styles.advancedOptionsContent}>
+                    {(filterOptions.data?.sources??[]).filter((option:PartnerPolicyFilterOption)=>
+                      option.label.toLowerCase().includes(sourceSearch.trim().toLowerCase())||
+                      option.value.toLowerCase().includes(sourceSearch.trim().toLowerCase())
+                    ).map((option:PartnerPolicyFilterOption)=><Pressable key={option.value} accessibilityRole="button"
+                      accessibilityLabel={option.label} accessibilityState={{selected:draftSource===option.value}}
+                      onPress={()=>setDraftSource(option.value)}
+                      style={[styles.advancedOption,draftSource===option.value&&styles.sortChoiceSelected]}>
+                      <Ionicons name={draftSource===option.value?'checkbox':'square-outline'} size={20} color="#4230B3"/>
+                      <Text style={styles.sortChoiceText} numberOfLines={2}>{option.label}</Text></Pressable>)}
+                  </ScrollView>}
               </>:null}
               {filterTab==='rm'?<>
                 <View style={styles.advancedSearch}><Feather name="search" size={17} color="#8190A7"/>
@@ -672,12 +675,15 @@ export default function PoliciesScreen() {
                   <Text style={styles.sortChoiceText}>All RMs</Text></Pressable>
                 {filterOptions.loading?<ActivityIndicator color="#4030AF"/>:filterOptions.error?
                   <Text style={styles.sortError}>RMs unavailable. Check network and retry.</Text>:
-                  (filterOptions.data?.rms??[]).filter((name:string)=>name.toLowerCase().includes(rmSearch.trim().toLowerCase()))
-                  .map((name:string)=><Pressable key={name} accessibilityRole="button" accessibilityLabel={name}
-                    accessibilityState={{selected:draftRm===name}} onPress={()=>setDraftRm(name)}
-                    style={[styles.advancedOption,draftRm===name&&styles.sortChoiceSelected]}>
-                    <Ionicons name={draftRm===name?'checkbox':'square-outline'} size={20} color="#4230B3"/>
-                    <Text style={styles.sortChoiceText} numberOfLines={2}>{name}</Text></Pressable>)}
+                  <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator
+                    style={styles.advancedOptionsScroll} contentContainerStyle={styles.advancedOptionsContent}>
+                    {(filterOptions.data?.rms??[]).filter((name:string)=>name.toLowerCase().includes(rmSearch.trim().toLowerCase()))
+                    .map((name:string)=><Pressable key={name} accessibilityRole="button" accessibilityLabel={name}
+                      accessibilityState={{selected:draftRm===name}} onPress={()=>setDraftRm(name)}
+                      style={[styles.advancedOption,draftRm===name&&styles.sortChoiceSelected]}>
+                      <Ionicons name={draftRm===name?'checkbox':'square-outline'} size={20} color="#4230B3"/>
+                      <Text style={styles.sortChoiceText} numberOfLines={2}>{name}</Text></Pressable>)}
+                  </ScrollView>}
               </>:null}
               {filterTab==='date'?<>
                 <Text style={styles.sortSectionLabel}>Date Range</Text>
@@ -969,7 +975,10 @@ const styles = StyleSheet.create({
   advancedSearch:{minHeight:41,flexDirection:'row',alignItems:'center',gap:8,
     borderWidth:1,borderColor:'#D9DEEE',borderRadius:12,paddingHorizontal:12,marginTop:9,marginBottom:6},
   advancedSearchInput:{flex:1,minHeight:40,color:'#172552',fontSize:12},
-  advancedOption:{minHeight:39,flexDirection:'row',alignItems:'center',gap:10,paddingHorizontal:10,borderRadius:9},
+  advancedOption:{height:46,flexDirection:'row',alignItems:'center',gap:10,paddingHorizontal:10,borderRadius:9},
+  // Four records (4 x 46px) remain visible; additional Source/RM entries scroll independently.
+  advancedOptionsScroll:{maxHeight:184,flexGrow:0},
+  advancedOptionsContent:{flexGrow:0},
   advancedPresets:{flexDirection:'row',flexWrap:'wrap',gap:7,marginTop:10},
   advancedPreset:{minHeight:34,paddingHorizontal:11,justifyContent:'center',borderRadius:9,backgroundColor:'#F1EFF9'},
   advancedPresetText:{color:'#27345B',fontSize:11,fontWeight:'700'},

@@ -28,6 +28,22 @@ assert.match(screen,/maxHeight:Math\.max\(160,windowHeight-safeAreaInsets\.top-s
 
 assert.match(screen,/Search source\.\.\./);
 assert.match(screen,/Search RM\.\.\./);
+
+assert.equal((screen.match(/style=\{styles\.advancedOptionsScroll\}/g)??[]).length,2,
+  'Source and RM each have a separately bounded scroll list');
+assert.equal((screen.match(/<ScrollView nestedScrollEnabled keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator/g)??[]).length,2,
+  'Both filter lists remain touch-scrollable inside the bottom sheet');
+assert.match(screen,/advancedOptionsScroll:\{maxHeight:184,flexGrow:0\}/,
+  'Each Source/RM list shows at most four 46px records');
+assert.match(screen,/advancedOption:\{height:46,/,
+  'Selection rows use a predictable height for the four-record viewport');
+assert.match(screen,/<Text style=\{styles\.sortChoiceText\}>All Sources<\/Text><\/Pressable>[\s\S]*?<ScrollView nestedScrollEnabled/,
+  'All Sources stays outside the scrollable source list');
+assert.match(screen,/<Text style=\{styles\.sortChoiceText\}>All RMs<\/Text><\/Pressable>[\s\S]*?<ScrollView nestedScrollEnabled/,
+  'All RMs stays outside the scrollable RM list');
+assert.match(screen,/<\/ScrollView>\s*<View style=\{styles\.advancedFooter\}>/,
+  'Reset and Apply remain outside the sheet content scroll area');
+
 assert.match(screen,/PartnerDatePicker directSelect label="From"/);
 assert.match(screen,/PartnerDatePicker directSelect label="To"/);
 // Keep the Policies search Filter button identical to Claims, but enabled and wired to the existing sheet.
