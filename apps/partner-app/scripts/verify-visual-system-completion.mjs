@@ -191,10 +191,10 @@ requireText(accountShellHeader, "backgroundColor: '#0A234A'", 'Account header mu
 requireText(accountShellHeader, 'accessibilityRole="header"', 'Account page title must be accessible.');
 const lifeHealthCaseDetails = read('app/life-health-cases/[id].tsx');
 for (const [fragment, purpose] of [
-  ["const [expandedCaseTab,setExpandedCaseTab]=useState<'activity'|'remarks'>('activity');", 'Activity Status must be selected by default'],
+  ["const [expandedCaseTab,setExpandedCaseTab]=useState<'activity'|'remarks'|null>(null);", 'Both existing tabs must start collapsed'],
   ['<View style={styles.activityFilterTabs}>', 'Update existing tabs above case actions; do not add new tabs'],
   ['accessibilityState={{selected:expandedCaseTab===tab}}', 'Existing tab must expose selected accessibility state'],
-  ['onPress={()=>setExpandedCaseTab(tab)}', 'Tapping active tab must not collapse the existing history'],
+  ['onPress={()=>setExpandedCaseTab(previous=>previous===tab?null:tab)}', 'Tapping the same tab must collapse its section'],
   ['styles.activityFilterTabActive', 'Selected tab must use underline styling'],
   ["activityFilterTabActive:{borderBottomColor:'#2582F8'}", 'Selected underline must be bright blue'],
   ["activityFilterTabs:{flexDirection:'row',alignItems:'stretch',backgroundColor:'#FFFFFF',borderBottomWidth:1,borderBottomColor:'#E7EAF0'}", 'Tabs must be white with grey divider'],
@@ -202,7 +202,12 @@ for (const [fragment, purpose] of [
   ["activityFilterText:{fontSize:11,fontWeight:'600',color:'#52627A'", 'Inactive text must be muted'],
   ["{record.status_group==='pending'?<View style={styles.caseActions}>", 'Reject and save actions must remain below existing tabs'],
 ]) requireText(lifeHealthCaseDetails, fragment, purpose);
-if (lifeHealthCaseDetails.includes('setExpandedCaseTab(previous=>previous===tab?null:tab)')) throw new Error('Existing case filter must not collapse when selected again.');
+requireText(lifeHealthCaseDetails, 'setExpandedCaseTab(null);', 'Focus must reset both case history tabs to collapsed.');
+if (lifeHealthCaseDetails.includes('onPress={()=>setExpandedCaseTab(tab)}')) throw new Error('Existing case filter must toggle closed when selected again.');
+if (lifeHealthCaseDetails.includes('<Text style={styles.heroCaseNumber}')) throw new Error('Internal LH identifier must be hidden from the case header.');
+requireText(lifeHealthCaseDetails, '<View style={styles.heroTitleStatus}>', 'Pending status must sit beside Life / Health Case title.');
+requireText(lifeHealthCaseDetails, 'heroEditPencil:{width:44,height:44', 'Edit button must be prominent and have a full touch target.');
+requireText(lifeHealthCaseDetails, '<Text style={styles.heroSubtitle} selectable>{record.customer_name} · {record.proposal_number}</Text>', 'Proposal number must remain complete and appear once in case header.');
 if (lifeHealthCaseDetails.includes("activityFilterCount") || lifeHealthCaseDetails.includes('tabCountBadge')) throw new Error('Activity / Remarks tabs must not display badges.');
 const deletionScreen = read('app/account-deletion.tsx');
 const deletionBrandIndex = deletionScreen.indexOf('<View style={styles.heroBrand} accessibilityLabel="insureit Partner">');
