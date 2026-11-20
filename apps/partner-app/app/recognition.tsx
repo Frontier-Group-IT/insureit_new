@@ -22,7 +22,7 @@ const RING_SEGMENTS = Array.from({ length: RING_COUNT }, (_, index) => {
   return {
     left: RING_SIZE / 2 + RING_RADIUS * Math.sin(radians) - 3.7,
     top: RING_SIZE / 2 - RING_RADIUS * Math.cos(radians) - 2.1,
-    transform: [{ rotate: `${angle}deg` }],
+    transform: [{ rotate: `${angle}deg` as `${number}deg` }],
   };
 });
 
