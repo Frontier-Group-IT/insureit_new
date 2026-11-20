@@ -86,8 +86,8 @@ assert.ok(app.includes("if(!record||record.status_group!=='pending'||remarkSavin
 assert.ok(app.includes("remarkHeaderActionDisabled") && app.includes("remarkHeaderTextDisabled"), 'Rejected Add Remark appears visibly disabled');
 assert.ok(app.includes("record.status_group==='rejected'?'lock-closed-outline':'add-circle-outline'"), 'Rejected Add Remark shows lock status');
 assert.ok(app.includes('record.remarks?.trim()'), 'Remarks history remains visible in the record');
-assert.ok(app.includes("const [expandedCaseTab,setExpandedCaseTab]=useState<'activity'|'remarks'|null>(null)"), 'Both tabs start collapsed');
-assert.ok(app.includes('setExpandedCaseTab(previous=>previous===tab?null:tab)'), 'Tapping active tab collapses and switching opens only one');
+assert.ok(app.includes("const [expandedCaseTab,setExpandedCaseTab]=useState<'activity'|'remarks'>('activity')"), 'Activity Status must be selected by default');
+assert.ok(app.includes('onPress={()=>setExpandedCaseTab(tab)}'), 'Tapping a selected tab must not collapse its history');
 assert.ok(app.includes("expandedCaseTab==='remarks'"), 'Remarks history appears only when remarks tab expands');
 assert.ok(app.includes("expandedCaseTab==='activity'"), 'Activity history appears only when activity tab expands');
 assert.equal((app.match(/style=\{styles\.activityRow\}/g)||[]).length,3,'Remarks and both Activity tabs use aligned rows');
@@ -95,7 +95,7 @@ assert.equal((app.match(/style=\{styles\.activityTimestamp\}/g)||[]).length,3,'R
 assert.ok(app.includes("activityRow:{flexDirection:'row',alignItems:'flex-start',justifyContent:'space-between',gap:8}"),'Case activity uses a horizontal status and timestamp row');
 assert.ok(app.includes("activityDetails:{flex:1,minWidth:0,gap:4}") && app.includes("textAlign:'right',width:130"),'Activity actor and title remain on the left while date/time stays readable on the right');
 
-assert.ok(app.includes("setExpandedCaseTab(null)"), 'Tab state resets on screen focus');
+assert.ok(app.includes("setExpandedCaseTab('activity')"), 'Activity Status is reselected on screen focus');
 assert.ok(app.includes("KeyboardAvoidingView") && app.includes("Platform.OS==='ios'?'padding':'height'"), 'Remark modal avoids iOS and Android keyboards');
 assert.ok(app.includes('keyboardShouldPersistTaps="handled"'), 'Remark modal scrolling supports keyboard interaction');
 assert.ok(app.includes('accessibilityLabel="Close remark popup"'), 'Remark popup has an accessible close control');
