@@ -208,7 +208,7 @@ export function PolicyOcrImportPanel({ variant = "header", context, onApply, onC
       // per-field confidence is null by design; select eligible verified
       // fields for reviewer confirmation, never fabricate a confidence score.
       const n8nVerified=result.extractionMethod==="native_pdf_text"
-        && ["icici_3005_n8n_native_pdf","icici_3005_od_n8n_native_pdf","tata_aig_private_car_saod_n8n_native_pdf","tata_aig_private_car_package_n8n_native_pdf","tata_aig_private_car_bundled_n8n_native_pdf","tata_aig_two_wheeler_bundled_n8n_native_pdf"].includes(result.parserId);
+        && ["icici_3005_n8n_native_pdf","icici_3005_od_n8n_native_pdf","tata_aig_private_car_saod_n8n_native_pdf","tata_aig_private_car_package_n8n_native_pdf","tata_aig_private_car_bundled_n8n_native_pdf","tata_aig_two_wheeler_bundled_n8n_native_pdf","new_india_cv_native_pdf","iffco_tokio_cv_native_pdf","go_digit_cv_native_pdf"].includes(result.parserId);
       const safeKeys = result.fields
         .filter((field) => APPLY_FIELDS.has(field.key)
           && ((field.confidence ?? 0) >= .9 || n8nVerified))
