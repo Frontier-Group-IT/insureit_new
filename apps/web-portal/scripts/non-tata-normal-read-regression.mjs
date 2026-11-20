@@ -43,6 +43,31 @@ assert.ok(bridge.includes(String.raw`head.replace(/\s+/g, " ")`),
   "Commercial recognition must normalize native-PDF line breaks");
 assert.ok(!bridge.includes(String.raw`head.replace(/\\s+/g, " ")`),
   "A double-escaped literal regex silently misses whitespace");
+// Exercise the actual classifier body, not a hand-copied equivalent, with
+// the New India commercial layout and the two already-supported insurers.
+const classifierSource=bridge.match(/function insurerForText\(head: string\): Insurer \| null \{[\s\S]*?\n\}/)?.[0];
+assert.ok(classifierSource,"Insurer classifier must be present");
+const classifier=new Function(
+ classifierSource.replace("head: string", "head").replace(": Insurer | null", "")
+  .replace("const matches: Insurer[]", "const matches")
+ +"\nreturn insurerForText;"
+)();
+const newIndiaHeader="THE NEW INDIA ASSURANCE CO. LTD.\n"
+ +"POLICY SCHEDULE CUM CERTIFICATE OF INSURANCE\n"
+ +"Commercial Vehicle Package Policy Enhanced Covers";
+assert.equal(classifier(newIndiaHeader),"new_india_cv_native_pdf",
+ "New India Enhanced Covers must route to the trained commercial validator, not ICICI");
+assert.equal(classifier(newIndiaHeader.replace("ASSURANCE CO. LTD.","ASSURANCE CO LTD")),
+ null,"Do not widen matching to an unverified issuer heading");
+assert.equal(classifier("IFFCO TOKIO GENERAL INSURANCE\nCOMMERCIAL VEHICLE CERTIFICATE"),
+ "iffco_tokio_cv_native_pdf","IFFCO routing must stay intact");
+assert.equal(classifier("Go Digit General Insurance\nDigit Commercial Vehicle Insurance"),
+ "go_digit_cv_native_pdf","Go Digit routing must stay intact");
+assert.equal(classifier("ICICI LOMBARD GENERAL INSURANCE\nPackage Policy"),
+ null,"ICICI must remain outside the non-Tata classifier");
+assert.equal(classifier("TATA AIG GENERAL INSURANCE\nCommercial Vehicle Package Policy"),
+ null,"Tata must remain outside the non-Tata classifier");
+
 assert.ok(bridge.includes("pages.slice(0, 3)"),
   "Allow the first three pages to identify the printed commercial layout");
 
