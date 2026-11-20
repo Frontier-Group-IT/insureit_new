@@ -886,7 +886,7 @@ const periodSql = fs.readFileSync(path.join(root,'../../supabase/migrations/2026
 for(const phrase of ["setSortSheetOpen(true)","Sort by","MTD","All","sheetStatuses.map","Apply Filter","setPeriod(draftPeriod)","setLifecycle(draftLifecycle)","periodCounts.data?.[draftPeriod]?.[option.value]","styles.sortFloating"]) {
   requireText(policies,phrase,'Policy period/status bottom sheet is missing '+phrase);
 }
-for(const phrase of ["period,","policies:list:${period}:${lifecycle}","[period, lifecycle, debouncedSearch, businessLine]","setVisibleLimit(PAGE_SIZE)"]) {
+for(const phrase of ["period,","policies:list:${period}:${lifecycle}","[period, lifecycle, debouncedSearch, businessLine, source, rm, fromDate, toDate]","setVisibleLimit(PAGE_SIZE)"]) {
   requireText(policies,phrase,'Period filter must invalidate fetched pages and reset pagination: '+phrase);
 }
 for(const phrase of ["partner_app_list_policies_by_period","partner_app_policy_period_counts","p_period: period","businessLine === 'all'"]) {
