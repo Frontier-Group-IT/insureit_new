@@ -956,8 +956,8 @@ for (const phrase of [
   "styles.advancedTabs","key:'period'","key:'source'","key:'rm'","key:'date'",
   "setFilterTab('period')","sheetStatuses.map","styles.sortChoiceCountBadge",
   "styles.advancedFooter","styles.advancedReset","styles.advancedApply",
-  "Search source...","Search RM...","PartnerDatePicker label=\"From\"",
-  "PartnerDatePicker label=\"To\"","onPress={applySortSheet}",
+  "Search source...","Search RM...","PartnerDatePicker directSelect label=\"From\"",
+  "PartnerDatePicker directSelect label=\"To\"","onPress={applySortSheet}",
   "maxHeight:windowHeight-36","sortPeriodSelected:{backgroundColor:'#4030AF'",
   "sortPeriodOption:{flex:1,minHeight:43","sortChoice:{flexDirection:'row',alignItems:'center',gap:11,minHeight:46",
 ]) requireText(policies,phrase,'The approved four-tab Sort by layout must remain compact: '+phrase);
