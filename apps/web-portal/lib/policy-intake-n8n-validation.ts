@@ -324,7 +324,8 @@ export function validateTataAigN8nResponse(
     || Object.keys(checks).some(key => !expectedChecks.has(key))
     || [...expectedChecks].some(key => checks[key] !== true))
     fail("n8n_financial_validation_failed");
-  if (!Array.isArray(value.fields) || value.fields.length < REQUIRED_FIELDS.length
+  const saod = product === "Stand-Alone Own Damage";
+  if (!Array.isArray(value.fields) || value.fields.length < REQUIRED_FIELDS.length - (saod ? 2 : 0)
     || value.fields.length > FIELD_KEYS.size) fail("n8n_fields_invalid");
 
   const seen = new Set<string>();
@@ -344,7 +345,6 @@ export function validateTataAigN8nResponse(
   });
   // SAOD provides only new own-damage coverage. The policy may reference
   // a previous insurer's TP period, but that is not a new TP cover here.
-  const saod = product === "Stand-Alone Own Damage";
   if (REQUIRED_FIELDS.some(key => !(saod && (key === "third_party_start_date" || key === "third_party_end_date")) && !seen.has(key))
     || seen.has("policy_issuance_date"))
     fail("n8n_required_field_missing");
