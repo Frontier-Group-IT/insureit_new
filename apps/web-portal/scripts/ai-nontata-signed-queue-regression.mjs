@@ -81,4 +81,41 @@ const digitFields=[{key:"policy_product",label:"Policy product",value:"Digit Com
 assert.equal(enrichVerifiedN8nOnboardingFields(digitFields,"go_digit_cv_native_pdf").find(f=>f.key==="policy_product")?.value,"Package");
 assert.equal(enrichVerifiedN8nOnboardingFields(digitFields,"iffco_tokio_cv_native_pdf").find(f=>f.key==="policy_product")?.value,"Digit Commercial Vehicle Insurance");
 assert.equal(enrichVerifiedN8nOnboardingFields(digitFields).find(f=>f.key==="policy_product")?.value,"Digit Commercial Vehicle Insurance");
+// NIA's printed mixed-rate GST cannot be derived from the generic 18%/5%
+// estimator, so the onboarding view uses the saved source only after
+// verifying the same current PDF queue, policy ID and OD+TP reconciliation.
+const {readVerifiedNiaPrintedPremiumReference}=await import("../lib/policy-n8n-onboarding-premium.ts");
+const niaNotes="Policy Intake x — independently validated commercial-motor PDF (new_india_cv_native_pdf). REVIEW ONLY; no policy or customer was booked. Printed OD 40622, TP including liabilities 44342, Net 84964, GST 9542, Gross 94506. Owner-driver PA and paid-driver liabilities are retained inside printed TP.";
+const niaBase={
+  parserId:"new_india_cv_native_pdf",checksPassed:16,currentPdfVerified:true,
+  remarks:niaNotes,policyNumber:"31280031260300002807",
+  fields:[{key:"policy_number",value:"31280031260300002807"},
+    {key:"od_premium",value:"40622"},{key:"tp_premium",value:"44342"}],
+};
+const pdfTotals={od:40622,tp:44342,net:84964,gst:9542,gross:94506};
+assert.deepEqual(readVerifiedNiaPrintedPremiumReference(niaBase),pdfTotals);
+assert.equal(readVerifiedNiaPrintedPremiumReference({...niaBase,parserId:"go_digit_cv_native_pdf"}),null);
+assert.equal(readVerifiedNiaPrintedPremiumReference({...niaBase,checksPassed:15}),null);
+assert.equal(readVerifiedNiaPrintedPremiumReference({...niaBase,currentPdfVerified:false}),null);
+assert.equal(readVerifiedNiaPrintedPremiumReference({...niaBase,policyNumber:"OTHER"}),null);
+assert.equal(readVerifiedNiaPrintedPremiumReference({...niaBase,
+  fields:niaBase.fields.map(f=>f.key==="tp_premium"?{...f,value:"44343"}:f)}),null);
+assert.equal(readVerifiedNiaPrintedPremiumReference({...niaBase,remarks:niaNotes.replace("GST 9542","GST 9530")}),null);
+const niaHandoff=file("../app/policy-intakes/handoff-actions.ts");
+const niaPage=file("../app/policies/new/page.tsx");
+const unified=file("../components/policy-unified-form.tsx");
+const shell=file("../components/policy-commercial-shell.tsx");
+assert.ok(niaHandoff.includes('niaVerified')&&niaHandoff.includes('^FASTag ID:
+),
+  "NIA stale drafts must not show FASTag ID as the registration authority");
+assert.ok(niaHandoff.includes('nia_missing_rto_authority_and_cpa'));
+assert.ok(niaPage.includes('readVerifiedNiaPrintedPremiumReference(')
+  && niaPage.includes('queue.data.document_id===document.data.id'));
+assert.ok(unified.includes('printedPremiumReference!.gst')
+  && unified.includes('Math.round(od*100)===Math.round(printedPremiumReference.od*100)')
+  && unified.includes('form.cpaOpted==="No"'));
+assert.ok(shell.includes('printedPremiumReference={props.printedPremiumReference}'));
+assert.ok(component.includes('NIA PDF verified · booking fields incomplete')
+  && component.includes('Go Digit · manufacturing year unavailable'));
+
 console.log("PASS: signed-source non-Tata AI queue routing, insurer-scoped verified name/product draft, and ICICI/Tata/booking guards.");
