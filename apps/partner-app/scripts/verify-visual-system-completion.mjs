@@ -215,7 +215,7 @@ for (const fragment of [
   'styles.artworkTile', 'styles.achievementArtwork', 'styles.verticalRule',
   '{item.title}', 'A great start!', 'ACHIEVED', 'name="checkmark-circle"',
   'styles.dateRow', 'name="calendar-outline"',
-  'NEXT MILESTONE', '{next.title}', "Keep going, you're on track!",
+  'NEXT MILESTONE', '{next.title}', 'Keep going,', 'on track!',
   'RING_SEGMENTS.map((segment, index)', 'styles.percentCircle',
   'styles.customersRow', 'View your full journey',
   'styles.journeyTint', 'styles.journeyArrow',
