@@ -44,7 +44,7 @@ for (const style of ['filterButton', 'filterText']) {
     const start = src.indexOf('  '+style+': {');
     assert.ok(start >= 0, 'Missing '+style);
     const rest = src.slice(start);
-    return style === 'filterText' ? rest.split('\\n')[0] : rest.slice(0, rest.indexOf('\\n  },') + 5);
+    return style === 'filterText' ? rest.split('\n')[0] : rest.slice(0, rest.indexOf('\n  },') + 5);
   };
   assert.equal(grab(screen), grab(claims), 'Policies '+style+' must match the exact Claims style');
 }
