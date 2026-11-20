@@ -12,8 +12,25 @@ export type NonTataCommercialRead = {
   checksPassed: number;
   premium: { od: number; tp: number; net: number; gst: number; gross: number };
 };
-const ORIGIN = "https://n8n.nishant.uk";
-const ENDPOINT = "/webhook/insureit-nontata-motor-pdf-candidate-v1";
+// Use the SAME approved self-hosted webhook as the production ICICI/Tata bridge.
+// Commercial policy verification stays isolated by the insurer classifier and its
+// strict response contract; no changes to ICICI or Tata parser logic are needed.
+const PRIMARY_WEBHOOK_ORIGIN = "https://n8n.nishant.uk";
+const PRIMARY_WEBHOOK_PATH = "/webhook/insureit-policy-intake-icici-v1";
+function sharedN8nWebhookUrl(): string {
+  if (process.env.INSUREIT_N8N_OCR_ENDPOINT_MODE !== "self_hosted")
+    throw new Error("n8n_self_hosted_required");
+  const configured = process.env.INSUREIT_N8N_OCR_WEBHOOK_URL;
+  if (!configured) throw new Error("n8n_nontata_not_configured");
+  let parsed: URL;
+  try { parsed = new URL(configured); }
+  catch { throw new Error("n8n_nontata_webhook_url_invalid"); }
+  if (parsed.protocol !== "https:" || parsed.origin !== PRIMARY_WEBHOOK_ORIGIN
+      || parsed.pathname !== PRIMARY_WEBHOOK_PATH || parsed.search || parsed.hash
+      || parsed.username || parsed.password)
+    throw new Error("n8n_nontata_webhook_url_invalid");
+  return parsed.toString();
+}
 const MAX_BYTES = 4 * 1024 * 1024; // Vercel request-size limit, independent of proxy's 16 MB limit.
 const PDF = "%PDF-";
 const REQUIRED_BASE = [
@@ -181,7 +198,7 @@ export async function tryReadNonTataCommercialPolicy(
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 60_000);
   try {
-    const response = await fetch(ORIGIN + ENDPOINT, {
+    const response = await fetch(sharedN8nWebhookUrl(), {
       method: "POST", headers: { "x-insureit-policy-intake-secret": secret },
       body, signal: controller.signal, cache: "no-store", redirect: "error",
     });
