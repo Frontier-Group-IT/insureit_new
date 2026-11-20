@@ -833,7 +833,7 @@ for (const impactMarker of [
   'PartnerAssets.actions.quickClaims',
   'PartnerAssets.actions.businessPerformance',
   'PartnerAssets.actions.impactCustomerAdded',
-  'borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: \'#E3E9F1\'',
+  "borderBottomWidth: 1, borderBottomColor: '#D5DDE9'",
   'styles.monthDivider',
   'styles.monthStatDivider',
   'styles.cardDetails',
