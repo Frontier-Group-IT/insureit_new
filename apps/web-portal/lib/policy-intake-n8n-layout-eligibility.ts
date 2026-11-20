@@ -31,7 +31,7 @@ export async function isTrainedLocalN8nMotorPdf(blob: Blob, mimeType: string): P
     // hint, not authorization to book or accept fields.
     const head = beginning.slice(0, 2400);
     const commercial =
-      (/THE NEW INDIA ASSURANCE CO\\. LTD\\./i.test(head)
+      (/THE NEW INDIA ASSURANCE CO\. LTD\./i.test(head)
         && /Commercial Vehicle Package Policy/i.test(beginning.slice(0, 5000)))
       || (/IFFCO.?TOKIO GENERAL INSURANCE/i.test(head)
         && /COMMERCIAL VEHICLE CERTIFICATE/i.test(beginning.slice(0, 5000)))
