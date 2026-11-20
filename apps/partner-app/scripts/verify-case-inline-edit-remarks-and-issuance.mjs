@@ -86,8 +86,8 @@ assert.ok(app.includes("if(!record||record.status_group!=='pending'||remarkSavin
 assert.ok(app.includes("remarkHeaderActionDisabled") && app.includes("remarkHeaderTextDisabled"), 'Rejected Add Remark appears visibly disabled');
 assert.ok(app.includes("record.status_group==='rejected'?'lock-closed-outline':'add-circle-outline'"), 'Rejected Add Remark shows lock status');
 assert.ok(app.includes('record.remarks?.trim()'), 'Remarks history remains visible in the record');
-assert.ok(app.includes("const [expandedCaseTab,setExpandedCaseTab]=useState<'activity'|'remarks'>('activity')"), 'Activity Status must be selected by default');
-assert.ok(app.includes('onPress={()=>setExpandedCaseTab(tab)}'), 'Tapping a selected tab must not collapse its history');
+assert.ok(app.includes("const [expandedCaseTab,setExpandedCaseTab]=useState<'activity'|'remarks'|null>(null)"), 'Activity Status and Remarks start collapsed');
+assert.ok(app.includes('onPress={()=>setExpandedCaseTab(previous=>previous===tab?null:tab)}'), 'Tapping a tab toggles its content without opening both tabs');
 assert.ok(app.includes("expandedCaseTab==='remarks'"), 'Remarks history appears only when remarks tab expands');
 assert.ok(app.includes("expandedCaseTab==='activity'"), 'Activity history appears only when activity tab expands');
 assert.equal((app.match(/style=\{styles\.activityRow\}/g)||[]).length,3,'Remarks and both Activity tabs use aligned rows');
@@ -95,7 +95,7 @@ assert.equal((app.match(/style=\{styles\.activityTimestamp\}/g)||[]).length,3,'R
 assert.ok(app.includes("activityRow:{flexDirection:'row',alignItems:'flex-start',justifyContent:'space-between',gap:8}"),'Case activity uses a horizontal status and timestamp row');
 assert.ok(app.includes("activityDetails:{flex:1,minWidth:0,gap:4}") && app.includes("textAlign:'right',width:130"),'Activity actor and title remain on the left while date/time stays readable on the right');
 
-assert.ok(app.includes("setExpandedCaseTab('activity')"), 'Activity Status is reselected on screen focus');
+assert.ok(app.includes('setExpandedCaseTab(null)'), 'Both tabs reset collapsed on screen focus');
 assert.ok(app.includes("KeyboardAvoidingView") && app.includes("Platform.OS==='ios'?'padding':'height'"), 'Remark modal avoids iOS and Android keyboards');
 assert.ok(app.includes('keyboardShouldPersistTaps="handled"'), 'Remark modal scrolling supports keyboard interaction');
 assert.ok(app.includes('accessibilityLabel="Close remark popup"'), 'Remark popup has an accessible close control');
@@ -173,9 +173,11 @@ assert.ok(app.includes("{record.status_group==='pending'&&editMode?<View style={
 assert.ok(app.includes("{record.status_group==='pending'&&editMode?<>"), 'Replace and delete are hidden while locked');
 assert.ok(app.includes("if(!record||!editMode||documentBusy||record.status_group!=='pending')return;"), 'Document picker guards edit mode');
 assert.ok(app.includes("if(!record||!editMode||!deleteTarget||documentBusy"), 'Delete guards edit mode');
-assert.ok(app.includes("heroEditPencil:{minWidth:33,height:25"), 'Pencil is badge-sized');
-assert.ok(app.includes('name="pencil" size={13}'), 'Pencil icon is compact');
-assert.ok(app.indexOf('<View style={styles.statusPill}>') < app.indexOf('accessibilityLabel={editMode?"Editing case details":"Edit case details"}'), 'Pencil follows Pending status');
+assert.ok(app.includes("heroEditPencil:{width:44,height:44") && app.includes("backgroundColor:'#FFFFFF'"), 'Pencil has accessible highlighted white 44px touch target');
+assert.ok(app.includes('name="pencil" size={18} color="#95651F"'), 'Pencil icon is brown and visible on white');
+assert.ok(app.includes('<View style={styles.heroTitleStatus}>') && app.indexOf('<View style={styles.statusPill}>') < app.indexOf('accessibilityLabel={editMode?"Editing case details":"Edit case details"}'), 'Status badge follows case title and precedes highlighted Edit');
+assert.ok(!app.includes('<Text style={styles.heroCaseNumber}'), 'LH internal identifier must not appear in header');
+assert.ok(app.includes('<Text style={styles.heroSubtitle} selectable>{record.customer_name} · {record.proposal_number}</Text>'), 'Customer and proposal number render once in the full-width header without truncation');
 assert.ok(app.includes('if(editMode){'), 'Cancel handles leaving edit mode');
 
 console.log('Case inline edit, append-only remarks, secure issuance and native parity verified.');
