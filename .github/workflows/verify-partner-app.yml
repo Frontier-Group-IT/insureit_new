@@ -46,6 +46,9 @@ jobs:
       - name: Verify Add Claim reference-blue animation
         run: node apps/partner-app/scripts/verify-claims-add-button-highlight.mjs
 
+      - name: Verify compact Recognition progress tracker
+        run: node apps/partner-app/scripts/verify-recognition-compact-tracker.mjs
+
       - name: Require synchronized dependency lockfile
         shell: bash
         run: |
