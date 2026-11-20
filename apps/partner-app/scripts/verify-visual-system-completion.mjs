@@ -189,6 +189,21 @@ const profile = read('app/profile.tsx');
 const accountShellHeader = read('components/partner-case-page-header.tsx');
 requireText(accountShellHeader, "backgroundColor: '#0A234A'", 'Account header must match the Policy Details title strip.');
 requireText(accountShellHeader, 'accessibilityRole="header"', 'Account page title must be accessible.');
+
+const caseRegister = read('app/life-health-cases/index.tsx');
+for (const fragment of [
+  'const [filterOpen,setFilterOpen]=useState(false);',
+  'accessibilityLabel="Filter Case Register by status"',
+  'accessibilityState={{expanded:filterOpen}}',
+  '{filterOpen?<View style={styles.filterMenu}>',
+  'onPress={()=>{setStatus(item.key);setFilterOpen(false);}}',
+  '{filters.find(item=>item.key===status)?.label} ({counts[status]})',
+  'listLifeHealthCases({status,businessLine,search,offset,limit:10})',
+  'setBusinessLine(item.key)',
+]) requireText(caseRegister, fragment, 'Case Register must preserve both reconciled dropdowns: '+fragment);
+if (caseRegister.includes('<ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filters}')) {
+  throw new Error('Case Register must not restore clipped status chips.');
+}
 const lifeHealthCaseDetails = read('app/life-health-cases/[id].tsx');
 for (const [fragment, purpose] of [
   ["const [expandedCaseTab,setExpandedCaseTab]=useState<'activity'|'remarks'|null>(null);", 'Both existing tabs must start collapsed'],
