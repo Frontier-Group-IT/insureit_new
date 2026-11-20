@@ -210,7 +210,7 @@ const deletionSloganIndex = deletionScreen.indexOf('<View style={styles.heroCopy
 if (deletionBrandIndex < 0 || deletionSloganIndex < 0 || deletionBrandIndex >= deletionSloganIndex) {
   throw new Error('Account deletion must show the Partner logo left and the slogan right.');
 }
-requireText(deletionScreen, "heroCopy: { flex: 1, minWidth: 0, paddingLeft: 10, paddingTop: 0, alignItems: 'flex-end' }", 'Account deletion slogan must sit against the right edge of its hero column.');
+requireText(deletionScreen, "heroCopy: { flex: 1, minWidth: 0, paddingLeft: 10, paddingTop: 14, alignItems: 'flex-end' }", 'Account deletion slogan stays right-aligned and begins at the brand wordmark's first text row.');
 requireText(deletionScreen, "heroSloganBlock: { alignSelf: 'flex-end', width: 142, maxWidth: '100%', alignItems: 'flex-start' }", 'Slogan is right-anchored with a stable two-line width, while allowing narrow viewport shrink.');
 requireText(deletionScreen, 'numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>Your account,', 'First slogan row stays on one line.');
 requireText(deletionScreen, 'numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>your choice', 'Second slogan row stays on one line.');
