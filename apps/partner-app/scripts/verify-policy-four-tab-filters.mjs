@@ -37,7 +37,7 @@ assert.match(migration,/p_to_date is null or coalesce\(b\.issuance_date,b\.creat
 assert.match(migration,/count\(\*\) over\(\) as total_count/);
 assert.match(migration,/REVOKE ALL ON FUNCTION public\.partner_app_policy_filter_options/);
 assert.doesNotMatch(migration,/\b(insert|update|delete|truncate)\s+(into|from|public\.)/i,'Filters must be read-only');
-assert.match(screen,/sortPeriodSelected:\\{backgroundColor:'#FFFFFF',borderColor:'#4030AF',borderWidth:1\\.5\\}/,'Selected MTD or All uses a white background with purple outline only');
-assert.match(screen,/sortPeriodTextSelected:\\{color:'#4030AF'\\}/,'Selected period remains legible in purple');
-assert.match(screen,/sortPeriodOption:\\{[^\\n]*borderColor:'#D8DCEA'/,'Unselected period remains a neutral outline');
+assert.ok(screen.includes("sortPeriodSelected:{backgroundColor:'#FFFFFF',borderColor:'#4030AF',borderWidth:1.5}"),'Selected MTD or All uses a white background with purple outline only');
+assert.ok(screen.includes("sortPeriodTextSelected:{color:'#4030AF'}"),'Selected period remains legible in purple');
+assert.ok(screen.includes("sortPeriodOption:{flex:1,minHeight:43,borderRadius:12,borderWidth:1,borderColor:'#D8DCEA'"),'Unselected period remains a neutral outline');
 console.log('Partner Policies four-tab filter UI and scoped data contract passed.');
