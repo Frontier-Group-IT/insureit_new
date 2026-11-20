@@ -301,7 +301,7 @@ export default function LifeHealthCaseDetailScreen(){
  },[id]);
  useFocusEffect(useCallback(()=>{
    let active=true;
-   setExpandedCaseTab(null);
+   setExpandedCaseTab('activity');
    setEditMode(false);
    // Guard against stale detail data after switching accounts or navigating away.
    void load();
