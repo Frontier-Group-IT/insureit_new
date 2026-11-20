@@ -104,7 +104,7 @@ export default function RecognitionScreen() {
           {next ? (
             <View style={styles.nextCard}>
               <View style={styles.artworkTile}>
-                <Image source={PartnerAssets.status.achievement} style={styles.achievementArtwork} resizeMode="contain" />
+                <Image source={require('../assets/partner/status/journey-trophy-reference.png')} style={styles.achievementArtwork} resizeMode="contain" />
               </View>
               <View style={styles.verticalRule} />
               <View style={styles.nextHeadingText}>
