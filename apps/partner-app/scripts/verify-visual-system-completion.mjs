@@ -374,6 +374,23 @@ if (!(learnActions.indexOf('styles.cancelButton') < learnActions.indexOf('styles
 }
 requireText(learn, "answerActions: { flexDirection: 'row'", 'Learn actions must share one horizontal row.');
 
+// MISP must provide precise field-level errors, not a generic all-fields alert.
+const mispForm = read('components/misp-partner-form.tsx');
+for (const fragment of [
+  "key==='aadhaar_number'?value.replace(/\\D/g,'').slice(0,12)",
+  "field.key==='aadhaar_number'?12",
+  'DP Aadhaar Number must contain exactly 12 digits.',
+  'IFSC format is invalid.',
+  'Account Number must contain 6 to 20 digits.',
+  'validateMisp(form)',
+  'setFieldErrors(errors)',
+  'mispFieldOrder.find(key=>errors[key])',
+  "partnerAlert(`${label} invalid`,errors[firstInvalid]",
+  'fieldErrors[field.key]&&styles.invalidInput',
+  'styles.fieldError',
+]) requireText(mispForm, fragment, 'MISP must validate individual fields, accept 12 Aadhaar digits and show exact errors.');
+if (mispForm.includes("partnerAlert('Check MISP details'")) throw new Error('MISP must not show the old generic validation popup.');
+
 const pulse = read('app/pulse.tsx');
 
 for (const asset of ['policyChecklist', 'appsGrid', 'settings', 'supportVerified']) {
