@@ -215,11 +215,12 @@ async function processClaim(item: Claimed, parserRevision: string) {
     // A recognized parser that rejected the PDF's verification contract is
     // not an untrained layout. Keep its safe diagnostic for the reviewer.
     const validationFailed=untrained && Boolean(extraction.diagnosticCode);
+    const safeDiagnostic=extraction.diagnosticCode??"parser_not_trained";
     await finishClaim(item,{
       state:validationFailed?"exception":untrained?"unsupported":"failed",
       exception_codes:[validationFailed?"parser_validation_failed":untrained?"unsupported_layout":"extraction_failed"],
       field_keys:[],parser_id:null,checks_passed:0,extraction_fingerprint:null,
-      last_error_code:validationFailed?extraction.diagnosticCode:untrained?"parser_not_trained":"n8n_unavailable",
+      last_error_code:untrained?safeDiagnostic:"n8n_unavailable",
       processed_at:untrained?new Date().toISOString():null,
       retry_after:retryAfter(untrained?1440:5),
     });
