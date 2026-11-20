@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 const read=path=>readFileSync(new URL(path,import.meta.url),'utf8');
 const screen=read('../app/(tabs)/policies.tsx');
 const api=read('../lib/policies.ts');
-const migration=read('../../supabase/migrations/20261120100000_partner_policy_advanced_filters.sql');
+const migration=read('../../../supabase/migrations/20261120100000_partner_policy_advanced_filters.sql');
 
 for(const tab of ["key:'period'","key:'source'","key:'rm'","key:'date'"])
   assert.ok(screen.includes(tab),'The one-row filters must contain '+tab);
