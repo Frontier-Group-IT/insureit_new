@@ -1,6 +1,6 @@
 import { partnerAlert } from '@/components/ui/partner-alert-provider';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Keyboard, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Keyboard, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { PartnerPolicyCalendarDialog } from '@/components/policy-intakes/partner-policy-calendar-dialog';
@@ -44,16 +44,16 @@ const fields: Array<{title:string;items:FieldConfig[]}>= [
   ]},
 ];
 const documentSlots = [
-  {key:'aadhaar_front',label:'Aadhaar Front'},
-  {key:'aadhaar_back',label:'Aadhaar Back'},
-  {key:'pan_copy',label:'PAN Copy'},
-  {key:'cancelled_cheque',label:'Cancelled Cheque / Bank Proof'},
-  {key:'photograph',label:'Photograph'},
-  {key:'gst_copy',label:'GST Certificate'},
-  {key:'signed_registration_form',label:'Signed Registration Certificate'},
-  {key:'education_10th_marksheet',label:'Education Marksheet'},
-  {key:'custom_1',label:'Other Document 1'},
-  {key:'custom_2',label:'Other Document 2'},
+  {key:'aadhaar_front',label:'Aadhaar Front',required:true},
+  {key:'aadhaar_back',label:'Aadhaar Back',required:true},
+  {key:'pan_copy',label:'PAN Copy',required:true},
+  {key:'cancelled_cheque',label:'Cancelled Cheque / Bank Proof',required:true},
+  {key:'photograph',label:'Photograph',required:true},
+  {key:'gst_copy',label:'GST Certificate',required:true},
+  {key:'signed_registration_form',label:'Signed Registration Certificate',required:false},
+  {key:'education_10th_marksheet',label:'Education Marksheet',required:false},
+  {key:'custom_1',label:'Other Document 1',required:false},
+  {key:'custom_2',label:'Other Document 2',required:false},
 ] as const;
 type SavedDocument={type:string;name:string;label?:string|null};
 const educationOptions=[
@@ -114,6 +114,7 @@ function validateMisp(form:Record<MispField,string>):MispErrors {
 }
 export function MispPartnerForm({rms,banks,oems,pendingMisps,loading,onDirtyChange,onCancel}:{rms:Option[];banks:Option[];oems:Option[];pendingMisps:Option[];loading:boolean;onDirtyChange:(dirty:boolean)=>void;onCancel:()=>void}) {
   const router=useRouter();
+  const {height:windowHeight}=useWindowDimensions();
   const [form,setForm]=useState(empty);
   const [fieldErrors,setFieldErrors]=useState<MispErrors>({});
   const [picker,setPicker]=useState<'rm'|'oem'|'bank'|null>(null);
@@ -125,6 +126,7 @@ export function MispPartnerForm({rms,banks,oems,pendingMisps,loading,onDirtyChan
   const [documents,setDocuments]=useState<SavedDocument[]>([]);
   const [busyDocument,setBusyDocument]=useState<string|null>(null);
   const [educationType,setEducationType]=useState('education_10th_marksheet');
+  const [educationOpen,setEducationOpen]=useState(false);
   const [customNames,setCustomNames]=useState<Record<string,string>>({});
   const set=(key:MispField,value:string)=>{
     // Aadhaar stays digit-only and accepts all 12 digits (never a 10-digit cap).
@@ -322,21 +324,31 @@ export function MispPartnerForm({rms,banks,oems,pendingMisps,loading,onDirtyChan
               <Pressable accessibilityRole="button" accessibilityLabel="Close MISP document popup" disabled={Boolean(busyDocument)}
                 onPress={()=>setDocumentsOpen(false)}><Ionicons name="close" size={22} color="#4C5970"/></Pressable>
             </View>
-            <ScrollView style={styles.documentScroll} keyboardShouldPersistTaps="handled">
+            <ScrollView style={[styles.documentScroll,{maxHeight:Math.min(366,Math.max(190,windowHeight-220))}]} keyboardShouldPersistTaps="handled" nestedScrollEnabled>
               {documentSlots.map(slot=>{
                 const current=findDocument(slot.key);
                 return <View key={slot.key} style={styles.documentRow}>
                   <Ionicons name="document-text-outline" size={20} color="#315B85"/>
                   <View style={styles.documentLabel}>
-                    <Text style={styles.documentName}>{slot.label}</Text>
+                    <Text style={styles.documentName}>{slot.label}{slot.required?<Text style={styles.requiredStar}> *</Text>:null}</Text>
                     {current?<Text numberOfLines={1} style={styles.documentFilename}>{current.name}</Text>:null}
                     {slot.key==='education_10th_marksheet'?
-                      <View style={styles.educationOptions}>{educationOptions.map(option=>
-                        <Pressable key={option.key} accessibilityRole="button" accessibilityLabel={option.label}
-                          onPress={()=>setEducationType(option.key)}
-                          style={[styles.educationPill,educationType===option.key&&styles.educationSelected]}>
-                          <Text style={styles.educationText}>{option.label}</Text>
-                        </Pressable>)}</View>:null}
+                      <View style={styles.educationDropdown}>
+                        <Pressable accessibilityRole="button" accessibilityLabel="Select education category"
+                          accessibilityState={{expanded:educationOpen}} disabled={Boolean(busyDocument)}
+                          onPress={()=>setEducationOpen(open=>!open)} style={styles.educationChoice}>
+                          <Text style={styles.educationText}>{educationOptions.find(option=>option.key===educationType)?.label||'Select category'}</Text>
+                          <Ionicons name={educationOpen?'chevron-up':'chevron-down'} size={16} color="#17365D"/>
+                        </Pressable>
+                        {educationOpen?<View style={styles.educationMenu}>{educationOptions.map(option=>
+                          <Pressable key={option.key} accessibilityRole="button" accessibilityLabel={option.label}
+                            accessibilityState={{selected:educationType===option.key}}
+                            onPress={()=>{setEducationType(option.key);setEducationOpen(false);}}
+                            style={styles.educationMenuItem}>
+                            <Text style={styles.educationText}>{option.label}</Text>
+                            {educationType===option.key?<Ionicons name="checkmark" size={16} color="#155EBA"/>:null}
+                          </Pressable>)}</View>:null}
+                      </View>:null}
                     {slot.key.startsWith('custom_')?<TextInput
                       placeholder="Document name" placeholderTextColor="#8290A5"
                       value={customNames[slot.key]??current?.label??''}
@@ -416,7 +428,7 @@ const styles=StyleSheet.create({
   documentModal:{backgroundColor:'#FFF',borderRadius:18,padding:16,maxHeight:'90%',gap:12},
   documentHead:{flexDirection:'row',justifyContent:'space-between',alignItems:'center',paddingBottom:10,borderBottomWidth:1,borderBottomColor:'#E7EDF5'},
   documentHeading:{color:'#17365D',fontSize:16,fontWeight:'800'},
-  documentScroll:{flexGrow:0},documentRow:{flexDirection:'row',alignItems:'center',gap:9,minHeight:53,paddingVertical:9,borderBottomWidth:1,borderBottomColor:'#E7EDF5'},
+  documentScroll:{flexGrow:0,flexShrink:1},documentRow:{flexDirection:'row',alignItems:'center',gap:9,minHeight:61,paddingVertical:8,borderBottomWidth:1,borderBottomColor:'#E7EDF5'},
   documentLabel:{flex:1,minWidth:0,gap:4},documentName:{fontSize:12,fontWeight:'700',color:'#000'},
   documentFilename:{fontSize:11,color:'#16805C'},
   docIconButton:{width:34,height:36,borderWidth:1,borderColor:'#D9E3F1',borderRadius:9,alignItems:'center',justifyContent:'center'},
@@ -424,7 +436,9 @@ const styles=StyleSheet.create({
   docUploadText:{fontSize:11,color:'#24517E',fontWeight:'700'},
   docDone:{minHeight:43,backgroundColor:'#155EBA',borderRadius:10,alignItems:'center',justifyContent:'center'},
   customDocumentName:{minHeight:35,borderWidth:1,borderColor:'#DCE5EF',borderRadius:8,paddingHorizontal:8,fontSize:11,color:'#17365D'},
-  educationOptions:{flexDirection:'row',flexWrap:'wrap',gap:4},
-  educationPill:{borderWidth:1,borderColor:'#CBD8E8',borderRadius:8,padding:5},
-  educationSelected:{backgroundColor:'#E8F2FF'},educationText:{fontSize:10,color:'#17365D'},
+  educationDropdown:{gap:4,marginTop:2},
+  educationChoice:{minHeight:36,borderWidth:1,borderColor:'#CBD8E8',borderRadius:8,paddingHorizontal:10,flexDirection:'row',justifyContent:'space-between',alignItems:'center',gap:8},
+  educationMenu:{borderWidth:1,borderColor:'#CBD8E8',borderRadius:8,overflow:'hidden',backgroundColor:'#FFFFFF'},
+  educationMenuItem:{minHeight:39,paddingHorizontal:10,flexDirection:'row',justifyContent:'space-between',alignItems:'center',borderBottomWidth:StyleSheet.hairlineWidth,borderBottomColor:'#E7EDF5'},
+  educationText:{fontSize:11,color:'#17365D'},
 });
