@@ -89,6 +89,12 @@ const historicalMissingDate=historicalText.replace("Date of Registration 02/12/2
 const rejectedHistorical=parse({all:()=>[{json:{text:historicalMissingDate}}]})[0].json;
 assert.equal(rejectedHistorical.ok,false,"Undated short number must not be accepted");
 assert.equal(rejectedHistorical.checks.vehicle_registration_status_verified,false);
+for(const invalidDate of ["99/99/2020","31/12/2099"]){
+ const malformed=historicalText.replace("02/12/2020",invalidDate);
+ const rejected=parse({all:()=>[{json:{text:malformed}}]})[0].json;
+ assert.equal(rejected.ok,false,"Invalid/future historic registration date must not qualify");
+ assert.equal(rejected.checks.vehicle_registration_status_verified,false);
+}
 
 for(const [i,fixture] of fixtures.entries()){
   const parsed=parse({all:()=>[{json:{text:fixture.text}}]})[0].json;
