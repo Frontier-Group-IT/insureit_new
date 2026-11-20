@@ -49,7 +49,7 @@ assert.match(api,/dp_aadhaar_number_encrypted:isMisp\?aadhaarEncrypted:null/,'DP
 assert.match(api,/isEmployeeWithinAccessScope/,'RM employee scope enforced');
 assert.match(api,/brandRows/,'OEM master list comes from real manufacturer brands');
 assert.match(api,/pendingMisps/,'Server retains saved MISP application records');
-assert.doesNotMatch(partnerNew,/pendingMisps|setPendingMisps/,'New Partner screen must not request saved MISP list');
+assert.doesNotMatch(app,/pendingMisps|setPendingMisps/,'New Partner screen must not request saved MISP list');
 assert.doesNotMatch(form,/Continue saved MISP documents|pendingMisps/,'New MISP form must not display saved applications');
 assert.ok(route.includes('name="partner-documents"'),'Document route is registered');
 assert.match(permissions,/partner-new\|partner-documents/,'Native MISP document route requires Add Partner permission');
