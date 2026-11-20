@@ -30,33 +30,32 @@ const sample = `const styles = {
   computed: { fontWeight: '800' as const },
 };`;
 
-const ios = transform(sample, 'ios');
-for (const expected of [
-  'heading: {\\n    fontWeight: "600"',
-  'display: {\\n    fontWeight: "600"',
-  'section: {\\n    fontWeight: "600"',
-  'label: {\\n    fontWeight: "500"',
-  'body: {\\n    fontWeight: "400"',
-  'normal: {\\n    fontWeight: "400"',
-  'semanticBold: {\\n    fontWeight: "600"',
-]) {
-  assert.ok(ios.includes(expected), `Missing expected iOS weight: ${expected}`);
+function weightFor(output, style) {
+  const match = output.match(new RegExp(String.raw`\\b${style}:\\s*\\{\\s*fontWeight:\\s*['\"]([^'\"]+)['\"]`));
+  return match?.[1];
 }
-assert.match(ios, /fontWeight: activeWeight/, 'Dynamic expressions remain intact');
-assert.match(ios, /fontWeight: "600" as const/, 'TypeScript const-weight values transform on iOS');
+
+const ios = transform(sample, 'ios');
+for (const [style, expected] of Object.entries({
+  heading: '600', display: '600', section: '600', label: '500',
+  body: '400', normal: '400', semanticBold: '600',
+})) assert.equal(weightFor(ios, style), expected, `Incorrect iOS weight for ${style}`);
+assert.match(ios, /fontWeight: activeWeight/, 'Dynamic font-weight expressions remain intact');
+assert.match(ios, /fontWeight:\\s*['\"]600['\"] as const/, 'TypeScript const-weight values transform on iOS');
 
 for (const platform of ['android', 'web']) {
-  const result = transform(sample, platform);
-  for (const weight of ['900', '800', '700', '600', '500', '400', 'bold']) {
-    assert.ok(result.includes(`fontWeight: "${weight}"`), `${platform} must keep original weight ${weight}`);
-  }
-  assert.match(result, /fontWeight: "800" as const/, `${platform} must preserve TS source weights`);
+  const output = transform(sample, platform);
+  for (const [style, expected] of Object.entries({
+    heading: '900', display: '800', section: '700', label: '600',
+    body: '500', normal: '400', semanticBold: 'bold',
+  })) assert.equal(weightFor(output, style), expected, `${platform} must keep original ${style} weight`);
+  assert.match(output, /fontWeight:\\s*['\"]800['\"] as const/, `${platform} must preserve TypeScript weights`);
 }
 
 const theme = readFileSync(new URL('../lib/theme.ts', import.meta.url), 'utf8');
 const iosTheme = transform(theme, 'ios');
 const androidTheme = transform(theme, 'android');
-assert.ok(!iosTheme.includes("fontWeight: '800'"), 'iOS theme must not preserve extra-bold headings');
-assert.ok(androidTheme.includes("fontWeight: '800'"), 'Android theme must retain original extra-bold headings');
+assert.doesNotMatch(iosTheme, /fontWeight:\\s*['\"](?:700|800|900)['\"]/, 'iOS theme must not retain heavy headings');
+assert.match(androidTheme, /fontWeight:\\s*['\"]800['\"]/, 'Android theme must retain original headings');
 
 console.log('Partner iOS typography verified: 400/500/600 on iOS, original Android/web weights retained.');
