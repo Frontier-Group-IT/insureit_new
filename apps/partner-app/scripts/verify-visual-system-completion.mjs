@@ -28,12 +28,17 @@ const homeMetricIcons = read('components/ui/partner-home-metric-icons.tsx');
 const business = read('app/(tabs)/business.tsx');
 for (const phrase of [
   "justifyContent: 'center', gap: 3",
-  "width: '92%'",
-  "fontSize: 10, lineHeight: 15, fontWeight: '700'",
-  "minimumFontScale={0.85}",
-  "bottom: height + 5",
-  "paddingTop: 18",
-]) requireText(business, phrase, 'Business Month-wise Trend values must remain readable and non-overlapping on compact iOS screens: ' + phrase);
+  "barPlotSlot: { height: 72, width: '100%'",
+  "barTrack: { height: '100%', width: '92%'",
+  "fontSize: 11, lineHeight: 13, fontWeight: '700'",
+  "const visiblePremiumLabel = compact && premiumLabel.length > 6",
+  "premiumLabel.replace(/(Cr|L|k)$/",
+  "<Text numberOfLines={2} style={[styles.barValue, { bottom: height + 5 }]}>",
+  "paddingTop: 27",
+]) requireText(business, phrase, 'Business Month-wise Trend values must use independent full-width labels without iOS autoshrink: ' + phrase);
+if (business.includes('minimumFontScale={0.85} style={[styles.barValue') || business.includes('styles.barTrackCompact')) {
+  throw new Error('Trend premium labels cannot be constrained to the narrow blue bar');
+}
 
 const businessReport = read('app/business-report.tsx');
 const customers = read('app/customers.tsx');
