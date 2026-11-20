@@ -25,7 +25,7 @@ const uploadSlots: Array<{ type: DocumentType; label: string }> = [
   { type: 'pan_copy', label: 'PAN Copy' }, { type: 'cancelled_cheque', label: 'Cancelled Cheque / Bank Proof' },
   { type: 'photograph', label: 'Photograph' }, { type: 'gst_copy', label: 'GST Certificate' },
 ];
-type MasterData = { ok?: boolean; error?: string; rms?: Option[]; banks?: Option[]; oems?: Option[]; pendingMisps?:Option[]; pendingPartners?:Option[] };
+type MasterData = { ok?: boolean; error?: string; rms?: Option[]; banks?: Option[]; oems?: Option[]; pendingMisps?:Option[] };
 const initial: Record<Field, string> = {
   document_received_at: '', associate_employee_id: '', pos_first_name: '', pos_middle_name: '', pos_last_name: '',
   pan_number: '', aadhaar_number: '', date_of_birth: '', mobile: '', email: '',
@@ -165,7 +165,6 @@ export default function AddPartnerScreen() {
   const [uploadOpen, setUploadOpen] = useState(false);
   const [uploadingType, setUploadingType] = useState<DocumentType | null>(null);
   const [uploaded, setUploaded] = useState<Partial<Record<DocumentType, string>>>({});
-  const [pendingPartners, setPendingPartners] = useState<Option[]>([]);
   const [missingDocuments, setMissingDocuments] = useState<DocumentType[]>(uploadSlots.slice(0,5).map(slot => slot.type));
   const [finalizing, setFinalizing] = useState(false);
   const [issuedPartnerId, setIssuedPartnerId] = useState<string | null>(null);
@@ -205,7 +204,7 @@ export default function AddPartnerScreen() {
         const response = await authenticatedRequest('GET');
         const result = await response.json() as MasterData;
         if (!response.ok || !result.ok) throw new Error(result.error || 'Could not load RM and Bank lists.');
-        if (active) { setRms(result.rms || []); setBanks(result.banks || []); setOems(result.oems || []);setPendingMisps(result.pendingMisps || []);setPendingPartners(result.pendingPartners || []); }
+        if (active) { setRms(result.rms || []); setBanks(result.banks || []); setOems(result.oems || []);setPendingMisps(result.pendingMisps || []); }
       } catch (error) {
         if (active) partnerAlert('Master data unavailable', error instanceof Error ? error.message : 'Please retry.');
       } finally { if (active) setLoading(false); }
@@ -330,17 +329,6 @@ export default function AddPartnerScreen() {
     setMissingDocuments(result.missing || []);
     setIssuedPartnerId(result.partner_id || null);
     return result;
-  };
-  const resumePartner = async (savedId: string) => {
-    if (saving || uploadingType || finalizing) return;
-    setSaving(true);
-    try {
-      await loadSavedDocuments(savedId);
-      setApplicationId(savedId);
-      setUploadOpen(true);
-    } catch (error) {
-      partnerAlert('Unable to open saved Partner', error instanceof Error ? error.message : 'Please retry.');
-    } finally { setSaving(false); }
   };
   const completePartnerDocuments = () => {
     if (!applicationId || missingDocuments.length || finalizing || uploadingType || !allowed) return;
@@ -467,19 +455,6 @@ export default function AddPartnerScreen() {
           ))}
           </>}
 
-          {partnerType==="posp" && !applicationId && pendingPartners.length > 0 ? (
-            <View style={styles.section}>
-              <Text style={[styles.sectionTitle, { padding: 12 }]}>Resume saved Partner documents</Text>
-              {pendingPartners.map(item => (
-                <Pressable key={item.id} accessibilityRole="button" accessibilityLabel={`Continue Partner ${item.name}`}
-                  disabled={saving} onPress={() => void resumePartner(item.id)}
-                  style={{ padding: 12, borderTopWidth: 1, borderTopColor: '#E1E7F1', flexDirection: 'row', justifyContent: 'space-between' }}>
-                  <Text style={styles.selectText} numberOfLines={1}>{item.name}</Text>
-                  <Ionicons name="chevron-forward" size={18} color="#17365D" />
-                </Pressable>
-              ))}
-            </View>
-          ) : null}
           {partnerType==="posp"&&<View style={styles.actionFooter}>
             <View style={styles.actionRow}>
               <Pressable accessibilityRole="button" accessibilityLabel="Cancel Add Partner"
