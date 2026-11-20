@@ -8,6 +8,8 @@ import { createCurrentIntakePdfSignedSource } from "@/lib/policy-intake-n8n-sign
 import { segregatePolicyIntakeLanes } from "@/lib/policy-ocr-routing-mode";
 import { requestN8nPolicyIntakeBySignedSource, type N8nOcrField, type N8nVerifiedPremiumBreakdown } from "@/lib/policy-intake-n8n-bridge";
 import { loadPolicyIntakeDuplicateMatches } from "@/lib/policy-intake-duplicate";
+import { tryReadNonTataCommercialSignedPolicy, type NonTataCommercialRead } from "@/lib/policy-nontata-commercial-n8n";
+import type { N8nOcrBridgeResponse } from "@/lib/policy-intake-n8n-validation";
 
 const BUCKET = "policy-documents";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -38,7 +40,9 @@ export type SemiAutoN8nPreview = {
   parserVersion: string;
   changedFieldCount: number;
   changedFields: SemiAutoN8nChangedField[];
-  premium: N8nVerifiedPremiumBreakdown;
+  premium: N8nVerifiedPremiumBreakdown | null;
+  /** Non-Tata only: verified printed OD/TP/net/GST/gross; not an ICICI component breakdown. */
+  commercialPremium?: NonTataCommercialRead["premium"];
   checksPassed: number;
   warnings: string[];
   canApply: boolean;
@@ -108,8 +112,9 @@ async function currentSnapshot(id: string): Promise<SourceSnapshot | null> {
 
 function fingerprint(
   id: string, documentId: string, fields: N8nOcrField[], warnings: string[],
-  premium: N8nVerifiedPremiumBreakdown,
+  premium: N8nVerifiedPremiumBreakdown | null,
   issuanceEvidence?: PolicyIssuanceDateEvidence, acceptedIssuanceDate?:string|null,
+  commercialPremium?: NonTataCommercialRead["premium"],
 ): string {
   // Bind the review token to the exact signed-PDF hash, even if metadata
   // changes without altering the 18 extracted insurance fields.
@@ -119,7 +124,7 @@ function fingerprint(
         documentSha256:issuanceEvidence.documentSha256,
         proposedDate:issuanceEvidence.proposedDate,
       }:null,
-      acceptedIssuanceDate:acceptedIssuanceDate??null }))
+      acceptedIssuanceDate:acceptedIssuanceDate??null, commercialPremium:commercialPremium??null }))
     .digest("hex");
 }
 
@@ -132,15 +137,30 @@ export async function previewSemiAutoN8nExtraction(id: string): Promise<SemiAuto
   // The portal validates the current version and grants a short-lived link,
   // but never downloads or forwards the PDF bytes to n8n. n8n fetches it.
   const admin = createSupabaseAdminClient();
-  let extraction;
+  let extraction: Omit<N8nOcrBridgeResponse, "premium"> & { premium: N8nVerifiedPremiumBreakdown | null };
+  let commercialPremium: NonTataCommercialRead["premium"] | undefined;
   try {
     const source = await createCurrentIntakePdfSignedSource(
       id, snapshot.document.id, snapshot.document.storage_path,
     );
-    extraction = await requestN8nPolicyIntakeBySignedSource({
-      intakeId: id, documentId: source.documentId,
-      requestId: randomUUID(), signedUrl: source.signedUrl,
+    const requestId = randomUUID();
+    const commercial = await tryReadNonTataCommercialSignedPolicy({
+      intakeId: id, documentId: source.documentId, requestId, signedUrl: source.signedUrl,
     });
+    if (commercial) {
+      commercialPremium = commercial.premium;
+      // Never fabricate an ICICI basic-OD/CPA breakdown for commercial policies.
+      extraction = {
+        ok: true, fields: commercial.fields, warnings: commercial.warnings,
+        parserId: commercial.parserId, parserVersion: commercial.parserVersion,
+        checksPassed: commercial.checksPassed, premium: null,
+      };
+    } else {
+      extraction = await requestN8nPolicyIntakeBySignedSource({
+        intakeId: id, documentId: source.documentId,
+        requestId, signedUrl: source.signedUrl,
+      });
+    }
   } catch (error) {
     // A failed n8n validation is not a reason to invoke legacy Google OCR.
     // Report the unsupported/unverified layout without leaking PDF text,
@@ -151,6 +171,8 @@ export async function previewSemiAutoN8nExtraction(id: string): Promise<SemiAuto
     // code (never raw PDF text, signed URLs, headers, or n8n responses).
     const parserValidationCodes=new Set([
       "n8n_review_required","n8n_financial_validation_failed",
+      "n8n_nontata_verification_failed","n8n_nontata_financial_reconciliation_failed",
+      "n8n_nontata_check_set_invalid","n8n_nontata_premium_components_invalid",
       "n8n_wrong_policy_product","n8n_required_field_missing",
       "n8n_premium_breakdown_missing","n8n_premium_reconciliation_failed",
       "n8n_coverage_dates_invalid","n8n_od_reference_missing",
@@ -236,7 +258,7 @@ export async function previewSemiAutoN8nExtraction(id: string): Promise<SemiAuto
     ? extraction.warnings.filter(warning=>warning!=="tata_aig_issuance_date_unverified"
        && warning!=="tata_aig_signature_date_not_in_native_text")
     : extraction.warnings;
-  let canApply = current.intake.policy_type === "motor"
+  let canApply = !commercialPremium && current.intake.policy_type === "motor"
     && !isN8nWorkbenchPrimary()
     && extraction.warnings.length === 0 && semiAutoN8nApplyEnabled()
     && current.intake.status === "processing"
@@ -254,13 +276,14 @@ export async function previewSemiAutoN8nExtraction(id: string): Promise<SemiAuto
   return { ok: true, preview: {
     documentId: current.document.id,
     fingerprint: fingerprint(id, current.document.id, extraction.fields, visibleWarnings,
-      extraction.premium, extraction.issuanceEvidence,acceptedIssuanceDate),
+      extraction.premium, extraction.issuanceEvidence,acceptedIssuanceDate, commercialPremium),
     fields: extraction.fields,
     parserId: extraction.parserId,
     parserVersion: extraction.parserVersion,
     changedFieldCount,
     changedFields,
     premium: extraction.premium,
+    ...(commercialPremium ? {commercialPremium} : {}),
     checksPassed: extraction.checksPassed,
     warnings: visibleWarnings,
     ...(extraction.issuanceEvidence?{issuanceEvidence:extraction.issuanceEvidence}:{}),
