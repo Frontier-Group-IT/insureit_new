@@ -304,6 +304,9 @@ for (const fragment of [
   'Learn • Practice • Grow',
   "backgroundColor: '#07347C'",
   'height: 94,',
+  'headerArtwork: { width: 35, height: 43 }',
+  "referenceTitle: { color: '#FFFFFF', fontSize: 17",
+  "headerSubtitle: { color: '#B7CBF5', fontSize: 11",
   'styles.headerGlow',
   'styles.headerCurve',
 ]) requireText(learn, fragment, '60-Second Learn must match the reference stopwatch header and retain five-tab navigation.');
