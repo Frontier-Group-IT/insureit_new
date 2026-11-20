@@ -1,3 +1,5 @@
+import { resolveManufacturingYearEvidence } from "./policy-n8n-onboarding-enrichment.ts";
+
 export type OcrImportField = {
   key: string;
   label: string;
@@ -60,6 +62,8 @@ const SECTION_02 = new Set([
   "vehicle_model",
   "vehicle_fuel_type",
   "vehicle_manufacturing_year",
+  "vehicle_registration_year",
+  "vehicle_registration_date",
   "vehicle_capacity",
   "vehicle_motor_power_kw",
   "vehicle_chassis_number",
@@ -325,6 +329,17 @@ export function buildPolicyOcrOnboardingUpdate(input: OcrApplyInput): OcrApplyRe
   });
   setText("vehicle_fuel_type", (value) => { next.fuelType = value; }, fuel);
   setText("vehicle_manufacturing_year", (value) => { next.manufacturingYear = value; }, year);
+  // The approved operational fallback applies to all recognised insurer
+  // extracts carrying a distinct registration date/year. It never replaces
+  // an existing manufacturing year and cannot run on RC-locked/edit records.
+  if(!section02Protected && !next.manufacturingYear){
+    const manufacturing=resolveManufacturingYearEvidence(input.fields);
+    if(manufacturing.source==="registration_year_fallback"){
+      next.manufacturingYear=manufacturing.year;
+      applied+=1;
+      touchedSection02=true;
+    }
+  }
   setText("vehicle_rto_state", (value) => { next.rtoState = value; });
   setText("vehicle_rto_name", (value) => { next.rtoName = value; });
   setText("vehicle_chassis_number", (value) => { next.chassisNo = value; }, vehicleIdentifier);
