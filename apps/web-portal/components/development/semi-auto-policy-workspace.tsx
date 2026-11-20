@@ -78,7 +78,7 @@ function commercialBookingIssue(row:SemiAutoIntakeRow,code:string):
   if(/Go Digit General Insurance/i.test(insurer) && code==="missing_field"
       && !values.get("vehicle_manufacturing_year")){
     return {title:"Go Digit · manufacturing year unavailable",
-      detail:"The PDF's Year of Regn. / Manufacturing field contains separate values. A printed registration year cannot be copied into manufacturing year when the latter is '--'. Verify the manufacturing year from a separate trustworthy RC/VAHAN source."};
+      detail:"The current PDF prints separate registration/manufacturing values. The configured operational rule now permits the printed registration year to fill an absent manufacturing year, labelled as a fallback. Reparse the current PDF; if registration-year evidence is missing or conflicts, use verified RC evidence."};
   }
   return null;
 }
@@ -101,7 +101,7 @@ function parserDiagnostic(code:string|null|undefined): {title:string;detail:stri
     nia_missing_rto_authority_and_cpa:"NIA PDF extraction succeeded, but the registration-authority field is unprinted and the canonical GCV policy requires positive verified owner-driver CPA. No RTO city or CPA value is invented; booking remains blocked.",
     nia_missing_registration_authority:"NIA PDF does not print a usable registration authority. The old FASTag ID parser match has been removed. Verify the actual RTO city/code from trusted registration evidence.",
     nia_missing_verified_gcv_cpa:"NIA GCV policy has no independently verified owner-driver CPA. The current canonical rule requires a positive CPA amount; do not silently book without it.",
-    go_digit_missing_verified_manufacturing_year:"Go Digit PDF extraction passed, but the printed Manufacturing Year and Month is blank. The separate registration year cannot be used. Verify manufacturing year using RC/VAHAN before automatic policy booking.",
+    go_digit_missing_verified_manufacturing_year:"The earlier Go Digit extraction had no manufacturing year or accepted registration-year fallback. Reparse the current policy PDF to apply the registration-year fallback rule; a missing or conflicting year will still require review.",
     go_digit_missing_verified_onboarding_fields:"Go Digit PDF is verified but does not independently provide all mandatory canonical policy fields. Review the listed missing vehicle or policy fields before booking.",
     n8n_review_required:"The n8n output failed the expected parser contract. This legacy code does not identify which check failed; run a fresh reparse to obtain the new diagnostics.",
     n8n_commercial_classifier_missed_layout:"The shared n8n webhook returned a commercial parser response, but the website routed it through ICICI validation. Inspect the commercial PDF recognition rule.",
