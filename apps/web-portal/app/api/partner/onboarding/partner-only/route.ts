@@ -82,12 +82,20 @@ async function handle(request: Request, writing: boolean) {
       .in("status",["submitted","under_review","changes_requested"])
       .eq("registration_status","documents_pending").order("updated_at",{ascending:false}).limit(10);
     if(pendingError)console.error("[partner-onboarding] pending MISP list unavailable",{code:pendingError.code||"request_error"});
+    // The submitting employee can resume saved individual Partners on a later app session.
+    const {data:pendingPartners,error:pendingPartnersError}=await admin.from("intermediary_onboarding_applications")
+      .select("id,draft_data,updated_at").eq("initiated_by",profile.id).eq("requested_type","posp")
+      .contains("draft_data",{mobile_partner_only:true})
+      .in("status",["submitted","under_review","changes_requested"])
+      .neq("partner_status","active_partner").order("updated_at",{ascending:false}).limit(30);
+    if(pendingPartnersError)console.error("[partner-onboarding] saved Partner list unavailable",{code:pendingPartnersError.code||"request_error"});
     const manufacturers=new Set((manufacturerRows.data??[]).map(item=>item.id));
     const oems=[...new Set((brandRows.data??[]).filter(item=>manufacturers.has(item.manufacturer_id)).map(item=>item.brand_name))];
     return reply({ ok: true, rms: inScope.filter((row): row is NonNullable<typeof row> => row !== null),
       banks: (bankRows.data ?? []).map(bank => ({ id: bank.id, name: bank.name })),
       oems: oems.map(name=>({id:name,name})),
-      pendingMisps:(pendingMisp??[]).map(item=>({id:item.id,name:typeof item.draft_data?.misp_name==="string"?item.draft_data.misp_name:"MISP application"})) });
+      pendingMisps:(pendingMisp??[]).map(item=>({id:item.id,name:typeof item.draft_data?.misp_name==="string"?item.draft_data.misp_name:"MISP application"})),
+      pendingPartners:(pendingPartners??[]).map(item=>({id:item.id,name:typeof item.draft_data?.pos_name==="string"?item.draft_data.pos_name:typeof item.draft_data?.pos_first_name==="string"?item.draft_data.pos_first_name:"Saved Partner"})) });
   }
 
   let input: Payload;
