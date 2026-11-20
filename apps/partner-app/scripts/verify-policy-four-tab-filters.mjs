@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 const read=path=>readFileSync(new URL(path,import.meta.url),'utf8');
 const screen=read('../app/(tabs)/policies.tsx');
 const api=read('../lib/policies.ts');
+const claims=read('../app/(tabs)/claims.tsx');
 const migration=read('../../../supabase/migrations/20261120061111_partner_policy_advanced_filters.sql');
 
 for(const tab of ["key:'period'","key:'source'","key:'rm'","key:'date'"])
@@ -29,6 +30,21 @@ assert.match(screen,/Search source\.\.\./);
 assert.match(screen,/Search RM\.\.\./);
 assert.match(screen,/PartnerDatePicker directSelect label="From"/);
 assert.match(screen,/PartnerDatePicker directSelect label="To"/);
+// Keep the Policies search Filter button identical to Claims, but enabled and wired to the existing sheet.
+for (const marker of [
+  'accessibilityLabel="Filter policies"',
+  'onPress={openSortSheet}',
+  '<Ionicons name="filter-outline" size={18} color="#3156B8" />',
+  '<Text style={styles.filterText}>Filter</Text>',
+  'borderLeftWidth: StyleSheet.hairlineWidth',
+  "borderLeftColor: '#D9DFEA'",
+]) assert.ok(screen.includes(marker), 'Policies inline Filter must preserve: '+marker);
+for (const style of ['filterButton', 'filterText']) {
+  const grab = src => src.match(new RegExp('  '+style+': \\{[\\s\\S]*?\\n  \\},|  '+style+': \\{[^\\n]+\\},'))?.[0];
+  assert.equal(grab(screen), grab(claims), 'Policies '+style+' must match the exact Claims style');
+}
+assert.doesNotMatch(screen,/styles\.sortFloating|sortFloating:|>Sort by<\/Text>/,'Remove the old floating Sort by control');
+assert.match(screen,/searchSticky \? <View style=\{\[styles\.stickySearchOverlay[\s\S]*?\{searchControls\}/,'Sticky Policies search reuses the enabled inline Filter');
 assert.match(screen,/Reset Filters/);
 assert.match(screen,/Apply Filter/);
 assert.match(screen,/setDraftSource\(source\)/,'Opening sheet preserves source');
