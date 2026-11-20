@@ -62,7 +62,10 @@ export function NonTataParserTestPanel() {
             <h3 className="text-base font-semibold text-slate-900">Extraction result — review only</h3>
             <p className="mt-1 text-sm text-slate-600">
               {result.parserAccepted ? "Printed checks passed. Manual review is still mandatory." :
-                "Some verification checks failed. Inspect the missing fields and warnings below."}
+                (result.supportedInsurer === "new_india_cv_native_pdf" && result.checks.registration_complete === false
+                  && Object.entries(result.checks).every(([key, passed]) => key === "registration_complete" || passed))
+                  ? "All printed policy and premium checks passed. The PDF shows only an RTO prefix. Use normal Policy Read to select Unregistered and confirm chassis/engine; a full registration number is not required for this review."
+                  : "Some verification checks failed. Inspect the missing fields and warnings below."}
             </p>
             <p className="mt-2 text-xs text-slate-500">Insurer parser: {result.supportedInsurer}. No policy was booked.</p>
             <div className="mt-4 grid gap-2 sm:grid-cols-5">

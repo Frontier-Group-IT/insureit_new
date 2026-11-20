@@ -5,6 +5,7 @@ import { extractNativePdfTextPages } from "@/lib/policy-ocr-native-pdf";
 import { isN8nPolicyReadEnabled } from "@/lib/policy-ocr-routing-mode";
 import { requestN8nPolicyIntakeExtraction } from "@/lib/policy-intake-n8n-bridge";
 import { requestN8nPolicyIntakeBySignedSource } from "@/lib/policy-intake-n8n-bridge";
+import { tryReadNonTataCommercialPolicy } from "@/lib/policy-nontata-commercial-n8n";
 import { createCurrentIntakePdfSignedSource } from "@/lib/policy-intake-n8n-signed-source";
 import type { PolicyIntakeOcrResult } from "@/lib/policy-intake-ocr-service";
 
@@ -22,6 +23,19 @@ export async function extractPolicyIntakeWithN8nFallback(
   file: File,
   extractWithExistingGoogle: PolicyIntakeLegacyExtractor,
 ): Promise<PolicyIntakeOcrResult> {
+  // Trained non-Tata commercial layouts are available to normal Intake users,
+  // but Intake lane assignment and any downstream booking rules stay unchanged.
+  if (file.type === "application/pdf") {
+    try {
+      const parsed = await tryReadNonTataCommercialPolicy(file);
+      if (parsed) return {
+        ok: true, fields: parsed.fields, warnings: parsed.warnings,
+        parserId: parsed.parserId, parserVersion: parsed.parserVersion,
+      };
+    } catch {
+      return { ok: false, error: "The verified New India, IFFCO Tokio or Go Digit reader could not process this Intake PDF. Use manual review; nothing was booked." };
+    }
+  }
   // Hard cutover: unknown insurer PDFs fail closed to human review. Never
   // silently reroute an n8n failure to the paid Google Document AI service.
   if (isN8nPolicyReadEnabled()) {

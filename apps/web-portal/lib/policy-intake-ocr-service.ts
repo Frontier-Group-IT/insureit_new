@@ -2,6 +2,7 @@ import "server-only";
 import { headers } from "next/headers";
 import { parsePolicyDocument, type ParsedPolicyField } from "@/lib/policy-ocr-parsers";
 import { requestN8nPolicyIntakeExtraction } from "@/lib/policy-intake-n8n-bridge";
+import { tryReadNonTataCommercialPolicy } from "@/lib/policy-nontata-commercial-n8n";
 import { isN8nPolicyReadEnabled } from "@/lib/policy-ocr-routing-mode";
 import { refineAdditionalMotorPolicy } from "@/lib/policy-ocr-additional-motor-refiner";
 import { refineDigitCommercialPolicyV2 } from "@/lib/policy-ocr-digit-refiner-v2";
@@ -39,6 +40,17 @@ export async function extractPolicyIntakeDocumentTrusted(formData: FormData): Pr
   if (!(file instanceof File) || !file.size) return { ok:false, error:"Select a policy PDF or image." };
   if (!ALLOWED_TYPES.has(file.type)) return { ok:false, error:"Only PDF, JPG, PNG and WebP policy copies are supported." };
   if (file.size > MAX_FILE_SIZE) return { ok:false, error:"The policy document must be 15 MB or smaller." };
+  if (file.type === "application/pdf") {
+    try {
+      const commercial = await tryReadNonTataCommercialPolicy(file);
+      if (commercial) return {
+        ok: true, fields: commercial.fields, parserId: commercial.parserId,
+        parserVersion: commercial.parserVersion, warnings: commercial.warnings,
+      };
+    } catch {
+      return { ok: false, error: "The local New India, IFFCO Tokio or Go Digit reader could not verify this policy PDF. Review it manually; no Google fallback or policy booking occurred." };
+    }
+  }
   if (isN8nPolicyReadEnabled()) {
     if (file.type !== "application/pdf") return {ok:false,error:"n8n is trained only for supported PDF policy layouts. Use manual entry for this image."};
     try {
