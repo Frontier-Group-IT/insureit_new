@@ -20,7 +20,12 @@ assert.match(screen,/Load More Cases<\/Text>/, "Case list uses the same Load Mor
 assert.match(screen,/<Feather name="chevron-down" size=\{13\} color="#3156B8"\/>/, "Case list has the Policies downward chevron");
 assert.match(screen,/Loading more cases…/, "Case list has loading progress text");
 assert.match(screen,/rows\.length<total\?<Pressable/, "Case footer is hidden after all matching cases are loaded");
-assert.match(screen,/listLifeHealthCases\(\{status,search,offset,limit:10\}\)/, "Existing 10-item server pagination is unchanged");
+assert.match(screen,/listLifeHealthCases\\(\\{status,businessLine,search,offset,limit:10\\}\\)/, "Existing 10-item server pagination remains, with business-line filtering");
+assert.match(api,/businessLine: args\\.businessLine \\?\\? 'all'/, "Omitting the filter preserves the legacy All default");
+assert.match(route,/\\["all","life","health"\\]\\.includes\\(businessLine\\)/, "Server accepts only supported business lines");
+assert.match(route,/businessLine==="all" \\|\\| row\\.business_line\\.trim\\(\\)\\.toLowerCase\\(\\)===businessLine/, "Business-line filtering happens before pagination");
+assert.match(screen,/styles\\.listTitle/, "Heading remains visible with status tabs");
+assert.match(screen,/setBusinessLine\\(item\\.key\\)/, "Dropdown changes selected business line");
 assert.match(screen,/accessibilityState=\{\{disabled:more,busy:more\}\}/, "Loading state disables repeated pagination taps");
 assert.doesNotMatch(screen,/Load More \(\$\{rows\.length\} of \$\{total\}\)/, "Old numeric footer is removed");
 console.log("Partner issued policy popup, native detail and scoped edits passed");
