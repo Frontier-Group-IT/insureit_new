@@ -189,6 +189,21 @@ const profile = read('app/profile.tsx');
 const accountShellHeader = read('components/partner-case-page-header.tsx');
 requireText(accountShellHeader, "backgroundColor: '#0A234A'", 'Account header must match the Policy Details title strip.');
 requireText(accountShellHeader, 'accessibilityRole="header"', 'Account page title must be accessible.');
+const lifeHealthCaseDetails = read('app/life-health-cases/[id].tsx');
+for (const [fragment, purpose] of [
+  ["const [expandedCaseTab,setExpandedCaseTab]=useState<'activity'|'remarks'>('activity');", 'Activity Status must be selected by default'],
+  ['<View style={styles.activityFilterTabs}>', 'Update existing tabs above case actions; do not add new tabs'],
+  ['accessibilityState={{selected:expandedCaseTab===tab}}', 'Existing tab must expose selected accessibility state'],
+  ['onPress={()=>setExpandedCaseTab(tab)}', 'Tapping active tab must not collapse the existing history'],
+  ['styles.activityFilterTabActive', 'Selected tab must use underline styling'],
+  ["activityFilterTabActive:{borderBottomColor:'#2582F8'}", 'Selected underline must be bright blue'],
+  ["activityFilterTabs:{flexDirection:'row',alignItems:'stretch',backgroundColor:'#FFFFFF',borderBottomWidth:1,borderBottomColor:'#E7EAF0'}", 'Tabs must be white with grey divider'],
+  ["activityFilterTextActive:{color:'#0A234A'}", 'Selected text must be navy'],
+  ["activityFilterText:{fontSize:11,fontWeight:'600',color:'#52627A'", 'Inactive text must be muted'],
+  ["{record.status_group==='pending'?<View style={styles.caseActions}>", 'Reject and save actions must remain below existing tabs'],
+]) requireText(lifeHealthCaseDetails, fragment, purpose);
+if (lifeHealthCaseDetails.includes('setExpandedCaseTab(previous=>previous===tab?null:tab)')) throw new Error('Existing case filter must not collapse when selected again.');
+if (lifeHealthCaseDetails.includes("activityFilterCount") || lifeHealthCaseDetails.includes('tabCountBadge')) throw new Error('Activity / Remarks tabs must not display badges.');
 const deletionScreen = read('app/account-deletion.tsx');
 const deletionBrandIndex = deletionScreen.indexOf('<View style={styles.heroBrand} accessibilityLabel="insureit Partner">');
 const deletionSloganIndex = deletionScreen.indexOf('<View style={styles.heroCopy}>');
