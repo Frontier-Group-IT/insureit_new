@@ -218,7 +218,7 @@ async function processClaim(item: Claimed, parserRevision: string) {
     const safeDiagnostic=extraction.diagnosticCode??"parser_not_trained";
     await finishClaim(item,{
       state:validationFailed?"exception":untrained?"unsupported":"failed",
-      exception_codes:[validationFailed?"parser_validation_failed":untrained?"unsupported_layout":"extraction_failed"],
+      exception_codes:[validationFailed?"extraction_failed":untrained?"unsupported_layout":"extraction_failed"],
       field_keys:[],parser_id:null,checks_passed:0,extraction_fingerprint:null,
       last_error_code:untrained?safeDiagnostic:"n8n_unavailable",
       processed_at:untrained?new Date().toISOString():null,
