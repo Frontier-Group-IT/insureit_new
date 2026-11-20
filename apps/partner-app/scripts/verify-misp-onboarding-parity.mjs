@@ -3,6 +3,7 @@ import {readFileSync} from 'node:fs';
 const read=p=>readFileSync(new URL(p,import.meta.url),'utf8');
 const app=read('../app/partner-new.tsx');
 const form=read('../components/misp-partner-form.tsx');
+const partnerNew=read('../app/partner-new.tsx');
 const documents=read('../app/partner-documents.tsx');
 const route=read('../app/_layout.tsx');
 const permissions=read('../lib/partner-permissions.ts');
@@ -47,7 +48,9 @@ assert.match(api,/input.partner_type === "misp" \? "misp" : "posp"/,'MISP is sav
 assert.match(api,/dp_aadhaar_number_encrypted:isMisp\?aadhaarEncrypted:null/,'DP Aadhaar encrypted separately');
 assert.match(api,/isEmployeeWithinAccessScope/,'RM employee scope enforced');
 assert.match(api,/brandRows/,'OEM master list comes from real manufacturer brands');
-assert.match(api,/pendingMisps/,'Saved MISP documents can be resumed');
+assert.match(api,/pendingMisps/,'Server retains saved MISP application records');
+assert.doesNotMatch(app,/pendingMisps|setPendingMisps/,'New Partner screen must not request saved MISP list');
+assert.doesNotMatch(form,/Continue saved MISP documents|pendingMisps/,'New MISP form must not display saved applications');
 assert.ok(route.includes('name="partner-documents"'),'Document route is registered');
 assert.match(permissions,/partner-new\|partner-documents/,'Native MISP document route requires Add Partner permission');
 for(const type of ['aadhaar_front','aadhaar_back','pan_copy','cancelled_cheque','photograph','gst_copy',
