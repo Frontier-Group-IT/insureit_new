@@ -41,7 +41,7 @@ for (const [fragment, description] of [
 for (const removed of ['filterNameBadge: {', 'openStatusMenu', 'statusOptions.map', 'visible={statusMenuOpen}']) {
   assert.ok(!policies.includes(removed), 'Search bar no longer renders redundant status control: ' + removed);
 }
-assert.match(policies, /<Ionicons name="filter-outline" size={18} color="#3156B8" \/>/, 'Enabled inline Filter must use the exact Claims icon');
+assert.ok(policies.includes('<Ionicons name="filter-outline" size={18} color="#3156B8" />'), 'Enabled inline Filter must use the exact Claims icon');
 assert.match(policies, /onPress=\{openSortSheet\}/, 'Inline Filter must open existing Policies advanced filters');
 assert.doesNotMatch(policies, /styles\\.summaryRow|styles\\.summaryScroll|styles\\.summaryChipSelected|seeAllOpen|statusSheetOverlay/, 'Obsolete horizontal policy chips and See all removed');
 // Claims keeps three compact filters and the permission-gated Add action together in one row.
