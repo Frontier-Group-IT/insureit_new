@@ -1,9 +1,9 @@
 Partner production OTA trigger
-release=partner-claims-unified-outline-pr-4950
+release=partner-profile-registration-id-icon-pr-4957
 source=verified-merged-main
-source_pr=4950
-source_merge=e898a2f80732688e98b31f75009f1cf5d9233597
-reason=user-approved-merge-and-publish-navy-outline-connected-claims-filters
+source_pr=4957
+source_merge=a197546e3eed59fe2b681d8633c2a890976bda2b
+reason=user-approved-merge-and-publish-profile-registration-id-icon
 channel=production
 runtime=0.2.0
 requested=2026-11-20
