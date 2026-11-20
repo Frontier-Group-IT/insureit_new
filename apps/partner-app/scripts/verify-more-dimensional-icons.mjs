@@ -15,13 +15,20 @@ for (const title of ['Search all business', 'Policy Intake', 'Case Register',
   'Profile & registration', 'Support', 'Settings & app info']) {
   assert.ok(more.includes('title="'+title+'"'), 'Preserve More action '+title);
 }
+// Search and Case Register use title-only menu rows with no subtitle.
+assert.match(more, /iconKind="search" title="Search all business" onPress=/);
+assert.match(more, /iconKind="case-register" title="Case Register" onPress=/);
+assert.doesNotMatch(more, /title="Search all business" helper=/);
+assert.doesNotMatch(more, /title="Case Register" helper=/);
 for (const kind of ['search','policy-intake','renewals','customers','week',
   'impact','journey','activity','learn','recognition','stories','profile',
   'support','settings']) {
   assert.ok(icons.includes(kind+': {') || icons.includes("'"+kind+"': {"),
     '3D palette missing for '+kind);
 }
-assert.match(more, /sectionRows/, 'More groups should not have rounded card containers');
+assert.match(more, /<View style=\{styles\.sectionRows\}>\{children\}<\/View>/, 'Every More section must share a rounded white card container');
+assert.match(more, /sectionRows: \{[\s\S]*?overflow: 'hidden',[\s\S]*?borderRadius: 16,[\s\S]*?backgroundColor: partnerTheme\.colors\.surface,[\s\S]*?borderWidth: 1,[\s\S]*?borderColor: partnerTheme\.colors\.line,[\s\S]*?\.\.\.partnerTheme\.shadowSoft/, 'More section cards must have a clipped rounded white surface, light border and soft shadow');
+assert.match(more, /paddingHorizontal: 13,/, 'Rows must have inset horizontal padding inside the rounded cards');
 assert.match(more, /!last && styles\.menuRowDivider/, 'Dividers must separate adjacent menu items');
 assert.match(more, /borderBottomWidth: 1/, 'Dividers must be clearly visible, not hairline-faded');
 assert.match(more, /borderBottomColor: '#E6EAF0'/, 'Dividers must use subtle reference-style light gray');

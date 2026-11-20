@@ -122,9 +122,9 @@ export default function MoreScreen() {
       ) : null}
 
       <MenuSection title="WORK">
-        {canPartnerSearch(context) ? <MenuRow iconKind="search" title="Search all business" helper="Customers, policies and claims" onPress={() => router.push('/search')} /> : null}
+        {canPartnerSearch(context) ? <MenuRow iconKind="search" title="Search all business" onPress={() => router.push('/search')} /> : null}
         {canPartnerAccess(context, 'view_policy_intakes') ? <MenuRow iconKind="policy-intake" title="Policy Intake" onPress={() => router.push('/policy-intakes')} /> : null}
-        {canPartnerAccessCaseRegister(context) ? <MenuRow iconKind="case-register" title="Case Register" helper="Life & Health cases" onPress={() => router.push('/life-health-cases')} /> : null}
+        {canPartnerAccessCaseRegister(context) ? <MenuRow iconKind="case-register" title="Case Register" onPress={() => router.push('/life-health-cases')} /> : null}
         {canPartnerAccess(context, 'view_policies') ? <MenuRow iconKind="renewals" title="Renewals" onPress={() => router.push('/renewals')} /> : null}
         {canPartnerAccess(context, 'view_customers') ? <MenuRow iconKind="customers" title="Customers" onPress={() => router.push('/customers')} last /> : null}
       </MenuSection>
@@ -341,16 +341,21 @@ const styles = StyleSheet.create({
     letterSpacing: 1.1,
     ...partnerTheme.typography.eyebrow,
   },
-  // Use subtle, reference-style dividers between menu rows.
+  // Group menu rows in one softly rounded white card, matching the reference.
   sectionRows: {
-    backgroundColor: 'transparent',
+    overflow: 'hidden',
+    borderRadius: 16,
+    backgroundColor: partnerTheme.colors.surface,
+    borderWidth: 1,
+    borderColor: partnerTheme.colors.line,
+    ...partnerTheme.shadowSoft,
   },
   menuRow: {
     minHeight: 68,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    paddingHorizontal: 6,
+    paddingHorizontal: 13,
     paddingVertical: 9,
   },
   menuRowDivider: {
