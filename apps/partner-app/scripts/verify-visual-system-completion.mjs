@@ -221,7 +221,11 @@ for (const required of [
   'Unlocked achievements', 'ACHIEVED', '{item.title}', 'formatDate(item.date)',
   'NEXT MILESTONE', '{next.title}', 'next.current.toLocaleString', 'View your full journey',
   "hero: { marginHorizontal: -partnerTheme.spacing.lg, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#E5E7EB'",
-  'styles.earnedCount', 'styles.achievementMeta', 'width: 32, height: 32', 'borderWidth: 2.5', 'fontSize: 7, lineHeight: 10',
+  'styles.earnedCount', 'styles.achievementMeta', 'width: 32, height: 32', 'fontSize: 5, lineHeight: 7',
+  'PROGRESS_RING_SEGMENTS.map((segment, index) =>',
+  'progress * PROGRESS_RING_SEGMENTS.length - index',
+  "backgroundColor: fill > 0 ? '#7158DC' : '#E7E1F9'",
+  'accessibilityRole="progressbar"',
   'numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65}>Every milestone matters.',
   'earnedCount: { alignItems: \'center\', justifyContent: \'center\', width: 64',
 ]) requireText(recognition, required, 'My Achievements must keep approved compact content and placement.');

@@ -13,6 +13,18 @@ import { partnerTheme } from '@/lib/theme';
 
 type RecognitionItem = PartnerRecognition['items'][number];
 
+// Keep the 32px ring OTA-safe: use only React Native views (no new native dependencies).
+// Overlapping radial segments form a smooth ring with a proportional purple arc.
+const PROGRESS_RING_SEGMENTS = Array.from({ length: 120 }, (_, index) => {
+  const angle = (index * 360) / 120;
+  const radians = (angle * Math.PI) / 180;
+  return {
+    left: 16 + 14.5 * Math.sin(radians) - 0.9,
+    top: 16 - 14.5 * Math.cos(radians) - 1.25,
+    rotation: `${angle}deg` as `${number}deg`,
+  };
+});
+
 export default function RecognitionScreen() {
   const router = useRouter();
   const [data, setData] = useState<PartnerRecognition | null>(null);
@@ -114,6 +126,25 @@ export default function RecognitionScreen() {
                     accessibilityLabel={next.title}
                     accessibilityValue={{ min: 0, max: Math.max(0, next.target), now: Math.max(0, Math.min(next.current, Math.max(0, next.target))) }}
                   >
+                    {PROGRESS_RING_SEGMENTS.map((segment, index) => {
+                      const fill = Math.max(0, Math.min(1, progress * PROGRESS_RING_SEGMENTS.length - index));
+                      return (
+                        <View
+                          key={index}
+                          accessible={false}
+                          style={[
+                            styles.progressSegment,
+                            {
+                              left: segment.left,
+                              top: segment.top,
+                              transform: [{ rotate: segment.rotation }],
+                              backgroundColor: fill > 0 ? '#7158DC' : '#E7E1F9',
+                              opacity: fill > 0 ? fill : 1,
+                            },
+                          ]}
+                        />
+                      );
+                    })}
                     <Text style={styles.percentText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.9}>{(progress * 100).toFixed(1)}%</Text>
                   </View>
                   <Text style={styles.currentNumber}>{next.current.toLocaleString('en-IN')}</Text>
@@ -184,8 +215,9 @@ const styles = StyleSheet.create({
   nextEyebrow: { color: '#6856D5', fontSize: 10, letterSpacing: 0.8, fontWeight: '800' },
   nextTitle: { marginTop: 5, color: '#17233A', fontSize: 17, lineHeight: 22, fontWeight: '800' },
   percentGroup: { alignItems: 'center', justifyContent: 'center', gap: 5 },
-  percentCircle: { width: 32, height: 32, borderRadius: 16, borderWidth: 2.5, borderColor: '#7158DC', alignItems: 'center', justifyContent: 'center', backgroundColor: '#F7F4FF' },
-  percentText: { color: '#6954D6', fontSize: 7, lineHeight: 10, fontWeight: '800', textAlign: 'center', includeFontPadding: false },
+  percentCircle: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F7F4FF' },
+  progressSegment: { position: 'absolute', width: 1.8, height: 2.5, borderRadius: 1.2 },
+  percentText: { color: '#6954D6', fontSize: 5, lineHeight: 7, fontWeight: '800', textAlign: 'center', includeFontPadding: false },
   currentNumber: { color: '#17233A', fontSize: 15, fontWeight: '800' },
   journeyLink: { marginTop: 12, paddingVertical: 12, flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center', borderRadius: partnerTheme.radius.md, backgroundColor: '#EBF1FA' },
   journeyLinkPressed: { opacity: 0.7 },
