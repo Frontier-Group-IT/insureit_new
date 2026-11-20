@@ -403,7 +403,7 @@ async function preparePolicyIntakeHandoffInternal(
       : verified && verified.premium
       ? `Policy Intake ${id} — n8n validated ${verified.premium.tataAig ? "Tata AIG private car" : "ICICI 3005"} PDF. Review every prefilled value before booking.
 PDF premium reconciliation: Printed Basic OD ${verified.premium.basicOd} + OD add-ons ${addOnTotal} - validated NCB/OD deductions ${verified.premium.odDeductions??0} = Total OD ${verified.premium.totalOd}; net-of-deductions Basic OD entered for onboarding ${verifiedPremium?.od??"unavailable"}. TP ${verified.premium.basicTp}, CPA ${verified.premium.cpa}, Net ${verified.premium.net}, GST ${verified.premium.tax}, Gross ${verified.premium.gross}.
-Third Party period: ${tpStart||"unavailable"} to ${tpExpiry||"unavailable"}. ${verified.premium.tataAig ? "Tata AIG issuance date is taken from the current signed policy PDF timestamp when it matches the printed receipt under the configured insurer rule. Non-owner-driver paid-liability amounts are allocated to the TP form bucket, not CPA." : ""} Verify separate TP/CPA dates, policy class/product, identity, commercial rates and unmatched PDF fields manually.`
+Third Party period: ${tpStart||"unavailable"} to ${tpExpiry||"unavailable"}. ${verified.premium.tataAig ? "Tata AIG issuance date is taken from the current signed policy PDF timestamp when it matches the printed receipt under the configured insurer rule. Non-owner-driver paid-liability amounts are allocated to the TP form bucket, not CPA." : ""} Verify separate TP/CPA dates, policy class/product, identity, commercial rates and unmatched PDF fields manually.${yearFallbackNote}`
       : `Policy Intake ${id}`,
   };
   // Preserve the long-standing generic OCR default. A positive owner-driver
