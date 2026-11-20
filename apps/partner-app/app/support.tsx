@@ -46,8 +46,6 @@ export default function SupportScreen() {
       ) : (
         <View style={styles.page}>
           <View style={styles.hero}>
-            <View pointerEvents="none" style={styles.heroCurveA} />
-            <View pointerEvents="none" style={styles.heroCurveB} />
             <View style={styles.heroIconShell}>
               <Image source={PartnerAssets.actions.supportVerified} style={styles.heroIcon} resizeMode="contain" />
             </View>
@@ -139,8 +137,6 @@ function OpsStat({ value, label, helper, onPress, tone }: {
     <Pressable accessibilityRole="button" accessibilityLabel={label + ': ' + value + '. ' + helper}
       accessibilityHint="Opens the related records" onPress={onPress}
       style={({ pressed }) => [styles.statCard, pressed && styles.statPressed]}>
-      <View pointerEvents="none" style={[styles.statTint, tone === 'warning' ? styles.warningTint : tone === 'info' ? styles.infoTint : styles.purpleTint]} />
-      <View pointerEvents="none" style={[styles.statSwoosh, tone === 'warning' ? styles.warningSwoosh : tone === 'info' ? styles.infoSwoosh : styles.purpleSwoosh]} />
       <View style={[styles.statIconBox, tone === 'warning' ? styles.warningIconBg : tone === 'info' ? styles.infoIconBg : styles.purpleIconBg]}>
         <Ionicons name={icon} size={29} color={color} />
         <View style={[styles.countBubble, { backgroundColor: color }]}>
@@ -152,7 +148,7 @@ function OpsStat({ value, label, helper, onPress, tone }: {
         <Text style={styles.statLabel} numberOfLines={2}>{label}</Text>
         <Text style={styles.statHelper} numberOfLines={2}>{helper}</Text>
       </View>
-      <View style={[styles.arrowCircle, { backgroundColor: tone === 'warning' ? '#FAD8E9' : tone === 'info' ? '#E0EDFF' : '#EBDFFF' }]}>
+      <View style={styles.arrowCircle}>
         <Ionicons name="chevron-forward" size={21} color={color} />
       </View>
     </Pressable>
@@ -171,15 +167,11 @@ function formatUpdatedAt(value: string) {
 const styles = StyleSheet.create({
   page: { paddingBottom: 12, overflow: 'hidden' },
   hero: {
-    minHeight: 112, borderRadius: 19, borderWidth: 1, borderColor: '#C9DCF8',
-    backgroundColor: '#E4F0FF', flexDirection: 'row', alignItems: 'center',
+    minHeight: 112, borderRadius: 19, borderWidth: 1, borderColor: '#E1E6EF',
+    backgroundColor: '#FFFFFF', flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: 12, paddingVertical: 12, overflow: 'hidden',
     shadowColor: '#396CB2', shadowOpacity: 0.09, shadowRadius: 9, shadowOffset: { width: 0, height: 3 }, elevation: 2,
   },
-  heroCurveA: { position: 'absolute', right: -30, bottom: -65, width: 180, height: 135,
-    borderRadius: 90, backgroundColor: '#BDD9FF', transform: [{ rotate: '-26deg' }] },
-  heroCurveB: { position: 'absolute', right: -60, top: -65, width: 160, height: 150,
-    borderRadius: 80, backgroundColor: '#D5E7FF', transform: [{ rotate: '25deg' }] },
   heroIconShell: { height: 65, width: 65, borderRadius: 22, backgroundColor: '#D4E7FF',
     alignItems: 'center', justifyContent: 'center', zIndex: 1 },
   heroIcon: { width: 61, height: 61 },
@@ -198,17 +190,11 @@ const styles = StyleSheet.create({
   statList: { gap: 12 },
   statCard: {
     minHeight: 91, borderRadius: 19, backgroundColor: '#FFFFFF', borderWidth: 1,
-    borderColor: '#EDF0F7', overflow: 'hidden', flexDirection: 'row', alignItems: 'center',
+    borderColor: '#E3E7EF', overflow: 'hidden', flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: 12, paddingVertical: 11,
     shadowColor: '#617AA4', shadowOpacity: 0.09, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 2,
   },
   statPressed: { opacity: 0.84 },
-  statTint: { position: 'absolute', width: 100, height: 130, right: -22, top: -17, borderRadius: 52, opacity: 0.8 },
-  warningTint: { backgroundColor: '#FCE5F1' }, infoTint: { backgroundColor: '#E1EDFF' },
-  purpleTint: { backgroundColor: '#EFE2FF' },
-  statSwoosh: { position: 'absolute', width: 115, height: 105, right: 21, bottom: -90, borderRadius: 55, transform: [{ rotate: '-18deg' }] },
-  warningSwoosh: { backgroundColor: '#FAD4E6' }, infoSwoosh: { backgroundColor: '#D1E5FF' },
-  purpleSwoosh: { backgroundColor: '#E5D5FF' },
   statIconBox: { width: 53, height: 56, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   warningIconBg: { backgroundColor: '#FBE5F0' }, infoIconBg: { backgroundColor: '#DFECFF' },
   purpleIconBg: { backgroundColor: '#EFE0FF' },
@@ -220,7 +206,7 @@ const styles = StyleSheet.create({
   statLabel: { color: '#071B42', fontSize: 12.6, fontWeight: '800', lineHeight: 17 },
   statHelper: { marginTop: 3, color: '#586A84', fontSize: 10.2, lineHeight: 14 },
   arrowCircle: { marginLeft: 5, width: 30, height: 30, borderRadius: 15,
-    alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: '#FFFFFF', zIndex: 1 },
+    alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#E0E5EC', backgroundColor: '#F5F6F8', zIndex: 1 },
   bottomWaveArea: { marginTop: 15, minHeight: 32, overflow: 'hidden' },
   bottomWavePale: { position: 'absolute', width: '140%', height: 66, left: -48, top: 16,
     borderRadius: 95, backgroundColor: '#E6EFFD', transform: [{ rotate: '5deg' }] },
