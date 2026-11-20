@@ -420,7 +420,7 @@ for (const fragment of [
   'IFSC format is invalid.',
   'Account Number must contain 6 to 20 digits.',
   'validateMisp(form)',
-  'setFieldErrors(errors)',
+  'setFieldErrors(firstInvalid?{[firstInvalid]:errors[firstInvalid]}:{})',
   'mispFieldOrder.find(key=>errors[key])',
   "partnerAlert(`${label} invalid`,errors[firstInvalid]",
   'fieldErrors[field.key]&&styles.invalidInput',
