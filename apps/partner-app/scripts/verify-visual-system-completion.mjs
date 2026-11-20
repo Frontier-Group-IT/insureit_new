@@ -895,7 +895,7 @@ const periodSql = fs.readFileSync(path.join(root,'../../supabase/migrations/2026
 for(const phrase of ["setSortSheetOpen(true)","Sort by","MTD","All","sheetStatuses.map","Apply Filter","setPeriod(draftPeriod)","setLifecycle(draftLifecycle)","periodCounts.data?.[draftPeriod]?.[option.value]","styles.sortFloating"]) {
   requireText(policies,phrase,'Policy period/status bottom sheet is missing '+phrase);
 }
-for(const phrase of ["period,","policies:list:${period}:${lifecycle}","[period, lifecycle, debouncedSearch, businessLine]","setVisibleLimit(PAGE_SIZE)"]) {
+for(const phrase of ["period,","policies:list:${period}:${lifecycle}","[period, lifecycle, debouncedSearch, businessLine, source, rm, fromDate, toDate]","setVisibleLimit(PAGE_SIZE)"]) {
   requireText(policies,phrase,'Period filter must invalidate fetched pages and reset pagination: '+phrase);
 }
 for(const phrase of ["partner_app_list_policies_by_period","partner_app_policy_period_counts","p_period: period","businessLine === 'all'"]) {
@@ -919,30 +919,20 @@ requireText(policies,"let savedPolicyLifecycle: PartnerPolicyLifecycle = 'all';"
 requireText(policies,"useState<PartnerPolicyPeriod>(savedPolicyPeriod)","The Sort by sheet and list must share the selected period");
 requireText(policies,"useState<PartnerPolicyLifecycle>(savedPolicyLifecycle)","The Sort by sheet and list must share the selected status");
 
-for(const phrase of [
-  "name=\"calendar\"",
-  "name=\"layers-outline\"",
-  "styles.sortPeriodContent",
-  "sortChoiceSelected:{backgroundColor:'#EFEBFF'}",
-  "sortCountPurple:{backgroundColor:'#DDDDFE'}",
-  "sortCountGreen:{backgroundColor:'#DFF8E9'}",
-  "sortCountRed:{backgroundColor:'#FCE5E5'}",
-  "sortCountAmber:{backgroundColor:'#FFF0D9'}",
-  "styles.sortChoiceCountBadge",
-  "styles.sortApplyContent",
-  "name=\"filter\"",
-  "setDraftPeriod(value);setDraftLifecycle('all');",
-  "onPress={applySortSheet}",
-  "maxHeight:windowHeight-36",
-]) requireText(policies,phrase,'Premium Sort by sheet must match reference without changing filtering semantics: '+phrase);
-
+// The approved four-tab layout retains the period/status controls while adding
+// searchable Source and RM and a native date range without resetting status.
 for (const phrase of [
-  "sortPeriodSelected:{backgroundColor:'#4030AF'",
-  "sortPeriodOption:{flex:1,minHeight:43",
-  "sortChoice:{flexDirection:'row',alignItems:'center',gap:11,minHeight:46",
-  "sortApply:{height:46,borderRadius:24",
-  "backgroundColor:'#4030AF',marginTop:14",
-]) requireText(policies,phrase,'Sort sheet must remain compact with seamless purple fill: '+phrase);
+  "styles.advancedTabs","key:'period'","key:'source'","key:'rm'","key:'date'",
+  "setFilterTab('period')","sheetStatuses.map","styles.sortChoiceCountBadge",
+  "styles.advancedFooter","styles.advancedReset","styles.advancedApply",
+  "Search source...","Search RM...","PartnerDatePicker label=\"From\"",
+  "PartnerDatePicker label=\"To\"","onPress={applySortSheet}",
+  "maxHeight:windowHeight-36","sortPeriodSelected:{backgroundColor:'#4030AF'",
+  "sortPeriodOption:{flex:1,minHeight:43","sortChoice:{flexDirection:'row',alignItems:'center',gap:11,minHeight:46",
+]) requireText(policies,phrase,'The approved four-tab Sort by layout must remain compact: '+phrase);
+if (policies.includes("setDraftPeriod(value);setDraftLifecycle('all');")) {
+  throw new Error('Changing Period must not reset the selected policy lifecycle');
+}
 if (policies.includes("SortPurpleGradient") || policies.includes("sortPurpleGradient") || policies.includes('name="checkmark-circle" size={21}')) {
   throw new Error('Sort sheet must not use striped gradient pieces or the period checkmark');
 }
