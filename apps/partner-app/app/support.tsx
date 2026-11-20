@@ -49,7 +49,6 @@ export default function SupportScreen() {
             <View style={styles.heroIconShell}>
               <PartnerProfileMenuIcon kind="support" size={60} />
             </View>
-            <View style={styles.heroRule} />
             <View style={styles.heroContent}>
               <View style={styles.heroTopRow}>
                 <View style={styles.heroInformation}>
@@ -172,19 +171,18 @@ function formatUpdatedAt(value: string) {
 const styles = StyleSheet.create({
   page: { paddingBottom: 12, overflow: 'hidden' },
   hero: {
-    minHeight: 112, borderRadius: 19, borderWidth: 1, borderColor: '#E1E6EF',
+    minHeight: 106, marginHorizontal: -16, borderRadius: 19, borderWidth: 1, borderColor: '#E1E6EF',
     backgroundColor: '#FFFFFF', flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 12, paddingVertical: 12, overflow: 'hidden',
+    paddingHorizontal: 16, paddingVertical: 13, overflow: 'hidden',
     shadowColor: '#396CB2', shadowOpacity: 0.09, shadowRadius: 9, shadowOffset: { width: 0, height: 3 }, elevation: 2,
   },
-  heroIconShell: { height: 65, width: 60, alignItems: 'center', justifyContent: 'center', zIndex: 1 },
-  heroRule: { marginHorizontal: 8, width: 1.5, height: 66, backgroundColor: '#5385CA', zIndex: 1 },
+  heroIconShell: { height: 60, width: 60, alignItems: 'center', justifyContent: 'center', marginRight: 12, zIndex: 1 },
   heroContent: { flex: 1, minWidth: 0, zIndex: 1 },
-  heroTopRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 5 },
-  heroInformation: { flex: 1, minWidth: 0, paddingTop: 2 },
-  heroTitle: { color: '#071B42', fontWeight: '800', fontSize: 12.2, lineHeight: 16 },
-  heroSubtitle: { marginTop: 4, color: '#4E6484', fontSize: 9.8, lineHeight: 13 },
-  heroRight: { flexShrink: 0, width: 107, alignItems: 'flex-end', gap: 9 },
+  heroTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, width: '100%' },
+  heroInformation: { flex: 1, minWidth: 0, minHeight: 60, justifyContent: 'center' },
+  heroTitle: { color: '#071B42', fontWeight: '800', fontSize: 12.8, lineHeight: 17 },
+  heroSubtitle: { marginTop: 4, color: '#4E6484', fontSize: 10, lineHeight: 14 },
+  heroRight: { flexShrink: 0, width: 100, alignItems: 'flex-end', justifyContent: 'center', gap: 7 },
   updatedLine: { width: '100%', alignItems: 'flex-end' },
   updatedText: { color: '#255390', fontSize: 9.2, fontWeight: '700', textAlign: 'right' },
   heroActions: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', gap: 6, zIndex: 1 },
