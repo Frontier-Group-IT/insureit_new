@@ -146,7 +146,8 @@ export default function RecognitionScreen() {
 function milestoneArtwork(icon: RecognitionItem['icon']): ImageSourcePropType {
   if (icon === 'learn') return PartnerAssets.actions.policyChecklist;
   if (icon === 'renewal') return PartnerAssets.actions.renewalsReference;
-  return PartnerAssets.actions.quickClaims;
+  if (icon === 'claim') return PartnerAssets.actions.quickClaims;
+  return PartnerAssets.status.journey;
 }
 
 function formatDate(value: string) {
