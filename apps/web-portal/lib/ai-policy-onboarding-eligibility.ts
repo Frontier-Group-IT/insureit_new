@@ -215,7 +215,7 @@ export function assessAiPolicyIntake(input: AiPolicyEvidence): AiAssessment {
     // financial verification or infer a manufacture month/day.
     const yearEvidence=resolveManufacturingYearEvidence(input.fields);
     if (required.some(key => key==="vehicle_manufacturing_year"
-      ? !yearEvidence.year : !fields.get(key))) {
+      ? !fields.get(key) && !yearEvidence.year : !fields.get(key))) {
       add("missing_field", "Mandatory extracted fields are missing", "edit_draft");
     }
     if (parser?.family==="commercial" && fields.get("vehicle_registration_status")==="registration_pending")
