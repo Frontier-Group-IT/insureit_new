@@ -11,12 +11,13 @@
     "typecheck": "tsc --noEmit",
     "verify:routes": "node scripts/verify-routes.mjs",
     "verify:phase5": "node scripts/verify-phase5-contracts.mjs",
-    "verify:visual": "node scripts/verify-visual-system-completion.mjs",
+    "verify:visual": "node scripts/verify-visual-system-completion.mjs && npm run verify:ios-typography",
     "verify:pre-apk": "node scripts/verify-pre-apk-freeze.mjs",
     "verify:phase6": "node scripts/verify-phase6-native-foundation.mjs",
     "verify:uat": "node scripts/verify-pre-apk-uat.mjs",
     "verify:activity-unread-search": "node scripts/verify-activity-unread-search.mjs",
-    "build:web": "expo export --platform web --output-dir dist-web"
+    "build:web": "expo export --platform web --output-dir dist-web",
+    "verify:ios-typography": "node scripts/verify-ios-typography.mjs"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
