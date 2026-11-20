@@ -15,6 +15,11 @@ for (const title of ['Search all business', 'Policy Intake', 'Case Register',
   'Profile & registration', 'Support', 'Settings & app info']) {
   assert.ok(more.includes('title="'+title+'"'), 'Preserve More action '+title);
 }
+// Search and Case Register use title-only menu rows with no subtitle.
+assert.match(more, /iconKind="search" title="Search all business" onPress=/);
+assert.match(more, /iconKind="case-register" title="Case Register" onPress=/);
+assert.doesNotMatch(more, /title="Search all business" helper=/);
+assert.doesNotMatch(more, /title="Case Register" helper=/);
 for (const kind of ['search','policy-intake','renewals','customers','week',
   'impact','journey','activity','learn','recognition','stories','profile',
   'support','settings']) {
