@@ -14,9 +14,11 @@ type PartnerDatePickerProps = {
   minimumDate?: Date;
   maximumDate?: Date;
   disabled?: boolean;
+  /** Opt in to immediate iOS day selection without the shared Done button. */
+  directSelect?: boolean;
 };
 
-export function PartnerDatePicker({ label, value, onChange, minimumDate, maximumDate, disabled = false }: PartnerDatePickerProps) {
+export function PartnerDatePicker({ label, value, onChange, minimumDate, maximumDate, disabled = false, directSelect = false }: PartnerDatePickerProps) {
   const [open, setOpen] = useState(false);
   const displayValue = useMemo(() => value
     ? formatAppDate(value)
@@ -29,8 +31,12 @@ export function PartnerDatePicker({ label, value, onChange, minimumDate, maximum
   };
 
   const handleChange = (event: DateTimePickerEvent, selected?: Date) => {
-    if (Platform.OS === 'android') setOpen(false);
-    if (event.type === 'dismissed' || !selected) return;
+    if (event.type === 'dismissed' || !selected) {
+      if (Platform.OS === 'android') setOpen(false);
+      return;
+    }
+    // Only this screen opts in; all other date pickers retain their behavior.
+    if (Platform.OS === 'android' || directSelect) setOpen(false);
     onChange(selected);
   };
 
@@ -59,7 +65,7 @@ export function PartnerDatePicker({ label, value, onChange, minimumDate, maximum
             maximumDate={maximumDate}
             onChange={handleChange}
           />
-          {Platform.OS === 'ios' ? (
+          {Platform.OS === 'ios' && !directSelect ? (
             <Pressable accessibilityRole="button" onPress={() => setOpen(false)} style={styles.doneButton}>
               <Text style={styles.doneText}>Done</Text>
             </Pressable>
