@@ -1035,7 +1035,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
                 <p className="break-all font-mono text-[10px]">Error code: {exceptionRow.ai_diagnostic_code}</p>
                 <p>{parserDiagnostic(exceptionRow.ai_diagnostic_code)?.detail}</p>
                 {parserDiagnostic(exceptionRow.ai_diagnostic_code)?.checks.length ? <p><strong>Failed checks:</strong> {parserDiagnostic(exceptionRow.ai_diagnostic_code)?.checks.join(", ")}</p>:null}
-                <p className="mt-1 text-amber-800">This is the saved queue diagnostic, not a fresh execution. Use Reparse & replace to retry.</p>
+
               </div>
             ):null}
             <div className="mt-3 max-h-[300px] space-y-2 overflow-y-auto">
@@ -1238,38 +1238,22 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
                 ) : null}
               </div>
             ) : null}
-            <p className="mt-3 text-[10px] leading-4 text-[#61748e]">
-              The queue is review-only until a verified resolution is recorded. Choosing an action here does not create a customer, vehicle or policy.
-            </p>
+
             {queueRetryError ? <p role="alert" className="mt-3 rounded-lg bg-amber-50 p-2 text-[10px] text-amber-900">{queueRetryError}</p> : null}
             <div className="mt-5 flex flex-wrap justify-end gap-2">
               {primaryN8n && queueActive && !exceptionRow.is_duplicate
                 && ["unsupported","exception","failed"].includes(exceptionRow.ai_state??"") ? (
                 <button type="button" disabled={isWaiting || queueRetrying}
                   onClick={()=>{setManualTransferRow(exceptionRow);setManualTransferReason("");setManualTransferError(null);setExceptionRow(null);}}
-                  className="min-h-9 rounded-lg border border-amber-300 bg-amber-50 px-3 text-[11px] font-bold text-amber-900 disabled:opacity-50">
-                  Move to Manual Onboarding
+                  aria-label="Move to manual onboarding" title="Move to manual onboarding" className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100 disabled:opacity-50">
+                  <PencilLine className="h-4 w-4"/>
                 </button>
               ):null}
               <button type="button" autoFocus onClick={()=>{setExceptionRow(null);setQueueRetryError(null);setCustomerReview(null);}}
-                className="min-h-9 rounded-lg border border-[#cbd6e5] px-3 text-[11px] font-semibold text-[#38516e]">Close</button>
-              <Link href={"/policy-intakes/"+exceptionRow.id} className="inline-flex min-h-9 items-center rounded-lg border border-[#bcd0e5] px-3 text-[11px] font-semibold text-[#24538b]">Advanced options</Link>
-              {queueActive ? <button type="button" disabled={queueRetrying}
-                onClick={async ()=>{
-                  if(!exceptionRow)return;
-                  setQueueRetrying(true);setQueueRetryError(null);
-                  try{
-                    const response=await reprocessAiPolicyIntake(exceptionRow.id);
-                    if(response.ok){setExceptionRow(null);router.refresh();}
-                    else setQueueRetryError(response.error??"Could not queue extraction.");
-                  }catch{setQueueRetryError("Unable to schedule a recheck. Refresh the Intake and try again.");}
-                  finally{setQueueRetrying(false);}
-                }}
-                className="inline-flex min-h-9 items-center rounded-lg border border-[#bcd0e5] px-3 text-[11px] font-semibold text-[#24538b] disabled:opacity-50">
-                {queueRetrying?"Queuing...":"Recheck in background"}
-              </button> : null}
+                aria-label="Close exception" title="Close" className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50"><X className="h-4 w-4"/></button>
+              <Link href={"/policy-intakes/"+exceptionRow.id} aria-label="Open Intake" title="Open Intake" className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-blue-700 hover:bg-blue-50"><ArrowRight className="h-4 w-4"/></Link>
               <button type="button" onClick={()=>{const id=exceptionRow.id;setExceptionRow(null);setProcessingOpen(true);void selectRow(id);}}
-                className="min-h-9 rounded-lg bg-[#174b83] px-3 text-[11px] font-bold text-white">Review current PDF</button>
+                aria-label="Review current PDF" title="Review current PDF" className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-[#174b83] text-white hover:bg-blue-800"><Eye className="h-4 w-4"/></button>
             </div>
           </div>
         </div>
