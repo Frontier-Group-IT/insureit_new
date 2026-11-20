@@ -223,7 +223,7 @@ export default async function IntermediaryWorkflowPage({ params, searchParams }:
 
         {query.success && !popupEvent ? <WorkflowSuccessToast message={successes[query.success] ?? "Saved successfully."} /> : null}
 
-        <IntermediaryDocumentUploadController applicationId={id} enabled={viewStage === "documents" && editable} showGst={Boolean(profile.gst_number)} />
+        <IntermediaryDocumentUploadController applicationId={id} enabled={viewStage === "documents" && editable} showGst={Boolean(profile.gst_number)} canFinalizeExistingPartnerDocuments={context === "partner" && documentsComplete && application.partner_status !== "active_partner"} />
         <main className="overflow-hidden rounded-2xl border bg-white">
           {viewStage === "primary" || viewStage === "documents" ? (
             <div className="space-y-4 bg-[#F4F7FB]">
