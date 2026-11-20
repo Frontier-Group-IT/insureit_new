@@ -313,6 +313,8 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
   // Validate the original PDF premium and its OD/NCB deduction before a
   // handoff can claim the Intake or create a canonical draft.
   let verifiedMoney:ReturnType<typeof mapVerifiedN8nMotorPremium>;
+  if (!extracted.preview.premium || extracted.preview.commercialPremium)
+    return fail("Premium","Commercial policy booking requires canonical policy onboarding review; no ICICI breakdown is inferred.");
   try{verifiedMoney=mapVerifiedN8nMotorPremium(extracted.preview.premium);}
   catch{return fail("Premium","The validated ICICI premium or OD/NCB deduction cannot be represented safely in canonical onboarding. Review the policy manually.");}
 
