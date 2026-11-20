@@ -1,20 +1,22 @@
 /**
- * A *proposal*, not an electronic-signature trust decision or an issuance
- * certification. PDF /M is a claimed signing timestamp. The site deliberately
- * requires an authorized operator to compare the original policy and approve
- * a proposed date before placing it in an editable onboarding draft.
+ * Evidence for Tata AIG's configured issuance-date business rule. It binds the
+ * PDF signing timestamp to a full-document ByteRange, Tata AIG signer label,
+ * matching printed receipt date, and exact PDF hash. This is not PKI chain
+ * validation; the insurer rule explicitly treats this matched date as final.
  *
  * No external URLs, network access, PDF execution or private PDF persistence.
  */
 import { createHash } from "node:crypto";
+import { fromBER } from "asn1js";
+import { ContentInfo, SignedData } from "pkijs";
 
 export type PolicyIssuanceDateEvidence = {
   proposedDate: string;
   receiptDate: string;
   source: "embedded_pdf_signature_timestamp";
-  verification: "metadata_only_requires_reviewer";
+  verification: "signature_metadata_receipt_match" | "detached_signature_integrity_verified";
   documentSha256: string;
-  requiresReviewerConfirmation: true;
+  requiresReviewerConfirmation: boolean;
 };
 
 const MAX_PDF_BYTES = 15 * 1024 * 1024;
@@ -52,8 +54,8 @@ function parsePdfSigningDate(value: string): string | null {
 /**
  * Derive a candidate ONLY when one signed-document metadata envelope covers
  * the complete PDF and its signing day agrees with separately validated n8n
- * receipt evidence. ByteRange coverage is not cryptographic CMS verification.
- * The result MUST NEVER be accepted as independently verified issuance.
+ * receipt evidence. CMS trust-chain validation is intentionally separate
+ * from the agreed Tata AIG business rule and does not gate date acceptance.
  */
 export function extractTataAigSigningDateProposal(
   bytes: Uint8Array, verifiedReceiptDate: string | null | undefined,
@@ -85,8 +87,42 @@ export function extractTataAigSigningDateProposal(
     proposedDate:signingDate,
     receiptDate:verifiedReceiptDate,
     source:"embedded_pdf_signature_timestamp",
-    verification:"metadata_only_requires_reviewer",
+    verification:"signature_metadata_receipt_match",
     documentSha256:createHash('sha256').update(bytes).digest('hex'),
     requiresReviewerConfirmation:true,
   };
+}
+
+/** Verify the detached CMS against exactly the two signed ByteRange segments.
+ * Certificate-chain trust is a separate decision under the Tata AIG rule.
+ */
+export async function verifyTataAigSigningDateEvidence(
+  bytes: Uint8Array, receiptDate: string | null | undefined,
+): Promise<PolicyIssuanceDateEvidence | null> {
+  const proposal=extractTataAigSigningDateProposal(bytes,receiptDate);
+  if(!proposal)return null;
+  try {
+    const text=Buffer.from(bytes).toString("latin1");
+    RANGE.lastIndex=0;
+    const match=RANGE.exec(text);
+    RANGE.lastIndex=0;
+    if(!match)return null;
+    const firstLength=Number(match[2]),secondBegin=Number(match[3]),secondLength=Number(match[4]);
+    const container=text.slice(firstLength+1,secondBegin-1);
+    const padded=Buffer.from(container,"hex");
+    const parsed=fromBER(padded);
+    if(parsed.offset<=0 || parsed.offset>padded.length
+      || padded.subarray(parsed.offset).some(byte=>byte!==0))return null;
+    const cms=ContentInfo.fromBER(padded.subarray(0,parsed.offset));
+    if(cms.contentType!==ContentInfo.SIGNED_DATA)return null;
+    const signed=new SignedData({schema:cms.content});
+    if(signed.signerInfos.length!==1 || signed.encapContentInfo.eContent)return null;
+    const content=Buffer.concat([
+      Buffer.from(bytes.subarray(0,firstLength)),
+      Buffer.from(bytes.subarray(secondBegin,secondBegin+secondLength)),
+    ]);
+    const valid=await signed.verify({signer:0,data:Uint8Array.from(content).buffer,checkChain:false});
+    if(!valid)return null;
+    return {...proposal,verification:"detached_signature_integrity_verified",requiresReviewerConfirmation:false};
+  } catch {return null;}
 }

@@ -12,8 +12,8 @@ const codes=x=>x.exceptions.map(e=>e.code);
 function evidence(date,receiptDate=date) {
   return {proposedDate:date,receiptDate,
     source:"embedded_pdf_signature_timestamp",
-    verification:"metadata_only_requires_reviewer",
-    documentSha256:"a".repeat(64),requiresReviewerConfirmation:true};
+    verification:"detached_signature_integrity_verified",
+    documentSha256:"a".repeat(64),requiresReviewerConfirmation:false};
 }
 function eligible(preview,issuanceDateVerified) {
   return assessAiPolicyIntake({
@@ -40,6 +40,8 @@ for(const fixture of fixtures) {
   const v={parserId:preview.parser_id,checksPassed:18,warnings:preview.warnings,
     fields:preview.fields,issuanceEvidence:evidence(receipt)};
   assert.equal(acceptedTataAigIssuanceDate(v),receipt,fixture.name);
+  assert.equal(acceptedTataAigIssuanceDate({...v,issuanceEvidence:{...v.issuanceEvidence,verification:"signature_metadata_receipt_match"}}),null,
+    "An unverified /M and ByteRange cannot become an accepted issuance date");
   assert.deepEqual(codes(eligible(preview,true)),["preflight_pending"],
     "Matching signing/receipt date must clear issuance exception without bypassing canonical preflight");
   assert.equal(acceptedTataAigIssuanceDate({...v,issuanceEvidence:evidence("2026-10-20",receipt)}),null);
@@ -86,4 +88,6 @@ assert(ui.includes('!n8nResult.preview.acceptedIssuanceDate ? ('),
  "Do not demand manual date confirmation for accepted dates");
 assert(actions.includes('extracted.preview.checksPassed!==13'),
  "Never turn Tata automated date eligibility into unreviewed full auto-booking");
+assert(handoff.includes('issuanceDate:verified?(verifiedIssuanceDate||approvedSigningDate):""'),
+ "Never prefill a new onboarding draft with today's date when issuance evidence is absent");
 console.log("Tata signing/receipt auto issuance: six policy variants, negative controls, audit and booking gates passed");

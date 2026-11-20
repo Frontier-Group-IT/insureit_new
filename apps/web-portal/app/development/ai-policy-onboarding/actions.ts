@@ -728,6 +728,53 @@ export async function reprocessAiPolicyIntake(id: string): Promise<{ok:boolean;e
   return{ok:true};
 }
 
+/**
+ * One-click, explicit fresh parse for an open Motor Intake. The verified
+ * current PDF is re-read through n8n, then replaces the active parser-owned
+ * OCR and saved onboarding draft. It never books or creates master records.
+ */
+export async function reparseAndReplaceAiPolicyIntakeDraft(
+  id:string,
+):Promise<{ok:boolean;editUrl?:string;error?:string}> {
+  await requireDevelopmentPolicyOperator(id);
+  await requirePolicyCreator();
+  if(!isN8nWorkbenchPrimary())return{ok:false,error:"The n8n review workbench is not enabled."};
+  const admin=createSupabaseAdminClient();
+  const {data:intake,error}=await admin.from("policy_intake_requests")
+    .select("id,intake_number,status,policy_type,final_policy_id,created_at,processing_lane,ocr_fields")
+    .eq("id",id).maybeSingle();
+  if(error||!intake||intake.policy_type!=="motor"
+      ||!(["processing","ready_for_review","in_review","needs_attention"].includes(intake.status))
+      ||intake.final_policy_id){
+    return{ok:false,error:"Only an open, unbooked Motor Intake can be reparsed."};
+  }
+  const duplicate=await loadPolicyIntakeDuplicateMatches(admin,[intake]);
+  if(!duplicate.ok)return{ok:false,error:"Duplicate verification is unavailable; nothing was replaced."};
+  if(duplicate.matches.has(id))return{ok:false,error:"This Intake is a duplicate and cannot be reparsed into an onboarding draft."};
+  const {data:currentDocument,error:documentError}=await admin.from("policy_intake_documents")
+    .select("id").eq("intake_id",id).eq("is_current",true)
+    .maybeSingle<{id:string}>();
+  if(documentError||!currentDocument)return{ok:false,error:"The current private policy PDF is unavailable."};
+  const {data:queue}=await admin.from("policy_intake_ai_processing_queue")
+    .select("state,document_id").eq("intake_id",id)
+    .maybeSingle<{state:string;document_id:string}>();
+  if(queue && queue.document_id===currentDocument.id
+      && ["pending","processing"].includes(queue.state)){
+    return{ok:false,error:"This PDF is already being processed. Wait for that run to finish, then reparse."};
+  }
+
+  // This is the explicit operator path for either lane. It does not change
+  // processing_lane; unsupported layouts remain manual and cannot be booked.
+  const handoff=await prepareVerifiedN8nIntakeHandoff(
+    id,null,null,false,false,undefined,undefined,true,
+  );
+  if(!handoff.ok)return{ok:false,error:handoff.error};
+  revalidatePath("/development/ai-policy-onboarding");
+  revalidatePath("/policy-intakes");
+  revalidatePath("/policy-intakes/"+encodeURIComponent(id));
+  return{ok:true,editUrl:"/policies/new?intake_id="+encodeURIComponent(id)};
+}
+
 export async function applySemiAutoN8nIntake(
   id: string, documentId: string, fingerprint: string, confirmed: boolean,
 ): Promise<{ ok: boolean; error?: string }> {

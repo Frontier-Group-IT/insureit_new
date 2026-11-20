@@ -1,5 +1,5 @@
 import "server-only";
-import { extractTataAigSigningDateProposal } from "@/lib/policy-issuance-signature-evidence";
+import { verifyTataAigSigningDateEvidence } from "@/lib/policy-issuance-signature-evidence";
 import { validateN8nPolicyIntakeResponse, type N8nOcrBridgeInput, type N8nOcrBridgeResponse } from "@/lib/policy-intake-n8n-validation";
 export { validateN8nPolicyIntakeResponse } from "@/lib/policy-intake-n8n-validation";
 export type { N8nOcrField, N8nOcrBridgeInput, N8nOcrBridgeResponse, N8nVerifiedPremiumBreakdown } from "@/lib/policy-intake-n8n-validation";
@@ -41,9 +41,9 @@ async function readEvidencePdf(url: URL): Promise<Uint8Array | null> {
   } catch {return null;}
   finally {clearTimeout(timer);}
 }
-function attachSigningProposal(extraction:N8nOcrBridgeResponse,pdf:Uint8Array|null):N8nOcrBridgeResponse {
+async function attachSigningProposal(extraction:N8nOcrBridgeResponse,pdf:Uint8Array|null):Promise<N8nOcrBridgeResponse> {
   if(!pdf || !extraction.parserId.startsWith("tata_aig_") || !extraction.receiptDate) return extraction;
-  const issuanceEvidence=extractTataAigSigningDateProposal(pdf,extraction.receiptDate);
+  const issuanceEvidence=await verifyTataAigSigningDateEvidence(pdf,extraction.receiptDate);
   return issuanceEvidence?{...extraction,issuanceEvidence}:extraction;
 }
 
