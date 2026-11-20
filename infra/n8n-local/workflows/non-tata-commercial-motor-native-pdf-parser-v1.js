@@ -100,7 +100,7 @@ function iffco(t){
 }
 function digit(t){
  const id=grab(t,/Policy No\.\s*(D\d{8,12})/i)||grab(t,/Policy No:\s*(D\d{8,12})/i);
- const name=grab(t,/\bName\s+((?:MR|MRS|MS)\s+[^\n]{5,80}?)\s{2,}Vehicle Registration No\./i)||grab(t,/\bName\s*\n\s*((?:MR|MRS|MS)\s+[^\n]{5,80})/i);
+ const name=grab(t,/\bName\s+((?:MR|MRS|MS)\s+[^\n]{5,80}?)\s+Vehicle Registration No\./i)||grab(t,/\bName\s*\n\s*((?:MR|MRS|MS)\s+[^\n]{5,80})/i);
  const reg=grab(t,/Vehicle Registration No\.\s*([A-Z]{2}\d{2}[A-Z]{1,3}\d{3,4})/i)||grab(t,/Vehicle Registration No\.\s*\n\s*([A-Z]{2}\d{2}[A-Z]{1,3}\d{3,4})/i);
  let issue=validDate(grab(t,/Policy Issue Date\s+(\d{2}-[A-Za-z]{3}-\d{4})/i));
  let start=validDate(grab(t,/\bFrom\s+(\d{2}-[A-Za-z]{3}-\d{4})\s*00:\d{2}:\d{2}/i));
