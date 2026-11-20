@@ -44,8 +44,8 @@ export default function AccountDeletionScreen() {
         </View>
         <View style={styles.heroCopy}>
           <View style={styles.heroSloganBlock}>
-            <Text accessibilityRole="header" style={styles.heroTitle}>Your account,</Text>
-            <Text style={[styles.heroTitle, styles.heroTitleAccent]}>your choice</Text>
+            <Text accessibilityRole="header" style={styles.heroTitle} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>Your account,</Text>
+            <Text style={[styles.heroTitle, styles.heroTitleAccent]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>your choice</Text>
             <View style={styles.heroUnderline} />
           </View>
         </View>
@@ -86,7 +86,7 @@ const styles = StyleSheet.create({
   body: { paddingHorizontal: 18, paddingBottom: 28, gap: 19, minHeight: 700 },
   hero: { minHeight: 116, marginHorizontal: -18, paddingHorizontal: 18, paddingTop: 16, paddingBottom: 12, overflow: 'hidden', flexDirection: 'row', alignItems: 'flex-start', backgroundColor: '#FFFFFF' },
   heroCopy: { flex: 1, minWidth: 0, paddingLeft: 10, paddingTop: 0, alignItems: 'flex-end' },
-  heroSloganBlock: { alignSelf: 'flex-end', maxWidth: '100%', alignItems: 'flex-start' },
+  heroSloganBlock: { alignSelf: 'flex-end', width: '100%', alignItems: 'flex-start' },
   heroTitle: { fontSize: 19, lineHeight: 22, fontWeight: '900', color: '#171B59', letterSpacing: -0.6, textAlign: 'left' },
   heroTitleAccent: { color: '#4726B6' },
   heroUnderline: { width: 83, height: 4, borderRadius: 3, marginTop: 9, backgroundColor: '#8241E9' },
