@@ -190,7 +190,8 @@ assert.ok(!canonicalEngine.includes("CPA amount is mandatory for GCV policies")
   "Canonical booking must allow zero CPA for any GCV policy, unless CPA is opted in");
 assert.ok(!unified.includes("CPA amount is mandatory for GCV policies")
   && unified.includes("CPA must be positive when opted in.")
-  && unified.includes('min="0"'),
+  && unified.includes('min="0"')
+  && !unified.includes('...(form.vehicleClass==="GCV"?[form.cpa]:[])'),
   "Form must allow zero CPA while preserving opted-in amount check");
 assert.ok(!handoff.includes('const niaMissingCpa=')
   && handoff.includes('niaHoldCode=niaMissingAuthority?"nia_missing_registration_authority":null'),
