@@ -274,11 +274,30 @@ async function preparePolicyIntakeHandoffInternal(
   const {data:existingDraft}=await admin.from("policy_intake_onboarding_drafts").select("draft_payload,revision").eq("intake_id",id).maybeSingle<{draft_payload:PolicyIntakeDraft;revision:number}>();
   const markFreshParseForReview=async()=>{
     if(!verified?.replaceExistingDraft)return true;
+    const goDigit=verified.parserId==="go_digit_cv_native_pdf" && verified.checksPassed===18
+      && verified.warnings.length===0;
+    // A verified extraction is not a complete booking. An absent separately
+    // printed manufacturing year is NOT fixed by using the registration year.
+    const requiredGoDigitKeys=[
+      "insured_name","policy_product","vehicle_manufacturing_year",
+      "vehicle_capacity","vehicle_rto_name","vehicle_rto_state",
+      "vehicle_registration_number","vehicle_chassis_number","vehicle_engine_number",
+      "policy_issuance_date","policy_start_date","policy_end_date",
+    ];
+    const missingGoDigit=goDigit?requiredGoDigitKeys.filter(key=>
+      !verified.fields.some(f=>f.key===key&&f.value.trim())):[];
+    const autoEligibleGoDigit=goDigit&&missingGoDigit.length===0;
+    const specificMissingYear=goDigit&&missingGoDigit.includes("vehicle_manufacturing_year");
     const{error}=await admin.from("policy_intake_ai_processing_queue").update({
-      state:"exception",exception_codes:["booking_review_required"],
+      // Never mark other insurers eligible without their existing booking rule.
+      state:autoEligibleGoDigit?"verified":"exception",
+      exception_codes:autoEligibleGoDigit?[]:goDigit&&missingGoDigit.length?["missing_field"]:["booking_review_required"],
       field_keys:verified.fields.map(field=>field.key),parser_id:verified.parserId,
       checks_passed:verified.checksPassed,extraction_fingerprint:verified.fingerprint,
-      last_error_code:"bulk_conversion_review_required",processed_at:new Date().toISOString(),
+      last_error_code:autoEligibleGoDigit?null:specificMissingYear
+        ?"go_digit_missing_verified_manufacturing_year":goDigit&&missingGoDigit.length
+          ?"go_digit_missing_verified_onboarding_fields":"bulk_conversion_review_required",
+      processed_at:new Date().toISOString(),
       retry_after:new Date(Date.now()+24*60*60*1000).toISOString(),
       lease_id:null,leased_until:null,updated_at:new Date().toISOString(),
     }).eq("intake_id",id).eq("document_id",verified.documentId);
