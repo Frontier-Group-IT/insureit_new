@@ -70,9 +70,52 @@ const isoDate=(value:string)=>{
   return date.getUTCFullYear()===Number(m[3])&&date.getUTCMonth()===Number(m[2])-1&&date.getUTCDate()===Number(m[1])
     ? m[3]+'-'+m[2]+'-'+m[1]:null;
 };
+type MispErrors=Partial<Record<MispField,string>>;
+const mispFieldOrder:MispField[]=fields.flatMap(section=>section.items.map(field=>field.key));
+function validateMispField(key:MispField,form:Record<MispField,string>):string|null {
+  const value=form[key].trim();
+  const label=fields.flatMap(section=>section.items).find(field=>field.key===key)?.label||key;
+  if(!value) {
+    return key==='document_received_at'||key==='dp_middle_name'||key==='dp_last_name'
+      ?null:`${label} is required.`;
+  }
+  const upper=value.toUpperCase();
+  if(key==='pan_number'||key==='dp_pan_number')
+    return /^[A-Z]{5}[0-9]{4}[A-Z]$/.test(upper)?null:`${label} format is invalid. Use ABCDE1234F.`;
+  if(key==='aadhaar_number')
+    return /^[0-9]{12}$/.test(value)?null:'DP Aadhaar Number must contain exactly 12 digits.';
+  if(key==='dp_phone')
+    return /^[6-9][0-9]{9}$/.test(value.replace(/^\+91/,''))?null:'DP Contact must be a valid 10-digit Indian mobile number.';
+  if(key==='dp_email')
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)?null:'DP Email format is invalid.';
+  if(key==='date_of_birth') {
+    const dob=isoDate(value);
+    return dob&&dob<=new Date().toISOString().slice(0,10)?null:'DP Date of Birth is invalid.';
+  }
+  if(key==='document_received_at')
+    return isoDate(value)?null:'Documents received date is invalid.';
+  if(key==='postal_code')
+    return /^[0-9]{6}$/.test(value)?null:'PIN Code must contain exactly 6 digits.';
+  if(key==='bank_account_number')
+    return /^[0-9]{6,20}$/.test(value)?null:'Account Number must contain 6 to 20 digits.';
+  if(key==='bank_ifsc_code')
+    return /^[A-Z]{4}0[A-Z0-9]{6}$/.test(upper)?null:'IFSC format is invalid. Use ABCD0123456.';
+  if(key==='gst_number')
+    return /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/.test(upper)?null:'GST Number format is invalid.';
+  return null;
+}
+function validateMisp(form:Record<MispField,string>):MispErrors {
+  const errors:MispErrors={};
+  for(const key of mispFieldOrder){
+    const error=validateMispField(key,form);
+    if(error)errors[key]=error;
+  }
+  return errors;
+}
 export function MispPartnerForm({rms,banks,oems,pendingMisps,loading,onDirtyChange,onCancel}:{rms:Option[];banks:Option[];oems:Option[];pendingMisps:Option[];loading:boolean;onDirtyChange:(dirty:boolean)=>void;onCancel:()=>void}) {
   const router=useRouter();
   const [form,setForm]=useState(empty);
+  const [fieldErrors,setFieldErrors]=useState<MispErrors>({});
   const [picker,setPicker]=useState<'rm'|'oem'|'bank'|null>(null);
   const [search,setSearch]=useState('');
   const [dateField,setDateField]=useState<'document_received_at'|'date_of_birth'|null>(null);
@@ -84,7 +127,17 @@ export function MispPartnerForm({rms,banks,oems,pendingMisps,loading,onDirtyChan
   const [educationType,setEducationType]=useState('education_10th_marksheet');
   const [customNames,setCustomNames]=useState<Record<string,string>>({});
   const set=(key:MispField,value:string)=>{
-    setForm(prev=>({...prev,[key]:value}));
+    // Aadhaar stays digit-only and accepts all 12 digits (never a 10-digit cap).
+    const nextValue=key==='aadhaar_number'?value.replace(/\D/g,'').slice(0,12):value;
+    setForm(prev=>({...prev,[key]:nextValue}));
+    setFieldErrors(prev=>{
+      if(!prev[key])return prev;
+      const next={...prev};
+      const message=validateMispField(key,{...form,[key]:nextValue});
+      if(message)next[key]=message;
+      else delete next[key];
+      return next;
+    });
     onDirtyChange(true);
   };
   const list=picker==='rm'?rms:picker==='oem'?oems:banks;
@@ -124,19 +177,13 @@ export function MispPartnerForm({rms,banks,oems,pendingMisps,loading,onDirtyChan
       bank_account_number:form.bank_account_number.trim(),bank_ifsc_code:form.bank_ifsc_code.trim().toUpperCase(),
       gst_number:form.gst_number.trim().toUpperCase(),postal_code:form.postal_code.trim(),
     };
-    if(!form.misp_name.trim()||!form.oem_name||!form.associate_employee_id||!form.dp_first_name.trim()
-      ||!/^[A-Z]{5}\d{4}[A-Z]$/.test(normalized.pan_number)
-      ||!/^[A-Z]{5}\d{4}[A-Z]$/.test(normalized.dp_pan_number)
-      ||!/^[6-9]\d{9}$/.test(normalized.dp_phone)
-      ||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized.dp_email)
-      ||!/^\d{12}$/.test(normalized.aadhaar_number)
-      ||!dob||dob>new Date().toISOString().slice(0,10)
-      ||(form.document_received_at.trim()&&!received)
-      ||!form.address.trim()||!form.city.trim()||!form.state.trim()||!/^\d{6}$/.test(normalized.postal_code)
-      ||!form.bank_id||!/^\d{6,20}$/.test(normalized.bank_account_number)
-      ||!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(normalized.bank_ifsc_code)
-      ||!/^\d{2}[A-Z]{5}\d{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/.test(normalized.gst_number)) {
-      partnerAlert('Check MISP details','Complete the required MISP, Designated Person, address and bank fields in the same format as the website.');
+    const errors=validateMisp(form);
+    setFieldErrors(errors);
+    const firstInvalid=mispFieldOrder.find(key=>errors[key]);
+    if(firstInvalid){
+      Keyboard.dismiss();
+      const label=fields.flatMap(section=>section.items).find(field=>field.key===firstInvalid)?.label||'Field';
+      partnerAlert(`${label} invalid`,errors[firstInvalid]||'Check this field.');
       return;
     }
     setSaving(true);
@@ -228,7 +275,7 @@ export function MispPartnerForm({rms,banks,oems,pendingMisps,loading,onDirtyChan
                 {field.pick||field.date?
                   <Pressable accessibilityRole="button" accessibilityLabel={'Select '+field.label} disabled={loading||Boolean(applicationId)}
                     onPress={()=>{if(field.date)setDateField(field.key as 'document_received_at'|'date_of_birth');else{setSearch('');setPicker(field.pick!);}}}
-                    style={styles.inputPress}>
+                    style={[styles.inputPress,fieldErrors[field.key]&&styles.invalidInput]}>
                     <Text numberOfLines={1} style={styles.inputText}>{field.date?(form[field.key]||field.hint):(optionName||field.hint)}</Text>
                     <Ionicons name={field.date?'calendar-outline':'chevron-down'} size={18} color="#17365D"/>
                   </Pressable>
@@ -237,7 +284,8 @@ export function MispPartnerForm({rms,banks,oems,pendingMisps,loading,onDirtyChan
                     placeholder={field.hint} placeholderTextColor="#98A3B2"
                     autoCapitalize={['pan_number','dp_pan_number','bank_ifsc_code','gst_number'].includes(field.key)?'characters':field.key==='dp_email'?'none':'sentences'}
                     maxLength={field.key==='aadhaar_number'?12:field.key==='postal_code'?6:field.key==='pan_number'||field.key==='dp_pan_number'?10:field.key==='gst_number'?15:field.key==='bank_ifsc_code'?11:field.key==='address'?300:150}
-                    style={styles.input}/>}
+                    style={[styles.input,fieldErrors[field.key]&&styles.invalidInput]}/>}
+                {fieldErrors[field.key]?<Text style={styles.fieldError}>{fieldErrors[field.key]}</Text>:null}
               </View>;
             })}
           </View>
@@ -350,6 +398,8 @@ const styles=StyleSheet.create({
   indexText:{color:'#FFF',fontSize:11,fontWeight:'800'},heading:{color:'#000000',fontSize:13,fontWeight:'800'},
   grid:{padding:12,flexDirection:'row',flexWrap:'wrap',justifyContent:'space-between',rowGap:12},
   half:{width:'48.5%',gap:5},pendingItem:{width:"100%",minHeight:42,borderRadius:9,borderWidth:1,borderColor:"#DEE7F1",flexDirection:"row",justifyContent:"space-between",alignItems:"center",paddingHorizontal:12},label:{color:'#000000',fontSize:11,fontWeight:'700'},requiredStar:{color:'#DC2626'},
+  invalidInput:{borderColor:'#DC2626',backgroundColor:'#FFF9F9'},
+  fieldError:{fontSize:10.5,lineHeight:15,color:'#B91C1C',fontWeight:'600'},
   input:{minHeight:44,paddingHorizontal:10,backgroundColor:'#FFF',borderWidth:1,borderColor:'#CED8E7',borderRadius:10,fontSize:12,color:'#152A49'},
   inputPress:{minHeight:44,paddingHorizontal:10,flexDirection:'row',justifyContent:'space-between',alignItems:'center',gap:5,borderWidth:1,borderColor:'#CED8E7',borderRadius:10},
   inputText:{color:'#17365D',fontWeight:'600',fontSize:12,flexShrink:1},
