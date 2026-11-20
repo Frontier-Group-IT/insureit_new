@@ -34,11 +34,11 @@ type IconPalette = {
 // Reuse the bundled transparent Customers and Journey artwork without adding backgrounds.
 // Keep other menu icons and their existing destinations unchanged.
 const ILLUSTRATED_ICONS: Partial<Record<PartnerProfileMenuIconKind, ImageSourcePropType>> = {
-  'policy-intake': require('../../assets/partner/icons/more-policy-intake-3d.png'),
+  'policy-intake': require('../../assets/partner/actions/policy-checklist.png'),
   'case-register': require('../../assets/partner/icons/more-case-register.png'),
   renewals: require('../../assets/partner/icons/more-renewals.png'),
   // Match the supplied Add Partner 3D reference with the existing transparent artwork, without a tile.
-  customers: require('../../assets/partner/quick-actions/add-partner.png'),
+  customers: require('../../assets/partner/actions/customer-register.png'),
   impact: require('../../assets/partner/icons/more-impact.png'),
   // The former menu PNG cannot be decoded reliably; reuse the verified bundled 3D journey illustration.
   journey: require('../../assets/partner/status/journey.png'),
@@ -79,9 +79,6 @@ export function PartnerProfileMenuIcon({
         style={{
           width: size,
           height: size,
-          // The Policy Intake PNG contains large transparent margins; enlarge the
-          // visible illustration rather than merely increasing the image box.
-          ...(kind === 'policy-intake' ? { transform: [{ scale: 1.7 }] } : {}),
           ...(kind === 'journey' ? { transform: [{ scale: 1.16 }] } : {}),
         }}
       />
