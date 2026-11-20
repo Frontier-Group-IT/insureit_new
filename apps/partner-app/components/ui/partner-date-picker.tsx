@@ -2,7 +2,7 @@ import { formatAppDate } from '@/lib/indian-date';
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import { useMemo, useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { partnerSelectionHaptic } from '@/lib/partner-haptics';
 import { partnerTheme } from '@/lib/theme';
@@ -74,7 +74,11 @@ export function PartnerDatePicker({ label, value, onChange, minimumDate, maximum
       </Pressable>
 
       {open && directSelect ? (
-        <View style={styles.pickerWrap}>
+        <Modal visible transparent animationType="fade" onRequestClose={() => setOpen(false)}>
+          <View style={styles.calendarOverlay}>
+            <Pressable style={StyleSheet.absoluteFill} accessibilityRole="button"
+              accessibilityLabel="Close calendar" onPress={() => setOpen(false)} />
+            <View style={styles.calendarCard}>
           <View style={styles.calendarHeader}>
             <Pressable accessibilityRole="button" accessibilityLabel="Previous month"
               onPress={() => setVisibleMonth(current => new Date(current.getFullYear(), current.getMonth() - 1, 1, 12))}
@@ -105,7 +109,9 @@ export function PartnerDatePicker({ label, value, onChange, minimumDate, maximum
               );
             })}
           </View>
-        </View>
+            </View>
+          </View>
+        </Modal>
       ) : open ? (
         <View style={styles.pickerWrap}>
           <DateTimePicker
@@ -146,6 +152,8 @@ const styles = StyleSheet.create({
   pickerWrap: { borderWidth: 1, borderColor: partnerTheme.colors.line, borderRadius: partnerTheme.radius.lg, overflow: 'hidden', backgroundColor: partnerTheme.colors.surface },
   doneButton: { minHeight: partnerTheme.control.minTouchTarget, alignItems: 'center', justifyContent: 'center', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: partnerTheme.colors.line },
   doneText: { color: partnerTheme.colors.brand, ...partnerTheme.typography.bodyStrong },
+  calendarOverlay: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(16,30,66,0.64)', padding: 18 },
+  calendarCard: { width: '100%', maxWidth: 344, borderRadius: 16, backgroundColor: '#FFFFFF', padding: 12 },
   calendarHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 4, paddingTop: 5 },
   monthButton: { width: 34, height: 34, alignItems: 'center', justifyContent: 'center' },
   monthTitle: { color: partnerTheme.colors.ink, fontSize: 13, fontWeight: '700' },
