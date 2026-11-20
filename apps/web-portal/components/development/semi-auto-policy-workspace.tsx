@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { IntakeStatusBucket } from "@/lib/policy-intake-status-buckets";
 import { hasVerifiedN8nParserEvidence } from "@/lib/ai-policy-onboarding-eligibility";
-import { AlertCircle, ArrowUpRight, CheckCircle2, ClipboardCheck, FileSearch, Loader2, PencilLine, RefreshCw, Search, ShieldAlert, Sparkles } from "lucide-react";
+import { AlertCircle, ArrowUpRight, CheckCircle2, ClipboardCheck, FileSearch, Loader2, PencilLine, RefreshCw, Search, ShieldAlert, Sparkles, Eye, RotateCcw, ArrowRight, X } from "lucide-react";
 import { applySemiAutoN8nIntake, bookSemiAutoIntake, convertVerifiedAiIntake, checkSemiAutoIntake, continueVerifiedN8nIntakeToOnboarding, editSemiAutoIntake, previewSemiAutoN8nIntake, reprocessAiPolicyIntake, reparseAndReplaceAiPolicyIntakeDraft, reviewAiIntakeCustomerCandidates, reviewIciciVerifiedDraftRepair, applyReviewedIciciDraftRepair, transferFailedAiIntakeToManual, type ReviewedIciciDraftComparison, type AiCustomerCandidateReview, type SemiAutoActionResult, type SemiAutoN8nResult } from "@/app/development/ai-policy-onboarding/actions";
 
 export type SemiAutoIntakeRow = {
@@ -133,6 +133,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
   const [n8nNotice, setN8nNotice] = useState<string | null>(null);
   const [done, setDone] = useState<{ policyCode: string; policyId: string } | null>(null);
   const [exceptionRow,setExceptionRow]=useState<SemiAutoIntakeRow|null>(null);
+  const [processingOpen,setProcessingOpen]=useState(false);
   const [manualTransferRow,setManualTransferRow]=useState<SemiAutoIntakeRow|null>(null);
   const [manualTransferReason,setManualTransferReason]=useState("");
   const [manualTransferError,setManualTransferError]=useState<string|null>(null);
@@ -581,14 +582,14 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
   },[reprocessConfirmOpen]);
 
   return (
-    <div className="grid grid-cols-1 items-start gap-2 xl:grid-cols-[minmax(0,1.65fr)_minmax(350px,1fr)]">
+    <div className="flex min-w-0 flex-col gap-3">
       {primaryN8n && queueActive ? (
         <section aria-label="Automatic policy processing summary"
           className="rounded-xl border border-[#d3e3ef] bg-white px-3 py-2.5 xl:col-span-2">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h2 className="flex items-center gap-2 text-[12px] font-bold text-[#16355a]"><span className="h-1.5 w-1.5 rounded-full bg-cyan-500"/> AI extraction pipeline <span className="rounded bg-[#eef6f9] px-1.5 py-0.5 text-[9px] font-semibold text-[#267a8d]">REVIEW CONTROLLED</span></h2>
-              <p className="mt-0.5 text-[10px] text-[#61738a]">Current PDF → n8n extraction → human review → approved onboarding. Extraction never registers a policy.</p>
+              <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-800"><Sparkles className="h-4 w-4 text-cyan-600"/> Processing overview</h2>
+              
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <button type="button" onClick={()=>setReprocessConfirmOpen(true)} disabled={isWaiting||reprocessBatch.length===0}
@@ -618,7 +619,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
               </div>
             ))}
           </div>
-          <p className="mt-1.5 text-[9.5px] text-[#63758c]">Verified ≠ bookable. Conversion requires a separate confirmation and canonical checks for PDF, identity, dates, duplicates, ownership and OTP.</p>
+          
           {bulkProgress ? (
             <div role="status" className="mt-2 rounded-lg border border-[#cbd9ea] bg-[#f5f9ff] p-3 text-[11px] text-[#285078]">
               Bulk conversion: {bulkProgress.done} / {bulkProgress.total} attempts completed{bulkRunning?" · processing next policy":""}.
@@ -641,11 +642,11 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
           {autoConvertMessage ? <p role="status" className="mt-2 rounded-lg border border-[#cbd9ea] bg-[#f5f9ff] p-3 text-[11px] text-[#285078]">{autoConvertMessage}</p> : null}
         </section>
       ) : null}
-      <section className="min-w-0 overflow-hidden rounded-xl border border-[#d4e2ef] bg-white xl:flex xl:h-[min(76vh,790px)] xl:flex-col">
+      <section className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#e7eef5] px-3 py-2.5">
           <div>
-            <div className="flex items-center gap-2"><ClipboardCheck className="h-4 w-4 text-[#2861a0]"/><h2 className="text-[13px] font-bold text-[#142e4c]">{primaryN8n ? "Policy Intakes · Matching register status" : "Existing Motor Policy Intakes"}</h2></div>
-            <p className="mt-0.5 text-[10px] text-[#61738a]">Open Intake register · Select a row to inspect its AI evidence</p>
+            <div className="flex items-center gap-2"><ClipboardCheck className="h-4 w-4 text-[#2861a0]"/><h2 className="text-[13px] font-bold text-[#142e4c]">{primaryN8n ? "Policy Intakes" : "Existing Motor Policy Intakes"}</h2></div>
+            
           </div>
           <div className="relative w-full sm:w-[220px]">
             <Search className="pointer-events-none absolute left-3 top-2.5 h-3.5 w-3.5 text-[#8090a6]"/>
@@ -653,8 +654,8 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
               placeholder="Search number, source, mobile" className="h-9 w-full rounded-lg border border-[#d9e3ee] bg-[#f9fbff] pl-9 pr-3 text-[11px] outline-none focus:border-[#456ba6]" />
           </div>
         </div>
-        <div className="min-h-0 overflow-auto xl:flex-1">
-          <table className="min-w-[760px] w-full border-collapse text-left text-[10.5px]">
+        <div className="max-h-[72vh] overflow-auto">
+          <table className="min-w-[900px] w-full border-collapse text-left text-[11px]">
             <thead className="sticky top-0 z-10 bg-[#edf4fa] text-[9px] font-bold uppercase tracking-[.07em] text-[#62748e]">
               <tr><th className="w-10 px-3 py-3"><span className="sr-only">Select</span></th><th className="px-2 py-3">Intake</th><th className="px-3 py-3">Lead source</th><th className="px-3 py-3">Customer mobile</th>{primaryN8n ? <th className="px-3 py-3">Policy type</th> : null}<th className="px-3 py-3">{primaryN8n ? "Intake workflow" : "Status"}</th><th className="px-3 py-3">{primaryN8n ? "Saved OCR (old)" : "OCR"}</th>{primaryN8n && queueActive ? <th className="px-3 py-3">AI Exceptions</th> : null}<th className="px-3 py-3">Submitted</th></tr>
             </thead>
@@ -663,7 +664,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
                 <tr key={row.id} className={selectedId === row.id ? "bg-[#ebf4ff]" : "hover:bg-[#f9fbff]"}>
                   <td className="px-3 py-2">
                     <input type="checkbox" aria-label={"Select " + row.intake_number} checked={selectedId === row.id} disabled={isWaiting && selectedId !== row.id}
-                      onChange={() => { void selectRow(row.id); }} className="h-4 w-4 accent-[#215a9c]" />
+                      onChange={() => { setProcessingOpen(true); void selectRow(row.id); }} className="h-4 w-4 accent-[#215a9c]" />
                   </td>
                   <td className="whitespace-nowrap px-2 py-3">
                     <Link href={"/policy-intakes/" + row.id} className="font-bold text-[#20528f] hover:underline">{row.intake_number}</Link>
@@ -678,45 +679,22 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
                       : primaryN8n && row.intake_bucket === "processing" ? "Processing"
                       : humanStatus[row.status] || row.status}</span></td>
                   <td className="whitespace-nowrap px-3 py-3"><span className={row.ocr_status === "completed" ? "font-semibold text-emerald-700" : "font-semibold text-amber-700"}>{row.ocr_status === "completed" ? "Extracted" : row.ocr_status.replaceAll("_", " ")}</span></td>
-                  {primaryN8n && queueActive ? <td className="min-w-[170px] px-3 py-3">
-                    <div className="text-[10px] font-semibold text-[#32547d]">{row.is_duplicate ? "Duplicate · skipped" : row.ai_diagnostic_code && ["unsupported","exception","failed"].includes(row.ai_state??"") ? "Parser error · details below" : row.ai_state ? aiStateLabel[row.ai_state] : "Waiting for queue"}</div>
-                    {!row.is_duplicate && row.ai_state==="verified" && !row.ai_exceptions?.length ? (
-                      <button type="button" disabled={isWaiting} onClick={()=>setAutoConvertRow(row)}
-                        className="mt-1 rounded-md bg-[#174b83] px-2.5 py-1.5 text-[10px] font-bold text-white disabled:opacity-50">
-                        Convert to Policy
+                  {primaryN8n && queueActive ? <td className="px-3 py-2">
+                    <div className="flex min-w-[230px] items-center justify-between gap-2">
+                      <button type="button" title="Open exception" onClick={()=>{setExceptionRow(row);setCustomerReview(null);}} className="flex min-w-0 items-center gap-2 text-left">
+                        <span className={"h-2 w-2 shrink-0 rounded-full "+(row.is_duplicate?"bg-slate-400":row.ai_state==="verified"?"bg-emerald-500":row.ai_state==="processing"?"bg-sky-500":"bg-amber-500")}/>
+                        <span className="max-w-[200px] truncate font-medium text-slate-700" title={row.ai_diagnostic_code ? parserDiagnostic(row.ai_diagnostic_code)?.detail : (row.ai_exceptions??[]).map(code=>aiIssueTitles[code]??code).join(", ")}>
+                          {row.is_duplicate?"Duplicate":row.ai_diagnostic_code?(parserDiagnostic(row.ai_diagnostic_code)?.title??"Parser error"):row.ai_exceptions?.length?(aiIssueTitles[row.ai_exceptions[0]]??"Needs review"):aiStateLabel[row.ai_state??""]??"Queued"}
+                        </span>
+                        {(row.ai_exceptions?.length??0)>1?<span className="rounded-md bg-amber-50 px-1.5 py-0.5 font-semibold text-amber-800">+{(row.ai_exceptions?.length??0)-1}</span>:null}
                       </button>
-                    ) : null}
-                    {row.policy_type==="motor" && !row.is_duplicate && ["processing","ready_for_review","in_review","needs_attention"].includes(row.status) ? (
-                      <button type="button" disabled={replaceReparseId!==null || isWaiting}
-                        onClick={()=>void reparseAndReplace(row)}
-                        className="mt-1 ml-1 rounded-md border border-[#adc5e0] bg-white px-2 py-1.5 text-[10px] font-semibold text-[#174b83] disabled:opacity-50">
-                        {replaceReparseId===row.id?"Reparsing…":"Reparse & replace"}
-                      </button>
-                    ) : null}
-                    {replaceReparseErrorId===row.id&&replaceReparseError?<p role="alert" className="mt-1 max-w-[280px] whitespace-normal text-[10px] leading-4 text-amber-800">{replaceReparseError}</p>:null}
-                    {!row.is_duplicate && row.ai_diagnostic_code && ["unsupported","exception","failed"].includes(row.ai_state??"") ? (
-                      <div className="mt-2 max-w-[300px] space-y-1 rounded-lg border border-amber-200 bg-amber-50 p-2 text-[10px] leading-4 text-amber-950">
-                        <p className="font-bold">{parserDiagnostic(row.ai_diagnostic_code)?.title??"Parser failed"}</p>
-                        <p className="break-all font-mono text-[9px]">Code: {row.ai_diagnostic_code}</p>
-                        <p>{parserDiagnostic(row.ai_diagnostic_code)?.detail}</p>
-                        {parserDiagnostic(row.ai_diagnostic_code)?.checks.length ? <p><strong>Failed checks:</strong> {parserDiagnostic(row.ai_diagnostic_code)?.checks.join(", ")}</p> : null}
-                        <p className="text-amber-800">Saved queue result{row.ai_processed_at?" · "+compactDate(row.ai_processed_at):" · time not recorded"}. Reparse for a fresh result.</p>
+                      <div className="flex shrink-0 items-center gap-0.5">
+                        <button type="button" aria-label={"Inspect "+row.intake_number} title="Inspect" onClick={()=>{setExceptionRow(row);setCustomerReview(null);}} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"><Eye className="h-4 w-4"/></button>
+                        {!row.is_duplicate&&row.ai_state==="verified"&&!row.ai_exceptions?.length?<button type="button" aria-label={"Convert "+row.intake_number} title="Convert" disabled={isWaiting} onClick={()=>setAutoConvertRow(row)} className="rounded-lg p-2 text-emerald-700 hover:bg-emerald-50 disabled:opacity-40"><ArrowRight className="h-4 w-4"/></button>:null}
+                        {row.policy_type==="motor"&&!row.is_duplicate&&["processing","ready_for_review","in_review","needs_attention"].includes(row.status)?<button type="button" aria-label={"Reparse "+row.intake_number} title="Reparse and replace saved draft" disabled={replaceReparseId!==null||isWaiting} onClick={()=>void reparseAndReplace(row)} className="rounded-lg p-2 text-blue-700 hover:bg-blue-50 disabled:opacity-40">{replaceReparseId===row.id?<Loader2 className="h-4 w-4 animate-spin"/>:<RotateCcw className="h-4 w-4"/>}</button>:null}
                       </div>
-                    ) : null}
-                    {!row.is_duplicate && ["unsupported","exception","failed"].includes(row.ai_state??"") ? (
-                      <button type="button" disabled={isWaiting}
-                        onClick={()=>{setManualTransferRow(row);setManualTransferReason("");setManualTransferError(null);}}
-                        className="mt-1 ml-1 rounded-md border border-amber-300 bg-amber-50 px-2 py-1 text-[10px] font-semibold text-amber-900 disabled:opacity-50">
-                        Move to Manual
-                      </button>
-                    ):null}
-                    {row.ai_exceptions?.length ? (
-                      <button type="button" onClick={()=>{setExceptionRow(row);setCustomerReview(null);}}
-                        className="mt-1 rounded-md border border-[#e4d4b2] bg-[#fff8e8] px-2 py-1 text-left text-[10px] font-semibold text-[#765013] hover:bg-[#fff0c8]">
-                        {row.ai_diagnostic_code ? "View exact parser diagnostic" : row.ai_state==="unsupported" ? "Parser not trained · Reprocess" : aiIssueTitles[row.ai_exceptions[0]]??"Review exception"}
-                        {row.ai_exceptions.length>1 ? ` +${row.ai_exceptions.length-1}`:""}
-                      </button>
-                    ):null}
+                    </div>
+                    {replaceReparseErrorId===row.id&&replaceReparseError?<button type="button" title={replaceReparseError} onClick={()=>setExceptionRow(row)} className="block max-w-[245px] truncate text-left text-[10px] text-rose-700">{replaceReparseError}</button>:null}
                   </td> : null}
                   <td className="whitespace-nowrap px-3 py-3 text-[#62748e]">{compactDate(row.created_at)}</td>
                 </tr>
@@ -726,8 +704,8 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
           {!visible.length ? <div className="p-7 text-center text-[12px] text-[#718197]">No Intake matches this filter on the current page.</div> : null}
         </div>
       </section>
-      <section aria-live="polite" className="min-w-0 rounded-xl border border-[#d4e2ef] bg-white p-3 xl:h-[min(76vh,790px)] xl:overflow-y-auto">
-        <div className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-[#4774c1]" /><h2 className="text-[13px] font-bold text-[#142e4c]">{primaryN8n ? "n8n Policy Processing" : "AI Booking Check"}</h2></div>
+      {processingOpen ? <div className="fixed inset-0 z-[160] flex items-center justify-center bg-slate-950/60 p-3 backdrop-blur-[2px]"><div role="dialog" aria-modal="true" aria-label="Policy processing" className="relative max-h-[90vh] w-full max-w-5xl overflow-y-auto rounded-2xl bg-white p-5 shadow-2xl"><button type="button" aria-label="Close processing" title="Close" onClick={()=>setProcessingOpen(false)} className="absolute right-4 top-4 rounded-lg p-2 text-slate-500 hover:bg-slate-100"><X className="h-5 w-5"/></button><section aria-live="polite" className="min-w-0 pr-8">
+        <div className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-[#4774c1]" /><h2 className="text-[13px] font-bold text-[#142e4c]">{primaryN8n ? "Policy processing" : "AI Booking Check"}</h2></div>
         {!selectedId ? <div className="mt-5 rounded-xl border border-dashed border-[#cddbea] p-5 text-center text-[11px] leading-5 text-[#63768e]">
           {primaryN8n ? queueActive ? "The queue reads Intakes automatically. Select one to review its exceptions, or review the current private PDF again before onboarding." : "Select an Intake to read its current private policy PDF using n8n. Untrained insurer layouts will be referred for manual review, not processed through Google OCR." : "Select a checkbox in the Intake table to see exactly which fields are ready and which require correction."}
         </div> : (
@@ -976,7 +954,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
             )}
           </>
         )}
-      </section>
+      </section></div></div> : null}
       {reprocessConfirmOpen && typeof document !== "undefined" ? createPortal(
         <div className="fixed inset-0 z-[9999] flex items-center justify-center overflow-y-auto bg-[#101d37]/75 px-3 py-4 backdrop-blur-[2px]" role="presentation">
           <div role="alertdialog" aria-modal="true" aria-labelledby="bulk-reprocess-title"
@@ -1046,9 +1024,9 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
       {exceptionRow ? (
         <div className="fixed inset-0 z-[170] flex items-center justify-center bg-[#101d37]/65 px-4 py-6" role="presentation">
           <div role="alertdialog" aria-modal="true" aria-labelledby="ai-exception-title"
-            className="w-full max-w-[530px] rounded-2xl border border-[#d6e2f1] bg-white p-5 shadow-[0_24px_80px_rgba(12,28,52,.3)]">
+            className="max-h-[90vh] w-full max-w-[680px] overflow-y-auto rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl">
             <h3 id="ai-exception-title" className="flex items-center gap-2 text-[15px] font-bold text-[#193657]">
-              <ShieldAlert className="h-4 w-4 text-amber-700"/> Resolve policy exceptions
+              <ShieldAlert className="h-4 w-4 text-amber-700"/> Exception details
             </h3>
             <p className="mt-2 text-[11px] text-[#62748e]">Intake {exceptionRow.intake_number}</p>
             {exceptionRow.ai_diagnostic_code ? (
@@ -1290,7 +1268,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
                 className="inline-flex min-h-9 items-center rounded-lg border border-[#bcd0e5] px-3 text-[11px] font-semibold text-[#24538b] disabled:opacity-50">
                 {queueRetrying?"Queuing...":"Recheck in background"}
               </button> : null}
-              <button type="button" onClick={()=>{const id=exceptionRow.id;setExceptionRow(null);void selectRow(id);}}
+              <button type="button" onClick={()=>{const id=exceptionRow.id;setExceptionRow(null);setProcessingOpen(true);void selectRow(id);}}
                 className="min-h-9 rounded-lg bg-[#174b83] px-3 text-[11px] font-bold text-white">Review current PDF</button>
             </div>
           </div>
