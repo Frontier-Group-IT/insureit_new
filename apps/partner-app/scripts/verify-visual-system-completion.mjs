@@ -837,7 +837,8 @@ requireText(journey, 'bottomNavigation={<PartnerStackBottomNavigation activeTab=
 if (journey.includes('name="locate-outline"')) throw new Error('Milestone top-right circle icon must be removed.');
 if (/calendar-outline|PartnerPolicyCalendarDialog|calendarOpen|setTimelineDate|\[timelineDate,|calendarButton|dateFilterRow|Clear timeline date filter/.test(journey)) throw new Error('Journey timeline must not include the removed calendar/date picker or its unused state.');
 requireText(journey, "filter === 'all' || milestoneCategory(item.kind, item.title) === filter", 'Journey timeline must retain category filtering.');
-requireText(journey, "hero: { marginTop: 12, borderWidth: 1, borderColor: '#E1E5ED'", 'Milestone and summary must be combined into one full-width white card.');
+requireText(journey, "hero: { marginHorizontal: -partnerTheme.spacing.lg, borderBottomWidth: 1, borderBottomColor: '#D7DFEB'", 'Milestone summary must connect to the navy header and span the viewport with a straight bottom divider.');
+if (/next30Row|NEXT 30 DAYS|getPartnerRenewalSummary|renewalSummary|heroSectionDivider/.test(journey)) throw new Error('My Progress must not render or request the removed Next 30 Days section.');
 requireText(journey, 'numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72} accessibilityLabel={data.next_milestone.title}', 'Milestone heading must fit a single row.');
 requireText(journey, "progressCircle: { width: 52, height: 52", 'Circular progress diameter must be compact.');
 requireText(journey, 'numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.9}>Milestone progress', 'Milestone progress label must remain on one line.');
@@ -856,14 +857,6 @@ requireText(journey, "heroTitle: { color: '#17233A'", 'Milestone title must stay
 requireText(journey, 'function CircularMilestoneProgress(', 'Milestone must have an accessible circular percentage indicator.');
 requireText(journey, 'styles.heroHeadline', 'Milestone title and circular progress must share a compact header.');
 for (const [fragment,purpose] of [
-  ["getPartnerRenewalSummary()", 'Next 30 Days must load a scoped, live renewal summary'],
-  ["getPartnerJourney(), getPartnerRenewalSummary()", 'Journey and renewal results load independently'],
-  ["renewalSummary.due_30_premium", 'Next 30 Days premium must not be hardcoded'],
-  ["renewalSummary.due_30_count", 'Next 30 Days policy count must not be hardcoded'],
-  ["formatWholeRupees(renewalSummary.due_30_premium)", 'Premium uses whole-rupee Indian currency formatting'],
-  ["onPress={() => router.push('/renewals')}", 'Next 30 Days summary must open renewals'],
-  ["styles.next30Row", 'Show reference-style compact renewal summary'],
-  ["styles.heroSectionDivider", 'Renewal and milestone sections need a full-width horizontal divider'],
   ["styles.milestoneVerticalDivider", 'Milestone reference requires a thin vertical purple divider'],
   ["styles.milestoneEyebrow", 'Show uppercase NEXT MILESTONE eyebrow'],
   ["Keep going, you're on track!", 'Preserve reference subtitle'],
