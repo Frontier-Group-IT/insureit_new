@@ -71,7 +71,7 @@ function insurerForText(head: string): Insurer | null {
   const issuer = normalized.slice(0, 5000);
   const product = normalized.slice(0, 8500);
   const matches: Insurer[] = [];
-  if (/THE NEW INDIA ASSURANCE CO\\. LTD\\./i.test(issuer) && /Commercial Vehicle Package Policy/i.test(product))
+  if (/THE NEW INDIA ASSURANCE CO\. LTD\./i.test(issuer) && /Commercial Vehicle Package Policy/i.test(product))
     matches.push("new_india_cv_native_pdf");
   if (/IFFCO.?TOKIO GENERAL INSURANCE/i.test(issuer) && /COMMERCIAL VEHICLE CERTIFICATE/i.test(product))
     matches.push("iffco_tokio_cv_native_pdf");
