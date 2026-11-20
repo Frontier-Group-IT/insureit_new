@@ -43,6 +43,9 @@ jobs:
       - name: Install dependencies
         run: npm install --no-audit --no-fund
 
+      - name: Verify Add Claim reference-blue animation
+        run: node apps/partner-app/scripts/verify-claims-add-button-highlight.mjs
+
       - name: Require synchronized dependency lockfile
         shell: bash
         run: |
