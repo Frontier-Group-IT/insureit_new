@@ -10,6 +10,7 @@ import { loadPolicyIntakeDuplicateMatches } from "@/lib/policy-intake-duplicate"
 import { buildPolicyOcrOnboardingUpdate, normalizeVerifiedMotorPowerKw } from "@/lib/policy-ocr-onboarding-apply";
 import { policyDateDecision } from "@/lib/policy-date-rule";
 import { mapVerifiedGoDigitCommercialPremium, mapVerifiedN8nMotorPremium, verifiedCpaSelectionMatches } from "@/lib/policy-n8n-onboarding-premium";
+import { resolveManufacturingYearEvidence } from "@/lib/policy-n8n-onboarding-enrichment";
 import { checkSemiAutoReadiness, type SemiAutoIssue } from "@/lib/policy-intake-semi-auto";
 import { isN8nWorkbenchPrimary, previewSemiAutoN8nExtraction, applySemiAutoN8nExtraction, type SemiAutoN8nResult } from "@/lib/policy-intake-semi-auto-n8n";
 import { segregatePolicyIntakeLanes } from "@/lib/policy-ocr-routing-mode";
@@ -295,6 +296,7 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
     return fail("Source PDF","The current PDF, fingerprint or strict insurer verification is invalid. Recheck this Intake before booking.");
 
   const pdfField=(key:string)=>extracted.preview.fields.find(f=>f.key===key)?.value?.trim()??"";
+  const manufacturingEvidence=resolveManufacturingYearEvidence(extracted.preview.fields);
   // A passed arithmetic/PDF check does not establish vehicle motor power.
   // Verify the separate CC/KW field before auto-taking over reviewer ownership.
   const isOdElectricTwoWheeler=extracted.preview.parserId==="icici_3005_od_n8n_native_pdf"
@@ -327,15 +329,17 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
     if (extracted.preview.parserId!=="go_digit_cv_native_pdf"
         || extracted.preview.checksPassed!==18 || extracted.preview.warnings.length)
       return fail("Premium","This commercial layout still requires insurer-specific booking review.");
-    // Do not claim reviewer ownership or update an existing draft if the PDF
-    // omits an onboarding-mandatory value. In particular registration year is
-    // NOT manufacturing year; current Digit sample prints manufacturing '--'.
+    // Under the configured operational rule, a missing manufacturing year
+    // may use the policy's separately printed registration year. This is a
+    // labelled fallback, never a claim about manufacturer evidence or a
+    // fabricated manufacturing date. All premium checks stay exact.
     for (const key of ["insured_name","policy_product","vehicle_manufacturing_year",
       "vehicle_capacity","vehicle_rto_name","vehicle_rto_state","vehicle_class"]) {
-      if (!pdfField(key)) return fail("Missing verified PDF field",
-        key==="vehicle_manufacturing_year"
-          ?"Manufacturing year is not printed in this Go Digit PDF. Registration year cannot substitute. Verify the year from RC/VAHAN before policy booking."
-          :"The current Go Digit PDF does not independently verify "+key+". Review the original PDF or verified RC before booking.");
+      if (!pdfField(key) && !(key==="vehicle_manufacturing_year" && manufacturingEvidence.year))
+        return fail("Missing verified PDF field",
+          key==="vehicle_manufacturing_year"
+            ?"Neither manufacturing year nor usable registration-year fallback was extracted from the current PDF."
+            :"The current Go Digit PDF does not independently verify "+key+". Review the original PDF or verified RC before booking.");
     }
     if (pdfField("policy_product")!=="Digit Commercial Vehicle Insurance")
       return fail("Policy product","The commercial product is not the verified combined Go Digit motor policy.");
@@ -359,7 +363,7 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
   if(forwarded.draftRevision<1)return fail("Draft revision","Canonical revision is unavailable.");
   if(commercial && (forwarded.draft.policyProduct!=="Package"
     || forwarded.draft.vehicleClass!=="MISD"
-    || forwarded.draft.manufacturingYear!==pdfField("vehicle_manufacturing_year")
+    || forwarded.draft.manufacturingYear!==manufacturingEvidence.year
     || forwarded.draft.capacity!==pdfField("vehicle_capacity")
     || forwarded.draft.rtoName!==pdfField("vehicle_rto_name")
     || forwarded.draft.rtoState!==pdfField("vehicle_rto_state")))
