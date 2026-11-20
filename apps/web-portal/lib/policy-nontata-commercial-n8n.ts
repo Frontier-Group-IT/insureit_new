@@ -109,9 +109,10 @@ function validate(payload: unknown, insurer: Insurer, ids: Record<"intake_id" | 
       || expected.some((name) => typeof checks[name] !== "boolean"))
     throw new Error("n8n_nontata_check_set_invalid");
   const failed = expected.filter((name) => checks[name] !== true);
-  const nIndiaPending = insurer === "new_india_cv_native_pdf"
-    && failed.length === 1 && failed[0] === "registration_complete" && payload.ok === false;
-  if (!((failed.length === 0 && payload.ok === true) || nIndiaPending)) {
+  // An RTO-only prefix on a New India schedule is a NEW unregistered
+  // vehicle. Its classification is verified by the parser, but the prefix
+  // must never be used as a registered vehicle number.
+  if (failed.length > 0 || payload.ok !== true) {
     // Only expose names from this server-controlled check list, never raw
     // extracted values, policyholder text, signed links or n8n warnings.
     const diagnostic=failed.slice(0,6).join("__");
@@ -140,9 +141,11 @@ function validate(payload: unknown, insurer: Insurer, ids: Record<"intake_id" | 
     if (!byKey.get(key)) throw new Error("n8n_nontata_required_field_missing");
   }
   const printedPlate = byKey.get("vehicle_registration_number") || "";
-  if (nIndiaPending) {
-    if (!rtoPrefix(printedPlate) || byKey.get("vehicle_registration_status") !== "registration_pending"
-        || !/^20\d{2}$/.test(byKey.get("vehicle_manufacturing_year") || ""))
+  const isNewIndiaUnregistered = insurer === "new_india_cv_native_pdf"
+    && rtoPrefix(printedPlate) && byKey.get("vehicle_registration_status") === "unregistered";
+  if (isNewIndiaUnregistered) {
+    if (!/^20\d{2}$/.test(byKey.get("vehicle_manufacturing_year") || "")
+        || checks.registration_complete !== true)
       throw new Error("n8n_nontata_unregistered_evidence_invalid");
   } else if (checks.vehicle_registration_printed === true) {
     if (!completePlate(printedPlate) || byKey.get("vehicle_registration_status") !== "registered")
@@ -173,13 +176,11 @@ function validate(payload: unknown, insurer: Insurer, ids: Record<"intake_id" | 
     return w;
   });
 
-  if (nIndiaPending) {
-    // Never feed an RTO-only prefix into the registered-vehicle number field.
-    warnings.unshift("Policy prints only an RTO prefix. Confirm the vehicle is unregistered before onboarding, or supply its verified full registration number.");
-  }
   return {
     parserId: insurer, parserVersion: "non-tata-cv-v2",
-    fields: nIndiaPending ? fields.filter((f) => f.key !== "vehicle_registration_number") : fields,
+    // Preserve registration status=unregistered, omit the RTO prefix from
+    // registration number. The prefix remains verified in the PDF itself.
+    fields: isNewIndiaUnregistered ? fields.filter((f) => f.key !== "vehicle_registration_number") : fields,
     warnings,
     checksPassed: expected.filter((key) => checks[key] === true).length,
     premium: { od, tp, net, gst, gross },
