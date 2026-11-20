@@ -26,7 +26,18 @@ export async function isTrainedLocalN8nMotorPdf(blob: Blob, mimeType: string): P
       && /(?:Thank\s+you\s+for\s+choosing\s+TATA\s+AIG\s+as\s+your\s+Insurer|Welcome\s+to\s+TATA\s+AIG\s+family)/i.test(beginning.slice(0, 6000))
       && /(?:Bundled Auto Secure\s*-\s*(?:Private Car|Two Wheeler) Policy|Auto Secure - Standalone Own Damage Private Car Policy|Auto Secure - Private Car Package Policy)/i.test(beginning.slice(0, 800))
       && /\bPolicy No\.\s*\d{10}\s+\d{2}\s+\d{2}\b/i.test(beginning.slice(0, 3000));
-    return icici3005 || tataAig;
+    // The strict commercial reader already validates the full document and
+    // reconciles printed premium totals. Classification is only a routing
+    // hint, not authorization to book or accept fields.
+    const head = beginning.slice(0, 2400);
+    const commercial =
+      (/THE NEW INDIA ASSURANCE CO\\. LTD\\./i.test(head)
+        && /Commercial Vehicle Package Policy/i.test(beginning.slice(0, 5000)))
+      || (/IFFCO.?TOKIO GENERAL INSURANCE/i.test(head)
+        && /COMMERCIAL VEHICLE CERTIFICATE/i.test(beginning.slice(0, 5000)))
+      || (/Go Digit General Insurance/i.test(head)
+        && /Digit Commercial Vehicle Insurance/i.test(beginning.slice(0, 5000)));
+    return icici3005 || tataAig || commercial;
   } catch {
     return false;
   }
