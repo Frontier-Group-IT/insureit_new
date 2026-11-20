@@ -69,12 +69,12 @@ type PolicyFilterTab='period'|'source'|'rm'|'date';
 const isoDate=(date:Date)=>`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
 const parseFilterDate=(value:string)=>value?new Date(value+'T12:00:00'):null;
 const todayDate=()=>new Date();
-const quickDateRange=(key:'mtd'|'last_month'|'last_3'|'last_6')=>{
+const quickDateRange=(key:'mtd'|'90'|'365')=>{
  const now=todayDate();
  if(key==='mtd')return {from:isoDate(new Date(now.getFullYear(),now.getMonth(),1)),to:isoDate(now)};
- if(key==='last_month')return {from:isoDate(new Date(now.getFullYear(),now.getMonth()-1,1)),to:isoDate(new Date(now.getFullYear(),now.getMonth(),0))};
- const months=key==='last_3'?3:6;
- return {from:isoDate(new Date(now.getFullYear(),now.getMonth()-months+1,1)),to:isoDate(now)};
+ const from=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+ from.setDate(from.getDate()-(key==='90'?89:364));
+ return {from:isoDate(from),to:isoDate(now)};
 };
 const sheetStatuses: {label:string;value:PartnerPolicyStatusFilter;lifecycle:PartnerPolicyLifecycle}[] = [
   {label:'All Policies',value:'all',lifecycle:'all'},
@@ -688,9 +688,8 @@ export default function PoliciesScreen() {
                   {([
                     {key:'all',label:'All Dates'},
                     {key:'mtd',label:'MTD'},
-                    {key:'last_month',label:'Last Month'},
-                    {key:'last_3',label:'Last 3 Months'},
-                    {key:'last_6',label:'Last 6 Months'},
+                    {key:'90',label:'90 Days'},
+                    {key:'365',label:'365 Days'},
                   ] as const).map(option=><Pressable key={option.key} accessibilityRole="button"
                     onPress={()=>{if(option.key==='all'){setDraftFromDate('');setDraftToDate('');}
                       else {const dates=quickDateRange(option.key);setDraftFromDate(dates.from);setDraftToDate(dates.to);}}}
