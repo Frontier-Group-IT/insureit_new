@@ -332,10 +332,10 @@ const styles = StyleSheet.create({
   },
   feedback: { marginTop: partnerTheme.spacing.md },
   section: {
-    marginTop: 14,
+    marginTop: 10,
   },
   sectionTitle: {
-    marginBottom: 6,
+    marginBottom: 5,
     marginLeft: 5,
     color: '#617492',
     letterSpacing: 1.1,
@@ -351,12 +351,12 @@ const styles = StyleSheet.create({
     ...partnerTheme.shadowSoft,
   },
   menuRow: {
-    minHeight: 68,
+    minHeight: 62,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
     paddingHorizontal: 13,
-    paddingVertical: 9,
+    paddingVertical: 5,
   },
   menuRowDivider: {
     borderBottomWidth: 1,
