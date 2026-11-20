@@ -203,36 +203,31 @@ for (const [screen, title, icon] of [
   requireText(screen, `<PartnerCasePageHeader title="${title}" icon="${icon}" onBack={() => router.back()} />`, `${title} must show a white title and back action on navy.`);
 }
 
-// My Achievements retains navy navigation and an accessible percentage circle.
+// My Achievements keeps navigation, dynamic data and an accessible progress indicator,
+// while matching the new purple illustrated-card reference.
 for (const fragment of [
   'hideTopBar', 'navyStatusBar', 'bottomNavigationNavy',
   '<PartnerCaseBottomNavigation activeTab="More" />',
   '<PartnerCasePageHeader title="My Achievements" icon="ribbon-outline" onBack={() => router.back()} />',
-  'accessibilityRole="progressbar"', 'accessibilityValue={{ min: 0',
-  'percentCircle', '(progress * 100).toFixed(1)',
-]) requireText(recognition, fragment, 'My Achievements must retain navy navigation and accessible percentage progress.');
-for (const unwanted of [
-  'heroDescription', 'cardDivider', 'styles.description', '{item.body}', 'progressCaption',
-  'styles.remaining', 'Customers achieved', 'Completed', 'more customers to unlock',
-  'styles.track', 'styles.fill', 'name="flag-outline"', 'styles.dateRow', 'styles.earnedRow',
-]) if (recognition.includes(unwanted)) throw new Error('My Achievements must omit old decorations and spacing: ' + unwanted);
-for (const required of [
-  'YOUR RECOGNITION', 'Every milestone matters.', 'Recorded achievement',
-  'Unlocked achievements', 'ACHIEVED', '{item.title}', 'formatDate(item.date)',
-  'NEXT MILESTONE', '{next.title}', 'next.current.toLocaleString', 'View your full journey',
-  "hero: { marginHorizontal: -partnerTheme.spacing.lg, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#E5E7EB'",
-  'styles.earnedCount', 'styles.achievementMeta', 'width: 32, height: 32', 'fontSize: 5, lineHeight: 7',
-  'PROGRESS_RING_SEGMENTS.map((segment, index) =>',
-  'progress * PROGRESS_RING_SEGMENTS.length - index',
-  "backgroundColor: fill > 0 ? '#7158DC' : '#E7E1F9'",
-  'accessibilityRole="progressbar"',
-  'numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65}>Every milestone matters.',
-  'earnedCount: { alignItems: \'center\', justifyContent: \'center\', width: 64',
-]) requireText(recognition, required, 'My Achievements must keep approved compact content and placement.');
-const recognitionHero = recognition.slice(recognition.indexOf('<View style={styles.hero}>'), recognition.indexOf('<View style={styles.sectionHeading}>'));
-if (!recognitionHero.includes('styles.earnedCount') || !recognitionHero.includes('styles.heroCopy')) throw new Error('Recognition count belongs inside the right side of the white header.');
-const recognitionAchievement = recognition.slice(recognition.indexOf('{data.items.map'), recognition.indexOf('</View>\n          ) : (', recognition.indexOf('{data.items.map')));
-if (!recognitionAchievement.includes('styles.earnedPill') || !recognitionAchievement.includes('styles.date')) throw new Error('Achievement badge and date must be inside each card.');
+  'getPartnerRecognition()', 'accessibilityRole="progressbar"', 'accessibilityValue={{ min: 0',
+  '(progress * 100).toFixed(1)', 'next.current.toLocaleString', 'formatDate(item.date)',
+  'Unlocked achievements', 'name="star"', 'styles.headingRule',
+  'styles.artworkTile', 'styles.achievementArtwork', 'styles.verticalRule',
+  '{item.title}', 'A great start!', 'ACHIEVED', 'name="checkmark-circle"',
+  'styles.dateRow', 'name="calendar-outline"',
+  'NEXT MILESTONE', '{next.title}', "Keep going, you're on track!",
+  'RING_SEGMENTS.map((segment, index)', 'styles.percentCircle',
+  'styles.customersRow', 'View your full journey',
+  'styles.journeyTint', 'styles.journeyArrow',
+  "onPress={() => router.push('/journey')}",
+]) requireText(recognition, fragment, 'My Achievements reference redesign must retain artwork, data and navigation.');
+for (const unwanted of ['{item.body}', 'styles.remaining', 'styles.track', 'styles.fill', 'progressCaption']) {
+  if (recognition.includes(unwanted)) throw new Error('My Achievements contains obsolete layout: ' + unwanted);
+}
+const recognitionAchievement = recognition.slice(recognition.indexOf('{data.items.map'), recognition.indexOf('{next ? ('));
+if (!recognitionAchievement.includes('styles.earnedPill') || !recognitionAchievement.includes('styles.date')) {
+  throw new Error('Each achievement must show its achieved badge and date.');
+}
 
 // Learn follows the Renewal Work Queue reference header rather than the shared compact page header.
 for (const fragment of [
