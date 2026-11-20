@@ -7,15 +7,12 @@ import { PartnerScreen } from '@/components/partner-screen';
 import { PartnerStackBottomNavigation } from '@/components/partner-stack-bottom-navigation';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { getPartnerJourney, type PartnerJourneyData } from '@/lib/journey';
-import { getPartnerRenewalSummary, type PartnerRenewalSummary } from '@/lib/policies';
-import { formatIndianCurrency } from '@/lib/format';
 import { PartnerAssets } from '@/lib/partner-assets';
 import { partnerTheme } from '@/lib/theme';
 
 export default function JourneyScreen() {
   const router = useRouter();
   const [data, setData] = useState<PartnerJourneyData | null>(null);
-  const [renewalSummary, setRenewalSummary] = useState<PartnerRenewalSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [filter, setFilter] = useState<JourneyFilter>('all');
@@ -25,12 +22,7 @@ export default function JourneyScreen() {
     setLoading(true);
     setError('');
     try {
-      const [journeyResult, renewalResult] = await Promise.allSettled([
-        getPartnerJourney(), getPartnerRenewalSummary(),
-      ]);
-      if (journeyResult.status === 'rejected') throw journeyResult.reason;
-      setData(journeyResult.value);
-      setRenewalSummary(renewalResult.status === 'fulfilled' ? renewalResult.value : null);
+      setData(await getPartnerJourney());
     } catch {
       setError('Your journey could not be loaded.');
     } finally {
@@ -63,20 +55,6 @@ export default function JourneyScreen() {
       ) : (
         <>
           <View style={styles.hero}>
-            <Pressable accessibilityRole="button" accessibilityLabel="Open renewals due in the next 30 days"
-              onPress={() => router.push('/renewals')} style={({ pressed }) => [styles.next30Row, pressed && styles.summaryItemPressed]}>
-              <Image source={PartnerAssets.actions.quickRenewals} style={styles.next30Artwork} resizeMode="contain" accessible={false} />
-              <View style={styles.next30Details}>
-                <Text style={styles.next30Eyebrow}>NEXT 30 DAYS</Text>
-                <Text style={styles.next30Premium} numberOfLines={1}>
-                  Net Premium - {renewalSummary ? formatWholeRupees(renewalSummary.due_30_premium) : '—'}
-                </Text>
-              </View>
-              <Text style={styles.next30Count} numberOfLines={1}>
-                POLICIES {renewalSummary ? renewalSummary.due_30_count.toLocaleString('en-IN') : '—'}
-              </Text>
-            </Pressable>
-            <View style={styles.heroSectionDivider} accessible={false}/>
             <View style={styles.heroHeadline}>
               <Image source={require('../assets/partner/status/journey-trophy-reference.png')} style={styles.milestoneTrophy} resizeMode="contain" accessible={false} />
               <View style={styles.milestoneVerticalDivider} accessible={false}/>
@@ -229,25 +207,13 @@ function journeyMilestoneArtwork(kind: string, title: string): ImageSourcePropTy
   return PartnerAssets.status.achievement;
 }
 
-function formatWholeRupees(value: number | string): string {
-  const amount = Number(value);
-  return formatIndianCurrency(Number.isFinite(amount) ? Math.trunc(amount) : 0);
-}
-
 function formatDate(value: string) {
   const date = new Date(`${value}T00:00:00`);
   return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }).format(date);
 }
 
 const styles = StyleSheet.create({
-  hero: { marginTop: 12, borderWidth: 1, borderColor: '#E1E5ED', borderRadius: 18, paddingHorizontal: 12, paddingTop: 12, paddingBottom: 8, backgroundColor: '#FFFFFF' },
-  next30Row: { flexDirection: 'row', alignItems: 'center', gap: 9, paddingBottom: 8, minHeight: 44 },
-  next30Artwork: { width: 34, height: 34, flexShrink: 0 },
-  next30Details: { flex: 1, minWidth: 0, gap: 3 },
-  next30Eyebrow: { color: '#17233A', fontSize: 10, fontWeight: '800' },
-  next30Premium: { color: '#53637C', fontSize: 10, fontWeight: '600' },
-  next30Count: { color: '#17233A', fontSize: 9, fontWeight: '800', flexShrink: 0 },
-  heroSectionDivider: { width: '100%', height: 1, backgroundColor: '#E1E5ED', marginBottom: 10 },
+  hero: { marginHorizontal: -partnerTheme.spacing.lg, borderBottomWidth: 1, borderBottomColor: '#D7DFEB', paddingHorizontal: 12, paddingTop: 12, paddingBottom: 8, backgroundColor: '#FFFFFF' },
   heroHeadline: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 70 },
   milestoneTrophy: { width: 42, height: 42, borderRadius: 10, flexShrink: 0 },
   milestoneVerticalDivider: { width: 2, height: 43, backgroundColor: '#A78DEB', flexShrink: 0 },
