@@ -8,6 +8,13 @@ const eligibility=file("../lib/ai-policy-onboarding-eligibility.ts");
 const component=file("../components/development/semi-auto-policy-workspace.tsx");
 const actions=file("../app/development/ai-policy-onboarding/actions.ts");
 const oldBridge=file("../lib/policy-intake-n8n-bridge.ts");
+const handoff=file("../app/policy-intakes/handoff-actions.ts");
+// An NIA RTO prefix is an unregistered vehicle, never a blocking incomplete
+// registered plate. The source prefix must not fill registrationNo.
+assert.match(signed,/isNewIndiaUnregistered/);
+assert.match(signed,/fields\.filter\(\(f\) => f\.key !== "vehicle_registration_number"\)/);
+assert.match(signed,/vehicle_registration_status"\) === "unregistered"/);
+assert.match(handoff,/field\.key==="vehicle_registration_status"&&field\.value==="unregistered"/);
 for (const id of ["go_digit_cv_native_pdf","new_india_cv_native_pdf","iffco_tokio_cv_native_pdf"]) {
   assert.ok(eligibility.includes(id), "AI queue must recognize trained parser "+id);
   assert.ok(signed.includes(id), "The signed-source path must retain exact parser identity "+id);

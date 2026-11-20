@@ -47,19 +47,47 @@ for(let i=0;i<nia.length;i++){
   assert.equal(field(parsedNarrow,'insured_name'),'EXAMPLE SAMPLE CUSTOMER');
   assert.equal(field(parsedNarrow,'vehicle_make'),'TATA MOTOR');
   assert.equal(field(parsedNarrow,'vehicle_model'),'TEST TRUCK');
-  assert.equal(parsedNarrow.checks.registration_complete,false);
-  assert.equal(parsedNarrow.ok,false,'Partial plate must remain review-only');
+  assert.equal(parsedNarrow.checks.registration_complete,true);
+  assert.equal(parsedNarrow.ok,true,'RTO-only prefix must classify as new unregistered');
+  assert.equal(field(parsedNarrow,'vehicle_registration_status'),'unregistered');
  }
  const r=parseNonTata(text);
  assert.equal(r.parser_id,'new_india_cv_native_pdf',tag);
  assert.deepEqual([r.premium_components.od,r.premium_components.tp,r.premium_components.net,r.premium_components.gst,r.premium_components.gross],[od,tp,net,gst,gross],tag);
  assert.equal(r.checks.net_od_tp_reconciled,true,tag);
  assert.equal(r.checks.gross_net_tax_reconciled,true,tag);
- assert.equal(r.ok,complete,tag+' incomplete plate requires review');
+ assert.equal(r.ok,true,tag+' RTO-only prefix is a verified unregistered vehicle');
+ assert.equal(field(r,'vehicle_registration_status'),complete?'registered':'unregistered');
+ assert.equal(r.checks.registration_complete,true,tag+' registration status verified from prefix');
  assert.equal(r.review_required,true);
  assert.equal(r.auto_finalize_allowed,false);
  assert.equal(field(r,'policy_issuance_date'),'2026-11-19',tag);
 }
+// Unknown/malformed registration evidence must still fail strict checks.
+const niaUnknown=[
+ 'THE NEW INDIA ASSURANCE CO. LTD.',
+ 'POLICY SCHEDULE CUM CERTIFICATE OF INSURANCE',
+ 'Commercial Vehicle Package Policy',
+ 'Policy Number :31280031260300002100',
+ "Insured's Name EXAMPLE SAMPLE CUSTOMER Customer ID TEST012",
+ 'Period of cover 06/11/2026 02:46:54 PM to 05/11/2027 11:59:59 PM',
+ 'Chassis no./Engine no.: MAT843319T7J28325/3.6L',
+ 'RDE03JTX530573',
+ 'Make/Model: TATA MOTOR/TEST TRUCK Registration no. XX-00',
+ 'INSURED DECLARED VALUE (Rs)',
+ 'Vehicle Trailer Non-Elec Acc Electrical Acc Total Value',
+ '2978298 0 0 0 0 2978298',
+ 'Total OD Premium (Rs) 15184',
+ 'Total TP Premium (Rs) 35738',
+ 'Net Premium (Rs) 50922',
+ 'GST (Rs) 4576',
+ 'Total Payable (Rs) 55498',
+ 'Date of Issue: 19/11/2026',
+].join('\\n');
+const invalidPrefix=parseNonTata(niaUnknown);
+assert.equal(invalidPrefix.ok,false);
+assert.equal(invalidPrefix.checks.registration_complete,false);
+
 const iffcoText=[
  'IFFCO TOKIO GENERAL INSURANCE CO.LTD',
  'COMMERCIAL VEHICLE CERTIFICATE OF INSURANCE cum SCHEDULE & TAX INVOICE',

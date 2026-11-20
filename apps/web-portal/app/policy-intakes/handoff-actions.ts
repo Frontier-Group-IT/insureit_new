@@ -306,7 +306,10 @@ async function preparePolicyIntakeHandoffInternal(
   const insurers=(insurerResult.data??[]).map((row:InsurerOption)=>({value:row.id,label:row.name}));
   const mapped=buildPolicyOcrOnboardingUpdate({
     mode:"create",
-    registrationMode:"registered",
+    // Carry verified new/unregistered status into onboarding. Never force a
+    // registration number for a policy containing only an RTO prefix.
+    registrationMode:verified?.fields.some(field =>
+      field.key==="vehicle_registration_status"&&field.value==="unregistered")?"unregistered":"registered",
     current:{registrationNo:"",vehicleClass:"",make:"",model:"",fuelType:"",manufacturingYear:"",capacity:"",chassisNo:"",engineNo:"",rtoState:"",rtoName:"",policyProduct:"",idv:"",od:"",tp:"",cpa:"",policyNo:"",insurerId:"",validFrom:"",validUpto:""},
     fields:verified?enrichVerifiedN8nOnboardingFields(verified.fields):(intake.ocr_fields??[]),
     manufacturers:manufacturerOptions,insurers,rcVerified:false,
