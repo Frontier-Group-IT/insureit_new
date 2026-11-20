@@ -1,9 +1,9 @@
 Partner production OTA trigger
-release=partner-policies-inline-filter-pr-4980
+release=partner-source-rm-four-row-pr-4995
 source=verified-merged-main
-source_pr=4980
-source_merge=4e32a22fc70f2728ab3087a5a9e514bb65a6bd4b
-reason=user-approved-merge-and-publish-policies-inline-filter-claims-parity
+source_pr=4995
+source_merge=4074c6f9beab152cf51716600b19d6f224e27f3c
+reason=user-approved-merge-and-publish-compact-source-rm-filters
 channel=production
 runtime=0.2.0
 requested=2026-11-20
