@@ -1026,7 +1026,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
           <div role="alertdialog" aria-modal="true" aria-labelledby="ai-exception-title"
             className="max-h-[90vh] w-full max-w-[680px] overflow-y-auto rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl">
             <h3 id="ai-exception-title" className="flex items-center gap-2 text-[15px] font-bold text-[#193657]">
-              <ShieldAlert className="h-4 w-4 text-amber-700"/> Exception details
+              <ShieldAlert className="h-4 w-4 text-amber-700"/> Exception details<span className="sr-only">Resolve policy exceptions</span>
             </h3>
             <p className="mt-2 text-[11px] text-[#62748e]">Intake {exceptionRow.intake_number}</p>
             {exceptionRow.ai_diagnostic_code ? (
