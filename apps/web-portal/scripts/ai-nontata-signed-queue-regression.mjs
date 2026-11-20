@@ -185,7 +185,8 @@ assert.ok(unified.includes("Provisional city from the NIA issuing office")
   "A provisional issuing-office city must be labeled when shown as RTO");
 const canonicalEngine=file("../lib/policy-onboarding-engine.ts");
 assert.ok(!canonicalEngine.includes("CPA amount is mandatory for GCV policies")
-  && canonicalEngine.includes("(payload.premium.cpaOpted && cpaAmount <= 0)"),
+  && canonicalEngine.includes("(payload.premium.cpaOpted && cpaAmount <= 0)")
+  && canonicalEngine.includes("(!payload.premium.cpaOpted && cpaAmount > 0)"),
   "Canonical booking must allow zero CPA for any GCV policy, unless CPA is opted in");
 assert.ok(!unified.includes("CPA amount is mandatory for GCV policies")
   && unified.includes("CPA must be positive when opted in.")
