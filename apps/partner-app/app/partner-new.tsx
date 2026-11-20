@@ -328,32 +328,31 @@ export default function AddPartnerScreen() {
     setIssuedPartnerId(result.partner_id || null);
     return result;
   };
-  const completePartnerDocuments = () => {
-    if (!applicationId || missingDocuments.length || finalizing || uploadingType || !allowed) return;
-    partnerAlert('Complete Partner documents?', 'Issue the permanent Partner ID using the documents already saved for this application?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Complete & Issue ID', onPress: () => { void (async () => {
-        setFinalizing(true);
-        try {
-          const session = (await supabase.auth.getSession()).data.session;
-          if (!session?.access_token) throw new Error('Sign in again to complete the application.');
-          const base = (process.env.EXPO_PUBLIC_PORTAL_URL || 'https://portal.insureit.in').replace(/\/$/, '');
-          const response = await fetch(`${base}/api/partner/onboarding/partner-only/documents`, {
-            method: 'PATCH', headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ application_id: applicationId }),
-          });
-          const result = await response.json() as { ok?: boolean; error?: string; partner_id?: string };
-          if (!response.ok || !result.ok || !result.partner_id) throw new Error(result.error || 'Partner ID could not be issued.');
-          setIssuedPartnerId(result.partner_id);
-          setUploadOpen(false);
-          partnerAlert('Partner ID Issued', `Partner ID: ${result.partner_id}`, [
-            { text: 'Done', onPress: () => router.replace('/(tabs)/policies') },
-          ]);
-        } catch (error) {
-          partnerAlert('Unable to issue Partner ID', error instanceof Error ? error.message : 'Please retry or contact Operations.');
-        } finally { setFinalizing(false); }
-      })(); } },
-    ]);
+  const completePartnerDocuments = async () => {
+    if (!applicationId || missingDocuments.length > 0 || finalizing || uploadingType || !allowed || issuedPartnerId) return;
+    setFinalizing(true);
+    try {
+      // The server rechecks all required files (including GST when applicable) and
+      // atomically issues the Partner ID. Never trust local upload state alone.
+      const session = (await supabase.auth.getSession()).data.session;
+      if (!session?.access_token) throw new Error('Sign in again to complete the application.');
+      const base = (process.env.EXPO_PUBLIC_PORTAL_URL || 'https://portal.insureit.in').replace(/\/$/, '');
+      const response = await fetch(`${base}/api/partner/onboarding/partner-only/documents`, {
+        method: 'PATCH', headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ application_id: applicationId }),
+      });
+      const result = await response.json() as { ok?: boolean; error?: string; partner_id?: string };
+      if (!response.ok || !result.ok || !result.partner_id) throw new Error(result.error || 'Partner ID could not be issued.');
+      setIssuedPartnerId(result.partner_id);
+      setUploadOpen(false);
+      partnerAlert('Partner ID Created', `Partner ID: ${result.partner_id}`, [
+        { text: 'Done', onPress: () => router.replace('/(tabs)/policies') },
+      ]);
+    } catch (error) {
+      partnerAlert('Unable to issue Partner ID', error instanceof Error ? error.message : 'Please retry or contact Operations.');
+    } finally {
+      setFinalizing(false);
+    }
   };
   const deleteDocument = (type: DocumentType) => {
     if (!applicationId || !uploaded[type] || saving || uploadingType) return;
@@ -475,22 +474,18 @@ export default function AddPartnerScreen() {
           onCancel={() => setDateField(null)}
           onConfirm={date => setSelectedDate(date)}
         />
-        <Modal visible={uploadOpen} transparent animationType="fade" onRequestClose={() => { if (!uploadingType && !finalizing) setUploadOpen(false); }}>
+        <Modal visible={uploadOpen} transparent animationType="fade" onRequestClose={() => { /* Required document upload must be completed before leaving. */ }}>
           <View style={styles.modalBackdrop}>
             {showUploadBadge ? <View pointerEvents="none" style={[styles.uploadSuccessBadge,styles.uploadSuccessOverlay,{top:Math.max(12,safeAreaInsets.top+8)}]} accessibilityRole="alert">
               <Ionicons name="checkmark-circle" size={17} color="#16805C"/>
               <Text style={styles.uploadSuccessBadgeText}>Uploaded</Text>
             </View> : null}
-            <Pressable style={StyleSheet.absoluteFillObject} accessibilityLabel="Close document popup"
-              onPress={() => { if (!uploadingType) setUploadOpen(false); }} />
+
             <View style={styles.documentModalCenter} pointerEvents="box-none">
               <View style={styles.documentModal}>
                 <View style={styles.modalTitleRow}>
                   <Text style={styles.modalTitle}>Upload Documents</Text>
-                  <Pressable accessibilityRole="button" accessibilityLabel="Close document popup"
-                    disabled={Boolean(uploadingType)} onPress={() => setUploadOpen(false)}>
-                    <Ionicons name="close" size={22} color="#4C5970"/>
-                  </Pressable>
+
                 </View>
                 <ScrollView keyboardShouldPersistTaps="handled" style={styles.documentModalScroll}>
           <View style={styles.documentModalBody}>
@@ -528,15 +523,11 @@ export default function AddPartnerScreen() {
                 <Text style={{ color: missingDocuments.length ? '#9B5B10' : '#16805C', fontSize: 11, fontWeight: '700' }}>
                   {issuedPartnerId ? `Partner ID: ${issuedPartnerId}` : missingDocuments.length ? `${missingDocuments.length} required document(s) remaining` : 'All required documents saved — ready to issue Partner ID'}
                 </Text>
-                {!issuedPartnerId ? <Pressable accessibilityRole="button" accessibilityLabel="Complete documents and issue Partner ID"
-                  disabled={Boolean(uploadingType) || finalizing || missingDocuments.length > 0} onPress={completePartnerDocuments}
-                  style={[styles.documentDoneButton, (Boolean(uploadingType) || finalizing || missingDocuments.length > 0) && styles.disabled]}>
-                  <Text style={styles.submitText}>{finalizing ? 'Issuing Partner ID…' : 'Complete & Issue Partner ID'}</Text>
-                </Pressable> : null}
-                <Pressable accessibilityRole="button" accessibilityLabel="Done uploading documents"
-                  disabled={Boolean(uploadingType) || finalizing} onPress={() => { setUploadOpen(false); router.replace('/(tabs)/policies'); }}
-                  style={[styles.documentDoneButton, Boolean(uploadingType) && styles.disabled]}>
-                  <Text style={styles.submitText}>Done</Text>
+                <Pressable accessibilityRole="button" accessibilityLabel="Done uploading documents and create Partner ID"
+                  disabled={!applicationId || !allowed || Boolean(uploadingType) || finalizing || missingDocuments.length > 0 || Boolean(issuedPartnerId)}
+                  onPress={() => void completePartnerDocuments()}
+                  style={[styles.documentDoneButton, (!applicationId || !allowed || Boolean(uploadingType) || finalizing || missingDocuments.length > 0 || Boolean(issuedPartnerId)) && styles.disabled]}>
+                  <Text style={styles.submitText}>{finalizing ? 'Creating Partner ID…' : 'Done'}</Text>
                 </Pressable>
               </View>
             </View>
