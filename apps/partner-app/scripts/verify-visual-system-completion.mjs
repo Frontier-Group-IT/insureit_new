@@ -212,11 +212,11 @@ if (lifeHealthCaseDetails.includes("activityFilterCount") || lifeHealthCaseDetai
 const deletionScreen = read('app/account-deletion.tsx');
 const deletionBrandIndex = deletionScreen.indexOf('<View style={styles.heroBrand} accessibilityLabel="insureit Partner">');
 const deletionSloganIndex = deletionScreen.indexOf('<View style={styles.heroCopy}>');
-if (deletionBrandIndex < 0 || deletionSloganIndex < 0 || deletionBrandIndex >= deletionSloganIndex) {
-  throw new Error('Account deletion must show the Partner logo left and the slogan right.');
+if (deletionBrandIndex < 0 || deletionSloganIndex < 0 || deletionSloganIndex >= deletionBrandIndex) {
+  throw new Error('Account deletion must show the slogan on the far left and Partner crest/wordmark on the far right.');
 }
-requireText(deletionScreen, "heroCopy: { flex: 1, minWidth: 0, paddingLeft: 10, paddingTop: 14, alignItems: 'flex-end' }", "Account deletion slogan stays right-aligned and begins at the brand wordmark first text row.");
-requireText(deletionScreen, "heroSloganBlock: { alignSelf: 'flex-end', width: 142, maxWidth: '100%', alignItems: 'flex-start' }", 'Slogan is right-anchored with a stable two-line width, while allowing narrow viewport shrink.');
+requireText(deletionScreen, "heroCopy: { flex: 1, minWidth: 0, paddingRight: 10, paddingTop: 14, alignItems: 'flex-start' }", 'Account deletion slogan must anchor to the left and align with the wordmark text rows.');
+requireText(deletionScreen, "heroSloganBlock: { alignSelf: 'flex-start', width: 142, maxWidth: '100%', alignItems: 'flex-start' }", 'Two slogan lines start from the same left position.');
 requireText(deletionScreen, 'numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>Your account,', 'First slogan row stays on one line.');
 requireText(deletionScreen, 'numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>your choice', 'Second slogan row stays on one line.');
 requireText(deletionScreen, "heroTitle: { width: '100%', fontSize: 19, lineHeight: 22", 'Both Y characters must share the same left origin in equal-width text rows.');
@@ -228,8 +228,8 @@ for (const [fragment, reason] of [
   ['styles.hero', 'Branded deletion page has a hero'],
   ['styles.heroUnderline', 'Hero title uses purple accent underline'],
   ["backgroundColor: '#FFFFFF' },", 'Deletion heading must have a clean white background'],
-  ["heroBrand: { width: 156, minHeight: 70", 'Official crest and Partner wordmark remain in a compact left-side lockup'],
-  ["alignSelf: 'flex-start', alignItems: 'center', justifyContent: 'flex-start'", 'Logo group top-aligns with the heading and stays left-aligned'],
+  ["heroBrand: { width: 156, minHeight: 70", 'Official crest and Partner wordmark remain a compact right-side lockup'],
+  ["alignSelf: 'flex-start', alignItems: 'center', justifyContent: 'flex-end'", 'Brand lockup is placed at the far right'],
   ["tintColor: '#0B438C'", 'The official crest must render navy on the white banner'],
   ['styles.heroBrandCopy', 'Crest and insureit Partner text must form a horizontal logo lockup'],
   ["alignItems: 'flex-start', backgroundColor: '#FFFFFF'", 'Deletion hero keeps its white banner and top alignment'],
