@@ -141,6 +141,8 @@ export async function GET(request:Request) {
    }
    const status = url.searchParams.get("status") || "pending";
    if (!["pending","rejected","issued","all"].includes(status)) return respond({ok:false,error:"Invalid status."},400);
+   const businessLine = (url.searchParams.get("businessLine") || "all").trim().toLowerCase();
+   if (!["all","life","health"].includes(businessLine)) return respond({ok:false,error:"Invalid business line."},400);
    const search = (url.searchParams.get("search") || "").trim().toLowerCase().slice(0,120);
    const limit = Math.min(50,Math.max(1,Number(url.searchParams.get("limit") || "10") || 10));
    const offset = Number(url.searchParams.get("offset") || "0");
@@ -178,6 +180,7 @@ export async function GET(request:Request) {
    const counts={pending:0,rejected:0,issued:0,all:result.length};
    for (const row of result) counts[row.status_group as "pending"|"rejected"|"issued"]++;
    const visible = result.filter(row=>(status==="all" || row.status_group===status) &&
+      (businessLine==="all" || row.business_line.trim().toLowerCase()===businessLine) &&
       (!search || [row.case_number,row.customer_name,row.customer_phone,row.insurer_name,row.product_name,
         row.proposal_number,row.rm_name,row.lead_source,row.status_group].some(value=>String(value).toLowerCase().includes(search))));
    return respond({ok:true,cases:visible.slice(offset,offset+limit),counts,total:visible.length});
