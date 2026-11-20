@@ -67,9 +67,9 @@ const isMoney = (x: unknown): x is number =>
 function insurerForText(head: string): Insurer | null {
   // PDF text extraction can split an insurer/product heading across lines.
   // Normalize whitespace without trusting a caller-supplied insurer label.
-  const normalized = head.replace(/\\s+/g, " ");
-  const issuer = normalized.slice(0, 2400);
-  const product = normalized.slice(0, 5000);
+  const normalized = head.replace(/\s+/g, " ");
+  const issuer = normalized.slice(0, 5000);
+  const product = normalized.slice(0, 8500);
   const matches: Insurer[] = [];
   if (/THE NEW INDIA ASSURANCE CO\\. LTD\\./i.test(issuer) && /Commercial Vehicle Package Policy/i.test(product))
     matches.push("new_india_cv_native_pdf");
@@ -86,7 +86,7 @@ export async function recognizeNonTataCommercialPdf(file: File): Promise<Insurer
   const bytes = new Uint8Array(await file.arrayBuffer());
   if (new TextDecoder("ascii").decode(bytes.subarray(0, 5)) !== PDF) return null;
   const pages = await extractNativePdfTextPages(bytes);
-  const text = pages.slice(0, 2).map((page) => page.text).join("\n");
+  const text = pages.slice(0, 3).map((page) => page.text).join("\n");
   return insurerForText(text);
 }
 

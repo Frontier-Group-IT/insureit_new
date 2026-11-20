@@ -34,6 +34,16 @@ assert.match(bridge, /if \(!response\.ok\) throw/);
 assert.match(bridge, /gst_independently_evidenced/);
 assert.match(bridge, /gross_net_tax_reconciled/);
 assert.match(bridge, /invoice_gross_matches/);
+// Real native PDF extraction can split the Go Digit issuer and commercial
+// product across multiple lines and pages. Whitespace normalization must
+// use the regex whitespace token, not a literal backslash followed by s.
+assert.ok(bridge.includes(String.raw`head.replace(/\s+/g, " ")`),
+  "Commercial recognition must normalize native-PDF line breaks");
+assert.ok(!bridge.includes(String.raw`head.replace(/\\s+/g, " ")`),
+  "A double-escaped literal regex silently misses whitespace");
+assert.ok(bridge.includes("pages.slice(0, 3)"),
+  "Allow the first three pages to identify the printed commercial layout");
+
 
 for (const src of [actions,service,router]) {
   assert.match(src, /tryReadNonTataCommercialPolicy/);
