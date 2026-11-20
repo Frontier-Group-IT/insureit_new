@@ -21,7 +21,9 @@ for (const kind of ['search','policy-intake','renewals','customers','week',
   assert.ok(icons.includes(kind+': {') || icons.includes("'"+kind+"': {"),
     '3D palette missing for '+kind);
 }
-assert.match(more, /sectionRows/, 'More groups should not have rounded card containers');
+assert.match(more, /<View style=\{styles\.sectionRows\}>\{children\}<\/View>/, 'Every More section must share a rounded white card container');
+assert.match(more, /sectionRows: \{[\s\S]*?overflow: 'hidden',[\s\S]*?borderRadius: 16,[\s\S]*?backgroundColor: partnerTheme\.colors\.surface,[\s\S]*?borderWidth: 1,[\s\S]*?borderColor: partnerTheme\.colors\.line,[\s\S]*?\.\.\.partnerTheme\.shadowSoft/, 'More section cards must have a clipped rounded white surface, light border and soft shadow');
+assert.match(more, /paddingHorizontal: 13,/, 'Rows must have inset horizontal padding inside the rounded cards');
 assert.match(more, /!last && styles\.menuRowDivider/, 'Dividers must separate adjacent menu items');
 assert.match(more, /borderBottomWidth: 1/, 'Dividers must be clearly visible, not hairline-faded');
 assert.match(more, /borderBottomColor: '#E6EAF0'/, 'Dividers must use subtle reference-style light gray');
