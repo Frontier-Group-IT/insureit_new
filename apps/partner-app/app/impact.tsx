@@ -156,16 +156,33 @@ export default function ImpactScreen() {
 
           <Pressable
             onPress={() => router.push('/journey')}
-            style={({ pressed }) => [styles.journeyLink, pressed && styles.pressed]}
+            style={({ pressed }) => [styles.journeyLink, pressed && styles.journeyPressed]}
             accessibilityRole="button"
-            accessibilityLabel="See your journey"
+            accessibilityLabel="See your journey, milestones and achievements"
           >
-            <ImpactIcon art="journey" size={46} />
-            <View style={styles.journeyBody}>
-              <Text style={styles.journeyTitle}>See your journey</Text>
-              <Text style={styles.journeySubtitle}>Milestones and achievements</Text>
+            <View pointerEvents="none" style={styles.journeyScenery}>
+              <View style={styles.journeyGlow} />
+              <View style={styles.journeyRoadShadow} />
+              <View style={styles.journeyRoad} />
+              <View style={styles.journeyRoadTop} />
+              <View style={[styles.journeyRoadMark, styles.journeyRoadMarkOne]} />
+              <View style={[styles.journeyRoadMark, styles.journeyRoadMarkTwo]} />
+              <View style={[styles.journeyRoadMark, styles.journeyRoadMarkThree]} />
             </View>
-            <Ionicons name="chevron-forward" size={17} color="#9AA3B2" />
+            <View style={styles.journeyIconCircle}>
+              <Image source={IMPACT_ART.journey} resizeMode="contain" style={styles.journeyIcon} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
+            </View>
+            <View style={styles.journeyBody}>
+              <Text style={styles.journeyTitle} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>See your journey</Text>
+              <Text style={styles.journeySubtitle} numberOfLines={2}>Milestones and achievements</Text>
+            </View>
+            <View pointerEvents="none" style={styles.journeyCarScene}>
+              <Ionicons name="location-sharp" size={24} color="#6754EF" style={styles.journeyLocationPin} />
+              <Image source={IMPACT_ART.motor} resizeMode="contain" style={styles.journeyBlueCar} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
+            </View>
+            <View style={styles.journeyArrowCircle}>
+              <Ionicons name="arrow-forward" size={24} color="#3D39D3" />
+            </View>
           </Pressable>
         </>
       )}
@@ -289,10 +306,56 @@ const styles = StyleSheet.create({
   settlementEyebrow: { color: '#3C7B78', letterSpacing: 0.8, fontSize: 10, fontWeight: '800' },
   settlementValue: { marginTop: 3, color: '#17233A', fontSize: 17, lineHeight: 22, fontWeight: '800' },
   settlementText: { marginTop: 3, color: '#56716F', fontSize: 10.5, lineHeight: 15 },
-  journeyLink: { marginTop: 12, minHeight: 68, flexDirection: 'row', alignItems: 'center', gap: 11, borderRadius: 18, paddingHorizontal: 13, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E4E9F0' },
-  journeyBody: { flex: 1 },
-  journeyTitle: { color: '#17233A', fontSize: 12, fontWeight: '800' },
-  journeySubtitle: { color: '#66758C', fontSize: 10, marginTop: 3 },
+  // Reference-inspired illustrated journey CTA. Use native layers so it stays crisp on Android/iOS.
+  journeyLink: {
+    marginTop: 14, minHeight: 128, overflow: 'hidden', flexDirection: 'row', alignItems: 'center',
+    gap: 10, paddingHorizontal: 13, paddingVertical: 15, borderRadius: 25,
+    backgroundColor: '#ECECFF', borderWidth: 1.5, borderColor: '#D7D6FF',
+    shadowColor: '#7771D8', shadowOpacity: 0.12, shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 }, elevation: 3,
+  },
+  journeyScenery: { ...StyleSheet.absoluteFillObject, overflow: 'hidden' },
+  journeyGlow: {
+    position: 'absolute', top: -60, left: -34, width: 260, height: 210,
+    borderRadius: 110, backgroundColor: '#F4F4FF', opacity: 0.92,
+  },
+  journeyRoadShadow: {
+    position: 'absolute', width: 350, height: 140, right: -116, bottom: -96,
+    backgroundColor: '#7167ED', borderRadius: 95, transform: [{ rotate: '-21deg' }], opacity: 0.24,
+  },
+  journeyRoad: {
+    position: 'absolute', width: 345, height: 124, right: -104, bottom: -79,
+    borderRadius: 95, backgroundColor: '#9994EE', transform: [{ rotate: '-21deg' }],
+  },
+  journeyRoadTop: {
+    position: 'absolute', width: 345, height: 89, right: -82, bottom: -75,
+    borderRadius: 95, backgroundColor: '#C4C1FA', transform: [{ rotate: '-21deg' }],
+  },
+  journeyRoadMark: {
+    position: 'absolute', height: 2, width: 17, backgroundColor: '#F9F8FF',
+    borderRadius: 3, transform: [{ rotate: '-22deg' }],
+  },
+  journeyRoadMarkOne: { bottom: 27, right: 120 },
+  journeyRoadMarkTwo: { bottom: 42, right: 78 },
+  journeyRoadMarkThree: { bottom: 59, right: 35 },
+  journeyIconCircle: {
+    width: 70, height: 70, borderRadius: 40, flexShrink: 0,
+    backgroundColor: '#D9DFFF', alignItems: 'center', justifyContent: 'center',
+  },
+  journeyIcon: { width: 64, height: 64 },
+  journeyBody: { flex: 1, minWidth: 0, paddingBottom: 12, zIndex: 2 },
+  journeyTitle: { color: '#102B5A', fontSize: 17, lineHeight: 22, fontWeight: '800', letterSpacing: -0.35 },
+  journeySubtitle: { color: '#405B89', fontSize: 11, lineHeight: 15, fontWeight: '600', marginTop: 4 },
+  journeyCarScene: { position: 'absolute', right: 12, top: 14, width: 92, height: 75 },
+  journeyBlueCar: { position: 'absolute', bottom: 0, right: 5, width: 86, height: 65 },
+  journeyLocationPin: { position: 'absolute', top: 0, right: 0 },
+  journeyArrowCircle: {
+    position: 'absolute', right: 13, bottom: 11, width: 37, height: 37, borderRadius: 20,
+    alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF',
+    shadowColor: '#4C47C3', shadowOpacity: 0.16, shadowRadius: 5,
+    shadowOffset: { width: 0, height: 2 }, elevation: 2,
+  },
+  journeyPressed: { opacity: 0.94, transform: [{ scale: 0.987 }] },
   iconShell: {
     alignItems: 'center', justifyContent: 'center', backgroundColor: '#E8F5FF',
     borderWidth: StyleSheet.hairlineWidth, borderColor: '#D1E9FF',
