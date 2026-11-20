@@ -577,13 +577,13 @@ export default function LifeHealthCaseDetailScreen(){
 
       {(record.status_group==='pending'||record.status_group==='rejected')?(
         <View style={styles.activityCard}>
-          <View style={styles.tabs}>
+          <View style={styles.activityFilterTabs}>
             {(['activity','remarks'] as const).map(tab=><Pressable key={tab} accessibilityRole="tab"
               accessibilityLabel={tab==='activity'?'Activity Status':'Remarks'}
               accessibilityState={{selected:expandedCaseTab===tab}}
               onPress={()=>setExpandedCaseTab(tab)}
-              style={[styles.tab,expandedCaseTab===tab&&styles.tabActive]}>
-              <Text style={[styles.tabText,expandedCaseTab===tab&&styles.tabTextActive]}>
+              style={[styles.activityFilterTab,expandedCaseTab===tab&&styles.activityFilterTabActive]}>
+              <Text style={[styles.activityFilterText,expandedCaseTab===tab&&styles.activityFilterTextActive]}>
                 {tab==='activity'?'Activity Status':'Remarks'}
               </Text>
             </Pressable>)}
@@ -954,11 +954,16 @@ const styles=StyleSheet.create({
   disabledAction:{opacity:0.56},
   document:{width:'100%',flexDirection:'row',alignItems:'center',gap:1,minHeight:45,backgroundColor:'#E9FAF0',borderWidth:1,borderColor:'#A6E1C5',borderRadius:9,overflow:'hidden'},
   documentName:{flex:1,fontSize:11,fontWeight:'600',color:navy},
-  tabs:{flexDirection:'row',alignItems:'stretch',backgroundColor:'#FFFFFF',borderBottomWidth:1,borderBottomColor:'#E7EAF0'},
-  tab:{flex:1,minWidth:0,minHeight:44,paddingHorizontal:8,paddingVertical:10,alignItems:'center',justifyContent:'center',borderBottomWidth:3,borderBottomColor:'transparent',backgroundColor:'#FFFFFF'},
-  tabActive:{borderBottomColor:'#2582F8'},
-  tabText:{fontSize:11,fontWeight:'600',color:'#52627A',textAlign:'center'},
-  tabTextActive:{color:'#0A234A'},
+  tabs:{flexDirection:'row',alignItems:'center',gap:6},
+  tab:{paddingHorizontal:12,paddingVertical:9,borderRadius:9,backgroundColor:'#EDF3FB'},
+  tabActive:{backgroundColor:navy},
+  tabText:{fontSize:11,fontWeight:'700',color:navy},
+  tabTextActive:{color:'#FFFFFF'},
+  activityFilterTabs:{flexDirection:'row',alignItems:'stretch',backgroundColor:'#FFFFFF',borderBottomWidth:1,borderBottomColor:'#E7EAF0'},
+  activityFilterTab:{flex:1,minWidth:0,minHeight:44,paddingHorizontal:8,paddingVertical:10,alignItems:'center',justifyContent:'center',borderBottomWidth:3,borderBottomColor:'transparent',backgroundColor:'#FFFFFF'},
+  activityFilterTabActive:{borderBottomColor:'#2582F8'},
+  activityFilterText:{fontSize:11,fontWeight:'600',color:'#52627A',textAlign:'center'},
+  activityFilterTextActive:{color:'#0A234A'},
   activity:{borderTopWidth:1,borderTopColor:'#ECF0F6',paddingTop:10,gap:4},
   activityRow:{flexDirection:'row',alignItems:'flex-start',justifyContent:'space-between',gap:8},
   activityDetails:{flex:1,minWidth:0,gap:4},
