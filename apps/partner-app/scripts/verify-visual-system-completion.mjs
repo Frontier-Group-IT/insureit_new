@@ -831,7 +831,7 @@ for (const impactRoute of ["router.push('/customers')", "router.push('/(tabs)/po
 for (const tinySize of ['fontSize: 7.5', 'fontSize: 8.5', 'fontSize: 8,']) if (impact.includes(tinySize)) throw new Error(`Impact must not regress to tiny typography: ${tinySize}`);
 requireText(journey, 'PartnerAssets.status.journey', 'Journey timeline and empty state must use journey artwork.');
 requireText(journey, 'navyTopBar navyStatusBar bottomNavigationNavy', 'My Progress must use navy header and status bar.');
-requireText(journey, '<PartnerScreen title="My progress" topBarIcon="analytics-outline" onBack={() => router.back()}', 'My Progress must have its own progress icon and no eyebrow.');
+requireText(journey, '<PartnerScreen title="My progress" artwork={require(\'../assets/partner/icons/more-journey-3d-new.png\')} onBack={() => router.back()}', 'My Progress header must use the selected 3D journey asset and no eyebrow.');
 if (journey.includes('eyebrow="MY JOURNEY"')) throw new Error('My Progress must not show MY JOURNEY above its title.');
 requireText(journey, 'bottomNavigation={<PartnerStackBottomNavigation activeTab="home" />}', 'My Progress must have the permission-gated Home bottom navigator.');
 if (journey.includes('name="locate-outline"')) throw new Error('Milestone top-right circle icon must be removed.');
@@ -841,7 +841,7 @@ requireText(journey, "hero: { marginTop: 12, borderWidth: 1, borderColor: '#E1E5
 requireText(journey, 'numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72} accessibilityLabel={data.next_milestone.title}', 'Milestone heading must fit a single row.');
 requireText(journey, "progressCircle: { width: 52, height: 52", 'Circular progress diameter must be compact.');
 requireText(journey, 'numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.9}>Milestone progress', 'Milestone progress label must remain on one line.');
-requireText(journey, "progressColumn: { width: 122", 'Milestone progress label must have enough horizontal space.');
+requireText(journey, "progressColumn: { width: 92", 'Milestone progress label must have adequate space while leaving room for reference title.');
 requireText(journey, "progressCircleText: { color: '#6954D6', fontSize: 12", 'Circle percentage label must be reduced with the ring.');
 requireText(journey, 'label="Customers" artwork={PartnerAssets.actions.quickCustomers}', 'Customers summary must retain its existing illustration and link.');
 requireText(journey, 'styles.summaryDivider', 'Combined summary must have two visible internal separators.');
@@ -852,9 +852,24 @@ requireText(journey, "paddingHorizontal: 12, paddingTop: 12, paddingBottom: 8, b
 requireText(journey, "left: 26 + Math.sin(angle) * 20.5", 'Ring segments must match the smaller geometry.');
 requireText(journey, 'numberOfLines={1} ellipsizeMode="tail" accessibilityLabel={item.subtitle}', 'Timeline descriptions must truncate to one line.');
 requireText(journey, 'numberOfLines={1} ellipsizeMode="tail" accessibilityLabel={item.title}', 'Timeline titles must truncate to one line.');
-requireText(journey, "heroTitle: { flex: 1, minWidth: 0, color: '#17233A'", 'Milestone title must stay legible on white.');
+requireText(journey, "heroTitle: { color: '#17233A'", 'Milestone title must stay legible on white.');
 requireText(journey, 'function CircularMilestoneProgress(', 'Milestone must have an accessible circular percentage indicator.');
 requireText(journey, 'styles.heroHeadline', 'Milestone title and circular progress must share a compact header.');
+for (const [fragment,purpose] of [
+  ["getPartnerRenewalSummary()", 'Next 30 Days must load a scoped, live renewal summary'],
+  ["getPartnerJourney(), getPartnerRenewalSummary()", 'Journey and renewal results load independently'],
+  ["renewalSummary.due_30_premium", 'Next 30 Days premium must not be hardcoded'],
+  ["renewalSummary.due_30_count", 'Next 30 Days policy count must not be hardcoded'],
+  ["formatWholeRupees(renewalSummary.due_30_premium)", 'Premium uses whole-rupee Indian currency formatting'],
+  ["onPress={() => router.push('/renewals')}", 'Next 30 Days summary must open renewals'],
+  ["styles.next30Row", 'Show reference-style compact renewal summary'],
+  ["styles.heroSectionDivider", 'Renewal and milestone sections need a full-width horizontal divider'],
+  ["styles.milestoneVerticalDivider", 'Milestone reference requires a thin vertical purple divider'],
+  ["styles.milestoneEyebrow", 'Show uppercase NEXT MILESTONE eyebrow'],
+  ["Keep going, you're on track!", 'Preserve reference subtitle'],
+  ["styles.milestoneCopy", 'Left-align reference milestone label, title and subtitle'],
+]) requireText(journey,fragment,purpose);
+
 requireText(journey, 'styles.progressCircle', 'Milestone progress ring must replace the separate horizontal bar.');
 requireText(journey, 'CIRCLE_SEGMENTS.map(', 'Progress ring must render its percentage-based circular segments.');
 requireText(journey, 'accessibilityRole="progressbar"', 'Circular milestone progress must remain accessible.');
@@ -877,7 +892,7 @@ requireText(journey, "filterLabelRow: { width: '100%', alignItems: 'center', jus
 requireText(journey, "borderRightColor: '#A6B3C6'", 'Timeline tabs need visible vertical dividers.');
 requireText(journey, "filterUnderlineActive: { height: 3, backgroundColor: '#2488ED' }", 'Selected tab must have a blue underline.');
 requireText(journey, 'styles.outsideHeading', 'Achievements heading and badge must move outside the card.');
-requireText(journey, "summary: { marginTop: 12, paddingTop: 8, borderTopWidth: 1", 'Three metrics must be contained under the milestone in one card.');
+requireText(journey, "summary: { marginTop: 12, paddingTop: 8, borderTopWidth: 1", 'Three metrics must remain inside the milestone card with their own divider.');
 requireText(journey, "summaryDetails: { flexShrink: 1, minWidth: 0, alignItems: 'flex-start'", 'Summary label and count must center within equal-width metric segments.');
 if (journey.indexOf('<Text style={styles.achievementDate}>') < journey.indexOf('<Text style={styles.achievementTitle}')) throw new Error('Isolated 3D-style achievement artwork must precede a one-line title, with the date underneath, as in the reference.');
 requireText(journey, "achievementIcon: { width: 52, height: 52, justifyContent: 'center', alignItems: 'center', marginBottom: 5, backgroundColor: 'transparent' }", 'Achievement art must stay isolated without background tiles.');
