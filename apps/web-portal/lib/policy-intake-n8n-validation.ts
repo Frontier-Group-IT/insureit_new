@@ -356,7 +356,11 @@ export function validateTataAigN8nResponse(
   if (!/^\d{14}$/.test(get("policy_number"))
     || get("insurer_name") !== "Tata AIG General Insurance Company Limited"
     || get("policy_product") !== product || get("vehicle_class") !== (twoWheeler ? "TWP" : "PCP")
-    || get("vehicle_fuel_type").toUpperCase() !== (twoWheeler ? "ELECTRIC" : "PETROL")
+    // Tata AIG's native-PDF parser verifies the printed fuel type. Private
+    // cars may be diesel, petrol, CNG, LPG or electric; only two-wheelers in
+    // this trained product profile are required to be electric.
+    || !(twoWheeler ? get("vehicle_fuel_type").toUpperCase() === "ELECTRIC"
+      : ["PETROL","DIESEL","CNG","LPG","ELECTRIC"].includes(get("vehicle_fuel_type").toUpperCase()))
     || (twoWheeler && (get("vehicle_motor_power_kw") !== get("vehicle_capacity")
       || !/^[1-9][0-9]?(?:\\.[0-9]{1,2})?$/.test(get("vehicle_motor_power_kw"))))
     || !/^(?:19|20)\d{2}$/.test(get("vehicle_manufacturing_year"))

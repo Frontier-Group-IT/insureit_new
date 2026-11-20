@@ -21,6 +21,21 @@ invalid(saodWithoutTp, v=>v.fields.push(
   {key:"third_party_start_date",label:"TP start",value:"2025-11-30",confidence:null,page:null,evidence:"Test policy"}
 ), "n8n_coverage_dates_invalid");
 
+// Regression from live Tata AIG Package intake PIR-261120-766C17:
+// native PDF verified DIESEL, but the website previously hard-coded PETROL.
+const packageDiesel=read("package");
+packageDiesel.fields.find(field=>field.key==="vehicle_fuel_type").value="DIESEL";
+const verifiedDiesel=validateTataAigN8nResponse(packageDiesel,IDS);
+assert.equal(verifiedDiesel.ok,true,"Diesel Tata AIG Package must pass after 18 signed-source checks");
+assert.equal(get(verifiedDiesel.fields,"vehicle_fuel_type"),"DIESEL");
+for(const permitted of ["CNG","LPG","ELECTRIC"]){
+  const fuelVariant=copy(packageDiesel);
+  fuelVariant.fields.find(field=>field.key==="vehicle_fuel_type").value=permitted;
+  assert.equal(validateTataAigN8nResponse(fuelVariant,IDS).ok,true,"Supported printed fuel: "+permitted);
+}
+invalid(packageDiesel,x=>{
+  x.fields.find(field=>field.key==="vehicle_fuel_type").value="KEROSENE";
+},"n8n_tata_aig_vehicle_or_policy_invalid");
 const combos=[
   {name:"saod",product:"Stand-Alone Own Damage",registrationMode:"registered",gross:9178},
   {name:"package",product:"Package",registrationMode:"registered",gross:23505},
