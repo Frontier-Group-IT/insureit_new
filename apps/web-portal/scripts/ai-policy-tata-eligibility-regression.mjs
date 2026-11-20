@@ -28,6 +28,19 @@ const evaluate=(preview,extra={})=>assessAiPolicyIntake({
  bundledPeriodsVerified:true,canonicalPreflightPassed:false,...extra,
 });
 assert.equal(fixtures.length,6);
+// SAOD policies have no newly issued TP coverage. The canonical queue must
+// not label a fully verified OD-only schedule "Mandatory field missing".
+const standalone=JSON.parse(read("./fixtures/tata-aig-n8n-saod-synthetic.json"));
+assert.equal(standalone.fields.some(f=>f.key==="third_party_end_date"),false);
+assert(!codes(evaluate(standalone)).includes("missing_field"),
+ "Tata standalone OD does not require third-party_end_date");
+assert.deepEqual(codes(evaluate(standalone,{issuanceDateVerified:true})),
+ ["preflight_pending"],"SAOD accepted extraction still undergoes canonical booking preflight");
+const packageWithoutTp=JSON.parse(read("./fixtures/tata-aig-n8n-package-synthetic.json"));
+packageWithoutTp.fields=packageWithoutTp.fields.filter(f=>f.key!=="third_party_end_date");
+assert(codes(evaluate(packageWithoutTp)).includes("missing_field"),
+ "Tata Package still requires third-party expiry");
+
 for(const [i,fixture] of fixtures.entries()){
  const p=parser({all:()=>[{json:{text:fixture.text}}]})[0].json;
  assert.equal(p.ok,true,fixture.name);
