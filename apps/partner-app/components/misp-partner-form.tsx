@@ -71,7 +71,7 @@ const isoDate=(value:string)=>{
     ? m[3]+'-'+m[2]+'-'+m[1]:null;
 };
 type MispErrors=Partial<Record<MispField,string>>;
-const mispFieldOrder:MispField[]=fields.flatMap(section=>section.items.map(field=>field.key));
+const mispFieldOrder:MispField[]=['associate_employee_id',...fields.flatMap(section=>section.items.map(field=>field.key)).filter(key=>key!=='associate_employee_id')];
 function validateMispField(key:MispField,form:Record<MispField,string>):string|null {
   const value=form[key].trim();
   const label=fields.flatMap(section=>section.items).find(field=>field.key===key)?.label||key;
@@ -180,8 +180,9 @@ export function MispPartnerForm({rms,banks,oems,loading,onDirtyChange,onCancel}:
       gst_number:form.gst_number.trim().toUpperCase(),postal_code:form.postal_code.trim(),
     };
     const errors=validateMisp(form);
-    setFieldErrors(errors);
     const firstInvalid=mispFieldOrder.find(key=>errors[key]);
+    // Highlight one field at a time while preserving full-form validation.
+    setFieldErrors(firstInvalid?{[firstInvalid]:errors[firstInvalid]}:{});
     if(firstInvalid){
       Keyboard.dismiss();
       const label=fields.flatMap(section=>section.items).find(field=>field.key===firstInvalid)?.label||'Field';
