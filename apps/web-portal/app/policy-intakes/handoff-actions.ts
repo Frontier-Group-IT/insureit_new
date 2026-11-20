@@ -493,23 +493,51 @@ Third Party period: ${tpStart||"unavailable"} to ${tpExpiry||"unavailable"}. ${v
 
 export async function loadPolicyIntakeOnboardingDraft(id:string):Promise<PolicyIntakeHandoffResult>{
   await requirePolicyIntakeFinalizer(id); await requirePolicyIntakeReviewer(id); const admin=createSupabaseAdminClient();
-  const {data:intake}=await admin.from("policy_intake_requests").select("id,intake_number,status,created_at,ocr_fields,assigned_to_profile_id,matched_customer_id,customer_mobile").eq("id",id).maybeSingle<{id:string;intake_number:string;status:string;created_at:string;ocr_fields:PolicyIntakeOcrField[];assigned_to_profile_id:string|null;matched_customer_id:string|null;customer_mobile:string}>();
+  const {data:intake}=await admin.from("policy_intake_requests").select("id,intake_number,status,created_at,ocr_fields,ocr_parser_id,ocr_status,assigned_to_profile_id,matched_customer_id,customer_mobile").eq("id",id).maybeSingle<{id:string;intake_number:string;status:string;created_at:string;ocr_fields:PolicyIntakeOcrField[];ocr_parser_id:string|null;ocr_status:string;assigned_to_profile_id:string|null;matched_customer_id:string|null;customer_mobile:string}>();
   if(!intake||intake.status!=="in_review")return{ok:false,error:"This intake is not in review for Policy Onboarding."};
   const duplicateCheck=await loadPolicyIntakeDuplicateMatches(admin,[intake]);
   if(!duplicateCheck.ok)return{ok:false,error:duplicateCheck.error};
   if(duplicateCheck.matches.has(id))return{ok:false,error:"This policy intake is a duplicate and cannot continue in Policy Onboarding."};
   const {data,error}=await admin.from("policy_intake_onboarding_drafts").select("draft_payload,revision").eq("intake_id",id).maybeSingle<{draft_payload:PolicyIntakeDraft;revision:number}>();
   if(error||!data?.draft_payload)return{ok:false,error:"The saved Policy Onboarding draft is unavailable. Return to the intake and start review again."};
+  // Restore only blank fields from verified, current-PDF NIA evidence. An older
+  // draft may have lost the correct insured name because the former identity
+  // selector only accepted ICICI page-1 provenance. Do not overwrite edits.
+  const nia=intake.ocr_parser_id==="new_india_cv_native_pdf" && intake.ocr_status==="completed";
+  let niaVerified=false;
+  if(nia){
+    const [queue,doc]=await Promise.all([
+      admin.from("policy_intake_ai_processing_queue").select("state,document_id,parser_id,checks_passed,extraction_fingerprint")
+        .eq("intake_id",id).maybeSingle<{state:string;document_id:string;parser_id:string;checks_passed:number;extraction_fingerprint:string|null}>(),
+      admin.from("policy_intake_documents").select("id").eq("intake_id",id).eq("is_current",true)
+        .maybeSingle<{id:string}>(),
+    ]);
+    niaVerified=Boolean(!queue.error&&!doc.error&&queue.data&&doc.data
+      &&queue.data.document_id===doc.data.id
+      &&queue.data.parser_id==="new_india_cv_native_pdf"
+      &&queue.data.checks_passed===16 && queue.data.extraction_fingerprint
+      &&["exception","verified"].includes(queue.data.state));
+  }
+  const verifiedNiaName=niaVerified
+    ?selectVerifiedN8nInsuredDraftIdentity(intake.ocr_fields??[],null,"new_india_cv_native_pdf").name:"";
+  const displayDraft={...data.draft_payload};
+  if(verifiedNiaName && !displayDraft.insuredName.trim())displayDraft.insuredName=verifiedNiaName;
+  // This field was populated by the old parser reading the following table
+  // label ("FASTag ID:") as the missing registration authority. Clear only
+  // that known invalid machine-generated value; never guess Gurgaon from
+  // the policy issuing office or HR-00 from a registration prefix.
+  if(niaVerified && /^FASTag ID:$/i.test(displayDraft.rtoName.trim()))displayDraft.rtoName="";
   const verifiedDraft=data.draft_payload.remarks?.includes("n8n validated ICICI 3005")===true;
   const identityName=verifiedDraft
-    ? data.draft_payload.insuredName
-    : ocrInsuredName(intake.ocr_fields??[])||data.draft_payload.insuredName;
+    ? displayDraft.insuredName
+    : niaVerified ? displayDraft.insuredName
+      : ocrInsuredName(intake.ocr_fields??[])||displayDraft.insuredName;
   const masterIdentity=verifiedDraft
     ? await resolveMasterIntakeIdentity(admin,intake.matched_customer_id,intake.customer_mobile) : null;
   const matchedCustomerId=verifiedDraft
     ? masterIdentity&&sameInsuredIdentity(masterIdentity.name,identityName)?masterIdentity.id:null
     : await resolveConfirmedIntakeCustomerId(admin,intake.customer_mobile,identityName);
-  return{ok:true,draft:data.draft_payload,draftRevision:data.revision,matchedCustomerId};
+  return{ok:true,draft:displayDraft,draftRevision:data.revision,matchedCustomerId};
 }
 
 export async function savePolicyIntakeOnboardingDraft(id:string,expectedRevision:number,draft:PolicyIntakeDraft):Promise<PolicyIntakeDraftSaveResult>{
