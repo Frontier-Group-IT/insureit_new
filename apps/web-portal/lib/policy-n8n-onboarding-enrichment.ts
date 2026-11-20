@@ -142,8 +142,17 @@ export function enrichVerifiedN8nOnboardingFields<T extends N8nPrefillField>(
   };
 
   const manufacturing=resolveManufacturingYearEvidence(rawFields);
-  if(manufacturing.source==="registration_year_fallback")
-    add("vehicle_manufacturing_year",manufacturing.year,"Manufacturing year — registration-year fallback");
+  if(manufacturing.source==="registration_year_fallback"){
+    // A literal "--" from the PDF is still a missing value, not a genuine
+    // manufacture year. Replace only this placeholder in the derived copy.
+    const current=fields.find(field=>field.key==="vehicle_manufacturing_year");
+    if(current){
+      current.value=manufacturing.year;
+      current.label="Manufacturing year — registration-year fallback";
+    } else {
+      add("vehicle_manufacturing_year",manufacturing.year,"Manufacturing year — registration-year fallback");
+    }
+  }
 
   const isKnownChetak = get("vehicle_make").toUpperCase() === "CHETAK"
     && Boolean(knownChetakModelCode(get("vehicle_model")));
