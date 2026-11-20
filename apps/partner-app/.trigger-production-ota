@@ -1,9 +1,9 @@
 Partner production OTA trigger
-release=partner-misp-clean-new-form-pr-5007
+release=partner-support-header-full-width-pr-5016
 source=verified-merged-main
-source_pr=5007
-source_merge=b578ca2ca87ab48cbb157a35c0a826316e7b7cad
-reason=user-approved-merge-and-publish-remove-saved-misp-documents-new-form
+source_pr=5016
+source_merge=4810ac80162985503b39934633863c9a70e58715
+reason=user-approved-merge-and-publish-support-operations-desk-header-alignment
 channel=production
 runtime=0.2.0
 requested=2026-11-20
