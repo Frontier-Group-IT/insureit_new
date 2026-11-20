@@ -152,8 +152,9 @@ export async function prepareVerifiedN8nIntakeHandoff(
   const acceptableCommercialWarning=(value:string)=>
     parsed.preview.parserId==="new_india_cv_native_pdf"
     && value.startsWith("Policy prints only an RTO prefix.");
+  const legacyChecksFailed=parsed.preview.checksPassed!==(isTata?18:13) || blockingWarnings.length>0;
   if (commercial ? (!commercialChecksOk || parsed.preview.warnings.some(w=>!acceptableCommercialWarning(w)))
-      : (parsed.preview.checksPassed!==(isTata?18:13) || blockingWarnings.length>0)) {
+      : legacyChecksFailed) {
     return{ok:false,error:"n8n validation warnings must be resolved before creating an onboarding draft."};
   }
   // Metadata-only date evidence is not certified issuance. An authorized
