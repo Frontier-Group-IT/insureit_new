@@ -902,27 +902,13 @@ if (business.includes("!performance || !network")) {
 console.log('Partner visual-system completion contracts verified.');
 
 
-for (const label of ['Total Policies', 'Active Policies', 'Expiring Soon', 'Lapsed Policies', 'Upcoming']) {
-  requireText(policies, "label: '" + label + "'", 'Policies dropdown must retain ' + label + '.');
+// Lifecycle filtering remains in Sort by, not duplicated in search.
+requireText(policies,'<PartnerSearchField','Policies search must remain available');
+requireText(policies,'sheetStatuses.map','Lifecycle filters must remain in Sort by');
+for (const removed of ['statusMenuOpen','openStatusMenu','statusButtonRef','selectedStatus.label','visible={statusMenuOpen}','style={styles.filterButton}']) {
+  if (policies.includes(removed)) throw new Error('Remove redundant search-bar status dropdown: '+removed);
 }
-for (const contract of [
-  'selectedStatus.label',
-  'formatStatusCount(selectedStatus.count)',
-  'onPress={openStatusMenu}',
-  'onPress={() => selectSummary(option.filter)}',
-  'setStatusMenuOpen(false)',
-  'accessibilityState={{ selected }}',
-  'visible={statusMenuOpen}',
-]) {
-  requireText(policies, contract, 'Policies status dropdown contract missing: ' + contract);
-}
-for (const forbidden of ['styles.summaryRow', 'styles.summaryChipSelected', 'Filter policies', 'accessibilityState={{ disabled: true }}']) {
-  if (policies.includes(forbidden)) throw new Error('Policies must use the dropdown, not obsolete chips/disabled Filter: ' + forbidden);
-}
-for (const forbidden of ['See all policy status filters', '>See all</Text>', 'visible={seeAllOpen}', 'summarySeeAll:', 'statusSheetOverlay:']) {
-  if (policies.includes(forbidden)) throw new Error('Policies screen must not render the See all button or modal: ' + forbidden);
-}
-
+requireText(policies,'searchField: {','Search field should fill the available search row');
 
 // Business-line dropdown is separate from lifecycle status and applies to the scoped backend list.
 

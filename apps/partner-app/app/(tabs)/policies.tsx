@@ -127,13 +127,10 @@ export default function PoliciesScreen() {
   const [sourceSearch,setSourceSearch]=useState('');
   const [rmSearch,setRmSearch]=useState('');
   const advanced=source!=='all'||rm!=='all'||Boolean(fromDate)||Boolean(toDate);
-  const [statusMenuOpen, setStatusMenuOpen] = useState(false);
   const [businessLine, setBusinessLine] = useState<PartnerPolicyBusinessLine>('all');
   const [lineMenuOpen, setLineMenuOpen] = useState(false);
   const [lineMenuPosition, setLineMenuPosition] = useState({top:300,left:88});
   const lineButtonRef = useRef<View>(null);
-  const [statusMenuTop, setStatusMenuTop] = useState(180);
-  const statusButtonRef = useRef<View>(null);
   const [query, setQuery] = useState(savedPolicyQuery);
   const [visibleLimit, setVisibleLimit] = useState(PAGE_SIZE);
   const [unreadActivityCount, setUnreadActivityCount] = useState(0);
@@ -242,58 +239,11 @@ export default function PoliciesScreen() {
     await Promise.all([summary.refresh(), periodCounts.refresh(), collection.refresh()]);
   }, [collection, summary, periodCounts]);
 
-  const selectSummary = (filter: PartnerPolicyLifecycle) => {
-    setStatusMenuOpen(false);
-    setQuery('');
-    setVisibleLimit(PAGE_SIZE);
-    setLifecycle(filter);
-  };
-  const draftFiltersMatchApplied = draftSource===source && draftRm===rm &&
-    draftFromDate===fromDate && draftToDate===toDate;
-  // The draft period is not part of this request: each response contains both MTD and All.
-  // Fetch counts for draft Source/RM/Date selections before Apply, rather than displaying
-  // stale counts from the applied filter or hiding status badges until Apply.
-  useEffect(()=>{
-    if(!sortSheetOpen || draftFiltersMatchApplied){
-      setDraftCounts(null);
-      setDraftCountsLoading(false);
-      return;
-    }
-    let active=true;
-    setDraftCounts(null);
-    setDraftCountsLoading(true);
-    const draftAdvanced=draftSource!=='all'||draftRm!=='all'||Boolean(draftFromDate)||Boolean(draftToDate);
-    const countRequest=draftAdvanced
-      ? getPartnerAdvancedPolicyCounts({businessLine,search:debouncedSearch,source:draftSource,rm:draftRm,fromDate:draftFromDate,toDate:draftToDate})
-      : getPartnerPolicyPeriodCounts({businessLine,search:debouncedSearch});
-    void countRequest.then(result=>{if(active)setDraftCounts(result);})
-      .catch(()=>{if(active)setDraftCounts(null);})
-      .finally(()=>{if(active)setDraftCountsLoading(false);});
-    return ()=>{active=false;};
-  },[sortSheetOpen,draftFiltersMatchApplied,draftSource,draftRm,draftFromDate,draftToDate,businessLine,debouncedSearch]);
-  const draftStatusCounts = draftFiltersMatchApplied ? periodCounts.data?.[draftPeriod] : draftCounts?.[draftPeriod];
-  const activePeriodCounts = periodCounts.data?.[period];
-  const statusOptions: { label: string; filter: PartnerPolicyLifecycle; count: number | undefined }[] = [
-    { label: 'Total Policies', filter: 'all', count: activePeriodCounts?.all },
-    { label: 'Active Policies', filter: 'in_force', count: activePeriodCounts?.active },
-    { label: 'Expiring Soon', filter: 'expiring', count: activePeriodCounts?.due },
-    { label: 'Lapsed Policies', filter: 'expired', count: activePeriodCounts?.expired },
-    { label: 'Upcoming', filter: 'upcoming', count: period==='all' && !advanced ? summary.data?.upcoming_policies : undefined },
-  ];
-  const selectedStatus = statusOptions.find((option) => option.filter === lifecycle) ?? statusOptions[0];
-  const formatStatusCount = (count: number | undefined) => count === undefined ? '—' : count.toLocaleString('en-IN');
-  const openStatusMenu = () => {
-    statusButtonRef.current?.measureInWindow((_x, y, _width, height) => {
-      setStatusMenuTop(Math.max(8, Math.min(y + height + 5, windowHeight - 280)));
-      setStatusMenuOpen(true);
-    });
-  };
   useEffect(() => {
-    if (!isFocused) { setStatusMenuOpen(false); setLineMenuOpen(false); setSortSheetOpen(false); }
+    if (!isFocused) { setLineMenuOpen(false); setSortSheetOpen(false); }
   }, [isFocused]);
 
   const openSortSheet = () => {
-    setStatusMenuOpen(false);
     setLineMenuOpen(false);
     setDraftPeriod(period);
     setDraftLifecycle(lifecycle);
@@ -322,7 +272,6 @@ export default function PoliciesScreen() {
     verticalListRef.current?.scrollToOffset({offset:0,animated:false});
   };
   const openBusinessLineMenu = () => {
-    setStatusMenuOpen(false);
     lineButtonRef.current?.measureInWindow((x,y,width,height) => {
       setLineMenuPosition({
         top:Math.max(8,Math.min(y+height+4,windowHeight-260)),
@@ -367,21 +316,6 @@ export default function PoliciesScreen() {
           placeholders={['Search customer...', 'Search vehicle number...', 'Search policy number...']}
           containerStyle={styles.searchField}
         />
-        <Pressable
-          ref={statusButtonRef}
-          accessibilityRole="button"
-          accessibilityLabel={`Choose policy status, ${selectedStatus.label}, ${formatStatusCount(selectedStatus.count)}`}
-          accessibilityState={{ expanded: statusMenuOpen }}
-          onPress={openStatusMenu}
-          style={({ pressed }) => [styles.filterButton, pressed && styles.summaryChipPressed]}
-        >
-          <View style={styles.filterNameBadge}>
-            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={styles.filterText}>
-              {selectedStatus.label} ({formatStatusCount(selectedStatus.count)})
-            </Text>
-            <Ionicons name="chevron-down" size={14} color="#FFFFFF" />
-          </View>
-        </Pressable>
       </View>
 
   );
@@ -759,37 +693,6 @@ export default function PoliciesScreen() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
-      <Modal visible={statusMenuOpen} transparent animationType="fade" onRequestClose={() => setStatusMenuOpen(false)}>
-        <View style={styles.statusMenuOverlay}>
-          <Pressable
-            style={StyleSheet.absoluteFill}
-            accessibilityRole="button"
-            accessibilityLabel="Close policy status menu"
-            onPress={() => setStatusMenuOpen(false)}
-          />
-          <View style={[styles.statusMenu, { top: statusMenuTop }]}>
-            {statusOptions.map((option) => {
-              const selected = lifecycle === option.filter;
-              return (
-                <Pressable
-                  key={option.filter}
-                  accessibilityRole="button"
-                  accessibilityLabel={`${option.label}, ${formatStatusCount(option.count)}`}
-                  accessibilityState={{ selected }}
-                  onPress={() => selectSummary(option.filter)}
-                  style={({ pressed }) => [styles.statusMenuOption, selected && styles.statusMenuOptionSelected, pressed && styles.summaryChipPressed]}
-                >
-                  <Text style={[styles.statusMenuLabel, selected && styles.statusMenuSelectedText]} numberOfLines={1}>{option.label}</Text>
-                  <Text style={[styles.statusMenuCount, selected && styles.statusMenuSelectedText]}>
-                    {formatStatusCount(option.count)}
-                  </Text>
-                  {selected ? <Ionicons name="checkmark-circle" color="#3156B8" size={17} /> : null}
-                </Pressable>
-              );
-            })}
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
@@ -1007,43 +910,6 @@ const styles = StyleSheet.create({
     borderRadius: 0,
     backgroundColor: '#FFFFFF',
   },
-  filterButton: {
-    height: 44,
-    width: 158,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 5,
-    paddingHorizontal: 7,
-    backgroundColor: '#FFFFFF',
-  },
-  filterNameBadge: {
-    flexShrink: 1,
-    maxWidth: '100%',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    borderRadius: 9,
-    paddingVertical: 7,
-    paddingHorizontal: 8,
-    backgroundColor: '#17365D',
-  },
-  filterText: { flexShrink: 1, color: '#FFFFFF', fontSize: 10, lineHeight: 14, fontWeight: '700' },
-  statusMenuOverlay: { flex: 1 },
-  statusMenu: {
-    position: 'absolute', right: 16, width: 228, padding: 5,
-    borderRadius: 13, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DFE7F1',
-    shadowColor: '#001B42', shadowOpacity: 0.15, shadowRadius: 12,
-    shadowOffset: { width: 0, height: 5 }, elevation: 10,
-  },
-  statusMenuOption: {
-    minHeight: 44, borderRadius: 9, paddingHorizontal: 10,
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-  },
-  statusMenuOptionSelected: { backgroundColor: '#EEF4FF' },
-  statusMenuLabel: { flex: 1, color: '#17365D', fontSize: 12, fontWeight: '700' },
-  statusMenuCount: { color: '#657995', fontSize: 11, fontWeight: '700' },
-  statusMenuSelectedText: { color: '#234F9F' },
   summaryChipPressed: { opacity: 0.78 },
   sortFloating:{position:'absolute',bottom:8,alignSelf:'center',flexDirection:'row',alignItems:'center',justifyContent:'center',gap:6,
     paddingHorizontal:15,minHeight:40,borderRadius:22,backgroundColor:'#F0EDFF',borderWidth:1,borderColor:'#E1DBFA',
