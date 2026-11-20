@@ -111,8 +111,14 @@ function validate(payload: unknown, insurer: Insurer, ids: Record<"intake_id" | 
   const failed = expected.filter((name) => checks[name] !== true);
   const nIndiaPending = insurer === "new_india_cv_native_pdf"
     && failed.length === 1 && failed[0] === "registration_complete" && payload.ok === false;
-  if (!((failed.length === 0 && payload.ok === true) || nIndiaPending))
-    throw new Error("n8n_nontata_verification_failed");
+  if (!((failed.length === 0 && payload.ok === true) || nIndiaPending)) {
+    // Only expose names from this server-controlled check list, never raw
+    // extracted values, policyholder text, signed links or n8n warnings.
+    const diagnostic=failed.slice(0,6).join("__");
+    throw new Error(diagnostic
+      ? "n8n_failed_checks__"+diagnostic
+      : "n8n_nontata_verification_failed");
+  }
 
   if (payload.fields.length < 14 || payload.fields.length > 35
       || payload.warnings.length > 30)
