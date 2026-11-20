@@ -760,7 +760,23 @@ requireText(claimDetail, 'pathname: \'/claim/stage\'', 'Stage rows must navigate
 
 requireText(search, 'PartnerAssets.emptyStates.noSearchResults', 'Universal Search must use the prepared no-results artwork.');
 for (const featureAsset of ['navigation.customers', 'navigation.policies', 'navigation.claims']) requireText(search, `PartnerAssets.${featureAsset}`, `Universal Search is missing ${featureAsset} result artwork.`);
-requireText(support, 'PartnerAssets.actions.supportVerified', 'Support fallback must use the prepared verified-support artwork.');
+requireText(support, '<PartnerProfileMenuIcon kind="support" size={60} />', 'Support hero must use the More page 3D headset icon.');
+for (const fragment of [
+  'styles.heroTopRow',
+  'styles.heroRight',
+  'formatUpdatedAt(data.generated_at)',
+  'styles.updatedLine',
+  'styles.heroActions',
+  'name="chatbubble-ellipses"',
+  'name="document-text"',
+]) requireText(support, fragment, 'Support hero must retain the right-aligned generated-at label and both shortcut icons.');
+const supportRightIndex = support.indexOf('<View style={styles.heroRight}>');
+const supportUpdatedIndex = support.indexOf('<View style={styles.updatedLine}>', supportRightIndex);
+const supportActionsIndex = support.indexOf('<View style={styles.heroActions}>', supportRightIndex);
+if (!(supportRightIndex > 0 && supportUpdatedIndex > supportRightIndex && supportActionsIndex > supportUpdatedIndex)) {
+  throw new Error('Support right column must show updated-at above the two icon shortcuts.');
+}
+if (support.includes('PartnerAssets.actions.supportVerified')) throw new Error('Support hero must not reuse the old analytics icon.');
 if (support.includes('asset={PartnerAssets.emptyStates.supportResolved}')) throw new Error('Support-unavailable errors must not misuse the support-resolved artwork.');
 requireText(settings, 'PartnerAssets.status.settings', 'Settings must retain branded Check for updates artwork.');
 const settingsSectionHeader = read('components/ui/partner-section-header.tsx');
