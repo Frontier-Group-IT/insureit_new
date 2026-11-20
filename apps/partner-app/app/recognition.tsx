@@ -14,14 +14,14 @@ type RecognitionItem = PartnerRecognition['items'][number];
 const PURPLE = '#6325D7';
 const INK = '#101A54';
 const RING_COUNT = 120;
-const RING_SIZE = 100;
-const RING_RADIUS = 41;
+const RING_SIZE = 50;
+const RING_RADIUS = 20.5;
 const RING_SEGMENTS = Array.from({ length: RING_COUNT }, (_, index) => {
   const angle = (index * 360) / RING_COUNT;
   const radians = angle * Math.PI / 180;
   return {
-    left: RING_SIZE / 2 + RING_RADIUS * Math.sin(radians) - 3.7,
-    top: RING_SIZE / 2 - RING_RADIUS * Math.cos(radians) - 2.1,
+    left: RING_SIZE / 2 + RING_RADIUS * Math.sin(radians) - 1.85,
+    top: RING_SIZE / 2 - RING_RADIUS * Math.cos(radians) - 1.05,
     transform: [{ rotate: `${angle}deg` as `${number}deg` }],
   };
 });
@@ -65,7 +65,7 @@ export default function RecognitionScreen() {
       ) : (
         <View style={styles.content}>
           <View style={styles.sectionHeading}>
-            <Ionicons name="star" size={31} color={PURPLE} />
+            <Ionicons name="star" size={23} color={PURPLE} />
             <Text style={styles.sectionTitle} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.76}>Unlocked achievements</Text>
             <View style={styles.headingRule} />
           </View>
@@ -84,12 +84,12 @@ export default function RecognitionScreen() {
                   </View>
                   <View style={styles.achievementMeta}>
                     <View style={styles.earnedPill}>
-                      <Ionicons name="checkmark-circle" size={18} color={PURPLE} />
+                      <Ionicons name="checkmark-circle" size={14} color={PURPLE} />
                       <Text style={styles.earnedPillText}>ACHIEVED</Text>
                     </View>
                     {item.date ? (
                       <View style={styles.dateRow}>
-                        <Ionicons name="calendar-outline" size={16} color={PURPLE} />
+                        <Ionicons name="calendar-outline" size={13} color={PURPLE} />
                         <Text style={styles.date}>{formatDate(item.date)}</Text>
                       </View>
                     ) : null}
@@ -123,7 +123,7 @@ export default function RecognitionScreen() {
                   <Text style={styles.percentText}>{(progress * 100).toFixed(1)}%</Text>
                 </View>
                 <View style={styles.customersRow}>
-                  <Ionicons name="people" size={20} color={PURPLE} />
+                  <Ionicons name="people" size={15} color={PURPLE} />
                   <Text style={styles.currentNumber}>{next.current.toLocaleString('en-IN')}</Text>
                 </View>
               </View>
@@ -135,7 +135,7 @@ export default function RecognitionScreen() {
             onPress={() => router.push('/journey')}>
             <View style={styles.journeyTint} pointerEvents="none" />
             <Text style={styles.journeyLinkText}>View your full journey</Text>
-            <View style={styles.journeyArrow}><Ionicons name="arrow-forward" size={23} color="#FFFFFF" /></View>
+            <View style={styles.journeyArrow}><Ionicons name="arrow-forward" size={19} color="#FFFFFF" /></View>
           </Pressable>
         </View>
       )}
@@ -156,36 +156,36 @@ function formatDate(value: string) {
 }
 
 const styles = StyleSheet.create({
-  content: { paddingTop: 18, paddingBottom: 28, gap: 20 },
-  sectionHeading: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 36 },
-  sectionTitle: { color: INK, fontWeight: '800', fontSize: 20, letterSpacing: -0.5 },
+  content: { paddingTop: 12, paddingBottom: 18, gap: 12 },
+  sectionHeading: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 29 },
+  sectionTitle: { color: INK, fontWeight: '800', fontSize: 17, letterSpacing: -0.35 },
   headingRule: { flex: 1, height: 2, backgroundColor: '#8D50D9', marginLeft: 4 },
-  list: { gap: 14 },
-  card: { flexDirection: 'row', alignItems: 'center', minHeight: 116, paddingHorizontal: 13, paddingVertical: 13, gap: 11, borderRadius: 25, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E4DDFC', shadowColor: '#5433B6', shadowOffset: { width: 0, height: 5 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 2 },
-  artworkTile: { width: 69, height: 77, borderRadius: 23, flexShrink: 0, backgroundColor: '#F1EAFE', alignItems: 'center', justifyContent: 'center' },
-  achievementArtwork: { width: 65, height: 65 },
-  verticalRule: { width: 1, height: 75, backgroundColor: '#CDB5F4' },
-  achievementHeading: { flex: 1, minWidth: 0, gap: 6 },
-  title: { fontSize: 15, lineHeight: 20, fontWeight: '800', color: INK },
-  supportingText: { color: '#56608F', fontSize: 12.5, lineHeight: 17, fontWeight: '600' },
-  achievementMeta: { flexShrink: 0, alignItems: 'flex-end', gap: 12 },
-  earnedPill: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#EDE2FF', borderRadius: 999, paddingVertical: 7, paddingHorizontal: 8 },
-  earnedPillText: { fontSize: 9, fontWeight: '800', color: '#4E1AC1' },
+  list: { gap: 9 },
+  card: { flexDirection: 'row', alignItems: 'center', minHeight: 88, paddingHorizontal: 11, paddingVertical: 9, gap: 9, borderRadius: 20, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E4DDFC', shadowColor: '#5433B6', shadowOffset: { width: 0, height: 5 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 2 },
+  artworkTile: { width: 55, height: 59, borderRadius: 17, flexShrink: 0, backgroundColor: '#F1EAFE', alignItems: 'center', justifyContent: 'center' },
+  achievementArtwork: { width: 51, height: 51 },
+  verticalRule: { width: 1, height: 55, backgroundColor: '#CDB5F4' },
+  achievementHeading: { flex: 1, minWidth: 0, gap: 3 },
+  title: { fontSize: 13, lineHeight: 17, fontWeight: '800', color: INK },
+  supportingText: { color: '#56608F', fontSize: 10.5, lineHeight: 14, fontWeight: '600' },
+  achievementMeta: { flexShrink: 0, alignItems: 'flex-end', gap: 8 },
+  earnedPill: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#EDE2FF', borderRadius: 999, paddingVertical: 5, paddingHorizontal: 6 },
+  earnedPillText: { fontSize: 8, fontWeight: '800', color: '#4E1AC1' },
   dateRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  date: { color: '#435078', fontSize: 10.5, fontWeight: '600' },
-  nextCard: { flexDirection: 'row', alignItems: 'center', gap: 11, minHeight: 148, paddingHorizontal: 13, paddingVertical: 15, borderRadius: 25, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E4DDFC', shadowColor: '#5433B6', shadowOffset: { width: 0, height: 5 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 2 },
-  nextHeadingText: { flex: 1, minWidth: 0, gap: 6 },
-  nextEyebrow: { color: PURPLE, fontSize: 11, fontWeight: '800', letterSpacing: 0.2 },
-  nextTitle: { color: INK, fontSize: 19, lineHeight: 24, fontWeight: '800' },
-  percentGroup: { width: 101, flexShrink: 0, alignItems: 'center', gap: 4 },
+  date: { color: '#435078', fontSize: 9, fontWeight: '600' },
+  nextCard: { flexDirection: 'row', alignItems: 'center', gap: 9, minHeight: 100, paddingHorizontal: 11, paddingVertical: 11, borderRadius: 20, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E4DDFC', shadowColor: '#5433B6', shadowOffset: { width: 0, height: 5 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 2 },
+  nextHeadingText: { flex: 1, minWidth: 0, gap: 4 },
+  nextEyebrow: { color: PURPLE, fontSize: 9, fontWeight: '800', letterSpacing: 0.2 },
+  nextTitle: { color: INK, fontSize: 15, lineHeight: 20, fontWeight: '800' },
+  percentGroup: { width: 69, flexShrink: 0, alignItems: 'center', gap: 4 },
   percentCircle: { width: RING_SIZE, height: RING_SIZE, alignItems: 'center', justifyContent: 'center' },
-  progressSegment: { position: 'absolute', width: 7.4, height: 4.2, borderRadius: 3 },
-  percentText: { color: '#241478', fontSize: 18, fontWeight: '800' },
+  progressSegment: { position: 'absolute', width: 3.7, height: 2.1, borderRadius: 3 },
+  percentText: { color: '#241478', fontSize: 11, fontWeight: '800' },
   customersRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  currentNumber: { color: INK, fontSize: 19, fontWeight: '800' },
-  journeyLink: { marginTop: 3, minHeight: 67, paddingHorizontal: 16, borderRadius: 40, backgroundColor: '#E1CEFA', overflow: 'hidden', flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 13 },
+  currentNumber: { color: INK, fontSize: 13, fontWeight: '800' },
+  journeyLink: { marginTop: 3, minHeight: 49, paddingHorizontal: 12, borderRadius: 30, backgroundColor: '#E1CEFA', overflow: 'hidden', flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 13 },
   journeyTint: { position: 'absolute', left: '15%', right: '15%', top: 0, bottom: 0, backgroundColor: '#E7DCFF', opacity: 0.65, borderRadius: 40 },
   journeyLinkPressed: { opacity: 0.75 },
-  journeyLinkText: { color: '#541BC7', fontSize: 17, fontWeight: '800' },
-  journeyArrow: { width: 39, height: 39, borderRadius: 20, backgroundColor: PURPLE, alignItems: 'center', justifyContent: 'center' },
+  journeyLinkText: { color: '#541BC7', fontSize: 14, fontWeight: '800' },
+  journeyArrow: { width: 31, height: 31, borderRadius: 16, backgroundColor: PURPLE, alignItems: 'center', justifyContent: 'center' },
 });
