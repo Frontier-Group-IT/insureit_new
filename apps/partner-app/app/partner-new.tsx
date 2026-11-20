@@ -250,8 +250,9 @@ export default function AddPartnerScreen() {
       postal_code: form.postal_code.trim(),
     };
     const errors = validatePartner(form);
-    setFieldErrors(errors);
     const firstInvalid = validationOrder.find(key => errors[key]);
+    // Only the first invalid input is visible; the full validation still blocks saving.
+    setFieldErrors(firstInvalid ? { [firstInvalid]: errors[firstInvalid] } : {});
     if (firstInvalid) {
       Keyboard.dismiss();
       setValidationAlert({field:firstInvalid,message:errors[firstInvalid]!});
