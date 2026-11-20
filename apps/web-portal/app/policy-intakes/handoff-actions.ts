@@ -274,6 +274,20 @@ async function preparePolicyIntakeHandoffInternal(
   const {data:existingDraft}=await admin.from("policy_intake_onboarding_drafts").select("draft_payload,revision").eq("intake_id",id).maybeSingle<{draft_payload:PolicyIntakeDraft;revision:number}>();
   const markFreshParseForReview=async()=>{
     if(!verified?.replaceExistingDraft)return true;
+    // An n8n 16/16 NIA extraction only establishes printed facts, not that
+    // an unregistered GCV has its RTO authority and owner-driver CPA. Keep a
+    // specific review hold rather than calling every such case bulk failure.
+    const nia=verified.parserId==="new_india_cv_native_pdf"
+      && verified.checksPassed===16 && verified.warnings.length===0;
+    const hasField=(key:string)=>verified.fields.some(f=>f.key===key&&f.value.trim());
+    const niaMissingAuthority=nia && (!hasField("vehicle_rto_name")
+      ||verified.fields.some(f=>f.key==="vehicle_rto_name" && /^FASTag ID:$/i.test(f.value.trim())));
+    const niaGoods=nia && verified.fields.some(f=>f.key==="vehicle_class" && /goods carrying|\\bGCV\\b/i.test(f.value));
+    const niaMissingCpa=niaGoods && !verified.fields.some(f=>f.key==="cpa_premium"
+      &&Number(f.value)>0 &&Number.isFinite(Number(f.value)));
+    const niaHoldCode=niaMissingAuthority&&niaMissingCpa?"nia_missing_rto_authority_and_cpa"
+      :niaMissingAuthority?"nia_missing_registration_authority"
+      :niaMissingCpa?"nia_missing_verified_gcv_cpa":null;
     const goDigit=verified.parserId==="go_digit_cv_native_pdf" && verified.checksPassed===18
       && verified.warnings.length===0;
     // A verified extraction is not a complete booking. An absent separately
@@ -291,12 +305,13 @@ async function preparePolicyIntakeHandoffInternal(
     const{error}=await admin.from("policy_intake_ai_processing_queue").update({
       // Never mark other insurers eligible without their existing booking rule.
       state:autoEligibleGoDigit?"verified":"exception",
-      exception_codes:autoEligibleGoDigit?[]:goDigit&&missingGoDigit.length?["missing_field"]:["booking_review_required"],
+      exception_codes:autoEligibleGoDigit?[]:niaHoldCode?["missing_field"]
+        :goDigit&&missingGoDigit.length?["missing_field"]:["booking_review_required"],
       field_keys:verified.fields.map(field=>field.key),parser_id:verified.parserId,
       checks_passed:verified.checksPassed,extraction_fingerprint:verified.fingerprint,
-      last_error_code:autoEligibleGoDigit?null:specificMissingYear
+      last_error_code:autoEligibleGoDigit?null:niaHoldCode??(specificMissingYear
         ?"go_digit_missing_verified_manufacturing_year":goDigit&&missingGoDigit.length
-          ?"go_digit_missing_verified_onboarding_fields":"bulk_conversion_review_required",
+          ?"go_digit_missing_verified_onboarding_fields":"bulk_conversion_review_required"),
       processed_at:new Date().toISOString(),
       retry_after:new Date(Date.now()+24*60*60*1000).toISOString(),
       lease_id:null,leased_until:null,updated_at:new Date().toISOString(),
