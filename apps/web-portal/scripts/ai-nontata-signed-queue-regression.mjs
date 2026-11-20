@@ -9,6 +9,7 @@ const component=file("../components/development/semi-auto-policy-workspace.tsx")
 const actions=file("../app/development/ai-policy-onboarding/actions.ts");
 const oldBridge=file("../lib/policy-intake-n8n-bridge.ts");
 const handoff=file("../app/policy-intakes/handoff-actions.ts");
+const premiumHelper=file("../lib/policy-n8n-onboarding-premium.ts");
 const insuredHelper=file("../lib/policy-n8n-onboarding-insured.ts");
 const enrichmentHelper=file("../lib/policy-n8n-onboarding-enrichment.ts");
 // An NIA RTO prefix is an unregistered vehicle, never a blocking incomplete
@@ -50,6 +51,15 @@ assert.ok(handoff.includes("enrichVerifiedN8nOnboardingFields(verified.fields,ve
 assert.ok(insuredHelper.includes('field.page === null && field.evidence === "Native PDF policy schedule"'));
 assert.ok(enrichmentHelper.includes('parserId === "go_digit_cv_native_pdf"'));
 assert.ok(enrichmentHelper.includes('Number(get("od_premium")) > 0 && Number(get("tp_premium")) > 0'));
+assert.ok(actions.includes('mapVerifiedGoDigitCommercialPremium(commercial)'));
+assert.ok(actions.includes('key==="vehicle_manufacturing_year"'));
+assert.ok(handoff.includes('const goDigitVerifiedFill = Boolean(commercial) && fillEmptyFields'));
+assert.ok(premiumHelper.includes("mapVerifiedGoDigitCommercialPremium"));
+const {mapVerifiedGoDigitCommercialPremium}=await import("../lib/policy-n8n-onboarding-premium.ts");
+assert.deepEqual(mapVerifiedGoDigitCommercialPremium({od:2415.46,tp:7647,net:10062.46,gst:1811.24,gross:11873.70}),
+  {od:"2415.46",addOnPremium:"0",tp:"7647",cpa:"0",cpaOpted:"No"});
+assert.throws(()=>mapVerifiedGoDigitCommercialPremium({od:2415.46,tp:7647,net:10062.46,gst:1811.24,gross:12000}),
+  /n8n_motor_premium_handoff_unreconciled/);
 // Run the actual helpers on verified commercial evidence, not a copied algorithm.
 const {selectVerifiedN8nInsuredDraftIdentity}=await import("../lib/policy-n8n-onboarding-insured.ts");
 const {enrichVerifiedN8nOnboardingFields}=await import("../lib/policy-n8n-onboarding-enrichment.ts");
