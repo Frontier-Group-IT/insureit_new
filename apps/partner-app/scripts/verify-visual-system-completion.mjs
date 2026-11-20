@@ -26,6 +26,15 @@ const businessGrowthIcon = read('components/ui/partner-business-growth-icon.tsx'
 const businessOverviewIcons = read('components/ui/partner-business-overview-icons.tsx');
 const homeMetricIcons = read('components/ui/partner-home-metric-icons.tsx');
 const business = read('app/(tabs)/business.tsx');
+for (const phrase of [
+  "justifyContent: 'center', gap: 3",
+  "width: '92%'",
+  "fontSize: 10, lineHeight: 15, fontWeight: '700'",
+  "minimumFontScale={0.85}",
+  "bottom: height + 5",
+  "paddingTop: 18",
+]) requireText(business, phrase, 'Business Month-wise Trend values must remain readable and non-overlapping on compact iOS screens: ' + phrase);
+
 const businessReport = read('app/business-report.tsx');
 const customers = read('app/customers.tsx');
 requireText(businessReport, 'hideTopBar', 'Business Report must hide its default light header.');
