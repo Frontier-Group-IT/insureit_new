@@ -56,24 +56,27 @@ export default function JourneyScreen() {
         <>
           <View style={styles.hero}>
             <View style={styles.heroHeadline}>
+              <Image source={require('../assets/partner/status/journey-trophy-reference.png')} style={styles.milestoneTrophy} resizeMode="contain" accessible={false} />
               <Text style={styles.heroTitle} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72} accessibilityLabel={data.next_milestone.title}>{data.next_milestone.title}</Text>
               <CircularMilestoneProgress progress={progress} current={data.next_milestone.current} target={data.next_milestone.target} />
             </View>
-          </View>
-
-          <View style={styles.summary}>
-            <Summary value={data.policy_count} label="Policies" artwork={PartnerAssets.actions.quickPolicyIntake} onPress={() => router.push('/(tabs)/policies')} />
-            <Summary value={data.customer_count} label="Customers" artwork={PartnerAssets.actions.quickCustomers} combined onPress={() => router.push('/customers')} />
-            <Summary value={data.claim_count} label="Claims" artwork={PartnerAssets.actions.quickClaims} onPress={() => router.push('/(tabs)/claims')} />
+            <View style={styles.summary}>
+              <Summary value={data.policy_count} label="Policies" artwork={PartnerAssets.actions.quickPolicyIntake} onPress={() => router.push('/(tabs)/policies')} />
+              <View style={styles.summaryDivider} accessible={false}/>
+              <Summary value={data.customer_count} label="Customers" artwork={PartnerAssets.actions.quickCustomers} onPress={() => router.push('/customers')} />
+              <View style={styles.summaryDivider} accessible={false}/>
+              <Summary value={data.claim_count} label="Claims" artwork={PartnerAssets.actions.quickClaims} onPress={() => router.push('/(tabs)/claims')} />
+            </View>
           </View>
 
           {achievements.length > 0 ? (
-            <View style={styles.card}>
-              <View style={styles.cardHeading}>
+            <View style={styles.achievementSection}>
+              <View style={styles.outsideHeading}>
                 <Text style={styles.sectionTitle}>My achievements</Text>
                 <View style={styles.smallPill}><Text style={styles.smallPillText}>Milestones</Text></View>
               </View>
-              <View style={styles.achievementRow}>
+              <View style={styles.achievementCard}>
+                <View style={styles.achievementRow}>
                 {achievements.map((item, index) => {
                   return (
                     <View key={`${item.kind}-${item.date}-${index}`} style={styles.achievement}>
@@ -85,6 +88,7 @@ export default function JourneyScreen() {
                     </View>
                   );
                 })}
+                </View>
               </View>
             </View>
           ) : null}
@@ -94,7 +98,7 @@ export default function JourneyScreen() {
               <Text style={styles.sectionTitle}>Journey timeline</Text>
             </View>
             <View style={styles.filters}>
-              {JOURNEY_FILTERS.map((choice) => (
+              {JOURNEY_FILTERS.map((choice, index) => (
                 <Pressable
                   key={choice.key}
                   accessibilityRole="button"
@@ -102,7 +106,10 @@ export default function JourneyScreen() {
                   onPress={() => { setFilter(choice.key); setShowAll(false); }}
                   style={[styles.filterButton, filter === choice.key && styles.filterActive]}
                 >
-                  <Text style={[styles.filterText, filter === choice.key && styles.filterActiveText]}>{choice.label}</Text>
+                  <View style={[styles.filterLabelRow, index === JOURNEY_FILTERS.length - 1 && styles.filterLabelLast]}>
+                    <Text style={[styles.filterText, filter === choice.key && styles.filterActiveText]}>{choice.label}</Text>
+                  </View>
+                  <View style={[styles.filterUnderline, filter === choice.key && styles.filterUnderlineActive]}/>
                 </Pressable>
               ))}
             </View>
@@ -151,11 +158,11 @@ function milestoneCategory(kind: string, title: string): JourneyFilter {
   return 'all';
 }
 
-function Summary({ value, label, artwork, combined = false, onPress }: { value: number; label: string; artwork: ImageSourcePropType; combined?: boolean; onPress: () => void }) {
+function Summary({ value, label, artwork, onPress }: { value: number; label: string; artwork: ImageSourcePropType; onPress: () => void }) {
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel={`Open ${label}: ${value.toLocaleString('en-IN')}`} onPress={onPress} style={({ pressed }) => [styles.summaryItem, combined && styles.summaryCombinedItem, pressed && styles.summaryItemPressed]}>
+    <Pressable accessibilityRole="button" accessibilityLabel={`Open ${label}: ${value.toLocaleString('en-IN')}`} onPress={onPress} style={({ pressed }) => [styles.summaryItem, pressed && styles.summaryItemPressed]}>
       <Image source={artwork} style={styles.summaryArtwork} resizeMode="contain" accessible={false} />
-      <View style={[styles.summaryDetails, combined && styles.summaryCombinedDetails]}>
+      <View style={styles.summaryDetails}>
         <Text style={styles.summaryLabel} adjustsFontSizeToFit numberOfLines={1} minimumFontScale={0.8}>{label}</Text>
         <Text style={styles.summaryValue} adjustsFontSizeToFit numberOfLines={1}>{value.toLocaleString('en-IN')}</Text>
       </View>
@@ -201,24 +208,27 @@ function formatDate(value: string) {
 }
 
 const styles = StyleSheet.create({
-  hero: { marginTop: 0, marginHorizontal: -partnerTheme.spacing.lg, borderBottomWidth: 1, borderBottomColor: '#E4E8EF', paddingHorizontal: 16, paddingVertical: 10, backgroundColor: '#FFFFFF' },
-  heroHeadline: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
-  heroTitle: { flex: 1, minWidth: 0, color: '#17233A', fontSize: 18, lineHeight: 24, fontWeight: '800' },
+  hero: { marginTop: 12, borderWidth: 1, borderColor: '#E1E5ED', borderRadius: 18, paddingHorizontal: 12, paddingTop: 12, paddingBottom: 8, backgroundColor: '#FFFFFF' },
+  heroHeadline: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  milestoneTrophy: { width: 42, height: 42, borderRadius: 10, flexShrink: 0 },
+  heroTitle: { flex: 1, minWidth: 0, color: '#17233A', fontSize: 17, lineHeight: 23, fontWeight: '800' },
   progressColumn: { width: 122, flexShrink: 0, alignItems: 'center', justifyContent: 'center', gap: 2 },
   progressCircle: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
   progressSegment: { position: 'absolute', width: 1.6, height: 3, borderRadius: 1 },
   progressCircleText: { color: '#6954D6', fontSize: 9, fontWeight: '800' },
   heroProgressLabel: { width: '100%', color: '#6856D5', fontSize: 9, fontWeight: '700', textAlign: 'center' },
-  summary: { marginTop: 12, flexDirection: 'row', gap: 8 },
-  summaryItem: { flex: 1, minWidth: 0, minHeight: 75, flexDirection: 'row', alignItems: 'center', padding: 7, gap: 5, borderRadius: 17, borderWidth: 1, borderColor: '#E7E9EE', backgroundColor: '#FFFFFF' },
+  summary: { marginTop: 12, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#E1E5ED', flexDirection: 'row', alignItems: 'stretch', width: '100%' },
+  summaryItem: { flex: 1, minWidth: 0, minHeight: 75, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 2, paddingVertical: 5, gap: 3 },
   summaryItemPressed: { backgroundColor: '#F1F5FB' },
-  summaryCombinedItem: { gap: 3, paddingHorizontal: 5 },
-  summaryCombinedDetails: { gap: 1, justifyContent: 'center' },
-  summaryArtwork: { width: 35, height: 40, flexShrink: 0 },
-  summaryDetails: { flex: 1, minWidth: 0, alignItems: 'flex-start', justifyContent: 'center', gap: 3 },
+  summaryDivider: { width: 1, alignSelf: 'stretch', backgroundColor: '#A6B3C6', marginVertical: 5 },
+  summaryArtwork: { width: 29, height: 30, flexShrink: 0 },
+  summaryDetails: { alignItems: 'center', justifyContent: 'center', gap: 2 },
   summaryValue: { color: partnerTheme.colors.ink, fontSize: 14, lineHeight: 18, fontWeight: '800' },
   summaryLabel: { color: partnerTheme.colors.inkMuted, fontSize: 9.5, fontWeight: '600' },
   card: { marginTop: 13, padding: 15, borderRadius: 19, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E7E9EE' },
+  achievementSection: { marginTop: 15 },
+  outsideHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 9 },
+  achievementCard: { padding: 15, borderRadius: 19, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E7E9EE' },
   cardHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 15 },
   sectionTitle: { color: partnerTheme.colors.ink, fontSize: 16, fontWeight: '800' },
   smallPill: { paddingHorizontal: 10, paddingVertical: 5, backgroundColor: '#E9E1FF', borderRadius: 999 },
@@ -229,11 +239,15 @@ const styles = StyleSheet.create({
   achievementArtwork: { width: 48, height: 48 },
   achievementTitle: { width: '100%', color: '#192333', fontSize: 10.5, lineHeight: 14, fontWeight: '700', textAlign: 'center' },
   achievementDate: { color: '#7A8698', fontSize: 9, lineHeight: 13, textAlign: 'center', marginTop: 3 },
-  filters: { flexDirection: 'row', gap: 5, marginBottom: 19 },
-  filterButton: { flex: 1, minWidth: 0, paddingVertical: 10, paddingHorizontal: 2, alignItems: 'center', borderRadius: 9, backgroundColor: '#F3F5F9' },
-  filterActive: { backgroundColor: '#142849' },
+  filters: { flexDirection: 'row', gap: 0, width: '100%', marginBottom: 18 },
+  filterButton: { flex: 1, minWidth: 0, alignItems: 'center', justifyContent: 'flex-end' },
+  filterLabelRow: { width: '100%', alignItems: 'center', justifyContent: 'center', minHeight: 34, paddingHorizontal: 1, borderRightWidth: 1, borderRightColor: '#A6B3C6' },
+  filterActive: {},
+  filterLabelLast: { borderRightWidth: 0 },
+  filterUnderline: { width: '100%', height: 1, backgroundColor: '#E3E8F0' },
+  filterUnderlineActive: { height: 3, backgroundColor: '#2488ED' },
   filterText: { fontSize: 10, fontWeight: '700', color: '#667085' },
-  filterActiveText: { color: '#FFFFFF' },
+  filterActiveText: { color: '#17233A' },
   timeline: { borderTopWidth: 1, borderTopColor: '#E7E9EE' },
   timelineRow: { minHeight: 56, flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 9 },
   timelineArtwork: { width: 30, height: 32, flexShrink: 0 },
