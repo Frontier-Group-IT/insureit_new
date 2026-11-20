@@ -63,6 +63,30 @@ const aiStateLabel: Record<string,string> = {
   failed:"Retry scheduled",duplicate:"Duplicate · skipped",
 };
 
+function parserDiagnostic(code:string|null|undefined): {title:string;detail:string;checks:string[]} | null {
+  if(!code)return null;
+  const checkPrefix="n8n_failed_checks__";
+  if(code.startsWith(checkPrefix)){
+    const checks=code.slice(checkPrefix.length).split("__").filter(Boolean)
+      .map(value=>value.replaceAll("_"," "));
+    return {title:"PDF verification failed",detail:"The commercial reader ran but rejected these checks. Inspect the matching fields and source layout in n8n. No policy was booked.",checks};
+  }
+  const descriptions:Record<string,string>={
+    n8n_review_required:"The n8n output failed the expected parser contract. This legacy code does not identify which check failed; run a fresh reparse to obtain the new diagnostics.",
+    n8n_commercial_classifier_missed_layout:"The shared n8n webhook returned a commercial parser response, but the website routed it through ICICI validation. Inspect the commercial PDF recognition rule.",
+    n8n_nontata_verification_failed:"Commercial parser validation failed, but individual failing checks were not retained in this older result. Reparse to capture them.",
+    n8n_nontata_financial_reconciliation_failed:"Printed OD, TP, net, GST or gross amounts did not reconcile. Compare the extracted totals with the policy PDF.",
+    n8n_nontata_required_field_missing:"The commercial parser response omitted a mandatory policy, insured, vehicle, date or premium field.",
+    n8n_nontata_check_set_invalid:"The commercial parser returned an unexpected set of verification checks.",
+    n8n_nontata_date_invalid:"The printed policy date did not pass strict calendar validation.",
+    n8n_nontata_registered_plate_invalid:"The verified registration status and printed vehicle registration number do not agree.",
+    n8n_nontata_pdf_download_failed:"n8n could not retrieve the current private policy PDF.",
+    n8n_bridge_http_failure_404:"The configured n8n webhook was not found. Check workflow publication and path.",
+    n8n_bridge_http_failure_401:"The n8n webhook rejected authentication."
+  };
+  return {title:"Extraction diagnostic",detail:descriptions[code]??"n8n returned a failure code. Open the current workflow execution and inspect its rejected checks or document stage.",checks:[]};
+}
+
 const humanStatus: Record<string, string> = {
   ready_for_review: "Ready for Review", in_review: "In Review",
   needs_attention: "Needs Attention", processing: "Processing",
@@ -655,7 +679,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
                       : humanStatus[row.status] || row.status}</span></td>
                   <td className="whitespace-nowrap px-3 py-3"><span className={row.ocr_status === "completed" ? "font-semibold text-emerald-700" : "font-semibold text-amber-700"}>{row.ocr_status === "completed" ? "Extracted" : row.ocr_status.replaceAll("_", " ")}</span></td>
                   {primaryN8n && queueActive ? <td className="min-w-[170px] px-3 py-3">
-                    <div className="text-[10px] font-semibold text-[#32547d]">{row.is_duplicate ? "Duplicate · skipped" : row.ai_state ? aiStateLabel[row.ai_state] : "Waiting for queue"}</div>
+                    <div className="text-[10px] font-semibold text-[#32547d]">{row.is_duplicate ? "Duplicate · skipped" : row.ai_diagnostic_code && ["unsupported","exception","failed"].includes(row.ai_state??"") ? "Parser error · details below" : row.ai_state ? aiStateLabel[row.ai_state] : "Waiting for queue"}</div>
                     {!row.is_duplicate && row.ai_state==="verified" && !row.ai_exceptions?.length ? (
                       <button type="button" disabled={isWaiting} onClick={()=>setAutoConvertRow(row)}
                         className="mt-1 rounded-md bg-[#174b83] px-2.5 py-1.5 text-[10px] font-bold text-white disabled:opacity-50">
@@ -669,7 +693,16 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
                         {replaceReparseId===row.id?"Reparsing…":"Reparse & replace"}
                       </button>
                     ) : null}
-                    {replaceReparseErrorId===row.id&&replaceReparseError?<p role="alert" className="mt-1 max-w-[190px] whitespace-normal text-[9px] text-amber-800">{replaceReparseError}</p>:null}
+                    {replaceReparseErrorId===row.id&&replaceReparseError?<p role="alert" className="mt-1 max-w-[280px] whitespace-normal text-[10px] leading-4 text-amber-800">{replaceReparseError}</p>:null}
+                    {!row.is_duplicate && row.ai_diagnostic_code && ["unsupported","exception","failed"].includes(row.ai_state??"") ? (
+                      <div className="mt-2 max-w-[300px] space-y-1 rounded-lg border border-amber-200 bg-amber-50 p-2 text-[10px] leading-4 text-amber-950">
+                        <p className="font-bold">{parserDiagnostic(row.ai_diagnostic_code)?.title??"Parser failed"}</p>
+                        <p className="break-all font-mono text-[9px]">Code: {row.ai_diagnostic_code}</p>
+                        <p>{parserDiagnostic(row.ai_diagnostic_code)?.detail}</p>
+                        {parserDiagnostic(row.ai_diagnostic_code)?.checks.length ? <p><strong>Failed checks:</strong> {parserDiagnostic(row.ai_diagnostic_code)?.checks.join(", ")}</p> : null}
+                        <p className="text-amber-800">Saved queue result{row.ai_processed_at?" · "+compactDate(row.ai_processed_at):" · time not recorded"}. Reparse for a fresh result.</p>
+                      </div>
+                    ) : null}
                     {!row.is_duplicate && ["unsupported","exception","failed"].includes(row.ai_state??"") ? (
                       <button type="button" disabled={isWaiting}
                         onClick={()=>{setManualTransferRow(row);setManualTransferReason("");setManualTransferError(null);}}
@@ -680,7 +713,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
                     {row.ai_exceptions?.length ? (
                       <button type="button" onClick={()=>{setExceptionRow(row);setCustomerReview(null);}}
                         className="mt-1 rounded-md border border-[#e4d4b2] bg-[#fff8e8] px-2 py-1 text-left text-[10px] font-semibold text-[#765013] hover:bg-[#fff0c8]">
-                        {row.ai_state==="unsupported" ? "Parser not trained · Reprocess" : aiIssueTitles[row.ai_exceptions[0]]??"Review exception"}
+                        {row.ai_diagnostic_code ? "View exact parser diagnostic" : row.ai_state==="unsupported" ? "Parser not trained · Reprocess" : aiIssueTitles[row.ai_exceptions[0]]??"Review exception"}
                         {row.ai_exceptions.length>1 ? ` +${row.ai_exceptions.length-1}`:""}
                       </button>
                     ):null}
@@ -1018,6 +1051,15 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
               <ShieldAlert className="h-4 w-4 text-amber-700"/> Resolve policy exceptions
             </h3>
             <p className="mt-2 text-[11px] text-[#62748e]">Intake {exceptionRow.intake_number}</p>
+            {exceptionRow.ai_diagnostic_code ? (
+              <div className="mt-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-[11px] leading-5 text-amber-950">
+                <p className="font-bold">{parserDiagnostic(exceptionRow.ai_diagnostic_code)?.title}</p>
+                <p className="break-all font-mono text-[10px]">Error code: {exceptionRow.ai_diagnostic_code}</p>
+                <p>{parserDiagnostic(exceptionRow.ai_diagnostic_code)?.detail}</p>
+                {parserDiagnostic(exceptionRow.ai_diagnostic_code)?.checks.length ? <p><strong>Failed checks:</strong> {parserDiagnostic(exceptionRow.ai_diagnostic_code)?.checks.join(", ")}</p>:null}
+                <p className="mt-1 text-amber-800">This is the saved queue diagnostic, not a fresh execution. Use Reparse & replace to retry.</p>
+              </div>
+            ):null}
             <div className="mt-3 max-h-[300px] space-y-2 overflow-y-auto">
               {(exceptionRow.ai_exceptions??[]).map(code=>(
                 <div key={code} className="rounded-lg border border-[#e6dfd0] bg-[#fffcf4] p-3">

@@ -90,7 +90,7 @@ export async function loadAiQueueDisplay(ids: readonly string[]): Promise<Map<st
         exception_codes:safeCodes(Array.isArray(r.exception_codes)?r.exception_codes:[]),
         processed_at:r.processed_at??null,
         document_id:r.document_id,
-        diagnostic_code:typeof r.last_error_code==="string" && /^n8n_[a-z0-9_]{1,60}$/.test(r.last_error_code) ? r.last_error_code : null,
+        diagnostic_code:typeof r.last_error_code==="string" && /^n8n_[a-z0-9_]{1,240}$/.test(r.last_error_code) ? r.last_error_code : null,
       });
     }
   }
