@@ -1,4 +1,5 @@
 import { loadPolicyIntakeOnboardingDraft } from "@/app/policy-intakes/handoff-actions";
+import { readVerifiedNiaPrintedPremiumReference, type NiaPrintedPremiumReference } from "@/lib/policy-n8n-onboarding-premium";
 import { PolicyCommercialShell } from "@/components/policy-commercial-shell";
 import { type PolicyRmOption } from "@/components/policy-unified-form";
 import { PolicyOnboardingProductGuard } from "@/components/policy-onboarding-product-guard";
@@ -44,6 +45,7 @@ export default async function NewPolicyPage({ searchParams }: { searchParams: Pr
   let sourceIntakeId: string | null = null;
   let initialDraftRevision: number | null = null;
   let vehicleHandoff = false;
+  let printedPremiumReference:NiaPrintedPremiumReference|null = null;
 
   if (params.intake_id) {
     const intakeDraft = await loadPolicyIntakeOnboardingDraft(params.intake_id);
@@ -51,6 +53,39 @@ export default async function NewPolicyPage({ searchParams }: { searchParams: Pr
     const { registrationMode, ...form } = intakeDraft.draft;
     workflowInitialValues = form; workflowRegistrationMode = registrationMode;
     preselectedCustomerId = intakeDraft.matchedCustomerId; sourceIntakeId = params.intake_id; initialDraftRevision = intakeDraft.draftRevision;
+    // The generic GCV calculator estimates GST. NIA schedules may print a
+    // different independently rounded mixed-rate GST, which must not be
+    // passed through the estimator as though it were an invoice total.
+    const {data:source}=await admin.from("policy_intake_requests")
+      .select("ocr_parser_id,ocr_status,ocr_fields,storage_path,storage_bucket")
+      .eq("id",params.intake_id).maybeSingle<{
+        ocr_parser_id:string|null;ocr_status:string;
+        ocr_fields:Array<{key:string;value:string}>|null;
+        storage_path:string|null;storage_bucket:string|null;
+      }>();
+    if(source?.ocr_parser_id==="new_india_cv_native_pdf" && source.ocr_status==="completed"){
+      const [queue,document]=await Promise.all([
+        admin.from("policy_intake_ai_processing_queue")
+          .select("parser_id,checks_passed,extraction_fingerprint,document_id")
+          .eq("intake_id",params.intake_id).maybeSingle<{
+            parser_id:string|null;checks_passed:number;
+            extraction_fingerprint:string|null;document_id:string;
+          }>(),
+        admin.from("policy_intake_documents").select("id,storage_path,storage_bucket")
+          .eq("intake_id",params.intake_id).eq("is_current",true).maybeSingle<{
+            id:string;storage_path:string;storage_bucket:string;
+          }>(),
+      ]);
+      const currentPdfVerified=Boolean(!queue.error&&!document.error&&queue.data&&document.data
+        &&queue.data.document_id===document.data.id&&queue.data.extraction_fingerprint
+        &&source.storage_path===document.data.storage_path
+        &&source.storage_bucket===document.data.storage_bucket);
+      printedPremiumReference=readVerifiedNiaPrintedPremiumReference({
+        parserId:queue.data?.parser_id??null,checksPassed:queue.data?.checks_passed??0,
+        currentPdfVerified,remarks:intakeDraft.draft.remarks,
+        policyNumber:intakeDraft.draft.policyNo,fields:source.ocr_fields??[],
+      });
+    }
   } else if (params.customer_id && params.vehicle_id) {
     if (scoped && !allowedCustomerIds.has(params.customer_id)) return <SetupError message="The customer is outside the approved downline portfolio." />;
     const [{data:customer},{data:vehicle}] = await Promise.all([
@@ -142,7 +177,7 @@ export default async function NewPolicyPage({ searchParams }: { searchParams: Pr
       ) : null}
       <PolicyRemarksActionStyle />
       <PolicyOnboardingProductGuard insurers={insurerOptions} />
-      <PolicyCommercialShell mode="create" insurers={insurerOptions} customers={customerOptions} rms={rmOptions} sources={sourceOptions} manufacturers={manufacturerOptions} commercialAccess={commercialAccess} initialValues={workflowInitialValues} initialRegistrationMode={workflowRegistrationMode} authoritativeInitialValues={vehicleHandoff} preselectedCustomerId={preselectedCustomerId} preselectedVehicleId={vehicleHandoff ? params.vehicle_id ?? null : null} sourceIntakeId={sourceIntakeId} initialDraftRevision={initialDraftRevision} />
+      <PolicyCommercialShell mode="create" insurers={insurerOptions} customers={customerOptions} rms={rmOptions} sources={sourceOptions} manufacturers={manufacturerOptions} commercialAccess={commercialAccess} initialValues={workflowInitialValues} printedPremiumReference={printedPremiumReference} initialRegistrationMode={workflowRegistrationMode} authoritativeInitialValues={vehicleHandoff} preselectedCustomerId={preselectedCustomerId} preselectedVehicleId={vehicleHandoff ? params.vehicle_id ?? null : null} sourceIntakeId={sourceIntakeId} initialDraftRevision={initialDraftRevision} />
     </AppShell>
   );
 }
