@@ -64,13 +64,17 @@ function newIndia(t){
  const gst=amountAfter(t,/\bGST\s*\(Rs\)\s*([\d,]+(?:\.\d+)?)/i);
  const gross=amountAfter(t,/\bTotal Payable\s*\(Rs\)\s*([\d,]+(?:\.\d+)?)/i);
  const isRegistered=plate(reg);
+ // Business rule: an RTO-only prefix (e.g. MP-20 or HR-00) on a New India
+ // policy indicates a NEW UNREGISTERED vehicle, never a partial registered plate.
+ const hasUnregisteredPrefix=!!reg && /^(?:MP|HR)-?\d{2}$/i.test(reg);
+ const registrationVerified=isRegistered || hasUnregisteredPrefix;
  const year=grab(t,/Year of manufacture:\s*(20\d{2})/i);
  const fuel=grab(t,/Type of fuel:\s*(Diesel|Petrol|CNG|Electric)/i);
  const rto=grab(t,/Name of registration\s*(?:authority:\s*)?\n\s*([^\n]{3,80})/i)||null;
  const state=reg?.startsWith('MP')?'Madhya Pradesh':reg?.startsWith('HR')?'Haryana':null;
- const base={policy_number:p,insured_name:cleanInsured,policy_product:/Enhanced Covers/i.test(t.slice(0,450))?'Commercial Vehicle Package Policy Enhanced Covers':'Commercial Vehicle Package Policy',policy_start_date:start,policy_end_date:end,policy_issuance_date:issue,third_party_start_date:start,third_party_end_date:end,vehicle_registration_number:reg,vehicle_registration_status:isRegistered?'registered':'registration_pending',vehicle_make:mm?.[1]?.trim()||null,vehicle_model:model,vehicle_class:'Commercial Vehicle - Goods Carrying',vehicle_fuel_type:fuel,vehicle_manufacturing_year:year,vehicle_rto_state:state,vehicle_rto_name:rto,vehicle_chassis_number:chassis,vehicle_engine_number:engine,idv,vehicle_capacity:grab(t,/Gross Vehicle Weight\s*(?:\(GVW\))?:\s*(\d{3,6})/i)};
+ const base={policy_number:p,insured_name:cleanInsured,policy_product:/Enhanced Covers/i.test(t.slice(0,450))?'Commercial Vehicle Package Policy Enhanced Covers':'Commercial Vehicle Package Policy',policy_start_date:start,policy_end_date:end,policy_issuance_date:issue,third_party_start_date:start,third_party_end_date:end,vehicle_registration_number:reg,vehicle_registration_status:isRegistered?'registered':hasUnregisteredPrefix?'unregistered':'registration_pending',vehicle_make:mm?.[1]?.trim()||null,vehicle_model:model,vehicle_class:'Commercial Vehicle - Goods Carrying',vehicle_fuel_type:fuel,vehicle_manufacturing_year:year,vehicle_rto_state:state,vehicle_rto_name:rto,vehicle_chassis_number:chassis,vehicle_engine_number:engine,idv,vehicle_capacity:grab(t,/Gross Vehicle Weight\s*(?:\(GVW\))?:\s*(\d{3,6})/i)};
  const premium={od,tp,net,gst,gross,tax_basis:'Printed mixed-rate tax, never inferred from OD/TP alone'};
- return output('The New India Assurance Company Limited','new_india_cv_native_pdf',base,premium,{nia_layout:/THE NEW INDIA ASSURANCE CO\. LTD\./i.test(t),registration_complete:isRegistered},isRegistered?[]:['Document only prints a partial registration. Complete plate must be manually verified.']);
+ return output('The New India Assurance Company Limited','new_india_cv_native_pdf',base,premium,{nia_layout:/THE NEW INDIA ASSURANCE CO\. LTD\./i.test(t),registration_complete:registrationVerified},registrationVerified?[]:['Registration evidence is missing or is not a recognized unregistered RTO prefix.']);
 }
 function cashGroup(t,re){return amount(grab(t,re));}
 function iffco(t){
