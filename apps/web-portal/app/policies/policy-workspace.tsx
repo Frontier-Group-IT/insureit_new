@@ -553,7 +553,7 @@ export function PolicyWorkspace({ rows, sourceOptions = [], isRelationshipManage
             <tr>
               <th className="w-[190px] px-3 py-2">Policy / Product</th>
               <th className="w-[188px] px-2.5 py-2">Customer</th>
-              <th className="w-[142px] px-2.5 py-2">Risk / Asset</th>
+              <th className="w-[142px] px-2.5 py-2">{business === "Life" || business === "Health" ? "Policy No." : "Risk / Asset"}</th>
               <th className="w-[178px] px-2.5 py-2 text-center">Insurer</th>
               <th className="w-[156px] px-2.5 py-2">Validity</th>
               <th className="w-[118px] px-2.5 py-2">Status</th>
