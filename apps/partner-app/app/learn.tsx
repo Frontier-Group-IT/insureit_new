@@ -21,13 +21,13 @@ export default function LearnScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [explanationExpanded, setExplanationExpanded] = useState(false);
+  const [showAnswerFeedback, setShowAnswerFeedback] = useState(false);
   const [selectedOptionKey, setSelectedOptionKey] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError('');
-    setExplanationExpanded(false);
+    setShowAnswerFeedback(false);
     setSelectedOptionKey(null);
     try {
       setData(await getPartnerLearningToday());
@@ -40,6 +40,14 @@ export default function LearnScreen() {
 
   useEffect(() => { void load(); }, [load]);
 
+  // A newly submitted answer gets one second of feedback; previously completed
+  // cards never replay the feedback when the page is opened again.
+  useEffect(() => {
+    if (!showAnswerFeedback) return;
+    const timeout = setTimeout(() => setShowAnswerFeedback(false), 1000);
+    return () => clearTimeout(timeout);
+  }, [showAnswerFeedback]);
+
   const answer = data?.answer || null;
   async function submitAnswer() {
     if (!data?.card || !selectedOptionKey || data.answered_today || submitting) return;
@@ -49,7 +57,7 @@ export default function LearnScreen() {
       const result = await submitPartnerLearningAnswer(data.card.id, selectedOptionKey);
       setData(result.today);
       setSelectedOptionKey(null);
-      setExplanationExpanded(false);
+      setShowAnswerFeedback(true);
     } catch {
       setError('Your answer could not be saved. Please try again.');
     } finally {
@@ -60,6 +68,8 @@ export default function LearnScreen() {
   return (
     <PartnerScreen title="60-Second Learn" hideTopBar navyStatusBar bottomNavigationNavy bottomNavigation={<PartnerCaseBottomNavigation activeTab="More" />}>
       <View style={styles.referenceHeader}>
+        <View pointerEvents="none" style={styles.headerGlow} />
+        <View pointerEvents="none" style={styles.headerCurve} />
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Back"
@@ -67,10 +77,13 @@ export default function LearnScreen() {
           onPress={() => router.back()}
           style={styles.headerAction}
         >
-          <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
+          <Ionicons name="arrow-back" size={30} color="#FFFFFF" />
         </Pressable>
-        <Image source={PartnerAssets.actions.policyChecklist} style={styles.headerArtwork} resizeMode="contain" />
-        <Text accessibilityRole="header" numberOfLines={1} style={styles.referenceTitle}>60-Second Learn</Text>
+        <Image source={require('../assets/partner/learn-stopwatch-reference.png')} style={styles.headerArtwork} resizeMode="contain" />
+        <View style={styles.headerCopy}>
+          <Text accessibilityRole="header" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85} style={styles.referenceTitle}>60-Second Learn</Text>
+          <Text numberOfLines={1} style={styles.headerSubtitle}>Learn • Practice • Grow</Text>
+        </View>
       </View>
       {loading ? (
         <PartnerStateView state="loading" title="Loading today’s learning card" />
@@ -131,26 +144,15 @@ export default function LearnScreen() {
 
           {error ? <Text style={styles.inlineError}>{error}</Text> : null}
 
-          {answer ? (
-            <View style={[styles.answerCard, answer.is_correct ? styles.answerCorrect : styles.answerLearn]}>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={answer.is_correct ? 'That’s right. Show explanation' : 'Here’s the stronger answer. Show explanation'}
-                accessibilityState={{ expanded: explanationExpanded }}
-                onPress={() => setExplanationExpanded((current) => !current)}
-                style={styles.answerToggle}
-              >
+          {answer && showAnswerFeedback ? (
+            <View accessibilityRole="alert" style={[styles.answerCard, answer.is_correct ? styles.answerCorrect : styles.answerLearn]}>
+              <View style={styles.answerToggle}>
                 <View style={styles.answerArtwork}>
                   <Image source={answer.is_correct ? PartnerAssets.status.verified : PartnerAssets.actions.policyChecklist} style={styles.answerArtworkImage} resizeMode="contain" />
                 </View>
                 <Text style={styles.answerTitle}>{answer.is_correct ? 'That’s right.' : 'Here’s the stronger answer.'}</Text>
-                <Ionicons name={explanationExpanded ? 'chevron-up' : 'chevron-down'} size={20} color="#6951C7" />
-              </Pressable>
-              {explanationExpanded ? (
-                <View style={styles.explanationArea}>
-                  <Text style={styles.explanation}>{answer.explanation}</Text>
-                </View>
-              ) : null}
+                <Ionicons name={answer.is_correct ? 'checkmark-circle' : 'information-circle'} size={21} color={answer.is_correct ? '#079D82' : '#6951C7'} />
+              </View>
             </View>
           ) : null}
 
@@ -202,17 +204,22 @@ function Stat({ value, label, icon, iconColor }: { value: number; label: string;
 
 const styles = StyleSheet.create({
   referenceHeader: {
-    height: 64,
+    height: 94,
     marginHorizontal: -partnerTheme.spacing.lg,
-    paddingHorizontal: 14,
-    backgroundColor: '#071E49',
+    paddingHorizontal: 13,
+    backgroundColor: '#07347C',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 12,
+    overflow: 'hidden',
   },
-  headerAction: { width: 34, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
-  headerArtwork: { width: 36, height: 36 },
-  referenceTitle: { flexShrink: 1, color: '#FFFFFF', fontSize: 18, fontWeight: '800' },
+  headerGlow: { position: 'absolute', left: -45, top: -110, width: 390, height: 200, borderRadius: 160, backgroundColor: '#0958AD', opacity: 0.45 },
+  headerCurve: { position: 'absolute', right: -85, bottom: 33, width: 230, height: 135, borderRadius: 115, backgroundColor: '#102B72', opacity: 0.43, transform: [{ rotate: '-18deg' }] },
+  headerAction: { width: 43, minHeight: 54, alignItems: 'center', justifyContent: 'center' },
+  headerArtwork: { width: 70, height: 86 },
+  headerCopy: { flex: 1, minWidth: 0, gap: 3 },
+  referenceTitle: { color: '#FFFFFF', fontSize: 23, fontWeight: '800', letterSpacing: -0.45 },
+  headerSubtitle: { color: '#B7CBF5', fontSize: 15, fontWeight: '500', letterSpacing: 0.1 },
   questionSection: { marginTop: 13, padding: 16, backgroundColor: '#FFFFFF', borderRadius: 23, borderWidth: 1, borderColor: '#DDE9FB', shadowColor: '#1559BA', shadowOpacity: 0.1, shadowRadius: 11, shadowOffset: { width: 0, height: 5 }, elevation: 3 },
   questionHeadingRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   lightbulbCircle: { width: 47, height: 47, borderRadius: 24, backgroundColor: '#E8F3FF', alignItems: 'center', justifyContent: 'center' },

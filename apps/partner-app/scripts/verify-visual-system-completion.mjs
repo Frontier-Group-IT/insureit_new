@@ -293,20 +293,23 @@ if (!recognitionAchievement.includes('styles.earnedPill') || !recognitionAchieve
   throw new Error('Each achievement must show its achieved badge and date.');
 }
 
-// Learn follows the Renewal Work Queue reference header rather than the shared compact page header.
+// Learn uses the supplied blue stopwatch header with its subtitle and an ephemeral answer confirmation.
 for (const fragment of [
   'hideTopBar navyStatusBar bottomNavigationNavy',
   '<PartnerCaseBottomNavigation activeTab="More" />',
   'accessibilityLabel="Back"',
-  '<Ionicons name="arrow-back" size={22} color="#FFFFFF" />',
-  'PartnerAssets.actions.policyChecklist',
+  '<Ionicons name="arrow-back" size={30} color="#FFFFFF" />',
+  "require('../assets/partner/learn-stopwatch-reference.png')",
   '60-Second Learn</Text>',
-  "backgroundColor: '#071E49'",
-  "height: 64,",
-]) requireText(learn, fragment, '60-Second Learn must match the Renewal navy header and retain five-tab navigation.');
+  'Learn • Practice • Grow',
+  "backgroundColor: '#07347C'",
+  'height: 94,',
+  'styles.headerGlow',
+  'styles.headerCurve',
+]) requireText(learn, fragment, '60-Second Learn must match the reference stopwatch header and retain five-tab navigation.');
 
 // Learn matches the approved reference: independent white options, single-choice radio
-// selection and explicit submission. Preserve dynamic content and response explanation.
+// selection and explicit submission. Preserve learning progress while feedback expires after one second.
 const learnSectionStart = learn.indexOf('<View style={styles.questionSection}>');
 const learnSectionEnd = learn.indexOf('<View style={styles.optionsList}', learnSectionStart);
 if (learnSectionStart < 0 || learnSectionEnd < 0) throw new Error('Learn reference question card or separate option list missing.');
@@ -340,11 +343,15 @@ for (const required of [
   '<Stat value={data.stats.attempted_days} label="Learning days"',
   '<Stat value={data.stats.total_attempts} label="Cards completed"',
   'disabled={Boolean(data.answered_today || submitting)}',
-  'explanationExpanded ? (',
-  'onPress={() => setExplanationExpanded((current) => !current)}',
-  'accessibilityState={{ expanded: explanationExpanded }}',
-  '{answer.explanation}',
-]) requireText(learn, required, 'Learn reference layout, submission safety and answer explanation must remain intact.');
+  'const [showAnswerFeedback, setShowAnswerFeedback] = useState(false)',
+  'const timeout = setTimeout(() => setShowAnswerFeedback(false), 1000)',
+  'return () => clearTimeout(timeout)',
+  'setShowAnswerFeedback(true)',
+  '{answer && showAnswerFeedback ? (',
+]) requireText(learn, required, 'Learn must retain progress, explicit submission and non-repeating one-second feedback.');
+if (learn.includes('{answer ? (') || learn.includes('explanationExpanded ? (')) {
+  throw new Error('Previously submitted answers must not permanently show feedback');
+}
 for (const removed of [
   'styles.questionCard', 'styles.topStrip', 'styles.streak', 'styles.badgeColumn',
   'correct_answers', 'You selected:', 'GOOD TO KNOW', 'NICE WORK', 'styles.selectedText', 'styles.answerEyebrow',
