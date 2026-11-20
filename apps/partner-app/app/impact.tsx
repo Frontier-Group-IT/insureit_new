@@ -102,10 +102,10 @@ export default function ImpactScreen() {
               <Text style={styles.heroValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65}>
                 {shortCurrency(data.active_motor_idv)}
               </Text>
-              <View style={styles.heroCoverageBadge}>
-                <Ionicons name="shield-checkmark" size={12} color="#2566CF" />
-                <Text style={styles.heroCoverageText} numberOfLines={1}>Your coverage this month</Text>
-              </View>
+            </View>
+            <View pointerEvents="none" style={styles.heroCoverageBadge}>
+              <Ionicons name="shield-checkmark" size={12} color="#2566CF" />
+              <Text style={styles.heroCoverageText} numberOfLines={1}>Your coverage this month</Text>
             </View>
           </Pressable>
 
@@ -133,10 +133,10 @@ export default function ImpactScreen() {
                   <ImpactIcon art="premium" size={49} plain />
                 </View>
                 <View style={styles.premiumDetails}>
+                  <Text style={styles.premiumLabel}>Gross premium</Text>
                   <Text style={styles.premiumValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65}>
                     {shortCurrency(data.gross_premium_this_month)}
                   </Text>
-                  <Text style={styles.premiumLabel}>Gross premium</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={17} color="#8A98AD" />
               </View>
@@ -217,10 +217,8 @@ function ImpactCard({ art, value, label, onPress }: {
     >
       <View style={styles.cardContentRow}>
         <ImpactIcon art={art} size={40} plain />
-        <View style={styles.cardDetails}>
-          <Text style={styles.impactLabel} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>{label}</Text>
-          <Text style={styles.impactValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{count(value)}</Text>
-        </View>
+        <Text style={styles.impactLabel} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>{label}</Text>
+        <Text style={styles.impactValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{count(value)}</Text>
         <Ionicons name="chevron-forward" size={15} color="#9AA7BB" />
       </View>
     </Pressable>
@@ -240,7 +238,7 @@ function MonthStat({ art, label, value, onPress }: {
       onPress={onPress}
       style={({ pressed }) => [styles.monthStat, pressed && styles.monthStatPressed]}
     >
-      <ImpactIcon art={art} size={43} plain />
+      <ImpactIcon art={art} size={33} plain />
       <View style={styles.cardDetails}>
         <Text style={styles.monthValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65}>{value}</Text>
         <Text style={styles.monthLabel} numberOfLines={2}>{label}</Text>
@@ -290,30 +288,30 @@ const styles = StyleSheet.create({
   heroCar: {width: 78, height: 76, flexShrink: 0, alignItems: 'center', justifyContent: 'center'},
   heroShield: {position: 'absolute', top: 0, right: -2, backgroundColor: '#EFF6FF', borderRadius: 12},
   heroDivider: { width: 1, alignSelf: 'stretch', marginVertical: 4, backgroundColor: '#D1DAE9' },
-  heroDetails: {flex: 1, minWidth: 0, alignItems: 'flex-start', gap: 2},
+  heroDetails: {flex: 1, minWidth: 0, alignItems: 'flex-start', gap: 2, paddingTop: 17},
   heroEyebrow: {color: '#576580', fontSize: 10, lineHeight: 13, fontWeight: '600'},
   heroValue: {width: '100%', color: '#11274A', fontSize: 28, lineHeight: 34, fontWeight: '800'},
-  heroCoverageBadge: {flexDirection: 'row', alignItems: 'center', gap: 3, borderRadius: 999, paddingHorizontal: 7, paddingVertical: 3, backgroundColor: '#E3EEFF', maxWidth: '100%'},
+  heroCoverageBadge: {position: 'absolute', top: 7, right: 12, flexDirection: 'row', alignItems: 'center', gap: 3, borderRadius: 999, paddingHorizontal: 7, paddingVertical: 3, backgroundColor: '#E3EEFF', maxWidth: '65%'},
   heroCoverageText: {color: '#2566CF', fontSize: 9, fontWeight: '600'},
   sectionHeader: { marginTop: 17, marginBottom: 9 },
   sectionTitle: { color: '#17233A', fontSize: 16, fontWeight: '800' },
   footprintCard: {backgroundColor: '#FFFFFF', borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: '#E4E9F0'},
   footprintDivider: {height: StyleSheet.hairlineWidth, marginHorizontal: 12, backgroundColor: '#E1E6EF'},
-  impactCard: {minHeight: 60, paddingHorizontal: 12, paddingVertical: 7, backgroundColor: '#FFFFFF'},
-  cardContentRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 11 },
+  impactCard: {minHeight: 49, paddingHorizontal: 12, paddingVertical: 4, backgroundColor: '#FFFFFF'},
+  cardContentRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 9 },
   cardDetails: { flex: 1, minWidth: 0, justifyContent: 'center', gap: 2 },
-  impactValue: { color: '#17233A', fontSize: 18, lineHeight: 22, fontWeight: '800' },
-  impactLabel: { color: '#58657B', fontSize: 12, lineHeight: 16, fontWeight: '600' },
+  impactValue: { color: '#17233A', fontSize: 17, lineHeight: 21, fontWeight: '800', textAlign: 'right', minWidth: 44 },
+  impactLabel: { flex: 1, minWidth: 0, color: '#58657B', fontSize: 12, lineHeight: 16, fontWeight: '600' },
   monthCard: { borderRadius: 19, overflow: 'hidden', backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E4E9F0' },
-  monthPremium: { paddingHorizontal: 14, paddingVertical: 12 },
+  monthPremium: { paddingHorizontal: 14, paddingVertical: 8 },
   monthPremiumTop: { flexDirection: 'row', alignItems: 'center', gap: 7 },
   premiumIconLabel: { justifyContent: 'center' },
-  premiumDetails: { flex: 1, minWidth: 0, gap: 4 },
+  premiumDetails: { flex: 1, minWidth: 0, gap: 2 },
   premiumLabel: { color: '#17233A', fontSize: 11, fontWeight: '700' },
-  premiumValue: { color: '#17233A', fontSize: 25, lineHeight: 32, fontWeight: '800' },
+  premiumValue: { color: '#17233A', fontSize: 24, lineHeight: 29, fontWeight: '800' },
   monthDivider: { marginHorizontal: 14, height: StyleSheet.hairlineWidth, backgroundColor: '#E6EAF0' },
-  monthStatsRow: { flexDirection: 'row', paddingVertical: 5 },
-  monthStat: { flex: 1, minWidth: 0, minHeight: 87, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 7, gap: 4 },
+  monthStatsRow: { flexDirection: 'row', paddingVertical: 2 },
+  monthStat: { flex: 1, minWidth: 0, minHeight: 59, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 4, gap: 4 },
   monthStatDivider: { width: StyleSheet.hairlineWidth, backgroundColor: '#E6EAF0', marginVertical: 6 },
   monthStatPressed: { backgroundColor: '#F1F7FF' },
   monthValue: { color: '#17233A', fontSize: 19, lineHeight: 24, fontWeight: '800' },

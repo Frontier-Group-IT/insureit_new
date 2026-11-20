@@ -865,7 +865,7 @@ for (const impactMarker of [
   'styles.monthStatDivider',
   'styles.cardDetails',
   '<ImpactIcon art={art} size={40} plain />',
-  '<ImpactIcon art={art} size={43} plain />',
+  '<ImpactIcon art={art} size={33} plain />',
 ]) requireText(impact, impactMarker, `Impact reference layout is missing ${impactMarker}.`);
 if (impact.includes('icon={icon}') || impact.includes('styles.cardLeft')) throw new Error('Impact must keep blue artwork left with metric and label stacked to its right.');
 requireText(impact, '<MonthStat art="monthly-policy" label="Policies"', 'Monthly policies must use the distinct Add Policy reference artwork.');
@@ -873,11 +873,15 @@ requireText(impact, '<ImpactCard art="policy" value={data.lifetime_policies}', '
 for (const [fragment,reason] of [
   ['styles.footprintCard', 'Protection footprint is contained in one combined white card'],
   ['styles.footprintDivider', 'Protection footprint rows use internal thin dividers'],
-  ['impactCard: {minHeight: 60', 'Protection footprint rows are compact'],
+  ['impactCard: {minHeight: 49', 'Protection footprint rows are compact'],
+  ["textAlign: 'right', minWidth: 44", 'Footprint counts must align right before the chevron'],
+  ["position: 'absolute', top: 7, right: 12", 'Coverage badge must occupy the hero top-right'],
+  ["monthStat: { flex: 1, minWidth: 0, minHeight: 59", 'Monthly statistics must remain compact'],
+  ['<Text style={styles.premiumLabel}>Gross premium</Text>', 'Gross premium label must be visible'],
   ['<ImpactIcon art={art} size={40} plain />', 'Footprint illustrations must be compact'],
   ['numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>{label}', 'Footprint labels must remain on one line'],
   ['styles.impactLabel} numberOfLines={1}', 'Label must precede the numeric value'],
-  ["fontSize: 18, lineHeight: 22", 'Footprint values use the compact font'],
+  ["fontSize: 17, lineHeight: 21", 'Footprint values use the compact font'],
   ['styles.heroCar', 'First banner includes enlarged existing 3D car'],
   ['styles.heroShield', 'First banner includes shield artwork'],
   ['Total Protection Value', 'First banner includes reference title'],
