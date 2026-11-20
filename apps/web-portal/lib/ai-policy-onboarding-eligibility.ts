@@ -16,7 +16,8 @@ export type AiPolicyExceptionCode =
   | "vehicle_ownership" | "missing_field" | "manufacturer_unmatched"
   | "financial_reconciliation" | "issuance_date_unverified" | "date_approval"
   | "bundled_validity" | "coverage_conflict" | "draft_conflict"
-  | "preflight_pending" | "stale_document" | "booking_review_required";
+  | "preflight_pending" | "stale_document" | "booking_review_required"
+  | "registration_pending_review";
 
 export type AiResolutionRoute =
   | "reprocess" | "customer_decision" | "edit_draft"
@@ -88,14 +89,19 @@ const TATA_INFORMATIONAL_WARNINGS = new Set([
   "tata_aig_printed_net_rounding",
   "tata_aig_signature_date_not_in_native_text",
 ]);
-export type TrainedN8nParserFamily = "icici" | "tata_private_car" | "tata_two_wheeler";
+export const NON_TATA_COMMERCIAL_N8N_IDS = new Set([
+  "new_india_cv_native_pdf", "iffco_tokio_cv_native_pdf", "go_digit_cv_native_pdf",
+]);
+export type TrainedN8nParserFamily = "icici" | "tata_private_car" | "tata_two_wheeler" | "commercial";
 export function trainedN8nParserProfile(parserId: string | null): {
-  checks: 13 | 18; family: TrainedN8nParserFamily;
+  checks: 13 | 16 | 18; family: TrainedN8nParserFamily;
 } | null {
   if (!parserId) return null;
   if (ICICI_N8N_IDS.has(parserId)) return { checks:13, family:"icici" };
   if (TATA_AIG_PRIVATE_CAR_N8N_IDS.has(parserId)) return { checks:18, family:"tata_private_car" };
   if (parserId===TATA_AIG_TWO_WHEELER_N8N_ID) return { checks:18, family:"tata_two_wheeler" };
+  if (parserId==="new_india_cv_native_pdf") return { checks:16, family:"commercial" };
+  if (NON_TATA_COMMERCIAL_N8N_IDS.has(parserId)) return { checks:18, family:"commercial" };
   return null;
 }
 export function hasVerifiedN8nParserEvidence(
@@ -103,7 +109,7 @@ export function hasVerifiedN8nParserEvidence(
 ): boolean {
   const profile=trainedN8nParserProfile(parserId);
   return Boolean(profile && checksPassed===profile.checks
-    && (profile.family==="icici" ? warnings.length===0
+    && (profile.family==="icici" || profile.family==="commercial" ? warnings.length===0
       : warnings.every(warning=>TATA_INFORMATIONAL_WARNINGS.has(warning))));
 }
 
@@ -191,8 +197,8 @@ export function assessAiPolicyIntake(input: AiPolicyEvidence): AiAssessment {
     // The old kW-only requirement is valid for ICICI 3005 and electric
     // two-wheelers, but not for petrol/diesel Tata AIG private cars.
     const required: string[]=[...requiredFields].filter(key =>
-      key!=="vehicle_motor_power_kw" || parser?.family!=="tata_private_car");
-    if (parser?.family==="tata_private_car" || parser?.family==="tata_two_wheeler") {
+      key!=="vehicle_motor_power_kw" || (parser?.family!=="tata_private_car" && parser?.family!=="commercial"));
+    if (parser?.family==="tata_private_car" || parser?.family==="tata_two_wheeler" || parser?.family==="commercial") {
       required.push("vehicle_capacity","vehicle_registration_status","vehicle_rto_state");
       if (fields.get("vehicle_registration_status")?.toLowerCase()==="registered") {
         required.push("vehicle_registration_number");
@@ -201,6 +207,8 @@ export function assessAiPolicyIntake(input: AiPolicyEvidence): AiAssessment {
     if (required.some(key => !fields.get(key))) {
       add("missing_field", "Mandatory extracted fields are missing", "edit_draft");
     }
+    if (parser?.family==="commercial" && fields.get("vehicle_registration_status")==="registration_pending")
+      add("registration_pending_review", "Confirm unregistered vehicle identity and RTO prefix", "edit_draft");
     if (!input.matchedManufacturer) add("manufacturer_unmatched", "Vehicle make not matched to master", "edit_draft");
     if (!input.premiumReconciled) add("financial_reconciliation", "Premium components do not reconcile", "edit_draft");
   }

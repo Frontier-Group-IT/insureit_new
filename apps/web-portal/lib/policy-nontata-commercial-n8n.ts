@@ -9,6 +9,8 @@ export type NonTataCommercialRead = {
   parserVersion: "non-tata-cv-v2";
   fields: OcrField[];
   warnings: string[];
+  checksPassed: number;
+  premium: { od: number; tp: number; net: number; gst: number; gross: number };
 };
 const ORIGIN = "https://n8n.nishant.uk";
 const ENDPOINT = "/webhook/insureit-nontata-motor-pdf-candidate-v1";
@@ -151,6 +153,8 @@ function validate(payload: unknown, insurer: Insurer, ids: Record<"intake_id" | 
     parserId: insurer, parserVersion: "non-tata-cv-v2",
     fields: nIndiaPending ? fields.filter((f) => f.key !== "vehicle_registration_number") : fields,
     warnings,
+    checksPassed: expected.filter((key) => checks[key] === true).length,
+    premium: { od, tp, net, gst, gross },
   };
 }
 
@@ -185,4 +189,53 @@ export async function tryReadNonTataCommercialPolicy(
     const payload: unknown = await response.json();
     return validate(payload, insurer, requestIds);
   } finally { clearTimeout(timeout); }
+}
+
+// The AI Policy Automation queue has a current, server-authorized Supabase signed
+// source, not a browser-uploaded File. Reuse the same strict non-Tata validator,
+// with a bounded private download and exact-storage-origin protection.
+export async function tryReadNonTataCommercialSignedPolicy(
+  source: { signedUrl: string; intakeId: string; documentId: string; requestId: string },
+): Promise<NonTataCommercialRead | null> {
+  const ids = { intake_id: source.intakeId, document_id: source.documentId, request_id: source.requestId };
+  if (Object.values(ids).some((id) => !UUID.test(id)))
+    throw new Error("n8n_nontata_invalid_request_ids");
+  let url: URL;
+  try { url = new URL(source.signedUrl); }
+  catch { throw new Error("n8n_nontata_signed_source_invalid"); }
+  if (url.origin !== "https://ilzhsfqqjyppzzvfscmh.supabase.co"
+      || !url.pathname.startsWith("/storage/v1/object/sign/policy-documents/intakes/" + ids.intake_id + "/")
+      || url.pathname.includes("..") || !url.searchParams.has("token")
+      || url.username || url.password || url.hash)
+    throw new Error("n8n_nontata_signed_source_invalid");
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 20_000);
+  try {
+    const response = await fetch(url, { signal: controller.signal, cache: "no-store", redirect: "error" });
+    if (!response.ok) throw new Error("n8n_nontata_pdf_download_failed");
+    const declaredSize = Number(response.headers.get("content-length") ?? "0");
+    if (declaredSize > MAX_BYTES) throw new Error("n8n_nontata_pdf_exceeds_4mb");
+    const reader = response.body?.getReader();
+    if (!reader) throw new Error("n8n_nontata_pdf_download_failed");
+    const chunks: Uint8Array[] = [];
+    let length = 0;
+    for (;;) {
+      const part = await reader.read();
+      if (part.done) break;
+      length += part.value.byteLength;
+      if (length > MAX_BYTES) {
+        await reader.cancel();
+        throw new Error("n8n_nontata_pdf_exceeds_4mb");
+      }
+      chunks.push(part.value);
+    }
+    const bytes = new Uint8Array(length);
+    let offset = 0;
+    for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.length; }
+    if (new TextDecoder("ascii").decode(bytes.subarray(0, 5)) !== PDF)
+      throw new Error("n8n_nontata_pdf_not_pdf");
+    const file = new File([bytes], "current-policy.pdf", { type: "application/pdf" });
+    return await tryReadNonTataCommercialPolicy(file, ids);
+  } finally { clearTimeout(timer); }
 }
