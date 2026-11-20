@@ -117,4 +117,61 @@ assert.ok(shell.includes('printedPremiumReference={props.printedPremiumReference
 assert.ok(component.includes('NIA PDF verified · booking fields incomplete')
   && component.includes('Go Digit · manufacturing year unavailable'));
 
+// Approved operational rule: only when the policy fails to print manufacture
+// year, a separately printed registration year or complete registration date
+// may fill the canonical manufacturing YEAR. No day/month is fabricated.
+const {resolveManufacturingYearEvidence}=await import("../lib/policy-n8n-onboarding-enrichment.ts");
+const registrationOnly=[
+  {key:"vehicle_manufacturing_year",value:"--"},
+  {key:"vehicle_registration_year",value:"2022"},
+];
+assert.deepEqual(resolveManufacturingYearEvidence(registrationOnly),
+  {year:"2022",source:"registration_year_fallback"});
+assert.deepEqual(resolveManufacturingYearEvidence([
+  {key:"vehicle_manufacturing_year",value:"2021"},...registrationOnly.slice(1)]),
+  {year:"2021",source:"manufacturing_year"});
+assert.deepEqual(resolveManufacturingYearEvidence([{key:"vehicle_registration_date",value:"2022-08-16"}]),
+  {year:"2022",source:"registration_year_fallback"});
+assert.equal(resolveManufacturingYearEvidence([{key:"policy_issuance_date",value:"2026-11-19"}]).year,"");
+assert.equal(resolveManufacturingYearEvidence([{key:"vehicle_registration_year",value:"2040"}]).year,"");
+assert.equal(resolveManufacturingYearEvidence([{key:"vehicle_registration_year",value:"2022"},{key:"vehicle_registration_year",value:"2024"}]).year,"");
+assert.equal(resolveManufacturingYearEvidence([{key:"vehicle_registration_year",value:"2022"},
+  {key:"vehicle_registration_date",value:"2023-01-01"}]).year,"");
+assert.equal(resolveManufacturingYearEvidence([{key:"vehicle_registration_date",value:"2022-02-30"}]).year,"");
+assert.equal(resolveManufacturingYearEvidence([{key:"vehicle_registration_year",value:"2022"},
+  {key:"vehicle_manufacturing_year",value:"unknown layout"}]).year,"");
+const fallbackFields=[
+  {key:"vehicle_registration_year",value:"2022",label:"Registration year"},
+  {key:"vehicle_manufacturing_year",value:"--",label:"Manufacturing year"},
+];
+const enrichedFallback=enrichVerifiedN8nOnboardingFields(fallbackFields,"go_digit_cv_native_pdf");
+assert.deepEqual(enrichedFallback.filter(f=>f.key==="vehicle_manufacturing_year"),
+  [{key:"vehicle_manufacturing_year",label:"Manufacturing year — registration-year fallback",value:"2022"}],
+  "The invalid placeholder should not be treated as manufacturing-year evidence");
+const actualManufacture=enrichVerifiedN8nOnboardingFields([
+  {key:"vehicle_registration_year",value:"2022",label:"Registration year"},
+  {key:"vehicle_manufacturing_year",value:"2024",label:"Manufacturing year"},
+],"go_digit_cv_native_pdf");
+assert.equal(actualManufacture.find(f=>f.key==="vehicle_manufacturing_year")?.value,"2024");
+const {buildPolicyOcrOnboardingUpdate}=await import("../lib/policy-ocr-onboarding-apply.ts");
+const baseOcrState={registrationNo:"",vehicleClass:"",make:"",model:"",fuelType:"",
+  manufacturingYear:"",capacity:"",chassisNo:"",engineNo:"",rtoState:"",rtoName:"",
+  policyProduct:"",idv:"",od:"",tp:"",cpa:"",policyNo:"",insurerId:"",
+  validFrom:"",validUpto:""};
+const applyYear=(current,fields,mode="create")=>buildPolicyOcrOnboardingUpdate({
+  mode,registrationMode:"registered",rcVerified:false,current,fields,
+  manufacturers:[],insurers:[]});
+assert.equal(applyYear(baseOcrState,[{key:"vehicle_registration_year",value:"2022",label:"Registration year"}]).next.manufacturingYear,"2022");
+assert.equal(applyYear({...baseOcrState,manufacturingYear:"2021"},[{key:"vehicle_registration_year",value:"2022",label:"Registration year"}]).next.manufacturingYear,"2021");
+assert.equal(applyYear(baseOcrState,[{key:"vehicle_registration_year",value:"2022",label:"Registration year"}],"edit").next.manufacturingYear,"");
+assert.ok(handoff.includes("resolveManufacturingYearEvidence(verified.fields)")
+  && handoff.includes("REGISTRATION_YEAR_MANUFACTURING_FALLBACK:")
+  && handoff.includes('key==="vehicle_manufacturing_year" ? !digitYear?.year'));
+assert.ok(actions.includes("resolveManufacturingYearEvidence(extracted.preview.fields)")
+  && actions.includes('forwarded.draft.manufacturingYear!==manufacturingEvidence.year')
+  && actions.includes("mapVerifiedGoDigitCommercialPremium(commercial)"));
+assert.ok(eligibility.includes("resolveManufacturingYearEvidence(input.fields)"));
+assert.ok(signed.includes('"vehicle_registration_year"'));
+assert.ok(unified.includes("Registration-year fallback"));
+
 console.log("PASS: signed-source non-Tata AI queue routing, insurer-scoped verified name/product draft, and ICICI/Tata/booking guards.");
