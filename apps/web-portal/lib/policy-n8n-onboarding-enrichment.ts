@@ -10,6 +10,8 @@ const ALLOWED_N8N_ONBOARDING_KEYS = new Set([
   "vehicle_make",
   "vehicle_model",
   "vehicle_manufacturing_year",
+  "vehicle_registration_year",
+  "vehicle_registration_date",
   "vehicle_engine_number",
   "vehicle_chassis_number",
   "vehicle_rto_name",
@@ -28,6 +30,9 @@ const ALLOWED_N8N_ONBOARDING_KEYS = new Set([
 
 
 export type N8nPrefillField = { key: string; label: string; value: string };
+
+import { resolveManufacturingYearEvidence } from "./policy-registration-year-fallback.mjs";
+export { resolveManufacturingYearEvidence } from "./policy-registration-year-fallback.mjs";
 
 // These model families are documented electric Chetak scooters. Do not infer
 // fuel, vehicle class or power from unrelated/unrecognised make/model text.
@@ -97,6 +102,19 @@ export function enrichVerifiedN8nOnboardingFields<T extends N8nPrefillField>(
   const add = (key: string, value: string, label: string) => {
     if (value && !get(key)) fields.push({ key, label, value });
   };
+
+  const manufacturing=resolveManufacturingYearEvidence(rawFields);
+  if(manufacturing.source==="registration_year_fallback"){
+    // A literal "--" from the PDF is still a missing value, not a genuine
+    // manufacture year. Replace only this placeholder in the derived copy.
+    const current=fields.find(field=>field.key==="vehicle_manufacturing_year");
+    if(current){
+      current.value=manufacturing.year;
+      current.label="Manufacturing year — registration-year fallback";
+    } else {
+      add("vehicle_manufacturing_year",manufacturing.year,"Manufacturing year — registration-year fallback");
+    }
+  }
 
   const isKnownChetak = get("vehicle_make").toUpperCase() === "CHETAK"
     && Boolean(knownChetakModelCode(get("vehicle_model")));

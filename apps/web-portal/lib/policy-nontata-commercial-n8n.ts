@@ -50,7 +50,9 @@ const ALLOWED_FIELDS = new Set([
   "policy_issuance_date", "policy_start_date", "policy_end_date", "third_party_start_date",
   "third_party_end_date", "vehicle_registration_number", "vehicle_registration_status",
   "vehicle_class", "vehicle_make", "vehicle_model", "vehicle_fuel_type",
-  "vehicle_manufacturing_year", "vehicle_capacity", "vehicle_chassis_number",
+  "vehicle_manufacturing_year",
+  "vehicle_registration_year",
+  "vehicle_registration_date", "vehicle_capacity", "vehicle_chassis_number",
   "vehicle_engine_number", "vehicle_rto_name", "vehicle_rto_state",
   "idv", "od_premium", "tp_premium", "cpa_premium",
 ]);

@@ -13,7 +13,7 @@ import { isN8nWorkbenchPrimary, previewSemiAutoN8nExtraction } from "@/lib/polic
 import type { N8nVerifiedPremiumBreakdown } from "@/lib/policy-intake-n8n-validation";
 import { mapVerifiedN8nMotorPremium } from "@/lib/policy-n8n-onboarding-premium";
 import { policyDateDecision } from "@/lib/policy-date-rule";
-import { enrichVerifiedN8nOnboardingFields } from "@/lib/policy-n8n-onboarding-enrichment";
+import { enrichVerifiedN8nOnboardingFields, resolveManufacturingYearEvidence } from "@/lib/policy-n8n-onboarding-enrichment";
 import { sameInsuredIdentity, selectVerifiedN8nInsuredDraftIdentity } from "@/lib/policy-n8n-onboarding-insured";
 
 export type PolicyIntakeDraft = {
@@ -290,8 +290,10 @@ async function preparePolicyIntakeHandoffInternal(
       :niaMissingCpa?"nia_missing_verified_gcv_cpa":null;
     const goDigit=verified.parserId==="go_digit_cv_native_pdf" && verified.checksPassed===18
       && verified.warnings.length===0;
-    // A verified extraction is not a complete booking. An absent separately
-    // printed manufacturing year is NOT fixed by using the registration year.
+    // Business rule: where the manufacturer did not print a manufacturing
+    // year, use the separately evidenced registration year as an operational
+    // fallback, with provenance. Financial values are never inferred.
+    const digitYear=goDigit?resolveManufacturingYearEvidence(verified.fields):null;
     const requiredGoDigitKeys=[
       "insured_name","policy_product","vehicle_manufacturing_year",
       "vehicle_capacity","vehicle_rto_name","vehicle_rto_state",
@@ -299,7 +301,8 @@ async function preparePolicyIntakeHandoffInternal(
       "policy_issuance_date","policy_start_date","policy_end_date",
     ];
     const missingGoDigit=goDigit?requiredGoDigitKeys.filter(key=>
-      !verified.fields.some(f=>f.key===key&&f.value.trim())):[];
+      key==="vehicle_manufacturing_year" ? !digitYear?.year
+      :!verified.fields.some(f=>f.key===key&&f.value.trim())):[];
     const autoEligibleGoDigit=goDigit&&missingGoDigit.length===0;
     const specificMissingYear=goDigit&&missingGoDigit.includes("vehicle_manufacturing_year");
     const{error}=await admin.from("policy_intake_ai_processing_queue").update({
@@ -367,6 +370,11 @@ async function preparePolicyIntakeHandoffInternal(
        addOnPremium:"0",cpa:"0",cpaOpted:"No" as const}
     : verified?.premium ? mapVerifiedN8nMotorPremium(verified.premium) : null;
   const addOnTotal=verifiedPremium?Number(verifiedPremium.addOnPremium):0;
+  const yearEvidence=verified?resolveManufacturingYearEvidence(verified.fields):null;
+  const yearFallbackNote=yearEvidence?.source==="registration_year_fallback"
+    ? " REGISTRATION_YEAR_MANUFACTURING_FALLBACK: Manufacturing year missing from policy; "+yearEvidence.year
+      +" was taken from the printed vehicle registration year under the configured operational fallback rule. This is not manufacturer-verified and no manufacturing month/day was inferred."
+    :"";
   // Only a separately printed issued-on date OR the exact insurer-scoped
   // signing+receipt rule is accepted; OD/TP start and clock are never substitutes.
   const verifiedIssuanceDate=verified?.fields.find(field=>field.key==="policy_issuance_date")?.value
@@ -391,11 +399,11 @@ async function preparePolicyIntakeHandoffInternal(
     cpa:verifiedPremium?.cpa??mapped.next.cpa,
     policyNo:mapped.next.policyNo,insurerId:mapped.next.insurerId,validFrom:mapped.next.validFrom,validUpto:mapped.next.validUpto,
     payoutBasis:"NET",projectedOdPercent:"",projectedTpPercent:"",insurerScheme:"",payinBillNo:"",payinBilledAmount:"",payinBillDate:"",payinStatus:"Unbilled",retention:"",payoutOdPercent:"",payoutTpPercent:"",flatPayoutAmount:"",payoutStatus:"Pending",payoutDate:"",payoutVoucherNo:"",remarks:verified?.commercialPremium
-      ? `Policy Intake ${id} — independently validated commercial-motor PDF (${verified.parserId}). REVIEW ONLY; no policy or customer was booked. Printed OD ${verified.commercialPremium.od}, TP including liabilities ${verified.commercialPremium.tp}, Net ${verified.commercialPremium.net}, GST ${verified.commercialPremium.gst}, Gross ${verified.commercialPremium.gross}. Owner-driver PA and paid-driver liabilities are retained inside printed TP; do not add CPA a second time. Confirm vehicle class, registration, policy dates, premiums and all other fields before booking.`
+      ? `Policy Intake ${id} — independently validated commercial-motor PDF (${verified.parserId}). REVIEW ONLY; no policy or customer was booked. Printed OD ${verified.commercialPremium.od}, TP including liabilities ${verified.commercialPremium.tp}, Net ${verified.commercialPremium.net}, GST ${verified.commercialPremium.gst}, Gross ${verified.commercialPremium.gross}. Owner-driver PA and paid-driver liabilities are retained inside printed TP; do not add CPA a second time. Confirm vehicle class, registration, policy dates, premiums and all other fields before booking.${yearFallbackNote}`
       : verified && verified.premium
       ? `Policy Intake ${id} — n8n validated ${verified.premium.tataAig ? "Tata AIG private car" : "ICICI 3005"} PDF. Review every prefilled value before booking.
 PDF premium reconciliation: Printed Basic OD ${verified.premium.basicOd} + OD add-ons ${addOnTotal} - validated NCB/OD deductions ${verified.premium.odDeductions??0} = Total OD ${verified.premium.totalOd}; net-of-deductions Basic OD entered for onboarding ${verifiedPremium?.od??"unavailable"}. TP ${verified.premium.basicTp}, CPA ${verified.premium.cpa}, Net ${verified.premium.net}, GST ${verified.premium.tax}, Gross ${verified.premium.gross}.
-Third Party period: ${tpStart||"unavailable"} to ${tpExpiry||"unavailable"}. ${verified.premium.tataAig ? "Tata AIG issuance date is taken from the current signed policy PDF timestamp when it matches the printed receipt under the configured insurer rule. Non-owner-driver paid-liability amounts are allocated to the TP form bucket, not CPA." : ""} Verify separate TP/CPA dates, policy class/product, identity, commercial rates and unmatched PDF fields manually.`
+Third Party period: ${tpStart||"unavailable"} to ${tpExpiry||"unavailable"}. ${verified.premium.tataAig ? "Tata AIG issuance date is taken from the current signed policy PDF timestamp when it matches the printed receipt under the configured insurer rule. Non-owner-driver paid-liability amounts are allocated to the TP form bucket, not CPA." : ""} Verify separate TP/CPA dates, policy class/product, identity, commercial rates and unmatched PDF fields manually.${yearFallbackNote}`
       : `Policy Intake ${id}`,
   };
   // Preserve the long-standing generic OCR default. A positive owner-driver
@@ -483,6 +491,12 @@ Third Party period: ${tpStart||"unavailable"} to ${tpExpiry||"unavailable"}. ${v
         (supplemented as unknown as Record<string,unknown>)[key]=draft[key];
         changed=true;
       }
+    }
+    if(supplemented.manufacturingYear && !original.manufacturingYear
+        && yearEvidence?.source==="registration_year_fallback"
+        && !supplemented.remarks.includes("REGISTRATION_YEAR_MANUFACTURING_FALLBACK:")){
+      supplemented.remarks=(supplemented.remarks||"")+yearFallbackNote;
+      changed=true;
     }
     if(!changed)return{ok:true,draft:original,draftRevision:existingDraft.revision,
       matchedCustomerId:verified

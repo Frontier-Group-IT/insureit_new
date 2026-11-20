@@ -14,6 +14,8 @@ const ALLOWED_N8N_ONBOARDING_KEYS = new Set([
   "vehicle_make",
   "vehicle_model",
   "vehicle_manufacturing_year",
+  "vehicle_registration_year",
+  "vehicle_registration_date",
   "vehicle_engine_number",
   "vehicle_chassis_number",
   "vehicle_rto_name",
