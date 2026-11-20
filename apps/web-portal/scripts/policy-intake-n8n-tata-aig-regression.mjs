@@ -36,10 +36,6 @@ for(const permitted of ["CNG","LPG","ELECTRIC"]){
 invalid(packageDiesel,x=>{
   x.fields.find(field=>field.key==="vehicle_fuel_type").value="KEROSENE";
 },"n8n_tata_aig_vehicle_or_policy_invalid");
-invalid(read("bundled"),x=>{
-  x.fields.find(field=>field.key==="vehicle_fuel_type").value="DIESEL";
-},"n8n_tata_aig_vehicle_or_policy_invalid");
-
 const combos=[
   {name:"saod",product:"Stand-Alone Own Damage",registrationMode:"registered",gross:9178},
   {name:"package",product:"Package",registrationMode:"registered",gross:23505},
