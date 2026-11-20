@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  Animated,
+  Easing,
   FlatList,
   Image,
   Platform,
@@ -40,6 +42,52 @@ import { usePartnerSession } from '@/providers/partner-session-provider';
 const PAGE_SIZE = 10;
 let savedClaimQuery = '';
 let savedClaimState: PartnerClaimState = 'all';
+
+
+const ADD_CLAIM_GRADIENT = Array.from({ length: 28 }, (_, index) => {
+  // Closely match the reference: deep royal blue on the left, brighter cobalt on the right.
+  const start = [5, 63, 175];
+  const end = [10, 84, 213];
+  const t = index / 27;
+  return `rgb(${start.map((channel, i) => Math.round(channel + (end[i] - channel) * t)).join(',')})`;
+});
+
+function HighlightedAddClaimButton({ onPress, active }: { onPress: () => void; active: boolean }) {
+  const pulse = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (!active) {
+      pulse.stopAnimation();
+      pulse.setValue(1);
+      return;
+    }
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 1.035, duration: 1450, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 1, duration: 1450, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+      ]),
+    );
+    animation.start();
+    return () => animation.stop();
+  }, [active, pulse]);
+
+  return (
+    <Animated.View style={[styles.summaryAddClaimMotion, { transform: [{ scale: pulse }] }]}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Add Claim"
+        onPress={onPress}
+        style={({ pressed }) => [styles.summaryAddClaim, pressed && styles.summaryChipPressed]}
+      >
+        <View pointerEvents="none" style={styles.summaryAddClaimGradient}>
+          {ADD_CLAIM_GRADIENT.map((color, index) => <View key={index} style={{ flex: 1, backgroundColor: color }} />)}
+        </View>
+        <Ionicons name="add-circle-outline" size={15} color="#FFFFFF" />
+        <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85} style={styles.summaryAddClaimText}>Add Claim</Text>
+      </Pressable>
+    </Animated.View>
+  );
+}
 
 export default function ClaimsScreen() {
   const router = useRouter();
@@ -210,15 +258,7 @@ export default function ClaimsScreen() {
             })}
           </View>
           {canPartnerStartClaim(context) ? (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Add Claim"
-              onPress={() => router.push('/claim/select-vehicle' as never)}
-              style={({ pressed }) => [styles.summaryAddClaim, pressed && styles.summaryChipPressed]}
-            >
-              <Ionicons name="add-circle-outline" size={15} color="#0860C8" />
-              <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85} style={styles.summaryAddClaimText}>Add Claim</Text>
-            </Pressable>
+            <HighlightedAddClaimButton onPress={() => router.push('/claim/select-vehicle' as never)} active={isFocused} />
           ) : null}
         </View>
 
@@ -532,8 +572,10 @@ const styles = StyleSheet.create({
   summaryChipLabelSelected: { color: '#FFFFFF' },
   summaryChipCount: { color: '#7A889C', fontSize: 8, lineHeight: 11, fontWeight: '500', flexShrink: 0 },
   summaryChipCountSelected: { color: '#E2EEFF' },
-  summaryAddClaim: { width: 88, minHeight: 38, flexShrink: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 3, paddingHorizontal: 5, borderRadius: 12, borderWidth: 1, borderColor: '#E0E7F1', backgroundColor: '#FFFFFF', shadowColor: '#173B6C', shadowOpacity: 0.08, shadowRadius: 4, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
-  summaryAddClaimText: { color: '#0860C8', fontSize: 9, fontWeight: '600', flexShrink: 1 },
+  summaryAddClaimMotion: { width: 88, flexShrink: 0, borderRadius: 12, shadowColor: '#064DBD', shadowOpacity: 0.2, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 3 },
+  summaryAddClaim: { width: 88, minHeight: 38, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 3, paddingHorizontal: 5, borderRadius: 12, overflow: 'hidden', backgroundColor: '#0648C1' },
+  summaryAddClaimGradient: { ...StyleSheet.absoluteFillObject, flexDirection: 'row', overflow: 'hidden', borderRadius: 12 },
+  summaryAddClaimText: { color: '#FFFFFF', fontSize: 9, fontWeight: '700', flexShrink: 1 },
   controls: {
     marginTop: 8,
     minHeight: 46,
