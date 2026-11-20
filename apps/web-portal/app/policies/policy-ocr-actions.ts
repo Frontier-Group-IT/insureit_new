@@ -2,6 +2,7 @@
 
 import { headers } from "next/headers";
 import { requestN8nPolicyIntakeExtraction } from "@/lib/policy-intake-n8n-bridge";
+import { tryReadNonTataCommercialPolicy } from "@/lib/policy-nontata-commercial-n8n";
 import { isN8nPolicyReadEnabled } from "@/lib/policy-ocr-routing-mode";
 import { requirePolicyEditor } from "@/lib/policy-access-server";
 import {
@@ -126,6 +127,22 @@ async function extractPolicyFile(
   if (!(file instanceof File) || file.size === 0) return { ok: false, error: "Select a policy PDF or image." };
   if (!ALLOWED_TYPES.has(file.type)) return { ok: false, error: "Only PDF, JPG, PNG and WebP policy copies are supported." };
   if (file.size > MAX_FILE_SIZE) return { ok: false, error: "The policy document must be 15 MB or smaller." };
+  if (file.type === "application/pdf") {
+    try {
+      // New India, IFFCO Tokio, Go Digit only. No changes to parallel Tata/ICICI workflow.
+      const commercial = await tryReadNonTataCommercialPolicy(file);
+      if (commercial) return {
+        ok: true, fields: commercial.fields, parserId: commercial.parserId,
+        parserVersion: commercial.parserVersion, model: "INSUREIT local n8n commercial motor",
+        extractionMethod: "native_pdf_text", warnings: commercial.warnings,
+      };
+    } catch (error) {
+      const code = error instanceof Error && /^n8n_nontata_[a-z0-9_]{1,72}$/.test(error.message)
+        ? error.message : "n8n_nontata_unavailable";
+      console.error("[policy-read] commercial n8n refused", { code });
+      return { ok: false, error: "The New India, IFFCO Tokio or Go Digit parser could not verify this PDF. Review the PDF and try again; no policy was booked." };
+    }
+  }
   if (isN8nPolicyReadEnabled()) {
     if (file.type !== "application/pdf") return {
       ok: false, error: "The local n8n reader currently supports verified digital PDF files. Use manual onboarding for images or untrained policies.",
