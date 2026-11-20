@@ -211,7 +211,7 @@ if (deletionBrandIndex < 0 || deletionSloganIndex < 0 || deletionBrandIndex >= d
   throw new Error('Account deletion must show the Partner logo left and the slogan right.');
 }
 requireText(deletionScreen, "heroCopy: { flex: 1, minWidth: 0, paddingLeft: 10, paddingTop: 0, alignItems: 'flex-end' }", 'Account deletion slogan must sit against the right edge of its hero column.');
-requireText(deletionScreen, "heroSloganBlock: { alignSelf: 'flex-end', width: '100%', alignItems: 'flex-start' }", 'Slogan uses the full right column to avoid wrapping while keeping both lines and underline left-aligned.');
+requireText(deletionScreen, "heroSloganBlock: { alignSelf: 'flex-end', width: 142, maxWidth: '100%', alignItems: 'flex-start' }", 'Slogan is right-anchored with a stable two-line width, while allowing narrow viewport shrink.');
 requireText(deletionScreen, 'numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>Your account,', 'First slogan row stays on one line.');
 requireText(deletionScreen, 'numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>your choice', 'Second slogan row stays on one line.');
 requireText(deletionScreen, '<View style={styles.heroSloganBlock}>', 'Both headline rows must use the same right-side alignment group.');
