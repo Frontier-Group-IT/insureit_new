@@ -96,11 +96,12 @@ assert.match(form, /if\(invalidField\)revealFirstError\(invalidField\)/, 'After 
 assert.match(form, /fieldErrors\[field\.key\] && styles\.invalidControl/, 'Input retains red validation border');
 assert.doesNotMatch(form, /<Text style=\{styles\.fieldError\}/, 'No duplicate inline error text beneath input fields');
 
-// Mobile Partner completion must be explicit, scoped to the creator and independent of new uploads.
+// Mobile Partner completion remains explicit; the New Partner screen must not expose other saved applications.
 const partnerOnlyRoute=read('../../web-portal/app/api/partner/onboarding/partner-only/route.ts');
-assert.match(partnerOnlyRoute,/pendingPartners:/,'Previously saved Partners can be resumed after app restart');
-assert.match(partnerOnlyRoute,/\.eq\("initiated_by",profile\.id\)/,'Resume list is scoped to the employee');
-assert.match(form,/Resume saved Partner documents/);
+assert.match(partnerOnlyRoute,/pendingPartners:/,'Server retains scoped saved Partner records for existing onboarding access');
+assert.match(partnerOnlyRoute,/\.eq\("initiated_by",profile\.id\)/,'Saved applications remain scoped to the employee');
+assert.doesNotMatch(form,/Resume saved Partner documents/,'New Partner form must be creation-only');
+assert.doesNotMatch(form,/pendingPartners|resumePartner/,'New Partner form must not fetch or render the saved Partner list');
 assert.match(form,/const loadSavedDocuments = async/);
 assert.match(form,/method: 'PATCH'/,'Complete Partner action invokes explicit finalization');
 assert.match(form,/Complete & Issue Partner ID/);
