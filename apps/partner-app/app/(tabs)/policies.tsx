@@ -934,6 +934,7 @@ const styles = StyleSheet.create({
     borderRadius: 0,
     backgroundColor: '#FFFFFF',
   },
+  statusMenuOverlay: { flex: 1 },
   summaryChipPressed: { opacity: 0.78 },
   sortFloating:{position:'absolute',bottom:8,alignSelf:'center',flexDirection:'row',alignItems:'center',justifyContent:'center',gap:6,
     paddingHorizontal:15,minHeight:40,borderRadius:22,backgroundColor:'#F0EDFF',borderWidth:1,borderColor:'#E1DBFA',
