@@ -3,6 +3,7 @@ import { getCurrentSession } from '@/lib/partner-session';
 const portal = (process.env.EXPO_PUBLIC_PORTAL_URL || 'https://portal.insureit.in').replace(/\/$/, '');
 
 export type LifeHealthStatus = 'pending' | 'rejected' | 'issued' | 'all';
+export type LifeHealthBusinessLine = 'all' | 'life' | 'health';
 export type LifeHealthCaseSummary = {
   id: string;
   case_number: string;
@@ -64,12 +65,13 @@ async function request<T>(params: URLSearchParams): Promise<T> {
 
 export async function listLifeHealthCases(args: {
   status: LifeHealthStatus;
+  businessLine?: LifeHealthBusinessLine;
   search: string;
   offset: number;
   limit?: number;
 }) {
   const params = new URLSearchParams({
-    status: args.status, search: args.search.slice(0,120),
+    status: args.status, businessLine: args.businessLine ?? 'all', search: args.search.slice(0,120),
     offset: String(args.offset),limit: String(args.limit ?? 10),
   });
   return request<{ok:true;cases:LifeHealthCaseSummary[];counts:CaseCounts;total:number}>(params);
