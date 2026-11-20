@@ -383,7 +383,8 @@ export function validateTataAigN8nResponse(
   const odStart = get("policy_start_date"), odEnd = get("policy_end_date");
   const tpStart = get("third_party_start_date"), tpEnd = get("third_party_end_date");
   if (!date(odStart) || !date(odEnd) || odEnd < odStart
-    || (saod ? Boolean(tpStart || tpEnd)
+    || (saod ? (Boolean(tpStart) !== Boolean(tpEnd)
+        || (Boolean(tpStart) && (!date(tpStart) || !date(tpEnd) || tpEnd < tpStart)))
       : (!date(tpStart) || !date(tpEnd) || tpEnd < tpStart || tpStart !== odStart || tpEnd < odEnd
         || (product === "Bundled" && tpEnd === odEnd)
         || (twoWheeler && (tpEnd.slice(0,4) !== String(Number(odEnd.slice(0,4))+4)
