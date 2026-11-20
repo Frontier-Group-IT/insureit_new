@@ -1,4 +1,5 @@
 import type { PolicyIssuanceDateEvidence } from "./policy-issuance-signature-evidence.ts";
+import { resolveManufacturingYearEvidence } from "./policy-n8n-onboarding-enrichment.ts";
 
 /**
  * Pure, conservative exception vocabulary for future AI Policy Intake queue.
@@ -209,7 +210,12 @@ export function assessAiPolicyIntake(input: AiPolicyEvidence): AiAssessment {
         required.push("vehicle_registration_number");
       }
     }
-    if (required.some(key => !fields.get(key))) {
+    // Manufacturing year may use a separately printed registration year
+    // under the approved operational fallback. This does NOT weaken any
+    // financial verification or infer a manufacture month/day.
+    const yearEvidence=resolveManufacturingYearEvidence(input.fields);
+    if (required.some(key => key==="vehicle_manufacturing_year"
+      ? !yearEvidence.year : !fields.get(key))) {
       add("missing_field", "Mandatory extracted fields are missing", "edit_draft");
     }
     if (parser?.family==="commercial" && fields.get("vehicle_registration_status")==="registration_pending")
