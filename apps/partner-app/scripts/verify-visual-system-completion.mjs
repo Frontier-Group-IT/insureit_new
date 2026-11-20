@@ -438,9 +438,16 @@ requireText(business, "setOverviewCustomOpen((open) => (overviewRange === 'custo
 requireText(business, 'setOverviewCustomOpen(false);', 'Selecting a non-custom Business Overview period must close the custom range panel.');
 requireText(business, "{overviewCustomOpen ? (", 'Business Overview custom range card must render from explicit open state.');
 requireText(business, 'const [trendCustomOpen, setTrendCustomOpen] = useState(false);', 'Month-wise Trend must track custom-range panel visibility independently from the selected period.');
-requireText(business, "setTrendCustomOpen((open) => (trendRange === 'custom' ? !open : true));", 'Selecting Custom again must toggle the Month-wise Trend custom range panel.');
+requireText(business, "setTrendCustomOpen(true);", 'Selecting Custom must open a modal without replacing the last applied trend.');
 requireText(business, 'setTrendCustomOpen(false);', 'Selecting a non-custom Month-wise Trend period must close the custom range panel.');
-requireText(business, "{trendCustomOpen ? (", 'Month-wise Trend custom range card must render from explicit open state.');
+requireText(business, 'visible={trendCustomOpen}', 'Month-wise Trend custom range must render as an overlay popup, not a separate page card.');
+requireText(business, 'directDateSelection', 'Trend popup must use a direct-select calendar.');
+const rangeCard = read('components/partner-business-range-summary.tsx');
+for (const phrase of ["directDateSelection?: boolean", "directSelect={directDateSelection}", "calendarVariant={directDateSelection ? 'dark' : 'default'}"]) requireText(rangeCard, phrase, 'Only the Trend custom popup should opt into the reference-style calendar: ' + phrase);
+for (const phrase of ["calendarVariant?: 'default' | 'dark'", "calendarVariant === 'dark'", "styles.darkSelectedHeading", "styles.darkDaySelected"]) requireText(datePicker, phrase, 'Dark calendar must retain selected date, month navigation and one-tap selection: ' + phrase);
+
+requireText(business, "setTrendRange('custom');", 'Trend period changes to Custom only after the successful range response.');
+if (business.includes('Apply a custom range to view its net premium total.')) throw new Error('Do not replace the existing graph while the user chooses a custom date range.');
 requireText(business, '!payout.available', 'Business payout authorization gate must remain intact.');
 requireText(business, 'getPartnerPayoutSummary()', 'Business must continue loading payout data through the existing service.');
 requireText(business, "source={require('../../assets/partner/banners/claims-header-reference.jpg')}", 'Business header must use the same reference background as Claims and Policies.');
