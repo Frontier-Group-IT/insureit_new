@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   FlatList,
   Image,
+  KeyboardAvoidingView,
   Modal,
   Platform,
   Pressable,
@@ -75,6 +76,14 @@ const quickDateRange=(key:'mtd'|'90'|'365')=>{
  const from=new Date(now.getFullYear(),now.getMonth(),now.getDate());
  from.setDate(from.getDate()-(key==='90'?89:364));
  return {from:isoDate(from),to:isoDate(now)};
+};
+const selectedDatePreset=(from:string,to:string):'all'|'mtd'|'90'|'365'|null=>{
+  if(!from&&!to)return 'all';
+  for(const key of ['mtd','90','365'] as const){
+    const range=quickDateRange(key);
+    if(from===range.from&&to===range.to)return key;
+  }
+  return null;
 };
 const sheetStatuses: {label:string;value:PartnerPolicyStatusFilter;lifecycle:PartnerPolicyLifecycle}[] = [
   {label:'All Policies',value:'all',lifecycle:'all'},
@@ -584,8 +593,8 @@ export default function PoliciesScreen() {
           </View>
         </View>
       </Modal>
-      <Modal visible={sortSheetOpen} transparent animationType="slide" onRequestClose={()=>setSortSheetOpen(false)}>
-        <View style={styles.sortOverlay}>
+      <Modal visible={sortSheetOpen} transparent animationType="slide" statusBarTranslucent={false} onRequestClose={()=>setSortSheetOpen(false)}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={0} style={styles.sortOverlay}>
           <Pressable style={StyleSheet.absoluteFill} accessibilityRole="button" accessibilityLabel="Close sort by popup" onPress={()=>setSortSheetOpen(false)}/>
           <View style={[styles.sortSheet,{paddingBottom:Math.max(12,safeAreaInsets.bottom+7),maxHeight:windowHeight-36}]}>
             <View style={styles.sortSheetHeader}>
@@ -642,7 +651,6 @@ export default function PoliciesScreen() {
                 </View>
               </>:null}
               {filterTab==='source'?<>
-                <Text style={styles.sortSectionLabel}>Source</Text>
                 <View style={styles.advancedSearch}><Feather name="search" size={17} color="#8190A7"/>
                   <TextInput value={sourceSearch} onChangeText={setSourceSearch}
                     accessibilityLabel="Search sources" placeholder="Search source..."
@@ -664,7 +672,6 @@ export default function PoliciesScreen() {
                     <Text style={styles.sortChoiceText} numberOfLines={2}>{option.label}</Text></Pressable>)}
               </>:null}
               {filterTab==='rm'?<>
-                <Text style={styles.sortSectionLabel}>RM</Text>
                 <View style={styles.advancedSearch}><Feather name="search" size={17} color="#8190A7"/>
                   <TextInput value={rmSearch} onChangeText={setRmSearch}
                     accessibilityLabel="Search RMs" placeholder="Search RM..."
@@ -691,14 +698,17 @@ export default function PoliciesScreen() {
                     {key:'90',label:'90 Days'},
                     {key:'365',label:'365 Days'},
                   ] as const).map(option=><Pressable key={option.key} accessibilityRole="button"
+                    accessibilityState={{selected:selectedDatePreset(draftFromDate,draftToDate)===option.key}}
                     onPress={()=>{if(option.key==='all'){setDraftFromDate('');setDraftToDate('');}
                       else {const dates=quickDateRange(option.key);setDraftFromDate(dates.from);setDraftToDate(dates.to);}}}
-                    style={styles.advancedPreset}><Text style={styles.advancedPresetText}>{option.label}</Text></Pressable>)}
+                    style={[styles.advancedPreset,selectedDatePreset(draftFromDate,draftToDate)===option.key&&styles.advancedPresetSelected]}>
+                    <Text style={[styles.advancedPresetText,selectedDatePreset(draftFromDate,draftToDate)===option.key&&styles.advancedPresetTextSelected]}>{option.label}</Text>
+                  </Pressable>)}
                 </View>
                 <View style={styles.advancedDates}>
-                  <View style={{flex:1}}><PartnerDatePicker label="From" value={parseFilterDate(draftFromDate)}
+                  <View style={{flex:1}}><PartnerDatePicker directSelect label="From" value={parseFilterDate(draftFromDate)}
                     onChange={date=>setDraftFromDate(isoDate(date))} maximumDate={parseFilterDate(draftToDate)??undefined}/></View>
-                  <View style={{flex:1}}><PartnerDatePicker label="To" value={parseFilterDate(draftToDate)}
+                  <View style={{flex:1}}><PartnerDatePicker directSelect label="To" value={parseFilterDate(draftToDate)}
                     onChange={date=>setDraftToDate(isoDate(date))} minimumDate={parseFilterDate(draftFromDate)??undefined}/></View>
                 </View>
                 {draftFromDate&&draftToDate&&draftFromDate>draftToDate?
@@ -719,7 +729,7 @@ export default function PoliciesScreen() {
                 <Text style={styles.sortApplyText}>Apply Filter</Text></Pressable>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
       <Modal visible={statusMenuOpen} transparent animationType="fade" onRequestClose={() => setStatusMenuOpen(false)}>
         <View style={styles.statusMenuOverlay}>
@@ -1031,6 +1041,8 @@ const styles = StyleSheet.create({
   advancedPresets:{flexDirection:'row',flexWrap:'wrap',gap:7,marginTop:10},
   advancedPreset:{minHeight:34,paddingHorizontal:11,justifyContent:'center',borderRadius:9,backgroundColor:'#F1EFF9'},
   advancedPresetText:{color:'#27345B',fontSize:11,fontWeight:'700'},
+  advancedPresetSelected:{backgroundColor:'#4030AF',borderColor:'#4030AF',borderWidth:1},
+  advancedPresetTextSelected:{color:'#FFFFFF',fontWeight:'800'},
   advancedDates:{flexDirection:'row',gap:9,marginTop:13},
   advancedFooter:{flexDirection:'row',gap:9,paddingVertical:11,borderTopWidth:1,borderTopColor:'#E5E7F1'},
   advancedReset:{flex:1,minHeight:45,flexDirection:'row',gap:6,alignItems:'center',justifyContent:'center',
