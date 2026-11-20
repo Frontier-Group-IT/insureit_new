@@ -311,13 +311,13 @@ async function preparePolicyIntakeHandoffInternal(
     registrationMode:verified?.fields.some(field =>
       field.key==="vehicle_registration_status"&&field.value==="unregistered")?"unregistered":"registered",
     current:{registrationNo:"",vehicleClass:"",make:"",model:"",fuelType:"",manufacturingYear:"",capacity:"",chassisNo:"",engineNo:"",rtoState:"",rtoName:"",policyProduct:"",idv:"",od:"",tp:"",cpa:"",policyNo:"",insurerId:"",validFrom:"",validUpto:""},
-    fields:verified?enrichVerifiedN8nOnboardingFields(verified.fields):(intake.ocr_fields??[]),
+    fields:verified?enrichVerifiedN8nOnboardingFields(verified.fields,verified.parserId):(intake.ocr_fields??[]),
     manufacturers:manufacturerOptions,insurers,rcVerified:false,
   });
   // Only a server-verified current-PDF insured name is offered as an
   // editable, review-required draft value. It NEVER auto-links a customer.
   const masterIdentity=verified?await resolveMasterIntakeIdentity(admin,intake.matched_customer_id,intake.customer_mobile):null;
-  const verifiedIdentity=verified?selectVerifiedN8nInsuredDraftIdentity(verified.fields,masterIdentity):null;
+  const verifiedIdentity=verified?selectVerifiedN8nInsuredDraftIdentity(verified.fields,masterIdentity,verified.parserId):null;
   const customerName=verifiedIdentity?.name??(mapped.next.insuredName?.trim()||"");
   // Canonical form computes net = Basic OD + add-ons + TP + CPA. The n8n
   // "od_premium" OCR field is *Total OD*, so never copy it directly into
