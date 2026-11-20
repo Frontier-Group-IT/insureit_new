@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Image, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
@@ -8,7 +8,7 @@ import { PartnerCaseBottomNavigation } from '@/components/partner-case-bottom-na
 import { PartnerCasePageHeader } from '@/components/partner-case-page-header';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { getPartnerSupport, type PartnerSupport } from '@/lib/engagement';
-import { PartnerAssets } from '@/lib/partner-assets';
+import { PartnerProfileMenuIcon } from '@/components/ui/partner-profile-menu-icon';
 
 type StatTone = 'warning' | 'info' | 'purple';
 
@@ -47,23 +47,28 @@ export default function SupportScreen() {
         <View style={styles.page}>
           <View style={styles.hero}>
             <View style={styles.heroIconShell}>
-              <Image source={PartnerAssets.actions.supportVerified} style={styles.heroIcon} resizeMode="contain" />
+              <PartnerProfileMenuIcon kind="support" size={60} />
             </View>
             <View style={styles.heroRule} />
-            <View style={styles.heroInformation}>
-              <Text style={styles.heroTitle} numberOfLines={2}>INSUREIT Operations Desk</Text>
-              <Text style={styles.heroSubtitle}>Your operational overview</Text>
-              <View style={styles.updatedLine}>
-                <Ionicons name="time-outline" size={13} color="#1D59AD" />
-                <Text style={styles.updatedText}>{formatUpdatedAt(data.generated_at)}</Text>
-              </View>
-            </View>
-            <View style={styles.heroActions}>
-              <View style={styles.heroActionBubble}>
-                <Ionicons name="chatbubble-ellipses" size={23} color="#2681EB" />
-              </View>
-              <View style={styles.heroActionBubble}>
-                <Ionicons name="document-text" size={23} color="#1E70D4" />
+            <View style={styles.heroContent}>
+              <View style={styles.heroTopRow}>
+                <View style={styles.heroInformation}>
+                  <Text style={styles.heroTitle} numberOfLines={2}>INSUREIT Operations Desk</Text>
+                  <Text style={styles.heroSubtitle} numberOfLines={2}>Your operational overview</Text>
+                </View>
+                <View style={styles.heroRight}>
+                  <View style={styles.updatedLine}>
+                    <Text style={styles.updatedText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>{formatUpdatedAt(data.generated_at)}</Text>
+                  </View>
+                  <View style={styles.heroActions}>
+                    <View style={styles.heroActionBubble}>
+                      <Ionicons name="chatbubble-ellipses" size={23} color="#2681EB" />
+                    </View>
+                    <View style={styles.heroActionBubble}>
+                      <Ionicons name="document-text" size={23} color="#1E70D4" />
+                    </View>
+                  </View>
+                </View>
               </View>
             </View>
           </View>
@@ -172,16 +177,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12, paddingVertical: 12, overflow: 'hidden',
     shadowColor: '#396CB2', shadowOpacity: 0.09, shadowRadius: 9, shadowOffset: { width: 0, height: 3 }, elevation: 2,
   },
-  heroIconShell: { height: 65, width: 65, borderRadius: 22, backgroundColor: '#D4E7FF',
-    alignItems: 'center', justifyContent: 'center', zIndex: 1 },
-  heroIcon: { width: 61, height: 61 },
-  heroRule: { marginHorizontal: 10, width: 1.5, height: 66, backgroundColor: '#5385CA', zIndex: 1 },
-  heroInformation: { flex: 1, minWidth: 0, justifyContent: 'center', zIndex: 1 },
-  heroTitle: { color: '#071B42', fontWeight: '800', fontSize: 13.5, lineHeight: 18 },
-  heroSubtitle: { marginTop: 3, color: '#4E6484', fontSize: 10.5, lineHeight: 14 },
-  updatedLine: { marginTop: 7, flexDirection: 'row', alignItems: 'center', gap: 4 },
-  updatedText: { color: '#255390', fontSize: 9.5, fontWeight: '600' },
-  heroActions: { flexDirection: 'row', alignSelf: 'flex-end', gap: 5, marginLeft: 4, zIndex: 1 },
+  heroIconShell: { height: 65, width: 60, alignItems: 'center', justifyContent: 'center', zIndex: 1 },
+  heroRule: { marginHorizontal: 8, width: 1.5, height: 66, backgroundColor: '#5385CA', zIndex: 1 },
+  heroContent: { flex: 1, minWidth: 0, zIndex: 1 },
+  heroTopRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 5 },
+  heroInformation: { flex: 1, minWidth: 0, paddingTop: 2 },
+  heroTitle: { color: '#071B42', fontWeight: '800', fontSize: 12.2, lineHeight: 16 },
+  heroSubtitle: { marginTop: 4, color: '#4E6484', fontSize: 9.8, lineHeight: 13 },
+  heroRight: { flexShrink: 0, width: 107, alignItems: 'flex-end', gap: 9 },
+  updatedLine: { width: '100%', alignItems: 'flex-end' },
+  updatedText: { color: '#255390', fontSize: 9.2, fontWeight: '700', textAlign: 'right' },
+  heroActions: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', gap: 6, zIndex: 1 },
   heroActionBubble: { width: 29, height: 29, borderRadius: 15, backgroundColor: '#FFFFFF',
     alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#DDEBFF' },
   sectionTitleWrap: { marginTop: 19, marginBottom: 13 },
