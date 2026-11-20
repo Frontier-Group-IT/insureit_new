@@ -1,9 +1,9 @@
 Partner production OTA trigger
-release=partner-support-header-full-width-pr-5016
+release=support-hero-edge-to-edge-pr-5024
 source=verified-merged-main
-source_pr=5016
-source_merge=4810ac80162985503b39934633863c9a70e58715
-reason=user-approved-merge-and-publish-support-operations-desk-header-alignment
+source_pr=5024
+source_merge=735c7e138ae2ceaa0c57dfbf21675e062b5ec9a8
+reason=user-approved-merge-and-publish-support-hero-edge-to-edge
 channel=production
 runtime=0.2.0
 requested=2026-11-20
