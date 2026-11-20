@@ -205,3 +205,95 @@ export async function DELETE(request: Request) {
   }
   return response({ ok: true, document_type: documentType });
 }
+
+
+const PARTNER_REQUIRED_DOCUMENTS = ["aadhaar_front", "aadhaar_back", "pan_copy", "cancelled_cheque", "photograph"] as const;
+const PARTNER_APPLICATION_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+/** Reading stored files and finalizing a mobile-created Partner are owner-scoped.
+ * This never grants generic access to unrelated intermediary applications. */
+async function authorizePartnerDocumentCompletion(request: Request, applicationId: string) {
+  if (!PARTNER_APPLICATION_ID.test(applicationId)) return { error: response({ ok: false, error: "Invalid Partner application." }, 400) };
+  const token = /^Bearer\s+([^\s]+)$/i.exec(request.headers.get("authorization") ?? "")?.[1];
+  if (!token) return { error: response({ ok: false, error: "Sign in again to continue." }, 401) };
+  const scoped = createSupabaseWithAccessToken(token);
+  const { data: auth, error: authError } = await scoped.auth.getUser(token);
+  if (authError || !auth.user) return { error: response({ ok: false, error: "Session expired." }, 401) };
+  const { data: identity, error: identityError } = await scoped.rpc("partner_app_current_identity");
+  if (identityError || !identity || identity.actor_kind !== "employee"
+    || identity.auth_user_id !== auth.user.id || identity.profile_id !== auth.user.id) {
+    return { error: response({ ok: false, error: "Only authorized employees may complete Partner applications." }, 403) };
+  }
+  const admin = createSupabaseAdminClient();
+  const { data: profile, error: profileError } = await admin.from("profiles")
+    .select("id,role,is_active,employee_id").eq("id", auth.user.id).maybeSingle();
+  if (profileError || !profile?.is_active || !profile.employee_id || profile.role !== identity.role) {
+    return { error: response({ ok: false, error: "Employee account is inactive." }, 403) };
+  }
+  const { data: employee } = await admin.from("employees").select("employment_status").eq("id", profile.employee_id).maybeSingle();
+  if (employee?.employment_status !== "active") {
+    return { error: response({ ok: false, error: "Employee account is inactive." }, 403) };
+  }
+  const permissions = await getEffectivePermissionAccessMap(profile);
+  if (!["edit", "approve"].includes(permissions.create_intermediary_application ?? "none")
+    || !(await isEmployeeWithinAccessScope(profile.id, profile.role, profile.employee_id))) {
+    return { error: response({ ok: false, error: "You do not have Add Partner permission." }, 403) };
+  }
+  const [{ data: application, error: appError }, { data: onboarding, error: onboardingError }] = await Promise.all([
+    admin.from("intermediary_onboarding_applications").select("id,initiated_by,requested_type,status,partner_status,draft_data")
+      .eq("id", applicationId).eq("initiated_by", profile.id).maybeSingle(),
+    admin.from("posp_misp_onboarding_profiles").select("workflow_stage,gst_number,partner_status,partner_id")
+      .eq("application_id", applicationId).eq("partner_type", "posp").maybeSingle(),
+  ]);
+  if (appError || onboardingError) return { error: response({ ok: false, error: "Unable to check Partner application." }, 503) };
+  if (!application || application.requested_type !== "posp" || application.draft_data?.mobile_partner_only !== true || !onboarding) {
+    return { error: response({ ok: false, error: "Partner application is not available to this account." }, 404) };
+  }
+  const alreadyActive = application.partner_status === "active_partner"
+    && onboarding.partner_status === "active_partner"
+    && Boolean(onboarding.partner_id && !onboarding.partner_id.startsWith("PENDING-"));
+  if (!alreadyActive && (!["submitted", "under_review", "changes_requested"].includes(application.status)
+    || onboarding.workflow_stage !== "iib_processing")) {
+    return { error: response({ ok: false, error: "Partner is not in an eligible document-completion stage." }, 409) };
+  }
+  return { admin, actorId: profile.id, onboarding, alreadyActive };
+}
+
+/** Reload previously uploaded documents on app restart; never trusts local upload state. */
+export async function GET(request: Request) {
+  const applicationId = new URL(request.url).searchParams.get("applicationId") ?? "";
+  const context = await authorizePartnerDocumentCompletion(request, applicationId);
+  if ("error" in context) return context.error;
+  const { data: documents, error } = await context.admin.from("intermediary_onboarding_documents")
+    .select("document_type,file_name").eq("application_id", applicationId);
+  if (error) return response({ ok: false, error: "Saved documents could not be loaded." }, 503);
+  const required = [...PARTNER_REQUIRED_DOCUMENTS, ...(context.onboarding.gst_number ? ["gst_copy"] : [])];
+  const available = new Set((documents ?? []).filter(item => Boolean(item.file_name?.trim())).map(item => item.document_type));
+  return response({ ok: true, documents: (documents ?? []).map(item => ({ type: item.document_type, name: item.file_name })),
+    missing: required.filter(type => !available.has(type)),
+    partner_id: context.alreadyActive ? context.onboarding.partner_id : null,
+    status: context.alreadyActive ? "active" : required.every(type => available.has(type)) ? "ready_to_finalize" : "documents_pending" });
+}
+
+/** Explicit user-confirmed completion; uses the canonical atomic activation RPC. */
+export async function PATCH(request: Request) {
+  const body = await request.json().catch(() => null) as { application_id?: unknown } | null;
+  const applicationId = typeof body?.application_id === "string" ? body.application_id.trim() : "";
+  const context = await authorizePartnerDocumentCompletion(request, applicationId);
+  if ("error" in context) return context.error;
+  const { data: documents, error: documentError } = await context.admin.from("intermediary_onboarding_documents")
+    .select("document_type,file_name").eq("application_id", applicationId);
+  if (documentError) return response({ ok: false, error: "Unable to verify your saved documents." }, 503);
+  const available = new Set((documents ?? []).filter(item => Boolean(item.file_name?.trim())).map(item => item.document_type));
+  const required = [...PARTNER_REQUIRED_DOCUMENTS, ...(context.onboarding.gst_number ? ["gst_copy"] : [])];
+  const missing = required.filter(type => !available.has(type));
+  if (missing.length) return response({ ok: false, error: "Documents still required: " + missing.join(", ").replaceAll("_", " "), missing }, 400);
+  const { data: activated, error: activationError } = await context.admin.rpc("finalize_partner_activation_v2", {
+    p_application_id: applicationId, p_actor_id: context.actorId,
+  });
+  if (activationError || !activated || typeof activated.partner_id !== "string") {
+    console.error("[partner-app-partner-activation] failed", { applicationId, code: activationError?.code ?? "invalid_result" });
+    return response({ ok: false, error: "Documents are saved, but Partner ID could not be issued. Contact Operations with this application reference." }, 409);
+  }
+  return response({ ok: true, partner_id: activated.partner_id, status: "active", already_active: activated.already_active === true });
+}
