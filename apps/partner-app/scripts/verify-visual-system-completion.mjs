@@ -191,17 +191,28 @@ requireText(accountShellHeader, "backgroundColor: '#0A234A'", 'Account header mu
 requireText(accountShellHeader, 'accessibilityRole="header"', 'Account page title must be accessible.');
 const caseRegister = read('app/life-health-cases/index.tsx');
 for (const fragment of [
-  'const [filterOpen,setFilterOpen]=useState(false);',
-  'accessibilityLabel="Filter Case Register by status"',
-  'accessibilityState={{expanded:filterOpen}}',
-  '{filterOpen?<View style={styles.filterMenu}>',
-  'onPress={()=>{setStatus(item.key);setFilterOpen(false);}}',
-  '{filters.find(item=>item.key===status)?.label} ({counts[status]})',
+  '<ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filters}',
+  'filters.map(item=><Pressable',
+  'onPress={()=>{setStatus(item.key);setBusinessLineMenuOpen(false);}}',
+  '{item.label} ({counts[item.key]})',
   'listLifeHealthCases({status,businessLine,search,offset,limit:10})',
   'setBusinessLine(item.key)',
-]) requireText(caseRegister, fragment, 'Case Register must preserve both reconciled dropdowns: '+fragment);
-if (caseRegister.includes('<ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filters}')) {
-  throw new Error('Case Register must not restore clipped status chips.');
+  'businessLineAnchor:{position:\'relative\',zIndex:21,overflow:\'visible\'}',
+  "businessLineMenu:{position:'absolute',top:35,left:0,width:110,zIndex:30,elevation:12",
+]) requireText(caseRegister, fragment, 'Case Register preserves original status buttons and floating business-line menu: '+fragment);
+for (const obsolete of [
+  'const [filterOpen,setFilterOpen]=useState(false);',
+  'accessibilityLabel="Filter Case Register by status"',
+  'styles.filterTrigger',
+  'styles.filterSection',
+]) {
+  if (caseRegister.includes(obsolete)) throw new Error('Case Register must not show replaced status dropdown: '+obsolete);
+}
+const headingPos = caseRegister.indexOf('style={styles.listHeading}');
+const menuPos = caseRegister.indexOf('style={styles.businessLineMenu}');
+const recordsPos = caseRegister.indexOf('{loading?<ActivityIndicator', headingPos);
+if (!(headingPos>=0 && menuPos>headingPos && recordsPos>menuPos)) {
+  throw new Error('Business-line overlay must remain anchored to the heading before case records.');
 }
 const lifeHealthCaseDetails = read('app/life-health-cases/[id].tsx');
 for (const [fragment, purpose] of [
