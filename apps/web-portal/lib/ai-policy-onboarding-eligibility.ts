@@ -1,5 +1,5 @@
 import type { PolicyIssuanceDateEvidence } from "./policy-issuance-signature-evidence.ts";
-import { resolveManufacturingYearEvidence } from "./policy-n8n-onboarding-enrichment.ts";
+import { resolveManufacturingYearEvidence } from "./policy-registration-year-fallback.mjs";
 
 /**
  * Pure, conservative exception vocabulary for future AI Policy Intake queue.
