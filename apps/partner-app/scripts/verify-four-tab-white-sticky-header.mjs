@@ -19,8 +19,10 @@ assert.match(policies, /stickyClaimsHeading/);
 assert.match(policies, /stickySearchOverlay: \{[^\n]+backgroundColor: '#082657'/);
 assert.match(claims, /stickyOverlay: \{[^\n]+backgroundColor: "#082657"/);
 assert.match(claims, /<Text style=\{styles.stickyTitle\}>Claims<\/Text>/);
-// Policies use one search-row dropdown with all five live lifecycle counts.
-assert.match(policies, /onPress=\{openStatusMenu\}/, 'Policies lifecycle dropdown opens from the search row');
+// Policies search occupies the entire row; lifecycle filters remain inside Sort by.
+assert.match(policies, /<PartnerSearchField/, 'Policies search remains in the sticky header');
+assert.match(policies, /sheetStatuses\.map/, 'Lifecycle statuses remain in Sort by');
+assert.doesNotMatch(policies, /onPress=\{openStatusMenu\}/, 'Duplicate search-row lifecycle dropdown is removed');
 assert.match(policies, /<Text style=\{styles\.quickActionsHeading\}>Quick Actions<\/Text>/, 'Quick Actions heading keeps its styling');
 assert.ok(policies.includes('<View style={styles.policyListHeadingSection}>\n        <Pressable'), 'Business-line dropdown replaces the redundant Policies list heading');
 assert.ok(!policies.includes('<Text style={styles.policyListTitle}>Policies</Text>'), 'Policies list does not repeat the page heading');
