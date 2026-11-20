@@ -883,7 +883,7 @@ requireText(journey, "progressColumn: { width: 86", 'Milestone progress column m
 requireText(journey, "progressCircleText: { color: '#6954D6', fontSize: 10", 'Circle percentage label must be 10px within the 40px ring.');
 requireText(journey, 'label="Customers" artwork={PartnerAssets.actions.quickCustomers}', 'Customers summary must retain its existing illustration and link.');
 requireText(journey, 'styles.summaryDivider', 'Combined summary must have two visible internal separators.');
-requireText(journey, "summaryItem: { flex: 1, minWidth: 0, minHeight: 48, flexDirection: 'row'", 'All three summary metrics must have a compact icon-left horizontal layout.');
+requireText(journey, "summaryItem: { flex: 1, minWidth: 0, minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', paddingHorizontal: 5", 'All three summary metrics must left-align their icon and stacked text within equal-width segments.');
 requireText(journey, "summaryArtwork: { width: 27, height: 29", 'Existing illustrated icons must remain compact.');
 requireText(journey, "summaryDivider: { width: 1, alignSelf: 'stretch', backgroundColor: '#A6B3C6'", 'Full-width combined summary must retain separators.');
 requireText(journey, "paddingHorizontal: 12, paddingTop: 12, paddingBottom: 8, backgroundColor: '#FFFFFF'", 'Milestone section vertical spacing must remain compact.');
