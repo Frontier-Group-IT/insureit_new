@@ -35,6 +35,14 @@ assert.match(more, /!last && styles\.menuRowDivider/, 'Dividers must separate ad
 assert.match(more, /borderBottomWidth: 1/, 'Dividers must be clearly visible, not hairline-faded');
 assert.match(more, /borderBottomColor: '#E6EAF0'/, 'Dividers must use subtle reference-style light gray');
 assert.match(more, /width: 52/, 'Enlarged icons need a sufficient layout slot');
+// The approved Profile & registration icon must be a business-person illustration
+// with a distinct registration card, while Customers retains its own existing art.
+assert.match(more, /iconKind="profile" title="Profile & registration" onPress=\{\(\) => router\.push\('\/profile'\)\}/);
+assert.match(icons, /if \(kind === 'profile'\) \{/);
+assert.match(icons, /source=\{require\('\.\.\/\.\.\/assets\/partner\/quick-actions\/add-partner\.png'\)\}/);
+assert.match(icons, /styles\.profileIdentityCard/);
+assert.match(icons, /name="person" size=\{9\} color="#1B66B8"/);
+assert.match(icons, /width: 23,[\s\S]*?height: 16,/);
 assert.match(icons, /styles\.glyphDepth/);
 assert.match(icons, /styles\.glyphEdge/);
 assert.match(icons, /styles\.glyphFace/);
