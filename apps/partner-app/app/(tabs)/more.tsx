@@ -341,16 +341,21 @@ const styles = StyleSheet.create({
     letterSpacing: 1.1,
     ...partnerTheme.typography.eyebrow,
   },
-  // Use subtle, reference-style dividers between menu rows.
+  // Group menu rows in one softly rounded white card, matching the reference.
   sectionRows: {
-    backgroundColor: 'transparent',
+    overflow: 'hidden',
+    borderRadius: 16,
+    backgroundColor: partnerTheme.colors.surface,
+    borderWidth: 1,
+    borderColor: partnerTheme.colors.line,
+    ...partnerTheme.shadowSoft,
   },
   menuRow: {
     minHeight: 68,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    paddingHorizontal: 6,
+    paddingHorizontal: 13,
     paddingVertical: 9,
   },
   menuRowDivider: {
