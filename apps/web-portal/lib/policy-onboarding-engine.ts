@@ -270,7 +270,12 @@ function validatePayload(payload: PolicyOnboardingPayload) {
   if (!chassis) return "Enter the chassis number.";
   if (!engine) return "Enter the engine number.";
   if (vehicleClass !== "CPM" && (!rtoState || !rtoName)) return "Enter the RTO state and RTO name/code.";
-  if (vehicleClass === "GCV" && (!payload.premium.cpaOpted || !Number.isFinite(cpaAmount) || cpaAmount <= 0)) return "CPA amount is mandatory for GCV policies and must be greater than 0.";
+  // CPA is optional for goods carriers. Never invent a charge, and require
+  // a positive amount only when owner-driver CPA is explicitly opted in.
+  if (!Number.isFinite(cpaAmount) || cpaAmount < 0
+    || (payload.premium.cpaOpted && cpaAmount <= 0)
+    || (!payload.premium.cpaOpted && cpaAmount > 0))
+    return "CPA amount and cover selection must agree; zero CPA is allowed when not opted in.";
   if (!payload.policy.insuranceCompanyId) return "Select an insurance company.";
   if (!payload.policy.policyNumber) return "Enter the policy number.";
   if (!payload.policy.policyType) return "Select the policy type.";
