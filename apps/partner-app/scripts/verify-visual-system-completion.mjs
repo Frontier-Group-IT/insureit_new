@@ -49,6 +49,29 @@ requireText(businessReport, 'getPartnerBusinessReportNet()', 'Business Report da
 requireText(businessReport, 'bottomNavigation={<PartnerStackBottomNavigation activeTab="business" />}', 'Business Report must retain its existing bottom navigation.');
 
 const policies = read('app/(tabs)/policies.tsx');
+const datePicker = read('components/ui/partner-date-picker.tsx');
+for (const phrase of [
+  "KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}",
+  "selectedDatePreset(draftFromDate,draftToDate)===option.key",
+  "styles.advancedPresetSelected",
+  "styles.advancedPresetTextSelected",
+  '<PartnerDatePicker directSelect label="From"',
+  '<PartnerDatePicker directSelect label="To"',
+  '<Text style={styles.sortSectionLabel}>Date Range</Text>',
+]) requireText(policies, phrase, 'Policies filter sheet must retain keyboard-safe direct date selection and highlighted presets: ' + phrase);
+if (policies.includes('<Text style={styles.sortSectionLabel}>Source</Text>') ||
+    policies.includes('<Text style={styles.sortSectionLabel}>RM</Text>')) {
+  throw new Error('Do not duplicate Source/RM headings above their search inputs');
+}
+for (const phrase of [
+  "directSelect?: boolean",
+  "open && directSelect",
+  "calendarCells.map((day, index)",
+  "onPress={() => { void partnerSelectionHaptic(); onChange(day); setOpen(false); }}",
+  "accessibilityState={{ disabled: outside, selected }}",
+  "Platform.OS === 'ios' && !directSelect",
+]) requireText(datePicker, phrase, 'Direct-select date filter must close on valid day tap while preserving shared picker behavior: ' + phrase);
+
 const claims = read('app/(tabs)/claims.tsx');
 const renewals = read('app/renewals.tsx');
 const policyIntakes = read('app/policy-intakes.tsx');
