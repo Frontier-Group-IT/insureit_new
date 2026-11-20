@@ -142,7 +142,7 @@ export default function LifeHealthCaseDetailScreen(){
  const [documents,setDocuments]=useState<LifeHealthDocument[]>([]);
  const [activities,setActivities]=useState<LifeHealthActivity[]>([]);
  const [infoTab,setInfoTab]=useState<'activity'|'remarks'>('activity');
- const [expandedCaseTab,setExpandedCaseTab]=useState<'activity'|'remarks'|null>(null);
+ const [expandedCaseTab,setExpandedCaseTab]=useState<'activity'|'remarks'>('activity');
  const [remarkOpen,setRemarkOpen]=useState(false);
  const [remarkDraft,setRemarkDraft]=useState('');
  const [remarkSaving,setRemarkSaving]=useState(false);
@@ -578,10 +578,10 @@ export default function LifeHealthCaseDetailScreen(){
       {(record.status_group==='pending'||record.status_group==='rejected')?(
         <View style={styles.activityCard}>
           <View style={styles.tabs}>
-            {(['activity','remarks'] as const).map(tab=><Pressable key={tab} accessibilityRole="button"
+            {(['activity','remarks'] as const).map(tab=><Pressable key={tab} accessibilityRole="tab"
               accessibilityLabel={tab==='activity'?'Activity Status':'Remarks'}
-              accessibilityState={{expanded:expandedCaseTab===tab}}
-              onPress={()=>setExpandedCaseTab(previous=>previous===tab?null:tab)}
+              accessibilityState={{selected:expandedCaseTab===tab}}
+              onPress={()=>setExpandedCaseTab(tab)}
               style={[styles.tab,expandedCaseTab===tab&&styles.tabActive]}>
               <Text style={[styles.tabText,expandedCaseTab===tab&&styles.tabTextActive]}>
                 {tab==='activity'?'Activity Status':'Remarks'}
@@ -954,11 +954,11 @@ const styles=StyleSheet.create({
   disabledAction:{opacity:0.56},
   document:{width:'100%',flexDirection:'row',alignItems:'center',gap:1,minHeight:45,backgroundColor:'#E9FAF0',borderWidth:1,borderColor:'#A6E1C5',borderRadius:9,overflow:'hidden'},
   documentName:{flex:1,fontSize:11,fontWeight:'600',color:navy},
-  tabs:{flexDirection:'row',alignItems:'center',gap:6},
-  tab:{paddingHorizontal:12,paddingVertical:9,borderRadius:9,backgroundColor:'#EDF3FB'},
-  tabActive:{backgroundColor:navy},
-  tabText:{fontSize:11,fontWeight:'700',color:navy},
-  tabTextActive:{color:'#FFFFFF'},
+  tabs:{flexDirection:'row',alignItems:'stretch',backgroundColor:'#FFFFFF',borderBottomWidth:1,borderBottomColor:'#E7EAF0'},
+  tab:{flex:1,minWidth:0,minHeight:44,paddingHorizontal:8,paddingVertical:10,alignItems:'center',justifyContent:'center',borderBottomWidth:3,borderBottomColor:'transparent',backgroundColor:'#FFFFFF'},
+  tabActive:{borderBottomColor:'#2582F8'},
+  tabText:{fontSize:11,fontWeight:'600',color:'#52627A',textAlign:'center'},
+  tabTextActive:{color:'#0A234A'},
   activity:{borderTopWidth:1,borderTopColor:'#ECF0F6',paddingTop:10,gap:4},
   activityRow:{flexDirection:'row',alignItems:'flex-start',justifyContent:'space-between',gap:8},
   activityDetails:{flex:1,minWidth:0,gap:4},
