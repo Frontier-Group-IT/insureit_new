@@ -52,6 +52,9 @@ jobs:
       - name: Verify Claims unified segmented filters
         run: node apps/partner-app/scripts/verify-claims-unified-segment-filter.mjs
 
+      - name: Verify Protection delivered journey banner
+        run: node apps/partner-app/scripts/verify-impact-journey-banner.mjs
+
       - name: Require synchronized dependency lockfile
         shell: bash
         run: |
