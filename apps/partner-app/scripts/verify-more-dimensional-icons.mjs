@@ -29,6 +29,8 @@ for (const kind of ['search','policy-intake','renewals','customers','week',
 assert.match(more, /<View style=\{styles\.sectionRows\}>\{children\}<\/View>/, 'Every More section must share a rounded white card container');
 assert.match(more, /sectionRows: \{[\s\S]*?overflow: 'hidden',[\s\S]*?borderRadius: 16,[\s\S]*?backgroundColor: partnerTheme\.colors\.surface,[\s\S]*?borderWidth: 1,[\s\S]*?borderColor: partnerTheme\.colors\.line,[\s\S]*?\.\.\.partnerTheme\.shadowSoft/, 'More section cards must have a clipped rounded white surface, light border and soft shadow');
 assert.match(more, /paddingHorizontal: 13,/, 'Rows must have inset horizontal padding inside the rounded cards');
+assert.match(more, /menuRow: \\{[\\s\\S]*?minHeight: 62,[\\s\\S]*?paddingVertical: 5,/, 'Compact menu rows must retain a consistent usable height and inset');
+assert.match(more, /section: \\{\\s*marginTop: 10,/, 'Compact More sections must reduce vertical gaps');
 assert.match(more, /!last && styles\.menuRowDivider/, 'Dividers must separate adjacent menu items');
 assert.match(more, /borderBottomWidth: 1/, 'Dividers must be clearly visible, not hairline-faded');
 assert.match(more, /borderBottomColor: '#E6EAF0'/, 'Dividers must use subtle reference-style light gray');
