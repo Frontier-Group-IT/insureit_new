@@ -196,8 +196,13 @@ export function assessAiPolicyIntake(input: AiPolicyEvidence): AiAssessment {
     const fields = new Map(input.fields.map(field => [field.key, field.value.trim()]));
     // The old kW-only requirement is valid for ICICI 3005 and electric
     // two-wheelers, but not for petrol/diesel Tata AIG private cars.
+    const saod = parser?.family==="tata_private_car"
+      && fields.get("policy_product")?.toLowerCase()==="stand-alone own damage";
     const required: string[]=[...requiredFields].filter(key =>
-      key!=="vehicle_motor_power_kw" || (parser?.family!=="tata_private_car" && parser?.family!=="commercial"));
+      // Standalone Own Damage does not issue new TP cover. Existing TP dates
+      // may be printed as reference, but cannot be mandatory for OD extraction.
+      !(saod && key==="third_party_end_date")
+      && (key!=="vehicle_motor_power_kw" || (parser?.family!=="tata_private_car" && parser?.family!=="commercial")));
     if (parser?.family==="tata_private_car" || parser?.family==="tata_two_wheeler" || parser?.family==="commercial") {
       required.push("vehicle_capacity","vehicle_registration_status","vehicle_rto_state");
       if (fields.get("vehicle_registration_status")?.toLowerCase()==="registered") {
