@@ -39,12 +39,12 @@ function output(issuer,parserId,base,premium,specific={},warnings=[]) {
 }
 function newIndia(t){
  const p=grab(t,/\bPolicy Number\s*:\s*(\d{20})\b/i);
- const insured=grab(t,/Insured['’]s Name\s*\n\s*([^\n]{3,100})/i)||grab(t,/Insured['’]s Name\s+(.+?)\s{2,}Customer ID/i);
+ const insured=grab(t,/Insured['’]s Name\s*\n\s*([^\n]{3,100})/i)||grab(t,/Insured['’]s Name\s+(.+?)\s+Customer ID/i);
  const cleanInsured=insured?.replace(/\s+\.$/,'').replace(/\s{2,}.+$/,'').trim()||null;
  const [start,end]=period(t);
  const issue=validDate(grab(t,/Date of Issue\s*:\s*(\d{2}\/\d{2}\/\d{4})/i));
  const reg=grab(t,/\bRegistration no\.\s*([A-Z]{2}[- ]?\d{2}(?:[- ][A-Z]{1,3})?(?:[- ]?\d{1,4})?)/i);
- const makeModel=(grab(t,/Make\/Model:\s*\n\s*([^\n]+?\s*\/\s*[^\n]+)/i)||grab(t,/Make\/Model:\s*([^\n]{4,80}?)\s{2,}Registration no\./i)||'').trim();
+ const makeModel=(grab(t,/Make\/Model:\s*\n\s*([^\n]+?\s*\/\s*[^\n]+)/i)||grab(t,/Make\/Model:\s*([^\n]{4,130}?)\s+Registration no\./i)||'').trim();
  const mm=makeModel.match(/^([^\n\/]{2,40})\s*\/\s*([^\n]{2,65})/);
  let model=mm?.[2]?.trim()||null;
  if(model && /\s{3,}/.test(model))model=model.split(/\s{3,}/)[0];
