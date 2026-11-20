@@ -49,22 +49,22 @@ const classifierSource=bridge.match(/function insurerForText\(head: string\): In
 assert.ok(classifierSource,"Insurer classifier must be present");
 const classifier=new Function(
  classifierSource.replace("head: string", "head").replace(": Insurer | null", "")
- +"\\nreturn insurerForText;"
+ +"\nreturn insurerForText;"
 )();
-const newIndiaHeader="THE NEW INDIA ASSURANCE CO. LTD.\\n"
- +"POLICY SCHEDULE CUM CERTIFICATE OF INSURANCE\\n"
+const newIndiaHeader="THE NEW INDIA ASSURANCE CO. LTD.\n"
+ +"POLICY SCHEDULE CUM CERTIFICATE OF INSURANCE\n"
  +"Commercial Vehicle Package Policy Enhanced Covers";
 assert.equal(classifier(newIndiaHeader),"new_india_cv_native_pdf",
  "New India Enhanced Covers must route to the trained commercial validator, not ICICI");
 assert.equal(classifier(newIndiaHeader.replace("ASSURANCE CO. LTD.","ASSURANCE CO LTD")),
  null,"Do not widen matching to an unverified issuer heading");
-assert.equal(classifier("IFFCO TOKIO GENERAL INSURANCE\\nCOMMERCIAL VEHICLE CERTIFICATE"),
+assert.equal(classifier("IFFCO TOKIO GENERAL INSURANCE\nCOMMERCIAL VEHICLE CERTIFICATE"),
  "iffco_tokio_cv_native_pdf","IFFCO routing must stay intact");
-assert.equal(classifier("Go Digit General Insurance\\nDigit Commercial Vehicle Insurance"),
+assert.equal(classifier("Go Digit General Insurance\nDigit Commercial Vehicle Insurance"),
  "go_digit_cv_native_pdf","Go Digit routing must stay intact");
-assert.equal(classifier("ICICI LOMBARD GENERAL INSURANCE\\nPackage Policy"),
+assert.equal(classifier("ICICI LOMBARD GENERAL INSURANCE\nPackage Policy"),
  null,"ICICI must remain outside the non-Tata classifier");
-assert.equal(classifier("TATA AIG GENERAL INSURANCE\\nCommercial Vehicle Package Policy"),
+assert.equal(classifier("TATA AIG GENERAL INSURANCE\nCommercial Vehicle Package Policy"),
  null,"Tata must remain outside the non-Tata classifier");
 
 assert.ok(bridge.includes("pages.slice(0, 3)"),
