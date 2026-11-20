@@ -1,11 +1,12 @@
 import { partnerAlert } from '@/components/ui/partner-alert-provider';
+import { PartnerConfirmDialog } from '@/components/ui/partner-confirm-dialog';
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { canPartnerAccess } from '@/lib/partner-permissions';
 import { PartnerStackBottomNavigation, type PartnerTabDestination } from '@/components/partner-stack-bottom-navigation';
 import { PartnerPolicyCalendarDialog } from '@/components/policy-intakes/partner-policy-calendar-dialog';
@@ -122,6 +123,7 @@ async function authenticatedRequest(method: 'GET' | 'POST', body?: unknown) {
 export default function AddPartnerScreen() {
   const router = useRouter();
   const { width, fontScale } = useWindowDimensions();
+  const safeAreaInsets = useSafeAreaInsets();
   const twoColumns = width >= 350 && fontScale <= 1.3;
   const cellStyle = twoColumns ? styles.halfField : styles.fullField;
   const { context } = usePartnerSession();
@@ -129,6 +131,15 @@ export default function AddPartnerScreen() {
     && canPartnerAccess(context, 'create_intermediary_application', 'edit');
   const [form, setForm] = useState(initial);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [validationAlert, setValidationAlert] = useState<{field:Field;message:string}|null>(null);
+  const [uploadSuccessToken, setUploadSuccessToken] = useState(0);
+  const [showUploadBadge, setShowUploadBadge] = useState(false);
+  useEffect(() => {
+    if (!uploadSuccessToken) return;
+    setShowUploadBadge(true);
+    const timeout = setTimeout(() => setShowUploadBadge(false), 1000);
+    return () => clearTimeout(timeout);
+  }, [uploadSuccessToken]);
   const scrollRef = useRef<ScrollView>(null);
   const sectionPositions = useRef<Record<number, number>>({});
   const bodyPositions = useRef<Record<number, number>>({});
@@ -238,7 +249,7 @@ export default function AddPartnerScreen() {
     const firstInvalid = validationOrder.find(key => errors[key]);
     if (firstInvalid) {
       Keyboard.dismiss();
-      revealFirstError(firstInvalid);
+      setValidationAlert({field:firstInvalid,message:errors[firstInvalid]!});
       return null;
     }
     setSaving(true);
@@ -293,7 +304,7 @@ export default function AddPartnerScreen() {
       const data = await response.json() as { ok?: boolean; error?: string };
       if (!response.ok || !data.ok) throw new Error(data.error || 'Document upload failed.');
       setUploaded(previous => ({ ...previous, [type]: file.name }));
-      partnerAlert('Uploaded', `${file.name} saved successfully.`);
+      setUploadSuccessToken(previous => previous + 1);
     } catch (error) {
       partnerAlert('Upload failed', error instanceof Error ? error.message : 'Try again.');
     } finally {
@@ -337,6 +348,10 @@ export default function AddPartnerScreen() {
             <Ionicons name="person-add-outline" size={22} color="#FFFFFF" />
             <Text style={styles.heading}>Add Partner</Text>
           </View>
+          {showUploadBadge && !uploadOpen ? <View style={styles.uploadSuccessBadge} accessibilityRole="alert">
+            <Ionicons name="checkmark-circle" size={17} color="#16805C"/>
+            <Text style={styles.uploadSuccessBadgeText}>Uploaded</Text>
+          </View> : null}
         </View>
         <ScrollView ref={scrollRef} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
           <View style={styles.typeSwitch} accessibilityLabel="Partner onboarding type">{(["posp","misp"] as const).map(type=><Pressable key={type} accessibilityRole="button" accessibilityLabel={type.toUpperCase()} accessibilityState={{selected:partnerType===type}} onPress={()=>changePartnerType(type)} style={[styles.typeOption,partnerType===type&&styles.typeSelected]}><Text style={[styles.typeText,partnerType===type&&styles.typeSelectedText]}>{type.toUpperCase()}</Text></Pressable>)}</View>
@@ -355,7 +370,6 @@ export default function AddPartnerScreen() {
                       <Text style={styles.selectText} numberOfLines={1}>{banks.find(x => x.id === form.bank_id)?.name || (loading ? 'Loading banks…' : 'Select bank')}</Text>
                       <Ionicons name="chevron-down" size={17} color="#17365D" />
                     </Pressable>
-                    {fieldErrors.bank_id ? <Text style={styles.fieldError} accessibilityRole="alert">{fieldErrors.bank_id}</Text> : null}
                   </View>
                 ) : null}
                 {section.inputs.map(field => (
@@ -376,7 +390,6 @@ export default function AddPartnerScreen() {
                           autoCorrect={false} maxLength={field.key === 'address' ? 300 : field.key === 'aadhaar_number' ? 12 : 150}
                           style={[styles.input, fieldErrors[field.key] && styles.invalidControl]} />
                       )}
-                      {fieldErrors[field.key] ? <Text style={styles.fieldError} accessibilityRole="alert">{fieldErrors[field.key]}</Text> : null}
                     </View>
                     {field.key === 'document_received_at' ? (
                       <View style={[styles.field, cellStyle]} onLayout={event => { fieldPositions.current.associate_employee_id = event.nativeEvent.layout.y; }}>
@@ -385,7 +398,6 @@ export default function AddPartnerScreen() {
                           <Text style={styles.selectText} numberOfLines={1}>{rms.find(x => x.id === form.associate_employee_id)?.name || (loading ? 'Loading RMs…' : 'Select RM')}</Text>
                           <Ionicons name="chevron-down" size={17} color="#17365D" />
                         </Pressable>
-                        {fieldErrors.associate_employee_id ? <Text style={styles.fieldError} accessibilityRole="alert">{fieldErrors.associate_employee_id}</Text> : null}
                       </View>
                     ) : null}
                   </Fragment>
@@ -420,6 +432,10 @@ export default function AddPartnerScreen() {
         />
         <Modal visible={uploadOpen} transparent animationType="fade" onRequestClose={() => { if (!uploadingType) setUploadOpen(false); }}>
           <View style={styles.modalBackdrop}>
+            {showUploadBadge ? <View pointerEvents="none" style={[styles.uploadSuccessBadge,styles.uploadSuccessOverlay,{top:Math.max(12,safeAreaInsets.top+8)}]} accessibilityRole="alert">
+              <Ionicons name="checkmark-circle" size={17} color="#16805C"/>
+              <Text style={styles.uploadSuccessBadgeText}>Uploaded</Text>
+            </View> : null}
             <Pressable style={StyleSheet.absoluteFillObject} accessibilityLabel="Close document popup"
               onPress={() => { if (!uploadingType) setUploadOpen(false); }} />
             <View style={styles.documentModalCenter} pointerEvents="box-none">
@@ -473,6 +489,19 @@ export default function AddPartnerScreen() {
             </View>
           </View>
         </Modal>
+        <PartnerConfirmDialog
+          visible={validationAlert!==null}
+          title="Action required"
+          message={validationAlert?.message??''}
+          kind="error"
+          actions={[{label:'OK',onPress:()=>{
+            const invalidField=validationAlert?.field;
+            setValidationAlert(null);
+            if(invalidField)revealFirstError(invalidField);
+          }}]}
+          onCancel={()=>setValidationAlert(null)}
+          dismissible={false}
+        />
         <Modal visible={selector !== null} transparent animationType="fade" onRequestClose={closeSelector}>
           <View style={styles.modalBackdrop}>
             <Pressable style={StyleSheet.absoluteFillObject} accessibilityLabel="Close selection popup" onPress={closeSelector} />
@@ -529,6 +558,9 @@ const styles = StyleSheet.create({
   header: { height: 54, backgroundColor: '#071E49', borderBottomWidth: 1, borderBottomColor: '#071E49', paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', gap: 14 },
   heading: { fontSize: 17, color: '#FFFFFF', fontWeight: '800' },
   headerTitleGroup: { flexDirection: 'row', alignItems: 'center', gap: 9, flexShrink: 1 },
+  uploadSuccessBadge: {marginLeft:'auto',flexDirection:'row',alignItems:'center',gap:5,backgroundColor:'#E7F8EE',borderRadius:999,paddingHorizontal:10,minHeight:30},
+  uploadSuccessBadgeText: {color:'#16805C',fontSize:11,fontWeight:'700'},
+  uploadSuccessOverlay: {position:'absolute',right:16,zIndex:15,elevation:15},
   content: { padding: 12, paddingBottom: 35, gap: 12 },
   typeSwitch:{flexDirection:'row',width:'100%',padding:4,backgroundColor:'#E4EAF5',borderRadius:12,borderWidth:1,borderColor:'#CED8E7'},
   typeOption:{flex:1,minHeight:42,alignItems:'center',justifyContent:'center',borderRadius:9},typeSelected:{backgroundColor:'#17365D'},typeText:{fontWeight:'800',fontSize:13,color:'#4D5F7B'},typeSelectedText:{color:'#FFFFFF'},
