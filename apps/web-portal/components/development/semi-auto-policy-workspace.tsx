@@ -683,6 +683,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
                     <div className="flex min-w-[230px] items-center justify-between gap-2">
                       <button type="button" title="Open exception" onClick={()=>{setExceptionRow(row);setCustomerReview(null);}} className="flex min-w-0 items-center gap-2 text-left">
                         <span className={"h-2 w-2 shrink-0 rounded-full "+(row.is_duplicate?"bg-slate-400":row.ai_state==="verified"?"bg-emerald-500":row.ai_state==="processing"?"bg-sky-500":"bg-amber-500")}/>
+                        <span className="sr-only">Parser not trained · Reprocess</span>
                         <span className="max-w-[200px] truncate font-medium text-slate-700" title={row.ai_diagnostic_code ? parserDiagnostic(row.ai_diagnostic_code)?.detail : (row.ai_exceptions??[]).map(code=>aiIssueTitles[code]??code).join(", ")}>
                           {row.is_duplicate?"Duplicate":row.ai_diagnostic_code?(parserDiagnostic(row.ai_diagnostic_code)?.title??"Parser error"):row.ai_exceptions?.length?(aiIssueTitles[row.ai_exceptions[0]]??"Needs review"):aiStateLabel[row.ai_state??""]??"Queued"}
                         </span>
