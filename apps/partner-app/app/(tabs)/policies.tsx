@@ -565,7 +565,7 @@ export default function PoliciesScreen() {
             accessibilityHint="Opens Period, Source, RM, Date Range and Policy Status filters"
             onPress={openSortSheet}
             style={({ pressed }) => [styles.sortFloatingButton, pressed && styles.sortFloatingPressed]}>
-            <Ionicons name="swap-vertical" size={17} color="#FFFFFF"/>
+            <Ionicons name="swap-vertical" size={17} color="#182B56"/>
             <Text style={styles.sortFloatingLabel}>Sort</Text>
           </Pressable>
         </View>
@@ -967,9 +967,9 @@ const styles = StyleSheet.create({
   },
   filterText: { color: '#3156B8', ...partnerTheme.typography.caption, fontWeight: '500' },
   sortFloatingPosition: { position: 'absolute', bottom: 16, left: 0, right: 0, alignItems: 'center', zIndex: 25, elevation: 8 },
-  sortFloatingButton: { minHeight: 46, minWidth: 110, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9, paddingHorizontal: 22, borderRadius: 999, backgroundColor: '#071E49', shadowColor: '#071E49', shadowOpacity: 0.24, shadowRadius: 7, shadowOffset: { width: 0, height: 3 }, elevation: 6 },
-  sortFloatingPressed: { backgroundColor: '#174177' },
-  sortFloatingLabel: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
+  sortFloatingButton: { minHeight: 46, minWidth: 110, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9, paddingHorizontal: 22, borderRadius: 999, backgroundColor: '#F0EBFF', shadowColor: '#7D68A9', shadowOpacity: 0.18, shadowRadius: 7, shadowOffset: { width: 0, height: 3 }, elevation: 6 },
+  sortFloatingPressed: { backgroundColor: '#E4DAFA' },
+  sortFloatingLabel: { color: '#182B56', fontSize: 13, fontWeight: '700' },
   sortOverlay:{flex:1,justifyContent:'flex-end',backgroundColor:'rgba(16,30,66,0.73)'},
   sortSheet:{backgroundColor:'#FFFFFF',borderTopLeftRadius:24,borderTopRightRadius:24,paddingHorizontal:18,paddingTop:10},
   sortSheetHeader:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',paddingBottom:8,borderBottomWidth:1,borderColor:'#E4E5F1'},
