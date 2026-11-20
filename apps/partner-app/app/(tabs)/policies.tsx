@@ -566,7 +566,7 @@ export default function PoliciesScreen() {
             onPress={openSortSheet}
             style={({ pressed }) => [styles.sortFloatingButton, pressed && styles.sortFloatingPressed]}>
             <Ionicons name="swap-vertical" size={17} color="#182B56"/>
-            <Text style={styles.sortFloatingLabel}>Sort</Text>
+            <Text style={styles.sortFloatingLabel}>Sort by</Text>
           </Pressable>
         </View>
       ) : null}
