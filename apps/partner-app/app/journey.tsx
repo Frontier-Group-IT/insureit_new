@@ -83,7 +83,7 @@ export default function JourneyScreen() {
               <View style={styles.milestoneCopy}>
                 <Text style={styles.milestoneEyebrow}>NEXT MILESTONE</Text>
                 <Text style={styles.heroTitle} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72} accessibilityLabel={data.next_milestone.title}>{data.next_milestone.title}</Text>
-                <Text style={styles.milestoneSubtitle} numberOfLines={1}>Keep going, you're on track!</Text>
+                <Text style={styles.milestoneSubtitle} numberOfLines={1}>{"Keep going, you're on track!"}</Text>
               </View>
               <CircularMilestoneProgress progress={progress} current={data.next_milestone.current} target={data.next_milestone.target} />
             </View>
