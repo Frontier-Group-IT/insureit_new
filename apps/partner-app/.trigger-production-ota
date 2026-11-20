@@ -1,9 +1,9 @@
 Partner production OTA trigger
-release=partner-policy-filters-pr-4940
+release=partner-period-outline-pr-4948
 source=verified-merged-main
-source_pr=4940
-source_merge=0af90ffbcc8fe0645e8163b42963215059957229
-reason=user-approved-merge-and-publish-keyboard-aware-sort-date-presets-direct-select-calendar
+source_pr=4948
+source_merge=0fe7738fe9b436e145c365151db9526aa1a60dcc
+reason=user-approved-merge-and-publish-white-outline-mtd-all-period
 channel=production
 runtime=0.2.0
 requested=2026-11-20
