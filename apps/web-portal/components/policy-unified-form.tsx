@@ -245,7 +245,7 @@ export function PolicyUnifiedForm({ mode, insurers, customers = [], rms, sources
     const groups=[
       [form.issuanceDate,form.businessLine,form.intermediaryType,form.leadSource,form.rmName,form.intermediaryCode],
       vehicleIdentityFields,
-      [form.policyProduct,form.policyNo,form.insurerId,form.idv,form.od,form.tp,...(form.vehicleClass==="GCV"?[form.cpa]:[]),form.validFrom,form.validUpto],
+      [form.policyProduct,form.policyNo,form.insurerId,form.idv,form.od,form.tp,form.validFrom,form.validUpto],
     ];
     return groups.map(values=>{const filled=values.filter(value=>String(value??"").trim()!=="").length;return{filled,total:values.length,complete:filled===values.length,empty:filled===0,remaining:values.length-filled};});
   },[form,vehicleRegistrationMode,isCpmClass]);
