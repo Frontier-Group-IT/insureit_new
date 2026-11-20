@@ -75,7 +75,7 @@ export default function RecognitionScreen() {
               {data.items.map((item) => (
                 <View key={item.code} style={styles.card}>
                   <View style={styles.artworkTile}>
-                    <Image source={milestoneArtwork(item.icon)} style={styles.achievementArtwork} resizeMode="contain" />
+                    <Image source={milestoneArtwork(item.icon, item.title)} style={styles.achievementArtwork} resizeMode="contain" />
                   </View>
                   <View style={styles.verticalRule} />
                   <View style={styles.achievementHeading}>
@@ -143,10 +143,10 @@ export default function RecognitionScreen() {
   );
 }
 
-function milestoneArtwork(icon: RecognitionItem['icon']): ImageSourcePropType {
+function milestoneArtwork(icon: RecognitionItem['icon'], title: string): ImageSourcePropType {
   if (icon === 'learn') return PartnerAssets.actions.policyChecklist;
   if (icon === 'renewal') return PartnerAssets.actions.renewalsReference;
-  if (icon === 'claim') return PartnerAssets.actions.quickClaims;
+  if (/claim/i.test(title)) return PartnerAssets.actions.quickClaims;
   return PartnerAssets.status.journey;
 }
 
