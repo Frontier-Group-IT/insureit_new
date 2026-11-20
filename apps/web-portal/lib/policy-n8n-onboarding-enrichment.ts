@@ -76,11 +76,24 @@ export function splitN8nRtoStateAndCity(raw: string) {
  */
 export function enrichVerifiedN8nOnboardingFields<T extends N8nPrefillField>(
   rawFields: readonly T[],
+  parserId?: string,
 ): N8nPrefillField[] {
   const fields: N8nPrefillField[] = rawFields.filter(field => ALLOWED_N8N_ONBOARDING_KEYS.has(field.key)).map(field => ({
     key: field.key, label: field.label, value: field.value,
   }));
   const get = (key: string) => fields.find(field => field.key === key)?.value.trim() ?? "";
+
+  // Digit labels its combined OD+TP policy "Digit Commercial Vehicle Insurance"
+  // rather than "Package". Only the strict verified Digit 18-check parser may
+  // normalize that into the canonical form's Package selection. Do not apply
+  // this alias to generic OCR, ICICI, Tata, IFFCO, or New India.
+  if (parserId === "go_digit_cv_native_pdf"
+      && get("policy_product") === "Digit Commercial Vehicle Insurance"
+      && /miscellaneous/i.test(get("vehicle_class"))
+      && Number(get("od_premium")) > 0 && Number(get("tp_premium")) > 0) {
+    const product = fields.find(field => field.key === "policy_product");
+    if (product) product.value = "Package";
+  }
   const add = (key: string, value: string, label: string) => {
     if (value && !get(key)) fields.push({ key, label, value });
   };
