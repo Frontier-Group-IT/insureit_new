@@ -50,9 +50,10 @@ assert.match(customers, /<PartnerStackBottomNavigation activeTab="business" \/>/
 assert.doesNotMatch(customers, /<NavItem icon=/, 'Customers must not restore separate white navigation tabs');
 
 assert.ok(learn.includes('navyStatusBar bottomNavigationNavy bottomNavigation={<PartnerCaseBottomNavigation activeTab="More" />}'), 'Learn keeps five-tab navy footer');
-assert.ok(learn.includes("backgroundColor: '#07347C'") && learn.includes("height: 94,"), 'Learn matches the approved blue stopwatch reference header');
-assert.ok(learn.includes('headerArtwork: { width: 35, height: 43 }'), 'Learn stopwatch is compact at 50% of the reference-rendered size');
-assert.ok(learn.includes("referenceTitle: { color: '#FFFFFF', fontSize: 17") && learn.includes("headerSubtitle: { color: '#B7CBF5', fontSize: 11"), 'Learn title and subtitle use the approved compact sizes');
+assert.ok(learn.includes("backgroundColor: '#0A234A'") && learn.includes("height: 64,"), 'Learn uses the compact solid navy header');
+assert.ok(learn.includes('headerArtwork: { width: 27, height: 33 }'), 'Learn stopwatch uses the approved reduced size');
+assert.ok(learn.includes("referenceTitle: { color: '#FFFFFF', fontSize: 15") && learn.includes("headerSubtitle: { color: '#C1D0E7', fontSize: 10"), 'Learn title and subtitle use the approved smaller font sizes');
+assert.ok(!learn.includes('styles.headerGlow') && !learn.includes('styles.headerCurve'), 'Learn header must have no decorative curves');
 assert.ok(learn.includes('Learn • Practice • Grow'), 'Learn reference subtitle is displayed');
 assert.ok(renewal.includes("backgroundColor: '#071E49'"), 'Renewals reference remains navy');
 assert.match(bar, /canPartnerAccess\(context, 'view_claims'\)/, 'Claims tab permission retained');
