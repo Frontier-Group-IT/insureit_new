@@ -962,7 +962,7 @@ requireText(renewalScreen, 'navyStatusBar', 'Renewal Work Queue must retain its 
 // Policy list MTD / All bottom sheet, scoped database date/status filtering and counts.
 const periodPolicyLib = read('lib/policies.ts');
 const periodSql = fs.readFileSync(path.join(root,'../../supabase/migrations/20261119113000_partner_policy_period_status_filters.sql'),'utf8');
-for(const phrase of ["setSortSheetOpen(true)","Sort by","MTD","All","sheetStatuses.map","Apply Filter","setPeriod(draftPeriod)","setLifecycle(draftLifecycle)","periodCounts.data?.[draftPeriod]?.[option.value]","styles.sortFloating"]) {
+for(const phrase of ["setSortSheetOpen(true)","Sort by","MTD","All","sheetStatuses.map","Apply Filter","setPeriod(draftPeriod)","setLifecycle(draftLifecycle)","draftStatusCounts?.[option.value]","styles.sortFloating"]) {
   requireText(policies,phrase,'Policy period/status bottom sheet is missing '+phrase);
 }
 for(const phrase of ["period,","policies:list:${period}:${lifecycle}","[period, lifecycle, debouncedSearch, businessLine, source, rm, fromDate, toDate]","setVisibleLimit(PAGE_SIZE)"]) {
