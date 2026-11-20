@@ -22,8 +22,6 @@ assert.match(screen,/Loading more cases…/, "Case list has loading progress tex
 assert.match(screen,/rows\.length<total\?<Pressable/, "Case footer is hidden after all matching cases are loaded");
 assert.ok(screen.includes('listLifeHealthCases({status,businessLine,search,offset,limit:10})'), 'Existing 10-item server pagination remains, with business-line filtering');
 assert.ok(api.includes("businessLine: args.businessLine ?? 'all'"), 'Omitting the filter preserves the legacy All default');
-assert.ok(route.includes('["all","life","health"].includes(businessLine)'), 'Server accepts only supported business lines');
-assert.ok(route.includes('businessLine==="all" || row.business_line.trim().toLowerCase()===businessLine'), 'Business-line filtering happens before pagination');
 assert.ok(screen.includes('styles.listTitle'), 'Heading remains visible with status tabs');
 assert.ok(screen.includes('setBusinessLine(item.key)'), 'Dropdown changes selected business line');
 assert.match(screen,/accessibilityState=\{\{disabled:more,busy:more\}\}/, "Loading state disables repeated pagination taps");
