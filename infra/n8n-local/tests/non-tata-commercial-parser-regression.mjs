@@ -94,6 +94,19 @@ const digitText=[
 const d=parseNonTata(digitText);
 assert.equal(d.ok,true,JSON.stringify(d.warnings));
 assert.equal(d.parser_id,'go_digit_cv_native_pdf');
+const digitRawName = digitText.replace(
+  'Name MR SAMPLE POLICYHOLDER             Vehicle Registration No.',
+  'Name MR SAMPLE POLICYHOLDER Vehicle Registration No.',
+);
+const rawNameResult=parseNonTata(digitRawName);
+assert.equal(rawNameResult.ok,true,JSON.stringify(rawNameResult.warnings));
+assert.equal(field(rawNameResult,'insured_name'),'MR SAMPLE POLICYHOLDER');
+assert.equal(rawNameResult.checks.insured_name_verified,true);
+// An absent identity must still be rejected rather than guessed.
+const digitNoName=parseNonTata(digitRawName.replace('Name MR SAMPLE POLICYHOLDER ', ''));
+assert.equal(digitNoName.checks.insured_name_verified,false);
+assert.equal(digitNoName.ok,false);
+
 assert.deepEqual([d.premium_components.od,d.premium_components.tp,d.premium_components.net,d.premium_components.gst,d.premium_components.gross],[2415.46,7647,10062.46,1811.24,11873.7]);
 const unknown=parseNonTata('UNTRAINED LIFE INSURER DOCUMENT 12345');
 assert.equal(unknown.ok,false);assert.equal(unknown.auto_finalize_allowed,false);
