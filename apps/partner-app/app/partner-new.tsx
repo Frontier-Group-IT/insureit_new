@@ -347,7 +347,6 @@ export default function AddPartnerScreen() {
           const result = await response.json() as { ok?: boolean; error?: string; partner_id?: string };
           if (!response.ok || !result.ok || !result.partner_id) throw new Error(result.error || 'Partner ID could not be issued.');
           setIssuedPartnerId(result.partner_id);
-          setPendingPartners(previous => previous.filter(item => item.id !== applicationId));
           setUploadOpen(false);
           partnerAlert('Partner ID Issued', `Partner ID: ${result.partner_id}`, [
             { text: 'Done', onPress: () => router.replace('/(tabs)/policies') },
