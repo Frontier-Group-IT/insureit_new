@@ -38,7 +38,8 @@ assert.match(component,/n8nResult\.preview\.commercialPremium\.gross/);
 assert.match(eligibility,/profile\.family==="commercial"/);
 assert.match(queue,/ICICI_N8N_IDS\.has\(extraction\.preview\.parserId\)/);
 assert.match(actions,/extracted\.preview\.premium \|\| extracted\.preview\.commercialPremium/);
-assert.match(actions,/extracted\.preview\.checksPassed!==13/);
+assert.match(actions,/!hasVerifiedN8nParserEvidence\(extracted\.preview\.parserId,/,
+  "Confirmed bulk conversion requires exact trained insurer checks, including Tata 18/18");
 assert.match(oldBridge,/insureit-policy-intake-icici-v1/);
 assert.doesNotMatch(signed,/supabaseAdmin|\.from\("policies"\)/);
 assert.doesNotMatch(preview,/auto_finalize_allowed:\s*true/);

@@ -86,8 +86,11 @@ assert(handoff.includes('.eq("intake_id",id).eq("revision",existingDraft.revisio
 assert(ui.includes('Issuance date automatically accepted: '));
 assert(ui.includes('!n8nResult.preview.acceptedIssuanceDate ? ('),
  "Do not demand manual date confirmation for accepted dates");
-assert(actions.includes('extracted.preview.checksPassed!==13'),
- "Never turn Tata automated date eligibility into unreviewed full auto-booking");
+assert(actions.includes('if(confirmed!==true)') &&
+ actions.includes('const booked=await onboardPolicy(payload)') &&
+ actions.includes('hasVerifiedN8nParserEvidence(extracted.preview.parserId,') &&
+ actions.includes('policyDateDecision(issuanceDate)'),
+ "Tata automated date eligibility must NEVER bypass explicit confirmation, verified parser checks, date policy or canonical booking");
 assert(handoff.includes('issuanceDate:verified?(verifiedIssuanceDate||approvedSigningDate):""'),
  "Never prefill a new onboarding draft with today's date when issuance evidence is absent");
 console.log("Tata signing/receipt auto issuance: six policy variants, negative controls, audit and booking gates passed");
