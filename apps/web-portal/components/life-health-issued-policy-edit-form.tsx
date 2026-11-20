@@ -217,26 +217,34 @@ export function LifeHealthIssuedPolicyEditForm({ initial, insurers, sources, act
           <Field label="Sum assured / insured" value={form.sumInsured} onChange={(v)=>set("sumInsured",v.replace(/[^0-9.]/g,""))}/>
           <Field label="Case premium amount" value={form.premiumAmount} onChange={(v)=>set("premiumAmount",v.replace(/[^0-9.]/g,""))}/>
           <div className="min-w-0"><Select label="Payment mode" value={form.paymentMode} onChange={(v)=>set("paymentMode",v)} options={modes}/></div>
-          <div className="col-span-full">
+          <div className="min-w-0">
             <p className={labelClass}>Remarks</p>
-            <button type="button" onClick={()=>{setRemarkError(null);setRemarkDraft("");setRemarksModalOpen(true);}} className="flex min-h-10 w-full items-center justify-center gap-2 rounded-xl border border-[#BFD3F5] bg-[#EEF4FF] px-4 py-2 text-[11px] font-semibold text-[#17365D] transition hover:bg-[#E3EEFF] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315B9A]"><MessageSquareText className="h-4 w-4"/>Add Remark</button>
+            <button type="button" onClick={()=>{setRemarkError(null);setRemarkDraft("");setRemarksModalOpen(true);}} className="flex h-9 w-full items-center justify-center gap-2 rounded-lg border border-[#BFD3F5] bg-[#EEF4FF] px-4 text-[11px] font-semibold text-[#17365D] transition hover:bg-[#E3EEFF] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315B9A]"><MessageSquareText className="h-4 w-4"/>Add Remark</button>
           </div>
         </Section>
       <section aria-label="Onboarding summary" className="rounded-2xl border border-[#D9E2F0] bg-white shadow-sm">
-        <div className="flex items-center justify-between border-b border-[#E5ECF5] p-4"><div><p className="text-[8px] font-bold uppercase tracking-[.08em] text-[#7A8799]">Policy status</p><h2 className="mt-1 text-[13px] font-semibold text-[#17365D]">Onboarding summary</h2></div><span role="progressbar" aria-label="Onboarding completion" aria-valuemin={0} aria-valuemax={100} aria-valuenow={completion} className={`grid h-12 w-12 place-items-center rounded-full border-[5px] text-[10px] font-bold ${completion===100?"border-[#16A34A] bg-[#16A34A] text-white":"border-[#E7EEF7] bg-white text-[#17365D]"}`}>{completion}%</span></div>
+        <div className="flex items-center justify-between border-b border-[#E5ECF5] p-4"><div><p className="text-[8px] font-bold uppercase tracking-[.08em] text-[#7A8799]">Policy status</p><h2 className="mt-1 text-[13px] font-semibold text-[#17365D]">Onboarding summary</h2></div><span role="progressbar" aria-label="Onboarding completion" aria-valuemin={0} aria-valuemax={100} aria-valuenow={completion} className="relative grid h-12 w-12 shrink-0 place-items-center text-[11px] font-bold text-[#6D51DF]">
+          <svg viewBox="0 0 48 48" className="absolute inset-0 h-full w-full -rotate-90" aria-hidden="true">
+            <circle cx="24" cy="24" r="20" fill="none" stroke="#EAE5FA" strokeWidth="4" />
+            <circle cx="24" cy="24" r="20" fill="none" stroke="#6D51DF" strokeWidth="4" strokeLinecap="round" pathLength={100} strokeDasharray={`${completion} 100`} />
+          </svg>
+          <span className="relative">{completion}%</span>
+        </span></div>
         <div className="px-4 pb-2 pt-3">
           <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
             <div className="min-w-0">
-              <p className="text-[9px] font-bold uppercase text-[#667085]">Premium</p>
-              <div className="mt-1 flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">
-                <p className="break-words text-[18px] font-semibold text-[#17365D]">₹{form.finalPremium||"0"}</p>
+              <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                <p className="text-[9px] font-bold uppercase text-[#667085]">Premium</p>
                 <p className="text-[9px] text-[#7A8799]">{form.paymentFrequency||"Frequency pending"} · {form.paymentMode||"Mode pending"}</p>
               </div>
+              <p className="mt-1 break-words text-[18px] font-semibold text-[#17365D]">₹{form.finalPremium||"0"}</p>
             </div>
             {commercialAccess?<div className="ml-auto text-right">
-              <p className={`text-[18px] font-semibold ${commercialCalculations.retention<0?"text-red-600":"text-[#17365D]"}`}>{money(commercialCalculations.retention)}</p>
+              <div className="flex flex-wrap items-baseline justify-end gap-x-2 gap-y-1">
+                <p className="text-[9px] text-[#98A2B3]">After 10% TDS</p>
+                <p className={`text-[18px] font-semibold ${commercialCalculations.retention<0?"text-red-600":"text-[#17365D]"}`}>{money(commercialCalculations.retention)}</p>
+              </div>
               <p className="mt-1 text-[9px] font-bold uppercase tracking-[0.07em] text-[#667085]">Projected retention</p>
-              <p className="mt-0.5 text-[9px] text-[#98A2B3]">After 10% TDS</p>
             </div>:null}
           </div>
         </div>
