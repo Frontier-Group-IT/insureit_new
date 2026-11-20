@@ -114,7 +114,8 @@ assert.match(form, /<PartnerConfirmDialog[\s\S]*?title="Action required"[\s\S]*?
 assert.match(form, /if\(invalidField\)revealFirstError\(invalidField\)/, 'After acknowledgement, the invalid field is revealed');
 assert.match(form, /const \[fieldErrors, setFieldErrors\] = useState<FieldErrors>\(\{\}\)/, 'POSP errors are absent on initial load');
 assert.doesNotMatch(form, /highlightedField/, 'POSP must not highlight the first missing field on page load');
-assert.match(form, /const errors = validatePartner\(form\);\s*setFieldErrors\(errors\);/, 'Save Detail validates and highlights all invalid POSP fields');
+assert.match(form, /const errors = validatePartner\(form\);\s*const firstInvalid = validationOrder\.find\(key => errors\[key\]\);/, 'POSP save validates the full form before selecting the first invalid field');
+assert.match(form, /setFieldErrors\(firstInvalid \? \{ \[firstInvalid\]: errors\[firstInvalid\] \} : \{\}\);/, 'POSP highlights only the first invalid field after Save Detail');
 assert.match(form, /setFieldErrors\(previous => \{/, 'POSP editing rechecks only previously invalid fields');
 assert.match(form, /if \(!previous\[key\]\) return previous;/, 'Untouched POSP fields stay free of premature validation');
 assert.match(form, /validatePartnerField\(key, \{ \.\.\.form, \[key\]: value \}\)/, 'POSP corrected values are checked immediately');
@@ -124,7 +125,9 @@ assert.match(form, /fieldErrors\[field\.key\] && styles\.invalidControl/, 'Every
 assert.match(form, /fieldErrors\.bank_id && styles\.invalidControl/, 'Bank selector highlights independently');
 assert.doesNotMatch(form, /setFieldErrors\(validatePartner\(form\)\)/, 'POSP should not recalculate all errors during typing');
 assert.match(misp, /const \[fieldErrors,setFieldErrors\]=useState<MispErrors>\(\{\}\)/, 'MISP starts with no visible errors');
-assert.match(misp, /const errors=validateMisp\(form\);\s*setFieldErrors\(errors\);/, 'MISP also highlights all missing fields only on Save Detail');
+assert.match(misp, /const errors=validateMisp\(form\);\s*const firstInvalid=mispFieldOrder\.find\(key=>errors\[key\]\);/, 'MISP validates all values before choosing first failure');
+assert.match(misp, /setFieldErrors\(firstInvalid\?\{\[firstInvalid\]:errors\[firstInvalid\]\}:\{\}\);/, 'MISP highlights only first invalid field after Save Detail');
+assert.match(misp, /const mispFieldOrder:MispField\[\]=\['associate_employee_id',/, 'MISP checks RM first');
 assert.match(misp, /if\(!prev\[key\]\)return prev;/, 'MISP only revalidates previously flagged fields on edit');
 assert.match(misp, /else delete next\[key\];/, 'MISP clears errors after a field is corrected');
 const order = form.match(/const validationOrder: Field\[\] = \[([\s\S]*?)\];/)?.[1];
