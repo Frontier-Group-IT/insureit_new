@@ -282,12 +282,9 @@ async function preparePolicyIntakeHandoffInternal(
     const hasField=(key:string)=>verified.fields.some(f=>f.key===key&&f.value.trim());
     const niaMissingAuthority=nia && (!hasField("vehicle_rto_name")
       ||verified.fields.some(f=>f.key==="vehicle_rto_name" && /^FASTag ID:$/i.test(f.value.trim())));
-    const niaGoods=nia && verified.fields.some(f=>f.key==="vehicle_class" && /goods carrying|\\bGCV\\b/i.test(f.value));
-    const niaMissingCpa=niaGoods && !verified.fields.some(f=>f.key==="cpa_premium"
-      &&Number(f.value)>0 &&Number.isFinite(Number(f.value)));
-    const niaHoldCode=niaMissingAuthority&&niaMissingCpa?"nia_missing_rto_authority_and_cpa"
-      :niaMissingAuthority?"nia_missing_registration_authority"
-      :niaMissingCpa?"nia_missing_verified_gcv_cpa":null;
+    // Optional CPA is not a missing GCV field. Keep NIA review limited to
+    // actual absent authority or other independently verified booking rules.
+    const niaHoldCode=niaMissingAuthority?"nia_missing_registration_authority":null;
     const goDigit=verified.parserId==="go_digit_cv_native_pdf" && verified.checksPassed===18
       && verified.warnings.length===0;
     // Business rule: where the manufacturer did not print a manufacturing
