@@ -766,6 +766,25 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
                     </div>
                   ) : <p className="mt-2 text-[10px] font-semibold text-emerald-800">All n8n fields match the saved OCR values exactly.</p>}
                 </div>
+                {n8nResult.preview.commercialPremium ? (
+                  <div className="mt-3 rounded-lg border border-[#cbded5] bg-[#f7fcf8] p-3">
+                    <p className="text-[10.5px] font-bold text-[#195339]">Verified printed commercial premium</p>
+                    <p className="mt-1 text-[10px] text-[#4e7360]">Exact OD, TP, net, tax and gross from this insurer. The source does not establish a separate ICICI-style basic OD, add-on or CPA breakdown.</p>
+                    {([
+                      { label:"Total OD", amount:n8nResult.preview.commercialPremium.od },
+                      { label:"Total third party", amount:n8nResult.preview.commercialPremium.tp },
+                      { label:"Printed net", amount:n8nResult.preview.commercialPremium.net },
+                      { label:"Printed GST", amount:n8nResult.preview.commercialPremium.gst },
+                      { label:"Printed gross", amount:n8nResult.preview.commercialPremium.gross },
+                    ]).map(item => (
+                      <div key={item.label} className="flex justify-between gap-2 border-b border-[#e0ede5] py-1 text-[10px] last:border-b-0">
+                        <span className="text-[#567060]">{item.label}</span>
+                        <span className="font-semibold tabular-nums text-[#214b32]">{rupees(item.amount)}</span>
+                      </div>
+                    ))}
+                    <p className="mt-2 text-[10px] text-[#246442]">{n8nResult.preview.checksPassed} source checks passed. Registration/booking requires separate review.</p>
+                  </div>
+                ) : n8nResult.preview.premium ? (
                 <div className="mt-3 rounded-lg border border-[#cbded5] bg-[#f7fcf8] p-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className="text-[10.5px] font-bold text-[#195339]">PDF premium reconciliation</p>
@@ -804,6 +823,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
                     Verified: Basic OD + add-ons = Total OD; TP + CPA = liability; Total OD + liability = net; net + rounded tax = gross.
                   </p>
                 </div>
+                ) : null}
                 <div className="mt-2 max-h-[320px] overflow-auto rounded-lg border border-[#d9e5f1] bg-white">
                   <table className="w-full min-w-[320px] text-left text-[10px]">
                     <thead className="sticky top-0 bg-[#eaf2fc] text-[#2d5076]"><tr><th className="p-2">Field</th><th className="p-2">Extracted value</th><th className="p-2">Evidence</th></tr></thead>
