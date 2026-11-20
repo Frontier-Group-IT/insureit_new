@@ -123,7 +123,7 @@ export default function StoriesScreen() {
               {story.progress_current !== undefined && story.progress_target ? (
                 <View style={styles.storyProgressWrap}>
                   <View style={styles.storyProgressTrack}>
-                    <View style={[styles.storyProgressFill, { width: (Math.min(100, Math.max(0, (story.progress_current / story.progress_target) * 100))) + '%' }]} />
+                    <View style={[styles.storyProgressFill, { width: (Math.min(100, Math.max(0, (story.progress_current / story.progress_target) * 100))) + '%' as `${number}%` }]} />
                   </View>
                   <View style={styles.storyProgressMeta}>
                     <Text style={styles.storyProgressText}>{story.progress_current}</Text>
