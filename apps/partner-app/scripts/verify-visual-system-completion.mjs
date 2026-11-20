@@ -965,14 +965,14 @@ if (business.includes("!performance || !network")) {
 console.log('Partner visual-system completion contracts verified.');
 
 
-// Lifecycle filtering remains in the existing advanced filter sheet, opened from the Claims-style inline Filter button.
+// Lifecycle filtering remains in the existing advanced sheet, opened from the bottom-center Sort button.
 requireText(policies,'<PartnerSearchField','Policies search must remain available');
 requireText(policies,'sheetStatuses.map','Lifecycle filters must remain in Sort by');
 for (const removed of ['statusMenuOpen','openStatusMenu','statusButtonRef','selectedStatus.label','visible={statusMenuOpen}']) {
   if (policies.includes(removed)) throw new Error('Remove redundant search-bar status dropdown: '+removed);
 }
 requireText(policies,'searchField: {','Search field should fill the available search row');
-requireText(policies,'style={styles.filterButton}','Policies search must integrate the right-side Filter action.');
+requireText(policies,'style={styles.filterButton}','Policies search must display the right-side Filter indicator.');
 requireText(policies,'<Ionicons name="filter-outline" size={18} color="#3156B8" />','Policies must use the exact Claims filter icon.');
 requireText(policies,'<Text style={styles.filterText}>Filter</Text>','Inline filter label must match Claims.');
 
@@ -1030,10 +1030,13 @@ for(const phrase of ["partner_app_commercial_scope()","partner_branch_authorized
 for(const phrase of ["filterButton: {","minWidth: 68","borderLeftWidth: StyleSheet.hairlineWidth","borderLeftColor: '#D9DFEA'","filterText: { color: '#3156B8'"]) {
   requireText(policies,phrase,'Inline Policies Filter must match the existing Claims search control: '+phrase);
 }
-for(const removed of ['styles.sortFloating','sortFloating:','sortFloatingText:']) {
-  if(policies.includes(removed)) throw new Error('Remove the redundant floating Sort by control: '+removed);
-}
-requireText(policies,'onPress={openSortSheet}','Inline Filter must open the existing advanced filter bottom sheet');
+requireText(policies,'accessibilityLabel="Filter options are available from the bottom Sort button"','Inline Filter must be view-only and accessible.');
+requireText(policies,'style={styles.filterButton} pointerEvents="none"','Inline Filter must not be a clickable control.');
+requireText(policies,'accessibilityLabel="Sort and filter policies"','Bottom-center Sort must be accessible.');
+requireText(policies,'style={({ pressed }) => [styles.sortFloatingButton','Bottom-center Sort must have a pressed state.');
+requireText(policies,'sortFloatingPosition: { position: \'absolute\', bottom: 16','Bottom-center Sort must float above tab navigation.');
+requireText(policies,'onPress={openSortSheet}','Floating Sort must open the existing advanced filter bottom sheet');
+requireText(policies,'{isFocused && !sortSheetOpen && !lineMenuOpen ? (','Floating Sort must hide behind modal menus.');
 
 for (const phrase of ["cardGap: { height: 5 }","minHeight: 68,","marginHorizontal: 10,","paddingVertical: 8,","insurerLogo: { width: 33, height: 33 }","customerName: { color: '#173A7D', fontSize: 13","policyNumber: { marginTop: 2, color: '#5C6C84', fontSize: 10","statusText: { fontSize: 9"]) {
   requireText(policies,phrase,'Policies cards should be less dense and use more of the available screen: '+phrase);

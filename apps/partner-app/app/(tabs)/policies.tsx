@@ -340,15 +340,11 @@ export default function PoliciesScreen() {
           placeholders={['Search customer...', 'Search vehicle number...', 'Search policy number...']}
           containerStyle={styles.searchField}
         />
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Filter policies"
-          onPress={openSortSheet}
-          style={styles.filterButton}
-        >
+        <View accessibilityLabel="Filter options are available from the bottom Sort button"
+          style={styles.filterButton} pointerEvents="none">
           <Ionicons name="filter-outline" size={18} color="#3156B8" />
           <Text style={styles.filterText}>Filter</Text>
-        </Pressable>
+        </View>
       </View>
 
   );
@@ -563,6 +559,17 @@ export default function PoliciesScreen() {
       {isFocused ? <StatusBar style={searchSticky ? 'light' : 'dark'} /> : null}
       {searchSticky && safeAreaInsets.top > 0 ? <View pointerEvents="none" style={[styles.stickyStatusBarShield, { height: safeAreaInsets.top }]} /> : null}
       {searchSticky ? <View style={[styles.stickySearchOverlay, { top: safeAreaInsets.top }]} pointerEvents="box-none"><Text style={styles.stickyClaimsHeading}>Policies</Text>{searchControls}</View> : null}
+      {isFocused && !sortSheetOpen && !lineMenuOpen ? (
+        <View pointerEvents="box-none" style={styles.sortFloatingPosition}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Sort and filter policies"
+            accessibilityHint="Opens Period, Source, RM, Date Range and Policy Status filters"
+            onPress={openSortSheet}
+            style={({ pressed }) => [styles.sortFloatingButton, pressed && styles.sortFloatingPressed]}>
+            <Ionicons name="swap-vertical" size={17} color="#FFFFFF"/>
+            <Text style={styles.sortFloatingLabel}>Sort</Text>
+          </Pressable>
+        </View>
+      ) : null}
       <Modal visible={lineMenuOpen} transparent animationType="fade" onRequestClose={()=>setLineMenuOpen(false)}>
         <View style={styles.statusMenuOverlay}>
           <Pressable style={StyleSheet.absoluteFill} accessibilityRole="button" accessibilityLabel="Close business line menu" onPress={()=>setLineMenuOpen(false)}/>
@@ -812,7 +819,7 @@ function formatUpdatedAt(value: number | null) {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#FFFFFF' },
-  content: { paddingBottom: 108, backgroundColor: '#FFFFFF' },
+  content: { paddingBottom: 120, backgroundColor: '#FFFFFF' },
   contentEmpty: { flexGrow: 1 },
   hero: {
     height: 98,
@@ -959,6 +966,10 @@ const styles = StyleSheet.create({
     borderLeftColor: '#D9DFEA',
   },
   filterText: { color: '#3156B8', ...partnerTheme.typography.caption, fontWeight: '500' },
+  sortFloatingPosition: { position: 'absolute', bottom: 16, left: 0, right: 0, alignItems: 'center', zIndex: 25, elevation: 8 },
+  sortFloatingButton: { minHeight: 46, minWidth: 110, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9, paddingHorizontal: 22, borderRadius: 999, backgroundColor: '#071E49', shadowColor: '#071E49', shadowOpacity: 0.24, shadowRadius: 7, shadowOffset: { width: 0, height: 3 }, elevation: 6 },
+  sortFloatingPressed: { backgroundColor: '#174177' },
+  sortFloatingLabel: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
   sortOverlay:{flex:1,justifyContent:'flex-end',backgroundColor:'rgba(16,30,66,0.73)'},
   sortSheet:{backgroundColor:'#FFFFFF',borderTopLeftRadius:24,borderTopRightRadius:24,paddingHorizontal:18,paddingTop:10},
   sortSheetHeader:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',paddingBottom:8,borderBottomWidth:1,borderColor:'#E4E5F1'},
