@@ -20,10 +20,11 @@ const mapping = icon.slice(icon.indexOf('const ILLUSTRATED_ICONS:'),icon.indexOf
 assert.ok(mapping.startsWith('const ILLUSTRATED_ICONS:'), 'Illustrated icons must be centrally mapped');
 const highResolution = new Map([
   ['policy-intake', '../assets/partner/actions/policy-checklist.png'],
-  ['customers', '../assets/partner/actions/customer-register.png'],
+
 ]);
 for (const [kind,title] of illustrated) {
-  const source = highResolution.get(kind)
+  const source = kind === 'customers' ? '../assets/partner/quick-actions/add-partner.png'
+    : highResolution.get(kind)
     ?? (kind === 'journey' ? '../assets/partner/status/journey.png' : `../assets/partner/icons/more-${kind}.png`);
   assert.ok(more.includes('title="'+title+'"'), 'Preserve menu action '+title);
   assert.ok(mapping.includes(source.replace('../', '../../')), 'Missing illustrated asset mapping '+kind);
@@ -49,8 +50,8 @@ assert.match(more,/canPartnerAccessCaseRegister\(context\)/);
 assert.match(more,/canPartnerAccess\(context, 'view_policy_intakes'\)/);
 assert.match(more,/PartnerProfileMenuIcon kind=\{iconKind\} size=\{iconKind === 'policy-intake' \? 48 : 42\}/);
 assert.match(mapping, /status\/journey\.png/, 'Use existing valid Journey artwork');
-assert.match(mapping, /actions\/customer-register\.png/, 'Use high-resolution transparent Customers artwork');
+assert.match(mapping, /quick-actions\/add-partner\.png/, 'Use the user-approved blue business-person icon with purple plus for Customers');
 assert.doesNotMatch(icon, /scale: 1\.7/, 'Policy Intake must avoid magnifying low-resolution source artwork');
 assert.match(icon, /scale: 1\.16/, 'Original My Journey art must render more clearly');
 assert.match(more, /sectionRows/, 'More sections must retain their rounded menu groups');
-console.log('High-resolution Intake and Customers icons, Journey art and rounded More sections verified.');
+console.log('Approved Add Partner artwork for Customers, sharp Policy Intake icon, Journey art and rounded More sections verified.');
