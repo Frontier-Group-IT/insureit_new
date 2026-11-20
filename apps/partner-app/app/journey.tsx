@@ -173,7 +173,7 @@ function Summary({ value, label, artwork, onPress }: { value: number; label: str
 const CIRCLE_SEGMENT_COUNT = 96;
 const CIRCLE_SEGMENTS = Array.from({ length: CIRCLE_SEGMENT_COUNT }, (_, index) => {
   const angle = (index * 2 * Math.PI) / CIRCLE_SEGMENT_COUNT;
-  return { left: 18 + Math.sin(angle) * 13.5 - 0.8, top: 18 - Math.cos(angle) * 13.5 - 1.5, rotate: `${index * 360 / CIRCLE_SEGMENT_COUNT}deg` };
+  return { left: 26 + Math.sin(angle) * 20.5 - 0.9, top: 26 - Math.cos(angle) * 20.5 - 1.5, rotate: `${index * 360 / CIRCLE_SEGMENT_COUNT}deg` };
 });
 
 function CircularMilestoneProgress({ progress, current, target }: { progress: number; current: number; target: number }) {
@@ -213,18 +213,18 @@ const styles = StyleSheet.create({
   milestoneTrophy: { width: 42, height: 42, borderRadius: 10, flexShrink: 0 },
   heroTitle: { flex: 1, minWidth: 0, color: '#17233A', fontSize: 17, lineHeight: 23, fontWeight: '800' },
   progressColumn: { width: 122, flexShrink: 0, alignItems: 'center', justifyContent: 'center', gap: 2 },
-  progressCircle: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
+  progressCircle: { width: 52, height: 52, alignItems: 'center', justifyContent: 'center' },
   progressSegment: { position: 'absolute', width: 1.6, height: 3, borderRadius: 1 },
-  progressCircleText: { color: '#6954D6', fontSize: 9, fontWeight: '800' },
+  progressCircleText: { color: '#6954D6', fontSize: 12, fontWeight: '800' },
   heroProgressLabel: { width: '100%', color: '#6856D5', fontSize: 9, fontWeight: '700', textAlign: 'center' },
-  summary: { marginTop: 12, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#E1E5ED', flexDirection: 'row', alignItems: 'stretch', width: '100%' },
-  summaryItem: { flex: 1, minWidth: 0, minHeight: 75, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 2, paddingVertical: 5, gap: 3 },
+  summary: { marginTop: 12, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#E1E5ED', flexDirection: 'row', alignItems: 'stretch', width: '100%' },
+  summaryItem: { flex: 1, minWidth: 0, minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 2, paddingVertical: 4, gap: 4 },
   summaryItemPressed: { backgroundColor: '#F1F5FB' },
   summaryDivider: { width: 1, alignSelf: 'stretch', backgroundColor: '#A6B3C6', marginVertical: 5 },
-  summaryArtwork: { width: 29, height: 30, flexShrink: 0 },
-  summaryDetails: { alignItems: 'center', justifyContent: 'center', gap: 2 },
-  summaryValue: { color: partnerTheme.colors.ink, fontSize: 14, lineHeight: 18, fontWeight: '800' },
-  summaryLabel: { color: partnerTheme.colors.inkMuted, fontSize: 9.5, fontWeight: '600' },
+  summaryArtwork: { width: 27, height: 29, flexShrink: 0 },
+  summaryDetails: { flexShrink: 1, minWidth: 0, alignItems: 'flex-start', justifyContent: 'center', gap: 1 },
+  summaryValue: { color: partnerTheme.colors.ink, fontSize: 13, lineHeight: 17, fontWeight: '800' },
+  summaryLabel: { color: partnerTheme.colors.inkMuted, fontSize: 9, lineHeight: 12, fontWeight: '600' },
   card: { marginTop: 13, padding: 15, borderRadius: 19, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E7E9EE' },
   achievementSection: { marginTop: 15 },
   outsideHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 9 },
