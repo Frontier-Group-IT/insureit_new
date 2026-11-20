@@ -116,23 +116,23 @@ expectAll('app/(tabs)/claims.tsx', [
   [/label: 'Settled Claims'/, 'Preserve Settled Claims status'],
   [/label: 'In Progress'/, 'Preserve In Progress status'],
 ]);
-// Policies have one accessible five-status dropdown, replacing the legacy
-// disabled Filter control and horizontal lifecycle chip row.
-expectAll('app/(tabs)/policies.tsx', [
-  [/label: 'Total Policies', filter: 'all'/, 'Total Policies option is available'],
-  [/label: 'Active Policies', filter: 'in_force'/, 'Active Policies option is available'],
-  [/label: 'Expiring Soon', filter: 'expiring'/, 'Expiring Soon option is available'],
-  [/label: 'Lapsed Policies', filter: 'expired'/, 'Lapsed Policies option is available'],
-  [/label: 'Upcoming', filter: 'upcoming'/, 'Upcoming option is available'],
-  [/count: activePeriodCounts\?\.all/, 'Dropdown total count uses live period-scoped data'],
-  [/selectedStatus\.label/, 'Search dropdown displays the selected lifecycle'],
-  [/formatStatusCount\(selectedStatus\.count\)/, 'Search dropdown displays the selected live count'],
-  [/onPress=\{openStatusMenu\}/, 'Dropdown opens from search row'],
-  [/onPress=\{\(\) => selectSummary\(option\.filter\)\}/, 'Dropdown selection filters policies'],
-  [/setQuery\(''\);[\s\S]*?setVisibleLimit\(PAGE_SIZE\);[\s\S]*?setLifecycle\(filter\)/, 'Selecting a lifecycle resets query and pagination'],
-  [/onRequestClose=\{\(\) => setStatusMenuOpen\(false\)\}/, 'Dropdown closes with Android back'],
-  [/accessibilityState=\{\{ selected \}\}/, 'Dropdown options announce current selection'],
-]);
+// The search bar no longer duplicates lifecycle filters from Sort by.
+const policiesScreen = read('app/(tabs)/policies.tsx');
+for (const [fragment, description] of [
+  ['<PartnerSearchField', 'Search remains available'],
+  ['containerStyle={styles.searchField}', 'Search field uses available width'],
+  ['sheetStatuses.map', 'Sort by renders lifecycle status choices'],
+  ["label:'All Policies',value:'all',lifecycle:'all'", 'All status remains available'],
+  ["label:'Active',value:'active',lifecycle:'in_force'", 'Active status remains available'],
+  ["label:'Expired',value:'expired',lifecycle:'expired'", 'Expired status remains available'],
+  ["label:'Due',value:'due',lifecycle:'expiring'", 'Due status remains available'],
+  ['setLifecycle(draftLifecycle)', 'Apply commits the selected status'],
+  ["onClear={() => setQuery('')}", 'Search clearing remains functional'],
+]) { checks += 1; if (!policiesScreen.includes(fragment)) failures.push('Policies: ' + description); }
+for (const removed of ['statusMenuOpen', 'statusButtonRef', 'openStatusMenu', 'statusOptions.map', 'selectedStatus.label']) {
+  checks += 1;
+  if (policiesScreen.includes(removed)) failures.push('Duplicate status search dropdown remains: ' + removed);
+}
 for (const obsolete of ['seeAllOpen', 'summarySeeAll:', 'statusSheetOverlay:', 'See all policy status filters', 'styles.summaryRow', 'accessibilityLabel="Filter policies"']) {
   checks += 1;
   if (read('app/(tabs)/policies.tsx').includes(obsolete)) failures.push('Policies must not retain obsolete chip/disabled Filter UI: ' + obsolete);

@@ -19,8 +19,10 @@ assert.match(policies, /stickyClaimsHeading/);
 assert.match(policies, /stickySearchOverlay: \{[^\n]+backgroundColor: '#082657'/);
 assert.match(claims, /stickyOverlay: \{[^\n]+backgroundColor: "#082657"/);
 assert.match(claims, /<Text style=\{styles.stickyTitle\}>Claims<\/Text>/);
-// Policies use one search-row dropdown with all five live lifecycle counts.
-assert.match(policies, /onPress=\{openStatusMenu\}/, 'Policies lifecycle dropdown opens from the search row');
+// Policies search occupies the entire row; lifecycle filters remain inside Sort by.
+assert.match(policies, /<PartnerSearchField/, 'Policies search remains in the sticky header');
+assert.match(policies, /sheetStatuses\.map/, 'Lifecycle statuses remain in Sort by');
+assert.doesNotMatch(policies, /onPress=\{openStatusMenu\}/, 'Duplicate search-row lifecycle dropdown is removed');
 assert.match(policies, /<Text style=\{styles\.quickActionsHeading\}>Quick Actions<\/Text>/, 'Quick Actions heading keeps its styling');
 assert.ok(policies.includes('<View style={styles.policyListHeadingSection}>\n        <Pressable'), 'Business-line dropdown replaces the redundant Policies list heading');
 assert.ok(!policies.includes('<Text style={styles.policyListTitle}>Policies</Text>'), 'Policies list does not repeat the page heading');
@@ -28,24 +30,18 @@ assert.ok(policies.indexOf('onPress={openBusinessLineMenu}') > policies.indexOf(
 assert.ok(policies.indexOf('onPress={openBusinessLineMenu}') < policies.indexOf('{isOffline || collection.stale || summary.stale'), 'Business-line dropdown precedes the policy list and feedback');
 assert.ok(policies.includes('onPress={openBusinessLineMenu}'), 'Business-line dropdown remains interactive');
 
-assert.ok(policies.includes("filterButton: {") && policies.includes("backgroundColor: '#FFFFFF'"), 'Policy filter outer area stays white');
-assert.ok(policies.includes("filterNameBadge: {") && policies.includes("backgroundColor: '#17365D'"), 'Only the selected filter name uses a navy badge');
-assert.ok(policies.includes('<View style={styles.filterNameBadge}>'), 'Selected name sits in its own navy badge');
-assert.ok(policies.includes('name="chevron-down" size={14} color="#FFFFFF"'), 'Dropdown chevron is white on navy inside the badge');
-assert.match(policies, /<View style=\{styles\.filterNameBadge\}>[\s\S]*?<Ionicons name="chevron-down" size=\{14\} color="#FFFFFF" \/>[\s\S]*?<\/View>/, 'Chevron and selected status label share the navy badge');
-assert.match(policies, /filterNameBadge: \{[\s\S]*?flexDirection: 'row',[\s\S]*?alignItems: 'center'/, 'Navy label and chevron align horizontally');
-
-for (const label of ['Total Policies', 'Active Policies', 'Expiring Soon', 'Lapsed Policies', 'Upcoming']) {
-  assert.ok(policies.includes("label: '" + label + "'"), 'Preserve Policies status ' + label);
+// Status remains available in the Sort by sheet; no status dropdown is rendered in search.
+for (const [fragment, description] of [
+  ['sheetStatuses.map', 'Lifecycle status options are rendered'],
+  ['setDraftLifecycle(', 'Lifecycle status selection is enabled'],
+  ['setLifecycle(draftLifecycle)', 'Apply Filter commits the lifecycle status'],
+  ['const draftStatusCounts =', 'Status counts remain scoped to the draft filters'],
+  ['<PartnerSearchField', 'Search input remains in its sticky bar'],
+]) assert.ok(policies.includes(fragment), description);
+for (const removed of ['filterNameBadge: {', 'filterButton: {', 'openStatusMenu', 'statusOptions.map', 'visible={statusMenuOpen}']) {
+  assert.ok(!policies.includes(removed), 'Search bar no longer renders redundant status control: ' + removed);
 }
-for (const lifecycle of ['all', 'in_force', 'expiring', 'expired', 'upcoming']) {
-  assert.ok(policies.includes("filter: '" + lifecycle + "'"), 'Preserve lifecycle ' + lifecycle);
-}
-assert.match(policies, /count: activePeriodCounts\?\.all/, 'Dropdown counts use the selected period summary');
-assert.match(policies, /onPress=\{\(\) => selectSummary\(option\.filter\)\}/, 'Dropdown selection filters policies');
-assert.match(policies, /accessibilityState=\{\{ selected \}\}/, 'Dropdown selection announced accessibly');
-assert.match(policies, /visible=\{statusMenuOpen\}/, 'Dropdown displays all options on demand');
-assert.doesNotMatch(policies, /styles\.summaryRow|styles\.summaryScroll|styles\.summaryChipSelected|seeAllOpen|statusSheetOverlay/, 'Obsolete horizontal policy chips and See all removed');
+assert.doesNotMatch(policies, /styles\\.summaryRow|styles\\.summaryScroll|styles\\.summaryChipSelected|seeAllOpen|statusSheetOverlay/, 'Obsolete horizontal policy chips and See all removed');
 // Claims keeps three compact filters and the permission-gated Add action together in one row.
 assert.match(claims, /<View style=\{styles\.summaryChips\} accessibilityLabel="Claim status filters">/, 'All Claims status chips remain visible in a single row');
 assert.match(claims, /summaryChip: \{ flex: 1, minWidth: 0/, 'Claims chips divide available width rather than scroll');
