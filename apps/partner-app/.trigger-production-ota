@@ -1,12 +1,13 @@
 Partner production OTA trigger
-release=partner-restore-previous-more-3d-icons-pr-4877
+release=partner-policy-four-tab-filters-pr-4923
 source=verified-merged-main
-source_pr=4877
-source_merge=bd46fbc450d819040573a2809fd1037ef2e2e170
-reason=user-approved-restore-previous-icons-after-separate-policy-intake-fix
+source_pr=4923
+source_merge=52f41a06da406dd82d4ad4741eb07908aa5c57b9
+reason=user-approved-merge-and-publish-period-source-rm-date-filters
+migration=20261120061111_partner_policy_advanced_filters
 channel=production
 runtime=0.2.0
-requested=2026-11-19
+requested=2026-11-20
 no_native_build=true
 no_apk=true
 no_aab=true
