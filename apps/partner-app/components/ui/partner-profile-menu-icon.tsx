@@ -86,6 +86,26 @@ export function PartnerProfileMenuIcon({
   }
   // Only the preserved kinds reach this palette; case-register uses artwork.
   const config = CONFIG[kind as Exclude<PartnerProfileMenuIconKind, 'case-register'>];
+  // ACCOUNT rows use standalone illustrated glyphs — no tile, border, shadow or badge.
+  // Keep the existing icon size and the 3D depth treatment without a backing surface.
+  if (kind === 'profile' || kind === 'support' || kind === 'settings') {
+    const glyphSize = Math.round(size * 0.72);
+    return (
+      <View
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+        pointerEvents="none"
+        style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}
+      >
+        <Ionicons name={config.icon} size={glyphSize} color={config.shadow}
+          style={[styles.glyph, { transform: [{ translateX: 1.5 }, { translateY: 2 }] }]} />
+        <Ionicons name={config.icon} size={glyphSize} color={config.edge}
+          style={[styles.glyph, { transform: [{ translateX: 0.5 }, { translateY: 1 }] }]} />
+        <Ionicons name={config.icon} size={glyphSize} color={config.face}
+          style={styles.glyph} />
+      </View>
+    );
+  }
   const glyph = Math.round(size * 0.56);
   const badgeSize = Math.round(size * 0.33);
 
