@@ -181,11 +181,17 @@ export async function previewSemiAutoN8nExtraction(
       "n8n_fields_invalid","n8n_field_shape_invalid",
       "n8n_issuance_date_invalid",
     ]);
-    if(parserValidationCodes.has(code)) {
+    if(parserValidationCodes.has(code)
+      || /^n8n_failed_checks__(?:[a-z0-9_]{1,65})(?:__[a-z0-9_]{1,65})*$/.test(code)
+      || code==="n8n_commercial_classifier_missed_layout") {
       console.error("[ai-policy] rejected n8n validation",{code});
       return { ok: false, reason: "untrained_or_unverified",
         diagnosticCode:code,
-        error:"The n8n parser response failed a strict policy verification check ("+code+"). Check its policy variant, premiums, issue date and extracted fields; no old OCR fallback or booking was performed." };
+        error:code.startsWith("n8n_failed_checks__")
+          ? "n8n rejected the PDF. Failed checks: "+code.slice("n8n_failed_checks__".length).split("__").join(", ")+". No booking or OCR replacement occurred."
+          : code==="n8n_commercial_classifier_missed_layout"
+            ? "The n8n commercial parser responded, but the website did not recognize its commercial layout before applying ICICI validation. Check the commercial PDF classifier."
+            : "The n8n parser response failed strict verification ("+code+"). Review the parser evidence; no OCR replacement or booking occurred." };
     }
     // Only known, safe error codes are exposed. Never show signed URLs,
     // response bodies or private PDF content in an operator-facing error.
