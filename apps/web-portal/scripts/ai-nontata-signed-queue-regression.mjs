@@ -45,11 +45,11 @@ assert.match(actions,/!hasVerifiedN8nParserEvidence\(extracted\.preview\.parserI
 assert.match(oldBridge,/insureit-policy-intake-icici-v1/);
 assert.doesNotMatch(signed,/supabaseAdmin|\.from\("policies"\)/);
 assert.doesNotMatch(preview,/auto_finalize_allowed:\s*true/);
-assert.match(handoff,/selectVerifiedN8nInsuredDraftIdentity\\(verified\\.fields,masterIdentity,verified\\.parserId\\)/);
-assert.match(handoff,/enrichVerifiedN8nOnboardingFields\\(verified\\.fields,verified\\.parserId\\)/);
-assert.match(insuredHelper,/field\\.page === null && field\\.evidence === "Native PDF policy schedule"/);
-assert.match(enrichmentHelper,/parserId === "go_digit_cv_native_pdf"/);
-assert.match(enrichmentHelper,/Number\\(get\\("od_premium"\\)\\) > 0 && Number\\(get\\("tp_premium"\\)\\) > 0/);
+assert.ok(handoff.includes("selectVerifiedN8nInsuredDraftIdentity(verified.fields,masterIdentity,verified.parserId)"));
+assert.ok(handoff.includes("enrichVerifiedN8nOnboardingFields(verified.fields,verified.parserId)"));
+assert.ok(insuredHelper.includes('field.page === null && field.evidence === "Native PDF policy schedule"'));
+assert.ok(enrichmentHelper.includes('parserId === "go_digit_cv_native_pdf"'));
+assert.ok(enrichmentHelper.includes('Number(get("od_premium")) > 0 && Number(get("tp_premium")) > 0'));
 // Run the actual helpers on verified commercial evidence, not a copied algorithm.
 const {selectVerifiedN8nInsuredDraftIdentity}=await import("../lib/policy-n8n-onboarding-insured.ts");
 const {enrichVerifiedN8nOnboardingFields}=await import("../lib/policy-n8n-onboarding-enrichment.ts");
