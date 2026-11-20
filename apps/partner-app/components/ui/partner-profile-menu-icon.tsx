@@ -84,11 +84,37 @@ export function PartnerProfileMenuIcon({
       />
     );
   }
+  // Profile & registration: match the approved customer-style business person,
+  // replacing the Customers plus badge with a compact registration ID card.
+  // Reuse bundled artwork rather than fetching images or adding native dependencies.
+  if (kind === 'profile') {
+    return (
+      <View
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+        pointerEvents="none"
+        style={[styles.profileIllustration, { width: size, height: size }]}
+      >
+        <Image
+          source={require('../../assets/partner/quick-actions/add-partner.png')}
+          resizeMode="contain"
+          style={{ width: size, height: size }}
+        />
+        <View style={styles.profileIdentityCard}>
+          <Ionicons name="person" size={9} color="#1B66B8" />
+          <View style={styles.profileIdentityLines}>
+            <View style={styles.profileIdentityLine} />
+            <View style={[styles.profileIdentityLine, styles.profileIdentityShortLine]} />
+          </View>
+        </View>
+      </View>
+    );
+  }
   // Only the preserved kinds reach this palette; case-register uses artwork.
   const config = CONFIG[kind as Exclude<PartnerProfileMenuIconKind, 'case-register'>];
-  // Give the three ACCOUNT glyphs visible, icon-only 3D depth.
+  // Keep Support and Settings as their existing icon-only 3D glyphs.
   // No tiles, surrounding borders, extra badges or changes to menu touch targets.
-  if (kind === 'profile' || kind === 'support' || kind === 'settings') {
+  if (kind === 'support' || kind === 'settings') {
     const glyphSize = Math.round(size * 0.74);
     const layers = [
       { color: config.shadow, x: 2.6, y: 4, opacity: 0.5 },
@@ -165,6 +191,30 @@ export function PartnerProfileMenuIcon({
 }
 
 const styles = StyleSheet.create({
+  profileIllustration: { position: 'relative', alignItems: 'center', justifyContent: 'center' },
+  profileIdentityCard: {
+    position: 'absolute',
+    right: -1,
+    bottom: 0,
+    width: 23,
+    height: 16,
+    borderRadius: 4,
+    borderWidth: 1.25,
+    borderColor: '#1C74CA',
+    backgroundColor: '#F7FCFF',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 1,
+    shadowColor: '#174778',
+    shadowOpacity: 0.22,
+    shadowRadius: 2,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  profileIdentityLines: { gap: 2, justifyContent: 'center' },
+  profileIdentityLine: { width: 7, height: 2, borderRadius: 1, backgroundColor: '#2688DC' },
+  profileIdentityShortLine: { width: 5 },
   standaloneIcon: { width: 42, height: 42, alignItems: 'center', justifyContent: 'center' },
   tile: {
     position: 'relative',
