@@ -98,7 +98,7 @@ export default function JourneyScreen() {
               <Text style={styles.sectionTitle}>Journey timeline</Text>
             </View>
             <View style={styles.filters}>
-              {JOURNEY_FILTERS.map((choice) => (
+              {JOURNEY_FILTERS.map((choice, index) => (
                 <Pressable
                   key={choice.key}
                   accessibilityRole="button"
@@ -106,7 +106,7 @@ export default function JourneyScreen() {
                   onPress={() => { setFilter(choice.key); setShowAll(false); }}
                   style={[styles.filterButton, filter === choice.key && styles.filterActive]}
                 >
-                  <View style={styles.filterLabelRow}>
+                  <View style={[styles.filterLabelRow, index === JOURNEY_FILTERS.length - 1 && styles.filterLabelLast]}>
                     <Text style={[styles.filterText, filter === choice.key && styles.filterActiveText]}>{choice.label}</Text>
                   </View>
                   <View style={[styles.filterUnderline, filter === choice.key && styles.filterUnderlineActive]}/>
@@ -243,6 +243,7 @@ const styles = StyleSheet.create({
   filterButton: { flex: 1, minWidth: 0, alignItems: 'center', justifyContent: 'flex-end' },
   filterLabelRow: { width: '100%', alignItems: 'center', justifyContent: 'center', minHeight: 34, paddingHorizontal: 1, borderRightWidth: 1, borderRightColor: '#A6B3C6' },
   filterActive: {},
+  filterLabelLast: { borderRightWidth: 0 },
   filterUnderline: { width: '100%', height: 1, backgroundColor: '#E3E8F0' },
   filterUnderlineActive: { height: 3, backgroundColor: '#2488ED' },
   filterText: { fontSize: 10, fontWeight: '700', color: '#667085' },
