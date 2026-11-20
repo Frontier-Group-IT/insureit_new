@@ -15,7 +15,11 @@ for (const parser of ["new_india_cv_native_pdf","iffco_tokio_cv_native_pdf","go_
   assert.ok(review.includes(parser), "The reviewer must be allowed to select non-Tata confidence-null fields");
 }
 assert.match(bridge, /n8n\.nishant\.uk/);
-assert.match(bridge, /\/webhook\/insureit-nontata-motor-pdf-candidate-v1/);
+assert.match(bridge, /\/webhook\/insureit-policy-intake-icici-v1/);
+assert.match(bridge, /INSUREIT_N8N_OCR_WEBHOOK_URL/);
+assert.match(bridge, /INSUREIT_N8N_OCR_ENDPOINT_MODE/);
+assert.doesNotMatch(bridge, /\/webhook\/insureit-nontata-motor-pdf-candidate-v1/,
+  "All trained insurers must use the original shared n8n workflow");
 assert.match(bridge, /review_required !== true/);
 assert.match(bridge, /auto_finalize_allowed !== false/);
 assert.match(bridge, /payload\.intake_id !== ids\.intake_id/);
