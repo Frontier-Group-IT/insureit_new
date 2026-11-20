@@ -239,6 +239,30 @@ export default function PoliciesScreen() {
     await Promise.all([summary.refresh(), periodCounts.refresh(), collection.refresh()]);
   }, [collection, summary, periodCounts]);
 
+  const draftFiltersMatchApplied = draftSource===source && draftRm===rm &&
+    draftFromDate===fromDate && draftToDate===toDate;
+  // The draft period is not part of this request: each response contains both MTD and All.
+  // Fetch counts for draft Source/RM/Date selections before Apply, rather than displaying
+  // stale counts from the applied filter or hiding status badges until Apply.
+  useEffect(()=>{
+    if(!sortSheetOpen || draftFiltersMatchApplied){
+      setDraftCounts(null);
+      setDraftCountsLoading(false);
+      return;
+    }
+    let active=true;
+    setDraftCounts(null);
+    setDraftCountsLoading(true);
+    const draftAdvanced=draftSource!=='all'||draftRm!=='all'||Boolean(draftFromDate)||Boolean(draftToDate);
+    const countRequest=draftAdvanced
+      ? getPartnerAdvancedPolicyCounts({businessLine,search:debouncedSearch,source:draftSource,rm:draftRm,fromDate:draftFromDate,toDate:draftToDate})
+      : getPartnerPolicyPeriodCounts({businessLine,search:debouncedSearch});
+    void countRequest.then(result=>{if(active)setDraftCounts(result);})
+      .catch(()=>{if(active)setDraftCounts(null);})
+      .finally(()=>{if(active)setDraftCountsLoading(false);});
+    return ()=>{active=false;};
+  },[sortSheetOpen,draftFiltersMatchApplied,draftSource,draftRm,draftFromDate,draftToDate,businessLine,debouncedSearch]);
+  const draftStatusCounts = draftFiltersMatchApplied ? periodCounts.data?.[draftPeriod] : draftCounts?.[draftPeriod];
   useEffect(() => {
     if (!isFocused) { setLineMenuOpen(false); setSortSheetOpen(false); }
   }, [isFocused]);
