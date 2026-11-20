@@ -15,6 +15,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
   useWindowDimensions,
 } from 'react-native';
@@ -25,10 +26,14 @@ import { PartnerProfileAvatar } from '@/components/ui/partner-profile-avatar';
 import { PartnerMotionBadge } from '@/components/ui/partner-motion-badge';
 import { PartnerInsurerLogo } from '@/components/ui/partner-insurer-logo';
 import { PartnerSearchField } from '@/components/ui/partner-search-field';
+import { PartnerDatePicker } from '@/components/ui/partner-date-picker';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import {
   getPartnerPolicySummary,
   getPartnerPolicyPeriodCounts,
+  getPartnerAdvancedPolicyCounts,
+  getPartnerPolicyFilterOptions,
+  type PartnerPolicyFilterOption,
   listPartnerPolicies,
   type PartnerPolicyLifecycle,
   type PartnerPolicyBusinessLine,
@@ -59,6 +64,18 @@ const businessLineOptions: {label:string;value:PartnerPolicyBusinessLine}[] = [
 let savedPolicyQuery = '';
 let savedPolicyLifecycle: PartnerPolicyLifecycle = 'all';
 let savedPolicyPeriod: PartnerPolicyPeriod = 'all';
+let savedPolicySource='all', savedPolicyRm='all', savedPolicyFrom='', savedPolicyTo='';
+type PolicyFilterTab='period'|'source'|'rm'|'date';
+const isoDate=(date:Date)=>`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+const parseFilterDate=(value:string)=>value?new Date(value+'T12:00:00'):null;
+const todayDate=()=>new Date();
+const quickDateRange=(key:'mtd'|'last_month'|'last_3'|'last_6')=>{
+ const now=todayDate();
+ if(key==='mtd')return {from:isoDate(new Date(now.getFullYear(),now.getMonth(),1)),to:isoDate(now)};
+ if(key==='last_month')return {from:isoDate(new Date(now.getFullYear(),now.getMonth()-1,1)),to:isoDate(new Date(now.getFullYear(),now.getMonth(),0))};
+ const months=key==='last_3'?3:6;
+ return {from:isoDate(new Date(now.getFullYear(),now.getMonth()-months+1,1)),to:isoDate(now)};
+};
 const sheetStatuses: {label:string;value:PartnerPolicyStatusFilter;lifecycle:PartnerPolicyLifecycle}[] = [
   {label:'All Policies',value:'all',lifecycle:'all'},
   {label:'Active',value:'active',lifecycle:'in_force'},
@@ -87,6 +104,18 @@ export default function PoliciesScreen() {
   const [sortSheetOpen, setSortSheetOpen] = useState(false);
   const [draftPeriod, setDraftPeriod] = useState<PartnerPolicyPeriod>(savedPolicyPeriod);
   const [draftLifecycle, setDraftLifecycle] = useState<PartnerPolicyLifecycle>(savedPolicyLifecycle);
+  const [filterTab,setFilterTab]=useState<PolicyFilterTab>('period');
+  const [source,setSource]=useState(savedPolicySource);
+  const [rm,setRm]=useState(savedPolicyRm);
+  const [fromDate,setFromDate]=useState(savedPolicyFrom);
+  const [toDate,setToDate]=useState(savedPolicyTo);
+  const [draftSource,setDraftSource]=useState(savedPolicySource);
+  const [draftRm,setDraftRm]=useState(savedPolicyRm);
+  const [draftFromDate,setDraftFromDate]=useState(savedPolicyFrom);
+  const [draftToDate,setDraftToDate]=useState(savedPolicyTo);
+  const [sourceSearch,setSourceSearch]=useState('');
+  const [rmSearch,setRmSearch]=useState('');
+  const advanced=source!=='all'||rm!=='all'||Boolean(fromDate)||Boolean(toDate);
   const [statusMenuOpen, setStatusMenuOpen] = useState(false);
   const [businessLine, setBusinessLine] = useState<PartnerPolicyBusinessLine>('all');
   const [lineMenuOpen, setLineMenuOpen] = useState(false);
@@ -115,19 +144,30 @@ export default function PoliciesScreen() {
     setVisibleLimit(PAGE_SIZE);
     setRequestedLimit(PAGE_SIZE);
     setLoadMoreFeedback(false);
-  }, [period, lifecycle, debouncedSearch, businessLine]);
+  }, [period, lifecycle, debouncedSearch, businessLine, source, rm, fromDate, toDate]);
 
   useEffect(() => {
     savedPolicyQuery = query;
     savedPolicyLifecycle = lifecycle;
     savedPolicyPeriod = period;
-  }, [lifecycle, period, query]);
+    savedPolicySource=source; savedPolicyRm=rm; savedPolicyFrom=fromDate; savedPolicyTo=toDate;
+  }, [lifecycle, period, query, source, rm, fromDate, toDate]);
 
   const fetchSummary = useCallback(() => getPartnerPolicySummary(), []);
-  const fetchPeriodCounts = useCallback(() => getPartnerPolicyPeriodCounts({businessLine,search:debouncedSearch}),[businessLine,debouncedSearch]);
+  const fetchPeriodCounts = useCallback(() =>
+    advanced
+      ? getPartnerAdvancedPolicyCounts({businessLine,search:debouncedSearch,source,rm,fromDate,toDate})
+      : getPartnerPolicyPeriodCounts({businessLine,search:debouncedSearch}),
+    [businessLine,debouncedSearch,advanced,source,rm,fromDate,toDate]);
+  const filterOptions=usePartnerQuery({
+    scopeKey:cacheScopeKey,
+    key:`policies:filter-options:${businessLine}`,
+    fetcher:()=>getPartnerPolicyFilterOptions(businessLine),
+    staleTimeMs:120_000,
+  });
   const periodCounts = usePartnerQuery<PartnerPolicyPeriodCounts>({
     scopeKey:cacheScopeKey,
-    key:`policies:period-counts:${businessLine}:${debouncedSearch || 'all'}`,
+    key:`policies:period-counts:${businessLine}:${debouncedSearch||'all'}:${source}:${rm}:${fromDate}:${toDate}`,
     fetcher:fetchPeriodCounts,
     staleTimeMs:60_000,
   });
@@ -142,7 +182,7 @@ export default function PoliciesScreen() {
     const nextRows = await listPartnerPolicies({
       lifecycle,
       businessLine,
-      period,
+      period,source,rm,fromDate,toDate,
       search: debouncedSearch,
       limit,
       offset,
@@ -151,13 +191,13 @@ export default function PoliciesScreen() {
       rows: nextRows,
       total: nextRows[0]?.total_count ?? 0,
     };
-  }, [debouncedSearch, lifecycle, businessLine, period]);
+  }, [debouncedSearch, lifecycle, businessLine, period, source,rm,fromDate,toDate]);
 
   const collection = usePartnerPageQuery<PartnerPolicyRow>({
     scopeKey: cacheScopeKey,
     // The requested limit is part of the cache identity. Without this, increasing
     // 10 -> 20 can reuse the cached 10-row "page 0" result and appear to do nothing.
-    key: `policies:list:${period}:${lifecycle}:${businessLine}:${debouncedSearch || 'all'}:limit:${visibleLimit}`,
+    key: `policies:list:${period}:${lifecycle}:${businessLine}:${source}:${rm}:${fromDate}:${toDate}:${debouncedSearch||'all'}:limit:${visibleLimit}`,
     pageSize: visibleLimit,
     fetchPage,
     staleTimeMs: 60_000,
@@ -221,13 +261,18 @@ export default function PoliciesScreen() {
     setStatusMenuOpen(false);
     setLineMenuOpen(false);
     setDraftPeriod(period);
-    setDraftLifecycle(lifecycle==='upcoming' ? 'all' : lifecycle);
+    setDraftLifecycle(lifecycle);
+    setDraftSource(source);setDraftRm(rm);setDraftFromDate(fromDate);setDraftToDate(toDate);
+    setSourceSearch('');setRmSearch('');setFilterTab('period');
     setSortSheetOpen(true);
   };
   const applySortSheet = () => {
+    if(draftFromDate&&draftToDate&&draftFromDate>draftToDate)return;
     setSortSheetOpen(false);
     setPeriod(draftPeriod);
     setLifecycle(draftLifecycle);
+    setSource(draftSource);setRm(draftRm);
+    setFromDate(draftFromDate);setToDate(draftToDate);
     setVisibleLimit(PAGE_SIZE);
     setRequestedLimit(PAGE_SIZE);
     setLoadMoreFeedback(false);
