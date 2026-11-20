@@ -107,7 +107,15 @@ function extract(raw){
  const reg=match(text,/\bRegistration No\.\s*([A-Z0-9][A-Z0-9\s-]{0,18})(?=\n|\s{3,}|\bMake\s*\/\s*Model|\bDate of Registration)/i);
  const rawPlate=reg?.replace(/[\s-]/g,'').toUpperCase()??'';
  const unregistered=/^(?:NEW|NA|N\/A|NOTREGISTERED)$/.test(rawPlate);
- const registered=/^(?:HR|DL|MP)[A-Z0-9]{7,13}$/.test(rawPlate);
+ // Haryana schedules can print the older district+four-digit format,
+ // e.g. HR 98 4481 (no alphabetic series). Require a separately printed
+ // historic Date of Registration to avoid mistaking an incomplete prefix for
+ // a registered vehicle. Do not infer any missing characters.
+ const historicRegistration=match(text,/\bDate of Registration\s+(\d{2}\/\d{2}\/\d{4})/i);
+ const legacyHaryana=/^HR\d{6}$/.test(rawPlate)
+   && Boolean(historicRegistration && /^(?:19|20)\d{2}$/.test(historicRegistration.slice(-4))
+     && Number(historicRegistration.slice(-4)) <= new Date().getFullYear());
+ const registered=/^(?:HR|DL|MP)[A-Z0-9]{7,13}$/.test(rawPlate)||legacyHaryana;
  const status=unregistered?'unregistered':registered?'registered':'unknown';
  checks.vehicle_registration_status_verified=status!=='unknown';
  // PDF.js omits the literal Certificate of prefix in actual Tata AIG PDFs.
