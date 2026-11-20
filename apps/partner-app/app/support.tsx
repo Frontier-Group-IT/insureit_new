@@ -34,9 +34,11 @@ export default function SupportScreen() {
   useEffect(() => { void load(); }, [load]);
 
   return (
-    <PartnerScreen title="Support" hideTopBar navyStatusBar bottomNavigationNavy
+    <PartnerScreen title="Support" hideTopBar fullWidth navyStatusBar bottomNavigationNavy
       bottomNavigation={<PartnerCaseBottomNavigation activeTab="More" />}>
-      <PartnerCasePageHeader title="Support" icon="headset-outline" onBack={() => router.back()} />
+      <View style={styles.contentInset}>
+        <PartnerCasePageHeader title="Support" icon="headset-outline" onBack={() => router.back()} />
+      </View>
       {loading ? (
         <PartnerStateView state="loading" title="Loading support" />
       ) : error || !data ? (
@@ -72,6 +74,7 @@ export default function SupportScreen() {
             </View>
           </View>
 
+          <View style={styles.contentInset}>
           {data.relationship_contact ? (
             <View style={styles.contactCard}>
               <View style={styles.contactAvatar}>
@@ -113,6 +116,7 @@ export default function SupportScreen() {
             <View style={styles.bottomWavePale} />
             <View style={styles.bottomWaveBlue} />
             <View style={styles.bottomWaveLight} />
+          </View>
           </View>
         </View>
       )}
@@ -170,8 +174,9 @@ function formatUpdatedAt(value: string) {
 
 const styles = StyleSheet.create({
   page: { paddingBottom: 12, overflow: 'hidden' },
+  contentInset: { paddingHorizontal: 16 },
   hero: {
-    minHeight: 106, marginHorizontal: -16, borderRadius: 19, borderWidth: 1, borderColor: '#E1E6EF',
+    minHeight: 106, marginHorizontal: 0, borderRadius: 0, borderWidth: 0, borderBottomWidth: 1, borderColor: '#E1E6EF',
     backgroundColor: '#FFFFFF', flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: 16, paddingVertical: 13, overflow: 'hidden',
     shadowColor: '#396CB2', shadowOpacity: 0.09, shadowRadius: 9, shadowOffset: { width: 0, height: 3 }, elevation: 2,
