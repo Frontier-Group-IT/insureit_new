@@ -90,4 +90,17 @@ assert(backend.includes('const blockingWarnings = parsed.preview.warnings.filter
 assert(backend.includes('informationalTataWarnings.has(warning)'));
 assert(backend.includes('parsed.preview.checksPassed!==(isTata?18:13)'));
 
-console.log("AI Studio Tata AIG queue eligibility: 6 layouts, ICICI regression and negative controls passed");
+const conversion=read("../app/development/ai-policy-onboarding/actions.ts");
+assert(conversion.includes("!hasVerifiedN8nParserEvidence(extracted.preview.parserId,"),
+ "Bulk conversion must accept only the trained insurer's exact strict check profile");
+assert(conversion.includes("extracted.preview.acceptedIssuanceDate"),
+ "Tata conversion must use PDF-verified signature/receipt date, not inferred cover start");
+assert(conversion.includes("mapVerifiedN8nMotorPremium(extracted.preview.premium)"),
+ "Tata canonical premium mapping must remain independently reconciled");
+assert(conversion.includes("const booked=await onboardPolicy(payload)"),
+ "Tata conversion must use canonical booking transaction and its conflict gates");
+assert(conversion.includes("if(confirmed!==true)"),
+ "Unconfirmed or unattended registration must remain blocked");
+assert(!conversion.includes("extracted.preview.checksPassed!==13||extracted.preview.warnings.length"),
+ "Old ICICI-only 13-check gate must not reject independently verified Tata");
+console.log("AI Studio Tata AIG queue eligibility, strict canonical bulk conversion and negative controls passed");
