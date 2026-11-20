@@ -25,7 +25,7 @@ const uploadSlots: Array<{ type: DocumentType; label: string }> = [
   { type: 'pan_copy', label: 'PAN Copy' }, { type: 'cancelled_cheque', label: 'Cancelled Cheque / Bank Proof' },
   { type: 'photograph', label: 'Photograph' }, { type: 'gst_copy', label: 'GST Certificate' },
 ];
-type MasterData = { ok?: boolean; error?: string; rms?: Option[]; banks?: Option[]; oems?: Option[]; pendingMisps?:Option[] };
+type MasterData = { ok?: boolean; error?: string; rms?: Option[]; banks?: Option[]; oems?: Option[]; pendingMisps?:Option[]; pendingPartners?:Option[] };
 const initial: Record<Field, string> = {
   document_received_at: '', associate_employee_id: '', pos_first_name: '', pos_middle_name: '', pos_last_name: '',
   pan_number: '', aadhaar_number: '', date_of_birth: '', mobile: '', email: '',
@@ -165,6 +165,10 @@ export default function AddPartnerScreen() {
   const [uploadOpen, setUploadOpen] = useState(false);
   const [uploadingType, setUploadingType] = useState<DocumentType | null>(null);
   const [uploaded, setUploaded] = useState<Partial<Record<DocumentType, string>>>({});
+  const [pendingPartners, setPendingPartners] = useState<Option[]>([]);
+  const [missingDocuments, setMissingDocuments] = useState<DocumentType[]>(uploadSlots.slice(0,5).map(slot => slot.type));
+  const [finalizing, setFinalizing] = useState(false);
+  const [issuedPartnerId, setIssuedPartnerId] = useState<string | null>(null);
   const [dateField, setDateField] = useState<'date_of_birth' | 'document_received_at' | null>(null);
   const set = (key: Field, value: string) => {
     setForm(old => ({ ...old, [key]: value }));
@@ -201,7 +205,7 @@ export default function AddPartnerScreen() {
         const response = await authenticatedRequest('GET');
         const result = await response.json() as MasterData;
         if (!response.ok || !result.ok) throw new Error(result.error || 'Could not load RM and Bank lists.');
-        if (active) { setRms(result.rms || []); setBanks(result.banks || []); setOems(result.oems || []);setPendingMisps(result.pendingMisps || []); }
+        if (active) { setRms(result.rms || []); setBanks(result.banks || []); setOems(result.oems || []);setPendingMisps(result.pendingMisps || []);setPendingPartners(result.pendingPartners || []); }
       } catch (error) {
         if (active) partnerAlert('Master data unavailable', error instanceof Error ? error.message : 'Please retry.');
       } finally { if (active) setLoading(false); }
@@ -258,6 +262,7 @@ export default function AddPartnerScreen() {
       const result = await response.json() as { ok?: boolean; error?: string; application_id?: string };
       if (!response.ok || !result.ok || !result.application_id) throw new Error(result.error || 'Partner application could not be submitted.');
       setApplicationId(result.application_id);
+      setMissingDocuments(uploadSlots.filter(slot => slot.type !== 'gst_copy' || Boolean(form.gst_number.trim())).map(slot => slot.type));
       showSavedChoice();
       return result.application_id;
     } catch (error) {
@@ -304,12 +309,66 @@ export default function AddPartnerScreen() {
       const data = await response.json() as { ok?: boolean; error?: string };
       if (!response.ok || !data.ok) throw new Error(data.error || 'Document upload failed.');
       setUploaded(previous => ({ ...previous, [type]: file.name }));
+      await loadSavedDocuments(savedId);
       setUploadSuccessToken(previous => previous + 1);
     } catch (error) {
       partnerAlert('Upload failed', error instanceof Error ? error.message : 'Try again.');
     } finally {
       setUploadingType(null);
     }
+  };
+  const loadSavedDocuments = async (savedId: string) => {
+    const session = (await supabase.auth.getSession()).data.session;
+    if (!session?.access_token) throw new Error('Sign in again to load documents.');
+    const base = (process.env.EXPO_PUBLIC_PORTAL_URL || 'https://portal.insureit.in').replace(/\/$/, '');
+    const response = await fetch(`${base}/api/partner/onboarding/partner-only/documents?applicationId=${encodeURIComponent(savedId)}`, {
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    });
+    const result = await response.json() as { ok?: boolean; error?: string; documents?: Array<{ type: DocumentType; name: string }>; missing?: DocumentType[]; partner_id?: string | null };
+    if (!response.ok || !result.ok) throw new Error(result.error || 'Unable to load saved documents.');
+    setUploaded(Object.fromEntries((result.documents || []).map(item => [item.type, item.name])) as Partial<Record<DocumentType, string>>);
+    setMissingDocuments(result.missing || []);
+    setIssuedPartnerId(result.partner_id || null);
+    return result;
+  };
+  const resumePartner = async (savedId: string) => {
+    if (saving || uploadingType || finalizing) return;
+    setSaving(true);
+    try {
+      await loadSavedDocuments(savedId);
+      setApplicationId(savedId);
+      setUploadOpen(true);
+    } catch (error) {
+      partnerAlert('Unable to open saved Partner', error instanceof Error ? error.message : 'Please retry.');
+    } finally { setSaving(false); }
+  };
+  const completePartnerDocuments = () => {
+    if (!applicationId || missingDocuments.length || finalizing || uploadingType || !allowed) return;
+    partnerAlert('Complete Partner documents?', 'Issue the permanent Partner ID using the documents already saved for this application?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Complete & Issue ID', onPress: () => { void (async () => {
+        setFinalizing(true);
+        try {
+          const session = (await supabase.auth.getSession()).data.session;
+          if (!session?.access_token) throw new Error('Sign in again to complete the application.');
+          const base = (process.env.EXPO_PUBLIC_PORTAL_URL || 'https://portal.insureit.in').replace(/\/$/, '');
+          const response = await fetch(`${base}/api/partner/onboarding/partner-only/documents`, {
+            method: 'PATCH', headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ application_id: applicationId }),
+          });
+          const result = await response.json() as { ok?: boolean; error?: string; partner_id?: string };
+          if (!response.ok || !result.ok || !result.partner_id) throw new Error(result.error || 'Partner ID could not be issued.');
+          setIssuedPartnerId(result.partner_id);
+          setPendingPartners(previous => previous.filter(item => item.id !== applicationId));
+          setUploadOpen(false);
+          partnerAlert('Partner ID Issued', `Partner ID: ${result.partner_id}`, [
+            { text: 'Done', onPress: () => router.replace('/(tabs)/policies') },
+          ]);
+        } catch (error) {
+          partnerAlert('Unable to issue Partner ID', error instanceof Error ? error.message : 'Please retry or contact Operations.');
+        } finally { setFinalizing(false); }
+      })(); } },
+    ]);
   };
   const deleteDocument = (type: DocumentType) => {
     if (!applicationId || !uploaded[type] || saving || uploadingType) return;
@@ -330,6 +389,7 @@ export default function AddPartnerScreen() {
             const result = await response.json() as { ok?: boolean; error?: string };
             if (!response.ok || !result.ok) throw new Error(result.error || 'Document could not be deleted.');
             setUploaded(previous => { const next = { ...previous }; delete next[type]; return next; });
+            await loadSavedDocuments(applicationId);
           } catch (error) {
             partnerAlert('Delete failed', error instanceof Error ? error.message : 'Try again.');
           } finally { setUploadingType(null); }
@@ -407,6 +467,19 @@ export default function AddPartnerScreen() {
           ))}
           </>}
 
+          {partnerType==="posp" && !applicationId && pendingPartners.length > 0 ? (
+            <View style={styles.section}>
+              <Text style={[styles.sectionTitle, { padding: 12 }]}>Resume saved Partner documents</Text>
+              {pendingPartners.map(item => (
+                <Pressable key={item.id} accessibilityRole="button" accessibilityLabel={`Continue Partner ${item.name}`}
+                  disabled={saving} onPress={() => void resumePartner(item.id)}
+                  style={{ padding: 12, borderTopWidth: 1, borderTopColor: '#E1E7F1', flexDirection: 'row', justifyContent: 'space-between' }}>
+                  <Text style={styles.selectText} numberOfLines={1}>{item.name}</Text>
+                  <Ionicons name="chevron-forward" size={18} color="#17365D" />
+                </Pressable>
+              ))}
+            </View>
+          ) : null}
           {partnerType==="posp"&&<View style={styles.actionFooter}>
             <View style={styles.actionRow}>
               <Pressable accessibilityRole="button" accessibilityLabel="Cancel Add Partner"
@@ -430,7 +503,7 @@ export default function AddPartnerScreen() {
           onCancel={() => setDateField(null)}
           onConfirm={date => setSelectedDate(date)}
         />
-        <Modal visible={uploadOpen} transparent animationType="fade" onRequestClose={() => { if (!uploadingType) setUploadOpen(false); }}>
+        <Modal visible={uploadOpen} transparent animationType="fade" onRequestClose={() => { if (!uploadingType && !finalizing) setUploadOpen(false); }}>
           <View style={styles.modalBackdrop}>
             {showUploadBadge ? <View pointerEvents="none" style={[styles.uploadSuccessBadge,styles.uploadSuccessOverlay,{top:Math.max(12,safeAreaInsets.top+8)}]} accessibilityRole="alert">
               <Ionicons name="checkmark-circle" size={17} color="#16805C"/>
@@ -480,8 +553,16 @@ export default function AddPartnerScreen() {
             </View>
           </View>
                 </ScrollView>
+                <Text style={{ color: missingDocuments.length ? '#9B5B10' : '#16805C', fontSize: 11, fontWeight: '700' }}>
+                  {issuedPartnerId ? `Partner ID: ${issuedPartnerId}` : missingDocuments.length ? `${missingDocuments.length} required document(s) remaining` : 'All required documents saved — ready to issue Partner ID'}
+                </Text>
+                {!issuedPartnerId ? <Pressable accessibilityRole="button" accessibilityLabel="Complete documents and issue Partner ID"
+                  disabled={Boolean(uploadingType) || finalizing || missingDocuments.length > 0} onPress={completePartnerDocuments}
+                  style={[styles.documentDoneButton, (Boolean(uploadingType) || finalizing || missingDocuments.length > 0) && styles.disabled]}>
+                  <Text style={styles.submitText}>{finalizing ? 'Issuing Partner ID…' : 'Complete & Issue Partner ID'}</Text>
+                </Pressable> : null}
                 <Pressable accessibilityRole="button" accessibilityLabel="Done uploading documents"
-                  disabled={Boolean(uploadingType)} onPress={() => { setUploadOpen(false); router.replace('/(tabs)/policies'); }}
+                  disabled={Boolean(uploadingType) || finalizing} onPress={() => { setUploadOpen(false); router.replace('/(tabs)/policies'); }}
                   style={[styles.documentDoneButton, Boolean(uploadingType) && styles.disabled]}>
                   <Text style={styles.submitText}>Done</Text>
                 </Pressable>

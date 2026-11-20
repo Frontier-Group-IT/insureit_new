@@ -96,4 +96,22 @@ assert.match(form, /if\(invalidField\)revealFirstError\(invalidField\)/, 'After 
 assert.match(form, /fieldErrors\[field\.key\] && styles\.invalidControl/, 'Input retains red validation border');
 assert.doesNotMatch(form, /<Text style=\{styles\.fieldError\}/, 'No duplicate inline error text beneath input fields');
 
+// Mobile Partner completion must be explicit, scoped to the creator and independent of new uploads.
+const partnerOnlyRoute=read('../../web-portal/app/api/partner/onboarding/partner-only/route.ts');
+assert.match(partnerOnlyRoute,/pendingPartners:/,'Previously saved Partners can be resumed after app restart');
+assert.match(partnerOnlyRoute,/\.eq\("initiated_by",profile\.id\)/,'Resume list is scoped to the employee');
+assert.match(form,/Resume saved Partner documents/);
+assert.match(form,/const loadSavedDocuments = async/);
+assert.match(form,/method: 'PATCH'/,'Complete Partner action invokes explicit finalization');
+assert.match(form,/Complete & Issue Partner ID/);
+assert.match(form,/missingDocuments\.length > 0/,'Incomplete applications cannot be finalized from the app');
+const partnerDocumentsRoute=read('../../web-portal/app/api/partner/onboarding/partner-only/documents/route.ts');
+assert.match(partnerDocumentsRoute,/export async function GET\(request: Request\)/);
+assert.match(partnerDocumentsRoute,/export async function PATCH\(request: Request\)/);
+assert.match(partnerDocumentsRoute,/application\.initiated_by/,'Owner checked before retrieving or finalizing documents');
+assert.match(partnerDocumentsRoute,/mobile_partner_only/,'Only app-created Partner records may be finalized here');
+assert.match(partnerDocumentsRoute,/getEffectivePermissionAccessMap\(profile\)/);
+assert.match(partnerDocumentsRoute,/PARTNER_REQUIRED_DOCUMENTS/);
+assert.match(partnerDocumentsRoute,/finalize_partner_activation_v2/,'Use existing atomic issuance, never manually create an ID');
+
 console.log('Add Partner-only native action, secure route and form verified.');
