@@ -212,7 +212,9 @@ for (const required of [
   'Unlocked achievements', 'ACHIEVED', '{item.title}', 'formatDate(item.date)',
   'NEXT MILESTONE', '{next.title}', 'next.current.toLocaleString', 'View your full journey',
   "hero: { marginHorizontal: -partnerTheme.spacing.lg, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#E5E7EB'",
-  'styles.earnedCount', 'styles.achievementMeta', 'width: 64, height: 64',
+  'styles.earnedCount', 'styles.achievementMeta', 'width: 32, height: 32', 'borderWidth: 2.5', 'fontSize: 7, lineHeight: 10',
+  'numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65}>Every milestone matters.',
+  'earnedCount: { alignItems: \'center\', justifyContent: \'center\', width: 64',
 ]) requireText(recognition, required, 'My Achievements must keep approved compact content and placement.');
 const recognitionHero = recognition.slice(recognition.indexOf('<View style={styles.hero}>'), recognition.indexOf('<View style={styles.sectionHeading}>'));
 if (!recognitionHero.includes('styles.earnedCount') || !recognitionHero.includes('styles.heroCopy')) throw new Error('Recognition count belongs inside the right side of the white header.');
