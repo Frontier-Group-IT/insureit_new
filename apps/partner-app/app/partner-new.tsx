@@ -133,6 +133,7 @@ export default function AddPartnerScreen() {
   const allowed = context?.identity.actor_kind === 'employee'
     && canPartnerAccess(context, 'create_intermediary_application', 'edit');
   const [form, setForm] = useState(initial);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [validationAlert, setValidationAlert] = useState<{field:Field;message:string}|null>(null);
   const [uploadSuccessToken, setUploadSuccessToken] = useState(0);
   const [showUploadBadge, setShowUploadBadge] = useState(false);
@@ -172,12 +173,15 @@ export default function AddPartnerScreen() {
   const [dateField, setDateField] = useState<'date_of_birth' | 'document_received_at' | null>(null);
   const set = (key: Field, value: string) => {
     setForm(old => ({ ...old, [key]: value }));
+    setFieldErrors(previous => {
+      if (!previous[key]) return previous;
+      const next = { ...previous };
+      const message = validatePartnerField(key, { ...form, [key]: value });
+      if (message) next[key] = message;
+      else delete next[key];
+      return next;
+    });
   };
-  // This is visual guidance only. The full validation is still executed on Save Detail.
-  // Do not highlight fields while master data is loading or after the application is saved.
-  const highlightedField = !loading && !applicationId
-    ? validationOrder.find(key => validatePartnerField(key, form) !== null)
-    : undefined;
   const hasUnsavedDetails = mispDirty || (!applicationId && (Object.keys(initial) as Field[]).some(key => form[key] !== initial[key]));
   const changePartnerType=(next:"posp"|"misp")=>{
     if(next===partnerType)return;
@@ -246,6 +250,7 @@ export default function AddPartnerScreen() {
       postal_code: form.postal_code.trim(),
     };
     const errors = validatePartner(form);
+    setFieldErrors(errors);
     const firstInvalid = validationOrder.find(key => errors[key]);
     if (firstInvalid) {
       Keyboard.dismiss();
@@ -258,6 +263,7 @@ export default function AddPartnerScreen() {
       const result = await response.json() as { ok?: boolean; error?: string; application_id?: string };
       if (!response.ok || !result.ok || !result.application_id) throw new Error(result.error || 'Partner application could not be submitted.');
       setApplicationId(result.application_id);
+      setFieldErrors({});
       setMissingDocuments(uploadSlots.filter(slot => slot.type !== 'gst_copy' || Boolean(form.gst_number.trim())).map(slot => slot.type));
       showSavedChoice();
       return result.application_id;
@@ -409,7 +415,7 @@ export default function AddPartnerScreen() {
                 {index === 2 ? (
                   <View style={[styles.field, cellStyle]} onLayout={event => { fieldPositions.current.bank_id = event.nativeEvent.layout.y; }}>
                     <Text style={styles.label}>Bank <Text style={styles.requiredStar}>*</Text></Text>
-                    <Pressable disabled={loading || Boolean(applicationId)} accessibilityRole="button" onPress={() => openSelector('bank')} style={[styles.select, highlightedField === 'bank_id' && styles.invalidControl]}>
+                    <Pressable disabled={loading || Boolean(applicationId)} accessibilityRole="button" onPress={() => openSelector('bank')} style={[styles.select, fieldErrors.bank_id && styles.invalidControl]}>
                       <Text style={styles.selectText} numberOfLines={1}>{banks.find(x => x.id === form.bank_id)?.name || (loading ? 'Loading banks…' : 'Select bank')}</Text>
                       <Ionicons name="chevron-down" size={17} color="#17365D" />
                     </Pressable>
@@ -421,7 +427,7 @@ export default function AddPartnerScreen() {
                       <Text style={styles.label}>{field.label}{!field.optional ? <Text style={styles.requiredStar}> *</Text> : null}</Text>
                       {field.key === 'document_received_at' || field.key === 'date_of_birth' ? (
                         <Pressable accessibilityRole="button" accessibilityLabel={`Select ${field.label}`}
-                          disabled={Boolean(applicationId)} onPress={() => setDateField(field.key as 'date_of_birth' | 'document_received_at')} style={[styles.select, highlightedField === field.key && styles.invalidControl]}>
+                          disabled={Boolean(applicationId)} onPress={() => setDateField(field.key as 'date_of_birth' | 'document_received_at')} style={[styles.select, fieldErrors[field.key] && styles.invalidControl]}>
                           <Text style={styles.selectText} numberOfLines={1}>{form[field.key] || 'DD/MM/YYYY'}</Text>
                           <Ionicons name="calendar-outline" size={18} color="#17365D" />
                         </Pressable>
@@ -431,13 +437,13 @@ export default function AddPartnerScreen() {
                           keyboardType={field.keyboard || 'default'} secureTextEntry={Boolean(field.secret)}
                           autoCapitalize={field.key === 'email' ? 'none' : field.key === 'pan_number' || field.key === 'bank_ifsc_code' || field.key === 'gst_number' ? 'characters' : 'sentences'}
                           autoCorrect={false} maxLength={field.key === 'address' ? 300 : field.key === 'aadhaar_number' ? 12 : 150}
-                          style={[styles.input, highlightedField === field.key && styles.invalidControl]} />
+                          style={[styles.input, fieldErrors[field.key] && styles.invalidControl]} />
                       )}
                     </View>
                     {field.key === 'document_received_at' ? (
                       <View style={[styles.field, cellStyle]} onLayout={event => { fieldPositions.current.associate_employee_id = event.nativeEvent.layout.y; }}>
                         <Text style={styles.label}>RM <Text style={styles.requiredStar}>*</Text></Text>
-                        <Pressable disabled={loading || Boolean(applicationId)} accessibilityRole="button" onPress={() => openSelector('rm')} style={[styles.select, highlightedField === 'associate_employee_id' && styles.invalidControl]}>
+                        <Pressable disabled={loading || Boolean(applicationId)} accessibilityRole="button" onPress={() => openSelector('rm')} style={[styles.select, fieldErrors.associate_employee_id && styles.invalidControl]}>
                           <Text style={styles.selectText} numberOfLines={1}>{rms.find(x => x.id === form.associate_employee_id)?.name || (loading ? 'Loading RMs…' : 'Select RM')}</Text>
                           <Ionicons name="chevron-down" size={17} color="#17365D" />
                         </Pressable>
