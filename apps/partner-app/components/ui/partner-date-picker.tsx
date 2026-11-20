@@ -16,9 +16,11 @@ type PartnerDatePickerProps = {
   disabled?: boolean;
   /** Opt in to immediate iOS day selection without the shared Done button. */
   directSelect?: boolean;
+  /** Dark month-grid calendar used only by Business trend custom range. */
+  calendarVariant?: 'default' | 'dark';
 };
 
-export function PartnerDatePicker({ label, value, onChange, minimumDate, maximumDate, disabled = false, directSelect = false }: PartnerDatePickerProps) {
+export function PartnerDatePicker({ label, value, onChange, minimumDate, maximumDate, disabled = false, directSelect = false, calendarVariant = 'default' }: PartnerDatePickerProps) {
   const [open, setOpen] = useState(false);
   const [visibleMonth, setVisibleMonth] = useState(() => new Date((value ?? new Date()).getFullYear(), (value ?? new Date()).getMonth(), 1, 12));
   const displayValue = useMemo(() => value
@@ -45,7 +47,7 @@ export function PartnerDatePicker({ label, value, onChange, minimumDate, maximum
   const calendarCells = useMemo(() => {
     const year = visibleMonth.getFullYear();
     const month = visibleMonth.getMonth();
-    const offset = new Date(year, month, 1, 12).getDay();
+    const offset = (new Date(year, month, 1, 12).getDay() + 6) % 7;
     const days = new Date(year, month + 1, 0, 12).getDate();
     return Array.from({ length: Math.ceil((offset + days) / 7) * 7 }, (_, index) => {
       const day = index - offset + 1;
@@ -64,7 +66,7 @@ export function PartnerDatePicker({ label, value, onChange, minimumDate, maximum
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={`${label}, ${displayValue}`}
-        accessibilityHint={Platform.OS === 'web' ? 'Native date selection is available in the Partner mobile app.' : 'Opens the system date picker.'}
+        accessibilityHint={Platform.OS === 'web' ? 'Native date selection is available in the Partner mobile app.' : 'Opens the date calendar.'}
         disabled={disabled || Platform.OS === 'web'}
         onPress={openPicker}
         style={({ pressed }) => [styles.control, disabled && styles.disabled, pressed && styles.pressed]}
@@ -78,19 +80,25 @@ export function PartnerDatePicker({ label, value, onChange, minimumDate, maximum
           <View style={styles.calendarOverlay}>
             <Pressable style={StyleSheet.absoluteFill} accessibilityRole="button"
               accessibilityLabel="Close calendar" onPress={() => setOpen(false)} />
-            <View style={styles.calendarCard}>
+            <View style={[styles.calendarCard, calendarVariant === 'dark' && styles.calendarCardDark]}>
+          {calendarVariant === 'dark' ? (
+            <View style={styles.darkSelectedHeading}>
+              <Text style={styles.darkYear}>{(value ?? visibleMonth).getFullYear()}</Text>
+              <Text style={styles.darkSelectedDate}>{(value ?? visibleMonth).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}</Text>
+            </View>
+          ) : null}
           <View style={styles.calendarHeader}>
             <Pressable accessibilityRole="button" accessibilityLabel="Previous month"
               onPress={() => setVisibleMonth(current => new Date(current.getFullYear(), current.getMonth() - 1, 1, 12))}
-              style={styles.monthButton}><Ionicons name="chevron-back" size={20} color={partnerTheme.colors.brand}/></Pressable>
-            <Text style={styles.monthTitle}>{visibleMonth.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}</Text>
+              style={styles.monthButton}><Ionicons name="chevron-back" size={20} color={calendarVariant === 'dark' ? '#FFFFFF' : partnerTheme.colors.brand}/></Pressable>
+            <Text style={[styles.monthTitle, calendarVariant === 'dark' && styles.darkMonthTitle]}>{visibleMonth.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}</Text>
             <Pressable accessibilityRole="button" accessibilityLabel="Next month"
               onPress={() => setVisibleMonth(current => new Date(current.getFullYear(), current.getMonth() + 1, 1, 12))}
-              style={styles.monthButton}><Ionicons name="chevron-forward" size={20} color={partnerTheme.colors.brand}/></Pressable>
+              style={styles.monthButton}><Ionicons name="chevron-forward" size={20} color={calendarVariant === 'dark' ? '#FFFFFF' : partnerTheme.colors.brand}/></Pressable>
           </View>
           <View style={styles.calendarGrid}>
-            {['S','M','T','W','T','F','S'].map((weekday, index) =>
-              <View key={index} style={styles.dayCell}><Text style={styles.weekday}>{weekday}</Text></View>)}
+            {['M','T','W','T','F','S','S'].map((weekday, index) =>
+              <View key={index} style={styles.dayCell}><Text style={[styles.weekday, calendarVariant === 'dark' && styles.darkWeekday]}>{weekday}</Text></View>)}
             {calendarCells.map((day, index) => {
               const selected = Boolean(day && value && day.getFullYear() === value.getFullYear() &&
                 day.getMonth() === value.getMonth() && day.getDate() === value.getDate());
@@ -102,8 +110,8 @@ export function PartnerDatePicker({ label, value, onChange, minimumDate, maximum
                     accessibilityState={{ disabled: outside, selected }}
                     disabled={outside}
                     onPress={() => { void partnerSelectionHaptic(); onChange(day); setOpen(false); }}
-                    style={[styles.dayButton, selected && styles.daySelected]}>
-                    <Text style={[styles.dayText, outside && styles.dayDisabled, selected && styles.daySelectedText]}>{day.getDate()}</Text>
+                    style={[styles.dayButton, calendarVariant === 'dark' && styles.darkDayButton, selected && (calendarVariant === 'dark' ? styles.darkDaySelected : styles.daySelected)]}>
+                    <Text style={[styles.dayText, calendarVariant === 'dark' && styles.darkDayText, outside && styles.dayDisabled, selected && (calendarVariant === 'dark' ? styles.darkDaySelectedText : styles.daySelectedText)]}>{day.getDate()}</Text>
                   </Pressable> : null}
                 </View>
               );
@@ -154,6 +162,16 @@ const styles = StyleSheet.create({
   doneText: { color: partnerTheme.colors.brand, ...partnerTheme.typography.bodyStrong },
   calendarOverlay: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(16,30,66,0.64)', padding: 18 },
   calendarCard: { width: '100%', maxWidth: 344, borderRadius: 16, backgroundColor: '#FFFFFF', padding: 12 },
+  calendarCardDark: { padding: 0, overflow: 'hidden', backgroundColor: '#393939', borderRadius: 6 },
+  darkSelectedHeading: { paddingHorizontal: 20, paddingTop: 15, paddingBottom: 18, backgroundColor: '#525252' },
+  darkYear: { color: '#CECECE', fontSize: 16, fontWeight: '600' },
+  darkSelectedDate: { marginTop: 6, color: '#FFFFFF', fontSize: 27, fontWeight: '800' },
+  darkMonthTitle: { color: '#FFFFFF', fontSize: 16 },
+  darkWeekday: { color: '#D6D6D6' },
+  darkDayButton: { width: 36, height: 36, borderRadius: 20 },
+  darkDayText: { color: '#FFFFFF', fontSize: 15 },
+  darkDaySelected: { backgroundColor: '#79C9C4' },
+  darkDaySelectedText: { color: '#122A2A', fontWeight: '800' },
   calendarHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 4, paddingTop: 5 },
   monthButton: { width: 34, height: 34, alignItems: 'center', justifyContent: 'center' },
   monthTitle: { color: partnerTheme.colors.ink, fontSize: 13, fontWeight: '700' },
