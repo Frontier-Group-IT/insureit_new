@@ -48,7 +48,7 @@ for (const style of ['filterButton', 'filterText']) {
   };
   assert.equal(grab(screen), grab(claims), 'Policies '+style+' must match the exact Claims style');
 }
-assert.doesNotMatch(screen,/styles\.sortFloating|sortFloating:|>Sort by<\/Text>/,'Remove the old floating Sort by control');
+assert.doesNotMatch(screen,/styles\.sortFloating|sortFloating:|sortFloatingText:/,'Remove the old floating Sort by control while retaining the existing filter sheet title');
 assert.match(screen,/searchSticky \? <View style=\{\[styles\.stickySearchOverlay[\s\S]*?\{searchControls\}/,'Sticky Policies search reuses the enabled inline Filter');
 assert.match(screen,/Reset Filters/);
 assert.match(screen,/Apply Filter/);
