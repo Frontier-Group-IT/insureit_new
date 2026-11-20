@@ -594,60 +594,131 @@ export default function PoliciesScreen() {
                 <Ionicons name="close" size={23} color="#586580"/>
               </Pressable>
             </View>
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.sortSheetBody}>
-              <View style={styles.sortSectionHeading}>
-                <Feather name="calendar" size={20} color="#182557"/>
-                <Text style={styles.sortSectionLabel}>Period</Text>
-              </View>
-              <View style={styles.sortPeriodRow}>
-                {(['mtd','all'] as const).map(value=>{
-                  const selected=draftPeriod===value;
-                  return <Pressable key={value} accessibilityRole="button" accessibilityLabel={value==='mtd'?'MTD':'All'}
-                    accessibilityState={{selected}} onPress={()=>{setDraftPeriod(value);setDraftLifecycle('all');}}
-                    style={({pressed})=>[styles.sortPeriodOption,selected&&styles.sortPeriodSelected,pressed&&styles.summaryChipPressed]}>
-                    <View style={styles.sortPeriodContent}>
+            <View style={styles.advancedTabs}>
+              {([
+                {key:'period',label:'Period',icon:'calendar'},
+                {key:'source',label:'Source',icon:'sliders'},
+                {key:'rm',label:'RM',icon:'users'},
+                {key:'date',label:'Date Range',icon:'calendar'},
+              ] as const).map(tab=><Pressable key={tab.key} accessibilityRole="tab"
+                accessibilityLabel={tab.label} accessibilityState={{selected:filterTab===tab.key}}
+                onPress={()=>setFilterTab(tab.key)}
+                style={[styles.advancedTab,filterTab===tab.key&&styles.advancedTabActive]}>
+                <Feather name={tab.icon} size={12} color={filterTab===tab.key?'#4230B3':'#53647D'}/>
+                <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}
+                  style={[styles.advancedTabText,filterTab===tab.key&&styles.advancedTabTextActive]}>{tab.label}</Text>
+              </Pressable>)}
+            </View>
+            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled"
+              style={styles.advancedPanel} contentContainerStyle={styles.sortSheetBody}>
+              {filterTab==='period'?<>
+                <View style={styles.sortSectionHeading}><Feather name="calendar" size={18} color="#182557"/>
+                  <Text style={styles.sortSectionLabel}>Period</Text></View>
+                <View style={styles.sortPeriodRow}>
+                  {(['mtd','all'] as const).map(value=>{
+                    const selected=draftPeriod===value;
+                    return <Pressable key={value} accessibilityRole="button" accessibilityLabel={value==='mtd'?'MTD':'All'}
+                      accessibilityState={{selected}} onPress={()=>setDraftPeriod(value)}
+                      style={[styles.sortPeriodOption,selected&&styles.sortPeriodSelected]}>
                       <Text style={[styles.sortPeriodText,selected&&styles.sortPeriodTextSelected]}>{value==='mtd'?'MTD':'All'}</Text>
-                    </View>
-                  </Pressable>;
-                })}
-              </View>
-              <View style={styles.sortSectionDivider}/>
-              <View style={styles.sortSectionHeading}>
-                <Ionicons name="layers-outline" size={21} color="#182557"/>
-                <Text style={styles.sortSectionLabel}>{draftPeriod==='mtd'?'MTD':'All'} Policy Status</Text>
-              </View>
-              <View style={styles.sortChoices}>
-                {sheetStatuses.map(option=>{
-                  const selected=draftLifecycle===option.lifecycle;
-                  const count=periodCounts.data?.[draftPeriod]?.[option.value];
-                  return <Pressable key={option.value} accessibilityRole="button" accessibilityLabel={option.label}
-                    accessibilityState={{selected}} onPress={()=>setDraftLifecycle(option.lifecycle)}
-                    style={({pressed})=>[styles.sortChoice,selected&&styles.sortChoiceSelected,pressed&&styles.summaryChipPressed]}>
-                    <Ionicons name={selected?'radio-button-on':'radio-button-off'} color={selected?'#4230B3':'#A3A9B1'} size={24}/>
-                    <Text style={[styles.sortChoiceText,selected&&styles.sortChoiceTextSelected]}>{option.label}</Text>
-                    <View style={[styles.sortChoiceCountBadge,
-                      option.value==='all'?styles.sortCountPurple:
-                      option.value==='active'?styles.sortCountGreen:
-                      option.value==='expired'?styles.sortCountRed:styles.sortCountAmber]}>
-                      <Text style={[styles.sortChoiceCount,
-                        option.value==='all'?styles.sortCountPurpleText:
-                        option.value==='active'?styles.sortCountGreenText:
-                        option.value==='expired'?styles.sortCountRedText:styles.sortCountAmberText]}>
-                        {count===undefined?'—':count.toLocaleString('en-IN')}
-                      </Text>
-                    </View>
-                  </Pressable>;
-                })}
-              </View>
-              {periodCounts.error ? <Text style={styles.sortError}>Counts are unavailable. The selected filter may need a server update.</Text>:null}
-              <Pressable accessibilityRole="button" accessibilityLabel="Apply policy filters"
-                style={({pressed})=>[styles.sortApply,pressed&&styles.summaryChipPressed]} onPress={applySortSheet}>
-                <View style={styles.sortApplyContent}>
-                  <Feather name="filter" size={20} color="#FFFFFF"/>
-                  <Text style={styles.sortApplyText}>Apply Filter</Text>
+                    </Pressable>;
+                  })}
                 </View>
-              </Pressable>
+                <View style={styles.sortSectionDivider}/>
+                <View style={styles.sortSectionHeading}><Ionicons name="layers-outline" size={19} color="#182557"/>
+                  <Text style={styles.sortSectionLabel}>All Policies Status</Text></View>
+                <View style={styles.sortChoices}>
+                  {sheetStatuses.map(option=>{
+                    const selected=draftLifecycle===option.lifecycle;
+                    const count=!advanced&&draftPeriod===period?periodCounts.data?.[draftPeriod]?.[option.value]:undefined;
+                    return <Pressable key={option.value} accessibilityRole="button" accessibilityLabel={option.label}
+                      accessibilityState={{selected}} onPress={()=>setDraftLifecycle(option.lifecycle)}
+                      style={[styles.sortChoice,selected&&styles.sortChoiceSelected]}>
+                      <Ionicons name={selected?'radio-button-on':'radio-button-off'} color={selected?'#4230B3':'#A3A9B1'} size={22}/>
+                      <Text style={[styles.sortChoiceText,selected&&styles.sortChoiceTextSelected]}>{option.label}</Text>
+                      {count!==undefined?<View style={styles.sortChoiceCountBadge}><Text style={styles.sortChoiceCount}>{count.toLocaleString('en-IN')}</Text></View>:null}
+                    </Pressable>;
+                  })}
+                </View>
+              </>:null}
+              {filterTab==='source'?<>
+                <Text style={styles.sortSectionLabel}>Source</Text>
+                <View style={styles.advancedSearch}><Feather name="search" size={17} color="#8190A7"/>
+                  <TextInput value={sourceSearch} onChangeText={setSourceSearch}
+                    accessibilityLabel="Search sources" placeholder="Search source..."
+                    placeholderTextColor="#91A0B4" style={styles.advancedSearchInput}/></View>
+                <Pressable accessibilityRole="button" accessibilityState={{selected:draftSource==='all'}}
+                  onPress={()=>setDraftSource('all')} style={[styles.advancedOption,draftSource==='all'&&styles.sortChoiceSelected]}>
+                  <Ionicons name={draftSource==='all'?'checkbox':'square-outline'} size={20} color="#4230B3"/>
+                  <Text style={styles.sortChoiceText}>All Sources</Text></Pressable>
+                {filterOptions.loading?<ActivityIndicator color="#4030AF"/>:filterOptions.error?
+                  <Text style={styles.sortError}>Sources unavailable. Check network and retry.</Text>:
+                  (filterOptions.data?.sources??[]).filter((option:PartnerPolicyFilterOption)=>
+                    option.label.toLowerCase().includes(sourceSearch.trim().toLowerCase())||
+                    option.value.toLowerCase().includes(sourceSearch.trim().toLowerCase())
+                  ).map((option:PartnerPolicyFilterOption)=><Pressable key={option.value} accessibilityRole="button"
+                    accessibilityLabel={option.label} accessibilityState={{selected:draftSource===option.value}}
+                    onPress={()=>setDraftSource(option.value)}
+                    style={[styles.advancedOption,draftSource===option.value&&styles.sortChoiceSelected]}>
+                    <Ionicons name={draftSource===option.value?'checkbox':'square-outline'} size={20} color="#4230B3"/>
+                    <Text style={styles.sortChoiceText} numberOfLines={2}>{option.label}</Text></Pressable>)}
+              </>:null}
+              {filterTab==='rm'?<>
+                <Text style={styles.sortSectionLabel}>RM</Text>
+                <View style={styles.advancedSearch}><Feather name="search" size={17} color="#8190A7"/>
+                  <TextInput value={rmSearch} onChangeText={setRmSearch}
+                    accessibilityLabel="Search RMs" placeholder="Search RM..."
+                    placeholderTextColor="#91A0B4" style={styles.advancedSearchInput}/></View>
+                <Pressable accessibilityRole="button" accessibilityState={{selected:draftRm==='all'}}
+                  onPress={()=>setDraftRm('all')} style={[styles.advancedOption,draftRm==='all'&&styles.sortChoiceSelected]}>
+                  <Ionicons name={draftRm==='all'?'checkbox':'square-outline'} size={20} color="#4230B3"/>
+                  <Text style={styles.sortChoiceText}>All RMs</Text></Pressable>
+                {filterOptions.loading?<ActivityIndicator color="#4030AF"/>:filterOptions.error?
+                  <Text style={styles.sortError}>RMs unavailable. Check network and retry.</Text>:
+                  (filterOptions.data?.rms??[]).filter((name:string)=>name.toLowerCase().includes(rmSearch.trim().toLowerCase()))
+                  .map((name:string)=><Pressable key={name} accessibilityRole="button" accessibilityLabel={name}
+                    accessibilityState={{selected:draftRm===name}} onPress={()=>setDraftRm(name)}
+                    style={[styles.advancedOption,draftRm===name&&styles.sortChoiceSelected]}>
+                    <Ionicons name={draftRm===name?'checkbox':'square-outline'} size={20} color="#4230B3"/>
+                    <Text style={styles.sortChoiceText} numberOfLines={2}>{name}</Text></Pressable>)}
+              </>:null}
+              {filterTab==='date'?<>
+                <Text style={styles.sortSectionLabel}>Date Range</Text>
+                <View style={styles.advancedPresets}>
+                  {([
+                    {key:'all',label:'All Dates'},
+                    {key:'mtd',label:'MTD'},
+                    {key:'last_month',label:'Last Month'},
+                    {key:'last_3',label:'Last 3 Months'},
+                    {key:'last_6',label:'Last 6 Months'},
+                  ] as const).map(option=><Pressable key={option.key} accessibilityRole="button"
+                    onPress={()=>{if(option.key==='all'){setDraftFromDate('');setDraftToDate('');}
+                      else {const dates=quickDateRange(option.key);setDraftFromDate(dates.from);setDraftToDate(dates.to);}}}
+                    style={styles.advancedPreset}><Text style={styles.advancedPresetText}>{option.label}</Text></Pressable>)}
+                </View>
+                <View style={styles.advancedDates}>
+                  <View style={{flex:1}}><PartnerDatePicker label="From" value={parseFilterDate(draftFromDate)}
+                    onChange={date=>setDraftFromDate(isoDate(date))} maximumDate={parseFilterDate(draftToDate)??undefined}/></View>
+                  <View style={{flex:1}}><PartnerDatePicker label="To" value={parseFilterDate(draftToDate)}
+                    onChange={date=>setDraftToDate(isoDate(date))} minimumDate={parseFilterDate(draftFromDate)??undefined}/></View>
+                </View>
+                {draftFromDate&&draftToDate&&draftFromDate>draftToDate?
+                  <Text style={styles.sortError}>The start date must be before the end date.</Text>:null}
+              </>:null}
+              {periodCounts.error?<Text style={styles.sortError}>Policy counts are temporarily unavailable.</Text>:null}
             </ScrollView>
+            <View style={styles.advancedFooter}>
+              <Pressable accessibilityRole="button" accessibilityLabel="Reset Filters" style={styles.advancedReset}
+                onPress={()=>{setDraftPeriod('all');setDraftLifecycle('all');setDraftSource('all');setDraftRm('all');
+                  setDraftFromDate('');setDraftToDate('');setSourceSearch('');setRmSearch('');setFilterTab('period');}}>
+                <Feather name="rotate-ccw" size={17} color="#172552"/>
+                <Text style={styles.advancedResetText}>Reset Filters</Text></Pressable>
+              <Pressable accessibilityRole="button" accessibilityLabel="Apply policy filters"
+                disabled={Boolean(draftFromDate&&draftToDate&&draftFromDate>draftToDate)}
+                style={styles.advancedApply} onPress={applySortSheet}>
+                <Feather name="filter" size={18} color="#FFFFFF"/>
+                <Text style={styles.sortApplyText}>Apply Filter</Text></Pressable>
+            </View>
           </View>
         </View>
       </Modal>
@@ -947,6 +1018,28 @@ const styles = StyleSheet.create({
   sortSheetTitle:{fontSize:17,fontWeight:'800',color:'#14244B'},
   sortSheetClose:{minWidth:36,minHeight:36,alignItems:'center',justifyContent:'center'},
   sortSheetBody:{paddingTop:8,paddingBottom:3},
+  advancedTabs:{flexDirection:'row',gap:4,marginTop:11},
+  advancedTab:{flex:1,minWidth:0,minHeight:38,flexDirection:'row',gap:3,alignItems:'center',justifyContent:'center',
+    borderRadius:10,borderWidth:1,borderColor:'#D7DCEC',paddingHorizontal:3,backgroundColor:'#FFFFFF'},
+  advancedTabActive:{backgroundColor:'#EEE7FF',borderColor:'#D4C6FC'},
+  advancedTabText:{fontSize:10,fontWeight:'700',color:'#344765',flexShrink:1},
+  advancedTabTextActive:{color:'#4230B3'},
+  advancedPanel:{maxHeight:290,marginTop:11},
+  advancedSearch:{minHeight:41,flexDirection:'row',alignItems:'center',gap:8,
+    borderWidth:1,borderColor:'#D9DEEE',borderRadius:12,paddingHorizontal:12,marginTop:9,marginBottom:6},
+  advancedSearchInput:{flex:1,minHeight:40,color:'#172552',fontSize:12},
+  advancedOption:{minHeight:39,flexDirection:'row',alignItems:'center',gap:10,paddingHorizontal:10,borderRadius:9},
+  advancedPresets:{flexDirection:'row',flexWrap:'wrap',gap:7,marginTop:10},
+  advancedPreset:{minHeight:34,paddingHorizontal:11,justifyContent:'center',borderRadius:9,backgroundColor:'#F1EFF9'},
+  advancedPresetText:{color:'#27345B',fontSize:11,fontWeight:'700'},
+  advancedDates:{flexDirection:'row',gap:9,marginTop:13},
+  advancedFooter:{flexDirection:'row',gap:9,paddingVertical:11,borderTopWidth:1,borderTopColor:'#E5E7F1'},
+  advancedReset:{flex:1,minHeight:45,flexDirection:'row',gap:6,alignItems:'center',justifyContent:'center',
+    borderWidth:1,borderColor:'#C8D0E5',borderRadius:23},
+  advancedResetText:{fontSize:12,color:'#1B2950',fontWeight:'800'},
+  advancedApply:{flex:1.6,minHeight:45,flexDirection:'row',gap:8,alignItems:'center',justifyContent:'center',
+    borderRadius:23,backgroundColor:'#4030AF'},
+
   sortSectionHeading:{flexDirection:'row',alignItems:'center',gap:9,marginTop:4,marginBottom:9},
   sortSectionLabel:{fontSize:13,lineHeight:19,color:'#172552',fontWeight:'800'},
   sortSectionDivider:{height:1,backgroundColor:'#E1E3EE',marginTop:12,marginBottom:10},
