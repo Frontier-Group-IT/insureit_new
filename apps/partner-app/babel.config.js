@@ -3,6 +3,7 @@ module.exports = function (api) {
   return {
     presets: ['babel-preset-expo'],
     plugins: [
+      require('./plugins/ios-typography'),
       ['module-resolver', { root: ['./'], alias: { '@': './' } }],
     ],
   };
