@@ -1,7 +1,7 @@
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { Animated, Image, type ImageSourcePropType, Pressable, RefreshControl, Platform, StyleSheet, Text, View, useWindowDimensions, type StyleProp, type TextStyle } from 'react-native';
+import { Animated, Image, type ImageSourcePropType, Modal, Pressable, RefreshControl, Platform, StyleSheet, Text, View, useWindowDimensions, type StyleProp, type TextStyle } from 'react-native';
 
 import { PartnerBusinessRangeSummaryCard } from '@/components/partner-business-range-summary';
 import { PartnerScreen, usePartnerStickyVisible } from '@/components/partner-screen';
@@ -218,8 +218,8 @@ export default function BusinessScreen() {
     setTrendError(null);
 
     if (next === 'custom') {
-      setTrendRange('custom');
-      setTrendCustomOpen((open) => (trendRange === 'custom' ? !open : true));
+      // Keep the last applied trend on screen while users choose a custom range.
+      setTrendCustomOpen(true);
       return;
     }
 
@@ -237,7 +237,7 @@ export default function BusinessScreen() {
     } finally {
       setTrendLoading(false);
     }
-  }, [trendRange]);
+  }, []);
 
   const overview = overviewRange === 'mtd' || !overviewPreset
     ? null
@@ -441,7 +441,7 @@ export default function BusinessScreen() {
                     menu={<DropdownMenu options={TREND_OPTIONS} selected={trendRange} onSelect={(value) => void selectTrendRange(value)} />}
                   >
                     <Pressable accessibilityRole="button" accessibilityLabel="Choose month trend period" accessibilityState={{ expanded: trendMenuOpen }} onPress={() => setTrendMenuOpen((value) => !value)} style={styles.smallSelect}>
-                      <Text style={styles.smallSelectText}>{optionLabel(TREND_OPTIONS, trendRange)}</Text>
+                      <Text style={styles.smallSelectText}>{trendCustomOpen ? 'Custom' : optionLabel(TREND_OPTIONS, trendRange)}</Text>
                       <Ionicons name={trendMenuOpen ? 'chevron-up' : 'chevron-down'} size={10} color="#3156B8" />
                     </Pressable>
                   </PartnerAnchoredDropdown>
@@ -456,18 +456,36 @@ export default function BusinessScreen() {
             />
           </View>
 
-          {trendCustomOpen ? (
-            <View style={styles.rangeWrap}>
-              <PartnerBusinessRangeSummaryCard
-                title="Custom trend range"
-                meta="Choose a date range for the trend total"
-                onApplied={(result) => {
-                  setTrendPreset(result);
-                  setTrendCustomOpen(false);
-                }}
-              />
+          <Modal
+            visible={trendCustomOpen}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setTrendCustomOpen(false)}
+          >
+            <View style={styles.trendRangeOverlay}>
+              <Pressable accessibilityRole="button" accessibilityLabel="Close custom trend range"
+                onPress={() => setTrendCustomOpen(false)} style={StyleSheet.absoluteFill} />
+              <View style={styles.trendRangePopup}>
+                <Pressable accessibilityRole="button" accessibilityLabel="Close custom trend range"
+                  style={styles.trendRangeClose} onPress={() => setTrendCustomOpen(false)}>
+                  <Ionicons name="close" size={22} color="#56647C" />
+                </Pressable>
+                {trendCustomOpen ? (
+                  <PartnerBusinessRangeSummaryCard
+                    title="Custom trend range"
+                    meta="Choose From and To dates to update the trend"
+                    directDateSelection
+                    onApplied={(result) => {
+                      setTrendPreset(result);
+                      setTrendRange('custom');
+                      setTrendError(null);
+                      setTrendCustomOpen(false);
+                    }}
+                  />
+                ) : null}
+              </View>
             </View>
-          ) : null}
+          </Modal>
           {trendLoading ? <Text style={styles.inlineLoading}>Loading selected trend…</Text> : null}
           {trendError ? <View style={styles.feedback}><PartnerBanner tone="warning" message={trendError} /></View> : null}
           {trendRange === 'last_6_months' && netTrend.error ? (
@@ -478,7 +496,7 @@ export default function BusinessScreen() {
             compact={compactScreen}
             emptyMessage={trendRange === 'last_6_months'
               ? (netTrend.loading ? 'Loading monthly net premium…' : 'No monthly net premium data available.')
-              : trendRange === 'custom' ? 'Apply a custom range to view its net premium total.' : undefined}
+              : undefined}
           />
 
           <SectionHeader
@@ -894,6 +912,9 @@ const styles = StyleSheet.create({
   dropdownOptionText: { color: '#506079', ...partnerTheme.typography.caption, fontWeight: Platform.OS === 'ios' ? '400' : '600' },
   dropdownOptionTextActive: { color: '#3156B8', fontWeight: Platform.OS === 'ios' ? '400' : '800' },
   rangeWrap: { marginBottom: 8 },
+  trendRangeOverlay: { flex: 1, justifyContent: 'center', padding: 20, backgroundColor: 'rgba(12,26,52,0.65)' },
+  trendRangePopup: { width: '100%', maxWidth: 440, alignSelf: 'center', backgroundColor: '#FFFFFF', borderRadius: 20, paddingTop: 36, paddingHorizontal: 8, paddingBottom: 8 },
+  trendRangeClose: { position: 'absolute', top: 6, right: 8, padding: 5, zIndex: 2 },
   inlineLoading: { marginBottom: 7, color: '#718198', ...partnerTheme.typography.caption },
   overviewGrid: { flexDirection: 'row', gap: 5, borderRadius: 16, padding: 6, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#DDE6F1', ...partnerTheme.shadowSoft },
   overviewCard: { flex: 1, minWidth: 0, minHeight: 78, alignItems: 'center', justifyContent: 'center', borderRadius: 12, paddingHorizontal: 2, paddingVertical: 8, backgroundColor: '#F5F9FF' },
