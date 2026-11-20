@@ -375,15 +375,19 @@ async function preparePolicyIntakeHandoffInternal(
     ? " REGISTRATION_YEAR_MANUFACTURING_FALLBACK: Manufacturing year missing from policy; "+yearEvidence.year
       +" was taken from the printed vehicle registration year under the configured operational fallback rule. This is not manufacturer-verified and no manufacturing month/day was inferred."
     :"";
-  const niaProvisionalRto=verified?.parserId==="new_india_cv_native_pdf"
+  const niaProvisionalRtoField=verified?.parserId==="new_india_cv_native_pdf"
     && verified.checksPassed===16
-    && verified.fields.some(field=>field.key==="vehicle_rto_name"
-      && field.evidence==="NIA issuing office city; provisional, NOT registration authority"
-      && field.value.trim()==="Gurgaon")
     && verified.fields.some(field=>field.key==="vehicle_registration_status"
-      &&field.value==="unregistered");
-  const niaProvisionalRtoNote=niaProvisionalRto
-    ?" NIA_PROVISIONAL_RTO_FROM_ISSUING_OFFICE: Gurgaon, Haryana. Vehicle registration authority was blank on the PDF; the source is NIA's Gurgaon issuing office, not RTO confirmation. Confirm after RTO registration.":"";
+      &&field.value==="unregistered")
+      ?verified.fields.find(field=>field.key==="vehicle_rto_name"
+        &&field.evidence==="NIA issuing office city; provisional, NOT registration authority"
+        &&/^[A-Za-z][A-Za-z -]{2,45}$/.test(field.value.trim()))
+      :undefined;
+  const niaProvisionalRto=Boolean(niaProvisionalRtoField);
+  const niaProvisionalRtoNote=niaProvisionalRtoField
+    ?" NIA_PROVISIONAL_RTO_FROM_ISSUING_OFFICE: "+niaProvisionalRtoField.value.trim()
+      +", "+(verified?.fields.find(f=>f.key==="vehicle_rto_state")?.value||"state unavailable")
+      +". Vehicle registration authority was blank on the PDF; the source is NIA's issuing office, not RTO confirmation. Confirm after RTO registration.":"";
   // Only a separately printed issued-on date OR the exact insurer-scoped
   // signing+receipt rule is accepted; OD/TP start and clock are never substitutes.
   const verifiedIssuanceDate=verified?.fields.find(field=>field.key==="policy_issuance_date")?.value
@@ -507,7 +511,7 @@ Third Party period: ${tpStart||"unavailable"} to ${tpExpiry||"unavailable"}. ${v
       supplemented.remarks=(supplemented.remarks||"")+yearFallbackNote;
       changed=true;
     }
-    if(niaProvisionalRto && supplemented.rtoName==="Gurgaon"
+    if(niaProvisionalRtoField && supplemented.rtoName===niaProvisionalRtoField.value.trim()
        && !supplemented.remarks.includes("NIA_PROVISIONAL_RTO_FROM_ISSUING_OFFICE:")){
       supplemented.remarks=(supplemented.remarks||"")+niaProvisionalRtoNote;
       changed=true;
