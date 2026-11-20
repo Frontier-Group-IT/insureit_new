@@ -544,6 +544,7 @@ export async function reviewIciciVerifiedDraftRepair(id:string):Promise<Reviewed
     ||preview.checksPassed!==13||preview.warnings.length
     ||!["icici_3005_n8n_native_pdf","icici_3005_od_n8n_native_pdf"].includes(preview.parserId))
     return{ok:false,error:"The current verified PDF is different or has incomplete checks; reprocess and review before changing any saved draft."};
+  if (!preview.premium) return {ok:false,error:"Only ICICI's complete printed premium breakdown can be reconciled here."};
   const pdfField=(key:string)=>preview.fields.find(field=>field.key===key)?.value?.trim()??"";
   const pdfIssueDate=pdfField("policy_issuance_date");
   if(policyDateDecision(pdfIssueDate)==="invalid"||policyDateDecision(pdfIssueDate)==="future")
