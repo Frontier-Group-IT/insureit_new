@@ -305,43 +305,51 @@ for (const fragment of [
   "height: 64,",
 ]) requireText(learn, fragment, '60-Second Learn must match the Renewal navy header and retain five-tab navigation.');
 
-// Learn preserves a white edge-to-edge question section, with one right-aligned category badge.
+// Learn matches the approved reference: independent white options, single-choice radio
+// selection and explicit submission. Preserve dynamic content and response explanation.
 const learnSectionStart = learn.indexOf('<View style={styles.questionSection}>');
-const learnSectionEnd = learn.indexOf('<View style={styles.optionsCard}>', learnSectionStart);
-if (learnSectionStart < 0 || learnSectionEnd < 0) throw new Error('Learn full-width question section missing.');
+const learnSectionEnd = learn.indexOf('<View style={styles.optionsList}', learnSectionStart);
+if (learnSectionStart < 0 || learnSectionEnd < 0) throw new Error('Learn reference question card or separate option list missing.');
 const learnSection = learn.slice(learnSectionStart, learnSectionEnd);
 for (const required of [
   '<View style={styles.questionHeadingRow}>',
+  '<Ionicons name="bulb"',
   '<Text style={styles.questionMeta}>TODAY’S QUESTION</Text>',
   '<Text style={styles.question}>{data.card.prompt}</Text>',
-  'styles.categoryPill',
-]) if (!learnSection.includes(required)) throw new Error('Learn question layout is missing ' + required);
+  'styles.headingUnderline',
+]) requireText(learnSection, required, 'Learn reference question card missing essential content.');
 for (const required of [
-  "questionSection: { marginHorizontal: -partnerTheme.spacing.lg, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#E5E7EB' }",
-  "justifyContent: 'space-between'",
-  "questionMeta: { flexShrink: 1, color: '#071E49', fontSize: 16",
-  '<View style={styles.optionsCard}>',
-  '<View style={styles.optionDivider} />',
-  'styles.optionCorrect',
-  'styles.optionWrong',
+  'optionsList: { marginTop: 17, gap: 10 }',
+  "backgroundColor: '#FFFFFF'",
+  'borderRadius: 21',
+  'data.card.options.map',
+  'accessibilityRole="radio"',
+  'accessibilityState={{ disabled: Boolean(data.answered_today || submitting), checked: Boolean(isSelected) }}',
+  'onPress={() => setSelectedOptionKey(option.key)}',
+  'styles.radioOuter',
+  'styles.radioOuterSelected',
+  'styles.radioCenter',
+  'async function submitAnswer()',
+  'submitPartnerLearningAnswer(data.card.id, selectedOptionKey)',
+  'accessibilityLabel="Submit Answer"',
+  'disabled={!selectedOptionKey || submitting}',
+  'onPress={() => void submitAnswer()}',
+  'styles.lightbulbCircle',
+  'styles.statsDivider',
+  'styles.footnoteTitle',
+  '<Stat value={data.stats.attempted_days} label="Learning days"',
+  '<Stat value={data.stats.total_attempts} label="Cards completed"',
   'disabled={Boolean(data.answered_today || submitting)}',
-  'accessibilityState={{ disabled: Boolean(data.answered_today || submitting), selected: Boolean(isSelected) }}',
   'explanationExpanded ? (',
   'onPress={() => setExplanationExpanded((current) => !current)}',
   'accessibilityState={{ expanded: explanationExpanded }}',
   '{answer.explanation}',
-  '<Stat value={data.stats.attempted_days} label="Learning days" />',
-  '<Stat value={data.stats.total_attempts} label="Cards completed" />',
-]) requireText(learn, required, 'Learn must retain compact card, response lock, accessible accordion and two learning stats.');
+]) requireText(learn, required, 'Learn reference layout, submission safety and answer explanation must remain intact.');
 for (const removed of [
   'styles.questionCard', 'styles.topStrip', 'styles.streak', 'styles.badgeColumn',
   'correct_answers', 'You selected:', 'GOOD TO KNOW', 'NICE WORK', 'styles.selectedText', 'styles.answerEyebrow',
-]) if (learn.includes(removed)) throw new Error('Learn must not display obsolete badge, counter or copy: ' + removed);
-const optionCardStart = learn.indexOf('<View style={styles.optionsCard}>');
-const optionCardEnd = learn.indexOf('{error ? <Text style={styles.inlineError}>', optionCardStart);
-if (optionCardStart < 0 || optionCardEnd < 0 || !learn.slice(optionCardStart, optionCardEnd).includes('data.card.options.map')) {
-  throw new Error('All learning options must render inside one card.');
-}
+  'styles.categoryPill', 'styles.optionDivider', 'styles.optionsCard', 'onPress={() => choose(option.key)}',
+]) if (learn.includes(removed)) throw new Error('Learn contains obsolete layout or immediate-submit behavior: ' + removed);
 
 const pulse = read('app/pulse.tsx');
 
