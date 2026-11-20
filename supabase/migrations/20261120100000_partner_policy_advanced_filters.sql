@@ -460,7 +460,7 @@ begin
   ),
   scoped as (
     select b.* from base b where
-      and (v_line='all' or
+      (v_line='all' or
         (case
           when concat_ws(' ',b.policy_type,b.policy_product,b.business_line) ilike '%health%' then 'health'
           when concat_ws(' ',b.policy_type,b.policy_product,b.business_line) ilike '%life%' then 'life'
