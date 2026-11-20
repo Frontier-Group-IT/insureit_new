@@ -33,9 +33,19 @@ export function sameInsuredIdentity(a: string, b: string) {
 export function selectVerifiedN8nInsuredDraftIdentity(
   fields: readonly VerifiedIdentityField[],
   linkedCustomer: LinkedCustomer | null,
+  parserId?: string,
 ): VerifiedInsuredDraftIdentity {
-  const source = fields.find(field => field.key === "insured_name"
-    && field.page === 1 && /^Name of (?:the )?Insured$/i.test(field.evidence?.trim() ?? ""));
+  // Commercial n8n is independently verified against the current private PDF.
+  // Its strict adapter uses page:null and a fixed evidence label, unlike the
+  // ICICI page-1 "Name of Insured" field. Never accept an unrecognized parser.
+  const commercial = new Set([
+    "go_digit_cv_native_pdf", "iffco_tokio_cv_native_pdf", "new_india_cv_native_pdf",
+  ]).has(parserId ?? "");
+  const candidates = fields.filter(field => field.key === "insured_name"
+    && (commercial
+      ? field.page === null && field.evidence === "Native PDF policy schedule"
+      : field.page === 1 && /^Name of (?:the )?Insured$/i.test(field.evidence?.trim() ?? "")));
+  const source = candidates.length === 1 ? candidates[0] : undefined;
   const candidate = source ? normalizedName(source.value) : "";
   // Fail closed for an empty, placeholder or malformed PDF identity.
   const pdfName = candidate.length >= 2 && candidate.length <= 120
@@ -43,6 +53,9 @@ export function selectVerifiedN8nInsuredDraftIdentity(
     && !/^(?:NA|N\/A|NAME|UNKNOWN|INSURED|CUSTOMER)$/i.test(candidate)
     ? candidate : "";
 
+  if (commercial && !pdfName) {
+    return { name: "", matchedCustomerId: null, needsManualReview: true, source: "missing" };
+  }
   if (linkedCustomer?.id && normalizedName(linkedCustomer.name)) {
     const masterName = normalizedName(linkedCustomer.name);
     if (pdfName && !sameInsuredIdentity(masterName, pdfName)) {
