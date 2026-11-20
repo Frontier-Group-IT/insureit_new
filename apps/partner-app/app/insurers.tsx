@@ -356,10 +356,10 @@ export default function InsurerListScreen() {
                   <View key={insurer.name} style={styles.financialRow}>
                     {columns.map((column) => {
                       const amount = column.key === 'policies' ? null : metricValue(insurer, column.key);
-                      const cellStyle = [styles.metricCell, { width: METRIC_WIDTHS[column.key], backgroundColor: METRIC_COLORS[column.key].cell }];
                       if (column.key === 'policies') {
-                        return <Text key={column.key} style={cellStyle} numberOfLines={1}
-                          adjustsFontSizeToFit minimumFontScale={0.8}>{insurer.policies}</Text>;
+                        return <View key={column.key} style={[styles.metricPressable, { width: METRIC_WIDTHS[column.key], backgroundColor: METRIC_COLORS[column.key].cell }]}>
+                          <Text style={styles.metricCell} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>{insurer.policies}</Text>
+                        </View>;
                       }
                       const exactAmount = amount == null ? '—' : formatInsurerRupees(amount);
                       return (
