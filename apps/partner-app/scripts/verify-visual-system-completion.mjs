@@ -293,23 +293,25 @@ if (!recognitionAchievement.includes('styles.earnedPill') || !recognitionAchieve
   throw new Error('Each achievement must show its achieved badge and date.');
 }
 
-// Learn uses the supplied blue stopwatch header with its subtitle and an ephemeral answer confirmation.
+// The 60-Second Learn screen uses the approved compact, solid navy header.
 for (const fragment of [
   'hideTopBar navyStatusBar bottomNavigationNavy',
   '<PartnerCaseBottomNavigation activeTab="More" />',
   'accessibilityLabel="Back"',
-  '<Ionicons name="arrow-back" size={30} color="#FFFFFF" />',
+  '<Ionicons name="arrow-back" size={22} color="#FFFFFF" />',
   "require('../assets/partner/learn-stopwatch-reference.png')",
   '60-Second Learn</Text>',
   'Learn • Practice • Grow',
-  "backgroundColor: '#07347C'",
-  'height: 94,',
-  'headerArtwork: { width: 35, height: 43 }',
-  "referenceTitle: { color: '#FFFFFF', fontSize: 17",
-  "headerSubtitle: { color: '#B7CBF5', fontSize: 11",
-  'styles.headerGlow',
-  'styles.headerCurve',
-]) requireText(learn, fragment, '60-Second Learn must match the reference stopwatch header and retain five-tab navigation.');
+  "backgroundColor: '#0A234A'",
+  'height: 64,',
+  'headerArtwork: { width: 27, height: 33 }',
+  "referenceTitle: { color: '#FFFFFF', fontSize: 15",
+  "headerSubtitle: { color: '#C1D0E7', fontSize: 10",
+  'headerAction: { width: 32, minHeight: 44',
+]) requireText(learn, fragment, '60-Second Learn must use the compact navy stopwatch header and retain navigation.');
+for (const removed of ['styles.headerGlow', 'styles.headerCurve', 'headerGlow: {', 'headerCurve: {', "backgroundColor: '#07347C'"]) {
+  if (learn.includes(removed)) throw new Error('Compact Learn header must not include decorative blue curves: ' + removed);
+}
 
 // Learn matches the approved reference: independent white options, single-choice radio
 // selection and explicit submission. Preserve learning progress while feedback expires after one second.
