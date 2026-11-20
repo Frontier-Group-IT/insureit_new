@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requirePolicyOcrTrainingOperator } from "@/lib/policy-ocr-training-access";
+import { requirePolicyEditor } from "@/lib/policy-access-server";
 import { extractNativePdfTextPages } from "@/lib/policy-ocr-native-pdf";
 
 export const runtime = "nodejs";
@@ -34,7 +34,7 @@ const close = (a: number, b: number) => Math.abs(a - b) <= 0.06;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export async function POST(request: NextRequest) {
-  await requirePolicyOcrTrainingOperator();
+  await requirePolicyEditor();
   const secret = process.env.INSUREIT_N8N_OCR_HEADER_SECRET;
   if (!secret || secret.length < 32) return json("The isolated n8n reader is not configured.", 503);
 
