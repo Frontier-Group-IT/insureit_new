@@ -340,6 +340,15 @@ export default function PoliciesScreen() {
           placeholders={['Search customer...', 'Search vehicle number...', 'Search policy number...']}
           containerStyle={styles.searchField}
         />
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Filter policies"
+          onPress={openSortSheet}
+          style={styles.filterButton}
+        >
+          <Ionicons name="filter-outline" size={18} color="#3156B8" />
+          <Text style={styles.filterText}>Filter</Text>
+        </Pressable>
       </View>
 
   );
@@ -551,11 +560,6 @@ export default function PoliciesScreen() {
         windowSize={7}
       />
       </SafeAreaView>
-      <Pressable accessibilityRole="button" accessibilityLabel="Sort by policy period and status"
-        onPress={openSortSheet} style={({pressed})=>[styles.sortFloating,pressed&&styles.summaryChipPressed]}>
-        <Feather name="sliders" size={14} color="#304778"/>
-        <Text style={styles.sortFloatingText}>Sort by</Text>
-      </Pressable>
       {isFocused ? <StatusBar style={searchSticky ? 'light' : 'dark'} /> : null}
       {searchSticky && safeAreaInsets.top > 0 ? <View pointerEvents="none" style={[styles.stickyStatusBarShield, { height: safeAreaInsets.top }]} /> : null}
       {searchSticky ? <View style={[styles.stickySearchOverlay, { top: safeAreaInsets.top }]} pointerEvents="box-none"><Text style={styles.stickyClaimsHeading}>Policies</Text>{searchControls}</View> : null}
@@ -936,10 +940,19 @@ const styles = StyleSheet.create({
   },
   statusMenuOverlay: { flex: 1 },
   summaryChipPressed: { opacity: 0.78 },
-  sortFloating:{position:'absolute',bottom:8,alignSelf:'center',flexDirection:'row',alignItems:'center',justifyContent:'center',gap:6,
-    paddingHorizontal:15,minHeight:40,borderRadius:22,backgroundColor:'#F0EDFF',borderWidth:1,borderColor:'#E1DBFA',
-    shadowColor:'#5C5493',shadowOpacity:0.13,shadowRadius:8,shadowOffset:{width:0,height:2},elevation:6},
-  sortFloatingText:{fontSize:11,fontWeight:'800',color:'#304778'},
+  filterButton: {
+    height: 44,
+    minWidth: 68,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    paddingHorizontal: 12,
+    backgroundColor: '#FFFFFF',
+    borderLeftWidth: StyleSheet.hairlineWidth,
+    borderLeftColor: '#D9DFEA',
+  },
+  filterText: { color: '#3156B8', ...partnerTheme.typography.caption, fontWeight: '500' },
   sortOverlay:{flex:1,justifyContent:'flex-end',backgroundColor:'rgba(16,30,66,0.73)'},
   sortSheet:{backgroundColor:'#FFFFFF',borderTopLeftRadius:24,borderTopRightRadius:24,paddingHorizontal:18,paddingTop:10},
   sortSheetHeader:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',paddingBottom:8,borderBottomWidth:1,borderColor:'#E4E5F1'},

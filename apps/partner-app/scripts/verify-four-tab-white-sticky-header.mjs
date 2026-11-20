@@ -19,7 +19,7 @@ assert.match(policies, /stickyClaimsHeading/);
 assert.match(policies, /stickySearchOverlay: \{[^\n]+backgroundColor: '#082657'/);
 assert.match(claims, /stickyOverlay: \{[^\n]+backgroundColor: "#082657"/);
 assert.match(claims, /<Text style=\{styles.stickyTitle\}>Claims<\/Text>/);
-// Policies search occupies the entire row; lifecycle filters remain inside Sort by.
+// Policies search shares the row with the exact Claims-style enabled Filter; lifecycle choices remain in the existing advanced sheet.
 assert.match(policies, /<PartnerSearchField/, 'Policies search remains in the sticky header');
 assert.match(policies, /sheetStatuses\.map/, 'Lifecycle statuses remain in Sort by');
 assert.doesNotMatch(policies, /onPress=\{openStatusMenu\}/, 'Duplicate search-row lifecycle dropdown is removed');
@@ -38,9 +38,11 @@ for (const [fragment, description] of [
   ['const draftStatusCounts =', 'Status counts remain scoped to the draft filters'],
   ['<PartnerSearchField', 'Search input remains in its sticky bar'],
 ]) assert.ok(policies.includes(fragment), description);
-for (const removed of ['filterNameBadge: {', 'filterButton: {', 'openStatusMenu', 'statusOptions.map', 'visible={statusMenuOpen}']) {
+for (const removed of ['filterNameBadge: {', 'openStatusMenu', 'statusOptions.map', 'visible={statusMenuOpen}']) {
   assert.ok(!policies.includes(removed), 'Search bar no longer renders redundant status control: ' + removed);
 }
+assert.ok(policies.includes('<Ionicons name="filter-outline" size={18} color="#3156B8" />'), 'Enabled inline Filter must use the exact Claims icon');
+assert.match(policies, /onPress=\{openSortSheet\}/, 'Inline Filter must open existing Policies advanced filters');
 assert.doesNotMatch(policies, /styles\\.summaryRow|styles\\.summaryScroll|styles\\.summaryChipSelected|seeAllOpen|statusSheetOverlay/, 'Obsolete horizontal policy chips and See all removed');
 // Claims keeps three compact filters and the permission-gated Add action together in one row.
 assert.match(claims, /<View style=\{styles\.summaryChips\} accessibilityLabel="Claim status filters">/, 'All Claims status chips remain visible in a single row');

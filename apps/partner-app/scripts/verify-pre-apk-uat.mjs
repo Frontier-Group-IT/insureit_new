@@ -133,9 +133,10 @@ for (const removed of ['statusMenuOpen', 'statusButtonRef', 'openStatusMenu', 's
   checks += 1;
   if (policiesScreen.includes(removed)) failures.push('Duplicate status search dropdown remains: ' + removed);
 }
-for (const obsolete of ['seeAllOpen', 'summarySeeAll:', 'statusSheetOverlay:', 'See all policy status filters', 'styles.summaryRow', 'accessibilityLabel="Filter policies"']) {
+for (const obsolete of ['seeAllOpen', 'summarySeeAll:', 'statusSheetOverlay:', 'See all policy status filters', 'styles.summaryRow']) {
   checks += 1;
   if (read('app/(tabs)/policies.tsx').includes(obsolete)) failures.push('Policies must not retain obsolete chip/disabled Filter UI: ' + obsolete);
+  // The approved inline Policies Filter is active and reuses the existing advanced sheet.
 }
 
 // Claims Filter mirrors Policies: keep the visual button but never mount a dropdown.
