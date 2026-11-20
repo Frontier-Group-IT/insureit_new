@@ -54,6 +54,25 @@ assert.match(misp, /await authorizedDocs\('POST',applicationId,payload\)/,'MISP 
 assert.match(misp, /await refreshDocuments\(applicationId\)/,'MISP refreshed saved file records');
 assert.match(misp, /educationOptions/,'MISP retains education category variants');
 assert.match(misp, /customNames/,'MISP retains custom document labels');
+assert.match(misp, /maxHeight:Math\.min\(366,Math\.max\(190,windowHeight-220\)\)/,
+  'MISP document popup must show approximately six rows while allowing all documents to scroll');
+assert.match(misp, /documentSlots\.map\(slot=>/,
+  'All MISP document rows remain in one continuous list');
+assert.match(misp, /slot\.required\?<Text style=\{styles\.requiredStar\}> \*<\/Text>:null/,
+  'MISP backend-required documents display red asterisks');
+assert.match(misp, /key:'gst_copy',label:'GST Certificate',required:true/,
+  'MISP GST certificate remains marked mandatory according to backend rules');
+assert.match(misp, /accessibilityLabel="Select education category"/,
+  'Education Marksheet uses a category dropdown instead of four chips');
+assert.match(misp, /onPress=\{\(\)=>\{setEducationType\(option\.key\);setEducationOpen\(false\);\}\}/,
+  'Education dropdown selection closes the menu and preserves the selected category');
+assert.doesNotMatch(misp, /styles\.educationPill|styles\.educationOptions/,
+  'Old horizontally wrapped education chips must be removed');
+const mispScrollPosition=misp.indexOf('<ScrollView style={[styles.documentScroll');
+const mispDonePosition=misp.indexOf('accessibilityLabel="Done uploading MISP documents"');
+assert.ok(mispScrollPosition>=0&&mispDonePosition>misp.indexOf('</ScrollView>',mispScrollPosition),
+  'MISP modal Done button stays fixed outside the document scrolling viewport');
+
 assert.doesNotMatch(misp, /submit\('documents'\)/,'MISP does not create duplicate application on upload');
 const mispRoute=read('../../web-portal/app/api/partner/onboarding/documents/route.ts');
 assert.match(mispRoute,/export async function DELETE\(request:Request\)/);
