@@ -123,7 +123,10 @@ export async function prepareVerifiedN8nIntakeHandoff(
     return{ok:false,error:"The n8n extraction changed after review. Run n8n again and check the new fields before continuing."};
   }
   const commercial=parsed.preview.commercialPremium;
-  if (commercial && !replaceExistingDraft) {
+  const goDigitVerifiedFill = Boolean(commercial) && fillEmptyFields
+    && parsed.preview.parserId==="go_digit_cv_native_pdf"
+    && parsed.preview.checksPassed===18 && parsed.preview.warnings.length===0;
+  if (commercial && !replaceExistingDraft && !goDigitVerifiedFill) {
     return {ok:false,error:"Commercial premium handoff is available only via the explicit Reparse & replace review action."};
   }
   if (!commercial && !parsed.preview.premium) {
@@ -271,11 +274,30 @@ async function preparePolicyIntakeHandoffInternal(
   const {data:existingDraft}=await admin.from("policy_intake_onboarding_drafts").select("draft_payload,revision").eq("intake_id",id).maybeSingle<{draft_payload:PolicyIntakeDraft;revision:number}>();
   const markFreshParseForReview=async()=>{
     if(!verified?.replaceExistingDraft)return true;
+    const goDigit=verified.parserId==="go_digit_cv_native_pdf" && verified.checksPassed===18
+      && verified.warnings.length===0;
+    // A verified extraction is not a complete booking. An absent separately
+    // printed manufacturing year is NOT fixed by using the registration year.
+    const requiredGoDigitKeys=[
+      "insured_name","policy_product","vehicle_manufacturing_year",
+      "vehicle_capacity","vehicle_rto_name","vehicle_rto_state",
+      "vehicle_registration_number","vehicle_chassis_number","vehicle_engine_number",
+      "policy_issuance_date","policy_start_date","policy_end_date",
+    ];
+    const missingGoDigit=goDigit?requiredGoDigitKeys.filter(key=>
+      !verified.fields.some(f=>f.key===key&&f.value.trim())):[];
+    const autoEligibleGoDigit=goDigit&&missingGoDigit.length===0;
+    const specificMissingYear=goDigit&&missingGoDigit.includes("vehicle_manufacturing_year");
     const{error}=await admin.from("policy_intake_ai_processing_queue").update({
-      state:"exception",exception_codes:["booking_review_required"],
+      // Never mark other insurers eligible without their existing booking rule.
+      state:autoEligibleGoDigit?"verified":"exception",
+      exception_codes:autoEligibleGoDigit?[]:goDigit&&missingGoDigit.length?["missing_field"]:["booking_review_required"],
       field_keys:verified.fields.map(field=>field.key),parser_id:verified.parserId,
       checks_passed:verified.checksPassed,extraction_fingerprint:verified.fingerprint,
-      last_error_code:"bulk_conversion_review_required",processed_at:new Date().toISOString(),
+      last_error_code:autoEligibleGoDigit?null:specificMissingYear
+        ?"go_digit_missing_verified_manufacturing_year":goDigit&&missingGoDigit.length
+          ?"go_digit_missing_verified_onboarding_fields":"bulk_conversion_review_required",
+      processed_at:new Date().toISOString(),
       retry_after:new Date(Date.now()+24*60*60*1000).toISOString(),
       lease_id:null,leased_until:null,updated_at:new Date().toISOString(),
     }).eq("intake_id",id).eq("document_id",verified.documentId);
@@ -311,13 +333,13 @@ async function preparePolicyIntakeHandoffInternal(
     registrationMode:verified?.fields.some(field =>
       field.key==="vehicle_registration_status"&&field.value==="unregistered")?"unregistered":"registered",
     current:{registrationNo:"",vehicleClass:"",make:"",model:"",fuelType:"",manufacturingYear:"",capacity:"",chassisNo:"",engineNo:"",rtoState:"",rtoName:"",policyProduct:"",idv:"",od:"",tp:"",cpa:"",policyNo:"",insurerId:"",validFrom:"",validUpto:""},
-    fields:verified?enrichVerifiedN8nOnboardingFields(verified.fields):(intake.ocr_fields??[]),
+    fields:verified?enrichVerifiedN8nOnboardingFields(verified.fields,verified.parserId):(intake.ocr_fields??[]),
     manufacturers:manufacturerOptions,insurers,rcVerified:false,
   });
   // Only a server-verified current-PDF insured name is offered as an
   // editable, review-required draft value. It NEVER auto-links a customer.
   const masterIdentity=verified?await resolveMasterIntakeIdentity(admin,intake.matched_customer_id,intake.customer_mobile):null;
-  const verifiedIdentity=verified?selectVerifiedN8nInsuredDraftIdentity(verified.fields,masterIdentity):null;
+  const verifiedIdentity=verified?selectVerifiedN8nInsuredDraftIdentity(verified.fields,masterIdentity,verified.parserId):null;
   const customerName=verifiedIdentity?.name??(mapped.next.insuredName?.trim()||"");
   // Canonical form computes net = Basic OD + add-ons + TP + CPA. The n8n
   // "od_premium" OCR field is *Total OD*, so never copy it directly into

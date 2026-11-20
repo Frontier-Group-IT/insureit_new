@@ -320,14 +320,14 @@ assert(handoff.includes('if(existingDraft?.draft_payload)'),
   "Existing saved drafts must never be overwritten by the n8n handoff");
 assert(handoff.includes("lastDoc.id!==verified.documentId"),
   "The exact current PDF must be rechecked after reviewer claim");
-assert(handoff.includes("enrichVerifiedN8nOnboardingFields(verified.fields)"),
+assert(handoff.includes("enrichVerifiedN8nOnboardingFields(verified.fields,verified.parserId)"),
   "n8n vehicle and policy draft fields remain strictly allowlisted");
 assert(handoff.includes("resolveMasterIntakeIdentity(admin,intake.matched_customer_id,intake.customer_mobile)"),
   "Approved linked master identity must still be checked against the intake mobile");
 assert(handoff.includes('if(existingDraft?.draft_payload && !(verified?.fillEmptyFields) && !(verified?.replaceExistingDraft))')
   && handoff.includes('.eq("intake_id",id).eq("revision",existingDraft.revision)'),
   "Existing drafts must not be overwritten; explicit blank-only refresh requires revision CAS");
-assert(handoff.includes("selectVerifiedN8nInsuredDraftIdentity(verified.fields,masterIdentity)")
+assert(handoff.includes("selectVerifiedN8nInsuredDraftIdentity(verified.fields,masterIdentity,verified.parserId)")
   && handoff.includes("const customerName=verifiedIdentity?.name")
   && handoff.includes("verifiedIdentity?.matchedCustomerId??null"),
   "Reviewable ICICI 3005 PDF insured name may prefill, but must not auto-link a customer");
@@ -852,6 +852,7 @@ assert(convertCode.includes("await requireDevelopmentPolicyOperator(id)")
   && convertCode.includes('forwarded.draft.issuanceDate!==issuanceDate')
   && convertCode.includes('normalizedIdentity(pdfField("insured_name"))')
   && convertCode.includes('mapVerifiedN8nMotorPremium(extracted.preview.premium)')
+   && convertCode.includes('mapVerifiedGoDigitCommercialPremium(commercial)')
   && convertCode.includes('forwarded.draft.addOnPremium')
   && convertCode.includes('forwarded.draft.tpValidUpto')
   && convertCode.includes('createNewCustomer:true')
