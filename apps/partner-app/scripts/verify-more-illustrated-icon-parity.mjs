@@ -19,7 +19,7 @@ assert.match(more, /iconKind="policy-intake" title="Policy Intake"/);
 const mapping = icon.slice(icon.indexOf('const ILLUSTRATED_ICONS:'),icon.indexOf('const CONFIG:'));
 assert.ok(mapping.startsWith('const ILLUSTRATED_ICONS:'), 'Illustrated icons must be centrally mapped');
 const highResolution = new Map([
-  ['policy-intake', '../assets/partner/actions/policy-checklist.png'],
+  ['policy-intake', '../assets/partner/icons/more-policy-intake-approved-document.png'],
 
 ]);
 for (const [kind,title] of illustrated) {
@@ -32,8 +32,9 @@ for (const [kind,title] of illustrated) {
   assert.equal(png.subarray(0,8).toString('hex'),'89504e470d0a1a0a', 'Asset must be local PNG: '+kind);
   assert.ok(png.length > 500, 'Icon artwork missing content for '+kind);
   if (highResolution.has(kind) || kind === 'journey') {
-    assert.equal(png.readUInt32BE(16), 256, 'Sharp menu illustration must be 256px wide: '+kind);
-    assert.equal(png.readUInt32BE(20), 256, 'Sharp menu illustration must be 256px high: '+kind);
+    const expectedPixels = kind === 'policy-intake' ? 192 : 256;
+    assert.equal(png.readUInt32BE(16), expectedPixels, 'Sharp menu illustration has expected width: '+kind);
+    assert.equal(png.readUInt32BE(20), expectedPixels, 'Sharp menu illustration has expected height: '+kind);
   }
 }
 for (const kind of untouched) {
@@ -54,4 +55,4 @@ assert.match(mapping, /quick-actions\/add-partner\.png/, 'Use the user-approved 
 assert.doesNotMatch(icon, /scale: 1\.7/, 'Policy Intake must avoid magnifying low-resolution source artwork');
 assert.doesNotMatch(icon, /scale: 1\.16/, 'Sharp My Journey art must not be magnified');
 assert.match(more, /sectionRows/, 'More sections must retain their rounded menu groups');
-console.log('Approved Customers and isolated 3D My Journey icons, Policy Intake artwork, and rounded More sections verified.');
+console.log('Approved green-shield Policy Intake, blue-person Customers, isolated 3D My Journey, and rounded More sections verified.');
