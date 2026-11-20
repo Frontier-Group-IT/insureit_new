@@ -74,7 +74,7 @@ function toWeb(r){
 const historicalCar=fixtures[4];
 const historicalText=historicalCar.text
   .replace("Registration No. HR00AB0001","Registration No. HR994321")
-  +"\\nDate of Registration 02/12/2020\\n";
+  +"\nDate of Registration 02/12/2020\n";
 const historical=parse({all:()=>[{json:{text:historicalText}}]})[0].json;
 assert.equal(historical.ok,true,"Historic Haryana format must not fail registration validation");
 assert.equal(historical.checks_passed,18);
