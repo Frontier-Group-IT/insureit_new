@@ -383,7 +383,6 @@ async function preparePolicyIntakeHandoffInternal(
         &&field.evidence==="NIA issuing office city; provisional, NOT registration authority"
         &&/^[A-Za-z][A-Za-z -]{2,45}$/.test(field.value.trim()))
       :undefined;
-  const niaProvisionalRto=Boolean(niaProvisionalRtoField);
   const niaProvisionalRtoNote=niaProvisionalRtoField
     ?" NIA_PROVISIONAL_RTO_FROM_ISSUING_OFFICE: "+niaProvisionalRtoField.value.trim()
       +", "+(verified?.fields.find(f=>f.key==="vehicle_rto_state")?.value||"state unavailable")
