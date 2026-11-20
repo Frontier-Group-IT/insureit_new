@@ -351,6 +351,29 @@ for (const removed of [
   'styles.categoryPill', 'styles.optionDivider', 'styles.optionsCard', 'onPress={() => choose(option.key)}',
 ]) if (learn.includes(removed)) throw new Error('Learn contains obsolete layout or immediate-submit behavior: ' + removed);
 
+// Learning counters precede the question. Unanswered cards use a two-button
+// action row with Cancel on the left, and the tip immediately below it.
+const learnStatsAt = learn.indexOf('<View style={styles.statsCard}>');
+const learnQuestionAt = learn.indexOf('<View style={styles.questionSection}>');
+const learnOptionsAt = learn.indexOf('<View style={styles.optionsList}');
+const learnActionsAt = learn.indexOf('<View style={styles.answerActions}>');
+const learnTipAt = learn.indexOf('<View style={styles.footnote}>');
+if (!(learnStatsAt >= 0 && learnStatsAt < learnQuestionAt && learnQuestionAt < learnOptionsAt
+  && learnOptionsAt < learnActionsAt && learnActionsAt < learnTipAt)) {
+  throw new Error('Learn must show progress above Today’s Question and Learning Tip below the action buttons.');
+}
+const learnActions = learn.slice(learnActionsAt, learnTipAt);
+for (const required of [
+  'accessibilityLabel="Cancel learning answer"',
+  'onPress={() => router.back()}',
+  'accessibilityLabel="Submit Answer"',
+  'styles.cancelButton', 'styles.submitButton',
+]) requireText(learnActions, required, 'Learn actions must preserve Cancel-left and Submit-right behaviors.');
+if (!(learnActions.indexOf('styles.cancelButton') < learnActions.indexOf('styles.submitButton'))) {
+  throw new Error('Cancel must appear to the left of Submit Answer.');
+}
+requireText(learn, "answerActions: { flexDirection: 'row'", 'Learn actions must share one horizontal row.');
+
 const pulse = read('app/pulse.tsx');
 
 for (const asset of ['policyChecklist', 'appsGrid', 'settings', 'supportVerified']) {
