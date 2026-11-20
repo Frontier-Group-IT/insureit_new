@@ -81,6 +81,12 @@ export default function LearnScreen() {
       ) : (
         <>
 
+          <View style={styles.statsCard}>
+            <Stat value={data.stats.attempted_days} label="Learning days" icon="school" iconColor="#1373D7" />
+            <View style={styles.statsDivider} />
+            <Stat value={data.stats.total_attempts} label="Cards completed" icon="checkbox" iconColor="#08A58D" />
+          </View>
+
           <View style={styles.questionSection}>
             <View style={styles.questionHeadingRow}>
               <View style={styles.lightbulbCircle}><Ionicons name="bulb" size={27} color="#0876E9" /></View>
@@ -148,11 +154,25 @@ export default function LearnScreen() {
             </View>
           ) : null}
 
-          <View style={styles.statsCard}>
-            <Stat value={data.stats.attempted_days} label="Learning days" icon="school" iconColor="#1373D7" />
-            <View style={styles.statsDivider} />
-            <Stat value={data.stats.total_attempts} label="Cards completed" icon="checkbox" iconColor="#08A58D" />
-          </View>
+          {!data.answered_today ? (
+            <View style={styles.answerActions}>
+              <Pressable accessibilityRole="button" accessibilityLabel="Cancel learning answer"
+                accessibilityState={{ disabled: submitting }}
+                disabled={submitting}
+                onPress={() => router.back()}
+                style={({ pressed }) => [styles.cancelButton, submitting && styles.submitButtonDisabled, pressed && styles.submitButtonPressed]}>
+                <Text style={styles.cancelText}>Cancel</Text>
+              </Pressable>
+              <Pressable accessibilityRole="button" accessibilityLabel="Submit Answer"
+                accessibilityState={{ disabled: !selectedOptionKey || submitting }}
+                disabled={!selectedOptionKey || submitting}
+                onPress={() => void submitAnswer()}
+                style={({ pressed }) => [styles.submitButton, (!selectedOptionKey || submitting) && styles.submitButtonDisabled, pressed && styles.submitButtonPressed]}>
+                {submitting ? <ActivityIndicator color="#FFFFFF" /> : <Ionicons name="paper-plane-outline" size={20} color="#FFFFFF" />}
+                <Text style={styles.submitText}>{submitting ? "Submitting..." : "Submit Answer"}</Text>
+              </Pressable>
+            </View>
+          ) : null}
 
           <View style={styles.footnote}>
             <Ionicons name="shield-checkmark" size={29} color="#08A58D" />
@@ -162,16 +182,6 @@ export default function LearnScreen() {
             </View>
             <Ionicons name="megaphone-outline" size={31} color="#76A8EB" />
           </View>
-          {!data.answered_today ? (
-            <Pressable accessibilityRole="button" accessibilityLabel="Submit Answer"
-              accessibilityState={{ disabled: !selectedOptionKey || submitting }}
-              disabled={!selectedOptionKey || submitting}
-              onPress={() => void submitAnswer()}
-              style={({ pressed }) => [styles.submitButton, (!selectedOptionKey || submitting) && styles.submitButtonDisabled, pressed && styles.submitButtonPressed]}>
-              {submitting ? <ActivityIndicator color="#FFFFFF" /> : <Ionicons name="paper-plane-outline" size={22} color="#FFFFFF" />}
-              <Text style={styles.submitText}>{submitting ? "Submitting..." : "Submit Answer"}</Text>
-            </Pressable>
-          ) : null}
         </>
       )}
     </PartnerScreen>
@@ -234,17 +244,20 @@ const styles = StyleSheet.create({
   answerTitle: { flex: 1, color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
   explanationArea: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#DCD6F1', paddingHorizontal: 13, paddingTop: 11, paddingBottom: 14 },
   explanation: { color: '#4C586D', ...partnerTheme.typography.body },
-  statsCard: { marginTop: 15, flexDirection: 'row', alignItems: 'center', borderRadius: 21, paddingVertical: 15, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DDE9FB', shadowColor: '#1559BA', shadowOpacity: 0.08, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 2 },
+  statsCard: { marginTop: 13, flexDirection: 'row', alignItems: 'center', borderRadius: 21, paddingVertical: 15, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DDE9FB', shadowColor: '#1559BA', shadowOpacity: 0.08, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 2 },
   stat: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9 },
   statsDivider: { width: 1, height: 38, backgroundColor: '#A8B8D5' },
   statCopy: { flexShrink: 1 },
   statValue: { color: '#081E50', fontSize: 22, lineHeight: 26, fontWeight: '800' },
   statLabel: { color: '#5D7196', fontSize: 10.5, lineHeight: 14, fontWeight: '600' },
-  footnote: { marginTop: 13, flexDirection: 'row', alignItems: 'center', gap: 9, borderRadius: 21, padding: 14, backgroundColor: '#E5F0FF', borderWidth: 1, borderColor: '#D2E4FF' },
+  footnote: { marginTop: 12, flexDirection: 'row', alignItems: 'center', gap: 9, borderRadius: 21, padding: 14, backgroundColor: '#E5F0FF', borderWidth: 1, borderColor: '#D2E4FF' },
   footnoteContent: { flex: 1 },
   footnoteTitle: { color: '#0B4BA9', fontSize: 15, fontWeight: '800', marginBottom: 4 },
   footnoteText: { color: '#315C9A', fontSize: 12.5, lineHeight: 18 },
-  submitButton: { marginTop: 20, marginHorizontal: 40, marginBottom: 20, minHeight: 57, borderRadius: 30, backgroundColor: '#0756C5', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, shadowColor: '#0756C5', shadowOpacity: 0.25, shadowRadius: 9, shadowOffset: { width: 0, height: 5 }, elevation: 4 },
+  answerActions: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 17 },
+  cancelButton: { flex: 1, minWidth: 0, minHeight: 57, borderRadius: 30, borderWidth: 1.5, borderColor: '#0756C5', backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
+  cancelText: { color: '#0756C5', fontSize: 16, fontWeight: '800' },
+  submitButton: { flex: 1.6, minWidth: 0, minHeight: 57, borderRadius: 30, backgroundColor: '#0756C5', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, shadowColor: '#0756C5', shadowOpacity: 0.25, shadowRadius: 9, shadowOffset: { width: 0, height: 5 }, elevation: 4 },
   submitButtonDisabled: { opacity: 0.55 },
   submitButtonPressed: { opacity: 0.85 },
   submitText: { color: '#FFFFFF', fontSize: 17, fontWeight: '800' },
