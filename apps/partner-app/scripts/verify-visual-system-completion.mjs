@@ -272,8 +272,11 @@ for (const [fragment, reason] of [
   ['<PartnerCaseBottomNavigation activeTab="More" />', 'Account deletion retains the five-tab navy footer'],
 ]) requireText(deletionScreen, fragment, reason);
 
+// Support alone opts into the edge-to-edge canvas; the rest retain their inset.
+requireText(support, 'style={styles.contentInset}', 'Support retains standard content margins below its full-width hero.');
+requireText(support, 'marginHorizontal: 0, borderRadius: 0', 'Support hero reaches screen edges.');
 for (const [screen, label] of [[settings, 'Settings'], [profile, 'Profile'], [support, 'Support'], [deletionScreen, 'Account deletion']]) {
-  requireText(screen, 'hideTopBar navyStatusBar bottomNavigationNavy', `${label} must opt into the Policy Details navy shell.`);
+  requireText(screen, label === 'Support' ? 'hideTopBar fullWidth navyStatusBar bottomNavigationNavy' : 'hideTopBar navyStatusBar bottomNavigationNavy', `${label} must opt into the Policy Details navy shell.`);
   requireText(screen, '<PartnerCaseBottomNavigation activeTab="More" />', `${label} must retain permission-aware five-tab navigation with More selected.`);
   requireText(screen, '<PartnerCasePageHeader', `${label} must use the Policy Details-style title strip.`);
 }
