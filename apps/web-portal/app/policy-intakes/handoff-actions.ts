@@ -74,7 +74,8 @@ type IntakeForHandoff={
 type VerifiedN8nHandoff = {
   documentId:string; fields:PolicyIntakeOcrField[];
   parserId:string; parserVersion:string; checksPassed:number; fingerprint:string; warnings:string[];
-  premium:N8nVerifiedPremiumBreakdown;
+  premium:N8nVerifiedPremiumBreakdown | null;
+  commercialPremium?: { od:number; tp:number; net:number; gst:number; gross:number };
   fillEmptyFields?:boolean;
   /** Explicit IT action: rebuild the saved, unbooked Intake draft from this fresh parse. */
   replaceExistingDraft?:boolean;
@@ -121,8 +122,12 @@ export async function prepareVerifiedN8nIntakeHandoff(
       || (expectedFingerprint && parsed.preview.fingerprint!==expectedFingerprint)) {
     return{ok:false,error:"The n8n extraction changed after review. Run n8n again and check the new fields before continuing."};
   }
-  if (parsed.preview.commercialPremium || !parsed.preview.premium) {
-    return {ok:false,error:"The commercial insurer PDF was extracted, but this ICICI/Tata-specific handoff cannot safely map its CPA and premium components. Open normal Policy Onboarding to review the printed policy before booking."};
+  const commercial=parsed.preview.commercialPremium;
+  if (commercial && !replaceExistingDraft) {
+    return {ok:false,error:"Commercial premium handoff is available only via the explicit Reparse & replace review action."};
+  }
+  if (!commercial && !parsed.preview.premium) {
+    return {ok:false,error:"The validated n8n premium breakdown is missing."};
   }
   const isTata = /^tata_aig_(?:private_car_(?:saod|package|bundled)|two_wheeler_bundled)_n8n_native_pdf$/.test(parsed.preview.parserId);
   const informationalTataWarnings = new Set([
@@ -135,7 +140,21 @@ export async function prepareVerifiedN8nIntakeHandoff(
     !isTata || !informationalTataWarnings.has(warning));
   // Missing signing evidence still leaves issuance date blank; the workflow
   // never substitutes coverage start, receipt alone, PDF creation, or today.
-  if(parsed.preview.checksPassed!==(isTata?18:13) || blockingWarnings.length>0) {
+  // The non-Tata adapter has already verified the insurer-specific check
+  // set and its printed OD + TP = net, net + GST = gross contract.
+  // Never attempt to pass its commercial totals through ICICI/Tata rules.
+  const commercialChecksOk=Boolean(commercial)
+    && ["go_digit_cv_native_pdf","iffco_tokio_cv_native_pdf","new_india_cv_native_pdf"].includes(parsed.preview.parserId)
+    && parsed.preview.checksPassed >= (parsed.preview.parserId==="iffco_tokio_cv_native_pdf"
+      || parsed.preview.parserId==="go_digit_cv_native_pdf" ? 18 : 15)
+    && Math.abs((commercial!.od+commercial!.tp)-commercial!.net)<0.07
+    && Math.abs((commercial!.net+commercial!.gst)-commercial!.gross)<0.07;
+  const acceptableCommercialWarning=(value:string)=>
+    parsed.preview.parserId==="new_india_cv_native_pdf"
+    && value.startsWith("Policy prints only an RTO prefix.");
+  const legacyChecksFailed=parsed.preview.checksPassed!==(isTata?18:13) || blockingWarnings.length>0;
+  if (commercial ? (!commercialChecksOk || parsed.preview.warnings.some(w=>!acceptableCommercialWarning(w)))
+      : legacyChecksFailed) {
     return{ok:false,error:"n8n validation warnings must be resolved before creating an onboarding draft."};
   }
   // Metadata-only date evidence is not certified issuance. An authorized
@@ -163,7 +182,8 @@ export async function prepareVerifiedN8nIntakeHandoff(
     documentId:parsed.preview.documentId,fields:parsed.preview.fields,
     parserId:parsed.preview.parserId,parserVersion:parsed.preview.parserVersion,
     checksPassed:parsed.preview.checksPassed,fingerprint:parsed.preview.fingerprint,
-    warnings:parsed.preview.warnings,premium:parsed.preview.premium,fillEmptyFields,
+    warnings:parsed.preview.warnings,premium:parsed.preview.premium,
+    ...(commercial?{commercialPremium:commercial}:{}),fillEmptyFields,
     replaceExistingDraft,
     reviewedIssueDateReplacement,
     ...(autoAcceptedIssuanceDate?{autoAcceptedIssuanceDate}:{}),
@@ -299,7 +319,13 @@ async function preparePolicyIntakeHandoffInternal(
   // Canonical form computes net = Basic OD + add-ons + TP + CPA. The n8n
   // "od_premium" OCR field is *Total OD*, so never copy it directly into
   // the form's Basic OD field and then add add-ons again.
-  const verifiedPremium=verified?mapVerifiedN8nMotorPremium(verified.premium):null;
+  // Commercial totals already include paid-driver/owner-driver liabilities in
+  // TP. Put the entire printed liability total into TP, never duplicate CPA.
+  // Booking is deliberately left to an operator reviewing the editable draft.
+  const verifiedPremium=verified?.commercialPremium
+    ? {od:String(verified.commercialPremium.od),tp:String(verified.commercialPremium.tp),
+       addOnPremium:"0",cpa:"0",cpaOpted:"No" as const}
+    : verified?.premium ? mapVerifiedN8nMotorPremium(verified.premium) : null;
   const addOnTotal=verifiedPremium?Number(verifiedPremium.addOnPremium):0;
   // Only a separately printed issued-on date OR the exact insurer-scoped
   // signing+receipt rule is accepted; OD/TP start and clock are never substitutes.
@@ -321,10 +347,12 @@ async function preparePolicyIntakeHandoffInternal(
     od:verifiedPremium?.od??mapped.next.od,
     tp:verifiedPremium?.tp??mapped.next.tp,
     ...(verifiedPremium?{addOnPremium:verifiedPremium.addOnPremium,tpValidUpto:tpExpiry,cpaValidUpto:cpaExpiry}:{}),
-    cpaOpted:"No",
+    cpaOpted:verifiedPremium?.cpaOpted??"No",
     cpa:verifiedPremium?.cpa??mapped.next.cpa,
     policyNo:mapped.next.policyNo,insurerId:mapped.next.insurerId,validFrom:mapped.next.validFrom,validUpto:mapped.next.validUpto,
-    payoutBasis:"NET",projectedOdPercent:"",projectedTpPercent:"",insurerScheme:"",payinBillNo:"",payinBilledAmount:"",payinBillDate:"",payinStatus:"Unbilled",retention:"",payoutOdPercent:"",payoutTpPercent:"",flatPayoutAmount:"",payoutStatus:"Pending",payoutDate:"",payoutVoucherNo:"",remarks:verified
+    payoutBasis:"NET",projectedOdPercent:"",projectedTpPercent:"",insurerScheme:"",payinBillNo:"",payinBilledAmount:"",payinBillDate:"",payinStatus:"Unbilled",retention:"",payoutOdPercent:"",payoutTpPercent:"",flatPayoutAmount:"",payoutStatus:"Pending",payoutDate:"",payoutVoucherNo:"",remarks:verified?.commercialPremium
+      ? `Policy Intake ${id} — independently validated commercial-motor PDF (${verified.parserId}). REVIEW ONLY; no policy or customer was booked. Printed OD ${verified.commercialPremium.od}, TP including liabilities ${verified.commercialPremium.tp}, Net ${verified.commercialPremium.net}, GST ${verified.commercialPremium.gst}, Gross ${verified.commercialPremium.gross}. Owner-driver PA and paid-driver liabilities are retained inside printed TP; do not add CPA a second time. Confirm vehicle class, registration, policy dates, premiums and all other fields before booking.`
+      : verified && verified.premium
       ? `Policy Intake ${id} — n8n validated ${verified.premium.tataAig ? "Tata AIG private car" : "ICICI 3005"} PDF. Review every prefilled value before booking.
 PDF premium reconciliation: Printed Basic OD ${verified.premium.basicOd} + OD add-ons ${addOnTotal} - validated NCB/OD deductions ${verified.premium.odDeductions??0} = Total OD ${verified.premium.totalOd}; net-of-deductions Basic OD entered for onboarding ${verifiedPremium?.od??"unavailable"}. TP ${verified.premium.basicTp}, CPA ${verified.premium.cpa}, Net ${verified.premium.net}, GST ${verified.premium.tax}, Gross ${verified.premium.gross}.
 Third Party period: ${tpStart||"unavailable"} to ${tpExpiry||"unavailable"}. ${verified.premium.tataAig ? "Tata AIG issuance date is taken from the current signed policy PDF timestamp when it matches the printed receipt under the configured insurer rule. Non-owner-driver paid-liability amounts are allocated to the TP form bucket, not CPA." : ""} Verify separate TP/CPA dates, policy class/product, identity, commercial rates and unmatched PDF fields manually.`

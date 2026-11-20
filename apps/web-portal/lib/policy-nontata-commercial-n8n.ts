@@ -65,12 +65,17 @@ const isMoney = (x: unknown): x is number =>
     && Math.abs(x * 100 - Math.round(x * 100)) < 0.00001;
 
 function insurerForText(head: string): Insurer | null {
+  // PDF text extraction can split an insurer/product heading across lines.
+  // Normalize whitespace without trusting a caller-supplied insurer label.
+  const normalized = head.replace(/\\s+/g, " ");
+  const issuer = normalized.slice(0, 2400);
+  const product = normalized.slice(0, 5000);
   const matches: Insurer[] = [];
-  if (/THE NEW INDIA ASSURANCE CO\. LTD\./i.test(head) && /Commercial Vehicle Package Policy/i.test(head))
+  if (/THE NEW INDIA ASSURANCE CO\\. LTD\\./i.test(issuer) && /Commercial Vehicle Package Policy/i.test(product))
     matches.push("new_india_cv_native_pdf");
-  if (/IFFCO.?TOKIO GENERAL INSURANCE/i.test(head) && /COMMERCIAL VEHICLE CERTIFICATE/i.test(head))
+  if (/IFFCO.?TOKIO GENERAL INSURANCE/i.test(issuer) && /COMMERCIAL VEHICLE CERTIFICATE/i.test(product))
     matches.push("iffco_tokio_cv_native_pdf");
-  if (/Go Digit General Insurance/i.test(head) && /Digit Commercial Vehicle Insurance/i.test(head))
+  if (/Go Digit General Insurance/i.test(issuer) && /Digit Commercial Vehicle Insurance/i.test(product))
     matches.push("go_digit_cv_native_pdf");
   return matches.length === 1 ? matches[0] : null;
 }

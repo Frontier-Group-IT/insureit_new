@@ -212,11 +212,15 @@ async function processClaim(item: Claimed, parserRevision: string) {
   const extraction=await previewSemiAutoN8nExtraction(item.intake_id);
   if (!extraction.ok) {
     const untrained=extraction.reason==="untrained_or_unverified";
+    // A recognized parser that rejected the PDF's verification contract is
+    // not an untrained layout. Keep its safe diagnostic for the reviewer.
+    const validationFailed=untrained && Boolean(extraction.diagnosticCode);
+    const safeDiagnostic=extraction.diagnosticCode??"parser_not_trained";
     await finishClaim(item,{
-      state:untrained?"unsupported":"failed",
-      exception_codes:[untrained?"unsupported_layout":"extraction_failed"],
+      state:validationFailed?"exception":untrained?"unsupported":"failed",
+      exception_codes:[validationFailed?"extraction_failed":untrained?"unsupported_layout":"extraction_failed"],
       field_keys:[],parser_id:null,checks_passed:0,extraction_fingerprint:null,
-      last_error_code:untrained?(extraction.diagnosticCode??"parser_not_trained"):"n8n_unavailable",
+      last_error_code:untrained?safeDiagnostic:"n8n_unavailable",
       processed_at:untrained?new Date().toISOString():null,
       retry_after:retryAfter(untrained?1440:5),
     });
