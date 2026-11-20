@@ -60,6 +60,26 @@ export function mapVerifiedN8nMotorPremium(p: N8nVerifiedPremiumBreakdown): {
   };
 }
 
+
+/** Strict Go Digit native PDF commercial totals -> canonical Motor form. These
+ * totals have ALREADY passed 18 independent n8n validation checks. Owner-driver
+ * and paid-driver liability are inside the printed TP bucket and must not be
+ * added a second time as CPA. */
+export function mapVerifiedGoDigitCommercialPremium(p: {
+  od: number; tp: number; net: number; gst: number; gross: number;
+}): ReturnType<typeof mapVerifiedN8nMotorPremium> {
+  const money = [p.od, p.tp, p.net, p.gst, p.gross];
+  const valid = (v: number) => Number.isFinite(v) && v >= 0 && v <= 1_000_000_000
+    && Math.abs(v * 100 - Math.round(v * 100)) < .00001;
+  const cents = (v: number) => Math.round(v * 100);
+  if (!money.every(valid) || p.od <= 0 || p.tp <= 0
+    || Math.abs(cents(p.od + p.tp) - cents(p.net)) > 6
+    || Math.abs(cents(p.net + p.gst) - cents(p.gross)) > 6)
+    throw new Error("n8n_motor_premium_handoff_unreconciled");
+  const paisa = (v: number) => String(Math.round(v * 100) / 100);
+  return { od:paisa(p.od), addOnPremium:"0", tp:paisa(p.tp), cpa:"0", cpaOpted:"No" };
+}
+
 /** Verified CPA amount and saved owner-driver opt-in must agree before booking.
  * A positive numeric field alone cannot turn an operator's saved "No" into Yes.
  * In particular, canonical booking zeros out CPA whenever opted is false. */
