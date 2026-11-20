@@ -112,7 +112,7 @@ function validateMisp(form:Record<MispField,string>):MispErrors {
   }
   return errors;
 }
-export function MispPartnerForm({rms,banks,oems,pendingMisps,loading,onDirtyChange,onCancel}:{rms:Option[];banks:Option[];oems:Option[];pendingMisps:Option[];loading:boolean;onDirtyChange:(dirty:boolean)=>void;onCancel:()=>void}) {
+export function MispPartnerForm({rms,banks,oems,loading,onDirtyChange,onCancel}:{rms:Option[];banks:Option[];oems:Option[];loading:boolean;onDirtyChange:(dirty:boolean)=>void;onCancel:()=>void}) {
   const router=useRouter();
   const {height:windowHeight}=useWindowDimensions();
   const [form,setForm]=useState(empty);
@@ -261,7 +261,6 @@ export function MispPartnerForm({rms,banks,oems,pendingMisps,loading,onDirtyChan
   },[documentsOpen,applicationId]);
   return (
     <View style={styles.wrapper}>
-      {pendingMisps.length>0&&<View style={styles.section}><View style={styles.sectionHeading}><Text style={styles.heading}>Continue saved MISP documents</Text></View><View style={styles.grid}>{pendingMisps.map(item=><Pressable key={item.id} accessibilityRole="button" onPress={()=>router.push({pathname:"/partner-documents",params:{applicationId:item.id}} as never)} style={styles.pendingItem}><Text style={styles.inputText} numberOfLines={1}>{item.name}</Text><Ionicons name="chevron-forward" color="#17365D" size={17}/></Pressable>)}</View></View>}
       {fields.map((section,index)=>(
         <View key={section.title} style={styles.section}>
           <View style={styles.sectionHeading}>
