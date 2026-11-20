@@ -1,9 +1,9 @@
 Partner production OTA trigger
-release=partner-single-done-id-creation-pr-4994
+release=partner-source-rm-four-row-pr-4995
 source=verified-merged-main
-source_pr=4994
-source_merge=c7502744d623c79cbc14382d6a40e1ebf21bf3cf
-reason=user-approved-publish-mandatory-documents-single-done-id-creation
+source_pr=4995
+source_merge=4074c6f9beab152cf51716600b19d6f224e27f3c
+reason=user-approved-merge-and-publish-compact-source-rm-filters
 channel=production
 runtime=0.2.0
 requested=2026-11-20
