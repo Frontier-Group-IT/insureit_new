@@ -68,6 +68,28 @@ function toWeb(r){
     warnings:["tata_aig_issuance_date_unverified","tata_aig_human_review_required",
       ...(Math.abs(p.component_net-p.printed_net)>0.005?["tata_aig_printed_net_rounding"]:[])]};
 }
+// A printed Haryana district+four-digit registration (without alphabetic
+// series) is valid ONLY when a prior Date of Registration is independently
+// printed. A district prefix alone, or an undated short number, remains blocked.
+const historicalCar=fixtures[4];
+const historicalText=historicalCar.text
+  .replace("Registration No. HR00AB0001","Registration No. HR994321")
+  +"\\nDate of Registration 02/12/2020\\n";
+const historical=parse({all:()=>[{json:{text:historicalText}}]})[0].json;
+assert.equal(historical.ok,true,"Historic Haryana format must not fail registration validation");
+assert.equal(historical.checks_passed,18);
+assert.equal(historical.fields.vehicle_registration_status,"registered");
+assert.equal(historical.fields.vehicle_registration_number,"HR994321");
+const historicalNormalized=returnWeb(
+ {first:()=>({json:historical})},
+ () => ({first:()=>({json:{intake_id:IDs.intakeId,document_id:IDs.documentId,request_id:IDs.requestId}})}),
+)[0].json;
+assert.equal(validateTataAigN8nResponse(historicalNormalized,IDs).ok,true);
+const historicalMissingDate=historicalText.replace("Date of Registration 02/12/2020","");
+const rejectedHistorical=parse({all:()=>[{json:{text:historicalMissingDate}}]})[0].json;
+assert.equal(rejectedHistorical.ok,false,"Undated short number must not be accepted");
+assert.equal(rejectedHistorical.checks.vehicle_registration_status_verified,false);
+
 for(const [i,fixture] of fixtures.entries()){
   const parsed=parse({all:()=>[{json:{text:fixture.text}}]})[0].json;
   assert.equal(parsed.ok,true,fixture.name+" "+JSON.stringify(parsed.failed_checks));
