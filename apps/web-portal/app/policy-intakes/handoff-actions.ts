@@ -123,7 +123,10 @@ export async function prepareVerifiedN8nIntakeHandoff(
     return{ok:false,error:"The n8n extraction changed after review. Run n8n again and check the new fields before continuing."};
   }
   const commercial=parsed.preview.commercialPremium;
-  if (commercial && !replaceExistingDraft) {
+  const goDigitVerifiedFill = Boolean(commercial) && fillEmptyFields
+    && parsed.preview.parserId==="go_digit_cv_native_pdf"
+    && parsed.preview.checksPassed===18 && parsed.preview.warnings.length===0;
+  if (commercial && !replaceExistingDraft && !goDigitVerifiedFill) {
     return {ok:false,error:"Commercial premium handoff is available only via the explicit Reparse & replace review action."};
   }
   if (!commercial && !parsed.preview.premium) {
