@@ -112,9 +112,9 @@ export function PartnerProfileMenuIcon({
   }
   // Only the preserved kinds reach this palette; case-register uses artwork.
   const config = CONFIG[kind as Exclude<PartnerProfileMenuIconKind, 'case-register'>];
-  // Give the three ACCOUNT glyphs visible, icon-only 3D depth.
+  // Keep Support and Settings as their existing icon-only 3D glyphs.
   // No tiles, surrounding borders, extra badges or changes to menu touch targets.
-  if (kind === 'profile' || kind === 'support' || kind === 'settings') {
+  if (kind === 'support' || kind === 'settings') {
     const glyphSize = Math.round(size * 0.74);
     const layers = [
       { color: config.shadow, x: 2.6, y: 4, opacity: 0.5 },
