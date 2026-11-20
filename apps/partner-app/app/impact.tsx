@@ -90,21 +90,33 @@ export default function ImpactScreen() {
             onPress={() => router.push('/(tabs)/business')}
             style={({ pressed }) => [styles.hero, pressed && styles.pressed]}
           >
-            <ImpactIcon art="motor" size={48} plain />
+            <View style={styles.heroCar}>
+              <ImpactIcon art="motor" size={76} plain />
+              <View pointerEvents="none" style={styles.heroShield}>
+                <Ionicons name="shield-checkmark" size={22} color="#3379E6" />
+              </View>
+            </View>
             <View style={styles.heroDivider} />
-            <Text style={styles.heroValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65}>
-              {shortCurrency(data.active_motor_idv)}
-            </Text>
-
+            <View style={styles.heroDetails}>
+              <Text style={styles.heroEyebrow} numberOfLines={1}>Total Protection Value</Text>
+              <Text style={styles.heroValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65}>
+                {shortCurrency(data.active_motor_idv)}
+              </Text>
+              <View style={styles.heroCoverageBadge}>
+                <Ionicons name="shield-checkmark" size={12} color="#2566CF" />
+                <Text style={styles.heroCoverageText} numberOfLines={1}>Your coverage this month</Text>
+              </View>
+            </View>
           </Pressable>
 
           <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>Protection footprint</Text></View>
-          <View style={styles.grid}>
+          <View style={styles.footprintCard}>
             <ImpactCard art="vehicle" value={data.active_vehicles} label="Vehicles covered" onPress={() => router.push('/customers')} />
+            <View style={styles.footprintDivider} accessible={false}/>
             <ImpactCard art="customer" value={data.customers_served} label="Customers served" onPress={() => router.push('/customers')} />
-          </View>
-          <View style={styles.grid}>
+            <View style={styles.footprintDivider} accessible={false}/>
             <ImpactCard art="policy" value={data.lifetime_policies} label="Policies in your book" onPress={() => router.push('/(tabs)/policies')} />
+            <View style={styles.footprintDivider} accessible={false}/>
             <ImpactCard art="claim" value={data.claims_assisted} label="Claims assisted" onPress={() => router.push('/(tabs)/claims')} />
           </View>
 
@@ -204,11 +216,12 @@ function ImpactCard({ art, value, label, onPress }: {
       style={({ pressed }) => [styles.impactCard, pressed && styles.pressed]}
     >
       <View style={styles.cardContentRow}>
-        <ImpactIcon art={art} size={49} plain />
+        <ImpactIcon art={art} size={40} plain />
         <View style={styles.cardDetails}>
-          <Text style={styles.impactValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>{count(value)}</Text>
-          <Text style={styles.impactLabel} numberOfLines={2}>{label}</Text>
+          <Text style={styles.impactLabel} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>{label}</Text>
+          <Text style={styles.impactValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{count(value)}</Text>
         </View>
+        <Ionicons name="chevron-forward" size={15} color="#9AA7BB" />
       </View>
     </Pressable>
   );
@@ -268,25 +281,29 @@ const styles = StyleSheet.create({
   headerCopy: { flex: 1, minWidth: 0, justifyContent: 'center' },
   headerTitle: { color: '#FFFFFF', fontSize: 16, lineHeight: 22, fontWeight: '700', letterSpacing: -0.12 },
   hero: {
-    marginHorizontal: -partnerTheme.spacing.lg, minHeight: 82,
-    paddingHorizontal: 16, paddingVertical: 12,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E3E9F1',
-    flexDirection: 'row', alignItems: 'center', gap: 12,
+    marginHorizontal: -partnerTheme.spacing.lg, minHeight: 96,
+    paddingHorizontal: 14, paddingVertical: 10,
+    backgroundColor: '#F0F6FF',
+    borderBottomWidth: 1, borderBottomColor: '#D5DDE9',
+    flexDirection: 'row', alignItems: 'center', gap: 11,
   },
-  heroDivider: { width: StyleSheet.hairlineWidth, alignSelf: 'stretch', marginVertical: 6, backgroundColor: '#D6DEEA' },
-  heroValue: { flex: 1, minWidth: 0, color: '#11274A', fontSize: 28, lineHeight: 36, fontWeight: '800' },
+  heroCar: {width: 78, height: 76, flexShrink: 0, alignItems: 'center', justifyContent: 'center'},
+  heroShield: {position: 'absolute', top: 0, right: -2, backgroundColor: '#EFF6FF', borderRadius: 12},
+  heroDivider: { width: 1, alignSelf: 'stretch', marginVertical: 4, backgroundColor: '#D1DAE9' },
+  heroDetails: {flex: 1, minWidth: 0, alignItems: 'flex-start', gap: 2},
+  heroEyebrow: {color: '#576580', fontSize: 10, lineHeight: 13, fontWeight: '600'},
+  heroValue: {width: '100%', color: '#11274A', fontSize: 28, lineHeight: 34, fontWeight: '800'},
+  heroCoverageBadge: {flexDirection: 'row', alignItems: 'center', gap: 3, borderRadius: 999, paddingHorizontal: 7, paddingVertical: 3, backgroundColor: '#E3EEFF', maxWidth: '100%'},
+  heroCoverageText: {color: '#2566CF', fontSize: 9, fontWeight: '600'},
   sectionHeader: { marginTop: 17, marginBottom: 9 },
   sectionTitle: { color: '#17233A', fontSize: 16, fontWeight: '800' },
-  grid: { flexDirection: 'row', gap: 9, marginBottom: 9 },
-  impactCard: {
-    flex: 1, minWidth: 0, minHeight: 105, borderRadius: 18, padding: 12,
-    backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E4E9F0',
-  },
-  cardContentRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 },
-  cardDetails: { flex: 1, minWidth: 0, justifyContent: 'center', gap: 4 },
-  impactValue: { color: '#17233A', fontSize: 22, lineHeight: 28, fontWeight: '800' },
-  impactLabel: { color: '#17233A', fontSize: 11, lineHeight: 15, fontWeight: '700' },
+  footprintCard: {backgroundColor: '#FFFFFF', borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: '#E4E9F0'},
+  footprintDivider: {height: StyleSheet.hairlineWidth, marginHorizontal: 12, backgroundColor: '#E1E6EF'},
+  impactCard: {minHeight: 60, paddingHorizontal: 12, paddingVertical: 7, backgroundColor: '#FFFFFF'},
+  cardContentRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 11 },
+  cardDetails: { flex: 1, minWidth: 0, justifyContent: 'center', gap: 2 },
+  impactValue: { color: '#17233A', fontSize: 18, lineHeight: 22, fontWeight: '800' },
+  impactLabel: { color: '#58657B', fontSize: 12, lineHeight: 16, fontWeight: '600' },
   monthCard: { borderRadius: 19, overflow: 'hidden', backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E4E9F0' },
   monthPremium: { paddingHorizontal: 14, paddingVertical: 12 },
   monthPremiumTop: { flexDirection: 'row', alignItems: 'center', gap: 7 },
