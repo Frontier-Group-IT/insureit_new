@@ -121,8 +121,8 @@ export function hasVerifiedN8nParserEvidence(
  * partial signed revisions, multiple ByteRanges, non-Tata claimed signers
  * and inconsistent Indian-calendar dates.
  *
- * This is an explicit insurer-scoped business assumption. It is NOT proof of
- * cryptographic signature trust. Other policy/booking/OTP checks still apply.
+ * This is the confirmed insurer-scoped business rule. PKI chain trust is a
+ * separate assurance; it does not block applying this issuance-date rule.
  */
 export function acceptedTataAigIssuanceDate(input: {
   parserId:string; checksPassed:number; warnings:readonly string[];
@@ -134,9 +134,9 @@ export function acceptedTataAigIssuanceDate(input: {
     || !hasVerifiedN8nParserEvidence(input.parserId,input.checksPassed,input.warnings))
     return null;
   const evidence=input.issuanceEvidence;
-  if(!evidence || evidence.verification!=="metadata_only_requires_reviewer"
+  if(!evidence || evidence.verification!=="detached_signature_integrity_verified"
       || evidence.source!=="embedded_pdf_signature_timestamp"
-      || evidence.requiresReviewerConfirmation!==true
+      || evidence.requiresReviewerConfirmation!==false
       || !/^[a-f0-9]{64}$/.test(evidence.documentSha256)) return null;
   const day=(value:string)=>{
     if(!/^\d{4}-\d{2}-\d{2}$/.test(value))return false;

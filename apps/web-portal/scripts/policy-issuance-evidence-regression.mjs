@@ -26,7 +26,7 @@ const first=extractTataAigSigningDateProposal(twoW,"2026-11-19");
 assert(first);
 assert.equal(first.proposedDate,"2026-11-19");
 assert.equal(first.source,"embedded_pdf_signature_timestamp");
-assert.equal(first.verification,"metadata_only_requires_reviewer");
+assert.equal(first.verification,"signature_metadata_receipt_match");
 assert.equal(first.requiresReviewerConfirmation,true);
 assert.match(first.documentSha256,/^[a-f0-9]{64}$/);
 assert.equal(extractTataAigSigningDateProposal(twoW,"2026-11-17"),null);

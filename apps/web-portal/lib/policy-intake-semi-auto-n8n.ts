@@ -86,7 +86,7 @@ export function semiAutoN8nApplyEnabled(): boolean {
     && process.env.INSUREIT_N8N_OCR_ALLOW_REVIEW_APPLY === "true";
 }
 
-async function currentSnapshot(id: string): Promise<SourceSnapshot | null> {
+async function currentSnapshot(id: string, allowManualLane = false): Promise<SourceSnapshot | null> {
   const admin = createSupabaseAdminClient();
   const [record, copy] = await Promise.all([
     admin.from("policy_intake_requests")
@@ -98,7 +98,7 @@ async function currentSnapshot(id: string): Promise<SourceSnapshot | null> {
   ]);
   if (record.error || copy.error || !record.data || !copy.data) return null;
   const intake = record.data, document = copy.data;
-  if ((segregatePolicyIntakeLanes() && intake.processing_lane!=="automation")
+  if ((segregatePolicyIntakeLanes() && intake.processing_lane!=="automation" && !allowManualLane)
       || (intake.policy_type !== null
       && !["motor", "non_motor", "life", "health"].includes(intake.policy_type))
       || !ALLOWED_STATUSES.has(intake.status)
@@ -128,11 +128,13 @@ function fingerprint(
     .digest("hex");
 }
 
-export async function previewSemiAutoN8nExtraction(id: string): Promise<SemiAutoN8nResult> {
+export async function previewSemiAutoN8nExtraction(
+  id: string, options: { allowManualLane?: boolean } = {},
+): Promise<SemiAutoN8nResult> {
   if (!semiAutoN8nEnabledForIntake(id)) {
     return { ok: false, error: "n8n processing is not enabled for this Intake." };
   }
-  const snapshot = await currentSnapshot(id);
+  const snapshot = await currentSnapshot(id, options.allowManualLane === true);
   if (!snapshot) return { ok: false, error: "The current Intake PDF is unavailable, changed or not eligible for extraction." };
   // The portal validates the current version and grants a short-lived link,
   // but never downloads or forwards the PDF bytes to n8n. n8n fetches it.
@@ -224,7 +226,7 @@ export async function previewSemiAutoN8nExtraction(id: string): Promise<SemiAuto
     return { ok: false, reason: "untrained_or_unverified",
       error: "This Intake belongs to an untrained policy category. n8n has retrieved the private PDF, but a policy-type-specific parser is required before its fields can be accepted. No Google OCR fallback or booking was performed." };
   }
-  const current = await currentSnapshot(id);
+  const current = await currentSnapshot(id, options.allowManualLane === true);
   if (!current || current.document.id !== snapshot.document.id
       || current.intake.storage_path !== snapshot.intake.storage_path
       || current.intake.status !== snapshot.intake.status

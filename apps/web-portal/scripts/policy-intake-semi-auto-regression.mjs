@@ -298,7 +298,8 @@ assert(handoff.includes("export async function prepareVerifiedN8nIntakeHandoff("
 assert(handoff.includes('await requireCapability("manage_system","approve")')
   && handoff.includes("await requirePolicyCreator()"),
   "The directly callable n8n handoff server action must recheck Development and Policy Creator rights");
-assert(handoff.includes("const parsed=await previewSemiAutoN8nExtraction(id)"),
+assert(handoff.includes("const parsed=await previewSemiAutoN8nExtraction(id")
+  && handoff.includes("allowManualLane:replaceExistingDraft"),
   "The handoff must re-extract the current private PDF server-side, not accept browser OCR fields");
 assert(handoff.includes("parsed.preview.fingerprint!==expectedFingerprint"),
   "A changed extraction must block a previously reviewed handoff");
@@ -323,7 +324,7 @@ assert(handoff.includes("enrichVerifiedN8nOnboardingFields(verified.fields)"),
   "n8n vehicle and policy draft fields remain strictly allowlisted");
 assert(handoff.includes("resolveMasterIntakeIdentity(admin,intake.matched_customer_id,intake.customer_mobile)"),
   "Approved linked master identity must still be checked against the intake mobile");
-assert(handoff.includes('if(existingDraft?.draft_payload && !(verified?.fillEmptyFields))')
+assert(handoff.includes('if(existingDraft?.draft_payload && !(verified?.fillEmptyFields) && !(verified?.replaceExistingDraft))')
   && handoff.includes('.eq("intake_id",id).eq("revision",existingDraft.revision)'),
   "Existing drafts must not be overwritten; explicit blank-only refresh requires revision CAS");
 assert(handoff.includes("selectVerifiedN8nInsuredDraftIdentity(verified.fields,masterIdentity)")
@@ -801,7 +802,7 @@ assert.equal(prioritizedQueueSql.split("\n").filter(line=>line.trim()==="$$;").l
 // Corrected n8n date handoff, genuine exception taxonomy and duplicate skip.
 const duplicateQueueSql=readFileSync(new URL("../../../supabase/migrations/20261117190000_ai_policy_duplicate_queue_and_reassess.sql",import.meta.url),"utf8");
 assert(handoff.includes('const verifiedIssuanceDate=verified?.fields.find(field=>field.key==="policy_issuance_date")?.value')
-  && handoff.includes('issuanceDate:verified?(verifiedIssuanceDate||approvedSigningDate):new Date().toISOString().slice(0,10)')
+  && handoff.includes('issuanceDate:verified?(verifiedIssuanceDate||approvedSigningDate):""')
   && handoff.includes('reviewerConfirmedSigningDate')
   && handoff.includes('expectedDraftRevision')
   && handoff.includes('"manufacturingYear","issuanceDate"'),

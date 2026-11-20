@@ -73,8 +73,11 @@ type IntakeForHandoff={
 
 type VerifiedN8nHandoff = {
   documentId:string; fields:PolicyIntakeOcrField[];
+  parserId:string; parserVersion:string; checksPassed:number; fingerprint:string; warnings:string[];
   premium:N8nVerifiedPremiumBreakdown;
   fillEmptyFields?:boolean;
+  /** Explicit IT action: rebuild the saved, unbooked Intake draft from this fresh parse. */
+  replaceExistingDraft?:boolean;
   /** Date accepted using Tata AIG's matching signing/receipt business rule. */
   autoAcceptedIssuanceDate?:{date:string;documentSha256:string};
   reviewedIssueDateReplacement?:{expectedPrevious:string;expectedRevision:number};
@@ -91,15 +94,17 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-
  * No policy is booked; this is a deliberate, auditable reviewer handoff.
  */
 export async function prepareVerifiedN8nIntakeHandoff(
-  id:string, expectedDocumentId:string, expectedFingerprint:string, takeOver=false, fillEmptyFields=false,
+  id:string, expectedDocumentId:string|null, expectedFingerprint:string|null, takeOver=false, fillEmptyFields=false,
   reviewedIssueDateReplacement?:{expectedPrevious:string;expectedRevision:number},
   reviewerConfirmedSigningDate?:{
     date:string;documentSha256:string;
     expectedDraftRevision:number|null;expectedPreviousDate:string|null;
   },
+  replaceExistingDraft=false,
 ):Promise<PolicyIntakeHandoffResult> {
-  if (!isN8nWorkbenchPrimary() || !UUID.test(id) || !UUID.test(expectedDocumentId)
-      || !/^[a-f0-9]{64}$/i.test(expectedFingerprint)) {
+  if (!isN8nWorkbenchPrimary() || !UUID.test(id)
+      || (!replaceExistingDraft && (!expectedDocumentId || !expectedFingerprint
+        || !UUID.test(expectedDocumentId) || !/^[a-f0-9]{64}$/i.test(expectedFingerprint)))) {
     return {ok:false,error:"n8n handoff is not enabled or the reviewed PDF reference is invalid."};
   }
   // Every exported server action enforces scope itself; do not rely on the
@@ -110,10 +115,10 @@ export async function prepareVerifiedN8nIntakeHandoff(
   await requirePolicyCreator();
   await requirePolicyIntakeFinalizer(id);
   await requirePolicyIntakeReviewer(id);
-  const parsed=await previewSemiAutoN8nExtraction(id);
+  const parsed=await previewSemiAutoN8nExtraction(id,{allowManualLane:replaceExistingDraft});
   if(!parsed.ok)return{ok:false,error:parsed.error};
-  if(parsed.preview.documentId!==expectedDocumentId
-      || parsed.preview.fingerprint!==expectedFingerprint) {
+  if((expectedDocumentId && parsed.preview.documentId!==expectedDocumentId)
+      || (expectedFingerprint && parsed.preview.fingerprint!==expectedFingerprint)) {
     return{ok:false,error:"The n8n extraction changed after review. Run n8n again and check the new fields before continuing."};
   }
   if (parsed.preview.commercialPremium || !parsed.preview.premium) {
@@ -128,8 +133,8 @@ export async function prepareVerifiedN8nIntakeHandoff(
   ]);
   const blockingWarnings = parsed.preview.warnings.filter(warning =>
     !isTata || !informationalTataWarnings.has(warning));
-  // Missing Tata issuance-date evidence is *not* auto-approved: reviewers
-  // must explicitly supply and date-authorize it before a final booking.
+  // Missing signing evidence still leaves issuance date blank; the workflow
+  // never substitutes coverage start, receipt alone, PDF creation, or today.
   if(parsed.preview.checksPassed!==(isTata?18:13) || blockingWarnings.length>0) {
     return{ok:false,error:"n8n validation warnings must be resolved before creating an onboarding draft."};
   }
@@ -138,7 +143,7 @@ export async function prepareVerifiedN8nIntakeHandoff(
   const signature=parsed.preview.issuanceEvidence;
   const existing=parsed.preview.savedDraftIssueDate;
   if(reviewerConfirmedSigningDate) {
-    if(!signature || signature.verification!=="metadata_only_requires_reviewer"
+    if(!signature || signature.verification!=="detached_signature_integrity_verified"
       || reviewerConfirmedSigningDate.date!==signature.proposedDate
       || reviewerConfirmedSigningDate.documentSha256!==signature.documentSha256
       || reviewerConfirmedSigningDate.expectedDraftRevision!==(existing?.revision??null)
@@ -155,7 +160,11 @@ export async function prepareVerifiedN8nIntakeHandoff(
     && !["invalid","future"].includes(policyDateDecision(autoDate))
     ?{date:autoDate,documentSha256:signature.documentSha256}:undefined;
   return preparePolicyIntakeHandoffInternal(id,takeOver===true,{
-    documentId:expectedDocumentId,fields:parsed.preview.fields,premium:parsed.preview.premium,fillEmptyFields,
+    documentId:parsed.preview.documentId,fields:parsed.preview.fields,
+    parserId:parsed.preview.parserId,parserVersion:parsed.preview.parserVersion,
+    checksPassed:parsed.preview.checksPassed,fingerprint:parsed.preview.fingerprint,
+    warnings:parsed.preview.warnings,premium:parsed.preview.premium,fillEmptyFields,
+    replaceExistingDraft,
     reviewedIssueDateReplacement,
     ...(autoAcceptedIssuanceDate?{autoAcceptedIssuanceDate}:{}),
     ...(reviewerConfirmedSigningDate?{reviewerConfirmedSigningDate}:{}),
@@ -183,7 +192,7 @@ async function preparePolicyIntakeHandoffInternal(
     .maybeSingle<IntakeForHandoff>();
   if(!intake||["completed","rejected"].includes(intake.status))return{ok:false,error:"This intake is no longer available for onboarding."};
   if(verified){
-    if(intake.policy_type!=="motor" || !["processing","ready_for_review","in_review"].includes(intake.status))
+    if(intake.policy_type!=="motor" || !["processing","ready_for_review","in_review","needs_attention"].includes(intake.status))
       return{ok:false,error:"Only an open Motor Intake with verified n8n output can continue to Motor Policy Onboarding."};
     const{data:currentDocument,error:documentError}=await admin.from("policy_intake_documents")
       .select("id,storage_path,storage_bucket").eq("intake_id",id).eq("is_current",true)
@@ -209,10 +218,14 @@ async function preparePolicyIntakeHandoffInternal(
     return{ok:false,conflict:true,reviewerName,error:`This intake is currently assigned to ${reviewerName}.`};
   }
 
+  const replaceOcr=verified?.replaceExistingDraft===true;
   let assignmentQuery=admin.from("policy_intake_requests")
-    .update({status:"in_review",assigned_to_profile_id:reviewer.id,attention_reason:null})
+    .update({status:"in_review",assigned_to_profile_id:reviewer.id,attention_reason:null,
+      ...(replaceOcr?{ocr_status:"completed",ocr_fields:verified.fields,
+        ocr_parser_id:verified.parserId,ocr_parser_version:verified.parserVersion,
+        ocr_warnings:verified.warnings}: {})})
     .eq("id",id)
-    .in("status",["ready_for_review","in_review","processing"]);
+    .in("status",["ready_for_review","in_review","processing","needs_attention"]);
   if(verified)assignmentQuery=assignmentQuery.eq("storage_path",intake.storage_path as string);
   if(assignedToAnother){
     assignmentQuery=assignmentQuery.eq("assigned_to_profile_id",intake.assigned_to_profile_id as string);
@@ -236,7 +249,19 @@ async function preparePolicyIntakeHandoffInternal(
   }
 
   const {data:existingDraft}=await admin.from("policy_intake_onboarding_drafts").select("draft_payload,revision").eq("intake_id",id).maybeSingle<{draft_payload:PolicyIntakeDraft;revision:number}>();
-  if(existingDraft?.draft_payload && !(verified?.fillEmptyFields)){
+  const markFreshParseForReview=async()=>{
+    if(!verified?.replaceExistingDraft)return true;
+    const{error}=await admin.from("policy_intake_ai_processing_queue").update({
+      state:"exception",exception_codes:["booking_review_required"],
+      field_keys:verified.fields.map(field=>field.key),parser_id:verified.parserId,
+      checks_passed:verified.checksPassed,extraction_fingerprint:verified.fingerprint,
+      last_error_code:"bulk_conversion_review_required",processed_at:new Date().toISOString(),
+      retry_after:new Date(Date.now()+24*60*60*1000).toISOString(),
+      lease_id:null,leased_until:null,updated_at:new Date().toISOString(),
+    }).eq("intake_id",id).eq("document_id",verified.documentId);
+    return !error;
+  };
+  if(existingDraft?.draft_payload && !(verified?.fillEmptyFields) && !(verified?.replaceExistingDraft)){
     // A pre-existing operator draft must NEVER be overwritten by n8n.
     const identityName=verified
       ? existingDraft.draft_payload.insuredName
@@ -290,7 +315,7 @@ async function preparePolicyIntakeHandoffInternal(
   const intermediaryType=intake.lead_source_type==="posp"?"POSP":intake.lead_source_type==="misp"?"MISP":"SIBL / Partner";
   const draft:PolicyIntakeDraft={
     registrationMode:mapped.registrationMode,
-    issuanceDate:verified?(verifiedIssuanceDate||approvedSigningDate):new Date().toISOString().slice(0,10),rmName:"",intermediaryType,leadSource:intake.lead_source_name,intermediaryCode:intake.lead_source_code??"",businessLine:"Motor",
+    issuanceDate:verified?(verifiedIssuanceDate||approvedSigningDate):"",rmName:"",intermediaryType,leadSource:intake.lead_source_name,intermediaryCode:intake.lead_source_code??"",businessLine:"Motor",
     registrationNo:mapped.next.registrationNo,insuredName:customerName,phoneNo:intake.customer_mobile,vehicleClass:mapped.next.vehicleClass,make:mapped.next.make,model:mapped.next.model,fuelType:mapped.next.fuelType,capacity:mapped.next.capacity,manufacturingYear:mapped.next.manufacturingYear,chassisNo:mapped.next.chassisNo,engineNo:mapped.next.engineNo,rtoState:mapped.next.rtoState,rtoName:mapped.next.rtoName,
     policyProduct:mapped.next.policyProduct,idv:mapped.next.idv,
     od:verifiedPremium?.od??mapped.next.od,
@@ -302,12 +327,27 @@ async function preparePolicyIntakeHandoffInternal(
     payoutBasis:"NET",projectedOdPercent:"",projectedTpPercent:"",insurerScheme:"",payinBillNo:"",payinBilledAmount:"",payinBillDate:"",payinStatus:"Unbilled",retention:"",payoutOdPercent:"",payoutTpPercent:"",flatPayoutAmount:"",payoutStatus:"Pending",payoutDate:"",payoutVoucherNo:"",remarks:verified
       ? `Policy Intake ${id} — n8n validated ${verified.premium.tataAig ? "Tata AIG private car" : "ICICI 3005"} PDF. Review every prefilled value before booking.
 PDF premium reconciliation: Printed Basic OD ${verified.premium.basicOd} + OD add-ons ${addOnTotal} - validated NCB/OD deductions ${verified.premium.odDeductions??0} = Total OD ${verified.premium.totalOd}; net-of-deductions Basic OD entered for onboarding ${verifiedPremium?.od??"unavailable"}. TP ${verified.premium.basicTp}, CPA ${verified.premium.cpa}, Net ${verified.premium.net}, GST ${verified.premium.tax}, Gross ${verified.premium.gross}.
-Third Party period: ${tpStart||"unavailable"} to ${tpExpiry||"unavailable"}. ${verified.premium.tataAig ? "Tata AIG issuance uses the signing-date/printed-receipt business rule if both agree; this does NOT certify the CMS signer trust. Non-owner-driver paid-liability amounts are allocated to the TP form bucket, not CPA." : ""} Verify separate TP/CPA dates, policy class/product, identity, commercial rates and unmatched PDF fields manually.`
+Third Party period: ${tpStart||"unavailable"} to ${tpExpiry||"unavailable"}. ${verified.premium.tataAig ? "Tata AIG issuance date is taken from the current signed policy PDF timestamp when it matches the printed receipt under the configured insurer rule. Non-owner-driver paid-liability amounts are allocated to the TP form bucket, not CPA." : ""} Verify separate TP/CPA dates, policy class/product, identity, commercial rates and unmatched PDF fields manually.`
       : `Policy Intake ${id}`,
   };
   // Preserve the long-standing generic OCR default. A positive owner-driver
   // CPA is opted-in only for a separately validated n8n premium breakdown.
   if(verifiedPremium)draft.cpaOpted=verifiedPremium.cpaOpted;
+  if(existingDraft?.draft_payload && verified?.replaceExistingDraft){
+    // Reparse is an explicit reset: a successful current-PDF parse replaces
+    // every old draft field, including stale operator edits. The previous
+    // revision remains observable through the monotonically increasing CAS.
+    const {data:updated,error:updateError}=await admin.from("policy_intake_onboarding_drafts")
+      .update({draft_payload:draft,revision:existingDraft.revision+1,
+        updated_by_profile_id:reviewer.id,updated_at:new Date().toISOString()})
+      .eq("intake_id",id).eq("revision",existingDraft.revision)
+      .select("revision").maybeSingle<{revision:number}>();
+    if(updateError||!updated)return{ok:false,error:"The saved draft changed during reparse. Refresh and run Reparse & Replace again."};
+    if(!await markFreshParseForReview())return{ok:false,error:"The draft was replaced but the review queue could not be refreshed. Reload this Intake before booking."};
+    return{ok:true,draft,draftRevision:updated.revision,
+      matchedCustomerId:masterIdentity&&sameInsuredIdentity(masterIdentity.name,draft.insuredName)?masterIdentity.id:null,
+      existingDraft:true};
+  }
   if(existingDraft?.draft_payload){
     // Operator explicitly requested reapplying only missing verified fields.
     // Never replace a nonempty saved value; use optimistic revision control.
@@ -348,7 +388,7 @@ Third Party period: ${tpStart||"unavailable"} to ${tpExpiry||"unavailable"}. ${v
         +"\nAUTO_TATA_ISSUANCE_DATE: "+(original.issuanceDate||"(blank)")
         +" -> "+autoDate.date
         +" under signing/receipt business rule; source PDF SHA-256 "
-        +autoDate.documentSha256+". This does not establish CMS certificate trust.";
+        +autoDate.documentSha256+". Applied under the configured Tata AIG issuance-date rule.";
       changed=true;
     }
     if(dateReview && original.issuanceDate!==verifiedIssuanceDate){
@@ -394,6 +434,7 @@ Third Party period: ${tpStart||"unavailable"} to ${tpExpiry||"unavailable"}. ${v
   }
   const {data:storedDraft,error:draftError}=await admin.from("policy_intake_onboarding_drafts").insert({intake_id:id,draft_payload:draft,revision:1,updated_by_profile_id:reviewer.id}).select("revision").single<{revision:number}>();
   if(draftError||!storedDraft)return{ok:false,error:"Policy Onboarding draft could not be prepared. Refresh and try again."};
+  if(!await markFreshParseForReview())return{ok:false,error:"The draft was prepared but the review queue could not be refreshed. Reload this Intake before booking."};
   return{ok:true,draft,draftRevision:storedDraft.revision,matchedCustomerId,existingDraft:false};
 }
 

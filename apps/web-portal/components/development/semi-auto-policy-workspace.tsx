@@ -7,7 +7,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { IntakeStatusBucket } from "@/lib/policy-intake-status-buckets";
 import { hasVerifiedN8nParserEvidence } from "@/lib/ai-policy-onboarding-eligibility";
 import { AlertCircle, ArrowUpRight, CheckCircle2, ClipboardCheck, FileSearch, Loader2, PencilLine, RefreshCw, Search, ShieldAlert, Sparkles } from "lucide-react";
-import { applySemiAutoN8nIntake, bookSemiAutoIntake, convertVerifiedAiIntake, checkSemiAutoIntake, continueVerifiedN8nIntakeToOnboarding, editSemiAutoIntake, previewSemiAutoN8nIntake, reprocessAiPolicyIntake, reviewAiIntakeCustomerCandidates, reviewIciciVerifiedDraftRepair, applyReviewedIciciDraftRepair, transferFailedAiIntakeToManual, type ReviewedIciciDraftComparison, type AiCustomerCandidateReview, type SemiAutoActionResult, type SemiAutoN8nResult } from "@/app/development/ai-policy-onboarding/actions";
+import { applySemiAutoN8nIntake, bookSemiAutoIntake, convertVerifiedAiIntake, checkSemiAutoIntake, continueVerifiedN8nIntakeToOnboarding, editSemiAutoIntake, previewSemiAutoN8nIntake, reprocessAiPolicyIntake, reparseAndReplaceAiPolicyIntakeDraft, reviewAiIntakeCustomerCandidates, reviewIciciVerifiedDraftRepair, applyReviewedIciciDraftRepair, transferFailedAiIntakeToManual, type ReviewedIciciDraftComparison, type AiCustomerCandidateReview, type SemiAutoActionResult, type SemiAutoN8nResult } from "@/app/development/ai-policy-onboarding/actions";
 
 export type SemiAutoIntakeRow = {
   id: string;
@@ -132,6 +132,9 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
   const [reviewingCustomer,setReviewingCustomer]=useState(false);
   const [queueRetrying,setQueueRetrying]=useState(false);
   const [queueRetryError,setQueueRetryError]=useState<string|null>(null);
+  const [replaceReparseId,setReplaceReparseId]=useState<string|null>(null);
+  const [replaceReparseError,setReplaceReparseError]=useState<string|null>(null);
+  const [replaceReparseErrorId,setReplaceReparseErrorId]=useState<string|null>(null);
   const [draftReview,setDraftReview]=useState<ReviewedIciciDraftComparison|null>(null);
   const [draftReviewBusy,setDraftReviewBusy]=useState(false);
   const [draftApplyBusy,setDraftApplyBusy]=useState(false);
@@ -144,6 +147,16 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
     | { kind: "existing"; editUrl: string }
     | null
   >(null);
+  async function reparseAndReplace(row:SemiAutoIntakeRow){
+    setReplaceReparseId(row.id);setReplaceReparseError(null);setReplaceReparseErrorId(null);
+    try{
+      const response=await reparseAndReplaceAiPolicyIntakeDraft(row.id);
+      if(!response.ok){setReplaceReparseErrorId(row.id);setReplaceReparseError(response.error??"Could not reparse this Intake.");return;}
+      setExceptionRow(null);setReplaceReparseError(null);
+      router.push(response.editUrl??("/policies/new?intake_id="+encodeURIComponent(row.id)));
+    }catch{setReplaceReparseErrorId(row.id);setReplaceReparseError("The reparse result is unknown. Refresh this Intake before trying again.");}
+    finally{setReplaceReparseId(null);}
+  }
   const selected = rows.find(row => row.id === selectedId);
   const visible = useMemo(() => {
     const query = search.toLowerCase().trim();
@@ -649,6 +662,14 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
                         Convert to Policy
                       </button>
                     ) : null}
+                    {row.policy_type==="motor" && !row.is_duplicate && ["processing","ready_for_review","in_review","needs_attention"].includes(row.status) ? (
+                      <button type="button" disabled={replaceReparseId!==null || isWaiting}
+                        onClick={()=>void reparseAndReplace(row)}
+                        className="mt-1 ml-1 rounded-md border border-[#adc5e0] bg-white px-2 py-1.5 text-[10px] font-semibold text-[#174b83] disabled:opacity-50">
+                        {replaceReparseId===row.id?"Reparsing…":"Reparse & replace"}
+                      </button>
+                    ) : null}
+                    {replaceReparseErrorId===row.id&&replaceReparseError?<p role="alert" className="mt-1 max-w-[190px] whitespace-normal text-[9px] text-amber-800">{replaceReparseError}</p>:null}
                     {!row.is_duplicate && ["unsupported","exception","failed"].includes(row.ai_state??"") ? (
                       <button type="button" disabled={isWaiting}
                         onClick={()=>{setManualTransferRow(row);setManualTransferReason("");setManualTransferError(null);}}
@@ -1093,6 +1114,18 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
                  {draftReviewMessage?<p role="status" className="text-[10px] font-semibold text-[#245583]">{draftReviewMessage}</p>:null}
                </div>
              ) : null}
+            {primaryN8n && exceptionRow.policy_type==="motor" && !exceptionRow.is_duplicate ? (
+              <div className="mt-3 rounded-lg border border-[#bfd0e4] bg-[#f5f9ff] p-3">
+                <p className="text-[11px] font-bold text-[#19446f]">Reparse current PDF and replace saved details</p>
+                <p className="mt-1 text-[10px] leading-4 text-[#4c6280]">Runs the current PDF through n8n again. If validation succeeds, all saved extracted details and the onboarding draft are replaced. This does not create or book a policy.</p>
+                <button type="button" disabled={replaceReparseId!==null||isWaiting}
+                  onClick={()=>void reparseAndReplace(exceptionRow)}
+                  className="mt-2 rounded-md bg-[#174b83] px-3 py-2 text-[10px] font-bold text-white disabled:opacity-50">
+                  {replaceReparseId===exceptionRow.id?"Reparsing current PDF…":"Reparse & replace saved draft"}
+                </button>
+                {replaceReparseError?<p role="alert" className="mt-2 text-[10px] text-amber-800">{replaceReparseError}</p>:null}
+              </div>
+            ):null}
                           {(exceptionRow.ai_exceptions??[]).some(code=>code.startsWith("customer_")) ? (
               <div className="mt-3 space-y-2 rounded-lg border border-[#d2e0f0] bg-[#f5f9ff] p-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
