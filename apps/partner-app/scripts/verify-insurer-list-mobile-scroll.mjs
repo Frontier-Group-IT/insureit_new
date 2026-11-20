@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 const screen = readFileSync(new URL('../app/insurers.tsx', import.meta.url), 'utf8');
 
 // Insurer performance reference: compact full-width date filter, single inline calendar,
-// compact insurer names and every actor-authorized financial column visible together in portrait.
+// compact pinned insurer names and readable horizontally scrolling authorized financial columns.
 assert.match(screen, /function displayInsurerName\(name: string\): string/);
 assert.match(screen, /const NAME_ALIASES: Array<\[RegExp, string\]>/);
 for (const alias of ['United India', 'New India', 'ICICI Lombard', 'Tata AIG', 'Go Digit'])
@@ -28,12 +28,15 @@ assert.match(screen, /setPickerTarget\('from'\)/, 'Range selects from and to dat
 assert.match(screen, /setPickerTarget\('to'\)/, 'From selection advances to To');
 assert.doesNotMatch(screen, /contentContainerStyle=\{styles\.filterRow\}|Sort insurer register|DateTimePicker|dateModalOpen/, 'No financial filter strip, sort modal or native dual picker');
 assert.doesNotMatch(screen, /sortButton|searchRow|tableScrollRef|Swipe table sideways/, 'No separate sort button or legacy table');
-assert.doesNotMatch(screen, /<ScrollView horizontal|showsHorizontalScrollIndicator/, 'Financial columns fit without horizontal scrolling');
-assert.match(screen, /styles\.fixedNames/, 'Insurer names remain visible in the same responsive row');
-assert.match(screen, /financialColumns: \{ flex: 1, minWidth: 0 \}/, 'Financial columns fill the remaining portrait width');
-assert.match(screen, /fixedNames: \{ width: '31%'/, 'Insurer name width is responsive');
-assert.match(screen, /policyColumn: \{ width: '17%' \}/, 'Policy count uses a narrower column');
-assert.match(screen, /amountColumn: \{ flex: 1, minWidth: 0 \}/, 'All authorized amount columns share remaining width');
+assert.match(screen, /<ScrollView horizontal showsHorizontalScrollIndicator/, 'Financial columns scroll horizontally as requested');
+assert.match(screen, /styles\.fixedNames/, 'Insurer names remain visible in a pinned column');
+assert.match(screen, /financialColumns: \{ flex: 1, minWidth: 0 \}/, 'Scrollable financial viewport fills remaining portrait width');
+assert.match(screen, /const INSURER_COLUMN_WIDTH = '31%'/, 'Insurer name width remains at the existing 31%');
+assert.match(screen, /fixedNames: \{ width: INSURER_COLUMN_WIDTH/, 'Pinned insurer names use the existing width');
+assert.match(screen, /policies: 75, premium: 105, payin: 90, retention: 95/, 'Policies and Net Premium remain initially visible');
+assert.match(screen, /METRIC_COLORS\[column\.key\]\.header/, 'Color-coded financial headers');
+assert.match(screen, /METRIC_COLORS\[column\.key\]\.cell/, 'Color-coded financial data cells');
+assert.match(screen, /numberOfLines=\{1\} adjustsFontSizeToFit minimumFontScale=\{0\.9\}/, 'Header labels stay on one line');
 assert.match(screen, /styles\.financialRow/, 'All financial columns remain aligned row-by-row');
 assert.match(screen, /formatInsurerCompactRupees\(amount\)/, 'Compact values fit in portrait');
 assert.match(screen, /partnerAlert\(/, 'Exact whole-rupee values remain accessible via shared popup on tap');

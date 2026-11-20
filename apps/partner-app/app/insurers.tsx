@@ -1,7 +1,7 @@
 import { partnerAlert } from '@/components/ui/partner-alert-provider';
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useMemo, useState } from 'react';
-import { Image, Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
@@ -17,6 +17,17 @@ const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 type Metric = 'premium' | 'payin' | 'retention' | 'payout';
 type SortKey = 'amount_desc' | 'amount_asc' | 'policies_desc' | 'policies_asc' | 'name_asc' | 'name_desc' | 'payin_desc' | 'retention_desc';
 const ROW_HEIGHT = 46;
+const INSURER_COLUMN_WIDTH = '31%';
+
+// Fixed widths keep the first two metrics visible while additional columns scroll.
+const METRIC_WIDTHS = { policies: 75, premium: 105, payin: 90, retention: 95, payout: 95 } as const;
+const METRIC_COLORS = {
+  policies: { header: '#E2EEFF', cell: '#F1F6FF' },
+  premium: { header: '#EAE5FF', cell: '#F6F3FF' },
+  payin: { header: '#DDF5E8', cell: '#F0FAF5' },
+  retention: { header: '#FFF0DB', cell: '#FFFAF2' },
+  payout: { header: '#FFF0DB', cell: '#FFFAF2' },
+} as const;
 
 // Display aliases only: never alter the full insurer name used for the RPC,
 // logo lookup, searches or accessibility.
@@ -322,7 +333,8 @@ export default function InsurerListScreen() {
                   </View>
                 ))}
             </View>
-            <View style={styles.financialColumns}>
+            <ScrollView horizontal showsHorizontalScrollIndicator accessibilityLabel="Swipe horizontally for additional financial columns" style={styles.financialColumns} contentContainerStyle={styles.financialScrollContent}>
+              <View style={{ width: columns.reduce((total, column) => total + METRIC_WIDTHS[column.key], 0) }}>
               <View style={styles.registerHeader}>
                 {columns.map((column) => (
                   <Pressable key={column.key} accessibilityRole="button"
@@ -333,8 +345,8 @@ export default function InsurerListScreen() {
                       else if (column.key === 'payin' && canViewCommercials) setSortKey('payin_desc');
                       else if (column.key === 'retention' && canViewCommercials) setSortKey('retention_desc');
                     }}
-                    style={[styles.metricHeaderCell, column.key === 'policies' ? styles.policyColumn : styles.amountColumn]}>
-                    <Text numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.8}
+                    style={[styles.metricHeaderCell, { width: METRIC_WIDTHS[column.key], backgroundColor: METRIC_COLORS[column.key].header }]}>
+                    <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.9}
                       style={styles.metricHeaderText}>{column.label.toUpperCase()}</Text>
                   </Pressable>
                 ))}
@@ -344,17 +356,17 @@ export default function InsurerListScreen() {
                   <View key={insurer.name} style={styles.financialRow}>
                     {columns.map((column) => {
                       const amount = column.key === 'policies' ? null : metricValue(insurer, column.key);
-                      const cellStyle = [styles.metricCell, column.key === 'policies' ? styles.policyColumn : styles.amountColumn];
                       if (column.key === 'policies') {
-                        return <Text key={column.key} style={cellStyle} numberOfLines={1}
-                          adjustsFontSizeToFit minimumFontScale={0.8}>{insurer.policies}</Text>;
+                        return <View key={column.key} style={[styles.metricPressable, { width: METRIC_WIDTHS[column.key], backgroundColor: METRIC_COLORS[column.key].cell }]}>
+                          <Text style={styles.metricCell} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>{insurer.policies}</Text>
+                        </View>;
                       }
                       const exactAmount = amount == null ? '—' : formatInsurerRupees(amount);
                       return (
                         <Pressable key={column.key} accessibilityRole="button"
                           accessibilityLabel={`${insurer.name}, ${column.label}, ${exactAmount}. Tap for full amount`}
                           onPress={() => partnerAlert(`${displayInsurerName(insurer.name)} · ${column.label}`, exactAmount)}
-                          style={[styles.metricPressable, styles.amountColumn]}>
+                          style={[styles.metricPressable, { width: METRIC_WIDTHS[column.key], backgroundColor: METRIC_COLORS[column.key].cell }]}>
                           <Text style={styles.metricAmountText} numberOfLines={1}
                             adjustsFontSizeToFit minimumFontScale={0.7}>
                             {amount == null ? '—' : formatInsurerCompactRupees(amount)}
@@ -364,7 +376,8 @@ export default function InsurerListScreen() {
                     })}
                   </View>
                 ))}
-            </View>
+              </View>
+            </ScrollView>
           </View>
           {!validRange ? <PartnerStateView state="empty" title="Date range unavailable"
             message="Choose a valid range of up to 366 days." />
@@ -433,20 +446,21 @@ const styles = StyleSheet.create({
   countText: { color: '#667D9C', fontSize: 10.5 },
   register: { overflow: 'hidden', borderRadius: 12, borderWidth: 1, borderColor: '#DCE6F2', backgroundColor: '#FFFFFF' },
   registerContents: { flexDirection: 'row', alignItems: 'flex-start', width: '100%' },
-  fixedNames: { width: '31%', borderRightWidth: 1, borderRightColor: '#D8E4F3', backgroundColor: '#FFFFFF' },
+  fixedNames: { width: INSURER_COLUMN_WIDTH, borderRightWidth: 1, borderRightColor: '#D8E4F3', backgroundColor: '#FFFFFF' },
   financialColumns: { flex: 1, minWidth: 0 },
-  registerHeader: { flexDirection: 'row', alignItems: 'center', height: 38, paddingHorizontal: 3, backgroundColor: '#E9F1FE', borderBottomWidth: 1, borderBottomColor: '#DCE6F2' },
+  financialScrollContent: { alignItems: 'flex-start' },
+  registerHeader: { flexDirection: 'row', alignItems: 'center', height: 38, backgroundColor: '#E9F1FE', borderBottomWidth: 1, borderBottomColor: '#DCE6F2' },
   columnTitle: { color: '#38577E', fontSize: 9, fontWeight: '800' },
-  metricHeaderCell: { minWidth: 0, minHeight: 36, justifyContent: 'center', paddingHorizontal: 1 },
+  metricHeaderCell: { minWidth: 0, minHeight: 36, justifyContent: 'center', paddingHorizontal: 8 },
   policyColumn: { width: '17%' },
   amountColumn: { flex: 1, minWidth: 0 },
-  metricHeaderText: { textAlign: 'right', color: '#38577E', fontSize: 8, fontWeight: '800' },
+  metricHeaderText: { textAlign: 'center', color: '#38577E', fontSize: 10, fontWeight: '800' },
   tableRow: { height: ROW_HEIGHT, flexDirection: 'row', alignItems: 'center', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E2EBF4', paddingHorizontal: 4, gap: 4 },
   logo: { width: 21, height: 21 },
   insurerName: { flex: 1, minWidth: 0, color: '#28466D', fontSize: 9.2, fontWeight: '700', lineHeight: 12 },
-  financialRow: { flexDirection: 'row', alignItems: 'center', height: ROW_HEIGHT, paddingHorizontal: 3, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E2EBF4' },
-  metricCell: { minWidth: 0, paddingHorizontal: 1, textAlign: 'right', color: '#163C7A', fontSize: 9.5, fontWeight: '700', fontVariant: ['tabular-nums'] },
-  metricPressable: { minWidth: 0, height: ROW_HEIGHT, justifyContent: 'center', paddingHorizontal: 1 },
+  financialRow: { flexDirection: 'row', alignItems: 'center', height: ROW_HEIGHT, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E2EBF4' },
+  metricCell: { minWidth: 0, paddingHorizontal: 8, textAlign: 'right', color: '#163C7A', fontSize: 9.5, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  metricPressable: { minWidth: 0, height: ROW_HEIGHT, justifyContent: 'center', paddingHorizontal: 8 },
   metricAmountText: { color: '#163C7A', textAlign: 'right', fontSize: 9.5, fontWeight: '700', fontVariant: ['tabular-nums'] },
   empty: { padding: 18, fontSize: 12, color: '#718198' },
   retry: { minHeight: 38, alignItems: 'center', justifyContent: 'center' },
