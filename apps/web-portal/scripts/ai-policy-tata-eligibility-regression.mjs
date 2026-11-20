@@ -31,7 +31,9 @@ assert.equal(fixtures.length,6);
 // SAOD policies have no newly issued TP coverage. The canonical queue must
 // not label a fully verified OD-only schedule "Mandatory field missing".
 const standalone=JSON.parse(read("./fixtures/tata-aig-n8n-saod-synthetic.json"));
-assert.equal(standalone.fields.some(f=>f.key==="third_party_end_date"),false);
+// The synthetic SAOD fixture includes a reference to an earlier TP policy.
+// Remove it to exercise an equally valid standalone OD-only document.
+standalone.fields=standalone.fields.filter(f=>f.key!=="third_party_end_date");
 assert(!codes(evaluate(standalone)).includes("missing_field"),
  "Tata standalone OD does not require third-party_end_date");
 assert.deepEqual(codes(evaluate(standalone,{issuanceDateVerified:true})),
