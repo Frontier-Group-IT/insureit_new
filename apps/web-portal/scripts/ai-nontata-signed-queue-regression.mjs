@@ -107,14 +107,14 @@ const unified=file("../components/policy-unified-form.tsx");
 const shell=file("../components/policy-commercial-shell.tsx");
 assert.ok(niaHandoff.includes('niaVerified')&&niaHandoff.includes("FASTag ID:"),
   "NIA stale drafts must not show FASTag ID as the registration authority");
-assert.ok(niaHandoff.includes('nia_missing_rto_authority_and_cpa'));
+assert.ok(niaHandoff.includes('nia_missing_registration_authority') && !niaHandoff.includes('const niaMissingCpa='));
 assert.ok(niaPage.includes('readVerifiedNiaPrintedPremiumReference(')
   && niaPage.includes('queue.data.document_id===document.data.id'));
 assert.ok(unified.includes('printedPremiumReference!.gst')
   && unified.includes('Math.round(od*100)===Math.round(printedPremiumReference.od*100)')
   && unified.includes('form.cpaOpted==="No"'));
 assert.ok(shell.includes('printedPremiumReference={props.printedPremiumReference}'));
-assert.ok(component.includes('NIA PDF verified · booking fields incomplete')
+assert.ok(component.includes('NIA PDF verified · provisional RTO pending')
   && component.includes('Go Digit · manufacturing year unavailable'));
 
 // Approved operational rule: only when the policy fails to print manufacture
@@ -183,8 +183,18 @@ assert.ok(handoff.includes("NIA_PROVISIONAL_RTO_FROM_ISSUING_OFFICE:")
 assert.ok(unified.includes("Provisional city from the NIA issuing office")
   && unified.includes('form.remarks.includes("NIA_PROVISIONAL_RTO_FROM_ISSUING_OFFICE:")'),
   "A provisional issuing-office city must be labeled when shown as RTO");
-assert.ok(handoff.includes('nia_missing_verified_gcv_cpa')
-  && component.includes('nia_missing_verified_gcv_cpa'),
-  "Missing positive CPA must continue blocking automatic GCV booking");
+const canonicalEngine=file("../lib/policy-onboarding-engine.ts");
+assert.ok(!canonicalEngine.includes("CPA amount is mandatory for GCV policies")
+  && canonicalEngine.includes("(payload.premium.cpaOpted && cpaAmount <= 0)"),
+  "Canonical booking must allow zero CPA for any GCV policy, unless CPA is opted in");
+assert.ok(!unified.includes("CPA amount is mandatory for GCV policies")
+  && unified.includes("CPA must be positive when opted in.")
+  && unified.includes('min="0"'),
+  "Form must allow zero CPA while preserving opted-in amount check");
+assert.ok(!handoff.includes('const niaMissingCpa=')
+  && handoff.includes('niaHoldCode=niaMissingAuthority?"nia_missing_registration_authority":null'),
+  "NIA reparse queue must not hold verified zero-CPA commercial policies as missing CPA");
+assert.ok(component.includes("Historical NIA CPA hold"),
+  "The UI must clarify older CPA-only exceptions are obsolete");
 
 console.log("PASS: signed-source non-Tata AI queue routing, insurer-scoped verified name/product draft, and ICICI/Tata/booking guards.");
