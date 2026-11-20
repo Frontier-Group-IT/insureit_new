@@ -205,7 +205,7 @@ function MenuRow({
       ]}
     >
       <View style={styles.rowIcon}>
-        <PartnerProfileMenuIcon kind={iconKind} size={iconKind === 'policy-intake' ? 48 : 42} />
+        <PartnerProfileMenuIcon kind={iconKind} size={42} />
       </View>
       <View style={styles.rowBody}>
         <Text style={styles.rowTitle}>{title}</Text>
