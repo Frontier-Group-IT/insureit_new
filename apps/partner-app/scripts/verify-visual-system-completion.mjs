@@ -902,17 +902,17 @@ requireText(journey, "filter === 'all' || milestoneCategory(item.kind, item.titl
 requireText(journey, "hero: { marginHorizontal: -partnerTheme.spacing.lg, borderBottomWidth: 1, borderBottomColor: '#D7DFEB'", 'Milestone summary must connect to the navy header and span the viewport with a straight bottom divider.');
 if (/next30Row|NEXT 30 DAYS|getPartnerRenewalSummary|renewalSummary|heroSectionDivider/.test(journey)) throw new Error('My Progress must not render or request the removed Next 30 Days section.');
 requireText(journey, 'numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72} accessibilityLabel={data.next_milestone.title}', 'Milestone heading must fit a single row.');
-requireText(journey, "progressCircle: { width: 52, height: 52", 'Circular progress diameter must be compact.');
-requireText(journey, 'numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.9}>Milestone progress', 'Milestone progress label must remain on one line.');
-requireText(journey, "progressColumn: { width: 92", 'Milestone progress label must have adequate space while leaving room for reference title.');
-requireText(journey, "progressCircleText: { color: '#6954D6', fontSize: 12", 'Circle percentage label must be reduced with the ring.');
+requireText(journey, "progressCircle: { width: 40, height: 40", 'Circular progress diameter must match the approved compact 40px design.');
+requireText(journey, 'numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>Milestone progress', 'Milestone progress label must remain on one line.');
+requireText(journey, "progressColumn: { width: 86", 'Milestone progress column must shrink while keeping the title legible.');
+requireText(journey, "progressCircleText: { color: '#6954D6', fontSize: 10", 'Circle percentage label must be 10px within the 40px ring.');
 requireText(journey, 'label="Customers" artwork={PartnerAssets.actions.quickCustomers}', 'Customers summary must retain its existing illustration and link.');
 requireText(journey, 'styles.summaryDivider', 'Combined summary must have two visible internal separators.');
-requireText(journey, "summaryItem: { flex: 1, minWidth: 0, minHeight: 48, flexDirection: 'row'", 'All three summary metrics must have a compact icon-left horizontal layout.');
+requireText(journey, "summaryItem: { flex: 1, minWidth: 0, minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', paddingHorizontal: 5", 'All three summary metrics must left-align their icon and stacked text within equal-width segments.');
 requireText(journey, "summaryArtwork: { width: 27, height: 29", 'Existing illustrated icons must remain compact.');
 requireText(journey, "summaryDivider: { width: 1, alignSelf: 'stretch', backgroundColor: '#A6B3C6'", 'Full-width combined summary must retain separators.');
 requireText(journey, "paddingHorizontal: 12, paddingTop: 12, paddingBottom: 8, backgroundColor: '#FFFFFF'", 'Milestone section vertical spacing must remain compact.');
-requireText(journey, "left: 26 + Math.sin(angle) * 20.5", 'Ring segments must match the smaller geometry.');
+requireText(journey, "left: 20 + Math.sin(angle) * 15.5", 'Ring segments must match the 40px circle geometry.');
 requireText(journey, 'numberOfLines={1} ellipsizeMode="tail" accessibilityLabel={item.subtitle}', 'Timeline descriptions must truncate to one line.');
 requireText(journey, 'numberOfLines={1} ellipsizeMode="tail" accessibilityLabel={item.title}', 'Timeline titles must truncate to one line.');
 requireText(journey, "heroTitle: { color: '#17233A'", 'Milestone title must stay legible on white.');
@@ -925,6 +925,10 @@ for (const [fragment,purpose] of [
   ["styles.milestoneCopy", 'Left-align reference milestone label, title and subtitle'],
 ]) requireText(journey,fragment,purpose);
 
+requireText(journey, 'styles.milestoneBottomRow', 'Subtitle and progress label must be on the same aligned horizontal row.');
+requireText(journey, "milestoneBottomRow: { flexDirection: 'row', alignItems: 'center'", 'Subtitle and progress label must share the same baseline row.');
+requireText(journey, 'styles.milestoneTopRow', 'Circle must remain aligned with the milestone title block.');
+requireText(journey, '20 - Math.cos(angle) * 15.5', 'Progress segments must fit the reduced circular indicator.');
 requireText(journey, 'styles.progressCircle', 'Milestone progress ring must replace the separate horizontal bar.');
 requireText(journey, 'CIRCLE_SEGMENTS.map(', 'Progress ring must render its percentage-based circular segments.');
 requireText(journey, 'accessibilityRole="progressbar"', 'Circular milestone progress must remain accessible.');
