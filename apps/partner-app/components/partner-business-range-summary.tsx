@@ -14,12 +14,14 @@ type PartnerBusinessRangeSummaryCardProps = {
   title?: string;
   meta?: string;
   onApplied?: (summary: PartnerBusinessRangeSummary) => void;
+  directDateSelection?: boolean;
 };
 
 export function PartnerBusinessRangeSummaryCard({
   title = 'Custom range',
   meta = 'Premium, policies, customers and claims',
   onApplied,
+  directDateSelection = false,
 }: PartnerBusinessRangeSummaryCardProps = {}) {
   const today = useMemo(() => startOfDay(new Date()), []);
   const [fromDate, setFromDate] = useState<Date | null>(null);
@@ -74,6 +76,8 @@ export function PartnerBusinessRangeSummaryCard({
       <View style={styles.dateRow}>
         <View style={styles.dateField}>
           <PartnerDatePicker
+            directSelect={directDateSelection}
+            calendarVariant={directDateSelection ? 'dark' : 'default'}
             label="From"
             value={fromDate}
             maximumDate={toDate ?? today}
@@ -82,6 +86,8 @@ export function PartnerBusinessRangeSummaryCard({
         </View>
         <View style={styles.dateField}>
           <PartnerDatePicker
+            directSelect={directDateSelection}
+            calendarVariant={directDateSelection ? 'dark' : 'default'}
             label="To"
             value={toDate}
             minimumDate={fromDate ?? undefined}
