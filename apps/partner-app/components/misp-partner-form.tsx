@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, Keyboard, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import { Ionicons } from '@expo/vector-icons';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import { PartnerPolicyCalendarDialog } from '@/components/policy-intakes/partner-policy-calendar-dialog';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 
@@ -251,9 +251,18 @@ export function MispPartnerForm({rms,banks,oems,pendingMisps,loading,onDirtyChan
           <Text style={styles.primaryText}>{saving?'Saving…':'Save Detail'}</Text>
         </Pressable>
       </View>
-      {dateField?<DateTimePicker value={isoDate(form[dateField])?new Date(isoDate(form[dateField])+'T12:00:00'):new Date()}
-        mode="date" display={Platform.OS==='ios'?'spinner':'default'} maximumDate={new Date()}
-        onChange={(_event,date)=>{if(date){set(dateField,String(date.getDate()).padStart(2,'0')+'/'+String(date.getMonth()+1).padStart(2,'0')+'/'+date.getFullYear());}setDateField(null);}}/>:null}
+      <PartnerPolicyCalendarDialog
+        visible={Boolean(dateField)}
+        value={dateField && isoDate(form[dateField]) ? new Date(isoDate(form[dateField])+'T12:00:00') : new Date()}
+        maximumDate={new Date()}
+        onCancel={() => setDateField(null)}
+        onConfirm={date => {
+          if (dateField) {
+            set(dateField, String(date.getDate()).padStart(2,'0')+'/'+String(date.getMonth()+1).padStart(2,'0')+'/'+date.getFullYear());
+          }
+          setDateField(null);
+        }}
+      />
 
       <Modal visible={documentsOpen} transparent animationType="fade" onRequestClose={()=>{if(!busyDocument)setDocumentsOpen(false);}}>
         <View style={styles.documentBackdrop}>

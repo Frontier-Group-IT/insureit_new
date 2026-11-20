@@ -25,6 +25,16 @@ for(const field of [
   assert.ok(form.includes("key:'"+field+"'"),'Missing MISP field '+field);
   assert.ok(web.includes('name="'+field+'"'),'Field not found on website MISP reference: '+field);
 }
+// Both Add Partner variants must share the reference-style centered, one-tap date calendar.
+const sharedCalendar=read('../components/policy-intakes/partner-policy-calendar-dialog.tsx');
+assert.match(app,/PartnerPolicyCalendarDialog/,'POSP uses the reference calendar');
+assert.match(form,/PartnerPolicyCalendarDialog/,'MISP uses the same reference calendar');
+assert.match(form,/visible=\{Boolean\(dateField\)\}/,'MISP calendar appears as a modal');
+assert.match(form,/maximumDate=\{new Date\(\)\}/,'MISP cannot select future dates');
+assert.match(form,/onConfirm=\{date => \{/,'MISP commits a selected day immediately');
+assert.match(form,/setDateField\(null\)/,'MISP calendar closes after selection or dismissal');
+assert.doesNotMatch(form,/DateTimePicker|display=\{Platform\.OS===/,'MISP must not open a bottom native date picker');
+assert.match(sharedCalendar,/onPress=\{\(\) => onConfirm\(candidate\)\}/,'The shared calendar selects days without OK or Done');
 // Native POSP and MISP now share Save Detail and the optional document popup.
 assert.ok(form.includes('Save Detail'),'MISP uses the native Save Detail action');
 assert.ok(form.includes('Upload Documents'),'MISP can open document-category popup after save');
