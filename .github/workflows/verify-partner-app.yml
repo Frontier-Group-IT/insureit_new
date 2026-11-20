@@ -81,6 +81,9 @@ jobs:
       - name: Verify dimensional More menu icon coverage
         run: node apps/partner-app/scripts/verify-more-dimensional-icons.mjs
 
+      - name: Verify Partner Policies four-tab advanced filters
+        run: node apps/partner-app/scripts/verify-policy-four-tab-filters.mjs
+
       - name: Verify Partner route integrity
         run: npm --workspace apps/partner-app run verify:routes
 
