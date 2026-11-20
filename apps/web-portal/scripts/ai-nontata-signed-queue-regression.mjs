@@ -9,6 +9,8 @@ const component=file("../components/development/semi-auto-policy-workspace.tsx")
 const actions=file("../app/development/ai-policy-onboarding/actions.ts");
 const oldBridge=file("../lib/policy-intake-n8n-bridge.ts");
 const handoff=file("../app/policy-intakes/handoff-actions.ts");
+const insuredHelper=file("../lib/policy-n8n-onboarding-insured.ts");
+const enrichmentHelper=file("../lib/policy-n8n-onboarding-enrichment.ts");
 // An NIA RTO prefix is an unregistered vehicle, never a blocking incomplete
 // registered plate. The source prefix must not fill registrationNo.
 assert.match(signed,/isNewIndiaUnregistered/);
@@ -43,4 +45,25 @@ assert.match(actions,/!hasVerifiedN8nParserEvidence\(extracted\.preview\.parserI
 assert.match(oldBridge,/insureit-policy-intake-icici-v1/);
 assert.doesNotMatch(signed,/supabaseAdmin|\.from\("policies"\)/);
 assert.doesNotMatch(preview,/auto_finalize_allowed:\s*true/);
-console.log("PASS: signed-source non-Tata AI queue routing, printed premiums, and ICICI/Tata/booking guards.");
+assert.match(handoff,/selectVerifiedN8nInsuredDraftIdentity\\(verified\\.fields,masterIdentity,verified\\.parserId\\)/);
+assert.match(handoff,/enrichVerifiedN8nOnboardingFields\\(verified\\.fields,verified\\.parserId\\)/);
+assert.match(insuredHelper,/field\\.page === null && field\\.evidence === "Native PDF policy schedule"/);
+assert.match(enrichmentHelper,/parserId === "go_digit_cv_native_pdf"/);
+assert.match(enrichmentHelper,/Number\\(get\\("od_premium"\\)\\) > 0 && Number\\(get\\("tp_premium"\\)\\) > 0/);
+// Run the actual helpers on verified commercial evidence, not a copied algorithm.
+const {selectVerifiedN8nInsuredDraftIdentity}=await import("../lib/policy-n8n-onboarding-insured.ts");
+const {enrichVerifiedN8nOnboardingFields}=await import("../lib/policy-n8n-onboarding-enrichment.ts");
+const rawName=[{key:"insured_name",value:"MR BASANT SINGH KUSHRAM",page:null,evidence:"Native PDF policy schedule"}];
+const proposed=selectVerifiedN8nInsuredDraftIdentity(rawName,null,"go_digit_cv_native_pdf");
+assert.deepEqual([proposed.name,proposed.matchedCustomerId,proposed.needsManualReview],["MR BASANT SINGH KUSHRAM",null,true]);
+assert.equal(selectVerifiedN8nInsuredDraftIdentity(rawName,null).name,"","ICICI/Tata provenance must not change");
+assert.equal(selectVerifiedN8nInsuredDraftIdentity(rawName,null,"unexpected_parser").name,"","Unknown parser fails closed");
+assert.equal(selectVerifiedN8nInsuredDraftIdentity(rawName,[{id:"x",name:"UNRELATED"}][0],"go_digit_cv_native_pdf").matchedCustomerId,null);
+assert.equal(selectVerifiedN8nInsuredDraftIdentity([], {id:"x",name:"UNRELATED"},"go_digit_cv_native_pdf").name,"","Do not fallback to a master when verified commercial PDF name is missing");
+const digitFields=[{key:"policy_product",label:"Policy product",value:"Digit Commercial Vehicle Insurance"},
+{key:"vehicle_class",label:"Class",value:"Commercial Vehicle - Miscellaneous Class D"},
+{key:"od_premium",label:"OD",value:"2415.46"}, {key:"tp_premium",label:"TP",value:"7647"}];
+assert.equal(enrichVerifiedN8nOnboardingFields(digitFields,"go_digit_cv_native_pdf").find(f=>f.key==="policy_product")?.value,"Package");
+assert.equal(enrichVerifiedN8nOnboardingFields(digitFields,"iffco_tokio_cv_native_pdf").find(f=>f.key==="policy_product")?.value,"Digit Commercial Vehicle Insurance");
+assert.equal(enrichVerifiedN8nOnboardingFields(digitFields).find(f=>f.key==="policy_product")?.value,"Digit Commercial Vehicle Insurance");
+console.log("PASS: signed-source non-Tata AI queue routing, insurer-scoped verified name/product draft, and ICICI/Tata/booking guards.");
