@@ -136,7 +136,7 @@ begin
     select b.*
     from base b
     where
-      and (v_source='all' or ((case
+      (v_source='all' or ((case
  when lower(btrim(coalesce(b.intermediary_type,''))) in ('sibl / partner','partner') then 'partner'
  when lower(btrim(coalesce(b.intermediary_type,'')))='posp' then 'posp'
  when lower(btrim(coalesce(b.intermediary_type,'')))='misp' then 'misp'
@@ -144,7 +144,7 @@ begin
       and (v_rm='all' or coalesce(nullif(btrim(b.rm_name),''),'')=v_rm)
       and (p_from_date is null or coalesce(b.issuance_date,b.created_at::date)>=p_from_date)
       and (p_to_date is null or coalesce(b.issuance_date,b.created_at::date)<=p_to_date)
-      (v_period='all' or coalesce(b.issuance_date,b.start_date,b.created_at::date) between date_trunc('month',v_today::timestamp)::date and v_today)
+      and (v_period='all' or coalesce(b.issuance_date,b.start_date,b.created_at::date) between date_trunc('month',v_today::timestamp)::date and v_today)
       and (v_lifecycle='all' or b.lifecycle_status=v_lifecycle)
       and (v_line='all' or
         (case
@@ -323,7 +323,7 @@ begin
     select b.*
     from base b
     where
-      and (v_source='all' or ((case
+      (v_source='all' or ((case
  when lower(btrim(coalesce(b.intermediary_type,''))) in ('sibl / partner','partner') then 'partner'
  when lower(btrim(coalesce(b.intermediary_type,'')))='posp' then 'posp'
  when lower(btrim(coalesce(b.intermediary_type,'')))='misp' then 'misp'
@@ -331,7 +331,7 @@ begin
       and (v_rm='all' or coalesce(nullif(btrim(b.rm_name),''),'')=v_rm)
       and (p_from_date is null or coalesce(b.issuance_date,b.created_at::date)>=p_from_date)
       and (p_to_date is null or coalesce(b.issuance_date,b.created_at::date)<=p_to_date)
-      (v_line='all' or
+      and (v_line='all' or
         (case
           when concat_ws(' ',b.policy_type,b.policy_product,b.business_line) ilike '%health%' then 'health'
           when concat_ws(' ',b.policy_type,b.policy_product,b.business_line) ilike '%life%' then 'life'
@@ -460,7 +460,7 @@ begin
   ),
   scoped as (
     select b.* from base b where
-      (v_line='all' or
+      and (v_line='all' or
         (case
           when concat_ws(' ',b.policy_type,b.policy_product,b.business_line) ilike '%health%' then 'health'
           when concat_ws(' ',b.policy_type,b.policy_product,b.business_line) ilike '%life%' then 'life'
