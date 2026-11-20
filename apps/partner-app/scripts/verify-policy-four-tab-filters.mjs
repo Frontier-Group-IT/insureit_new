@@ -46,15 +46,22 @@ assert.match(screen,/<\/ScrollView>\s*<View style=\{styles\.advancedFooter\}>/,
 
 assert.match(screen,/PartnerDatePicker directSelect label="From"/);
 assert.match(screen,/PartnerDatePicker directSelect label="To"/);
-// Keep the Policies search Filter button identical to Claims, but enabled and wired to the existing sheet.
+// Keep the inline Filter visually identical to Claims, but non-interactive.
 for (const marker of [
-  'accessibilityLabel="Filter policies"',
-  'onPress={openSortSheet}',
+  'accessibilityLabel="Filter options are available from the bottom Sort button"',
+  'style={styles.filterButton} pointerEvents="none"',
   '<Ionicons name="filter-outline" size={18} color="#3156B8" />',
   '<Text style={styles.filterText}>Filter</Text>',
   'borderLeftWidth: StyleSheet.hairlineWidth',
   "borderLeftColor: '#D9DFEA'",
-]) assert.ok(screen.includes(marker), 'Policies inline Filter must preserve: '+marker);
+]) assert.ok(screen.includes(marker), 'View-only Policies Filter must preserve: '+marker);
+assert.match(screen,/accessibilityLabel="Sort and filter policies"/, 'Floating Sort must be an accessible action');
+assert.match(screen,/style=\{\(\{ pressed \}\) => \[styles.sortFloatingButton/, 'Floating Sort must have a touch target and pressed state');
+assert.match(screen,/onPress=\{openSortSheet\}/, 'Floating Sort opens the existing advanced bottom sheet');
+assert.match(screen,/\{isFocused && !sortSheetOpen && !lineMenuOpen \? \(/, 'Hide floating Sort beneath other menus and while unfocused');
+assert.match(screen,/sortFloatingPosition: \{ position: 'absolute', bottom: 16/, 'Sort stays bottom-center above the tab navigation');
+assert.match(screen,/content: \{ paddingBottom: 120/, 'Last policy records have clearance beneath the floating Sort');
+assert.doesNotMatch(screen,/accessibilityLabel="Filter policies"\s+onPress=\{openSortSheet\}/, 'Search Filter must not open the advanced sheet');
 for (const style of ['filterButton', 'filterText']) {
   const grab = src => {
     const start = src.indexOf('  '+style+': {');
@@ -64,8 +71,8 @@ for (const style of ['filterButton', 'filterText']) {
   };
   assert.equal(grab(screen), grab(claims), 'Policies '+style+' must match the exact Claims style');
 }
-assert.doesNotMatch(screen,/styles\.sortFloating|sortFloating:|sortFloatingText:/,'Remove the old floating Sort by control while retaining the existing filter sheet title');
-assert.match(screen,/searchSticky \? <View style=\{\[styles\.stickySearchOverlay[\s\S]*?\{searchControls\}/,'Sticky Policies search reuses the enabled inline Filter');
+assert.doesNotMatch(screen,/sortFloating:\s*\{/,'Do not restore legacy floating Sort styling; use the accessible new trigger');
+assert.match(screen,/searchSticky \? <View style=\{\[styles\.stickySearchOverlay[\s\S]*?\{searchControls\}/,'Sticky Policies search reuses the view-only inline Filter');
 assert.match(screen,/Reset Filters/);
 assert.match(screen,/Apply Filter/);
 assert.match(screen,/setDraftSource\(source\)/,'Opening sheet preserves source');
