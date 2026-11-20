@@ -142,7 +142,7 @@ export default function LifeHealthCaseDetailScreen(){
  const [documents,setDocuments]=useState<LifeHealthDocument[]>([]);
  const [activities,setActivities]=useState<LifeHealthActivity[]>([]);
  const [infoTab,setInfoTab]=useState<'activity'|'remarks'>('activity');
- const [expandedCaseTab,setExpandedCaseTab]=useState<'activity'|'remarks'>('activity');
+ const [expandedCaseTab,setExpandedCaseTab]=useState<'activity'|'remarks'|null>(null);
  const [remarkOpen,setRemarkOpen]=useState(false);
  const [remarkDraft,setRemarkDraft]=useState('');
  const [remarkSaving,setRemarkSaving]=useState(false);
@@ -301,7 +301,7 @@ export default function LifeHealthCaseDetailScreen(){
  },[id]);
  useFocusEffect(useCallback(()=>{
    let active=true;
-   setExpandedCaseTab('activity');
+   setExpandedCaseTab(null);
    setEditMode(false);
    // Guard against stale detail data after switching accounts or navigating away.
    void load();
@@ -458,19 +458,21 @@ export default function LifeHealthCaseDetailScreen(){
     {record&&!loading?<View style={styles.wrap}>
       <View style={[styles.hero,record.status_group==='issued'?styles.heroIssued:record.status_group==='rejected'?styles.heroRejected:null]}>
         <View style={styles.heroTop}>
-          <Text style={styles.heroTitle}>Life / Health Case</Text>
-          <View style={styles.heroStatusActions}>
+          <View style={styles.heroTitleStatus}>
+            <Text style={styles.heroTitle}>Life / Health Case</Text>
             <View style={styles.statusPill}>
               <Text style={styles.statusText}>{record.status_group==='issued'?'Issued':record.status_group==='rejected'?'Rejected':'Pending'}</Text>
             </View>
-            {record.status_group==='pending'?<Pressable accessibilityRole="button" accessibilityLabel={editMode?"Editing case details":"Edit case details"}
-              accessibilityState={{selected:editMode,disabled:saving||issuing||documentBusy||rejectBusy}} disabled={saving||issuing||documentBusy||rejectBusy}
-              onPress={()=>setEditMode(true)} style={[styles.heroEditPencil,editMode&&styles.heroEditPencilActive]}>
-              <Ionicons name="pencil" size={13} color="#FFFFFF"/>
-            </Pressable>:null}
           </View>
+          {record.status_group==='pending'?<Pressable accessibilityRole="button" accessibilityLabel={editMode?"Editing case details":"Edit case details"}
+            accessibilityState={{selected:editMode,disabled:saving||issuing||documentBusy||rejectBusy}} disabled={saving||issuing||documentBusy||rejectBusy}
+            onPress={()=>setEditMode(true)} style={[styles.heroEditPencil,editMode&&styles.heroEditPencilActive]}>
+            <Ionicons name="pencil" size={18} color="#95651F"/>
+          </Pressable>:null}
         </View>
-        <View style={styles.heroSecond}><Text style={styles.heroSubtitle} numberOfLines={1}>{record.customer_name} · {record.proposal_number}</Text><Text style={styles.heroCaseNumber} numberOfLines={1} selectable>{record.case_number}</Text></View>
+        <View style={styles.heroSecond}>
+          <Text style={styles.heroSubtitle} selectable>{record.customer_name} · {record.proposal_number}</Text>
+        </View>
 
       </View>
 
@@ -581,7 +583,7 @@ export default function LifeHealthCaseDetailScreen(){
             {(['activity','remarks'] as const).map(tab=><Pressable key={tab} accessibilityRole="tab"
               accessibilityLabel={tab==='activity'?'Activity Status':'Remarks'}
               accessibilityState={{selected:expandedCaseTab===tab}}
-              onPress={()=>setExpandedCaseTab(tab)}
+              onPress={()=>setExpandedCaseTab(previous=>previous===tab?null:tab)}
               style={[styles.activityFilterTab,expandedCaseTab===tab&&styles.activityFilterTabActive]}>
               <Text style={[styles.activityFilterText,expandedCaseTab===tab&&styles.activityFilterTextActive]}>
                 {tab==='activity'?'Activity Status':'Remarks'}
@@ -898,15 +900,14 @@ const styles=StyleSheet.create({
   heroIssued:{backgroundColor:'#1E694F'},
   heroRejected:{backgroundColor:'#913D3D'},
   heroTop:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:8},
-  heroStatusActions:{flexDirection:'row',alignItems:'center',gap:8},
-  heroEditPencil:{minWidth:33,height:25,borderRadius:6,borderWidth:1,borderColor:'rgba(255,255,255,0.55)',alignItems:'center',justifyContent:'center',backgroundColor:'rgba(255,255,255,0.12)'},
-  heroEditPencilActive:{backgroundColor:'rgba(255,255,255,0.30)',borderColor:'#FFFFFF'},
-  heroSecond:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:8},
+  heroTitleStatus:{flex:1,minWidth:0,flexDirection:'row',flexWrap:'wrap',alignItems:'center',gap:7},
+  heroEditPencil:{width:44,height:44,borderRadius:10,borderWidth:1,borderColor:'#FFFFFF',alignItems:'center',justifyContent:'center',backgroundColor:'#FFFFFF'},
+  heroEditPencilActive:{backgroundColor:'#FFF1D9',borderColor:'#FFFFFF'},
+  heroSecond:{width:'100%'},
   heroTitle:{color:'#FFFFFF',fontSize:15,fontWeight:'800'},
   statusPill:{borderRadius:6,backgroundColor:'rgba(255,255,255,0.16)',borderWidth:1,borderColor:'rgba(255,255,255,0.36)',paddingHorizontal:9,paddingVertical:3},
   statusText:{fontSize:10,fontWeight:'700',color:'#FFFFFF'},
-  heroSubtitle:{color:'#FFFFFF',fontWeight:'600',fontSize:10,flexShrink:1},
-  heroCaseNumber:{color:'#F8F0E4',fontSize:9,fontWeight:'600',flexShrink:1},
+  heroSubtitle:{color:'#FFFFFF',fontWeight:'600',fontSize:10,flexShrink:1,flexWrap:'wrap'},
   section:{backgroundColor:'#FFFFFF',borderRadius:14,borderWidth:1,borderColor:'#D9E2F0',overflow:'hidden'},
   sectionHighlight:{backgroundColor:'#F7FAFF',borderColor:'#C9D9F5'},
   sectionHeader:{flexDirection:'row',alignItems:'center',gap:10,minHeight:49,paddingHorizontal:12,paddingVertical:8,borderBottomWidth:1,borderBottomColor:'#D9E2F0',backgroundColor:'#EAF1FA'},
