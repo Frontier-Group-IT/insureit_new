@@ -84,4 +84,16 @@ assert.ok(form.includes('/api/partner/onboarding/partner-only/documents'), 'Miss
 assert.match(form, /api\/partner\/onboarding\/partner-only/);
 assert.doesNotMatch(form, /Add POSP|Add MISP|Create POSP|Create MISP/);
 assert.match(form, /canPartnerAccess\(context, 'create_intermediary_application', 'edit'\)/);
+assert.doesNotMatch(form, /partnerAlert\('Uploaded'/, 'A successful upload must not open the centered modal');
+assert.match(form, /setUploadSuccessToken\(previous => previous \+ 1\)/, 'Only a confirmed upload triggers the Uploaded badge');
+assert.match(form, /setTimeout\(\(\) => setShowUploadBadge\(false\), 1000\)/, 'Uploaded badge disappears after one second');
+assert.match(form, /showUploadBadge \? <View pointerEvents="none"/, 'Uploaded badge overlays the document modal at the top-right');
+assert.match(form, /styles\.uploadSuccessOverlay,\{top:Math\.max\(12,safeAreaInsets\.top\+8\)\}/, 'Badge respects the top safe area');
+assert.match(form, /const \[validationAlert, setValidationAlert\]/, 'Form maintains an explicit validation-dialog state');
+assert.match(form, /setValidationAlert\(\{field:firstInvalid,message:errors\[firstInvalid\]!\}\)/, 'Submit displays the actual first invalid field reason');
+assert.match(form, /<PartnerConfirmDialog[\s\S]*?title="Action required"[\s\S]*?kind="error"/, 'Validation reuses the same centered alert design with red error icon');
+assert.match(form, /if\(invalidField\)revealFirstError\(invalidField\)/, 'After acknowledgement, the invalid field is revealed');
+assert.match(form, /fieldErrors\[field\.key\] && styles\.invalidControl/, 'Input retains red validation border');
+assert.doesNotMatch(form, /<Text style=\{styles\.fieldError\}/, 'No duplicate inline error text beneath input fields');
+
 console.log('Add Partner-only native action, secure route and form verified.');
