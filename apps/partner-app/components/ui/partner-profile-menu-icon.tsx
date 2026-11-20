@@ -38,7 +38,7 @@ const ILLUSTRATED_ICONS: Partial<Record<PartnerProfileMenuIconKind, ImageSourceP
   'case-register': require('../../assets/partner/icons/more-case-register.png'),
   renewals: require('../../assets/partner/icons/more-renewals.png'),
   // Match the supplied Add Partner 3D reference with the existing transparent artwork, without a tile.
-  customers: require('../../assets/partner/actions/customer-register.png'),
+  customers: require('../../assets/partner/quick-actions/add-partner.png'),
   impact: require('../../assets/partner/icons/more-impact.png'),
   // The former menu PNG cannot be decoded reliably; reuse the verified bundled 3D journey illustration.
   journey: require('../../assets/partner/status/journey.png'),
