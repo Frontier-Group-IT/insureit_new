@@ -49,6 +49,7 @@ const classifierSource=bridge.match(/function insurerForText\(head: string\): In
 assert.ok(classifierSource,"Insurer classifier must be present");
 const classifier=new Function(
  classifierSource.replace("head: string", "head").replace(": Insurer | null", "")
+  .replace("const matches: Insurer[]", "const matches")
  +"\nreturn insurerForText;"
 )();
 const newIndiaHeader="THE NEW INDIA ASSURANCE CO. LTD.\n"
