@@ -57,6 +57,16 @@ requireText(insurerPerformance, "headerSearchBand: { backgroundColor: '#071E49'"
 if (insurerPerformance.includes('BUSINESS PERFORMANCE') || insurerPerformance.includes('headerEyebrow')) throw new Error('Insurer header must show only the main title without eyebrow or unused style.');
 requireText(insurerPerformance, "headerCopy: { flex: 1, minWidth: 0, justifyContent: 'center' }", 'Insurer header title is centered vertically.');
 requireText(insurerPerformance, 'bottomNavigation={<PartnerStackBottomNavigation activeTab="business" />}', 'Existing Business-active footer must be preserved.');
+for (const phrase of [
+  "const INSURER_COLUMN_WIDTH = '31%'",
+  "ScrollView horizontal showsHorizontalScrollIndicator",
+  "numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.9}",
+  "width: METRIC_WIDTHS[column.key]",
+  "backgroundColor: METRIC_COLORS[column.key].header",
+  "backgroundColor: METRIC_COLORS[column.key].cell",
+  "policies: 75, premium: 105, payin: 90, retention: 95",
+]) requireText(insurerPerformance, phrase, 'Insurer report must retain fixed names and readable horizontally scrolling colored financial columns: ' + phrase);
+
 
 const policyOnboarding = read('app/policy-intakes/onboarding.tsx');
 // Standalone Add Policy labels match the website, but existing Intake actions stay unchanged.
