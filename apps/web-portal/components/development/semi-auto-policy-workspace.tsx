@@ -65,13 +65,9 @@ function commercialBookingIssue(row:SemiAutoIntakeRow,code:string):
   if(/New India Assurance/i.test(insurer) && ["booking_review_required","missing_field"].includes(code)){
     const rawRto=values.get("vehicle_rto_name")??"";
     const missingRto=!rawRto||/^FASTag ID:$/i.test(rawRto);
-    const goods=/goods carrying|GCV/i.test(values.get("vehicle_class")??"");
-    const cpa=Number(values.get("cpa_premium")??"0");
-    const missingCpa=goods&&(!Number.isFinite(cpa)||cpa<=0);
-    const title=missingRto||missingCpa?"NIA PDF verified · booking fields incomplete":"NIA policy · canonical booking review";
+    const title=missingRto?"NIA PDF verified · provisional RTO pending":"NIA policy · canonical booking review";
     const issues=[
-      ...(missingRto?["The policy does not print a usable registration authority. FASTag ID is a separate label, not an RTO city."]:[]),
-      ...(missingCpa?["This goods-carrier policy has no independently verified positive owner-driver CPA, which the current canonical GCV booking rule requires. Do not invent a CPA amount."]:[]),
+      ...(missingRto?["The policy does not print a registration authority. Reparse the current PDF to obtain a labelled provisional issuing-office city where supported. CPA may legitimately be zero."]:[]),
     ];
     return {title,detail:issues.length?issues.join(" "):"NIA extraction passed, but commercial-policy booking remains review-controlled. Check identity, premium components, tax and canonical preflight."};
   }
@@ -98,9 +94,9 @@ function parserDiagnostic(code:string|null|undefined): {title:string;detail:stri
     return {title:"PDF verification failed",detail:"The commercial reader ran but rejected these checks. Inspect the matching fields and source layout in n8n. No policy was booked.",checks};
   }
   const descriptions:Record<string,string>={
-    nia_missing_rto_authority_and_cpa:"NIA PDF extraction succeeded, but the registration-authority field is unprinted and the canonical GCV policy requires positive verified owner-driver CPA. No RTO city or CPA value is invented; booking remains blocked.",
+    nia_missing_rto_authority_and_cpa:"Historical NIA exception: the older system blocked missing registration authority and zero CPA. Zero CPA is now allowed; reparse this PDF to refresh the provisional RTO.",
     nia_missing_registration_authority:"NIA PDF does not print a usable registration authority. The old FASTag ID parser match has been removed. Verify the actual RTO city/code from trusted registration evidence.",
-    nia_missing_verified_gcv_cpa:"NIA GCV policy has no independently verified owner-driver CPA. The current canonical rule requires a positive CPA amount; do not silently book without it.",
+    nia_missing_verified_gcv_cpa:"Historical NIA CPA hold: GCV owner-driver CPA is optional. Do not invent CPA; reparse the PDF to refresh review status.",
     go_digit_missing_verified_manufacturing_year:"The earlier Go Digit extraction had no manufacturing year or accepted registration-year fallback. Reparse the current policy PDF to apply the registration-year fallback rule; a missing or conflicting year will still require review.",
     go_digit_missing_verified_onboarding_fields:"Go Digit PDF is verified but does not independently provide all mandatory canonical policy fields. Review the listed missing vehicle or policy fields before booking.",
     n8n_review_required:"The n8n output failed the expected parser contract. This legacy code does not identify which check failed; run a fresh reparse to obtain the new diagnostics.",
