@@ -49,7 +49,7 @@ export default function SupportScreen() {
             <View pointerEvents="none" style={styles.heroCurveA} />
             <View pointerEvents="none" style={styles.heroCurveB} />
             <View style={styles.heroIconShell}>
-              <Image source={PartnerAssets.actions.support} style={styles.heroIcon} resizeMode="contain" />
+              <Image source={PartnerAssets.actions.supportVerified} style={styles.heroIcon} resizeMode="contain" />
             </View>
             <View style={styles.heroRule} />
             <View style={styles.heroInformation}>
