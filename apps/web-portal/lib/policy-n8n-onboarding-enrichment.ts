@@ -31,46 +31,8 @@ const ALLOWED_N8N_ONBOARDING_KEYS = new Set([
 
 export type N8nPrefillField = { key: string; label: string; value: string };
 
-export type ManufacturingYearEvidence = {
-  year: string;
-  source: "manufacturing_year" | "registration_year_fallback" | "missing";
-};
-/** InsureIt-approved operational rule: a missing manufacturing year may use
- * the *printed* registration year, never a guessed manufacture day/month.
- * Finance, identity, expiry and issue-date evidence is not affected.
- * Duplicate or contradictory source fields fail closed. */
-export function resolveManufacturingYearEvidence(
-  fields: readonly {key:string;value:string}[],
-): ManufacturingYearEvidence {
-  const unique = (key:string):string|null => {
-    const values=fields.filter(f=>f.key===key);
-    return values.length<=1 ? (values[0]?.value?.trim()??"") : null;
-  };
-  const mfg=unique("vehicle_manufacturing_year");
-  const regYear=unique("vehicle_registration_year");
-  const regDate=unique("vehicle_registration_date");
-  if(mfg===null||regYear===null||regDate===null)
-    return {year:"",source:"missing"};
-  const allowedYear=(s:string)=> /^(?:19|20)\d{2}$/.test(s)
-    && Number(s)<=new Date().getUTCFullYear() && Number(s)>=1900;
-  if(allowedYear(mfg)) return {year:mfg,source:"manufacturing_year"};
-  if(mfg && !/^(?:--|N\/A|NA|NOT AVAILABLE|UNKNOWN)$/i.test(mfg))
-    return {year:"",source:"missing"};
-  const datedYear=regDate ? (() => {
-    if(!/^\d{4}-\d{2}-\d{2}$/.test(regDate))return "";
-    const time=new Date(regDate+"T00:00:00Z");
-    return Number.isFinite(time.getTime())
-      &&time.toISOString().slice(0,10)===regDate ? regDate.slice(0,4):"";
-  })() : "";
-  if(regDate && !datedYear)return {year:"",source:"missing"};
-  if(regYear && !allowedYear(regYear))return {year:"",source:"missing"};
-  if(regYear && datedYear && regYear!==datedYear)
-    return {year:"",source:"missing"};
-  const year=regYear||datedYear;
-  if(!year||!allowedYear(year))return {year:"",source:"missing"};
-  return {year,source:"registration_year_fallback"};
-}
-
+import { resolveManufacturingYearEvidence } from "./policy-registration-year-fallback.mjs";
+export { resolveManufacturingYearEvidence } from "./policy-registration-year-fallback.mjs";
 
 // These model families are documented electric Chetak scooters. Do not infer
 // fuel, vehicle class or power from unrelated/unrecognised make/model text.
