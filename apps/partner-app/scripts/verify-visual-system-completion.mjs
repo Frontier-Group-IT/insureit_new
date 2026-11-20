@@ -210,10 +210,11 @@ const deletionSloganIndex = deletionScreen.indexOf('<View style={styles.heroCopy
 if (deletionBrandIndex < 0 || deletionSloganIndex < 0 || deletionBrandIndex >= deletionSloganIndex) {
   throw new Error('Account deletion must show the Partner logo left and the slogan right.');
 }
-requireText(deletionScreen, "heroCopy: { flex: 1, minWidth: 0, paddingLeft: 10, paddingTop: 0, alignItems: 'flex-end' }", 'Account deletion slogan must sit against the right edge of its hero column.');
-requireText(deletionScreen, "heroSloganBlock: { alignSelf: 'flex-end', width: '100%', alignItems: 'flex-start' }", 'Slogan uses the full right column to avoid wrapping while keeping both lines and underline left-aligned.');
+requireText(deletionScreen, "heroCopy: { flex: 1, minWidth: 0, paddingLeft: 10, paddingTop: 14, alignItems: 'flex-end' }", "Account deletion slogan stays right-aligned and begins at the brand wordmark first text row.");
+requireText(deletionScreen, "heroSloganBlock: { alignSelf: 'flex-end', width: 142, maxWidth: '100%', alignItems: 'flex-start' }", 'Slogan is right-anchored with a stable two-line width, while allowing narrow viewport shrink.');
 requireText(deletionScreen, 'numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>Your account,', 'First slogan row stays on one line.');
 requireText(deletionScreen, 'numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>your choice', 'Second slogan row stays on one line.');
+requireText(deletionScreen, "heroTitle: { width: '100%', fontSize: 19, lineHeight: 22", 'Both Y characters must share the same left origin in equal-width text rows.');
 requireText(deletionScreen, '<View style={styles.heroSloganBlock}>', 'Both headline rows must use the same right-side alignment group.');
 requireText(deletionScreen, "letterSpacing: -0.6, textAlign: 'left'", 'Account deletion title lines must start at the same column.');
 requireText(deletionScreen, "intro: { fontSize: 14, lineHeight: 23, color: '#242657', fontWeight: '500', textAlign: 'justify', alignSelf: 'stretch' }", 'The introduction must justify to full content width without disturbing horizontal padding.');
