@@ -375,6 +375,15 @@ async function preparePolicyIntakeHandoffInternal(
     ? " REGISTRATION_YEAR_MANUFACTURING_FALLBACK: Manufacturing year missing from policy; "+yearEvidence.year
       +" was taken from the printed vehicle registration year under the configured operational fallback rule. This is not manufacturer-verified and no manufacturing month/day was inferred."
     :"";
+  const niaProvisionalRto=verified?.parserId==="new_india_cv_native_pdf"
+    && verified.checksPassed===16
+    && verified.fields.some(field=>field.key==="vehicle_rto_name"
+      && field.evidence==="NIA issuing office city; provisional, NOT registration authority"
+      && field.value.trim()==="Gurgaon")
+    && verified.fields.some(field=>field.key==="vehicle_registration_status"
+      &&field.value==="unregistered");
+  const niaProvisionalRtoNote=niaProvisionalRto
+    ?" NIA_PROVISIONAL_RTO_FROM_ISSUING_OFFICE: Gurgaon, Haryana. Vehicle registration authority was blank on the PDF; the source is NIA's Gurgaon issuing office, not RTO confirmation. Confirm after RTO registration.":"";
   // Only a separately printed issued-on date OR the exact insurer-scoped
   // signing+receipt rule is accepted; OD/TP start and clock are never substitutes.
   const verifiedIssuanceDate=verified?.fields.find(field=>field.key==="policy_issuance_date")?.value
@@ -399,7 +408,7 @@ async function preparePolicyIntakeHandoffInternal(
     cpa:verifiedPremium?.cpa??mapped.next.cpa,
     policyNo:mapped.next.policyNo,insurerId:mapped.next.insurerId,validFrom:mapped.next.validFrom,validUpto:mapped.next.validUpto,
     payoutBasis:"NET",projectedOdPercent:"",projectedTpPercent:"",insurerScheme:"",payinBillNo:"",payinBilledAmount:"",payinBillDate:"",payinStatus:"Unbilled",retention:"",payoutOdPercent:"",payoutTpPercent:"",flatPayoutAmount:"",payoutStatus:"Pending",payoutDate:"",payoutVoucherNo:"",remarks:verified?.commercialPremium
-      ? `Policy Intake ${id} — independently validated commercial-motor PDF (${verified.parserId}). REVIEW ONLY; no policy or customer was booked. Printed OD ${verified.commercialPremium.od}, TP including liabilities ${verified.commercialPremium.tp}, Net ${verified.commercialPremium.net}, GST ${verified.commercialPremium.gst}, Gross ${verified.commercialPremium.gross}. Owner-driver PA and paid-driver liabilities are retained inside printed TP; do not add CPA a second time. Confirm vehicle class, registration, policy dates, premiums and all other fields before booking.${yearFallbackNote}`
+      ? `Policy Intake ${id} — independently validated commercial-motor PDF (${verified.parserId}). REVIEW ONLY; no policy or customer was booked. Printed OD ${verified.commercialPremium.od}, TP including liabilities ${verified.commercialPremium.tp}, Net ${verified.commercialPremium.net}, GST ${verified.commercialPremium.gst}, Gross ${verified.commercialPremium.gross}. Owner-driver PA and paid-driver liabilities are retained inside printed TP; do not add CPA a second time. Confirm vehicle class, registration, policy dates, premiums and all other fields before booking.${yearFallbackNote}${niaProvisionalRtoNote}`
       : verified && verified.premium
       ? `Policy Intake ${id} — n8n validated ${verified.premium.tataAig ? "Tata AIG private car" : "ICICI 3005"} PDF. Review every prefilled value before booking.
 PDF premium reconciliation: Printed Basic OD ${verified.premium.basicOd} + OD add-ons ${addOnTotal} - validated NCB/OD deductions ${verified.premium.odDeductions??0} = Total OD ${verified.premium.totalOd}; net-of-deductions Basic OD entered for onboarding ${verifiedPremium?.od??"unavailable"}. TP ${verified.premium.basicTp}, CPA ${verified.premium.cpa}, Net ${verified.premium.net}, GST ${verified.premium.tax}, Gross ${verified.premium.gross}.
@@ -496,6 +505,11 @@ Third Party period: ${tpStart||"unavailable"} to ${tpExpiry||"unavailable"}. ${v
         && yearEvidence?.source==="registration_year_fallback"
         && !supplemented.remarks.includes("REGISTRATION_YEAR_MANUFACTURING_FALLBACK:")){
       supplemented.remarks=(supplemented.remarks||"")+yearFallbackNote;
+      changed=true;
+    }
+    if(niaProvisionalRto && supplemented.rtoName==="Gurgaon"
+       && !supplemented.remarks.includes("NIA_PROVISIONAL_RTO_FROM_ISSUING_OFFICE:")){
+      supplemented.remarks=(supplemented.remarks||"")+niaProvisionalRtoNote;
       changed=true;
     }
     if(!changed)return{ok:true,draft:original,draftRevision:existingDraft.revision,
