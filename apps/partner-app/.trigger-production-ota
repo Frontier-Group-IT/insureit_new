@@ -1,9 +1,9 @@
 Partner production OTA trigger
-release=partner-more-compact-pr-4930-refresh
+release=partner-achievements-compact-pr-4939
 source=verified-merged-main
-source_pr=4930
-source_merge=acd8ed93bffb9d99fe4b3667f5e516058ea3671a
-reason=user-approved-merge-and-publish-compact-partner-more-layout
+source_pr=4939
+source_merge=5a1e193045499cd6df4406447176758d251915e5
+reason=user-approved-merge-and-publish-half-size-achievement-progress-tracker
 channel=production
 runtime=0.2.0
 requested=2026-11-20
