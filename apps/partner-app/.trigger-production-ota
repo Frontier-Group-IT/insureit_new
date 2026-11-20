@@ -1,9 +1,9 @@
 Partner production OTA trigger
-release=partner-profile-registration-id-icon-pr-4957
+release=partner-journey-banner-pr-4976
 source=verified-merged-main
-source_pr=4957
-source_merge=a197546e3eed59fe2b681d8633c2a890976bda2b
-reason=user-approved-merge-and-publish-profile-registration-id-icon
+source_pr=4976
+source_merge=9de51fc801b28590e4dc434d8423b18aa0eb09b7
+reason=user-approved-merge-and-publish-reference-journey-banner
 channel=production
 runtime=0.2.0
 requested=2026-11-20
