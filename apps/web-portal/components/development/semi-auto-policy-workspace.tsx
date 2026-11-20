@@ -36,6 +36,7 @@ const aiIssueTitles: Record<string,string> = {
   extraction_pending:"Waiting for n8n",
   extraction_failed:"n8n extraction failed",
   unverified_parser:"Parser checks need review",
+  registration_pending_review:"Confirm unregistered vehicle / RTO prefix",
   duplicate_policy:"Duplicate policy detected",
   reviewer_conflict:"Reviewer or review status conflict",
   customer_identity:"Same mobile / different insured",
