@@ -662,7 +662,7 @@ export default function PoliciesScreen() {
                       style={[styles.advancedOption,draftSource===option.value&&styles.sortChoiceSelected]}>
                       <Ionicons name={draftSource===option.value?'checkbox':'square-outline'} size={20} color="#4230B3"/>
                       <Text style={styles.sortChoiceText} numberOfLines={2}>{option.label}</Text></Pressable>)}
-                  </ScrollView>
+                  </ScrollView>}
               </>:null}
               {filterTab==='rm'?<>
                 <View style={styles.advancedSearch}><Feather name="search" size={17} color="#8190A7"/>
@@ -683,7 +683,7 @@ export default function PoliciesScreen() {
                       style={[styles.advancedOption,draftRm===name&&styles.sortChoiceSelected]}>
                       <Ionicons name={draftRm===name?'checkbox':'square-outline'} size={20} color="#4230B3"/>
                       <Text style={styles.sortChoiceText} numberOfLines={2}>{name}</Text></Pressable>)}
-                  </ScrollView>
+                  </ScrollView>}
               </>:null}
               {filterTab==='date'?<>
                 <Text style={styles.sortSectionLabel}>Date Range</Text>
