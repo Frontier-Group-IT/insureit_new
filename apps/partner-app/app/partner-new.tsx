@@ -338,7 +338,7 @@ export default function AddPartnerScreen() {
       // atomically issues the Partner ID. Never trust local upload state alone.
       const session = (await supabase.auth.getSession()).data.session;
       if (!session?.access_token) throw new Error('Sign in again to complete the application.');
-      const base = (process.env.EXPO_PUBLIC_PORTAL_URL || 'https://portal.insureit.in').replace(/\\/$/, '');
+      const base = (process.env.EXPO_PUBLIC_PORTAL_URL || 'https://portal.insureit.in').replace(/\/$/, '');
       const response = await fetch(`${base}/api/partner/onboarding/partner-only/documents`, {
         method: 'PATCH', headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ application_id: applicationId }),
