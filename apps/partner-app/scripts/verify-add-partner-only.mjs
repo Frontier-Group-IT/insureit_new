@@ -112,7 +112,20 @@ assert.match(form, /const \[validationAlert, setValidationAlert\]/, 'Form mainta
 assert.match(form, /setValidationAlert\(\{field:firstInvalid,message:errors\[firstInvalid\]!\}\)/, 'Submit displays the actual first invalid field reason');
 assert.match(form, /<PartnerConfirmDialog[\s\S]*?title="Action required"[\s\S]*?kind="error"/, 'Validation reuses the same centered alert design with red error icon');
 assert.match(form, /if\(invalidField\)revealFirstError\(invalidField\)/, 'After acknowledgement, the invalid field is revealed');
-assert.match(form, /fieldErrors\[field\.key\] && styles\.invalidControl/, 'Input retains red validation border');
+assert.match(form, /const highlightedField = !loading && !applicationId/, 'Only active unsaved POSP form fields can be highlighted');
+assert.match(form, /validationOrder\.find\(key => validatePartnerField\(key, form\) !== null\)/, 'Guide only the first missing or invalid field');
+assert.match(form, /highlightedField === 'associate_employee_id' && styles\.invalidControl/, 'RM highlights red when not selected');
+assert.match(form, /highlightedField === field\.key && styles\.invalidControl/, 'Only the guided date or text field highlights red');
+assert.match(form, /highlightedField === 'bank_id' && styles\.invalidControl/, 'Bank selector follows the same single-field rule');
+assert.doesNotMatch(form, /fieldErrors\[/, 'Do not highlight every invalid POSP field at the same time');
+const order = form.match(/const validationOrder: Field\[\] = \[([\s\S]*?)\];/)?.[1];
+assert.ok(order, 'POSP validation order exists');
+assert.ok(order.indexOf("'associate_employee_id'") < order.indexOf("'pos_first_name'"), 'RM must be first');
+assert.ok(order.indexOf("'pos_first_name'") < order.indexOf("'pan_number'"), 'Next highlight moves from First Name to PAN');
+assert.ok(order.indexOf("'pan_number'") < order.indexOf("'aadhaar_number'"), 'Next highlight moves from PAN to Aadhaar');
+assert.ok(order.indexOf("'bank_ifsc_code'") < order.indexOf("'document_received_at'"), 'Optional fields do not interrupt required fields');
+assert.match(form, /const errors = validatePartner\(form\);/, 'Save Detail continues validating all fields');
+assert.match(form, /const firstInvalid = validationOrder\.find\(key => errors\[key\]\)/, 'Save blocks the first invalid field');
 assert.doesNotMatch(form, /<Text style=\{styles\.fieldError\}/, 'No duplicate inline error text beneath input fields');
 
 // Mobile Partner completion remains explicit; the New Partner screen must not expose other saved applications.
