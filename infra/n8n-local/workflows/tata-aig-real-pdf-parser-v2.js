@@ -49,7 +49,7 @@ function addonsFor(premium,layout){
  const from=premium.search(/Section\s*-\s*I Add[ -]On Covers/i);
  if(from<0)return [];
  const after=premium.slice(from);
- const end=after.search(/(?:Section\s*-\s*II Liability|Total Add[ -]On Premium\s*\(C\))/i);
+ const end=after.search(/(?:Section\s*-\s*II Liability|Total Add[ -]On Premium\s*\([BC]\))/i);
  const text=(end>=0?after.slice(0,end):after.slice(0,3000));
  const found=[];
  // Actual PDFs: car '(Add) <wrapped name> (TAxx) <price>', two-wheeler 'Add : <name> (TAxx) <price>'.
@@ -129,7 +129,7 @@ function extract(raw){
  const cckw=match(vehicleSection,/\bCC\s*\/\s*KW\s*(\d+(?:\.\d{1,2})?)/i);
  const seats=match(vehicleSection,/\bSeating Capacity\s*\(Including\s*Driver\)\s*(\d{1,2})/i) || seating(vehicleSection);
  const rto=match(vehicleSection,/\bRTO Location\s+([A-Z]{3,30})\b/i)?.toUpperCase()??null;
- const stateByRto={JABALPUR:'MADHYA PRADESH',SATNA:'MADHYA PRADESH',BADSHAPUR:'HARYANA',GURGAON:'HARYANA',FARIDABAD:'HARYANA',DELHI:'DELHI'};
+ const stateByRto={JABALPUR:'MADHYA PRADESH',SATNA:'MADHYA PRADESH',BADSHAPUR:'HARYANA',REWARI:'HARYANA',GURGAON:'HARYANA',FARIDABAD:'HARYANA',DELHI:'DELHI'};
  const state=stateByRto[rto]??null;
  const stateByPlate={MP:'MADHYA PRADESH',HR:'HARYANA',DL:'DELHI'};
  checks.vehicle_identity_verified=Boolean(engine&&chassis&&engine!==chassis&&engine.length>=7&&chassis.length>=14);
@@ -140,7 +140,9 @@ function extract(raw){
  checks.idv_verified=Boolean(idv&&idv>0&&near(idv,amount(idvMatch[1]),0.01));
  const od=coverage(text,'OD'),tp=coverage(text,'TP'),pa=coverage(text,'CPA');
  const cpaNA=/Compulsory (?:PA Cover|Personal Accident Cover) for Owner-Driver\s+NA\s+NA/i.test(text);
- checks.coverage_periods_verified=Boolean(od&&tp&&od.from&&od.to&&tp.from===od.from&&od.to>=od.from&&tp.to>=od.to&& (pa?pa.from===od.from&&pa.to>=pa.from:cpaNA));
+ checks.coverage_periods_verified=layout===LAYOUTS.private_saod
+   ? Boolean(od?.from&&od?.to&&od.to>=od.from&&!tp&&!pa&&/Standalone Own Damage Private Car Policy/i.test(text))
+   : Boolean(od&&tp&&od.from&&od.to&&tp.from===od.from&&od.to>=od.from&&tp.to>=od.to&& (pa?pa.from===od.from&&pa.to>=pa.from:cpaNA));
  if(isTw)checks.coverage_periods_verified=checks.coverage_periods_verified&&tp.to>od.to;
  const premiumStart=text.search(/Schedule of Premium/i);
  const premOriginal=premiumStart>=0?text.slice(premiumStart):'';
@@ -148,20 +150,28 @@ function extract(raw){
  const premiumColumns=formatted?splitPdfColumns(premOriginal,isTw?79:78):null;
  const prem=formatted?premiumColumns.left+'\n'+premiumColumns.right:premOriginal;
  const basicOd=isTw?cash(prem,/Premium on Vehicle\s*₹\s*([\d,.]+)/i):firstCurrencyAfter(prem,/Premium on Vehicle and Non-/i,130);
- const ncb=isTw?0:(cash(prem,/Less\s*:\s*No claim bonus[^₹\n]*₹\s*([\d,.]+)/i)??null);
  const odPrinted=cash(prem,/Total Own Damage Premium\s*\(A\)\s*₹\s*([\d,.]+)/i);
+ const printedNcb=cash(prem,/Less\s*:\s*No claim bonus[^₹\n]*₹\s*([\d,.]+)/i);
+ // A policy with no printed NCB deduction may have zero NCB. Only accept zero
+ // when the independently printed basic OD and total OD match exactly.
+ const ncb=isTw?0:printedNcb??(basicOd!==null&&odPrinted!==null&&near(basicOd,odPrinted,0.03)?0:null);
  checks.basic_od_ncb_reconciled=near((basicOd??NaN)-(ncb??NaN),odPrinted??NaN,0.03);
  const addons=addonsFor(prem,layout);
- const addonTotal=cash(prem,/Total Add[ -]On Premium\s*\(C\)\s*₹\s*([\d,.]+)/i);
+ const addonTotal=cash(prem,layout===LAYOUTS.private_saod
+   ? /Total Add[ -]on Premium\s*\(B\)\s*₹\s*([\d,.]+)/i
+   : /Total Add[ -]On Premium\s*\(C\)\s*₹\s*([\d,.]+)/i);
  checks.itemized_addons_reconciled=addonTotal!==null&&near(addonTotal,addons.reduce((v,a)=>v+a.amount,0),0.045);
- const basicTp=cash(prem,/Basic TP [Pp]remium\s*₹\s*([\d,.]+)/i);
+ const saodNoLiability=layout===LAYOUTS.private_saod&&!/Section\s*-\s*II Liability|Total Liability Premium\s*\(B\)/i.test(prem);
+ const basicTp=saodNoLiability?0:cash(prem,/Basic TP [Pp]remium\s*₹\s*([\d,.]+)/i);
  const ownerDriverCpa=isTw?
    (cash(prem,/Compulsory Personal Accident Cover for Owner\s*₹\s*([\d,.]+)/i)??cash(prem,/Compulsory Personal Accident Cover for Owner\s*Driver\s*₹\s*[\d,.]+\s*₹\s*([\d,.]+)/i)??0):
    (firstCurrencyAfter(prem,/\d+Year\(s\) Compulsory PA cover for/i,125)??0);
  const passenger=isTw?0:(cash(prem,/PA cover to unnamed passengers[\s\S]{0,140}?₹\s*([\d,.]+)/i)??0);
  const legal=isTw?0:(cash(prem,/Add: Legal liability to paid driver[\s\S]{0,150}?₹\s*([\d,.]+)/i)??0);
- const liability=cash(prem,/Total Liability Premium\s*\(B\)\s*₹\s*([\d,.]+)/i);
- const rsa=isTw?0:(cash(prem,/Total Others\s*\(D\)\s*₹\s*([\d,.]+)/i)??0);
+ const liability=saodNoLiability?0:cash(prem,/Total Liability Premium\s*\(B\)\s*₹\s*([\d,.]+)/i);
+ const rsa=isTw?0:(cash(prem,saodNoLiability
+   ? /Total Others\s*\(C\)\s*₹\s*([\d,.]+)/i
+   : /Total Others\s*\(D\)\s*₹\s*([\d,.]+)/i)??0);
  checks.liability_components_reconciled=near((basicTp??NaN)+ownerDriverCpa+passenger+legal,liability??NaN,0.03);
  const printedNet=cash(prem,/Net Premium\s*\(A\+B\+C(?:\+D)?\)\s*₹\s*([\d,.]+)/i);
  const net=cent((odPrinted??NaN)+(addonTotal??NaN)+(liability??NaN)+rsa);

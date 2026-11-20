@@ -35,6 +35,21 @@ for(let i=0;i<nia.length;i++){
  'Total Payable (Rs) '+gross,
  'Date of Issue: 19/11/2026'
  ].join('\n');
+ // Native PDF.js may collapse table columns to one intervening space.
+ // Keep a heading-delimited extraction; never take arbitrary adjacent text.
+ if(i===0 || i===1){
+  const narrow=text
+    .replace("Insured's Name EXAMPLE SAMPLE CUSTOMER        Customer ID",
+      "Insured's Name EXAMPLE SAMPLE CUSTOMER Customer ID")
+    .replace("Make/Model: TATA MOTOR/TEST TRUCK       Registration no.",
+      "Make/Model: TATA MOTOR/TEST TRUCK Registration no.");
+  const parsedNarrow=parseNonTata(narrow);
+  assert.equal(field(parsedNarrow,'insured_name'),'EXAMPLE SAMPLE CUSTOMER');
+  assert.equal(field(parsedNarrow,'vehicle_make'),'TATA MOTOR');
+  assert.equal(field(parsedNarrow,'vehicle_model'),'TEST TRUCK');
+  assert.equal(parsedNarrow.checks.registration_complete,false);
+  assert.equal(parsedNarrow.ok,false,'Partial plate must remain review-only');
+ }
  const r=parseNonTata(text);
  assert.equal(r.parser_id,'new_india_cv_native_pdf',tag);
  assert.deepEqual([r.premium_components.od,r.premium_components.tp,r.premium_components.net,r.premium_components.gst,r.premium_components.gross],[od,tp,net,gst,gross],tag);

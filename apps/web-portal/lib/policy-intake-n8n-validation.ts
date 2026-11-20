@@ -324,7 +324,8 @@ export function validateTataAigN8nResponse(
     || Object.keys(checks).some(key => !expectedChecks.has(key))
     || [...expectedChecks].some(key => checks[key] !== true))
     fail("n8n_financial_validation_failed");
-  if (!Array.isArray(value.fields) || value.fields.length < REQUIRED_FIELDS.length
+  const saod = product === "Stand-Alone Own Damage";
+  if (!Array.isArray(value.fields) || value.fields.length < REQUIRED_FIELDS.length - (saod ? 2 : 0)
     || value.fields.length > FIELD_KEYS.size) fail("n8n_fields_invalid");
 
   const seen = new Set<string>();
@@ -342,7 +343,10 @@ export function validateTataAigN8nResponse(
       page: item.page as number | null, confidence: null, evidence: item.evidence,
     };
   });
-  if (REQUIRED_FIELDS.some(key => !seen.has(key)) || seen.has("policy_issuance_date"))
+  // SAOD provides only new own-damage coverage. The policy may reference
+  // a previous insurer's TP period, but that is not a new TP cover here.
+  if (REQUIRED_FIELDS.some(key => !(saod && (key === "third_party_start_date" || key === "third_party_end_date")) && !seen.has(key))
+    || seen.has("policy_issuance_date"))
     fail("n8n_required_field_missing");
   const get = (key: string) => fields.find(field => field.key === key)?.value ?? "";
   const eq = (key: string, number: number) => {
@@ -378,11 +382,13 @@ export function validateTataAigN8nResponse(
   } else fail("n8n_tata_aig_registration_invalid");
   const odStart = get("policy_start_date"), odEnd = get("policy_end_date");
   const tpStart = get("third_party_start_date"), tpEnd = get("third_party_end_date");
-  if (![odStart, odEnd, tpStart, tpEnd].every(date) || odEnd < odStart || tpEnd < tpStart
-    || (product !== "Stand-Alone Own Damage" && (tpStart !== odStart || tpEnd < odEnd))
-    || (product === "Bundled" && tpEnd === odEnd)
-    || (twoWheeler && (tpEnd.slice(0,4) !== String(Number(odEnd.slice(0,4))+4)
-      || tpStart !== odStart))) fail("n8n_coverage_dates_invalid");
+  if (!date(odStart) || !date(odEnd) || odEnd < odStart
+    || (saod ? (Boolean(tpStart) !== Boolean(tpEnd)
+        || (Boolean(tpStart) && (!date(tpStart) || !date(tpEnd) || tpEnd < tpStart)))
+      : (!date(tpStart) || !date(tpEnd) || tpEnd < tpStart || tpStart !== odStart || tpEnd < odEnd
+        || (product === "Bundled" && tpEnd === odEnd)
+        || (twoWheeler && (tpEnd.slice(0,4) !== String(Number(odEnd.slice(0,4))+4)
+          || tpStart !== odStart))))) fail("n8n_coverage_dates_invalid");
 
   const money = value.premium_components;
   if (!object(money) || !Array.isArray(money.od_addons) || money.od_addons.length > 20)

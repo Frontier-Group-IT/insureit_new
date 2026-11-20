@@ -11,6 +11,16 @@ const read=name=>JSON.parse(fs.readFileSync(fileURLToPath(new URL(`./fixtures/ta
 const copy=v=>structuredClone(v);
 const get=(fields,key)=>fields.find(field=>field.key===key)?.value??"";
 const invalid=(base,update,expected)=>{const changed=copy(base);update(changed);assert.throws(()=>validateTataAigN8nResponse(changed,IDS),new RegExp(expected));};
+// A true standalone OD schedule need not repeat an existing TP policy's dates.
+// Preserve older SAOD references if both dates are present, but reject partial dates.
+const saodWithoutTp=read("saod");
+saodWithoutTp.fields=saodWithoutTp.fields.filter(f=>!["third_party_start_date","third_party_end_date"].includes(f.key));
+assert.equal(validateTataAigN8nResponse(saodWithoutTp,IDS).ok,true,
+  "SAOD review may omit TP dates because standalone OD issues no new TP cover");
+invalid(saodWithoutTp, v=>v.fields.push(
+  {key:"third_party_start_date",label:"TP start",value:"2025-11-30",confidence:null,page:null,evidence:"Test policy"}
+), "n8n_coverage_dates_invalid");
+
 const combos=[
   {name:"saod",product:"Stand-Alone Own Damage",registrationMode:"registered",gross:9178},
   {name:"package",product:"Package",registrationMode:"registered",gross:23505},
