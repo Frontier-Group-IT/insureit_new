@@ -40,7 +40,9 @@ assert.match(component,/Verified printed commercial premium/);
 assert.match(component,/n8nResult\.preview\.commercialPremium\.gross/);
 assert.match(eligibility,/profile\.family==="commercial"/);
 assert.match(queue,/ICICI_N8N_IDS\.has\(extraction\.preview\.parserId\)/);
-assert.match(actions,/extracted\.preview\.premium \|\| extracted\.preview\.commercialPremium/);
+assert.match(actions,/const commercial=extracted\.preview\.commercialPremium/);
+assert.match(actions,/mapVerifiedGoDigitCommercialPremium\(commercial\)/);
+assert.match(actions,/extracted\.preview\.parserId!=="go_digit_cv_native_pdf"/);
 assert.match(actions,/!hasVerifiedN8nParserEvidence\(extracted\.preview\.parserId,/,
   "Confirmed bulk conversion requires exact trained insurer checks, including Tata 18/18");
 assert.match(oldBridge,/insureit-policy-intake-icici-v1/);
