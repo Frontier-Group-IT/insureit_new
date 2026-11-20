@@ -233,16 +233,18 @@ export function LifeHealthIssuedPolicyEditForm({ initial, insurers, sources, act
         <div className="px-4 pb-2 pt-3">
           <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
             <div className="min-w-0">
-              <p className="text-[9px] font-bold uppercase text-[#667085]">Premium</p>
-              <div className="mt-1 flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">
-                <p className="break-words text-[18px] font-semibold text-[#17365D]">₹{form.finalPremium||"0"}</p>
+              <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                <p className="text-[9px] font-bold uppercase text-[#667085]">Premium</p>
                 <p className="text-[9px] text-[#7A8799]">{form.paymentFrequency||"Frequency pending"} · {form.paymentMode||"Mode pending"}</p>
               </div>
+              <p className="mt-1 break-words text-[18px] font-semibold text-[#17365D]">₹{form.finalPremium||"0"}</p>
             </div>
             {commercialAccess?<div className="ml-auto text-right">
-              <p className={`text-[18px] font-semibold ${commercialCalculations.retention<0?"text-red-600":"text-[#17365D]"}`}>{money(commercialCalculations.retention)}</p>
+              <div className="flex flex-wrap items-baseline justify-end gap-x-2 gap-y-1">
+                <p className="text-[9px] text-[#98A2B3]">After 10% TDS</p>
+                <p className={`text-[18px] font-semibold ${commercialCalculations.retention<0?"text-red-600":"text-[#17365D]"}`}>{money(commercialCalculations.retention)}</p>
+              </div>
               <p className="mt-1 text-[9px] font-bold uppercase tracking-[0.07em] text-[#667085]">Projected retention</p>
-              <p className="mt-0.5 text-[9px] text-[#98A2B3]">After 10% TDS</p>
             </div>:null}
           </div>
         </div>
