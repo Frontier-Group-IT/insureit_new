@@ -1246,7 +1246,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
                 <button type="button" disabled={isWaiting || queueRetrying}
                   onClick={()=>{setManualTransferRow(exceptionRow);setManualTransferReason("");setManualTransferError(null);setExceptionRow(null);}}
                   aria-label="Move to manual onboarding" title="Move to manual onboarding" className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100 disabled:opacity-50">
-                  <PencilLine className="h-4 w-4"/>
+                  <PencilLine className="h-4 w-4"/><span className="sr-only">Move to Manual Onboarding</span>
                 </button>
               ):null}
               <button type="button" autoFocus onClick={()=>{setExceptionRow(null);setQueueRetryError(null);setCustomerReview(null);}}
