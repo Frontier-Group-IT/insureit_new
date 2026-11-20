@@ -1,4 +1,4 @@
-import { resolveManufacturingYearEvidence } from "./policy-n8n-onboarding-enrichment.ts";
+import { resolveManufacturingYearEvidence } from "./policy-registration-year-fallback.mjs";
 
 export type OcrImportField = {
   key: string;
