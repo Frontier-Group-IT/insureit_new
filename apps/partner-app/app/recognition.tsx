@@ -110,7 +110,7 @@ export default function RecognitionScreen() {
               <View style={styles.nextHeadingText}>
                 <Text style={styles.nextEyebrow}>NEXT MILESTONE</Text>
                 <Text style={styles.nextTitle}>{next.title}</Text>
-                <Text style={styles.supportingText}>Keep going, you're on track!</Text>
+                <Text style={styles.supportingText}>{"Keep going, you\'re on track!"}</Text>
               </View>
               <View style={styles.percentGroup}>
                 <View style={styles.percentCircle} accessibilityRole="progressbar" accessibilityLabel={next.title}
