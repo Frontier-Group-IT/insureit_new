@@ -354,7 +354,7 @@ requireText(business, 'function trendScale(values: number[])', 'Business trend m
 requireText(business, 'const rawStep = peak / 3;', 'Trend scale must use equal premium intervals.');
 requireText(business, '[1, 2, 2.5, 5, 10].find(', 'Trend interval must round to readable rupee ticks.');
 requireText(business, '[3, 2, 1, 0].map((multiple) => formatCompactCurrency(multiple * step))', 'Trend Y-axis ticks must display rupee values including zero.');
-requireText(business, 'Math.round((premium / top) * (compact ? 52 : 70))', 'Trend bars must scale to the same rounded axis ceiling as labels.');
+requireText(business, 'Math.round((premium / top) * (compact ? 45 : 60))', 'Trend bars must scale to the same rounded axis ceiling as labels.');
 requireText(business, 'const points = data.slice(-6);', 'Trend axis and chart must derive from the same six plotted months.');
 requireText(business, 'formatCompactCurrency(premium)', 'Preserve original monthly premium labels.');
 
