@@ -25,7 +25,7 @@ const uploadSlots: Array<{ type: DocumentType; label: string }> = [
   { type: 'pan_copy', label: 'PAN Copy' }, { type: 'cancelled_cheque', label: 'Cancelled Cheque / Bank Proof' },
   { type: 'photograph', label: 'Photograph' }, { type: 'gst_copy', label: 'GST Certificate' },
 ];
-type MasterData = { ok?: boolean; error?: string; rms?: Option[]; banks?: Option[]; oems?: Option[]; pendingMisps?:Option[] };
+type MasterData = { ok?: boolean; error?: string; rms?: Option[]; banks?: Option[]; oems?: Option[];  };
 const initial: Record<Field, string> = {
   document_received_at: '', associate_employee_id: '', pos_first_name: '', pos_middle_name: '', pos_last_name: '',
   pan_number: '', aadhaar_number: '', date_of_birth: '', mobile: '', email: '',
@@ -156,7 +156,6 @@ export default function AddPartnerScreen() {
   const [partnerType,setPartnerType]=useState<"posp"|"misp">("posp");
   const [mispDirty,setMispDirty]=useState(false);
   const [oems,setOems]=useState<Option[]>([]);
-  const [pendingMisps,setPendingMisps]=useState<Option[]>([]);
   const [rms, setRms] = useState<Option[]>([]);
   const [banks, setBanks] = useState<Option[]>([]);
   const [loading, setLoading] = useState(true);
@@ -203,7 +202,7 @@ export default function AddPartnerScreen() {
         const response = await authenticatedRequest('GET');
         const result = await response.json() as MasterData;
         if (!response.ok || !result.ok) throw new Error(result.error || 'Could not load RM and Bank lists.');
-        if (active) { setRms(result.rms || []); setBanks(result.banks || []); setOems(result.oems || []);setPendingMisps(result.pendingMisps || []); }
+        if (active) { setRms(result.rms || []); setBanks(result.banks || []); setOems(result.oems || []);}
       } catch (error) {
         if (active) partnerAlert('Master data unavailable', error instanceof Error ? error.message : 'Please retry.');
       } finally { if (active) setLoading(false); }
@@ -399,7 +398,7 @@ export default function AddPartnerScreen() {
         </View>
         <ScrollView ref={scrollRef} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
           <View style={styles.typeSwitch} accessibilityLabel="Partner onboarding type">{(["posp","misp"] as const).map(type=><Pressable key={type} accessibilityRole="button" accessibilityLabel={type.toUpperCase()} accessibilityState={{selected:partnerType===type}} onPress={()=>changePartnerType(type)} style={[styles.typeOption,partnerType===type&&styles.typeSelected]}><Text style={[styles.typeText,partnerType===type&&styles.typeSelectedText]}>{type.toUpperCase()}</Text></Pressable>)}</View>
-          {partnerType==="misp"?<MispPartnerForm rms={rms} banks={banks} oems={oems} pendingMisps={pendingMisps} loading={loading} onDirtyChange={setMispDirty} onCancel={() => leavePartnerForm()}/>:<>
+          {partnerType==="misp"?<MispPartnerForm rms={rms} banks={banks} oems={oems} loading={loading} onDirtyChange={setMispDirty} onCancel={() => leavePartnerForm()}/>:<>
           {sections.map((section, index) => (
             <View key={section.heading} style={styles.section} onLayout={event => { sectionPositions.current[index] = event.nativeEvent.layout.y; }}>
               <View style={styles.sectionHeader}>
