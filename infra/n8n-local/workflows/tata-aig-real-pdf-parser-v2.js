@@ -112,9 +112,10 @@ function extract(raw){
  // historic Date of Registration to avoid mistaking an incomplete prefix for
  // a registered vehicle. Do not infer any missing characters.
  const historicRegistration=match(text,/\bDate of Registration\s+(\d{2}\/\d{2}\/\d{4})/i);
+ const validHistoricRegistration=iso(historicRegistration);
  const legacyHaryana=/^HR\d{6}$/.test(rawPlate)
-   && Boolean(historicRegistration && /^(?:19|20)\d{2}$/.test(historicRegistration.slice(-4))
-     && Number(historicRegistration.slice(-4)) <= new Date().getFullYear());
+   && Boolean(validHistoricRegistration
+     && validHistoricRegistration <= new Date().toISOString().slice(0,10));
  const registered=/^(?:HR|DL|MP)[A-Z0-9]{7,13}$/.test(rawPlate)||legacyHaryana;
  const status=unregistered?'unregistered':registered?'registered':'unknown';
  checks.vehicle_registration_status_verified=status!=='unknown';
