@@ -58,12 +58,19 @@ export default function JourneyScreen() {
             <View style={styles.heroHeadline}>
               <Image source={require('../assets/partner/status/journey-trophy-reference.png')} style={styles.milestoneTrophy} resizeMode="contain" accessible={false} />
               <View style={styles.milestoneVerticalDivider} accessible={false}/>
-              <View style={styles.milestoneCopy}>
-                <Text style={styles.milestoneEyebrow}>NEXT MILESTONE</Text>
-                <Text style={styles.heroTitle} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72} accessibilityLabel={data.next_milestone.title}>{data.next_milestone.title}</Text>
-                <Text style={styles.milestoneSubtitle} numberOfLines={1}>{"Keep going, you're on track!"}</Text>
+              <View style={styles.milestoneBody}>
+                <View style={styles.milestoneTopRow}>
+                  <View style={styles.milestoneCopy}>
+                    <Text style={styles.milestoneEyebrow}>NEXT MILESTONE</Text>
+                    <Text style={styles.heroTitle} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72} accessibilityLabel={data.next_milestone.title}>{data.next_milestone.title}</Text>
+                  </View>
+                  <CircularMilestoneProgress progress={progress} current={data.next_milestone.current} target={data.next_milestone.target} />
+                </View>
+                <View style={styles.milestoneBottomRow}>
+                  <Text style={styles.milestoneSubtitle} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.78}>{"Keep going, you're on track!"}</Text>
+                  <Text style={styles.heroProgressLabel} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>Milestone progress</Text>
+                </View>
               </View>
-              <CircularMilestoneProgress progress={progress} current={data.next_milestone.current} target={data.next_milestone.target} />
             </View>
             <View style={styles.summary}>
               <Summary value={data.policy_count} label="Policies" artwork={PartnerAssets.actions.quickPolicyIntake} onPress={() => router.push('/(tabs)/policies')} />
@@ -178,7 +185,7 @@ function Summary({ value, label, artwork, onPress }: { value: number; label: str
 const CIRCLE_SEGMENT_COUNT = 96;
 const CIRCLE_SEGMENTS = Array.from({ length: CIRCLE_SEGMENT_COUNT }, (_, index) => {
   const angle = (index * 2 * Math.PI) / CIRCLE_SEGMENT_COUNT;
-  return { left: 26 + Math.sin(angle) * 20.5 - 0.9, top: 26 - Math.cos(angle) * 20.5 - 1.5, rotate: `${index * 360 / CIRCLE_SEGMENT_COUNT}deg` };
+  return { left: 20 + Math.sin(angle) * 15.5 - 0.8, top: 20 - Math.cos(angle) * 15.5 - 1.5, rotate: `${index * 360 / CIRCLE_SEGMENT_COUNT}deg` };
 });
 
 function CircularMilestoneProgress({ progress, current, target }: { progress: number; current: number; target: number }) {
@@ -193,7 +200,7 @@ function CircularMilestoneProgress({ progress, current, target }: { progress: nu
         ))}
         <Text style={styles.progressCircleText}>{percentage}%</Text>
       </View>
-      <Text style={styles.heroProgressLabel} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.9}>Milestone progress</Text>
+
     </View>
   );
 }
@@ -217,15 +224,18 @@ const styles = StyleSheet.create({
   heroHeadline: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 70 },
   milestoneTrophy: { width: 42, height: 42, borderRadius: 10, flexShrink: 0 },
   milestoneVerticalDivider: { width: 2, height: 43, backgroundColor: '#A78DEB', flexShrink: 0 },
+  milestoneBody: { flex: 1, minWidth: 0, justifyContent: 'center' },
+  milestoneTopRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  milestoneBottomRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 3, marginTop: 3 },
   milestoneCopy: { flex: 1, minWidth: 0, justifyContent: 'center', gap: 2 },
   milestoneEyebrow: { color: '#7154CE', fontSize: 9, fontWeight: '800', letterSpacing: 0.3 },
   heroTitle: { color: '#17233A', fontSize: 15, lineHeight: 19, fontWeight: '800' },
-  milestoneSubtitle: { color: '#53637C', fontSize: 9, lineHeight: 13 },
-  progressColumn: { width: 92, flexShrink: 0, alignItems: 'center', justifyContent: 'center', gap: 2 },
-  progressCircle: { width: 52, height: 52, alignItems: 'center', justifyContent: 'center' },
+  milestoneSubtitle: { flex: 1, minWidth: 0, color: '#53637C', fontSize: 9, lineHeight: 13 },
+  progressColumn: { width: 86, flexShrink: 0, alignItems: 'center', justifyContent: 'center' },
+  progressCircle: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   progressSegment: { position: 'absolute', width: 1.6, height: 3, borderRadius: 1 },
-  progressCircleText: { color: '#6954D6', fontSize: 12, fontWeight: '800' },
-  heroProgressLabel: { width: '100%', color: '#6856D5', fontSize: 9, fontWeight: '700', textAlign: 'center' },
+  progressCircleText: { color: '#6954D6', fontSize: 10, fontWeight: '800' },
+  heroProgressLabel: { width: 86, flexShrink: 0, color: '#6856D5', fontSize: 9, lineHeight: 13, fontWeight: '700', textAlign: 'center' },
   summary: { marginTop: 12, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#E1E5ED', flexDirection: 'row', alignItems: 'stretch', width: '100%' },
   summaryItem: { flex: 1, minWidth: 0, minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 2, paddingVertical: 4, gap: 4 },
   summaryItemPressed: { backgroundColor: '#F1F5FB' },
