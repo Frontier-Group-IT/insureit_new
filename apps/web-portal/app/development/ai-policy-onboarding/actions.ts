@@ -313,6 +313,8 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
   // Validate the original PDF premium and its OD/NCB deduction before a
   // handoff can claim the Intake or create a canonical draft.
   let verifiedMoney:ReturnType<typeof mapVerifiedN8nMotorPremium>;
+  if (!extracted.preview.premium || extracted.preview.commercialPremium)
+    return fail("Premium","Commercial policy booking requires canonical policy onboarding review; no ICICI breakdown is inferred.");
   try{verifiedMoney=mapVerifiedN8nMotorPremium(extracted.preview.premium);}
   catch{return fail("Premium","The validated ICICI premium or OD/NCB deduction cannot be represented safely in canonical onboarding. Review the policy manually.");}
 
@@ -542,6 +544,7 @@ export async function reviewIciciVerifiedDraftRepair(id:string):Promise<Reviewed
     ||preview.checksPassed!==13||preview.warnings.length
     ||!["icici_3005_n8n_native_pdf","icici_3005_od_n8n_native_pdf"].includes(preview.parserId))
     return{ok:false,error:"The current verified PDF is different or has incomplete checks; reprocess and review before changing any saved draft."};
+  if (!preview.premium) return {ok:false,error:"Only ICICI's complete printed premium breakdown can be reconciled here."};
   const pdfField=(key:string)=>preview.fields.find(field=>field.key===key)?.value?.trim()??"";
   const pdfIssueDate=pdfField("policy_issuance_date");
   if(policyDateDecision(pdfIssueDate)==="invalid"||policyDateDecision(pdfIssueDate)==="future")
