@@ -189,6 +189,20 @@ const profile = read('app/profile.tsx');
 const accountShellHeader = read('components/partner-case-page-header.tsx');
 requireText(accountShellHeader, "backgroundColor: '#0A234A'", 'Account header must match the Policy Details title strip.');
 requireText(accountShellHeader, 'accessibilityRole="header"', 'Account page title must be accessible.');
+const caseRegister = read('app/life-health-cases/index.tsx');
+for (const [fragment, purpose] of [
+  ['const [filterOpen,setFilterOpen]=useState(false);', 'Case Register dropdown must start closed'],
+  ['accessibilityLabel="Filter Case Register by status"', 'Status dropdown trigger must be accessible'],
+  ['accessibilityState={{expanded:filterOpen}}', 'Status dropdown must expose expanded state'],
+  ["{filterOpen?<View style={styles.filterMenu}>", 'Dropdown must show selectable status options'],
+  ["onPress={()=>{setStatus(item.key);setFilterOpen(false);}}", 'Selection must update status and close menu'],
+  ["{item.label} ({counts[item.key]})", 'Dropdown must retain live counts for all statuses'],
+  ["{filters.find(item=>item.key===status)?.label} ({counts[status]})", 'Closed dropdown must show active status and count'],
+  ["listLifeHealthCases({status,search,offset,limit:10})", 'Dropdown must preserve scoped server case filtering'],
+]) requireText(caseRegister, fragment, purpose);
+if (caseRegister.includes('<ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filters}')) {
+  throw new Error('Case Register must not restore horizontally clipped status filter buttons.');
+}
 const lifeHealthCaseDetails = read('app/life-health-cases/[id].tsx');
 for (const [fragment, purpose] of [
   ["const [expandedCaseTab,setExpandedCaseTab]=useState<'activity'|'remarks'>('activity');", 'Activity Status must be selected by default'],
