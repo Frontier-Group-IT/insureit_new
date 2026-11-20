@@ -27,6 +27,30 @@ export async function getPartnerPolicyPeriodCounts({
   return data as PartnerPolicyPeriodCounts;
 }
 
+export type PartnerPolicyAdvancedFilters = {
+  source?: string; rm?: string; fromDate?: string; toDate?: string;
+};
+export type PartnerPolicyFilterOption = {value:string;label:string};
+export type PartnerPolicyFilterOptions = {sources:PartnerPolicyFilterOption[];rms:string[]};
+
+// Facet names come only from the signed-in partner's authorized policies.
+export async function getPartnerPolicyFilterOptions(businessLine:PartnerPolicyBusinessLine):Promise<PartnerPolicyFilterOptions>{
+  const {data,error}=await supabase.rpc('partner_app_policy_filter_options',{p_business_line:businessLine});
+  if(error)throw error;
+  return {sources:Array.isArray(data?.sources)?data.sources:[],rms:Array.isArray(data?.rms)?data.rms:[]};
+}
+export async function getPartnerAdvancedPolicyCounts({
+  businessLine='all',search,source='all',rm='all',fromDate,toDate,
+}:PartnerPolicyAdvancedFilters & {businessLine?:PartnerPolicyBusinessLine;search?:string}):Promise<PartnerPolicyPeriodCounts>{
+  const {data,error}=await supabase.rpc('partner_app_policy_filtered_counts',{
+    p_business_line:businessLine,p_search:search?.trim()||null,
+    p_source:source,p_rm:rm,p_from_date:fromDate||null,p_to_date:toDate||null,
+  });
+  if(error)throw error;
+  if(!data?.mtd||!data?.all)throw new Error('Policy filter counts are unavailable.');
+  return data as PartnerPolicyPeriodCounts;
+}
+
 export type PartnerPolicyRow = {
   policy_id: string;
   policy_code: string | null;
@@ -67,7 +91,7 @@ export async function listPartnerPolicies({
   search,
   lifecycle = 'all',
   businessLine = 'all',
-  period = 'all',
+  period = 'all',source='all',rm='all',fromDate,toDate,
 }: {
   limit?: number;
   offset?: number;
@@ -75,7 +99,7 @@ export async function listPartnerPolicies({
   lifecycle?: PartnerPolicyLifecycle;
   businessLine?: PartnerPolicyBusinessLine;
   period?: PartnerPolicyPeriod;
-} = {}) {
+} & PartnerPolicyAdvancedFilters = {}) {
   // Preserve the existing production RPC for the default unfiltered list.
   // Filtered tabs use the matching scoped server-side RPC, never a local slice of 10 rows.
   const args = {
@@ -84,13 +108,19 @@ export async function listPartnerPolicies({
     p_search: search?.trim() || null,
     p_lifecycle: lifecycle,
   };
-  const { data, error } = period === 'mtd'
+  const advanced=source!=='all'||rm!=='all'||Boolean(fromDate)||Boolean(toDate);
+  const { data, error } = advanced
+    ? await supabase.rpc('partner_app_list_policies_filtered',{
+        ...args,p_business_line:businessLine,p_period:period,
+        p_source:source,p_rm:rm,p_from_date:fromDate||null,p_to_date:toDate||null,
+      })
+    : period === 'mtd'
     ? await supabase.rpc('partner_app_list_policies_by_period', {...args, p_business_line: businessLine, p_period: period})
     : businessLine === 'all'
       ? await supabase.rpc('partner_app_list_policies', args)
       : await supabase.rpc('partner_app_list_policies_by_line', { ...args, p_business_line: businessLine });
   if (error) {
-    if ((period === 'mtd' || businessLine !== 'all') && (error.code === 'PGRST202' || error.code === '42883')) {
+    if ((advanced || period === 'mtd' || businessLine !== 'all') && (error.code === 'PGRST202' || error.code === '42883')) {
       throw new Error('Policy period filtering is not available on the server yet. Please contact support.');
     }
     throw error;
