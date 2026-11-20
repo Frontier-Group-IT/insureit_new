@@ -20,6 +20,7 @@ type PartnerDatePickerProps = {
 
 export function PartnerDatePicker({ label, value, onChange, minimumDate, maximumDate, disabled = false, directSelect = false }: PartnerDatePickerProps) {
   const [open, setOpen] = useState(false);
+  const [visibleMonth, setVisibleMonth] = useState(() => new Date((value ?? new Date()).getFullYear(), (value ?? new Date()).getMonth(), 1, 12));
   const displayValue = useMemo(() => value
     ? formatAppDate(value)
     : 'Select date', [value]);
@@ -27,6 +28,7 @@ export function PartnerDatePicker({ label, value, onChange, minimumDate, maximum
   const openPicker = () => {
     if (disabled || Platform.OS === 'web') return;
     void partnerSelectionHaptic();
+    setVisibleMonth(new Date((value ?? new Date()).getFullYear(), (value ?? new Date()).getMonth(), 1, 12));
     setOpen(true);
   };
 
@@ -39,6 +41,22 @@ export function PartnerDatePicker({ label, value, onChange, minimumDate, maximum
     if (Platform.OS === 'android' || directSelect) setOpen(false);
     onChange(selected);
   };
+
+  const calendarCells = useMemo(() => {
+    const year = visibleMonth.getFullYear();
+    const month = visibleMonth.getMonth();
+    const offset = new Date(year, month, 1, 12).getDay();
+    const days = new Date(year, month + 1, 0, 12).getDate();
+    return Array.from({ length: Math.ceil((offset + days) / 7) * 7 }, (_, index) => {
+      const day = index - offset + 1;
+      return day > 0 && day <= days ? new Date(year, month, day, 12) : null;
+    });
+  }, [visibleMonth]);
+  const isOutsideRange = (day: Date) =>
+    (minimumDate && new Date(day.getFullYear(), day.getMonth(), day.getDate()).getTime() <
+      new Date(minimumDate.getFullYear(), minimumDate.getMonth(), minimumDate.getDate()).getTime()) ||
+    (maximumDate && new Date(day.getFullYear(), day.getMonth(), day.getDate()).getTime() >
+      new Date(maximumDate.getFullYear(), maximumDate.getMonth(), maximumDate.getDate()).getTime());
 
   return (
     <View style={styles.wrap}>
@@ -55,7 +73,40 @@ export function PartnerDatePicker({ label, value, onChange, minimumDate, maximum
         <Ionicons name="calendar-outline" size={18} color={partnerTheme.colors.brand} />
       </Pressable>
 
-      {open ? (
+      {open && directSelect ? (
+        <View style={styles.pickerWrap}>
+          <View style={styles.calendarHeader}>
+            <Pressable accessibilityRole="button" accessibilityLabel="Previous month"
+              onPress={() => setVisibleMonth(current => new Date(current.getFullYear(), current.getMonth() - 1, 1, 12))}
+              style={styles.monthButton}><Ionicons name="chevron-back" size={20} color={partnerTheme.colors.brand}/></Pressable>
+            <Text style={styles.monthTitle}>{visibleMonth.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}</Text>
+            <Pressable accessibilityRole="button" accessibilityLabel="Next month"
+              onPress={() => setVisibleMonth(current => new Date(current.getFullYear(), current.getMonth() + 1, 1, 12))}
+              style={styles.monthButton}><Ionicons name="chevron-forward" size={20} color={partnerTheme.colors.brand}/></Pressable>
+          </View>
+          <View style={styles.calendarGrid}>
+            {['S','M','T','W','T','F','S'].map((weekday, index) =>
+              <View key={index} style={styles.dayCell}><Text style={styles.weekday}>{weekday}</Text></View>)}
+            {calendarCells.map((day, index) => {
+              const selected = Boolean(day && value && day.getFullYear() === value.getFullYear() &&
+                day.getMonth() === value.getMonth() && day.getDate() === value.getDate());
+              const outside = day ? Boolean(isOutsideRange(day)) : false;
+              return (
+                <View key={index} style={styles.dayCell}>
+                  {day ? <Pressable accessibilityRole="button"
+                    accessibilityLabel={day.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
+                    accessibilityState={{ disabled: outside, selected }}
+                    disabled={outside}
+                    onPress={() => { void partnerSelectionHaptic(); onChange(day); setOpen(false); }}
+                    style={[styles.dayButton, selected && styles.daySelected]}>
+                    <Text style={[styles.dayText, outside && styles.dayDisabled, selected && styles.daySelectedText]}>{day.getDate()}</Text>
+                  </Pressable> : null}
+                </View>
+              );
+            })}
+          </View>
+        </View>
+      ) : open ? (
         <View style={styles.pickerWrap}>
           <DateTimePicker
             value={value ?? new Date()}
@@ -95,6 +146,17 @@ const styles = StyleSheet.create({
   pickerWrap: { borderWidth: 1, borderColor: partnerTheme.colors.line, borderRadius: partnerTheme.radius.lg, overflow: 'hidden', backgroundColor: partnerTheme.colors.surface },
   doneButton: { minHeight: partnerTheme.control.minTouchTarget, alignItems: 'center', justifyContent: 'center', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: partnerTheme.colors.line },
   doneText: { color: partnerTheme.colors.brand, ...partnerTheme.typography.bodyStrong },
+  calendarHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 4, paddingTop: 5 },
+  monthButton: { width: 34, height: 34, alignItems: 'center', justifyContent: 'center' },
+  monthTitle: { color: partnerTheme.colors.ink, fontSize: 13, fontWeight: '700' },
+  calendarGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 4, paddingBottom: 6 },
+  dayCell: { width: '14.2857%', height: 34, alignItems: 'center', justifyContent: 'center' },
+  weekday: { color: partnerTheme.colors.inkMuted, fontSize: 11, fontWeight: '700' },
+  dayButton: { width: 31, height: 31, alignItems: 'center', justifyContent: 'center', borderRadius: 16 },
+  dayText: { color: partnerTheme.colors.ink, fontSize: 12, fontWeight: '600' },
+  dayDisabled: { color: '#B2B9C7' },
+  daySelected: { backgroundColor: partnerTheme.colors.brand },
+  daySelectedText: { color: '#FFFFFF', fontWeight: '800' },
   disabled: { opacity: 0.5 },
   pressed: { backgroundColor: partnerTheme.colors.surfaceMuted },
 });
