@@ -243,7 +243,7 @@ export default function PoliciesScreen() {
     { label: 'Active Policies', filter: 'in_force', count: activePeriodCounts?.active },
     { label: 'Expiring Soon', filter: 'expiring', count: activePeriodCounts?.due },
     { label: 'Lapsed Policies', filter: 'expired', count: activePeriodCounts?.expired },
-    { label: 'Upcoming', filter: 'upcoming', count: period==='all' ? summary.data?.upcoming_policies : undefined },
+    { label: 'Upcoming', filter: 'upcoming', count: period==='all' && !advanced ? summary.data?.upcoming_policies : undefined },
   ];
   const selectedStatus = statusOptions.find((option) => option.filter === lifecycle) ?? statusOptions[0];
   const formatStatusCount = (count: number | undefined) => count === undefined ? '—' : count.toLocaleString('en-IN');
@@ -630,7 +630,7 @@ export default function PoliciesScreen() {
                 <View style={styles.sortChoices}>
                   {sheetStatuses.map(option=>{
                     const selected=draftLifecycle===option.lifecycle;
-                    const count=!advanced&&draftPeriod===period?periodCounts.data?.[draftPeriod]?.[option.value]:undefined;
+                    const count=draftPeriod===period&&draftSource===source&&draftRm===rm&&draftFromDate===fromDate&&draftToDate===toDate?periodCounts.data?.[draftPeriod]?.[option.value]:undefined;
                     return <Pressable key={option.value} accessibilityRole="button" accessibilityLabel={option.label}
                       accessibilityState={{selected}} onPress={()=>setDraftLifecycle(option.lifecycle)}
                       style={[styles.sortChoice,selected&&styles.sortChoiceSelected]}>
