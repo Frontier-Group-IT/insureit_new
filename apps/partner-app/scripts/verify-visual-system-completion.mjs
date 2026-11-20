@@ -833,19 +833,35 @@ for (const impactMarker of [
   'PartnerAssets.actions.quickClaims',
   'PartnerAssets.actions.businessPerformance',
   'PartnerAssets.actions.impactCustomerAdded',
-  'borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: \'#E3E9F1\'',
+  "borderBottomWidth: 1, borderBottomColor: '#D5DDE9'",
   'styles.monthDivider',
   'styles.monthStatDivider',
   'styles.cardDetails',
-  '<ImpactIcon art={art} size={49} plain />',
+  '<ImpactIcon art={art} size={40} plain />',
   '<ImpactIcon art={art} size={43} plain />',
 ]) requireText(impact, impactMarker, `Impact reference layout is missing ${impactMarker}.`);
 if (impact.includes('icon={icon}') || impact.includes('styles.cardLeft')) throw new Error('Impact must keep blue artwork left with metric and label stacked to its right.');
 requireText(impact, '<MonthStat art="monthly-policy" label="Policies"', 'Monthly policies must use the distinct Add Policy reference artwork.');
 requireText(impact, '<ImpactCard art="policy" value={data.lifetime_policies}', 'Policy book must use the Policy Document reference artwork.');
-if (impact.includes('borderRadius: 18, minHeight: 94')) throw new Error('Impact top summary must be a full-width flat white strip, not a rounded card.');
+for (const [fragment,reason] of [
+  ['styles.footprintCard', 'Protection footprint is contained in one combined white card'],
+  ['styles.footprintDivider', 'Protection footprint rows use internal thin dividers'],
+  ['impactCard: {minHeight: 60', 'Protection footprint rows are compact'],
+  ['<ImpactIcon art={art} size={40} plain />', 'Footprint illustrations must be compact'],
+  ['numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>{label}', 'Footprint labels must remain on one line'],
+  ['styles.impactLabel} numberOfLines={1}', 'Label must precede the numeric value'],
+  ["fontSize: 18, lineHeight: 22", 'Footprint values use the compact font'],
+  ['styles.heroCar', 'First banner includes enlarged existing 3D car'],
+  ['styles.heroShield', 'First banner includes shield artwork'],
+  ['Total Protection Value', 'First banner includes reference title'],
+  ['Your coverage this month', 'First banner includes reference badge'],
+  ["backgroundColor: '#F0F6FF'", 'First banner retains reference light blue background'],
+  ["borderBottomWidth: 1, borderBottomColor: '#D5DDE9'", 'First banner needs a straight full-width bottom divider'],
+]) requireText(impact, fragment, 'Protection reference missing: ' + reason);
+if (impact.includes('styles.grid') || impact.includes('grid: { flexDirection:')) throw new Error('Protection footprint must not restore the two-column grid.');
+if (impact.includes('borderRadius: 18, minHeight: 94')) throw new Error('Impact top summary must stay full-width and flat, not a rounded card.');
 requireText(impact, 'styles.heroDivider', 'Impact final reference keeps the thin vertical divider between car and amount.');
-requireText(impact, 'marginHorizontal: -partnerTheme.spacing.lg, minHeight: 82', 'Impact summary must span the viewport like the Policy Details summary.');
+requireText(impact, 'marginHorizontal: -partnerTheme.spacing.lg, minHeight: 96', 'Impact summary must connect to the header and span the full viewport.');
 for (const impactRoute of ["router.push('/customers')", "router.push('/(tabs)/policies')", "router.push('/(tabs)/claims')", "router.push('/business-report')", "router.push('/journey')"]) requireText(impact, impactRoute, `Impact clickable-card route is missing ${impactRoute}.`);
 for (const tinySize of ['fontSize: 7.5', 'fontSize: 8.5', 'fontSize: 8,']) if (impact.includes(tinySize)) throw new Error(`Impact must not regress to tiny typography: ${tinySize}`);
 requireText(journey, 'PartnerAssets.status.journey', 'Journey timeline and empty state must use journey artwork.');
