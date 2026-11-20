@@ -174,4 +174,17 @@ assert.ok(eligibility.includes("resolveManufacturingYearEvidence(input.fields)")
 assert.ok(signed.includes('"vehicle_registration_year"'));
 assert.ok(unified.includes("Registration-year fallback"));
 
+// The source PDF's RTO-authority cell is blank; the NIA issuing-office city
+// is explicitly provisional and must never be treated as verified RC data.
+assert.ok(handoff.includes("NIA_PROVISIONAL_RTO_FROM_ISSUING_OFFICE:")
+  && handoff.includes("NIA issuing office city; provisional, NOT registration authority")
+  && handoff.includes('field.value==="unregistered"'),
+  "NIA fallback must require verified current PDF, unregistered status and source evidence");
+assert.ok(unified.includes("Provisional city from the NIA issuing office")
+  && unified.includes('form.remarks.includes("NIA_PROVISIONAL_RTO_FROM_ISSUING_OFFICE:")'),
+  "A provisional issuing-office city must be labeled when shown as RTO");
+assert.ok(handoff.includes('nia_missing_verified_gcv_cpa')
+  && component.includes('nia_missing_verified_gcv_cpa'),
+  "Missing positive CPA must continue blocking automatic GCV booking");
+
 console.log("PASS: signed-source non-Tata AI queue routing, insurer-scoped verified name/product draft, and ICICI/Tata/booking guards.");
