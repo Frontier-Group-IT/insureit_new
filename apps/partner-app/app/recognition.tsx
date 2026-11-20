@@ -61,7 +61,7 @@ export default function RecognitionScreen() {
               </View>
               <View style={styles.heroCopy}>
                 <Text style={styles.heroEyebrow}>YOUR RECOGNITION</Text>
-                <Text style={styles.heroTitle}>Every milestone matters.</Text>
+                <Text style={styles.heroTitle} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65}>Every milestone matters.</Text>
               </View>
               <View style={styles.earnedCount} accessibilityLabel={`${data.items.length} recorded achievements`}>
                 <Text style={styles.earnedNumber}>{data.items.length.toLocaleString('en-IN')}</Text>
@@ -114,7 +114,7 @@ export default function RecognitionScreen() {
                     accessibilityLabel={next.title}
                     accessibilityValue={{ min: 0, max: Math.max(0, next.target), now: Math.max(0, Math.min(next.current, Math.max(0, next.target))) }}
                   >
-                    <Text style={styles.percentText}>{(progress * 100).toFixed(1)}%</Text>
+                    <Text style={styles.percentText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.9}>{(progress * 100).toFixed(1)}%</Text>
                   </View>
                   <Text style={styles.currentNumber}>{next.current.toLocaleString('en-IN')}</Text>
                 </View>
@@ -162,9 +162,9 @@ const styles = StyleSheet.create({
   heroCopy: { flex: 1, minWidth: 0 },
   heroEyebrow: { color: '#6856C9', fontSize: 9, letterSpacing: 0.7, fontWeight: '800' },
   heroTitle: { marginTop: 4, color: '#17233A', fontSize: 15, lineHeight: 20, fontWeight: '800' },
-  earnedCount: { alignItems: 'center', justifyContent: 'center', width: 92, flexShrink: 0 },
-  earnedNumber: { color: '#16805B', fontSize: 24, lineHeight: 29, fontWeight: '800' },
-  earnedLabel: { color: '#56657C', fontSize: 9, lineHeight: 13, fontWeight: '700', textAlign: 'center' },
+  earnedCount: { alignItems: 'center', justifyContent: 'center', width: 64, flexShrink: 0 },
+  earnedNumber: { color: '#16805B', fontSize: 18, lineHeight: 22, fontWeight: '800' },
+  earnedLabel: { color: '#56657C', fontSize: 8, lineHeight: 11, fontWeight: '700', textAlign: 'center' },
   sectionHeading: { marginTop: 15, marginBottom: 9 },
   sectionTitle: { color: '#151C2B', fontSize: 16, fontWeight: '800' },
   earnedPill: { paddingVertical: 5, paddingHorizontal: 8, borderRadius: 999, backgroundColor: '#E9E5FF' },
@@ -184,8 +184,8 @@ const styles = StyleSheet.create({
   nextEyebrow: { color: '#6856D5', fontSize: 10, letterSpacing: 0.8, fontWeight: '800' },
   nextTitle: { marginTop: 5, color: '#17233A', fontSize: 17, lineHeight: 22, fontWeight: '800' },
   percentGroup: { alignItems: 'center', justifyContent: 'center', gap: 5 },
-  percentCircle: { width: 64, height: 64, borderRadius: 32, borderWidth: 5, borderColor: '#7158DC', alignItems: 'center', justifyContent: 'center', backgroundColor: '#F7F4FF' },
-  percentText: { color: '#6954D6', fontSize: 14, fontWeight: '800' },
+  percentCircle: { width: 32, height: 32, borderRadius: 16, borderWidth: 2.5, borderColor: '#7158DC', alignItems: 'center', justifyContent: 'center', backgroundColor: '#F7F4FF' },
+  percentText: { color: '#6954D6', fontSize: 7, lineHeight: 10, fontWeight: '800', textAlign: 'center', includeFontPadding: false },
   currentNumber: { color: '#17233A', fontSize: 15, fontWeight: '800' },
   journeyLink: { marginTop: 12, paddingVertical: 12, flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center', borderRadius: partnerTheme.radius.md, backgroundColor: '#EBF1FA' },
   journeyLinkPressed: { opacity: 0.7 },
