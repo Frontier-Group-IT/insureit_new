@@ -25,13 +25,13 @@ const highResolution = new Map([
 for (const [kind,title] of illustrated) {
   const source = kind === 'customers' ? '../assets/partner/quick-actions/add-partner.png'
     : highResolution.get(kind)
-    ?? (kind === 'journey' ? '../assets/partner/status/journey.png' : `../assets/partner/icons/more-${kind}.png`);
+    ?? (kind === 'journey' ? '../assets/partner/icons/more-journey-3d-new.png' : `../assets/partner/icons/more-${kind}.png`);
   assert.ok(more.includes('title="'+title+'"'), 'Preserve menu action '+title);
   assert.ok(mapping.includes(source.replace('../', '../../')), 'Missing illustrated asset mapping '+kind);
   const png = readFileSync(new URL(source, import.meta.url));
   assert.equal(png.subarray(0,8).toString('hex'),'89504e470d0a1a0a', 'Asset must be local PNG: '+kind);
   assert.ok(png.length > 500, 'Icon artwork missing content for '+kind);
-  if (highResolution.has(kind)) {
+  if (highResolution.has(kind) || kind === 'journey') {
     assert.equal(png.readUInt32BE(16), 256, 'Sharp menu illustration must be 256px wide: '+kind);
     assert.equal(png.readUInt32BE(20), 256, 'Sharp menu illustration must be 256px high: '+kind);
   }
@@ -49,9 +49,9 @@ assert.match(more,/onPress=\{\(\) => router\.push\('\/life-health-cases'\)\}/);
 assert.match(more,/canPartnerAccessCaseRegister\(context\)/);
 assert.match(more,/canPartnerAccess\(context, 'view_policy_intakes'\)/);
 assert.match(more,/PartnerProfileMenuIcon kind=\{iconKind\} size=\{iconKind === 'policy-intake' \? 48 : 42\}/);
-assert.match(mapping, /status\/journey\.png/, 'Use existing valid Journey artwork');
+assert.match(mapping, /icons\/more-journey-3d-new\.png/, 'Use newly approved isolated 3D My Journey artwork');
 assert.match(mapping, /quick-actions\/add-partner\.png/, 'Use the user-approved blue business-person icon with purple plus for Customers');
 assert.doesNotMatch(icon, /scale: 1\.7/, 'Policy Intake must avoid magnifying low-resolution source artwork');
-assert.match(icon, /scale: 1\.16/, 'Original My Journey art must render more clearly');
+assert.doesNotMatch(icon, /scale: 1\.16/, 'Sharp My Journey art must not be magnified');
 assert.match(more, /sectionRows/, 'More sections must retain their rounded menu groups');
-console.log('Approved Add Partner artwork for Customers, sharp Policy Intake icon, Journey art and rounded More sections verified.');
+console.log('Approved Customers and isolated 3D My Journey icons, Policy Intake artwork, and rounded More sections verified.');
