@@ -91,6 +91,13 @@ export function validateN8nPolicyIntakeResponse(
     && value.parser_version === "bridge-od-v1";
   const isBundled = value.parser_id === "icici_3005_n8n_native_pdf"
     && value.parser_version === "bridge-v1";
+  // The shared n8n webhook serves commercial motor parsers as well. If the
+  // separate commercial classifier missed one, report that routing defect
+  // instead of disguising it as an untrained policy or generic review failure.
+  if (["go_digit_cv_native_pdf","new_india_cv_native_pdf","iffco_tokio_cv_native_pdf"]
+      .includes(String(value.parser_id))) {
+    throw new Error("n8n_commercial_classifier_missed_layout");
+  }
   if (value.ok !== true || value.review_required !== true || value.auto_finalize_allowed !== false
       || (!isOd && !isBundled)
       || value.extraction_method !== "native_pdf_text") throw new Error("n8n_review_required");
