@@ -141,9 +141,7 @@ export default function RenewalsScreen() {
 
   const header = (
     <View>
-      {summary.loading && !summary.data ? (
-        <PartnerStateView state="loading" title="Loading renewal summary" />
-      ) : (
+      {summary.loading && !summary.data ? null : (
         <View style={styles.summaryPanel}>
           <Pressable
             accessibilityRole="button"
@@ -173,8 +171,8 @@ export default function RenewalsScreen() {
       ) : null}
 
       <View style={styles.modeTabs}>
-        <ModeTab label="Upcoming" count={summary.data?.due_30_count ?? 0} active={mode === 'expiring'} onPress={() => selectMode('expiring')} />
-        <ModeTab label="Overdue" count={summary.data?.overdue_count ?? 0} active={mode === 'expired'} danger onPress={() => selectMode('expired')} />
+        <ModeTab label="Upcoming" count={summary.data?.due_30_count ?? null} active={mode === 'expiring'} onPress={() => selectMode('expiring')} />
+        <ModeTab label="Overdue" count={summary.data?.overdue_count ?? null} active={mode === 'expired'} danger onPress={() => selectMode('expired')} />
       </View>
 
       <View style={styles.searchRow}>
@@ -195,7 +193,7 @@ export default function RenewalsScreen() {
           <View style={styles.listIcon}><Image source={PartnerAssets.actions.quickPolicyIntake} style={styles.listArtwork} resizeMode="contain" /></View>
           <View>
             <Text style={styles.opportunitiesTitle}>{mode === 'expired' ? 'OVERDUE POLICIES' : 'RENEWAL OPPORTUNITIES'}</Text>
-            <Text style={styles.opportunitiesMeta}>{collection.loading ? 'Loading…' : `${collection.rows.length} policies · ${collection.total} total`}</Text>
+            <Text style={styles.opportunitiesMeta}>{collection.loading && !collection.rows.length ? 'Loading…' : `${collection.rows.length} policies · ${collection.total} total`}</Text>
           </View>
         </View>
         <View ref={sortAnchorRef} collapsable={false} style={styles.sortArea}>
@@ -213,7 +211,7 @@ export default function RenewalsScreen() {
   const empty = (
     <View style={styles.emptyCard}>
       {collection.loading ? (
-        <PartnerStateView state="loading" title="Finding renewal opportunities" />
+        <RenewalLoadingRows />
       ) : collection.error ? (
         <PartnerStateView state="error" title="Renewals could not be loaded" message={collection.error} actionLabel="Try again" onAction={() => void refreshAll()} />
       ) : (
@@ -301,8 +299,26 @@ function formatWholeRupees(value: number | string): string {
   return formatIndianCurrency(Number.isFinite(amount) ? Math.trunc(amount) : 0);
 }
 
-function ModeTab({ label, count, active, danger = false, onPress }: { label: string; count: number; active: boolean; danger?: boolean; onPress: () => void }) {
-  return <Pressable onPress={onPress} style={[styles.modeTab, active && styles.modeTabActive]}><Text style={[styles.modeLabel, active && styles.modeLabelActive]}>{label}</Text><View style={[styles.tabBadge, danger ? styles.tabBadgeDanger : styles.tabBadgeBlue]}><Text style={[styles.tabBadgeText, danger ? styles.tabBadgeDangerText : styles.tabBadgeBlueText]}>{count}</Text></View></Pressable>;
+function ModeTab({ label, count, active, danger = false, onPress }: { label: string; count: number | null; active: boolean; danger?: boolean; onPress: () => void }) {
+  return <Pressable onPress={onPress} style={[styles.modeTab, active && styles.modeTabActive]}><Text style={[styles.modeLabel, active && styles.modeLabelActive]}>{label}</Text>{count !== null ? <View style={[styles.tabBadge, danger ? styles.tabBadgeDanger : styles.tabBadgeBlue]}><Text style={[styles.tabBadgeText, danger ? styles.tabBadgeDangerText : styles.tabBadgeBlueText]}>{count}</Text></View> : null}</Pressable>;
+}
+
+function RenewalLoadingRows() {
+  return (
+    <View style={styles.loadingRows} accessibilityRole="progressbar" accessibilityLabel="Loading renewal opportunities">
+      {Array.from({ length: 3 }, (_, index) => (
+        <View key={index} style={styles.loadingRow} importantForAccessibility="no-hide-descendants">
+          <View style={styles.loadingLogo} />
+          <View style={styles.loadingText}>
+            <View style={styles.loadingName} />
+            <View style={styles.loadingPolicy} />
+            <View style={styles.loadingPremium} />
+          </View>
+          <View style={styles.loadingBadge} />
+        </View>
+      ))}
+    </View>
+  );
 }
 
 function resolveSummarySelection(data: PartnerRenewalSummary | null | undefined, mode: PartnerRenewalMode, bucket: PartnerRenewalBucket): SummarySelection {
@@ -378,6 +394,14 @@ const styles = StyleSheet.create({
   sortMenu: { position: 'absolute', width: 148, paddingVertical: 4, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E4E9F1', shadowColor: '#0C2856', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.16, shadowRadius: 10, elevation: 15 },
   sortOption: { minHeight: 36, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 }, sortOptionPressed: { backgroundColor: '#F6F8FC' }, sortOptionText: { color: '#42516A', fontSize: 10.5, fontWeight: '600' }, sortOptionTextActive: { color: partnerTheme.colors.brand, fontWeight: '800' },
   emptyCard: { minHeight: 205, borderBottomLeftRadius: 14, borderBottomRightRadius: 14, borderWidth: 1, borderTopWidth: 0, borderColor: '#E4E9F1', backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20, paddingVertical: 20 },
+  loadingRows: { width: '100%', gap: 0 },
+  loadingRow: { minHeight: 66, paddingHorizontal: 0, paddingVertical: 9, flexDirection: 'row', alignItems: 'center', gap: 9, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E4E9F1' },
+  loadingLogo: { width: 34, height: 34, borderRadius: 8, backgroundColor: '#EDEFF3' },
+  loadingText: { flex: 1, gap: 5 },
+  loadingName: { width: '62%', height: 8, borderRadius: 4, backgroundColor: '#EDEFF3' },
+  loadingPolicy: { width: '82%', height: 7, borderRadius: 4, backgroundColor: '#F0F2F5' },
+  loadingPremium: { width: '49%', height: 7, borderRadius: 4, backgroundColor: '#F0F2F5' },
+  loadingBadge: { width: 49, height: 23, borderRadius: 9, backgroundColor: '#EDEFF3' },
   emptyArtwork: { width: 122, height: 82, marginBottom: 8 }, emptyTitle: { color: '#101A31', fontSize: 13, lineHeight: 18, fontWeight: '800', textAlign: 'center' }, emptyMessage: { marginTop: 7, color: '#69758A', fontSize: 10, lineHeight: 17, textAlign: 'center' },
   recordCard: { backgroundColor: '#FFFFFF', borderLeftWidth: 1, borderRightWidth: 1, borderColor: '#E4E9F1' },
   recordCardLast: { borderBottomWidth: 1, borderBottomLeftRadius: 14, borderBottomRightRadius: 14, overflow: 'hidden' },
