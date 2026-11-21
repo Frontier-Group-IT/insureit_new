@@ -16,7 +16,8 @@ const enrichmentHelper=file("../lib/policy-n8n-onboarding-enrichment.ts");
 // registered plate. The source prefix must not fill registrationNo.
 assert.match(signed,/isNewIndiaUnregistered/);
 assert.match(signed,/fields\.filter\(\(f\) => f\.key !== "vehicle_registration_number"\)/);
-assert.ok(signed.includes("fields: isNewIndiaUnregistered || isUnitedNewVehicle")
+assert.ok(signed.includes("fields: enrichIffcoCertifiedMachineFamily(")
+  &&signed.includes("isNewIndiaUnregistered || isUnitedNewVehicle")
   &&signed.includes("const isIffcoNewVehicle ="),
   "IFFCO MP/NEW reference must remain in verified evidence, not canonical registration; other insurer references stay filtered");
 assert.ok(handoff.includes('registrationMode:verified?.fields.some')
