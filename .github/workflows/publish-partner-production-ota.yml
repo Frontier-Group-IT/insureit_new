@@ -87,6 +87,7 @@ jobs:
           for (const file of files) {
             const approved = file === 'apps/partner-app/.trigger-production-ota'
               || file === 'apps/partner-app/scripts/verify-policy-intake-list-pagination.mjs'
+              || file === 'apps/partner-app/scripts/verify-header-profile-photo.mjs'
               || file === 'apps/partner-app/scripts/verify-more-illustrated-icon-parity.mjs'
               || file === 'apps/partner-app/scripts/verify-more-dimensional-icons.mjs'
               || file === 'apps/partner-app/scripts/verify-visual-system-completion.mjs'
