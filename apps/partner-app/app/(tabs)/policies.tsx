@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   FlatList,
   Image,
+  Keyboard,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -267,6 +268,10 @@ export default function PoliciesScreen() {
     if (!isFocused) { setLineMenuOpen(false); setSortSheetOpen(false); }
   }, [isFocused]);
 
+  const closeSortSheet = () => {
+    Keyboard.dismiss();
+    setSortSheetOpen(false);
+  };
   const openSortSheet = () => {
     setLineMenuOpen(false);
     setDraftPeriod(period);
@@ -277,7 +282,7 @@ export default function PoliciesScreen() {
   };
   const applySortSheet = () => {
     if(draftFromDate&&draftToDate&&draftFromDate>draftToDate)return;
-    setSortSheetOpen(false);
+    closeSortSheet();
     setPeriod(draftPeriod);
     setLifecycle(draftLifecycle);
     setSource(draftSource);setRm(draftRm);
@@ -588,13 +593,13 @@ export default function PoliciesScreen() {
           </View>
         </View>
       </Modal>
-      <Modal visible={sortSheetOpen} transparent animationType="slide" statusBarTranslucent={false} onRequestClose={()=>setSortSheetOpen(false)}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={0} style={styles.sortOverlay}>
-          <Pressable style={StyleSheet.absoluteFill} accessibilityRole="button" accessibilityLabel="Close sort by popup" onPress={()=>setSortSheetOpen(false)}/>
+      <Modal visible={sortSheetOpen} transparent animationType={Platform.OS === 'android' ? 'fade' : 'slide'} statusBarTranslucent={false} onRequestClose={closeSortSheet}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={0} style={styles.sortOverlay}>
+          <Pressable style={StyleSheet.absoluteFill} accessibilityRole="button" accessibilityLabel="Close sort by popup" onPress={closeSortSheet}/>
           <View style={[styles.sortSheet,{paddingBottom:Math.max(12,safeAreaInsets.bottom+7),maxHeight:windowHeight-Math.max(safeAreaInsets.top,20)-12}]}>
             <View style={styles.sortSheetHeader}>
               <Text style={styles.sortSheetTitle}>Sort by</Text>
-              <Pressable accessibilityRole="button" accessibilityLabel="Close sort by popup" onPress={()=>setSortSheetOpen(false)} style={styles.sortSheetClose}>
+              <Pressable accessibilityRole="button" accessibilityLabel="Close sort by popup" onPress={closeSortSheet} style={styles.sortSheetClose}>
                 <Ionicons name="close" size={23} color="#586580"/>
               </Pressable>
             </View>
@@ -606,7 +611,7 @@ export default function PoliciesScreen() {
                 {key:'date',label:'Date Range',icon:'calendar'},
               ] as const).map(tab=><Pressable key={tab.key} accessibilityRole="tab"
                 accessibilityLabel={tab.label} accessibilityState={{selected:filterTab===tab.key}}
-                onPress={()=>setFilterTab(tab.key)}
+                onPress={()=>{Keyboard.dismiss();setFilterTab(tab.key);}}
                 style={[styles.advancedTab,filterTab===tab.key&&styles.advancedTabActive]}>
                 <Feather name={tab.icon} size={12} color={filterTab===tab.key?'#4230B3':'#53647D'}/>
                 <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}
