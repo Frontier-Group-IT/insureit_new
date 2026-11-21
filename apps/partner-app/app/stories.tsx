@@ -133,7 +133,7 @@ export default function StoriesScreen() {
                 style={({ pressed }) => [styles.storyTextLink, pressed && story.route ? styles.storyTextPressed : null]}
               >
                 {story.metric !== undefined ? (
-                  <Text style={[styles.metric, story.kind === 'business' && styles.businessMetric]} adjustsFontSizeToFit numberOfLines={2}>{formatMetric(story)}</Text>
+                  <Text style={styles.metric} adjustsFontSizeToFit numberOfLines={2}>{formatMetric(story)}</Text>
                 ) : null}
                 <Text style={styles.title} numberOfLines={3} adjustsFontSizeToFit minimumFontScale={0.75}>{story.title}</Text>
               </Pressable>
