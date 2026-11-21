@@ -262,6 +262,45 @@ assert.ok(unified.includes("Provisional IFFCO policyholder address city")
   && unified.includes("Diesel inferred from the JCB 3DX Plus manufacturer model"),
   "IFFCO fallback values should be distinguished from verified PDF registration/fuel");
 
+// Confirmed IFFCO conversion eligibility uses the same strict source
+// provenance and exact printed commercial premiums as the booking handler.
+const {assessIffcoAutoOnboarding}=await import("../lib/policy-iffco-auto-eligibility.ts");
+const ifField=(key,value,evidence="Native PDF policy schedule")=>({key,value,evidence});
+const iffcoAutoFields=[
+  ifField("insured_name","KR EARTHMOVERS"),ifField("policy_number","N9394260"),
+  ifField("policy_product","Commercial Vehicle Package"),
+  ifField("policy_issuance_date","2026-11-16"),ifField("policy_start_date","2026-11-16"),
+  ifField("policy_end_date","2027-11-15"),ifField("third_party_start_date","2026-11-16"),
+  ifField("third_party_end_date","2027-11-15"),ifField("vehicle_class","Commercial Vehicle - Miscellaneous Class D"),
+  ifField("vehicle_make","JCB"),ifField("vehicle_model","JCB 3DX PLUS 2WD BACKHOE LOADER"),
+  ifField("vehicle_registration_status","registration_pending"),
+  ifField("vehicle_manufacturing_year","2026"),ifField("vehicle_chassis_number","RAJ3DXSRV03731509"),
+  ifField("vehicle_engine_number","H00545556"),ifField("idv","3480000"),
+  ifField("vehicle_capacity","4765","IFFCO PDF page 1: CC in insured vehicle row; not seating capacity"),
+  ifField("vehicle_fuel_type","Diesel","Manufacturer-model Diesel specification (JCB 3DX Plus 2WD); NOT PDF-printed"),
+  ifField("vehicle_rto_state","Madhya Pradesh","IFFCO PDF State Code 23 plus MP/NEW new vehicle reference"),
+  ifField("vehicle_rto_name","Jabalpur","IFFCO policyholder address city only; registration authority is blank. PROVISIONAL until vehicle is registered."),
+  ifField("cpa_premium","0"),
+];
+const iffcoAuto={parserId:"iffco_tokio_cv_native_pdf",checksPassed:18,
+  warnings:[],fields:iffcoAutoFields,
+  commercialPremium:{od:4762,tp:7367,net:12129,gst:2183.22,gross:14312.22}};
+assert.equal(assessIffcoAutoOnboarding(iffcoAuto).eligible,true);
+assert.equal(assessIffcoAutoOnboarding({...iffcoAuto,parserId:"go_digit_cv_native_pdf"}).eligible,false);
+assert.equal(assessIffcoAutoOnboarding({...iffcoAuto,checksPassed:17}).eligible,false);
+assert.equal(assessIffcoAutoOnboarding({...iffcoAuto,commercialPremium:{...iffcoAuto.commercialPremium,gross:14300}}).eligible,false);
+assert.equal(assessIffcoAutoOnboarding({...iffcoAuto,fields:iffcoAuto.fields.filter(f=>f.key!=="vehicle_capacity")}).eligible,false);
+assert.equal(assessIffcoAutoOnboarding({...iffcoAuto,fields:iffcoAuto.fields.map(f=>f.key==="vehicle_rto_name"?{...f,evidence:"Native PDF policy schedule"}:f)}).eligible,false);
+assert.equal(assessIffcoAutoOnboarding({...iffcoAuto,fields:iffcoAuto.fields.map(f=>f.key==="vehicle_fuel_type"?{...f,evidence:"Native PDF policy schedule"}:f)}).eligible,false);
+assert.equal(assessIffcoAutoOnboarding({...iffcoAuto,fields:[...iffcoAuto.fields,iffcoAuto.fields[0]]}).eligible,false);
+assert.ok(handoff.includes("const iffcoReview=assessIffcoAutoOnboarding(")
+  && handoff.includes("eligibleForVerifiedConversion=autoEligibleGoDigit||iffcoReview.eligible"),
+  "IFFCO source and financial validated readiness must be used for the queue");
+assert.ok(actions.includes("const assessment=assessIffcoAutoOnboarding(")
+  && actions.includes("mapVerifiedIffcoCommercialPremium(commercial")
+  && actions.includes('forwarded.draft.registrationMode!=="unregistered"'),
+  "IFFCO confirmed conversion must verify financial mapping, registration and original evidence");
+
 // The source PDF's RTO-authority cell is blank; the NIA issuing-office city
 // is explicitly provisional and must never be treated as verified RC data.
 assert.ok(handoff.includes("NIA_PROVISIONAL_RTO_FROM_ISSUING_OFFICE:")
