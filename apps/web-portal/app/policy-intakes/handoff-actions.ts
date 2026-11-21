@@ -11,9 +11,9 @@ import { requireCapability } from "@/lib/master-data-server";
 import { requirePolicyCreator } from "@/lib/policy-access-server";
 import { isN8nWorkbenchPrimary, previewSemiAutoN8nExtraction } from "@/lib/policy-intake-semi-auto-n8n";
 import type { N8nVerifiedPremiumBreakdown } from "@/lib/policy-intake-n8n-validation";
-import { mapVerifiedN8nMotorPremium, mapVerifiedIffcoCommercialPremium } from "@/lib/policy-n8n-onboarding-premium";
+import { mapVerifiedN8nMotorPremium, mapVerifiedIffcoCommercialPremium, mapVerifiedNiaCommercialPremium } from "@/lib/policy-n8n-onboarding-premium";
 import { assessIffcoAutoOnboarding } from "@/lib/policy-iffco-auto-eligibility";
-import { assessStandardCommercialDirectConversion } from "@/lib/policy-commercial-direct-eligibility";
+import { assessNiaNamedAuthorityUnregisteredConversion, assessStandardCommercialDirectConversion } from "@/lib/policy-commercial-direct-eligibility";
 import { policyDateDecision } from "@/lib/policy-date-rule";
 import { enrichVerifiedN8nOnboardingFields, resolveManufacturingYearEvidence } from "@/lib/policy-n8n-onboarding-enrichment";
 import { sameInsuredIdentity, selectVerifiedN8nInsuredDraftIdentity } from "@/lib/policy-n8n-onboarding-insured";
@@ -141,11 +141,15 @@ export async function prepareVerifiedN8nIntakeHandoff(
       commercialPremium:commercial,
     }).eligible;
   const standardCommercialVerifiedFill=Boolean(commercial)&&fillEmptyFields
-    &&assessStandardCommercialDirectConversion({
+    &&(assessNiaNamedAuthorityUnregisteredConversion({
       parserId:parsed.preview.parserId,checksPassed:parsed.preview.checksPassed,
       warnings:parsed.preview.warnings,fields:parsed.preview.fields,
       commercialPremium:commercial,
-    }).eligible;
+    }).eligible||assessStandardCommercialDirectConversion({
+      parserId:parsed.preview.parserId,checksPassed:parsed.preview.checksPassed,
+      warnings:parsed.preview.warnings,fields:parsed.preview.fields,
+      commercialPremium:commercial,
+    }).eligible);
   if (commercial && !replaceExistingDraft && !goDigitVerifiedFill
       && !iffcoVerifiedFill && !standardCommercialVerifiedFill) {
     return {ok:false,error:"This commercial PDF is not eligible for direct verified handoff; check its insurer-specific evidence before booking."};
@@ -333,7 +337,13 @@ async function preparePolicyIntakeHandoffInternal(
       warnings:verified.warnings,fields:verified.fields,
       commercialPremium:verified.commercialPremium,
     });
-    const eligibleForVerifiedConversion=autoEligibleGoDigit||iffcoReview.eligible||standardReview.eligible;
+    const niaReview=assessNiaNamedAuthorityUnregisteredConversion({
+      parserId:verified.parserId,checksPassed:verified.checksPassed,
+      warnings:verified.warnings,fields:verified.fields,
+      commercialPremium:verified.commercialPremium,
+    });
+    const eligibleForVerifiedConversion=autoEligibleGoDigit||iffcoReview.eligible
+      ||standardReview.eligible||niaReview.eligible;
     const specificMissingYear=goDigit&&missingGoDigit.includes("vehicle_manufacturing_year");
     const{error}=await admin.from("policy_intake_ai_processing_queue").update({
       // Only previously certified Go Digit and new narrowly evidenced IFFCO
@@ -348,7 +358,8 @@ async function preparePolicyIntakeHandoffInternal(
         ?"go_digit_missing_verified_manufacturing_year":goDigit&&missingGoDigit.length
           ?"go_digit_missing_verified_onboarding_fields"
           :verified.parserId==="iffco_tokio_cv_native_pdf"?iffcoReview.reason
-          :["new_india_cv_native_pdf","united_india_gcv_native_pdf","oriental_gccv_native_pdf"].includes(verified.parserId)?standardReview.reason
+          :verified.parserId==="new_india_cv_native_pdf"?niaReview.reason
+          :["united_india_gcv_native_pdf","oriental_gccv_native_pdf"].includes(verified.parserId)?standardReview.reason
           :"bulk_conversion_review_required"),
       processed_at:new Date().toISOString(),
       retry_after:new Date(Date.now()+24*60*60*1000).toISOString(),
@@ -409,16 +420,25 @@ async function preparePolicyIntakeHandoffInternal(
        ||verified.warnings.length>0||iffcoCpaFields.length!==1
        ||!Number.isFinite(iffcoCpa)||iffcoCpa<0))
     return{ok:false,error:"IFFCO printed CPA evidence is incomplete; do not calculate an unverified premium."};
+  const niaCertified=verified?.parserId==="new_india_cv_native_pdf"
+    &&assessNiaNamedAuthorityUnregisteredConversion({
+      parserId:verified.parserId,checksPassed:verified.checksPassed,
+      warnings:verified.warnings,fields:verified.fields,
+      commercialPremium:verified.commercialPremium,
+    }).eligible;
+  const niaCpa=niaCertified?Number(verified.fields.find(f=>f.key==="cpa_premium")?.value):NaN;
   let verifiedPremium:ReturnType<typeof mapVerifiedN8nMotorPremium>|null=null;
   try{
     verifiedPremium=verified?.parserId==="iffco_tokio_cv_native_pdf"
       ?mapVerifiedIffcoCommercialPremium(verified.commercialPremium!,iffcoCpa)
+      :niaCertified
+      ?mapVerifiedNiaCommercialPremium(verified!.commercialPremium!,niaCpa)
       :verified?.commercialPremium
       ? {od:String(verified.commercialPremium.od),tp:String(verified.commercialPremium.tp),
          addOnPremium:"0",cpa:"0",cpaOpted:"No"}
       :verified?.premium ? mapVerifiedN8nMotorPremium(verified.premium) : null;
   }catch{
-    return{ok:false,error:"IFFCO printed CPA and liability totals do not reconcile; no draft or policy was changed."};
+    return{ok:false,error:"The current insurer PDF CPA/TP split is inconsistent; no draft or policy was changed."};
   }
   const addOnTotal=verifiedPremium?Number(verifiedPremium.addOnPremium):0;
   const yearEvidence=verified?resolveManufacturingYearEvidence(verified.fields):null;
@@ -490,12 +510,12 @@ async function preparePolicyIntakeHandoffInternal(
     policyProduct:mapped.next.policyProduct,idv:mapped.next.idv,
     od:verifiedPremium?.od??mapped.next.od,
     tp:verifiedPremium?.tp??mapped.next.tp,
-    ...(verifiedPremium?{addOnPremium:verifiedPremium.addOnPremium,tpValidUpto:tpExpiry,cpaValidUpto:cpaExpiry}:{}),
+    ...(verifiedPremium?{addOnPremium:verifiedPremium.addOnPremium,tpValidUpto:tpExpiry,cpaValidUpto:cpaExpiry||(niaCertified?tpExpiry:"")}:{}),
     cpaOpted:verifiedPremium?.cpaOpted??"No",
     cpa:verifiedPremium?.cpa??mapped.next.cpa,
     policyNo:mapped.next.policyNo,insurerId:mapped.next.insurerId,validFrom:mapped.next.validFrom,validUpto:mapped.next.validUpto,
     payoutBasis:"NET",projectedOdPercent:"",projectedTpPercent:"",insurerScheme:"",payinBillNo:"",payinBilledAmount:"",payinBillDate:"",payinStatus:"Unbilled",retention:"",payoutOdPercent:"",payoutTpPercent:"",flatPayoutAmount:"",payoutStatus:"Pending",payoutDate:"",payoutVoucherNo:"",remarks:verified?.commercialPremium
-      ? `Policy Intake ${id} — independently validated commercial-motor PDF (${verified.parserId}). REVIEW ONLY; no policy or customer was booked. Printed OD ${verified.commercialPremium.od}, TP including liabilities ${verified.commercialPremium.tp}, Net ${verified.commercialPremium.net}, GST ${verified.commercialPremium.gst}, Gross ${verified.commercialPremium.gross}. ${verified.parserId==="iffco_tokio_cv_native_pdf" ? `IFFCO source Net(B) ${verified.commercialPremium.tp} includes owner-driver CPA ${iffcoCpa}. Canonical TP ${verifiedPremium?.tp} excludes that CPA, and CPA is entered separately as ${verifiedPremium?.cpa}; their sum equals printed Net(B).` : "Owner-driver PA and paid-driver liabilities are retained inside printed TP; do not add CPA a second time."} Confirm vehicle class, registration, policy dates, premiums and all other fields before booking.${yearFallbackNote}${niaProvisionalRtoNote}${iffcoProvisionalNote}${iffcoRegisteredRtoNote}${iffcoFuelNote}`
+      ? `Policy Intake ${id} — independently validated commercial-motor PDF (${verified.parserId}). REVIEW ONLY; no policy or customer was booked. Printed OD ${verified.commercialPremium.od}, TP including liabilities ${verified.commercialPremium.tp}, Net ${verified.commercialPremium.net}, GST ${verified.commercialPremium.gst}, Gross ${verified.commercialPremium.gross}. ${verified.parserId==="iffco_tokio_cv_native_pdf" ? `IFFCO source Net(B) ${verified.commercialPremium.tp} includes owner-driver CPA ${iffcoCpa}. Canonical TP ${verifiedPremium?.tp} excludes that CPA, and CPA is entered separately as ${verifiedPremium?.cpa}; their sum equals printed Net(B).` : niaCertified ? `New India separately verified owner-driver CPA ${niaCpa} is excluded from canonical TP ${verifiedPremium?.tp}; paid-driver LL stays within TP. Printed mixed 18%/5% GST ${verified.commercialPremium.gst} is not recalculated at 18% of net.` : "Owner-driver PA and paid-driver liabilities are retained inside printed TP; do not add CPA a second time."} Confirm vehicle class, registration, policy dates, premiums and all other fields before booking.${yearFallbackNote}${niaProvisionalRtoNote}${iffcoProvisionalNote}${iffcoRegisteredRtoNote}${iffcoFuelNote}`
       : verified && verified.premium
       ? `Policy Intake ${id} — n8n validated ${verified.premium.tataAig ? "Tata AIG private car" : "ICICI 3005"} PDF. Review every prefilled value before booking.
 PDF premium reconciliation: Printed Basic OD ${verified.premium.basicOd} + OD add-ons ${addOnTotal} - validated NCB/OD deductions ${verified.premium.odDeductions??0} = Total OD ${verified.premium.totalOd}; net-of-deductions Basic OD entered for onboarding ${verifiedPremium?.od??"unavailable"}. TP ${verified.premium.basicTp}, CPA ${verified.premium.cpa}, Net ${verified.premium.net}, GST ${verified.premium.tax}, Gross ${verified.premium.gross}.
@@ -573,6 +593,29 @@ Third Party period: ${tpStart||"unavailable"} to ${tpExpiry||"unavailable"}. ${v
         +"\nReviewer confirmed proposed PDF signing date "+confirmedSigning.date
         +" against the original policy; document SHA-256 "+confirmedSigning.documentSha256
         +". Certificate chain is not independently trusted; booking needs normal approval.";
+      changed=true;
+    }
+    // Reconcile ONLY the recognized old auto-generated NIA premium split.
+    // The older parser placed printed TP (including PA) into canonical TP
+    // and wrote CPA=0/No. It must not turn a previously verified PA policy
+    // into zero CPA. Preserve any genuine operator edits and use draft CAS.
+    const oldNiaMoney=niaCertified && verified?.commercialPremium
+      && verifiedPremium?.cpaOpted==="Yes"
+      && original.remarks.includes("independently validated commercial-motor PDF (new_india_cv_native_pdf)")
+      && original.remarks.includes("Printed OD "+verified.commercialPremium.od+", TP including liabilities "+verified.commercialPremium.tp+",")
+      && Number(original.od)===verified.commercialPremium.od
+      && Number(original.tp)===verified.commercialPremium.tp
+      && Number(original.cpa)===0 && original.cpaOpted==="No"
+      && Number(original.addOnPremium||"0")===0;
+    if(oldNiaMoney){
+      supplemented.tp=verifiedPremium!.tp;
+      supplemented.cpa=verifiedPremium!.cpa;
+      supplemented.cpaOpted="Yes";
+      supplemented.cpaValidUpto=tpExpiry;
+      supplemented.remarks=(supplemented.remarks||"")
+        +"\nNIA_VERIFIED_CPA_RECONCILIATION: prior source-generated unsplit TP "
+        +original.tp+" -> "+verifiedPremium!.tp+" TP plus "+verifiedPremium!.cpa
+        +" independently printed owner-driver CPA; mixed GST unchanged.";
       changed=true;
     }
     for(const key of fillable){
