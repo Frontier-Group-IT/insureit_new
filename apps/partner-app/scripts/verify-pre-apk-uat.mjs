@@ -91,6 +91,7 @@ expectAll('app/policy-intake-new.tsx', [
 // Action Required cards use the existing clean 3D warning icon and compact, single-line badge.
 expectAll('app/policy-intakes.tsx', [
   [/source=\{PartnerAssets\.status\.warning\}/, 'Action Required must reuse the existing 3D warning asset'],
+  [/rowArtworkAttention: \{ backgroundColor: 'transparent' \}/, 'Warning icon container must have no background fill'],
   [/row\.status === 'needs_attention' \|\| \(row\.status === 'processing' && row\.ocr_status === 'failed'\)/, 'Attention icon must apply only to actual action-required rows'],
   [/statusTone\(row\) === 'warning' \? \(/, 'Only warning rows use the compact Action Required badge'],
   [/numberOfLines=\{1\}[\s\S]*?ellipsizeMode="tail"[\s\S]*?style=\{styles\.actionRequiredBadge\}/, 'Action Required label must fit one row and ellipsize on narrow devices'],
