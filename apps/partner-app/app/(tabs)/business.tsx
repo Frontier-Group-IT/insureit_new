@@ -722,17 +722,19 @@ function TrendChart({ data, emptyMessage, compact = false }: { data: TrendPoint[
           const height = premium > 0 ? Math.max(3, Math.round((premium / top) * (compact ? 45 : 60))) : 0;
           const label = item.month === 'MTD' ? 'MTD' : item.month === 'LAST' ? 'Last' : item.month === 'CUSTOM' ? 'Custom' : shortMonth(item.month);
           const premiumLabel = formatCompactCurrency(premium);
-          // Only longer compact amounts wrap; never shrink iOS text to fit a narrow bar.
-          const visiblePremiumLabel = compact && premiumLabel.length > 6
-            ? premiumLabel.replace(/(Cr|L|k)$/, '\n$1')
-            : premiumLabel;
+          // iOS uses neutral, compact amount labels without the currency symbol.
+          // Android retains its existing formatting and wrap behavior.
+          const displayPremiumLabel = Platform.OS === 'ios' ? premiumLabel.replace(/^₹/, '') : premiumLabel;
+          const visiblePremiumLabel = compact && displayPremiumLabel.length > 6
+            ? displayPremiumLabel.replace(/(Cr|L|k)$/, '\n$1')
+            : displayPremiumLabel;
           return (
             <View key={`${item.month}-${index}`} style={styles.barColumn}>
               <View style={[styles.barPlotSlot, compact && styles.barPlotSlotCompact]}>
                 <View style={styles.barTrack}>
                   <View style={[styles.bar, { height }]} />
                 </View>
-                <Text numberOfLines={2} style={[styles.barValue, { bottom: height + 5 }]}>
+                <Text numberOfLines={2} style={[styles.barValue, Platform.OS === 'ios' && styles.barValueIos, { bottom: height + 5 }]}>
                   {visiblePremiumLabel}
                 </Text>
               </View>
@@ -930,6 +932,7 @@ const styles = StyleSheet.create({
   chart: { flex: 1, height: 91, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'center', gap: 3 },
   barColumn: { flex: 1, maxWidth: 54, height: '100%', alignItems: 'center', justifyContent: 'flex-end' },
   barValue: { position: 'absolute', left: 0, right: 0, height: 27, color: '#14367B', textAlign: 'center', fontSize: 11, lineHeight: 13, fontWeight: '700', includeFontPadding: false },
+  barValueIos: { color: '#000000', fontSize: 9, lineHeight: 12, fontWeight: '400' },
   barPlotSlot: { height: 72, width: '100%', alignItems: 'center', justifyContent: 'flex-end', position: 'relative' },
   barTrack: { height: '100%', width: '92%', justifyContent: 'flex-end', borderTopLeftRadius: 7, borderTopRightRadius: 7 },
   bar: { width: '100%', borderTopLeftRadius: 7, borderTopRightRadius: 7, backgroundColor: '#2298E8' },
