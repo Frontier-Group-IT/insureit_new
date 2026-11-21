@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View, type ImageSourcePropType } from 'react-native';
 
 import { PartnerScreen } from '@/components/partner-screen';
 import { PartnerCaseBottomNavigation } from '@/components/partner-case-bottom-navigation';
@@ -99,6 +99,7 @@ export default function ProfileScreen() {
       <View style={styles.hero}>
         <View pointerEvents="none" style={styles.heroGlowLarge} />
         <View pointerEvents="none" style={styles.heroGlowSmall} />
+        <Image source={require('../assets/partner/profile/profile-id-check-3d.png')} style={styles.heroArtwork} resizeMode="contain" accessible={false} />
 
         <View style={styles.heroTopRow}>
           <View style={styles.avatarStage}>
@@ -128,6 +129,7 @@ export default function ProfileScreen() {
             <View style={styles.rolePill}>
               <Text style={styles.roleText}>{roleLabel}</Text>
             </View>
+            {identity.actor_kind === 'employee' && identity.designation ? <Text style={styles.heroDesignation} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72}>{identity.designation}</Text> : null}
           </View>
 
           <Pressable
@@ -235,11 +237,22 @@ export default function ProfileScreen() {
   );
 }
 
+const registrationIcons: Record<string, ImageSourcePropType> = {
+  'Employee code': require('../assets/partner/profile/employee-id-3d.png'),
+  'Intermediary code': require('../assets/partner/profile/employee-id-3d.png'),
+  'Partner code': require('../assets/partner/profile/employee-id-3d.png'),
+  Designation: require('../assets/partner/profile/designation-bag-3d.png'),
+  Organization: require('../assets/partner/profile/designation-bag-3d.png'),
+  Role: require('../assets/partner/profile/role-team-3d.png'),
+  'Portal status': require('../assets/partner/profile/role-team-3d.png'),
+};
+
 function SectionTitle({ icon, title }: { icon: React.ComponentProps<typeof Ionicons>['name']; title: string }) {
   return (
     <View style={styles.sectionTitleRow}>
-      <Ionicons name={icon} size={23} color="#0C6FE8" />
+      <View style={styles.sectionTitleIcon}><Ionicons name={icon} size={22} color="#FFFFFF" /></View>
       <Text style={styles.sectionTitle}>{title}</Text>
+      <View style={styles.sectionTitleRule} />
     </View>
   );
 }
@@ -259,13 +272,19 @@ function Detail({
   value: string;
   isLast?: boolean;
 }) {
+  const artwork = registrationIcons[label];
   return (
-    <View style={[styles.detailRow, isLast && styles.detailRowLast]}>
+    <View style={[styles.detailRow, isLast && styles.detailRowLast, { borderColor: iconBackground }]}>
+      <View style={[styles.detailGlow, { backgroundColor: iconBackground }]} pointerEvents="none" />
+      {artwork ? <Image source={artwork} style={styles.detailArtworkRight} resizeMode="contain" accessible={false} /> : null}
       <View style={[styles.detailIcon, { backgroundColor: iconBackground }]}>
-        <Ionicons name={icon} size={19} color={iconColor} />
+        {artwork ? <Image source={artwork} style={styles.detailArtworkLeft} resizeMode="contain" accessible={false} /> : <Ionicons name={icon} size={24} color={iconColor} />}
       </View>
-      <Text style={styles.detailLabel}>{label}</Text>
-      <Text style={styles.detailValue}>{value}</Text>
+      <View style={[styles.detailVerticalRule, { backgroundColor: iconColor }]} />
+      <View style={styles.detailCopy}>
+        <Text style={styles.detailLabel}>{label}</Text>
+        <Text style={styles.detailValue}>{value || 'Not recorded'}</Text>
+      </View>
     </View>
   );
 }
@@ -346,6 +365,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 5 },
     elevation: 3,
   },
+  heroArtwork: { position: 'absolute', width: 91, height: 83, right: 9, bottom: 1, opacity: 0.67 },
   heroTopRow: {
     width: '100%',
     flexDirection: 'row',
@@ -448,6 +468,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     backgroundColor: 'rgba(255,255,255,0.17)',
   },
+  heroDesignation: { marginTop: 7, maxWidth: '100%', color: '#DFECFF', fontSize: 9.5, lineHeight: 13, fontWeight: '600' },
   roleText: {
     color: '#DCE7FF',
     fontSize: 10.5,
@@ -467,67 +488,26 @@ const styles = StyleSheet.create({
     opacity: 0.68,
   },
 
-  sectionTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginTop: 24,
-    marginBottom: 13,
-    paddingLeft: 4,
-  },
-  sectionTitle: {
-    color: '#111A35',
-    fontSize: 17,
-    lineHeight: 22,
-    fontWeight: '800',
-  },
-  details: {
-    overflow: 'hidden',
-    borderRadius: 22,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E5EAF2',
-    shadowColor: '#162A55',
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 3,
-  },
+  sectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 23, marginBottom: 14, paddingLeft: 3 },
+  sectionTitleIcon: { width: 33, height: 33, borderRadius: 9, backgroundColor: '#8445DF', alignItems: 'center', justifyContent: 'center', shadowColor: '#7640CA', shadowOpacity: 0.18, shadowRadius: 5, elevation: 2 },
+  sectionTitle: { color: '#111A35', fontSize: 17, lineHeight: 23, fontWeight: '800' },
+  sectionTitleRule: { flex: 1, height: 2, backgroundColor: '#8D50D9', marginLeft: 5 },
+  details: { gap: 11, paddingBottom: 18 },
   detailRow: {
-    minHeight: 72,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#E9EDF4',
+    position: 'relative', overflow: 'hidden', minHeight: 98, flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: 12, paddingVertical: 14, borderRadius: 20, backgroundColor: '#FFFFFF',
+    borderWidth: 1, shadowColor: '#5433B6', shadowOpacity: 0.07, shadowRadius: 9,
+    shadowOffset: { width: 0, height: 4 }, elevation: 2,
   },
-  detailRowLast: { borderBottomWidth: 0 },
-  detailIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  detailLabel: {
-    flexShrink: 1,
-    maxWidth: '43%',
-    color: '#68748B',
-    fontSize: 12,
-    lineHeight: 17,
-    fontWeight: '600',
-  },
-  detailValue: {
-    flex: 1,
-    minWidth: 0,
-    marginLeft: 8,
-    textAlign: 'right',
-    color: '#101833',
-    fontSize: 12.5,
-    lineHeight: 16,
-    fontWeight: '800',
-  },
+  detailRowLast: {},
+  detailGlow: { position: 'absolute', right: -32, top: -26, width: 143, height: 143, borderRadius: 72, opacity: 0.8 },
+  detailArtworkRight: { position: 'absolute', right: -2, bottom: 1, width: 86, height: 91, opacity: 0.83 },
+  detailIcon: { width: 56, height: 61, borderRadius: 16, flexShrink: 0, alignItems: 'center', justifyContent: 'center' },
+  detailArtworkLeft: { width: 54, height: 59 },
+  detailVerticalRule: { width: 1, height: 56, marginHorizontal: 12, opacity: 0.5 },
+  detailCopy: { flex: 1, minWidth: 0, paddingRight: 69, gap: 5 },
+  detailLabel: { color: '#5A6683', fontSize: 11.5, lineHeight: 15, fontWeight: '600' },
+  detailValue: { color: '#101833', fontSize: 13.5, lineHeight: 17, fontWeight: '800' },
   logoutFeedback: {
     marginTop: 12,
   },
