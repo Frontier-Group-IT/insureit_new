@@ -1,9 +1,9 @@
 Partner production OTA trigger
-release=partner-business-report-reference-redesign-pr-5067
+release=partner-my-progress-summary-gap-pr-5079
 source=verified-merged-main
-source_pr=5067
-source_merge=bda6f137dd7c93413091bb16f2b5d5a00a362e6e
-reason=user-approved-merge-and-publish-business-report-redesign
+source_pr=5079
+source_merge=da85305b9fce6837eaa34c93f129d448c7515c8a
+reason=user-approved-merge-and-publish-my-progress-summary-gap
 channel=production
 runtime=0.2.0
 requested=2026-11-21
