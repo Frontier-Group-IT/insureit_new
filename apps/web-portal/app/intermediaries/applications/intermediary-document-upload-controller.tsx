@@ -31,11 +31,13 @@ export function IntermediaryDocumentUploadController({
   enabled,
   showGst = false,
   legacyDocuments = false,
+  canFinalizeExistingPartnerDocuments = false,
 }: {
   applicationId: string;
   enabled: boolean;
   showGst?: boolean;
   legacyDocuments?: boolean;
+  canFinalizeExistingPartnerDocuments?: boolean;
 }) {
   const router = useRouter();
   const [progress, setProgress] = useState<string | null>(null);
@@ -89,8 +91,8 @@ export function IntermediaryDocumentUploadController({
         });
       }
 
-      if (!items.length) {
-        setError("Choose at least one document to upload or replace.");
+      if (!items.length && !canFinalizeExistingPartnerDocuments) {
+        setError("Choose a document to upload, or complete all required documents before issuing a Partner ID.");
         return;
       }
 
@@ -101,7 +103,9 @@ export function IntermediaryDocumentUploadController({
       }
 
       try {
-        let finalizeRequired = false;
+        // All required files may already be on record. The finalization endpoint
+        // independently rechecks document presence, authorization and activation stage.
+        let finalizeRequired = items.length === 0 && canFinalizeExistingPartnerDocuments;
 
         for (let index = 0; index < items.length; index += 1) {
           const item = items[index];
@@ -146,7 +150,7 @@ export function IntermediaryDocumentUploadController({
 
     form.addEventListener("submit", handleSubmit, true);
     return () => form.removeEventListener("submit", handleSubmit, true);
-  }, [applicationId, enabled, legacyDocuments, progress, router, showGst]);
+  }, [applicationId, canFinalizeExistingPartnerDocuments, enabled, legacyDocuments, progress, router, showGst]);
 
   return (
     <>
