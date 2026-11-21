@@ -874,7 +874,7 @@ for (const impactMarker of [
   'styles.monthDivider',
   'styles.monthStatDivider',
   'styles.cardDetails',
-  '<ImpactIcon art={art} size={40} plain />',
+  '<ImpactIcon art={art} size={40} plain footprint />',
   '<ImpactIcon art={art} size={33} plain />',
 ]) requireText(impact, impactMarker, `Impact reference layout is missing ${impactMarker}.`);
 if (impact.includes('icon={icon}') || impact.includes('styles.cardLeft')) throw new Error('Impact must keep blue artwork left with metric and label stacked to its right.');
@@ -885,10 +885,10 @@ for (const [fragment,reason] of [
   ['styles.footprintDivider', 'Protection footprint rows use internal thin dividers'],
   ['impactCard: {minHeight: 49', 'Protection footprint rows are compact'],
   ["textAlign: 'right', minWidth: 44", 'Footprint counts must align right before the chevron'],
-  ["position: 'absolute', top: 7, right: 12", 'Coverage badge must occupy the hero top-right'],
+  ["heroCoverageBadge: {width: 106", 'Coverage badge must align right without overlapping the value'],
   ["monthStat: { flex: 1, minWidth: 0, minHeight: 59", 'Monthly statistics must remain compact'],
   ['<Text style={styles.premiumLabel}>Gross premium</Text>', 'Gross premium label must be visible'],
-  ['<ImpactIcon art={art} size={40} plain />', 'Footprint illustrations must be compact'],
+  ['<ImpactIcon art={art} size={40} plain footprint />', 'Footprint illustrations must share the compact slot'],
   ['numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>{label}', 'Footprint labels must remain on one line'],
   ['styles.impactLabel} numberOfLines={1}', 'Label must precede the numeric value'],
   ["fontSize: 17, lineHeight: 21", 'Footprint values use the compact font'],
@@ -899,6 +899,18 @@ for (const [fragment,reason] of [
   ["backgroundColor: '#F0F6FF'", 'First banner retains reference light blue background'],
   ["borderBottomWidth: 1, borderBottomColor: '#D5DDE9'", 'First banner needs a straight full-width bottom divider'],
 ]) requireText(impact, fragment, 'Protection reference missing: ' + reason);
+for (const [fragment, reason] of [
+  ["heroDetails: {flex: 1, minWidth: 0, alignSelf: 'stretch', justifyContent: 'flex-start'", 'Protection heading must move upward'],
+  ["heroValueGroup: {flex: 1, minWidth: 0, gap: 0}", 'Protection heading and amount must have zero extra gap'],
+  ["fontSize: 23, lineHeight: 28, fontWeight: '800', marginTop: 0", 'Protection amount must be reduced without top margin'],
+  ['<Text style={styles.heroCoverageText} numberOfLines={2}>', 'Top-right coverage badge may use two lines'],
+  ["heroTopRow: {flexDirection: 'row', alignItems: 'flex-start'", 'Badge and value must share a non-overlapping top row'],
+  ["footprintIconSlot: {flexShrink: 0, alignItems: 'center', justifyContent: 'center'}", 'Footprint icons must have standardized centered slots'],
+  ["const artworkSize = footprint ? 36 : Math.round(size * 0.89)", 'All footprint artwork must occupy equal image dimensions'],
+  ["Platform.OS === 'android' && art === 'monthly-policy'", 'Android monthly policy icon must have a platform-specific visible asset'],
+  ["require('../assets/partner/actions/add-policy-reference.png')", 'Android monthly policies must use an RGBA illustration'],
+  [": IMPACT_ART[art]", 'Existing iOS icon assignments must remain'],
+]) requireText(impact, fragment, 'Protection Delivered update missing: ' + reason);
 if (impact.includes('styles.grid') || impact.includes('grid: { flexDirection:')) throw new Error('Protection footprint must not restore the two-column grid.');
 if (impact.includes('borderRadius: 18, minHeight: 94')) throw new Error('Impact top summary must stay full-width and flat, not a rounded card.');
 requireText(impact, 'styles.heroDivider', 'Impact final reference keeps the thin vertical divider between car and amount.');
