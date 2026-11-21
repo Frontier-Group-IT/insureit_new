@@ -26,6 +26,17 @@
 - Verify UI offers **Convert** for a clean verified queue and explicit review-held retry without first demanding Reprocess/Reparse, and displays precise validation failure when a check cannot pass.
 - Run the full Web Portal CI including regressions, lint, TypeScript and production build before merge. Deploy manually from `main` only after verification.
 
+## JCB fuel inference (IFFCO and future insurer parsers)
+
+Do not treat every JCB machine as Diesel: JCB produces electric equipment. For
+IFFCO CV policies, populate a missing Fuel Type as Diesel only when the
+PDF-printed make/model match a separately verified diesel manufacturer model
+family (currently JCB 3DX Plus 2WD, VM117 NDD compactor, and 455-5N wheel
+loader). Record this provenance in the extracted field evidence and retain the
+PDF-printed model. An explicit conflicting fuel or an unrecognized/ambiguous
+model must stop automatic booking until independently resolved. The parser's
+18/18 extraction count is **not** sufficient to claim booking readiness.
+
 ## Current scope and limitations
 
 - ICICI 3005 and Tata AIG use the previously established noncommercial premium route; Go Digit and IFFCO have insurer-specific commercial paths.
