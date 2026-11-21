@@ -291,7 +291,7 @@ function JourneyMilestoneStory({ story }: { story: PartnerStory }) {
           <View style={styles.journeyScene} pointerEvents="none">
             <View style={styles.journeySceneHalo} />
             <Image
-              source={require('../assets/partner/icons/more-journey-3d-new.png')}
+              source={require('../assets/partner/status/journey.png')}
               style={styles.journeyRoadArtwork}
               resizeMode="contain"
               accessibilityElementsHidden
@@ -300,6 +300,7 @@ function JourneyMilestoneStory({ story }: { story: PartnerStory }) {
             <View style={styles.journeyTrophy}>
               <Ionicons name="trophy" size={34} color="#F6B51D" />
             </View>
+            <Image source={require('../assets/partner/actions/quick-customers.png')} style={styles.journeyPeopleArtwork} resizeMode="contain" />
             <View style={styles.journeySceneAchieved}>
               <Ionicons name="checkmark-circle" size={16} color="#0FA565" />
               <Text style={styles.journeySceneMarkerText}>{formatCount(achieved)} achieved</Text>
@@ -415,21 +416,6 @@ function StoryIllustration({ kind, body }: { kind: PartnerStory['kind']; body: s
       </View>
     );
   }
-  if (kind === 'journey') {
-    return (
-      <View style={styles.illustrationScene}>
-        <View style={styles.sceneHalo} />
-        <View style={styles.growthBars}>
-          {[60, 95, 132, 171].map((height, i) => <View key={i} style={[styles.growthBar, { height }]} />)}
-        </View>
-        <View style={styles.sceneGrowthArrow}><Ionicons name="trending-up" size={120} color="#1988FA" /></View>
-        <View style={styles.peopleRow}>
-          {[32, 42, 55, 46].map((size, i) => <Ionicons key={i} name="person" size={size} color={i === 2 ? '#075AB9' : '#1680E6'} />)}
-        </View>
-        <View style={styles.sceneBadge}><Ionicons name="people" size={38} color="#FFFFFF" /></View>
-      </View>
-    );
-  }
   if (kind === 'business') {
     return (
       <View style={styles.businessGrowthScene}>
@@ -520,6 +506,7 @@ const styles = StyleSheet.create({
   journeyScene: { width: '100%', height: 288, marginTop: 10, alignItems: 'center', justifyContent: 'center' },
   journeySceneHalo: { position: 'absolute', width: '100%', height: 235, borderRadius: 140, backgroundColor: 'rgba(237,248,255,0.67)', top: 19 },
   journeyRoadArtwork: { width: '100%', height: 258 },
+  journeyPeopleArtwork: { position: 'absolute', bottom: 55, left: '7%', width: 62, height: 62 },
   journeyTrophy: { position: 'absolute', right: '10%', top: 39, width: 49, height: 49, borderRadius: 25, backgroundColor: '#FFF6DB', borderWidth: 2, borderColor: '#FFDC80', alignItems: 'center', justifyContent: 'center', shadowColor: '#B17C0C', shadowOpacity: 0.14, shadowRadius: 8, elevation: 3 },
   journeySceneAchieved: { position: 'absolute', left: 2, bottom: 18, flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#FFFFFF', paddingHorizontal: 9, paddingVertical: 6, borderWidth: 1, borderColor: '#6FD4A5', borderRadius: 10 },
   journeySceneTarget: { position: 'absolute', right: 3, top: 6, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#6EB2F7' },
