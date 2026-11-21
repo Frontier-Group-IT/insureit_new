@@ -363,7 +363,8 @@ export function PolicyUnifiedForm({ mode, insurers, customers = [], rms, sources
         const result=await onboardPolicy(finalPayload);
         if(result.ok){
           try{sessionStorage.removeItem(POLICY_DRAFT_KEY);}catch{}
-          if(sourceIntakeId){if(returnToAiStudio){router.push("/development/ai-policy-onboarding?view=processing");}else{router.push("/policy-intakes");}}
+          if(sourceIntakeId&&returnToAiStudio){router.push("/development/ai-policy-onboarding?view=processing");}
+          else if(sourceIntakeId){router.push("/policy-intakes");}
           else{router.push(`/policies?success=policy_created&policy=${encodeURIComponent(result.policyCode)}&policy_id=${encodeURIComponent(result.policyId)}`);}
           return;
         }
