@@ -355,6 +355,31 @@ for (const [fragment, reason] of [
 for (const deprecated of ['styles.metricCard', 'styles.cardCorner', 'styles.metricHeader', 'styles.lowerWave', 'styles.titleArrow']) {
   if (stories.includes(deprecated)) throw new Error('Old card-based Stories layout remains: ' + deprecated);
 }
+// Monthly (Business) Story alone uses the new premium and policies snapshot.
+for (const [needle, rationale] of [
+  ["story.kind === 'business' ? (", 'Only Business Story receives the specialized layout'],
+  ['<BusinessMonthStory story={story} onOpen={openStory} />', 'Live business story data powers its own full-screen snapshot'],
+  ["const policyMatch = story.title.match(/^([0-9,]+) +(polic(?:y|ies)) *(.*)$/i)", 'Policy count and title stay data-driven'],
+  ["const premium = story.metric !== undefined ? formatMetric(story) : null", 'Gross premium is formatted from live data'],
+  ['style={styles.businessMonthBadge}', 'This Month uses centered rounded badge'],
+  ['style={styles.businessPremiumAmount}', 'Premium is the main headline'],
+  ['style={styles.businessPoliciesCard}', 'Policies are summarized separately'],
+  ['style={styles.businessPremiumCaption}', 'Business metric label is available beneath the summary'],
+  ['style={styles.businessIllustrationWrap}', 'Monthly growth artwork sits directly below figures'],
+  ["if (kind === 'business')", 'Dedicated native business artwork is used'],
+  ['style={styles.businessGrowthBars}', 'Native growth bars remain responsive'],
+  ['style={styles.businessRupeeCoin}', 'Rupee illustration is present'],
+  ['style={styles.businessCashCoin}', 'Premium illustration is present'],
+  ['style={[styles.navButton, styles.navButtonPrimary]}', 'Shared story footer stays unchanged'],
+  ["onPress={previous}", 'Previous navigation stays functional'],
+  ["onPress={next}", 'Next navigation stays functional'],
+]) requireText(stories, needle, 'Business Stories snapshot regression: ' + rationale);
+for (const unexpected of [
+  '₹1,11,71,203.76',
+  '772 policies',
+]) {
+  if (stories.includes(unexpected)) throw new Error('Business Story figures must come from the actual story result, not a mockup: ' + unexpected);
+}
 const recognition = read('app/recognition.tsx');
 const learn = read('app/learn.tsx');
 for (const [screen, title, icon] of [

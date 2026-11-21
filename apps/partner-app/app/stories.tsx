@@ -117,6 +117,10 @@ export default function StoriesScreen() {
               <View style={styles.waveLower} />
             </View>
             <View style={styles.storyContent}>
+              {story.kind === 'business' ? (
+                <BusinessMonthStory story={story} onOpen={openStory} />
+              ) : (
+              <>
               <View style={styles.lessonBadge}>
                 <Ionicons name={story.kind === 'learn' ? 'time-outline' : storyIcon(story.kind)} size={20} color="#0757C8" />
                 <Text numberOfLines={1} style={styles.lessonBadgeText}>{story.eyebrow}</Text>
@@ -129,7 +133,7 @@ export default function StoriesScreen() {
                 style={({ pressed }) => [styles.storyTextLink, pressed && story.route ? styles.storyTextPressed : null]}
               >
                 {story.metric !== undefined ? (
-                  <Text style={[styles.metric, story.kind === 'business' && styles.businessMetric]} adjustsFontSizeToFit numberOfLines={2}>{formatMetric(story)}</Text>
+                  <Text style={styles.metric} adjustsFontSizeToFit numberOfLines={2}>{formatMetric(story)}</Text>
                 ) : null}
                 <Text style={styles.title} numberOfLines={3} adjustsFontSizeToFit minimumFontScale={0.75}>{story.title}</Text>
               </Pressable>
@@ -155,6 +159,8 @@ export default function StoriesScreen() {
                   <Text style={styles.completedText}>Completed today</Text>
                 </View>
               ) : null}
+              </>
+              )}
             </View>
           </ScrollView>
           <View style={[styles.footer, { paddingBottom: Math.max(16, insets.bottom + 8) }]}>
@@ -184,6 +190,71 @@ function formatMetric(story: PartnerStory) {
   const value = Number(story.metric || 0);
   if (story.metric_label?.toLowerCase().includes('idv') || story.metric_label?.toLowerCase().includes('premium')) return formatIndianCurrency(value);
   return String(story.metric);
+}
+
+/**
+ * The fourth (monthly business) story uses a focused financial snapshot instead
+ * of the shared narrative slide. Metrics and policy counts stay backend-driven.
+ */
+function BusinessMonthStory({ story, onOpen }: { story: PartnerStory; onOpen: () => void }) {
+  const policyMatch = story.title.match(/^([0-9,]+) +(polic(?:y|ies)) *(.*)$/i);
+  const premium = story.metric !== undefined ? formatMetric(story) : null;
+  const label = story.metric_label?.trim() || 'Gross premium';
+  const hasRoute = Boolean(story.route);
+  const hasTarget = story.progress_current !== undefined && Boolean(story.progress_target);
+
+  return (
+    <View style={styles.businessSnapshot}>
+      <View style={styles.businessMonthBadge}>
+        <Ionicons name="stats-chart-outline" size={23} color="#075ECB" />
+        <Text style={styles.businessMonthBadgeText}>{story.eyebrow}</Text>
+      </View>
+      <Pressable
+        onPress={onOpen}
+        disabled={!hasRoute}
+        accessibilityRole={hasRoute ? 'link' : undefined}
+        accessibilityLabel={hasRoute ? 'Open ' + story.title : undefined}
+        style={({ pressed }) => [styles.businessSummaryLink, pressed && hasRoute && styles.storyTextPressed]}
+      >
+        {premium ? (
+          <Text style={styles.businessPremiumAmount} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.42}>
+            {premium}
+          </Text>
+        ) : null}
+        <View style={styles.titleRule}><View style={styles.titleRuleActive} /></View>
+        <View style={styles.businessPoliciesCard}>
+          <Ionicons name="document-text-outline" size={31} color="#0E6ADD" />
+          <View style={styles.businessPolicyText}>
+            {policyMatch ? (
+              <>
+                <Text style={styles.businessPolicyCount}>{policyMatch[1]}</Text>
+                <Text style={styles.businessPolicyLabel}>{policyMatch[2] + (policyMatch[3] ? ' ' + policyMatch[3].trim() : '')}</Text>
+              </>
+            ) : (
+              <Text style={styles.businessPolicyLabel}>{story.title}</Text>
+            )}
+          </View>
+        </View>
+      </Pressable>
+      <Text style={styles.businessPremiumCaption}>
+        {premium ? label + ' ' + premium : story.body}
+      </Text>
+      {hasTarget ? (
+        <View style={styles.storyProgressWrap}>
+          <View style={styles.storyProgressTrack}>
+            <View style={[styles.storyProgressFill, { width: (Math.min(100, Math.max(0, (Number(story.progress_current) / Number(story.progress_target)) * 100))) + '%' as `${number}%` }]} />
+          </View>
+          <View style={styles.storyProgressMeta}>
+            <Text style={styles.storyProgressText}>{story.progress_current}</Text>
+            <Text style={styles.storyProgressText}>{story.progress_target}</Text>
+          </View>
+        </View>
+      ) : null}
+      <View style={styles.businessIllustrationWrap} pointerEvents="none">
+        <StoryIllustration kind="business" body={story.body} />
+      </View>
+    </View>
+  );
 }
 
 /** Emphasize the educational keywords without changing backend story copy. */
@@ -232,14 +303,19 @@ function StoryIllustration({ kind, body }: { kind: PartnerStory['kind']; body: s
   }
   if (kind === 'business') {
     return (
-      <View style={styles.illustrationScene}>
-        <View style={styles.sceneHalo} />
-        <View style={styles.growthBars}>
-          {[60, 94, 133, 184].map((height, i) => <View key={i} style={[styles.growthBar, { height }]} />)}
+      <View style={styles.businessGrowthScene}>
+        <View style={styles.businessGrowthHalo} />
+        <View style={styles.businessGrowthPlatform} />
+        <View style={styles.businessGrowthBars}>
+          {[68, 107, 146, 183].map((height, i) => (
+            <View key={i} style={[styles.businessGrowthBar, { height }]}>
+              <View style={styles.businessGrowthBarHighlight} />
+            </View>
+          ))}
         </View>
-        <View style={styles.sceneGrowthArrow}><Ionicons name="trending-up" size={128} color="#117CF4" /></View>
-        <View style={styles.sceneBadge}><Ionicons name="cash-outline" size={44} color="#FFFFFF" /></View>
-        <View style={styles.rupeeBadge}><Text style={styles.rupeeText}>₹</Text></View>
+        <View style={styles.businessGrowthTrend}><Ionicons name="trending-up" size={138} color="#0888F5" /></View>
+        <View style={styles.businessRupeeCoin}><Text style={styles.businessRupeeText}>₹</Text></View>
+        <View style={styles.businessCashCoin}><Ionicons name="cash-outline" size={39} color="#FFFFFF" /></View>
       </View>
     );
   }
@@ -291,6 +367,28 @@ const styles = StyleSheet.create({
   waveMiddle: { position: 'absolute', top: -45, left: -100, width: '160%', height: 200, borderTopLeftRadius: 245, borderTopRightRadius: 180, backgroundColor: '#CFE2FF', opacity: 0.9, transform: [{ rotate: '-10deg' }] },
   waveLower: { position: 'absolute', bottom: -110, right: -130, width: '155%', height: 230, borderTopLeftRadius: 240, borderTopRightRadius: 280, backgroundColor: '#D6E6FF', opacity: 0.88, transform: [{ rotate: '-11deg' }] },
   storyContent: { alignItems: 'center', width: '100%', paddingTop: 8 },
+  // Story 4/5: the reference's large financial headline, policy summary and 3D-style growth artwork.
+  businessSnapshot: { width: '100%', alignItems: 'center', paddingTop: 4 },
+  businessMonthBadge: { minHeight: 40, maxWidth: '95%', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 30, backgroundColor: '#CFE2FF', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
+  businessMonthBadgeText: { color: '#0758C3', fontSize: 14, fontWeight: '900', letterSpacing: 0.5, textTransform: 'uppercase' },
+  businessSummaryLink: { width: '100%', alignItems: 'center', marginTop: 18 },
+  businessPremiumAmount: { alignSelf: 'stretch', textAlign: 'center', color: '#092D68', fontSize: 41, lineHeight: 52, fontWeight: '900', letterSpacing: -1.1 },
+  businessPoliciesCard: { marginTop: 18, width: '100%', minHeight: 78, paddingVertical: 11, paddingHorizontal: 22, borderRadius: 28, backgroundColor: '#DCEBFF', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 15 },
+  businessPolicyText: { flexShrink: 1, alignItems: 'flex-start' },
+  businessPolicyCount: { fontSize: 29, lineHeight: 33, fontWeight: '900', color: '#082D67' },
+  businessPolicyLabel: { fontSize: 17, lineHeight: 22, fontWeight: '700', color: '#0B2E64', textAlign: 'left' },
+  businessPremiumCaption: { marginTop: 13, textAlign: 'center', fontSize: 14, lineHeight: 20, fontWeight: '700', color: '#476384' },
+  businessIllustrationWrap: { width: '100%', minHeight: 250, marginTop: 14, alignItems: 'center', justifyContent: 'center' },
+  businessGrowthScene: { width: '100%', height: 270, maxWidth: 360, alignItems: 'center', justifyContent: 'center' },
+  businessGrowthHalo: { position: 'absolute', top: 17, width: 275, height: 224, borderRadius: 155, backgroundColor: '#D6E7FF' },
+  businessGrowthPlatform: { position: 'absolute', bottom: 6, width: 275, height: 24, borderRadius: 40, backgroundColor: '#C1DEFD', borderWidth: 2, borderColor: '#E7F4FF' },
+  businessGrowthBars: { position: 'absolute', bottom: 25, flexDirection: 'row', alignItems: 'flex-end', gap: 8, left: '19%' },
+  businessGrowthBar: { width: 41, borderWidth: 2, borderColor: '#68BCFF', borderRadius: 10, backgroundColor: '#0F8DF4', overflow: 'hidden', shadowColor: '#126BC5', shadowOpacity: 0.18, shadowRadius: 8, elevation: 4 },
+  businessGrowthBarHighlight: { position: 'absolute', left: 2, top: 3, bottom: 3, width: 7, borderRadius: 4, backgroundColor: '#7DD5FF', opacity: 0.7 },
+  businessGrowthTrend: { position: 'absolute', top: 0, left: '21%', transform: [{ rotate: '-10deg' }] },
+  businessRupeeCoin: { position: 'absolute', bottom: 13, left: '4%', width: 76, height: 76, borderRadius: 41, borderWidth: 5, borderColor: '#FFFFFF', backgroundColor: '#E6F3FF', justifyContent: 'center', alignItems: 'center', shadowColor: '#256CB3', shadowOpacity: 0.16, shadowRadius: 8, elevation: 5 },
+  businessRupeeText: { fontSize: 42, fontWeight: '900', color: '#075ABC' },
+  businessCashCoin: { position: 'absolute', bottom: 10, right: '4%', width: 79, height: 79, borderRadius: 42, borderWidth: 5, borderColor: '#FFFFFF', backgroundColor: '#0968D6', justifyContent: 'center', alignItems: 'center', shadowColor: '#256CB3', shadowOpacity: 0.2, shadowRadius: 8, elevation: 5 },
   lessonBadge: { minHeight: 39, maxWidth: '90%', paddingHorizontal: 15, paddingVertical: 8, borderRadius: 30, backgroundColor: '#D1E3FF', flexDirection: 'row', gap: 9, alignItems: 'center', justifyContent: 'center' },
   lessonBadgeText: { color: '#0856B6', fontSize: 13, fontWeight: '900', letterSpacing: 0.2, textTransform: 'uppercase' },
   storyTextLink: { marginTop: 15, alignSelf: 'stretch', alignItems: 'center' },
