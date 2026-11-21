@@ -13,6 +13,7 @@ import { isN8nWorkbenchPrimary, previewSemiAutoN8nExtraction } from "@/lib/polic
 import type { N8nVerifiedPremiumBreakdown } from "@/lib/policy-intake-n8n-validation";
 import { mapVerifiedN8nMotorPremium, mapVerifiedIffcoCommercialPremium } from "@/lib/policy-n8n-onboarding-premium";
 import { assessIffcoAutoOnboarding } from "@/lib/policy-iffco-auto-eligibility";
+import { assessStandardCommercialDirectConversion } from "@/lib/policy-commercial-direct-eligibility";
 import { policyDateDecision } from "@/lib/policy-date-rule";
 import { enrichVerifiedN8nOnboardingFields, resolveManufacturingYearEvidence } from "@/lib/policy-n8n-onboarding-enrichment";
 import { sameInsuredIdentity, selectVerifiedN8nInsuredDraftIdentity } from "@/lib/policy-n8n-onboarding-insured";
@@ -139,7 +140,14 @@ export async function prepareVerifiedN8nIntakeHandoff(
       fields:parsed.preview.fields,
       commercialPremium:commercial,
     }).eligible;
-  if (commercial && !replaceExistingDraft && !goDigitVerifiedFill && !iffcoVerifiedFill) {
+  const standardCommercialVerifiedFill=Boolean(commercial)&&fillEmptyFields
+    &&assessStandardCommercialDirectConversion({
+      parserId:parsed.preview.parserId,checksPassed:parsed.preview.checksPassed,
+      warnings:parsed.preview.warnings,fields:parsed.preview.fields,
+      commercialPremium:commercial,
+    }).eligible;
+  if (commercial && !replaceExistingDraft && !goDigitVerifiedFill
+      && !iffcoVerifiedFill && !standardCommercialVerifiedFill) {
     return {ok:false,error:"This commercial PDF is not eligible for direct verified handoff; check its insurer-specific evidence before booking."};
   }
   if (!commercial && !parsed.preview.premium) {
@@ -320,7 +328,12 @@ async function preparePolicyIntakeHandoffInternal(
       warnings:verified.warnings,fields:verified.fields,
       commercialPremium:verified.commercialPremium,
     });
-    const eligibleForVerifiedConversion=autoEligibleGoDigit||iffcoReview.eligible;
+    const standardReview=assessStandardCommercialDirectConversion({
+      parserId:verified.parserId,checksPassed:verified.checksPassed,
+      warnings:verified.warnings,fields:verified.fields,
+      commercialPremium:verified.commercialPremium,
+    });
+    const eligibleForVerifiedConversion=autoEligibleGoDigit||iffcoReview.eligible||standardReview.eligible;
     const specificMissingYear=goDigit&&missingGoDigit.includes("vehicle_manufacturing_year");
     const{error}=await admin.from("policy_intake_ai_processing_queue").update({
       // Only previously certified Go Digit and new narrowly evidenced IFFCO
@@ -335,6 +348,7 @@ async function preparePolicyIntakeHandoffInternal(
         ?"go_digit_missing_verified_manufacturing_year":goDigit&&missingGoDigit.length
           ?"go_digit_missing_verified_onboarding_fields"
           :verified.parserId==="iffco_tokio_cv_native_pdf"?iffcoReview.reason
+          :["new_india_cv_native_pdf","united_india_gcv_native_pdf","oriental_gccv_native_pdf"].includes(verified.parserId)?standardReview.reason
           :"bulk_conversion_review_required"),
       processed_at:new Date().toISOString(),
       retry_after:new Date(Date.now()+24*60*60*1000).toISOString(),
@@ -370,7 +384,7 @@ async function preparePolicyIntakeHandoffInternal(
     // Carry verified new/unregistered status into onboarding. Never force a
     // registration number for a policy containing only an RTO prefix.
     registrationMode:verified?.fields.some(field =>
-      field.key==="vehicle_registration_status"&&field.value==="unregistered")?"unregistered":"registered",
+      field.key==="vehicle_registration_status"&&["unregistered","registration_pending"].includes(field.value))?"unregistered":"registered",
     current:{registrationNo:"",vehicleClass:"",make:"",model:"",fuelType:"",manufacturingYear:"",capacity:"",chassisNo:"",engineNo:"",rtoState:"",rtoName:"",policyProduct:"",idv:"",od:"",tp:"",cpa:"",policyNo:"",insurerId:"",validFrom:"",validUpto:""},
     fields:verified?enrichVerifiedN8nOnboardingFields(verified.fields,verified.parserId):(intake.ocr_fields??[]),
     manufacturers:manufacturerOptions,insurers,rcVerified:false,
