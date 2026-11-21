@@ -239,7 +239,7 @@ const styles = StyleSheet.create({
   progressCircleText: { color: '#6954D6', fontSize: 10, fontWeight: '800' },
   heroProgressLabel: { width: 86, flexShrink: 0, color: '#6856D5', fontSize: 9, lineHeight: 13, fontWeight: '700', textAlign: 'center' },
   summary: { marginTop: 12, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#E1E5ED', flexDirection: 'row', alignItems: 'stretch', width: '100%' },
-  summaryItem: { flex: 1, minWidth: 0, minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', paddingHorizontal: 5, paddingVertical: 4, gap: 10 },
+  summaryItem: { flex: 1, minWidth: 0, minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', paddingHorizontal: 5, paddingVertical: 4, gap: 16 },
   summaryItemPressed: { backgroundColor: '#F1F5FB' },
   summaryDivider: { width: 1, alignSelf: 'stretch', backgroundColor: '#A6B3C6', marginVertical: 5 },
   summaryArtwork: { width: 27, height: 29, flexShrink: 0 },
