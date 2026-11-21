@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 const screen = readFileSync(new URL('../app/insurers.tsx', import.meta.url), 'utf8');
 
-// Insurer performance reference: full-width rounded search with right-side date button,
-// Policies-style date-range bottom sheet and direct-select calendar while keeping pinned insurer names.
+// Insurer performance reference: full-width rounded search with right-side date button and inline calendar,
+// compact pinned insurer names and readable horizontally scrolling authorized financial columns.
 assert.match(screen, /function displayInsurerName\(name: string\): string/);
 assert.match(screen, /const NAME_ALIASES: Array<\[RegExp, string\]>/);
 for (const alias of ['United India', 'New India', 'ICICI Lombard', 'Tata AIG', 'Go Digit'])
@@ -28,18 +28,11 @@ assert.match(screen, /<View style=\{styles\.selectedRangeRow\}>[\s\S]*?formatRan
 assert.match(screen, /headerSearch: \{ width: '100%', backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#CBD8E7', borderRadius: 999/, 'Search is a full-width rounded pill');
 assert.match(screen, /dateSection: \{ marginHorizontal: 14, marginTop: 14/, 'Search has equal left and right margins');
 assert.doesNotMatch(screen, /styles\.headerSearchBand|styles\.dateRangeTrigger/, 'No duplicate navy search band or large Date Range card');
-assert.match(screen, /<Modal visible=\{dateExpanded\} transparent/, 'Calendar trigger opens a modal bottom sheet rather than inline content');
-assert.match(screen, /<PartnerDatePicker directSelect label="From"/, 'From uses the same centered calendar as Policies');
-assert.match(screen, /<PartnerDatePicker directSelect label="To"/, 'To uses the same centered calendar as Policies');
-assert.match(screen, /selectedPreset\(draft\.from, draft\.to\)/, 'Draft presets are shown before applying');
-assert.match(screen, /applyPreset\(key\)/, 'MTD, 90 and 365 days select valid reporting ranges');
-assert.match(screen, /setDraft\(range\)/, 'Closing the sheet discards uncommitted changes');
-assert.match(screen, /onPress=\{applyDateRange\}/, 'Apply Filter is the only action that commits');
-assert.match(screen, /setRange\(draft\)/, 'Applying the draft refreshes insurer figures');
-assert.match(screen, /disabled[\s\S]*?All Dates unavailable, report supports a maximum of 366 days/, 'Unsupported all-history range remains disabled');
-assert.match(screen, /maximumDate=\{new Date\(\)\}/, 'Calendar prevents future To dates');
-assert.doesNotMatch(screen, /calendarCells\.map|styles\.datePanel|setPickerTarget/, 'Old inline calendar implementation is removed');
-assert.doesNotMatch(screen, /contentContainerStyle=\{styles\.filterRow\}|Sort insurer register|dateModalOpen/, 'No legacy financial filter strip or sort popup');
+assert.match(screen, /dateExpanded \? \(/, 'Existing calendar opens beneath the selected range');
+assert.match(screen, /calendarCells\.map/, 'Single shared calendar is displayed');
+assert.match(screen, /setPickerTarget\('from'\)/, 'Range selects from and to dates');
+assert.match(screen, /setPickerTarget\('to'\)/, 'From selection advances to To');
+assert.doesNotMatch(screen, /contentContainerStyle=\{styles\.filterRow\}|Sort insurer register|DateTimePicker|dateModalOpen/, 'No financial filter strip, sort modal or native dual picker');
 assert.doesNotMatch(screen, /sortButton|searchRow|tableScrollRef|Swipe table sideways/, 'No separate sort button or legacy table');
 assert.match(screen, /<ScrollView horizontal showsHorizontalScrollIndicator/, 'Financial columns scroll horizontally as requested');
 assert.match(screen, /styles\.fixedNames/, 'Insurer names remain visible in a pinned column');
