@@ -18,8 +18,8 @@ assert.match(provider, /getPartnerProfilePhotoUrl\(nextContext\.identity\.auth_u
 assert.match(provider, /setAvatarUri\(null\)/, 'Clear avatar on logout');
 assert.match(profile, /refreshAvatar\(\)/, 'Partner upload must refresh shared avatar state');
 assert.match(profile, /<PartnerCasePageHeader title="Profile & registration"/, 'Keep the existing navy page header');
-assert.match(profile, /hero: \{[\s\S]*?marginHorizontal: -partnerTheme\.spacing\.lg,\s*marginTop: 0,/, 'Attach the blue profile banner directly beneath the navy title header');
-assert.match(profile, /marginHorizontal: -partnerTheme\.spacing\.lg/, 'Allow profile banner to fill the screen width');
+assert.match(profile, /hero: \{[\s\S]*?marginHorizontal: 0,\s*marginTop: 12,\s*borderRadius: 24,/, 'Approved Profile banner should be inset and rounded');
+assert.match(profile, /profile-id-check-3d\.png/, 'Approved profile hero illustration must be retained');
 assert.match(profile, /<View style=\{styles\.heroTopRow\}>/, 'Photo and sign-out must stay in the upper row');
 assert.match(profile, /<View style=\{styles\.heroBody\}>[\s\S]*?<Text style=\{styles\.name\}>/, 'Name must occupy a separate full-width block');
 assert.doesNotMatch(profile, /numberOfLines=\{1\} style=\{styles\.name\}/, 'Long names must wrap');
