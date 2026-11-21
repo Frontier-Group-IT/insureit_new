@@ -28,7 +28,9 @@ const fields=Object.entries({
   key,value,
   evidence:key==="vehicle_rto_name"
     ?"NIA PDF Name of registration authority: Mandla - MP 51; matches MP-51"
-    :key==="cpa_premium"?cpaEvidence:"Native PDF policy schedule",
+    :key==="cpa_premium"?cpaEvidence
+    :key==="vehicle_registration_status"?"NIA PDF partial registration prefix MP-51; no full plate"
+    :"Native PDF policy schedule",
 }));
 const input={parserId:"new_india_cv_native_pdf",checksPassed:16,warnings:[],
   fields,commercialPremium:printed};
@@ -63,6 +65,7 @@ const rejects=[
     "NIA issuing office city; provisional, NOT registration authority")}],
   ["mismatched authority code",{fields:replace("vehicle_rto_name","Mandla",
     "NIA PDF Name of registration authority: Mandla - MP 52; matches MP-52")}],
+  ["mismatched printed registration prefix",{fields:replace("vehicle_registration_status","unregistered","NIA PDF partial registration prefix MP-52; no full plate")}],
   ["registered plate guessed",{fields:replace("vehicle_registration_status","registered")}],
   ["fake plate inserted",{fields:[...fields,{key:"vehicle_registration_number",value:"MP51AB1234",evidence:"guessed"}]}],
   ["untrained model",{fields:replace("vehicle_model","UNKNOWN")}],
