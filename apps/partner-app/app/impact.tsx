@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, View, type ImageSourcePropType } from 'react-native';
+import { Image, Platform, Pressable, StyleSheet, Text, View, type ImageSourcePropType } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
@@ -98,14 +98,18 @@ export default function ImpactScreen() {
             </View>
             <View style={styles.heroDivider} />
             <View style={styles.heroDetails}>
-              <Text style={styles.heroEyebrow} numberOfLines={1}>Total Protection Value</Text>
-              <Text style={styles.heroValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65}>
-                {shortCurrency(data.active_motor_idv)}
-              </Text>
-            </View>
-            <View pointerEvents="none" style={styles.heroCoverageBadge}>
-              <Ionicons name="shield-checkmark" size={12} color="#2566CF" />
-              <Text style={styles.heroCoverageText} numberOfLines={1}>Your coverage this month</Text>
+              <View style={styles.heroTopRow}>
+                <View style={styles.heroValueGroup}>
+                  <Text style={styles.heroEyebrow} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.78}>Total Protection Value</Text>
+                  <Text style={styles.heroValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65}>
+                    {shortCurrency(data.active_motor_idv)}
+                  </Text>
+                </View>
+                <View pointerEvents="none" style={styles.heroCoverageBadge}>
+                  <Ionicons name="shield-checkmark" size={12} color="#2566CF" />
+                  <Text style={styles.heroCoverageText} numberOfLines={2}>Your coverage this month</Text>
+                </View>
+              </View>
             </View>
           </Pressable>
 
@@ -216,7 +220,7 @@ function ImpactCard({ art, value, label, onPress }: {
       style={({ pressed }) => [styles.impactCard, pressed && styles.pressed]}
     >
       <View style={styles.cardContentRow}>
-        <ImpactIcon art={art} size={40} plain />
+        <ImpactIcon art={art} size={40} plain footprint />
         <Text style={styles.impactLabel} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>{label}</Text>
         <Text style={styles.impactValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{count(value)}</Text>
         <Ionicons name="chevron-forward" size={15} color="#9AA7BB" />
@@ -251,19 +255,27 @@ function ImpactIcon({ art, size, plain = false }: {
   art: ImpactArt;
   size: number;
   plain?: boolean;
+  footprint?: boolean;
 }) {
+  // Android's monthly Policies slot uses the bundled RGBA policy illustration
+  // instead of the indexed-color transparent PNG, which can render invisibly.
+  const source = Platform.OS === 'android' && art === 'monthly-policy'
+    ? require('../assets/partner/actions/add-policy-reference.png')
+    : IMPACT_ART[art];
+  const artworkSize = footprint ? 36 : Math.round(size * 0.89);
   return (
     <View style={[
       styles.iconShell,
       { width: size, height: size, borderRadius: Math.round(size * 0.28) },
       plain && styles.iconShellPlain,
+      footprint && styles.footprintIconSlot,
     ]}>
       <Image
-        source={IMPACT_ART[art]}
+        source={source}
         resizeMode="contain"
         accessibilityElementsHidden
         importantForAccessibility="no-hide-descendants"
-        style={{ width: Math.round(size * 0.89), height: Math.round(size * 0.89) }}
+        style={{ width: artworkSize, height: artworkSize }}
       />
     </View>
   );
@@ -288,14 +300,17 @@ const styles = StyleSheet.create({
   heroCar: {width: 78, height: 76, flexShrink: 0, alignItems: 'center', justifyContent: 'center'},
   heroShield: {position: 'absolute', top: 0, right: -2, backgroundColor: '#EFF6FF', borderRadius: 12},
   heroDivider: { width: 1, alignSelf: 'stretch', marginVertical: 4, backgroundColor: '#D1DAE9' },
-  heroDetails: {flex: 1, minWidth: 0, alignItems: 'flex-start', gap: 2, paddingTop: 17},
+  heroDetails: {flex: 1, minWidth: 0, alignSelf: 'stretch', justifyContent: 'flex-start'},
+  heroTopRow: {flexDirection: 'row', alignItems: 'flex-start', gap: 5, justifyContent: 'space-between'},
+  heroValueGroup: {flex: 1, minWidth: 0, gap: 0},
   heroEyebrow: {color: '#576580', fontSize: 10, lineHeight: 13, fontWeight: '600'},
-  heroValue: {width: '100%', color: '#11274A', fontSize: 28, lineHeight: 34, fontWeight: '800'},
-  heroCoverageBadge: {position: 'absolute', top: 7, right: 12, flexDirection: 'row', alignItems: 'center', gap: 3, borderRadius: 999, paddingHorizontal: 7, paddingVertical: 3, backgroundColor: '#E3EEFF', maxWidth: '65%'},
-  heroCoverageText: {color: '#2566CF', fontSize: 9, fontWeight: '600'},
+  heroValue: {width: '100%', color: '#11274A', fontSize: 23, lineHeight: 28, fontWeight: '800', marginTop: 0},
+  heroCoverageBadge: {width: 106, flexShrink: 0, flexDirection: 'row', alignItems: 'flex-start', gap: 3, borderRadius: 12, paddingHorizontal: 6, paddingVertical: 3, backgroundColor: '#E3EEFF'},
+  heroCoverageText: {flex: 1, minWidth: 0, color: '#2566CF', fontSize: 9, lineHeight: 11, fontWeight: '600'},
   sectionHeader: { marginTop: 17, marginBottom: 9 },
   sectionTitle: { color: '#17233A', fontSize: 16, fontWeight: '800' },
   footprintCard: {backgroundColor: '#FFFFFF', borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: '#E4E9F0'},
+  footprintIconSlot: {flexShrink: 0, alignItems: 'center', justifyContent: 'center'},
   footprintDivider: {height: StyleSheet.hairlineWidth, marginHorizontal: 12, backgroundColor: '#E1E6EF'},
   impactCard: {minHeight: 49, paddingHorizontal: 12, paddingVertical: 4, backgroundColor: '#FFFFFF'},
   cardContentRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 9 },
