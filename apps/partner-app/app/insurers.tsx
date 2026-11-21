@@ -328,12 +328,6 @@ export default function InsurerListScreen() {
                 <Ionicons name="close" size={23} color="#586580" />
               </Pressable>
             </View>
-            <View style={styles.sheetTabs}>
-              <View style={styles.sheetTab}>
-                <Ionicons name="calendar-outline" size={14} color="#4230B3" />
-                <Text style={styles.sheetTabText}>Date Range</Text>
-              </View>
-            </View>
             <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled"
               contentContainerStyle={styles.sheetBody}>
               <Text style={styles.sheetSectionTitle}>Date Range</Text>
@@ -413,9 +407,6 @@ const styles = StyleSheet.create({
   sheetHeader: { paddingHorizontal: 18, paddingVertical: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#E2E5ED' },
   sheetTitle: { fontSize: 19, color: '#17233A', fontWeight: '700' },
   sheetClose: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center' },
-  sheetTabs: { marginHorizontal: 18, marginTop: 10, marginBottom: 4, flexDirection: 'row' },
-  sheetTab: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: '#D0C7FA', borderRadius: 10, backgroundColor: '#EFEAFF', paddingHorizontal: 12, minHeight: 38 },
-  sheetTabText: { fontSize: 12, color: '#4230B3', fontWeight: '700' },
   sheetBody: { paddingHorizontal: 18, paddingTop: 12, paddingBottom: 14, gap: 12 },
   sheetSectionTitle: { fontSize: 14, color: '#182557', fontWeight: '700' },
   sheetPresets: { flexDirection: 'row', alignItems: 'center', gap: 6 },
