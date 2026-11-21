@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Modal, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 
@@ -11,8 +11,8 @@ import { canPartnerAccessCaseRegister } from '@/lib/partner-permissions';
 import { usePartnerSession } from '@/providers/partner-session-provider';
 
 const filters: Array<{key:LifeHealthStatus;label:string}> = [
-  {key:'pending',label:'Pending'},{key:'rejected',label:'Rejected'},
-  {key:'issued',label:'Issued'},{key:'all',label:'All'},
+  {key:'all',label:'All'},{key:'pending',label:'Pending'},
+  {key:'issued',label:'Issued'},{key:'rejected',label:'Rejected'},
 ];
 const businessLineOptions: Array<{key:LifeHealthBusinessLine;label:string}> = [
   {key:'all',label:'All'},{key:'life',label:'Life'},{key:'health',label:'Health'},
@@ -22,7 +22,7 @@ const navy='#071E49';
 export default function LifeHealthCaseRegisterScreen() {
  const router=useRouter();
  const {context}=usePartnerSession();
- const [status,setStatus]=useState<LifeHealthStatus>('pending');
+ const [status,setStatus]=useState<LifeHealthStatus>('all');
  const [businessLine,setBusinessLine]=useState<LifeHealthBusinessLine>('all');
  const [businessLineMenuOpen,setBusinessLineMenuOpen]=useState(false);
  const [query,setQuery]=useState('');
@@ -63,14 +63,40 @@ export default function LifeHealthCaseRegisterScreen() {
  );
  return (
    <PartnerScreen title="Case Register" navyTopBar navyStatusBar bottomNavigationNavy bottomNavigation={<PartnerCaseBottomNavigation/>} onBack={()=>router.back()}>
-     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filters} contentContainerStyle={styles.filtersContent}>
-       {filters.map(item=><Pressable key={item.key} accessibilityRole="button"
+     <View style={styles.filters}>
+       <View style={styles.businessLineAnchor}>
+         <Pressable accessibilityRole="button"
+           accessibilityLabel={`Filter cases by business line: ${businessLineOptions.find(item=>item.key===businessLine)?.label}`}
+           accessibilityState={{selected:status==='all',expanded:businessLineMenuOpen}}
+           onPress={()=>{setStatus('all');setBusinessLineMenuOpen(open=>!open);}}
+           style={[styles.filter,status==='all'&&styles.filterSelected,styles.allFilter]}>
+           <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}
+             style={[styles.filterText,status==='all'&&styles.filterTextSelected]}>
+             {businessLine==='all'?`All (${counts.all})`:businessLineOptions.find(item=>item.key===businessLine)?.label}
+           </Text>
+           <Feather name={businessLineMenuOpen?'chevron-up':'chevron-down'} size={13} color={status==='all'?'#FFFFFF':'#49617D'}/>
+         </Pressable>
+         {businessLineMenuOpen?<View style={styles.businessLineMenu}>
+           {businessLineOptions.map(item=><Pressable key={item.key}
+             accessibilityRole="button"
+             accessibilityLabel={`Filter ${item.label} cases`}
+             accessibilityState={{selected:businessLine===item.key}}
+             onPress={()=>{setBusinessLine(item.key);setStatus('all');setBusinessLineMenuOpen(false);}}
+             style={[styles.businessLineOption,businessLine===item.key&&styles.businessLineOptionSelected]}>
+             <Text style={[styles.businessLineOptionText,businessLine===item.key&&styles.businessLineOptionTextSelected]}>{item.label}</Text>
+             {businessLine===item.key?<Feather name="check" size={13} color="#173A7D"/>:null}
+           </Pressable>)}
+         </View>:null}
+       </View>
+       {filters.filter(item=>item.key!=='all').map(item=><Pressable key={item.key}
+         accessibilityRole="button" accessibilityLabel={`Show ${item.label} cases`}
          accessibilityState={{selected:status===item.key}}
          onPress={()=>{setStatus(item.key);setBusinessLineMenuOpen(false);}}
          style={[styles.filter,status===item.key&&styles.filterSelected]}>
-         <Text numberOfLines={1} style={[styles.filterText,status===item.key&&styles.filterTextSelected]}>{item.label} ({counts[item.key]})</Text>
+         <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}
+           style={[styles.filterText,status===item.key&&styles.filterTextSelected]}>{item.label} ({counts[item.key]})</Text>
        </Pressable>)}
-     </ScrollView>
+     </View>
      <View style={styles.searchWrap}>
        <Ionicons name="search-outline" size={19} color="#63748A"/>
        <TextInput value={query} onChangeText={setQuery} style={styles.search}
@@ -81,26 +107,6 @@ export default function LifeHealthCaseRegisterScreen() {
        <Pressable onPress={()=>void load()}><Text style={styles.retry}>Retry</Text></Pressable></View>:null}
      <View style={styles.listHeading}>
        <Text style={styles.listTitle}>{status==='all'?'All Cases':`${filters.find(item=>item.key===status)?.label} Cases`}</Text>
-       <View style={styles.businessLineAnchor}>
-         <Pressable accessibilityRole="button"
-           accessibilityLabel={`Filter cases by business line: ${businessLineOptions.find(item=>item.key===businessLine)?.label}`}
-           accessibilityState={{expanded:businessLineMenuOpen}}
-           onPress={()=>setBusinessLineMenuOpen(open=>!open)}
-           style={styles.businessLineSelect}>
-           <Text style={styles.businessLineSelectText}>{businessLineOptions.find(item=>item.key===businessLine)?.label}</Text>
-           <Feather name={businessLineMenuOpen?'chevron-up':'chevron-down'} size={13} color="#49617D"/>
-         </Pressable>
-         {businessLineMenuOpen?<View style={styles.businessLineMenu}>
-           {businessLineOptions.map(item=><Pressable key={item.key}
-             accessibilityRole="button"
-             accessibilityState={{selected:businessLine===item.key}}
-             onPress={()=>{setBusinessLineMenuOpen(false);setBusinessLine(item.key);}}
-             style={[styles.businessLineOption,businessLine===item.key&&styles.businessLineOptionSelected]}>
-             <Text style={[styles.businessLineOptionText,businessLine===item.key&&styles.businessLineOptionTextSelected]}>{item.label}</Text>
-             {businessLine===item.key?<Feather name="check" size={13} color="#173A7D"/>:null}
-           </Pressable>)}
-         </View>:null}
-       </View>
      </View>
      {loading?<ActivityIndicator color={navy} style={{marginTop:24}}/>:
        rows.length===0?<Text style={styles.message}>No matching cases found.</Text>:
@@ -193,18 +199,17 @@ const styles=StyleSheet.create({
  modalViewText:{fontSize:11,fontWeight:'700',color:'#FFFFFF'},
  searchWrap:{flexDirection:'row',alignItems:'center',borderRadius:12,borderWidth:1,borderColor:'#CBD8E7',backgroundColor:'#FFF',paddingHorizontal:12,height:44,gap:8,marginTop:4,marginBottom:8},
  search:{flex:1,color:'#172B4D',fontSize:12},
- filters:{marginTop:12,marginBottom:8,flexGrow:0},
- filtersContent:{flexDirection:'row',alignItems:'center',gap:6,paddingRight:4},
- filter:{borderRadius:10,borderColor:'#D6E0EE',borderWidth:1,paddingVertical:9,paddingHorizontal:10,backgroundColor:'#FFF'},
+ // Keep the filter bar above the rest of the page so the All menu can overlap the search and records.
+ filters:{marginTop:12,marginBottom:8,minHeight:42,flexDirection:'row',alignItems:'center',gap:6,position:'relative',zIndex:40,overflow:'visible'},
+ filter:{flex:1,minWidth:0,minHeight:42,borderRadius:11,borderColor:'#D6E0EE',borderWidth:1,paddingHorizontal:5,backgroundColor:'#FFFFFF',alignItems:'center',justifyContent:'center'},
  filterSelected:{backgroundColor:navy,borderColor:navy},
  filterText:{fontSize:11,color:'#49617D',fontWeight:'700'},
- filterTextSelected:{color:'#FFF'},
+ filterTextSelected:{color:'#FFFFFF'},
+ allFilter:{flexDirection:'row',gap:3,paddingHorizontal:5},
  list:{gap:7,paddingBottom:20},
- listHeading:{marginTop:8,marginBottom:3,flexDirection:'row',alignItems:'center',justifyContent:'flex-start',gap:9,position:'relative',zIndex:20,overflow:'visible'},
- businessLineAnchor:{position:'relative',zIndex:21,overflow:'visible'},
- businessLineSelect:{minWidth:85,minHeight:32,paddingHorizontal:11,borderRadius:9,borderWidth:1,borderColor:'#CAD7E7',backgroundColor:'#FFFFFF',flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:9},
- businessLineSelectText:{fontSize:11,fontWeight:'700',color:'#173A7D'},
- businessLineMenu:{position:'absolute',top:35,left:0,width:110,zIndex:30,elevation:12,borderRadius:10,borderWidth:1,borderColor:'#D6E0EE',backgroundColor:'#FFFFFF',overflow:'hidden',shadowColor:'#0A234A',shadowOpacity:0.14,shadowRadius:8,shadowOffset:{width:0,height:4}},
+ listHeading:{marginTop:8,marginBottom:3,flexDirection:'row',alignItems:'center',justifyContent:'flex-start',gap:9},
+ businessLineAnchor:{flex:1,minWidth:0,position:'relative',zIndex:50,overflow:'visible'},
+ businessLineMenu:{position:'absolute',top:46,left:0,width:148,zIndex:60,elevation:16,borderRadius:10,borderWidth:1,borderColor:'#D6E0EE',backgroundColor:'#FFFFFF',overflow:'hidden',shadowColor:'#0A234A',shadowOpacity:0.18,shadowRadius:10,shadowOffset:{width:0,height:5}},
  businessLineOption:{minHeight:37,paddingHorizontal:12,flexDirection:'row',alignItems:'center',justifyContent:'space-between'},
  businessLineOptionSelected:{backgroundColor:'#EEF4FF'},
  businessLineOptionText:{fontSize:11,color:'#49617D',fontWeight:'600'},
