@@ -20,6 +20,7 @@ const mapping = icon.slice(icon.indexOf('const ILLUSTRATED_ICONS:'),icon.indexOf
 assert.ok(mapping.startsWith('const ILLUSTRATED_ICONS:'), 'Illustrated icons must be centrally mapped');
 const highResolution = new Map([
   ['policy-intake', '../assets/partner/icons/more-policy-intake-approved-document.png'],
+  ['impact', '../assets/partner/icons/more-impact-3d-isolated.png'],
 
 ]);
 for (const [kind,title] of illustrated) {
@@ -33,7 +34,7 @@ for (const [kind,title] of illustrated) {
   assert.equal(png.subarray(0,8).toString('hex'),'89504e470d0a1a0a', 'Asset must be local PNG: '+kind);
   assert.ok(png.length > 500, 'Icon artwork missing content for '+kind);
   if (highResolution.has(kind) || kind === 'journey') {
-    const expectedPixels = kind === 'policy-intake' ? 192 : 256;
+    const expectedPixels = kind === 'policy-intake' ? 192 : kind === 'impact' ? 128 : 256;
     assert.equal(png.readUInt32BE(16), expectedPixels, 'Sharp menu illustration has expected width: '+kind);
     assert.equal(png.readUInt32BE(20), expectedPixels, 'Sharp menu illustration has expected height: '+kind);
   }
@@ -53,6 +54,7 @@ assert.match(more,/canPartnerAccess\(context, 'view_policy_intakes'\)/);
 assert.match(more,/PartnerProfileMenuIcon kind=\{iconKind\} size=\{42\}/, 'Policy Intake icon size must match Case Register');
 assert.match(mapping, /quick-actions\/case-register\.png/, 'Case Register must use distinct folder artwork, not the intake shield');
 assert.doesNotMatch(mapping, /['"]case-register['"]:\s*require\(['"][^'"]*more-case-register\.png/, 'Reject old Case Register icon');
+assert.match(mapping, /icons\/more-impact-3d-isolated\.png/, 'My Impact must use approved isolated 3D artwork');
 assert.match(mapping, /icons\/more-journey-3d-new\.png/, 'Use newly approved isolated 3D My Journey artwork');
 assert.match(mapping, /quick-actions\/add-partner\.png/, 'Use the user-approved blue business-person icon with purple plus for Customers');
 assert.doesNotMatch(icon, /scale: 1\.7/, 'Policy Intake must avoid magnifying low-resolution source artwork');
