@@ -1,5 +1,3 @@
-import { mapVerifiedIffcoCommercialPremium } from "./policy-n8n-onboarding-premium.ts";
-
 type Field={key:string;value:string;evidence?:string|null};
 type PrintedPremium={od:number;tp:number;net:number;gst:number;gross:number};
 type Input={parserId:string;checksPassed:number;warnings:readonly string[];fields:readonly Field[];commercialPremium?:PrintedPremium|null};
@@ -47,7 +45,17 @@ export function assessIffcoAutoOnboarding(input:Input):{eligible:boolean;reason:
   const cpa=Number(get("cpa_premium"));
   if(!Number.isFinite(cpa)||cpa<0||!input.commercialPremium)
     return fail("iffco_financial_evidence_incomplete");
-  try {mapVerifiedIffcoCommercialPremium(input.commercialPremium,cpa);}
-  catch{return fail("iffco_printed_financials_unreconciled");}
+  // Independent, currency-cent checks parallel the canonical IFFCO
+  // mapper. Do not import the server-only TS module into Node regressions.
+  const premium=input.commercialPremium;
+  const values=[premium.od,premium.tp,premium.net,premium.gst,premium.gross,cpa];
+  const valid=(n:number)=>Number.isFinite(n)&&n>=0&&n<=1_000_000_000
+    &&Math.abs(n*100-Math.round(n*100))<0.00001;
+  const cents=(n:number)=>Math.round(n*100);
+  if(!values.every(valid)||premium.od<=0||premium.tp<=0
+    ||cents(cpa)>cents(premium.tp)
+    ||Math.abs(cents(premium.od)+cents(premium.tp)-cents(premium.net))>6
+    ||Math.abs(cents(premium.net)+cents(premium.gst)-cents(premium.gross))>6)
+    return fail("iffco_printed_financials_unreconciled");
   return {eligible:true,reason:""};
 }
