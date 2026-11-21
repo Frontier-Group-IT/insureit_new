@@ -507,7 +507,7 @@ function validDate(v: string): boolean {
 function monetary(v: unknown): number {
   if (typeof v !== "number" || !Number.isFinite(v) || v < 0 || v > 1e9
       || Math.abs(v * 100 - Math.round(v * 100)) > 0.00001) fail("n8n_tp_premium_invalid");
-  return v;
+  return v as number;
 }
 const cents = (v: number) => Math.round(v * 100);
 function isTataAigTpParser(id: unknown): id is keyof typeof TP_PRODUCTS {
@@ -538,16 +538,17 @@ function validateTataAigTpResponse(
   if (!Array.isArray(value.fields) || value.fields.length < REQUIRED.length
     || value.fields.length > FIELD_KEYS.size) fail("n8n_tp_fields_invalid");
   const seen = new Set<string>();
-  const fields: N8nOcrField[] = value.fields.map((item: unknown) => {
+  const fields: N8nOcrField[] = (value.fields as unknown[]).map((item: unknown) => {
     if (!obj(item) || typeof item.key !== "string" || !FIELD_KEYS.has(item.key)
       || seen.has(item.key) || typeof item.value !== "string" || !item.value.trim()
       || item.value.length > 300 || typeof item.label !== "string" || item.label.length > 100
       || item.confidence !== null || !Number.isInteger(item.page) || Number(item.page) < 1
       || Number(item.page) > 20 || typeof item.evidence !== "string" || item.evidence.length > 120)
       fail("n8n_tp_field_invalid");
-    seen.add(item.key);
-    return {key:item.key,value:item.value,label:item.label,page:item.page as number,
-      confidence:null,evidence:item.evidence};
+    const f = item as Json;
+    seen.add(f.key as string);
+    return {key:f.key as string,value:f.value as string,label:f.label as string,page:f.page as number,
+      confidence:null,evidence:f.evidence as string};
   });
   if (REQUIRED.some(k => !seen.has(k))) fail("n8n_tp_required_field_missing");
   const get=(key:string)=>fields.find(f=>f.key===key)?.value.trim() ?? "";
@@ -582,11 +583,12 @@ function validateTataAigTpResponse(
   const p=value.premium_components;
   if (!obj(p) || !Array.isArray(p.od_addons) || p.od_addons.length !== 0
     || p.basic_od_premium !== 0 || p.addon_subtotal !== 0) fail("n8n_tp_premium_shape_invalid");
-  const basic=monetary(p.basic_tp_premium),cpa=monetary(p.owner_driver_cpa);
-  const paid=monetary(p.paid_driver_liability),liability=monetary(p.total_liability_premium);
-  const net=monetary(p.printed_net_premium),tax=monetary(p.printed_total_tax);
-  const gross=monetary(p.gross_premium);
-  const receiptDate=p.receipt_date;
+  const money=p as Json;
+  const basic=monetary(money.basic_tp_premium),cpa=monetary(money.owner_driver_cpa);
+  const paid=monetary(money.paid_driver_liability),liability=monetary(money.total_liability_premium);
+  const net=monetary(money.printed_net_premium),tax=monetary(money.printed_total_tax);
+  const gross=monetary(money.gross_premium);
+  const receiptDate=money.receipt_date;
   if (typeof receiptDate !== "string" || !validDate(receiptDate)) fail("n8n_tp_receipt_date_invalid");
   const fieldCents=(k:string)=>/^\d+(?:\.\d{1,2})?$/.test(get(k))
     ? cents(Number(get(k))) : NaN;
@@ -598,8 +600,8 @@ function validateTataAigTpResponse(
     || (longTerm ? cpa!==0 || paid!==0 : cpa<=0))
     fail("n8n_tp_premium_reconciliation_failed");
   return {
-    ok:true,fields,warnings:value.warnings as string[],parserId:value.parser_id,
-    parserVersion:value.parser_version as string,checksPassed:16,receiptDate,
+    ok:true,fields,warnings:value.warnings as string[],parserId:value.parser_id as string,
+    parserVersion:value.parser_version as string,checksPassed:16,receiptDate:receiptDate as string,
     premium:{basicOd:0,odAddons:[],totalOd:0,basicTp:basic,cpa,liability,
       net,exactIgst:tax,tax,gross,tataAig:{product:"Third-Party Only",
       postNcbOd:0,addonSubtotal:0,paidDriverLiability:paid,
