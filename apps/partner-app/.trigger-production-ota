@@ -1,9 +1,9 @@
 Partner production OTA trigger
-release=partner-renewals-compact-skeleton-pr-5058
+release=partner-business-report-reference-redesign-pr-5067
 source=verified-merged-main
-source_pr=5058
-source_merge=455ea9277a7d418b7e2a9ad9ab9afbc19e2766ce
-reason=user-approved-merge-and-publish-renewals-compact-loading-skeleton
+source_pr=5067
+source_merge=bda6f137dd7c93413091bb16f2b5d5a00a362e6e
+reason=user-approved-merge-and-publish-business-report-redesign
 channel=production
 runtime=0.2.0
 requested=2026-11-21
