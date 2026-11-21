@@ -990,7 +990,7 @@ requireText(journey, 'label="Customers" artwork={PartnerAssets.actions.quickCust
 requireText(journey, 'styles.summaryDivider', 'Combined summary must have two visible internal separators.');
 requireText(journey, "summaryItem: { flex: 1, minWidth: 0, minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', paddingHorizontal: 5", 'All three summary metrics must left-align their icon and stacked text within equal-width segments.');
 requireText(journey, "summaryArtwork: { width: 27, height: 29", 'Existing illustrated icons must remain compact.');
-requireText(journey, "paddingHorizontal: 5, paddingVertical: 4, gap: 10", 'Summary icons must have 10px horizontal spacing from labels.');
+requireText(journey, "paddingHorizontal: 5, paddingVertical: 4, gap: 16", 'Summary icons must have 16px horizontal spacing from labels.');
 requireText(journey, "transform: [{ translateY: -6 }]", 'Keep-going subtitle must move up independently of the progress label.');
 requireText(journey, "timelineSection: { marginTop: 13 }", 'Timeline must have its own outside heading spacing.');
 const timelineHeadingIndex = journey.indexOf('<Text style={styles.sectionTitle}>Journey timeline</Text>');
