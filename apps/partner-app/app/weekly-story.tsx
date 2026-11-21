@@ -120,53 +120,53 @@ export default function WeeklyStoryScreen() {
 
           <View style={styles.comparisonSectionHeading}>
             <Text style={styles.sectionTitle}>{comparisonDays === 7 ? 'Compared with last week' : `Compared with previous ${comparisonDays} days`}</Text>
+          <View style={styles.compareHeader}>
+            <View style={styles.rangeWrap}>
+              <PartnerAnchoredDropdown
+                visible={comparisonOpen}
+                onDismiss={() => setComparisonOpen(false)}
+                align="right"
+                menuWidth={142}
+                menu={(
+                  <View style={styles.rangeMenu}>
+                    {[7, 14, 30].map((days) => (
+                      <Pressable
+                        key={days}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Use last ${days} days comparison`}
+                        onPress={() => {
+                          setComparisonDays(days as 7 | 14 | 30);
+                          setComparisonOpen(false);
+                        }}
+                        style={({ pressed }) => [
+                          styles.rangeOption,
+                          comparisonDays === days && styles.rangeOptionActive,
+                          pressed && styles.cardPressed,
+                        ]}
+                      >
+                        <Text style={[styles.rangeOptionText, comparisonDays === days && styles.rangeOptionTextActive]}>{`Last ${days} days`}</Text>
+                        {comparisonDays === days ? <Ionicons name="checkmark" size={14} color="#1765C1" /> : null}
+                      </Pressable>
+                    ))}
+                  </View>
+                )}
+              >
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`Comparison period: last ${comparisonDays} days`}
+                  accessibilityState={{ expanded: comparisonOpen }}
+                  onPress={() => setComparisonOpen((value) => !value)}
+                  style={({ pressed }) => [styles.rangePill, pressed && styles.cardPressed]}
+                >
+                  <Ionicons name="calendar-outline" size={14} color="#33415F" />
+                  <Text style={styles.rangePillText}>{`Last ${comparisonDays} days`}</Text>
+                  <Ionicons name={comparisonOpen ? 'chevron-up' : 'chevron-down'} size={14} color="#33415F" />
+                </Pressable>
+              </PartnerAnchoredDropdown>
+            </View>
+          </View>
           </View>
           <View style={styles.compareCard}>
-            <View style={styles.compareHeader}>
-              <View style={styles.rangeWrap}>
-                <PartnerAnchoredDropdown
-                  visible={comparisonOpen}
-                  onDismiss={() => setComparisonOpen(false)}
-                  align="right"
-                  menuWidth={142}
-                  menu={(
-                    <View style={styles.rangeMenu}>
-                      {[7, 14, 30].map((days) => (
-                        <Pressable
-                          key={days}
-                          accessibilityRole="button"
-                          accessibilityLabel={`Use last ${days} days comparison`}
-                          onPress={() => {
-                            setComparisonDays(days as 7 | 14 | 30);
-                            setComparisonOpen(false);
-                          }}
-                          style={({ pressed }) => [
-                            styles.rangeOption,
-                            comparisonDays === days && styles.rangeOptionActive,
-                            pressed && styles.cardPressed,
-                          ]}
-                        >
-                          <Text style={[styles.rangeOptionText, comparisonDays === days && styles.rangeOptionTextActive]}>{`Last ${days} days`}</Text>
-                          {comparisonDays === days ? <Ionicons name="checkmark" size={14} color="#1765C1" /> : null}
-                        </Pressable>
-                      ))}
-                    </View>
-                  )}
-                >
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={`Comparison period: last ${comparisonDays} days`}
-                    accessibilityState={{ expanded: comparisonOpen }}
-                    onPress={() => setComparisonOpen((value) => !value)}
-                    style={({ pressed }) => [styles.rangePill, pressed && styles.cardPressed]}
-                  >
-                    <Ionicons name="calendar-outline" size={14} color="#33415F" />
-                    <Text style={styles.rangePillText}>{`Last ${comparisonDays} days`}</Text>
-                    <Ionicons name={comparisonOpen ? 'chevron-up' : 'chevron-down'} size={14} color="#33415F" />
-                  </Pressable>
-                </PartnerAnchoredDropdown>
-              </View>
-            </View>
 
             {comparisonLoading ? (
               <View style={styles.compareMessage}><Text style={styles.compareMessageText}>Updating comparison…</Text></View>
@@ -242,7 +242,10 @@ function Trend({ value, caption }: { value: number; caption?: string }) {
   return (
     <View style={[styles.trend, { backgroundColor }]}>
       <Ionicons name={positive ? 'trending-up' : 'trending-down'} size={24} color={color} />
-      <View><Text style={[styles.trendValue, { color }]}>{Math.abs(value).toFixed(1)}%</Text><Text style={[styles.trendCaption, { color }]}>{caption ?? (positive ? 'Higher than last week' : 'Lower than last week')}</Text></View>
+      <View style={styles.trendCopy}>
+        <Text numberOfLines={1} style={[styles.trendValue, { color }]}>{Math.abs(value).toFixed(1)}%</Text>
+        <Text numberOfLines={2} style={[styles.trendCaption, { color }]}>{caption ?? (positive ? 'Higher than last week' : 'Lower than last week')}</Text>
+      </View>
     </View>
   );
 }
@@ -307,9 +310,9 @@ const styles = StyleSheet.create({
   statValue: { color: '#FFFFFF', fontSize: 18, lineHeight: 21, fontWeight: '800' },
   statLabel: { marginTop: 1, color: '#E2EEFF', fontSize: 9.5, lineHeight: 13, fontWeight: '500' },
   statDivider: { width: StyleSheet.hairlineWidth, height: 38, marginHorizontal: 13, backgroundColor: 'rgba(218, 235, 255, 0.30)' },
-  comparisonSectionHeading: { marginTop: 18, marginBottom: 8, paddingHorizontal: 3 },
+  comparisonSectionHeading: { marginTop: 18, marginBottom: 8, paddingHorizontal: 3, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   compareCard: { borderRadius: 16, paddingHorizontal: 15, paddingTop: 13, paddingBottom: 14, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E5EAF2', shadowColor: '#163565', shadowOpacity: 0.05, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 2 },
-  compareHeader: { position: 'relative', zIndex: 5, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end' },
+  compareHeader: { position: 'relative', zIndex: 5, flexShrink: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end' },
   sectionHeader: { marginTop: 19, marginBottom: 9, paddingHorizontal: 3, flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 29 },
   headingRule: { flex: 1, height: 2, marginLeft: 3, backgroundColor: '#36AA97' },
   sectionTitle: { flexShrink: 1, color: '#07142F', fontSize: 15, lineHeight: 20, fontWeight: '800', letterSpacing: -0.2 },
@@ -324,7 +327,7 @@ const styles = StyleSheet.create({
   compareMessage: { minHeight: 69, marginTop: 12, alignItems: 'center', justifyContent: 'center' },
   compareMessageText: { color: '#77839A', fontSize: 10.5, fontWeight: '600' },
   compareErrorText: { color: partnerTheme.colors.danger, fontSize: 10.5, fontWeight: '600' },
-  compareBody: { minHeight: 69, marginTop: 12, flexDirection: 'row', alignItems: 'center' },
+  compareBody: { minHeight: 69, flexDirection: 'row', alignItems: 'center' },
   previousMetric: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 12, paddingRight: 13 },
   compareIcon: { width: 47, height: 47, borderRadius: 24, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F0EAFE' },
   miniBars: { height: 25, flexDirection: 'row', alignItems: 'flex-end', gap: 3 },
@@ -334,8 +337,9 @@ const styles = StyleSheet.create({
   compareLabel: { marginTop: 3, color: '#77839A', fontSize: 10.5, lineHeight: 14, fontWeight: '500' },
   compareDivider: { width: StyleSheet.hairlineWidth, height: 48, marginHorizontal: 12, backgroundColor: '#DCE2EC' },
   trend: { width: 144, minHeight: 58, flexDirection: 'row', alignItems: 'center', gap: 9, paddingHorizontal: 12, borderRadius: 12 },
-  trendValue: { fontSize: 15, lineHeight: 19, fontWeight: '800' },
-  trendCaption: { marginTop: 2, fontSize: 9.5, lineHeight: 12, fontWeight: '500' },
+  trendCopy: { flex: 1, minWidth: 0, alignItems: 'center' },
+  trendValue: { fontSize: 15, lineHeight: 19, fontWeight: '800', textAlign: 'center' },
+  trendCaption: { marginTop: 2, fontSize: 9.5, lineHeight: 12, fontWeight: '500', textAlign: 'center', flexShrink: 1 },
   nextCard: { minHeight: 79, flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 16, paddingHorizontal: 15, paddingVertical: 13, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E1E7F0', shadowColor: '#163565', shadowOpacity: 0.05, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 2 },
   cardPressed: { opacity: 0.72 },
   nextIcon: { position: 'relative', width: 48, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: '#E6F1FF' },
