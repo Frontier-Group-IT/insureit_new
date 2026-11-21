@@ -355,6 +355,29 @@ for (const [fragment, reason] of [
 for (const deprecated of ['styles.metricCard', 'styles.cardCorner', 'styles.metricHeader', 'styles.lowerWave', 'styles.titleArrow']) {
   if (stories.includes(deprecated)) throw new Error('Old card-based Stories layout remains: ' + deprecated);
 }
+// My Journey uses live milestone metrics and distinct road/trophy artwork, not the business chart.
+for (const [needle, rationale] of [
+  ["story.kind === 'journey' ? (", 'Journey is separately composed instead of using a floating card'],
+  ['<JourneyMilestoneStory story={story} onOpen={openStory} />', 'Journey uses live story record'],
+  ['const achieved = Number(story.progress_current);', 'Achieved customers use the verified progress value'],
+  ['const target = Number(story.progress_target);', 'Goal uses the verified progress target'],
+  ['Number.isFinite(achieved)', 'Invalid progress must not create misleading milestone values'],
+  ['Math.max(0, target - achieved)', 'Customers to go are computed, not copied from a misleading title'],
+  ['Math.round(fraction * 100)', 'Progress percentage is computed from achieved / goal'],
+  ['style={styles.journeyRemainingPill}', 'Remaining count has its own clear pill'],
+  ['style={styles.journeyTargetPill}', 'Goal appears in a separate milestone capsule'],
+  ['style={styles.journeyProgressTrack}', 'Progress bar is displayed'],
+  ['style={styles.journeyPercentagePill}', 'Progress percentage is displayed'],
+  ["require('../assets/partner/icons/more-journey-3d-new.png')", '3D Journey map illustration uses existing asset'],
+  ["require('../assets/partner/status/journey-trophy-reference.png')", 'Goal trophy uses existing asset'],
+  ['style={styles.journeyFallbackTitle}', 'Missing progress shows real story copy instead of fabricated values'],
+  ['onPress={onOpen}', 'Journey details link stays functional'],
+  ["onPress={previous}", 'Shared Previous button stays functional'],
+  ["onPress={next}", 'Shared Next button stays functional'],
+]) requireText(stories, needle, 'Journey milestone redesign regression: ' + rationale);
+if (stories.includes('2,606 customers') || stories.includes('394 customers to go') || stories.includes('87% complete')) {
+  throw new Error('Journey must never hard-code customer counts from the screenshot/mockup.');
+}
 // Monthly (Business) Story alone uses the new premium and policies snapshot.
 for (const [needle, rationale] of [
   ["story.kind === 'business' ? (", 'Only Business Story receives the specialized layout'],
