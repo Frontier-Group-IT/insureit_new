@@ -1,4 +1,4 @@
-import { mapVerifiedIffcoCommercialPremium } from "./policy-n8n-onboarding-premium";
+import { mapVerifiedIffcoCommercialPremium } from "./policy-n8n-onboarding-premium.ts";
 
 type Field={key:string;value:string;evidence?:string|null};
 type PrintedPremium={od:number;tp:number;net:number;gst:number;gross:number};
