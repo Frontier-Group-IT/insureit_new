@@ -119,6 +119,8 @@ export default function StoriesScreen() {
             <View style={styles.storyContent}>
               {story.kind === 'business' ? (
                 <BusinessMonthStory story={story} onOpen={openStory} />
+              ) : story.kind === 'journey' ? (
+                <JourneyMilestoneStory story={story} onOpen={openStory} />
               ) : (
               <>
               <View style={styles.lessonBadge}>
@@ -190,6 +192,88 @@ function formatMetric(story: PartnerStory) {
   const value = Number(story.metric || 0);
   if (story.metric_label?.toLowerCase().includes('idv') || story.metric_label?.toLowerCase().includes('premium')) return formatIndianCurrency(value);
   return String(story.metric);
+}
+
+/**
+ * My Journey is a dedicated milestone slide. Both the achieved count and
+ * remaining count come from the same live progress fields, not the story
+ * title (which can describe remaining customers rather than achieved ones).
+ */
+function JourneyMilestoneStory({ story, onOpen }: { story: PartnerStory; onOpen: () => void }) {
+  const achieved = Number(story.progress_current);
+  const target = Number(story.progress_target);
+  const validProgress = story.progress_current != null
+    && story.progress_target != null
+    && Number.isFinite(achieved)
+    && Number.isFinite(target)
+    && achieved >= 0
+    && target > 0;
+  const remaining = validProgress ? Math.max(0, target - achieved) : 0;
+  const fraction = validProgress ? Math.min(1, Math.max(0, achieved / target)) : 0;
+  const percentage = Math.round(fraction * 100);
+  const formatCount = (value: number) => Math.round(value).toLocaleString('en-IN');
+  const canOpen = Boolean(story.route);
+
+  return (
+    <View style={styles.journeySnapshot}>
+      <View style={styles.journeyBadge}>
+        <Ionicons name="people-outline" size={23} color="#1358C5" />
+        <Text style={styles.journeyBadgeText}>{story.eyebrow}</Text>
+      </View>
+      <Pressable
+        onPress={onOpen}
+        disabled={!canOpen}
+        accessibilityRole={canOpen ? 'link' : undefined}
+        accessibilityLabel={canOpen ? 'Open ' + story.title : undefined}
+        style={({ pressed }) => [styles.journeySummaryLink, pressed && canOpen && styles.storyTextPressed]}
+      >
+        {validProgress ? (
+          <>
+            <Text style={styles.journeyAchievedNumber} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
+              {formatCount(achieved)} customers
+            </Text>
+            <Text style={styles.journeyAchievedLabel}>served so far</Text>
+            <View style={styles.journeyRemainingPill}>
+              <Text style={styles.journeyRemainingText}>{formatCount(remaining)} customers to go</Text>
+            </View>
+            <View style={styles.journeyTargetPill}>
+              <Text style={styles.journeyTargetText}>Next milestone: {formatCount(target)}</Text>
+            </View>
+          </>
+        ) : (
+          <>
+            <Text style={styles.journeyFallbackTitle}>{story.title}</Text>
+            <Text style={styles.journeyFallbackBody}>{story.body}</Text>
+          </>
+        )}
+      </Pressable>
+      {validProgress ? (
+        <View style={styles.journeyProgressSection} accessibilityLabel={percentage + '% complete toward ' + formatCount(target) + ' customers'}>
+          <View style={styles.journeyProgressTrack}>
+            <View style={[styles.journeyProgressFill, { width: (fraction * 100) + '%' as `${number}%` }]} />
+          </View>
+          <View style={styles.journeyProgressLabels}>
+            <Text style={styles.journeyProgressCount}>{formatCount(achieved)}</Text>
+            <View style={styles.journeyPercentagePill}>
+              <Text style={styles.journeyPercentageText}>{percentage}% complete</Text>
+            </View>
+            <Text style={styles.journeyProgressCount}>{formatCount(target)}</Text>
+          </View>
+        </View>
+      ) : null}
+      <View style={styles.journeyIllustrationWrap} pointerEvents="none">
+        <View style={styles.journeyArtworkHalo} />
+        <Image source={require('../assets/partner/icons/more-journey-3d-new.png')}
+          resizeMode="contain" style={styles.journeyRoadArtwork}
+          accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
+        <View style={styles.journeyTrophyPodium}>
+          <Image source={require('../assets/partner/status/journey-trophy-reference.png')}
+            resizeMode="contain" style={styles.journeyTrophyArtwork}
+            accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
+        </View>
+      </View>
+    </View>
+  );
 }
 
 /**
@@ -367,6 +451,31 @@ const styles = StyleSheet.create({
   waveMiddle: { position: 'absolute', top: -45, left: -100, width: '160%', height: 200, borderTopLeftRadius: 245, borderTopRightRadius: 180, backgroundColor: '#CFE2FF', opacity: 0.9, transform: [{ rotate: '-10deg' }] },
   waveLower: { position: 'absolute', bottom: -110, right: -130, width: '155%', height: 230, borderTopLeftRadius: 240, borderTopRightRadius: 280, backgroundColor: '#D6E6FF', opacity: 0.88, transform: [{ rotate: '-11deg' }] },
   storyContent: { alignItems: 'center', width: '100%', paddingTop: 8 },
+  // Story 3/5: milestone snapshot based on live customer progress.
+  journeySnapshot: { width: '100%', alignItems: 'center', paddingTop: 3 },
+  journeyBadge: { minHeight: 42, maxWidth: '95%', paddingHorizontal: 20, paddingVertical: 9, borderRadius: 28, backgroundColor: '#CFE1FF', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9 },
+  journeyBadgeText: { fontSize: 15, fontWeight: '900', color: '#1357BD', textTransform: 'uppercase', letterSpacing: 0.4 },
+  journeySummaryLink: { width: '100%', marginTop: 17, alignItems: 'center' },
+  journeyAchievedNumber: { textAlign: 'center', width: '100%', color: '#092E6A', fontSize: 37, lineHeight: 45, letterSpacing: -1.1, fontWeight: '900' },
+  journeyAchievedLabel: { color: '#526B93', fontSize: 22, lineHeight: 28, textAlign: 'center', fontWeight: '500' },
+  journeyRemainingPill: { width: '100%', minHeight: 51, marginTop: 17, borderRadius: 50, backgroundColor: '#E0D9FF', justifyContent: 'center', alignItems: 'center', paddingHorizontal: 8, paddingVertical: 9 },
+  journeyRemainingText: { color: '#4725A6', fontSize: 25, fontWeight: '900', lineHeight: 31, textAlign: 'center' },
+  journeyTargetPill: { marginTop: 12, minHeight: 39, backgroundColor: '#FFFFFF', borderWidth: 1.5, borderColor: '#2069D2', borderRadius: 30, paddingHorizontal: 17, paddingVertical: 7, justifyContent: 'center', alignItems: 'center' },
+  journeyTargetText: { fontSize: 17, color: '#0D397D', fontWeight: '800', textAlign: 'center' },
+  journeyFallbackTitle: { fontSize: 26, lineHeight: 33, color: '#082F69', fontWeight: '900', textAlign: 'center' },
+  journeyFallbackBody: { fontSize: 16, lineHeight: 23, marginTop: 15, color: '#526B93', textAlign: 'center' },
+  journeyProgressSection: { marginTop: 20, alignSelf: 'stretch', paddingHorizontal: 7 },
+  journeyProgressTrack: { width: '100%', height: 11, borderRadius: 99, overflow: 'hidden', backgroundColor: '#BFD8FA' },
+  journeyProgressFill: { height: '100%', borderRadius: 99, backgroundColor: '#683FFF' },
+  journeyProgressLabels: { marginTop: 9, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 7 },
+  journeyProgressCount: { fontSize: 15, color: '#0E3875', fontWeight: '900' },
+  journeyPercentagePill: { backgroundColor: '#E4DFFF', borderRadius: 25, paddingVertical: 5, paddingHorizontal: 12 },
+  journeyPercentageText: { color: '#4925B3', fontSize: 13, fontWeight: '900' },
+  journeyIllustrationWrap: { width: '100%', height: 265, marginTop: 10, alignItems: 'center', justifyContent: 'center' },
+  journeyArtworkHalo: { position: 'absolute', width: 292, height: 237, borderRadius: 155, backgroundColor: '#D2E6FF', opacity: 0.82, top: 18 },
+  journeyRoadArtwork: { width: '100%', maxWidth: 332, height: 257 },
+  journeyTrophyPodium: { position: 'absolute', top: 3, right: '8%', width: 67, height: 69, borderRadius: 36, justifyContent: 'center', alignItems: 'center', backgroundColor: '#D7E9FF', borderWidth: 2, borderColor: '#EAF4FF' },
+  journeyTrophyArtwork: { width: 62, height: 62 },
   // Story 4/5: the reference's large financial headline, policy summary and 3D-style growth artwork.
   businessSnapshot: { width: '100%', alignItems: 'center', paddingTop: 4 },
   businessMonthBadge: { minHeight: 40, maxWidth: '95%', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 30, backgroundColor: '#CFE2FF', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
