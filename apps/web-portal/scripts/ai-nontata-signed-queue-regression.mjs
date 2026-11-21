@@ -326,6 +326,16 @@ assert.equal(assessIffcoAutoOnboarding({...iffcoAuto,fields:[...iffcoAuto.fields
 assert.ok(handoff.includes("const iffcoReview=assessIffcoAutoOnboarding(")
   && handoff.includes("eligibleForVerifiedConversion=autoEligibleGoDigit||iffcoReview.eligible"),
   "IFFCO source and financial validated readiness must be used for the queue");
+assert.ok(actions.includes('const heldIffcoReview=queued?.state==="exception"')
+  &&actions.includes('queued.exception_codes.length===1')
+  &&actions.includes('queued.exception_codes[0]==="booking_review_required"')
+  &&actions.includes('extracted.preview.fingerprint!==queued.extraction_fingerprint'),
+  "IFFCO held retries still require exact queue exception, fingerprint and fresh PDF");
+const studio=file("../components/development/semi-auto-policy-workspace.tsx");
+assert.ok(studio.includes("canExplicitlyRetryIffco(exceptionRow)")
+  &&studio.includes("setAutoConvertRow(exceptionRow)")
+  &&studio.includes("convertVerifiedAiIntake(row.id,true)"),
+  "Only explicitly confirmed IFFCO held retry can invoke direct conversion");
 assert.ok(actions.includes("const assessment=assessIffcoAutoOnboarding(")
   && actions.includes("mapVerifiedIffcoCommercialPremium(commercial")
   && actions.includes('pdfField("vehicle_registration_status")==="registration_pending"'),
