@@ -10,7 +10,7 @@ as $function$
 declare
   v_scope jsonb; v_identity jsonb; v_actor_kind text; v_scope_mode text;
   v_employee_ids uuid[]:=array[]::uuid[]; v_intermediary_ids uuid[]:=array[]::uuid[]; v_group_ids uuid[]:=array[]::uuid[];
-  v_profile_id uuid; v_portal_account_id uuid; v_limit integer:=greatest(1,least(coalesce(p_limit,100),100)); v_offset integer:=greatest(0,least(coalesce(p_offset,0),10000)); v_fetch integer; v_start timestamptz; v_home jsonb; v_result jsonb;
+  v_profile_id uuid; v_portal_account_id uuid; v_limit integer:=greatest(1,least(coalesce(p_limit,100),100)); v_offset integer:=greatest(0,least(coalesce(p_offset,0),100000000)); v_fetch integer; v_start timestamptz; v_home jsonb; v_result jsonb;
 begin
   if p_period not in ('today','last_week','last_month','all') or p_period is null then
     raise exception 'Invalid activity period' using errcode='22023';
@@ -53,7 +53,7 @@ begin
       case when pir.status='needs_attention' then 'Needs your attention' when pir.final_policy_id is not null then 'Policy created' when pir.status='in_review' then 'Operations review' when pir.status='ready_for_review' then 'Ready for review' else initcap(replace(pir.status,'_',' ')) end meta,
       '/policy-intakes/'||pir.id::text route,case when pir.status='needs_attention' then 'attention' else 'operations' end tone, null::text manufacturer
     from public.policy_intake_requests pir where (v_start is null or pir.updated_at>=v_start) and case when v_actor_kind='intermediary' then pir.submitted_by_portal_account_id=v_portal_account_id when v_actor_kind='employee' then pir.submitted_by_profile_id=v_profile_id else false end
-    order by pir.updated_at desc limit 40
+    order by pir.updated_at desc limit v_fetch
   ), learning_events as (
     select 'learn'::text kind,a.card_id entity_id,a.created_at event_at,c.category title,'60-Second Learn' subtitle,
       case when a.is_correct then 'Answered correctly' else 'Learning card completed' end meta,'/learn' route,'learn' tone, null::text manufacturer
