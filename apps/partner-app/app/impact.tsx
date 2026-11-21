@@ -251,7 +251,7 @@ function MonthStat({ art, label, value, onPress }: {
   );
 }
 
-function ImpactIcon({ art, size, plain = false }: {
+function ImpactIcon({ art, size, plain = false, footprint = false }: {
   art: ImpactArt;
   size: number;
   plain?: boolean;
