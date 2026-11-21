@@ -45,6 +45,10 @@ const replace=(key,value,evidence)=>{
   return next;
 };
 assert.equal(check().eligible,true,"Source-certified unregistered NIA layout qualifies for one-click preflight");
+assert.equal(check({fields:replace("policy_product","Commercial Vehicle Package Policy")}).eligible,true,
+  "The live NIA standard printed Package label qualifies for the same certified GCV family");
+assert.equal(check({fields:replace("policy_product","Commercial Vehicle Standalone Own Damage")}).eligible,false,
+  "Different NIA product layouts are not certified by this change");
 assert.equal(assessStandardCommercialDirectConversion(input).eligible,false,
   "Previously registered/zero-CPA-only route must remain unchanged");
 const premium=mapVerifiedNiaCommercialPremium(printed,275);
