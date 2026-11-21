@@ -2,12 +2,15 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { getPartnerStories, type PartnerStory, type PartnerStoriesData } from '@/lib/stories';
 import { formatIndianCurrency } from '@/lib/format';
 
 export default function StoriesScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
   const params = useLocalSearchParams<{ start?: string }>();
   const [data, setData] = useState<PartnerStoriesData | null>(null);
@@ -63,7 +66,8 @@ export default function StoriesScreen() {
 
   return (
     <View style={styles.screen}>
-      <View style={styles.top}>
+      <StatusBar style="light" backgroundColor="#092B62" />
+      <View style={[styles.top, { paddingTop: insets.top + 11 }]}>
         <View style={styles.progress} accessibilityLabel={'Story ' + (index + 1) + ' of ' + (data?.items.length || 5)}>
           {progress.map((active, itemIndex) => (
             <View key={itemIndex} style={styles.progressTrack}>
