@@ -6,6 +6,7 @@ import { segregatePolicyIntakeLanes } from "@/lib/policy-ocr-routing-mode";
 import { assessAiPolicyIntake, acceptedTataAigIssuanceDate, hasVerifiedN8nParserEvidence, ICICI_N8N_IDS, type AiPolicyEvidence, type AiPolicyExceptionCode } from "@/lib/ai-policy-onboarding-eligibility";
 import { loadPolicyIntakeDuplicateMatches } from "@/lib/policy-intake-duplicate";
 import { policyDateDecision } from "@/lib/policy-date-rule";
+import { assessIffcoAutoOnboarding } from "@/lib/policy-iffco-auto-eligibility";
 import type { PolicyIntakeOcrField } from "@/lib/policy-intake-ocr-service";
 import { fetchAllPages } from "@/lib/fetch-all-pages";
 
@@ -381,8 +382,23 @@ async function processClaim(item: Claimed, parserRevision: string) {
   // an extracted PDF. Record correctly extracted Intakes as verified, while
   // never labelling them eligible to book until the real transaction preflight
   // has passed. True duplicate policy numbers remain non-bookable.
+  const certifiedIffcoNewVehicle=extraction.preview.parserId==="iffco_tokio_cv_native_pdf"
+    &&values.get("vehicle_registration_status")==="registration_pending"
+    &&assessIffcoAutoOnboarding({
+      parserId:extraction.preview.parserId,
+      checksPassed:extraction.preview.checksPassed,
+      warnings:extraction.preview.warnings,
+      fields:extraction.preview.fields,
+      commercialPremium:extraction.preview.commercialPremium,
+    }).eligible;
+  // A fully validated IFFCO MP/NEW internal reference with independently
+  // evidenced provisional state/city does not need manual RTO-prefix
+  // confirmation merely to enter canonical booking preflight. Real booking
+  // checks, including dates, customer, duplicate, OTP and ownership, remain.
   const codes=assessment.exceptions
-    .filter(e=>e.code!=="preflight_pending").map(e=>e.code);
+    .filter(e=>e.code!=="preflight_pending"
+      &&!(certifiedIffcoNewVehicle&&e.code==="registration_pending_review"))
+    .map(e=>e.code);
   const state:AiQueueState=isDuplicate?"duplicate"
     :assessment.state==="unsupported"?"unsupported"
     :codes.length?"exception":"verified";
