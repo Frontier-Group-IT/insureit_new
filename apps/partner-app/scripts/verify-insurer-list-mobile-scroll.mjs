@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 const screen = readFileSync(new URL('../app/insurers.tsx', import.meta.url), 'utf8');
 
-// Insurer performance reference: compact full-width date filter, single inline calendar,
+// Insurer performance reference: full-width rounded search with right-side date button and inline calendar,
 // compact pinned insurer names and readable horizontally scrolling authorized financial columns.
 assert.match(screen, /function displayInsurerName\(name: string\): string/);
 assert.match(screen, /const NAME_ALIASES: Array<\[RegExp, string\]>/);
@@ -20,9 +20,15 @@ const asset = readFileSync(new URL('../assets/partner/status/business-growth.png
 assert.ok(asset.includes(Buffer.from('tRNS')), 'Insurer header 3D icon must have a transparent background');
 assert.doesNotMatch(screen, /source=\{PartnerAssets\.actions\.businessPerformance\}/, 'Do not reuse opaque white-tile performance PNG');
 
-assert.match(screen, /accessibilityLabel="Date Range"/, 'Date Range is the only register filter');
-assert.match(screen, /styles\.dateRangeTrigger/, 'Full-width date range control remains');
-assert.match(screen, /dateExpanded \? \(/, 'Calendar opens immediately beneath Date Range');
+assert.match(screen, /accessibilityLabel="Date Range"/, 'Calendar button remains accessible inside search');
+assert.match(screen, /<View style=\{styles\.dateSection\}>\s*<View style=\{styles\.headerSearch\}>/, 'Search is in the reporting filter area');
+assert.match(screen, /<TextInput value=\{search\}[\s\S]*?style=\{styles\.headerSearchInput\}/, 'Existing insurer search state and input remain');
+assert.match(screen, /style=\{styles\.calendarTrigger\}>\s*<Ionicons name="calendar-outline"/, 'Right-side calendar button is inside the search field');
+assert.match(screen, /<View style=\{styles\.selectedRangeRow\}>[\s\S]*?formatRange\(from, to\)/, 'Selected dates appear beneath search');
+assert.match(screen, /headerSearch: \{ width: '100%', backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#CBD8E7', borderRadius: 999/, 'Search is a full-width rounded pill');
+assert.match(screen, /dateSection: \{ marginHorizontal: 14, marginTop: 14/, 'Search has equal left and right margins');
+assert.doesNotMatch(screen, /styles\.headerSearchBand|styles\.dateRangeTrigger/, 'No duplicate navy search band or large Date Range card');
+assert.match(screen, /dateExpanded \? \(/, 'Existing calendar opens beneath the selected range');
 assert.match(screen, /calendarCells\.map/, 'Single shared calendar is displayed');
 assert.match(screen, /setPickerTarget\('from'\)/, 'Range selects from and to dates');
 assert.match(screen, /setPickerTarget\('to'\)/, 'From selection advances to To');
@@ -54,4 +60,4 @@ assert.match(screen, /if \(sortKey === 'payin_desc' && canViewCommercials\)/, 'P
 assert.match(screen, /if \(sortKey === 'retention_desc' && canViewCommercials\)/, 'Retention sort is commercially authorized only');
 assert.match(screen, /accessibilityLabel=\{\`Sort by \$\{column\.label\}\`\}/, 'Column header sorting preserved');
 assert.doesNotMatch(screen, /arrow-forward|summaryCard/, 'No row navigation or summary card');
-console.log('Partner insurer inline date range and compact portrait register regression passed.');
+console.log('Partner insurer combined search/date filter and compact portrait register regression passed.');

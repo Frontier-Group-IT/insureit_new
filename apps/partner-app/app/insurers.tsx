@@ -217,7 +217,7 @@ export default function InsurerListScreen() {
           </View>
         </View>
       </View>
-      <View style={styles.headerSearchBand}>
+      <View style={styles.dateSection}>
         <View style={styles.headerSearch}>
           <Ionicons name="search-outline" size={18} color="#8698AE" />
           <TextInput value={search} onChangeText={setSearch} placeholder="Search insurer"
@@ -226,20 +226,17 @@ export default function InsurerListScreen() {
           {search ? <Pressable accessibilityRole="button" accessibilityLabel="Clear insurer search" onPress={() => setSearch('')}>
             <Ionicons name="close-circle" size={17} color="#94A2B5" />
           </Pressable> : null}
+          <View style={styles.calendarDivider} />
+          <Pressable accessibilityRole="button" accessibilityLabel="Date Range"
+            accessibilityState={{ expanded: dateExpanded }} onPress={openDateRange}
+            hitSlop={8} style={styles.calendarTrigger}>
+            <Ionicons name="calendar-outline" size={20} color="#155BB6" />
+          </Pressable>
         </View>
-      </View>
-
-      <View style={styles.dateSection}>
-        <Pressable accessibilityRole="button" accessibilityLabel="Date Range"
-          accessibilityState={{ expanded: dateExpanded }} onPress={openDateRange}
-          style={styles.dateRangeTrigger}>
-          <Ionicons name="calendar-outline" size={18} color="#155BB6" />
-          <View style={styles.dateRangeCopy}>
-            <Text style={styles.dateRangeTitle}>Date Range</Text>
-            <Text style={styles.dateRangeValue}>{validRange ? formatRange(from, to) : 'Select a valid reporting range'}</Text>
-          </View>
-          <Ionicons name={dateExpanded ? 'chevron-up' : 'chevron-down'} size={18} color="#155BB6" />
-        </Pressable>
+        <View style={styles.selectedRangeRow}>
+          <Ionicons name="calendar-outline" size={13} color="#667D9C" />
+          <Text style={styles.dateRangeValue}>{validRange ? formatRange(from, to) : 'Select a valid reporting range'}</Text>
+        </View>
         {dateExpanded ? (
           <View style={styles.datePanel}>
             <View style={styles.dateFields}>
@@ -406,13 +403,13 @@ const styles = StyleSheet.create({
   headerCopy: { flex: 1, minWidth: 0, justifyContent: 'center' },
   headerTitleRow: { flexDirection: 'row', alignItems: 'center', minWidth: 0, minHeight: 51 },
   headerTitle: { flex: 1, minWidth: 0, fontSize: 18, fontWeight: '800', color: '#FFFFFF', lineHeight: 23 },
-  headerSearchBand: { backgroundColor: '#071E49', marginHorizontal: -16, paddingHorizontal: 12, paddingTop: 4, paddingBottom: 12 },
-  headerSearch: { backgroundColor: '#FFFFFF', borderRadius: 10, minHeight: 42, paddingHorizontal: 12, alignItems: 'center', flexDirection: 'row', gap: 9 },
-  headerSearchInput: { flex: 1, color: '#233D62', fontSize: 12, paddingVertical: 6 },
-  dateSection: { marginHorizontal: 10, marginTop: 10, marginBottom: 8 },
-  dateRangeTrigger: { minHeight: 54, borderRadius: 11, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE6F2', paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center', gap: 10 },
-  dateRangeCopy: { flex: 1, gap: 3 },
-  dateRangeTitle: { fontSize: 12, fontWeight: '800', color: '#173D7B' },
+  // Full-width pill within even side margins; calendar is part of this same search control.
+  headerSearch: { width: '100%', backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#CBD8E7', borderRadius: 999, minHeight: 46, paddingLeft: 14, paddingRight: 6, alignItems: 'center', flexDirection: 'row', gap: 9 },
+  headerSearchInput: { flex: 1, minWidth: 0, color: '#233D62', fontSize: 12, paddingVertical: 6 },
+  dateSection: { marginHorizontal: 14, marginTop: 14, marginBottom: 8 },
+  calendarDivider: { width: 1, height: 22, backgroundColor: '#DCE6F2' },
+  calendarTrigger: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  selectedRangeRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8, paddingHorizontal: 10 },
   dateRangeValue: { fontSize: 10.5, fontWeight: '600', color: '#667D9C' },
   datePanel: { paddingHorizontal: 10, paddingVertical: 12, backgroundColor: '#FFFFFF', borderRadius: 11, marginTop: 7, borderColor: '#DCE6F2', borderWidth: 1 },
   dateFields: { flexDirection: 'row', gap: 9 },
