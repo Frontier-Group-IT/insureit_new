@@ -79,6 +79,15 @@ function commercialBookingIssue(row:SemiAutoIntakeRow,code:string):
   return null;
 }
 
+// An explicit single-policy retry is offered only for prior IFFCO booking
+// review holds. Server-side validation remains authoritative.
+function canExplicitlyRetryIffco(row:SemiAutoIntakeRow):boolean {
+  return !row.is_duplicate&&row.ai_state==="exception"
+    &&row.ai_exceptions?.length===1
+    &&row.ai_exceptions[0]==="booking_review_required"
+    &&(row.ocr_fields??[]).some(field=>field.key==="insurer_name"
+      &&/IFFCO.?TOKIO/i.test(field.value||""));
+}
 const aiStateLabel: Record<string,string> = {
   pending:"Queued",processing:"Reading PDF",exception:"Needs action",
   verified:"Extracted · booking preflight pending",unsupported:"Not trained",
@@ -515,7 +524,8 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
 
   async function convertOneVerified() {
     const row=autoConvertRow;
-    if(!row||isWaiting||row.is_duplicate||row.ai_state!=="verified"||row.ai_exceptions?.length)return;
+    if(!row||isWaiting||row.is_duplicate||
+      !((row.ai_state==="verified"&&!row.ai_exceptions?.length)||canExplicitlyRetryIffco(row)))return;
     setBusy("booking");setAutoConvertMessage(null);
     try{
       const result=await convertVerifiedAiIntake(row.id,true);
@@ -724,7 +734,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
                       </button>
                       <div className="flex shrink-0 items-center gap-0.5">
                         <button type="button" aria-label={"Inspect "+row.intake_number} title="Inspect" onClick={()=>{setExceptionRow(row);setCustomerReview(null);}} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"><Eye className="h-4 w-4"/></button>
-                        {!row.is_duplicate&&row.ai_state==="verified"&&!row.ai_exceptions?.length?<button type="button" aria-label={"Convert "+row.intake_number} title="Convert" disabled={isWaiting} onClick={()=>setAutoConvertRow(row)} className="rounded-lg p-2 text-emerald-700 hover:bg-emerald-50 disabled:opacity-40"><ArrowRight className="h-4 w-4"/></button>:null}
+                        {((!row.is_duplicate&&row.ai_state==="verified"&&!row.ai_exceptions?.length)||canExplicitlyRetryIffco(row))?<button type="button" aria-label={"Convert "+row.intake_number} title="Convert" disabled={isWaiting} onClick={()=>setAutoConvertRow(row)} className="rounded-lg p-2 text-emerald-700 hover:bg-emerald-50 disabled:opacity-40"><ArrowRight className="h-4 w-4"/></button>:null}
                         {row.policy_type==="motor"&&!row.is_duplicate&&["processing","ready_for_review","in_review","needs_attention"].includes(row.status)?<button type="button" aria-label={"Reparse "+row.intake_number} title="Reparse and replace saved draft" disabled={replaceReparseId!==null||isWaiting} onClick={()=>void reparseAndReplace(row)} className="rounded-lg p-2 text-blue-700 hover:bg-blue-50 disabled:opacity-40">{replaceReparseId===row.id?<Loader2 className="h-4 w-4 animate-spin"/>:<RotateCcw className="h-4 w-4"/>}</button>:null}
                       </div>
                     </div>
@@ -1118,6 +1128,13 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
                  </button>
                </div>
              ) : null}
+             {primaryN8n && canExplicitlyRetryIffco(exceptionRow) ? (
+               <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3">
+                 <span className="text-[11px] text-emerald-900">Current PDF and booking checks will be verified again.</span>
+                 <button type="button" disabled={isWaiting} onClick={()=>{setAutoConvertRow(exceptionRow);setExceptionRow(null);}}
+                   className="rounded-lg bg-emerald-700 px-3 py-2 text-[11px] font-semibold text-white hover:bg-emerald-800 disabled:opacity-50">Convert to Policy</button>
+               </div>
+             ):null}
              {primaryN8n && (exceptionRow.ai_exceptions??[]).includes("booking_review_required") ? (
                <div className="mt-3 space-y-2 rounded-lg border border-[#bfd0e4] bg-[#f5f9ff] p-3">
                  <p className="text-[11px] font-bold text-[#19446f]">Review saved draft versus current PDF</p>
