@@ -194,9 +194,12 @@ function validate(payload: unknown, insurer: Insurer, ids: Record<"intake_id" | 
 
   return {
     parserId: insurer, parserVersion: "non-tata-cv-v2",
-    // Preserve registration status=unregistered, omit the RTO prefix from
-    // registration number. The prefix remains verified in the PDF itself.
-    fields: isNewIndiaUnregistered || isIffcoNewVehicle || isUnitedNewVehicle
+    // IFFCO MP/NEW is a PDF-printed *internal reference*, not an RTO plate.
+    // Retain it in verified extraction for the insurer-specific eligibility
+    // evidence check. The canonical onboarding mapper independently clears
+    // registrationNo for registration_pending, so it is never booked as a plate.
+    // NIA/United reference-only numbers remain filtered as before.
+    fields: isNewIndiaUnregistered || isUnitedNewVehicle
       ? fields.filter((f) => f.key !== "vehicle_registration_number") : fields,
     warnings,
     checksPassed: expected.filter((key) => checks[key] === true).length,
