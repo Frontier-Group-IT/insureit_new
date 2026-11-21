@@ -327,6 +327,14 @@ const activity = read('app/activity.tsx');
 const impact = read('app/impact.tsx');
 const journey = read('app/journey.tsx');
 const weeklyStory = read('app/weekly-story.tsx');
+const stories = read('app/stories.tsx');
+for (const fragment of [
+  "import { useSafeAreaInsets } from 'react-native-safe-area-context';",
+  'const insets = useSafeAreaInsets();',
+  '<StatusBar style="light" backgroundColor="#092B62" />',
+  'style={[styles.top, { paddingTop: insets.top + 11 }]}',
+  'style={styles.progress}',
+]) requireText(stories, fragment, 'All INSUREIT Story slides must keep progress dashes below Android/iOS status bars: ' + fragment);
 const recognition = read('app/recognition.tsx');
 const learn = read('app/learn.tsx');
 for (const [screen, title, icon] of [
