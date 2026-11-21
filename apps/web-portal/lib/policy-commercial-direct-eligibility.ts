@@ -41,6 +41,7 @@ export function assessStandardCommercialDirectConversion(input:Input):{eligible:
   // the printed registration authority: never substitute an address, branch,
   // issue office, or provisional 'NEW' prefix for a valid registration.
   if(!fields.get("vehicle_rto_name")?.evidence
+    ||!/\\b(?:RTO|registration authority|registered vehicle)\\b/i.test(fields.get("vehicle_rto_name")?.evidence??"")
     ||/provisional|address city|issuing office|not registration authority/i.test(fields.get("vehicle_rto_name")?.evidence??"")
     ||!(/^[A-Za-z][A-Za-z .-]{2,65}$/.test(get("vehicle_rto_name"))))
     return fail("rto_authority_not_verified");
