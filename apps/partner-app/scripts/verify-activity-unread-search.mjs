@@ -43,7 +43,7 @@ expect(!screen.includes("setBadgeCountAsync"), "Feature does not alter the OS ap
 
 
 const periodMigration = fs.readFileSync(
-  new URL("../../../supabase/migrations/20261121140000_partner_activity_period_filter.sql", import.meta.url),
+  new URL("../../../supabase/migrations/20261121082430_partner_activity_period_filter.sql", import.meta.url),
   "utf8",
 );
 expect(activity.includes("Filter activity by date") && activity.includes('name="chevron-down"'), "Activity header has an accessible compact period dropdown");
