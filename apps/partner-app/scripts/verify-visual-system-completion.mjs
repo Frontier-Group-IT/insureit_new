@@ -368,6 +368,20 @@ for (const required of [
   'if (index <= 0) return;',
   'if (index >= data.items.length - 1) {',
 ]) requireText(stories, required, 'Story navigation accessibility or boundary regression: ' + required);
+// Today story uses a dedicated responsive renewal summary; other slides remain shared.
+for (const expected of [
+  "story.kind === 'today' ? (",
+  "<TodayRenewalStory story={story} onOpen={openStory} />",
+  "function TodayRenewalStory({ story, onOpen }",
+  "story.body.match(/₹",
+  "story.title.match(/",
+  "styles.todayCard",
+  "styles.todayPremiumPanel",
+  "styles.todayArtWrap",
+  "styles.todayCalendar",
+  "onTouchStart={(event) => event.stopPropagation()}",
+]) requireText(stories, expected, 'Today renewal design regression: ' + expected);
+if (stories.includes('₹939') || stories.includes('1 renewal is due in 7 days')) throw new Error('Today story renewal values must not be hardcoded');
 // Monthly (Business) Story alone uses the new premium and policies snapshot.
 for (const [needle, rationale] of [
   ["story.kind === 'business' ? (", 'Only Business Story receives the specialized layout'],
