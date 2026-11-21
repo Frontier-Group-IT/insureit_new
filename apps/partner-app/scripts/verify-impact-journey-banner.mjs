@@ -9,9 +9,11 @@ for(const [fragment,reason] of [
   ['styles.journeyRoad','Decorative winding road'],
   ['styles.journeyBlueCar','Existing blue car imagery'],
   ['name="location-sharp"','Journey destination pin'],
-  ['styles.journeyArrowCircle','Round white arrow action'],
   ['Milestones and achievements','Journey subtitle remains'],
-  ['minHeight: 128','Full illustrated banner height'],
+  ['minHeight: 96','Compact illustrated banner height'],
 ]) assert.ok(src.includes(fragment),reason);
 assert.ok(!src.includes('<ImpactIcon art="journey" size={46} />'),'Legacy plain journey card removed');
-console.log('Reference-style Protection delivered journey banner and navigation verified');
+assert.ok(!src.includes('journeyArrowCircle'),'Decorative right arrow is removed from compact card');
+assert.ok(src.includes('<ImpactIcon art={art} size={54} plain />'),'Policies and Customers Added icons enlarged');
+assert.ok(src.includes('<ImpactIcon art="premium" size={49} plain />'),'Gross Premium icon size remains unchanged');
+console.log('Compact Protection delivered journey banner and navigation verified');
