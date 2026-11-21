@@ -114,14 +114,14 @@ export async function getPartnerUnreadActivityCount(limit = 100) {
   return activity.items.reduce((count, item) => count + (readKeys.has(partnerActivityEventKey(item)) ? 0 : 1), 0);
 }
 
-/** All-period unread badge count, capped once the UI can display 99+. */
+/** Current-day unread badge count, matching the Activity screen's default Today filter. */
 export async function getPartnerUnreadActivityBadgeCount() {
   const pageSize = 100;
   let offset = 0;
   let unread = 0;
 
   while (true) {
-    const page = await getPartnerActivityByPeriod('all', offset, pageSize);
+    const page = await getPartnerActivityByPeriod('today', offset, pageSize);
     if (!page.items.length) return unread;
     const readKeys = await getPartnerActivityReadKeys(page.items);
     unread += page.items.reduce(
