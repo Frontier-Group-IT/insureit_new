@@ -27,7 +27,7 @@ export function assessIffcoAutoOnboarding(input:Input):{eligible:boolean;reason:
     ||!/^Commercial Vehicle - Miscellaneous Class D$/i.test(get("vehicle_class"))
     ||!["registration_pending","registered"].includes(get("vehicle_registration_status"))
     ||get("vehicle_make")!=="JCB"
-    ||!(/^(?:JCB 3DX PLUS 2WD BACKHOE LOADER|VMT?\s*117\s+LC\s+NDD\s+COMPACTOR)$/i.test(get("vehicle_model"))))
+    ||!(/^(?:JCB 3DX PLUS 2WD BACKHOE LOADER|VMT?\s*117\s+LC\s+NDD\s+COMPACTOR|JCB\s+455[- ]5N\s+(?:WHEEL\s+)?LOADER)$/i.test(get("vehicle_model"))))
     return fail("iffco_layout_needs_separate_certification");
   if(!/^(?:19|20)\d{2}$/.test(get("vehicle_manufacturing_year"))
     ||Number(get("vehicle_manufacturing_year"))>new Date().getUTCFullYear()
@@ -36,7 +36,9 @@ export function assessIffcoAutoOnboarding(input:Input):{eligible:boolean;reason:
     ||get("vehicle_fuel_type")!=="Diesel"
     ||!fields.get("vehicle_fuel_type")?.evidence?.startsWith("Manufacturer-model Diesel specification")
     ||(/VMT?\s*117\s+LC\s+NDD/i.test(get("vehicle_model"))
-      &&!fields.get("vehicle_make")?.evidence?.startsWith("Manufacturer-model JCB VM117 NDD specification")))
+      &&!fields.get("vehicle_make")?.evidence?.startsWith("Manufacturer-model JCB VM117 NDD specification"))
+    ||(/JCB\s+455[- ]5N/i.test(get("vehicle_model"))
+      &&!fields.get("vehicle_fuel_type")?.evidence?.startsWith("Manufacturer-model Diesel specification (JCB 455-5N wheel loader)")))
     return fail("iffco_vehicle_evidence_incomplete");
   const registration=get("vehicle_registration_number").toUpperCase().replace(/[ -]/g,"");
   const isPending=get("vehicle_registration_status")==="registration_pending";
