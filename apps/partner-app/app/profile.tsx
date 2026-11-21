@@ -260,7 +260,7 @@ const registrationSideIcons: Record<string, ImageSourcePropType> = {
 function SectionTitle({ icon, title }: { icon: React.ComponentProps<typeof Ionicons>['name']; title: string }) {
   return (
     <View style={styles.sectionTitleRow}>
-      <View style={styles.sectionTitleIcon}><Ionicons name={icon} size={22} color="#FFFFFF" /></View>
+      <View style={styles.sectionTitleIcon}><Image source={require('../assets/partner/profile/registration-3d.png')} style={styles.registrationTitleArtwork} resizeMode="contain" accessible={false} /></View>
       <Text style={styles.sectionTitle}>{title}</Text>
       <View style={styles.sectionTitleRule} />
     </View>
@@ -499,7 +499,8 @@ const styles = StyleSheet.create({
   },
 
   sectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 23, marginBottom: 14, paddingLeft: 3 },
-  sectionTitleIcon: { width: 33, height: 33, borderRadius: 9, backgroundColor: '#8445DF', alignItems: 'center', justifyContent: 'center', shadowColor: '#7640CA', shadowOpacity: 0.18, shadowRadius: 5, elevation: 2 },
+  sectionTitleIcon: { width: 34, height: 34, alignItems: 'center', justifyContent: 'center' },
+  registrationTitleArtwork: { width: 34, height: 34 },
   sectionTitle: { color: '#111A35', fontSize: 17, lineHeight: 23, fontWeight: '800' },
   sectionTitleRule: { flex: 1, height: 2, backgroundColor: '#8D50D9', marginLeft: 5 },
   details: { gap: 11, paddingBottom: 18 },
