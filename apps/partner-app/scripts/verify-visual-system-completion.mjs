@@ -1214,7 +1214,8 @@ requireText(weeklyStory, 'accessibilityState={{ expanded: comparisonOpen }}', 'Y
 requireText(weeklyStory, '[7, 14, 30].map((days)', 'Your Week comparison range control must offer 7, 14 and 30 day options.');
 requireText(weeklyStory, 'getPartnerBusinessRange(range.from, range.to)', 'Your Week non-default comparison ranges must load scoped business-range data.');
 for (const tinySize of ['fontSize:7.5', 'fontSize:8.5', 'fontSize:8,', 'fontSize:9,']) if (weeklyStory.includes(tinySize)) throw new Error(`Your Week must not regress to tiny typography: ${tinySize}`);
-for (const recognitionAsset of ['status.achievement', 'actions.policyChecklist', 'actions.renewals', 'status.journey']) requireText(recognition, `PartnerAssets.${recognitionAsset}`, `Recognition is missing ${recognitionAsset} artwork.`);
+for (const recognitionAsset of ['status.achievement', 'actions.renewals', 'status.journey']) requireText(recognition, `PartnerAssets.${recognitionAsset}`, `Recognition is missing ${recognitionAsset} artwork.`);
+requireText(recognition, "if (icon === 'learn') return require('../assets/partner/status/learning-rhythm-3d.png');", 'Learning rhythm must use its dedicated 3D achievement artwork.');
 for (const tinySize of ['fontSize:7.5', 'fontSize:8.5']) if (recognition.includes(tinySize)) throw new Error(`Recognition must not regress to tiny typography: ${tinySize}`);
 for (const learnAsset of ['actions.policyChecklist', 'status.verified']) requireText(learn, `PartnerAssets.${learnAsset}`, `Learn is missing ${learnAsset} artwork.`);
 for (const tinySize of ['fontSize: 7.2', 'fontSize: 7.5', 'fontSize: 8.5', 'fontSize: 8,', 'fontSize: 9,']) if (learn.includes(tinySize)) throw new Error(`Learn must not regress to tiny typography: ${tinySize}`);
