@@ -229,6 +229,39 @@ assert.ok(eligibility.includes("resolveManufacturingYearEvidence(input.fields)")
 assert.ok(signed.includes('"vehicle_registration_year"'));
 assert.ok(unified.includes("Registration-year fallback"));
 
+// Exact current-PDF IFFCO fields must map into the existing unregistered
+// MISD onboarding form, without treating MP/NEW as an official plate.
+const iffcoOcrFields=[
+  {key:"vehicle_registration_status",label:"Status",value:"registration_pending"},
+  {key:"vehicle_class",label:"Class",value:"Commercial Vehicle - Miscellaneous Class D"},
+  {key:"vehicle_make",label:"Make",value:"JCB"},
+  {key:"vehicle_model",label:"Model",value:"JCB 3DX PLUS 2WD BACKHOE LOADER"},
+  {key:"vehicle_fuel_type",label:"Fuel",value:"Diesel"},
+  {key:"vehicle_capacity",label:"CC",value:"4765"},
+  {key:"vehicle_rto_state",label:"RTO state",value:"Madhya Pradesh"},
+  {key:"vehicle_rto_name",label:"Provisional city",value:"Jabalpur"},
+];
+const iffcoApplied=buildPolicyOcrOnboardingUpdate({
+  mode:"create",registrationMode:"registered",rcVerified:false,
+  current:baseOcrState,fields:iffcoOcrFields,manufacturers:["JCB"],insurers:[],
+});
+assert.equal(iffcoApplied.registrationMode,"unregistered");
+assert.equal(iffcoApplied.next.registrationNo,"");
+assert.equal(iffcoApplied.next.vehicleClass,"MISD");
+for(const [key,expected] of Object.entries({
+  make:"JCB",fuelType:"Diesel",capacity:"4765",rtoState:"Madhya Pradesh",
+  rtoName:"Jabalpur",model:"JCB 3DX PLUS 2WD BACKHOE LOADER"})){
+  assert.equal(iffcoApplied.next[key],expected,"IFFCO mapper must preserve "+key);
+}
+assert.ok(handoff.includes('IFFCO_PROVISIONAL_RTO_FROM_INSURED_ADDRESS:')
+  && handoff.includes("IFFCO_FUEL_FROM_JCB_MODEL:")
+  && handoff.includes('iffcoProvisionalRtoField')
+  && handoff.includes('iffcoModelFuel'),
+  "IFFCO non-PDF provenance must reach the stored policy intake draft remarks");
+assert.ok(unified.includes("Provisional IFFCO policyholder address city")
+  && unified.includes("Diesel inferred from the JCB 3DX Plus manufacturer model"),
+  "IFFCO fallback values should be distinguished from verified PDF registration/fuel");
+
 // The source PDF's RTO-authority cell is blank; the NIA issuing-office city
 // is explicitly provisional and must never be treated as verified RC data.
 assert.ok(handoff.includes("NIA_PROVISIONAL_RTO_FROM_ISSUING_OFFICE:")
