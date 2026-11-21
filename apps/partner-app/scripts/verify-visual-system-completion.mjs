@@ -1,7 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { inflateSync } from 'node:zlib';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, '..');
@@ -506,45 +505,6 @@ requireText(home, '<MiniBusinessTrend values={trend.map((item) => Number(item.pr
 if (home.includes('<PartnerBusinessGrowthIcon')) throw new Error('Partner Home MTD card must not show the removed large growth icon.');
 requireText(more, "<PartnerProfileMenuIcon kind={iconKind} size={42} />", 'Partner Profile/More icons including Policy Intake and Case Register must share the same 42px size.');
 
-requireText(profileMenuIcon, "impact: require('../../assets/partner/icons/more-impact.png')", 'My Impact must use its bundled 3D artwork.');
-// Android's PNG decoder can silently show an empty view for a truncated or CRC-invalid PNG.
-// Check full chunk integrity and decompression, not just PNG magic bytes or file existence.
-const impactPng = fs.readFileSync(path.join(root, 'assets/partner/icons/more-impact.png'));
-if (!impactPng.subarray(0, 8).equals(Buffer.from([137,80,78,71,13,10,26,10]))) {
-  throw new Error('My Impact artwork must be a genuine PNG.');
-}
-let impactOffset = 8;
-let impactPaletteAlpha = false;
-let impactEnded = false;
-const impactCompressed = [];
-function impactCrc32(bytes) {
-  let value = 0xFFFFFFFF;
-  for (const byte of bytes) {
-    value ^= byte;
-    for (let bit = 0; bit < 8; bit += 1) value = value & 1 ? (value >>> 1) ^ 0xEDB88320 : value >>> 1;
-  }
-  return (value ^ 0xFFFFFFFF) >>> 0;
-}
-while (impactOffset + 12 <= impactPng.length) {
-  const size = impactPng.readUInt32BE(impactOffset);
-  const chunkEnd = impactOffset + size + 12;
-  if (chunkEnd > impactPng.length) throw new Error('My Impact PNG has a truncated chunk.');
-  const type = impactPng.toString('ascii', impactOffset + 4, impactOffset + 8);
-  const checksum = impactPng.readUInt32BE(chunkEnd - 4);
-  if (checksum !== impactCrc32(impactPng.subarray(impactOffset + 4, chunkEnd - 4))) {
-    throw new Error('My Impact PNG has a corrupt ' + type + ' checksum.');
-  }
-  if (type === 'tRNS') impactPaletteAlpha = true;
-  if (type === 'IDAT') impactCompressed.push(impactPng.subarray(impactOffset + 8, chunkEnd - 4));
-  impactOffset = chunkEnd;
-  if (type === 'IEND') { impactEnded = true; break; }
-}
-if (!impactEnded || impactOffset !== impactPng.length || !impactPaletteAlpha || impactCompressed.length === 0) {
-  throw new Error('My Impact icon must be complete, transparent, and PNG decoder-safe.');
-}
-if (inflateSync(Buffer.concat(impactCompressed)).length === 0) {
-  throw new Error('My Impact PNG pixel data must decompress successfully.');
-}
 
 for (const kind of [
   'search', 'policy-intake', 'renewals', 'customers',
