@@ -11,6 +11,7 @@ import { buildPolicyOcrOnboardingUpdate, normalizeVerifiedMotorPowerKw } from "@
 import { policyDateDecision } from "@/lib/policy-date-rule";
 import { mapVerifiedGoDigitCommercialPremium, mapVerifiedIffcoCommercialPremium, mapVerifiedN8nMotorPremium, verifiedCpaSelectionMatches } from "@/lib/policy-n8n-onboarding-premium";
 import { assessIffcoAutoOnboarding } from "@/lib/policy-iffco-auto-eligibility";
+import { assessStandardCommercialDirectConversion } from "@/lib/policy-commercial-direct-eligibility";
 import { resolveManufacturingYearEvidence } from "@/lib/policy-n8n-onboarding-enrichment";
 import { checkSemiAutoReadiness, type SemiAutoIssue } from "@/lib/policy-intake-semi-auto";
 import { isN8nWorkbenchPrimary, previewSemiAutoN8nExtraction, applySemiAutoN8nExtraction, type SemiAutoN8nResult } from "@/lib/policy-intake-semi-auto-n8n";
@@ -289,12 +290,12 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
   // Explicit, one-at-a-time retry of a previously held IFFCO booking attempt.
   // All unrelated queue errors remain blocked, and the original current PDF,
   // fingerprint and the canonical booking checks are reverified below.
-  const heldIffcoReview=queued?.state==="exception"
-    &&queued.parser_id==="iffco_tokio_cv_native_pdf"
-    &&queued.checks_passed===18
+  const heldReview=queued?.state==="exception"
+    &&queued.parser_id!==null
+    &&hasVerifiedN8nParserEvidence(queued.parser_id,queued.checks_passed,[])
     &&queued.exception_codes.length===1
     &&queued.exception_codes[0]==="booking_review_required";
-  if(queueError||!queued||(!heldIffcoReview
+  if(queueError||!queued||(!heldReview
       &&(queued.state!=="verified"||queued.exception_codes.length>0))
       ||!queued.extraction_fingerprint)
     return fail("Extraction","The current Intake has other extraction or booking exceptions requiring review.");
@@ -302,7 +303,7 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
   if(!extracted.ok)return fail("Extraction",extracted.error);
   if(extracted.preview.documentId!==queued.document_id||
      extracted.preview.fingerprint!==queued.extraction_fingerprint||
-     (heldIffcoReview&&extracted.preview.parserId!=="iffco_tokio_cv_native_pdf")||
+     (heldReview&&extracted.preview.parserId!==queued.parser_id)||
      !hasVerifiedN8nParserEvidence(extracted.preview.parserId,
        extracted.preview.checksPassed,extracted.preview.warnings))
     return fail("Source PDF","The current PDF, fingerprint or strict insurer verification is invalid. Recheck this Intake before booking.");
@@ -352,11 +353,10 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
       if(cpaFields.length!==1)return fail("IFFCO CPA","Original PDF has ambiguous owner-driver CPA evidence.");
       try {verifiedMoney=mapVerifiedIffcoCommercialPremium(commercial,Number(cpaFields[0].value));}
       catch {return fail("IFFCO premium","IFFCO OD, TP, CPA, net, GST or gross differs from the original PDF.");}
-    }else{
-      // Existing working Go Digit route and premium rule: unchanged.
-      if (extracted.preview.parserId!=="go_digit_cv_native_pdf"
-          || extracted.preview.checksPassed!==18 || extracted.preview.warnings.length)
-        return fail("Premium","This commercial layout still requires insurer-specific booking review.");
+    }else if(extracted.preview.parserId==="go_digit_cv_native_pdf"){
+      // Existing working Go Digit premium/registration mapping is preserved.
+      if (extracted.preview.checksPassed!==18 || extracted.preview.warnings.length)
+        return fail("Premium","The Go Digit parser evidence is incomplete.");
     // Under the configured operational rule, a missing manufacturing year
     // may use the policy's separately printed registration year. This is a
     // labelled fallback, never a claim about manufacturer evidence or a
@@ -373,6 +373,18 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
       return fail("Policy product","The commercial product is not the verified combined Go Digit motor policy.");
     try {verifiedMoney=mapVerifiedGoDigitCommercialPremium(commercial);}
       catch {return fail("Premium","Printed OD, TP, net, GST and gross do not reconcile with the canonical form.");}
+    }else{
+      const assessment=assessStandardCommercialDirectConversion({
+        parserId:extracted.preview.parserId,checksPassed:extracted.preview.checksPassed,
+        warnings:extracted.preview.warnings,fields:extracted.preview.fields,
+        commercialPremium:commercial,
+      });
+      if(!assessment.eligible)return fail("Commercial evidence",
+        "This policy needs evidence review: "+assessment.reason);
+      // Only source-verified zero-CPA layouts qualify for this standard
+      // commercial split. Positive CPA requires a certified insurer mapper.
+      try {verifiedMoney=mapVerifiedGoDigitCommercialPremium(commercial);}
+      catch{return fail("Commercial premium","Printed OD, TP, net, GST and gross could not be reconciled.");}
     }
   } else {
     if (!extracted.preview.premium)
@@ -390,8 +402,9 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
   if(forwarded.draft.issuanceDate!==issuanceDate)
     return fail("Saved issuance date","The saved draft's issue date differs from the verified current PDF. Review it before booking; no existing manual value was overwritten.");
   if(forwarded.draftRevision<1)return fail("Draft revision","Canonical revision is unavailable.");
+  const expectedCommercialClass=/Goods Carrying Vehicle/i.test(pdfField("vehicle_class"))?"GCV":"MISD";
   if(commercial && (forwarded.draft.policyProduct!=="Package"
-    || forwarded.draft.vehicleClass!=="MISD"
+    || forwarded.draft.vehicleClass!==expectedCommercialClass
     || forwarded.draft.manufacturingYear!==manufacturingEvidence.year
     || forwarded.draft.capacity!==pdfField("vehicle_capacity")
     || forwarded.draft.rtoName!==pdfField("vehicle_rto_name")
