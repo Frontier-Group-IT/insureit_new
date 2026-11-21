@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -8,12 +8,13 @@ import { PartnerCaseBottomNavigation } from '@/components/partner-case-bottom-na
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { getPartnerInsurerLogoSource, getPartnerManufacturerLogoSource } from '@/lib/catalog-logos';
 import {
-  getPartnerActivity,
+  getPartnerActivityByPeriod,
   getPartnerActivityReadKeys,
   markPartnerActivityRead,
   partnerActivityEventKey,
   type PartnerActivityData,
   type PartnerActivityItem,
+  type PartnerActivityPeriod,
 } from '@/lib/engagement';
 import { PartnerAssets } from '@/lib/partner-assets';
 
@@ -24,27 +25,59 @@ export default function ActivityScreen() {
   const [error, setError] = useState('');
   const [query, setQuery] = useState('');
   const [activityFilter, setActivityFilter] = useState<'unread' | 'read' | 'all'>('all');
+  const [period, setPeriod] = useState<PartnerActivityPeriod>('today');
+  const [periodMenuOpen, setPeriodMenuOpen] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [moreError, setMoreError] = useState('');
+  const requestVersion = useRef(0);
   const [readKeys, setReadKeys] = useState<Set<string>>(new Set());
 
   const load = useCallback(async () => {
+    const version = ++requestVersion.current;
     setLoading(true);
     setError('');
+    setMoreError('');
+    setHasMore(false);
     try {
-      const nextData = await getPartnerActivity(100);
+      const nextData = await getPartnerActivityByPeriod(period);
       const nextReadKeys = await getPartnerActivityReadKeys(nextData.items);
+      if (requestVersion.current !== version) return;
       setData(nextData);
       setReadKeys(nextReadKeys);
+      setHasMore(nextData.has_more);
     } catch {
+      if (requestVersion.current !== version) return;
       setData(null);
       setError('Recent activity could not be loaded.');
     } finally {
-      setLoading(false);
+      if (requestVersion.current === version) setLoading(false);
     }
-  }, []);
+  }, [period]);
 
   useEffect(() => {
     void load();
+    return () => { requestVersion.current += 1; };
   }, [load]);
+
+  async function loadMore() {
+    if (!data || !hasMore || loadingMore || loading) return;
+    const version = requestVersion.current;
+    setLoadingMore(true);
+    setMoreError('');
+    try {
+      const nextPage = await getPartnerActivityByPeriod(period, data.items.length);
+      const nextReadKeys = await getPartnerActivityReadKeys(nextPage.items);
+      if (requestVersion.current !== version) return;
+      setData((current) => current ? { ...current, items: [...current.items, ...nextPage.items] } : current);
+      setReadKeys((current) => new Set([...current, ...nextReadKeys]));
+      setHasMore(nextPage.has_more);
+    } catch {
+      if (requestVersion.current === version) setMoreError('Could not load older activity. Try again.');
+    } finally {
+      if (requestVersion.current === version) setLoadingMore(false);
+    }
+  }
 
   const counts = useMemo(() => {
     const all = data?.items.length ?? 0;
@@ -199,7 +232,39 @@ export default function ActivityScreen() {
 
           <View style={styles.recentHeader}>
             <Text style={styles.sectionTitle}>Recent activity</Text>
-            <Text style={styles.today}> · Today</Text>
+            <Text style={styles.today}> · </Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Filter activity by date"
+              accessibilityState={{ expanded: periodMenuOpen }}
+              onPress={() => setPeriodMenuOpen((open) => !open)}
+              hitSlop={8}
+              style={styles.periodTrigger}
+            >
+              <Text style={styles.today}>{period === 'today' ? 'Today' : period === 'last_week' ? 'Last Week' : period === 'last_month' ? 'Last Month' : 'All'}</Text>
+              <Ionicons name="chevron-down" size={13} color="#8390AA" />
+            </Pressable>
+            {periodMenuOpen ? (
+              <View style={styles.periodMenu}>
+                {([
+                  ['today', 'Today'],
+                  ['last_week', 'Last Week'],
+                  ['last_month', 'Last Month'],
+                  ['all', 'All'],
+                ] as const).map(([key, label]) => (
+                  <Pressable
+                    key={key}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: period === key }}
+                    onPress={() => { setPeriodMenuOpen(false); setPeriod(key); }}
+                    style={[styles.periodOption, period === key && styles.periodOptionSelected]}
+                  >
+                    <Text style={[styles.periodOptionText, period === key && styles.periodOptionTextSelected]}>{label}</Text>
+                    {period === key ? <Ionicons name="checkmark" size={15} color="#236FB8" /> : null}
+                  </Pressable>
+                ))}
+              </View>
+            ) : null}
           </View>
 
           <View style={styles.searchWrap}>
@@ -303,6 +368,19 @@ export default function ActivityScreen() {
               message={query ? "Try another search term or activity filter." : activityFilter === "unread" ? "You are caught up. New activity will appear here." : "New policy, claim, intake and learning events will appear here when they are recorded."}
             />
           )}
+          {hasMore ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Load more activity"
+              disabled={loadingMore}
+              onPress={() => void loadMore()}
+              style={styles.loadMore}
+            >
+              <Text style={styles.loadMoreText}>{loadingMore ? 'Loading...' : 'Load more activity'}</Text>
+              <Ionicons name="chevron-down" size={15} color="#236FB8" />
+            </Pressable>
+          ) : null}
+          {moreError ? <Text style={styles.moreError}>{moreError}</Text> : null}
         </>}
       </View>
     </PartnerScreen>
@@ -485,8 +563,34 @@ const styles = StyleSheet.create({
     marginTop: 10,
     marginBottom: 6,
     flexDirection: 'row',
-    alignItems: 'baseline',
+    alignItems: 'center',
+    zIndex: 20,
   },
+  periodTrigger: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingVertical: 4 },
+  periodMenu: {
+    position: 'absolute',
+    top: 29,
+    left: 112,
+    width: 152,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#D7E0EF',
+    borderRadius: 11,
+    padding: 4,
+    zIndex: 30,
+    elevation: 12,
+    shadowColor: '#0B1F3C',
+    shadowOpacity: 0.13,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+  },
+  periodOption: { paddingHorizontal: 11, paddingVertical: 10, borderRadius: 7, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  periodOptionSelected: { backgroundColor: '#EEF4FD' },
+  periodOptionText: { color: '#52617A', fontSize: 12, fontWeight: '600' },
+  periodOptionTextSelected: { color: '#164579', fontWeight: '800' },
+  loadMore: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 13 },
+  loadMoreText: { color: '#236FB8', fontWeight: '700', fontSize: 12 },
+  moreError: { color: '#B45309', textAlign: 'center', fontSize: 12, paddingBottom: 8 },
   searchWrap: {
     height: 43,
     marginBottom: 7,
