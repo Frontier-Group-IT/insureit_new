@@ -51,7 +51,29 @@ const businessReport = read('app/business-report.tsx');
 const customers = read('app/customers.tsx');
 requireText(businessReport, 'hideTopBar', 'Business Report must hide its default light header.');
 requireText(businessReport, 'navyStatusBar', 'Business Report must render the navy status area.');
-requireText(businessReport, '<PartnerCasePageHeader title="Business Report" icon="business-outline" onBack={() => router.back()} />', 'Business Report must reuse the navy header with a white building icon and Back action.');
+for (const marker of [
+  'style={styles.pageHeader}',
+  'style={styles.headerWaveRear}',
+  'style={styles.headerWaveFront}',
+  'accessibilityRole="button" accessibilityLabel="Back"',
+  'onPress={() => router.back()}',
+  'name="business-outline"',
+  'Business Report</Text>',
+  "backgroundColor: '#071E49'",
+  '<ReportCard artwork={PartnerAssets.actions.payoutGrowth}',
+  '<ReportCard artwork={PartnerAssets.actions.policyChecklist}',
+  '<ReportCard artwork={PartnerAssets.actions.quickCustomers}',
+  '<SectionHeading title="Last 6 Months · Net Premium"',
+  '<SectionHeading title="Business by Product · Net Premium"',
+  '<ReportRow',
+  "tone=\"purple\"",
+]) requireText(businessReport, marker, 'Business Report reference layout must retain: ' + marker);
+if (businessReport.includes('chevron-forward') || businessReport.includes('chevron-right')) {
+  throw new Error('Business Report rows must not display navigation chevrons.');
+}
+if (businessReport.includes('EATD Net Premium')) {
+  throw new Error('MTD premium must not be mislabeled EATD without a matching backend calculation.');
+}
 requireText(businessReport, 'getPartnerBusinessReportNet()', 'Business Report data source must remain unchanged.');
 requireText(businessReport, 'bottomNavigation={<PartnerStackBottomNavigation activeTab="business" />}', 'Business Report must retain its existing bottom navigation.');
 
