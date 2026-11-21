@@ -23,7 +23,8 @@ const highResolution = new Map([
 
 ]);
 for (const [kind,title] of illustrated) {
-  const source = kind === 'customers' ? '../assets/partner/quick-actions/add-partner.png'
+  const source = kind === 'case-register' ? '../assets/partner/quick-actions/case-register.png'
+    : kind === 'customers' ? '../assets/partner/quick-actions/add-partner.png'
     : highResolution.get(kind)
     ?? (kind === 'journey' ? '../assets/partner/icons/more-journey-3d-new.png' : `../assets/partner/icons/more-${kind}.png`);
   assert.ok(more.includes('title="'+title+'"'), 'Preserve menu action '+title);
@@ -50,6 +51,8 @@ assert.match(more,/onPress=\{\(\) => router\.push\('\/life-health-cases'\)\}/);
 assert.match(more,/canPartnerAccessCaseRegister\(context\)/);
 assert.match(more,/canPartnerAccess\(context, 'view_policy_intakes'\)/);
 assert.match(more,/PartnerProfileMenuIcon kind=\{iconKind\} size=\{42\}/, 'Policy Intake icon size must match Case Register');
+assert.match(mapping, /quick-actions\/case-register\.png/, 'Case Register must use distinct folder artwork, not the intake shield');
+assert.doesNotMatch(mapping, /['"]case-register['"]:\s*require\(['"][^'"]*more-case-register\.png/, 'Reject old Case Register icon');
 assert.match(mapping, /icons\/more-journey-3d-new\.png/, 'Use newly approved isolated 3D My Journey artwork');
 assert.match(mapping, /quick-actions\/add-partner\.png/, 'Use the user-approved blue business-person icon with purple plus for Customers');
 assert.doesNotMatch(icon, /scale: 1\.7/, 'Policy Intake must avoid magnifying low-resolution source artwork');

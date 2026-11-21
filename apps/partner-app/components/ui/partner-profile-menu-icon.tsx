@@ -35,7 +35,7 @@ type IconPalette = {
 // Keep other menu icons and their existing destinations unchanged.
 const ILLUSTRATED_ICONS: Partial<Record<PartnerProfileMenuIconKind, ImageSourcePropType>> = {
   'policy-intake': require('../../assets/partner/icons/more-policy-intake-approved-document.png'),
-  'case-register': require('../../assets/partner/icons/more-case-register.png'),
+  'case-register': require('../../assets/partner/quick-actions/case-register.png'),
   renewals: require('../../assets/partner/icons/more-renewals.png'),
   // Match the supplied Add Partner 3D reference with the existing transparent artwork, without a tile.
   customers: require('../../assets/partner/quick-actions/add-partner.png'),
