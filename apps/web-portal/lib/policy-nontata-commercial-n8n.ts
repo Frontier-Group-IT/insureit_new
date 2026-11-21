@@ -2,7 +2,7 @@ import "server-only";
 
 import { extractNativePdfTextPages } from "@/lib/policy-ocr-native-pdf";
 
-type Insurer = "new_india_cv_native_pdf" | "iffco_tokio_cv_native_pdf" | "go_digit_cv_native_pdf";
+type Insurer = "new_india_cv_native_pdf" | "iffco_tokio_cv_native_pdf" | "go_digit_cv_native_pdf" | "united_india_gcv_native_pdf" | "oriental_gccv_native_pdf";
 type OcrField = { key: string; label: string; value: string; confidence: null; page: number | null; evidence: string };
 export type NonTataCommercialRead = {
   parserId: Insurer;
@@ -44,6 +44,8 @@ const REQUIRED_EXTRA: Record<Insurer, string[]> = {
   new_india_cv_native_pdf: ["nia_layout", "registration_complete"],
   iffco_tokio_cv_native_pdf: ["iffco_layout", "printed_tax_table", "invoice_taxable_matches", "invoice_gross_matches"],
   go_digit_cv_native_pdf: ["digit_layout", "registered_plate", "od_basic_ncb", "tp_itemization"],
+  united_india_gcv_native_pdf: ["uiic_layout", "igst_components_printed", "stamp_accounting_disclosed", "stamp_charge_reconciled"],
+  oriental_gccv_native_pdf: ["oicl_layout", "four_tax_components_printed", "stamp_charge_reconciled"],
 };
 const ALLOWED_FIELDS = new Set([
   "policy_number", "insurer_name", "policy_product", "insured_name",
@@ -79,6 +81,10 @@ function insurerForText(head: string): Insurer | null {
     matches.push("iffco_tokio_cv_native_pdf");
   if (/Go Digit General Insurance/i.test(issuer) && /Digit Commercial Vehicle Insurance/i.test(product))
     matches.push("go_digit_cv_native_pdf");
+  if (/UNITED INDIA INSURANCE COMPANY LIMITED/i.test(issuer) && /GCV PUBLIC CARRIER/i.test(product))
+    matches.push("united_india_gcv_native_pdf");
+  if (/THE ORIENTAL INSURANCE COMPANY LIMITED/i.test(issuer) && /GCCV-PUBLIC CARRIERS/i.test(product))
+    matches.push("oriental_gccv_native_pdf");
   return matches.length === 1 ? matches[0] : null;
 }
 
@@ -145,9 +151,17 @@ function validate(payload: unknown, insurer: Insurer, ids: Record<"intake_id" | 
   const printedPlate = byKey.get("vehicle_registration_number") || "";
   const isNewIndiaUnregistered = insurer === "new_india_cv_native_pdf"
     && rtoPrefix(printedPlate) && byKey.get("vehicle_registration_status") === "unregistered";
-  if (isNewIndiaUnregistered) {
+  // IFFCO and United India explicitly issue new-vehicle reference numbers.
+  // These are NOT RTO registration plates and must never be booked as such.
+  const isIffcoNewVehicle = insurer === "iffco_tokio_cv_native_pdf"
+    && /^MP\/NEW\/\d{3,6}$/i.test(printedPlate)
+    && byKey.get("vehicle_registration_status") === "registration_pending";
+  const isUnitedNewVehicle = insurer === "united_india_gcv_native_pdf"
+    && printedPlate === "NEW"
+    && byKey.get("vehicle_registration_status") === "registration_pending";
+  if (isNewIndiaUnregistered || isIffcoNewVehicle || isUnitedNewVehicle) {
     if (!/^20\d{2}$/.test(byKey.get("vehicle_manufacturing_year") || "")
-        || checks.registration_complete !== true)
+        || (isNewIndiaUnregistered && checks.registration_complete !== true))
       throw new Error("n8n_nontata_unregistered_evidence_invalid");
   } else if (checks.vehicle_registration_printed === true) {
     if (!completePlate(printedPlate) || byKey.get("vehicle_registration_status") !== "registered")
@@ -182,7 +196,8 @@ function validate(payload: unknown, insurer: Insurer, ids: Record<"intake_id" | 
     parserId: insurer, parserVersion: "non-tata-cv-v2",
     // Preserve registration status=unregistered, omit the RTO prefix from
     // registration number. The prefix remains verified in the PDF itself.
-    fields: isNewIndiaUnregistered ? fields.filter((f) => f.key !== "vehicle_registration_number") : fields,
+    fields: isNewIndiaUnregistered || isIffcoNewVehicle || isUnitedNewVehicle
+      ? fields.filter((f) => f.key !== "vehicle_registration_number") : fields,
     warnings,
     checksPassed: expected.filter((key) => checks[key] === true).length,
     premium: { od, tp, net, gst, gross },
