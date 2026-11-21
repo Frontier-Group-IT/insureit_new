@@ -478,9 +478,11 @@ assert.ok(actions.includes('const heldReview=queued?.state==="exception"')
   &&actions.includes('queued.exception_codes.length===1')
   &&actions.includes('queued.exception_codes[0]==="booking_review_required"')
   &&actions.includes("const sameReviewedFingerprint=")
-  &&actions.includes("!sameReviewedFingerprint")
-  &&actions.includes("extracted.preview.documentId!==queued.document_id"),
-  "Held parser retries still require exact queue exception, fingerprint and fresh PDF");
+  &&actions.includes("!(sameReviewedFingerprint||reverifiedNiaLegacyHold)")
+  &&actions.includes("extracted.preview.documentId!==queued.document_id")
+  &&actions.includes('queued.last_error_code==="missing_verified_vehicle_registration_number"')
+  &&actions.includes("assessNiaNamedAuthorityUnregisteredConversion({"),
+  "Held parser retries require an exact fingerprint except for a narrowly re-certified NIA legacy source, and always require the same current PDF");
 const studio=file("../components/development/semi-auto-policy-workspace.tsx");
 assert.ok(studio.includes("canRetryReviewHeldPolicy(exceptionRow)")
   &&studio.includes("setAutoConvertRow(exceptionRow)")
