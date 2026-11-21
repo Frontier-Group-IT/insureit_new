@@ -428,6 +428,17 @@ async function preparePolicyIntakeHandoffInternal(
       +", "+(verified?.fields.find(field=>field.key==="vehicle_rto_state")?.value||"state unknown")
       +". IFFCO new vehicle's actual Registration Authority field was blank. "
       +"The insured address city is used for onboarding geography only; replace with the actual registered RTO after registration.":"";
+  const iffcoRegisteredRtoField=verified?.parserId==="iffco_tokio_cv_native_pdf"
+    &&verified.checksPassed===18
+    &&verified.fields.some(field=>field.key==="vehicle_registration_status"
+      &&field.value==="registered")
+    ?verified.fields.find(field=>field.key==="vehicle_rto_name"
+      &&field.evidence.startsWith("Registered plate ")
+      &&field.evidence.includes(" (MP RTO registry);")
+      &&/^[A-Za-z][A-Za-z -]{2,45}$/.test(field.value.trim())):undefined;
+  const iffcoRegisteredRtoNote=iffcoRegisteredRtoField
+    ?" IFFCO_REGISTERED_RTO_FROM_PLATE: "+iffcoRegisteredRtoField.evidence
+      +". RTO city comes from the printed registration plate's MP district code, not the insured address.":"";
   const iffcoModelFuel=verified?.parserId==="iffco_tokio_cv_native_pdf"
     &&verified.checksPassed===18
       ?verified.fields.find(f=>f.key==="vehicle_fuel_type"&&f.value==="Diesel"
@@ -458,7 +469,7 @@ async function preparePolicyIntakeHandoffInternal(
     cpa:verifiedPremium?.cpa??mapped.next.cpa,
     policyNo:mapped.next.policyNo,insurerId:mapped.next.insurerId,validFrom:mapped.next.validFrom,validUpto:mapped.next.validUpto,
     payoutBasis:"NET",projectedOdPercent:"",projectedTpPercent:"",insurerScheme:"",payinBillNo:"",payinBilledAmount:"",payinBillDate:"",payinStatus:"Unbilled",retention:"",payoutOdPercent:"",payoutTpPercent:"",flatPayoutAmount:"",payoutStatus:"Pending",payoutDate:"",payoutVoucherNo:"",remarks:verified?.commercialPremium
-      ? `Policy Intake ${id} — independently validated commercial-motor PDF (${verified.parserId}). REVIEW ONLY; no policy or customer was booked. Printed OD ${verified.commercialPremium.od}, TP including liabilities ${verified.commercialPremium.tp}, Net ${verified.commercialPremium.net}, GST ${verified.commercialPremium.gst}, Gross ${verified.commercialPremium.gross}. ${verified.parserId==="iffco_tokio_cv_native_pdf" ? `IFFCO source Net(B) ${verified.commercialPremium.tp} includes owner-driver CPA ${iffcoCpa}. Canonical TP ${verifiedPremium?.tp} excludes that CPA, and CPA is entered separately as ${verifiedPremium?.cpa}; their sum equals printed Net(B).` : "Owner-driver PA and paid-driver liabilities are retained inside printed TP; do not add CPA a second time."} Confirm vehicle class, registration, policy dates, premiums and all other fields before booking.${yearFallbackNote}${niaProvisionalRtoNote}${iffcoProvisionalNote}${iffcoFuelNote}`
+      ? `Policy Intake ${id} — independently validated commercial-motor PDF (${verified.parserId}). REVIEW ONLY; no policy or customer was booked. Printed OD ${verified.commercialPremium.od}, TP including liabilities ${verified.commercialPremium.tp}, Net ${verified.commercialPremium.net}, GST ${verified.commercialPremium.gst}, Gross ${verified.commercialPremium.gross}. ${verified.parserId==="iffco_tokio_cv_native_pdf" ? `IFFCO source Net(B) ${verified.commercialPremium.tp} includes owner-driver CPA ${iffcoCpa}. Canonical TP ${verifiedPremium?.tp} excludes that CPA, and CPA is entered separately as ${verifiedPremium?.cpa}; their sum equals printed Net(B).` : "Owner-driver PA and paid-driver liabilities are retained inside printed TP; do not add CPA a second time."} Confirm vehicle class, registration, policy dates, premiums and all other fields before booking.${yearFallbackNote}${niaProvisionalRtoNote}${iffcoProvisionalNote}${iffcoRegisteredRtoNote}${iffcoFuelNote}`
       : verified && verified.premium
       ? `Policy Intake ${id} — n8n validated ${verified.premium.tataAig ? "Tata AIG private car" : "ICICI 3005"} PDF. Review every prefilled value before booking.
 PDF premium reconciliation: Printed Basic OD ${verified.premium.basicOd} + OD add-ons ${addOnTotal} - validated NCB/OD deductions ${verified.premium.odDeductions??0} = Total OD ${verified.premium.totalOd}; net-of-deductions Basic OD entered for onboarding ${verifiedPremium?.od??"unavailable"}. TP ${verified.premium.basicTp}, CPA ${verified.premium.cpa}, Net ${verified.premium.net}, GST ${verified.premium.tax}, Gross ${verified.premium.gross}.
@@ -566,6 +577,12 @@ Third Party period: ${tpStart||"unavailable"} to ${tpExpiry||"unavailable"}. ${v
       && supplemented.rtoName===iffcoProvisionalRtoField.value.trim()
       && !supplemented.remarks.includes("IFFCO_PROVISIONAL_RTO_FROM_INSURED_ADDRESS:")){
       supplemented.remarks=(supplemented.remarks||"")+iffcoProvisionalNote;
+      changed=true;
+    }
+    if(iffcoRegisteredRtoField
+      &&supplemented.rtoName===iffcoRegisteredRtoField.value.trim()
+      &&!supplemented.remarks.includes("IFFCO_REGISTERED_RTO_FROM_PLATE:")){
+      supplemented.remarks=(supplemented.remarks||"")+iffcoRegisteredRtoNote;
       changed=true;
     }
     if(iffcoModelFuel && supplemented.fuelType==="Diesel"
