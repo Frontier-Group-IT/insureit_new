@@ -822,6 +822,7 @@ const supportActionsIndex = support.indexOf('<View style={styles.heroActions}>',
 if (!(supportRightIndex > 0 && supportUpdatedIndex > supportRightIndex && supportActionsIndex > supportUpdatedIndex)) {
   throw new Error('Support right column must show updated-at above the two icon shortcuts.');
 }
+requireText(support, "textAlign: 'right', transform: [{ translateY: 9 }]", 'Support updated-at label should align with the left title without moving the icon row.');
 if (support.includes('PartnerAssets.actions.supportVerified')) throw new Error('Support hero must not reuse the old analytics icon.');
 if (support.includes('asset={PartnerAssets.emptyStates.supportResolved}')) throw new Error('Support-unavailable errors must not misuse the support-resolved artwork.');
 requireText(settings, 'PartnerAssets.status.settings', 'Settings must retain branded Check for updates artwork.');

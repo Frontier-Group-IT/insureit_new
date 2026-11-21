@@ -189,7 +189,8 @@ const styles = StyleSheet.create({
   heroSubtitle: { marginTop: 4, color: '#4E6484', fontSize: 10, lineHeight: 14 },
   heroRight: { flexShrink: 0, width: 100, alignItems: 'flex-end', justifyContent: 'center', gap: 7 },
   updatedLine: { width: '100%', alignItems: 'flex-end' },
-  updatedText: { color: '#255390', fontSize: 9.2, fontWeight: '700', textAlign: 'right' },
+  // Optical alignment with the unchanged left title; transform does not move the action icons or header layout.
+  updatedText: { color: '#255390', fontSize: 9.2, fontWeight: '700', textAlign: 'right', transform: [{ translateY: 9 }] },
   heroActions: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', gap: 6, zIndex: 1 },
   heroActionBubble: { width: 29, height: 29, borderRadius: 15, backgroundColor: '#FFFFFF',
     alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#DDEBFF' },
