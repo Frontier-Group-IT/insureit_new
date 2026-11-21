@@ -64,7 +64,7 @@ export default function PolicyDetailScreen() {
   const isVerified = data ? ['active', 'issued', 'in_force', 'in force'].includes((data.policy.status || data.policy.lifecycle_status || '').toLowerCase().replaceAll('-', '_')) : false;
 
   return (
-    <PartnerScreen title="Policy Details" hideTopBar navyStatusBar bottomNavigationNavy bottomNavigation={<PartnerCaseBottomNavigation activeTab="Policies" />}>
+    <PartnerScreen title="Policy Details" hideTopBar bottomNavigationNavy bottomNavigation={<PartnerCaseBottomNavigation activeTab="Policies" />}>
       <View style={styles.pageHeader}>
         <View style={styles.headerTitleRow}>
           <Pressable
@@ -74,9 +74,9 @@ export default function PolicyDetailScreen() {
             hitSlop={8}
             style={({ pressed }) => [styles.headerBackButton, pressed && styles.pressed]}
           >
-            <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
+            <Ionicons name="arrow-back" size={20} color="#102A51" />
           </Pressable>
-          <Ionicons name="document-text" size={23} color="#FFFFFF" />
+          <Ionicons name="document-text" size={23} color="#102A51" />
           <Text style={styles.headerTitle}>Policy Details</Text>
         </View>
       </View>
@@ -326,10 +326,10 @@ function formatDate(value: string | null) { return formatAppDate(value, '—'); 
 function nullableMoney(value: number | string | null) { return value == null ? 'Not recorded' : formatIndianCurrency(value); }
 
 const styles = StyleSheet.create({
-  pageHeader: { height: 52, marginHorizontal: -partnerTheme.spacing.lg, paddingHorizontal: 16, justifyContent: 'center', backgroundColor: '#0A234A', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#244269' },
+  pageHeader: { height: 52, marginHorizontal: -partnerTheme.spacing.lg, paddingHorizontal: 16, justifyContent: 'center', backgroundColor: '#FFFFFF', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E3E9F1' },
   headerTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   headerBackButton: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { color: '#FFFFFF', fontSize: 16, lineHeight: 22, fontWeight: '700', letterSpacing: -0.12 },
+  headerTitle: { color: '#102A51', fontSize: 16, lineHeight: 22, fontWeight: '700', letterSpacing: -0.12 },
   stateWrap: { marginTop: 14 },
   contentWrap: { marginTop: 0, gap: 6, paddingBottom: 15 },
   summaryCard: {
