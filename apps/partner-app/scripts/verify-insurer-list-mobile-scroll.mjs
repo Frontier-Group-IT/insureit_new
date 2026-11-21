@@ -29,6 +29,10 @@ assert.match(screen, /headerSearch: \{ width: '100%', backgroundColor: '#FFFFFF'
 assert.match(screen, /dateSection: \{ marginHorizontal: 14, marginTop: 14/, 'Search has equal left and right margins');
 assert.doesNotMatch(screen, /styles\.headerSearchBand|styles\.dateRangeTrigger/, 'No duplicate navy search band or large Date Range card');
 assert.match(screen, /<Modal visible=\{dateExpanded\} transparent/, 'Calendar trigger opens a modal bottom sheet rather than inline content');
+assert.doesNotMatch(screen, /styles\.sheetTabs|styles\.sheetTab|styles\.sheetTabText/, 'Redundant purple Date Range tab must not render above the section heading');
+assert.match(screen, /<View style=\{styles\.sheetHeader\}>[\s\S]*?<\/View>\s*<ScrollView showsVerticalScrollIndicator=\{false\}/, 'Sort by header directly precedes scrolling date range controls');
+assert.match(screen, /<Text style=\{styles\.sheetSectionTitle\}>Date Range<\/Text>/, 'Keep one clear Date Range section heading');
+
 assert.match(screen, /<PartnerDatePicker directSelect label="From"/, 'From uses the same centered calendar as Policies');
 assert.match(screen, /<PartnerDatePicker directSelect label="To"/, 'To uses the same centered calendar as Policies');
 assert.match(screen, /selectedPreset\(draft\.from, draft\.to\)/, 'Draft presets are shown before applying');
