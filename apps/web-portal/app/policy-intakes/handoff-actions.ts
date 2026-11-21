@@ -147,9 +147,10 @@ export async function prepareVerifiedN8nIntakeHandoff(
   // set and its printed OD + TP = net, net + GST = gross contract.
   // Never attempt to pass its commercial totals through ICICI/Tata rules.
   const commercialChecksOk=Boolean(commercial)
-    && ["go_digit_cv_native_pdf","iffco_tokio_cv_native_pdf","new_india_cv_native_pdf"].includes(parsed.preview.parserId)
-    && parsed.preview.checksPassed >= (parsed.preview.parserId==="iffco_tokio_cv_native_pdf"
-      || parsed.preview.parserId==="go_digit_cv_native_pdf" ? 18 : 15)
+    && ["go_digit_cv_native_pdf","iffco_tokio_cv_native_pdf","new_india_cv_native_pdf",
+        "united_india_gcv_native_pdf","oriental_gccv_native_pdf"].includes(parsed.preview.parserId)
+    && parsed.preview.checksPassed >= (parsed.preview.parserId==="new_india_cv_native_pdf" ? 16
+      : parsed.preview.parserId==="oriental_gccv_native_pdf" ? 17 : 18)
     && Math.abs((commercial!.od+commercial!.tp)-commercial!.net)<0.07
     && Math.abs((commercial!.net+commercial!.gst)-commercial!.gross)<0.07;
   const acceptableCommercialWarning=(value:string)=>
