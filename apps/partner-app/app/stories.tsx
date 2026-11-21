@@ -180,15 +180,6 @@ function storyIcon(kind: PartnerStory['kind']) {
   return 'document-text-outline' as const;
 }
 
-function storyToneStyle(tone: PartnerStory['tone']) {
-  if (tone === 'attention') return styles.toneAttention;
-  if (tone === 'impact') return styles.toneImpact;
-  if (tone === 'journey') return styles.toneJourney;
-  if (tone === 'business') return styles.toneBusiness;
-  if (tone === 'learn') return styles.toneLearn;
-  return styles.toneCalm;
-}
-
 function formatMetric(story: PartnerStory) {
   const value = Number(story.metric || 0);
   if (story.metric_label?.toLowerCase().includes('idv') || story.metric_label?.toLowerCase().includes('premium')) return formatIndianCurrency(value);
