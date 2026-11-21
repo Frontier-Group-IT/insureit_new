@@ -1,0 +1,17 @@
+import { readFileSync } from "node:fs";
+import { strict as assert } from "node:assert";
+const code = readFileSync(new URL("../app/policies/life-health-cases/delete-actions.ts", import.meta.url), "utf8");
+const preflight = code.indexOf('action: "life_health_case_delete_requested"');
+const unlink = code.indexOf("if (existing.final_policy_id)");
+const caseDelete = code.indexOf('.from("life_health_cases").delete()');
+assert.ok(preflight > 0 && preflight < unlink && preflight < caseDelete, "Mandatory audit preflight must precede destructive operations");
+assert.match(code, /table_name: "life_health_cases"/, "Use canonical table_name");
+assert.match(code, /record_id: caseId/, "Use canonical record_id");
+assert.match(code, /new_data: \{/, "Use canonical JSON audit data");
+for (const legacy of ["entity_type:", "entity_id:", "metadata:"]) assert.ok(!code.includes(legacy), "Remove unsupported audit column "+legacy);
+assert.match(code, /if \(auditRequestError \|\| !auditRequest\?\.id\)/, "Fail closed when audit preflight fails");
+assert.match(code, /failedStorageBatches/, "Inspect Storage failures");
+assert.match(code, /if \(!auditComplete\)/, "Check durable outcome write");
+assert.match(code, /profile\.role !== "it_super_user"/, "Preserve IT-only deletion");
+assert.match(code, /deleteMasterRecord\("policy", linkedPolicyId\)/, "Preserve policy dependency protections");
+console.log("SEC-PR-05 static audit schema/preflight checks passed; synthetic runtime tests remain pending.");
