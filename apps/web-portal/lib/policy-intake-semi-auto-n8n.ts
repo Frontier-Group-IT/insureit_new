@@ -295,7 +295,7 @@ export async function previewSemiAutoN8nExtraction(
       &&extraction.fields.some(field=>field.key==="vehicle_registration_status"
         &&field.value==="registration_pending")
       &&extraction.fields.some(field=>field.key==="vehicle_registration_number"
-        &&/^MP\\/NEW\\/\\d{3,6}$/i.test(field.value))
+        &&/^MP\/NEW\/\d{3,6}$/i.test(field.value))
       ?{legacyIffcoNewFingerprint:fingerprint(id,current.document.id,
           extraction.fields.filter(field=>field.key!=="vehicle_registration_number"),
           visibleWarnings,extraction.premium,extraction.issuanceEvidence,
