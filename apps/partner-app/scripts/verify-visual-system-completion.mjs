@@ -885,7 +885,7 @@ for (const impactMarker of [
   'styles.monthStatDivider',
   'styles.cardDetails',
   '<ImpactIcon art={art} size={40} plain footprint />',
-  '<ImpactIcon art={art} size={33} plain />',
+  '<ImpactIcon art={art} size={44} plain />',
 ]) requireText(impact, impactMarker, `Impact reference layout is missing ${impactMarker}.`);
 if (impact.includes('icon={icon}') || impact.includes('styles.cardLeft')) throw new Error('Impact must keep blue artwork left with metric and label stacked to its right.');
 requireText(impact, '<MonthStat art="monthly-policy" label="Policies"', 'Monthly policies must use the distinct Add Policy reference artwork.');
@@ -905,18 +905,23 @@ for (const [fragment,reason] of [
   ['styles.heroCar', 'First banner includes enlarged existing 3D car'],
   ['styles.heroShield', 'First banner includes shield artwork'],
   ['Total Protection Value', 'First banner includes reference title'],
-  ['Your coverage this month', 'First banner includes reference badge'],
+  ["Your coverage{'\\n'}this month", 'First banner includes the explicit two-line coverage badge'],
   ["backgroundColor: '#F0F6FF'", 'First banner retains reference light blue background'],
   ["borderBottomWidth: 1, borderBottomColor: '#D5DDE9'", 'First banner needs a straight full-width bottom divider'],
 ]) requireText(impact, fragment, 'Protection reference missing: ' + reason);
 for (const [fragment, reason] of [
-  ["heroDetails: {flex: 1, minWidth: 0, alignSelf: 'stretch', justifyContent: 'flex-start'", 'Protection heading must move upward'],
+  ["heroDetails: {flex: 1, minWidth: 0, alignSelf: 'stretch', justifyContent: 'center'", 'Protection heading and amount must vertically center beside the car'],
   ["heroValueGroup: {flex: 1, minWidth: 0, gap: 0}", 'Protection heading and amount must have zero extra gap'],
   ["fontSize: 23, lineHeight: 28, fontWeight: '800', marginTop: 0", 'Protection amount must be reduced without top margin'],
   ['<Text style={styles.heroCoverageText} numberOfLines={2}>', 'Top-right coverage badge may use two lines'],
-  ["heroTopRow: {flexDirection: 'row', alignItems: 'flex-start'", 'Badge and value must share a non-overlapping top row'],
+  ["heroTopRow: {flexDirection: 'row', alignItems: 'center'", 'Badge and value must share a vertically centered row'],
   ["footprintIconSlot: {flexShrink: 0, alignItems: 'center', justifyContent: 'center'}", 'Footprint icons must have standardized centered slots'],
-  ["const artworkSize = footprint ? 36 : Math.round(size * 0.89)", 'All footprint artwork must occupy equal image dimensions'],
+  ["const artworkSize = footprint ? (footprintArtworkSize[art] ?? 36) : Math.round(size * 0.89)", 'Footprint artwork sizes must be normalized individually within the fixed slot'],
+  ["heroCoverageBadge: {width: 106, flexShrink: 0, flexDirection: 'row', alignItems: 'center'", 'Coverage badge must be centered and stay compact'],
+  ["customer: 40", 'Customer footprint artwork must use its normalized scale'],
+  ["policy: 40", 'Policy footprint artwork must use its normalized scale'],
+  ["claim: 31", 'Claims footprint artwork must not overpower the other icons'],
+  ['<ImpactIcon art={art} size={44} plain />', 'Monthly Policies and Customers icons must be enlarged'],
   ["Platform.OS === 'android' && art === 'monthly-policy'", 'Android monthly policy icon must have a platform-specific visible asset'],
   ["require('../assets/partner/actions/add-policy-reference.png')", 'Android monthly policies must use an RGBA illustration'],
   [": IMPACT_ART[art]", 'Existing iOS icon assignments must remain'],
