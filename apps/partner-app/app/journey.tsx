@@ -105,11 +105,12 @@ export default function JourneyScreen() {
             </View>
           ) : null}
 
-          <View style={styles.card}>
-            <View style={styles.cardHeading}>
+          <View style={styles.timelineSection}>
+            <View style={styles.outsideHeading}>
               <Text style={styles.sectionTitle}>Journey timeline</Text>
             </View>
-            <View style={styles.filters}>
+            <View style={styles.card}>
+              <View style={styles.filters}>
               {JOURNEY_FILTERS.map((choice, index) => (
                 <Pressable
                   key={choice.key}
@@ -149,6 +150,7 @@ export default function JourneyScreen() {
                 <Ionicons name={showAll ? 'chevron-up' : 'chevron-down'} size={16} color="#315E9C" />
               </Pressable>
             ) : null}
+            </View>
           </View>
         </>
       )}
@@ -230,25 +232,25 @@ const styles = StyleSheet.create({
   milestoneCopy: { flex: 1, minWidth: 0, justifyContent: 'center', gap: 2 },
   milestoneEyebrow: { color: '#7154CE', fontSize: 9, fontWeight: '800', letterSpacing: 0.3 },
   heroTitle: { color: '#17233A', fontSize: 15, lineHeight: 19, fontWeight: '800' },
-  milestoneSubtitle: { flex: 1, minWidth: 0, color: '#53637C', fontSize: 9, lineHeight: 13 },
+  milestoneSubtitle: { flex: 1, minWidth: 0, color: '#53637C', fontSize: 9, lineHeight: 13, transform: [{ translateY: -6 }] },
   progressColumn: { width: 86, flexShrink: 0, alignItems: 'center', justifyContent: 'center' },
   progressCircle: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   progressSegment: { position: 'absolute', width: 1.6, height: 3, borderRadius: 1 },
   progressCircleText: { color: '#6954D6', fontSize: 10, fontWeight: '800' },
   heroProgressLabel: { width: 86, flexShrink: 0, color: '#6856D5', fontSize: 9, lineHeight: 13, fontWeight: '700', textAlign: 'center' },
   summary: { marginTop: 12, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#E1E5ED', flexDirection: 'row', alignItems: 'stretch', width: '100%' },
-  summaryItem: { flex: 1, minWidth: 0, minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', paddingHorizontal: 5, paddingVertical: 4, gap: 4 },
+  summaryItem: { flex: 1, minWidth: 0, minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', paddingHorizontal: 5, paddingVertical: 4, gap: 10 },
   summaryItemPressed: { backgroundColor: '#F1F5FB' },
   summaryDivider: { width: 1, alignSelf: 'stretch', backgroundColor: '#A6B3C6', marginVertical: 5 },
   summaryArtwork: { width: 27, height: 29, flexShrink: 0 },
   summaryDetails: { flexShrink: 1, minWidth: 0, alignItems: 'flex-start', justifyContent: 'center', gap: 1 },
   summaryValue: { color: partnerTheme.colors.ink, fontSize: 13, lineHeight: 17, fontWeight: '800' },
   summaryLabel: { color: partnerTheme.colors.inkMuted, fontSize: 9, lineHeight: 12, fontWeight: '600' },
-  card: { marginTop: 13, padding: 15, borderRadius: 19, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E7E9EE' },
+  timelineSection: { marginTop: 13 },
+  card: { padding: 15, borderRadius: 19, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E7E9EE' },
   achievementSection: { marginTop: 15 },
   outsideHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 9 },
   achievementCard: { padding: 15, borderRadius: 19, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E7E9EE' },
-  cardHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 15 },
   sectionTitle: { color: partnerTheme.colors.ink, fontSize: 16, fontWeight: '800' },
   smallPill: { paddingHorizontal: 10, paddingVertical: 5, backgroundColor: '#E9E1FF', borderRadius: 999 },
   smallPillText: { fontSize: 10, color: '#6842B5', fontWeight: '700' },
