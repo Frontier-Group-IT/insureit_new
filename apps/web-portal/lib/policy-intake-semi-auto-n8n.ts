@@ -40,6 +40,9 @@ export type SemiAutoN8nPreview = {
   /** Old queue hashes before certified compactor make/fuel enrichment. */
   legacyIffcoMachineFingerprint?: string;
   legacyIffcoMachineWithoutNewRefFingerprint?: string;
+  /** Pre-enrichment 455-5N IFFCO queue hash, fuel missing in n8n output. */
+  legacyIffcoLoaderFuelFingerprint?: string;
+  legacyIffcoLoaderFuelWithoutNewRefFingerprint?: string;
   fields: N8nOcrField[];
   parserId: string;
   parserVersion: string;
@@ -324,6 +327,28 @@ export async function previewSemiAutoN8nExtraction(
             oldFields,visibleWarnings,extraction.premium,extraction.issuanceEvidence,
             acceptedIssuanceDate,commercialPremium),
           legacyIffcoMachineWithoutNewRefFingerprint:fingerprint(id,current.document.id,
+            oldFields.filter(field=>field.key!=="vehicle_registration_number"),
+            visibleWarnings,extraction.premium,extraction.issuanceEvidence,
+            acceptedIssuanceDate,commercialPremium),
+        };
+      })():{}),
+    // Prior IFFCO 455-5N loader PDFs were stored with no fuel field.
+    // Accept only a matched *current* PDF and exact certified model to
+    // reverify an old booking-review hold without requiring a new queue job.
+    ...(extraction.parserId==="iffco_tokio_cv_native_pdf"
+      &&extraction.fields.some(field=>field.key==="vehicle_model"
+        &&/^JCB\s+455[- ]5N\s+(?:WHEEL\s+)?LOADER$/i.test(field.value))
+      &&extraction.fields.some(field=>field.key==="vehicle_make"&&field.value==="JCB")
+      &&extraction.fields.some(field=>field.key==="vehicle_fuel_type"
+        &&field.value==="Diesel"
+        &&field.evidence.startsWith("Manufacturer-model Diesel specification (JCB 455-5N wheel loader)"))
+      ?(()=>{
+        const oldFields=extraction.fields.filter(field=>field.key!=="vehicle_fuel_type");
+        return{
+          legacyIffcoLoaderFuelFingerprint:fingerprint(id,current.document.id,
+            oldFields,visibleWarnings,extraction.premium,extraction.issuanceEvidence,
+            acceptedIssuanceDate,commercialPremium),
+          legacyIffcoLoaderFuelWithoutNewRefFingerprint:fingerprint(id,current.document.id,
             oldFields.filter(field=>field.key!=="vehicle_registration_number"),
             visibleWarnings,extraction.premium,extraction.issuanceEvidence,
             acceptedIssuanceDate,commercialPremium),
