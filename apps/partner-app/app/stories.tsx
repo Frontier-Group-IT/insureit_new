@@ -197,7 +197,7 @@ function formatMetric(story: PartnerStory) {
  * of the shared narrative slide. Metrics and policy counts stay backend-driven.
  */
 function BusinessMonthStory({ story, onOpen }: { story: PartnerStory; onOpen: () => void }) {
-  const policyMatch = story.title.match(/^([\\d,]+)\\s+(polic(?:y|ies))\\s*(.*)$/i);
+  const policyMatch = story.title.match(/^([0-9,]+) +(polic(?:y|ies)) *(.*)$/i);
   const premium = story.metric !== undefined ? formatMetric(story) : null;
   const label = story.metric_label?.trim() || 'Gross premium';
   const hasRoute = Boolean(story.route);
@@ -228,7 +228,7 @@ function BusinessMonthStory({ story, onOpen }: { story: PartnerStory; onOpen: ()
             {policyMatch ? (
               <>
                 <Text style={styles.businessPolicyCount}>{policyMatch[1]}</Text>
-                <Text style={styles.businessPolicyLabel}>{'polic' + (policyMatch[2].toLowerCase() === 'policy' ? 'y' : 'ies') + (policyMatch[3] ? ' ' + policyMatch[3].trim() : '')}</Text>
+                <Text style={styles.businessPolicyLabel}>{policyMatch[2] + (policyMatch[3] ? ' ' + policyMatch[3].trim() : '')}</Text>
               </>
             ) : (
               <Text style={styles.businessPolicyLabel}>{story.title}</Text>
