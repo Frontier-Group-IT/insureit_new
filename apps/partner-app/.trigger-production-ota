@@ -1,9 +1,9 @@
 Partner production OTA trigger
-release=partner-all-regular-typography-pr-5035
+release=partner-restore-typography-revert-pr-5046
 source=verified-merged-main
-source_pr=5035
-source_merge=559d2c8dab667aa5563529c8e17341d5d92d60a1
-reason=user-approved-merge-and-publish-all-regular-typography
+source_pr=5046
+source_merge=8438779d3d288c22f1df2f14c1c4023c7a4ebdf1
+reason=user-approved-merge-and-publish-revert-pr-5035
 channel=production
 runtime=0.2.0
 requested=2026-11-21
