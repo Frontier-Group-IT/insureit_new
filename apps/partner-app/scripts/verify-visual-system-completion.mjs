@@ -923,7 +923,21 @@ for (const item of ['Profile & registration', 'Support', 'Biometric re-entry', '
 for (const detail of ['INSUREIT Partner', 'Version', 'Runtime', 'Automatic on launch']) requireText(settings, detail, 'Compact app information must retain ' + detail);
 
 
-requireText(profile, "marginHorizontal: -partnerTheme.spacing.lg,\n    marginTop: 0,\n    paddingHorizontal: 20,", 'Profile blue hero must attach directly below the navy title header with no blank gap.');
+for (const fragment of [
+  'marginHorizontal: 0,',
+  'marginTop: 12,',
+  'borderRadius: 24,',
+  'minHeight: 124,',
+  'borderRadius: 22,',
+  'minHeight: 72,',
+  'width: 42,',
+  'height: 42,',
+  'onPress={() => void changeProfilePhoto()}',
+  'value={identity.employee_code}',
+  'value={identity.designation',
+  'value={humanize(identity.role)}',
+  '<PartnerCaseBottomNavigation activeTab="More" />',
+]) requireText(profile, fragment, 'Refreshed Profile layout must retain registration details and key actions: ' + fragment);
 requireText(profile, 'name="log-out-outline"', 'Profile hero must expose the logout icon.');
 requireText(profile, 'onPress={() => setLogoutOpen(true)}', 'Profile hero logout icon must open confirmation instead of signing out immediately.');
 requireText(profile, '<PartnerConfirmDialog', 'Profile logout must use the shared confirmation dialog.');
