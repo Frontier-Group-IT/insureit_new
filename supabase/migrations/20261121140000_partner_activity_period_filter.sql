@@ -57,7 +57,7 @@ begin
   ), learning_events as (
     select 'learn'::text kind,a.card_id entity_id,a.created_at event_at,c.category title,'60-Second Learn' subtitle,
       case when a.is_correct then 'Answered correctly' else 'Learning card completed' end meta,'/learn' route,'learn' tone, null::text manufacturer
-    from public.partner_learning_attempts a join public.partner_learning_cards c on c.id=a.card_id where a.auth_user_id=auth.uid() and (v_start is null or a.created_at>=v_start) order by a.created_at desc limit 20
+    from public.partner_learning_attempts a join public.partner_learning_cards c on c.id=a.card_id where a.auth_user_id=auth.uid() and (v_start is null or a.created_at>=v_start) order by a.created_at desc limit v_fetch
   ), all_events as (select * from policy_events union all select * from claim_events union all select * from intake_events union all select * from learning_events),
   ranked as (select * from all_events order by event_at desc, kind, entity_id limit v_limit+1 offset v_offset),
   page as (select * from ranked order by event_at desc, kind, entity_id limit v_limit)
