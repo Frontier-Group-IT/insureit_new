@@ -37,6 +37,9 @@ export type SemiAutoN8nPreview = {
   fingerprint: string;
   /** Legacy queue hash compatibility for IFFCO MP/NEW before internal reference retention. */
   legacyIffcoNewFingerprint?: string;
+  /** Old queue hashes before certified compactor make/fuel enrichment. */
+  legacyIffcoMachineFingerprint?: string;
+  legacyIffcoMachineWithoutNewRefFingerprint?: string;
   fields: N8nOcrField[];
   parserId: string;
   parserVersion: string;
@@ -301,6 +304,31 @@ export async function previewSemiAutoN8nExtraction(
           visibleWarnings,extraction.premium,extraction.issuanceEvidence,
           acceptedIssuanceDate,commercialPremium)}
       :{}),
+    // Compatibility for pre-enrichment IFFCO VMT 117 LC NDD queue rows.
+    // The original parser emitted Make=VMT and no fuel; derive only hashes
+    // for this exact certified model-family and re-validate current PDF
+    // before any policy registration. Do not update the queue/draft here.
+    ...(extraction.parserId==="iffco_tokio_cv_native_pdf"
+      &&extraction.fields.some(field=>field.key==="vehicle_model"
+        &&/^VMT?\s*117\s+LC\s+NDD\s+COMPACTOR$/i.test(field.value))
+      &&extraction.fields.some(field=>field.key==="vehicle_make"
+        &&field.value==="JCB"
+        &&field.evidence.startsWith("Manufacturer-model JCB VM117 NDD specification"))
+      ?(()=>{
+        const oldFields=extraction.fields
+          .filter(field=>field.key!=="vehicle_fuel_type")
+          .map(field=>field.key==="vehicle_make"
+            ?{...field,value:"VMT",evidence:"Native PDF policy schedule"}:field);
+        return {
+          legacyIffcoMachineFingerprint:fingerprint(id,current.document.id,
+            oldFields,visibleWarnings,extraction.premium,extraction.issuanceEvidence,
+            acceptedIssuanceDate,commercialPremium),
+          legacyIffcoMachineWithoutNewRefFingerprint:fingerprint(id,current.document.id,
+            oldFields.filter(field=>field.key!=="vehicle_registration_number"),
+            visibleWarnings,extraction.premium,extraction.issuanceEvidence,
+            acceptedIssuanceDate,commercialPremium),
+        };
+      })():{}),
     fields: extraction.fields,
     parserId: extraction.parserId,
     parserVersion: extraction.parserVersion,
