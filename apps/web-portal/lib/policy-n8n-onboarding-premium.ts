@@ -80,6 +80,29 @@ export function mapVerifiedGoDigitCommercialPremium(p: {
   return { od:paisa(p.od), addOnPremium:"0", tp:paisa(p.tp), cpa:"0", cpaOpted:"No" };
 }
 
+/** IFFCO Tokio prints Net(B) inclusive of owner-driver PA. Canonical booking
+ * separately adds CPA to TP. Split ONLY the source-verified CPA amount out of
+ * printed Net(B), without changing OD, printed net/GST/gross or paid-driver LL.
+ * Values must have passed the active IFFCO 18-check parser contract first. */
+export function mapVerifiedIffcoCommercialPremium(
+  p: {od:number; tp:number; net:number; gst:number; gross:number},
+  printedCpa:number,
+):ReturnType<typeof mapVerifiedN8nMotorPremium> {
+  const money=[p.od,p.tp,p.net,p.gst,p.gross,printedCpa];
+  const valid=(v:number)=>Number.isFinite(v)&&v>=0&&v<=1_000_000_000
+    &&Math.abs(v*100-Math.round(v*100))<.00001;
+  const cents=(v:number)=>Math.round(v*100);
+  if(!money.every(valid)||p.od<=0||p.tp<=0
+    ||cents(printedCpa)>cents(p.tp)
+    ||Math.abs(cents(p.od)+cents(p.tp)-cents(p.net))>6
+    ||Math.abs(cents(p.net)+cents(p.gst)-cents(p.gross))>6)
+    throw new Error("n8n_iffco_cpa_split_unreconciled");
+  const canonicalTpCents=cents(p.tp)-cents(printedCpa);
+  const value=(v:number)=>String(Math.round(v*100)/100);
+  return {od:value(p.od),tp:value(canonicalTpCents/100),addOnPremium:"0",
+    cpa:value(printedCpa),cpaOpted:printedCpa>0?"Yes":"No"};
+}
+
 /** Read-only printed New India tax reference, for current-PDF verified drafts.
  * This is NOT used to compute or post a booked policy's tax. We cannot
  * recreate a source invoice's rounded mixed-rate GST from 18%/5% estimates.
