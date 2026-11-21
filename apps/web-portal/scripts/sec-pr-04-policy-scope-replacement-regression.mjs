@@ -1,0 +1,15 @@
+import {readFileSync} from "node:fs";
+import {strict as assert} from "node:assert";
+const editor = readFileSync(new URL("../lib/policy-access-server.ts",import.meta.url),"utf8");
+const action = readFileSync(new URL("../app/policies/non-motor-policy-document-actions.ts",import.meta.url),"utf8");
+const body=editor.slice(editor.indexOf("export async function requirePolicyEditor"));
+assert.match(body,/accessRank\[permission.access\] < accessRank.edit \|\| !policyId/);
+assert.match(body,/canAccessPolicy\(profile.id, profile.role, policyId, "view_policies", true\)/);
+assert.match(action,/if \(existingRows\?\.length && requester\?\.role !== "operations_head_life"\)/);
+assert.match(action,/await requirePolicyEditor\(policyId\)/);
+assert.match(action,/await requirePolicyCreator\(\)/);
+const signer = readFileSync(new URL("../app/policies/policy-document-actions.ts",import.meta.url),"utf8");
+const view = signer.slice(signer.indexOf("export async function openPolicyCopy"),signer.indexOf("export type PolicyCopyFileMetadata"));
+assert.match(view, /canAccessPolicy\(profile\.id, profile\.role, documentRow\.policy_id, "view_policies"\)/);
+assert.doesNotMatch(view, /canAccessCustomer/, "Customer visibility alone must not sign an unrelated policy copy.");
+console.log("SEC-PR-04 scoped editor and create-vs-replace contracts passed (static only).");

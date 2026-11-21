@@ -50,6 +50,10 @@ export async function requirePolicyEditor(policyId?: string) {
     return profile;
   }
   const permission = await getEffectivePermission(profile.id, profile.role, "view_policies");
-  if (accessRank[permission.access] < accessRank.edit) redirect("/access-denied");
+  if (accessRank[permission.access] < accessRank.edit || !policyId) redirect("/access-denied");
+  // Capability and record scope are independent. Organization-wide roles keep
+  // their existing access through canAccessPolicy's organization mode.
+  const { canAccessPolicy } = await import("@/lib/policy-access-scope");
+  if (!(await canAccessPolicy(profile.id, profile.role, policyId, "view_policies", true))) redirect("/access-denied");
   return profile;
 }
