@@ -1,7 +1,7 @@
-import { useState, type ReactNode } from 'react';
+import { useCallback, useState, type ReactNode } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Feather, Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
 import { PartnerBanner } from '@/components/ui/partner-banner';
@@ -9,6 +9,7 @@ import { PartnerButton } from '@/components/ui/partner-button';
 import { PartnerConfirmDialog } from '@/components/ui/partner-confirm-dialog';
 import { PartnerProfileAvatar } from '@/components/ui/partner-profile-avatar';
 import { PartnerProfileMenuIcon, type PartnerProfileMenuIconKind } from '@/components/ui/partner-profile-menu-icon';
+import { getPartnerUnreadActivityBadgeCount } from '@/lib/engagement';
 import { canPartnerAccess, canPartnerAccessCaseRegister, canPartnerSearch } from '@/lib/partner-permissions';
 import { partnerTheme } from '@/lib/theme';
 import { signedInPersonName, signedInPersonRole } from '@/lib/signed-in-person';
@@ -22,6 +23,19 @@ export default function MoreScreen() {
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState('');
+  const [unreadCount, setUnreadCount] = useState<number | null>(null);
+
+  useFocusEffect(useCallback(() => {
+    let active = true;
+    setUnreadCount(null);
+    if (context) {
+      void getPartnerUnreadActivityBadgeCount()
+        .then((count) => { if (active) setUnreadCount(count); })
+        .catch(() => { if (active) setUnreadCount(null); });
+    }
+    return () => { active = false; };
+  }, [context]));
+
   if (!context) return null;
 
   async function logout() {
@@ -62,11 +76,16 @@ export default function MoreScreen() {
           <View style={styles.heroActions}>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="View recent activity"
+              accessibilityLabel={unreadCount === null ? "View recent activity" : `View recent activity, ${unreadCount} unread`}
               onPress={() => router.push('/activity')}
               style={({ pressed }) => [styles.heroIconButton, pressed && styles.pressed]}
             >
               <Feather name="bell" size={20} color="#FFFFFF" />
+              {unreadCount !== null && unreadCount > 0 ? (
+                <View pointerEvents="none" style={styles.heroUnreadBadge}>
+                  <Text style={styles.heroUnreadBadgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
+                </View>
+              ) : null}
             </Pressable>
             <Pressable
               accessibilityRole="button"
@@ -268,6 +287,21 @@ const styles = StyleSheet.create({
     borderWidth: 1.25,
     borderColor: '#FFFFFF',
   },
+  heroUnreadBadge: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    minWidth: 19,
+    height: 19,
+    paddingHorizontal: 3,
+    borderRadius: 10,
+    backgroundColor: '#F04452',
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroUnreadBadgeText: { color: '#FFFFFF', fontSize: 9, lineHeight: 12, fontWeight: '800', textAlign: 'center' },
   heroAvatarTouch: { borderRadius: 18 },
   heroAvatar: {
     width: 35,
