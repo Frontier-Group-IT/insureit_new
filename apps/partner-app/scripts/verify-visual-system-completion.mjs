@@ -937,6 +937,7 @@ for (const fragment of [
   'registrationIcons: Record<string, ImageSourcePropType>',
   'registrationSideIcons: Record<string, ImageSourcePropType>',
   "profile-id-check-3d.png",
+  "registration-3d.png",
   "employee-id-3d.png",
   "designation-bag-3d.png",
   "role-team-3d.png",
