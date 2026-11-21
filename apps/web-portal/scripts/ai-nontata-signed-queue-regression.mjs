@@ -72,7 +72,9 @@ assert.match(eligibility,/profile\.family==="commercial"/);
 assert.match(queue,/ICICI_N8N_IDS\.has\(extraction\.preview\.parserId\)/);
 assert.match(actions,/const commercial=extracted\.preview\.commercialPremium/);
 assert.match(actions,/mapVerifiedGoDigitCommercialPremium\(commercial\)/);
-assert.match(actions,/extracted\.preview\.parserId!=="go_digit_cv_native_pdf"/);
+assert.ok(actions.includes('extracted.preview.parserId==="go_digit_cv_native_pdf"')
+  && actions.includes('assessStandardCommercialDirectConversion({'),
+  "Go Digit premium mapping stays insurer-scoped; other commercial parsers need their own strict eligibility contract");
 assert.match(actions,/!hasVerifiedN8nParserEvidence\(extracted\.preview\.parserId,/,
   "Confirmed bulk conversion requires exact trained insurer checks, including Tata 18/18");
 assert.match(oldBridge,/insureit-policy-intake-icici-v1/);
