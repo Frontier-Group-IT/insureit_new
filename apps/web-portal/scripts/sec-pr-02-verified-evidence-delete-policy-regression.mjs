@@ -1,0 +1,10 @@
+import {readFileSync} from "node:fs";
+import {strict as assert} from "node:assert";
+const sql=readFileSync(new URL("../../../supabase/migrations/20261113091000_claim_verified_evidence_storage_delete_guard.sql",import.meta.url),"utf8");
+for(const pattern of [/as restrictive for delete to authenticated/i,/bucket_id <> 'claim-documents'/,/security definer/i,/set search_path = ''/,/cd\.storage_path = p_path/,/cd\.verification_status = 'verified'/,/c\.claim_service_mode = 'broker_managed'/,/revoke all on function/,/to authenticated/])assert.match(sql,pattern);
+assert.match(sql,/create schema if not exists vapt_private/);
+assert.match(sql,/on public\.claim_documents as restrictive for delete to authenticated/);
+assert.match(sql,/on storage\.objects as restrictive for delete to authenticated/);
+assert.match(sql,/vapt_private\.sec_pr_02_is_verified_broker_claim_evidence/);
+assert.doesNotMatch(sql,/drop policy/i);
+console.log("SEC-PR-02 restricted evidence policy contract passed; live Storage RLS NOT exercised.");
