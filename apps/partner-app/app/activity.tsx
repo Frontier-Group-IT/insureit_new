@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Image, Modal, Pressable, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
@@ -20,6 +20,9 @@ import { PartnerAssets } from '@/lib/partner-assets';
 
 export default function ActivityScreen() {
   const router = useRouter();
+  const { width: windowWidth } = useWindowDimensions();
+  const periodTriggerRef = useRef<View>(null);
+  const [periodMenuPosition, setPeriodMenuPosition] = useState({ top: 0, left: 0 });
   const [data, setData] = useState<PartnerActivityData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -109,6 +112,20 @@ export default function ActivityScreen() {
       return searchable.includes(normalizedQuery);
     });
   }, [activityFilter, data, query, readKeys]);
+
+  function togglePeriodMenu() {
+    if (periodMenuOpen) {
+      setPeriodMenuOpen(false);
+      return;
+    }
+    periodTriggerRef.current?.measureInWindow((x, y, _width, height) => {
+      setPeriodMenuPosition({
+        top: y + height + 3,
+        left: Math.max(8, Math.min(x, windowWidth - 160)),
+      });
+      setPeriodMenuOpen(true);
+    });
+  }
 
   function openActivity(item: PartnerActivityItem) {
     const key = partnerActivityEventKey(item);
@@ -237,34 +254,14 @@ export default function ActivityScreen() {
               accessibilityRole="button"
               accessibilityLabel="Filter activity by date"
               accessibilityState={{ expanded: periodMenuOpen }}
-              onPress={() => setPeriodMenuOpen((open) => !open)}
+              onPress={togglePeriodMenu}
+              ref={periodTriggerRef}
               hitSlop={8}
               style={styles.periodTrigger}
             >
               <Text style={styles.today}>{period === 'today' ? 'Today' : period === 'last_week' ? 'Last Week' : period === 'last_month' ? 'Last Month' : 'All'}</Text>
               <Ionicons name="chevron-down" size={13} color="#8390AA" />
             </Pressable>
-            {periodMenuOpen ? (
-              <View style={styles.periodMenu}>
-                {([
-                  ['today', 'Today'],
-                  ['last_week', 'Last Week'],
-                  ['last_month', 'Last Month'],
-                  ['all', 'All'],
-                ] as const).map(([key, label]) => (
-                  <Pressable
-                    key={key}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: period === key }}
-                    onPress={() => { setPeriodMenuOpen(false); setPeriod(key); }}
-                    style={[styles.periodOption, period === key && styles.periodOptionSelected]}
-                  >
-                    <Text style={[styles.periodOptionText, period === key && styles.periodOptionTextSelected]}>{label}</Text>
-                    {period === key ? <Ionicons name="checkmark" size={15} color="#236FB8" /> : null}
-                  </Pressable>
-                ))}
-              </View>
-            ) : null}
           </View>
 
           <View style={styles.searchWrap}>
@@ -383,6 +380,44 @@ export default function ActivityScreen() {
           {moreError ? <Text style={styles.moreError}>{moreError}</Text> : null}
         </>}
       </View>
+      <Modal
+        visible={periodMenuOpen}
+        transparent
+        statusBarTranslucent
+        animationType="none"
+        onRequestClose={() => setPeriodMenuOpen(false)}
+      >
+        <View style={styles.periodModalLayer}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Close activity date filter"
+            onPress={() => setPeriodMenuOpen(false)}
+            style={StyleSheet.absoluteFillObject}
+          />
+          <View
+            accessibilityViewIsModal
+            style={[styles.periodMenu, { top: periodMenuPosition.top, left: periodMenuPosition.left }]}
+          >
+            {([
+              ['today', 'Today'],
+              ['last_week', 'Last Week'],
+              ['last_month', 'Last Month'],
+              ['all', 'All'],
+            ] as const).map(([key, label]) => (
+              <Pressable
+                key={key}
+                accessibilityRole="button"
+                accessibilityState={{ selected: period === key }}
+                onPress={() => { setPeriodMenuOpen(false); setPeriod(key); }}
+                style={[styles.periodOption, period === key && styles.periodOptionSelected]}
+              >
+                <Text style={[styles.periodOptionText, period === key && styles.periodOptionTextSelected]}>{label}</Text>
+                {period === key ? <Ionicons name="checkmark" size={15} color="#236FB8" /> : null}
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      </Modal>
     </PartnerScreen>
   );
 }
@@ -567,10 +602,9 @@ const styles = StyleSheet.create({
     zIndex: 20,
   },
   periodTrigger: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingVertical: 4 },
+  periodModalLayer: { flex: 1, backgroundColor: 'transparent' },
   periodMenu: {
     position: 'absolute',
-    top: 29,
-    left: 112,
     width: 152,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
