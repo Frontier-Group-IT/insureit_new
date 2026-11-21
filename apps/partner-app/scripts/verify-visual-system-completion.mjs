@@ -851,6 +851,17 @@ if (!(supportRightIndex > 0 && supportUpdatedIndex > supportRightIndex && suppor
   throw new Error('Support right column must show updated-at above the two icon shortcuts.');
 }
 requireText(support, "textAlign: 'right', transform: [{ translateY: 9 }]", 'Support updated-at label should align with the left title without moving the icon row.');
+for (const fragment of [
+  "Platform.OS === 'ios' ? 1 : 2",
+  "adjustsFontSizeToFit={Platform.OS === 'ios'}",
+  "heroTitleIos: { fontSize: 11.2, lineHeight: 15 }",
+  "heroIconShell: { height: 60, width: 60",
+  "marginRight: 12, zIndex: 1, transform: [{ translateY: -6 }]",
+  "heroInformation: { flex: 1, minWidth: 0, minHeight: 60, justifyContent: 'center', transform: [{ translateY: -6 }]",
+  'name="chatbubble-ellipses" size={18}',
+  'name="document-text" size={18}',
+  'heroActionBubble: { width: 25, height: 25',
+]) requireText(support, fragment, 'Support first section must retain compact Android icons and single-line iOS title: ' + fragment);
 if (support.includes('PartnerAssets.actions.supportVerified')) throw new Error('Support hero must not reuse the old analytics icon.');
 if (support.includes('asset={PartnerAssets.emptyStates.supportResolved}')) throw new Error('Support-unavailable errors must not misuse the support-resolved artwork.');
 requireText(settings, 'PartnerAssets.status.settings', 'Settings must retain branded Check for updates artwork.');
