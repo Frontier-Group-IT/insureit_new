@@ -1,9 +1,9 @@
 Partner production OTA trigger
-release=partner-stories-tap-navigation-pr-5096
+release=partner-stories-today-renewal-redesign-pr-5104
 source=verified-merged-main
-source_pr=5096
-source_merge=2c325b4c456275d5d36d455dc5728fd176396d52
-reason=user-approved-merge-and-publish-stories-tap-navigation
+source_pr=5104
+source_merge=7741fbb8c778f5b932c1238c0c28e61dd72a2e57
+reason=user-approved-merge-and-publish-today-story-redesign
 channel=production
 runtime=0.2.0
 requested=2026-11-21
