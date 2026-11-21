@@ -192,9 +192,7 @@ async function processClaim(item: Claimed, parserRevision: string) {
       await finishClaim(item,{
         state:"duplicate",exception_codes:["duplicate_policy"],field_keys:[],
         parser_id:null,checks_passed:0,extraction_fingerprint:null,
-        last_error_code:extraction.preview.parserId==="new_india_cv_native_pdf"
-      &&!niaReview.eligible&&!isDuplicate?"nia_"+niaReview.reason:null,
-    processed_at:new Date().toISOString(),
+        last_error_code:null,processed_at:new Date().toISOString(),
         retry_after:retryAfter(1440),
       });
       return;
@@ -427,7 +425,9 @@ async function processClaim(item: Claimed, parserRevision: string) {
     parser_id:extraction.preview.parserId,
     checks_passed:extraction.preview.checksPassed,
     extraction_fingerprint:extraction.preview.fingerprint,
-    last_error_code:null,processed_at:new Date().toISOString(),
+    last_error_code:extraction.preview.parserId==="new_india_cv_native_pdf"
+      &&!niaReview.eligible&&!isDuplicate?"nia_"+niaReview.reason:null,
+    processed_at:new Date().toISOString(),
     retry_after:retryAfter(1440),
   });
   // The same canonical, current-document guard fills only an EMPTY saved
