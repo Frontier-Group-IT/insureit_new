@@ -59,23 +59,28 @@ export default async function SemiAutoPolicyOnboardingPage({ searchParams }: { s
   const duplicates = list.error ? null : await loadPolicyIntakeDuplicateMatches(admin, list.data ?? []);
   const unavailable = Boolean(list.error || !duplicates?.ok);
   const candidates = list.data ?? [];
-  const duplicateIds = duplicates?.ok ? new Set(duplicates.matches.keys()) : new Set<string>();
   // Every open Motor Intake appears, including duplicates and unfinished OCR.
-  // Duplicate status is display-only: normal edit/booking still uses independent
-  // canonical authorization, duplicate detection and readiness checks.
+  // The shared OCR policy-number matcher may have no policy number yet when
+  // the separate AI queue has independently verified the current PDF.
   const workspaceRows = !unavailable && duplicates?.ok ? candidates : [];
-  // The Policy Intake Register uses this exact bucketing function across
-  // the entire authorized result set, BEFORE search/status/page filters.
-  // Duplicates are a distinct derived status and must not inflate the Action
-  // Required or In Review tabs. These open-only counts intentionally exclude
-  // rejected/completed Intakes visible in the full register.
-  const intakeCounts = policyIntakeStatusCounts(workspaceRows,duplicateIds);
-  const duplicateCount = intakeCounts.duplicate;
-  // Open-work count must exclude canonical duplicates; the Duplicate tab
-  // remains available for read-only audit, not as pending AI work.
-  const total = intakeCounts.action_required + intakeCounts.in_review + intakeCounts.processing;
   const queueActive = primaryN8n && aiQueueEnabled();
   const queue = queueActive ? await loadAiQueueDisplay(workspaceRows.map(row=>row.id)) : new Map();
+  // Effective duplicate status is the union of canonical OCR matches and
+  // *confirmed* AI queue duplicates. In particular, a queue-only duplicate
+  // must not linger in Processing just because intake OCR is still pending.
+  // Never accept a generic exception/diagnostic as proof of a duplicate.
+  // This is display-only; booking still independently checks duplicates.
+  const duplicateIds = duplicates?.ok ? new Set(duplicates.matches.keys()) : new Set<string>();
+  for (const row of workspaceRows) {
+    const item = queue.get(row.id);
+    if (item?.state === "duplicate" && item.exception_codes.includes("duplicate_policy"))
+      duplicateIds.add(row.id);
+  }
+  // Compute all tabs/counts from the SAME effective duplicate set before
+  // pagination, bulk-convert, retries, and row rendering. No database writes.
+  const intakeCounts = policyIntakeStatusCounts(workspaceRows,duplicateIds);
+  const duplicateCount = intakeCounts.duplicate;
+  const total = intakeCounts.action_required + intakeCounts.in_review + intakeCounts.processing;
   const queueCounts = { eligible:0, extracted:0, duplicates:duplicateCount, queued:0, extracting:0,
     exceptions:0, unprocessed:0, unsupported:0, failed:0 };
   for (const row of workspaceRows) {
