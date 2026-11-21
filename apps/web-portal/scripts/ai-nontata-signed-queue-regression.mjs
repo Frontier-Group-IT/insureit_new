@@ -87,6 +87,32 @@ assert.ok(actions.includes('key==="vehicle_manufacturing_year"'));
 assert.ok(handoff.includes('const goDigitVerifiedFill = Boolean(commercial) && fillEmptyFields'));
 assert.ok(premiumHelper.includes("mapVerifiedGoDigitCommercialPremium"));
 const {mapVerifiedGoDigitCommercialPremium}=await import("../lib/policy-n8n-onboarding-premium.ts");
+const {mapVerifiedIffcoCommercialPremium}=await import("../lib/policy-n8n-onboarding-premium.ts");
+const iffcoVerified=[
+  {od:4608,tp:7697,net:12305,gst:2214.90,gross:14519.90,cpa:330},
+  {od:20129,tp:7367,net:27496,gst:4949.28,gross:32445.28,cpa:0},
+  {od:4518,tp:7697,net:12215,gst:2198.70,gross:14413.70,cpa:330},
+  {od:5565,tp:7367,net:12932,gst:2327.76,gross:15259.76,cpa:0},
+  {od:4132,tp:7697,net:11829,gst:2129.22,gross:13958.22,cpa:330},
+  {od:4762,tp:7367,net:12129,gst:2183.22,gross:14312.22,cpa:0},
+  {od:5847,tp:7367,net:13214,gst:2378.52,gross:15592.52,cpa:0},
+];
+for(const data of iffcoVerified){
+  const p=mapVerifiedIffcoCommercialPremium(data,data.cpa);
+  assert.equal(p.cpaOpted,data.cpa>0?"Yes":"No");
+  assert.equal(Math.round((Number(p.od)+Number(p.tp)+Number(p.cpa))*100),
+    Math.round(data.net*100),"IFFCO canonical net must equal independently printed PDF net");
+  assert.equal(Math.round(Number(p.tp)*100),
+    Math.round((data.tp-data.cpa)*100),"IFFCO printed Net(B) must not be double-counted");
+}
+assert.throws(()=>mapVerifiedIffcoCommercialPremium(iffcoVerified[0],9000),
+  /n8n_iffco_cpa_split_unreconciled/);
+assert.throws(()=>mapVerifiedIffcoCommercialPremium({...iffcoVerified[0],gross:15000},330),
+  /n8n_iffco_cpa_split_unreconciled/);
+assert.ok(handoff.includes("mapVerifiedIffcoCommercialPremium")
+  && handoff.includes('iffcoCpaFields.length!==1'),
+  "IFFCO review draft must require printed CPA evidence and strict TP/CPA mapping");
+
 assert.deepEqual(mapVerifiedGoDigitCommercialPremium({od:2415.46,tp:7647,net:10062.46,gst:1811.24,gross:11873.70}),
   {od:"2415.46",addOnPremium:"0",tp:"7647",cpa:"0",cpaOpted:"No"});
 assert.throws(()=>mapVerifiedGoDigitCommercialPremium({od:2415.46,tp:7647,net:10062.46,gst:1811.24,gross:12000}),
