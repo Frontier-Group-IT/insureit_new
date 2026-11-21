@@ -1,6 +1,7 @@
 import "server-only";
 
 import { extractNativePdfTextPages } from "@/lib/policy-ocr-native-pdf";
+import { enrichIffcoCertifiedMachineFamily } from "@/lib/policy-iffco-machine-family";
 
 type Insurer = "new_india_cv_native_pdf" | "iffco_tokio_cv_native_pdf" | "go_digit_cv_native_pdf" | "united_india_gcv_native_pdf" | "oriental_gccv_native_pdf";
 type OcrField = { key: string; label: string; value: string; confidence: null; page: number | null; evidence: string };
@@ -199,8 +200,10 @@ function validate(payload: unknown, insurer: Insurer, ids: Record<"intake_id" | 
     // evidence check. The canonical onboarding mapper independently clears
     // registrationNo for registration_pending, so it is never booked as a plate.
     // NIA/United reference-only numbers remain filtered as before.
-    fields: isNewIndiaUnregistered || isUnitedNewVehicle
-      ? fields.filter((f) => f.key !== "vehicle_registration_number") : fields,
+    fields: enrichIffcoCertifiedMachineFamily(
+      isNewIndiaUnregistered || isUnitedNewVehicle
+        ? fields.filter((f) => f.key !== "vehicle_registration_number") : fields,
+      insurer),
     warnings,
     checksPassed: expected.filter((key) => checks[key] === true).length,
     premium: { od, tp, net, gst, gross },

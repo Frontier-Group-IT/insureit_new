@@ -309,7 +309,9 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
   // Re-verified live source fields and document ID remain authoritative.
   const sameReviewedFingerprint=extracted.preview.fingerprint===queued.extraction_fingerprint
     ||(queued.parser_id==="iffco_tokio_cv_native_pdf"
-      &&extracted.preview.legacyIffcoNewFingerprint===queued.extraction_fingerprint);
+      &&(extracted.preview.legacyIffcoNewFingerprint===queued.extraction_fingerprint
+        ||extracted.preview.legacyIffcoMachineFingerprint===queued.extraction_fingerprint
+        ||extracted.preview.legacyIffcoMachineWithoutNewRefFingerprint===queued.extraction_fingerprint));
   if(extracted.preview.documentId!==queued.document_id||
      !sameReviewedFingerprint||
      (heldReview&&extracted.preview.parserId!==queued.parser_id)||
