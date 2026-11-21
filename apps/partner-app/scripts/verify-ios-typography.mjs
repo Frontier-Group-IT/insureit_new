@@ -8,7 +8,7 @@ const plugin = require('../plugins/ios-typography.js');
 
 function weightsFor(source, platform) {
   const result = transformSync(source, {
-    filename: 'ios-typography-verification.ts',
+    filename: 'partner-typography-verification.ts',
     babelrc: false,
     configFile: false,
     ast: true,
@@ -47,36 +47,50 @@ function weightsFor(source, platform) {
   return weights;
 }
 
-const sample = `const styles = {
-  heading: { fontWeight: '900' },
-  display: { fontWeight: '800' },
-  section: { fontWeight: '700' },
-  label: { fontWeight: '600' },
-  body: { fontWeight: '500' },
-  normal: { fontWeight: '400' },
-  semanticBold: { fontWeight: 'bold' },
-  dynamic: { fontWeight: activeWeight },
-  conditional: { fontWeight: Platform.OS === 'ios' ? '400' : '700' },
-  computed: { fontWeight: '800' as const },
-};`;
+const sample = [
+  "const styles = {",
+  "  heading: { fontWeight: '900' },",
+  "  display: { fontWeight: '800' },",
+  "  section: { fontWeight: '700' },",
+  "  label: { fontWeight: '600' },",
+  "  body: { fontWeight: '500' },",
+  "  normal: { fontWeight: '400' },",
+  "  semanticBold: { fontWeight: 'bold' },",
+  "  dynamic: { fontWeight: activeWeight },",
+  "  conditional: { fontWeight: Platform.OS === 'ios' ? '400' : '700' },",
+  "  computed: { fontWeight: '800' as const },",
+  "  numeric: { fontWeight: 700 },",
+  "  expression: { fontWeight: getWeight() },",
+  "  quotedKey: { 'fontWeight': 'bolder' },",
+  "  untouched: { fontSize: 14, color: '#123456', fontStyle: 'italic' },",
+  "};",
+].join('\n');
 
-const ios = weightsFor(sample, 'ios');
-for (const [style, expected] of Object.entries({
-  heading: '600', display: '600', section: '600', label: '500',
-  body: '400', normal: '400', semanticBold: '600', computed: '600',
-})) assert.equal(ios.get(style), expected, `Incorrect iOS weight for ${style}`);
-assert.ok(!ios.has('dynamic'), 'Dynamic font-weight expressions must remain unmodified');
+const expectedStyles = [
+  'heading', 'display', 'section', 'label', 'body', 'normal',
+  'semanticBold', 'dynamic', 'conditional', 'computed', 'numeric',
+  'expression', 'quotedKey',
+];
 
-for (const platform of ['android', 'web']) {
-  const result = weightsFor(sample, platform);
-  for (const [style, expected] of Object.entries({
-    heading: '900', display: '800', section: '700', label: '600',
-    body: '500', normal: '400', semanticBold: 'bold', computed: '800',
-  })) assert.equal(result.get(style), expected, `${platform} must retain ${style}`);
+for (const platform of ['ios', 'android', 'web']) {
+  const weights = weightsFor(sample, platform);
+  for (const style of expectedStyles) {
+    assert.equal(weights.get(style), '400', 'Partner ' + platform + ' ' + style + ' must render regular');
+  }
+  assert.ok(!weights.has('untouched'), platform + ' unrelated styles should remain unchanged');
 }
 
 const theme = readFileSync(new URL('../lib/theme.ts', import.meta.url), 'utf8');
-assert.equal(weightsFor(theme, 'ios').get('display'), '600', 'iOS display should be semibold');
-assert.equal(weightsFor(theme, 'ios').get('body'), '400', 'iOS body should be regular');
-assert.equal(weightsFor(theme, 'android').get('display'), '800', 'Android headings must not change');
-console.log('Partner typography: iOS 400/500/600, Android/web original weights verified.');
+for (const platform of ['ios', 'android', 'web']) {
+  const weights = weightsFor(theme, platform);
+  for (const style of [
+    'display', 'pageTitle', 'sectionTitle', 'cardTitle', 'body',
+    'bodyStrong', 'label', 'caption', 'meta', 'eyebrow',
+  ]) assert.equal(weights.get(style), '400', 'Shared ' + style + ' must be regular on ' + platform);
+}
+
+// Ensure the normalization stays local to the Partner App bundle.
+const babelConfig = readFileSync(new URL('../babel.config.js', import.meta.url), 'utf8');
+assert.match(babelConfig, /require\('\.\/plugins\/ios-typography'\)/, 'Partner Babel config must load regular typography plugin');
+
+console.log('Partner typography: regular fontWeight 400 verified on iOS, Android and web.');
