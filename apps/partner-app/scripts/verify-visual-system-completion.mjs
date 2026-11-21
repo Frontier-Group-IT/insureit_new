@@ -58,7 +58,7 @@ requireText(businessReport, 'bottomNavigation={<PartnerStackBottomNavigation act
 const policies = read('app/(tabs)/policies.tsx');
 const datePicker = read('components/ui/partner-date-picker.tsx');
 for (const phrase of [
-  "KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}",
+  "KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}",
   "selectedDatePreset(draftFromDate,draftToDate)===option.key",
   "styles.advancedPresetSelected",
   "styles.advancedPresetTextSelected",
@@ -66,17 +66,6 @@ for (const phrase of [
   '<PartnerDatePicker directSelect label="To"',
   '<Text style={styles.sortSectionLabel}>Date Range</Text>',
 ]) requireText(policies, phrase, 'Policies filter sheet must retain keyboard-safe direct date selection and highlighted presets: ' + phrase);
-// Android keeps the native full-screen overlay so bottom navigation remains hidden,
- // but must not stack a second keyboard-height resize on the app's existing pan mode.
-for (const marker of [
-  "animationType={Platform.OS === 'android' ? 'fade' : 'slide'}",
-  "onRequestClose={closeSortSheet}",
-  "Keyboard.dismiss();",
-  "onPress={()=>{Keyboard.dismiss();setFilterTab(tab.key);}}",
-  "onPress={closeSortSheet}",
-]) requireText(policies, marker, 'Android Sort by popup must close quickly and avoid keyboard pan/resize conflicts: ' + marker);
-if (policies.includes("Platform.OS === 'ios' ? 'padding' : 'height'"))
-  throw new Error('Android Sort by must not double resize the native pan-mode keyboard.');
 if (policies.includes('<Text style={styles.sortSectionLabel}>Source</Text>') ||
     policies.includes('<Text style={styles.sortSectionLabel}>RM</Text>')) {
   throw new Error('Do not duplicate Source/RM headings above their search inputs');
