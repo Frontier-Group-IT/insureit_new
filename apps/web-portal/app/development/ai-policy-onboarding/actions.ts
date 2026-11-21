@@ -438,11 +438,13 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
   // Explicitly confirmed IT/Admin auto-conversion uses the existing atomic
   // reviewer takeover; manual handoffs keep their separate confirmation.
   // Fill blank fields from CURRENT verified PDF only, never overwrite edits.
-  // Preserve current reviewer edits for the certified NIA legacy premium hold.
-  // The handoff repairs only its independently evidenced old machine-generated
-  // TP/CPA allocation under draft revision CAS; other insurer paths unchanged.
+  // The fifth argument is fillEmptyFields, NOT replaceExistingDraft.
+  // All certified commercial paths must apply verified missing-field updates;
+  // New India specifically needs this to reconcile the old generated TP/CPA
+  // split under draft revision CAS. The separate replaceExistingDraft
+  // argument stays false, preserving reviewer edits and original draft.
   const forwarded=await prepareVerifiedN8nIntakeHandoff(id,queued.document_id,
-    extracted.preview.fingerprint,true,!nia);
+    extracted.preview.fingerprint,true,true);
   if(!forwarded.ok)return fail("Canonical Intake handoff",forwarded.error);
   if(forwarded.draft.issuanceDate!==issuanceDate)
     return fail("Saved issuance date","The saved draft's issue date differs from the verified current PDF. Review it before booking; no existing manual value was overwritten.");
