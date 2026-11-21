@@ -30,6 +30,7 @@ export type PolicyCommercialShellProps = {
   preselectedCustomerId?: string | null;
   preselectedVehicleId?: string | null;
   sourceIntakeId?: string | null;
+  returnToAiStudio?: boolean;
   initialDraftRevision?: number | null;
   initialRegistrationMode?: "registered" | "unregistered";
   authoritativeInitialValues?: boolean;
@@ -54,6 +55,7 @@ export function PolicyCommercialShell(props: PolicyCommercialShellProps) {
         preselectedCustomerId={props.preselectedCustomerId}
         preselectedVehicleId={props.preselectedVehicleId}
         sourceIntakeId={props.sourceIntakeId}
+        returnToAiStudio={props.returnToAiStudio}
         initialDraftRevision={props.initialDraftRevision}
         initialRegistrationMode={props.initialRegistrationMode}
         authoritativeInitialValues={props.authoritativeInitialValues}
