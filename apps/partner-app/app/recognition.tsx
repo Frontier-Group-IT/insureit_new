@@ -144,7 +144,7 @@ export default function RecognitionScreen() {
 }
 
 function milestoneArtwork(icon: RecognitionItem['icon'], title: string): ImageSourcePropType {
-  if (icon === 'learn') return PartnerAssets.actions.policyChecklist;
+  if (icon === 'learn') return require('../assets/partner/status/learning-rhythm-3d.png');
   if (icon === 'renewal') return PartnerAssets.actions.renewalsReference;
   if (/claim/i.test(title)) return PartnerAssets.actions.quickClaims;
   return PartnerAssets.status.journey;
