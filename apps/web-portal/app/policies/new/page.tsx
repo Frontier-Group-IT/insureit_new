@@ -24,7 +24,7 @@ type PrefillCustomer = { id:string; contact_name:string; company_name:string|nul
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-export default async function NewPolicyPage({ searchParams }: { searchParams: Promise<{ intake_id?:string; customer_id?:string; vehicle_id?:string }> }) {
+export default async function NewPolicyPage({ searchParams }: { searchParams: Promise<{ intake_id?:string; customer_id?:string; vehicle_id?:string; origin?:string }> }) {
   const { profile: requester } = await getAuthenticatedProfile(await getServerAccessToken());
   const profile = requester?.role === "operations_head_life" ? await requireCapability("view_policies") : await requirePolicyCreator();
   const commercialAccess = canAccessPolicyCommercials(profile, profile.role === "operations_head_life");
@@ -177,7 +177,7 @@ export default async function NewPolicyPage({ searchParams }: { searchParams: Pr
       ) : null}
       <PolicyRemarksActionStyle />
       <PolicyOnboardingProductGuard insurers={insurerOptions} />
-      <PolicyCommercialShell mode="create" insurers={insurerOptions} customers={customerOptions} rms={rmOptions} sources={sourceOptions} manufacturers={manufacturerOptions} commercialAccess={commercialAccess} initialValues={workflowInitialValues} printedPremiumReference={printedPremiumReference} initialRegistrationMode={workflowRegistrationMode} authoritativeInitialValues={vehicleHandoff} preselectedCustomerId={preselectedCustomerId} preselectedVehicleId={vehicleHandoff ? params.vehicle_id ?? null : null} sourceIntakeId={sourceIntakeId} initialDraftRevision={initialDraftRevision} />
+      <PolicyCommercialShell mode="create" insurers={insurerOptions} customers={customerOptions} rms={rmOptions} sources={sourceOptions} manufacturers={manufacturerOptions} commercialAccess={commercialAccess} initialValues={workflowInitialValues} printedPremiumReference={printedPremiumReference} initialRegistrationMode={workflowRegistrationMode} authoritativeInitialValues={vehicleHandoff} preselectedCustomerId={preselectedCustomerId} preselectedVehicleId={vehicleHandoff ? params.vehicle_id ?? null : null} sourceIntakeId={sourceIntakeId} returnToAiStudio={Boolean(sourceIntakeId && params.origin==="ai_studio")} initialDraftRevision={initialDraftRevision} />
     </AppShell>
   );
 }
