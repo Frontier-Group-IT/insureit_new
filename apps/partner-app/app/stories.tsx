@@ -236,7 +236,7 @@ function JourneyMilestoneStory({ story }: { story: PartnerStory }) {
   const target = Number(story.progress_target);
   const hasMilestone = Number.isFinite(current) && current >= 0 &&
     Number.isFinite(target) && target > 0;
-  const achieved = hasMilestone ? Math.min(current, target) : 0;
+  const achieved = hasMilestone ? current : 0;
   const remaining = hasMilestone ? Math.max(0, target - current) : 0;
   const completion = hasMilestone ? Math.min(100, Math.max(0, (current / target) * 100)) : 0;
   const formatCount = (value: number) => Math.round(value).toLocaleString('en-IN');
