@@ -159,6 +159,8 @@ export default function StoriesScreen() {
                 <TodayRenewalStory story={story} onOpen={openStory} />
               ) : story.kind === 'business' ? (
                 <BusinessMonthStory story={story} onOpen={openStory} />
+              ) : story.kind === 'journey' ? (
+                <JourneyMilestoneStory story={story} />
               ) : (
               <>
               <View style={styles.lessonBadge}>
@@ -223,6 +225,101 @@ function formatMetric(story: PartnerStory) {
   const value = Number(story.metric || 0);
   if (story.metric_label?.toLowerCase().includes('idv') || story.metric_label?.toLowerCase().includes('premium')) return formatIndianCurrency(value);
   return String(story.metric);
+}
+
+/**
+ * Story 3/5: customer journey milestone. Use only verified, scoped story
+ * progress fields so counts, target and completion stay live and consistent.
+ * The shared curved background, story header, progress dashes and invisible
+ * tap navigation remain owned by StoriesScreen.
+ */
+function JourneyMilestoneStory({ story }: { story: PartnerStory }) {
+  const current = Number(story.progress_current);
+  const target = Number(story.progress_target);
+  const hasMilestone = Number.isFinite(current) && current >= 0 &&
+    Number.isFinite(target) && target > 0;
+  const achieved = hasMilestone ? current : 0;
+  const remaining = hasMilestone ? Math.max(0, target - current) : 0;
+  const completion = hasMilestone ? Math.min(100, Math.max(0, (current / target) * 100)) : 0;
+  const formatCount = (value: number) => Math.round(value).toLocaleString('en-IN');
+
+  return (
+    <View style={styles.journeyStory}>
+      <View pointerEvents="none" style={styles.journeyBlueArc} />
+      <View style={styles.journeyHeadingBadge}>
+        <Ionicons name="people" size={23} color="#0760C8" />
+        <Text style={styles.journeyHeadingText}>MY JOURNEY</Text>
+      </View>
+      <Text style={styles.journeySubtitle}>Your milestone progress at a glance.</Text>
+
+      {hasMilestone ? (
+        <>
+          <View style={styles.journeyStats}>
+            <View style={styles.journeyStat}>
+              <View style={[styles.journeyStatIcon, styles.journeyStatIconBlue]}>
+                <Ionicons name="people" size={25} color="#146DD5" />
+              </View>
+              <Text style={styles.journeyStatValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{formatCount(current)}</Text>
+              <Text style={styles.journeyStatLabel}>Customers achieved</Text>
+            </View>
+            <View style={styles.journeyStatDivider} />
+            <View style={styles.journeyStat}>
+              <View style={[styles.journeyStatIcon, styles.journeyStatIconViolet]}>
+                <Ionicons name="locate" size={25} color="#8B45DB" />
+              </View>
+              <Text style={styles.journeyStatValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{formatCount(remaining)}</Text>
+              <Text style={styles.journeyStatLabel}>Customers to go</Text>
+            </View>
+            <View style={styles.journeyStatDivider} />
+            <View style={styles.journeyStat}>
+              <View style={[styles.journeyStatIcon, styles.journeyStatIconGold]}>
+                <Ionicons name="trophy" size={25} color="#E7A408" />
+              </View>
+              <Text style={styles.journeyStatValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{formatCount(target)}</Text>
+              <Text style={styles.journeyStatLabel}>Customer milestone</Text>
+            </View>
+          </View>
+
+          <View style={styles.journeyProgressBlock} accessibilityLabel={`Milestone ${Math.round(completion)} percent complete, ${formatCount(remaining)} customers remaining`}>
+            <View style={styles.journeyProgressTop}>
+              <Text style={styles.journeyProgressLabel}>Milestone completion</Text>
+              <View style={styles.journeyProgressPercent}><Text style={styles.journeyProgressPercentText}>{Math.round(completion)}%</Text></View>
+            </View>
+            <View style={styles.journeyProgressTrack}>
+              <View style={[styles.journeyProgressFill, { width: `${completion}%` as `${number}%` }]} />
+            </View>
+          </View>
+
+          <View style={styles.journeyScene} pointerEvents="none">
+            <View style={styles.journeySceneHalo} />
+            <Image
+              source={require('../assets/partner/status/journey.png')}
+              style={styles.journeyRoadArtwork}
+              resizeMode="contain"
+              accessibilityElementsHidden
+              importantForAccessibility="no-hide-descendants"
+            />
+            <View style={styles.journeyTrophy}>
+              <Ionicons name="trophy" size={34} color="#F6B51D" />
+            </View>
+            <Image source={require('../assets/partner/actions/quick-customers.png')} style={styles.journeyPeopleArtwork} resizeMode="contain" />
+            <View style={styles.journeySceneAchieved}>
+              <Ionicons name="checkmark-circle" size={16} color="#0FA565" />
+              <Text style={styles.journeySceneMarkerText}>{formatCount(achieved)} achieved</Text>
+            </View>
+            <View style={styles.journeySceneTarget}>
+              <Text style={styles.journeySceneMarkerText}>{formatCount(target)} target</Text>
+            </View>
+          </View>
+        </>
+      ) : (
+        <View style={styles.journeyNoMilestone}>
+          <Ionicons name="analytics-outline" size={29} color="#286BC5" />
+          <Text style={styles.journeyNoMilestoneText}>Your next customer milestone will appear when progress data is available.</Text>
+        </View>
+      )}
+    </View>
+  );
 }
 
 /**
@@ -408,21 +505,6 @@ function StoryIllustration({ kind, body }: { kind: PartnerStory['kind']; body: s
       </View>
     );
   }
-  if (kind === 'journey') {
-    return (
-      <View style={styles.illustrationScene}>
-        <View style={styles.sceneHalo} />
-        <View style={styles.growthBars}>
-          {[60, 95, 132, 171].map((height, i) => <View key={i} style={[styles.growthBar, { height }]} />)}
-        </View>
-        <View style={styles.sceneGrowthArrow}><Ionicons name="trending-up" size={120} color="#1988FA" /></View>
-        <View style={styles.peopleRow}>
-          {[32, 42, 55, 46].map((size, i) => <Ionicons key={i} name="person" size={size} color={i === 2 ? '#075AB9' : '#1680E6'} />)}
-        </View>
-        <View style={styles.sceneBadge}><Ionicons name="people" size={38} color="#FFFFFF" /></View>
-      </View>
-    );
-  }
   if (kind === 'business') {
     return (
       <View style={styles.businessGrowthScene}>
@@ -489,6 +571,37 @@ const styles = StyleSheet.create({
   waveMiddle: { position: 'absolute', top: -45, left: -100, width: '160%', height: 200, borderTopLeftRadius: 245, borderTopRightRadius: 180, backgroundColor: '#CFE2FF', opacity: 0.9, transform: [{ rotate: '-10deg' }] },
   waveLower: { position: 'absolute', bottom: -110, right: -130, width: '155%', height: 230, borderTopLeftRadius: 240, borderTopRightRadius: 280, backgroundColor: '#D6E6FF', opacity: 0.88, transform: [{ rotate: '-11deg' }] },
   storyContent: { alignItems: 'center', width: '100%', paddingTop: 8 },
+  journeyStory: { width: '100%', alignItems: 'center', paddingTop: 4, paddingBottom: 8 },
+  journeyBlueArc: { position: 'absolute', top: -55, width: '145%', height: 205, borderBottomLeftRadius: 210, borderBottomRightRadius: 195, backgroundColor: '#238BF1', opacity: 0.92 },
+  journeyHeadingBadge: { minHeight: 45, maxWidth: '100%', paddingHorizontal: 22, borderRadius: 35, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 10, backgroundColor: '#E5F2FF', shadowColor: '#064E9F', shadowOpacity: 0.12, shadowOffset: { width: 0, height: 4 }, shadowRadius: 8, elevation: 3 },
+  journeyHeadingText: { color: '#08449B', fontSize: 20, fontWeight: '900', letterSpacing: 0.3 },
+  journeySubtitle: { marginTop: 15, color: '#FFFFFF', fontSize: 15, lineHeight: 21, fontWeight: '700', textAlign: 'center' },
+  journeyStats: { marginTop: 55, width: '100%', flexDirection: 'row', alignItems: 'stretch', justifyContent: 'space-between' },
+  journeyStat: { flex: 1, minWidth: 0, alignItems: 'center', gap: 5, paddingHorizontal: 3 },
+  journeyStatDivider: { width: StyleSheet.hairlineWidth, alignSelf: 'stretch', backgroundColor: '#A7C5E9', marginVertical: 9 },
+  journeyStatIcon: { width: 42, height: 42, borderRadius: 16, alignItems: 'center', justifyContent: 'center', shadowColor: '#116AB9', shadowOpacity: 0.09, shadowRadius: 5, elevation: 2 },
+  journeyStatIconBlue: { backgroundColor: '#EDF6FF' },
+  journeyStatIconViolet: { backgroundColor: '#F0E4FF' },
+  journeyStatIconGold: { backgroundColor: '#FFF4DE' },
+  journeyStatValue: { color: '#092E67', fontSize: 22, lineHeight: 26, fontWeight: '900' },
+  journeyStatLabel: { color: '#4C6387', fontSize: 10.5, lineHeight: 14, fontWeight: '700', textAlign: 'center' },
+  journeyProgressBlock: { width: '100%', marginTop: 25, paddingHorizontal: 4 },
+  journeyProgressTop: { minHeight: 31, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 7 },
+  journeyProgressLabel: { color: '#285A8C', fontSize: 12, fontWeight: '700' },
+  journeyProgressPercent: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 12, backgroundColor: '#09975B' },
+  journeyProgressPercentText: { color: '#FFFFFF', fontSize: 15, fontWeight: '900' },
+  journeyProgressTrack: { height: 17, borderRadius: 20, backgroundColor: '#D7E2F1', padding: 3, borderWidth: 1, borderColor: '#FFFFFF', overflow: 'hidden' },
+  journeyProgressFill: { height: '100%', borderRadius: 16, backgroundColor: '#14AF76' },
+  journeyScene: { width: '100%', height: 288, marginTop: 10, alignItems: 'center', justifyContent: 'center' },
+  journeySceneHalo: { position: 'absolute', width: '100%', height: 235, borderRadius: 140, backgroundColor: 'rgba(237,248,255,0.67)', top: 19 },
+  journeyRoadArtwork: { width: '100%', height: 258 },
+  journeyPeopleArtwork: { position: 'absolute', bottom: 55, left: '7%', width: 62, height: 62 },
+  journeyTrophy: { position: 'absolute', right: '10%', top: 39, width: 49, height: 49, borderRadius: 25, backgroundColor: '#FFF6DB', borderWidth: 2, borderColor: '#FFDC80', alignItems: 'center', justifyContent: 'center', shadowColor: '#B17C0C', shadowOpacity: 0.14, shadowRadius: 8, elevation: 3 },
+  journeySceneAchieved: { position: 'absolute', left: 2, bottom: 18, flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#FFFFFF', paddingHorizontal: 9, paddingVertical: 6, borderWidth: 1, borderColor: '#6FD4A5', borderRadius: 10 },
+  journeySceneTarget: { position: 'absolute', right: 3, top: 6, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#6EB2F7' },
+  journeySceneMarkerText: { color: '#184879', fontSize: 11, fontWeight: '800' },
+  journeyNoMilestone: { minHeight: 225, marginTop: 35, paddingHorizontal: 20, alignItems: 'center', justifyContent: 'center', gap: 12 },
+  journeyNoMilestoneText: { color: '#285A8C', textAlign: 'center', lineHeight: 21, fontSize: 14, fontWeight: '600' },
 
   todaySnapshot: { width: '100%', paddingTop: 3, gap: 12, alignItems: 'center' },
   todayCard: { width: '100%', borderRadius: 24, padding: 17, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DFEAFB', overflow: 'hidden', shadowColor: '#497BB6', shadowOpacity: 0.08, shadowRadius: 12, elevation: 2 },

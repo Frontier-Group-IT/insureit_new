@@ -406,6 +406,31 @@ for (const unexpected of [
 ]) {
   if (stories.includes(unexpected)) throw new Error('Business Story figures must come from the actual story result, not a mockup: ' + unexpected);
 }
+// Story 3 (My Journey) keeps its own milestone-focused composition and real scoped data.
+for (const [needle, rationale] of [
+  ["story.kind === 'journey' ? (", 'Only the customer journey story uses its own layout'],
+  ['<JourneyMilestoneStory story={story} />', 'My Journey renders the dedicated milestone composition'],
+  ['function JourneyMilestoneStory({ story }', 'My Journey milestone renderer exists'],
+  ['Number(story.progress_current)', 'Achieved count comes from live story progress'],
+  ['Number(story.progress_target)', 'Target comes from live story progress'],
+  ['Math.max(0, target - current)', 'Remaining count derives from target minus actual progress'],
+  ['Math.round(completion)', 'Percentage is calculated from live progress'],
+  ['style={styles.journeyHeadingBadge}', 'Journey heading is a centered badge'],
+  ['style={styles.journeyBlueArc}', 'Journey uses the uninterrupted curved background'],
+  ['style={styles.journeyProgressTrack}', 'Milestone progress has a dedicated track'],
+  ["require('../assets/partner/status/journey.png')", 'Journey road uses the bundled 3D path illustration'],
+  ["require('../assets/partner/actions/quick-customers.png')", 'Journey uses bundled 3D customer artwork'],
+  ['style={styles.journeyTrophy}', '3D road milestone is decorated with a trophy'],
+  ['style={styles.journeySceneTarget}', 'Target marker remains data-driven'],
+  ['style={styles.journeySceneAchieved}', 'Achieved marker remains data-driven'],
+]) requireText(stories, needle, 'My Journey slide regression: ' + rationale);
+if (stories.includes('style={styles.growthBars}') || stories.includes('style={styles.sceneGrowthArrow}')) {
+  throw new Error('Old generic journey bar-chart illustration must remain removed.');
+}
+for (const mockValue of ['2,606', '394 customers', '3,000 target', '87%']) {
+  if (stories.includes(mockValue)) throw new Error('My Journey must not hardcode mockup milestones: ' + mockValue);
+}
+
 const recognition = read('app/recognition.tsx');
 const learn = read('app/learn.tsx');
 for (const [screen, title, icon] of [
