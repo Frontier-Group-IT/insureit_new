@@ -3,10 +3,9 @@ type PrintedPremium={od:number;tp:number;net:number;gst:number;gross:number};
 type Input={parserId:string;checksPassed:number;warnings:readonly string[];fields:readonly Field[];commercialPremium?:PrintedPremium|null};
 
 /** Review-ready, NOT permission to silently register a policy.
- * This narrowly certified IFFCO new JCB 3DX Plus 2WD family has a source
- * verified 18-check PDF, CC, model fuel reference, provisional city with
- * explicit provenance and a fully reconciled OD/TP/CPA/GST/gross breakdown.
- * All other IFFCO layouts remain human review until separately validated. */
+ * Certified IFFCO JCB 3DX Plus 2WD family: either the original provisional
+ * MP/NEW layout or a registered MP plate with independently mapped MP RTO.
+ * Full PDF provenance, exact financials and canonical booking still required. */
 export function assessIffcoAutoOnboarding(input:Input):{eligible:boolean;reason:string} {
   const fail=(reason:string)=>({eligible:false,reason});
   if(input.parserId!=="iffco_tokio_cv_native_pdf"||input.checksPassed!==18||input.warnings.length)
@@ -21,12 +20,12 @@ export function assessIffcoAutoOnboarding(input:Input):{eligible:boolean;reason:
     "policy_end_date","third_party_start_date","third_party_end_date","vehicle_class","vehicle_make",
     "vehicle_model","vehicle_manufacturing_year","vehicle_capacity","vehicle_fuel_type",
     "vehicle_rto_state","vehicle_rto_name","vehicle_chassis_number","vehicle_engine_number",
-    "cpa_premium","idv","policy_product","vehicle_registration_status"]){
+    "cpa_premium","idv","policy_product","vehicle_registration_status","vehicle_registration_number"]){
     if(!get(key))return fail("iffco_missing_"+key);
   }
   if(get("policy_product")!=="Commercial Vehicle Package"
     ||!/^Commercial Vehicle - Miscellaneous Class D$/i.test(get("vehicle_class"))
-    ||get("vehicle_registration_status")!=="registration_pending"
+    ||!["registration_pending","registered"].includes(get("vehicle_registration_status"))
     ||get("vehicle_make")!=="JCB"
     ||!/^JCB 3DX PLUS 2WD BACKHOE LOADER$/i.test(get("vehicle_model")))
     return fail("iffco_layout_needs_separate_certification");
@@ -37,11 +36,29 @@ export function assessIffcoAutoOnboarding(input:Input):{eligible:boolean;reason:
     ||get("vehicle_fuel_type")!=="Diesel"
     ||!fields.get("vehicle_fuel_type")?.evidence?.startsWith("Manufacturer-model Diesel specification"))
     return fail("iffco_vehicle_evidence_incomplete");
-  if(get("vehicle_rto_state")!=="Madhya Pradesh"
-    ||!fields.get("vehicle_rto_state")?.evidence?.startsWith("IFFCO PDF State Code 23")
-    ||!fields.get("vehicle_rto_name")?.evidence?.startsWith("IFFCO policyholder address city only;")
-    ||!(/^[a-z ]{3,45}$/i.test(get("vehicle_rto_name"))))
-    return fail("iffco_provisional_location_source_missing");
+  const registration=get("vehicle_registration_number").toUpperCase().replace(/[ -]/g,"");
+  const isPending=get("vehicle_registration_status")==="registration_pending";
+  const rtoCity=get("vehicle_rto_name");
+  const rtoStateEvidence=fields.get("vehicle_rto_state")?.evidence??"";
+  const rtoCityEvidence=fields.get("vehicle_rto_name")?.evidence??"";
+  if(get("vehicle_rto_state")!=="Madhya Pradesh"||!(/^[a-z ]{3,45}$/i.test(rtoCity)))
+    return fail("iffco_location_evidence_incomplete");
+  if(isPending){
+    if(!/^MP\/NEW\/\d{3,6}$/.test(registration)
+      ||!rtoStateEvidence.startsWith("IFFCO PDF State Code 23")
+      ||!rtoCityEvidence.startsWith("IFFCO policyholder address city only;"))
+      return fail("iffco_provisional_location_source_missing");
+  }else{
+    // The PDF's empty Registration Authority box must never be replaced
+    // with the insured's mailing city. Trust only an identified MP RTO code
+    // attached to the *same* printed vehicle registration number.
+    const match=registration.match(/^MP(\d{2})[A-Z]{1,3}\d{3,4}$/);
+    if(!match
+      ||!rtoStateEvidence.startsWith("Registered plate "+get("vehicle_registration_number")+" indicates MP state;")
+      ||!rtoCityEvidence.startsWith("Registered plate "+get("vehicle_registration_number")+" code MP-"+match[1]+" = "+rtoCity+" (MP RTO registry);")
+      ||!get("vehicle_chassis_number")||!get("vehicle_engine_number"))
+      return fail("iffco_registered_rto_evidence_missing");
+  }
   const cpa=Number(get("cpa_premium"));
   if(!Number.isFinite(cpa)||cpa<0||!input.commercialPremium)
     return fail("iffco_financial_evidence_incomplete");
