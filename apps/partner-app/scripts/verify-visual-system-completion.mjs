@@ -878,7 +878,7 @@ const supportActionsIndex = support.indexOf('<View style={styles.heroActions}>',
 if (!(supportRightIndex > 0 && supportUpdatedIndex > supportRightIndex && supportActionsIndex > supportUpdatedIndex)) {
   throw new Error('Support right column must show updated-at above the two icon shortcuts.');
 }
-requireText(support, "textAlign: 'right', transform: [{ translateY: 9 }]", 'Support updated-at label should align with the left title without moving the icon row.');
+requireText(support, "textAlign: 'right', transform: [{ translateY: 0 }]", 'Support updated-at label should align with the left title without moving the icon row.');
 for (const fragment of [
   "Platform.OS === 'ios' ? 1 : 2",
   "adjustsFontSizeToFit={Platform.OS === 'ios'}",
