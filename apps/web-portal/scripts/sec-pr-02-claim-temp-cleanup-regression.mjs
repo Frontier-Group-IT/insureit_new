@@ -1,0 +1,12 @@
+import { readFileSync } from "node:fs";
+import { strict as assert } from "node:assert";
+const code = readFileSync(new URL("../app/claims/[id]/claim-document-upload-actions.ts", import.meta.url), "utf8");
+const cleanup = code.match(/async function cleanupPaths\(paths: string\[\]\) \{([\s\S]*?)\n\}/)?.[1];
+assert.ok(cleanup, "Temporary cleanup function should exist.");
+assert.match(cleanup, /from\("claim_documents"\)/, "Check claim document registrations.");
+assert.match(cleanup, /\.in\("storage_path", paths\)/, "Match requested paths.");
+assert.match(cleanup, /if \(lookupError\) throw/, "Fail closed when registration lookup errors.");
+assert.match(cleanup, /if \(registered\?\.length\) throw/, "Protect registered documents.");
+assert.match(cleanup, /if \(removeError\) throw/, "Propagate Storage deletion failure.");
+assert.match(code, /requireClaimWorkflowAccess/, "Preserve the existing claim access check.");
+console.log("SEC-PR-02 static cleanup guards verified (not a Storage RLS runtime test).");

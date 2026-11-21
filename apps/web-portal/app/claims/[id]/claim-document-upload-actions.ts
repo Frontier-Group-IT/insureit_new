@@ -77,7 +77,22 @@ async function createSignedUpload(path: string, fileName: string, documentType: 
   if (error || !data?.token) throw new Error(error?.message ?? "Could not prepare document upload.");
   return { path, token: data.token, fileName, documentType, contentType };
 }
-async function cleanupPaths(paths: string[]) { if (!paths.length) return; const storageAdmin = createSupabaseAdminClient(); await storageAdmin.storage.from(bucketName).remove(paths); }
+async function cleanupPaths(paths: string[]) {
+  if (!paths.length) return;
+  const storageAdmin = createSupabaseAdminClient();
+  // This helper is exclusively for abandoned/unregistered uploads. Even a
+  // caller with admin Storage access must not remove a registered claim file.
+  const { data: registered, error: lookupError } = await storageAdmin
+    .from("claim_documents")
+    .select("id")
+    .eq("storage_bucket", bucketName)
+    .in("storage_path", paths)
+    .limit(1);
+  if (lookupError) throw new Error("Could not verify temporary document cleanup eligibility.");
+  if (registered?.length) throw new Error("Registered claim documents cannot be cleaned up as temporary uploads.");
+  const { error: removeError } = await storageAdmin.storage.from(bucketName).remove(paths);
+  if (removeError) throw new Error("Temporary document cleanup failed.");
+}
 
 export async function prepareSpotSurveyMediaUpload(claimId: string, files: ClaimUploadFileMetadata[]): Promise<PrepareResult> {
   try {
