@@ -410,7 +410,9 @@ for (const [needle, rationale] of [
   ['style={styles.journeySceneTarget}', 'Target marker remains data-driven'],
   ['style={styles.journeySceneAchieved}', 'Achieved marker remains data-driven'],
 ]) requireText(stories, needle, 'My Journey slide regression: ' + rationale);
-if (stories.includes("if (kind === 'journey')")) throw new Error('Old generic journey bar-chart illustration must remain removed.');
+if (stories.includes('style={styles.growthBars}') || stories.includes('style={styles.sceneGrowthArrow}')) {
+  throw new Error('Old generic journey bar-chart illustration must remain removed.');
+}
 for (const mockValue of ['2,606', '394 customers', '3,000 target', '87%']) {
   if (stories.includes(mockValue)) throw new Error('My Journey must not hardcode mockup milestones: ' + mockValue);
 }
