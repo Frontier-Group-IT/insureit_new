@@ -79,14 +79,13 @@ function commercialBookingIssue(row:SemiAutoIntakeRow,code:string):
   return null;
 }
 
-// An explicit single-policy retry is offered only for prior IFFCO booking
-// review holds. Server-side validation remains authoritative.
+// Only a confirmed single-intake retry is offered for booking-review or
+// provisional-RTO holds. The server checks actual trained parser identity,
+// source PDF/fingerprint, and insurer eligibility before any booking.
 function canRetryReviewHeldPolicy(row:SemiAutoIntakeRow):boolean {
   return !row.is_duplicate&&row.ai_state==="exception"
     &&row.ai_exceptions?.length===1
-    &&row.ai_exceptions[0]==="booking_review_required"
-    &&(row.ocr_fields??[]).some(field=>field.key==="insurer_name"
-      &&Boolean(field.value?.trim()));
+    &&["booking_review_required","registration_pending_review"].includes(row.ai_exceptions[0]);
 }
 const aiStateLabel: Record<string,string> = {
   pending:"Queued",processing:"Reading PDF",exception:"Needs action",

@@ -16,6 +16,12 @@ const enrichmentHelper=file("../lib/policy-n8n-onboarding-enrichment.ts");
 // registered plate. The source prefix must not fill registrationNo.
 assert.match(signed,/isNewIndiaUnregistered/);
 assert.match(signed,/fields\.filter\(\(f\) => f\.key !== "vehicle_registration_number"\)/);
+assert.ok(signed.includes("fields: isNewIndiaUnregistered || isUnitedNewVehicle")
+  &&signed.includes("const isIffcoNewVehicle ="),
+  "IFFCO MP/NEW reference must remain in verified evidence, not canonical registration; other insurer references stay filtered");
+assert.ok(handoff.includes('registrationMode:verified?.fields.some')
+  &&handoff.includes('["unregistered","registration_pending"].includes(field.value)'),
+  "Canonical unregistered form must keep registrationNo empty even with source MP/NEW evidence");
 assert.match(signed,/vehicle_registration_status"\) === "unregistered"/);
 assert.ok(handoff.includes('["unregistered","registration_pending"].includes(field.value)'),
   "Both explicit unregistered and registration_pending map to unregistered; a registered plate never does");
@@ -330,6 +336,44 @@ for(const [parserId,checksPassed] of [
  assert.equal(assessStandardCommercialDirectConversion({...fixture,fields:standardFields.map(f=>f.key==="cpa_premium"?{...f,value:"330"}:f)}).eligible,false);
  assert.equal(assessStandardCommercialDirectConversion({...fixture,commercialPremium:{...standardPremium,net:2999}}).eligible,false);
 }
+// Regression for the real MP/NEW IFFCO certificate N9436560, whose PDF
+// identifies MP/NEW/9805 as an internal reference (never an RTO plate).
+// The value is mandatory *extraction evidence* but must not become a
+// canonical registrationNo. Printed CPA=330 is split out of TP=7697.
+const iffcoMandlaNew={
+  ...iffcoAuto,
+  fields:iffcoAutoFields.map(field=>{
+    if(field.key==="policy_number")return {...field,value:"N9436560"};
+    if(field.key==="insured_name")return {...field,value:"SHOBHARAM TARAM"};
+    if(field.key==="vehicle_registration_number")return {...field,value:"MP/NEW/9805"};
+    if(field.key==="vehicle_rto_name")return {...field,value:"Mandla"};
+    if(field.key==="vehicle_chassis_number")return {...field,value:"RAJ3DXSRP03674139"};
+    if(field.key==="vehicle_engine_number")return {...field,value:"H00539805"};
+    if(field.key==="idv")return {...field,value:"3430000"};
+    if(field.key==="cpa_premium")return {...field,value:"330"};
+    if(field.key==="policy_issuance_date"||field.key==="policy_start_date"||field.key==="third_party_start_date")
+      return {...field,value:"2026-11-19"};
+    if(field.key==="policy_end_date"||field.key==="third_party_end_date")
+      return {...field,value:"2027-11-18"};
+    return field;
+  }),
+  commercialPremium:{od:4694,tp:7697,net:12391,gst:2230.38,gross:14621.38},
+};
+assert.equal(assessIffcoAutoOnboarding(iffcoMandlaNew).eligible,true,
+  "N9436560 MP/NEW is eligible with exact 18 checks, source RTO notes and CPA reconciliation");
+assert.equal(assessIffcoAutoOnboarding({...iffcoMandlaNew,fields:iffcoMandlaNew.fields.filter(f=>
+  f.key!=="vehicle_registration_number")}).eligible,false,
+  "IFFCO internal reference is mandatory for evidence even though canonical registration stays empty");
+assert.equal(assessIffcoAutoOnboarding({...iffcoMandlaNew,fields:iffcoMandlaNew.fields.map(f=>
+  f.key==="vehicle_registration_number"?{...f,value:"NEW"}:f)}).eligible,false);
+assert.equal(assessIffcoAutoOnboarding({...iffcoMandlaNew,commercialPremium:{
+  ...iffcoMandlaNew.commercialPremium,net:12390}}).eligible,false);
+const semiN8n=file("../lib/policy-intake-semi-auto-n8n.ts");
+assert.ok(semiN8n.includes("legacyIffcoNewFingerprint")
+  &&semiN8n.includes('field.key!=="vehicle_registration_number"')
+  &&actions.includes("sameReviewedFingerprint")
+  &&actions.includes("extracted.preview.fingerprint,true,true"),
+  "An old queue MP/NEW hash can retry once with the newly verified full current-PDF evidence");
 assert.equal(assessIffcoAutoOnboarding(iffcoAuto).eligible,true);
 // A registered JCB MP plate is not an MP/NEW provisional vehicle. Its
 // address city must not be mistaken for the registration district.
@@ -368,10 +412,18 @@ assert.equal(assessIffcoAutoOnboarding({...iffcoAuto,fields:[...iffcoAuto.fields
 assert.ok(handoff.includes("const iffcoReview=assessIffcoAutoOnboarding(")
   && handoff.includes("eligibleForVerifiedConversion=autoEligibleGoDigit||iffcoReview.eligible"),
   "IFFCO source and financial validated readiness must be used for the queue");
+assert.ok(actions.includes('queued.exception_codes[0]==="registration_pending_review"')
+  &&actions.includes('queued.parser_id==="iffco_tokio_cv_native_pdf"'),
+  "Only fully trained IFFCO can explicitly retry an old provisional registration hold");
+assert.ok(queue.includes("certifiedIffcoNewVehicle")
+  &&queue.includes('certifiedIffcoNewVehicle&&e.code==="registration_pending_review"'),
+  "Queue should clear only the certified IFFCO provisional RTO exception, not real booking errors");
 assert.ok(actions.includes('const heldReview=queued?.state==="exception"')
   &&actions.includes('queued.exception_codes.length===1')
   &&actions.includes('queued.exception_codes[0]==="booking_review_required"')
-  &&actions.includes('extracted.preview.fingerprint!==queued.extraction_fingerprint'),
+  &&actions.includes("const sameReviewedFingerprint=")
+  &&actions.includes("!sameReviewedFingerprint")
+  &&actions.includes("extracted.preview.documentId!==queued.document_id"),
   "Held parser retries still require exact queue exception, fingerprint and fresh PDF");
 const studio=file("../components/development/semi-auto-policy-workspace.tsx");
 assert.ok(studio.includes("canRetryReviewHeldPolicy(exceptionRow)")

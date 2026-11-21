@@ -828,7 +828,8 @@ assert(!workerText.includes("const bundledPeriodsVerified=!bundled;")
   && workerText.includes('const bundledPeriodsVerified=!bundled||('),
   "A validated bundled period is not an exception, but actual earlier-month OTP remains blocking");
 assert(workerText.includes('const state:AiQueueState=isDuplicate?"duplicate"')
-  && workerText.includes('filter(e=>e.code!=="preflight_pending")')
+  && workerText.includes('e.code!=="preflight_pending"')
+  && workerText.includes('certifiedIffcoNewVehicle&&e.code==="registration_pending_review"')
   && workerText.includes('existingDuplicate.matches.has(intake.id)')
   && workerText.indexOf('existingDuplicate.matches.has(intake.id)')<workerText.indexOf('const extraction=await previewSemiAutoN8nExtraction'),
   "Recognized duplicate must bypass expensive n8n and preflight pending is not a document exception");
@@ -859,7 +860,9 @@ assert(convertStart>0&&convertEnd>convertStart,
 const convertCode=actionsText.slice(convertStart,convertEnd);
 assert(convertCode.includes("await requireDevelopmentPolicyOperator(id)")
   && convertCode.includes('queued.state!=="verified"')
-  && convertCode.includes("extracted.preview.fingerprint!==queued.extraction_fingerprint")
+  && convertCode.includes("const sameReviewedFingerprint=")
+  && convertCode.includes("!sameReviewedFingerprint")
+  && convertCode.includes("extracted.preview.documentId!==queued.document_id")
   && convertCode.includes('prepareVerifiedN8nIntakeHandoff(id,queued.document_id')
   && convertCode.includes('decision==="otp_required"')
   && convertCode.includes('forwarded.draft.issuanceDate!==issuanceDate')
@@ -871,7 +874,7 @@ assert(convertCode.includes("await requireDevelopmentPolicyOperator(id)")
   && convertCode.includes('createNewCustomer:true')
   && convertCode.includes('await onboardPolicy(payload)'),
   "One-click conversion must independently reverify current PDF, name, premiums, policy number, issued date and OTP, then use the canonical policy/customer transaction");
-assert(convertCode.includes('queued.extraction_fingerprint,true,true')
+assert(convertCode.includes('extracted.preview.fingerprint,true,true')
   && convertCode.includes('normalizeVerifiedMotorPowerKw(pdfField("vehicle_motor_power_kw"))')
   && convertCode.includes('forwarded.draft.capacity!==verifiedKw')
   && convertCode.includes('await requireDevelopmentPolicyOperator(id)'),

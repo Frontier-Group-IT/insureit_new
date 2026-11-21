@@ -287,22 +287,31 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
     .select("state,document_id,extraction_fingerprint,exception_codes,parser_id,checks_passed")
     .eq("intake_id",id)
     .maybeSingle<{state:string;document_id:string;extraction_fingerprint:string|null;exception_codes:string[];parser_id:string|null;checks_passed:number}>();
-  // Explicit, one-at-a-time retry of a previously held IFFCO booking attempt.
-  // All unrelated queue errors remain blocked, and the original current PDF,
-  // fingerprint and the canonical booking checks are reverified below.
+  // An explicit single-intake Convert can re-evaluate an earlier review hold
+  // without first forcing Reprocess/Reparse. Only the *trained* IFFCO MP/NEW
+  // layout may retry registration_pending_review, and every retry re-checks
+  // the live PDF, fingerprint and insurer-specific evidence before booking.
   const heldReview=queued?.state==="exception"
     &&queued.parser_id!==null
     &&hasVerifiedN8nParserEvidence(queued.parser_id,queued.checks_passed,[])
     &&queued.exception_codes.length===1
-    &&queued.exception_codes[0]==="booking_review_required";
+    &&(queued.exception_codes[0]==="booking_review_required"
+      ||(queued.parser_id==="iffco_tokio_cv_native_pdf"
+         &&queued.exception_codes[0]==="registration_pending_review"));
   if(queueError||!queued||(!heldReview
       &&(queued.state!=="verified"||queued.exception_codes.length>0))
       ||!queued.extraction_fingerprint)
     return fail("Extraction","The current Intake has other extraction or booking exceptions requiring review.");
   const extracted=await previewSemiAutoN8nExtraction(id);
   if(!extracted.ok)return fail("Extraction",extracted.error);
+  // Backward-compatible once for old IFFCO MP/NEW queue rows. The old
+  // fingerprint excluded the printed *internal* registration reference.
+  // Re-verified live source fields and document ID remain authoritative.
+  const sameReviewedFingerprint=extracted.preview.fingerprint===queued.extraction_fingerprint
+    ||(queued.parser_id==="iffco_tokio_cv_native_pdf"
+      &&extracted.preview.legacyIffcoNewFingerprint===queued.extraction_fingerprint);
   if(extracted.preview.documentId!==queued.document_id||
-     extracted.preview.fingerprint!==queued.extraction_fingerprint||
+     !sameReviewedFingerprint||
      (heldReview&&extracted.preview.parserId!==queued.parser_id)||
      !hasVerifiedN8nParserEvidence(extracted.preview.parserId,
        extracted.preview.checksPassed,extracted.preview.warnings))
@@ -397,7 +406,7 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
   // reviewer takeover; manual handoffs keep their separate confirmation.
   // Fill blank fields from CURRENT verified PDF only, never overwrite edits.
   const forwarded=await prepareVerifiedN8nIntakeHandoff(id,queued.document_id,
-    queued.extraction_fingerprint,true,true);
+    extracted.preview.fingerprint,true,true);
   if(!forwarded.ok)return fail("Canonical Intake handoff",forwarded.error);
   if(forwarded.draft.issuanceDate!==issuanceDate)
     return fail("Saved issuance date","The saved draft's issue date differs from the verified current PDF. Review it before booking; no existing manual value was overwritten.");

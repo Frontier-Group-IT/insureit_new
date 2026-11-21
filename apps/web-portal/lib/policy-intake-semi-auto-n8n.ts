@@ -35,6 +35,8 @@ export type SemiAutoN8nChangedField = {
 export type SemiAutoN8nPreview = {
   documentId: string;
   fingerprint: string;
+  /** Legacy queue hash compatibility for IFFCO MP/NEW before internal reference retention. */
+  legacyIffcoNewFingerprint?: string;
   fields: N8nOcrField[];
   parserId: string;
   parserVersion: string;
@@ -285,6 +287,20 @@ export async function previewSemiAutoN8nExtraction(
     documentId: current.document.id,
     fingerprint: fingerprint(id, current.document.id, extraction.fields, visibleWarnings,
       extraction.premium, extraction.issuanceEvidence,acceptedIssuanceDate, commercialPremium),
+    // Older versions filtered the MP/NEW internal reference from the
+    // signed-output fields before hashing. Match old queue fingerprints only
+    // for the exact same current document and verified IFFCO new-vehicle
+    // layout; do NOT omit this source evidence from the new fingerprint.
+    ...(extraction.parserId==="iffco_tokio_cv_native_pdf"
+      &&extraction.fields.some(field=>field.key==="vehicle_registration_status"
+        &&field.value==="registration_pending")
+      &&extraction.fields.some(field=>field.key==="vehicle_registration_number"
+        &&/^MP\/NEW\/\d{3,6}$/i.test(field.value))
+      ?{legacyIffcoNewFingerprint:fingerprint(id,current.document.id,
+          extraction.fields.filter(field=>field.key!=="vehicle_registration_number"),
+          visibleWarnings,extraction.premium,extraction.issuanceEvidence,
+          acceptedIssuanceDate,commercialPremium)}
+      :{}),
     fields: extraction.fields,
     parserId: extraction.parserId,
     parserVersion: extraction.parserVersion,
