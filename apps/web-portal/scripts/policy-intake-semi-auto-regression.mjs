@@ -983,13 +983,13 @@ assert(actionsText.includes("const PAGE=200, MAX_MATCHES=2000")
   && actionsText.includes(":{createNewCustomer:true}")
   && !actionsText.includes('limit(51)\n    .returns<Array<{id:string;phone:string;contact_name:string;company_name:string|null}>>()'),
   "Shared-mobile identities must not be rejected by a 51-row arbitrary cutoff");
-assert(actionsText.includes("async function holdFailedAiConversion(id:string)")
-  && actionsText.includes('exception_codes:["booking_review_required"]')
-  && actionsText.includes('last_error_code:"bulk_conversion_review_required"')
-  && actionsText.includes('.eq("intake_id",id).eq("state","verified")')
-  && actionsText.includes("if(!result.ok)await holdFailedAiConversion(id)")
+assert(actionsText.includes("async function holdFailedAiConversion(id:string,issues:readonly SemiAutoIssue[]=[]")
+  && actionsText.includes('activeOverlap?["coverage_conflict"]:["booking_review_required"]')
+  && actionsText.includes('activeOverlap?"existing_active_policy_overlap":"bulk_conversion_review_required"')
+  && actionsText.includes(':update.eq("state","verified")')
+  && actionsText.includes("if(!result.ok)await holdFailedAiConversion(id,result.issues)")
   && actionsText.includes("await holdFailedAiConversion(id);"),
-  "Failed or uncertain bulk conversion must persist a review hold on previously verified queue rows");
+  "Failed and uncertain conversions must hold previously verified queue rows; certified NIA coverage conflicts retain their exact reason");
 assert(workbenchText.includes('booking_review_required:"Bulk booking requires manual review"'),
   "Held bulk bookings must show a specific manual-review reason");
 // Surface a sanitized status without revealing n8n response bodies, signed

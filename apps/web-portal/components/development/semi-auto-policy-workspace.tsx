@@ -62,6 +62,10 @@ function commercialBookingIssue(row:SemiAutoIntakeRow,code:string):
   {title:string;detail:string}|null {
   const values=new Map((row.ocr_fields??[]).map(f=>[f.key,f.value?.trim()??""]));
   const insurer=values.get("insurer_name")??"";
+  if(/New India Assurance/i.test(insurer) && code==="coverage_conflict"){
+    return {title:"Active policy already exists for this chassis",
+      detail:"The verified PDF refers to a chassis already linked to an active policy with overlapping cover dates. Compare the prior Policy Register record and resolve its coverage or replacement status before registering another policy. Reprocessing the same PDF will not remove this conflict."};
+  }
   if(/New India Assurance/i.test(insurer) && ["booking_review_required","missing_field"].includes(code)){
     const rawRto=values.get("vehicle_rto_name")??"";
     const missingRto=!rawRto||/^FASTag ID:$/i.test(rawRto);
@@ -107,6 +111,7 @@ function parserDiagnostic(code:string|null|undefined): {title:string;detail:stri
     nia_missing_verified_gcv_cpa:"Historical NIA CPA hold: GCV owner-driver CPA is optional. Do not invent CPA; reparse the PDF to refresh review status.",
     go_digit_missing_verified_manufacturing_year:"The earlier Go Digit extraction had no manufacturing year or accepted registration-year fallback. Reparse the current policy PDF to apply the registration-year fallback rule; a missing or conflicting year will still require review.",
     go_digit_missing_verified_onboarding_fields:"Go Digit PDF is verified but does not independently provide all mandatory canonical policy fields. Review the listed missing vehicle or policy fields before booking.",
+    existing_active_policy_overlap:"This is a canonical vehicle-history conflict, not an OCR failure. An active policy on this chassis overlaps the New India policy's dates. Review the existing policy and resolve its status before booking. Do not rerun n8n or create a duplicate vehicle.",
     n8n_review_required:"The n8n output failed the expected parser contract. This legacy code does not identify which check failed; run a fresh reparse to obtain the new diagnostics.",
     n8n_commercial_classifier_missed_layout:"The shared n8n webhook returned a commercial parser response, but the website routed it through ICICI validation. Inspect the commercial PDF recognition rule.",
     n8n_nontata_verification_failed:"Commercial parser validation failed, but individual failing checks were not retained in this older result. Reparse to capture them.",
@@ -119,7 +124,7 @@ function parserDiagnostic(code:string|null|undefined): {title:string;detail:stri
     n8n_bridge_http_failure_404:"The configured n8n webhook was not found. Check workflow publication and path.",
     n8n_bridge_http_failure_401:"The n8n webhook rejected authentication."
   };
-  return {title:"Extraction diagnostic",detail:descriptions[code]??"n8n returned a failure code. Open the current workflow execution and inspect its rejected checks or document stage.",checks:[]};
+  return {title:code==="existing_active_policy_overlap"?"Existing active policy":"Extraction diagnostic",detail:descriptions[code]??"n8n returned a failure code. Open the current workflow execution and inspect its rejected checks or document stage.",checks:[]};
 }
 
 const humanStatus: Record<string, string> = {
@@ -1100,7 +1105,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
             </div>
             {exceptionRow.ai_diagnostic_code ? (
               <p className="mt-2 rounded-lg border border-[#e6dfd0] bg-[#fffcf4] p-2 text-[10px] font-medium text-[#79531e]">
-                Parser validation reason: <code>{exceptionRow.ai_diagnostic_code}</code>. A response failing verification is not necessarily a new/untrained product. Review the matching local n8n execution; no policy is booked.
+                {exceptionRow.ai_diagnostic_code==="existing_active_policy_overlap"?"Booking hold reason: ":"Parser validation reason: "}<code>{exceptionRow.ai_diagnostic_code}</code>. {exceptionRow.ai_diagnostic_code==="existing_active_policy_overlap"?"The active policy must be reviewed; no policy was booked.":"A response failing verification is not necessarily a new/untrained product. Review the matching local n8n execution; no policy is booked."}
               </p>
             ):null}
             {primaryN8n && queueActive && reprocessCandidates.some(candidate=>candidate.id===exceptionRow.id)

@@ -242,13 +242,23 @@ function payloadFromDraft(d: PolicyIntakeDraft, id: string, revision: number, ma
 // Only verified queue rows are held, retaining the validated fingerprint and
 // source fields for manual inspection. Explicit operator reprocessing remains
 // available through the existing authorized recovery action.
-async function holdFailedAiConversion(id:string):Promise<void>{
+async function holdFailedAiConversion(id:string,issues:readonly SemiAutoIssue[]=[]):Promise<void>{
   const admin=createSupabaseAdminClient();
   const now=new Date().toISOString();
-  const {error}=await admin.from("policy_intake_ai_processing_queue")
-    .update({state:"exception",exception_codes:["booking_review_required"],
-      last_error_code:"bulk_conversion_review_required",updated_at:now})
-    .eq("intake_id",id).eq("state","verified");
+  const activeOverlap=issues.some(item=>item.field==="Existing active policy");
+  // A certified NIA review hold is not a parsing failure. Preserve a real
+  // vehicle-history conflict rather than overwriting it with the generic
+  // bulk booking review code. Keep all other insurer holds unchanged.
+  let update=admin.from("policy_intake_ai_processing_queue")
+    .update({state:"exception",
+      exception_codes:activeOverlap?["coverage_conflict"]:["booking_review_required"],
+      last_error_code:activeOverlap?"existing_active_policy_overlap":"bulk_conversion_review_required",
+      updated_at:now})
+    .eq("intake_id",id);
+  update=activeOverlap
+    ?update.eq("parser_id","new_india_cv_native_pdf").in("state",["verified","exception"])
+    :update.eq("state","verified");
+  const {error}=await update;
   if(error)console.error("[ai-policy] booking review hold failed",{code:error.code||"unknown"});
 }
 
@@ -263,7 +273,7 @@ export async function convertVerifiedAiIntake(id:string,confirmed:boolean):Promi
   }
   try{
     const result=await convertVerifiedAiIntakeCore(id,confirmed);
-    if(!result.ok)await holdFailedAiConversion(id);
+    if(!result.ok)await holdFailedAiConversion(id,result.issues);
     return result;
   }catch(error){
     // Preserve the exact error class for server-side diagnosis without
@@ -497,6 +507,39 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
     ||forwarded.draft.policyNo.replace(/[^A-Z0-9]/gi,"").toUpperCase()
       !==pdfField("policy_number").replace(/[^A-Z0-9]/gi,"").toUpperCase()){
     return fail("PDF reconciliation","Saved validity, policy number or premium differs from the current n8n-verified PDF. Review it before booking.");
+  }
+
+  // Only the certified New India GCV path: a correct PDF can still refer
+  // to a chassis with an active, overlapping policy. Detect this read-only
+  // before customer creation or any policy transaction; never auto-transfer
+  // vehicle ownership or silently supersede another issued policy.
+  if(nia){
+    const chassis=pdfField("vehicle_chassis_number");
+    if(!chassis)return fail("Vehicle identity","The current PDF does not verify a chassis number.");
+    const {data:linkedVehicles,error:vehicleError}=await admin.from("vehicles")
+      .select("id").eq("chassis_no",chassis).limit(2);
+    if(vehicleError)return fail("Vehicle history","Existing vehicle ownership could not be checked. No policy was registered.");
+    if((linkedVehicles??[]).length>1)
+      return fail("Vehicle identity","Multiple vehicle masters share this chassis. Review and merge the identity before registering another policy.");
+    const vehicleId=linkedVehicles?.[0]?.id;
+    if(vehicleId){
+      const {data:existing,error:historyError}=await admin.from("policies")
+        .select("id,start_date,end_date,policy_no")
+        .eq("vehicle_id",vehicleId).eq("status","active")
+        .lte("start_date",pdfField("policy_end_date"))
+        .gte("end_date",pdfField("policy_start_date"))
+        .order("start_date",{ascending:false}).limit(2);
+      if(historyError)return fail("Vehicle history","Existing policy coverage could not be checked. No policy was registered.");
+      if(existing?.length){
+        const first=existing[0];
+        const ref=String(first.policy_no??"").replace(/[^A-Za-z0-9]/g,"");
+        const suffix=ref.slice(-4);
+        return fail("Existing active policy",
+          "This chassis already has an active policy"+(suffix?" ending "+suffix:"")
+          +" valid from "+first.start_date+" to "+first.end_date
+          +", overlapping the New India PDF period. Review that policy in Policy Register and resolve the coverage/ownership decision before converting this Intake. No new policy was registered.");
+      }
+    }
   }
 
   // Use the same verified insured name and phone as normal onboarding.

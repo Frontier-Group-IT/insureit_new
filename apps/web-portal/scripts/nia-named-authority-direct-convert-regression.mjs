@@ -96,6 +96,18 @@ assert.match(action,/queued\.last_error_code==="missing_verified_vehicle_registr
 assert.match(action,/extracted\.preview\.documentId===queued\.document_id/);
 assert.match(action,/assessNiaNamedAuthorityUnregisteredConversion\(/);
 assert.match(action,/mapVerifiedNiaCommercialPremium\(commercial/);
+assert.match(action,/\.eq\("chassis_no",chassis\)\.limit\(2\)/,
+  "Certified NIA must inspect existing same-chassis vehicle masters");
+assert.match(action,/\.eq\("status","active"\)/,
+  "Certified NIA must check active policy history before registration");
+assert.match(action,/\.lte\("start_date",pdfField\("policy_end_date"\)\)/,
+  "Only coverage overlapping the verified policy period should block conversion");
+assert.match(action,/\.gte\("end_date",pdfField\("policy_start_date"\)\)/);
+assert.match(action,/return fail\("Existing active policy"/);
+assert.match(action,/activeOverlap\?\["coverage_conflict"\]/,
+  "Real overlapping cover must survive queue hold as an explicit exception");
+assert.match(action,/activeOverlap\?"existing_active_policy_overlap"/);
+
 assert.match(action,/prepareVerifiedN8nIntakeHandoff\(id,queued\.document_id,\s*extracted\.preview\.fingerprint,true,true\)/,
   "Certified NIA must enable fillEmptyFields for legacy TP/CPA CAS repair without requesting draft replacement");
 assert.doesNotMatch(action,/extracted\.preview\.fingerprint,true,!nia/,
@@ -112,4 +124,7 @@ assert.match(signed,/isNewIndiaUnregistered/);
 assert.match(signed,/isNewIndiaUnregistered \|\| isUnitedNewVehicle/);
 assert.match(client,/canRetryReviewHeldPolicy/);
 assert.match(client,/Verify & Convert/);
+assert.match(client,/Active policy already exists for this chassis/);
+assert.match(client,/existing_active_policy_overlap/);
+assert.match(queue,/r.last_error_code==="existing_active_policy_overlap"/);
 console.log("NIA named RTO / owner-driver CPA / legacy review-hold direct-convert regressions passed");
