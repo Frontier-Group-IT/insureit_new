@@ -50,6 +50,10 @@ expect(activity.includes("Filter activity by date") && activity.includes('name="
 for (const option of ["Today", "Last Week", "Last Month", "All"]) {
   expect(activity.includes(option), `Activity dropdown supports ${option}`);
 }
+expect(activity.includes('visible={periodMenuOpen}') && activity.includes('transparent') && activity.includes('style={StyleSheet.absoluteFillObject}') && activity.includes('accessibilityLabel="Close activity date filter"') && activity.includes('onPress={() => setPeriodMenuOpen(false)}'), "Activity dropdown closes when the user taps outside without selecting an option");
+expect(activity.includes('onRequestClose={() => setPeriodMenuOpen(false)}') && activity.includes('statusBarTranslucent'), "Activity dropdown supports Android back dismissal and full-screen outside taps");
+expect(activity.includes('periodTriggerRef.current?.measureInWindow') && activity.includes('top: y + height + 3') && activity.includes('left: Math.max(8, Math.min(x, windowWidth - 160))'), "Activity dropdown remains anchored to its trigger on different screen sizes");
+expect(activity.includes('onPress={() => { setPeriodMenuOpen(false); setPeriod(key); }}'), "Selecting a date period dismisses the menu and applies the selected filter");
 expect(activity.includes("setPeriod(key)") && activity.includes("getPartnerActivityByPeriod(period"), "Changing period fetches scoped records instead of relabeling old results");
 expect(activity.includes("Load more activity") && activity.includes("loadMore()"), "Historical activity can be paginated");
 expect(engagement.includes("partner_app_activity_filtered") && engagement.includes("p_offset: offset"), "Period RPC receives server-side date filter and pagination");
