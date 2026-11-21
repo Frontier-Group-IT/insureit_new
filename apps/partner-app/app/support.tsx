@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
@@ -54,7 +54,10 @@ export default function SupportScreen() {
             <View style={styles.heroContent}>
               <View style={styles.heroTopRow}>
                 <View style={styles.heroInformation}>
-                  <Text style={styles.heroTitle} numberOfLines={2}>INSUREIT Operations Desk</Text>
+                  <Text style={[styles.heroTitle, Platform.OS === 'ios' && styles.heroTitleIos]}
+                    numberOfLines={Platform.OS === 'ios' ? 1 : 2}
+                    adjustsFontSizeToFit={Platform.OS === 'ios'}
+                    minimumFontScale={0.75}>INSUREIT Operations Desk</Text>
                   <Text style={styles.heroSubtitle} numberOfLines={2}>Your operational overview</Text>
                 </View>
                 <View style={styles.heroRight}>
@@ -63,10 +66,10 @@ export default function SupportScreen() {
                   </View>
                   <View style={styles.heroActions}>
                     <View style={styles.heroActionBubble}>
-                      <Ionicons name="chatbubble-ellipses" size={23} color="#2681EB" />
+                      <Ionicons name="chatbubble-ellipses" size={18} color="#2681EB" />
                     </View>
                     <View style={styles.heroActionBubble}>
-                      <Ionicons name="document-text" size={23} color="#1E70D4" />
+                      <Ionicons name="document-text" size={18} color="#1E70D4" />
                     </View>
                   </View>
                 </View>
@@ -181,18 +184,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 13, overflow: 'hidden',
     shadowColor: '#396CB2', shadowOpacity: 0.09, shadowRadius: 9, shadowOffset: { width: 0, height: 3 }, elevation: 2,
   },
-  heroIconShell: { height: 60, width: 60, alignItems: 'center', justifyContent: 'center', marginRight: 12, zIndex: 1 },
+  heroIconShell: { height: 60, width: 60, alignItems: 'center', justifyContent: 'center', marginRight: 12, zIndex: 1, transform: [{ translateY: -6 }] },
   heroContent: { flex: 1, minWidth: 0, zIndex: 1 },
   heroTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, width: '100%' },
-  heroInformation: { flex: 1, minWidth: 0, minHeight: 60, justifyContent: 'center' },
+  heroInformation: { flex: 1, minWidth: 0, minHeight: 60, justifyContent: 'center', transform: [{ translateY: -6 }] },
   heroTitle: { color: '#071B42', fontWeight: '800', fontSize: 12.8, lineHeight: 17 },
+  heroTitleIos: { fontSize: 11.2, lineHeight: 15 },
   heroSubtitle: { marginTop: 4, color: '#4E6484', fontSize: 10, lineHeight: 14 },
   heroRight: { flexShrink: 0, width: 100, alignItems: 'flex-end', justifyContent: 'center', gap: 7 },
   updatedLine: { width: '100%', alignItems: 'flex-end' },
   // Optical alignment with the unchanged left title; transform does not move the action icons or header layout.
   updatedText: { color: '#255390', fontSize: 9.2, fontWeight: '700', textAlign: 'right', transform: [{ translateY: 9 }] },
-  heroActions: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', gap: 6, zIndex: 1 },
-  heroActionBubble: { width: 29, height: 29, borderRadius: 15, backgroundColor: '#FFFFFF',
+  heroActions: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', gap: 5, zIndex: 1 },
+  heroActionBubble: { width: 25, height: 25, borderRadius: 13, backgroundColor: '#FFFFFF',
     alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#DDEBFF' },
   sectionTitleWrap: { marginTop: 19, marginBottom: 13 },
   sectionTitle: { color: '#071B42', fontWeight: '800', fontSize: 20, letterSpacing: -0.4 },
