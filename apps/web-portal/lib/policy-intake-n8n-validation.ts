@@ -552,6 +552,7 @@ function validateTataAigTpResponse(
   if (REQUIRED.some(k => !seen.has(k))) fail("n8n_tp_required_field_missing");
   const get=(key:string)=>fields.find(f=>f.key===key)?.value.trim() ?? "";
   if (!/^\d{10}\s+\d{2}\s+\d{2}$/.test(get("policy_number"))
+    || /^0{10}\s+0{2}\s+0{2}$/.test(get("policy_number"))
     || get("insurer_name") !== "TATA AIG GENERAL INSURANCE COMPANY LIMITED"
     || get("policy_product") !== "Third-Party Only" || get("vehicle_class") !== "PCP"
     || !get("insured_name") || !/^[A-Z ]{2,80}$/i.test(get("vehicle_make"))
