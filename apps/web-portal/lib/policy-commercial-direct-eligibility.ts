@@ -116,7 +116,7 @@ export function assessNiaNamedAuthorityUnregisteredConversion(input:Input):{elig
   // Only this source-certified model/layout family is enabled initially.
   // Other NIA goods vehicles remain review-controlled until their own tests.
   if(get("insurer_name")!=="The New India Assurance Company Limited"
-    ||get("policy_product")!=="Commercial Vehicle Package Policy Enhanced Covers"
+    ||!["Commercial Vehicle Package Policy","Commercial Vehicle Package Policy Enhanced Covers"].includes(get("policy_product"))
     ||get("vehicle_class")!=="Commercial Vehicle - Goods Carrying"
     ||get("vehicle_make")!=="TATA MOTOR"
     ||get("vehicle_model")!=="1918 AZURA"
