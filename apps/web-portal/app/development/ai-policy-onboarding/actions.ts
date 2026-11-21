@@ -283,15 +283,26 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
   if(confirmed!==true)return fail("Confirmation","Confirm this policy's registration before continuing.");
   const admin=createSupabaseAdminClient();
   const {data:queued,error:queueError}=await admin.from("policy_intake_ai_processing_queue")
-    .select("state,document_id,extraction_fingerprint,exception_codes")
+    .select("state,document_id,extraction_fingerprint,exception_codes,parser_id,checks_passed")
     .eq("intake_id",id)
-    .maybeSingle<{state:string;document_id:string;extraction_fingerprint:string|null;exception_codes:string[]}>();
-  if(queueError||!queued||queued.state!=="verified"||queued.exception_codes.length||!queued.extraction_fingerprint)
-    return fail("Extraction","This Intake is not currently verified for conversion. Check its latest n8n exceptions.");
+    .maybeSingle<{state:string;document_id:string;extraction_fingerprint:string|null;exception_codes:string[];parser_id:string|null;checks_passed:number}>();
+  // Explicit, one-at-a-time retry of a previously held IFFCO booking attempt.
+  // All unrelated queue errors remain blocked, and the original current PDF,
+  // fingerprint and the canonical booking checks are reverified below.
+  const heldIffcoReview=queued?.state==="exception"
+    &&queued.parser_id==="iffco_tokio_cv_native_pdf"
+    &&queued.checks_passed===18
+    &&queued.exception_codes.length===1
+    &&queued.exception_codes[0]==="booking_review_required";
+  if(queueError||!queued||(!heldIffcoReview
+      &&(queued.state!=="verified"||queued.exception_codes.length>0))
+      ||!queued.extraction_fingerprint)
+    return fail("Extraction","The current Intake has other extraction or booking exceptions requiring review.");
   const extracted=await previewSemiAutoN8nExtraction(id);
   if(!extracted.ok)return fail("Extraction",extracted.error);
   if(extracted.preview.documentId!==queued.document_id||
      extracted.preview.fingerprint!==queued.extraction_fingerprint||
+     (heldIffcoReview&&extracted.preview.parserId!=="iffco_tokio_cv_native_pdf")||
      !hasVerifiedN8nParserEvidence(extracted.preview.parserId,
        extracted.preview.checksPassed,extracted.preview.warnings))
     return fail("Source PDF","The current PDF, fingerprint or strict insurer verification is invalid. Recheck this Intake before booking.");
