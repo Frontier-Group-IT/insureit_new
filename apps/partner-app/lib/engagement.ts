@@ -132,6 +132,19 @@ export async function getPartnerSupport() {
   return data as PartnerSupport;
 }
 
+export type PartnerActivityPeriod = 'today' | 'last_week' | 'last_month' | 'all';
+export type PartnerFilteredActivityData = PartnerActivityData & { has_more: boolean };
+
+export async function getPartnerActivityByPeriod(period: PartnerActivityPeriod, offset = 0, limit = 100) {
+  const { data, error } = await supabase.rpc('partner_app_activity_filtered', {
+    p_period: period,
+    p_limit: limit,
+    p_offset: offset,
+  });
+  if (error) throw error;
+  return data as PartnerFilteredActivityData;
+}
+
 export async function getPartnerActivity(limit = 40) {
   const { data, error } = await supabase.rpc('partner_app_activity', { p_limit: limit });
   if (error) throw error;
