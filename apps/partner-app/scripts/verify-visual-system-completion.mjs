@@ -31,11 +31,18 @@ for (const phrase of [
   "barPlotSlot: { height: 72, width: '100%'",
   "barTrack: { height: '100%', width: '92%'",
   "fontSize: 11, lineHeight: 13, fontWeight: '700'",
-  "const visiblePremiumLabel = compact && premiumLabel.length > 6",
-  "premiumLabel.replace(/(Cr|L|k)$/",
-  "<Text numberOfLines={2} style={[styles.barValue, { bottom: height + 5 }]}>",
+  "const visiblePremiumLabel = compact && displayPremiumLabel.length > 6",
+  "displayPremiumLabel.replace(/(Cr|L|k)$/",
+  "<Text numberOfLines={2} style={[styles.barValue, Platform.OS === 'ios' && styles.barValueIos, { bottom: height + 5 }]}>",
   "paddingTop: 27",
 ]) requireText(business, phrase, 'Business Month-wise Trend values must use independent full-width labels without iOS autoshrink: ' + phrase);
+for (const marker of [
+  "const displayPremiumLabel = Platform.OS === 'ios' ? premiumLabel.replace(/^₹/, '') : premiumLabel;",
+  "barValueIos: { color: '#000000', fontSize: 9, lineHeight: 12, fontWeight: '400' }",
+  "Platform.OS === 'ios' && styles.barValueIos",
+  "const premiumLabel = formatCompactCurrency(premium);",
+  "const axisLabels = [3, 2, 1, 0].map((multiple) => formatCompactCurrency(multiple * step));",
+]) requireText(business, marker, 'Only iOS should remove the rupee prefix and use small regular black labels; Android and Y-axis stay unchanged: ' + marker);
 if (business.includes('minimumFontScale={0.85} style={[styles.barValue') || business.includes('styles.barTrackCompact')) {
   throw new Error('Trend premium labels cannot be constrained to the narrow blue bar');
 }
