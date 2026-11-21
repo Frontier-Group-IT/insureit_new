@@ -16,6 +16,12 @@ const enrichmentHelper=file("../lib/policy-n8n-onboarding-enrichment.ts");
 // registered plate. The source prefix must not fill registrationNo.
 assert.match(signed,/isNewIndiaUnregistered/);
 assert.match(signed,/fields\.filter\(\(f\) => f\.key !== "vehicle_registration_number"\)/);
+assert.ok(signed.includes("fields: isNewIndiaUnregistered || isUnitedNewVehicle")
+  &&signed.includes("const isIffcoNewVehicle ="),
+  "IFFCO MP/NEW reference must remain in verified evidence, not canonical registration; other insurer references stay filtered");
+assert.ok(handoff.includes('registrationMode:verified?.fields.some')
+  &&handoff.includes('["unregistered","registration_pending"].includes(field.value)'),
+  "Canonical unregistered form must keep registrationNo empty even with source MP/NEW evidence");
 assert.match(signed,/vehicle_registration_status"\) === "unregistered"/);
 assert.ok(handoff.includes('["unregistered","registration_pending"].includes(field.value)'),
   "Both explicit unregistered and registration_pending map to unregistered; a registered plate never does");
@@ -368,6 +374,12 @@ assert.equal(assessIffcoAutoOnboarding({...iffcoAuto,fields:[...iffcoAuto.fields
 assert.ok(handoff.includes("const iffcoReview=assessIffcoAutoOnboarding(")
   && handoff.includes("eligibleForVerifiedConversion=autoEligibleGoDigit||iffcoReview.eligible"),
   "IFFCO source and financial validated readiness must be used for the queue");
+assert.ok(actions.includes('queued.exception_codes[0]==="registration_pending_review"')
+  &&actions.includes('queued.parser_id==="iffco_tokio_cv_native_pdf"'),
+  "Only fully trained IFFCO can explicitly retry an old provisional registration hold");
+assert.ok(queue.includes("certifiedIffcoNewVehicle")
+  &&queue.includes('certifiedIffcoNewVehicle&&e.code==="registration_pending_review"'),
+  "Queue should clear only the certified IFFCO provisional RTO exception, not real booking errors");
 assert.ok(actions.includes('const heldReview=queued?.state==="exception"')
   &&actions.includes('queued.exception_codes.length===1')
   &&actions.includes('queued.exception_codes[0]==="booking_review_required"')
