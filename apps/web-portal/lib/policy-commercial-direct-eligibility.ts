@@ -107,7 +107,10 @@ export function assessNiaNamedAuthorityUnregisteredConversion(input:Input):{elig
   const authorityMatch=authority.match(
     /^NIA PDF Name of registration authority: ([A-Za-z][A-Za-z .'-]{2,65}) - MP (\d{2}); matches MP-\2$/,
   );
+  const printedPrefix=fields.get("vehicle_registration_status")?.evidence??"";
+  const sourcePrefix=printedPrefix.match(/^NIA PDF partial registration prefix MP-(\\d{2}); no full plate$/);
   if(!authorityMatch||authorityMatch[1].trim()!==get("vehicle_rto_name")
+    ||!sourcePrefix||sourcePrefix[1]!==authorityMatch[2]
     ||get("vehicle_rto_state")!=="Madhya Pradesh")
     return fail("nia_named_rto_authority_not_verified");
   // Only this source-certified model/layout family is enabled initially.
