@@ -144,3 +144,29 @@ export function verifiedCpaSelectionMatches(
   return Number.isFinite(verifiedCpa) && verifiedCpa >= 0
     && (savedOpted === "Yes") === (verifiedCpa > 0);
 }
+
+
+/** New India package GCV: printed Total TP INCLUDES owner-driver CPA.
+ * n8n certifies the labelled Basic TP + CPA + paid-driver LL rows AND the
+ * two printed 18%/5% GST bases before cpa_premium is emitted. Canonical form
+ * must enter CPA separately, subtract it from printed total TP exactly once,
+ * and retain the paid-driver liability in the remaining TP bucket.
+ * Never derive CPA by subtracting arbitrary amounts from the TP total. */
+export function mapVerifiedNiaCommercialPremium(
+  printed: {od:number;tp:number;net:number;gst:number;gross:number},
+  sourceVerifiedCpa: number,
+):ReturnType<typeof mapVerifiedN8nMotorPremium>{
+  const cents=(v:number)=>Math.round(v*100);
+  const values=[printed.od,printed.tp,printed.net,printed.gst,printed.gross,sourceVerifiedCpa];
+  if(!values.every(v=>Number.isFinite(v)&&v>=0&&v<=1_000_000_000
+      &&Math.abs(v*100-cents(v))<0.00001)
+    ||sourceVerifiedCpa<=0||sourceVerifiedCpa>=printed.tp
+    ||printed.od<=0||printed.tp<=0||printed.gross<=0
+    ||Math.abs(cents(printed.od)+cents(printed.tp)-cents(printed.net))>6
+    ||Math.abs(cents(printed.net)+cents(printed.gst)-cents(printed.gross))>6)
+    throw new Error("nia_printed_cpa_split_unreconciled");
+  const asMoney=(v:number)=>String(cents(v)/100);
+  const tpWithoutCpa=(cents(printed.tp)-cents(sourceVerifiedCpa))/100;
+  return {od:asMoney(printed.od),addOnPremium:"0",tp:asMoney(tpWithoutCpa),
+    cpa:asMoney(sourceVerifiedCpa),cpaOpted:"Yes"};
+}
