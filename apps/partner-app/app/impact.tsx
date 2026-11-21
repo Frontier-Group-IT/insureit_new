@@ -196,9 +196,6 @@ export default function ImpactScreen() {
               <Ionicons name="location-sharp" size={24} color="#6754EF" style={styles.journeyLocationPin} />
               <Image source={IMPACT_ART.motor} resizeMode="contain" style={styles.journeyBlueCar} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
             </View>
-            <View style={styles.journeyArrowCircle}>
-              <Ionicons name="arrow-forward" size={24} color="#3D39D3" />
-            </View>
           </Pressable>
         </>
       )}
@@ -242,7 +239,7 @@ function MonthStat({ art, label, value, onPress }: {
       onPress={onPress}
       style={({ pressed }) => [styles.monthStat, pressed && styles.monthStatPressed]}
     >
-      <ImpactIcon art={art} size={44} plain />
+      <ImpactIcon art={art} size={54} plain />
       <View style={styles.cardDetails}>
         <Text style={styles.monthValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65}>{value}</Text>
         <Text style={styles.monthLabel} numberOfLines={2}>{label}</Text>
@@ -334,7 +331,7 @@ const styles = StyleSheet.create({
   premiumValue: { color: '#17233A', fontSize: 24, lineHeight: 29, fontWeight: '800' },
   monthDivider: { marginHorizontal: 14, height: StyleSheet.hairlineWidth, backgroundColor: '#E6EAF0' },
   monthStatsRow: { flexDirection: 'row', paddingVertical: 2 },
-  monthStat: { flex: 1, minWidth: 0, minHeight: 59, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 4, gap: 4 },
+  monthStat: { flex: 1, minWidth: 0, minHeight: 64, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 4, gap: 5 },
   monthStatDivider: { width: StyleSheet.hairlineWidth, backgroundColor: '#E6EAF0', marginVertical: 6 },
   monthStatPressed: { backgroundColor: '#F1F7FF' },
   monthValue: { color: '#17233A', fontSize: 19, lineHeight: 24, fontWeight: '800' },
@@ -346,8 +343,8 @@ const styles = StyleSheet.create({
   settlementText: { marginTop: 3, color: '#56716F', fontSize: 10.5, lineHeight: 15 },
   // Reference-inspired illustrated journey CTA. Use native layers so it stays crisp on Android/iOS.
   journeyLink: {
-    marginTop: 14, minHeight: 128, overflow: 'hidden', flexDirection: 'row', alignItems: 'center',
-    gap: 10, paddingHorizontal: 13, paddingVertical: 15, borderRadius: 25,
+    marginTop: 12, minHeight: 96, overflow: 'hidden', flexDirection: 'row', alignItems: 'center',
+    gap: 10, paddingHorizontal: 13, paddingVertical: 9, borderRadius: 22,
     backgroundColor: '#ECECFF', borderWidth: 1.5, borderColor: '#D7D6FF',
     shadowColor: '#7771D8', shadowOpacity: 0.12, shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 }, elevation: 3,
@@ -377,22 +374,16 @@ const styles = StyleSheet.create({
   journeyRoadMarkTwo: { bottom: 42, right: 78 },
   journeyRoadMarkThree: { bottom: 59, right: 35 },
   journeyIconCircle: {
-    width: 70, height: 70, borderRadius: 40, flexShrink: 0,
+    width: 60, height: 60, borderRadius: 32, flexShrink: 0,
     backgroundColor: '#D9DFFF', alignItems: 'center', justifyContent: 'center',
   },
-  journeyIcon: { width: 64, height: 64 },
-  journeyBody: { flex: 1, minWidth: 0, paddingBottom: 12, zIndex: 2 },
+  journeyIcon: { width: 56, height: 56 },
+  journeyBody: { flex: 1, minWidth: 0, paddingBottom: 0, paddingRight: 56, zIndex: 2 },
   journeyTitle: { color: '#102B5A', fontSize: 17, lineHeight: 22, fontWeight: '800', letterSpacing: -0.35 },
   journeySubtitle: { color: '#405B89', fontSize: 11, lineHeight: 15, fontWeight: '600', marginTop: 4 },
-  journeyCarScene: { position: 'absolute', right: 12, top: 14, width: 92, height: 75 },
-  journeyBlueCar: { position: 'absolute', bottom: 0, right: 5, width: 86, height: 65 },
+  journeyCarScene: { position: 'absolute', right: 11, top: 10, width: 76, height: 64 },
+  journeyBlueCar: { position: 'absolute', bottom: 0, right: 4, width: 73, height: 55 },
   journeyLocationPin: { position: 'absolute', top: 0, right: 0 },
-  journeyArrowCircle: {
-    position: 'absolute', right: 13, bottom: 11, width: 37, height: 37, borderRadius: 20,
-    alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF',
-    shadowColor: '#4C47C3', shadowOpacity: 0.16, shadowRadius: 5,
-    shadowOffset: { width: 0, height: 2 }, elevation: 2,
-  },
   journeyPressed: { opacity: 0.94, transform: [{ scale: 0.987 }] },
   iconShell: {
     alignItems: 'center', justifyContent: 'center', backgroundColor: '#E8F5FF',
