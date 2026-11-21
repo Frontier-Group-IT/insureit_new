@@ -1,9 +1,9 @@
 Partner production OTA trigger
-release=partner-my-progress-summary-gap-pr-5079
+release=partner-business-report-exact-icons-standard-header-pr-5084
 source=verified-merged-main
-source_pr=5079
-source_merge=da85305b9fce6837eaa34c93f129d448c7515c8a
-reason=user-approved-merge-and-publish-my-progress-summary-gap
+source_pr=5084
+source_merge=2774f232886d4133d75f9813d495c8be6a47a5a0
+reason=user-approved-merge-and-publish-business-report-exact-3d-icons-compact-header
 channel=production
 runtime=0.2.0
 requested=2026-11-21
