@@ -17,7 +17,8 @@ const enrichmentHelper=file("../lib/policy-n8n-onboarding-enrichment.ts");
 assert.match(signed,/isNewIndiaUnregistered/);
 assert.match(signed,/fields\.filter\(\(f\) => f\.key !== "vehicle_registration_number"\)/);
 assert.match(signed,/vehicle_registration_status"\) === "unregistered"/);
-assert.match(handoff,/field\.key==="vehicle_registration_status"&&field\.value==="unregistered"/);
+assert.ok(handoff.includes('["unregistered","registration_pending"].includes(field.value)'),
+  "Both explicit unregistered and registration_pending map to unregistered; a registered plate never does");
 for (const id of ["go_digit_cv_native_pdf","new_india_cv_native_pdf","iffco_tokio_cv_native_pdf"]) {
   assert.ok(eligibility.includes(id), "AI queue must recognize trained parser "+id);
   assert.ok(signed.includes(id), "The signed-source path must retain exact parser identity "+id);
@@ -71,7 +72,9 @@ assert.match(eligibility,/profile\.family==="commercial"/);
 assert.match(queue,/ICICI_N8N_IDS\.has\(extraction\.preview\.parserId\)/);
 assert.match(actions,/const commercial=extracted\.preview\.commercialPremium/);
 assert.match(actions,/mapVerifiedGoDigitCommercialPremium\(commercial\)/);
-assert.match(actions,/extracted\.preview\.parserId!=="go_digit_cv_native_pdf"/);
+assert.ok(actions.includes('extracted.preview.parserId==="go_digit_cv_native_pdf"')
+  && actions.includes('assessStandardCommercialDirectConversion({'),
+  "Go Digit premium mapping stays insurer-scoped; other commercial parsers need their own strict eligibility contract");
 assert.match(actions,/!hasVerifiedN8nParserEvidence\(extracted\.preview\.parserId,/,
   "Confirmed bulk conversion requires exact trained insurer checks, including Tata 18/18");
 assert.match(oldBridge,/insureit-policy-intake-icici-v1/);
@@ -117,6 +120,13 @@ assert.deepEqual(mapVerifiedGoDigitCommercialPremium({od:2415.46,tp:7647,net:100
   {od:"2415.46",addOnPremium:"0",tp:"7647",cpa:"0",cpaOpted:"No"});
 assert.throws(()=>mapVerifiedGoDigitCommercialPremium({od:2415.46,tp:7647,net:10062.46,gst:1811.24,gross:12000}),
   /n8n_motor_premium_handoff_unreconciled/);
+assert.ok(handoff.includes("const standardCommercialVerifiedFill=Boolean(commercial)&&fillEmptyFields")
+  &&handoff.includes("assessStandardCommercialDirectConversion({"),
+  "Other commercial parsers must use a strict direct-booking eligibility contract");
+assert.ok(handoff.includes("const iffcoVerifiedFill = Boolean(commercial) && fillEmptyFields")
+  &&handoff.includes("!iffcoVerifiedFill && !standardCommercialVerifiedFill")
+  &&handoff.includes("assessIffcoAutoOnboarding({"),
+  "Certified IFFCO must be allowed through direct handoff without manual reparse");
 assert.ok(handoff.includes('state:eligibleForVerifiedConversion?"verified":"exception"')
   && handoff.includes("autoEligibleGoDigit||iffcoReview.eligible"),
   "Existing Go Digit eligibility is preserved while narrowly certified IFFCO is added");
@@ -288,6 +298,38 @@ const iffcoAutoFields=[
 const iffcoAuto={parserId:"iffco_tokio_cv_native_pdf",checksPassed:18,
   warnings:[],fields:iffcoAutoFields,
   commercialPremium:{od:4762,tp:7367,net:12129,gst:2183.22,gross:14312.22}};
+// Shared direct-conversion criteria for the other three trained commercial
+// parsers. A parser-success flag alone must NEVER grant booking authority.
+const {assessStandardCommercialDirectConversion}=await import("../lib/policy-commercial-direct-eligibility.ts");
+const standardFields=[
+  ifField("insured_name","TEST CARRIER"),ifField("policy_number","POLICY-EXAMPLE"),
+  ifField("policy_issuance_date","2026-11-16"),ifField("policy_start_date","2026-11-16"),
+  ifField("policy_end_date","2027-11-15"),ifField("third_party_start_date","2026-11-16"),
+  ifField("third_party_end_date","2027-11-15"),ifField("insurer_name","TEST INSURER"),
+  ifField("vehicle_class","Goods Carrying Vehicle"),ifField("vehicle_make","TATA"),
+  ifField("vehicle_model","TRUCK"),ifField("vehicle_fuel_type","Diesel"),
+  ifField("vehicle_manufacturing_year","2024"),ifField("vehicle_capacity","7500"),
+  ifField("vehicle_rto_state","Madhya Pradesh"),
+  ifField("vehicle_rto_name","Jabalpur","RTO authority printed in registered vehicle schedule"),
+  ifField("vehicle_registration_number","MP20AB1234"),ifField("vehicle_registration_status","registered"),
+  ifField("vehicle_chassis_number","CHASSIS123456"),ifField("vehicle_engine_number","ENGINE123"),
+  ifField("policy_product","Goods Carrying Vehicle Package"),
+  ifField("idv","1000000"),ifField("cpa_premium","0"),
+];
+const standardPremium={od:1000,tp:2000,net:3000,gst:540,gross:3540};
+for(const [parserId,checksPassed] of [
+  ["new_india_cv_native_pdf",16],["united_india_gcv_native_pdf",18],
+  ["oriental_gccv_native_pdf",17],
+]){
+ const fixture={parserId,checksPassed,warnings:[],fields:standardFields,commercialPremium:standardPremium};
+ assert.equal(assessStandardCommercialDirectConversion(fixture).eligible,true,
+   parserId+" fully evidenced, zero-CPA registered package eligible");
+ assert.equal(assessStandardCommercialDirectConversion({...fixture,checksPassed:checksPassed-1}).eligible,false);
+ assert.equal(assessStandardCommercialDirectConversion({...fixture,fields:standardFields.filter(f=>f.key!=="vehicle_rto_name")}).eligible,false);
+ assert.equal(assessStandardCommercialDirectConversion({...fixture,fields:standardFields.map(f=>f.key==="vehicle_registration_number"?{...f,value:"NEW"}:f)}).eligible,false);
+ assert.equal(assessStandardCommercialDirectConversion({...fixture,fields:standardFields.map(f=>f.key==="cpa_premium"?{...f,value:"330"}:f)}).eligible,false);
+ assert.equal(assessStandardCommercialDirectConversion({...fixture,commercialPremium:{...standardPremium,net:2999}}).eligible,false);
+}
 assert.equal(assessIffcoAutoOnboarding(iffcoAuto).eligible,true);
 // A registered JCB MP plate is not an MP/NEW provisional vehicle. Its
 // address city must not be mistaken for the registration district.
@@ -326,6 +368,16 @@ assert.equal(assessIffcoAutoOnboarding({...iffcoAuto,fields:[...iffcoAuto.fields
 assert.ok(handoff.includes("const iffcoReview=assessIffcoAutoOnboarding(")
   && handoff.includes("eligibleForVerifiedConversion=autoEligibleGoDigit||iffcoReview.eligible"),
   "IFFCO source and financial validated readiness must be used for the queue");
+assert.ok(actions.includes('const heldReview=queued?.state==="exception"')
+  &&actions.includes('queued.exception_codes.length===1')
+  &&actions.includes('queued.exception_codes[0]==="booking_review_required"')
+  &&actions.includes('extracted.preview.fingerprint!==queued.extraction_fingerprint'),
+  "Held parser retries still require exact queue exception, fingerprint and fresh PDF");
+const studio=file("../components/development/semi-auto-policy-workspace.tsx");
+assert.ok(studio.includes("canRetryReviewHeldPolicy(exceptionRow)")
+  &&studio.includes("setAutoConvertRow(exceptionRow)")
+  &&studio.includes("convertVerifiedAiIntake(row.id,true)"),
+  "Only explicitly confirmed held parser retries can invoke direct conversion");
 assert.ok(actions.includes("const assessment=assessIffcoAutoOnboarding(")
   && actions.includes("mapVerifiedIffcoCommercialPremium(commercial")
   && actions.includes('pdfField("vehicle_registration_status")==="registration_pending"'),
