@@ -1,7 +1,7 @@
 import { partnerAlert } from '@/components/ui/partner-alert-provider';
 import { PartnerConfirmDialog } from '@/components/ui/partner-confirm-dialog';
 import { Fragment, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
+import { ActivityIndicator, Animated, Easing, Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { StatusBar } from 'expo-status-bar';
@@ -155,6 +155,19 @@ export default function AddPartnerScreen() {
     scrollRef.current?.scrollTo({ y: Math.max(0, y - 65), animated: true });
   };
   const [partnerType,setPartnerType]=useState<"posp"|"misp">("posp");
+  const [typeSwitchWidth,setTypeSwitchWidth]=useState(0);
+  const typeSlide=useRef(new Animated.Value(0)).current;
+  useEffect(()=>{
+    if(typeSwitchWidth<=10)return;
+    const animation=Animated.timing(typeSlide,{
+      toValue:partnerType==="misp"?(typeSwitchWidth-10)/2:0,
+      duration:230,
+      easing:Easing.out(Easing.cubic),
+      useNativeDriver:true,
+    });
+    animation.start();
+    return ()=>animation.stop();
+  },[partnerType,typeSwitchWidth,typeSlide]);
   const [mispDirty,setMispDirty]=useState(false);
   const [oems,setOems]=useState<Option[]>([]);
   const [rms, setRms] = useState<Option[]>([]);
@@ -404,7 +417,10 @@ export default function AddPartnerScreen() {
           </View> : null}
         </View>
         <ScrollView ref={scrollRef} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
-          <View style={styles.typeSwitch} accessibilityLabel="Partner onboarding type">{(["posp","misp"] as const).map(type=><Pressable key={type} accessibilityRole="button" accessibilityLabel={type.toUpperCase()} accessibilityState={{selected:partnerType===type}} onPress={()=>changePartnerType(type)} style={[styles.typeOption,partnerType===type&&styles.typeSelected]}><Text style={[styles.typeText,partnerType===type&&styles.typeSelectedText]}>{type.toUpperCase()}</Text></Pressable>)}</View>
+          <View style={styles.typeSwitch} accessibilityLabel="Partner onboarding type" onLayout={event=>setTypeSwitchWidth(event.nativeEvent.layout.width)}>
+            {typeSwitchWidth>10&&<Animated.View pointerEvents="none" style={[styles.typeSelected,{width:(typeSwitchWidth-10)/2,transform:[{translateX:typeSlide}]}]}/>}
+            {(["posp","misp"] as const).map(type=><Pressable key={type} accessibilityRole="button" accessibilityLabel={type.toUpperCase()} accessibilityState={{selected:partnerType===type}} onPress={()=>changePartnerType(type)} style={styles.typeOption}><Text style={[styles.typeText,partnerType===type&&styles.typeSelectedText]}>{type.toUpperCase()}</Text></Pressable>)}
+          </View>
           {partnerType==="misp"?<MispPartnerForm rms={rms} banks={banks} oems={oems} loading={loading} onDirtyChange={setMispDirty} onCancel={() => leavePartnerForm()}/>:<>
           {sections.map((section, index) => (
             <View key={section.heading} style={styles.section} onLayout={event => { sectionPositions.current[index] = event.nativeEvent.layout.y; }}>
@@ -613,7 +629,7 @@ const styles = StyleSheet.create({
   uploadSuccessOverlay: {position:'absolute',right:16,zIndex:15,elevation:15},
   content: { padding: 12, paddingBottom: 35, gap: 12 },
   typeSwitch:{flexDirection:'row',width:'100%',padding:4,backgroundColor:'#E4EAF5',borderRadius:12,borderWidth:1,borderColor:'#CED8E7'},
-  typeOption:{flex:1,minHeight:42,alignItems:'center',justifyContent:'center',borderRadius:9},typeSelected:{backgroundColor:'#17365D'},typeText:{fontWeight:'800',fontSize:13,color:'#4D5F7B'},typeSelectedText:{color:'#FFFFFF'},
+  typeOption:{flex:1,minHeight:42,alignItems:'center',justifyContent:'center',borderRadius:9},typeSelected:{position:'absolute',left:5,top:5,bottom:5,borderRadius:9,backgroundColor:'#17365D'},typeText:{fontWeight:'800',fontSize:13,color:'#4D5F7B'},typeSelectedText:{color:'#FFFFFF'},
   section: { backgroundColor: '#FFF', borderWidth: 1, borderColor: '#E1E7F1', borderRadius: 14, overflow: 'hidden' },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12, backgroundColor: '#F9FBFD', borderBottomWidth: 1, borderBottomColor: '#E1E7F1' },
   index: { backgroundColor: '#17365D', borderRadius: 7, width: 33, height: 33, justifyContent: 'center', alignItems: 'center' },
