@@ -12,6 +12,7 @@ import { requirePolicyCreator } from "@/lib/policy-access-server";
 import { isN8nWorkbenchPrimary, previewSemiAutoN8nExtraction } from "@/lib/policy-intake-semi-auto-n8n";
 import type { N8nVerifiedPremiumBreakdown } from "@/lib/policy-intake-n8n-validation";
 import { mapVerifiedN8nMotorPremium, mapVerifiedIffcoCommercialPremium } from "@/lib/policy-n8n-onboarding-premium";
+import { assessIffcoAutoOnboarding } from "@/lib/policy-iffco-auto-eligibility";
 import { policyDateDecision } from "@/lib/policy-date-rule";
 import { enrichVerifiedN8nOnboardingFields, resolveManufacturingYearEvidence } from "@/lib/policy-n8n-onboarding-enrichment";
 import { sameInsuredIdentity, selectVerifiedN8nInsuredDraftIdentity } from "@/lib/policy-n8n-onboarding-insured";
@@ -302,17 +303,27 @@ async function preparePolicyIntakeHandoffInternal(
       key==="vehicle_manufacturing_year" ? !digitYear?.year
       :!verified.fields.some(f=>f.key===key&&f.value.trim())):[];
     const autoEligibleGoDigit=goDigit&&missingGoDigit.length===0;
+    const iffcoReview=assessIffcoAutoOnboarding({
+      parserId:verified.parserId,checksPassed:verified.checksPassed,
+      warnings:verified.warnings,fields:verified.fields,
+      commercialPremium:verified.commercialPremium,
+    });
+    const eligibleForVerifiedConversion=autoEligibleGoDigit||iffcoReview.eligible;
     const specificMissingYear=goDigit&&missingGoDigit.includes("vehicle_manufacturing_year");
     const{error}=await admin.from("policy_intake_ai_processing_queue").update({
-      // Never mark other insurers eligible without their existing booking rule.
-      state:autoEligibleGoDigit?"verified":"exception",
-      exception_codes:autoEligibleGoDigit?[]:niaHoldCode?["missing_field"]
+      // Only previously certified Go Digit and new narrowly evidenced IFFCO
+      // layouts enter the verified queue. All other commercial formats remain
+      // review-only; no booking is created by changing queue status.
+      state:eligibleForVerifiedConversion?"verified":"exception",
+      exception_codes:eligibleForVerifiedConversion?[]:niaHoldCode?["missing_field"]
         :goDigit&&missingGoDigit.length?["missing_field"]:["booking_review_required"],
       field_keys:verified.fields.map(field=>field.key),parser_id:verified.parserId,
       checks_passed:verified.checksPassed,extraction_fingerprint:verified.fingerprint,
-      last_error_code:autoEligibleGoDigit?null:niaHoldCode??(specificMissingYear
+      last_error_code:eligibleForVerifiedConversion?null:niaHoldCode??(specificMissingYear
         ?"go_digit_missing_verified_manufacturing_year":goDigit&&missingGoDigit.length
-          ?"go_digit_missing_verified_onboarding_fields":"bulk_conversion_review_required"),
+          ?"go_digit_missing_verified_onboarding_fields"
+          :verified.parserId==="iffco_tokio_cv_native_pdf"?iffcoReview.reason
+          :"bulk_conversion_review_required"),
       processed_at:new Date().toISOString(),
       retry_after:new Date(Date.now()+24*60*60*1000).toISOString(),
       lease_id:null,leased_until:null,updated_at:new Date().toISOString(),
@@ -401,6 +412,28 @@ async function preparePolicyIntakeHandoffInternal(
     ?" NIA_PROVISIONAL_RTO_FROM_ISSUING_OFFICE: "+niaProvisionalRtoField.value.trim()
       +", "+(verified?.fields.find(f=>f.key==="vehicle_rto_state")?.value||"state unavailable")
       +". Vehicle registration authority was blank on the PDF; the source is NIA's issuing office, not RTO confirmation. Confirm after RTO registration.":"";
+  // IFFCO issues MP/NEW internal vehicle references before actual RTO
+  // registration. Its insured-address city is a useful operational fallback,
+  // NOT official RTO evidence. Keep the proof in the saved draft remarks.
+  const iffcoProvisionalRtoField=verified?.parserId==="iffco_tokio_cv_native_pdf"
+    && verified.checksPassed===18
+    && verified.fields.some(field=>field.key==="vehicle_registration_status"
+      &&field.value==="registration_pending")
+      ?verified.fields.find(field=>field.key==="vehicle_rto_name"
+        &&field.evidence.startsWith("IFFCO policyholder address city only;")
+        &&/^[A-Za-z][A-Za-z -]{2,45}$/.test(field.value.trim()))
+      :undefined;
+  const iffcoProvisionalNote=iffcoProvisionalRtoField
+    ?" IFFCO_PROVISIONAL_RTO_FROM_INSURED_ADDRESS: "+iffcoProvisionalRtoField.value.trim()
+      +", "+(verified?.fields.find(field=>field.key==="vehicle_rto_state")?.value||"state unknown")
+      +". IFFCO new vehicle's actual Registration Authority field was blank. "
+      +"The insured address city is used for onboarding geography only; replace with the actual registered RTO after registration.":"";
+  const iffcoModelFuel=verified?.parserId==="iffco_tokio_cv_native_pdf"
+    &&verified.checksPassed===18
+      ?verified.fields.find(f=>f.key==="vehicle_fuel_type"&&f.value==="Diesel"
+        &&f.evidence.startsWith("Manufacturer-model Diesel specification")):undefined;
+  const iffcoFuelNote=iffcoModelFuel
+    ?" IFFCO_FUEL_FROM_JCB_MODEL: Diesel is inferred from the manufacturer-confirmed JCB 3DX Plus 2WD variant, not a fuel value printed in this policy.":"";
   // Only a separately printed issued-on date OR the exact insurer-scoped
   // signing+receipt rule is accepted; OD/TP start and clock are never substitutes.
   const verifiedIssuanceDate=verified?.fields.find(field=>field.key==="policy_issuance_date")?.value
@@ -425,7 +458,7 @@ async function preparePolicyIntakeHandoffInternal(
     cpa:verifiedPremium?.cpa??mapped.next.cpa,
     policyNo:mapped.next.policyNo,insurerId:mapped.next.insurerId,validFrom:mapped.next.validFrom,validUpto:mapped.next.validUpto,
     payoutBasis:"NET",projectedOdPercent:"",projectedTpPercent:"",insurerScheme:"",payinBillNo:"",payinBilledAmount:"",payinBillDate:"",payinStatus:"Unbilled",retention:"",payoutOdPercent:"",payoutTpPercent:"",flatPayoutAmount:"",payoutStatus:"Pending",payoutDate:"",payoutVoucherNo:"",remarks:verified?.commercialPremium
-      ? `Policy Intake ${id} — independently validated commercial-motor PDF (${verified.parserId}). REVIEW ONLY; no policy or customer was booked. Printed OD ${verified.commercialPremium.od}, TP including liabilities ${verified.commercialPremium.tp}, Net ${verified.commercialPremium.net}, GST ${verified.commercialPremium.gst}, Gross ${verified.commercialPremium.gross}. ${verified.parserId==="iffco_tokio_cv_native_pdf" ? `IFFCO source Net(B) ${verified.commercialPremium.tp} includes owner-driver CPA ${iffcoCpa}. Canonical TP ${verifiedPremium?.tp} excludes that CPA, and CPA is entered separately as ${verifiedPremium?.cpa}; their sum equals printed Net(B).` : "Owner-driver PA and paid-driver liabilities are retained inside printed TP; do not add CPA a second time."} Confirm vehicle class, registration, policy dates, premiums and all other fields before booking.${yearFallbackNote}${niaProvisionalRtoNote}`
+      ? `Policy Intake ${id} — independently validated commercial-motor PDF (${verified.parserId}). REVIEW ONLY; no policy or customer was booked. Printed OD ${verified.commercialPremium.od}, TP including liabilities ${verified.commercialPremium.tp}, Net ${verified.commercialPremium.net}, GST ${verified.commercialPremium.gst}, Gross ${verified.commercialPremium.gross}. ${verified.parserId==="iffco_tokio_cv_native_pdf" ? `IFFCO source Net(B) ${verified.commercialPremium.tp} includes owner-driver CPA ${iffcoCpa}. Canonical TP ${verifiedPremium?.tp} excludes that CPA, and CPA is entered separately as ${verifiedPremium?.cpa}; their sum equals printed Net(B).` : "Owner-driver PA and paid-driver liabilities are retained inside printed TP; do not add CPA a second time."} Confirm vehicle class, registration, policy dates, premiums and all other fields before booking.${yearFallbackNote}${niaProvisionalRtoNote}${iffcoProvisionalNote}${iffcoFuelNote}`
       : verified && verified.premium
       ? `Policy Intake ${id} — n8n validated ${verified.premium.tataAig ? "Tata AIG private car" : "ICICI 3005"} PDF. Review every prefilled value before booking.
 PDF premium reconciliation: Printed Basic OD ${verified.premium.basicOd} + OD add-ons ${addOnTotal} - validated NCB/OD deductions ${verified.premium.odDeductions??0} = Total OD ${verified.premium.totalOd}; net-of-deductions Basic OD entered for onboarding ${verifiedPremium?.od??"unavailable"}. TP ${verified.premium.basicTp}, CPA ${verified.premium.cpa}, Net ${verified.premium.net}, GST ${verified.premium.tax}, Gross ${verified.premium.gross}.
@@ -527,6 +560,17 @@ Third Party period: ${tpStart||"unavailable"} to ${tpExpiry||"unavailable"}. ${v
     if(niaProvisionalRtoField && supplemented.rtoName===niaProvisionalRtoField.value.trim()
        && !supplemented.remarks.includes("NIA_PROVISIONAL_RTO_FROM_ISSUING_OFFICE:")){
       supplemented.remarks=(supplemented.remarks||"")+niaProvisionalRtoNote;
+      changed=true;
+    }
+    if(iffcoProvisionalRtoField
+      && supplemented.rtoName===iffcoProvisionalRtoField.value.trim()
+      && !supplemented.remarks.includes("IFFCO_PROVISIONAL_RTO_FROM_INSURED_ADDRESS:")){
+      supplemented.remarks=(supplemented.remarks||"")+iffcoProvisionalNote;
+      changed=true;
+    }
+    if(iffcoModelFuel && supplemented.fuelType==="Diesel"
+      &&!supplemented.remarks.includes("IFFCO_FUEL_FROM_JCB_MODEL:")){
+      supplemented.remarks=(supplemented.remarks||"")+iffcoFuelNote;
       changed=true;
     }
     if(!changed)return{ok:true,draft:original,draftRevision:existingDraft.revision,
