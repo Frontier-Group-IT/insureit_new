@@ -117,6 +117,10 @@ assert.deepEqual(mapVerifiedGoDigitCommercialPremium({od:2415.46,tp:7647,net:100
   {od:"2415.46",addOnPremium:"0",tp:"7647",cpa:"0",cpaOpted:"No"});
 assert.throws(()=>mapVerifiedGoDigitCommercialPremium({od:2415.46,tp:7647,net:10062.46,gst:1811.24,gross:12000}),
   /n8n_motor_premium_handoff_unreconciled/);
+assert.ok(handoff.includes("const iffcoVerifiedFill = Boolean(commercial) && fillEmptyFields")
+  &&handoff.includes("!goDigitVerifiedFill && !iffcoVerifiedFill")
+  &&handoff.includes("assessIffcoAutoOnboarding({"),
+  "Certified IFFCO must be allowed through direct handoff without manual reparse");
 assert.ok(handoff.includes('state:eligibleForVerifiedConversion?"verified":"exception"')
   && handoff.includes("autoEligibleGoDigit||iffcoReview.eligible"),
   "Existing Go Digit eligibility is preserved while narrowly certified IFFCO is added");
