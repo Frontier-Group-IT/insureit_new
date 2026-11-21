@@ -405,6 +405,31 @@ const previewSource=file("../lib/policy-intake-semi-auto-n8n.ts");
 assert.ok(previewSource.includes("legacyIffcoMachineWithoutNewRefFingerprint")
   &&actions.includes("extracted.preview.legacyIffcoMachineWithoutNewRefFingerprint"),
   "Existing IFFCO queue entries must retain a guarded one-click evidence retry");
+// JCB 455-5N wheel-loader N9424861: PDF prints JCB and model, not
+// fuel. Fill Diesel only for the verified model family, not all JCB makes.
+const iffcoLoaderSource=[
+  ...iffcoAutoFields.filter(f=>!["vehicle_make","vehicle_model","vehicle_fuel_type"].includes(f.key)),
+  ifField("vehicle_make","JCB"),
+  ifField("vehicle_model","JCB 455-5N LOADER"),
+];
+const loaderFields=enrichIffcoCertifiedMachineFamily(iffcoLoaderSource,"iffco_tokio_cv_native_pdf");
+assert.equal(loaderFields.find(f=>f.key==="vehicle_fuel_type")?.value,"Diesel");
+assert.equal(loaderFields.find(f=>f.key==="vehicle_make")?.value,"JCB");
+assert.ok(loaderFields.find(f=>f.key==="vehicle_fuel_type")?.evidence?.includes("JCB 455-5N wheel loader"));
+assert.equal(assessIffcoAutoOnboarding({...iffcoAuto,fields:loaderFields}).eligible,true);
+assert.equal(assessIffcoAutoOnboarding({...iffcoAuto,fields:iffcoLoaderSource}).eligible,false,
+ "18/18 parser checks do not mean a bookable intake when fuel is missing");
+for(const model of ["JCB 403E LOADER","JCB E-TECH LOADER","JCB UNKNOWN LOADER"]){
+ const fields=enrichIffcoCertifiedMachineFamily(iffcoLoaderSource.map(f=>f.key==="vehicle_model"?{...f,value:model}:f),"iffco_tokio_cv_native_pdf");
+ assert.equal(fields.some(f=>f.key==="vehicle_fuel_type"),false,"Must not guess diesel for "+model);
+}
+const loaderElectric=enrichIffcoCertifiedMachineFamily([...iffcoLoaderSource,ifField("vehicle_fuel_type","Electric")],"iffco_tokio_cv_native_pdf");
+assert.equal(loaderElectric.find(f=>f.key==="vehicle_fuel_type")?.value,"Electric","Never overwrite printed fuel");
+const loaderPreview=file("../lib/policy-intake-semi-auto-n8n.ts");
+assert.ok(loaderPreview.includes("legacyIffcoLoaderFuelFingerprint")
+  &&loaderPreview.includes("legacyIffcoLoaderFuelWithoutNewRefFingerprint")
+  &&actions.includes("extracted.preview.legacyIffcoLoaderFuelFingerprint"),
+  "Old IFFCO loader queues must remain eligible for exact fresh-PDF revalidation");
 assert.equal(assessIffcoAutoOnboarding(iffcoAuto).eligible,true);
 // A registered JCB MP plate is not an MP/NEW provisional vehicle. Its
 // address city must not be mistaken for the registration district.
