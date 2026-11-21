@@ -374,6 +374,36 @@ assert.ok(semiN8n.includes("legacyIffcoNewFingerprint")
   &&actions.includes("sameReviewedFingerprint")
   &&actions.includes("extracted.preview.fingerprint,true,true"),
   "An old queue MP/NEW hash can retry once with the newly verified full current-PDF evidence");
+// Family-level enrichment: N9293311's original PDF prints "VMT 117 LC
+// NDD COMPACTOR", and n8n emits "VMT" with no fuel. Do not grant booking
+// just because extraction has passed 18/18 checks.
+const {enrichIffcoCertifiedMachineFamily}=await import("../lib/policy-iffco-machine-family.ts");
+const iffcoCompactorSource=[
+  ...iffcoAutoFields.filter(f=>!["vehicle_make","vehicle_model","vehicle_fuel_type"].includes(f.key)),
+  ifField("vehicle_make","VMT"),
+  ifField("vehicle_model","VMT 117 LC NDD COMPACTOR"),
+];
+const enrichedCompactor=enrichIffcoCertifiedMachineFamily(
+  iffcoCompactorSource,"iffco_tokio_cv_native_pdf");
+assert.equal(enrichedCompactor.find(f=>f.key==="vehicle_make")?.value,"JCB");
+assert.equal(enrichedCompactor.find(f=>f.key==="vehicle_fuel_type")?.value,"Diesel");
+assert.equal(enrichedCompactor.find(f=>f.key==="vehicle_make")?.evidence?.startsWith("Manufacturer-model JCB VM117 NDD specification"),true);
+const compactor={...iffcoAuto,fields:enrichedCompactor,commercialPremium:{
+  od:5565,tp:7367,net:12932,gst:2327.76,gross:15259.76,
+}};
+assert.equal(assessIffcoAutoOnboarding(compactor).eligible,true,
+  "IFFCO VMT 117 LC NDD family can be certified for N9293311 without a policy-number exception");
+assert.equal(assessIffcoAutoOnboarding({...compactor,fields:iffcoCompactorSource}).eligible,false,
+  "18/18 parser checks are not enough when make and fuel are unverified");
+for(const model of ["UNLISTED COMPACTOR","VMT 330 ROAD ROLLER","VMT 117 LC DD COMPACTOR"]){
+ const e=enrichIffcoCertifiedMachineFamily(iffcoCompactorSource.map(f=>f.key==="vehicle_model"?{...f,value:model}:f),"iffco_tokio_cv_native_pdf");
+ assert.equal(e.some(f=>f.key==="vehicle_fuel_type"),false,model+" must never get a guessed fuel type");
+}
+assert.equal(enrichIffcoCertifiedMachineFamily(iffcoCompactorSource,"new_india_cv_native_pdf").some(f=>f.key==="vehicle_fuel_type"),false);
+const previewSource=file("../lib/policy-intake-semi-auto-n8n.ts");
+assert.ok(previewSource.includes("legacyIffcoMachineWithoutNewRefFingerprint")
+  &&actions.includes("extracted.preview.legacyIffcoMachineWithoutNewRefFingerprint"),
+  "Existing IFFCO queue entries must retain a guarded one-click evidence retry");
 assert.equal(assessIffcoAutoOnboarding(iffcoAuto).eligible,true);
 // A registered JCB MP plate is not an MP/NEW provisional vehicle. Its
 // address city must not be mistaken for the registration district.
