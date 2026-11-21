@@ -52,22 +52,18 @@ const customers = read('app/customers.tsx');
 requireText(businessReport, 'hideTopBar', 'Business Report must hide its default light header.');
 requireText(businessReport, 'navyStatusBar', 'Business Report must render the navy status area.');
 for (const marker of [
-  'style={styles.pageHeader}',
-  'style={styles.headerWaveRear}',
-  'style={styles.headerWaveFront}',
-  'accessibilityRole="button" accessibilityLabel="Back"',
-  'onPress={() => router.back()}',
-  'name="business-outline"',
-  'Business Report</Text>',
-  "backgroundColor: '#071E49'",
-  '<ReportCard artwork={PartnerAssets.actions.payoutGrowth}',
-  '<ReportCard artwork={PartnerAssets.actions.policyChecklist}',
-  '<ReportCard artwork={PartnerAssets.actions.quickCustomers}',
+  '<PartnerCasePageHeader title="Business Report" icon="business-outline" onBack={() => router.back()} />',
+  "artwork={require('../assets/partner/business-report/premium-wallet-3d.png')}",
+  "artwork={require('../assets/partner/business-report/policies-approved-3d.png')}",
+  "artwork={require('../assets/partner/business-report/customers-shield-3d.png')}",
   '<SectionHeading title="Last 6 Months · Net Premium"',
   '<SectionHeading title="Business by Product · Net Premium"',
   '<ReportRow',
-  "tone=\"purple\"",
+  'tone="purple"',
 ]) requireText(businessReport, marker, 'Business Report reference layout must retain: ' + marker);
+if (/headerWaveRear|headerWaveFront|styles\.pageHeader|styles\.headerTitleRow|borderBottomLeftRadius: 22/.test(businessReport)) {
+  throw new Error('Business Report must use the shared straight navy header without decorative waves or curves.');
+}
 if (businessReport.includes('chevron-forward') || businessReport.includes('chevron-right')) {
   throw new Error('Business Report rows must not display navigation chevrons.');
 }
