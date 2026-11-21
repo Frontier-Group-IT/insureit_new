@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -11,12 +11,13 @@ import { formatIndianCurrency } from '@/lib/format';
 export default function StoriesScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { height: windowHeight } = useWindowDimensions();
+  const { height: windowHeight, width: windowWidth } = useWindowDimensions();
   const params = useLocalSearchParams<{ start?: string }>();
   const [data, setData] = useState<PartnerStoriesData | null>(null);
   const [index, setIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const navigationTouch = useRef<{ x: number; y: number } | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -57,6 +58,32 @@ export default function StoriesScreen() {
   function previous() {
     if (index <= 0) return;
     setIndex((value) => value - 1);
+  }
+
+  // Observe taps without claiming the ScrollView's responder: vertical drags still scroll.
+  // Interactive story links stop propagation so opening a route never also advances the story.
+  function handleStoryTouchStart(event: { nativeEvent: { pageX: number; pageY: number; touches: readonly unknown[] } }) {
+    if (event.nativeEvent.touches.length !== 1) {
+      navigationTouch.current = null;
+      return;
+    }
+    navigationTouch.current = { x: event.nativeEvent.pageX, y: event.nativeEvent.pageY };
+  }
+
+  function handleStoryTouchMove(event: { nativeEvent: { pageX: number; pageY: number } }) {
+    const start = navigationTouch.current;
+    if (start && (Math.abs(start.x - event.nativeEvent.pageX) > 12 || Math.abs(start.y - event.nativeEvent.pageY) > 12)) {
+      navigationTouch.current = null;
+    }
+  }
+
+  function handleStoryTouchEnd(event: { nativeEvent: { pageX: number; pageY: number } }) {
+    const start = navigationTouch.current;
+    navigationTouch.current = null;
+    if (!start) return;
+    if (Math.abs(start.x - event.nativeEvent.pageX) > 12 || Math.abs(start.y - event.nativeEvent.pageY) > 12) return;
+    if (event.nativeEvent.pageX < windowWidth / 2) previous();
+    else next();
   }
 
   function openStory() {
@@ -106,10 +133,21 @@ export default function StoriesScreen() {
       ) : (
         <>
           <ScrollView
+            key={index}
             style={styles.scroll}
-            contentContainerStyle={[styles.scrollContent, { minHeight: Math.max(480, windowHeight - insets.top - insets.bottom - 210) }]}
+            contentContainerStyle={[styles.scrollContent, { minHeight: Math.max(480, windowHeight - insets.top - insets.bottom - 155), paddingBottom: Math.max(20, insets.bottom + 12) }]}
             showsVerticalScrollIndicator={false}
-            accessibilityLabel="Story content"
+            accessibilityLabel="Story content. Tap left for previous, right for next."
+            accessibilityActions={[{ name: 'decrement', label: 'Previous story' }, { name: 'increment', label: 'Next story' }]}
+            onAccessibilityAction={({ nativeEvent }) => {
+              if (nativeEvent.actionName === 'decrement') previous();
+              if (nativeEvent.actionName === 'increment') next();
+            }}
+            onTouchStart={handleStoryTouchStart}
+            onTouchMove={handleStoryTouchMove}
+            onTouchEnd={handleStoryTouchEnd}
+            onTouchCancel={() => { navigationTouch.current = null; }}
+            onScrollBeginDrag={() => { navigationTouch.current = null; }}
           >
             <View pointerEvents="none" style={styles.storyBackdrop}>
               <View style={styles.waveUpper} />
@@ -127,6 +165,8 @@ export default function StoriesScreen() {
               </View>
               <Pressable
                 onPress={openStory}
+                onTouchStart={(event) => { navigationTouch.current = null; event.stopPropagation(); }}
+                onTouchEnd={(event) => event.stopPropagation()}
                 disabled={!story.route}
                 accessibilityRole={story.route ? 'link' : undefined}
                 accessibilityLabel={story.route ? 'Open ' + story.title : undefined}
@@ -163,15 +203,6 @@ export default function StoriesScreen() {
               )}
             </View>
           </ScrollView>
-          <View style={[styles.footer, { paddingBottom: Math.max(16, insets.bottom + 8) }]}>
-            <Pressable onPress={previous} disabled={index === 0} accessibilityRole="button" accessibilityLabel="Previous story" style={[styles.navButton, index === 0 && styles.navDisabled]}>
-              <Ionicons name="arrow-back" size={27} color="#0C5EC5" />
-            </Pressable>
-            <Text style={styles.footerHint}>{index + 1} of {data?.items.length || 0}</Text>
-            <Pressable onPress={next} accessibilityRole="button" accessibilityLabel={index === (data?.items.length || 1) - 1 ? 'Close stories' : 'Next story'} style={[styles.navButton, styles.navButtonPrimary]}>
-              <Ionicons name="arrow-forward" size={28} color="#FFFFFF" />
-            </Pressable>
-          </View>
         </>
       )}
     </View>
@@ -211,6 +242,8 @@ function BusinessMonthStory({ story, onOpen }: { story: PartnerStory; onOpen: ()
       </View>
       <Pressable
         onPress={onOpen}
+        onTouchStart={(event) => event.stopPropagation()}
+        onTouchEnd={(event) => event.stopPropagation()}
         disabled={!hasRoute}
         accessibilityRole={hasRoute ? 'link' : undefined}
         accessibilityLabel={hasRoute ? 'Open ' + story.title : undefined}
@@ -430,11 +463,6 @@ const styles = StyleSheet.create({
   rupeeText: { fontSize: 35, fontWeight: '900', color: '#0763C7' },
   completedPill: { alignSelf: 'center', marginTop: 5, marginBottom: 7, flexDirection: 'row', alignItems: 'center', gap: 9, paddingHorizontal: 18, paddingVertical: 9, borderRadius: 50, backgroundColor: '#DDF6EA' },
   completedText: { color: '#06845A', fontSize: 14, fontWeight: '800' },
-  footer: { zIndex: 5, paddingHorizontal: 23, paddingBottom: 18, paddingTop: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#DDEBFF' },
-  footerHint: { color: '#12366C', fontSize: 15, fontWeight: '900' },
-  navButton: { width: 57, height: 57, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF', borderRadius: 30 },
-  navButtonPrimary: { backgroundColor: '#0955CC', shadowColor: '#0446A3', shadowOpacity: 0.17, shadowRadius: 8, elevation: 3 },
-  navDisabled: { opacity: 0.3 },
   storySkeleton: { margin: 24, gap: 17, padding: 24, borderRadius: 22, backgroundColor: '#FFFFFF' },
   storySkeletonIcon: { height: 54, width: 54, borderRadius: 15, backgroundColor: '#E1EAF8' },
   storySkeletonEyebrow: { height: 12, width: '35%', borderRadius: 5, backgroundColor: '#E1EAF8' },

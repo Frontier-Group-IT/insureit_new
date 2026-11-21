@@ -341,20 +341,33 @@ for (const [fragment, reason] of [
   ['style={styles.body}', 'Story question is centered'],
   ['style={styles.illustrationWrap}', 'Large illustration sits underneath question'],
   ['style={styles.completedPill}', 'Completed learning status sits below illustration'],
-  ['style={[styles.navButton, styles.navButtonPrimary]}', 'Forward arrow uses a prominent filled blue button'],
-  ["backgroundColor: '#0955CC'", 'Forward footer action uses royal blue'],
-  ["height: 57", 'Footer arrows are large reference-style circular buttons'],
   ['<StoryIllustration kind={story.kind} body={story.body} />', 'Artwork adapts to the current story type'],
   ["if (kind === 'learn' && /vehicle number/i.test(body))", 'Vehicle-servicing story uses car and number plate'],
   ["require('../assets/partner/actions/impact-blue-3d-car.png')", 'Learning illustration reuses bundled blue 3D car'],
   ['MH12AB1234', 'Example learning plate illustrates vehicle number'],
   ["onPress={openStory}", 'Story title retains navigation'],
-  ["onPress={previous}", 'Previous story stays functional'],
-  ["onPress={next}", 'Next story stays functional'],
+  ['onTouchStart={handleStoryTouchStart}', 'Story taps are observed without blocking native scrolling'],
+  ['onTouchEnd={handleStoryTouchEnd}', 'Story taps navigate when the finger is released'],
+  ['onScrollBeginDrag={() => { navigationTouch.current = null; }}', 'Scrolling cancels pending tap navigation'],
+  ['event.stopPropagation()', 'Story links do not trigger next or previous on tap'],
+  ['if (event.nativeEvent.pageX < windowWidth / 2) previous();', 'Left-side taps navigate backwards'],
+  ['else next();', 'Right-side taps navigate forwards'],
 ]) requireText(stories, fragment, 'Stories reference redesign missing: ' + reason);
 for (const deprecated of ['styles.metricCard', 'styles.cardCorner', 'styles.metricHeader', 'styles.lowerWave', 'styles.titleArrow']) {
   if (stories.includes(deprecated)) throw new Error('Old card-based Stories layout remains: ' + deprecated);
 }
+// Touch navigation has no visible footer, preserves route controls and supports accessibility.
+for (const forbidden of ['styles.footer', 'styles.footerHint', 'styles.navButton', 'styles.navButtonPrimary', 'styles.navDisabled']) {
+  if (stories.includes(forbidden)) throw new Error('Stories must no longer show footer arrows or a slide count: ' + forbidden);
+}
+for (const required of [
+  'accessibilityActions={[{ name: \'decrement\', label: \'Previous story\' }, { name: \'increment\', label: \'Next story\' }]}',
+  "if (nativeEvent.actionName === 'decrement') previous();",
+  "if (nativeEvent.actionName === 'increment') next();",
+  'key={index}',
+  'if (index <= 0) return;',
+  'if (index >= data.items.length - 1) {',
+]) requireText(stories, required, 'Story navigation accessibility or boundary regression: ' + required);
 // Monthly (Business) Story alone uses the new premium and policies snapshot.
 for (const [needle, rationale] of [
   ["story.kind === 'business' ? (", 'Only Business Story receives the specialized layout'],
@@ -370,9 +383,8 @@ for (const [needle, rationale] of [
   ['style={styles.businessGrowthBars}', 'Native growth bars remain responsive'],
   ['style={styles.businessRupeeCoin}', 'Rupee illustration is present'],
   ['style={styles.businessCashCoin}', 'Premium illustration is present'],
-  ['style={[styles.navButton, styles.navButtonPrimary]}', 'Shared story footer stays unchanged'],
-  ["onPress={previous}", 'Previous navigation stays functional'],
-  ["onPress={next}", 'Next navigation stays functional'],
+  ['onTouchStart={(event) => event.stopPropagation()}', 'Business story summary link preserves route navigation without changing slides'],
+  ['onTouchEnd={(event) => event.stopPropagation()}', 'Business story link tap does not advance the slide'],
 ]) requireText(stories, needle, 'Business Stories snapshot regression: ' + rationale);
 for (const unexpected of [
   '₹1,11,71,203.76',
