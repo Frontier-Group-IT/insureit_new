@@ -247,6 +247,16 @@ const registrationIcons: Record<string, ImageSourcePropType> = {
   'Portal status': require('../assets/partner/profile/role-team-3d.png'),
 };
 
+const registrationSideIcons: Record<string, ImageSourcePropType> = {
+  'Employee code': require('../assets/partner/profile/employee-id-detail-3d.png'),
+  'Intermediary code': require('../assets/partner/profile/employee-id-detail-3d.png'),
+  'Partner code': require('../assets/partner/profile/employee-id-detail-3d.png'),
+  Designation: require('../assets/partner/profile/designation-briefcase-detail-3d.png'),
+  Organization: require('../assets/partner/profile/designation-briefcase-detail-3d.png'),
+  Role: require('../assets/partner/profile/role-shield-detail-3d.png'),
+  'Portal status': require('../assets/partner/profile/role-shield-detail-3d.png'),
+};
+
 function SectionTitle({ icon, title }: { icon: React.ComponentProps<typeof Ionicons>['name']; title: string }) {
   return (
     <View style={styles.sectionTitleRow}>
@@ -276,7 +286,7 @@ function Detail({
   return (
     <View style={[styles.detailRow, isLast && styles.detailRowLast, { borderColor: iconBackground }]}>
       <View style={[styles.detailGlow, { backgroundColor: iconBackground }]} pointerEvents="none" />
-      {artwork ? <Image source={artwork} style={styles.detailArtworkRight} resizeMode="contain" accessible={false} /> : null}
+      {registrationSideIcons[label] ? <Image source={registrationSideIcons[label]} style={styles.detailArtworkRight} resizeMode="contain" accessible={false} /> : null}
       <View style={[styles.detailIcon, { backgroundColor: iconBackground }]}>
         {artwork ? <Image source={artwork} style={styles.detailArtworkLeft} resizeMode="contain" accessible={false} /> : <Ionicons name={icon} size={24} color={iconColor} />}
       </View>
