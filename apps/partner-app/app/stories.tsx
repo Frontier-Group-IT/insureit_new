@@ -155,7 +155,9 @@ export default function StoriesScreen() {
               <View style={styles.waveLower} />
             </View>
             <View style={styles.storyContent}>
-              {story.kind === 'business' ? (
+              {story.kind === 'today' ? (
+                <TodayRenewalStory story={story} onOpen={openStory} />
+              ) : story.kind === 'business' ? (
                 <BusinessMonthStory story={story} onOpen={openStory} />
               ) : (
               <>
@@ -290,6 +292,93 @@ function BusinessMonthStory({ story, onOpen }: { story: PartnerStory; onOpen: ()
   );
 }
 
+/**
+ * Today has a dedicated renewal summary layout. Reuse the exact story title/body
+ * from partner_app_stories; a premium is highlighted only when the supplied
+ * text contains an actual rupee amount.
+ */
+function TodayRenewalStory({ story, onOpen }: { story: PartnerStory; onOpen: () => void }) {
+  const premiumMatch = story.body.match(/₹\s*[\d,]+(?:\.\d{1,2})?/);
+  const premium = premiumMatch?.[0].replace(/\s+/g, '') ?? null;
+  const remainingCopy = premiumMatch
+    ? (story.body.slice(0, premiumMatch.index).trim() + ' ' + story.body.slice((premiumMatch.index ?? 0) + premiumMatch[0].length).trim()).trim()
+    : story.body;
+  const renewalDays = story.title.match(/\b(?:in|within)\s+(\d+)\s+days?\b/i)?.[1] ?? null;
+  const hasRoute = Boolean(story.route);
+
+  return (
+    <View style={styles.todaySnapshot}>
+      <View style={styles.todayCard}>
+        <View pointerEvents="none" style={styles.todayCornerAccent} />
+        <View style={styles.todayHeadlineRow}>
+          <View style={styles.todaySunIcon}>
+            <Ionicons name="sunny-outline" size={34} color="#FFFFFF" />
+          </View>
+          <View style={styles.todayHeadlineText}>
+            <Text style={styles.todayEyebrow}>{story.eyebrow}</Text>
+            <Pressable
+              onPress={onOpen}
+              disabled={!hasRoute}
+              onTouchStart={(event) => event.stopPropagation()}
+              onTouchEnd={(event) => event.stopPropagation()}
+              accessibilityRole={hasRoute ? 'link' : undefined}
+              accessibilityLabel={hasRoute ? 'Open ' + story.title : undefined}
+              style={styles.todayTitleLink}
+            >
+              <Text style={styles.todayHeadline}>{story.title}</Text>
+              {hasRoute ? <Ionicons name="arrow-forward" size={20} color="#0B6DD6" /> : null}
+            </Pressable>
+          </View>
+        </View>
+        <View style={styles.todayDivider} />
+        <View style={styles.todayPremiumPanel}>
+          <View style={styles.todayPremiumIcon}><Ionicons name="calendar-outline" size={25} color="#0C6EDC" /></View>
+          <View style={styles.todayPremiumBody}>
+            {premium ? <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} style={styles.todayPremiumValue}>{premium}</Text> : null}
+            <Text style={styles.todayPremiumDescription}>{remainingCopy}</Text>
+          </View>
+        </View>
+        {story.progress_current !== undefined && story.progress_target ? (
+          <View style={styles.storyProgressWrap}>
+            <View style={styles.storyProgressTrack}>
+              <View style={[styles.storyProgressFill, { width: (Math.min(100, Math.max(0, (story.progress_current / story.progress_target) * 100))) + '%' as `${number}%` }]} />
+            </View>
+            <View style={styles.storyProgressMeta}>
+              <Text style={styles.storyProgressText}>{story.progress_current}</Text>
+              <Text style={styles.storyProgressText}>{story.progress_target}</Text>
+            </View>
+          </View>
+        ) : null}
+      </View>
+      <View pointerEvents="none" style={styles.todayArtWrap}>
+        <View style={styles.todayArtHalo} />
+        <View style={styles.todayBackDocument} />
+        <View style={styles.todayFrontDocument}>
+          <View style={styles.todayArtLabel}><Text style={styles.todayArtLabelText}>RENEWAL</Text></View>
+          {[0, 1, 2].map((i) => (
+            <View key={i} style={styles.todayArtLine}>
+              <Ionicons name="checkmark-circle" size={23} color="#36C76A" />
+              <View style={[styles.todayArtLineBar, i === 2 && styles.todayArtLineBarShort]} />
+            </View>
+          ))}
+        </View>
+        <View style={styles.todayShield}>
+          <Ionicons name="umbrella" color="#FFFFFF" size={46} />
+        </View>
+        <View style={styles.todayCalendar}>
+          <View style={styles.todayCalendarTop} />
+          {renewalDays ? (
+            <>
+              <Text style={styles.todayCalendarNumber}>{renewalDays}</Text>
+              <Text style={styles.todayCalendarDays}>DAYS</Text>
+            </>
+          ) : <Ionicons name="calendar" size={46} color="#0A3A84" />}
+        </View>
+      </View>
+    </View>
+  );
+}
+
 /** Emphasize the educational keywords without changing backend story copy. */
 function highlightStoryText(copy: string) {
   return copy.split(/(vehicle number|Motor policy servicing\?)/gi).map((part, index) => (
@@ -400,6 +489,36 @@ const styles = StyleSheet.create({
   waveMiddle: { position: 'absolute', top: -45, left: -100, width: '160%', height: 200, borderTopLeftRadius: 245, borderTopRightRadius: 180, backgroundColor: '#CFE2FF', opacity: 0.9, transform: [{ rotate: '-10deg' }] },
   waveLower: { position: 'absolute', bottom: -110, right: -130, width: '155%', height: 230, borderTopLeftRadius: 240, borderTopRightRadius: 280, backgroundColor: '#D6E6FF', opacity: 0.88, transform: [{ rotate: '-11deg' }] },
   storyContent: { alignItems: 'center', width: '100%', paddingTop: 8 },
+
+  todaySnapshot: { width: '100%', paddingTop: 3, gap: 12, alignItems: 'center' },
+  todayCard: { width: '100%', borderRadius: 24, padding: 17, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DFEAFB', overflow: 'hidden', shadowColor: '#497BB6', shadowOpacity: 0.08, shadowRadius: 12, elevation: 2 },
+  todayCornerAccent: { position: 'absolute', right: -40, top: -65, width: 158, height: 160, borderRadius: 85, backgroundColor: '#E3EEFF' },
+  todayHeadlineRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 13 },
+  todaySunIcon: { width: 61, height: 61, borderRadius: 19, backgroundColor: '#FFA51E', alignItems: 'center', justifyContent: 'center', shadowColor: '#DC941F', shadowOpacity: 0.18, shadowRadius: 7, elevation: 3 },
+  todayHeadlineText: { flex: 1, minWidth: 0 },
+  todayEyebrow: { color: '#697996', fontSize: 13, fontWeight: '900', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 },
+  todayTitleLink: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  todayHeadline: { color: '#092E68', fontSize: 25, lineHeight: 31, fontWeight: '900', flex: 1, flexShrink: 1 },
+  todayDivider: { marginTop: 18, marginBottom: 13, height: 1, backgroundColor: '#DAE7F8' },
+  todayPremiumPanel: { flexDirection: 'row', gap: 12, alignItems: 'center', padding: 12, borderRadius: 17, backgroundColor: '#EDF5FF' },
+  todayPremiumIcon: { width: 47, height: 47, backgroundColor: '#D7E9FF', borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  todayPremiumBody: { flex: 1, minWidth: 0 },
+  todayPremiumValue: { fontSize: 26, lineHeight: 32, fontWeight: '900', color: '#0B326E' },
+  todayPremiumDescription: { color: '#506889', fontSize: 13, lineHeight: 19, fontWeight: '600' },
+  todayArtWrap: { width: '100%', height: 285, maxWidth: 355, alignItems: 'center', justifyContent: 'center', marginTop: 5 },
+  todayArtHalo: { position: 'absolute', width: 280, height: 258, borderRadius: 150, backgroundColor: '#DCEBFF', opacity: 0.85 },
+  todayBackDocument: { position: 'absolute', left: '14%', top: 40, width: 185, height: 216, borderRadius: 22, backgroundColor: '#E5F3FF', borderWidth: 6, borderColor: '#87BDFA', transform: [{ rotate: '-12deg' }] },
+  todayFrontDocument: { position: 'absolute', left: '22%', top: 20, width: 205, height: 232, borderRadius: 23, backgroundColor: '#FFFFFF', borderWidth: 6, borderColor: '#2686F3', paddingHorizontal: 19, paddingTop: 23, shadowColor: '#246EC1', shadowOpacity: 0.2, shadowRadius: 12, elevation: 5 },
+  todayArtLabel: { backgroundColor: '#146FE6', borderRadius: 15, paddingVertical: 8, alignItems: 'center', marginBottom: 22 },
+  todayArtLabelText: { color: '#FFFFFF', fontSize: 14, fontWeight: '900', letterSpacing: 0.8 },
+  todayArtLine: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 15 },
+  todayArtLineBar: { height: 10, width: 102, backgroundColor: '#B6D0F4', borderRadius: 10 },
+  todayArtLineBarShort: { width: 65 },
+  todayShield: { position: 'absolute', left: '4%', bottom: 8, height: 89, width: 89, borderRadius: 24, backgroundColor: '#126FDD', borderWidth: 5, borderColor: '#E8F5FF', alignItems: 'center', justifyContent: 'center', shadowColor: '#1667B9', shadowOpacity: 0.19, shadowRadius: 8, elevation: 6 },
+  todayCalendar: { position: 'absolute', right: '5%', bottom: 6, width: 111, height: 124, backgroundColor: '#FFFFFF', borderRadius: 19, borderWidth: 4, borderColor: '#99C5FF', overflow: 'hidden', alignItems: 'center', justifyContent: 'center', shadowColor: '#2676CE', shadowOpacity: 0.22, shadowRadius: 10, elevation: 7 },
+  todayCalendarTop: { position: 'absolute', height: 22, backgroundColor: '#116DE6', top: 0, right: 0, left: 0 },
+  todayCalendarNumber: { marginTop: 14, color: '#0C326C', fontSize: 45, lineHeight: 53, fontWeight: '900' },
+  todayCalendarDays: { color: '#0C326C', fontSize: 17, lineHeight: 21, fontWeight: '900' },
   // Story 4/5: the reference's large financial headline, policy summary and 3D-style growth artwork.
   businessSnapshot: { width: '100%', alignItems: 'center', paddingTop: 4 },
   businessMonthBadge: { minHeight: 40, maxWidth: '95%', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 30, backgroundColor: '#CFE2FF', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
