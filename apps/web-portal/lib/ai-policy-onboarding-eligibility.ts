@@ -92,16 +92,18 @@ const TATA_INFORMATIONAL_WARNINGS = new Set([
 ]);
 export const NON_TATA_COMMERCIAL_N8N_IDS = new Set([
   "new_india_cv_native_pdf", "iffco_tokio_cv_native_pdf", "go_digit_cv_native_pdf",
+  "united_india_gcv_native_pdf", "oriental_gccv_native_pdf",
 ]);
 export type TrainedN8nParserFamily = "icici" | "tata_private_car" | "tata_two_wheeler" | "commercial";
 export function trainedN8nParserProfile(parserId: string | null): {
-  checks: 13 | 16 | 18; family: TrainedN8nParserFamily;
+  checks: 13 | 16 | 17 | 18; family: TrainedN8nParserFamily;
 } | null {
   if (!parserId) return null;
   if (ICICI_N8N_IDS.has(parserId)) return { checks:13, family:"icici" };
   if (TATA_AIG_PRIVATE_CAR_N8N_IDS.has(parserId)) return { checks:18, family:"tata_private_car" };
   if (parserId===TATA_AIG_TWO_WHEELER_N8N_ID) return { checks:18, family:"tata_two_wheeler" };
   if (parserId==="new_india_cv_native_pdf") return { checks:16, family:"commercial" };
+  if (parserId==="oriental_gccv_native_pdf") return { checks:17, family:"commercial" };
   if (NON_TATA_COMMERCIAL_N8N_IDS.has(parserId)) return { checks:18, family:"commercial" };
   return null;
 }
