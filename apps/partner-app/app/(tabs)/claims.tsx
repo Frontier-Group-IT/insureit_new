@@ -563,7 +563,7 @@ const styles = StyleSheet.create({
   },
   filterText: { color: '#3156B8', ...partnerTheme.typography.caption, fontWeight: '500' },
   banner: { marginTop: 8 },
-  summaryRow: { marginTop: 8, marginBottom: 4, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 4 },
+  summaryRow: { marginTop: 8, marginBottom: 4, flexDirection: 'row', alignItems: 'center', gap: 4 },
   summaryChips: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 0, padding: 2, borderRadius: 12, borderWidth: 1, borderColor: '#D7DFEC', backgroundColor: '#FFFFFF' },
   summaryChip: { flex: 1, minWidth: 0, minHeight: 36, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 2, paddingHorizontal: 2, borderRadius: 9, backgroundColor: '#FFFFFF', borderWidth: 1.5, borderColor: 'transparent' },
   summaryChipSelected: { backgroundColor: '#FFFFFF', borderColor: '#17365D' },
