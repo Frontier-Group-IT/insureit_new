@@ -26,9 +26,19 @@ assert.match(customers, /kpiSkeletonBlock/, 'Customer summary uses metric placeh
 const stories = read('app/stories.tsx');
 assert.match(stories, /accessibilityLabel="Loading INSUREIT Stories"/, 'Stories show theme-aware skeleton placeholders');
 assert.doesNotMatch(stories, /<ActivityIndicator/, 'Stories initial load no longer uses a spinner');
-for (const path of ['app/insurers.tsx', 'app/network.tsx', 'app/search.tsx', 'app/(tabs)/business.tsx', 'app/(tabs)/claims.tsx', 'app/(tabs)/policies.tsx', 'app/renewals.tsx', 'app/policy/[id].tsx']) {
+for (const path of ['app/insurers.tsx', 'app/network.tsx', 'app/search.tsx', 'app/(tabs)/business.tsx', 'app/(tabs)/claims.tsx', 'app/(tabs)/policies.tsx', 'app/policy/[id].tsx']) {
   assert.match(read(path), /<PartnerStateView state="loading"/, 'Existing ' + path + ' screen is covered by the shared skeleton');
 }
+// Renewal Work Queue intentionally uses compact, screen-local placeholders.
+const renewals = read('app/renewals.tsx');
+assert.match(renewals, /<RenewalLoadingRows \/>/, 'Renewal Opportunities retains a compact loading skeleton');
+assert.match(renewals, /function RenewalLoadingRows\(/, 'Renewals declares its compact skeleton rows');
+assert.match(renewals, /Array\.from\(\{ length: 3 \}/, 'Renewals uses only three compact placeholder rows');
+assert.match(renewals, /accessibilityRole="progressbar" accessibilityLabel="Loading renewal opportunities"/, 'Renewal placeholders have an accessible loading label');
+assert.doesNotMatch(renewals, /<PartnerStateView state="loading"/, 'Renewals must not render large shared loading cards above tabs');
+assert.match(renewals, /summary\.loading && !summary\.data \? null :/, 'Summary placeholders do not push tabs below six fake cards');
+assert.match(renewals, /count=\{summary\.data\?\.due_30_count \?\? null\}/, 'Do not show fictitious Upcoming zero while summary loads');
+assert.match(renewals, /count=\{summary\.data\?\.overdue_count \?\? null\}/, 'Do not show fictitious Overdue zero while summary loads');
 const intake = read('app/policy-intakes.tsx');
 assert.match(intake, /<PolicyIntakeSkeletonList \/>/, 'Policy Intake retains its existing specialized skeleton');
 assert.match(shared, /state === 'offline'/, 'Offline behavior remains separate');
