@@ -126,6 +126,12 @@ function compactDate(date: string) {
 
 const rupees = (amount: number) => "₹" + amount.toLocaleString("en-IN", { maximumFractionDigits: 2 });
 
+// The origin is a fixed UI marker, never a caller-supplied redirect URL.
+function studioOnboardingUrl(editUrl: string): string {
+  if (!editUrl.startsWith("/policies/new?")) return editUrl;
+  return editUrl + (editUrl.includes("origin=") ? "" : "&origin=ai_studio");
+}
+
 export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, primaryN8n = false,
   queueActive = false, queueCounts, bulkCandidates = [], reprocessCandidates = [] }: {
   rows: SemiAutoIntakeRow[]; profileId: string; initialIntakeId?: string | null;
@@ -205,7 +211,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
       const response=await reparseAndReplaceAiPolicyIntakeDraft(row.id);
       if(!response.ok){setReplaceReparseErrorId(row.id);setReplaceReparseError(response.error??"Could not reparse this Intake.");return;}
       setExceptionRow(null);setReplaceReparseError(null);
-      router.push(response.editUrl??("/policies/new?intake_id="+encodeURIComponent(row.id)));
+      router.push(studioOnboardingUrl(response.editUrl??("/policies/new?intake_id="+encodeURIComponent(row.id))));
     }catch{setReplaceReparseErrorId(row.id);setReplaceReparseError("The reparse result is unknown. Refresh this Intake before trying again.");}
     finally{setReplaceReparseId(null);}
   }
@@ -377,7 +383,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
     if (!dialog) return;
     if (dialog.kind === "existing") {
       setHandoffDialog(null);
-      router.push(dialog.editUrl);
+      router.push(studioOnboardingUrl(dialog.editUrl));
       return;
     }
     if (isWaiting || selectedId !== dialog.intakeId || !n8nResult?.ok
@@ -408,9 +414,9 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
         setHandoffDialog({ ...dialog, kind: "takeover", reviewerName: response.assignmentConflict.reviewerName });
       } else if (response.ok && response.editUrl) {
         if (response.existingDraft) {
-          setHandoffDialog({ kind: "existing", editUrl: response.editUrl });
+          setHandoffDialog({ kind: "existing", editUrl: studioOnboardingUrl(response.editUrl) });
         } else {
-          router.push(response.editUrl);
+          router.push(studioOnboardingUrl(response.editUrl));
         }
       } else {
         setN8nNotice(response.error ?? "The Intake could not be forwarded. Re-run n8n before trying again.");
@@ -562,7 +568,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
         // name and ask for a separate, explicit takeover confirmation.
         setTakeover({ intakeId: selectedId, reviewerName: response.assignmentConflict.reviewerName });
       } else if (response.ok && response.editUrl) {
-        router.push(response.editUrl);
+        router.push(studioOnboardingUrl(response.editUrl));
       } else {
         setResult(response);
       }
@@ -585,7 +591,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
       const response = await editSemiAutoIntake(intakeId, true);
       if (requestId.current !== next) return;
       if (response.ok && response.editUrl) {
-        router.push(response.editUrl);
+        router.push(studioOnboardingUrl(response.editUrl));
       } else {
         setResult(response);
       }
