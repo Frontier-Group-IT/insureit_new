@@ -1,4 +1,5 @@
 import type { PolicyIssuanceDateEvidence } from "@/lib/policy-issuance-signature-evidence";
+import { isTataAigTpParser, validateTataAigTpResponse } from "@/lib/policy-intake-n8n-tata-tp-validation";
 const KEYS = new Set([
   "policy_number", "insurer_name", "policy_product", "policy_issuance_date", "policy_start_date", "policy_end_date",
   "third_party_start_date", "third_party_end_date", "third_party_policy_number", "third_party_insurer_name",
@@ -80,6 +81,9 @@ export function validateN8nPolicyIntakeResponse(
 ): N8nOcrBridgeResponse {
   // Tata AIG uses a separately proven 18-check accounting contract. Leave
   // every ICICI-3005/3005-O guard below unchanged.
+  if (plainObject(value) && isTataAigTpParser(value.parser_id)) {
+    return validateTataAigTpResponse(value, ids);
+  }
   if (plainObject(value) && typeof value.parser_id === "string"
       && value.parser_id.startsWith("tata_aig_")) {
     return validateTataAigN8nResponse(value, ids);
