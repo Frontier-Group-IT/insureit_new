@@ -96,9 +96,9 @@ assert.match(action,/queued\.last_error_code==="missing_verified_vehicle_registr
 assert.match(action,/extracted\.preview\.documentId===queued\.document_id/);
 assert.match(action,/assessNiaNamedAuthorityUnregisteredConversion\(/);
 assert.match(action,/mapVerifiedNiaCommercialPremium\(commercial/);
-assert.match(action,/prepareVerifiedN8nIntakeHandoff\\(id,queued\\.document_id,\\s*extracted\\.preview\\.fingerprint,true,true\\)/,
+assert.match(action,/prepareVerifiedN8nIntakeHandoff\(id,queued\.document_id,\s*extracted\.preview\.fingerprint,true,true\)/,
   "Certified NIA must enable fillEmptyFields for legacy TP/CPA CAS repair without requesting draft replacement");
-assert.doesNotMatch(action,/extracted\\.preview\\.fingerprint,true,!nia/,
+assert.doesNotMatch(action,/extracted\.preview\.fingerprint,true,!nia/,
   "The fifth handoff argument is fillEmptyFields, not preserveExistingDraft");
 assert.match(action,/const expectedCommercialClass=\/Goods Carrying\/i/);
 assert.match(handoff,/oldNiaMoney/);
