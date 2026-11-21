@@ -41,6 +41,26 @@ expect(policies.includes("unreadActivityCount > 99 ? \"99+\" : unreadActivityCou
 expect(policies.includes("styles.unreadBadge"), "Policies bell displays red unread badge");
 expect(!screen.includes("setBadgeCountAsync"), "Feature does not alter the OS application icon badge");
 
+
+const periodMigration = fs.readFileSync(
+  new URL("../../../supabase/migrations/20261121140000_partner_activity_period_filter.sql", import.meta.url),
+  "utf8",
+);
+expect(activity.includes("Filter activity by date") && activity.includes('name="chevron-down"'), "Activity header has an accessible compact period dropdown");
+for (const option of ["Today", "Last Week", "Last Month", "All"]) {
+  expect(activity.includes(option), `Activity dropdown supports ${option}`);
+}
+expect(activity.includes("setPeriod(key)") && activity.includes("getPartnerActivityByPeriod(period"), "Changing period fetches scoped records instead of relabeling old results");
+expect(activity.includes("Load more activity") && activity.includes("loadMore()"), "Historical activity can be paginated");
+expect(engagement.includes("partner_app_activity_filtered") && engagement.includes("p_offset: offset"), "Period RPC receives server-side date filter and pagination");
+expect(periodMigration.includes("v_start is null or coalesce(p.created_at"), "Policy events filter by policy activity timestamp");
+expect(periodMigration.includes("v_start is null or coalesce(h.created_at"), "Claim events filter by claim activity timestamp");
+expect(periodMigration.includes("v_start is null or pir.updated_at"), "Intake events filter by intake activity timestamp");
+expect(periodMigration.includes("v_start is null or a.created_at"), "Learning events filter by learning timestamp");
+expect(periodMigration.includes("v_offset") && periodMigration.includes("has_more"), "Backend pages all authorized events without the previous 100-record total cap");
+expect(periodMigration.includes("partner_app_current_identity()") && periodMigration.includes("partner_app_commercial_scope()"), "New RPC retains Partner identity and scope enforcement");
+expect(periodMigration.includes("revoke all on function public.partner_app_activity_filtered"), "Anonymous execution is not granted for activity history");
+
 const logoCatalog = read("lib/catalog-logos.ts");
 const makerMigration = fs.readFileSync(
   new URL("../../../supabase/migrations/20261111121500_partner_activity_claim_vehicle_manufacturer.sql", import.meta.url),
