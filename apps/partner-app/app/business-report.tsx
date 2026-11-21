@@ -1,17 +1,19 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback } from 'react';
 import { useRouter } from 'expo-router';
-import { RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, RefreshControl, StyleSheet, Text, View, type ImageSourcePropType } from 'react-native';
 
 import { PartnerScreen } from '@/components/partner-screen';
-import { PartnerCasePageHeader } from '@/components/partner-case-page-header';
 import { PartnerStackBottomNavigation } from '@/components/partner-stack-bottom-navigation';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { getPartnerBusinessReportNet, type PartnerBusinessPerformance } from '@/lib/business';
 import { formatIndianCurrency } from '@/lib/format';
+import { PartnerAssets } from '@/lib/partner-assets';
 import { partnerTheme } from '@/lib/theme';
 import { usePartnerQuery } from '@/lib/use-partner-query';
 import { usePartnerSession } from '@/providers/partner-session-provider';
+
+type Accent = 'blue' | 'purple' | 'green';
 
 export default function BusinessReportScreen() {
   const router = useRouter();
@@ -42,7 +44,17 @@ export default function BusinessReportScreen() {
         ),
       }}
     >
-      <PartnerCasePageHeader title="Business Report" icon="business-outline" onBack={() => router.back()} />
+      <View style={styles.pageHeader}>
+        <View style={styles.headerWaveRear} pointerEvents="none" />
+        <View style={styles.headerWaveFront} pointerEvents="none" />
+        <View style={styles.headerTitleRow}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Back" hitSlop={8} onPress={() => router.back()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
+          </Pressable>
+          <Ionicons name="business-outline" size={24} color="#FFFFFF" />
+          <Text accessibilityRole="header" numberOfLines={1} style={styles.headerTitle}>Business Report</Text>
+        </View>
+      </View>
       {report.loading && !report.data ? (
         <PartnerStateView state="loading" title="Loading business report" />
       ) : !report.data ? (
@@ -56,48 +68,103 @@ export default function BusinessReportScreen() {
       ) : (
         <>
           <View style={styles.summaryGrid}>
-            <ReportCard icon="cash-outline" label="MTD Net Premium" value={formatIndianCurrency(report.data.premium_this_month)} />
-            <ReportCard icon="document-text-outline" label="MTD Policies" value={String(report.data.policies_this_month)} />
-            <ReportCard icon="people-outline" label="Customers" value={String(report.data.total_customers)} />
+            <ReportCard artwork={PartnerAssets.actions.payoutGrowth} accent="blue" label="MTD Net Premium" value={formatIndianCurrency(report.data.premium_this_month)} />
+            <ReportCard artwork={PartnerAssets.actions.policyChecklist} accent="purple" label="MTD Policies" value={String(report.data.policies_this_month)} />
+            <ReportCard artwork={PartnerAssets.actions.quickCustomers} accent="green" label="Customers" value={String(report.data.total_customers)} />
           </View>
 
-          <Text style={styles.sectionTitle}>Last 6 Months · Net Premium</Text>
+          <SectionHeading title="Last 6 Months · Net Premium" icon="stats-chart" tone="blue" aside="Last 6 Months" />
           <View style={styles.reportCard}>
-            {report.data.trend.slice(-6).map((item) => (
-              <View key={item.month} style={styles.row}>
-                <Text style={styles.month}>{formatMonth(item.month)}</Text>
-                <View style={styles.rowRight}>
-                  <Text style={styles.policies}>{item.policies} policies</Text>
-                  <Text style={styles.premium}>{formatIndianCurrency(item.premium)}</Text>
-                </View>
-              </View>
+            <View style={styles.tableHeader}>
+              <Text style={[styles.tableHeaderLabel, styles.nameColumn]}>Month</Text>
+              <Text style={[styles.tableHeaderLabel, styles.countColumn]}>Policies</Text>
+              <Text style={[styles.tableHeaderLabel, styles.amountColumn]}>Net Premium</Text>
+            </View>
+            {report.data.trend.slice(-6).map((item, index, rows) => (
+              <ReportRow
+                key={item.month}
+                title={formatMonth(item.month)}
+                count={item.policies}
+                amount={formatIndianCurrency(item.premium)}
+                tone="blue"
+                last={index === rows.length - 1}
+              />
             ))}
           </View>
 
-          <Text style={styles.sectionTitle}>Business by Product · Net Premium</Text>
+          <SectionHeading title="Business by Product · Net Premium" icon="layers" tone="purple" />
           <View style={styles.reportCard}>
-            {report.data.business_mix.length ? report.data.business_mix.map((item) => (
-              <View key={item.label} style={styles.row}>
-                <Text numberOfLines={1} style={styles.month}>{humanize(item.label)}</Text>
-                <View style={styles.rowRight}>
-                  <Text style={styles.policies}>{item.policies} policies</Text>
-                  <Text style={styles.premium}>{formatIndianCurrency(item.premium)}</Text>
-                </View>
-              </View>
+            <View style={styles.tableHeader}>
+              <Text style={[styles.tableHeaderLabel, styles.nameColumn]}>Product</Text>
+              <Text style={[styles.tableHeaderLabel, styles.countColumn]}>Policies</Text>
+              <Text style={[styles.tableHeaderLabel, styles.amountColumn]}>Net Premium</Text>
+            </View>
+            {report.data.business_mix.length ? report.data.business_mix.map((item, index, rows) => (
+              <ReportRow
+                key={item.label}
+                title={humanize(item.label)}
+                count={item.policies}
+                amount={formatIndianCurrency(item.premium)}
+                tone="purple"
+                last={index === rows.length - 1}
+              />
             )) : <Text style={styles.empty}>No product mix available.</Text>}
           </View>
+          <View pointerEvents="none" style={styles.footerWave} />
         </>
       )}
     </PartnerScreen>
   );
 }
 
-function ReportCard({ icon, label, value }: { icon: keyof typeof Ionicons.glyphMap; label: string; value: string }) {
+function ReportCard({ artwork, accent, label, value }: {
+  artwork: ImageSourcePropType;
+  accent: Accent;
+  label: string;
+  value: string;
+}) {
+  const accentColor = accent === 'purple' ? '#9951ED' : accent === 'green' ? '#159B58' : '#1687F6';
   return (
-    <View style={styles.summaryCard}>
-      <View style={styles.icon}><Ionicons name={icon} size={18} color="#3156B8" /></View>
-      <Text numberOfLines={1} adjustsFontSizeToFit style={styles.value}>{value}</Text>
-      <Text style={styles.label}>{label}</Text>
+    <View style={[styles.summaryCard, accent === 'purple' ? styles.purpleCard : accent === 'green' ? styles.greenCard : styles.blueCard]}>
+      <Image source={artwork} style={styles.summaryArtwork} resizeMode="contain" accessibilityIgnoresInvertColors />
+      <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.64} style={styles.value}>{value}</Text>
+      <Text numberOfLines={2} style={styles.label}>{label}</Text>
+      <View style={[styles.cardAccent, { backgroundColor: accentColor }]} />
+    </View>
+  );
+}
+
+function SectionHeading({ title, icon, tone, aside }: {
+  title: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  tone: 'blue' | 'purple';
+  aside?: string;
+}) {
+  return (
+    <View style={styles.sectionHeading}>
+      <Ionicons name={icon} size={21} color={tone === 'purple' ? '#8547E9' : '#1577DD'} />
+      <Text style={styles.sectionTitle}>{title}</Text>
+      {aside ? <View style={styles.periodTag}><Text style={styles.periodText}>{aside}</Text></View> : null}
+    </View>
+  );
+}
+
+function ReportRow({ title, count, amount, tone, last }: {
+  title: string;
+  count: number;
+  amount: string;
+  tone: 'blue' | 'purple';
+  last: boolean;
+}) {
+  return (
+    <View style={[styles.row, last && styles.lastRow]}>
+      <Text numberOfLines={2} style={[styles.rowName, styles.nameColumn]}>{title}</Text>
+      <View style={styles.countColumn}>
+        <View style={[styles.countPill, tone === 'purple' ? styles.purplePill : styles.bluePill]}>
+          <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72} style={styles.countText}>{count} policies</Text>
+        </View>
+      </View>
+      <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65} style={[styles.rowAmount, styles.amountColumn]}>{amount}</Text>
     </View>
   );
 }
@@ -108,21 +175,43 @@ function formatMonth(value: string) {
 }
 
 function humanize(value: string) {
-  return value.replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
+  return value.replaceAll('_', ' ').replace(/\\b\\w/g, (letter) => letter.toUpperCase());
 }
 
 const styles = StyleSheet.create({
-  summaryGrid: { flexDirection: 'row', gap: 8 },
-  summaryCard: { flex: 1, minHeight: 112, alignItems: 'center', justifyContent: 'center', borderRadius: 14, padding: 9, backgroundColor: '#F5F9FF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#DDE6F1' },
-  icon: { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: '#E7F0FF' },
-  value: { width: '100%', marginTop: 7, color: '#14367B', textAlign: 'center', fontSize: 15, lineHeight: 20, fontWeight: '800' },
-  label: { marginTop: 3, color: '#718198', textAlign: 'center', ...partnerTheme.typography.caption, fontWeight: '700' },
-  sectionTitle: { marginTop: 18, marginBottom: 7, color: partnerTheme.colors.inkMuted, fontSize: 10, lineHeight: 14, fontWeight: '700', letterSpacing: 0.7 },
-  reportCard: { borderRadius: 16, paddingHorizontal: 12, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#DDE6F1', ...partnerTheme.shadowSoft },
-  row: { minHeight: 54, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E8EDF4' },
-  month: { flex: 1, color: '#253858', ...partnerTheme.typography.bodyStrong },
-  rowRight: { alignItems: 'flex-end' },
-  policies: { color: '#8795A9', ...partnerTheme.typography.meta },
-  premium: { marginTop: 2, color: '#3156B8', ...partnerTheme.typography.bodyStrong },
-  empty: { paddingVertical: 18, color: '#8795A9', ...partnerTheme.typography.caption },
+  pageHeader: { height: 73, marginHorizontal: -partnerTheme.spacing.lg, backgroundColor: '#071E49', justifyContent: 'center', paddingHorizontal: 17, borderBottomLeftRadius: 22, overflow: 'hidden' },
+  headerWaveRear: { position: 'absolute', width: '82%', height: 70, right: -45, bottom: -49, borderTopLeftRadius: 190, backgroundColor: '#0E458B', transform: [{ rotate: '-7deg' }] },
+  headerWaveFront: { position: 'absolute', width: '67%', height: 47, right: -15, bottom: -37, borderTopLeftRadius: 160, backgroundColor: '#1684DF', transform: [{ rotate: '-4deg' }] },
+  backButton: { width: 32, height: 36, alignItems: 'center', justifyContent: 'center' },
+  headerTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 13, zIndex: 1 },
+  headerTitle: { flexShrink: 1, color: '#FFFFFF', fontSize: 18, lineHeight: 24, fontWeight: '800' },
+  summaryGrid: { marginTop: 14, flexDirection: 'row', gap: 7 },
+  summaryCard: { flex: 1, minWidth: 0, minHeight: 138, paddingHorizontal: 5, paddingTop: 9, paddingBottom: 15, alignItems: 'center', borderRadius: 18, borderWidth: 1, borderColor: '#E4E9F3', overflow: 'hidden', ...partnerTheme.shadowSoft },
+  blueCard: { backgroundColor: '#EFF7FF' },
+  purpleCard: { backgroundColor: '#F7F3FF' },
+  greenCard: { backgroundColor: '#F0FAF7' },
+  summaryArtwork: { width: 67, height: 64 },
+  value: { width: '100%', textAlign: 'center', color: '#08295C', fontSize: 15, lineHeight: 22, fontWeight: '800', marginTop: 3 },
+  label: { color: '#506487', fontSize: 10.5, lineHeight: 14, fontWeight: '600', textAlign: 'center', marginTop: 3 },
+  cardAccent: { position: 'absolute', bottom: 0, left: 10, right: 10, height: 4, borderTopLeftRadius: 4, borderTopRightRadius: 4 },
+  sectionHeading: { marginTop: 23, marginBottom: 9, flexDirection: 'row', alignItems: 'center', gap: 7 },
+  sectionTitle: { color: '#0B2657', fontSize: 13.5, lineHeight: 18, fontWeight: '800', flexShrink: 1, flexGrow: 1 },
+  periodTag: { paddingHorizontal: 8, paddingVertical: 6, borderRadius: 16, backgroundColor: '#E4F0FF', flexShrink: 0 },
+  periodText: { fontSize: 10, color: '#0D468F', fontWeight: '700' },
+  reportCard: { borderRadius: 17, overflow: 'hidden', backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E1EAF5', ...partnerTheme.shadowSoft },
+  tableHeader: { minHeight: 34, backgroundColor: '#F3F8FF', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 11, gap: 6 },
+  tableHeaderLabel: { fontSize: 10, lineHeight: 14, color: '#72819B', fontWeight: '700' },
+  nameColumn: { flex: 1.05, minWidth: 0 },
+  countColumn: { flex: 1.02, minWidth: 0 },
+  amountColumn: { flex: 1.52, minWidth: 0, textAlign: 'right' },
+  row: { minHeight: 50, paddingVertical: 9, paddingHorizontal: 11, gap: 6, flexDirection: 'row', alignItems: 'center', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E5EDF8' },
+  lastRow: { borderBottomWidth: 0 },
+  rowName: { color: '#0D2855', fontSize: 12, lineHeight: 17, fontWeight: '700' },
+  rowAmount: { color: '#0B285F', fontSize: 12, lineHeight: 17, fontWeight: '700' },
+  countPill: { borderRadius: 14, paddingVertical: 5, paddingHorizontal: 4, alignItems: 'center' },
+  bluePill: { backgroundColor: '#E4F2FF' },
+  purplePill: { backgroundColor: '#EFE3FF' },
+  countText: { fontSize: 9.5, lineHeight: 12, fontWeight: '700', color: '#173775', textAlign: 'center' },
+  empty: { paddingVertical: 18, paddingHorizontal: 12, color: '#8795A9', ...partnerTheme.typography.caption },
+  footerWave: { height: 24, marginTop: 27, marginHorizontal: -partnerTheme.spacing.lg, backgroundColor: '#E2F1FF', borderTopLeftRadius: 110, borderTopRightRadius: 80 },
 });
