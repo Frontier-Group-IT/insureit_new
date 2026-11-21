@@ -39,7 +39,7 @@ const ILLUSTRATED_ICONS: Partial<Record<PartnerProfileMenuIconKind, ImageSourceP
   renewals: require('../../assets/partner/icons/more-renewals.png'),
   // Match the supplied Add Partner 3D reference with the existing transparent artwork, without a tile.
   customers: require('../../assets/partner/quick-actions/add-partner.png'),
-  impact: require('../../assets/partner/icons/more-impact.png'),
+  impact: require('../../assets/partner/icons/more-impact-3d-isolated.png'),
   // Show the newly approved isolated 3D journey artwork without additional tiles.
   journey: require('../../assets/partner/icons/more-journey-3d-new.png'),
 };
