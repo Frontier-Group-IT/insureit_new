@@ -85,7 +85,12 @@ function commercialBookingIssue(row:SemiAutoIntakeRow,code:string):
 function canRetryReviewHeldPolicy(row:SemiAutoIntakeRow):boolean {
   return !row.is_duplicate&&row.ai_state==="exception"
     &&row.ai_exceptions?.length===1
-    &&["booking_review_required","registration_pending_review"].includes(row.ai_exceptions[0]);
+    &&["booking_review_required","registration_pending_review"].includes(row.ai_exceptions[0])
+    // A prior extraction may be fully checked but still lack a mandatory
+    // vehicle make/fuel. Don't advertise policy registration from stale
+    // positive parser check counts. The operator can re-evaluate evidence
+    // through the same existing reparse workflow without any booking.
+    &&!/^iffco_missing_(?:vehicle_make|vehicle_fuel_type|vehicle_model)$/.test(row.ai_diagnostic_code??"");
 }
 const aiStateLabel: Record<string,string> = {
   pending:"Queued",processing:"Reading PDF",exception:"Needs action",
