@@ -7,6 +7,7 @@ import { assessAiPolicyIntake, acceptedTataAigIssuanceDate, hasVerifiedN8nParser
 import { loadPolicyIntakeDuplicateMatches } from "@/lib/policy-intake-duplicate";
 import { policyDateDecision } from "@/lib/policy-date-rule";
 import { assessIffcoAutoOnboarding } from "@/lib/policy-iffco-auto-eligibility";
+import { assessNiaNamedAuthorityUnregisteredConversion } from "@/lib/policy-commercial-direct-eligibility";
 import type { PolicyIntakeOcrField } from "@/lib/policy-intake-ocr-service";
 import { fetchAllPages } from "@/lib/fetch-all-pages";
 
@@ -322,7 +323,12 @@ async function processClaim(item: Claimed, parserRevision: string) {
     && model.length>=2 && model.length<=100
     && ["TWO WHEELER","TWP"].includes(normalizedName(values.get("vehicle_class")??""))
     && normalizedName(values.get("vehicle_fuel_type")??"")==="ELECTRIC";
-  const make=recognizedChetak?"BAJAJ":rawMake;
+  // NIA writes "TATA MOTOR" on its GCV schedule. For the separately
+  // trained 1918 AZURA family this is the canonical Tata manufacturer,
+  // not a missing brand. Never infer a brand for unknown NIA models.
+  const recognizedNiaTata=extraction.preview.parserId==="new_india_cv_native_pdf"
+    &&rawMake==="TATA MOTOR" &&model==="1918 AZURA";
+  const make=recognizedChetak?"BAJAJ":recognizedNiaTata?"TATA":rawMake;
   const enabledMakes=new Set((brands??[]).map(x=>normalizedName(x.brand_name)));
   const matchedManufacturer=enabledMakes.has(make)
     || (recognizedChetak&&[...enabledMakes].some(x=>x.startsWith("BAJAJ AUTO")));
@@ -395,10 +401,22 @@ async function processClaim(item: Claimed, parserRevision: string) {
   // evidenced provisional state/city does not need manual RTO-prefix
   // confirmation merely to enter canonical booking preflight. Real booking
   // checks, including dates, customer, duplicate, OTP and ownership, remain.
+  const niaReview=assessNiaNamedAuthorityUnregisteredConversion({
+    parserId:extraction.preview.parserId,checksPassed:extraction.preview.checksPassed,
+    warnings:extraction.preview.warnings,fields:extraction.preview.fields,
+    commercialPremium:extraction.preview.commercialPremium,
+  });
   const codes=assessment.exceptions
     .filter(e=>e.code!=="preflight_pending"
       &&!(certifiedIffcoNewVehicle&&e.code==="registration_pending_review"))
     .map(e=>e.code);
+  // A 16/16 NIA result can be a correct extraction yet still lack the
+  // printed CPA/GST or named-authority evidence for direct booking.
+  // Do not turn such an intake green just because its generic fields exist.
+  if(extraction.preview.parserId==="new_india_cv_native_pdf"
+    &&!niaReview.eligible&&!isDuplicate
+    &&!codes.includes("booking_review_required"))
+    codes.push("booking_review_required");
   const state:AiQueueState=isDuplicate?"duplicate"
     :assessment.state==="unsupported"?"unsupported"
     :codes.length?"exception":"verified";
@@ -407,7 +425,9 @@ async function processClaim(item: Claimed, parserRevision: string) {
     parser_id:extraction.preview.parserId,
     checks_passed:extraction.preview.checksPassed,
     extraction_fingerprint:extraction.preview.fingerprint,
-    last_error_code:null,processed_at:new Date().toISOString(),
+    last_error_code:extraction.preview.parserId==="new_india_cv_native_pdf"
+      &&!niaReview.eligible&&!isDuplicate?"nia_"+niaReview.reason:null,
+    processed_at:new Date().toISOString(),
     retry_after:retryAfter(1440),
   });
   // The same canonical, current-document guard fills only an EMPTY saved

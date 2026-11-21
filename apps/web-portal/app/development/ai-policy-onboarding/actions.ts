@@ -9,9 +9,9 @@ import { requirePolicyIntakeFinalizer, requirePolicyIntakeReviewer } from "@/lib
 import { loadPolicyIntakeDuplicateMatches } from "@/lib/policy-intake-duplicate";
 import { buildPolicyOcrOnboardingUpdate, normalizeVerifiedMotorPowerKw } from "@/lib/policy-ocr-onboarding-apply";
 import { policyDateDecision } from "@/lib/policy-date-rule";
-import { mapVerifiedGoDigitCommercialPremium, mapVerifiedIffcoCommercialPremium, mapVerifiedN8nMotorPremium, verifiedCpaSelectionMatches } from "@/lib/policy-n8n-onboarding-premium";
+import { mapVerifiedGoDigitCommercialPremium, mapVerifiedIffcoCommercialPremium, mapVerifiedNiaCommercialPremium, mapVerifiedN8nMotorPremium, verifiedCpaSelectionMatches } from "@/lib/policy-n8n-onboarding-premium";
 import { assessIffcoAutoOnboarding } from "@/lib/policy-iffco-auto-eligibility";
-import { assessStandardCommercialDirectConversion } from "@/lib/policy-commercial-direct-eligibility";
+import { assessNiaNamedAuthorityUnregisteredConversion, assessStandardCommercialDirectConversion } from "@/lib/policy-commercial-direct-eligibility";
 import { resolveManufacturingYearEvidence } from "@/lib/policy-n8n-onboarding-enrichment";
 import { checkSemiAutoReadiness, type SemiAutoIssue } from "@/lib/policy-intake-semi-auto";
 import { isN8nWorkbenchPrimary, previewSemiAutoN8nExtraction, applySemiAutoN8nExtraction, type SemiAutoN8nResult } from "@/lib/policy-intake-semi-auto-n8n";
@@ -284,9 +284,9 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
   if(confirmed!==true)return fail("Confirmation","Confirm this policy's registration before continuing.");
   const admin=createSupabaseAdminClient();
   const {data:queued,error:queueError}=await admin.from("policy_intake_ai_processing_queue")
-    .select("state,document_id,extraction_fingerprint,exception_codes,parser_id,checks_passed")
+    .select("state,document_id,extraction_fingerprint,exception_codes,parser_id,checks_passed,last_error_code")
     .eq("intake_id",id)
-    .maybeSingle<{state:string;document_id:string;extraction_fingerprint:string|null;exception_codes:string[];parser_id:string|null;checks_passed:number}>();
+    .maybeSingle<{state:string;document_id:string;extraction_fingerprint:string|null;exception_codes:string[];parser_id:string|null;checks_passed:number;last_error_code:string|null}>();
   // An explicit single-intake Convert can re-evaluate an earlier review hold
   // without first forcing Reprocess/Reparse. Only the *trained* IFFCO MP/NEW
   // layout may retry registration_pending_review, and every retry re-checks
@@ -314,8 +314,23 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
         ||extracted.preview.legacyIffcoMachineWithoutNewRefFingerprint===queued.extraction_fingerprint
         ||extracted.preview.legacyIffcoLoaderFuelFingerprint===queued.extraction_fingerprint
         ||extracted.preview.legacyIffcoLoaderFuelWithoutNewRefFingerprint===queued.extraction_fingerprint));
+  // A specifically held legacy NIA prefix-only policy had no CPA field in
+  // the old extraction fingerprint. An explicit one-policy confirmation may
+  // upgrade that hold ONLY after re-reading the same current document and
+  // passing the new source-labelled authority, CPA and mixed-GST evidence.
+  // All unrelated stale PDFs, old holds and insurer variants still require
+  // exact fingerprint identity. Never bulk-retry this legacy hold.
+  const reverifiedNiaLegacyHold=heldReview
+    &&queued.parser_id==="new_india_cv_native_pdf"
+    &&queued.last_error_code==="missing_verified_vehicle_registration_number"
+    &&extracted.preview.documentId===queued.document_id
+    &&assessNiaNamedAuthorityUnregisteredConversion({
+      parserId:extracted.preview.parserId,checksPassed:extracted.preview.checksPassed,
+      warnings:extracted.preview.warnings,fields:extracted.preview.fields,
+      commercialPremium:extracted.preview.commercialPremium,
+    }).eligible;
   if(extracted.preview.documentId!==queued.document_id||
-     !sameReviewedFingerprint||
+     !(sameReviewedFingerprint||reverifiedNiaLegacyHold)||
      (heldReview&&extracted.preview.parserId!==queued.parser_id)||
      !hasVerifiedN8nParserEvidence(extracted.preview.parserId,
        extracted.preview.checksPassed,extracted.preview.warnings))
@@ -349,6 +364,7 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
   let verifiedMoney:ReturnType<typeof mapVerifiedN8nMotorPremium>;
   const commercial=extracted.preview.commercialPremium;
   const iffco=extracted.preview.parserId==="iffco_tokio_cv_native_pdf";
+  const nia=extracted.preview.parserId==="new_india_cv_native_pdf";
   if (commercial) {
     if(iffco){
       const assessment=assessIffcoAutoOnboarding({
@@ -366,6 +382,19 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
       if(cpaFields.length!==1)return fail("IFFCO CPA","Original PDF has ambiguous owner-driver CPA evidence.");
       try {verifiedMoney=mapVerifiedIffcoCommercialPremium(commercial,Number(cpaFields[0].value));}
       catch {return fail("IFFCO premium","IFFCO OD, TP, CPA, net, GST or gross differs from the original PDF.");}
+    }else if(nia){
+      const assessment=assessNiaNamedAuthorityUnregisteredConversion({
+        parserId:extracted.preview.parserId,checksPassed:extracted.preview.checksPassed,
+        warnings:extracted.preview.warnings,fields:extracted.preview.fields,
+        commercialPremium:commercial,
+      });
+      if(!assessment.eligible)
+        return fail("New India evidence","The current NIA PDF is not certified for direct booking: "+assessment.reason);
+      const cpaFields=extracted.preview.fields.filter(f=>f.key==="cpa_premium");
+      if(cpaFields.length!==1)
+        return fail("New India CPA","Owner-driver CPA must be independently printed and verified.");
+      try{verifiedMoney=mapVerifiedNiaCommercialPremium(commercial,Number(cpaFields[0].value));}
+      catch{return fail("New India premium","Printed basic TP, CPA, paid-driver LL, mixed GST, net or gross is inconsistent.");}
     }else if(extracted.preview.parserId==="go_digit_cv_native_pdf"){
       // Existing working Go Digit premium/registration mapping is preserved.
       if (extracted.preview.checksPassed!==18 || extracted.preview.warnings.length)
@@ -409,13 +438,16 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
   // Explicitly confirmed IT/Admin auto-conversion uses the existing atomic
   // reviewer takeover; manual handoffs keep their separate confirmation.
   // Fill blank fields from CURRENT verified PDF only, never overwrite edits.
+  // Preserve current reviewer edits for the certified NIA legacy premium hold.
+  // The handoff repairs only its independently evidenced old machine-generated
+  // TP/CPA allocation under draft revision CAS; other insurer paths unchanged.
   const forwarded=await prepareVerifiedN8nIntakeHandoff(id,queued.document_id,
-    extracted.preview.fingerprint,true,true);
+    extracted.preview.fingerprint,true,!nia);
   if(!forwarded.ok)return fail("Canonical Intake handoff",forwarded.error);
   if(forwarded.draft.issuanceDate!==issuanceDate)
     return fail("Saved issuance date","The saved draft's issue date differs from the verified current PDF. Review it before booking; no existing manual value was overwritten.");
   if(forwarded.draftRevision<1)return fail("Draft revision","Canonical revision is unavailable.");
-  const expectedCommercialClass=/Goods Carrying Vehicle/i.test(pdfField("vehicle_class"))?"GCV":"MISD";
+  const expectedCommercialClass=/Goods Carrying/i.test(pdfField("vehicle_class"))?"GCV":"MISD";
   if(commercial && (forwarded.draft.policyProduct!=="Package"
     || forwarded.draft.vehicleClass!==expectedCommercialClass
     || forwarded.draft.manufacturingYear!==manufacturingEvidence.year

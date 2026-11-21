@@ -861,7 +861,9 @@ const convertCode=actionsText.slice(convertStart,convertEnd);
 assert(convertCode.includes("await requireDevelopmentPolicyOperator(id)")
   && convertCode.includes('queued.state!=="verified"')
   && convertCode.includes("const sameReviewedFingerprint=")
-  && convertCode.includes("!sameReviewedFingerprint")
+  && convertCode.includes("!(sameReviewedFingerprint||reverifiedNiaLegacyHold)")
+  && convertCode.includes("assessNiaNamedAuthorityUnregisteredConversion({")
+  && convertCode.includes('queued.last_error_code==="missing_verified_vehicle_registration_number"')
   && convertCode.includes("extracted.preview.documentId!==queued.document_id")
   && convertCode.includes('prepareVerifiedN8nIntakeHandoff(id,queued.document_id')
   && convertCode.includes('decision==="otp_required"')
@@ -874,7 +876,8 @@ assert(convertCode.includes("await requireDevelopmentPolicyOperator(id)")
   && convertCode.includes('createNewCustomer:true')
   && convertCode.includes('await onboardPolicy(payload)'),
   "One-click conversion must independently reverify current PDF, name, premiums, policy number, issued date and OTP, then use the canonical policy/customer transaction");
-assert(convertCode.includes('extracted.preview.fingerprint,true,true')
+assert(convertCode.includes('extracted.preview.fingerprint,true,!nia')
+  && convertCode.includes('const nia=extracted.preview.parserId')
   && convertCode.includes('normalizeVerifiedMotorPowerKw(pdfField("vehicle_motor_power_kw"))')
   && convertCode.includes('forwarded.draft.capacity!==verifiedKw')
   && convertCode.includes('await requireDevelopmentPolicyOperator(id)'),

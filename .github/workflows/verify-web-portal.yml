@@ -41,6 +41,8 @@ jobs:
         run: node scripts/non-tata-normal-read-regression.mjs
       - name: AI queue non-Tata signed-PDF and printed premium regression
         run: node scripts/ai-nontata-signed-queue-regression.mjs
+      - name: NIA named-authority and owner-driver CPA direct-convert regression
+        run: node --experimental-strip-types scripts/nia-named-authority-direct-convert-regression.mjs
       - name: Life and Health Case Register line filter regression
         run: node scripts/life-health-line-filter-regression.mjs
       - name: Verify Partner Motor policy-copy upload security

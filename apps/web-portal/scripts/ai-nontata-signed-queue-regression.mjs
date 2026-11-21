@@ -373,7 +373,8 @@ const semiN8n=file("../lib/policy-intake-semi-auto-n8n.ts");
 assert.ok(semiN8n.includes("legacyIffcoNewFingerprint")
   &&semiN8n.includes('field.key!=="vehicle_registration_number"')
   &&actions.includes("sameReviewedFingerprint")
-  &&actions.includes("extracted.preview.fingerprint,true,true"),
+  &&actions.includes("extracted.preview.fingerprint,true,!nia")
+  &&actions.includes("const nia=extracted.preview.parserId"),
   "An old queue MP/NEW hash can retry once with the newly verified full current-PDF evidence");
 // Family-level enrichment: N9293311's original PDF prints "VMT 117 LC
 // NDD COMPACTOR", and n8n emits "VMT" with no fuel. Do not grant booking
@@ -478,9 +479,11 @@ assert.ok(actions.includes('const heldReview=queued?.state==="exception"')
   &&actions.includes('queued.exception_codes.length===1')
   &&actions.includes('queued.exception_codes[0]==="booking_review_required"')
   &&actions.includes("const sameReviewedFingerprint=")
-  &&actions.includes("!sameReviewedFingerprint")
-  &&actions.includes("extracted.preview.documentId!==queued.document_id"),
-  "Held parser retries still require exact queue exception, fingerprint and fresh PDF");
+  &&actions.includes("!(sameReviewedFingerprint||reverifiedNiaLegacyHold)")
+  &&actions.includes("extracted.preview.documentId!==queued.document_id")
+  &&actions.includes('queued.last_error_code==="missing_verified_vehicle_registration_number"')
+  &&actions.includes("assessNiaNamedAuthorityUnregisteredConversion({"),
+  "Held parser retries require an exact fingerprint except for a narrowly re-certified NIA legacy source, and always require the same current PDF");
 const studio=file("../components/development/semi-auto-policy-workspace.tsx");
 assert.ok(studio.includes("canRetryReviewHeldPolicy(exceptionRow)")
   &&studio.includes("setAutoConvertRow(exceptionRow)")
