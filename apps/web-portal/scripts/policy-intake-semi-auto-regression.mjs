@@ -67,6 +67,19 @@ assert(page.includes('requireCapability("manage_system", "approve")'), "Route re
 assert(page.includes("fetchAllPages<CandidateIntake"), "Candidate list must load all relevant rows before pagination");
 assert(page.includes("loadPolicyIntakeDuplicateMatches(admin, list.data ?? [])"), "Shared authoritative duplicate detection must run for every candidate");
 assert(page.includes('policyIntakeBucket(row, duplicateIds.has(row.id))'), "Effective status must match the Policy Intake register");
+assert(page.includes('item?.state === "duplicate" && item.exception_codes.includes("duplicate_policy")')
+  && page.includes('duplicateIds.add(row.id)'),
+  "A confirmed AI-queue duplicate must appear in the Duplicate bucket even while intake OCR is pending");
+assert(page.indexOf("const queue = queueActive ? await loadAiQueueDisplay") <
+  page.indexOf("const intakeCounts = policyIntakeStatusCounts(workspaceRows,duplicateIds)"),
+  "Load queue duplicate evidence before computing unified status tab counts");
+assert(page.indexOf("const intakeCounts = policyIntakeStatusCounts(workspaceRows,duplicateIds)") <
+  page.indexOf('const statusRows = selectedView==="all"'),
+  "Queue-backed duplicate IDs must be applied before status filtering and pagination");
+assert(page.includes("!duplicateIds.has(row.id)")
+  && page.includes('is_duplicate: policyIntakeBucket(row, duplicateIds.has(row.id)) === "duplicate"'),
+  "Queue duplicates must be excluded from automatic retries and bulk conversion without altering the saved intake");
+
 assert(page.includes('const workspaceRows = !unavailable && duplicates?.ok ? candidates : []'),
   "All open Motor Intakes, including duplicates and incomplete OCR, must remain in the n8n preview list");
 assert(page.includes('is_duplicate: policyIntakeBucket(row, duplicateIds.has(row.id)) === "duplicate"'),
