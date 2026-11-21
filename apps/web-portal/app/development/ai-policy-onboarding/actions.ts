@@ -287,14 +287,17 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
     .select("state,document_id,extraction_fingerprint,exception_codes,parser_id,checks_passed")
     .eq("intake_id",id)
     .maybeSingle<{state:string;document_id:string;extraction_fingerprint:string|null;exception_codes:string[];parser_id:string|null;checks_passed:number}>();
-  // Explicit, one-at-a-time retry of a previously held IFFCO booking attempt.
-  // All unrelated queue errors remain blocked, and the original current PDF,
-  // fingerprint and the canonical booking checks are reverified below.
+  // An explicit single-intake Convert can re-evaluate an earlier review hold
+  // without first forcing Reprocess/Reparse. Only the *trained* IFFCO MP/NEW
+  // layout may retry registration_pending_review, and every retry re-checks
+  // the live PDF, fingerprint and insurer-specific evidence before booking.
   const heldReview=queued?.state==="exception"
     &&queued.parser_id!==null
     &&hasVerifiedN8nParserEvidence(queued.parser_id,queued.checks_passed,[])
     &&queued.exception_codes.length===1
-    &&queued.exception_codes[0]==="booking_review_required";
+    &&(queued.exception_codes[0]==="booking_review_required"
+      ||(queued.parser_id==="iffco_tokio_cv_native_pdf"
+         &&queued.exception_codes[0]==="registration_pending_review"));
   if(queueError||!queued||(!heldReview
       &&(queued.state!=="verified"||queued.exception_codes.length>0))
       ||!queued.extraction_fingerprint)
