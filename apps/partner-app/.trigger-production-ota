@@ -1,9 +1,9 @@
 Partner production OTA trigger
-release=partner-restore-typography-revert-pr-5046
+release=partner-ios-only-regular-typography-pr-5052
 source=verified-merged-main
-source_pr=5046
-source_merge=8438779d3d288c22f1df2f14c1c4023c7a4ebdf1
-reason=user-approved-merge-and-publish-revert-pr-5035
+source_pr=5052
+source_merge=14c18e0f731ee01c0ef70d9d036e54e6ddd4a6b8
+reason=user-approved-merge-and-publish-ios-only-normal-typography
 channel=production
 runtime=0.2.0
 requested=2026-11-21
