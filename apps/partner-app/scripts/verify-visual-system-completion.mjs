@@ -198,28 +198,37 @@ requireText(accountShellHeader, "backgroundColor: '#0A234A'", 'Account header mu
 requireText(accountShellHeader, 'accessibilityRole="header"', 'Account page title must be accessible.');
 const caseRegister = read('app/life-health-cases/index.tsx');
 for (const fragment of [
-  '<ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filters}',
-  'filters.map(item=><Pressable',
-  'onPress={()=>{setStatus(item.key);setBusinessLineMenuOpen(false);}}',
-  '{item.label} ({counts[item.key]})',
+  "{key:'all',label:'All'},{key:'pending',label:'Pending'}",
+  "{key:'issued',label:'Issued'},{key:'rejected',label:'Rejected'}",
+  "const [status,setStatus]=useState<LifeHealthStatus>('all');",
+  "businessLineOptions.map(item=><Pressable",
+  "filters.filter(item=>item.key!=='all').map(item=><Pressable",
+  "onPress={()=>{setStatus('all');setBusinessLineMenuOpen(open=>!open);}}",
+  "onPress={()=>{setBusinessLine(item.key);setStatus('all');setBusinessLineMenuOpen(false);}}",
+  "onPress={()=>{setStatus(item.key);setBusinessLineMenuOpen(false);}}",
   'listLifeHealthCases({status,businessLine,search,offset,limit:10})',
-  'setBusinessLine(item.key)',
-  'businessLineAnchor:{position:\'relative\',zIndex:21,overflow:\'visible\'}',
-  "businessLineMenu:{position:'absolute',top:35,left:0,width:110,zIndex:30,elevation:12",
-]) requireText(caseRegister, fragment, 'Case Register preserves original status buttons and floating business-line menu: '+fragment);
+  'filters:{marginTop:12,marginBottom:8,minHeight:42,flexDirection:\'row\',alignItems:\'center\',gap:6,position:\'relative\',zIndex:40,overflow:\'visible\'}',
+  "businessLineMenu:{position:'absolute',top:46,left:0,width:148,zIndex:60,elevation:16",
+]) requireText(caseRegister, fragment, 'Case Register All dropdown must float over unchanged search and records: '+fragment);
 for (const obsolete of [
-  'const [filterOpen,setFilterOpen]=useState(false);',
-  'accessibilityLabel="Filter Case Register by status"',
+  '<ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filters}',
+  'styles.businessLineSelect',
   'styles.filterTrigger',
   'styles.filterSection',
+  'const [filterOpen,setFilterOpen]=useState(false);',
 ]) {
-  if (caseRegister.includes(obsolete)) throw new Error('Case Register must not show replaced status dropdown: '+obsolete);
+  if (caseRegister.includes(obsolete)) throw new Error('Obsolete Case Register dropdown layout remains: '+obsolete);
 }
-const headingPos = caseRegister.indexOf('style={styles.listHeading}');
-const menuPos = caseRegister.indexOf('style={styles.businessLineMenu}');
-const recordsPos = caseRegister.indexOf('{loading?<ActivityIndicator', headingPos);
-if (!(headingPos>=0 && menuPos>headingPos && recordsPos>menuPos)) {
-  throw new Error('Business-line overlay must remain anchored to the heading before case records.');
+const caseFilterPos = caseRegister.indexOf('<View style={styles.filters}>');
+const caseMenuPos = caseRegister.indexOf('style={styles.businessLineMenu}');
+const caseSearchPos = caseRegister.indexOf('style={styles.searchWrap}');
+const caseHeadingPos = caseRegister.indexOf('style={styles.listHeading}');
+const caseListPos = caseRegister.indexOf('{loading?<ActivityIndicator');
+if (!(caseFilterPos>=0 && caseMenuPos>caseFilterPos && caseSearchPos>caseMenuPos && caseHeadingPos>caseSearchPos && caseListPos>caseHeadingPos)) {
+  throw new Error('All dropdown must be anchored in top filters while search, heading and records stay below it.');
+}
+if (caseRegister.slice(caseHeadingPos,caseListPos).includes('businessLineMenuOpen')) {
+  throw new Error('No business-line dropdown belongs beside the Cases heading.');
 }
 const lifeHealthCaseDetails = read('app/life-health-cases/[id].tsx');
 for (const [fragment, purpose] of [
