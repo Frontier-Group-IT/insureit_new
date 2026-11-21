@@ -373,7 +373,7 @@ const semiN8n=file("../lib/policy-intake-semi-auto-n8n.ts");
 assert.ok(semiN8n.includes("legacyIffcoNewFingerprint")
   &&semiN8n.includes('field.key!=="vehicle_registration_number"')
   &&actions.includes("sameReviewedFingerprint")
-  &&actions.includes("extracted.preview.fingerprint,true,!nia")
+  &&actions.includes("extracted.preview.fingerprint,true,true")
   &&actions.includes("const nia=extracted.preview.parserId"),
   "An old queue MP/NEW hash can retry once with the newly verified full current-PDF evidence");
 // Family-level enrichment: N9293311's original PDF prints "VMT 117 LC
