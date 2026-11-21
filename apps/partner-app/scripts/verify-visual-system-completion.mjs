@@ -1127,7 +1127,12 @@ requireText(weeklyStory, 'PartnerAssets.actions.quickRenewals', 'Your Week uses 
 if (weeklyStory.includes('styles.clockBadge') || weeklyStory.includes('name="time" size={12}')) throw new Error('Your Week must not overlay an extra clock badge on the renewal icon.');
 requireText(weeklyStory, "backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#DCE9FA'", 'Your Week This Week pill must use the white treatment.');
 requireText(weeklyStory, 'minWidth: 92, flexShrink: 0', 'Your Week This Week pill must not clip the Week label on compact widths.');
-requireText(weeklyStory, "backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E1E7F0'", 'Your Week reflection card must use a white surface.');
+requireText(weeklyStory, "backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#A6DFD1'", 'Your Week reflection card retains a white surface with the new mint-green border.');
+requireText(weeklyStory, "shadowColor: '#36AA97'", 'Your Week reflection card uses a subtle green shadow.');
+requireText(weeklyStory, 'style={styles.comparisonSectionHeading}', 'Your Week comparison title appears above the card.');
+requireText(weeklyStory, "style={styles.compareHeader}", 'Your Week range selector remains inside the comparison card.');
+requireText(weeklyStory, 'style={styles.headingRule}', 'Your Week Coming next heading has a horizontal accent rule.');
+requireText(weeklyStory, 'name="calendar-outline" size={23} color="#168C7B"', 'Your Week Coming next heading uses a green calendar icon.');
 requireText(weeklyStory, 'accessibilityState={{ expanded: comparisonOpen }}', 'Your Week comparison range control must expose expanded state.');
 requireText(weeklyStory, '[7, 14, 30].map((days)', 'Your Week comparison range control must offer 7, 14 and 30 day options.');
 requireText(weeklyStory, 'getPartnerBusinessRange(range.from, range.to)', 'Your Week non-default comparison ranges must load scoped business-range data.');

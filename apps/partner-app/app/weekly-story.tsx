@@ -118,9 +118,11 @@ export default function WeeklyStoryScreen() {
             </View>
           </View>
 
+          <View style={styles.comparisonSectionHeading}>
+            <Text style={styles.sectionTitle}>{comparisonDays === 7 ? 'Compared with last week' : `Compared with previous ${comparisonDays} days`}</Text>
+          </View>
           <View style={styles.compareCard}>
             <View style={styles.compareHeader}>
-              <Text style={styles.sectionTitle}>{comparisonDays === 7 ? 'Compared with last week' : `Compared with previous ${comparisonDays} days`}</Text>
               <View style={styles.rangeWrap}>
                 <PartnerAnchoredDropdown
                   visible={comparisonOpen}
@@ -187,7 +189,11 @@ export default function WeeklyStoryScreen() {
             )}
           </View>
 
-          <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>Coming next</Text></View>
+          <View style={styles.sectionHeader}>
+            <Ionicons name="calendar-outline" size={23} color="#168C7B" />
+            <Text style={styles.sectionTitle}>Coming next</Text>
+            <View style={styles.headingRule} />
+          </View>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Open renewals"
@@ -301,9 +307,11 @@ const styles = StyleSheet.create({
   statValue: { color: '#FFFFFF', fontSize: 18, lineHeight: 21, fontWeight: '800' },
   statLabel: { marginTop: 1, color: '#E2EEFF', fontSize: 9.5, lineHeight: 13, fontWeight: '500' },
   statDivider: { width: StyleSheet.hairlineWidth, height: 38, marginHorizontal: 13, backgroundColor: 'rgba(218, 235, 255, 0.30)' },
-  compareCard: { marginTop: 18, borderRadius: 16, paddingHorizontal: 15, paddingTop: 13, paddingBottom: 14, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E5EAF2', shadowColor: '#163565', shadowOpacity: 0.05, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 2 },
-  compareHeader: { position: 'relative', zIndex: 5, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
-  sectionHeader: { marginTop: 19, marginBottom: 9, paddingHorizontal: 3 },
+  comparisonSectionHeading: { marginTop: 18, marginBottom: 8, paddingHorizontal: 3 },
+  compareCard: { borderRadius: 16, paddingHorizontal: 15, paddingTop: 13, paddingBottom: 14, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E5EAF2', shadowColor: '#163565', shadowOpacity: 0.05, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 2 },
+  compareHeader: { position: 'relative', zIndex: 5, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end' },
+  sectionHeader: { marginTop: 19, marginBottom: 9, paddingHorizontal: 3, flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 29 },
+  headingRule: { flex: 1, height: 2, marginLeft: 3, backgroundColor: '#36AA97' },
   sectionTitle: { flexShrink: 1, color: '#07142F', fontSize: 15, lineHeight: 20, fontWeight: '800', letterSpacing: -0.2 },
   rangeWrap: { position: 'relative', zIndex: 10 },
   rangePill: { minHeight: 32, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, borderRadius: 999, borderWidth: 1, borderColor: '#E1E6EF', backgroundColor: '#FFFFFF' },
@@ -335,7 +343,7 @@ const styles = StyleSheet.create({
   nextBody: { flex: 1, minWidth: 0 },
   nextTitle: { color: '#07142F', fontSize: 13.5, lineHeight: 18, fontWeight: '800' },
   nextText: { marginTop: 5, color: '#65728C', fontSize: 10.5, lineHeight: 15, fontWeight: '500' },
-  endCard: { position: 'relative', overflow: 'hidden', minHeight: 104, marginTop: 16, flexDirection: 'row', alignItems: 'flex-start', gap: 12, borderRadius: 16, paddingHorizontal: 15, paddingVertical: 16, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E1E7F0', shadowColor: '#163565', shadowOpacity: 0.04, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 1 },
+  endCard: { position: 'relative', overflow: 'hidden', minHeight: 104, marginTop: 16, flexDirection: 'row', alignItems: 'flex-start', gap: 12, borderRadius: 16, paddingHorizontal: 15, paddingVertical: 16, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#A6DFD1', shadowColor: '#36AA97', shadowOpacity: 0.08, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 1 },
   reflectionGlow: { position: 'absolute', width: 190, height: 190, borderRadius: 95, right: -62, top: -72, backgroundColor: 'rgba(220, 247, 243, 0.42)' },
   reflectionIcon: { width: 46, height: 46, borderRadius: 23, alignItems: 'center', justifyContent: 'center', backgroundColor: '#D7F4EF' },
   reflectionCopy: { flex: 1, minWidth: 0, paddingTop: 2, paddingRight: 72 },
