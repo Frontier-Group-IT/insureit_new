@@ -104,7 +104,7 @@ assert.match(eligibility,/Thank\\s\+you\\s\+for\\s\+choosing\\s\+TATA\\s\+AIG\\s
 assert.match(bridge,/x-insureit-policy-intake-secret/);
 assert.match(bridge,/SIGNED_OBJECT_PREFIX/);
 assert.match(panel,/cpa_opted/);
-assert.match(actions,/isTata\?18:13/);
+assert.match(actions,/trainedN8nParserProfile\(parsed\.preview\.parserId\)\?\.checks/);
 assert.match(actions,/customer_mobile/);
 assert.match(actions,/lead_source_name/);
 assert.match(actions,/rmName/);

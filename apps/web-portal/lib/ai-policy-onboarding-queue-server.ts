@@ -277,13 +277,13 @@ async function processClaim(item: Claimed, parserRevision: string) {
   }]);
   if(!duplicate.ok)throw new Error("Canonical duplicate protection unavailable");
   const isDuplicate=duplicate.matches.has(intake.id);
-  // Copy ONLY strictly validated n8n OCR into an empty, unchanged Intake.
-  // An atomic SQL compare-and-set checks current document, lease, empty OCR,
-  // status, and absence of saved draft. This never books a policy.
-  // The transactional OCR-sync RPC is still approved for warning-free ICICI
-  // only. Tata AIG is review-only, with issuance/signature evidence requiring
-  // human review, and must not be silently persisted as canonical OCR.
-  if(ICICI_N8N_IDS.has(extraction.preview.parserId)
+  // Persist independently validated OCR only while this document, lease,
+  // empty intake and absent manual draft are atomically confirmed by the DB.
+  // Tata AIG TP-only is handled by a separate 16-check RPC. A successful
+  // extraction is NOT permission to book or to bypass the canonical preflight.
+  const tataTpOnly = extraction.preview.parserId === "tata_aig_private_car_liability_only_n8n_native_pdf"
+    || extraction.preview.parserId === "tata_aig_private_car_three_year_tp_n8n_native_pdf";
+  if((ICICI_N8N_IDS.has(extraction.preview.parserId) || tataTpOnly)
     && hasVerifiedN8nParserEvidence(extraction.preview.parserId,
       extraction.preview.checksPassed,extraction.preview.warnings)
     && intake.status==="processing"
@@ -293,12 +293,14 @@ async function processClaim(item: Claimed, parserRevision: string) {
     // v1 hardcoded the Bundled parser and compared a base revision against
     // the claimed suffixed revision. v2 binds BOTH the actual parser identity
     // and the exact queue lease/revision, and refuses to rewrite a draft.
-    const synced=await admin.rpc("sync_verified_ai_intake_ocr_v2",{
+    const synced=await admin.rpc(tataTpOnly
+      ? "sync_verified_ai_intake_tata_tp_ocr_v1"
+      : "sync_verified_ai_intake_ocr_v2",{
       p_intake_id:intake.id,p_document_id:item.document_id,p_lease_id:item.lease_id,
       p_parser_revision:parserRevision,
       p_parser_id:extraction.preview.parserId,
       p_parser_version:extraction.preview.parserVersion,
-      p_verified_fields:extraction.preview.fields,p_checks_passed:13,
+      p_verified_fields:extraction.preview.fields,p_checks_passed:extraction.preview.checksPassed,
     });
     if(synced.error)throw new Error("Canonical verified OCR synchronization unavailable");
     if(synced.data!==true){
@@ -306,7 +308,7 @@ async function processClaim(item: Claimed, parserRevision: string) {
       // refused it. Keep the PDF/draft untouched and require fresh review.
       await finishClaim(item,{
         state:"exception",exception_codes:["draft_conflict"],field_keys:[],
-        parser_id:extraction.preview.parserId,checks_passed:13,
+        parser_id:extraction.preview.parserId,checks_passed:extraction.preview.checksPassed,
         extraction_fingerprint:extraction.preview.fingerprint,
         last_error_code:"verified_ocr_sync_guard_refused",
         processed_at:null,retry_after:retryAfter(1440),

@@ -82,6 +82,8 @@ export const TATA_AIG_PRIVATE_CAR_N8N_IDS = new Set([
   "tata_aig_private_car_saod_n8n_native_pdf",
   "tata_aig_private_car_package_n8n_native_pdf",
   "tata_aig_private_car_bundled_n8n_native_pdf",
+  "tata_aig_private_car_liability_only_n8n_native_pdf",
+  "tata_aig_private_car_three_year_tp_n8n_native_pdf",
 ]);
 export const TATA_AIG_TWO_WHEELER_N8N_ID = "tata_aig_two_wheeler_bundled_n8n_native_pdf";
 const TATA_INFORMATIONAL_WARNINGS = new Set([
@@ -89,6 +91,7 @@ const TATA_INFORMATIONAL_WARNINGS = new Set([
   "tata_aig_human_review_required",
   "tata_aig_printed_net_rounding",
   "tata_aig_signature_date_not_in_native_text",
+  "tata_aig_issuance_date_requires_verified_pdf_signature",
 ]);
 export const NON_TATA_COMMERCIAL_N8N_IDS = new Set([
   "new_india_cv_native_pdf", "iffco_tokio_cv_native_pdf", "go_digit_cv_native_pdf",
@@ -100,6 +103,9 @@ export function trainedN8nParserProfile(parserId: string | null): {
 } | null {
   if (!parserId) return null;
   if (ICICI_N8N_IDS.has(parserId)) return { checks:13, family:"icici" };
+  if (parserId === "tata_aig_private_car_liability_only_n8n_native_pdf"
+    || parserId === "tata_aig_private_car_three_year_tp_n8n_native_pdf")
+    return { checks:16, family:"tata_private_car" };
   if (TATA_AIG_PRIVATE_CAR_N8N_IDS.has(parserId)) return { checks:18, family:"tata_private_car" };
   if (parserId===TATA_AIG_TWO_WHEELER_N8N_ID) return { checks:18, family:"tata_two_wheeler" };
   if (parserId==="new_india_cv_native_pdf") return { checks:16, family:"commercial" };
@@ -201,10 +207,13 @@ export function assessAiPolicyIntake(input: AiPolicyEvidence): AiAssessment {
     // two-wheelers, but not for petrol/diesel Tata AIG private cars.
     const saod = parser?.family==="tata_private_car"
       && fields.get("policy_product")?.toLowerCase()==="stand-alone own damage";
+    const thirdPartyOnly = parser?.family==="tata_private_car"
+      && fields.get("policy_product")?.toLowerCase()==="third-party only";
     const required: string[]=[...requiredFields].filter(key =>
       // Standalone Own Damage does not issue new TP cover. Existing TP dates
       // may be printed as reference, but cannot be mandatory for OD extraction.
       !(saod && key==="third_party_end_date")
+      && !(thirdPartyOnly && key==="idv")
       && (key!=="vehicle_motor_power_kw" || (parser?.family!=="tata_private_car" && parser?.family!=="commercial")));
     if (parser?.family==="tata_private_car" || parser?.family==="tata_two_wheeler" || parser?.family==="commercial") {
       required.push("vehicle_capacity","vehicle_registration_status","vehicle_rto_state");

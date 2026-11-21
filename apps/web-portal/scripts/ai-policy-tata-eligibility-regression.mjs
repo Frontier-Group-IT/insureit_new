@@ -88,8 +88,12 @@ assert(worker.includes("const bundledPeriodsVerified=!bundled||("));
 assert(worker.includes("&& hasVerifiedN8nParserEvidence(extraction.preview.parserId,"));
 assert(worker.includes('ICICI_N8N_IDS.has(extraction.preview.parserId)'),
  "only warning-free ICICI may use canonical OCR-sync RPC");
-assert(worker.includes('p_checks_passed:13,'),
- "do not change live guarded 13-check ICICI OCR sync RPC contract");
+assert(worker.includes("sync_verified_ai_intake_tata_tp_ocr_v1"),
+ "strict Tata AIG TP OCR must use dedicated guarded RPC");
+assert(worker.includes("sync_verified_ai_intake_ocr_v2"),
+ "existing guarded ICICI OCR sync remains unchanged");
+assert(worker.includes("p_checks_passed:extraction.preview.checksPassed,"),
+ "OCR sync must pass only the checks count verified for its parser family");
 // Client and server must use the SAME verified parser profile. Tata warnings
 // requiring manual issuance review must not hide the safe editable-draft handoff.
 const workspace=read("../components/development/semi-auto-policy-workspace.tsx");
@@ -103,7 +107,12 @@ assert(workspace.includes('continueVerifiedN8nIntakeToOnboarding('));
 const backend=read("../app/policy-intakes/handoff-actions.ts");
 assert(backend.includes('const blockingWarnings = parsed.preview.warnings.filter('));
 assert(backend.includes('informationalTataWarnings.has(warning)'));
-assert(backend.includes('parsed.preview.checksPassed!==(isTata?18:13)'));
+assert(backend.includes('trainedN8nParserProfile(parsed.preview.parserId)?.checks'),
+ "handoff must use insurer-specific 16/18/13 check profiles");
+assert.equal(trainedN8nParserProfile("tata_aig_private_car_liability_only_n8n_native_pdf")?.checks,16);
+assert.equal(trainedN8nParserProfile("tata_aig_private_car_three_year_tp_n8n_native_pdf")?.checks,16);
+assert(hasVerifiedN8nParserEvidence("tata_aig_private_car_three_year_tp_n8n_native_pdf",16,
+ ["tata_aig_issuance_date_requires_verified_pdf_signature","tata_aig_human_review_required"]));
 
 const conversion=read("../app/development/ai-policy-onboarding/actions.ts");
 assert(conversion.includes("!hasVerifiedN8nParserEvidence(extracted.preview.parserId,"),
