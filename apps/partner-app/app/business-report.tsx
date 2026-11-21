@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback } from 'react';
 import { useRouter } from 'expo-router';
-import { Image, RefreshControl, StyleSheet, Text, View, type ImageSourcePropType } from 'react-native';
+import { Image, Pressable, RefreshControl, StyleSheet, Text, View, type ImageSourcePropType } from 'react-native';
 
 import { PartnerScreen } from '@/components/partner-screen';
 import { PartnerStackBottomNavigation } from '@/components/partner-stack-bottom-navigation';
@@ -48,13 +48,9 @@ export default function BusinessReportScreen() {
         <View style={styles.headerWaveRear} pointerEvents="none" />
         <View style={styles.headerWaveFront} pointerEvents="none" />
         <View style={styles.headerTitleRow}>
-          <Ionicons
-            name="arrow-back"
-            size={24}
-            color="#FFFFFF"
-            onPress={() => router.back()}
-            accessibilityLabel="Back"
-          />
+          <Pressable accessibilityRole="button" accessibilityLabel="Back" hitSlop={8} onPress={() => router.back()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
+          </Pressable>
           <Ionicons name="business-outline" size={24} color="#FFFFFF" />
           <Text accessibilityRole="header" numberOfLines={1} style={styles.headerTitle}>Business Report</Text>
         </View>
@@ -186,6 +182,7 @@ const styles = StyleSheet.create({
   pageHeader: { height: 73, marginHorizontal: -partnerTheme.spacing.lg, backgroundColor: '#071E49', justifyContent: 'center', paddingHorizontal: 17, borderBottomLeftRadius: 22, overflow: 'hidden' },
   headerWaveRear: { position: 'absolute', width: '82%', height: 70, right: -45, bottom: -49, borderTopLeftRadius: 190, backgroundColor: '#0E458B', transform: [{ rotate: '-7deg' }] },
   headerWaveFront: { position: 'absolute', width: '67%', height: 47, right: -15, bottom: -37, borderTopLeftRadius: 160, backgroundColor: '#1684DF', transform: [{ rotate: '-4deg' }] },
+  backButton: { width: 32, height: 36, alignItems: 'center', justifyContent: 'center' },
   headerTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 13, zIndex: 1 },
   headerTitle: { flexShrink: 1, color: '#FFFFFF', fontSize: 18, lineHeight: 24, fontWeight: '800' },
   summaryGrid: { marginTop: 14, flexDirection: 'row', gap: 7 },
