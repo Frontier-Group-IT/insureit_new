@@ -127,8 +127,20 @@ export async function prepareVerifiedN8nIntakeHandoff(
   const goDigitVerifiedFill = Boolean(commercial) && fillEmptyFields
     && parsed.preview.parserId==="go_digit_cv_native_pdf"
     && parsed.preview.checksPassed===18 && parsed.preview.warnings.length===0;
-  if (commercial && !replaceExistingDraft && !goDigitVerifiedFill) {
-    return {ok:false,error:"Commercial premium handoff is available only via the explicit Reparse & replace review action."};
+  // Direct IFFCO handoff is restricted to the separately certified JCB
+  // family. This has the same strict insurer/premium/RTO provenance gate as
+  // queue eligibility and final conversion. Other commercial layouts still
+  // require the explicit reparse/review flow.
+  const iffcoVerifiedFill = Boolean(commercial) && fillEmptyFields
+    && assessIffcoAutoOnboarding({
+      parserId:parsed.preview.parserId,
+      checksPassed:parsed.preview.checksPassed,
+      warnings:parsed.preview.warnings,
+      fields:parsed.preview.fields,
+      commercialPremium:commercial,
+    }).eligible;
+  if (commercial && !replaceExistingDraft && !goDigitVerifiedFill && !iffcoVerifiedFill) {
+    return {ok:false,error:"This commercial PDF is not eligible for direct verified handoff; check its insurer-specific evidence before booking."};
   }
   if (!commercial && !parsed.preview.premium) {
     return {ok:false,error:"The validated n8n premium breakdown is missing."};
