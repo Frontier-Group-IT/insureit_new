@@ -9,7 +9,8 @@ import { requirePolicyIntakeFinalizer, requirePolicyIntakeReviewer } from "@/lib
 import { loadPolicyIntakeDuplicateMatches } from "@/lib/policy-intake-duplicate";
 import { buildPolicyOcrOnboardingUpdate, normalizeVerifiedMotorPowerKw } from "@/lib/policy-ocr-onboarding-apply";
 import { policyDateDecision } from "@/lib/policy-date-rule";
-import { mapVerifiedGoDigitCommercialPremium, mapVerifiedN8nMotorPremium, verifiedCpaSelectionMatches } from "@/lib/policy-n8n-onboarding-premium";
+import { mapVerifiedGoDigitCommercialPremium, mapVerifiedIffcoCommercialPremium, mapVerifiedN8nMotorPremium, verifiedCpaSelectionMatches } from "@/lib/policy-n8n-onboarding-premium";
+import { assessIffcoAutoOnboarding } from "@/lib/policy-iffco-auto-eligibility";
 import { resolveManufacturingYearEvidence } from "@/lib/policy-n8n-onboarding-enrichment";
 import { checkSemiAutoReadiness, type SemiAutoIssue } from "@/lib/policy-intake-semi-auto";
 import { isN8nWorkbenchPrimary, previewSemiAutoN8nExtraction, applySemiAutoN8nExtraction, type SemiAutoN8nResult } from "@/lib/policy-intake-semi-auto-n8n";
@@ -322,13 +323,29 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
   // handoff can claim the Intake or create a canonical draft.
   let verifiedMoney:ReturnType<typeof mapVerifiedN8nMotorPremium>;
   const commercial=extracted.preview.commercialPremium;
+  const iffco=extracted.preview.parserId==="iffco_tokio_cv_native_pdf";
   if (commercial) {
-    // Only the exact Go Digit 18-check native PDF contract may enter this path.
-    // The other commercial insurers remain review-only until their separate
-    // canonical premium/component mappings have been independently certified.
-    if (extracted.preview.parserId!=="go_digit_cv_native_pdf"
-        || extracted.preview.checksPassed!==18 || extracted.preview.warnings.length)
-      return fail("Premium","This commercial layout still requires insurer-specific booking review.");
+    if(iffco){
+      const assessment=assessIffcoAutoOnboarding({
+        parserId:extracted.preview.parserId,
+        checksPassed:extracted.preview.checksPassed,
+        warnings:extracted.preview.warnings,
+        fields:extracted.preview.fields,
+        commercialPremium:commercial,
+      });
+      if(!assessment.eligible)
+        return fail("IFFCO evidence","This IFFCO layout is not yet eligible for confirmed booking: "+assessment.reason);
+      // IFFCO Net(B) includes separately printed CPA. Exact source-verified
+      // amounts are split before canonical payload reconciliation.
+      const cpaFields=extracted.preview.fields.filter(f=>f.key==="cpa_premium");
+      if(cpaFields.length!==1)return fail("IFFCO CPA","Original PDF has ambiguous owner-driver CPA evidence.");
+      try {verifiedMoney=mapVerifiedIffcoCommercialPremium(commercial,Number(cpaFields[0].value));}
+      catch {return fail("IFFCO premium","IFFCO OD, TP, CPA, net, GST or gross differs from the original PDF.");}
+    }else{
+      // Existing working Go Digit route and premium rule: unchanged.
+      if (extracted.preview.parserId!=="go_digit_cv_native_pdf"
+          || extracted.preview.checksPassed!==18 || extracted.preview.warnings.length)
+        return fail("Premium","This commercial layout still requires insurer-specific booking review.");
     // Under the configured operational rule, a missing manufacturing year
     // may use the policy's separately printed registration year. This is a
     // labelled fallback, never a claim about manufacturer evidence or a
@@ -344,7 +361,8 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
     if (pdfField("policy_product")!=="Digit Commercial Vehicle Insurance")
       return fail("Policy product","The commercial product is not the verified combined Go Digit motor policy.");
     try {verifiedMoney=mapVerifiedGoDigitCommercialPremium(commercial);}
-    catch {return fail("Premium","Printed OD, TP, net, GST and gross do not reconcile with the canonical form.");}
+      catch {return fail("Premium","Printed OD, TP, net, GST and gross do not reconcile with the canonical form.");}
+    }
   } else {
     if (!extracted.preview.premium)
       return fail("Premium","A verified premium breakdown is missing.");
@@ -366,8 +384,13 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
     || forwarded.draft.manufacturingYear!==manufacturingEvidence.year
     || forwarded.draft.capacity!==pdfField("vehicle_capacity")
     || forwarded.draft.rtoName!==pdfField("vehicle_rto_name")
-    || forwarded.draft.rtoState!==pdfField("vehicle_rto_state")))
-    return fail("Verified Go Digit fields","The saved commercial identity, class, manufacturing year, CC, RTO or Package selection differs from the verified PDF.");
+    || forwarded.draft.rtoState!==pdfField("vehicle_rto_state")
+    || (iffco && (forwarded.draft.registrationMode!=="unregistered"
+      ||!!forwarded.draft.registrationNo
+      ||forwarded.draft.fuelType!==pdfField("vehicle_fuel_type")
+      ||!forwarded.draft.remarks.includes("IFFCO_PROVISIONAL_RTO_FROM_INSURED_ADDRESS:")
+      ||!forwarded.draft.remarks.includes("IFFCO_FUEL_FROM_JCB_MODEL:")))))
+    return fail("Verified commercial fields","The saved commercial identity, class, year, CC, RTO, fuel, registration status, source notes or Package selection differs from the verified PDF.");
   if(isOdElectricTwoWheeler
       && (forwarded.draft.vehicleClass!=="TWP"
         ||forwarded.draft.fuelType!=="Electric"
