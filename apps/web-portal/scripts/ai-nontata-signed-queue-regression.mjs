@@ -117,6 +117,9 @@ assert.deepEqual(mapVerifiedGoDigitCommercialPremium({od:2415.46,tp:7647,net:100
   {od:"2415.46",addOnPremium:"0",tp:"7647",cpa:"0",cpaOpted:"No"});
 assert.throws(()=>mapVerifiedGoDigitCommercialPremium({od:2415.46,tp:7647,net:10062.46,gst:1811.24,gross:12000}),
   /n8n_motor_premium_handoff_unreconciled/);
+assert.ok(handoff.includes("const standardCommercialVerifiedFill=Boolean(commercial)&&fillEmptyFields")
+  &&handoff.includes("assessStandardCommercialDirectConversion({"),
+  "Other commercial parsers must use a strict direct-booking eligibility contract");
 assert.ok(handoff.includes("const iffcoVerifiedFill = Boolean(commercial) && fillEmptyFields")
   &&handoff.includes("!goDigitVerifiedFill && !iffcoVerifiedFill")
   &&handoff.includes("assessIffcoAutoOnboarding({"),
@@ -330,16 +333,16 @@ assert.equal(assessIffcoAutoOnboarding({...iffcoAuto,fields:[...iffcoAuto.fields
 assert.ok(handoff.includes("const iffcoReview=assessIffcoAutoOnboarding(")
   && handoff.includes("eligibleForVerifiedConversion=autoEligibleGoDigit||iffcoReview.eligible"),
   "IFFCO source and financial validated readiness must be used for the queue");
-assert.ok(actions.includes('const heldIffcoReview=queued?.state==="exception"')
+assert.ok(actions.includes('const heldReview=queued?.state==="exception"')
   &&actions.includes('queued.exception_codes.length===1')
   &&actions.includes('queued.exception_codes[0]==="booking_review_required"')
   &&actions.includes('extracted.preview.fingerprint!==queued.extraction_fingerprint'),
-  "IFFCO held retries still require exact queue exception, fingerprint and fresh PDF");
+  "Held parser retries still require exact queue exception, fingerprint and fresh PDF");
 const studio=file("../components/development/semi-auto-policy-workspace.tsx");
-assert.ok(studio.includes("canExplicitlyRetryIffco(exceptionRow)")
+assert.ok(studio.includes("canRetryReviewHeldPolicy(exceptionRow)")
   &&studio.includes("setAutoConvertRow(exceptionRow)")
   &&studio.includes("convertVerifiedAiIntake(row.id,true)"),
-  "Only explicitly confirmed IFFCO held retry can invoke direct conversion");
+  "Only explicitly confirmed held parser retries can invoke direct conversion");
 assert.ok(actions.includes("const assessment=assessIffcoAutoOnboarding(")
   && actions.includes("mapVerifiedIffcoCommercialPremium(commercial")
   && actions.includes('pdfField("vehicle_registration_status")==="registration_pending"'),
