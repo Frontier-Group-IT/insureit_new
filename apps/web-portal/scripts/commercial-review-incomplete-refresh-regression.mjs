@@ -18,4 +18,12 @@ assert.match(client, /Payout status/, "Payout status must be labeled separately.
 assert.match(client, /Rates entered · review status/, "Rates entered with incomplete status must be flagged, not automatically approved.");
 assert.match(actions, /commercial_status: nextStatus/, "Server must persist explicit commercial status.");
 assert.match(actions, /revalidatePath\("\/policies\/commercial-review"\)/, "Server must invalidate the commercial review route.");
+// Regression: switching between POSPs and a Partner must never retain ghost table rows
+// or selected policies from the previous intermediary.
+assert.match(client, /if \(intermediary !== "all" && row\.intermediaryCode !== intermediary\) return false;/, "Intermediary filtering must compare exact policy codes.");
+assert.match(client, /const tableFilterKey = JSON\.stringify\(\[side, query, insurer, intermediary, intermediaryType, vehicleClass, status, backfill, dateFrom, dateTo\]\)/, "Table remount key must include intermediary and all displayed filters.");
+assert.match(client, /<tbody key=\{tableFilterKey\} className="divide-y divide-\[#EDF0F4\]">\{filteredRows\.map\(\(row\) =>/, "Visible DOM rows must be replaced from the same filtered array as the counters.");
+assert.match(client, /function changeIntermediary\(value: string\) \{[\s\S]*?setIntermediary\(value\);[\s\S]*?setSelected\(new Set\(\)\);[\s\S]*?setEditingId\(null\);/, "Switching intermediary must clear prior row selection and edit state.");
+assert.match(client, /onChange=\{\(e\) => changeIntermediary\(e\.target\.value\)\}/, "Intermediary selector must use the safe handler.");
+
 console.log("Commercial review incomplete refresh and status reconciliation regression passed.");
