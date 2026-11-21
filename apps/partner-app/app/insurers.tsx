@@ -1,13 +1,14 @@
 import { partnerAlert } from '@/components/ui/partner-alert-provider';
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useMemo, useState } from 'react';
-import { Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Image, KeyboardAvoidingView, Modal, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
 import { PartnerStackBottomNavigation } from '@/components/partner-stack-bottom-navigation';
 import { PartnerInsurerLogo } from '@/components/ui/partner-insurer-logo';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
+import { PartnerDatePicker } from '@/components/ui/partner-date-picker';
 import { getPartnerInsurerRegister, type PartnerInsurerRegisterRow } from '@/lib/business';
 import { PartnerAssets } from '@/lib/partner-assets';
 import { usePartnerQuery } from '@/lib/use-partner-query';
@@ -82,7 +83,13 @@ function parseLocal(value: string) {
   const [year, month, day] = value.split('-').map(Number);
   return new Date(year, month - 1, day);
 }
-function getPresetRange(preset: 'mtd' | 'last_month') {
+function getPresetRange(preset: 'mtd' | 'last_month' | '90' | '365') {
+  if (preset === '90' || preset === '365') {
+    const today = new Date();
+    const from = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    from.setDate(from.getDate() - (preset === '90' ? 89 : 364));
+    return { from: isoLocal(from), to: isoLocal(today) };
+  }
   const today = new Date();
   const from = preset === 'mtd'
     ? new Date(today.getFullYear(), today.getMonth(), 1)
@@ -91,6 +98,13 @@ function getPresetRange(preset: 'mtd' | 'last_month') {
     ? today
     : new Date(today.getFullYear(), today.getMonth(), 0);
   return { from: isoLocal(from), to: isoLocal(to) };
+}
+function selectedPreset(from: string, to: string): 'mtd' | '90' | '365' | null {
+  for (const preset of ['mtd', '90', '365'] as const) {
+    const dates = getPresetRange(preset);
+    if (dates.from === from && dates.to === to) return preset;
+  }
+  return null;
 }
 function validDateRange(from: string, to: string) {
   if (!DATE_PATTERN.test(from) || !DATE_PATTERN.test(to)) return false;
@@ -115,6 +129,7 @@ function metricValue(row: PartnerInsurerRegisterRow, metric: Metric): number | s
 export default function InsurerListScreen() {
   const params = useLocalSearchParams<{ from?: string; to?: string }>();
   const router = useRouter();
+  const { height: screenHeight } = useWindowDimensions();
   const { context, cacheScopeKey } = usePartnerSession();
   const employee = context?.identity.actor_kind === 'employee';
   const canViewCommercials = employee && context?.can_view_insurer_commercials === true;
@@ -127,11 +142,6 @@ export default function InsurerListScreen() {
   const [dateExpanded, setDateExpanded] = useState(false);
   const [search, setSearch] = useState('');
   const [sortKey, setSortKey] = useState<SortKey>('amount_desc');
-  const [pickerTarget, setPickerTarget] = useState<'from' | 'to'>('from');
-  const [calendarMonth, setCalendarMonth] = useState(() => {
-    const date = parseLocal(range.from);
-    return new Date(date.getFullYear(), date.getMonth(), 1);
-  });
   const validRange = validDateRange(range.from, range.to);
   const validDraft = validDateRange(draft.from, draft.to);
   const { from, to } = range;
@@ -170,34 +180,20 @@ export default function InsurerListScreen() {
   }, [query.data, search, sortKey, canViewCommercials]);
 
   const openDateRange = () => {
-    if (dateExpanded) {
-      setDateExpanded(false);
-      return;
-    }
+    // Keep draft changes isolated until Apply Filter is tapped.
     setDraft(range);
-    setPickerTarget('from');
-    const start = parseLocal(range.from);
-    setCalendarMonth(new Date(start.getFullYear(), start.getMonth(), 1));
     setDateExpanded(true);
   };
-  const selectDate = (day: number) => {
-    const selected = isoLocal(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), day));
-    setDraft((current) => ({ ...current, [pickerTarget]: selected }));
-    if (pickerTarget === 'from') setPickerTarget('to');
+  const closeDateRange = () => {
+    setDateExpanded(false);
+    setDraft(range);
   };
-  const changeMonth = (step: number) => {
-    setCalendarMonth((current) => new Date(current.getFullYear(), current.getMonth() + step, 1));
+  const applyDateRange = () => {
+    if (!validDraft) return;
+    setRange(draft);
+    setDateExpanded(false);
   };
-  const calendarCells = useMemo(() => {
-    const year = calendarMonth.getFullYear();
-    const month = calendarMonth.getMonth();
-    const leading = new Date(year, month, 1).getDay();
-    const days = new Date(year, month + 1, 0).getDate();
-    return [...Array<null>(leading).fill(null), ...Array.from({ length: days }, (_, i) => i + 1)];
-  }, [calendarMonth]);
-  const today = new Date();
-  const isCurrentMonth = calendarMonth.getFullYear() === today.getFullYear()
-    && calendarMonth.getMonth() === today.getMonth();
+  const applyPreset = (preset: 'mtd' | '90' | '365') => setDraft(getPresetRange(preset));
 
   return (
     <PartnerScreen title="Insurer-wise Performance" hideTopBar fullWidth bottomNavigationNavy navyStatusBar
@@ -237,80 +233,7 @@ export default function InsurerListScreen() {
           <Ionicons name="calendar-outline" size={13} color="#667D9C" />
           <Text style={styles.dateRangeValue}>{validRange ? formatRange(from, to) : 'Select a valid reporting range'}</Text>
         </View>
-        {dateExpanded ? (
-          <View style={styles.datePanel}>
-            <View style={styles.dateFields}>
-              {(['from', 'to'] as const).map((field) => (
-                <Pressable key={field} accessibilityRole="button"
-                  accessibilityLabel={field === 'from' ? 'Select From Date' : 'Select To Date'}
-                  accessibilityState={{ selected: pickerTarget === field }}
-                  onPress={() => {
-                    setPickerTarget(field);
-                    const selected = parseLocal(draft[field]);
-                    setCalendarMonth(new Date(selected.getFullYear(), selected.getMonth(), 1));
-                  }}
-                  style={[styles.dateButton, pickerTarget === field && styles.dateButtonActive]}>
-                  <Text style={styles.dateButtonLabel}>{field === 'from' ? 'From Date' : 'To Date'}</Text>
-                  <Text style={styles.dateButtonText}>{parseLocal(draft[field]).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</Text>
-                </Pressable>
-              ))}
-            </View>
-            <View style={styles.calendarWrap}>
-              <View style={styles.monthRow}>
-                <Pressable accessibilityRole="button" accessibilityLabel="Previous month"
-                  onPress={() => changeMonth(-1)} style={styles.monthArrow}>
-                  <Ionicons name="chevron-back" size={18} color="#155BB6" />
-                </Pressable>
-                <Text style={styles.monthTitle}>
-                  {calendarMonth.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}
-                </Text>
-                <Pressable accessibilityRole="button" accessibilityLabel="Next month"
-                  disabled={isCurrentMonth} onPress={() => changeMonth(1)}
-                  style={styles.monthArrow}>
-                  <Ionicons name="chevron-forward" size={18} color={isCurrentMonth ? '#BDC8D7' : '#155BB6'} />
-                </Pressable>
-              </View>
-              <View style={styles.calendarGrid}>
-                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-                  <View key={day} style={styles.calendarCell}>
-                    <Text style={styles.weekdayText}>{day}</Text>
-                  </View>
-                ))}
-                {calendarCells.map((day, index) => {
-                  const value = day == null ? null : isoLocal(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), day));
-                  const disabled = value != null && value > isoLocal(today);
-                  const selected = value != null && value === draft[pickerTarget];
-                  const inRange = value != null && value >= draft.from && value <= draft.to;
-                  return (
-                    <View key={index} style={styles.calendarCell}>
-                      {day != null ? (
-                        <Pressable accessibilityRole="button" accessibilityLabel={value ?? ''}
-                          accessibilityState={{ selected, disabled }} disabled={disabled}
-                          onPress={() => selectDate(day)}
-                          style={[styles.dayButton, inRange && styles.dayInRange, selected && styles.daySelected]}>
-                          <Text style={[styles.dayText, disabled && styles.dayDisabledText,
-                            selected && styles.daySelectedText]}>{day}</Text>
-                        </Pressable>
-                      ) : null}
-                    </View>
-                  );
-                })}
-              </View>
-            </View>
-            <Text style={styles.dateNote}>Select From and To dates using this calendar (maximum 366 days).</Text>
-            {!validDraft ? <Text style={styles.invalidRange}>Choose a valid range: From Date must be on or before To Date, within 366 days.</Text> : null}
-            <View style={styles.modalActions}>
-              <Pressable accessibilityRole="button" onPress={() => setDateExpanded(false)} style={styles.cancel}>
-                <Text style={styles.cancelText}>Cancel</Text>
-              </Pressable>
-              <Pressable accessibilityRole="button" disabled={!validDraft}
-                onPress={() => { setRange(draft); setDateExpanded(false); }}
-                style={[styles.apply, !validDraft && styles.applyDisabled]}>
-                <Text style={styles.applyText}>Apply</Text>
-              </Pressable>
-            </View>
-          </View>
-        ) : null}
+
       </View>
 
       <View style={styles.registerArea}>
@@ -390,6 +313,80 @@ export default function InsurerListScreen() {
         </View>
       </View>
 
+
+      <Modal visible={dateExpanded} transparent animationType={Platform.OS === 'ios' ? 'slide' : 'fade'}
+        onRequestClose={closeDateRange}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={styles.sheetOverlay}>
+          <Pressable style={StyleSheet.absoluteFill} accessibilityRole="button"
+            accessibilityLabel="Dismiss Date Range filter" onPress={closeDateRange} />
+          <View style={[styles.sheet,{ maxHeight: Math.max(330, screenHeight - 70) }]} accessibilityViewIsModal>
+            <View style={styles.sheetHeader}>
+              <Text style={styles.sheetTitle}>Sort by</Text>
+              <Pressable accessibilityRole="button" accessibilityLabel="Close Date Range filter"
+                onPress={closeDateRange} style={styles.sheetClose}>
+                <Ionicons name="close" size={23} color="#586580" />
+              </Pressable>
+            </View>
+            <View style={styles.sheetTabs}>
+              <View style={styles.sheetTab}>
+                <Ionicons name="calendar-outline" size={14} color="#4230B3" />
+                <Text style={styles.sheetTabText}>Date Range</Text>
+              </View>
+            </View>
+            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled"
+              contentContainerStyle={styles.sheetBody}>
+              <Text style={styles.sheetSectionTitle}>Date Range</Text>
+              <View style={styles.sheetPresets}>
+                <Pressable accessibilityRole="button" disabled
+                  accessibilityLabel="All Dates unavailable, report supports a maximum of 366 days"
+                  style={[styles.sheetPreset, styles.sheetPresetDisabled]}>
+                  <Text style={styles.sheetPresetText}>All Dates</Text>
+                </Pressable>
+                {(['mtd', '90', '365'] as const).map((key) => {
+                  const selected = selectedPreset(draft.from, draft.to) === key;
+                  const label = key === 'mtd' ? 'MTD' : key === '90' ? '90 Days' : '365 Days';
+                  return <Pressable key={key} accessibilityRole="button" accessibilityState={{ selected }}
+                    onPress={() => applyPreset(key)}
+                    style={[styles.sheetPreset, selected && styles.sheetPresetSelected]}>
+                    <Text style={[styles.sheetPresetText, selected && styles.sheetPresetTextSelected]}>{label}</Text>
+                  </Pressable>;
+                })}
+              </View>
+              <Text style={styles.sheetNote}>This insurer report supports a maximum of 366 days. All Dates is not available.</Text>
+              <View style={styles.sheetDates}>
+                <View style={styles.sheetDateField}>
+                  <PartnerDatePicker directSelect label="From"
+                    value={DATE_PATTERN.test(draft.from) ? parseLocal(draft.from) : null}
+                    onChange={(date) => setDraft((current) => ({ ...current, from: isoLocal(date) }))}
+                    maximumDate={DATE_PATTERN.test(draft.to) ? parseLocal(draft.to) : new Date()} />
+                </View>
+                <View style={styles.sheetDateField}>
+                  <PartnerDatePicker directSelect label="To"
+                    value={DATE_PATTERN.test(draft.to) ? parseLocal(draft.to) : null}
+                    onChange={(date) => setDraft((current) => ({ ...current, to: isoLocal(date) }))}
+                    minimumDate={DATE_PATTERN.test(draft.from) ? parseLocal(draft.from) : undefined}
+                    maximumDate={new Date()} />
+                </View>
+              </View>
+              {!validDraft ? <Text style={styles.invalidRange}>Select valid From and To dates, no more than 366 days apart and not in the future.</Text> : null}
+            </ScrollView>
+            <View style={styles.sheetFooter}>
+              <Pressable accessibilityRole="button" accessibilityLabel="Reset date filters"
+                onPress={() => setDraft(getPresetRange('mtd'))} style={styles.sheetReset}>
+                <Ionicons name="refresh-outline" size={17} color="#172552" />
+                <Text style={styles.sheetResetText}>Reset Filters</Text>
+              </Pressable>
+              <Pressable accessibilityRole="button" accessibilityLabel="Apply insurer date range"
+                disabled={!validDraft} onPress={applyDateRange}
+                style={[styles.sheetApply,!validDraft && styles.applyDisabled]}>
+                <Ionicons name="funnel-outline" size={17} color="#FFFFFF" />
+                <Text style={styles.sheetApplyText}>Apply Filter</Text>
+              </Pressable>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </PartnerScreen>
   );
 }
@@ -411,33 +408,32 @@ const styles = StyleSheet.create({
   calendarTrigger: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   selectedRangeRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8, paddingHorizontal: 10 },
   dateRangeValue: { fontSize: 10.5, fontWeight: '600', color: '#667D9C' },
-  datePanel: { paddingHorizontal: 10, paddingVertical: 12, backgroundColor: '#FFFFFF', borderRadius: 11, marginTop: 7, borderColor: '#DCE6F2', borderWidth: 1 },
-  dateFields: { flexDirection: 'row', gap: 9 },
-  dateButton: { flex: 1, minWidth: 0, borderWidth: 1, borderColor: '#DCE6F2', borderRadius: 10, padding: 10, gap: 5 },
-  dateButtonActive: { borderColor: '#155BB6', backgroundColor: '#F2F7FF' },
-  dateButtonLabel: { fontSize: 10, color: '#667D9C', fontWeight: '700' },
-  dateButtonText: { color: '#1F3A64', fontSize: 11, fontWeight: '700' },
-  calendarWrap: { marginTop: 12, borderRadius: 10, padding: 6, backgroundColor: '#F8FAFF' },
-  monthRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
-  monthArrow: { minHeight: 38, minWidth: 38, alignItems: 'center', justifyContent: 'center' },
-  monthTitle: { fontSize: 15, fontWeight: '800', color: '#173D7B' },
-  calendarGrid: { flexDirection: 'row', flexWrap: 'wrap' },
-  calendarCell: { width: '14.2857%', alignItems: 'center', justifyContent: 'center', paddingVertical: 3 },
-  weekdayText: { fontSize: 10, color: '#718198', fontWeight: '700' },
-  dayButton: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
-  dayInRange: { backgroundColor: '#E5F1FF' },
-  daySelected: { backgroundColor: '#155BB6' },
-  dayText: { fontSize: 12, color: '#243B60', fontWeight: '600' },
-  dayDisabledText: { color: '#BCC5D1' },
-  daySelectedText: { color: '#FFFFFF', fontWeight: '800' },
-  dateNote: { marginTop: 9, fontSize: 10, color: '#718198' },
-  invalidRange: { marginTop: 7, color: '#B42318', fontSize: 11 },
-  modalActions: { flexDirection: 'row', gap: 10, marginTop: 12 },
-  cancel: { flex: 1, minHeight: 42, alignItems: 'center', justifyContent: 'center', borderRadius: 9, backgroundColor: '#EEF2F7' },
-  cancelText: { color: '#526781', fontWeight: '700', fontSize: 12 },
-  apply: { flex: 1, minHeight: 42, alignItems: 'center', justifyContent: 'center', borderRadius: 9, backgroundColor: '#155BB6' },
+  sheetOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(9,22,55,0.65)' },
+  sheet: { borderTopLeftRadius: 24, borderTopRightRadius: 24, backgroundColor: '#FFFFFF', paddingTop: 12, overflow: 'hidden' },
+  sheetHeader: { paddingHorizontal: 18, paddingVertical: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#E2E5ED' },
+  sheetTitle: { fontSize: 19, color: '#17233A', fontWeight: '700' },
+  sheetClose: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center' },
+  sheetTabs: { marginHorizontal: 18, marginTop: 10, marginBottom: 4, flexDirection: 'row' },
+  sheetTab: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: '#D0C7FA', borderRadius: 10, backgroundColor: '#EFEAFF', paddingHorizontal: 12, minHeight: 38 },
+  sheetTabText: { fontSize: 12, color: '#4230B3', fontWeight: '700' },
+  sheetBody: { paddingHorizontal: 18, paddingTop: 12, paddingBottom: 14, gap: 12 },
+  sheetSectionTitle: { fontSize: 14, color: '#182557', fontWeight: '700' },
+  sheetPresets: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  sheetPreset: { flex: 1, minWidth: 0, minHeight: 40, borderRadius: 10, backgroundColor: '#F1EFF9', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 2 },
+  sheetPresetDisabled: { opacity: 0.45 },
+  sheetPresetSelected: { backgroundColor: '#4230B3' },
+  sheetPresetText: { fontSize: 11, color: '#25385B', fontWeight: '700', textAlign: 'center' },
+  sheetPresetTextSelected: { color: '#FFFFFF' },
+  sheetNote: { color: '#7C879B', fontSize: 10.5, lineHeight: 15 },
+  sheetDates: { flexDirection: 'row', gap: 9 },
+  sheetDateField: { flex: 1, minWidth: 0 },
+  invalidRange: { color: '#B42318', fontSize: 11 },
+  sheetFooter: { flexDirection: 'row', gap: 9, paddingHorizontal: 18, paddingVertical: 12, borderTopWidth: 1, borderTopColor: '#E3E5EC' },
+  sheetReset: { flex: 1, minWidth: 0, minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, borderRadius: 24, borderWidth: 1, borderColor: '#C8CFE0' },
+  sheetResetText: { fontSize: 12, color: '#172552', fontWeight: '700' },
+  sheetApply: { flex: 1.5, minWidth: 0, minHeight: 44, borderRadius: 24, backgroundColor: '#4230B3', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7 },
   applyDisabled: { opacity: 0.45 },
-  applyText: { color: '#FFFFFF', fontWeight: '800', fontSize: 12 },
+  sheetApplyText: { color: '#FFFFFF', fontWeight: '700', fontSize: 12 },
   registerArea: { paddingHorizontal: 10, paddingTop: 3, paddingBottom: 18 },
   rangeRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, paddingHorizontal: 3, marginBottom: 8 },
   countText: { color: '#667D9C', fontSize: 10.5 },
