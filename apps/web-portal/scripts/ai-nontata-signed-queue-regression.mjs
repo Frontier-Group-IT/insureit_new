@@ -22,6 +22,23 @@ for (const id of ["go_digit_cv_native_pdf","new_india_cv_native_pdf","iffco_toki
   assert.ok(eligibility.includes(id), "AI queue must recognize trained parser "+id);
   assert.ok(signed.includes(id), "The signed-source path must retain exact parser identity "+id);
 }
+// Split-insurer n8n layout routing: do not send IFFCO new-vehicle internal
+// references into canonical registration as real number plates.
+assert.ok(signed.includes('"united_india_gcv_native_pdf"')
+  && signed.includes('"oriental_gccv_native_pdf"')
+  && signed.includes('"stamp_charge_reconciled"'),
+  "New insurer identifiers must be explicitly recognized with strict financial check sets");
+assert.ok(signed.includes('isIffcoNewVehicle')
+  && signed.includes('isUnitedNewVehicle')
+  && signed.includes('/^MP\\/NEW\\/\\d{3,6}$/i')
+  && signed.includes('printedPlate === "NEW"'),
+  "IFFCO and United new-vehicle internal numbers must be classified as unregistered");
+assert.ok(signed.includes("isIffcoNewVehicle || isUnitedNewVehicle")
+  && signed.includes('vehicle_manufacturing_year'),
+  "Only printed make/year evidence may grant unregistered classification");
+assert.ok(!signed.includes("auto_finalize_allowed:true"),
+  "New insurer recognition must preserve review-only extraction safety");
+
 assert.match(preview,/tryReadNonTataCommercialSignedPolicy/);
 assert.ok(preview.indexOf("tryReadNonTataCommercialSignedPolicy") <
           preview.indexOf("requestN8nPolicyIntakeBySignedSource({"),
