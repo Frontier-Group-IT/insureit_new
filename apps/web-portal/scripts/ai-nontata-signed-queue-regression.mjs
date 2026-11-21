@@ -276,6 +276,7 @@ const iffcoAutoFields=[
   ifField("third_party_end_date","2027-11-15"),ifField("vehicle_class","Commercial Vehicle - Miscellaneous Class D"),
   ifField("vehicle_make","JCB"),ifField("vehicle_model","JCB 3DX PLUS 2WD BACKHOE LOADER"),
   ifField("vehicle_registration_status","registration_pending"),
+  ifField("vehicle_registration_number","MP/NEW/5556"),
   ifField("vehicle_manufacturing_year","2026"),ifField("vehicle_chassis_number","RAJ3DXSRV03731509"),
   ifField("vehicle_engine_number","H00545556"),ifField("idv","3480000"),
   ifField("vehicle_capacity","4765","IFFCO PDF page 1: CC in insured vehicle row; not seating capacity"),
@@ -288,6 +289,33 @@ const iffcoAuto={parserId:"iffco_tokio_cv_native_pdf",checksPassed:18,
   warnings:[],fields:iffcoAutoFields,
   commercialPremium:{od:4762,tp:7367,net:12129,gst:2183.22,gross:14312.22}};
 assert.equal(assessIffcoAutoOnboarding(iffcoAuto).eligible,true);
+// A registered JCB MP plate is not an MP/NEW provisional vehicle. Its
+// address city must not be mistaken for the registration district.
+const iffcoRegistered={
+  ...iffcoAuto,
+  fields:iffcoAuto.fields.map(field=>{
+    if(field.key==="vehicle_registration_status")return {...field,value:"registered"};
+    if(field.key==="vehicle_registration_number")return {...field,value:"MP20ZS7041"};
+    if(field.key==="vehicle_manufacturing_year")return {...field,value:"2024"};
+    if(field.key==="vehicle_capacity")return {...field,value:"4399"};
+    if(field.key==="vehicle_rto_state")return {...field,evidence:"Registered plate MP20ZS7041 indicates MP state; MP RTO registry"};
+    if(field.key==="vehicle_rto_name")return {...field,evidence:"Registered plate MP20ZS7041 code MP-20 = Jabalpur (MP RTO registry); not policyholder address"};
+    if(field.key==="cpa_premium")return {...field,value:"330"};
+    return field;
+  }),
+  commercialPremium:{od:4132,tp:7697,net:11829,gst:2129.22,gross:13958.22},
+};
+assert.equal(assessIffcoAutoOnboarding(iffcoRegistered).eligible,true,
+  "IFFCO registered MP20 JCB with 18/18 checks and reconciled premium is eligible");
+assert.equal(assessIffcoAutoOnboarding({...iffcoRegistered,fields:iffcoRegistered.fields.map(f=>
+  f.key==="vehicle_rto_name"?{...f,evidence:"IFFCO policyholder address city only;"}:f)}).eligible,false,
+  "Registered RTO must not come from the mailing address");
+assert.equal(assessIffcoAutoOnboarding({...iffcoRegistered,fields:iffcoRegistered.fields.map(f=>
+  f.key==="vehicle_registration_number"?{...f,value:"MP21ZS7041"}:f)}).eligible,false,
+  "RTO evidence must match the exact printed plate");
+assert.equal(assessIffcoAutoOnboarding({...iffcoRegistered,commercialPremium:{...iffcoRegistered.commercialPremium,net:11828}}).eligible,false,
+  "Registered IFFCO still requires reconciled printed premiums");
+assert.equal(assessIffcoAutoOnboarding({...iffcoRegistered,checksPassed:17}).eligible,false);
 assert.equal(assessIffcoAutoOnboarding({...iffcoAuto,parserId:"go_digit_cv_native_pdf"}).eligible,false);
 assert.equal(assessIffcoAutoOnboarding({...iffcoAuto,checksPassed:17}).eligible,false);
 assert.equal(assessIffcoAutoOnboarding({...iffcoAuto,commercialPremium:{...iffcoAuto.commercialPremium,gross:14300}}).eligible,false);
@@ -300,7 +328,7 @@ assert.ok(handoff.includes("const iffcoReview=assessIffcoAutoOnboarding(")
   "IFFCO source and financial validated readiness must be used for the queue");
 assert.ok(actions.includes("const assessment=assessIffcoAutoOnboarding(")
   && actions.includes("mapVerifiedIffcoCommercialPremium(commercial")
-  && actions.includes('forwarded.draft.registrationMode!=="unregistered"'),
+  && actions.includes('pdfField("vehicle_registration_status")==="registration_pending"'),
   "IFFCO confirmed conversion must verify financial mapping, registration and original evidence");
 
 // The source PDF's RTO-authority cell is blank; the NIA issuing-office city

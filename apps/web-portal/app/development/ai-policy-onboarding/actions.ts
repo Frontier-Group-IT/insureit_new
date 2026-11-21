@@ -385,10 +385,16 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
     || forwarded.draft.capacity!==pdfField("vehicle_capacity")
     || forwarded.draft.rtoName!==pdfField("vehicle_rto_name")
     || forwarded.draft.rtoState!==pdfField("vehicle_rto_state")
-    || (iffco && (forwarded.draft.registrationMode!=="unregistered"
-      ||!!forwarded.draft.registrationNo
+    || (iffco && (forwarded.draft.registrationMode
+           !==(pdfField("vehicle_registration_status")==="registration_pending"?"unregistered":"registered")
+      ||(pdfField("vehicle_registration_status")==="registration_pending"
+        ?!!forwarded.draft.registrationNo
+        :forwarded.draft.registrationNo.replace(/[ -]/g,"").toUpperCase()
+            !==pdfField("vehicle_registration_number").replace(/[ -]/g,"").toUpperCase())
       ||forwarded.draft.fuelType!==pdfField("vehicle_fuel_type")
-      ||!forwarded.draft.remarks.includes("IFFCO_PROVISIONAL_RTO_FROM_INSURED_ADDRESS:")
+      ||!(pdfField("vehicle_registration_status")==="registration_pending"
+        ?forwarded.draft.remarks.includes("IFFCO_PROVISIONAL_RTO_FROM_INSURED_ADDRESS:")
+        :forwarded.draft.remarks.includes("IFFCO_REGISTERED_RTO_FROM_PLATE:"))
       ||!forwarded.draft.remarks.includes("IFFCO_FUEL_FROM_JCB_MODEL:")))))
     return fail("Verified commercial fields","The saved commercial identity, class, year, CC, RTO, fuel, registration status, source notes or Package selection differs from the verified PDF.");
   if(isOdElectricTwoWheeler
