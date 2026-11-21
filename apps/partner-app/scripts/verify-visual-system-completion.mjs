@@ -924,10 +924,20 @@ for (const impactMarker of [
   'styles.monthStatDivider',
   'styles.cardDetails',
   '<ImpactIcon art={art} size={40} plain footprint />',
-  '<ImpactIcon art={art} size={44} plain />',
+  '<ImpactIcon art={art} size={54} plain />',
 ]) requireText(impact, impactMarker, `Impact reference layout is missing ${impactMarker}.`);
 if (impact.includes('icon={icon}') || impact.includes('styles.cardLeft')) throw new Error('Impact must keep blue artwork left with metric and label stacked to its right.');
 requireText(impact, '<MonthStat art="monthly-policy" label="Policies"', 'Monthly policies must use the distinct Add Policy reference artwork.');
+requireText(impact, '<ImpactIcon art="premium" size={49} plain />', 'Gross premium artwork must stay at 49px.');
+requireText(impact, '<ImpactIcon art={art} size={54} plain />', 'Only monthly Policies and Customers artwork grows to 54px.');
+requireText(impact, 'onPress={() => router.push(\'/journey\')}', 'Compact Journey card remains fully clickable.');
+requireText(impact, 'marginTop: 12, minHeight: 96, overflow: \'hidden\'', 'Journey CTA must be compact.');
+requireText(impact, 'journeyIconCircle: {', 'Journey art remains in the compact card.');
+requireText(impact, 'style={styles.journeyCarScene}', 'Journey car artwork remains.');
+if (impact.includes('styles.journeyArrowCircle') || impact.includes('journeyArrowCircle:') || impact.includes('name="arrow-forward"')) {
+  throw new Error('Journey CTA must not render the removed circular right arrow.');
+}
+
 requireText(impact, '<ImpactCard art="policy" value={data.lifetime_policies}', 'Policy book must use the Policy Document reference artwork.');
 for (const [fragment,reason] of [
   ['styles.footprintCard', 'Protection footprint is contained in one combined white card'],
@@ -935,7 +945,7 @@ for (const [fragment,reason] of [
   ['impactCard: {minHeight: 49', 'Protection footprint rows are compact'],
   ["textAlign: 'right', minWidth: 44", 'Footprint counts must align right before the chevron'],
   ["heroCoverageBadge: {width: 106", 'Coverage badge must align right without overlapping the value'],
-  ["monthStat: { flex: 1, minWidth: 0, minHeight: 59", 'Monthly statistics must remain compact'],
+  ["monthStat: { flex: 1, minWidth: 0, minHeight: 64", 'Monthly statistics must remain compact'],
   ['<Text style={styles.premiumLabel}>Gross premium</Text>', 'Gross premium label must be visible'],
   ['<ImpactIcon art={art} size={40} plain footprint />', 'Footprint illustrations must share the compact slot'],
   ['numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>{label}', 'Footprint labels must remain on one line'],
@@ -960,7 +970,7 @@ for (const [fragment, reason] of [
   ["customer: 40", 'Customer footprint artwork must use its normalized scale'],
   ["policy: 40", 'Policy footprint artwork must use its normalized scale'],
   ["claim: 31", 'Claims footprint artwork must not overpower the other icons'],
-  ['<ImpactIcon art={art} size={44} plain />', 'Monthly Policies and Customers icons must be enlarged'],
+  ['<ImpactIcon art={art} size={54} plain />', 'Monthly Policies and Customers icons must be enlarged'],
   ["Platform.OS === 'android' && art === 'monthly-policy'", 'Android monthly policy icon must have a platform-specific visible asset'],
   ["require('../assets/partner/actions/add-policy-reference.png')", 'Android monthly policies must use an RGBA illustration'],
   [": IMPACT_ART[art]", 'Existing iOS icon assignments must remain'],
