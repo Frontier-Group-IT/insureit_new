@@ -12,6 +12,7 @@ import { requirePolicyCreator } from "@/lib/policy-access-server";
 import { isN8nWorkbenchPrimary, previewSemiAutoN8nExtraction } from "@/lib/policy-intake-semi-auto-n8n";
 import type { N8nVerifiedPremiumBreakdown } from "@/lib/policy-intake-n8n-validation";
 import { mapVerifiedN8nMotorPremium, mapVerifiedIffcoCommercialPremium } from "@/lib/policy-n8n-onboarding-premium";
+import { assessIffcoAutoOnboarding } from "@/lib/policy-iffco-auto-eligibility";
 import { policyDateDecision } from "@/lib/policy-date-rule";
 import { enrichVerifiedN8nOnboardingFields, resolveManufacturingYearEvidence } from "@/lib/policy-n8n-onboarding-enrichment";
 import { sameInsuredIdentity, selectVerifiedN8nInsuredDraftIdentity } from "@/lib/policy-n8n-onboarding-insured";
@@ -302,17 +303,27 @@ async function preparePolicyIntakeHandoffInternal(
       key==="vehicle_manufacturing_year" ? !digitYear?.year
       :!verified.fields.some(f=>f.key===key&&f.value.trim())):[];
     const autoEligibleGoDigit=goDigit&&missingGoDigit.length===0;
+    const iffcoReview=assessIffcoAutoOnboarding({
+      parserId:verified.parserId,checksPassed:verified.checksPassed,
+      warnings:verified.warnings,fields:verified.fields,
+      commercialPremium:verified.commercialPremium,
+    });
+    const eligibleForVerifiedConversion=autoEligibleGoDigit||iffcoReview.eligible;
     const specificMissingYear=goDigit&&missingGoDigit.includes("vehicle_manufacturing_year");
     const{error}=await admin.from("policy_intake_ai_processing_queue").update({
-      // Never mark other insurers eligible without their existing booking rule.
-      state:autoEligibleGoDigit?"verified":"exception",
-      exception_codes:autoEligibleGoDigit?[]:niaHoldCode?["missing_field"]
+      // Only previously certified Go Digit and new narrowly evidenced IFFCO
+      // layouts enter the verified queue. All other commercial formats remain
+      // review-only; no booking is created by changing queue status.
+      state:eligibleForVerifiedConversion?"verified":"exception",
+      exception_codes:eligibleForVerifiedConversion?[]:niaHoldCode?["missing_field"]
         :goDigit&&missingGoDigit.length?["missing_field"]:["booking_review_required"],
       field_keys:verified.fields.map(field=>field.key),parser_id:verified.parserId,
       checks_passed:verified.checksPassed,extraction_fingerprint:verified.fingerprint,
-      last_error_code:autoEligibleGoDigit?null:niaHoldCode??(specificMissingYear
+      last_error_code:eligibleForVerifiedConversion?null:niaHoldCode??(specificMissingYear
         ?"go_digit_missing_verified_manufacturing_year":goDigit&&missingGoDigit.length
-          ?"go_digit_missing_verified_onboarding_fields":"bulk_conversion_review_required"),
+          ?"go_digit_missing_verified_onboarding_fields"
+          :verified.parserId==="iffco_tokio_cv_native_pdf"?iffcoReview.reason
+          :"bulk_conversion_review_required"),
       processed_at:new Date().toISOString(),
       retry_after:new Date(Date.now()+24*60*60*1000).toISOString(),
       lease_id:null,leased_until:null,updated_at:new Date().toISOString(),
