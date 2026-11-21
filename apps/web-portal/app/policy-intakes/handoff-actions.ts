@@ -15,6 +15,7 @@ import { mapVerifiedN8nMotorPremium, mapVerifiedIffcoCommercialPremium, mapVerif
 import { assessIffcoAutoOnboarding } from "@/lib/policy-iffco-auto-eligibility";
 import { assessNiaNamedAuthorityUnregisteredConversion, assessStandardCommercialDirectConversion } from "@/lib/policy-commercial-direct-eligibility";
 import { policyDateDecision } from "@/lib/policy-date-rule";
+import { trainedN8nParserProfile } from "@/lib/ai-policy-onboarding-eligibility";
 import { enrichVerifiedN8nOnboardingFields, resolveManufacturingYearEvidence } from "@/lib/policy-n8n-onboarding-enrichment";
 import { sameInsuredIdentity, selectVerifiedN8nInsuredDraftIdentity } from "@/lib/policy-n8n-onboarding-insured";
 
@@ -157,12 +158,14 @@ export async function prepareVerifiedN8nIntakeHandoff(
   if (!commercial && !parsed.preview.premium) {
     return {ok:false,error:"The validated n8n premium breakdown is missing."};
   }
-  const isTata = /^tata_aig_(?:private_car_(?:saod|package|bundled)|two_wheeler_bundled)_n8n_native_pdf$/.test(parsed.preview.parserId);
+  const isTata = parsed.preview.parserId.startsWith("tata_aig_")
+    && trainedN8nParserProfile(parsed.preview.parserId) !== null;
   const informationalTataWarnings = new Set([
     "tata_aig_issuance_date_unverified",
     "tata_aig_human_review_required",
     "tata_aig_printed_net_rounding",
     "tata_aig_signature_date_not_in_native_text",
+    "tata_aig_issuance_date_requires_verified_pdf_signature",
   ]);
   const blockingWarnings = parsed.preview.warnings.filter(warning =>
     !isTata || !informationalTataWarnings.has(warning));
@@ -181,7 +184,8 @@ export async function prepareVerifiedN8nIntakeHandoff(
   const acceptableCommercialWarning=(value:string)=>
     parsed.preview.parserId==="new_india_cv_native_pdf"
     && value.startsWith("Policy prints only an RTO prefix.");
-  const legacyChecksFailed=parsed.preview.checksPassed!==(isTata?18:13) || blockingWarnings.length>0;
+  const legacyChecksFailed=parsed.preview.checksPassed !== (trainedN8nParserProfile(parsed.preview.parserId)?.checks ?? 13)
+    || blockingWarnings.length > 0;
   if (commercial ? (!commercialChecksOk || parsed.preview.warnings.some(w=>!acceptableCommercialWarning(w)))
       : legacyChecksFailed) {
     return{ok:false,error:"n8n validation warnings must be resolved before creating an onboarding draft."};
