@@ -107,7 +107,7 @@ export default function ImpactScreen() {
                 </View>
                 <View pointerEvents="none" style={styles.heroCoverageBadge}>
                   <Ionicons name="shield-checkmark" size={12} color="#2566CF" />
-                  <Text style={styles.heroCoverageText} numberOfLines={2}>Your coverage this month</Text>
+                  <Text style={styles.heroCoverageText} numberOfLines={2}>Your coverage{'\n'}this month</Text>
                 </View>
               </View>
             </View>
@@ -242,7 +242,7 @@ function MonthStat({ art, label, value, onPress }: {
       onPress={onPress}
       style={({ pressed }) => [styles.monthStat, pressed && styles.monthStatPressed]}
     >
-      <ImpactIcon art={art} size={33} plain />
+      <ImpactIcon art={art} size={44} plain />
       <View style={styles.cardDetails}>
         <Text style={styles.monthValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65}>{value}</Text>
         <Text style={styles.monthLabel} numberOfLines={2}>{label}</Text>
@@ -262,7 +262,15 @@ function ImpactIcon({ art, size, plain = false, footprint = false }: {
   const source = Platform.OS === 'android' && art === 'monthly-policy'
     ? require('../assets/partner/actions/add-policy-reference.png')
     : IMPACT_ART[art];
-  const artworkSize = footprint ? 36 : Math.round(size * 0.89);
+  // Equal 40px footprint slots still look different because the illustrations
+  // have unequal transparent padding. Normalize their visible artwork individually.
+  const footprintArtworkSize: Partial<Record<ImpactArt, number>> = {
+    vehicle: 37,
+    customer: 40,
+    policy: 40,
+    claim: 31,
+  };
+  const artworkSize = footprint ? (footprintArtworkSize[art] ?? 36) : Math.round(size * 0.89);
   return (
     <View style={[
       styles.iconShell,
@@ -300,12 +308,12 @@ const styles = StyleSheet.create({
   heroCar: {width: 78, height: 76, flexShrink: 0, alignItems: 'center', justifyContent: 'center'},
   heroShield: {position: 'absolute', top: 0, right: -2, backgroundColor: '#EFF6FF', borderRadius: 12},
   heroDivider: { width: 1, alignSelf: 'stretch', marginVertical: 4, backgroundColor: '#D1DAE9' },
-  heroDetails: {flex: 1, minWidth: 0, alignSelf: 'stretch', justifyContent: 'flex-start'},
-  heroTopRow: {flexDirection: 'row', alignItems: 'flex-start', gap: 5, justifyContent: 'space-between'},
+  heroDetails: {flex: 1, minWidth: 0, alignSelf: 'stretch', justifyContent: 'center'},
+  heroTopRow: {flexDirection: 'row', alignItems: 'center', gap: 5, justifyContent: 'space-between'},
   heroValueGroup: {flex: 1, minWidth: 0, gap: 0},
   heroEyebrow: {color: '#576580', fontSize: 10, lineHeight: 13, fontWeight: '600'},
   heroValue: {width: '100%', color: '#11274A', fontSize: 23, lineHeight: 28, fontWeight: '800', marginTop: 0},
-  heroCoverageBadge: {width: 106, flexShrink: 0, flexDirection: 'row', alignItems: 'flex-start', gap: 3, borderRadius: 12, paddingHorizontal: 6, paddingVertical: 3, backgroundColor: '#E3EEFF'},
+  heroCoverageBadge: {width: 106, flexShrink: 0, flexDirection: 'row', alignItems: 'center', gap: 3, borderRadius: 12, paddingHorizontal: 6, paddingVertical: 3, backgroundColor: '#E3EEFF'},
   heroCoverageText: {flex: 1, minWidth: 0, color: '#2566CF', fontSize: 9, lineHeight: 11, fontWeight: '600'},
   sectionHeader: { marginTop: 17, marginBottom: 9 },
   sectionTitle: { color: '#17233A', fontSize: 16, fontWeight: '800' },
