@@ -828,7 +828,8 @@ assert(!workerText.includes("const bundledPeriodsVerified=!bundled;")
   && workerText.includes('const bundledPeriodsVerified=!bundled||('),
   "A validated bundled period is not an exception, but actual earlier-month OTP remains blocking");
 assert(workerText.includes('const state:AiQueueState=isDuplicate?"duplicate"')
-  && workerText.includes('filter(e=>e.code!=="preflight_pending")')
+  && workerText.includes('e.code!=="preflight_pending"')
+  && workerText.includes('certifiedIffcoNewVehicle&&e.code==="registration_pending_review"')
   && workerText.includes('existingDuplicate.matches.has(intake.id)')
   && workerText.indexOf('existingDuplicate.matches.has(intake.id)')<workerText.indexOf('const extraction=await previewSemiAutoN8nExtraction'),
   "Recognized duplicate must bypass expensive n8n and preflight pending is not a document exception");
