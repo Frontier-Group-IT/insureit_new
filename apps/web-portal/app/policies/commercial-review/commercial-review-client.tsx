@@ -172,6 +172,10 @@ export function CommercialReviewClient({ rows }: { rows: CommercialReviewRow[] }
     });
   }, [displayedRows, statusKey, status, insurer, intermediary, intermediaryType, vehicleClass, backfill, dateFrom, dateTo, query, side]);
 
+  // Give the table body a fresh DOM identity whenever the visible filter changes.
+  // This prevents recycled/stale table rows from a previous intermediary remaining
+  // painted when the count is already based on the new filteredRows array.
+  const tableFilterKey = JSON.stringify([side, query, insurer, intermediary, intermediaryType, vehicleClass, status, backfill, dateFrom, dateTo]);
   const allFilteredSelected = filteredRows.length > 0 && filteredRows.every((row) => selected.has(row.id));
   const activeTotal = side === "insurer"
     ? filteredRows.reduce((sum, row) => sum + row.projectedTotal, 0)
@@ -268,6 +272,15 @@ export function CommercialReviewClient({ rows }: { rows: CommercialReviewRow[] }
     });
   }
 
+  function changeIntermediary(value: string) {
+    setIntermediary(value);
+    // Never carry selections or edit state from a different intermediary into bulk actions.
+    setSelected(new Set());
+    setEditingId(null);
+    setBulkOpen(false);
+    setMessage(null);
+  }
+
   function clearFilters() {
     setQuery(""); setInsurer("all"); setIntermediary("all"); setIntermediaryType("all"); setVehicleClass("all"); setStatus("all"); setBackfill("all"); setDateFrom(""); setDateTo("");
   }
@@ -299,7 +312,7 @@ export function CommercialReviewClient({ rows }: { rows: CommercialReviewRow[] }
       <div className="mt-2 grid gap-2 xl:grid-cols-[minmax(220px,1.1fr)_minmax(150px,.65fr)_minmax(190px,.8fr)_minmax(165px,.68fr)_minmax(140px,.55fr)_minmax(165px,.68fr)_auto_auto]">
         <label className="relative"><Search className="absolute left-3 top-2.5 h-4 w-4 text-[#98A2B3]" /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Policy / insurer / intermediary" className="h-9 w-full rounded-xl border border-[#D8DEE9] pl-9 pr-3 text-[9.5px] outline-none focus:border-[#315B9A]" /></label>
         <select value={insurer} onChange={(e) => setInsurer(e.target.value)} className="h-9 rounded-xl border border-[#D8DEE9] bg-white px-3 text-[9px]"><option value="all">All insurers</option>{insurers.map((name) => <option key={name}>{name}</option>)}</select>
-        <select value={intermediary} onChange={(e) => setIntermediary(e.target.value)} className="h-9 rounded-xl border border-[#D8DEE9] bg-white px-3 text-[9px]"><option value="all">All intermediaries</option>{intermediaries.map((row) => <option key={row.intermediaryCode ?? row.id} value={row.intermediaryCode ?? ""}>{row.intermediaryName} · {row.intermediaryCode}</option>)}</select>
+        <select value={intermediary} onChange={(e) => changeIntermediary(e.target.value)} className="h-9 rounded-xl border border-[#D8DEE9] bg-white px-3 text-[9px]"><option value="all">All intermediaries</option>{intermediaries.map((row) => <option key={row.intermediaryCode ?? row.id} value={row.intermediaryCode ?? ""}>{row.intermediaryName} · {row.intermediaryCode}</option>)}</select>
         <select value={vehicleClass} onChange={(e) => setVehicleClass(e.target.value)} className="h-9 rounded-xl border border-[#D8DEE9] bg-white px-3 text-[9px]"><option value="all">All vehicle classes</option>{vehicleClasses.map((value) => <option key={value} value={value}>{value === "NON_MOTOR" ? "Non-Motor" : `${value} · ${vehicleClassLabels[value] ?? value}`}</option>)}</select>
         <select value={status} onChange={(e) => setStatus(e.target.value as LedgerStatus | "all")} className="h-9 rounded-xl border border-[#D8DEE9] bg-white px-3 text-[9px]"><option value="all">All statuses</option>{Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>
         <select value={backfill} onChange={(e) => setBackfill(e.target.value as BackfillFilter)} className="h-9 rounded-xl border border-[#D8DEE9] bg-white px-3 text-[9px]"><option value="all">All entries</option><option value="incomplete">Backfill incomplete</option><option value="complete">Complete</option><option value="zero_od">OD = 0%</option><option value="zero_tp">TP = 0%</option><option value="zero_total">Total = ₹0</option></select>
@@ -361,7 +374,7 @@ export function CommercialReviewClient({ rows }: { rows: CommercialReviewRow[] }
             <th className="min-w-[88px] px-2 py-2 text-left">{side === "insurer" ? "Pay-In status" : "Payout status"}</th>
             <th className="sticky right-0 z-40 w-[126px] min-w-[126px] bg-[#F8FAFC] px-2 py-2 text-center">Actions</th>
           </tr></thead>
-          <tbody className="divide-y divide-[#EDF0F4]">{filteredRows.map((row) => {
+          <tbody key={tableFilterKey} className="divide-y divide-[#EDF0F4]">{filteredRows.map((row) => {
             const isEditing = editingId === row.id;
             const rowStatus = row[statusKey];
             const od = side === "insurer" ? row.projectedOdPercent : row.payoutOdPercent;
