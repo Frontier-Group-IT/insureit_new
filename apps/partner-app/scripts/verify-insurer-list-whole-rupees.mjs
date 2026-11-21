@@ -23,17 +23,15 @@ assert.ok(screen.includes('accessibilityLabel={`${insurer.name}, ${column.label}
 assert.ok(screen.includes('getPartnerInsurerRegister(from, to)'));
 assert.ok(screen.includes("context?.identity.actor_kind === 'employee'"), 'Employee/non-employee amounts remain scoped');
 
-assert.ok(screen.includes('accessibilityLabel="Date Range"'), 'Search-row calendar opens Date Range sheet');
-assert.ok(screen.includes('<Modal visible={dateExpanded} transparent'), 'Date Range uses a bottom sheet rather than inline calendar');
-assert.ok(screen.includes('<PartnerDatePicker directSelect label="From"'), 'From uses shared direct-select calendar modal');
-assert.ok(screen.includes('<PartnerDatePicker directSelect label="To"'), 'To uses shared direct-select calendar modal');
-assert.ok(screen.includes('onPress={applyDateRange}'), 'User must explicitly apply draft date range');
+assert.ok(screen.includes('accessibilityLabel="Date Range"'), 'Full-width Date Range opens the inline calendar');
+assert.ok(screen.includes('dateExpanded ? ('), 'Calendar is expanded beneath the date trigger');
+assert.ok(screen.includes("const [pickerTarget, setPickerTarget] = useState<'from' | 'to'>('from')"), 'Single calendar selects both endpoints');
+assert.ok(screen.includes('calendarCells.map((day, index)'), 'A single month calendar grid is rendered');
+assert.ok(screen.includes('setDraft((current) => ({ ...current, [pickerTarget]: selected }))'), 'Calendar updates the selected endpoint');
 assert.ok(screen.includes('disabled={!validDraft}'), 'Invalid date ranges cannot be applied');
-assert.ok(screen.includes('setDraft(range)'), 'Closing without applying restores current range');
 assert.ok(screen.includes('getPartnerInsurerRegister(from, to)'), 'Range remains connected to scoped report fetch');
-assert.ok(screen.includes('All Dates unavailable, report supports a maximum of 366 days'), 'Unsupported unbounded history cannot be submitted');
-assert.ok(!screen.includes('calendarCells.map'), 'Old inline date grid removed');
-assert.ok(!screen.includes('dateModalOpen'), 'No redundant legacy date modal state');
+assert.ok(!screen.includes('DateTimePicker'), 'Avoid clipped native inline calendar');
+assert.ok(!screen.includes('dateModalOpen'), 'Date range is inline, not modal');
 assert.ok(!screen.includes('accessibilityLabel="Financial filters, Date Range and Sort"'), 'Financial filter row removed');
 assert.ok(!screen.includes('accessibilityLabel="Sort insurer register"'), 'Sort filter removed');
 assert.ok(screen.includes("label: 'Pay-In'") && screen.includes("label: 'Retention'"), 'Employee commercial columns retained');
