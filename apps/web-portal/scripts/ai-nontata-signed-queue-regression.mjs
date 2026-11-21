@@ -124,7 +124,7 @@ assert.ok(handoff.includes("const standardCommercialVerifiedFill=Boolean(commerc
   &&handoff.includes("assessStandardCommercialDirectConversion({"),
   "Other commercial parsers must use a strict direct-booking eligibility contract");
 assert.ok(handoff.includes("const iffcoVerifiedFill = Boolean(commercial) && fillEmptyFields")
-  &&handoff.includes("!goDigitVerifiedFill && !iffcoVerifiedFill")
+  &&handoff.includes("!iffcoVerifiedFill && !standardCommercialVerifiedFill")
   &&handoff.includes("assessIffcoAutoOnboarding({"),
   "Certified IFFCO must be allowed through direct handoff without manual reparse");
 assert.ok(handoff.includes('state:eligibleForVerifiedConversion?"verified":"exception"')
