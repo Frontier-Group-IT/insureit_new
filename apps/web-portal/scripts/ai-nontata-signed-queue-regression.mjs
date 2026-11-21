@@ -117,7 +117,9 @@ assert.deepEqual(mapVerifiedGoDigitCommercialPremium({od:2415.46,tp:7647,net:100
   {od:"2415.46",addOnPremium:"0",tp:"7647",cpa:"0",cpaOpted:"No"});
 assert.throws(()=>mapVerifiedGoDigitCommercialPremium({od:2415.46,tp:7647,net:10062.46,gst:1811.24,gross:12000}),
   /n8n_motor_premium_handoff_unreconciled/);
-assert.ok(handoff.includes('state:autoEligibleGoDigit?"verified":"exception"'));
+assert.ok(handoff.includes('state:eligibleForVerifiedConversion?"verified":"exception"')
+  && handoff.includes("autoEligibleGoDigit||iffcoReview.eligible"),
+  "Existing Go Digit eligibility is preserved while narrowly certified IFFCO is added");
 assert.ok(handoff.includes('go_digit_missing_verified_manufacturing_year'));
 assert.ok(component.includes('go_digit_missing_verified_manufacturing_year'));
 // Run the actual helpers on verified commercial evidence, not a copied algorithm.
