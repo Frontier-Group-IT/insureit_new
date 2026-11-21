@@ -394,7 +394,7 @@ const styles = StyleSheet.create({
   brandMeta: { marginTop: 3, color: '#DBE8FF', fontSize: 11 },
   close: { width: 42, height: 42, borderRadius: 24, alignItems: 'center', justifyContent: 'center', backgroundColor: '#2D5998' },
   scroll: { flex: 1 },
-  scrollContent: { flexGrow: 1, paddingHorizontal: 20, paddingTop: 44, paddingBottom: 14, justifyContent: 'center' },
+  scrollContent: { flexGrow: 1, paddingHorizontal: 20, paddingTop: 14, paddingBottom: 14, justifyContent: 'flex-start' },
   storyBackdrop: { ...StyleSheet.absoluteFillObject, overflow: 'hidden' },
   waveUpper: { position: 'absolute', top: -205, left: -110, width: '150%', height: 255, borderBottomLeftRadius: 250, borderBottomRightRadius: 145, backgroundColor: '#0A3478', transform: [{ rotate: '-9deg' }] },
   waveMiddle: { position: 'absolute', top: -45, left: -100, width: '160%', height: 200, borderTopLeftRadius: 245, borderTopRightRadius: 180, backgroundColor: '#CFE2FF', opacity: 0.9, transform: [{ rotate: '-10deg' }] },
