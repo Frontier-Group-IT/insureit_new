@@ -11,7 +11,7 @@ import { requireCapability } from "@/lib/master-data-server";
 import { requirePolicyCreator } from "@/lib/policy-access-server";
 import { isN8nWorkbenchPrimary, previewSemiAutoN8nExtraction } from "@/lib/policy-intake-semi-auto-n8n";
 import type { N8nVerifiedPremiumBreakdown } from "@/lib/policy-intake-n8n-validation";
-import { mapVerifiedN8nMotorPremium } from "@/lib/policy-n8n-onboarding-premium";
+import { mapVerifiedN8nMotorPremium, mapVerifiedIffcoCommercialPremium } from "@/lib/policy-n8n-onboarding-premium";
 import { policyDateDecision } from "@/lib/policy-date-rule";
 import { enrichVerifiedN8nOnboardingFields, resolveManufacturingYearEvidence } from "@/lib/policy-n8n-onboarding-enrichment";
 import { sameInsuredIdentity, selectVerifiedN8nInsuredDraftIdentity } from "@/lib/policy-n8n-onboarding-insured";
@@ -360,13 +360,29 @@ async function preparePolicyIntakeHandoffInternal(
   // Canonical form computes net = Basic OD + add-ons + TP + CPA. The n8n
   // "od_premium" OCR field is *Total OD*, so never copy it directly into
   // the form's Basic OD field and then add add-ons again.
-  // Commercial totals already include paid-driver/owner-driver liabilities in
-  // TP. Put the entire printed liability total into TP, never duplicate CPA.
-  // Booking is deliberately left to an operator reviewing the editable draft.
-  const verifiedPremium=verified?.commercialPremium
-    ? {od:String(verified.commercialPremium.od),tp:String(verified.commercialPremium.tp),
-       addOnPremium:"0",cpa:"0",cpaOpted:"No" as const}
-    : verified?.premium ? mapVerifiedN8nMotorPremium(verified.premium) : null;
+  // The IFFCO Net(B) source prints CPA inside TP. Canonical Motor instead
+  // adds CPA separately; split the *independently printed* CPA out of TP in
+  // paisa, preserving verified OD, net, tax, gross, and paid-driver liability.
+  // Other insurer liability totals retain their existing safe handling.
+  const iffcoCpaFields=verified?.parserId==="iffco_tokio_cv_native_pdf"
+    ?verified.fields.filter(f=>f.key==="cpa_premium"):[];
+  const iffcoCpa=iffcoCpaFields.length===1?Number(iffcoCpaFields[0].value):NaN;
+  if(verified?.parserId==="iffco_tokio_cv_native_pdf"
+     &&(!verified.commercialPremium||verified.checksPassed!==18
+       ||verified.warnings.length>0||iffcoCpaFields.length!==1
+       ||!Number.isFinite(iffcoCpa)||iffcoCpa<0))
+    return{ok:false,error:"IFFCO printed CPA evidence is incomplete; do not calculate an unverified premium."};
+  let verifiedPremium:ReturnType<typeof mapVerifiedN8nMotorPremium>|null=null;
+  try{
+    verifiedPremium=verified?.parserId==="iffco_tokio_cv_native_pdf"
+      ?mapVerifiedIffcoCommercialPremium(verified.commercialPremium!,iffcoCpa)
+      :verified?.commercialPremium
+      ? {od:String(verified.commercialPremium.od),tp:String(verified.commercialPremium.tp),
+         addOnPremium:"0",cpa:"0",cpaOpted:"No"}
+      :verified?.premium ? mapVerifiedN8nMotorPremium(verified.premium) : null;
+  }catch{
+    return{ok:false,error:"IFFCO printed CPA and liability totals do not reconcile; no draft or policy was changed."};
+  }
   const addOnTotal=verifiedPremium?Number(verifiedPremium.addOnPremium):0;
   const yearEvidence=verified?resolveManufacturingYearEvidence(verified.fields):null;
   const yearFallbackNote=yearEvidence?.source==="registration_year_fallback"
@@ -409,7 +425,7 @@ async function preparePolicyIntakeHandoffInternal(
     cpa:verifiedPremium?.cpa??mapped.next.cpa,
     policyNo:mapped.next.policyNo,insurerId:mapped.next.insurerId,validFrom:mapped.next.validFrom,validUpto:mapped.next.validUpto,
     payoutBasis:"NET",projectedOdPercent:"",projectedTpPercent:"",insurerScheme:"",payinBillNo:"",payinBilledAmount:"",payinBillDate:"",payinStatus:"Unbilled",retention:"",payoutOdPercent:"",payoutTpPercent:"",flatPayoutAmount:"",payoutStatus:"Pending",payoutDate:"",payoutVoucherNo:"",remarks:verified?.commercialPremium
-      ? `Policy Intake ${id} — independently validated commercial-motor PDF (${verified.parserId}). REVIEW ONLY; no policy or customer was booked. Printed OD ${verified.commercialPremium.od}, TP including liabilities ${verified.commercialPremium.tp}, Net ${verified.commercialPremium.net}, GST ${verified.commercialPremium.gst}, Gross ${verified.commercialPremium.gross}. Owner-driver PA and paid-driver liabilities are retained inside printed TP; do not add CPA a second time. Confirm vehicle class, registration, policy dates, premiums and all other fields before booking.${yearFallbackNote}${niaProvisionalRtoNote}`
+      ? `Policy Intake ${id} — independently validated commercial-motor PDF (${verified.parserId}). REVIEW ONLY; no policy or customer was booked. Printed OD ${verified.commercialPremium.od}, TP including liabilities ${verified.commercialPremium.tp}, Net ${verified.commercialPremium.net}, GST ${verified.commercialPremium.gst}, Gross ${verified.commercialPremium.gross}. ${verified.parserId==="iffco_tokio_cv_native_pdf" ? `IFFCO source Net(B) ${verified.commercialPremium.tp} includes owner-driver CPA ${iffcoCpa}. Canonical TP ${verifiedPremium?.tp} excludes that CPA, and CPA is entered separately as ${verifiedPremium?.cpa}; their sum equals printed Net(B).` : "Owner-driver PA and paid-driver liabilities are retained inside printed TP; do not add CPA a second time."} Confirm vehicle class, registration, policy dates, premiums and all other fields before booking.${yearFallbackNote}${niaProvisionalRtoNote}`
       : verified && verified.premium
       ? `Policy Intake ${id} — n8n validated ${verified.premium.tataAig ? "Tata AIG private car" : "ICICI 3005"} PDF. Review every prefilled value before booking.
 PDF premium reconciliation: Printed Basic OD ${verified.premium.basicOd} + OD add-ons ${addOnTotal} - validated NCB/OD deductions ${verified.premium.odDeductions??0} = Total OD ${verified.premium.totalOd}; net-of-deductions Basic OD entered for onboarding ${verifiedPremium?.od??"unavailable"}. TP ${verified.premium.basicTp}, CPA ${verified.premium.cpa}, Net ${verified.premium.net}, GST ${verified.premium.tax}, Gross ${verified.premium.gross}.
