@@ -335,6 +335,30 @@ for (const fragment of [
   'style={[styles.top, { paddingTop: insets.top + 11 }]}',
   'style={styles.progress}',
 ]) requireText(stories, fragment, 'All INSUREIT Story slides must keep progress dashes below Android/iOS status bars: ' + fragment);
+// Stories reference: continuous illustrated slide, not the former floating card.
+for (const [fragment, reason] of [
+  ['style={styles.storyBackdrop}', 'Stories use a shared blue curved canvas'],
+  ['style={styles.waveUpper}', 'Header wave is integrated with the story'],
+  ['style={styles.waveMiddle}', 'Blue-white flowing background continues behind story copy'],
+  ['style={styles.lessonBadge}', 'Eyebrow is a centered rounded badge'],
+  ['style={styles.titleRule}', 'Centered title has the reference underline'],
+  ['style={styles.body}', 'Story question is centered'],
+  ['style={styles.illustrationWrap}', 'Large illustration sits underneath question'],
+  ['style={styles.completedPill}', 'Completed learning status sits below illustration'],
+  ['style={[styles.navButton, styles.navButtonPrimary]}', 'Forward arrow uses a prominent filled blue button'],
+  ["backgroundColor: '#0955CC'", 'Forward footer action uses royal blue'],
+  ["height: 57", 'Footer arrows are large reference-style circular buttons'],
+  ['<StoryIllustration kind={story.kind} body={story.body} />', 'Artwork adapts to the current story type'],
+  ["if (kind === 'learn' && /vehicle number/i.test(body))", 'Vehicle-servicing story uses car and number plate'],
+  ["require('../assets/partner/actions/impact-blue-3d-car.png')", 'Learning illustration reuses bundled blue 3D car'],
+  ['MH12AB1234', 'Example learning plate illustrates vehicle number'],
+  ["onPress={openStory}", 'Story title retains navigation'],
+  ["onPress={previous}", 'Previous story stays functional'],
+  ["onPress={next}", 'Next story stays functional'],
+]) requireText(stories, fragment, 'Stories reference redesign missing: ' + reason);
+for (const deprecated of ['styles.metricCard', 'styles.cardCorner', 'styles.metricHeader', 'styles.lowerWave', 'styles.titleArrow']) {
+  if (stories.includes(deprecated)) throw new Error('Old card-based Stories layout remains: ' + deprecated);
+}
 const recognition = read('app/recognition.tsx');
 const learn = read('app/learn.tsx');
 for (const [screen, title, icon] of [
