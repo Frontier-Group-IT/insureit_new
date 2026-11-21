@@ -1,12 +1,12 @@
 Partner production OTA trigger
-release=support-hero-edge-to-edge-pr-5024
+release=partner-all-regular-typography-pr-5035
 source=verified-merged-main
-source_pr=5024
-source_merge=735c7e138ae2ceaa0c57dfbf21675e062b5ec9a8
-reason=user-approved-merge-and-publish-support-hero-edge-to-edge
+source_pr=5035
+source_merge=559d2c8dab667aa5563529c8e17341d5d92d60a1
+reason=user-approved-merge-and-publish-all-regular-typography
 channel=production
 runtime=0.2.0
-requested=2026-11-20
+requested=2026-11-21
 no_native_build=true
 no_apk=true
 no_aab=true
