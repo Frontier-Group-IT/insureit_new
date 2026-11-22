@@ -28,7 +28,7 @@ const permission=read("lib/permission-management.ts");
 assert.match(permission,/lifeHeadPermissionCeiling/);
 assert.match(permission,/role==="operations_head_life"/);
 const policyDocuments=read("app/policies/policy-document-actions.ts");
-assert.match(policyDocuments,/profile.role === "operations_head_life"/);
+assert.doesNotMatch(policyDocuments,/canAccessCustomer\(/, "A customer-level read cannot substitute for policy-specific document authorization.");
 assert.match(policyDocuments,/canAccessPolicy\(profile.id, profile.role, documentRow.policy_id, "view_policies"\)/);
 const caseList=read("app/policies/life-health-cases/page.tsx");
 assert.ok(caseList.includes(".or(downlineCaseFilter)"));
