@@ -20,7 +20,8 @@ BEGIN
   ] LOOP
     SELECT pg_get_functiondef(p.oid) INTO body
       FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-     WHERE n.nspname = 'public' AND p.proname = fn AND p.pronargs = 0;
+     WHERE n.nspname = 'public' AND p.proname = fn
+       AND p.pronargs = CASE WHEN fn IN ('advance_initial_documents_verified', 'complete_spot_survey') THEN 2 ELSE 0 END;
     IF body IS NULL OR position(new_lookup IN body) = 0
        OR (fn IN ('persist_initial_document_submission_from_stage_details',
                   'persist_managed_claim_stage_transition_from_details')
