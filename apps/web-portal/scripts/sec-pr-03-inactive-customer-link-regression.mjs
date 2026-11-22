@@ -1,0 +1,15 @@
+import { readFileSync } from "node:fs";
+import { strict as assert } from "node:assert";
+const sql = readFileSync(new URL("../../../supabase/migrations/20261107180500_prevent_inactive_customer_account_link.sql", import.meta.url), "utf8");
+const guard = sql.indexOf("p.is_active is not true");
+const profileUpsert = sql.indexOf("insert into public.profiles");
+const customerUpdate = sql.indexOf("update public.customers");
+assert.ok(guard >= 0 && guard < profileUpsert && guard < customerUpdate, "Inactive profile must be checked before all mutations.");
+assert.match(sql, /raise exception 'This account is inactive/, "Inactive self-link should be blocked.");
+assert.match(sql, /for update/, "Existing profile is locked for check and mutation.");
+assert.doesNotMatch(sql, /on conflict \(id\) do update[\s\S]*?is_active\s*=\s*true\s*;/i, "Conflict update cannot reactivate an inactive profile.");
+assert.match(sql, /insert into public\.profiles/, "First-time customer signup must remain.");
+assert.match(sql, /update public\.customers/, "Existing customer relationship logic must remain.");
+assert.match(sql, /insert into public\.customer_memberships/, "Customer membership link remains.");
+assert.match(sql, /revoke all on function public\.link_existing_customer_account/, "Preserve function permissions.");
+console.log("SEC-PR-03 static inactive account guard verified; runtime IAM scenarios NOT tested.");
