@@ -31,8 +31,9 @@ export async function GET(request: Request) {
   if (authError || !auth.user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
 
   const { data: identity, error: identityError } = await scoped.rpc("partner_app_current_identity");
-  if (identityError || !identity || identity.auth_user_id !== auth.user.id) {
-    return NextResponse.json({ error: "Partner identity unavailable." }, { status: 403 });
+  if (identityError) return NextResponse.json({ error: "Partner identity service unavailable." }, { status: 503 });
+  if (!identity || identity.auth_user_id !== auth.user.id) {
+    return NextResponse.json({ error: "Partner identity is not authorized." }, { status: 403 });
   }
   const admin = createSupabaseAdminClient();
   if (identity.actor_kind === "employee") {
@@ -41,11 +42,13 @@ export async function GET(request: Request) {
     }
     const { data: profile, error } = await admin.from("profiles")
       .select("id,role,is_active,employee_id").eq("id", auth.user.id).maybeSingle();
-    if (error || !profile?.is_active || !profile.employee_id || profile.role !== identity.role) {
+    if (error) return NextResponse.json({ error: "Employee access service unavailable." }, { status: 503 });
+    if (!profile?.is_active || !profile.employee_id || profile.role !== identity.role) {
       return NextResponse.json({ error: "Employee access unavailable." }, { status: 403 });
     }
-    const { data: employee } = await admin.from("employees").select("employment_status")
+    const { data: employee, error: employeeError } = await admin.from("employees").select("employment_status")
       .eq("id", profile.employee_id).maybeSingle();
+    if (employeeError) return NextResponse.json({ error: "Employee status service unavailable." }, { status: 503 });
     if (employee?.employment_status !== "active") {
       return NextResponse.json({ error: "Employee access inactive." }, { status: 403 });
     }
@@ -61,7 +64,8 @@ export async function GET(request: Request) {
   // identity, commercial scope, and server/RLS operations; never inherit an
   // internal employee's administrative capabilities.
   const { data: scope, error: scopeError } = await scoped.rpc("partner_app_commercial_scope");
-  if (scopeError || !scope || scope.actor_kind !== "intermediary") {
+  if (scopeError) return NextResponse.json({ error: "Partner scope service unavailable." }, { status: 503 });
+  if (!scope || scope.actor_kind !== "intermediary") {
     return NextResponse.json({ error: "Partner scope unavailable." }, { status: 403 });
   }
   return NextResponse.json({ actor_kind: "intermediary", capabilities: partnerGrants, can_view_insurer_commercials: false }, {
