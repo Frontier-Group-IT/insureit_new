@@ -1,13 +1,12 @@
 Partner production OTA trigger
-release=partner-native-ai-studio-read-only
+release=partner-stories-progress-below-heading-home-navigation
 source=verified-merged-main
-source_pr=5136
-source_merge=07bc1fcd331402dda864a510153a2917c5132197
-reason=user-approved-publish-before-edge-backend-extension
+source_pr=5142
+source_merge=10e975da1692effc8ab677e098ccbeef781eb87b
+reason=user-approved-merge-and-publish-stories-header-timeline-and-home-tabs
 channel=production
 runtime=0.2.0
 requested=2026-11-23
-precondition=secure-rpcs-installed-and-verified
 no_native_build=true
 no_apk=true
 no_aab=true
