@@ -1,5 +1,5 @@
-// First independent Partner Policy Onboarding service operation.
-// Only new_prepare is implemented. Do NOT switch the mobile API until all actions
+// Independent Partner Policy Onboarding migration (read-only and draft-save operations).
+// Do NOT switch the mobile API until all booking and document actions
 // have equivalent authorization/booking/approval/document business rules.
 import { createClient } from "npm:@supabase/supabase-js@2.57.0";
 
@@ -112,7 +112,7 @@ Deno.serve(async (request: Request) => {
           if(value===undefined||value==="")continue;
           if(key==="payinBasis"||key==="partnerPayoutBasis"){
             if(!["NET","FLAT"].includes(value))return json({ok:false,error:"Invalid commercial basis."},400);
-          }else if(!/^\\d+(?:\\.\\d{1,2})?$/.test(value)||
+          }else if(!/^\d+(?:\.\d{1,2})?$/.test(value)||
             !Number.isFinite(Number(value))||
             Number(value)>(key.endsWith("Value")&&values[key.replace("Value","Basis")]==="NET"?100:100000000000)){
             return json({ok:false,error:"Invalid projected commercial value."},400);
@@ -164,14 +164,19 @@ Deno.serve(async (request: Request) => {
       next.productDrafts=Object.fromEntries(Object.entries(productDrafts as Record<string,Record<string,string>>)
         .map(([type,values])=>[type,{...(prior[type]??{}),...values}]));
     }
-    // Compare-and-set on revision AND reviewer/status; preserve stored-only fields.
-    const {data:saved,error:saveError}=await admin.from("policy_intake_onboarding_drafts")
-      .update({draft_payload:next,revision:revision+1,
-        updated_by_profile_id:uid,updated_at:new Date().toISOString()})
-      .eq("intake_id",intakeId).eq("revision",revision)
-      .select("revision").maybeSingle();
+    // This service-role-only RPC serializes intake assignment/status and draft
+    // revision inside one Postgres transaction, preventing reassignment races.
+    const {data:saved,error:saveError}=await admin.rpc('partner_app_save_intake_draft_atomic',{
+      p_intake_id:intakeId,
+      p_reviewer_id:uid,
+      p_expected_revision:revision,
+      p_draft:next,
+    });
     if(saveError)return json({ok:false,error:"Policy Onboarding draft could not be saved."},503);
-    if(!saved)return json({ok:false,error:"The draft was edited elsewhere. Reload before saving."},409);
+    if(!saved||saved.ok!==true){
+      const status=saved?.status===400?400:409;
+      return json({ok:false,error:String(saved?.error??"Draft changed. Reload before saving.")},status);
+    }
     return json({ok:true,revision:saved.revision});
   }
   if (body.action === "customer_search") {
