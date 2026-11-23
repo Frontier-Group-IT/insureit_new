@@ -13,7 +13,7 @@ async function call(method: 'GET' | 'POST') {
   }
   const body = data as { request?: AccountDeletionRequest | null; error?: string } | null;
   if (body?.error) throw new Error(body.error);
-  return body.request ?? null;
+  return body?.request ?? null;
 }
 export const getAccountDeletionRequest = () => call('GET');
 export const submitAccountDeletionRequest = () => call('POST');
