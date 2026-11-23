@@ -7,6 +7,22 @@ import { buildPolicyOcrOnboardingUpdate } from "../lib/policy-ocr-onboarding-app
 import { selectVerifiedN8nInsuredDraftIdentity } from "../lib/policy-n8n-onboarding-insured.ts";
 
 const IDS={intakeId:"00000000-0000-4000-8000-000000000001",documentId:"00000000-0000-4000-8000-000000000002",requestId:"00000000-0000-4000-8000-000000000003"};
+for(const parserId of [
+  "tata_aig_private_car_liability_only_n8n_native_pdf",
+  "tata_aig_private_car_three_year_tp_n8n_native_pdf",
+]){
+  const verifiedName=selectVerifiedN8nInsuredDraftIdentity([
+    {key:"insured_name",value:"Mr SANKALP BHARADWAJ",page:1,evidence:"Tata AIG Liability Only Policy Schedule"},
+  ],null,parserId);
+  assert.equal(verifiedName.name,"Mr SANKALP BHARADWAJ");
+  assert.equal(verifiedName.source,"verified_pdf");
+  assert.equal(verifiedName.matchedCustomerId,null,"OCR name must not auto-link a customer");
+  const untrusted=selectVerifiedN8nInsuredDraftIdentity([
+    {key:"insured_name",value:"Mr SANKALP BHARADWAJ",page:1,evidence:"unverified OCR"},
+  ],null,parserId);
+  assert.equal(untrusted.name,"","Unverified labels must not populate the canonical name");
+}
+
 const read=name=>JSON.parse(fs.readFileSync(fileURLToPath(new URL(`./fixtures/tata-aig-n8n-${name}-synthetic.json`,import.meta.url)),"utf8"));
 const copy=v=>structuredClone(v);
 const get=(fields,key)=>fields.find(field=>field.key===key)?.value??"";
