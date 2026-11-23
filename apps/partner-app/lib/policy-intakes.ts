@@ -3,6 +3,7 @@ import type { DocumentPickerAsset } from 'expo-document-picker';
 import { Platform } from 'react-native';
 
 import { getCurrentSession } from '@/lib/partner-session';
+import { supabase } from '@/lib/supabase';
 
 const portalUrl = (process.env.EXPO_PUBLIC_PORTAL_URL || 'https://portal.insureit.in').replace(/\/$/, '');
 
@@ -161,8 +162,11 @@ export function partnerPolicyIntakeMatchUrl(path: string): string | null {
 }
 
 export async function listPartnerPolicyIntakeSources(): Promise<PartnerPolicyIntakeSource[]> {
-  const result = await apiRequest<IntakeSourcesResponse>('/api/partner/policy-intakes?view=sources');
-  return Array.isArray(result.sources) ? result.sources : [];
+  const {data,error}=await supabase.functions.invoke('partner-intake-sources',{body:{}});
+  const result=data as (IntakeSourcesResponse & {error?:string})|null;
+  if(error||!result?.ok||!Array.isArray(result.sources))
+    throw new Error(result?.error||'Authorized Policy Intake sources are unavailable.');
+  return result.sources;
 }
 
 export async function submitPartnerPolicyIntake(input: {
