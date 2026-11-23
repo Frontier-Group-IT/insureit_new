@@ -1,3 +1,18 @@
+## Additional migrated services (2026-11-23)
+- `partner-policy-copy` v1: JWT-protected Motor creator-only copy attachment, one-time signed upload and verified stored MIME/size.
+- `partner-onboarding-documents` v2: scoped Life/Health/Non Motor signed upload, verified finalization, replacement and removal. Client uses Supabase Storage, not Vercel.
+- `partner-customer-create` v1: idempotent source-scoped customer creation, PAN/GST validation, customer-scoped private PDF/JPG/PNG KYC staging and verified file signature. Mobile customer creation/upload moved to Edge in draft PR; no production customer writes tested.
+- `partner-intake-sources` v1: authenticated source dropdown with exact branch parent Partner exception and active intermediary scope. Mobile source list moved to Edge in draft PR.
+- All four JWT-protected functions deployed and operational status confirmed in Supabase control plane; **not device-UAT-confirmed**.
+
+## Remaining Vercel dependencies blocking production cutover
+- Full `/api/partner/policy-intakes` GET and POST route (read list/detail/status, OCR classification, upload preparation/finalization, replacements and review_status), plus scoped policy copy signed read and website handoff.
+- `/api/partner/policy-intakes/native-onboarding`: Motor booking conflict checks, date approvals, Authbridge RC lookup, standalone new-book and Life/Health case transactions; new preparatory Edge actions do not replace these.
+- Life/Health case read/edit/issue, Add Partner onboarding and document staging, remaining external workflows and website links.
+- Email OTP vendor secrets and RC provider credentials must be configured in Supabase Functions; they cannot be inferred or moved from suspended Vercel without authorization and secret inventory.
+- Cloudflare OpenNext route exists in repo, but current live Worker and deployed SHA have not been verified, so it is **not** a safe automatic fallback.
+- Run `node apps/partner-app/scripts/audit-vercel-dependencies.mjs --enforce` only when all route replacements are complete. The audit must return no dependency hits, and role-based iOS/Android UAT must pass, before Expo production OTA.
+
 ## Supabase document upload/replace/delete migration
 - New `partner-policy-copy` Edge Function v1 deployed with JWT verification; employee creator-only standalone Motor policy copy (15 MB), private Storage one-time signed uploads, file-size/MIME check before metadata linking, and retry-safe finalization. Expo client uses `supabase.functions.invoke` and `uploadToSignedUrl`.
 - Upgraded `partner-onboarding-documents` Edge Function to v2 with JWT verification for Life, Health and Non Motor; supports assigned-reviewer `list`, `prepare_upload`, `finalize_upload`, and `delete`. Restricts filenames and MIME, preserves existing 4 MB cap and saved business line, verifies stored file properties, replaces metadata before deleting old Storage object, and keeps private bucket paths out of list responses. Expo client uses Edge and signed Storage, not Vercel.
