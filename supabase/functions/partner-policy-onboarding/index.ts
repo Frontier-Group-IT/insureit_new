@@ -66,8 +66,8 @@ Deno.serve(async (request: Request) => {
     const intakeId=typeof body.intake_id==="string" ? body.intake_id : "";
     const revision=body.revision;
     const input=body.draft;
-    if(!uuid.test(intakeId) || !Number.isSafeInteger(revision) ||
-       typeof revision!=="number" || revision<1 ||
+    if(!uuid.test(intakeId) || typeof revision!=="number" ||
+       !Number.isSafeInteger(revision) || revision<1 ||
        !input || typeof input!=="object" || Array.isArray(input)){
       return json({ok:false,error:"Invalid draft revision or values."},400);
     }
