@@ -23,6 +23,7 @@ const mobileDeletion=read('apps/partner-app/lib/account-deletion.ts');
 const mobileOnboarding=read('apps/partner-app/lib/policy-onboarding.ts');
 const mobileCustomers=read('apps/partner-app/lib/customers.ts');
 const mobileIntakes=read('apps/partner-app/lib/policy-intakes.ts');
+const insurerLogo=read('apps/partner-app/components/ui/partner-insurer-logo.tsx');
 const mobilePush=read('apps/partner-app/lib/partner-notifications.ts');
 for(const [name,code] of [['onboarding',onboarding],['deletion',deletion],['push',push],['sources',sources],['onboarding-documents',onboardingDocs],['policy-copy',policyCopy],['customer-create',customerService],['intake-sources',intakeSources]]){
   assert.match(code,/auth\.getUser\(/,`${name} must check the caller's JWT`);
@@ -113,4 +114,8 @@ assert.match(intakeSources,/scope.partner_ids.includes\(identity.portal_access_e
 assert.match(intakeSources,/parent\?\.partner_status==="active_partner"/, 'Parent source requires active Partner');
 assert.match(intakeSources,/eq\("account_status","active"\)/, 'Directory must filter active intermediaries');
 assert.match(mobileIntakes,/functions.invoke\('partner-intake-sources'/, 'Mobile intake sources must use Supabase Edge');
-console.log('Supabase Edge migration auth, documents, customers and intake-source contracts verified');
+assert.match(insurerLogo,/supabase\.from\('insurance_companies'\)/,'Managed insurer logos must be read from Supabase');
+assert.match(insurerLogo,/\.from\('insurer-assets'\)\.getPublicUrl/,'Managed insurer logos use public Supabase Storage');
+assert.match(insurerLogo,/getPartnerInsurerLogoSource\(name\)/,'Insurer logos retain offline bundled fallback');
+assert.doesNotMatch(insurerLogo,/portal\.insureit\.in|api\/insurer-logo/,'Insurer logo must not depend on Vercel');
+console.log('Supabase Edge migration auth, documents, customers, insurer logos and intake-source contracts verified');
