@@ -214,7 +214,7 @@ function CardHeader({ iconKind, title, actionLabel, onAction, tinted = false }: 
       <View style={styles.cardHeaderLeft}>{iconKind ? <PartnerPolicyDetailIcon kind={iconKind} size={22} showBadge={false} /> : null}<Text style={styles.cardTitle}>{title}</Text></View>
       {actionLabel ? (
         <Pressable accessibilityRole="button" disabled={!onAction} onPress={onAction} hitSlop={8} style={({ pressed }) => [styles.cardHeaderAction, pressed && onAction ? styles.pressed : null]}>
-          <Text style={styles.cardHeaderActionText}>{actionLabel}</Text><Ionicons name="chevron-forward" size={13} color="#0969CF" />
+          <Text style={styles.cardHeaderActionText}>{actionLabel}</Text>
         </Pressable>
       ) : null}
     </View>
@@ -238,7 +238,7 @@ function QuickAction({ iconKind, label, onPress }: {
       accessibilityRole="button"
       accessibilityLabel={label}
       onPress={onPress}
-      style={({ pressed }) => [styles.quickAction, pressed && styles.pressed]}
+      style={({ pressed }) => [styles.quickAction, iconKind === 'policy-document' ? styles.quickDocument : iconKind === 'renew-policy' ? styles.quickRenewal : iconKind === 'raise-claim' ? styles.quickClaim : styles.quickCustomer, pressed && styles.pressed]}
     >
       <View style={styles.quickActionIcon}>
         <Image source={illustration} style={iconKind === 'renew-policy' || iconKind === 'raise-claim' ? styles.quickActionArtworkCompact : styles.quickActionArtwork} resizeMode="contain" accessibilityIgnoresInvertColors />
@@ -249,7 +249,10 @@ function QuickAction({ iconKind, label, onPress }: {
 }
 
 function OverviewItem({ iconKind, label, value, insurerName }: { iconKind: PartnerPolicyDetailIconKind; label: string; value: string; insurerName?: string | null }) {
-  return <View style={styles.overviewItem}>{insurerName ? <View style={styles.overviewLogoWrap}><PartnerInsurerLogo name={insurerName} fallback={PartnerAssets.products.motorInsurance} style={styles.overviewLogo} /></View> : <PartnerPolicyDetailIcon kind={iconKind} size={17} tone="neutral" />}<View style={styles.overviewCopy}><Text style={styles.overviewLabel}>{label}</Text><Text numberOfLines={2} style={styles.overviewValue}>{value}</Text></View></View>;
+  const colorStyle = label === 'Category' || label === 'IDV' ? styles.toneBlue
+    : label === 'Product' || label === 'Total Premium' ? styles.tonePurple
+    : label === 'Issuance Date' ? styles.toneMint : styles.toneAmber;
+  return <View style={[styles.overviewItem, colorStyle]}>{insurerName ? <View style={styles.overviewLogoWrap}><PartnerInsurerLogo name={insurerName} fallback={PartnerAssets.products.motorInsurance} style={styles.overviewLogo} /></View> : <PartnerPolicyDetailIcon kind={iconKind} size={17} tone="neutral" />}<View style={styles.overviewCopy}><Text style={styles.overviewLabel}>{label}</Text><Text numberOfLines={2} style={styles.overviewValue}>{value}</Text></View></View>;
 }
 
 function EntityRow({ image, icon, title, subtitle, onPress }: { image?: ImageSourcePropType; icon?: keyof typeof Ionicons.glyphMap; title: string; subtitle: string; onPress?: () => void }) {
@@ -317,7 +320,18 @@ function InsurerMiniInfo({ name }: { name: string | null | undefined }) {
     </View>
   );
 }
-function MiniInfo({ label, value, compact = false, threeColumn = false }: { label: string; value: string; compact?: boolean; threeColumn?: boolean }) { return <View style={[styles.miniInfo, compact && styles.miniInfoCompact, threeColumn && styles.miniInfoThreeColumn]}><Text style={styles.miniLabel}>{label}</Text><Text style={styles.miniValue}>{value}</Text></View>; }
+function MiniInfo({ label, value, compact = false, threeColumn = false }: { label: string; value: string; compact?: boolean; threeColumn?: boolean }) {
+  const premiumTone = label === 'Net premium' ? styles.toneMint
+    : label === 'OD premium' ? styles.toneBlue
+    : label === 'TP premium' ? styles.tonePurple
+    : label === 'GST' ? styles.toneAmber
+    : label === 'CPA' ? styles.toneRose : null;
+  const salesTone = label === 'RM' ? styles.toneAmber
+    : label === 'Intermediary' ? styles.toneMint
+    : label === 'Group' ? styles.tonePurple
+    : label === 'Policy lifecycle' ? styles.toneRose : null;
+  return <View style={[styles.miniInfo, compact && styles.miniInfoCompact, threeColumn && styles.miniInfoThreeColumn, compact ? premiumTone : salesTone]}><Text style={styles.miniLabel}>{label}</Text><Text style={styles.miniValue}>{value}</Text></View>;
+}
 function policyArtwork(category: string): ImageSourcePropType { if (category === 'Motor') return PartnerAssets.products.motorInsurance; if (category === 'Health') return PartnerAssets.products.healthInsurance; if (category === 'Life') return PartnerAssets.products.familyInsurance; return PartnerAssets.products.commercialInsurance; }
 function displayParts(...values: Array<string | number | null | undefined>) { return values.map((value) => value == null ? '' : String(value).trim()).filter((value) => value && value.toLowerCase() !== 'null' && value.toLowerCase() !== 'undefined').join(' · '); }
 function policyCategory(data: PartnerPolicyDetail) { const value = [data.policy.policy_type, data.policy.policy_product, data.policy.business_line].filter(Boolean).join(' ').toLowerCase(); if (value.includes('health')) return 'Health'; if (value.includes('life')) return 'Life'; if (value.includes('motor') || data.vehicle) return 'Motor'; return 'Non-Motor'; }
@@ -361,20 +375,25 @@ const styles = StyleSheet.create({
   periodValue: { color: '#53677F', fontSize: 10, lineHeight: 14, fontWeight: '700', textAlign: 'right' },
   externalSection: { gap: 5 },
   externalSectionHeading: { marginLeft: -6, paddingLeft: 0, paddingRight: 2 },
-  card: { overflow: 'hidden', borderRadius: 13, borderWidth: StyleSheet.hairlineWidth, borderColor: '#E2E8F1', backgroundColor: '#FFFFFF' },
-  customerVehicleBorder: { borderColor: '#3993F5', borderWidth: 1 },
+  card: { overflow: 'hidden', borderRadius: 15, borderWidth: StyleSheet.hairlineWidth, borderColor: '#DEDFF1', backgroundColor: '#FFFFFF' },
+  customerVehicleBorder: { borderColor: '#3993F5', borderWidth: 1, backgroundColor: '#F3F8FF' },
   cardHeader: { minHeight: 37, paddingHorizontal: 11, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   cardHeaderCompact: { minHeight: 30 },
-  policySectionHeaderTint: { backgroundColor: '#E8F0FB' },
+  policySectionHeaderTint: { backgroundColor: '#EDE4FF' },
   cardHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 7 }, cardTitle: { color: '#102A51', fontSize: 12.5, lineHeight: 16, fontWeight: '800' },
   cardHeaderAction: { flexDirection: 'row', alignItems: 'center', gap: 1, minHeight: 32, paddingLeft: 8 }, cardHeaderActionText: { color: '#0969CF', fontSize: 9, lineHeight: 12, fontWeight: '700' },
-  quickSection: { marginHorizontal: 12, paddingVertical: 4 },
-  quickSectionHeading: { marginLeft: -6, marginRight: 3, marginBottom: 5, color: '#17365D', fontSize: 12, lineHeight: 16, fontWeight: '800' },
-  quickGrid: { flexDirection: 'row', alignItems: 'stretch', gap: 7 },
+  quickSection: { marginHorizontal: 0, paddingVertical: 8 },
+  quickSectionHeading: { marginLeft: 3, marginRight: 3, marginBottom: 9, color: '#17365D', fontSize: 13, lineHeight: 18, fontWeight: '800' },
+  quickGrid: { flexDirection: 'row', alignItems: 'stretch', gap: 6 },
   quickAction: {
-    flex: 1, minWidth: 0, minHeight: 68, alignItems: 'center', justifyContent: 'center',
-    paddingHorizontal: 2, paddingVertical: 6, gap: 4, backgroundColor: 'transparent',
+    flex: 1, minWidth: 0, minHeight: 94, alignItems: 'center', justifyContent: 'center',
+    paddingHorizontal: 3, paddingVertical: 9, gap: 5, borderRadius: 13,
+    borderWidth: StyleSheet.hairlineWidth, borderColor: '#E0E9F6',
   },
+  quickDocument: { backgroundColor: '#E5F0FF', borderColor: '#C9DFFA' },
+  quickRenewal: { backgroundColor: '#F0E6FF', borderColor: '#E0CFFF' },
+  quickClaim: { backgroundColor: '#E0F8F0', borderColor: '#BEE9DB' },
+  quickCustomer: { backgroundColor: '#FFF0DF', borderColor: '#F9DFC0' },
   quickActionIcon: { width: 54, height: 54, alignItems: 'center', justifyContent: 'center' },
   quickActionArtwork: { width: 54, height: 54 },
   quickActionArtworkCompact: { width: 43, height: 43 },
@@ -383,14 +402,19 @@ const styles = StyleSheet.create({
     fontWeight: '800', width: '100%', includeFontPadding: false,
   },
   overviewGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 5, paddingHorizontal: 9, paddingBottom: 9 },
-  overviewItem: { width: '31%', flexGrow: 1, minWidth: 0, minHeight: 54, flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 6, paddingHorizontal: 4, borderWidth: StyleSheet.hairlineWidth, borderColor: '#DCE7F3', borderRadius: 9 },
-  overviewLogoWrap: { width: 23, height: 23, borderRadius: 9, backgroundColor: '#F0F5FC', alignItems: 'center', justifyContent: 'center' }, overviewLogo: { width: 20, height: 20 }, overviewCopy: { flex: 1, minWidth: 0 }, overviewLabel: { color: '#8A95A6', fontSize: 8.5, lineHeight: 10 }, overviewValue: { marginTop: 2, color: '#192B46', fontSize: 10, lineHeight: 13, fontWeight: '700' },
+  overviewItem: { width: '31%', flexGrow: 1, minWidth: 0, minHeight: 60, flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 7, paddingHorizontal: 6, borderWidth: StyleSheet.hairlineWidth, borderColor: '#DCE7F3', borderRadius: 11 },
+  toneBlue: { backgroundColor: '#E7F2FF', borderColor: '#D1E5FF' },
+  tonePurple: { backgroundColor: '#F1E8FF', borderColor: '#E8D8FF' },
+  toneMint: { backgroundColor: '#E1F8EE', borderColor: '#C7EEDF' },
+  toneAmber: { backgroundColor: '#FFF2E3', borderColor: '#F7DFC3' },
+  toneRose: { backgroundColor: '#FCEAF4', borderColor: '#F6D6E9' },
+  overviewLogoWrap: { width: 23, height: 23, borderRadius: 9, backgroundColor: '#F0F5FC', alignItems: 'center', justifyContent: 'center' }, overviewLogo: { width: 20, height: 20 }, overviewCopy: { flex: 1, minWidth: 0 }, overviewLabel: { color: '#59677D', fontSize: 8.5, lineHeight: 10 }, overviewValue: { marginTop: 2, color: '#192B46', fontSize: 10, lineHeight: 13, fontWeight: '700' },
   unifiedSectionDivider: { height: StyleSheet.hairlineWidth, backgroundColor: '#E3E9F1', marginHorizontal: 10, marginVertical: 2 },
-  premiumDisclosure: { minHeight: 47, marginHorizontal: 0, marginBottom: 8, paddingHorizontal: 11, borderRadius: 0, flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: '#E8F0FB' },
-  commercialRow: { minHeight: 47, marginHorizontal: 0, marginBottom: 8, paddingHorizontal: 11, borderRadius: 0, flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: '#E8F0FB' },
+  premiumDisclosure: { minHeight: 50, marginHorizontal: 0, marginBottom: 8, paddingHorizontal: 11, borderRadius: 0, flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: '#DCF6F0' },
+  commercialRow: { minHeight: 50, marginHorizontal: 0, marginBottom: 8, paddingHorizontal: 11, borderRadius: 0, flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: '#FFF0DC' },
   disclosureText: { flex: 1, minWidth: 0 }, disclosureTitle: { color: '#152945', fontSize: 10.5, lineHeight: 13, fontWeight: '700' }, disclosureSummary: { marginTop: 2, color: '#6F7F94', fontSize: 8.5, lineHeight: 11 },
   premiumDetailGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingHorizontal: 10, paddingBottom: 10 },
-  detailGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 10, paddingBottom: 10 }, miniInfo: { width: '47%', minHeight: 38, padding: 7, borderRadius: 8, backgroundColor: '#F7F9FC' }, miniLabel: { color: '#8A95A6', fontSize: 8, lineHeight: 10, textTransform: 'uppercase' }, miniValue: { marginTop: 2, color: '#21334E', fontSize: 9.5, lineHeight: 12, fontWeight: '700' },
+  detailGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 10, paddingBottom: 10 }, miniInfo: { width: '47%', minHeight: 44, padding: 8, borderRadius: 10, backgroundColor: '#F7F9FC' }, miniLabel: { color: '#64738A', fontSize: 8, lineHeight: 10, textTransform: 'uppercase' }, miniValue: { marginTop: 2, color: '#21334E', fontSize: 9.5, lineHeight: 12, fontWeight: '700' },
   miniInfoCompact: { width: '31%', flexGrow: 1, minWidth: 0, paddingHorizontal: 5 },
   miniInfoThreeColumn: { width: '31%', flexGrow: 1, minWidth: 0 },
   insurerMiniInfo: { flexDirection: 'row', alignItems: 'center', gap: 6 },
