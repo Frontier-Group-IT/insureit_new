@@ -1146,11 +1146,11 @@ for (const detail of ['INSUREIT Partner', 'Version', 'Runtime', 'Automatic on la
 
 for (const fragment of [
   'marginHorizontal: 0,',
-  'marginTop: 10,',
-  'minHeight: 104,',
+  'marginTop: 3,',
+  'minHeight: 82,',
   'profile-team-3d.png',
   'sectionTitleRule: { flex: 1, height: 2',
-  'details: { gap: 11, paddingBottom: 18 }',
+  'details: { gap: 11, paddingBottom: 5 }',
   'minHeight: 88,',
   'detailVerticalRule:',
   'detailArtworkLeft:',
@@ -1164,31 +1164,37 @@ for (const fragment of [
   'value={identity.designation',
   'value={humanize(identity.role)}',
   '<PartnerCaseBottomNavigation activeTab="More" />',
+  'width: 72,',
+  'height: 72,',
+  'width: 65,',
+  'styles.logoutButton',
+  'styles.logoutButtonText',
 ]) requireText(profile, fragment, 'Profile 3D redesign must retain: ' + fragment);
 for (const forbidden of [
   'registrationSideIcons', 'detailArtworkRight', 'detailGlow:',
   "profile-id-check-3d.png", "backgroundColor: '#1047B9'",
+  'styles.heroProfileIcon', 'minHeight: 212,',
 ]) {
-  if (profile.includes(forbidden)) throw new Error('Profile must not restore duplicate icons or the old blue card: ' + forbidden);
+  if (profile.includes(forbidden)) throw new Error('Profile must not restore duplicate icons, a blue card, or header logout: ' + forbidden);
 }
-requireText(profile, 'style={styles.heroArtwork}', '3D team hero artwork must remain visible.');
-requireText(profile, 'width: 76,', 'Profile artwork must stay compact');
-requireText(profile, 'width: 58,', 'Profile avatar must stay compact');
-requireText(profile, 'width: 34,', 'Profile sign-out button must stay compact');
-if (!/<View style=\{styles\.heroTopRow\}>[\s\S]*?profile-team-3d\.png[\s\S]*?accessibilityLabel="Sign out"/.test(profile)) {
-  throw new Error('Avatar, identity, artwork, and logout must appear in one horizontal row');
+requireText(profile, 'style={styles.heroArtwork}', '3D team hero must stay visible.');
+if (!/<View style=\{styles\.heroTopRow\}>[\s\S]*?profile-team-3d\.png[\s\S]*?<\/View>/.test(profile)) {
+  throw new Error('Profile avatar, details and 3D art must share the top row');
 }
-if (profile.includes('minHeight: 212,')) throw new Error('Old tall two-row Profile hero must stay removed');
+const registrationEnd = profile.indexOf('</View>', profile.indexOf('<View style={styles.details}>'));
+const logoutStart = profile.indexOf('styles.logoutButton');
+if (registrationEnd === -1 || logoutStart <= registrationEnd) {
+  throw new Error('Logout button must appear below Registration cards, not in the header');
+}
+requireText(profile, 'accessibilityLabel="Sign out"', 'Bottom logout button must be accessible.');
+requireText(profile, 'onPress={() => setLogoutOpen(true)}', 'Logout button must open confirmation.');
+requireText(profile, '<PartnerConfirmDialog', 'Profile logout must use shared confirmation.');
+requireText(profile, 'title="Sign out of INSUREIT Partner?"', 'Confirmation title must remain unchanged.');
+requireText(profile, 'message="You will need to sign in again to access your business and service workspace."', 'Confirmation message must remain unchanged.');
 const profileTeamImage = fs.readFileSync(path.join(root, 'assets/partner/profile/profile-team-3d.png'));
 if (profileTeamImage.byteLength < 10000 || !profileTeamImage.subarray(0, 8).equals(Buffer.from([137,80,78,71,13,10,26,10]))) {
   throw new Error('Transparent 3D team asset missing or invalid PNG');
 }
-requireText(profile, 'name="log-out-outline"', 'Profile hero must expose the logout icon.');
-requireText(profile, 'onPress={() => setLogoutOpen(true)}', 'Profile hero logout icon must open confirmation instead of signing out immediately.');
-requireText(profile, '<PartnerConfirmDialog', 'Profile logout must use the shared confirmation dialog.');
-requireText(profile, 'title="Sign out of INSUREIT Partner?"', 'Profile logout confirmation must match the More screen title.');
-requireText(profile, 'message="You will need to sign in again to access your business and service workspace."', 'Profile logout confirmation must match the More screen message.');
-if (profile.includes('styles.logoutArea') || profile.includes('styles.logoutButton')) throw new Error('Profile must not restore the bottom logout button.');
 
 for (const activityAsset of ['status.policyActive', 'navigation.claims', 'navigation.policyIntake', 'actions.policyChecklist', 'status.announcement']) requireText(activity, `PartnerAssets.${activityAsset}`, `Activity is missing ${activityAsset} artwork.`);
 for (const tinySize of ['fontSize: 7.2', 'fontSize: 7.5', 'fontSize: 8.5', 'fontSize: 8,']) if (activity.includes(tinySize)) throw new Error(`Activity must not regress to tiny timeline typography: ${tinySize}`);
