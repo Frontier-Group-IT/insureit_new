@@ -223,7 +223,7 @@ export async function loadRmPerformance(profile: ViewerProfile, query: RmPerform
         visited.add(parentId);
         const person = byId.get(parentId);
         if (!person) break;
-        const isSalesHead = /sales head|sales manager|relationship manager|^rm$/i.test(person.designation ?? "");
+        const isSalesHead = /\b(?:sales head|sales manager|relationship manager|regional head|regional manager|zonal head|zonal manager|agency manager|cluster manager|head motors)\b|^rm$/i.test(person.designation ?? "");
         if (!isSalesHead) break;
         if (!resolved.has(parentId)) {
           rows.push({employeeId:person.id,name:person.full_name ?? "Unnamed manager",managerId:person.reporting_manager_id,
