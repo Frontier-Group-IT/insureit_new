@@ -18,8 +18,11 @@ assert.match(provider, /getPartnerProfilePhotoUrl\(nextContext\.identity\.auth_u
 assert.match(provider, /setAvatarUri\(null\)/, 'Clear avatar on logout');
 assert.match(profile, /refreshAvatar\(\)/, 'Partner upload must refresh shared avatar state');
 assert.match(profile, /<PartnerCasePageHeader title="Profile & registration"/, 'Keep the existing navy page header');
-assert.match(profile, /hero: \{[\s\S]*?marginTop: 14,/, 'Profile hero must flow directly onto the page without a colored card');
+assert.match(profile, /hero: \{[\s\S]*?marginTop: 10,/, 'Profile hero must stay compact and directly on the page without a colored card');
 assert.match(profile, /profile-team-3d\.png/, 'Profile must use the approved three-person 3D insurance artwork');
+assert.match(profile, /<View style=\{styles\.heroTopRow\}>[\s\S]*?styles\.avatarStage[\s\S]*?styles\.heroBody[\s\S]*?profile-team-3d\.png[\s\S]*?accessibilityLabel="Sign out"[\s\S]*?<\/View>/, 'Photo, identity, 3D art and sign out must share one horizontal row');
+assert.match(profile, /heroTopRow: \{[\s\S]*?minHeight: 104,/, 'Profile row must remain compact');
+assert.doesNotMatch(profile, /minHeight: 212,/, 'Old tall profile header must not return');
 assert.match(profile, /<View style=\{styles\.heroTopRow\}>/, 'Photo and sign-out must stay in the upper row');
 assert.match(profile, /<View style=\{styles\.heroBody\}>[\s\S]*?<Text style=\{styles\.name\} numberOfLines=\{2\}>/, 'Name must fit two lines alongside avatar without truncating');
 assert.doesNotMatch(profile, /backgroundColor: '#1047B9'/, 'Blue profile banner must remain removed');
