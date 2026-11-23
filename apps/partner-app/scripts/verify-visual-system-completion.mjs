@@ -1111,32 +1111,35 @@ for (const detail of ['INSUREIT Partner', 'Version', 'Runtime', 'Automatic on la
 
 
 for (const fragment of [
-  'marginHorizontal: 0,',
-  'marginTop: 12,',
-  'borderRadius: 24,',
-  'minHeight: 124,',
+  "backgroundColor: 'transparent'",
+  "profile-team-3d.png",
+  'heroArtwork: { position:',
   'sectionTitleRule: { flex: 1, height: 2',
   'details: { gap: 11, paddingBottom: 18 }',
-  'minHeight: 98,',
+  'minHeight: 94,',
   'detailVerticalRule:',
   'detailArtworkLeft:',
-  'detailArtworkRight:',
   'registrationIcons: Record<string, ImageSourcePropType>',
-  'registrationSideIcons: Record<string, ImageSourcePropType>',
-  "profile-id-check-3d.png",
   "registration-3d.png",
   "employee-id-3d.png",
   "designation-bag-3d.png",
   "role-team-3d.png",
-  "employee-id-detail-3d.png",
-  "designation-briefcase-detail-3d.png",
-  "role-shield-detail-3d.png",
   'onPress={() => void changeProfilePhoto()}',
   'value={identity.employee_code}',
   'value={identity.designation',
   'value={humanize(identity.role)}',
   '<PartnerCaseBottomNavigation activeTab="More" />',
 ]) requireText(profile, fragment, 'Refreshed Profile layout must retain registration details and key actions: ' + fragment);
+for (const forbidden of [
+  'registrationSideIcons:',
+  'detailArtworkRight:',
+  'styles.detailGlow',
+  'styles.heroGlowLarge',
+  'styles.heroGlowSmall',
+  'profile-id-check-3d.png',
+]) if (profile.includes(forbidden)) throw new Error('Unboxed Profile must not reuse duplicate or old artwork: ' + forbidden);
+requireText(profile, 'style={styles.detailArtworkLeft}', 'Each registration card must have exactly one left-side 3D icon.');
+requireText(profile, 'style={styles.heroArtwork}', 'Profile team illustration must be separate from the editable avatar.');
 requireText(profile, 'name="log-out-outline"', 'Profile hero must expose the logout icon.');
 requireText(profile, 'onPress={() => setLogoutOpen(true)}', 'Profile hero logout icon must open confirmation instead of signing out immediately.');
 requireText(profile, '<PartnerConfirmDialog', 'Profile logout must use the shared confirmation dialog.');
