@@ -83,6 +83,7 @@ export default function AiPolicyStudioScreen() {
       const result=await performAiStudioAction(selected.id,pendingAction);
       if(!result.ok){
         setActionError(result.issues?.[0]?.message||result.error);
+        if(result.error.includes('outcome_unknown')||result.error.includes('result_unknown'))setResultUncertain(true);
         setPendingAction(null);
         return;
       }
