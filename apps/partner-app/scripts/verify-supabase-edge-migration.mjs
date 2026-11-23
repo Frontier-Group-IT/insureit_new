@@ -7,6 +7,10 @@ const app=path.resolve(here,'..');
 const repo=path.resolve(app,'../..');
 const read=(p)=>fs.readFileSync(path.join(repo,p),'utf8');
 const onboarding=read('supabase/functions/partner-policy-onboarding/index.ts');
+assert.equal(read('supabase/functions/partner-policy-onboarding/policy-ocr-onboarding-apply.ts'),
+  read('apps/web-portal/lib/policy-ocr-onboarding-apply.ts'), 'Native OCR draft import must exactly match Web rules');
+assert.equal(read('supabase/functions/partner-policy-onboarding/policy-registration-year-fallback.mjs'),
+  read('apps/web-portal/lib/policy-registration-year-fallback.mjs'), 'Manufacturing-year fallback must exactly match Web rules');
 const atomicSave=read('supabase/migrations/20261123090812_partner_intake_draft_save_atomic.sql');
 const deletion=read('supabase/functions/partner-account-deletion/index.ts');
 const sources=read('supabase/functions/partner-policy-sources/index.ts');
@@ -26,6 +30,9 @@ assert.match(onboarding,/assigned_to_profile_id",uid/, 'Customer search must req
 assert.match(onboarding,/Duplicate intakes cannot be onboarded/, 'Customer search must block duplicates');
 assert.match(onboarding,/Life Operations customer scope is not migrated/, 'Life Operations must fail closed until downline access is migrated');
 assert.ok(onboarding.includes('not yet been migrated.') && onboarding.includes('},501)'), 'Unmigrated operations must reject with 501');
+assert.ok(onboarding.includes('body.action === "prepare"'), 'OCR-backed intake prepare must exist');
+assert.ok(onboarding.includes('buildPolicyOcrOnboardingUpdate({'), 'Prepare must apply canonical OCR rules');
+assert.ok(onboarding.includes('.eq("assigned_to_profile_id",user.user.id)'), 'Preparation must be restricted to assigned reviewer');
 assert.ok(onboarding.includes('body.action === "save"'), 'Revision-guarded draft save must exist');
 assert.ok(onboarding.includes('Number.isSafeInteger(revision)'), 'Save rejects nonintegral revisions');
 assert.ok(onboarding.includes('.eq("assigned_to_profile_id",uid)'), 'Save requires assigned reviewer');
