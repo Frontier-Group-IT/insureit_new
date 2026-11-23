@@ -194,22 +194,29 @@ const premiumStart = policyDetail.indexOf('styles.premiumDisclosure', overviewSt
 const commercialStart = policyDetail.indexOf('styles.commercialRow', premiumStart);
 requireText(overviewCard, 'styles.overviewGrid', 'Existing overview fields remain visible');
 if (!(premiumStart > overviewStart && commercialStart > premiumStart)) throw new Error('Premium and Sales must follow Policy Overview');
-if (overviewCard.includes('styles.premiumDisclosure') || overviewCard.includes('styles.commercialRow')) throw new Error('Premium and Sales require independent colorful cards');
-requireText(policyDetail, "premiumDisclosure: { minHeight: 50", 'Premium mint card retains its pressable disclosure');
-requireText(policyDetail, "commercialRow: { minHeight: 50", 'Sales amber card retains its pressable disclosure');
+if (overviewCard.includes('styles.premiumDisclosure') || overviewCard.includes('styles.commercialRow')) throw new Error('Premium and Sales require independent sections');
+requireText(policyDetail, "premiumDisclosure: { minHeight: 37", 'Premium section retains its pressable disclosure');
+requireText(policyDetail, "commercialRow: { minHeight: 37", 'Sales section retains its pressable disclosure');
+requireText(policyDetail, "backgroundColor: 'transparent'", 'Quick Actions use a transparent background');
+requireText(policyDetail, '<View style={styles.externalSection}>\\n            <CardHeader iconKind="policy-overview"', 'Policy Overview heading sits outside its content card');
+requireText(policyDetail, '<View style={styles.externalSection}>\\n            <Pressable accessibilityRole="button" accessibilityState={{ expanded: showPremiumDetails }}', 'Premium disclosure sits outside its content card');
+requireText(policyDetail, '<View style={styles.externalSection}>\\n            <Pressable accessibilityRole="button" accessibilityState={{ expanded: showCommercialDetails }}', 'Sales disclosure sits outside its content card');
+for (const removedTone of ['styles.quickDocument', 'styles.quickRenewal', 'styles.quickClaim', 'styles.quickCustomer', 'styles.policySectionHeaderTint']) {
+  if (policyDetail.includes(removedTone)) throw new Error('Removed colored header/action style unexpectedly returned: ' + removedTone);
+}
 requireText(policyDetail, 'accessibilityState={{ expanded: showPremiumDetails }}', 'Premium expansion remains');
 requireText(policyDetail, 'accessibilityState={{ expanded: showCommercialDetails }}', 'Commercial expansion remains');
 requireText(policyDetail, 'const [showPremiumDetails, setShowPremiumDetails] = useState(true);', 'Premium breakup opens expanded by default');
 requireText(policyDetail, 'const [showCommercialDetails, setShowCommercialDetails] = useState(true);', 'Sales ownership opens expanded by default');
 requireText(policyDetail, 'onPress={() => setShowPremiumDetails((value) => !value)}', 'Premium breakup is still collapsible');
 requireText(policyDetail, 'onPress={() => setShowCommercialDetails((value) => !value)}', 'Sales ownership is still collapsible');
-requireText(policyDetail, 'quickSectionHeading: { marginLeft: 3, marginRight: 3, marginBottom: 9', 'Quick Actions heading remains aligned with new color tiles');
+requireText(policyDetail, 'quickSectionHeading: { marginLeft: 3, marginRight: 3, marginBottom: 9', 'Quick Actions heading remains aligned with transparent tiles');
 requireText(policyDetail, 'externalSectionHeading: { marginLeft: -6, paddingLeft: 0, paddingRight: 2 }', 'Customer & Vehicle heading moves slightly left without moving its card');
-requireText(policyDetail, 'contentWrap: { marginTop: 0, gap: 12, paddingBottom: 15 }', 'Colored section cards use 12px breathing room');
+requireText(policyDetail, 'contentWrap: { marginTop: 0, gap: 12, paddingBottom: 15 }', 'Section cards use 12px breathing room');
 requireText(policyDetail, 'paddingHorizontal: 14, paddingTop: 10, paddingBottom: 9', 'Policy summary vertical padding is compact');
 requireText(policyDetail, 'quickSection: { marginHorizontal: 0, paddingVertical: 8 }', 'Quick Actions tiles align with full-width content');
 requireText(policyDetail, 'quickSectionHeading: { marginLeft: 3, marginRight: 3, marginBottom: 9', 'Quick Actions heading keeps its clear spacing');
-requireText(policyDetail, "minHeight: 94, alignItems: 'center', justifyContent: 'center'", 'Quick Action rows use full colored tap targets');
+requireText(policyDetail, "minHeight: 94, alignItems: 'center', justifyContent: 'center'", 'Quick Action rows retain full tap targets');
 requireText(policyDetail, 'cardHeaderCompact: { minHeight: 30 }', 'Customer & Vehicle heading becomes 30px tall');
 requireText(policyDetail, '!iconKind && !actionLabel ? styles.cardHeaderCompact : null', 'Only plain section headings compact; Policy Overview header retains its original layout');
 
