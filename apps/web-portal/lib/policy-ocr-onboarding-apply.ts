@@ -88,6 +88,7 @@ function vehicleClass(raw: string) {
   if (/\bpcp\b|private car|motor car|private vehicle/.test(value)) return "PCP";
   if (/\btwp\b|two wheeler|motor cycle|motorcycle|scooter/.test(value)) return "TWP";
   if (/\bcpm\b|contractor plant|contractors plant|mobile plant|construction equipment/.test(value)) return "CPM";
+  if (/\bagricultural tractor\b/.test(value)) return "MISD";
   if (/\bmisd\b|miscellaneous/.test(value)) return "MISD";
   return "";
 }
