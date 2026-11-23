@@ -15,10 +15,11 @@ const atomicSave=read('supabase/migrations/20261123090812_partner_intake_draft_s
 const deletion=read('supabase/functions/partner-account-deletion/index.ts');
 const sources=read('supabase/functions/partner-policy-sources/index.ts');
 const onboardingDocs=read('supabase/functions/partner-onboarding-documents/index.ts');
+const policyCopy=read('supabase/functions/partner-policy-copy/index.ts');
 const push=read('supabase/functions/partner-push-devices/index.ts');
 const mobileDeletion=read('apps/partner-app/lib/account-deletion.ts');
 const mobilePush=read('apps/partner-app/lib/partner-notifications.ts');
-for(const [name,code] of [['onboarding',onboarding],['deletion',deletion],['push',push],['sources',sources],['onboarding-documents',onboardingDocs]]){
+for(const [name,code] of [['onboarding',onboarding],['deletion',deletion],['push',push],['sources',sources],['onboarding-documents',onboardingDocs],['policy-copy',policyCopy]]){
   assert.match(code,/auth\.getUser\(/,`${name} must check the caller's JWT`);
   assert.match(code,/partner_app_current_identity/,`${name} must verify canonical identity`);
   assert.match(code,/SUPABASE_SERVICE_ROLE_KEY/,`${name} uses server-only credentials`);
@@ -68,4 +69,12 @@ assert.match(onboardingDocs,/draft.data.draft_payload\?\.businessLine!==line/,'D
 assert.match(onboardingDocs,/Life Operations document scope is not migrated/,'Life Head downline must fail closed');
 assert.match(onboardingDocs,/\.select\("document_type,file_name"\)/,'Only document metadata can be returned');
 assert.doesNotMatch(onboardingDocs,/\.upload\(|\.remove\(|createSignedUrl/,'Document listing must never mutate or issue links');
-console.log('Supabase Edge migration auth and read-only document contracts verified');
+assert.match(policyCopy,/partner_app_effective_permissions/,'Policy copy requires current grants');
+assert.match(policyCopy,/policy.created_by!==userInfo.user.id/,'Only original booking employee can attach the copy');
+assert.match(policyCopy,/policy.business_line!=="Motor"/,'Only standalone Motor policy copy is eligible');
+assert.match(policyCopy,/createSignedUploadUrl\(path,\{upsert:false\}\)/,'Policy copy uses one-time, non-overwriting storage token');
+assert.match(policyCopy,/stored.size!==size\|\|stored.contentType!==type/,'Finalization verifies stored bytes and MIME');
+assert.match(policyCopy,/LIMIT=15\*1024\*1024/,'Policy copy size cap is preserved');
+assert.match(policyCopy,/after.data\)return reply\(\{ok:true,document_id:after.data.id\}\)/,'Policy-copy finalize recovers idempotently');
+assert.doesNotMatch(policyCopy,/portal.insureit.in|EXPO_PUBLIC_PORTAL_URL/,'Policy-copy service must be independent of Vercel');
+console.log('Supabase Edge migration auth and policy-copy upload contracts verified');
