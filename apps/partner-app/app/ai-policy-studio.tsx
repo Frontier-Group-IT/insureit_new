@@ -8,7 +8,7 @@ import { aiStudioActionsEnabled, performAiStudioAction, type StudioAction } from
 import { usePartnerSession } from '@/providers/partner-session-provider';
 import { loadAiStudioDetail, loadAiStudioPage, type AiStudioBucket, type AiStudioDetail, type AiStudioPage, type AiStudioRow } from '@/lib/ai-studio';
 
-const C = { ink:'#182C38', faint:'#71828C', paper:'#F5F8F7', line:'#E5ECEA', navy:'#142C3B', blue:'#375DD8', mint:'#B9EAD0' };
+const C = { ink:'#182C38', faint:'#71828C', paper:'#F4F7FD', line:'#E3EAF4', navy:'#122A49', blue:'#3158CF', mint:'#B9EAD0' };
 const TABS: Array<{key:AiStudioBucket;label:string}> = [
   {key:'review',label:'Review'}, {key:'processing',label:'Running'}, {key:'done',label:'Done'},
 ];
@@ -41,6 +41,7 @@ export default function AiPolicyStudioScreen() {
   const [actionBusy,setActionBusy]=useState(false);
   const [actionError,setActionError]=useState('');
   const [resultUncertain,setResultUncertain]=useState(false);
+  const [fieldExpanded,setFieldExpanded]=useState(false);
   const sequence=useRef(0);
   const detailSequence=useRef(0);
 
@@ -75,7 +76,16 @@ export default function AiPolicyStudioScreen() {
   },[selected,allowed]);
   const count=(key:AiStudioBucket)=>page.counts[key]||0;
   const refresh=()=>{setRefreshing(true);void reload();};
-  const closeDetail=()=>{if(actionBusy)return;setSelected(null);setPendingAction(null);setActionError('');setResultUncertain(false);};
+  const closeDetail=()=>{if(actionBusy)return;setSelected(null);setPendingAction(null);setActionError('');setResultUncertain(false);setFieldExpanded(false);};
+  const openDetail=(row:AiStudioRow)=>{setSelected(row);setFieldExpanded(false);setActionError('');setResultUncertain(false);};
+  const reloadSelected=async()=>{
+    if(!selected||actionBusy)return;
+    const intakeId=selected.id;
+    setDetailLoading(true);setDetailError('');setActionError('');setPendingAction(null);
+    try{const updated=await loadAiStudioDetail(intakeId);setDetail(updated);setResultUncertain(false);void reload();}
+    catch(e){setDetailError(e instanceof Error?e.message:'Could not refresh intake.');}
+    finally{setDetailLoading(false);}
+  };
   async function commitAction(){
     if(!selected||!pendingAction||actionBusy||resultUncertain)return;
     setActionBusy(true);setActionError('');
@@ -122,8 +132,8 @@ export default function AiPolicyStudioScreen() {
       <ScrollView style={s.scroll} contentContainerStyle={{paddingHorizontal:22,paddingTop:13,paddingBottom:insets.bottom+36}}
         refreshControl={<RefreshControl refreshing={refreshing} tintColor={C.blue} onRefresh={refresh}/>}>
         <View style={s.titleRow}>
-          <View><Text style={s.eyebrow}>INTELLIGENCE / 01</Text><Text style={s.title}>AI Studio<Text style={{color:C.blue}}>.</Text></Text></View>
-          <View style={s.sparkle}><Ionicons name="sparkles-outline" color={C.ink} size={24}/></View>
+          <View style={{flex:1}}><Text style={s.eyebrow}>POLICY OPERATIONS</Text><Text style={s.title}>AI Onboarding <Text style={{color:C.blue}}>Studio</Text></Text><Text style={s.subtitle}>Review PDFs, repair drafts and securely register policies.</Text></View>
+          <View style={s.sparkle}><Ionicons name="sparkles" color={C.blue} size={22}/></View>
         </View>
         <View style={s.hero}>
           <View style={s.heroMain}>
@@ -138,6 +148,7 @@ export default function AiPolicyStudioScreen() {
           </View>
           <View style={s.heroRing}/>
         </View>
+        <View style={s.quickGuide}><View style={s.guideIcon}><Ionicons name="flash-outline" size={18} color={C.blue}/></View><View style={{flex:1}}><Text style={s.guideTitle}>Your workflow</Text><Text style={s.guideText}>Open an intake → Reparse if needed → Verify & Convert</Text></View><Ionicons name="shield-checkmark-outline" size={20} color="#2D8065"/></View>
         <View style={s.segment}>
           {TABS.map(tab=><Pressable key={tab.key} accessibilityRole="tab" accessibilityState={{selected:filter===tab.key}}
             style={[s.segmentItem,filter===tab.key&&s.segmentActive]}
@@ -161,7 +172,7 @@ export default function AiPolicyStudioScreen() {
             const done=!!row.final_policy_id,flag=row.exception_codes.length>0;
             const status=done?'Completed':row.bucket==='review'?(flag?'Needs review':'Ready'):(flag?'Attention':'In progress');
             return <Pressable key={row.id} accessibilityRole="button" accessibilityLabel={'Open '+row.intake_number}
-              style={({pressed})=>[s.row,pressed&&{backgroundColor:'#F2F6F4'}]} onPress={()=>setSelected(row)}>
+              style={({pressed})=>[s.row,pressed&&{backgroundColor:'#F2F6F4'}]} onPress={()=>openDetail(row)}>
               <View style={[s.mark,{backgroundColor:done?'#54A983':flag?'#D7A662':'#8B9EDB'}]}/>
               <View style={s.rowMain}><Text numberOfLines={1} style={s.rowTitle}>{row.intake_number.replace('PIR-','')}</Text>
                 <Text numberOfLines={1} style={s.rowSub}>{row.lead_source_name||row.policy_type||'Policy intake'}</Text></View>
@@ -193,37 +204,38 @@ export default function AiPolicyStudioScreen() {
             <View style={s.detailHero}>
               <Text style={s.detailEyebrow}>{humanize(detail.queue_state)}</Text>
               <Text style={s.detailName}>{detail.fields.find(x=>x.key==='insured_name')?.value||detail.lead_source_name||'Policy intake'}</Text>
-              <Text style={s.detailMeta}>{detail.checks_passed} verified checks · {detail.policy_type||'Motor'}</Text>
+              <Text style={s.detailMeta}>{detail.checks_passed} verified checks · {detail.policy_type||'Motor'}</Text><View style={s.detailSteps}><Ionicons name="document-text-outline" color={C.mint} size={16}/><Text style={s.stepLabel}>PDF</Text><Ionicons name="chevron-forward" size={13} color="#B9C9D0"/><Ionicons name="scan-outline" size={16} color={C.mint}/><Text style={s.stepLabel}>Extracted</Text><Ionicons name="chevron-forward" size={13} color="#B9C9D0"/><Ionicons name="shield-checkmark-outline" size={16} color={C.mint}/><Text style={s.stepLabel}>Review</Text></View>
             </View>
             {detail.last_error_code||detail.exception_codes.length?<View style={s.issue}>
               <Ionicons name="information-circle-outline" size={18} color="#996A33"/>
               <Text style={s.issueText}>{humanize(detail.last_error_code||detail.exception_codes.join(', '))}</Text>
             </View>:null}
-            <View style={s.sectionHead}><Text style={s.sectionTitle}>PDF extraction</Text>
-              <Text style={s.meta}>{detail.fields.length} fields</Text></View>
+            <Pressable style={s.fieldsHeader} accessibilityRole="button" onPress={()=>setFieldExpanded(v=>!v)}><View style={s.fieldsIcon}><Ionicons name="document-text-outline" color={C.blue} size={20}/></View><View style={{flex:1}}><Text style={s.sectionTitle}>Extracted policy details</Text><Text style={s.meta}>{detail.fields.length} PDF fields</Text></View><Text style={s.fieldsToggle}>{fieldExpanded?'Show less':'View all'}</Text><Ionicons name={fieldExpanded?'chevron-up':'chevron-down'} size={17} color={C.blue}/></Pressable>
             <View style={s.detailList}>
-              {detail.fields.map((f,index)=><View key={f.key+String(index)} style={s.detailField}>
+              {(fieldExpanded?detail.fields:detail.fields.slice(0,8)).map((f,index)=><View key={f.key+String(index)} style={s.detailField}>
                 <Text style={s.fieldLabel}>{fieldName(f.key)}</Text>
                 <Text selectable style={s.fieldValue}>{f.value}</Text>
               </View>)}
             </View>
 
+            {!fieldExpanded&&detail.fields.length>8?<Pressable accessibilityRole="button" style={s.moreFields} onPress={()=>setFieldExpanded(true)}><Text style={s.moreFieldsText}>View {detail.fields.length-8} more fields</Text><Ionicons name="chevron-down" size={14} color={C.blue}/></Pressable>:null}
+            {!aiStudioActionsEnabled&&!detail.final_policy_id?<View style={s.disabledNotice}><Ionicons name="lock-closed-outline" size={20} color="#8F7033"/><View style={{flex:1}}><Text style={s.disabledTitle}>Secure actions awaiting activation</Text><Text style={s.disabledText}>Reparse and Verify & Convert will unlock after backend verification. No unsafe booking shortcuts.</Text></View></View>:null}
             {aiStudioActionsEnabled&&!detail.final_policy_id?<View style={s.actionsWrap}>
               {actionError?<Text style={s.actionError}>{actionError}</Text>:null}
-              {resultUncertain?<Text style={s.note}>Refresh the record and confirm its booking status before any retry.</Text>:null}
+              {resultUncertain?<View style={s.uncertain}><Ionicons name="warning-outline" size={18} color="#966126"/><Text style={s.uncertainText}>Result uncertain. Refresh and inspect booking status before retrying.</Text></View>:null}
+              {resultUncertain?<Pressable style={s.refreshRecord} accessibilityRole="button" onPress={()=>void reloadSelected()}><Ionicons name="refresh" size={17} color={C.blue}/><Text style={s.refreshRecordText}>Refresh intake status</Text></Pressable>:null}
               {!pendingAction&&!resultUncertain?<View style={s.actionsRow}>
                 <Pressable accessibilityRole="button" accessibilityLabel="Reparse current PDF and replace draft"
                   style={s.reparseButton} onPress={()=>setPendingAction('reparse')} disabled={actionBusy}>
-                  <Ionicons name="refresh-outline" color={C.ink} size={18}/><Text style={s.reparseLabel}>Reparse</Text>
+                  <Ionicons name="refresh-outline" color={C.blue} size={22}/><Text style={s.reparseLabel}>Reparse PDF</Text><Text style={s.actionSub}>Replace extracted draft</Text>
                 </Pressable>
                 <Pressable accessibilityRole="button" accessibilityLabel="Verify PDF and convert to policy"
                   style={s.convertButton} onPress={()=>setPendingAction('convert')} disabled={actionBusy}>
-                  <Text style={s.convertLabel}>Verify & Convert</Text>
-                  <Ionicons name="arrow-forward" color="#FFFFFF" size={17}/>
+                  <Ionicons name="shield-checkmark-outline" color="#FFFFFF" size={22}/><Text style={s.convertLabel}>Verify & Convert</Text><Text style={s.convertSub}>Secure policy booking</Text>
                 </Pressable>
               </View>:null}
               {pendingAction?<View style={s.confirmPanel}>
-                <Text style={s.confirmTitle}>{pendingAction==='reparse'?'Replace saved draft?':'Register this policy?'}</Text>
+                <View style={s.confirmHeading}><Ionicons name={pendingAction==='reparse'?'refresh-circle-outline':'shield-checkmark-outline'} size={24} color={C.blue}/><Text style={s.confirmTitle}>{pendingAction==='reparse'?'Replace saved draft?':'Verify and register this policy?'}</Text></View>
                 <Text style={s.confirmDescription}>{pendingAction==='reparse'
                   ?'The current PDF will replace all OCR-generated draft details. No policy is booked.'
                   :'The server will independently verify the current PDF and all policy, customer, vehicle and duplicate checks before booking.'}</Text>
@@ -232,12 +244,12 @@ export default function AiPolicyStudioScreen() {
                     onPress={()=>setPendingAction(null)}><Text style={s.cancelText}>Cancel</Text></Pressable>
                   <Pressable disabled={actionBusy} accessibilityRole="button" style={s.confirm}
                     onPress={()=>void commitAction()}>
-                    {actionBusy?<ActivityIndicator color="#FFFFFF" size="small"/>:<Text style={s.confirmText}>Confirm</Text>}
+                    {actionBusy?<ActivityIndicator color="#FFFFFF" size="small"/>:<Text style={s.confirmText}>{pendingAction==='reparse'?'Reparse now':'Verify & Convert'}</Text>}
                   </Pressable>
                 </View>
               </View>:null}
             </View>:null}
-                        <Text style={s.note}>Extraction is not booking approval. Final registration requires the protected onboarding service.</Text>
+            <View style={s.safetyRow}><Ionicons name="shield-checkmark" color="#2D8065" size={16}/><Text style={s.safetyText}>PDF extraction is not booking approval. Final registration always uses the protected onboarding service.</Text></View>
           </ScrollView>:null}
         </SafeAreaView>
       </Modal>
