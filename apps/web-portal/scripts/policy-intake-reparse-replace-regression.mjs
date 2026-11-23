@@ -19,6 +19,12 @@ assert(handoff.includes('issuanceDate:verified?(verifiedIssuanceDate||approvedSi
 assert(handoff.includes('allowManualLane:replaceExistingDraft'),"Explicit operator action can reparse manual-lane intakes");
 assert(preview.includes('options.allowManualLane === true'),"Only explicit reparse enables the manual-lane exception");
 assert(ui.includes('Reparse & replace saved draft'),"Exception dialog exposes the one-click action");
+const reprocessPanel=ui.slice(ui.indexOf("Queue the current private PDF")>=0?ui.indexOf("Queue the current private PDF"):ui.indexOf("Re-read the current PDF using n8n"));
+assert(reprocessPanel.includes("reparseAndReplaceAiPolicyIntakeDraft(row.id)"),
+  "Reprocess-current-PDF must replace verified parser-owned OCR and draft, not just enqueue");
+assert(reprocessPanel.includes("Reprocess current PDF & replace draft"),
+  "Button must explicitly describe its replacement behavior");
+
 assert(ui.includes('Reparse & replace'),"Open Motor intake rows expose the one-click action");
 assert(ui.includes('does not create or book a policy'),"The action communicates its booking boundary");
 console.log("Policy Intake reparse-and-replace guards, UI, current PDF and draft overwrite: passed");
