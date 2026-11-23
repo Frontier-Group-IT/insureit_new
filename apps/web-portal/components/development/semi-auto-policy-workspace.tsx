@@ -1111,24 +1111,27 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
             {primaryN8n && queueActive && reprocessCandidates.some(candidate=>candidate.id===exceptionRow.id)
                && !reprocessAttemptedIds.includes(exceptionRow.id) ? (
                <div className="mt-3 rounded-lg border border-[#cbd9ea] bg-[#f5f9ff] p-3">
-                 <p className="text-[10px] text-[#49627f]">Queue the current private PDF for another n8n extraction with the newly trained parser. This does not register a policy or overwrite existing OCR.</p>
+                 <p className="text-[10px] text-[#49627f]">Re-read the current PDF using n8n and replace the outdated OCR-generated onboarding draft with its newly verified fields. No policy will be registered.</p>
                  <button type="button" disabled={queueRetrying || isWaiting}
                    onClick={async()=>{
                      const row=exceptionRow;
                      setQueueRetrying(true);setQueueRetryError(null);
                      try{
-                       const response=await reprocessAiPolicyIntake(row.id);
+                       // This single-intake action replaces the parser-generated
+                       // draft from the currently verified PDF, rather than merely
+                       // resetting queue flags and retaining stale OCR.
+                       const response=await reparseAndReplaceAiPolicyIntakeDraft(row.id);
                        if(response.ok){
                          setReprocessAttemptedIds(ids=>ids.includes(row.id)?ids:[...ids,row.id]);
                          setExceptionRow(null);setCustomerReview(null);
-                         setAutoConvertMessage(row.intake_number+" queued for n8n reprocessing. Check its extraction status after refresh.");
+                         setAutoConvertMessage(row.intake_number+" re-extracted: the outdated OCR-derived draft has been replaced. No policy was booked.");
                          router.refresh();
-                       }else setQueueRetryError(response.error??"This Intake could not be requeued.");
-                     }catch{setQueueRetryError("Queue request status is unknown. Check this Intake before retrying.");}
+                       }else setQueueRetryError(response.error??"The current PDF could not be verified or its draft replaced.");
+                     }catch{setQueueRetryError("Reparse result is unknown. Refresh the Intake before attempting another replacement.");}
                      finally{setQueueRetrying(false);}
                    }}
                    className="mt-2 rounded-md bg-[#174b83] px-3 py-2 text-[10px] font-bold text-white disabled:opacity-50">
-                   {queueRetrying ? "Queuing..." : "Reprocess current PDF"}
+                   {queueRetrying ? "Reparsing & replacing..." : "Reprocess current PDF & replace draft"}
                  </button>
                </div>
              ) : null}
