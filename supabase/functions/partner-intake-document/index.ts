@@ -44,13 +44,15 @@ Deno.serve(async (request: Request) => {
   const admin = createClient(url, secret, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
-  // This staged endpoint deliberately supports only exact submitter ownership.
-  // Other authorized visibility paths (RM hierarchy, reviewer organization,
-  // Operations Head and Partner branch/group lead-source scope) require parity
-  // with getPartnerEmployeeIntakeReadScope BEFORE this replaces the mobile API.
+  // This staged endpoint supports submitter ownership and explicit assignment
+  // to an active in-review employee with live review permissions. Wider
+  // organization, RM hierarchy, Head and Partner lead-source visibility remain
+  // intentionally unsupported until canonical read-scope parity is proven
+  // BEFORE this replaces the mobile API.
   // Never infer global read access from a capability or client-provided ID.
   let ownerField: "submitted_by_profile_id" | "submitted_by_portal_account_id";
   let ownerId: string | null = null;
+  let canReadAssignedReview = false;
   if (identity.actor_kind === "employee") {
     const { data: grants, error: grantsError } = await scoped.rpc("partner_app_effective_permissions");
     if (grantsError) return json({ ok: false, error: "Intake permissions unavailable." }, 503);
@@ -68,6 +70,8 @@ Deno.serve(async (request: Request) => {
       return json({ ok: false, error: "Employee account unavailable." }, 403);
     ownerField = "submitted_by_profile_id";
     ownerId = identity.profile_id;
+    canReadAssignedReview = ["edit", "approve"].includes(capabilities.review_policy_intakes) ||
+      capabilities.finalize_policy_intakes === "approve";
   } else {
     if (identity.portal_access_type === "branch" || identity.portal_access_type === "group") {
       ownerField = "submitted_by_profile_id";
@@ -82,9 +86,19 @@ Deno.serve(async (request: Request) => {
     }
   }
   if (!ownerId) return json({ ok: false, error: "Partner owner unavailable." }, 403);
-  const { data: intake, error: intakeError } = await admin.from("policy_intake_requests")
-    .select("storage_bucket,storage_path").eq("id", input.id)
-    .eq(ownerField, ownerId).maybeSingle();
+  // UUID values come exclusively from verified canonical identity, not client
+  // query parameters. An assigned reviewer can read the PDF only while the
+  // intake is actively in_review; submitters retain their existing access.
+  let intakeQuery = admin.from("policy_intake_requests")
+    .select("storage_bucket,storage_path").eq("id", input.id);
+  if (canReadAssignedReview && ownerField === "submitted_by_profile_id" && uuid.test(ownerId)) {
+    intakeQuery = intakeQuery.or(
+      `submitted_by_profile_id.eq.${ownerId},and(assigned_to_profile_id.eq.${ownerId},status.eq.in_review)`
+    );
+  } else {
+    intakeQuery = intakeQuery.eq(ownerField, ownerId);
+  }
+  const { data: intake, error: intakeError } = await intakeQuery.maybeSingle();
   if (intakeError) return json({ ok: false, error: "Policy document lookup unavailable." }, 503);
   if (!intake) return json({ ok: false, error: "Policy Intake not available to this account." }, 404);
   if (typeof intake.storage_bucket !== "string" || !intake.storage_bucket ||
