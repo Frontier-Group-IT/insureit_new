@@ -259,8 +259,8 @@ function StoryHeading({ icon, title, tone = 'blue' }: {
   );
 }
 
-function StoryPanel({ children }: { children: React.ReactNode }) {
-  return <View style={styles.unifiedPanel}>{children}</View>;
+function StoryPanel({ children, impact = false }: { children: React.ReactNode; impact?: boolean }) {
+  return <View style={[styles.unifiedPanel, impact && styles.impactPanel]}>{children}</View>;
 }
 
 function ImpactStory({ story, onOpen }: { story: PartnerStory; onOpen: () => void }) {
@@ -271,7 +271,7 @@ function ImpactStory({ story, onOpen }: { story: PartnerStory; onOpen: () => voi
   return (
     <View style={styles.unifiedStory}>
       <StoryHeading icon="shield-checkmark-outline" title={story.eyebrow} />
-      <StoryPanel>
+      <StoryPanel impact>
         <Pressable
           onPress={onOpen}
           disabled={!hasRoute}
@@ -668,6 +668,7 @@ const styles = StyleSheet.create({
   unifiedHeadingGreen: { backgroundColor: '#EBFFF7', borderColor: '#C7F0DD' },
   unifiedHeadingText: { color: '#12386E', fontSize: 13, fontWeight: '800', letterSpacing: 0.45, textTransform: 'uppercase', flexShrink: 1 },
   unifiedPanel: { width: '100%', padding: 11, borderRadius: 23, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E1EAF7', shadowColor: '#0E579C', shadowOpacity: 0.09, shadowRadius: 12, elevation: 2 },
+  impactPanel: { borderWidth: 2, borderColor: '#3687E8' },
   unifiedArtworkBox: { width: '100%', height: 300, alignItems: 'center', justifyContent: 'center', overflow: 'visible' },
   storyHeroArtwork: { width: '100%', height: 300, maxWidth: 360 },
   todayFallbackArt: { width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' },
