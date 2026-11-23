@@ -1146,8 +1146,8 @@ for (const detail of ['INSUREIT Partner', 'Version', 'Runtime', 'Automatic on la
 
 for (const fragment of [
   'marginHorizontal: 0,',
-  'marginTop: 14,',
-  'minHeight: 212,',
+  'marginTop: 10,',
+  'minHeight: 104,',
   'profile-team-3d.png',
   'sectionTitleRule: { flex: 1, height: 2',
   'details: { gap: 11, paddingBottom: 18 }',
@@ -1172,6 +1172,13 @@ for (const forbidden of [
   if (profile.includes(forbidden)) throw new Error('Profile must not restore duplicate icons or the old blue card: ' + forbidden);
 }
 requireText(profile, 'style={styles.heroArtwork}', '3D team hero artwork must remain visible.');
+requireText(profile, 'width: 76,', 'Profile artwork must stay compact');
+requireText(profile, 'width: 58,', 'Profile avatar must stay compact');
+requireText(profile, 'width: 34,', 'Profile sign-out button must stay compact');
+if (!/<View style=\{styles\.heroTopRow\}>[\s\S]*?profile-team-3d\.png[\s\S]*?accessibilityLabel="Sign out"/.test(profile)) {
+  throw new Error('Avatar, identity, artwork, and logout must appear in one horizontal row');
+}
+if (profile.includes('minHeight: 212,')) throw new Error('Old tall two-row Profile hero must stay removed');
 const profileTeamImage = fs.readFileSync(path.join(root, 'assets/partner/profile/profile-team-3d.png'));
 if (profileTeamImage.byteLength < 10000 || !profileTeamImage.subarray(0, 8).equals(Buffer.from([137,80,78,71,13,10,26,10]))) {
   throw new Error('Transparent 3D team asset missing or invalid PNG');

@@ -115,7 +115,7 @@ export default function ProfileScreen() {
                 (pressed || avatarUploading) && styles.avatarCameraDisabled,
               ]}
             >
-              <Ionicons name={avatarUploading ? 'cloud-upload-outline' : 'camera'} size={18} color="#FFFFFF" />
+              <Ionicons name={avatarUploading ? 'cloud-upload-outline' : 'camera'} size={15} color="#FFFFFF" />
             </Pressable>
           </View>
 
@@ -127,6 +127,12 @@ export default function ProfileScreen() {
             {identity.actor_kind === 'employee' && identity.designation ? <Text style={styles.heroDesignation} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72}>{identity.designation}</Text> : null}
           </View>
 
+          <Image
+            source={require('../assets/partner/profile/profile-team-3d.png')}
+            resizeMode="contain"
+            style={styles.heroArtwork}
+            accessible={false}
+          />
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Sign out"
@@ -137,15 +143,9 @@ export default function ProfileScreen() {
               (pressed || signingOut) && styles.heroProfileIconPressed,
             ]}
           >
-            <Ionicons name="log-out-outline" size={24} color="#174A96" />
+            <Ionicons name="log-out-outline" size={21} color="#174A96" />
           </Pressable>
         </View>
-        <Image
-          source={require('../assets/partner/profile/profile-team-3d.png')}
-          resizeMode="contain"
-          style={styles.heroArtwork}
-          accessible={false}
-        />
       </View>
 
       <SectionTitle title="Registration" />
@@ -348,40 +348,34 @@ const styles = StyleSheet.create({
   },
   // No colored hero card: profile is part of the page canvas.
   hero: {
-    marginTop: 14,
+    marginTop: 10,
     marginHorizontal: 0,
     paddingHorizontal: 4,
-    paddingTop: 8,
-    paddingBottom: 6,
-    minHeight: 212,
-    alignItems: 'center',
+    paddingVertical: 8,
   },
   heroTopRow: {
     width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    minHeight: 76,
-    zIndex: 1,
+    gap: 6,
+    minHeight: 104,
   },
   heroArtwork: {
-    width: '100%',
-    maxWidth: 320,
-    height: 130,
-    marginTop: -2,
-    alignSelf: 'center',
+    flexShrink: 0,
+    width: 76,
+    height: 90,
   },
   avatarStage: {
-    width: 74,
-    height: 74,
+    width: 58,
+    height: 58,
     position: 'relative',
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarShell: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
+    width: 54,
+    height: 54,
+    borderRadius: 27,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
@@ -400,21 +394,21 @@ const styles = StyleSheet.create({
   },
   avatarText: {
     color: '#153E83',
-    fontSize: 22,
-    lineHeight: 27,
+    fontSize: 18,
+    lineHeight: 22,
     fontWeight: '800',
   },
   avatarCamera: {
     position: 'absolute',
     right: -1,
     bottom: -1,
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#0B63CE',
-    borderWidth: 3,
+    borderWidth: 2,
     borderColor: '#FFFFFF',
     shadowColor: '#000000',
     shadowOpacity: 0.24,
@@ -434,31 +428,31 @@ const styles = StyleSheet.create({
   name: {
     flexShrink: 1,
     color: '#0E2C64',
-    fontSize: 18,
-    lineHeight: 23,
+    fontSize: 16,
+    lineHeight: 20,
     fontWeight: '800',
   },
   rolePill: {
     alignSelf: 'flex-start',
     maxWidth: '100%',
-    marginTop: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    marginTop: 4,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
     borderRadius: 999,
     backgroundColor: '#E7EEFF',
   },
-  heroDesignation: { marginTop: 7, maxWidth: '100%', color: '#536B91', fontSize: 10, lineHeight: 14, fontWeight: '600' },
+  heroDesignation: { marginTop: 4, maxWidth: '100%', color: '#536B91', fontSize: 9.5, lineHeight: 12.5, fontWeight: '600' },
   roleText: {
     color: '#365CA2',
-    fontSize: 10.5,
-    lineHeight: 13,
-    fontWeight: '500',
+    fontSize: 10,
+    lineHeight: 12,
+    fontWeight: '600',
   },
   heroProfileIcon: {
     flexShrink: 0,
-    width: 40,
-    height: 40,
-    borderRadius: 14,
+    width: 34,
+    height: 34,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#E7EFFC',
