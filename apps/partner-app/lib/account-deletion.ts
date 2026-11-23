@@ -1,16 +1,18 @@
 import { getCurrentSession } from '@/lib/partner-session';
-const portalUrl = (process.env.EXPO_PUBLIC_PORTAL_URL || 'https://portal.insureit.in').replace(/\/$/, '');
+import { supabase } from '@/lib/supabase';
 export type AccountDeletionRequest = { id: string; status: 'requested' | 'under_review' | 'fulfilling' | 'fulfilled' | 'declined'; requested_at: string; completed_at?: string | null };
 async function call(method: 'GET' | 'POST') {
   const session = await getCurrentSession();
   if (!session?.access_token) throw new Error('Sign in again to request account deletion.');
-  const response = await fetch(`${portalUrl}/api/partner/account-deletion`, {
+  const { data, error } = await supabase.functions.invoke('partner-account-deletion', {
     method,
-    headers: { Authorization: `Bearer ${session.access_token}`, ...(method === 'POST' ? { 'Content-Type': 'application/json' } : {}) },
-    ...(method === 'POST' ? { body: JSON.stringify({ confirmation: 'DELETE MY ACCOUNT' }) } : {}),
+    ...(method === 'POST' ? { body: { confirmation: 'DELETE MY ACCOUNT' } } : {}),
   });
-  const body = await response.json() as { request?: AccountDeletionRequest | null; error?: string };
-  if (!response.ok) throw new Error(body.error || 'Account deletion request unavailable.');
+  if (error) {
+    throw new Error('Account deletion service is unavailable. Check your connection and try again.');
+  }
+  const body = data as { request?: AccountDeletionRequest | null; error?: string } | null;
+  if (body?.error) throw new Error(body.error);
   return body.request ?? null;
 }
 export const getAccountDeletionRequest = () => call('GET');
