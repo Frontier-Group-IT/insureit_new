@@ -23,7 +23,7 @@ assert.match(onboarding,/status","in_review"/, 'Customer search must require in-
 assert.match(onboarding,/assigned_to_profile_id",uid/, 'Customer search must require assigned reviewer');
 assert.match(onboarding,/Duplicate intakes cannot be onboarded/, 'Customer search must block duplicates');
 assert.match(onboarding,/Life Operations customer scope is not migrated/, 'Life Operations must fail closed until downline access is migrated');
-assert.match(onboarding,/status.?501/, 'Unmigrated actions must return 501');
+assert.match(onboarding,/not yet been migrated.[^\n]*501\)/, 'Unmigrated actions must return 501');
 assert.doesNotMatch(onboarding,/\.from\("policies"\)\.insert\(/, 'Preparation may not book policies');
 assert.match(mobileDeletion,/functions\.invoke\('partner-account-deletion'/, 'Account deletion must call Supabase Edge');
 assert.match(mobilePush,/functions\.invoke\('partner-push-devices'/, 'Push must call Supabase Edge');
