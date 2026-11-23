@@ -864,7 +864,7 @@ requireText(policyDetail, 'navyStatusBar bottomNavigationNavy', 'System status b
 
 
 // Policy Details keeps its own four original policy-specific actions;
-// only the visual layout matches the transparent Policies Quick Actions row.
+// the approved Policy Details redesign gives these four actions their own subtle color tiles.
 for (const [label, kind, route] of [
   ['Policy Document', 'policy-document', '/policies'],
   ['Renew Policy', 'renew-policy', '/renewals'],
@@ -875,9 +875,9 @@ for (const [label, kind, route] of [
   requireText(policyDetail, `iconKind="${kind}"`, `Policy Details must retain its ${label} icon.`);
   requireText(policyDetail, route, `Policy Details must preserve the original ${label} route.`);
 }
-requireText(policyDetail, "backgroundColor: 'transparent'", 'Quick Actions must remain background-free.');
+for (const tone of ['quickDocument', 'quickRenewal', 'quickClaim', 'quickCustomer']) requireText(policyDetail, `styles.${tone}`, `Quick Actions must use approved colored tile: ${tone}`);
 requireText(policyDetail, 'numberOfLines={1} adjustsFontSizeToFit', 'Action labels must use single-line auto fitting.');
-requireText(policyDetail, 'styles.quickActionIcon', 'Icons must render directly without tiles.');
+requireText(policyDetail, 'styles.quickActionIcon', 'Existing 3D icons must render inside colored action tiles.');
 for (const asset of ['policy-document', 'customer-details']) {
   requireText(policyDetail, `require('../../assets/partner/quick-actions/${asset}.png')`, `3D quick-action illustration missing: ${asset}`);
 }
@@ -892,9 +892,9 @@ requireText(policyDetail, 'gap: 7, backgroundColor:', 'Disclosure icon-to-title 
 requireText(policyDetail, '<Text style={styles.cardTitle}>Premium breakup</Text>', 'Premium title uses exact Overview heading typography.');
 requireText(policyDetail, '<Text style={styles.cardTitle}>Sales ownership</Text>', 'Sales ownership title uses exact Overview heading typography.');
 requireText(policyDetail, '<CardHeader iconKind="policy-overview" title="Policy Overview" tinted', 'Policy Overview header must use the source-and-ownership blue band.');
-requireText(policyDetail, "policySectionHeaderTint: { backgroundColor: '#E8F0FB' }", 'Policy Overview uses the light-blue reference background.');
-requireText(policyDetail, "premiumDisclosure: { minHeight: 47, marginHorizontal: 0, marginBottom: 8, paddingHorizontal: 11, borderRadius: 0, flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: '#E8F0FB' }", 'Premium breakup uses the same full-width light-blue header.');
-requireText(policyDetail, "commercialRow: { minHeight: 47, marginHorizontal: 0, marginBottom: 8, paddingHorizontal: 11, borderRadius: 0, flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: '#E8F0FB' }", 'Sales ownership uses the same full-width light-blue header.');
+requireText(policyDetail, "policySectionHeaderTint: { backgroundColor: '#EDE4FF' }", 'Policy Overview uses the approved lavender tint.');
+requireText(policyDetail, "premiumDisclosure: { minHeight: 50, marginHorizontal: 0, marginBottom: 8, paddingHorizontal: 11, borderRadius: 0, flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: '#DCF6F0' }", 'Premium breakup uses the approved mint header.');
+requireText(policyDetail, "commercialRow: { minHeight: 50, marginHorizontal: 0, marginBottom: 8, paddingHorizontal: 11, borderRadius: 0, flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: '#FFF0DC' }", 'Sales ownership uses the approved amber header.');
 
 requireText(policyDetail, "iconKind === 'renew-policy'", 'Renew Policy retains its own icon choice.');
 requireText(policyDetail, "iconKind === 'raise-claim'", 'Raise Claim retains its own icon choice.');
@@ -904,7 +904,7 @@ if (policyDetail.includes('quickGlyph')) throw new Error('Generic vector icons m
 if (policyDetail.includes('Ionicons name={iconName} size={32}')) throw new Error('Flat quick-action glyph must not return.');
 
 for (const obsolete of ['label="Policy Intake"', 'label="Add Policy"', 'label="Case Register"', 'label="Add Partner"', 'styles.quickBlue', 'borderRightColor']) {
-  if (policyDetail.includes(obsolete)) throw Error('Policy Details must not replace original actions or reintroduce backgrounds: ' + obsolete);
+  if (policyDetail.includes(obsolete)) throw Error('Policy Details must not replace original actions or introduce unrelated tiles: ' + obsolete);
 }
 requireText(policyDetail, 'navyStatusBar bottomNavigationNavy', 'Policy Details must use a navy system status bar and footer safe area.');
 requireText(policyDetail, '<PartnerCaseBottomNavigation activeTab="Policies" />', 'Policy Details must use existing navigation with Policies selected.');
