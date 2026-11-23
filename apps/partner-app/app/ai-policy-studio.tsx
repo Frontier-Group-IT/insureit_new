@@ -210,7 +210,13 @@ export default function AiPolicyStudioScreen() {
               <Ionicons name="information-circle-outline" size={18} color="#996A33"/>
               <Text style={s.issueText}>{humanize(detail.last_error_code||detail.exception_codes.join(', '))}</Text>
             </View>:null}
-            {!aiStudioActionsEnabled&&!detail.final_policy_id?<View style={s.disabledNotice}><Ionicons name="lock-closed-outline" size={20} color="#8F7033"/><View style={{flex:1}}><Text style={s.disabledTitle}>Secure actions awaiting activation</Text><Text style={s.disabledText}>Reparse and Verify & Convert will unlock after backend verification. No unsafe booking shortcuts.</Text></View></View>:null}
+            {!aiStudioActionsEnabled&&!detail.final_policy_id?<View style={s.actionsWrap}>
+              <View style={s.actionsRow}>
+                <View style={[s.reparseButton,s.disabledAction]}><Ionicons name="refresh-outline" color="#7F8EAB" size={22}/><Text style={s.reparseLabel}>Reparse PDF</Text><Text style={s.actionSub}>Awaiting activation</Text></View>
+                <View style={[s.convertButton,s.disabledConvert]}><Ionicons name="lock-closed-outline" color="#FFFFFF" size={22}/><Text style={s.convertLabel}>Verify & Convert</Text><Text style={s.convertSub}>Awaiting activation</Text></View>
+              </View>
+              <View style={s.disabledNotice}><Ionicons name="lock-closed-outline" size={20} color="#8F7033"/><View style={{flex:1}}><Text style={s.disabledTitle}>Secure actions awaiting activation</Text><Text style={s.disabledText}>These buttons unlock after the backend passes authenticated booking checks. Your current intakes are unchanged.</Text></View></View>
+            </View>:null}
             {aiStudioActionsEnabled&&!detail.final_policy_id?<View style={s.actionsWrap}>
               {actionError?<Text style={s.actionError}>{actionError}</Text>:null}
               {resultUncertain?<View style={s.uncertain}><Ionicons name="warning-outline" size={18} color="#966126"/><Text style={s.uncertainText}>Result uncertain. Refresh and inspect booking status before retrying.</Text></View>:null}
@@ -320,6 +326,7 @@ const s=StyleSheet.create({
   fieldsIcon:{width:39,height:39,borderRadius:12,backgroundColor:'#ECF1FF',alignItems:'center',justifyContent:'center'},
   fieldsToggle:{fontSize:11,color:C.blue,fontWeight:'800'},moreFields:{height:42,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:7},
   moreFieldsText:{fontSize:11,fontWeight:'700',color:C.blue},
+  disabledAction:{opacity:.68},disabledConvert:{backgroundColor:'#8297C8'},
   disabledNotice:{flexDirection:'row',gap:10,marginTop:18,padding:15,borderRadius:16,backgroundColor:'#FFF7EA',borderWidth:1,borderColor:'#F0E4C9'},
   disabledTitle:{fontSize:12,color:'#795820',fontWeight:'800'},disabledText:{fontSize:11,lineHeight:17,color:'#926E3A',marginTop:4},
   uncertain:{flexDirection:'row',gap:8,borderRadius:12,backgroundColor:'#FFF1DE',padding:12,marginBottom:10},
