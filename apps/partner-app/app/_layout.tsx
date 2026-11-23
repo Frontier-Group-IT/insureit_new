@@ -41,7 +41,7 @@ export default function RootLayout() {
                     <Stack.Screen name="journey" />
                     <Stack.Screen name="network" />
                     <Stack.Screen name="learn" />
-                    <Stack.Screen name="stories" />
+                    <Stack.Screen name="stories" options={{ animation: 'none', presentation: 'card', contentStyle: { backgroundColor: '#EAF3FF' } }} />
                     <Stack.Screen name="weekly-story" />
                     <Stack.Screen name="recognition" />
                     <Stack.Screen name="support" />

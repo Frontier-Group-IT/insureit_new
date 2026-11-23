@@ -147,7 +147,7 @@ export default function StoriesScreen() {
       </View>
 
       {loading ? (
-        <View style={styles.storyLoadingArea} accessibilityRole="progressbar" accessibilityLabel="Loading INSUREIT Stories">
+        <View style={[styles.storyLoadingArea, { paddingBottom: 96 + insets.bottom }]} accessibilityRole="progressbar" accessibilityLabel="Loading INSUREIT Stories">
           <View style={styles.storySkeleton}>
             <View style={styles.storySkeletonIcon} />
             <View style={styles.storySkeletonEyebrow} />
@@ -176,7 +176,7 @@ export default function StoriesScreen() {
             alwaysBounceVertical={false}
             onLayout={(event) => setStoryViewportHeight(event.nativeEvent.layout.height)}
             onContentSizeChange={(_width, height) => setStoryMeasuredHeight(height)}
-            contentContainerStyle={[styles.scrollContent, { paddingBottom: 12 }]}
+            contentContainerStyle={[styles.scrollContent, { paddingBottom: 96 + insets.bottom }]}
             showsVerticalScrollIndicator={false}
             accessibilityLabel="Story content. Tap left for previous, right for next."
             accessibilityActions={[{ name: 'decrement', label: 'Previous story' }, { name: 'increment', label: 'Next story' }]}
@@ -680,7 +680,7 @@ function StoryIllustration({ kind, body, artworkHeight = 300 }: { kind: PartnerS
 const styles = StyleSheet.create({
   screen: { flex: 1, overflow: 'hidden', backgroundColor: '#EAF3FF' },
   top: { zIndex: 5, backgroundColor: '#0A3478', paddingHorizontal: 18, paddingTop: 11, paddingBottom: 16 },
-  bottomNavigationShell: { backgroundColor: '#071E49' },
+  bottomNavigationShell: { position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 10, backgroundColor: '#071E49' },
   progress: { flexDirection: 'row', gap: 6, marginTop: 16 },
   progressTrack: { flex: 1, height: 4, overflow: 'hidden', borderRadius: 999, backgroundColor: '#7D9BC7' },
   progressFill: { width: '0%', height: '100%', backgroundColor: '#FFFFFF', borderRadius: 999 },

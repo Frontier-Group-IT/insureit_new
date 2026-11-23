@@ -347,24 +347,30 @@ for (const fragment of [
   "import { PartnerCaseBottomNavigation } from '@/components/partner-case-bottom-navigation';",
   '<PartnerCaseBottomNavigation activeTab="Home" />',
   'style={[styles.bottomNavigationShell, { paddingBottom: insets.bottom }]}',
-  'bottomNavigationShell: { backgroundColor:',
+  'bottomNavigationShell: { position: \'absolute\', left: 0, right: 0, bottom: 0, zIndex: 10, backgroundColor:',
 ]) requireText(stories, fragment, 'Stories must retain Home navigation and bottom safe area: ' + fragment);
 if (stories.indexOf('<PartnerCaseBottomNavigation activeTab="Home" />') < stories.indexOf('</ScrollView>')) {
   throw new Error('Stories bottom tabs must remain outside the story tap-to-advance ScrollView.');
 }
 // Loading, success and error must all reserve the screen body so the Home tabs stay at the bottom.
 for (const fragment of [
-  '<View style={styles.storyLoadingArea} accessibilityRole="progressbar"',
+  '<View style={[styles.storyLoadingArea, { paddingBottom: 96 + insets.bottom }]} accessibilityRole="progressbar"',
   '<View style={styles.storySkeleton}>',
   '<View style={styles.storySkeletonSecondary}>',
   '<View style={styles.storySkeletonArtwork} />',
   'storyLoadingArea: { flex: 1, minHeight: 0,',
   'storySkeletonSecondary: { gap: 14,',
-  'bottomNavigationShell: { backgroundColor:',
+  'bottomNavigationShell: { position: \'absolute\', left: 0, right: 0, bottom: 0, zIndex: 10, backgroundColor:',
   'screen: { flex: 1,',
 ]) requireText(stories, fragment, 'Stories loading must fill available height without moving bottom navigation: ' + fragment);
 if (stories.includes('storySkeleton: { margin: 24')) throw new Error('Old short Stories loading card must not return.');
 if (stories.indexOf('<PartnerCaseBottomNavigation activeTab="Home" />') < stories.indexOf('</ScrollView>')) throw new Error('Stories Home tab bar must stay outside loading and story content.');
+
+// The Stories route must not cross-fade over the More screen while fetching data.
+const appRootLayout = read('app/_layout.tsx');
+requireText(appRootLayout, '<Stack.Screen name="stories" options={{ animation: \'none\', presentation: \'card\', contentStyle: { backgroundColor: \'#EAF3FF\' } }} />', 'Stories must open as an opaque full-screen route without a fade over More.');
+requireText(stories, 'contentContainerStyle={[styles.scrollContent, { paddingBottom: 96 + insets.bottom }]}', 'Loaded stories must reserve space above the fixed bottom bar.');
+requireText(stories, 'style={[styles.storyLoadingArea, { paddingBottom: 96 + insets.bottom }]}', 'Loading skeleton must reserve fixed navigation space.');
 
 // Compact Stories update is typography/card sizing only; keep artwork sizes and navigation unchanged.
 for (const marker of [
