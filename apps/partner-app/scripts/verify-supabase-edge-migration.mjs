@@ -110,7 +110,7 @@ assert.doesNotMatch(mobileCustomers,/portal.insureit.in|EXPO_PUBLIC_PORTAL_URL|\
 assert.match(intakeSources,/scope.intermediary_ids/, 'Intake source service derives IDs from verified scope');
 assert.match(intakeSources,/identity.portal_access_type==="branch"/, 'Branch portal parent rule is retained');
 assert.match(intakeSources,/scope.partner_ids.includes\(identity.portal_access_entity_id\)/, 'Branch parent exception must match scoped branch');
-assert.match(intakeSources,/parent.partner_status==="active_partner"/, 'Parent source requires active Partner');
+assert.match(intakeSources,/parent\?\.partner_status==="active_partner"/, 'Parent source requires active Partner');
 assert.match(intakeSources,/eq\("account_status","active"\)/, 'Directory must filter active intermediaries');
 assert.match(mobileIntakes,/functions.invoke\('partner-intake-sources'/, 'Mobile intake sources must use Supabase Edge');
 console.log('Supabase Edge migration auth, documents, customers and intake-source contracts verified');
