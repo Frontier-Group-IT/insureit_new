@@ -14,10 +14,11 @@ assert.equal(read('supabase/functions/partner-policy-onboarding/policy-registrat
 const atomicSave=read('supabase/migrations/20261123090812_partner_intake_draft_save_atomic.sql');
 const deletion=read('supabase/functions/partner-account-deletion/index.ts');
 const sources=read('supabase/functions/partner-policy-sources/index.ts');
+const onboardingDocs=read('supabase/functions/partner-onboarding-documents/index.ts');
 const push=read('supabase/functions/partner-push-devices/index.ts');
 const mobileDeletion=read('apps/partner-app/lib/account-deletion.ts');
 const mobilePush=read('apps/partner-app/lib/partner-notifications.ts');
-for(const [name,code] of [['onboarding',onboarding],['deletion',deletion],['push',push],['sources',sources]]){
+for(const [name,code] of [['onboarding',onboarding],['deletion',deletion],['push',push],['sources',sources],['onboarding-documents',onboardingDocs]]){
   assert.match(code,/auth\.getUser\(/,`${name} must check the caller's JWT`);
   assert.match(code,/partner_app_current_identity/,`${name} must verify canonical identity`);
   assert.match(code,/SUPABASE_SERVICE_ROLE_KEY/,`${name} uses server-only credentials`);
@@ -60,4 +61,11 @@ assert.match(sources,/Life Operations source scope has not been migrated/, 'Life
 assert.match(sources,/eq\("account_status","active"\)/, 'Source listings only include active intermediaries');
 assert.match(sources,/Source directory temporarily unavailable/, 'Source outage must not be treated as denial');
 
-console.log('Supabase Edge migration read-only and auth contracts verified');
+assert.match(onboardingDocs,/body.action!=="list"/,'Document service must reject all mutation actions');
+assert.match(onboardingDocs,/grants.finalize_policy_intakes!=="approve"/,'Document service requires finalizer permission');
+assert.match(onboardingDocs,/assigned_to_profile_id!==userInfo.user.id/,'Document list must check assigned reviewer');
+assert.match(onboardingDocs,/draft.data.draft_payload\?\.businessLine!==line/,'Document list must enforce saved business line');
+assert.match(onboardingDocs,/Life Operations document scope is not migrated/,'Life Head downline must fail closed');
+assert.match(onboardingDocs,/\.select\("document_type,file_name"\)/,'Only document metadata can be returned');
+assert.doesNotMatch(onboardingDocs,/\.upload\(|\.remove\(|createSignedUrl/,'Document listing must never mutate or issue links');
+console.log('Supabase Edge migration auth and read-only document contracts verified');
