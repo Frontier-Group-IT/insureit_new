@@ -4,6 +4,7 @@ import { Image, StyleSheet, View, type ImageSourcePropType } from 'react-native'
 export type PartnerProfileMenuIconKind =
   | 'search'
   | 'policy-intake'
+  | 'ai-studio'
   | 'case-register'
   | 'renewals'
   | 'customers'
@@ -47,6 +48,7 @@ const ILLUSTRATED_ICONS: Partial<Record<PartnerProfileMenuIconKind, ImageSourceP
 const CONFIG: Record<Exclude<PartnerProfileMenuIconKind, 'case-register'>, IconPalette> = {
   search: { icon: 'search', accentIcon: 'briefcase', face: '#3488F2', edge: '#0756BB', shadow: '#123A7B', tile: '#EAF4FF', light: '#FFFFFF' },
   'policy-intake': { icon: 'document-text', accentIcon: 'add', face: '#527AF2', edge: '#2147B4', shadow: '#172F73', tile: '#EDF2FF', light: '#FFFFFF' },
+  'ai-studio': { icon: 'sparkles', accentIcon: 'scan', face: '#40A9A8', edge: '#176D88', shadow: '#153C66', tile: '#E7FAF2', light: '#FFFFFF' },
   renewals: { icon: 'refresh-circle', accentIcon: 'calendar', face: '#13B6A9', edge: '#087A86', shadow: '#12526A', tile: '#E5FAF6', light: '#FFFFFF' },
   customers: { icon: 'people', accentIcon: 'checkmark', face: '#327CE7', edge: '#2351B6', shadow: '#192E74', tile: '#E9F3FF', light: '#FFFFFF' },
   week: { icon: 'bar-chart', accentIcon: 'trending-up', face: '#238CEB', edge: '#1456B5', shadow: '#1D3F80', tile: '#E9F5FF', light: '#FFFFFF' },
