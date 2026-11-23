@@ -348,8 +348,8 @@ for (const [fragment, reason] of [
   ['style={styles.completedPill}', 'Completed learning status sits below illustration'],
   ['<StoryIllustration kind={story.kind} body={story.body} />', 'Artwork adapts to the current story type'],
   ["if (kind === 'learn' && /vehicle number/i.test(body))", 'Vehicle-servicing story uses car and number plate'],
-  ["require('../assets/partner/actions/impact-blue-3d-car.png')", 'Learning illustration reuses bundled blue 3D car'],
-  ['MH12AB1234', 'Example learning plate illustrates vehicle number'],
+  ["require('../assets/partner/stories/learning-car.png')", 'Learning illustration uses the bundled 3D car-and-plate scene'],
+  ["require('../assets/partner/stories/learning-car.png')", 'Learning story has its own 3D vehicle and example plate illustration'],
   ["onPress={openStory}", 'Story title retains navigation'],
   ['onTouchStart={handleStoryTouchStart}', 'Story taps are observed without blocking native scrolling'],
   ['onTouchEnd={handleStoryTouchEnd}', 'Story taps navigate when the finger is released'],
@@ -399,7 +399,7 @@ for (const [needle, rationale] of [
   ['style={styles.businessPremiumCaption}', 'Business metric label is available beneath the summary'],
   ['style={styles.businessIllustrationWrap}', 'Monthly growth artwork sits directly below figures'],
   ["if (kind === 'business')", 'Dedicated native business artwork is used'],
-  ["require('../assets/partner/status/business-growth.png')", 'Bundled 3D growth artwork replaces flat bars and coin mockups'],
+  ["require('../assets/partner/stories/this-month.png')", 'New 3D financial artwork replaces flat bars and coin mockups'],
   ['style={styles.businessGrowth3dArtwork}', '3D business artwork scales responsively'],
   ['onTouchStart={(event) => event.stopPropagation()}', 'Business story summary link preserves route navigation without changing slides'],
   ['onTouchEnd={(event) => event.stopPropagation()}', 'Business story link tap does not advance the slide'],
@@ -425,8 +425,8 @@ for (const marker of [
   "story.metric !== undefined",
   "story.body.match(/([\\d,]+)\\s+customers?",
   "story.body.match(/([\\d,]+)\\s+claims?",
-  'style={styles.impactGoldenShield}',
-  'style={styles.impactApprovedMedal}',
+  "require('../assets/partner/stories/your-impact.png')",
+  'style={styles.storyHeroArtwork}',
   'style={styles.journeyProgressTrack}',
   'style={styles.businessPremiumAmount}',
   "style={styles.learnStoryQuestion}",
@@ -438,20 +438,27 @@ for (const [needle, purpose] of [
   ["'CLAIMS UPDATE'", 'Claims are never mislabeled as renewals'],
   ["isRenewal ? 'RENEWAL REMINDER'", 'Renewal heading remains accurate'],
   ["style={styles.todayDaysBadge}", 'Renewal days are highlighted'],
-  ["style={styles.impactGoldenShield}", 'Impact scene includes gold-edged insurance protection'],
-  ["style={styles.impactApprovedMedal}", 'Impact scene contains approval medal'],
+  ["require('../assets/partner/stories/your-impact.png')", 'Impact uses the new gold shield, car and badge composition'],
   ["style={styles.journeyMetricPanel}", 'Journey stats are outside a large white card'],
-  ["require('../assets/partner/status/journey-trophy-reference.png')", 'Journey uses 3D trophy badge'],
-  ["require('../assets/partner/status/business-growth.png')", 'Monthly premium uses bundled 3D blue chart'],
+  ["require('../assets/partner/stories/my-journey.png')", 'Journey uses the new 3D road, trophy and flag artwork'],
+  ["require('../assets/partner/stories/this-month.png')", 'Monthly premium uses the new blue-gold 3D growth chart'],
   ["style={styles.businessGrowth3dArtwork}", '3D chart is sized for the illustration scene'],
-  ["style={styles.vehiclePlate}", 'Educational vehicle number plate remains prominent'],
-  ["style={styles.learningCar}", 'Educational car illustration remains on Learn'],
+  ["require('../assets/partner/stories/learning-car.png')", 'Learn has a dedicated car and vehicle-plate artwork'],
   ["accessibilityActions={[{ name: 'decrement', label: 'Previous story' }, { name: 'increment', label: 'Next story' }]}", 'Existing tap/accessibility navigation is unchanged'],
 ]) requireText(stories, needle, 'Five Story visual parity contract: ' + purpose);
 for (const forbidden of ['style={styles.businessGrowthBars}', 'style={styles.businessRupeeCoin}', 'style={styles.businessCashCoin}']) {
   if (stories.includes(forbidden)) throw new Error('Legacy flat business chart still renders: ' + forbidden);
 }
 
+for(const asset of [
+  "stories/today-renewal.png", "stories/your-impact.png", "stories/my-journey.png",
+  "stories/this-month.png", "stories/learning-car.png",
+]) {
+  const storyArtwork = fs.readFileSync(path.join(root, 'assets/partner', asset));
+  if (storyArtwork.byteLength < 8000 || !storyArtwork.subarray(0, 8).equals(Buffer.from([137,80,78,71,13,10,26,10]))) {
+    throw new Error('Original PNG story artwork missing or invalid: ' + asset);
+  }
+}
 // Story 3 (My Journey) keeps its own milestone-focused composition and real scoped data.
 for (const [needle, rationale] of [
   ["story.kind === 'journey' ? (", 'Only the customer journey story uses its own layout'],
@@ -464,9 +471,9 @@ for (const [needle, rationale] of [
   ['<StoryHeading icon="people" title={story.eyebrow} tone="violet" />', 'Journey uses the unified violet heading'],
   ['style={styles.journeyBlueArc}', 'Journey uses the uninterrupted curved background'],
   ['style={styles.journeyProgressTrack}', 'Milestone progress has a dedicated track'],
-  ["require('../assets/partner/status/journey.png')", 'Journey road uses the bundled 3D path illustration'],
-  ["require('../assets/partner/actions/quick-customers.png')", 'Journey uses bundled 3D customer artwork'],
-  ['style={styles.journeyTrophy}', '3D road milestone is decorated with a trophy'],
+  ["require('../assets/partner/stories/my-journey.png')", 'Journey road uses the new original 3D illustration'],
+  ["require('../assets/partner/stories/my-journey.png')", 'Journey illustration includes a flag, gold route and trophy'],
+  ['style={styles.journeySceneTarget}', '3D road milestone target marker stays dynamic'],
   ['style={styles.journeySceneTarget}', 'Target marker remains data-driven'],
   ['style={styles.journeySceneAchieved}', 'Achieved marker remains data-driven'],
 ]) requireText(stories, needle, 'My Journey slide regression: ' + rationale);
