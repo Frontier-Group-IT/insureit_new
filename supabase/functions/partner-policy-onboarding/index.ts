@@ -2,6 +2,7 @@
 // Do NOT switch the mobile API until all booking and document actions
 // have equivalent authorization/booking/approval/document business rules.
 import { createClient } from "npm:@supabase/supabase-js@2.57.0";
+import { buildPolicyOcrOnboardingUpdate } from "./policy-ocr-onboarding-apply.ts";
 
 const allowedFields = ["registrationMode","issuanceDate","rmName","intermediaryType","leadSource","intermediaryCode","businessLine",
 "registrationNo","insuredName","phoneNo","vehicleClass","make","model","fuelType","capacity","manufacturingYear",
@@ -35,7 +36,7 @@ Deno.serve(async (request: Request) => {
   if (!token) return json({ok:false,error:"Authenticated Partner session required."},401);
   let body: Record<string,unknown>;
   try { body = await request.json(); } catch { return json({ok:false,error:"Invalid Policy Onboarding request."},400); }
-  if(body.action !== "new_prepare" && body.action !== "customer_search" && body.action !== "save") {
+  if(body.action !== "new_prepare" && body.action !== "customer_search" && body.action !== "save" && body.action !== "prepare") {
     // No side effects or privileged fallbacks for unmigrated operations.
     return json({ok:false,error:"This Policy Onboarding operation has not yet been migrated."},501);
   }
@@ -59,6 +60,117 @@ Deno.serve(async (request: Request) => {
     return json({ok:false,error:"Operations Policy Onboarding access required."},403);
   }
   const admin = createClient(url,secret,{auth:{persistSession:false,autoRefreshToken:false}});
+  if (body.action === "prepare") {
+    // This preparatory operation deliberately does NOT take over unassigned or
+    // another employee's intake; the original Web workflow has additional
+    // scoped reviewer-claim logic which must be ported before mobile cutover.
+    const intakeId = typeof body.intake_id==="string" ? body.intake_id : "";
+    if(!uuid.test(intakeId))return json({ok:false,error:"Invalid Policy Intake reference."},400);
+    if(identity.role==="operations_head_life")
+      return json({ok:false,error:"Life Operations downline preparation has not been migrated."},501);
+    const level=(key:string)=>access.capabilities?.[key];
+    if(!["edit","approve"].includes(level("review_policy_intakes"))||
+       level("finalize_policy_intakes")!=="approve"){
+      return json({ok:false,error:"Operations finalization permission is required."},403);
+    }
+    const {data:intake,error:intakeError}=await admin.from("policy_intake_requests")
+      .select("id,intake_number,lead_source_type,lead_source_name,lead_source_code,customer_mobile,ocr_fields,status,assigned_to_profile_id,created_at")
+      .eq("id",intakeId).eq("status","in_review")
+      .eq("assigned_to_profile_id",user.user.id).maybeSingle();
+    if(intakeError)return json({ok:false,error:"Policy Intake is temporarily unavailable."},503);
+    if(!intake)return json({ok:false,error:"You are no longer the assigned reviewer."},409);
+    const number=String((Array.isArray(intake.ocr_fields)?intake.ocr_fields:[])
+      .find((field:{key?:string})=>field?.key==="policy_number")?.value??"")
+      .trim().toUpperCase().replace(/[^A-Z0-9]/g,"");
+    if(number){
+      const [policies,earlier]=await Promise.all([
+        admin.from("policies").select("id").eq("policy_no_normalized",number).limit(1),
+        admin.from("policy_intake_requests").select("id,ocr_fields")
+          .order("created_at",{ascending:true}).order("id",{ascending:true}).limit(5000),
+      ]);
+      if(policies.error||earlier.error)return json({ok:false,error:"Duplicate verification unavailable."},503);
+      if(policies.data?.length)return json({ok:false,error:"Duplicate intakes cannot be onboarded."},409);
+      const first=(earlier.data??[]).find(row=>
+        String((Array.isArray(row.ocr_fields)?row.ocr_fields:[])
+          .find((field:{key?:string})=>field?.key==="policy_number")?.value??"")
+          .trim().toUpperCase().replace(/[^A-Z0-9]/g,"")===number);
+      if(first && first.id!==intakeId)return json({ok:false,error:"Duplicate intakes cannot be onboarded."},409);
+    }
+    const [insurersResult,makesResult,brandsResult,storedResult]=await Promise.all([
+      admin.from("insurance_companies").select("id,name").eq("is_active",true).order("name"),
+      admin.from("vehicle_manufacturers").select("id").eq("is_active",true),
+      admin.from("vehicle_manufacturer_brands").select("manufacturer_id,brand_name").eq("is_active",true).order("brand_name"),
+      admin.from("policy_intake_onboarding_drafts").select("draft_payload,revision")
+        .eq("intake_id",intakeId).maybeSingle(),
+    ]);
+    if(insurersResult.error||makesResult.error||brandsResult.error||storedResult.error)
+      return json({ok:false,error:"Policy Onboarding draft or master data unavailable."},503);
+    const insurers=(insurersResult.data??[]).map(row=>({value:row.id,label:row.name}));
+    const manufacturersSet=new Set((makesResult.data??[]).map(row=>row.id));
+    const manufacturers=Array.from(new Set((brandsResult.data??[])
+      .filter(row=>manufacturersSet.has(row.manufacturer_id))
+      .map(row=>row.brand_name))).sort();
+    let draft=storedResult.data?.draft_payload as Record<string,unknown>|null;
+    let revision=storedResult.data?.revision??0;
+    if(!draft){
+      // Import exactly the same normalized OCR fields as Operations Web. Never
+      // infer Chetak power from seating or model digits, or invent missing fields.
+      const empty={registrationNo:"",vehicleClass:"",make:"",model:"",fuelType:"",
+        manufacturingYear:"",capacity:"",chassisNo:"",engineNo:"",rtoState:"",
+        rtoName:"",policyProduct:"",idv:"",od:"",tp:"",cpa:"",
+        policyNo:"",insurerId:"",validFrom:"",validUpto:""};
+      const mapped=buildPolicyOcrOnboardingUpdate({
+        mode:"create",registrationMode:"registered",current:empty,
+        fields:Array.isArray(intake.ocr_fields)?intake.ocr_fields:[],
+        manufacturers,insurers,rcVerified:false
+      });
+      const x=mapped.next;
+      draft={
+        registrationMode:mapped.registrationMode,issuanceDate:initialIssuanceDate(),
+        rmName:"",intermediaryType:intake.lead_source_type==="posp"?"POSP":intake.lead_source_type==="misp"?"MISP":"SIBL / Partner",
+        leadSource:intake.lead_source_name,intermediaryCode:intake.lead_source_code??"",businessLine:"Motor",
+        registrationNo:x.registrationNo,insuredName:x.insuredName??"",phoneNo:intake.customer_mobile,
+        vehicleClass:x.vehicleClass,make:x.make,model:x.model,fuelType:x.fuelType,capacity:x.capacity,
+        manufacturingYear:x.manufacturingYear,chassisNo:x.chassisNo,engineNo:x.engineNo,
+        rtoState:x.rtoState,rtoName:x.rtoName,policyProduct:x.policyProduct,idv:x.idv,
+        od:x.od,tp:x.tp,cpaOpted:"No",cpa:x.cpa,policyNo:x.policyNo,insurerId:x.insurerId,
+        validFrom:x.validFrom,validUpto:x.validUpto,payoutBasis:"NET",
+        projectedOdPercent:"",projectedTpPercent:"",insurerScheme:"",
+        payinBillNo:"",payinBilledAmount:"",payinBillDate:"",payinStatus:"Unbilled",
+        retention:"",payoutOdPercent:"",payoutTpPercent:"",flatPayoutAmount:"",
+        payoutStatus:"Pending",payoutDate:"",payoutVoucherNo:"",
+        remarks:`Policy Intake ${intake.id}`
+      };
+      const {data:inserted,error:insertError}=await admin.from("policy_intake_onboarding_drafts")
+        .insert({intake_id:intakeId,draft_payload:draft,revision:1,updated_by_profile_id:user.user.id})
+        .select("revision").maybeSingle();
+      if(insertError){
+        if(insertError.code!=="23505")return json({ok:false,error:"Onboarding draft could not be prepared."},503);
+        const {data:concurrent,error:concurrentError}=await admin.from("policy_intake_onboarding_drafts")
+          .select("draft_payload,revision").eq("intake_id",intakeId).maybeSingle();
+        if(concurrentError||!concurrent)return json({ok:false,error:"Draft changed. Reload before proceeding."},409);
+        draft=concurrent.draft_payload;
+        revision=concurrent.revision;
+      }else if(!inserted)return json({ok:false,error:"Onboarding draft could not be prepared."},503);
+      else revision=inserted.revision;
+    }
+    const visibleDraft={...draft};
+    const commercialAccess=access.can_view_insurer_commercials===true;
+    if(!commercialAccess){
+      for(const key of commercialFields)visibleDraft[key]="";
+      const products=draft.productDrafts;
+      if(products && typeof products==="object" && !Array.isArray(products)){
+        visibleDraft.productDrafts=Object.fromEntries(
+          Object.entries(products as Record<string,Record<string,string>>)
+            .map(([type,values])=>[type,Object.fromEntries(Object.entries(values)
+              .filter(([key])=>!commercialProductFields.has(key)))]));
+      }
+    }
+    // Source-owner/RM metadata has its own scoped service. Never return a full
+    // employee directory or guess an RM from the intake's display name.
+    return json({ok:true,draft:visibleDraft,revision,intake_number:intake.intake_number,
+      insurers,manufacturers,sourceMeta:null,commercialAccess,approvers});
+  }
   if (body.action === "save") {
     // A new standalone policy is not a persisted intake draft. Save is only
     // allowed for an existing, currently assigned, active intake reviewer.
