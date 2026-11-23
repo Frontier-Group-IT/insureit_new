@@ -1,9 +1,9 @@
 Partner production OTA trigger
-release=partner-stories-progress-below-heading-home-navigation
+release=partner-stories-compact-font-cards-pr-5147
 source=verified-merged-main
-source_pr=5142
-source_merge=10e975da1692effc8ab677e098ccbeef781eb87b
-reason=user-approved-merge-and-publish-stories-header-timeline-and-home-tabs
+source_pr=5147
+source_merge=f983f5e7f6fa8f1ab1431038c525c6bb129700a2
+reason=user-approved-merge-and-publish-compact-story-typography-and-cards
 channel=production
 runtime=0.2.0
 requested=2026-11-23
