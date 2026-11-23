@@ -383,7 +383,8 @@ for (const expected of [
   "styles.todayCard",
   "styles.todayPremiumPanel",
   "styles.todayArtWrap",
-  "styles.todayCalendar",
+  "require('../assets/partner/stories/today-renewal.png')",
+  "require('../assets/partner/stories/claims.png')",
   "onTouchStart={(event) => event.stopPropagation()}",
 ]) requireText(stories, expected, 'Today renewal design regression: ' + expected);
 if (stories.includes('₹939') || stories.includes('1 renewal is due in 7 days')) throw new Error('Today story renewal values must not be hardcoded');
