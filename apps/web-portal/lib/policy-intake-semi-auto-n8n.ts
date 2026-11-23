@@ -189,7 +189,20 @@ export async function previewSemiAutoN8nExtraction(
       "n8n_fields_invalid","n8n_field_shape_invalid",
       "n8n_issuance_date_invalid",
     ]);
+    // The two strictly validated Tata AIG third-party products return
+    // n8n_tp_* errors for a parser CONTRACT mismatch. These are not a
+    // webhook outage. Surface only the small, locally-owned error set.
+    const tataTpContractCodes=new Set([
+      "n8n_tp_contract_invalid","n8n_tp_checks_invalid","n8n_tp_warning_invalid",
+      "n8n_tp_fields_invalid","n8n_tp_field_invalid","n8n_tp_required_field_missing",
+      "n8n_tp_policy_or_vehicle_invalid","n8n_tp_registration_invalid",
+      "n8n_tp_coverage_invalid","n8n_tp_cpa_period_invalid","n8n_tp_premium_shape_invalid",
+      "n8n_tp_premium_invalid","n8n_tp_receipt_date_invalid",
+      "n8n_tp_premium_reconciliation_failed",
+    ]);
     if(parserValidationCodes.has(code)
+      || tataTpContractCodes.has(code)
+      || code==="n8n_request_identity_mismatch"
       || /^n8n_failed_checks__(?:[a-z0-9_]{1,65})(?:__[a-z0-9_]{1,65})*$/.test(code)
       || code==="n8n_commercial_classifier_missed_layout") {
       console.error("[ai-policy] rejected n8n validation",{code});
