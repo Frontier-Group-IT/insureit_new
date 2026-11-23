@@ -369,6 +369,16 @@ for (const marker of [
   "<PartnerCaseBottomNavigation activeTab=\"Home\" />",
   "onTouchEnd={handleStoryTouchEnd}",
 ]) requireText(stories, marker, 'Story compact text/card-only scope regression: ' + marker);
+// Full-screen Story behavior: scrolling is disabled after viewport-fit and
+// enabled as a fallback only when artwork has reached its minimum.
+for (const marker of [
+  'const storyScrollEnabled = storyViewportHeight > 0',
+  'storyMeasuredHeight > storyViewportHeight + 2',
+  'artworkReduction >= 204;',
+  'scrollEnabled={storyScrollEnabled}',
+  'bounces={storyScrollEnabled}',
+  'alwaysBounceVertical={false}',
+]) requireText(stories, marker, 'Full-screen Story no-scroll contract: ' + marker);
 // Fixed-height 300 px art was the underlying clipping cause; keep image assets and story navigation.
 for (const required of [
   'onLayout={(event) => setStoryViewportHeight(event.nativeEvent.layout.height)}',
