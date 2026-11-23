@@ -102,12 +102,19 @@ for (const required of [
   "PARTNER_APP_VERSION = '0.2.0'",
   'Notifications.getPermissionsAsync()',
   'Notifications.getExpoPushTokenAsync({ projectId: PARTNER_PROJECT_ID })',
-  '/api/partner/push-devices',
+  "supabase.functions.invoke('partner-push-devices'",
   "action: 'register'",
   "action: 'unregister'",
-  'Authorization: `Bearer ${session.access_token}`',
+  "getCurrentSession()",
 ]) {
   if (!notifications.includes(required)) throw new Error(`Partner push registration client contract missing: ${required}`);
+}
+if (notifications.includes('/api/partner/push-devices') || notifications.includes('portal.insureit.in')) {
+  throw new Error('Native push registration must not depend on the Vercel portal.');
+}
+const supabasePush = fs.readFileSync(path.join(root, '../../supabase/functions/partner-push-devices/index.ts'), 'utf8');
+for (const contract of ['getUser(bearer)', 'partner_app_current_identity', 'partner_app_commercial_scope', 'PROJECT_ID', 'APP_VERSION']) {
+  if (!supabasePush.includes(contract)) throw new Error('Supabase push function security contract missing: ' + contract);
 }
 if (notifications.includes('from("partner_push_devices")') || notifications.includes("from('partner_push_devices')")) {
   throw new Error('Partner mobile must never access the push-device table directly.');
