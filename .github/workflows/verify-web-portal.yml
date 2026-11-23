@@ -43,6 +43,8 @@ jobs:
         run: node scripts/ai-nontata-signed-queue-regression.mjs
       - name: NIA named-authority and owner-driver CPA direct-convert regression
         run: node --experimental-strip-types scripts/nia-named-authority-direct-convert-regression.mjs
+      - name: Isolated Kotak Digit OD and UIIC Tractor TP product regression
+        run: node --experimental-strip-types scripts/insurer-variant-extensions-regression.mjs
       - name: Life and Health Case Register line filter regression
         run: node scripts/life-health-line-filter-regression.mjs
       - name: Verify Partner Motor policy-copy upload security
