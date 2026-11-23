@@ -72,13 +72,11 @@ export type NativeMotorPolicyCopy = {uri:string;name:string;size:number;mimeType
 export async function attachNewNativeMotorPolicyCopy(policyId:string,file:NativeMotorPolicyCopy){
   const session=await getCurrentSession();
   if(!session?.access_token)throw new Error('Partner session expired. Sign in again.');
-  const endpoint=portal+'/api/partner/policy-intakes/native-onboarding/policy-copy';
   const send=async(body:Record<string,unknown>)=>{
-    const response=await fetch(endpoint,{method:'POST',cache:'no-store',
-      headers:{Authorization:'Bearer '+session.access_token,'Content-Type':'application/json'},body:JSON.stringify(body)});
-    const data=await response.json().catch(()=>null) as {ok?:boolean;error?:string;path?:string;token?:string;document_id?:string;attached?:boolean}|null;
-    if(!response.ok||!data?.ok)throw new Error(data?.error||'Policy-copy service is unavailable.');
-    return data;
+    const {data,error}=await supabase.functions.invoke('partner-policy-copy',{body});
+    const result=data as {ok?:boolean;error?:string;path?:string;token?:string;document_id?:string;attached?:boolean}|null;
+    if(error||!result?.ok)throw new Error(result?.error||'Policy-copy service is unavailable. Please retry without creating another policy.');
+    return result;
   };
   const metadata={policy_id:policyId,name:file.name,size:file.size,type:file.mimeType};
   const prepared=await send({action:'prepare',...metadata});
@@ -126,8 +124,17 @@ export type NativeOnboardingDocument = {type:NativeOnboardingDocumentType;fileNa
 async function documentRequest<T>(intakeId:string,line:NativeProductType,method:'GET'|'POST'|'DELETE',type?:NativeOnboardingDocumentType,file?:{uri:string;name:string;mimeType?:string}):Promise<T>{
   const session=await getCurrentSession();
   if(!session?.access_token)throw new Error('Partner session expired. Sign in again.');
+  if(method==='GET'){
+    const {data,error}=await supabase.functions.invoke('partner-onboarding-documents',{
+      body:{action:'list',intake_id:intakeId,business_line:line},
+    });
+    const result=data as ({ok?:boolean;error?:string}&Partial<T>)|null;
+    if(error||!result?.ok)throw new Error(result?.error||'Onboarding documents could not be loaded.');
+    return result as T;
+  }
+  // Mutating document operations still use the existing route until secure
+  // upload/replacement/delete parity is implemented on Supabase.
   const endpoint=`${portal}/api/partner/policy-intakes/native-onboarding/documents`;
-  const query=`?intake_id=${encodeURIComponent(intakeId)}&business_line=${encodeURIComponent(line)}`;
   const headers:Record<string,string>={Authorization:`Bearer ${session.access_token}`};
   let body:FormData|string|undefined;
   if(method==='POST'&&type&&file){
