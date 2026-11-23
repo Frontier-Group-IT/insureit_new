@@ -246,7 +246,7 @@ const styles = StyleSheet.create({
   answerTitle: { flex: 1, color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
   explanationArea: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#DCD6F1', paddingHorizontal: 13, paddingTop: 11, paddingBottom: 14 },
   explanation: { color: '#4C586D', ...partnerTheme.typography.body },
-  statsCard: { marginTop: 13, flexDirection: 'row', alignItems: 'center', borderRadius: 21, paddingVertical: 15, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DDE9FB', shadowColor: '#1559BA', shadowOpacity: 0.08, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 2 },
+  statsCard: { marginTop: 0, marginHorizontal: -partnerTheme.spacing.lg, flexDirection: 'row', alignItems: 'center', paddingVertical: 15, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#DDE9FB' },
   stat: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9 },
   statsDivider: { width: 1, height: 38, backgroundColor: '#A8B8D5' },
   statCopy: { flexShrink: 1 },
