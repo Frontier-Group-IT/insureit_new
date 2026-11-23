@@ -16,11 +16,13 @@ const deletion=read('supabase/functions/partner-account-deletion/index.ts');
 const sources=read('supabase/functions/partner-policy-sources/index.ts');
 const onboardingDocs=read('supabase/functions/partner-onboarding-documents/index.ts');
 const policyCopy=read('supabase/functions/partner-policy-copy/index.ts');
+const customerService=read('supabase/functions/partner-customer-create/index.ts');
 const push=read('supabase/functions/partner-push-devices/index.ts');
 const mobileDeletion=read('apps/partner-app/lib/account-deletion.ts');
 const mobileOnboarding=read('apps/partner-app/lib/policy-onboarding.ts');
+const mobileCustomers=read('apps/partner-app/lib/customers.ts');
 const mobilePush=read('apps/partner-app/lib/partner-notifications.ts');
-for(const [name,code] of [['onboarding',onboarding],['deletion',deletion],['push',push],['sources',sources],['onboarding-documents',onboardingDocs],['policy-copy',policyCopy]]){
+for(const [name,code] of [['onboarding',onboarding],['deletion',deletion],['push',push],['sources',sources],['onboarding-documents',onboardingDocs],['policy-copy',policyCopy],['customer-create',customerService]]){
   assert.match(code,/auth\.getUser\(/,`${name} must check the caller's JWT`);
   assert.match(code,/partner_app_current_identity/,`${name} must verify canonical identity`);
   assert.match(code,/SUPABASE_SERVICE_ROLE_KEY/,`${name} uses server-only credentials`);
@@ -91,4 +93,16 @@ assert.match(mobileOnboarding,/functions\.invoke\('partner-policy-copy'/,'Native
 assert.match(mobileOnboarding,/functions\.invoke\('partner-onboarding-documents'/,'Native document listing must use Supabase Edge');
 assert.match(mobileOnboarding,/const scope=\{intake_id:intakeId,business_line:line\}/,'Document actions must be scoped to intake and business line');
 assert.match(mobileOnboarding,/invoke\(\{\.\.\.scope,action:'list'\}\)/,'Document listing uses scoped payload');
-console.log('Supabase Edge migration auth and policy-copy upload contracts verified');
+assert.match(customerService,/partner_app_commercial_scope/,'Customer writes require canonical source scope');
+assert.match(customerService,/partner_app_effective_permissions/,'Employee customer write uses current permission grants');
+assert.match(customerService,/partner_app_customer_in_scope/,'Customer upload requires specific customer scope');
+assert.match(customerService,/customerCode=await codeFor\(user.user.id,requestId\)/,'Customer idempotency token binds to authenticated user');
+assert.match(customerService,/crypto.subtle.digest\("SHA-256",bytes\)/,'Customer idempotent ID uses SHA256');
+assert.match(customerService,/lead_source_intermediary_id:sourceId/,'Client cannot select an arbitrary source');
+assert.match(customerService,/createSignedUploadUrl\(path,\{upsert:false\}\)/,'KYC document uses one-time private signed upload');
+assert.match(customerService,/signature=mime==="application\/pdf"/,'KYC content signature is verified before registration');
+assert.match(customerService,/aadhaar_last_four:/,'Aadhaar only stores last four digits');
+assert.match(mobileCustomers,/functions.invoke\('partner-customer-create'/,'Native customer creation uses Supabase');
+assert.match(mobileCustomers,/uploadToSignedUrl\(prepared.path,prepared.token,bytes/,'Native customer KYC upload uses Supabase Storage');
+assert.doesNotMatch(mobileCustomers,/portal.insureit.in|EXPO_PUBLIC_PORTAL_URL|\/api\/partner\/customers\/create/,'Native customer workflow must have no Vercel dependency');
+console.log('Supabase Edge migration auth, documents and customer contracts verified');
