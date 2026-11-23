@@ -477,10 +477,13 @@ function BusinessMonthStory({ story, onOpen }: { story: PartnerStory; onOpen: ()
         style={({ pressed }) => [styles.businessSummaryLink, pressed && hasRoute && styles.storyTextPressed]}
       >
         {premium ? (
-          <Text style={styles.businessPremiumAmount} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.42}>
-            {premium}
-          </Text>
-        ) : null}
+          <>
+            <Text style={styles.businessPremiumAmount} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.42}>
+              {premium}
+            </Text>
+            <Text style={styles.businessPremiumCaption}>{label}</Text>
+          </>
+        ) : <Text style={styles.businessPremiumCaption}>{story.body}</Text>}
         <View style={styles.titleRule}><View style={styles.titleRuleActive} /></View>
         <View style={styles.businessPoliciesCard}>
           <Ionicons name="document-text-outline" size={31} color="#0E6ADD" />
@@ -496,7 +499,6 @@ function BusinessMonthStory({ story, onOpen }: { story: PartnerStory; onOpen: ()
           </View>
         </View>
       </Pressable>
-      <Text style={styles.businessPremiumCaption}>{premium ? label : story.body}</Text>
       {hasTarget ? (
         <View style={styles.storyProgressWrap}>
           <View style={styles.storyProgressTrack}>
@@ -592,11 +594,11 @@ function TodayRenewalStory({ story, onOpen }: { story: PartnerStory; onOpen: () 
           ))}
         </View>
         <View style={styles.todayShield}>
-          <Ionicons name="umbrella" color="#FFFFFF" size={46} />
+          <Ionicons name={isClaim ? "shield-checkmark" : "umbrella"} color="#FFFFFF" size={46} />
         </View>
         <View style={styles.todayCalendar}>
           <View style={styles.todayCalendarTop} />
-          {renewalDays ? (
+          {isClaim ? <Ionicons name="medkit" size={48} color="#0A3A84" /> : renewalDays ? (
             <>
               <Text style={styles.todayCalendarNumber}>{renewalDays}</Text>
               <Text style={styles.todayCalendarDays}>DAYS</Text>
@@ -727,7 +729,7 @@ const styles = StyleSheet.create({
   journeyBlueArc: { position: 'absolute', top: -30, width: '125%', height: 120, borderBottomLeftRadius: 210, borderBottomRightRadius: 195, backgroundColor: '#278CF3', opacity: 0.85 },
   journeyHeadingBadge: { minHeight: 45, maxWidth: '100%', paddingHorizontal: 22, borderRadius: 35, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 10, backgroundColor: '#E5F2FF', shadowColor: '#064E9F', shadowOpacity: 0.12, shadowOffset: { width: 0, height: 4 }, shadowRadius: 8, elevation: 3 },
   journeyHeadingText: { color: '#08449B', fontSize: 20, fontWeight: '900', letterSpacing: 0.3 },
-  journeySubtitle: { marginTop: 6, marginBottom: 9, color: '#FFFFFF', fontSize: 13, lineHeight: 19, fontWeight: '700', textAlign: 'center' },
+  journeySubtitle: { marginTop: 6, marginBottom: 9, color: '#0752AD', fontSize: 13, lineHeight: 19, fontWeight: '700', textAlign: 'center' },
   journeyMetricPanel: { width: '100%', paddingHorizontal: 5, marginTop: 9 },
   journeyStats: { marginTop: 0, width: '100%', flexDirection: 'row', alignItems: 'stretch', justifyContent: 'space-between' },
   journeyStat: { flex: 1, minWidth: 0, alignItems: 'center', gap: 5, paddingHorizontal: 3 },
@@ -761,7 +763,7 @@ const styles = StyleSheet.create({
   todayCard: { width: '100%', borderRadius: 24, padding: 17, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DFEAFB', overflow: 'hidden', shadowColor: '#497BB6', shadowOpacity: 0.08, shadowRadius: 12, elevation: 2 },
   todayCornerAccent: { position: 'absolute', right: -40, top: -65, width: 158, height: 160, borderRadius: 85, backgroundColor: '#E3EEFF' },
   todayHeadlineRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 13 },
-  todaySunIcon: { width: 61, height: 61, borderRadius: 19, backgroundColor: '#FFA51E', alignItems: 'center', justifyContent: 'center', shadowColor: '#DC941F', shadowOpacity: 0.18, shadowRadius: 7, elevation: 3 },
+  todaySunIcon: { width: 52, height: 52, borderRadius: 17, backgroundColor: '#FFA51E', alignItems: 'center', justifyContent: 'center', shadowColor: '#DC941F', shadowOpacity: 0.18, shadowRadius: 7, elevation: 3 },
   todayHeadlineText: { flex: 1, minWidth: 0 },
   todayEyebrow: { color: '#7B8AA3', fontSize: 10, fontWeight: '900', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 7 },
   todayTitleLink: { flexDirection: 'row', alignItems: 'center', gap: 8 },
@@ -797,7 +799,7 @@ const styles = StyleSheet.create({
   businessPolicyText: { flexShrink: 1, alignItems: 'flex-start' },
   businessPolicyCount: { fontSize: 29, lineHeight: 33, fontWeight: '900', color: '#082D67' },
   businessPolicyLabel: { fontSize: 17, lineHeight: 22, fontWeight: '700', color: '#0B2E64', textAlign: 'left' },
-  businessPremiumCaption: { marginTop: 8, textAlign: 'center', fontSize: 12, lineHeight: 18, fontWeight: '700', color: '#476384' },
+  businessPremiumCaption: { marginTop: 3, textAlign: 'center', fontSize: 12, lineHeight: 18, fontWeight: '700', color: '#476384' },
   businessIllustrationWrap: { width: '100%', minHeight: 235, marginTop: 3, alignItems: 'center', justifyContent: 'center' },
   businessGrowthScene: { width: '100%', height: 245, maxWidth: 360, alignItems: 'center', justifyContent: 'center' },
   businessGrowthHalo: { position: 'absolute', top: 17, width: 275, height: 224, borderRadius: 155, backgroundColor: '#D6E7FF' },
