@@ -1294,7 +1294,7 @@ for (const removed of ['statusMenuOpen','openStatusMenu','statusButtonRef','sele
   if (policies.includes(removed)) throw new Error('Remove redundant search-bar status dropdown: '+removed);
 }
 requireText(policies,'searchField: {','Search field should fill the available search row');
-requireText(policies,'style={styles.filterButton}','Policies search must display the right-side Filter indicator.');
+requireText(policies,'style={({ pressed }) => [styles.filterButton, pressed && styles.summaryChipPressed]}','Policies search must display the interactive right-side Filter button.');
 requireText(policies,'<Ionicons name="filter-outline" size={18} color="#3156B8" />','Policies must use the exact Claims filter icon.');
 requireText(policies,'<Text style={styles.filterText}>Filter</Text>','Inline filter label must match Claims.');
 
