@@ -54,9 +54,9 @@ export async function performAiStudioAction(intakeId:string,action:StudioAction)
     return {ok:false,error:typeof result.error==='string'?result.error:'The action was not accepted.',
       issues:Array.isArray(result.issues)?result.issues.filter((v):v is {field:string;message:string}=>
         Boolean(v&&typeof v==='object'&&typeof v.field==='string'&&typeof v.message==='string')).slice(0,5):[]};
-  }catch(err){
-    if(err instanceof Error && err.name==='AbortError')
-      throw new Error('The result is unknown. Refresh this intake before doing anything else.');
-    throw err instanceof Error?err:new Error('Could not confirm the result. Refresh before retrying.');
+  }catch{
+    // Every transport/JSON/timeout failure may have happened after the server
+    // committed the policy. Do not let operators blindly repeat the action.
+    throw new Error('The result is unknown. Refresh this intake before doing anything else.');
   }finally{clearTimeout(timeout);}
 }
