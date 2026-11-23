@@ -26,11 +26,14 @@ The local n8n tunnel on port 8787 stays untouched.
    `n8n.insureit.in` or `mcp.nishant.uk` routes.
 6. Run `./smoke-test.ps1 -Public` after the tunnel route is live. Public GET to the actions path must not produce a successful response;
    unauthorized POST must be rejected. Recheck non-Studio paths return 404.
-7. After testing a valid IT operator token against a disposable eligible intake,
-   and negative tests (unprivileged actor, invalid JWT, duplicate booking,
-   changed PDF, ownership/RTO/date/OTP cases, timeout and repeat request),
-   set `INSUREIT_AI_STUDIO_BACKEND_ENABLED=true` and restart the backend.
-8. Only then release a Partner OTA with
+7. Keep the Partner OTA action flag OFF. In a controlled testing window,
+   set `INSUREIT_AI_STUDIO_BACKEND_ENABLED=true` and restart the backend
+   to run authenticated negative tests (unprivileged actor, invalid JWT,
+   duplicate booking, changed PDF, ownership/RTO/date/OTP cases, timeout
+   and repeat request) and a pre-approved disposable eligible intake.
+   Revert the backend flag to false if any acceptance test fails.
+8. Only after these tests pass, leave the backend enabled and release
+   a Partner OTA with
    `EXPO_PUBLIC_AI_STUDIO_API_URL=https://studio.nishant.uk` and
    `EXPO_PUBLIC_AI_STUDIO_ACTIONS_ENABLED=true`. No native app rebuild required.
 
