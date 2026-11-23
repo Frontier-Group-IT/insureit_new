@@ -112,7 +112,8 @@ assert.match(action,/prepareVerifiedN8nIntakeHandoff\(id,queued\.document_id,\s*
   "Explicit Verify and Convert must rebuild the PDF-derived draft under CAS rather than trust stale TP/CPA values");
 assert.doesNotMatch(action,/extracted\.preview\.fingerprint,true,!nia/,
   "A stale draft must not become a separate source of authority");
-assert.match(action,/const expectedCommercialClass=\/Goods Carrying\/i/);
+assert.match(action,/const expectedCommercialClass=productVariant/);
+assert.match(action,/:\/Goods Carrying\/i.test\(pdfField\("vehicle_class"\)\)\?"GCV":"MISD"/);
 assert.match(handoff,/oldNiaMoney/);
 assert.match(handoff,/original\.remarks\.includes\("independently validated commercial-motor PDF \(new_india_cv_native_pdf\)"\)/);
 assert.match(handoff,/supplemented\.cpaOpted="Yes"/);

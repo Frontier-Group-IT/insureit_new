@@ -12,6 +12,7 @@ import { requirePolicyCreator } from "@/lib/policy-access-server";
 import { isN8nWorkbenchPrimary, previewSemiAutoN8nExtraction } from "@/lib/policy-intake-semi-auto-n8n";
 import type { N8nVerifiedPremiumBreakdown } from "@/lib/policy-intake-n8n-validation";
 import { mapVerifiedN8nMotorPremium, mapVerifiedIffcoCommercialPremium, mapVerifiedNiaCommercialPremium } from "@/lib/policy-n8n-onboarding-premium";
+import { assessProductVariantDirectConversion, mapVerifiedProductVariantPremium, PRODUCT_VARIANT_PARSERS } from "@/lib/policy-product-variant-direct-eligibility";
 import { assessIffcoAutoOnboarding } from "@/lib/policy-iffco-auto-eligibility";
 import { assessNiaNamedAuthorityUnregisteredConversion, assessStandardCommercialDirectConversion } from "@/lib/policy-commercial-direct-eligibility";
 import { policyDateDecision } from "@/lib/policy-date-rule";
@@ -151,8 +152,14 @@ export async function prepareVerifiedN8nIntakeHandoff(
       warnings:parsed.preview.warnings,fields:parsed.preview.fields,
       commercialPremium:commercial,
     }).eligible);
+  const productVariantVerifiedFill=Boolean(commercial)&&fillEmptyFields
+    &&assessProductVariantDirectConversion({
+      parserId:parsed.preview.parserId,checksPassed:parsed.preview.checksPassed,
+      warnings:parsed.preview.warnings,fields:parsed.preview.fields,
+      commercialPremium:commercial,
+    }).eligible;
   if (commercial && !replaceExistingDraft && !goDigitVerifiedFill
-      && !iffcoVerifiedFill && !standardCommercialVerifiedFill) {
+      && !iffcoVerifiedFill && !standardCommercialVerifiedFill && !productVariantVerifiedFill) {
     return {ok:false,error:"This commercial PDF is not eligible for direct verified handoff; check its insurer-specific evidence before booking."};
   }
   if (!commercial && !parsed.preview.premium) {
@@ -175,12 +182,12 @@ export async function prepareVerifiedN8nIntakeHandoff(
   // set and its printed OD + TP = net, net + GST = gross contract.
   // Never attempt to pass its commercial totals through ICICI/Tata rules.
   const commercialChecksOk=Boolean(commercial)
-    && ["go_digit_cv_native_pdf","iffco_tokio_cv_native_pdf","new_india_cv_native_pdf",
+    && (["go_digit_cv_native_pdf","iffco_tokio_cv_native_pdf","new_india_cv_native_pdf",
         "united_india_gcv_native_pdf","oriental_gccv_native_pdf"].includes(parsed.preview.parserId)
-    && parsed.preview.checksPassed >= (parsed.preview.parserId==="new_india_cv_native_pdf" ? 16
-      : parsed.preview.parserId==="oriental_gccv_native_pdf" ? 17 : 18)
+       || PRODUCT_VARIANT_PARSERS.has(parsed.preview.parserId))
+    && parsed.preview.checksPassed === (trainedN8nParserProfile(parsed.preview.parserId)?.checks ?? 0)
     && Math.abs((commercial!.od+commercial!.tp)-commercial!.net)<0.07
-    && Math.abs((commercial!.net+commercial!.gst)-commercial!.gross)<0.07;
+    && Math.abs((commercial!.net+commercial!.gst)-commercial!.gross)<(PRODUCT_VARIANT_PARSERS.has(parsed.preview.parserId)?0.51:0.07);
   const acceptableCommercialWarning=(value:string)=>
     parsed.preview.parserId==="new_india_cv_native_pdf"
     && value.startsWith("Policy prints only an RTO prefix.");
@@ -448,6 +455,8 @@ async function preparePolicyIntakeHandoffInternal(
       ?mapVerifiedIffcoCommercialPremium(verified.commercialPremium!,iffcoCpa)
       :niaCertified
       ?mapVerifiedNiaCommercialPremium(verified!.commercialPremium!,niaCpa)
+      :verified?.commercialPremium&&PRODUCT_VARIANT_PARSERS.has(verified.parserId)
+      ?mapVerifiedProductVariantPremium(verified.commercialPremium,verified.parserId)
       :verified?.commercialPremium
       ? {od:String(verified.commercialPremium.od),tp:String(verified.commercialPremium.tp),
          addOnPremium:"0",cpa:"0",cpaOpted:"No"}
@@ -530,7 +539,7 @@ async function preparePolicyIntakeHandoffInternal(
     cpa:verifiedPremium?.cpa??mapped.next.cpa,
     policyNo:mapped.next.policyNo,insurerId:mapped.next.insurerId,validFrom:mapped.next.validFrom,validUpto:mapped.next.validUpto,
     payoutBasis:"NET",projectedOdPercent:"",projectedTpPercent:"",insurerScheme:"",payinBillNo:"",payinBilledAmount:"",payinBillDate:"",payinStatus:"Unbilled",retention:"",payoutOdPercent:"",payoutTpPercent:"",flatPayoutAmount:"",payoutStatus:"Pending",payoutDate:"",payoutVoucherNo:"",remarks:verified?.commercialPremium
-      ? `Policy Intake ${id} — independently validated commercial-motor PDF (${verified.parserId}). REVIEW ONLY; no policy or customer was booked. Printed OD ${verified.commercialPremium.od}, TP including liabilities ${verified.commercialPremium.tp}, Net ${verified.commercialPremium.net}, GST ${verified.commercialPremium.gst}, Gross ${verified.commercialPremium.gross}. ${verified.parserId==="iffco_tokio_cv_native_pdf" ? `IFFCO source Net(B) ${verified.commercialPremium.tp} includes owner-driver CPA ${iffcoCpa}. Canonical TP ${verifiedPremium?.tp} excludes that CPA, and CPA is entered separately as ${verifiedPremium?.cpa}; their sum equals printed Net(B).` : niaCertified ? `New India separately verified owner-driver CPA ${niaCpa} is excluded from canonical TP ${verifiedPremium?.tp}; paid-driver LL stays within TP. Printed mixed 18%/5% GST ${verified.commercialPremium.gst} is not recalculated at 18% of net.` : "Owner-driver PA and paid-driver liabilities are retained inside printed TP; do not add CPA a second time."} Confirm vehicle class, registration, policy dates, premiums and all other fields before booking.${yearFallbackNote}${niaProvisionalRtoNote}${iffcoProvisionalNote}${iffcoRegisteredRtoNote}${iffcoFuelNote}`
+      ? `Policy Intake ${id} — independently validated commercial-motor PDF (${verified.parserId}). REVIEW ONLY; no policy or customer was booked. Printed OD ${verified.commercialPremium.od}, TP including liabilities ${verified.commercialPremium.tp}, Net ${verified.commercialPremium.net}, GST ${verified.commercialPremium.gst}, Gross ${verified.commercialPremium.gross}. ${verified.parserId==="iffco_tokio_cv_native_pdf" ? `IFFCO source Net(B) ${verified.commercialPremium.tp} includes owner-driver CPA ${iffcoCpa}. Canonical TP ${verifiedPremium?.tp} excludes that CPA, and CPA is entered separately as ${verifiedPremium?.cpa}; their sum equals printed Net(B).` : niaCertified ? `New India separately verified owner-driver CPA ${niaCpa} is excluded from canonical TP ${verifiedPremium?.tp}; paid-driver LL stays within TP. Printed mixed 18%/5% GST ${verified.commercialPremium.gst} is not recalculated at 18% of net.` :PRODUCT_VARIANT_PARSERS.has(verified.parserId) ? (verified.parserId==="go_digit_two_wheeler_od_native_pdf" ? "Digit Two-Wheeler standalone OD: newly issued TP and CPA are zero. Earlier ICICI TP validity is a policy reference, not new TP premium. Parts Depreciation Protect is opted without a separately itemized premium; no add-on charge was fabricated." : "Liability-only policy: OD, IDV and owner-driver CPA are zero. United tractor paid-driver liability remains inside TP; the separately disclosed stamp charge does not increase gross.") : "Owner-driver PA and paid-driver liabilities are retained inside printed TP; do not add CPA a second time."} Confirm vehicle class, registration, policy dates, premiums and all other fields before booking.${yearFallbackNote}${niaProvisionalRtoNote}${iffcoProvisionalNote}${iffcoRegisteredRtoNote}${iffcoFuelNote}`
       : verified && verified.premium
       ? `Policy Intake ${id} — n8n validated ${verified.premium.tataAig ? "Tata AIG private car" : "ICICI 3005"} PDF. Review every prefilled value before booking.
 PDF premium reconciliation: Printed Basic OD ${verified.premium.basicOd} + OD add-ons ${addOnTotal} - validated NCB/OD deductions ${verified.premium.odDeductions??0} = Total OD ${verified.premium.totalOd}; net-of-deductions Basic OD entered for onboarding ${verifiedPremium?.od??"unavailable"}. TP ${verified.premium.basicTp}, CPA ${verified.premium.cpa}, Net ${verified.premium.net}, GST ${verified.premium.tax}, Gross ${verified.premium.gross}.
