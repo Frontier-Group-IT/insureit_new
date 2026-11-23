@@ -16,6 +16,7 @@ const deletion=read('supabase/functions/partner-account-deletion/index.ts');
 const sources=read('supabase/functions/partner-policy-sources/index.ts');
 const intakeSources=read('supabase/functions/partner-intake-sources/index.ts');
 const intakeDocument=read('supabase/functions/partner-intake-document/index.ts');
+const familyScope=read('supabase/functions/partner-intake-document/intake-partner-family.ts');
 const onboardingDocs=read('supabase/functions/partner-onboarding-documents/index.ts');
 const policyCopy=read('supabase/functions/partner-policy-copy/index.ts');
 const customerService=read('supabase/functions/partner-customer-create/index.ts');
@@ -124,6 +125,18 @@ assert.match(intakeDocument,/profile.role !== "relationship_manager"/,'RM-specif
 assert.match(intakeDocument,/hierarchySubmitterIds = resolved.profileIds/,'Hierarchy submitters are derived from verified active profiles');
 assert.match(intakeDocument,/submitted_by_profile_id.in.\(\$\{hierarchySubmitterIds.join\(","\)\}\)/,'Hierarchy access must remain submitter-ID scoped');
 assert.match(intakeDocument,/Reporting-chain scope unavailable/,'Hierarchy read failure must deny without fallback');
+assert.match(intakeDocument,/partnerFamilyPredicates\(/,'Hierarchical PDF read must derive canonical Partner family predicates');
+assert.match(intakeDocument,/posp_misp_onboarding_profiles/,'Family association must start from linked onboardings');
+assert.match(intakeDocument,/source_application_id/,'Family parent Partner must be linked to scoped applications');
+assert.match(intakeDocument,/parent_partner_id/,'Family must include only linked branches');
+assert.match(intakeDocument,/portal_access_identities/,'Family login submitters must use entity links');
+assert.match(intakeDocument,/intermediary_portal_accounts/,'Family portal accounts must use intermediaries');
+assert.match(intakeDocument,/hierarchyFamilyPredicates = partnerFamilyPredicates/,'Only verified family predicates may enter PDF scope');
+assert.match(intakeDocument,/Reporting-chain scope unavailable/,'Any failed family query must deny');
+assert.match(familyScope,/PART-2026-/,'Legacy Partner code aliases must remain supported');
+assert.match(familyScope,/safeCode\.test/,'Family source codes must be validated against PostgREST injection');
+assert.match(familyScope,/uuid\.test/,'Family linked ID values must be UUID-validated');
+
 
 assert.match(intakeDocument,/profile\.role === "operations_head_life"/,'Life Head must retain scoped read');
 assert.match(intakeDocument,/profile\.role === "super_admin"/,'Super Admin organization scope is explicit');
