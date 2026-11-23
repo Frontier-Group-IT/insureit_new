@@ -339,8 +339,46 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
       warnings:extracted.preview.warnings,fields:extracted.preview.fields,
       commercialPremium:extracted.preview.commercialPremium,
     }).eligible;
+  // The earlier UIIC GCV parser extracted the correct RTO but stamped it
+  // with generic "Native PDF policy schedule" evidence. After fixing the
+  // labelled Registration Authority source, the evidence-only fingerprint
+  // changes. A one-policy Verify & Convert may upgrade precisely that hold,
+  // but ONLY if the existing OCR's entire key/value set matches the freshly
+  // verified PDF; no PDF fact, document, parser or policy identity may change.
+  let reverifiedUiicRtoEvidenceHold=false;
+  if(heldReview && queued.parser_id==="united_india_gcv_native_pdf"
+    && queued.last_error_code==="rto_authority_not_verified"
+    &&extracted.preview.documentId===queued.document_id
+    &&extracted.preview.parserId===queued.parser_id
+    &&assessStandardCommercialDirectConversion({
+      parserId:extracted.preview.parserId,checksPassed:extracted.preview.checksPassed,
+      warnings:extracted.preview.warnings,fields:extracted.preview.fields,
+      commercialPremium:extracted.preview.commercialPremium,
+    }).eligible){
+    const {data:currentIntake,error:readError}=await admin.from("policy_intake_requests")
+      .select("ocr_fields,final_policy_id").eq("id",id).maybeSingle<{
+        ocr_fields:{key:string;value:string;evidence?:string|null}[]|null;final_policy_id:string|null;
+      }>();
+    const oldFields=currentIntake?.ocr_fields??[];
+    const freshFields=extracted.preview.fields;
+    const values=(fs:readonly {key:string;value:string}[])=>fs
+      .map(f=>[f.key,f.value.trim()] as const)
+      .sort((a,b)=>a[0].localeCompare(b[0]));
+    const oldValues=values(oldFields),freshValues=values(freshFields);
+    const rtoOld=oldFields.find(f=>f.key==="vehicle_rto_name");
+    const rtoFresh=freshFields.find(f=>f.key==="vehicle_rto_name");
+    reverifiedUiicRtoEvidenceHold=!readError&&!currentIntake?.final_policy_id
+      &&oldFields.length>0&&oldFields.length===freshFields.length
+      &&new Set(oldFields.map(f=>f.key)).size===oldFields.length
+      &&new Set(freshFields.map(f=>f.key)).size===freshFields.length
+      &&JSON.stringify(oldValues)===JSON.stringify(freshValues)
+      &&rtoOld?.evidence==="Native PDF policy schedule"
+      &&typeof rtoFresh?.evidence==="string"
+      &&/\bRegistration Authority\b/i.test(rtoFresh.evidence)
+      &&/\bRTO\b/i.test(rtoFresh.evidence);
+  }
   if(extracted.preview.documentId!==queued.document_id||
-     !(sameReviewedFingerprint||reverifiedNiaLegacyHold)||
+     !(sameReviewedFingerprint||reverifiedNiaLegacyHold||reverifiedUiicRtoEvidenceHold)||
      (heldReview&&extracted.preview.parserId!==queued.parser_id)||
      !hasVerifiedN8nParserEvidence(extracted.preview.parserId,
        extracted.preview.checksPassed,extracted.preview.warnings))

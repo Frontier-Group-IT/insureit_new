@@ -868,7 +868,7 @@ const convertCode=actionsText.slice(convertStart,convertEnd);
 assert(convertCode.includes("await requireDevelopmentPolicyOperator(id)")
   && convertCode.includes('queued.state!=="verified"')
   && convertCode.includes("const sameReviewedFingerprint=")
-  && convertCode.includes("!(sameReviewedFingerprint||reverifiedNiaLegacyHold)")
+  && convertCode.includes("!(sameReviewedFingerprint||reverifiedNiaLegacyHold||reverifiedUiicRtoEvidenceHold)")
   && convertCode.includes("assessNiaNamedAuthorityUnregisteredConversion({")
   && convertCode.includes('queued.last_error_code==="missing_verified_vehicle_registration_number"')
   && convertCode.includes("extracted.preview.documentId!==queued.document_id")
