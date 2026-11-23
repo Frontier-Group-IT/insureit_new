@@ -115,7 +115,12 @@ assert.match(intakeDocument,/partner_app_commercial_scope/,'Intake PDF read must
 assert.match(intakeDocument,/identity\.auth_user_id !== user\.user\.id/,'Intake PDF must bind identity to authenticated user');
 assert.match(intakeDocument,/partner_app_effective_permissions/,'Employee PDF access requires current permissions');
 assert.match(intakeDocument,/profile\.is_active !== true/,'Inactive employee PDF access must be denied');
-assert.match(intakeDocument,/\.eq\(ownerField, ownerId\)\.maybeSingle\(\)/,'Intake PDF read must constrain exact submitter');
+assert.match(intakeDocument,/intakeQuery = intakeQuery\.eq\(ownerField, ownerId\)/,'Non-reviewers and other submitters must stay owner-scoped');
+assert.match(intakeDocument,/canReadAssignedReview = \["edit", "approve"\]\.includes\(capabilities\.review_policy_intakes\)/,'Assigned reviewer read requires live review edit rights');
+assert.match(intakeDocument,/capabilities\.finalize_policy_intakes === "approve"/,'Assigned finalizer permission remains explicit');
+assert.match(intakeDocument,/canReadAssignedReview && ownerField === "submitted_by_profile_id" && uuid\.test\(ownerId\)/,'Reviewer expansion only for verified employee UUID');
+assert.match(intakeDocument,/assigned_to_profile_id\.eq\.\$\{ownerId\},status\.eq\.in_review/,'Reviewer can read only assigned in-review intakes');
+assert.match(intakeDocument,/intakeQuery\.maybeSingle\(\)/,'Signed URL uses one permission-scoped intake result');
 assert.match(intakeDocument,/createSignedUrl\(intake\.storage_path, 300\)/,'Intake PDF URL must expire after five minutes');
 assert.doesNotMatch(intakeDocument,/\.from\("policy_intake_requests"\)\.update\(|\.from\("policy_intake_requests"\)\.insert\(/,'PDF endpoint is read only');
 assert.doesNotMatch(intakeDocument,/portal\.insureit\.in|EXPO_PUBLIC_PORTAL_URL/,'PDF endpoint cannot use Vercel');
