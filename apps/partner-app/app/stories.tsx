@@ -596,13 +596,19 @@ function highlightStoryText(copy: string) {
 /** Native and bundled artwork: no new dependency or hard-coded story data. */
 
 function StoryIllustration({ kind, body }: { kind: PartnerStory['kind']; body: string }) {
-  // Keep the sample number plate only for vehicle-number lessons. Other
-  // learning topics use the same glossy 3D visual system without an unrelated plate.
-  if (kind === 'learn' && /vehicle number/i.test(body)) {
+  // Keep the same approved 3D car-and-plate artwork on every 60 Sec Learn
+  // topic. Lesson title/question stays live and never derives from the image.
+  if (kind === 'learn') {
     return (
       <View style={styles.vehicleScene}>
         <View style={styles.vehicleHalo} />
-        <Image source={require('../assets/partner/stories/learning-car.png')} resizeMode="contain" style={styles.storyHeroArtwork} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
+        <Image
+          source={require('../assets/partner/stories/learning-car.png')}
+          resizeMode="contain"
+          style={styles.storyHeroArtwork}
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+        />
       </View>
     );
   }
@@ -611,23 +617,6 @@ function StoryIllustration({ kind, body }: { kind: PartnerStory['kind']; body: s
       <View style={styles.businessGrowthScene}>
         <View style={styles.businessGrowthHalo} />
         <Image source={require('../assets/partner/stories/this-month.png')} resizeMode="contain" style={styles.businessGrowth3dArtwork} />
-      </View>
-    );
-  }
-  if (kind === 'learn') {
-    const motorLesson = /motor|vehicle|third.party|accident|liability|driver|road|insurance cover|own.damage/i.test(body);
-    return (
-      <View style={styles.vehicleScene}>
-        <View style={styles.vehicleHalo} />
-        <Image
-          source={motorLesson
-            ? require('../assets/partner/stories/your-impact.png')
-            : require('../assets/partner/stories/claims.png')}
-          resizeMode="contain"
-          style={styles.storyHeroArtwork}
-          accessibilityElementsHidden
-          importantForAccessibility="no-hide-descendants"
-        />
       </View>
     );
   }
