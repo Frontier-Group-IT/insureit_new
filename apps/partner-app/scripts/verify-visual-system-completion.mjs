@@ -352,6 +352,23 @@ for (const fragment of [
 if (stories.indexOf('<PartnerCaseBottomNavigation activeTab="Home" />') < stories.indexOf('</ScrollView>')) {
   throw new Error('Stories bottom tabs must remain outside the story tap-to-advance ScrollView.');
 }
+// Compact Stories update is typography/card sizing only; keep artwork sizes and navigation unchanged.
+for (const marker of [
+  "unifiedPanel: { width: '100%', padding: 11,",
+  "impactPremium: { color: '#092B5B', fontSize: 28, lineHeight: 36, fontWeight: '800'",
+  "impactVehicleRow: { width: '100%', marginTop: 12, minHeight: 54, padding: 7,",
+  "journeyStatValue: { color: '#092E67', fontSize: 20, lineHeight: 24, fontWeight: '800'",
+  "todayCard: { width: '100%', borderRadius: 24, padding: 12,",
+  "businessPremiumAmount: { alignSelf: 'stretch', textAlign: 'center', color: '#092D68', fontSize: 27, lineHeight: 35, fontWeight: '800'",
+  "businessPoliciesCard: { marginTop: 18, width: '100%', minHeight: 62, paddingVertical: 8,",
+  "learnStoryQuestion: { color: '#31537E', fontSize: 15, lineHeight: 22",
+  "unifiedArtworkBox: { width: '100%', height: 300,",
+  "storyHeroArtwork: { width: '100%', height: 300,",
+  "journeyScene: { width: '100%', height: 304,",
+  "todayArtWrap: { width: '100%', height: 300,",
+  "<PartnerCaseBottomNavigation activeTab=\"Home\" />",
+  "onTouchEnd={handleStoryTouchEnd}",
+]) requireText(stories, marker, 'Story compact text/card-only scope regression: ' + marker);
 // Stories reference: continuous illustrated slide, not the former floating card.
 for (const [fragment, reason] of [
   ['style={styles.storyBackdrop}', 'Stories use a shared blue curved canvas'],
