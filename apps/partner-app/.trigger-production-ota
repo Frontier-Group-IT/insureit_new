@@ -1,12 +1,12 @@
 Partner production OTA trigger
-release=partner-stories-today-renewal-redesign-pr-5104
+release=partner-stories-unified-five-redesign-pr-5113
 source=verified-merged-main
-source_pr=5104
-source_merge=7741fbb8c778f5b932c1238c0c28e61dd72a2e57
-reason=user-approved-merge-and-publish-today-story-redesign
+source_pr=5113
+source_merge=eade16680866b2d33a1c1b65870d144040d31666
+reason=user-approved-merge-and-publish-five-stories-unified-redesign
 channel=production
 runtime=0.2.0
-requested=2026-11-21
+requested=2026-11-23
 no_native_build=true
 no_apk=true
 no_aab=true
