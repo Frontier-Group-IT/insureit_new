@@ -43,6 +43,8 @@ jobs:
         run: node scripts/ai-nontata-signed-queue-regression.mjs
       - name: Verify Partner AI Studio Cloudflare canonical actions and bearer guard
         run: node scripts/partner-ai-studio-cloudflare-actions-regression.mjs
+      - name: Verify Partner AI Studio dedicated Windows tunnel backend isolation
+        run: node scripts/partner-ai-studio-windows-backend-regression.mjs
       - name: NIA named-authority and owner-driver CPA direct-convert regression
         run: node --experimental-strip-types scripts/nia-named-authority-direct-convert-regression.mjs
       - name: Isolated Kotak Digit OD and UIIC Tractor TP product regression
