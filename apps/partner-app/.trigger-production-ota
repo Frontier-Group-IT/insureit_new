@@ -1,9 +1,9 @@
 Partner production OTA trigger
-release=partner-stories-unified-five-redesign-pr-5113
+release=partner-login-supabase-independent
 source=verified-merged-main
-source_pr=5113
-source_merge=eade16680866b2d33a1c1b65870d144040d31666
-reason=user-approved-merge-and-publish-five-stories-unified-redesign
+source_pr=5131
+source_merge=72ad3c9d0ec2d96b7c620bae6e3666eebe794f41
+reason=user-approved-finish-login-fix-without-vercel
 channel=production
 runtime=0.2.0
 requested=2026-11-23
