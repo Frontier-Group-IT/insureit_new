@@ -117,6 +117,14 @@ assert.match(intakeDocument,/partner_app_effective_permissions/,'Employee PDF ac
 assert.match(intakeDocument,/profile\.is_active !== true/,'Inactive employee PDF access must be denied');
 assert.match(intakeDocument,/\.select\("id,role,is_active"\)/,'Organization scope requires a live server-read employee role');
 assert.match(intakeDocument,/hierarchyIntakeRoles\.has\(profile\.role \?\? ""\)/,'Hierarchy roles cannot automatically gain organization-wide PDF access');
+assert.match(intakeDocument,/resolveActiveReportingProfiles\(/,'Hierarchy PDF access must use the verified active-chain resolver');
+assert.match(intakeDocument,/activePages\(admin, "employees", "id,reporting_manager_id"\)/,'Hierarchy read must load active employees');
+assert.match(intakeDocument,/activePages\(admin, "profiles", "id,employee_id"\)/,'Hierarchy read must load active profiles');
+assert.match(intakeDocument,/profile.role !== "relationship_manager"/,'RM-specific override semantics must remain unsupported');
+assert.match(intakeDocument,/hierarchySubmitterIds = resolved.profileIds/,'Hierarchy submitters are derived from verified active profiles');
+assert.match(intakeDocument,/submitted_by_profile_id.in.\(\$\{hierarchySubmitterIds.join\(","\)\}\)/,'Hierarchy access must remain submitter-ID scoped');
+assert.match(intakeDocument,/Reporting-chain scope unavailable/,'Hierarchy read failure must deny without fallback');
+
 assert.match(intakeDocument,/profile\.role === "operations_head_life"/,'Life Head must retain scoped read');
 assert.match(intakeDocument,/profile\.role === "super_admin"/,'Super Admin organization scope is explicit');
 assert.match(intakeDocument,/canReadOrganization = !constrainedRole/,'Organization scope requires non-hierarchy role');
