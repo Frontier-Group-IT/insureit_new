@@ -9,6 +9,16 @@ const allowedFields = ["registrationMode","issuanceDate","rmName","intermediaryT
 "insurerId","validFrom","validUpto","payoutBasis","projectedOdPercent","projectedTpPercent","insurerScheme",
 "payinBillNo","payinBilledAmount","payinBillDate","payinStatus","retention","payoutOdPercent","payoutTpPercent",
 "flatPayoutAmount","payoutStatus","payoutDate","payoutVoucherNo","remarks"];
+// Keep exactly the web onboarding draft field allowlist. Unknown fields are
+// not written, and product-commercial terms are only accepted for financial roles.
+const optionalFields = ["addOnPremium","tpValidUpto","cpaValidUpto"];
+const commercialFields = ["payoutBasis","projectedOdPercent","projectedTpPercent","insurerScheme","payinBillNo","payinBilledAmount","payinBillDate","payinStatus","retention","payoutOdPercent","payoutTpPercent","flatPayoutAmount","payoutStatus","payoutDate","payoutVoucherNo"];
+const commercialProductFields = new Set(["payinBasis","payinValue","payinScheme","partnerPayoutBasis","partnerPayoutValue"]);
+const riskFields=["riskTitle","riskLocation","occupancyType","cargoDescription","transitFrom","transitTo","transitMode","projectName","projectValue","natureOfBusiness","liabilityType","employeeCount","annualWages","businessName","annualTurnover"];
+const additionalFields=["proposalNumber","previousInsurer","previousPolicyNumber","previousClaims","addOns","warranties","specialConditions","endorsements","remarks"];
+const productFields=new Set([...riskFields,...additionalFields,"address","productName","ppt","pd","paymentFrequency","premiumAmount","paymentMode","customerMode","customerId","customerType","insuredName","phone","contactName","email","policyNumber","category","status","sumInsured","deductible","netPremium","gstAmount","grossPremium","startDate","endDate",...commercialProductFields]);
+const nonMotorTypes=["Life","Health","Non Motor"];
+const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const approvers = [
   { key: "jatin", name: "Jatin Kumar Buwaniwala" },
   { key: "vishal", name: "Vishal Kochhar" },
@@ -25,7 +35,7 @@ Deno.serve(async (request: Request) => {
   if (!token) return json({ok:false,error:"Authenticated Partner session required."},401);
   let body: Record<string,unknown>;
   try { body = await request.json(); } catch { return json({ok:false,error:"Invalid Policy Onboarding request."},400); }
-  if(body.action !== "new_prepare" && body.action !== "customer_search") {
+  if(body.action !== "new_prepare" && body.action !== "customer_search" && body.action !== "save") {
     // No side effects or privileged fallbacks for unmigrated operations.
     return json({ok:false,error:"This Policy Onboarding operation has not yet been migrated."},501);
   }
@@ -49,6 +59,121 @@ Deno.serve(async (request: Request) => {
     return json({ok:false,error:"Operations Policy Onboarding access required."},403);
   }
   const admin = createClient(url,secret,{auth:{persistSession:false,autoRefreshToken:false}});
+  if (body.action === "save") {
+    // A new standalone policy is not a persisted intake draft. Save is only
+    // allowed for an existing, currently assigned, active intake reviewer.
+    const uid=user.user.id;
+    const intakeId=typeof body.intake_id==="string" ? body.intake_id : "";
+    const revision=body.revision;
+    const input=body.draft;
+    if(!uuid.test(intakeId) || !Number.isSafeInteger(revision) ||
+       typeof revision!=="number" || revision<1 ||
+       !input || typeof input!=="object" || Array.isArray(input)){
+      return json({ok:false,error:"Invalid draft revision or values."},400);
+    }
+    if(identity.role==="operations_head_life"){
+      // Existing site requires an additional downline predicate.
+      return json({ok:false,error:"Life Operations onboarding scope has not been migrated."},501);
+    }
+    const level=(key:string)=>access.capabilities?.[key];
+    if(!["edit","approve"].includes(level("review_policy_intakes"))||
+       level("finalize_policy_intakes")!=="approve"){
+      return json({ok:false,error:"Operations finalization permission is required."},403);
+    }
+    const draft=input as Record<string,unknown>;
+    if(allowedFields.some(key=>typeof draft[key]!=="string"||(draft[key] as string).length>4000)||
+       optionalFields.some(key=>draft[key]!==undefined&&(typeof draft[key]!=="string"||(draft[key] as string).length>4000))||
+       !["registered","unregistered"].includes(String(draft.registrationMode))||
+       !["Yes","No"].includes(String(draft.cpaOpted))||
+       !["Motor",...nonMotorTypes].includes(String(draft.businessLine))){
+      return json({ok:false,error:"Invalid onboarding draft fields."},400);
+    }
+    const productDrafts=draft.productDrafts;
+    if(productDrafts!==undefined){
+      if(!productDrafts || typeof productDrafts!=="object" || Array.isArray(productDrafts)){
+        return json({ok:false,error:"Invalid product draft."},400);
+      }
+      const entries=Object.entries(productDrafts as Record<string,unknown>);
+      if(entries.length>nonMotorTypes.length||entries.some(([type,values])=>
+        !nonMotorTypes.includes(type)||!values||typeof values!=="object"||Array.isArray(values)||
+        Object.entries(values as Record<string,unknown>).some(([key,value])=>
+          !productFields.has(key)||typeof value!=="string"||value.length>2000))){
+        return json({ok:false,error:"Unsupported product draft fields."},400);
+      }
+    }
+    const commercialAccess=identity.role==="operations_head_life"||access.can_view_insurer_commercials===true;
+    if(productDrafts!==undefined){
+      for(const values of Object.values(productDrafts as Record<string,Record<string,string>>)){
+        if(!commercialAccess&&Object.keys(values).some(key=>commercialProductFields.has(key))){
+          return json({ok:false,error:"Commercial terms require financial access."},403);
+        }
+        for(const key of commercialProductFields){
+          const value=values[key];
+          if(value===undefined||value==="")continue;
+          if(key==="payinBasis"||key==="partnerPayoutBasis"){
+            if(!["NET","FLAT"].includes(value))return json({ok:false,error:"Invalid commercial basis."},400);
+          }else if(!/^\\d+(?:\\.\\d{1,2})?$/.test(value)||
+            !Number.isFinite(Number(value))||
+            Number(value)>(key.endsWith("Value")&&values[key.replace("Value","Basis")]==="NET"?100:100000000000)){
+            return json({ok:false,error:"Invalid projected commercial value."},400);
+          }
+        }
+      }
+    }
+    // Assignment and duplicate checks are made before reading any draft.
+    const {data:intake,error:intakeError}=await admin.from("policy_intake_requests")
+      .select("id,status,assigned_to_profile_id,ocr_fields")
+      .eq("id",intakeId).eq("status","in_review")
+      .eq("assigned_to_profile_id",uid).maybeSingle();
+    if(intakeError)return json({ok:false,error:"Policy Intake review is unavailable."},503);
+    if(!intake)return json({ok:false,error:"You are no longer the assigned reviewer."},409);
+    const number=String((Array.isArray(intake.ocr_fields)?intake.ocr_fields:[])
+      .find((field:{key?:string})=>field?.key==="policy_number")?.value??"")
+      .trim().toUpperCase().replace(/[^A-Z0-9]/g,"");
+    if(number){
+      const [policies,earlier]=await Promise.all([
+        admin.from("policies").select("id").eq("policy_no_normalized",number).limit(1),
+        admin.from("policy_intake_requests").select("id,ocr_fields")
+          .order("created_at",{ascending:true}).order("id",{ascending:true}).limit(5000),
+      ]);
+      if(policies.error||earlier.error)return json({ok:false,error:"Duplicate verification unavailable."},503);
+      if(policies.data?.length)return json({ok:false,error:"Duplicate intakes cannot be onboarded."},409);
+      const first=(earlier.data??[]).find(item=>
+        String((Array.isArray(item.ocr_fields)?item.ocr_fields:[])
+          .find((field:{key?:string})=>field?.key==="policy_number")?.value??"")
+          .trim().toUpperCase().replace(/[^A-Z0-9]/g,"")===number);
+      if(first&&first.id!==intakeId)return json({ok:false,error:"Duplicate intakes cannot be onboarded."},409);
+    }
+    const {data:stored,error:storedError}=await admin.from("policy_intake_onboarding_drafts")
+      .select("draft_payload,revision").eq("intake_id",intakeId).maybeSingle();
+    if(storedError)return json({ok:false,error:"Onboarding draft unavailable."},503);
+    if(!stored||stored.revision!==revision)return json({ok:false,error:"Draft changed. Reload the latest version."},409);
+    const previous=stored.draft_payload as Record<string,unknown>;
+    if(!previous||typeof previous!=="object"||Array.isArray(previous)){
+      return json({ok:false,error:"Stored draft invalid."},503);
+    }
+    const next:Record<string,unknown>={...previous};
+    for(const key of allowedFields){
+      if(!commercialAccess&&commercialFields.includes(key))continue;
+      next[key]=draft[key];
+    }
+    for(const key of optionalFields)if(draft[key]!==undefined)next[key]=draft[key];
+    if(productDrafts!==undefined){
+      const prior=(previous.productDrafts&&typeof previous.productDrafts==="object"&&!Array.isArray(previous.productDrafts))
+        ?previous.productDrafts as Record<string,Record<string,string>>:{};
+      next.productDrafts=Object.fromEntries(Object.entries(productDrafts as Record<string,Record<string,string>>)
+        .map(([type,values])=>[type,{...(prior[type]??{}),...values}]));
+    }
+    // Compare-and-set on revision AND reviewer/status; preserve stored-only fields.
+    const {data:saved,error:saveError}=await admin.from("policy_intake_onboarding_drafts")
+      .update({draft_payload:next,revision:revision+1,
+        updated_by_profile_id:uid,updated_at:new Date().toISOString()})
+      .eq("intake_id",intakeId).eq("revision",revision)
+      .select("revision").maybeSingle();
+    if(saveError)return json({ok:false,error:"Policy Onboarding draft could not be saved."},503);
+    if(!saved)return json({ok:false,error:"The draft was edited elsewhere. Reload before saving."},409);
+    return json({ok:true,revision:saved.revision});
+  }
   if (body.action === "customer_search") {
     // Existing route requires the active reviewer, a live finalization grant,
     // and no duplicate intake. Do not broaden scope to other intake IDs.
