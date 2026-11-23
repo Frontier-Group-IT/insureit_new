@@ -314,9 +314,12 @@ function ImpactStory({ story, onOpen }: { story: PartnerStory; onOpen: () => voi
       </StoryPanel>
       <View pointerEvents="none" style={styles.unifiedArtworkBox}>
         <View style={styles.unifiedArtHalo} />
-        <Image source={require('../assets/partner/status/policy-active.png')} resizeMode="contain" style={styles.impactProtectionArtwork} />
+        <View style={styles.impactGoldenShield}>
+          <Ionicons name="umbrella" size={72} color="#FFFFFF" />
+        </View>
         <Image source={require('../assets/partner/actions/impact-blue-3d-car.png')} resizeMode="contain" style={styles.impactVehicleArtwork} />
         <Image source={require('../assets/partner/actions/policy-checklist.png')} resizeMode="contain" style={styles.impactDocumentArtwork} />
+        <View style={styles.impactApprovedMedal}><Ionicons name="checkmark-circle" size={33} color="#FFFFFF" /></View>
       </View>
     </View>
   );
@@ -337,7 +340,7 @@ function LearnStory({ story, onOpen }: { story: PartnerStory; onOpen: () => void
           accessibilityLabel={hasRoute ? 'Open ' + story.title : undefined}
           style={styles.learnStoryLink}
         >
-          <Text style={styles.learnStoryTitle}>{story.title}</Text>
+          <Text style={styles.learnStoryTitle} numberOfLines={3} adjustsFontSizeToFit minimumFontScale={0.78}>{story.title}</Text>
           <View style={styles.titleRule}><View style={styles.titleRuleActive} /></View>
           <Text style={styles.learnStoryQuestion}>{highlightStoryText(story.body)}</Text>
         </Pressable>
@@ -379,7 +382,7 @@ function JourneyMilestoneStory({ story }: { story: PartnerStory }) {
 
       {hasMilestone ? (
         <>
-          <StoryPanel>
+          <View style={styles.journeyMetricPanel}>
           <View style={styles.journeyStats}>
             <View style={styles.journeyStat}>
               <View style={[styles.journeyStatIcon, styles.journeyStatIconBlue]}>
@@ -416,7 +419,7 @@ function JourneyMilestoneStory({ story }: { story: PartnerStory }) {
             </View>
           </View>
 
-          </StoryPanel>
+          </View>
           <View style={styles.journeyScene} pointerEvents="none">
             <View style={styles.journeySceneHalo} />
             <Image
@@ -427,7 +430,7 @@ function JourneyMilestoneStory({ story }: { story: PartnerStory }) {
               importantForAccessibility="no-hide-descendants"
             />
             <View style={styles.journeyTrophy}>
-              <Ionicons name="trophy" size={34} color="#F6B51D" />
+              <Image source={require('../assets/partner/status/journey-trophy-reference.png')} style={styles.journeyTrophyArtwork} resizeMode="contain" />
             </View>
             <Image source={require('../assets/partner/actions/quick-customers.png')} style={styles.journeyPeopleArtwork} resizeMode="contain" />
             <View style={styles.journeySceneAchieved}>
@@ -493,9 +496,7 @@ function BusinessMonthStory({ story, onOpen }: { story: PartnerStory; onOpen: ()
           </View>
         </View>
       </Pressable>
-      <Text style={styles.businessPremiumCaption}>
-        {premium ? label + ' ' + premium : story.body}
-      </Text>
+      <Text style={styles.businessPremiumCaption}>{premium ? label : story.body}</Text>
       {hasTarget ? (
         <View style={styles.storyProgressWrap}>
           <View style={styles.storyProgressTrack}>
@@ -528,6 +529,10 @@ function TodayRenewalStory({ story, onOpen }: { story: PartnerStory; onOpen: () 
     : story.body;
   const renewalDays = story.title.match(/\b(?:in|within)\s+(\d+)\s+days?\b/i)?.[1] ?? null;
   const hasRoute = Boolean(story.route);
+  const isRenewal = /renew|expir|premium due/i.test(story.title + ' ' + story.body);
+  const isClaim = !isRenewal && /claim/i.test(story.title + ' ' + story.body);
+  const storyCategory = isClaim ? 'CLAIMS UPDATE' : isRenewal ? 'RENEWAL REMINDER' : 'TODAY\'S UPDATE';
+  const titleParts = isRenewal ? story.title.match(/^(.*?)(\b(?:in|within)\s+\d+\s+days?)(.*)$/i) : null;
 
   return (
     <View style={styles.todaySnapshot}>
@@ -539,7 +544,7 @@ function TodayRenewalStory({ story, onOpen }: { story: PartnerStory; onOpen: () 
             <Ionicons name="sunny-outline" size={34} color="#FFFFFF" />
           </View>
           <View style={styles.todayHeadlineText}>
-            <Text style={styles.todayEyebrow}>RENEWAL REMINDER</Text>
+            <Text style={styles.todayEyebrow}>{storyCategory}</Text>
             <Pressable
               onPress={onOpen}
               disabled={!hasRoute}
@@ -549,7 +554,7 @@ function TodayRenewalStory({ story, onOpen }: { story: PartnerStory; onOpen: () 
               accessibilityLabel={hasRoute ? 'Open ' + story.title : undefined}
               style={styles.todayTitleLink}
             >
-              <Text style={styles.todayHeadline}>{story.title}</Text>
+              <Text style={styles.todayHeadline}>{titleParts ? <>{titleParts[1]}<Text style={styles.todayDaysBadge}>{titleParts[2]}</Text>{titleParts[3]}</> : story.title}</Text>
               {hasRoute ? <Ionicons name="arrow-forward" size={20} color="#0B6DD6" /> : null}
             </Pressable>
           </View>
@@ -578,7 +583,7 @@ function TodayRenewalStory({ story, onOpen }: { story: PartnerStory; onOpen: () 
         <View style={styles.todayArtHalo} />
         <View style={styles.todayBackDocument} />
         <View style={styles.todayFrontDocument}>
-          <View style={styles.todayArtLabel}><Text style={styles.todayArtLabelText}>RENEWAL</Text></View>
+          <View style={styles.todayArtLabel}><Text style={styles.todayArtLabelText}>{isClaim ? 'CLAIMS' : isRenewal ? 'RENEWAL' : 'INSUREIT'}</Text></View>
           {[0, 1, 2].map((i) => (
             <View key={i} style={styles.todayArtLine}>
               <Ionicons name="checkmark-circle" size={23} color="#36C76A" />
@@ -636,17 +641,7 @@ function StoryIllustration({ kind, body }: { kind: PartnerStory['kind']; body: s
     return (
       <View style={styles.businessGrowthScene}>
         <View style={styles.businessGrowthHalo} />
-        <View style={styles.businessGrowthPlatform} />
-        <View style={styles.businessGrowthBars}>
-          {[68, 107, 146, 183].map((height, i) => (
-            <View key={i} style={[styles.businessGrowthBar, { height }]}>
-              <View style={styles.businessGrowthBarHighlight} />
-            </View>
-          ))}
-        </View>
-        <View style={styles.businessGrowthTrend}><Ionicons name="trending-up" size={138} color="#0888F5" /></View>
-        <View style={styles.businessRupeeCoin}><Text style={styles.businessRupeeText}>₹</Text></View>
-        <View style={styles.businessCashCoin}><Ionicons name="cash-outline" size={39} color="#FFFFFF" /></View>
+        <Image source={require('../assets/partner/status/business-growth.png')} resizeMode="contain" style={styles.businessGrowth3dArtwork} />
       </View>
     );
   }
@@ -721,6 +716,8 @@ const styles = StyleSheet.create({
   impactSmallLabel: { color: '#385A83', fontSize: 11, lineHeight: 14, textAlign: 'center', fontWeight: '700' },
   impactFallback: { color: '#385A83', fontSize: 14, lineHeight: 19, textAlign: 'center', marginTop: 9 },
   impactProtectionArtwork: { width: 164, height: 178, position: 'absolute', top: 21, left: '30%' },
+  impactGoldenShield: { position: 'absolute', top: 5, width: 168, height: 170, borderRadius: 64, borderColor: '#FFE492', borderWidth: 9, backgroundColor: '#0765CD', alignItems: 'center', justifyContent: 'center', shadowColor: '#C79508', shadowOpacity: 0.36, shadowRadius: 15, elevation: 5 },
+  impactApprovedMedal: { position: 'absolute', right: '1%', bottom: 5, width: 61, height: 61, borderRadius: 35, backgroundColor: '#F3AA00', borderColor: '#FFE7A1', borderWidth: 6, alignItems: 'center', justifyContent: 'center', elevation: 4 },
   impactVehicleArtwork: { width: 166, height: 137, position: 'absolute', bottom: 0, left: '2%' },
   impactDocumentArtwork: { width: 117, height: 127, position: 'absolute', bottom: 2, right: '2%' },
   learnStoryLink: { alignItems: 'center', alignSelf: 'stretch' },
@@ -731,6 +728,7 @@ const styles = StyleSheet.create({
   journeyHeadingBadge: { minHeight: 45, maxWidth: '100%', paddingHorizontal: 22, borderRadius: 35, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 10, backgroundColor: '#E5F2FF', shadowColor: '#064E9F', shadowOpacity: 0.12, shadowOffset: { width: 0, height: 4 }, shadowRadius: 8, elevation: 3 },
   journeyHeadingText: { color: '#08449B', fontSize: 20, fontWeight: '900', letterSpacing: 0.3 },
   journeySubtitle: { marginTop: 6, marginBottom: 9, color: '#FFFFFF', fontSize: 13, lineHeight: 19, fontWeight: '700', textAlign: 'center' },
+  journeyMetricPanel: { width: '100%', paddingHorizontal: 5, marginTop: 9 },
   journeyStats: { marginTop: 0, width: '100%', flexDirection: 'row', alignItems: 'stretch', justifyContent: 'space-between' },
   journeyStat: { flex: 1, minWidth: 0, alignItems: 'center', gap: 5, paddingHorizontal: 3 },
   journeyStatDivider: { width: StyleSheet.hairlineWidth, alignSelf: 'stretch', backgroundColor: '#A7C5E9', marginVertical: 9 },
@@ -751,7 +749,8 @@ const styles = StyleSheet.create({
   journeySceneHalo: { position: 'absolute', width: '100%', height: 235, borderRadius: 140, backgroundColor: 'rgba(237,248,255,0.67)', top: 19 },
   journeyRoadArtwork: { width: '100%', height: 258 },
   journeyPeopleArtwork: { position: 'absolute', bottom: 55, left: '7%', width: 62, height: 62 },
-  journeyTrophy: { position: 'absolute', right: '10%', top: 39, width: 49, height: 49, borderRadius: 25, backgroundColor: '#FFF6DB', borderWidth: 2, borderColor: '#FFDC80', alignItems: 'center', justifyContent: 'center', shadowColor: '#B17C0C', shadowOpacity: 0.14, shadowRadius: 8, elevation: 3 },
+  journeyTrophy: { position: 'absolute', right: '10%', top: 39, width: 56, height: 56, borderRadius: 30, backgroundColor: '#FFF6DB', borderWidth: 2, borderColor: '#FFDC80', alignItems: 'center', justifyContent: 'center', shadowColor: '#B17C0C', shadowOpacity: 0.14, shadowRadius: 8, elevation: 3 },
+  journeyTrophyArtwork: { width: 51, height: 51 },
   journeySceneAchieved: { position: 'absolute', left: 2, bottom: 18, flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#FFFFFF', paddingHorizontal: 9, paddingVertical: 6, borderWidth: 1, borderColor: '#6FD4A5', borderRadius: 10 },
   journeySceneTarget: { position: 'absolute', right: 3, top: 6, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#6EB2F7' },
   journeySceneMarkerText: { color: '#184879', fontSize: 11, fontWeight: '800' },
@@ -766,7 +765,8 @@ const styles = StyleSheet.create({
   todayHeadlineText: { flex: 1, minWidth: 0 },
   todayEyebrow: { color: '#7B8AA3', fontSize: 10, fontWeight: '900', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 7 },
   todayTitleLink: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  todayHeadline: { color: '#092E68', fontSize: 23, lineHeight: 29, fontWeight: '900', flex: 1, flexShrink: 1 },
+  todayHeadline: { color: '#092E68', fontSize: 23, lineHeight: 32, fontWeight: '900', flex: 1, flexShrink: 1 },
+  todayDaysBadge: { color: '#0766DA', backgroundColor: '#D8E8FF', fontWeight: '900' },
   todayDivider: { marginTop: 18, marginBottom: 13, height: 1, backgroundColor: '#DAE7F8' },
   todayPremiumPanel: { flexDirection: 'row', gap: 12, alignItems: 'center', padding: 12, borderRadius: 17, backgroundColor: '#EDF5FF' },
   todayPremiumIcon: { width: 47, height: 47, backgroundColor: '#D7E9FF', borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
@@ -801,6 +801,7 @@ const styles = StyleSheet.create({
   businessIllustrationWrap: { width: '100%', minHeight: 235, marginTop: 3, alignItems: 'center', justifyContent: 'center' },
   businessGrowthScene: { width: '100%', height: 245, maxWidth: 360, alignItems: 'center', justifyContent: 'center' },
   businessGrowthHalo: { position: 'absolute', top: 17, width: 275, height: 224, borderRadius: 155, backgroundColor: '#D6E7FF' },
+  businessGrowth3dArtwork: { width: '100%', height: 255, maxWidth: 330 },
   businessGrowthPlatform: { position: 'absolute', bottom: 6, width: 275, height: 24, borderRadius: 40, backgroundColor: '#C1DEFD', borderWidth: 2, borderColor: '#E7F4FF' },
   businessGrowthBars: { position: 'absolute', bottom: 25, flexDirection: 'row', alignItems: 'flex-end', gap: 8, left: '19%' },
   businessGrowthBar: { width: 41, borderWidth: 2, borderColor: '#68BCFF', borderRadius: 10, backgroundColor: '#0F8DF4', overflow: 'hidden', shadowColor: '#126BC5', shadowOpacity: 0.18, shadowRadius: 8, elevation: 4 },
