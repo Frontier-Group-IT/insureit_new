@@ -1,0 +1,252 @@
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { canPartnerUseAiStudio } from '@/lib/partner-permissions';
+import { usePartnerSession } from '@/providers/partner-session-provider';
+import { loadAiStudioDetail, loadAiStudioPage, type AiStudioBucket, type AiStudioDetail, type AiStudioPage, type AiStudioRow } from '@/lib/ai-studio';
+
+const C = { ink:'#182C38', faint:'#71828C', paper:'#F5F8F7', line:'#E5ECEA', navy:'#142C3B', blue:'#375DD8', mint:'#B9EAD0' };
+const TABS: Array<{key:AiStudioBucket;label:string}> = [
+  {key:'review',label:'Review'}, {key:'processing',label:'Running'}, {key:'done',label:'Done'},
+];
+const humanize = (value:string) => value.replace(/_/g,' ').replace(/\b\w/g,s=>s.toUpperCase());
+const fieldName = (key:string) => ({
+  insured_name:'Insured',policy_number:'Policy',policy_issuance_date:'Issued',
+  policy_start_date:'Starts',policy_end_date:'Ends',vehicle_registration_number:'Registration',
+  vehicle_make:'Make',vehicle_model:'Model',vehicle_capacity:'Capacity',
+  vehicle_chassis_number:'Chassis',vehicle_engine_number:'Engine',
+  vehicle_rto_name:'RTO',vehicle_rto_state:'State',insurer_name:'Insurer',
+  od_premium:'Own damage',tp_premium:'Third party',
+} as Record<string,string>)[key] || humanize(key);
+
+export default function AiPolicyStudioScreen() {
+  const router=useRouter();
+  const insets=useSafeAreaInsets();
+  const {context}=usePartnerSession();
+  const allowed=canPartnerUseAiStudio(context);
+  const [filter,setFilter]=useState<AiStudioBucket>('review');
+  const [page,setPage]=useState<AiStudioPage>({counts:{review:0,processing:0,done:0},rows:[]});
+  const [loading,setLoading]=useState(true);
+  const [refreshing,setRefreshing]=useState(false);
+  const [moreLoading,setMoreLoading]=useState(false);
+  const [error,setError]=useState('');
+  const [selected,setSelected]=useState<AiStudioRow|null>(null);
+  const [detail,setDetail]=useState<AiStudioDetail|null>(null);
+  const [detailLoading,setDetailLoading]=useState(false);
+  const [detailError,setDetailError]=useState('');
+  const sequence=useRef(0);
+  const detailSequence=useRef(0);
+
+  const reload=useCallback(async(offset=0)=>{
+    if(!allowed) return;
+    const token=++sequence.current;
+    if(offset===0){setLoading(true);setError('');}else setMoreLoading(true);
+    try {
+      const next=await loadAiStudioPage(filter,offset);
+      if(token!==sequence.current)return;
+      setPage(old=>offset===0?next:{counts:next.counts,rows:[...old.rows,...next.rows.filter(row=>!old.rows.some(x=>x.id===row.id))]});
+    } catch(e) {
+      if(token===sequence.current) setError(e instanceof Error?e.message:'Could not load the queue.');
+    } finally {
+      if(token===sequence.current){setLoading(false);setRefreshing(false);setMoreLoading(false);}
+    }
+  },[allowed,filter]);
+  useFocusEffect(useCallback(()=>{
+    void reload();
+    return ()=>{sequence.current++;detailSequence.current++;};
+  },[reload]));
+  useEffect(()=>{
+    if(!selected||!allowed){setDetail(null);return;}
+    const token=++detailSequence.current;
+    setDetail(null);setDetailError('');setDetailLoading(true);
+    void loadAiStudioDetail(selected.id).then(x=>{
+      if(token===detailSequence.current)setDetail(x);
+    }).catch(e=>{
+      if(token===detailSequence.current)setDetailError(e instanceof Error?e.message:'Could not load intake.');
+    }).finally(()=>{if(token===detailSequence.current)setDetailLoading(false);});
+    return ()=>{detailSequence.current++;};
+  },[selected,allowed]);
+  const count=(key:AiStudioBucket)=>page.counts[key]||0;
+  const refresh=()=>{setRefreshing(true);void reload();};
+
+  if(!allowed)return(
+    <SafeAreaView style={s.root}>
+      <Pressable style={s.circle} onPress={()=>router.back()} accessibilityRole="button" accessibilityLabel="Back">
+        <Ionicons name="arrow-back" color={C.ink} size={20}/>
+      </Pressable>
+      <View style={s.center}><Ionicons name="lock-closed-outline" color={C.faint} size={28}/>
+        <Text style={s.emptyHead}>Private workspace</Text>
+        <Text style={s.emptyText}>For authorized IT reviewers.</Text>
+      </View>
+    </SafeAreaView>
+  );
+  return (
+    <SafeAreaView style={s.root} edges={['top']}>
+      <View style={s.top}>
+        <Pressable onPress={()=>router.back()} accessibilityRole="button" accessibilityLabel="Back to More" style={s.circle}>
+          <Ionicons name="arrow-back" size={20} color={C.ink}/>
+        </Pressable>
+        <Text style={s.topWord}>INSUREIT  /  OPERATIONS</Text>
+        <Pressable onPress={refresh} accessibilityRole="button" accessibilityLabel="Refresh" style={s.circle}>
+          <Ionicons name="refresh-outline" size={20} color={C.ink}/>
+        </Pressable>
+      </View>
+      <ScrollView style={s.scroll} contentContainerStyle={{paddingHorizontal:22,paddingTop:13,paddingBottom:insets.bottom+36}}
+        refreshControl={<RefreshControl refreshing={refreshing} tintColor={C.blue} onRefresh={refresh}/>}>
+        <View style={s.titleRow}>
+          <View><Text style={s.eyebrow}>INTELLIGENCE / 01</Text><Text style={s.title}>AI Studio<Text style={{color:C.blue}}>.</Text></Text></View>
+          <View style={s.sparkle}><Ionicons name="sparkles-outline" color={C.ink} size={24}/></View>
+        </View>
+        <View style={s.hero}>
+          <View style={s.heroMain}>
+            <Text style={s.heroOverline}>AWAITING ATTENTION</Text>
+            <Text style={s.heroNumber}>{count('review')}</Text>
+            <Text style={s.heroHint}>●  Live policy queue</Text>
+          </View>
+          <View style={s.heroAside}>
+            <Text style={s.heroMini}>{count('processing')}</Text><Text style={s.heroAsideLabel}>Processing</Text>
+            <View style={s.heroDivider}/>
+            <Text style={s.heroMini}>{count('done')}</Text><Text style={s.heroAsideLabel}>Completed</Text>
+          </View>
+          <View style={s.heroRing}/>
+        </View>
+        <View style={s.segment}>
+          {TABS.map(tab=><Pressable key={tab.key} accessibilityRole="tab" accessibilityState={{selected:filter===tab.key}}
+            style={[s.segmentItem,filter===tab.key&&s.segmentActive]}
+            onPress={()=>{setFilter(tab.key);setPage(p=>({...p,rows:[]}));}}>
+            <Text style={[s.segmentLabel,filter===tab.key&&s.activeLabel]}>{tab.label}</Text>
+            <Text style={[s.segmentCount,filter===tab.key&&s.activeLabel]}>{count(tab.key)}</Text>
+          </Pressable>)}
+        </View>
+        <View style={s.sectionHead}><Text style={s.sectionTitle}>{filter==='review'?'Needs your eye':filter==='processing'?'In the pipeline':'Finished'}</Text>
+          <Text style={s.meta}>{count(filter)} records</Text></View>
+        {loading&&page.rows.length===0?<View style={s.center}><ActivityIndicator color={C.blue}/></View>:null}
+        {error?<Pressable style={s.error} onPress={()=>void reload()} accessibilityRole="button">
+          <Text style={s.errorText}>{error}</Text><Ionicons name="refresh" color="#A44935" size={18}/>
+        </Pressable>:null}
+        {!loading&&!error&&!page.rows.length?<View style={s.center}>
+          <Ionicons name="checkmark-circle-outline" color="#7DAB96" size={28}/>
+          <Text style={s.emptyHead}>All clear here</Text><Text style={s.emptyText}>No intakes in this view.</Text>
+        </View>:null}
+        {page.rows.length>0?<View style={s.list}>
+          {page.rows.map(row=>{
+            const done=!!row.final_policy_id,flag=row.exception_codes.length>0;
+            const status=done?'Completed':row.bucket==='review'?(flag?'Needs review':'Ready'):(flag?'Attention':'In progress');
+            return <Pressable key={row.id} accessibilityRole="button" accessibilityLabel={'Open '+row.intake_number}
+              style={({pressed})=>[s.row,pressed&&{backgroundColor:'#F2F6F4'}]} onPress={()=>setSelected(row)}>
+              <View style={[s.mark,{backgroundColor:done?'#54A983':flag?'#D7A662':'#8B9EDB'}]}/>
+              <View style={s.rowMain}><Text numberOfLines={1} style={s.rowTitle}>{row.intake_number.replace('PIR-','')}</Text>
+                <Text numberOfLines={1} style={s.rowSub}>{row.lead_source_name||row.policy_type||'Policy intake'}</Text></View>
+              <View style={s.rowRight}><Text style={[s.rowStatus,{color:done?'#398562':flag?'#A5773A':'#5C78A8'}]}>{status}</Text>
+                <Text style={s.rowChecks}>{row.checks_passed?String(row.checks_passed)+' checks':'Pending'}</Text></View>
+              <Ionicons name="chevron-forward" size={16} color="#9DADAF"/>
+            </Pressable>;
+          })}
+        </View>:null}
+        {!loading&&page.rows.length<count(filter)?<Pressable style={s.showMore} disabled={moreLoading}
+          onPress={()=>void reload(page.rows.length)} accessibilityRole="button">
+          {moreLoading?<ActivityIndicator color={C.ink} size="small"/>:<Text style={s.showMoreText}>Show more</Text>}
+        </Pressable>:null}
+        <Text style={s.footer}>SECURED BY INSUREIT · SUPABASE</Text>
+      </ScrollView>
+
+      <Modal visible={Boolean(selected)} presentationStyle="pageSheet" animationType="slide" onRequestClose={()=>setSelected(null)}>
+        <SafeAreaView style={s.sheet}>
+          <View style={s.sheetTop}>
+            <View><Text style={s.eyebrow}>VERIFIED INTAKE</Text>
+              <Text style={s.sheetTitle}>{selected?.intake_number.replace('PIR-','')}</Text></View>
+            <Pressable style={s.circle} onPress={()=>setSelected(null)} accessibilityRole="button" accessibilityLabel="Close details">
+              <Ionicons name="close" color={C.ink} size={21}/>
+            </Pressable>
+          </View>
+          {detailLoading?<View style={s.center}><ActivityIndicator color={C.blue}/></View>:null}
+          {detailError?<View style={s.center}><Text style={s.errorText}>{detailError}</Text></View>:null}
+          {detail?<ScrollView contentContainerStyle={s.sheetContent}>
+            <View style={s.detailHero}>
+              <Text style={s.detailEyebrow}>{humanize(detail.queue_state)}</Text>
+              <Text style={s.detailName}>{detail.fields.find(x=>x.key==='insured_name')?.value||detail.lead_source_name||'Policy intake'}</Text>
+              <Text style={s.detailMeta}>{detail.checks_passed} verified checks · {detail.policy_type||'Motor'}</Text>
+            </View>
+            {detail.last_error_code||detail.exception_codes.length?<View style={s.issue}>
+              <Ionicons name="information-circle-outline" size={18} color="#996A33"/>
+              <Text style={s.issueText}>{humanize(detail.last_error_code||detail.exception_codes.join(', '))}</Text>
+            </View>:null}
+            <View style={s.sectionHead}><Text style={s.sectionTitle}>PDF extraction</Text>
+              <Text style={s.meta}>{detail.fields.length} fields</Text></View>
+            <View style={s.detailList}>
+              {detail.fields.map((f,index)=><View key={f.key+String(index)} style={s.detailField}>
+                <Text style={s.fieldLabel}>{fieldName(f.key)}</Text>
+                <Text selectable style={s.fieldValue}>{f.value}</Text>
+              </View>)}
+            </View>
+            <Text style={s.note}>Extraction is not booking approval. Final registration requires the protected onboarding service.</Text>
+          </ScrollView>:null}
+        </SafeAreaView>
+      </Modal>
+    </SafeAreaView>
+  );
+}
+
+const s=StyleSheet.create({
+  root:{flex:1,backgroundColor:C.paper},scroll:{flex:1},
+  top:{height:58,paddingHorizontal:20,flexDirection:'row',alignItems:'center',justifyContent:'space-between'},
+  circle:{width:43,height:43,borderRadius:23,backgroundColor:'#FFFFFF',borderWidth:1,borderColor:C.line,alignItems:'center',justifyContent:'center'},
+  topWord:{fontSize:10,letterSpacing:1.4,color:C.faint,fontWeight:'700'},
+  eyebrow:{fontSize:10,color:'#87969C',fontWeight:'800',letterSpacing:1.5},
+  titleRow:{flexDirection:'row',justifyContent:'space-between',alignItems:'center',marginBottom:22},
+  title:{fontSize:36,fontWeight:'800',letterSpacing:-1.7,color:C.ink,marginTop:5},
+  sparkle:{height:49,width:49,borderRadius:25,alignItems:'center',justifyContent:'center',backgroundColor:C.mint},
+  hero:{height:174,backgroundColor:C.navy,borderRadius:26,flexDirection:'row',overflow:'hidden',marginBottom:21},
+  heroMain:{flex:1,paddingLeft:24,paddingTop:23,zIndex:1},
+  heroOverline:{fontSize:10,fontWeight:'700',color:'#A7C6D1',letterSpacing:1.2},
+  heroNumber:{fontSize:63,fontWeight:'700',color:'#FFFFFF',letterSpacing:-3,marginTop:2},
+  heroHint:{fontSize:11,color:C.mint,marginTop:-1},
+  heroAside:{width:113,alignSelf:'center',borderLeftWidth:1,borderLeftColor:'#375262',paddingLeft:18,zIndex:1},
+  heroMini:{fontSize:22,fontWeight:'800',color:'#FFFFFF'},
+  heroAsideLabel:{fontSize:10,color:'#B8CBD1',marginBottom:5},
+  heroDivider:{backgroundColor:'#375262',height:1,marginVertical:7,marginRight:13},
+  heroRing:{position:'absolute',width:220,height:220,borderRadius:110,borderWidth:1,borderColor:'#305060',top:-100,left:-100},
+  segment:{flexDirection:'row',backgroundColor:'#E9EFED',borderRadius:17,padding:4,marginBottom:24},
+  segmentItem:{flex:1,minHeight:43,borderRadius:13,alignItems:'center',justifyContent:'center',flexDirection:'row',gap:6},
+  segmentActive:{backgroundColor:'#FFFFFF'},
+  segmentLabel:{fontSize:12,fontWeight:'600',color:C.faint},
+  segmentCount:{fontSize:10,fontWeight:'700',color:'#92A19F'},
+  activeLabel:{color:C.ink,fontWeight:'800'},
+  sectionHead:{flexDirection:'row',justifyContent:'space-between',alignItems:'center',marginBottom:10,marginTop:2},
+  sectionTitle:{fontSize:15,color:C.ink,fontWeight:'800',letterSpacing:-.3},
+  meta:{fontSize:11,fontWeight:'600',color:C.faint},
+  list:{backgroundColor:'#FFFFFF',borderRadius:22,borderWidth:1,borderColor:C.line,overflow:'hidden'},
+  row:{minHeight:80,flexDirection:'row',alignItems:'center',gap:11,paddingHorizontal:14,borderBottomWidth:StyleSheet.hairlineWidth,borderBottomColor:C.line},
+  mark:{width:4,height:34,borderRadius:3},
+  rowMain:{flex:1,minWidth:0},
+  rowTitle:{fontSize:13,fontWeight:'800',color:C.ink},
+  rowSub:{fontSize:10.5,marginTop:5,color:C.faint},
+  rowRight:{gap:5,alignItems:'flex-end'},
+  rowStatus:{fontSize:10,fontWeight:'700'},
+  rowChecks:{fontSize:10,color:'#91A0A5'},
+  center:{minHeight:160,alignItems:'center',justifyContent:'center',gap:10,padding:32},
+  emptyHead:{fontSize:15,fontWeight:'800',color:C.ink},
+  emptyText:{fontSize:11,color:C.faint},
+  error:{padding:15,borderRadius:15,backgroundColor:'#FFF0EA',flexDirection:'row',gap:12,marginBottom:12,alignItems:'center'},
+  errorText:{flex:1,fontSize:12,color:'#A44935'},
+  showMore:{height:48,alignItems:'center',justifyContent:'center'},
+  showMoreText:{fontWeight:'800',fontSize:12,color:C.blue},
+  footer:{fontSize:9,letterSpacing:1.2,color:'#99A6A4',textAlign:'center',marginTop:23},
+  sheet:{flex:1,backgroundColor:C.paper},
+  sheetTop:{minHeight:90,paddingHorizontal:22,flexDirection:'row',alignItems:'center',justifyContent:'space-between'},
+  sheetTitle:{fontSize:24,fontWeight:'800',color:C.ink,letterSpacing:-.9,marginTop:4},
+  sheetContent:{paddingHorizontal:22,paddingTop:5,paddingBottom:48},
+  detailHero:{backgroundColor:C.navy,borderRadius:23,padding:22,marginBottom:15},
+  detailEyebrow:{fontSize:10,letterSpacing:1.4,fontWeight:'800',color:C.mint},
+  detailName:{fontSize:22,color:'#FFFFFF',fontWeight:'800',marginTop:12,letterSpacing:-.5},
+  detailMeta:{fontSize:11,color:'#B9C9D0',marginTop:8},
+  issue:{backgroundColor:'#FFF4E7',padding:14,borderRadius:14,flexDirection:'row',gap:9,marginBottom:16},
+  issueText:{flex:1,fontSize:12,lineHeight:17,color:'#94652D',fontWeight:'600'},
+  detailList:{backgroundColor:'#FFFFFF',borderRadius:19,borderWidth:1,borderColor:C.line,paddingHorizontal:16},
+  detailField:{paddingVertical:14,minHeight:54,borderBottomWidth:StyleSheet.hairlineWidth,borderBottomColor:C.line,flexDirection:'row',alignItems:'center',gap:14},
+  fieldLabel:{flex:.38,fontSize:11,color:C.faint},
+  fieldValue:{flex:.62,fontSize:11.5,color:C.ink,fontWeight:'700',textAlign:'right'},
+  note:{fontSize:10.5,lineHeight:17,color:C.faint,marginTop:19,textAlign:'center'},
+});
