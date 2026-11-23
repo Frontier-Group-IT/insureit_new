@@ -84,7 +84,9 @@ export async function POST(request:NextRequest){
     return respond({ok:true,action:"convert",policy_booked:true,
       policy_id:result.policyId??null,policy_code:result.policyCode??null});
   }catch{
-    // Never return internal exceptions, tokens, service URLs, or customer data.
-    return respond({ok:false,error:"secure_action_unavailable_or_denied"},503);
+    // The canonical transaction may already have completed when a transport
+    // or downstream error occurs. Require refresh before any repeated action.
+    // Never return internal exceptions, credentials or customer data.
+    return respond({ok:false,error:"action_outcome_unknown_refresh_before_retry"},503);
   }
 }
