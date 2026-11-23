@@ -21,7 +21,7 @@ const searchScreen = app('app/search.tsx');
 const businessScreen = app('app/(tabs)/business.tsx');
 const endpoint = web('app/api/partner/effective-permissions/route.ts');
 const intakeRoute = web('app/api/partner/policy-intakes/route.ts');
-const permissionRpc = readFileSync(new URL('../../../supabase/migrations/20261123123000_partner_effective_permissions_supabase.sql', import.meta.url), 'utf8');
+const permissionRpc = readFileSync(new URL('../../../supabase/migrations/20261123075048_partner_app_effective_permissions_supabase.sql', import.meta.url), 'utf8');
 const migration = readFileSync(new URL('../../../supabase/migrations/20261107180000_partner_app_website_write_permission_guards.sql', import.meta.url), 'utf8');
 const rollback = readFileSync(new URL('../../../supabase/rollbacks/20261107180000_partner_app_website_write_permission_guards_rollback.sql', import.meta.url), 'utf8');
 
