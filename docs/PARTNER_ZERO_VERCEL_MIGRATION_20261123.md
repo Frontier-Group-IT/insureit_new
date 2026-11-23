@@ -108,3 +108,10 @@ The list above was checked against the Partner app's `lib/` files and screen-lev
 - The `relationship_manager` role is intentionally excluded from this new path because the canonical Operations `getEmployeeAccessScope` supports capability-specific scope overrides. Partner/Branch family attribution and Life Operations Head downline remain unmet.
 - Pure resolver unit tests cover active descendants, isolation from unrelated staff, stale employee edges, reporting cycles and malformed IDs. CI invokes the tests with Node type stripping.
 - No user data, booking, production database, Edge deployment, OTA, or mobile call path was changed. This PR must remain draft pending full permission parity and user-account UAT.
+
+
+## Staged Partner/Branch family PDF read attribution
+- For non-RM management hierarchy roles only, `partner-intake-document` now follows the canonical `rm-policy-intake-scope` Partner-family chain: active descendant employees → `posp_misp_onboarding_profiles.associate_employee_id` → linked parent Partners → child Branches → partner codes and verified login/intermediary account IDs.
+- Source codes are derived only from verified Partner masters and retain the canonical `PTNNNNN` → `PART-2026-NNNNN` legacy alias. All IDs and source codes are validated before constructing PostgREST expressions; every source query uses bounded pagination and fails closed on errors or incomplete reads.
+- New pure regression tests verify aliases, deduplication, empty scope and injection denial. The checks run in Partner CI, independent of production credentials.
+- **Not final parity:** Relationship Manager capability-specific overrides and Operations Head Life downline remain unsupported; no authenticated device/role UAT has been executed. The function has not been deployed or connected to the mobile app. No merge/OTA.
