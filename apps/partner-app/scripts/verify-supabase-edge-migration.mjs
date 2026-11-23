@@ -74,7 +74,7 @@ assert.match(onboardingDocs,/\.select\("document_type,file_name"\)/,'Only docume
 assert.match(onboardingDocs,/createSignedUploadUrl\(path,\{upsert:false\}\)/,'Document upload must use one-time non-overwriting token');
 assert.match(onboardingDocs,/stored.size!==size\|\|stored.contentType!==mime/,'Finalize must verify uploaded content');
 assert.match(onboardingDocs,/MAX_BYTES=4\*1024\*1024/,'Document file-size limit is enforced');
-assert.match(onboardingDocs,/eq\("assigned_to_profile_id",userInfo.user.id\)/,'Document mutations must require original reviewer');
+assert.match(onboardingDocs,/assigned_to_profile_id!==userInfo.user.id/,'Document mutations must require original reviewer');
 assert.match(mobileOnboarding,/action:'prepare_upload'/,'Mobile must prepare signed document uploads');
 assert.match(mobileOnboarding,/action:'finalize_upload'/,'Mobile must finalize checked Storage uploads');
 assert.match(mobileOnboarding,/action:'delete'/,'Mobile document removal must use Supabase Edge');
