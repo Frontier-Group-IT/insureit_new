@@ -336,6 +336,22 @@ for (const fragment of [
   'style={[styles.top, { paddingTop: insets.top + 11 }]}',
   'style={styles.progress}',
 ]) requireText(stories, fragment, 'All INSUREIT Story slides must keep progress dashes below Android/iOS status bars: ' + fragment);
+// Story dashes must sit below the heading while the permission-aware Home tabs stay outside the story touch responder.
+const storiesHeaderStart = stories.indexOf('<View style={styles.header}>');
+const storiesHeaderEnd = stories.indexOf('</View>\n      </View>\n\n      {loading ? (', storiesHeaderStart);
+const storiesProgressPosition = stories.indexOf('<View style={styles.progress}');
+if (storiesHeaderStart < 0 || storiesHeaderEnd < 0 || storiesProgressPosition <= storiesHeaderStart || storiesProgressPosition >= storiesHeaderEnd) {
+  throw new Error('Stories progress timeline must render below the navy header row.');
+}
+for (const fragment of [
+  "import { PartnerCaseBottomNavigation } from '@/components/partner-case-bottom-navigation';",
+  '<PartnerCaseBottomNavigation activeTab="Home" />',
+  'style={[styles.bottomNavigationShell, { paddingBottom: insets.bottom }]}',
+  'bottomNavigationShell: { backgroundColor:',
+]) requireText(stories, fragment, 'Stories must retain Home navigation and bottom safe area: ' + fragment);
+if (stories.indexOf('<PartnerCaseBottomNavigation activeTab="Home" />') < stories.indexOf('</ScrollView>')) {
+  throw new Error('Stories bottom tabs must remain outside the story tap-to-advance ScrollView.');
+}
 // Stories reference: continuous illustrated slide, not the former floating card.
 for (const [fragment, reason] of [
   ['style={styles.storyBackdrop}', 'Stories use a shared blue curved canvas'],
