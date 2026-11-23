@@ -160,44 +160,39 @@ export type PartnerCustomerDocument = {
   type: 'pan_copy' | 'aadhaar_front' | 'aadhaar_back' | 'gst_copy';
   uri: string; name: string; mimeType: string; size: number;
 };
-const portalUrl = (process.env.EXPO_PUBLIC_PORTAL_URL || 'https://portal.insureit.in').replace(/\/$/, '');
-
-async function partnerCustomerRequest(method: 'POST' | 'PUT', payload: string | FormData) {
-  const { data: sessionData } = await supabase.auth.getSession();
-  const token = sessionData.session?.access_token;
-  if (!token) throw new Error('Sign in again to continue.');
-  let response: Response;
-  try {
-    response = await fetch(portalUrl + '/api/partner/customers/create', {
-      method,
-      headers: {
-        Authorization: 'Bearer ' + token,
-        ...(method === 'POST' ? { 'Content-Type': 'application/json' } : {}),
-      },
-      body: payload,
-    });
-  } catch {
-    throw new Error('Cannot connect to customer service. Check your internet connection.');
-  }
-  const result = await response.json().catch(() => null) as {ok?:boolean;customerId?:string;error?:string}|null;
-  if (!response.ok || !result?.ok) {
-    throw new Error(result?.error || 'Customer request was not confirmed. Check customer list before retrying.');
+async function partnerCustomerRequest(body:Record<string,unknown>){
+  const {data,error}=await supabase.functions.invoke('partner-customer-create',{body});
+  const result=data as {ok?:boolean;customerId?:string;error?:string;path?:string;token?:string;alreadySaved?:boolean}|null;
+  if(error||!result?.ok){
+    throw new Error(result?.error||'Customer service is unavailable. Check your list before retrying.');
   }
   return result;
 }
 
 export async function createPartnerCustomer(input: NewPartnerCustomer, requestId: string): Promise<string> {
   await requirePartnerWritePermission('create_customers');
-  const result = await partnerCustomerRequest('POST', JSON.stringify({ ...input, requestId }));
+  const result = await partnerCustomerRequest({ ...input, requestId, action:'create' });
   if (!result.customerId) throw new Error('Customer creation was not confirmed. Check customer list before retrying.');
   return result.customerId;
 }
 
-export async function uploadPartnerCustomerDocument(customerId: string, document: PartnerCustomerDocument): Promise<void> {
+export async function uploadPartnerCustomerDocument(customerId:string, document:PartnerCustomerDocument):Promise<void>{
   await requirePartnerWritePermission('create_customers');
-  const payload = new FormData();
-  payload.append('customerId', customerId);
-  payload.append('type', document.type);
-  payload.append('file', { uri:document.uri, name:document.name, type:document.mimeType } as unknown as Blob);
-  await partnerCustomerRequest('PUT',payload);
+  let bytes:ArrayBuffer;
+  try{
+    const file=await fetch(document.uri);
+    if(!file.ok)throw new Error('Document could not be read');
+    bytes=await file.arrayBuffer();
+  }catch{throw new Error('The selected document could not be read. Select it again.');}
+  if(bytes.byteLength!==document.size||bytes.byteLength<1||bytes.byteLength>4*1024*1024)
+    throw new Error('Selected document is invalid or exceeds the 4 MB limit.');
+  const details={customerId,type:document.type,name:document.name,
+    mimeType:document.mimeType,size:document.size};
+  const prepared=await partnerCustomerRequest({action:'prepare_document',...details});
+  if(prepared.alreadySaved)return;
+  if(!prepared.path||!prepared.token)throw new Error('Secure customer document token is unavailable.');
+  const {error:uploadError}=await supabase.storage.from('customer-documents')
+    .uploadToSignedUrl(prepared.path,prepared.token,bytes,{contentType:document.mimeType,upsert:false});
+  if(uploadError)throw new Error('Customer document upload failed: '+uploadError.message);
+  await partnerCustomerRequest({action:'finalize_document',...details,path:prepared.path});
 }
