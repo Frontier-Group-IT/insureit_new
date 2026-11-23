@@ -18,6 +18,7 @@ const onboardingDocs=read('supabase/functions/partner-onboarding-documents/index
 const policyCopy=read('supabase/functions/partner-policy-copy/index.ts');
 const push=read('supabase/functions/partner-push-devices/index.ts');
 const mobileDeletion=read('apps/partner-app/lib/account-deletion.ts');
+const mobileOnboarding=read('apps/partner-app/lib/policy-onboarding.ts');
 const mobilePush=read('apps/partner-app/lib/partner-notifications.ts');
 for(const [name,code] of [['onboarding',onboarding],['deletion',deletion],['push',push],['sources',sources],['onboarding-documents',onboardingDocs],['policy-copy',policyCopy]]){
   assert.match(code,/auth\.getUser\(/,`${name} must check the caller's JWT`);
@@ -77,4 +78,7 @@ assert.match(policyCopy,/stored.size!==size\|\|stored.contentType!==type/,'Final
 assert.match(policyCopy,/LIMIT=15\*1024\*1024/,'Policy copy size cap is preserved');
 assert.match(policyCopy,/after.data\)return reply\(\{ok:true,document_id:after.data.id\}\)/,'Policy-copy finalize recovers idempotently');
 assert.doesNotMatch(policyCopy,/portal.insureit.in|EXPO_PUBLIC_PORTAL_URL/,'Policy-copy service must be independent of Vercel');
+assert.match(mobileOnboarding,/functions\.invoke\('partner-policy-copy'/,'Native Motor policy copy must use Supabase Edge');
+assert.match(mobileOnboarding,/functions\.invoke\('partner-onboarding-documents'/,'Native document listing must use Supabase Edge');
+assert.match(mobileOnboarding,/action:'list',intake_id:intakeId,business_line:line/,'Document list request is scope-bound');
 console.log('Supabase Edge migration auth and policy-copy upload contracts verified');
