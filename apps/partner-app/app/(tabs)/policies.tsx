@@ -340,11 +340,16 @@ export default function PoliciesScreen() {
           placeholders={['Search customer...', 'Search vehicle number...', 'Search policy number...']}
           containerStyle={styles.searchField}
         />
-        <View accessibilityLabel="Filter options are available from the bottom Sort button"
-          style={styles.filterButton} pointerEvents="none">
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Filter policies"
+          accessibilityHint="Opens the same filters as Sort by"
+          onPress={openSortSheet}
+          style={({ pressed }) => [styles.filterButton, pressed && styles.summaryChipPressed]}
+        >
           <Ionicons name="filter-outline" size={18} color="#3156B8" />
           <Text style={styles.filterText}>Filter</Text>
-        </View>
+        </Pressable>
       </View>
 
   );

@@ -46,22 +46,32 @@ assert.match(screen,/<\/ScrollView>\s*<View style=\{styles\.advancedFooter\}>/,
 
 assert.match(screen,/PartnerDatePicker directSelect label="From"/);
 assert.match(screen,/PartnerDatePicker directSelect label="To"/);
-// Keep the inline Filter visually identical to Claims, but non-interactive.
+// The search-row Filter and the floating Sort must open the same scoped filter sheet.
 for (const marker of [
-  'accessibilityLabel="Filter options are available from the bottom Sort button"',
-  'style={styles.filterButton} pointerEvents="none"',
+  'accessibilityRole="button"',
+  'accessibilityLabel="Filter policies"',
+  'accessibilityHint="Opens the same filters as Sort by"',
   '<Ionicons name="filter-outline" size={18} color="#3156B8" />',
   '<Text style={styles.filterText}>Filter</Text>',
   'borderLeftWidth: StyleSheet.hairlineWidth',
   "borderLeftColor: '#D9DFEA'",
-]) assert.ok(screen.includes(marker), 'View-only Policies Filter must preserve: '+marker);
-assert.match(screen,/accessibilityLabel="Sort and filter policies"/, 'Floating Sort must be an accessible action');
-assert.match(screen,/style=\{\(\{ pressed \}\) => \[styles.sortFloatingButton/, 'Floating Sort must have a touch target and pressed state');
-assert.match(screen,/onPress=\{openSortSheet\}/, 'Floating Sort opens the existing advanced bottom sheet');
-assert.match(screen,/\{isFocused && !sortSheetOpen && !lineMenuOpen \? \(/, 'Hide floating Sort beneath other menus and while unfocused');
-assert.match(screen,/sortFloatingPosition: \{ position: 'absolute', bottom: 16/, 'Sort stays bottom-center above the tab navigation');
-assert.match(screen,/content: \{ paddingBottom: 120/, 'Last policy records have clearance beneath the floating Sort');
-assert.doesNotMatch(screen,/accessibilityLabel="Filter policies"\s+onPress=\{openSortSheet\}/, 'Search Filter must not open the advanced sheet');
+]) assert.ok(screen.includes(marker), 'Interactive Policies Filter must preserve: '+marker);
+assert.match(screen,/accessibilityLabel="Filter policies"[\s\S]*?onPress=\{openSortSheet\}/,
+  'Search-row Filter opens the same advanced sheet as Sort');
+assert.match(screen,/style=\{\(\{ pressed \}\) => \[styles\.filterButton, pressed && styles\.summaryChipPressed\]\}/,
+  'Search-row Filter gives visible press feedback without changing its default appearance');
+assert.doesNotMatch(screen,/style=\{styles\.filterButton\} pointerEvents="none"/,
+  'Search-row Filter must not suppress touch events');
+assert.match(screen,/accessibilityLabel="Sort and filter policies"/, 'Floating Sort must remain an accessible action');
+assert.match(screen,/style=\{\(\{ pressed \}\) => \[styles\.sortFloatingButton/, 'Floating Sort retains touch feedback');
+assert.equal((screen.match(/onPress=\{openSortSheet\}/g)??[]).length,2,
+  'Both top Filter and floating Sort use the same openSortSheet function');
+assert.match(screen,/\{isFocused && !sortSheetOpen && !lineMenuOpen \? \(/,
+  'Floating Sort hides beneath modal menus or when unfocused');
+assert.match(screen,/sortFloatingPosition: \{ position: 'absolute', bottom: 16/,
+  'Floating Sort remains above tab navigation');
+assert.match(screen,/content: \{ paddingBottom: 120/,
+  'Policy rows retain clearance beneath floating Sort');
 for (const style of ['filterButton', 'filterText']) {
   const grab = src => {
     const start = src.indexOf('  '+style+': {');
@@ -72,7 +82,7 @@ for (const style of ['filterButton', 'filterText']) {
   assert.equal(grab(screen), grab(claims), 'Policies '+style+' must match the exact Claims style');
 }
 assert.doesNotMatch(screen,/sortFloating:\s*\{/,'Do not restore legacy floating Sort styling; use the accessible new trigger');
-assert.match(screen,/searchSticky \? <View style=\{\[styles\.stickySearchOverlay[\s\S]*?\{searchControls\}/,'Sticky Policies search reuses the view-only inline Filter');
+assert.match(screen,/searchSticky \? <View style=\{\[styles\.stickySearchOverlay[\s\S]*?\{searchControls\}/,'Sticky Policies search reuses the interactive inline Filter');
 assert.match(screen,/Reset Filters/);
 assert.match(screen,/Apply Filter/);
 assert.match(screen,/setDraftSource\(source\)/,'Opening sheet preserves source');
