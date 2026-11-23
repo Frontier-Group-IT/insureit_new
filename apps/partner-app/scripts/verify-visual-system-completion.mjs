@@ -459,6 +459,23 @@ for(const asset of [
     throw new Error('Original PNG story artwork missing or invalid: ' + asset);
   }
 }
+// Both screenshots that exposed the fallbacks must now use themed 3D art.
+for (const [needle, purpose] of [
+  ["require('../assets/partner/stories/claims.png')", 'Today claims use a new glossy blue 3D illustration'],
+  ["isClaim ? 'shield-checkmark' : 'sunny-outline'", 'Claims use a relevant header icon'],
+  ["isClaim ? 'medkit-outline' : 'calendar-outline'", 'Claims summary icon is no longer an unrelated calendar'],
+  ["/motor|vehicle|third.party|accident|liability|driver|road|insurance cover|own.damage/i.test(body)", 'Motor learning subjects select relevant 3D artwork'],
+  ["motorLesson", 'Motor learning selection does not fall back to the flat document scene'],
+  ["kind === 'learn' && /vehicle number/i.test(body)", 'Vehicle-number lessons retain their specific number-plate art'],
+]) requireText(stories, needle, 'Contextual Stories artwork contract: ' + purpose);
+for (const oldFallback of ["require('../assets/partner/status/claim-attention.png')", "if (kind === 'learn') {\\n    return (\\n      <View style={styles.illustrationScene}>"]) {
+  if (stories.includes(oldFallback)) throw new Error('Old contextual Story fallback must remain removed: ' + oldFallback);
+}
+const claimsArtwork = fs.readFileSync(path.join(root,'assets/partner/stories/claims.png'));
+if (claimsArtwork.byteLength < 20000 || !claimsArtwork.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10]))) {
+  throw new Error('Claims story 3D asset is missing or invalid PNG');
+}
+
 // Story 3 (My Journey) keeps its own milestone-focused composition and real scoped data.
 for (const [needle, rationale] of [
   ["story.kind === 'journey' ? (", 'Only the customer journey story uses its own layout'],
