@@ -24,6 +24,7 @@ type PartnerSessionValue = {
   avatarUri: string | null;
   refreshAvatar: () => Promise<string | null>;
   refresh: () => Promise<PartnerSessionContext | null>;
+  refreshForLogin: () => Promise<PartnerSessionContext>;
   clear: () => void;
   signOut: () => Promise<void>;
 };
@@ -42,7 +43,7 @@ export function PartnerSessionProvider({ children }: PropsWithChildren) {
   const contextRef = useRef<PartnerSessionContext | null>(null);
   const appState = useRef<AppStateStatus>(AppState.currentState);
 
-  const resolve = useCallback(async ({ blocking }: { blocking: boolean }) => {
+  const resolve = useCallback(async ({ blocking, propagateFailure = false }: { blocking: boolean; propagateFailure?: boolean }) => {
     if (blocking) setStatus('loading');
     setError(null);
 
@@ -105,11 +106,17 @@ export function PartnerSessionProvider({ children }: PropsWithChildren) {
         ? 'Your account is not currently authorized for INSUREIT Partner. Contact support if access is expected.'
         : 'Unable to verify your account right now. Check your connection and retry.');
       setStatus(kind === 'denied' ? 'denied' : 'unavailable');
+      if (propagateFailure) throw cause;
       return null;
     }
   }, []);
 
   const refresh = useCallback(() => resolve({ blocking: true }), [resolve]);
+  const refreshForLogin = useCallback(async () => {
+    const resolved = await resolve({ blocking: true, propagateFailure: true });
+    if (!resolved) throw new Error('Partner session was not established.');
+    return resolved;
+  }, [resolve]);
 
   const refreshAvatar = useCallback(async () => {
     const authUserId = contextRef.current?.identity.auth_user_id;
@@ -193,8 +200,8 @@ export function PartnerSessionProvider({ children }: PropsWithChildren) {
   const cacheScopeKey = context?.identity.auth_user_id || activeScopeKey.current;
 
   const value = useMemo(
-    () => ({ status, context, error, cacheScopeKey, avatarUri, refreshAvatar, refresh, clear, signOut }),
-    [status, context, error, cacheScopeKey, avatarUri, refreshAvatar, refresh, clear, signOut],
+    () => ({ status, context, error, cacheScopeKey, avatarUri, refreshAvatar, refresh, refreshForLogin, clear, signOut }),
+    [status, context, error, cacheScopeKey, avatarUri, refreshAvatar, refresh, refreshForLogin, clear, signOut],
   );
 
   return <PartnerSessionContextValue.Provider value={value}>{children}</PartnerSessionContextValue.Provider>;
