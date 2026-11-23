@@ -369,6 +369,21 @@ for (const marker of [
   "<PartnerCaseBottomNavigation activeTab=\"Home\" />",
   "onTouchEnd={handleStoryTouchEnd}",
 ]) requireText(stories, marker, 'Story compact text/card-only scope regression: ' + marker);
+// Second-pass tightening only touches typography and summary-card spacing, not the artwork or navigation.
+for (const snippet of [
+  "unifiedPanel: { width: '100%', padding: 8,",
+  "impactPremium: { color: '#092B5B', fontSize: 25, lineHeight: 32,",
+  "journeyProgressBlock: { width: '100%', marginTop: 6,",
+  "todayCard: { width: '100%', borderRadius: 24, padding: 8,",
+  "businessPoliciesCard: { marginTop: 8, width: '100%', minHeight: 52, paddingVertical: 5,",
+  "learnStoryQuestion: { color: '#31537E', fontSize: 14, lineHeight: 20,",
+  "unifiedArtworkBox: { width: '100%', height: 300,",
+  "storyHeroArtwork: { width: '100%', height: 300,",
+  "journeyScene: { width: '100%', height: 304,",
+  "todayArtWrap: { width: '100%', height: 300,",
+  '<PartnerCaseBottomNavigation activeTab="Home" />',
+  'onTouchEnd={handleStoryTouchEnd}',
+]) requireText(stories, snippet, 'Compact story follow-up regression: ' + snippet);
 // Stories reference: continuous illustrated slide, not the former floating card.
 for (const [fragment, reason] of [
   ['style={styles.storyBackdrop}', 'Stories use a shared blue curved canvas'],
