@@ -15,7 +15,7 @@ The local n8n tunnel on port 8787 stays untouched.
 3. Start with `INSUREIT_AI_STUDIO_BACKEND_ENABLED=false`.
    Run `docker compose config`, then `docker compose build` and
    `docker compose up -d`. Review startup logs locally for missing configuration.
-4. Verify `http://127.0.0.1:8790/api/partner/ai-policy-studio/actions`
+4. Run `./smoke-test.ps1` to verify the local proxy isolation, then verify `http://127.0.0.1:8790/api/partner/ai-policy-studio/actions`
    returns 405 for GET when sent with the expected Host.
    Confirm every other URL, including `/login`, `/api`, `/admin`,
    and n8n editor paths, returns 404 from the proxy.
@@ -24,7 +24,7 @@ The local n8n tunnel on port 8787 stays untouched.
    service `http://localhost:8790` (no wildcard path).
    Cloudflare must proxy HTTPS. Do not alter the existing `n8n.nishant.uk`,
    `n8n.insureit.in` or `mcp.nishant.uk` routes.
-6. Public GET to the actions path must not produce a successful response;
+6. Run `./smoke-test.ps1 -Public` after the tunnel route is live. Public GET to the actions path must not produce a successful response;
    unauthorized POST must be rejected. Recheck non-Studio paths return 404.
 7. After testing a valid IT operator token against a disposable eligible intake,
    and negative tests (unprivileged actor, invalid JWT, duplicate booking,
