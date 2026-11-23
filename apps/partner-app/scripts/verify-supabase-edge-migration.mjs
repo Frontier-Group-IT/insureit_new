@@ -8,10 +8,11 @@ const repo=path.resolve(app,'../..');
 const read=(p)=>fs.readFileSync(path.join(repo,p),'utf8');
 const onboarding=read('supabase/functions/partner-policy-onboarding/index.ts');
 const deletion=read('supabase/functions/partner-account-deletion/index.ts');
+const sources=read('supabase/functions/partner-policy-sources/index.ts');
 const push=read('supabase/functions/partner-push-devices/index.ts');
 const mobileDeletion=read('apps/partner-app/lib/account-deletion.ts');
 const mobilePush=read('apps/partner-app/lib/partner-notifications.ts');
-for(const [name,code] of [['onboarding',onboarding],['deletion',deletion],['push',push]]){
+for(const [name,code] of [['onboarding',onboarding],['deletion',deletion],['push',push],['sources',sources]]){
   assert.match(code,/auth\.getUser\(/,`${name} must check the caller's JWT`);
   assert.match(code,/partner_app_current_identity/,`${name} must verify canonical identity`);
   assert.match(code,/SUPABASE_SERVICE_ROLE_KEY/,`${name} uses server-only credentials`);
@@ -31,4 +32,11 @@ assert.doesNotMatch(mobileDeletion,/portal\.insureit\.in|EXPO_PUBLIC_PORTAL_URL/
 assert.doesNotMatch(mobilePush,/portal\.insureit\.in|EXPO_PUBLIC_PORTAL_URL/, 'Push cannot call Vercel');
 assert.match(push,/\.eq\("actor_id", actor\.actor_id\)/, 'Push unregistration must be scoped to actor');
 assert.match(deletion,/confirmation !== "DELETE MY ACCOUNT"/, 'Deletion must require explicit user confirmation');
+assert.match(sources,/partner_app_effective_permissions/, 'Source search must use live permission map');
+assert.match(sources,/assigned_to_profile_id",auth.user.id/, 'Source search must restrict to assigned intake');
+assert.match(sources,/eq\("status","in_review"\)/, 'Source search must require active intake review');
+assert.match(sources,/Life Operations source scope has not been migrated/, 'Life Operations downline must fail closed');
+assert.match(sources,/eq\("account_status","active"\)/, 'Source listings only include active intermediaries');
+assert.match(sources,/Source directory temporarily unavailable/, 'Source outage must not be treated as denial');
+
 console.log('Supabase Edge migration read-only and auth contracts verified');
