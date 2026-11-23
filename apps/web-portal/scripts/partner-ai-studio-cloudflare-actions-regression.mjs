@@ -22,5 +22,5 @@ assert(app.includes('supabase.auth.getSession()'));
 assert(app.includes('The result is unknown.'));
 assert(screen.includes('aiStudioActionsEnabled&&!detail.final_policy_id'));
 assert(screen.includes('performAiStudioAction(selected.id,pendingAction)'));
-assert(screen.includes('Replace saved draft?')&&screen.includes('Register this policy?'));
+assert(screen.includes('Replace saved draft?')&&screen.includes('Verify and register this policy?'));
 console.log('Partner AI Studio Cloudflare canonical actions authorization + feature gate contract passed');
