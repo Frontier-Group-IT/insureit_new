@@ -1,3 +1,10 @@
+## Additional high-impact cutovers and CI audit
+- `lib/partner-permissions.ts` previously called Vercel `/api/partner/effective-permissions` on **every privileged write**, despite login being migrated. It now rechecks `partner_app_effective_permissions` through Supabase, validates the permission map and fails closed if unavailable; this removes the suspended Vercel blocker from claims, customers and intake *permission checks*, but not the underlying remaining Vercel APIs.
+- `components/ui/partner-insurer-logo.tsx` now loads managed insurer logos from authenticated `insurance_companies.logo_path` and public Supabase `insurer-assets` Storage, with a bundled offline-logo fallback. No Vercel insurer-logo proxy.
+- Partner CI now runs `node apps/partner-app/scripts/audit-vercel-dependencies.mjs` (informational until full cutover); first result was **46 string-level references in 10 files** before the write-permission guard and insurer-logo removals.
+- Web CI has a read-only anonymous Cloudflare route-presence probe. This is discovery only, no secrets, no production traffic routing or certification; the Cloudflare Worker remains unverified until successful recorded responses.
+- No Expo OTA or merge before the remaining authenticated Policy Intake, booking, Life/Health and Partner onboarding flow is independently verified. A successful login or any one Edge deployment is not proof of Vercel independence.
+
 ## Additional migrated services (2026-11-23)
 - `partner-policy-copy` v1: JWT-protected Motor creator-only copy attachment, one-time signed upload and verified stored MIME/size.
 - `partner-onboarding-documents` v2: scoped Life/Health/Non Motor signed upload, verified finalization, replacement and removal. Client uses Supabase Storage, not Vercel.
