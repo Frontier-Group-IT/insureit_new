@@ -79,8 +79,8 @@ Deno.serve(async (request: Request) => {
     // only intermediary IDs from the authenticated commercial-scope RPC.
     // Validate identifiers before placing them in PostgREST OR predicates.
     const scopedIds = identity.portal_access_type
-      ? scope.intermediary_ids
-      : [identity.intermediary_id];
+      ? (scope.intermediary_ids ?? [])
+      : [identity.intermediary_id].filter((id: unknown) => id !== null && id !== undefined);
     if (!Array.isArray(scopedIds) || scopedIds.some((id: unknown) =>
       typeof id !== "string" || !uuid.test(id)))
       return json({ ok: false, error: "Lead-source scope unavailable." }, 503);
