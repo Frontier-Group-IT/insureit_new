@@ -70,7 +70,7 @@ assert.equal(assessProductVariantDirectConversion(altered(kw,x=>{x.commercialPre
 assert.equal(assessProductVariantDirectConversion(altered(kw,x=>{x.fields.push({...x.fields[0]})})).eligible,false);
 const df=fixture(digit,{policy_start_date:"2026-11-18",policy_end_date:"2027-11-17"},
  {od:2312.46,tp:0,net:2312.46,gst:416.24,gross:2728.70});
-assert.equal(assessProductVariantDirectConversion(altered(df,x=>{x.fields.find(f=>f.key==="vehicle_manufacturing_year")?.value="2025";x.fields.push({key:"vehicle_manufacturing_year",value:"2025",evidence:"guessed"});})).eligible,false);
+assert.equal(assessProductVariantDirectConversion(altered(df,x=>{x.fields.push({key:"vehicle_manufacturing_year",value:"2025",evidence:"guessed"});})).eligible,false);
 assert.equal(assessProductVariantDirectConversion(altered(df,x=>{x.commercialPremium.tp=100})).eligible,false);
 const ui=fixture(united,{policy_start_date:"2026-11-19",policy_end_date:"2027-11-18",
 third_party_end_date:"2027-11-18"}, {od:0,tp:7317,net:7317,gst:1317,gross:8634});
