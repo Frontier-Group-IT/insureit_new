@@ -138,3 +138,6 @@ if (unregisterIndex < 0 || signOutIndex < 0 || unregisterIndex > signOutIndex) {
 }
 
 console.log('Partner Phase 6 native foundation guard OK: 0.2.0 dependencies/config, selective privacy and server-mediated push registration lifecycle are reviewed; APK build remains explicit/manual-only.');
+
+// Additional zero-Vercel backend/service contract checks (no production writes).
+await import('./verify-supabase-edge-migration.mjs');
