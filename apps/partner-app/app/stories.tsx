@@ -147,12 +147,19 @@ export default function StoriesScreen() {
       </View>
 
       {loading ? (
-        <View style={styles.storySkeleton} accessibilityRole="progressbar" accessibilityLabel="Loading INSUREIT Stories">
-          <View style={styles.storySkeletonIcon} />
-          <View style={styles.storySkeletonEyebrow} />
-          <View style={styles.storySkeletonTitle} />
-          <View style={styles.storySkeletonLine} />
-          <View style={styles.storySkeletonLineShort} />
+        <View style={styles.storyLoadingArea} accessibilityRole="progressbar" accessibilityLabel="Loading INSUREIT Stories">
+          <View style={styles.storySkeleton}>
+            <View style={styles.storySkeletonIcon} />
+            <View style={styles.storySkeletonEyebrow} />
+            <View style={styles.storySkeletonTitle} />
+            <View style={styles.storySkeletonLine} />
+            <View style={styles.storySkeletonLineShort} />
+          </View>
+          <View style={styles.storySkeletonSecondary}>
+            <View style={styles.storySkeletonArtwork} />
+            <View style={styles.storySkeletonLine} />
+            <View style={styles.storySkeletonLineShort} />
+          </View>
         </View>
       ) : error || !story ? (
         <View style={styles.center}>
@@ -855,7 +862,10 @@ const styles = StyleSheet.create({
   rupeeText: { fontSize: 35, fontWeight: '900', color: '#0763C7' },
   completedPill: { alignSelf: 'center', marginTop: 5, marginBottom: 7, flexDirection: 'row', alignItems: 'center', gap: 9, paddingHorizontal: 18, paddingVertical: 6, borderRadius: 50, backgroundColor: '#DDF6EA' },
   completedText: { color: '#06845A', fontSize: 13, fontWeight: '800' },
-  storySkeleton: { margin: 24, gap: 17, padding: 24, borderRadius: 22, backgroundColor: '#FFFFFF' },
+  storyLoadingArea: { flex: 1, minHeight: 0, paddingHorizontal: 14, paddingTop: 18, paddingBottom: 20, gap: 14, backgroundColor: '#EAF3FF' },
+  storySkeleton: { gap: 17, padding: 24, borderRadius: 22, backgroundColor: '#FFFFFF' },
+  storySkeletonSecondary: { gap: 14, padding: 20, borderRadius: 22, backgroundColor: '#FFFFFF' },
+  storySkeletonArtwork: { height: 120, width: '100%', borderRadius: 16, backgroundColor: '#DBE6F8' },
   storySkeletonIcon: { height: 54, width: 54, borderRadius: 15, backgroundColor: '#E1EAF8' },
   storySkeletonEyebrow: { height: 12, width: '35%', borderRadius: 5, backgroundColor: '#E1EAF8' },
   storySkeletonTitle: { height: 27, width: '80%', borderRadius: 8, backgroundColor: '#DBE6F8' },

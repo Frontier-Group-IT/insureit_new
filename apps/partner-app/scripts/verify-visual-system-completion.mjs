@@ -352,6 +352,20 @@ for (const fragment of [
 if (stories.indexOf('<PartnerCaseBottomNavigation activeTab="Home" />') < stories.indexOf('</ScrollView>')) {
   throw new Error('Stories bottom tabs must remain outside the story tap-to-advance ScrollView.');
 }
+// Loading, success and error must all reserve the screen body so the Home tabs stay at the bottom.
+for (const fragment of [
+  '<View style={styles.storyLoadingArea} accessibilityRole="progressbar"',
+  '<View style={styles.storySkeleton}>',
+  '<View style={styles.storySkeletonSecondary}>',
+  '<View style={styles.storySkeletonArtwork} />',
+  'storyLoadingArea: { flex: 1, minHeight: 0,',
+  'storySkeletonSecondary: { gap: 14,',
+  'bottomNavigationShell: { backgroundColor:',
+  'screen: { flex: 1,',
+]) requireText(stories, fragment, 'Stories loading must fill available height without moving bottom navigation: ' + fragment);
+if (stories.includes('storySkeleton: { margin: 24')) throw new Error('Old short Stories loading card must not return.');
+if (stories.indexOf('<PartnerCaseBottomNavigation activeTab="Home" />') < stories.indexOf('</ScrollView>')) throw new Error('Stories Home tab bar must stay outside loading and story content.');
+
 // Compact Stories update is typography/card sizing only; keep artwork sizes and navigation unchanged.
 for (const marker of [
   "unifiedPanel: { width: '100%', padding: 8,",
