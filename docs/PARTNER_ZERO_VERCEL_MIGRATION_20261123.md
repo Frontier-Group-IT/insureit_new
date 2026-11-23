@@ -13,7 +13,7 @@ The installed Partner app must not require `portal.insureit.in` / Vercel for any
 | `lib/account-deletion.ts` | `/api/partner/account-deletion` | Edge Function `partner-account-deletion`; idempotent requests, no client service key | **Edge deployed, app change unmerged** |
 | `lib/partner-notifications.ts` | `/api/partner/push-devices` | Edge Function `partner-push-devices`; validated Expo project/token, scoped ownership | **Schema + Edge deployed, app change unmerged** |
 | `lib/policy-intakes.ts` | `/api/partner/policy-intakes`, `/document`, `/bridge/issue`, web handoff | Scoped list/status, duplicates, counts, upload prepare/finish, review, OCR dispatch, bridge alternatives | **BLOCKED: needs full business-rule port + tests** |
-| `lib/policy-onboarding.ts` | `/api/partner/policy-intakes/native-onboarding` plus `/sources`, `/documents`, `/policy-copy`, `/standalone-life`, `/standalone-non-motor` | Native prepare/draft/revision, motor booking, Life/Health case, nonmotor, RM/source, approvals, RC, secure signed uploads | **PARTIAL: `new_prepare` Edge Function deployed; Save/Book/RC/approval/files and intake-linked prepare remain blocked. Principal cause of HTTP 402** |
+| `lib/policy-onboarding.ts` | `/api/partner/policy-intakes/native-onboarding` plus `/sources`, `/documents`, `/policy-copy`, `/standalone-life`, `/standalone-non-motor` | Native prepare/draft/revision, motor booking, Life/Health case, nonmotor, RM/source, approvals, RC, secure signed uploads | **PARTIAL: `new_prepare` plus restricted `customer_search` in Supabase Edge; Save/Book/RC/approval/files and intake-linked prepare remain blocked. Principal cause of HTTP 402** |
 | `lib/life-health-cases.ts` | `/api/partner/life-health-cases` and website edit links | Scoped list/detail/edit, case conversion, documents, stage notes, approval and audits | **BLOCKED** |
 | `lib/customers.ts` | `/api/partner/customers/create` | Authenticated customer creation, dedup, scope, document staging and ID safeguards | **BLOCKED** |
 | `app/partner-new.tsx` | `/api/partner/onboarding/partner-only` and `/documents` | Protected Partner creation, sensitive PAN/Aadhaar handling, reviewer scope, secure files | **BLOCKED** |
@@ -38,8 +38,13 @@ The list above was checked against the Partner app's `lib/` files and screen-lev
 - Applied the repository's preexisting `supabase/migrations/20260907002000_partner_push_devices.sql` to production (it had not previously been applied), with RLS and no `authenticated` direct table privileges.
 - Added `supabase/functions/partner-push-devices/index.ts`; deployed with JWT verification and checked Expo project/version requirements.
 - Mobile calls for these two services were updated in the feature branch, **not OTA published**.
-- Added `partner-policy-onboarding` Edge Function with authenticated read-only `new_prepare`, preserving insurer/manufacturer masters and the draft shape. All other operations reject with 501; **mobile is not switched to it** until booking/document operations have parity.
+- Deployed `partner-policy-onboarding` Edge Function with authenticated read-only `new_prepare` and reviewer-assigned `customer_search`; current Life Head downline search explicitly rejects 501. All booking/save/approval/RC operations reject with 501; **mobile is not switched to it** until booking/document operations have parity.
+- Deployed `partner-policy-sources` Edge Function with authenticated source search, active POSP/MISP/Partner filter, paginated results, verified assigned-intake binding and active sales RM metadata. Life Head downline search remains disabled until equivalent scope is implemented; **mobile is not switched**.
 - Added `node apps/partner-app/scripts/audit-vercel-dependencies.mjs` for the remaining call inventory; `--enforce` is the mandatory final release gate, not currently green.
+
+## Verification added
+- `apps/partner-app/scripts/verify-supabase-edge-migration.mjs` is invoked by Phase 6 CI. It asserts user JWT verification, role checks, assigned reviewer filters, preserved duplicate protection, scoped source directory, no client Vercel dependency for the two completed services and explicit fail-closed unsupported actions.
+- Live Supabase function presence and `verify_jwt=true` confirmed, but a test authenticated user session is still necessary for full e2e behavioral equivalence. No production customer or policy write test has been performed.
 
 ## Release blockers / exact next engineering work
 - Move the main 44k+ character native-onboarding route and its shared engines into an equivalent testable service, without bypassing existing booking checks.
