@@ -532,8 +532,8 @@ function TodayRenewalStory({ story, onOpen }: { story: PartnerStory; onOpen: () 
       <View style={styles.todayCard}>
         <View pointerEvents="none" style={styles.todayCornerAccent} />
         <View style={styles.todayHeadlineRow}>
-          <View style={styles.todaySunIcon}>
-            <Ionicons name="sunny-outline" size={34} color="#FFFFFF" />
+          <View style={[styles.todaySunIcon, isClaim && styles.todayClaimsIcon]}>
+            <Ionicons name={isClaim ? 'shield-checkmark' : 'sunny-outline'} size={34} color="#FFFFFF" />
           </View>
           <View style={styles.todayHeadlineText}>
             <Text style={styles.todayEyebrow}>{storyCategory}</Text>
@@ -553,7 +553,7 @@ function TodayRenewalStory({ story, onOpen }: { story: PartnerStory; onOpen: () 
         </View>
         <View style={styles.todayDivider} />
         <View style={styles.todayPremiumPanel}>
-          <View style={styles.todayPremiumIcon}><Ionicons name="calendar-outline" size={25} color="#0C6EDC" /></View>
+          <View style={styles.todayPremiumIcon}><Ionicons name={isClaim ? 'medkit-outline' : 'calendar-outline'} size={25} color="#0C6EDC" /></View>
           <View style={styles.todayPremiumBody}>
             {premium ? <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} style={styles.todayPremiumValue}>{premium}</Text> : null}
             <Text style={styles.todayPremiumDescription}>{remainingCopy}</Text>
@@ -574,11 +574,10 @@ function TodayRenewalStory({ story, onOpen }: { story: PartnerStory; onOpen: () 
       <View pointerEvents="none" style={styles.todayArtWrap}>
         {isRenewal ? (
           <Image source={require('../assets/partner/stories/today-renewal.png')} resizeMode="contain" style={styles.storyHeroArtwork} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
+        ) : isClaim ? (
+          <Image source={require('../assets/partner/stories/claims.png')} resizeMode="contain" style={styles.storyHeroArtwork} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
         ) : (
-          <View style={styles.todayFallbackArt}>
-            <Image source={require('../assets/partner/status/claim-attention.png')} resizeMode="contain" style={styles.storyHeroArtwork} />
-            <View style={styles.todayCalendar}><View style={styles.todayCalendarTop} /><Ionicons name={isClaim ? 'medkit' : 'calendar'} size={46} color="#0A3A84" /></View>
-          </View>
+          <Image source={require('../assets/partner/stories/your-impact.png')} resizeMode="contain" style={styles.storyHeroArtwork} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
         )}
       </View>
     </View>
@@ -597,9 +596,8 @@ function highlightStoryText(copy: string) {
 /** Native and bundled artwork: no new dependency or hard-coded story data. */
 
 function StoryIllustration({ kind, body }: { kind: PartnerStory['kind']; body: string }) {
-  // Match the vehicle-servicing story in the supplied reference. Other learning
-  // questions retain a generic insured-document illustration instead of showing
-  // an unrelated number plate.
+  // Keep the sample number plate only for vehicle-number lessons. Other
+  // learning topics use the same glossy 3D visual system without an unrelated plate.
   if (kind === 'learn' && /vehicle number/i.test(body)) {
     return (
       <View style={styles.vehicleScene}>
@@ -617,15 +615,19 @@ function StoryIllustration({ kind, body }: { kind: PartnerStory['kind']; body: s
     );
   }
   if (kind === 'learn') {
+    const motorLesson = /motor|vehicle|third.party|accident|liability|driver|road|insurance cover|own.damage/i.test(body);
     return (
-      <View style={styles.illustrationScene}>
-        <View style={styles.sceneHalo} />
-        <View style={[styles.documentSheet, styles.documentSheetBack]} />
-        <View style={styles.documentSheet}>
-          <View style={styles.documentIcon}><Ionicons name="shield-checkmark" size={43} color="#176FDD" /></View>
-          {[0, 1, 2].map(i => <View key={i} style={styles.checkRow}><Ionicons name="checkbox" size={23} color="#197CF4" /><View style={[styles.dummyLine, { width: i === 2 ? 90 : 125 }]} /></View>)}
-        </View>
-        <View style={styles.sceneBadge}><Ionicons name="refresh" size={40} color="#FFFFFF" /></View>
+      <View style={styles.vehicleScene}>
+        <View style={styles.vehicleHalo} />
+        <Image
+          source={motorLesson
+            ? require('../assets/partner/stories/your-impact.png')
+            : require('../assets/partner/stories/claims.png')}
+          resizeMode="contain"
+          style={styles.storyHeroArtwork}
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+        />
       </View>
     );
   }
@@ -735,6 +737,7 @@ const styles = StyleSheet.create({
   todayCornerAccent: { position: 'absolute', right: -40, top: -65, width: 158, height: 160, borderRadius: 85, backgroundColor: '#E3EEFF' },
   todayHeadlineRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 13 },
   todaySunIcon: { width: 52, height: 52, borderRadius: 17, backgroundColor: '#FFA51E', alignItems: 'center', justifyContent: 'center', shadowColor: '#DC941F', shadowOpacity: 0.18, shadowRadius: 7, elevation: 3 },
+  todayClaimsIcon: { backgroundColor: '#177ADE', shadowColor: '#13569C' },
   todayHeadlineText: { flex: 1, minWidth: 0 },
   todayEyebrow: { color: '#7B8AA3', fontSize: 10, fontWeight: '900', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 7 },
   todayTitleLink: { flexDirection: 'row', alignItems: 'center', gap: 8 },
