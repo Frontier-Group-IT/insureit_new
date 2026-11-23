@@ -3,11 +3,14 @@ import "server-only";
 import { extractNativePdfTextPages } from "@/lib/policy-ocr-native-pdf";
 import { enrichIffcoCertifiedMachineFamily } from "@/lib/policy-iffco-machine-family";
 
-type Insurer = "new_india_cv_native_pdf" | "iffco_tokio_cv_native_pdf" | "go_digit_cv_native_pdf" | "united_india_gcv_native_pdf" | "oriental_gccv_native_pdf";
+type ExistingInsurer = "new_india_cv_native_pdf" | "iffco_tokio_cv_native_pdf" | "go_digit_cv_native_pdf" | "united_india_gcv_native_pdf" | "oriental_gccv_native_pdf";
+type NewProductVariant = "zurich_kotak_private_car_tp_native_pdf" | "go_digit_two_wheeler_od_native_pdf" | "united_india_tractor_tp_native_pdf";
+type Insurer = ExistingInsurer | NewProductVariant;
+const NEW_VARIANTS = new Set<Insurer>(["zurich_kotak_private_car_tp_native_pdf","go_digit_two_wheeler_od_native_pdf","united_india_tractor_tp_native_pdf"]);
 type OcrField = { key: string; label: string; value: string; confidence: null; page: number | null; evidence: string };
 export type NonTataCommercialRead = {
   parserId: Insurer;
-  parserVersion: "non-tata-cv-v2";
+  parserVersion: "non-tata-cv-v2" | "insureit-product-extension-v1";
   fields: OcrField[];
   warnings: string[];
   checksPassed: number;
@@ -41,7 +44,7 @@ const REQUIRED_BASE = [
   "vehicle_idv_verified", "od_tp_components_printed", "net_od_tp_reconciled",
   "gst_independently_evidenced", "gross_net_tax_reconciled",
 ] as const;
-const REQUIRED_EXTRA: Record<Insurer, string[]> = {
+const REQUIRED_EXTRA: Record<ExistingInsurer, string[]> = {
   new_india_cv_native_pdf: ["nia_layout", "registration_complete"],
   iffco_tokio_cv_native_pdf: ["iffco_layout", "printed_tax_table", "invoice_taxable_matches", "invoice_gross_matches"],
   go_digit_cv_native_pdf: ["digit_layout", "registered_plate", "od_basic_ncb", "tp_itemization"],
@@ -86,6 +89,18 @@ function insurerForText(head: string): Insurer | null {
     matches.push("united_india_gcv_native_pdf");
   if (/THE ORIENTAL INSURANCE COMPANY LIMITED/i.test(issuer) && /GCCV-PUBLIC CARRIERS/i.test(product))
     matches.push("oriental_gccv_native_pdf");
+  // Specific product extensions precede the old CV classifiers. They never
+  // route an existing Digit Commercial Vehicle or United GCV layout here.
+  if (/Zurich Kotak General Insurance Company \(India\) Limited/i.test(issuer)
+      && /Liability only \(Private Car\)/i.test(product))
+    matches.push("zurich_kotak_private_car_tp_native_pdf");
+  if (/Go Digit General Insurance (?:Ltd\.|Limited)/i.test(issuer)
+      && /Digit Two-Wheeler Insurance/i.test(product)
+      && /Digit Two-Wheeler Stand-al/i.test(product))
+    matches.push("go_digit_two_wheeler_od_native_pdf");
+  if (/UNITED INDIA INSURANCE COMPANY LIMITED/i.test(issuer)
+      && /MISCELLANEOUS AND SPECIAL TYPE OF VEHICLES\s*-\s*LIABILITY ONLY POLICY/i.test(product))
+    matches.push("united_india_tractor_tp_native_pdf");
   return matches.length === 1 ? matches[0] : null;
 }
 
@@ -99,7 +114,110 @@ export async function recognizeNonTataCommercialPdf(file: File): Promise<Insurer
   return insurerForText(text);
 }
 
+
+const NEW_VARIANT_CHECKS: Record<NewProductVariant, string[]> = {
+  zurich_kotak_private_car_tp_native_pdf:[
+    "insurer_verified","product_verified","policy_identity_verified","policy_period_verified",
+    "issuance_date_evidenced","registration_authority_verified","vehicle_identification_verified",
+    "vehicle_make_model_verified","manufacturing_year_evidenced","capacity_and_fuel_verified",
+    "third_party_only_zero_od","third_party_only_zero_cpa","tp_premium_printed",
+    "net_components_reconciled","tax_components_verified","gross_rounded_reconciled"],
+  united_india_tractor_tp_native_pdf:[
+    "insurer_verified","tractor_liability_only_verified","insured_verified",
+    "policy_number_verified","period_verified","issuance_evidenced",
+    "vehicle_identification_verified","tractor_make_model_verified",
+    "registration_authority_verified","tractor_class_and_fuel_verified",
+    "capacity_and_year_verified","idv_zero_valid","od_zero_valid",
+    "paid_driver_ll_reconciled","net_tp_reconciled","tax_evidenced",
+    "stamp_separately_disclosed","cpa_waiver_evidenced"],
+  go_digit_two_wheeler_od_native_pdf:[
+    "insurer_verified","standalone_od_product_verified","identity_verified",
+    "insured_vehicle_registered","od_period_verified","issuance_date_evidenced",
+    "make_model_evidenced","vehicle_identification_verified",
+    "year_evidence_separate","fuel_cc_verified","idv_printed",
+    "od_net_invoice_printed","igst_printed","gross_invoice_printed",
+    "tax_reconciled","gross_reconciled","no_new_tp_premium",
+    "optional_parts_depreciation_named"],
+};
+function validateNewVariant(
+ payload:unknown,insurer:NewProductVariant,
+ ids:Record<"intake_id"|"document_id"|"request_id",string>,
+):NonTataCommercialRead{
+ if(!object(payload)||payload.contract_version!=="1"||payload.parser_id!==insurer
+   ||payload.parser_version!=="insureit-product-extension-v1"
+   ||payload.extraction_method!=="native_pdf_text"||payload.review_required!==true
+   ||payload.auto_finalize_allowed!==false||payload.intake_id!==ids.intake_id
+   ||payload.document_id!==ids.document_id||payload.request_id!==ids.request_id
+   ||payload.validation_passed!==true||payload.ok!==true
+   ||!object(payload.checks)||!Array.isArray(payload.fields)
+   ||!Array.isArray(payload.warnings)||payload.warnings.length)
+   throw new Error("n8n_extension_contract_invalid");
+ const expected=NEW_VARIANT_CHECKS[insurer],checks=payload.checks;
+ if(Object.keys(checks).length!==expected.length||expected.some(k=>checks[k]!==true))
+   throw new Error("n8n_extension_check_set_invalid");
+ const fields:OcrField[]=payload.fields.map((raw:unknown)=>{
+   if(!object(raw)||typeof raw.key!=="string"||!ALLOWED_FIELDS.has(raw.key)
+     ||typeof raw.label!=="string"||raw.label.length>100
+     ||typeof raw.value!=="string"||!raw.value.trim()||raw.value.length>300
+     ||raw.confidence!==null||(raw.page!==null&&(!Number.isInteger(raw.page)||(raw.page as number)<1||(raw.page as number)>10))
+     ||typeof raw.evidence!=="string"||raw.evidence.length>120)
+       throw new Error("n8n_extension_field_shape_invalid");
+   return {key:raw.key,label:raw.label,value:raw.value,confidence:null,page:raw.page as number|null,evidence:raw.evidence};
+ });
+ const byKey=new Map(fields.map(f=>[f.key,f.value]));
+ if(byKey.size!==fields.length)throw new Error("n8n_extension_duplicate_field");
+ const required=["insurer_name","policy_product","insured_name","policy_number","policy_start_date",
+ "policy_end_date","policy_issuance_date","vehicle_class","vehicle_make","vehicle_model",
+ "vehicle_registration_status","vehicle_registration_number","vehicle_rto_name","vehicle_rto_state",
+ "vehicle_chassis_number","vehicle_engine_number","vehicle_capacity","vehicle_fuel_type",
+ "idv","od_premium","tp_premium","cpa_premium"];
+ if(required.some(k=>!byKey.get(k))
+   ||byKey.get("vehicle_registration_status")!=="registered"
+   ||!completePlate(byKey.get("vehicle_registration_number")||""))
+   throw new Error("n8n_extension_identity_or_vehicle_invalid");
+ for(const key of ["policy_issuance_date","policy_start_date","policy_end_date"]){
+   const value=byKey.get(key)||"";
+   if(!/^\d{4}-\d{2}-\d{2}$/.test(value)
+     ||!Number.isFinite(Date.parse(value+"T00:00:00Z"))
+     ||new Date(value+"T00:00:00Z").toISOString().slice(0,10)!==value)
+      throw new Error("n8n_extension_invalid_date");
+ }
+ if((byKey.get("policy_end_date")||"")<(byKey.get("policy_start_date")||""))
+   throw new Error("n8n_extension_invalid_coverage");
+ if(insurer==="go_digit_two_wheeler_od_native_pdf"){
+   if(byKey.get("policy_product")!=="Stand-alone Own Damage"
+     ||byKey.get("vehicle_class")!=="Two Wheeler"||!byKey.get("vehicle_registration_year")
+     ||byKey.has("vehicle_manufacturing_year"))
+     throw new Error("n8n_extension_unverified_manufacture_year");
+ }else{
+   if(byKey.get("policy_product")!=="Third-Party Only"
+     ||!byKey.get("vehicle_manufacturing_year")
+     ||byKey.get("idv")!=="0"||byKey.get("od_premium")!=="0"
+     ||byKey.get("cpa_premium")!=="0")
+     throw new Error("n8n_extension_tp_only_contract_invalid");
+ }
+ if(insurer==="united_india_tractor_tp_native_pdf"
+    &&(byKey.get("vehicle_class")!=="Agricultural Tractor"
+       ||byKey.get("vehicle_make")!=="MAHINDRA"))
+    throw new Error("n8n_extension_tractor_class_invalid");
+ const p=payload.premium_components;
+ if(!object(p)||![p.od,p.tp,p.net,p.gst,p.gross].every(isMoney))
+   throw new Error("n8n_extension_premium_shape_invalid");
+ const {od,tp,net,gst,gross}=p as {od:number,tp:number,net:number,gst:number,gross:number};
+ if(Math.abs(cents(od+tp)-cents(net))>6
+    ||Math.abs(cents(net+gst)-cents(gross))>50
+    ||cents(Number(byKey.get("od_premium")))!==cents(od)
+    ||cents(Number(byKey.get("tp_premium")))!==cents(tp)
+    ||!isMoney(Number(byKey.get("idv"))))
+   throw new Error("n8n_extension_financial_reconciliation_failed");
+ // The PDF mobile is masked; never use it as customer contact. The intake
+ // supplied phone is handled by canonical booking identity/duplicate checks.
+ return {parserId:insurer,parserVersion:"insureit-product-extension-v1",
+   fields,warnings:[],checksPassed:expected.length,premium:{od,tp,net,gst,gross}};
+}
+
 function validate(payload: unknown, insurer: Insurer, ids: Record<"intake_id" | "document_id" | "request_id", string>): NonTataCommercialRead {
+  if(NEW_VARIANTS.has(insurer))return validateNewVariant(payload,insurer as NewProductVariant,ids);
   if (!object(payload) || payload.contract_version !== "1"
       || payload.parser_id !== insurer || payload.parser_version !== "non-tata-cv-v2"
       || payload.extraction_method !== "native_pdf_text"
