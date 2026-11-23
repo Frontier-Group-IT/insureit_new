@@ -7,7 +7,7 @@ const app=path.resolve(here,'..');
 const repo=path.resolve(app,'../..');
 const read=(p)=>fs.readFileSync(path.join(repo,p),'utf8');
 const onboarding=read('supabase/functions/partner-policy-onboarding/index.ts');
-const atomicSave=read('supabase/migrations/20261123162000_partner_intake_draft_save_atomic.sql');
+const atomicSave=read('supabase/migrations/20261123090812_partner_intake_draft_save_atomic.sql');
 const deletion=read('supabase/functions/partner-account-deletion/index.ts');
 const sources=read('supabase/functions/partner-policy-sources/index.ts');
 const push=read('supabase/functions/partner-push-devices/index.ts');
