@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { getPartnerStories, type PartnerStory, type PartnerStoriesData } from '@/lib/stories';
 import { formatIndianCurrency } from '@/lib/format';
+import { PartnerCaseBottomNavigation } from '@/components/partner-case-bottom-navigation';
 
 export default function StoriesScreen() {
   const router = useRouter();
@@ -95,13 +96,6 @@ export default function StoriesScreen() {
     <View style={styles.screen}>
       <StatusBar style="light" backgroundColor="#092B62" />
       <View style={[styles.top, { paddingTop: insets.top + 11 }]}>
-        <View style={styles.progress} accessibilityLabel={'Story ' + (index + 1) + ' of ' + (data?.items.length || 5)}>
-          {progress.map((active, itemIndex) => (
-            <View key={itemIndex} style={styles.progressTrack}>
-              <View style={[styles.progressFill, active && styles.progressFillActive]} />
-            </View>
-          ))}
-        </View>
         <View style={styles.header}>
           <View style={styles.brand}>
             <View style={styles.brandMark}><Text style={styles.brandMarkText}>I</Text></View>
@@ -114,6 +108,13 @@ export default function StoriesScreen() {
           <Pressable onPress={() => router.back()} style={styles.close} hitSlop={8} accessibilityRole="button" accessibilityLabel="Close INSUREIT Stories">
             <Ionicons name="close" size={24} color="#FFFFFF" />
           </Pressable>
+        </View>
+        <View style={styles.progress} accessibilityLabel={'Story ' + (index + 1) + ' of ' + (data?.items.length || 5)}>
+          {progress.map((active, itemIndex) => (
+            <View key={itemIndex} style={styles.progressTrack}>
+              <View style={[styles.progressFill, active && styles.progressFillActive]} />
+            </View>
+          ))}
         </View>
       </View>
 
@@ -135,7 +136,7 @@ export default function StoriesScreen() {
           <ScrollView
             key={index}
             style={styles.scroll}
-            contentContainerStyle={[styles.scrollContent, { minHeight: Math.max(480, windowHeight - insets.top - insets.bottom - 155), paddingBottom: Math.max(20, insets.bottom + 12) }]}
+            contentContainerStyle={[styles.scrollContent, { minHeight: Math.max(360, windowHeight - insets.top - insets.bottom - 228), paddingBottom: 24 }]}
             showsVerticalScrollIndicator={false}
             accessibilityLabel="Story content. Tap left for previous, right for next."
             accessibilityActions={[{ name: 'decrement', label: 'Previous story' }, { name: 'increment', label: 'Next story' }]}
@@ -213,6 +214,9 @@ export default function StoriesScreen() {
           </ScrollView>
         </>
       )}
+      <View style={[styles.bottomNavigationShell, { paddingBottom: insets.bottom }]}>
+        <PartnerCaseBottomNavigation activeTab="Home" />
+      </View>
     </View>
   );
 }
@@ -635,12 +639,13 @@ function StoryIllustration({ kind, body }: { kind: PartnerStory['kind']; body: s
 
 const styles = StyleSheet.create({
   screen: { flex: 1, overflow: 'hidden', backgroundColor: '#EAF3FF' },
-  top: { zIndex: 5, backgroundColor: '#0A3478', paddingHorizontal: 18, paddingTop: 11, paddingBottom: 28 },
-  progress: { flexDirection: 'row', gap: 6 },
+  top: { zIndex: 5, backgroundColor: '#0A3478', paddingHorizontal: 18, paddingTop: 11, paddingBottom: 16 },
+  bottomNavigationShell: { backgroundColor: '#071E49' },
+  progress: { flexDirection: 'row', gap: 6, marginTop: 16 },
   progressTrack: { flex: 1, height: 4, overflow: 'hidden', borderRadius: 999, backgroundColor: '#7D9BC7' },
   progressFill: { width: '0%', height: '100%', backgroundColor: '#FFFFFF', borderRadius: 999 },
   progressFillActive: { width: '100%' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 22 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 },
   brand: { flexDirection: 'row', alignItems: 'center', gap: 11, flexShrink: 1 },
   brandMark: { width: 44, height: 44, borderRadius: 15, backgroundColor: '#6551EB', alignItems: 'center', justifyContent: 'center' },
   brandMarkText: { color: '#FFFFFF', fontSize: 23, fontWeight: '900' },
