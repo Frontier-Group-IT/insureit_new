@@ -28,12 +28,17 @@ assert.doesNotMatch(source, /quickGlyph/, 'QuickAction must not use generic vect
 assert.match(source, /iconKind="renew-policy" label="Renew Policy" onPress=\{\(\) => router\.push\('\/renewals'/, 'Renewal route remains unchanged');
 assert.match(source, /iconKind="raise-claim" label="Raise Claim" onPress=\{\(\) => router\.push\('\/claims'/, 'Claims route remains unchanged');
 assert.match(source,/PartnerCaseBottomNavigation activeTab="Policies"/,'Bottom navigation unchanged');
-// The approved color redesign is confined to sections below the original white policy hero.
-for (const marker of ['styles.quickDocument', 'styles.quickRenewal', 'styles.quickClaim', 'styles.quickCustomer', 'styles.toneBlue', 'styles.tonePurple', 'styles.toneMint', 'styles.toneAmber', 'styles.toneRose']) {
-  assert.ok(source.includes(marker), 'Missing color treatment: ' + marker);
+// Only the information tiles retain their pastel fills; action and section headings are uncolored.
+for (const marker of ['styles.toneBlue', 'styles.tonePurple', 'styles.toneMint', 'styles.toneAmber', 'styles.toneRose']) {
+  assert.ok(source.includes(marker), 'Overview information tile treatment missing: ' + marker);
 }
-assert.match(source, /premiumDisclosure:[^\n]*backgroundColor: '#DCF6F0'/, 'Premium section must use the mint header');
-assert.match(source, /commercialRow:[^\n]*backgroundColor: '#FFF0DC'/, 'Sales section must use the amber header');
+for (const obsolete of ['styles.quickDocument', 'styles.quickRenewal', 'styles.quickClaim', 'styles.quickCustomer', 'styles.policySectionHeaderTint']) {
+  assert.ok(!source.includes(obsolete), 'Obsolete colored action/header reference: ' + obsolete);
+}
+assert.match(source, /quickAction:\s*\{[\s\S]*?backgroundColor: 'transparent'/, 'Quick Action tiles are transparent');
+assert.match(source, /<View style=\{styles.externalSection\}>\s*<CardHeader iconKind="policy-overview" title="Policy Overview"/, 'Overview heading sits outside its content card');
+assert.match(source, /<View style=\{styles.externalSection\}>\s*<Pressable accessibilityRole="button" accessibilityState=\{\{ expanded: showPremiumDetails \}\}/, 'Premium disclosure is outside its detail card');
+assert.match(source, /<View style=\{styles.externalSection\}>\s*<Pressable accessibilityRole="button" accessibilityState=\{\{ expanded: showCommercialDetails \}\}/, 'Sales disclosure is outside its detail card');
+assert.doesNotMatch(source, /premiumDisclosure:[^\n]*backgroundColor:|commercialRow:[^\n]*backgroundColor:/, 'Premium and Sales headings must not have background colors');
 assert.doesNotMatch(source, /name="chevron-forward"/, 'Do not introduce arrows in the redesign');
-assert.match(source, /<Card>[\s\S]*<\/Card>\s*<Card>\s*<Pressable accessibilityRole="button" accessibilityState=\{\{ expanded: showPremiumDetails \}\}/, 'Overview and premium are independent visual cards');
-console.log('Navy Policy Details hero preserved; colored action, overview, premium and sales cards verified.');
+console.log('Navy Policy Details hero and original icons preserved; clean headings and transparent Quick Actions verified.');
