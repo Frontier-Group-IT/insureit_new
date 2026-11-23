@@ -2,11 +2,29 @@
 // Migration staging: DO NOT connect the app until employee hierarchy read parity
 // and authenticated role-based UAT are complete. No unsigned/public Storage URLs.
 import { createClient } from "npm:@supabase/supabase-js@2.57.0";
+import { resolveActiveReportingProfiles } from "./intake-reporting-chain.ts";
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 // Synced to web's hierarchyIntakeRoles: these roles never gain organization-wide
 // Intake PDF visibility merely from having a review capability.
 const hierarchyIntakeRoles = new Set(["relationship_manager","sales_manager","asm","zonal_head","sales_head","manager","director"]);
+// Only complete active pages are accepted; an incomplete hierarchy must deny,
+// never silently reduce or expand visibility. This is a staging-only read path.
+async function activePages(admin: any, table: "employees" | "profiles", columns: string) {
+  const rows: Record<string, unknown>[] = [];
+  const pageSize = 500;
+  for (let start = 0; start <= 20000; start += pageSize) {
+    const { data, error } = await admin.from(table).select(columns)
+      .eq(table === "employees" ? "employment_status" : "is_active",
+          table === "employees" ? "active" : true)
+      .order("id", { ascending: true }).range(start, start + pageSize - 1);
+    if (error || !Array.isArray(data)) throw new Error("Reporting-chain read unavailable");
+    rows.push(...data);
+    if (data.length < pageSize) return rows;
+  }
+  throw new Error("Reporting-chain exceeds verified page limit");
+}
+
 const json = (body: Record<string, unknown>, status = 200) =>
   new Response(JSON.stringify(body), { status,
     headers: { "Content-Type": "application/json", "Cache-Control": "private, no-store" } });
@@ -57,6 +75,7 @@ Deno.serve(async (request: Request) => {
   let ownerId: string | null = null;
   let canReadAssignedReview = false;
   let canReadOrganization = false;
+  let hierarchySubmitterIds: string[] = [];
   let sourceIds: string[] = [];
   if (identity.actor_kind === "employee") {
     const { data: grants, error: grantsError } = await scoped.rpc("partner_app_effective_permissions");
@@ -86,6 +105,30 @@ Deno.serve(async (request: Request) => {
     canReadOrganization = !constrainedRole &&
       (profile.role === "super_admin" ||
        ["edit", "approve"].includes(capabilities.review_policy_intakes));
+    // Migrate only the verified active-employee/submitter portion of
+    // reportingChainScope. The RM role uses capability-specific overrides;
+    // Partner/Branch family source predicates are not migrated here.
+    if (hierarchyIntakeRoles.has(profile.role ?? "") && profile.role !== "relationship_manager") {
+      const { data: owner, error: ownerError } = await admin.from("profiles")
+        .select("employee_id").eq("id", identity.profile_id).eq("is_active", true).maybeSingle();
+      if (ownerError) return json({ ok: false, error: "Reporting-chain owner unavailable." }, 503);
+      if (owner?.employee_id) {
+        try {
+          const [employees, profiles] = await Promise.all([
+            activePages(admin, "employees", "id,reporting_manager_id"),
+            activePages(admin, "profiles", "id,employee_id"),
+          ]);
+          const resolved = resolveActiveReportingProfiles(
+            owner.employee_id, identity.profile_id,
+            employees as Array<{ id: string; reporting_manager_id: string | null }>,
+            profiles as Array<{ id: string; employee_id: string | null }>,
+          );
+          hierarchySubmitterIds = resolved.profileIds;
+        } catch {
+          return json({ ok: false, error: "Reporting-chain scope unavailable." }, 503);
+        }
+      }
+    }
   } else {
     // Match the canonical website document route: ordinary intermediary
     // accounts see their own lead source, while branch/group accounts use
@@ -118,6 +161,9 @@ Deno.serve(async (request: Request) => {
   if (ownerId) predicates.push(`${ownerField}.eq.${ownerId}`);
   if (identity.actor_kind === "employee" && canReadAssignedReview && ownerId) {
     predicates.push(`and(assigned_to_profile_id.eq.${ownerId},status.eq.in_review)`);
+  }
+  if (identity.actor_kind === "employee" && hierarchySubmitterIds.length) {
+    predicates.push(`submitted_by_profile_id.in.(${hierarchySubmitterIds.join(",")})`);
   }
   if (identity.actor_kind === "intermediary" && sourceIds.length) {
     predicates.push(`lead_source_id.in.(${sourceIds.join(",")})`);
