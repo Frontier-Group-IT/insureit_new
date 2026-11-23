@@ -10,6 +10,7 @@ import { loadPolicyIntakeDuplicateMatches } from "@/lib/policy-intake-duplicate"
 import { buildPolicyOcrOnboardingUpdate, normalizeVerifiedMotorPowerKw } from "@/lib/policy-ocr-onboarding-apply";
 import { policyDateDecision } from "@/lib/policy-date-rule";
 import { mapVerifiedGoDigitCommercialPremium, mapVerifiedIffcoCommercialPremium, mapVerifiedNiaCommercialPremium, mapVerifiedN8nMotorPremium, verifiedCpaSelectionMatches } from "@/lib/policy-n8n-onboarding-premium";
+import { assessProductVariantDirectConversion, mapVerifiedProductVariantPremium, PRODUCT_VARIANT_PARSERS } from "@/lib/policy-product-variant-direct-eligibility";
 import { assessIffcoAutoOnboarding } from "@/lib/policy-iffco-auto-eligibility";
 import { assessNiaNamedAuthorityUnregisteredConversion, assessStandardCommercialDirectConversion } from "@/lib/policy-commercial-direct-eligibility";
 import { resolveManufacturingYearEvidence } from "@/lib/policy-n8n-onboarding-enrichment";
@@ -413,6 +414,7 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
   const commercial=extracted.preview.commercialPremium;
   const iffco=extracted.preview.parserId==="iffco_tokio_cv_native_pdf";
   const nia=extracted.preview.parserId==="new_india_cv_native_pdf";
+  const productVariant=PRODUCT_VARIANT_PARSERS.has(extracted.preview.parserId);
   if (commercial) {
     if(iffco){
       const assessment=assessIffcoAutoOnboarding({
@@ -443,6 +445,16 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
         return fail("New India CPA","Owner-driver CPA must be independently printed and verified.");
       try{verifiedMoney=mapVerifiedNiaCommercialPremium(commercial,Number(cpaFields[0].value));}
       catch{return fail("New India premium","Printed basic TP, CPA, paid-driver LL, mixed GST, net or gross is inconsistent.");}
+    }else if(productVariant){
+      const assessment=assessProductVariantDirectConversion({
+        parserId:extracted.preview.parserId,checksPassed:extracted.preview.checksPassed,
+        warnings:extracted.preview.warnings,fields:extracted.preview.fields,
+        commercialPremium:commercial,
+      });
+      if(!assessment.eligible)return fail("Product variant evidence",
+        "The current PDF requires a trained product-variant preflight: "+assessment.reason);
+      try{verifiedMoney=mapVerifiedProductVariantPremium(commercial,extracted.preview.parserId);}
+      catch{return fail("Product variant premium","The current PDF OD, TP, tax or gross is inconsistent.");}
     }else if(extracted.preview.parserId==="go_digit_cv_native_pdf"){
       // Existing working Go Digit premium/registration mapping is preserved.
       if (extracted.preview.checksPassed!==18 || extracted.preview.warnings.length)
@@ -496,8 +508,14 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
   if(forwarded.draft.issuanceDate!==issuanceDate)
     return fail("Saved issuance date","The saved draft's issue date differs from the verified current PDF. Review it before booking; no existing manual value was overwritten.");
   if(forwarded.draftRevision<1)return fail("Draft revision","Canonical revision is unavailable.");
-  const expectedCommercialClass=/Goods Carrying/i.test(pdfField("vehicle_class"))?"GCV":"MISD";
-  if(commercial && (forwarded.draft.policyProduct!=="Package"
+  const expectedCommercialClass=productVariant
+    ?extracted.preview.parserId==="zurich_kotak_private_car_tp_native_pdf"?"PCP"
+      :extracted.preview.parserId==="go_digit_two_wheeler_od_native_pdf"?"TWP":"MISD"
+    :/Goods Carrying/i.test(pdfField("vehicle_class"))?"GCV":"MISD";
+  const expectedCommercialProduct=productVariant
+    ?extracted.preview.parserId==="go_digit_two_wheeler_od_native_pdf"?"SAOD":"Third Party"
+    :"Package";
+  if(commercial && (forwarded.draft.policyProduct!==expectedCommercialProduct
     || forwarded.draft.vehicleClass!==expectedCommercialClass
     || forwarded.draft.manufacturingYear!==manufacturingEvidence.year
     || forwarded.draft.capacity!==pdfField("vehicle_capacity")
