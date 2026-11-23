@@ -1352,8 +1352,12 @@ for(const phrase of ["partner_app_commercial_scope()","partner_branch_authorized
 for(const phrase of ["filterButton: {","minWidth: 68","borderLeftWidth: StyleSheet.hairlineWidth","borderLeftColor: '#D9DFEA'","filterText: { color: '#3156B8'"]) {
   requireText(policies,phrase,'Inline Policies Filter must match the existing Claims search control: '+phrase);
 }
-requireText(policies,'accessibilityLabel="Filter options are available from the bottom Sort button"','Inline Filter must be view-only and accessible.');
-requireText(policies,'style={styles.filterButton} pointerEvents="none"','Inline Filter must not be a clickable control.');
+requireText(policies,'accessibilityLabel="Filter policies"','Inline Filter must have a useful accessible action label.');
+requireText(policies,'accessibilityHint="Opens the same filters as Sort by"','Inline Filter must describe its shared filter sheet.');
+requireText(policies,'style={({ pressed }) => [styles.filterButton, pressed && styles.summaryChipPressed]}','Inline Filter must be tappable with press feedback.');
+if ((policies.match(/onPress=\\{openSortSheet\\}/g) || []).length !== 2) {
+  throw new Error('Both search-row Filter and floating Sort must open the same filter popup.');
+}
 requireText(policies,'accessibilityLabel="Sort and filter policies"','Bottom-center Sort must be accessible.');
 requireText(policies,'style={({ pressed }) => [styles.sortFloatingButton','Bottom-center Sort must have a pressed state.');
 requireText(policies,'sortFloatingPosition: { position: \'absolute\', bottom: 16','Bottom-center Sort must float above tab navigation.');
